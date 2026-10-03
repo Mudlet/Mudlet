@@ -3241,7 +3241,7 @@ describe("Tests that uninstalling takes the addon commands it made", function()
     first = mudletSpecPackageCommand
     assert.is_number(first, "the package's script could not place its command")
 
-    mudletSpecPackageCommand = nil
+    _G.mudletSpecPackageCommand = nil
     removeFixturePackage(name)
     assert.is_false(removeCommand(first), "the command outlived the package that made it")
 
@@ -3283,16 +3283,19 @@ describe("Tests that uninstalling takes the addon commands it made", function()
         'mudletSpecPcallCommand = select(2, pcall(addCommand, {name = "mudlet-spec pcall command", menuPath = "MudletSpec"}))',
         -- not a tail call, which would take this function's own frame off the stack
         "function mudletSpecRunTyped(code) local typed = assert(loadstring(code)) typed() end",
+        -- a tail call into a C function leaves the caller's frame where it was
+        'function mudletSpecTail() return addCommand{name = "mudlet-spec tail command", menuPath = "MudletSpec"} end',
       }, "\n")),
       "</ScriptPackage>",
     }, "\n"))
     local globals = {"mudletSpecTriggerCommand", "mudletSpecAliasCommand", "mudletSpecHandlerCommand",
-                     "mudletSpecPcallCommand", "mudletSpecFileCommand", "mudletSpecTypedCommand"}
+                     "mudletSpecPcallCommand", "mudletSpecFileCommand", "mudletSpecTypedCommand",
+                     "mudletSpecTailCommand"}
     defer(function()
       if mudletSpecHandler then
         killAnonymousEventHandler(mudletSpecHandler)
       end
-      mudletSpecHandler, mudletSpecRunTyped = nil, nil
+      _G.mudletSpecHandler, _G.mudletSpecRunTyped, _G.mudletSpecTail = nil, nil, nil
     end)
     withScratchPackage(name, path, globals)
 
@@ -3308,6 +3311,7 @@ describe("Tests that uninstalling takes the addon commands it made", function()
     file:close()
     dofile(folder .. "/command.lua")
     mudletSpecRunTyped(placeCommand("mudletSpecTypedCommand", "mudlet-spec typed command"))
+    _G.mudletSpecTailCommand = mudletSpecTail()
 
     local ids = {}
     for _, global in ipairs(globals) do
@@ -3334,7 +3338,7 @@ describe("Tests that uninstalling takes the addon commands it made", function()
     permScript(scriptName, "", placeCommand("mudletSpecProfileCommand", "mudlet-spec profile command"))
     defer(function()
       forgetCommand(mudletSpecProfileCommand)
-      mudletSpecProfileCommand = nil
+      _G.mudletSpecProfileCommand = nil
       disableScript(scriptName)
     end)
     assert.is_number(mudletSpecProfileCommand, "the profile's script could not place its command")
@@ -3359,7 +3363,7 @@ describe("Tests that uninstalling takes the addon commands it made", function()
       .. "</ScriptPackage>")
     defer(function()
       forgetCommand(mudletSpecModuleCommand)
-      mudletSpecModuleCommand, mudletSpecModuleLoads = nil, nil
+      _G.mudletSpecModuleCommand, _G.mudletSpecModuleLoads = nil, nil
       removeFixtureModule(name)
       os.remove(path)
       lfs.rmdir(scratchDirectory)
@@ -3368,6 +3372,20 @@ describe("Tests that uninstalling takes the addon commands it made", function()
     installUntilConfirmed(installModule, path, function() return moduleInstalled(name) end, "the command module")
     local id = mudletSpecModuleCommand
     assert.is_number(id, "the module's script could not place its command")
+
+    local beside = scratchDirectory .. "/" .. name .. "-command.lua"
+    defer(function()
+      forgetCommand(mudletSpecModuleFileCommand)
+      _G.mudletSpecModuleFileCommand = nil
+      os.remove(beside)
+    end)
+    local file = io.open(beside, "wb")
+    assert.is_not_nil(file, "could not write beside the module's file")
+    file:write(placeCommand("mudletSpecModuleFileCommand", "mudlet-spec module file command"))
+    file:close()
+    dofile(beside)
+    local fileCommand = mudletSpecModuleFileCommand
+    assert.is_number(fileCommand, "the file beside the module could not place its command")
 
     local loads = mudletSpecModuleLoads
     reloadModuleUntil(name, function() return mudletSpecModuleLoads > loads end)
@@ -3378,6 +3396,7 @@ describe("Tests that uninstalling takes the addon commands it made", function()
     -- a reload postponed by a profile save could otherwise be what removed it
     assert.equals(loads, mudletSpecModuleLoads, "the module was reloaded while being removed")
     assert.is_false(enableCommand(id), "the command outlived the module that made it")
+    assert.is_false(enableCommand(fileCommand), "the command a file beside the module made outlived the module")
   end)
 end)
 

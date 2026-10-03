@@ -796,10 +796,9 @@ target_compile_definitions(${LIB_MUDLET_TARGET}
   PRIVATE
     APP_TARGET="${APP_TARGET}"
     LUA_DEFAULT_PATH="${LUA_DEFAULT_DIR}")
-# Only on the file that reads it: an absolute path in a definition is one
-# ccache's base_dir cannot rewrite, so on every file it made each checkout of
-# the source hash differently and worktrees could not share a single hit.
-set_source_files_properties(TLuaInterpreter.cpp PROPERTIES
+# Only on the file that reads it: ccache's base_dir cannot rewrite a path in a
+# definition, so on every file it would stop worktrees sharing any cache hits.
+set_property(SOURCE TLuaInterpreter.cpp APPEND PROPERTY
   COMPILE_DEFINITIONS LUA_SOURCE_PATH="${CMAKE_CURRENT_SOURCE_DIR}/mudlet-lua/lua")
 
 if(USE_OWN_QTKEYCHAIN)

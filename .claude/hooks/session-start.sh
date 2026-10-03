@@ -91,12 +91,13 @@ TEST_PACKAGES=(
   imagemagick
   ffmpeg
 )
-# Every package is asked about: some arrive with other packages, so testing for
-# one of them alone skipped the rest and left Qt's xcb plugin unable to start.
+# Every package is asked about, as some of them arrive with unrelated packages.
+# Not fatal: the steps after this one do not need any of them.
 if ! dpkg -s "${TEST_PACKAGES[@]}" >/dev/null 2>&1; then
   echo "Installing test-suite apt dependencies..."
-  ${SUDO} apt-get update -qq
-  DEBIAN_FRONTEND=noninteractive ${SUDO} apt-get install -y --no-install-recommends "${TEST_PACKAGES[@]}"
+  { ${SUDO} apt-get update -qq \
+    && DEBIAN_FRONTEND=noninteractive ${SUDO} apt-get install -y --no-install-recommends "${TEST_PACKAGES[@]}"; } \
+    || echo "WARNING: could not install the test-suite apt dependencies"
 fi
 
 # gcovr and jq for the improve-test-coverage skill. Guarded separately so
@@ -162,8 +163,13 @@ fi
 # into relative ones, the same in every worktree; it must not be above /opt/qt
 # or /usr, whose include paths would then differ with worktree depth. With
 # hash_dir off, an object's debug info can name a sibling's build directory.
-if command -v ccache >/dev/null 2>&1 && [ -n "${CLAUDE_PROJECT_DIR:-}" ]; then
-  ccache --set-config=base_dir="$(dirname "${CLAUDE_PROJECT_DIR}")" \
+# The main checkout's parent, even from a worktree, as the setting is global.
+CCACHE_BASE_DIR=""
+if [ -n "${CLAUDE_PROJECT_DIR:-}" ]; then
+  CCACHE_BASE_DIR="$(dirname "$(cd "${CLAUDE_PROJECT_DIR}" && cd "$(git rev-parse --git-common-dir)/.." && pwd)")" || CCACHE_BASE_DIR=""
+fi
+if command -v ccache >/dev/null 2>&1 && [ -n "${CCACHE_BASE_DIR}" ] && [ "${CCACHE_BASE_DIR}" != "/" ]; then
+  ccache --set-config=base_dir="${CCACHE_BASE_DIR}" \
     && ccache --set-config=hash_dir=false \
     || echo "WARNING: could not configure ccache for sharing between worktrees"
 fi

@@ -49,6 +49,7 @@
 #include <QMargins>
 #include <QPointer>
 #include <QRect>
+#include <QSet>
 #include <QStack>
 #include <QTextStream>
 #include <QTimer>
@@ -522,12 +523,11 @@ public:
     // alone even when that is not registered, there being nothing better to move
     // it to. Returns true when the display font was changed.
     bool substituteMissingDisplayFont();
-    // The package or module owning the code a Lua chunk came from: an item, by
-    // the "Script: name" style names items compile under, or a file in the
-    // package's folder. Empty for anything else, an item in no package, a
-    // temporary item, or a name items of more than one package share - items
-    // in no package counting as one.
-    QString packageOwningChunk(const QString& chunkName, bool* pAmbiguous = nullptr);
+    // Every package or module that could own the code a Lua chunk came from: an
+    // item, by the "Script: name" style names items compile under, or a file in
+    // a package's folder or beside a module's file. An item in no package counts
+    // as "", and temporary items and code-less folders are not counted.
+    QSet<QString> packagesOwningChunk(const QString& chunkName);
     // The script whose top-level code is running, so code it runs directly can
     // be told apart from another script of the same name in another package
     struct RunningScript
@@ -1176,6 +1176,7 @@ private slots:
     void slot_saveProfileAfterPackageChange();
 
 private:
+    QSet<QString> packagesOwningFile(const QString& fileName);
     // Inserts at the console's cursor, or appends when no line follows it.
     void pasteClipboardInto(TConsoleModel& model);
     // Repaints the lines holding the console's selection, when it is on screen.

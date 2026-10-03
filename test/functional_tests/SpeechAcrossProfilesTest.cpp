@@ -1403,9 +1403,9 @@ private slots:
         QCOMPARE(errorsToProfileInFront, qsl("0"));
     }
 
-    // A fault leaves the model loaded - getInfo() still names it - so a start
-    // refused there has to say to reload it. Gating on initialized(), which is
-    // false in Error too, told the caller no model had been loaded at all.
+    // A fault while listening leaves the model loaded - getInfo() still names
+    // it - so a start refused there says to reload it, not that the engine was
+    // never initialized, which initialized() being false in Error would suggest.
     void test_aStartInAnErrorStateSaysToReloadTheModel_data()
     {
         QTest::addColumn<QString>("call");

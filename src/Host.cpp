@@ -71,6 +71,7 @@
 #include <QDirIterator>
 #include <QElapsedTimer>
 #include <QEventLoop>
+#include <QFileInfo>
 #include <QFontInfo>
 #include <QJsonDocument>
 #include <QJsonObject>
@@ -3580,18 +3581,11 @@ bool Host::removeDir(const QString& dirName, const QString& originalPath)
     return result;
 }
 
-QString Host::packageOwningChunk(const QString& chunkName, bool* pAmbiguous)
+QSet<QString> Host::packagesOwningChunk(const QString& chunkName)
 {
-    // A file loaded with dofile() or require() is named "@" and its path, and a
-    // package's own files are unpacked into a folder of the profile named after it
+    // A file loaded with dofile() or require() is named "@" and its path
     if (chunkName.startsWith(QLatin1Char('@'))) {
-        const QString profileHome = MudletApp::getMudletPath(enums::profileHomePath, getName()) + QLatin1Char('/');
-        const QString path = QDir::cleanPath(QDir::fromNativeSeparators(chunkName.mid(1)));
-        if (!path.startsWith(profileHome)) {
-            return {};
-        }
-        const QString folder = path.mid(profileHome.size()).section(QLatin1Char('/'), 0, 0);
-        return (mInstalledPackages.contains(folder) || mInstalledModules.contains(folder)) ? folder : QString();
+        return packagesOwningFile(chunkName.mid(1));
     }
 
     const qsizetype separator = chunkName.indexOf(qsl(": "));
@@ -3602,13 +3596,15 @@ QString Host::packageOwningChunk(const QString& chunkName, bool* pAmbiguous)
     const QString name = chunkName.mid(separator + 2);
 
     QSet<QString> owners;
+    // A folder with no code of its own - the one a package is installed into is
+    // named after the package - cannot be where a chunk came from
     auto collectOwners = [&name, &owners](const auto& roots) {
         for (auto* root : roots) {
             std::vector<decltype(root)> pending{root};
             while (!pending.empty()) {
                 auto* item = pending.back();
                 pending.pop_back();
-                if (!item->isTemporary() && item->getName() == name) {
+                if (!item->isTemporary() && item->getName() == name && !(item->isFolder() && item->getScript().isEmpty())) {
                     owners.insert(root->mPackageName);
                 }
                 for (auto* child : *item->getChildrenList()) {
@@ -3630,13 +3626,47 @@ QString Host::packageOwningChunk(const QString& chunkName, bool* pAmbiguous)
         collectOwners(mKeyUnit.getKeyRootNodeList());
     } else if (kind == u"Button") {
         collectOwners(mActionUnit.getActionRootNodeList());
-    } else {
-        return {};
     }
-    if (pAmbiguous) {
-        *pAmbiguous = owners.size() > 1;
+    return owners;
+}
+
+QSet<QString> Host::packagesOwningFile(const QString& fileName)
+{
+#if defined(Q_OS_WINDOWS)
+    const Qt::CaseSensitivity caseSensitivity = Qt::CaseInsensitive;
+#else
+    const Qt::CaseSensitivity caseSensitivity = Qt::CaseSensitive;
+#endif
+    const QString path = QDir::cleanPath(QDir(QDir::fromNativeSeparators(fileName)).absolutePath());
+    auto under = [&path, caseSensitivity](const QString& directory) {
+        const QString prefix = QDir::cleanPath(QDir(directory).absolutePath()) + QLatin1Char('/');
+        return path.startsWith(prefix, caseSensitivity);
+    };
+
+    // A package's own files are unpacked into a folder of the profile named after it
+    const QString profileHome = MudletApp::getMudletPath(enums::profileHomePath, getName());
+    if (under(profileHome)) {
+        const QString folder = path.mid(QDir::cleanPath(QDir(profileHome).absolutePath()).size() + 1).section(QLatin1Char('/'), 0, 0);
+        for (const QString& name : mInstalledPackages) {
+            if (!name.compare(folder, caseSensitivity)) {
+                return {name};
+            }
+        }
+        for (auto it = mInstalledModules.constBegin(); it != mInstalledModules.constEnd(); ++it) {
+            if (!it.key().compare(folder, caseSensitivity)) {
+                return {it.key()};
+            }
+        }
     }
-    return owners.size() == 1 ? *owners.constBegin() : QString();
+
+    // A module is often worked on where it lives, its Lua beside its own file
+    QSet<QString> owners;
+    for (auto it = mInstalledModules.constBegin(); it != mInstalledModules.constEnd(); ++it) {
+        if (!it.value().isEmpty() && under(QFileInfo(it.value().constFirst()).absolutePath())) {
+            owners.insert(it.key());
+        }
+    }
+    return owners;
 }
 
 void Host::removePackageInfo(const QString& packageName, const bool isModule)
@@ -3765,8 +3795,9 @@ bool Host::uninstallPackage(const QString& packageName, enums::PackageModuleType
     mKeyUnit.uninstall(packageName);
     // Not for a ModuleSync: the module comes straight back with its Lua state
     // intact, and a command it made from a handler, or behind an "id = id or
-    // addCommand{}" guard, would not be made again.
-    if (thing != enums::PackageModuleType::ModuleSync) {
+    // addCommand{}" guard, would not be made again. Unless the name is also a
+    // package's, which a sync removes for good - and a command says only the name.
+    if (thing != enums::PackageModuleType::ModuleSync || installedBothWays) {
         emit signal_packageRemoved(packageName);
     }
     if (auto* fonts = FontManager::self()) {

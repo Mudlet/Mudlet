@@ -4796,15 +4796,23 @@ int TLuaInterpreter::addCommand(lua_State* L)
             break;
         }
         const QString source = QString::fromUtf8(frame.source);
-        if (source == host.mRunningScript.chunkName) {
+        const bool fromRunningScript = source == host.mRunningScript.chunkName;
+        // The body of the script being compiled is exactly that script, whatever
+        // else shares its name
+        if (fromRunningScript && !std::strcmp(frame.what, "main")) {
             package = host.mRunningScript.package;
             break;
         }
-        bool ambiguous = false;
-        package = host.packageOwningChunk(source, &ambiguous);
-        if (ambiguous && TDebug::wants(TDebug::Category::LuaWarning)) {
-            TDebug(Qt::black, Qt::yellow, TDebug::Category::LuaWarning)
-                            << "addCommand: more than one package has an item that compiled as \"" << source << "\", so this command will not be removed when either is uninstalled\n"
+        const QSet<QString> owners = host.packagesOwningChunk(source);
+        if (owners.size() == 1) {
+            package = *owners.constBegin();
+        } else if (fromRunningScript && owners.contains(host.mRunningScript.package)) {
+            // A function the running script's body defined and called is the
+            // likeliest of several same-named candidates
+            package = host.mRunningScript.package;
+        } else if (owners.size() > 1 && TDebug::wants(TDebug::Category::LuaWarning)) {
+            TDebug(Qt::black, Qt::yellow, TDebug::Category::LuaWarning) << "addCommand: the code that called it could belong to any of " << QStringList(owners.cbegin(), owners.cend()).join(qsl(", "))
+                                                                        << " (an empty name is the profile), so this command will not be removed when a package is uninstalled\n"
                     >> &host;
         }
         break;

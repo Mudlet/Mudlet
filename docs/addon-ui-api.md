@@ -163,10 +163,12 @@ end)
    comes straight back with its Lua state, ids included. The Lua that called
    `addCommand` decides: one of the package's items, a function one of them
    defined (an event handler, a timer closure), or a file in the package's
-   folder. Commands made from the command line, a profile's own items, code
+   folder or beside the module's own file. Commands made from the command line, a profile's own items, code
    compiled from a string (a string-code `tempTimer`, `loadstring`), or a
-   function whose item shares its name with another package's belong to no
-   package and stay.
+   function whose item shares its name with another package's item or one of
+   the profile's belong to no package and stay. A library package's helper
+   that calls `addCommand` for its callers makes commands that are the
+   library's.
 5. **Cycles leave no residue.** Repeated add/remove must not accumulate
    toolbar spacing, separators, or menu entries; emptied `menuPath` submenus
    disappear.
