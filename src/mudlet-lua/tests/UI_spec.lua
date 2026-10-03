@@ -1657,6 +1657,18 @@ describe("Tests UI functions", function()
       assert.are.equal(250, mp.max)
     end)
 
+    it("should read each line's own numbers when lines differ only in them", function()
+      -- a max of zero drops the first line's readings, the others still have theirs
+      assert.are.same({}, BaseUI.parseVitalsLine("HP: 523/000 MP: 210/000 [same shape]"))
+      local hits = BaseUI.parseVitalsLine("HP: 417/600 MP: 198/250 [same shape]")
+      assert.are.equal(417, reading(hits, "hp", "curmax").current)
+      assert.are.equal(600, reading(hits, "hp", "curmax").max)
+      assert.are.equal(198, reading(hits, "mp", "curmax").current)
+      hits = BaseUI.parseVitalsLine("HP: 900/999 MP: 110/250 [same shape]")
+      assert.are.equal(900, reading(hits, "hp", "curmax").current)
+      assert.are.equal(110, reading(hits, "mp", "curmax").current)
+    end)
+
     it("should parse labelled percentages without needing a maximum", function()
       local hits = BaseUI.parseVitalsLine("<87%hp 80%m>")
       local hp = reading(hits, "hp", "percent")
@@ -2044,6 +2056,17 @@ describe("Tests UI functions", function()
 
       it("gates each shape only on the start of its own regex", function()
         assert.is_true(BaseUI.prefixesLeadTheirShapes())
+      end)
+
+      it("remembers what a line matched only while no shape tells digits apart", function()
+        assert.is_true(BaseUI.shapesTreatDigitsAlike())
+      end)
+
+      it("reads a line the same way the second time", function()
+        for _, line in ipairs(readableLines) do
+          assert.are.same(BaseUI.parseVitalsLine(line), BaseUI.parseVitalsLine(line), line)
+          assert.are.same(BaseUI.parseVitalsLine(line, true), BaseUI.parseVitalsLine(line, true), line)
+        end
       end)
 
       it("gates each shape only on a literal it cannot match without", function()

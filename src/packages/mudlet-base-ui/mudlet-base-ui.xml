@@ -1230,6 +1230,20 @@ function BaseUI.prefixesLeadTheirShapes()
   return true
 end
 
+-- for the test suite: the vitals scan remembers which shapes matched a line
+-- with its digits read as 0, which is only sound while no shape tells one
+-- digit from another
+function BaseUI.shapesTreatDigitsAlike()
+  for _, pattern in ipairs(vitalsLinePatterns) do
+    for _, regex in ipairs({ pattern.regex, pattern.prefix or "" }) do
+      if regex:gsub("{%d*,?%d*}", ""):find("%d") then
+        return false
+      end
+    end
+  end
+  return true
+end
+
 -- for the test suite: the vitals scan never tries a shape on a line without
 -- the literal it needs, which is only sound while no such line can match it
 function BaseUI.needsHoldOn(text)
@@ -1322,6 +1336,35 @@ local function candidateShapesFor(mask, skipWindowed)
   return shapes
 end
 
+-- visits one shape's reading, dropping the nonsense ones
+local function readShape(index, pattern, visit, state, first, second)
+  local kind = pattern.kind
+  if kind == "curmax" then
+    local current, max = parseVitalsNumber(first), parseVitalsNumber(second)
+    if current and max and max &gt; 0 and max &lt; maxSaneVital
+       and current &lt;= max * maxOverhealFactor then
+      visit(state, index, pattern, current, max, nil)
+    end
+  elseif kind == "percent" then
+    local percent = tonumber(first)
+    if percent and percent &lt;= 100 then
+      visit(state, index, pattern, nil, nil, percent)
+    end
+  elseif kind == "bare" then
+    local current = tonumber(first)
+    if current and current &lt; maxSaneVital then
+      visit(state, index, pattern, current, nil, nil)
+    end
+  end
+end
+
+-- a line with every digit read as 0 -&gt; the shapes that matched it, in order.
+-- No shape tells one digit from another, so every line reading the same way
+-- matches exactly these; prompts and combat lines repeat with only their
+-- numbers changing, and the full walk costs most of the per-line time
+local matchedShapes, matchedShapesWithoutWindowed = {}, {}
+local matchedShapeCount = 0
+
 -- calls visit(state, index, pattern, current, max, percent) for each reading
 -- in one plain-text line, in shape order; chat-shaped lines have none.
 -- Nonsense readings - a max of zero, a wildly overhealed current, absurd
@@ -1333,6 +1376,20 @@ local function scanVitalsLine(text, skipWindowed, visit, state)
   if type(text) ~= "string" or BaseUI.chatLikeLine(text) then
     return
   end
+  local skeleton = text:gsub("%d", "0")
+  local known = skipWindowed and matchedShapesWithoutWindowed or matchedShapes
+  local matched = known[skeleton]
+  if matched then
+    for _, index in ipairs(matched) do
+      local pattern = vitalsLinePatterns[index]
+      local first, second = rex.match(text, compiledPattern[pattern.regex])
+      if first then
+        readShape(index, pattern, visit, state, first, second)
+      end
+    end
+    return
+  end
+  matched = {}
   local lowered = text:lower()
   local mask = 0
   for literal, bit in pairs(needsBit) do
@@ -1361,26 +1418,16 @@ local function scanVitalsLine(text, skipWindowed, visit, state)
       first, second = rex.match(text, compiledPattern[pattern.regex])
     end
     if first then
-      local kind = pattern.kind
-      if kind == "curmax" then
-        local current, max = parseVitalsNumber(first), parseVitalsNumber(second)
-        if current and max and max &gt; 0 and max &lt; maxSaneVital
-           and current &lt;= max * maxOverhealFactor then
-          visit(state, index, pattern, current, max, nil)
-        end
-      elseif kind == "percent" then
-        local percent = tonumber(first)
-        if percent and percent &lt;= 100 then
-          visit(state, index, pattern, nil, nil, percent)
-        end
-      elseif kind == "bare" then
-        local current = tonumber(first)
-        if current and current &lt; maxSaneVital then
-          visit(state, index, pattern, current, nil, nil)
-        end
-      end
+      matched[#matched + 1] = index
+      readShape(index, pattern, visit, state, first, second)
     end
   end
+  if matchedShapeCount &gt;= 1000 then
+    matchedShapes, matchedShapesWithoutWindowed, matchedShapeCount = {}, {}, 0
+    known = skipWindowed and matchedShapesWithoutWindowed or matchedShapes
+  end
+  matchedShapeCount = matchedShapeCount + 1
+  known[skeleton] = matched
 end
 
 local function addReading(readings, index, pattern, current, max, percent)
