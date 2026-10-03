@@ -38,6 +38,8 @@
 #include "ProfileTestHelper.h"
 #include "SettingsTestHelper.h"
 #include "Host.h"
+#include "TCommandLine.h"
+#include "TMainConsole.h"
 #include "MudletInstanceCoordinator.h"
 #include "TelnetServerStub.h"
 #include "dlgProfilePreferences.h"
@@ -151,6 +153,47 @@ private slots:
         // Nothing here has asked for the handle, so a read now can only be the
         // one the tick queued
         QTRY_VERIFY2_WITH_TIMEOUT(dictionaryReads == 1, "turning spell check on left the dictionary unread, for the first word typed to pay for", 5s);
+    }
+
+    // Words already in the input line are checked again, not only ones typed after
+    void test_switchingSpellCheckRechecksTheInputLine()
+    {
+        QVERIFY2(mpPreferences && mpHost->getEnableSpellCheck(), "the case above left spell check off");
+        TCommandLine* pCommandLine = mpHost->mpConsole->mpCommandLine;
+        QVERIFY(pCommandLine);
+        const auto marked = [pCommandLine](const QString& word) {
+            const QTextCursor found = pCommandLine->document()->find(word);
+            QTextCursor at(pCommandLine->document());
+            at.setPosition(found.selectionStart() + 1);
+            return !found.isNull() && at.charFormat().underlineStyle() == QTextCharFormat::SpellCheckUnderline;
+        };
+        pCommandLine->setPlainText(qsl("helo wrld "));
+        pCommandLine->recheckWholeLine();
+        if (!marked(qsl("helo"))) {
+            QSKIP("no dictionary here marks \"helo\" as misspelt");
+        }
+
+        QSignalSpy applySpy(mpPreferences, &dlgProfilePreferences::signal_preferencesSaved);
+        mpPreferences->checkBox_spellCheck->click();
+        QVERIFY2(TestSettings::waitForApply(applySpy), "the untick never reached the Host");
+        QVERIFY2(!marked(qsl("helo")), "switching spell check off left the marks on the input line");
+
+        applySpy.clear();
+        mpPreferences->checkBox_spellCheck->click();
+        QVERIFY2(TestSettings::waitForApply(applySpy), "the tick never reached the Host");
+        QVERIFY2(marked(qsl("helo")), "switching spell check back on did not mark the input line again");
+
+        // The case above picked British English
+        pCommandLine->setPlainText(qsl("colour color "));
+        pCommandLine->recheckWholeLine();
+        if (marked(qsl("color")) && !marked(qsl("colour"))) {
+            mpHost->setSpellDic(qsl("en_US"));
+            const bool rechecked = marked(qsl("colour")) && !marked(qsl("color"));
+            mpHost->setSpellDic(scmDictionary);
+            QVERIFY2(rechecked, "picking another dictionary did not check the input line again");
+        }
+
+        pCommandLine->clear();
     }
 };
 

@@ -4658,6 +4658,7 @@ void Host::setSpellDic(const QString& newDict)
     }
     mSpellDic = newDict;
     mSpellChecker.setSystemDictionary(newDict);
+    recheckCommandLineSpelling();
 }
 
 void Host::setEnableSpellCheck(const bool enable)
@@ -4670,6 +4671,15 @@ void Host::setEnableSpellCheck(const bool enable)
     // wanted. Not during a load: it is warmed once at the end, after the profile's own settings are read.
     if (enable && !mIsProfileLoadingSequence) {
         emit signal_spellCheckEnabled();
+    }
+    recheckCommandLineSpelling();
+}
+
+// Words already in the input line keep the marks they were given until checked again
+void Host::recheckCommandLineSpelling()
+{
+    if (mpConsole && !mIsProfileLoadingSequence) {
+        mpConsole->updateCommandLineSpellCheck(mEnableSpellCheck);
     }
 }
 
