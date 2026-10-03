@@ -1,9 +1,9 @@
 describe("Alias processing", function()
 
-    -- TAlias's match-all loop is unconditional, and it steps one byte after an
-    -- empty match, so on a command holding a multi-byte character it can land
-    -- mid-character. pcre2 then rejects the offset and TAlias::match() ends the
-    -- loop, dropping every capture past that character.
+    -- TAlias's match-all loop is unconditional and steps on after an empty match,
+    -- so on a command holding a multi-byte character it must step past the whole
+    -- character: landing inside one has ended the loop, dropping every capture
+    -- past it, and has found an extra empty match there.
     describe("captures across a multi-byte character", function()
 
         it("keeps collecting captures past a multi-byte character", function()
@@ -32,6 +32,7 @@ describe("Alias processing", function()
         -- One character, so one empty match before it: stepping a byte at a time
         -- after an empty match gave one more inside the character as well
         it("finds the same matches around a multi-byte character as around a plain one", function()
+            assert.are.equal("UTF-8", getServerEncoding(), "this spec needs a UTF-8 server encoding to send a multi-byte command")
             local seen = {}
             local id = tempAlias([[(\d*)]], function()
                 seen = {}

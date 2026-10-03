@@ -1473,10 +1473,10 @@ describe("Trigger processing", function()
             assert.is_true(fired, "a complex regex trigger should fire on its pattern")
         end)
 
-        -- The match-all (/g) loop steps one byte after an empty match, so on a line
-        -- holding a multi-byte character it can land mid-character. pcre2 then
-        -- rejects the offset and TTrigger::match_perl() ends the loop, dropping
-        -- every capture past that character (#10112). matchAll is argument 8.
+        -- The match-all (/g) loop steps on after an empty match, so on a line holding
+        -- a multi-byte character it must step past the whole character: landing inside
+        -- one has ended the loop, dropping every capture past it (#10112), and has found
+        -- an extra empty match there. matchAll is argument 8.
         it("keeps collecting captures past a multi-byte character", function()
             -- feedTriggers() transcodes into the server encoding, so a non-UTF-8
             -- one would strip the character and let this pass without testing it
