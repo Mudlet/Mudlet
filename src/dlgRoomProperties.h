@@ -31,6 +31,7 @@
 #include <optional>
 
 class Host;
+class TRoom;
 
 class dlgRoomProperties : public QDialog, public Ui::room_properties
 {
@@ -82,9 +83,12 @@ private:
     void initBorderInstructions();
     void emitBorderPreview();
     void restoreOriginalBorders();
+    TRoom* liveRoom(const int) const;
+    QSet<int> liveRoomIds() const;
 
     Host* mpHost = nullptr;
     QSet<int> mRoomIds;
+    QHash<int, quint64> mRoomSerials;
     QHash<QString, int> mpSymbols;
     QHash<int, int> mpWeights;
     QColor selectedSymbolColor;

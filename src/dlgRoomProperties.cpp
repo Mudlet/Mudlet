@@ -82,6 +82,7 @@ void dlgRoomProperties::init(
         if (!pFirstRoom) {
             pFirstRoom = room;
         }
+        mRoomSerials[roomId] = room->serial();
         mOriginalBorderColors[roomId] = room->mBorderColor;
         mOriginalBorderThicknesses[roomId] = room->mBorderThickness;
     }
@@ -450,7 +451,7 @@ void dlgRoomProperties::accept()
                             newBorderColor,
                             changeBorderThickness,
                             newBorderThickness,
-                            mRoomIds);
+                            liveRoomIds());
 }
 
 
@@ -737,11 +738,33 @@ void dlgRoomProperties::slot_borderThicknessChanged(int value)
     emitBorderPreview();
 }
 
+// The dialog is not modal, so a script may have deleted any of these rooms,
+// or replaced one with a new room under the same id, while it was open
+TRoom* dlgRoomProperties::liveRoom(const int roomId) const
+{
+    TRoom* room = mpHost->mpMap->mpRoomDB->getRoom(roomId);
+    if (!room || !mRoomSerials.contains(roomId) || room->serial() != mRoomSerials.value(roomId)) {
+        return nullptr;
+    }
+    return room;
+}
+
+QSet<int> dlgRoomProperties::liveRoomIds() const
+{
+    QSet<int> result;
+    for (const int roomId : std::as_const(mRoomIds)) {
+        if (liveRoom(roomId)) {
+            result.insert(roomId);
+        }
+    }
+    return result;
+}
+
 void dlgRoomProperties::emitBorderPreview()
 {
     // Apply current border settings directly to rooms for live preview
     for (const int roomId : std::as_const(mRoomIds)) {
-        TRoom* room = mpHost->mpMap->mpRoomDB->getRoom(roomId);
+        TRoom* room = liveRoom(roomId);
         if (!room) {
             continue;
         }
@@ -757,10 +780,8 @@ void dlgRoomProperties::emitBorderPreview()
 
 void dlgRoomProperties::restoreOriginalBorders()
 {
-    // Looked up afresh because the dialog is not modal: a script may have
-    // deleted some of these rooms, or replaced the whole map, meanwhile
     for (const int roomId : std::as_const(mRoomIds)) {
-        TRoom* room = mpHost->mpMap->mpRoomDB->getRoom(roomId);
+        TRoom* room = liveRoom(roomId);
         if (!room) {
             continue;
         }
