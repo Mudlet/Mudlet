@@ -175,6 +175,34 @@ private slots:
         mudlet::self()->setupConfig();
     }
 
+    // An empty portable.txt in the config directory names no directory at all,
+    // so there is no path to quote and no portable profiles to go unlisted
+    void test_anEmptyMarkerIsReportedAsNamingNoDirectory()
+    {
+        QFile marker(mMarker);
+        QVERIFY(marker.open(QIODevice::WriteOnly | QIODevice::Truncate));
+        marker.close();
+        QTest::ignoreMessage(QtWarningMsg, QRegularExpression(qsl("portable.txt names no data directory\\.$")));
+        QTest::ignoreMessage(QtWarningMsg, QRegularExpression(qsl("names no data directory, so")));
+        mudlet::self()->setupConfig();
+
+        mudlet::self()->warnAboutRejectedPortableRoot();
+        const QList<QMessageBox*> shown = shownNotices();
+        QCOMPARE(shown.size(), 1);
+        const QString text = shown.first()->text();
+        const QString informativeText = shown.first()->informativeText();
+        shown.first()->close();
+
+        QVERIFY2(text.contains(mMarker), qPrintable(qsl("the notice does not name %1: \"%2\"").arg(mMarker, text)));
+        QVERIFY2(!text.contains(qsl("names the data directory")), qPrintable(qsl("the notice quotes a directory the file does not name: \"%1\"").arg(text)));
+        QVERIFY2(!informativeText.contains(qsl("will not be listed")),
+                 qPrintable(qsl("the notice speaks of portable profiles going unlisted, with no portable directory named: \"%1\"").arg(informativeText)));
+
+        QVERIFY(writeRejectedMarker());
+        QTest::ignoreMessage(QtWarningMsg, QRegularExpression(qsl("which Mudlet cannot use")));
+        mudlet::self()->setupConfig();
+    }
+
     void test_initLeavesTheNoticeToMain()
     {
         mDismissed.clear();

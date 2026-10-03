@@ -2502,8 +2502,13 @@ void mudlet::setupConfig()
         // on screen once the connection dialog is up
         mRejectedPortableMarker = resolution.portableMarker;
         mRejectedPortableRoot = resolution.rejectedRoot;
-        qWarning().nospace().noquote() << "mudlet::setupConfig() WARN - \"" << mRejectedPortableMarker << "\" names the data directory \"" << mRejectedPortableRoot
-                                       << "\", which Mudlet cannot use, so \"" << confPath << "\" is in use instead. Profiles kept where the marker points will not be listed until it is corrected.";
+        if (mRejectedPortableRoot.isEmpty()) {
+            qWarning().nospace().noquote() << "mudlet::setupConfig() WARN - \"" << mRejectedPortableMarker << "\" names no data directory, so \"" << confPath << "\" is in use.";
+        } else {
+            qWarning().nospace().noquote() << "mudlet::setupConfig() WARN - \"" << mRejectedPortableMarker << "\" names the data directory \"" << mRejectedPortableRoot
+                                           << "\", which Mudlet cannot use, so \"" << confPath
+                                           << "\" is in use instead. Profiles kept where the marker points will not be listed until it is corrected.";
+        }
     }
     if (resolution.migrationPending) {
         qInfo().nospace() << "mudlet::setupConfig() INFO: XDG_CONFIG_HOME is set but $XDG_CONFIG_HOME/mudlet holds no profiles, so the existing " << confPath
@@ -2542,12 +2547,20 @@ void mudlet::warnAboutRejectedPortableRoot()
     notice->setTextFormat(Qt::PlainText);
     //: Title of the warning shown at startup when portable.txt names a data directory Mudlet cannot use
     notice->setWindowTitle(tr("Portable data directory unusable"));
-    //: %1 is the full path of the portable.txt file, %2 the data directory it names that Mudlet cannot use
-    notice->setText(tr("%1 names the data directory %2, which Mudlet cannot use.").arg(marker, rejectedRoot));
-    //: %1 is the full path of the directory Mudlet has fallen back to for profiles and settings
-    notice->setInformativeText(tr("Mudlet is using %1 instead, so profiles kept in the portable directory will not be listed. "
-                                  "Correct the file and restart Mudlet to use that directory again.")
-                                       .arg(MudletApp::getMudletPath(enums::mainPath)));
+    if (rejectedRoot.isEmpty()) {
+        //: %1 is the full path of a portable.txt file that is empty, which outside the folder Mudlet is installed in names no data directory
+        notice->setText(tr("%1 is empty, so it names no data directory.").arg(marker));
+        //: %1 is the full path of the directory Mudlet uses for profiles and settings
+        notice->setInformativeText(
+                tr("Mudlet is using %1. To keep profiles in a portable data directory, write its path into the file and restart Mudlet.").arg(MudletApp::getMudletPath(enums::mainPath)));
+    } else {
+        //: %1 is the full path of the portable.txt file, %2 the data directory it names that Mudlet cannot use
+        notice->setText(tr("%1 names the data directory %2, which Mudlet cannot use.").arg(marker, rejectedRoot));
+        //: %1 is the full path of the directory Mudlet has fallen back to for profiles and settings
+        notice->setInformativeText(tr("Mudlet is using %1 instead, so profiles kept in the portable directory will not be listed. "
+                                      "Correct the file and restart Mudlet to use that directory again.")
+                                           .arg(MudletApp::getMudletPath(enums::mainPath)));
+    }
     notice->setIcon(QMessageBox::Warning);
     // Never exec(): that spins a nested event loop inside startup, which an
     // unattended run - mudlet --profile under CI - has nobody to end. open() is
