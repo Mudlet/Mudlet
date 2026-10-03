@@ -185,6 +185,8 @@ second worktree took 1m18s from the cache against 8m41s cold. Configure every tr
 flags, or nothing matches. A tree that rebuilds its precompiled header in place - after a flag
 change - does not cache it, because ccache reads the old `.gch` as an input, so every file built
 on top of it misses for other worktrees; delete `cmake_pch.hxx.gch` before rebuilding to avoid that.
+An object shared this way records the build directory of the worktree that first compiled it, so
+a debugger opens that worktree's sources; build with `CCACHE_HASHDIR=1` in a tree you are debugging.
 Run Mudlet headlessly there with `QT_QPA_PLATFORM=offscreen`.
 
 Both test harnesses work in the remote container (validated: 112/112 ctest, 3202 busted

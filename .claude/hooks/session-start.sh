@@ -154,7 +154,9 @@ fi
 # Let worktrees share ccache hits: base_dir makes paths below it relative, so
 # it is the main checkout's parent - never / or above /opt/qt and /usr, whose
 # include paths would then differ with worktree depth. hash_dir off keeps each
-# worktree's build directory out of the hash of a -g build. Both are global.
+# worktree's build directory out of the hash of a -g build, so a shared object's
+# debug info can name a sibling's; build with CCACHE_HASHDIR=1 to step through
+# one in a debugger. Both settings are global.
 CHECKOUT_ROOT=""
 if [ -n "${CLAUDE_PROJECT_DIR:-}" ]; then
   CHECKOUT_ROOT="$(cd "${CLAUDE_PROJECT_DIR}" && cd "$(git rev-parse --git-common-dir)/.." && pwd)" || CHECKOUT_ROOT=""
