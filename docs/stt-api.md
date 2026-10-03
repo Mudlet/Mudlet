@@ -227,9 +227,9 @@ call was refused, whichever profile holds the microphone: `stt.init()`,
 `stt.stop()`, `stt.cancel()` and `stt.close()` can all be refused while
 another profile is listening, and a fault sent to that profile would describe
 a session that is running perfectly well to a game that cannot act on it.
-`stt.start()` and `stt.toggle()` refused in `error` go to the caller too: the
-fault released the microphone, so routing by owner would reach whichever
-profile is in front. And
+`stt.start()`, `stt.toggle()` and `stt.stop()` refused in `error` go to the
+caller too: the fault released the microphone, so routing by owner would reach
+whichever profile is in front. And
 `sysSTTCapabilitiesChanged` reaches **every open profile**, for the reason given
 with it below: it describes the engine rather than a session.
 

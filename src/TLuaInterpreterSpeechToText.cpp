@@ -643,8 +643,9 @@ int TLuaInterpreter::sttStop(lua_State* L)
         const QString message = qsl("nothing was stopped - speech recognition is in an error state; the sysSTTError event carries the reason");
         // Raised as well as returned: docs/stt-api.md's "refusals speak" covers
         // every refusal the engine caused, and a consumer driving the bridge
-        // from events alone heard nothing at all about this one.
-        reportSpeechRefusal(message);
+        // from events alone heard nothing at all about this one. To the caller,
+        // as the fault took the microphone claim that routing would go by.
+        reportSpeechRefusalTo(getHostFromLua(L), message);
         return warnArgumentValue(L, funcName, message);
     }
 

@@ -1403,6 +1403,40 @@ private slots:
         QCOMPARE(errorsToProfileInFront, qsl("0"));
     }
 
+    // stt.stop() refused in an error state, by the same rule as stt.cancel():
+    // there is no claim left to route by, so the profile in front must not hear it
+    void test_aStopRefusedInAnErrorStateIsReportedToTheCaller()
+    {
+        mudlet::self()->activateProfile(mpSecondHost);
+        StandInRecognizer* pEngine = installStandInEngine();
+        QVERIFY2(pEngine, "the stand-in engine was not installed");
+        pEngine->initialize(QString());
+        pEngine->faultTheEngine();
+
+        for (Host* pHost : {mpFirstHost, mpSecondHost}) {
+            QVERIFY(runLua(pHost,
+                           qsl("_sttFaultErrorsHeard = '0'\n_sttFaultErrorHandler = registerAnonymousEventHandler('sysSTTError', function() _sttFaultErrorsHeard = "
+                               "tostring(tonumber(_sttFaultErrorsHeard) + 1) end)"))
+                            .isNull());
+        }
+
+        QVERIFY(runLua(mpFirstHost, qsl("_sttFaultStopOk, _sttFaultStopWhy = stt.stop()")).isNull());
+        const bool stopSucceeded = luaGlobalBoolean(mpFirstHost, qsl("_sttFaultStopOk"));
+        const QString why = luaGlobalString(mpFirstHost, qsl("_sttFaultStopWhy"));
+        const QString errorsToCaller = luaGlobalString(mpFirstHost, qsl("_sttFaultErrorsHeard"));
+        const QString errorsToProfileInFront = luaGlobalString(mpSecondHost, qsl("_sttFaultErrorsHeard"));
+
+        for (Host* pHost : {mpFirstHost, mpSecondHost}) {
+            runLua(pHost, qsl("killAnonymousEventHandler(_sttFaultErrorHandler)"));
+        }
+        retireStandInEngine();
+
+        QVERIFY2(!stopSucceeded, "a stop in an error state reported success");
+        QVERIFY2(why.contains(qsl("error state")), qPrintable(qsl("the refusal does not say why: \"%1\"").arg(why)));
+        QCOMPARE(errorsToCaller, qsl("1"));
+        QCOMPARE(errorsToProfileInFront, qsl("0"));
+    }
+
     // A fault while listening leaves the model loaded - getInfo() still names
     // it - so a start refused there says to reload it, not that the engine was
     // never initialized, which initialized() being false in Error would suggest.
