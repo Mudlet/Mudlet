@@ -216,8 +216,8 @@ static SpeechRecognizerFactory::Backend onDemandSpeechBackend()
 
 // Which model-based backend's on-disk install paths answer stt.getModelPath(),
 // stt.getLibraryPath() and getInfo().searchPaths: whichever is actually loaded
-// when it is one of these two, the auto-preferred installed backend otherwise,
-// and Vosk's own paths as the last resort - so these platform-tier reads
+// when it is one of these two, sherpa when it is installed, and Vosk's own
+// paths otherwise - so these platform-tier reads
 // always name a real, checkable directory, exactly as they did before sherpa
 // or the built-in macOS backend existed. The macOS backend never answers for
 // these: it installs no library and needs no model, so it has no paths of its
@@ -235,7 +235,9 @@ static SpeechRecognizerFactory::Backend modelBasedBackendForPaths(mudlet* pMudle
     // Not availableBackends(), which loads every engine and latches the answer:
     // a package asking where to install one, before installing it, would then
     // be told by stt.init() that it is not installed. Sherpa leads that list,
-    // so whether it is there is the whole choice.
+    // so whether it is there is the whole choice. Before any probe that is
+    // whether its file is on its search paths, which misses one only the
+    // system loader finds and counts one that will not load.
     return SherpaRecognizer::libraryPresent() ? SpeechRecognizerFactory::Backend::Sherpa : SpeechRecognizerFactory::Backend::Vosk;
 }
 
@@ -932,8 +934,8 @@ int TLuaInterpreter::sttGetInfo(lua_State* L)
 
 // stt.getModelPath()
 // Get the default path where speech models should be stored, for whichever
-// model-based engine is actually loaded (falling back to the auto-preferred
-// installed one, then Vosk, when none is loaded yet).
+// model-based engine is actually loaded (falling back to sherpa when it is
+// installed, then Vosk, when none is loaded yet).
 // Returns the path as a string.
 int TLuaInterpreter::sttGetModelPath(lua_State* L)
 {
