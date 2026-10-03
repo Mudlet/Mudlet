@@ -1230,6 +1230,26 @@ void TCommandLine::handleAutoCompletion()
 
 void TCommandLine::historyMove(MoveDirection direction)
 {
+    // Neither arrow does anything while this line is masked. Two distinct hazards
+    // meet here, and guarding only the banking branch below would leave the second
+    // one live:
+    //  - banking writes the line into mHistoryList, and from there into the
+    //    profile's plaintext command_history_main, where Up pages a password the
+    //    player could never see back out in clear text;
+    //  - the walk further down replaces the line with a history entry and
+    //    announces that entry, so a screen reader reads it aloud and Enter sends a
+    //    previous command to the game as the password. Masking starts by clearing
+    //    the line, which is exactly the state the walk takes, so one press of Up
+    //    reaches it.
+    // Tested per widget rather than through Host::isRemoteEchoingActive(), which is
+    // profile-wide: only the main command line is ever masked (see
+    // setEchoSuppression), and a package's own command line holds no password and
+    // must keep working. mIsEchoSuppressed also cannot be set while the player has
+    // masking turned off, so it subsumes that preference rather than ignoring it.
+    if (mIsEchoSuppressed && mType == MainCommandLine) {
+        return;
+    }
+
     // DOWN at position 0 with text: save to history and clear input
     if (direction == MOVE_DOWN && mHistoryBuffer == 0 && !toPlainText().isEmpty()) {
         mHistoryList.removeAll(toPlainText());
