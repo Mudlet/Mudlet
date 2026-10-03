@@ -1871,6 +1871,27 @@ describe("Tests Geyser.Label right click menus", function()
       assert.are.same({"First", "Fourth", "Second", "Third"}, menuOrder())
     end)
 
+    it("styles the item it adds and leaves the ones already there alone", function()
+      local styled = {}
+      local original = setLabelStyleSheet
+      setLabelStyleSheet = function(name, ...)
+        styled[#styled + 1] = name
+        return original(name, ...)
+      end
+      local ok, err = pcall(label.addMenuLabel, label, "Fourth")
+      setLabelStyleSheet = original
+      assert.is_true(ok, err)
+      assert.are.same({menuItem("Fourth").name}, styled)
+      assert.are.equal(getLabelStyleSheet(menuItem("First").name), getLabelStyleSheet(menuItem("Fourth").name))
+    end)
+
+    it("keeps a sheet an item was given of its own when another is added", function()
+      menuItem("Second"):setStyleSheet("QLabel{ color: red; }")
+      label:addMenuLabel("Fourth")
+      assert.are.equal("QLabel{ color: red; }", getLabelStyleSheet(menuItem("Second").name))
+      assert.are_not.equal("QLabel{ color: red; }", getLabelStyleSheet(menuItem("Fourth").name))
+    end)
+
     it("adds an item under a parent that was declared with a submenu", function()
       -- a parent is declared by following its name with a table of its
       -- children, and an empty one is how a submenu that is filled in later is
