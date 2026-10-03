@@ -666,7 +666,7 @@ describe("Tests MXP handling", function()
       local name = "mxpSpecScriptDock"
       finally(function()
         closeFrame(name)
-        closeUserWindow(name)
+        deleteMiniConsole(name)
       end)
       openUserWindow(name, false)
       echo(name, "mxpSpecScriptText\n")
