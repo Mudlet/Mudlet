@@ -25,9 +25,10 @@
 
 #include "ui_room_properties.h"
 
+#include <QColor>
 #include <QListWidget>
 
-#include "TRoom.h"
+#include <optional>
 
 class Host;
 
@@ -38,30 +39,32 @@ class dlgRoomProperties : public QDialog, public Ui::room_properties
 public:
     Q_DISABLE_COPY(dlgRoomProperties)
     explicit dlgRoomProperties(Host*, QWidget* parent = nullptr);
-    void init(
-        QHash<QString, int> usedNames,
-        QHash<int, int>& pColors,
-        QHash<QString, int>& pSymbols,
-        QHash<int, int>& pWeights,
-        QHash<bool, int> lockStatus,
-        int hiddenRoomCount,
-        QSet<TRoom*>& pRooms);
+    void
+    init(QHash<QString, int> usedNames, QHash<int, int>& pColors, QHash<QString, int>& pSymbols, QHash<int, int>& pWeights, QHash<bool, int> lockStatus, int hiddenRoomCount, const QSet<int>& roomIds);
     void accept() override;
     void reject() override;
 
 signals:
-    void signal_save_symbol(
-        bool changeName, QString newName,
-        bool mChangeRoomColor, int mRoomColorNumber,
-        bool changeSymbol, QString newSymbol,
-        bool changeSymbolColor, QColor newSymbolColor,
-        bool changeWeight, int newWeight,
-        bool changeLockStatus, std::optional<bool> newLockStatus,
-        bool changeHiddenStatus, std::optional<bool> newHiddenStatus,
-        bool changeBorderColor, QColor newBorderColor,
-        bool changeBorderThickness, int newBorderThickness,
-        QSet<TRoom*> mpRooms);
-    void signal_preview_border(QSet<TRoom*> rooms);
+    void signal_save_symbol(bool changeName,
+                            QString newName,
+                            bool mChangeRoomColor,
+                            int mRoomColorNumber,
+                            bool changeSymbol,
+                            QString newSymbol,
+                            bool changeSymbolColor,
+                            QColor newSymbolColor,
+                            bool changeWeight,
+                            int newWeight,
+                            bool changeLockStatus,
+                            std::optional<bool> newLockStatus,
+                            bool changeHiddenStatus,
+                            std::optional<bool> newHiddenStatus,
+                            bool changeBorderColor,
+                            QColor newBorderColor,
+                            bool changeBorderThickness,
+                            int newBorderThickness,
+                            QSet<int> roomIds);
+    void signal_preview_border(QSet<int> roomIds);
 
 private:
     QColor backgroundBasedColor(QColor);
@@ -81,7 +84,7 @@ private:
     void restoreOriginalBorders();
 
     Host* mpHost = nullptr;
-    QSet<TRoom*> mpRooms;
+    QSet<int> mRoomIds;
     QHash<QString, int> mpSymbols;
     QHash<int, int> mpWeights;
     QColor selectedSymbolColor;
@@ -93,8 +96,8 @@ private:
     int mBorderThickness = 0;
     bool mBorderColorWasChanged = false;
     bool mBorderThicknessWasChanged = false;
-    QHash<TRoom*, QColor> mOriginalBorderColors;
-    QHash<TRoom*, int> mOriginalBorderThicknesses;
+    QHash<int, QColor> mOriginalBorderColors;
+    QHash<int, int> mOriginalBorderThicknesses;
     QString multipleValuesPlaceholder = tr("(Multiple values...)");
 
 private slots:

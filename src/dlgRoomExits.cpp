@@ -494,7 +494,11 @@ void dlgRoomExits::slot_addSpecialExit()
 void dlgRoomExits::save()
 {
     mpHost->mpMap->mMapGraphNeedsUpdate = true;
+    // The dialog is not modal, so a script may have deleted the room, or
+    // replaced the whole map, since init() looked it up
+    pR = mpHost->mpMap->mpRoomDB->getRoom(mRoomID);
     if (!pR) {
+        close();
         return;
     }
 
