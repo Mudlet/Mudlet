@@ -21,7 +21,7 @@
 #include "THyperlinkVisibilityManager.h"
 #include "TBuffer.h"
 #include "TConsoleModel.h"
-#include "mudlet.h"
+#include "TAppFrontend.h"
 
 #include <QAccessible>
 #include <QDateTime>
@@ -730,17 +730,17 @@ void THyperlinkVisibilityManager::queueHiddenAnnouncement()
 
 void THyperlinkVisibilityManager::slot_announceHiddenLinks()
 {
-    if (mPendingHiddenCount <= 0 || !QAccessible::isActive() || !mudlet::self()) {
+    if (mPendingHiddenCount <= 0 || !QAccessible::isActive() || !TAppFrontend::instance()) {
         mPendingHiddenCount = 0;
         return;
     }
 
     if (mPendingHiddenCount == 1) {
         //: Screen-reader announcement when an OSC 8 hyperlink is hidden by the visibility manager
-        mudlet::self()->announce(tr("Link hidden"), QString(), true);
+        TAppFrontend::instance()->announce(tr("Link hidden"), QString(), true);
     } else {
         //: Screen-reader announcement when multiple OSC 8 hyperlinks are hidden at once; %n is the count
-        mudlet::self()->announce(tr("%n link(s) hidden", nullptr, mPendingHiddenCount), QString(), true);
+        TAppFrontend::instance()->announce(tr("%n link(s) hidden", nullptr, mPendingHiddenCount), QString(), true);
     }
     mPendingHiddenCount = 0;
 }
@@ -767,9 +767,9 @@ void THyperlinkVisibilityManager::performReveal(TrackedHyperlink& link)
             buffer.restoreLinkIndices(link.lineNumber, link.startColumn, link.length, link.linkId);
             link.isConcealed = false;
 
-            if (QAccessible::isActive() && mudlet::self()) {
+            if (QAccessible::isActive() && TAppFrontend::instance()) {
                 //: Screen-reader announcement when a previously hidden OSC 8 link is revealed; %1 is the original link text
-                mudlet::self()->announce(tr("Link revealed: %1").arg(link.originalText), QString(), true);
+                TAppFrontend::instance()->announce(tr("Link revealed: %1").arg(link.originalText), QString(), true);
             }
         }
     }

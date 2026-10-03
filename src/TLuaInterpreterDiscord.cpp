@@ -43,7 +43,7 @@
 #include "TTimer.h"
 #include "discord.h"
 #include "mapInfoContributorManager.h"
-#include "mudlet.h"
+#include "TAppFrontend.h"
 
 #include <limits>
 #include <math.h>
@@ -331,14 +331,14 @@ int TLuaInterpreter::setDiscordGameUrl(lua_State* L)
     // what it displays on the button. It is not part of rich presence, so it
     // does not have the API enabled check that those Discord functions need
     // in order to respect privacy.
-    mudlet* pMudlet = mudlet::self();
+    TAppFrontend* pApp = TAppFrontend::instance();
     auto& host = getHostFromLua(L);
     const int args = lua_gettop(L);
 
     if (!args) { // no args, blank the invite URL and game name
         host.setDiscordInviteURL(QString());
         host.setDiscordGameName(QString());
-        pMudlet->updateDiscordNamedIcon();
+        pApp->updateDiscordNamedIcon();
         lua_pushboolean(L, true);
         return 1;
     }
@@ -360,7 +360,7 @@ int TLuaInterpreter::setDiscordGameUrl(lua_State* L)
     } else {
         host.setDiscordGameName(QString());
     }
-    pMudlet->updateDiscordNamedIcon();
+    pApp->updateDiscordNamedIcon();
     lua_pushboolean(L, true);
     return 1;
 }

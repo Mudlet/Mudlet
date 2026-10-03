@@ -185,6 +185,7 @@ public:
 /*static*/ void mudlet::start()
 {
     smpSelf = new mudlet;
+    TAppFrontend::setInstance(smpSelf.data());
 }
 
 /*static*/ mudlet* mudlet::self()
@@ -4711,6 +4712,13 @@ Host* mudlet::getActiveHost()
     return nullptr;
 }
 
+void mudlet::setCompactInputLineChecked(Host* pHost, bool checked)
+{
+    if (mpCurrentActiveHost == pHost) {
+        dactionInputLine->setChecked(checked);
+    }
+}
+
 // Received when the OS/DE/WM tells Mudlet to close (or we force the close
 // ourselves or the user hits the close application menu option or action on
 // the "Connect" buttion):
@@ -7065,6 +7073,7 @@ mudlet::~mudlet()
 
     saveDetachedWindowsGeometry();
 
+    TAppFrontend::setInstance(nullptr);
     mudlet::smpSelf = nullptr;
 }
 

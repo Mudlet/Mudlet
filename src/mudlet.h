@@ -33,6 +33,7 @@
 #include "MudletReplay.h"
 #include "ShortcutsManager.h"
 #include "SpeechRecognizerFactory.h"
+#include "TAppFrontend.h"
 #include "utils.h"
 #include <memory>
 
@@ -104,7 +105,7 @@ class TTabBar;
 class TToolBar;
 class TUiTour;
 
-class mudlet : public QMainWindow, public Ui::main_window
+class mudlet : public QMainWindow, public Ui::main_window, public TAppFrontend
 {
     Q_OBJECT
 
@@ -153,7 +154,7 @@ public:
     void adjustMenuBarVisibility();
     void adjustToolBarVisibility();
     void alertUser(int milliseconds);
-    void announce(const QString& text, const QString& processing = QString(), bool isPlain = false);
+    void announce(const QString& text, const QString& processing = QString(), bool isPlain = false) override;
     void attachDebugArea(const QString&);
     void checkUpdatesOnStart();
     void commitLayoutUpdates(bool flush = false);
@@ -168,7 +169,7 @@ public:
     void updateMainWindowTitle();
     void forceClose();
     void armForceClose();
-    Host* getActiveHost();
+    Host* getActiveHost() override;
     QList<QString> getAvailableTranslationCodes() const { return mTranslationsMap.keys(); }
     const QMap<QByteArray, QString>& getEncodingNamesMap() const { return mEncodingNameMap; }
     ShortcutsManager* shortcutsManager() const { return mpShortcutsManager.data(); }
@@ -282,6 +283,8 @@ public:
     void setToolBarVisibility(enums::controlsVisibility);
     void showChangelogIfUpdated();
     void slot_showConnectionDialog();
+    void showConnectionDialog() override { slot_showConnectionDialog(); }
+    void setCompactInputLineChecked(Host* pHost, bool checked) override;
     bool invertMapZoom() const { return mInvertMapZoom; }
     bool showTabConnectionIndicators() const { return mShowTabConnectionIndicators; }
     // Addon toolbar button management
@@ -329,11 +332,11 @@ public:
 
     // Brings up the preferences dialog and selects the tab whos objectName is
     // supplied, for the given Host - or the active one if none is given:
-    void showOptionsDialog(const QString&, Host* = nullptr);
+    void showOptionsDialog(const QString&, Host* = nullptr) override;
     void startAutoLogin(const QStringList&, bool offline = false);
     void setStorePasswordsSecurely(bool storeSecurely);
     enums::controlsVisibility toolBarVisibility() const { return mToolbarVisibility; }
-    void updateDiscordNamedIcon();
+    void updateDiscordNamedIcon() override;
     void updateMultiViewControls();
     void writeSettings();
     bool profileExists(const QString& profileName);
@@ -353,7 +356,7 @@ public:
     static bool evaluateExperiencedPlayer(const QSettings& settings, const QString& profilesPath, const QDateTime& now);
 
     // Telnet URI handling
-    void handleTelnetUri(const QString& uri);
+    void handleTelnetUri(const QString& uri) override;
 
     enums::Appearance mAppearance = enums::Appearance::systemSetting;
     // 1 (of 2) needed to work around a (Windows/MacOs specific QStyleFactory)

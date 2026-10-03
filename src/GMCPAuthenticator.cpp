@@ -27,7 +27,7 @@
 #include "SecureStringUtils.h"
 #include "UntrustedText.h"
 #include "ctelnet.h"
-#include "mudlet.h"
+#include "TAppFrontend.h"
 #include <QAccessible>
 #include <QCryptographicHash>
 #include <QDebug>
@@ -858,9 +858,8 @@ void GMCPAuthenticator::announceBrowserHandoff(const QString& provider)
 
     // The browser handoff happens with no focused control to announce it, so push an explicit
     // announcement to assistive technology (VoiceOver/NVDA/Orca) instead of relying on the console.
-    if (auto* mainWindow = mudlet::self()) {
-        QAccessibleAnnouncementEvent announcement(mainWindow, message);
-        QAccessible::updateAccessibility(&announcement);
+    if (auto* app = TAppFrontend::instance()) {
+        app->announce(message, QString(), true);
     }
 }
 
