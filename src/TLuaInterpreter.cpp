@@ -5094,6 +5094,10 @@ bool TLuaInterpreter::call_luafunction(void* pT, const QString& itemName)
     lua_gettable(L, LUA_REGISTRYINDEX);
     if (lua_isfunction(L, -1)) {
         setMatches(L);
+        // A multiline trigger's Lua function gets multimatches just as its script would
+        if (!mMultiCaptureGroupList.empty()) {
+            setMatches(L, MultimatchesSource::Captures);
+        }
         const int error = lua_pcall(L, 0, LUA_MULTRET, 0);
         if (error) {
             std::string e = "";
@@ -5172,6 +5176,9 @@ std::pair<bool, bool> TLuaInterpreter::callLuaFunctionReturnBool(void* pT, const
 
     if (lua_isfunction(L, -1)) {
         setMatches(L);
+        if (!mMultiCaptureGroupList.empty()) {
+            setMatches(L, MultimatchesSource::Captures);
+        }
         const int error = lua_pcall(L, 0, LUA_MULTRET, 0);
         if (error) {
             std::string e = "";
