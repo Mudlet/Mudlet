@@ -4743,6 +4743,41 @@ you can use it but there could be issues with aligning columns of text</string>
             </property>
            </widget>
           </item>
+          <item row="7" column="0">
+           <widget class="QLabel" name="label_menuBarAltKeyNavigation">
+            <property name="text">
+             <string>Pressing Alt on its own moves focus to the menu bar:</string>
+            </property>
+            <property name="buddy">
+             <cstring>comboBox_menuBarAltKeyNavigation</cstring>
+            </property>
+           </widget>
+          </item>
+          <item row="7" column="1">
+           <widget class="QComboBox" name="comboBox_menuBarAltKeyNavigation">
+            <property name="toolTip">
+             <string>&lt;p&gt;Screen reader users reach Mudlet's menus by pressing and releasing Alt. Mudlet turns this on when the system reports a screen reader. Choose &lt;b&gt;always&lt;/b&gt; if yours is not detected, or &lt;b&gt;never&lt;/b&gt; if a mistimed Alt keybinding keeps moving focus away from the command line.&lt;/p&gt;</string>
+            </property>
+            <property name="accessibleDescription">
+             <string>Screen reader users reach Mudlet's menus by pressing and releasing Alt. Mudlet turns this on when the system reports a screen reader. Choose always if yours is not detected, or never if a mistimed Alt keybinding keeps moving focus away from the command line.</string>
+            </property>
+            <item>
+             <property name="text">
+              <string>when a screen reader is running</string>
+             </property>
+            </item>
+            <item>
+             <property name="text">
+              <string>always</string>
+             </property>
+            </item>
+            <item>
+             <property name="text">
+              <string>never</string>
+             </property>
+            </item>
+           </widget>
+          </item>
          </layout>
         </widget>
        </item>
@@ -5361,6 +5396,7 @@ you can use it but there could be issues with aligning columns of text</string>
   <tabstop>checkBox_enableClosedCaption</tabstop>
   <tabstop>comboBox_blankLinesBehaviour</tabstop>
   <tabstop>comboBox_caretModeKey</tabstop>
+  <tabstop>comboBox_menuBarAltKeyNavigation</tabstop>
   <tabstop>checkBox_f3SearchEnabled</tabstop>
   <tabstop>checkBox_enableBlinkText</tabstop>
   <tabstop>mFORCE_MCCP_OFF</tabstop>

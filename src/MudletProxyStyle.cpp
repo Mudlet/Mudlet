@@ -122,9 +122,17 @@ void MudletProxyStyle::slot_a11yStatusChanged(const QString& interfaceName, cons
 int MudletProxyStyle::styleHint(StyleHint styleHint, const QStyleOption* opt, const QWidget* widget, QStyleHintReturn* returnData) const
 {
     if (styleHint == QStyle::SH_MenuBar_AltKeyNavigation) {
-        // A lone Alt tap focuses the menu bar only for screen reader users
-        // (Mudlet/Mudlet#6145). Everyone else keeps focus on the command line
-        // when an Alt-based keybinding is mistimed (Mudlet/Mudlet#4280)
+        // By default a lone Alt tap focuses the menu bar only for screen reader
+        // users (Mudlet/Mudlet#6145). Everyone else keeps focus on the command
+        // line when an Alt-based keybinding is mistimed (Mudlet/Mudlet#4280)
+        switch (smAltKeyNavigation) {
+        case enums::MenuBarAltKeyNavigation::Always:
+            return 1;
+        case enums::MenuBarAltKeyNavigation::Never:
+            return 0;
+        case enums::MenuBarAltKeyNavigation::WhenScreenReaderRunning:
+            break;
+        }
         return mScreenReaderRunning ? 1 : 0;
     }
     if (styleHint == QStyle::SH_ItemView_ActivateItemOnSingleClick) {

@@ -4880,6 +4880,9 @@ void mudlet::readEarlySettings(const QSettings& settings)
         mAppearance = static_cast<enums::Appearance>(appearance);
     }
 
+    MudletProxyStyle::setAltKeyNavigation(
+            static_cast<enums::MenuBarAltKeyNavigation>(settings.value(qsl("menuBarAltKeyNavigation"), static_cast<int>(enums::MenuBarAltKeyNavigation::WhenScreenReaderRunning)).toInt()));
+
     const QString interfaceLanguage = settings.value("interfaceLanguage", autodetectPreferredLanguage()).toString();
     MudletApp::setInterfaceLanguage(interfaceLanguage);
     mUserLocale = QLocale(interfaceLanguage);
@@ -5172,6 +5175,7 @@ void mudlet::writeSettings()
     // 'darkTheme' value was only used during PTBs, remove it to reduce confusion in the future
     settings.remove("darkTheme");
     settings.setValue("appearance", mAppearance);
+    settings.setValue(qsl("menuBarAltKeyNavigation"), static_cast<int>(MudletProxyStyle::altKeyNavigation()));
 
     settings.setValue("minLengthForSpellCheck", mMinLengthForSpellCheck);
     settings.setValue(qsl("enableMultiViewMode"), mMultiView);
