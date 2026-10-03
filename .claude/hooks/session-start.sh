@@ -151,6 +151,24 @@ if [ -n "${CLAUDE_ENV_FILE:-}" ]; then
   } >> "${CLAUDE_ENV_FILE}"
 fi
 
+# Let worktrees share ccache hits: base_dir makes paths below it relative, so
+# it is the main checkout's parent - never / or above /opt/qt and /usr, whose
+# include paths would then differ with worktree depth. hash_dir off keeps each
+# worktree's build directory out of the hash of a -g build. Both are global.
+CHECKOUT_ROOT=""
+if [ -n "${CLAUDE_PROJECT_DIR:-}" ]; then
+  CHECKOUT_ROOT="$(cd "${CLAUDE_PROJECT_DIR}" && cd "$(git rev-parse --git-common-dir)/.." && pwd)" || CHECKOUT_ROOT=""
+fi
+CCACHE_BASE_DIR=""
+if [ -n "${CHECKOUT_ROOT}" ]; then
+  CCACHE_BASE_DIR="$(dirname "${CHECKOUT_ROOT}")"
+fi
+if command -v ccache >/dev/null 2>&1 && [ -n "${CCACHE_BASE_DIR}" ] && [ "${CCACHE_BASE_DIR}" != "/" ]; then
+  ccache --set-config=base_dir="${CCACHE_BASE_DIR}" \
+    && ccache --set-config=hash_dir=false \
+    || echo "WARNING: could not configure ccache for sharing between worktrees"
+fi
+
 # PR-review tooling for the agent. Installed at user scope, so it lands in
 # the cached container state like everything else. Non-fatal: a marketplace
 # outage must not block the session.
