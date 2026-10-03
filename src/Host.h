@@ -1285,6 +1285,8 @@ private:
     // this length it is dropped, so one outsized line can't hold its allocation for the rest of the
     // session; no game line comes close to it.
     static constexpr qsizetype scmMaxRetainedHaystack = 8192;
+    // The unzip blocks the UI, but below this archive size it finishes too fast for the unpacking dialog to earn its cost
+    static constexpr qint64 scmArchiveSizeWorthAnUnpackingDialog = 25_MB;
     QString mTriggerHaystack;
     QString mLogin;
     QString mPass;
