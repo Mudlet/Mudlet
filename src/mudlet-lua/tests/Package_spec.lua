@@ -2008,6 +2008,26 @@ describe("Tests installing an archive whose config.lua will not run", function()
     assert.equals(1, exists(name .. " alias", "alias"), "the archive's contents were not installed")
   end)
 
+  -- The manifest is run on the main thread, so one that never finishes has to
+  -- be stopped rather than waited for
+  it("says the same of a config.lua that never finishes", function()
+    local name = "mudlet-spec-loopingconfig"
+    defer(function() removeFixturePackage(name) end)
+    defer(function() removeFixturePackage("mudlet-spec-loopingconfig-renamed") end)
+
+    local mark = getLastLineNumber("main")
+    installUntilConfirmed(installPackage, fixtureDirectory .. "/" .. name .. ".mpackage",
+                          function() return packageInstalled(name) end, "the fixture whose config.lua never finishes")
+    local text = textFrom(mark)
+
+    assert.is_true(containsWrapped(text, 'The config.lua of "' .. name .. '" could not be read'), text)
+    assert.is_true(containsWrapped(text, "it ran for too long and was stopped"), text)
+    assert.is_false(packageInstalled("mudlet-spec-loopingconfig-renamed"),
+                    "the package installed under the name of a manifest that never finished")
+    assert.same({}, getPackageInfo(name))
+    assert.equals(1, exists(name .. " alias", "alias"), "the archive's contents were not installed")
+  end)
+
   -- The same archive installed as a module is reinstalled on every profile save
   -- and on every reloadModule(), so saying it there is the same sentence over
   -- and over for a manifest the user was told about once already, on the

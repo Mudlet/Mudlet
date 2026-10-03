@@ -3899,6 +3899,17 @@ QString Host::getPackageConfig(const QString& luaConfig, bool isModule, QString*
     int error = luaL_loadstring(L, strings.join("\n").toUtf8().constData());
 
     if (!error) {
+        // This runs on the main thread, so a manifest that never ends would hang Mudlet for good. A real
+        // one is a few assignments, far inside this budget.
+        lua_sethook(
+                L,
+                [](lua_State* L, lua_Debug*) {
+                    // From then on every instruction raises, so a pcall() in the manifest cannot swallow it
+                    lua_sethook(L, lua_gethook(L), LUA_MASKCOUNT, 1);
+                    luaL_error(L, "it ran for too long and was stopped");
+                },
+                LUA_MASKCOUNT,
+                10'000'000);
         error = lua_pcall(L, 0, 0, 0);
     }
     if (!error) {
