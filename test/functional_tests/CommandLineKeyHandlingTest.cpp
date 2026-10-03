@@ -731,6 +731,14 @@ private slots:
 
         QVERIFY(runLua(qsl("selectCmdLineText('%1')").arg(mLineName)));
         QCOMPARE(selection(pCommandLine), qsl("printedX appendedY"));
+
+        QVERIFY(runLua(qsl("printCmdLine('%1', 'row one\\nrow two')").arg(mLineName)));
+        type(pCommandLine, qsl("X"));
+        QCOMPARE(pCommandLine->toPlainText(), qsl("row one\nrow twoX"));
+
+        QVERIFY(runLua(qsl("appendCmdLine('%1', '\\nrow three')").arg(mLineName)));
+        type(pCommandLine, qsl("Y"));
+        QCOMPARE(pCommandLine->toPlainText(), qsl("row one\nrow twoX\nrow threeY"));
     }
 
     // The main command line grows to show every row of what Lua puts into it,
