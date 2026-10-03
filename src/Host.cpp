@@ -1477,10 +1477,6 @@ void Host::updateConsolesFont()
     raiseEvent(event);
 
     emit signal_consoleFontChanged(mpConsole->displayFont());
-
-    if (mudlet::self()->smpDebugArea && mudlet::self()->smpDebugConsole) {
-        mudlet::self()->smpDebugConsole->setFont(mpConsole->displayFont());
-    }
 }
 
 // a little message to make the player feel special for helping us find bugs
@@ -5690,9 +5686,6 @@ bool Host::setProfileStyleSheet(const QString& styleSheet)
     mProfileStyleSheet = styleSheet;
     mpConsole->setProfileStyleSheet(styleSheet);
     emit signal_profileStyleSheetChanged(styleSheet);
-    if (this == mudlet::self()->mpCurrentActiveHost) {
-        mudlet::self()->setGlobalStyleSheet(styleSheet);
-    }
     return true;
 }
 
@@ -6221,40 +6214,7 @@ void Host::setFocusOnHostActiveCommandLine()
             return;
         }
 
-        auto pCommandLine = activeCommandLine();
-        TCommandLine* targetCommandLine = nullptr;
-
-        if (pCommandLine) {
-            pCommandLine->activateWindow();
-            pCommandLine->console()->show();
-            pCommandLine->console()->raise();
-            pCommandLine->console()->repaint();
-            targetCommandLine = pCommandLine;
-        } else {
-            targetCommandLine = mpConsole->raiseCommandLine();
-        }
-
-        if (targetCommandLine) {
-            targetCommandLine->setFocus(Qt::OtherFocusReason);
-
-            // For Steam Deck and other environments where focus might be unreliable,
-            // add additional focus attempts with slight delays. The command line
-            // can be destroyed before they fire - a user window closing, or the
-            // view going down while the Host stays - and a raw pointer would then
-            // be read off freed memory, so they hold it by QPointer
-            const QPointer<TCommandLine> pTarget(targetCommandLine);
-            QTimer::singleShot(10ms, this, [pTarget]() {
-                if (pTarget && !pTarget->hasFocus()) {
-                    pTarget->setFocus(Qt::OtherFocusReason);
-                }
-            });
-
-            QTimer::singleShot(50ms, this, [pTarget]() {
-                if (pTarget && !pTarget->hasFocus()) {
-                    pTarget->setFocus(Qt::OtherFocusReason);
-                }
-            });
-        }
+        mpConsole->focusCommandLine(activeCommandLine());
 
         mFocusTimerRunning = false;
     };

@@ -68,6 +68,8 @@
 #include <QPainter>
 #include <QVideoWidget>
 
+#include <chrono>
+
 namespace {
 // See TWindowRegistry::SubConsoleKind for what Other is for.
 TWindowRegistry::SubConsoleKind subConsoleKindOf(const TConsole::ConsoleType type)
@@ -1531,13 +1533,40 @@ void TMainConsole::setCommandLineText(const QString& text)
     mpCommandLine->selectAll();
 }
 
-TCommandLine* TMainConsole::raiseCommandLine()
+void TMainConsole::focusCommandLine(TCommandLine* pCommandLine)
 {
-    mpCommandLine->activateWindow();
-    show();
-    raise();
-    repaint();
-    return mpCommandLine;
+    using namespace std::chrono_literals;
+
+    TCommandLine* targetCommandLine = pCommandLine ? pCommandLine : mpCommandLine.data();
+    if (!targetCommandLine) {
+        return;
+    }
+
+    targetCommandLine->activateWindow();
+    TConsole* pConsole = pCommandLine ? pCommandLine->console() : this;
+    pConsole->show();
+    pConsole->raise();
+    pConsole->repaint();
+    targetCommandLine->setFocus(Qt::OtherFocusReason);
+
+    // For Steam Deck and other environments where focus might be unreliable,
+    // add additional focus attempts with slight delays. The command line
+    // can be destroyed before they fire - a user window closing, or the
+    // view going down while the Host stays - and a raw pointer would then
+    // be read off freed memory, so they hold it by QPointer. They are timed
+    // against the Host so that they end with the profile, not with this console.
+    const QPointer<TCommandLine> pTarget(targetCommandLine);
+    QTimer::singleShot(10ms, mpHost, [pTarget]() {
+        if (pTarget && !pTarget->hasFocus()) {
+            pTarget->setFocus(Qt::OtherFocusReason);
+        }
+    });
+
+    QTimer::singleShot(50ms, mpHost, [pTarget]() {
+        if (pTarget && !pTarget->hasFocus()) {
+            pTarget->setFocus(Qt::OtherFocusReason);
+        }
+    });
 }
 
 TCommandLine* TMainConsole::commandLineNamed(const QString& name) const

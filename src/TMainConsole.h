@@ -188,7 +188,8 @@ public:
     void setCommandLinePlaceholderText(const QString& text);
     void updateCommandLineSpellCheck(bool enabled);
     void setCommandLineText(const QString& text);
-    TCommandLine* raiseCommandLine();
+    // Raises and focuses pCommandLine, or this console's own command line when it is null.
+    void focusCommandLine(TCommandLine* pCommandLine);
     // The command line operations the core forwards to this view by name, never
     // by widget. An empty name or "main" is this console's own command line, any
     // other one made by createCommandLine() or a mini console's; each reports

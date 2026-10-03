@@ -52,6 +52,7 @@
 #include <QDialog>
 #include <QDockWidget>
 #include <QLabel>
+#include <QMenuBar>
 #include <QTemporaryDir>
 
 #include <zip.h>
@@ -483,6 +484,49 @@ private slots:
         QCOMPARE(preferences->styleSheet(), styleSheet);
         QCOMPARE(notepad->styleSheet(), styleSheet);
         QCOMPARE(note->styleSheet(), styleSheet);
+    }
+
+    // The main window's own bars take the style sheet of the profile on show,
+    // which mudlet hears over the same signal.
+    void test_profileStyleSheetReachesTheMainWindow()
+    {
+        startProfile(mHostname, mLocalhost, mPort);
+        auto host = mudlet::self()->getActiveHost();
+        QVERIFY2(host, "No active host available for the test.");
+
+        const QString styleSheet = qsl("QMenuBar { color: #123456; }");
+        QVERIFY2(mudlet::self()->menuBar()->styleSheet() != styleSheet, "SETUP: the menu bar already carries the style sheet, so the assertion below cannot fail.");
+
+        QVERIFY(host->setProfileStyleSheet(styleSheet));
+
+        QCOMPARE(mudlet::self()->menuBar()->styleSheet(), styleSheet);
+    }
+
+    // The central debug console follows the display font of a profile that
+    // changes it, over signal_consoleFontChanged which mudlet connects.
+    void test_consoleFontReachesTheCentralDebugConsole()
+    {
+        startProfile(mHostname, mLocalhost, mPort);
+        auto host = mudlet::self()->getActiveHost();
+        QVERIFY2(host, "No active host available for the test.");
+        mudlet::self()->attachDebugArea(host->getName());
+        // Only closing the profile or the application takes the parentless debug area
+        // down, and cleanup() does neither, so it would outlive this Host into the next method.
+        const auto tidyUp = qScopeGuard([]() {
+            delete mudlet::smpDebugArea.data();
+        });
+        const QPointer<TConsole> debugConsole = mudlet::smpDebugConsole;
+        QVERIFY2(debugConsole, "The central debug console was not created.");
+
+        QFont font = host->getDisplayFont();
+        QVERIFY2(font.pointSize() > 0, "The display font is not sized in points, so a point size cannot be compared.");
+        font.setPointSize(font.pointSize() + 3);
+        QVERIFY2(debugConsole->font().pointSize() != font.pointSize(), "SETUP: the debug console already uses the new size, so the assertion below cannot fail.");
+
+        const auto [applied, error] = host->setDisplayFont(font);
+        QVERIFY2(applied, qPrintable(error));
+
+        QCOMPARE(debugConsole->font().pointSize(), font.pointSize());
     }
 
     // The same seam for the display font: Host::updateConsolesFont() raises

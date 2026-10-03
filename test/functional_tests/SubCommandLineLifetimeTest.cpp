@@ -341,6 +341,72 @@ private slots:
         runDeferredDeletes();
     }
 
+    // Host::setFocusOnHostActiveCommandLine() hands the focus back to the command
+    // line the player used last, even when another one holds it now
+    void test_hostFocusGoesToTheLastUsedCommandLine()
+    {
+        TMainConsole* console = mpHost->mpConsole;
+        const QString name = qsl("lastUsedCmdLine");
+
+        auto [created, createMsg] = console->createCommandLine(QString(), name, 0, 0, 100, 30);
+        QVERIFY2(created, qPrintable(createMsg));
+        TCommandLine* subCommandLine = console->subCommandLineWidget(name);
+        QVERIFY(subCommandLine);
+
+        // The window stays up for the next test to take down: focus given after
+        // a hide() and a fresh show() never lands under the offscreen platform.
+        // The wait outlasts Host's delayed focus retries.
+        const auto tidyUp = qScopeGuard([this, console, name]() {
+            QTest::qWait(100ms);
+            console->deleteCommandLine(name);
+            runDeferredDeletes();
+        });
+
+        mudlet::self()->show();
+        mudlet::self()->activateWindow();
+        QVERIFY2(QTest::qWaitForWindowActive(mudlet::self()), "the main window never became active");
+        console->mpCommandLine->setFocus(Qt::OtherFocusReason);
+        QTRY_VERIFY2(console->mpCommandLine->hasFocus(), "SETUP: the main command line never took the keyboard focus");
+        mpHost->recordActiveCommandLine(subCommandLine);
+
+        mpHost->setFocusOnHostActiveCommandLine();
+
+        QTRY_VERIFY2(subCommandLine->hasFocus(), "the focus did not go to the command line used last");
+    }
+
+    // With no command line on record the main console's own one takes the focus
+    void test_hostFocusFallsBackToTheMainCommandLine()
+    {
+        TMainConsole* console = mpHost->mpConsole;
+        const QString name = qsl("focusedAwayCmdLine");
+
+        auto [created, createMsg] = console->createCommandLine(QString(), name, 0, 0, 100, 30);
+        QVERIFY2(created, qPrintable(createMsg));
+        TCommandLine* subCommandLine = console->subCommandLineWidget(name);
+        QVERIFY(subCommandLine);
+
+        // The window stays up for the next test to take down: focus given after
+        // a hide() and a fresh show() never lands under the offscreen platform.
+        // The wait outlasts Host's delayed focus retries.
+        const auto tidyUp = qScopeGuard([this, console, name]() {
+            QTest::qWait(100ms);
+            console->deleteCommandLine(name);
+            runDeferredDeletes();
+        });
+
+        mudlet::self()->show();
+        mudlet::self()->activateWindow();
+        QVERIFY2(QTest::qWaitForWindowActive(mudlet::self()), "the main window never became active");
+        subCommandLine->setFocus(Qt::OtherFocusReason);
+        QTRY_VERIFY2(subCommandLine->hasFocus(), "SETUP: the sub command line never took the keyboard focus");
+        mpHost->forgetCommandLine(subCommandLine);
+        mpHost->forgetCommandLine(console->mpCommandLine);
+
+        mpHost->setFocusOnHostActiveCommandLine();
+
+        QTRY_VERIFY2(console->mpCommandLine->hasFocus(), "the focus did not fall back to the main command line");
+    }
+
     // A sub command line that is hiding while it holds the keyboard focus has to
     // hand that focus on, or the focus goes with the hidden widget and typing no
     // longer reaches a command line at all (#8499)
