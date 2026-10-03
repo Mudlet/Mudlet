@@ -49,6 +49,8 @@
 
 #include "GroupedTest.h"
 
+using namespace std::chrono_literals;
+
 class MapAreaImageExportTest : public QObject
 {
     Q_OBJECT
@@ -200,11 +202,11 @@ private slots:
 
         // The export hands the actual file write to a QtConcurrent task
         QImage exportedImage;
-        QTRY_VERIFY2_WITH_TIMEOUT(exportedImage.load(filePath), "the exported image could not be read back", 10000);
+        QTRY_VERIFY2_WITH_TIMEOUT(exportedImage.load(filePath), "the exported image could not be read back", 10s);
         // The file lands inside QPixmap::save(), before the task reports back,
         // and the watcher is only deleted once it has - so this is what says the
         // pool thread has let go of the widget the fixture is about to delete
-        QTRY_VERIFY_WITH_TIMEOUT(!exportsInFlight(mp2dMap), 10000);
+        QTRY_VERIFY_WITH_TIMEOUT(!exportsInFlight(mp2dMap), 10s);
 
         // Both halves of the outline - the stub's and the arrowhead's - are
         // white, so this covers the pair jointly rather than either alone
@@ -241,7 +243,7 @@ private slots:
         // Or the wait below would pass without running a single handler
         QVERIFY(exportsInFlight(mp2dMap));
 
-        QTRY_VERIFY_WITH_TIMEOUT(!exportsInFlight(mp2dMap), 10000);
+        QTRY_VERIFY_WITH_TIMEOUT(!exportsInFlight(mp2dMap), 10s);
         QVERIFY(!QImage(firstPath).isNull());
         QVERIFY(!QImage(secondPath).isNull());
     }
@@ -284,7 +286,7 @@ private slots:
         // deleteHost() freed the map this view points at
         survivingView->mpMap = nullptr;
 
-        QTRY_VERIFY_WITH_TIMEOUT(!exportsInFlight(survivingView.get()), 10000);
+        QTRY_VERIFY_WITH_TIMEOUT(!exportsInFlight(survivingView.get()), 10s);
     }
 };
 

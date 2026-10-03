@@ -29,6 +29,7 @@
 
 #include "Host.h"
 #include "TBuffer.h"
+#include "TCommandLine.h"
 #include "TConsole.h"
 #include "TDebug.h"
 #include "TDebugFilterBar.h"
@@ -2177,7 +2178,7 @@ void TTextEdit::mousePressEvent(QMouseEvent* event)
         }
         mSelectedRegion = QRegion(0, 0, 0, 0);
         // Invalid until the first click, so an early click isn't taken as a double-click's second half:
-        if (mLastClickTimer.isValid() && mLastClickTimer.elapsed() < 300) {
+        if (mLastClickTimer.isValid() && mLastClickTimer.durationElapsed() < 300ms) {
             mMouseTracking = true;
             mMouseTrackLevel++;
             if (mMouseTrackLevel > 3) {

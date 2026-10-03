@@ -210,15 +210,9 @@ public:
     std::pair<bool, QString> exportAreaToImage(int areaId, const QString& filePath, std::optional<int> zLevel = std::nullopt, qreal zoom = 2.0, bool exportAllZLevels = false);
 
 
-    // default 2D zoom level
-    static inline const qreal csmDefaultXYZoom = 20.0;
-    // minimum 2D zoom level
-    static inline const qreal csmMinXYZoom = 3.0;
-
-
     TMap* mpMap = nullptr;
     QPointer<Host> mpHost;
-    qreal xyzoom = csmDefaultXYZoom;
+    qreal xyzoom;
     int mRX = 0;
     int mRY = 0;
     QPoint mPHighlight;
@@ -391,6 +385,8 @@ public slots:
     void slot_exportAreaToImage();
 
 private:
+    void set3DViewCenter(int areaId, int x, int y, int z);
+
     class InteractionDispatcher
     {
     public:

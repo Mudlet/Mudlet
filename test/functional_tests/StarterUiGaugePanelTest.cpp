@@ -45,6 +45,8 @@
 
 #include "GroupedTest.h"
 
+using namespace std::chrono_literals;
+
 class StarterUiGaugePanelTest : public QObject
 {
     Q_OBJECT
@@ -350,7 +352,7 @@ private:
             QFAIL("No active host available for the test.");
         }
         QSignalSpy connected(&(host->mTelnet), &cTelnet::signal_connected);
-        if (!connected.wait(3000)) {
+        if (!connected.wait(3s)) {
             QFAIL("Could not connect to the stub.");
         }
     }

@@ -34,6 +34,8 @@
 #include <QVBoxLayout>
 #include <utility>
 
+using namespace std::chrono_literals;
+
 namespace {
 
 // Only the page at the front of a header is resized with it, so every page
@@ -355,7 +357,7 @@ void TMxpFrameWidgets::scheduleSizeReport(bool relayout)
     // which then finds the same borders and stops there because
     // Host::setBorders() ignores an unchanged value.
     mSizeReportPending = true;
-    QTimer::singleShot(0, mpMainConsole, [this]() {
+    QTimer::singleShot(0ms, mpMainConsole, [this]() {
         mSizeReportPending = false;
         const bool relayout = std::exchange(mRelayoutPending, false);
         if (!mpMainConsole->mpHost) {

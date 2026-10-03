@@ -42,6 +42,8 @@
 #include <QStandardPaths>
 #include <QTimer>
 
+using namespace std::chrono_literals;
+
 namespace {
 // Holds TMediaPlayer::reservedForPlay() for as long as a play() call is setting that player up,
 // however that call returns.
@@ -1394,7 +1396,7 @@ void TMedia::connectMediaPlayer(std::shared_ptr<TMediaPlayer>& player)
         // by the time the turn comes: a track that took the player over in between owns it now.
         const quint64 claimedAt = lockedPlayer->claimGeneration();
 
-        QTimer::singleShot(0, this, [this, weakPlayer, claimedAt] {
+        QTimer::singleShot(0ms, this, [this, weakPlayer, claimedAt] {
             const auto endingPlayer = weakPlayer.lock();
 
             if (!endingPlayer || !endingPlayer->mediaPlayer() || endingPlayer->claimGeneration() != claimedAt) {
@@ -1743,7 +1745,7 @@ void TMedia::releaseMediaSourceAfterEvents(const std::shared_ptr<TMediaPlayer>& 
     const quint64 claimedAt = player->claimGeneration();
     const quint64 continuedAt = player->continuationGeneration();
 
-    QTimer::singleShot(0, this, [this, weakPlayer, endedData, claimedAt, continuedAt, playbackStateDecides] {
+    QTimer::singleShot(0ms, this, [this, weakPlayer, endedData, claimedAt, continuedAt, playbackStateDecides] {
         const auto lockedPlayer = weakPlayer.lock();
         const bool stillOurs = lockedPlayer && lockedPlayer->claimGeneration() == claimedAt;
         // Two ways the same playback can have carried on during the deferred turn. On a

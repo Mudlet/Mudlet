@@ -26,7 +26,6 @@
 
 
 #include "Host.h"
-#include "T2DMap.h"
 #include "TRoomDB.h"
 
 #include <QBuffer>
@@ -54,7 +53,7 @@ static const int kPixmapDataLineSize = 64;
 TArea::TArea(TMap* pMap, TRoomDB* pRDB)
 : mpRoomDB(pRDB)
 , mpMap(pMap)
-, mLast2DMapZoom(T2DMap::csmDefaultXYZoom)
+, mLast2DMapZoom(TMap::scmDefaultXYZoom)
 {
 }
 
@@ -104,15 +103,16 @@ QMap<int, QMap<int, QMultiMap<int, int>>> TArea::koordinatenSystem()
 
 QList<int> TArea::getRoomsByPosition(int x, int y, int z)
 {
+    // The grid index already files this area's rooms by cell, so this reads one
+    // cell rather than every room in the area - scripts that build maps ask
+    // about the neighbouring cells of each new room. A room deleted out from
+    // under its area can leave an entry behind until the next calcSpan(), so
+    // each one is checked against the room itself:
     QList<int> dL;
-    QSetIterator<int> itAreaRoom(rooms);
-    while (itAreaRoom.hasNext()) {
-        const int roomId = itAreaRoom.next();
-        TRoom* pR = mpRoomDB->getRoom(roomId);
-        if (pR) {
-            if (pR->x() == x && pR->y() == y && pR->z() == z) {
-                dL.push_back(roomId);
-            }
+    for (const int roomId : mGridIndex.roomsAt(z, x, y)) {
+        const TRoom* pR = mpRoomDB->getRoom(roomId);
+        if (pR && rooms.contains(roomId) && pR->x() == x && pR->y() == y && pR->z() == z) {
+            dL.push_back(roomId);
         }
     }
     // Only used by TLuaInterpreter::getRoomsByPosition(), so might as well sort
@@ -1187,7 +1187,7 @@ bool TArea::hasPermanentLabels() const
 
 void TArea::set2DMapZoom(const qreal zoom)
 {
-    if (zoom >= T2DMap::csmMinXYZoom) {
+    if (zoom >= TMap::scmMinXYZoom) {
         mLast2DMapZoom = zoom;
     }
 }

@@ -31,7 +31,6 @@
 #include "KeyUnit.h"
 #include "ScriptUnit.h"
 #include "GifTracker.h"
-#include "TCommandLine.h"
 #include "TLuaInterpreter.h"
 #include "TimerUnit.h"
 #include "TMainConsole.h"
@@ -664,9 +663,6 @@ public:
     void setCaretEnabled(bool enabled);
     bool caretShortcutMatches(const QKeyEvent*) const;
     void setFocusOnHostActiveCommandLine();
-    void recordActiveCommandLine(TCommandLine*);
-    void forgetCommandLine(TCommandLine*);
-    QPointer<TConsole> parentTConsole(QObject*) const;
     QMargins borders() const { return mBorders; }
     QMargins userBorders() const { return mUserBorders; }
     void setUserBorders(const QMargins);
@@ -675,8 +671,8 @@ public:
     bool saveMapFile(const QString& location, int saveVersion = 0);
     bool loadMapFile(const QString& location);
     bool importMapFile(const QString& location, QString* errMsg = nullptr);
-    std::tuple<QString, bool> getCmdLineSettings(const TCommandLine::CommandLineType, const QString&);
-    void setCmdLineSettings(const TCommandLine::CommandLineType, const bool, const QString&);
+    std::tuple<QString, bool> getCmdLineSettings(const enums::CommandLineType, const QString&);
+    void setCmdLineSettings(const enums::CommandLineType, const bool, const QString&);
     int getCommandLineHistorySaveSize() const { return mCommandLineHistorySaveSize; }
     void setCommandLineHistorySaveSize(const int lines);
     bool showIdsInEditor() const { return mShowIDsInEditor; }
@@ -1126,6 +1122,10 @@ signals:
     void signal_editorSearchOptionsChanged(const enums::EditorSearchOptions);
     void signal_editorShowBidiChanged(const bool);
     void signal_showIdsInEditorChanged(const bool);
+    // The game's name or invite for Discord changed, which the Discord buttons show.
+    void signal_discordGameChanged();
+    // A reset is about to replace the Lua state, so whatever it placed in the frontend has to go.
+    void signal_profileResetting();
     // The frontend owns the editor, notepad and IRC client it opens for a
     // profile. On close it closes them and lets go of them; on destruction it
     // deletes them there and then, while the units the editor references still
@@ -1229,7 +1229,6 @@ private:
     void timerEvent(QTimerEvent* event) override;
     void autoSaveMap();
     QString sanitizePackageName(const QString packageName) const;
-    TCommandLine* activeCommandLine();
     void closeChildren();
     void setupSandboxedLuaState(lua_State* L);
 
@@ -1418,10 +1417,6 @@ private:
     bool mEditorShowBidi = true;
     // should focus should be on the main window with the caret enabled?
     bool mCaretEnabled = false;
-
-    // Tracks which command line was last used for this profile so that we can
-    // return to it when switching between profiles:
-    QStack<QPointer<TCommandLine>> mpLastCommandLineUsed;
 
     // ensures that only one "zero-time" timer is created by the lambda in
     // setFocusOnHostActiveCommandLine(), even when it is called multiple
