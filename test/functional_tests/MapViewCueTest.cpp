@@ -61,6 +61,8 @@
 
 #include "GroupedTest.h"
 
+using namespace std::chrono_literals;
+
 namespace {
 const QByteArray scmMapXml = QByteArrayLiteral("<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n"
                                                "<map>\n"
@@ -132,7 +134,7 @@ private:
         int before = -1;
         while (before != mPaintCount) {
             before = mPaintCount;
-            QTest::qWait(50);
+            QTest::qWait(50ms);
         }
         mPaintCount = 0;
     }
@@ -189,7 +191,7 @@ private slots:
         mpHost = TestProfile::create(mProfileName, mLocalhost, mPort);
         QVERIFY(mpHost);
         QSignalSpy connected(&(mpHost->mTelnet), &cTelnet::signal_connected);
-        QVERIFY2(connected.wait(3000), "could not connect to the telnet stub");
+        QVERIFY2(connected.wait(3s), "could not connect to the telnet stub");
 
         mudlet::self()->show();
         mpHost->showHideOrCreateMapper(false);
@@ -395,7 +397,7 @@ private slots:
                          [this]() {
                              return mp2dMap->mNewMoveAction;
                          },
-                         2000),
+                         2s),
                  "the drawing mapper was not told a move happened");
 
         QVERIFY2(areaListOf(mpMapper).contains(map()->getDefaultAreaName()), "the drawing mapper did not relist its areas");
