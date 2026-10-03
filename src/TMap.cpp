@@ -47,6 +47,7 @@
 #include <QPainter>
 #include <QPixmap>
 #include <QSaveFile>
+#include <QScopeGuard>
 #include <QSizeF>
 #include <QXmlStreamReader>
 #include <chrono>
@@ -3305,6 +3306,12 @@ std::pair<bool, QString> TMap::writeJsonMapFile(const QString& dest)
         return {false, qsl("import or export already in progress")};
     }
 
+    mJsonExportInProgress = true;
+    mJsonExportLostAnArea = false;
+    const auto exportEnded = qScopeGuard([this]() {
+        mJsonExportInProgress = false;
+    });
+
     mProgressDialogRoomsTotal = mpRoomDB->getRoomMap().count();
     mProgressDialogAreasTotal = mpRoomDB->getAreaMap().count();
     mProgressDialogLabelsTotal = 0;
@@ -3377,6 +3384,9 @@ std::pair<bool, QString> TMap::writeJsonMapFile(const QString& dest)
         file.cancelWriting();
         emit signal_mapProgressClose();
         mMapProgressStandalone = false;
+        if (mJsonExportLostAnArea) {
+            return {false, qsl("an area was deleted while the map was being exported")};
+        }
         return {false, qsl("aborted by user")};
     }
 
@@ -3811,6 +3821,16 @@ bool TMap::incrementJsonProgressDialog(const bool isExportNotImport, const bool 
     }
     qApp->processEvents();
     return mMapProgressCancelRequested;
+}
+
+void TMap::areasAboutToBeDeleted()
+{
+    // The export walks the live areas and pumps the event loop as it goes, so a
+    // script can delete the one it is writing; it stops at its next progress step
+    if (mJsonExportInProgress) {
+        mJsonExportLostAnArea = true;
+        mMapProgressCancelRequested = true;
+    }
 }
 
 void TMap::announceMapLoaded(const bool showPlayerArea)

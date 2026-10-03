@@ -813,7 +813,9 @@ void TArea::writeJsonArea(QJsonArray& array) const
     }
     if (currentRoomCount % 10 != 0) {
         // Must add on any remainder otherwise the total will be wrong:
-        mpMap->incrementJsonProgressDialog(true, true, currentRoomCount % 10);
+        if (mpMap->incrementJsonProgressDialog(true, true, currentRoomCount % 10)) {
+            return;
+        }
     }
     const QJsonValue roomsValue{roomsArray};
     areaObj.insert(QLatin1String("rooms"), roomsValue);
