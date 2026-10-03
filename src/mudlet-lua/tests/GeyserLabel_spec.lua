@@ -1871,18 +1871,36 @@ describe("Tests Geyser.Label right click menus", function()
       assert.are.same({"First", "Fourth", "Second", "Third"}, menuOrder())
     end)
 
-    it("styles the item it adds and leaves the ones already there alone", function()
+    -- the names of the labels a call to addMenuLabel handed a stylesheet to; the
+    -- global is swapped in _G because this file runs in an environment of its own
+    local function labelsStyledBy(menuLabel, ...)
       local styled = {}
-      local original = setLabelStyleSheet
-      setLabelStyleSheet = function(name, ...)
+      local original = _G.setLabelStyleSheet
+      _G.setLabelStyleSheet = function(name, ...)
         styled[#styled + 1] = name
         return original(name, ...)
       end
-      local ok, err = pcall(label.addMenuLabel, label, "Fourth")
-      setLabelStyleSheet = original
+      local ok, err = pcall(menuLabel.addMenuLabel, menuLabel, ...)
+      _G.setLabelStyleSheet = original
       assert.is_true(ok, err)
-      assert.are.same({menuItem("Fourth").name}, styled)
+      return styled
+    end
+
+    it("styles the item it adds and leaves the ones already there alone", function()
+      assert.are.same({"glmHostrightClickMenuFourth"}, labelsStyledBy(label, "Fourth"))
       assert.are.equal(getLabelStyleSheet(menuItem("First").name), getLabelStyleSheet(menuItem("Fourth").name))
+    end)
+
+    it("styles a child it adds to a submenu in that depth's style and leaves the rest alone", function()
+      local other = Geyser.Label:new({name = "glmDepthStyled", x = 0, y = 0, width = 100, height = 30})
+      other:createRightClickMenu({MenuItems = {"Parent", {"Old"}, "Sibling"}, Style2 = "dark"})
+
+      local styled = labelsStyledBy(other, "New", "Parent")
+
+      local new = other:findMenuElement("Parent.New")
+      assert.are.same({new.name}, styled)
+      assert.are.equal(getLabelStyleSheet(other:findMenuElement("Parent.Old").name), getLabelStyleSheet(new.name))
+      assert.are_not.equal(getLabelStyleSheet(other:findMenuElement("Parent").name), getLabelStyleSheet(new.name))
     end)
 
     it("keeps a sheet an item was given of its own when another is added", function()
@@ -2004,6 +2022,21 @@ describe("Tests Geyser.Label right click menus", function()
     it("takes a stylesheet of its own, which wins over the mode", function()
       label:styleMenuItems("dark", "QLabel{ background-color: red; }")
       assert.are.equal("QLabel{ background-color: red; }", getLabelStyleSheet(menuItem("First").name))
+    end)
+
+    it("restyles items added later and ones given a sheet of their own", function()
+      label:addMenuLabel("Fourth")
+      menuItem("Second"):setStyleSheet("QLabel{ color: red; }")
+      label:styleMenuItems("dark")
+      local dark = getLabelStyleSheet(menuItem("First").name)
+      assert.are.equal(dark, getLabelStyleSheet(menuItem("Second").name))
+      assert.are.equal(dark, getLabelStyleSheet(menuItem("Fourth").name))
+      label:addMenuLabel("Fifth")
+      assert.are.equal(dark, getLabelStyleSheet(menuItem("Fifth").name))
+    end)
+
+    it("raises for a mode it does not know", function()
+      assert.has_error(function() label:styleMenuItems("nosuchmode") end)
     end)
   end)
 
