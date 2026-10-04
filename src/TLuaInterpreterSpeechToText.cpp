@@ -27,10 +27,10 @@
 #include "TLuaInterpreter.h"
 
 #include "Host.h"
-#include "mudlet.h"
 #include "SherpaRecognizer.h"
 #include "SpeechRecognizer.h"
 #include "SpeechRecognizerFactory.h"
+#include "TSpeechBridge.h"
 #include "VoskRecognizer.h"
 
 #include <QDir>
@@ -79,12 +79,12 @@ static const char* speechSensitivityName(const SpeechRecognizer::Sensitivity sen
 
 // docs/stt-api.md's "refusals speak": a consumer driving the bridge from events
 // has to hear a refusal too, and with no engine installed there is no recognizer
-// to emit errorOccurred through - so this raises the event on mudlet itself.
+// to emit errorOccurred through - so this raises the event through the bridge itself.
 // Without it "no engine" and "nothing said yet" look identical from Lua.
 static void reportSpeechRefusal(const QString& message)
 {
-    if (auto* pMudlet = mudlet::self()) {
-        pMudlet->raiseSpeechEvent(qsl("sysSTTError"), message);
+    if (auto* pBridge = TSpeechBridge::instance()) {
+        pBridge->raiseSpeechEvent(qsl("sysSTTError"), message);
     }
 }
 
@@ -95,8 +95,8 @@ static void reportSpeechRefusal(const QString& message)
 // and would report a fault in a session that is running perfectly well.
 static void reportSpeechRefusalTo(Host& host, const QString& message)
 {
-    if (auto* pMudlet = mudlet::self()) {
-        pMudlet->raiseSpeechEventOn(&host, qsl("sysSTTError"), message);
+    if (auto* pBridge = TSpeechBridge::instance()) {
+        pBridge->raiseSpeechEventOn(&host, qsl("sysSTTError"), message);
     }
 }
 
@@ -168,12 +168,12 @@ static QString noEngineMessage()
 // changes what the backend can do without anything else happening. Announced
 // here because docs/stt-api.md tells consumers to re-read capabilities on a
 // change rather than cache them, which needs the change to be announced at all.
-static void announceSpeechCapabilities(mudlet* pMudlet)
+static void announceSpeechCapabilities(TSpeechBridge* pBridge)
 {
-    if (!pMudlet) {
+    if (!pBridge) {
         return;
     }
-    if (auto* pRecognizer = qobject_cast<VoskRecognizer*>(pMudlet->speechRecognizer())) {
+    if (auto* pRecognizer = qobject_cast<VoskRecognizer*>(pBridge->speechRecognizer())) {
         // Keeps the recognizer's own baseline in step. It no longer decides what
         // Lua hears - the bridge does - so this cannot produce an announcement
         // the call below would not.
@@ -182,7 +182,7 @@ static void announceSpeechCapabilities(mudlet* pMudlet)
     // The bridge decides. Its view can move without the recognizer's doing so,
     // since getInfo() reports every capability as false while there is no
     // recognizer at all.
-    pMudlet->announceSpeechCapabilitiesIfChanged();
+    pBridge->announceSpeechCapabilitiesIfChanged();
 }
 
 // Whether any speech engine at all is present and loadable: a model-based
@@ -222,9 +222,9 @@ static SpeechRecognizerFactory::Backend onDemandSpeechBackend()
 // or the built-in macOS backend existed. The macOS backend never answers for
 // these: it installs no library and needs no model, so it has no paths of its
 // own to report.
-static SpeechRecognizerFactory::Backend modelBasedBackendForPaths(mudlet* pMudlet)
+static SpeechRecognizerFactory::Backend modelBasedBackendForPaths(TSpeechBridge* pBridge)
 {
-    auto* pRecognizer = pMudlet ? pMudlet->speechRecognizer() : nullptr;
+    auto* pRecognizer = pBridge ? pBridge->speechRecognizer() : nullptr;
     if (qobject_cast<SherpaRecognizer*>(pRecognizer)) {
         return SpeechRecognizerFactory::Backend::Sherpa;
     }
@@ -239,9 +239,9 @@ static SpeechRecognizerFactory::Backend modelBasedBackendForPaths(mudlet* pMudle
 // The directory stt.getModelPath() answers with: the same engine choice, so a
 // refusal telling a package where to install a model never names a directory
 // other than the one the API told it to use.
-static QString speechModelsDirectory(mudlet* pMudlet)
+static QString speechModelsDirectory(TSpeechBridge* pBridge)
 {
-    return modelBasedBackendForPaths(pMudlet) == SpeechRecognizerFactory::Backend::Sherpa ? SherpaRecognizer::modelsDirectoryPath() : VoskRecognizer::modelsDirectoryPath();
+    return modelBasedBackendForPaths(pBridge) == SpeechRecognizerFactory::Backend::Sherpa ? SherpaRecognizer::modelsDirectoryPath() : VoskRecognizer::modelsDirectoryPath();
 }
 
 // Which backend a live recognizer actually is - the same identification
@@ -399,15 +399,15 @@ int TLuaInterpreter::sttInit(lua_State* L)
                     return warnArgumentValue(L, funcName, message);
                 }
             } else {
-                const QString message = qsl("no model path provided and no language model is installed - install one into %1").arg(speechModelsDirectory(mudlet::self()));
+                const QString message = qsl("no model path provided and no language model is installed - install one into %1").arg(speechModelsDirectory(TSpeechBridge::instance()));
                 reportSpeechRefusalTo(host, message);
                 return warnArgumentValue(L, funcName, message);
             }
         }
     }
 
-    auto* pMudlet = mudlet::self();
-    if (!pMudlet) {
+    auto* pBridge = TSpeechBridge::instance();
+    if (!pBridge) {
         return warnArgumentValue(L, funcName, "mudlet instance not available");
     }
 
@@ -424,9 +424,9 @@ int TLuaInterpreter::sttInit(lua_State* L)
         return warnArgumentValue(L, funcName, message);
     }
 
-    pMudlet->initSpeechRecognition(backend);
+    pBridge->initSpeechRecognition(backend);
 
-    auto* pRecognizer = pMudlet->speechRecognizer();
+    auto* pRecognizer = pBridge->speechRecognizer();
     if (!pRecognizer) {
         const QString message = noEngineMessage();
         reportSpeechRefusalTo(host, message);
@@ -485,7 +485,7 @@ int TLuaInterpreter::sttInit(lua_State* L)
     // another published, so the pointer it has been working through is no
     // longer the one Lua reads. Asked first, and by identity, so nothing below
     // dereferences a recognizer on its way out.
-    if (pMudlet->speechRecognizer() != pRecognizer) {
+    if (pBridge->speechRecognizer() != pRecognizer) {
         const QString message = qsl("a handler for one of this call's own events changed the speech engine while the model was still loading");
         reportSpeechRefusalTo(host, message);
         return warnArgumentValue(L, funcName, message);
@@ -541,8 +541,8 @@ int TLuaInterpreter::sttStart(lua_State* L)
 {
     const char* funcName = "stt.start";
 
-    auto* pMudlet = mudlet::self();
-    if (!pMudlet) {
+    auto* pBridge = TSpeechBridge::instance();
+    if (!pBridge) {
         return warnArgumentValue(L, funcName, "mudlet instance not available");
     }
 
@@ -550,9 +550,9 @@ int TLuaInterpreter::sttStart(lua_State* L)
     // before stt.init() finds nothing and reports the library as missing on a
     // machine where stt.getInfo().available is true. Every setter already
     // builds it here for the same reason.
-    pMudlet->initSpeechRecognition(onDemandSpeechBackend());
+    pBridge->initSpeechRecognition(onDemandSpeechBackend());
 
-    auto* pRecognizer = pMudlet->speechRecognizer();
+    auto* pRecognizer = pBridge->speechRecognizer();
     if (!pRecognizer) {
         const QString message = noEngineMessage();
         reportSpeechRefusal(message);
@@ -571,7 +571,7 @@ int TLuaInterpreter::sttStart(lua_State* L)
     // its own. That case falls through to the claim below, which takes the
     // microphone off the profile that has it.
     Host& host = getHostFromLua(L);
-    if (pRecognizer->listening() && pMudlet->microphoneOwner() == &host) {
+    if (pRecognizer->listening() && pBridge->microphoneOwner() == &host) {
         lua_pushboolean(L, true);
         return 1;
     }
@@ -580,15 +580,15 @@ int TLuaInterpreter::sttStart(lua_State* L)
     // profile already holds does nothing, so releasing it unconditionally would
     // drop a claim made for an earlier session and send the phrase it is still
     // decoding to whichever profile happens to be in front.
-    const bool alreadyOurs = (pMudlet->microphoneOwner() == &host);
-    if (!alreadyOurs && !pMudlet->claimMicrophoneFor(&host)) {
+    const bool alreadyOurs = (pBridge->microphoneOwner() == &host);
+    if (!alreadyOurs && !pBridge->claimMicrophoneFor(&host)) {
         const QString message = qsl("another profile is still finishing a phrase on the microphone - try again in a moment");
         reportSpeechRefusalTo(host, message);
         return warnArgumentValue(L, funcName, message);
     }
     if (pRecognizer->startListening() == SpeechRecognizer::StartResult::Refused) {
         if (!alreadyOurs) {
-            pMudlet->releaseMicrophone();
+            pBridge->releaseMicrophone();
         }
         // The recognizer has already said why through sysSTTError; what
         // matters here is not telling the caller that recording began
@@ -606,12 +606,12 @@ int TLuaInterpreter::sttStop(lua_State* L)
 {
     const char* funcName = "stt.stop";
 
-    auto* pMudlet = mudlet::self();
-    if (!pMudlet) {
+    auto* pBridge = TSpeechBridge::instance();
+    if (!pBridge) {
         return warnArgumentValue(L, funcName, "mudlet instance not available");
     }
 
-    auto* pRecognizer = pMudlet->speechRecognizer();
+    auto* pRecognizer = pBridge->speechRecognizer();
     if (!pRecognizer) {
         // Not initialized is fine - just return true
         lua_pushboolean(L, true);
@@ -638,7 +638,7 @@ int TLuaInterpreter::sttStop(lua_State* L)
     // that holds nothing, so this refuses rather than handing the microphone
     // over: taking it is what stt.start() is for.
     Host& host = getHostFromLua(L);
-    if (pMudlet->microphoneOwner() && pMudlet->microphoneOwner() != &host) {
+    if (pBridge->microphoneOwner() && pBridge->microphoneOwner() != &host) {
         const QString message = qsl("another profile is listening, and only the profile that started a session can stop it");
         reportSpeechRefusalTo(host, message);
         return warnArgumentValue(L, funcName, message);
@@ -660,12 +660,12 @@ int TLuaInterpreter::sttCancel(lua_State* L)
 {
     const char* funcName = "stt.cancel";
 
-    auto* pMudlet = mudlet::self();
-    if (!pMudlet) {
+    auto* pBridge = TSpeechBridge::instance();
+    if (!pBridge) {
         return warnArgumentValue(L, funcName, "mudlet instance not available");
     }
 
-    auto* pRecognizer = pMudlet->speechRecognizer();
+    auto* pRecognizer = pBridge->speechRecognizer();
     if (!pRecognizer) {
         lua_pushboolean(L, true);
         return 1;
@@ -685,7 +685,7 @@ int TLuaInterpreter::sttCancel(lua_State* L)
         return warnArgumentValue(L, funcName, message);
     }
 
-    if (pMudlet->microphoneOwner() && pMudlet->microphoneOwner() != &host) {
+    if (pBridge->microphoneOwner() && pBridge->microphoneOwner() != &host) {
         const QString message = qsl("another profile is listening, and only the profile that started a session can cancel it");
         reportSpeechRefusalTo(host, message);
         return warnArgumentValue(L, funcName, message);
@@ -706,14 +706,14 @@ int TLuaInterpreter::sttToggle(lua_State* L)
 {
     const char* funcName = "stt.toggle";
 
-    auto* pMudlet = mudlet::self();
-    if (!pMudlet) {
+    auto* pBridge = TSpeechBridge::instance();
+    if (!pBridge) {
         return warnArgumentValue(L, funcName, "mudlet instance not available");
     }
 
-    pMudlet->initSpeechRecognition(onDemandSpeechBackend());
+    pBridge->initSpeechRecognition(onDemandSpeechBackend());
 
-    auto* pRecognizer = pMudlet->speechRecognizer();
+    auto* pRecognizer = pBridge->speechRecognizer();
     if (!pRecognizer || !pRecognizer->initialized()) {
         const QString message = pRecognizer ? qsl("speech recognizer not initialized - call stt.init() first") : noEngineMessage();
         reportSpeechRefusal(message);
@@ -731,19 +731,19 @@ int TLuaInterpreter::sttToggle(lua_State* L)
     // decoder - so pressing it asks for the microphone rather than surrendering
     // one it never had.
     Host& host = getHostFromLua(L);
-    const bool ownedHere = pMudlet->microphoneOwner() == &host;
+    const bool ownedHere = pBridge->microphoneOwner() == &host;
     if ((pRecognizer->listening() || pRecognizer->starting()) && ownedHere) {
         pRecognizer->stopListening();
         lua_pushboolean(L, false);
     } else {
-        if (!ownedHere && !pMudlet->claimMicrophoneFor(&host)) {
+        if (!ownedHere && !pBridge->claimMicrophoneFor(&host)) {
             const QString message = qsl("another profile is still finishing a phrase on the microphone - try again in a moment");
             reportSpeechRefusalTo(host, message);
             return warnArgumentValue(L, funcName, message);
         }
         if (pRecognizer->startListening() == SpeechRecognizer::StartResult::Refused) {
             if (!ownedHere) {
-                pMudlet->releaseMicrophone();
+                pBridge->releaseMicrophone();
             }
             return warnArgumentValue(L, funcName, "could not start listening - the sysSTTError event carries the reason");
         }
@@ -762,8 +762,8 @@ int TLuaInterpreter::sttToggle(lua_State* L)
 // its own. This stays in step with stt.getInfo().listening for the same reason.
 int TLuaInterpreter::sttIsListening(lua_State* L)
 {
-    auto* pMudlet = mudlet::self();
-    if (!pMudlet) {
+    auto* pBridge = TSpeechBridge::instance();
+    if (!pBridge) {
         lua_pushboolean(L, false);
         return 1;
     }
@@ -774,8 +774,8 @@ int TLuaInterpreter::sttIsListening(lua_State* L)
     // showed a live control it did not own and announced stops it never made.
     // A profile that wants to know the device is busy elsewhere learns it from
     // the refusal its own start returns.
-    auto* pRecognizer = pMudlet->speechRecognizer();
-    const bool listeningHere = pRecognizer && pRecognizer->listening() && pMudlet->microphoneOwner() == &getHostFromLua(L);
+    auto* pRecognizer = pBridge->speechRecognizer();
+    const bool listeningHere = pRecognizer && pRecognizer->listening() && pBridge->microphoneOwner() == &getHostFromLua(L);
     lua_pushboolean(L, listeningHere);
     return 1;
 }
@@ -795,13 +795,13 @@ int TLuaInterpreter::sttIsAvailable(lua_State* L)
 // Returns true if initialized, false otherwise.
 int TLuaInterpreter::sttIsInitialized(lua_State* L)
 {
-    auto* pMudlet = mudlet::self();
-    if (!pMudlet) {
+    auto* pBridge = TSpeechBridge::instance();
+    if (!pBridge) {
         lua_pushboolean(L, false);
         return 1;
     }
 
-    auto* pRecognizer = pMudlet->speechRecognizer();
+    auto* pRecognizer = pBridge->speechRecognizer();
     lua_pushboolean(L, pRecognizer && pRecognizer->initialized());
     return 1;
 }
@@ -813,7 +813,7 @@ int TLuaInterpreter::sttIsInitialized(lua_State* L)
 // once behind the keys this function actually sets.
 int TLuaInterpreter::sttGetInfo(lua_State* L)
 {
-    auto* pMudlet = mudlet::self();
+    auto* pBridge = TSpeechBridge::instance();
 
     lua_newtable(L);
 
@@ -822,7 +822,7 @@ int TLuaInterpreter::sttGetInfo(lua_State* L)
     // installed - which was exactly when they were absent, so the documented
     // probe getInfo().capabilities.words was a nil index on any machine without
     // an engine.
-    auto* pRecognizer = pMudlet ? pMudlet->speechRecognizer() : nullptr;
+    auto* pRecognizer = pBridge ? pBridge->speechRecognizer() : nullptr;
 
     // Asked of the recognizer once one exists, so the name cannot drift from
     // the backend actually running. Empty before that: this build can create
@@ -844,7 +844,7 @@ int TLuaInterpreter::sttGetInfo(lua_State* L)
     // answer, and a getInfo() that reported another game's session while
     // stt.listening() said no would be the worse of the two to debug.
     lua_pushstring(L, "listening");
-    lua_pushboolean(L, pRecognizer && pRecognizer->listening() && pMudlet->microphoneOwner() == &getHostFromLua(L));
+    lua_pushboolean(L, pRecognizer && pRecognizer->listening() && pBridge->microphoneOwner() == &getHostFromLua(L));
     lua_settable(L, -3);
 
     // Engine state, which distinguishes Error from Uninitialized - both of
@@ -915,7 +915,7 @@ int TLuaInterpreter::sttGetInfo(lua_State* L)
     lua_pushstring(L, "searchPaths");
     lua_newtable(L);
     int pathIndex = 1;
-    const bool searchSherpaPaths = modelBasedBackendForPaths(pMudlet) == SpeechRecognizerFactory::Backend::Sherpa;
+    const bool searchSherpaPaths = modelBasedBackendForPaths(pBridge) == SpeechRecognizerFactory::Backend::Sherpa;
     const QStringList searchPaths = searchSherpaPaths ? SherpaRecognizer::librarySearchPaths() : VoskRecognizer::librarySearchPaths();
     for (const QString& path : searchPaths) {
         lua_pushinteger(L, pathIndex++);
@@ -934,7 +934,7 @@ int TLuaInterpreter::sttGetInfo(lua_State* L)
 // Returns the path as a string.
 int TLuaInterpreter::sttGetModelPath(lua_State* L)
 {
-    const QString path = speechModelsDirectory(mudlet::self());
+    const QString path = speechModelsDirectory(TSpeechBridge::instance());
     lua_pushstring(L, path.toUtf8().constData());
     return 1;
 }
@@ -946,7 +946,7 @@ int TLuaInterpreter::sttGetModelPath(lua_State* L)
 // Returns the path as a string.
 int TLuaInterpreter::sttGetLibraryPath(lua_State* L)
 {
-    const bool sherpa = modelBasedBackendForPaths(mudlet::self()) == SpeechRecognizerFactory::Backend::Sherpa;
+    const bool sherpa = modelBasedBackendForPaths(TSpeechBridge::instance()) == SpeechRecognizerFactory::Backend::Sherpa;
     const QString path = sherpa ? SherpaRecognizer::userLibraryPath() : VoskRecognizer::userLibraryPath();
     lua_pushstring(L, path.toUtf8().constData());
     return 1;
@@ -1004,16 +1004,16 @@ int TLuaInterpreter::sttClose(lua_State* L)
 {
     const char* funcName = "stt.close";
 
-    auto* pMudlet = mudlet::self();
-    if (pMudlet) {
-        auto* pRecognizer = pMudlet->speechRecognizer();
+    auto* pBridge = TSpeechBridge::instance();
+    if (pBridge) {
+        auto* pRecognizer = pBridge->speechRecognizer();
         if (pRecognizer) {
             // Closing takes the engine down for every profile, so a profile
             // that holds nothing must not be able to do it to the one that
             // does - it would end another game's session and destroy the model
             // under it, and that game would see only a state change.
             Host& host = getHostFromLua(L);
-            if (pMudlet->microphoneOwner() && pMudlet->microphoneOwner() != &host) {
+            if (pBridge->microphoneOwner() && pBridge->microphoneOwner() != &host) {
                 const QString message = qsl("another profile is listening, so the speech engine cannot be closed from here");
                 reportSpeechRefusalTo(host, message);
                 return warnArgumentValue(L, funcName, message);
@@ -1024,7 +1024,7 @@ int TLuaInterpreter::sttClose(lua_State* L)
             // the report is raised after that - so by then raiseSpeechEvent()
             // would answer with whichever profile is in front rather than the
             // one whose phrase was lost.
-            Host* pOwner = pMudlet->microphoneOwner() ? pMudlet->microphoneOwner() : &host;
+            Host* pOwner = pBridge->microphoneOwner() ? pBridge->microphoneOwner() : &host;
 
             if (pRecognizer->listening()) {
                 pRecognizer->cancel();
@@ -1040,7 +1040,7 @@ int TLuaInterpreter::sttClose(lua_State* L)
             // that handler was just given, and the engine still reads as
             // Processing while it runs. Telling that handler its phrase is
             // lost describes the one outcome that did not happen.
-            const bool lostAPhraseBeingTranscribed = !pRecognizer->listening() && pRecognizer->state() == SpeechRecognizer::State::Processing && !pMudlet->deliveringSpeechResult();
+            const bool lostAPhraseBeingTranscribed = !pRecognizer->listening() && pRecognizer->state() == SpeechRecognizer::State::Processing && !pBridge->deliveringSpeechResult();
             pRecognizer->releaseResources();
             // listening() is false in Processing, so this used to fall straight
             // through and the phrase being decoded went with the engine - no
@@ -1071,13 +1071,13 @@ int TLuaInterpreter::sttSetSilenceTimeout(lua_State* L)
         return warnArgumentValue(L, "stt.setSilenceTimeout", qsl("milliseconds must be 0 (disabled) or greater, got %1").arg(msec));
     }
 
-    auto* pMudlet = mudlet::self();
-    if (!pMudlet) {
+    auto* pBridge = TSpeechBridge::instance();
+    if (!pBridge) {
         return warnArgumentValue(L, "stt.setSilenceTimeout", "mudlet instance not available");
     }
 
-    pMudlet->initSpeechRecognition(onDemandSpeechBackend());
-    auto* pRecognizer = pMudlet->speechRecognizer();
+    pBridge->initSpeechRecognition(onDemandSpeechBackend());
+    auto* pRecognizer = pBridge->speechRecognizer();
     if (!pRecognizer) {
         const QString message = noEngineMessage();
         reportSpeechRefusal(message);
@@ -1110,13 +1110,13 @@ int TLuaInterpreter::sttSetSensitivity(lua_State* L)
         return warnArgumentChoice(L, "stt.setSensitivity", qsl("sensitivity"), {qsl("short"), qsl("default"), qsl("long")}, mode);
     }
 
-    auto* pMudlet = mudlet::self();
-    if (!pMudlet) {
+    auto* pBridge = TSpeechBridge::instance();
+    if (!pBridge) {
         return warnArgumentValue(L, "stt.setSensitivity", "mudlet instance not available");
     }
 
-    pMudlet->initSpeechRecognition(onDemandSpeechBackend());
-    auto* pRecognizer = pMudlet->speechRecognizer();
+    pBridge->initSpeechRecognition(onDemandSpeechBackend());
+    auto* pRecognizer = pBridge->speechRecognizer();
     if (!pRecognizer) {
         const QString message = noEngineMessage();
         reportSpeechRefusal(message);
@@ -1187,13 +1187,13 @@ int TLuaInterpreter::sttSetVocabulary(lua_State* L)
         lua_pop(L, 1);
     }
 
-    auto* pMudlet = mudlet::self();
-    if (!pMudlet) {
+    auto* pBridge = TSpeechBridge::instance();
+    if (!pBridge) {
         return warnArgumentValue(L, "stt.setVocabulary", "mudlet instance not available");
     }
 
-    pMudlet->initSpeechRecognition(onDemandSpeechBackend());
-    auto* pRecognizer = pMudlet->speechRecognizer();
+    pBridge->initSpeechRecognition(onDemandSpeechBackend());
+    auto* pRecognizer = pBridge->speechRecognizer();
     if (!pRecognizer) {
         const QString message = noEngineMessage();
         reportSpeechRefusal(message);
@@ -1245,9 +1245,9 @@ int TLuaInterpreter::sttGetPlatformKey(lua_State* L)
 // be safely unloaded.
 int TLuaInterpreter::sttReloadLibrary(lua_State* L)
 {
-    auto* pMudlet = mudlet::self();
-    if (pMudlet) {
-        auto* pRecognizer = pMudlet->speechRecognizer();
+    auto* pBridge = TSpeechBridge::instance();
+    if (pBridge) {
+        auto* pRecognizer = pBridge->speechRecognizer();
         // initialized() is false in State::Error, but Error can still be
         // reached with live native handles (e.g. a failure partway through
         // startListeningInternal() after the native recognizer was already
@@ -1308,7 +1308,7 @@ int TLuaInterpreter::sttReloadLibrary(lua_State* L)
     // "false" here after a successful re-detect would have concluded speech
     // was unavailable while stt.available() said otherwise.
     const bool available = speechEngineAvailable();
-    announceSpeechCapabilities(pMudlet);
+    announceSpeechCapabilities(pBridge);
     if (!available) {
         // Detection ran and found nothing usable, which is the engine's answer
         // rather than anything the caller got wrong - so it speaks like the other
@@ -1329,9 +1329,9 @@ int TLuaInterpreter::sttReloadLibrary(lua_State* L)
 // use, or still holds live native resources, and cannot be safely unloaded.
 int TLuaInterpreter::sttUnloadLibrary(lua_State* L)
 {
-    auto* pMudlet = mudlet::self();
-    if (pMudlet) {
-        auto* pRecognizer = pMudlet->speechRecognizer();
+    auto* pBridge = TSpeechBridge::instance();
+    if (pBridge) {
+        auto* pRecognizer = pBridge->speechRecognizer();
         // Same guard as stt.reloadLibrary(): see the comment there for why
         // hasLiveNativeResources() is checked rather than state alone.
         if (pRecognizer && (pRecognizer->listening() || pRecognizer->initialized() || pRecognizer->hasLiveNativeResources())) {
@@ -1379,7 +1379,7 @@ int TLuaInterpreter::sttUnloadLibrary(lua_State* L)
     // the next read-shaped call - getInfo(), available() - maps it straight
     // back in, and the file the caller meant to replace is locked again
     VoskRecognizer::unloadLibraryByRequest(true);
-    announceSpeechCapabilities(pMudlet);
+    announceSpeechCapabilities(pBridge);
 
     lua_pushboolean(L, true);
     return 1;

@@ -32,6 +32,7 @@
 #include "PortableModeTestHelper.h"
 #include "ProfileTestHelper.h"
 #include "TLuaInterpreter.h"
+#include "TSpeechBridge.h"
 #include "TelnetServerStub.h"
 #include "VoskRecognizer.h"
 #include "VoskStubHelper.h"
@@ -189,7 +190,7 @@ private slots:
         // profile, and a profile is only active once it has a console.
         mpHost = TestProfile::create(mProfileName, mLocalhost, QString::number(mpServer->serverPort()));
         QVERIFY2(mpHost, "the profile could not be created");
-        QVERIFY2(!mudlet::self()->speechRecognizer(), "a recognizer existed before any case asked for one, so its creation cannot be observed");
+        QVERIFY2(!TSpeechBridge::instance()->speechRecognizer(), "a recognizer existed before any case asked for one, so its creation cannot be observed");
     }
 
     void cleanupTestCase()

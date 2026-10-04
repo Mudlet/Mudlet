@@ -220,6 +220,7 @@ set(mudlet_SRCS
     TRoomDB.cpp
     TScript.cpp
     TScrollBox.cpp
+    TSpeechBridge.cpp
     TSpellChecker.cpp
     TSplitter.cpp
     TSplitterHandle.cpp
@@ -508,6 +509,7 @@ set(mudlet_HDRS
     TRoomDB.h
     TScript.h
     TScrollBox.h
+    TSpeechBridge.h
     TSpellChecker.h
     TSplitter.h
     TSplitterHandle.h
