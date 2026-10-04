@@ -1499,6 +1499,23 @@ private slots:
         deleteProfileDirectory(mAutoLogHostname);
     }
 
+    // Not a spec: Lua cannot delete a command line named "main", and the one left behind changes later specs.
+    void test_aSubCommandLineNamedMainLeavesTheMainStyleSheet()
+    {
+        startProfile();
+        auto host = mudlet::self()->getActiveHost();
+        QVERIFY2(host, "No active host available for the test.");
+
+        runLua(host, qsl(R"LUA(
+setCmdLineStyleSheet("main", "color: rgb(7,8,9);")
+createScrollBox("mainNamedHost", 0, 0, 50, 50)
+mainNamedCreated = tostring(createCommandLine("mainNamedHost", "main", 0, 0, 50, 20))
+mainNamedSheets = getCmdLineStyleSheet() .. "|" .. getCmdLineStyleSheet("main")
+)LUA"));
+        QCOMPARE(luaGlobalString(host, "mainNamedCreated"), qsl("true"));
+        QCOMPARE(luaGlobalString(host, "mainNamedSheets"), qsl("color: rgb(7,8,9);|color: rgb(7,8,9);"));
+    }
+
     // Every one of these Lua functions used to reach through Host::mpConsole
     // without checking it, so calling any of them on a profile whose window had
     // been closed took the whole client down with it. None of them can do what

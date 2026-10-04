@@ -43,6 +43,15 @@ void TDockWidget::setTConsole(TConsole* pC)
     pC->mpDockWidget = this;
 }
 
+// A qproperty-windowTitle in a style sheet sets the title without going through setUserWindowTitle()
+bool TDockWidget::event(QEvent* event)
+{
+    if (event->type() == QEvent::WindowTitleChange && mpHost) {
+        mpHost->windowRegistry().setUserWindowTitle(mWidgetConsoleName, windowTitle());
+    }
+    return QDockWidget::event(event);
+}
+
 void TDockWidget::closeEvent(QCloseEvent* event)
 {
     if (mpHost && !mpHost->isClosingDown()) {

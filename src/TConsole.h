@@ -451,7 +451,7 @@ private:
     // The size of the TConsole in (normal) "character" cells:
     QSize mDimensions;
     // mpMainFrame's palette cannot hold this - it is rebuilt from scratch on every colour change
-    QColor mBorderColor = Qt::black;
+    QColor& mBorderColor;
     // latches the 'cover' scale failure so a resize drag does not repeat the warning
     bool mWindowBgCoverScaleFailed = false;
 };
