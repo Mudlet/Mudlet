@@ -32,7 +32,6 @@
 
 #include "TLuaInterpreter.h"
 
-#include "EAction.h"
 #include "Host.h"
 #include "TArea.h"
 #include "TConsoleFrontend.h"

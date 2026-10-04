@@ -35,7 +35,6 @@
 
 #include <iterator>
 
-#include "EAction.h"
 #include "FontManager.h"
 #include "Host.h"
 #include "HostManager.h"
