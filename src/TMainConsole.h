@@ -87,9 +87,7 @@ public:
     void restoreOwnMapper();
     bool createBuffer(const QString& name);
     std::pair<bool, QString> setUserWindowStyleSheet(const QString& name, const QString& userWindowStyleSheet);
-    std::optional<QString> getUserWindowStyleSheet(const QString& name) const;
     std::pair<bool, QString> setUserWindowTitle(const QString& name, const QString& text);
-    std::pair<bool, QString> getUserWindowTitle(const QString& name) const;
     bool createLabel(const QString& windowname, const QString& name, int x, int y, int width, int height, bool fillBackground, bool clickThrough = false);
     std::pair<bool, QString> createMapper(const QString& windowname, int, int, int, int);
     std::pair<bool, QString> createCommandLine(const QString& windowname, const QString& name, int, int, int, int);
@@ -97,7 +95,6 @@ public:
     void deregisterSubCommandLine(TCommandLine* pCommandLine);
     std::pair<bool, QString> createTextBox(const QString& windowname, const QString& name, int, int, int, int);
     std::pair<bool, QString> setCmdLineStyleSheet(const QString& name, const QString& styleSheet);
-    std::optional<QString> getCmdLineStyleSheet(const QString& name) const;
     std::pair<bool, QString> setLabelStyleSheet(const QString& name, const QString& stylesheet);
     std::optional<QSize> getLabelSizeHint(const QString& name) const;
     std::pair<bool, QString> deleteLabel(const QString&);
@@ -132,7 +129,6 @@ public:
     bool resetLabelSvgShear(const QString& name);
     bool resetLabelSvgTransform(const QString& name);
     bool setLabelFont(const QString& name, const QFont& font);
-    std::optional<QString> getLabelText(const QString& name) const;
     // No value for a name that is not a label's, false for a label that is not
     // showing a movie; the movie operations below report failure for either.
     std::optional<bool> labelShowsMovie(const QString& name) const;

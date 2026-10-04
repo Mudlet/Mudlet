@@ -1424,13 +1424,13 @@ int TLuaInterpreter::getBorderTop(lua_State* L)
 int TLuaInterpreter::getBorderColor(lua_State* L)
 {
     const Host& host = getHostFromLua(L);
-    if (!host.mpConsole) {
+    const auto color = host.borderColor();
+    if (!color) {
         return warnArgumentValue(L, __func__, no_main_window_value);
     }
-    const QColor color = host.mpConsole->borderColor();
-    lua_pushnumber(L, color.red());
-    lua_pushnumber(L, color.green());
-    lua_pushnumber(L, color.blue());
+    lua_pushnumber(L, color->red());
+    lua_pushnumber(L, color->green());
+    lua_pushnumber(L, color->blue());
     return 3;
 }
 
@@ -2002,7 +2002,7 @@ int TLuaInterpreter::getLabelText(lua_State* L)
 {
     const QString labelName = getVerifiedString(L, __func__, 1, "label name");
     const Host& host = getHostFromLua(L);
-    const auto text = host.mpConsole ? host.mpConsole->getLabelText(labelName) : std::nullopt;
+    const auto text = host.labelText(labelName);
     if (!text) {
         lua_pushnil(L);
         lua_pushfstring(L, bad_label_value, labelName.toUtf8().constData());
@@ -3277,7 +3277,7 @@ int TLuaInterpreter::getCmdLineStyleSheet(lua_State* L)
     const QString name = hasName ? QString{lua_tostring(L, 1)} : qsl("main");
     const Host& host = getHostFromLua(L);
 
-    if (auto styleSheet = host.mpConsole ? host.mpConsole->getCmdLineStyleSheet(name) : std::nullopt) {
+    if (auto styleSheet = host.commandLineStyleSheet(name)) {
         lua_pushstring(L, styleSheet->toUtf8().constData());
         return 1;
     }
@@ -4151,7 +4151,7 @@ int TLuaInterpreter::getUserWindowTitle(lua_State* L)
         return warnArgumentValue(L, __func__, no_main_window_value);
     }
 
-    auto [success, result] = host.mpConsole->getUserWindowTitle(name);
+    auto [success, result] = host.userWindowTitle(name);
     if (!success) {
         return warnArgumentValue(L, __func__, result);
     }
@@ -4190,7 +4190,7 @@ int TLuaInterpreter::getUserWindowStyleSheet(lua_State* L)
     }
 
     const Host& host = getHostFromLua(L);
-    if (auto styleSheet = host.mpConsole ? host.mpConsole->getUserWindowStyleSheet(userWindowName) : std::nullopt) {
+    if (auto styleSheet = host.userWindowStyleSheet(userWindowName)) {
         lua_pushstring(L, styleSheet->toUtf8().constData());
         return 1;
     }

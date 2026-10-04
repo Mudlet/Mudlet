@@ -85,6 +85,8 @@ struct TLabelModel
     QString mStyleSheet;
     QString mToolTip;
     QFont mFont;
+    // QLabel::text(), which a pixmap or movie empties, written by the view after each change.
+    QString mText;
 
 private:
     void releaseFunc(const int existingFunction, const int newFunction);
