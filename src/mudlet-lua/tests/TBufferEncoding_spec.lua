@@ -506,8 +506,25 @@ describe("Tests a double byte character cut short by a byte that cannot be its s
     end
   end)
 
+  -- The foreground colour of text on the first line from fromLine on that starts with prefix
+  local function colourOf(text, prefix, fromLine)
+    for line = fromLine, getLastLineNumber("main") do
+      moveCursor("main", 0, line)
+      if getCurrentLine("main"):sub(1, #prefix) == prefix then
+        assert.is_true(selectString(text, 1) >= 0, "no '" .. text .. "' in " .. getCurrentLine("main"))
+        local colour = {getFgColor("main")}
+        deselect()
+        return colour
+      end
+    end
+    error("no line starting '" .. prefix .. "'")
+  end
+
   it("still acts on a colour code that arrives in the next read", function()
     finally(restoreServerEncoding())
+    local referenceMark = getLastLineNumber("main")
+    feed("dbref:\27[31mRED\27[0m\r\n")
+    local redReference = colourOf("RED", "dbref:", referenceMark)
     for _, case in ipairs(leadBytes) do
       local encoding, lead = case[1], case[2]
       assert.is_true(setServerEncoding(encoding), "setServerEncoding refused " .. encoding)
@@ -517,6 +534,8 @@ describe("Tests a double byte character cut short by a byte that cannot be its s
       feed("\27[31mRED\27[0m\r\n")
 
       assert.same({"dbcolour:" .. kept(lead) .. "RED"}, shownLines("dbcolour:", mark), encoding)
+      assert.same(redReference, colourOf("RED", "dbcolour:", mark), encoding)
+      assert.are_not.same(redReference, colourOf("dbcolour:", "dbcolour:", mark), encoding)
     end
   end)
 
