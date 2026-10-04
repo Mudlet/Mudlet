@@ -708,6 +708,23 @@ private slots:
         QCOMPARE(pMiniPane->mCaretLine, 0);
         QCOMPARE(pMiniPane->mCaretColumn, 0);
     }
+
+    // Last, as it empties the main console the other cases read. Turning caret
+    // mode on brings the old caret into view before moving it, and with the
+    // buffer emptied by deleteLine() that read the last line of an empty list.
+    void test_turningCaretModeOnAfterDeleteLineEmptiedTheMainConsole()
+    {
+        pane()->setCaretPosition(mLastLineNumber, 0);
+        mpHost->setCaretEnabled(false);
+        QVERIFY(runLua(qsl("clearWindow()\nmoveCursor(0, 0)\ndeleteLine()")));
+        QVERIFY(consoleBuffer().lineBuffer.isEmpty());
+        QVERIFY2(pane()->mCaretLine * QFontMetrics(pane()->font()).height() > pane()->height(), "the caret is not below the screen, so turning caret mode on does not bring it into view");
+
+        mpHost->setCaretEnabled(true);
+
+        QCOMPARE(pane()->mCaretLine, 0);
+        QCOMPARE(pane()->mCaretColumn, 0);
+    }
 };
 
 #include "CaretNavigationTest.moc"

@@ -3871,7 +3871,8 @@ void TTextEdit::updateCaret()
         if (mCaretLine < lineOffset) {
             scrollTo(mCaretLine + 1);
         } else if (mCaretLine >= lineOffset + mScreenHeight) {
-            int emptyLastLine = mpBuffer->lineBuffer.last().isEmpty();
+            // Turning caret mode on calls this before moving a caret that deleteLine() may have left on an emptied buffer
+            const int emptyLastLine = !mpBuffer->lineBuffer.isEmpty() && mpBuffer->lineBuffer.last().isEmpty();
             if (mCaretLine == mpBuffer->lineBuffer.length() - 1 - emptyLastLine) {
                 scrollTo(mCaretLine + 2);
             } else {
