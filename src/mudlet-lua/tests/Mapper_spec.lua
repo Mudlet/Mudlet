@@ -1288,12 +1288,16 @@ describe("Tests mapper functions against a shared fixture", function()
 
     it("connectExitStub weighs a direction code from 2 to 11 against a room with that ID", function()
       local east = 4
-      if not roomExists(east) then
+      local createdEast = not roomExists(east)
+      if createdEast then
         addRoom(east); setRoomArea(east, areaAlpha)
-        finally(function() deleteRoom(east) end)
       end
       local a = createRoomID(); addRoom(a); setRoomArea(a, areaAlpha)
-      finally(function() deleteRoom(a) end)
+      -- one finally: busted keeps only the last function handed to it
+      finally(function()
+        deleteRoom(a)
+        if createdEast then deleteRoom(east) end
+      end)
       setExitStub(a, east, true)
       local ok, err = connectExitStub(a, east)
       assert.is_nil(ok)
