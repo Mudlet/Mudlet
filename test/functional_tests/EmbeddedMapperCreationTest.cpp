@@ -70,6 +70,14 @@ private:
     const QString mFirstAreaName = qsl("AAArea");
     const QString mPlayerAreaName = qsl("QAArea");
 
+    // Core code reaches the mapper through TMap::mapViewFrontend(), which TMap keeps
+    // beside mapper() rather than deriving from it, so it has to follow every handoff.
+    bool frontendFollowsMapper() const
+    {
+        dlgMapper* pMapper = mpHost->mpMap->mapper();
+        return mpHost->mpMap->mapViewFrontend() == (pMapper ? static_cast<TMapViewFrontend*>(pMapper) : nullptr);
+    }
+
 private slots:
     void initTestCase()
     {
@@ -190,12 +198,14 @@ private slots:
         mudlet::self()->slot_showMapperDialog();
         qApp->processEvents();
         QVERIFY2(mpHost->mpMap->mapper() != pEmbedded, "the dock did not take the map over, so restoring it below would prove nothing");
+        QVERIFY2(frontendFollowsMapper(), "the dock took the map over but core code still drives the embedded mapper");
 
         mudlet::self()->slot_showMapperDialog();
         qApp->processEvents();
 
         QVERIFY2(mpHost->mpMap->mapper(), "closing the toolbar map dock left the map with no mapper at all, so nothing redraws it");
         QCOMPARE(mpHost->mpMap->mapper(), pEmbedded);
+        QVERIFY2(frontendFollowsMapper(), "the map went back to the embedded mapper but core code still drives the dock's");
     }
 
     // A map widget that was opened and closed again used to refuse createMapper()
@@ -248,6 +258,7 @@ private slots:
         QVERIFY2(pDockMapper.isNull(), "the map widget's own mapper outlived the dock that owned it");
         QVERIFY2(mpHost->mpMap->mapper(), "the map widget's death took the map's mapper with it");
         QCOMPARE(mpHost->mpMap->mapper(), mpHost->mainConsoleView()->mpMapper.data());
+        QVERIFY2(frontendFollowsMapper(), "core code still drives the dead map widget's mapper");
     }
 
     // The profile's own map dock is hidden rather than destroyed when the main
@@ -342,12 +353,30 @@ private slots:
         QVERIFY(pEmbedded);
 
         mpHost->mpMap->setMapper(nullptr);
+        QVERIFY2(!mpHost->mpMap->mapViewFrontend(), "clearing the map's mapper left core code a mapper to drive");
 
         auto [again, againMessage] = mpHost->mainConsoleView()->createMapper(QString(), 0, 0, 300, 300);
         QVERIFY2(again, qPrintable(againMessage));
         QVERIFY2(mpHost->mpMap->mapper(), "a repeat createMapper() left the map with no mapper at all");
         QCOMPARE(mpHost->mpMap->mapper(), pEmbedded);
+        QVERIFY2(frontendFollowsMapper(), "the embedded mapper took the map back but core code was not given it");
         QVERIFY2(mapOpenEventCountIs(1), "taking the map back raised a second mapOpenEvent");
+    }
+
+    // The frontend pointer is a plain pointer beside the QPointer, so it is only
+    // safe while TMap answers null for it once the mapper it names is gone.
+    void test_mapViewFrontendIsNullOnceTheMapperIsDestroyed()
+    {
+        auto [created, message] = mpHost->mainConsoleView()->createMapper(QString(), 0, 0, 300, 300);
+        QVERIFY2(created, qPrintable(message));
+        dlgMapper* pEmbedded = mpHost->mainConsoleView()->mpMapper.data();
+        QVERIFY(pEmbedded);
+        QCOMPARE(mpHost->mpMap->mapViewFrontend(), static_cast<TMapViewFrontend*>(pEmbedded));
+
+        delete pEmbedded;
+
+        QVERIFY(!mpHost->mpMap->mapper());
+        QVERIFY2(!mpHost->mpMap->mapViewFrontend(), "TMap still hands core code the mapper that was just destroyed");
     }
 
     // The two halves of the takeover only meet when the profile holds an embedded
