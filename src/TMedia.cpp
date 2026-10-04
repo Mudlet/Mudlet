@@ -42,6 +42,8 @@
 #include <QStandardPaths>
 #include <QTimer>
 
+#include <algorithm>
+
 using namespace std::chrono_literals;
 
 namespace {
@@ -86,6 +88,9 @@ bool mediaTypeNamed(const QJsonObject& json)
 
     return !mediaTypeJSON.isString() || !mediaTypeJSON.toString().isEmpty();
 }
+
+// Every pass is a playlist entry built up front, so a huge count from a game would hang Mudlet
+constexpr int maxQueuedLoops = 10000;
 } // namespace
 
 // Public
@@ -2142,7 +2147,7 @@ void TMedia::play(TMediaData& mediaData)
                 }
             }
 
-            for (int k = 0; k < mediaData.mediaLoops(); k++) {
+            for (int k = 0, loops = std::min(mediaData.mediaLoops(), maxQueuedLoops); k < loops; k++) {
                 absolutePathFileName = fileNameList.size() > 1 ? fileNameList.at(QRandomGenerator::global()->bounded(fileNameList.size()))
                                                                : (mediaData.mediaInput() == TMediaData::MediaInputStream ? TMedia::getStreamUrl(mediaData) : fileNameList.at(0));
 

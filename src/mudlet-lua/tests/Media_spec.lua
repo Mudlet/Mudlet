@@ -891,6 +891,17 @@ describe("Media playback effects with a generated sound file", function()
     assert.equals(0, #getPlayingSounds())
   end)
 
+  it("a huge finite loop count returns promptly", function()
+    if mediaPlaybackUnavailable() then
+      return
+    end
+    writeSoundFiles()
+    local started = os.clock()
+    assert.is_true(playSoundFile({name = soundFile, key = "busted-many-loops", loops = 10000000}))
+    assert.is_true(os.clock() - started < 0.5)
+    assert.is_not_nil(waitForEvent("sysMediaStarted", 5000))
+  end)
+
   it("a start position begins playback part way into the file", function()
     if mediaPlaybackUnavailable() then
       return
