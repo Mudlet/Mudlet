@@ -6227,6 +6227,33 @@ std::optional<bool> Host::windowScrolling(const QString& name) const
     return {pModel->mScrollingEnabled};
 }
 
+std::optional<QFont> Host::windowFont(const QString& name) const
+{
+    if (!mpConsole) {
+        return {};
+    }
+    const TConsoleModel* pModel = consoleModelNamed(name);
+    if (!pModel) {
+        return {};
+    }
+    if (pModel == mpMainConsoleModel.get()) {
+        return {mpConsole->displayFont()};
+    }
+    return {pModel->mUpperPaneFont};
+}
+
+std::optional<int> Host::windowFontSize(const QString& name) const
+{
+    if (!mpConsole) {
+        return {};
+    }
+    const TConsoleModel* pModel = consoleModelNamed(name);
+    if (!pModel) {
+        return {};
+    }
+    return {pModel->mUpperPaneFont.pointSize()};
+}
+
 std::optional<QString> Host::commandLineText(const QString& name) const
 {
     if (!mpConsole) {

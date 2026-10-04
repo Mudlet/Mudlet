@@ -1510,12 +1510,9 @@ int TLuaInterpreter::getFont(lua_State* L)
     // A console wins a name a label also carries, the way it does for every
     // other window function, so a name no console answers to is only then
     // tried as a label:
-    std::optional<QFont> font;
-    if (host.mpConsole) {
-        font = host.mpConsole->getWindowFont(windowName);
-        if (!font) {
-            font = host.labelFont(windowName);
-        }
+    std::optional<QFont> font = host.windowFont(windowName);
+    if (!font) {
+        font = host.labelFont(windowName);
     }
     if (!font) {
         return windowNotFound(L, windowName);
@@ -1530,7 +1527,7 @@ int TLuaInterpreter::getFontSize(lua_State* L)
 {
     const QString windowName{WINDOW_NAME(L, 1)};
     const Host& host = getHostFromLua(L);
-    const auto size = host.mpConsole ? host.mpConsole->getWindowFontSize(windowName) : std::nullopt;
+    const auto size = host.windowFontSize(windowName);
     if (!size) {
         return windowNotFound(L, windowName);
     }

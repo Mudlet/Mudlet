@@ -233,8 +233,6 @@ public:
     // The font operations, found by name in the same way. The main console's
     // font is the profile's display font, which Host keeps and tells scripts
     // about when it changes.
-    std::optional<QFont> getWindowFont(const QString& name);
-    std::optional<int> getWindowFontSize(const QString& name);
     // The console keeps its point size. Answers whether the font was taken
     // and, when not, why.
     std::optional<std::pair<bool, QString>> setWindowFontFamily(const QString& name, const QString& family, QFont::Weight weight);
