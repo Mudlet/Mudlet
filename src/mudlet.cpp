@@ -4682,6 +4682,28 @@ void mudlet::hideEvent(QHideEvent* event)
     QMainWindow::hideEvent(event);
 }
 
+bool mudlet::saveWindowLayoutForScript()
+{
+    // the flag is what makes the save on the way out a no-op, and a save asked
+    // for from a script is no substitute for that one, so it goes back up only
+    // if this call really saved
+    const bool hadSavedLayout = mHasSavedLayout;
+    mHasSavedLayout = false;
+    const bool saved = saveWindowLayout();
+    mHasSavedLayout = hadSavedLayout && saved;
+    return saved;
+}
+
+int mudlet::profileTabIndex(const QString& profileName) const
+{
+    return mpTabBar->tabIndex(profileName);
+}
+
+void mudlet::setActiveProfileTab(const QString& profileName)
+{
+    mpTabBar->setCurrentIndex(mpTabBar->tabIndex(profileName));
+}
+
 std::optional<QSize> mudlet::getImageSize(const QString& imageLocation)
 {
     // QImage reads an SVG only where the qsvg image plugin is deployed, so the

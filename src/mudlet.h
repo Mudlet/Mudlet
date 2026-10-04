@@ -153,7 +153,7 @@ public:
     void addConsoleForNewHost(Host*);
     void adjustMenuBarVisibility();
     void adjustToolBarVisibility();
-    void alertUser(int milliseconds);
+    void alertUser(int milliseconds) override;
     void announce(const QString& text, const QString& processing = QString(), bool isPlain = false) override;
     void attachDebugArea(const QString&);
     void checkUpdatesOnStart();
@@ -232,7 +232,7 @@ public:
     // Out of line so mudlet.h needs no more than a forward declaration -
     // converting the QPointer this returns wants the complete type
     QDockWidget* getMainWindowDockWidget(const QString& mapKey) const;
-    std::optional<QSize> getImageSize(const QString&);
+    std::optional<QSize> getImageSize(const QString&) override;
     const QLocale& getUserLocale() const { return mUserLocale; }
     // Used to enable "emergency" control recovery action - if Mudlet is
     // operating without either menubar or main toolbar showing.
@@ -240,7 +240,7 @@ public:
     bool isGoingDown() { return mIsGoingDown; }
     bool closeHeldOffByEventPump(Host*) const;
     Host* loadProfile(const QString&, const bool, const QString& saveFileName = QString());
-    bool loadWindowLayout();
+    bool loadWindowLayout() override;
     enums::controlsVisibility menuBarVisibility() const { return mMenuBarVisibility; }
     bool canHideToolBar() const { return mMenuBarVisibility != enums::visibleNever; }
     bool migratePasswordsToProfileStorage();
@@ -258,13 +258,14 @@ public:
     void readEarlySettings(const QSettings&);
     void readLateSettings(const QSettings&);
     void refreshTabBar();
-    void refreshTabBarsAfterStyleChange();
+    void refreshTabBarsAfterStyleChange() override;
     // Used by a profile to tell the mudlet class
     // to tell other profiles to reload the updated
     // maps (via signal_profileMapReloadRequested(...))
     void requestProfilesToReloadMaps(QList<QString>);
     std::pair<bool, QString> resetProfileIcon(const QString&);
     bool saveWindowLayout();
+    bool saveWindowLayoutForScript() override;
     void scanForMudletTranslations(const QString&);
     void scanForQtTranslations(const QString&);
     void setAppearance(enums::Appearance, const bool& loading = false);
@@ -278,6 +279,9 @@ public:
     void setShowMapAuditErrors(const bool);
     void setInvertMapZoom(const bool);
     void setShowTabConnectionIndicators(const bool) override;
+    int profileTabIndex(const QString& profileName) const override;
+    void setActiveProfileTab(const QString& profileName) override;
+    void resizeMainWindow(int width, int height) override { resize(width, height); }
     void setupPreInstallPackages(const QString&, const QString&, const bool);
     void setToolBarIconSize(int);
     void setToolBarVisibility(enums::controlsVisibility);
