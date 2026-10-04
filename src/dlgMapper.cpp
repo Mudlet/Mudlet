@@ -53,6 +53,11 @@
 
 using namespace std::chrono_literals;
 
+TMapViewFrontend* TMap::mapViewFrontend() const
+{
+    return mpMapper.data();
+}
+
 dlgMapper::dlgMapper(QWidget* parent, Host* pH, TMap* pM)
 : QWidget(parent)
 , mpMap(pM)

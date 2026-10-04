@@ -28,9 +28,9 @@
 #include "TArea.h"
 #include "TEvent.h"
 #include "TMapLabel.h"
+#include "TMapViewFrontend.h"
 #include "TRoomDB.h"
 #include "XMLimport.h"
-#include "dlgMapper.h"
 #include "TLuaInterpreter.h"
 #include "mapInfoContributorManager.h"
 
@@ -2991,11 +2991,6 @@ void TMap::reportStringToProgressDialog(const QString text)
         // inform the user that something IS happening...
         qApp->processEvents();
     }
-}
-
-TMapViewFrontend* TMap::mapViewFrontend() const
-{
-    return mpMapper.data();
 }
 
 void TMap::reportProgressToProgressDialog(const int current, const int maximum)
