@@ -68,9 +68,9 @@ public:
     TConsole* createSubConsole(const QString& name, QWidget* parent);
     TMxpFrameWidgets& mxpFrameWidgets() { return *mpMxpFrameWidgets; }
     const TMxpFrameWidgets& mxpFrameWidgets() const { return *mpMxpFrameWidgets; }
-    bool createScrollBox(const QString& windowname, const QString& name, int x, int y, int width, int height);
-    bool raiseWindow(const QString& name);
-    bool lowerWindow(const QString& name);
+    bool createScrollBox(const QString& windowname, const QString& name, int x, int y, int width, int height) override;
+    bool raiseWindow(const QString& name) override;
+    bool lowerWindow(const QString& name) override;
     bool showWindow(const QString& name);
     bool hideWindow(const QString& name);
     void setProfileName(const QString&) override;
@@ -86,9 +86,9 @@ public:
     void applyBorders();
     // Hands TMap::mpMapper back to this profile's own mapper, if it has one
     void restoreOwnMapper();
-    bool createBuffer(const QString& name);
-    std::pair<bool, QString> setUserWindowStyleSheet(const QString& name, const QString& userWindowStyleSheet);
-    std::pair<bool, QString> setUserWindowTitle(const QString& name, const QString& text);
+    bool createBuffer(const QString& name) override;
+    std::pair<bool, QString> setUserWindowStyleSheet(const QString& name, const QString& userWindowStyleSheet) override;
+    std::pair<bool, QString> setUserWindowTitle(const QString& name, const QString& text) override;
     bool createLabel(const QString& windowname, const QString& name, int x, int y, int width, int height, bool fillBackground, bool clickThrough) override;
     std::pair<bool, QString> createMapper(const QString& windowname, int, int, int, int);
     std::pair<bool, QString> createCommandLine(const QString& windowname, const QString& name, int, int, int, int) override;
@@ -99,10 +99,10 @@ public:
     std::pair<bool, QString> setLabelStyleSheet(const QString& name, const QString& stylesheet) override;
     std::optional<QSize> getLabelSizeHint(const QString& name) const override;
     std::pair<bool, QString> deleteLabel(const QString& name) override;
-    std::pair<bool, QString> deleteMiniConsole(const QString&);
+    std::pair<bool, QString> deleteMiniConsole(const QString&) override;
     std::pair<bool, QString> deleteCommandLine(const QString&) override;
     std::pair<bool, QString> deleteTextBox(const QString&) override;
-    std::pair<bool, QString> deleteScrollBox(const QString&);
+    std::pair<bool, QString> deleteScrollBox(const QString&) override;
     std::pair<bool, QString> setLabelToolTip(const QString& name, const QString& text, double duration) override;
     std::pair<bool, QString> setLabelCursor(const QString& name, int shape) override;
     std::pair<bool, QString> setLabelCustomCursor(const QString& name, const QString& pixMapLocation, int hotX, int hotY) override;
@@ -156,12 +156,7 @@ public:
     TConsole* deregisterSubConsole(const QString& name);
     void registerDockWidget(const QString& name, TDockWidget* pDockWidget);
     TDockWidget* deregisterDockWidget(const QString& name);
-    // Makes the user window if the name is free and shows it, then floats it
-    // ("f") or docks it ("r", "l", "t", "b"), each also accepted as the word it
-    // stands for; an empty area leaves it where it is. An unknown area is
-    // refused with the window already showing. A name held by a miniconsole is
-    // refused before anything is made.
-    std::pair<bool, QString> openUserWindow(const QString& name, bool loadLayout, bool autoDock, const QString& area);
+    std::pair<bool, QString> openUserWindow(const QString& name, bool loadLayout, bool autoDock, const QString& area) override;
     TConsole* subConsoleWidget(const QString& name) const { return mSubConsoleMap.value(name); }
     QString subConsoleName(TConsole* pConsole) const { return mSubConsoleMap.key(pConsole); }
     TDockWidget* dockWidget(const QString& name) const { return mDockWidgetMap.value(name); }
@@ -169,11 +164,11 @@ public:
     // Host forwards these by name; each also handles the name's dock, so the core needs one branch each.
     void closeSubConsole(const QString& name);
     void changeSubConsoleColors(const QString& name);
-    bool showSubConsole(const QString& name);
-    bool hideSubConsole(const QString& name);
-    bool resizeSubConsole(const QString& name, int width, int height);
-    bool moveSubConsole(const QString& name, int x, int y);
-    bool reparentWindow(const QString& windowname, const QString& name, int x, int y, bool show);
+    bool showSubConsole(const QString& name) override;
+    bool hideSubConsole(const QString& name) override;
+    bool resizeSubConsole(const QString& name, int width, int height) override;
+    bool moveSubConsole(const QString& name, int x, int y) override;
+    bool reparentWindow(const QString& windowname, const QString& name, int x, int y, bool show) override;
     std::optional<QSize> consoleFontSize(const QString& name) const;
     bool setSubConsoleBackgroundColor(const QString& name, const QColor& color);
     bool setSubConsoleBackgroundImage(const QString& name, const QString& path, int mode);
@@ -208,17 +203,11 @@ public:
     bool setCommandLineVisible(const QString& name, bool visible) override;
     // Also used by Host to announce a log change for a view not yet built
     static QString loggingAnnouncementText(const bool isLogging, const QString& logFileName);
-    // The scroll bar and scrolling operations the core forwards to this view by
-    // name, never by widget. An empty name or "main" is this console, any other
-    // a mini console, user window or buffer; each reports failure for a name
-    // that is none of those.
-    bool setWindowScrollBarVisible(const QString& name, bool visible);
-    bool setWindowHorizontalScrollBarVisible(const QString& name, bool visible);
-    bool setWindowScrolling(const QString& name, bool enabled);
-    // A negative line counts back from the end. One at or past the end, or
-    // toEnd, puts the console back to following new lines.
-    bool scrollWindowTo(const QString& name, int line, bool toEnd);
-    // The font operations, found by name in the same way. The main console's
+    bool setWindowScrollBarVisible(const QString& name, bool visible) override;
+    bool setWindowHorizontalScrollBarVisible(const QString& name, bool visible) override;
+    bool setWindowScrolling(const QString& name, bool enabled) override;
+    bool scrollWindowTo(const QString& name, int line, bool toEnd) override;
+    // The font operations, found by name as the scroll bar ones are. The main console's
     // font is the profile's display font, which Host keeps and tells scripts
     // about when it changes.
     // The console keeps its point size. Answers whether the font was taken
@@ -238,11 +227,10 @@ public:
     // reach this view's QWidget base.
     QPoint mousePosition() const;
     bool hasKeyboardFocus() const;
-    // Shared by scroll boxes, command lines and text boxes: each is the same plain QWidget call.
-    bool showPlainWindow(const QString& name);
-    bool hidePlainWindow(const QString& name);
-    bool resizePlainWindow(const QString& name, int width, int height);
-    bool movePlainWindow(const QString& name, int x, int y);
+    bool showPlainWindow(const QString& name) override;
+    bool hidePlainWindow(const QString& name) override;
+    bool resizePlainWindow(const QString& name, int width, int height) override;
+    bool movePlainWindow(const QString& name, int x, int y) override;
     bool setCommandLineAction(const QString& name, const int func) override;
     bool resetCommandLineAction(const QString& name) override;
     void showStatistics();

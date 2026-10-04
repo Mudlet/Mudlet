@@ -624,10 +624,10 @@ int TLuaInterpreter::deleteMiniConsole(lua_State* L)
     const QString miniConsoleName = getVerifiedString(L, __func__, 1, "miniconsole name");
     const Host& host = getHostFromLua(L);
 
-    if (!host.mpConsole) {
+    if (!host.consoleFrontend()) {
         return warnArgumentValue(L, __func__, no_main_window_value, true);
     }
-    if (auto [success, message] = host.mpConsole->deleteMiniConsole(miniConsoleName); !success) {
+    if (auto [success, message] = host.consoleFrontend()->deleteMiniConsole(miniConsoleName); !success) {
         lua_pushboolean(L, false);
         lua_pushstring(L, message.toUtf8().constData());
         return 2;
@@ -908,10 +908,10 @@ int TLuaInterpreter::deleteScrollBox(lua_State* L)
     const QString scrollBoxName = getVerifiedString(L, __func__, 1, "scrollbox name");
     const Host& host = getHostFromLua(L);
 
-    if (!host.mpConsole) {
+    if (!host.consoleFrontend()) {
         return warnArgumentValue(L, __func__, no_main_window_value, true);
     }
-    if (auto [success, message] = host.mpConsole->deleteScrollBox(scrollBoxName); !success) {
+    if (auto [success, message] = host.consoleFrontend()->deleteScrollBox(scrollBoxName); !success) {
         lua_pushboolean(L, false);
         lua_pushstring(L, message.toUtf8().constData());
         return 2;
@@ -979,7 +979,7 @@ int TLuaInterpreter::disableHorizontalScrollBar(lua_State* L)
 {
     const QString windowName{WINDOW_NAME(L, 1)};
     const Host& host = getHostFromLua(L);
-    if (!host.mpConsole || !host.mpConsole->setWindowHorizontalScrollBarVisible(windowName, false)) {
+    if (!host.consoleFrontend() || !host.consoleFrontend()->setWindowHorizontalScrollBarVisible(windowName, false)) {
         return windowNotFound(L, windowName);
     }
     return 0;
@@ -990,7 +990,7 @@ int TLuaInterpreter::disableScrollBar(lua_State* L)
 {
     const QString windowName{WINDOW_NAME(L, 1)};
     const Host& host = getHostFromLua(L);
-    if (!host.mpConsole || !host.mpConsole->setWindowScrollBarVisible(windowName, false)) {
+    if (!host.consoleFrontend() || !host.consoleFrontend()->setWindowScrollBarVisible(windowName, false)) {
         return windowNotFound(L, windowName);
     }
     return 0;
@@ -1259,7 +1259,7 @@ int TLuaInterpreter::enableHorizontalScrollBar(lua_State* L)
 {
     const QString windowName{WINDOW_NAME(L, 1)};
     const Host& host = getHostFromLua(L);
-    if (!host.mpConsole || !host.mpConsole->setWindowHorizontalScrollBarVisible(windowName, true)) {
+    if (!host.consoleFrontend() || !host.consoleFrontend()->setWindowHorizontalScrollBarVisible(windowName, true)) {
         return windowNotFound(L, windowName);
     }
     return 0;
@@ -1270,7 +1270,7 @@ int TLuaInterpreter::enableScrollBar(lua_State* L)
 {
     const QString windowName{WINDOW_NAME(L, 1)};
     const Host& host = getHostFromLua(L);
-    if (!host.mpConsole || !host.mpConsole->setWindowScrollBarVisible(windowName, true)) {
+    if (!host.consoleFrontend() || !host.consoleFrontend()->setWindowScrollBarVisible(windowName, true)) {
         return windowNotFound(L, windowName);
     }
     return 0;
@@ -2360,7 +2360,7 @@ int TLuaInterpreter::lowerWindow(lua_State* L)
 {
     const QString windowName{WINDOW_NAME(L, 1)};
     const Host& host = getHostFromLua(L);
-    lua_pushboolean(L, host.mpConsole && host.mpConsole->lowerWindow(windowName));
+    lua_pushboolean(L, host.consoleFrontend() && host.consoleFrontend()->lowerWindow(windowName));
     return 1;
 }
 
@@ -2474,7 +2474,7 @@ int TLuaInterpreter::raiseWindow(lua_State* L)
 {
     const QString windowName{WINDOW_NAME(L, 1)};
     const Host& host = getHostFromLua(L);
-    lua_pushboolean(L, host.mpConsole && host.mpConsole->raiseWindow(windowName));
+    lua_pushboolean(L, host.consoleFrontend() && host.consoleFrontend()->raiseWindow(windowName));
     return 1;
 }
 
@@ -4130,10 +4130,10 @@ int TLuaInterpreter::setUserWindowTitle(lua_State* L)
     }
 
     const Host& host = getHostFromLua(L);
-    if (!host.mpConsole) {
+    if (!host.consoleFrontend()) {
         return warnArgumentValue(L, __func__, no_main_window_value);
     }
-    if (auto [success, message] = host.mpConsole->setUserWindowTitle(name, title); !success) {
+    if (auto [success, message] = host.consoleFrontend()->setUserWindowTitle(name, title); !success) {
         return warnArgumentValue(L, __func__, message);
     }
 
@@ -4170,10 +4170,10 @@ int TLuaInterpreter::setUserWindowStyleSheet(lua_State* L)
     const QString userWindowStyleSheet{lua_tostring(L, 2)};
     const Host& host = getHostFromLua(L);
 
-    if (!host.mpConsole) {
+    if (!host.consoleFrontend()) {
         return warnArgumentValue(L, __func__, no_main_window_value);
     }
-    if (auto [success, message] = host.mpConsole->setUserWindowStyleSheet(userWindowName, userWindowStyleSheet); !success) {
+    if (auto [success, message] = host.consoleFrontend()->setUserWindowStyleSheet(userWindowName, userWindowStyleSheet); !success) {
         return warnArgumentValue(L, __func__, message);
     }
 
@@ -4484,7 +4484,7 @@ int TLuaInterpreter::scrollTo(lua_State* L)
 
     const QString windowName{name};
     const Host& host = getHostFromLua(L);
-    if (!host.mpConsole || !host.mpConsole->scrollWindowTo(windowName, targetLine, stopScrolling)) {
+    if (!host.consoleFrontend() || !host.consoleFrontend()->scrollWindowTo(windowName, targetLine, stopScrolling)) {
         return windowNotFound(L, windowName);
     }
     return 0;
@@ -4553,7 +4553,7 @@ int TLuaInterpreter::enableScrolling(lua_State* L)
     }
 
     const Host& host = getHostFromLua(L);
-    if (!host.mpConsole || !host.mpConsole->setWindowScrolling(windowName, true)) {
+    if (!host.consoleFrontend() || !host.consoleFrontend()->setWindowScrolling(windowName, true)) {
         return windowNotFound(L, windowName);
     }
     lua_pushboolean(L, true);
@@ -4569,7 +4569,7 @@ int TLuaInterpreter::disableScrolling(lua_State* L)
     }
 
     const Host& host = getHostFromLua(L);
-    if (!host.mpConsole || !host.mpConsole->setWindowScrolling(windowName, false)) {
+    if (!host.consoleFrontend() || !host.consoleFrontend()->setWindowScrolling(windowName, false)) {
         return windowNotFound(L, windowName);
     }
     lua_pushboolean(L, true);
