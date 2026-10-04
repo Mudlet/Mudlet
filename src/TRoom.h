@@ -49,7 +49,6 @@ public:
     void setId(const int);
     bool setExit(const int to, const int direction);
     int getExit(const int) const;
-    QHash<int, int> getExits() const;
     bool hasExit(const int) const;
     void setWeight(int);
     bool setExitLock(const int, const bool);
