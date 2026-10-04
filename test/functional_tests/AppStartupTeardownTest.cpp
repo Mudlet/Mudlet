@@ -46,6 +46,10 @@
 
 #include "GroupedTest.h"
 
+#if !defined(Q_OS_WINDOWS)
+#include <sys/un.h>
+#endif
+
 #ifndef MUDLET_APP_BINARY
 // Set by test/functional_tests/CMakeLists.txt. Without it there is no binary to
 // drive and every case below would pass having run nothing, so fail the build
@@ -95,13 +99,16 @@ private slots:
             // A root of its own per run, so the child reads none of the
             // developer's profiles and leaves nothing behind. Creating
             // mudlet/profiles is what makes XDG_CONFIG_HOME outrank the legacy
-            // ~/.config/mudlet, see MudletApp::xdgConfigDir(). Under /tmp on
-            // Unix: the instance socket lives in it, and macOS's per-user temp
-            // directory leaves too little of sockaddr_un's 104 bytes.
+            // ~/.config/mudlet, see MudletApp::xdgConfigDir().
 #if defined(Q_OS_WINDOWS)
             QTemporaryDir sandbox;
 #else
-            QTemporaryDir sandbox(qsl("/tmp/mudlet-teardown-XXXXXX"));
+            // The instance socket lives in it, and macOS's per-user temp
+            // directory can leave too little of sockaddr_un for its path
+            const QString sandboxName = qsl("mudlet-teardown-XXXXXX");
+            const QString socketPath = qsl("%1/%2/tmp/%3").arg(QDir::tempPath(), sandboxName, scmInstanceServerName);
+            const QString tempRoot = QFile::encodeName(socketPath).size() < static_cast<qsizetype>(sizeof(sockaddr_un::sun_path)) ? QDir::tempPath() : qsl("/tmp");
+            QTemporaryDir sandbox(qsl("%1/%2").arg(tempRoot, sandboxName));
 #endif
             QVERIFY2(sandbox.isValid(), qPrintable(sandbox.errorString()));
             QVERIFY(QDir().mkpath(qsl("%1/config/mudlet/profiles").arg(sandbox.path())));
