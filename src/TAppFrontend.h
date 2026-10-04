@@ -20,10 +20,11 @@
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
 
+#include <QString>
+
 #include <optional>
 
 class Host;
-class QString;
 
 // The application shell as core code sees it. The mudlet main window implements it;
 // core code reaches it through instance() instead of naming the window class.
@@ -51,6 +52,30 @@ public:
     virtual void updateMapActionAvailability() = 0;
     virtual bool showTabConnectionIndicators() const = 0;
     virtual void setShowTabConnectionIndicators(bool show) = 0;
+
+    // Surfaces a command can be placed on. A client with different chrome maps
+    // these onto whatever it has; one that has only a menu honours Menu alone.
+    enum class CommandSurface { Menu, Toolbar, Both };
+
+    struct CommandRequest
+    {
+        QString name;
+        QString icon;
+        QString tooltip;
+        QString menuPath;
+        QString shortcut;
+        CommandSurface surfaces = CommandSurface::Both;
+    };
+
+    // Why a command could not be placed, so the binding can say which
+    virtual int addAddonCommand(const CommandRequest& request, Host* pHost, QString& error) = 0;
+    virtual bool removeAddonCommand(int commandId, Host* pHost) = 0;
+    virtual bool setAddonCommandEnabled(int commandId, bool enabled, Host* pHost) = 0;
+    virtual bool setAddonCommandChecked(int commandId, bool checked, Host* pHost) = 0;
+    virtual bool setAddonCommandIcon(int commandId, const QString& icon, Host* pHost) = 0;
+    virtual bool setAddonCommandTooltip(int commandId, const QString& tooltip, Host* pHost) = 0;
+    virtual bool setAddonCommandPinned(int commandId, bool pinned, Host* pHost) = 0;
+    virtual bool setAddonCommandPulse(int commandId, bool enabled, const QString& color1, const QString& color2, int interval, Host* pHost, QString& error) = 0;
 
 protected:
     // The main window owns itself, so nothing deletes it through this interface.
