@@ -22,6 +22,7 @@
 
 #include <QFont>
 
+#include <list>
 #include <optional>
 #include <utility>
 
@@ -29,6 +30,7 @@ class QColor;
 class QRect;
 class QSize;
 class QString;
+class TAction;
 
 // A profile's main console as core code sees it. TMainConsole implements it; core code
 // reaches it through Host::consoleFrontend() and names windows, never widgets.
@@ -130,6 +132,10 @@ public:
     // Resizing or moving a docked user window floats it first.
     virtual bool resizeSubConsole(const QString& name, int width, int height) = 0;
     virtual bool moveSubConsole(const QString& name, int x, int y) = 0;
+    // For shutdown: closes the sub-console, first taking a user window's dock out of the main window; does
+    // nothing for a name that is not a sub-console's. Only while Mudlet or the profile is closing down
+    // does that take the name out of the window registry; at any other time the sub-console is just hidden.
+    virtual void closeSubConsole(const QString& name) = 0;
 
     // Makes the user window unless one has that name and shows it, then floats it ("f") or docks it
     // ("r", "l", "t", "b"), each also accepted as the word it stands for; an empty area leaves it where
@@ -243,6 +249,37 @@ public:
     virtual void setMapLargeAreaExitArrows(bool enabled) = 0;
     // Also repaints the map's 3D view, if one is open.
     virtual void requestMapRepaint() = 0;
+
+    // A root action set to float has a floating toolbar, any other a button bar in this console. An
+    // action shown as a menu on another's bar (on a floating toolbar, any entry of such a menu) is
+    // recorded against that bar too, so what is asked of its bar is done to the whole bar.
+    // These bring the bars in line with the root actions (for a package, with the toolbars in it): make,
+    // fill and place each, and destroy any left from an action that has switched between docked and floating.
+    virtual void regenerateToolBars(const std::list<TAction*>& rootActions) = 0;
+    virtual void regenerateEasyButtonBars(const std::list<TAction*>& rootActions) = 0;
+    // Takes an action's bars out of the window without destroying them, for an action that is being
+    // removed or has stopped being a root one.
+    virtual void detachActionBars(TAction* pAction) = 0;
+    virtual bool hasEasyButtonBar(TAction* pAction) const = 0;
+    // For a child moved out from under pOldParent: the child no longer belongs to whichever of its bars
+    // it shared with its old parent.
+    virtual void releaseParentActionBars(TAction* pOldParent, TAction* pChild) = 0;
+    // Renames the action's floating toolbar, if it has one.
+    virtual void renameActionToolBar(TAction* pAction, const QString& name) = 0;
+    // Floating toolbars are the main window's children rather than this console's, so the profile has
+    // to delete them itself: at once, or once control returns to the event loop.
+    virtual void deleteActionToolBars() = 0;
+    virtual void deleteActionToolBarsLater() = 0;
+
+    // Floating toolbars raise a flag when moved or resized. Committing lowers the flags and answers
+    // whether any was raised; discarding, for a layout just restored, stops counting them but leaves
+    // them raised.
+    virtual bool commitToolBarLayoutChanges() = 0;
+    virtual void discardToolBarLayoutChanges() = 0;
+    // The same flag on a user window's dock: clearDockLayoutChanged() is true only when there was a
+    // raised flag to lower. Both do nothing for a name with no dock.
+    virtual void setDockLayoutChanged(const QString& name) = 0;
+    virtual bool clearDockLayoutChanged(const QString& name) = 0;
 
 protected:
     // The view is a widget whose owner deletes it as one, so nothing deletes it through this interface.
