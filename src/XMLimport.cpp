@@ -603,10 +603,15 @@ void XMLimport::readRoom(QMultiHash<int, int>& areamRoomMultiHash, unsigned int*
             mpHost->mpMap->reportStringToProgressDialog(tr("Parsing room data [count: %1]...").arg(*roomCount));
         }
         areamRoomMultiHash.insert(pT->area, pT->id);
+        mMaxRoomId = qMax(mMaxRoomId, pT->id); // Wasn't used but now maintains max Room Id
         // We are loading a map so can make some optimisation by setting the
         // third argument as true:
-        mpHost->mpMap->mpRoomDB->addRoom(pT->id, pT, true);
-        mMaxRoomId = qMax(mMaxRoomId, pT->id); // Wasn't used but now maintains max Room Id
+        if (!mpHost->mpMap->mpRoomDB->addRoom(pT->id, pT, true)) {
+            // addRoom() takes no ownership of a room whose id is taken, and
+            // ~TRoom() would remove the room holding that id, so unhook it:
+            pT->mpRoomDB = nullptr;
+            delete pT;
+        }
     } else {
         delete pT;
     }
