@@ -1592,8 +1592,7 @@ describe("MMCP effects against a scripted chat peer", function()
       assert.is_true(mmcp.ignore(PEER_NAME))
     end)
 
-    -- A message whose first line ends right after its "[ CHAT ]  - " prefix used to be
-    -- read past its end
+    -- The peek notice's first line then ends right after its "[ CHAT ]  - " prefix
     it("survives a peer whose name starts with a newline", function()
       if peerUnavailable() then return end
       ensurePeer()
