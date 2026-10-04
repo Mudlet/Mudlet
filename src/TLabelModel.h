@@ -21,6 +21,7 @@
  ***************************************************************************/
 
 #include <QColor>
+#include <QFont>
 #include <QPointer>
 #include <QRect>
 #include <QSet>
@@ -80,6 +81,10 @@ struct TLabelModel
     QRect mGeometry;
     // QWidget::isVisibleTo() the main console, kept current by the view.
     bool mVisible = false;
+    // The widget's own styleSheet(), toolTip() and font(), kept current by the view.
+    QString mStyleSheet;
+    QString mToolTip;
+    QFont mFont;
 
 private:
     void releaseFunc(const int existingFunction, const int newFunction);

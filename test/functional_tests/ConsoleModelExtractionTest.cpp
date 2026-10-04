@@ -4084,6 +4084,68 @@ noViewSelectionReport = table.concat(noViewSelectionProblems, '; ')
         QCOMPARE(host->commandLineText(name), std::optional<QString>(qsl("mini console text")));
     }
 
+    // The label getters read the model, so whatever restyles, retips or refonts the
+    // widget - a script, the label itself or an application stylesheet - must reach it.
+    void test_aLabelsStyleSheetToolTipAndFontFollowTheWidget()
+    {
+        startProfile();
+        auto host = mudlet::self()->getActiveHost();
+        QVERIFY2(host, "No active host available for the test.");
+        QVERIFY2(host->mainConsoleView(), "The active host has no main console.");
+
+        const QString name = qsl("followedLabel");
+        const auto [created, message] = host->createLabel(QString(), name, 0, 0, 100, 40, true, false);
+        QVERIFY2(created, qPrintable(message));
+        QPointer<TLabel> label = host->mainConsoleView()->labelWidget(name);
+        QVERIFY2(label, "Creating a label left no widget in the console's own map.");
+        auto restoreAppStyleSheet = qScopeGuard([previous = qApp->styleSheet()]() {
+            qApp->setStyleSheet(previous);
+        });
+
+        auto compareWithTheWidget = [&](const char* step) {
+            QVERIFY2(label, step);
+            QVERIFY2(host->labelStyleSheet(name) == std::optional<QString>(label->styleSheet()), step);
+            QVERIFY2(host->labelToolTip(name) == std::optional<QString>(label->toolTip()), step);
+            QVERIFY2(host->labelFont(name) == std::optional<QFont>(label->font()), step);
+        };
+
+        compareWithTheWidget("a new label");
+        if (QTest::currentTestFailed()) {
+            return;
+        }
+        runLua(host, qsl("setLabelStyleSheet('%1', 'font-size: 23pt; color: red;')").arg(name));
+        compareWithTheWidget("a script set a stylesheet with a font in it");
+        if (QTest::currentTestFailed()) {
+            return;
+        }
+        QCOMPARE(host->labelFont(name)->pointSize(), 23);
+        runLua(host, qsl("setLabelToolTip('%1', 'followed tip', 2)").arg(name));
+        compareWithTheWidget("a script set a tooltip");
+        if (QTest::currentTestFailed()) {
+            return;
+        }
+        QCOMPARE(host->labelToolTip(name), std::optional<QString>(qsl("followed tip")));
+        runLua(host, qsl("setLabelStyleSheet('%1', '')").arg(name));
+        compareWithTheWidget("a script cleared the stylesheet");
+        if (QTest::currentTestFailed()) {
+            return;
+        }
+        qApp->setStyleSheet(qsl("QLabel { font-size: 17pt; }"));
+        compareWithTheWidget("an application stylesheet set the font");
+        if (QTest::currentTestFailed()) {
+            return;
+        }
+        QCOMPARE(host->labelFont(name)->pointSize(), 17);
+        qApp->setStyleSheet(QString());
+        label->setFont(QFont(label->font().family(), 31));
+        compareWithTheWidget("the widget's font was set directly");
+        if (QTest::currentTestFailed()) {
+            return;
+        }
+        label->setToolTip(QString());
+        compareWithTheWidget("the widget's tooltip was cleared directly");
+    }
+
     // A scroll box, a command line and a text box are the three kinds nothing
     // deregisters from its own destructor, so closing the profile is the moment
     // their registry entries can outlive the widgets they name.
