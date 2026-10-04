@@ -74,7 +74,7 @@ public:
     virtual bool setLabelMovieSpeed(const QString& name, int percent) = 0;
     virtual bool scaleLabelMovie(const QString& name, bool followLabelSize) = 0;
 
-    // These act only on command lines made by createCommandLine() or a mini console's, never a console's own;
+    // These act only on command lines made by createCommandLine() or a mini console's, never the main console's own;
     // createCommandLine() fails for a name already taken.
     virtual std::pair<bool, QString> createCommandLine(const QString& windowname, const QString& name, int x, int y, int width, int height) = 0;
     virtual std::pair<bool, QString> deleteCommandLine(const QString& name) = 0;
