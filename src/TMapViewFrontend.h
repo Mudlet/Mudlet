@@ -20,7 +20,11 @@
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
 
-class QString;
+#include <QSet>
+#include <QString>
+
+#include <optional>
+#include <utility>
 
 // What core code asks of the mapper drawing a profile's map. dlgMapper implements it; core code
 // reaches it through TMap::mapViewFrontend().
@@ -38,6 +42,16 @@ public:
     virtual void setMapProgressCancelable(bool cancelable) = 0;
     virtual void hideMapProgress() = 0;
     virtual bool isMapProgressVisible() const = 0;
+
+    // The 2D map's room selection; while a drag is still sizing it, it cannot be cleared.
+    virtual bool selectingRooms() const = 0;
+    virtual QSet<int> selectedRooms() const = 0;
+    virtual int centerSelectedRoom() const = 0;
+    virtual void clearRoomSelection() = 0;
+
+    virtual int shownAreaId() const = 0;
+    virtual std::pair<bool, QString> setMapZoom(qreal zoom, int areaId) = 0;
+    virtual std::pair<bool, QString> exportAreaToImage(int areaId, const QString& filePath, std::optional<int> zLevel, qreal zoom, bool exportAllZLevels) = 0;
 
 protected:
     // The mapper is a widget whose Qt parent deletes it, so nothing deletes it through this interface.

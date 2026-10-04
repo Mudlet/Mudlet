@@ -71,6 +71,16 @@ public:
     void setMapProgressCancelable(bool cancelable) override;
     void hideMapProgress() override;
     bool isMapProgressVisible() const override;
+    bool selectingRooms() const override { return mp2dMap->mMultiSelection; }
+    QSet<int> selectedRooms() const override { return mp2dMap->mMultiSelectionSet; }
+    int centerSelectedRoom() const override { return mp2dMap->getCenterSelectedRoomId(); }
+    void clearRoomSelection() override { mp2dMap->clearSelection(); }
+    int shownAreaId() const override { return mp2dMap->getAreaId(); }
+    std::pair<bool, QString> setMapZoom(qreal zoom, int areaId) override { return mp2dMap->setMapZoom(zoom, areaId); }
+    std::pair<bool, QString> exportAreaToImage(int areaId, const QString& filePath, std::optional<int> zLevel, qreal zoom, bool exportAllZLevels) override
+    {
+        return mp2dMap->exportAreaToImage(areaId, filePath, zLevel, zoom, exportAllZLevels);
+    }
 
 signals:
     void signal_mapProgressCanceled();
