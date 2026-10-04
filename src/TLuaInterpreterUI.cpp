@@ -50,7 +50,6 @@
 #include "TMedia.h"
 #include "TRoomDB.h"
 #include "TTimer.h"
-#include "dlgIRC.h"
 #include "mapInfoContributorManager.h"
 
 #include <array>
@@ -60,7 +59,6 @@
 #include <QCollator>
 #include <QCoreApplication>
 #include <QDir>
-#include <QFileDialog>
 #include <QFileInfo>
 #include <QVector>
 #ifdef QT_TEXTTOSPEECH_LIB
@@ -4951,12 +4949,10 @@ int TLuaInterpreter::invokeFileDialog(lua_State* L)
         }
     }
 
-    if (!luaDir) {
-        const QString fileName = QFileDialog::getExistingDirectory(nullptr, title, location);
-        lua_pushstring(L, fileName.toUtf8().constData());
-        return 1;
+    QString fileName;
+    if (auto* frontend = TAppFrontend::instance()) {
+        fileName = luaDir ? frontend->getOpenFileName(title, location) : frontend->getExistingDirectory(title, location);
     }
-    const QString fileName = QFileDialog::getOpenFileName(nullptr, title, location);
     lua_pushstring(L, fileName.toUtf8().constData());
     return 1;
 }

@@ -87,6 +87,7 @@ set(WINDOW_GROUP_TEST_SOURCES
     WrapLineRewrapTest.cpp
     ScrollLostOnPartialRepaintTest.cpp
     ScrollBarContrastTest.cpp
+    ScriptFileDialogTest.cpp
 )
 
 # Profiles: their config dir, their folders, and loading, saving and deleting them

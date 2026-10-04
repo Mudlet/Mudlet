@@ -209,6 +209,10 @@ public:
     QStringList getOrphanedProfiles();
     void reattachOrphanedProfiles();
     void processEventLoopHack() override;
+    QObject* openComposer(Host*, const QString& title, const QString& text) override;
+    void closeComposer(QObject* composer) override;
+    QString getOpenFileName(const QString& title, const QString& location) override;
+    QString getExistingDirectory(const QString& title, const QString& location) override;
     void readEarlySettings(const QSettings&);
     void readLateSettings(const QSettings&);
     void refreshTabBar();
