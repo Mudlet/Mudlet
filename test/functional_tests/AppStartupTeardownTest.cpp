@@ -101,9 +101,10 @@ private slots:
             QVERIFY(QDir().mkpath(qsl("%1/config/mudlet/profiles").arg(sandbox.path())));
             QVERIFY(QDir().mkpath(qsl("%1/tmp").arg(sandbox.path())));
 
+            // Before the stand-in, so it outlives the sockets whose handlers append to it
+            QByteArray forwarded;
             // Stands in for the running Mudlet the child forwards to
             QLocalServer runningInstance;
-            QByteArray forwarded;
             connect(&runningInstance, &QLocalServer::newConnection, &runningInstance, [&runningInstance, &forwarded]() {
                 while (QLocalSocket* socket = runningInstance.nextPendingConnection()) {
                     connect(socket, &QLocalSocket::readyRead, socket, [socket, &forwarded]() {
@@ -157,7 +158,7 @@ private slots:
             QVERIFY2(mudlet.waitForStarted(scmStartTimeoutMs), qPrintable(qsl("%1: %2").arg(where, mudlet.errorString())));
             // Not waitForFinished(): the stand-in only answers while events are processed
             QTRY_VERIFY2_WITH_TIMEOUT(mudlet.state() == QProcess::NotRunning,
-                                      qPrintable(qsl("%1: the child never finished, so it found no running instance and started as the first one").arg(where)),
+                                      qPrintable(qsl("%1: the child never finished, so it did not leave through the forwarding return and is running as a first instance").arg(where)),
                                       scmFinishTimeoutMs);
 
             const QString output = QString::fromUtf8(mudlet.readAllStandardOutput());

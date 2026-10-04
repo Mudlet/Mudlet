@@ -490,8 +490,8 @@ int main(int argc, char* argv[])
 
     // The first QSslSocket (each cTelnet holds two) makes Qt parse every system CA certificate on the
     // constructing thread, inside profile load; warming up on another thread now usually finishes first.
-    // Declared after consoleApp, so every early return joins it before that goes: the warm-up holds Qt's
-    // TLS backend mutex while loading the plugin, and static destruction tears those down.
+    // Every early return joins it on the way out: the warm-up holds Qt's TLS backend mutex while loading
+    // the plugin, and static destruction tears those down.
     TlsWarmup tlsWarmup;
 
     if (app) {
