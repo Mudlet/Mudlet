@@ -2756,8 +2756,8 @@ describe("Tests exporting the profile to a file with saveProfile", function()
   local exportedPath = scratchDirectory .. "/mudlet-spec-exported.xml"
   -- U+FFFC U+241B, which is how an ESC is held in a save file
   local encodedEscape = "\239\191\188\226\144\155"
-  -- Every control character a save file has a control picture for, each one
-  -- twice in a row, as the import hands them back to the export raw
+  -- Control characters a save gives back unchanged, each one twice in a row,
+  -- as the import hands them back to the export raw
   local controlCodes = {1, 2, 3, 4, 5, 6, 7, 8, 11, 12, 14, 15, 18, 19, 20, 21, 22, 25, 26, 27, 28, 29, 30, 31}
   local rawControls, encodedControls = {}, {}
   for index, code in ipairs(controlCodes) do
@@ -2888,7 +2888,7 @@ describe("Tests exporting the profile to a file with saveProfile", function()
   end)
 
   it("writes every control character back as a placeholder and a control picture", function()
-    assert.equals("-- " .. rawControls, getScript(name .. " control script"))
+    assert.equals("-- " .. rawControls, (getScript(name .. " control script")))
     assert.is_true(contains(exported, "<script>-- " .. encodedControls .. "</script>"),
                    "the exported script does not hold every control character encoded")
   end)

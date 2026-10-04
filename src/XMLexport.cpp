@@ -247,7 +247,7 @@ struct ControlEntity
 };
 
 // How pugixml writes each control character, and the U+FFFC + Control Picture pair that
-// XMLimport reads back. Profiles already on disk depend on these exact pairs.
+// replaces it, as XML 1.0 cannot hold the character itself.
 constexpr ControlEntity scControlEntities[] = {
         {"&#1;", "\uFFFC\u2401"},   // SOH
         {"&#01;", "\uFFFC\u2401"},  // SOH
