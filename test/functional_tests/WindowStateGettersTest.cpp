@@ -197,11 +197,67 @@ private slots:
     {
         assertVisibility(mpBackgroundHost, qsl("main"), true, qsl("a backgrounded profile's main window"));
 
-        // getMainWindowSize() falls back to a cached size while the console is hidden
+        // A hidden console is measured by the container it will be shown in
         const auto geometry = mpBackgroundHost->windowGeometry(qsl("main"));
         QVERIFY(geometry.has_value());
         QVERIFY2(geometry->width() > 0 && geometry->height() > 0,
                  qPrintable(qsl("a backgrounded profile's main window reported an empty geometry: %1x%2").arg(geometry->width()).arg(geometry->height())));
+    }
+
+    // A backgrounded profile's console is hidden, so getMainWindowSize() measures the container it
+    // will be shown in, which resizes with the application window while the console gets no event.
+    void test_backgroundProfileFollowsTheApplicationWindowResizing()
+    {
+        const QSize before = mpBackgroundHost->mainWindowSize().value_or(QSize());
+        const QSize windowSize = mudlet::self()->size();
+        mudlet::self()->resize(windowSize + QSize(-120, -80));
+        QTest::qWait(50);
+
+        const QSize after = mpBackgroundHost->mainWindowSize().value_or(QSize());
+        const QSize measured = mpBackgroundHost->mainConsoleView()->getMainWindowSize();
+        mudlet::self()->resize(windowSize);
+        QTest::qWait(50);
+        QVERIFY2(after != before, "resizing the application window did not change a backgrounded profile's main window size");
+        QCOMPARE(after, measured);
+    }
+
+    // A detached window's background tab is hidden at its full size, so its command line growing is
+    // laid out with no event to report it, just before Lua's resize handlers ask for the size.
+    void test_hiddenConsoleFollowsItsCommandLineGrowing()
+    {
+        TMainConsole* pConsole = mpFrontHost->mainConsoleView();
+        pConsole->hide();
+        const int hiddenWidth = pConsole->width();
+        const QSize before = pConsole->getMainWindowSize();
+
+        mpFrontHost->getLuaInterpreter()->compileAndExecuteScript(qsl("printCmdLine('main', 'one\\ntwo\\nthree\\nfour')"));
+        const QSize grown = mpFrontHost->mainWindowSize().value_or(QSize());
+        const QSize measured = pConsole->getMainWindowSize();
+        mpFrontHost->getLuaInterpreter()->compileAndExecuteScript(qsl("clearCmdLine('main')"));
+        pConsole->show();
+        QTest::qWait(50);
+
+        QVERIFY2(hiddenWidth > 0, "hiding the console took its width, so there is nothing to test here");
+        QVERIFY2(measured.height() < before.height(), "the command line did not grow, so there is nothing to test here");
+        QCOMPARE(grown, measured);
+    }
+
+    // A style sheet's minimum size resizes a hidden command line with no Resize event.
+    void test_hiddenConsoleFollowsItsCommandLineStyleSheet()
+    {
+        TMainConsole* pConsole = mpFrontHost->mainConsoleView();
+        pConsole->hide();
+        const QSize before = pConsole->getMainWindowSize();
+
+        mpFrontHost->getLuaInterpreter()->compileAndExecuteScript(qsl("setCmdLineStyleSheet('main', 'QPlainTextEdit { min-height: 120px; }')"));
+        const QSize styled = mpFrontHost->mainWindowSize().value_or(QSize());
+        const QSize measured = pConsole->getMainWindowSize();
+        mpFrontHost->getLuaInterpreter()->compileAndExecuteScript(qsl("setCmdLineStyleSheet('main', '')"));
+        pConsole->show();
+        QTest::qWait(50);
+
+        QVERIFY2(measured.height() < before.height(), "the style sheet did not grow the command line, so there is nothing to test here");
+        QCOMPARE(styled, measured);
     }
 
 private:

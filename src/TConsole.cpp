@@ -972,6 +972,10 @@ void TConsole::resizeEvent(QResizeEvent* event)
         // don't call event in lua if size didn't change
         const bool preventLuaEvent = (getMainWindowSize() == mOldSize);
         mOldSize = getMainWindowSize();
+        // Laying out a hidden console, as above, resizes its command line with no event to report it
+        if (!mpHost.isNull()) {
+            mpHost->windowRegistry().setMainWindowSize(mOldSize);
+        }
         if (preventLuaEvent) {
             return;
         }
