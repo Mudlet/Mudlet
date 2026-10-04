@@ -357,14 +357,20 @@ describe("Tests Big5 decoding", function()
     using("BIG5-HKSCS")
 
     local lines, mark = decodedLines("enc:" .. bytes(0x8F, 0xA2) .. "\27[32mx\27[0m")
-    local fed
+    local fed, between
     for i = #lines, 1, -1 do
       if lines[i]:match("^enc:") then
         fed = mark + i - 1
+        between = lines[i]:match("^enc:(.-)x")
         break
       end
     end
     assert.is_not_nil(fed, "no line carrying the fed bytes reached the buffer")
+    -- a replacement mark would leave nothing outside the BMP to misalign the format;
+    -- macOS drops the character altogether (#10408), which tests nothing but is no failure
+    if not (between == "" and getOS() == "mac") then
+      assert.same({0x2863B}, codePoints(between))
+    end
     moveCursor("main", 0, fed)
     local found = selectString("main", "x", 1)
     local color = {getFgColor("main")}
