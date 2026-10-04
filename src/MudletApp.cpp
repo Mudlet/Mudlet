@@ -583,6 +583,35 @@ QPair<bool, QString> MudletApp::writeProfileData(const QString& profile, const Q
     return qMakePair(false, file.errorString());
 }
 
+QPair<bool, QString> MudletApp::setProfileIcon(const QString& profile, const QString& newIconPath)
+{
+    QDir dir;
+    auto profileIconPath = getMudletPath(enums::profileDataItemPath, profile, qsl("profileicon"));
+    if (QFileInfo::exists(profileIconPath) && !dir.remove(profileIconPath)) {
+        qWarning() << "MudletApp::setProfileIcon() ERROR: couldn't remove existing icon" << profileIconPath;
+        return {false, qsl("couldn't remove existing icon file")};
+    }
+
+    if (!QFile::copy(newIconPath, profileIconPath)) {
+        qWarning() << "MudletApp::setProfileIcon() ERROR: couldn't copy new icon" << newIconPath << " to" << profileIconPath;
+        return {false, qsl("couldn't copy icon file into new location")};
+    }
+
+    return {true, QString()};
+}
+
+QPair<bool, QString> MudletApp::resetProfileIcon(const QString& profile)
+{
+    QDir dir;
+    auto profileIconPath = getMudletPath(enums::profileDataItemPath, profile, qsl("profileicon"));
+    if (QFileInfo::exists(profileIconPath) && !dir.remove(profileIconPath)) {
+        qWarning() << "MudletApp::resetProfileIcon() ERROR: couldn't remove existing icon" << profileIconPath;
+        return {false, qsl("couldn't remove existing icon file")};
+    }
+
+    return {true, QString()};
+}
+
 QString MudletApp::getCanonicalProfileName(const QString& profileName)
 {
     if (profileName.isEmpty()) {
