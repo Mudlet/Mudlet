@@ -37,7 +37,6 @@
 #include "TAction.h"
 #include "TAlias.h"
 #include "TArea.h"
-#include "TConsole.h"
 #include "TConsoleFrontend.h"
 #include "TConsoleModel.h"
 #include "TDebug.h"
