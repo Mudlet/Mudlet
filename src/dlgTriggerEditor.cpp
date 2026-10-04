@@ -2360,6 +2360,11 @@ void dlgTriggerEditor::slot_itemSelectedInSearchResults(QTreeWidgetItem* pItem)
         LuaInterface* lI = mpHost->getLuaInterface();
         VarUnit* vu = lI->getVarUnit();
         const QStringList varShort = pItem->data(0, IdRole).toStringList();
+        // A stale-tree rebuild empties the variables tree without refilling it,
+        // leaving mpVarBaseItem freed
+        if (!treeWidget_variables->topLevelItemCount()) {
+            repopulateVars();
+        }
         QList<QTreeWidgetItem*> list;
         recurseVariablesDown(mpVarBaseItem, list);
         QListIterator<QTreeWidgetItem*> it(list);

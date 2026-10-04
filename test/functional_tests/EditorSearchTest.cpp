@@ -416,6 +416,25 @@ private slots:
         QVERIFY(!mpEditor->treeWidget_aliases->findItems(qsl("qaStaleAlias"), Qt::MatchExactly | Qt::MatchRecursive).isEmpty());
     }
 
+    void test_selectingAVariableResultAfterAScriptAddedAnItemSelectsIt()
+    {
+        mpEditor->setSearchOptions(enums::EditorSearchOptionIncludeVariables);
+        mpEditor->slot_showScripts();
+        search(qsl("qaSearchVariable"));
+        QTreeWidgetItem* result = topLevelResultFor(qsl("Variable"));
+        QVERIFY(result);
+
+        QVERIFY(mpHost->getLuaInterpreter()->compileAndExecuteScript(qsl("permAlias('qaStaleVarAlias', '', '^qaStaleVar$', '')")));
+        QVERIFY2(mpEditor->mNeedUpdateData, "the script did not mark the editor's trees as stale");
+
+        mpEditor->slot_itemSelectedInSearchResults(result);
+
+        QCOMPARE(mpEditor->mCurrentView, EditorViewType::cmVarsView);
+        QTreeWidgetItem* selected = mpEditor->treeWidget_variables->currentItem();
+        QVERIFY2(selected, "no variable became current after its search result was chosen");
+        QCOMPARE(selected->text(0), qsl("qaSearchVariable"));
+    }
+
     // The find box inside the script pane marks every match as the term is
     // typed, so it waits until enough has been typed to be worth a pass over
     // the document - one or two characters match most of a script (#3847).
