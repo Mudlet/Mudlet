@@ -989,37 +989,40 @@ void TRoomDB::auditRooms(QHash<int, int>& roomRemapping, QHash<int, int>& areaRe
             itRoom.next();
             TRoom* pR = itRoom.value();
 
-            // Purges any duplicates that a QList structure DOES permit, but a QSet does NOT:
+            // Purges any duplicates that a QList structure DOES permit, but a QSet does NOT.
+            // A list of fewer than two has none, and most rooms have no stubs or
+            // locks at all, so those skip building a set that would allocate.
             // Exit stubs:
-            int _listCount = pR->exitStubs.count();
-            // These next few construction of a QSet from a QList or vice versa
-            // are probably safe as both iterators refer to the SAME instance
-            // that is persistent:
-            QSet<int> _set{pR->exitStubs.begin(), pR->exitStubs.end()};
-            if (_set.count() < _listCount) {
-                if (TMap::smShowMapAuditErrors) {
-                    const QString infoMsg = tr("[ INFO ]  - Duplicate exit stub identifiers found in room id: %1, this is an\n"
-                                               "anomaly but has been cleaned up easily.")
-                                                    .arg(itRoom.key());
-                    mpMap->postMessage(infoMsg);
+            if (pR->exitStubs.count() > 1) {
+                const int _listCount = pR->exitStubs.count();
+                const QSet<int> _set{pR->exitStubs.begin(), pR->exitStubs.end()};
+                if (_set.count() < _listCount) {
+                    if (TMap::smShowMapAuditErrors) {
+                        const QString infoMsg = tr("[ INFO ]  - Duplicate exit stub identifiers found in room id: %1, this is an\n"
+                                                   "anomaly but has been cleaned up easily.")
+                                                        .arg(itRoom.key());
+                        mpMap->postMessage(infoMsg);
+                    }
+                    mpMap->appendRoomErrorMsg(itRoom.key(), tr("[ INFO ]  - Duplicate exit stub identifiers found in room, this is an anomaly but has been cleaned up easily."), false);
                 }
-                mpMap->appendRoomErrorMsg(itRoom.key(), tr("[ INFO ]  - Duplicate exit stub identifiers found in room, this is an anomaly but has been cleaned up easily."), false);
+                pR->exitStubs = QList<int>{_set.begin(), _set.end()};
             }
-            pR->exitStubs = QList<int>{_set.begin(), _set.end()};
 
             // Exit locks:
-            _listCount = pR->exitLocks.count();
-            _set = QSet<int>{pR->exitLocks.begin(), pR->exitLocks.end()};
-            if (_set.count() < _listCount) {
-                if (TMap::smShowMapAuditErrors) {
-                    const QString infoMsg = tr("[ INFO ]  - Duplicate exit lock identifiers found in room id: %1, this is an\n"
-                                               "anomaly but has been cleaned up easily.")
-                                                    .arg(itRoom.key());
-                    mpMap->postMessage(infoMsg);
+            if (pR->exitLocks.count() > 1) {
+                const int _listCount = pR->exitLocks.count();
+                const QSet<int> _set{pR->exitLocks.begin(), pR->exitLocks.end()};
+                if (_set.count() < _listCount) {
+                    if (TMap::smShowMapAuditErrors) {
+                        const QString infoMsg = tr("[ INFO ]  - Duplicate exit lock identifiers found in room id: %1, this is an\n"
+                                                   "anomaly but has been cleaned up easily.")
+                                                        .arg(itRoom.key());
+                        mpMap->postMessage(infoMsg);
+                    }
+                    mpMap->appendRoomErrorMsg(itRoom.key(), tr("[ INFO ]  - Duplicate exit lock identifiers found in room, this is an anomaly but has been cleaned up easily."), false);
                 }
-                mpMap->appendRoomErrorMsg(itRoom.key(), tr("[ INFO ]  - Duplicate exit lock identifiers found in room, this is an anomaly but has been cleaned up easily."), false);
+                pR->exitLocks = QList<int>{_set.begin(), _set.end()};
             }
-            pR->exitLocks = QList<int>{_set.begin(), _set.end()};
 
             // TASK 9 IS DONE INSIDE THIS METHOD:
             pR->audit(roomRemapping, areaRemapping);

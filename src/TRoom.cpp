@@ -1161,28 +1161,26 @@ void TRoom::audit(const QHash<int, int> roomRemapping, const QHash<int, int> are
     auditExits(roomRemapping);
 }
 
+// QSet's range constructor reserves, which allocates even for an empty range
+static QSet<int> listToSet(const QList<int>& list)
+{
+    return list.isEmpty() ? QSet<int>() : QSet<int>(list.begin(), list.end());
+}
+
 void TRoom::auditExits(const QHash<int, int> roomRemapping)
 {
     // Clone all the structures into working copies that we can eliminate valid
-    // members from to identify any rogue members before removing them:
-
+    // members from to identify any rogue members before removing them. Left
+    // shared rather than detached: most rooms have none of these, and
+    // detaching an empty Qt container allocates one.
     QMap<QString, int> exitWeightsCopy = exitWeights;
-    QSet<int> exitStubsCopy{exitStubs.begin(), exitStubs.end()};
-    QSet<int> exitLocksCopy{exitLocks.begin(), exitLocks.end()};
+    QSet<int> exitStubsCopy = listToSet(exitStubs);
+    QSet<int> exitLocksCopy = listToSet(exitLocks);
     QMap<QString, int> doorsCopy = doors;
     QMap<QString, QList<QPointF>> customLinesCopy = customLines;
     QMap<QString, QColor> customLinesColorCopy = customLinesColor;
     QMap<QString, Qt::PenStyle> customLinesStyleCopy = customLinesStyle;
     QMap<QString, bool> customLinesArrowCopy = customLinesArrow;
-
-    exitWeightsCopy.detach(); // Make deep copies now, this will happen anyhow once we start to remove valid members
-    exitStubsCopy.detach();
-    exitLocksCopy.detach();
-    doorsCopy.detach();
-    customLinesCopy.detach();
-    customLinesColorCopy.detach();
-    customLinesStyleCopy.detach();
-    customLinesArrowCopy.detach();
 
     auditExit(north,
               DIR_NORTH,

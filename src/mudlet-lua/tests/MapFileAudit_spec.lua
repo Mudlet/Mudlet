@@ -230,6 +230,26 @@ describe("Tests the audit of a damaged binary map file", function()
     end)
   end)
 
+  describe("Tests exit stubs", function()
+    it("keeps one of each exit stub a room lists twice", function()
+      local area = newArea("MapFileAuditSpecDuplicateStubs")
+      local room = newRoom(area, 0)
+      setExitStub(room, "in", true)
+      setExitStub(room, "out", true)
+      local stubs = getExitStubs1(room)
+      table.sort(stubs)
+      assert.are.same({11, 12}, stubs)
+
+      reloadWith(function(data)
+        -- a stub list is its length and then each direction code, in = 11 and
+        -- out = 12, so this lists "in" twice and drops "out"
+        return planted(data, int32(2) .. int32(11) .. int32(12), int32(2) .. int32(11) .. int32(11), 1)
+      end)
+
+      assert.are.same({11}, getExitStubs1(room))
+    end)
+  end)
+
   describe("Tests room IDs", function()
     it("renumbers a room whose ID is below one and keeps its area, exits and hash", function()
       local area = newArea("MapFileAuditSpecBadRoomId")
