@@ -479,7 +479,7 @@ void TArea::calcSpan()
     mSpanIndex.clear();
     mZLevelIndex.clear();
     mGridIndex.clear();
-    QHash<int, int> customLineRoomIdToZ;
+    mCustomLineIndex.clear();
 
     for (const int id : std::as_const(rooms)) {
         TRoom* pR = mpRoomDB->getRoom(id);
@@ -494,13 +494,12 @@ void TArea::calcSpan()
         mGridIndex.addRoom(id, z, x, y);
         mSpanIndex.addRoom(x, -1 * y, z);
         if (!pR->customLines.empty()) {
-            customLineRoomIdToZ.insert(id, z);
+            mCustomLineIndex.addRoom(id, z);
         }
     }
 
     publishSpan();
-
-    mCustomLineIndex.rebuild(customLineRoomIdToZ);
+    mGridIndex.refreshMemoryEstimate();
     mLodExitIndex.markDirty();
 }
 
