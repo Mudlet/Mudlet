@@ -178,6 +178,45 @@ QString currentTimeStamp()
     return cachedStamp;
 }
 
+// Writes "rgb(r,g,b)" without the allocations QString::number() and arg() make
+void appendHtmlRgb(QString& s, const QRgb color)
+{
+    const auto appendChannel = [&s](const int value) {
+        char digits[3];
+        qsizetype count = 0;
+        if (value >= 100) {
+            digits[count++] = static_cast<char>('0' + value / 100);
+        }
+        if (value >= 10) {
+            digits[count++] = static_cast<char>('0' + (value / 10) % 10);
+        }
+        digits[count++] = static_cast<char>('0' + value % 10);
+        s.append(QLatin1StringView(digits, count));
+    };
+    s.append(QLatin1StringView("rgb("));
+    appendChannel(qRed(color));
+    s.append(QLatin1Char(','));
+    appendChannel(qGreen(color));
+    s.append(QLatin1Char(','));
+    appendChannel(qBlue(color));
+    s.append(QLatin1Char(')'));
+}
+
+void appendHtmlEscaped(QString& s, const QChar* text, const qsizetype length)
+{
+    qsizetype runStart = 0;
+    for (qsizetype i = 0; i < length; ++i) {
+        const char16_t c = text[i].unicode();
+        if (c != u'<' && c != u'>') {
+            continue;
+        }
+        s.append(text + runStart, i - runStart);
+        s.append(c == u'<' ? QLatin1StringView("&lt;") : QLatin1StringView("&gt;"));
+        runStart = i + 1;
+    }
+    s.append(text + runStart, length - runStart);
+}
+
 // Asks for the cache line holding the allocator's bookkeeping for a heap block,
 // which freeing it reads first and which (in glibc) sits just below the address
 // the allocator handed out - itself ownHeaderBytes below the contents for a
@@ -6693,15 +6732,15 @@ QString TBuffer::bufferToHtml(const bool showTimeStamp /*= false*/, const int ro
     // then we need:
     // <span timestamp format>Timestamp (13 chars)</span><span default>___padding spaces___</span><span first chunk style>first chunk...
     // we will NOT need a closing "</span>"
+    const QColor consoleBgColor{mpModel ? mpModel->mBgColor : QColor(Qt::black)};
     if (showTimeStamp && !timeBuffer.at(row).isEmpty()) {
         // Use the console's background so the timestamp blends in with the
         // rest of the text, as done in TTextEdit::layoutLine(...).
-        const QColor timeStampBgColor{mpModel ? mpModel->mBgColor : QColor(Qt::black)};
-        s.append(qsl("<span style=\"color: rgb(200,150,0); background: %1; \">%2").arg(timeStampBgColor.name(), timeBuffer.at(row).left(TBuffer::smTimeStampFormat.length())));
+        s.append(qsl("<span style=\"color: rgb(200,150,0); background: %1; \">%2").arg(consoleBgColor.name(), timeBuffer.at(row).left(TBuffer::smTimeStampFormat.length())));
         // Set the current idea of what the formatting is so we can spot if it
         // changes:
         currentFgColor = qRgb(200, 150, 0);
-        currentBgColor = timeStampBgColor.rgba();
+        currentBgColor = consoleBgColor.rgba();
         currentFlags = TChar::None;
         // We are no longer before the first span - so we need to flag that
         // there will be one to close:
@@ -6722,40 +6761,36 @@ QString TBuffer::bufferToHtml(const bool showTimeStamp /*= false*/, const int ro
         s.append(qsl("<span>%1").arg(QString(spacePadding, QChar::Space)));
     }
 
-    for (auto cookedPos = static_cast<size_t>(pos); pos < lastPos; ++cookedPos, ++pos) {
-        const int charLinkIndex = buffer.at(cookedRow).at(cookedPos).linkIndex();
+    const std::vector<TChar>& lineChars = buffer.at(cookedRow);
+    const QString& lineText = lineBuffer.at(row);
+    // Text is read in runs straight from the QString, so never past its end
+    lastPos = std::min(lastPos, static_cast<int>(lineText.size()));
+    const bool enableBlink = (mpHost != nullptr) && mpHost->getEnableBlinkText();
+    int textRunStart = pos;
+    for (; pos < lastPos; ++pos) {
+        const TChar& ch = lineChars[static_cast<size_t>(pos)];
+        const int charLinkIndex = ch.linkIndex();
         // Do we need to start a new span?
-        if (firstSpan || buffer.at(cookedRow).at(cookedPos).foregroundRgba() != currentFgColor || buffer.at(cookedRow).at(cookedPos).backgroundRgba() != currentBgColor
-            || (buffer.at(cookedRow).at(cookedPos).mFlags & TChar::TestMask) != currentFlags || charLinkIndex != currentLinkIndex) {
+        if (firstSpan || ch.foregroundRgba() != currentFgColor || ch.backgroundRgba() != currentBgColor || (ch.mFlags & TChar::TestMask) != currentFlags || charLinkIndex != currentLinkIndex) {
+            appendHtmlEscaped(s, lineText.constData() + textRunStart, pos - textRunStart);
+            textRunStart = pos;
             if (firstSpan) {
                 firstSpan = false; // The first span - won't need to close the previous one
             } else {
                 s.append(QLatin1String("</span>"));
             }
-            currentFgColor = buffer.at(cookedRow).at(cookedPos).foregroundRgba();
-            currentBgColor = buffer.at(cookedRow).at(cookedPos).backgroundRgba();
+            currentFgColor = ch.foregroundRgba();
+            currentBgColor = ch.backgroundRgba();
             if (qAlpha(currentBgColor) == 0) {
                 // A transparent cell (e.g. a system message) has no colour of its
                 // own on screen - it shows the console's background through it -
                 // so fall back to that rather than exporting alpha-0 as black.
-                currentBgColor = (mpModel ? mpModel->mBgColor : QColor(Qt::black)).rgba();
+                currentBgColor = consoleBgColor.rgba();
             }
-            currentFlags = buffer.at(cookedRow).at(cookedPos).mFlags & TChar::TestMask;
+            currentFlags = ch.mFlags & TChar::TestMask;
             currentLinkIndex = charLinkIndex;
 
             // clang-format off
-            // Determine blink class if any (only when blink is enabled in settings)
-            QString blinkClass;
-            const bool enableBlink = (mpHost != nullptr) && mpHost->getEnableBlinkText();
-
-            if (enableBlink) {
-                if (currentFlags & TChar::FastBlink) {
-                    blinkClass = qsl(" class='blink-fast'");
-                } else if (currentFlags & TChar::Blink) {
-                    blinkClass = qsl(" class='blink-slow'");
-                }
-            }
-
             // Build text-decoration CSS including decoration colors from TLinkStore
             QString textDecorationCss;
             if (currentFlags & (TChar::Underline | TChar::StrikeOut | TChar::Overline)) {
@@ -6795,44 +6830,39 @@ QString TBuffer::bufferToHtml(const bool showTimeStamp /*= false*/, const int ro
                     }
 
                     if (hasDecorationColor) {
-                        textDecorationCss.append(qsl(" text-decoration-color: rgb(%1,%2,%3);")
-                            .arg(QString::number(decorationColor.red()),
-                                 QString::number(decorationColor.green()),
-                                 QString::number(decorationColor.blue())));
+                        textDecorationCss.append(QLatin1StringView(" text-decoration-color: "));
+                        appendHtmlRgb(textDecorationCss, decorationColor.rgb());
+                        textDecorationCss.append(QLatin1Char(';'));
                     }
                 }
             }
 
-            if (currentFlags & TChar::Reverse) {
-                // Swap the fore and background colours:
-                s.append(qsl("<span%9 style=\"color: rgb(%1,%2,%3); background: rgb(%4,%5,%6);%7%8")
-                         .arg(QString::number(qRed(currentBgColor)), QString::number(qGreen(currentBgColor)), QString::number(qBlue(currentBgColor)), // args 1 to 3
-                              QString::number(qRed(currentFgColor)), QString::number(qGreen(currentFgColor)), QString::number(qBlue(currentFgColor)), // args 4 to 6
-                              currentFlags & TChar::Bold ? QLatin1String(" font-weight: bold;") : QString(), // arg 7
-                              currentFlags & TChar::Italic ? QLatin1String(" font-style: italic;") : QString(), // arg 8
-                              blinkClass) // arg 9
-                         + textDecorationCss
-                         + qsl("\">"));
-            } else {
-                s.append(qsl("<span%9 style=\"color: rgb(%1,%2,%3); background: rgb(%4,%5,%6);%7%8")
-                         .arg(QString::number(qRed(currentFgColor)), QString::number(qGreen(currentFgColor)), QString::number(qBlue(currentFgColor)), // args 1 to 3
-                              QString::number(qRed(currentBgColor)), QString::number(qGreen(currentBgColor)), QString::number(qBlue(currentBgColor)), // args 4 to 6
-                              currentFlags & TChar::Bold ? QLatin1String(" font-weight: bold;") : QString(), // arg 7
-                              currentFlags & TChar::Italic ? QLatin1String(" font-style: italic;") : QString(), // arg 8
-                              blinkClass) // arg 9
-                         + textDecorationCss
-                         + qsl("\">"));
-            }
             // clang-format on
-        }
-        if (lineBuffer.at(row).at(pos) == QChar('<')) {
-            s.append(QLatin1String("&lt;"));
-        } else if (lineBuffer.at(row).at(pos) == QChar('>')) {
-            s.append("&gt;");
-        } else {
-            s.append(lineBuffer.at(row).at(pos));
+            s.append(QLatin1StringView("<span"));
+            if (enableBlink) {
+                if (currentFlags & TChar::FastBlink) {
+                    s.append(QLatin1StringView(" class='blink-fast'"));
+                } else if (currentFlags & TChar::Blink) {
+                    s.append(QLatin1StringView(" class='blink-slow'"));
+                }
+            }
+            const bool reverse = currentFlags.testFlag(TChar::Reverse);
+            s.append(QLatin1StringView(" style=\"color: "));
+            appendHtmlRgb(s, reverse ? currentBgColor : currentFgColor);
+            s.append(QLatin1StringView("; background: "));
+            appendHtmlRgb(s, reverse ? currentFgColor : currentBgColor);
+            s.append(QLatin1Char(';'));
+            if (currentFlags & TChar::Bold) {
+                s.append(QLatin1StringView(" font-weight: bold;"));
+            }
+            if (currentFlags & TChar::Italic) {
+                s.append(QLatin1StringView(" font-style: italic;"));
+            }
+            s.append(textDecorationCss);
+            s.append(QLatin1StringView("\">"));
         }
     }
+    appendHtmlEscaped(s, lineText.constData() + textRunStart, pos - textRunStart);
     if (!s.isEmpty()) {
         s.append(QLatin1String("</span>"));
         // Needed to balance the very first open <span>, but only if we have
