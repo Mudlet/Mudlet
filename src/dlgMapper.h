@@ -71,6 +71,9 @@ public:
     void setMapProgressCancelable(bool cancelable) override;
     void hideMapProgress() override;
     bool isMapProgressVisible() const override;
+    void show3DView(bool shown) override { slot_toggle3DView(shown); }
+    bool showing3DView() const override;
+    void recreate3DView() override { recreate3DWidget(); }
     bool selectingRooms() const override { return mp2dMap->mMultiSelection; }
     QSet<int> selectedRooms() const override { return mp2dMap->mMultiSelectionSet; }
     int centerSelectedRoom() const override { return mp2dMap->getCenterSelectedRoomId(); }

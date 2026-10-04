@@ -47,6 +47,7 @@
 #include "TLabel.h"
 #include "TMap.h"
 #include "TMapLabel.h"
+#include "TMapViewFrontend.h"
 #include "TRoomDB.h"
 #include "TScript.h"
 #include "TTextEdit.h"
@@ -54,12 +55,8 @@
 #include "TIrcClient.h"
 #include "TTimer.h"
 #include "dlgComposer.h"
-#include "dlgMapper.h"
 #include "mudlet.h"
 #include "utils.h"
-#if defined(INCLUDE_3DMAPPER)
-#include "glwidget_integration.h"
-#endif
 
 #include <hunspell/hunspell.h>
 
@@ -69,6 +66,7 @@
 #include <QCollator>
 #include <QCoreApplication>
 #include <QDesktopServices>
+#include <QFutureWatcher>
 #include <QGuiApplication>
 #include <QSettings>
 #if defined(Q_OS_MACOS)
@@ -8899,7 +8897,7 @@ int TLuaInterpreter::setConfig(lua_State* L)
         }
 #if defined(INCLUDE_3DMAPPER)
         if (key == qsl("show3dMapView")) {
-            host.mpMap->mpMapper->slot_toggle3DView(getVerifiedBool(L, __func__, 2, "value"));
+            host.mpMap->mapViewFrontend()->show3DView(getVerifiedBool(L, __func__, 2, "value"));
             return success();
         }
 #endif
@@ -9333,8 +9331,8 @@ int TLuaInterpreter::setConfig(lua_State* L)
         // Special handling for 3D mapper experiment
         if (key == qsl("experiment.3dmap.modernmapper")) {
 #if defined(INCLUDE_3DMAPPER)
-            if (host.mpMap && host.mpMap->mpMapper) {
-                host.mpMap->mpMapper->recreate3DWidget();
+            if (auto* mapper = host.mpMap ? host.mpMap->mapViewFrontend() : nullptr) {
+                mapper->recreate3DView();
             }
 #endif
         }
@@ -9471,9 +9469,8 @@ int TLuaInterpreter::getConfig(lua_State* L)
             {qsl("show3dMapView"),
              [&]() {
 #if defined(INCLUDE_3DMAPPER)
-                 if (host.mpMap && host.mpMap->mpMapper) {
-                     auto widget = host.mpMap->mpMapper->glWidget;
-                     lua_pushboolean(L, (widget && widget->isVisible()));
+                 if (auto* mapper = host.mpMap ? host.mpMap->mapViewFrontend() : nullptr) {
+                     lua_pushboolean(L, mapper->showing3DView());
                      return;
                  }
 #endif

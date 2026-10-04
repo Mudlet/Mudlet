@@ -53,6 +53,12 @@ public:
     virtual std::pair<bool, QString> setMapZoom(qreal zoom, int areaId) = 0;
     virtual std::pair<bool, QString> exportAreaToImage(int areaId, const QString& filePath, std::optional<int> zLevel, qreal zoom, bool exportAllZLevels) = 0;
 
+    // Without the 3D mapper compiled in there is no 3D view to show.
+    virtual void show3DView(bool shown) = 0;
+    virtual bool showing3DView() const = 0;
+    // Builds the 3D view afresh, for a change of 3D renderer to take effect.
+    virtual void recreate3DView() = 0;
+
 protected:
     // The mapper is a widget whose Qt parent deletes it, so nothing deletes it through this interface.
     ~TMapViewFrontend() = default;
