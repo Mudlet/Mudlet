@@ -1137,11 +1137,19 @@ private slots:
         QVERIFY2(pOwnerAfter == nullptr, "the microphone was still held after the session that claimed it ended");
     }
 
-    // A profile that closes mid-session takes the session with it. Left
-    // running, the claim would clear with the Host and the rest of the phrase
-    // would land on whichever profile is in front.
+    // A profile that closes mid-session takes the session with it, including a
+    // phrase still being decoded. Left running, the claim would clear with the
+    // Host and the phrase would land on whichever profile is in front.
+    void test_closingTheProfileHoldingTheMicrophoneEndsItsSession_data()
+    {
+        QTest::addColumn<bool>("stillDecoding");
+        QTest::newRow("listening") << false;
+        QTest::newRow("decoding") << true;
+    }
+
     void test_closingTheProfileHoldingTheMicrophoneEndsItsSession()
     {
+        QFETCH(bool, stillDecoding);
         const QString doomedName = qsl("SpeechAcrossProfiles-Doomed");
         deleteProfileDirectory(doomedName);
         QVERIFY(provisionProfileOnDisk(doomedName));
@@ -1157,7 +1165,11 @@ private slots:
         QVERIFY(runLua(pDoomed, qsl("_sttDoomedStarted = stt.start()")).isNull());
         QVERIFY2(luaGlobalBoolean(pDoomed, qsl("_sttDoomedStarted")), "the session did not start");
         QCOMPARE(TSpeechBridge::instance()->microphoneOwner(), pDoomed);
-        pEngine->hearSoFar(qsl("kill hound"));
+        if (stillDecoding) {
+            pEngine->beginProcessing();
+        } else {
+            pEngine->hearSoFar(qsl("kill hound"));
+        }
 
         mudlet::self()->activateProfile(mpFirstHost);
         listenFor(mpFirstHost, qsl("sysSTTResult"), qsl("_heardAfterCloseFirst"));
@@ -1168,10 +1180,14 @@ private slots:
         mudlet::self()->slot_closeProfileByName(doomedName);
         QTRY_VERIFY_WITH_TIMEOUT(!hostFor(doomedName), 5000);
 
-        const bool listeningAfterClose = pEngine->listening();
+        const bool busyAfterClose = pEngine->listening() || pEngine->state() == SpeechRecognizer::State::Processing;
         const Host* pOwnerAfterClose = TSpeechBridge::instance()->microphoneOwner();
-        // A session the close left running would hand its phrase over on stop
-        pEngine->stopListening();
+        // A session the close left running would hand its phrase over now
+        if (pEngine->listening()) {
+            pEngine->stopListening();
+        } else if (pEngine->state() == SpeechRecognizer::State::Processing) {
+            pEngine->finishPhrase(qsl("kill hound"));
+        }
         QTest::qWait(50ms);
         const QStringList heardBySurvivors{luaGlobalString(mpFirstHost, qsl("_heardAfterCloseFirst")),
                                            luaGlobalString(mpFirstHost, qsl("_faultAfterCloseFirst")),
@@ -1181,7 +1197,7 @@ private slots:
         retireStandInEngine();
         deleteProfileDirectory(doomedName);
 
-        QVERIFY2(!listeningAfterClose, "closing the profile holding the microphone left its session running");
+        QVERIFY2(!busyAfterClose, "closing the profile holding the microphone left its session running");
         QVERIFY2(pOwnerAfterClose == nullptr, "the microphone was still held after the profile holding it closed");
         for (const QString& heard : heardBySurvivors) {
             QVERIFY2(heard.isEmpty(), qPrintable(qsl("a profile that never listened received the closed profile's session: %1").arg(heard)));
