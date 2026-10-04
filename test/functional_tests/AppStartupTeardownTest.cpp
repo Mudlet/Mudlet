@@ -22,28 +22,25 @@
  *
  * A test that links mudlet_core builds its own application object and never
  * reaches src/main.cpp, so the shipped binary is run as a child here - as
- * HeadlessVersionTest does for the options main() answers. main() hands the SSL
- * warm-up to a thread and then leaves, and leaving is where static destruction
- * takes Qt's TLS backend mutex and its library store out from under whatever is
- * still running: the process reports "QMutex: destroying locked mutex" and dies
- * inside freed plugin machinery.
+ * HeadlessVersionTest does for the options main() answers. A GUI start hands the
+ * TLS warm-up to a thread, and a second Mudlet - opened for a telnet:// link or
+ * a package while one is already running - forwards that to the running one and
+ * leaves main() moments later, with the warm-up still in flight. Leaving is where
+ * static destruction takes Qt's TLS backend mutex and its library store out from
+ * under it: "QMutex: destroying locked mutex", then a crash inside freed plugin
+ * machinery. This test plays the running instance and has the child forward a
+ * telnet:// link to it. Nothing on that path writes to the config root; the
+ * sandbox below is for what it reads.
  *
- * --version starts the warm-up immediately before main() returns - after
- * initSentry(), the application object, the translators and the version text -
- * so a background task has almost no room to finish before teardown. That path
- * builds a QCoreApplication and runs neither mudlet::start() nor setupConfig(),
- * which is why the version branch starts the warm-up itself: without that, this
- * case would spawn a process that starts no background task at all and would
- * pass with the #10460 fix reverted. Nothing on the path writes to the config
- * root; the sandbox below is for what it reads.
- *
- * It is a race, so one clean exit proves nothing; hence the repeats. The
- * regression this covers failed all six of six runs on a Linux debug build.
+ * It is a race, so one clean exit proves nothing; hence the repeats. With the
+ * warm-up left unjoined, a Linux debug build crashed in 8 of 20 runs.
  *
  * Run with: ctest -R AppStartupTeardownTest -V
  */
 
 #include <QtTest/QtTest>
+#include <QLocalServer>
+#include <QLocalSocket>
 
 #include "GroupedTest.h"
 
@@ -64,6 +61,9 @@ private:
     static constexpr int scmRunCount = 8;
     static constexpr int scmStartTimeoutMs = 10000;
     static constexpr int scmFinishTimeoutMs = 20000;
+    // MudletInstanceCoordinator's server name in main()
+    static constexpr QLatin1StringView scmInstanceServerName{"MudletInstanceCoordinator"};
+    static constexpr QLatin1StringView scmTelnetUri{"telnet://localhost:1"};
 
     static QString appBinary() { return QString::fromUtf8(MUDLET_APP_BINARY); }
 
@@ -78,7 +78,7 @@ private:
     }
 
 private slots:
-    void exitsCleanlyAfterEveryStartup()
+    void exitsCleanlyAfterForwardingToARunningInstance()
     {
         QVERIFY2(QFileInfo::exists(appBinary()), qPrintable(qsl("no application binary at %1").arg(appBinary())));
         if (portableMarkerWouldWin()) {
@@ -89,16 +89,49 @@ private slots:
             // A root of its own per run, so the child reads none of the
             // developer's profiles and leaves nothing behind. Creating
             // mudlet/profiles is what makes XDG_CONFIG_HOME outrank the legacy
-            // ~/.config/mudlet, see MudletApp::xdgConfigDir()
+            // ~/.config/mudlet, see MudletApp::xdgConfigDir(). Under /tmp on
+            // Unix: the instance socket lives in it, and macOS's per-user temp
+            // directory leaves too little of sockaddr_un's 104 bytes.
+#if defined(Q_OS_WINDOWS)
             QTemporaryDir sandbox;
+#else
+            QTemporaryDir sandbox(qsl("/tmp/mudlet-teardown-XXXXXX"));
+#endif
             QVERIFY2(sandbox.isValid(), qPrintable(sandbox.errorString()));
             QVERIFY(QDir().mkpath(qsl("%1/config/mudlet/profiles").arg(sandbox.path())));
+            QVERIFY(QDir().mkpath(qsl("%1/tmp").arg(sandbox.path())));
+
+            // Stands in for the running Mudlet the child forwards to
+            QLocalServer runningInstance;
+            QByteArray forwarded;
+            connect(&runningInstance, &QLocalServer::newConnection, &runningInstance, [&runningInstance, &forwarded]() {
+                while (QLocalSocket* socket = runningInstance.nextPendingConnection()) {
+                    connect(socket, &QLocalSocket::readyRead, socket, [socket, &forwarded]() {
+                        forwarded += socket->readAll();
+                    });
+                }
+            });
+#if defined(Q_OS_WINDOWS)
+            // Pipe names are machine-wide on Windows, so a Mudlet the developer
+            // has open would take the child's forward instead of this stand-in
+            QLocalSocket probe;
+            probe.connectToServer(scmInstanceServerName);
+            if (probe.waitForConnected(500)) {
+                QSKIP("a running Mudlet holds the instance pipe this test has to stand in for");
+            }
+            const QString serverName = scmInstanceServerName;
+#else
+            // Where QLocalSocket looks for the name, given the TMPDIR below
+            const QString serverName = qsl("%1/tmp/%2").arg(sandbox.path(), scmInstanceServerName);
+#endif
+            QVERIFY2(runningInstance.listen(serverName), qPrintable(runningInstance.errorString()));
 
             QProcessEnvironment environment = QProcessEnvironment::systemEnvironment();
             environment.insert(qsl("XDG_CONFIG_HOME"), qsl("%1/config").arg(sandbox.path()));
             environment.insert(qsl("XDG_DATA_HOME"), qsl("%1/data").arg(sandbox.path()));
             // Keeps a WITH_SENTRY build's crashpad database out of the real cache
             environment.insert(qsl("XDG_CACHE_HOME"), qsl("%1/cache").arg(sandbox.path()));
+            environment.insert(qsl("TMPDIR"), qsl("%1/tmp").arg(sandbox.path()));
             environment.insert(qsl("QT_QPA_PLATFORM"), qsl("offscreen"));
             environment.insert(qsl("MUDLET_TEST_MODE"), qsl("1"));
             // Has Qt log every plugin directory it searches, so the run below
@@ -107,37 +140,40 @@ private slots:
             environment.insert(qsl("QT_DEBUG_PLUGINS"), qsl("1"));
             environment.insert(qsl("QT_FORCE_STDERR_LOGGING"), qsl("1"));
             // The warm-up leaves Qt's CA store loaded for the process lifetime,
-            // so a leak check here would only ever report that. Appended
-            // rather than replacing what ctest set, since the runtime
-            // takes the last setting of a flag and the earlier ones stay.
+            // and an early return leaves the application object to the OS, so a
+            // leak check here would only ever report those. Appended rather than
+            // replacing what ctest set, since the runtime takes the last setting
+            // of a flag and the earlier ones stay.
             const QString inheritedSanitizerOptions = environment.value(qsl("ASAN_OPTIONS"));
             environment.insert(qsl("ASAN_OPTIONS"), inheritedSanitizerOptions.isEmpty() ? qsl("detect_leaks=0") : qsl("%1:detect_leaks=0").arg(inheritedSanitizerOptions));
 
             QProcess mudlet;
             mudlet.setProcessEnvironment(environment);
             mudlet.setProgram(appBinary());
-            mudlet.setArguments({qsl("--version")});
+            mudlet.setArguments({scmTelnetUri});
             mudlet.start();
 
             const QString where = qsl("run %1 of %2").arg(QString::number(run), QString::number(scmRunCount));
             QVERIFY2(mudlet.waitForStarted(scmStartTimeoutMs), qPrintable(qsl("%1: %2").arg(where, mudlet.errorString())));
-            QVERIFY2(mudlet.waitForFinished(scmFinishTimeoutMs), qPrintable(qsl("%1: --version never finished").arg(where)));
+            // Not waitForFinished(): the stand-in only answers while events are processed
+            QTRY_VERIFY2_WITH_TIMEOUT(mudlet.state() == QProcess::NotRunning,
+                                      qPrintable(qsl("%1: the child never finished, so it found no running instance and started as the first one").arg(where)),
+                                      scmFinishTimeoutMs);
 
             const QString output = QString::fromUtf8(mudlet.readAllStandardOutput());
             const QString standardError = QString::fromUtf8(mudlet.readAllStandardError());
             const QString diagnostics = qsl("%1, stderr:\n%2").arg(where, standardError);
-            QVERIFY2(mudlet.exitStatus() == QProcess::NormalExit, qPrintable(qsl("mudlet --version crashed on leaving main(); %1").arg(diagnostics)));
-            QVERIFY2(mudlet.exitCode() == 0, qPrintable(qsl("mudlet --version exited %1; %2").arg(QString::number(mudlet.exitCode()), diagnostics)));
-            // The application name is the one part of the banner no
-            // translation touches - mudlet, mudlet.exe or Mudlet, depending on
-            // the platform
-            QVERIFY2(output.contains(qsl("mudlet"), Qt::CaseInsensitive), qPrintable(qsl("no version banner, so main() never reached the version branch; %1").arg(diagnostics)));
+            QVERIFY2(mudlet.exitStatus() == QProcess::NormalExit, qPrintable(qsl("mudlet crashed on leaving main(); %1").arg(diagnostics)));
+            QVERIFY2(mudlet.exitCode() == 0, qPrintable(qsl("mudlet exited %1; %2").arg(QString::number(mudlet.exitCode()), diagnostics)));
+            QTRY_VERIFY2_WITH_TIMEOUT(forwarded.contains(qsl("TELNET_URI:%1").arg(scmTelnetUri).toUtf8()),
+                                      qPrintable(qsl("the link never reached the stand-in, so main() did not leave through the forwarding return; %1").arg(diagnostics)),
+                                      5000);
             // Without a warm-up in flight at the return the case would pass with
             // the #10460 fix reverted, and cover nothing. Nothing else on this
-            // path loads plugins, so a search of a tls directory is the warm-up's.
+            // path loads TLS, so a search of a tls directory is the warm-up's.
             // Either stream: under MSYS2 main() sends debug output to stdout.
             QVERIFY2(standardError.contains(qsl("/tls\"")) || output.contains(qsl("/tls\"")),
-                     qPrintable(qsl("Qt never searched for a TLS backend, so the SSL warm-up never ran; %1").arg(diagnostics)));
+                     qPrintable(qsl("Qt never searched for a TLS backend, so the TLS warm-up never ran, or main() returned without waiting for it; %1").arg(diagnostics)));
         }
     }
 };
