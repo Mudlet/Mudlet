@@ -30,6 +30,7 @@
 #include "MudletApp.h"
 #include "TLuaInterpreter.h"
 
+#include <QApplication>
 #include <QClipboard>
 #include <QGuiApplication>
 
