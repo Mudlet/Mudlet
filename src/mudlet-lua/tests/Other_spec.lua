@@ -2056,7 +2056,14 @@ describe("Tests Other.lua functions", function()
   end)
 
   describe("Tests table.save and table.load round-trips", function()
-    local path = getMudletHomeDir() .. "/table-save-spec.lua"
+    local path
+
+    before_each(function()
+      -- a name no file holds yet, so the cleanup below can only delete what the spec wrote
+      repeat
+        path = string.format("%s/table-save-spec-%d.lua", getMudletHomeDir(), math.random(1e9))
+      until not io.exists(path)
+    end)
 
     after_each(function()
       os.remove(path)
