@@ -1391,7 +1391,7 @@ void TTextEdit::drawForeground(QPainter& painter, const QRect& r)
     // Building a pane-sized buffer costs the same whether one line changed or
     // all of them did, so it is only done when there is no buffer to reuse -
     // the pane changed size or resolution, or nothing has been painted yet.
-    bool bufferWasJustCleared = false;
+    bool screenIsBlank = false;
     if (mScreenBuffer.format() != cacheFormat || mScreenBuffer.width() != surfaceSize.width() || mScreenBuffer.height() != 2 * surfaceSize.height()
         || !qFuzzyCompare(mScreenBuffer.devicePixelRatio(), dpr)) {
         QImage resized(surfaceSize.width(), 2 * surfaceSize.height(), cacheFormat);
@@ -1404,7 +1404,7 @@ void TTextEdit::drawForeground(QPainter& painter, const QRect& r)
             // Only the part that fits the new size came across
             mCachedScreenSize = mCachedScreenSize.boundedTo(surfaceSize);
         } else {
-            bufferWasJustCleared = true;
+            screenIsBlank = true;
         }
         mScreenBuffer = std::move(resized);
         mScreenTop = 0;
@@ -1416,8 +1416,9 @@ void TTextEdit::drawForeground(QPainter& painter, const QRect& r)
     QImage screen = cachedScreen();
     // Nothing is reused, so whatever the window holds is the previous frame's
     // ink - including the sliver past the last cell, which no band fill reaches.
-    if (!reusedCachedScreenContent && !bufferWasJustCleared) {
+    if (!reusedCachedScreenContent && !screenIsBlank) {
         screen.fill(clearColor);
+        screenIsBlank = true;
     }
     QImage* target = &screen;
     if (noCopy) {
@@ -1469,7 +1470,11 @@ void TTextEdit::drawForeground(QPainter& painter, const QRect& r)
     }
     const QRect deleteRect(0, drawFrom * mFontHeight, mScreenWidth * mFontWidth, clearHeight);
     p.setCompositionMode(QPainter::CompositionMode_Source);
-    p.fillRect(deleteRect, clearColor);
+    // A blank screen already holds the clear color, so filling it again would
+    // only go over every pixel a second time.
+    if (!screenIsBlank) {
+        p.fillRect(deleteRect, clearColor);
+    }
     // Scrolling shifts the cached screen by whole cells, which drops a complete
     // line of text into the spare row. Nothing but the bottom line's overflow
     // belongs there, so rebuild it from scratch whenever it is not already part
@@ -1477,7 +1482,9 @@ void TTextEdit::drawForeground(QPainter& painter, const QRect& r)
     QRect spareRowRect;
     if (!bottomRowIsRepainted) {
         spareRowRect = QRect(0, mScreenHeight * mFontHeight, mScreenWidth * mFontWidth, mFontHeight);
-        p.fillRect(spareRowRect, clearColor);
+        if (!screenIsBlank) {
+            p.fillRect(spareRowRect, clearColor);
+        }
     }
 
     p.setCompositionMode(QPainter::CompositionMode_SourceOver);
