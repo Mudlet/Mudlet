@@ -5033,17 +5033,19 @@ void cTelnet::postMessage(QString msg)
 
         QStringList body = messageStack.first().split(QChar('\n'));
 
-        qint8 openBraceIndex = body.at(0).indexOf(QLatin1String("["));
-        qint8 closeBraceIndex = body.at(0).indexOf(QLatin1String("]"));
-        qint8 hyphenIndex = body.at(0).indexOf(QLatin1String("- "));
+        const QString firstLine = body.at(0);
+        const qsizetype openBraceIndex = firstLine.indexOf(QLatin1String("["));
+        const qsizetype closeBraceIndex = firstLine.indexOf(QLatin1String("]"));
+        const qsizetype hyphenIndex = firstLine.indexOf(QLatin1String("- "));
         if (openBraceIndex >= 0 && closeBraceIndex > 0 && closeBraceIndex < hyphenIndex) {
-            quint8 prefixLength = hyphenIndex + 1;
-            while (body.at(0).at(prefixLength) == ' ') {
+            qsizetype prefixLength = hyphenIndex + 1;
+            // The first line can end in the separator, as when an MMCP peer's name starts with a newline
+            while (prefixLength < firstLine.size() && firstLine.at(prefixLength) == ' ') {
                 ++prefixLength;
             }
 
-            QString prefix = body.at(0).left(prefixLength).toUpper();
-            QString firstLineTail = body.at(0).mid(prefixLength);
+            QString prefix = firstLine.left(prefixLength).toUpper();
+            QString firstLineTail = firstLine.mid(prefixLength);
             body.removeFirst();
             //: Keep the capitalisation, the translated text at 7 letters max so it aligns nicely
             if (prefix.contains(tr("ERROR")) || prefix.contains(QLatin1String("ERROR"))) {
