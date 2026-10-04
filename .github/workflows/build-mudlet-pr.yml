@@ -727,10 +727,11 @@ jobs:
         echo "::endgroup::"
         touch "${{runner.temp}}/lua-tests.shown"
 
-        # Mudlet exits 0 whatever its specs did. A failed spec is left to the "Passed Lua
-        # tests" step, as on Linux, but named here too, since a C++ failure skips that step.
+        # Mudlet exits 0 whatever its specs did, so a failed spec has to fail this step
+        # itself; the upload steps below go by the ctest result alone.
         if [ -e /tmp/busted-tests-failed ]; then
           echo "::error::Lua specs failed - see the Lua tests group above"
+          lua_status=1
         elif ! grep -Eq '[0-9]+ success(es)? / [0-9]+ failures? / [0-9]+ errors?' "${lua_log}"; then
           echo "::error::The Lua specs never ran - see the Lua tests group above"
           [ "${lua_status}" -ne 0 ] || lua_status=1
