@@ -22,6 +22,7 @@
 #include <QGuiApplication>
 #include <QPaintDevice>
 #include <QPainter>
+#include <QRawFont>
 #include <QRect>
 #include <QTextLayout>
 
@@ -50,15 +51,8 @@ void TGlyphCache::setFont(const QFont& font, const QPaintDevice& device)
     mDpiY = dpiY;
 }
 
-void TGlyphCache::drawCentered(QPainter& painter, const QRect& cell, QStringView grapheme, const Style style)
+QPointF TGlyphCache::origin(const QRect& cell, const Entry& entry)
 {
-    Q_ASSERT_X(mDpiX > 0, "TGlyphCache::drawCentered(...)", "setFont() has not been called, so there is no font to shape with");
-    if (grapheme.isEmpty()) {
-        return;
-    }
-    const bool cacheable = grapheme.size() <= csmMaxCachedLength;
-    const Entry uncached = cacheable ? Entry() : shape(grapheme, style);
-    const Entry& entry = cacheable ? lookup(grapheme, style) : uncached;
     // The same centring qt_format_text() applies for Qt::AlignCenter, truncated
     // to the 1/64 pixel grid as QTextLine::draw() does before the painter's
     // scale is applied - otherwise glyphs land a device pixel away from where
@@ -66,10 +60,34 @@ void TGlyphCache::drawCentered(QPainter& painter, const QRect& cell, QStringView
     const auto toFixedGrid = [](const qreal value) {
         return static_cast<int>(value * 64) / 64.0;
     };
-    const QPointF origin(toFixedGrid(cell.x() + (cell.width() - entry.advance) / 2), toFixedGrid(cell.y() + (cell.height() - entry.height) / 2));
-    for (const QGlyphRun& run : entry.runs) {
-        painter.drawGlyphRun(origin, run);
+    return QPointF(toFixedGrid(cell.x() + (cell.width() - entry.advance) / 2), toFixedGrid(cell.y() + (cell.height() - entry.height) / 2));
+}
+
+qreal TGlyphCache::drawCentered(QPainter& painter, const QRect& cell, QStringView grapheme, const Style style)
+{
+    Q_ASSERT_X(mDpiX > 0, "TGlyphCache::drawCentered(...)", "setFont() has not been called, so there is no font to shape with");
+    if (grapheme.isEmpty()) {
+        return cell.y();
     }
+    const bool cacheable = grapheme.size() <= csmMaxCachedLength;
+    const Entry uncached = cacheable ? Entry() : shape(grapheme, style);
+    const Entry& entry = cacheable ? lookup(grapheme, style) : uncached;
+    const QPointF at = origin(cell, entry);
+    for (const QGlyphRun& run : entry.runs) {
+        painter.drawGlyphRun(at, run);
+    }
+    return at.y() + entry.inkBottom;
+}
+
+qreal TGlyphCache::inkBottom(const QRect& cell, QStringView grapheme, const Style style)
+{
+    if (grapheme.isEmpty()) {
+        return cell.y();
+    }
+    const bool cacheable = grapheme.size() <= csmMaxCachedLength;
+    const Entry uncached = cacheable ? Entry() : shape(grapheme, style);
+    const Entry& entry = cacheable ? lookup(grapheme, style) : uncached;
+    return origin(cell, entry).y() + entry.inkBottom;
 }
 
 const TGlyphCache::Entry& TGlyphCache::lookup(QStringView grapheme, const Style style)
@@ -135,5 +153,13 @@ TGlyphCache::Entry TGlyphCache::shape(QStringView grapheme, const Style style) c
     // Not line.height(), which is rounded up and would lift glyphs above where
     // drawText() puts them.
     entry.height = line.ascent() + line.descent();
+    for (const QGlyphRun& run : std::as_const(entry.runs)) {
+        const QRawFont font = run.rawFont();
+        const QList<quint32> glyphs = run.glyphIndexes();
+        const QList<QPointF> positions = run.positions();
+        for (qsizetype i = 0; i < glyphs.size() && i < positions.size(); ++i) {
+            entry.inkBottom = std::max(entry.inkBottom, positions.at(i).y() + font.boundingRect(glyphs.at(i)).bottom());
+        }
+    }
     return entry;
 }

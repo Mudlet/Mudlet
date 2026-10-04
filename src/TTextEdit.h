@@ -251,11 +251,12 @@ private:
     // the bottom of a cell cannot be erased by the line below it. Both callers
     // depend on that order, which is why none of this is reachable from outside.
     void layoutLine(int lineNumber, int lineOfScreen, const TChar& timeStampStyle, LineLayout& layout, int* offset = nullptr) const;
-    void paintBackgrounds(QPainter&, const LineLayout&) const;
-    void paintForegrounds(QPainter&, TGlyphCache&, const LineLayout&, const QRect& clip = QRect()) const;
+    void paintBackgrounds(QPainter&, const LineLayout&, const QRect& cleared = QRect(), const QColor& clearedTo = QColor()) const;
+    // Returns the y just below the deepest ink it painted.
+    int paintForegrounds(QPainter&, TGlyphCache&, const LineLayout&, const QRect& clip = QRect()) const;
     void drawCustomDecorations(QPainter&, const QColor&, const QRect&, const TChar&) const;
     int layoutGrapheme(LineLayout& layout, const QPoint& cursor, QStringView grapheme, const int column, const int line, const TChar& charStyle) const;
-    void paintGraphemeForeground(QPainter&, TGlyphCache&, const GraphemeRun&) const;
+    int paintGraphemeForeground(QPainter&, TGlyphCache&, const GraphemeRun&) const;
 
     // Reused between paints to keep their capacity rather than reallocating a
     // line's worth of graphemes on every repaint.
