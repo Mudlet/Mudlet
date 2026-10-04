@@ -519,6 +519,28 @@ describe("Tests a double byte character cut short by a byte that cannot be its s
       assert.same({"dbcolour:" .. kept(lead) .. "RED"}, shownLines("dbcolour:", mark), encoding)
     end
   end)
+
+  it("keeps a line ending that cuts a GB18030 four byte sequence short at its last byte", function()
+    using("GB18030")
+    local mark = getLastLineNumber("main")
+
+    -- 0x81 0x30 0x81 is only missing its final digit; the "0" is shown and the
+    -- second 0x81 is then a lead byte the line ending cannot follow
+    feed("db4cut:one" .. bytes(0x81, 0x30, 0x81))
+    feed("\r\ndb4cut:two\r\n")
+
+    assert.same({"db4cut:one" .. replacement .. "0" .. replacement, "db4cut:two"}, shownLines("db4cut:", mark))
+  end)
+
+  it("commits a line that ends on the first two bytes of a GB18030 four byte sequence", function()
+    using("GB18030")
+    local mark = getLastLineNumber("main")
+
+    -- the line ending is the third byte, so there is no fourth to wait for
+    feed("db4end:one" .. bytes(0x81, 0x30) .. "\r\n")
+
+    assert.same({"db4end:one" .. replacement .. "0"}, shownLines("db4end:", mark))
+  end)
 end)
 
 describe("Tests UTF-8 locally fed text that ends part way through a sequence", function()

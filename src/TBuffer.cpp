@@ -7272,6 +7272,16 @@ bool TBuffer::processGBSequence(const std::string& bufferData, const bool isFrom
                 // This IS a 4-byte sequence
                 gbSequenceLength = 4;
 
+                // A third byte that cannot belong to the sequence ends it now, as below, rather than
+                // being held with it for a fourth byte that cannot help
+                if ((pos + 2) < len) {
+                    const auto thirdByte = static_cast<quint8>(bufferData.at(pos + 2));
+                    if (thirdByte < 0x81 || thirdByte == 0xFF) {
+                        mMudLine.append(QChar::ReplacementCharacter);
+                        return true;
+                    }
+                }
+
                 if ((pos + gbSequenceLength - 1) >= len) {
                     // Not enough bytes to process yet - so store what we have and return
                     if (isFromServer) {
