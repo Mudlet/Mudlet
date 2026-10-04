@@ -665,7 +665,8 @@ jobs:
         !cancelled() && steps.build.outcome == 'success'
         && matrix.run_tests == 'true' && runner.os == 'macOS'
       # Covers both suites: on the 3-core arm64 runner ctest takes ~215s on its own, and the
-      # Lua suite stretches from ~170s to ~240s while sharing the runner with it
+      # Lua suite stretches from ~170s to ~240s while sharing the runner with it. The Lua
+      # run has its own, shorter limit below.
       timeout-minutes: 15
       run: |
         # Given to the Lua run only: AppStartupTeardownTest and HeadlessVersionTest pass
@@ -685,6 +686,10 @@ jobs:
         )
         lua_log="${{runner.temp}}/lua-tests.log"
         lua_tests=""
+        # As long as the Linux and build-mudlet.yml Lua steps get, and short enough of
+        # timeout-minutes to leave stopping the run and reporting on it inside the step
+        lua_budget=720
+        lua_deadline=$(( SECONDS + lua_budget ))
         if [ -x ~/Desktop/Mudlet.app/Contents/MacOS/mudlet ]; then
           env "${lua_tests_env[@]}" ~/Desktop/Mudlet.app/Contents/MacOS/mudlet \
             --profile "Mudlet self-test" --mirror --offline > "${lua_log}" 2>&1 &
@@ -701,6 +706,18 @@ jobs:
         ctest --output-on-failure -j $(( 2 * $(sysctl -n hw.ncpu) )) || ctest_status=$?
         echo "ctest=${ctest_status}" >> "$GITHUB_OUTPUT"
 
+        # Bounded here rather than by timeout-minutes, so a hung Lua run still lets the step
+        # end on its own and hand its ctest result to the upload steps below
+        while [ -n "${lua_tests}" ] && kill -0 "${lua_tests}" 2>/dev/null \
+          && [ "${SECONDS}" -lt "${lua_deadline}" ]; do
+          sleep 5
+        done
+        if [ -n "${lua_tests}" ] && kill -0 "${lua_tests}" 2>/dev/null; then
+          echo "::error::The Lua run was still going after ${lua_budget}s - stopping it"
+          kill "${lua_tests}" 2>/dev/null || true
+          sleep 10
+          kill -9 "${lua_tests}" 2>/dev/null || true
+        fi
         lua_status=0
         [ -z "${lua_tests}" ] || wait "${lua_tests}" || lua_status=$?
         echo "::group::Lua tests"
