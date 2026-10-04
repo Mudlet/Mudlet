@@ -378,7 +378,8 @@ function table.pickle( t, file, tables, lookup )
       if type( i ) == "table" then
         if not lookup[i] then
           table.insert( tables, i )
-          lookup[i] = table.maxn( tables )
+          -- not table.maxn(), which walks every entry: once per table saved, that is quadratic
+          lookup[i] = #tables
         end
         file:write( "[{" .. lookup[i] .. "}] = " )
       else
@@ -389,7 +390,7 @@ function table.pickle( t, file, tables, lookup )
       if type( v ) == "table" then
         if not lookup[v] then
           table.insert( tables, v )
-          lookup[v] = table.maxn( tables )
+          lookup[v] = #tables
         end
         file:write( "{" .. lookup[v] .. "}," )
       else
