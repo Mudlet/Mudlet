@@ -63,23 +63,17 @@ public:
     {
         mIndex.clear();
         mCachedSize = 0;
-        mCachedMemoryEstimate = 0;
     }
 
     // O(1) — counts are maintained incrementally by add/remove/rebuild.
     int size() const { return mCachedSize; }
 
-    // O(1) — rough memory usage estimate in bytes, for profiling/diagnostics.
-    // Refreshed by rebuild() and reset by clear(); may be stale after
-    // incremental add/remove/move updates until the next rebuild().
-    int memoryEstimateBytes() const { return mCachedMemoryEstimate; }
+    // Rough memory usage in bytes, for profiling output; walks the whole index.
+    int memoryEstimateBytes() const;
 
 private:
-    int computeMemoryEstimate() const;
-
     QHash<int, QHash<int, QHash<int, RoomIds>>> mIndex;
     int mCachedSize = 0;
-    int mCachedMemoryEstimate = 0;
     static const RoomIds csmEmptyCell;
 };
 

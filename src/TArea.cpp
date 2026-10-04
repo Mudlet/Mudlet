@@ -477,35 +477,29 @@ void TArea::publishOverallSpan()
 void TArea::calcSpan()
 {
     mSpanIndex.clear();
-
-    // Collect the room-to-Z mapping in a single pass so mZLevelIndex can be
-    // rebuilt without a second iteration. Also collect the full z/x/y data
-    // so the grid index can be rebuilt at the same time.
-    QHash<int, int> roomIdToZ;
-    roomIdToZ.reserve(rooms.size());
-    QHash<int, QHash<int, QPair<int, int>>> zToRoomXY;
+    mZLevelIndex.clear();
+    mGridIndex.clear();
     QHash<int, int> customLineRoomIdToZ;
 
-    QSetIterator<int> itRoom(rooms);
-    while (itRoom.hasNext()) {
-        const int id = itRoom.next();
+    for (const int id : std::as_const(rooms)) {
         TRoom* pR = mpRoomDB->getRoom(id);
         if (!pR) {
             continue;
         }
 
-        roomIdToZ.insert(id, pR->z());
-        zToRoomXY[pR->z()].insert(id, {pR->x(), pR->y()});
-        mSpanIndex.addRoom(pR->x(), -1 * pR->y(), pR->z());
+        const int x = pR->x();
+        const int y = pR->y();
+        const int z = pR->z();
+        mZLevelIndex.addRoom(id, z);
+        mGridIndex.addRoom(id, z, x, y);
+        mSpanIndex.addRoom(x, -1 * y, z);
         if (!pR->customLines.empty()) {
-            customLineRoomIdToZ.insert(id, pR->z());
+            customLineRoomIdToZ.insert(id, z);
         }
     }
 
     publishSpan();
 
-    mZLevelIndex.rebuild(roomIdToZ);
-    mGridIndex.rebuild(zToRoomXY);
     mCustomLineIndex.rebuild(customLineRoomIdToZ);
     mLodExitIndex.markDirty();
 }

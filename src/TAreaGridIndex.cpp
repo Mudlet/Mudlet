@@ -142,13 +142,10 @@ void TAreaGridIndex::rebuild(int z, const QHash<int, QPair<int, int>>& roomIdToX
         it.next();
         mIndex[z][it.value().first][it.value().second].append(it.key());
     }
-    mCachedMemoryEstimate = computeMemoryEstimate();
 }
 
 void TAreaGridIndex::rebuild(const QHash<int, QHash<int, QPair<int, int>>>& zToRoomXY)
 {
-    // Full rebuild: bypass the per-Z path so computeMemoryEstimate() is called
-    // only once rather than once per Z level.
     mIndex.clear();
     mCachedSize = 0;
     for (auto itZ = zToRoomXY.constBegin(); itZ != zToRoomXY.constEnd(); ++itZ) {
@@ -158,7 +155,6 @@ void TAreaGridIndex::rebuild(const QHash<int, QHash<int, QPair<int, int>>>& zToR
         }
         mCachedSize += itZ.value().size();
     }
-    mCachedMemoryEstimate = computeMemoryEstimate();
 }
 
 const TAreaGridIndex::RoomIds& TAreaGridIndex::roomsAt(int z, int x, int y) const
@@ -234,7 +230,7 @@ QList<QPair<int, bool>> TAreaGridIndex::roomsInViewportWithCollisions(int z, int
     return result;
 }
 
-int TAreaGridIndex::computeMemoryEstimate() const
+int TAreaGridIndex::memoryEstimateBytes() const
 {
     // Count the number of containers at each nesting level to give a
     // better-than-nothing estimate.  Qt QHash internals allocate roughly
