@@ -50,6 +50,7 @@
 #include <QSizeF>
 #include <QXmlStreamReader>
 #include <chrono>
+#include <cmath>
 #include <limits>
 #include <queue>
 
@@ -60,6 +61,10 @@
 using namespace std::chrono_literals;
 
 namespace {
+// An image label is painted scaled from its pixmap, so past this many pixels a
+// bigger one only costs memory: at 30000 pixels square it is gigabytes.
+constexpr qreal cMaxImageLabelPixels = 4096.0 * 4096.0;
+
 // A map file can carry a room symbol scaling factor that TMap's own setter
 // would refuse - hand-edited, from a third-party tool, or written by a Mudlet
 // whose JSON reader truncated it (issue #10176). Loading cannot go through the
@@ -2428,12 +2433,16 @@ int TMap::createMapImageLabel(int area, QString imagePath, float x, float y, flo
     label.noScaling = false;
     label.temporary = temporary;
 
-    const QRectF drawRect = QRectF(0, 0, static_cast<qreal>(width * zoom), static_cast<qreal>(height * zoom));
+    QSizeF pixSize(static_cast<qreal>(width) * zoom, static_cast<qreal>(height) * zoom);
+    const qreal pixels = pixSize.width() * pixSize.height();
+    if (qIsFinite(pixels) && pixels > cMaxImageLabelPixels) {
+        pixSize *= std::sqrt(cMaxImageLabelPixels / pixels);
+    }
     const QPixmap imagePixmap = QPixmap(imagePath);
-    QPixmap pix = QPixmap(drawRect.size().toSize());
+    QPixmap pix = QPixmap(pixSize.toSize());
     pix.fill(Qt::transparent);
     QPainter lp(&pix);
-    lp.drawPixmap(QPoint(0, 0), imagePixmap.scaled(drawRect.size().toSize()));
+    lp.drawPixmap(QPoint(0, 0), imagePixmap.scaled(pixSize.toSize()));
     label.size = QSizeF(width, height);
     label.pix = pix;
 
