@@ -37,6 +37,7 @@
 #include "MMCPServer.h"
 #include "mudlet.h"
 #include "TConsole.h"
+#include "TConsoleFrontend.h"
 #include "TConsoleModel.h"
 #include "TDebug.h"
 #include "TEvent.h"
@@ -2242,6 +2243,11 @@ QList<int> Host::getStopWatchIds() const
 }
 
 TMainConsole* Host::mainConsoleView() const
+{
+    return mpConsole.data();
+}
+
+TConsoleFrontend* Host::consoleFrontend() const
 {
     return mpConsole.data();
 }
@@ -5230,7 +5236,7 @@ std::pair<bool, QString> Host::createLabel(const QString& windowname, const QStr
     const bool labelExists = mWindowRegistry.hasLabel(name);
     const bool subConsoleExists = mWindowRegistry.hasSubConsole(name);
     if (!labelExists && !subConsoleExists) {
-        if (mpConsole->createLabel(windowname, name, x, y, width, height, fillBg, clickthrough)) {
+        if (consoleFrontend()->createLabel(windowname, name, x, y, width, height, fillBg, clickthrough)) {
             return {true, QString()};
         }
     } else if (labelExists) {
@@ -5247,7 +5253,7 @@ bool Host::setClickthrough(const QString& name, bool clickthrough)
         return false;
     }
 
-    return mpConsole->setLabelClickThrough(name, clickthrough);
+    return consoleFrontend()->setLabelClickThrough(name, clickthrough);
 }
 
 bool Host::setLabelStyleSheet(const QString& name, const QString& styleSheet)
@@ -5256,7 +5262,7 @@ bool Host::setLabelStyleSheet(const QString& name, const QString& styleSheet)
         return false;
     }
 
-    return mpConsole->setLabelStyleSheet(name, styleSheet).first;
+    return consoleFrontend()->setLabelStyleSheet(name, styleSheet).first;
 }
 
 bool Host::setLinkStyle(const QString& name, const QString& linkColor, const QString& linkVisitedColor, bool underline)
@@ -5265,7 +5271,7 @@ bool Host::setLinkStyle(const QString& name, const QString& linkColor, const QSt
         return false;
     }
 
-    return mpConsole->setLabelLinkStyle(name, linkColor, linkVisitedColor, underline);
+    return consoleFrontend()->setLabelLinkStyle(name, linkColor, linkVisitedColor, underline);
 }
 
 bool Host::resetLinkStyle(const QString& name)
@@ -5274,7 +5280,7 @@ bool Host::resetLinkStyle(const QString& name)
         return false;
     }
 
-    return mpConsole->resetLabelLinkStyle(name);
+    return consoleFrontend()->resetLabelLinkStyle(name);
 }
 
 bool Host::clearVisitedLinks(const QString& name)
@@ -5283,7 +5289,7 @@ bool Host::clearVisitedLinks(const QString& name)
         return false;
     }
 
-    return mpConsole->clearLabelVisitedLinks(name);
+    return consoleFrontend()->clearLabelVisitedLinks(name);
 }
 
 void Host::hideMudletsVariables()
@@ -5344,7 +5350,7 @@ bool Host::showWindow(const QString& name)
 
     // check labels first as they are shown/hidden more often
     if (mWindowRegistry.hasLabel(name)) {
-        return mpConsole->showLabel(name);
+        return consoleFrontend()->showLabel(name);
     }
 
     if (mWindowRegistry.hasSubConsole(name)) {
@@ -5366,7 +5372,7 @@ bool Host::hideWindow(const QString& name)
 
     // check labels first as they are shown/hidden more often
     if (mWindowRegistry.hasLabel(name)) {
-        return mpConsole->hideLabel(name);
+        return consoleFrontend()->hideLabel(name);
     }
 
     if (mWindowRegistry.hasSubConsole(name)) {
@@ -5387,7 +5393,7 @@ bool Host::resizeWindow(const QString& name, int x1, int y1)
     }
 
     if (mWindowRegistry.hasLabel(name)) {
-        return mpConsole->resizeLabel(name, x1, y1);
+        return consoleFrontend()->resizeLabel(name, x1, y1);
     }
 
     if (mWindowRegistry.hasSubConsole(name)) {
@@ -5408,7 +5414,7 @@ bool Host::moveWindow(const QString& name, int x1, int y1)
     }
 
     if (mWindowRegistry.hasLabel(name)) {
-        return mpConsole->moveLabel(name, x1, y1);
+        return consoleFrontend()->moveLabel(name, x1, y1);
     }
 
     if (mWindowRegistry.hasSubConsole(name)) {
@@ -5447,7 +5453,7 @@ std::pair<bool, QString> Host::setWindow(const QString& windowname, const QStrin
     }
 
     if (mWindowRegistry.hasLabel(name)) {
-        if (mpConsole->reparentLabel(windowname, name, x1, y1, show)) {
+        if (consoleFrontend()->reparentLabel(windowname, name, x1, y1, show)) {
             return {true, QString()};
         }
         return {false, qsl("element '%1' not found").arg(name)};
@@ -5538,7 +5544,7 @@ bool Host::echoWindow(const QString& name, const QString& text)
         pModel->mirrorToStdOut(text);
         return true;
     }
-    return mpConsole && mpConsole->setLabelText(name, text);
+    return mpConsole && consoleFrontend()->setLabelText(name, text);
 }
 
 bool Host::pasteWindow(const QString& name)
@@ -5676,7 +5682,7 @@ std::pair<bool, QString> Host::setMovie(const QString& name, const QString& movi
         return {false, qsl("label '%1' does not exist").arg(name)};
     }
 
-    return mpConsole->setLabelMovie(name, moviePath);
+    return consoleFrontend()->setLabelMovie(name, moviePath);
 }
 
 QSize Host::calcFontSize(const QString& windowName)
@@ -5711,7 +5717,7 @@ bool Host::setBackgroundColor(const QString& name, int r, int g, int b, int alph
         return true;
     }
 
-    return mpConsole->setLabelBackgroundColor(name, QColor(r, g, b, alpha));
+    return consoleFrontend()->setLabelBackgroundColor(name, QColor(r, g, b, alpha));
 }
 
 std::optional<QColor> Host::getBackgroundColor(const QString& name) const
@@ -5724,7 +5730,7 @@ std::optional<QColor> Host::getBackgroundColor(const QString& name) const
         return {pModel->mBgColor};
     }
 
-    return mpConsole->getLabelBackgroundColor(name);
+    return consoleFrontend()->getLabelBackgroundColor(name);
 }
 
 bool Host::setBackgroundImage(const QString& name, QString& imgPath, int mode, bool fullWindow)
@@ -5753,7 +5759,7 @@ bool Host::setBackgroundImage(const QString& name, QString& imgPath, int mode, b
     }
 
     if (mWindowRegistry.hasLabel(name)) {
-        return mpConsole->setLabelBackgroundImage(name, imgPath);
+        return consoleFrontend()->setLabelBackgroundImage(name, imgPath);
     }
 
     return mpConsole->setSubConsoleBackgroundImage(name, imgPath, mode);
@@ -5775,7 +5781,7 @@ bool Host::resetBackgroundImage(const QString& name, bool fullWindow)
     }
 
     if (mWindowRegistry.hasLabel(name)) {
-        return mpConsole->resetLabelBackgroundImage(name);
+        return consoleFrontend()->resetLabelBackgroundImage(name);
     }
 
     return mpConsole->resetSubConsoleBackgroundImage(name);
@@ -5791,7 +5797,7 @@ bool Host::setSvgTint(const QString& name, const QColor& color)
         return false;
     }
 
-    return mpConsole->setLabelSvgTint(name, color);
+    return consoleFrontend()->setLabelSvgTint(name, color);
 }
 
 bool Host::resetSvgTint(const QString& name)
@@ -5804,7 +5810,7 @@ bool Host::resetSvgTint(const QString& name)
         return false;
     }
 
-    return mpConsole->resetLabelSvgTint(name);
+    return consoleFrontend()->resetLabelSvgTint(name);
 }
 
 bool Host::setSvgRotation(const QString& name, double angle)
@@ -5817,7 +5823,7 @@ bool Host::setSvgRotation(const QString& name, double angle)
         return false;
     }
 
-    return mpConsole->setLabelSvgRotation(name, angle);
+    return consoleFrontend()->setLabelSvgRotation(name, angle);
 }
 
 bool Host::resetSvgRotation(const QString& name)
@@ -5830,7 +5836,7 @@ bool Host::resetSvgRotation(const QString& name)
         return false;
     }
 
-    return mpConsole->resetLabelSvgRotation(name);
+    return consoleFrontend()->resetLabelSvgRotation(name);
 }
 
 bool Host::setSvgShear(const QString& name, double shearX, double shearY)
@@ -5843,7 +5849,7 @@ bool Host::setSvgShear(const QString& name, double shearX, double shearY)
         return false;
     }
 
-    return mpConsole->setLabelSvgShear(name, shearX, shearY);
+    return consoleFrontend()->setLabelSvgShear(name, shearX, shearY);
 }
 
 bool Host::resetSvgShear(const QString& name)
@@ -5856,7 +5862,7 @@ bool Host::resetSvgShear(const QString& name)
         return false;
     }
 
-    return mpConsole->resetLabelSvgShear(name);
+    return consoleFrontend()->resetLabelSvgShear(name);
 }
 
 bool Host::resetSvgTransform(const QString& name)
@@ -5869,7 +5875,7 @@ bool Host::resetSvgTransform(const QString& name)
         return false;
     }
 
-    return mpConsole->resetLabelSvgTransform(name);
+    return consoleFrontend()->resetLabelSvgTransform(name);
 }
 
 bool Host::setCommandBackgroundColor(const QString& name, int r, int g, int b, int alpha)
