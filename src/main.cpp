@@ -46,6 +46,7 @@
 #include <QTextLayout>
 #include <iostream>
 #include <memory>
+#include <thread>
 #include <vector>
 
 #include <QStandardPaths>
@@ -63,7 +64,6 @@
 #include <QSplashScreen>
 #include <QSslConfiguration>
 #include <QStringList>
-#include <QThreadPool>
 #include <QTranslator>
 #include "AltFocusMenuBarDisable.h"
 #include "TAccessibleConsole.h"
@@ -154,6 +154,38 @@ void removeOldNoteColorEmojiFonts()
 }
 #endif // defined(Q_OS_LINUX)
 #endif // defined(INCLUDE_FONTS)
+
+// A std::thread rather than a QThread or QThreadPool: on macOS, which has no timed pthread_join, Qt
+// starts its threads detached and QThread::wait() returns before the thread has run its exit
+// handlers. main() then unloads the TLS plugins and runs the static destructors while those
+// handlers are still running. Joins in its destructor, so every return from main() waits for it.
+class SslWarmup
+{
+public:
+    SslWarmup() = default;
+    SslWarmup(const SslWarmup&) = delete;
+    SslWarmup& operator=(const SslWarmup&) = delete;
+    ~SslWarmup() { join(); }
+
+    void start()
+    {
+        if (!mThread.joinable()) {
+            mThread = std::thread([]() {
+                QSslConfiguration::defaultConfiguration();
+            });
+        }
+    }
+
+    void join()
+    {
+        if (mThread.joinable()) {
+            mThread.join();
+        }
+    }
+
+private:
+    std::thread mThread;
+};
 
 QTranslator* loadTranslationsForCommandLine()
 {
@@ -423,21 +455,15 @@ int main(int argc, char* argv[])
     }
 
     // The first QSslSocket (each cTelnet holds two) makes Qt parse every system CA certificate on the
-    // constructing thread, inside profile load; warming up on a pool thread now usually finishes first.
-    // A local pool, so every early return joins it: the warm-up holds Qt's TLS backend mutex while loading
-    // the plugin, and static destruction tears those down. Not the global pool: waiting on it would also
-    // wait for QtConcurrent work a profile left running. --version starts it as it returns, only so
+    // constructing thread, inside profile load; warming up on another thread now usually finishes first.
+    // Every early return joins it: the warm-up holds Qt's TLS backend mutex while loading the plugin, and
+    // static destruction tears those down. --version starts it as it returns, only so
     // AppStartupTeardownTest can drive that race: any earlier, it and this thread fill Qt's unguarded
     // caches at once, which a QCoreApplication leaves empty - a double free.
-    QThreadPool sslWarmupPool;
-    const auto startSslWarmup = [&sslWarmupPool]() {
-        sslWarmupPool.start([]() {
-            QSslConfiguration::defaultConfiguration();
-        });
-    };
+    SslWarmup sslWarmup;
 
     if (app) {
-        startSslWarmup();
+        sslWarmup.start();
         mudlet::start();
         // GUI runs settle the config path here, before any file is read; a
         // print-and-exit run has MudletApp resolve it on first use instead.
@@ -583,7 +609,7 @@ int main(int argc, char* argv[])
                                                           "There is NO WARRANTY, to the extent permitted by law."));
         std::cout << texts.join(QString()).toStdString();
         if (!app) {
-            startSslWarmup();
+            sslWarmup.start();
         }
         return 0;
     }
@@ -1202,7 +1228,7 @@ int main(int argc, char* argv[])
     // Before the QApplication goes, not just before main() returns: the TLS
     // plugin loader connects to qApp, so a warm-up still running here would
     // reach for one that has already been deleted.
-    sslWarmupPool.waitForDone();
+    sslWarmup.join();
 
     // Joins the match helpers while the QApplication still exists; see
     // TriggerMatchPool::shutdown().
