@@ -200,7 +200,7 @@ private slots:
         QVERIFY2(host->mainConsoleView(), "The active host has no main console.");
 
         host->showHideOrCreateMapper(true);
-        auto mapper = host->mpMap->mpMapper;
+        auto mapper = host->mpMap->mapper();
         QVERIFY2(mapper, "The mapper was not created.");
 
         const QString miniName = qsl("colourRefreshMini");
@@ -756,7 +756,7 @@ private slots:
 
         QDockWidget* dock = host->mainConsoleView()->mpDockableMapWidget;
         QVERIFY2(dock, "The mapper dock was not created.");
-        dlgMapper* mapper = host->mpMap->mpMapper.data();
+        dlgMapper* mapper = host->mpMap->mapper();
         QVERIFY2(mapper, "The map was left with no mapper.");
         QCOMPARE(dock->widget(), mapper);
         QVERIFY2(!host->mpMap->mpRoomDB->isEmpty(), "Making the mapper did not restore the saved map.");
@@ -782,7 +782,7 @@ private slots:
 
         host->showHideOrCreateMapper(true);
 
-        dlgMapper* mapper = host->mpMap->mpMapper.data();
+        dlgMapper* mapper = host->mpMap->mapper();
         QVERIFY2(mapper, "The mapper was not created.");
         QCOMPARE(mapper->comboBox_showArea->currentText(), mPlayerAreaName);
     }
@@ -802,7 +802,7 @@ private slots:
         host->showHideOrCreateMapper(true);
         QPointer<QDockWidget> dock = host->mainConsoleView()->mpDockableMapWidget;
         QVERIFY2(dock, "The mapper dock was not created.");
-        dlgMapper* mapper = host->mpMap->mpMapper.data();
+        dlgMapper* mapper = host->mpMap->mapper();
         QVERIFY(host->mapperShown());
 
         host->showHideOrCreateMapper(true);
@@ -840,7 +840,7 @@ private slots:
         mudlet::self()->show();
         auto [created, message] = host->mainConsoleView()->createMapper(QString(), 0, 0, 300, 300);
         QVERIFY2(created, qPrintable(message));
-        dlgMapper* mapper = host->mpMap->mpMapper.data();
+        dlgMapper* mapper = host->mpMap->mapper();
         QVERIFY2(mapper, "The embedded mapper was not made the map's mapper.");
         QVERIFY(host->mapperShown());
 
@@ -871,11 +871,11 @@ private slots:
         QVERIFY2(host->saveMapFile(mapFileName), "The map could not be saved under a name.");
         QVERIFY2(host->saveMapFile(QString()), "The map could not be saved as the profile's latest.");
         host->mpMap->mapClear();
-        QVERIFY2(host->mpMap->mpMapper.isNull(), "SETUP: the profile already has a mapper.");
+        QVERIFY2(!host->mpMap->mapper(), "SETUP: the profile already has a mapper.");
 
         QVERIFY2(host->loadMapFile(mapFileName), "Loading the saved map failed.");
         QVERIFY2(host->mainConsoleView()->mpDockableMapWidget, "Loading a map with no mapper did not make one.");
-        dlgMapper* mapper = host->mpMap->mpMapper.data();
+        dlgMapper* mapper = host->mpMap->mapper();
         QVERIFY2(mapper, "Loading a map left the map with no mapper.");
         QCOMPARE(mapper->comboBox_showArea->currentText(), mPlayerAreaName);
 
@@ -921,7 +921,7 @@ private slots:
         auto [created, message] = host->mainConsoleView()->createMapper(QString(), 0, 0, 300, 300);
         QVERIFY2(created, qPrintable(message));
         QVERIFY2(!host->mainConsoleView()->mpDockableMapWidget, "SETUP: the profile has a map dock, so its mapper could be reached without going through the map.");
-        dlgMapper* mapper = host->mpMap->mpMapper.data();
+        dlgMapper* mapper = host->mpMap->mapper();
         QVERIFY2(mapper, "The embedded mapper was not made the map's mapper.");
         QVERIFY(mapper->mp2dMap->mLargeAreaExitArrows);
 

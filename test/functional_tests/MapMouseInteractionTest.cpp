@@ -170,11 +170,11 @@ private:
     {
         mpHost->mMapViewOnly = viewOnly;
         mpHost->mRoomSize = kRoomSize;
-        if (!map()->mpMapper) {
+        if (!map()->mapper()) {
             mpHost->showHideOrCreateMapper(false);
         }
-        QVERIFY(map()->mpMapper);
-        mp2dMap = map()->mpMapper->mp2dMap;
+        QVERIFY(map()->mapper());
+        mp2dMap = map()->mapper()->mp2dMap;
         QVERIFY(mp2dMap);
         mp2dMap->init();
         mp2dMap->resize(kWidgetWidth, kWidgetHeight);
@@ -641,9 +641,9 @@ private:
         QVERIFY(map()->addRoom(kOtherAreaRoomId) && map()->setRoomArea(kOtherAreaRoomId, mOtherAreaId) && map()->setRoomCoordinates(kOtherAreaRoomId, 10, 10, 0));
         map()->setDefaultAreaShown(true);
         showMapper(false);
-        map()->mpMapper->updateAreaComboBox();
-        map()->mpMapper->resetAreaComboBoxToPlayerRoomArea();
-        QCOMPARE(map()->mpMapper->comboBox_showArea->currentText(), qsl("Mouse Area"));
+        map()->mapper()->updateAreaComboBox();
+        map()->mapper()->resetAreaComboBoxToPlayerRoomArea();
+        QCOMPARE(map()->mapper()->comboBox_showArea->currentText(), qsl("Mouse Area"));
     }
 
     QSet<int> roomsInArea(const int areaId) const
@@ -2767,7 +2767,7 @@ private slots:
         }
         showMapper(false);
         // The mapper's list of areas was filled before this map's areas existed.
-        map()->mpMapper->updateAreaComboBox();
+        map()->mapper()->updateAreaComboBox();
         dragFromTo(pointUnitsFromCentre(-1.5, 1.5), pointUnitsFromCentre(1.5, 0.5));
         const QSet<int> northRow{kNorthWestRoomId, kNorthRoomId, kNorthEastRoomId};
         QCOMPARE(mp2dMap->mMultiSelectionSet, northRow);
@@ -2785,7 +2785,7 @@ private slots:
         QCOMPARE(roomsInArea(otherAreaId), northRow + farRooms);
         QVERIFY2(!roomsInArea(mAreaId).intersects(northRow), "the rooms are still in the area they came from");
         QCOMPARE(mp2dMap->mAreaID, otherAreaId);
-        QCOMPARE(map()->mpMapper->comboBox_showArea->currentText(), qsl("Next Door"));
+        QCOMPARE(map()->mapper()->comboBox_showArea->currentText(), qsl("Next Door"));
         QCOMPARE(mp2dMap->mMapCenterX, 0.0);
         QCOMPARE(mp2dMap->mMapCenterY, -1.0);
         QVERIFY(map()->isUnsaved());
@@ -2809,7 +2809,7 @@ private slots:
         QVERIFY2(newAreaId > 0, "no area called Brand New was made");
         QCOMPARE(roomsInArea(newAreaId), QSet<int>{kEastRoomId});
         QCOMPARE(mp2dMap->mAreaID, newAreaId);
-        QCOMPARE(map()->mpMapper->comboBox_showArea->currentText(), qsl("Brand New"));
+        QCOMPARE(map()->mapper()->comboBox_showArea->currentText(), qsl("Brand New"));
         QVERIFY(map()->isUnsaved());
     }
 
@@ -2861,8 +2861,8 @@ private slots:
         QVERIFY(mLastWarningText.isEmpty());
         QCOMPARE(configuredAreas(), (QStringList{qsl("Brand New (%1)").arg(newAreaId), qsl("Default Area (-1)"), mouseAreaRow(), otherAreaRow()}));
         QCOMPARE(configuredAreaSelected(), qsl("Brand New (%1)").arg(newAreaId));
-        QVERIFY2(map()->mpMapper->comboBox_showArea->findText(qsl("Brand New")) >= 0, "the dropdown does not offer the new area");
-        QCOMPARE(map()->mpMapper->comboBox_showArea->currentText(), qsl("Mouse Area"));
+        QVERIFY2(map()->mapper()->comboBox_showArea->findText(qsl("Brand New")) >= 0, "the dropdown does not offer the new area");
+        QCOMPARE(map()->mapper()->comboBox_showArea->currentText(), qsl("Mouse Area"));
         QCOMPARE(mp2dMap->mAreaID, mAreaId);
     }
 
@@ -2884,7 +2884,7 @@ private slots:
         showMapWithAnotherArea();
         QVERIFY(openConfigureAreas());
         const QStringList before = configuredAreas();
-        const int dropdownCountBefore = map()->mpMapper->comboBox_showArea->count();
+        const int dropdownCountBefore = map()->mapper()->comboBox_showArea->count();
 
         QVERIFY(pressAndName(qsl("Create"), QString()));
 
@@ -2892,8 +2892,8 @@ private slots:
         QCOMPARE(configuredAreas(), before);
         QCOMPARE(configuredAreaSelected(), mouseAreaRow());
         QCOMPARE(map()->mpRoomDB->getAreaNamesMap().size(), 3);
-        QCOMPARE(map()->mpMapper->comboBox_showArea->count(), dropdownCountBefore);
-        QCOMPARE(map()->mpMapper->comboBox_showArea->currentText(), qsl("Mouse Area"));
+        QCOMPARE(map()->mapper()->comboBox_showArea->count(), dropdownCountBefore);
+        QCOMPARE(map()->mapper()->comboBox_showArea->currentText(), qsl("Mouse Area"));
     }
 
     void test_renamingTheAreaShownRenamesItInTheListAndTheDropdown()
@@ -2907,7 +2907,7 @@ private slots:
         QCOMPARE(map()->mpRoomDB->getAreaNamesMap().value(mAreaId), qsl("Renamed Area"));
         QCOMPARE(configuredAreas(), (QStringList{qsl("Default Area (-1)"), otherAreaRow(), qsl("Renamed Area (%1)").arg(mAreaId)}));
         QCOMPARE(configuredAreaSelected(), qsl("Renamed Area (%1)").arg(mAreaId));
-        QCOMPARE(map()->mpMapper->comboBox_showArea->currentText(), qsl("Renamed Area"));
+        QCOMPARE(map()->mapper()->comboBox_showArea->currentText(), qsl("Renamed Area"));
         QCOMPARE(mp2dMap->mAreaID, mAreaId);
     }
 
@@ -2921,7 +2921,7 @@ private slots:
         QCOMPARE(mLastWarningText, qsl("Unable to rename area. Name may be invalid or already in use."));
         QCOMPARE(map()->mpRoomDB->getAreaNamesMap().value(mAreaId), qsl("Mouse Area"));
         QCOMPARE(configuredAreaSelected(), mouseAreaRow());
-        QCOMPARE(map()->mpMapper->comboBox_showArea->currentText(), qsl("Mouse Area"));
+        QCOMPARE(map()->mapper()->comboBox_showArea->currentText(), qsl("Mouse Area"));
     }
 
     void test_cancellingTheRenamePromptLeavesTheAreaAlone()
@@ -2948,8 +2948,8 @@ private slots:
         QVERIFY(!map()->mpRoomDB->getAreaNamesMap().contains(mOtherAreaId));
         QVERIFY2(!map()->mpRoomDB->getRoom(kOtherAreaRoomId), "the deleted area's room is still on the map");
         QCOMPARE(configuredAreas(), (QStringList{qsl("Default Area (-1)"), mouseAreaRow()}));
-        QCOMPARE(map()->mpMapper->comboBox_showArea->findText(qsl("Other")), -1);
-        QCOMPARE(map()->mpMapper->comboBox_showArea->currentText(), qsl("Mouse Area"));
+        QCOMPARE(map()->mapper()->comboBox_showArea->findText(qsl("Other")), -1);
+        QCOMPARE(map()->mapper()->comboBox_showArea->currentText(), qsl("Mouse Area"));
         QCOMPARE(mp2dMap->mAreaID, mAreaId);
     }
 
@@ -2961,8 +2961,8 @@ private slots:
     {
         showMapWithAnotherArea();
         map()->setDefaultAreaShown(false);
-        map()->mpMapper->updateAreaComboBox();
-        QCOMPARE(map()->mpMapper->comboBox_showArea->currentText(), qsl("Mouse Area"));
+        map()->mapper()->updateAreaComboBox();
+        QCOMPARE(map()->mapper()->comboBox_showArea->currentText(), qsl("Mouse Area"));
 
         QVERIFY(openConfigureAreas());
 
@@ -2998,7 +2998,7 @@ private slots:
 
         QVERIFY(mLastWarningText.isEmpty());
         QCOMPARE(map()->mpRoomDB->getAreaNamesMap().value(mOtherAreaId), qsl("Renamed Area"));
-        QCOMPARE(map()->mpMapper->comboBox_showArea->currentText(), qsl("Mouse Area"));
+        QCOMPARE(map()->mapper()->comboBox_showArea->currentText(), qsl("Mouse Area"));
         QCOMPARE(mp2dMap->mAreaID, mAreaId);
     }
 
@@ -3016,13 +3016,13 @@ private slots:
         QVERIFY(openConfigureAreasOn(pView->get2DMap()));
         QVERIFY(pressAndName(qsl("Create"), qsl("Brand New"), pView->get2DMap()));
         QVERIFY(mLastWarningText.isEmpty());
-        QVERIFY2(map()->mpMapper->comboBox_showArea->findText(qsl("Brand New")) >= 0, "the primary dropdown was not refreshed after a secondary view's dialog created an area");
+        QVERIFY2(map()->mapper()->comboBox_showArea->findText(qsl("Brand New")) >= 0, "the primary dropdown was not refreshed after a secondary view's dialog created an area");
 
         QVERIFY(selectConfiguredArea(otherAreaRow(), pView->get2DMap()));
         QVERIFY(pressAndName(qsl("Rename"), qsl("Renamed Other"), pView->get2DMap()));
         QVERIFY(mLastWarningText.isEmpty());
-        QCOMPARE(map()->mpMapper->comboBox_showArea->findText(qsl("Other")), -1);
-        QVERIFY2(map()->mpMapper->comboBox_showArea->findText(qsl("Renamed Other")) >= 0, "the primary dropdown was not refreshed after a secondary view's dialog renamed an area");
+        QCOMPARE(map()->mapper()->comboBox_showArea->findText(qsl("Other")), -1);
+        QVERIFY2(map()->mapper()->comboBox_showArea->findText(qsl("Renamed Other")) >= 0, "the primary dropdown was not refreshed after a secondary view's dialog renamed an area");
 
         mpHost->closeMapView(viewId);
     }
@@ -3046,7 +3046,7 @@ private slots:
 
         QVERIFY2(pView->getCurrentAreaId() != mOtherAreaId, "the secondary view is still showing the deleted area");
         QCOMPARE(pView->getCurrentAreaId(), -1);
-        QCOMPARE(map()->mpMapper->comboBox_showArea->findText(qsl("Other")), -1);
+        QCOMPARE(map()->mapper()->comboBox_showArea->findText(qsl("Other")), -1);
 
         mpHost->closeMapView(viewId);
     }

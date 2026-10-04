@@ -533,10 +533,10 @@ private:
     // mapper that already exists rather than leaving it alone.
     dlgMapper* ensureMapper() const
     {
-        if (mpHost->mpMap->mpMapper.isNull()) {
+        if (!mpHost->mpMap->mapper()) {
             mpHost->showHideOrCreateMapper(false);
         }
-        return mpHost->mpMap->mpMapper;
+        return mpHost->mpMap->mapper();
     }
 
     // A reply reports its progress no more often than an interval of Qt's own,
@@ -604,7 +604,7 @@ private slots:
         // No mapper widget yet, so every download below takes the standalone
         // progress path the signals under test belong to, until the tests at the
         // end of this file that deliberately create one.
-        QVERIFY2(mpHost->mpMap->mpMapper.isNull(), "a mapper widget already exists, so the standalone progress path will not be taken");
+        QVERIFY2(!mpHost->mpMap->mapper(), "a mapper widget already exists, so the standalone progress path will not be taken");
 
         watchMapDownloadEvent();
 
