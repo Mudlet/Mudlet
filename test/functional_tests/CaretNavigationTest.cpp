@@ -668,6 +668,8 @@ private slots:
         press(pMiniPane, Qt::Key_Left, Qt::ShiftModifier);
         pMiniPane->slot_copySelectionToClipboard();
         const QString selected = QApplication::clipboard()->text();
+        // The caret is still on a line clearWindow() took, which a plain arrow key reads
+        pMiniPane->setCaretPosition(0, 0);
         press(pMiniPane, Qt::Key_Right);
 
         QCOMPARE(selected, QString());
