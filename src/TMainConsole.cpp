@@ -787,6 +787,16 @@ TConsole* TMainConsole::createMiniConsole(const QString& windowname, const QStri
     return nullptr;
 }
 
+TMxpFrameFrontend& TMainConsole::mxpFrames()
+{
+    return *mpMxpFrameWidgets;
+}
+
+const TMxpFrameFrontend& TMainConsole::mxpFrames() const
+{
+    return *mpMxpFrameWidgets;
+}
+
 TConsole* TMainConsole::createSubConsole(const QString& name, QWidget* parent)
 {
     auto* pC = new TConsole(mpHost, name, SubConsole, parent);

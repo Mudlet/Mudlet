@@ -34,6 +34,7 @@ class QRect;
 class QSize;
 class QString;
 class TAction;
+class TMxpFrameFrontend;
 
 // A profile's main console as core code sees it. TMainConsole implements it; core code
 // reaches it through Host::consoleFrontend() and names windows, never widgets.
@@ -335,6 +336,10 @@ public:
     // True while keyboard focus is on this console's focus proxy, normally its own command line, so false
     // while it is on the text, as in caret navigation, or in another window.
     virtual bool hasKeyboardFocus() const = 0;
+
+    // The widgets of the profile's MXP frames, which live as long as this console.
+    virtual TMxpFrameFrontend& mxpFrames() = 0;
+    virtual const TMxpFrameFrontend& mxpFrames() const = 0;
 
 protected:
     // The view is a widget whose owner deletes it as one, so nothing deletes it through this interface.
