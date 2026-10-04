@@ -2085,7 +2085,7 @@ void TMedia::play(TMediaData& mediaData)
                 playlist->clear();
             } else {
                 if (!playlist->isEmpty() && playlist->mediaCount() > 1) { // Purge media from the previous playlist
-                    playlist->removeMedia(playlist->nextIndex(), playlist->mediaCount());
+                    playlist->removeMedia(playlist->nextIndex(), playlist->mediaCount() - 1);
                 }
 
                 return; // No action required. Continue playing the same media.
@@ -2140,7 +2140,7 @@ void TMedia::play(TMediaData& mediaData)
                     playlist->clear();
                 } else {
                     if (!playlist->isEmpty() && playlist->mediaCount() > 1) { // Purge media from the previous playlist
-                        playlist->removeMedia(playlist->nextIndex(), playlist->mediaCount());
+                        playlist->removeMedia(playlist->nextIndex(), playlist->mediaCount() - 1);
                     }
 
                     mediaData.setMediaLoops(mediaData.mediaLoops() - 1); // Subtract the currently playing media from the total
