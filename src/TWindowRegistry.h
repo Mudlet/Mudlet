@@ -158,8 +158,8 @@ public:
     void setMainWindowSize(const QSize& size) { mMainWindowSize = size; }
     QSize mainWindowSize() const { return mMainWindowSize; }
 
-    // Name only: core asks just whether a name exists and its kind.
-    // Three sets as the name spaces are independent; a name in several resolves in declaration order.
+    // Name only, bar a command line's text: core asks just whether a name exists and its kind.
+    // Three containers as the name spaces are independent; a name in several resolves in declaration order.
     void registerScrollBox(const QString& name) { mScrollBoxes.insert(name); }
     void deregisterScrollBox(const QString& name)
     {
@@ -168,7 +168,7 @@ public:
     }
     bool hasScrollBox(const QString& name) const { return mScrollBoxes.contains(name); }
 
-    void registerCommandLine(const QString& name) { mCommandLines.insert(name); }
+    void registerCommandLine(const QString& name) { mCommandLines.insert(name, QString()); }
 
     // Not identity-checked, like docks. The view's destroyed() handlers drop these by widget identity,
     // so they only name a name the dying widget still holds.
@@ -178,6 +178,25 @@ public:
         forgetPlainWindowState(name);
     }
     bool hasCommandLine(const QString& name) const { return mCommandLines.contains(name); }
+    // The view pushes every change, so script edits read back synchronously.
+    void setCommandLineText(const QString& name, const QString& text)
+    {
+        if (auto it = mCommandLines.find(name); it != mCommandLines.end()) {
+            it.value() = text;
+        }
+    }
+    void setMainCommandLineText(const QString& text) { mMainCommandLineText = text; }
+    // An empty name or "main" is the main command line, as getCmdLine() resolves them.
+    std::optional<QString> commandLineText(const QString& name) const
+    {
+        if (name.isEmpty() || name == QLatin1String("main")) {
+            return mMainCommandLineText;
+        }
+        if (auto it = mCommandLines.constFind(name); it != mCommandLines.cend()) {
+            return it.value();
+        }
+        return {};
+    }
 
     void registerTextBox(const QString& name) { mTextBoxes.insert(name); }
     void deregisterTextBox(const QString& name)
@@ -247,9 +266,10 @@ private:
     QMap<QString, QSize> mDockWidgets;
     mutable QMap<QString, QSize> mAnsweredUserWindowSizes;
     QSet<QString> mScrollBoxes;
-    QSet<QString> mCommandLines;
+    QMap<QString, QString> mCommandLines;
     QSet<QString> mTextBoxes;
     QSize mMainWindowSize;
+    QString mMainCommandLineText;
     QMap<QString, PlainWindowState> mPlainWindowStates;
 };
 
