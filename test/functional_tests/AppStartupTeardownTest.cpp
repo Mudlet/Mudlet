@@ -27,13 +27,15 @@
  * a package while one is already running - forwards that to the running one and
  * leaves main() moments later, with the warm-up still in flight. Unjoined, leaving
  * is where static destruction takes Qt's TLS backend mutex and its library store
- * out from under it: "QMutex: destroying locked mutex", then a crash inside freed plugin
- * machinery. This test plays the running instance and has the child forward a
- * telnet:// link to it. Nothing on that path writes to the config root; the
- * sandbox below is for what it reads.
+ * out from under it: "QMutex: destroying locked mutex", then sometimes a crash
+ * inside freed plugin machinery. This test plays the running instance and has the
+ * child forward a telnet:// link to it. Nothing on that path writes to the config
+ * root; the sandbox below is for what it reads.
  *
  * It is a race, so one clean exit proves nothing; hence the repeats. With the
- * warm-up left unjoined, a Linux debug build crashed in 8 of 20 runs.
+ * warm-up left unjoined, a Linux debug build warned in 28 of 30 runs and crashed
+ * in 15; an ASan build warned in all 30 and crashed in none, so the warning is
+ * what is checked for, not only the crash.
  *
  * Run with: ctest -R AppStartupTeardownTest -V
  */
@@ -66,6 +68,10 @@ private:
     static constexpr QLatin1StringView scmTelnetUri{"telnet://localhost:1"};
 
     static QString appBinary() { return QString::fromUtf8(MUDLET_APP_BINARY); }
+
+    // QTest cuts a failure message off at a few KB, and QT_DEBUG_PLUGINS puts
+    // that much plugin scanning ahead of what a crash leaves at the end
+    static QString tail(const QString& text) { return text.right(1500); }
 
     // A portable.txt beside the shipped binary, or in $HOME/.config/mudlet,
     // outranks XDG_CONFIG_HOME (MudletApp::resolveConfigRoot()), so the child
@@ -139,6 +145,9 @@ private slots:
             }
             environment.insert(qsl("QT_QPA_PLATFORM"), qsl("offscreen"));
             environment.insert(qsl("MUDLET_TEST_MODE"), qsl("1"));
+            // Should the forward fail, the child carries on as an instance of its
+            // own, and this keeps it from registering itself as the telnet handler
+            environment.insert(qsl("CI"), qsl("1"));
             // Has Qt log every plugin directory it searches, so the run below
             // can tell whether the warm-up looked for a TLS backend at all. Forced
             // to stderr, as macOS would send it to the system log instead.
@@ -160,23 +169,42 @@ private slots:
 
             const QString where = qsl("run %1 of %2").arg(QString::number(run), QString::number(scmRunCount));
             QVERIFY2(mudlet.waitForStarted(scmStartTimeoutMs), qPrintable(qsl("%1: %2").arg(where, mudlet.errorString())));
-            // Not waitForFinished(): the stand-in only accepts the child's connections while events are processed
-            QTRY_VERIFY2_WITH_TIMEOUT(mudlet.state() == QProcess::NotRunning,
-                                      qPrintable(qsl("%1: the child never finished, so it did not leave through the forwarding return and is running as an instance of its own").arg(where)),
-                                      scmFinishTimeoutMs);
+            const QByteArray expected = qsl("TELNET_URI:%1").arg(scmTelnetUri).toUtf8();
+            // Not waitForFinished(): the stand-in only accepts the child's connections
+            // while events are processed. Nor QTRY_VERIFY, which on a late finish
+            // reports its timeout as too short instead of the checks below.
+            QDeadlineTimer deadline(scmFinishTimeoutMs);
+            while (mudlet.state() != QProcess::NotRunning && !deadline.hasExpired()) {
+                QTest::qWait(20);
+            }
+            const bool finished = mudlet.state() == QProcess::NotRunning;
+            // The child can be gone before the stand-in has read what it wrote
+            const bool reachedReturn = QTest::qWaitFor(
+                    [&forwarded, &expected]() {
+                        return forwarded.contains(expected);
+                    },
+                    5000);
+            if (!finished) {
+                mudlet.kill();
+                mudlet.waitForFinished(scmStartTimeoutMs);
+            }
 
             const QString output = QString::fromUtf8(mudlet.readAllStandardOutput());
             const QString standardError = QString::fromUtf8(mudlet.readAllStandardError());
-            const QString diagnostics = qsl("%1, stderr:\n%2").arg(where, standardError);
+            // Both streams: under MSYS2 main() sends debug output to stdout
+            const QString diagnostics = qsl("%1, end of stdout:\n%2\nend of stderr:\n%3").arg(where, tail(output), tail(standardError));
+            QVERIFY2(finished,
+                     qPrintable(qsl("%1; %2").arg(reachedReturn ? qsl("mudlet forwarded the link but never exited, so it hung on the way out of main()")
+                                                                : qsl("mudlet never finished, so it did not leave through the forwarding return and is running as an instance of its own"),
+                                                  diagnostics)));
+            QVERIFY2(reachedReturn, qPrintable(qsl("the link never reached the stand-in, so main() did not leave through the forwarding return; %1").arg(diagnostics)));
             QVERIFY2(mudlet.exitStatus() == QProcess::NormalExit, qPrintable(qsl("mudlet crashed on leaving main(); %1").arg(diagnostics)));
             QVERIFY2(mudlet.exitCode() == 0, qPrintable(qsl("mudlet exited %1; %2").arg(QString::number(mudlet.exitCode()), diagnostics)));
-            QTRY_VERIFY2_WITH_TIMEOUT(forwarded.contains(qsl("TELNET_URI:%1").arg(scmTelnetUri).toUtf8()),
-                                      qPrintable(qsl("the link never reached the stand-in, so main() did not leave through the forwarding return; %1").arg(diagnostics)),
-                                      5000);
+            const QString lockedMutex = qsl("destroying locked mutex");
+            QVERIFY2(!standardError.contains(lockedMutex) && !output.contains(lockedMutex), qPrintable(qsl("static destruction ran with the TLS warm-up still in flight; %1").arg(diagnostics)));
             // Without a warm-up in flight at the return the case would pass with
             // the #10460 fix reverted, and cover nothing. Nothing else on this
             // path loads TLS, so a search of a tls directory is the warm-up's.
-            // Either stream: under MSYS2 main() sends debug output to stdout.
             QVERIFY2(standardError.contains(qsl("/tls\"")) || output.contains(qsl("/tls\"")),
                      qPrintable(qsl("Qt never searched for a TLS backend, so the TLS warm-up never ran, or main() returned without waiting for it; %1").arg(diagnostics)));
         }
