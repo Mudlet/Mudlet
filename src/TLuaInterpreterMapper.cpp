@@ -42,9 +42,8 @@
 #include "TMap.h"
 #include "TMapLabel.h"
 #include "TMedia.h"
-#include "TMapView.h"
 #include "TMapViewFrontend.h"
-#include "TMapViewManager.h"
+#include "TMapViewsFrontend.h"
 #include "TRoomDB.h"
 #include "TTimer.h"
 #include "mapInfoContributorManager.h"
@@ -727,12 +726,12 @@ int TLuaInterpreter::centerview(lua_State* L)
 
     // If viewId is specified, center that specific view
     if (viewId > 0) {
-        auto* viewManager = host.mpMap->getViewManager();
+        auto* viewManager = host.mpMap->mapViewsFrontend();
         if (!viewManager) {
             return warnArgumentValue(L, __func__, "no view manager available");
         }
 
-        TMapView* view = viewManager->getView(viewId);
+        auto* view = viewManager->view(viewId);
         if (!view) {
             return warnArgumentValue(L, __func__, qsl("view %1 not found").arg(viewId));
         }
@@ -2006,12 +2005,12 @@ int TLuaInterpreter::getMapZoom(lua_State* L)
 
     // If viewId is specified, get zoom from that specific view
     if (viewId > 0) {
-        auto* viewManager = host.mpMap->getViewManager();
+        auto* viewManager = host.mpMap->mapViewsFrontend();
         if (!viewManager) {
             return warnArgumentValue(L, __func__, "no view manager available");
         }
 
-        TMapView* view = viewManager->getView(viewId);
+        auto* view = viewManager->view(viewId);
         if (!view) {
             return warnArgumentValue(L, __func__, qsl("view %1 not found").arg(viewId));
         }
@@ -3973,12 +3972,12 @@ int TLuaInterpreter::setMapZoom(lua_State* L)
 
     // If viewId is specified, set zoom for that specific view
     if (viewId > 0) {
-        auto* viewManager = host.mpMap->getViewManager();
+        auto* viewManager = host.mpMap->mapViewsFrontend();
         if (!viewManager) {
             return warnArgumentValue(L, __func__, "no view manager available");
         }
 
-        TMapView* view = viewManager->getView(viewId);
+        auto* view = viewManager->view(viewId);
         if (!view) {
             return warnArgumentValue(L, __func__, qsl("view %1 not found").arg(viewId));
         }
@@ -4695,7 +4694,7 @@ int TLuaInterpreter::getMapViewIds(lua_State* L)
         return warnArgumentValue(L, __func__, "no map present or loaded");
     }
 
-    auto* viewManager = host.mpMap->getViewManager();
+    auto* viewManager = host.mpMap->mapViewsFrontend();
     if (!viewManager) {
         return warnArgumentValue(L, __func__, "no view manager available");
     }
@@ -4722,12 +4721,12 @@ int TLuaInterpreter::getMapViewInfo(lua_State* L)
         return warnArgumentValue(L, __func__, "no map present or loaded");
     }
 
-    auto* viewManager = host.mpMap->getViewManager();
+    auto* viewManager = host.mpMap->mapViewsFrontend();
     if (!viewManager) {
         return warnArgumentValue(L, __func__, "no view manager available");
     }
 
-    TMapView* view = viewManager->getView(viewId);
+    auto* view = viewManager->view(viewId);
     if (!view) {
         return warnArgumentValue(L, __func__, qsl("view %1 not found").arg(viewId));
     }
