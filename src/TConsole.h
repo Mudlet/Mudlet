@@ -218,7 +218,6 @@ public:
     // The members below alias the model, so it must be declared first.
     std::shared_ptr<TConsoleModel> mpModel;
     TBuffer& buffer;
-    static const QString cmLuaLineVariable;
     TTextEdit* mUpperPane = nullptr;
     TTextEdit* mLowerPane = nullptr;
 

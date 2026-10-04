@@ -37,7 +37,6 @@
 #include "TAction.h"
 #include "TAlias.h"
 #include "TBuffer.h"
-#include "TConsole.h"
 #include "TConsoleModel.h"
 #include "TDebug.h"
 #include "TEvent.h"
@@ -102,6 +101,7 @@ const QString TLuaInterpreter::csmInvalidItemID{qsl("item ID as %1 does not seem
 const QString TLuaInterpreter::csmInvalidAreaID{qsl("number %1 is not a valid area id")};
 const QString TLuaInterpreter::csmInvalidAreaName{qsl("string '%1' is not a valid area name")};
 const QStringList TLuaInterpreter::csmItemTypes{qsl("alias"), qsl("button"), qsl("script"), qsl("keybind"), qsl("timer"), qsl("trigger")};
+static const QString csmLuaLineVariable{qsl("line")};
 
 
 TLuaInterpreter::TLuaInterpreter(Host* pH, const QString& hostName, int id)
@@ -6134,7 +6134,7 @@ void TLuaInterpreter::setLineGlobal(const QString& line)
 {
     lua_State* L = pGlobalLua;
     if (!lazyGlobalsUsable(L)) {
-        set_lua_string(TConsole::cmLuaLineVariable, line);
+        set_lua_string(csmLuaLineVariable, line);
         return;
     }
 
