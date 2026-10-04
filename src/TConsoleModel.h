@@ -28,6 +28,7 @@
 
 #include <QColor>
 #include <QFile>
+#include <QFont>
 #include <QPair>
 #include <QPoint>
 #include <QPointer>
@@ -234,6 +235,8 @@ struct TConsoleModel
     QSize mGridSize;
     // The upper pane's TTextEdit::mCursorY, which it copies out of the buffer as it repaints.
     int mUpperPaneCursorY = 0;
+    // The upper pane's font, which TTextEdit copies out as it changes, a style sheet's included.
+    QFont mUpperPaneFont;
     bool mScrollingEnabled = true;
     QColor mBorderColor = QColorConstants::Black;
     void wrapLine(int line) { buffer.wrapLine(line, mWrapAt, mIndentCount, mHangingIndentCount); }

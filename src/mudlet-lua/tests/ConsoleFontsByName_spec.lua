@@ -206,6 +206,18 @@ describe("Tests that the font functions find their console by name", function()
         assert.are.equal(rows, getRowCount(window))
       end)
     end
+
+    it("reads the size a style sheet gives a user window's text", function()
+      local window = "specFontsByName styled user window" .. suffix
+      assert.is_true(kinds[2][2](window))
+      finally(function()
+        kinds[2][3](window)
+      end)
+      local size = getFontSize(window) == 21 and 22 or 21
+
+      assert.is_true(setUserWindowStyleSheet(window, ("TTextEdit { font-size: %dpt; }"):format(size)))
+      assert.are.equal(size, getFontSize(window))
+    end)
   end)
 
   describe("with the main console", function()
