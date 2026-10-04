@@ -2156,6 +2156,102 @@ describe("Tests UI functions", function()
     end)
   end)
 
+  -- the vitals trigger's callback, fed lines the way the trigger would: it
+  -- reads the global line and the line number, both stood in for in _G, as
+  -- busted gives a spec file an environment of its own
+  describe("Test BaseUI.onVitalsLine", function()
+    if not (type(BaseUI) == "table" and type(BaseUI.onVitalsLine) == "function") then
+      it("needs the base UI package installed", function()
+        pending("BaseUI.onVitalsLine is unavailable in this profile")
+      end)
+      return
+    end
+
+    local saved, applied, scoreRequests, lineNumber
+
+    before_each(function()
+      saved = {
+        applyVitals = BaseUI.applyVitals,
+        maybeRequestScore = BaseUI.maybeRequestScore,
+        shapeSightings = BaseUI.shapeSightings,
+        scoreWindowUntil = BaseUI.scoreWindowUntil,
+        lastVitalsLine = BaseUI.lastVitalsLine,
+        lastChatLine = BaseUI.lastChatLine,
+        getLineNumber = _G.getLineNumber,
+        line = _G.line,
+      }
+      applied, scoreRequests, lineNumber = {}, 0, 1000
+      BaseUI.applyVitals = function(_, updates)
+        applied[#applied + 1] = updates
+      end
+      BaseUI.maybeRequestScore = function()
+        scoreRequests = scoreRequests + 1
+      end
+      BaseUI.shapeSightings = {}
+      BaseUI.scoreWindowUntil = nil
+      BaseUI.lastVitalsLine, BaseUI.lastChatLine = nil, nil
+      _G.getLineNumber = function()
+        return lineNumber
+      end
+    end)
+
+    after_each(function()
+      BaseUI.applyVitals = saved.applyVitals
+      BaseUI.maybeRequestScore = saved.maybeRequestScore
+      BaseUI.shapeSightings = saved.shapeSightings
+      BaseUI.scoreWindowUntil = saved.scoreWindowUntil
+      BaseUI.lastVitalsLine = saved.lastVitalsLine
+      BaseUI.lastChatLine = saved.lastChatLine
+      _G.getLineNumber = saved.getLineNumber
+      _G.line = saved.line
+    end)
+
+    local function see(text)
+      lineNumber = lineNumber + 1
+      _G.line = text
+      BaseUI.onVitalsLine()
+    end
+
+    it("should trust a gated prompt shape from its third sighting", function()
+      see("<100/120hp 50/60m 80/90mv>")
+      see("<100/120hp 50/60m 80/90mv>")
+      assert.are.same({}, applied)
+      see("<90/120hp 50/60m 80/90mv>")
+      assert.are.same({
+        { hp = { current = 90, max = 120 }, mp = { current = 50, max = 60 }, mv = { current = 80, max = 90 } },
+      }, applied)
+    end)
+
+    it("should trust a score-table cell on first sight", function()
+      see("| Race: Undead Atavian | Health: 4252/4252 |")
+      assert.are.same({ { hp = { current = 4252, max = 4252 } } }, applied)
+    end)
+
+    it("should read an anchorless score row only while the score window is open", function()
+      local row = "Race : Human           Mana     :  1000/ 1000      Autoexit (X)"
+      see(row)
+      assert.are.same({}, applied)
+      BaseUI.scoreWindowUntil = getEpoch() + 60
+      see(row)
+      assert.are.same({ { mp = { current = 1000, max = 1000 } } }, applied)
+    end)
+
+    it("should ask for the score screen when a current with no maximum is trusted", function()
+      see("523h 120m >")
+      see("523h 120m >")
+      assert.are.equal(0, scoreRequests)
+      see("523h 120m >")
+      assert.are.equal(2, scoreRequests)
+      assert.are.same({ { hp = { current = 523 }, mp = { current = 120 } } }, applied)
+    end)
+
+    it("should read a line only once however often its trigger fires", function()
+      see("| Race: Undead Atavian | Health: 4252/4252 |")
+      BaseUI.onVitalsLine()
+      assert.are.equal(1, #applied)
+    end)
+  end)
+
   -- when a game installs its own interface (a Client.GUI package), the
   -- starter UI stands aside rather than fight it for screen space
   describe("Test the starter UI standing aside for a game's own interface", function()
