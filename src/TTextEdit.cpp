@@ -160,13 +160,23 @@ void TTextEdit::forceUpdate()
 
 void TTextEdit::scheduleUpdate(const QRect& rect)
 {
-    mPendingPaintRegion += rect.isValid() ? rect : QWidget::rect();
+    if (mWholePaneRequested) {
+        // A script echoing in a loop lands here on every line; the scrollbar
+        // catches up once the event loop runs, as the paint itself will.
+        if (mScrollBarUpdatePending && !mpPaintPacer->isActive()) {
+            mpPaintPacer->start(0);
+        }
+        return;
+    }
+    const QRect area = rect.isValid() ? rect : QWidget::rect();
+    mPendingPaintRegion += area;
 
     // Nothing painted recently, so this frame's window is open: Qt still merges
     // whatever else arrives before the event loop gets around to painting.
     if (!mSincePaint.isValid() || mSincePaint.elapsed() >= csmPaintPaceMs) {
         applyPendingScrollBarUpdate();
         update(mPendingPaintRegion);
+        mWholePaneRequested = area.contains(QWidget::rect());
         mPendingPaintRegion = QRegion();
         return;
     }
@@ -1505,6 +1515,7 @@ bool TTextEdit::shouldRegisterBlinkClient(const bool enableBlinkText, const bool
 void TTextEdit::paintEvent(QPaintEvent* e)
 {
     mSincePaint.restart();
+    mWholePaneRequested = false;
     if (!mPendingPaintRegion.isEmpty()) {
         // Whatever this paint covers is current now, so a deferred repaint of it
         // would be redundant. Only the remainder - if a partial expose left one -
