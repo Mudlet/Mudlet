@@ -4490,7 +4490,12 @@ void T2DMap::slot_customLineProperties()
             connect(mpCurrentLineColor, &QAbstractButton::clicked, this, &T2DMap::slot_customLineColor);
             dialog->adjustSize();
 
-            connect(dialog, &QDialog::accepted, this, [this, room, exit]() {
+            // The dialog leaves scripts running, and one may delete the room or its line meanwhile
+            connect(dialog, &QDialog::accepted, this, [this, roomId = room->getId(), exit]() {
+                TRoom* room = mpMap->mpRoomDB->getRoom(roomId);
+                if (!room || !room->customLines.contains(exit)) {
+                    return;
+                }
                 mCurrentLineStyle = static_cast<Qt::PenStyle>(mpCurrentLineStyle->currentData().toInt());
                 room->customLinesStyle[exit] = mCurrentLineStyle;
                 room->customLinesColor[exit] = mCurrentLineColor;

@@ -31,6 +31,8 @@
  */
 
 #include <QAction>
+#include <QCheckBox>
+#include <QDialog>
 #include <QMenu>
 #include <QMouseEvent>
 #include <QPixmap>
@@ -295,6 +297,68 @@ private slots:
         mp2dMap->mCustomLineSelectedRoom = 0;
         mp2dMap->mCustomLineSelectedExit.clear();
         mp2dMap->mCustomLineSelectedPoint = -1;
+    }
+
+    // The east room's line selected and its properties dialog opened, as its
+    // menu's "Properties" item does
+    QPointer<QDialog> openTheLinePropertiesDialog()
+    {
+        buildMap();
+        if (!addLineToTheEastRoom()) {
+            return nullptr;
+        }
+        showMapper();
+        mp2dMap->mCustomLineSelectedRoom = kEastRoomId;
+        mp2dMap->mCustomLineSelectedExit = kLineExit;
+        mp2dMap->slot_customLineProperties();
+        return mp2dMap->findChild<QDialog*>(qsl("custom_line_properties"));
+    }
+
+    void test_acceptingLinePropertiesAfterTheRoomIsDeletedDoesNothing()
+    {
+        QPointer<QDialog> dialog = openTheLinePropertiesDialog();
+        QVERIFY2(dialog, "no line properties dialog was opened");
+        auto* arrow = dialog->findChild<QCheckBox*>(qsl("arrow"));
+        QVERIFY(arrow);
+        arrow->setChecked(true);
+        QVERIFY(map()->mpRoomDB->removeRoom(kEastRoomId));
+
+        dialog->accept();
+
+        QVERIFY(!map()->mpRoomDB->getRoom(kEastRoomId));
+    }
+
+    void test_acceptingLinePropertiesAfterTheLineIsRemovedDoesNotBringItBack()
+    {
+        QPointer<QDialog> dialog = openTheLinePropertiesDialog();
+        QVERIFY2(dialog, "no line properties dialog was opened");
+        TRoom* pRoom = map()->mpRoomDB->getRoom(kEastRoomId);
+        QVERIFY(pRoom);
+        pRoom->customLines.remove(kLineExit);
+        pRoom->customLinesArrow.remove(kLineExit);
+        pRoom->customLinesStyle.remove(kLineExit);
+        pRoom->customLinesColor.remove(kLineExit);
+
+        dialog->accept();
+
+        QVERIFY(!pRoom->customLinesArrow.contains(kLineExit));
+        QVERIFY(!pRoom->customLinesStyle.contains(kLineExit));
+        QVERIFY(!pRoom->customLinesColor.contains(kLineExit));
+    }
+
+    void test_acceptingLinePropertiesAppliesThem()
+    {
+        QPointer<QDialog> dialog = openTheLinePropertiesDialog();
+        QVERIFY2(dialog, "no line properties dialog was opened");
+        auto* arrow = dialog->findChild<QCheckBox*>(qsl("arrow"));
+        QVERIFY(arrow);
+        arrow->setChecked(true);
+
+        dialog->accept();
+
+        const TRoom* pRoom = map()->mpRoomDB->getRoom(kEastRoomId);
+        QVERIFY(pRoom);
+        QVERIFY(pRoom->customLinesArrow.value(kLineExit));
     }
 
     void test_theRoomMenusItemsGoAwayWithTheMenu()
