@@ -40,6 +40,7 @@
 #include "TDebugFilterBar.h"
 #include "MudletInstanceCoordinator.h"
 #include "MudletWebExport.h"
+#include "MudletWebImport.h"
 #include "SherpaRecognizer.h"
 #include "SpeechRecognizer.h"
 #include "SpeechRecognizerFactory.h"
@@ -6986,8 +6987,11 @@ void mudlet::slot_connectionDialogueFinished(const QString& profile, bool connec
 
 void mudlet::installModulesList(Host* pHost, QStringList modules)
 {
+    const QString profileHome = MudletApp::getMudletPath(enums::profileHomePath, pHost->getName());
     for (const auto& module : modules) {
         QStringList entry = pHost->mInstalledModules[module];
+        // Kept, so that the next save lists the module where it was found
+        entry[0] = MudletWebImport::locateModuleFile(profileHome, module, entry[0]);
         if (!pHost->installPackage(entry[0], enums::PackageModuleType::ModuleFromUI).first) {
             qWarning() << "mudlet::installModulesList() WARNING - failed to load module" << module;
         }

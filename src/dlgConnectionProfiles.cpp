@@ -31,6 +31,7 @@
 #include "HostManager.h"
 #include "LuaInterface.h"
 #include "MudletApp.h"
+#include "MudletWebImport.h"
 #include "TGameDetails.h"
 #include "XMLimport.h"
 #include "discord.h"
@@ -48,7 +49,13 @@
 #include <QApplication>
 #include <QColorDialog>
 #include <QDir>
+#include <QDragEnterEvent>
+#include <QDropEvent>
+#include <QFileDialog>
 #include <QFileInfo>
+#include <QFutureWatcher>
+#include <QMessageBox>
+#include <QMimeData>
 #include <QPointer>
 #include <QRandomGenerator>
 #include <QSettings>
@@ -227,6 +234,7 @@ dlgConnectionProfiles::dlgConnectionProfiles(QWidget* parent)
     // happens to be Remove, silently deleting the profile being created:
     remove_profile_button->setAutoDefault(false);
     new_profile_button->setAutoDefault(false);
+    import_profile_button->setAutoDefault(false);
     mpSkipToGamesButton->setAutoDefault(false);
     connect_button->setDefault(true);
 
@@ -298,6 +306,7 @@ dlgConnectionProfiles::dlgConnectionProfiles(QWidget* parent)
         connect_button->setIcon(icon_connect);
         new_profile_button->setIcon(icon_new);
         remove_profile_button->setIcon(QIcon::fromTheme(qsl("edit-delete"), QIcon(qsl(":/icons/edit-delete.png"))));
+        import_profile_button->setIcon(QIcon::fromTheme(qsl("document-import"), QIcon(qsl(":/icons/import.png"))));
 
         copy_profile_toolbutton->setIcon(QIcon::fromTheme(qsl("edit-copy"), QIcon(qsl(":/icons/edit-copy.png"))));
         copy_profile_toolbutton->setToolButtonStyle(Qt::ToolButtonTextBesideIcon);
@@ -341,6 +350,11 @@ dlgConnectionProfiles::dlgConnectionProfiles(QWidget* parent)
     connect(new_profile_button, &QAbstractButton::clicked, this, &dlgConnectionProfiles::slot_addProfile);
     connect(mpCopyProfile, &QAction::triggered, this, &dlgConnectionProfiles::slot_copyProfile);
     connect(copyProfileSettings, &QAction::triggered, this, &dlgConnectionProfiles::slot_copyOnlySettingsOfProfile);
+    connect(import_profile_button, &QAbstractButton::clicked, this, &dlgConnectionProfiles::slot_importProfiles);
+    //: Tooltip of the button that adds profiles from a .zip file
+    import_profile_button->setToolTip(utils::richText(tr("Add profiles from a .zip exported by Mudlet Web, or by Mudlet on another computer. "
+                                                         "You can also drop the file on this window.")));
+    setAcceptDrops(true);
     connect(remove_profile_button, &QAbstractButton::clicked, this, &dlgConnectionProfiles::slot_deleteProfile);
     connect(profile_name_entry, &QLineEdit::textChanged, this, &dlgConnectionProfiles::slot_updateName);
     connect(profile_name_entry, &QLineEdit::editingFinished, this, &dlgConnectionProfiles::slot_saveName);
@@ -2205,6 +2219,102 @@ void dlgConnectionProfiles::saveDefaultProfileCopy(const QString& profileName, c
     }
     mCopyingProfile = false;
     validateProfile();
+}
+
+void dlgConnectionProfiles::slot_importProfiles()
+{
+    //: Title of the file picker for importing profiles
+    const QString fileName = QFileDialog::getOpenFileName(this,
+                                                          tr("Import profiles"),
+                                                          QDir::homePath(),
+                                                          //: File type filter in the file picker for importing profiles
+                                                          tr("Profile archives (*.zip);;All files (*)"));
+    if (!fileName.isEmpty()) {
+        importProfilesFrom(fileName);
+    }
+}
+
+void dlgConnectionProfiles::importProfilesFrom(const QString& archivePathFileName)
+{
+    if (mImportingProfiles) {
+        return;
+    }
+    mImportingProfiles = true;
+    import_profile_button->setEnabled(false);
+    //: Shown on the Import button while profiles are being imported
+    import_profile_button->setText(tr("Importing..."));
+
+    // No busy cursor, unlike copying: closing the dialog takes this watcher with
+    // it, and nothing would be left to restore the cursor
+    auto watcher = new QFutureWatcher<MudletWebImport::Result>(this);
+    connect(watcher, &QFutureWatcher<MudletWebImport::Result>::finished, this, [this, watcher]() {
+        const MudletWebImport::Result result = watcher->result();
+        watcher->deleteLater();
+        mImportingProfiles = false;
+        import_profile_button->setEnabled(true);
+        //: Text of the button that adds profiles from a .zip file
+        import_profile_button->setText(tr("Import"));
+
+        if (!result.error.isEmpty()) {
+            //: Title of the message shown when importing profiles fails
+            QMessageBox::warning(this, tr("Import profiles"), result.error);
+            return;
+        }
+
+        // They are the player's own now, and easier found there than in the whole catalog
+        if (mpTabBar->isVisible() && mpTabBar->currentIndex() != scmMyGamesTab) {
+            mpTabBar->setCurrentIndex(scmMyGamesTab);
+        } else {
+            fillout_form();
+        }
+        const auto imported = findData(*listWidget_profiles, result.profiles.constFirst(), csmNameRole);
+        if (!imported.isEmpty()) {
+            if (listWidget_profiles->currentItem() == imported.constFirst()) {
+                slot_itemClicked(imported.constFirst());
+            } else {
+                listWidget_profiles->setCurrentItem(imported.constFirst());
+            }
+        }
+
+        QStringList names;
+        for (const auto& name : result.profiles) {
+            names.append(qsl("<li>%1</li>").arg(name.toHtmlEscaped()));
+        }
+        //: Shown after importing profiles; %1 lists the profiles that were added. Connect is the button that starts playing.
+        QString message = tr("<p>Added to your profiles:</p><ul>%1</ul><p>Pick one and click <b>Connect</b> to play.</p>").arg(names.join(QString()));
+        if (!result.warnings.isEmpty()) {
+            QStringList warnings;
+            for (const auto& warning : result.warnings) {
+                warnings.append(qsl("<li>%1</li>").arg(warning.toHtmlEscaped()));
+            }
+            //: Shown after importing profiles, below the list of what was added; %1 lists what could not be brought over.
+            message += tr("<p>Please note:</p><ul>%1</ul>").arg(warnings.join(QString()));
+        }
+        //: Title of the message shown after importing profiles
+        QMessageBox::information(this, tr("Profiles imported"), message);
+    });
+    watcher->setFuture(QtConcurrent::run(&MudletWebImport::importArchive, archivePathFileName, MudletApp::getMudletPath(enums::profilesPath)));
+}
+
+void dlgConnectionProfiles::dragEnterEvent(QDragEnterEvent* event)
+{
+    const QList<QUrl> urls = event->mimeData()->urls();
+    if (!mImportingProfiles && urls.size() == 1 && urls.constFirst().isLocalFile() && urls.constFirst().toLocalFile().endsWith(qsl(".zip"), Qt::CaseInsensitive)) {
+        event->acceptProposedAction();
+        return;
+    }
+    QDialog::dragEnterEvent(event);
+}
+
+void dlgConnectionProfiles::dropEvent(QDropEvent* event)
+{
+    const QList<QUrl> urls = event->mimeData()->urls();
+    if (urls.size() == 1 && urls.constFirst().isLocalFile()) {
+        event->acceptProposedAction();
+        importProfilesFrom(urls.constFirst().toLocalFile());
+        return;
+    }
+    QDialog::dropEvent(event);
 }
 
 void dlgConnectionProfiles::slot_copyOnlySettingsOfProfile()
