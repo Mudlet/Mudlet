@@ -1397,11 +1397,40 @@ local processedEchoToHTML = function(t, reset)
   return result
 end
 
--- Cursor columns count UTF-16 code units: one per character, two for one outside the BMP
+-- Cursor columns count UTF-16 code units: one per character, two for one outside the BMP.
+-- Each byte of a malformed sequence becomes its own U+FFFD when Qt decodes the text.
 local function utf16Length(str)
-  local _, continuationBytes = str:gsub("[\128-\191]", "")
-  local _, fourByteLeads = str:gsub("[\240-\247]", "")
-  return #str - continuationBytes + fourByteLeads
+  local length, i, n = 0, 1, #str
+  while i <= n do
+    local lead = str:byte(i)
+    local size, low, high = 1, 0x80, 0xBF
+    if lead >= 0xC2 and lead <= 0xDF then
+      size = 2
+    elseif lead >= 0xE0 and lead <= 0xEF then
+      size = 3
+      if lead == 0xE0 then low = 0xA0 elseif lead == 0xED then high = 0x9F end
+    elseif lead >= 0xF0 and lead <= 0xF4 then
+      size = 4
+      if lead == 0xF0 then low = 0x90 elseif lead == 0xF4 then high = 0x8F end
+    end
+    local valid = size > 1 and i + size - 1 <= n
+    if valid then
+      local second = str:byte(i + 1)
+      valid = second >= low and second <= high
+      for j = i + 2, i + size - 1 do
+        local byte = str:byte(j)
+        valid = valid and byte >= 0x80 and byte <= 0xBF
+      end
+    end
+    if valid then
+      length = length + (size == 4 and 2 or 1)
+      i = i + size
+    else
+      length = length + 1
+      i = i + 1
+    end
+  end
+  return length
 end
 
 --- Generic color echo and insert function (allowing hecho, decho, cecho, hinsertText, dinsertText and cinsertText).

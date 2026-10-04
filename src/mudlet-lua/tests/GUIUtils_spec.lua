@@ -2169,6 +2169,19 @@ describe("Tests the GUI utilities as far as possible without mudlet", function()
       end
     end)
 
+    it("Should insert each piece after bytes that are not valid UTF-8", function()
+      local replacement = "\239\191\189"
+      -- a stray continuation byte, a truncated emoji and an encoded surrogate
+      for _, case in ipairs({{"\128", 1}, {"\240\159\152", 3}, {"\237\160\128", 3}}) do
+        clearWindow(windowName)
+        echo(windowName, "AB\n")
+        moveCursor(windowName, 0, 0)
+        cinsertText(windowName, case[1] .. "<red>X")
+        moveCursor(windowName, 0, 0)
+        assert.equals(string.rep(replacement, case[2]) .. "XAB", currentLine(windowName))
+      end
+    end)
+
     it("Should answer nil and a message for an insert into a window that does not exist", function()
       for _, insert in ipairs({{cinsertText, "<red>x"}, {dinsertText, "<255,0,0>x"}, {hinsertText, "#ff0000x"}}) do
         local ok, result, message = pcall(insert[1], "guiUtilsNoSuchWindow", insert[2])
