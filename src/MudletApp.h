@@ -133,6 +133,8 @@ public:
 
     // Creates the profile's directory if missing, so writing for a nonexistent profile brings it into being
     static QPair<bool, QString> writeProfileData(const QString& profile, const QString& item, const QString& what);
+    static QPair<bool, QString> setProfileIcon(const QString& profile, const QString& newIconPath);
+    static QPair<bool, QString> resetProfileIcon(const QString& profile);
 
     // The on-disk spelling of a profile named in any case, or an empty string if
     // neither an existing profile nor a predefined game goes by that name

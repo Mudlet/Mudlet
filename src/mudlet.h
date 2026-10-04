@@ -238,6 +238,7 @@ public:
     // operating without either menubar or main toolbar showing.
     bool isControlsVisible() const;
     bool isGoingDown() { return mIsGoingDown; }
+    bool quitting() const override { return mIsGoingDown; }
     bool closeHeldOffByEventPump(Host*) const;
     Host* loadProfile(const QString&, const bool, const QString& saveFileName = QString());
     bool loadWindowLayout() override;
@@ -263,9 +264,10 @@ public:
     // to tell other profiles to reload the updated
     // maps (via signal_profileMapReloadRequested(...))
     void requestProfilesToReloadMaps(QList<QString>);
-    std::pair<bool, QString> resetProfileIcon(const QString&);
     bool saveWindowLayout();
     bool saveWindowLayoutForScript() override;
+    bool openProfile(const QString& profileName, bool connect) override;
+    bool requestProfileTabClose(const QString& profileName) override;
     void scanForMudletTranslations(const QString&);
     void scanForQtTranslations(const QString&);
     void setAppearance(enums::Appearance, const bool& loading = false);
@@ -274,7 +276,6 @@ public:
     void setEditorTreeWidgetIconSize(int);
     void setInterfaceLanguage(const QString&);
     void setMenuBarVisibility(enums::controlsVisibility);
-    std::pair<bool, QString> setProfileIcon(const QString& profile, const QString& newIconPath);
     void setShowIconsOnMenu(const Qt::CheckState);
     void setShowMapAuditErrors(const bool);
     void setInvertMapZoom(const bool);
