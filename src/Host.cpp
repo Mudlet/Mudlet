@@ -655,14 +655,14 @@ bool Host::saveMapFile(const QString& location, int saveVersion)
 
 bool Host::loadMapFile(const QString& location)
 {
-    if (!mpMap || mpMap->mpMapper.isNull()) {
+    if (!mpMap || !mpMap->mapViewFrontend()) {
         // No map or map currently loaded - so try and created mapper
         // but don't load a map here by default, we do that below and it may not
         // be the default map anyhow
         showHideOrCreateMapper(false);
     }
 
-    if (!mpMap || mpMap->mpMapper.isNull()) {
+    if (!mpMap || !mpMap->mapViewFrontend()) {
         // And that failed so give up
         return false;
     }
@@ -711,12 +711,12 @@ bool Host::loadMapFile(const QString& location)
 // console - if possible!
 bool Host::importMapFile(const QString& location, QString* errMsg)
 {
-    if (!mpMap || mpMap->mpMapper.isNull()) {
+    if (!mpMap || !mpMap->mapViewFrontend()) {
         // No map or mapper currently loaded/present - so try and create mapper
         showHideOrCreateMapper(false);
     }
 
-    if (!mpMap || mpMap->mpMapper.isNull()) {
+    if (!mpMap || !mpMap->mapViewFrontend()) {
         // And that failed so give up
         if (errMsg) {
             *errMsg = qsl("loadMap: unable to initialise mapper {in Host::importMapFile(...)} - something is wrong!");
@@ -5467,7 +5467,7 @@ std::pair<bool, QString> Host::openMapWidget(const QString& area, int x, int y, 
         return {false, qsl("no console for this profile - it may be closing")};
     }
 
-    if (!consoleFrontend()->mapWidgetCreated() && mpMap->mpMapper.isNull()) {
+    if (!consoleFrontend()->mapWidgetCreated() && !mpMap->mapViewFrontend()) {
         showHideOrCreateMapper(true);
     }
 
@@ -5941,7 +5941,7 @@ bool Host::interceptMapperButton()
 // loads/imports a non-default (last saved map in profile's map directory).
 void Host::showHideOrCreateMapper(const bool loadDefaultMap)
 {
-    if (!mpMap->mpMapper.isNull()) {
+    if (mpMap->mapViewFrontend()) {
         toggleMapperVisibility();
         return;
     }
