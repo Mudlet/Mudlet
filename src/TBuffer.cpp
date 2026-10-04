@@ -6770,8 +6770,15 @@ QString TBuffer::bufferToHtml(const bool showTimeStamp /*= false*/, const int ro
     for (; pos < lastPos; ++pos) {
         const TChar& ch = lineChars[static_cast<size_t>(pos)];
         const int charLinkIndex = ch.linkIndex();
+        QRgb charBgColor = ch.backgroundRgba();
+        if (qAlpha(charBgColor) == 0) {
+            // A transparent cell (e.g. a system message) has no colour of its
+            // own on screen - it shows the console's background through it -
+            // so fall back to that rather than exporting alpha-0 as black.
+            charBgColor = consoleBgColor.rgba();
+        }
         // Do we need to start a new span?
-        if (firstSpan || ch.foregroundRgba() != currentFgColor || ch.backgroundRgba() != currentBgColor || (ch.mFlags & TChar::TestMask) != currentFlags || charLinkIndex != currentLinkIndex) {
+        if (firstSpan || ch.foregroundRgba() != currentFgColor || charBgColor != currentBgColor || (ch.mFlags & TChar::TestMask) != currentFlags || charLinkIndex != currentLinkIndex) {
             appendHtmlEscaped(s, lineText.constData() + textRunStart, pos - textRunStart);
             textRunStart = pos;
             if (firstSpan) {
@@ -6780,13 +6787,7 @@ QString TBuffer::bufferToHtml(const bool showTimeStamp /*= false*/, const int ro
                 s.append(QLatin1String("</span>"));
             }
             currentFgColor = ch.foregroundRgba();
-            currentBgColor = ch.backgroundRgba();
-            if (qAlpha(currentBgColor) == 0) {
-                // A transparent cell (e.g. a system message) has no colour of its
-                // own on screen - it shows the console's background through it -
-                // so fall back to that rather than exporting alpha-0 as black.
-                currentBgColor = consoleBgColor.rgba();
-            }
+            currentBgColor = charBgColor;
             currentFlags = ch.mFlags & TChar::TestMask;
             currentLinkIndex = charLinkIndex;
 
