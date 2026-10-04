@@ -209,8 +209,9 @@ private:
 #if defined(Q_OS_WINDOWS)
     std::unique_ptr<QThread> mThread;
 #else
-    static void* run(void*)
+    static void* run(void* argument)
     {
+        Q_UNUSED(argument)
         warmUp();
         return nullptr;
     }
