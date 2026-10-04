@@ -24,6 +24,7 @@
 #include "Host.h"
 #include "mudlet.h"
 #include "TConsole.h"
+#include "TMainConsole.h"
 
 TDockWidget::TDockWidget(Host* pH, const QString& consoleName)
 : QDockWidget()

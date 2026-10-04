@@ -21,6 +21,8 @@
  ***************************************************************************/
 
 
+#include "TMainConsole.h"
+
 #include "MudletApp.h"
 #include "TConsole.h"
 

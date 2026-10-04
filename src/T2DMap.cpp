@@ -43,6 +43,7 @@
 #include "RoomMoveActivationHandler.h"
 #include "RoomMoveDragHandler.h"
 #include "SelectionRectangleHandler.h"
+#include "TMainConsole.h"
 #include "TMapViewManager.h"
 #include "TRoom.h" // For DIR_XXX defines
 #include "TRoomDB.h"

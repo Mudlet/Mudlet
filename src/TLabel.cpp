@@ -27,6 +27,7 @@
 #include "TConsole.h"
 #include "TDockWidget.h"
 #include "mudlet.h"
+#include "TMainConsole.h"
 
 #include <QDesktopServices>
 #include <QFile>

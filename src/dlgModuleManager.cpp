@@ -25,6 +25,7 @@
 
 #include "mudlet.h"
 #include "MudletApp.h"
+#include "TMainConsole.h"
 
 #include <QFileDialog>
 #include <QMessageBox>

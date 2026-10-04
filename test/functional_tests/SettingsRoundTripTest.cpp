@@ -54,6 +54,7 @@
 #include "MudletApp.h"
 #include "TConsole.h"
 #include "TLuaInterpreter.h"
+#include "TMainConsole.h"
 #include "TMap.h"
 #include "TelnetServerStub.h"
 #include "dlgProfilePreferences.h"
