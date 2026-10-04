@@ -314,8 +314,8 @@ private slots:
         }
     }
 
-    // Scrolling reuses the cached screen by blitting it a whole number of cells
-    // up or down, which lands a complete line of text in the strip below the
+    // Scrolling reuses the cached screen shifted a whole number of cells up or
+    // down, which can leave a complete line of text in the strip below the
     // last one. Only the bottom line's own overflow belongs there.
     void test_scrollingLeavesNoGhostLineBelowTheBottomOne()
     {
@@ -343,7 +343,7 @@ private slots:
             runLua(host, qsl("cecho('<white>' .. string.rep('%1\\n', %2))").arg(line).arg(pane->getScreenHeight() * 4));
             pane->forceUpdate();
             QApplication::processEvents();
-            // primes the cached screen the scroll below is blitted from
+            // primes the cached screen the scroll below reuses
             renderPane(host);
 
             // drawForeground() ignores the cache entirely below ten scrolled-off

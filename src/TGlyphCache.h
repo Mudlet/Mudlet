@@ -57,13 +57,15 @@ public:
     void setFont(const QFont&, const QPaintDevice&);
     // Places the grapheme exactly where drawText(cell, Qt::AlignCenter |
     // Qt::TextDontClip | Qt::TextSingleLine, grapheme) would have put it,
-    // shaped with the font given to the last setFont().
-    void drawCentered(QPainter&, const QRect& cell, QStringView grapheme, Style);
+    // shaped with the font given to the last setFont(). Returns how far down its ink reaches.
+    qreal drawCentered(QPainter&, const QRect& cell, QStringView grapheme, Style);
     // As drawCentered() in `color`, but the glyphs only reach the painter at
     // the next flush(), so that a line costs one draw call per color rather
     // than one per cell. Anything else drawn with the painter has to wait for
     // that flush, or it lands beneath glyphs queued before it.
-    void queueCentered(QPainter&, const QRect& cell, QStringView grapheme, Style, const QColor& color);
+    qreal queueCentered(QPainter&, const QRect& cell, QStringView grapheme, Style, const QColor& color);
+    // Where drawCentered() would leave the bottom of the grapheme's ink, without drawing it.
+    qreal inkBottom(const QRect& cell, QStringView grapheme, Style);
     // Draws the queued glyphs, leaving the painter's pen in their color.
     void flush(QPainter&);
     qsizetype size() const { return mEntries.size(); }
@@ -101,7 +103,12 @@ private:
         QList<Run> runs;
         qreal advance = 0.0;
         qreal height = 0.0;
+        // Below the origin, from the glyphs' outlines: stacked combining marks
+        // can reach several lines past the line box the runs' own bounds give.
+        qreal inkBottom = 0.0;
     };
+
+    static QPointF origin(const QRect& cell, const Entry&);
 
     const Entry& lookup(QStringView grapheme, Style);
     Entry shape(QStringView grapheme, Style) const;
