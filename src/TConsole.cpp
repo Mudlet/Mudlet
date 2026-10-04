@@ -231,6 +231,7 @@ TConsole::TConsole(Host* pH, const QString& name, const ConsoleType type, QWidge
 , mCurrentSearchResult(mpModel->mCurrentSearchResult)
 , mControlCharacter(pH->getControlCharacterMode())
 , mType(type)
+, mScrollingEnabled(mpModel->mScrollingEnabled)
 {
     // The model is built without a view (Host creates the main console's one
     // before any widget exists), so this view subscribes to it now.

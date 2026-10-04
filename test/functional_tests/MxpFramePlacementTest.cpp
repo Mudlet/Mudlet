@@ -508,7 +508,7 @@ private slots:
             // what the frame's text is printed in, until the game says otherwise
             QCOMPARE(console->model().mFormatCurrent.foreground(), QColor(200, 180, 160));
             QCOMPARE(console->model().mFormatCurrent.background(), QColor(40, 60, 80).lighter(115));
-            QVERIFY(console->getScrolling());
+            QVERIFY(console->model().mScrollingEnabled);
         }
     }
 
@@ -522,7 +522,7 @@ private slots:
         for (const QString& name : {qsl("titled"), qsl("plain"), qsl("tab"), qsl("popup")}) {
             TConsole* console = frameConsole(name);
             QVERIFY2(console, qPrintable(qsl("Frame %1 should have a console").arg(name)));
-            QVERIFY2(!console->getScrolling(), qPrintable(qsl("Frame %1 should not scroll").arg(name)));
+            QVERIFY2(!console->model().mScrollingEnabled, qPrintable(qsl("Frame %1 should not scroll").arg(name)));
         }
     }
 

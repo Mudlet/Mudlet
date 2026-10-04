@@ -319,7 +319,7 @@ public:
     // The console a script names: "" and "main" are the main console's, any
     // other a mini console's, user window's or buffer's. The main console's is
     // there with or without a view.
-    TConsoleModel* consoleModelNamed(const QString& name);
+    TConsoleModel* consoleModelNamed(const QString& name) const;
     // The one clipboard every console copies to and pastes from. Each answers
     // whether it found the console.
     bool copyToClipboard(const QString& name);
@@ -667,6 +667,10 @@ public:
     std::optional<QSize> userWindowSize(const QString& name) const;
     // Columns by rows of a console's text area; {} for no such console.
     std::optional<QSize> windowGridSize(const QString& name) const;
+    // The line a console's upper pane last drew up to, within its buffer; {} for no such console.
+    std::optional<int> windowScroll(const QString& name) const;
+    // Whether a console scrolls; {} for no such console.
+    std::optional<bool> windowScrolling(const QString& name) const;
     bool getEditorShowBidi() const { return mEditorShowBidi; }
     void setEditorShowBidi(const bool);
     bool caretEnabled() const;
