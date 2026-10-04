@@ -35,10 +35,9 @@
 #include "EAction.h"
 #include "Host.h"
 #include "TArea.h"
-#include "TConsole.h"
+#include "TConsoleFrontend.h"
 #include "TDebug.h"
 #include "TEvent.h"
-#include "TMainConsole.h"
 #include "TMap.h"
 #include "TMapLabel.h"
 #include "TMedia.h"
@@ -47,9 +46,6 @@
 #include "TRoomDB.h"
 #include "TTimer.h"
 #include "mapInfoContributorManager.h"
-#if defined(INCLUDE_3DMAPPER)
-#include "glwidget_integration.h"
-#endif
 
 #include <algorithm>
 #include <limits>
@@ -674,11 +670,7 @@ int TLuaInterpreter::shiftMapPerspective(lua_State* L)
     const float horizontalAngle = getVerifiedFloat(L, __func__, 2, "horizontalAngle");
     const float rotationAngle = getVerifiedFloat(L, __func__, 3, "rotationAngle");
 
-    if (host.mpMap->mpM) {
-        if (auto* modernWidget = dynamic_cast<ModernGLWidget*>(host.mpMap->mpM.data())) {
-            modernWidget->shiftCamera(verticalAngle, horizontalAngle, rotationAngle);
-        }
-    }
+    host.mpMap->mapViewFrontend()->shift3DViewCamera(verticalAngle, horizontalAngle, rotationAngle);
     return 0;
 }
 int TLuaInterpreter::setMapPerspective(lua_State* L)
@@ -693,11 +685,7 @@ int TLuaInterpreter::setMapPerspective(lua_State* L)
     const float theta = getVerifiedFloat(L, __func__, 2, "theta");
     const float phi = getVerifiedFloat(L, __func__, 3, "phi");
 
-    if (host.mpMap->mpM) {
-        if (auto* modernWidget = dynamic_cast<ModernGLWidget*>(host.mpMap->mpM.data())) {
-            modernWidget->setCameraPosition(r, theta, phi);
-        }
-    }
+    host.mpMap->mapViewFrontend()->set3DViewCameraPosition(r, theta, phi);
     return 0;
 }
 #endif
