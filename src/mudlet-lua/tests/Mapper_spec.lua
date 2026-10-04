@@ -469,6 +469,27 @@ describe("Tests searchRoom", function()
 
 end)
 
+-- Outside the shared fixture, whose rooms take the IDs 2 to 11 that a direction code can be mistaken for
+describe("Tests connectExitStub with a direction code on a map without those room IDs", function()
+  it("connectExitStub takes a direction code from 2 to 11 as a direction when no room has that ID", function()
+    local east = 4
+    if roomExists(east) then
+      pending("room 4 exists in this profile, so the code is ambiguous")
+      return
+    end
+    local area = addAreaName("connectExitStub code")
+    finally(function() deleteArea(area) end)
+    -- above 11, so neither room can take the ID being tested
+    local a = createRoomID(12); addRoom(a); setRoomArea(a, area); setRoomCoordinates(a, 0, 0, 0)
+    local b = createRoomID(12); addRoom(b); setRoomArea(b, area); setRoomCoordinates(b, 1, 0, 0)
+    setExitStub(a, "east", true)
+    setExitStub(b, "west", true)
+    assert.is_true(connectExitStub(a, east))
+    assert.are.equal(b, getRoomExits(a)["east"])
+    assert.are.equal(a, getRoomExits(b)["west"])
+  end)
+end)
+
 -- A shared in-memory fixture: three areas and ten rooms wired into a
 -- pathfinding diamond, a cross-area link, a special exit and a pair of sandbox
 -- rooms used for the mutation-heavy tests. Everything is torn down at the end.
