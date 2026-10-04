@@ -26,6 +26,7 @@
 
 
 #include "TConsole.h"
+#include "TConsoleFrontend.h"
 #include <QFile>
 #include <QHash>
 #include <QPointer>
@@ -52,7 +53,7 @@ class QDockWidget;
 class QProgressDialog;
 class QTimer;
 
-class TMainConsole : public TConsole
+class TMainConsole : public TConsole, public TConsoleFrontend
 {
     Q_OBJECT
 
@@ -88,56 +89,52 @@ public:
     bool createBuffer(const QString& name);
     std::pair<bool, QString> setUserWindowStyleSheet(const QString& name, const QString& userWindowStyleSheet);
     std::pair<bool, QString> setUserWindowTitle(const QString& name, const QString& text);
-    bool createLabel(const QString& windowname, const QString& name, int x, int y, int width, int height, bool fillBackground, bool clickThrough = false);
+    bool createLabel(const QString& windowname, const QString& name, int x, int y, int width, int height, bool fillBackground, bool clickThrough) override;
     std::pair<bool, QString> createMapper(const QString& windowname, int, int, int, int);
     std::pair<bool, QString> createCommandLine(const QString& windowname, const QString& name, int, int, int, int);
     void registerSubCommandLine(const QString& name, TCommandLine* pCommandLine);
     void deregisterSubCommandLine(TCommandLine* pCommandLine);
     std::pair<bool, QString> createTextBox(const QString& windowname, const QString& name, int, int, int, int);
     std::pair<bool, QString> setCmdLineStyleSheet(const QString& name, const QString& styleSheet);
-    std::pair<bool, QString> setLabelStyleSheet(const QString& name, const QString& stylesheet);
-    std::optional<QSize> getLabelSizeHint(const QString& name) const;
-    std::pair<bool, QString> deleteLabel(const QString&);
+    std::pair<bool, QString> setLabelStyleSheet(const QString& name, const QString& stylesheet) override;
+    std::optional<QSize> getLabelSizeHint(const QString& name) const override;
+    std::pair<bool, QString> deleteLabel(const QString& name) override;
     std::pair<bool, QString> deleteMiniConsole(const QString&);
     std::pair<bool, QString> deleteCommandLine(const QString&);
     std::pair<bool, QString> deleteTextBox(const QString&);
     std::pair<bool, QString> deleteScrollBox(const QString&);
-    std::pair<bool, QString> setLabelToolTip(const QString& name, const QString& text, double duration);
-    std::pair<bool, QString> setLabelCursor(const QString& name, int shape);
-    std::pair<bool, QString> setLabelCustomCursor(const QString& name, const QString& pixMapLocation, int hotX, int hotY);
-    // Host forwards these by name, never by widget; each fails for a name that is not a label's.
-    bool setLabelClickThrough(const QString& name, bool clickThrough);
-    bool setLabelLinkStyle(const QString& name, const QString& linkColor, const QString& linkVisitedColor, bool underline);
-    bool resetLabelLinkStyle(const QString& name);
-    bool clearLabelVisitedLinks(const QString& name);
-    bool showLabel(const QString& name);
-    bool hideLabel(const QString& name);
-    bool resizeLabel(const QString& name, int width, int height);
-    bool moveLabel(const QString& name, int x, int y);
-    bool reparentLabel(const QString& windowname, const QString& name, int x, int y, bool show);
-    bool setLabelText(const QString& name, const QString& text);
-    std::pair<bool, QString> setLabelMovie(const QString& name, const QString& moviePath);
-    bool setLabelBackgroundColor(const QString& name, const QColor& color);
-    std::optional<QColor> getLabelBackgroundColor(const QString& name) const;
-    bool setLabelBackgroundImage(const QString& name, const QString& path);
-    bool resetLabelBackgroundImage(const QString& name);
-    bool setLabelSvgTint(const QString& name, const QColor& color);
-    bool resetLabelSvgTint(const QString& name);
-    bool setLabelSvgRotation(const QString& name, double angle);
-    bool resetLabelSvgRotation(const QString& name);
-    bool setLabelSvgShear(const QString& name, double shearX, double shearY);
-    bool resetLabelSvgShear(const QString& name);
-    bool resetLabelSvgTransform(const QString& name);
-    bool setLabelFont(const QString& name, const QFont& font);
-    // No value for a name that is not a label's, false for a label that is not
-    // showing a movie; the movie operations below report failure for either.
-    std::optional<bool> labelShowsMovie(const QString& name) const;
-    bool startLabelMovie(const QString& name);
-    bool pauseLabelMovie(const QString& name);
-    // Also false when the movie has no such frame.
-    bool setLabelMovieFrame(const QString& name, int frame);
-    bool setLabelMovieSpeed(const QString& name, int percent);
-    bool scaleLabelMovie(const QString& name, bool followLabelSize);
+    std::pair<bool, QString> setLabelToolTip(const QString& name, const QString& text, double duration) override;
+    std::pair<bool, QString> setLabelCursor(const QString& name, int shape) override;
+    std::pair<bool, QString> setLabelCustomCursor(const QString& name, const QString& pixMapLocation, int hotX, int hotY) override;
+    bool setLabelClickThrough(const QString& name, bool clickThrough) override;
+    bool setLabelLinkStyle(const QString& name, const QString& linkColor, const QString& linkVisitedColor, bool underline) override;
+    bool resetLabelLinkStyle(const QString& name) override;
+    bool clearLabelVisitedLinks(const QString& name) override;
+    bool showLabel(const QString& name) override;
+    bool hideLabel(const QString& name) override;
+    bool resizeLabel(const QString& name, int width, int height) override;
+    bool moveLabel(const QString& name, int x, int y) override;
+    bool reparentLabel(const QString& windowname, const QString& name, int x, int y, bool show) override;
+    bool setLabelText(const QString& name, const QString& text) override;
+    std::pair<bool, QString> setLabelMovie(const QString& name, const QString& moviePath) override;
+    bool setLabelBackgroundColor(const QString& name, const QColor& color) override;
+    std::optional<QColor> getLabelBackgroundColor(const QString& name) const override;
+    bool setLabelBackgroundImage(const QString& name, const QString& path) override;
+    bool resetLabelBackgroundImage(const QString& name) override;
+    bool setLabelSvgTint(const QString& name, const QColor& color) override;
+    bool resetLabelSvgTint(const QString& name) override;
+    bool setLabelSvgRotation(const QString& name, double angle) override;
+    bool resetLabelSvgRotation(const QString& name) override;
+    bool setLabelSvgShear(const QString& name, double shearX, double shearY) override;
+    bool resetLabelSvgShear(const QString& name) override;
+    bool resetLabelSvgTransform(const QString& name) override;
+    bool setLabelFont(const QString& name, const QFont& font) override;
+    std::optional<bool> labelShowsMovie(const QString& name) const override;
+    bool startLabelMovie(const QString& name) override;
+    bool pauseLabelMovie(const QString& name) override;
+    bool setLabelMovieFrame(const QString& name, int frame) override;
+    bool setLabelMovieSpeed(const QString& name, int percent) override;
+    bool scaleLabelMovie(const QString& name, bool followLabelSize) override;
     // Not the open map, so map changes stay in this class, in step with the window registry.
     TLabel* labelWidget(const QString& name) const { return mLabelMap.value(name); }
     // Copies a named window's current pos() and size() into Host's window registry (a label's into
