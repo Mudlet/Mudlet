@@ -395,6 +395,27 @@ private slots:
         QCOMPARE(selected->text(0), qsl("qaNestedTrigger"));
     }
 
+    // A script that adds an item marks every tree stale; showing the result's
+    // view then rebuilds them, which must not free the item about to be selected
+    void test_selectingAResultAfterAScriptAddedAnItemSelectsIt()
+    {
+        mpEditor->slot_showScripts();
+        search(qsl("qaNestedTrigger"));
+        QTreeWidgetItem* result = mpEditor->treeWidget_searchResults->topLevelItem(0);
+        QVERIFY(result);
+
+        QVERIFY(mpHost->getLuaInterpreter()->compileAndExecuteScript(qsl("permAlias('qaStaleAlias', '', '^qaStale$', '')")));
+        QVERIFY2(mpEditor->mNeedUpdateData, "the script did not mark the editor's trees as stale");
+
+        mpEditor->slot_itemSelectedInSearchResults(result);
+
+        QCOMPARE(mpEditor->mCurrentView, EditorViewType::cmTriggerView);
+        QTreeWidgetItem* selected = mpEditor->treeWidget_triggers->currentItem();
+        QVERIFY2(selected, "no trigger became current after its search result was chosen");
+        QCOMPARE(selected->text(0), qsl("qaNestedTrigger"));
+        QVERIFY(!mpEditor->treeWidget_aliases->findItems(qsl("qaStaleAlias"), Qt::MatchExactly | Qt::MatchRecursive).isEmpty());
+    }
+
     // The find box inside the script pane marks every match as the term is
     // typed, so it waits until enough has been typed to be worth a pass over
     // the document - one or two characters match most of a script (#3847).
