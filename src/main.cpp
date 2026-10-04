@@ -46,7 +46,6 @@
 #include <QTextLayout>
 #include <iostream>
 #include <memory>
-#include <thread>
 #include <vector>
 
 #include <QStandardPaths>
@@ -65,6 +64,11 @@
 #include <QSslConfiguration>
 #include <QStringList>
 #include <QTranslator>
+#if defined(Q_OS_WINDOWS)
+#include <QThread>
+#else
+#include <thread>
+#endif
 #include "AltFocusMenuBarDisable.h"
 #include "TAccessibleConsole.h"
 #include "TAccessibleTextEdit.h"
@@ -84,7 +88,6 @@
 
 #if defined(Q_OS_WINDOWS) && defined(INCLUDE_UPDATER)
 #include <windows.h>
-#include <QThread>
 #endif
 
 using namespace std::chrono_literals;
@@ -155,10 +158,10 @@ void removeOldNoteColorEmojiFonts()
 #endif // defined(Q_OS_LINUX)
 #endif // defined(INCLUDE_FONTS)
 
-// A std::thread rather than a QThread or QThreadPool: on macOS, which has no timed pthread_join, Qt
-// starts its threads detached and QThread::wait() returns before the thread has run its exit
-// handlers. main() then unloads the TLS plugins and runs the static destructors while those
-// handlers are still running. Joins in its destructor, so every return from main() waits for it.
+// Joined, so the warm-up thread has exited completely before main() unloads the TLS plugins and runs
+// the static destructors. On macOS Qt starts its threads detached, so QThread::wait() returns before
+// the thread runs its exit handlers; Qt before 6.9 cleans up a std::thread on Windows from a watcher
+// thread after the join. Not std::jthread: libc++ only ships it without -fexperimental-library from LLVM 20.
 class SslWarmup
 {
 public:
@@ -169,22 +172,40 @@ public:
 
     void start()
     {
-        if (!mThread.joinable()) {
-            mThread = std::thread([]() {
-                QSslConfiguration::defaultConfiguration();
-            });
+#if defined(Q_OS_WINDOWS)
+        if (!mThread) {
+            mThread.reset(QThread::create(warmUp));
+            mThread->start();
         }
+#else
+        if (!mThread.joinable()) {
+            mThread = std::thread(warmUp);
+        }
+#endif
     }
 
     void join()
     {
+#if defined(Q_OS_WINDOWS)
+        if (mThread) {
+            mThread->wait();
+            mThread.reset();
+        }
+#else
         if (mThread.joinable()) {
             mThread.join();
         }
+#endif
     }
 
 private:
+    static void warmUp() { QSslConfiguration::defaultConfiguration(); }
+
+#if defined(Q_OS_WINDOWS)
+    std::unique_ptr<QThread> mThread;
+#else
     std::thread mThread;
+#endif
 };
 
 QTranslator* loadTranslationsForCommandLine()

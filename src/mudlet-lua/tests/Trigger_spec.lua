@@ -1619,11 +1619,10 @@ describe("Trigger processing", function()
         -- trigger holds: measured at 7.1 to 8.3 with the walk linear against
         -- 54 to 58 with it quadratic, so sixteen lies between the two. Each
         -- measurement is the cheapest of five runs, because scheduling noise
-        -- only ever adds, and the two lines take turns so that a slow patch
-        -- on the runner lands on both rather than on one. Each run starts from
-        -- a full garbage collection: late in the suite the heap is hundreds of
-        -- megabytes, and a collection cycle finishing inside a run puts its
-        -- cost on whichever line happened to be feeding.
+        -- only ever adds, and the two lines take turns so a slow patch on the
+        -- runner lands on both. One full collection first puts the next one a
+        -- whole heap's growth away, far more than these runs allocate, so no
+        -- collector work lands on either line.
         --
         -- Subtracting an unarmed baseline to leave only what the trigger adds
         -- is what this did first, and it could not be made to hold. On the
@@ -1637,7 +1636,6 @@ describe("Trigger processing", function()
             -- "word " is five bytes, so this is an 8 kB line and one eight times longer
             local shortReps, longReps = 1638, 13104
             local function costOf(line)
-                collectgarbage()
                 -- os.clock() resolves to about a millisecond on Windows, which
                 -- is the whole cost of the shorter line there, so a single feed
                 -- can measure exactly 0 and leave the ratio below nothing to
@@ -1666,6 +1664,7 @@ describe("Trigger processing", function()
             finally(function() if type(id) == "number" and id > 0 then killTrigger("SpecComplexMatchAllCost") end end)
             local shortLine, longLine = string.rep("word ", shortReps), string.rep("word ", longReps)
             local short, long, shortCaptures, longCaptures
+            collectgarbage()
             for _ = 1, 5 do
                 short = math.min(short or math.huge, costOf(shortLine))
                 shortCaptures = _G.TrigSpec.captures
