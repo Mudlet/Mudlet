@@ -1616,13 +1616,14 @@ describe("Trigger processing", function()
         -- trigger armed, not what arming it adds. The console's own per-line
         -- work is linear, and so is the trigger once the walk is, so eight
         -- times the line is eight times the total whatever share of it the
-        -- trigger holds: measured at 7.1 to 8.3 with the walk linear against
-        -- 54 to 58 with it quadratic, so sixteen lies between the two. Each
-        -- measurement is the cheapest of five runs, because scheduling noise
-        -- only ever adds, and the two lines take turns so a slow patch on the
-        -- runner lands on both. One full collection first puts the next one a
-        -- whole heap's growth away, far more than these runs allocate, so no
-        -- collector work lands on either line.
+        -- trigger holds: measured at 7.7 to 8.5 with the walk linear (10.5 late
+        -- in a full suite) against 52 to 55 with it quadratic, so sixteen lies
+        -- between the two. Each measurement is the cheapest of five runs,
+        -- because scheduling noise only ever adds, and the two lines take turns
+        -- so a slow patch on the runner cannot cost one line all five of its
+        -- runs. One full collection first leaves the next cycle a whole live
+        -- heap away at Lua's default pause, more than these runs allocate, so it
+        -- stays off both lines.
         --
         -- Subtracting an unarmed baseline to leave only what the trigger adds
         -- is what this did first, and it could not be made to hold. On the
@@ -1648,11 +1649,10 @@ describe("Trigger processing", function()
                     feedTriggers("\n" .. line .. "\n")
                     feeds = feeds + 1
                     taken = os.clock() - started
-                -- a clock that never advanced would spin here forever and hang
-                -- CI with no diagnostic, which is worse than the failure this
-                -- loop replaced. 100 feeds is far more than any platform needs,
-                -- so giving up past it leaves the short > 0 assertion below to
-                -- report the dead clock.
+                -- a clock that never advances would spin here forever and hang
+                -- CI with no diagnostic. 100 feeds is far more than any platform
+                -- needs, so giving up past it leaves the short > 0 assertion
+                -- below to report the dead clock.
                 until taken >= 0.02 or feeds >= 100
                 return taken / feeds
             end

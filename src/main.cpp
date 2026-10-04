@@ -67,7 +67,7 @@
 #if defined(Q_OS_WINDOWS)
 #include <QThread>
 #else
-#include <thread>
+#include <pthread.h>
 #endif
 #include "AltFocusMenuBarDisable.h"
 #include "TAccessibleConsole.h"
@@ -158,10 +158,10 @@ void removeOldNoteColorEmojiFonts()
 #endif // defined(Q_OS_LINUX)
 #endif // defined(INCLUDE_FONTS)
 
-// Joined, so the warm-up thread has exited completely before main() unloads the TLS plugins and runs
-// the static destructors. On macOS Qt starts its threads detached, so QThread::wait() returns before
-// the thread runs its exit handlers; Qt before 6.9 cleans up a std::thread on Windows from a watcher
-// thread after the join. Not std::jthread: libc++ only ships it without -fexperimental-library from LLVM 20.
+// Joined so the warm-up thread has fully exited, exit handlers included, before the application object
+// and the statics go. Not QThread on macOS: Qt starts threads detached there, so wait() is no join. Not
+// std::thread on Windows: before Qt 6.9 a watcher thread frees its adopted thread data after the join.
+// pthread_create rather than std::thread, which throws when no thread can be had; the warm-up is optional.
 class SslWarmup
 {
 public:
@@ -178,8 +178,12 @@ public:
             mThread->start();
         }
 #else
-        if (!mThread.joinable()) {
-            mThread = std::thread(warmUp);
+        if (!mStarted) {
+            const int error = pthread_create(&mThread, nullptr, &SslWarmup::run, nullptr);
+            mStarted = error == 0;
+            if (!mStarted) {
+                qWarning().nospace() << "SslWarmup::start() WARNING - no thread for the SSL warm-up (" << qt_error_string(error) << "), so the first connection will load the CA certificates itself";
+            }
         }
 #endif
     }
@@ -192,8 +196,9 @@ public:
             mThread.reset();
         }
 #else
-        if (mThread.joinable()) {
-            mThread.join();
+        if (mStarted) {
+            pthread_join(mThread, nullptr);
+            mStarted = false;
         }
 #endif
     }
@@ -204,7 +209,14 @@ private:
 #if defined(Q_OS_WINDOWS)
     std::unique_ptr<QThread> mThread;
 #else
-    std::thread mThread;
+    static void* run(void*)
+    {
+        warmUp();
+        return nullptr;
+    }
+
+    pthread_t mThread{};
+    bool mStarted = false;
 #endif
 };
 
@@ -477,10 +489,10 @@ int main(int argc, char* argv[])
 
     // The first QSslSocket (each cTelnet holds two) makes Qt parse every system CA certificate on the
     // constructing thread, inside profile load; warming up on another thread now usually finishes first.
-    // Every early return joins it: the warm-up holds Qt's TLS backend mutex while loading the plugin, and
-    // static destruction tears those down. --version starts it as it returns, only so
-    // AppStartupTeardownTest can drive that race: any earlier, it and this thread fill Qt's unguarded
-    // caches at once, which a QCoreApplication leaves empty - a double free.
+    // Declared after consoleApp, so every early return joins it before that goes: the warm-up holds Qt's
+    // TLS backend mutex while loading the plugin, and static destruction tears those down. --version
+    // starts it as it returns, only so AppStartupTeardownTest can drive that race: any earlier, it and
+    // this thread fill Qt's unguarded caches at once, which a QCoreApplication leaves empty - a double free.
     SslWarmup sslWarmup;
 
     if (app) {
