@@ -1853,10 +1853,21 @@ describe("Tests mapper functions against a shared fixture", function()
     end
 
     it("createMapImageLabel keeps the image of a huge label to a bounded size", function()
+      local imagePath = getMudletHomeDir() .. "/mapper_spec_huge_label.xpm"
+      local image = assert(io.open(imagePath, "w"))
+      image:write('/* XPM */\nstatic char * spec_xpm[] = {\n"2 2 2 1",\n' ..
+                  '"a c #ff0000",\n"b c #0000ff",\n"ab",\n"ba"};\n')
+      image:close()
       -- 10000 by 2000 pixels at this zoom, over the 4096 x 4096 pixel budget
-      local id = createMapImageLabel(areaAlpha, getMudletHomeDir() .. "/nonexistent.png", 0, 0, 0, 1000, 200, 10.0, true)
-      finally(function() deleteMapLabel(areaAlpha, id) end)
+      local id = createMapImageLabel(areaAlpha, imagePath, 0, 0, 0, 1000, 200, 10.0, true)
+      local blankId = createMapImageLabel(areaAlpha, getMudletHomeDir() .. "/nonexistent.png", 0, 0, 0, 1000, 200, 10.0, true)
+      finally(function()
+        deleteMapLabel(areaAlpha, id)
+        deleteMapLabel(areaAlpha, blankId)
+        os.remove(imagePath)
+      end)
       local label = getMapLabel(areaAlpha, id)
+      assert.are_not.equal(getMapLabel(areaAlpha, blankId).Pixmap, label.Pixmap)
       assert.are.same({1000, 200}, {label.Width, label.Height})
       local width, height = pngSize(label.Pixmap)
       local message = string.format("the label's image is %d x %d", width, height)

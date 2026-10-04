@@ -2433,7 +2433,7 @@ int TMap::createMapImageLabel(int area, QString imagePath, float x, float y, flo
     label.noScaling = false;
     label.temporary = temporary;
 
-    QSizeF pixSize(static_cast<qreal>(width) * zoom, static_cast<qreal>(height) * zoom);
+    QSizeF pixSize(static_cast<qreal>(width * zoom), static_cast<qreal>(height * zoom));
     const qreal pixels = pixSize.width() * pixSize.height();
     if (qIsFinite(pixels) && pixels > cMaxImageLabelPixels) {
         pixSize *= std::sqrt(cMaxImageLabelPixels / pixels);
