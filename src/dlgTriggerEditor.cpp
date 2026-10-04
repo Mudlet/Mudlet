@@ -3376,7 +3376,6 @@ void dlgTriggerEditor::delete_variable()
             if (parent) {
                 parent->removeChild(var);
             }
-            vu->removeVariable(var);
 
             if (pParentItem && !newSelection) {
                 newSelection = pParentItem;

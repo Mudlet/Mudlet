@@ -93,7 +93,8 @@ private:
         int oldPosition;
     };
 
-    void addVariableRows(VarUnit* pVarUnit, QTreeWidgetItem* pParent, TVar* pVariable, bool showHidden);
+    struct VariableRowLook;
+    void addVariableRows(VarUnit* pVarUnit, QTreeWidgetItem* pParent, TVar* pVariable, bool showHidden, const VariableRowLook& look);
     bool rowsStandForCurrentVariables(VarUnit* pVarUnit) const;
     void adoptVariableTree(VarUnit* pVarUnit);
 
