@@ -1,7 +1,7 @@
 mpackage = [[mudlet-spec-trickyconfig]]
 author = [[Mudlet test suite]]
 title = [[Fixture whose config.lua leaves its globals in an awkward state]]
--- Each of these used to abort Mudlet while the manifest was read back
+-- The manifest is read back outside the protected call that ran this, so none of these may raise there
 local globals = _G
 globals[1] = [[a global with a number for its name]]
 _VERSION = nil

@@ -2064,7 +2064,7 @@ end)
 
 describe("Tests installing an archive whose config.lua leaves its globals in an awkward state", function()
   -- The manifest is read back from the globals the script left behind, outside the protected
-  -- call that ran it, so anything that raised there aborted Mudlet
+  -- call that ran it, where a Lua error cannot be caught
   it("installs under the name its config.lua asks for and keeps its details", function()
     local name = "mudlet-spec-trickyconfig"
     defer(function() removeFixturePackage(name) end)
