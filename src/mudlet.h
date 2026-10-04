@@ -291,29 +291,14 @@ public:
     bool drawUpperLowerLevels() const override { return mDrawUpperLowerLevels; }
     void setDrawUpperLowerLevels(bool draw) override { mDrawUpperLowerLevels = draw; }
     // Addon toolbar button management
-    // Surfaces a command can be placed on. A client with different chrome maps
-    // these onto whatever it has; one that has only a menu honours Menu alone.
-    enum class CommandSurface { Menu, Toolbar, Both };
-
-    struct CommandRequest
-    {
-        QString name;
-        QString icon;
-        QString tooltip;
-        QString menuPath;
-        QString shortcut;
-        CommandSurface surfaces = CommandSurface::Both;
-    };
-
-    // Why a command could not be placed, so the binding can say which
-    int addAddonCommand(const CommandRequest& request, Host* pHost, QString& error);
-    bool removeAddonCommand(int commandId, Host* pHost);
-    bool setAddonCommandEnabled(int commandId, bool enabled, Host* pHost);
-    bool setAddonCommandChecked(int commandId, bool checked, Host* pHost);
-    bool setAddonCommandIcon(int commandId, const QString& icon, Host* pHost);
-    bool setAddonCommandTooltip(int commandId, const QString& tooltip, Host* pHost);
-    bool setAddonCommandPinned(int commandId, bool pinned, Host* pHost);
-    bool setAddonCommandPulse(int commandId, bool enabled, const QString& color1, const QString& color2, int interval, Host* pHost, QString& error);
+    int addAddonCommand(const CommandRequest& request, Host* pHost, QString& error) override;
+    bool removeAddonCommand(int commandId, Host* pHost) override;
+    bool setAddonCommandEnabled(int commandId, bool enabled, Host* pHost) override;
+    bool setAddonCommandChecked(int commandId, bool checked, Host* pHost) override;
+    bool setAddonCommandIcon(int commandId, const QString& icon, Host* pHost) override;
+    bool setAddonCommandTooltip(int commandId, const QString& tooltip, Host* pHost) override;
+    bool setAddonCommandPinned(int commandId, bool pinned, Host* pHost) override;
+    bool setAddonCommandPulse(int commandId, bool enabled, const QString& color1, const QString& color2, int interval, Host* pHost, QString& error) override;
     // Every command a profile placed, dropped when it closes or resets
     void removeAddonCommandsForHost(Host* pHost);
     // Which add-on commands hold this key, named as the player reads them.
