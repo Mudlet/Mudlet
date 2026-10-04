@@ -83,7 +83,7 @@ private:
         mSawMenu = false;
         mUnexpectedPopup.clear();
         auto* closer = new QTimer(this);
-        closer->setInterval(20);
+        closer->setInterval(20ms);
         connect(closer, &QTimer::timeout, this, [this, closer]() {
             auto* popup = QApplication::activePopupWidget();
             if (!popup) {
@@ -163,7 +163,7 @@ private slots:
                 []() {
                     return mudlet::self()->mpConnectionDialog && mudlet::self()->mpConnectionDialog->isVisible();
                 },
-                5000));
+                5s));
     }
 
     void cleanupTestCase()
@@ -282,7 +282,7 @@ private slots:
                          [copyAction]() {
                              return copyAction->isEnabled();
                          },
-                         15000),
+                         15s),
                  "The copy never completed");
 
         QVERIFY2(QDir(MudletApp::getMudletPath(enums::profileHomePath, mCopyName)).exists(), "The copy has no folder on disk");
@@ -337,7 +337,7 @@ private slots:
                          [copyAction]() {
                              return copyAction->isEnabled();
                          },
-                         15000),
+                         15s),
                  "The copy never completed");
 
         QVERIFY2(QDir(MudletApp::getMudletPath(enums::profileHomePath, mQuietCopyName)).exists(), "The copy has no folder on disk");

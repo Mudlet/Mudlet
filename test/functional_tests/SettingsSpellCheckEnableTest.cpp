@@ -45,6 +45,8 @@
 
 #include "GroupedTest.h"
 
+using namespace std::chrono_literals;
+
 // Not the starting dictionary, so that reading it can only be down to the
 // change made below. Hunspell_create() hands back a handle whether or not the
 // files exist, so the load is logged on every platform.
@@ -148,7 +150,7 @@ private slots:
 
         // Nothing here has asked for the handle, so a read now can only be the
         // one the tick queued
-        QTRY_VERIFY2_WITH_TIMEOUT(dictionaryReads == 1, "turning spell check on left the dictionary unread, for the first word typed to pay for", 5000);
+        QTRY_VERIFY2_WITH_TIMEOUT(dictionaryReads == 1, "turning spell check on left the dictionary unread, for the first word typed to pay for", 5s);
     }
 };
 

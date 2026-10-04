@@ -44,14 +44,10 @@
 #include "TTextCodec.h"
 #include "TEncodingHelper.h"
 #include "utils.h"
-#include "TTextEdit.h"
 #include "discord.h"
 #include "dlgComposer.h"
-#include "dlgMapper.h"
 #include "mudlet.h"
-#if defined(INCLUDE_3DMAPPER)
-#include "glwidget_integration.h"
-#endif
+#include "MudletReplay.h"
 #include "MMCPServer.h"
 
 #include <QCoreApplication>
@@ -337,7 +333,7 @@ cTelnet::~cTelnet()
         mpPostingTimer->stop();
     }
 
-    // Unconditional: the end of a compressed stream re-initialises it while switching decompression off
+    // Unconditional: freeing a stream that never started or has already ended does nothing
     inflateEnd(&mZstream);
 
     // Aggressively disconnect the sockets to prevent signals during destruction
@@ -1883,12 +1879,13 @@ void cTelnet::checkNAWS()
 void cTelnet::sendCurrentNAWS()
 {
     Host* pHost = mpHost;
-    if (!pHost || !pHost->mpConsole) {
+    if (!pHost) {
         return;
     }
     // Use the smaller of the screen width or the wrapAt, then subtract the
-    // width of the time stamps if they are showing:
-    int naws_x = std::min(pHost->mScreenWidth, pHost->mWrapAt) - (pHost->mainConsoleShowsTimeStamps() ? TBuffer::smTimeStampFormat.size() : 0);
+    // width of the time stamps if they are drawn - with no view they are not:
+    const bool gutterDrawn = pHost->mpConsole && pHost->mainConsoleShowsTimeStamps();
+    int naws_x = std::min(pHost->mScreenWidth, pHost->mWrapAt) - (gutterDrawn ? TBuffer::smTimeStampFormat.size() : 0);
     int naws_y = pHost->mScreenHeight;
     if ((naws_y > 0) && (myOptionState.test(static_cast<size_t>(OPT_NAWS))) && ((mNaws_x != naws_x) || (mNaws_y != naws_y))) {
         sendNAWS(naws_x, naws_y);
@@ -3013,7 +3010,7 @@ void cTelnet::autoEnableTTYPEVersion()
     // encoding. Raise the flag before anything that could turn the event loop,
     // as that is all it takes for more of those bytes to arrive.
     mDeferredReconnect = true;
-    QTimer::singleShot(0, this, [this]() {
+    QTimer::singleShot(0ms, this, [this]() {
         mDeferredReconnect = false;
         if (!mpHost || mpHost->isClosingDown() || !mpSocket) {
             // Nothing to replace by the time this ran: the player may have
@@ -5203,8 +5200,10 @@ void cTelnet::gotPrompt(std::string& mud_data)
 //              5=lock open, 6=lock secure, 7=lock locked
 static bool containsMxpModeSwitch(const std::string& data)
 {
-    for (size_t pos = data.find('\x1B'); pos != std::string::npos && pos + 3 < data.size(); pos = data.find('\x1B', pos + 1)) {
-        if (data[pos + 1] == '[' && data[pos + 2] >= '0' && data[pos + 2] <= '7' && data[pos + 3] == 'z') {
+    // Anchored on the closing 'z' rather than the ESC: every SGR colour code
+    // opens with an ESC, so a scan from those stops at each one of them.
+    for (size_t pos = data.find('z', 3); pos != std::string::npos; pos = data.find('z', pos + 1)) {
+        if (data[pos - 3] == '\x1B' && data[pos - 2] == '[' && data[pos - 1] >= '0' && data[pos - 1] <= '7') {
             return true;
         }
     }
@@ -5254,7 +5253,7 @@ void cTelnet::gotRest(std::string& mud_data)
         size_t i = mud_data.rfind('\n');
 
         if (i != std::string::npos) {
-            mMudData += mud_data.substr(0, i + 1);
+            mMudData.append(mud_data, 0, i + 1);
             postData();
 
             if (!mIsTimerPosting && (mpPostingTimer->interval() != mTimeOut)) {
@@ -5264,11 +5263,7 @@ void cTelnet::gotRest(std::string& mud_data)
             mpPostingTimer->start();
             mIsTimerPosting = true;
 
-            if (i + 1 < mud_data.size()) {
-                mMudData = mud_data.substr(i + 1, mud_data.size());
-            } else {
-                mMudData = "";
-            }
+            mMudData.assign(mud_data, i + 1, std::string::npos);
         } else {
             mMudData += mud_data;
 
@@ -5316,30 +5311,70 @@ void cTelnet::postData()
 
     // Detach the pending data first: a trigger fired inside printOnDisplay() can
     // call feedTelnet(), re-entering here - it must not post this data again.
-    std::string data{std::move(mMudData)};
-    mMudData.clear();
+    std::string data;
+    data.swap(mMudData);
+
+    // translateToPlainText() parses its argument in place, so anyone snooping
+    // the stream gets a copy of the original bytes:
+    std::string original;
+    const bool snooped = mpHost->mMMCPServer != nullptr;
+    if (snooped) {
+        original = data;
+    }
 
     // All data goes through main console's printOnDisplay which calls
     // translateToPlainText - MXP DEST routing happens inside that process
     mpHost->printOnDisplay(data, true);
     if (mpHost->mMMCPServer && !mpHost->mIsRemoteEchoingActive) {
-        mpHost->mMMCPServer->receiveFromPlayer(data);
+        mpHost->mMMCPServer->receiveFromPlayer(snooped ? original : data);
+    }
+
+    // Hand the capacity back so the next packet appends without a malloc. A
+    // re-entrant feed may have left a tail of its own behind; that stays.
+    if (mMudData.empty()) {
+        data.clear();
+        mMudData.swap(data);
     }
 }
 
 void cTelnet::initStreamDecompressor()
 {
+    // A stream can still be allocated here - overwriting it would leak it
+    // (#10410). inflateEnd() leaves one never initialised (mZstream starts out
+    // zeroed) or already ended alone.
+    inflateEnd(&mZstream);
+
     mZstream.zalloc = Z_NULL;
     mZstream.zfree = Z_NULL;
     mZstream.opaque = Z_NULL;
     mZstream.avail_in = 0;
     mZstream.next_in = Z_NULL;
+    mUninflatedInput.clear();
+    mUninflatedInputComplete = true;
 
     inflateInit(&mZstream);
 }
 
+void cTelnet::refuseCompressedStream()
+{
+    sendTelnetOption(TN_DONT, mCompressionOption);
+    hisOptionState.reset(static_cast<size_t>(mCompressionOption));
+    if (mCompressionOption == OPT_COMPRESS) {
+        mMCCP_version_1 = false;
+    } else {
+        mMCCP_version_2 = false;
+    }
+    mNeedDecompression = false;
+    mUninflatedInput.clear();
+    // the next start sequence initialises a stream of its own
+    inflateEnd(&mZstream);
+}
+
 int cTelnet::decompressBuffer(char*& in_buffer, int& length, char* out_buffer)
 {
+    char* const inputStart = in_buffer;
+    const int inputLength = length;
+
     mZstream.avail_in = length;
     mZstream.next_in = (Bytef*)in_buffer;
 
@@ -5359,36 +5394,55 @@ int cTelnet::decompressBuffer(char*& in_buffer, int& length, char* out_buffer)
     mZstream.next_in = Z_NULL;
     mZstream.next_out = Z_NULL;
 
+    const auto consumed = static_cast<size_t>(inputLength - length);
+    // Nothing has come out of the stream yet and every byte inflate() took is
+    // still at hand - this read's, plus the few earlier ones kept for this.
+    // Not judged by total_in: zlib leaves it at 0 when it stops for a preset
+    // dictionary, six bytes in.
+    const bool allInputAtHand = mZstream.total_out == 0 && mUninflatedInputComplete;
+
     if (zval == Z_NEED_DICT || zval == Z_DATA_ERROR || zval == Z_STREAM_ERROR || zval == Z_MEM_ERROR) {
         // The compressed stream is broken (e.g. the server announced
         // compression but sent uncompressed data). Only Z_STREAM_END used to be
         // handled, so a failed inflate() silently ate all further input and the
         // connection looked dead. Warn, drop compression, and let the caller
         // reprocess the unconsumed input as plain data.
-        qWarning() << "cTelnet::decompressBuffer() ERROR - inflate() failed:" << zError(zval) << "- disabling compression";
+        qWarning() << "cTelnet::decompressBuffer() ERROR - inflate() failed:" << zError(zval) << (mZstream.msg ? mZstream.msg : "") << "- disabling compression";
         //: %1 is the decompression error description. Shown when the server sends a corrupt MCCP (compressed) data stream.
         postMessage(tr("[ WARN  ]  - MCCP decompression error (%1), compression disabled.\n"
                        "If the display looks garbled, please reconnect to the game.")
                             .arg(QString::fromUtf8(zError(zval))));
-        sendTelnetOption(TN_DONT, mMCCP_version_1 ? OPT_COMPRESS : OPT_COMPRESS2);
-        inflateEnd(&mZstream);
-        mNeedDecompression = false;
-        hisOptionState.reset(static_cast<size_t>(OPT_COMPRESS));
-        hisOptionState.reset(static_cast<size_t>(OPT_COMPRESS2));
-        initStreamDecompressor();
+        // Refuse the version the broken stream was using - with both negotiated,
+        // refusing the other one leaves the game compressing - and stop taking
+        // its start sequence as one until the game offers it again.
+        // A stream that breaks before producing any output was most likely
+        // never compressed at all (a game announcing compression and then not
+        // using it), so hand back the bytes inflate() took for its header too
+        // rather than cutting them off the text.
+        if (allInputAtHand) {
+            outSize = static_cast<int>(mUninflatedInput.copy(out_buffer, mUninflatedInput.size()));
+            in_buffer = inputStart;
+            length = inputLength;
+        }
+        refuseCompressedStream();
         return outSize;
     }
 
+    if (allInputAtHand && zval != Z_STREAM_END && mUninflatedInput.size() + consumed <= scmMaxUninflatedInput) {
+        mUninflatedInput.append(inputStart, consumed);
+    } else {
+        mUninflatedInput.clear();
+        mUninflatedInputComplete = false;
+    }
+
     if (zval == Z_STREAM_END) {
-        inflateEnd(&mZstream);
         qDebug() << "recv Z_STREAM_END, ending compression";
         this->mNeedDecompression = false;
 
         hisOptionState.reset(static_cast<size_t>(OPT_COMPRESS));
         hisOptionState.reset(static_cast<size_t>(OPT_COMPRESS2));
 
-        // zval should always be NULL on inflateEnd.  No need for an else block. MCCP Rev. 3 -MH //
-        initStreamDecompressor();
+        inflateEnd(&mZstream);
         qDebug() << "Listening for new compression sequences";
 
         // We shouldn't return -1 or an error here, as that prevents any text
@@ -5452,7 +5506,7 @@ bool cTelnet::loadReplay(const QString& name, QString* pErrMsg)
         mReplayPaused = false;
         mReplayChunkPending = false;
         mReplayChunkDelay = 0;
-        if (mudlet::self()->replayStart(mpHost)) {
+        if (auto* replay = MudletReplay::self(); replay && replay->start(mpHost)) {
             auto [ok, modifiedFormat] = testReadReplayFile();
             if (Q_LIKELY(ok)) {
                 mReplayHasFaultyFormat = modifiedFormat;
@@ -5516,8 +5570,8 @@ void cTelnet::loadReplayChunk()
         // Previous use of loadedBytes + 1 caused a spurious character at end of
         // string display by a qDebug of the loadBuffer contents
         loadBuffer[loadedBytes] = '\0';
-        mudlet::self()->mReplayTime = mudlet::self()->mReplayTime.addMSecs(offset);
-        mReplayChunkDelay = offset / mudlet::self()->mReplaySpeed;
+        auto* replay = MudletReplay::self();
+        mReplayChunkDelay = replay ? replay->advance(offset) : offset;
         mReplayChunkPending = true;
         if (!mReplayPaused) {
             mpReplayChunkTimer->start(mReplayChunkDelay);
@@ -5581,8 +5635,8 @@ void cTelnet::endReplay(const QString& message)
     if (!message.isEmpty()) {
         postMessage(message);
     }
-    if (auto pMudlet = mudlet::self()) {
-        pMudlet->replayOver();
+    if (auto* replay = MudletReplay::self()) {
+        replay->over();
     }
 }
 
@@ -5741,6 +5795,17 @@ void cTelnet::processSocketData(char* in_buffer, int amount, const bool loopback
 
     if (mDecompressionRecursionDepth > scmMaxDecompressionRecursion) {
         qWarning() << "cTelnet::processSocketData(...) WARNING - recursion depth exceeded, dropping remaining data";
+        if (mNeedDecompression) {
+            // What is dropped here is the rest of the compressed stream, and
+            // zlib cannot pick a stream up again past a gap, so whatever the
+            // game compresses next would come out as garbage or not at all.
+            // Refuse the stream so the game falls back to plain text instead.
+            //: Shown when one read from the game inflates to more than can be processed safely (e.g. a decompression bomb) while MCCP compression is on.
+            postMessage(tr("[ WARN  ]  - Too much compressed data to process at once, some was lost - compression disabled.\n"
+                           "If the display looks garbled, please reconnect to the game."));
+            refuseCompressedStream();
+            return;
+        }
         //: Shown when too much data expands out of one compressed read (e.g. a decompression bomb) to process safely.
         postMessage(tr("[ WARN  ]  - Too much data to process at once, some may have been lost."));
         return;
@@ -5764,9 +5829,6 @@ void cTelnet::processSocketData(char* in_buffer, int amount, const bool loopback
     in_buffer[amount] = '\0';
 
     std::string cleandata;
-    // Pre-allocate for worst case: decompressed data can be much larger than input
-    // BUFFER_SIZE is 100000, so reserve enough for typical usage
-    cleandata.reserve(static_cast<size_t>(BUFFER_SIZE) * 4);
     qint32 datalen = 0;
     datalen = amount;
     char* buffer = in_buffer;
@@ -5789,6 +5851,10 @@ void cTelnet::processSocketData(char* in_buffer, int amount, const bool loopback
     }
     // TODO: https://github.com/Mudlet/Mudlet/issues/5780 (4 of 7) - investigate switching from using `char[]` to `std::array<char>`
     buffer[static_cast<size_t>(datalen)] = '\0';
+
+    // About what stripping telnet leaves of the read (decompression already
+    // went through out_buffer above):
+    cleandata.reserve(static_cast<size_t>(datalen));
 
     // A compressed read can inflate to nothing. Older Mudlets refuse a replay
     // holding an empty chunk, so its wait carries over to the next chunk.
@@ -5882,7 +5948,7 @@ void cTelnet::processSocketData(char* in_buffer, int amount, const bool loopback
                     // TODO this code looks ahead instead of using the state machine.
                     // This is not a good idea.
                     char _ch = buffer[i];
-                    if ((_ch == OPT_COMPRESS) || (_ch == OPT_COMPRESS2)) {
+                    if (((_ch == OPT_COMPRESS) && mMCCP_version_1) || ((_ch == OPT_COMPRESS2) && mMCCP_version_2)) {
                         bool _compress = false;
 
                         if ((i > 1) && (i + 2 < datalen)) {
@@ -5899,6 +5965,7 @@ void cTelnet::processSocketData(char* in_buffer, int amount, const bool loopback
 
                         if (_compress) {
                             mNeedDecompression = true;
+                            mCompressionOption = _ch;
                             // from this position in stream onwards, data will be compressed by zlib
                             gotRest(cleandata);
                             cleandata = "";
@@ -6406,13 +6473,15 @@ void cTelnet::checkCharacterModePattern()
     raiseProtocolEvent("sysCharacterModeDetected", "");
     qDebug() << "Character-at-a-time mode pattern detected (ECHO + SGA persisted past a submitted line)";
 
-    if (mudlet::self()->showCharacterModeWarning()) {
-        mudlet::self()->showedCharacterModeWarning();
-        //: Warning shown when server uses character-at-a-time mode which Mudlet doesn't support
-        postMessage(tr("[ WARN ]  - This game appears to use character-at-a-time mode, "
-                       "which Mudlet does not support. Input may not work as expected. "
-                       "Consider using keybindings for immediate key response instead."));
-    }
+    emit signal_characterModeDetected();
+}
+
+void cTelnet::postCharacterModeWarning()
+{
+    //: Warning shown when server uses character-at-a-time mode which Mudlet doesn't support
+    postMessage(tr("[ WARN ]  - This game appears to use character-at-a-time mode, "
+                   "which Mudlet does not support. Input may not work as expected. "
+                   "Consider using keybindings for immediate key response instead."));
 }
 
 bool cTelnet::checkEchoAnomalyPattern()

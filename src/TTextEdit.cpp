@@ -29,11 +29,13 @@
 
 #include "Host.h"
 #include "TBuffer.h"
+#include "TCommandLine.h"
 #include "TConsole.h"
 #include "TDebug.h"
 #include "TDebugFilterBar.h"
 #include "TDockWidget.h"
 #include "TEvent.h"
+#include "TGlyphCache.h"
 #include "THyperlinkSelectionManager.h"
 #include "THyperlinkVisibilityManager.h"
 #include "mudlet.h"
@@ -80,6 +82,7 @@ TTextEdit::TTextEdit(TConsole* pC, QWidget* pW, TBuffer* pB, Host* pH, bool isLo
 , mWideAmbigousWidthGlyphs(pH->wideAmbiguousEAsianGlyphs())
 , mEnableBlinkText(pH->getEnableBlinkText())
 , mMouseWheelRemainder()
+, mpGlyphCache(std::make_unique<TGlyphCache>())
 {
     Q_ASSERT_X(mpHost, "TTextEdit::TTextEdit(...)", "mpHost is a nullptr");
     Q_ASSERT_X(mSearchHighlightFgColor != mSearchHighlightBgColor, "TTextEdit::TTextEdit(...)", "search highlight foreground and background colors must not be the same");
@@ -123,6 +126,7 @@ TTextEdit::TTextEdit(TConsole* pC, QWidget* pW, TBuffer* pB, Host* pH, bool isLo
     mpPaintPacer = new QTimer(this);
     mpPaintPacer->setSingleShot(true);
     connect(mpPaintPacer, &QTimer::timeout, this, [this]() {
+        applyPendingScrollBarUpdate();
         if (!mPendingPaintRegion.isEmpty()) {
             update(mPendingPaintRegion);
             mPendingPaintRegion = QRegion();
@@ -161,6 +165,7 @@ void TTextEdit::scheduleUpdate(const QRect& rect)
     // Nothing painted recently, so this frame's window is open: Qt still merges
     // whatever else arrives before the event loop gets around to painting.
     if (!mSincePaint.isValid() || mSincePaint.elapsed() >= csmPaintPaceMs) {
+        applyPendingScrollBarUpdate();
         update(mPendingPaintRegion);
         mPendingPaintRegion = QRegion();
         return;
@@ -250,6 +255,9 @@ void TTextEdit::toggleTimeStamps(const bool state)
 // Only wired up for the upper pane:
 void TTextEdit::slot_scrollBarMoved(int line)
 {
+    if (mUpdatingScrollBar) {
+        return;
+    }
     if (mpConsole->mpScrollBar) {
         updateScrollBar(line);
         scrollTo(line);
@@ -259,17 +267,27 @@ void TTextEdit::slot_scrollBarMoved(int line)
 void TTextEdit::updateScrollBar(int line)
 {
     Q_ASSERT_X(!mIsLowerPane, "updateScrollBar(...)", "called on LOWER pane when it should only be used on upper one!");
+    mScrollBarUpdatePending = false;
     int screenHeight{mScreenHeight};
-    if (mIsTailMode) {
+    // The upper pane is built first, and shows the lines a model already holds
+    // before the lower pane exists
+    if (mIsTailMode && mpConsole->mLowerPane) {
         screenHeight -= mpConsole->mLowerPane->getScreenHeight();
     }
     if (mpConsole->mpScrollBar) {
-        disconnect(mpConsole->mpScrollBar, &QAbstractSlider::valueChanged, this, &TTextEdit::slot_scrollBarMoved);
+        mUpdatingScrollBar = true;
         mpConsole->mpScrollBar->setRange(screenHeight, mpBuffer->getLastLineNumber() + 1);
         mpConsole->mpScrollBar->setSingleStep(1);
         mpConsole->mpScrollBar->setPageStep(screenHeight);
         mpConsole->mpScrollBar->setValue(std::max(0, line));
-        connect(mpConsole->mpScrollBar, &QAbstractSlider::valueChanged, this, &TTextEdit::slot_scrollBarMoved);
+        mUpdatingScrollBar = false;
+    }
+}
+
+void TTextEdit::applyPendingScrollBarUpdate()
+{
+    if (mScrollBarUpdatePending) {
+        updateScrollBar(mpBuffer->mCursorY);
     }
 }
 
@@ -405,7 +423,7 @@ void TTextEdit::showNewLines()
     if (!mIsLowerPane) {
         // This is ONLY for the upper pane
         if (mpConsole->mpScrollBar && mOldScrollPos > 0) {
-            updateScrollBar(mpBuffer->mCursorY);
+            mScrollBarUpdatePending = true;
         }
     }
     scheduleUpdate();
@@ -526,16 +544,17 @@ void TTextEdit::layoutLine(int lineNumber, int lineOfScreen, const TChar& timeSt
 {
     layout.clear();
     QPoint cursor(-mCursorX, lineOfScreen);
-    const QString lineText = mpBuffer->lineBuffer.at(lineNumber);
+    // References rather than copies: the layout keeps views into these strings.
+    const QString& lineText = mpBuffer->lineBuffer.at(lineNumber);
     QTextBoundaryFinder boundaryFinder(QTextBoundaryFinder::Grapheme, lineText);
     int currentSize = lineText.size();
     if (mpConsole->showTimeStamps()) {
-        const QString timestamp(mpBuffer->timeBuffer.at(lineNumber));
-        for (const QChar c : timestamp) {
+        const QString& timestamp = mpBuffer->timeBuffer.at(lineNumber);
+        for (qsizetype i = 0, total = timestamp.size(); i < total; ++i) {
             // The column argument is not incremented here (is fixed at 0) so
             // the timestamp does not take up any places when it is clicked on
             // by the mouse...
-            cursor.setX(cursor.x() + layoutGrapheme(layout, cursor, c, 0, lineNumber, timeStampStyle));
+            cursor.setX(cursor.x() + layoutGrapheme(layout, cursor, QStringView(timestamp).sliced(i, 1), 0, lineNumber, timeStampStyle));
         }
         currentSize += TBuffer::smTimeStampFormat.size();
     }
@@ -555,7 +574,7 @@ void TTextEdit::layoutLine(int lineNumber, int lineOfScreen, const TChar& timeSt
         }
 
         const TChar& charStyle = mpBuffer->buffer.at(lineNumber).at(indexOfChar);
-        const int graphemeWidth = layoutGrapheme(layout, cursor, lineText.mid(indexOfChar, nextBoundary - indexOfChar), columnWithOutTimestamp, lineNumber, charStyle);
+        const int graphemeWidth = layoutGrapheme(layout, cursor, QStringView(lineText).sliced(indexOfChar, nextBoundary - indexOfChar), columnWithOutTimestamp, lineNumber, charStyle);
         cursor.setX(cursor.x() + graphemeWidth);
         indexOfChar = nextBoundary;
         columnWithOutTimestamp += graphemeWidth;
@@ -580,7 +599,7 @@ void TTextEdit::paintBackgrounds(QPainter& painter, const LineLayout& layout) co
     }
 }
 
-void TTextEdit::paintForegrounds(QPainter& painter, const LineLayout& layout, const QRect& clip) const
+void TTextEdit::paintForegrounds(QPainter& painter, TGlyphCache& glyphCache, const LineLayout& layout, const QRect& clip) const
 {
     if (layout.empty()) {
         return;
@@ -591,7 +610,7 @@ void TTextEdit::paintForegrounds(QPainter& painter, const LineLayout& layout, co
     }
     for (const GraphemeRun& run : layout) {
         if (run.style) {
-            paintGraphemeForeground(painter, run);
+            paintGraphemeForeground(painter, glyphCache, run);
         }
     }
     if (!clip.isNull()) {
@@ -599,293 +618,293 @@ void TTextEdit::paintForegrounds(QPainter& painter, const LineLayout& layout, co
     }
 }
 
-void TTextEdit::replaceControlCharacterWith_Picture(const uint unicode, const QString& grapheme, const int column, QString& outGrapheme, int& charWidth) const
+void TTextEdit::replaceControlCharacterWith_Picture(const uint unicode, QStringView grapheme, const int column, QStringView& outGrapheme, int& charWidth) const
 {
     switch (unicode) {
     case 0:
-        outGrapheme = QChar(0x2400);
+        outGrapheme = u"\u2400";
         charWidth = 1;
         break; // NUL - not sure that this can appear
     case 1:
-        outGrapheme = QChar(0x2401);
+        outGrapheme = u"\u2401";
         charWidth = 1;
         break; // SOH
     case 2:
-        outGrapheme = QChar(0x2402);
+        outGrapheme = u"\u2402";
         charWidth = 1;
         break; // STX
     case 3:
-        outGrapheme = QChar(0x2403);
+        outGrapheme = u"\u2403";
         charWidth = 1;
         break; // ETX
     case 4:
-        outGrapheme = QChar(0x2404);
+        outGrapheme = u"\u2404";
         charWidth = 1;
         break; // EOT
     case 5:
-        outGrapheme = QChar(0x2405);
+        outGrapheme = u"\u2405";
         charWidth = 1;
         break; // ENQ
     case 6:
-        outGrapheme = QChar(0x2406);
+        outGrapheme = u"\u2406";
         charWidth = 1;
         break; // ACK
     case 7:
-        outGrapheme = QChar(0x2407);
+        outGrapheme = u"\u2407";
         charWidth = 1;
         break; // BEL - the (audio) handling of this gets done when it is received, not when it is displayed here:
     case 8:
-        outGrapheme = QChar(0x2408);
+        outGrapheme = u"\u2408";
         charWidth = 1;
         break; // BS
     case 9:    // HT
         // Makes the spacing behave like a tab
         charWidth = mTabStopwidth - (column % mTabStopwidth);
         // But print the "control picture" on top
-        outGrapheme = QChar(0x2409);
+        outGrapheme = u"\u2409";
         break;
     case 10:
-        outGrapheme = QChar(0x240A);
+        outGrapheme = u"\u240A";
         charWidth = 1;
         break; // LF - may not ever appear!
     case 11:
-        outGrapheme = QChar(0x240B);
+        outGrapheme = u"\u240B";
         charWidth = 1;
         break; // VT
     case 12:
-        outGrapheme = QChar(0x240C);
+        outGrapheme = u"\u240C";
         charWidth = 1;
         break; // FF
     case 13:
-        outGrapheme = QChar(0x240D);
+        outGrapheme = u"\u240D";
         charWidth = 1;
         break; // CR - shouldn't appear but does seem to crop up somehow!
     case 14:
-        outGrapheme = QChar(0x240E);
+        outGrapheme = u"\u240E";
         charWidth = 1;
         break; // SO
     case 15:
-        outGrapheme = QChar(0x240F);
+        outGrapheme = u"\u240F";
         charWidth = 1;
         break; // SI
     case 16:
-        outGrapheme = QChar(0x2410);
+        outGrapheme = u"\u2410";
         charWidth = 1;
         break; // DLE
     case 17:
-        outGrapheme = QChar(0x2411);
+        outGrapheme = u"\u2411";
         charWidth = 1;
         break; // DC1
     case 18:
-        outGrapheme = QChar(0x2412);
+        outGrapheme = u"\u2412";
         charWidth = 1;
         break; // DC2
     case 19:
-        outGrapheme = QChar(0x2413);
+        outGrapheme = u"\u2413";
         charWidth = 1;
         break; // DC3
     case 20:
-        outGrapheme = QChar(0x2414);
+        outGrapheme = u"\u2414";
         charWidth = 1;
         break; // DC4
     case 21:
-        outGrapheme = QChar(0x2415);
+        outGrapheme = u"\u2415";
         charWidth = 1;
         break; // NAK
     case 22:
-        outGrapheme = QChar(0x2416);
+        outGrapheme = u"\u2416";
         charWidth = 1;
         break; // SYN
     case 23:
-        outGrapheme = QChar(0x2417);
+        outGrapheme = u"\u2417";
         charWidth = 1;
         break; // ETB
     case 24:
-        outGrapheme = QChar(0x2418);
+        outGrapheme = u"\u2418";
         charWidth = 1;
         break; // CAN
     case 25:
-        outGrapheme = QChar(0x2419);
+        outGrapheme = u"\u2419";
         charWidth = 1;
         break; // EM
     case 26:
-        outGrapheme = QChar(0x241A);
+        outGrapheme = u"\u241A";
         charWidth = 1;
         break; // SUB
     case 27:
-        outGrapheme = QChar(0x241B);
+        outGrapheme = u"\u241B";
         charWidth = 1;
         break; // ESC - shouldn't appear as will have been intercepted previously
     case 28:
-        outGrapheme = QChar(0x241C);
+        outGrapheme = u"\u241C";
         charWidth = 1;
         break; // FS
     case 29:
-        outGrapheme = QChar(0x241D);
+        outGrapheme = u"\u241D";
         charWidth = 1;
         break; // GS
     case 30:
-        outGrapheme = QChar(0x241E);
+        outGrapheme = u"\u241E";
         charWidth = 1;
         break; // RS
     case 31:
-        outGrapheme = QChar(0x241F);
+        outGrapheme = u"\u241F";
         charWidth = 1;
         break; // US
     case 127:
-        outGrapheme = QChar(0x2421);
+        outGrapheme = u"\u2421";
         charWidth = 1;
         break; // DEL
     default:
         charWidth = getGraphemeWidth(unicode);
-        outGrapheme = (charWidth < 1) ? QString() : grapheme;
+        outGrapheme = (charWidth < 1) ? QStringView() : grapheme;
     }
 }
 
-void TTextEdit::replaceControlCharacterWith_OEMFont(const uint unicode, const QString& grapheme, const int column, QString& outGrapheme, int& charWidth) const
+void TTextEdit::replaceControlCharacterWith_OEMFont(const uint unicode, QStringView grapheme, const int column, QStringView& outGrapheme, int& charWidth) const
 {
     Q_UNUSED(column)
     switch (unicode) {
     case 0:
-        outGrapheme = QString(QChar::Space);
+        outGrapheme = u" ";
         charWidth = 1;
         break; // NUL - not sure that this can appear and the OEM font treats it as a space
     case 1:
-        outGrapheme = QChar(0x263A);
+        outGrapheme = u"\u263A";
         charWidth = 1;
         break; // SOH - White Smiling Face
     case 2:
-        outGrapheme = QChar(0x263B);
+        outGrapheme = u"\u263B";
         charWidth = 1;
         break; // STX - Black Smiling Face
     case 3:
-        outGrapheme = QChar(0x2665);
+        outGrapheme = u"\u2665";
         charWidth = 1;
         break; // ETX - Black Heart Suite
     case 4:
-        outGrapheme = QChar(0x2666);
+        outGrapheme = u"\u2666";
         charWidth = 1;
         break; // EOT - Black Diamond Suite
     case 5:
-        outGrapheme = QChar(0x2663);
+        outGrapheme = u"\u2663";
         charWidth = 1;
         break; // ENQ - Black ClubsSuite
     case 6:
-        outGrapheme = QChar(0x2660);
+        outGrapheme = u"\u2660";
         charWidth = 1;
         break; // ACK - Black Spade Suite
     case 7:
-        outGrapheme = QChar(0x2022);
+        outGrapheme = u"\u2022";
         charWidth = 1;
         break; // BEL - Bullet - the handling of this gets done when it is received, not when it is displayed here:
     case 8:
-        outGrapheme = QChar(0x25D8);
+        outGrapheme = u"\u25D8";
         charWidth = 1;
         break; // BS  - Inverse Bullet
     case 9:
         // NOTE THAT WE DO NOT USE TAB SPACING FOR THIS MODE:
-        outGrapheme = QChar(0x25CB);
+        outGrapheme = u"\u25CB";
         charWidth = 1;
         break; // HT  - Circle
     case 10:
-        outGrapheme = QChar(0x25D9);
+        outGrapheme = u"\u25D9";
         charWidth = 1;
         break; // LF  - Inverse Circle
     case 11:
-        outGrapheme = QChar(0x2642);
+        outGrapheme = u"\u2642";
         charWidth = 1;
         break; // VT  - Male Sign
     case 12:
-        outGrapheme = QChar(0x2640);
+        outGrapheme = u"\u2640";
         charWidth = 1;
         break; // FF  - Female Sign
     case 13:
-        outGrapheme = QChar(0x266A);
+        outGrapheme = u"\u266A";
         charWidth = 1;
         break; // CR  - Single Quaver - shouldn't appear but does seem to crop up somehow!
     case 14:
-        outGrapheme = QChar(0x266B);
+        outGrapheme = u"\u266B";
         charWidth = 1;
         break; // SO  - Double Quaver
     case 15:
-        outGrapheme = QChar(0x263C);
+        outGrapheme = u"\u263C";
         charWidth = 1;
         break; // SI  - White Sun with Rays
     case 16:
-        outGrapheme = QChar(0x25BA);
+        outGrapheme = u"\u25BA";
         charWidth = 1;
         break; // DLE - Black Right-Pointing Pointer
     case 17:
-        outGrapheme = QChar(0x25C4);
+        outGrapheme = u"\u25C4";
         charWidth = 1;
         break; // DC1 - Black Left-Pointing Pointer
     case 18:
-        outGrapheme = QChar(0x2195);
+        outGrapheme = u"\u2195";
         charWidth = 1;
         break; // DC2 - Up Down ArroW
     case 19:
-        outGrapheme = QChar(0x203C);
+        outGrapheme = u"\u203C";
         charWidth = 1;
         break; // DC3 - Double Exclaimation Mark
     case 20:
-        outGrapheme = QChar(0x00B6);
+        outGrapheme = u"\u00B6";
         charWidth = 1;
         break; // DC4 - Pilcrow
     case 21:
-        outGrapheme = QChar(0x00A7);
+        outGrapheme = u"\u00A7";
         charWidth = 1;
         break; // NAK - Section Sign
     case 22:
-        outGrapheme = QChar(0x25AC);
+        outGrapheme = u"\u25AC";
         charWidth = 1;
         break; // SYN - Black Rectangle
     case 23:
-        outGrapheme = QChar(0x21A8);
+        outGrapheme = u"\u21A8";
         charWidth = 1;
         break; // ETB - Up Down Arrow With Base
     case 24:
-        outGrapheme = QChar(0x2191);
+        outGrapheme = u"\u2191";
         charWidth = 1;
         break; // CAN - Up Arrow
     case 25:
-        outGrapheme = QChar(0x2193);
+        outGrapheme = u"\u2193";
         charWidth = 1;
         break; // EM  - Down Arrow
     case 26:
-        outGrapheme = QChar(0x2192);
+        outGrapheme = u"\u2192";
         charWidth = 1;
         break; // SUB - Right Arrow
     case 27:
-        outGrapheme = QChar(0x2190);
+        outGrapheme = u"\u2190";
         charWidth = 1;
         break; // ESC - Left Arrow - shouldn't appear as will have been intercepted previously
     case 28:
-        outGrapheme = QChar(0x221F);
+        outGrapheme = u"\u221F";
         charWidth = 1;
         break; // FS  - Right Angle
     case 29:
-        outGrapheme = QChar(0x2194);
+        outGrapheme = u"\u2194";
         charWidth = 1;
         break; // GS  - Left Right Arrow
     case 30:
-        outGrapheme = QChar(0x25B2);
+        outGrapheme = u"\u25B2";
         charWidth = 1;
         break; // RS  - Black Up-Pointing Pointer
     case 31:
-        outGrapheme = QChar(0x25BC);
+        outGrapheme = u"\u25BC";
         charWidth = 1;
         break; // US  - Black Down-Pointing Pointer
     case 127:
-        outGrapheme = QChar(0x2302);
+        outGrapheme = u"\u2302";
         charWidth = 1;
         break; // DEL - House
     default:
         charWidth = getGraphemeWidth(unicode);
-        outGrapheme = (charWidth < 1) ? QString() : grapheme;
+        outGrapheme = (charWidth < 1) ? QStringView() : grapheme;
     }
 }
 
-int TTextEdit::layoutGrapheme(LineLayout& layout, const QPoint& cursor, const QString& grapheme, const int column, const int line, const TChar& charStyle) const
+int TTextEdit::layoutGrapheme(LineLayout& layout, const QPoint& cursor, QStringView grapheme, const int column, const int line, const TChar& charStyle) const
 {
     const uint unicode = graphemeInfo::getBaseCharacter(grapheme);
     int charWidth = 0;
@@ -897,10 +916,10 @@ int TTextEdit::layoutGrapheme(LineLayout& layout, const QPoint& cursor, const QS
         // No special handling, except for these:
         if (Q_UNLIKELY(unicode == '\t')) {
             charWidth = mTabStopwidth - (column % mTabStopwidth);
-            run.grapheme = QString(QChar::Tabulation);
+            run.grapheme = u"\t";
         } else {
             charWidth = graphemeInfo::getWidth(unicode, mWideAmbigousWidthGlyphs);
-            run.grapheme = (charWidth < 1) ? QString() : grapheme;
+            run.grapheme = (charWidth < 1) ? QStringView() : grapheme;
         }
         break;
     case ControlCharacterMode::Picture:
@@ -961,11 +980,11 @@ int TTextEdit::layoutGrapheme(LineLayout& layout, const QPoint& cursor, const QS
     return charWidth;
 }
 
-void TTextEdit::paintGraphemeForeground(QPainter& painter, const GraphemeRun& run) const
+void TTextEdit::paintGraphemeForeground(QPainter& painter, TGlyphCache& glyphCache, const GraphemeRun& run) const
 {
     const QColor& fgColor = run.fgColor;
     const QRect& textRect = run.textRect;
-    const QString& grapheme = run.grapheme;
+    const QStringView grapheme = run.grapheme;
     const TChar& charStyle = *run.style;
     const TChar::AttributeFlags attributes = charStyle.allDisplayAttributes();
     const bool isBold = attributes & TChar::Bold;
@@ -1004,16 +1023,7 @@ void TTextEdit::paintGraphemeForeground(QPainter& painter, const GraphemeRun& ru
 
     // const bool isConcealed = attributes & TChar::Concealed;
     // const int altFontIndex = charStyle.alternateFont();
-    if ((painter.font().bold() != isBold) || (painter.font().italic() != isItalics) || (painter.font().overline() != useQtOverline) || (painter.font().strikeOut() != useQtStrikeOut)
-        || (painter.font().underline() != useQtUnderline)) {
-        QFont font = painter.font();
-        font.setBold(isBold);
-        font.setItalic(isItalics);
-        font.setOverline(useQtOverline);
-        font.setStrikeOut(useQtStrikeOut);
-        font.setUnderline(useQtUnderline);
-        painter.setFont(font);
-    }
+    const bool useQtDecoration = useQtUnderline || useQtOverline || useQtStrikeOut;
 
     if (textRect.isNull()) {
         return;
@@ -1022,8 +1032,21 @@ void TTextEdit::paintGraphemeForeground(QPainter& painter, const GraphemeRun& ru
     if (painter.pen().color() != effectiveFgColor) {
         painter.setPen(effectiveFgColor);
     }
-    if (grapheme.size() != 1 || grapheme.at(0) != QChar::Space || useQtUnderline || useQtOverline || useQtStrikeOut) {
-        painter.drawText(textRect, Qt::AlignCenter | Qt::TextDontClip | Qt::TextSingleLine, grapheme);
+    TGlyphCache::Style style;
+    style.setFlag(TGlyphCache::Bold, isBold);
+    style.setFlag(TGlyphCache::Italic, isItalics);
+    if (Q_UNLIKELY(useQtDecoration)) {
+        // drawGlyphRun() draws these decorations differently, so they stay with drawText()
+        QFont font = TGlyphCache::styled(this->font(), style);
+        font.setOverline(useQtOverline);
+        font.setStrikeOut(useQtStrikeOut);
+        font.setUnderline(useQtUnderline);
+        if (painter.font() != font) {
+            painter.setFont(font);
+        }
+        painter.drawText(textRect, Qt::AlignCenter | Qt::TextDontClip | Qt::TextSingleLine, grapheme.toString());
+    } else if (grapheme.size() != 1 || grapheme.at(0) != QChar::Space) {
+        glyphCache.drawCentered(painter, textRect, grapheme, style);
     }
 
     // Draw custom decorations (colored underlines, overlines, strikethrough)
@@ -1259,6 +1282,7 @@ void TTextEdit::drawForeground(QPainter& painter, const QRect& r)
     QPainter p(&pixmap);
     // Setting the font here isn't academic as the text IS drawn with THIS painter (p)
     p.setFont(painter.font());
+    mpGlyphCache->setFont(p.font(), *p.device());
     // Source rather than SourceOver for the cache blits below: they have to
     // overwrite whatever a reused buffer still holds from an earlier frame, and
     // over a freshly cleared buffer the two modes produce identical pixels.
@@ -1394,26 +1418,26 @@ void TTextEdit::drawForeground(QPainter& painter, const QRect& r)
         layoutLine(i + lineOffset, i, timeStampStyle, mCurrentLineLayout, &mScreenOffset);
         paintBackgrounds(p, mCurrentLineLayout);
         if (!lineAboveRestored) {
-            paintForegrounds(p, mOverflowLineLayout, deleteRect);
+            paintForegrounds(p, *mpGlyphCache, mOverflowLineLayout, deleteRect);
             lineAboveRestored = true;
         }
-        paintForegrounds(p, mPreviousLineLayout);
+        paintForegrounds(p, *mpGlyphCache, mPreviousLineLayout);
         mPreviousLineLayout.swap(mCurrentLineLayout);
     }
     if (!lineAboveRestored) {
-        paintForegrounds(p, mOverflowLineLayout, deleteRect);
+        paintForegrounds(p, *mpGlyphCache, mOverflowLineLayout, deleteRect);
     }
     // Anything below the band is cached content that already holds this line's
     // overflow, so clip it away rather than compositing the same ink twice.
     const QRect bandRect(0, drawFrom * mFontHeight, mScreenWidth * mFontWidth, (drawTo + 1 - drawFrom) * mFontHeight);
-    paintForegrounds(p, mPreviousLineLayout, bottomRowIsRepainted ? QRect() : bandRect);
+    paintForegrounds(p, *mpGlyphCache, mPreviousLineLayout, bottomRowIsRepainted ? QRect() : bandRect);
 
     if (!spareRowRect.isNull() && hasBufferLine(lastRow + lineOffset)) {
         layoutLine(lastRow + lineOffset, lastRow, timeStampStyle, mOverflowLineLayout);
-        paintForegrounds(p, mOverflowLineLayout, spareRowRect);
+        paintForegrounds(p, *mpGlyphCache, mOverflowLineLayout, spareRowRect);
     }
-    // The layouts borrow TChar pointers from the buffer, so do not keep them
-    // past the paint they were built for.
+    // The layouts borrow TChar pointers and text from the buffer, so do not
+    // keep them past the paint they were built for.
     mPreviousLineLayout.clear();
     mCurrentLineLayout.clear();
     mOverflowLineLayout.clear();
@@ -1484,9 +1508,9 @@ void TTextEdit::paintEvent(QPaintEvent* e)
     if (!mPendingPaintRegion.isEmpty()) {
         // Whatever this paint covers is current now, so a deferred repaint of it
         // would be redundant. Only the remainder - if a partial expose left one -
-        // still needs the pacer.
+        // and a pending scrollbar update still need the pacer.
         mPendingPaintRegion -= e->region();
-        if (mPendingPaintRegion.isEmpty()) {
+        if (mPendingPaintRegion.isEmpty() && !mScrollBarUpdatePending) {
             mpPaintPacer->stop();
         }
     }
@@ -2154,7 +2178,7 @@ void TTextEdit::mousePressEvent(QMouseEvent* event)
         }
         mSelectedRegion = QRegion(0, 0, 0, 0);
         // Invalid until the first click, so an early click isn't taken as a double-click's second half:
-        if (mLastClickTimer.isValid() && mLastClickTimer.elapsed() < 300) {
+        if (mLastClickTimer.isValid() && mLastClickTimer.durationElapsed() < 300ms) {
             mMouseTracking = true;
             mMouseTrackLevel++;
             if (mMouseTrackLevel > 3) {
@@ -2565,6 +2589,10 @@ std::pair<bool, int> TTextEdit::drawTextForClipboard(QPainter& painter, QRect re
 {
     painter.setCompositionMode(QPainter::CompositionMode_SourceOver);
     painter.setFont(font());
+    // A cache of its own, so that this leaves the console's caches alone as
+    // promised above.
+    TGlyphCache glyphCache;
+    glyphCache.setFont(painter.font(), *painter.device());
 
     int lineCount = rectangle.height() / mFontHeight;
     int linesDrawn = 0;
@@ -2579,7 +2607,7 @@ std::pair<bool, int> TTextEdit::drawTextForClipboard(QPainter& painter, QRect re
         // A line's backgrounds have to go down before the previous line's glyphs
         layoutLine(i + lineOffset, i, timeStampStyle, currentLine);
         paintBackgrounds(painter, currentLine);
-        paintForegrounds(painter, previousLine);
+        paintForegrounds(painter, glyphCache, previousLine);
         previousLine.swap(currentLine);
         // counted here rather than in the loop's increment, so that the timeout
         // below reports the line it just drew instead of the one before it
@@ -2587,11 +2615,11 @@ std::pair<bool, int> TTextEdit::drawTextForClipboard(QPainter& painter, QRect re
 
         if (std::chrono::duration_cast<std::chrono::seconds>(std::chrono::high_resolution_clock::now() - mCopyImageStartTime).count() >= timeout) {
             qDebug().nospace() << "timeout for image copy (" << timeout << "s) reached, managed to draw " << linesDrawn << " lines";
-            paintForegrounds(painter, previousLine);
+            paintForegrounds(painter, glyphCache, previousLine);
             return {false, linesDrawn};
         }
     }
-    paintForegrounds(painter, previousLine);
+    paintForegrounds(painter, glyphCache, previousLine);
     return {true, linesDrawn};
 }
 

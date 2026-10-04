@@ -7,40 +7,18 @@
 name: 🔨 Build Mudlet - PR
 on:
   pull_request:
+    # Kept in step with docs-only-pr.yml, which reports this workflow's checks
+    # for the pull requests these paths leave it out of.
+    paths-ignore:
+      - 'docs/**'
+      - '.github/ISSUE_TEMPLATE/**'
+      - '**.md'
 
 jobs:
-  changes:
-    name: detect buildable changes
-    runs-on: ubuntu-latest
-    if: ${{ github.repository_owner == 'Mudlet' }}
-    outputs:
-      build: ${{steps.filter.outputs.build}}
-    steps:
-    - name: Check whether anything affecting the build changed
-      id: filter
-      env:
-        GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      run: |
-        # Only genuinely inert paths are listed - CI, CMake and packaging scripts
-        # all affect the build. Anything unexpected falls through to building.
-        files=$(gh api --paginate \
-          "/repos/${{github.repository}}/pulls/${{github.event.pull_request.number}}/files" \
-          -q '.[].filename')
-        echo "Changed files:"
-        printf '%s\n' "$files"
-
-        if printf '%s\n' "$files" | grep -qvE '(^docs/|^\.github/ISSUE_TEMPLATE/|\.md$)'; then
-          echo "build=true" >> "$GITHUB_OUTPUT"
-        else
-          echo "build=false" >> "$GITHUB_OUTPUT"
-          echo "::notice::Documentation-only change - skipping the build matrix"
-        fi
-
   compile-mudlet:
     name: ${{matrix.buildname}}
     runs-on: ${{matrix.os}}
-    needs: changes
-    if: ${{ github.repository_owner == 'Mudlet' && needs.changes.outputs.build == 'true' }}
+    if: ${{ github.repository_owner == 'Mudlet' }}
     concurrency:
       group: ${{github.workflow}}-${{matrix.buildname}}-${{ github.event.pull_request.number || github.ref }}
       cancel-in-progress: ${{ github.event_name == 'pull_request' }}
@@ -57,8 +35,8 @@ jobs:
           # ',' in some of the following with a '/' seemed to cause extra
           # spurious steps in the build and broke things! - SlySven
           # Smaller than build-mudlet.yml's on purpose - only builds that produce
-          # an artifact. 'ubuntu (x86_64)' and 'ubuntu / clang' still run there on
-          # every push to development and nightly.
+          # an artifact, plus a compile-only 'ubuntu / clang'. 'ubuntu (x86_64)'
+          # still runs there on every push to development and nightly.
           # oldest OS supported for maximum compatibility of built AppImage
           - os: ubuntu-22.04
             buildname: 'ubuntu / gcc / lua tests + leak detection'
@@ -86,6 +64,16 @@ jobs:
             ccache_id: macos-arm64
             deploy: 'deploy'
             run_tests: 'true'
+          # The one PR job without precompiled headers, so a missing #include fails
+          # here and not after merge. It restores the push job's warm cache and
+          # leaves running the tests to the gcc job, which keeps it well inside that.
+          - os: ubuntu-26.04
+            buildname: 'ubuntu / clang'
+            compiler: clang_64
+            gcc_compiler_version: 14
+            qt: '6.11.1'
+            ccache_id: ubuntu-clang
+            compile_only: 'true'
 
     steps:
     - name: Checkout Mudlet source code
@@ -359,6 +347,8 @@ jobs:
          echo "WITH_UPDATER=no" >> $GITHUB_ENV
          echo "WITH_3DMAPPER=no" >> $GITHUB_ENV
          echo "WITH_FONTS=no" >> $GITHUB_ENV
+         # The one job that builds without precompiled headers, so a missing #include still fails somewhere
+         echo "CMAKE_DISABLE_PRECOMPILE_HEADERS=ON" >> $GITHUB_ENV
 
     # Saves are keyed per commit, so the primary key deliberately matches no entry
     # and every restore prefix-matches the newest. The tag branch in the key is
@@ -454,9 +444,9 @@ jobs:
       working-directory: '${{runner.workspace}}/b/ninja'
       run: cp -cR src/mudlet.app "${{runner.temp}}/mudlet-for-ctest.app"
 
-    # Skipped after the full ctest run, which covers these, and with BUILD_TESTING=OFF (bare ctest exits 8)
+    # Skipped after the full ctest run, which covers these, on the compile-only job, and with BUILD_TESTING=OFF (bare ctest exits 8)
     - name: Run QTest
-      if: matrix.run_tests != 'true' && matrix.build_tests != 'false'
+      if: matrix.run_tests != 'true' && matrix.build_tests != 'false' && matrix.compile_only != 'true'
       run: ctest --test-dir ${{runner.workspace}}/b/ninja -L functional --output-on-failure -j $(nproc)
 
     - name: add ssh-agent for release uploads
@@ -619,8 +609,8 @@ jobs:
       if: matrix.run_tests == 'true' && runner.os == 'Linux'
       # This leg drives the real discord-rpc library, whose reconnects happen in
       # wall-clock time, so the suite needs a budget of its own: the run itself
-      # takes ~75s, and the rest is headroom for a slow runner stretching those.
-      timeout-minutes: 6
+      # takes 300-340s under ASan, and the rest is headroom for a slow runner.
+      timeout-minutes: 12
       run: xvfb-run --auto-servernum ${{github.workspace}}/src/mudlet --profile "Mudlet self-test" --mirror --offline
       env:
         AUTORUN_BUSTED_TESTS: 'true'

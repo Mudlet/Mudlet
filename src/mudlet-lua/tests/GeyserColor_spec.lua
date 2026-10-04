@@ -76,6 +76,36 @@ describe("Tests functionality of Geyser.Color", function()
       assert.is_nil(Geyser.Color.parse("no_such_colour_at_all"))
       assert.is_nil(Geyser.Color.parse(nil))
     end)
+
+    -- hex and decimal strings are remembered once parsed, so ask twice
+    it("reads the same string the same way every time", function()
+      for _ = 1, 2 do
+        assert.are.same({170, 0, 255, 255}, {Geyser.Color.parse("#AA00FF")})
+        assert.are.same({170, 0, 255, 16}, {Geyser.Color.parse("#AA00FF10")})
+        assert.are.same({190, 0, 255, 128}, {Geyser.Color.parse("<190,0,255,128>")})
+      end
+    end)
+
+    it("raises for a malformed hex string every time", function()
+      for _ = 1, 2 do
+        assert.has_error(function() Geyser.Color.parse("#fff") end)
+      end
+    end)
+
+    it("reads a named colour whose entry carries an alpha", function()
+      color_table.geyserColorSpecTranslucent = {10, 20, 30, 40}
+      finally(function() color_table.geyserColorSpecTranslucent = nil end)
+      assert.are.same({10, 20, 30, 40}, {Geyser.Color.parse("geyserColorSpecTranslucent")})
+    end)
+
+    it("reads discrete components given as strings", function()
+      assert.are.same({1, 2, 3, 255}, {Geyser.Color.parse("1", "2", "3")})
+      assert.are.same({1, 2, 3, 4}, {Geyser.Color.parse("1", "2", "3", "4")})
+    end)
+
+    it("needs a red component when given green and blue", function()
+      assert.are.same({nil, "No color supplied"}, {Geyser.Color.parse(nil, 2, 3)})
+    end)
   end)
 
   describe("Geyser.Color formatting", function()
