@@ -133,12 +133,13 @@ jobs:
 
     # Keyed on the runner image, as the rocks link against its Homebrew libraries, and on
     # the script that installs them. A tagged release installs its rocks afresh, since the
-    # app bundles them.
+    # app bundles them. As with ccache, saves are keyed per run and restores prefix-match
+    # the newest, so a set that fails its check is replaced rather than restored for good.
     - name: (macOS) Work out the Lua rocks cache key
       if: runner.os == 'macOS'
       id: rocks
       run: |
-        echo "key=luarocks-${{ matrix.os }}-${{ runner.arch }}-${ImageVersion:?is not set}-${{ hashFiles('CI/install-lua-rocks.sh') }}" >> "$GITHUB_OUTPUT"
+        echo "prefix=luarocks-${{ matrix.os }}-${{ runner.arch }}-${ImageVersion:?is not set}-${{ hashFiles('CI/install-lua-rocks.sh') }}-" >> "$GITHUB_OUTPUT"
 
     - name: (macOS) Restore Lua rocks cache
       if: runner.os == 'macOS' && !startsWith(github.ref, 'refs/tags/')
@@ -146,7 +147,8 @@ jobs:
       uses: actions/cache/restore@v6
       with:
         path: ~/.luarocks
-        key: ${{ steps.rocks.outputs.key }}
+        key: ${{ steps.rocks.outputs.prefix }}
+        restore-keys: ${{ steps.rocks.outputs.prefix }}
 
     - name: (macOS) Install dependencies
       if: runner.os == 'macOS'
@@ -205,7 +207,7 @@ jobs:
 
         # Install lua-yajl early to generate translation statistics - unless the cache held
         # every rock, and they all still load against this runner's Homebrew libraries
-        if [ "${{ steps.cache-luarocks.outputs.cache-hit }}" = "true" ] \
+        if [ -n "${{ steps.cache-luarocks.outputs.cache-matched-key }}" ] \
           && ${{github.workspace}}/CI/install-lua-rocks.sh --check; then
           echo "LUA_ROCKS_CACHED=true" >> $GITHUB_ENV
         else
@@ -478,11 +480,11 @@ jobs:
     - name: (macOS) Save Lua rocks cache
       if: >-
         runner.os == 'macOS' && github.ref_name == 'development'
-        && steps.cache-luarocks.outputs.cache-hit != 'true'
+        && env.LUA_ROCKS_CACHED != 'true'
       uses: actions/cache/save@v6
       with:
         path: ~/.luarocks
-        key: ${{ steps.rocks.outputs.key }}
+        key: ${{ steps.rocks.outputs.prefix }}${{ github.run_id }}-${{ github.run_attempt }}
 
     - name: (Linux) Run C++ tests
       if: runner.os == 'Linux' && matrix.run_tests == 'true'
