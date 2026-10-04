@@ -41,7 +41,6 @@
 #include "TMapLabel.h"
 #include "TMedia.h"
 #include "TRoomDB.h"
-#include "TTabBar.h"
 #include "TTimer.h"
 #include "mapInfoContributorManager.h"
 
