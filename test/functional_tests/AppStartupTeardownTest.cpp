@@ -201,7 +201,8 @@ private slots:
             QVERIFY2(mudlet.exitStatus() == QProcess::NormalExit, qPrintable(qsl("mudlet crashed on leaving main(); %1").arg(diagnostics)));
             QVERIFY2(mudlet.exitCode() == 0, qPrintable(qsl("mudlet exited %1; %2").arg(QString::number(mudlet.exitCode()), diagnostics)));
             const QString lockedMutex = qsl("destroying locked mutex");
-            QVERIFY2(!standardError.contains(lockedMutex) && !output.contains(lockedMutex), qPrintable(qsl("static destruction ran with the TLS warm-up still in flight; %1").arg(diagnostics)));
+            QVERIFY2(!standardError.contains(lockedMutex) && !output.contains(lockedMutex),
+                     qPrintable(qsl("a locked mutex was destroyed on the way out of main(), as happens with the TLS warm-up still in flight; %1").arg(diagnostics)));
             // Without a warm-up in flight at the return the case would pass with
             // the #10460 fix reverted, and cover nothing. Nothing else on this
             // path loads TLS, so a search of a tls directory is the warm-up's.
