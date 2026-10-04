@@ -99,7 +99,6 @@ public:
     std::pair<bool, QString> setCmdLineStyleSheet(const QString& name, const QString& styleSheet);
     std::optional<QString> getCmdLineStyleSheet(const QString& name) const;
     std::pair<bool, QString> setLabelStyleSheet(const QString& name, const QString& stylesheet);
-    std::optional<QString> getLabelStyleSheet(const QString& name) const;
     std::optional<QSize> getLabelSizeHint(const QString& name) const;
     std::pair<bool, QString> deleteLabel(const QString&);
     std::pair<bool, QString> deleteMiniConsole(const QString&);
@@ -107,7 +106,6 @@ public:
     std::pair<bool, QString> deleteTextBox(const QString&);
     std::pair<bool, QString> deleteScrollBox(const QString&);
     std::pair<bool, QString> setLabelToolTip(const QString& name, const QString& text, double duration);
-    std::optional<QString> getLabelToolTip(const QString& name) const;
     std::pair<bool, QString> setLabelCursor(const QString& name, int shape);
     std::pair<bool, QString> setLabelCustomCursor(const QString& name, const QString& pixMapLocation, int hotX, int hotY);
     // Host forwards these by name, never by widget; each fails for a name that is not a label's.
@@ -133,7 +131,6 @@ public:
     bool setLabelSvgShear(const QString& name, double shearX, double shearY);
     bool resetLabelSvgShear(const QString& name);
     bool resetLabelSvgTransform(const QString& name);
-    std::optional<QFont> getLabelFont(const QString& name) const;
     bool setLabelFont(const QString& name, const QFont& font);
     std::optional<QString> getLabelText(const QString& name) const;
     // No value for a name that is not a label's, false for a label that is not
