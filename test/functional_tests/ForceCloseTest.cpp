@@ -32,6 +32,8 @@
 
 #include "GroupedTest.h"
 
+#include <QApplication>
+#include <QDialog>
 #include <QPointer>
 #include <QTemporaryDir>
 #include <QtTest/QtTest>
@@ -110,6 +112,50 @@ private slots:
         for (const auto& host : std::as_const(hosts)) {
             QVERIFY2(host.isNull(), "the window closed but left a profile loaded");
         }
+    }
+
+    // A telnet URI handed over by another instance loads its profile on an event
+    // that forceClose()'s pump may deliver, after the walk took its snapshot
+    void test_aProfileLoadedDuringTheWalkIsForcedClosedToo()
+    {
+        const QString early = mProfileNames.first();
+        const QString late = mProfileNames.last();
+        QVERIFY(provisionProfileOnDisk(early));
+        QVERIFY(provisionProfileOnDisk(late));
+        mWindow->startAutoLogin({early}, true);
+        QVERIFY2(HostManager::self()->getHost(early), "the first profile did not load");
+
+        QPointer<Host> lateHost;
+        bool lateLoaded = false;
+        QTimer::singleShot(0, mWindow, [this, &late, &lateHost, &lateLoaded]() {
+            mWindow->startAutoLogin({late}, true);
+            lateHost = HostManager::self()->getHost(late);
+            if (lateHost) {
+                lateLoaded = true;
+                lateHost->mFORCE_SAVE_ON_EXIT = false;
+            }
+        });
+
+        // Without save on exit an unforced profile asks whether to save it, which would hold the close open
+        QString askedTitle;
+        QTimer modalWatch;
+        connect(&modalWatch, &QTimer::timeout, this, [&askedTitle]() {
+            if (auto dialog = qobject_cast<QDialog*>(QApplication::activeModalWidget())) {
+                if (askedTitle.isEmpty()) {
+                    askedTitle = dialog->windowTitle();
+                }
+                dialog->reject();
+            }
+        });
+        modalWatch.start(50);
+
+        mWindow->forceClose();
+
+        QTRY_VERIFY2_WITH_TIMEOUT(mWindow.isNull() || !askedTitle.isEmpty(), "forceClose() never closed the window", 30s);
+        QVERIFY2(lateLoaded, "the late profile did not load during the walk, so nothing was tested");
+        QVERIFY2(askedTitle.isEmpty(), qPrintable(qsl("forceClose() asked \"%1\" about a profile it should have forced closed").arg(askedTitle)));
+        QVERIFY2(mWindow.isNull(), "forceClose() did not close the window");
+        QVERIFY2(lateHost.isNull(), "the window closed but left the late profile loaded");
     }
 };
 
