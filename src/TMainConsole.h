@@ -62,7 +62,7 @@ public:
     ~TMainConsole();
 
     void resizeEvent(QResizeEvent* event) override;
-    void resetMainConsole();
+    void resetMainConsole() override;
     void closeEvent(QCloseEvent*) override;
     TConsole* createMiniConsole(const QString& windowname, const QString& name, int x, int y, int width, int height);
     TConsole* createSubConsole(const QString& name, QWidget* parent);
@@ -76,8 +76,7 @@ public:
     void setProfileName(const QString&) override;
     // What Host needs of this console's own widget, named rather than reached
     // through the QWidget API so that a view with no widget could answer too.
-    // False when closeEvent() refused, e.g. the user cancelled the save prompt:
-    bool requestClose();
+    bool requestClose() override;
     void requestRepaint();
     QFont displayFont() const override;
     void setProfileStyleSheet(const QString& styleSheet) override;
@@ -93,6 +92,9 @@ public:
     void setFont(const QFont& font) override { TConsole::setFont(font); }
     void setFont(const QFont& font, bool forceChange) { TConsole::setFont(font, forceChange); }
     void setFontSize(int size) override { TConsole::setFontSize(size); }
+    void setF3SearchEnabled(bool enabled) override { TConsole::setF3SearchEnabled(enabled); }
+    void setCompactInputLine(bool state) override { TConsole::setCompactInputLine(state); }
+    void setCaretMode(bool enabled) override { TConsole::setCaretMode(enabled); }
     void showNewLines() override { TConsole::showNewLines(); }
     void showCommandEcho(const TConsoleModel::CommandEcho& echo) override { TConsole::showCommandEcho(echo); }
     void markSelectionDirty() override { TConsole::markSelectionDirty(); }
@@ -230,10 +232,8 @@ public:
     bool setTextBoxStyleSheet(const QString& name, const QString& styleSheet) override;
     bool setTextBoxFont(const QString& name, const QFont& font) override;
     bool setTextBoxTabMovesFocus(const QString& name, bool tabMovesFocus) override;
-    // QWidget state the core asks about, answered here so that it need not
-    // reach this view's QWidget base.
-    QPoint mousePosition() const;
-    bool hasKeyboardFocus() const;
+    QPoint mousePosition() const override;
+    bool hasKeyboardFocus() const override;
     bool showPlainWindow(const QString& name) override;
     bool hidePlainWindow(const QString& name) override;
     bool resizePlainWindow(const QString& name, int width, int height) override;
