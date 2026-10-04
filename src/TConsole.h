@@ -213,7 +213,6 @@ public:
     bool getScrollBarVisible() const;
     void setHorizontalScrollBar(bool);
     void setScrolling(const bool state);
-    bool getScrolling() const { return mScrollingEnabled; }
 
     // Model state, not view state: the main console shares Host's, so a link
     // concealed while the profile was open stays concealed once the widget has
@@ -445,7 +444,7 @@ private:
     enums::BufferSearchOptions mSearchOptions = enums::BufferSearchOptionNone;
     QAction* mpAction_searchOptions = nullptr;
     QIcon mIcon_searchOptions;
-    bool mScrollingEnabled = true;
+    bool& mScrollingEnabled;
     bool mF3SearchEnabled = false;
     QPointer<QShortcut> mpSearchNextShortcut;
     QPointer<QShortcut> mpSearchPrevShortcut;
