@@ -987,15 +987,17 @@ describe("Tests C++ functions in the Miscallaneous category", function()
           local logPath
           local htmlLogging = getConfig("logInHTML")
           finally(function()
-            startLogging(false)
-            setConfig("logInHTML", htmlLogging)
             if logPath then
+              startLogging(false)
               os.remove(logPath)
             end
+            setConfig("logInHTML", htmlLogging)
           end)
           setConfig("logInHTML", false)
 
-          logPath = select(3, startLogging(true))
+          local started, _, startPath = startLogging(true)
+          assert.is_true(started, "logging was already on, so the log file is not this spec's to delete")
+          logPath = startPath
           feedTelnet("\27[0m\27[31mSpecTextLogA\27[0m\nSpecTextLogB\n")
           -- a received line is only written once the next one commits
           feedTelnet("SpecTextLogFlush\n")
