@@ -1137,6 +1137,57 @@ private slots:
         QVERIFY2(pOwnerAfter == nullptr, "the microphone was still held after the session that claimed it ended");
     }
 
+    // A profile that closes mid-session takes the session with it. Left
+    // running, the claim would clear with the Host and the rest of the phrase
+    // would land on whichever profile is in front.
+    void test_closingTheProfileHoldingTheMicrophoneEndsItsSession()
+    {
+        const QString doomedName = qsl("SpeechAcrossProfiles-Doomed");
+        deleteProfileDirectory(doomedName);
+        QVERIFY(provisionProfileOnDisk(doomedName));
+        QVERIFY2(runLua(mpFirstHost, qsl("loadProfile('%1', true)").arg(doomedName)).isNull(), "the third profile could not be loaded");
+        QTest::qWait(500ms);
+        Host* pDoomed = hostFor(doomedName);
+        QVERIFY2(pDoomed, "the third profile did not open");
+
+        mudlet::self()->activateProfile(pDoomed);
+        StandInRecognizer* pEngine = installStandInEngine();
+        QVERIFY2(pEngine, "the stand-in engine was not installed");
+        pEngine->initialize(QString());
+        QVERIFY(runLua(pDoomed, qsl("_sttDoomedStarted = stt.start()")).isNull());
+        QVERIFY2(luaGlobalBoolean(pDoomed, qsl("_sttDoomedStarted")), "the session did not start");
+        QCOMPARE(TSpeechBridge::instance()->microphoneOwner(), pDoomed);
+        pEngine->hearSoFar(qsl("kill hound"));
+
+        mudlet::self()->activateProfile(mpFirstHost);
+        listenFor(mpFirstHost, qsl("sysSTTResult"), qsl("_heardAfterCloseFirst"));
+        listenFor(mpFirstHost, qsl("sysSTTError"), qsl("_faultAfterCloseFirst"));
+        listenFor(mpSecondHost, qsl("sysSTTResult"), qsl("_heardAfterCloseSecond"));
+        listenFor(mpSecondHost, qsl("sysSTTError"), qsl("_faultAfterCloseSecond"));
+
+        mudlet::self()->slot_closeProfileByName(doomedName);
+        QTRY_VERIFY_WITH_TIMEOUT(!hostFor(doomedName), 5000);
+
+        const bool listeningAfterClose = pEngine->listening();
+        const Host* pOwnerAfterClose = TSpeechBridge::instance()->microphoneOwner();
+        // A session the close left running would hand its phrase over on stop
+        pEngine->stopListening();
+        QTest::qWait(50ms);
+        const QStringList heardBySurvivors{luaGlobalString(mpFirstHost, qsl("_heardAfterCloseFirst")),
+                                           luaGlobalString(mpFirstHost, qsl("_faultAfterCloseFirst")),
+                                           luaGlobalString(mpSecondHost, qsl("_heardAfterCloseSecond")),
+                                           luaGlobalString(mpSecondHost, qsl("_faultAfterCloseSecond"))};
+
+        retireStandInEngine();
+        deleteProfileDirectory(doomedName);
+
+        QVERIFY2(!listeningAfterClose, "closing the profile holding the microphone left its session running");
+        QVERIFY2(pOwnerAfterClose == nullptr, "the microphone was still held after the profile holding it closed");
+        for (const QString& heard : heardBySurvivors) {
+            QVERIFY2(heard.isEmpty(), qPrintable(qsl("a profile that never listened received the closed profile's session: %1").arg(heard)));
+        }
+    }
+
     // Stopping is as much a part of owning a session as starting was. A profile
     // that holds nothing has nothing to stop, and reaching across to end
     // another game's session would leave that game with a bare state change -
@@ -1757,6 +1808,30 @@ private slots:
         QTest::qWait(100ms);
         runLua(mpFirstHost, qsl("removeCommand(%1)").arg(firstId));
         runLua(mpSecondHost, qsl("removeCommand(%1)").arg(secondId));
+    }
+
+    // Must stay the last case: it closes both of the fixture's profiles.
+    // With no profile left nobody can raise sysSTT* or stop the engine, so
+    // closing the last one releases it.
+    void test_closingTheLastProfileReleasesTheEngine()
+    {
+        StandInRecognizer* pEngine = installStandInEngine();
+        QVERIFY2(pEngine, "the stand-in engine was not installed");
+        pEngine->initialize(QString());
+        const QPointer<StandInRecognizer> engine = pEngine;
+
+        mudlet::self()->slot_closeProfileByName(mSecondHostname);
+        QTRY_VERIFY_WITH_TIMEOUT(!hostFor(mSecondHostname), 5000);
+        mpSecondHost = nullptr;
+        QVERIFY2(engine && engine->initialized(), "the engine was released while a profile was still open");
+
+        mudlet::self()->slot_closeProfileByName(mFirstHostname);
+        QTRY_VERIFY_WITH_TIMEOUT(HostManager::self()->getHostCount() == 0, 5000);
+        mpFirstHost = nullptr;
+        SpeechRecognizerFactory::setFactoryOverride(nullptr);
+
+        QVERIFY2(engine, "the engine was destroyed rather than released");
+        QVERIFY2(!engine->initialized(), "the engine kept its resources after the last profile closed");
     }
 
 private:

@@ -258,9 +258,9 @@ void TSpeechBridge::initSpeechRecognition(SpeechRecognizerFactory::Backend backe
     // built and initialised an engine the outer frame then threw away: three
     // consecutive statements acting on three different objects. A re-entrant
     // caller now finds the new engine already in place and fully connected.
-    // Bridge glue only: recognizer signals surface as Lua events on the active
-    // profile. Text routing, UI state and policy all belong to the packages
-    // consuming these events, not to the core.
+    // Bridge glue only: recognizer signals surface as Lua events on the profile
+    // holding the microphone (see raiseSpeechEvent()). Text routing, UI state
+    // and policy all belong to the packages consuming these events.
     connect(pReplacement, &SpeechRecognizer::partialResult, this, [this](const QString& text) {
         raiseSpeechEvent(qsl("sysSTTPartialResult"), text);
     });

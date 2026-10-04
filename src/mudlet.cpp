@@ -1391,7 +1391,7 @@ mudlet::mudlet()
     static DebugProfileObserver debugProfileObserver;
     TDebug::setProfileObserver(&debugProfileObserver);
     // A child rather than a member, so it and the recognizer it owns are torn
-    // down with the main window's other children, as the recognizer always was
+    // down with the main window's other children
     mpSpeechBridge = new TSpeechBridge(this);
     connect(mpSpeechBridge, &TSpeechBridge::microphoneOwnerChanged, this, &mudlet::refreshMicrophoneMarkers);
     // Initialisation happens later in setupConfig() and init()
