@@ -94,6 +94,47 @@ extern "C" {
 int luaopen_yajl(lua_State*);
 }
 
+namespace {
+
+// luasql's __tostring reads its argument as its own object unchecked, so a script calling
+// env.__tostring() without one crashes Mudlet. Upvalues: luasql's function, its metatable, its name.
+int checkedLuasqlToString(lua_State* L)
+{
+    bool ownObject = false;
+    if (lua_type(L, 1) == LUA_TUSERDATA && lua_getmetatable(L, 1)) {
+        ownObject = lua_rawequal(L, -1, lua_upvalueindex(2));
+        lua_pop(L, 1);
+    }
+    if (!ownObject) {
+        return luaL_typerror(L, 1, lua_tostring(L, lua_upvalueindex(3)));
+    }
+    lua_pushvalue(L, lua_upvalueindex(1));
+    lua_pushvalue(L, 1);
+    lua_call(L, 1, 1);
+    return 1;
+}
+
+void guardLuasqlToString(lua_State* L, const char* metatableName)
+{
+    luaL_getmetatable(L, metatableName);
+    if (!lua_istable(L, -1)) {
+        lua_pop(L, 1);
+        return;
+    }
+    lua_getfield(L, -1, "__tostring");
+    if (!lua_iscfunction(L, -1)) {
+        lua_pop(L, 2);
+        return;
+    }
+    lua_pushvalue(L, -2);
+    lua_pushstring(L, metatableName);
+    lua_pushcclosure(L, checkedLuasqlToString, 3);
+    lua_setfield(L, -2, "__tostring");
+    lua_pop(L, 1);
+}
+
+} // namespace
+
 
 const QString TLuaInterpreter::csmInvalidRoomID{qsl("number %1 is not a valid roomID")};
 const QString TLuaInterpreter::csmInvalidStopWatchID{qsl("stopwatch with ID %1 not found")};
@@ -7126,7 +7167,11 @@ void TLuaInterpreter::initLuaGlobals()
         mpHost->postMessage(modLoadMessageQueue.dequeue());
     }
 
-    loadLuaModule(modLoadMessageQueue, QLatin1String("luasql.sqlite3"), tr("Database support will not be available."), QLatin1String("sqlite3"), QLatin1String("luasql"));
+    if (loadLuaModule(modLoadMessageQueue, QLatin1String("luasql.sqlite3"), tr("Database support will not be available."), QLatin1String("sqlite3"), QLatin1String("luasql"))) {
+        for (const char* metatableName : {"SQLite3 environment", "SQLite3 connection", "SQLite3 cursor"}) {
+            guardLuasqlToString(pGlobalLua, metatableName);
+        }
+    }
     while (!modLoadMessageQueue.isEmpty()) {
         mpHost->postMessage(modLoadMessageQueue.dequeue());
     }
