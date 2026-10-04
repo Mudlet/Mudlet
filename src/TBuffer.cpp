@@ -7557,6 +7557,7 @@ bool TBuffer::processBig5Sequence(const std::string& bufferData, const bool isFr
                 qDebug().nospace() << "TBuffer::processBig5Sequence(...) " << big5SequenceLength << "-byte Big5 sequence accepted, it is " << codePoint.size() << " QChar(s) long [" << codePoint
                                    << "] and is in the " << dataIdentity.c_str() << " range";
 #endif
+                isNonBmpCharacter = codePoint.size() == 2;
                 mMudLine.append(codePoint);
                 break;
             case 0:
@@ -7679,6 +7680,7 @@ bool TBuffer::processEUC_KRSequence(const std::string& bufferData, const bool is
                 qDebug().nospace() << "TBuffer::processEUC_KRSequence(...) " << eucSequenceLength << "-byte EUC-KR sequence accepted, it is " << codePoint.size() << " QChar(s) long [" << codePoint
                                    << "] and is in the " << dataIdentity.c_str() << " range";
 #endif
+                isNonBmpCharacter = codePoint.size() == 2;
                 mMudLine.append(codePoint);
                 break;
             case 0:

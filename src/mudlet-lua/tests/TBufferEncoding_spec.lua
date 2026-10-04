@@ -350,6 +350,30 @@ describe("Tests Big5 decoding", function()
 
     assert.equals("你", decoded(bytes(0xA7, 0x41)))
   end)
+
+  -- 0x8F 0xA2 is U+2863B, two UTF-16 units that each need their own format;
+  -- a line short of one aborted Mudlet as soon as it was drawn
+  it("keeps the format of the text after a character outside the BMP", function()
+    using("BIG5-HKSCS")
+
+    local lines, mark = decodedLines("enc:" .. bytes(0x8F, 0xA2) .. "\27[32mx\27[0m")
+    local fed
+    for i = #lines, 1, -1 do
+      if lines[i]:match("^enc:") then
+        fed = mark + i - 1
+        break
+      end
+    end
+    assert.is_not_nil(fed, "no line carrying the fed bytes reached the buffer")
+    moveCursor("main", 0, fed)
+    local found = selectString("main", "x", 1)
+    local color = {getFgColor("main")}
+    deselect("main")
+    moveCursorEnd("main")
+
+    assert.is_true(found > 0)
+    assert.same({0, 128, 0}, color)
+  end)
 end)
 
 describe("Tests EUC-KR decoding", function()
