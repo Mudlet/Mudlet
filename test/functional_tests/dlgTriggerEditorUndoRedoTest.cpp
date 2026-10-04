@@ -78,6 +78,39 @@ private:
     TTreeWidget *treeWidget() const { return getTreeWidget(); }
   };
 
+  void reParentInModel(EditorViewType viewType, int childID, int oldParentID,
+                       int newParentID, int position) {
+    const auto mode = TreeItemInsertMode::AtPosition;
+    switch (viewType) {
+    case EditorViewType::cmTriggerView:
+      mpHost->getTriggerUnit()->reParentTrigger(childID, oldParentID,
+                                                newParentID, mode, position);
+      break;
+    case EditorViewType::cmTimerView:
+      mpHost->getTimerUnit()->reParentTimer(childID, oldParentID, newParentID,
+                                            mode, position);
+      break;
+    case EditorViewType::cmAliasView:
+      mpHost->getAliasUnit()->reParentAlias(childID, oldParentID, newParentID,
+                                            mode, position);
+      break;
+    case EditorViewType::cmScriptView:
+      mpHost->getScriptUnit()->reParentScript(childID, oldParentID,
+                                              newParentID, mode, position);
+      break;
+    case EditorViewType::cmKeysView:
+      mpHost->getKeyUnit()->reParentKey(childID, oldParentID, newParentID,
+                                        mode, position);
+      break;
+    case EditorViewType::cmActionView:
+      mpHost->getActionUnit()->reParentAction(childID, oldParentID,
+                                              newParentID, mode, position);
+      break;
+    default:
+      QFAIL("No model to move the item in for this view");
+    }
+  }
+
   std::vector<ItemTypeInfo> mItemTypes;
 
   void cleanupAll(const ItemTypeInfo &itemType) {
@@ -773,6 +806,10 @@ private slots:
 
       mpEditor->slot_itemMoved(grandchildID, oldParentID, newParentID,
                                oldPosition, newPosition);
+      // A real drag moves the item in the model too, straight after emitting
+      // itemMoved; without it, undo would list the item under its old parent twice
+      reParentInModel(itemType.viewType, grandchildID, oldParentID,
+                      newParentID, newPosition);
 
       QVERIFY2(parent->childCount() == 3 &&
                    childWithGrandchild->childCount() == 0,
