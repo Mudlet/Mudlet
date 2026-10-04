@@ -389,9 +389,9 @@ private slots:
         QCOMPARE(copiedText(pane), line);
     }
 
-    // A script clearing the window while a line drag is held takes the line the
+    // A script deleting lines while a line drag is held can take the line the
     // drag started on, which the next move then read past the end of the buffer
-    void test_lineDragAcrossAClearedWindowLeavesNoSelection()
+    void test_lineDragAcrossDeletedLinesLeavesNoSelection()
     {
         TTextEdit* pane = paneShowingProse();
         QVERIFY2(pane, "the prose never reached the upper pane");
@@ -400,8 +400,28 @@ private slots:
         const QPointF pressPos = cellInMiddleRow(pane, 33);
         sendMouse(pane, QEvent::MouseButtonPress, Qt::LeftButton, Qt::LeftButton, pressPos, Qt::ControlModifier);
         QVERIFY2(pane->mDragStart.y() > 0, "the press did not start the drag below the first line");
-        QVERIFY2(host->getLuaInterpreter()->compileAndExecuteScript(qsl("clearWindow()")), "the clearWindow() call failed");
+        QVERIFY2(host->getLuaInterpreter()->compileAndExecuteScript(qsl("for i = 1, 25 do moveCursor(0, 0) deleteLine() end")), "the deleteLine() calls failed");
         QVERIFY(host->mpConsole->buffer.getLastLineNumber() < pane->mDragStart.y());
+        const QString highlightedByThePress = highlightedText();
+
+        moveAndReleaseLeftButton(pane, QPointF(pressPos.x(), pane->mFontHeight / 2.0), Qt::ControlModifier);
+
+        QCOMPARE(highlightedText(), highlightedByThePress);
+    }
+
+    // Output after a clearWindow() reuses the line numbers a held drag started
+    // from, and the drag must not carry on into text the user never pressed on
+    void test_lineDragAcrossAClearedAndRefilledWindowLeavesNoSelection()
+    {
+        TTextEdit* pane = paneShowingProse();
+        QVERIFY2(pane, "the prose never reached the upper pane");
+        Host* host = mudlet::self()->getActiveHost();
+
+        const QPointF pressPos = cellInMiddleRow(pane, 33);
+        sendMouse(pane, QEvent::MouseButtonPress, Qt::LeftButton, Qt::LeftButton, pressPos, Qt::ControlModifier);
+        QVERIFY2(pane->mDragStart.y() > 0, "the press did not start the drag below the first line");
+        QVERIFY2(host->getLuaInterpreter()->compileAndExecuteScript(qsl("clearWindow()\nfor i = 1, 200 do echo('refill ' .. i .. '\\n') end")), "the clearWindow() and echo calls failed");
+        QVERIFY(host->mpConsole->buffer.getLastLineNumber() > pane->mDragStart.y());
 
         moveAndReleaseLeftButton(pane, QPointF(pressPos.x(), pane->mFontHeight / 2.0), Qt::ControlModifier);
 
