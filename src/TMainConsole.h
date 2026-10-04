@@ -65,6 +65,7 @@ public:
     void resetMainConsole() override;
     void closeEvent(QCloseEvent*) override;
     TConsole* createMiniConsole(const QString& windowname, const QString& name, int x, int y, int width, int height);
+    bool addMiniConsole(const QString& windowname, const QString& name, int x, int y, int width, int height) override { return createMiniConsole(windowname, name, x, y, width, height) != nullptr; }
     TConsole* createSubConsole(const QString& name, QWidget* parent);
     TMxpFrameWidgets& mxpFrameWidgets() { return *mpMxpFrameWidgets; }
     const TMxpFrameWidgets& mxpFrameWidgets() const { return *mpMxpFrameWidgets; }
@@ -288,7 +289,7 @@ public:
     // replaces is deleted later.
     void replaceActionButton(TAction* pAction, TFlipButton* pButton);
     void replaceActionMenuEntry(TAction* pAction, EAction* pEntry);
-    void setActionButtonChecked(TAction* pAction, bool checked);
+    void setActionButtonChecked(TAction* pAction, bool checked) override;
     // Floating toolbars are the main window's children rather than this
     // console's, so the profile has to delete them itself.
     const std::list<QPointer<TToolBar>>& actionToolBars() const { return mToolBarList; }
