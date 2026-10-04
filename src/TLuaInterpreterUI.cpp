@@ -1514,7 +1514,7 @@ int TLuaInterpreter::getFont(lua_State* L)
     if (host.mpConsole) {
         font = host.mpConsole->getWindowFont(windowName);
         if (!font) {
-            font = host.mpConsole->getLabelFont(windowName);
+            font = host.labelFont(windowName);
         }
     }
     if (!font) {
@@ -1583,7 +1583,7 @@ int TLuaInterpreter::getLabelStyleSheet(lua_State* L)
 {
     const QString label = getVerifiedString(L, __func__, 1, "label");
     const Host& host = getHostFromLua(L);
-    if (auto stylesheet = host.mpConsole ? host.mpConsole->getLabelStyleSheet(label) : std::nullopt) {
+    if (auto stylesheet = host.labelStyleSheet(label)) {
         lua_pushstring(L, stylesheet->toUtf8().constData());
         return 1;
     }
@@ -3334,7 +3334,7 @@ int TLuaInterpreter::setFont(lua_State* L)
         lua_pushboolean(L, true);
         return 1;
     }
-    const auto currentLabelFont = host.mpConsole->getLabelFont(targetName);
+    const auto currentLabelFont = host.labelFont(targetName);
     if (!currentLabelFont) {
         return windowNotFound(L, targetName);
     }
@@ -3423,7 +3423,7 @@ int TLuaInterpreter::getLabelToolTip(lua_State* L)
     }
 
     const Host& host = getHostFromLua(L);
-    if (auto toolTip = host.mpConsole ? host.mpConsole->getLabelToolTip(labelName) : std::nullopt) {
+    if (auto toolTip = host.labelToolTip(labelName)) {
         lua_pushstring(L, toolTip->toUtf8().constData());
         return 1;
     }

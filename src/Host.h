@@ -661,6 +661,10 @@ public:
     }
     std::optional<QString> windowType(const QString& name) const;
     std::optional<QRect> windowGeometry(const QString& name) const;
+    // {} for no such label.
+    std::optional<QString> labelStyleSheet(const QString& name) const;
+    std::optional<QString> labelToolTip(const QString& name) const;
+    std::optional<QFont> labelFont(const QString& name) const;
     std::optional<bool> windowVisible(const QString& name) const;
     std::optional<QSize> mainWindowSize() const;
     // A name with no user window answers the main window's size.
