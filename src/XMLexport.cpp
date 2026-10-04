@@ -269,15 +269,15 @@ constexpr ControlEntity scControlEntities[] = {
         {"&#12;", "\uFFFC\u240C"},  // FF
         {"&#14;", "\uFFFC\u240E"},  // SS
         {"&#15;", "\uFFFC\u240F"},  // SI
-        {"&#10;", "\uFFFC\u2410"},  // DLE
-        {"&#16;", "\uFFFC\u2411"},  // DC1
+        {"&#16;", "\uFFFC\u2410"},  // DLE
+        {"&#17;", "\uFFFC\u2411"},  // DC1
         {"&#18;", "\uFFFC\u2412"},  // DC2
         {"&#19;", "\uFFFC\u2413"},  // DC3
         {"&#20;", "\uFFFC\u2414"},  // DC4
         {"&#21;", "\uFFFC\u2415"},  // NAK
         {"&#22;", "\uFFFC\u2416"},  // SYN
-        {"&#17;", "\uFFFC\u2417"},  // ETB
-        {"&#23;", "\uFFFC\u2418"},  // CAN
+        {"&#23;", "\uFFFC\u2417"},  // ETB
+        {"&#24;", "\uFFFC\u2418"},  // CAN
         {"&#25;", "\uFFFC\u2419"},  // EM
         {"&#26;", "\uFFFC\u241A"},  // SUB
         {"&#27;", "\uFFFC\u241B"},  // ESC
