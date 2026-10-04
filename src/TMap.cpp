@@ -789,7 +789,7 @@ bool TMap::gotoRoom(int r1, int r2)
     return findPath(r1, r2);
 }
 
-void TMap::addDirectionalRoute(QHash<unsigned int, route>& bestRoutes,
+void TMap::addDirectionalRoute(std::vector<std::pair<unsigned int, route>>& bestRoutes,
                                const QMap<QString, int>& exitWeights,
                                unsigned int source,
                                TRoom* pSourceR,
@@ -853,9 +853,15 @@ void TMap::addDirectionalRoute(QHash<unsigned int, route>& bestRoutes,
     }
     r.cost = cost;
 
-    if (!bestRoutes.contains(target) || bestRoutes.value(target).cost > r.cost) {
-        bestRoutes.insert(target, r);
+    for (auto& [bestTarget, bestRoute] : bestRoutes) {
+        if (bestTarget == static_cast<unsigned int>(target)) {
+            if (bestRoute.cost > r.cost) {
+                bestRoute = r;
+            }
+            return;
+        }
     }
+    bestRoutes.emplace_back(target, r);
 }
 
 void TMap::initGraph()
@@ -863,7 +869,9 @@ void TMap::initGraph()
     QElapsedTimer _time;
     _time.start();
     locations.clear();
+    locations.reserve(mpRoomDB->getRoomMap().size());
     roomidToIndex.clear();
+    roomidToIndex.reserve(mpRoomDB->getRoomMap().size());
     g.clear();
     g = mygraph_t();
     unsigned int roomCount = 0;
@@ -908,13 +916,13 @@ void TMap::initGraph()
     // would make the next search write out of bounds.
     resetSearchState(roomCount);
 
-    // Now identify the routes between rooms, and pick out the best edges of parallel ones
-    for (auto l : locations) {
+    // Now identify the routes between rooms, and pick out the best edges of parallel ones.
+    // A room has a handful of exits, so a reused list beats a hash table built per room.
+    std::vector<std::pair<unsigned int, route>> bestRoutes;
+    for (const location& l : locations) {
         unsigned const int source = l.id;
         TRoom* pSourceR = l.pR;
-        QHash<unsigned int, route> bestRoutes;
-        // key is target (destination room),
-        // value is data we will need to store later,
+        bestRoutes.clear();
         QMap<QString, int> const exitWeights = pSourceR->getExitWeights();
 
         addDirectionalRoute(bestRoutes, exitWeights, source, pSourceR, pSourceR->getNorth(), DIR_NORTH, qsl("n"), unUsableRoomSet);
@@ -939,16 +947,15 @@ void TMap::initGraph()
 
         // Now we have eliminated possible duplicate and useless edges we can create and
         // insert the remainder into the BGL graph:
-        QHashIterator<unsigned int, route> itRoute = bestRoutes;
-        while (itRoute.hasNext()) {
-            itRoute.next();
+        const int sourceIndex = roomidToIndex.value(source);
+        for (const auto& [target, bestRoute] : bestRoutes) {
             edge_descriptor e;
             bool inserted; // This is always going to be false as it gets set if
                            // we had tried to insert a parallel edge into a graph
                            // that does not support them - but we've just been
                            // and disposed of those already!
-            tie(e, inserted) = add_edge(roomidToIndex.value(source), roomidToIndex.value(itRoute.key()), itRoute.value().cost, g);
-            edgeHash.insert(qMakePair(source, itRoute.key()), itRoute.value());
+            tie(e, inserted) = add_edge(sourceIndex, roomidToIndex.value(target), bestRoute.cost, g);
+            edgeHash.insert(qMakePair(source, target), bestRoute);
             // The key is made from the QPair<edgeSourceRoomId, edgeTargetRoomId>...
             edgeCount++;
         }
