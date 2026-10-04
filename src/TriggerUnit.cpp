@@ -573,6 +573,9 @@ void TriggerUnit::processDataStream(const QString& data, int line)
     const auto processingGuard = qScopeGuard([this] {
         mProcessingDepth--;
         Q_ASSERT(mProcessingDepth >= 0);
+        if (mProcessingDepth <= 1) {
+            mRunawayFeedStopped = false;
+        }
         if (mProcessingDepth == 0) {
             // Deletion is deferred while any pass runs, so these pointers stayed
             // valid; drop them before doCleanup() frees the underlying triggers.
@@ -585,7 +588,6 @@ void TriggerUnit::processDataStream(const QString& data, int line)
             }
             mRootNodesAddedWhileProcessing.clear();
             mSameLineChainStarters.clear();
-            mRunawayFeedStopped = false;
             doCleanup();
         }
     });

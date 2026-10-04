@@ -299,7 +299,7 @@ bool AliasUnit::processDataStream(const QString& data)
                              << " - probably an alias that expands into itself.";
         //: %1 is the command being expanded, %2 the depth limit. Shown in the game window when an alias keeps expanding into itself
         mpHost->postMessage(tr("[ ERROR ] - Alias processing stopped to prevent a crash: \"%1\" was expanded by an alias %2 times in a row, each time producing a command that matched an alias "
-                               "again. It goes to the game unexpanded, and any other command expanded through an alias before the command that started this finishes is discarded. Send from "
+                               "again. It goes to the game unexpanded, and any other command an alias expands further along that chain is discarded. Send from "
                                "the alias with send() rather than expandAlias(), or give it a pattern that does not match what it sends.")
                                     .arg(data, QString::number(scmMaxProcessingDepth)));
         return false;
@@ -318,8 +318,10 @@ bool AliasUnit::processDataStream(const QString& data)
     const auto processingGuard = qScopeGuard([this] {
         mProcessingDepth--;
         Q_ASSERT(mProcessingDepth >= 0);
-        if (mProcessingDepth == 0) {
+        if (mProcessingDepth <= 1) {
             mRunawayExpansionStopped = false;
+        }
+        if (mProcessingDepth == 0) {
             doCleanup();
         }
     });

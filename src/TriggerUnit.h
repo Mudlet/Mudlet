@@ -104,9 +104,10 @@ public:
     void _uninstall(TTrigger* pChild, const QString& packageName);
 
     int processingDepth() const { return mProcessingDepth; }
-    // Set once feedTriggers() reaches scmMaxProcessingDepth, cleared when the outermost pass
-    // returns. A trigger that feeds two matching lines branches at every level, so refusing
-    // only the feeds at the limit still leaves 2^50 of them to run below it.
+    // Set once feedTriggers() reaches scmMaxProcessingDepth, cleared when the feed that started
+    // the chain returns to the outermost pass, so other triggers on that line can still feed.
+    // A trigger that feeds two matching lines branches at every level, so refusing only the
+    // feeds at the limit still leaves 2^50 of them to run below it.
     bool runawayFeedStopped() const { return mRunawayFeedStopped; }
     void stopRunawayFeed() { mRunawayFeedStopped = true; }
     // Raw pointer is safe: a trigger outlives its own execute() frame, as deletion

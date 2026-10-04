@@ -1131,7 +1131,7 @@ int TLuaInterpreter::feedTriggers(lua_State* L)
     auto* triggerUnit = host.getTriggerUnit();
     if (triggerUnit->runawayFeedStopped()) {
         lua_pushnil(L);
-        lua_pushstring(L, "feedTriggers: refused, an endless feedTriggers loop was already stopped while this line was being processed");
+        lua_pushstring(L, "feedTriggers: refused, an endless loop further along this chain of fed text was already stopped");
         return 2;
     }
     if (triggerUnit->processingDepth() >= TriggerUnit::scmMaxProcessingDepth) {

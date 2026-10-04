@@ -965,8 +965,38 @@ describe("Trigger processing", function()
             feedTriggers("\nfeed_myself_twice\n")
 
             killTrigger(id)
-            assert.is_true(fired < 1000, "the loop should be stopped after the first trip, fired " .. fired .. " times")
-            assert.are.equal(fired - 50, refusals, "every feed after the trip should be refused")
+            -- Each line the outermost fire feeds runs one chain down to the cap
+            assert.is_true(fired < 1000, "the loop should be stopped at the cap, fired " .. fired .. " times")
+            assert.is_true(refusals > 0, "feeds below a stopped chain should be refused")
+        end)
+
+        it("still lets another trigger on the same line feed after a runaway is stopped", function()
+            local fired = 0
+            local runaway
+            runaway = tempRegexTrigger("^runaway_(start|again)$", function()
+                fired = fired + 1
+                if fired > 1000 then
+                    disableTrigger(runaway)
+                    return
+                end
+                pcall(feedTriggers, "runaway_again\nrunaway_again\n")
+            end)
+            -- Matches only the outermost line, so it runs once, after the runaway's chain
+            local other = tempRegexTrigger("^runaway_start$", function()
+                feedTriggers("other_trigger_line\n")
+            end)
+            local reached = false
+            local receiver = tempRegexTrigger("^other_trigger_line$", function()
+                reached = true
+            end)
+
+            feedTriggers("\nrunaway_start\n")
+
+            killTrigger(runaway)
+            killTrigger(other)
+            killTrigger(receiver)
+            assert.is_true(fired < 1000, "the runaway should be stopped, fired " .. fired .. " times")
+            assert.is_true(reached, "the other trigger's feed should still be processed")
         end)
 
     end)

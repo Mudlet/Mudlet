@@ -79,8 +79,41 @@ describe("Alias processing", function()
 
             killAnonymousEventHandler(handler)
             killAlias(id)
-            assert.are.equal(50, fired)
-            assert.are.equal(1, sends, "only the call that hit the cap should reach the game")
+            -- Each of the outermost alias's two calls runs one chain down to the cap
+            assert.are.equal(99, fired)
+            assert.are.equal(2, sends, "only the calls that hit the cap should reach the game")
+        end)
+
+        it("still sends what another alias on the same command expands after a runaway is stopped", function()
+            local fired = 0
+            local runaway
+            runaway = tempAlias("^runaway_(start|again)$", function()
+                fired = fired + 1
+                if fired > 1000 then
+                    killAlias(runaway)
+                    return
+                end
+                expandAlias("runaway_again", false)
+                expandAlias("runaway_again", false)
+            end)
+            -- Matches only the typed command, so it runs once, after the runaway's chain
+            local other = tempAlias("^runaway_start$", function()
+                expandAlias("other_alias_command", false)
+            end)
+            local otherSends = 0
+            local handler = registerAnonymousEventHandler("sysDataSendRequest", function(_, command)
+                if command == "other_alias_command" then
+                    otherSends = otherSends + 1
+                end
+            end)
+
+            expandAlias("runaway_start", false)
+
+            killAnonymousEventHandler(handler)
+            killAlias(runaway)
+            killAlias(other)
+            assert.is_true(fired < 1000, "the runaway should be stopped, fired " .. fired .. " times")
+            assert.are.equal(1, otherSends, "the other alias's command should reach the game")
         end)
 
         -- The "command" field of an alias is sent as if typed, so one that
