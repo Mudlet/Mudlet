@@ -399,12 +399,17 @@ private slots:
         QVERIFY2(pane->testAttribute(Qt::WA_OpaquePaintEvent), "the pane did not go back to opaque painting after one frame");
 
         QCOMPARE(painted.size(), blended.size());
+        // Only the pane's own pixels: grab() leaves whatever no widget paints
+        // uninitialised, and that differs from one grab to the next (macOS)
+        const qreal dpr = painted.devicePixelRatio();
+        const QRect paneArea = QRect(pane->mapTo(host->mpConsole, QPoint()) * dpr, pane->size() * dpr).intersected(painted.rect());
+        QVERIFY(!paneArea.isEmpty());
         int worst = 0;
         QPoint worstAt;
-        for (int y = 0; y < painted.height(); ++y) {
+        for (int y = paneArea.top(); y <= paneArea.bottom(); ++y) {
             const auto* a = reinterpret_cast<const QRgb*>(painted.constScanLine(y));
             const auto* b = reinterpret_cast<const QRgb*>(blended.constScanLine(y));
-            for (int x = 0; x < painted.width(); ++x) {
+            for (int x = paneArea.left(); x <= paneArea.right(); ++x) {
                 const int difference = std::max({std::abs(qRed(a[x]) - qRed(b[x])), std::abs(qGreen(a[x]) - qGreen(b[x])), std::abs(qBlue(a[x]) - qBlue(b[x]))});
                 if (difference > worst) {
                     worst = difference;
@@ -413,11 +418,11 @@ private slots:
             }
         }
         QVERIFY2(worst == 0,
-                 qPrintable(qsl("painting the background differed from blending over it by %1 in one channel at (%2, %3): %4 against %5")
+                 qPrintable(qsl("painting the background differed from blending over it by %1 in one channel at (%2, %3), over %4: %5 against %6")
                                     .arg(worst)
                                     .arg(worstAt.x())
                                     .arg(worstAt.y())
-                                    .arg(painted.pixelColor(worstAt).name(), blended.pixelColor(worstAt).name())));
+                                    .arg(widgetAt(host->mpConsole, worstAt / dpr), painted.pixelColor(worstAt).name(), blended.pixelColor(worstAt).name())));
     }
 
 private:
@@ -438,6 +443,12 @@ private:
 
     // Off the cell grid at the right, so there is a sliver past the last whole
     // cell that the cached screen does not reach
+    static QString widgetAt(QWidget* parent, const QPoint& at)
+    {
+        const QWidget* widget = parent->childAt(at);
+        return widget ? qsl("%1 \"%2\"").arg(QLatin1String(widget->metaObject()->className()), widget->objectName()) : qsl("no child");
+    }
+
     static void moveOffTheCellGrid(TTextEdit* pane)
     {
         const int columns = pane->width() / pane->mFontWidth;
