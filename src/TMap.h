@@ -56,6 +56,7 @@
 
 class dlgMapper;
 class TMapViewFrontend;
+class TMapViewsFrontend;
 class Host;
 #if defined(INCLUDE_3DMAPPER)
 class QOpenGLWidget;
@@ -296,6 +297,9 @@ public:
 
     TMapViewManager* getViewManager() { return mpViewManager; }
     void setViewManager(TMapViewManager* pViewManager) { mpViewManager = pViewManager; }
+    // mpViewManager as core code drives it. Defined in TMapViewManager.cpp, which can see that
+    // TMapViewManager is a TMapViewsFrontend.
+    TMapViewsFrontend* mapViewsFrontend() const;
 
     // Was a single int mRoomId but that breaks things when maps are
     // copied/shared between profiles - so now we track the profile name

@@ -27,6 +27,11 @@
 #include "TRoomDB.h"
 #include "utils.h"
 
+TMapViewsFrontend* TMap::mapViewsFrontend() const
+{
+    return mpViewManager;
+}
+
 TMapViewManager::TMapViewManager(Host* pHost, TMap* pMap)
 : QObject(pMap)
 , mpHost(pHost)
@@ -128,6 +133,11 @@ TMapView* TMapViewManager::getView(int viewId)
         return it.value();
     }
     return nullptr;
+}
+
+TSecondaryMapViewFrontend* TMapViewManager::view(int viewId)
+{
+    return getView(viewId);
 }
 
 QList<int> TMapViewManager::getViewIds() const
