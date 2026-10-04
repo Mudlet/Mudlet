@@ -198,6 +198,8 @@ public:
     void setMSPVariables(const QByteArray&);
     bool isIPAddress(const QString&);
     std::pair<bool, QString> purgeMediaCache();
+    // Does nothing while a composer is already open
+    void openComposer(const QString& title, const QString& text);
     void atcpComposerCancel();
     void atcpComposerSave(QString);
     void checkNAWS();

@@ -51,7 +51,6 @@
 #include "TEncodingHelper.h"
 #include "TIrcClient.h"
 #include "TTimer.h"
-#include "dlgComposer.h"
 #include "mudlet.h"
 #include "utils.h"
 
@@ -4095,14 +4094,7 @@ void TLuaInterpreter::handleIreComposerEdit(const QString& jsonData)
     const QString title = jsonObj["title"].toString();
     const QString initialText = jsonObj["text"].toString();
 
-    if (host.mTelnet.mpComposer) {
-        return;
-    }
-
-    host.mTelnet.mpComposer = new dlgComposer(&host);
-    host.mTelnet.mpComposer->init(title, initialText);
-    host.mTelnet.mpComposer->raise();
-    host.mTelnet.mpComposer->show();
+    host.mTelnet.openComposer(title, initialText);
 }
 
 // No documentation available in wiki - internal function

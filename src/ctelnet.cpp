@@ -4417,20 +4417,12 @@ void cTelnet::setATCPVariables(const QByteArray& msg)
             arg.clear();
         }
 
-        if (mpComposer) {
-            // If we already have the composer out then bail out:
-            return;
-        }
-
-        mpComposer = new dlgComposer(mpHost);
         //FIXME
         if (arg.startsWith(QChar::Space)) {
             arg.remove(0, 1);
         }
 
-        mpComposer->init(title, arg);
-        mpComposer->raise();
-        mpComposer->show();
+        openComposer(title, arg);
         return;
     }
 
@@ -4946,6 +4938,18 @@ void cTelnet::setChannel102Variables(const QString& msg)
 void cTelnet::setAutoReconnect(bool status)
 {
     mAutoReconnect = status;
+}
+
+void cTelnet::openComposer(const QString& title, const QString& text)
+{
+    if (mpComposer) {
+        return;
+    }
+
+    mpComposer = new dlgComposer(mpHost);
+    mpComposer->init(title, text);
+    mpComposer->raise();
+    mpComposer->show();
 }
 
 void cTelnet::atcpComposerCancel()
