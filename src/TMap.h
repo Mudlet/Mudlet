@@ -296,10 +296,10 @@ public:
     QString mProfileName;
 
     TMapViewManager* getViewManager() { return mpViewManager; }
-    void setViewManager(TMapViewManager* pViewManager) { mpViewManager = pViewManager; }
-    // mpViewManager as core code drives it. Defined in TMapViewManager.cpp, which can see that
-    // TMapViewManager is a TMapViewsFrontend.
-    TMapViewsFrontend* mapViewsFrontend() const;
+    // Defined in TMapViewManager.cpp, which can see that TMapViewManager is a TMapViewsFrontend.
+    void setViewManager(TMapViewManager* pViewManager);
+    // mpViewManager as core code drives it.
+    TMapViewsFrontend* mapViewsFrontend() const { return mpViewsFrontend; }
 
     // Was a single int mRoomId but that breaks things when maps are
     // copied/shared between profiles - so now we track the profile name
@@ -456,6 +456,9 @@ public slots:
 
 private:
     void resetSearchState(const std::size_t roomCount);
+
+    // The same object as mpViewManager, set with it by setViewManager().
+    TMapViewsFrontend* mpViewsFrontend = nullptr;
 
     // A* leaving the route in mSearchPredecessor; see the definition for why not boost::astar_search().
     bool searchGraph(const vertex start, const vertex goal);
