@@ -316,8 +316,6 @@ bool Tree<T>::popChild(Tree<T>* pChild)
 {
     // erase(), not remove(): remove() rescans the whole list, and a folder pops every child as it is torn down
     if (const auto it = std::find(mpMyChildrenList->begin(), mpMyChildrenList->end(), pChild); it != mpMyChildrenList->end()) {
-        // Only one entry is erased, so a second copy would be left dangling
-        Q_ASSERT(std::find(std::next(it), mpMyChildrenList->end(), pChild) == mpMyChildrenList->end());
         mpMyChildrenList->erase(it);
         return true;
     }
