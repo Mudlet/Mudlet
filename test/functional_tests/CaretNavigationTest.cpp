@@ -650,6 +650,64 @@ private slots:
 
         QVERIFY2(consoleBuffer().isLinkVisited(linkIndex), "the activated link was not marked as visited");
     }
+
+    // deleteLine() can take a console's last line, leaving no line at all, and
+    // the caret keys indexed that buffer unchecked
+    void test_caretKeysOnAConsoleEmptiedByDeleteLine()
+    {
+        QVERIFY(runLua(qsl("createMiniConsole('caretEmptied', 0, 0, 300, 100)\nclearWindow('caretEmptied')\ndeleteLine('caretEmptied')")));
+        TConsole* pMini = mpHost->mpConsole->subConsoleWidget(qsl("caretEmptied"));
+        QVERIFY(pMini);
+        QVERIFY(pMini->buffer.lineBuffer.isEmpty());
+        TTextEdit* pMiniPane = pMini->mUpperPane;
+
+        press(pMiniPane, Qt::Key_Down);
+        press(pMiniPane, Qt::Key_Right);
+        press(pMiniPane, Qt::Key_End);
+        press(pMiniPane, Qt::Key_End, Qt::ControlModifier);
+
+        QCOMPARE(pMiniPane->mCaretLine, 0);
+        QCOMPARE(pMiniPane->mCaretColumn, 0);
+    }
+
+    // deleteLine() does not move the caret, so deleting lines above it can leave
+    // it below the last line of the buffer
+    void test_caretKeysAfterDeleteLineShortensTheBufferPastTheCaret()
+    {
+        QVERIFY(runLua(qsl("createMiniConsole('caretShortened', 0, 0, 300, 100)\nfor i = 1, 10 do echo('caretShortened', 'line ' .. i .. '\\n') end")));
+        TConsole* pMini = mpHost->mpConsole->subConsoleWidget(qsl("caretShortened"));
+        QVERIFY(pMini);
+        TTextEdit* pMiniPane = pMini->mUpperPane;
+        pMiniPane->setCaretPosition(9, 2);
+
+        QVERIFY(runLua(qsl("for i = 1, 8 do moveCursor('caretShortened', 0, 1) deleteLine('caretShortened') end")));
+        QCOMPARE(pMini->buffer.lineBuffer, QStringList({qsl("line 1"), qsl("line 10"), QString()}));
+        QCOMPARE(pMiniPane->mCaretLine, 9);
+
+        // Back on the last line with text, as turning caret mode on would put it
+        press(pMiniPane, Qt::Key_Right);
+        QCOMPARE(pMiniPane->mCaretLine, 1);
+        QCOMPARE(pMiniPane->mCaretColumn, 1);
+        press(pMiniPane, Qt::Key_End);
+        QCOMPARE(pMiniPane->mCaretLine, 1);
+        QCOMPARE(pMiniPane->mCaretColumn, 6);
+    }
+
+    // Deleting the only line of text leaves just the trailing empty line, which
+    // Ctrl+End skipped past to line -1
+    void test_ctrlEndOnAConsoleLeftWithOnlyItsTrailingLine()
+    {
+        QVERIFY(runLua(qsl("createMiniConsole('caretTrailing', 0, 0, 300, 100)\necho('caretTrailing', 'only\\n')\nmoveCursor('caretTrailing', 0, 0)\ndeleteLine('caretTrailing')")));
+        TConsole* pMini = mpHost->mpConsole->subConsoleWidget(qsl("caretTrailing"));
+        QVERIFY(pMini);
+        QCOMPARE(pMini->buffer.lineBuffer, QStringList({QString()}));
+        TTextEdit* pMiniPane = pMini->mUpperPane;
+
+        press(pMiniPane, Qt::Key_End, Qt::ControlModifier);
+
+        QCOMPARE(pMiniPane->mCaretLine, 0);
+        QCOMPARE(pMiniPane->mCaretColumn, 0);
+    }
 };
 
 #include "CaretNavigationTest.moc"
