@@ -2059,24 +2059,6 @@ bool TMainConsole::setWindowScrolling(const QString& name, bool enabled)
     return true;
 }
 
-std::optional<bool> TMainConsole::getWindowScrolling(const QString& name)
-{
-    auto pC = consoleNamed(name);
-    if (!pC) {
-        return {};
-    }
-    return {pC->getScrolling()};
-}
-
-std::optional<int> TMainConsole::getWindowScroll(const QString& name)
-{
-    auto pC = consoleNamed(name);
-    if (!pC) {
-        return {};
-    }
-    return {std::max(std::min(pC->mUpperPane->mCursorY, pC->getLastLineNumber()), 0)};
-}
-
 bool TMainConsole::scrollWindowTo(const QString& name, int line, bool toEnd)
 {
     auto pC = consoleNamed(name);
