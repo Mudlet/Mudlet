@@ -190,6 +190,7 @@ public:
 
 
 private:
+    void calcCustomLineBounds();
     void setPlanarExit(int&, const int);
     void refreshLodExitIndex();
 
