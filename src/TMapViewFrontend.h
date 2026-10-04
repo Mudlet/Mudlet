@@ -58,6 +58,9 @@ public:
     virtual bool showing3DView() const = 0;
     // Builds the 3D view afresh, for a change of 3D renderer to take effect.
     virtual void recreate3DView() = 0;
+    // Only the modern 3D renderer has a camera to move; with the legacy one these do nothing.
+    virtual void shift3DViewCamera(float verticalAngle, float horizontalAngle, float rotationAngle) = 0;
+    virtual void set3DViewCameraPosition(float r, float theta, float phi) = 0;
 
 protected:
     // The mapper is a widget whose Qt parent deletes it, so nothing deletes it through this interface.
