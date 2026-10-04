@@ -218,8 +218,6 @@ public:
     std::optional<bool> removeCommandLineMenuItem(const QString& name, const QString& label) override;
     bool setCommandLineSavesHistory(const QString& name, bool savesHistory) override;
     bool setCommandLineVisible(const QString& name, bool visible) override;
-    // Also used by Host to announce a log change for a view not yet built
-    static QString loggingAnnouncementText(const bool isLogging, const QString& logFileName);
     bool setWindowScrollBarVisible(const QString& name, bool visible) override;
     bool setWindowHorizontalScrollBarVisible(const QString& name, bool visible) override;
     bool setWindowScrolling(const QString& name, bool enabled) override;
