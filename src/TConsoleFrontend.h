@@ -20,6 +20,8 @@
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
 
+#include "TConsoleModel.h"
+
 #include <QFont>
 
 #include <list>
@@ -280,6 +282,30 @@ public:
     // raised flag to lower. Both do nothing for a name with no dock.
     virtual void setDockLayoutChanged(const QString& name) = 0;
     virtual bool clearDockLayoutChanged(const QString& name) = 0;
+
+    // The view's part of Host::printOnDisplay(). startIncomingText() starts timing the pass for the latency
+    // box and answers whether new text should alert the player: true before this console is first shown, and
+    // from its being hidden, with Mudlet minimized and the profile asking for alerts, until it is shown again.
+    virtual bool startIncomingText() = 0;
+    // Asks the desktop to draw the player's attention to Mudlet's window until it is next activated.
+    virtual void alertNewData() = 0;
+    // Ends the timing, schedules the paced latency box refresh and has the profile's tab marked for new text,
+    // which shows only while another profile's tab is the active one and Mudlet is not in multi-view.
+    virtual void finishIncomingText() = 0;
+    // Does what showNewLines() does, for the end of a batch of incoming text.
+    virtual void finalize() = 0;
+
+    // Repaint cues for text written to this console's model: showNewLines() for lines appended to it (a view
+    // scrolled back stays where it is), showCommandEcho() for what TConsoleModel::printCommand() did and
+    // markSelectionDirty() for the lines the selection covers, after their text changed in place.
+    virtual void showNewLines() = 0;
+    virtual void showCommandEcho(const TConsoleModel::CommandEcho& echo) = 0;
+    virtual void markSelectionDirty() = 0;
+    // Re-applies this console's font to its text and redraws all of it.
+    virtual void refreshView() const = 0;
+    // Schedules a repaint after a command echo, skipped once the mapper drawing the map has made a 3D view
+    // (even if it has since gone back to 2D) or, in builds without one, while there is any mapper.
+    virtual void requestRepaintAfterCommand() = 0;
 
 protected:
     // The view is a widget whose owner deletes it as one, so nothing deletes it through this interface.
