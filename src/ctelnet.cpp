@@ -1092,7 +1092,7 @@ void cTelnet::slot_socketDisconnected()
     }
 
     postData();
-    if (mpHost->mainConsoleView()) {
+    if (mpHost->consoleFrontend()) {
         // A line held back for server-wrap undoing is complete now that the
         // connection is gone - commit it before the disconnect messages:
         mpHost->mainConsoleModel().buffer.flushPendingServerWrapJoin();
@@ -1884,7 +1884,7 @@ void cTelnet::sendCurrentNAWS()
     }
     // Use the smaller of the screen width or the wrapAt, then subtract the
     // width of the time stamps if they are drawn - with no view they are not:
-    const bool gutterDrawn = pHost->mainConsoleView() && pHost->mainConsoleShowsTimeStamps();
+    const bool gutterDrawn = pHost->consoleFrontend() && pHost->mainConsoleShowsTimeStamps();
     int naws_x = std::min(pHost->mScreenWidth, pHost->mWrapAt) - (gutterDrawn ? TBuffer::smTimeStampFormat.size() : 0);
     int naws_y = pHost->mScreenHeight;
     if ((naws_y > 0) && (myOptionState.test(static_cast<size_t>(OPT_NAWS))) && ((mNaws_x != naws_x) || (mNaws_y != naws_y))) {
@@ -5020,7 +5020,7 @@ void cTelnet::postMessage(QString msg)
 {
     messageStack.append(msg);
 
-    if (!mpHost || mpHost->isClosingDown() || !mpHost->mainConsoleView()) {
+    if (!mpHost || mpHost->isClosingDown() || !mpHost->consoleFrontend()) {
         // Console doesn't exist (yet), or Host is shutting down; stack up
         // messages until it does (or they are dumped out by the destructor)...
         return;
@@ -5298,14 +5298,14 @@ void cTelnet::slot_timerPosting()
     postData();
     mMudData = "";
     mIsTimerPosting = false;
-    if (mpHost && mpHost->mainConsoleView()) {
+    if (mpHost && mpHost->consoleFrontend()) {
         mpHost->finalizeMainConsole();
     }
 }
 
 void cTelnet::postData()
 {
-    if (!mpHost || mpHost->isClosingDown() || !mpHost->mainConsoleView()) {
+    if (!mpHost || mpHost->isClosingDown() || !mpHost->consoleFrontend()) {
         return;
     }
 
@@ -5727,7 +5727,7 @@ void cTelnet::slot_processReplayChunk()
         gotRest(cleandata);
     }
 
-    if (mpHost && mpHost->mainConsoleView()) {
+    if (mpHost && mpHost->consoleFrontend()) {
         mpHost->finalizeMainConsole();
     }
     if (loadingReplay) {
@@ -6100,7 +6100,7 @@ Some data loss is likely - please mention this problem to the game admins.)",
         return;
     }
 
-    if (mpHost && mpHost->mainConsoleView()) {
+    if (mpHost && mpHost->consoleFrontend()) {
         mpHost->finalizeMainConsole();
     }
 
