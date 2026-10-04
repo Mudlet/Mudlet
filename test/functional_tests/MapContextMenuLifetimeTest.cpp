@@ -308,6 +308,8 @@ private slots:
             return nullptr;
         }
         showMapper();
+        // An accepted dialog is only deleted later, and findChild must not hand back the last case's
+        qDeleteAll(mp2dMap->findChildren<QDialog*>(qsl("custom_line_properties")));
         mp2dMap->mCustomLineSelectedRoom = kEastRoomId;
         mp2dMap->mCustomLineSelectedExit = kLineExit;
         mp2dMap->slot_customLineProperties();
@@ -344,6 +346,24 @@ private slots:
         QVERIFY(!pRoom->customLinesArrow.contains(kLineExit));
         QVERIFY(!pRoom->customLinesStyle.contains(kLineExit));
         QVERIFY(!pRoom->customLinesColor.contains(kLineExit));
+    }
+
+    void test_acceptingLinePropertiesAfterAnotherMapIsLoadedDoesNothing()
+    {
+        QPointer<QDialog> dialog = openTheLinePropertiesDialog();
+        QVERIFY2(dialog, "no line properties dialog was opened");
+        auto* arrow = dialog->findChild<QCheckBox*>(qsl("arrow"));
+        QVERIFY(arrow);
+        arrow->setChecked(true);
+        // The same room id with the same line, but in a map loaded since
+        buildMap();
+        QVERIFY(addLineToTheEastRoom());
+
+        dialog->accept();
+
+        const TRoom* pRoom = map()->mpRoomDB->getRoom(kEastRoomId);
+        QVERIFY(pRoom);
+        QVERIFY(!pRoom->customLinesArrow.value(kLineExit));
     }
 
     void test_acceptingLinePropertiesAppliesThem()
