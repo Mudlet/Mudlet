@@ -315,7 +315,6 @@ int compSign(int a, int b)
 // reason why it cannot.
 QString TMap::connectExitStubByDirection(const int fromRoomId, const int dirType)
 {
-    Q_ASSERT_X(scmUnitVectors.contains(dirType), "TMap::connectExitStubByDirection(...)", "there is no unitVector.value() for the given dirType");
     Q_ASSERT_X(scmReverseDirections.contains(dirType), "TMap::connectExitStubByDirection(...)", "there is no scmReverseDirections.value() for the given dirType");
 
     TRoom* pFromR = mpRoomDB->getRoom(fromRoomId);
@@ -333,6 +332,7 @@ QString TMap::connectExitStubByDirection(const int fromRoomId, const int dirType
     }
 
     const int reverseDir = scmReverseDirections.value(dirType);
+    // In and out have no unit vector, and the zero vector they get here matches a room at the same coordinates
     const QVector3D unitVector = scmUnitVectors.value(dirType);
     // QVector3D is composed of floating point values so we need to round them
     // if we want to assign them to integral variables without compiler warnings!

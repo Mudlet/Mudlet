@@ -1286,6 +1286,32 @@ describe("Tests mapper functions against a shared fixture", function()
       end
     end)
 
+    it("connectExitStub weighs a direction code from 2 to 11 against a room with that ID", function()
+      local east = 4
+      if not roomExists(east) then
+        addRoom(east); setRoomArea(east, areaAlpha)
+        finally(function() deleteRoom(east) end)
+      end
+      local a = createRoomID(); addRoom(a); setRoomArea(a, areaAlpha)
+      finally(function() deleteRoom(a) end)
+      setExitStub(a, east, true)
+      local ok, err = connectExitStub(a, east)
+      assert.is_nil(ok)
+      assert.is_truthy(err:find("too ambiguous", 1, true), err)
+    end)
+
+    it("connectExitStub given in joins the room at the same position with an out stub", function()
+      local area = addAreaName("connectExitStub in")
+      finally(function() deleteArea(area) end)
+      local a = createRoomID(); addRoom(a); setRoomArea(a, area); setRoomCoordinates(a, 0, 0, 0)
+      local b = createRoomID(); addRoom(b); setRoomArea(b, area); setRoomCoordinates(b, 0, 0, 0)
+      setExitStub(a, "in", true)
+      setExitStub(b, "out", true)
+      assert.is_true(connectExitStub(a, "in"))
+      assert.are.equal(b, getRoomExits(a)["in"])
+      assert.are.equal(a, getRoomExits(b)["out"])
+    end)
+
     it("connectExitStub given only a target joins the one pair of facing stubs", function()
       local a, b = stubPair("up", "down")
       assert.is_true(connectExitStub(a, b))
