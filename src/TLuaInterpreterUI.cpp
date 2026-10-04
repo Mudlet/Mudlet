@@ -1697,11 +1697,11 @@ int TLuaInterpreter::getMousePosition(lua_State* L)
 {
     const Host& host = getHostFromLua(L);
 
-    if (!host.mpConsole) {
+    if (!host.consoleFrontend()) {
         return warnArgumentValue(L, __func__, no_main_window_value);
     }
 
-    const QPoint pos = host.mpConsole->mousePosition();
+    const QPoint pos = host.consoleFrontend()->mousePosition();
 
     lua_pushnumber(L, pos.x());
     lua_pushnumber(L, pos.y());
@@ -2029,7 +2029,7 @@ int TLuaInterpreter::getWindowWrap(lua_State* L)
 int TLuaInterpreter::hasFocus(lua_State* L)
 {
     const Host& host = getHostFromLua(L);
-    lua_pushboolean(L, host.mpConsole && host.mpConsole->hasKeyboardFocus()); //FIXME
+    lua_pushboolean(L, host.consoleFrontend() && host.consoleFrontend()->hasKeyboardFocus()); //FIXME
     return 1;
 }
 

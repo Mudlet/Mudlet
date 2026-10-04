@@ -548,7 +548,7 @@ bool Host::requestClose()
     // This call ends up at the (void) TMainConsole::closeEvent(...) and causes
     // the requestClose() method called here to return a true if the event was
     // accepted:
-    if (!mpConsole->requestClose()) {
+    if (!consoleFrontend()->requestClose()) {
         // Nope the user doesn't want this to close - and it won't have set its
         // mEnableClose flag:
         return false;
@@ -561,7 +561,7 @@ bool Host::requestClose()
     closeChildren();
 
     // This time this will succeed as mEnableClose is set:
-    mpConsole->requestClose();
+    consoleFrontend()->requestClose();
     return true;
 }
 
@@ -1140,7 +1140,7 @@ void Host::resetProfile_phase2()
     mTriggerUnit.doCleanup();
     mKeyUnit.doCleanup();
     mActionUnit.doCleanup();
-    mpConsole->resetMainConsole();
+    consoleFrontend()->resetMainConsole();
     // Drain queued DeferredDelete events so old labels' models run their
     // luaL_unref against the still-live Lua state. Without this, those unrefs
     // execute after initLuaGlobals() has swapped in a new state and corrupt
@@ -2261,7 +2261,7 @@ void Host::setF3SearchEnabled(const bool enabled)
 {
     mF3SearchEnabled = enabled;
     if (mpConsole) {
-        mpConsole->setF3SearchEnabled(enabled);
+        consoleFrontend()->setF3SearchEnabled(enabled);
     }
 }
 
@@ -4767,7 +4767,7 @@ void Host::setName(const QString& name)
 
     if (mpConsole) {
         // If skipped it will be taken care of in the TMainConsole constructor:
-        mpConsole->setProfileName(name);
+        consoleFrontend()->setProfileName(name);
     }
 }
 
@@ -5071,7 +5071,7 @@ void Host::setCompactInputLine(const bool state)
         // yet - so must check for it existing first - and ensure the read
         // setting is applied in the constructor for it:
         if (mpConsole) {
-            mpConsole->setCompactInputLine(state);
+            consoleFrontend()->setCompactInputLine(state);
         }
         raiseSettingChangedEvent(qsl("compactInputLine"), state);
     }
@@ -6405,7 +6405,7 @@ bool Host::caretEnabled() const
 void Host::setCaretEnabled(bool enabled)
 {
     mCaretEnabled = enabled;
-    mpConsole->setCaretMode(enabled);
+    consoleFrontend()->setCaretMode(enabled);
 }
 
 // Whether this key press is the one selected in the accessibility preferences

@@ -29,6 +29,7 @@
 #include <utility>
 
 class QColor;
+class QPoint;
 class QRect;
 class QSize;
 class QString;
@@ -306,6 +307,29 @@ public:
     // Schedules a repaint after a command echo, skipped once the mapper drawing the map has made a 3D view
     // (even if it has since gone back to 2D) or, in builds without one, while there is any mapper.
     virtual void requestRepaintAfterCommand() = 0;
+
+    // Raises sysExitEvent, then saves the profile and map if it always saves on exit or its close is forced,
+    // else asks the player whether to save. False when the player cancels; once a close has been accepted,
+    // a later one is accepted at once, with no event, save or prompt.
+    virtual bool requestClose() = 0;
+    // For a profile reset: takes every sub-console (a user window with its dock), command line, label, scroll
+    // box and text box out of the window registry and deletes each once control returns to the event loop.
+    virtual void resetMainConsole() = 0;
+    // Gives this console and each of its sub-consoles the profile's new name.
+    virtual void setProfileName(const QString&) = 0;
+    // Adds or removes the F3 / Shift+F3 buffer search keys; adding them warns the profile of any add-on
+    // command that already holds either key.
+    virtual void setF3SearchEnabled(bool enabled) = 0;
+    // Hides the button row beside the command line when true, shows it when false.
+    virtual void setCompactInputLine(bool state) = 0;
+    // Caret navigation of the text: on moves keyboard focus to it, grabbing the keyboard on Windows and Linux;
+    // off releases that and makes the command line its focus proxy again.
+    virtual void setCaretMode(bool enabled) = 0;
+    // The mouse pointer's position relative to this console's top-left corner, so it can lie outside it.
+    virtual QPoint mousePosition() const = 0;
+    // True while keyboard focus is on this console's focus proxy, normally its own command line, so false
+    // while it is on the text, as in caret navigation, or in another window.
+    virtual bool hasKeyboardFocus() const = 0;
 
 protected:
     // The view is a widget whose owner deletes it as one, so nothing deletes it through this interface.
