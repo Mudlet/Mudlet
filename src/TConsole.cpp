@@ -229,6 +229,7 @@ TConsole::TConsole(Host* pH, const QString& name, const ConsoleType type, QWidge
 , mpBufferSearchUp(new QToolButton)
 , mpBufferSearchDown(new QToolButton)
 , mCurrentSearchResult(mpModel->mCurrentSearchResult)
+, mScrollBarEnabled(mpModel->mScrollBarEnabled)
 , mControlCharacter(pH->getControlCharacterMode())
 , mType(type)
 , mScrollingEnabled(mpModel->mScrollingEnabled)
@@ -1825,15 +1826,6 @@ void TConsole::setScrollBarVisible(bool isVisible)
         mScrollBarEnabled = isVisible;
         mpScrollBar->setVisible(isVisible);
     }
-}
-
-// Reports what enableScrollBar()/disableScrollBar() last asked for rather than
-// QWidget::isVisible(): a profile that is not the front tab has its whole
-// console hidden, which would otherwise make every background profile report
-// its scroll bar as gone.
-bool TConsole::getScrollBarVisible() const
-{
-    return mScrollBarEnabled;
 }
 
 void TConsole::setHorizontalScrollBar(bool isEnabled)

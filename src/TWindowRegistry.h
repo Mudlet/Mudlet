@@ -20,6 +20,7 @@
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
 
+#include <QFont>
 #include <QMap>
 #include <QRect>
 #include <QSet>
@@ -192,7 +193,7 @@ public:
     void setMainWindowSize(const QSize& size) { mMainWindowSize = size; }
     QSize mainWindowSize() const { return mMainWindowSize; }
 
-    // Name only, bar a command line's text and style sheet: core asks just whether a name exists and its kind.
+    // Name only, bar command line and text box state: core asks just whether a name exists and its kind.
     // Three containers as the name spaces are independent; a name in several resolves in declaration order.
     void registerScrollBox(const QString& name) { mScrollBoxes.insert(name); }
     void deregisterScrollBox(const QString& name)
@@ -244,14 +245,57 @@ public:
         }
         return {};
     }
+    // Written by the view as it creates a command line and each time a script sets it.
+    void setCommandLineSavesHistory(const QString& name, const bool savesHistory)
+    {
+        if (auto it = mCommandLines.find(name); it != mCommandLines.end()) {
+            it->savesHistory = savesHistory;
+        }
+    }
+    void setMainCommandLineSavesHistory(const bool savesHistory) { mMainCommandLine.savesHistory = savesHistory; }
+    // Names resolve as for commandLineText().
+    std::optional<bool> commandLineSavesHistory(const QString& name) const
+    {
+        if (const CommandLineEntry* pEntry = commandLine(name)) {
+            return pEntry->savesHistory;
+        }
+        return {};
+    }
 
-    void registerTextBox(const QString& name) { mTextBoxes.insert(name); }
+    void registerTextBox(const QString& name) { mTextBoxes.insert(name, TextBoxEntry()); }
     void deregisterTextBox(const QString& name)
     {
         mTextBoxes.remove(name);
         forgetPlainWindowState(name);
     }
     bool hasTextBox(const QString& name) const { return mTextBoxes.contains(name); }
+    // The view pushes every change, a style sheet's font included, so script edits read back synchronously.
+    void setTextBoxText(const QString& name, const QString& text)
+    {
+        if (auto it = mTextBoxes.find(name); it != mTextBoxes.end()) {
+            it->text = text;
+        }
+    }
+    std::optional<QString> textBoxText(const QString& name) const
+    {
+        if (auto it = mTextBoxes.constFind(name); it != mTextBoxes.cend()) {
+            return it->text;
+        }
+        return {};
+    }
+    void setTextBoxFont(const QString& name, const QFont& font)
+    {
+        if (auto it = mTextBoxes.find(name); it != mTextBoxes.end()) {
+            it->font = font;
+        }
+    }
+    std::optional<QFont> textBoxFont(const QString& name) const
+    {
+        if (auto it = mTextBoxes.constFind(name); it != mTextBoxes.cend()) {
+            return it->font;
+        }
+        return {};
+    }
 
     bool hasPlainWindow(const QString& name) const { return hasScrollBox(name) || hasCommandLine(name) || hasTextBox(name); }
 
@@ -319,6 +363,13 @@ private:
     {
         QString text;
         QString styleSheet;
+        bool savesHistory = true;
+    };
+
+    struct TextBoxEntry
+    {
+        QString text;
+        QFont font;
     };
 
     const CommandLineEntry* commandLine(const QString& name) const
@@ -338,7 +389,7 @@ private:
     mutable QMap<QString, QSize> mAnsweredUserWindowSizes;
     QSet<QString> mScrollBoxes;
     QMap<QString, CommandLineEntry> mCommandLines;
-    QSet<QString> mTextBoxes;
+    QMap<QString, TextBoxEntry> mTextBoxes;
     QSize mMainWindowSize;
     CommandLineEntry mMainCommandLine;
     QMap<QString, PlainWindowState> mPlainWindowStates;

@@ -680,9 +680,15 @@ public:
     std::optional<int> windowScroll(const QString& name) const;
     // Whether a console scrolls; {} for no such console.
     std::optional<bool> windowScrolling(const QString& name) const;
+    // Whether a script last asked for a console's scroll bar; {} for no such console.
+    std::optional<bool> windowScrollBarVisible(const QString& name) const;
     // {} for no such command line.
     std::optional<QString> commandLineText(const QString& name) const;
     std::optional<QString> commandLineStyleSheet(const QString& name) const;
+    std::optional<bool> commandLineSavesHistory(const QString& name) const;
+    // {} for no such text box.
+    std::optional<QString> textBoxText(const QString& name) const;
+    std::optional<QFont> textBoxFont(const QString& name) const;
     // {} without a main console.
     std::optional<QColor> borderColor() const;
     // The main console answers the profile's display font; {} for no such console.
