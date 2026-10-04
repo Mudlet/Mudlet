@@ -25,9 +25,9 @@
  * HeadlessVersionTest does for the options main() answers. A GUI start hands the
  * TLS warm-up to a thread, and a second Mudlet - opened for a telnet:// link or
  * a package while one is already running - forwards that to the running one and
- * leaves main() moments later, with the warm-up still in flight. Leaving is where
- * static destruction takes Qt's TLS backend mutex and its library store out from
- * under it: "QMutex: destroying locked mutex", then a crash inside freed plugin
+ * leaves main() moments later, with the warm-up still in flight. Unjoined, leaving
+ * is where static destruction takes Qt's TLS backend mutex and its library store
+ * out from under it: "QMutex: destroying locked mutex", then a crash inside freed plugin
  * machinery. This test plays the running instance and has the child forward a
  * telnet:// link to it. Nothing on that path writes to the config root; the
  * sandbox below is for what it reads.
@@ -61,7 +61,7 @@ private:
     static constexpr int scmRunCount = 8;
     static constexpr int scmStartTimeoutMs = 10000;
     static constexpr int scmFinishTimeoutMs = 20000;
-    // MudletInstanceCoordinator's server name in main()
+    // Must match the name main() gives MudletInstanceCoordinator
     static constexpr QLatin1StringView scmInstanceServerName{"MudletInstanceCoordinator"};
     static constexpr QLatin1StringView scmTelnetUri{"telnet://localhost:1"};
 
@@ -132,7 +132,11 @@ private slots:
             environment.insert(qsl("XDG_DATA_HOME"), qsl("%1/data").arg(sandbox.path()));
             // Keeps a WITH_SENTRY build's crashpad database out of the real cache
             environment.insert(qsl("XDG_CACHE_HOME"), qsl("%1/cache").arg(sandbox.path()));
-            environment.insert(qsl("TMPDIR"), qsl("%1/tmp").arg(sandbox.path()));
+            // TMPDIR is what Qt reads on Unix, TMP and TEMP on Windows, where
+            // runUpdate() would otherwise launch a pending installer from the real one
+            for (const QString& variable : {qsl("TMPDIR"), qsl("TMP"), qsl("TEMP")}) {
+                environment.insert(variable, qsl("%1/tmp").arg(sandbox.path()));
+            }
             environment.insert(qsl("QT_QPA_PLATFORM"), qsl("offscreen"));
             environment.insert(qsl("MUDLET_TEST_MODE"), qsl("1"));
             // Has Qt log every plugin directory it searches, so the run below
@@ -156,9 +160,9 @@ private slots:
 
             const QString where = qsl("run %1 of %2").arg(QString::number(run), QString::number(scmRunCount));
             QVERIFY2(mudlet.waitForStarted(scmStartTimeoutMs), qPrintable(qsl("%1: %2").arg(where, mudlet.errorString())));
-            // Not waitForFinished(): the stand-in only answers while events are processed
+            // Not waitForFinished(): the stand-in only accepts the child's connections while events are processed
             QTRY_VERIFY2_WITH_TIMEOUT(mudlet.state() == QProcess::NotRunning,
-                                      qPrintable(qsl("%1: the child never finished, so it did not leave through the forwarding return and is running as a first instance").arg(where)),
+                                      qPrintable(qsl("%1: the child never finished, so it did not leave through the forwarding return and is running as an instance of its own").arg(where)),
                                       scmFinishTimeoutMs);
 
             const QString output = QString::fromUtf8(mudlet.readAllStandardOutput());
