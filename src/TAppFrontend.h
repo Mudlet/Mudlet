@@ -68,6 +68,8 @@ public:
     virtual bool openProfile(const QString& profileName, bool connect) = 0;
     // Asks the profile's tab to close, as its close button does; false if it has no tab.
     virtual bool requestProfileTabClose(const QString& profileName) = 0;
+    // Re-lays out the active profile's console from a short timer, e.g. after a toolbar is shown or hidden.
+    virtual void processEventLoopHack() = 0;
 
     // Surfaces a command can be placed on. A client with different chrome maps
     // these onto whatever it has; one that has only a menu honours Menu alone.

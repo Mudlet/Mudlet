@@ -1130,9 +1130,9 @@ int main(int argc, char* argv[])
         splash.finish(mudlet::self());
     }
 
-    mudlet::smMirrorToStdOut = parser.isSet(mirrorToStdout);
+    MudletApp::smMirrorToStdOut = parser.isSet(mirrorToStdout);
 #ifndef Q_OS_WINDOWS
-    if (mudlet::smMirrorToStdOut) {
+    if (MudletApp::smMirrorToStdOut) {
         // Without this a reader that exits first - `mudlet --mirror | head` -
         // kills Mudlet mid-session on the next line it copies; TConsole::
         // mirrorToStdOut() turns the write failure into a warning instead.

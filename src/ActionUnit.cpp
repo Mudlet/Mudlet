@@ -26,8 +26,8 @@
 
 #include "Host.h"
 #include "TAction.h"
+#include "TAppFrontend.h"
 #include "Tree.h"
-#include "mudlet.h"
 #include "TMainConsole.h"
 #include "utils.h"
 
@@ -409,7 +409,9 @@ std::pair<bool, QString> ActionUnit::setToolBarActive(const QString& name, const
     if (found) {
         updateAllToolbars();
     }
-    mudlet::self()->processEventLoopHack();
+    if (auto* pFrontend = TAppFrontend::instance()) {
+        pFrontend->processEventLoopHack();
+    }
     if (found) {
         return {true, QString()};
     }

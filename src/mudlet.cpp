@@ -1394,6 +1394,13 @@ mudlet::mudlet()
     // down with the main window's other children
     mpSpeechBridge = new TSpeechBridge(this);
     connect(mpSpeechBridge, &TSpeechBridge::microphoneOwnerChanged, this, &mudlet::refreshMicrophoneMarkers);
+    // Queued, so a tab change before the event loop first runs - while a test or startup is still
+    // building profiles - does not reach Discord, which also only starts polling then.
+    QTimer::singleShot(0ms, this, [this]() {
+        if (mDiscord.libraryLoaded()) {
+            connect(this, &mudlet::signal_tabChanged, &mDiscord, &Discord::UpdatePresence);
+        }
+    });
     // Initialisation happens later in setupConfig() and init()
 }
 

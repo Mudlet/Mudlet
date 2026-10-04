@@ -129,9 +129,6 @@ public:
     inline static QPointer<TConsole> smpDebugConsole;
     inline static QPointer<QMainWindow> smpDebugArea;
     inline static QPointer<TDebugFilterBar> smpDebugFilterBar;
-    // --mirror: copy each shown console line to stdout, for CI. Main console game text is copied on
-    // arrival, before a trigger can gag or rewrite it; print()/echo() output from any console too.
-    inline static bool smMirrorToStdOut = false;
     // adjust Mudlet settings to match Steam's requirements
     inline static bool smSteamMode = false;
 
@@ -211,7 +208,7 @@ public:
     bool hasOrphanedProfiles();
     QStringList getOrphanedProfiles();
     void reattachOrphanedProfiles();
-    void processEventLoopHack();
+    void processEventLoopHack() override;
     void readEarlySettings(const QSettings&);
     void readLateSettings(const QSettings&);
     void refreshTabBar();
