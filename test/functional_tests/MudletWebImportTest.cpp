@@ -43,8 +43,10 @@ private:
     QString profilesPath() const { return mRoot.filePath(qsl("profiles")); }
     QString archivePath() const { return mRoot.filePath(qsl("export.zip")); }
 
-    static bool writeArchive(const QString& path, const QList<QPair<QString, QByteArray>>& entries)
+    // Every entry is dated alike, as Mudlet Web dates an export, unless given a time of its own
+    static bool writeArchive(const QString& path, const QList<QPair<QString, QByteArray>>& entries, const QHash<QString, QDateTime>& modified = {})
     {
+        const QDateTime exported(QDate(2026, 10, 4), QTime(12, 0));
         int errorCode = 0;
         zip* archive = zip_open(path.toUtf8().constData(), ZIP_CREATE | ZIP_TRUNCATE, &errorCode);
         if (!archive) {
@@ -52,13 +54,32 @@ private:
         }
         for (const auto& [name, contents] : entries) {
             zip_source* source = zip_source_buffer(archive, contents.constData(), contents.size(), 0);
-            if (!source || zip_file_add(archive, name.toUtf8().constData(), source, ZIP_FL_ENC_UTF_8) < 0) {
+            const zip_int64_t index = source ? zip_file_add(archive, name.toUtf8().constData(), source, ZIP_FL_ENC_UTF_8) : -1;
+            // Stored, so that damage() can find an entry's bytes
+            if (index < 0 || zip_set_file_compression(archive, static_cast<zip_uint64_t>(index), ZIP_CM_STORE, 0) != 0
+                || zip_file_set_mtime(archive, static_cast<zip_uint64_t>(index), static_cast<time_t>(modified.value(name, exported).toSecsSinceEpoch()), 0) != 0) {
                 zip_source_free(source);
                 zip_discard(archive);
                 return false;
             }
         }
         return zip_close(archive) == 0;
+    }
+
+    // Changes an entry's data but not its checksum, so reading it fails partway
+    static bool damage(const QString& path, const QByteArray& marker)
+    {
+        QFile file(path);
+        if (!file.open(QIODevice::ReadWrite)) {
+            return false;
+        }
+        QByteArray bytes = file.readAll();
+        const qsizetype at = bytes.indexOf(marker);
+        if (at < 0) {
+            return false;
+        }
+        bytes[at] = bytes.at(at) == 'X' ? 'Y' : 'X';
+        return file.seek(0) && file.write(bytes) == bytes.size();
     }
 
     static QByteArray profileItem(const QString& text)
@@ -173,6 +194,33 @@ private slots:
         QCOMPARE(maps.constFirst(), qsl("2026-10-04#12-00-00map.dat"));
     }
 
+    void test_aSaveTheArchiveDatesLaterIsTheOneDesktopLoads()
+    {
+        // desktop's autosave, from a profile folder zipped by hand, can be newer than its last stamped save
+        QVERIFY(writeArchive(archivePath(),
+                             {{qsl("current/2026-10-04#12-00-00.xml"), save(qsl("stamped"))},
+                              {qsl("current/autosave.xml"), save(qsl("autosave"))},
+                              {qsl("map/2026-10-04#12-00-00map.dat"), QByteArray("stamped")},
+                              {qsl("map/autosave.dat"), QByteArray("autosave")}},
+                             {{qsl("current/autosave.xml"), QDateTime(QDate(2026, 10, 4), QTime(12, 30))}, {qsl("map/autosave.dat"), QDateTime(QDate(2026, 10, 4), QTime(12, 30))}}));
+
+        const auto result = MudletWebImport::importArchive(archivePath(), profilesPath());
+
+        QCOMPARE(result.profiles, QStringList{qsl("export")});
+        QCOMPARE(newestSave(profilesPath() + qsl("/export")), qsl("autosave.xml"));
+        QCOMPARE(QDir(profilesPath() + qsl("/export/map")).entryList(QDir::Files, QDir::Time).constFirst(), qsl("autosave.dat"));
+    }
+
+    void test_aNameWithAPercentSignKeepsIt()
+    {
+        QVERIFY(QDir().mkpath(profilesPath() + qsl("/50%2 off")));
+        QVERIFY(writeArchive(archivePath(), {{qsl("50%2 off/current/2026-10-04#12-00-00.xml"), save(qsl("fresh"))}}));
+
+        const auto result = MudletWebImport::importArchive(archivePath(), profilesPath());
+
+        QCOMPARE(result.profiles, QStringList{qsl("50%2 off (2)")});
+    }
+
     void test_anOlderExportTakesItsConnectionFromTheSidecar()
     {
         QVERIFY(writeArchive(archivePath(),
@@ -214,6 +262,57 @@ private slots:
         QVERIFY(!QFileInfo::exists(profilesPath() + qsl("/Web/url")));
     }
 
+    void test_aConnectionMadeBeforeModesIsAWebSocketOne()
+    {
+        QVERIFY(writeArchive(archivePath(),
+                             {{qsl("Web/current/2026-10-04#12-00-00.xml"), save(qsl("fresh"))},
+                              {qsl("Web/url"), profileItem(QString())},
+                              {qsl("Web/.mudlet/connection.json"), json({{qsl("url"), qsl("wss://example.org/ws")}})}}));
+
+        const auto result = MudletWebImport::importArchive(archivePath(), profilesPath());
+
+        QCOMPARE(result.profiles, QStringList{qsl("Web")});
+        QCOMPARE(result.warnings.filter(qsl("WebSocket")).size(), 1);
+    }
+
+    void test_aProfileWithoutAnAddressSaysSo()
+    {
+        QVERIFY(writeArchive(archivePath(),
+                             {{qsl("Bare/current/2026-10-04#12-00-00.xml"), save(qsl("fresh"))}, {qsl("Bare/.mudlet/connection.json"), json({{qsl("mode"), qsl("mud")}, {qsl("port"), 23}})}}));
+
+        const auto result = MudletWebImport::importArchive(archivePath(), profilesPath());
+
+        QCOMPARE(result.profiles, QStringList{qsl("Bare")});
+        QCOMPARE(result.warnings.filter(qsl("no server address")).size(), 1);
+    }
+
+    void test_aSaveThatWouldNotUnpackIsNotAdded()
+    {
+        QVERIFY(writeArchive(archivePath(),
+                             {{qsl("Broken/current/2026-10-04#12-00-00.xml"), save(qsl("damaged-save"))},
+                              {qsl("Broken/scripts/kept.lua"), QByteArray("fine")},
+                              {qsl("Fine/current/2026-10-04#12-00-00.xml"), save(qsl("fresh"))}}));
+        QVERIFY(damage(archivePath(), "damaged-save"));
+
+        const auto result = MudletWebImport::importArchive(archivePath(), profilesPath());
+
+        QCOMPARE(result.profiles, QStringList{qsl("Fine")});
+        QCOMPARE(result.warnings.filter(qsl("\"Broken\" was not added")).size(), 1);
+        QVERIFY(!QFileInfo::exists(profilesPath() + qsl("/Broken")));
+    }
+
+    void test_aSaveCutShortIsNotTheOneDesktopLoads()
+    {
+        QVERIFY(writeArchive(archivePath(), {{qsl("P/current/2026-10-04#12-00-00.xml"), save(qsl("damaged-save"))}, {qsl("P/current/2026-10-03#12-00-00.xml"), save(qsl("whole"))}}));
+        QVERIFY(damage(archivePath(), "damaged-save"));
+
+        const auto result = MudletWebImport::importArchive(archivePath(), profilesPath());
+
+        QCOMPARE(result.profiles, QStringList{qsl("P")});
+        QCOMPARE(result.warnings.filter(qsl("could not be written")).size(), 1);
+        QCOMPARE(QDir(profilesPath() + qsl("/P/current")).entryList(QDir::Files), QStringList{qsl("2026-10-03#12-00-00.xml")});
+    }
+
     void test_nothingLandsOutsideTheProfile()
     {
         QVERIFY(writeArchive(archivePath(),
@@ -225,7 +324,7 @@ private slots:
         const auto result = MudletWebImport::importArchive(archivePath(), profilesPath());
 
         QCOMPARE(result.profiles, QStringList{qsl("P")});
-        QCOMPARE(result.warnings.size(), 1);
+        QCOMPARE(result.warnings.filter(qsl("outside")).size(), 1);
         QVERIFY(QFileInfo::exists(profilesPath() + qsl("/P/scripts/kept.lua")));
         QVERIFY(!QFileInfo::exists(mRoot.filePath(qsl("escaped.txt"))));
         QVERIFY(!QFileInfo::exists(QFileInfo(mRoot.path()).absolutePath() + qsl("/escaped.txt")));

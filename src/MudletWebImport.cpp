@@ -26,10 +26,12 @@
 #include <QDateTime>
 #include <QDir>
 #include <QFileInfo>
+#include <QHash>
 #include <QJsonDocument>
 #include <QJsonObject>
 #include <QRegularExpression>
 #include <QSaveFile>
+#include <QScopeGuard>
 #include <QTemporaryDir>
 
 #include <algorithm>
@@ -42,6 +44,7 @@ struct Entry
     zip_uint64_t index = 0;
     zip_uint64_t size = 0;
     QString path;
+    QDateTime modified;
 };
 
 // Nothing in the archive may land outside the profile it belongs to
@@ -81,19 +84,37 @@ bool extractEntry(zip* archive, const Entry& entry, const QString& destination)
     if (!source) {
         return false;
     }
-    QFile file(destination);
-    bool ok = file.open(QIODevice::WriteOnly | QIODevice::Truncate);
+    // Nothing is left at the destination unless the whole entry made it: a cut-off
+    // save would otherwise be the one desktop loads
+    QSaveFile file(destination);
+    bool ok = file.open(QIODevice::WriteOnly);
     zip_uint64_t written = 0;
     char buffer[65536];
-    while (ok && written < entry.size) {
-        const zip_int64_t length = zip_fread(source, buffer, sizeof(buffer));
-        // A size the data falls short of reads as 0 from here on, not as an error
+    // Read to the end rather than to the size: libzip checks the data's CRC only there
+    for (zip_int64_t length = 0; ok && (length = zip_fread(source, buffer, sizeof(buffer))) != 0;) {
         ok = length > 0 && file.write(buffer, length) == length;
         written += ok ? static_cast<zip_uint64_t>(length) : 0;
     }
+    // Data that falls short of its stated size ends early rather than failing
+    ok = ok && written == entry.size;
     zip_fclose(source);
-    file.close();
-    return ok && file.error() == QFileDevice::NoError;
+    if (!ok) {
+        file.cancelWriting();
+    }
+    return file.commit() && ok;
+}
+
+QString readProfileItem(const QString& home, const QString& item)
+{
+    QFile file(qsl("%1/%2").arg(home, item));
+    if (!file.open(QIODevice::ReadOnly)) {
+        return {};
+    }
+    QDataStream stream(&file);
+    stream.setVersion(QDataStream::Qt_5_12);
+    QString value;
+    stream >> value;
+    return value;
 }
 
 QByteArray readEntry(zip* archive, const Entry& entry)
@@ -113,6 +134,13 @@ QByteArray readEntry(zip* archive, const Entry& entry)
     return length == static_cast<zip_int64_t>(entry.size) ? bytes : QByteArray();
 }
 
+// A connection made before Mudlet Web had a mode is a WebSocket one
+bool usesWebSocket(const QJsonObject& sidecar)
+{
+    const QString mode = sidecar.value(qsl("mode")).toString();
+    return mode == qsl("websocket") || (mode.isEmpty() && !sidecar.value(qsl("url")).toString().isEmpty());
+}
+
 // The same encoding MudletApp::writeProfileData() gives the files beside current/
 bool writeProfileItem(const QString& home, const QString& item, const QString& value)
 {
@@ -128,34 +156,45 @@ bool writeProfileItem(const QString& home, const QString& item, const QString& v
 
 // Mudlet Web exports from before it wrote desktop's own connection files carry
 // the connection only in its sidecar
-void writeConnectionFromSidecar(const QString& home, const QJsonObject& sidecar)
+// the connection only in its sidecar. Returns how many of its files could not be written.
+int writeConnectionFromSidecar(const QString& home, const QJsonObject& sidecar)
 {
     const auto checkState = [&sidecar](const char* key) {
         return QString::number(sidecar.value(QLatin1String(key)).toBool() ? Qt::Checked : Qt::Unchecked);
     };
-    if (sidecar.value(qsl("mode")).toString() != qsl("websocket")) {
+    QList<std::pair<QString, QString>> items;
+    if (!usesWebSocket(sidecar)) {
         if (const QString host = sidecar.value(qsl("host")).toString(); !host.isEmpty()) {
-            writeProfileItem(home, qsl("url"), host);
+            items.append({qsl("url"), host});
         }
         if (const int port = sidecar.value(qsl("port")).toInt(); port > 0 && port <= 65535) {
-            writeProfileItem(home, qsl("port"), QString::number(port));
+            items.append({qsl("port"), QString::number(port)});
         }
     }
-    writeProfileItem(home, qsl("login"), sidecar.value(qsl("charLoginAccount")).toString());
-    writeProfileItem(home, qsl("description"), sidecar.value(qsl("description")).toString());
-    writeProfileItem(home, qsl("autologin"), checkState("autoReconnect"));
-    writeProfileItem(home, qsl("autoreconnect"), checkState("reconnectOnDrop"));
-    writeProfileItem(home, qsl("ssl_tsl"), checkState("tls"));
+    items.append({qsl("login"), sidecar.value(qsl("charLoginAccount")).toString()});
+    items.append({qsl("description"), sidecar.value(qsl("description")).toString()});
+    items.append({qsl("autologin"), checkState("autoReconnect")});
+    items.append({qsl("autoreconnect"), checkState("reconnectOnDrop")});
+    items.append({qsl("ssl_tsl"), checkState("tls")});
+    return static_cast<int>(std::count_if(items.cbegin(), items.cend(), [&home](const auto& item) {
+        return !writeProfileItem(home, item.first, item.second);
+    }));
 }
 
 // Desktop loads the save and map with the newest modification time, and
-// extracting gives them all about the same one. Ordered by their time-stamped
-// names instead, which is when they were made; a save named by hand counts as older.
-void putNewestLast(const QString& folder, const QStringList& filters)
+// extracting gives them all about the same one. Ordered by when the archive says
+// each was last changed, and where it can't tell them apart - Mudlet Web dates
+// a whole export alike - by their time-stamped names; a save named by hand counts as older.
+void putNewestLast(const QString& folder, const QStringList& filters, const QHash<QString, QDateTime>& modified)
 {
     static const QRegularExpression stamped(qsl(R"(^\d{4}-\d{2}-\d{2}#\d{2}-\d{2}-\d{2})"));
     QFileInfoList files = QDir(folder).entryInfoList(filters, QDir::Files);
-    std::sort(files.begin(), files.end(), [](const QFileInfo& a, const QFileInfo& b) {
+    std::sort(files.begin(), files.end(), [&modified](const QFileInfo& a, const QFileInfo& b) {
+        const QDateTime aModified = modified.value(a.absoluteFilePath());
+        const QDateTime bModified = modified.value(b.absoluteFilePath());
+        if (aModified != bModified) {
+            return aModified < bModified;
+        }
         const bool aStamped = stamped.match(a.fileName()).hasMatch();
         const bool bStamped = stamped.match(b.fileName()).hasMatch();
         return aStamped != bStamped ? bStamped : a.fileName() < b.fileName();
@@ -173,7 +212,7 @@ QString freeName(const QString& wanted, const QStringList& takenLowerCase)
 {
     QString name = wanted;
     for (int n = 2; takenLowerCase.contains(name.toLower()); ++n) {
-        name = qsl("%1 (%2)").arg(wanted).arg(n);
+        name = qsl("%1 (%2)").arg(wanted, QString::number(n));
     }
     return name;
 }
@@ -213,7 +252,8 @@ MudletWebImport::Result MudletWebImport::importArchive(const QString& archivePat
             unsafeEntries = true;
             continue;
         }
-        entries.append({static_cast<zip_uint64_t>(i), stat.size, path});
+        const QDateTime modified = (stat.valid & ZIP_STAT_MTIME) ? QDateTime::fromSecsSinceEpoch(stat.mtime) : QDateTime();
+        entries.append({static_cast<zip_uint64_t>(i), stat.size, path, modified});
     }
 
     // A profile is a folder with a save in current/: one per folder at the top,
@@ -251,8 +291,9 @@ MudletWebImport::Result MudletWebImport::importArchive(const QString& archivePat
     }
 
     // Staged beside the profiles folder rather than in it, where the profile list
-    // would show a half-written profile, yet on the same disk so it moves in whole
-    QTemporaryDir staging(qsl("%1/mudlet-web-import-XXXXXX").arg(QFileInfo(profilesPath).absolutePath()));
+    // would show a half-written profile, yet on the same disk so it moves in whole:
+    // a profiles folder that is a link may lead to another disk
+    QTemporaryDir staging(qsl("%1/mudlet-web-import-XXXXXX").arg(QFileInfo(QFileInfo(profilesPath).canonicalFilePath()).absolutePath()));
     if (!staging.isValid()) {
         //: Shown when importing profiles fails. %1 is the reason.
         result.error = tr("Could not make room to unpack the profiles: %1").arg(staging.errorString());
@@ -276,6 +317,7 @@ MudletWebImport::Result MudletWebImport::importArchive(const QString& archivePat
 
         QByteArray sidecar;
         int unwritten = 0;
+        QHash<QString, QDateTime> modified;
         for (const auto& entry : std::as_const(entries)) {
             if (!entry.path.startsWith(prefix)) {
                 continue;
@@ -293,17 +335,25 @@ MudletWebImport::Result MudletWebImport::importArchive(const QString& archivePat
             if (top == qsl("logs")) {
                 path = qsl("log") + path.mid(top.size());
             }
-            if (!extractEntry(archive, entry, qsl("%1/%2").arg(home, path))) {
+            const QString destination = qsl("%1/%2").arg(home, path);
+            if (extractEntry(archive, entry, destination)) {
+                modified.insert(QFileInfo(destination).absoluteFilePath(), entry.modified);
+            } else {
                 ++unwritten;
             }
         }
 
+        if (QDir(qsl("%1/current").arg(home)).entryList({qsl("*.[xX][mM][lL]")}, QDir::Files).isEmpty()) {
+            //: Listed after importing profiles. %1 is a profile's name.
+            result.warnings.append(tr("\"%1\" was not added: its save could not be written.").arg(name));
+            continue;
+        }
         const QJsonObject connection = QJsonDocument::fromJson(sidecar).object();
         if (!QFileInfo::exists(qsl("%1/url").arg(home)) && !connection.isEmpty()) {
-            writeConnectionFromSidecar(home, connection);
+            unwritten += writeConnectionFromSidecar(home, connection);
         }
-        putNewestLast(qsl("%1/current").arg(home), {qsl("*.[xX][mM][lL]")});
-        putNewestLast(qsl("%1/map").arg(home), {qsl("*.[dD][aA][tT]"), qsl("*.[jJ][sS][oO][nN]")});
+        putNewestLast(qsl("%1/current").arg(home), {qsl("*.[xX][mM][lL]")}, modified);
+        putNewestLast(qsl("%1/map").arg(home), {qsl("*.[dD][aA][tT]"), qsl("*.[jJ][sS][oO][nN]")}, modified);
 
         const QString target = qsl("%1/%2").arg(profilesPath, name);
         if (QFileInfo::exists(target) || !QDir().rename(home, target)) {
@@ -318,10 +368,15 @@ MudletWebImport::Result MudletWebImport::importArchive(const QString& archivePat
             //: Listed after importing profiles. %1 is a profile's name.
             result.warnings.append(tr("%n file(s) of \"%1\" could not be written and were left out.", nullptr, unwritten).arg(name));
         }
-        if (connection.value(qsl("mode")).toString() == qsl("websocket")) {
-            //: Listed after importing profiles. %1 is a profile's name. Desktop Mudlet can't connect to a WebSocket (ws:// or wss://) address.
-            result.warnings.append(
-                    tr("\"%1\" connected to its game through a WebSocket address, which desktop Mudlet can't use: enter the game's server address and port before you connect.").arg(name));
+        if (readProfileItem(target, qsl("url")).trimmed().isEmpty()) {
+            if (usesWebSocket(connection)) {
+                //: Listed after importing profiles. %1 is a profile's name. Desktop Mudlet can't connect to a WebSocket (ws:// or wss://) address.
+                result.warnings.append(
+                        tr("\"%1\" connected to its game through a WebSocket address, which desktop Mudlet can't use: enter the game's server address and port before you connect.").arg(name));
+            } else {
+                //: Listed after importing profiles. %1 is a profile's name.
+                result.warnings.append(tr("\"%1\" has no server address: enter the game's server address and port before you connect.").arg(name));
+            }
         }
     }
 

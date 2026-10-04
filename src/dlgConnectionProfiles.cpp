@@ -62,6 +62,7 @@
 #include <QSignalBlocker>
 #include <QTabBar>
 #include <QTime>
+#include <algorithm>
 #include <chrono>
 #include <sstream>
 
@@ -2291,7 +2292,12 @@ void dlgConnectionProfiles::importProfilesFrom(const QString& archivePathFileNam
             message += tr("<p>Please note:</p><ul>%1</ul>").arg(warnings.join(QString()));
         }
         //: Title of the message shown after importing profiles
-        QMessageBox::information(this, tr("Profiles imported"), message);
+        const QString title = tr("Profiles imported");
+        if (result.warnings.isEmpty()) {
+            QMessageBox::information(this, title, message);
+        } else {
+            QMessageBox::warning(this, title, message);
+        }
     });
     watcher->setFuture(QtConcurrent::run(&MudletWebImport::importArchive, archivePathFileName, MudletApp::getMudletPath(enums::profilesPath)));
 }
@@ -2299,7 +2305,10 @@ void dlgConnectionProfiles::importProfilesFrom(const QString& archivePathFileNam
 void dlgConnectionProfiles::dragEnterEvent(QDragEnterEvent* event)
 {
     const QList<QUrl> urls = event->mimeData()->urls();
-    if (!mImportingProfiles && urls.size() == 1 && urls.constFirst().isLocalFile() && urls.constFirst().toLocalFile().endsWith(qsl(".zip"), Qt::CaseInsensitive)) {
+    // Anything local is taken, so that dropping the wrong thing is explained rather than ignored
+    if (!mImportingProfiles && !urls.isEmpty() && std::all_of(urls.cbegin(), urls.cend(), [](const QUrl& url) {
+            return url.isLocalFile();
+        })) {
         event->acceptProposedAction();
         return;
     }
@@ -2309,12 +2318,22 @@ void dlgConnectionProfiles::dragEnterEvent(QDragEnterEvent* event)
 void dlgConnectionProfiles::dropEvent(QDropEvent* event)
 {
     const QList<QUrl> urls = event->mimeData()->urls();
-    if (urls.size() == 1 && urls.constFirst().isLocalFile()) {
-        event->acceptProposedAction();
-        importProfilesFrom(urls.constFirst().toLocalFile());
+    if (urls.isEmpty() || !urls.constFirst().isLocalFile()) {
+        QDialog::dropEvent(event);
         return;
     }
-    QDialog::dropEvent(event);
+    event->acceptProposedAction();
+    const QString fileName = urls.constFirst().toLocalFile();
+    if (urls.size() == 1 && QFileInfo(fileName).isFile() && fileName.endsWith(qsl(".zip"), Qt::CaseInsensitive)) {
+        importProfilesFrom(fileName);
+        return;
+    }
+    //: Title of the message shown when importing profiles fails
+    const QString title = tr("Import profiles");
+    //: Shown when something other than one .zip file is dropped on the Connect window. Safari and Finder name what macOS users see.
+    const QString message = tr("Drop the one .zip file that Mudlet Web's \"Export profiles…\" downloaded. If your browser unpacked it into a folder (Safari does), "
+                               "compress that folder into a .zip first - in Finder, right-click it and choose Compress - then drop the .zip.");
+    QMessageBox::information(this, title, message);
 }
 
 void dlgConnectionProfiles::slot_copyOnlySettingsOfProfile()
