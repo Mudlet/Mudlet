@@ -188,8 +188,10 @@ public:
         setAllDisplayAttributes(newDisplayAttributes);
     }
 
-    QColor foreground() const { return QColor::fromRgba(mFgColor); }
-    QColor background() const { return QColor::fromRgba(mBgColor); }
+    // The same color QColor::fromRgba() gives, built inline: that one is an
+    // out-of-line call, and painting asks for both colors of every cell.
+    QColor foreground() const { return QColor(qRed(mFgColor), qGreen(mFgColor), qBlue(mFgColor), qAlpha(mFgColor)); }
+    QColor background() const { return QColor(qRed(mBgColor), qGreen(mBgColor), qBlue(mBgColor), qAlpha(mBgColor)); }
     // For comparing colors without building a QColor:
     QRgb foregroundRgba() const { return mFgColor; }
     QRgb backgroundRgba() const { return mBgColor; }
