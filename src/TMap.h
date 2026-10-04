@@ -338,7 +338,8 @@ public:
     QPointer<QOpenGLWidget> mpM;
 #endif
     QPointer<dlgMapper> mpMapper;
-    // mpMapper as core code drives it; null when that is.
+    // mpMapper as core code drives it; null when that is. Defined in dlgMapper.cpp, which can see
+    // that dlgMapper is a TMapViewFrontend.
     TMapViewFrontend* mapViewFrontend() const;
     QMap<int, int> roomidToIndex;
 
