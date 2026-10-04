@@ -55,6 +55,34 @@ describe("Alias processing", function()
             assert.are.equal(1, sends, "the call past the cap should go to the game once, unexpanded")
         end)
 
+        it("stops an alias that expands into itself more than once per run", function()
+            local fired = 0
+            local id
+            id = tempAlias("^expand_into_myself_twice$", function()
+                fired = fired + 1
+                -- Without the fix this branches 2^50 ways; bail out so the spec fails instead of hanging
+                if fired > 1000 then
+                    killAlias(id)
+                    return
+                end
+                expandAlias("expand_into_myself_twice", false)
+                expandAlias("expand_into_myself_twice", false)
+            end)
+            local sends = 0
+            local handler = registerAnonymousEventHandler("sysDataSendRequest", function(_, command)
+                if command == "expand_into_myself_twice" then
+                    sends = sends + 1
+                end
+            end)
+
+            expandAlias("expand_into_myself_twice", false)
+
+            killAnonymousEventHandler(handler)
+            killAlias(id)
+            assert.are.equal(50, fired)
+            assert.are.equal(1, sends, "only the call that hit the cap should reach the game")
+        end)
+
         -- The "command" field of an alias is sent as if typed, so one that
         -- matches its own pattern recurses without any Lua in between
         it("stops an alias whose command matches itself", function()

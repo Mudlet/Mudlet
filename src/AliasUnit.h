@@ -106,6 +106,10 @@ private:
     int statsActiveItems = 0;
     // Counter for nested processing; cleanup deferred until 0
     int mProcessingDepth = 0;
+    // Set once scmMaxProcessingDepth is reached, cleared when the outermost expansion returns:
+    // an alias that expands into itself twice branches at every level, so refusing only the
+    // expansions at the limit still leaves 2^50 of them to run below it.
+    bool mRunawayExpansionStopped = false;
 };
 
 #endif // MUDLET_ALIASUNIT_H

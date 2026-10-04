@@ -585,6 +585,7 @@ void TriggerUnit::processDataStream(const QString& data, int line)
             }
             mRootNodesAddedWhileProcessing.clear();
             mSameLineChainStarters.clear();
+            mRunawayFeedStopped = false;
             doCleanup();
         }
     });

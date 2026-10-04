@@ -945,6 +945,30 @@ describe("Trigger processing", function()
             assert.has_error(function() feedTriggers({}) end)
         end)
 
+        it("stops a trigger that feeds itself more than one matching line", function()
+            local fired = 0
+            local refusals = 0
+            local id
+            id = tempRegexTrigger("^feed_myself_twice$", function()
+                fired = fired + 1
+                -- Without the fix this branches 2^50 ways; bail out so the spec fails instead of hanging
+                if fired > 1000 then
+                    disableTrigger(id)
+                    return
+                end
+                local ok = feedTriggers("feed_myself_twice\nfeed_myself_twice\n")
+                if ok == nil then
+                    refusals = refusals + 1
+                end
+            end)
+
+            feedTriggers("\nfeed_myself_twice\n")
+
+            killTrigger(id)
+            assert.is_true(fired < 1000, "the loop should be stopped after the first trip, fired " .. fired .. " times")
+            assert.are.equal(fired - 50, refusals, "every feed after the trip should be refused")
+        end)
+
     end)
 
     describe("temporary trigger creation and firing", function()
