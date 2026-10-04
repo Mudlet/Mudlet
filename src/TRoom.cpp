@@ -1545,8 +1545,10 @@ void TRoom::auditExits(const QHash<int, int> roomRemapping)
         for (auto itCustomLine = customLines.cbegin(); itCustomLine != customLines.cend(); ++itCustomLine) {
             const QList<QPointF>& points = itCustomLine.value();
             if (!std::all_of(points.cbegin(), points.cend(), [](const QPointF& point) {
+                    constexpr double lowest = std::numeric_limits<int>::min();
+                    constexpr double highest = std::numeric_limits<int>::max();
                     // NaN fails these comparisons too
-                    return qAbs(point.x()) <= std::numeric_limits<int>::max() && qAbs(point.y()) <= std::numeric_limits<int>::max();
+                    return point.x() >= lowest && point.x() <= highest && point.y() >= lowest && point.y() <= highest;
                 })) {
                 outOfRange.append(itCustomLine.key());
             }
@@ -1562,6 +1564,8 @@ void TRoom::auditExits(const QHash<int, int> roomRemapping)
             customLinesArrowCopy.remove(exitKey);
         }
         if (!outOfRange.isEmpty()) {
+            // The room's extents and its area's index of rooms with lines were worked out on load
+            calcRoomDimensions();
             //: %1 is the room ID, %2 is a list of exits whose custom lines were removed
             const QString infoMsg = tr("[ INFO ]  - In room with ID: %1 found one or more custom lines with a point outside the range of room coordinates, which were removed: %2.")
                                             .arg(id)

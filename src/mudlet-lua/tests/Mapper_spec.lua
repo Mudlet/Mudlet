@@ -1699,6 +1699,12 @@ describe("Tests mapper functions against a shared fixture", function()
       end
     end)
 
+    it("addCustomLine accepts a point at either end of the range of room coordinates", function()
+      assert.is_true(addCustomLine(rSandA, {{-2147483648, 2147483647, 0}, {2147483647, -2147483648, 0}}, "e", "solid line", {0, 0, 0}, false))
+      assert.are.equal(2, #getCustomLines1(rSandA)["e"].points)
+      assert.is_true(removeCustomLine(rSandA, "e"))
+    end)
+
     it("addCustomLine rejects a target room in a different area", function()
       local ok, err = addCustomLine(rSandA, rB1, "e", "solid line", {0, 0, 0}, false)
       assert.is_nil(ok)

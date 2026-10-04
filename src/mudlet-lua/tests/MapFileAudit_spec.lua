@@ -243,8 +243,8 @@ describe("Tests the audit of a damaged binary map file", function()
       assert.is_true(setExit(room, north, "north"))
       assert.is_true(addCustomLine(room, {{4321.25, 7, 0}}, "e", "solid line", {1, 2, 3}, true))
       assert.is_true(addCustomLine(room, {{1234.5, 7, 0}}, "n", "solid line", {1, 2, 3}, true))
-      -- the control
-      assert.is_true(addCustomLine(room, {{-0.5, 0.5, 0}}, "w", "dot line", {4, 5, 6}, false))
+      -- the control, with a point at the lowest room coordinate
+      assert.is_true(addCustomLine(room, {{-0.5, 0.5, 0}, {-2147483648, 0.5, 0}}, "w", "dot line", {4, 5, 6}, false))
 
       reloadWith(function(data)
         -- a point is two doubles, most significant byte first: 4321.25 becomes
@@ -258,6 +258,7 @@ describe("Tests the audit of a damaged binary map file", function()
       assert.is_nil(lines["n"])
       assert.is_table(lines["w"])
       assert.are.equal("dot line", lines["w"].attributes.style)
+      assert.are.equal(-2147483648, lines["w"].points[2][1])
     end)
   end)
 
