@@ -1455,7 +1455,7 @@ void Host::updateConsolesFont()
         return;
     }
 
-    mpConsole->refreshView();
+    consoleFrontend()->refreshView();
 
     TEvent event{};
     event.mArgumentList.append(qsl("sysSettingChanged"));
@@ -1888,12 +1888,12 @@ void Host::send(QString cmd, bool wantPrint, bool dontExpandAliases)
             // this is important to get the cursor position right
             const TConsoleModel::CommandEcho echo = mpMainConsoleModel->printCommand(cmd);
             if (mpConsole) {
-                mpConsole->showCommandEcho(echo);
+                consoleFrontend()->showCommandEcho(echo);
             }
         }
 
         if (mpConsole) {
-            mpConsole->requestRepaintAfterCommand();
+            consoleFrontend()->requestRepaintAfterCommand();
         }
     }
 
@@ -2283,14 +2283,14 @@ bool Host::selectMainConsoleSection(int from, int length)
 void Host::setMainConsoleFgColor(const QColor& color)
 {
     if (mpMainConsoleModel->setSelectionFgColor(color) && mpConsole) {
-        mpConsole->markSelectionDirty();
+        consoleFrontend()->markSelectionDirty();
     }
 }
 
 void Host::setMainConsoleBgColor(const QColor& color)
 {
     if (mpMainConsoleModel->setSelectionBgColor(color) && mpConsole) {
-        mpConsole->markSelectionDirty();
+        consoleFrontend()->markSelectionDirty();
     }
 }
 
@@ -2491,7 +2491,7 @@ void Host::printToMainConsole(const QString& msg)
 {
     mpMainConsoleModel->print(msg);
     if (mpConsole) {
-        mpConsole->showNewLines();
+        consoleFrontend()->showNewLines();
     }
 }
 
@@ -2499,7 +2499,7 @@ void Host::printToMainConsole(const QString& msg, QColor fgColor, QColor bgColor
 {
     mpMainConsoleModel->print(msg, fgColor, bgColor);
     if (mpConsole) {
-        mpConsole->showNewLines();
+        consoleFrontend()->showNewLines();
     }
 }
 
@@ -2507,7 +2507,7 @@ void Host::printSystemMessage(const QString& msg)
 {
     mpMainConsoleModel->printSystemMessage(msg);
     if (mpConsole) {
-        mpConsole->showNewLines();
+        consoleFrontend()->showNewLines();
     }
 }
 
@@ -2524,7 +2524,7 @@ void Host::printOnDisplay(std::string& data, const bool isFromServer)
 {
     // The view only times the pass, flashes the taskbar and marks the profile's
     // tab; the text is processed whether or not there is one.
-    const bool alertWanted = mpConsole && mpConsole->startIncomingText() && isFromServer;
+    const bool alertWanted = mpConsole && consoleFrontend()->startIncomingText() && isFromServer;
     TConsoleModel& model = *mpMainConsoleModel;
     TBuffer& buffer = model.buffer;
 
@@ -2546,7 +2546,7 @@ void Host::printOnDisplay(std::string& data, const bool isFromServer)
     if (alertWanted && mpConsole) {
         const int lastLineNumber = buffer.getLastLineNumber();
         if (lastLineNumber != beforeTranslateLastLineNumber || buffer.line(lastLineNumber - 1) != beforeTranslateLastLine) {
-            mpConsole->alertNewData();
+            consoleFrontend()->alertNewData();
         }
     }
 
@@ -2558,14 +2558,14 @@ void Host::printOnDisplay(std::string& data, const bool isFromServer)
     }
 
     if (mpConsole) {
-        mpConsole->finishIncomingText();
+        consoleFrontend()->finishIncomingText();
     }
 }
 
 void Host::finalizeMainConsole()
 {
     if (mpConsole) {
-        mpConsole->finalize();
+        consoleFrontend()->finalize();
     }
 }
 

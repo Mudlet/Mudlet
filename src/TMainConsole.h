@@ -93,6 +93,10 @@ public:
     void setFont(const QFont& font) override { TConsole::setFont(font); }
     void setFont(const QFont& font, bool forceChange) { TConsole::setFont(font, forceChange); }
     void setFontSize(int size) override { TConsole::setFontSize(size); }
+    void showNewLines() override { TConsole::showNewLines(); }
+    void showCommandEcho(const TConsoleModel::CommandEcho& echo) override { TConsole::showCommandEcho(echo); }
+    void markSelectionDirty() override { TConsole::markSelectionDirty(); }
+    void refreshView() const override { TConsole::refreshView(); }
     void restoreOwnMapper() override;
     bool createBuffer(const QString& name) override;
     std::pair<bool, QString> setUserWindowStyleSheet(const QString& name, const QString& userWindowStyleSheet) override;
@@ -263,9 +267,7 @@ public:
     void setMapperPanelVisible(bool visible) override;
     void setMapLargeAreaExitArrows(bool enabled) override;
     void requestMapRepaint() override;
-    // requestRepaint() for after echoing a command, skipped while the mapper
-    // has a 3D view - or, in builds without one, while there is any mapper.
-    void requestRepaintAfterCommand();
+    void requestRepaintAfterCommand() override;
     void regenerateToolBars(const std::list<TAction*>& rootActions) override;
     void regenerateEasyButtonBars(const std::list<TAction*>& rootActions) override;
     void detachActionBars(TAction* pAction) override;
@@ -303,14 +305,10 @@ public:
     void setupVideoOutput(TMediaPlayer* player, bool& setupSucceeded);
     void hideVideoOutput(TMediaPlayer* player);
     void toggleLogging(bool);
-    // The view's part of Host::printOnDisplay(). startIncomingText() starts
-    // timing the pass for the latency box and answers whether to alert the user
-    // if the text changes the buffer; finishIncomingText() schedules the paced
-    // latency box refresh and marks the profile's tab.
-    bool startIncomingText();
-    void alertNewData();
-    void finishIncomingText();
-    void finalize();
+    bool startIncomingText() override;
+    void alertNewData() override;
+    void finishIncomingText() override;
+    void finalize() override;
     void refreshSubconsoles();
 
 
