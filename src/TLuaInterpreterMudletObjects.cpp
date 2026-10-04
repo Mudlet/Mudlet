@@ -608,7 +608,7 @@ int TLuaInterpreter::getCmdLine(lua_State* L)
     }
     const QString commandLineName{name};
     const Host& host = getHostFromLua(L);
-    const auto text = host.mpConsole ? host.mpConsole->getCommandLineText(commandLineName) : std::nullopt;
+    const auto text = host.commandLineText(commandLineName);
     if (!text) {
         return commandLineNotFound(L, commandLineName);
     }

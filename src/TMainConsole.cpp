@@ -213,6 +213,10 @@ TMainConsole::TMainConsole(Host* pH, QWidget* parent)
     // Host starts a saved log as the profile loads, before there is a view
     slot_loggingStateChanged(mLogToLogFile);
 
+    connect(mpCommandLine, &QPlainTextEdit::textChanged, this, [this]() {
+        mpHost->windowRegistry().setMainCommandLineText(mpCommandLine->toPlainText());
+    });
+
     // During first use where mIsDebugConsole IS true mudlet::self() is null
     // then - but we rely on that flag to avoid having to also test for a
     // non-null mudlet::self() - the connect(...) will produce a debug
@@ -264,6 +268,7 @@ TMainConsole::~TMainConsole()
     // entries, as deleteCommandLine() and resetMainConsole() drop entries before the deferred delete.
     for (auto commandLine : findChildren<TCommandLine*>()) {
         disconnect(commandLine, &QObject::destroyed, this, nullptr);
+        disconnect(commandLine, &QPlainTextEdit::textChanged, this, nullptr);
     }
     for (auto scrollBox : findChildren<TScrollBox*>()) {
         disconnect(scrollBox, &QObject::destroyed, this, nullptr);
@@ -1685,6 +1690,12 @@ void TMainConsole::registerSubCommandLine(const QString& name, TCommandLine* pCo
     mSubCommandLineMap[name] = pCommandLine;
     mpHost->windowRegistry().registerCommandLine(name);
     watchWindowState(name, pCommandLine);
+    connect(pCommandLine, &QPlainTextEdit::textChanged, this, [this, name, pCommandLine]() {
+        // A displaced or deleted command line can still be typed in, and must not write its name's text.
+        if (mSubCommandLineMap.value(name) == pCommandLine) {
+            mpHost->windowRegistry().setCommandLineText(name, pCommandLine->toPlainText());
+        }
+    });
 
     // A TCommandLine is always a child widget of something else - the miniconsole
     // it is embedded in, or the user window / scroll box it was created into - so
@@ -1841,15 +1852,6 @@ TCommandLine* TMainConsole::commandLineNamed(const QString& name) const
         return mpCommandLine;
     }
     return mSubCommandLineMap.value(name);
-}
-
-std::optional<QString> TMainConsole::getCommandLineText(const QString& name) const
-{
-    auto pN = commandLineNamed(name);
-    if (!pN) {
-        return {};
-    }
-    return {pN->toPlainText()};
 }
 
 // The caret goes to the end of the first line, with nothing selected.

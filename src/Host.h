@@ -671,6 +671,8 @@ public:
     std::optional<int> windowScroll(const QString& name) const;
     // Whether a console scrolls; {} for no such console.
     std::optional<bool> windowScrolling(const QString& name) const;
+    // {} for no such command line.
+    std::optional<QString> commandLineText(const QString& name) const;
     bool getEditorShowBidi() const { return mEditorShowBidi; }
     void setEditorShowBidi(const bool);
     bool caretEnabled() const;
