@@ -25,6 +25,7 @@
 
 #include "MudletApp.h"
 #include "mudlet.h"
+#include "TMainConsole.h"
 
 #include <QCloseEvent>
 #include <QFileDialog>

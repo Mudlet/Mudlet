@@ -2241,6 +2241,24 @@ QList<int> Host::getStopWatchIds() const
     return ids;
 }
 
+TMainConsole* Host::mainConsoleView() const
+{
+    return mpConsole.data();
+}
+
+void Host::setMainConsoleView(TMainConsole* view)
+{
+    mpConsole = view;
+}
+
+void Host::setF3SearchEnabled(const bool enabled)
+{
+    mF3SearchEnabled = enabled;
+    if (mpConsole) {
+        mpConsole->setF3SearchEnabled(enabled);
+    }
+}
+
 std::shared_ptr<TConsoleModel> Host::sharedMainConsoleModel()
 {
     return mpMainConsoleModel;

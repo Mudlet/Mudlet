@@ -31,9 +31,9 @@
 #include "KeyUnit.h"
 #include "ScriptUnit.h"
 #include "GifTracker.h"
+#include "TConsoleModel.h"
 #include "TLuaInterpreter.h"
 #include "TimerUnit.h"
-#include "TMainConsole.h"
 #include "TSpellChecker.h"
 #include "TWindowRegistry.h"
 #include "TriggerUnit.h"
@@ -305,8 +305,8 @@ public:
     // The concrete main console widget, or nullptr while this profile has none.
     // Widget-side code uses these rather than mpConsole, so that mpConsole's type
     // can change without touching widget code.
-    TMainConsole* mainConsoleView() const { return mpConsole.data(); }
-    void setMainConsoleView(TMainConsole* view) { mpConsole = view; }
+    TMainConsole* mainConsoleView() const;
+    void setMainConsoleView(TMainConsole* view);
     std::shared_ptr<TConsoleModel> sharedMainConsoleModel();
     // Colorizer triggers: select a run of the current line, paint it, restore the format. Model state
     // only, so these run with no view; the two colour ones repaint the
@@ -712,13 +712,7 @@ public:
     bool setMMCPChatName(const QString&);
     void setShowIdsInEditor(const bool isShown);
     bool getF3SearchEnabled() const { return mF3SearchEnabled; }
-    void setF3SearchEnabled(const bool enabled)
-    {
-        mF3SearchEnabled = enabled;
-        if (mpConsole) {
-            mpConsole->setF3SearchEnabled(enabled);
-        }
-    }
+    void setF3SearchEnabled(const bool enabled);
     bool getForceMXPProcessorOn() const { return mForceMXPProcessorOn; }
     void setForceMXPProcessorOn(bool value)
     {

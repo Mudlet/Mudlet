@@ -44,6 +44,7 @@
 #include "TConsole.h"
 #include "TDebug.h"
 #include "TEvent.h"
+#include "TMainConsole.h"
 #include "TMap.h"
 #include "TMapLabel.h"
 #include "TMedia.h"

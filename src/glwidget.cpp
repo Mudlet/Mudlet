@@ -26,6 +26,7 @@
 
 #include "mudlet.h"
 #include "TArea.h"
+#include "TMainConsole.h"
 #include "TRoomDB.h"
 #include "dlgMapper.h"
 

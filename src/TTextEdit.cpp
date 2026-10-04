@@ -40,6 +40,7 @@
 #include "THyperlinkVisibilityManager.h"
 #include "mudlet.h"
 #include "MudletApp.h"
+#include "TMainConsole.h"
 #include "utils.h"
 #include "widechar_width.h"
 #include "TTextProperties.h"

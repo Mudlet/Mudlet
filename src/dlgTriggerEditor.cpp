@@ -32,6 +32,7 @@
 #include "MudletApp.h"
 #include "TConsole.h"
 #include "TDebug.h"
+#include "TMainConsole.h"
 #include "TTextEdit.h"
 #include "VarUnit.h"
 #include "XMLimport.h"
