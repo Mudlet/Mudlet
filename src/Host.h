@@ -304,12 +304,14 @@ public:
     // rather than dereference the shared_ptr.
     TConsoleModel* mainConsoleModelOrNull() { return mpMainConsoleModel.get(); }
     // The concrete main console widget, or nullptr while this profile has none.
-    // Widget-side code uses these rather than mpConsole, so that mpConsole's type
-    // can change without touching widget code.
+    // For widget-side code: this and setMainConsoleView() are defined in
+    // TMainConsole.cpp, so that Host.cpp never needs the widget's definition.
     TMainConsole* mainConsoleView() const;
     // mainConsoleView() as core code calls it, by window name rather than widget; null when that is.
     TConsoleFrontend* consoleFrontend() const;
     void setMainConsoleView(TMainConsole* view);
+    // Keeps TMainConsole's translation context, so the existing translations still apply.
+    static QString loggingAnnouncementText(const bool isLogging, const QString& logFileName);
     std::shared_ptr<TConsoleModel> sharedMainConsoleModel();
     // Colorizer triggers: select a run of the current line, paint it, restore the format. Model state
     // only, so these run with no view; the two colour ones repaint the
@@ -768,13 +770,14 @@ private:
     // which reads members declared much later - mBgColor among them. Same class of
     // bug as #10229, which had to move a call rather than a declaration.
     bool mIsClosingDown = false;
+    // Its font is the "reference" or "master" font for the whole profile.
+    // Clears itself when the view is destroyed, which is what makes handing
+    // out mpConsoleFrontend safe.
+    QPointer<TMainConsole> mpConsole;
+    // The same object, as core code drives it; read only while mpConsole is set.
+    TConsoleFrontend* mpConsoleFrontend = nullptr;
 
 public:
-    // Make this the first public member instantiated so we can use ITS font
-    // as the "reference" or "master" font for whole profile - and so we don't
-    // have to maintain a separate one here in this class which does not, as
-    // something derived from a QObject, have one:
-    QPointer<TMainConsole> mpConsole;
     cTelnet mTelnet;
     TLuaInterpreter mLuaInterpreter;
 

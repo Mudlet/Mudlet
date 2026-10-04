@@ -43,7 +43,6 @@
 #include "TEvent.h"
 #include "TIrcClient.h"
 #include "TLabelModel.h"
-#include "TMainConsole.h"
 #include "TMap.h"
 #include "TMapViewManager.h"
 #include "TMedia.h"
@@ -2242,19 +2241,9 @@ QList<int> Host::getStopWatchIds() const
     return ids;
 }
 
-TMainConsole* Host::mainConsoleView() const
-{
-    return mpConsole.data();
-}
-
 TConsoleFrontend* Host::consoleFrontend() const
 {
-    return mpConsole.data();
-}
-
-void Host::setMainConsoleView(TMainConsole* view)
-{
-    mpConsole = view;
+    return mpConsole.isNull() ? nullptr : mpConsoleFrontend;
 }
 
 void Host::setF3SearchEnabled(const bool enabled)
@@ -2574,12 +2563,18 @@ bool Host::mainConsoleShowsTimeStamps() const
     return mpMainConsoleModel->mShowTimeStamps;
 }
 
+QString Host::loggingAnnouncementText(const bool isLogging, const QString& logFileName)
+{
+    return isLogging ? QCoreApplication::translate("TMainConsole", "Logging has started. Log file is %1").arg(logFileName)
+                     : QCoreApplication::translate("TMainConsole", "Logging has been stopped. Log file is %1").arg(logFileName);
+}
+
 void Host::raiseLoggingAnnouncement(const bool isLogging, const QString& logFileName)
 {
     if (!consoleFrontend()) {
         // Written where TMainConsole::slot_loggingAnnouncement() would print it,
         // so that a view built later shows it
-        const QString text = QCoreApplication::translate("TConsole", "System Message: %1").arg(qsl("%1\n").arg(TMainConsole::loggingAnnouncementText(isLogging, logFileName)));
+        const QString text = QCoreApplication::translate("TConsole", "System Message: %1").arg(qsl("%1\n").arg(loggingAnnouncementText(isLogging, logFileName)));
         mpMainConsoleModel->buffer.append(text, 0, text.size(), QColorConstants::Red, QColorConstants::Transparent);
     }
     emit signal_loggingAnnouncement(isLogging, logFileName);
