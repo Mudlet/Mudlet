@@ -8,6 +8,21 @@ describe("window sizes", function()
   describe("getMainWindowSize", function()
     local restoreWidth, restoreHeight
 
+    -- getRowCount() measures the console's text area itself, so a failure says whether the
+    -- layout moved and only the reported size missed it, or the layout never moved at all
+    local function measure(label)
+      local width, height = getMainWindowSize()
+      return ("%s %dx%d, %d rows"):format(label, width, height, getRowCount())
+    end
+
+    local function watchResizes()
+      local seen = {}
+      local handler = registerAnonymousEventHandler("sysWindowResizeEvent", function(_, width, height)
+        seen[#seen + 1] = ("%dx%d"):format(width, height)
+      end)
+      return seen, handler
+    end
+
     -- Earlier specs can leave the main window a few pixels high, which gives a
     -- command line or button bar nothing to take its room from
     setup(function()
@@ -35,14 +50,22 @@ describe("window sizes", function()
       clearCmdLine("main")
       pumpEvents(100)
       local width, height = getMainWindowSize()
+      local before = measure("before")
+      local resizes, handler = watchResizes()
 
       printCmdLine("main", "one\ntwo\nthree\nfour")
       pumpEvents(100)
 
       local grownWidth, grownHeight = getMainWindowSize()
+      if grownHeight >= height then
+        local after = measure("after")
+        pumpEvents(1000)
+        killAnonymousEventHandler(handler)
+        assert.is_true(false, ("the main window stayed %d high under a four-line command line (%s; %s; %s; resize events: %s)")
+          :format(grownHeight, before, after, measure("a second later"), table.concat(resizes, " ")))
+      end
+      killAnonymousEventHandler(handler)
       assert.equals(width, grownWidth)
-      assert.is_true(grownHeight < height,
-        ("the main window stayed %d high under a four-line command line"):format(grownHeight))
 
       clearCmdLine("main")
       pumpEvents(100)
@@ -64,14 +87,22 @@ describe("window sizes", function()
       hideToolBar(toolbar)
       pumpEvents(100)
       local width, height = getMainWindowSize()
+      local before = measure("hidden")
+      local resizes, handler = watchResizes()
 
       showToolBar(toolbar)
       pumpEvents(100)
 
       local shownWidth, shownHeight = getMainWindowSize()
+      if shownHeight >= height then
+        local after = measure("shown")
+        pumpEvents(1000)
+        killAnonymousEventHandler(handler)
+        assert.is_true(false, ("the main window stayed %d high with a button bar along its top (%s; %s; %s; resize events: %s)")
+          :format(shownHeight, before, after, measure("a second later"), table.concat(resizes, " ")))
+      end
+      killAnonymousEventHandler(handler)
       assert.equals(width, shownWidth)
-      assert.is_true(shownHeight < height,
-        ("the main window stayed %d high with a button bar along its top"):format(shownHeight))
       -- No check that hiding it gives the room back: toolbars other specs leave
       -- along the top can keep that area at the height it grew to
     end)
