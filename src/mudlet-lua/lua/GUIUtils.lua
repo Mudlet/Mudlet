@@ -2017,10 +2017,20 @@ function ansi2string(text)
   return result
 end
 
+local ansiColorNames = {}
+for index = 0, 255 do
+  ansiColorNames[index] = string.format("ansi_%03d", index)
+end
+local basicColourNames, brightColourNames = {}, {}
+for index = 0, 7 do
+  basicColourNames[index] = ansiColorNames[index]
+  brightColourNames[index] = ansiColorNames[index + 8]
+end
+
 -- given an xterm256 index, returns an rgb string for decho use
 local function convertindex(tag)
-  local ansi = string.format("ansi_%03d", tag)
-  return color_table[ansi] or false
+  local name = ansiColorNames[tag] or string.format("ansi_%03d", tag)
+  return color_table[name] or false
 end
 
 -- a field left empty or out, as in 38;2;;5m or 38;2m, counts as 0
@@ -2034,10 +2044,7 @@ end
 function ansi2decho(text, ansi_default_color)
   assert(type(text) == 'string', 'ansi2decho: bad argument #1 type (expected string, got '..type(text)..'!)')
   local lastColour = ansi_default_color
-  local coloursToUse = nil
-
-  -- filled on the first escape and kept for this call only, so edits to color_table still apply
-  local colours, lightColours
+  local namesToUse = basicColourNames
 
   -- match each set of ansi tags, ie [0;36;40m and convert to decho equivalent.
   -- this works since both ansi colours and echo don't need closing tags and map to each other
@@ -2047,15 +2054,6 @@ function ansi2decho(text, ansi_default_color)
     local delim = ";"
     if s:find(":") then delim = ":" end
     local t = string.split(s, delim) -- split the codes into an indexed table
-
-    if not colours then
-      colours, lightColours = {}, {}
-      for i = 0, 7 do
-        colours[i] = convertindex(i)
-        lightColours[i] = convertindex(i + 8)
-      end
-    end
-    coloursToUse = coloursToUse or colours
 
     -- since fg/bg can come in different order and we need them as fg:bg for decho, collect
     -- the data first, then assemble it in the order we need at the end
@@ -2071,14 +2069,14 @@ function ansi2decho(text, ansi_default_color)
         -- reset attributes
         output[#output + 1] = "<r>"
         fg, bg = nil, nil
-        coloursToUse = colours
+        namesToUse = basicColourNames
         lastColour = ansi_default_color
       elseif code == "1" then
         -- light or bold
-        coloursToUse = lightColours
+        namesToUse = brightColourNames
       elseif code == "22" then
         -- not light or bold
-        coloursToUse = colours
+        namesToUse = basicColourNames
       elseif code == "3" then
         formatCodeHandled = true
         output[#output+1] = "<i>"
@@ -2137,12 +2135,12 @@ function ansi2decho(text, ansi_default_color)
           end
         elseif layerCode == 9 or layerCode == 10 then
           --light colours
-          colour = lightColours[cmd]
+          colour = color_table[brightColourNames[cmd]]
         elseif layerCode == 4 then
           -- background colours know no "bright" for
-          colour = colours[cmd]  -- mudlet
+          colour = color_table[basicColourNames[cmd]]  -- mudlet
         else -- usual ANSI colour index
-          colour = coloursToUse[cmd]
+          colour = color_table[namesToUse[cmd]]
         end
 
         if cutShort then
@@ -2161,8 +2159,8 @@ function ansi2decho(text, ansi_default_color)
       -- modify it
       -- only the eight basic colours have a bright form: after an xterm256 or
       -- rgb foreground lastColour is 8, and that colour stays as it is
-      if not formatCodeHandled and lastColour and coloursToUse[lastColour] then
-        fg = coloursToUse[lastColour]
+      if not formatCodeHandled then
+        fg = color_table[namesToUse[lastColour]] or fg
       end
 
       i = i + 1

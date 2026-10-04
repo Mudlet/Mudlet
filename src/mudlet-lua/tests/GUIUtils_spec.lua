@@ -104,6 +104,8 @@ describe("Tests the GUI utilities as far as possible without mudlet", function()
       local sequences = {
         {"\27[31m\27[1m", "<128,0,0><255,0,0>"},
         {"\27[1m\27[31m", "<255,0,0>"},
+        {"\27[1;31;22;32m", "<0,128,0>"},
+        {"\27[1m\27[22m\27[32m", "<0,128,0>"},
       }
       for _, seq in ipairs(sequences) do
           local actualResult = ansi2decho(seq[1])
