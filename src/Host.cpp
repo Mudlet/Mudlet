@@ -2943,7 +2943,8 @@ std::pair<bool, QString> Host::installPackage(const QString& fileName, enums::Pa
     QString actualFileName = fileName;
     std::unique_ptr<QTemporaryFile> tempFile;
 
-    if ((fileName.startsWith(QStringLiteral(":/")) || fileName.startsWith(QStringLiteral("qrc:/"))) && packageUnpacksAFolder(fileName)) {
+    const bool bundledPackage = fileName.startsWith(QStringLiteral(":/")) || fileName.startsWith(QStringLiteral("qrc:/"));
+    if (bundledPackage && packageUnpacksAFolder(fileName)) {
         tempFile = std::make_unique<QTemporaryFile>();
         if (!tempFile->open()) {
             return fail(qsl("failed to create a temporary file for the resource package: %1").arg(tempFile->errorString()));
@@ -3163,8 +3164,9 @@ std::pair<bool, QString> Host::installPackage(const QString& fileName, enums::Pa
         // Skip the unpacking dialog for modules created from UI, and for
         // script-initiated installs (passed via quiet) to avoid stealing
         // window-manager focus from the user's other applications - see
-        // issue #9170.
-        if (thing != enums::PackageModuleType::ModuleFromUI && !quiet) {
+        // issue #9170. Bundled packages skip it too: they unzip in less time
+        // than the dialog takes to build and paint.
+        if (thing != enums::PackageModuleType::ModuleFromUI && !quiet && !bundledPackage) {
             const QString message =
                     (thing != enums::PackageModuleType::Package) ? tr("Unpacking module:\n\"%1\"\nplease wait...").arg(packageName) : tr("Unpacking package:\n\"%1\"\nplease wait...").arg(packageName);
             emit signal_showUnpackingProgress(message, tr("Unpacking"));

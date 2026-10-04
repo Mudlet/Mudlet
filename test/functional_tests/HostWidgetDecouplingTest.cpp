@@ -431,6 +431,30 @@ private slots:
         QVERIFY2(dialogWhileUnpacking.isNull(), "The unpacking dialog was taken down but never disposed of.");
     }
 
+    // A new profile installs the bundled default packages as it loads, and a
+    // dialog per package cost more than the unzips it covered.
+    void test_noUnpackingDialogForABundledPackage()
+    {
+        startProfile(mHostname, mLocalhost, mPort);
+        auto host = mudlet::self()->getActiveHost();
+        QVERIFY2(host, "No active host available for the test.");
+        QVERIFY2(host->mpConsole, "The active host has no main console.");
+
+        const QString packageName = qsl("echo");
+        QTRY_VERIFY(!host->currentlySavingProfile());
+        if (host->mInstalledPackages.contains(packageName)) {
+            QVERIFY2(host->uninstallPackage(packageName, enums::PackageModuleType::Package), "Could not uninstall the bundled package to reinstall it.");
+            QTRY_VERIFY(!host->currentlySavingProfile());
+        }
+
+        QSignalSpy showSpy(host, &Host::signal_showUnpackingProgress);
+        auto [ok, message] = host->installPackage(qsl(":/packages/echo/echo.mpackage"), enums::PackageModuleType::Package, false);
+        QVERIFY2(ok, qPrintable(message));
+        QVERIFY2(host->mInstalledPackages.contains(packageName), "The bundled package was not installed.");
+        QCOMPARE(showSpy.count(), 0);
+        QVERIFY2(!host->mpConsole->mpUnpackingDialog, "Installing a bundled package put the unpacking dialog up.");
+    }
+
     // The map dock moved from Host to TMainConsole, so disposing of it is now the
     // console destructor's job. addDockWidget() reparents the dock onto the main
     // window, which outlives the profile, so nothing else would clean it up.
