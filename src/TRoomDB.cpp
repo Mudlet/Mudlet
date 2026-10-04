@@ -176,11 +176,11 @@ void TRoomDB::updateEntranceMap(TRoom* pR, bool isMapLoading)
         // than one exit to the same room. Asked of the mirror, which walks this
         // room's exits rather than every entrance into toExit:
         const auto addEntrance = [&](const int toExit) {
-            if (entranceMapBySource.contains(id, toExit)) {
-                return;
-            }
             if (showDebug) {
                 values.append(qsl("%1,").arg(toExit));
+            }
+            if (entranceMapBySource.contains(id, toExit)) {
+                return;
             }
             entranceMap.insert(toExit, id);
             entranceMapBySource.insert(id, toExit);
