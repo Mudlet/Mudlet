@@ -1174,6 +1174,7 @@ private slots:
         // line out of the deferred slot.
         appendModelLine(model.buffer, qsl("logged-while-running-three"));
 
+        QVERIFY2(!readFile(logFileName).contains(qsl("logged-while-running-two")), "A logged line was flushed on its own, before the event loop ran.");
         QTRY_VERIFY2(readFile(logFileName).contains(qsl("logged-while-running-two")), "Logged lines never reached the file while the log was still running.");
         QVERIFY2(model.mLogToLogFile, "The log stopped on its own.");
         QVERIFY2(readFile(logFileName).contains(qsl("logged-while-running-one")), "The first logged line never reached the file.");
