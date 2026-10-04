@@ -650,6 +650,28 @@ private slots:
 
         QVERIFY2(consoleBuffer().isLinkVisited(linkIndex), "the activated link was not marked as visited");
     }
+
+    // clearWindow() leaves a Shift selection's anchor on a line that is gone, and
+    // reading the selection then stepped it back a whole batch-delete to line -998
+    void test_extendingAShiftSelectionAcrossAClearedWindow()
+    {
+        QVERIFY(runLua(qsl("createMiniConsole('caretShiftCleared', 0, 0, 300, 100)\nfor i = 1, 10 do echo('caretShiftCleared', 'line ' .. i .. '\\n') end")));
+        TConsole* pMini = mpHost->mpConsole->subConsoleWidget(qsl("caretShiftCleared"));
+        QVERIFY(pMini);
+        TTextEdit* pMiniPane = pMini->mUpperPane;
+        pMiniPane->setCaretPosition(5, 2);
+        press(pMiniPane, Qt::Key_Down, Qt::ShiftModifier);
+        QVERIFY(runLua(qsl("clearWindow('caretShiftCleared')")));
+        QCOMPARE(pMini->buffer.lineBuffer.size(), 1);
+
+        QApplication::clipboard()->setText(qsl("nothing was copied"));
+        press(pMiniPane, Qt::Key_Left, Qt::ShiftModifier);
+        pMiniPane->slot_copySelectionToClipboard();
+        const QString selected = QApplication::clipboard()->text();
+        press(pMiniPane, Qt::Key_Right);
+
+        QCOMPARE(selected, QString());
+    }
 };
 
 #include "CaretNavigationTest.moc"

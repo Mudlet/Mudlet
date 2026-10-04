@@ -2664,6 +2664,10 @@ QString TTextEdit::getSelectedText(const QChar& newlineChar, const bool showTime
     }
     qsizetype startLine = std::max(0, mPA.y());
     qsizetype endLine = std::min<qsizetype>(mPB.y(), (mpBuffer->lineBuffer.size() - 1));
+    // The batch-delete step above can push a selection left on lines a clearWindow() removed off the top
+    if (endLine < startLine) {
+        return {};
+    }
     qsizetype offset = endLine - startLine;
     qsizetype startPos = std::max(0, mPA.x());
     qsizetype endPos = std::min<qsizetype>(mPB.x(), (mpBuffer->lineBuffer.at(endLine).size() - 1));
