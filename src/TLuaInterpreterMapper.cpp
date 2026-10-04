@@ -367,6 +367,11 @@ int TLuaInterpreter::addCustomLine(lua_State* L)
                                         coordinate);
                         return lua_error(L);
                     }
+                    // Room coordinates are ints; beyond them the z cast is undefined and
+                    // the 2D map's arithmetic overflows to infinity. NaN fails this too
+                    if (const lua_Number value = lua_tonumber(L, -1); !(value >= std::numeric_limits<int>::min() && value <= std::numeric_limits<int>::max())) {
+                        return warnArgumentValue(L, __func__, qsl("the %1-coordinate of point #%2 is outside the range of room coordinates").arg(QLatin1Char("xyz"[j - 1])).arg(i));
+                    }
                     switch (j) {
                     case 1:
                         ++xCount;
