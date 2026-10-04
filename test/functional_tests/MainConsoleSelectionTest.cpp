@@ -389,6 +389,26 @@ private slots:
         QCOMPARE(copiedText(pane), line);
     }
 
+    // A script clearing the window while a line drag is held takes the line the
+    // drag started on, which the next move then read past the end of the buffer
+    void test_lineDragAcrossAClearedWindowLeavesNoSelection()
+    {
+        TTextEdit* pane = paneShowingProse();
+        QVERIFY2(pane, "the prose never reached the upper pane");
+        Host* host = mudlet::self()->getActiveHost();
+
+        const QPointF pressPos = cellInMiddleRow(pane, 33);
+        sendMouse(pane, QEvent::MouseButtonPress, Qt::LeftButton, Qt::LeftButton, pressPos, Qt::ControlModifier);
+        QVERIFY2(pane->mDragStart.y() > 0, "the press did not start the drag below the first line");
+        QVERIFY2(host->getLuaInterpreter()->compileAndExecuteScript(qsl("clearWindow()")), "the clearWindow() call failed");
+        QVERIFY(host->mpConsole->buffer.getLastLineNumber() < pane->mDragStart.y());
+
+        moveAndReleaseLeftButton(pane, QPointF(pressPos.x(), pane->mFontHeight / 2.0), Qt::ControlModifier);
+
+        QCOMPARE(highlightedText(), QString());
+        QCOMPARE(copiedText(pane), mNothingCopied);
+    }
+
     void test_characterAnalysisDescribesEveryCodePoint()
     {
         TTextEdit* pane = paneShowingProse();

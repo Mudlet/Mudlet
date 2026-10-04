@@ -1739,6 +1739,12 @@ void TTextEdit::mouseMoveEvent(QMouseEvent* event)
         return;
     }
 
+    // A script can clear or delete lines while the button is held, taking the line the drag started on
+    if (mDragStart.y() >= static_cast<int>(mpBuffer->buffer.size())) {
+        mMouseTracking = false;
+        return;
+    }
+
     QPoint cursorLocation(tCharIndex, lineIndex);
 
     // A plain left-drag must not register a selection until the pointer has
