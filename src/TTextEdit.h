@@ -319,6 +319,8 @@ private:
     QElapsedTimer mSincePaint;
     // What the deferred repaint has to cover once the pacer fires.
     QRegion mPendingPaintRegion;
+    // The whole pane went to update() since the last paint, so asking again only costs time.
+    bool mWholePaneRequested = false;
     // The scrollbar repaints on every range change, so new output moves it
     // with the paced frame rather than with every packet.
     bool mScrollBarUpdatePending = false;
