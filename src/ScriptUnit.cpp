@@ -271,10 +271,9 @@ void ScriptUnit::removeScript(TScript* pT)
     if (!pT) {
         return;
     }
-    QMapIterator<QString, QList<TScript*>> it(mpHost->mEventHandlerMap);
-    while (it.hasNext()) {
-        it.next();
-        mpHost->mEventHandlerMap[it.key()].removeAll(pT);
+    // In place: a QMapIterator shares the map, so writing through operator[] copied all of it per script
+    for (auto& handlers : mpHost->mEventHandlerMap) {
+        handlers.removeAll(pT);
     }
     mScriptMap.remove(pT->getID());
 }
