@@ -25,6 +25,7 @@
  ***************************************************************************/
 
 
+#include "TMapViewFrontend.h"
 #include "ui_mapper.h"
 #include <QPointer>
 
@@ -41,7 +42,7 @@ class QOpenGLWidget;
 #endif
 
 
-class dlgMapper : public QWidget, public Ui::mapper
+class dlgMapper : public QWidget, public Ui::mapper, public TMapViewFrontend
 {
     Q_OBJECT
 
@@ -61,14 +62,15 @@ public:
     void refreshColours();
     void recreate3DWidget();
 
-    void showMapProgress(const QString& label, bool cancelable);
-    void setMapProgressLabel(const QString& text);
-    void setMapProgressRange(int minimum, int maximum);
-    void setMapProgressValue(int value);
-    int mapProgressMaximum() const;
-    void setMapProgressCancelable(bool cancelable);
-    void hideMapProgress();
-    bool isMapProgressVisible() const;
+    bool onScreen() const override { return isVisible(); }
+    void showMapProgress(const QString& label, bool cancelable) override;
+    void setMapProgressLabel(const QString& text) override;
+    void setMapProgressRange(int minimum, int maximum) override;
+    void setMapProgressValue(int value) override;
+    int mapProgressMaximum() const override;
+    void setMapProgressCancelable(bool cancelable) override;
+    void hideMapProgress() override;
+    bool isMapProgressVisible() const override;
 
 signals:
     void signal_mapProgressCanceled();

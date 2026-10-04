@@ -55,6 +55,7 @@
 #define DIR_OTHER 13
 
 class dlgMapper;
+class TMapViewFrontend;
 class Host;
 #if defined(INCLUDE_3DMAPPER)
 class QOpenGLWidget;
@@ -337,6 +338,8 @@ public:
     QPointer<QOpenGLWidget> mpM;
 #endif
     QPointer<dlgMapper> mpMapper;
+    // mpMapper as core code drives it; null when that is.
+    TMapViewFrontend* mapViewFrontend() const;
     QMap<int, int> roomidToIndex;
 
     // User-registered mapper context menu entries (addMapEvent()/addMapMenu());

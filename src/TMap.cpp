@@ -2993,6 +2993,11 @@ void TMap::reportStringToProgressDialog(const QString text)
     }
 }
 
+TMapViewFrontend* TMap::mapViewFrontend() const
+{
+    return mpMapper.data();
+}
+
 void TMap::reportProgressToProgressDialog(const int current, const int maximum)
 {
     if (hasActiveTransferProgress()) {
@@ -3005,9 +3010,8 @@ void TMap::reportProgressToProgressDialog(const int current, const int maximum)
 
 void TMap::createTransferProgress(const QString& title, const QString& label, bool cancelable)
 {
-    if (mpMapper && mpMapper->isVisible()) {
-        mpMapper->showMapProgress(label, cancelable);
-        connect(mpMapper, &dlgMapper::signal_mapProgressCanceled, this, &TMap::slot_downloadCancel, Qt::UniqueConnection);
+    if (auto* mapper = mapViewFrontend(); mapper && mapper->onScreen()) {
+        mapper->showMapProgress(label, cancelable);
         return;
     }
 
@@ -3023,8 +3027,8 @@ void TMap::updateTransferProgressLabel(const QString& text)
 {
     if (mMapProgressStandalone) {
         emit signal_mapProgressSetLabel(text);
-    } else if (mpMapper) {
-        mpMapper->setMapProgressLabel(text);
+    } else if (auto* mapper = mapViewFrontend()) {
+        mapper->setMapProgressLabel(text);
     }
 }
 
@@ -3033,8 +3037,8 @@ void TMap::updateTransferProgressRange(int minimum, int maximum)
     if (mMapProgressStandalone) {
         mMapProgressStandaloneMaximum = maximum;
         emit signal_mapProgressSetRange(minimum, maximum);
-    } else if (mpMapper) {
-        mpMapper->setMapProgressRange(minimum, maximum);
+    } else if (auto* mapper = mapViewFrontend()) {
+        mapper->setMapProgressRange(minimum, maximum);
     }
 }
 
@@ -3042,8 +3046,8 @@ void TMap::updateTransferProgressValue(int value)
 {
     if (mMapProgressStandalone) {
         emit signal_mapProgressSetValue(value);
-    } else if (mpMapper) {
-        mpMapper->setMapProgressValue(value);
+    } else if (auto* mapper = mapViewFrontend()) {
+        mapper->setMapProgressValue(value);
     }
 }
 
@@ -3052,23 +3056,23 @@ int TMap::transferProgressMaximum() const
     if (mMapProgressStandalone) {
         return mMapProgressStandaloneMaximum;
     }
-    if (mpMapper) {
-        return mpMapper->mapProgressMaximum();
+    if (auto* mapper = mapViewFrontend()) {
+        return mapper->mapProgressMaximum();
     }
     return 0;
 }
 
 bool TMap::hasActiveTransferProgress() const
 {
-    return mMapProgressStandalone || (mpMapper && mpMapper->isMapProgressVisible());
+    return mMapProgressStandalone || (mapViewFrontend() && mapViewFrontend()->isMapProgressVisible());
 }
 
 void TMap::disableTransferProgressCancel()
 {
     if (mMapProgressStandalone) {
         emit signal_mapProgressDisableCancel();
-    } else if (mpMapper) {
-        mpMapper->setMapProgressCancelable(false);
+    } else if (auto* mapper = mapViewFrontend()) {
+        mapper->setMapProgressCancelable(false);
     }
 }
 
@@ -3082,9 +3086,8 @@ void TMap::clearTransferProgress()
         emit signal_mapProgressClose();
         return;
     }
-    if (mpMapper) {
-        disconnect(mpMapper, &dlgMapper::signal_mapProgressCanceled, this, &TMap::slot_downloadCancel);
-        mpMapper->hideMapProgress();
+    if (auto* mapper = mapViewFrontend()) {
+        mapper->hideMapProgress();
     }
 }
 

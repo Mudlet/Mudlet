@@ -419,6 +419,9 @@ void dlgMapper::showMapProgress(const QString& label, bool cancelable)
     mpProgressOverlay->show();
     repositionProgressOverlay();
     mpProgressOverlay->raise();
+    if (mpMap) {
+        connect(this, &dlgMapper::signal_mapProgressCanceled, mpMap, &TMap::slot_downloadCancel, Qt::UniqueConnection);
+    }
 }
 
 void dlgMapper::setMapProgressLabel(const QString& text)
@@ -460,6 +463,9 @@ void dlgMapper::setMapProgressCancelable(bool cancelable)
 
 void dlgMapper::hideMapProgress()
 {
+    if (mpMap) {
+        disconnect(this, &dlgMapper::signal_mapProgressCanceled, mpMap, &TMap::slot_downloadCancel);
+    }
     if (mpProgressOverlay) {
         mpProgressOverlay->hide();
     }
