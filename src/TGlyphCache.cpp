@@ -19,6 +19,7 @@
 
 #include "TGlyphCache.h"
 
+#include <QGlyphRun>
 #include <QGuiApplication>
 #include <QPaintDevice>
 #include <QPainter>
@@ -33,7 +34,7 @@ bool drawnAsOnePath(const QPainter& painter, const QRawFont& font)
 {
     constexpr qreal maxCachedGlyphSize = 64;
     const qreal pixelSize = font.pixelSize();
-    return pixelSize * pixelSize * qAbs(painter.deviceTransform().determinant()) >= maxCachedGlyphSize * maxCachedGlyphSize;
+    return pixelSize * pixelSize * qAbs(painter.deviceTransform().determinant()) > maxCachedGlyphSize * maxCachedGlyphSize;
 }
 } // namespace
 
@@ -203,14 +204,20 @@ TGlyphCache::Entry TGlyphCache::shape(QStringView grapheme, const Style style) c
         return entry;
     }
     for (const QGlyphRun& glyphRun : layout.glyphRuns()) {
-        entry.runs.append(Run{glyphRun.rawFont(), glyphRun.glyphIndexes(), glyphRun.positions()});
+        Run run{glyphRun.rawFont(), glyphRun.glyphIndexes(), glyphRun.positions()};
+        // flush() pairs queued glyphs and positions by index, so they must stay
+        // the same length; drawGlyphRun() would have stopped at the shorter one.
+        const qsizetype count = std::min(run.glyphs.size(), run.positions.size());
+        run.glyphs.resize(count);
+        run.positions.resize(count);
+        entry.runs.append(std::move(run));
     }
     entry.advance = line.horizontalAdvance();
     // Not line.height(), which is rounded up and would lift glyphs above where
     // drawText() puts them.
     entry.height = line.ascent() + line.descent();
     for (const Run& run : std::as_const(entry.runs)) {
-        for (qsizetype i = 0; i < run.glyphs.size() && i < run.positions.size(); ++i) {
+        for (qsizetype i = 0; i < run.glyphs.size(); ++i) {
             entry.inkBottom = std::max(entry.inkBottom, run.positions.at(i).y() + run.font.boundingRect(run.glyphs.at(i)).bottom());
         }
     }

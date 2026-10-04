@@ -23,7 +23,6 @@
 #include <QFlags>
 #include <QColor>
 #include <QFont>
-#include <QGlyphRun>
 #include <QHash>
 #include <QList>
 #include <QMetaObject>
