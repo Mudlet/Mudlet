@@ -392,7 +392,7 @@ Host::Host(int port, const QString& hostname, const QString& login, const QStrin
     if (MudletApp::firstLaunch()) {
         QTimer::singleShot(0ms, this, [this]() {
             if (mpConsole) {
-                mpConsole->setCommandLinePlaceholderText(tr("Text to send to the game"));
+                consoleFrontend()->setCommandLinePlaceholderText(tr("Text to send to the game"));
             }
         });
     }
@@ -4730,7 +4730,7 @@ void Host::setUserDictionaryOptions(const bool _useDictionary, const bool useSha
     // been disabled the spell checking code won't run we need to clear any
     // highlights in the TCommandLine instance that may have been present when
     // spell checking is turned on or off:
-    mpConsole->updateCommandLineSpellCheck(isSpellCheckingEnabled);
+    consoleFrontend()->updateCommandLineSpellCheck(isSpellCheckingEnabled);
 }
 
 // This does not take care of any QMaps or other containers that the mudlet
@@ -5563,7 +5563,7 @@ bool Host::setCmdLineAction(const QString& name, const int func)
     if (!mpConsole) {
         return false;
     }
-    return mpConsole->setCommandLineAction(name, func);
+    return consoleFrontend()->setCommandLineAction(name, func);
 }
 
 bool Host::resetCmdLineAction(const QString& name)
@@ -5571,7 +5571,7 @@ bool Host::resetCmdLineAction(const QString& name)
     if (!mpConsole) {
         return false;
     }
-    return mpConsole->resetCommandLineAction(name);
+    return consoleFrontend()->resetCommandLineAction(name);
 }
 
 bool Host::setLabelClickCallback(const QString& name, const int func)
@@ -6444,7 +6444,7 @@ void Host::setFocusOnHostActiveCommandLine()
             return;
         }
 
-        mpConsole->focusActiveCommandLine();
+        consoleFrontend()->focusActiveCommandLine();
 
         mFocusTimerRunning = false;
     };
@@ -6512,7 +6512,7 @@ void Host::sendCmdLine(const QString& cmd)
         return;
     }
 
-    mpConsole->setCommandLineText(cmd);
+    consoleFrontend()->setCommandLineText(cmd);
 }
 
 void Host::setRemoteEchoingActive(bool active)

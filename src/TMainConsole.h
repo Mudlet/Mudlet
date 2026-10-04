@@ -91,17 +91,17 @@ public:
     std::pair<bool, QString> setUserWindowTitle(const QString& name, const QString& text);
     bool createLabel(const QString& windowname, const QString& name, int x, int y, int width, int height, bool fillBackground, bool clickThrough) override;
     std::pair<bool, QString> createMapper(const QString& windowname, int, int, int, int);
-    std::pair<bool, QString> createCommandLine(const QString& windowname, const QString& name, int, int, int, int);
+    std::pair<bool, QString> createCommandLine(const QString& windowname, const QString& name, int, int, int, int) override;
     void registerSubCommandLine(const QString& name, TCommandLine* pCommandLine);
     void deregisterSubCommandLine(TCommandLine* pCommandLine);
-    std::pair<bool, QString> createTextBox(const QString& windowname, const QString& name, int, int, int, int);
-    std::pair<bool, QString> setCmdLineStyleSheet(const QString& name, const QString& styleSheet);
+    std::pair<bool, QString> createTextBox(const QString& windowname, const QString& name, int, int, int, int) override;
+    std::pair<bool, QString> setCmdLineStyleSheet(const QString& name, const QString& styleSheet) override;
     std::pair<bool, QString> setLabelStyleSheet(const QString& name, const QString& stylesheet) override;
     std::optional<QSize> getLabelSizeHint(const QString& name) const override;
     std::pair<bool, QString> deleteLabel(const QString& name) override;
     std::pair<bool, QString> deleteMiniConsole(const QString&);
-    std::pair<bool, QString> deleteCommandLine(const QString&);
-    std::pair<bool, QString> deleteTextBox(const QString&);
+    std::pair<bool, QString> deleteCommandLine(const QString&) override;
+    std::pair<bool, QString> deleteTextBox(const QString&) override;
     std::pair<bool, QString> deleteScrollBox(const QString&);
     std::pair<bool, QString> setLabelToolTip(const QString& name, const QString& text, double duration) override;
     std::pair<bool, QString> setLabelCursor(const QString& name, int shape) override;
@@ -184,35 +184,28 @@ public:
     bool clearDockLayoutChanged(const QString& name);
     TCommandLine* subCommandLineWidget(const QString& name) const { return mSubCommandLineMap.value(name); }
     QList<TCommandLine*> subCommandLineWidgets() const { return mSubCommandLineMap.values(); }
-    void setCommandLinePlaceholderText(const QString& text);
-    void updateCommandLineSpellCheck(bool enabled);
-    void setCommandLineText(const QString& text);
+    void setCommandLinePlaceholderText(const QString& text) override;
+    void updateCommandLineSpellCheck(bool enabled) override;
+    void setCommandLineText(const QString& text) override;
     // The command line the player used last for this profile, so the focus can
     // go back to it on returning to the profile.
     void recordActiveCommandLine(TCommandLine*);
     void forgetCommandLine(TCommandLine*);
-    // Raises and focuses that command line, or this console's own when none is on record.
-    void focusActiveCommandLine();
-    // The command line operations the core forwards to this view by name, never
-    // by widget. An empty name or "main" is this console's own command line, any
-    // other one made by createCommandLine() or a mini console's; each reports
-    // failure for a name that is none of those.
-    bool replaceCommandLineText(const QString& name, const QString& text);
-    bool appendCommandLineText(const QString& name, const QString& text);
-    bool clearCommandLine(const QString& name);
-    bool selectCommandLineText(const QString& name);
-    bool addCommandLineSuggestion(const QString& name, const QString& word);
-    bool removeCommandLineSuggestion(const QString& name, const QString& word);
-    bool clearCommandLineSuggestions(const QString& name);
-    bool addCommandLineBlacklistWord(const QString& name, const QString& word);
-    bool removeCommandLineBlacklistWord(const QString& name, const QString& word);
-    bool clearCommandLineBlacklist(const QString& name);
-    bool addCommandLineMenuItem(const QString& name, const QString& label, const QString& eventName);
-    // No value for a name that is not a command line's, false for a command line
-    // with no such item.
-    std::optional<bool> removeCommandLineMenuItem(const QString& name, const QString& label);
-    bool setCommandLineSavesHistory(const QString& name, bool savesHistory);
-    bool setCommandLineVisible(const QString& name, bool visible);
+    void focusActiveCommandLine() override;
+    bool replaceCommandLineText(const QString& name, const QString& text) override;
+    bool appendCommandLineText(const QString& name, const QString& text) override;
+    bool clearCommandLine(const QString& name) override;
+    bool selectCommandLineText(const QString& name) override;
+    bool addCommandLineSuggestion(const QString& name, const QString& word) override;
+    bool removeCommandLineSuggestion(const QString& name, const QString& word) override;
+    bool clearCommandLineSuggestions(const QString& name) override;
+    bool addCommandLineBlacklistWord(const QString& name, const QString& word) override;
+    bool removeCommandLineBlacklistWord(const QString& name, const QString& word) override;
+    bool clearCommandLineBlacklist(const QString& name) override;
+    bool addCommandLineMenuItem(const QString& name, const QString& label, const QString& eventName) override;
+    std::optional<bool> removeCommandLineMenuItem(const QString& name, const QString& label) override;
+    bool setCommandLineSavesHistory(const QString& name, bool savesHistory) override;
+    bool setCommandLineVisible(const QString& name, bool visible) override;
     // Also used by Host to announce a log change for a view not yet built
     static QString loggingAnnouncementText(const bool isLogging, const QString& logFileName);
     // The scroll bar and scrolling operations the core forwards to this view by
@@ -232,18 +225,15 @@ public:
     // and, when not, why.
     std::optional<std::pair<bool, QString>> setWindowFontFamily(const QString& name, const QString& family, QFont::Weight weight);
     bool setWindowFontSize(const QString& name, int size);
-    // Creates the console's own command line the first time it is shown.
-    bool setWindowCommandLineVisible(const QString& name, bool visible);
+    bool setWindowCommandLineVisible(const QString& name, bool visible) override;
     TTextBox* textBoxWidget(const QString& name) const { return mTextBoxMap.value(name); }
-    // The text box operations the core forwards to this view by name, never by
-    // widget; each reports failure for a name that is not a text box's.
-    bool setTextBoxText(const QString& name, const QString& text);
-    bool clearTextBox(const QString& name);
-    bool setTextBoxReadOnly(const QString& name, bool readOnly);
-    bool setTextBoxPlaceholder(const QString& name, const QString& text);
-    bool setTextBoxStyleSheet(const QString& name, const QString& styleSheet);
-    bool setTextBoxFont(const QString& name, const QFont& font);
-    bool setTextBoxTabMovesFocus(const QString& name, bool tabMovesFocus);
+    bool setTextBoxText(const QString& name, const QString& text) override;
+    bool clearTextBox(const QString& name) override;
+    bool setTextBoxReadOnly(const QString& name, bool readOnly) override;
+    bool setTextBoxPlaceholder(const QString& name, const QString& text) override;
+    bool setTextBoxStyleSheet(const QString& name, const QString& styleSheet) override;
+    bool setTextBoxFont(const QString& name, const QFont& font) override;
+    bool setTextBoxTabMovesFocus(const QString& name, bool tabMovesFocus) override;
     // QWidget state the core asks about, answered here so that it need not
     // reach this view's QWidget base.
     QPoint mousePosition() const;
@@ -253,8 +243,8 @@ public:
     bool hidePlainWindow(const QString& name);
     bool resizePlainWindow(const QString& name, int width, int height);
     bool movePlainWindow(const QString& name, int x, int y);
-    bool setCommandLineAction(const QString& name, const int func);
-    bool resetCommandLineAction(const QString& name);
+    bool setCommandLineAction(const QString& name, const int func) override;
+    bool resetCommandLineAction(const QString& name) override;
     void showStatistics();
     void showPackageDownloadProgress(const QString& title, const QString& cancelText);
     void updatePackageDownloadProgress(qint64 got, qint64 total);
