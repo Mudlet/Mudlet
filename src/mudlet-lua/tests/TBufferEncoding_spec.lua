@@ -267,21 +267,20 @@ describe("Tests GBK decoding", function()
     using("GBK")
     assert.equals("丂", decoded(bytes(0x81, 0x40)), "the precondition failed - 0x81 is meant to be a usable lead byte")
 
-    assert.equals(replacement, decoded(bytes(0x81, 0x7F)))
+    assert.equals(replacement .. bytes(0x7F), decoded(bytes(0x81, 0x7F)))
   end)
 
-  it("consumes both bytes of a pair whose second byte is out of range", function()
+  it("keeps an ASCII byte that cannot be the second byte of a pair", function()
     using("GBK")
 
-    -- the space is part of the rejected pair, so only the Z survives it
-    assert.equals(replacement .. "Z", decoded(bytes(0xC4, 0x20, 0x5A)))
+    assert.equals(replacement .. " Z", decoded(bytes(0xC4, 0x20, 0x5A)))
   end)
 
   it("refuses the four byte sequences that only GB18030 defines", function()
     using("GBK")
 
-    assert.equals(replacement, decoded(bytes(0x90, 0x30)), "the lead pair of a non-BMP sequence")
-    assert.equals(replacement, decoded(bytes(0xFD, 0x30)), "the lead pair of a private use sequence")
+    assert.equals(replacement .. "0", decoded(bytes(0x90, 0x30)), "the lead pair of a non-BMP sequence")
+    assert.equals(replacement .. "0", decoded(bytes(0xFD, 0x30)), "the lead pair of a private use sequence")
   end)
 end)
 
@@ -336,7 +335,7 @@ describe("Tests Big5 decoding", function()
   it("rejects a second byte below the lower range", function()
     using("BIG5")
 
-    assert.equals(replacement, decoded(bytes(0xA7, 0x20)))
+    assert.equals(replacement .. " ", decoded(bytes(0xA7, 0x20)))
   end)
 
   it("rejects a lead byte the encoding has no meaning for", function()
@@ -376,7 +375,7 @@ describe("Tests EUC-KR decoding", function()
   it("rejects a pair whose second byte is out of range", function()
     using("EUC-KR")
 
-    assert.equals(replacement, decoded(bytes(0xC7, 0x20)))
+    assert.equals(replacement .. " ", decoded(bytes(0xC7, 0x20)))
   end)
 end)
 
@@ -441,6 +440,84 @@ describe("Tests a UTF-8 sequence cut short by a byte that cannot continue it", f
       end
     end
     assert.same({"gaprompt:" .. replacement, "gaafter"}, shown)
+  end)
+end)
+
+describe("Tests a double byte character cut short by a byte that cannot be its second", function()
+
+  -- Games that cut text at a byte count end lines on a lone lead byte. The byte
+  -- after it - the game's line ending, or the escape of its next colour code -
+  -- belongs to the game, not to the broken character, so only the lead byte
+  -- earns a replacement mark (#11333).
+
+  local leadBytes = {
+    {"BIG5", bytes(0xA4)},
+    {"GBK", bytes(0xD6)},
+    {"GB18030", bytes(0xD6)},
+    {"EUC-KR", bytes(0xC7)},
+    {"GB18030", bytes(0x81, 0x30)},
+  }
+
+  local function shownLines(prefix, mark)
+    local shown = {}
+    for _, line in ipairs(getLines("main", mark, getLastLineNumber("main") + 1)) do
+      if line:find("^" .. prefix) then
+        shown[#shown + 1] = line
+      end
+    end
+    return shown
+  end
+
+  local function feed(data)
+    local ok, msg = feedTelnet(data)
+    assert.is_true(ok, "start the suite with --offline, see the tests README - feedTelnet said: " .. tostring(msg))
+  end
+
+  -- an unfinished four byte GB18030 sequence also loses only its lead byte, so
+  -- the digit that made it look like one is shown
+  local function kept(lead)
+    return replacement .. lead:sub(2)
+  end
+
+  it("keeps a line ending that arrives with the lead byte", function()
+    finally(restoreServerEncoding())
+    for _, case in ipairs(leadBytes) do
+      local encoding, lead = case[1], case[2]
+      assert.is_true(setServerEncoding(encoding), "setServerEncoding refused " .. encoding)
+      local mark = getLastLineNumber("main")
+
+      feed("dbcut:one" .. lead .. "\r\ndbcut:two\r\n")
+
+      assert.same({"dbcut:one" .. kept(lead), "dbcut:two"}, shownLines("dbcut:", mark), encoding)
+    end
+  end)
+
+  it("keeps a line ending that arrives in the next read", function()
+    finally(restoreServerEncoding())
+    for _, case in ipairs(leadBytes) do
+      local encoding, lead = case[1], case[2]
+      assert.is_true(setServerEncoding(encoding), "setServerEncoding refused " .. encoding)
+      local mark = getLastLineNumber("main")
+
+      feed("dbsplit:one" .. lead)
+      feed("\r\ndbsplit:two\r\n")
+
+      assert.same({"dbsplit:one" .. kept(lead), "dbsplit:two"}, shownLines("dbsplit:", mark), encoding)
+    end
+  end)
+
+  it("still acts on a colour code that arrives in the next read", function()
+    finally(restoreServerEncoding())
+    for _, case in ipairs(leadBytes) do
+      local encoding, lead = case[1], case[2]
+      assert.is_true(setServerEncoding(encoding), "setServerEncoding refused " .. encoding)
+      local mark = getLastLineNumber("main")
+
+      feed("dbcolour:" .. lead)
+      feed("\27[31mRED\27[0m\r\n")
+
+      assert.same({"dbcolour:" .. kept(lead) .. "RED"}, shownLines("dbcolour:", mark), encoding)
+    end
   end)
 end)
 
@@ -859,23 +936,23 @@ describe("Tests a character whose bytes are split by the posting timeout", funct
     using("GBK")
 
     -- Only cTelnet makes the marker, so a carriage return handed to
-    -- feedTriggers() is the caller's own byte and the decoder has to see it: as
-    -- the second byte of a GBK pair it is out of range, and the pair is refused
-    -- whole, in one replacement mark, so it does not end the line. Held back as
-    -- a marker, it would instead leave the lead byte unfinished at the end of the
-    -- text, and end the line.
+    -- feedTriggers() is the caller's own byte and the decoder has to see it: it
+    -- cannot be the second byte of a GBK pair, so the lead byte is refused on
+    -- its own and the carriage return is read as itself. Held back as a marker,
+    -- it would instead leave the lead byte waiting for the next text, to pair
+    -- with the "t" of "tail".
     -- (false: these are the game's own bytes, not UTF-8 to be converted to it)
     local mark = getLastLineNumber("main")
     feedTriggers("local:" .. bytes(0xC4, 0x0D), false)
     feedTriggers("tail\n", false)
 
-    local seen
+    local seen = {}
     for _, line in ipairs(getLines("main", mark, getLastLineNumber("main") + 1)) do
-      if line:find("^local:") then
-        seen = line
+      if line ~= "" then
+        seen[#seen + 1] = line
       end
     end
-    assert.equals("local:" .. replacement .. "tail", seen)
+    assert.same({"local:" .. replacement, "tail"}, seen)
   end)
 end)
 

@@ -7463,6 +7463,14 @@ bool TBuffer::processGBSequence(const std::string& bufferData, const bool isFrom
         if (isToUseReplacementMark) {
             mMudLine.append(QChar::ReplacementCharacter);
         }
+        // A byte that cannot belong to the sequence is the game's own - its line ending, a colour code's
+        // ESC - so only the lead byte is lost and that byte is decoded on its own, as browsers do
+        const auto byteAt = [&bufferData, pos](const size_t offset) {
+            return static_cast<quint8>(bufferData.at(pos + offset));
+        };
+        if ((gbSequenceLength == 2 && byteAt(1) < 0x80) || (gbSequenceLength == 4 && (byteAt(2) < 0x81 || byteAt(2) == 0xFF || byteAt(3) < 0x30 || byteAt(3) > 0x39))) {
+            gbSequenceLength = 1;
+        }
     }
 
     // As there is already a unit increment at the bottom of loop
@@ -7585,6 +7593,11 @@ bool TBuffer::processBig5Sequence(const std::string& bufferData, const bool isFr
         if (isToUseReplacementMark) {
             mMudLine.append(QChar::ReplacementCharacter);
         }
+        // A byte that cannot belong to the sequence is the game's own - its line ending, a colour code's
+        // ESC - so only the lead byte is lost and that byte is decoded on its own, as browsers do
+        if (big5SequenceLength == 2 && static_cast<quint8>(bufferData.at(pos + 1)) < 0x80) {
+            big5SequenceLength = 1;
+        }
     }
 
     // As there is already a unit increment at the bottom of loop
@@ -7706,6 +7719,11 @@ bool TBuffer::processEUC_KRSequence(const std::string& bufferData, const bool is
 #endif
         if (isToUseReplacementMark) {
             mMudLine.append(QChar::ReplacementCharacter);
+        }
+        // A byte that cannot belong to the sequence is the game's own - its line ending, a colour code's
+        // ESC - so only the lead byte is lost and that byte is decoded on its own, as browsers do
+        if (eucSequenceLength == 2 && static_cast<quint8>(bufferData.at(pos + 1)) < 0x80) {
+            eucSequenceLength = 1;
         }
     }
 
