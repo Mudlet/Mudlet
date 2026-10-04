@@ -2973,7 +2973,7 @@ int TLuaInterpreter::setDefaultAreaVisible(lua_State* L)
     }
 
     const bool isToShowDefaultArea = getVerifiedBool(L, __func__, 1, "isToShowDefaultArea");
-    if (host.mpMap->mpMapper) {
+    if (host.mpMap->mapViewFrontend()) {
         const bool wasShown = host.mpMap->getDefaultAreaShown();
         host.mpMap->setDefaultAreaShown(isToShowDefaultArea);
         host.mpMap->announceDefaultAreaVisibilitySet(wasShown);
@@ -8854,7 +8854,7 @@ int TLuaInterpreter::setConfig(lua_State* L)
         return 2;
     };
 
-    if (host.mpMap && host.mpMap->mpMapper) {
+    if (host.mpMap && host.mpMap->mapViewFrontend()) {
         if (key == qsl("mapRoomSize")) {
             // Through float, as dlgMapper::slot_roomSize() rounds it:
             host.mRoomSize = static_cast<float>(getVerifiedInt(L, __func__, 2, "value") / 10.0);

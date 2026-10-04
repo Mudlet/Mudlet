@@ -667,7 +667,7 @@ int TLuaInterpreter::shiftMapPerspective(lua_State* L)
 {
     Host& host = getHostFromLua(L);
 
-    if (!host.mpMap || !host.mpMap->mpRoomDB || !host.mpMap->mpMapper) {
+    if (!host.mpMap || !host.mpMap->mpRoomDB || !host.mpMap->mapViewFrontend()) {
         return warnArgumentValue(L, __func__, "you haven't opened a map yet");
     }
 
@@ -686,7 +686,7 @@ int TLuaInterpreter::setMapPerspective(lua_State* L)
 {
     Host& host = getHostFromLua(L);
 
-    if (!host.mpMap || !host.mpMap->mpRoomDB || !host.mpMap->mpMapper) {
+    if (!host.mpMap || !host.mpMap->mpRoomDB || !host.mpMap->mapViewFrontend()) {
         return warnArgumentValue(L, __func__, "you haven't opened a map yet");
     }
 
@@ -746,7 +746,7 @@ int TLuaInterpreter::centerview(lua_State* L)
     }
 
     // Primary mapper behavior (original code)
-    if (!host.mpMap->mpMapper) {
+    if (!host.mpMap->mapViewFrontend()) {
         return warnArgumentValue(L, __func__, "you haven't opened a map yet");
     }
 
@@ -2070,7 +2070,7 @@ int TLuaInterpreter::getPlayerRoom(lua_State* L)
 {
     Host& host = getHostFromLua(L);
 
-    if (!host.mpMap || !host.mpMap->mpRoomDB || !host.mpMap->mpMapper) {
+    if (!host.mpMap || !host.mpMap->mpRoomDB || !host.mpMap->mapViewFrontend()) {
         return warnArgumentValue(L, __func__, "you haven't opened a map yet");
     }
 
