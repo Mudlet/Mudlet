@@ -2275,7 +2275,7 @@ void Host::resetMainConsoleFormat()
     mpMainConsoleModel->resetFormat();
 }
 
-TConsoleModel* Host::consoleModelNamed(const QString& name)
+TConsoleModel* Host::consoleModelNamed(const QString& name) const
 {
     if (name.isEmpty() || name == QLatin1String("main")) {
         return mpMainConsoleModel.get();
@@ -6124,11 +6124,35 @@ std::optional<QSize> Host::windowGridSize(const QString& name) const
     if (!mpConsole) {
         return {};
     }
-    const TConsoleModel* pModel = (name.isEmpty() || name == QLatin1String("main")) ? mpMainConsoleModel.get() : mWindowRegistry.subConsoleModel(name);
+    const TConsoleModel* pModel = consoleModelNamed(name);
     if (!pModel) {
         return {};
     }
     return {pModel->mGridSize};
+}
+
+std::optional<int> Host::windowScroll(const QString& name) const
+{
+    if (!mpConsole) {
+        return {};
+    }
+    TConsoleModel* pModel = consoleModelNamed(name);
+    if (!pModel) {
+        return {};
+    }
+    return {std::max(std::min(pModel->mUpperPaneCursorY, pModel->buffer.getLastLineNumber()), 0)};
+}
+
+std::optional<bool> Host::windowScrolling(const QString& name) const
+{
+    if (!mpConsole) {
+        return {};
+    }
+    const TConsoleModel* pModel = consoleModelNamed(name);
+    if (!pModel) {
+        return {};
+    }
+    return {pModel->mScrollingEnabled};
 }
 
 std::optional<QSize> Host::userWindowSize(const QString& name) const

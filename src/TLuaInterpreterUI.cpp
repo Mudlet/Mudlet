@@ -1781,7 +1781,7 @@ int TLuaInterpreter::getScroll(lua_State* L)
 {
     const QString windowName = lua_gettop(L) == 1 ? getVerifiedString(L, __func__, 1, "window name", true) : qsl("main");
     const Host& host = getHostFromLua(L);
-    const auto scroll = host.mpConsole ? host.mpConsole->getWindowScroll(windowName) : std::nullopt;
+    const auto scroll = host.windowScroll(windowName);
     if (!scroll) {
         return windowNotFound(L, windowName);
     }
@@ -4587,7 +4587,7 @@ int TLuaInterpreter::scrollingActive(lua_State* L)
     }
 
     const Host& host = getHostFromLua(L);
-    const auto scrolling = host.mpConsole ? host.mpConsole->getWindowScrolling(windowName) : std::nullopt;
+    const auto scrolling = host.windowScrolling(windowName);
     if (!scrolling) {
         return windowNotFound(L, windowName);
     }

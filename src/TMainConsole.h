@@ -235,8 +235,6 @@ public:
     bool setWindowHorizontalScrollBarVisible(const QString& name, bool visible);
     std::optional<bool> getWindowScrollBarVisible(const QString& name);
     bool setWindowScrolling(const QString& name, bool enabled);
-    std::optional<bool> getWindowScrolling(const QString& name);
-    std::optional<int> getWindowScroll(const QString& name);
     // A negative line counts back from the end. One at or past the end, or
     // toEnd, puts the console back to following new lines.
     bool scrollWindowTo(const QString& name, int line, bool toEnd);
