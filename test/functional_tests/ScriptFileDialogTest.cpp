@@ -78,6 +78,14 @@ private:
         mpPoll = poll;
         poll->setInterval(20ms);
         connect(poll, &QTimer::timeout, this, [this, path, attempts = 0]() mutable {
+            // Counted before looking for the file dialog, so that some other window
+            // holding up the script fails the test as well
+            if (++attempts > 500) {
+                if (auto* modal = qobject_cast<QDialog*>(QApplication::activeModalWidget())) {
+                    modal->reject();
+                }
+                return;
+            }
             QFileDialog* dialog = nullptr;
             const QWidgetList widgets = QApplication::topLevelWidgets();
             for (QWidget* widget : widgets) {
@@ -91,10 +99,6 @@ private:
             }
             // QFileDialog redeclares accept() as protected; QDialog's public slots reach the same overrides
             auto* asDialog = static_cast<QDialog*>(dialog);
-            if (++attempts > 500) {
-                asDialog->reject();
-                return;
-            }
             // A refused answer is reported in a message box over the dialog
             if (auto* box = qobject_cast<QDialog*>(QApplication::activeModalWidget()); box && box != dialog) {
                 box->reject();
