@@ -2333,7 +2333,10 @@ void dlgConnectionProfiles::dropEvent(QDropEvent* event)
     //: Shown when something other than one .zip file is dropped on the Connect window. Safari and Finder name what macOS users see.
     const QString message = tr("Drop the one .zip file that Mudlet Web's \"Export profiles…\" downloaded. If your browser unpacked it into a folder (Safari does), "
                                "compress that folder into a .zip first - in Finder, right-click it and choose Compress - then drop the .zip.");
-    QMessageBox::information(this, title, message);
+    // Not from within the drop: a nested event loop there keeps Explorer or Finder waiting until it closes
+    QTimer::singleShot(0, this, [this, title, message]() {
+        QMessageBox::information(this, title, message);
+    });
 }
 
 void dlgConnectionProfiles::slot_copyOnlySettingsOfProfile()

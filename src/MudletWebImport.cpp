@@ -35,6 +35,7 @@
 #include <QTemporaryDir>
 
 #include <algorithm>
+#include <memory>
 #include <zip.h>
 
 namespace {
@@ -85,9 +86,10 @@ bool extractEntry(zip* archive, const Entry& entry, const QString& destination)
         return false;
     }
     // Nothing is left at the destination unless the whole entry made it: a cut-off
-    // save would otherwise be the one desktop loads
-    QSaveFile file(destination);
-    bool ok = file.open(QIODevice::WriteOnly);
+    // save would otherwise be the one desktop loads. Not QSaveFile, whose fsync per
+    // file adds up over an export's logs, and nothing sees staging before it is complete.
+    QFile file(destination);
+    bool ok = file.open(QIODevice::WriteOnly | QIODevice::Truncate);
     zip_uint64_t written = 0;
     char buffer[65536];
     // Read to the end rather than to the size: libzip checks the data's CRC only there
@@ -98,10 +100,12 @@ bool extractEntry(zip* archive, const Entry& entry, const QString& destination)
     // Data that falls short of its stated size ends early rather than failing
     ok = ok && written == entry.size;
     zip_fclose(source);
-    if (!ok) {
-        file.cancelWriting();
+    file.close();
+    if (!ok || file.error() != QFileDevice::NoError) {
+        file.remove();
+        return false;
     }
-    return file.commit() && ok;
+    return true;
 }
 
 QString readProfileItem(const QString& home, const QString& item)
@@ -155,7 +159,6 @@ bool writeProfileItem(const QString& home, const QString& item, const QString& v
 }
 
 // Mudlet Web exports from before it wrote desktop's own connection files carry
-// the connection only in its sidecar
 // the connection only in its sidecar. Returns how many of its files could not be written.
 int writeConnectionFromSidecar(const QString& home, const QJsonObject& sidecar)
 {
@@ -292,11 +295,18 @@ MudletWebImport::Result MudletWebImport::importArchive(const QString& archivePat
 
     // Staged beside the profiles folder rather than in it, where the profile list
     // would show a half-written profile, yet on the same disk so it moves in whole:
-    // a profiles folder that is a link may lead to another disk
-    QTemporaryDir staging(qsl("%1/mudlet-web-import-XXXXXX").arg(QFileInfo(QFileInfo(profilesPath).canonicalFilePath()).absolutePath()));
-    if (!staging.isValid()) {
+    // a profiles folder that is a link may lead to another disk, where the folder
+    // beside it may not be writable
+    std::unique_ptr<QTemporaryDir> staging;
+    for (const QString& parent : {QFileInfo(QFileInfo(profilesPath).canonicalFilePath()).absolutePath(), QFileInfo(profilesPath).absolutePath()}) {
+        staging = std::make_unique<QTemporaryDir>(qsl("%1/mudlet-web-import-XXXXXX").arg(parent));
+        if (staging->isValid()) {
+            break;
+        }
+    }
+    if (!staging->isValid()) {
         //: Shown when importing profiles fails. %1 is the reason.
-        result.error = tr("Could not make room to unpack the profiles: %1").arg(staging.errorString());
+        result.error = tr("Could not make room to unpack the profiles: %1").arg(staging->errorString());
         return result;
     }
 
@@ -312,7 +322,7 @@ MudletWebImport::Result MudletWebImport::importArchive(const QString& archivePat
             wanted = tr("Mudlet Web profile");
         }
         const QString name = freeName(wanted, taken);
-        const QString home = qsl("%1/%2").arg(staging.path(), name);
+        const QString home = qsl("%1/%2").arg(staging->path(), name);
         const QString prefix = root.isEmpty() ? QString() : root + QLatin1Char('/');
 
         QByteArray sidecar;
