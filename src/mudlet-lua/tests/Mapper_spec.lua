@@ -3296,6 +3296,16 @@ describe("Tests saveMap and loadMap", function()
       assertMapRestored()
     end)
 
+    it("lists each entrance into a room once after a reload", function()
+      buildMap()
+      assert.are.same({roomA}, getAllRoomEntrances(roomB))
+
+      assert.is_true(saveMap(savePath))
+      deleteMap()
+      assert.is_true(loadMap(savePath))
+      assert.are.same({roomA}, getAllRoomEntrances(roomB))
+    end)
+
     it("replaces what is on the map rather than merging into it", function()
       buildMap()
       saveMap(savePath)
@@ -3414,6 +3424,30 @@ describe("Tests saveMap and loadMap", function()
     -- mCustomEnvColors, a different map, so there is nothing to read this back
     -- with from Lua
     pending("the environment colours an XML map declares have no Lua getter")
+
+    it("keeps the entrances of a room whose ID a later room in the file reuses", function()
+      local duplicatePath = getMudletHomeDir() .. "/mapper_spec_duplicate.xml"
+      finally(function() os.remove(duplicatePath) end)
+      local file = assert(io.open(duplicatePath, "w"))
+      file:write([[<?xml version="1.0" encoding="UTF-8"?>
+<map>
+  <areas><area id="4001" name="Mapper Spec Duplicate Area"/></areas>
+  <rooms>
+    <room id="4001" area="4001"><coord x="0" y="0" z="0"/><exit direction="north" target="4002"/></room>
+    <room id="4002" area="4001"><coord x="0" y="1" z="0"/></room>
+    <room id="4003" area="4001"><coord x="1" y="0" z="0"/></room>
+    <room id="4001" area="4001"><coord x="0" y="0" z="0"/><exit special="1" command="jump" target="4003"/></room>
+  </rooms>
+</map>
+]])
+      file:close()
+
+      -- the second 4001 is refused, but reading its special exit must not
+      -- have dropped the entrance the first one recorded
+      assert.is_true(loadMap(duplicatePath))
+      assert.are.equal(4002, getRoomExits(4001)["north"])
+      assert.are.same({4001}, getAllRoomEntrances(4002))
+    end)
 
     it("throws away the map that was there before the import", function()
       local stray = createRoomID()

@@ -1617,11 +1617,12 @@ void TRoom::auditExits(const QHash<int, int> roomRemapping)
         }
     }
 
-    // The audit rewrites exit destinations, which the entrance hash built
-    // during the load has no entry for. Removing the superseded entries as
-    // well would be a full scan of the hash per room, and the consumers all
-    // re-check the exit anyway, so the leftovers are left to them.
-    mpRoomDB->updateEntranceMap(this, true);
+    // Only a remapped room id gives an exit a destination that the load did
+    // not record. The superseded entries are left behind, as the consumers all
+    // re-check the exit anyway.
+    if (!roomRemapping.isEmpty()) {
+        mpRoomDB->updateEntranceMap(this, true);
+    }
 }
 
 void TRoom::auditExit(int& exitRoomId,                     // Reference to where exit goes to

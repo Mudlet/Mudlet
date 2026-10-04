@@ -533,7 +533,12 @@ void XMLimport::readRoom(QMultiHash<int, int>& areamRoomMultiHash, unsigned int*
                     // This is how IRE XML maps mark special exits, rather than
                     // by just using a different string for the direction!
                     dir = attributes().value(qsl("command")).toString();
-                    pT->setSpecialExit(e, dir);
+                    // Not setSpecialExit(), which edits the map's entrances for
+                    // this room's id while the room is not on the map yet - and
+                    // a malformed file can reuse an id another room holds
+                    if (e > 0) {
+                        pT->mSpecialExits[dir] = e;
+                    }
                     pT->setDoor(dir, door);
                 } else {
                     continue;

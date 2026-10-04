@@ -264,6 +264,10 @@ describe("Tests the audit of a damaged binary map file", function()
       assert.are.same(expected, areaRooms)
       assert.are.equal(renumbered, getRoomExits(from)["east"])
       assert.are.equal(from, getRoomExits(renumbered)["west"])
+      -- the load recorded both entrances under the old ID, so the audit has
+      -- to record them again under the new one
+      assert.are.same({from}, getAllRoomEntrances(renumbered))
+      assert.is_truthy(table.contains(getAllRoomEntrances(from), renumbered))
       assert.are.equal(renumbered, getRoomIDbyHash("MapFileAuditSpecBadRoomHash"))
       -- and is found where it stands, not under the ID it was loaded with
       local x, y, z = getRoomCoordinates(renumbered)
@@ -325,6 +329,7 @@ describe("Tests the audit of a damaged binary map file", function()
       assert.is_not_nil(renumbered, "the room with the bad ID was lost")
       assert.is_true(renumbered >= 1)
       assert.are.same({["climb the rope"] = renumbered}, getSpecialExitsSwap(from))
+      assert.are.same({from}, getAllRoomEntrances(renumbered))
     end)
 
     it("keeps a room whose ID is below one when it loads a JSON map", function()
