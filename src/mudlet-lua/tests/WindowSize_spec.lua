@@ -75,15 +75,20 @@ describe("window sizes", function()
     -- As with the command line, only the toolbar is resized
     it("follows a button bar shown along its top", function()
       local toolbar = "wsTopToolbar"
+      local button = "wsTopButton"
       finally(function()
+        setButtonStyleSheet(button, "")
         hideToolBar(toolbar)
         pumpEvents(100)
       end)
       if exists(toolbar, "button") == 0 then
         assert.is_true(tempButtonToolbar(toolbar, 0, 0) > 0)
       end
-      local buttonId = findItems("wsTopButton", "button")[1] or tempButton(toolbar, "wsTopButton", 0)
+      local buttonId = findItems(button, "button")[1] or tempButton(toolbar, button, 0)
       assert.is_true(type(buttonId) == "number" and buttonId > 0, "could not put a button on " .. toolbar)
+      -- The bars along the top share one row as high as the tallest of them, so
+      -- this one has to outgrow any that other specs leave showing there
+      assert.is_true(setButtonStyleSheet(button, "QPushButton { min-height: 120px; }"))
       hideToolBar(toolbar)
       pumpEvents(100)
       local width, height = getMainWindowSize()
