@@ -34,11 +34,17 @@
 
 #include <QCheckBox>
 #include <QComboBox>
+#include <QContextMenuEvent>
+#include <QDialog>
+#include <QElapsedTimer>
 #include <QFileInfo>
 #include <QLineEdit>
+#include <QListWidget>
+#include <QMenu>
 #include <QPushButton>
 #include <QSpinBox>
 #include <QTemporaryDir>
+#include <QTimer>
 #include <QtTest/QtTest>
 
 #include "Host.h"
@@ -217,6 +223,76 @@ private:
         pDlg->init(usedNames, usedColors, usedSymbols, usedWeights, usedLockStatus, hiddenRoomCount, rooms);
         mpDialog = pDlg;
         return pDlg;
+    }
+
+    struct ColorSelectorOutcome
+    {
+        bool sawSelector = false;
+        bool clickLandedOnAColor = false;
+        bool sawMenu = false;
+        int colorsLeftInList = -1;
+    };
+    ColorSelectorOutcome mColorSelectorOutcome;
+
+    // The colour selector and its context menu each run their own event loop,
+    // so the right-click is made, and "Delete room color" picked, from timers
+    // inside them. A clickedRow of -1 right-clicks the empty space past the colours.
+    void rightClickInTheRoomColorSelector(dlgRoomProperties* pDlg, const int currentRow, const int clickedRow)
+    {
+        using namespace std::chrono_literals;
+        mColorSelectorOutcome = ColorSelectorOutcome();
+        auto* menuAnswerer = new QTimer(this);
+        menuAnswerer->setInterval(20ms);
+        connect(menuAnswerer, &QTimer::timeout, this, [this, menuAnswerer]() {
+            auto* menu = qobject_cast<QMenu*>(QApplication::activePopupWidget());
+            if (!menu) {
+                return;
+            }
+            menuAnswerer->stop();
+            mColorSelectorOutcome.sawMenu = true;
+            // Its only action, so a translation cannot hide it
+            const auto actions = menu->actions();
+            if (actions.size() == 1) {
+                actions.constFirst()->trigger();
+            }
+            menu->close();
+        });
+        auto* selectorDriver = new QTimer(this);
+        selectorDriver->setInterval(20ms);
+        QElapsedTimer waited;
+        waited.start();
+        connect(selectorDriver, &QTimer::timeout, this, [this, selectorDriver, menuAnswerer, currentRow, clickedRow, &waited]() {
+            auto* selector = qobject_cast<QDialog*>(QApplication::activeModalWidget());
+            auto* list = selector ? selector->findChild<QListWidget*>() : nullptr;
+            if (!list) {
+                // Something else is modal, and the button click would wait on it for ever
+                if (waited.hasExpired(10000)) {
+                    selectorDriver->stop();
+                    if (selector) {
+                        selector->reject();
+                    }
+                }
+                return;
+            }
+            selectorDriver->stop();
+            mColorSelectorOutcome.sawSelector = true;
+            list->setCurrentRow(currentRow);
+            QWidget* viewport = list->viewport();
+            const QPoint pos = clickedRow >= 0 ? list->visualItemRect(list->item(clickedRow)).center() : QPoint(viewport->width() - 2, viewport->height() - 2);
+            mColorSelectorOutcome.clickLandedOnAColor = list->itemAt(pos);
+            menuAnswerer->start();
+            QTest::mouseClick(viewport, Qt::RightButton, Qt::NoModifier, pos);
+            QContextMenuEvent event(QContextMenuEvent::Mouse, pos, viewport->mapToGlobal(pos));
+            QApplication::sendEvent(viewport, &event);
+            menuAnswerer->stop();
+            mColorSelectorOutcome.colorsLeftInList = list->count();
+            selector->reject();
+        });
+        selectorDriver->start();
+        pDlg->pushButton_setRoomColor->click();
+        selectorDriver->stop();
+        delete selectorDriver;
+        delete menuAnswerer;
     }
 
 private slots:
@@ -660,6 +736,49 @@ private slots:
         QCOMPARE(room(scmSecondRoom)->name, qsl("Renamed"));
         QVERIFY2(room(scmFirstRoom)->name.isEmpty(), "OK renamed a new room that reused the id");
         QCOMPARE(mEmitted.roomIds, QList<int>{scmSecondRoom});
+    }
+
+    void rightClickingPastTheColorsOfAnEmptyColorListOffersNothing()
+    {
+        buildMap();
+        map()->mCustomEnvColors.clear();
+
+        auto* pDlg = openDialogOn({scmFirstRoom});
+        rightClickInTheRoomColorSelector(pDlg, -1, -1);
+
+        QVERIFY(mColorSelectorOutcome.sawSelector);
+        QVERIFY2(!mColorSelectorOutcome.sawMenu, "there is no color under the cursor to delete");
+    }
+
+    void rightClickingPastTheColorsLeavesTheCurrentOneAlone()
+    {
+        buildMap();
+        map()->mCustomEnvColors = {{257, QColor(Qt::red)}, {258, QColor(Qt::blue)}};
+
+        auto* pDlg = openDialogOn({scmFirstRoom});
+        rightClickInTheRoomColorSelector(pDlg, 0, -1);
+
+        QVERIFY(mColorSelectorOutcome.sawSelector);
+        QVERIFY2(!mColorSelectorOutcome.clickLandedOnAColor, "the selector is too small to have empty space past its colors");
+        QVERIFY2(!mColorSelectorOutcome.sawMenu, "there is no color under the cursor to delete");
+        QCOMPARE(mColorSelectorOutcome.colorsLeftInList, 2);
+        QCOMPARE(map()->mCustomEnvColors.size(), 2);
+    }
+
+    void deletingARoomColorRemovesTheOneRightClicked()
+    {
+        buildMap();
+        map()->mCustomEnvColors = {{257, QColor(Qt::red)}, {258, QColor(Qt::blue)}};
+
+        auto* pDlg = openDialogOn({scmFirstRoom});
+        rightClickInTheRoomColorSelector(pDlg, 0, 1);
+
+        QVERIFY(mColorSelectorOutcome.sawSelector);
+        QVERIFY(mColorSelectorOutcome.clickLandedOnAColor);
+        QVERIFY(mColorSelectorOutcome.sawMenu);
+        QCOMPARE(mColorSelectorOutcome.colorsLeftInList, 1);
+        QVERIFY(map()->mCustomEnvColors.contains(257));
+        QVERIFY2(!map()->mCustomEnvColors.contains(258), "the right-clicked color was not deleted");
     }
 };
 

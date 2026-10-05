@@ -974,6 +974,81 @@ describe("Tests the GUI utilities as far as possible without mudlet", function()
       assert.is_nil(ok)
       assert.equals("replace: nothing is selected to be replaced. Did selectString return -1?", err)
     end)
+
+    describe("in a named window", function()
+      local windowName = "guiUtilsReplaceConsole"
+
+      setup(function()
+        createMiniConsole(windowName, 0, 0, 400, 200)
+        setWindowWrap(windowName, 60)
+      end)
+
+      teardown(function()
+        deleteMiniConsole(windowName)
+      end)
+
+      before_each(function()
+        clearWindow(windowName)
+        resetFormat(windowName)
+        echo(windowName, "hello world\n")
+        moveCursor(windowName, 0, 0)
+      end)
+
+      local function firstLine()
+        moveCursor(windowName, 0, 0)
+        selectCurrentLine(windowName)
+        local text = getSelection(windowName)
+        deselect(windowName)
+        return text
+      end
+
+      it("Should replace the selected text", function()
+        selectString(windowName, "world", 1)
+        assert.equals(0, select("#", replace(windowName, "there")))
+        assert.equals("hello there", firstLine())
+      end)
+
+      it("Should delete the selected text when given an empty replacement", function()
+        selectString(windowName, "world", 1)
+        replace(windowName, "")
+        assert.equals("hello ", firstLine())
+      end)
+
+      it("Should keep the colour of the selected text when asked to", function()
+        selectString(windowName, "world", 1)
+        setFgColor(windowName, 255, 0, 0)
+        selectString(windowName, "world", 1)
+        replace(windowName, "there", true)
+        selectSection(windowName, 6, 5)
+        assert.are.same({255, 0, 0}, getTextFormat(windowName).foreground)
+      end)
+
+      it("Should refuse when nothing is selected, and leave the text alone", function()
+        deselect(windowName)
+        local ok, err = replace(windowName, "there")
+        assert.is_nil(ok)
+        assert.equals("replace: nothing is selected to be replaced. Did selectString return -1?", err)
+        assert.equals("hello world", firstLine())
+      end)
+
+      it("Should only refuse an empty selection, not one whose text is gone", function()
+        selectString(windowName, "hello", 1)
+        clearWindow(windowName)
+        assert.are.same({"", 0, 5}, {getSelection(windowName)})
+        assert.equals(0, select("#", replace(windowName, "x")))
+      end)
+
+      it("Should not take a selection that is no longer valid for an empty one", function()
+        selectString(windowName, "world", 1)
+        clearWindow(windowName)
+        assert.are.same({nil, "the selection is no longer valid"}, {getSelection(windowName)})
+        assert.equals(0, select("#", replace(windowName, "x")))
+      end)
+
+      it("Should not complain about the selection of a window that does not exist", function()
+        assert.equals(0, select("#", replace("guiUtilsNoSuchWindow", "x")))
+      end)
+    end)
   end)
   describe("Tests the functionality of the color echo transformation functions", function()
     local cechoString = "<reset><ansi_light_red:ansi_010>This <b>is</b> <i>a</i> <:ansi_012><u>test</u> <ansi_010><s>of</s> <o>the</o><reset> echo transformations."
@@ -1928,6 +2003,215 @@ describe("Tests the GUI utilities as far as possible without mudlet", function()
       local improperOk, improperErr = pcall(xEcho, "Color", "echoPopup", "text", {"send('x')"}, {"a hint"}, 5)
       assert.is_false(improperOk)
       assert.is_truthy(improperErr:find("Improper arguments, usage: ([window, ] string, {commands}, {hints})", 1, true))
+    end)
+  end)
+
+  describe("Tests the format and selection state that cecho, decho and hecho work from", function()
+    local windowName = "guiUtilsXEchoStateConsole"
+    local bufferName = "guiUtilsXEchoStateBuffer"
+
+    setup(function()
+      createMiniConsole(windowName, 0, 0, 400, 200)
+      setWindowWrap(windowName, 60)
+      createBuffer(bufferName)
+    end)
+
+    teardown(function()
+      deleteMiniConsole(windowName)
+    end)
+
+    before_each(function()
+      clearWindow(windowName)
+      clearWindow(bufferName)
+      resetFormat(windowName)
+      moveCursor(windowName, 0, 0)
+    end)
+
+    local function formatAt(window, from, length)
+      selectSection(window, from, length)
+      local format = getTextFormat(window)
+      deselect(window)
+      return format
+    end
+
+    local function defaultFormat()
+      resetFormat(windowName)
+      echo(windowName, "reference\n")
+      moveCursor(windowName, 0, 0)
+      local format = formatAt(windowName, 0, 1)
+      clearWindow(windowName)
+      moveCursor(windowName, 0, 0)
+      return format
+    end
+
+    local function currentLine(window)
+      selectCurrentLine(window)
+      local text = getSelection(window)
+      deselect(window)
+      return text
+    end
+
+    it("Should start from the default format whatever was set before it", function()
+      local default = defaultFormat()
+      setBold(windowName, true)
+      setItalics(windowName, true)
+      setFgColor(windowName, 1, 2, 3)
+      setBgColor(windowName, 4, 5, 6)
+      cecho(windowName, "plain")
+      assert.are.same(default, formatAt(windowName, 0, 5))
+    end)
+
+    it("Should leave the default format behind for whatever is echoed next", function()
+      local default = defaultFormat()
+      cecho(windowName, "<red:blue><b><i><u><s><o>styled")
+      echo(windowName, "after")
+      assert.equals("styledafter", currentLine(windowName))
+
+      local styled = formatAt(windowName, 0, 6)
+      assert.are.same(color_table.red, styled.foreground)
+      assert.are.same(color_table.blue, styled.background)
+      assert.is_true(styled.bold)
+      assert.is_true(styled.italic)
+      assert.is_true(styled.underline)
+      assert.is_true(styled.strikeout)
+      assert.is_true(styled.overline)
+
+      assert.are.same(default, formatAt(windowName, 6, 5))
+    end)
+
+    it("Should not recolour text that was selected before it was called", function()
+      local default = defaultFormat()
+      echo(windowName, "keep\n")
+      moveCursor(windowName, 0, 0)
+      selectString(windowName, "keep", 1)
+      moveCursor(windowName, 0, 1)
+      cecho(windowName, "<red>new")
+      assert.are.same(color_table.red, formatAt(windowName, 0, 3).foreground)
+      moveCursor(windowName, 0, 0)
+      assert.are.same(default, formatAt(windowName, 0, 4))
+    end)
+
+    it("Should clear the selection of the window it echoed to", function()
+      echo(windowName, "keep\n")
+      moveCursor(windowName, 0, 0)
+      selectString(windowName, "keep", 1)
+      decho(windowName, "<255,0,0>new")
+      assert.are.same({"", 0, 0}, {getSelection(windowName)})
+    end)
+
+    it("Should apply and switch off the formatting tags in each of the three syntaxes", function()
+      cecho(windowName, "<b>B</b>n<i>I</i>n<u>U</u>n<s>S</s>n<o>O</o>n\n")
+      decho(windowName, "<b>B</b>n<i>I</i>n<u>U</u>n<s>S</s>n<o>O</o>n\n")
+      hecho(windowName, "#bB#/bn#iI#/in#uU#/un#sS#/sn#oO#/on\n")
+      local flags = {"bold", "italic", "underline", "strikeout", "overline"}
+      for line = 0, 2 do
+        moveCursor(windowName, 0, line)
+        assert.equals("BnInUnSnOn", currentLine(windowName))
+        for index, flag in ipairs(flags) do
+          assert.is_true(formatAt(windowName, (index - 1) * 2, 1)[flag], flag .. " on line " .. line)
+          assert.is_false(formatAt(windowName, (index - 1) * 2 + 1, 1)[flag], flag .. " off on line " .. line)
+        end
+      end
+    end)
+
+    it("Should go back to the default format at a reset in each of the three syntaxes", function()
+      local default = defaultFormat()
+      cecho(windowName, "<red:blue><b>X<reset>Y\n")
+      decho(windowName, "<255,0,0:0,0,255><b>X<r>Y\n")
+      hecho(windowName, "#ff0000,0000ff#bX#rY\n")
+      for line = 0, 2 do
+        moveCursor(windowName, 0, line)
+        assert.equals("XY", currentLine(windowName))
+        local before = formatAt(windowName, 0, 1)
+        assert.are.same({255, 0, 0}, before.foreground)
+        assert.are.same({0, 0, 255}, before.background)
+        assert.is_true(before.bold)
+        assert.are.same(default, formatAt(windowName, 1, 1))
+      end
+    end)
+
+    it("Should write coloured text into a buffer", function()
+      cecho(bufferName, "<red>in<blue>buffer")
+      moveCursor(bufferName, 0, 0)
+      assert.equals("inbuffer", currentLine(bufferName))
+      assert.are.same(color_table.red, formatAt(bufferName, 0, 2).foreground)
+      assert.are.same(color_table.blue, formatAt(bufferName, 2, 6).foreground)
+    end)
+
+    it("Should insert each coloured piece after the one before it", function()
+      echo(windowName, "AB\n")
+      moveCursor(windowName, 1, 0)
+      cinsertText(windowName, "<red>X<blue>Y")
+      moveCursor(windowName, 0, 0)
+      assert.equals("AXYB", currentLine(windowName))
+      assert.are.same(color_table.red, formatAt(windowName, 1, 1).foreground)
+      assert.are.same(color_table.blue, formatAt(windowName, 2, 1).foreground)
+    end)
+
+    it("Should return nothing", function()
+      assert.equals(0, select("#", cecho(windowName, "<red>x")))
+      assert.equals(0, select("#", xEcho("Color", "echo", windowName, "<red>x")))
+      assert.equals(0, select("#", xEcho("Hex", "insertText", windowName, "#ff0000x")))
+    end)
+
+    it("Should report a text that is not a string from one line inside xEcho", function()
+      -- one line for every wrapper means the position is xEcho's own, as
+      -- assert() reports it, rather than that of whoever called xEcho
+      local lines = {}
+      local function lineOf(err, message)
+        local line, text = err:match("^[^\n]*GUIUtils%.lua:(%d+): (.*)$")
+        assert.equals(message, text)
+        lines[#lines + 1] = line
+      end
+
+      local ok, err = pcall(cecho, 5)
+      assert.is_false(ok)
+      lineOf(err, "cecho: bad argument #1, string expected, got number!)")
+
+      ok, err = pcall(dinsertText)
+      assert.is_false(ok)
+      lineOf(err, "dinsertText: bad argument #1, string expected, got nil!)")
+
+      ok, err = pcall(hechoLink, {}, "send('x')", "a hint")
+      assert.is_false(ok)
+      lineOf(err, "hechoLink: bad argument #1, string expected, got table!)")
+
+      assert.is_truthy(lines[1])
+      assert.equals(lines[1], lines[2])
+      assert.equals(lines[1], lines[3])
+    end)
+
+    it("Should take the window name as the text, on the main console, when the text is nil or false", function()
+      clearWindow()
+      moveCursor(0, 0)
+      cecho("<red>mainText", nil)
+      cecho(windowName, false)
+      selectCurrentLine()
+      assert.equals("mainText" .. windowName, getSelection())
+      deselect()
+      assert.equals("", currentLine(windowName))
+    end)
+
+    it("Should echo a number given as the text", function()
+      cecho(windowName, 42)
+      assert.equals("42", currentLine(windowName))
+    end)
+
+    it("Should quietly do nothing for a window that does not exist", function()
+      assert.has_no.errors(function() cecho("guiUtilsNoSuchWindow", "<red>x") end)
+      assert.has_no.errors(function() decho("guiUtilsNoSuchWindow", "<255,0,0>x") end)
+    end)
+
+    it("Should count a trailing nil out of a link's arguments", function()
+      clearWindow()
+      moveCursor(0, 0)
+      cechoLink("<red>trailing", "send('x')", "a hint", nil)
+      selectCurrentLine()
+      assert.equals("trailing", getSelection())
+      deselect()
+
+      cechoPopup(windowName, "<red>menu", {"send('x')"}, {"a hint"}, nil)
+      assert.equals("menu", currentLine(windowName))
     end)
   end)
 

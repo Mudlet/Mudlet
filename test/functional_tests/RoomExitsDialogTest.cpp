@@ -58,6 +58,8 @@
 
 #include "GroupedTest.h"
 
+using namespace std::chrono_literals;
+
 // ExitsTreeWidget keeps its column numbers in an enumeration only dlgRoomExits
 // and its delegate are friends of, so mirror them here; the columnCount() check
 // in openDialogOn() is the tripwire for them drifting apart.
@@ -740,7 +742,7 @@ private slots:
         QVERIFY2(map()->isUnsaved(), "editing exits did not mark the map unsaved");
         // updateArea() queues a throttled repaint that emits signal_areaChanged
         // for the subject's area - drain the queued call and check it arrived.
-        QVERIFY2(areaChangedSpy.wait(1000), "updateArea() did not repaint the map (signal_areaChanged never fired)");
+        QVERIFY2(areaChangedSpy.wait(1s), "updateArea() did not repaint the map (signal_areaChanged never fired)");
         QCOMPARE(areaChangedSpy.count(), 1);
         QCOMPARE(areaChangedSpy.takeFirst().at(0).toInt(), subject()->getArea());
     }

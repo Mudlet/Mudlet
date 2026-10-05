@@ -53,6 +53,7 @@ public:
     bool hasExit(const int) const;
     void setWeight(int);
     bool setExitLock(const int, const bool);
+    void removeExitExtras(const int);
     bool setSpecialExitLock(const QString&, const bool);
     bool hasExitLock(const int to) const;
     bool hasSpecialExitLock(const QString&) const;

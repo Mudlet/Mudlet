@@ -23,7 +23,6 @@
 #include "XMLimport.h"
 
 
-#include "dlgMapper.h"
 #include "LuaInterface.h"
 #include "CredentialManager.h"
 #include "SecureStringUtils.h"
@@ -191,12 +190,8 @@ std::pair<bool, QString> XMLimport::importPackage(QFile* pfile, QString packName
                 } else {
                     readMap();
                     mpHost->mpMap->audit();
-                    if (mpHost->mpMap->mpMapper) {
-                        mpHost->mpMap->mpMapper->mp2dMap->init();
-                        mpHost->mpMap->mpMapper->updateAreaComboBox();
-                        mpHost->mpMap->mpMapper->resetAreaComboBoxToPlayerRoomArea();
-                        mpHost->mpMap->mpMapper->show();
-                    }
+                    mpHost->mpMap->announceMapLoaded(true);
+                    mpHost->mpMap->requestMapperShown();
                 }
             } else {
                 qDebug().nospace() << "XMLimport::importPackage(...) ERROR: "
@@ -1888,7 +1883,14 @@ void XMLimport::readModulesDetailsMap(QMap<QString, QStringList>& map)
                 // The last expected detail for the entry - so store this
                 // completed entry into the QMap
                 entry << readElementText();
-                map[key] = entry;
+                // Every reader of an entry indexes its file, sync flag and priority, so a hand-edited or
+                // truncated file that leaves one out would read past the end of it
+                if (entry.size() >= 3) {
+                    map[key] = entry;
+                } else {
+                    // Quoted so that QDebug escapes any control characters the file put in the name
+                    qWarning().nospace() << "XMLimport::readModulesDetailsMap() WARNING - ignoring the module " << key << " as its entry is missing some of its details.";
+                }
                 entry.clear();
             } else {
                 readUnknownElement(qsl("ModulesDetailsMap"));
