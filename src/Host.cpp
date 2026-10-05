@@ -3898,7 +3898,10 @@ QString Host::getPackageConfig(const QString& luaConfig, bool isModule, QString*
         error = lua_pcall(L, 0, 0, 0);
     }
     if (!error) {
-        lua_getglobal(L, "mpackage");
+        // Raw access throughout: this runs outside lua_pcall, so a metamethod or a non-string key
+        // that config.lua left behind would raise an unprotected error and abort Mudlet
+        lua_pushstring(L, "mpackage");
+        lua_rawget(L, LUA_GLOBALSINDEX);
         QString theNameItAsksFor;
         if (lua_isstring(L, -1)) {
             theNameItAsksFor = QString(lua_tostring(L, -1));
@@ -3915,13 +3918,15 @@ QString Host::getPackageConfig(const QString& luaConfig, bool isModule, QString*
         }
         if (!packageName.isEmpty()) {
             //get rid of lua version
-            lua_getglobal(L, "_G");
+            lua_pushvalue(L, LUA_GLOBALSINDEX);
+            lua_pushstring(L, "_VERSION");
             lua_pushnil(L);
-            lua_setfield(L, -2, "_VERSION");
+            lua_rawset(L, -3);
             QMap<QString, QString> packageInfo;
             lua_pushnil(L);
             while (lua_next(L, -2) != 0) {
-                if (lua_isstring(L, -1) && lua_isstring(L, -2)) {
+                // lua_tostring() would turn a number key into a string in place, which lua_next() rejects
+                if (lua_isstring(L, -1) && lua_type(L, -2) == LUA_TSTRING) {
                     packageInfo[lua_tostring(L, -2)] = lua_tostring(L, -1);
                 }
                 lua_pop(L, 1);

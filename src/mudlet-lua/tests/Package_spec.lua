@@ -2062,6 +2062,22 @@ describe("Tests installing an archive whose config.lua will not run", function()
   end)
 end)
 
+describe("Tests installing an archive whose config.lua leaves its globals in an awkward state", function()
+  -- The manifest is read back from the globals the script left behind, outside the protected
+  -- call that ran it, where a Lua error cannot be caught
+  it("installs under the name its config.lua asks for and keeps its details", function()
+    local name = "mudlet-spec-trickyconfig"
+    defer(function() removeFixturePackage(name) end)
+
+    installUntilConfirmed(installPackage, fixtureDirectory .. "/" .. name .. ".mpackage",
+                          function() return packageInstalled(name) end, "the fixture with the awkward globals")
+
+    assert.equals("Mudlet test suite", getPackageInfo(name, "author"))
+    assert.is_nil(getPackageInfo(name)["1"], "a global with a number for its name was filed as a detail")
+    assert.equals(1, exists(name .. " alias", "alias"), "the archive's contents were not installed")
+  end)
+end)
+
 describe("Tests the functionality of verbosePackageInstall", function()
   it("installs the package and says so on the main console", function()
     defer(function() removeFixturePackage(minimalPackage) end)
