@@ -1591,6 +1591,19 @@ describe("MMCP effects against a scripted chat peer", function()
       assert.is_true(contains(shown, PEER_NAME .. " is trying to peek your connections!"), shown)
       assert.is_true(mmcp.ignore(PEER_NAME))
     end)
+
+    -- The peek notice's first line then ends right after its "[ CHAT ]  - " prefix
+    it("survives a peer whose name starts with a newline", function()
+      if peerUnavailable() then return end
+      ensurePeer()
+      local mark = getLastLineNumber("main")
+      peerSends(1, "\nNewlinePeer")
+      peerSends(28, "")
+      local shown = waitForText(mark, "trying to peek your connections")
+      assert.is_true(contains(shown, "NewlinePeer is trying to peek your connections"), shown)
+      peerSends(1, PEER_NAME)
+      assert.is_true(waitUntil(function() return peerClient() ~= nil end, 2000))
+    end)
   end)
 
   describe("mmcp.sendSideChannel", function()
