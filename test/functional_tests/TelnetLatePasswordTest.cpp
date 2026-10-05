@@ -284,7 +284,7 @@ private slots:
         host->send(qsl("look"));
         // Nothing to wait for, so give a send that should not happen the same margin as one that
         // should before concluding it did not:
-        QTest::qWait(500);
+        QTest::qWait(500ms);
         QCOMPARE(mpServer->receivedText(), csLoginLine);
 
         deliverLatePassword(host);
@@ -311,7 +311,7 @@ private slots:
 
         // Past the detection window (CHARACTER_MODE_DETECT, 3 s), so a verdict the login line had
         // started would have latched by now and refused the password below
-        QTest::qWait(3500);
+        QTest::qWait(3500ms);
 
         deliverLatePassword(host);
         QVERIFY2(waitForReceivedText(csLoginLine + csPasswordLine), "the late password was not sent to the still-masked password prompt");
@@ -402,7 +402,7 @@ private slots:
         deliverLatePassword(host);
         // Nothing to wait for, so give a send that should not happen the same margin as one that
         // should before concluding it did not:
-        QTest::qWait(500);
+        QTest::qWait(500ms);
         QCOMPARE(mpServer->receivedText(), csLoginLine + csCommandLine);
     }
 
@@ -422,7 +422,7 @@ private slots:
         host->mTelnet.cancelLoginTimers();
 
         deliverLatePassword(host);
-        QTest::qWait(500);
+        QTest::qWait(500ms);
         QCOMPARE(mpServer->receivedText(), csLoginLine);
         QVERIFY2(!consoleContains(host, qsl("too late for the automatic login")), "a login Mudlet is not driving was told about a password it never owed");
     }
@@ -441,7 +441,7 @@ private slots:
         QCOMPARE(mpServer->receivedText(), csLoginLine);
 
         deliverLatePassword(host);
-        QTest::qWait(500);
+        QTest::qWait(500ms);
         QCOMPARE(mpServer->receivedText(), csLoginLine);
         QVERIFY2(!consoleContains(host, qsl("too late for the automatic login")), "a profile that never had a password waiting was told one arrived too late");
     }
@@ -461,7 +461,7 @@ private slots:
         QCOMPARE(mpServer->receivedText(), csLoginLine);
 
         deliverLatePassword(host);
-        QTest::qWait(500);
+        QTest::qWait(500ms);
         QCOMPARE(mpServer->receivedText(), csLoginLine);
     }
 
@@ -520,7 +520,7 @@ private slots:
                          [&manager]() {
                              return manager.isNull();
                          },
-                         5000),
+                         5s),
                  "the lookup never answered at its deadline");
         QVERIFY2(host->hasAutoLoginCredentials(), "a lookup that timed out stopped the password step waiting for the answer it still owes");
 
@@ -583,7 +583,7 @@ private:
                 [host]() {
                     return host->mTelnet.mAutoLoginPasswordOutstanding;
                 },
-                8000);
+                8s);
     }
 
     // A password step that was never armed leaves no mark to wait for, so the cases about one wait

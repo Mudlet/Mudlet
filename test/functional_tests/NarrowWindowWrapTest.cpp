@@ -39,6 +39,8 @@
 
 #include "GroupedTest.h"
 
+using namespace std::chrono_literals;
+
 // A wrap width that cannot hold a single glyph - because it is zero, because
 // the glyph is wider than the width, or because the indentation uses the width
 // up - made TBuffer::getWrapInfo() break the line at the character it was
@@ -301,7 +303,7 @@ private:
         std::atomic_bool finished{false};
         std::thread watchdog([&finished, what, timeoutSeconds]() {
             for (int i = 0; i < timeoutSeconds * 10 && !finished.load(); ++i) {
-                QThread::msleep(100);
+                QThread::sleep(100ms);
             }
             if (!finished.load()) {
                 qFatal("%s did not finish within %d seconds - the wrapping is stuck in a loop", what, timeoutSeconds);
@@ -335,7 +337,7 @@ private:
         }
 
         QSignalSpy connectedSpy(&(host->mTelnet), &cTelnet::signal_connected);
-        if (!connectedSpy.wait(2000)) {
+        if (!connectedSpy.wait(2s)) {
             QFAIL("Could not connect with the host.");
         }
     }

@@ -23,6 +23,15 @@
 #include "TMxpClient.h"
 #include "TMxpTagParser.h"
 
+// Far deeper than any game nests its elements, and shallow enough for a 1MB main-thread stack
+static constexpr qsizetype maxElementExpansionDepth = 32;
+
+// A game can define an element that expands to itself, directly or through other elements, or a
+// chain of elements long enough to exhaust the stack
+bool TMxpCustomElementTagHandler::mayExpand(const QString& key) const
+{
+    return mElementsBeingExpanded.size() < maxElementExpansionDepth && !mElementsBeingExpanded.contains(key);
+}
 
 TMxpTagHandlerResult TMxpCustomElementTagHandler::handleStartTag(TMxpContext& ctx, TMxpClient& client, MxpStartTag* tag)
 {
@@ -36,16 +45,19 @@ TMxpTagHandlerResult TMxpCustomElementTagHandler::handleStartTag(TMxpContext& ct
         }
     }
 
-    if (!el.definition.isEmpty()) {
+    const QString key = el.name.toUpper();
+    if (!el.definition.isEmpty() && mayExpand(key)) {
+        mElementsBeingExpanded.insert(key);
         for (const QSharedPointer<MxpNode>& ptr : std::as_const(el.parsedDefinition)) {
             if (!ptr->isTag()) {
                 ctx.handleContent(ptr->asText()->getContent());
-            } else {
+            } else if (ptr->isStartTag()) {
                 // transform the custom tag to the given in the definition
                 MxpStartTag newTag = resolveElementDefinition(el, ptr->asStartTag(), tag);
                 ctx.handleTag(ctx, client, &newTag);
             }
         }
+        mElementsBeingExpanded.remove(key);
     }
 
     return MXP_TAG_HANDLED;
@@ -64,17 +76,25 @@ TMxpTagHandlerResult TMxpCustomElementTagHandler::handleEndTag(TMxpContext& ctx,
         return MXP_TAG_HANDLED; //NO DEFINITION
     }
 
+    const QString key = el.name.toUpper();
+    if (!mayExpand(key)) {
+        return MXP_TAG_HANDLED;
+    }
+
 
     // generates closing tags in the reverse order
     // in the example: <!ELEMENT boldtext '<COLOR &col;><B>' ATT='col=red'>
     // will generate </B></COLOR>
+    // Per the MXP spec a definition holds only opening tags, so any closing tag in one is ignored
+    mElementsBeingExpanded.insert(key);
     for (int i = el.parsedDefinition.size(); i > 0; i--) {
         MxpNode* node = el.parsedDefinition[i - 1].get();
-        if (node->isTag()) {
+        if (node->isStartTag()) {
             MxpEndTag endTag(node->asStartTag()->getName());
             ctx.handleTag(ctx, client, &endTag);
         }
     }
+    mElementsBeingExpanded.remove(key);
 
     return MXP_TAG_HANDLED;
 }

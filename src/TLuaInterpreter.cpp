@@ -69,6 +69,7 @@
 #include <QCollator>
 #include <QCoreApplication>
 #include <QDesktopServices>
+#include <QFutureWatcher>
 #include <QGuiApplication>
 #include <QSettings>
 #if defined(Q_OS_MACOS)
@@ -93,6 +94,58 @@ using namespace std::chrono_literals;
 extern "C" {
 int luaopen_yajl(lua_State*);
 }
+
+namespace {
+
+// Some modules' methods read their first argument as their own object unchecked, so a script
+// calling one without it, as in env.__tostring() or dir.close(), crashes Mudlet.
+// Upvalues: the module's function, its metatable, its name.
+int checkedSelfMethod(lua_State* L)
+{
+    bool ownObject = false;
+    if (lua_type(L, 1) == LUA_TUSERDATA && lua_getmetatable(L, 1)) {
+        ownObject = lua_rawequal(L, -1, lua_upvalueindex(2));
+        lua_pop(L, 1);
+    }
+    if (!ownObject) {
+        return luaL_typerror(L, 1, lua_tostring(L, lua_upvalueindex(3)));
+    }
+    lua_pushvalue(L, lua_upvalueindex(1));
+    lua_insert(L, 1);
+    lua_call(L, lua_gettop(L) - 1, LUA_MULTRET);
+    return lua_gettop(L);
+}
+
+// methodTable is the metatable field holding the method, or nullptr for the metatable itself
+void guardSelfMethod(lua_State* L, const char* metatableName, const char* methodTable, const char* methodName)
+{
+    luaL_getmetatable(L, metatableName);
+    if (!lua_istable(L, -1)) {
+        lua_pop(L, 1);
+        return;
+    }
+    if (methodTable) {
+        lua_getfield(L, -1, methodTable);
+    } else {
+        lua_pushvalue(L, -1);
+    }
+    if (!lua_istable(L, -1)) {
+        lua_pop(L, 2);
+        return;
+    }
+    lua_getfield(L, -1, methodName);
+    if (!lua_iscfunction(L, -1)) {
+        lua_pop(L, 3);
+        return;
+    }
+    lua_pushvalue(L, -3);
+    lua_pushstring(L, metatableName);
+    lua_pushcclosure(L, checkedSelfMethod, 3);
+    lua_setfield(L, -2, methodName);
+    lua_pop(L, 2);
+}
+
+} // namespace
 
 
 const QString TLuaInterpreter::csmInvalidRoomID{qsl("number %1 is not a valid roomID")};
@@ -128,6 +181,8 @@ TLuaInterpreter::TLuaInterpreter(Host* pH, const QString& hostName, int id)
 
 TLuaInterpreter::~TLuaInterpreter()
 {
+    stopSpawnedProcesses();
+    mClosingGlobalLua = true;
     lua_close(pGlobalLua);
 }
 
@@ -621,6 +676,17 @@ void TLuaInterpreter::slot_purge()
 }
 
 // No documentation available in wiki - internal function
+// A spawn()ed process calls back into, and holds a reference in, the Lua state
+// that started it, so it cannot outlive that state: each one is ended before
+// the state is closed. The finished ones still waiting for slot_purge() go
+// first so that list holds nothing deleted here.
+void TLuaInterpreter::stopSpawnedProcesses()
+{
+    slot_purge();
+    qDeleteAll(findChildren<TForkedProcess*>(Qt::FindDirectChildrenOnly));
+}
+
+// No documentation available in wiki - internal function
 int TLuaInterpreter::Wait(lua_State* L)
 {
     const int n = lua_gettop(L);
@@ -817,7 +883,13 @@ int TLuaInterpreter::getWindowsCodepage(lua_State* L)
 int TLuaInterpreter::spawn(lua_State* L)
 {
     Host& host = getHostFromLua(L);
-    return TForkedProcess::startProcess(host.getLuaInterpreter(), L);
+    TLuaInterpreter* interpreter = host.getLuaInterpreter();
+    if (interpreter->mClosingGlobalLua) {
+        lua_pushnil(L);
+        lua_pushstring(L, "spawn: the Lua state is closing, so nothing would be left to receive the output");
+        return 2;
+    }
+    return TForkedProcess::startProcess(interpreter, L);
 }
 
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#loadReplay
@@ -1129,7 +1201,13 @@ int TLuaInterpreter::feedTriggers(lua_State* L)
     // A self-feeding trigger recurses the C++ stack one level per re-match; abort
     // with a catchable Lua error before that overflows the stack into a crash.
     auto* triggerUnit = host.getTriggerUnit();
+    if (triggerUnit->runawayFeedStopped()) {
+        lua_pushnil(L);
+        lua_pushstring(L, "feedTriggers: refused, an endless loop further along this chain of fed text was already stopped");
+        return 2;
+    }
     if (triggerUnit->processingDepth() >= TriggerUnit::scmMaxProcessingDepth) {
+        triggerUnit->stopRunawayFeed();
         qWarning().nospace() << "TLuaInterpreter::feedTriggers(...) aborting: trigger processing recursion reached the limit of " << TriggerUnit::scmMaxProcessingDepth
                              << " - probably an endless feedTriggers loop.";
         const QString* pName = triggerUnit->currentExecutingTriggerName();
@@ -2974,21 +3052,9 @@ int TLuaInterpreter::setDefaultAreaVisible(lua_State* L)
 
     const bool isToShowDefaultArea = getVerifiedBool(L, __func__, 1, "isToShowDefaultArea");
     if (host.mpMap->mpMapper) {
-        // If we are re-enabling the display of the default area
-        // AND the mapper was showing the default area
-        // the area widget will NOT be showing the correct area name afterwards
-        bool isAreaWidgetInNeedOfResetting = false;
-        if ((!host.mpMap->getDefaultAreaShown()) && (isToShowDefaultArea) && (host.mpMap->mpMapper->mp2dMap->mAreaID == -1)) {
-            isAreaWidgetInNeedOfResetting = true;
-        }
-
+        const bool wasShown = host.mpMap->getDefaultAreaShown();
         host.mpMap->setDefaultAreaShown(isToShowDefaultArea);
-        if (isAreaWidgetInNeedOfResetting) {
-            // Corner case fixup:
-            host.mpMap->mpMapper->comboBox_showArea->setCurrentText(host.mpMap->getDefaultAreaName());
-        }
-        host.mpMap->mpMapper->mp2dMap->repaint();
-        host.mpMap->mpMapper->update();
+        host.mpMap->announceDefaultAreaVisibilitySet(wasShown);
         lua_pushboolean(L, true);
     } else {
         lua_pushboolean(L, false);
@@ -3035,6 +3101,11 @@ int TLuaInterpreter::expandAlias(lua_State* L)
     // emptied matches table:
     TLuaInterpreter* pL = host.getLuaInterpreter();
     const int dispatchDepth = pL->pushNestedDispatchState();
+    if (dispatchDepth < 0) {
+        qWarning().nospace() << "TLuaInterpreter::expandAlias(...) WARNING - not expanding " << payload << " as a garbage collection finaliser asked for it while the capture tables were being built.";
+        lua_pushboolean(L, false);
+        return 1;
+    }
     // Host::send will encode the UTF encoded data here in the wanted Server
     // encoding:
     host.send(payload, wantPrint, false);
@@ -3638,6 +3709,10 @@ void TLuaInterpreter::clearCaptureGroups()
 // popNestedDispatchState() to unwind to.
 int TLuaInterpreter::pushNestedDispatchState()
 {
+    // The matching pop moves the parked lists back over any a build is walking
+    if (buildingCaptureTables()) {
+        return -1;
+    }
     // Every Lua call is made before the entry goes onto the stack, and each one
     // is raw. A package is free to put __index on the globals table, and running
     // one here could raise past the pop this pairs with - raw reads cannot, and
@@ -4444,8 +4519,30 @@ void TLuaInterpreter::setChannel102Table(int& var, int& arg)
 }
 
 // No documentation available in wiki - internal function
+// While true, nothing may replace the capture lists - see pushMatchesTable()
+bool TLuaInterpreter::buildingCaptureTables()
+{
+    if (mCaptureBuildDepth == 0) {
+        return false;
+    }
+    // Only a __gc finaliser, which is a running Lua function, can reach a pass from
+    // inside a build. With none running, the count was left behind by an error
+    // that a finaliser raised straight past the decrement.
+    lua_Debug ar;
+    if (!lua_getstack(pGlobalLua, 0, &ar)) {
+        mCaptureBuildDepth = 0;
+        return false;
+    }
+    return true;
+}
+
+// No documentation available in wiki - internal function
 void TLuaInterpreter::pushMatchesTable(lua_State* L)
 {
+    // Every push below can run a __gc finaliser, and one that starts a trigger or
+    // alias pass would replace the lists this walk holds iterators into, so passes
+    // are refused until it ends
+    ++mCaptureBuildDepth;
     // presized, so filling it in does not rehash the table on the way up
     lua_createtable(L, static_cast<int>(mCaptureGroupList.size()), static_cast<int>(mCapturedNameGroups.size()));
 
@@ -4460,11 +4557,14 @@ void TLuaInterpreter::pushMatchesTable(lua_State* L)
         lua_pushstring(L, capture.toUtf8().constData());
         lua_rawset(L, -3);
     }
+    --mCaptureBuildDepth;
 }
 
 // No documentation available in wiki - internal function
-void TLuaInterpreter::pushMultimatchesTable(lua_State* L, const bool withNames)
+void TLuaInterpreter::pushMultimatchesTable(lua_State* L)
 {
+    // Passes are refused for the same reason pushMatchesTable() gives
+    ++mCaptureBuildDepth;
     int k = 1;
     lua_newtable(L);
     for (auto mit = mMultiCaptureGroupList.begin(); mit != mMultiCaptureGroupList.end(); mit++, k++) {
@@ -4477,15 +4577,14 @@ void TLuaInterpreter::pushMultimatchesTable(lua_State* L, const bool withNames)
             lua_pushstring(L, (*it).c_str());
             lua_settable(L, -3);
         }
-        if (withNames) {
-            for (const auto& [name, capture] : mMultiCaptureNameGroups.value(k - 1)) {
-                lua_pushstring(L, name.toUtf8().constData());
-                lua_pushstring(L, capture.toUtf8().constData());
-                lua_settable(L, -3);
-            }
+        for (const auto& [name, capture] : mMultiCaptureNameGroups.value(k - 1)) {
+            lua_pushstring(L, name.toUtf8().constData());
+            lua_pushstring(L, capture.toUtf8().constData());
+            lua_settable(L, -3);
         }
         lua_settable(L, -3);
     }
+    --mCaptureBuildDepth;
 }
 
 // No documentation available in wiki - internal, test-only function
@@ -4690,7 +4789,7 @@ void TLuaInterpreter::deferDispatchGlobals(lua_State* L, const MultimatchesSourc
         lua_pushnil(L);
         lua_rawset(L, LUA_GLOBALSINDEX);
     }
-    mMultimatchesPending = source == MultimatchesSource::Captures ? PendingMultimatches::Captures : PendingMultimatches::CapturesWithoutNames;
+    mMultimatchesPending = PendingMultimatches::Captures;
 }
 
 // No documentation available in wiki - internal function
@@ -4701,10 +4800,7 @@ void TLuaInterpreter::pushPendingMultimatches(lua_State* L)
         lua_rawgeti(L, LUA_REGISTRYINDEX, mSpareMultimatchesRef);
         break;
     case PendingMultimatches::Captures:
-        pushMultimatchesTable(L, true);
-        break;
-    case PendingMultimatches::CapturesWithoutNames:
-        pushMultimatchesTable(L, false);
+        pushMultimatchesTable(L);
         break;
     case PendingMultimatches::None:
         Q_UNREACHABLE();
@@ -5079,7 +5175,7 @@ void TLuaInterpreter::setMatches(lua_State* L, const MultimatchesSource source)
         lua_setglobal(L, "matches");
     }
     if (source != MultimatchesSource::Untouched) {
-        pushMultimatchesTable(L, source == MultimatchesSource::Captures);
+        pushMultimatchesTable(L);
         lua_setglobal(L, "multimatches");
     }
 }
@@ -5099,6 +5195,10 @@ bool TLuaInterpreter::call_luafunction(void* pT, const QString& itemName)
     lua_gettable(L, LUA_REGISTRYINDEX);
     if (lua_isfunction(L, -1)) {
         setMatches(L);
+        // A multiline trigger's Lua function gets multimatches just as its script would
+        if (!mMultiCaptureGroupList.empty()) {
+            setMatches(L, MultimatchesSource::Captures);
+        }
         const int error = lua_pcall(L, 0, LUA_MULTRET, 0);
         if (error) {
             std::string e = "";
@@ -5177,6 +5277,9 @@ std::pair<bool, bool> TLuaInterpreter::callLuaFunctionReturnBool(void* pT, const
 
     if (lua_isfunction(L, -1)) {
         setMatches(L);
+        if (!mMultiCaptureGroupList.empty()) {
+            setMatches(L, MultimatchesSource::Captures);
+        }
         const int error = lua_pcall(L, 0, LUA_MULTRET, 0);
         if (error) {
             std::string e = "";
@@ -5455,7 +5558,7 @@ std::pair<bool, bool> TLuaInterpreter::callMultiReturnBool(const QString& functi
     bool returnValue = false;
 
     if (!mMultiCaptureGroupList.empty()) {
-        setMatches(L, MultimatchesSource::CapturesWithoutNames);
+        setMatches(L, MultimatchesSource::Captures);
     }
 
     lua_getglobal(L, function.toUtf8().constData());
@@ -5865,6 +5968,12 @@ int TLuaInterpreter::createEventArgsTableRef(const TEvent& pE)
     return ref;
 }
 
+bool TLuaInterpreter::luaOnStack() const
+{
+    lua_Debug activation;
+    return pGlobalLua && lua_getstack(pGlobalLua, 0, &activation);
+}
+
 // No documentation available in wiki - internal, test-only helper for waitForEvent()
 void TLuaInterpreter::captureEventForWaits(const TEvent& pE)
 {
@@ -6022,11 +6131,13 @@ int TLuaInterpreter::unzipAsync(lua_State* L)
         return warnArgumentValue(L, __func__, "couldn't create output directory to put the extracted files into");
     }
 
+    // Extraction can outlast the profile, or this lua_State across a resetProfile(), so the
+    // watcher goes with the Host and reaches it directly rather than through L
+    Host* pHost = &getHostFromLua(L);
     auto future = QtConcurrent::run(utils::unzip, zipLocation, extractLocation, temporaryDir.path());
-    auto watcher = new QFutureWatcher<bool>;
-    connect(watcher, &QFutureWatcher<bool>::finished, watcher, [=]() {
+    auto watcher = new QFutureWatcher<bool>(pHost);
+    connect(watcher, &QFutureWatcher<bool>::finished, watcher, [pHost, watcher, future, zipLocation, extractLocation]() {
         TEvent event{};
-        Host& host = getHostFromLua(L);
 
         if (future.result()) {
             event.mArgumentList.append(qsl("sysUnzipDone"));
@@ -6040,7 +6151,7 @@ int TLuaInterpreter::unzipAsync(lua_State* L)
         event.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
         event.mArgumentList.append(extractLocation);
         event.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
-        host.raiseEvent(event);
+        pHost->raiseEvent(event);
         watcher->deleteLater();
     });
     watcher->setFuture(future);
@@ -6320,7 +6431,10 @@ void TLuaInterpreter::initLuaGlobals()
         // Host::resetProfile_phase2() drains DeferredDelete to stop labels doing.
         mNestedDispatchStates.clear();
         mEventHandlerLookupRefs.clear();
+        stopSpawnedProcesses();
+        mClosingGlobalLua = true;
         lua_close(pGlobalLua);
+        mClosingGlobalLua = false;
         forgetLazyGlobals();
     }
 
@@ -7111,7 +7225,9 @@ void TLuaInterpreter::initLuaGlobals()
      *     assumes whatever Lua name it offers).
      */
     QQueue<QString> modLoadMessageQueue;
-    loadLuaModule(modLoadMessageQueue, QLatin1String("lfs"), tr("Probably will not be able to access Mudlet Lua code."), QLatin1String("lfs (Lua File System)"));
+    if (loadLuaModule(modLoadMessageQueue, QLatin1String("lfs"), tr("Probably will not be able to access Mudlet Lua code."), QLatin1String("lfs (Lua File System)"))) {
+        guardSelfMethod(pGlobalLua, "directory metatable", "__index", "close");
+    }
     while (!modLoadMessageQueue.isEmpty()) {
         mpHost->postMessage(modLoadMessageQueue.dequeue());
     }
@@ -7136,7 +7252,11 @@ void TLuaInterpreter::initLuaGlobals()
         mpHost->postMessage(modLoadMessageQueue.dequeue());
     }
 
-    loadLuaModule(modLoadMessageQueue, QLatin1String("luasql.sqlite3"), tr("Database support will not be available."), QLatin1String("sqlite3"), QLatin1String("luasql"));
+    if (loadLuaModule(modLoadMessageQueue, QLatin1String("luasql.sqlite3"), tr("Database support will not be available."), QLatin1String("sqlite3"), QLatin1String("luasql"))) {
+        for (const char* metatableName : {"SQLite3 environment", "SQLite3 connection", "SQLite3 cursor"}) {
+            guardSelfMethod(pGlobalLua, metatableName, nullptr, "__tostring");
+        }
+    }
     while (!modLoadMessageQueue.isEmpty()) {
         mpHost->postMessage(modLoadMessageQueue.dequeue());
     }
@@ -8866,7 +8986,9 @@ int TLuaInterpreter::setConfig(lua_State* L)
 
     if (host.mpMap && host.mpMap->mpMapper) {
         if (key == qsl("mapRoomSize")) {
-            host.mpMap->mpMapper->slot_roomSize(getVerifiedInt(L, __func__, 2, "value"));
+            // Through float, as dlgMapper::slot_roomSize() rounds it:
+            host.mRoomSize = static_cast<float>(getVerifiedInt(L, __func__, 2, "value") / 10.0);
+            host.mpMap->announceMapperSettingChanged(TMap::MapperSetting::RoomSize);
             return success();
         }
         if (key == qsl("mapExitSize")) {
@@ -8881,25 +9003,28 @@ int TLuaInterpreter::setConfig(lua_State* L)
             if (!std::isfinite(size) || size < 1.0) {
                 return warnArgumentValue(L, __func__, qsl("mapExitSize must be a number of at least 1, got %1").arg(size));
             }
-            host.mpMap->mpMapper->mp2dMap->setExitSize(size);
+            host.mLineSize = size;
+            host.mpMap->announceMapperSettingChanged(TMap::MapperSetting::ExitSize);
             return success();
         }
         if (key == qsl("mapRoundRooms")) {
-            host.mpMap->mpMapper->slot_toggleRoundRooms(getVerifiedBool(L, __func__, 2, "value"));
+            host.mBubbleMode = getVerifiedBool(L, __func__, 2, "value");
+            host.mpMap->announceMapperSettingChanged(TMap::MapperSetting::RoundRooms);
             return success();
         }
         if (key == qsl("showRoomIdsOnMap")) {
-            host.mpMap->mpMapper->slot_setShowRoomIds(getVerifiedBool(L, __func__, 2, "value"));
+            host.mShowRoomID = getVerifiedBool(L, __func__, 2, "value");
+            host.mpMap->announceMapperSettingChanged(TMap::MapperSetting::ShowRoomIds);
             return success();
         }
         if (key == qsl("showMapInfo")) {
             host.mMapInfoContributors.insert(getVerifiedString(L, __func__, 2, "value"));
-            host.mpMap->mpMapper->slot_updateInfoContributors();
+            host.mpMap->announceMapInfoContributorsChanged();
             return success();
         }
         if (key == qsl("hideMapInfo")) {
             host.mMapInfoContributors.remove(getVerifiedString(L, __func__, 2, "value"));
-            host.mpMap->mpMapper->slot_updateInfoContributors();
+            host.mpMap->announceMapInfoContributorsChanged();
             return success();
         }
 #if defined(INCLUDE_3DMAPPER)
@@ -8913,18 +9038,13 @@ int TLuaInterpreter::setConfig(lua_State* L)
             return success();
         }
         if (key == qsl("mapShowGrid")) {
-            const bool showGrid = getVerifiedBool(L, __func__, 2, "value");
-            host.mMapperShowGrid = showGrid;
-            host.mpMap->mpMapper->slot_setShowGrid(showGrid);
+            host.mMapperShowGrid = getVerifiedBool(L, __func__, 2, "value");
+            host.mpMap->announceMapperSettingChanged(TMap::MapperSetting::ShowGrid);
             return success();
         }
         if (key == qsl("showUpperLowerLevels")) {
             mudlet::self()->mDrawUpperLowerLevels = getVerifiedBool(L, __func__, 2, "value");
-
-            if (host.mpMap && host.mpMap->mpMapper && host.mpMap->mpMapper->mp2dMap) {
-                host.mpMap->mpMapper->mp2dMap->update();
-            }
-
+            host.mpMap->requestMapRepaint();
             return success();
         }
         if (key == qsl("mapInfoColor")) {

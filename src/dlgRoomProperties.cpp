@@ -612,14 +612,20 @@ void dlgRoomProperties::slot_openRoomColorSelector()
     connect(listWidget, &QListWidget::itemDoubleClicked, dialog, &QDialog::accept);
     connect(listWidget, &QListWidget::itemClicked, this, &dlgRoomProperties::slot_selectRoomColor);
     listWidget->setContextMenuPolicy(Qt::CustomContextMenu);
-    connect(listWidget, &QListWidget::customContextMenuRequested, this, [=, this]() {
+    connect(listWidget, &QListWidget::customContextMenuRequested, this, [=, this](const QPoint& pos) {
+        // A right-click on empty space leaves the current item as it was, so
+        // only the color under the cursor is offered for deletion
+        QListWidgetItem* clickedItem = listWidget->itemAt(pos);
+        if (!clickedItem) {
+            return;
+        }
         QMenu menu;
         //: This action deletes a color from the list of all room colors
         menu.addAction(tr("Delete room color"), this, [=, this]() {
-            auto selectedItem = listWidget->takeItem(listWidget->currentRow());
-            auto color = selectedItem->text();
+            const int colorNumber = clickedItem->text().toInt();
+            delete clickedItem;
 
-            mpHost->mpMap->mCustomEnvColors.remove(color.toInt());
+            mpHost->mpMap->mCustomEnvColors.remove(colorNumber);
             repaint();
             mpHost->mpMap->setUnsaved(__func__);
         });

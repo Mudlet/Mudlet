@@ -160,7 +160,7 @@ private:
                 [this]() {
                     return Discord::getLoggedInUserName() == mDiscordStubUserName;
                 },
-                65000);
+                65s);
         return loggedIn && mpDiscordIpcStub->handshakeCount() > handshakesBefore;
     }
 
@@ -212,7 +212,7 @@ private slots:
         // The connection can complete before the spy exists, and on a loaded
         // leak-detection runner it can take seconds
         QSignalSpy spy2(&(mpHost->mTelnet), &cTelnet::signal_connected);
-        if (mpHost->mTelnet.getConnectionState() != QAbstractSocket::ConnectedState && !spy2.wait(8000)) {
+        if (mpHost->mTelnet.getConnectionState() != QAbstractSocket::ConnectedState && !spy2.wait(8s)) {
             QFAIL("Could not connect with the host.");
         }
 
@@ -556,8 +556,8 @@ private slots:
 
         // discord-rpc serializes SET_ACTIVITY on its own IO thread, so give
         // the frames generous time to arrive:
-        QTRY_COMPARE_WITH_TIMEOUT(lastSetActivity().value(qsl("details")).toString(), qsl("Exploring the IPC stub"), 10000);
-        QTRY_COMPARE_WITH_TIMEOUT(lastSetActivity().value(qsl("state")).toString(), qsl("end-to-end"), 10000);
+        QTRY_COMPARE_WITH_TIMEOUT(lastSetActivity().value(qsl("details")).toString(), qsl("Exploring the IPC stub"), 10s);
+        QTRY_COMPARE_WITH_TIMEOUT(lastSetActivity().value(qsl("state")).toString(), qsl("end-to-end"), 10s);
     }
 
     void cleanupTestCase()
