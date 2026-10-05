@@ -8770,10 +8770,12 @@ void mudlet::changeEvent(QEvent* event)
         // prevents ALT+TAB system switching auto refocusing to command line
         // remember the widget that had focus before deactivation to resume later
         if (isActiveWindow()) {
-            if (mpFocusWidgetBeforeDeactivate) {
+            // A closed profile's widgets are hidden, and outlive its Host until
+            // their deferred deletion: focusing one then reaches the dead Host
+            if (mpFocusWidgetBeforeDeactivate && mpFocusWidgetBeforeDeactivate->isVisible()) {
                 mpFocusWidgetBeforeDeactivate->setFocus();
-                mpFocusWidgetBeforeDeactivate.clear();
             }
+            mpFocusWidgetBeforeDeactivate.clear();
         } else {
             mpFocusWidgetBeforeDeactivate = QApplication::focusWidget();
         }
