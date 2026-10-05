@@ -3706,5 +3706,23 @@ describe("Tests the text-to-speech Lua API", function()
         assert.equals(voices[2], ttsGetCurrentVoice())
         assert.same({voices[2]}, changes)
       end)
+
+      -- Its proof comes at the end of the run rather than here: the engine
+      -- outlives the main window, so it can report a line ending after the
+      -- profiles are gone. Leaving a stream of one-word lines to be spoken
+      -- quickly while the profile closes keeps the engine changing state all
+      -- the way through shutdown; a crash shows as a sanitizer report at exit.
+      it("speech still queued when Mudlet quits does not crash it", function()
+        if noMockEngine() then
+          return
+        end
+        local handler = registerAnonymousEventHandler("sysExitEvent", function()
+          ttsSetRate(1)
+          for line = 1, 200 do
+            ttsQueue("line" .. line)
+          end
+        end, true)
+        assert.is_number(handler)
+      end)
     end)
   end)
