@@ -230,6 +230,24 @@ describe("Tests the audit of a damaged binary map file", function()
     end)
   end)
 
+  describe("Tests the 2D map zoom", function()
+    -- getMapZoom() would report infinity and the next save would keep it
+    it("gives an area whose saved zoom text reads as infinity the default zoom", function()
+      openMapWidget()
+      local area = newArea("MapFileAuditSpecInfiniteZoomText")
+      newRoom(area, 0)
+      assert.is_true(setMapZoom(4321.25, area))
+
+      reloadWith(function(data)
+        -- format 20 keeps the zoom as text in the area user data, in UTF-16;
+        -- the conversion ignores the trailing spaces that keep the length
+        return planted(data, "\0004\0003\0002\0001\000.\0002\0005", "\000i\000n\000f\000 \000 \000 \000 ", 1)
+      end, 20)
+
+      assert.are.equal(20, getMapZoom(area))
+    end)
+  end)
+
   describe("Tests room IDs", function()
     it("renumbers a room whose ID is below one and keeps its area, exits and hash", function()
       local area = newArea("MapFileAuditSpecBadRoomId")

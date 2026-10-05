@@ -89,7 +89,7 @@ on every platform and `USE_SANITIZER=Address` on Linux, and a `Mudlet-*` tag set
 `CMAKE_BUILD_TYPE=Release` with `USE_SANITIZER` empty and `SENTRY_SEND_DEBUG=1`. So
 `USE_SANITIZER=Address cmake --preset ci-linux` reproduces the Linux PR job; `SENTRY_DSN` is a
 repository secret and cannot be matched locally. `ci-macos-no-tests` is `ci-macos` with
-`BUILD_TESTING=OFF`, for the Intel job that ships a binary and leaves the testing to the arm64
+`BUILD_TESTING=OFF`, for the Intel PTB and release job, which leaves the testing to the arm64
 one. `ci-windows` builds into `build-$MSYSTEM/`, but the rest build into `../b/ninja` — beside
 the checkout, not inside it, which is where the workflows' ctest and packaging steps look — so
 reach for them to investigate a CI failure, not for day-to-day work. They have no test presets:

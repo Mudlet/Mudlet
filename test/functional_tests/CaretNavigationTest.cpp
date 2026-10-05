@@ -709,6 +709,65 @@ private slots:
         QCOMPARE(pMiniPane->mCaretColumn, 0);
     }
 
+    // clearWindow() leaves a Shift selection's anchor on a line that is gone, and
+    // reading the selection then stepped it back a whole batch-delete to line -998
+    void test_extendingAShiftSelectionAcrossAClearedWindow()
+    {
+        QVERIFY(runLua(qsl("createMiniConsole('caretShiftCleared', 0, 0, 300, 100)\nfor i = 1, 10 do echo('caretShiftCleared', 'line ' .. i .. '\\n') end")));
+        TConsole* pMini = mpHost->mpConsole->subConsoleWidget(qsl("caretShiftCleared"));
+        QVERIFY(pMini);
+        TTextEdit* pMiniPane = pMini->mUpperPane;
+        pMiniPane->setCaretPosition(5, 2);
+        press(pMiniPane, Qt::Key_Down, Qt::ShiftModifier);
+        QVERIFY(runLua(qsl("clearWindow('caretShiftCleared')")));
+        QCOMPARE(pMini->buffer.lineBuffer.size(), 1);
+
+        QApplication::clipboard()->setText(qsl("nothing was copied"));
+        press(pMiniPane, Qt::Key_Left, Qt::ShiftModifier);
+        pMiniPane->slot_copySelectionToClipboard();
+        const QString selected = QApplication::clipboard()->text();
+        // The caret is still on a line clearWindow() took, which a plain arrow key reads
+        pMiniPane->setCaretPosition(0, 0);
+        press(pMiniPane, Qt::Key_Right);
+
+        QCOMPARE(selected, QString());
+    }
+
+    // clearWindow() takes away the line the caret is on, and the caret keys read
+    // that line. After the cases that read the original buffer, as it empties it.
+    void test_theCaretKeysStayInsideABufferClearedUnderTheCaret()
+    {
+        for (int line = 0; line < 5; ++line) {
+            mpHost->mpConsole->print(qsl("clear filler %1\n").arg(line));
+        }
+        const int line = static_cast<int>(consoleBuffer().lineBuffer.length()) - 2;
+        QVERIFY(line >= 2);
+        pane()->setCaretPosition(line, 3);
+
+        QVERIFY(runLua(qsl("clearWindow()")));
+        QCOMPARE(consoleBuffer().lineBuffer.length(), 1);
+
+        for (const Qt::Key key : {Qt::Key_End, Qt::Key_Right, Qt::Key_Left}) {
+            press(pane(), key);
+            QCOMPARE(pane()->mCaretLine, 0);
+            QCOMPARE(pane()->mCaretColumn, 0);
+        }
+    }
+
+    // clearWindow() leaves a single empty line, which Ctrl+End cannot step over
+    // the way it does a trailing one, as there is no line before it.
+    void test_ctrlEndInAClearedBufferStaysOnTheOnlyLine()
+    {
+        QVERIFY(runLua(qsl("clearWindow()")));
+        QCOMPARE(consoleBuffer().lineBuffer.length(), 1);
+        pane()->setCaretPosition(0, 0);
+
+        press(pane(), Qt::Key_End, Qt::ControlModifier);
+
+        QCOMPARE(pane()->mCaretLine, 0);
+        QCOMPARE(pane()->mCaretColumn, 0);
+    }
+
     // Last, as it empties the main console the other cases read. Turning caret
     // mode on brings the old caret into view before moving it, and with the
     // buffer emptied by deleteLine() that read the last line of an empty list.
