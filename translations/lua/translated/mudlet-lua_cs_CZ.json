@@ -71,6 +71,10 @@
     "message": "Balíček „%s“ byl úspěšně nainstalován.",
     "description": "Success message after drag&drop of package file onto Mudlet - %s is the file name"
   },
+  "Mudlet.packageInstallPartial": {
+    "message": "Balíček „%s“ byl nainstalován, ale ne všechno v něm funguje – viz výše.",
+    "description": "Message after drag&drop of a package file onto Mudlet whose triggers or scripts have errors in them - %s is the file name"
+  },
   "Mudlet.packageInstallFail": {
     "message": "Instalace „%s“ selhala: %s",
     "description": "Failure message after drag&drop of package file onto Mudlet - %s is the file name"
@@ -78,6 +82,10 @@
   "Mudlet.moduleInstallSuccess": {
     "message": "Modul „%s“ byl úspěšně nainstalován.",
     "description": "Success message after drag&drop of module file onto Mudlet - %s is the file name"
+  },
+  "Mudlet.moduleInstallPartial": {
+    "message": "Modul „%s“ byl nainstalován, ale ne všechno v něm funguje – viz výše.",
+    "description": "Message after drag&drop of a module file onto Mudlet whose triggers or scripts have errors in them - %s is the file name"
   },
   "Mudlet.moduleInstallFail": {
     "message": "Instalace „%s“ selhala: %s",
