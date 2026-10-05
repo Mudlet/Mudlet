@@ -3076,6 +3076,11 @@ int TTextEdit::imageTopLine()
         mCursorY = mpBuffer->mCursorY;
     }
 
+    // deleteLine() can empty the buffer without pulling mCursorY back to it
+    if (mpBuffer->lineBuffer.isEmpty()) {
+        return 0;
+    }
+
     if (mCursorY > mScreenHeight) {
         // mIsTailMode is always true for lower pane and true for upper one when
         // it is scrolled to the bottom and new text is to be appended and the
