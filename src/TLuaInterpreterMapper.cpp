@@ -77,6 +77,9 @@ static bool isMain(const QString& name)
     return false;
 }
 
+static const char* const csmMapInUseByCallback = "rooms and areas cannot be deleted, nor the map replaced, from inside an exit weight filter or map info callback";
+static const char* const csmPathfindingInExitWeightFilter = "a path cannot be found from inside an exit weight filter";
+
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#getCustomLines
 int TLuaInterpreter::getCustomLines(lua_State* L)
 {
@@ -979,7 +982,7 @@ int TLuaInterpreter::connectExitStub(lua_State* L)
             hasDirection = true;
         } else if (lua_type(L, 2) == LUA_TNUMBER) {
             const int value = qRound(lua_tonumber(L, 2));
-            if (value >= DIR_OUT || value <= DIR_NORTH) {
+            if (value >= DIR_NORTH && value <= DIR_OUT) {
                 // Ambiguous - look in more detail and check whether there is a
                 // a room with the given number and/or an exit stub:
                 const bool hasRoomWithNumberAsId = static_cast<bool>(host.mpMap->mpRoomDB->getRoom(value));
@@ -1239,6 +1242,9 @@ int TLuaInterpreter::deleteArea(lua_State* L)
     if (!host.mpMap || !host.mpMap->mpRoomDB) {
         return warnArgumentValue(L, __func__, "no map present or loaded");
     }
+    if (host.mpMap->scriptCallbackInProgress()) {
+        return warnArgumentValue(L, __func__, csmMapInUseByCallback);
+    }
 
     if (lua_isnumber(L, 1)) {
         id = static_cast<int>(lua_tonumber(L, 1));
@@ -1295,6 +1301,9 @@ int TLuaInterpreter::deleteMap(lua_State* L)
         // still succeed immediately after this function has been used!
         return warnArgumentValue(L, __func__, "no map present or loaded");
     }
+    if (host.mpMap->scriptCallbackInProgress()) {
+        return warnArgumentValue(L, __func__, csmMapInUseByCallback);
+    }
 
     host.mpMap->mapClear();
 
@@ -1312,6 +1321,9 @@ int TLuaInterpreter::deleteRoom(lua_State* L)
         return 0;
     }
     const Host& host = getHostFromLua(L);
+    if (host.mpMap->scriptCallbackInProgress()) {
+        return warnArgumentValue(L, __func__, csmMapInUseByCallback);
+    }
     int areaId = -1;
     if (auto* pR = host.mpMap->mpRoomDB->getRoom(id)) {
         areaId = pR->getArea();
@@ -2050,6 +2062,9 @@ int TLuaInterpreter::getPath(lua_State* L)
     if (!host.mpMap->mpRoomDB->getRoom(targetRoomId)) {
         return warnArgumentValue(L, __func__, qsl("number %1 is not a valid target roomID").arg(targetRoomId));
     }
+    if (host.mpMap->graphBuildInProgress()) {
+        return warnArgumentValue(L, __func__, csmPathfindingInExitWeightFilter);
+    }
 
     const bool ret = host.mpMap->gotoRoom(originRoomId, targetRoomId);
     const int totalWeight = host.assemblePath(); // Needed even if unsuccessful, to clear lua tables then
@@ -2578,6 +2593,9 @@ int TLuaInterpreter::gotoRoom(lua_State* L)
     if (!host.mpMap->mpRoomDB->getRoom(targetRoomId)) {
         return warnArgumentValue(L, __func__, qsl("number %1 is not a valid target roomID").arg(targetRoomId));
     }
+    if (host.mpMap->graphBuildInProgress()) {
+        return warnArgumentValue(L, __func__, csmPathfindingInExitWeightFilter);
+    }
 
     if (!host.mpMap->gotoRoom(targetRoomId)) {
         const int totalWeight = host.assemblePath(); // Needed if unsuccessful to clear lua speedwalk tables
@@ -2688,6 +2706,9 @@ int TLuaInterpreter::loadJsonMap(lua_State* L)
     if (!pHost || !pHost->mpMap || !pHost->mpMap->mpMapper || !pHost->mpMap->mpMapper->mp2dMap) {
         return warnArgumentValue(L, __func__, "no map present or loaded");
     }
+    if (pHost->mpMap->scriptCallbackInProgress()) {
+        return warnArgumentValue(L, __func__, csmMapInUseByCallback);
+    }
 
     auto source = getVerifiedString(L, __func__, 1, "import pathFileName");
     if (source.isEmpty()) {
@@ -2716,6 +2737,9 @@ int TLuaInterpreter::loadMap(lua_State* L)
     QString location;
     if (lua_gettop(L)) {
         location = getVerifiedString(L, __func__, 1, "Map pathFile {loads last stored map if omitted}", true);
+    }
+    if (host.mpMap && host.mpMap->scriptCallbackInProgress()) {
+        return warnArgumentValue(L, __func__, csmMapInUseByCallback);
     }
 
     bool isOk = false;

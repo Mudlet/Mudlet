@@ -31,6 +31,8 @@
  */
 
 #include <QAction>
+#include <QCheckBox>
+#include <QDialog>
 #include <QMenu>
 #include <QMouseEvent>
 #include <QPixmap>
@@ -299,6 +301,88 @@ private slots:
         mp2dMap->mCustomLineSelectedPoint = -1;
     }
 
+    // The east room's line selected and its properties dialog opened, as its
+    // menu's "Properties" item does
+    QPointer<QDialog> openTheLinePropertiesDialog()
+    {
+        buildMap();
+        if (!addLineToTheEastRoom()) {
+            return nullptr;
+        }
+        showMapper();
+        // An accepted dialog is only deleted later, and findChild must not hand back the last case's
+        qDeleteAll(mp2dMap->findChildren<QDialog*>(qsl("custom_line_properties")));
+        mp2dMap->mCustomLineSelectedRoom = kEastRoomId;
+        mp2dMap->mCustomLineSelectedExit = kLineExit;
+        mp2dMap->slot_customLineProperties();
+        return mp2dMap->findChild<QDialog*>(qsl("custom_line_properties"));
+    }
+
+    void test_acceptingLinePropertiesAfterTheRoomIsDeletedDoesNothing()
+    {
+        QPointer<QDialog> dialog = openTheLinePropertiesDialog();
+        QVERIFY2(dialog, "no line properties dialog was opened");
+        auto* arrow = dialog->findChild<QCheckBox*>(qsl("arrow"));
+        QVERIFY(arrow);
+        arrow->setChecked(true);
+        QVERIFY(map()->mpRoomDB->removeRoom(kEastRoomId));
+
+        dialog->accept();
+
+        QVERIFY(!map()->mpRoomDB->getRoom(kEastRoomId));
+    }
+
+    void test_acceptingLinePropertiesAfterTheLineIsRemovedDoesNotBringItBack()
+    {
+        QPointer<QDialog> dialog = openTheLinePropertiesDialog();
+        QVERIFY2(dialog, "no line properties dialog was opened");
+        TRoom* pRoom = map()->mpRoomDB->getRoom(kEastRoomId);
+        QVERIFY(pRoom);
+        pRoom->customLines.remove(kLineExit);
+        pRoom->customLinesArrow.remove(kLineExit);
+        pRoom->customLinesStyle.remove(kLineExit);
+        pRoom->customLinesColor.remove(kLineExit);
+
+        dialog->accept();
+
+        QVERIFY(!pRoom->customLinesArrow.contains(kLineExit));
+        QVERIFY(!pRoom->customLinesStyle.contains(kLineExit));
+        QVERIFY(!pRoom->customLinesColor.contains(kLineExit));
+    }
+
+    void test_acceptingLinePropertiesAfterAnotherMapIsLoadedDoesNothing()
+    {
+        QPointer<QDialog> dialog = openTheLinePropertiesDialog();
+        QVERIFY2(dialog, "no line properties dialog was opened");
+        auto* arrow = dialog->findChild<QCheckBox*>(qsl("arrow"));
+        QVERIFY(arrow);
+        arrow->setChecked(true);
+        // The same room id with the same line, but in a map loaded since
+        buildMap();
+        QVERIFY(addLineToTheEastRoom());
+
+        dialog->accept();
+
+        const TRoom* pRoom = map()->mpRoomDB->getRoom(kEastRoomId);
+        QVERIFY(pRoom);
+        QVERIFY(!pRoom->customLinesArrow.value(kLineExit));
+    }
+
+    void test_acceptingLinePropertiesAppliesThem()
+    {
+        QPointer<QDialog> dialog = openTheLinePropertiesDialog();
+        QVERIFY2(dialog, "no line properties dialog was opened");
+        auto* arrow = dialog->findChild<QCheckBox*>(qsl("arrow"));
+        QVERIFY(arrow);
+        arrow->setChecked(true);
+
+        dialog->accept();
+
+        const TRoom* pRoom = map()->mpRoomDB->getRoom(kEastRoomId);
+        QVERIFY(pRoom);
+        QVERIFY(pRoom->customLinesArrow.value(kLineExit));
+    }
+
     void test_theRoomMenusItemsGoAwayWithTheMenu()
     {
         buildMap();
@@ -415,6 +499,107 @@ private slots:
         item->trigger();
         QVERIFY2(lua(qsl("assert(specRemovedEventSeen == 1)")), "the item raised an event for a map event that was removed");
         QVERIFY(lua(qsl("killAnonymousEventHandler(specRemovedEventHandler)")));
+    }
+
+    // The line's second point, picked and right-clicked
+    QPointer<QMenu> openTheMenuOfAPickedPoint()
+    {
+        buildMap();
+        if (!addLineToTheEastRoom()) {
+            return nullptr;
+        }
+        showMapper();
+        // The first click picks the line, only then can one of its points be picked
+        clickAt(pointUnitsFromCentre(1, 2));
+        clickAt(pointUnitsFromCentre(1, 4));
+        rightClickAt(pointUnitsFromCentre(1, 4));
+        return mp2dMap->mActiveContextMenu;
+    }
+
+    // As above, with the line then taken away as removeCustomLine() does while
+    // the menu is still up
+    QPointer<QMenu> openTheMenuOfAPointWhoseLineIsThenRemoved()
+    {
+        QPointer<QMenu> menu = openTheMenuOfAPickedPoint();
+        TRoom* pRoom = map()->mpRoomDB->getRoom(kEastRoomId);
+        if (!pRoom) {
+            return nullptr;
+        }
+        pRoom->customLines.remove(kLineExit);
+        pRoom->customLinesArrow.remove(kLineExit);
+        pRoom->customLinesStyle.remove(kLineExit);
+        pRoom->customLinesColor.remove(kLineExit);
+        pRoom->calcRoomDimensions();
+        return menu;
+    }
+
+    void test_addingAPointToALineRemovedWhileItsMenuIsUpDoesNothing()
+    {
+        QPointer<QMenu> menu = openTheMenuOfAPointWhoseLineIsThenRemoved();
+        QCOMPARE(mp2dMap->mCustomLineSelectedPoint, 1);
+        QVERIFY2(menu, "the right click on the picked point put up no menu");
+        QAction* addPoint = menuItem(menu, qsl("Add point"));
+        QVERIFY2(addPoint && addPoint->isEnabled(), "the menu offers no Add point");
+
+        addPoint->trigger();
+
+        const TRoom* pRoom = map()->mpRoomDB->getRoom(kEastRoomId);
+        QVERIFY(pRoom);
+        QVERIFY2(!pRoom->customLines.contains(kLineExit), "the removed line was brought back");
+    }
+
+    void test_removingAPointFromALineRemovedWhileItsMenuIsUpDoesNothing()
+    {
+        QPointer<QMenu> menu = openTheMenuOfAPointWhoseLineIsThenRemoved();
+        QCOMPARE(mp2dMap->mCustomLineSelectedPoint, 1);
+        QVERIFY2(menu, "the right click on the picked point put up no menu");
+        QAction* removePoint = menuItem(menu, qsl("Remove point"));
+        QVERIFY2(removePoint && removePoint->isEnabled(), "the menu offers no Remove point");
+
+        removePoint->trigger();
+
+        const TRoom* pRoom = map()->mpRoomDB->getRoom(kEastRoomId);
+        QVERIFY(pRoom);
+        QVERIFY2(!pRoom->customLines.contains(kLineExit), "the removed line was brought back");
+    }
+
+    // A script can also put a different line in its place, as addCustomLine()
+    // does, long enough that the picked point's index still falls on it
+    void triggerOnALineReplacedWhileTheMenuIsUp(const QString& itemText)
+    {
+        QPointer<QMenu> menu = openTheMenuOfAPickedPoint();
+        QVERIFY2(menu, "the right click on the picked point put up no menu");
+        QCOMPARE(mp2dMap->mCustomLineSelectedPoint, 1);
+        QAction* item = menuItem(menu, itemText);
+        QVERIFY2(item && item->isEnabled(), qPrintable(qsl("the menu offers no %1").arg(itemText)));
+        TRoom* pRoom = map()->mpRoomDB->getRoom(kEastRoomId);
+        QVERIFY(pRoom);
+        const QList<QPointF> replacement{QPointF(2.0, 3.0), QPointF(2.0, 4.0), QPointF(2.0, 5.0)};
+        pRoom->customLines[kLineExit] = replacement;
+
+        item->trigger();
+
+        QCOMPARE(pRoom->customLines.value(kLineExit), replacement);
+    }
+
+    void test_addingAPointLeavesALineReplacedWhileTheMenuIsUpAlone() { triggerOnALineReplacedWhileTheMenuIsUp(qsl("Add point")); }
+
+    void test_removingAPointLeavesALineReplacedWhileTheMenuIsUpAlone() { triggerOnALineReplacedWhileTheMenuIsUp(qsl("Remove point")); }
+
+    void test_editingAPointPastTheEndOfAShortenedLineDoesNothing()
+    {
+        QPointer<QMenu> menu = openTheMenuOfAPickedPoint();
+        QVERIFY2(menu, "the right click on the picked point put up no menu");
+        QCOMPARE(mp2dMap->mCustomLineSelectedPoint, 1);
+        TRoom* pRoom = map()->mpRoomDB->getRoom(kEastRoomId);
+        QVERIFY(pRoom);
+        const QList<QPointF> shortened{QPointF(1.0, 3.0)};
+        pRoom->customLines[kLineExit] = shortened;
+
+        mp2dMap->slot_customLineAddPoint();
+        QCOMPARE(pRoom->customLines.value(kLineExit), shortened);
+        mp2dMap->slot_customLineRemovePoint();
+        QCOMPARE(pRoom->customLines.value(kLineExit), shortened);
     }
 
     // A menu put up over the map covers part of it, and the click that picks
