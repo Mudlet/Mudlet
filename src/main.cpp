@@ -162,13 +162,13 @@ void removeOldNoteColorEmojiFonts()
 // and the statics go. Not QThread on macOS: Qt starts threads detached there, so wait() is no join. Not
 // std::thread on Windows: before Qt 6.9 a watcher thread frees its adopted thread data after the join.
 // pthread_create rather than std::thread, which throws when no thread can be had; the warm-up is optional.
-class SslWarmup
+class TlsWarmup
 {
 public:
-    SslWarmup() = default;
-    SslWarmup(const SslWarmup&) = delete;
-    SslWarmup& operator=(const SslWarmup&) = delete;
-    ~SslWarmup() { join(); }
+    TlsWarmup() = default;
+    TlsWarmup(const TlsWarmup&) = delete;
+    TlsWarmup& operator=(const TlsWarmup&) = delete;
+    ~TlsWarmup() { join(); }
 
     void start()
     {
@@ -179,10 +179,10 @@ public:
         }
 #else
         if (!mStarted) {
-            const int error = pthread_create(&mThread, nullptr, &SslWarmup::run, nullptr);
+            const int error = pthread_create(&mThread, nullptr, &TlsWarmup::run, nullptr);
             mStarted = error == 0;
             if (!mStarted) {
-                qWarning().nospace() << "SslWarmup::start() WARNING - no thread for the SSL warm-up (" << qt_error_string(error) << "), so the first connection will load the CA certificates itself";
+                qWarning().nospace() << "TlsWarmup::start() WARNING - no thread for the TLS warm-up (" << qt_error_string(error) << "), so the first connection will load the CA certificates itself";
             }
         }
 #endif
@@ -490,14 +490,13 @@ int main(int argc, char* argv[])
 
     // The first QSslSocket (each cTelnet holds two) makes Qt parse every system CA certificate on the
     // constructing thread, inside profile load; warming up on another thread now usually finishes first.
-    // Declared after consoleApp, so every early return joins it before that goes: the warm-up holds Qt's
-    // TLS backend mutex while loading the plugin, and static destruction tears those down. --version
-    // starts it as it returns, only so AppStartupTeardownTest can drive that race: any earlier, it and
+    // Every early return joins it on the way out: the warm-up holds Qt's TLS backend mutex while loading
+    // the plugin, and static destruction tears those down. GUI runs only: on a print-and-exit run it and
     // this thread fill Qt's unguarded caches at once, which a QCoreApplication leaves empty - a double free.
-    SslWarmup sslWarmup;
+    TlsWarmup tlsWarmup;
 
     if (app) {
-        sslWarmup.start();
+        tlsWarmup.start();
         mudlet::start();
         // GUI runs settle the config path here, before any file is read; a
         // print-and-exit run has MudletApp resolve it on first use instead.
@@ -642,9 +641,6 @@ int main(int argc, char* argv[])
                                                           "This is free software: you are free to change and redistribute it.\n"
                                                           "There is NO WARRANTY, to the extent permitted by law."));
         std::cout << texts.join(QString()).toStdString();
-        if (!app) {
-            sslWarmup.start();
-        }
         return 0;
     }
 
@@ -1262,7 +1258,7 @@ int main(int argc, char* argv[])
     // Before the QApplication goes, not just before main() returns: the TLS
     // plugin loader connects to qApp, so a warm-up still running here would
     // reach for one that has already been deleted.
-    sslWarmup.join();
+    tlsWarmup.join();
 
     // Joins the match helpers while the QApplication still exists; see
     // TriggerMatchPool::shutdown().
