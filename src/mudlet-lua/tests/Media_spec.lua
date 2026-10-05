@@ -891,6 +891,40 @@ describe("Media playback effects with a generated sound file", function()
     assert.equals(0, #getPlayingSounds())
   end)
 
+  it("a huge finite loop count returns promptly", function()
+    if mediaPlaybackUnavailable() then
+      return
+    end
+    writeSoundFiles()
+    local started = os.clock()
+    assert.is_true(playSoundFile({name = soundFile, key = "busted-many-loops", loops = 10000000}))
+    assert.is_true(os.clock() - started < 0.5)
+    assert.is_not_nil(waitForEvent("sysMediaStarted", 5000))
+  end)
+
+  it("asking again for looping music that is playing replaces the passes still queued", function()
+    if mediaPlaybackUnavailable() then
+      return
+    end
+    local finished, started = {}, {}
+    collect("sysMediaFinished", finished)
+    collect("sysMediaStarted", started)
+
+    local secondFile = "busted-media-second.wav"
+    writeMediaFile(secondFile, 1000)
+    onCleanup(function() os.remove(mediaDirectory .. "/" .. secondFile) end)
+    assert.is_true(playMusicFile({name = secondFile, key = "busted-requeued", loops = 3}))
+    waitForCount("sysMediaStarted", started, 1)
+
+    -- continue keeps the pass that is playing and counts it as one of the two
+    assert.is_true(playMusicFile({name = secondFile, key = "busted-requeued", loops = 2}))
+    waitForCount("sysMediaFinished", finished, 2)
+    waitForEvent("sysMediaStarted", 1500)
+    assert.equals(2, #started)
+    assert.equals(2, #finished)
+    assert.equals(0, #getPlayingMusic())
+  end)
+
   it("a start position begins playback part way into the file", function()
     if mediaPlaybackUnavailable() then
       return
