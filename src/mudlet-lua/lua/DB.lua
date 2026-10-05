@@ -2582,7 +2582,9 @@ function db:close(db_name)
   end
 
   db.__conn[db_name] = nil
-  db.__autocommit[db_name] = nil
+  -- Drop the connection only. _begin on a closed database must not change
+  -- __autocommit, and the spec reads the flag create stored. The name is
+  -- already out of __conn, so it no longer holds a shared transaction.
   if still_open then
     return true, ""
   end
