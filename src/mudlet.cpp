@@ -5502,12 +5502,15 @@ void mudlet::setupEditorFocusRestoration(dlgTriggerEditor* pEditor, const QStrin
     // Disconnect any existing focus restoration connections for this editor
     disconnect(pEditor, &dlgTriggerEditor::editorClosing, nullptr, nullptr);
 
+    // Guarded: the detached window can be reattached or closed while the editor stays open
+    QPointer<QWidget> pTargetWindow = targetWindow;
     // Connect to our custom editorClosing signal which is emitted from closeEvent
-    connect(pEditor, &dlgTriggerEditor::editorClosing, [profileName, targetWindow]() {
+    connect(pEditor, &dlgTriggerEditor::editorClosing, pEditor, [profileName, pTargetWindow]() {
         // If a specific target window is provided (detached window), focus that
-        if (targetWindow) {
+        if (pTargetWindow) {
+            QWidget* targetWindow = pTargetWindow.data();
             // Small delay to ensure the editor window is fully processed
-            QTimer::singleShot(50ms, [profileName, targetWindow]() {
+            QTimer::singleShot(50ms, targetWindow, [profileName, targetWindow]() {
                 targetWindow->show();
                 targetWindow->raise();
                 targetWindow->activateWindow();
