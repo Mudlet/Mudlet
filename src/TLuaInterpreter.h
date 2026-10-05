@@ -144,6 +144,7 @@ public:
     void takeBackMultiCaptureGroups(std::list<std::list<std::string>>& captureList, std::list<std::list<int>>& posList);
     void adjustCaptureGroups(int x, int a);
     void clearCaptureGroups();
+    bool buildingCaptureTables();
     int pushNestedDispatchState();
     void popNestedDispatchState(const int depth);
     bool callEventHandler(const QString& function, const TEvent& pE);
@@ -1014,6 +1015,7 @@ private:
     QVector<QPair<QString, QString>> mCapturedNameGroups;
     QMap<QString, QPair<int, int>> mCapturedNameGroupsPosList;
     QVector<QVector<QPair<QString, QString>>> mMultiCaptureNameGroups;
+    int mCaptureBuildDepth = 0;
     // Most scripts never read "matches" or "multimatches", so lazyGlobalsIndex()
     // builds them on first read. "matches" is left out only while a capture
     // scope is open, as clearCaptureGroups() puts it back; "multimatches" is
