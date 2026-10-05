@@ -7,7 +7,7 @@
       <location filename="../src/AliasUnit.cpp" line="294"/>
       <source>[ ERROR ] - Alias processing stopped to prevent a crash: &quot;%1&quot; was expanded by an alias %2 times in a row, each time producing a command that matched an alias again. It goes to the game unexpanded. Send from the alias with send() rather than expandAlias(), or give it a pattern that does not match what it sends.</source>
       <extracomment>%1 is the command being expanded, %2 the depth limit. Shown in the game window when an alias keeps expanding into itself</extracomment>
-      <translation type="unfinished"/>
+      <translation>[ ERROR ] - Zpracování aliasů bylo zastaveno, aby nedošlo k pádu: „%1“ byl aliasem rozvinut %2krát za sebou a pokaždé z toho vznikl příkaz, který znovu odpovídal některému aliasu. Do hry se odešle nerozvinutý. Odesílejte z aliasu přes send() místo expandAlias(), nebo mu dejte vzor, který neodpovídá tomu, co odesílá.</translation>
     </message>
   </context>
   <context>
@@ -19,19 +19,19 @@
       <extracomment>Shown when macOS has no speech recognition for the chosen language; %1 is a language code such as en-US
 ----------
 Shown when a script asks for a speech language macOS cannot recognise; %1 is a language code such as en-US</extracomment>
-      <translation type="unfinished"/>
+      <translation>macOS nemá rozpoznávání řeči pro jazyk „%1“.</translation>
     </message>
     <message>
       <location filename="../src/AppleSpeechRecognizer.mm" line="128"/>
       <source>The macOS speech recognizer is not available at the moment. It becomes available once macOS has finished preparing the language it needs.</source>
       <extracomment>Shown when the macOS speech recognizer exists but the system reports it as unusable right now</extracomment>
-      <translation type="unfinished"/>
+      <translation>Rozpoznávání řeči v macOS teď není k dispozici. Zpřístupní se, jakmile macOS dokončí přípravu jazyka, který potřebuje.</translation>
     </message>
     <message>
       <location filename="../src/AppleSpeechRecognizer.mm" line="311"/>
       <source>Speech recognition permission cannot be requested when Mudlet is started from a terminal, because macOS asks the terminal&apos;s application for it instead. Quit and start Mudlet as an application - %1 - then try again.</source>
       <extracomment>Shown only in a development build started from a terminal, where macOS would blame the terminal&apos;s application for the permission request and kill Mudlet. %1 is a shell command, such as open &quot;/path/to/mudlet.app&quot;, and is not translated.</extracomment>
-      <translation type="unfinished"/>
+      <translation>Oprávnění k rozpoznávání řeči nelze vyžádat, když je Mudlet spuštěný z terminálu, protože macOS o ně místo toho žádá aplikaci terminálu. Ukončete Mudlet, spusťte ho jako aplikaci – %1 – a pak to zkuste znovu.</translation>
     </message>
     <message>
       <location filename="../src/AppleSpeechRecognizer.mm" line="339"/>
@@ -40,13 +40,13 @@ Shown when a script asks for a speech language macOS cannot recognise; %1 is a l
       <extracomment>Shown when the player refuses Mudlet permission to use macOS speech recognition; the path names the setting that grants it
 ----------
 Shown when macOS speech recognition was refused earlier and has to be allowed in system settings before speech will work</extracomment>
-      <translation type="unfinished"/>
+      <translation>Oprávnění k rozpoznávání řeči bylo zamítnuto. Povolte ho prosím v Nastavení systému > Soukromí a zabezpečení > Rozpoznávání řeči.</translation>
     </message>
     <message>
       <location filename="../src/AppleSpeechRecognizer.mm" line="383"/>
       <source>Microphone permission cannot be requested when Mudlet is started from a terminal, because macOS asks the terminal&apos;s application for it instead. Quit and start Mudlet as an application - %1 - then try again.</source>
       <extracomment>Shown only in a development build started from a terminal, where macOS would blame the terminal&apos;s application for the permission request and kill Mudlet. %1 is a shell command, such as open &quot;/path/to/mudlet.app&quot;, and is not translated.</extracomment>
-      <translation type="unfinished"/>
+      <translation>Oprávnění k mikrofonu nelze vyžádat, když je Mudlet spuštěný z terminálu, protože macOS o ně místo toho žádá aplikaci terminálu. Ukončete Mudlet, spusťte ho jako aplikaci – %1 – a pak to zkuste znovu.</translation>
     </message>
     <message>
       <location filename="../src/AppleSpeechRecognizer.mm" line="399"/>
@@ -55,50 +55,50 @@ Shown when macOS speech recognition was refused earlier and has to be allowed in
       <extracomment>Shown when the player refuses Mudlet access to the microphone; the path names the macOS setting that grants it
 ----------
 Shown when microphone access was refused earlier and has to be granted in system settings before speech will work</extracomment>
-      <translation type="unfinished"/>
+      <translation>Přístup k mikrofonu byl zamítnut. Povolte ho prosím v Nastavení systému > Soukromí a zabezpečení > Mikrofon.</translation>
     </message>
     <message>
       <location filename="../src/AppleSpeechRecognizer.mm" line="425"/>
       <location filename="../src/AppleSpeechRecognizer.mm" line="453"/>
       <source>Failed to initialize speech recognition</source>
       <extracomment>Shown when speech recognition could not be prepared for listening</extracomment>
-      <translation type="unfinished"/>
+      <translation>Rozpoznávání řeči se nepodařilo inicializovat</translation>
     </message>
     <message>
       <location filename="../src/AppleSpeechRecognizer.mm" line="438"/>
       <source>macOS cannot recognise &apos;%1&apos; on this Mac without sending the audio to Apple, so Mudlet will not listen. Add the language in System Settings &gt; Keyboard &gt; Dictation to have macOS download it.</source>
       <extracomment>Shown when macOS cannot recognise this language without sending the audio to Apple, which Mudlet will not do; %1 is a language code such as en-US</extracomment>
-      <translation type="unfinished"/>
+      <translation>macOS na tomto Macu nedokáže rozpoznat „%1“ bez odeslání zvuku společnosti Apple, a proto Mudlet nebude poslouchat. Přidejte jazyk v Nastavení systému > Klávesnice > Diktování, aby si ho macOS stáhl.</translation>
     </message>
     <message>
       <location filename="../src/AppleSpeechRecognizer.mm" line="543"/>
       <source>macOS speech recognition stopped without saying why.</source>
       <extracomment>Shown when macOS speech recognition stopped and gave no reason</extracomment>
-      <translation type="unfinished"/>
+      <translation>Rozpoznávání řeči v macOS se zastavilo bez udání důvodu.</translation>
     </message>
     <message>
       <location filename="../src/AppleSpeechRecognizer.mm" line="665"/>
       <source>macOS speech recognition stopped during this session; some speech may have been missed.</source>
       <extracomment>Shown when macOS speech recognition stops part-way through a listening session; some speech may have been missed</extracomment>
-      <translation type="unfinished"/>
+      <translation>Rozpoznávání řeči v macOS se během této relace zastavilo; část řeči možná nebyla zachycena.</translation>
     </message>
     <message>
       <location filename="../src/AppleSpeechRecognizer.mm" line="680"/>
       <source>Speech recognition stopped and could not be restarted.</source>
       <extracomment>Shown when macOS speech recognition stopped part-way through listening and could not be restarted</extracomment>
-      <translation type="unfinished"/>
+      <translation>Rozpoznávání řeči se zastavilo a nepodařilo se ho znovu spustit.</translation>
     </message>
     <message>
       <location filename="../src/AppleSpeechRecognizer.mm" line="716"/>
       <source>macOS speech recognition did not return the last phrase in time; it has been lost.</source>
       <extracomment>Shown when macOS speech recognition was asked for the last phrase and never answered</extracomment>
-      <translation type="unfinished"/>
+      <translation>Rozpoznávání řeči v macOS nevrátilo poslední frázi včas; fráze je ztracena.</translation>
     </message>
     <message>
       <location filename="../src/AppleSpeechRecognizer.mm" line="761"/>
       <source>The microphone audio could not be handed to macOS speech recognition, so nothing will be transcribed this session.</source>
       <extracomment>Shown when macOS speech recognition cannot accept the microphone audio in the format it is arriving in</extracomment>
-      <translation type="unfinished"/>
+      <translation>Zvuk z mikrofonu se nepodařilo předat rozpoznávání řeči v macOS, takže se v této relaci nic nepřepíše.</translation>
     </message>
   </context>
   <context>
@@ -152,7 +152,7 @@ Shown when microphone access was refused earlier and has to be granted in system
     <message>
       <location filename="../src/glwidget.cpp" line="2119"/>
       <source>Mapper: Cannot find a path from %1 to %2 using known exits.</source>
-      <translation>Mapa: Ze %1 do %2 nelze najít cestu po známých východech.</translation>
+      <translation>Mapa: Z místnosti %1 do místnosti %2 nelze najít cestu po známých východech.</translation>
     </message>
     <message numerus="yes">
       <location filename="../src/glwidget.cpp" line="288"/>
@@ -183,7 +183,7 @@ Shown when microphone access was refused earlier and has to be granted in system
       <location filename="../src/GMCPAuthenticator.cpp" line="700"/>
       <source>[ INFO ]  - You&apos;ll be signed in automatically next time. Manage this under Preferences, Privacy and security.</source>
       <extracomment>Shown once after a browser/OAuth sign-in whose reconnect token was saved, so future connects need no sign-in. &quot;Privacy and security&quot; is the name of a page in the preferences dialog; translate it the same way there.</extracomment>
-      <translation type="unfinished"/>
+      <translation>[ INFO ]  - Příště se přihlásíte automaticky. Spravovat to můžete v Nastavení na stránce Soukromí a zabezpečení.</translation>
     </message>
     <message>
       <location filename="../src/GMCPAuthenticator.cpp" line="727"/>
@@ -247,7 +247,7 @@ Shown when microphone access was refused earlier and has to be granted in system
       <location filename="../src/GMCPAuthenticator.cpp" line="1159"/>
       <source>[ INFO ]  - Your saved sign-in has expired; reconnecting so you can sign in again.</source>
       <extracomment>Shown when a saved password-less sign-in is no longer accepted; Mudlet reconnects so the user can sign in again.</extracomment>
-      <translation>[ INFO ]  - Vaše uložené přihlášení vypršelo; připojuji znovu, abyste se mohli přihlásit.</translation>
+      <translation>[ INFO ]  - Vaše uložené přihlášení vypršelo; probíhá nové připojení, abyste se mohli znovu přihlásit.</translation>
     </message>
   </context>
   <context>
@@ -339,7 +339,7 @@ Shown when microphone access was refused earlier and has to be granted in system
       <location filename="../src/Host.cpp" line="1752"/>
       <source>[ WARN ]  - The font &quot;%1&quot; that this profile uses is not installed on this computer, so the default &quot;%2&quot; is being used instead. Install that font, or pick another one in the preferences, to stop this message.</source>
       <extracomment>%1 is the font family the profile asked for, %2 is the font Mudlet ships with and is using instead</extracomment>
-      <translation type="unfinished"/>
+      <translation>[ WARN ]  - Písmo „%1“, které tento profil používá, není v tomto počítači nainstalované, proto se místo něj používá výchozí „%2“. Aby se tato zpráva přestala zobrazovat, nainstalujte toto písmo, nebo v nastavení zvolte jiné.</translation>
     </message>
     <message>
       <location filename="../src/Host.cpp" line="2694"/>
@@ -358,27 +358,27 @@ Shown when microphone access was refused earlier and has to be granted in system
       <location filename="../src/Host.cpp" line="2836"/>
       <source>&quot;%1&quot; is still being installed, so it cannot be installed again until that has finished.</source>
       <extracomment>%1 is the name of the package or module that is already part-way through being installed</extracomment>
-      <translation type="unfinished"/>
+      <translation>„%1“ se ještě instaluje, takže ho nelze instalovat znovu, dokud instalace neskončí.</translation>
     </message>
     <message>
       <location filename="../src/Host.cpp" line="2857"/>
       <source>&quot;%1&quot; leaves no name to install it under. Please rename the file and try again.</source>
       <extracomment>%1 is the file the user tried to install, which has no name of its own left once the folders it sits in and its extension are taken off</extracomment>
-      <translation type="unfinished"/>
+      <translation>Pro „%1“ nezbývá žádný název, pod kterým by se dal nainstalovat. Přejmenujte prosím soubor a zkuste to znovu.</translation>
     </message>
     <message>
       <location filename="../src/Host.cpp" line="2873"/>
       <location filename="../src/Host.cpp" line="3014"/>
       <source>A package called &quot;%1&quot; is already installed. Please uninstall it first or choose a different name.</source>
       <extracomment>%1 is the name of the package that is already installed</extracomment>
-      <translation type="unfinished"/>
+      <translation>Balíček s názvem „%1“ je už nainstalovaný. Nejprve ho prosím odinstalujte, nebo zvolte jiný název.</translation>
     </message>
     <message>
       <location filename="../src/Host.cpp" line="2890"/>
       <location filename="../src/Host.cpp" line="3031"/>
       <source>A module called &quot;%1&quot; is already installed. Please uninstall it first or choose a different name.</source>
       <extracomment>%1 is the name of the module that is already installed</extracomment>
-      <translation type="unfinished"/>
+      <translation>Modul s názvem „%1“ je už nainstalovaný. Nejprve ho prosím odinstalujte, nebo zvolte jiný název.</translation>
     </message>
     <message>
       <location filename="../src/Host.cpp" line="2947"/>
@@ -407,19 +407,19 @@ please wait...</source>
       <location filename="../src/Host.cpp" line="2997"/>
       <source>[ WARN ]  - The config.lua of &quot;%1&quot; could not be read, so it is being installed under that name with no details: %2</source>
       <extracomment>%1 is the name the package is being installed under, %2 is the error its config.lua gave</extracomment>
-      <translation type="unfinished"/>
+      <translation>[ WARN ]  - Soubor config.lua balíčku „%1“ se nepodařilo přečíst, proto se balíček instaluje pod tímto názvem bez dalších údajů: %2</translation>
     </message>
     <message>
       <location filename="../src/Host.cpp" line="3003"/>
       <source>The config.lua of this package asks to be installed as &quot;%1&quot;, which is not a name a package can have.</source>
       <extracomment>%1 is the name the package&apos;s config.lua asked to be installed under</extracomment>
-      <translation type="unfinished"/>
+      <translation>Soubor config.lua tohoto balíčku požaduje instalaci pod názvem „%1“, což není platný název balíčku.</translation>
     </message>
     <message>
       <location filename="../src/Host.cpp" line="3061"/>
       <source>A folder called &quot;%1&quot; is already in the profile, so the package could not be put in place. Please remove or rename that folder first.</source>
       <extracomment>%1 is the name the package&apos;s config.lua asks to be installed under</extracomment>
-      <translation type="unfinished"/>
+      <translation>V profilu už je složka s názvem „%1“, takže balíček nebylo možné umístit. Nejprve prosím tuto složku odeberte nebo přejmenujte.</translation>
     </message>
     <message>
       <location filename="../src/Host.cpp" line="3105"/>
@@ -432,25 +432,25 @@ please wait...</source>
       <location filename="../src/Host.cpp" line="3169"/>
       <source>[ WARN ]  - Failed to load package &quot;%1&quot;: %2</source>
       <extracomment>%1 is the package name, %2 is the reason its contents could not be read</extracomment>
-      <translation type="unfinished"/>
+      <translation>[ WARN ]  - Balíček „%1“ se nepodařilo načíst: %2</translation>
     </message>
     <message>
       <location filename="../src/Host.cpp" line="3190"/>
       <source>[ WARN ]  - Package &quot;%1&quot; was installed, but these parts of it are not working: &quot;%2&quot;. Open them in the editor to see why.</source>
       <extracomment>%1 is the package name; %2 is the names of the parts of it that are not working, separated by &quot;, &quot; and each already in its own pair of quotes</extracomment>
-      <translation type="unfinished"/>
+      <translation>[ WARN ]  - Balíček „%1“ byl nainstalován, ale tyto jeho části nefungují: „%2“. Proč, zjistíte, když je otevřete v editoru.</translation>
     </message>
     <message>
       <location filename="../src/Host.cpp" line="3197"/>
       <source>[ WARN ]  - Module &quot;%1&quot; was installed, but these parts of it are not working: &quot;%2&quot;. Open them in the editor to see why.</source>
       <extracomment>%1 is the module name; %2 is the names of the parts of it that are not working, separated by &quot;, &quot; and each already in its own pair of quotes</extracomment>
-      <translation type="unfinished"/>
+      <translation>[ WARN ]  - Modul „%1“ byl nainstalován, ale tyto jeho části nefungují: „%2“. Proč, zjistíte, když je otevřete v editoru.</translation>
     </message>
     <message>
       <location filename="../src/Host.cpp" line="3494"/>
       <source>[ ALERT ] - &quot;%1&quot; was installed as both a package and a module, so removing it has removed both.</source>
       <extracomment>%1 is the name that was installed as both a package and a module</extracomment>
-      <translation type="unfinished"/>
+      <translation>[ ALERT ] - „%1“ byl nainstalován jako balíček i jako modul, takže jeho odebráním se odebraly oba.</translation>
     </message>
     <message>
       <location filename="../src/Host.cpp" line="4105"/>
@@ -487,13 +487,13 @@ please wait...</source>
       <location filename="../src/dlgTriggerEditor.cpp" line="7022"/>
       <source>%1 is already used by Mudlet for &quot;%2&quot;, which will get the key first, so this key binding will not fire while that is available. Mudlet&apos;s own shortcuts can be changed in the preferences, under Shortcuts.</source>
       <extracomment>Warning shown in the editor when a key binding is given a key one of Mudlet&apos;s own shortcuts already uses. %1 is a key such as &quot;Alt+M&quot;, %2 the name of the Mudlet action holding it, as the Shortcuts tab of the preferences shows it.</extracomment>
-      <translation type="unfinished"/>
+      <translation>%1 už Mudlet používá pro „%2“. Klávesa jde nejdřív tam, takže tato klávesová zkratka se nespustí, dokud je tato akce dostupná. Vlastní klávesové zkratky Mudletu lze změnit v nastavení na stránce Klávesové zkratky.</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="7029"/>
       <source>%1 is already used by %2, which will get the key first, so this key binding will not fire.</source>
       <extracomment>Warning shown in the editor when a key binding is given a key an add-on command already holds. %1 is a key such as &quot;Alt+F9&quot;, %2 a comma separated list of the commands holding it.</extracomment>
-      <translation type="unfinished"/>
+      <translation>%1 už používá %2. Klávesa jde nejdřív tam, takže tato klávesová zkratka se nespustí.</translation>
     </message>
     <message>
       <location filename="../src/KeyUnit.cpp" line="458"/>
@@ -557,7 +557,7 @@ please wait...</source>
     <message>
       <location filename="../src/MMCPClient.cpp" line="171"/>
       <source>[ CHAT ]  - Connection from %1 at %2:%3 timed out (not accepted or denied by you).</source>
-      <translation>[ CHAT ]  - Spojení od %1 na %2:%3 vypršelo (nepřijal ani neodmítl jste ho).</translation>
+      <translation>[ CHAT ]  - Spojení od %1 na %2:%3 vypršelo (nepřijal jste ho ani neodmítl).</translation>
     </message>
     <message>
       <location filename="../src/MMCPClient.cpp" line="219"/>
@@ -702,7 +702,7 @@ please wait...</source>
 %1
 %2==== ==================== =============== =====%3
 </source>
-      <translation>Id   Jméno                Adresa          Port
+      <translation>ID   Jméno                Adresa          Port
 ==== ==================== =============== =====
 %1
 %2==== ==================== =============== =====%3
@@ -761,7 +761,7 @@ please wait...</source>
       <location filename="../src/MMCPServer.cpp" line="251"/>
       <location filename="../src/MMCPServer.cpp" line="571"/>
       <source>[ CHAT ]  - Invalid client id &apos;%1&apos;.</source>
-      <translation>[ CHAT ]  - Neplatné id klienta „%1“.</translation>
+      <translation>[ CHAT ]  - Neplatné ID klienta „%1“.</translation>
     </message>
     <message>
       <location filename="../src/MMCPServer.cpp" line="286"/>
@@ -779,12 +779,12 @@ please wait...</source>
       <location filename="../src/MMCPServer.cpp" line="371"/>
       <source>%1%2You try to chat to &lt;%3%4%1&gt; but it is empty and no-one hears you say: &apos;%5&apos;%6</source>
       <extracomment>%1 and %3 are ASCII ESC color codes that need to be included BEFORE a * portion of text (the main message %5) and (the group name %4) * respectively and %5 is another code at the very end to reset the colors * back to &quot;normal&quot;. %2 is the prefix added to all chat messages display to us. * Please try and reproduce the positioning of those codes around the translation.</extracomment>
-      <translation>%1%2Zkoušíte psát do &lt;%3%4%1&gt;, ale je prázdné a nikdo vás neslyší říkat: „%5“%6</translation>
+      <translation>%1%2Zkoušíte psát skupině &lt;%3%4%1>, ale je prázdná a nikdo vás neuslyší: „%5“%6</translation>
     </message>
     <message>
       <location filename="../src/MMCPServer.cpp" line="384"/>
       <source>Id</source>
-      <translation>Id</translation>
+      <translation>ID</translation>
     </message>
     <message>
       <location filename="../src/MMCPServer.cpp" line="385"/>
@@ -1114,13 +1114,13 @@ This text is shown when room(s) are (not) selected in mapper. %1 is the room ID 
       <location filename="../src/ircmessageformatter.cpp" line="192"/>
       <source>! %1 kicked %2 from %3</source>
       <extracomment>Shown in the IRC client when someone is kicked out of a channel without a reason being given. %1 is the nickname doing the kicking, %2 the nickname being kicked, %3 the channel.</extracomment>
-      <translation type="unfinished"/>
+      <translation>! %1 vyhodil %2 z %3</translation>
     </message>
     <message>
       <location filename="../src/ircmessageformatter.cpp" line="196"/>
       <source>! %1 kicked %2 from %3 (%4)</source>
       <extracomment>Shown in the IRC client when someone is kicked out of a channel. %1 is the nickname doing the kicking, %2 the nickname being kicked, %3 the channel, %4 the reason the kicker gave.</extracomment>
-      <translation type="unfinished"/>
+      <translation>! %1 vyhodil %2 z %3 (%4)</translation>
     </message>
     <message>
       <location filename="../src/ircmessageformatter.cpp" line="204"/>
@@ -1140,12 +1140,12 @@ This text is shown when room(s) are (not) selected in mapper. %1 is the room ID 
     <message>
       <location filename="../src/ircmessageformatter.cpp" line="234"/>
       <source>! %1 has %2 users: %3</source>
-      <translation>! %1 má %2 uživatelů: %3</translation>
+      <translation>! %1 – počet uživatelů: %2: %3</translation>
     </message>
     <message>
       <location filename="../src/ircmessageformatter.cpp" line="236"/>
       <source>! %1 has %2 users</source>
-      <translation>! %1 má %2 uživatelů</translation>
+      <translation>! %1 – počet uživatelů: %2</translation>
     </message>
     <message>
       <location filename="../src/ircmessageformatter.cpp" line="242"/>
@@ -1213,7 +1213,7 @@ This text is shown when room(s) are (not) selected in mapper. %1 is the room ID 
     <message>
       <location filename="../src/ircmessageformatter.cpp" line="368"/>
       <source>! %1 replied in %2 seconds</source>
-      <translation>! %1 odpověděl za %2 sekund</translation>
+      <translation>! %1 odpověděl za %2 s</translation>
     </message>
     <message>
       <location filename="../src/ircmessageformatter.cpp" line="382"/>
@@ -1338,12 +1338,12 @@ This text is shown when room(s) are (not) selected in mapper. %1 is the room ID 
     <message>
       <location filename="../src/ircmessageformatter.cpp" line="488"/>
       <source>%1 days</source>
-      <translation>%1 dní</translation>
+      <translation>%1 d</translation>
     </message>
     <message>
       <location filename="../src/ircmessageformatter.cpp" line="492"/>
       <source>%1 hours</source>
-      <translation>%1 hodin</translation>
+      <translation>%1 h</translation>
     </message>
     <message>
       <location filename="../src/ircmessageformatter.cpp" line="496"/>
@@ -1407,7 +1407,7 @@ This text is shown when room(s) are (not) selected in mapper. %1 is the room ID 
     <message>
       <location filename="../3rdparty/edbee-lib/edbee-lib/edbee/texteditorcontroller.cpp" line="433"/>
       <source>%1 ranges</source>
-      <translation>%1 rozsahů</translation>
+      <translation>rozsahů: %1</translation>
     </message>
     <message>
       <location filename="../3rdparty/edbee-lib/edbee-lib/edbee/texteditorcontroller.cpp" line="439"/>
@@ -1863,7 +1863,7 @@ This text is shown when room(s) are (not) selected in mapper. %1 is the room ID 
       <location filename="../src/TKey.cpp" line="248"/>
       <source>No key binding set. Click &quot;Grab New Key&quot; to assign one.</source>
       <extracomment>Error shown in the editor when a key item has no key binding assigned</extracomment>
-      <translation>Není nastavena žádná klávesová zkratka. Přiřadíte ji kliknutím na „Sejmout novou klávesu“.</translation>
+      <translation>Není nastavena žádná klávesová zkratka. Přiřadíte ji kliknutím na „Zachytit novou klávesu“.</translation>
     </message>
     <message>
       <location filename="../src/main.cpp" line="964"/>
@@ -1889,7 +1889,7 @@ You can change this later in Settings &gt; General.</source>
 
 Budete pak moct kliknout na odkaz telnet:// nebo telnets:// v prohlížeči a automaticky se otevře v Mudletu.
 
-Nastavení lze později změnit v Nastavení &gt; Obecné.</translation>
+Později to lze změnit v Nastavení > Obecné.</translation>
     </message>
     <message>
       <location filename="../src/main.cpp" line="977"/>
@@ -1901,7 +1901,7 @@ Nastavení lze později změnit v Nastavení &gt; Obecné.</translation>
       <location filename="../src/TTimer.cpp" line="122"/>
       <source>No time set - a timer needs a time greater than zero to run</source>
       <extracomment>Error shown in the editor when a timer&apos;s time is left at zero</extracomment>
-      <translation type="unfinished"/>
+      <translation>Není nastaven čas – timer potřebuje ke spuštění čas větší než nula</translation>
     </message>
   </context>
   <context>
@@ -1933,31 +1933,31 @@ Nastavení lze později změnit v Nastavení &gt; Obecné.</translation>
       <location filename="../src/SherpaRecognizer.cpp" line="306"/>
       <source>the library was found but does not export the functions this version of Mudlet needs</source>
       <extracomment>Shown when a speech engine library was found but is too old or incomplete to use; the player needs a different build rather than an install</extracomment>
-      <translation type="unfinished"/>
+      <translation>knihovna byla nalezena, ale neexportuje funkce, které tato verze Mudletu potřebuje</translation>
     </message>
     <message>
       <location filename="../src/SherpaRecognizer.cpp" line="478"/>
       <source>sherpa-onnx library not available</source>
       <extracomment>Shown when speech recognition is asked to load a model but the recognition library itself is not installed</extracomment>
-      <translation type="unfinished"/>
+      <translation>Knihovna sherpa-onnx není k dispozici</translation>
     </message>
     <message>
       <location filename="../src/SherpaRecognizer.cpp" line="501"/>
       <source>Model path does not exist: %1</source>
       <extracomment>Shown when a speech model cannot be found; %1 is the folder that was looked for</extracomment>
-      <translation type="unfinished"/>
+      <translation>Cesta k modelu neexistuje: %1</translation>
     </message>
     <message>
       <location filename="../src/SherpaRecognizer.cpp" line="525"/>
       <source>Not a sherpa-onnx streaming model (needs tokens.txt and encoder/decoder/joiner .onnx files): %1</source>
       <extracomment>Shown when a model directory exists but does not contain the files a sherpa-onnx streaming model needs; %1 is that directory</extracomment>
-      <translation type="unfinished"/>
+      <translation>Nejde o streamovací model sherpa-onnx (potřebuje tokens.txt a soubory .onnx pro encoder/decoder/joiner): %1</translation>
     </message>
     <message>
       <location filename="../src/SherpaRecognizer.cpp" line="700"/>
       <source>Failed to load sherpa-onnx model from: %1</source>
       <extracomment>Shown when a speech model folder exists but could not be loaded; %1 is that folder</extracomment>
-      <translation type="unfinished"/>
+      <translation>Model sherpa-onnx se nepodařilo načíst z: %1</translation>
     </message>
     <message>
       <location filename="../src/SherpaRecognizer.cpp" line="831"/>
@@ -1966,51 +1966,51 @@ Nastavení lze později změnit v Nastavení &gt; Obecné.</translation>
       <extracomment>Shown when the player refuses Mudlet access to the microphone; the path names the macOS setting that grants it
 ----------
 Shown when microphone access was refused earlier and has to be granted in system settings before speech will work</extracomment>
-      <translation type="unfinished"/>
+      <translation>Přístup k mikrofonu byl zamítnut. Povolte ho prosím v Nastavení systému > Soukromí a zabezpečení > Mikrofon.</translation>
     </message>
     <message>
       <location filename="../src/SherpaRecognizer.cpp" line="859"/>
       <location filename="../src/SherpaRecognizer.cpp" line="871"/>
       <source>Failed to initialize speech recognition</source>
       <extracomment>Shown when speech recognition could not be prepared for listening</extracomment>
-      <translation type="unfinished"/>
+      <translation>Rozpoznávání řeči se nepodařilo inicializovat</translation>
     </message>
     <message>
       <location filename="../src/SherpaRecognizer.cpp" line="921"/>
       <location filename="../src/SherpaRecognizer.cpp" line="985"/>
       <source>The speech engine returned no result for what it just heard.</source>
       <extracomment>Shown when the speech engine accepted a phrase and then returned no transcription for it</extracomment>
-      <translation type="unfinished"/>
+      <translation>Rozpoznávač řeči nevrátil pro právě zaslechnutou frázi žádný výsledek.</translation>
     </message>
     <message>
       <location filename="../src/SherpaRecognizer.cpp" line="1113"/>
       <source>These words cannot be used for speech biasing and were ignored: %1</source>
       <extracomment>Shown when some words cannot be used to bias speech recognition and were left out; %1 is the list of those words</extracomment>
-      <translation type="unfinished"/>
+      <translation>Tato slova nelze použít ke zvýhodnění při rozpoznávání řeči, a byla proto vynechána: %1</translation>
     </message>
     <message>
       <location filename="../src/SherpaRecognizer.cpp" line="1115"/>
       <source>%1 - that was all of them, so nothing is biasing recognition.</source>
       <extracomment>Added to the message above when every supplied word was unusable, so no biasing happened at all</extracomment>
-      <translation type="unfinished"/>
+      <translation>%1 – to byla všechna, takže rozpoznávání nezvýhodňuje nic.</translation>
     </message>
     <message>
       <location filename="../src/SherpaRecognizer.cpp" line="1154"/>
       <source>Speech recognition is not idle, so the supplied vocabulary is kept and takes effect at the next model load.</source>
       <extracomment>Shown when words offered to the speech engine cannot take effect until it next loads a model</extracomment>
-      <translation type="unfinished"/>
+      <translation>Rozpoznávání řeči právě pracuje, takže zadaná slovní zásoba se uchová a projeví se při příštím načtení modelu.</translation>
     </message>
     <message>
       <location filename="../src/SherpaRecognizer.cpp" line="1202"/>
       <source>Speech recognition is not idle, so the new sensitivity is kept and takes effect at the next model load.</source>
       <extracomment>Shown when a change to speech sensitivity cannot take effect until the engine next loads a model</extracomment>
-      <translation type="unfinished"/>
+      <translation>Rozpoznávání řeči právě pracuje, takže nová citlivost se uchová a projeví se při příštím načtení modelu.</translation>
     </message>
     <message>
       <location filename="../src/SherpaRecognizer.cpp" line="1227"/>
       <source>No installed model found for language: %1</source>
       <extracomment>Shown when a speech language is chosen with no model installed for it; %1 is a language code such as en-US</extracomment>
-      <translation type="unfinished"/>
+      <translation>Pro jazyk nebyl nalezen žádný nainstalovaný model: %1</translation>
     </message>
   </context>
   <context>
@@ -2019,31 +2019,31 @@ Shown when microphone access was refused earlier and has to be granted in system
       <location filename="../src/SpeechAudioCapture.cpp" line="37"/>
       <source>no error</source>
       <extracomment>Completes &quot;Audio input error occurred: %1&quot; - no fault was reported</extracomment>
-      <translation type="unfinished"/>
+      <translation>žádná chyba</translation>
     </message>
     <message>
       <location filename="../src/SpeechAudioCapture.cpp" line="40"/>
       <source>the microphone could not be opened</source>
       <extracomment>Completes &quot;Audio input error occurred: %1&quot; - the microphone could not be opened</extracomment>
-      <translation type="unfinished"/>
+      <translation>mikrofon se nepodařilo otevřít</translation>
     </message>
     <message>
       <location filename="../src/SpeechAudioCapture.cpp" line="43"/>
       <source>reading from the microphone failed</source>
       <extracomment>Completes &quot;Audio input error occurred: %1&quot; - reading from the microphone failed</extracomment>
-      <translation type="unfinished"/>
+      <translation>čtení z mikrofonu selhalo</translation>
     </message>
     <message>
       <location filename="../src/SpeechAudioCapture.cpp" line="46"/>
       <source>the microphone stopped supplying audio</source>
       <extracomment>Completes &quot;Audio input error occurred: %1&quot; - the microphone went silent mid-capture</extracomment>
-      <translation type="unfinished"/>
+      <translation>mikrofon přestal dodávat zvuk</translation>
     </message>
     <message>
       <location filename="../src/SpeechAudioCapture.cpp" line="49"/>
       <source>the microphone became unusable</source>
       <extracomment>Completes &quot;Audio input error occurred: %1&quot; - the microphone can no longer be used</extracomment>
-      <translation type="unfinished"/>
+      <translation>mikrofon přestal být použitelný</translation>
     </message>
     <message>
       <location filename="../src/SpeechAudioCapture.cpp" line="52"/>
@@ -2055,37 +2055,37 @@ Shown when microphone access was refused earlier and has to be granted in system
       <location filename="../src/SpeechAudioCapture.cpp" line="75"/>
       <source>No microphone available</source>
       <extracomment>Shown when speech recognition finds no audio input device at all</extracomment>
-      <translation type="unfinished"/>
+      <translation>Není k dispozici žádný mikrofon</translation>
     </message>
     <message>
       <location filename="../src/SpeechAudioCapture.cpp" line="96"/>
       <source>The microphone does not offer an audio format speech recognition can use</source>
       <extracomment>Shown when the microphone offers no audio format speech recognition can convert</extracomment>
-      <translation type="unfinished"/>
+      <translation>Mikrofon nenabízí žádný zvukový formát, který by rozpoznávání řeči mohlo použít</translation>
     </message>
     <message>
       <location filename="../src/SpeechAudioCapture.cpp" line="129"/>
       <source>Failed to start audio capture</source>
       <extracomment>Shown when the microphone could not be opened for speech recognition</extracomment>
-      <translation type="unfinished"/>
+      <translation>Záznam zvuku se nepodařilo spustit</translation>
     </message>
     <message>
       <location filename="../src/SpeechAudioCapture.cpp" line="210"/>
       <source>The microphone is supplying audio in a format speech recognition cannot read (%1).</source>
       <extracomment>%1 is a technical audio sample format name, e.g. &quot;Int32&quot;</extracomment>
-      <translation type="unfinished"/>
+      <translation>Mikrofon dodává zvuk ve formátu, který rozpoznávání řeči neumí přečíst (%1).</translation>
     </message>
     <message>
       <location filename="../src/SpeechAudioCapture.cpp" line="218"/>
       <source>The microphone reported an unusable audio format - try selecting a different input device.</source>
       <extracomment>Shown when the microphone reports an audio format speech recognition cannot work with</extracomment>
-      <translation type="unfinished"/>
+      <translation>Mikrofon ohlásil nepoužitelný zvukový formát – zkuste vybrat jiné vstupní zařízení.</translation>
     </message>
     <message>
       <location filename="../src/SpeechAudioCapture.cpp" line="322"/>
       <source>Audio input error occurred: %1</source>
       <extracomment>%1 is a description of what went wrong with the microphone</extracomment>
-      <translation type="unfinished"/>
+      <translation>Došlo k chybě zvukového vstupu: %1</translation>
     </message>
   </context>
   <context>
@@ -2094,31 +2094,31 @@ Shown when microphone access was refused earlier and has to be granted in system
       <location filename="../src/SpeechRecognizer.h" line="109"/>
       <source>Recognizer not initialized. Call initialize() first.</source>
       <extracomment>Shown when speech recognition is asked to listen before a language model is loaded</extracomment>
-      <translation type="unfinished"/>
+      <translation>Rozpoznávač není inicializovaný. Nejprve zavolejte initialize().</translation>
     </message>
     <message>
       <location filename="../src/SpeechRecognizer.h" line="112"/>
       <source>Speech recognition is in an error state - reload the model before listening again.</source>
       <extracomment>Shown when speech recognition is asked to listen while it is in an error state</extracomment>
-      <translation type="unfinished"/>
+      <translation>Rozpoznávání řeči je v chybovém stavu – před dalším posloucháním znovu načtěte model.</translation>
     </message>
     <message>
       <location filename="../src/SpeechRecognizer.h" line="115"/>
       <source>Speech recognition is still processing the previous phrase.</source>
       <extracomment>Shown when speech recognition is asked to listen while still transcribing the previous phrase</extracomment>
-      <translation type="unfinished"/>
+      <translation>Rozpoznávání řeči ještě zpracovává předchozí frázi.</translation>
     </message>
     <message>
       <location filename="../src/SpeechRecognizer.h" line="450"/>
       <source>This speech engine claims it can use a vocabulary but does not implement one.</source>
       <extracomment>Shown when a speech engine claims it can use a vocabulary but has no way to apply one, which is a fault in the engine rather than anything the player did</extracomment>
-      <translation type="unfinished"/>
+      <translation>Tento rozpoznávač řeči tvrdí, že umí používat slovní zásobu, ale nemá ji implementovanou.</translation>
     </message>
     <message>
       <location filename="../src/SpeechRecognizer.h" line="528"/>
       <source>Loading a speech model stopped the listening session that was under way - anything said during it is lost.</source>
       <extracomment>Shown when loading a speech model ends a listening session that was already under way, losing what was being said</extracomment>
-      <translation type="unfinished"/>
+      <translation>Načtení modelu řeči ukončilo probíhající poslech – vše, co během něj zaznělo, je ztraceno.</translation>
     </message>
   </context>
   <context>
@@ -2684,7 +2684,7 @@ Warning message shown when trying to delete an area fails.</extracomment>
     <message>
       <location filename="../src/T2DMap.cpp" line="1179"/>
       <source>Mapper: Cannot find a path from %1 to %2 using known exits.</source>
-      <translation>Mapa: Ze %1 do %2 nelze najít cestu po známých východech.</translation>
+      <translation>Mapa: Z místnosti %1 do místnosti %2 nelze najít cestu po známých východech.</translation>
     </message>
     <message>
       <location filename="../src/T2DMap.cpp" line="503"/>
@@ -2785,7 +2785,7 @@ o násobek:</translation>
     <message>
       <location filename="../src/TAlias.cpp" line="311"/>
       <source>Error: in &quot;Pattern:&quot;, faulty regular expression, reason: &quot;%1&quot;.</source>
-      <translation>Chyba: ve „Vzor:“ je vadný regulární výraz, důvod: „%1“.</translation>
+      <translation>Chyba: v poli „Vzor:“ je vadný regulární výraz, důvod: „%1“.</translation>
     </message>
   </context>
   <context>
@@ -2949,13 +2949,13 @@ Accessibility-friendly description for the built-in command line of a console/wi
       <location filename="../src/TConsole.cpp" line="1162"/>
       <source>Failed to open replay recording file for writing: %1</source>
       <extracomment>Informational message displayed when replay recording file could not be opened. %1 is the reason</extracomment>
-      <translation type="unfinished"/>
+      <translation>Soubor nahrávaného záznamu se nepodařilo otevřít pro zápis: %1</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="1172"/>
       <source>Replay recording has been stopped, but couldn&apos;t be saved: %1</source>
       <extracomment>Informational message displayed when replay recording is stopped but could not be saved. %1 is the reason</extracomment>
-      <translation type="unfinished"/>
+      <translation>Nahrávání záznamu bylo zastaveno, ale záznam se nepodařilo uložit: %1</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="1395"/>
@@ -3109,7 +3109,7 @@ Accessibility-friendly description for the built-in command line of a console/wi
       <location filename="../src/TConsole.cpp" line="2468"/>
       <source>Hide the find bar (Escape).</source>
       <extracomment>Tooltip for the button that puts the Central Debug Console&apos;s find bar away</extracomment>
-      <translation type="unfinished"/>
+      <translation>Skrýt lištu hledání (Escape).</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="2588"/>
@@ -3234,7 +3234,7 @@ Accessibility-friendly description for the built-in command line of a console/wi
       <location filename="../src/TConsole.cpp" line="3302"/>
       <source>[ WARN ]  - %1 is used by the buffer search and by %2, so neither will work until one of them is changed.</source>
       <extracomment>Warning posted to the profile when the buffer search is switched on while an add-on command already holds its key. %1 is a key such as &quot;F3&quot;, %2 a comma separated list of the commands holding it.</extracomment>
-      <translation type="unfinished"/>
+      <translation>[ WARN ]  - %1 používá hledání v bufferu i %2, takže nebude fungovat ani jedno, dokud se jedno z nich nezmění.</translation>
     </message>
     <message>
       <location filename="../src/TConsole.cpp" line="2988"/>
@@ -3308,7 +3308,7 @@ Accessibility-friendly description for the built-in command line of a console/wi
       <location filename="../src/TConsoleModel.cpp" line="141"/>
       <source>[ ERROR ] - Could not start logging to &quot;%1&quot;: %2</source>
       <extracomment>Error shown on the main console when a log file could not be opened. %1 is the file, %2 is the reason</extracomment>
-      <translation type="unfinished"/>
+      <translation>[ ERROR ] - Zaznamenávání do „%1“ nelze spustit: %2</translation>
     </message>
   </context>
   <context>
@@ -3318,28 +3318,56 @@ Accessibility-friendly description for the built-in command line of a console/wi
       <source>%n kind(s) of message are hidden - use the controls below to change that.
 </source>
       <extracomment>Shown in the Central Debug Console when it opens with some kinds of message hidden. %n is how many.</extracomment>
-      <translation type="unfinished"/>
+      <translation>
+        <numerusform>%n druh zpráv je skrytý – změnit to můžete ovládacími prvky níže.
+</numerusform>
+        <numerusform>%n druhy zpráv jsou skryté – změnit to můžete ovládacími prvky níže.
+</numerusform>
+        <numerusform>%n druhů zpráv je skrytých – změnit to můžete ovládacími prvky níže.
+</numerusform>
+        <numerusform>%n druhů zpráv je skrytých – změnit to můžete ovládacími prvky níže.
+</numerusform>
+      </translation>
     </message>
     <message>
       <location filename="../src/TDebug.cpp" line="127"/>
       <source>Showing only messages about &quot;%1&quot; - use the controls below to change that.
 </source>
       <extracomment>Shown in the Central Debug Console when it opens narrowed to a single trigger, alias, timer and so on. %1 is that item&apos;s name.</extracomment>
-      <translation type="unfinished"/>
+      <translation>Zobrazují se jen zprávy o „%1“ – změnit to můžete ovládacími prvky níže.
+</translation>
     </message>
     <message numerus="yes">
       <location filename="../src/TDebug.cpp" line="169"/>
       <source>%n message(s) dropped while paused.
 </source>
       <extracomment>Shown in the Central Debug Console on resuming, when more messages arrived while paused than could be held back.</extracomment>
-      <translation type="unfinished"/>
+      <translation>
+        <numerusform>%n zpráva byla během pozastavení zahozena.
+</numerusform>
+        <numerusform>%n zprávy byly během pozastavení zahozeny.
+</numerusform>
+        <numerusform>%n zpráv bylo během pozastavení zahozeno.
+</numerusform>
+        <numerusform>%n zpráv bylo během pozastavení zahozeno.
+</numerusform>
+      </translation>
     </message>
     <message numerus="yes">
       <location filename="../src/TDebug.cpp" line="288"/>
       <source>%n older message(s) were dropped while the Central Debug Console was closed.
 </source>
       <extracomment>Shown in the Central Debug Console when it opens, after the messages kept for it, if more arrived while it was closed than could be kept.</extracomment>
-      <translation type="unfinished"/>
+      <translation>
+        <numerusform>%n starší zpráva byla zahozena, zatímco byla centrální ladicí konzole zavřená.
+</numerusform>
+        <numerusform>%n starší zprávy byly zahozeny, zatímco byla centrální ladicí konzole zavřená.
+</numerusform>
+        <numerusform>%n starších zpráv bylo zahozeno, zatímco byla centrální ladicí konzole zavřená.
+</numerusform>
+        <numerusform>%n starších zpráv bylo zahozeno, zatímco byla centrální ladicí konzole zavřená.
+</numerusform>
+      </translation>
     </message>
   </context>
   <context>
@@ -3348,7 +3376,7 @@ Accessibility-friendly description for the built-in command line of a console/wi
       <location filename="../src/TDebugFilterBar.cpp" line="94"/>
       <source>Profile start and end</source>
       <extracomment>Central Debug Console filter: profile started/ended notices</extracomment>
-      <translation type="unfinished"/>
+      <translation>Spuštění a ukončení profilu</translation>
     </message>
     <message>
       <location filename="../src/TDebugFilterBar.cpp" line="97"/>
@@ -3360,31 +3388,31 @@ Accessibility-friendly description for the built-in command line of a console/wi
       <location filename="../src/TDebugFilterBar.cpp" line="100"/>
       <source>Connection and downloads</source>
       <extracomment>Central Debug Console filter: connecting to the game, downloads</extracomment>
-      <translation type="unfinished"/>
+      <translation>Připojení a stahování</translation>
     </message>
     <message>
       <location filename="../src/TDebugFilterBar.cpp" line="103"/>
       <source>Protocol events (GMCP, MSDP, MSSP, MXP)</source>
       <extracomment>Central Debug Console filter: GMCP, MSDP, MSSP and MXP events</extracomment>
-      <translation type="unfinished"/>
+      <translation>Události protokolů (GMCP, MSDP, MSSP, MXP)</translation>
     </message>
     <message>
       <location filename="../src/TDebugFilterBar.cpp" line="106"/>
       <source>Every line from the game</source>
       <extracomment>Central Debug Console filter: every line the game sends</extracomment>
-      <translation type="unfinished"/>
+      <translation>Každý řádek ze hry</translation>
     </message>
     <message>
       <location filename="../src/TDebugFilterBar.cpp" line="109"/>
       <source>Triggers that matched</source>
       <extracomment>Central Debug Console filter: which triggers matched</extracomment>
-      <translation type="unfinished"/>
+      <translation>Triggery, které našly shodu</translation>
     </message>
     <message>
       <location filename="../src/TDebugFilterBar.cpp" line="112"/>
       <source>Trigger capture groups and match state</source>
       <extracomment>Central Debug Console filter: capture groups and multiline trigger progress</extracomment>
-      <translation type="unfinished"/>
+      <translation>Zachycené skupiny a stav shody triggerů</translation>
     </message>
     <message>
       <location filename="../src/TDebugFilterBar.cpp" line="115"/>
@@ -3396,25 +3424,25 @@ Accessibility-friendly description for the built-in command line of a console/wi
       <location filename="../src/TDebugFilterBar.cpp" line="118"/>
       <source>Item housekeeping</source>
       <extracomment>Central Debug Console filter: housekeeping notices about triggers, timers and the like</extracomment>
-      <translation type="unfinished"/>
+      <translation>Údržba položek</translation>
     </message>
     <message>
       <location filename="../src/TDebugFilterBar.cpp" line="121"/>
       <source>Scripts that ran without errors</source>
       <extracomment>Central Debug Console filter: &quot;ran without errors&quot; notices</extracomment>
-      <translation type="unfinished"/>
+      <translation>Skripty, které proběhly bez chyb</translation>
     </message>
     <message>
       <location filename="../src/TDebugFilterBar.cpp" line="124"/>
       <source>Lua warnings</source>
       <extracomment>Central Debug Console filter: warnings from Lua functions</extracomment>
-      <translation type="unfinished"/>
+      <translation>Varování Lua</translation>
     </message>
     <message>
       <location filename="../src/TDebugFilterBar.cpp" line="127"/>
       <source>Text selection calls</source>
       <extracomment>Central Debug Console filter: selectString() and friends</extracomment>
-      <translation type="unfinished"/>
+      <translation>Volání výběru textu</translation>
     </message>
     <message>
       <location filename="../src/TDebugFilterBar.cpp" line="130"/>
@@ -3426,26 +3454,26 @@ Accessibility-friendly description for the built-in command line of a console/wi
       <location filename="../src/TDebugFilterBar.cpp" line="133"/>
       <source>Other messages</source>
       <extracomment>Central Debug Console filter: messages not belonging to any of the other groups, such as a script changing a setting</extracomment>
-      <translation type="unfinished"/>
+      <translation>Ostatní zprávy</translation>
     </message>
     <message>
       <location filename="../src/TDebugFilterBar.cpp" line="142"/>
       <source>Debug filters</source>
       <extracomment>Title of the toolbar holding the Central Debug Console&apos;s filter controls</extracomment>
-      <translation type="unfinished"/>
+      <translation>Ladicí filtry</translation>
     </message>
     <message>
       <location filename="../src/TDebugFilterBar.cpp" line="148"/>
       <location filename="../src/TDebugFilterBar.cpp" line="425"/>
       <source>Pause</source>
       <extracomment>Button in the Central Debug Console that stops new messages appearing</extracomment>
-      <translation type="unfinished"/>
+      <translation>Pozastavit</translation>
     </message>
     <message>
       <location filename="../src/TDebugFilterBar.cpp" line="151"/>
       <source>Hold back new messages so the console stays still. They are shown when you resume.</source>
       <extracomment>Tooltip for the Central Debug Console&apos;s Pause button</extracomment>
-      <translation type="unfinished"/>
+      <translation>Zadržet nové zprávy, aby konzole zůstala v klidu. Zobrazí se, až budete pokračovat.</translation>
     </message>
     <message>
       <location filename="../src/TDebugFilterBar.cpp" line="155"/>
@@ -3457,19 +3485,19 @@ Accessibility-friendly description for the built-in command line of a console/wi
       <location filename="../src/TDebugFilterBar.cpp" line="157"/>
       <source>Empty the console.</source>
       <extracomment>Tooltip for the Central Debug Console&apos;s Clear button</extracomment>
-      <translation type="unfinished"/>
+      <translation>Vyprázdnit konzoli.</translation>
     </message>
     <message>
       <location filename="../src/TDebugFilterBar.cpp" line="182"/>
       <source>Show</source>
       <extracomment>Menu button in the Central Debug Console for picking which kinds of message it shows</extracomment>
-      <translation type="unfinished"/>
+      <translation>Zobrazit</translation>
     </message>
     <message>
       <location filename="../src/TDebugFilterBar.cpp" line="186"/>
       <source>Choose which kinds of message the console shows from now on.</source>
       <extracomment>Tooltip for the Central Debug Console&apos;s category menu</extracomment>
-      <translation type="unfinished"/>
+      <translation>Vyberte, které druhy zpráv bude konzole od teď zobrazovat.</translation>
     </message>
     <message>
       <location filename="../src/TDebugFilterBar.cpp" line="202"/>
@@ -3481,87 +3509,99 @@ Accessibility-friendly description for the built-in command line of a console/wi
       <location filename="../src/TDebugFilterBar.cpp" line="207"/>
       <source>Hide all</source>
       <extracomment>Central Debug Console filter preset that turns every kind of message off</extracomment>
-      <translation type="unfinished"/>
+      <translation>Skrýt vše</translation>
     </message>
     <message>
       <location filename="../src/TDebugFilterBar.cpp" line="213"/>
       <source>[*] Every kind of message is hidden now - nothing further will appear until you show some again.
 </source>
       <extracomment>Shown in the Central Debug Console the moment the user hides every kind of message</extracomment>
-      <translation type="unfinished"/>
+      <translation>[*] Teď jsou skryté všechny druhy zpráv – nic dalšího se neobjeví, dokud některé znovu nezobrazíte.
+</translation>
     </message>
     <message>
       <location filename="../src/TDebugFilterBar.cpp" line="217"/>
       <source>Quiet (hide the noisy ones)</source>
       <extracomment>Central Debug Console filter preset that turns off only the kinds of message which flood it</extracomment>
-      <translation type="unfinished"/>
+      <translation>Tichý režim (skrýt ty upovídané)</translation>
     </message>
     <message>
       <location filename="../src/TDebugFilterBar.cpp" line="240"/>
       <source>Profiles</source>
       <extracomment>Menu button in the Central Debug Console for picking which profiles it shows messages from</extracomment>
-      <translation type="unfinished"/>
+      <translation>Profily</translation>
     </message>
     <message>
       <location filename="../src/TDebugFilterBar.cpp" line="243"/>
       <source>Choose which profiles the console shows messages from.</source>
       <extracomment>Tooltip for the Central Debug Console&apos;s profile menu</extracomment>
-      <translation type="unfinished"/>
+      <translation>Vyberte, ze kterých profilů bude konzole zobrazovat zprávy.</translation>
     </message>
     <message>
       <location filename="../src/TDebugFilterBar.cpp" line="294"/>
       <source>Show only messages about one trigger, alias, timer, key, button or script. Type to search by name.</source>
       <extracomment>Tooltip for the Central Debug Console&apos;s item filter, which narrows it to one trigger, alias, timer and so on</extracomment>
-      <translation type="unfinished"/>
+      <translation>Zobrazit jen zprávy o jednom triggeru, aliasu, timeru, klávese, tlačítku nebo skriptu. Psaním můžete hledat podle názvu.</translation>
     </message>
     <message>
       <location filename="../src/TDebugFilterBar.cpp" line="328"/>
       <source>[*] Nothing called &quot;%1&quot; was found in this profile, so only its system messages will show.
 </source>
       <extracomment>Shown in the Central Debug Console when the name typed into its item filter matches nothing the profile has. %1 is what was typed.</extracomment>
-      <translation type="unfinished"/>
+      <translation>[*] V tomto profilu se nic s názvem „%1“ nenašlo, takže se zobrazí jen jeho systémové zprávy.
+</translation>
     </message>
     <message>
       <location filename="../src/TDebugFilterBar.cpp" line="335"/>
       <source>All items</source>
       <extracomment>First entry of the Central Debug Console&apos;s item filter, meaning no item filter is applied</extracomment>
-      <translation type="unfinished"/>
+      <translation>Všechny položky</translation>
     </message>
     <message>
       <location filename="../src/TDebugFilterBar.cpp" line="405"/>
       <source>Show only lines containing...</source>
       <extracomment>Placeholder in the Central Debug Console&apos;s text filter box</extracomment>
-      <translation type="unfinished"/>
+      <translation>Zobrazit jen řádky obsahující...</translation>
     </message>
     <message>
       <location filename="../src/TDebugFilterBar.cpp" line="412"/>
       <source>Aa</source>
       <extracomment>Very short label on the Central Debug Console&apos;s case-sensitivity toggle, next to its text filter box. Keep it to a couple of characters.</extracomment>
-      <translation type="unfinished"/>
+      <translation>Aa</translation>
     </message>
     <message>
       <location filename="../src/TDebugFilterBar.cpp" line="416"/>
       <source>Match the text filter&apos;s upper and lower case exactly.</source>
       <extracomment>Tooltip for the Central Debug Console&apos;s case-sensitivity toggle</extracomment>
-      <translation type="unfinished"/>
+      <translation>Při filtrování textu přesně rozlišovat velká a malá písmena.</translation>
     </message>
     <message>
       <location filename="../src/TDebugFilterBar.cpp" line="425"/>
       <source>Resume</source>
       <extracomment>Button in the Central Debug Console that lets held-back messages through again</extracomment>
-      <translation type="unfinished"/>
+      <translation>Pokračovat</translation>
     </message>
     <message numerus="yes">
       <location filename="../src/TDebugFilterBar.cpp" line="438"/>
       <source>%n message(s) held</source>
       <extracomment>Shown in the Central Debug Console&apos;s toolbar while it is paused</extracomment>
-      <translation type="unfinished"/>
+      <translation>
+        <numerusform>%n zadržená zpráva</numerusform>
+        <numerusform>%n zadržené zprávy</numerusform>
+        <numerusform>%n zadržených zpráv</numerusform>
+        <numerusform>%n zadržených zpráv</numerusform>
+      </translation>
     </message>
     <message numerus="yes">
       <location filename="../src/TDebugFilterBar.cpp" line="442"/>
       <source>, %n dropped</source>
       <extracomment>Appended to the &quot;N messages held&quot; label once the Central Debug Console has been paused long enough to start discarding the oldest ones</extracomment>
-      <translation type="unfinished"/>
+      <translation>
+        <numerusform>, %n zahozena</numerusform>
+        <numerusform>, %n zahozeny</numerusform>
+        <numerusform>, %n zahozeno</numerusform>
+        <numerusform>, %n zahozeno</numerusform>
+      </translation>
     </message>
   </context>
   <context>
@@ -4310,7 +4350,7 @@ This is a checkable toggle item in the context menu shown when right-clicking th
       <location filename="../src/TDetachedWindow.cpp" line="3334"/>
       <source>Hide &amp;map</source>
       <extracomment>Toolbox menu entry of a detached window while the map is on screen - activating it hides the map</extracomment>
-      <translation type="unfinished"/>
+      <translation>Skrýt &amp;mapu</translation>
     </message>
     <message>
       <location filename="../src/TDetachedWindow.cpp" line="531"/>
@@ -4780,17 +4820,17 @@ Zkoušená umístění:
     <message>
       <location filename="../src/TMap.cpp" line="691"/>
       <source>[ INFO ] - Converting old style label id: %1.</source>
-      <translation>[ INFO ] - Převádí se popisek starého typu s id: %1.</translation>
+      <translation>[ INFO ] - Převádí se popisek starého typu s ID: %1.</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="696"/>
       <source>[ WARN ] - CONVERTING: cannot convert old style label in area with id: %1,  label id is: %2.</source>
-      <translation>[ WARN ] - PŘEVOD: popisek starého typu v oblasti s id: %1 nelze převést,  id popisku je: %2.</translation>
+      <translation>[ WARN ] - PŘEVOD: popisek starého typu v oblasti s ID: %1 nelze převést,  ID popisku je: %2.</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="699"/>
       <source>[ WARN ] - CONVERTING: cannot convert old style label with id: %1.</source>
-      <translation>[ WARN ] - PŘEVOD: popisek starého typu s id: %1 nelze převést.</translation>
+      <translation>[ WARN ] - PŘEVOD: popisek starého typu s ID: %1 nelze převést.</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="728"/>
@@ -4847,8 +4887,8 @@ znovu...</translation>
       <location filename="../src/TMap.cpp" line="1977"/>
       <source>[ INFO ]  - Default (reset) area (for rooms that have not been assigned to an
 area) not found, adding reserved -1 id.</source>
-      <translation>[ INFO ]  - Výchozí (rezervní) oblast (pro místnosti, které nebyly do žádné
-oblasti zařazeny) nenalezena, přidává se rezervované id -1.</translation>
+      <translation>[ INFO ]  - Výchozí oblast (pro místnosti, které nebyly do žádné
+oblasti zařazeny) nenalezena, přidává se rezervované ID -1.</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="2068"/>
@@ -4870,12 +4910,12 @@ podrobnosti konzistence...</translation>
     <message>
       <location filename="../src/TMap.cpp" line="2600"/>
       <source>Area id: %1 &quot;%2&quot;</source>
-      <translation>Id oblasti: %1 „%2“</translation>
+      <translation>ID oblasti: %1 „%2“</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="2602"/>
       <source>Area id: %1</source>
-      <translation>Id oblasti: %1</translation>
+      <translation>ID oblasti: %1</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="2611"/>
@@ -4885,12 +4925,12 @@ podrobnosti konzistence...</translation>
     <message>
       <location filename="../src/TMap.cpp" line="2618"/>
       <source>Room id: %1 &quot;%2&quot;</source>
-      <translation>Id místnosti: %1 „%2“</translation>
+      <translation>ID místnosti: %1 „%2“</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="2620"/>
       <source>Room id: %1</source>
-      <translation>Id místnosti: %1</translation>
+      <translation>ID místnosti: %1</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="2630"/>
@@ -4995,7 +5035,9 @@ a zkuste to znovu!</translation>
 &quot;%1&quot;
 is damaged or unreadable (%2), so the current map has been left as it was.</source>
       <extracomment>Error returned by the loadMap() Lua function. %1 is the path and name of the file that was read, %2 is the reason the XML parser gave</extracomment>
-      <translation type="unfinished"/>
+      <translation>loadMap: soubor:
+„%1“
+je poškozený nebo nečitelný (%2), takže aktuální mapa zůstala beze změny.</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="2822"/>
@@ -5004,7 +5046,10 @@ is damaged or unreadable (%2), so the current map has been left as it was.</sour
 is damaged or unreadable (%2) - so the current map has been
 left as it was.</source>
       <extracomment>Shown in the main console. %1 is the path and name of the file that was read, %2 is the reason the XML parser gave</extracomment>
-      <translation type="unfinished"/>
+      <translation>[ ERROR ] - Soubor:
+„%1“
+je poškozený nebo nečitelný (%2) – aktuální mapa proto
+zůstala beze změny.</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="2829"/>
@@ -5012,7 +5057,9 @@ left as it was.</source>
 &quot;%1&quot;
 does not contain a map, so the current map has been left as it was.</source>
       <extracomment>Error returned by the loadMap() Lua function. %1 is the path and name of the file that was read</extracomment>
-      <translation type="unfinished"/>
+      <translation>loadMap: soubor:
+„%1“
+neobsahuje mapu, takže aktuální mapa zůstala beze změny.</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="2834"/>
@@ -5022,7 +5069,11 @@ does not contain a map - a game with no map to offer can answer a
 download with an error page instead of one - so the current map has
 been left as it was.</source>
       <extracomment>Shown in the main console. %1 is the path and name of the file that was read</extracomment>
-      <translation type="unfinished"/>
+      <translation>[ ERROR ] - Soubor:
+„%1“
+neobsahuje mapu – hra, která žádnou mapu nenabízí, může na
+stažení odpovědět místo mapy chybovou stránkou – aktuální mapa
+proto zůstala beze změny.</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="2932"/>
@@ -5227,7 +5278,7 @@ please wait...</source>
     <message>
       <location filename="../src/TMap.cpp" line="1695"/>
       <source>[ INFO ]  - Ignoring this unlikely map file.</source>
-      <translation>[ INFO ]  - Tento nepravděpodobný soubor mapy se ignoruje.</translation>
+      <translation>[ INFO ]  - Tento podezřelý soubor mapy se ignoruje.</translation>
     </message>
     <message>
       <location filename="../src/TMap.cpp" line="2745"/>
@@ -5358,7 +5409,7 @@ v hlavní konzoli!</translation>
       <location filename="../src/TMedia.cpp" line="1796"/>
       <source>stops</source>
       <extracomment>This word is part of a sentence like &quot;Music stops&quot; when the music is about to stop.</extracomment>
-      <translation>zastavuje</translation>
+      <translation>se zastavuje</translation>
     </message>
     <message>
       <location filename="../src/TMedia.cpp" line="1368"/>
@@ -5370,13 +5421,13 @@ v hlavní konzoli!</translation>
       <location filename="../src/TMedia.cpp" line="1883"/>
       <source>plays</source>
       <extracomment>This word is part of a sentence like &quot;Music plays&quot; when the music is starting to play.</extracomment>
-      <translation>přehrává</translation>
+      <translation>se přehrává</translation>
     </message>
     <message>
       <location filename="../src/TMedia.cpp" line="1907"/>
       <source>pauses</source>
       <extracomment>This word is part of a sentence like &quot;Music pauses&quot; when the music stops playing for a while.</extracomment>
-      <translation>pozastavuje</translation>
+      <translation>se pozastavuje</translation>
     </message>
     <message>
       <location filename="../src/TMedia.cpp" line="2626"/>
@@ -5516,19 +5567,19 @@ v hlavní konzoli!</translation>
       <location filename="../src/TRoom.cpp" line="1498"/>
       <source>[ INFO ]  - In room with ID: %1 found one or more surplus door items that were removed: %2.</source>
       <extracomment>%1 is the room ID, %2 is a list of door items</extracomment>
-      <translation>[ INFO ]  - V místnosti s ID: %1 nalezeny jedny nebo více přebytečných položek dveří, byly odebrány: %2.</translation>
+      <translation>[ INFO ]  - V místnosti s ID: %1 nalezena jedna nebo více přebytečných položek dveří, byly odebrány: %2.</translation>
     </message>
     <message>
       <location filename="../src/TRoom.cpp" line="1515"/>
       <source>[ INFO ]  - In room with ID: %1 found one or more surplus weight items that were removed: %2.</source>
       <extracomment>%1 is the room ID, %2 is a list of weight items</extracomment>
-      <translation>[ INFO ]  - V místnosti s ID: %1 nalezeny jedny nebo více přebytečných položek váhy, byly odebrány: %2.</translation>
+      <translation>[ INFO ]  - V místnosti s ID: %1 nalezena jedna nebo více přebytečných položek váhy, byly odebrány: %2.</translation>
     </message>
     <message>
       <location filename="../src/TRoom.cpp" line="1532"/>
       <source>[ INFO ]  - In room with ID: %1 found one or more surplus exit lock items that were removed: %2.</source>
       <extracomment>%1 is the room ID, %2 is a list of exit lock items</extracomment>
-      <translation>[ INFO ]  - V místnosti s ID: %1 nalezeny jedny nebo více přebytečných položek zámků východů, byly odebrány: %2.</translation>
+      <translation>[ INFO ]  - V místnosti s ID: %1 nalezena jedna nebo více přebytečných položek zámků východů, byly odebrány: %2.</translation>
     </message>
     <message>
       <location filename="../src/TRoom.cpp" line="1612"/>
@@ -5621,25 +5672,25 @@ v hlavní konzoli!</translation>
 room&apos;s data has been lost so the id is now being deleted.  This
 suggests serious problems with the currently running version of
 Mudlet - is your system running out of memory?</source>
-      <translation>[ WARN ]  - Problém s datovou strukturou u místnosti s id: %1 – data té
-místnosti se ztratila, takže se teď id maže.  Naznačuje to vážné
+      <translation>[ WARN ]  - Problém s datovou strukturou u místnosti s ID: %1 – data té
+místnosti se ztratila, takže se teď ID maže.  Naznačuje to vážné
 potíže s právě běžící verzí Mudletu – nedochází vašemu systému
 paměť?</translation>
     </message>
     <message>
       <location filename="../src/TRoomDB.cpp" line="690"/>
       <source>[ WARN ]  - Problem with data structure associated with this room.  The room&apos;s data has been lost so the id is now being deleted.  This suggests serious problems with the currently running version of Mudlet - is your system running out of memory?</source>
-      <translation>[ WARN ]  - Problém s datovou strukturou u této místnosti.  Data místnosti se ztratila, takže se teď id maže.  Naznačuje to vážné potíže s právě běžící verzí Mudletu – nedochází vašemu systému paměť?</translation>
+      <translation>[ WARN ]  - Problém s datovou strukturou u této místnosti.  Data místnosti se ztratila, takže se teď ID maže.  Naznačuje to vážné potíže s právě běžící verzí Mudletu – nedochází vašemu systému paměť?</translation>
     </message>
     <message>
       <location filename="../src/TRoomDB.cpp" line="739"/>
       <source>[ ALERT ] - Area with id: %1 expected but not found, will be created.</source>
-      <translation>[ ALERT ] - Oblast s id: %1 se očekávala, ale nebyla nalezena, bude vytvořena.</translation>
+      <translation>[ ALERT ] - Oblast s ID: %1 se očekávala, ale nebyla nalezena, bude vytvořena.</translation>
     </message>
     <message>
       <location filename="../src/TRoomDB.cpp" line="742"/>
       <source>[ ALERT ] - Area with this id expected but not found, will be created.</source>
-      <translation>[ ALERT ] - Oblast s tímto id se očekávala, ale nebyla nalezena, bude vytvořena.</translation>
+      <translation>[ ALERT ] - Oblast s tímto ID se očekávala, ale nebyla nalezena, bude vytvořena.</translation>
     </message>
     <message numerus="yes">
       <location filename="../src/TRoomDB.cpp" line="771"/>
@@ -5682,38 +5733,38 @@ mají být...</numerusform>
       <location filename="../src/TRoomDB.cpp" line="822"/>
       <source>[ ALERT ] - Bad, (less than +1 and not the reserved -1) area ids found (count: %1)
 in map, now working out what new id numbers to use...</source>
-      <translation>[ ALERT ] - V mapě nalezena vadná id oblastí (menší než +1 a jiná než rezervované -1) (počet: %1),
-teď se zjišťuje, jaká nová id použít...</translation>
+      <translation>[ ALERT ] - V mapě nalezena vadná ID oblastí (menší než +1 a jiná než rezervované -1) (počet: %1),
+teď se zjišťuje, jaká nová ID použít...</translation>
     </message>
     <message>
       <location filename="../src/TRoomDB.cpp" line="834"/>
       <source>[ INFO ]  - The renumbered area ids will be:
 Old ==&gt; New</source>
-      <translation>[ INFO ]  - Přečíslovaná id oblastí budou:
-Staré ==&gt; Nové</translation>
+      <translation>[ INFO ]  - Přečíslovaná ID oblastí budou:
+Staré ==> Nové</translation>
     </message>
     <message>
       <location filename="../src/TRoomDB.cpp" line="852"/>
       <source>[ INFO ]  - The area with this bad id was renumbered to: %1.</source>
-      <translation>[ INFO ]  - Oblast s tímto vadným id byla přečíslována na: %1.</translation>
+      <translation>[ INFO ]  - Oblast s tímto vadným ID byla přečíslována na: %1.</translation>
     </message>
     <message>
       <location filename="../src/TRoomDB.cpp" line="853"/>
       <source>[ INFO ]  - This area was renumbered from the bad id: %1.</source>
-      <translation>[ INFO ]  - Tato oblast byla přečíslována z vadného id: %1.</translation>
+      <translation>[ INFO ]  - Tato oblast byla přečíslována z vadného ID: %1.</translation>
     </message>
     <message>
       <location filename="../src/TRoomDB.cpp" line="898"/>
       <location filename="../src/TRoomDB.cpp" line="901"/>
       <source>[ INFO ]  - Area id numbering is satisfactory.</source>
-      <translation>[ INFO ]  - Číslování id oblastí je v pořádku.</translation>
+      <translation>[ INFO ]  - Číslování ID oblastí je v pořádku.</translation>
     </message>
     <message>
       <location filename="../src/TRoomDB.cpp" line="909"/>
       <source>[ ALERT ] - Bad, (less than +1) room ids found (count: %1) in map, now working
 out what new id numbers to use.</source>
-      <translation>[ ALERT ] - V mapě nalezena vadná id místností (menší než +1) (počet: %1), teď se
-zjišťuje, jaká nová id použít.</translation>
+      <translation>[ ALERT ] - V mapě nalezena vadná ID místností (menší než +1) (počet: %1), teď se
+zjišťuje, jaká nová ID použít.</translation>
     </message>
     <message>
       <location filename="../src/TRoomDB.cpp" line="921"/>
@@ -5730,7 +5781,7 @@ zjišťuje, jaká nová id použít.</translation>
     <message>
       <location filename="../src/TRoomDB.cpp" line="827"/>
       <source>[ ALERT ] - Bad, (less than +1 and not the reserved -1) area ids found (count: %1) in map!  Look for further messages related to this for each affected area ...</source>
-      <translation>[ ALERT ] - V mapě nalezena vadná id oblastí (menší než +1 a jiná než rezervované -1) (počet: %1)!  Sledujte další zprávy k jednotlivým zasaženým oblastem ...</translation>
+      <translation>[ ALERT ] - V mapě nalezena vadná ID oblastí (menší než +1 a jiná než rezervované -1) (počet: %1)!  Sledujte další zprávy k jednotlivým zasaženým oblastem ...</translation>
     </message>
     <message>
       <location filename="../src/TRoomDB.cpp" line="99"/>
@@ -5776,29 +5827,29 @@ být...</numerusform>
     <message>
       <location filename="../src/TRoomDB.cpp" line="914"/>
       <source>[ ALERT ] - Bad, (less than +1) room ids found (count: %1) in map!  Look for further messages related to this for each affected room ...</source>
-      <translation>[ ALERT ] - V mapě nalezena vadná id místností (menší než +1) (počet: %1)!  Sledujte další zprávy k jednotlivým zasaženým místnostem ...</translation>
+      <translation>[ ALERT ] - V mapě nalezena vadná ID místností (menší než +1) (počet: %1)!  Sledujte další zprávy k jednotlivým zasaženým místnostem ...</translation>
     </message>
     <message>
       <location filename="../src/TRoomDB.cpp" line="937"/>
       <source>[ INFO ]  - This room with the bad id was renumbered to: %1.</source>
-      <translation>[ INFO ]  - Tato místnost s vadným id byla přečíslována na: %1.</translation>
+      <translation>[ INFO ]  - Tato místnost s vadným ID byla přečíslována na: %1.</translation>
     </message>
     <message>
       <location filename="../src/TRoomDB.cpp" line="938"/>
       <source>[ INFO ]  - This room was renumbered from the bad id: %1.</source>
-      <translation>[ INFO ]  - Tato místnost byla přečíslována z vadného id: %1.</translation>
+      <translation>[ INFO ]  - Tato místnost byla přečíslována z vadného ID: %1.</translation>
     </message>
     <message>
       <location filename="../src/TRoomDB.cpp" line="979"/>
       <location filename="../src/TRoomDB.cpp" line="982"/>
       <source>[ INFO ]  - Room id numbering is satisfactory.</source>
-      <translation>[ INFO ]  - Číslování id místností je v pořádku.</translation>
+      <translation>[ INFO ]  - Číslování ID místností je v pořádku.</translation>
     </message>
     <message>
       <location filename="../src/TRoomDB.cpp" line="1002"/>
       <source>[ INFO ]  - Duplicate exit stub identifiers found in room id: %1, this is an
 anomaly but has been cleaned up easily.</source>
-      <translation>[ INFO ]  - V místnosti s id: %1 nalezeny duplicitní identifikátory slepých
+      <translation>[ INFO ]  - V místnosti s ID: %1 nalezeny duplicitní identifikátory slepých
 východů, je to anomálie, ale snadno se uklidila.</translation>
     </message>
     <message>
@@ -5810,7 +5861,7 @@ východů, je to anomálie, ale snadno se uklidila.</translation>
       <location filename="../src/TRoomDB.cpp" line="1016"/>
       <source>[ INFO ]  - Duplicate exit lock identifiers found in room id: %1, this is an
 anomaly but has been cleaned up easily.</source>
-      <translation>[ INFO ]  - V místnosti s id: %1 nalezeny duplicitní identifikátory zámků
+      <translation>[ INFO ]  - V místnosti s ID: %1 nalezeny duplicitní identifikátory zámků
 východů, je to anomálie, ale snadno se uklidila.</translation>
     </message>
     <message>
@@ -5821,7 +5872,7 @@ východů, je to anomálie, ale snadno se uklidila.</translation>
     <message>
       <location filename="../src/TRoomDB.cpp" line="1097"/>
       <source>[ INFO ]  - This room claims to be in area id: %1, but that did not have a record of it.  The area has been updated to include this room.</source>
-      <translation>[ INFO ]  - Tato místnost tvrdí, že je v oblasti s id: %1, ale ta o ní záznam neměla.  Oblast byla aktualizována, aby tuto místnost obsahovala.</translation>
+      <translation>[ INFO ]  - Tato místnost tvrdí, že je v oblasti s ID: %1, ale ta o ní záznam neměla.  Oblast byla aktualizována, aby tuto místnost obsahovala.</translation>
     </message>
     <message>
       <location filename="../src/TRoomDB.cpp" line="1103"/>
@@ -5829,7 +5880,7 @@ východů, je to anomálie, ale snadno se uklidila.</translation>
 should be recording as possessing, they were:
 %3
 they have been added.</source>
-      <translation>[ INFO ]  - V oblasti s id: %1 chybělo %2 místností z těch, které by měla mít
+      <translation>[ INFO ]  - V oblasti s ID: %1 chyběly místnosti (počet: %2), které by měla mít
 zaznamenané, byly to:
 %3
 byly přidány.</translation>
@@ -5837,12 +5888,12 @@ byly přidány.</translation>
     <message>
       <location filename="../src/TRoomDB.cpp" line="1111"/>
       <source>[ INFO ]  - In this area there were %1 rooms missing from those it should be recorded as possessing.  They are: %2.  They have been added.</source>
-      <translation>[ INFO ]  - V této oblasti chybělo %1 místností z těch, které by měla mít zaznamenané.  Jsou to: %2.  Byly přidány.</translation>
+      <translation>[ INFO ]  - V této oblasti chyběly místnosti (počet: %1), které by měla mít zaznamenané.  Jsou to: %2.  Byly přidány.</translation>
     </message>
     <message>
       <location filename="../src/TRoomDB.cpp" line="1132"/>
       <source>[ INFO ]  - This room was claimed by area id: %1, but it does not belong there.  The area has been updated to not include this room.</source>
-      <translation>[ INFO ]  - Tuto místnost si nárokovala oblast s id: %1, ale nepatří tam.  Oblast byla aktualizována, aby tuto místnost neobsahovala.</translation>
+      <translation>[ INFO ]  - Tuto místnost si nárokovala oblast s ID: %1, ale nepatří tam.  Oblast byla aktualizována, aby tuto místnost neobsahovala.</translation>
     </message>
     <message>
       <location filename="../src/TRoomDB.cpp" line="1138"/>
@@ -5850,7 +5901,7 @@ byly přidány.</translation>
 should be recording as possessing, they were:
 %3
 they have been removed.</source>
-      <translation>[ INFO ]  - V oblasti s id: %1 bylo %2 místností navíc oproti těm, které by měla
+      <translation>[ INFO ]  - V oblasti s ID: %1 byly místnosti navíc (počet: %2) oproti těm, které by měla
 mít zaznamenané, byly to:
 %3
 byly odebrány.</translation>
@@ -5858,7 +5909,7 @@ byly odebrány.</translation>
     <message>
       <location filename="../src/TRoomDB.cpp" line="1146"/>
       <source>[ INFO ]  - In this area there were %1 extra rooms that it should not be recorded as possessing.  They were: %2.  They have been removed.</source>
-      <translation>[ INFO ]  - V této oblasti bylo %1 místností navíc, které by neměla mít zaznamenané.  Byly to: %2.  Byly odebrány.</translation>
+      <translation>[ INFO ]  - V této oblasti byly místnosti navíc (počet: %1), které by neměla mít zaznamenané.  Byly to: %2.  Byly odebrány.</translation>
     </message>
     <message>
       <location filename="../src/TRoomDB.cpp" line="1262"/>
@@ -5961,8 +6012,8 @@ oblasti na název jiné, která v tu chvíli existuje.</translation>
       <location filename="../src/TRoomDB.cpp" line="1338"/>
       <source>[ INFO ]  - Default (reset) area name (for rooms that have not been assigned to an
 area) not found, adding &quot;%1&quot; against the reserved -1 id.</source>
-      <translation>[ INFO ]  - Výchozí (rezervní) název oblasti (pro místnosti, které nebyly do žádné
-oblasti zařazeny) nenalezen, přidává se „%1“ k rezervovanému id -1.</translation>
+      <translation>[ INFO ]  - Výchozí název oblasti (pro místnosti, které nebyly do žádné
+oblasti zařazeny) nenalezen, přidává se „%1“ k rezervovanému ID -1.</translation>
     </message>
   </context>
   <context>
@@ -6051,18 +6102,18 @@ oblasti zařazeny) nenalezen, přidává se „%1“ k rezervovanému id -1.</tr
       <location filename="../src/TTextEdit.cpp" line="1955"/>
       <source>Show only lines containing &quot;%1&quot;</source>
       <extracomment>Central Debug Console right-click action, %1 is the text the user selected</extracomment>
-      <translation type="unfinished"/>
+      <translation>Zobrazit jen řádky obsahující „%1“</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="1965"/>
       <source>Stop filtering by text</source>
-      <translation type="unfinished"/>
+      <translation>Přestat filtrovat podle textu</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="1977"/>
       <source>Find...</source>
       <extracomment>Central Debug Console right-click action that reveals its search box</extracomment>
-      <translation type="unfinished"/>
+      <translation>Najít...</translation>
     </message>
     <message>
       <location filename="../src/TTextEdit.cpp" line="2941"/>
@@ -6746,7 +6797,7 @@ Unicode codepoint is U+00xxFFFE or U+00xxFFFF - not a character.</extracomment>
       <location filename="../src/TUiTour.cpp" line="196"/>
       <source>New here? This quick tour points out the most important parts of Mudlet - it takes less than a minute. Use Next or the arrow keys to move through it.</source>
       <extracomment>Body of the first step of the interface tour. &quot;Next&quot; is the button label, keep the two the same</extracomment>
-      <translation type="unfinished"/>
+      <translation>Jste tu poprvé? Tato krátká prohlídka ukáže nejdůležitější části Mudletu – zabere méně než minutu. Mezi kroky se pohybujte tlačítkem Další nebo šipkami.</translation>
     </message>
     <message>
       <location filename="../src/TUiTour.cpp" line="205"/>
@@ -6838,13 +6889,13 @@ Unicode codepoint is U+00xxFFFE or U+00xxFFFF - not a character.</extracomment>
       <location filename="../src/TriggerUnit.cpp" line="398"/>
       <source>[ ERROR ] - Trigger processing stopped to prevent a freeze: a trigger (or another trigger it creates) keeps creating new triggers that match the line being processed, so that line never finishes. %1 Create the trigger once, outside its own script, or give it a pattern that does not match the line it is created on.</source>
       <extracomment>%1 is the sentence above, about the triggers that were stopped</extracomment>
-      <translation>[ ERROR ] - Zpracování triggerů bylo zastaveno, aby aplikace nezamrzla: trigger (nebo jiný trigger, který vytváří) pořád vytváří nové triggery, které sedí na právě zpracovávaný řádek, takže ten řádek nikdy nedoběhne. %1 Vytvořte trigger jednou, mimo jeho vlastní skript, nebo mu dejte vzor, který nesedí na řádek, na kterém vzniká.</translation>
+      <translation>[ ERROR ] - Zpracování triggerů bylo zastaveno, aby aplikace nezamrzla: trigger (nebo jiný trigger, který vytváří) pořád vytváří nové triggery, které odpovídají právě zpracovávanému řádku, takže ten řádek nikdy nedoběhne. %1 Vytvořte trigger jednou, mimo jeho vlastní skript, nebo mu dejte vzor, který neodpovídá řádku, na kterém vzniká.</translation>
     </message>
     <message>
       <location filename="../src/TriggerUnit.cpp" line="404"/>
       <source>[ ERROR ] - Trigger processing stopped to prevent a freeze: trigger &apos;%1&apos; (or another trigger it creates) keeps creating new triggers that match the line being processed, so that line never finishes. %2 Create the trigger once, outside its own script, or give it a pattern that does not match the line it is created on.</source>
       <extracomment>%1 is the name of a trigger - the name of a trigger made by tempTrigger() and friends is its id number - and %2 is the sentence above, about the triggers that were stopped</extracomment>
-      <translation>[ ERROR ] - Zpracování triggerů bylo zastaveno, aby aplikace nezamrzla: trigger „%1“ (nebo jiný trigger, který vytváří) pořád vytváří nové triggery, které sedí na právě zpracovávaný řádek, takže ten řádek nikdy nedoběhne. %2 Vytvořte trigger jednou, mimo jeho vlastní skript, nebo mu dejte vzor, který nesedí na řádek, na kterém vzniká.</translation>
+      <translation>[ ERROR ] - Zpracování triggerů bylo zastaveno, aby aplikace nezamrzla: trigger „%1“ (nebo jiný trigger, který vytváří) pořád vytváří nové triggery, které odpovídají právě zpracovávanému řádku, takže ten řádek nikdy nedoběhne. %2 Vytvořte trigger jednou, mimo jeho vlastní skript, nebo mu dejte vzor, který neodpovídá řádku, na kterém vzniká.</translation>
     </message>
   </context>
   <context>
@@ -7070,37 +7121,37 @@ Error shown when the batch file for managing the update process cannot be create
       <location filename="../src/VoskRecognizer.cpp" line="371"/>
       <source>The speech engine library was unloaded on request - call stt.reloadLibrary() before loading a model.</source>
       <extracomment>Shown when a script asks to load a model after unloading the recognition library and before asking for it back</extracomment>
-      <translation type="unfinished"/>
+      <translation>Knihovna rozpoznávače řeči byla na žádost uvolněna – před načtením modelu zavolejte stt.reloadLibrary().</translation>
     </message>
     <message>
       <location filename="../src/VoskRecognizer.cpp" line="378"/>
       <source>Vosk library not available</source>
       <extracomment>Shown when speech recognition is asked to load a model but the recognition library itself is not installed</extracomment>
-      <translation type="unfinished"/>
+      <translation>Knihovna Vosk není k dispozici</translation>
     </message>
     <message>
       <location filename="../src/VoskRecognizer.cpp" line="414"/>
       <source>Model path does not exist: %1</source>
       <extracomment>Shown when a speech model cannot be found; %1 is the folder that was looked for</extracomment>
-      <translation type="unfinished"/>
+      <translation>Cesta k modelu neexistuje: %1</translation>
     </message>
     <message>
       <location filename="../src/VoskRecognizer.cpp" line="424"/>
       <source>Failed to load Vosk model from: %1</source>
       <extracomment>Shown when a speech model folder exists but could not be loaded; %1 is that folder</extracomment>
-      <translation type="unfinished"/>
+      <translation>Model Vosk se nepodařilo načíst z: %1</translation>
     </message>
     <message>
       <location filename="../src/VoskRecognizer.cpp" line="434"/>
       <source>Failed to create Vosk recognizer</source>
       <extracomment>Shown when a speech model loaded but the recognizer using it could not be created</extracomment>
-      <translation type="unfinished"/>
+      <translation>Rozpoznávač Vosk se nepodařilo vytvořit</translation>
     </message>
     <message>
       <location filename="../src/VoskRecognizer.cpp" line="264"/>
       <source>the library was found but does not export the functions this version of Mudlet needs</source>
       <extracomment>Shown when a speech engine library was found but is too old or incomplete to use; the player needs a different build rather than an install</extracomment>
-      <translation type="unfinished"/>
+      <translation>knihovna byla nalezena, ale neexportuje funkce, které tato verze Mudletu potřebuje</translation>
     </message>
     <message>
       <location filename="../src/VoskRecognizer.cpp" line="535"/>
@@ -7109,44 +7160,44 @@ Error shown when the batch file for managing the update process cannot be create
       <extracomment>Shown when the player refuses Mudlet access to the microphone; the path names the macOS setting that grants it
 ----------
 Shown when microphone access was refused earlier and has to be granted in system settings before speech will work</extracomment>
-      <translation type="unfinished"/>
+      <translation>Přístup k mikrofonu byl zamítnut. Povolte ho prosím v Nastavení systému > Soukromí a zabezpečení > Mikrofon.</translation>
     </message>
     <message>
       <location filename="../src/VoskRecognizer.cpp" line="576"/>
       <location filename="../src/VoskRecognizer.cpp" line="585"/>
       <source>Failed to initialize speech recognition</source>
       <extracomment>Shown when speech recognition could not be prepared for listening</extracomment>
-      <translation type="unfinished"/>
+      <translation>Rozpoznávání řeči se nepodařilo inicializovat</translation>
     </message>
     <message>
       <location filename="../src/VoskRecognizer.cpp" line="649"/>
       <source>The speech engine returned no result for what it just heard.</source>
       <extracomment>Shown when the speech engine accepted a phrase and then returned no transcription for it</extracomment>
-      <translation type="unfinished"/>
+      <translation>Rozpoznávač řeči nevrátil pro právě zaslechnutou frázi žádný výsledek.</translation>
     </message>
     <message>
       <location filename="../src/VoskRecognizer.cpp" line="657"/>
       <source>The speech engine&apos;s result could not be read: %1</source>
       <extracomment>Shown when the speech engine&apos;s output cannot be read back; %1 is the parser&apos;s reason</extracomment>
-      <translation type="unfinished"/>
+      <translation>Výsledek rozpoznávače řeči nelze přečíst: %1</translation>
     </message>
     <message>
       <location filename="../src/VoskRecognizer.cpp" line="663"/>
       <source>The speech engine&apos;s result was not in the expected form.</source>
       <extracomment>Shown when the speech engine&apos;s output parses but is not the structure a transcription is read from</extracomment>
-      <translation type="unfinished"/>
+      <translation>Výsledek rozpoznávače řeči neměl očekávanou podobu.</translation>
     </message>
     <message>
       <location filename="../src/VoskRecognizer.cpp" line="757"/>
       <source>The speech engine stopped decoding unexpectedly. Try starting speech recognition again.</source>
       <extracomment>Shown when the speech engine&apos;s decoder fails while audio is being fed to it</extracomment>
-      <translation type="unfinished"/>
+      <translation>Rozpoznávač řeči nečekaně přestal dekódovat. Zkuste rozpoznávání řeči spustit znovu.</translation>
     </message>
     <message>
       <location filename="../src/VoskRecognizer.cpp" line="883"/>
       <source>No installed model found for language: %1</source>
       <extracomment>Shown when a speech language is chosen with no model installed for it; %1 is a language code such as en-US</extracomment>
-      <translation type="unfinished"/>
+      <translation>Pro jazyk nebyl nalezen žádný nainstalovaný model: %1</translation>
     </message>
   </context>
   <context>
@@ -7342,12 +7393,12 @@ a tenhle ji přečíst neumí – potřebujete novější Mudlet!</translation>
     <message>
       <location filename="../src/ui/actions_main_area.ui" line="348"/>
       <source>&lt;p&gt;Type in one or more commands you want the button to send directly to the game if it is pressed. (Optional)&lt;/p&gt;&lt;p&gt;If this is a &lt;i&gt;push-down&lt;/i&gt; button then this is sent only when the button goes from the &lt;i&gt;up&lt;/i&gt; to &lt;i&gt;down&lt;/i&gt; state.&lt;/p&gt;&lt;p&gt;To send more complex commands, that could depend on or need to modifies variables within this profile a Lua script should be entered &lt;i&gt;instead&lt;/i&gt; in the editor area below.  Anything entered here is, literally, just sent to the game server.&lt;/p&gt;&lt;p&gt;It is permissible to use both this &lt;i&gt;and&lt;/i&gt; a Lua script - this will be sent &lt;b&gt;before&lt;/b&gt; the script is run.&lt;/p&gt;</source>
-      <translation>&lt;p&gt;Napište jeden nebo více příkazů, které má tlačítko po stisku poslat přímo do hry. (Nepovinné)&lt;/p&gt;&lt;p&gt;Pokud jde o &lt;i&gt;přepínací&lt;/i&gt; tlačítko, odešle se to jen při přechodu ze stavu &lt;i&gt;nahoře&lt;/i&gt; do &lt;i&gt;dole&lt;/i&gt;.&lt;/p&gt;&lt;p&gt;Pro složitější příkazy, které závisí na proměnných v tomto profilu nebo je musí měnit, napište &lt;i&gt;místo toho&lt;/i&gt; Lua skript do editoru níže.  Cokoli zadaného sem se doslova jen pošle hernímu serveru.&lt;/p&gt;&lt;p&gt;Je možné použít tohle &lt;i&gt;i&lt;/i&gt; Lua skript – tohle se odešle &lt;b&gt;před&lt;/b&gt; spuštěním skriptu.&lt;/p&gt;</translation>
+      <translation>&lt;p>Napište jeden nebo více příkazů, které má tlačítko po stisku poslat přímo do hry. (Nepovinné)&lt;/p>&lt;p>Pokud jde o &lt;i>přepínací&lt;/i> tlačítko, odešle se to jen při přechodu ze stavu &lt;i>nahoře&lt;/i> do stavu &lt;i>dole&lt;/i>.&lt;/p>&lt;p>Pro složitější příkazy, které závisí na proměnných v tomto profilu nebo je musí měnit, napište &lt;i>místo toho&lt;/i> Lua skript do editoru níže.  Cokoli zadaného sem se doslova jen pošle hernímu serveru.&lt;/p>&lt;p>Je možné použít tohle &lt;i>i&lt;/i> Lua skript – tohle se odešle &lt;b>před&lt;/b> spuštěním skriptu.&lt;/p></translation>
     </message>
     <message>
       <location filename="../src/ui/actions_main_area.ui" line="371"/>
       <source>&lt;p&gt;Type in one or more commands you want the button to send directly to the game when this button goes from the &lt;i&gt;down&lt;/i&gt; to &lt;i&gt;up&lt;/i&gt; state.&lt;/p&gt;&lt;p&gt;To send more complex commands, that could depend on or need to modifies variables within this profile a Lua script should be entered &lt;i&gt;instead&lt;/i&gt; in the editor area below.  Anything entered here is, literally, just sent to the game server.&lt;/p&gt;&lt;p&gt;It is permissible to use both this &lt;i&gt;and&lt;/i&gt; a Lua script - this will be sent &lt;b&gt;before&lt;/b&gt; the script is run.&lt;/p&gt;</source>
-      <translation>&lt;p&gt;Napište jeden nebo více příkazů, které má tlačítko poslat přímo do hry při přechodu ze stavu &lt;i&gt;dole&lt;/i&gt; do &lt;i&gt;nahoře&lt;/i&gt;.&lt;/p&gt;&lt;p&gt;Pro složitější příkazy, které závisí na proměnných v tomto profilu nebo je musí měnit, napište &lt;i&gt;místo toho&lt;/i&gt; Lua skript do editoru níže.  Cokoli zadaného sem se doslova jen pošle hernímu serveru.&lt;/p&gt;&lt;p&gt;Je možné použít tohle &lt;i&gt;i&lt;/i&gt; Lua skript – tohle se odešle &lt;b&gt;před&lt;/b&gt; spuštěním skriptu.&lt;/p&gt;</translation>
+      <translation>&lt;p>Napište jeden nebo více příkazů, které má tlačítko poslat přímo do hry při přechodu ze stavu &lt;i>dole&lt;/i> do stavu &lt;i>nahoře&lt;/i>.&lt;/p>&lt;p>Pro složitější příkazy, které závisí na proměnných v tomto profilu nebo je musí měnit, napište &lt;i>místo toho&lt;/i> Lua skript do editoru níže.  Cokoli zadaného sem se doslova jen pošle hernímu serveru.&lt;/p>&lt;p>Je možné použít tohle &lt;i>i&lt;/i> Lua skript – tohle se odešle &lt;b>před&lt;/b> spuštěním skriptu.&lt;/p></translation>
     </message>
     <message>
       <location filename="../src/ui/actions_main_area.ui" line="384"/>
@@ -7400,7 +7451,7 @@ a tenhle ji přečíst neumí – potřebujete novější Mudlet!</translation>
     <message>
       <location filename="../src/ui/aliases_main_area.ui" line="170"/>
       <source>&lt;p&gt;Enter one or more commands to use if the given command matches the pattern. (Optional)&lt;/p&gt;&lt;p&gt;This could be another alias or a command to send directly to the game. For complex commands that require modification of variables within this profile, use a Lua script in the editor area below instead. It&apos;s possible to use both this field and a Lua script - the contents of this field will be used before running the script.&lt;/p&gt;</source>
-      <translation>&lt;p&gt;Zadejte jeden nebo více příkazů, které se použijí, když daný příkaz sedí na vzor. (Nepovinné)&lt;/p&gt;&lt;p&gt;Může to být další alias nebo příkaz odesílaný přímo do hry. Pro složité příkazy, které potřebují měnit proměnné v tomto profilu, použijte raději Lua skript v editoru níže. Lze použít obojí – obsah tohoto pole se použije před spuštěním skriptu.&lt;/p&gt;</translation>
+      <translation>&lt;p>Zadejte jeden nebo více příkazů, které se použijí, když daný příkaz odpovídá vzoru. (Nepovinné)&lt;/p>&lt;p>Může to být další alias nebo příkaz odesílaný přímo do hry. Pro složité příkazy, které potřebují měnit proměnné v tomto profilu, použijte raději Lua skript v editoru níže. Lze použít obojí – obsah tohoto pole se použije před spuštěním skriptu.&lt;/p></translation>
     </message>
     <message>
       <location filename="../src/ui/aliases_main_area.ui" line="173"/>
@@ -7479,7 +7530,7 @@ Balíček je na serveru s problémem SSL certifikátu. URL možná používá HT
     <message>
       <location filename="../src/ctelnet.cpp" line="3020"/>
       <source>[ INFO ]  - This game appears to use KaVir&apos;s protocol handler, which works best when Mudlet reports its version number during connection. Version reporting in terminal type has been automatically enabled for improved color support. Reconnecting...</source>
-      <translation>[ INFO ]  - Tato hra zřejmě používá obsluhu protokolu od KaVira, která funguje nejlépe, když Mudlet při připojení hlásí číslo verze. Hlášení verze v typu terminálu bylo automaticky zapnuto kvůli lepší podpoře barev. Připojuji znovu...</translation>
+      <translation>[ INFO ]  - Tato hra zřejmě používá obsluhu protokolu od KaVira, která funguje nejlépe, když Mudlet při připojení hlásí číslo verze. Hlášení verze v typu terminálu bylo automaticky zapnuto kvůli lepší podpoře barev. Připojuje se znovu...</translation>
     </message>
     <message>
       <location filename="../src/ctelnet.cpp" line="712"/>
@@ -7516,17 +7567,17 @@ Zkontrolujte připojení k internetu a údaje zadané pro herní server.</transl
       <source>[ INFO ]  - Trying again in %n second(s)...</source>
       <extracomment>%n is the number of seconds before Mudlet tries the connection again.</extracomment>
       <translation>
-        <numerusform>[ INFO ]  - Zkusím to znovu za %n sekundu...</numerusform>
-        <numerusform>[ INFO ]  - Zkusím to znovu za %n sekundy...</numerusform>
-        <numerusform>[ INFO ]  - Zkusím to znovu za %n sekund...</numerusform>
-        <numerusform>[ INFO ]  - Zkusím to znovu za %n sekund...</numerusform>
+        <numerusform>[ INFO ]  - Nový pokus za %n sekundu...</numerusform>
+        <numerusform>[ INFO ]  - Nový pokus za %n sekundy...</numerusform>
+        <numerusform>[ INFO ]  - Nový pokus za %n sekund...</numerusform>
+        <numerusform>[ INFO ]  - Nový pokus za %n sekund...</numerusform>
       </translation>
     </message>
     <message>
       <location filename="../src/ctelnet.cpp" line="963"/>
       <source>[ INFO ]  - The saved password arrived too late for the automatic login, so it was not sent. Please type it in yourself.</source>
       <extracomment>Shown in the game window when a password fetched from the system keychain arrived after the automatic login had reached its password step, and Mudlet could not be sure the game was still asking for it</extracomment>
-      <translation type="unfinished"/>
+      <translation>[ INFO ]  - Uložené heslo dorazilo pro automatické přihlášení příliš pozdě, a proto nebylo odesláno. Zadejte ho prosím sami.</translation>
     </message>
     <message>
       <location filename="../src/ctelnet.cpp" line="1039"/>
@@ -7562,13 +7613,13 @@ Zkontrolujte připojení k internetu a údaje zadané pro herní server.</transl
       <location filename="../src/ctelnet.cpp" line="1106"/>
       <source>[ INFO ]  - Replay recording has been stopped and saved. File: %1</source>
       <extracomment>Message shown when a replay recording is saved because the connection to the game ended. %1 is the file name</extracomment>
-      <translation type="unfinished"/>
+      <translation>[ INFO ]  - Nahrávání záznamu bylo zastaveno a záznam uložen. Soubor: %1</translation>
     </message>
     <message>
       <location filename="../src/ctelnet.cpp" line="1109"/>
       <source>[ WARN ]  - Replay recording has been stopped, but couldn&apos;t be saved: %1</source>
       <extracomment>Message shown when a replay recording could not be saved after the connection to the game ended. %1 is the reason</extracomment>
-      <translation type="unfinished"/>
+      <translation>[ WARN ]  - Nahrávání záznamu bylo zastaveno, ale záznam se nepodařilo uložit: %1</translation>
     </message>
     <message>
       <location filename="../src/ctelnet.cpp" line="1125"/>
@@ -7802,7 +7853,7 @@ Je to: „%1“
       <location filename="../src/ctelnet.cpp" line="4586"/>
       <source>[ WARN ]  - Could not remove &quot;%1&quot; to upgrade it while the profile is being saved. The game will offer the upgrade again.</source>
       <extracomment>%1 is the name of the GUI package the game offered to upgrade</extracomment>
-      <translation type="unfinished"/>
+      <translation>[ WARN ]  - „%1“ nelze kvůli aktualizaci odebrat, protože se právě ukládá profil. Hra aktualizaci nabídne znovu.</translation>
     </message>
     <message>
       <location filename="../src/ctelnet.cpp" line="4507"/>
@@ -7930,7 +7981,7 @@ chybová zpráva zněla: „%2“.</translation>
       <location filename="../src/ctelnet.cpp" line="5578"/>
       <source>[  OK  ]  - The replay has been stopped.</source>
       <extracomment>Console message when the user ends a replay early with the replay toolbar&apos;s Stop button. The [ OK ] prefix is column padding shared with Mudlet&apos;s other console messages, keep it as it is</extracomment>
-      <translation type="unfinished"/>
+      <translation>[  OK  ]  - Přehrávání záznamu bylo zastaveno.</translation>
     </message>
     <message>
       <location filename="../src/ctelnet.cpp" line="5754"/>
@@ -8484,7 +8535,7 @@ chybová zpráva zněla: „%2“.</translation>
     <message>
       <location filename="../src/ui/custom_lines.ui" line="562"/>
       <source>&lt;p&gt;To remove a custom line: cancel this dialog, select the line and right-click to obtain a &amp;quot;delete&amp;quot; option.&lt;/p&gt;</source>
-      <translation>&lt;p&gt;Vlastní čáru odeberete takto: zavřete tento dialog, vyberte čáru a pravým tlačítkem zvolte &amp;quot;smazat&amp;quot;.&lt;/p&gt;</translation>
+      <translation>&lt;p>Vlastní čáru odeberete takto: zavřete tento dialog, vyberte čáru a pravým tlačítkem zvolte „smazat“.&lt;/p></translation>
     </message>
     <message>
       <location filename="../src/ui/custom_lines.ui" line="448"/>
@@ -8526,7 +8577,7 @@ custom line?</source>
       <location filename="../src/updater/Feed.cpp" line="212"/>
       <source>No download available for your platform</source>
       <extracomment>Error shown when the GitHub release has no binary matching the user&apos;s operating system</extracomment>
-      <translation>Pro vaši platformu není k dispozici ke stažení</translation>
+      <translation>Pro vaši platformu není k dispozici nic ke stažení</translation>
     </message>
     <message>
       <location filename="../src/updater/Feed.cpp" line="224"/>
@@ -9132,7 +9183,12 @@ použití</translation>
 &lt;p&gt;Special thanks to &lt;span style=&quot;color:#bc8942;&quot;&gt;&lt;b&gt;Brett Duzevich&lt;/b&gt;&lt;/span&gt; and &lt;span style=&quot;color:#bc8942;&quot;&gt;&lt;b&gt;Ronny Ho&lt;/b&gt;&lt;/span&gt;. They have contributed many good ideas and thus helped improve the scripting framework substantially.&lt;/p&gt;
 &lt;p&gt;Thanks to &lt;span style=&quot;color:#bc8942;&quot;&gt;&lt;b&gt;Tomas Mecir&lt;/b&gt;&lt;/span&gt; (&lt;span style=&quot;color:#0000ff;&quot;&gt;kmuddy@kmuddy.com&lt;/span&gt;) who brought us all together and inspired us with his KMuddy project. Mudlet is using some of the telnet code he wrote for his KMuddy project (&lt;a href=&quot;https://cgit.kde.org/kmuddy.git/&quot;&gt;cgit.kde.org/kmuddy.git/&lt;/a&gt;).&lt;/p&gt;
 &lt;p&gt;Special thanks to &lt;span style=&quot;color:#bc8942;&quot;&gt;&lt;b&gt;Nick Gammon&lt;/b&gt;&lt;/span&gt; (&lt;a href=&quot;http://www.gammon.com.au/mushclient/mushclient.htm&quot;&gt;www.gammon.com.au/mushclient/mushclient.htm&lt;/a&gt;) for giving us some valued pieces of advice.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p>I další lidé zanechali stopu na různých částech projektu Mudlet, a pokud tu nejsou zmínění, rozhodně to není úmysl! Dřívější přispěvatele najdete v seznamu &lt;b>&lt;a href="https://launchpad.net/~mudlet-makers/+members#active">Mudlet Makers&lt;/a>&lt;/b> (na našem bývalém webu pro hlášení chyb), současné přispěvatele pak nejspíš v seznamu &lt;b>&lt;a href="https://github.com/Mudlet/Mudlet/graphs/contributors">Contributors&lt;/a>&lt;/b> na GitHubu.&lt;/p>
+&lt;br>
+&lt;p>Mnoho ikon pochází z &lt;span style="color:#bc8942;">&lt;b>&lt;u>ikonového motivu KDE4 oxygen&lt;/u>&lt;/b>&lt;/span> na &lt;a href="https://web.archive.org/web/20130921230632/http://www.oxygen-icons.org/">www.oxygen-icons.org &lt;sup>{archiv wayback machine}&lt;/sup>&lt;/a> nebo &lt;a href="http://www.kde.org">www.kde.org&lt;/a>.  Většina zbytku je od Thorstena Wilmse, nebo od Stephena Lyonse, který spojil kousky Thorstenovy práce s ostatními zdroji.  Čárové ikony dialogu nastavení pocházejí ze &lt;span style="color:#bc8942;">&lt;b>&lt;u>sady ikon Lucide&lt;/u>&lt;/b>&lt;/span> na &lt;a href="https://lucide.dev">lucide.dev&lt;/a> a používají se podle licence ISC.&lt;/p>
+&lt;p>Zvláštní poděkování patří &lt;span style="color:#bc8942;">&lt;b>Brettu Duzevichovi&lt;/b>&lt;/span> a &lt;span style="color:#bc8942;">&lt;b>Ronnymu Ho&lt;/b>&lt;/span>. Přispěli mnoha dobrými nápady a výrazně tím pomohli vylepšit skriptovací framework.&lt;/p>
+&lt;p>Díky &lt;span style="color:#bc8942;">&lt;b>Tomasi Mecirovi&lt;/b>&lt;/span> (&lt;span style="color:#0000ff;">kmuddy@kmuddy.com&lt;/span>), který nás všechny svedl dohromady a inspiroval svým projektem KMuddy. Mudlet používá část telnetového kódu, který pro KMuddy napsal (&lt;a href="https://cgit.kde.org/kmuddy.git/">cgit.kde.org/kmuddy.git/&lt;/a>).&lt;/p>
+&lt;p>Zvláštní poděkování patří &lt;span style="color:#bc8942;">&lt;b>Nicku Gammonovi&lt;/b>&lt;/span> (&lt;a href="http://www.gammon.com.au/mushclient/mushclient.htm">www.gammon.com.au/mushclient/mushclient.htm&lt;/a>) za několik cenných rad.&lt;/p></translation>
     </message>
     <message>
       <location filename="../src/dlgAboutDialog.cpp" line="1284"/>
@@ -9262,19 +9318,19 @@ použití</translation>
       <location filename="../src/dlgAboutDialog.cpp" line="1328"/>
       <source>&lt;h2&gt;&lt;u&gt;Speech recognition backends&lt;/u&gt;&lt;/h2&gt;&lt;h3&gt;Mudlet can drive &lt;a href=&quot;https://alphacephei.com/vosk&quot;&gt;Vosk&lt;/a&gt; (Apache 2.0), &lt;a href=&quot;https://github.com/k2-fsa/sherpa-onnx&quot;&gt;sherpa-onnx&lt;/a&gt; (Apache 2.0), and the &lt;a href=&quot;https://onnxruntime.ai&quot;&gt;ONNX Runtime&lt;/a&gt; (MIT) it runs on.&lt;br&gt;None of them ship with Mudlet: you install them yourself, and each one&apos;s licence travels with the files you download.&lt;/h3&gt;</source>
       <extracomment>Credits the speech recognition libraries Mudlet can load. None are bundled - the user installs them - so this names them rather than reproducing their licences</extracomment>
-      <translation type="unfinished"/>
+      <translation>&lt;h2>&lt;u>Knihovny pro rozpoznávání řeči&lt;/u>&lt;/h2>&lt;h3>Mudlet umí ovládat &lt;a href="https://alphacephei.com/vosk">Vosk&lt;/a> (Apache 2.0), &lt;a href="https://github.com/k2-fsa/sherpa-onnx">sherpa-onnx&lt;/a> (Apache 2.0) a &lt;a href="https://onnxruntime.ai">ONNX Runtime&lt;/a> (MIT), na kterém běží.&lt;br>Žádná z nich není součástí Mudletu: instalujete si je sami a licence každé z nich je přiložena ke staženým souborům.&lt;/h3></translation>
     </message>
     <message>
       <location filename="../src/dlgAboutDialog.cpp" line="1336"/>
       <source>&lt;h2&gt;&lt;u&gt;Lucide - icon toolkit used for the settings dialog&apos;s category icons&lt;/u&gt;&lt;br&gt;&lt;a href=&quot;https://lucide.dev&quot;&gt;lucide.dev&lt;/a&gt;&lt;/h2&gt;&lt;h3&gt;Copyright © 2026 Lucide Icons and Contributors&lt;/h3&gt;</source>
       <extracomment>Credits the Lucide icon set used for the settings dialog&apos;s category icons. The copyright line below it is required by the ISC licence, so keep the name and year as they are</extracomment>
-      <translation type="unfinished"/>
+      <translation>&lt;h2>&lt;u>Lucide – sada ikon použitá pro ikony kategorií v dialogu nastavení&lt;/u>&lt;br>&lt;a href="https://lucide.dev">lucide.dev&lt;/a>&lt;/h2>&lt;h3>Copyright © 2026 Lucide Icons and Contributors&lt;/h3></translation>
     </message>
     <message>
       <location filename="../src/dlgAboutDialog.cpp" line="1341"/>
       <source>&lt;h4&gt;Of the icons used by Mudlet, &lt;tt&gt;monitor&lt;/tt&gt;, &lt;tt&gt;search&lt;/tt&gt;, &lt;tt&gt;terminal&lt;/tt&gt; and &lt;tt&gt;help-circle&lt;/tt&gt; are derived from the Feather project and are additionally covered by the following licence:&lt;/h4&gt;&lt;h3&gt;Copyright © 2013-present Cole Bemis&lt;/h3&gt;</source>
       <extracomment>Introduces the second licence covering those Lucide icons that Lucide itself inherited from the Feather project</extracomment>
-      <translation type="unfinished"/>
+      <translation>&lt;h4>Z ikon, které Mudlet používá, jsou &lt;tt>monitor&lt;/tt>, &lt;tt>search&lt;/tt>, &lt;tt>terminal&lt;/tt> a &lt;tt>help-circle&lt;/tt> odvozené z projektu Feather a vztahuje se na ně navíc tato licence:&lt;/h4>&lt;h3>Copyright © 2013-present Cole Bemis&lt;/h3></translation>
     </message>
     <message>
       <location filename="../src/dlgAboutDialog.cpp" line="1352"/>
@@ -9653,7 +9709,7 @@ použití</translation>
     <message>
       <location filename="../src/dlgConnectionProfiles.cpp" line="2644"/>
       <source>Please set a valid profile name before loading.</source>
-      <translation type="unfinished"/>
+      <translation>Před načtením zadejte prosím platný název profilu.</translation>
     </message>
     <message>
       <location filename="../src/dlgConnectionProfiles.cpp" line="839"/>
@@ -9716,13 +9772,13 @@ použití</translation>
       <location filename="../src/dlgConnectionProfiles.cpp" line="550"/>
       <source>Waiting for the keychain...</source>
       <extracomment>Shown in the connection dialog while the profile&apos;s password is being fetched from the system keychain</extracomment>
-      <translation type="unfinished"/>
+      <translation>Čeká se na správce přihlašovacích údajů...</translation>
     </message>
     <message>
       <location filename="../src/dlgConnectionProfiles.cpp" line="704"/>
       <source>The password for &apos;%1&apos; was saved, but other accounts on this computer can still read it.</source>
       <extracomment>Shown in the connection dialog when a password was saved but its file could not be made unreadable to other users of the computer. %1 is a profile name.</extracomment>
-      <translation type="unfinished"/>
+      <translation>Heslo pro „%1“ bylo uloženo, ale ostatní účty v tomto počítači ho stále mohou přečíst.</translation>
     </message>
     <message>
       <location filename="../src/dlgConnectionProfiles.cpp" line="1150"/>
@@ -9746,7 +9802,7 @@ použití</translation>
       <location filename="../src/dlgConnectionProfiles.cpp" line="1877"/>
       <source>This entry&apos;s artwork could not be read, so its name is shown instead.</source>
       <extracomment>Tooltip line on an entry in the connection dialog&apos;s games list whose icon file is present but cannot be read, so a plate with the entry&apos;s name is drawn in its place</extracomment>
-      <translation type="unfinished"/>
+      <translation>Obrázek této položky se nepodařilo načíst, proto se místo něj zobrazuje její název.</translation>
     </message>
     <message>
       <location filename="../src/dlgConnectionProfiles.cpp" line="1987"/>
@@ -9783,7 +9839,7 @@ použití</translation>
       <location filename="../src/dlgConnectionProfiles.cpp" line="2573"/>
       <source>Please enter the address of the game server to connect to it. Without one this profile can still be opened with the Offline button.</source>
       <extracomment>Shown in the connection dialog when a profile has no game server address. &quot;Offline&quot; is the dialog&apos;s own button and should be translated the same way it is</extracomment>
-      <translation type="unfinished"/>
+      <translation>Pro připojení zadejte prosím adresu herního serveru. I bez ní lze tento profil otevřít tlačítkem Offline.</translation>
     </message>
     <message>
       <location filename="../src/dlgConnectionProfiles.cpp" line="2581"/>
@@ -9879,7 +9935,7 @@ použití</translation>
       <location filename="../src/dlgIRC.cpp" line="329"/>
       <source>[ERROR] Could not send that message: %1</source>
       <extracomment>%1 is why the message could not be sent, e.g. &apos;no message given to send&apos;</extracomment>
-      <translation type="unfinished"/>
+      <translation>[ERROR] Zprávu se nepodařilo odeslat: %1</translation>
     </message>
     <message>
       <location filename="../src/dlgIRC.cpp" line="344"/>
@@ -9909,7 +9965,7 @@ použití</translation>
     <message>
       <location filename="../src/dlgIRC.cpp" line="390"/>
       <source>! Connecting %1...</source>
-      <translation>! Připojuje se %1...</translation>
+      <translation>! Připojování k %1...</translation>
     </message>
     <message>
       <location filename="../src/dlgIRC.cpp" line="395"/>
@@ -10209,19 +10265,19 @@ důvod: %2.</translation>
       <location filename="../src/dlgModuleManager.cpp" line="208"/>
       <source>&quot;%1&quot; could not be removed while the profile is being saved. Please try again in a moment.</source>
       <extracomment>%1 is the name of the module the user asked to remove</extracomment>
-      <translation type="unfinished"/>
+      <translation>„%1“ nelze odebrat, dokud se ukládá profil. Zkuste to prosím za chvíli znovu.</translation>
     </message>
     <message>
       <location filename="../src/dlgModuleManager.cpp" line="211"/>
       <source>&quot;%1&quot; is no longer installed, so there was nothing to remove.</source>
       <extracomment>%1 is the name of the module the user asked to remove, which turned out not to be installed any more</extracomment>
-      <translation type="unfinished"/>
+      <translation>„%1“ už není nainstalovaný, takže nebylo co odebrat.</translation>
     </message>
     <message>
       <location filename="../src/dlgModuleManager.cpp" line="214"/>
       <source>Removal failed</source>
       <extracomment>Title of the dialog that says why a module the user asked to remove was not removed</extracomment>
-      <translation type="unfinished"/>
+      <translation>Odebrání se nezdařilo</translation>
     </message>
   </context>
   <context>
@@ -10230,13 +10286,13 @@ důvod: %2.</translation>
       <location filename="../src/dlgNotepad.cpp" line="78"/>
       <source>Prepend</source>
       <extracomment>label for prepended text entry box in notepad</extracomment>
-      <translation>Předsadit</translation>
+      <translation>Předpona</translation>
     </message>
     <message>
       <location filename="../src/dlgNotepad.cpp" line="83"/>
       <source>Text to prepend to lines</source>
       <extracomment>placeholder text for text entry box in notepad - text which gets added before sending a line</extracomment>
-      <translation>Text, který se předsadí před řádky</translation>
+      <translation>Text, který se vloží před každý řádek</translation>
     </message>
     <message>
       <location filename="../src/dlgNotepad.cpp" line="87"/>
@@ -10499,12 +10555,12 @@ Další materiály ke čtení, např. odkaz na wiki Mudletu, fórum, repozitář
     <message>
       <location filename="../src/ui/dlgPackageExporter.ui" line="533"/>
       <source>Drag and drop files and folders, or use the browse button below</source>
-      <translation>Přetáhněte sem soubory a složky, nebo použijte tlačítko Procházet níže</translation>
+      <translation>Přetáhněte sem soubory a složky, nebo použijte tlačítko pro výběr souborů níže</translation>
     </message>
     <message>
       <location filename="../src/ui/dlgPackageExporter.ui" line="581"/>
       <source>Select files to include in package</source>
-      <translation>Vyberte soubory, které se mají do balíčku zahrnout</translation>
+      <translation>Vybrat soubory k zahrnutí do balíčku</translation>
     </message>
     <message>
       <location filename="../src/ui/dlgPackageExporter.ui" line="20"/>
@@ -10519,7 +10575,7 @@ Další materiály ke čtení, např. odkaz na wiki Mudletu, fórum, repozitář
     <message>
       <location filename="../src/ui/dlgPackageExporter.ui" line="631"/>
       <source>Select export location</source>
-      <translation>Vyberte umístění pro export</translation>
+      <translation>Vybrat umístění pro export</translation>
     </message>
     <message>
       <location filename="../src/dlgPackageExporter.cpp" line="75"/>
@@ -10581,7 +10637,7 @@ Další materiály ke čtení, např. odkaz na wiki Mudletu, fórum, repozitář
     <message>
       <location filename="../src/dlgPackageExporter.cpp" line="176"/>
       <source>Select where to save module</source>
-      <translation>Vyberte, kam modul uložit</translation>
+      <translation>Vybrat, kam modul uložit</translation>
     </message>
     <message>
       <location filename="../src/dlgPackageExporter.cpp" line="179"/>
@@ -10631,7 +10687,7 @@ Další materiály ke čtení, např. odkaz na wiki Mudletu, fórum, repozitář
     <message>
       <location filename="../src/dlgPackageExporter.cpp" line="204"/>
       <source>Select files to include in module</source>
-      <translation>Vyberte soubory, které se mají do modulu zahrnout</translation>
+      <translation>Vybrat soubory k zahrnutí do modulu</translation>
     </message>
     <message>
       <location filename="../src/dlgPackageExporter.cpp" line="212"/>
@@ -10871,7 +10927,7 @@ Další materiály ke čtení, např. odkazy na dokumentaci nebo příspěvky na
     <message>
       <location filename="../src/dlgPackageExporter.cpp" line="1507"/>
       <source>Required file &quot;%1&quot; was not found in the staging area. This area contains the Mudlet items chosen for the package, which you selected to be included in the package file. This suggests there may be a problem with that directory: &quot;%2&quot; - Do you have the necessary permissions and free disk-space?</source>
-      <translation>Vyžadovaný soubor „%1“ nebyl nalezen v přípravné oblasti. Ta obsahuje položky Mudletu vybrané pro balíček, které jste do souboru balíčku chtěl zahrnout. Naznačuje to problém s adresářem: „%2“ – máte potřebná oprávnění a dost místa na disku?</translation>
+      <translation>Vyžadovaný soubor „%1“ nebyl nalezen v přípravné oblasti. Ta obsahuje položky Mudletu vybrané k zahrnutí do souboru balíčku. Naznačuje to problém s adresářem: „%2“ – máte potřebná oprávnění a dost místa na disku?</translation>
     </message>
     <message>
       <location filename="../src/dlgPackageExporter.cpp" line="1042"/>
@@ -10959,12 +11015,12 @@ Package manager: network error, package couldn&apos;t be downloaded</extracommen
       <location filename="../src/dlgPackageManager.cpp" line="452"/>
       <source>Failed to install: %1</source>
       <extracomment>Package manager - status message shown when some packages downloaded from the repository failed to install. %1 is a comma-separated list of package names</extracomment>
-      <translation type="unfinished"/>
+      <translation>Nepodařilo se nainstalovat: %1</translation>
     </message>
     <message>
       <location filename="../src/dlgPackageManager.cpp" line="510"/>
       <source>Package &apos;%1&apos; could not be saved to your profile folder: %2</source>
-      <translation type="unfinished"/>
+      <translation>Balíček „%1“ se nepodařilo uložit do složky profilu: %2</translation>
     </message>
     <message>
       <location filename="../src/dlgPackageManager.cpp" line="638"/>
@@ -10976,19 +11032,19 @@ Package manager: network error, package couldn&apos;t be downloaded</extracommen
       <location filename="../src/dlgPackageManager.cpp" line="738"/>
       <source>These could not be removed while the profile is being saved: %1. Please try again in a moment.</source>
       <extracomment>%1 is a comma separated list of the packages that are still installed</extracomment>
-      <translation type="unfinished"/>
+      <translation>Tyto balíčky nelze odebrat, dokud se ukládá profil: %1. Zkuste to prosím za chvíli znovu.</translation>
     </message>
     <message>
       <location filename="../src/dlgPackageManager.cpp" line="742"/>
       <source>These are no longer installed, so there was nothing to remove: %1.</source>
       <extracomment>%1 is a comma separated list of the packages that turned out not to be installed any more</extracomment>
-      <translation type="unfinished"/>
+      <translation>Tyto balíčky už nejsou nainstalované, takže nebylo co odebrat: %1.</translation>
     </message>
     <message>
       <location filename="../src/dlgPackageManager.cpp" line="759"/>
       <source>Removal failed</source>
       <extracomment>Title of the dialog that says why a package the user asked to remove was not removed</extracomment>
-      <translation type="unfinished"/>
+      <translation>Odebrání se nezdařilo</translation>
     </message>
     <message>
       <location filename="../src/dlgPackageManager.cpp" line="898"/>
@@ -11104,7 +11160,7 @@ Message on button in package manager initially and when the view is NOT the &quo
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="276"/>
       <source>Automatic updates are disabled in development builds to prevent an update from overwriting your Mudlet.</source>
-      <translation>Ve vývojových buildech jsou automatické aktualizace vypnuté, aby vám aktualizace nepřepsala váš Mudlet.</translation>
+      <translation>Ve vývojových buildech jsou automatické aktualizace vypnuté, aby aktualizace nepřepsala váš Mudlet.</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="302"/>
@@ -11221,7 +11277,7 @@ Message on button in package manager initially and when the view is NOT the &quo
       <location filename="../src/dlgProfilePreferences.cpp" line="3319"/>
       <source>Migrated %1...</source>
       <extracomment>This notifies the user that progress is being made on profile migration by saying what profile was just migrated to store passwords securely</extracomment>
-      <translation>Převádí se %1...</translation>
+      <translation>Převeden profil %1...</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="3727"/>
@@ -11443,7 +11499,7 @@ Message on button in package manager initially and when the view is NOT the &quo
       <location filename="../src/dlgProfilePreferences.cpp" line="973"/>
       <source>Chat and sharing</source>
       <extracomment>Sidebar category in the settings dialog, holding the Discord Rich Presence and MudMaster chat options</extracomment>
-      <translation type="unfinished"/>
+      <translation>Chat a sdílení</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="975"/>
@@ -11455,7 +11511,7 @@ Message on button in package manager initially and when the view is NOT the &quo
       <location filename="../src/dlgProfilePreferences.cpp" line="977"/>
       <source>Privacy and security</source>
       <extracomment>Sidebar category in the settings dialog, holding the secure connection, proxy, password and permission options</extracomment>
-      <translation type="unfinished"/>
+      <translation>Soukromí a zabezpečení</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="979"/>
@@ -11473,7 +11529,7 @@ Message on button in package manager initially and when the view is NOT the &quo
       <location filename="../src/dlgProfilePreferences.cpp" line="983"/>
       <source>Advanced</source>
       <extracomment>Sidebar category in the settings dialog, holding development and diagnostic options</extracomment>
-      <translation type="unfinished"/>
+      <translation>Pokročilé</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="1056"/>
@@ -11485,13 +11541,13 @@ Message on button in package manager initially and when the view is NOT the &quo
       <location filename="../src/dlgProfilePreferences.cpp" line="1058"/>
       <source>Find in settings</source>
       <extracomment>Placeholder text of the search field at the top of the settings dialog</extracomment>
-      <translation type="unfinished"/>
+      <translation>Hledat v nastavení</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="1060"/>
       <source>Settings categories</source>
       <extracomment>Accessible name of the list that switches between the settings dialog&apos;s categories</extracomment>
-      <translation type="unfinished"/>
+      <translation>Kategorie nastavení</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="1062"/>
@@ -11503,25 +11559,25 @@ Message on button in package manager initially and when the view is NOT the &quo
       <location filename="../src/dlgProfilePreferences.cpp" line="1064"/>
       <source>Back to the settings you were on</source>
       <extracomment>Tooltip and accessible name of the button that leaves the settings search results</extracomment>
-      <translation type="unfinished"/>
+      <translation>Zpět na předchozí nastavení</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="1068"/>
       <source>Back to the category this page belongs to</source>
       <extracomment>Tooltip and accessible name of the chevron beside a settings subpage&apos;s breadcrumb, leading back to the category the subpage belongs to</extracomment>
-      <translation type="unfinished"/>
+      <translation>Zpět na kategorii, do které tato stránka patří</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="1072"/>
       <source>Mudlet support</source>
       <extracomment>Sidebar link at the bottom of the settings dialog, opening the Mudlet wiki in a browser</extracomment>
-      <translation type="unfinished"/>
+      <translation>Podpora Mudletu</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="1082"/>
       <source>System integration</source>
       <extracomment>Card title on the General settings page, above the options that tie Mudlet into the rest of the desktop</extracomment>
-      <translation type="unfinished"/>
+      <translation>Integrace se systémem</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="1084"/>
@@ -11533,43 +11589,43 @@ Message on button in package manager initially and when the view is NOT the &quo
       <location filename="../src/dlgProfilePreferences.cpp" line="1086"/>
       <source>Profile tabs</source>
       <extracomment>Card title on the Appearance settings page, above the options for the tabs that switch between open profiles</extracomment>
-      <translation type="unfinished"/>
+      <translation>Záložky profilů</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="1088"/>
       <source>Data encoding</source>
       <extracomment>Card title on the Connection settings page, above the character encoding used to talk to the game</extracomment>
-      <translation type="unfinished"/>
+      <translation>Kódování dat</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="1090"/>
       <source>Network</source>
       <extracomment>Card title on the Connection settings page, above the network packet timeout</extracomment>
-      <translation type="unfinished"/>
+      <translation>Síť</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="1092"/>
       <source>Passwords</source>
       <extracomment>Card title on the Privacy and security settings page, above where game passwords are kept</extracomment>
-      <translation type="unfinished"/>
+      <translation>Hesla</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="1094"/>
       <source>Server permissions</source>
       <extracomment>Card title on the Privacy and security settings page, above what the game&apos;s server is allowed to do</extracomment>
-      <translation type="unfinished"/>
+      <translation>Oprávnění serveru</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="1096"/>
       <source>Crash reports</source>
       <extracomment>Card title on the Privacy and security settings page, above the crash report sending policy</extracomment>
-      <translation type="unfinished"/>
+      <translation>Hlášení o pádu</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="1098"/>
       <source>Performance</source>
       <extracomment>Card title on the Advanced settings page, above options that trade compatibility for speed</extracomment>
-      <translation type="unfinished"/>
+      <translation>Výkon</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="1100"/>
@@ -11584,19 +11640,19 @@ Breadcrumb name of the subpage holding the Discord Rich Presence settings, reach
       <location filename="../src/dlgProfilePreferences.cpp" line="1102"/>
       <source>Protocols to offer the game</source>
       <extracomment>Card title on the game protocols subpage, above the ten protocols Mudlet can offer the game</extracomment>
-      <translation type="unfinished"/>
+      <translation>Protokoly nabízené hře</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="1104"/>
       <source>Text and media</source>
       <extracomment>Card title on the Accessibility settings page, above the options for blank lines, blinking text and captions</extracomment>
-      <translation type="unfinished"/>
+      <translation>Text a média</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="1106"/>
       <source>Keyboard</source>
       <extracomment>Card title on the Accessibility settings page, above the options for moving around Mudlet from the keyboard</extracomment>
-      <translation type="unfinished"/>
+      <translation>Klávesnice</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="1114"/>
@@ -11607,64 +11663,64 @@ Breadcrumb name of the subpage holding the Discord Rich Presence settings, reach
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="1120"/>
       <source>Lets Mudlet and the game agree on how letters are spelled out, so accented and non-Latin text arrives intact.</source>
-      <translation type="unfinished"/>
+      <translation>Umožní Mudletu a hře dohodnout se, jak zapisovat písmena, aby text s diakritikou a v jiných než latinských písmech dorazil neporušený.</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="1124"/>
       <source>Lets the game send your health, room and inventory as data, which is what most modern packages and user interfaces are built on.</source>
-      <translation type="unfinished"/>
+      <translation>Umožní hře posílat zdraví, místnost a inventář jako data, na kterých staví většina moderních balíčků a uživatelských rozhraní.</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="1126"/>
       <source>Tells the game a short list of facts about Mudlet, such as its name and version.</source>
-      <translation type="unfinished"/>
+      <translation>Sdělí hře několik základních údajů o Mudletu, třeba jeho název a verzi.</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="1128"/>
       <source>An older way for the game to send data about your character, used where GMCP is not offered.</source>
-      <translation type="unfinished"/>
+      <translation>Starší způsob, jak hra posílá data o vaší postavě; používá se tam, kde není k dispozici GMCP.</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="1130"/>
       <source>Lets the game play sound effects and music through Mudlet.</source>
-      <translation type="unfinished"/>
+      <translation>Umožní hře přehrávat přes Mudlet zvukové efekty a hudbu.</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="1132"/>
       <source>Lets the game tell Mudlet about itself - how many players are on, what it is about - for game listings.</source>
-      <translation type="unfinished"/>
+      <translation>Umožní hře sdělit Mudletu údaje o sobě – kolik hráčů je online, o čem je – pro seznamy her.</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="1136"/>
       <source>Tells the game which client you are using and what it can display, so it can send colour and Unicode when Mudlet supports them.</source>
-      <translation type="unfinished"/>
+      <translation>Sdělí hře, jaký klient používáte a co umí zobrazit, aby mohla posílat barvy a Unicode, když je Mudlet podporuje.</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="1138"/>
       <source>Lets the game mark up its text with clickable links, commands and pop-up menus.</source>
-      <translation type="unfinished"/>
+      <translation>Umožní hře doplnit text o klikatelné odkazy, příkazy a vyskakovací menu.</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="1140"/>
       <source>Tells the game how wide your window is, so it can wrap its text to fit rather than guessing.</source>
-      <translation type="unfinished"/>
+      <translation>Sdělí hře, jak široké je vaše okno, aby mohla zalamovat text na míru a nemusela hádat.</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="1142"/>
       <source>Tells the game more about Mudlet than MNES does, including support for clickable links in plain text.</source>
-      <translation type="unfinished"/>
+      <translation>Sdělí hře o Mudletu víc než MNES, včetně podpory klikatelných odkazů v prostém textu.</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="1165"/>
       <source>Same settings, new look!</source>
       <extracomment>Title of the banner explaining that the settings dialog has been reorganised</extracomment>
-      <translation type="unfinished"/>
+      <translation>Stejná nastavení, nový vzhled!</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="1168"/>
       <source>Settings are reorganised so they are easier to scan and search. Everything is still here - use search to jump straight to what you need.</source>
       <extracomment>Body of the banner explaining that the settings dialog has been reorganised</extracomment>
-      <translation type="unfinished"/>
+      <translation>Nastavení jsou nově uspořádaná, aby se v nich snáz orientovalo a hledalo. Nic nezmizelo – vyhledáváním skočíte rovnou na to, co potřebujete.</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="1170"/>
@@ -11677,331 +11733,331 @@ Breadcrumb name of the subpage holding the Discord Rich Presence settings, reach
       <location filename="../src/dlgProfilePreferences.cpp" line="1379"/>
       <source>%1 › %2</source>
       <extracomment>Breadcrumb over a settings subpage: %1 is the category it belongs to, %2 the subpage&apos;s own name</extracomment>
-      <translation type="unfinished"/>
+      <translation>%1 › %2</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="1194"/>
       <source>TLS, SSL, secure connection, encryption, certificate</source>
       <extracomment>Comma-separated synonyms for the settings search. Translate them into the words a player of your language would type when looking for this setting, rather than transliterating the English ones; acronyms and protocol names that your language uses untranslated can be left as they are. This one is for the secure connection settings.</extracomment>
-      <translation type="unfinished"/>
+      <translation>TLS, SSL, zabezpečené připojení, šifrování, certifikát</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="1196"/>
       <source>TLS, SSL, secure connection, reminder</source>
       <extracomment>Comma-separated synonyms for the settings search - translate to what a player would type, do not transliterate. This one is for the reminder offered when the game supports a secure connection.</extracomment>
-      <translation type="unfinished"/>
+      <translation>TLS, SSL, zabezpečené připojení, připomínka, upozornění</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="1198"/>
       <source>performance, speed, fast, slow, lag, lazy, matches, multimatches, line, _G, global variables</source>
       <extracomment>Comma-separated synonyms for the settings search - translate to what a player would type, do not transliterate. This one is for preparing the matches, multimatches and line trigger variables only when a script reads them.</extracomment>
-      <translation type="unfinished"/>
+      <translation>výkon, rychlost, rychlé, pomalé, lag, sekání, líné, matches, multimatches, line, _G, globální proměnné</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="1200"/>
       <source>proxy, SOCKS, tunnel, firewall</source>
       <extracomment>Comma-separated synonyms for the settings search - translate to what a player would type, do not transliterate. This one is for the proxy server settings.</extracomment>
-      <translation type="unfinished"/>
+      <translation>proxy, SOCKS, tunel, firewall, brána</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="1202"/>
       <source>password, keyring, keychain, credentials, sign in, two-factor, 2FA</source>
       <extracomment>Comma-separated synonyms for the settings search - translate to what a player would type, do not transliterate. This one is for where game passwords are kept.</extracomment>
-      <translation type="unfinished"/>
+      <translation>heslo, hesla, klíčenka, správce hesel, přihlašovací údaje, přihlášení, dvoufázové ověření, 2FA</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="1204"/>
       <source>password, masking, hidden characters</source>
       <extracomment>Comma-separated synonyms for the settings search - translate to what a player would type, do not transliterate. This one is for showing the password as it is typed.</extracomment>
-      <translation type="unfinished"/>
+      <translation>heslo, zakrývání, skryté znaky, hvězdičky</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="1206"/>
       <source>screen reader, NVDA, JAWS, VoiceOver, Orca, accessibility</source>
       <extracomment>Comma-separated synonyms for the settings search - translate to what a player would type, do not transliterate. This one is for telling the game that a screen reader is in use.</extracomment>
-      <translation type="unfinished"/>
+      <translation>odečítač obrazovky, čtečka obrazovky, NVDA, JAWS, VoiceOver, Orca, přístupnost</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="1208"/>
       <source>text to speech, TTS, speech, spoken, screen reader</source>
       <extracomment>Comma-separated synonyms for the settings search - translate to what a player would type, do not transliterate. This one is for reading incoming text out loud.</extracomment>
-      <translation type="unfinished"/>
+      <translation>převod textu na řeč, TTS, řeč, předčítání, hlasový výstup, odečítač obrazovky</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="1210"/>
       <source>timestamps, time, date, transcript</source>
       <extracomment>Comma-separated synonyms for the settings search - translate to what a player would type, do not transliterate. This one is for putting the time in front of each logged line.</extracomment>
-      <translation type="unfinished"/>
+      <translation>časové značky, čas, datum, záznam, log</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="1212"/>
       <source>transcript, HTML, plain text, log format</source>
       <extracomment>Comma-separated synonyms for the settings search - translate to what a player would type, do not transliterate. This one is for the format logs are written in.</extracomment>
-      <translation type="unfinished"/>
+      <translation>záznam, HTML, prostý text, formát logu, log</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="1214"/>
       <source>wrap, word wrap, line length, columns, indent</source>
       <extracomment>Comma-separated synonyms for the settings search - translate to what a player would type, do not transliterate. This one is for where long lines are broken.</extracomment>
-      <translation type="unfinished"/>
+      <translation>zalamování, zalamování řádků, délka řádku, sloupce, odsazení</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="1216"/>
       <source>scrollback, history, buffer, lines kept</source>
       <extracomment>Comma-separated synonyms for the settings search - translate to what a player would type, do not transliterate. This one is for how much past text is kept.</extracomment>
-      <translation type="unfinished"/>
+      <translation>historie výpisu, historie, buffer, počet řádků, posouvání</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="1218"/>
       <source>download map, fetch map, map from the game</source>
       <extracomment>Comma-separated synonyms for the settings search - translate to what a player would type, do not transliterate. This one is for fetching a map the game offers.</extracomment>
-      <translation type="unfinished"/>
+      <translation>stáhnout mapu, stažení mapy, mapa ze hry</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="1220"/>
       <source>hyperlink, link, clickable URL, OSC8</source>
       <extracomment>Comma-separated synonyms for the settings search - translate to what a player would type, do not transliterate. This one is for links in the game&apos;s text being clickable.</extracomment>
-      <translation type="unfinished"/>
+      <translation>hypertextový odkaz, odkaz, klikatelná URL, OSC8</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="1222"/>
       <source>echo, error messages, script errors, Lua errors</source>
       <extracomment>Comma-separated synonyms for the settings search - translate to what a player would type, do not transliterate. This one is for showing script errors in the game window.</extracomment>
-      <translation type="unfinished"/>
+      <translation>výpis, chybová hlášení, chyby skriptů, chyby Lua</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="1224"/>
       <source>encoding, character set, charset, UTF-8, Unicode, Latin-1</source>
       <extracomment>Comma-separated synonyms for the settings search - translate to what a player would type, do not transliterate. This one is for the character encoding used to talk to the game.</extracomment>
-      <translation type="unfinished"/>
+      <translation>kódování, znaková sada, charset, UTF-8, Unicode, Latin-1, diakritika</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="1226"/>
       <source>menu bar, hide menus, fullscreen, distraction free</source>
       <extracomment>Comma-separated synonyms for the settings search - translate to what a player would type, do not transliterate. This one is for when the menu bar is shown.</extracomment>
-      <translation type="unfinished"/>
+      <translation>řádek menu, nabídky, skrýt menu, celá obrazovka, bez rušení</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="1228"/>
       <source>toolbar, hide buttons, fullscreen, distraction free</source>
       <extracomment>Comma-separated synonyms for the settings search - translate to what a player would type, do not transliterate. This one is for when the toolbar is shown.</extracomment>
-      <translation type="unfinished"/>
+      <translation>panel nástrojů, lišta, skrýt tlačítka, celá obrazovka, bez rušení</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="1230"/>
       <source>spelling, spell check, dictionary, typos</source>
       <extracomment>Comma-separated synonyms for the settings search - translate to what a player would type, do not transliterate. This one is for checking spelling as the player types.</extracomment>
-      <translation type="unfinished"/>
+      <translation>pravopis, kontrola pravopisu, slovník, překlepy</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="1232"/>
       <source>language, locale, translation, interface language</source>
       <extracomment>Comma-separated synonyms for the settings search - translate to what a player would type, do not transliterate. This one is for the language Mudlet&apos;s own interface is in.</extracomment>
-      <translation type="unfinished"/>
+      <translation>jazyk, národní prostředí, překlad, jazyk rozhraní, čeština</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="1234"/>
       <source>dark mode, light mode, night mode, theme, colour scheme</source>
       <extracomment>Comma-separated synonyms for the settings search - translate to what a player would type, do not transliterate. This one is for the light or dark look of Mudlet.</extracomment>
-      <translation type="unfinished"/>
+      <translation>tmavý režim, světlý režim, noční režim, motiv, barevné schéma</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="1236"/>
       <source>crash, telemetry, diagnostics, error reports</source>
       <extracomment>Comma-separated synonyms for the settings search - translate to what a player would type, do not transliterate. This one is for whether crash reports are sent.</extracomment>
-      <translation type="unfinished"/>
+      <translation>pád, telemetrie, diagnostika, hlášení chyb, hlášení o pádu</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="1238"/>
       <source>Discord, rich presence, status, what I am playing</source>
       <extracomment>Comma-separated synonyms for the settings search - translate to what a player would type, do not transliterate. This one is for what Discord is told about the game being played.</extracomment>
-      <translation type="unfinished"/>
+      <translation>Discord, rich presence, stav, co hraju</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="1240"/>
       <source>MMCP, chat, MudMaster, player to player</source>
       <extracomment>Comma-separated synonyms for the settings search - translate to what a player would type, do not transliterate. This one is for the MudMaster chat protocol.</extracomment>
-      <translation type="unfinished"/>
+      <translation>MMCP, chat, MudMaster, mezi hráči</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="1242"/>
       <source>protocols, compression, MCCP, negotiation, telnet options</source>
       <extracomment>Comma-separated synonyms for the settings search - translate to what a player would type, do not transliterate. This one is for the telnet protocols Mudlet negotiates with the game.</extracomment>
-      <translation type="unfinished"/>
+      <translation>protokoly, komprese, MCCP, vyjednávání, volby telnetu</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="1244"/>
       <source>cache, sounds, music, downloaded media, clear</source>
       <extracomment>Comma-separated synonyms for the settings search - translate to what a player would type, do not transliterate. This one is for throwing away downloaded sounds and music.</extracomment>
-      <translation type="unfinished"/>
+      <translation>mezipaměť, cache, zvuky, hudba, stažená média, vymazat</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="1246"/>
       <source>keyboard shortcuts, hotkeys, key bindings, accelerators</source>
       <extracomment>Comma-separated synonyms for the settings search - translate to what a player would type, do not transliterate. This one is for the main window&apos;s keyboard shortcuts.</extracomment>
-      <translation type="unfinished"/>
+      <translation>klávesové zkratky, zkratky, horké klávesy, přiřazení kláves, akcelerátory</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="1248"/>
       <source>autosave, save on exit, backup</source>
       <extracomment>Comma-separated synonyms for the settings search - translate to what a player would type, do not transliterate. This one is for saving the profile when Mudlet is closed.</extracomment>
-      <translation type="unfinished"/>
+      <translation>automatické ukládání, uložit při ukončení, záloha</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="1250"/>
       <source>font, typeface, size, monospace, antialiasing</source>
       <extracomment>Comma-separated synonyms for the settings search - translate to what a player would type, do not transliterate. This one is for the font the game&apos;s text is drawn in.</extracomment>
-      <translation type="unfinished"/>
+      <translation>písmo, font, velikost, neproporcionální, monospace, vyhlazování</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="1252"/>
       <source>timeout, lag, latency, slow connection</source>
       <extracomment>Comma-separated synonyms for the settings search - translate to what a player would type, do not transliterate. This one is for how long Mudlet waits for the game to answer.</extracomment>
-      <translation type="unfinished"/>
+      <translation>časový limit, timeout, lag, odezva, latence, pomalé připojení</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="1535"/>
       <source>Learn more</source>
       <extracomment>Link at the end of a settings card&apos;s description line, opening the Mudlet wiki page about that setting</extracomment>
-      <translation type="unfinished"/>
+      <translation>Další informace</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="1541"/>
       <source>How Mudlet fits in with the rest of your desktop.</source>
       <extracomment>Description line under the &quot;System integration&quot; card title on the General settings page</extracomment>
-      <translation type="unfinished"/>
+      <translation>Jak Mudlet zapadá do zbytku vašeho systému.</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="1543"/>
       <source>The site Mudlet opens when you pick &quot;search on the web&quot; after selecting some text in the game.</source>
       <extracomment>Description line under the &quot;Web search&quot; card title on the General settings page</extracomment>
-      <translation type="unfinished"/>
+      <translation>Web, který Mudlet otevře, když po výběru textu ve hře zvolíte v místní nabídce hledání na webu.</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="1545"/>
       <source>How much of what the game has already sent stays available to scroll back through.</source>
       <extracomment>Description line under the &quot;Scrollback&quot; card title on the Main display settings page</extracomment>
-      <translation type="unfinished"/>
+      <translation>Kolik z toho, co hra už poslala, zůstane k dispozici pro posouvání zpět.</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="1547"/>
       <source>What the script editor offers while you write Lua, and where mistakes in it are reported.</source>
       <extracomment>Description line under the &quot;Scripting&quot; card title on the Editor settings page</extracomment>
-      <translation type="unfinished"/>
+      <translation>Co nabízí editor skriptů při psaní v Lua a kam se hlásí chyby v kódu.</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="1550"/>
       <source>Some games publish a ready-made map that Mudlet can fetch for you instead of you walking it yourself.</source>
       <extracomment>Description line under the &quot;Download map&quot; card title on the Mapper settings page</extracomment>
-      <translation type="unfinished"/>
+      <translation>Některé hry zveřejňují hotovou mapu, kterou Mudlet může stáhnout za vás, takže ji nemusíte sami prochodit.</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="1553"/>
       <source>Shows what you are playing on your Discord profile, and decides how much of it other people get to see.</source>
       <extracomment>Description line under the &quot;Discord Rich Presence&quot; card title on the Chat and sharing settings page</extracomment>
-      <translation type="unfinished"/>
+      <translation>Zobrazuje na vašem profilu na Discordu, co hrajete, a určuje, kolik z toho ostatní uvidí.</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="1555"/>
       <source>Chat directly with other players&apos; clients, without the messages going through the game.</source>
       <extracomment>Description line under the &quot;MMCP&quot; card title on the Chat and sharing settings page</extracomment>
-      <translation type="unfinished"/>
+      <translation>Přímý chat s klienty ostatních hráčů – zprávy přitom nejdou přes hru.</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="1558"/>
       <source>Extras Mudlet offers the game beyond plain text - sound, map data, your window size and the like. The game decides which of them it uses.</source>
       <extracomment>Description line under the &quot;Game protocols&quot; card title on the Connection settings page</extracomment>
-      <translation type="unfinished"/>
+      <translation>Doplňky, které Mudlet hře nabízí nad rámec prostého textu – zvuk, data mapy, velikost vašeho okna a podobně. Které z nich využije, rozhoduje hra.</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="1562"/>
       <source>How the bytes the game sends are turned into letters. Use what the game&apos;s own documentation asks for.</source>
       <extracomment>Description line under the &quot;Data encoding&quot; card title on the Connection settings page</extracomment>
-      <translation type="unfinished"/>
+      <translation>Jak se bajty, které hra posílá, převádějí na písmena. Použijte to, co požaduje dokumentace hry.</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="1565"/>
       <source>Workarounds for games whose servers do things their own way. Leave these off unless the game asks you to turn one on.</source>
       <extracomment>Description line under the &quot;Compatibility&quot; card title on the Connection settings page</extracomment>
-      <translation type="unfinished"/>
+      <translation>Obezličky pro hry, jejichž servery dělají věci po svém. Nechte je vypnuté, dokud vás hra nepožádá, abyste některou zapnuli.</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="1567"/>
       <source>How long Mudlet waits for the rest of a slow message before drawing what it already has.</source>
       <extracomment>Description line under the &quot;Network&quot; card title on the Connection settings page</extracomment>
-      <translation type="unfinished"/>
+      <translation>Jak dlouho Mudlet čeká na zbytek pomalé zprávy, než vykreslí to, co už má.</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="1569"/>
       <source>Encrypts everything travelling between Mudlet and the game, so nobody in between can read it. The game has to offer a secure port of its own.</source>
       <extracomment>Description line under the &quot;Secure connection&quot; card title on the Privacy and security settings page</extracomment>
-      <translation type="unfinished"/>
+      <translation>Šifruje veškerou komunikaci mezi Mudletem a hrou, takže ji nikdo cestou nepřečte. Hra musí nabízet vlastní zabezpečený port.</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="1571"/>
       <source>Sends Mudlet&apos;s traffic through another server first - needed on networks that block games directly.</source>
       <extracomment>Description line under the &quot;Proxy&quot; card title on the Privacy and security settings page</extracomment>
-      <translation type="unfinished"/>
+      <translation>Posílá provoz Mudletu nejdřív přes jiný server – nutné v sítích, které hry přímo blokují.</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="1573"/>
       <source>Where Mudlet keeps the passwords you have let it remember for you.</source>
       <extracomment>Description line under the &quot;Passwords&quot; card title on the Privacy and security settings page</extracomment>
-      <translation type="unfinished"/>
+      <translation>Kde Mudlet uchovává hesla, která jste mu dovolili si zapamatovat.</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="1575"/>
       <source>What the game is allowed to put on your screen or play through your speakers without asking first.</source>
       <extracomment>Description line under the &quot;Server permissions&quot; card title on the Privacy and security settings page</extracomment>
-      <translation type="unfinished"/>
+      <translation>Co smí hra bez ptaní zobrazit na obrazovce nebo přehrát z reproduktorů.</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="1578"/>
       <source>Sounds and music the game sends are kept on disk so they only have to be downloaded once.</source>
       <extracomment>Description line under the &quot;Media cache&quot; card title on the Privacy and security settings page</extracomment>
-      <translation type="unfinished"/>
+      <translation>Zvuky a hudba, které hra posílá, se ukládají na disk, takže se stahují jen jednou.</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="1582"/>
       <source>If Mudlet stops unexpectedly it can tell the developers what went wrong. A report says where Mudlet was in its own code - never what you typed or what the game sent.</source>
       <extracomment>Description line under the &quot;Crash reports&quot; card title on the Privacy and security settings page</extracomment>
-      <translation type="unfinished"/>
+      <translation>Když Mudlet nečekaně skončí, může vývojářům sdělit, co se pokazilo. Hlášení uvádí, kde se Mudlet ve svém kódu nacházel – nikdy ne to, co jste psali nebo co poslala hra.</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="1584"/>
       <source>Ways Mudlet speeds up your scripts. Leave these on unless a script or package misbehaves.</source>
       <extracomment>Description line under the &quot;Performance&quot; card title on the Advanced settings page</extracomment>
-      <translation type="unfinished"/>
+      <translation>Způsoby, jak Mudlet zrychluje vaše skripty. Nechte je zapnuté, pokud se některý skript nebo balíček nezačne chovat špatně.</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="1586"/>
       <source>Diagnostics for people writing packages and scripts. Leave these off for ordinary play.</source>
       <extracomment>Description line under the &quot;Developer&quot; card title on the Advanced settings page</extracomment>
-      <translation type="unfinished"/>
+      <translation>Diagnostika pro autory balíčků a skriptů. Při běžném hraní je nechte vypnuté.</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="1677"/>
       <source>%1 of %2 turned on</source>
       <extracomment>Text of the row on the Connection page&apos;s game protocols card that opens the list of protocols; %1 is how many are switched on, %2 how many there are</extracomment>
-      <translation type="unfinished"/>
+      <translation>zapnuto %1 z %2</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="1703"/>
       <source>Off - Discord is told nothing</source>
       <extracomment>Summary on the Chat and sharing page&apos;s Discord card, on the row that opens the Discord settings</extracomment>
-      <translation type="unfinished"/>
+      <translation>Vypnuto – Discord se nedozví nic</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="1706"/>
       <source>On - Discord is told you are using Mudlet</source>
       <extracomment>Summary on the Chat and sharing page&apos;s Discord card, on the row that opens the Discord settings</extracomment>
-      <translation type="unfinished"/>
+      <translation>Zapnuto – Discord se dozví, že používáte Mudlet</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="1709"/>
       <source>On - Discord is told which game you are playing</source>
       <extracomment>Summary on the Chat and sharing page&apos;s Discord card, on the row that opens the Discord settings</extracomment>
-      <translation type="unfinished"/>
+      <translation>Zapnuto – Discord se dozví, jakou hru hrajete</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="1758"/>
@@ -12013,138 +12069,138 @@ Breadcrumb name of the subpage holding the Discord Rich Presence settings, reach
       <location filename="../src/dlgProfilePreferences.cpp" line="1760"/>
       <source>Connect to the game to see whether this connection is encrypted.</source>
       <extracomment>Detail line of the security status card on the Privacy and security settings page, when the profile is not connected to its game</extracomment>
-      <translation type="unfinished"/>
+      <translation>Po připojení ke hře se tu zobrazí, zda je toto připojení šifrované.</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="1763"/>
       <source>Your connection to %1 is encrypted</source>
       <extracomment>Headline of the security status card on the Privacy and security settings page, when the connection to the game is encrypted; %1 is the game&apos;s address</extracomment>
-      <translation type="unfinished"/>
+      <translation>Připojení k %1 je šifrované</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="1769"/>
       <source>The game&apos;s certificate was issued by %1 and is valid until %2.</source>
       <extracomment>Detail line of the security status card on the Privacy and security settings page; %1 is who issued the game&apos;s certificate, %2 the date it stops being valid</extracomment>
-      <translation type="unfinished"/>
+      <translation>Certifikát hry vydala autorita %1 a platí do %2.</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="1769"/>
       <source>an unnamed authority</source>
-      <translation type="unfinished"/>
+      <translation>bez názvu</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="1774"/>
       <source>Nobody between you and the game can read what you send.</source>
       <extracomment>Detail line of the security status card on the Privacy and security settings page, when the connection is encrypted but the game presented no certificate details</extracomment>
-      <translation type="unfinished"/>
+      <translation>Nikdo mezi vámi a hrou nemůže číst, co posíláte.</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="1778"/>
       <source>Your connection to %1 is not encrypted</source>
       <extracomment>Headline of the security status card on the Privacy and security settings page, when the connection to the game is not encrypted; %1 is the game&apos;s address</extracomment>
-      <translation type="unfinished"/>
+      <translation>Připojení k %1 není šifrované</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="1780"/>
       <source>Everything you send, your password included, travels in the clear. Games that offer a secure port let you turn this around below.</source>
       <extracomment>Detail line of the security status card on the Privacy and security settings page, when the connection is not encrypted</extracomment>
-      <translation type="unfinished"/>
+      <translation>Vše, co posíláte, včetně hesla, putuje nešifrovaně. U her, které nabízejí zabezpečený port, to můžete změnit níže.</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="1785"/>
       <source>Secure connection settings</source>
       <extracomment>Link on the security status card of the Privacy and security settings page, leading to the &quot;Secure connection&quot; card below it</extracomment>
-      <translation type="unfinished"/>
+      <translation>Nastavení zabezpečeného připojení</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="1792"/>
       <source>Saving and notifications</source>
       <extracomment>Card title on the General settings page, above the &quot;save profile on exit&quot; and &quot;notify on new data&quot; options</extracomment>
-      <translation type="unfinished"/>
+      <translation>Ukládání a upozornění</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="1794"/>
       <source>Language</source>
       <extracomment>Card title on the General settings page, above the interface language selector</extracomment>
-      <translation type="unfinished"/>
+      <translation>Jazyk</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="1796"/>
       <source>Web search</source>
       <extracomment>Card title on the General settings page, above the search engine used by the &quot;search on the web&quot; context menu entry</extracomment>
-      <translation type="unfinished"/>
+      <translation>Hledání na webu</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="1798"/>
       <source>Icons and toolbars</source>
       <extracomment>Card title on the Appearance settings page, above the icon size and menu/toolbar visibility options</extracomment>
-      <translation type="unfinished"/>
+      <translation>Ikony a panely nástrojů</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="1800"/>
       <source>Colors</source>
       <extracomment>Card title on the Main display settings page, above the colors used for the game&apos;s text</extracomment>
-      <translation type="unfinished"/>
+      <translation>Barvy</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="1802"/>
       <source>Borders</source>
       <extracomment>Card title on the Main display settings page, above the width of the borders around the game&apos;s text</extracomment>
-      <translation type="unfinished"/>
+      <translation>Okraje</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="1804"/>
       <source>Scripting</source>
       <extracomment>Card title on the Editor settings page, above the Lua autocomplete and error echo options</extracomment>
-      <translation type="unfinished"/>
+      <translation>Skriptování</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="1806"/>
       <source>Whitespace and marks</source>
       <extracomment>Card title on the Editor settings page, above the options showing whitespace and other invisible marks</extracomment>
-      <translation type="unfinished"/>
+      <translation>Bílé znaky a značky</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="1808"/>
       <source>Map colors</source>
       <extracomment>Card title on the Mapper settings page, above the colors used to draw the map</extracomment>
-      <translation type="unfinished"/>
+      <translation>Barvy mapy</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="1810"/>
       <source>Compatibility</source>
       <extracomment>Card title on the Connection settings page, above the options needed by some older game drivers</extracomment>
-      <translation type="unfinished"/>
+      <translation>Kompatibilita</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="1812"/>
       <source>Developer</source>
       <extracomment>Card title on the Advanced settings page, above development and diagnostic options</extracomment>
-      <translation type="unfinished"/>
+      <translation>Pro vývojáře</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="1814"/>
       <source>Screen reader</source>
       <extracomment>Card title on the Accessibility settings page, above the two options about what the system screen reader is told</extracomment>
-      <translation type="unfinished"/>
+      <translation>Odečítač obrazovky</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="2537"/>
       <source>No results in settings for &quot;%1&quot;</source>
       <extracomment>Empty state of the settings search; %1 is what the user typed</extracomment>
-      <translation type="unfinished"/>
+      <translation>V nastavení nebylo nalezeno nic pro „%1“</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="2539"/>
       <source>Need help? Visit %1</source>
       <extracomment>Offered under the settings search empty state; %1 is a link labelled &quot;Mudlet support&quot;</extracomment>
-      <translation type="unfinished"/>
+      <translation>Potřebujete pomoc? Navštivte stránku %1</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="2545"/>
       <source>Search results</source>
       <extracomment>Title shown in place of a category name while the settings search is showing its results</extracomment>
-      <translation type="unfinished"/>
+      <translation>Výsledky hledání</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="4595"/>
@@ -12399,7 +12455,7 @@ a že je dost místa. Kopírování selhalo.</translation>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="7546"/>
       <source>The symbol cannot be drawn using any of the fonts in the system, either an invalid string was entered as the symbol for the indicated rooms or the map was created on a different systems with a different set of fonts available to use. You may be able to correct this by installing an additional font using whatever method is appropriate for this system or by editing the map to use a different symbol. It may be possible to do the latter via a lua script using the &lt;i&gt;getRoomChar&lt;/i&gt; and &lt;i&gt;setRoomChar&lt;/i&gt; functions.</source>
-      <translation>Symbol nelze vykreslit žádným písmem v systému – buď byl u uvedených místností zadán neplatný řetězec, nebo mapa vznikla na jiném systému s jinou sadou dostupných písem. Může pomoci doinstalovat další písmo způsobem obvyklým pro tento systém, nebo mapu upravit tak, aby používala jiný symbol. To druhé jde možná udělat lua skriptem přes funkce &lt;i&gt;getRoomChar&lt;/i&gt; a &lt;i&gt;setRoomChar&lt;/i&gt;.</translation>
+      <translation>Symbol nelze vykreslit žádným písmem v systému – buď byl u uvedených místností zadán neplatný řetězec, nebo mapa vznikla na jiném systému s jinou sadou dostupných písem. Může pomoci doinstalovat další písmo způsobem obvyklým pro tento systém, nebo mapu upravit tak, aby používala jiný symbol. To druhé jde možná udělat skriptem v Lua přes funkce &lt;i>getRoomChar&lt;/i> a &lt;i>setRoomChar&lt;/i>.</translation>
     </message>
     <message>
       <location filename="../src/dlgProfilePreferences.cpp" line="7637"/>
@@ -12842,7 +12898,7 @@ důvod: %2.</translation>
       <extracomment>Bold HTML tags are used to emphasis that the value is destination room&apos;s weight whether overridden by a non-zero exit weight here or not
 ----------
 Bold HTML tags are used to emphasis that the value is destination room&apos;s weight whether overridden by a non-zero exit weight here or not.</extracomment>
-      <translation>Váha &lt;b&gt;místnosti&lt;/b&gt; v cíli: %1.</translation>
+      <translation>Váha cílové &lt;b>místnosti&lt;/b>: %1.</translation>
     </message>
     <message>
       <location filename="../src/dlgRoomExits.cpp" line="1222"/>
@@ -12874,7 +12930,7 @@ Bold HTML tags are used to emphasis that the value is destination room&apos;s we
     <message>
       <location filename="../src/dlgRoomExits.cpp" line="1686"/>
       <source>Exits for room Id: %1 [*]</source>
-      <translation>Východy místnosti s Id: %1 [*]</translation>
+      <translation>Východy místnosti s ID: %1 [*]</translation>
     </message>
   </context>
   <context>
@@ -12963,7 +13019,7 @@ Bold HTML tags are used to emphasis that the value is destination room&apos;s we
       <extracomment>room properties dialog, setting text for checkbox, where you can set/unset a number of room&apos;s hidden status. More than one room is being considered and some, but not all (%n) of them are hidden and in this case the checkbox also has an partially checked state to be used to leave them all unchanged. A second translatable sentance indicating the number of currently hidden rooms will be inserted as %1.</extracomment>
       <translation>
         <numerusform>Skrýt %n místnost.%1</numerusform>
-        <numerusform>Skrýt %n místnosti.%1</numerusform>
+        <numerusform>Skrýt všechny %n místnosti.%1</numerusform>
         <numerusform>Skrýt všech %n místností.%1</numerusform>
         <numerusform>Skrýt všech %n místností.%1</numerusform>
       </translation>
@@ -12990,7 +13046,7 @@ Bold HTML tags are used to emphasis that the value is destination room&apos;s we
       <extracomment>room properties dialog, setting text for checkbox, where you can set/unset the hidden status of one or more rooms where %n is the total number of rooms and all of them are currently hidden or shown.</extracomment>
       <translation>
         <numerusform>Skrýt %n místnost.</numerusform>
-        <numerusform>Skrýt %n místnosti.</numerusform>
+        <numerusform>Skrýt (všechny) %n místnosti.</numerusform>
         <numerusform>Skrýt (všech) %n místností.</numerusform>
         <numerusform>Skrýt (všech) %n místností.</numerusform>
       </translation>
@@ -13594,7 +13650,7 @@ Help contents of a selectable option for the Trigger intro</extracomment>
       <location filename="../src/dlgTriggerEditor.cpp" line="337"/>
       <source>will not fire, key in use</source>
       <extracomment>Accessible description for a key binding whose key one of Mudlet&apos;s own shortcuts or an add-on command gets first, shown after the item name. Keep short, as it&apos;s appended to other descriptions like &quot;activated, will not fire, key in use&quot;</extracomment>
-      <translation type="unfinished"/>
+      <translation>nespustí se, klávesa obsazena</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="466"/>
@@ -14347,7 +14403,7 @@ Package item warning banner shown in trigger editor when selecting package items
       <location filename="../src/dlgTriggerEditor.cpp" line="8581"/>
       <source>&quot;%1&quot; cannot be changed here: Mudlet cannot safely change it under the name it is shown with, so anything saved for it could go somewhere else. Its value may show up blank for the same reason. A script can still change it.</source>
       <extracomment>Warning shown in the editor&apos;s Variables view for a variable it cannot write back to Lua. %1 is the name the variable is shown under.</extracomment>
-      <translation type="unfinished"/>
+      <translation>„%1“ zde nelze změnit: Mudlet ji nedokáže bezpečně změnit pod jménem, pod kterým je zobrazena, takže cokoli pro ni uložené by mohlo skončit jinde. Ze stejného důvodu se může její hodnota zobrazovat prázdná. Skript ji změnit pořád může.</translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="10671"/>
@@ -14458,7 +14514,7 @@ Package item warning banner shown in trigger editor when selecting package items
       <location filename="../src/dlgTriggerEditor.cpp" line="126"/>
       <source>&lt;ol&gt;&lt;li&gt;Click on the &apos;Add Item&apos; icon above.&lt;/li&gt;&lt;li&gt;Define an input &lt;strong&gt;pattern&lt;/strong&gt; either literally or with a Perl regular expression.&lt;/li&gt;&lt;li&gt;Define a &apos;substitution&apos; &lt;strong&gt;command&lt;/strong&gt; to send to the game in clear text &lt;strong&gt;instead of the alias pattern&lt;/strong&gt;, or write a script for more complicated needs.&lt;/li&gt;&lt;li&gt;&lt;strong&gt;Activate&lt;/strong&gt; the alias.&lt;/li&gt;&lt;/ol&gt;</source>
       <extracomment>Help contents of a selectable option for the Alias intro</extracomment>
-      <translation>&lt;ol&gt;&lt;li&gt;Klikněte nahoře na ikonu „Přidat položku“.&lt;/li&gt;&lt;li&gt;Určete vstupní &lt;strong&gt;vzor&lt;/strong&gt;, buď doslovně, nebo perlovským regulárním výrazem.&lt;/li&gt;&lt;li&gt;Určete náhradní &lt;strong&gt;příkaz&lt;/strong&gt;, který se &lt;strong&gt;místo vzoru aliasu&lt;/strong&gt; odešle do hry jako čitelný text, nebo pro složitější potřeby napište skript.&lt;/li&gt;&lt;li&gt;Alias &lt;strong&gt;aktivujte&lt;/strong&gt;.&lt;/li&gt;&lt;/ol&gt;</translation>
+      <translation>&lt;ol>&lt;li>Klikněte nahoře na ikonu „Přidat položku“.&lt;/li>&lt;li>Určete vstupní &lt;strong>vzor&lt;/strong>, buď doslovně, nebo perlovským regulárním výrazem.&lt;/li>&lt;li>Určete náhradní &lt;strong>příkaz&lt;/strong>, který se &lt;strong>místo vzoru aliasu&lt;/strong> odešle do hry jako prostý text, nebo pro složitější potřeby napište skript.&lt;/li>&lt;li>Alias &lt;strong>aktivujte&lt;/strong>.&lt;/li>&lt;/ol></translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="158"/>
@@ -14476,7 +14532,7 @@ Package item warning banner shown in trigger editor when selecting package items
       <location filename="../src/dlgTriggerEditor.cpp" line="162"/>
       <source>&lt;ol&gt;&lt;li&gt;Click on the &apos;Add Item&apos; icon above.&lt;/li&gt;&lt;li&gt;Define a &lt;strong&gt;pattern&lt;/strong&gt; that you want to trigger on.&lt;/li&gt;&lt;li&gt;Select the appropriate pattern &lt;strong&gt;type&lt;/strong&gt;.&lt;/li&gt;&lt;li&gt;Define a clear text &lt;strong&gt;command&lt;/strong&gt; that you want to send to the game if the trigger finds the pattern in the text from the game, or write a script for more complicated needs..&lt;/li&gt;&lt;li&gt;&lt;strong&gt;Activate&lt;/strong&gt; the trigger.&lt;/li&gt;&lt;/ol&gt;</source>
       <extracomment>Help contents of a selectable option for the Trigger intro</extracomment>
-      <translation>&lt;ol&gt;&lt;li&gt;Klikněte nahoře na ikonu „Přidat položku“.&lt;/li&gt;&lt;li&gt;Určete &lt;strong&gt;vzor&lt;/strong&gt;, na který má trigger reagovat.&lt;/li&gt;&lt;li&gt;Vyberte odpovídající &lt;strong&gt;typ&lt;/strong&gt; vzoru.&lt;/li&gt;&lt;li&gt;Určete &lt;strong&gt;příkaz&lt;/strong&gt; v čitelném textu, který se odešle do hry, když trigger vzor ve výstupu najde, nebo pro složitější potřeby napište skript.&lt;/li&gt;&lt;li&gt;Trigger &lt;strong&gt;aktivujte&lt;/strong&gt;.&lt;/li&gt;&lt;/ol&gt;</translation>
+      <translation>&lt;ol>&lt;li>Klikněte nahoře na ikonu „Přidat položku“.&lt;/li>&lt;li>Určete &lt;strong>vzor&lt;/strong>, na který má trigger reagovat.&lt;/li>&lt;li>Vyberte odpovídající &lt;strong>typ&lt;/strong> vzoru.&lt;/li>&lt;li>Určete &lt;strong>příkaz&lt;/strong> jako prostý text, který se odešle do hry, když trigger vzor ve výstupu najde, nebo pro složitější potřeby napište skript.&lt;/li>&lt;li>Trigger &lt;strong>aktivujte&lt;/strong>.&lt;/li>&lt;/ol></translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="193"/>
@@ -14524,7 +14580,7 @@ Package item warning banner shown in trigger editor when selecting package items
       <location filename="../src/dlgTriggerEditor.cpp" line="222"/>
       <source>&lt;ol&gt;&lt;li&gt;Click on the &apos;Add Item&apos; icon above.&lt;/li&gt;&lt;li&gt;Define the &lt;strong&gt;timespan&lt;/strong&gt; after which the timer should react in a this format: hours : minutes : seconds.&lt;/li&gt;&lt;li&gt;Define a clear text &lt;strong&gt;command&lt;/strong&gt; that you want to send to the game when the time has passed, or write a script for more complicated needs.&lt;/li&gt;&lt;li&gt;&lt;strong&gt;Activate&lt;/strong&gt; the timer.&lt;/li&gt;&lt;/ol&gt;&lt;p&gt;&lt;strong&gt;Note:&lt;/strong&gt; If you want the trigger to react only once and not regularly, use the Lua tempTimer() function instead.&lt;/p&gt;</source>
       <extracomment>Help contents of a selectable option for the Timer intro</extracomment>
-      <translation>&lt;ol&gt;&lt;li&gt;Klikněte nahoře na ikonu „Přidat položku“.&lt;/li&gt;&lt;li&gt;Určete &lt;strong&gt;časový úsek&lt;/strong&gt;, po kterém má timer zareagovat, ve tvaru hodiny : minuty : sekundy.&lt;/li&gt;&lt;li&gt;Určete &lt;strong&gt;příkaz&lt;/strong&gt; v čitelném textu, který se po uplynutí času odešle do hry, nebo pro složitější potřeby napište skript.&lt;/li&gt;&lt;li&gt;Timer &lt;strong&gt;aktivujte&lt;/strong&gt;.&lt;/li&gt;&lt;/ol&gt;&lt;p&gt;&lt;strong&gt;Poznámka:&lt;/strong&gt; Pokud má reagovat jen jednou a ne opakovaně, použijte místo toho Lua funkci tempTimer().&lt;/p&gt;</translation>
+      <translation>&lt;ol>&lt;li>Klikněte nahoře na ikonu „Přidat položku“.&lt;/li>&lt;li>Určete &lt;strong>časový úsek&lt;/strong>, po kterém má timer zareagovat, ve tvaru hodiny : minuty : sekundy.&lt;/li>&lt;li>Určete &lt;strong>příkaz&lt;/strong> jako prostý text, který se po uplynutí času odešle do hry, nebo pro složitější potřeby napište skript.&lt;/li>&lt;li>Timer &lt;strong>aktivujte&lt;/strong>.&lt;/li>&lt;/ol>&lt;p>&lt;strong>Poznámka:&lt;/strong> Pokud má reagovat jen jednou a ne opakovaně, použijte místo toho Lua funkci tempTimer().&lt;/p></translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="230"/>
@@ -14562,7 +14618,7 @@ Package item warning banner shown in trigger editor when selecting package items
       <location filename="../src/dlgTriggerEditor.cpp" line="266"/>
       <source>&lt;ol&gt;&lt;li&gt;Click on the &apos;Add Item&apos; icon above.&lt;/li&gt;&lt;li&gt;Click on &lt;strong&gt;&apos;grab key&apos;&lt;/strong&gt; and then press your key combination, e.g. including modifier keys like Control, Shift, etc.&lt;/li&gt;&lt;li&gt;Define a clear text &lt;strong&gt;command&lt;/strong&gt; that you want to send to the game if the button is pressed, or write a script for more complicated needs.&lt;/li&gt;&lt;li&gt;&lt;strong&gt;Activate&lt;/strong&gt; the new key binding.&lt;/li&gt;&lt;/ol&gt;</source>
       <extracomment>Help contents of a selectable option for the Keys intro</extracomment>
-      <translation>&lt;ol&gt;&lt;li&gt;Klikněte nahoře na ikonu „Přidat položku“.&lt;/li&gt;&lt;li&gt;Klikněte na &lt;strong&gt;„sejmout klávesu“&lt;/strong&gt; a stiskněte svou kombinaci kláves, klidně včetně modifikátorů jako Control, Shift apod.&lt;/li&gt;&lt;li&gt;Určete &lt;strong&gt;příkaz&lt;/strong&gt; v čitelném textu, který se po stisku odešle do hry, nebo pro složitější potřeby napište skript.&lt;/li&gt;&lt;li&gt;Novou klávesovou zkratku &lt;strong&gt;aktivujte&lt;/strong&gt;.&lt;/li&gt;&lt;/ol&gt;</translation>
+      <translation>&lt;ol>&lt;li>Klikněte nahoře na ikonu „Přidat položku“.&lt;/li>&lt;li>Klikněte na &lt;strong>„zachytit klávesu“&lt;/strong> a stiskněte svou kombinaci kláves, klidně včetně modifikátorů jako Control, Shift apod.&lt;/li>&lt;li>Určete &lt;strong>příkaz&lt;/strong> jako prostý text, který se po stisku odešle do hry, nebo pro složitější potřeby napište skript.&lt;/li>&lt;li>Novou klávesovou zkratku &lt;strong>aktivujte&lt;/strong>.&lt;/li>&lt;/ol></translation>
     </message>
     <message>
       <location filename="../src/dlgTriggerEditor.cpp" line="273"/>
@@ -15017,7 +15073,7 @@ Package item warning banner shown in trigger editor when selecting package items
     <message>
       <location filename="../src/ui/keybindings_main_area.ui" line="100"/>
       <source>&lt;p&gt;Enter one or more commands to use if the given command matches the pattern. (Optional)&lt;/p&gt;&lt;p&gt;This could be another alias or a command to send directly to the game. For complex commands that require modification of variables within this profile, use a Lua script in the editor area below instead. It&apos;s possible to use both this field and a Lua script - the contents of this field will be used before running the script.&lt;/p&gt;</source>
-      <translation>&lt;p&gt;Zadejte jeden nebo více příkazů, které se použijí, když daný příkaz sedí na vzor. (Nepovinné)&lt;/p&gt;&lt;p&gt;Může to být další alias nebo příkaz odesílaný přímo do hry. Pro složité příkazy, které potřebují měnit proměnné v tomto profilu, použijte raději Lua skript v editoru níže. Lze použít obojí – obsah tohoto pole se použije před spuštěním skriptu.&lt;/p&gt;</translation>
+      <translation>&lt;p>Zadejte jeden nebo více příkazů, které se použijí, když daný příkaz odpovídá vzoru. (Nepovinné)&lt;/p>&lt;p>Může to být další alias nebo příkaz odesílaný přímo do hry. Pro složité příkazy, které potřebují měnit proměnné v tomto profilu, použijte raději Lua skript v editoru níže. Lze použít obojí – obsah tohoto pole se použije před spuštěním skriptu.&lt;/p></translation>
     </message>
     <message>
       <location filename="../src/ui/keybindings_main_area.ui" line="103"/>
@@ -15032,7 +15088,7 @@ Package item warning banner shown in trigger editor when selecting package items
     <message>
       <location filename="../src/ui/keybindings_main_area.ui" line="127"/>
       <source>Grab New Key</source>
-      <translation>Sejmout novou klávesu</translation>
+      <translation>Zachytit novou klávesu</translation>
     </message>
   </context>
   <context>
@@ -16216,7 +16272,7 @@ Neposkytuje se ŽÁDNÁ ZÁRUKA v rozsahu povoleném zákonem.</translation>
     <message>
       <location filename="../src/mudlet.cpp" line="2657"/>
       <source>German (Austria, revised by F M Baumann)</source>
-      <translation>němčina (Rakousko, revize F. M. Baumann)</translation>
+      <translation>němčina (Rakousko, revize F. M. Baumanna)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="2658"/>
@@ -16231,7 +16287,7 @@ Neposkytuje se ŽÁDNÁ ZÁRUKA v rozsahu povoleném zákonem.</translation>
     <message>
       <location filename="../src/mudlet.cpp" line="2660"/>
       <source>German (Switzerland, revised by F M Baumann)</source>
-      <translation>němčina (Švýcarsko, revize F. M. Baumann)</translation>
+      <translation>němčina (Švýcarsko, revize F. M. Baumanna)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="2661"/>
@@ -16241,7 +16297,7 @@ Neposkytuje se ŽÁDNÁ ZÁRUKA v rozsahu povoleném zákonem.</translation>
     <message>
       <location filename="../src/mudlet.cpp" line="2662"/>
       <source>German (Germany/Belgium/Luxemburg, revised by F M Baumann)</source>
-      <translation>němčina (Německo, Belgie a Lucembursko, revize F. M. Baumann)</translation>
+      <translation>němčina (Německo, Belgie a Lucembursko, revize F. M. Baumanna)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="2663"/>
@@ -16302,129 +16358,134 @@ Neposkytuje se ŽÁDNÁ ZÁRUKA v rozsahu povoleném zákonem.</translation>
       <location filename="../src/mudlet.cpp" line="634"/>
       <source>this window has no menu for commands to be placed in</source>
       <extracomment>Refusal shown to a package whose profile is in a window with no menu of its own to place commands in</extracomment>
-      <translation type="unfinished"/>
+      <translation>toto okno nemá menu, do kterého by šlo umístit příkazy</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="638"/>
       <source>Extensions</source>
       <extracomment>Name of the menu that packages add their own commands to, shown inside the Options menu</extracomment>
-      <translation type="unfinished"/>
+      <translation>Rozšíření</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="672"/>
       <source>&quot;%1&quot; is already a command in this menu, so it cannot also be a submenu</source>
       <extracomment>Refusal shown to a package, %1 is one part of the menu path it asked for</extracomment>
-      <translation type="unfinished"/>
+      <translation>„%1“ už je v tomto menu příkazem, takže nemůže být zároveň podmenu</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="773"/>
       <location filename="../src/mudlet.cpp" line="783"/>
       <source>that is not a key sequence Qt understands</source>
       <extracomment>Refusal shown to a package that asked for a keyboard shortcut Qt could not make sense of</extracomment>
-      <translation type="unfinished"/>
+      <translation>takovému zápisu klávesové zkratky Qt nerozumí</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="802"/>
       <location filename="../src/mudlet.cpp" line="841"/>
       <source>%1 is already taken by &quot;%2&quot;</source>
       <extracomment>Refusal shown to a package, %1 is a keyboard shortcut such as &quot;Ctrl+K&quot; and %2 the name of whatever already uses it</extracomment>
-      <translation type="unfinished"/>
+      <translation>%1 už používá „%2“</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="833"/>
       <source>%1 is already taken by a command from another profile</source>
       <extracomment>Refusal shown to a package, %1 is a keyboard shortcut such as &quot;Ctrl+K&quot; that a command belonging to a different profile already uses</extracomment>
-      <translation type="unfinished"/>
+      <translation>%1 už používá příkaz z jiného profilu</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="869"/>
       <source>%1 is already taken by Mudlet</source>
       <extracomment>Refusal shown to a package, %1 is a keyboard shortcut such as &quot;Ctrl+K&quot; that Mudlet itself already uses</extracomment>
-      <translation type="unfinished"/>
+      <translation>%1 už používá Mudlet</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="889"/>
       <source>%1 is already taken by a key binding in this profile</source>
       <extracomment>Refusal shown to a package, %1 is a keyboard shortcut such as &quot;Ctrl+K&quot; that one of the profile&apos;s own key bindings already uses</extracomment>
-      <translation type="unfinished"/>
+      <translation>%1 už používá klávesová zkratka v tomto profilu</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="892"/>
       <source>%1 is already taken by the &quot;%2&quot; key binding</source>
       <extracomment>Refusal shown to a package, %1 is a keyboard shortcut such as &quot;Ctrl+K&quot; and %2 the name of the profile&apos;s key binding that already uses it</extracomment>
-      <translation type="unfinished"/>
+      <translation>%1 už používá klávesová zkratka „%2“</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="949"/>
       <source>a menu path needs a menu item to go in, so it cannot be used with surfaces = &quot;toolbar&quot;</source>
       <extracomment>Refusal shown to a package that gave a menu path for a command it also asked to keep off the menu. Leave surfaces and toolbar as they are, they are the names a package writes in its own code</extracomment>
-      <translation type="unfinished"/>
+      <translation>cesta v menu potřebuje položku menu, do které patří, takže ji nelze použít se surfaces = "toolbar"</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="954"/>
       <source>a shortcut needs a menu item to hang on, so it cannot be used with surfaces = &quot;toolbar&quot;</source>
       <extracomment>Refusal shown to a package that asked for a keyboard shortcut on a command it also asked to keep off the menu. Leave surfaces and toolbar as they are, they are the names a package writes in its own code</extracomment>
-      <translation type="unfinished"/>
+      <translation>zkratka potřebuje položku menu, ke které patří, takže ji nelze použít se surfaces = "toolbar"</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="973"/>
       <source>the main toolbar is hidden, so a toolbar-only command would be invisible - turn it on in Preferences -&gt; General, or place this command on the menu too</source>
       <extracomment>Refusal shown to a package that asked for a toolbar command while the toolbar is switched off. &quot;Preferences -&gt; General&quot; is a menu path and should be translated the same way as those menu entries are</extracomment>
-      <translation type="unfinished"/>
+      <translation>hlavní panel nástrojů je skrytý, takže příkaz jen na panelu nástrojů by nebyl vidět – zapněte ho v Nastavení → Obecné, nebo umístěte tento příkaz i do menu</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="976"/>
       <source>the menu bar is hidden, so a menu-only command would be invisible - turn it on in Preferences -&gt; General, or place this command on the toolbar too</source>
       <extracomment>Refusal shown to a package that asked for a menu command while the menu bar is switched off. &quot;Preferences -&gt; General&quot; is a menu path and should be translated the same way as those menu entries are</extracomment>
-      <translation type="unfinished"/>
+      <translation>řádek menu je skrytý, takže příkaz jen v menu by nebyl vidět – zapněte ho v Nastavení → Obecné, nebo umístěte tento příkaz i na panel nástrojů</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="979"/>
       <source>both the menu bar and the main toolbar are hidden, so this command would be invisible - turn one of them on in Preferences -&gt; General</source>
       <extracomment>Refusal shown to a package that asked for a command while both the menu bar and the toolbar are switched off. &quot;Preferences -&gt; General&quot; is a menu path and should be translated the same way as those menu entries are</extracomment>
-      <translation type="unfinished"/>
+      <translation>řádek menu i hlavní panel nástrojů jsou skryté, takže tento příkaz by nebyl vidět – zapněte jeden z nich v Nastavení → Obecné</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="992"/>
       <source>the menu bar is hidden, so a shortcut would never fire - turn it on in Preferences -&gt; General</source>
       <extracomment>Refusal shown to a package that asked for a keyboard shortcut while the menu bar is switched off. &quot;Preferences -&gt; General&quot; is a menu path and should be translated the same way as those menu entries are</extracomment>
-      <translation type="unfinished"/>
+      <translation>řádek menu je skrytý, takže by se zkratka nikdy nespustila – zapněte ho v Nastavení → Obecné</translation>
     </message>
     <message numerus="yes">
       <location filename="../src/mudlet.cpp" line="997"/>
       <source>a key sequence can be %n step(s) long at most</source>
       <extracomment>Refusal shown to a package that asked for a keyboard shortcut of more steps than Qt can hold, %n is that limit as a number</extracomment>
-      <translation type="unfinished"/>
+      <translation>
+        <numerusform>posloupnost kláves může mít nejvýš %n krok</numerusform>
+        <numerusform>posloupnost kláves může mít nejvýš %n kroky</numerusform>
+        <numerusform>posloupnost kláves může mít nejvýš %n kroků</numerusform>
+        <numerusform>posloupnost kláves může mít nejvýš %n kroků</numerusform>
+      </translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="1024"/>
       <source>&quot;%1&quot; is already a submenu here, so a command cannot take that label too</source>
       <extracomment>Refusal shown to a package, %1 is the name it gave its command</extracomment>
-      <translation type="unfinished"/>
+      <translation>„%1“ už je tady podmenu, takže příkaz nemůže dostat stejný popisek</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="1367"/>
       <source>%1 is now used by the &quot;%2&quot; command in your &quot;%3&quot; profile, so this profile&apos;s key binding on it will not fire. Put one of the two on a different key to use both.</source>
       <extracomment>Warning shown in the editor when an add-on command in another of the player&apos;s profiles takes a key one of this profile&apos;s key bindings uses. %1 is a key such as &quot;Alt+F9&quot;, %2 the name of the command and %3 the name of the profile it was added in.</extracomment>
-      <translation type="unfinished"/>
+      <translation>%1 teď používá příkaz „%2“ z vašeho profilu „%3“, takže klávesová zkratka tohoto profilu na stejné klávese se nespustí. Chcete-li používat obojí, přesuňte jedno z nich na jinou klávesu.</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="1561"/>
       <source>a command from another profile</source>
       <extracomment>Stands in for an add-on command&apos;s name where naming it would say what a different profile has installed. Appears in a list of what holds a keyboard shortcut.</extracomment>
-      <translation type="unfinished"/>
+      <translation>příkaz z jiného profilu</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="1701"/>
       <source>that command is not on the toolbar, and a pulse has nothing to colour without a button</source>
       <extracomment>Refusal shown to a package that asked to flash a command placed on the menu only, where there is no button to colour</extracomment>
-      <translation type="unfinished"/>
+      <translation>tento příkaz není na panelu nástrojů a bez tlačítka nemá pulzování co obarvit</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="1713"/>
       <source>&quot;%1&quot; is not a colour Qt recognises</source>
       <extracomment>Refusal shown to a package, %1 is the colour name or code it supplied</extracomment>
-      <translation type="unfinished"/>
+      <translation>„%1“ není barva, kterou Qt zná</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="1944"/>
@@ -16573,19 +16634,19 @@ Neposkytuje se ŽÁDNÁ ZÁRUKA v rozsahu povoleném zákonem.</translation>
       <location filename="../src/mudlet.cpp" line="2543"/>
       <source>Portable data directory unusable</source>
       <extracomment>Title of the warning shown at startup when portable.txt names a data directory Mudlet cannot use</extracomment>
-      <translation type="unfinished"/>
+      <translation>Přenosný datový adresář nelze použít</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="2545"/>
       <source>%1 names the data directory %2, which Mudlet cannot use.</source>
       <extracomment>%1 is the full path of the portable.txt file, %2 the data directory it names that Mudlet cannot use</extracomment>
-      <translation type="unfinished"/>
+      <translation>%1 uvádí datový adresář %2, který Mudlet nemůže použít.</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="2547"/>
       <source>Mudlet is using %1 instead, so profiles kept in the portable directory will not be listed. Correct the file and restart Mudlet to use that directory again.</source>
       <extracomment>%1 is the full path of the directory Mudlet has fallen back to for profiles and settings</extracomment>
-      <translation type="unfinished"/>
+      <translation>Mudlet místo něj používá %1, takže profily uložené v přenosném adresáři se nezobrazí. Opravte soubor a restartujte Mudlet, aby zase používal ten adresář.</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="2636"/>
@@ -16659,7 +16720,7 @@ Neposkytuje se ŽÁDNÁ ZÁRUKA v rozsahu povoleném zákonem.</translation>
     <message>
       <location filename="../src/mudlet.cpp" line="2683"/>
       <source>English (Hong Kong SAR China)</source>
-      <translation>angličtina (Hongkong (ZAO Číny))</translation>
+      <translation>angličtina (Hongkong – ZAO Číny)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="2684"/>
@@ -17045,7 +17106,7 @@ Neposkytuje se ŽÁDNÁ ZÁRUKA v rozsahu povoleném zákonem.</translation>
       <location filename="../src/mudlet.cpp" line="2952"/>
       <source>CP1162 (Latin/Thai)</source>
       <extracomment>Keep the English translation intact, so if a user accidentally changes to a language they don&apos;t understand, they can change back e.g. ISO 8859-2 (Центральная Европа/Central European)</extracomment>
-      <translation type="unfinished"/>
+      <translation>CP1162 (latinka, thajské/Latin/Thai)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="2960"/>
@@ -17092,13 +17153,13 @@ Neposkytuje se ŽÁDNÁ ZÁRUKA v rozsahu povoleném zákonem.</translation>
       <location filename="../src/mudlet.cpp" line="4403"/>
       <source> (listening)</source>
       <extracomment>Added to the title of the window whose profile has the microphone open, after the profile name</extracomment>
-      <translation type="unfinished"/>
+      <translation> (poslouchá)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="6046"/>
       <source>Hide map</source>
       <extracomment>Toolbox menu entry while the map is on screen - activating it hides the map</extracomment>
-      <translation type="unfinished"/>
+      <translation>Skrýt mapu</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="6049"/>
@@ -17153,13 +17214,13 @@ Neposkytuje se ŽÁDNÁ ZÁRUKA v rozsahu povoleném zákonem.</translation>
       <location filename="../src/mudlet.cpp" line="7298"/>
       <source>Pause</source>
       <extracomment>Button on the replay toolbar that holds the replay where it is</extracomment>
-      <translation type="unfinished"/>
+      <translation>Pozastavit</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="7209"/>
       <source>Hold the replay where it is. It carries on from the same point when you resume.</source>
       <extracomment>Tooltip on the replay toolbar&apos;s Pause button</extracomment>
-      <translation type="unfinished"/>
+      <translation>Pozastaví přehrávání záznamu na aktuálním místě. Po obnovení pokračuje od stejného bodu.</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="7214"/>
@@ -17171,19 +17232,19 @@ Neposkytuje se ŽÁDNÁ ZÁRUKA v rozsahu povoleném zákonem.</translation>
       <location filename="../src/mudlet.cpp" line="7217"/>
       <source>End the replay now, without playing the rest of it.</source>
       <extracomment>Tooltip on the replay toolbar&apos;s Stop button</extracomment>
-      <translation type="unfinished"/>
+      <translation>Ukončí přehrávání záznamu hned, bez přehrání zbytku.</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="7273"/>
       <source>%1 (paused)</source>
       <extracomment>Replaces the elapsed-time readout on the replay toolbar while the replay is held. %1 is the already translated and formatted &quot;Time: ...&quot; text, so do not add a time prefix of your own</extracomment>
-      <translation type="unfinished"/>
+      <translation>%1 (pozastaveno)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="7294"/>
       <source>Resume</source>
       <extracomment>Button on the replay toolbar that lets a held replay carry on</extracomment>
-      <translation type="unfinished"/>
+      <translation>Pokračovat</translation>
     </message>
     <message numerus="yes">
       <location filename="../src/mudlet.cpp" line="7496"/>
@@ -17353,12 +17414,12 @@ Neposkytuje se ŽÁDNÁ ZÁRUKA v rozsahu povoleném zákonem.</translation>
     <message>
       <location filename="../src/mudlet.cpp" line="2793"/>
       <source>Norwegian Bokmål</source>
-      <translation>bokmål</translation>
+      <translation>norština (bokmål)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="2794"/>
       <source>Norwegian Bokmål (Norway)</source>
-      <translation>bokmål (Norsko)</translation>
+      <translation>norština (bokmål, Norsko)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="2795"/>
@@ -17403,12 +17464,12 @@ Neposkytuje se ŽÁDNÁ ZÁRUKA v rozsahu povoleném zákonem.</translation>
     <message>
       <location filename="../src/mudlet.cpp" line="2803"/>
       <source>Norwegian Nynorsk</source>
-      <translation>nynorsk</translation>
+      <translation>norština (nynorsk)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="2804"/>
       <source>Norwegian Nynorsk (Norway)</source>
-      <translation>nynorsk (Norsko)</translation>
+      <translation>norština (nynorsk, Norsko)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="2805"/>
@@ -17754,140 +17815,140 @@ Neposkytuje se ŽÁDNÁ ZÁRUKA v rozsahu povoleném zákonem.</translation>
       <location filename="../src/mudlet.cpp" line="2888"/>
       <source>ASCII (Basic)</source>
       <extracomment>Keep the English translation intact, so if a user accidentally changes to a language they don&apos;t understand, they can change back e.g. ISO 8859-2 (Центральная Европа/Central European)</extracomment>
-      <translation>ASCII (základní)</translation>
+      <translation>ASCII (základní/Basic)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="2890"/>
       <source>UTF-8 (Recommended)</source>
       <extracomment>Keep the English translation intact, so if a user accidentally changes to a language they don&apos;t understand, they can change back e.g. ISO 8859-2 (Центральная Европа/Central European)</extracomment>
-      <translation>UTF-8 (doporučeno)</translation>
+      <translation>UTF-8 (doporučeno/Recommended)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="2892"/>
       <source>EUC-KR (Korean)</source>
       <extracomment>Keep the English translation intact, so if a user accidentally changes to a language they don&apos;t understand, they can change back e.g. ISO 8859-2 (Центральная Европа/Central European)</extracomment>
-      <translation>EUC-KR (korejské)</translation>
+      <translation>EUC-KR (korejské/Korean)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="2894"/>
       <source>GBK (Chinese)</source>
       <extracomment>Keep the English translation intact, so if a user accidentally changes to a language they don&apos;t understand, they can change back e.g. ISO 8859-2 (Центральная Европа/Central European)</extracomment>
-      <translation>GBK (čínské)</translation>
+      <translation>GBK (čínské/Chinese)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="2896"/>
       <source>GB18030 (Chinese)</source>
       <extracomment>Keep the English translation intact, so if a user accidentally changes to a language they don&apos;t understand, they can change back e.g. ISO 8859-2 (Центральная Европа/Central European)</extracomment>
-      <translation>GB18030 (čínské)</translation>
+      <translation>GB18030 (čínské/Chinese)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="2898"/>
       <source>Big5-ETen (Taiwan)</source>
       <extracomment>Keep the English translation intact, so if a user accidentally changes to a language they don&apos;t understand, they can change back e.g. ISO 8859-2 (Центральная Европа/Central European)</extracomment>
-      <translation>Big5-ETen (Tchaj-wan)</translation>
+      <translation>Big5-ETen (Tchaj-wan/Taiwan)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="2900"/>
       <source>Big5-HKSCS (Hong Kong)</source>
       <extracomment>Keep the English translation intact, so if a user accidentally changes to a language they don&apos;t understand, they can change back e.g. ISO 8859-2 (Центральная Европа/Central European)</extracomment>
-      <translation>Big5-HKSCS (Hongkong)</translation>
+      <translation>Big5-HKSCS (Hongkong/Hong Kong)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="2902"/>
       <source>ISO 8859-1 (Western European)</source>
       <extracomment>Keep the English translation intact, so if a user accidentally changes to a language they don&apos;t understand, they can change back e.g. ISO 8859-2 (Центральная Европа/Central European)</extracomment>
-      <translation>ISO 8859-1 (západoevropské)</translation>
+      <translation>ISO 8859-1 (západoevropské/Western European)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="2904"/>
       <source>ISO 8859-2 (Central European)</source>
       <extracomment>Keep the English translation intact, so if a user accidentally changes to a language they don&apos;t understand, they can change back e.g. ISO 8859-2 (Центральная Европа/Central European)</extracomment>
-      <translation>ISO 8859-2 (středoevropské)</translation>
+      <translation>ISO 8859-2 (středoevropské/Central European)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="2906"/>
       <source>ISO 8859-3 (South European)</source>
       <extracomment>Keep the English translation intact, so if a user accidentally changes to a language they don&apos;t understand, they can change back e.g. ISO 8859-2 (Центральная Европа/Central European)</extracomment>
-      <translation>ISO 8859-3 (jihoevropské)</translation>
+      <translation>ISO 8859-3 (jihoevropské/South European)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="2908"/>
       <source>ISO 8859-4 (Baltic)</source>
       <extracomment>Keep the English translation intact, so if a user accidentally changes to a language they don&apos;t understand, they can change back e.g. ISO 8859-2 (Центральная Европа/Central European)</extracomment>
-      <translation>ISO 8859-4 (baltské)</translation>
+      <translation>ISO 8859-4 (baltské/Baltic)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="2910"/>
       <source>ISO 8859-5 (Cyrillic)</source>
       <extracomment>Keep the English translation intact, so if a user accidentally changes to a language they don&apos;t understand, they can change back e.g. ISO 8859-2 (Центральная Европа/Central European)</extracomment>
-      <translation>ISO 8859-5 (cyrilice)</translation>
+      <translation>ISO 8859-5 (cyrilice/Cyrillic)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="2912"/>
       <source>ISO 8859-6 (Arabic)</source>
       <extracomment>Keep the English translation intact, so if a user accidentally changes to a language they don&apos;t understand, they can change back e.g. ISO 8859-2 (Центральная Европа/Central European)</extracomment>
-      <translation>ISO 8859-6 (arabské)</translation>
+      <translation>ISO 8859-6 (arabské/Arabic)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="2914"/>
       <source>ISO 8859-7 (Greek)</source>
       <extracomment>Keep the English translation intact, so if a user accidentally changes to a language they don&apos;t understand, they can change back e.g. ISO 8859-2 (Центральная Европа/Central European)</extracomment>
-      <translation>ISO 8859-7 (řecké)</translation>
+      <translation>ISO 8859-7 (řecké/Greek)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="2916"/>
       <source>ISO 8859-8 (Hebrew Visual)</source>
       <extracomment>Keep the English translation intact, so if a user accidentally changes to a language they don&apos;t understand, they can change back e.g. ISO 8859-2 (Центральная Европа/Central European)</extracomment>
-      <translation>ISO 8859-8 (hebrejské, vizuální)</translation>
+      <translation>ISO 8859-8 (hebrejské, vizuální/Hebrew Visual)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="2918"/>
       <source>ISO 8859-9 (Turkish)</source>
       <extracomment>Keep the English translation intact, so if a user accidentally changes to a language they don&apos;t understand, they can change back e.g. ISO 8859-2 (Центральная Европа/Central European)</extracomment>
-      <translation>ISO 8859-9 (turecké)</translation>
+      <translation>ISO 8859-9 (turecké/Turkish)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="2920"/>
       <source>ISO 8859-10 (Nordic)</source>
       <extracomment>Keep the English translation intact, so if a user accidentally changes to a language they don&apos;t understand, they can change back e.g. ISO 8859-2 (Центральная Европа/Central European)</extracomment>
-      <translation>ISO 8859-10 (severské)</translation>
+      <translation>ISO 8859-10 (severské/Nordic)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="2922"/>
       <source>ISO 8859-11 (Latin/Thai)</source>
       <extracomment>Keep the English translation intact, so if a user accidentally changes to a language they don&apos;t understand, they can change back e.g. ISO 8859-2 (Центральная Европа/Central European)</extracomment>
-      <translation>ISO 8859-11 (latinka/thajské)</translation>
+      <translation>ISO 8859-11 (latinka, thajské/Latin/Thai)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="2924"/>
       <source>ISO 8859-13 (Baltic)</source>
       <extracomment>Keep the English translation intact, so if a user accidentally changes to a language they don&apos;t understand, they can change back e.g. ISO 8859-2 (Центральная Европа/Central European)</extracomment>
-      <translation>ISO 8859-13 (baltské)</translation>
+      <translation>ISO 8859-13 (baltské/Baltic)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="2926"/>
       <source>ISO 8859-14 (Celtic)</source>
       <extracomment>Keep the English translation intact, so if a user accidentally changes to a language they don&apos;t understand, they can change back e.g. ISO 8859-2 (Центральная Европа/Central European)</extracomment>
-      <translation>ISO 8859-14 (keltské)</translation>
+      <translation>ISO 8859-14 (keltské/Celtic)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="2928"/>
       <source>ISO 8859-15 (Western)</source>
       <extracomment>Keep the English translation intact, so if a user accidentally changes to a language they don&apos;t understand, they can change back e.g. ISO 8859-2 (Центральная Европа/Central European)</extracomment>
-      <translation>ISO 8859-15 (západní)</translation>
+      <translation>ISO 8859-15 (západní/Western)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="2930"/>
       <source>ISO 8859-16 (Romanian)</source>
       <extracomment>Keep the English translation intact, so if a user accidentally changes to a language they don&apos;t understand, they can change back e.g. ISO 8859-2 (Центральная Европа/Central European)</extracomment>
-      <translation>ISO 8859-16 (rumunské)</translation>
+      <translation>ISO 8859-16 (rumunské/Romanian)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="2932"/>
       <location filename="../src/mudlet.cpp" line="2934"/>
       <source>CP437 (OEM Font)</source>
       <extracomment>Keep the English translation intact, so if a user accidentally changes to a language they don&apos;t understand, they can change back e.g. ISO 8859-2 (Центральная Европа/Central European)</extracomment>
-      <translation>CP437 (OEM písmo)</translation>
+      <translation>CP437 (OEM písmo/OEM Font)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="2936"/>
@@ -17901,38 +17962,38 @@ Neposkytuje se ŽÁDNÁ ZÁRUKA v rozsahu povoleném zákonem.</translation>
       <location filename="../src/mudlet.cpp" line="2942"/>
       <source>CP737 (DOS Greek)</source>
       <extracomment>Keep the English translation intact, so if a user accidentally changes to a language they don&apos;t understand, they can change back e.g. ISO 8859-2 (Центральная Европа/Central European)</extracomment>
-      <translation>CP737 (DOS řecké)</translation>
+      <translation>CP737 (DOS řecké/DOS Greek)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="2944"/>
       <source>CP850 (Western Europe)</source>
       <extracomment>Keep the English translation intact, so if a user accidentally changes to a language they don&apos;t understand, they can change back e.g. ISO 8859-2 (Центральная Европа/Central European)</extracomment>
-      <translation>CP850 (západní Evropa)</translation>
+      <translation>CP850 (západní Evropa/Western Europe)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="2946"/>
       <source>CP866 (Cyrillic/Russian)</source>
       <extracomment>Keep the English translation intact, so if a user accidentally changes to a language they don&apos;t understand, they can change back e.g. ISO 8859-2 (Центральная Европа/Central European)</extracomment>
-      <translation>CP866 (cyrilice/ruské)</translation>
+      <translation>CP866 (cyrilice, ruské/Cyrillic/Russian)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="2948"/>
       <location filename="../src/mudlet.cpp" line="2950"/>
       <source>CP869 (DOS Greek 2)</source>
       <extracomment>Keep the English translation intact, so if a user accidentally changes to a language they don&apos;t understand, they can change back e.g. ISO 8859-2 (Центральная Европа/Central European)</extracomment>
-      <translation>CP869 (DOS řecké 2)</translation>
+      <translation>CP869 (DOS řecké 2/DOS Greek 2)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="2954"/>
       <source>KOI8-R (Cyrillic)</source>
       <extracomment>Keep the English translation intact, so if a user accidentally changes to a language they don&apos;t understand, they can change back e.g. ISO 8859-2 (Центральная Европа/Central European)</extracomment>
-      <translation>KOI8-R (cyrilice)</translation>
+      <translation>KOI8-R (cyrilice/Cyrillic)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="2956"/>
       <source>KOI8-U (Cyrillic/Ukrainian)</source>
       <extracomment>Keep the English translation intact, so if a user accidentally changes to a language they don&apos;t understand, they can change back e.g. ISO 8859-2 (Центральная Европа/Central European)</extracomment>
-      <translation>KOI8-U (cyrilice/ukrajinské)</translation>
+      <translation>KOI8-U (cyrilice, ukrajinské/Cyrillic/Ukrainian)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="2958"/>
@@ -17944,55 +18005,55 @@ Neposkytuje se ŽÁDNÁ ZÁRUKA v rozsahu povoleném zákonem.</translation>
       <location filename="../src/mudlet.cpp" line="2964"/>
       <source>WINDOWS-1250 (Central European)</source>
       <extracomment>Keep the English translation intact, so if a user accidentally changes to a language they don&apos;t understand, they can change back e.g. ISO 8859-2 (Центральная Европа/Central European)</extracomment>
-      <translation>WINDOWS-1250 (středoevropské)</translation>
+      <translation>WINDOWS-1250 (středoevropské/Central European)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="2966"/>
       <source>WINDOWS-1251 (Cyrillic)</source>
       <extracomment>Keep the English translation intact, so if a user accidentally changes to a language they don&apos;t understand, they can change back e.g. ISO 8859-2 (Центральная Европа/Central European)</extracomment>
-      <translation>WINDOWS-1251 (cyrilice)</translation>
+      <translation>WINDOWS-1251 (cyrilice/Cyrillic)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="2968"/>
       <source>WINDOWS-1252 (Western)</source>
       <extracomment>Keep the English translation intact, so if a user accidentally changes to a language they don&apos;t understand, they can change back e.g. ISO 8859-2 (Центральная Европа/Central European)</extracomment>
-      <translation>WINDOWS-1252 (západní)</translation>
+      <translation>WINDOWS-1252 (západní/Western)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="2970"/>
       <source>WINDOWS-1253 (Greek)</source>
       <extracomment>Keep the English translation intact, so if a user accidentally changes to a language they don&apos;t understand, they can change back e.g. ISO 8859-2 (Центральная Европа/Central European)</extracomment>
-      <translation>WINDOWS-1253 (řecké)</translation>
+      <translation>WINDOWS-1253 (řecké/Greek)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="2972"/>
       <source>WINDOWS-1254 (Turkish)</source>
       <extracomment>Keep the English translation intact, so if a user accidentally changes to a language they don&apos;t understand, they can change back e.g. ISO 8859-2 (Центральная Европа/Central European)</extracomment>
-      <translation>WINDOWS-1254 (turecké)</translation>
+      <translation>WINDOWS-1254 (turecké/Turkish)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="2974"/>
       <source>WINDOWS-1255 (Hebrew)</source>
       <extracomment>Keep the English translation intact, so if a user accidentally changes to a language they don&apos;t understand, they can change back e.g. ISO 8859-2 (Центральная Европа/Central European)</extracomment>
-      <translation>WINDOWS-1255 (hebrejské)</translation>
+      <translation>WINDOWS-1255 (hebrejské/Hebrew)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="2976"/>
       <source>WINDOWS-1256 (Arabic)</source>
       <extracomment>Keep the English translation intact, so if a user accidentally changes to a language they don&apos;t understand, they can change back e.g. ISO 8859-2 (Центральная Европа/Central European)</extracomment>
-      <translation>WINDOWS-1256 (arabské)</translation>
+      <translation>WINDOWS-1256 (arabské/Arabic)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="2978"/>
       <source>WINDOWS-1257 (Baltic)</source>
       <extracomment>Keep the English translation intact, so if a user accidentally changes to a language they don&apos;t understand, they can change back e.g. ISO 8859-2 (Центральная Европа/Central European)</extracomment>
-      <translation>WINDOWS-1257 (baltské)</translation>
+      <translation>WINDOWS-1257 (baltské/Baltic)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="2980"/>
       <source>WINDOWS-1258 (Vietnamese)</source>
       <extracomment>Keep the English translation intact, so if a user accidentally changes to a language they don&apos;t understand, they can change back e.g. ISO 8859-2 (Центральная Европа/Central European)</extracomment>
-      <translation>WINDOWS-1258 (vietnamské)</translation>
+      <translation>WINDOWS-1258 (vietnamské/Vietnamese)</translation>
     </message>
     <message>
       <location filename="../src/mudlet.cpp" line="7449"/>
@@ -18714,7 +18775,7 @@ zkuste to znovu, až doběhne.</translation>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="910"/>
       <source>&lt;p&gt;Use anti aliasing on fonts. Smoothes fonts if you have a high screen resolution and you can use larger fonts. Note that on low resolutions and small font sizes, the font gets blurry.&lt;/p&gt;</source>
-      <translation>&lt;p&gt;Vyhlazovat písma. Při vysokém rozlišení obrazovky písmo zjemní a umožní použít větší velikosti. Pozor: při nízkém rozlišení a malých velikostech se písmo rozmaže.&lt;/p&gt;</translation>
+      <translation>&lt;p>Vyhlazovat písma. Písmo se zjemní; hodí se při vysokém rozlišení obrazovky, kde lze použít větší velikosti. Pozor: při nízkém rozlišení a malých velikostech se písmo rozmaže.&lt;/p></translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="916"/>
@@ -18927,7 +18988,7 @@ zkuste to znovu, až doběhne.</translation>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="586"/>
       <source>&lt;p&gt;Check all Key-bindings against key-presses.&lt;/p&gt;&lt;p&gt;&lt;i&gt;Versions of Mudlet prior to &lt;b&gt;3.9.0&lt;/b&gt; would stop checking after the first matching combination of&lt;/i&gt; KeyCode &lt;i&gt;and&lt;/i&gt; KeyModifier &lt;i&gt;was found and then send the command and/or run the script of that Key-binding only.  This&lt;/i&gt; per-profile &lt;i&gt;option tells Mudlet to check and run the remaining matches; but, to retain compatibility with previous versions, defaults to the &lt;b&gt;un&lt;/b&gt;-checked state.&lt;/i&gt;&lt;/p&gt;</source>
-      <translation>&lt;p&gt;Porovnávat stisk klávesy se všemi klávesovými zkratkami.&lt;/p&gt;&lt;p&gt;&lt;i&gt;Mudlet před verzí &lt;b&gt;3.9.0&lt;/b&gt; přestal hledat, jakmile našel první shodnou kombinaci&lt;/i&gt; KeyCode &lt;i&gt;a&lt;/i&gt; KeyModifier &lt;i&gt;, a provedl příkaz nebo skript jen té jedné zkratky. Tato volba&lt;/i&gt; pro každý profil &lt;i&gt;říká Mudletu, aby prošel a spustil i zbývající shody; kvůli zachování kompatibility se staršími verzemi je ale ve výchozím stavu &lt;b&gt;ne&lt;/b&gt;zaškrtnutá.&lt;/i&gt;&lt;/p&gt;</translation>
+      <translation>&lt;p>Porovnávat stisk klávesy se všemi klávesovými zkratkami.&lt;/p>&lt;p>&lt;i>Mudlet před verzí &lt;b>3.9.0&lt;/b> přestal hledat, jakmile našel první shodnou kombinaci&lt;/i> KeyCode &lt;i>a&lt;/i> KeyModifier&lt;i>, a provedl příkaz nebo skript jen té jedné zkratky. Tato volba&lt;/i> pro každý profil &lt;i>říká Mudletu, aby prošel a spustil i zbývající shody; kvůli zachování kompatibility se staršími verzemi je ale ve výchozím stavu &lt;b>ne&lt;/b>zaškrtnutá.&lt;/i>&lt;/p></translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="733"/>
@@ -19053,7 +19114,7 @@ zkuste to znovu, až doběhne.</translation>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2767"/>
       <source>&lt;p&gt;The default area (area id -1) is used by some mapper scripts as a temporary &apos;holding area&apos; for rooms before they&apos;re placed in the correct area.&lt;/p&gt;</source>
-      <translation>&lt;p&gt;Výchozí oblast (id oblasti -1) používají některé mapovací skripty jako dočasnou „odkladní plochu“ pro místnosti, než se zařadí do správné oblasti.&lt;/p&gt;</translation>
+      <translation>&lt;p>Výchozí oblast (ID oblasti -1) používají některé mapovací skripty jako dočasnou „odkladní plochu“ pro místnosti, než se zařadí do správné oblasti.&lt;/p></translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2741"/>
@@ -19123,7 +19184,7 @@ zkuste to znovu, až doběhne.</translation>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="4025"/>
       <source>Show snoop data in main console</source>
-      <translation>Zobrazovat data snoop v hlavní konzoli</translation>
+      <translation>Zobrazovat data ze sledování v hlavní konzoli</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="3894"/>
@@ -19168,7 +19229,7 @@ zkuste to znovu, až doběhne.</translation>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="1406"/>
       <source>&lt;i&gt;Experimental: the odd line can still be joined or left split when it should not be. &lt;a href=&quot;https://github.com/Mudlet/Mudlet/issues&quot;&gt;Tell us how it works for you&lt;/a&gt; - your feedback is what will make this better.&lt;/i&gt;</source>
-      <translation>&lt;i&gt;Experimentální: některý řádek se pořád může spojit nebo zůstat rozdělený, i když neměl. &lt;a href="https://github.com/Mudlet/Mudlet/issues"&gt;Napište nám, jak vám to funguje&lt;/a&gt; – vaše zpětná vazba je to, co tohle vylepší.&lt;/i&gt;</translation>
+      <translation>&lt;i>Experimentální: některý řádek se pořád může spojit nebo zůstat rozdělený, i když neměl. &lt;a href="https://github.com/Mudlet/Mudlet/issues">Napište nám, jak vám to funguje&lt;/a> – díky vaší zpětné vazbě to můžeme vylepšit.&lt;/i></translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2792"/>
@@ -19399,7 +19460,7 @@ zkuste to znovu, až doběhne.</translation>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="5132"/>
       <source>Always send</source>
-      <translation>Vždy odeslat</translation>
+      <translation>Vždy odesílat</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="5137"/>
@@ -19414,17 +19475,17 @@ zkuste to znovu, až doběhne.</translation>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="4950"/>
       <source>&lt;p&gt;Some MUDs use a flawed interpretation of the ANSI Set Graphics Rendition (&lt;b&gt;SGR&lt;/b&gt;) code sequences for 16M color mode which only uses semi-colons and not colons to separate parameter elements i.e. instead of using a code in the form: &lt;br&gt;&lt;tt&gt;\e[&lt;/tt&gt;...&lt;tt&gt;38:2:&lt;/tt&gt;&amp;lt;Color Space Id&amp;gt;&lt;tt&gt;:&lt;/tt&gt;&amp;lt;Red&amp;gt;&lt;tt&gt;:&lt;/tt&gt;&amp;lt;Green&amp;gt;&lt;tt&gt;:&lt;/tt&gt;&amp;lt;Blue&amp;gt;&lt;tt&gt;:&lt;/tt&gt;&amp;lt;Unused&amp;gt;&lt;tt&gt;:&lt;/tt&gt;&amp;lt;Tolerance&amp;gt;&lt;tt&gt;:&lt;/tt&gt;&amp;lt;Tolerance Color Space (0=CIELUV; 1=CIELAB)&amp;gt;&lt;tt&gt;;&lt;/tt&gt;...&lt;tt&gt;m&lt;/tt&gt;&lt;br&gt;where the &lt;i&gt;Color Space Id&lt;/i&gt; is expected to be an empty string to specify the usual (default) case and all of the &lt;i&gt;Parameter Elements&lt;/i&gt; (the &quot;2&quot; and the values in the &lt;tt&gt;&amp;lt;...&amp;gt;&lt;/tt&gt;s) may, technically, be omitted; they use: &lt;br&gt;&lt;tt&gt;\e[&lt;/tt&gt;...&lt;tt&gt;38;2;&lt;/tt&gt;&amp;lt;Red&amp;gt;&lt;tt&gt;;&lt;/tt&gt;&amp;lt;Green&amp;gt;&lt;tt&gt;;&lt;/tt&gt;&amp;lt;Blue&amp;gt;&lt;tt&gt;;&lt;/tt&gt;...&lt;tt&gt;m&lt;/tt&gt;&lt;br&gt;or: &lt;br&gt;&lt;tt&gt;\e[&lt;/tt&gt;...&lt;tt&gt;38;2;&lt;/tt&gt;&amp;lt;Color Space Id&amp;gt;&lt;tt&gt;;&lt;/tt&gt;&amp;lt;Red&amp;gt;&lt;tt&gt;;&lt;/tt&gt;&amp;lt;Green&amp;gt;&lt;tt&gt;;&lt;/tt&gt;&amp;lt;Blue&amp;gt;&lt;tt&gt;;&lt;/tt&gt;...&lt;tt&gt;m&lt;/tt&gt; .&lt;/p&gt;&lt;p&gt;It is not possible to reliably detect the difference between these two so checking this option causes Mudlet to expect the last one with the additional (but empty!) parameter.&lt;/p&gt;</source>
-      <translation>&lt;p&gt;Některé MUDy používají vadný výklad sekvencí ANSI Set Graphics Rendition (&lt;b&gt;SGR&lt;/b&gt;) pro režim 16M barev, který k oddělení prvků parametru používá jen středníky místo dvojteček. Místo kódu ve tvaru: &lt;br&gt;&lt;tt&gt;\e[&lt;/tt&gt;...&lt;tt&gt;38:2:&lt;/tt&gt;&amp;lt;Color Space Id&amp;gt;&lt;tt&gt;:&lt;/tt&gt;&amp;lt;Red&amp;gt;&lt;tt&gt;:&lt;/tt&gt;&amp;lt;Green&amp;gt;&lt;tt&gt;:&lt;/tt&gt;&amp;lt;Blue&amp;gt;&lt;tt&gt;:&lt;/tt&gt;&amp;lt;Unused&amp;gt;&lt;tt&gt;:&lt;/tt&gt;&amp;lt;Tolerance&amp;gt;&lt;tt&gt;:&lt;/tt&gt;&amp;lt;Tolerance Color Space (0=CIELUV; 1=CIELAB)&amp;gt;&lt;tt&gt;;&lt;/tt&gt;...&lt;tt&gt;m&lt;/tt&gt;&lt;br&gt;, kde se u &lt;i&gt;Color Space Id&lt;/i&gt; očekává prázdný řetězec pro obvyklý (výchozí) případ a všechny &lt;i&gt;prvky parametru&lt;/i&gt; (ona „2“ a hodnoty v &lt;tt&gt;&amp;lt;...&amp;gt;&lt;/tt&gt;) lze technicky vynechat, používají: &lt;br&gt;&lt;tt&gt;\e[&lt;/tt&gt;...&lt;tt&gt;38;2;&lt;/tt&gt;&amp;lt;Red&amp;gt;&lt;tt&gt;;&lt;/tt&gt;&amp;lt;Green&amp;gt;&lt;tt&gt;;&lt;/tt&gt;&amp;lt;Blue&amp;gt;&lt;tt&gt;;&lt;/tt&gt;...&lt;tt&gt;m&lt;/tt&gt;&lt;br&gt;nebo: &lt;br&gt;&lt;tt&gt;\e[&lt;/tt&gt;...&lt;tt&gt;38;2;&lt;/tt&gt;&amp;lt;Color Space Id&amp;gt;&lt;tt&gt;;&lt;/tt&gt;&amp;lt;Red&amp;gt;&lt;tt&gt;;&lt;/tt&gt;&amp;lt;Green&amp;gt;&lt;tt&gt;;&lt;/tt&gt;&amp;lt;Blue&amp;gt;&lt;tt&gt;;&lt;/tt&gt;...&lt;tt&gt;m&lt;/tt&gt; .&lt;/p&gt;&lt;p&gt;Tyto dva tvary od sebe nelze spolehlivě rozeznat, a proto zaškrtnutí této volby přiměje Mudlet očekávat ten druhý, s parametrem navíc (byť prázdným).&lt;/p&gt;</translation>
+      <translation>&lt;p>Některé MUDy používají vadný výklad sekvencí ANSI Set Graphics Rendition (&lt;b>SGR&lt;/b>) pro režim 16M barev, který k oddělení prvků parametru používá jen středníky místo dvojteček. Místo kódu ve tvaru: &lt;br>&lt;tt>\e[&lt;/tt>...&lt;tt>38:2:&lt;/tt>&lt;Color Space Id&gt;&lt;tt>:&lt;/tt>&lt;Red&gt;&lt;tt>:&lt;/tt>&lt;Green&gt;&lt;tt>:&lt;/tt>&lt;Blue&gt;&lt;tt>:&lt;/tt>&lt;Unused&gt;&lt;tt>:&lt;/tt>&lt;Tolerance&gt;&lt;tt>:&lt;/tt>&lt;Tolerance Color Space (0=CIELUV; 1=CIELAB)&gt;&lt;tt>;&lt;/tt>...&lt;tt>m&lt;/tt>,&lt;br>kde se u &lt;i>Color Space Id&lt;/i> očekává prázdný řetězec pro obvyklý (výchozí) případ a všechny &lt;i>prvky parametru&lt;/i> (ona „2“ a hodnoty v &lt;tt>&lt;...&gt;&lt;/tt>) lze technicky vynechat, používají: &lt;br>&lt;tt>\e[&lt;/tt>...&lt;tt>38;2;&lt;/tt>&lt;Red&gt;&lt;tt>;&lt;/tt>&lt;Green&gt;&lt;tt>;&lt;/tt>&lt;Blue&gt;&lt;tt>;&lt;/tt>...&lt;tt>m&lt;/tt>&lt;br>nebo: &lt;br>&lt;tt>\e[&lt;/tt>...&lt;tt>38;2;&lt;/tt>&lt;Color Space Id&gt;&lt;tt>;&lt;/tt>&lt;Red&gt;&lt;tt>;&lt;/tt>&lt;Green&gt;&lt;tt>;&lt;/tt>&lt;Blue&gt;&lt;tt>;&lt;/tt>...&lt;tt>m&lt;/tt> .&lt;/p>&lt;p>Tyto dva tvary od sebe nelze spolehlivě rozeznat, a proto zaškrtnutí této volby přiměje Mudlet očekávat ten druhý, s parametrem navíc (byť prázdným).&lt;/p></translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="4953"/>
       <source>When checked, interpret 16-million-color SGR sequences using the non-standard semi-colon form some MUDs send, which includes an extra empty parameter for the color space identifier. Enable this if true-color text from your game shows the wrong colors.</source>
-      <translation>Když je zaškrtnuto, vykládají se sekvence SGR pro 16 milionů barev v nestandardním středníkovém tvaru, který posílají některé MUDy a který obsahuje prázdný parametr navíc pro identifikátor barevného prostoru. Zapněte, pokud se text v pravých barvách zobrazuje ve špatných barvách.</translation>
+      <translation>Když je zaškrtnuto, vykládají se sekvence SGR pro 16 milionů barev v nestandardním středníkovém tvaru, který posílají některé MUDy a který obsahuje prázdný parametr navíc pro identifikátor barevného prostoru. Zapněte, pokud hra v režimu 16 milionů barev zobrazuje text ve špatných barvách.</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="5023"/>
       <source>Show &apos;LUA OK&apos; messages for Timers with the specified minimum interval (h:mm:ss.zzz), the minimum value (the default) shows all such messages but can render the Central Debug Console useless if there is a very small interval timer running.</source>
-      <translation>Zobrazovat zprávy „LUA OK“ u timerů se zadaným minimálním intervalem (h:mm:ss.zzz). Nejnižší hodnota (výchozí) zobrazí všechny tyto zprávy, ale při běhu timeru s velmi krátkým intervalem může centrální ladicí konzoli znepoužitelnit.</translation>
+      <translation>Zobrazovat zprávy „LUA OK“ u timerů se zadaným minimálním intervalem (h:mm:ss.zzz). Nejnižší hodnota (výchozí) zobrazí všechny tyto zprávy, ale když běží timer s velmi krátkým intervalem, může centrální ladicí konzoli zahltit tak, že bude nepoužitelná.</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="5060"/>
@@ -19552,14 +19613,14 @@ zkuste to znovu, až doběhne.</translation>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="913"/>
       <source>Use anti aliasing on fonts. Smooths fonts if you have a high screen resolution and you can use larger fonts. Note that on low resolutions and small font sizes, the font gets blurry.</source>
-      <translation>Vyhlazovat písma. Při vysokém rozlišení obrazovky písmo zjemní a umožní použít větší velikosti. Pozor: při nízkém rozlišení a malých velikostech se písmo rozmaže.</translation>
+      <translation>Vyhlazovat písma. Písmo se zjemní; hodí se při vysokém rozlišení obrazovky, kde lze použít větší velikosti. Pozor: při nízkém rozlišení a malých velikostech se písmo rozmaže.</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="940"/>
       <source>This font is not monospace, which may not be ideal for playing some text games:
 you can use it but there could be issues with aligning columns of text</source>
       <comment>Note that this text is split into two lines so that the message is not too wide in English, please do the same for other locales where the text is the same or longer</comment>
-      <translation>Toto písmo není neproporcionální, což u některých textových her nemusí být ideální:
+      <translation>Toto písmo nemá pevnou šířku znaků, což u některých textových her nemusí být ideální:
 můžete ho použít, ale mohou nastat potíže se zarovnáním sloupců textu</translation>
     </message>
     <message>
@@ -20012,17 +20073,17 @@ můžete ho použít, ale mohou nastat potíže se zarovnáním sloupců textu</
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="5150"/>
       <source>&lt;p&gt;Makes triggers faster by preparing the &lt;tt&gt;matches&lt;/tt&gt;, &lt;tt&gt;multimatches&lt;/tt&gt; and &lt;tt&gt;line&lt;/tt&gt; variables only when a script reads them. Scripts see the same values either way.&lt;/p&gt;&lt;p&gt;Turn this off only if a script or package looks through Lua&apos;s global table directly (with &lt;tt&gt;rawget&lt;/tt&gt;, &lt;tt&gt;next&lt;/tt&gt; or &lt;tt&gt;pairs&lt;/tt&gt; on &lt;tt&gt;_G&lt;/tt&gt;) and misbehaves because it does not find them there.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p>Zrychluje triggery tím, že proměnné &lt;tt>matches&lt;/tt>, &lt;tt>multimatches&lt;/tt> a &lt;tt>line&lt;/tt> připravuje, až když je skript čte. Skripty v obou případech vidí stejné hodnoty.&lt;/p>&lt;p>Vypněte to jen tehdy, když nějaký skript nebo balíček prochází globální tabulku Lua přímo (pomocí &lt;tt>rawget&lt;/tt>, &lt;tt>next&lt;/tt> nebo &lt;tt>pairs&lt;/tt> na &lt;tt>_G&lt;/tt>) a nefunguje správně, protože je tam nenajde.&lt;/p></translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="5153"/>
       <source>When checked, triggers run faster because the matches, multimatches and line variables are only prepared when a script reads them. Turn this off only if a script or package that looks through Lua&apos;s global table directly misbehaves.</source>
-      <translation type="unfinished"/>
+      <translation>Když je zaškrtnuto, běží triggery rychleji, protože proměnné matches, multimatches a line se připravují, až když je skript čte. Vypněte to jen tehdy, když nefunguje správně skript nebo balíček, který prochází globální tabulku Lua přímo.</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="5156"/>
       <source>Prepare trigger variables only when a script reads them</source>
-      <translation type="unfinished"/>
+      <translation>Připravovat proměnné triggerů, až když je skript čte</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2405"/>
@@ -20160,7 +20221,7 @@ můžete ho použít, ale mohou nastat potíže se zarovnáním sloupců textu</
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2770"/>
       <source>The default area (area id -1) is used by some mapper scripts as a temporary &apos;holding area&apos; for rooms before they&apos;re placed in the correct area.</source>
-      <translation>Výchozí oblast (id oblasti -1) používají některé mapovací skripty jako dočasnou „odkladní plochu“ pro místnosti, než se zařadí do správné oblasti.</translation>
+      <translation>Výchozí oblast (ID oblasti -1) používají některé mapovací skripty jako dočasnou „odkladní plochu“ pro místnosti, než se zařadí do správné oblasti.</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="2744"/>
@@ -20271,7 +20332,7 @@ můžete ho použít, ale mohou nastat potíže se zarovnáním sloupců textu</
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="4979"/>
       <source>plaintext with the profile (portable)</source>
-      <translation>čitelným textem u profilu (přenosné)</translation>
+      <translation>profilu jako čitelný text (přenosné)</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="5070"/>
@@ -20296,7 +20357,7 @@ můžete ho použít, ale mohou nastat potíže se zarovnáním sloupců textu</
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="4162"/>
       <source>Accept self-signed certificates</source>
-      <translation>Přijímat certifikáty podepsané sebou samým</translation>
+      <translation>Přijímat certifikáty podepsané svým držitelem</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="4172"/>
@@ -20616,7 +20677,7 @@ můžete ho použít, ale mohou nastat potíže se zarovnáním sloupců textu</
       <location filename="../src/ui/profile_preferences.ui" line="5020"/>
       <source>&lt;p&gt;Show &apos;LUA OK&apos; messages for Timers with the specified minimum interval (h:mm:ss.zzz), the minimum value (the default) shows all such messages but can render the &lt;i&gt;Central Debug Console&lt;/i&gt; useless if there is a very small interval timer running.&lt;/p&gt;</source>
       <comment>The term in &apos;...&apos; refer to a Mudlet specific thing and ought to match the corresponding translation elsewhere.</comment>
-      <translation>&lt;p&gt;Zobrazovat zprávy „LUA OK“ u timerů se zadaným minimálním intervalem (h:mm:ss.zzz). Nejnižší hodnota (výchozí) zobrazí všechny tyto zprávy, ale při běhu timeru s velmi krátkým intervalem může &lt;i&gt;centrální ladicí konzoli&lt;/i&gt; znepoužitelnit.&lt;/p&gt;</translation>
+      <translation>&lt;p>Zobrazovat zprávy „LUA OK“ u timerů se zadaným minimálním intervalem (h:mm:ss.zzz). Nejnižší hodnota (výchozí) zobrazí všechny tyto zprávy, ale když běží timer s velmi krátkým intervalem, může &lt;i>centrální ladicí konzoli&lt;/i> zahltit tak, že bude nepoužitelná.&lt;/p></translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="5076"/>
@@ -20637,7 +20698,7 @@ můžete ho použít, ale mohou nastat potíže se zarovnáním sloupců textu</
       <location filename="../src/ui/profile_preferences.ui" line="5099"/>
       <source> seconds</source>
       <extracomment>For most locales a space should be included so that the text is separated from the number!</extracomment>
-      <translation> sekund</translation>
+      <translation> sekundy</translation>
     </message>
     <message>
       <location filename="../src/ui/profile_preferences.ui" line="4615"/>
@@ -21420,7 +21481,7 @@ nebo skript LUA</translation>
     <message>
       <location filename="../src/ui/timers_main_area.ui" line="126"/>
       <source>&lt;p&gt;Enter one or more commands to use if the given command matches the pattern. (Optional)&lt;/p&gt;&lt;p&gt;This could be another alias or a command to send directly to the game. For complex commands that require modification of variables within this profile, use a Lua script in the editor area below instead. It&apos;s possible to use both this field and a Lua script - the contents of this field will be used before running the script.&lt;/p&gt;</source>
-      <translation>&lt;p&gt;Zadejte jeden nebo více příkazů, které se použijí, když daný příkaz sedí na vzor. (Nepovinné)&lt;/p&gt;&lt;p&gt;Může to být další alias nebo příkaz odesílaný přímo do hry. Pro složité příkazy, které potřebují měnit proměnné v tomto profilu, použijte raději Lua skript v editoru níže. Lze použít obojí – obsah tohoto pole se použije před spuštěním skriptu.&lt;/p&gt;</translation>
+      <translation>&lt;p>Zadejte jeden nebo více příkazů, které se použijí, když daný příkaz odpovídá vzoru. (Nepovinné)&lt;/p>&lt;p>Může to být další alias nebo příkaz odesílaný přímo do hry. Pro složité příkazy, které potřebují měnit proměnné v tomto profilu, použijte raději Lua skript v editoru níže. Lze použít obojí – obsah tohoto pole se použije před spuštěním skriptu.&lt;/p></translation>
     </message>
     <message>
       <location filename="../src/ui/timers_main_area.ui" line="129"/>
@@ -21479,7 +21540,7 @@ nebo skript LUA</translation>
       <location filename="../src/ui/triggers_main_area.ui" line="449"/>
       <source> lines)</source>
       <extracomment>This text is appended after the numeric value shown in the spin box (so that it and the prefix text is &quot;wrapped&quot; around it), except when the control is set to the special first value when all of them are replaced by that text.</extracomment>
-      <translation> řádcích)</translation>
+      <translation> řádků)</translation>
     </message>
     <message>
       <location filename="../src/ui/triggers_main_area.ui" line="452"/>
@@ -21500,13 +21561,13 @@ nebo skript LUA</translation>
     <message>
       <location filename="../src/ui/triggers_main_area.ui" line="108"/>
       <source>&lt;p&gt;Show or hide the advanced options for this trigger; hiding them leaves more room for the trigger &lt;i&gt;items&lt;/i&gt; on a smaller screen.&lt;/p&gt;</source>
-      <translation type="unfinished"/>
+      <translation>&lt;p>Zobrazí nebo skryje pokročilé možnosti tohoto triggeru; když jsou skryté, zbude na menší obrazovce víc místa pro &lt;i>položky&lt;/i> triggeru.&lt;/p></translation>
     </message>
     <message>
       <location filename="../src/ui/triggers_main_area.ui" line="111"/>
       <source>Advanced options</source>
       <extracomment>Label of the disclosure button that shows or hides the trigger&apos;s less commonly used settings - the stay open, sound, multi-line, filter and colourise options. Keep it short, it shares one row with the Name and Command fields.</extracomment>
-      <translation type="unfinished"/>
+      <translation>Pokročilé možnosti</translation>
     </message>
     <message>
       <location filename="../src/ui/triggers_main_area.ui" line="260"/>
@@ -21605,7 +21666,7 @@ nebo skript LUA</translation>
     <message>
       <location filename="../src/ui/triggers_main_area.ui" line="98"/>
       <source>&lt;p&gt;Enter one or more commands to use if the given command matches the pattern. (Optional)&lt;/p&gt;&lt;p&gt;This could be another alias or a command to send directly to the game. For complex commands that require modification of variables within this profile, use a Lua script in the editor area below instead. It&apos;s possible to use both this field and a Lua script - the contents of this field will be used before running the script.&lt;/p&gt;</source>
-      <translation>&lt;p&gt;Zadejte jeden nebo více příkazů, které se použijí, když daný příkaz sedí na vzor. (Nepovinné)&lt;/p&gt;&lt;p&gt;Může to být další alias nebo příkaz odesílaný přímo do hry. Pro složité příkazy, které potřebují měnit proměnné v tomto profilu, použijte raději Lua skript v editoru níže. Lze použít obojí – obsah tohoto pole se použije před spuštěním skriptu.&lt;/p&gt;</translation>
+      <translation>&lt;p>Zadejte jeden nebo více příkazů, které se použijí, když daný příkaz odpovídá vzoru. (Nepovinné)&lt;/p>&lt;p>Může to být další alias nebo příkaz odesílaný přímo do hry. Pro složité příkazy, které potřebují měnit proměnné v tomto profilu, použijte raději Lua skript v editoru níže. Lze použít obojí – obsah tohoto pole se použije před spuštěním skriptu.&lt;/p></translation>
     </message>
     <message>
       <location filename="../src/ui/triggers_main_area.ui" line="101"/>
