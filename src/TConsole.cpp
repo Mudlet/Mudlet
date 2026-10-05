@@ -1054,6 +1054,9 @@ void TConsole::clear()
 
 void TConsole::bufferCleared()
 {
+    // A drag held across the clear would otherwise carry on from whatever line later reuses its index
+    mUpperPane->endDrag();
+    mLowerPane->endDrag();
     mUpperPane->resetHScrollbar();
     clearSelection();
     clearSplit();
