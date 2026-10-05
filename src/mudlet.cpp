@@ -8587,6 +8587,12 @@ void mudlet::onlyShowProfiles(const QStringList& predefinedProfiles)
 // to be done on the next Qt event loop iteration:
 void mudlet::armForceClose()
 {
+    // A second close queued behind the first runs inside the first one's
+    // profile save, which pumps events, while that is still tearing Hosts down
+    if (mForceClosePending) {
+        return;
+    }
+    mForceClosePending = true;
     QTimer::singleShot(0ms, this, [this]() {
         // Deferring by one event loop iteration is meant to land outside Lua,
         // but the pump runs the event loop from inside Lua, so it can land
@@ -8596,12 +8602,16 @@ void mudlet::armForceClose()
             if (pHost->getLuaInterpreter()->pumpingEvents()) {
                 qWarning() << "mudlet::armForceClose() - a nested event loop is running, waiting for it to finish";
                 QTimer::singleShot(50ms, this, [this]() {
+                    mForceClosePending = false;
                     armForceClose();
                 });
                 return;
             }
         }
         forceClose();
+        // Not left set: closeEvent() can still refuse the close, and a later
+        // closeMudlet() must then be able to ask again
+        mForceClosePending = false;
     });
 }
 
