@@ -681,6 +681,31 @@ bool TRoom::setExitLock(int exit, bool state)
     return changed;
 }
 
+// For a normal exit that has just been taken away: what a stub can carry, its
+// door and lock, stays if a stub is left in its place, as the map audit has it
+void TRoom::removeExitExtras(const int direction)
+{
+    const QString exitKey{dirCodeToShortString(direction)};
+    bool changed = false;
+    if (!exitStubs.contains(direction)) {
+        changed |= doors.remove(exitKey) > 0;
+        changed |= exitLocks.removeAll(direction) > 0;
+    }
+    changed |= exitWeights.remove(exitKey) > 0;
+    const bool lineRemoved = customLines.remove(exitKey) > 0;
+    customLinesColor.remove(exitKey);
+    customLinesStyle.remove(exitKey);
+    customLinesArrow.remove(exitKey);
+    if (lineRemoved) {
+        calcRoomDimensions();
+        changed = true;
+    }
+    if (changed) {
+        mpRoomDB->mpMap->mMapGraphNeedsUpdate = true;
+        mpRoomDB->mpMap->setUnsaved(__func__);
+    }
+}
+
 bool TRoom::setSpecialExitLock(const QString& cmd, const bool doLock)
 {
     if (!mSpecialExits.contains(cmd)) {
