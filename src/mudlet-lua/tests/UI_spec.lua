@@ -6204,6 +6204,26 @@ describe("Console buffer size", function()
     assert.are.equal(150 - 99, getLineCount(console))
   end)
 
+  -- #10839: the machine's maximum is worked out per wrap column, so a huge
+  -- main wrap width brought it down to no lines at all, while the batch was
+  -- kept as asked and the first trim popped lines that were not there
+  it("a huge main wrap width leaves a working limit and batch", function()
+    local mainWrap = getWindowWrap("main")
+    finally(function() setWindowWrap("main", mainWrap) end)
+    assert.is_true(setWindowWrap("main", 2000000000))
+    assert.is_true(setConsoleBufferSize(console, 1000, 100))
+    local linesLimit, batchSize = getConsoleBufferSize(console)
+    assert.is_true(linesLimit >= 100, "lines limit was " .. linesLimit)
+    assert.is_true(batchSize >= 1 and batchSize < linesLimit, "batch size was " .. batchSize)
+
+    clearWindow(console)
+    for lineNumber = 1, 300 do
+      echo(console, ("huge wrap line %d\n"):format(lineNumber))
+    end
+    local last = getLastLineNumber(console)
+    assert.are.same({"huge wrap line 300"}, getLines(console, last - 1, last))
+  end)
+
   it("useMaximum raises the main console to the buffer maximum", function()
     -- the main console has to be named for this one: with three arguments the
     -- first is read as a window name, so the four argument form only lines up

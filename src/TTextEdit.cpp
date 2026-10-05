@@ -1739,6 +1739,12 @@ void TTextEdit::mouseMoveEvent(QMouseEvent* event)
         return;
     }
 
+    // A script can clear or delete lines while the button is held, taking the line the drag started on
+    if (mDragStart.y() >= static_cast<int>(mpBuffer->buffer.size())) {
+        mMouseTracking = false;
+        return;
+    }
+
     QPoint cursorLocation(tCharIndex, lineIndex);
 
     // A plain left-drag must not register a selection until the pointer has
@@ -2664,6 +2670,10 @@ QString TTextEdit::getSelectedText(const QChar& newlineChar, const bool showTime
     }
     qsizetype startLine = std::max(0, mPA.y());
     qsizetype endLine = std::min<qsizetype>(mPB.y(), (mpBuffer->lineBuffer.size() - 1));
+    // The batch-delete step above can push a selection left on lines a clearWindow() removed off the top
+    if (endLine < startLine) {
+        return {};
+    }
     qsizetype offset = endLine - startLine;
     qsizetype startPos = std::max(0, mPA.x());
     qsizetype endPos = std::min<qsizetype>(mPB.x(), (mpBuffer->lineBuffer.at(endLine).size() - 1));
@@ -3064,6 +3074,11 @@ int TTextEdit::imageTopLine()
 {
     if (!mIsLowerPane) {
         mCursorY = mpBuffer->mCursorY;
+    }
+
+    // deleteLine() can empty the buffer without pulling mCursorY back to it
+    if (mpBuffer->lineBuffer.isEmpty()) {
+        return 0;
     }
 
     if (mCursorY > mScreenHeight) {
@@ -3766,9 +3781,14 @@ void TTextEdit::slot_mouseAction(const QString& uniqueName)
         return;
     }
 
+    // The menu is non-modal, so a script can removeMouseEvent() while it is still open
+    const QStringList mouseEvent = mpHost->mConsoleActions.value(uniqueName);
+    if (mouseEvent.isEmpty()) {
+        return;
+    }
+
     TEvent event{};
-    QStringList mouseEvent = mpHost->mConsoleActions[uniqueName];
-    event.mArgumentList.append(mouseEvent[0]);
+    event.mArgumentList.append(mouseEvent.at(0));
     event.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
     event.mArgumentList.append(uniqueName);
 
