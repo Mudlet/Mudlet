@@ -800,6 +800,7 @@ private slots:
         mp2dMap->slot_setSnapCustomLinePointsToGrid(false);
         map()->mUserMenus.clear();
         map()->mUserActions.clear();
+        map()->mHiddenMenuItems.clear();
         map()->setMmpMapLocation(QString());
         mudlet::self()->setInvertMapZoom(false);
         mp2dMap->mRoomBeingMoved = false;
@@ -1970,6 +1971,67 @@ private slots:
                            "assert(#mouseTestRooms == 2 and mouseTestRooms[1] == %1 and mouseTestRooms[2] == %2, table.concat(mouseTestRooms, ','))")
                                .arg(kWestRoomId)
                                .arg(kEastRoomId)));
+    }
+
+    void test_aScriptCanHideTheViewingItemsAndKeepItsOwn()
+    {
+        buildMap();
+        showMapper(true);
+        QVERIFY(runLua(qsl("hideMapMenuItem('setPlayerLocation')\n"
+                           "hideMapMenuItem('switchMapMode')\n"
+                           "addMapEvent('mouseTestAction', 'mouseTestEvent', '', 'Do the thing')")));
+        rightClickAt(pointUnitsFromCentre(1, 0));
+
+        QVERIFY(!contextMenuItem(qsl("Set player location")));
+        QVERIFY(!contextMenuItem(qsl("Switch to editing mode")));
+        QVERIFY(contextMenuItem(qsl("Do the thing")));
+    }
+
+    void test_aMenuWithEveryItemHiddenDoesNotPopUp()
+    {
+        buildMap();
+        showMapper(true);
+        QVERIFY(runLua(qsl("hideMapMenuItem('setPlayerLocation')\n"
+                           "hideMapMenuItem('switchMapMode')")));
+        rightClickAt(pointUnitsFromCentre(1, 0));
+
+        QVERIFY2(!mp2dMap->mActiveContextMenu, "an empty context menu was put up");
+    }
+
+    void test_hidingAnEditingItemLeavesTheOthersOnTheMenu()
+    {
+        buildMap();
+        showMapper(false);
+        QVERIFY(runLua(qsl("hideMapMenuItem('deleteRoom')")));
+        rightClickAt(pointUnitsFromCentre(1, 0));
+
+        QVERIFY(!contextMenuItem(qsl("Delete")));
+        QVERIFY(contextMenuItem(qsl("Set exits...")));
+        QVERIFY(contextMenuItem(qsl("Create label...")));
+        QVERIFY(contextMenuItem(qsl("Switch to viewing mode")));
+    }
+
+    void test_showingAHiddenItemPutsItBackOnTheMenu()
+    {
+        buildMap();
+        showMapper(true);
+        QVERIFY(runLua(qsl("hideMapMenuItem('setPlayerLocation')\n"
+                           "showMapMenuItem('setPlayerLocation')")));
+        rightClickAt(pointUnitsFromCentre(1, 0));
+
+        QVERIFY(contextMenuItem(qsl("Set player location")));
+    }
+
+    void test_theMenuOnAnEmptyMapLeavesOutHiddenItems()
+    {
+        buildMap();
+        showMapper(true);
+        map()->mapClear();
+        QVERIFY(runLua(qsl("hideMapMenuItem('loadMap')")));
+        rightClickAt(viewCentre());
+
+        QVERIFY(!contextMenuItem(qsl("Load map...")));
+        QVERIFY(contextMenuItem(qsl("Create new map")));
     }
 
     void test_theMenuOnAnEmptyMapOffersToLoadOrCreateOne()

@@ -184,6 +184,36 @@ TMap::~TMap()
     }
 }
 
+// The names scripts pass to hideMapMenuItem(); they are API, so never rename one.
+const QStringList& TMap::builtInMenuItemNames()
+{
+    static const QStringList names{qsl("downloadMap"),
+                                   qsl("loadMap"),
+                                   qsl("createMap"),
+                                   qsl("createRoom"),
+                                   qsl("moveRoom"),
+                                   qsl("configureRoom"),
+                                   qsl("setExits"),
+                                   qsl("createExitLine"),
+                                   qsl("spreadRooms"),
+                                   qsl("shrinkRooms"),
+                                   qsl("deleteRoom"),
+                                   qsl("moveToPosition"),
+                                   qsl("moveToArea"),
+                                   qsl("configureAreas"),
+                                   qsl("createLabel"),
+                                   qsl("exportAreaImage"),
+                                   qsl("setPlayerLocation"),
+                                   qsl("switchMapMode")};
+    return names;
+}
+
+bool TMap::menuItemShown(const QString& itemName) const
+{
+    Q_ASSERT_X(builtInMenuItemNames().contains(itemName), "TMap::menuItemShown", "item name missing from builtInMenuItemNames()");
+    return !mHiddenMenuItems.contains(itemName);
+}
+
 void TMap::refreshMapperColours()
 {
     emit signal_mapperColoursChanged();
