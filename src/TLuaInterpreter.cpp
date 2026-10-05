@@ -94,6 +94,58 @@ extern "C" {
 int luaopen_yajl(lua_State*);
 }
 
+namespace {
+
+// Some modules' methods read their first argument as their own object unchecked, so a script
+// calling one without it, as in env.__tostring() or dir.close(), crashes Mudlet.
+// Upvalues: the module's function, its metatable, its name.
+int checkedSelfMethod(lua_State* L)
+{
+    bool ownObject = false;
+    if (lua_type(L, 1) == LUA_TUSERDATA && lua_getmetatable(L, 1)) {
+        ownObject = lua_rawequal(L, -1, lua_upvalueindex(2));
+        lua_pop(L, 1);
+    }
+    if (!ownObject) {
+        return luaL_typerror(L, 1, lua_tostring(L, lua_upvalueindex(3)));
+    }
+    lua_pushvalue(L, lua_upvalueindex(1));
+    lua_insert(L, 1);
+    lua_call(L, lua_gettop(L) - 1, LUA_MULTRET);
+    return lua_gettop(L);
+}
+
+// methodTable is the metatable field holding the method, or nullptr for the metatable itself
+void guardSelfMethod(lua_State* L, const char* metatableName, const char* methodTable, const char* methodName)
+{
+    luaL_getmetatable(L, metatableName);
+    if (!lua_istable(L, -1)) {
+        lua_pop(L, 1);
+        return;
+    }
+    if (methodTable) {
+        lua_getfield(L, -1, methodTable);
+    } else {
+        lua_pushvalue(L, -1);
+    }
+    if (!lua_istable(L, -1)) {
+        lua_pop(L, 2);
+        return;
+    }
+    lua_getfield(L, -1, methodName);
+    if (!lua_iscfunction(L, -1)) {
+        lua_pop(L, 3);
+        return;
+    }
+    lua_pushvalue(L, -3);
+    lua_pushstring(L, metatableName);
+    lua_pushcclosure(L, checkedSelfMethod, 3);
+    lua_setfield(L, -2, methodName);
+    lua_pop(L, 2);
+}
+
+} // namespace
+
 
 const QString TLuaInterpreter::csmInvalidRoomID{qsl("number %1 is not a valid roomID")};
 const QString TLuaInterpreter::csmInvalidStopWatchID{qsl("stopwatch with ID %1 not found")};
@@ -7101,7 +7153,9 @@ void TLuaInterpreter::initLuaGlobals()
      *     assumes whatever Lua name it offers).
      */
     QQueue<QString> modLoadMessageQueue;
-    loadLuaModule(modLoadMessageQueue, QLatin1String("lfs"), tr("Probably will not be able to access Mudlet Lua code."), QLatin1String("lfs (Lua File System)"));
+    if (loadLuaModule(modLoadMessageQueue, QLatin1String("lfs"), tr("Probably will not be able to access Mudlet Lua code."), QLatin1String("lfs (Lua File System)"))) {
+        guardSelfMethod(pGlobalLua, "directory metatable", "__index", "close");
+    }
     while (!modLoadMessageQueue.isEmpty()) {
         mpHost->postMessage(modLoadMessageQueue.dequeue());
     }
@@ -7126,7 +7180,11 @@ void TLuaInterpreter::initLuaGlobals()
         mpHost->postMessage(modLoadMessageQueue.dequeue());
     }
 
-    loadLuaModule(modLoadMessageQueue, QLatin1String("luasql.sqlite3"), tr("Database support will not be available."), QLatin1String("sqlite3"), QLatin1String("luasql"));
+    if (loadLuaModule(modLoadMessageQueue, QLatin1String("luasql.sqlite3"), tr("Database support will not be available."), QLatin1String("sqlite3"), QLatin1String("luasql"))) {
+        for (const char* metatableName : {"SQLite3 environment", "SQLite3 connection", "SQLite3 cursor"}) {
+            guardSelfMethod(pGlobalLua, metatableName, nullptr, "__tostring");
+        }
+    }
     while (!modLoadMessageQueue.isEmpty()) {
         mpHost->postMessage(modLoadMessageQueue.dequeue());
     }
