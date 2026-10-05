@@ -1935,8 +1935,7 @@ bool TMap::restore(QString location)
                     ifs >> pA->mUserData;
                 } else if (mVersion >= 17) {
                     ifs >> pA->mUserData;
-                    const qreal fallback_map2DZoom = pA->mUserData.take(QLatin1String("system.fallback_map2DZoom")).toDouble();
-                    pA->mLast2DMapZoom = (fallback_map2DZoom >= scmMinXYZoom) ? fallback_map2DZoom : scmDefaultXYZoom;
+                    pA->set2DMapZoom(pA->mUserData.take(QLatin1String("system.fallback_map2DZoom")).toDouble());
                 }
                 if (mVersion >= 21) {
                     int mapLabelsCount = -1;
