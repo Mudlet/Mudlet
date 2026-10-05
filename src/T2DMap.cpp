@@ -4547,11 +4547,16 @@ void T2DMap::slot_customLineAddPoint()
     if (!room) {
         return;
     }
+    // The menu stays open while scripts run, so the line may have been removed or shortened since
+    const QList<QPointF> line = room->customLines.value(mCustomLineSelectedExit);
+    if (mCustomLineSelectedPoint < 0 || mCustomLineSelectedPoint >= line.size()) {
+        return;
+    }
 
     QLineF segment;
     if (mCustomLineSelectedPoint > 0) {
-        segment = QLineF(room->customLines.value(mCustomLineSelectedExit).at(mCustomLineSelectedPoint - 1), room->customLines.value(mCustomLineSelectedExit).at(mCustomLineSelectedPoint));
-    } else if (mCustomLineSelectedPoint == 0) {
+        segment = QLineF(line.at(mCustomLineSelectedPoint - 1), line.at(mCustomLineSelectedPoint));
+    } else {
         // The first user manipulable point IS zero - line is drawn to it from a
         // point around room symbol dependent on the exit direction
         // The first segment of custom line stick out half of the distance
@@ -4578,7 +4583,7 @@ void T2DMap::slot_customLineAddPoint()
         } else {
             customLineStartPoint = QPointF(room->x(), room->y());
         }
-        segment = QLineF(customLineStartPoint, room->customLines.value(mCustomLineSelectedExit).at(0));
+        segment = QLineF(customLineStartPoint, line.at(0));
     }
     segment.setLength(segment.length() / 2.0);
     QPointF newPoint = segment.p2();
@@ -4609,11 +4614,16 @@ void T2DMap::slot_customLineRemovePoint()
     if (!room) {
         return;
     }
+    // The menu stays open while scripts run, so the line may have been removed or shortened since
+    const auto pointCount = room->customLines.value(mCustomLineSelectedExit).size();
+    if (mCustomLineSelectedPoint < 0 || mCustomLineSelectedPoint >= pointCount) {
+        return;
+    }
 
     if (mCustomLineSelectedPoint > 0) {
         room->customLines[mCustomLineSelectedExit].removeAt(mCustomLineSelectedPoint);
         mCustomLineSelectedPoint--;
-    } else if (mCustomLineSelectedPoint == 0 && room->customLines.value(mCustomLineSelectedExit).count() > 1) {
+    } else if (pointCount > 1) {
         // The first user manipulable point IS zero - line is drawn to it from a
         // point around room symbol dependent on the exit direction.  We can only
         // allow its deletion if there is at least another one left.
