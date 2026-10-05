@@ -61,6 +61,8 @@
 
 #include "GroupedTest.h"
 
+using namespace std::chrono_literals;
+
 class SettingsRoundTripTest : public QObject
 {
     Q_OBJECT
@@ -120,7 +122,7 @@ private:
             pDialog->setCurrentColor(color);
             pDialog->accept();
         });
-        pTimer->start(20);
+        pTimer->start(20ms);
     }
 
     bool runLua(const QString& code) const { return mpHost->getLuaInterpreter()->compileAndExecuteScript(code); }

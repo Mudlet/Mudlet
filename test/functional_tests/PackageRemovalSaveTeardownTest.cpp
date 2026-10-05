@@ -244,7 +244,7 @@ private slots:
         uninstallPackageOwingASave(qsl("uninstall-save-deferred"));
         QCOMPARE(saveSpy.count(), 0); // the point of the deferral: not saved on the spot
 
-        QTRY_VERIFY_WITH_TIMEOUT(saveSpy.count() >= 1, 5000);
+        QTRY_VERIFY_WITH_TIMEOUT(saveSpy.count() >= 1, 5s);
         mpHost->waitForProfileSave();
     }
 
@@ -261,7 +261,7 @@ private slots:
         QVERIFY(mpHost->uninstallPackage(qsl("uninstall-save-batch-two"), enums::PackageModuleType::Package));
         QVERIFY(mpHost->uninstallPackage(qsl("uninstall-save-batch-three"), enums::PackageModuleType::Package));
 
-        QTRY_VERIFY_WITH_TIMEOUT(saveSpy.count() >= 1, 5000);
+        QTRY_VERIFY_WITH_TIMEOUT(saveSpy.count() >= 1, 5s);
         mpHost->waitForProfileSave();
         QCOMPARE(saveSpy.count(), 1);
     }
@@ -362,7 +362,7 @@ private slots:
         QVERIFY2(QFile::remove(secondPath), "Could not delete the second archive the way the loop does");
 
         // Long enough that an install merely waiting its turn would have had it.
-        QTest::qWait(1000);
+        QTest::qWait(1s);
         QVERIFY2(mpHost->mInstalledPackages.contains(secondName), "The update was left waiting on an archive the repository loop had already deleted");
 
         mpHost->waitForProfileSave();
@@ -409,7 +409,7 @@ private slots:
             }
         });
 
-        QTRY_VERIFY_WITH_TIMEOUT(mpHost->mInstalledPackages.contains(packageName), 10000);
+        QTRY_VERIFY_WITH_TIMEOUT(mpHost->mInstalledPackages.contains(packageName), 10s);
         QVERIFY2(announcements > 0, "SETUP: no save was announced, so the observer never ran");
         QVERIFY2(!installedFromInsideTheAnnouncement, "The put-off install ran from inside the profileSaveFinished emission that released it");
 

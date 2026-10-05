@@ -49,6 +49,8 @@
 
 #include "GroupedTest.h"
 
+using namespace std::chrono_literals;
+
 class TelnetLargeBurstTest : public QObject
 {
     Q_OBJECT
@@ -113,7 +115,7 @@ private slots:
             QFAIL("No active host available for the test.");
         }
         QSignalSpy connected(&(mpHost->mTelnet), &cTelnet::signal_connected);
-        if (!connected.wait(15000)) {
+        if (!connected.wait(15s)) {
             QFAIL("Could not connect with the host.");
         }
     }
@@ -154,7 +156,7 @@ private slots:
         const QString lastLine = qsl("BURSTLINE %1").arg(lineCount - 1, 6, 10, QLatin1Char('0'));
         QElapsedTimer timer;
         timer.start();
-        while (timer.elapsed() < 15000 && !tailContains(lastLine)) {
+        while (timer.durationElapsed() < 15s && !tailContains(lastLine)) {
             QCoreApplication::processEvents(QEventLoop::AllEvents, 50);
         }
 

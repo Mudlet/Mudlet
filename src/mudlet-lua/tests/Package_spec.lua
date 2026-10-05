@@ -2100,6 +2100,22 @@ describe("Tests installing an archive whose config.lua will not run", function()
   end)
 end)
 
+describe("Tests installing an archive whose config.lua leaves its globals in an awkward state", function()
+  -- The manifest is read back from the globals the script left behind, outside the protected
+  -- call that ran it, where a Lua error cannot be caught
+  it("installs under the name its config.lua asks for and keeps its details", function()
+    local name = "mudlet-spec-trickyconfig"
+    defer(function() removeFixturePackage(name) end)
+
+    installUntilConfirmed(installPackage, fixtureDirectory .. "/" .. name .. ".mpackage",
+                          function() return packageInstalled(name) end, "the fixture with the awkward globals")
+
+    assert.equals("Mudlet test suite", getPackageInfo(name, "author"))
+    assert.is_nil(getPackageInfo(name)["1"], "a global with a number for its name was filed as a detail")
+    assert.equals(1, exists(name .. " alias", "alias"), "the archive's contents were not installed")
+  end)
+end)
+
 describe("Tests the functionality of verbosePackageInstall", function()
   it("installs the package and says so on the main console", function()
     defer(function() removeFixturePackage(minimalPackage) end)
@@ -2554,6 +2570,57 @@ describe("Tests installing a package file from a later Mudlet", function()
     -- though the package itself stays registered, the same way one whose XML is
     -- malformed does
     assert.equals(0, exists(name .. " trigger", "trigger"), "an unreadable file's trigger was installed anyway")
+  end)
+end)
+
+-- A package XML can carry a profile's settings, read the same way a profile's
+-- own save file is when it opens. A module entry there can stop short of its
+-- file, sync flag and priority in a hand-edited or truncated file.
+describe("Tests installing a package XML whose profile settings list an incomplete module", function()
+  local name = "mudlet-spec-incomplete-module-entry"
+  local moduleName = "mudlet-spec-incomplete-module"
+  local xml = getMudletHomeDir() .. "/" .. name .. ".xml"
+
+  it("installs the package and leaves the incomplete module out", function()
+    defer(function()
+      removeFixturePackage(name)
+      os.remove(xml)
+    end)
+    -- Every setting a <Host> element's attributes leave out is turned off as it
+    -- is read, so carry over the ones this profile has rather than change them
+    -- for the specs that run after this one
+    assert.is_true(waitForProfileSaveToPass(), "a profile save was still running")
+    local saved, savedTo = saveProfile()
+    assert.is_true(saved, tostring(savedTo))
+    assert.is_true(waitForProfileSaveToPass(), "the profile save was still running")
+    local settings = readFile(savedTo)
+    local hostElement = settings:match("<Host%s[^>]*>")
+    assert.is_string(hostElement, "the profile's save has no Host element to copy the settings of")
+    local borders = {}
+    for _, border in ipairs({"borderTopHeight", "borderBottomHeight", "borderLeftWidth", "borderRightWidth"}) do
+      borders[#borders + 1] = settings:match("<" .. border .. ">[^<]*</" .. border .. ">") or ""
+    end
+
+    writePackageXml(xml, table.concat({
+      '<HostPackage>',
+      hostElement,
+      table.concat(borders),
+      '<mInstalledModules><key>' .. moduleName .. '</key><priority>0</priority></mInstalledModules>',
+      '</Host>',
+      '</HostPackage>',
+      '<AliasPackage>',
+      '<Alias isActive="yes" isFolder="no">',
+      '<name>' .. name .. ' alias</name><packageName></packageName><script></script>',
+      '<command></command><regex>^' .. name .. '$</regex>',
+      '</Alias>',
+      '</AliasPackage>',
+    }, "\n"))
+
+    installUntilConfirmed(installPackage, xml, function() return packageInstalled(name) end, "the package " .. name)
+
+    assert.equals(1, exists(name .. " alias", "alias"), "the package's alias was not installed")
+    assert.is_false(moduleInstalled(moduleName), "a module with no file to load was listed")
+    assert.is_nil(getModulePath(moduleName))
   end)
 end)
 

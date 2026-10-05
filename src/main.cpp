@@ -43,6 +43,7 @@
 #include <QMessageBox>
 #include <QCommandLineOption>
 #include <QPainter>
+#include <QTextLayout>
 #include <iostream>
 #include <memory>
 #include <vector>
@@ -62,8 +63,12 @@
 #include <QSplashScreen>
 #include <QSslConfiguration>
 #include <QStringList>
-#include <QThreadPool>
 #include <QTranslator>
+#if defined(Q_OS_WINDOWS)
+#include <QThread>
+#else
+#include <pthread.h>
+#endif
 #include "AltFocusMenuBarDisable.h"
 #include "TAccessibleConsole.h"
 #include "TAccessibleTextEdit.h"
@@ -83,7 +88,6 @@
 
 #if defined(Q_OS_WINDOWS) && defined(INCLUDE_UPDATER)
 #include <windows.h>
-#include <QThread>
 #endif
 
 using namespace std::chrono_literals;
@@ -153,6 +157,69 @@ void removeOldNoteColorEmojiFonts()
 }
 #endif // defined(Q_OS_LINUX)
 #endif // defined(INCLUDE_FONTS)
+
+// Joined so the warm-up thread has fully exited, exit handlers included, before the application object
+// and the statics go. Not QThread on macOS: Qt starts threads detached there, so wait() is no join. Not
+// std::thread on Windows: before Qt 6.9 a watcher thread frees its adopted thread data after the join.
+// pthread_create rather than std::thread, which throws when no thread can be had; the warm-up is optional.
+class TlsWarmup
+{
+public:
+    TlsWarmup() = default;
+    TlsWarmup(const TlsWarmup&) = delete;
+    TlsWarmup& operator=(const TlsWarmup&) = delete;
+    ~TlsWarmup() { join(); }
+
+    void start()
+    {
+#if defined(Q_OS_WINDOWS)
+        if (!mThread) {
+            mThread.reset(QThread::create(warmUp));
+            mThread->start();
+        }
+#else
+        if (!mStarted) {
+            const int error = pthread_create(&mThread, nullptr, &TlsWarmup::run, nullptr);
+            mStarted = error == 0;
+            if (!mStarted) {
+                qWarning().nospace() << "TlsWarmup::start() WARNING - no thread for the TLS warm-up (" << qt_error_string(error) << "), so the first connection will load the CA certificates itself";
+            }
+        }
+#endif
+    }
+
+    void join()
+    {
+#if defined(Q_OS_WINDOWS)
+        if (mThread) {
+            mThread->wait();
+            mThread.reset();
+        }
+#else
+        if (mStarted) {
+            pthread_join(mThread, nullptr);
+            mStarted = false;
+        }
+#endif
+    }
+
+private:
+    static void warmUp() { QSslConfiguration::defaultConfiguration(); }
+
+#if defined(Q_OS_WINDOWS)
+    std::unique_ptr<QThread> mThread;
+#else
+    static void* run(void* argument)
+    {
+        Q_UNUSED(argument)
+        warmUp();
+        return nullptr;
+    }
+
+    pthread_t mThread{};
+    bool mStarted = false;
+#endif
+};
 
 QTranslator* loadTranslationsForCommandLine()
 {
@@ -422,17 +489,14 @@ int main(int argc, char* argv[])
     }
 
     // The first QSslSocket (each cTelnet holds two) makes Qt parse every system CA certificate on the
-    // constructing thread, inside profile load; warming up on a pool thread now usually finishes first.
-    // A local pool, so every early return joins it: the warm-up holds Qt's TLS backend mutex while loading
-    // the plugin, and static destruction tears those down. Not the global pool: waiting on it would also
-    // wait for QtConcurrent work a profile left running. Runs on print-and-exit paths too, which is how
-    // AppStartupTeardownTest drives that race via --version.
-    QThreadPool sslWarmupPool;
-    sslWarmupPool.start([]() {
-        QSslConfiguration::defaultConfiguration();
-    });
+    // constructing thread, inside profile load; warming up on another thread now usually finishes first.
+    // Every early return joins it on the way out: the warm-up holds Qt's TLS backend mutex while loading
+    // the plugin, and static destruction tears those down. GUI runs only: on a print-and-exit run it and
+    // this thread fill Qt's unguarded caches at once, which a QCoreApplication leaves empty - a double free.
+    TlsWarmup tlsWarmup;
 
     if (app) {
+        tlsWarmup.start();
         mudlet::start();
         // GUI runs settle the config path here, before any file is read; a
         // print-and-exit run has MudletApp resolve it on first use instead.
@@ -1194,7 +1258,7 @@ int main(int argc, char* argv[])
     // Before the QApplication goes, not just before main() returns: the TLS
     // plugin loader connects to qApp, so a warm-up still running here would
     // reach for one that has already been deleted.
-    sslWarmupPool.waitForDone();
+    tlsWarmup.join();
 
     // Joins the match helpers while the QApplication still exists; see
     // TriggerMatchPool::shutdown().
@@ -1241,12 +1305,12 @@ static bool isFileAccessible(const QString& filePath)
 // Returns true if operation succeeded, false if all retries failed
 static bool tryFileOperationWithRetry(const std::function<bool()>& operation, const QString& operationName, int maxAttempts = 3)
 {
-    const std::chrono::milliseconds retryDelays[] = {5000ms, 15000ms, 30000ms};
+    const std::chrono::milliseconds retryDelays[] = {5s, 15s, 30s};
 
     for (int attempt = 0; attempt < maxAttempts; ++attempt) {
         if (attempt > 0) {
             qWarning() << operationName << "- Attempt" << (attempt + 1) << "of" << maxAttempts << "after" << retryDelays[attempt - 1].count() << "ms delay";
-            QThread::msleep(retryDelays[attempt - 1].count());
+            QThread::sleep(retryDelays[attempt - 1]);
         }
 
         if (operation()) {

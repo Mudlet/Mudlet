@@ -59,6 +59,7 @@
 #include <QAction>
 #include <QCoreApplication>
 #include <QCursor>
+#include <QFutureWatcher>
 #if defined(Q_OS_LINUX) || defined(Q_OS_MACOS)
 /* The Devuan package for qt6-base-dev (for Qt 6.8.2) - and presumably
  * Debian and Ubuntu are missing the
@@ -1090,10 +1091,33 @@ void T2DMap::addTextLabelToCache(const QString& key, const TMapLabel& label, con
     }
 }
 
+// A label rendered whole at its zoomed size needs gigabytes once a big one is
+// zoomed in on, so past this QPainter scales only the part of it that is painted.
+// An area rather than a side, so a long thin title stays rendered crisply.
+static constexpr qint64 cMaxScaledLabelPixels = 4096 * 4096;
+
+static bool fitsScaledLabelLimit(const QSize& size)
+{
+    return qint64(size.width()) * size.height() <= cMaxScaledLabelPixels;
+}
+
+static void drawPixmapScaledTo(QPainter& painter, const QRectF& target, const QPixmap& pixmap)
+{
+    const QSize targetSize = target.size().toSize();
+    if (fitsScaledLabelLimit(targetSize)) {
+        painter.drawPixmap(target.topLeft(), pixmap.scaled(targetSize, Qt::IgnoreAspectRatio, Qt::SmoothTransformation));
+        return;
+    }
+    painter.save();
+    painter.setRenderHint(QPainter::SmoothPixmapTransform);
+    painter.drawPixmap(target, pixmap, QRectF(pixmap.rect()));
+    painter.restore();
+}
+
 void T2DMap::drawScaledLabel(QPainter& painter, const QPointF& position, TMapLabel& label, int labelKey, const QRectF& paintRect)
 {
     const QSize targetSize = paintRect.size().toSize();
-    if (!label.text.isEmpty() && !label.font.family().isEmpty()) {
+    if (!label.text.isEmpty() && !label.font.family().isEmpty() && fitsScaledLabelLimit(targetSize)) {
         // Include the label's visual content in the cache key so that editing
         // a label's text, font or colours (e.g. live-previewing from the
         // create label dialog) invalidates the previously cached rendering:
@@ -1107,10 +1131,10 @@ void T2DMap::drawScaledLabel(QPainter& painter, const QPointF& position, TMapLab
             painter.drawPixmap(position, *pix);
         } else {
             qWarning("T2DMap::drawScaledLabel() ALERT: Cache lookup failed for label %d in area %d, using fallback", labelKey, mAreaID);
-            painter.drawPixmap(position, label.pix.scaled(targetSize, Qt::IgnoreAspectRatio, Qt::SmoothTransformation));
+            drawPixmapScaledTo(painter, QRectF(position, QSizeF(targetSize)), label.pix);
         }
     } else {
-        painter.drawPixmap(position, label.pix.scaled(targetSize, Qt::IgnoreAspectRatio, Qt::SmoothTransformation));
+        drawPixmapScaledTo(painter, QRectF(position, QSizeF(targetSize)), label.pix);
     }
     label.clickSize = QSizeF(paintRect.width(), paintRect.height());
 }
@@ -3231,32 +3255,35 @@ void T2DMap::paintEvent(QPaintEvent* e)
 
     dlgMapper::paintMapInfo(renderTimer, painter, mpHost, mpMap, roomID, mAreaID, mMultiSelectionSet.size(), infoColor, xOffset, 20, width(), mFontHeight);
 
-    static bool isAreaWidgetValid = true; // Remember between uses
-    QFont _f = mpMap->mpMapper->comboBox_showArea->font();
-    if (isAreaWidgetValid) {
-        if (mAreaID == -1                       // the map being shown is the "default" area
-            && !mpMap->getDefaultAreaShown()) { // the area widget is not showing the "default" area
+    // The area combobox belongs to the main mapper, which a secondary view may exist without
+    if (!mIsSecondaryView && mpMap->mpMapper) {
+        static bool isAreaWidgetValid = true; // Remember between uses
+        QFont _f = mpMap->mpMapper->comboBox_showArea->font();
+        if (isAreaWidgetValid) {
+            if (mAreaID == -1                       // the map being shown is the "default" area
+                && !mpMap->getDefaultAreaShown()) { // the area widget is not showing the "default" area
 
-            isAreaWidgetValid = false; // So the widget CANNOT indicate the correct area
-            // Set the area widget to indicate the area widget is NOT
-            // showing valid text - so make it italic and crossed out
-            _f.setItalic(true);
-            _f.setUnderline(true);
-            _f.setStrikeOut(true);
-            _f.setOverline(true);
+                isAreaWidgetValid = false; // So the widget CANNOT indicate the correct area
+                // Set the area widget to indicate the area widget is NOT
+                // showing valid text - so make it italic and crossed out
+                _f.setItalic(true);
+                _f.setUnderline(true);
+                _f.setStrikeOut(true);
+                _f.setOverline(true);
+            }
+        } else {
+            if (!(mAreaID == -1 && !mpMap->getDefaultAreaShown())) {
+                isAreaWidgetValid = true; // So the widget CAN now indicate the correct area
+                // Reset to normal
+                _f.setItalic(false);
+                _f.setUnderline(false);
+                _f.setStrikeOut(false);
+                _f.setOverline(false);
+            }
         }
-    } else {
-        if (!(mAreaID == -1 && !mpMap->getDefaultAreaShown())) {
-            isAreaWidgetValid = true; // So the widget CAN now indicate the correct area
-            // Reset to normal
-            _f.setItalic(false);
-            _f.setUnderline(false);
-            _f.setStrikeOut(false);
-            _f.setOverline(false);
-        }
+
+        mpMap->mpMapper->comboBox_showArea->setFont(_f);
     }
-
-    mpMap->mpMapper->comboBox_showArea->setFont(_f);
 
     if (!mHelpMsg.isEmpty()) {
         painter.setPen(QColor(255, 155, 50));
@@ -4487,7 +4514,16 @@ void T2DMap::slot_customLineProperties()
             connect(mpCurrentLineColor, &QAbstractButton::clicked, this, &T2DMap::slot_customLineColor);
             dialog->adjustSize();
 
-            connect(dialog, &QDialog::accepted, this, [this, room, exit]() {
+            // The dialog leaves scripts running, and one may delete the room or its line, or load
+            // another map (a JSON load swaps in a new room database) meanwhile
+            connect(dialog, &QDialog::accepted, this, [this, roomId = room->getId(), exit, roomDB = mpMap->mpRoomDB.get(), mapGeneration = mpMap->mpRoomDB->mapGeneration()]() {
+                if (mpMap->mpRoomDB.get() != roomDB || mpMap->mpRoomDB->mapGeneration() != mapGeneration) {
+                    return;
+                }
+                TRoom* room = mpMap->mpRoomDB->getRoom(roomId);
+                if (!room || !room->customLines.contains(exit)) {
+                    return;
+                }
                 mCurrentLineStyle = static_cast<Qt::PenStyle>(mpCurrentLineStyle->currentData().toInt());
                 room->customLinesStyle[exit] = mCurrentLineStyle;
                 room->customLinesColor[exit] = mCurrentLineColor;
@@ -4512,11 +4548,16 @@ void T2DMap::slot_customLineAddPoint()
     if (!room) {
         return;
     }
+    // The menu stays open while scripts run, so the line may have been removed or shortened since
+    const QList<QPointF> line = room->customLines.value(mCustomLineSelectedExit);
+    if (mCustomLineSelectedPoint < 0 || mCustomLineSelectedPoint >= line.size()) {
+        return;
+    }
 
     QLineF segment;
     if (mCustomLineSelectedPoint > 0) {
-        segment = QLineF(room->customLines.value(mCustomLineSelectedExit).at(mCustomLineSelectedPoint - 1), room->customLines.value(mCustomLineSelectedExit).at(mCustomLineSelectedPoint));
-    } else if (mCustomLineSelectedPoint == 0) {
+        segment = QLineF(line.at(mCustomLineSelectedPoint - 1), line.at(mCustomLineSelectedPoint));
+    } else {
         // The first user manipulable point IS zero - line is drawn to it from a
         // point around room symbol dependent on the exit direction
         // The first segment of custom line stick out half of the distance
@@ -4543,7 +4584,7 @@ void T2DMap::slot_customLineAddPoint()
         } else {
             customLineStartPoint = QPointF(room->x(), room->y());
         }
-        segment = QLineF(customLineStartPoint, room->customLines.value(mCustomLineSelectedExit).at(0));
+        segment = QLineF(customLineStartPoint, line.at(0));
     }
     segment.setLength(segment.length() / 2.0);
     QPointF newPoint = segment.p2();
@@ -4574,11 +4615,16 @@ void T2DMap::slot_customLineRemovePoint()
     if (!room) {
         return;
     }
+    // The menu stays open while scripts run, so the line may have been removed or shortened since
+    const auto pointCount = room->customLines.value(mCustomLineSelectedExit).size();
+    if (mCustomLineSelectedPoint < 0 || mCustomLineSelectedPoint >= pointCount) {
+        return;
+    }
 
     if (mCustomLineSelectedPoint > 0) {
         room->customLines[mCustomLineSelectedExit].removeAt(mCustomLineSelectedPoint);
         mCustomLineSelectedPoint--;
-    } else if (mCustomLineSelectedPoint == 0 && room->customLines.value(mCustomLineSelectedExit).count() > 1) {
+    } else if (pointCount > 1) {
         // The first user manipulable point IS zero - line is drawn to it from a
         // point around room symbol dependent on the exit direction.  We can only
         // allow its deletion if there is at least another one left.
@@ -5407,7 +5453,9 @@ void T2DMap::slot_newMap()
     mpMap->updateArea(-1);
     isCenterViewCall = false;
     mpMap->setUnsaved(__func__);
-    mpMap->mpMapper->resetAreaComboBoxToPlayerRoomArea();
+    if (mpMap->mpMapper) {
+        mpMap->mpMapper->resetAreaComboBoxToPlayerRoomArea();
+    }
 }
 
 void T2DMap::slot_setArea()
@@ -5474,7 +5522,9 @@ void T2DMap::slot_setArea()
             mpMap->postMessage(tr("[  OK  ]  - Added \"%1\" (%2) area to map.").arg(newAreaName, QString::number(newAreaId)));
             mpMap->setUnsaved(__func__);
 
-            mpMap->mpMapper->updateAreaComboBox();
+            if (mpMap->mpMapper) {
+                mpMap->mpMapper->updateAreaComboBox();
+            }
         }
         mMultiRect = QRect(0, 0, 0, 0);
         QSetIterator<int> itSelectedRoom = mMultiSelectionSet;
@@ -5483,7 +5533,9 @@ void T2DMap::slot_setArea()
         }
         if (!mMultiSelectionSet.isEmpty()) {
             const auto& targetAreaName = mpMap->mpRoomDB->getAreaNamesMap().value(newAreaId);
-            mpMap->mpMapper->comboBox_showArea->setCurrentText(targetAreaName);
+            if (!mIsSecondaryView && mpMap->mpMapper) {
+                mpMap->mpMapper->comboBox_showArea->setCurrentText(targetAreaName);
+            }
             switchArea(targetAreaName);
             // The rooms are still selected, so land on them rather than on
             // whichever room switchArea() would otherwise have picked:
@@ -5501,7 +5553,11 @@ void T2DMap::slot_setArea()
     set_room_area_dialog->show();
     set_room_area_dialog->raise();
 
-    arealist_combobox->setCurrentIndex(mpMap->mpMapper->getCurrentShownAreaIndex());
+    if (!mIsSecondaryView && mpMap->mpMapper) {
+        arealist_combobox->setCurrentIndex(mpMap->mpMapper->getCurrentShownAreaIndex());
+    } else {
+        arealist_combobox->setCurrentIndex(arealist_combobox->findData(QString::number(mAreaID)));
+    }
 }
 
 
@@ -5893,6 +5949,10 @@ std::pair<bool, QString> T2DMap::setMapZoom(const qreal zoom, const int areaId)
         // This should be unreachable from the TLuaInterpreter but this cover
         // any future usage:
         return {false, qsl("no map loaded or no active mapper")};
+    }
+
+    if (!qIsFinite(zoom)) {
+        return {false, qsl("zoom %1 is invalid, it must be a finite number").arg(QString::number(zoom))};
     }
 
     if (zoom < TMap::scmMinXYZoom) {
@@ -6603,8 +6663,10 @@ std::pair<bool, QString> T2DMap::exportAreaToImage(int areaId, const QString& fi
         QString extension = fileInfo.suffix();
         QString basePath = fileInfo.absolutePath();
 
-        // Export each Z level as a separate file
-        for (const int currentZLevel : std::as_const(pArea->zLevels)) {
+        // Iterates a copy: each export's calcSpan() replaces zLevels, which
+        // would free the list under this loop
+        const QList<int> zLevels = pArea->zLevels;
+        for (const int currentZLevel : zLevels) {
             QString levelFileName = qsl("%1/%2_level_%3.%4").arg(basePath, baseFileName, QString::number(currentZLevel), extension.isEmpty() ? "png" : extension);
 
             // Recursively call this function for each Z level (without exportAllZLevels flag)
@@ -6741,7 +6803,7 @@ std::pair<bool, QString> T2DMap::exportAreaToImage(int areaId, const QString& fi
         QRectF labelPaintRectangle = QRect(labelX, labelY, labelWidth, labelHeight);
         if (!mapLabel.showOnTop) {
             if (!mapLabel.noScaling) {
-                painter.drawPixmap(labelPosition, mapLabel.pix.scaled(labelPaintRectangle.size().toSize(), Qt::IgnoreAspectRatio, Qt::SmoothTransformation));
+                drawPixmapScaledTo(painter, QRectF(labelPosition, labelPaintRectangle.size()), mapLabel.pix);
                 mapLabel.clickSize = QSizeF(labelPaintRectangle.width(), labelPaintRectangle.height());
             } else {
                 painter.drawPixmap(labelPosition, mapLabel.pix);
@@ -7270,7 +7332,7 @@ std::pair<bool, QString> T2DMap::exportAreaToImage(int areaId, const QString& fi
         if (mapLabel.showOnTop) {
             QPointF labelPosition(labelX, labelY);
             if (!mapLabel.noScaling) {
-                painter.drawPixmap(labelPosition, mapLabel.pix.scaled(labelPaintRectangle.size().toSize(), Qt::IgnoreAspectRatio, Qt::SmoothTransformation));
+                drawPixmapScaledTo(painter, QRectF(labelPosition, labelPaintRectangle.size()), mapLabel.pix);
                 mapLabel.clickSize = QSizeF(labelPaintRectangle.width(), labelPaintRectangle.height());
             } else {
                 painter.drawPixmap(labelPosition, mapLabel.pix);
@@ -7298,26 +7360,24 @@ std::pair<bool, QString> T2DMap::exportAreaToImage(int areaId, const QString& fi
         format = qsl("png");
     }
 
-    // Clean up any existing export watcher
-    if (mpExportWatcher) {
-        mpExportWatcher->deleteLater();
-    }
-
-    // Create new watcher for this export task
-    mpExportWatcher = new QFutureWatcher<std::pair<bool, QString>>(this);
-    connect(mpExportWatcher, &QFutureWatcher<std::pair<bool, QString>>::finished, this, [this]() {
-        auto result = mpExportWatcher->result();
-        if (!result.first) {
-            // Only show errors, no success messages
-            mpHost->postMessage(tr("[MAP]: %1").arg(result.second));
+    // Each export has a watcher of its own: several can be in flight at once,
+    // from calls made back to back or one per z level
+    auto* pWatcher = new QFutureWatcher<std::pair<bool, QString>>(this);
+    connect(pWatcher, &QFutureWatcher<std::pair<bool, QString>>::finished, this, [this, pWatcher, profileName = mpHost->getName()]() {
+        const auto [saved, errorMessage] = pWatcher->result();
+        if (!saved) {
+            // This view can outlive its profile, which may have closed before the save reported back
+            if (mpHost) {
+                mpHost->postMessage(tr("[MAP]: %1").arg(errorMessage));
+            } else {
+                qWarning().noquote().nospace() << "T2DMap::exportAreaToImage() WARNING - profile \"" << profileName << "\" closed before this export finished: " << errorMessage;
+            }
         }
-        mpExportWatcher->deleteLater();
-        mpExportWatcher = nullptr;
+        pWatcher->deleteLater();
     });
 
-    // Start async save task - fire & forget
     auto future = QtConcurrent::task(&T2DMap::performImageSave).withArguments(this, pixmap, filePath, format).spawn();
-    mpExportWatcher->setFuture(future);
+    pWatcher->setFuture(future);
 
     return {true, {}};
 }

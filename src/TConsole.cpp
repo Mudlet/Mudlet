@@ -168,6 +168,25 @@ std::shared_ptr<TConsoleModel> resolveConsoleModel(Host* pHost, const QString& n
     model->mScriptAddressable = type.testAnyFlags(TConsole::UserWindow | TConsole::SubConsole | TConsole::Buffer);
     return model;
 }
+
+QPointer<TConsole> parentTConsole(QObject* start)
+{
+    QPointer<TConsole> result;
+    auto ptr = start;
+    if (!ptr) {
+        // Handle pathalogical case:
+        return result;
+    }
+    do {
+        ptr = ptr->parent();
+    } while (ptr && !ptr->inherits("TConsole"));
+    // QObject::inherits(...) uses a const char* - so no need to wrap raw string literal!
+    if (!ptr) {
+        // Handle not found case:
+        return result;
+    }
+    return qobject_cast<TConsole*>(ptr);
+}
 } // namespace
 
 // A high-performance text widget with split screen ability for scrolling back
@@ -373,7 +392,7 @@ TConsole::TConsole(Host* pH, const QString& name, const ConsoleType type, QWidge
     centralLayout->setContentsMargins(0, 0, 0, 0);
 
     if (mType == MainConsole) {
-        mpCommandLine = new TCommandLine(pH, qsl("main"), TCommandLine::MainCommandLine, this, mpMainDisplay);
+        mpCommandLine = new TCommandLine(pH, qsl("main"), enums::MainCommandLine, this, mpMainDisplay);
         mpCommandLine->setContentsMargins(0, 0, 0, 0);
         mpCommandLine->setSizePolicy(sizePolicy);
         mpCommandLine->setFont(font());
@@ -1035,6 +1054,9 @@ void TConsole::clear()
 
 void TConsole::bufferCleared()
 {
+    // A drag held across the clear would otherwise carry on from whatever line later reuses its index
+    mUpperPane->endDrag();
+    mLowerPane->endDrag();
     mUpperPane->resetHScrollbar();
     clearSelection();
     clearSplit();
@@ -1631,7 +1653,7 @@ void TConsole::setCmdVisible(bool isVisible)
             // really there is nothing to do - so lets do nothing:
             return;
         }
-        mpCommandLine = new TCommandLine(mpHost, mConsoleName, TCommandLine::ConsoleCommandLine, this, mpMainDisplay);
+        mpCommandLine = new TCommandLine(mpHost, mConsoleName, enums::ConsoleCommandLine, this, mpMainDisplay);
         mpCommandLine->setContentsMargins(0, 0, 0, 0);
         mpCommandLine->setSizePolicy(sizePolicy);
         mpCommandLine->setFocusPolicy(Qt::StrongFocus);
@@ -2642,7 +2664,7 @@ void TConsole::setProxyForFocus(TCommandLine* pCommandLine)
         } else {
             // Need to search ancestors to find the TConsole that this one
             // is inserted into - and if it has a TCommandLine
-            auto parentConsole = mpHost->parentTConsole(this);
+            auto parentConsole = parentTConsole(this);
             if (!parentConsole.isNull() && parentConsole->mpCommandLine && parentConsole->mpCommandLine->isVisible()) {
                 // TBH We ought to also check for any added TCommandLine but
                 // that can wait for a future development...

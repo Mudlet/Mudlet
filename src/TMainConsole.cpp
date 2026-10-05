@@ -60,6 +60,7 @@
 #include <QProgressDialog>
 #include <QUiLoader>
 #include <QSaveFile>
+#include <QScopeGuard>
 #include <QScrollBar>
 #include <QShortcut>
 #include <QSizePolicy>
@@ -1439,7 +1440,7 @@ std::pair<bool, QString> TMainConsole::createCommandLine(const QString& windowna
     auto pN = mSubCommandLineMap.value(name);
 
     if (!pN) {
-        pN = new TCommandLine(mpHost, name, TCommandLine::SubCommandLine, this, parentWidgetFor(windowname));
+        pN = new TCommandLine(mpHost, name, enums::SubCommandLine, this, parentWidgetFor(windowname));
         registerSubCommandLine(name, pN);
         pN->resize(width, height);
         pN->move(x, y);
@@ -3873,6 +3874,15 @@ void TMainConsole::closeEvent(QCloseEvent* event)
     }
 
     qDebug().nospace().noquote() << "TMainConsole::closeEvent(...) INFO - received by \"" << mpHost->getName() << "\".";
+    // The sysExitEvent handlers, the save question and the save wait all run the
+    // event loop; a close or reset of this profile reached from a script meanwhile
+    // would delete this console, or the Lua state, under this call.
+    mpHost->getLuaInterpreter()->enterNestedEventLoop();
+    const auto nestedLoopGuard = qScopeGuard([pHost = QPointer<Host>(mpHost)]() {
+        if (pHost) {
+            pHost->getLuaInterpreter()->leaveNestedEventLoop();
+        }
+    });
     TEvent conCloseEvent{};
     conCloseEvent.mArgumentList.append(qsl("sysExitEvent"));
     conCloseEvent.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);

@@ -221,7 +221,7 @@ private:
         }
 
         QSignalSpy connectionSpy(&(host->mTelnet), &cTelnet::signal_connected);
-        if (!connectionSpy.wait(2000)) {
+        if (!connectionSpy.wait(2s)) {
             QFAIL("Could not connect with the host.");
         }
     }

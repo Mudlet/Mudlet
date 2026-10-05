@@ -77,6 +77,8 @@
 
 #include "GroupedTest.h"
 
+using namespace std::chrono_literals;
+
 class MapMouseInteractionTest : public QObject
 {
     Q_OBJECT
@@ -286,7 +288,7 @@ private:
     bool panning() const { return mp2dMap->testAttribute(Qt::WA_SetCursor) && mp2dMap->cursor().shape() == Qt::BlankCursor; }
 
     // Long enough for the pan's 16ms timer to tick a good few times.
-    void letThePanRun() const { QTest::qWait(150); }
+    void letThePanRun() const { QTest::qWait(150ms); }
 
     // How far east the view moves per tick of the pan's timer. The event loop
     // does not get round to the same number of ticks in every window, so the
@@ -318,7 +320,7 @@ private:
     }
 
     // Longer than the hold that makes a release end the pan rather than leave it running.
-    void holdTheButton() const { QTest::qWait(400); }
+    void holdTheButton() const { QTest::qWait(400ms); }
 
     // A custom line north out of the east room, to the two points the tests
     // click on and drag. Its first segment runs from the room itself up
@@ -417,7 +419,7 @@ private:
         mModalDialogAnswered = false;
         mModalAnswerAttemptsLeft = 100;
         mpModalAnswerTimer = new QTimer(this);
-        mpModalAnswerTimer->setInterval(20);
+        mpModalAnswerTimer->setInterval(20ms);
         connect(mpModalAnswerTimer, &QTimer::timeout, this, [this, answer]() {
             QWidget* pDialog = QApplication::activeModalWidget();
             if (!pDialog) {
@@ -758,7 +760,7 @@ private slots:
         mpHost = TestProfile::create(mProfileName, mLocalhost, mPort);
         QVERIFY(mpHost);
         QSignalSpy connected(&(mpHost->mTelnet), &cTelnet::signal_connected);
-        QVERIFY2(connected.wait(3000), "could not connect to the telnet stub");
+        QVERIFY2(connected.wait(3s), "could not connect to the telnet stub");
     }
 
     void cleanupTestCase()

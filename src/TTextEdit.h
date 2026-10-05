@@ -92,6 +92,7 @@ public:
     void updateHorizontalScrollBar();
     void highlightSelection();
     void unHighlight();
+    void endDrag() { mMouseTracking = false; }
     void focusInEvent(QFocusEvent* event) override;
     int imageTopLine();
     int bufferScrollDown(int lines);

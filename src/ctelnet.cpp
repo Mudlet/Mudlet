@@ -3010,7 +3010,7 @@ void cTelnet::autoEnableTTYPEVersion()
     // encoding. Raise the flag before anything that could turn the event loop,
     // as that is all it takes for more of those bytes to arrive.
     mDeferredReconnect = true;
-    QTimer::singleShot(0, this, [this]() {
+    QTimer::singleShot(0ms, this, [this]() {
         mDeferredReconnect = false;
         if (!mpHost || mpHost->isClosingDown() || !mpSocket) {
             // Nothing to replace by the time this ran: the player may have
@@ -5033,17 +5033,19 @@ void cTelnet::postMessage(QString msg)
 
         QStringList body = messageStack.first().split(QChar('\n'));
 
-        qint8 openBraceIndex = body.at(0).indexOf(QLatin1String("["));
-        qint8 closeBraceIndex = body.at(0).indexOf(QLatin1String("]"));
-        qint8 hyphenIndex = body.at(0).indexOf(QLatin1String("- "));
+        const QString firstLine = body.at(0);
+        const qsizetype openBraceIndex = firstLine.indexOf(QLatin1String("["));
+        const qsizetype closeBraceIndex = firstLine.indexOf(QLatin1String("]"));
+        const qsizetype hyphenIndex = firstLine.indexOf(QLatin1String("- "));
         if (openBraceIndex >= 0 && closeBraceIndex > 0 && closeBraceIndex < hyphenIndex) {
-            quint8 prefixLength = hyphenIndex + 1;
-            while (body.at(0).at(prefixLength) == ' ') {
+            qsizetype prefixLength = hyphenIndex + 1;
+            // The first line can end in the separator, as when an MMCP peer's name starts with a newline
+            while (prefixLength < firstLine.size() && firstLine.at(prefixLength) == ' ') {
                 ++prefixLength;
             }
 
-            QString prefix = body.at(0).left(prefixLength).toUpper();
-            QString firstLineTail = body.at(0).mid(prefixLength);
+            QString prefix = firstLine.left(prefixLength).toUpper();
+            QString firstLineTail = firstLine.mid(prefixLength);
             body.removeFirst();
             //: Keep the capitalisation, the translated text at 7 letters max so it aligns nicely
             if (prefix.contains(tr("ERROR")) || prefix.contains(QLatin1String("ERROR"))) {
@@ -5551,6 +5553,8 @@ bool cTelnet::loadReplay(const QString& name, QString* pErrMsg)
 void cTelnet::loadReplayChunk()
 {
     if (!replayStream.atEnd()) {
+        // testReadReplayFile() can leave the status of a short final payload behind
+        replayStream.resetStatus();
         qint32 amount = 0;
         qint32 offset = 0;
         if (mReplayHasFaultyFormat) {
@@ -5566,7 +5570,16 @@ void cTelnet::loadReplayChunk()
 
         replayStream >> amount;
 
-        loadedBytes = replayStream.readRawData(loadBuffer, amount);
+        // testReadReplayFile() vetted the file before playback, but the file can
+        // still change or stop being readable while it plays
+        const bool headerUsable = replayStream.status() == QDataStream::Ok && offset >= 0 && amount >= 0 && amount <= static_cast<qint32>(BUFFER_SIZE);
+        loadedBytes = headerUsable ? replayStream.readRawData(loadBuffer, amount) : -1;
+        if (loadedBytes < 0) {
+            loadedBytes = 0;
+            //: Console message when a replay stops because its file could not be read. The [ WARN ] prefix is column padding shared with Mudlet's other console messages, keep it as it is
+            endReplay(tr("[ WARN ]  - The replay has been aborted as the file seems to be corrupt."));
+            return;
+        }
         // Previous use of loadedBytes + 1 caused a spurious character at end of
         // string display by a qDebug of the loadBuffer contents
         loadBuffer[loadedBytes] = '\0';
@@ -5961,6 +5974,19 @@ void cTelnet::processSocketData(char* in_buffer, int amount, const bool loopback
                                 qDebug() << "MCCP version 2 starting sequence";
                                 _compress = true;
                             }
+                        }
+
+                        if (_compress && buffer == out_buffer.get()) {
+                            // Inflating the rest of out_buffer back into out_buffer overlaps source and
+                            // destination, and a server has no reason to nest a compressed stream in its own
+                            // decompressed output, so the start sequence is skipped whole: MCCP1's has no
+                            // IAC before its SE and would otherwise leave the parser inside a subnegotiation.
+                            qWarning() << "cTelnet::processSocketData(...) WARNING - ignoring an MCCP start sequence found inside decompressed data";
+                            i += 2;
+                            iac = false;
+                            insb = false;
+                            command = "";
+                            goto MAIN_LOOP_END;
                         }
 
                         if (_compress) {
