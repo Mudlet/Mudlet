@@ -2503,6 +2503,80 @@ describe("Tests mapper functions against a shared fixture", function()
       assert.has_error(function() setExitWeightFilter("block") end)
     end)
 
+    -- The filter runs while the graph is being built from raw room pointers, so
+    -- freeing a room from it would leave the build reading freed memory.
+    it("refuses to delete rooms or areas, or replace the map, from inside an exit weight filter", function()
+      local victim = createRoomID()
+      addRoom(victim)
+      setRoomArea(victim, areaAlpha)
+      setRoomCoordinates(victim, 0, -5, 0)
+      setExit(victim, rA1, "north")
+      finally(function()
+        setExitWeightFilter(nil)
+        deleteRoom(victim)
+      end)
+
+      local refusals
+      setExitWeightFilter(function(roomId)
+        if roomId == victim and not refusals then
+          -- missing ids and files, so a guard that stops refusing fails here
+          -- rather than taking the shared fixture with it
+          refusals = {
+            deleteRoom = {deleteRoom(missingRoomId)},
+            deleteArea = {deleteArea(missingAreaId)},
+            deleteMap = {deleteMap()},
+            loadMap = {loadMap(getMudletHomeDir() .. "/no_such_map.xml")},
+            loadJsonMap = {loadJsonMap(getMudletHomeDir() .. "/no_such_map.json")},
+          }
+        end
+      end)
+
+      assert.is_true(getPath(rA1, rA3))
+      assert.is_table(refusals, "the exit weight filter never saw the victim room")
+      for name, result in pairs(refusals) do
+        assert.is_nil(result[1], name .. " was not refused")
+        assert.is_truthy(result[2]:find("exit weight filter or map info callback", 1, true), name .. ": " .. tostring(result[2]))
+      end
+      assert.is_true(roomExists(victim))
+      assert.is_true(roomExists(rG1))
+      assert.are.same({tostring(rA2), tostring(rA3)}, speedWalkPath)
+    end)
+
+    -- A nested search would rebuild the graph the outer one is still walking,
+    -- and run the filter again for every exit in it.
+    it("refuses to find a path from inside an exit weight filter", function()
+      local entered, inner = false, nil
+      setExitWeightFilter(function()
+        if not entered then
+          entered = true
+          inner = {getPath(rA1, rA3)}
+        end
+      end)
+
+      assert.is_true(getPath(rA1, rA3))
+      assert.are.same({tostring(rA2), tostring(rA3)}, speedWalkPath)
+      assert.is_table(inner, "the exit weight filter never ran")
+      assert.is_nil(inner[1])
+      assert.is_truthy(inner[2]:find("from inside an exit weight filter", 1, true), tostring(inner[2]))
+    end)
+
+    it("refuses to speedwalk from inside an exit weight filter", function()
+      -- already there, so a gotoRoom that is not refused has nothing to send
+      assert.is_true(centerview(rA3))
+      local entered, inner = false, nil
+      setExitWeightFilter(function()
+        if not entered then
+          entered = true
+          inner = {gotoRoom(rA3)}
+        end
+      end)
+
+      assert.is_true(getPath(rA1, rA3))
+      assert.is_table(inner, "the exit weight filter never ran")
+      assert.is_nil(inner[1])
+      assert.is_truthy(inner[2]:find("from inside an exit weight filter", 1, true), tostring(inner[2]))
+    end)
+
     -- Every case above edits the map first, so each one searches a graph that
     -- has just been rebuilt. These four do not, which is what puts them on the
     -- state findPath() carries from one search to the next.
@@ -2915,6 +2989,79 @@ describe("Tests mapper functions against a shared fixture", function()
       local ok, err = killMapInfo("NoSuchMapInfoLabel")
       assert.is_nil(ok)
       assert.is_string(err)
+    end)
+
+    -- Contributors only run from inside the mapper's paint, and only with a
+    -- player room to report on, so wait for a paint to reach the callback.
+    local function paintUntil(done)
+      assert.is_true(centerview(rA1))
+      updateMap()
+      local waitedMs = 0
+      while not done() and waitedMs < 5000 do
+        pumpEvents(5)
+        waitedMs = waitedMs + 5
+      end
+      return done()
+    end
+
+    -- The paint holds raw room and area pointers across the callbacks, so
+    -- freeing either from one would leave the paint reading freed memory.
+    it("refuses to delete rooms or areas, or replace the map, from inside a map info callback", function()
+      local refusals
+      assert.is_true(registerMapInfo("MapperSpecWipe", function()
+        if not refusals then
+          refusals = {
+            deleteRoom = {deleteRoom(missingRoomId)},
+            deleteArea = {deleteArea(missingAreaId)},
+            deleteMap = {deleteMap()},
+            loadMap = {loadMap(getMudletHomeDir() .. "/no_such_map.xml")},
+          }
+        end
+        return "wipe"
+      end))
+      finally(function() killMapInfo("MapperSpecWipe") end)
+      assert.is_true(enableMapInfo("MapperSpecWipe"))
+
+      assert.is_true(paintUntil(function() return refusals ~= nil end), "the map info callback never ran")
+      for name, result in pairs(refusals) do
+        assert.is_nil(result[1], name .. " was not refused")
+        assert.is_truthy(result[2]:find("exit weight filter or map info callback", 1, true), name .. ": " .. tostring(result[2]))
+      end
+      assert.is_true(roomExists(rA1))
+      assert.is_true(roomExists(rA2))
+    end)
+
+    -- The paint walking a reallocated list reads freed memory but rarely faults,
+    -- so this only fails reliably under AddressSanitizer.
+    it("survives a map info callback that registers and kills contributors while the map is painted", function()
+      local churned = false
+      assert.is_true(registerMapInfo("MapperSpecChurn", function()
+        if not churned then
+          churned = true
+          -- enough appends to make the contributor list reallocate under the paint
+          for i = 1, 32 do
+            registerMapInfo("MapperSpecChurn" .. i, function() return "" end)
+          end
+          killMapInfo("MapperSpecChurn")
+        end
+        return "churn"
+      end))
+      -- registered after the churning one so the paint's walk over the contributor
+      -- names goes on past the reallocation; it needs no enabling, as every name is read
+      assert.is_true(registerMapInfo("MapperSpecChurnTail", function() return "tail" end))
+      finally(function()
+        killMapInfo("MapperSpecChurn")
+        killMapInfo("MapperSpecChurnTail")
+        for i = 1, 32 do
+          killMapInfo("MapperSpecChurn" .. i)
+        end
+      end)
+      assert.is_true(enableMapInfo("MapperSpecChurn"))
+
+      assert.is_true(paintUntil(function() return churned end), "the map info callback never ran")
+      local info = getMapInfo()
+      assert.is_nil(info["MapperSpecChurn"])
+      assert.is_not_nil(info["MapperSpecChurn32"])
     end)
   end)
 
