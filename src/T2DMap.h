@@ -31,7 +31,6 @@
 #include <QCache>
 #include <QColor>
 #include <QFont>
-#include <QFutureWatcher>
 #include <QPixmap>
 #include <QPointer>
 #include <QPointF>
@@ -214,7 +213,6 @@ public:
     TMap* mpMap = nullptr;
     QPointer<Host> mpHost;
     qreal xyzoom;
-    QFutureWatcher<std::pair<bool, QString>>* mpExportWatcher = nullptr;
     int mRX = 0;
     int mRY = 0;
     QPoint mPHighlight;
