@@ -4514,6 +4514,49 @@ describe("Tests saveJsonMap and loadJsonMap", function()
       assert.are.equal(2, getDoors(roomA)["n"])
       assert.is_true(hasExitLock(roomA, "north"))
     end)
+
+    it("reads a room weight below one as one", function()
+      buildMap()
+      reimportWith(function(document)
+        findRoom(document, roomA).weight = -3
+        findRoom(document, roomB).weight = 0
+      end)
+
+      assert.are.equal(1, getRoomWeight(roomA))
+      assert.are.equal(1, getRoomWeight(roomB))
+      -- a zero cost step trips an assertion in the route builder of debug builds
+      local ok, weight = getPath(roomA, roomB)
+      assert.is_true(ok)
+      assert.are.equal(1, weight)
+    end)
+  end)
+
+  describe("Tests pathfinding in a map read by loadJsonMap", function()
+    it("routes over the loaded map rather than the one it replaced", function()
+      deleteMap()
+      local area = addAreaName("MapperSpecJsonPathArea")
+      local rooms = {}
+      for x = 0, 2 do
+        local id = createRoomID()
+        addRoom(id); setRoomArea(id, area); setRoomCoordinates(id, x, 0, 0)
+        rooms[#rooms + 1] = id
+      end
+      setExit(rooms[1], rooms[2], "east"); setExit(rooms[2], rooms[1], "west")
+      setExit(rooms[2], rooms[3], "east"); setExit(rooms[3], rooms[2], "west")
+      assert.is_true(saveJsonMap(jsonPath))
+
+      -- build the routing graph for a map that differs from the file, and do
+      -- not deleteMap() before the import, as that would discard the graph
+      setExit(rooms[1], -1, "east")
+      assert.is_false(getPath(rooms[1], rooms[3]))
+      assert.is_true(loadJsonMap(jsonPath))
+
+      local ok, weight = getPath(rooms[1], rooms[3])
+      assert.is_true(ok)
+      assert.are.equal(2, weight)
+      assert.are.same({"e", "e"}, speedWalkDir)
+      assert.are.same({tostring(rooms[2]), tostring(rooms[3])}, speedWalkPath)
+    end)
   end)
 end)
 
