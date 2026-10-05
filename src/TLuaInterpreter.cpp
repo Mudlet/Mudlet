@@ -5968,6 +5968,12 @@ int TLuaInterpreter::createEventArgsTableRef(const TEvent& pE)
     return ref;
 }
 
+bool TLuaInterpreter::luaOnStack() const
+{
+    lua_Debug activation;
+    return pGlobalLua && lua_getstack(pGlobalLua, 0, &activation);
+}
+
 // No documentation available in wiki - internal, test-only helper for waitForEvent()
 void TLuaInterpreter::captureEventForWaits(const TEvent& pE)
 {

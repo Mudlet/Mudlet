@@ -2710,6 +2710,251 @@ describe("Tests C++ functions in the Miscallaneous category", function()
       end)
     end)
 
+    -- closeProfile() and resetProfile() only queue the lua_close() of the
+    -- caller's state, and a call after them that spins the event loop must not
+    -- let it happen underneath: the close or reset waits for the script to
+    -- finish. The self-test profile cannot close or reset itself, so the code
+    -- runs from a second profile's own timer.
+    describe("Tests a profile torn down while its script spins the event loop", function()
+      local profilesDirectory = getMudletHomeDir():match("^(.*)[/\\]")
+      local closing = "mudlet-spec-torn-down"
+      local target = "mudlet-spec-load-target"
+
+      -- closing a profile saves the shared window layout beside the profiles
+      -- directory, which the next Mudlet start reads, so put it back afterwards
+      local configurationDirectory = profilesDirectory:match("^(.*)[/\\]")
+      local layoutFiles = {
+        configurationDirectory .. "/windowLayout.dat",
+        configurationDirectory .. "/windowLayoutGeometry.dat",
+      }
+      local layoutBefore = {}
+
+      setup(function()
+        for _, path in ipairs(layoutFiles) do
+          local handle = io.open(path, "rb")
+          if handle then
+            layoutBefore[path] = handle:read("*a")
+            handle:close()
+          end
+        end
+      end)
+
+      teardown(function()
+        for _, path in ipairs(layoutFiles) do
+          if layoutBefore[path] then
+            local handle = assert(io.open(path, "wb"))
+            handle:write(layoutBefore[path])
+            handle:close()
+          else
+            os.remove(path)
+          end
+        end
+      end)
+
+      local function removeTree(path)
+        if lfs.symlinkattributes(path, "mode") ~= "directory" then
+          os.remove(path)
+          return
+        end
+        for entry in lfs.dir(path) do
+          if entry ~= "." and entry ~= ".." then
+            removeTree(path .. "/" .. entry)
+          end
+        end
+        lfs.rmdir(path)
+      end
+
+      -- Only folders carrying this file were made by these specs, so a real
+      -- profile that happens to share a name is never deleted
+      local ownerMarker = "mudlet-spec-torn-down-owned"
+
+      local function ownedByUs(name)
+        return io.exists(profilesDirectory .. "/" .. name .. "/" .. ownerMarker)
+      end
+
+      local function removeOwnedProfile(name)
+        if ownedByUs(name) then
+          removeTree(profilesDirectory .. "/" .. name)
+        end
+      end
+
+      local function createOwnedProfile(name)
+        assert.is_true(lfs.mkdir(profilesDirectory .. "/" .. name))
+        io.open(profilesDirectory .. "/" .. name .. "/" .. ownerMarker, "w"):close()
+      end
+
+      local function loaded(name)
+        local entry = getProfiles()[name]
+        return entry ~= nil and entry.loaded
+      end
+
+      local function waitUntil(condition)
+        for _ = 1, 200 do
+          if condition() then
+            return true
+          end
+          pumpEvents(50)
+        end
+        return condition()
+      end
+
+      -- Loads a profile whose script runs code once, from a timer; the code
+      -- answers through report(), which raises mudletSpecTornDownResult. The
+      -- marker file turns a reset's re-run of the script into the global event
+      -- mudletSpecTornDownRerun instead of starting it all over again.
+      local function runInProfileBeingTornDown(code)
+        for _, name in ipairs({closing, target}) do
+          local path = profilesDirectory .. "/" .. name
+          assert.is_true(lfs.attributes(path) == nil or ownedByUs(name),
+            "refusing to touch " .. path .. ", which these specs did not create")
+        end
+        local run = {}
+        local handlers = {
+          registerAnonymousEventHandler("mudletSpecTornDownResult", function(_, ...)
+            run.result = {...}
+          end),
+          registerAnonymousEventHandler("mudletSpecTornDownRerun", function()
+            run.reset = true
+          end),
+        }
+        finally(function()
+          for _, handler in ipairs(handlers) do
+            killAnonymousEventHandler(handler)
+          end
+          for _, name in ipairs({closing, target}) do
+            if loaded(name) then
+              closeProfile(name)
+            end
+          end
+          waitUntil(function() return not loaded(closing) and not loaded(target) end)
+          removeOwnedProfile(closing)
+          removeOwnedProfile(target)
+        end)
+
+        local script = string.format([[
+local function report(...) raiseGlobalEvent("mudletSpecTornDownResult", ...) end
+local marker = getMudletHomeDir() .. "/mudlet-spec-ran"
+if io.exists(marker) then
+  raiseGlobalEvent("mudletSpecTornDownRerun")
+else
+  io.open(marker, "w"):close()
+  tempTimer(0, function()
+    %s
+  end)
+end]], code)
+        script = script:gsub("&", "&amp;"):gsub("<", "&lt;"):gsub(">", "&gt;")
+
+        -- left behind by a run that crashed or was killed
+        removeOwnedProfile(closing)
+        removeOwnedProfile(target)
+        createOwnedProfile(target)
+        createOwnedProfile(closing)
+        assert.is_true(lfs.mkdir(profilesDirectory .. "/" .. closing .. "/current"))
+        local file = assert(io.open(profilesDirectory .. "/" .. closing .. "/current/2020-01-01#00-00-00.xml", "w"))
+        file:write(table.concat({
+          '<?xml version="1.0" encoding="UTF-8"?>',
+          '<!DOCTYPE MudletPackage>',
+          '<MudletPackage version="1.001">',
+          '<HostPackage><Host mFORCE_SAVE_ON_EXIT="yes"></Host></HostPackage>',
+          '<ScriptPackage>',
+          '<Script isActive="yes" isFolder="no"><name>mudletSpecTornDown</name><packageName></packageName>',
+          '<script>' .. script .. '</script><eventHandlerList/></Script>',
+          '</ScriptPackage>',
+          '</MudletPackage>',
+        }, "\n"))
+        file:close()
+
+        assert.is_true(loadProfile(closing, true))
+        assert.is_true(waitUntil(function() return run.result ~= nil end), "the profile being torn down never answered")
+        return run
+      end
+
+      local function needsTestMode()
+        if not testMode then
+          pending("waiting for the other profile needs pumpEvents()")
+          return true
+        end
+        return false
+      end
+
+      it("loads another profile after closeProfile(), then closes", function()
+        if needsTestMode() then
+          return
+        end
+        local run = runInProfileBeingTornDown(
+          string.format('closeProfile() report(tostring(loadProfile(%q, true)))', target))
+        assert.equals("true", run.result[1])
+        assert.is_true(waitUntil(function() return not loaded(closing) end), "the profile did not close")
+        assert.is_true(loaded(target))
+      end)
+
+      it("loads another profile after resetProfile(), then resets", function()
+        if needsTestMode() then
+          return
+        end
+        local run = runInProfileBeingTornDown(
+          string.format('resetProfile() report(tostring(loadProfile(%q, true)))', target))
+        assert.equals("true", run.result[1])
+        assert.is_true(waitUntil(function() return run.reset end), "the profile was not reset")
+        assert.is_true(loaded(target))
+      end)
+
+      it("closes another profile after closeProfile(), then closes", function()
+        if needsTestMode() then
+          return
+        end
+        local run = runInProfileBeingTornDown(
+          string.format('loadProfile(%q, true) closeProfile() report(tostring(closeProfile(%q)))', target, target))
+        assert.equals("true", run.result[1])
+        assert.is_true(waitUntil(function() return not loaded(closing) and not loaded(target) end), "the profiles did not close")
+      end)
+
+      it("closes after resetProfile() then closeProfile()", function()
+        if needsTestMode() then
+          return
+        end
+        local run = runInProfileBeingTornDown('resetProfile() report(tostring(closeProfile()))')
+        assert.equals("true", run.result[1])
+        assert.is_true(waitUntil(function() return not loaded(closing) end), "the profile did not close")
+      end)
+
+      it("reconnects after resetProfile(), then resets", function()
+        if needsTestMode() then
+          return
+        end
+        local telnetDir = os.getenv("MUDLET_TEST_TELNET_DIR")
+        local portFile = telnetDir and io.open(telnetDir .. "/port", "r")
+        if not portFile then
+          local reason = "needs the telnet fixture (CI/telnet-fixture-server.py with MUDLET_TEST_TELNET_DIR set)"
+          if os.getenv("MUDLET_TEST_REQUIRE_TELNET_FIXTURE") then
+            assert.is_true(false, "MUDLET_TEST_REQUIRE_TELNET_FIXTURE is set but there is no fixture port file in " .. tostring(telnetDir))
+          end
+          pending(reason)
+          return
+        end
+        local port = tonumber(portFile:read("*a"):match("%d+"))
+        portFile:close()
+        -- reconnect() only spins the event loop when there is a connection to drop
+        local run = runInProfileBeingTornDown(string.format([[
+connectToServer("127.0.0.1", %d)
+local attempts = 0
+local function resetOnceConnected()
+  attempts = attempts + 1
+  local _, _, connected = getConnectionInfo()
+  if not connected and attempts < 100 then
+    tempTimer(0.05, resetOnceConnected)
+    return
+  end
+  resetProfile()
+  reconnect()
+  report(tostring(connected))
+end
+tempTimer(0.05, resetOnceConnected)]], port))
+        assert.equals("true", run.result[1], "the profile never connected, so reconnect() had nothing to drop")
+        assert.is_true(waitUntil(function() return run.reset end), "the profile was not reset")
+      end)
+    end)
+
     describe("Tests the functionality of getProfileStats", function()
       it("reports a count for every kind of item", function()
         local stats = getProfileStats()
