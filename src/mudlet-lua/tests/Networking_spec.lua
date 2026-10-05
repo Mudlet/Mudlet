@@ -1849,7 +1849,10 @@ describe("MMCP effects against a scripted chat peer", function()
         return type(clients) == "table" and clients[1] ~= nil and clients[1].name == "RenamedPeer"
       end, 2000))
       -- and the new name is what addresses it from then on
+      local mark = captureSeq()
       assert.is_true(mmcp.chatTo("RenamedPeer", "hello again"))
+      -- waited for, or it can land after the next test's mark and be taken for that test's message
+      assert.is_table(waitForCommand("TextPersonal", mark))
 
       peerSends(1, PEER_NAME)
       assert.is_true(waitUntil(function() return peerClient() ~= nil end, 2000))
