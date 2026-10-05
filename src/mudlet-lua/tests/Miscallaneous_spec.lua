@@ -2013,6 +2013,62 @@ describe("Tests C++ functions in the Miscallaneous category", function()
         assert.is_false(contains(textFrom(mark), "mudlet-spec-second-replay-line"), "the replay that was refused played anyway")
         pumpEvents(200)
       end)
+
+      -- The file is only vetted when it is loaded, so this rewrites the second
+      -- chunk's header once playback has begun. QFile reads ahead in 16KB
+      -- blocks, so the first chunk is big enough that the second header is
+      -- still on disk, not in that read-ahead, by the time it is rewritten.
+      local function playReplayRewrittenWhilePlaying(name, rewrite, fieldOffset)
+        local replay = getMudletHomeDir() .. "/" .. name
+        local after = getMudletHomeDir() .. "/after-" .. name
+        finally(function()
+          os.remove(replay)
+          os.remove(after)
+        end)
+        local head = "mudlet-spec-rewritten-replay-head\r\n" .. string.rep("\r", 50000)
+        writeFile(replay, chunk(0, head) .. chunk(10, "mudlet-spec-rewritten-replay-tail\r\n"))
+        local mark = getLastLineNumber("main")
+
+        assert.is_true(loadReplay(replay))
+        local handle = io.open(replay, "r+b")
+        assert.is_not_nil(handle, "could not rewrite " .. replay)
+        handle:seek("set", 8 + #head + (fieldOffset or 4))
+        handle:write(rewrite)
+        handle:close()
+
+        assert.is_true(playedBack(mark, "replay has been aborted"), "the unreadable chunk did not end the replay")
+        assert.is_false(contains(textFrom(mark), "mudlet-spec-rewritten-replay-tail"), "the chunk after the unreadable one was played")
+        writeFile(after, chunk(0, "mudlet-spec-after-rewritten-line\r\n"))
+        assert.is_true(loadReplay(after), "the aborted replay was still counted as running")
+        assert.is_true(playedBack(mark, "mudlet-spec-after-rewritten-line"), "the replay after the aborted one did not reach the console")
+        pumpEvents(200)
+      end
+
+      it("ends a replay at a chunk whose length turned negative after loading", function()
+        if not testMode then
+          pending("letting the replay timer run needs MUDLET_TEST_MODE")
+          return
+        end
+        playReplayRewrittenWhilePlaying("mudlet-spec-negative-later-replay.dat", "\255\255\255\255")
+      end)
+
+      it("ends a replay at a chunk that grew too long for the buffer after loading", function()
+        if not testMode then
+          pending("letting the replay timer run needs MUDLET_TEST_MODE")
+          return
+        end
+        playReplayRewrittenWhilePlaying("mudlet-spec-oversized-later-replay.dat", bigEndian32(200000) .. string.rep("\r", 200000))
+      end)
+
+      -- A negative delay would start the replay timer with a negative interval,
+      -- which never fires, leaving the replay stuck as running
+      it("ends a replay at a chunk whose delay turned negative after loading", function()
+        if not testMode then
+          pending("letting the replay timer run needs MUDLET_TEST_MODE")
+          return
+        end
+        playReplayRewrittenWhilePlaying("mudlet-spec-negative-delay-replay.dat", "\255\255\255\255", 0)
+      end)
     end)
 
     describe("Tests the functionality of findItems", function()
