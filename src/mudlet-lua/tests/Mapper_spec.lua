@@ -1833,6 +1833,54 @@ describe("Tests mapper functions against a shared fixture", function()
       deleteMapLabel(areaAlpha, id)
     end)
 
+    -- Reads the width and height from the IHDR chunk of a base64-encoded PNG
+    local function pngSize(base64)
+      local alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/"
+      local bytes = {}
+      for i = 1, 32, 4 do
+        local n = 0
+        for j = i, i + 3 do
+          n = n * 64 + alphabet:find(base64:sub(j, j), 1, true) - 1
+        end
+        bytes[#bytes + 1] = math.floor(n / 65536) % 256
+        bytes[#bytes + 1] = math.floor(n / 256) % 256
+        bytes[#bytes + 1] = n % 256
+      end
+      local function uint32(at)
+        return ((bytes[at] * 256 + bytes[at + 1]) * 256 + bytes[at + 2]) * 256 + bytes[at + 3]
+      end
+      return uint32(17), uint32(21)
+    end
+
+    it("createMapImageLabel keeps the image of a huge label to a bounded size", function()
+      local imagePath = getMudletHomeDir() .. "/mapper_spec_huge_label.xpm"
+      local image = assert(io.open(imagePath, "w"))
+      image:write('/* XPM */\nstatic char * spec_xpm[] = {\n"2 2 2 1",\n' ..
+                  '"a c #ff0000",\n"b c #0000ff",\n"ab",\n"ba"};\n')
+      image:close()
+      -- 10000 by 2000 pixels at this zoom, over the 4096 x 4096 pixel budget
+      local id = createMapImageLabel(areaAlpha, imagePath, 0, 0, 0, 1000, 200, 10.0, true)
+      local blankId = createMapImageLabel(areaAlpha, getMudletHomeDir() .. "/nonexistent.png", 0, 0, 0, 1000, 200, 10.0, true)
+      finally(function()
+        deleteMapLabel(areaAlpha, id)
+        deleteMapLabel(areaAlpha, blankId)
+        os.remove(imagePath)
+      end)
+      local label = getMapLabel(areaAlpha, id)
+      assert.are_not.equal(getMapLabel(areaAlpha, blankId).Pixmap, label.Pixmap)
+      assert.are.same({1000, 200}, {label.Width, label.Height})
+      local width, height = pngSize(label.Pixmap)
+      local message = string.format("the label's image is %d x %d", width, height)
+      assert.is_true(width * height < 4100 * 4100, message)
+      assert.is_true(math.abs(width / height - 5) < 0.01, message)
+    end)
+
+    it("createMapImageLabel draws an ordinary label at its full size", function()
+      local id = createMapImageLabel(areaAlpha, getMudletHomeDir() .. "/nonexistent.png", 0, 0, 0, 10, 4, 30.0, true)
+      finally(function() deleteMapLabel(areaAlpha, id) end)
+      assert.are.same({300, 120}, {pngSize(getMapLabel(areaAlpha, id).Pixmap)})
+    end)
+
     it("getMapLabel returns nil and a message for a labelID the area has not got", function()
       local label, err = getMapLabel(areaAlpha, 999999)
       assert.is_nil(label)
