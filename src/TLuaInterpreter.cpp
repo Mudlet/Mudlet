@@ -6089,11 +6089,13 @@ int TLuaInterpreter::unzipAsync(lua_State* L)
         return warnArgumentValue(L, __func__, "couldn't create output directory to put the extracted files into");
     }
 
+    // Extraction can outlast the profile, or this lua_State across a resetProfile(), so the
+    // watcher goes with the Host and reaches it directly rather than through L
+    Host* pHost = &getHostFromLua(L);
     auto future = QtConcurrent::run(utils::unzip, zipLocation, extractLocation, temporaryDir.path());
-    auto watcher = new QFutureWatcher<bool>;
-    connect(watcher, &QFutureWatcher<bool>::finished, watcher, [=]() {
+    auto watcher = new QFutureWatcher<bool>(pHost);
+    connect(watcher, &QFutureWatcher<bool>::finished, watcher, [pHost, watcher, future, zipLocation, extractLocation]() {
         TEvent event{};
-        Host& host = getHostFromLua(L);
 
         if (future.result()) {
             event.mArgumentList.append(qsl("sysUnzipDone"));
@@ -6107,7 +6109,7 @@ int TLuaInterpreter::unzipAsync(lua_State* L)
         event.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
         event.mArgumentList.append(extractLocation);
         event.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
-        host.raiseEvent(event);
+        pHost->raiseEvent(event);
         watcher->deleteLater();
     });
     watcher->setFuture(future);
