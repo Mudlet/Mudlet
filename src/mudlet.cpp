@@ -4825,8 +4825,25 @@ void mudlet::endProfileLoad()
 
 void mudlet::forceClose()
 {
-    for (auto pHost : mHostManager) {
-        pHost->forceClose();
+    // Host::forceClose() pumps events, which may close a profile or load a new one
+    // (a pending telnet URI), so walk snapshots until a pass meets no host unvisited
+    QList<QPointer<Host>> visited;
+    bool metNewHost = true;
+    while (metNewHost) {
+        metNewHost = false;
+        QList<QPointer<Host>> hosts;
+        for (const auto& pHost : mHostManager.hostList()) {
+            if (!visited.contains(pHost.data())) {
+                hosts.append(pHost.data());
+            }
+        }
+        for (const auto& pHost : std::as_const(hosts)) {
+            if (pHost) {
+                visited.append(pHost);
+                metNewHost = true;
+                pHost->forceClose();
+            }
+        }
     }
 
     // This will fire the closeEvent(...)
