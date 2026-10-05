@@ -36,7 +36,9 @@ jobs:
           # spurious steps in the build and broke things! - SlySven
           # Smaller than build-mudlet.yml's on purpose - only builds that produce
           # an artifact, plus a compile-only 'ubuntu / clang'. 'ubuntu (x86_64)'
-          # still runs there on every push to development and nightly.
+          # and 'macos (x86_64)' still run there on every push to development,
+          # nightly and for releases: GitHub runs only a few macOS jobs at once for
+          # the whole repository, and the Intel job runs no tests to begin with.
           # oldest OS supported for maximum compatibility of built AppImage
           - os: ubuntu-22.04
             buildname: 'ubuntu / gcc / lua tests + leak detection'
@@ -49,14 +51,6 @@ jobs:
             # Enable AddressSanitizer for PTB and testing builds, but not release
             # builds (tagged Mudlet-*) - ASAN adds significant runtime overhead
             enable_asan: 'true'
-          # No tests: none branch on host architecture, so the arm64 job covers them on a faster pool.
-          - os: macos-15-intel
-            buildname: 'macos (x86_64)'
-            compiler: clang_64
-            qt: '6.11.1'
-            ccache_id: macos-x64
-            deploy: 'deploy'
-            build_tests: 'false'
           - os: macos-15
             buildname: 'macos (arm64) / c++, lua tests'
             compiler: clang_64
@@ -390,8 +384,8 @@ jobs:
       id: build
       uses: lukka/run-cmake@v10.9
       with:
-        configurePreset: ${{ runner.os == 'macOS' && (matrix.build_tests == 'false' && 'ci-macos-no-tests' || 'ci-macos') || 'ci-linux' }}
-        buildPreset: ${{ runner.os == 'macOS' && (matrix.build_tests == 'false' && 'ci-macos-no-tests' || 'ci-macos') || 'ci-linux' }}
+        configurePreset: ${{ runner.os == 'macOS' && 'ci-macos' || 'ci-linux' }}
+        buildPreset: ${{ runner.os == 'macOS' && 'ci-macos' || 'ci-linux' }}
       env:
         NINJA_STATUS: '[%f/%t %o/sec] '
         # The run-varying half of the ci-linux/ci-macos presets - everything else
@@ -446,9 +440,9 @@ jobs:
       working-directory: '${{runner.workspace}}/b/ninja'
       run: cp -cR src/mudlet.app "${{runner.temp}}/mudlet-for-ctest.app"
 
-    # Skipped after the full ctest run, which covers these, on the compile-only job, and with BUILD_TESTING=OFF (bare ctest exits 8)
+    # Skipped after the full ctest run, which covers these, and on the compile-only job
     - name: Run QTest
-      if: matrix.run_tests != 'true' && matrix.build_tests != 'false' && matrix.compile_only != 'true'
+      if: matrix.run_tests != 'true' && matrix.compile_only != 'true'
       run: ctest --test-dir ${{runner.workspace}}/b/ninja -L functional --output-on-failure -j $(nproc)
 
     - name: add ssh-agent for release uploads
