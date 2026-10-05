@@ -979,7 +979,7 @@ int TLuaInterpreter::connectExitStub(lua_State* L)
             hasDirection = true;
         } else if (lua_type(L, 2) == LUA_TNUMBER) {
             const int value = qRound(lua_tonumber(L, 2));
-            if (value >= DIR_OUT || value <= DIR_NORTH) {
+            if (value >= DIR_NORTH && value <= DIR_OUT) {
                 // Ambiguous - look in more detail and check whether there is a
                 // a room with the given number and/or an exit stub:
                 const bool hasRoomWithNumberAsId = static_cast<bool>(host.mpMap->mpRoomDB->getRoom(value));

@@ -469,6 +469,27 @@ describe("Tests searchRoom", function()
 
 end)
 
+-- Outside the shared fixture, whose rooms take the IDs 2 to 11 that a direction code can be mistaken for
+describe("Tests connectExitStub with a direction code on a map without those room IDs", function()
+  it("connectExitStub takes a direction code from 2 to 11 as a direction when no room has that ID", function()
+    local east = 4
+    if roomExists(east) then
+      pending("room 4 exists in this profile, so the code is ambiguous")
+      return
+    end
+    local area = addAreaName("connectExitStub code")
+    finally(function() deleteArea(area) end)
+    -- above 11, so neither room can take the ID being tested
+    local a = createRoomID(12); addRoom(a); setRoomArea(a, area); setRoomCoordinates(a, 0, 0, 0)
+    local b = createRoomID(12); addRoom(b); setRoomArea(b, area); setRoomCoordinates(b, 1, 0, 0)
+    setExitStub(a, "east", true)
+    setExitStub(b, "west", true)
+    assert.is_true(connectExitStub(a, east))
+    assert.are.equal(b, getRoomExits(a)["east"])
+    assert.are.equal(a, getRoomExits(b)["west"])
+  end)
+end)
+
 -- A shared in-memory fixture: three areas and ten rooms wired into a
 -- pathfinding diamond, a cross-area link, a special exit and a pair of sandbox
 -- rooms used for the mutation-heavy tests. Everything is torn down at the end.
@@ -1284,6 +1305,36 @@ describe("Tests mapper functions against a shared fixture", function()
         assert.are.equal(b, getRoomExits(a)[direction], direction)
         assert.are.equal(a, getRoomExits(b)[reverse], reverse)
       end
+    end)
+
+    it("connectExitStub weighs a direction code from 2 to 11 against a room with that ID", function()
+      local east = 4
+      local createdEast = not roomExists(east)
+      if createdEast then
+        addRoom(east); setRoomArea(east, areaAlpha)
+      end
+      local a = createRoomID(); addRoom(a); setRoomArea(a, areaAlpha)
+      -- one finally: busted keeps only the last function handed to it
+      finally(function()
+        deleteRoom(a)
+        if createdEast then deleteRoom(east) end
+      end)
+      setExitStub(a, east, true)
+      local ok, err = connectExitStub(a, east)
+      assert.is_nil(ok)
+      assert.is_truthy(err:find("too ambiguous", 1, true), err)
+    end)
+
+    it("connectExitStub given in joins the room at the same position with an out stub", function()
+      local area = addAreaName("connectExitStub in")
+      finally(function() deleteArea(area) end)
+      local a = createRoomID(); addRoom(a); setRoomArea(a, area); setRoomCoordinates(a, 0, 0, 0)
+      local b = createRoomID(); addRoom(b); setRoomArea(b, area); setRoomCoordinates(b, 0, 0, 0)
+      setExitStub(a, "in", true)
+      setExitStub(b, "out", true)
+      assert.is_true(connectExitStub(a, "in"))
+      assert.are.equal(b, getRoomExits(a)["in"])
+      assert.are.equal(a, getRoomExits(b)["out"])
     end)
 
     it("connectExitStub given only a target joins the one pair of facing stubs", function()
