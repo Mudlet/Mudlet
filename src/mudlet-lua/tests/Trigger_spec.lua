@@ -1616,10 +1616,14 @@ describe("Trigger processing", function()
         -- trigger armed, not what arming it adds. The console's own per-line
         -- work is linear, and so is the trigger once the walk is, so eight
         -- times the line is eight times the total whatever share of it the
-        -- trigger holds: measured at 7.1 to 8.3 with the walk linear against
-        -- 54 to 58 with it quadratic, so sixteen lies between the two. Each
-        -- measurement is the cheapest of three runs, because scheduling noise
-        -- only ever adds.
+        -- trigger holds: measured at 7.7 to 8.5 with the walk linear (10.5 late
+        -- in a full suite) against 52 to 55 with it quadratic, so sixteen lies
+        -- between the two. Each measurement is the cheapest of five runs,
+        -- because scheduling noise only ever adds, and the two lines take turns
+        -- so a slow patch on the runner cannot cost one line all five of its
+        -- runs. One full collection first leaves the next cycle a whole live
+        -- heap away at Lua's default pause, more than these runs allocate, so it
+        -- stays off both lines.
         --
         -- Subtracting an unarmed baseline to leave only what the trigger adds
         -- is what this did first, and it could not be made to hold. On the
@@ -1632,34 +1636,25 @@ describe("Trigger processing", function()
         it("costs under sixteen times as much for eight times the line", function()
             -- "word " is five bytes, so this is an 8 kB line and one eight times longer
             local shortReps, longReps = 1638, 13104
-            local function costOf(repeats)
-                local line = string.rep("word ", repeats)
-                local best
-                for _ = 1, 3 do
-                    -- os.clock() resolves to about a millisecond on Windows,
-                    -- which is the whole cost of the shorter line there, so a
-                    -- single feed can measure exactly 0 and leave the ratio
-                    -- below nothing to divide by. Feeding until the run is
-                    -- clear of that floor and dividing by the number of feeds
-                    -- keeps both measurements per-feed and comparable.
-                    local feeds, taken = 0, 0
-                    local started = os.clock()
-                    repeat
-                        feedTriggers("\n" .. line .. "\n")
-                        feeds = feeds + 1
-                        taken = os.clock() - started
-                    -- a clock that never advanced would spin here forever and
-                    -- hang CI with no diagnostic, which is worse than the
-                    -- failure this loop replaced. 100 feeds is far more than
-                    -- any platform needs, so giving up past it leaves the
-                    -- short > 0 assertion below to report the dead clock.
-                    until taken >= 0.02 or feeds >= 100
-                    taken = taken / feeds
-                    if not best or taken < best then
-                        best = taken
-                    end
-                end
-                return best
+            local function costOf(line)
+                -- os.clock() resolves to about a millisecond on Windows, which
+                -- is the whole cost of the shorter line there, so a single feed
+                -- can measure exactly 0 and leave the ratio below nothing to
+                -- divide by. Feeding until the run is clear of that floor and
+                -- dividing by the number of feeds keeps both measurements
+                -- per-feed and comparable.
+                local feeds, taken = 0, 0
+                local started = os.clock()
+                repeat
+                    feedTriggers("\n" .. line .. "\n")
+                    feeds = feeds + 1
+                    taken = os.clock() - started
+                -- a clock that never advances would spin here forever and hang
+                -- CI with no diagnostic. 100 feeds is far more than any platform
+                -- needs, so giving up past it leaves the short > 0 assertion
+                -- below to report the dead clock.
+                until taken >= 0.02 or feeds >= 100
+                return taken / feeds
             end
             _G.TrigSpec = {captures = 0}
             local id = tempComplexRegexTrigger("SpecComplexMatchAllCost", [[(\S+)]],
@@ -1667,10 +1662,15 @@ describe("Trigger processing", function()
                 0, -1, -1, 0, 1, -1, -1, 0, 0, 0)
             assert.is_number(id)
             finally(function() if type(id) == "number" and id > 0 then killTrigger("SpecComplexMatchAllCost") end end)
-            local short = costOf(shortReps)
-            local shortCaptures = _G.TrigSpec.captures
-            local long = costOf(longReps)
-            local longCaptures = _G.TrigSpec.captures
+            local shortLine, longLine = string.rep("word ", shortReps), string.rep("word ", longReps)
+            local short, long, shortCaptures, longCaptures
+            collectgarbage()
+            for _ = 1, 5 do
+                short = math.min(short or math.huge, costOf(shortLine))
+                shortCaptures = _G.TrigSpec.captures
+                long = math.min(long or math.huge, costOf(longLine))
+                longCaptures = _G.TrigSpec.captures
+            end
             assert.is_true(killTrigger("SpecComplexMatchAllCost"), "a temporary complex trigger should be removable by name")
             -- without this the trigger could have stopped matching, or stopped
             -- matching all, and the two costs would agree on measuring nothing

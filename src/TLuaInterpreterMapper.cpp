@@ -278,9 +278,7 @@ int TLuaInterpreter::addAreaName(lua_State* L)
     const int areaId = host.mpMap->mpRoomDB->addArea(name);
     lua_pushnumber(L, areaId);
 
-    if (host.mpMap->mpMapper) {
-        host.mpMap->mpMapper->updateAreaComboBox();
-    }
+    host.mpMap->announceAreaListChanged();
 
     host.mpMap->setUnsaved(__func__);
     host.mpMap->updateArea(areaId);
@@ -753,15 +751,8 @@ int TLuaInterpreter::centerview(lua_State* L)
 
     host.mpMap->mRoomIdHash[host.getName()] = roomId;
     host.mpMap->mNewMove = true;
-
-    if (host.mpMap->mpMapper->mp2dMap) {
-        host.mpMap->mpMapper->mp2dMap->isCenterViewCall = true;
-    }
     host.mpMap->updateArea(pR->getArea());
-    if (host.mpMap->mpMapper->mp2dMap) {
-        host.mpMap->mpMapper->mp2dMap->isCenterViewCall = false;
-        host.mpMap->mpMapper->resetAreaComboBoxToPlayerRoomArea();
-    }
+    host.mpMap->requestPlayerAreaShown();
     lua_pushboolean(L, true);
     return 1;
 }
@@ -1284,9 +1275,7 @@ int TLuaInterpreter::deleteArea(lua_State* L)
     }
 
     if (result) {
-        if (host.mpMap->mpMapper) {
-            host.mpMap->mpMapper->updateAreaComboBox();
-        }
+        host.mpMap->announceAreaListChanged();
         host.mpMap->setUnsaved(__func__);
         host.mpMap->updateArea(id);
         host.mpMap->mMapGraphNeedsUpdate = true;
@@ -2712,10 +2701,8 @@ int TLuaInterpreter::loadJsonMap(lua_State* L)
     // Must run the audit() process now - as it is no longer done within
     // TMap::readJsonMapFile(...) as that can now be used elsewhere:
     pHost->mpMap->audit();
-    pHost->mpMap->mpMapper->mp2dMap->init();
-    pHost->mpMap->mpMapper->updateAreaComboBox();
-    pHost->mpMap->mpMapper->resetAreaComboBoxToPlayerRoomArea();
-    pHost->mpMap->mpMapper->show();
+    pHost->mpMap->announceMapLoaded(true);
+    pHost->mpMap->requestMapperShown();
 
     lua_pushboolean(L, true);
     return 1;
@@ -3510,23 +3497,12 @@ int TLuaInterpreter::setAreaName(lua_State* L)
         return 1;
     }
 
-    bool isCurrentAreaRenamed = false;
-    if (host.mpMap->mpMapper) {
-        if (id > 0 && host.mpMap->mpRoomDB->getAreaNamesMap().value(id) == host.mpMap->mpMapper->comboBox_showArea->currentText()) {
-            isCurrentAreaRenamed = true;
-        }
-    }
-
+    const QString oldName = host.mpMap->mpRoomDB->getAreaNamesMap().value(id);
     const bool result = host.mpMap->mpRoomDB->setAreaName(id, newName);
     if (result) {
         host.mpMap->setUnsaved(__func__);
         host.mpMap->updateArea(id);
-        if (host.mpMap->mpMapper) {
-            host.mpMap->mpMapper->updateAreaComboBox();
-            if (isCurrentAreaRenamed) {
-                host.mpMap->mpMapper->comboBox_showArea->setCurrentText(newName);
-            }
-        }
+        host.mpMap->announceAreaRenamed(oldName, newName);
     }
     lua_pushboolean(L, result);
     return 1;

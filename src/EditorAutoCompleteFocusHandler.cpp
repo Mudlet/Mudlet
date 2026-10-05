@@ -56,9 +56,10 @@ EditorAutoCompleteFocusHandler::EditorAutoCompleteFocusHandler(edbee::TextEditor
     // setFocus() call on the list into a no-op: QWidget::setFocus() resolves it
     // to the focus proxy, which already owns the keyboard focus, so nothing
     // changes. The list is also marked non-focusable, so nothing else can hand
-    // the keyboard to it.
-    mpList->setFocusProxy(mpEditorComponent);
+    // the keyboard to it. The policy goes on first: QWidget::setFocusPolicy()
+    // passes it on to a focus proxy, which would leave the editor unclickable.
     mpList->setFocusPolicy(Qt::NoFocus);
+    mpList->setFocusProxy(mpEditorComponent);
 
     // The attribute is only consulted for a top-level window - QWidget only
     // checks it in show() when isWindow() is true - so it belongs on the menu

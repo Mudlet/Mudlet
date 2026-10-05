@@ -212,6 +212,8 @@ set(MAP_GROUP_TEST_SOURCES
     MapOffscreenCustomLineTest.cpp
     MapFileStatsTest.cpp
     MapTextLabelCacheTest.cpp
+    MapViewCueTest.cpp
+    LuaMapperCueTest.cpp
     MapLockNoOpTest.cpp
     RoomPropertiesDialogTest.cpp
     MapperButtonConfigTest.cpp
@@ -534,8 +536,8 @@ endforeach()
 # timeout than the default 60s
 set_tests_properties(ResetProfileTest PROPERTIES TIMEOUT 300)
 
-# AppStartupTeardownTest starts the whole application eight times over, and a
-# sanitiser build spends seconds on each of those start-ups
+# AppStartupTeardownTest starts the application eight times over, as far as
+# forwarding a link, and a sanitiser build spends seconds on each of those start-ups
 set_tests_properties(AppStartupTeardownTest PROPERTIES TIMEOUT 300)
 
 # HeadlessVersionTest runs the application once per row of its matrix, for the
