@@ -264,6 +264,8 @@ public:
     std::pair<bool, QString> readJsonMapFile(const QString&, const bool translatableTexts = false);
     qsizetype getCurrentProgressRoomCount() const { return mProgressDialogRoomsCount; }
     bool incrementJsonProgressDialog(const bool isExportNotImport, const bool isRoomNotLabel, const int increment = 1);
+    // TRoomDB calls this before it deletes an area or clears the map.
+    void areasAboutToBeDeleted();
     QString getDefaultAreaName() const { return mDefaultAreaName; }
     QString getUnnamedAreaName() const { return mUnnamedAreaName; }
 
@@ -531,6 +533,8 @@ private:
     bool mMapProgressIsTransfer = false;
     bool mMapProgressCancelRequested = false;
     int mMapProgressStandaloneMaximum = 0;
+    bool mJsonExportInProgress = false;
+    bool mJsonExportLostAnArea = false;
     // Using during updates of text in progress dialog partially from other
     // classes:
     qsizetype mProgressDialogAreasTotal = 0;
