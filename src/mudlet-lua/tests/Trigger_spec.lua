@@ -1240,6 +1240,59 @@ describe("Trigger processing", function()
 
     end)
 
+    -- A fire with no script, command or sound to run hands Lua nothing, so
+    -- whatever it does has to happen without the captures reaching Lua.
+    describe("a fire that runs no script", function()
+
+        after_each(function()
+            _G.TrigQuiet = nil
+        end)
+
+        it("still hands its capture to a filter child", function()
+            _G.TrigQuiet = {}
+            tempComplexRegexTrigger("SpecQuietParent", [[^quietparent (\w+) end$]], "", 0, 0, 0, 1, 0, 0, 0, 0, 0, 0)
+            permRegexTrigger("SpecQuietChild", "SpecQuietParent", {[[^(\w)]]},
+                             [==[_G.TrigQuiet[#_G.TrigQuiet + 1] = matches[2] ]==])
+            finally(function()
+                killTrigger("SpecQuietChild")
+                killTrigger("SpecQuietParent")
+            end)
+            feedTriggers("quietparent zebra end\n")
+            assert.are.same({"z"}, _G.TrigQuiet)
+        end)
+
+        it("still hands the captures of every line of a multiline match to a filter child", function()
+            _G.TrigQuiet = {}
+            tempComplexRegexTrigger("SpecQuietMultiParent", [[^quietfirst (\w+)$]], "", 1, 0, 0, 1, 0, 0, 0, 0, 0, 3)
+            tempComplexRegexTrigger("SpecQuietMultiParent", [[^quietsecond (\w+)$]], "", 1, 0, 0, 1, 0, 0, 0, 0, 0, 3)
+            permRegexTrigger("SpecQuietMultiChild", "SpecQuietMultiParent", {[[^(\w+)$]]},
+                             [==[_G.TrigQuiet[#_G.TrigQuiet + 1] = matches[2] ]==])
+            finally(function()
+                killTrigger("SpecQuietMultiChild")
+                killTrigger("SpecQuietMultiParent")
+            end)
+            feedTriggers("quietfirst zebra\n")
+            feedTriggers("quietsecond wombat\n")
+            assert.are.same({"zebra", "wombat"}, _G.TrigQuiet)
+        end)
+
+        it("leaves the matches table as the last script left it", function()
+            _G.TrigQuiet = {}
+            local quiet = tempRegexTrigger("^quietmatches$", "")
+            local id = tempLineTrigger(1, 3, function()
+                matches.fires = (matches.fires or 0) + 1
+                _G.TrigQuiet[line] = matches.fires
+            end)
+            finally(function()
+                killTrigger(id)
+                killTrigger(quiet)
+            end)
+            feedTriggers("\nquietfirst\nquietmatches\nquietthird\n")
+            assert.are.same({quietfirst = 1, quietmatches = 2, quietthird = 3}, _G.TrigQuiet)
+        end)
+
+    end)
+
     describe("temporary trigger argument validation", function()
 
         it("tempTrigger rejects a non-string, non-function body", function()
@@ -1822,6 +1875,17 @@ describe("Trigger processing", function()
             assert.are.same(color_table.red, coloursOf(line, "bbb").foreground)
             assert.are.same(defaultForeground, coloursOf(line, "highlight_groups").foreground,
                             "the whole match is skipped when the pattern has capture groups")
+        end)
+
+        it("recolours the match of a trigger with no script to run", function()
+            tempComplexRegexTrigger("SpecHighlightQuiet", [[^highlight_quiet (\w+)$]], "", 0, 0, 0, 0, 0, "red", "blue", 0, 0, 0)
+            finally(function() killTrigger("SpecHighlightQuiet") end)
+            feedTriggers("highlight_quiet ccc\n")
+
+            local line = getLineNumber()
+            assert.are.same(color_table.red, coloursOf(line, "ccc").foreground)
+            assert.are.same(color_table.blue, coloursOf(line, "ccc").background)
+            assert.are.same(defaultForeground, coloursOf(line, "highlight_quiet").foreground)
         end)
 
     end)
@@ -3139,6 +3203,21 @@ describe("Trigger processing", function()
 
                 feedTriggers("tkcommand trigger\n")
                 assert.is_true(_G.TriggerKindsSpec.commandSeen, "a trigger's command should be sent the way a typed one is")
+            end)
+        end)
+
+        it("hands its captures to what its command sets off, though it has no script", function()
+            withTrigger("command", function(cleanup)
+                local handler = registerAnonymousEventHandler("sysDataSendRequest", function(_, command)
+                    if command == "tkcommand sent" then
+                        _G.TriggerKindsSpec.commandSelection = selectCaptureGroup(1)
+                    end
+                end)
+                cleanup(function() killAnonymousEventHandler(handler) end)
+
+                feedTriggers("tkcommand trigger\n")
+                assert.is_number(_G.TriggerKindsSpec.commandSelection, "sending the command should raise sysDataSendRequest")
+                assert.is_true(_G.TriggerKindsSpec.commandSelection >= 0, "the handler should be able to select the trigger's match")
             end)
         end)
 
