@@ -310,4 +310,36 @@ describe("Console edges", function()
       assert.are.equal("a label cannot have an empty string as its name", err)
     end)
   end)
+
+  -- A range spanning most of the int range must not build a table entry per
+  -- line number it covers, or it runs out of memory
+  describe("getLines() with a range reaching outside the buffer", function()
+    local window = name("GetLines")
+
+    setup(function()
+      createMiniConsole(window, 0, 0, 400, 300)
+      clearWindow(window)
+      -- clearWindow() leaves one empty line, which would otherwise be line 0
+      moveCursor(window, 0, 0)
+      deleteLine(window)
+      echo(window, "one\ntwo\nthree")
+    end)
+
+    teardown(function()
+      deleteMiniConsole(window)
+    end)
+
+    it("returns only the lines that exist", function()
+      assert.are.same({"one", "two", "three"}, getLines(window, 0, 3))
+      assert.are.same({"one", "two"}, getLines(window, -2, 2))
+      assert.are.same({"two", "three"}, getLines(window, 1, 100))
+      assert.are.same({}, getLines(window, 10, 20))
+    end)
+
+    it("copes with the extremes of the int range", function()
+      assert.are.same({"one", "two"}, getLines(window, -2147483648, 2))
+      assert.are.same({"one", "two", "three"}, getLines(window, 0, 2147483647))
+      assert.are.same({}, getLines(window, 2147483647, -2147483648))
+    end)
+  end)
 end)

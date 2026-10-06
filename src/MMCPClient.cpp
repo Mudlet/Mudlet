@@ -45,8 +45,11 @@ QString convertToIPv4(QHostAddress addr)
     return addr.toString();
 }
 
+// A child of the server, so the profile's connections close with it rather
+// than go on reading into a profile that has gone
 MMCPClient::MMCPClient(Host* pHost, MMCPServer* pServer)
-: mpHost(pHost)
+: QObject(pServer)
+, mpHost(pHost)
 , mpMMCPServer(pServer)
 , mTcpSocket(this)
 , mLastColorBold(false)
@@ -65,6 +68,13 @@ MMCPClient::MMCPClient(Host* pHost, MMCPServer* pServer)
     // Setup pending connection timeout
     mPendingTimer.setSingleShot(true);
     connect(&mPendingTimer, &QTimer::timeout, this, &MMCPClient::slot_pendingTimeout);
+}
+
+MMCPClient::~MMCPClient()
+{
+    // Destroying a connected socket emits disconnected(), whose handler would
+    // report to the Host and the server, which may be the ones being destroyed
+    mTcpSocket.disconnect(this);
 }
 
 /**
