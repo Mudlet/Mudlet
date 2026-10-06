@@ -533,7 +533,12 @@ void XMLimport::readRoom(QMultiHash<int, int>& areamRoomMultiHash, unsigned int*
                     // This is how IRE XML maps mark special exits, rather than
                     // by just using a different string for the direction!
                     dir = attributes().value(qsl("command")).toString();
-                    pT->setSpecialExit(e, dir);
+                    // Not setSpecialExit(), which edits the map's entrances for
+                    // this room's id while the room is not on the map yet - and
+                    // a malformed file can reuse an id another room holds
+                    if (e > 0) {
+                        pT->mSpecialExits[dir] = e;
+                    }
                     pT->setDoor(dir, door);
                 } else {
                     continue;
@@ -598,10 +603,15 @@ void XMLimport::readRoom(QMultiHash<int, int>& areamRoomMultiHash, unsigned int*
             mpHost->mpMap->reportStringToProgressDialog(tr("Parsing room data [count: %1]...").arg(*roomCount));
         }
         areamRoomMultiHash.insert(pT->area, pT->id);
+        mMaxRoomId = qMax(mMaxRoomId, pT->id); // Wasn't used but now maintains max Room Id
         // We are loading a map so can make some optimisation by setting the
         // third argument as true:
-        mpHost->mpMap->mpRoomDB->addRoom(pT->id, pT, true);
-        mMaxRoomId = qMax(mMaxRoomId, pT->id); // Wasn't used but now maintains max Room Id
+        if (!mpHost->mpMap->mpRoomDB->addRoom(pT->id, pT, true)) {
+            // addRoom() takes no ownership of a room whose id is taken, and
+            // ~TRoom() would remove the room holding that id, so unhook it:
+            pT->mpRoomDB = nullptr;
+            delete pT;
+        }
     } else {
         delete pT;
     }

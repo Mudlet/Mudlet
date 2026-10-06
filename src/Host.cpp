@@ -2387,13 +2387,13 @@ bool Host::copyToClipboard(const QString& name)
     if (!pModel) {
         return false;
     }
-    *mpClipboard = pModel->buffer.copy(pModel->P_begin, pModel->P_end);
+    pModel->buffer.copyInto(pModel->P_begin, pModel->P_end, *mpClipboard);
     return true;
 }
 
 void Host::cutMainConsoleToClipboard()
 {
-    *mpClipboard = mpMainConsoleModel->buffer.cut(mpMainConsoleModel->P_begin, mpMainConsoleModel->P_end);
+    mpMainConsoleModel->buffer.cutInto(mpMainConsoleModel->P_begin, mpMainConsoleModel->P_end, *mpClipboard);
     markSelectionDirty(*mpMainConsoleModel);
 }
 
@@ -2794,27 +2794,30 @@ void Host::raiseEvent(const TEvent& pE)
         mScriptUnit.doCleanup();
     });
 
-    if (mEventHandlerMap.contains(pE.mArgumentList.at(0))) {
-        QList<TScript*> scriptList = mEventHandlerMap.value(pE.mArgumentList.at(0));
-        for (auto& script : scriptList) {
+    // Each list is copied before it runs, as a handler can register or kill
+    // handlers and so change the map under it
+    const QString& name = pE.mArgumentList.at(0);
+    if (const auto it = mEventHandlerMap.constFind(name); it != mEventHandlerMap.cend()) {
+        const QList<TScript*> scriptList = it.value();
+        for (auto* script : scriptList) {
             script->callEventHandler(pE);
         }
     }
-    if (mEventHandlerMap.contains(star)) {
-        QList<TScript*> scriptList = mEventHandlerMap.value(star);
-        for (auto& script : scriptList) {
+    if (const auto it = mEventHandlerMap.constFind(star); it != mEventHandlerMap.cend()) {
+        const QList<TScript*> scriptList = it.value();
+        for (auto* script : scriptList) {
             script->callEventHandler(pE);
         }
     }
 
-    if (mAnonymousEventHandlerFunctions.contains(pE.mArgumentList.at(0))) {
-        const QStringList functionsList = mAnonymousEventHandlerFunctions.value(pE.mArgumentList.at(0));
+    if (const auto it = mAnonymousEventHandlerFunctions.constFind(name); it != mAnonymousEventHandlerFunctions.cend()) {
+        const QStringList functionsList = it.value();
         for (const QString& function : functionsList) {
             mLuaInterpreter.callEventHandler(function, pE);
         }
     }
-    if (mAnonymousEventHandlerFunctions.contains(star)) {
-        const QStringList functionsList = mAnonymousEventHandlerFunctions.value(star);
+    if (const auto it = mAnonymousEventHandlerFunctions.constFind(star); it != mAnonymousEventHandlerFunctions.cend()) {
+        const QStringList functionsList = it.value();
         for (const QString& function : functionsList) {
             mLuaInterpreter.callEventHandler(function, pE);
         }
@@ -3907,6 +3910,17 @@ QString Host::getPackageConfig(const QString& luaConfig, bool isModule, QString*
     int error = luaL_loadstring(L, strings.join("\n").toUtf8().constData());
 
     if (!error) {
+        // This runs on the main thread, so a manifest that never ends would hang Mudlet for good. A real
+        // one is a few assignments, far inside this budget.
+        lua_sethook(
+                L,
+                [](lua_State* L, lua_Debug*) {
+                    // From then on every instruction raises, so a pcall() in the manifest cannot swallow it
+                    lua_sethook(L, lua_gethook(L), LUA_MASKCOUNT, 1);
+                    luaL_error(L, "it ran for too long and was stopped");
+                },
+                LUA_MASKCOUNT,
+                10'000'000);
         error = lua_pcall(L, 0, 0, 0);
     }
     if (!error) {
@@ -3954,8 +3968,9 @@ QString Host::getPackageConfig(const QString& luaConfig, bool isModule, QString*
         return packageName;
     }
 
-    // error
-    std::string e = lua_tostring(L, -1);
+    // error() can raise any value or none, and for anything but a string or a number this is null
+    const char* errorText = lua_tostring(L, -1);
+    std::string e = errorText ? errorText : "";
     if (e.empty()) {
         e = "no error message available from Lua";
     }
@@ -5454,11 +5469,7 @@ std::pair<bool, QString> Host::setWindow(const QString& windowname, const QStrin
         return {false, qsl("element '%1' not found").arg(name)};
     }
 
-    if (mpConsole->reparentWindow(windowname, name, x1, y1, show)) {
-        return {true, QString()};
-    }
-
-    return {false, qsl("element '%1' not found").arg(name)};
+    return mpConsole->reparentWindow(windowname, name, x1, y1, show);
 }
 
 std::pair<bool, QString> Host::openMapWidget(const QString& area, int x, int y, int width, int height)
