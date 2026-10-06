@@ -1865,6 +1865,12 @@ describe("Tests UI functions", function()
         end)
       end
 
+      it("gates each shape only on a literal these screens cannot match without", function()
+        for _, screen in ipairs(screens) do
+          assert.is_true(BaseUI.needsHoldOn(screen.line), screen.name)
+        end
+      end)
+
       it("should not read guild points or bare xp from an LPMud row", function()
         local hits = BaseUI.parseVitalsLine("Hp: 143 (167) Gp: 240 (240) Xp: 267000")
         assert.is_nil(reading(hits, "mp"))
@@ -2038,6 +2044,12 @@ describe("Tests UI functions", function()
 
       it("gates each shape only on the start of its own regex", function()
         assert.is_true(BaseUI.prefixesLeadTheirShapes())
+      end)
+
+      it("gates each shape only on a literal it cannot match without", function()
+        for _, line in ipairs(readableLines) do
+          assert.is_true(BaseUI.needsHoldOn(line), line)
+        end
       end)
 
       -- restore whatever the assertions do: a raised vitalsLock left behind
