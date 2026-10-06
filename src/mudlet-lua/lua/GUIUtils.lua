@@ -2017,13 +2017,34 @@ function ansi2string(text)
   return result
 end
 
+local ansiColorNames = {}
+for index = 0, 255 do
+  ansiColorNames[index] = string.format("ansi_%03d", index)
+end
+local basicColourNames, brightColourNames = {}, {}
+for index = 0, 7 do
+  basicColourNames[index] = ansiColorNames[index]
+  brightColourNames[index] = ansiColorNames[index + 8]
+end
+
+-- given an xterm256 index, returns an rgb string for decho use
+local function convertindex(tag)
+  local name = ansiColorNames[tag] or string.format("ansi_%03d", tag)
+  return color_table[name] or false
+end
+
+-- a field left empty or out, as in 38;2;;5m or 38;2m, counts as 0
+local function rgbComponent(field)
+  return tonumber(field) or 0
+end
+
 -- function for converting a raw ANSI string into something decho can process
 -- italics and underline not currently supported since decho doesn't support them
 -- bold is emulated so it is supported, up to an extent
 function ansi2decho(text, ansi_default_color)
   assert(type(text) == 'string', 'ansi2decho: bad argument #1 type (expected string, got '..type(text)..'!)')
   local lastColour = ansi_default_color
-  local coloursToUse = nil
+  local namesToUse = basicColourNames
 
   -- match each set of ansi tags, ie [0;36;40m and convert to decho equivalent.
   -- this works since both ansi colours and echo don't need closing tags and map to each other
@@ -2033,21 +2054,6 @@ function ansi2decho(text, ansi_default_color)
     local delim = ";"
     if s:find(":") then delim = ":" end
     local t = string.split(s, delim) -- split the codes into an indexed table
-
-    -- given an xterm256 index, returns an rgb string for decho use
-    local function convertindex(tag)
-      local ansi = string.format("ansi_%03d", tag)
-      return color_table[ansi] or false
-    end
-    local colours = {}
-    for i = 0, 7 do
-      colours[i] = convertindex(i)
-    end
-    local lightColours = {}
-    for i = 0, 7 do
-      lightColours[i] = convertindex(i+8)
-    end
-    coloursToUse = coloursToUse or colours
 
     -- since fg/bg can come in different order and we need them as fg:bg for decho, collect
     -- the data first, then assemble it in the order we need at the end
@@ -2063,14 +2069,14 @@ function ansi2decho(text, ansi_default_color)
         -- reset attributes
         output[#output + 1] = "<r>"
         fg, bg = nil, nil
-        coloursToUse = colours
+        namesToUse = basicColourNames
         lastColour = ansi_default_color
       elseif code == "1" then
         -- light or bold
-        coloursToUse = lightColours
+        namesToUse = brightColourNames
       elseif code == "22" then
         -- not light or bold
-        coloursToUse = colours
+        namesToUse = basicColourNames
       elseif code == "3" then
         formatCodeHandled = true
         output[#output+1] = "<i>"
@@ -2109,32 +2115,37 @@ function ansi2decho(text, ansi_default_color)
         local cmd = code - (layerCode * 10) -- extract the actual "command"
         -- 0-7 is a colour, 8 is xterm256
         local colour = nil
+        local cutShort = false
 
         if cmd == 8 and t[i + 1] == '5' then
           -- xterm256, colour indexed
-          colour = convertindex(tonumber(t[i + 2]))
+          local index = tonumber(t[i + 2])
+          cutShort = index == nil
+          colour = index and convertindex(index)
           i = i + 2
 
         elseif cmd == 8 and t[i + 1] == '2' then
           -- xterm256, rgb
           if delim == ";" then
-            colour = { t[i + 2] or '0', t[i + 3] or '0', t[i + 4] or '0' }
+            colour = { rgbComponent(t[i + 2]), rgbComponent(t[i + 3]), rgbComponent(t[i + 4]) }
             i = i + 4
           elseif delim == ":" then
-            colour = { t[i + 3] or '0', t[i + 4] or '0', t[i + 5] or '0' }
+            colour = { rgbComponent(t[i + 3]), rgbComponent(t[i + 4]), rgbComponent(t[i + 5]) }
             i = i + 5
           end
         elseif layerCode == 9 or layerCode == 10 then
           --light colours
-          colour = lightColours[cmd]
+          colour = color_table[brightColourNames[cmd]]
         elseif layerCode == 4 then
           -- background colours know no "bright" for
-          colour = colours[cmd]  -- mudlet
+          colour = color_table[basicColourNames[cmd]]  -- mudlet
         else -- usual ANSI colour index
-          colour = coloursToUse[cmd]
+          colour = color_table[namesToUse[cmd]]
         end
 
-        if layerCode == 3 or layerCode == 9 then
+        if cutShort then
+          -- a sequence cut short, like 38;5m, names no colour, so nothing changes
+        elseif layerCode == 3 or layerCode == 9 then
           fg = colour
           lastColour = cmd
         elseif layerCode == 4 or layerCode == 10 then
@@ -2146,8 +2157,10 @@ function ansi2decho(text, ansi_default_color)
       -- code such as 'bold' or 'dim'.
       -- In those cases, if there's a previous color, we are supposed to
       -- modify it
-      if not formatCodeHandled and lastColour then
-        fg = coloursToUse[lastColour]
+      -- only the eight basic colours have a bright form: after an xterm256 or
+      -- rgb foreground lastColour is 8, and that colour stays as it is
+      if not formatCodeHandled then
+        fg = color_table[namesToUse[lastColour]] or fg
       end
 
       i = i + 1

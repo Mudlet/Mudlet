@@ -58,6 +58,8 @@ private:
     inline static const QString TAG_CONTENT_PLACEHOLDER = qsl("&text;");
 
     bool mIsHrefInContent;
+    // Every byte of game text reaches handleContent(), not only what is inside a SEND
+    bool mInsideTag = false;
     QString mCurrentTagContent;
     QString mLastCaption;
     QString mCommand;
