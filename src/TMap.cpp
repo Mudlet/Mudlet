@@ -1768,12 +1768,12 @@ bool TMap::listLengthFits(QDataStream& ifs, const qint64 minBytesPerElement)
     // from Qt_6_7 a larger one can follow it
     Q_ASSERT(ifs.version() < QDataStream::Qt_6_7);
     constexpr qint64 lengthSize = sizeof(quint32);
-    char lengthBytes[lengthSize];
-    if (pDevice->peek(lengthBytes, lengthSize) != lengthSize) {
+    quint32 rawLength = 0;
+    if (pDevice->peek(reinterpret_cast<char*>(&rawLength), lengthSize) != lengthSize) {
         ifs.setStatus(QDataStream::ReadPastEnd);
         return false;
     }
-    const quint32 length = qFromBigEndian<quint32>(lengthBytes);
+    const quint32 length = qFromBigEndian<quint32>(&rawLength);
     // Most lists in a map are empty, and bytesAvailable() asks the OS for the file size
     if (!length) {
         return true;
