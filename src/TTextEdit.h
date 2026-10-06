@@ -203,6 +203,9 @@ private:
     int convertMouseXToBufferX(const int mouseX, const int lineNumber, bool* isOutOfbounds, bool* isOverTimeStamp = nullptr) const;
     int getGraphemeWidth(uint unicode) const;
     void normaliseSelection();
+    // Borrows mScreenBuffer's rows, so it must not outlive a reallocation of it.
+    QImage cachedScreen();
+    void slideScreenWindow(int deviceRows);
     // Coalescing replacement for update() on the paths that new output drives.
     // Those paints run inside the receive loop, so one per network packet
     // delays the next packet; capping them at one per csmPaintPaceMs lets a
@@ -291,13 +294,17 @@ private:
     QPointer<Host> mpHost;
     // screen height in characters
     int mScreenHeight;
-    // currently viewed screen area
-    QPixmap mScreenMap;
-    // What each paint draws into, swapped with mScreenMap once the frame is
-    // finished. Two buffers rather than one because a QPixmap shared with
-    // mScreenMap would deep-copy itself the moment a QPainter opened on it,
-    // which is exactly the full-surface copy this reuse exists to avoid.
-    QPixmap mRenderBuffer;
+    // The cached screen is a window mScreenTop device rows down a buffer twice
+    // its height: a scroll slides the window over the rows that are still valid
+    // instead of copying the whole screen up or down, and only once the window
+    // reaches an end of the buffer are those rows moved back to the other end.
+    QImage mScreenBuffer;
+    int mScreenTop = 0;
+    // Device size of the frame last left in the window; empty while none is.
+    QSize mCachedScreenSize;
+    // Cosmetic repaints - hover, selection - draw here, over a copy of the
+    // window, as they must leave the cached screen as they found it.
+    QImage mRenderBuffer;
     // Buffer lines whose text changed where it stands, so the cached screen
     // cannot be trusted for the rows they land on. -1 for "none pending".
     int mDirtyFirstLine = -1;

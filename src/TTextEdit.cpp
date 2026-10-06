@@ -47,6 +47,7 @@
 #include <algorithm>
 #include <chrono>
 #include <cmath>
+#include <cstring>
 #include <QtEvents>
 #include <QtGlobal>
 #include <QtMath>
@@ -378,7 +379,7 @@ void TTextEdit::updateScreenView()
     } else {
         mScreenWidth = currentScreenWidth;
     }
-    // When the pane dimensions change the cached mScreenMap pixmap no longer
+    // When the pane dimensions change the cached screen no longer
     // matches the current geometry. A subsequent partial-region repaint would
     // otherwise reuse that stale cache (see drawForeground) and leave newly
     // revealed columns/rows unpainted - e.g. growing the pane horizontally
@@ -1256,6 +1257,43 @@ int TTextEdit::getGraphemeWidth(uint unicode) const
 #endif
     return graphemeInfo::getWidth(unicode, mWideAmbigousWidthGlyphs);
 }
+QImage TTextEdit::cachedScreen()
+{
+    if (mScreenBuffer.isNull()) {
+        return QImage();
+    }
+    const qsizetype bytesPerLine = mScreenBuffer.bytesPerLine();
+    // Borrows the buffer's rows rather than copying them, so painting on the
+    // returned image paints on the cache itself.
+    QImage window(mScreenBuffer.bits() + mScreenTop * bytesPerLine, mScreenBuffer.width(), mScreenBuffer.height() / 2, bytesPerLine, mScreenBuffer.format());
+    window.setDevicePixelRatio(mScreenBuffer.devicePixelRatio());
+    return window;
+}
+
+// Leaves the window showing what copying the cached screen deviceRows up (or
+// down, if negative) would: each row the two positions share is kept and the
+// rows scrolled into view are left for the caller to redraw.
+void TTextEdit::slideScreenWindow(const int deviceRows)
+{
+    const int windowHeight = mScreenBuffer.height() / 2;
+    const int slidTop = mScreenTop + deviceRows;
+    if (slidTop >= 0 && slidTop + windowHeight <= mScreenBuffer.height()) {
+        mScreenTop = slidTop;
+        return;
+    }
+    // Restart from the far end, so that scrolling on in the same direction has
+    // the whole buffer to slide over before the next copy.
+    const int newTop = deviceRows > 0 ? 0 : mScreenBuffer.height() - windowHeight;
+    const int firstKeptRow = std::max(0, -deviceRows);
+    const int keptRows = windowHeight - std::abs(deviceRows);
+    if (keptRows > 0) {
+        const qsizetype bytesPerLine = mScreenBuffer.bytesPerLine();
+        uchar* bits = mScreenBuffer.bits();
+        std::memmove(bits + (newTop + firstKeptRow) * bytesPerLine, bits + (mScreenTop + firstKeptRow + deviceRows) * bytesPerLine, keptRows * bytesPerLine);
+    }
+    mScreenTop = newTop;
+}
+
 void TTextEdit::drawForeground(QPainter& painter, const QRect& r)
 {
     mHasBlinkingContent = false;
@@ -1264,30 +1302,9 @@ void TTextEdit::drawForeground(QPainter& painter, const QRect& r)
     qreal dpr = devicePixelRatioF();
     // One spare row below the last character cell, so that ink which overflows
     // the bottom cell - descenders and underscores do at many font sizes - has
-    // somewhere to go instead of being cut off by the edge of the pixmap.
+    // somewhere to go instead of being cut off by the edge of the cached screen.
     const int pixmapHeight = (mScreenHeight + 1) * mFontHeight;
     const QSize surfaceSize = smallestEnclosingSurfaceSize(mScreenWidth, mFontWidth, pixmapHeight, dpr);
-    // Building a pane-sized pixmap costs the same whether one line changed or
-    // all of them did, so it is only done when there is no buffer to reuse -
-    // the pane changed size or resolution, or nothing has been painted yet.
-    bool bufferWasJustCleared = false;
-    if (mRenderBuffer.size() != surfaceSize || !qFuzzyCompare(mRenderBuffer.devicePixelRatio(), dpr)) {
-        mRenderBuffer = QPixmap(surfaceSize);
-        mRenderBuffer.setDevicePixelRatio(dpr);
-        mRenderBuffer.fill(Qt::transparent);
-        bufferWasJustCleared = true;
-    }
-    QPixmap& pixmap = mRenderBuffer;
-
-    QPainter p(&pixmap);
-    // Setting the font here isn't academic as the text IS drawn with THIS painter (p)
-    p.setFont(painter.font());
-    mpGlyphCache->setFont(p.font(), *p.device());
-    // Source rather than SourceOver for the cache blits below: they have to
-    // overwrite whatever a reused buffer still holds from an earlier frame, and
-    // over a freshly cleared buffer the two modes produce identical pixels.
-    p.setCompositionMode(QPainter::CompositionMode_Source);
-
     int y_top = r.top() / mFontHeight;
     int y_bottom = r.bottom() / mFontHeight;
 
@@ -1318,8 +1335,7 @@ void TTextEdit::drawForeground(QPainter& painter, const QRect& r)
         mScrollVector = 0;
         noScroll = true;
     }
-    if (!scrolledSinceLastPaint && (r.height() < rect().height()) && (lineOffset > 0) && (mScreenMap.width() >= surfaceSize.width()) && (mScreenMap.height() >= surfaceSize.height())) {
-        p.drawPixmap(0, 0, mScreenMap);
+    if (!scrolledSinceLastPaint && (r.height() < rect().height()) && (lineOffset > 0) && (mCachedScreenSize.width() >= surfaceSize.width()) && (mCachedScreenSize.height() >= surfaceSize.height())) {
         reusedCachedScreenContent = true;
         from = y_top;
         noScroll = true;
@@ -1335,10 +1351,14 @@ void TTextEdit::drawForeground(QPainter& painter, const QRect& r)
         }
     }
     const int scrolledRows = qAbs(mScrollVector);
+    // Device rows the cached screen moves up (down if negative). A fractional
+    // scale can land this on half a device row, which rounds toward negative:
+    // that is where Qt places an image drawn at the same scaled offset.
+    int scrollShift = 0;
     if (!noScroll && !mForceUpdate && scrolledRows <= mScreenHeight) {
-        if (scrolledRows * mFontHeight < mScreenMap.height() && mScreenWidth * mFontWidth <= mScreenMap.width() && (mScreenHeight - scrolledRows) * mFontHeight > 0
-            && (mScreenHeight - scrolledRows) * mFontHeight <= mScreenMap.height()) {
-            p.drawPixmap(0, -mScrollVector * mFontHeight, mScreenMap);
+        if (scrolledRows * mFontHeight < mCachedScreenSize.height() && mScreenWidth * mFontWidth <= mCachedScreenSize.width() && (mScreenHeight - scrolledRows) * mFontHeight > 0
+            && (mScreenHeight - scrolledRows) * mFontHeight <= mCachedScreenSize.height()) {
+            scrollShift = qCeil(mScrollVector * mFontHeight * dpr - 0.5);
             reusedCachedScreenContent = true;
             if (mScrollVector >= 0) {
                 from = mScreenHeight - mScrollVector - 1;
@@ -1348,6 +1368,51 @@ void TTextEdit::drawForeground(QPainter& painter, const QRect& r)
             }
         }
     }
+
+    // Building a pane-sized buffer costs the same whether one line changed or
+    // all of them did, so it is only done when there is no buffer to reuse -
+    // the pane changed size or resolution, or nothing has been painted yet.
+    bool bufferWasJustCleared = false;
+    if (mScreenBuffer.width() != surfaceSize.width() || mScreenBuffer.height() != 2 * surfaceSize.height() || !qFuzzyCompare(mScreenBuffer.devicePixelRatio(), dpr)) {
+        QImage resized(surfaceSize.width(), 2 * surfaceSize.height(), QImage::Format_ARGB32_Premultiplied);
+        resized.setDevicePixelRatio(dpr);
+        resized.fill(Qt::transparent);
+        if (reusedCachedScreenContent) {
+            QPainter carry(&resized);
+            carry.setCompositionMode(QPainter::CompositionMode_Source);
+            carry.drawImage(QPointF(0, 0), cachedScreen());
+            // Only the part that fits the new size came across
+            mCachedScreenSize = mCachedScreenSize.boundedTo(surfaceSize);
+        } else {
+            bufferWasJustCleared = true;
+        }
+        mScreenBuffer = std::move(resized);
+        mScreenTop = 0;
+    }
+    if (scrollShift) {
+        slideScreenWindow(scrollShift);
+    }
+
+    QImage screen = cachedScreen();
+    // Nothing is reused, so whatever the window holds is the previous frame's
+    // ink - including the sliver past the last cell, which no band fill reaches.
+    if (!reusedCachedScreenContent && !bufferWasJustCleared) {
+        screen.fill(Qt::transparent);
+    }
+    QImage* target = &screen;
+    if (noCopy) {
+        if (mRenderBuffer.size() != surfaceSize || !qFuzzyCompare(mRenderBuffer.devicePixelRatio(), dpr)) {
+            mRenderBuffer = QImage(surfaceSize, QImage::Format_ARGB32_Premultiplied);
+            mRenderBuffer.setDevicePixelRatio(dpr);
+        }
+        std::memcpy(mRenderBuffer.bits(), screen.constBits(), mRenderBuffer.sizeInBytes());
+        target = &mRenderBuffer;
+    }
+
+    QPainter p(target);
+    // Setting the font here isn't academic as the text IS drawn with THIS painter (p)
+    p.setFont(painter.font());
+    mpGlyphCache->setFont(p.font(), *p.device());
 
     const int lastRow = mScreenHeight - 1;
     int drawFrom = qMax(0, from);
@@ -1367,14 +1432,6 @@ void TTextEdit::drawForeground(QPainter& painter, const QRect& r)
         }
     }
     const bool bottomRowIsRepainted = drawTo == lastRow;
-
-    // Neither cache blit ran, so everything outside the band about to be redrawn
-    // is still the previous frame's ink rather than the transparency a newly
-    // allocated pixmap would have started with.
-    if (!reusedCachedScreenContent && !bufferWasJustCleared) {
-        p.setCompositionMode(QPainter::CompositionMode_Source);
-        p.fillRect(QRect(0, 0, mScreenWidth * mFontWidth, pixmapHeight), Qt::transparent);
-    }
 
     //delete non used characters.
     //needed for horizontal scrolling because there sometimes characters didn't get cleared
@@ -1449,12 +1506,9 @@ void TTextEdit::drawForeground(QPainter& painter, const QRect& r)
     p.end();
     painter.setBackgroundMode(Qt::BGMode::TransparentMode);
     painter.setCompositionMode(QPainter::CompositionMode_SourceOver);
-    painter.drawPixmap(0, 0, pixmap);
+    painter.drawImage(QPointF(0, 0), *target);
     if (!noCopy) {
-        // Swapped rather than assigned: leaving the two sharing one buffer would
-        // make the next paint's QPainter deep-copy the whole surface before it
-        // could draw a single glyph, which is the cost being avoided here.
-        mScreenMap.swap(mRenderBuffer);
+        mCachedScreenSize = surfaceSize;
     }
     mScrollVector = 0;
     mLastRenderedOffset = lineOffset;
@@ -1493,7 +1547,7 @@ bool TTextEdit::shouldRegisterBlinkClient(const bool enableBlinkText, const bool
         return true;
     }
 
-    // When content is rendered by copying rows from mScreenMap (scroll or
+    // When content is rendered by reusing rows of the cached screen (scroll or
     // partial-height repaint), those rows are not re-scanned for blinking
     // characters, so mHasBlinkingContent will be false even if blinking content
     // is still visible. Preserve the blink timer in that case; the next full

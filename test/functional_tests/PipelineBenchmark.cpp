@@ -993,7 +993,7 @@ private slots:
     // Qt's paint coalescing.
     //
     // Declared last on purpose: its render target and the paint path's cached
-    // screen pixmap would otherwise land between peak_rss_kb and
+    // screen buffers would otherwise land between peak_rss_kb and
     // defaults_peak_rss_kb, whose difference is what the default packages cost.
     void benchDisplay()
     {
@@ -1023,7 +1023,7 @@ private slots:
 
         // scrollTo(line) draws the rows ending just ABOVE line, so `rows` is the
         // first argument that fills the pane. Advancing by more than one screenful
-        // per paint keeps drawForeground()'s scroll-blit shortcut from serving any
+        // per paint keeps drawForeground()'s scroll shortcut from serving any
         // part of a frame from the previous one, so every paint is a full redraw.
         const int stride = rows + 1;
         const int span = std::max(1, bufferedLines - rows);
@@ -1035,10 +1035,10 @@ private slots:
         pane->scrollTo(rows);
         pane->render(&target);
         // Proves text really reaches the pixmap, and keeps first-paint costs -
-        // glyph caches, the pane's own screen pixmap - out of the timed passes.
+        // glyph caches, the pane's own cached screen - out of the timed passes.
         QVERIFY2(frameHasContent(target.toImage()), "the rendered frame is a single flat colour - nothing was drawn, so the timings below would describe an empty widget");
 
-        // drawForeground() only skips its scroll-blit shortcut while the scroll
+        // drawForeground() only skips its scroll shortcut while the scroll
         // between two paints exceeds the rows on screen, and imageTopLine() is the
         // very offset it differences to decide that. Prove the stride clears it:
         // otherwise most of each frame is served from the previous one and the
@@ -1135,8 +1135,8 @@ private slots:
     //
     // Its guard on the cached screen is separate from the scroll shortcut's, and
     // when it rejects the cache the repaint falls through to that shortcut, which
-    // blits and then redraws nothing - so the damaged band is never drawn and the
-    // paint gets FASTER. Issue #10341 was exactly that, and both benchmarks above
+    // reuses the cache and redraws only below the band - so the band is never
+    // drawn and the paint gets FASTER. Issue #10341 was exactly that, and both benchmarks above
     // stayed flat through it - which is why this one exists. Reproducing it now
     // means reverting #10343 and running at a fractional QT_SCALE_FACTOR.
     void benchDisplayOverlay()
@@ -1193,13 +1193,13 @@ private:
     // agreeing with itself long after the guard it was copied from started
     // rejecting the cache.
     //
-    // Blitting the cache is not on its own the answer, because the scroll
-    // shortcut below it blits the same pixmap and is what a build with a broken
-    // guard falls through to. The two are told apart by what they redraw: the
-    // cached-screen blit redraws the damaged band, the scroll shortcut starts
-    // from the bottom row and leaves the band as it found it. So the cache is
-    // marked twice, once outside the band and once inside it, and only the
-    // wanted path arrives with the first mark and without the second.
+    // Reusing the cache is not on its own the answer, because the scroll
+    // shortcut below it reuses the same cached screen and is what a build with
+    // a broken guard falls through to. Only the wanted path paints into
+    // mRenderBuffer, over a copy of the cache, and it alone redraws the damaged
+    // band. So the cache is marked twice, once outside the band and once inside
+    // it, and only the wanted path leaves mRenderBuffer with the first mark and
+    // without the second.
     bool overlayPaintReusedCache(TTextEdit* pane, QPixmap& target, const QRect& band)
     {
         const QColor outsideMark(0, 255, 0);
@@ -1207,9 +1207,12 @@ private:
         const int insideRow = band.top() / pane->mFontHeight;
         markCacheRow(pane, 0, outsideMark);
         markCacheRow(pane, insideRow, insideMark);
+        // Otherwise a path that never touches it would leave an earlier probe's
+        // answer there to be read back.
+        pane->mRenderBuffer = QImage();
         pane->render(&target, QPoint(), QRegion(band));
 
-        const QImage painted = pane->mRenderBuffer.toImage();
+        const QImage painted = pane->mRenderBuffer.copy();
         const int insideTop = qRound(insideRow * pane->mFontHeight * pane->devicePixelRatioF());
         const double insideMarkLeft = markedFraction(painted, insideTop, insideMark);
         const bool cacheWasBlitted = markedFraction(painted, 0, outsideMark) > 0.9;
@@ -1219,7 +1222,8 @@ private:
 
     static void markCacheRow(TTextEdit* pane, const int row, const QColor& colour)
     {
-        QPainter mark(&pane->mScreenMap);
+        QImage screen = pane->cachedScreen();
+        QPainter mark(&screen);
         mark.setCompositionMode(QPainter::CompositionMode_Source);
         mark.fillRect(QRect(0, row * pane->mFontHeight, pane->width(), pane->mFontHeight), colour);
     }
@@ -1346,18 +1350,18 @@ private:
         const QRect band(0, (result.rows / 3) * pane->mFontHeight, pane->width(), kDisplayOverlayBandRows * pane->mFontHeight);
         QVERIFY2(band.height() < pane->rect().height(), "the band covers the whole pane, so these would be full repaints rather than the partial ones this measures");
         QVERIFY2(band.top() >= pane->mFontHeight, "the band starts at the top row, leaving no row above it for the probe below to mark");
-        // Any of these makes drawForeground() write the repaint back to the
-        // cache, which swaps the two pixmaps and leaves the probe reading the
-        // pre-render cache rather than what was just painted - reporting 0 for a
+        // Any of these makes drawForeground() paint the cache itself instead of
+        // the scratch buffer, leaving the probe reading whatever the scratch
+        // held rather than what was just painted - reporting 0 for a
         // reason that has nothing to do with the paint path. The first two also
         // widen the redraw to the whole screen below the band, so the timings
         // would stop describing a band at all.
         QVERIFY2(!pane->mMouseTracking && !pane->mForceUpdate && pane->mDirtyFirstLine < 0,
-                 "a drag, a forced redraw or a pending dirty line is in progress, so this would measure a wider repaint than the band and read the wrong pixmap back");
+                 "a drag, a forced redraw or a pending dirty line is in progress, so this would measure a wider repaint than the band and read the wrong buffer back");
         // The probe marks the cache and reads the band back out of the buffer, so
         // a cache too small to carry the marks would report them missing - the
         // same answer as a rejected cache, arrived at for an unrelated reason.
-        QVERIFY2(!pane->mScreenMap.isNull() && pane->mScreenMap.height() >= qRound(band.bottom() * pane->devicePixelRatioF()),
+        QVERIFY2(pane->cachedScreen().height() >= qRound(band.bottom() * pane->devicePixelRatioF()),
                  "the cached screen is too small to mark, so the probe could not tell a rejected cache from an unreadable one");
 
         double best = std::numeric_limits<double>::max();
