@@ -1079,6 +1079,7 @@ describe("Tests C++ functions in the Miscallaneous category", function()
           feedTelnet("\27[0m\27[1;3mSpecHtmlBoldItalic\27[0m\n")
           feedTelnet("\27[0m\27[4;9;53mSpecHtmlDecorated\27[0m\n")
           echo("SpecHtmlAngles a<b>c\n")
+          feedTelnet("\27[0m\27[31mSpecHtmlRunA<\27[32m>SpecHtmlRunB\27[0m\n")
           -- a received line is only written once the next one commits
           feedTelnet("SpecHtmlFlush\n")
           startLogging(false)
@@ -1113,6 +1114,8 @@ describe("Tests C++ functions in the Miscallaneous category", function()
           assert.is_true(contains(decorated, "text-decoration: underline line-through overline;"), decorated)
 
           assert.is_true(contains(contents, "SpecHtmlAngles a&lt;b&gt;c"), "the angle brackets in the logged text were not escaped")
+          assert.is_true(contains(contents, "SpecHtmlRunA&lt;</span><span"), "the text before a colour change did not end its own span")
+          assert.is_true(contains(contents, "\">&gt;SpecHtmlRunB</span><br>"), "the text after a colour change did not start the next span")
         end)
 
         it("gives text with a transparent background the console's colour (#10592)", function()
