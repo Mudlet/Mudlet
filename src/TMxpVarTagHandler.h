@@ -30,6 +30,9 @@
 class TMxpVarTagHandler : public TMxpTagHandler {
     MxpStartTag mCurrentStartTag;
     QString mCurrentVarContent;
+    // Every byte of game text reaches handleContent(), not only what is inside a VAR
+    bool mInsideTag = false;
+
 public:
     TMxpVarTagHandler()
     : mCurrentStartTag(MxpStartTag("VAR"))

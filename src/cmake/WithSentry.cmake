@@ -17,13 +17,15 @@ endif()
 
 message(STATUS "Building with Sentry enabled")
 string(REPLACE ";" "|" SENTRY_PREFIX_PATH "${CMAKE_PREFIX_PATH}")
+string(REPLACE ";" "|" SENTRY_C_COMPILER_LAUNCHER "${CMAKE_C_COMPILER_LAUNCHER}")
+string(REPLACE ";" "|" SENTRY_CXX_COMPILER_LAUNCHER "${CMAKE_CXX_COMPILER_LAUNCHER}")
 set(SENTRY_CMAKE_ARGS
     -DCMAKE_BUILD_TYPE=RelWithDebInfo
     "-DCMAKE_INSTALL_PREFIX=${SENTRY_BUILD_ROOT}"
     "-DCMAKE_C_COMPILER=${CMAKE_C_COMPILER}"
     "-DCMAKE_CXX_COMPILER=${CMAKE_CXX_COMPILER}"
-    "-DCMAKE_C_COMPILER_LAUNCHER=${CMAKE_C_COMPILER_LAUNCHER}"
-    "-DCMAKE_CXX_COMPILER_LAUNCHER=${CMAKE_CXX_COMPILER_LAUNCHER}"
+    "-DCMAKE_C_COMPILER_LAUNCHER=${SENTRY_C_COMPILER_LAUNCHER}"
+    "-DCMAKE_CXX_COMPILER_LAUNCHER=${SENTRY_CXX_COMPILER_LAUNCHER}"
     "-DCMAKE_PREFIX_PATH=${SENTRY_PREFIX_PATH}"
     -DSENTRY_BACKEND=crashpad
     -DSENTRY_TRANSPORT=none
@@ -177,7 +179,9 @@ if(APPLE)
             COMMAND strip -x $<TARGET_FILE:${EXE_MUDLET_TARGET}>
             COMMENT "Creating .dSYM bundle and stripping executable"
         )
-    else()
+    elseif(SENTRY_SEND_DEBUG)
+        # Only the Sentry upload below reads an unstripped build's .dSYM. Without it,
+        # dsymutil's 15-30s and the ~200MB it adds inside the app bundle buy nothing.
         add_custom_command(TARGET ${EXE_MUDLET_TARGET} POST_BUILD
             COMMAND dsymutil $<TARGET_FILE:${EXE_MUDLET_TARGET}> -o $<TARGET_FILE:${EXE_MUDLET_TARGET}>.dSYM
             COMMENT "Creating .dSYM bundle without stripping"

@@ -62,7 +62,6 @@ jobs:
         # Every buildname in build-mudlet-pr.yml and build-mudlet-win-pr.yml
         buildname:
           - 'ubuntu / gcc / lua tests + leak detection'
-          - 'macos (x86_64)'
           - 'macos (arm64) / c++, lua tests'
           - 'windows64'
     steps:
