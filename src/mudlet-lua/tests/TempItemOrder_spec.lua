@@ -4,6 +4,11 @@ describe("Temporary items killed out of the order they were made in", function()
   it("leaves the surviving triggers firing in the order they were made", function()
     local fired = {}
     local ids = {}
+    finally(function()
+      for _, id in pairs(ids) do
+        killTrigger(id)
+      end
+    end)
     for i = 1, 6 do
       ids[i] = tempTrigger(probe, function() fired[#fired + 1] = i end)
     end
@@ -19,14 +24,16 @@ describe("Temporary items killed out of the order they were made in", function()
     feedTriggers(probe .. "\n")
     assert.are.same({1, 3, 4, 6, 7}, fired)
 
-    for _, id in pairs(ids) do
-      killTrigger(id)
-    end
   end)
 
   it("leaves the surviving aliases running in the order they were made", function()
     local ran = {}
     local ids = {}
+    finally(function()
+      for _, id in pairs(ids) do
+        killAlias(id)
+      end
+    end)
     for i = 1, 6 do
       ids[i] = tempAlias("^" .. probe .. "$", function() ran[#ran + 1] = i end)
     end
@@ -41,8 +48,5 @@ describe("Temporary items killed out of the order they were made in", function()
     expandAlias(probe, false)
     assert.are.same({2, 3, 5, 6, 7}, ran)
 
-    for _, id in pairs(ids) do
-      killAlias(id)
-    end
   end)
 end)
