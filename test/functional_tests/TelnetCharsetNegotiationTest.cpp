@@ -337,8 +337,8 @@ private slots:
     {
         delete mpServer;
         mpServer = nullptr;
-        deleteProfileDirectory();
         delete mudlet::self();
+        deleteProfileDirectory();
     }
 
     // A game that lists several charsets it can speak must not pull a UTF-8
@@ -499,7 +499,7 @@ private:
                     }
                     return false;
                 },
-                5000);
+                5s);
     }
 
     // An RFC 2066 request for a charset Mudlet can use but is not using.
@@ -539,7 +539,7 @@ private:
                     [this]() {
                         return mpServer->connectionCount() >= 2 && mpServer->latestTtypeCycleFinished();
                     },
-                    15000)) {
+                    15s)) {
             qWarning("The client did not reconnect and complete its telnet negotiation");
             return nullptr;
         }
@@ -548,10 +548,7 @@ private:
 
     void deleteProfileDirectory()
     {
-        QDir dir(MudletApp::getMudletPath(enums::profileHomePath, mHostname));
-        if (dir.exists()) {
-            dir.removeRecursively();
-        }
+        TestProfile::removeProfileDirectory(mHostname);
     }
 };
 

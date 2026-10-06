@@ -45,6 +45,8 @@
 
 #include "GroupedTest.h"
 
+using namespace std::chrono_literals;
+
 class StarterUiGaugePanelTest : public QObject
 {
     Q_OBJECT
@@ -97,8 +99,8 @@ private slots:
     {
         delete mpServer;
         mpServer = nullptr;
-        deleteProfileDirectory(mHostname);
         delete mudlet::self();
+        deleteProfileDirectory(mHostname);
     }
 
     // The bars moved into a panel of their own to be draggable as a group, so
@@ -350,7 +352,7 @@ private:
             QFAIL("No active host available for the test.");
         }
         QSignalSpy connected(&(host->mTelnet), &cTelnet::signal_connected);
-        if (!connected.wait(3000)) {
+        if (!connected.wait(3s)) {
             QFAIL("Could not connect to the stub.");
         }
     }
@@ -379,10 +381,7 @@ private:
 
     void deleteProfileDirectory(const QString& profileName)
     {
-        QDir dir(MudletApp::getMudletPath(enums::profileHomePath, profileName));
-        if (dir.exists()) {
-            dir.removeRecursively();
-        }
+        TestProfile::removeProfileDirectory(profileName);
     }
 };
 

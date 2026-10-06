@@ -17,13 +17,15 @@ endif()
 
 message(STATUS "Building with Sentry enabled")
 string(REPLACE ";" "|" SENTRY_PREFIX_PATH "${CMAKE_PREFIX_PATH}")
+string(REPLACE ";" "|" SENTRY_C_COMPILER_LAUNCHER "${CMAKE_C_COMPILER_LAUNCHER}")
+string(REPLACE ";" "|" SENTRY_CXX_COMPILER_LAUNCHER "${CMAKE_CXX_COMPILER_LAUNCHER}")
 set(SENTRY_CMAKE_ARGS
     -DCMAKE_BUILD_TYPE=RelWithDebInfo
     "-DCMAKE_INSTALL_PREFIX=${SENTRY_BUILD_ROOT}"
     "-DCMAKE_C_COMPILER=${CMAKE_C_COMPILER}"
     "-DCMAKE_CXX_COMPILER=${CMAKE_CXX_COMPILER}"
-    "-DCMAKE_C_COMPILER_LAUNCHER=${CMAKE_C_COMPILER_LAUNCHER}"
-    "-DCMAKE_CXX_COMPILER_LAUNCHER=${CMAKE_CXX_COMPILER_LAUNCHER}"
+    "-DCMAKE_C_COMPILER_LAUNCHER=${SENTRY_C_COMPILER_LAUNCHER}"
+    "-DCMAKE_CXX_COMPILER_LAUNCHER=${SENTRY_CXX_COMPILER_LAUNCHER}"
     "-DCMAKE_PREFIX_PATH=${SENTRY_PREFIX_PATH}"
     -DSENTRY_BACKEND=crashpad
     -DSENTRY_TRANSPORT=none
@@ -72,7 +74,21 @@ ExternalProject_Add(
 
 add_dependencies(${LIB_MUDLET_TARGET} sentry_native)
 
-target_compile_options(${LIB_MUDLET_TARGET} PRIVATE -g)
+# Full debug info is only needed where the symbols are uploaded to Sentry, or
+# where the build type asks for it. Every other build - pull requests and pushes
+# to development - gets line tables only, which still gives sanitizer and crash
+# backtraces their file:line frames at a fraction of the compile, link and
+# ccache cost. The price is that builds which do upload - nightly PTBs and
+# tagged releases - no longer share mudlet_core's objects with the development
+# pushes whose ccache they start from, so they compile it afresh.
+if(SENTRY_SEND_DEBUG OR CMAKE_BUILD_TYPE MATCHES "^(Debug|RelWithDebInfo)$")
+  set(SENTRY_DEBUG_INFO_FLAG -g)
+elseif(CMAKE_CXX_COMPILER_ID MATCHES "Clang")
+  set(SENTRY_DEBUG_INFO_FLAG -gline-tables-only)
+else()
+  set(SENTRY_DEBUG_INFO_FLAG -g1)
+endif()
+target_compile_options(${LIB_MUDLET_TARGET} PRIVATE ${SENTRY_DEBUG_INFO_FLAG})
 
 if(WIN32)
     # On Windows the debug information must be emitted as CodeView (not DWARF) so
@@ -163,7 +179,9 @@ if(APPLE)
             COMMAND strip -x $<TARGET_FILE:${EXE_MUDLET_TARGET}>
             COMMENT "Creating .dSYM bundle and stripping executable"
         )
-    else()
+    elseif(SENTRY_SEND_DEBUG)
+        # Only the Sentry upload below reads an unstripped build's .dSYM. Without it,
+        # dsymutil's 15-30s and the ~200MB it adds inside the app bundle buy nothing.
         add_custom_command(TARGET ${EXE_MUDLET_TARGET} POST_BUILD
             COMMAND dsymutil $<TARGET_FILE:${EXE_MUDLET_TARGET}> -o $<TARGET_FILE:${EXE_MUDLET_TARGET}>.dSYM
             COMMENT "Creating .dSYM bundle without stripping"

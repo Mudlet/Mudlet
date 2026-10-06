@@ -75,6 +75,8 @@
 #include <memory>
 #include <optional>
 
+using namespace std::chrono_literals;
+
 extern "C" {
 #if defined(INCLUDE_VERSIONED_LUA_HEADERS)
 #include <lua5.1/lauxlib.h>
@@ -1408,7 +1410,7 @@ private slots:
         // Not merely still pointed at: an engine retired the way the swap path
         // retires one is deleteLater()d, so the destruction only lands on an
         // event loop turn. Take one, then check the object is still there.
-        QTest::qWait(1);
+        QTest::qWait(1ms);
         QVERIFY2(!workingRecognizer.isNull(), "the working backend was torn down for a replacement that never arrived");
         QCOMPARE(mudlet::self()->speechRecognizer(), workingRecognizer.data());
 #else

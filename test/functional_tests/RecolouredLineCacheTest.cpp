@@ -158,7 +158,7 @@ private slots:
 
         // Exactly the path Lua's fg() / setFgColor() takes.
         QVERIFY2(console->moveCursor(0, targetLine), "could not put the user cursor on the line to recolour");
-        QVERIFY2(console->selectSection(0, console->buffer.line(targetLine).size()), "could not select the line to recolour");
+        QVERIFY2(console->model().selectSection(0, console->buffer.line(targetLine).size()), "could not select the line to recolour");
         console->setFgColor(markerColor());
 
         // A partial repaint aimed at the BOTTOM of the pane - nowhere near the
@@ -191,7 +191,7 @@ private:
         }
 
         QSignalSpy spy2(&(host->mTelnet), &cTelnet::signal_connected);
-        if (!spy2.wait(2000)) {
+        if (!spy2.wait(2s)) {
             QFAIL("Could not connect with the host.");
         }
     }

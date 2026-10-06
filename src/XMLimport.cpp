@@ -23,14 +23,12 @@
 #include "XMLimport.h"
 
 
-#include "dlgMapper.h"
 #include "LuaInterface.h"
 #include "CredentialManager.h"
 #include "SecureStringUtils.h"
 #include "TAction.h"
 #include "TAlias.h"
 #include "TKey.h"
-#include "TMainConsole.h"
 #include "TMap.h"
 #include "TRoomDB.h"
 #include "TRoom.h"
@@ -192,12 +190,8 @@ std::pair<bool, QString> XMLimport::importPackage(QFile* pfile, QString packName
                 } else {
                     readMap();
                     mpHost->mpMap->audit();
-                    if (mpHost->mpMap->mpMapper) {
-                        mpHost->mpMap->mpMapper->mp2dMap->init();
-                        mpHost->mpMap->mpMapper->updateAreaComboBox();
-                        mpHost->mpMap->mpMapper->resetAreaComboBoxToPlayerRoomArea();
-                        mpHost->mpMap->mpMapper->show();
-                    }
+                    mpHost->mpMap->announceMapLoaded(true);
+                    mpHost->mpMap->requestMapperShown();
                 }
             } else {
                 qDebug().nospace() << "XMLimport::importPackage(...) ERROR: "
@@ -539,7 +533,12 @@ void XMLimport::readRoom(QMultiHash<int, int>& areamRoomMultiHash, unsigned int*
                     // This is how IRE XML maps mark special exits, rather than
                     // by just using a different string for the direction!
                     dir = attributes().value(qsl("command")).toString();
-                    pT->setSpecialExit(e, dir);
+                    // Not setSpecialExit(), which edits the map's entrances for
+                    // this room's id while the room is not on the map yet - and
+                    // a malformed file can reuse an id another room holds
+                    if (e > 0) {
+                        pT->mSpecialExits[dir] = e;
+                    }
                     pT->setDoor(dir, door);
                 } else {
                     continue;
@@ -604,10 +603,15 @@ void XMLimport::readRoom(QMultiHash<int, int>& areamRoomMultiHash, unsigned int*
             mpHost->mpMap->reportStringToProgressDialog(tr("Parsing room data [count: %1]...").arg(*roomCount));
         }
         areamRoomMultiHash.insert(pT->area, pT->id);
+        mMaxRoomId = qMax(mMaxRoomId, pT->id); // Wasn't used but now maintains max Room Id
         // We are loading a map so can make some optimisation by setting the
         // third argument as true:
-        mpHost->mpMap->mpRoomDB->addRoom(pT->id, pT, true);
-        mMaxRoomId = qMax(mMaxRoomId, pT->id); // Wasn't used but now maintains max Room Id
+        if (!mpHost->mpMap->mpRoomDB->addRoom(pT->id, pT, true)) {
+            // addRoom() takes no ownership of a room whose id is taken, and
+            // ~TRoom() would remove the room holding that id, so unhook it:
+            pT->mpRoomDB = nullptr;
+            delete pT;
+        }
     } else {
         delete pT;
     }
@@ -1049,6 +1053,8 @@ void XMLimport::readHost(Host* pHost)
     }
 
     pHost->setDebugShowAllProblemCodepoints(attributes().value(qsl("DebugShowAllProblemCodepoints")) == YES);
+    // On unless saved off, so a profile from before the setting existed gets it
+    pHost->setLazyCaptureGlobals(attributes().value(qsl("lazyCaptureGlobals")) != qsl("no"));
 
     const bool compactInputLine = attributes().value(QLatin1String("CompactInputLine")) == YES;
     pHost->setCompactInputLine(compactInputLine);
@@ -1244,10 +1250,12 @@ void XMLimport::readHost(Host* pHost)
     pHost->loadPackageInfo();
     // A package import comes through here too, into a profile that does have a
     // console - and that one needs the whole restyle, not just the model:
-    if (pHost->mpConsole) {
-        pHost->mpConsole->changeColors();
-    } else {
-        pHost->refreshMainConsoleColors();
+    pHost->applyMainConsoleColors();
+    if (!pHost->mpConsole) {
+        TConsoleModel& model = pHost->mainConsoleModel();
+        model.setWrapAt(pHost->mWrapAt);
+        model.setIndentCount(pHost->mWrapIndentCount);
+        model.setHangingIndentCount(pHost->mWrapHangingIndentCount);
     }
 }
 
@@ -1885,7 +1893,14 @@ void XMLimport::readModulesDetailsMap(QMap<QString, QStringList>& map)
                 // The last expected detail for the entry - so store this
                 // completed entry into the QMap
                 entry << readElementText();
-                map[key] = entry;
+                // Every reader of an entry indexes its file, sync flag and priority, so a hand-edited or
+                // truncated file that leaves one out would read past the end of it
+                if (entry.size() >= 3) {
+                    map[key] = entry;
+                } else {
+                    // Quoted so that QDebug escapes any control characters the file put in the name
+                    qWarning().nospace() << "XMLimport::readModulesDetailsMap() WARNING - ignoring the module " << key << " as its entry is missing some of its details.";
+                }
                 entry.clear();
             } else {
                 readUnknownElement(qsl("ModulesDetailsMap"));

@@ -28,6 +28,7 @@
 #include <QtTest/QtTest>
 
 #include "Host.h"
+#include "MudletApp.h"
 #include "dlgConnectionProfiles.h"
 #include "mudlet.h"
 
@@ -169,6 +170,19 @@ inline Host* create(const QString& profileName,
     }
 
     return mudlet::self()->getActiveHost();
+}
+
+// A test that creates the same profile in every test function must have the
+// last one's directory gone first, or create() finds the name "already in use"
+// and times out. Windows will not delete a file that is still open - a Host
+// keeps log/errors.txt open for as long as it lives - and a file only just
+// closed can stay locked for a moment while it is scanned, so a single
+// removeRecursively() can leave the directory behind. Keep trying until it
+// goes; removeRecursively() is true for a directory that is not there.
+inline bool removeProfileDirectory(const QString& profileName, const std::chrono::milliseconds timeout = std::chrono::seconds(5))
+{
+    QDir dir(MudletApp::getMudletPath(enums::profileHomePath, profileName));
+    return QTest::qWaitFor([&dir]() { return dir.removeRecursively(); }, timeout);
 }
 
 } // namespace TestProfile

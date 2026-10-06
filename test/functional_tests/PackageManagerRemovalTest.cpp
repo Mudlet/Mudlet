@@ -22,7 +22,6 @@
 
 #include "Host.h"
 #include "MudletInstanceCoordinator.h"
-#include "MudletApp.h"
 #include "PortableModeTestHelper.h"
 #include "ProfileTestHelper.h"
 #include "TLuaInterpreter.h"
@@ -32,6 +31,8 @@
 #include "mudlet.h"
 
 #include "GroupedTest.h"
+
+using namespace std::chrono_literals;
 
 // The Package Manager removes every package the user selected in one go, and
 // an uninstall can be refused for two quite different reasons: a profile save
@@ -85,14 +86,14 @@ private slots:
     {
         if (auto* self = mudlet::self()) {
             if (auto* host = self->getActiveHost()) {
-                QTest::qWait(50);
+                QTest::qWait(50ms);
                 host->waitForProfileSave();
             }
         }
         delete mpServer;
         mpServer = nullptr;
-        deleteProfileDirectory(mpHostname);
         delete mudlet::self();
+        deleteProfileDirectory(mpHostname);
     }
 
     // The one a sibling's sysUninstall handler took away first. It is gone,
@@ -183,7 +184,7 @@ private:
             return nullptr;
         }
         QSignalSpy connected(&(host->mTelnet), &cTelnet::signal_connected);
-        if (!connected.wait(2000)) {
+        if (!connected.wait(2s)) {
             return nullptr;
         }
         return mudlet::self()->getActiveHost();
@@ -191,10 +192,7 @@ private:
 
     void deleteProfileDirectory(const QString& profileName)
     {
-        QDir dir(MudletApp::getMudletPath(enums::profileHomePath, profileName));
-        if (dir.exists()) {
-            dir.removeRecursively();
-        }
+        TestProfile::removeProfileDirectory(profileName);
     }
 };
 

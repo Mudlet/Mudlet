@@ -159,6 +159,13 @@ describe("Tests C++ functions in the Miscallaneous category", function()
         assert.is_string(getTimestamp(1))
       end)
 
+      it("should read the main console by an empty name or main", function()
+        local timestamp = getTimestamp(1)
+        assert.is_string(timestamp)
+        assert.are.equal(timestamp, getTimestamp("main", 1))
+        assert.are.equal(timestamp, getTimestamp("", 1))
+      end)
+
       it("should return nil+msg for an out-of-range line number", function()
         local timestamp, err = getTimestamp(getLineCount() + 1000)
         assert.is_nil(timestamp)
@@ -227,6 +234,17 @@ describe("Tests C++ functions in the Miscallaneous category", function()
         expandAlias("mudletSpecSeparatorA" .. getCommandSeparator() .. "mudletSpecSeparatorB", false)
 
         assert.same({"A", "B"}, fired)
+      end)
+    end)
+
+    describe("Tests the functionality of getEpoch", function()
+      it("gives the seconds since the epoch, whatever the local time zone", function()
+        local before = os.time()
+        local epoch = getEpoch()
+        local after = os.time()
+        -- os.time() reads a coarser clock that can still be on the last second
+        -- for a few milliseconds after getEpoch()'s has moved on
+        assert.is_true(epoch >= before and epoch < after + 2, string.format("%f is not between %d and %d", epoch, before, after + 2))
       end)
     end)
 
@@ -964,6 +982,33 @@ describe("Tests C++ functions in the Miscallaneous category", function()
         end)
       end)
 
+      describe("Tests the functionality of logging in plain text", function()
+        it("writes each received line on a line of its own", function()
+          local logPath
+          local htmlLogging = getConfig("logInHTML")
+          finally(function()
+            if logPath then
+              startLogging(false)
+              os.remove(logPath)
+            end
+            setConfig("logInHTML", htmlLogging)
+          end)
+          setConfig("logInHTML", false)
+
+          local started, _, startPath = startLogging(true)
+          assert.is_true(started, "logging was already on, so the log file is not this spec's to delete")
+          logPath = startPath
+          feedTelnet("\27[0m\27[31mSpecTextLogA\27[0m\nSpecTextLogB\n")
+          -- a received line is only written once the next one commits
+          feedTelnet("SpecTextLogFlush\n")
+          startLogging(false)
+
+          local contents = readFile(logPath)
+          assert.is_string(contents, "the text log file that was closed is not readable")
+          assert.is_true(contains(contents, "SpecTextLogA\nSpecTextLogB\n"), "the received lines were not logged one per line")
+        end)
+      end)
+
       describe("Tests the functionality of appendLog", function()
         it("raises a Lua error when called with no arguments", function()
           assertArgError(function() appendLog() end, "appendLog: bad argument #1 type")
@@ -1061,6 +1106,7 @@ describe("Tests C++ functions in the Miscallaneous category", function()
           feedTelnet("\27[0m\27[1;3mSpecHtmlBoldItalic\27[0m\n")
           feedTelnet("\27[0m\27[4;9;53mSpecHtmlDecorated\27[0m\n")
           echo("SpecHtmlAngles a<b>c\n")
+          feedTelnet("\27[0m\27[31mSpecHtmlRunA<\27[32m>SpecHtmlRunB\27[0m\n")
           -- a received line is only written once the next one commits
           feedTelnet("SpecHtmlFlush\n")
           startLogging(false)
@@ -1095,6 +1141,8 @@ describe("Tests C++ functions in the Miscallaneous category", function()
           assert.is_true(contains(decorated, "text-decoration: underline line-through overline;"), decorated)
 
           assert.is_true(contains(contents, "SpecHtmlAngles a&lt;b&gt;c"), "the angle brackets in the logged text were not escaped")
+          assert.is_true(contains(contents, "SpecHtmlRunA&lt;</span><span"), "the text before a colour change did not end its own span")
+          assert.is_true(contains(contents, "\">&gt;SpecHtmlRunB</span><br>"), "the text after a colour change did not start the next span")
         end)
 
         it("gives text with a transparent background the console's colour (#10592)", function()
@@ -1137,6 +1185,7 @@ describe("Tests C++ functions in the Miscallaneous category", function()
           assert.is_string(contents, "the HTML log file that was closed is not readable")
           assert.is_true(contains(contents, "background: rgb(12,34,56)"), "the transparent text did not take the console's background colour in the log")
           assert.is_false(contains(contents, "background: rgb(0,0,0)"), "the transparent text was logged as black")
+          assert.is_true(contains(contents, ">SpecHtmlTransparent</span>"), "the transparent text was split into a span per character")
         end)
       end)
 
@@ -1649,6 +1698,103 @@ describe("Tests C++ functions in the Miscallaneous category", function()
         assert.equals(notAnArchive, zipLocation)
         assert.is_false(fileExists(extractDirectory .. "/readme.txt"))
       end)
+
+      it("survives the profile that asked for it closing before the extraction reports back", function()
+        if not testMode then
+          pending("pumping events after closing the other profile needs MUDLET_TEST_MODE")
+          return
+        end
+        local name = "mudlet-spec-unzip-closed"
+        local profileDirectory = getMudletHomeDir():match("^(.*)[/\\][^/\\]+$") .. "/" .. name
+
+        local function removeTree(path)
+          if lfs.attributes(path, "mode") ~= "directory" then
+            return
+          end
+          for entry in lfs.dir(path) do
+            if entry ~= "." and entry ~= ".." then
+              local child = path .. "/" .. entry
+              if lfs.attributes(child, "mode") == "directory" then
+                removeTree(child)
+              else
+                os.remove(child)
+              end
+            end
+          end
+          lfs.rmdir(path)
+        end
+        -- written into the profile made here, so a profile of the same name that
+        -- this spec did not make is never deleted
+        local marker = profileDirectory .. "/mudlet-spec-fixture"
+        if lfs.attributes(marker) then
+          removeTree(profileDirectory)
+        end
+        assert.is_nil(lfs.attributes(profileDirectory), "a profile named " .. name .. " already exists and is not this spec's to delete")
+        finally(function()
+          if lfs.attributes(marker) then
+            removeTree(profileDirectory)
+          end
+        end)
+
+        -- Enough empty entries that the extraction is still running when the profile
+        -- has gone; empty ones need no checksum, so the archive is quick to write here
+        local entries = 5000
+        local function le(value, bytes)
+          local out = {}
+          for i = 1, bytes do
+            out[i] = string.char(value % 256)
+            value = math.floor(value / 256)
+          end
+          return table.concat(out)
+        end
+        local localHeaders, centralDirectory, offset = {}, {}, 0
+        for i = 1, entries do
+          local entry = string.format("f%05d", i)
+          local common = le(20, 2) .. le(0, 2) .. le(0, 2) .. le(0, 2) .. le(0x21, 2) .. le(0, 4) .. le(0, 4) .. le(0, 4) .. le(#entry, 2) .. le(0, 2)
+          local header = le(0x04034b50, 4) .. common .. entry
+          localHeaders[i] = header
+          centralDirectory[i] = le(0x02014b50, 4) .. le(20, 2) .. common .. le(0, 2) .. le(0, 2) .. le(0, 2) .. le(0, 4) .. le(offset, 4) .. entry
+          offset = offset + #header
+        end
+        local directory = table.concat(centralDirectory)
+        local archive = profileDirectory .. "/many.zip"
+        local unzipped = profileDirectory .. string.format("/unzipped/f%05d", entries)
+
+        lfs.mkdir(profileDirectory)
+        writeFile(marker, "")
+        lfs.mkdir(profileDirectory .. "/current")
+        writeFile(archive, table.concat(localHeaders) .. directory .. le(0x06054b50, 4) .. le(0, 2) .. le(0, 2) .. le(entries, 2) .. le(entries, 2) .. le(#directory, 4) .. le(offset, 4) .. le(0, 2))
+
+        -- the unzipAsync() call has to come from the other profile's own Lua, so it
+        -- runs from a script in the profile it loads
+        local script = string.format("unzipAsync(%q, getMudletHomeDir() .. '/unzipped')", archive)
+        writeFile(profileDirectory .. "/current/2026-01-01#00-00-00.xml", [[<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE MudletPackage>
+<MudletPackage version="1.001">
+  <ScriptPackage>
+    <Script isActive="yes" isFolder="no">
+      <name>mudlet-spec-unzip</name>
+      <packageName></packageName>
+      <script>]] .. script .. [[</script>
+      <eventHandlerList />
+    </Script>
+  </ScriptPackage>
+</MudletPackage>
+]])
+
+        assert.is_true(loadProfile(name, true))
+        assert.is_true(closeProfile(name))
+
+        for _ = 1, 300 do
+          pumpEvents(100)
+          if fileExists(unzipped) then
+            break
+          end
+        end
+        pumpEvents(500)
+        assert.is_true(fileExists(unzipped), "the archive was not unpacked")
+        assert.is_nil(waitForEvent("sysUnzipDone", 200), "the closed profile's extraction was reported here")
+      end)
     end)
 
     describe("Tests the functionality of loadReplay", function()
@@ -1882,7 +2028,9 @@ describe("Tests C++ functions in the Miscallaneous category", function()
           os.remove(first)
           os.remove(second)
         end)
-        writeFile(first, chunk(400, "mudlet-spec-first-replay-line\r\n"))
+        -- Two chunks, so that the second is still in the file when the refused
+        -- call comes, and would be lost if that call touched the file
+        writeFile(first, chunk(400, "mudlet-spec-first-replay-line\r\n") .. chunk(10, "mudlet-spec-first-replay-tail\r\n"))
         writeFile(second, chunk(10, "mudlet-spec-second-replay-line\r\n"))
         local mark = getLastLineNumber("main")
 
@@ -1892,8 +2040,65 @@ describe("Tests C++ functions in the Miscallaneous category", function()
         assert.is_nil(ok)
         assert.is_true(contains(err, "already be in progress"), tostring(err))
         assert.is_true(playedBack(mark, "mudlet-spec-first-replay-line"), "the replay that was accepted did not reach the console")
+        assert.is_true(playedBack(mark, "mudlet-spec-first-replay-tail"), "refusing the second replay cut the first one short")
         assert.is_false(contains(textFrom(mark), "mudlet-spec-second-replay-line"), "the replay that was refused played anyway")
         pumpEvents(200)
+      end)
+
+      -- The file is only vetted when it is loaded, so this rewrites the second
+      -- chunk's header once playback has begun. QFile reads ahead in 16KB
+      -- blocks, so the first chunk is big enough that the second header is
+      -- still on disk, not in that read-ahead, by the time it is rewritten.
+      local function playReplayRewrittenWhilePlaying(name, rewrite, fieldOffset)
+        local replay = getMudletHomeDir() .. "/" .. name
+        local after = getMudletHomeDir() .. "/after-" .. name
+        finally(function()
+          os.remove(replay)
+          os.remove(after)
+        end)
+        local head = "mudlet-spec-rewritten-replay-head\r\n" .. string.rep("\r", 50000)
+        writeFile(replay, chunk(0, head) .. chunk(10, "mudlet-spec-rewritten-replay-tail\r\n"))
+        local mark = getLastLineNumber("main")
+
+        assert.is_true(loadReplay(replay))
+        local handle = io.open(replay, "r+b")
+        assert.is_not_nil(handle, "could not rewrite " .. replay)
+        handle:seek("set", 8 + #head + (fieldOffset or 4))
+        handle:write(rewrite)
+        handle:close()
+
+        assert.is_true(playedBack(mark, "replay has been aborted"), "the unreadable chunk did not end the replay")
+        assert.is_false(contains(textFrom(mark), "mudlet-spec-rewritten-replay-tail"), "the chunk after the unreadable one was played")
+        writeFile(after, chunk(0, "mudlet-spec-after-rewritten-line\r\n"))
+        assert.is_true(loadReplay(after), "the aborted replay was still counted as running")
+        assert.is_true(playedBack(mark, "mudlet-spec-after-rewritten-line"), "the replay after the aborted one did not reach the console")
+        pumpEvents(200)
+      end
+
+      it("ends a replay at a chunk whose length turned negative after loading", function()
+        if not testMode then
+          pending("letting the replay timer run needs MUDLET_TEST_MODE")
+          return
+        end
+        playReplayRewrittenWhilePlaying("mudlet-spec-negative-later-replay.dat", "\255\255\255\255")
+      end)
+
+      it("ends a replay at a chunk that grew too long for the buffer after loading", function()
+        if not testMode then
+          pending("letting the replay timer run needs MUDLET_TEST_MODE")
+          return
+        end
+        playReplayRewrittenWhilePlaying("mudlet-spec-oversized-later-replay.dat", bigEndian32(200000) .. string.rep("\r", 200000))
+      end)
+
+      -- A negative delay would start the replay timer with a negative interval,
+      -- which never fires, leaving the replay stuck as running
+      it("ends a replay at a chunk whose delay turned negative after loading", function()
+        if not testMode then
+          pending("letting the replay timer run needs MUDLET_TEST_MODE")
+          return
+        end
+        playReplayRewrittenWhilePlaying("mudlet-spec-negative-delay-replay.dat", "\255\255\255\255", 0)
       end)
     end)
 
@@ -1925,7 +2130,7 @@ describe("Tests C++ functions in the Miscallaneous category", function()
       it("returns nil+msg for an item type it does not know", function()
         local ok, err = findItems("name", "sandwich")
         assert.is_nil(ok)
-        assert.is_true(contains(err, "invalid item type 'sandwich' given"), tostring(err))
+        assert.are.equal('item type must be "alias", "button", "script", "keybind", "timer" or "trigger", got "sandwich"', err)
       end)
 
       it("returns an empty table when nothing matches", function()
@@ -2009,6 +2214,45 @@ describe("Tests C++ functions in the Miscallaneous category", function()
         insertHTML("<b>mudlet-spec-bold</b>")
 
         assert.equals("mudlet-spec-boldmudlet-spec-html-target", getCurrentLine())
+      end)
+    end)
+
+    describe("Tests the functionality of echo", function()
+      it("raises a Lua error when called with no arguments", function()
+        assertArgError(function() echo() end, "echo: bad argument #1 type")
+      end)
+
+      it("raises a Lua error for a console name that is not a string", function()
+        assertArgError(function() echo({}, "mudlet-spec-echo") end, "echo: bad argument #1 type")
+      end)
+
+      it("raises a Lua error for text that is not a string", function()
+        assertArgError(function() echo("main", {}) end, "echo: bad argument #2 type")
+      end)
+
+      it("writes to the main console and answers true, named or not", function()
+        local mark = getLastLineNumber("main")
+
+        assert.same({true}, {echo("mudlet-spec-echo-unnamed ")})
+        assert.same({true}, {echo("main", "mudlet-spec-echo-main ")})
+        assert.same({true}, {echo("", "mudlet-spec-echo-empty\n")})
+
+        assert.is_true(containsWrapped(textFrom(mark), "mudlet-spec-echo-unnamed mudlet-spec-echo-main mudlet-spec-echo-empty"), textFrom(mark))
+      end)
+
+      it("writes to a miniconsole and answers true", function()
+        local name = "mudlet-spec-echo-miniconsole"
+        createMiniConsole(name, 0, 0, 200, 100)
+        finally(function() deleteMiniConsole(name) end)
+
+        assert.same({true}, {echo(name, "mudlet-spec-echo-mini")})
+
+        local text = table.concat(getLines(name, 0, getLastLineNumber(name) + 1), "")
+        assert.is_true(contains(text, "mudlet-spec-echo-mini"), text)
+      end)
+
+      it("answers nil and a message for a console that does not exist", function()
+        assert.same({nil, "console/label 'mudlet-spec-echo-nowhere' does not exist"}, {echo("mudlet-spec-echo-nowhere", "text")})
       end)
     end)
 
@@ -2157,7 +2401,7 @@ describe("Tests C++ functions in the Miscallaneous category", function()
       it("returns nil+msg for an item type it does not know", function()
         local ok, err = isAncestorsActive(1, "sandwich")
         assert.is_nil(ok)
-        assert.is_true(contains(err, "invalid item type 'sandwich' given"), tostring(err))
+        assert.are.equal('item type must be "alias", "button", "script", "keybind", "timer" or "trigger", got "sandwich"', err)
       end)
 
       it("is true for a temporary item, which has no ancestors at all", function()
@@ -2192,6 +2436,73 @@ describe("Tests C++ functions in the Miscallaneous category", function()
 
         assert.is_true(enableTrigger(parentGroup))
         assert.is_true(isAncestorsActive(childId, "trigger"))
+      end)
+
+      -- The profile these run in is saved on exit and reused by the next run,
+      -- and Lua cannot delete a permanent item, so what an earlier run made is
+      -- reused rather than stacked up again under the same name.
+      local function nestedIn(groupName, groupKind, childName, childKind, makeChild)
+        local id = findItems(childName, childKind)[1]
+        if not id then
+          assert.is_true(permGroup(groupName, groupKind), "could not create the " .. groupKind .. " group")
+          id = makeChild()
+        end
+        assert.is_true(type(id) == "number" and id > 0, "could not nest a " .. childKind .. " in " .. groupName)
+        return id
+      end
+
+      it("follows the state of a nested alias's parent group", function()
+        local group = "mudletSpecIsActiveAliasGroup"
+        local childId = nestedIn(group, "alias", "mudletSpecIsActiveAliasChild", "alias", function()
+          return permAlias("mudletSpecIsActiveAliasChild", group, "^mudletSpecIsActiveNeverTyped$", "")
+        end)
+        finally(function() enableAlias(group) end)
+
+        assert.is_true(enableAlias(group))
+        assert.is_true(isAncestorsActive(childId, "alias"))
+        assert.is_true(disableAlias(group))
+        assert.is_false(isAncestorsActive(childId, "alias"))
+      end)
+
+      it("follows the state of a nested script's parent group", function()
+        local group = "mudletSpecIsActiveScriptGroup"
+        local childId = nestedIn(group, "script", "mudletSpecIsActiveScriptChild", "script", function()
+          return permScript("mudletSpecIsActiveScriptChild", group, "")
+        end)
+        -- script and timer groups are made switched off, unlike the others
+        finally(function() disableScript(group) end)
+
+        assert.is_true(enableScript(group))
+        assert.is_true(isAncestorsActive(childId, "script"))
+        assert.is_true(disableScript(group))
+        assert.is_false(isAncestorsActive(childId, "script"))
+      end)
+
+      it("follows whether the toolbar a button sits on is shown", function()
+        local toolbar = "mudletSpecIsActiveToolbar"
+        -- see "names the toolbar a button sits on" below for why it is hidden;
+        -- hiding it switches it off, and that is saved with the profile, so a
+        -- reused profile brings it back hidden and it has to be shown first
+        finally(function() hideToolBar(toolbar) end)
+        if exists(toolbar, "button") == 0 then
+          assert.is_true(tempButtonToolbar(toolbar, 0, 0) > 0)
+        end
+        local buttonId = findItems("mudletSpecIsActiveButton", "button")[1]
+            or tempButton(toolbar, "mudletSpecIsActiveButton", 0)
+        assert.is_true(type(buttonId) == "number" and buttonId > 0, "could not put a button on " .. toolbar)
+
+        showToolBar(toolbar)
+        assert.is_true(isAncestorsActive(buttonId, "button"))
+        hideToolBar(toolbar)
+        assert.is_false(isAncestorsActive(buttonId, "button"))
+      end)
+
+      it("returns nil+msg for an item of any type that does not exist", function()
+        for _, itemType in ipairs({"button", "keybind", "script", "timer", "trigger"}) do
+          local ok, err = isAncestorsActive(9999999, itemType)
+          assert.is_nil(ok)
+          assert.is_true(contains(err, itemType .. " item ID 9999999 does not exist"), tostring(err))
+        end
       end)
     end)
 
@@ -2261,7 +2572,7 @@ describe("Tests C++ functions in the Miscallaneous category", function()
       it("returns nil+msg for an item type it does not know", function()
         local ok, err = ancestors(1, "sandwich")
         assert.is_nil(ok)
-        assert.is_true(contains(err, "invalid item type 'sandwich' given"), tostring(err))
+        assert.are.equal('item type must be "alias", "button", "script", "keybind", "timer" or "trigger", got "sandwich"', err)
       end)
 
       it("returns an empty list for a temporary item, which has no ancestors", function()
@@ -2347,6 +2658,44 @@ describe("Tests C++ functions in the Miscallaneous category", function()
         assertNamesTheGroup(ancestors(buttonId, "button"), toolbar)
       end)
 
+      -- A timer whose parent is another timer rather than a group is an offset
+      -- timer: it runs relative to its parent, and the parent is an item in
+      -- its own right, which is what the node says
+      it("calls an offset timer's parent an item, not a group", function()
+        local parentName = "mudletSpecAncestorOffsetParent"
+        local childName = "mudletSpecAncestorOffsetChild"
+        local childId = findItems(childName, "timer")[1]
+        if not childId then
+          assert.is_number(permTimer(parentName, "", 60, [[ ]]))
+          childId = permTimer(childName, parentName, 30, [[ ]])
+        end
+        assert.is_true(type(childId) == "number" and childId > 0, "could not make an offset timer under " .. parentName)
+
+        -- a permanent timer is made switched off, and is left that way
+        finally(function() disableTimer(parentName) end)
+        assert.is_true(disableTimer(parentName))
+
+        local list = ancestors(childId, "timer")
+        assert.is_table(list)
+        assert.equals(1, #list)
+        assert.equals(parentName, list[1].name)
+        assert.equals("item", list[1].node)
+        assert.is_false(list[1].isActive)
+        assert.is_false(isAncestorsActive(childId, "timer"))
+
+        assert.is_true(enableTimer(parentName))
+        assert.is_true(ancestors(childId, "timer")[1].isActive)
+        assert.is_true(isAncestorsActive(childId, "timer"))
+      end)
+
+      it("returns nil+msg for an item of any other type that does not exist", function()
+        for _, itemType in ipairs({"timer", "alias", "keybind", "script", "button"}) do
+          local ok, err = ancestors(9999999, itemType)
+          assert.is_nil(ok)
+          assert.is_true(contains(err, itemType .. " item ID 9999999 does not exist"), tostring(err))
+        end
+      end)
+
       it("is case insensitive about the item type", function()
         local id, groupName = nested("timer")
         -- the group is named again here rather than only comparing the two
@@ -2389,6 +2738,251 @@ describe("Tests C++ functions in the Miscallaneous category", function()
         -- only a loaded profile has a connection to report on
         assert.is_nil(entry.connected)
         assert.equals("", entry.description)
+      end)
+    end)
+
+    -- closeProfile() and resetProfile() only queue the lua_close() of the
+    -- caller's state, and a call after them that spins the event loop must not
+    -- let it happen underneath: the close or reset waits for the script to
+    -- finish. The self-test profile cannot close or reset itself, so the code
+    -- runs from a second profile's own timer.
+    describe("Tests a profile torn down while its script spins the event loop", function()
+      local profilesDirectory = getMudletHomeDir():match("^(.*)[/\\]")
+      local closing = "mudlet-spec-torn-down"
+      local target = "mudlet-spec-load-target"
+
+      -- closing a profile saves the shared window layout beside the profiles
+      -- directory, which the next Mudlet start reads, so put it back afterwards
+      local configurationDirectory = profilesDirectory:match("^(.*)[/\\]")
+      local layoutFiles = {
+        configurationDirectory .. "/windowLayout.dat",
+        configurationDirectory .. "/windowLayoutGeometry.dat",
+      }
+      local layoutBefore = {}
+
+      setup(function()
+        for _, path in ipairs(layoutFiles) do
+          local handle = io.open(path, "rb")
+          if handle then
+            layoutBefore[path] = handle:read("*a")
+            handle:close()
+          end
+        end
+      end)
+
+      teardown(function()
+        for _, path in ipairs(layoutFiles) do
+          if layoutBefore[path] then
+            local handle = assert(io.open(path, "wb"))
+            handle:write(layoutBefore[path])
+            handle:close()
+          else
+            os.remove(path)
+          end
+        end
+      end)
+
+      local function removeTree(path)
+        if lfs.symlinkattributes(path, "mode") ~= "directory" then
+          os.remove(path)
+          return
+        end
+        for entry in lfs.dir(path) do
+          if entry ~= "." and entry ~= ".." then
+            removeTree(path .. "/" .. entry)
+          end
+        end
+        lfs.rmdir(path)
+      end
+
+      -- Only folders carrying this file were made by these specs, so a real
+      -- profile that happens to share a name is never deleted
+      local ownerMarker = "mudlet-spec-torn-down-owned"
+
+      local function ownedByUs(name)
+        return io.exists(profilesDirectory .. "/" .. name .. "/" .. ownerMarker)
+      end
+
+      local function removeOwnedProfile(name)
+        if ownedByUs(name) then
+          removeTree(profilesDirectory .. "/" .. name)
+        end
+      end
+
+      local function createOwnedProfile(name)
+        assert.is_true(lfs.mkdir(profilesDirectory .. "/" .. name))
+        io.open(profilesDirectory .. "/" .. name .. "/" .. ownerMarker, "w"):close()
+      end
+
+      local function loaded(name)
+        local entry = getProfiles()[name]
+        return entry ~= nil and entry.loaded
+      end
+
+      local function waitUntil(condition)
+        for _ = 1, 200 do
+          if condition() then
+            return true
+          end
+          pumpEvents(50)
+        end
+        return condition()
+      end
+
+      -- Loads a profile whose script runs code once, from a timer; the code
+      -- answers through report(), which raises mudletSpecTornDownResult. The
+      -- marker file turns a reset's re-run of the script into the global event
+      -- mudletSpecTornDownRerun instead of starting it all over again.
+      local function runInProfileBeingTornDown(code)
+        for _, name in ipairs({closing, target}) do
+          local path = profilesDirectory .. "/" .. name
+          assert.is_true(lfs.attributes(path) == nil or ownedByUs(name),
+            "refusing to touch " .. path .. ", which these specs did not create")
+        end
+        local run = {}
+        local handlers = {
+          registerAnonymousEventHandler("mudletSpecTornDownResult", function(_, ...)
+            run.result = {...}
+          end),
+          registerAnonymousEventHandler("mudletSpecTornDownRerun", function()
+            run.reset = true
+          end),
+        }
+        finally(function()
+          for _, handler in ipairs(handlers) do
+            killAnonymousEventHandler(handler)
+          end
+          for _, name in ipairs({closing, target}) do
+            if loaded(name) then
+              closeProfile(name)
+            end
+          end
+          waitUntil(function() return not loaded(closing) and not loaded(target) end)
+          removeOwnedProfile(closing)
+          removeOwnedProfile(target)
+        end)
+
+        local script = string.format([[
+local function report(...) raiseGlobalEvent("mudletSpecTornDownResult", ...) end
+local marker = getMudletHomeDir() .. "/mudlet-spec-ran"
+if io.exists(marker) then
+  raiseGlobalEvent("mudletSpecTornDownRerun")
+else
+  io.open(marker, "w"):close()
+  tempTimer(0, function()
+    %s
+  end)
+end]], code)
+        script = script:gsub("&", "&amp;"):gsub("<", "&lt;"):gsub(">", "&gt;")
+
+        -- left behind by a run that crashed or was killed
+        removeOwnedProfile(closing)
+        removeOwnedProfile(target)
+        createOwnedProfile(target)
+        createOwnedProfile(closing)
+        assert.is_true(lfs.mkdir(profilesDirectory .. "/" .. closing .. "/current"))
+        local file = assert(io.open(profilesDirectory .. "/" .. closing .. "/current/2020-01-01#00-00-00.xml", "w"))
+        file:write(table.concat({
+          '<?xml version="1.0" encoding="UTF-8"?>',
+          '<!DOCTYPE MudletPackage>',
+          '<MudletPackage version="1.001">',
+          '<HostPackage><Host mFORCE_SAVE_ON_EXIT="yes"></Host></HostPackage>',
+          '<ScriptPackage>',
+          '<Script isActive="yes" isFolder="no"><name>mudletSpecTornDown</name><packageName></packageName>',
+          '<script>' .. script .. '</script><eventHandlerList/></Script>',
+          '</ScriptPackage>',
+          '</MudletPackage>',
+        }, "\n"))
+        file:close()
+
+        assert.is_true(loadProfile(closing, true))
+        assert.is_true(waitUntil(function() return run.result ~= nil end), "the profile being torn down never answered")
+        return run
+      end
+
+      local function needsTestMode()
+        if not testMode then
+          pending("waiting for the other profile needs pumpEvents()")
+          return true
+        end
+        return false
+      end
+
+      it("loads another profile after closeProfile(), then closes", function()
+        if needsTestMode() then
+          return
+        end
+        local run = runInProfileBeingTornDown(
+          string.format('closeProfile() report(tostring(loadProfile(%q, true)))', target))
+        assert.equals("true", run.result[1])
+        assert.is_true(waitUntil(function() return not loaded(closing) end), "the profile did not close")
+        assert.is_true(loaded(target))
+      end)
+
+      it("loads another profile after resetProfile(), then resets", function()
+        if needsTestMode() then
+          return
+        end
+        local run = runInProfileBeingTornDown(
+          string.format('resetProfile() report(tostring(loadProfile(%q, true)))', target))
+        assert.equals("true", run.result[1])
+        assert.is_true(waitUntil(function() return run.reset end), "the profile was not reset")
+        assert.is_true(loaded(target))
+      end)
+
+      it("closes another profile after closeProfile(), then closes", function()
+        if needsTestMode() then
+          return
+        end
+        local run = runInProfileBeingTornDown(
+          string.format('loadProfile(%q, true) closeProfile() report(tostring(closeProfile(%q)))', target, target))
+        assert.equals("true", run.result[1])
+        assert.is_true(waitUntil(function() return not loaded(closing) and not loaded(target) end), "the profiles did not close")
+      end)
+
+      it("closes after resetProfile() then closeProfile()", function()
+        if needsTestMode() then
+          return
+        end
+        local run = runInProfileBeingTornDown('resetProfile() report(tostring(closeProfile()))')
+        assert.equals("true", run.result[1])
+        assert.is_true(waitUntil(function() return not loaded(closing) end), "the profile did not close")
+      end)
+
+      it("reconnects after resetProfile(), then resets", function()
+        if needsTestMode() then
+          return
+        end
+        local telnetDir = os.getenv("MUDLET_TEST_TELNET_DIR")
+        local portFile = telnetDir and io.open(telnetDir .. "/port", "r")
+        if not portFile then
+          local reason = "needs the telnet fixture (CI/telnet-fixture-server.py with MUDLET_TEST_TELNET_DIR set)"
+          if os.getenv("MUDLET_TEST_REQUIRE_TELNET_FIXTURE") then
+            assert.is_true(false, "MUDLET_TEST_REQUIRE_TELNET_FIXTURE is set but there is no fixture port file in " .. tostring(telnetDir))
+          end
+          pending(reason)
+          return
+        end
+        local port = tonumber(portFile:read("*a"):match("%d+"))
+        portFile:close()
+        -- reconnect() only spins the event loop when there is a connection to drop
+        local run = runInProfileBeingTornDown(string.format([[
+connectToServer("127.0.0.1", %d)
+local attempts = 0
+local function resetOnceConnected()
+  attempts = attempts + 1
+  local _, _, connected = getConnectionInfo()
+  if not connected and attempts < 100 then
+    tempTimer(0.05, resetOnceConnected)
+    return
+  end
+  resetProfile()
+  reconnect()
+  report(tostring(connected))
+end
+tempTimer(0.05, resetOnceConnected)]], port))
+        assert.equals("true", run.result[1], "the profile never connected, so reconnect() had nothing to drop")
+        assert.is_true(waitUntil(function() return run.reset end), "the profile was not reset")
       end)
     end)
 

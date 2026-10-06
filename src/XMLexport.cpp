@@ -29,6 +29,7 @@
 #include "Host.h"
 #include "LuaInterface.h"
 #include "CredentialManager.h"
+#include "ShortcutsManager.h"
 #include "TAction.h"
 #include "TAlias.h"
 #include "TKey.h"
@@ -36,7 +37,6 @@
 #include "TTimer.h"
 #include "TTrigger.h"
 #include "VarUnit.h"
-#include "mudlet.h"
 
 #include <QSaveFile>
 #include <QRegularExpression>
@@ -47,8 +47,42 @@
 #include <QGuiApplication>
 #include <QMetaEnum>
 
-#include <sstream>
+#include <string_view>
 #include <utility>
+
+namespace {
+// "scmMudletXmlDefaultVersion" number represents a major (integer part) and minor
+// (1000ths, range 0 to 999) that is used as a "version" attribute number when
+// writing the <MudletPackage ...> element of all (but maps if I ever get around
+// to doing a Map Xml file exporter/writer) Xml files used to export/save Mudlet
+// button/menu/toolbars; aliases. keys, scripts, timers, triggers and variables
+// and collections of these as modules/packages and entire profiles as "game
+// saves".  Mudlet versions up to 3.0.1 never bothered checking the version
+// detail and it had been hard coded as "1.0" back as far as history can
+// determine.  From that version a check was coded to test that the version
+// was less than 2.000f with the intention to loudly and clearly fail if a
+// higher version was encountered. Values above 1.001f have not yet been
+// codified but should be accepted so it should be possible to raise the number
+// a little and to use that to extend the Xml data format in a manner that older
+// versions ignore (possibly with some noise) but which they can still get the
+// details they can handle yet allow a later upgraded version to get extra
+// information they want.
+//
+// Taking this number to 2.000f or more WILL prevent old versions from reading
+// Xml files and should be considered a step associated with a major version
+// number change in the Mudlet application itself and SHOULD NOT BE DONE WITHOUT
+// agreement and consideration from the Project management, even a minor part
+// increment should not be done without justification...!
+// XML version Change history (what and why):
+// 1.001    Added method to allow XML format to permit ASCII control codes
+//          0x01-0x08, 0x0b, 0x0c, 0x0e-0x1f, 0x7f to be stored as part of the
+//          "script" element for a Mudlet "item" (0x09, 0x0a, 0x0d are the only
+//          ones that ARE permitted) - this is wanted so that, for instance
+//          ANSI ESC codes can be included in a Lua script without breaking
+//          the XML format used to store it - prior to this embedding such
+//          codes would break or destroy the script that used it.
+const QString scmMudletXmlDefaultVersion = QString::number(1.001f, 'f', 3);
+} // namespace
 
 XMLexport::XMLexport(Host* pH)
 : mpHost(pH)
@@ -205,92 +239,106 @@ void XMLexport::runAsyncSave(const QString& fileName, const QString& xmlSavedKey
     saveFutures.append(future);
 }
 
-// credit: https://stackoverflow.com/a/29752943/72944
-void inline XMLexport::replaceAll(std::string& source, const std::string& from, const std::string& to)
+namespace {
+struct ControlEntity
 {
-    std::string newString;
-    newString.reserve(source.length()); // avoids a few memory allocations
+    std::string_view entity;
+    std::string_view picture;
+};
 
-    std::string::size_type lastPos = 0;
-    std::string::size_type findPos;
+// How pugixml writes each control character, and the U+FFFC + Control Picture pair that
+// replaces it, as XML 1.0 cannot hold the character itself.
+constexpr ControlEntity scControlEntities[] = {
+        {"&#1;", "\uFFFC\u2401"},   // SOH
+        {"&#01;", "\uFFFC\u2401"},  // SOH
+        {"&#2;", "\uFFFC\u2402"},   // STX
+        {"&#02;", "\uFFFC\u2402"},  // STX
+        {"&#3;", "\uFFFC\u2403"},   // ETX
+        {"&#03;", "\uFFFC\u2403"},  // ETX
+        {"&#4;", "\uFFFC\u2404"},   // EOT
+        {"&#04;", "\uFFFC\u2404"},  // EOT
+        {"&#5;", "\uFFFC\u2405"},   // ENQ
+        {"&#05;", "\uFFFC\u2405"},  // ENQ
+        {"&#6;", "\uFFFC\u2406"},   // ACK
+        {"&#06;", "\uFFFC\u2406"},  // ACK
+        {"&#7;", "\uFFFC\u2407"},   // BEL
+        {"&#07;", "\uFFFC\u2407"},  // BEL
+        {"&#8;", "\uFFFC\u2408"},   // BS
+        {"&#08;", "\uFFFC\u2408"},  // BS
+        {"&#11;", "\uFFFC\u240B"},  // VT
+        {"&#12;", "\uFFFC\u240C"},  // FF
+        {"&#14;", "\uFFFC\u240E"},  // SS
+        {"&#15;", "\uFFFC\u240F"},  // SI
+        {"&#16;", "\uFFFC\u2410"},  // DLE
+        {"&#17;", "\uFFFC\u2411"},  // DC1
+        {"&#18;", "\uFFFC\u2412"},  // DC2
+        {"&#19;", "\uFFFC\u2413"},  // DC3
+        {"&#20;", "\uFFFC\u2414"},  // DC4
+        {"&#21;", "\uFFFC\u2415"},  // NAK
+        {"&#22;", "\uFFFC\u2416"},  // SYN
+        {"&#23;", "\uFFFC\u2417"},  // ETB
+        {"&#24;", "\uFFFC\u2418"},  // CAN
+        {"&#25;", "\uFFFC\u2419"},  // EM
+        {"&#26;", "\uFFFC\u241A"},  // SUB
+        {"&#27;", "\uFFFC\u241B"},  // ESC
+        {"&#28;", "\uFFFC\u241C"},  // FS
+        {"&#29;", "\uFFFC\u241D"},  // GS
+        {"&#30;", "\uFFFC\u241E"},  // RS
+        {"&#31;", "\uFFFC\u241F"},  // US
+        {"&#127;", "\uFFFC\u2421"}, // DEL
+};
 
-    while (std::string::npos != (findPos = source.find(from, lastPos))) {
-        newString.append(source, lastPos, findPos - lastPos);
-        newString += to;
-        lastPos = findPos + from.length();
+class StringXmlWriter : public pugi::xml_writer
+{
+public:
+    explicit StringXmlWriter(std::string& output)
+    : mOutput(output)
+    {
     }
+    void write(const void* data, size_t size) override { mOutput.append(static_cast<const char*>(data), size); }
 
-    // Care for the rest after last occurrence
-    newString += source.substr(lastPos);
-
-    source.swap(newString);
-}
+private:
+    std::string& mOutput;
+};
+} // namespace
 
 // sanitize non-printable characters for backwards & forward compatibility
 // work qxml which is stuck at 1.0 and doesn't support properly
 // encoding them. See https://github.com/Mudlet/Mudlet/issues/500
 void XMLexport::sanitizeForQxml(std::string& output)
 {
-    QMap<std::string, std::string> replacements{
-            {"&#1;", "\uFFFC\u2401"},   // SOH
-            {"&#01;", "\uFFFC\u2401"},  // SOH
-            {"&#2;", "\uFFFC\u2402"},   // STX
-            {"&#02;", "\uFFFC\u2402"},  // STX
-            {"&#3;", "\uFFFC\u2403"},   // ETX
-            {"&#03;", "\uFFFC\u2403"},  // ETX
-            {"&#4;", "\uFFFC\u2404"},   // EOT
-            {"&#04;", "\uFFFC\u2404"},  // EOT
-            {"&#5;", "\uFFFC\u2405"},   // ENQ
-            {"&#05;", "\uFFFC\u2405"},  // ENQ
-            {"&#6;", "\uFFFC\u2406"},   // ACK
-            {"&#06;", "\uFFFC\u2406"},  // ACK
-            {"&#7;", "\uFFFC\u2407"},   // BEL
-            {"&#07;", "\uFFFC\u2407"},  // BEL
-            {"&#8;", "\uFFFC\u2408"},   // BS
-            {"&#08;", "\uFFFC\u2408"},  // BS
-            {"&#11;", "\uFFFC\u240B"},  // VT
-            {"&#12;", "\uFFFC\u240C"},  // FF
-            {"&#14;", "\uFFFC\u240E"},  // SS
-            {"&#15;", "\uFFFC\u240F"},  // SI
-            {"&#10;", "\uFFFC\u2410"},  // DLE
-            {"&#16;", "\uFFFC\u2411"},  // DC1
-            {"&#18;", "\uFFFC\u2412"},  // DC2
-            {"&#19;", "\uFFFC\u2413"},  // DC3
-            {"&#20;", "\uFFFC\u2414"},  // DC4
-            {"&#21;", "\uFFFC\u2415"},  // NAK
-            {"&#22;", "\uFFFC\u2416"},  // SYN
-            {"&#17;", "\uFFFC\u2417"},  // ETB
-            {"&#23;", "\uFFFC\u2418"},  // CAN
-            {"&#25;", "\uFFFC\u2419"},  // EM
-            {"&#26;", "\uFFFC\u241A"},  // SUB
-            {"&#27;", "\uFFFC\u241B"},  // ESC
-            {"&#28;", "\uFFFC\u241C"},  // FS
-            {"&#29;", "\uFFFC\u241D"},  // GS
-            {"&#30;", "\uFFFC\u241E"},  // RS
-            {"&#31;", "\uFFFC\u241F"},  // US
-            {"&#127;", "\uFFFC\u2421"}, // DEL
-    };
-
-    // Look for each replacement in data and if not present remove it from the
-    // list of things to replace
-    QMutableMapIterator<std::string, std::string> itReplacement(replacements);
-    while (itReplacement.hasNext()) {
-        itReplacement.next();
-        if (output.find(itReplacement.key()) == std::string::npos) {
-            itReplacement.remove();
+    // pugixml escapes every "&" in the data itself as "&amp;", so each "&#" here is one of its
+    // character references and can be swapped in a single pass.
+    std::string sanitized;
+    std::string::size_type copiedUpTo = 0;
+    for (auto found = output.find("&#"); found != std::string::npos; found = output.find("&#", found + 2)) {
+        const std::string_view reference = std::string_view(output).substr(found);
+        for (const auto& [entity, picture] : scControlEntities) {
+            if (reference.starts_with(entity)) {
+                if (sanitized.empty()) {
+                    sanitized.reserve(output.size() + output.size() / 64);
+                }
+                sanitized.append(output, copiedUpTo, found - copiedUpTo);
+                sanitized.append(picture);
+                copiedUpTo = found + entity.size();
+                break;
+            }
         }
     }
-
-    if (!replacements.isEmpty()) {
-        // There is at least one thing left in the QMap of replacements and we
-        // can use the same iterator if we reset it to the start of the
-        // remaining replacements:
-        itReplacement.toFront();
-        while (itReplacement.hasNext()) {
-            itReplacement.next();
-            replaceAll(output, itReplacement.key(), itReplacement.value());
-        }
+    if (sanitized.empty()) {
+        return;
     }
+    sanitized.append(output, copiedUpTo);
+    output.swap(sanitized);
+}
+
+std::string XMLexport::serializeForQxml(const pugi::xml_document& doc)
+{
+    std::string output;
+    StringXmlWriter writer(output);
+    doc.save(writer);
+    sanitizeForQxml(output);
+    return output;
 }
 
 bool XMLexport::saveXml(const QString& fileName)
@@ -333,13 +381,7 @@ bool XMLexport::saveXmlDocToFile(const QString& fileName, const pugi::xml_docume
         return false;
     }
 
-    // Serialize the document to a stringstream
-    std::stringstream saveStringStream(std::ios::out);
-    doc.save(saveStringStream);
-    std::string output(saveStringStream.str());
-
-    // Apply sanitization for control characters
-    sanitizeForQxml(output);
+    const std::string output = serializeForQxml(doc);
 
     file.write(output.data(), output.size());
     bool success = file.error() == QFileDevice::NoError;
@@ -357,19 +399,9 @@ bool XMLexport::saveXmlDocToFile(const QString& fileName, const pugi::xml_docume
 // TODO: Refactor dlgTriggerEditor::slot_export() {at least} to call this method instead of saveXml(const QString&)
 bool XMLexport::saveXmlFile(QSaveFile& file)
 {
-    std::stringstream saveStringStream(std::ios::out);
-    // Remember, the mExportDoc is the data in the form of a pugi::xml_document
-    // instance - the save method needs a stream that implements the
-    // std::ostream interface into which it can push the data:
-    mExportDoc.save(saveStringStream);
-    // We need to do our own replacement of ASCII control characters that are
-    // not valid in XML version 1.0 and that means we cannot use the pugixml
-    // file methods as it does that in a different way which is not helpful
-    // as we do not use that library for READING the XML files - so convert
-    // the data to a std::string :
-    std::string output(saveStringStream.str());
-    // Then do the control character replacement:
-    sanitizeForQxml(output);
+    // pugixml's own file methods write control characters a different way, which XMLimport
+    // does not read, so the document is serialized here and written with Qt's file handling.
+    const std::string output = serializeForQxml(mExportDoc);
     // Now we can use Qt's file handling which does handle non-Latin1 named
     // files - which MinGW's STL file handling (on Windows platform) does not:
     const qint64 bytesWritten = file.write(output.data(), static_cast<qint64>(output.size()));
@@ -386,15 +418,7 @@ bool XMLexport::saveXmlFile(QSaveFile& file)
 
 QString XMLexport::saveXml()
 {
-    std::stringstream saveStringStream(std::ios::out);
-    std::string output;
-
-    mExportDoc.save(saveStringStream);
-    output = saveStringStream.str();
-
-    sanitizeForQxml(output);
-
-    return QString::fromStdString(output);
+    return QString::fromStdString(serializeForQxml(mExportDoc));
 }
 
 void XMLexport::writeHost(Host* pHost, pugi::xml_node mudletPackage)
@@ -541,6 +565,7 @@ void XMLexport::writeHost(Host* pHost, pugi::xml_node mudletPackage)
     host.append_attribute("mDoubleClickIgnore") = ignore.toUtf8().constData();
     host.append_attribute("EditorSearchOptions") = QString::number(pHost->mSearchOptions).toUtf8().constData();
     host.append_attribute("DebugShowAllProblemCodepoints") = pHost->debugShowAllProblemCodepoints() ? "yes" : "no";
+    host.append_attribute("lazyCaptureGlobals") = pHost->lazyCaptureGlobals() ? "yes" : "no";
     host.append_attribute("announceIncomingText") = pHost->mAnnounceIncomingText ? "yes" : "no";
     host.append_attribute("advertiseScreenReader") = pHost->mAdvertiseScreenReader ? "yes" : "no";
     host.append_attribute("enableOSC8Hyperlinks") = pHost->mEnableOSC8Hyperlinks ? "yes" : "no";
@@ -689,8 +714,8 @@ void XMLexport::writeHost(Host* pHost, pugi::xml_node mudletPackage)
             mapInfoContributor.text().set(iterator.next().toUtf8().constData());
         }
     }
-    {
-        auto iterator = mudlet::self()->mpShortcutsManager->iterator();
+    if (auto* shortcuts = ShortcutsManager::self()) {
+        auto iterator = shortcuts->iterator();
         while (iterator.hasNext()) {
             auto key = iterator.next();
             auto shortcut = host.append_child("profileShortcut");
@@ -1009,7 +1034,7 @@ pugi::xml_node XMLexport::writeXmlHeader()
     mExportDoc.append_child(pugi::node_doctype).set_value("MudletPackage");
 
     auto mudletPackage = mExportDoc.append_child("MudletPackage");
-    mudletPackage.append_attribute("version") = mudlet::self()->scmMudletXmlDefaultVersion.toUtf8().constData();
+    mudletPackage.append_attribute("version") = scmMudletXmlDefaultVersion.toUtf8().constData();
 
     return mudletPackage;
 }

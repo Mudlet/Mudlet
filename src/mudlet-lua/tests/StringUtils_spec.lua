@@ -285,6 +285,18 @@ describe("Tests StringUtils.lua functions", function()
       assert.equals("", ("   "):trim())
     end)
 
+    it("should keep long runs of whitespace inside the string", function()
+      local inner = "HP: 100" .. string.rep(" ", 200) .. "MP:\t\t50" .. string.rep(" ", 200) .. "EP: 9"
+      assert.equals(inner, ("   " .. inner .. string.rep(" ", 300)):trim())
+      assert.equals("", (string.rep(" \t\n", 500)):trim())
+      assert.equals("", (""):trim())
+      assert.equals("x", (string.rep(" ", 500) .. "x"):trim())
+    end)
+
+    it("should trim a number the way it trims its string form", function()
+      assert.equals("42", string.trim(42))
+    end)
+
     it("should return only the trimmed string, not gsub's replacement count", function()
       assert.equals(1, select("#", ("  a  "):trim()))
       assert.equals(1, select("#", ("a"):trim()))
@@ -423,6 +435,121 @@ describe("Tests StringUtils.lua functions", function()
       _G.stringUtilsSpecGlobal = nil
       assert.equals("a seen b", interpolated)
       assert.equals("nil", f("{stringUtilsSpecGlobal}"))
+    end)
+
+    it("should read the current value of a name each time the same string is used", function()
+      for i = 1, 3 do
+        assert.equals("i is " .. i, f("i is {i}"))
+      end
+    end)
+
+    it("should give a nested f the locals in scope where it runs", function()
+      local outerName = "outer"
+      local function inner()
+        local innerName = "inner"
+        -- not a tail call, which would take this frame and its locals off the stack
+        local result = f("{innerName}/{outerName}")
+        return result
+      end
+      assert.equals("inner/outer", inner())
+      assert.equals("[inner/outer] outer", f("[{inner()}] {outerName}"))
+    end)
+
+    it("should interpolate a variable named like one of f's own locals", function()
+      do
+        local lookup, outer_env, code = "local lookup", "local outer_env", "local code"
+        assert.equals("local lookup/local outer_env/local code", f("{lookup}/{outer_env}/{code}"))
+      end
+
+      local was = rawget(_G, "lookup")
+      _G.lookup = {x = 42}
+      local ok, result = pcall(f, "{lookup.x}")
+      _G.lookup = was
+      assert.is_true(ok, tostring(result))
+      assert.equals("42", result)
+    end)
+
+    it("should not let an outer f's locals shadow those of a function it calls", function()
+      local code, block, exp_env = "mine", "my block", "my env"
+      local function inner()
+        return f("{code}/{block}/{exp_env}")
+      end
+      assert.equals("[mine/my block/my env]", f("[{inner()}]"))
+    end)
+
+    -- a function made in an expression writes its globals into that
+    -- expression's own environment, which nothing else may see
+    it("should not let a global assigned inside one expression leak into the next", function()
+      assert.equals("1", f("{(function() fstringSpecLeak = 1 return fstringSpecLeak end)()}"))
+      assert.is_nil(rawget(_G, "fstringSpecLeak"))
+      assert.equals("nil", f("{fstringSpecLeak}"))
+    end)
+
+    it("should not let an expression that raised leave a global behind", function()
+      assert.is_false(pcall(f, "{(function() fstringSpecStale = 'stale' error('boom') end)()}"))
+      local fstringSpecStale = "fresh"
+      assert.equals("fresh", f("{fstringSpecStale}"))
+    end)
+
+    it("should keep an expression's globals through an f nested inside it", function()
+      assert.equals("1", f("{(function() fstringSpecNested = 1 local _ = f('{2}') return fstringSpecNested end)()}"))
+    end)
+
+    it("should keep the globals of a function an expression made for later", function()
+      local store = {}
+      assert.equals("made", f("{(function() store.bump = function() fstringSpecCount = (fstringSpecCount or 0) + 1 return fstringSpecCount end return 'made' end)()}"))
+      assert.equals(1, store.bump())
+      assert.equals(2, store.bump())
+      local fstringSpecCount = "local"
+      assert.equals("local", f("{fstringSpecCount}"))
+      assert.equals(3, store.bump())
+    end)
+
+    it("should not let a function an expression calls leave a global in its environment", function()
+      local setter = function(k, v)
+        getfenv(2)[k] = v
+        return "set"
+      end
+      -- concatenated so the call is not a tail call, which would leave getfenv(2) nothing to find
+      assert.equals("set", f("{setter('fstringSpecPlanted', 'planted') .. ''}"))
+      local fstringSpecPlanted = "local"
+      assert.equals("local", f("{fstringSpecPlanted}"))
+    end)
+
+    it("should keep what a helper wrote into an expression's environment through a nested f", function()
+      local setter = function(k, v)
+        getfenv(2)[k] = v
+        return ""
+      end
+      local nested = function()
+        return f("{1}")
+      end
+      assert.equals("1kept", f("{setter('fstringSpecHelperWrite', 'kept') .. nested() .. fstringSpecHelperWrite}"))
+    end)
+
+    it("should give every evaluation an environment whose lookup a helper cannot spoil for the next", function()
+      local spoiler = function()
+        setmetatable(getfenv(2), {})
+        return "spoilt"
+      end
+      assert.equals("spoilt", f("{spoiler() .. ''}"))
+      local hp = 42
+      assert.equals("42", f("{hp}"))
+    end)
+
+    it("should read globals from the environment f itself is given", function()
+      local sandbox = setmetatable({fstringSpecSandboxed = "inside"}, {__index = _G})
+      local original = getfenv(f)
+      _G.fstringSpecOutside = "outside"
+      setfenv(f, sandbox)
+      local ok, inside, outside = pcall(function()
+        return f("{fstringSpecSandboxed}"), f("{fstringSpecOutside}")
+      end)
+      setfenv(f, original)
+      _G.fstringSpecOutside = nil
+      assert.is_true(ok, tostring(inside))
+      assert.equals("inside", inside)
+      assert.equals("nil", outside)
     end)
 
     it("should not treat % as a format directive", function()

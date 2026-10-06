@@ -57,6 +57,8 @@
 
 #include "GroupedTest.h"
 
+using namespace std::chrono_literals;
+
 class EmergencyStopResumeTest : public QObject
 {
     Q_OBJECT
@@ -186,15 +188,15 @@ private slots:
         // readGlobalInt() cannot tell a missing global from a zero, and the
         // comparison after the stop would then hold as 0 == 0
         QVERIFY2(globalIsNumber(qsl("resumeTicks")), "the timer's callback should have left a number in resumeTicks");
-        QTRY_VERIFY_WITH_TIMEOUT(readGlobalInt(qsl("resumeTicks")) > 0, 5000);
+        QTRY_VERIFY_WITH_TIMEOUT(readGlobalInt(qsl("resumeTicks")) > 0, 5s);
 
         mpHost->stopAllTriggers();
         const int ticksAtStop = readGlobalInt(qsl("resumeTicks"));
-        QTest::qWait(500);
+        QTest::qWait(500ms);
         QCOMPARE(readGlobalInt(qsl("resumeTicks")), ticksAtStop);
 
         mpHost->reenableAllTriggers();
-        QTRY_VERIFY_WITH_TIMEOUT(readGlobalInt(qsl("resumeTicks")) > ticksAtStop, 5000);
+        QTRY_VERIFY_WITH_TIMEOUT(readGlobalInt(qsl("resumeTicks")) > ticksAtStop, 5s);
 
         // it would otherwise go on ticking through the cases below
         QVERIFY(unit->killTimer(QString::number(id)));
@@ -373,8 +375,8 @@ private slots:
 
         // and the half the widened guard is there for: once the parent does
         // fire, the command-only child has to arm and send
-        QTRY_VERIFY_WITH_TIMEOUT(readGlobalInt(qsl("offsetParentTicks")) > 0, 5000);
-        QTRY_VERIFY_WITH_TIMEOUT(readGlobalInt(qsl("offsetChildTicks")) > 0, 5000);
+        QTRY_VERIFY_WITH_TIMEOUT(readGlobalInt(qsl("offsetParentTicks")) > 0, 5s);
+        QTRY_VERIFY_WITH_TIMEOUT(readGlobalInt(qsl("offsetChildTicks")) > 0, 5s);
     }
 
     // The uninstallList half of the resume's skip: an uninstall with a timer
@@ -460,7 +462,7 @@ private:
         }
 
         QSignalSpy spy2(&(host->mTelnet), &cTelnet::signal_connected);
-        if (!spy2.wait(500)) {
+        if (host->mTelnet.getConnectionState() != QAbstractSocket::ConnectedState && !spy2.wait(8s)) {
             QFAIL("Could not connect with the host.");
         }
     }

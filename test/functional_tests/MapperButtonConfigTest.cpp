@@ -48,6 +48,8 @@
 
 #include "GroupedTest.h"
 
+using namespace std::chrono_literals;
+
 class MapperButtonConfigTest : public QObject
 {
     Q_OBJECT
@@ -95,7 +97,7 @@ private slots:
         }
 
         QSignalSpy connectionSpy(&(mpHost->mTelnet), &cTelnet::signal_connected);
-        if (!connectionSpy.wait(2000)) {
+        if (!connectionSpy.wait(2s)) {
             QFAIL("Could not connect with the host.");
         }
 
@@ -107,8 +109,8 @@ private slots:
         delete mpServer;
         mpServer = nullptr;
         mpHost = nullptr;
-        deleteProfileDirectory();
         delete mudlet::self();
+        deleteProfileDirectory();
     }
 
     void test_scriptedModeRoutesButtonToEvent()
@@ -152,10 +154,7 @@ private:
 
     void deleteProfileDirectory() const
     {
-        QDir dir(MudletApp::getMudletPath(enums::profileHomePath, mHostname));
-        if (dir.exists()) {
-            dir.removeRecursively();
-        }
+        TestProfile::removeProfileDirectory(mHostname);
     }
 };
 

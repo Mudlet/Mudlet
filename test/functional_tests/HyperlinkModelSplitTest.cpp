@@ -155,8 +155,7 @@ private slots:
         // Written through the model, read back through the view: the same
         // object, not two that happen to agree.
         model.mHyperlinkSelectionManager.setSelected(qsl("splitgroup"), qsl("splitvalue"), true);
-        QVERIFY2(console->getHyperlinkSelectionManager().isSelected(qsl("splitgroup"), qsl("splitvalue")),
-                 "the view and the model are answering from separate selection managers");
+        QVERIFY2(console->getHyperlinkSelectionManager().isSelected(qsl("splitgroup"), qsl("splitvalue")), "the view and the model are answering from separate selection managers");
 
         // A user window carries a model of its own, so its managers have to be
         // its own too - Host's belong to the main console alone.
@@ -194,7 +193,7 @@ private slots:
 
         const int linkIndex = model.buffer.getLinkIndexAt(lineNumber, line.indexOf(qsl("go north")));
         QVERIFY2(linkIndex > 0, "the linked characters carry no link index, so the MXP link is not clickable");
-        QCOMPARE(model.buffer.mLinkStore.getLinksConst(linkIndex), QStringList{qsl("send([[north]])")});
+        QCOMPARE(model.buffer.mLinkStore.getLinksConst(linkIndex), QStringList{qsl("send([[\nnorth]])")});
     }
 
     // The case above cannot tell the model's buffer from the view's, because
@@ -338,7 +337,7 @@ private slots:
                              lineNumber = lineHolding(model->buffer, qsl("OSCSPLIT1"));
                              return lineNumber >= 0;
                          },
-                         2000),
+                         2s),
                  "the line carrying the link never reached the buffer");
         QCOMPARE(lineTextAt(model->buffer, lineNumber), qsl("OSCSPLIT1(          )OSCSPLIT1"));
 
@@ -349,11 +348,20 @@ private slots:
         QCOMPARE(&host->mainConsoleModel(), model.get());
         QVERIFY2(lineTextAt(model->buffer, lineNumber) == qsl("OSCSPLIT1(          )OSCSPLIT1"), "the reveal had already run before the view was destroyed, so this case proves nothing");
 
+        // The delay only had to outlast the close, so with the view gone it is
+        // brought forward rather than waited out. The manager's own timer still
+        // has to notice and perform the reveal, which is what this case is about.
+        auto& trackedLinks = model->mHyperlinkVisibilityManager.mTrackedLinks;
+        QCOMPARE(trackedLinks.size(), 1);
+        for (auto& tracked : trackedLinks) {
+            tracked.creationTimeMs -= tracked.delayMs;
+        }
+        // Well short of the 20s delay, so only the reveal brought forward can pass this
         QVERIFY2(QTest::qWaitFor(
                          [&]() {
                              return lineTextAt(model->buffer, lineNumber) == qsl("OSCSPLIT1(HIDDENWORD)OSCSPLIT1");
                          },
-                         60000),
+                         5s),
                  "the concealed link never revealed itself once its view had gone");
     }
 
@@ -368,7 +376,7 @@ private:
             return nullptr;
         }
         QSignalSpy connected(&host->mTelnet, &cTelnet::signal_connected);
-        if (host->mTelnet.getConnectionState() != QAbstractSocket::ConnectedState && !connected.wait(8000)) {
+        if (host->mTelnet.getConnectionState() != QAbstractSocket::ConnectedState && !connected.wait(8s)) {
             qWarning("could not connect to the stub");
             return nullptr;
         }

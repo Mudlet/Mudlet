@@ -36,6 +36,55 @@
 #include <QString>
 #include <QStringBuilder>
 
+#include <algorithm>
+#include <cstddef>
+#include <limits>
+
+namespace {
+// QDataStream reads a list held inside a map itself, with no chance to check
+// its length first (#10689), so these maps are read one entry at a time.
+// Like QDataStream's own reader, they leave the map empty when a read fails.
+void readCustomLinePoints(QDataStream& ifs, QMap<QString, QList<QPointF>>& lines)
+{
+    lines.clear();
+    const qint64 pointBytes = ifs.floatingPointPrecision() == QDataStream::DoublePrecision ? 2 * sizeof(double) : 2 * sizeof(float);
+    quint32 count = 0;
+    ifs >> count;
+    for (quint32 i = 0; i < count && ifs.status() == QDataStream::Ok; ++i) {
+        QString direction;
+        ifs >> direction;
+        if (!TMap::listLengthFits(ifs, pointBytes)) {
+            break;
+        }
+        QList<QPointF> points;
+        ifs >> points;
+        lines.insert(direction, points);
+    }
+    if (ifs.status() != QDataStream::Ok) {
+        lines.clear();
+    }
+}
+
+void readCustomLineColorComponents(QDataStream& ifs, QMap<QString, QList<int>>& colors)
+{
+    colors.clear();
+    quint32 count = 0;
+    ifs >> count;
+    for (quint32 i = 0; i < count && ifs.status() == QDataStream::Ok; ++i) {
+        QString direction;
+        ifs >> direction;
+        if (!TMap::listLengthFits(ifs, sizeof(qint32))) {
+            break;
+        }
+        QList<int> components;
+        ifs >> components;
+        colors.insert(direction, components);
+    }
+    if (ifs.status() != QDataStream::Ok) {
+        colors.clear();
+    }
+}
+} // namespace
 
 // Helper needed to allow Qt::PenStyle enum to be unserialised (read from file)
 // in Qt5 - the compilation errors that result in not having this are really
@@ -63,6 +112,7 @@ QDataStream& operator>>(QDataStream& ds, Qt::PenStyle& value)
     return ds;
 }
 
+static quint64 smLastSerial = 0;
 static const QColor scDefaultHighlightForeground(QColor(255, 150, 0));
 static const QColor scDefaultHighlightBackground(QColor(0, 0, 0));
 
@@ -70,7 +120,15 @@ TRoom::TRoom(TRoomDB* pRDB)
 : highlightColor(scDefaultHighlightForeground)
 , highlightColor2(scDefaultHighlightBackground)
 , mpRoomDB(pRDB)
+, mSerial(++smLastSerial)
 {
+    // Here rather than at file scope because mX is private. TRoom mixes access
+    // levels, which makes offsetof conditionally-supported; GCC and Clang
+    // support it and only warn.
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Winvalid-offsetof"
+    static_assert(offsetof(TRoom, mX) == 0 && offsetof(TRoom, highlight) < 16, "see the comment above TRoom::mX");
+#pragma GCC diagnostic pop
 }
 
 TRoom::~TRoom()
@@ -606,54 +664,6 @@ int TRoom::getExit(const int direction) const
     return -1;
 }
 
-QHash<int, int> TRoom::getExits() const
-{
-    // key is room id we exit to, value is type of exit. 0 is normal, 1 is special
-    QHash<int, int> exitList;
-    if (north != -1) {
-        exitList[north] = 0;
-    }
-    if (northeast != -1) {
-        exitList[northeast] = 0;
-    }
-    if (east != -1) {
-        exitList[east] = 0;
-    }
-    if (southeast != -1) {
-        exitList[southeast] = 0;
-    }
-    if (south != -1) {
-        exitList[south] = 0;
-    }
-    if (southwest != -1) {
-        exitList[southwest] = 0;
-    }
-    if (west != -1) {
-        exitList[west] = 0;
-    }
-    if (northwest != -1) {
-        exitList[northwest] = 0;
-    }
-    if (up != -1) {
-        exitList[up] = 0;
-    }
-    if (down != -1) {
-        exitList[down] = 0;
-    }
-    if (in != -1) {
-        exitList[in] = 0;
-    }
-    if (out != -1) {
-        exitList[out] = 0;
-    }
-    QMapIterator<QString, int> it(mSpecialExits);
-    while (it.hasNext()) {
-        it.next();
-        exitList[it.value()] = 1;
-    }
-    return exitList;
-}
-
 bool TRoom::setExitLock(int exit, bool state)
 {
     bool changed = false;
@@ -670,6 +680,31 @@ bool TRoom::setExitLock(int exit, bool state)
         mpRoomDB->mpMap->setUnsaved(__func__);
     }
     return changed;
+}
+
+// For a normal exit that has just been taken away: what a stub can carry, its
+// door and lock, stays if a stub is left in its place, as the map audit has it
+void TRoom::removeExitExtras(const int direction)
+{
+    const QString exitKey{dirCodeToShortString(direction)};
+    bool changed = false;
+    if (!exitStubs.contains(direction)) {
+        changed |= doors.remove(exitKey) > 0;
+        changed |= exitLocks.removeAll(direction) > 0;
+    }
+    changed |= exitWeights.remove(exitKey) > 0;
+    const bool lineRemoved = customLines.remove(exitKey) > 0;
+    customLinesColor.remove(exitKey);
+    customLinesStyle.remove(exitKey);
+    customLinesArrow.remove(exitKey);
+    if (lineRemoved) {
+        calcRoomDimensions();
+        changed = true;
+    }
+    if (changed) {
+        mpRoomDB->mpMap->mMapGraphNeedsUpdate = true;
+        mpRoomDB->mpMap->setUnsaved(__func__);
+    }
 }
 
 bool TRoom::setSpecialExitLock(const QString& cmd, const bool doLock)
@@ -753,8 +788,17 @@ void TRoom::clearSpecialExits()
         customLinesColor.remove(itSpecialExit.key());
         customLinesStyle.remove(itSpecialExit.key());
         customLinesArrow.remove(itSpecialExit.key());
+        const QString exitName = itSpecialExit.key();
         // Then remove the exit itself from the QMap:
         itSpecialExit.remove();
+        // A special exit named like a normal one ("n", "up"...) shares that
+        // exit's weight, which has to stay while the normal exit does:
+        if (!hasExitOrSpecialExit(exitName)) {
+            exitWeights.remove(exitName);
+        }
+    }
+    if (TArea* pA = mpRoomDB->getArea(area)) {
+        pA->determineAreaExitsOfRoom(id);
     }
     mpRoomDB->updateEntranceMap(this);
     mpRoomDB->mpMap->mMapGraphNeedsUpdate = true;
@@ -779,8 +823,14 @@ void TRoom::removeAllSpecialExitsToRoom(const int roomId)
         customLinesColor.remove(itSpecialExit.key());
         customLinesStyle.remove(itSpecialExit.key());
         customLinesArrow.remove(itSpecialExit.key());
+        const QString exitName = itSpecialExit.key();
         // Then remove the exit itself from the QMap:
         itSpecialExit.remove();
+        // A special exit named like a normal one ("n", "up"...) shares that
+        // exit's weight, which has to stay while the normal exit does:
+        if (!hasExitOrSpecialExit(exitName)) {
+            exitWeights.remove(exitName);
+        }
     }
 
     if (exitFound) {
@@ -1006,13 +1056,13 @@ void TRoom::restore(QDataStream& ifs, int roomID, int version)
             // In version 20 we stopped storing a QString form for the line
             // style - and we also switched to lower case for the normal exit
             // direction keys and using a QColor to store the color:
-            ifs >> customLines;
+            readCustomLinePoints(ifs, customLines);
             ifs >> customLinesArrow;
             ifs >> customLinesColor;
             ifs >> customLinesStyle;
         } else {
             QMap<QString, QList<QPointF>> oldLinesData;
-            ifs >> oldLinesData;
+            readCustomLinePoints(ifs, oldLinesData);
             QMapIterator<QString, QList<QPointF>> itCustomLine(oldLinesData);
             while (itCustomLine.hasNext()) {
                 itCustomLine.next();
@@ -1042,7 +1092,7 @@ void TRoom::restore(QDataStream& ifs, int roomID, int version)
             }
 
             QMap<QString, QList<int>> oldLinesColorData;
-            ifs >> oldLinesColorData;
+            readCustomLineColorComponents(ifs, oldLinesColorData);
             QMapIterator<QString, QList<int>> itCustomLineColor(oldLinesColorData);
             while (itCustomLineColor.hasNext()) {
                 itCustomLineColor.next();
@@ -1115,10 +1165,14 @@ void TRoom::restore(QDataStream& ifs, int roomID, int version)
         if (version >= 21) {
             ifs >> mSpecialExitLocks;
         }
-        ifs >> exitLocks;
+        if (TMap::listLengthFits(ifs, sizeof(qint32))) {
+            ifs >> exitLocks;
+        }
     }
     if (version >= 13) {
-        ifs >> exitStubs;
+        if (TMap::listLengthFits(ifs, sizeof(qint32))) {
+            ifs >> exitStubs;
+        }
     }
     if (version >= 16) {
         ifs >> exitWeights;
@@ -1335,6 +1389,8 @@ void TRoom::auditExits(const QHash<int, int> roomRemapping)
                 continue;
             }
 
+            // Unlike a normal exit, a special exit is only there when it leads
+            // somewhere, so one to -1 does follow that room to its new id:
             if (roomRemapping.contains(exitRoomId)) {
                 const QString auditKey = qsl("audit.remapped_special_exit.%1").arg(exitName);
                 userData.insert(auditKey, QString::number(exitRoomId));
@@ -1387,6 +1443,7 @@ void TRoom::auditExits(const QHash<int, int> roomRemapping)
                     // TODO: Add additional warnings if we ARE deleting any data in following
                     exitWeights.remove(exitName);
                     doors.remove(exitName);
+                    mSpecialExitLocks.remove(exitName);
                     customLines.remove(exitName);
                     customLinesColor.remove(exitName);
                     customLinesStyle.remove(exitName);
@@ -1427,6 +1484,7 @@ void TRoom::auditExits(const QHash<int, int> roomRemapping)
                 // We cannot have a door or anything else on a non-existent special exit
                 doors.remove(exitName);
                 exitWeights.remove(exitName);
+                mSpecialExitLocks.remove(exitName);
                 customLines.remove(exitName);
                 customLinesColor.remove(exitName);
                 customLinesStyle.remove(exitName);
@@ -1506,6 +1564,45 @@ void TRoom::auditExits(const QHash<int, int> roomRemapping)
             mpRoomDB->mpMap->postMessage(infoMsg);
         }
         mpRoomDB->mpMap->appendRoomErrorMsg(id, infoMsg, true);
+    }
+
+    // Only a corrupt file can hold a custom line point outside the range of room
+    // coordinates, and the 2D map's arithmetic overflows to infinity on one
+    {
+        QStringList outOfRange;
+        for (auto itCustomLine = customLines.cbegin(); itCustomLine != customLines.cend(); ++itCustomLine) {
+            const QList<QPointF>& points = itCustomLine.value();
+            if (!std::all_of(points.cbegin(), points.cend(), [](const QPointF& point) {
+                    constexpr double lowest = std::numeric_limits<int>::min();
+                    constexpr double highest = std::numeric_limits<int>::max();
+                    // NaN fails these comparisons too
+                    return point.x() >= lowest && point.x() <= highest && point.y() >= lowest && point.y() <= highest;
+                })) {
+                outOfRange.append(itCustomLine.key());
+            }
+        }
+        for (const QString& exitKey : std::as_const(outOfRange)) {
+            customLines.remove(exitKey);
+            customLinesColor.remove(exitKey);
+            customLinesStyle.remove(exitKey);
+            customLinesArrow.remove(exitKey);
+            customLinesCopy.remove(exitKey);
+            customLinesColorCopy.remove(exitKey);
+            customLinesStyleCopy.remove(exitKey);
+            customLinesArrowCopy.remove(exitKey);
+        }
+        if (!outOfRange.isEmpty()) {
+            // The room's extents and its area's index of rooms with lines were worked out on load
+            calcRoomDimensions();
+            //: %1 is the room ID, %2 is a list of exits whose custom lines were removed
+            const QString infoMsg = tr("[ INFO ]  - In room with ID: %1 found one or more custom lines with a point outside the range of room coordinates, which were removed: %2.")
+                                            .arg(id)
+                                            .arg(outOfRange.join(QLatin1String(", ")));
+            if (TMap::smShowMapAuditErrors) {
+                mpRoomDB->mpMap->postMessage(infoMsg);
+            }
+            mpRoomDB->mpMap->appendRoomErrorMsg(id, infoMsg, true);
+        }
     }
 
     // Custom Lines - points - the master element - if the entry for an exit is
@@ -1589,11 +1686,12 @@ void TRoom::auditExits(const QHash<int, int> roomRemapping)
         }
     }
 
-    // The audit rewrites exit destinations, which the entrance hash built
-    // during the load has no entry for. Removing the superseded entries as
-    // well would be a full scan of the hash per room, and the consumers all
-    // re-check the exit anyway, so the leftovers are left to them.
-    mpRoomDB->updateEntranceMap(this, true);
+    // Only a remapped room id gives an exit a destination that the load did
+    // not record. The superseded entries are left behind, as the consumers all
+    // re-check the exit anyway.
+    if (!roomRemapping.isEmpty()) {
+        mpRoomDB->updateEntranceMap(this, true);
+    }
 }
 
 void TRoom::auditExit(int& exitRoomId,                     // Reference to where exit goes to
@@ -1609,7 +1707,9 @@ void TRoom::auditExit(int& exitRoomId,                     // Reference to where
                       QMap<QString, bool>& customLinesArrowPool,
                       const QHash<int, int> roomRemapping)
 {
-    if (roomRemapping.contains(exitRoomId)) {
+    // -1 is also what every absent exit holds, so a room renumbered from that
+    // id cannot take the exits that led to it without taking all the others:
+    if (exitRoomId != -1 && roomRemapping.contains(exitRoomId)) {
         const QString auditKey = qsl("audit.remapped_exit.%1").arg(dirCode);
         userData.insert(auditKey, QString::number(exitRoomId));
         //: %1 is the room ID, %2 is the exit direction, %3 is the old destination room ID, %4 is the new destination room ID
@@ -1855,9 +1955,10 @@ void TRoom::writeJsonRoom(QJsonArray& obj) const
 int TRoom::readJsonRoom(const QJsonArray& array, const int index, const int areaId)
 {
     const QJsonObject roomObj{array.at(index).toObject()};
-    // This is not needed to be stored into id as that is done when the room is
-    // added to the TRoomDB via a TRoomDB::addRoom(...) call:
     const int roomId = roomObj.value(QLatin1String("id")).toInt();
+    // TRoomDB::addRoom(...) sets this again once the room is read, but the
+    // warnings about bad exit data read before then have to name the room:
+    id = roomId;
     name = roomObj.value(QLatin1String("name")).toString();
     area = areaId;
     readJsonUserData(roomObj.value(QLatin1String("userData")).toObject());
@@ -1876,7 +1977,8 @@ int TRoom::readJsonRoom(const QJsonArray& array, const int index, const int area
     }
 
     if (roomObj.contains(QLatin1String("weight")) && roomObj.value(QLatin1String("weight")).isDouble()) {
-        weight = roomObj.value(QLatin1String("weight")).toInt();
+        // As in restore(): a weight below one breaks the route costs findPath() relies on
+        weight = qMax(1, roomObj.value(QLatin1String("weight")).toInt());
     }
 
     if (roomObj.contains(QLatin1String("symbol")) && roomObj.value(QLatin1String("symbol")).isObject()) {
@@ -2209,11 +2311,12 @@ void TRoom::readJsonDoor(const QJsonObject& obj, const QString& dir)
         doors.insert(dir, 3);
         return;
     }
-    if (Q_UNLIKELY(doorString == QLatin1String("none"))) {
-        return;
+    if (doorString != QLatin1String("none")) {
+        // The file may have been edited by hand or written by another tool,
+        // so an unknown type is dropped rather than trusted to never occur:
+        qWarning().nospace().noquote() << "TRoom::readJsonDoor(...) WARNING - the door type: \"" << doorString << "\" on the exit: \"" << dir << "\" of room id: " << id
+                                       << " is not understood, ignoring it.";
     }
-    qCritical().nospace().noquote() << "TRoom::readJsonDoor(...) CRITICAL - a type of door: \"" << dir << "\" is not understood!";
-    Q_UNREACHABLE(); // No other string expected
 }
 
 // This tacks on extra details onto the calling exitObj if there IS a custom line:

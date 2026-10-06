@@ -168,7 +168,7 @@ private slots:
             QTest::keyClick(QApplication::focusWidget(), Qt::Key_Return);
         });
         QSignalSpy profileLoaded(mudlet::self(), &mudlet::signal_profileLoaded);
-        QVERIFY2(profileLoaded.wait(6000), "the first profile did not finish loading");
+        QVERIFY2(profileLoaded.wait(6s), "the first profile did not finish loading");
         mpHost = mudlet::self()->getActiveHost();
         QVERIFY(mpHost);
 

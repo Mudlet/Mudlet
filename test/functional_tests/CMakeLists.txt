@@ -34,7 +34,9 @@ endif()
 # Windows, consoles and the text they draw
 set(WINDOW_GROUP_TEST_SOURCES
     AddonControlsTest.cpp
+    AsciiLineBreakTest.cpp
     ConsoleModelExtractionTest.cpp
+    ConsoleTextStyleTest.cpp
     CopyAsImageTest.cpp
     DebugConsoleFilterTest.cpp
     FrontendRefreshSeamTest.cpp
@@ -42,6 +44,7 @@ set(WINDOW_GROUP_TEST_SOURCES
     DetachedWindowMenuShortcutsTest.cpp
     FramePacingTest.cpp
     DockWidgetWithoutProfileTest.cpp
+    GlyphCacheTest.cpp
     GlyphOverflowTest.cpp
     HyperlinkModelSplitTest.cpp
     HostConsolePrintTest.cpp
@@ -84,6 +87,7 @@ set(WINDOW_GROUP_TEST_SOURCES
     WrapLineRewrapTest.cpp
     ScrollLostOnPartialRepaintTest.cpp
     ScrollBarContrastTest.cpp
+    OpaqueConsolePaintTest.cpp
 )
 
 # Profiles: their config dir, their folders, and loading, saving and deleting them
@@ -100,6 +104,7 @@ set(PROFILE_GROUP_TEST_SOURCES
     CredentialFilePermissionsTest.cpp
     DefaultGameDeleteTest.cpp
     DictionaryRoundTripTest.cpp
+    ForceCloseTest.cpp
     ProfileCloseGuardTest.cpp
     MissingDisplayFontTest.cpp
     PortableRootNoticeTest.cpp
@@ -136,6 +141,7 @@ set(TELNET_GROUP_TEST_SOURCES
     TelnetConnectFailureTest.cpp
     TelnetConnectLookupRaceTest.cpp
     TelnetIacEscapingTest.cpp
+    MMCPIncomingCallTest.cpp
     TelnetNewEnvironTest.cpp
     TelnetPasswordMaskTimeoutTest.cpp
     TelnetOptionsReportTest.cpp
@@ -149,6 +155,7 @@ set(TELNET_GROUP_TEST_SOURCES
     MudletAppVersionTest.cpp
     IrcKickDisplayTest.cpp
     IrcMessageGuardTest.cpp
+    IrcLuaClientTest.cpp
 )
 
 # Triggers and the other scriptable units, and what a running script does to them
@@ -162,6 +169,7 @@ set(TRIGGER_GROUP_TEST_SOURCES
     SetScriptCallbackTest.cpp
     TFeedTriggersRecursionTest.cpp
     TriggerMatchPoolTest.cpp
+    TreeChildTeardownTest.cpp
     UnitDeferredDeleteTest.cpp
     UnitProcessingDepthTest.cpp
     UnitsReachHostTest.cpp
@@ -171,8 +179,10 @@ set(TRIGGER_GROUP_TEST_SOURCES
 set(EDITOR_GROUP_TEST_SOURCES
     dlgTriggerEditorUndoRedoTest.cpp
     EdbeeReinitTest.cpp
+    EditorAutoCompleteFocusTest.cpp
     EditorClipboardXmlTest.cpp
     EditorBannerViewSwitchTest.cpp
+    EditorItemXMLHelpersTest.cpp
     ColorTriggerDialogTest.cpp
     EditorReshowTest.cpp
     PackageExporterTest.cpp
@@ -204,6 +214,8 @@ set(MAP_GROUP_TEST_SOURCES
     MapOffscreenCustomLineTest.cpp
     MapFileStatsTest.cpp
     MapTextLabelCacheTest.cpp
+    MapViewCueTest.cpp
+    LuaMapperCueTest.cpp
     MapLockNoOpTest.cpp
     RoomPropertiesDialogTest.cpp
     MapperButtonConfigTest.cpp
@@ -223,6 +235,7 @@ endif()
 
 # Packages and modules: installing them, saving them and removing them
 set(PACKAGE_GROUP_TEST_SOURCES
+    ActionBarPlacementTest.cpp
     ActionSelfRemovalTest.cpp
     ActionToolbarMenuTest.cpp
     BrokenPackageNoticeTest.cpp
@@ -287,6 +300,7 @@ set(TEARDOWN_GROUP_TEST_SOURCES
 
 # Sound, music and video, speech in and out, and the rich presence published to Discord
 set(MEDIA_GROUP_TEST_SOURCES
+    MediaMuteStateTest.cpp
     SpeechBridgeLuaTest.cpp
     SherpaEngineTest.cpp
     SpeechRecognizerContractTest.cpp
@@ -302,9 +316,12 @@ set(FUNCTIONAL_TEST_UTILS
     DiscordIpcServerStub.cpp
 )
 
+mudlet_add_test_pch_provider(mudlet_functional_test_pch)
+
 # mudlet_lsan_hooks has to be linked explicitly, see src/CMakeLists.txt
 macro(add_functional_test_binary target)
     add_executable(${target} ${ARGN} ${FUNCTIONAL_TEST_UTILS})
+    mudlet_reuse_test_pch(${target} mudlet_functional_test_pch)
     add_dependencies(${target} ${LIB_MUDLET_TARGET})
     target_link_libraries(${target} PRIVATE Qt6::Test ${LIB_MUDLET_TARGET} mudlet_lsan_hooks)
     set_target_properties(${target} PROPERTIES ENABLE_EXPORTS ON)
@@ -451,10 +468,10 @@ add_dependencies(functional_media_tests vosk_stub)
 # Passed rather than reconstructed in the test: the suffix rules above are the
 # only place the platform naming is decided, and a test guessing at it would
 # silently skip instead of failing when they change.
-foreach(stubUser functional_window_tests functional_media_tests)
-    target_compile_definitions(${stubUser} PRIVATE
-        MUDLET_VOSK_STUB_LIBRARY="$<TARGET_FILE:vosk_stub>")
-endforeach()
+# Only on the files that read it, so the rest of both groups' objects stay
+# free of build-tree paths and ccache can share them between worktrees.
+set_property(SOURCE SpeechAcrossProfilesTest.cpp SpeechBridgeLuaTest.cpp SpeechRecognizerContractTest.cpp
+    APPEND PROPERTY COMPILE_DEFINITIONS MUDLET_VOSK_STUB_LIBRARY="$<TARGET_FILE:vosk_stub>")
 
 # AppStartupTeardownTest and HeadlessVersionTest run the shipped application
 # instead of linking it, so they need that binary's path and need it built by the
@@ -462,7 +479,8 @@ endforeach()
 # a plain variable local to src/CMakeLists.txt, so a rename there fails generation
 # here rather than quietly depending on nothing.
 add_dependencies(functional_teardown_tests mudlet_executable)
-target_compile_definitions(functional_teardown_tests PRIVATE MUDLET_APP_BINARY="$<TARGET_FILE:mudlet_executable>")
+set_property(SOURCE AppStartupTeardownTest.cpp HeadlessVersionTest.cpp
+    APPEND PROPERTY COMPILE_DEFINITIONS MUDLET_APP_BINARY="$<TARGET_FILE:mudlet_executable>")
 
 # Every list's cases, so a grouped test's properties are the solo ones verbatim
 foreach(test_name ${allFunctionalTestNames})
@@ -521,8 +539,8 @@ endforeach()
 # timeout than the default 60s
 set_tests_properties(ResetProfileTest PROPERTIES TIMEOUT 300)
 
-# AppStartupTeardownTest starts the whole application eight times over, and a
-# sanitiser build spends seconds on each of those start-ups
+# AppStartupTeardownTest starts the application eight times over, as far as
+# forwarding a link, and a sanitiser build spends seconds on each of those start-ups
 set_tests_properties(AppStartupTeardownTest PROPERTIES TIMEOUT 300)
 
 # HeadlessVersionTest runs the application once per row of its matrix, for the
@@ -708,8 +726,8 @@ set_tests_properties(ScrollLostOnPartialRepaintTest PROPERTIES TIMEOUT 300)
 # reconnecting in others, so it needs a longer timeout
 set_tests_properties(TelnetStringSequenceRecoveryTest PROPERTIES TIMEOUT 300)
 
-# CopyAsImageTest and MainConsoleSelectionTest create a fresh profile per test method, so they need a longer timeout
-set_tests_properties(CopyAsImageTest MainConsoleSelectionTest PROPERTIES TIMEOUT 300)
+# CopyAsImageTest, MainConsoleSelectionTest and OpaqueConsolePaintTest create a fresh profile per test method, so they need a longer timeout
+set_tests_properties(CopyAsImageTest MainConsoleSelectionTest OpaqueConsolePaintTest PROPERTIES TIMEOUT 300)
 
 # TDiscordModeTest drives the real discord-rpc library end-to-end. The library's
 # reconnect backoff is a process-global (60s ceiling) that the suite's

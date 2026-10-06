@@ -49,13 +49,11 @@ struct TDebugMessage
     }
 
     QString mMessage;
-    // The "[A] ".."[Z] " marking identifying which profile the message came
-    // from, NOT the message's category:
+    // The "[A] ".."[Z] " marking of the source profile, NOT the message's category:
     QString mProfileTag;
     QColor mForeground;
     QColor mBackground;
-    // When the message arrived, so that one held back while the console is
-    // paused is not stamped with the time it was eventually shown:
+    // Arrival time, so a message held while paused isn't stamped with when it was shown:
     QString mTimeStamp;
 };
 
@@ -64,9 +62,8 @@ class TDebug
     Q_DECLARE_TR_FUNCTIONS(TDebug)
 
 public:
-    // Identifies the subsystem a message came from so that the Central Debug
-    // Console can drop the high volume ones without losing the rest. The values
-    // are persisted in the settings, so do not renumber them:
+    // Lets the Central Debug Console drop the high-volume subsystems. Persisted in the settings, so
+    // do not renumber:
     enum class Category : quint32 {
         System = 0x0001,        // profile started/ended, the identifier legend
         Error = 0x0002,         // compile and run-time errors, any subsystem
@@ -85,22 +82,17 @@ public:
     };
     Q_DECLARE_FLAGS(Categories, Category)
 
-    // The categories that make the console unreadable on a busy profile - off
-    // by default, and what the "Quiet" preset in the filter bar restores:
+    // Off by default, and what the filter bar's "Quiet" preset restores:
     static const Categories csmNoisyCategories;
     static const Categories csmAllCategories;
 
-    // The master switch that every wants() test sits under. It does not gate
-    // passesFilters(), and a handful of messages - the profile-started line and
-    // the identifier table in changeHostName() - are emitted without a wants()
-    // guard, so they appear whatever this is set to:
+    // Master switch for every wants() test. It doesn't gate passesFilters(), and a few unguarded messages
+    // (the profile-started line, changeHostName()'s identifier table) show regardless:
     inline static bool smDebugMode = false;
 
-    // Where the composed lines end up. The GUI installs the Central Debug
-    // Console; with nothing installed, lines queue as they do before that
-    // console exists. TDebug keeps a raw pointer to the sink and a closing
-    // profile emits lines from inside teardown, so an implementation has to
-    // detach itself before any of it is torn down:
+    // Where composed lines go: the GUI installs the Central Debug Console; with none, lines queue. TDebug
+    // keeps a raw pointer and a closing profile emits during teardown, so an implementation must detach
+    // before any of it is torn down:
     class Sink
     {
     public:
@@ -109,10 +101,8 @@ public:
         virtual void printDebugLine(const QString& text, const QColor& foreground, const QColor& background, const QString& timeStamp) = 0;
 
     protected:
-        // Nothing owns a sink through this interface - the Central Debug
-        // Console belongs to its widget parent - so deleting through it is a
-        // compile error. Clearing the pointer here is only a backstop: a
-        // console emits from inside its own teardown, so it detaches earlier.
+        // Nothing owns a sink through this interface (the console belongs to its widget parent), so deleting
+        // through it must not compile. Clearing the pointer is only a backstop: a console detaches earlier.
         ~Sink()
         {
             if (smpSink == this) {
@@ -124,8 +114,33 @@ public:
     static void setSink(Sink* pSink) { smpSink = pSink; }
     static Sink* sink() { return smpSink; }
 
+    // Told when the profile identifiers change, so the GUI can keep what shows
+    // them - the Central Debug Console's profile menu and the "[A] " prefixes
+    // on the profile tabs - in step. With none installed nothing is told:
+    class ProfileObserver
+    {
+    public:
+        // A profile gained or lost its identifier, or was renamed:
+        virtual void profilesChanged() = 0;
+        virtual void profileRenamed(const QString& newName, const QString& tag) = 0;
+        // Only raised in debug mode, and before the new profile has a tab:
+        virtual void profileAddedInDebugMode() = 0;
+
+    protected:
+        ~ProfileObserver()
+        {
+            if (smpProfileObserver == this) {
+                smpProfileObserver = nullptr;
+            }
+        }
+    };
+
+    static void setProfileObserver(ProfileObserver* pObserver) { smpProfileObserver = pObserver; }
+    static ProfileObserver* profileObserver() { return smpProfileObserver; }
+
 private:
     inline static Sink* smpSink = nullptr;
+    inline static ProfileObserver* smpProfileObserver = nullptr;
 
     // A shared map that is uses to put a short identifier on each debug message
     // - the first value is used to create a table to display on changes and the
@@ -150,14 +165,15 @@ private:
     // profiles:
     inline static const QString csmTagOverflow = qsl("[?] ");
 
-    // Messages held back while the user has the console paused. Bounded because
-    // the console's own buffer only holds 10,000 lines - anything beyond that
-    // could only be replayed straight into the trimmer:
+    // Held while paused, capped at the console's own 10,000-line buffer - more would only be trimmed on replay:
     inline static QQueue<TDebugMessage> smPausedQueue;
     inline static int smPausedDroppedCount = 0;
     static constexpr int csmPausedQueueLimit = 10000;
+    // The backlog has the same cap, or a run that never opens the console (headless, or a user who never
+    // turns on debugging) keeps every unguarded line - profile starts, connection steps - until it exits:
+    static constexpr int csmMessageQueueLimit = csmPausedQueueLimit;
+    inline static int smMessageQueueDroppedCount = 0;
 
-    // Filter state, all shared by the single Central Debug Console:
     static Categories smEnabledCategories;
     inline static QSet<const Host*> smDisabledHosts;
     inline static QString smTextFilter;
@@ -180,14 +196,11 @@ private:
     QColor fgColor;
     QColor bgColor;
     Category mCategory;
-    // The trigger, alias, timer, key, button or script this message is about,
-    // empty when it is not about one in particular:
+    // The trigger/alias/timer/key/button/script this is about, or empty:
     QString mItemName;
 
 public:
-    // The category is deliberately not defaulted, so that a new call site
-    // cannot silently become unfilterable. The item name is optional because
-    // plenty of messages genuinely do not belong to one:
+    // Category deliberately not defaulted, so a new call site can't silently become unfilterable:
     explicit TDebug(const QColor&, const QColor&, const Category, const QString& itemName = QString());
     ~TDebug() = default;
 
@@ -197,8 +210,7 @@ public:
     static void flushMessageQueue();
     static QString getTag(Host*);
 
-    // Cheap enough to use in place of a bare 'smDebugMode' test, so
-    // that the message is never even assembled when it would be filtered out:
+    // Use instead of a bare smDebugMode test, so a filtered-out message is never assembled:
     static bool wants(const Category);
 
     static Categories enabledCategories() { return smEnabledCategories; }
@@ -209,8 +221,6 @@ public:
     static void setHostEnabled(const Host*, const bool);
     static bool hostEnabled(const Host* pHost) { return !smDisabledHosts.contains(pHost); }
     static void enableAllHosts() { smDisabledHosts.clear(); }
-    // Profile identifier ("[A] ") and name for each currently active profile,
-    // for the filter bar's profile menu:
     static QList<QPair<const Host*, QString>> activeProfiles();
 
     static void setTextFilter(const QString&, const Qt::CaseSensitivity);
@@ -220,8 +230,7 @@ public:
     static void setItemFilter(const QString& itemName) { smItemFilter = itemName; }
     static QString itemFilter() { return smItemFilter; }
 
-    // Says up front how much is being held back, so an empty-looking console is
-    // never mistaken for a broken one:
+    // Says what is filtered out, so an empty-looking console isn't mistaken for a broken one:
     static void announceFilters();
     static int hiddenCategoryCount();
 
@@ -230,6 +239,7 @@ public:
     static int pausedMessageCount() { return smPausedQueue.count(); }
     static int pausedDroppedCount() { return smPausedDroppedCount; }
     static int pausedMessageLimit() { return csmPausedQueueLimit; }
+    static int messageQueueLimit() { return csmMessageQueueLimit; }
     static void discardPausedMessages();
 
     // Used to flush/print out the accumulated message:

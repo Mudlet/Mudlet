@@ -1,9 +1,9 @@
 # Package fixtures
 
-Fixture packages and modules for `Package_spec.lua`, plus one for
-`Trigger_spec.lua`. They are deliberately tiny (the largest archive is about
-1 KB) and every one of them is named `mudlet-spec-*` so anything they leave
-behind is obviously test-owned.
+Fixture packages and modules for `Package_spec.lua`, plus a few for
+`Trigger_spec.lua` and `TriggerFlood_spec.lua`. They are deliberately tiny
+(the largest archive is about 1 KB) and every one of them is named
+`mudlet-spec-*` so anything they leave behind is obviously test-owned.
 
 `sources/` holds the readable source of each fixture; the `.mpackage` files next
 to this README are those directories zipped up. `.mpackage` files are zip
@@ -40,6 +40,9 @@ deliberately.
 | `mudlet-spec-partialxml` | archive whose package XML stops after one alias and one script, so those items import and the load still fails |
 | `mudlet-spec-emptyname` | archive whose `config.lua` asks for a name that trims away to nothing, so there is no name to install under |
 | `mudlet-spec-badconfig` | archive whose `config.lua` names the package and then raises, so the whole manifest is lost and the file name is used |
+| `mudlet-spec-silentconfig` | archive whose `config.lua` names the package and then raises an error with no message (`error()`), so there is not even a message to report |
+| `mudlet-spec-loopingconfig` | archive whose `config.lua` names the package and then never finishes, even catching what is raised inside its loop, so it has to be stopped |
+| `mudlet-spec-trickyconfig` | archive whose `config.lua` leaves a global with a number for its name, `_G` and `_VERSION` set to nil, and metamethods on its globals that raise, all of which the manifest reader must step around |
 | `mudlet-spec-renamer` | archive whose `config.lua` installs it under a different name (`mudlet-spec-renamed`) than the file it came in |
 | `mudlet-spec-dotted` | archive whose `config.lua` names it with a `.xml` on the end, which is trimmed off before it is installed |
 | `mudlet-spec-nested` | archive whose `config.lua` name hides a second ending under the first, so one pass over it and two give different answers |
@@ -48,4 +51,5 @@ deliberately.
 | `sources/mudlet-spec-badxml-bare` | bare package XML that is truncated, for the same failure reached without an archive around it |
 | `sources/mudlet-spec-xmlonly` | bare package XML, installed without any archive around it |
 | `sources/mudlet-spec-colorfilter` | bare package XML with colour-pattern and perl children under filter parents; the colour children are the part no Lua API can build |
-| `sources/mudlet-spec-triggerkinds` | bare package XML holding one disabled trigger per pattern kind and option that no Lua API reaches - match-all substrings, recolouring substring/exact/start-of-line matches, a lua code condition, a line spacer and a trigger command |
+| `sources/mudlet-spec-triggerkinds` | bare package XML holding one disabled trigger per pattern kind and option that no Lua API reaches - match-all substrings, recolouring substring/exact/start-of-line matches, a lua code condition, a line spacer, a trigger command, filter parents of each kind that captures, and multiline triggers built from the non-regex kinds |
+| `sources/mudlet-spec-floodmixed` | bare package XML with two disabled triggers mixing a regex with the other pattern kinds, for `TriggerFlood_spec.lua` - only a trigger with a regex is prescanned, so those kinds are only prescanned alongside one |
