@@ -931,9 +931,17 @@ void dlgMapper::paintMapInfo(const QElapsedTimer& renderTimer,
     painter.save();
     painter.setFont(pHost->getDisplayFont());
 
-    for (const auto& key : pMap->mMapInfoContributorManager->getContributorKeys()) {
+    // The caller holds raw TRoom/TArea pointers across this, and a Lua contributor can
+    // register or kill contributors, so walk a copy and skip any that went away.
+    const TMap::ScriptCallbackScope callbackScope(pMap);
+    const QList<QString> keys = pMap->mMapInfoContributorManager->getContributorKeys();
+    for (const auto& key : keys) {
         if (pHost->mMapInfoContributors.contains(key)) {
-            auto properties = pMap->mMapInfoContributorManager->getContributor(key)(roomID, selectionSize, pRoom->getArea(), displayAreaId, infoColor);
+            const MapInfoCallback contributor = pMap->mMapInfoContributorManager->getContributor(key);
+            if (!contributor) {
+                continue;
+            }
+            auto properties = contributor(roomID, selectionSize, pRoom->getArea(), displayAreaId, infoColor);
             if (!properties.color.isValid()) {
                 properties.color = infoColor;
             }

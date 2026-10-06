@@ -605,6 +605,8 @@ private:
     // A depth, not a flag: the guarded load entry points call one another
     int mProfileLoadsInProgress = 0;
     bool mCloseRequestedDuringProfileLoad = false;
+    // From armForceClose() until the close it queued has run
+    bool mForceClosePending = false;
     // Whether multi-view is in effect:
     enums::controlsVisibility mMenuBarVisibility = enums::visibleAlways;
     // Used to ensure that mudlet::slot_updateShortcuts() only runs once each

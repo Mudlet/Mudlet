@@ -17,6 +17,19 @@ local kSpanOverflowingZoom = 1e40
 local kOrdinaryZoom = 21
 local kParkZoom = 31
 
+-- The no-argument getMapZoom() reports the area the mapper is SHOWING, and only
+-- a repaint moves it onto the area a centring asked for, so waiting for it to
+-- name a zoom is waiting for a paint of that area.
+local function waitForTheMapperToShow(zoom)
+  local waitedMs = 0
+  while getMapZoom() ~= zoom and waitedMs < 5000 do
+    updateMap()
+    pumpEvents(10)
+    waitedMs = waitedMs + 10
+  end
+  return getMapZoom() == zoom
+end
+
 describe("Tests 2D map painting at the limits of the coordinate space", function()
   local areaId, parkAreaId
   local nearRoom, farRoom, parkRoom
@@ -70,19 +83,6 @@ describe("Tests 2D map painting at the limits of the coordinate space", function
     closeMapWidget()
   end)
 
-  -- The no-argument getMapZoom() reports the area the mapper is SHOWING, and only
-  -- a repaint moves it onto the area a centring asked for, so waiting for it to
-  -- name a zoom is waiting for a paint of that area.
-  local function waitForTheMapperToShow(zoom)
-    local waitedMs = 0
-    while getMapZoom() ~= zoom and waitedMs < 5000 do
-      updateMap()
-      pumpEvents(10)
-      waitedMs = waitedMs + 10
-    end
-    return getMapZoom() == zoom
-  end
-
   -- Parking on another area first is what makes the wait mean something: from an
   -- area the mapper already shows, the reported zoom changes the moment it is
   -- stored, paint or no paint. Storing the zoom before the centring is what makes
@@ -115,5 +115,166 @@ describe("Tests 2D map painting at the limits of the coordinate space", function
     end)
     showAtZoom(nearRoom, kSpanOverflowingZoom)
     assert.are.equal(kSpanOverflowingZoom, getMapZoom(areaId))
+  end)
+end)
+
+-- A label this many rooms across, painted at kCloseZoom's hundred pixels per
+-- room on the 600x400 window, is terabytes as a single pixmap, which a build
+-- under AddressSanitizer aborts on asking for. That makes the spec bite; the
+-- player-facing failure is a smaller label needing gigabytes and running out of
+-- memory.
+local kHugeLabelRooms = 20000
+local kCloseZoom = 4
+local kLabelParkZoom = 33
+
+describe("Tests painting a map label many times bigger than the map window", function()
+  local areaId, parkAreaId
+  local centreRoom, parkRoom
+  local originalRoom
+
+  local function makeRoom(areaOfRoom)
+    local id = createRoomID()
+    addRoom(id)
+    setRoomArea(id, areaOfRoom)
+    setRoomCoordinates(id, 0, 0, 0)
+    return id
+  end
+
+  setup(function()
+    originalRoom = getPlayerRoom()
+    closeMapWidget()
+    assert.is_true(openMapWidget(0, 0, 600, 400))
+    areaId = addAreaName("HugeLabelSpec")
+    parkAreaId = addAreaName("HugeLabelSpecPark")
+    centreRoom = makeRoom(areaId)
+    parkRoom = makeRoom(parkAreaId)
+    assert.is_true(setMapZoom(kLabelParkZoom, parkAreaId))
+  end)
+
+  teardown(function()
+    if originalRoom and originalRoom > 0 then
+      centerview(originalRoom)
+      pumpEvents(100)
+    end
+    deleteRoom(centreRoom)
+    deleteRoom(parkRoom)
+    deleteArea("HugeLabelSpec")
+    deleteArea("HugeLabelSpecPark")
+    closeMapWidget()
+  end)
+
+  local function paintCloseUp()
+    assert.is_true(centerview(parkRoom))
+    assert.is_true(waitForTheMapperToShow(kLabelParkZoom),
+      "the mapper never moved off the area under test, so the paint below would prove nothing")
+    assert.is_true(setMapZoom(kCloseZoom, areaId))
+    assert.is_true(centerview(centreRoom))
+    assert.is_true(waitForTheMapperToShow(kCloseZoom),
+      "the mapper never painted the area holding the label")
+  end
+
+  it("paints a scaled text label", function()
+    -- The text's own size decides a text label's, so measure it to aim the zoom
+    local probeId = createMapLabel(areaId, "Huge", 0, 0, 0, 255, 255, 255, 0, 0, 0, 1, 12, false, false)
+    local measured = getMapLabel(areaId, probeId)
+    deleteMapLabel(areaId, probeId)
+    local labelZoom = measured.Width / kHugeLabelRooms
+    local height = measured.Height / labelZoom
+    local id = createMapLabel(areaId, "Huge", -kHugeLabelRooms / 2, height / 2, 0, 255, 255, 255, 0, 0, 0, labelZoom, 12, false, false)
+    finally(function() deleteMapLabel(areaId, id) end)
+
+    paintCloseUp()
+    assert.is_not_nil(getMapLabels(areaId)[id])
+  end)
+
+  -- A label with a font of its own is redrawn from its text rather than stretched
+  it("paints a scaled text label that names its font", function()
+    local font = "Bitstream Vera Sans Mono"
+    local probeId = createMapLabel(areaId, "Huge", 0, 0, 0, 255, 255, 255, 0, 0, 0, 1, 12, false, false, font)
+    local measured = getMapLabel(areaId, probeId)
+    deleteMapLabel(areaId, probeId)
+    local labelZoom = measured.Width / kHugeLabelRooms
+    local height = measured.Height / labelZoom
+    local id = createMapLabel(areaId, "Huge", -kHugeLabelRooms / 2, height / 2, 0, 255, 255, 255, 0, 0, 0, labelZoom, 12, false, false, font)
+    finally(function() deleteMapLabel(areaId, id) end)
+
+    paintCloseUp()
+    assert.is_not_nil(getMapLabels(areaId)[id])
+  end)
+
+  it("paints a scaled image label", function()
+    local id = createMapImageLabel(areaId, getMudletHomeDir() .. "/nonexistent.png", -kHugeLabelRooms / 2, kHugeLabelRooms / 2, 0,
+      kHugeLabelRooms, kHugeLabelRooms, 0.005, true)
+    finally(function() deleteMapLabel(areaId, id) end)
+
+    paintCloseUp()
+    assert.is_not_nil(getMapLabels(areaId)[id])
+  end)
+
+  -- Lua cannot read the mapper's pixels back, but it can read an export's, so
+  -- this is where a huge label drawn as nothing at all would show up. An opaque
+  -- image covers the whole export, so each labelled export has to differ from
+  -- the bare one; the two runs cover the layers under and over the rooms.
+  describe("exports an area holding a huge scaled image label", function()
+    local specDirectory = debug.getinfo(1, "S").source:match("^@(.*)[/\\]")
+    assert(specDirectory, "MapViewportLimits_spec.lua has to be run from a file so that it can find its fixtures")
+    local opaqueImage = specDirectory .. "/fixtures/images/solid-magenta-4x4.png"
+    local barePath = getMudletHomeDir() .. "/HugeLabelSpecBare.png"
+    local labelledPath = getMudletHomeDir() .. "/HugeLabelSpecLabelled.png"
+
+    local function readBytes(path)
+      local file = io.open(path, "rb")
+      if not file then
+        return nil
+      end
+      local bytes = file:read("*a")
+      file:close()
+      return bytes
+    end
+
+    -- The export is written on another thread after exportAreaImage() returns,
+    -- and starting a second one before the first has reported back crashes
+    -- Mudlet (#10393), so wait for the file to be complete and then a little
+    -- longer for the export to report back.
+    local function exportAndWait(path)
+      os.remove(path)
+      assert.is_true(exportAreaImage(areaId, path))
+      local bytes = readBytes(path)
+      local waitedMs = 0
+      while not (bytes and bytes:sub(-8, -5) == "IEND") and waitedMs < 5000 do
+        pumpEvents(20)
+        waitedMs = waitedMs + 20
+        bytes = readBytes(path)
+      end
+      pumpEvents(100)
+      assert(bytes and bytes:sub(-8, -5) == "IEND", "the export was never written to " .. path)
+      return bytes
+    end
+
+    local function exportWithHugeLabel(showOnTop)
+      local id
+      finally(function()
+        if id then
+          deleteMapLabel(areaId, id)
+        end
+        os.remove(barePath)
+        os.remove(labelledPath)
+      end)
+      local bare = exportAndWait(barePath)
+      id = createMapImageLabel(areaId, opaqueImage, -kHugeLabelRooms / 2, kHugeLabelRooms / 2, 0,
+        kHugeLabelRooms, kHugeLabelRooms, 0.005, showOnTop)
+
+      local labelled = exportAndWait(labelledPath)
+      assert.is_true(bare ~= labelled,
+        "the export came out the same with the label as without it, so the label was not drawn")
+    end
+
+    it("above the rooms", function()
+      exportWithHugeLabel(true)
+    end)
+
+    it("below the rooms", function()
+      exportWithHugeLabel(false)
+    end)
   end)
 end)

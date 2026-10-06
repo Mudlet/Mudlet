@@ -1448,6 +1448,17 @@ int TLuaInterpreter::printCmdLine(lua_State* L)
     return 0;
 }
 
+// An event carries its numbers as text. 17 significant digits bring any double
+// back unchanged, and a whole number below 2^53 reads the same either way, but
+// the integer formatter takes a fraction of the time.
+static QString eventNumberText(const double number)
+{
+    if (number == std::trunc(number) && std::abs(number) < 9007199254740992.0) {
+        return QString::number(static_cast<qint64>(number));
+    }
+    return QString::number(number, 'g', 17);
+}
+
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#raiseEvent
 int TLuaInterpreter::raiseEvent(lua_State* L)
 {
@@ -1461,9 +1472,7 @@ int TLuaInterpreter::raiseEvent(lua_State* L)
     for (int i = n; i >= 1; i--) {
         switch (lua_type(L, -1)) {
         case LUA_TNUMBER:
-            // https://en.wikipedia.org/wiki/Double-precision_floating-point_format#IEEE_754_double-precision_binary_floating-point_format:_binary64
-            // suggests that 17 decimal digits is the most we can rely on:
-            event.mArgumentList.prepend(QString::number(lua_tonumber(L, -1), 'g', 17));
+            event.mArgumentList.prepend(eventNumberText(lua_tonumber(L, -1)));
             event.mArgumentTypeList.prepend(ARGUMENT_TYPE_NUMBER);
             lua_pop(L, 1);
             break;
@@ -1701,7 +1710,7 @@ int TLuaInterpreter::raiseGlobalEvent(lua_State* L)
         // raiseEvent(...) and not one from another profile! - Slysven
         switch (lua_type(L, i)) {
         case LUA_TNUMBER:
-            event.mArgumentList.append(QString::number(lua_tonumber(L, i), 'g', 17));
+            event.mArgumentList.append(eventNumberText(lua_tonumber(L, i)));
             event.mArgumentTypeList.append(ARGUMENT_TYPE_NUMBER);
             break;
         case LUA_TSTRING:

@@ -493,6 +493,58 @@ describe("Tests telnet subnegotiation handling", function()
   end)
 end)
 
+describe("Tests MCCP decompression", function()
+  local function bigEndian32(value)
+    return string.char(math.floor(value / 16777216) % 256, math.floor(value / 65536) % 256, math.floor(value / 256) % 256, value % 256)
+  end
+
+  local function adler32(data)
+    local a, b = 1, 0
+    for i = 1, #data do
+      a = (a + data:byte(i)) % 65521
+      b = (b + a) % 65521
+    end
+    return b * 65536 + a
+  end
+
+  -- a zlib stream of one stored (uncompressed) deflate block, so no zlib is
+  -- needed here to build one
+  local function zlibStored(data)
+    local length = #data
+    local inverse = 65535 - length
+    return "\120\1\1" .. string.char(length % 256, math.floor(length / 256), inverse % 256, math.floor(inverse / 256)) .. data .. bigEndian32(adler32(data))
+  end
+
+  -- once the outer stream ends, its decompressed bytes are scanned for telnet
+  -- sequences, and inflating a second stream found there back into the same
+  -- buffer overlapped source and destination (#10662)
+  local function feedNestedStream(option, start)
+    local nested = "AAAAAAAA" .. start .. zlibStored(string.rep("B", 1000)) .. "\r\n"
+    local stream = "\255\251" .. option .. start .. zlibStored(nested) .. "MCCP_AFTER_NESTED\r\n"
+    -- feedTelnet() stops at a NUL and reads <...> as the name of a telnet code
+    assert.is_nil(stream:find("[%z<>]"), "the crafted stream carries a byte feedTelnet() would not pass through")
+    finally(function() feedTelnet("\255\252" .. option) end)
+    local mark = getLastLineNumber("main")
+
+    local ok, msg = feedTelnet(stream)
+    assert.is_true(ok, "start the suite with --offline, see the tests README - feedTelnet said: " .. tostring(msg))
+
+    local displayed = table.concat(getLines("main", mark, getLastLineNumber("main") + 1))
+    assert.is_truthy(displayed:find("AAAAAAAA", 1, true), "the decompressed text before the nested start sequence was lost")
+    assert.is_truthy(displayed:find("MCCP_AFTER_NESTED", 1, true), "the plain text after the compressed stream was lost")
+  end
+
+  it("does not restart MCCP2 compression from inside data it has just decompressed", function()
+    feedNestedStream("\86", "\255\250\86\255\240")
+  end)
+
+  -- the MCCP1 start sequence has no IAC before its SE, so it has to be skipped
+  -- whole or the telnet parser is left inside a subnegotiation
+  it("does not restart MCCP1 compression from inside data it has just decompressed", function()
+    feedNestedStream("\85", "\255\250\85\251\240")
+  end)
+end)
+
 describe("Tests MSDP subnegotiation handling", function()
   -- MSDP forbids only NUL, IAC and its own six markers inside a value, so every
   -- other control code is legal payload the game means to send. Mudlet turns the
