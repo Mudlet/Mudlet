@@ -1114,23 +1114,18 @@ function getHTMLformat(fmt)
   return result
 end
 
--- https://wiki.mudlet.org/w/Manual:Lua_Functions#getLabelFormat
--- used by xEcho for getting the default format for a label, taking into account
--- the background color setting and stylesheet
-function getLabelFormat(win)
-  assert(win, "getLabelFormat: requires at least one argument")
-  local r,g,b = 192, 192, 192
-  local reset = {
-    foreground = { r, g, b },
-    background = "rgba(0, 0, 0, 0)",
+-- what getLabelFormat() last read out of each label's stylesheet, by label name, kept
+-- with the stylesheet it was read from so a changed one is read afresh
+local labelStyleSheetFormats = {}
+
+local function parseLabelStyleSheet(stylesheet)
+  local parsed = {
     bold = false,
     italic = false,
     overline = false,
-    reverse = false,
     strikeout = false,
     underline = false,
   }
-  local stylesheet = getLabelStyleSheet(win)
   if stylesheet ~= "" then
     if stylesheet:find(";") then
       local styleTable = {}
@@ -1144,37 +1139,64 @@ function getLabelFormat(win)
       end
 
       if styleTable.color then
-        reset.foreground = styleTable.color
+        parsed.foreground = styleTable.color
       end
 
       if styleTable["text-decoration"] then
         local td = styleTable["text-decoration"]
         if td:match("underline") then
-          reset.underline = true
+          parsed.underline = true
         end
         if td:match("overline") then
-          reset.overline = true
+          parsed.overline = true
         end
         if td:match("line%-through") then
-          reset.strikeout = true
+          parsed.strikeout = true
         end
       end
 
       if styleTable.font then
-        reset.bold = styleTable.font:match("bold") and true or false
-        reset.italic = styleTable.font:match("italic") and true or false
+        parsed.bold = styleTable.font:match("bold") and true or false
+        parsed.italic = styleTable.font:match("italic") and true or false
       end
 
       if styleTable["font-weight"] and styleTable["font-weight"]:match("bold") then
-        reset.bold = true
+        parsed.bold = true
       end
 
       if styleTable["font-style"] and styleTable["font-style"]:match("italic") then
-        reset.italic = true
+        parsed.italic = true
       end
     end
   end
-  return reset
+  return parsed
+end
+
+-- https://wiki.mudlet.org/w/Manual:Lua_Functions#getLabelFormat
+-- used by xEcho for getting the default format for a label, taking into account
+-- the background color setting and stylesheet
+function getLabelFormat(win)
+  assert(win, "getLabelFormat: requires at least one argument")
+  local stylesheet = getLabelStyleSheet(win)
+  local cached = labelStyleSheetFormats[win]
+  local parsed
+  if cached and cached.stylesheet == stylesheet then
+    parsed = cached.parsed
+  else
+    parsed = parseLabelStyleSheet(stylesheet)
+    labelStyleSheetFormats[win] = { stylesheet = stylesheet, parsed = parsed }
+  end
+  -- a new table every call, as callers are free to change the one they get
+  return {
+    foreground = parsed.foreground or { 192, 192, 192 },
+    background = "rgba(0, 0, 0, 0)",
+    bold = parsed.bold,
+    italic = parsed.italic,
+    overline = parsed.overline,
+    reverse = false,
+    strikeout = parsed.strikeout,
+    underline = parsed.underline,
+  }
 end
 
 _Echos = {
@@ -1345,8 +1367,8 @@ local processedEchoToHTML = function(t, reset)
     underline = false
   }
   local format = table.deepcopy(reset)
-  local result = getHTMLformat(format)
-  for _,v in ipairs(t) do
+  local parts = { getHTMLformat(format) }
+  for i,v in ipairs(t) do
     local formatChanged = false
     if type(v) == "table" then
       if v.fg then
@@ -1391,10 +1413,9 @@ local processedEchoToHTML = function(t, reset)
       format = table.deepcopy(reset)
       formatChanged = true
     end
-    v = formatChanged and getHTMLformat(format) or v
-    result = result .. v
+    parts[i + 1] = formatChanged and getHTMLformat(format) or v
   end
-  return result
+  return table.concat(parts)
 end
 
 --- Generic color echo and insert function (allowing hecho, decho, cecho, hinsertText, dinsertText and cinsertText).
