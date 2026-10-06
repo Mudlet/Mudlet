@@ -46,6 +46,8 @@
 
 #include <algorithm>
 
+using namespace std::chrono_literals;
+
 Hunhandle* TSpellChecker::smpHunspell_sharedDictionary = nullptr;
 bool TSpellChecker::smSharedDictionaryFailed = false;
 QSet<QString> TSpellChecker::smWordSet_shared;
@@ -189,7 +191,7 @@ void TSpellChecker::setSystemDictionary(const QString& newDict)
     // typed. During a profile load the handle is warmed once at the end, after
     // the profile's own choice of dictionary has been read from its XML.
     if (!mpHost->mIsProfileLoadingSequence) {
-        QTimer::singleShot(0, mpHost, [this]() {
+        QTimer::singleShot(0ms, mpHost, [this]() {
             warmDictionaries();
         });
     }

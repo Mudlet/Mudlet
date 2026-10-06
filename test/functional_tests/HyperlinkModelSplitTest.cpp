@@ -193,7 +193,7 @@ private slots:
 
         const int linkIndex = model.buffer.getLinkIndexAt(lineNumber, line.indexOf(qsl("go north")));
         QVERIFY2(linkIndex > 0, "the linked characters carry no link index, so the MXP link is not clickable");
-        QCOMPARE(model.buffer.mLinkStore.getLinksConst(linkIndex), QStringList{qsl("send([[north]])")});
+        QCOMPARE(model.buffer.mLinkStore.getLinksConst(linkIndex), QStringList{qsl("send([[\nnorth]])")});
     }
 
     // The case above cannot tell the model's buffer from the view's, because
@@ -337,7 +337,7 @@ private slots:
                              lineNumber = lineHolding(model->buffer, qsl("OSCSPLIT1"));
                              return lineNumber >= 0;
                          },
-                         2000),
+                         2s),
                  "the line carrying the link never reached the buffer");
         QCOMPARE(lineTextAt(model->buffer, lineNumber), qsl("OSCSPLIT1(          )OSCSPLIT1"));
 
@@ -361,7 +361,7 @@ private slots:
                          [&]() {
                              return lineTextAt(model->buffer, lineNumber) == qsl("OSCSPLIT1(HIDDENWORD)OSCSPLIT1");
                          },
-                         5000),
+                         5s),
                  "the concealed link never revealed itself once its view had gone");
     }
 
@@ -376,7 +376,7 @@ private:
             return nullptr;
         }
         QSignalSpy connected(&host->mTelnet, &cTelnet::signal_connected);
-        if (host->mTelnet.getConnectionState() != QAbstractSocket::ConnectedState && !connected.wait(8000)) {
+        if (host->mTelnet.getConnectionState() != QAbstractSocket::ConnectedState && !connected.wait(8s)) {
             qWarning("could not connect to the stub");
             return nullptr;
         }

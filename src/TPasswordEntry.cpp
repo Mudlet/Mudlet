@@ -329,8 +329,8 @@ void TPasswordEntry::focusInEvent(QFocusEvent* event)
 {
     // Not on a switch back to the application, which would overwrite the
     // record just as it would for the command line itself
-    if (event->reason() != Qt::ActiveWindowFocusReason && mpHost && mpCommandLine) {
-        mpHost->recordActiveCommandLine(mpCommandLine);
+    if (event->reason() != Qt::ActiveWindowFocusReason && mpHost && mpHost->mpConsole && mpCommandLine) {
+        mpHost->mpConsole->recordActiveCommandLine(mpCommandLine);
     }
     QLineEdit::focusInEvent(event);
 }

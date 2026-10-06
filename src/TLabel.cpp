@@ -23,6 +23,7 @@
 
 
 #include "TLabel.h"
+#include "TCommandLine.h"
 #include "TConsole.h"
 #include "TDockWidget.h"
 #include "mudlet.h"

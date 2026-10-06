@@ -27,12 +27,9 @@
 #include "Host.h"
 #include "TKey.h"
 #include "Tree.h"
-#include "dlgTriggerEditor.h"
-#include "mudlet.h"
 #include "utils.h"
 
 #include <QFlags>
-#include <QKeySequence>
 #include <QLatin1Char>
 #include <QLatin1String>
 #include <QMutableSetIterator>
@@ -172,61 +169,13 @@ const TKey* KeyUnit::firstMatch(const Qt::Key key, const Qt::KeyboardModifiers m
     return nullptr;
 }
 
-QString KeyUnit::takenKeyWarning(const TKey* pKey) const
-{
-    auto* pMudlet = mudlet::self();
-    if (!pKey || mpHost.isNull() || !pMudlet || pKey->isFolder() || pKey->getKeyCode() == Qt::Key_unknown) {
-        return {};
-    }
-    // A keypad or group-switch binding cannot be written as a key sequence, so
-    // no shortcut can be the one holding it
-    constexpr Qt::KeyboardModifiers sequenceModifiers = Qt::ShiftModifier | Qt::ControlModifier | Qt::AltModifier | Qt::MetaModifier;
-    if (pKey->getKeyModifiers() & ~sequenceModifiers) {
-        return {};
-    }
-
-    const QKeySequence sequence(QKeyCombination(pKey->getKeyModifiers(), pKey->getKeyCode()));
-    const QString keyText = sequence.toString(QKeySequence::NativeText);
-    // Not either/or: addCommand() refuses a key Mudlet holds, but the preferences can move a
-    // Mudlet shortcut onto a command's key
-    QStringList warnings;
-    if (const QString action = pMudlet->ownShortcutUsingKey(pKey->getKeyCode(), pKey->getKeyModifiers()); !action.isEmpty()) {
-        // "while that is available": a greyed-out menu item doesn't get the key, so the binding fires then
-        //: Warning shown in the editor when a key binding is given a key one of Mudlet's own shortcuts already uses. %1 is a key such as "Alt+M", %2 the name of the Mudlet action holding it, as the Shortcuts tab of the preferences shows it.
-        warnings.append(tr("%1 is already used by Mudlet for \"%2\", which will get the key first, so this key binding will not fire while that is available. "
-                           "Mudlet's own shortcuts can be changed in the preferences, under Shortcuts.")
-                                .arg(keyText, action));
-    }
-    if (const QStringList holders = pMudlet->addonCommandsUsingShortcut(sequence, mpHost); !holders.isEmpty()) {
-        //: Warning shown in the editor when a key binding is given a key an add-on command already holds. %1 is a key such as "Alt+F9", %2 a comma separated list of the commands holding it.
-        warnings.append(tr("%1 is already used by %2, which will get the key first, so this key binding will not fire.").arg(keyText, holders.join(qsl(", "))));
-    }
-    return warnings.join(QChar::Space);
-}
-
-void KeyUnit::warnIfKeyIsTaken(const TKey* pKey) const
-{
-    // Shown in the editor rather than on the main screen, for the reason
-    // mudlet::warnProfilesLosingBindingTo() gives: a script that makes its
-    // bindings at profile load would repeat this at every startup, and a line
-    // the player learns to ignore is worse than no line. The editor is where
-    // the binding is, and where it gets changed.
-    if (mpHost.isNull() || !mpHost->mpEditorDialog) {
-        return;
-    }
-    if (const QString warning = takenKeyWarning(pKey); !warning.isEmpty()) {
-        // Announce only when visible, else a script binding keys on connect is read out at every
-        // connect; a closed editor replaces the warning on opening, and selecting the binding reshows it.
-        mpHost->mpEditorDialog->showWarning(warning, mpHost->mpEditorDialog->isVisible());
-    }
-}
-
 void KeyUnit::compileAll()
 {
+    // Switched off ones as well: a reset has just closed the Lua state their
+    // compiled functions lived in, and switching one back on later does
+    // not compile it again
     for (auto key : mKeyRootNodeList) {
-        if (key->isActive()) {
-            key->compileAll();
-        }
+        key->compileAll();
     }
 }
 
@@ -295,9 +244,7 @@ bool KeyUnit::enableKey(const QString& name)
         // whole subtrees, so a corpse never sits under a parent this loop keeps.
         pT->enableKey(name);
         found = true;
-        if (mpHost->mpEditorDialog) {
-            mpHost->mpEditorDialog->refreshKeyIcon(pT->getID());
-        }
+        emit mpHost->signal_keyToggled(pT->getID());
     }
     return found;
 }
@@ -313,32 +260,34 @@ bool KeyUnit::disableKey(const QString& name)
         // Walks pT's children for the same name as well - see enableKey()
         pT->disableKey(name);
         found = true;
-        if (mpHost->mpEditorDialog) {
-            mpHost->mpEditorDialog->refreshKeyIcon(pT->getID());
-        }
+        emit mpHost->signal_keyToggled(pT->getID());
     }
     return found;
 }
 
 bool KeyUnit::killKey(QString& name)
 {
-    for (auto pChild : mKeyRootNodeList) {
-        if (pChild->getName() != name) {
+    // By the lookup table rather than a walk of every key; see TimerUnit::killTimer()
+    const auto [begin, end] = mLookupTable.equal_range(name);
+    for (auto it = begin; it != end; ++it) {
+        TKey* pChild = it.value();
+        // Only a top level item was ever killable: one inside a group goes with
+        // its group, and freeing it separately as well would free it twice
+        if (pChild->getParent()) {
             continue;
         }
         // Names are not unique, so keep looking rather than give up on the first
-        // same-named key that cannot be killed - a permanent key loaded from the
-        // profile precedes this session's temporaries in this list, and reporting
-        // a failure over it would strand a killable key
+        // same-named key that cannot be killed - a permanent one would strand a
+        // killable temporary
         if (!pChild->isTemporary()) {
             // only temporary Keys can be killed
             continue;
         }
-        // An already killed key is only unlinked from this list once doCleanup()
+        // An already killed key is only unlinked from the lookup table once doCleanup()
         // gets to free it, which cannot happen while a key script is on the call
         // stack - so until then it is still findable by name. Killing it a second
         // time achieves nothing:
-        if (mCleanupSet.contains(pChild)) {
+        if (mCleanupSet.contains(pChild) || uninstallList.contains(pChild)) {
             continue;
         }
         pChild->setIsActive(false);
@@ -575,7 +524,6 @@ void KeyUnit::doCleanup()
         return;
     }
 
-    // Runs per unit on every line of game text and next to never has work queued.
     if (!hasPendingDeletes()) {
         return;
     }

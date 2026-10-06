@@ -45,6 +45,20 @@ describe("Tests MXP handling", function()
       assert.is_not_nil(mxp.ritem.sword)
       assert.is_nil(mxp.ritem.Sword)
     end)
+
+    -- The events wait until the packet's text has been through the triggers,
+    -- so a handler sees what the triggers did with the line.
+    it("should raise the element's event after the line's triggers have run", function()
+      local order = {}
+      local triggerId = tempExactMatchTrigger("a snarling kobold", function() order[#order + 1] = "trigger" end)
+      local handlerId = registerAnonymousEventHandler("mxp.rkobold", function() order[#order + 1] = "event" end)
+      feedTriggers([[<!ELEMENT RKobold FLAG="RoomKobold">]] .. "\n")
+      feedTriggers([[<RKobold>a snarling kobold</RKobold>]] .. "\n")
+      killTrigger(triggerId)
+      killAnonymousEventHandler(handlerId)
+
+      assert.are.same({"trigger", "event"}, order)
+    end)
   end)
 
   describe("Tests the text an MXP line is displayed as", function()
@@ -122,6 +136,48 @@ describe("Tests MXP handling", function()
     it("draws a horizontal rule as wide as the window wraps", function()
       local width = math.max(getWindowWrap("main"), 40)
       assertLineShown("\27[1zMXPRULE1<HR>MXPRULE2", ("-"):rep(width))
+    end)
+
+    -- an ANSI escape cannot be part of a tag, so one arriving before the tag
+    -- closed shows what had been read of the tag as plain text and still acts
+    it("shows a tag an escape sequence cut short as the text it was", function()
+      local function rowReading(mark, text)
+        local row
+        for candidate = mark, getLastLineNumber("main") do
+          if getLines("main", candidate, candidate + 1)[1] == text then
+            row = candidate
+          end
+        end
+        return row
+      end
+      local function fgAt(row, column)
+        moveCursor("main", column, row)
+        selectSection("main", column, 1)
+        local colour = {getFgColor("main")}
+        deselect("main")
+        moveCursorEnd("main")
+        return colour
+      end
+
+      -- with no MXP processor the tag would be shown as text anyway
+      local mark = getLastLineNumber("main")
+      feedTriggers("MXPESC0<B>x</B>\n")
+      assert.is_not_nil(rowReading(mark, "MXPESC0x"), "the precondition failed - MXP tags are not being processed")
+
+      mark = getLastLineNumber("main")
+      feedTriggers("MXPESC1<B\27[31mred\27[0m tail\n")
+      local row = rowReading(mark, "MXPESC1<Bred tail")
+      assert.is_not_nil(row, "no line reads \"MXPESC1<Bred tail\"")
+
+      -- the partial tag is shown in the colour in use before the escape
+      -- sequence, and the escape sequence still coloured the text after it
+      local tagStart = #"MXPESC1"
+      local before = fgAt(row, 0)
+      assert.same(before, fgAt(row, tagStart), "the '<'")
+      assert.same(before, fgAt(row, tagStart + 1), "the 'B'")
+      local after = fgAt(row, tagStart + 2)
+      assert.are_not.same(before, after)
+      assert.same(color_table.ansi_001, after)
     end)
   end)
 
@@ -350,6 +406,15 @@ describe("Tests MXP handling", function()
       assert.is_true(mainRecentlyHolds("MXPDEST13 anchored in main"))
     end)
 
+    -- a redirect into a frame that was never opened has nowhere else to go,
+    -- so the text stays where it would have been without one
+    it("leaves the text in the main window when the frame it names is not there", function()
+      assert.is_nil(windowType("mxpSpecNoSuchDest"))
+      assert.is_true(feedTriggers("<DEST mxpSpecNoSuchDest>MXPDEST14 stays</DEST>MXPDEST14 after\n"))
+      assert.is_true(mainRecentlyHolds("MXPDEST14 staysMXPDEST14 after"))
+      assert.is_false(holds(frameLines(), "MXPDEST14"))
+    end)
+
     -- EOL is the narrower of the two: it must leave the finished lines above
     -- the open one where they are, which is what tells it apart from EOF
     it("keeps the frame's finished lines when the redirect carries EOL", function()
@@ -472,6 +537,56 @@ describe("Tests MXP handling", function()
       closeFrame("mxpSpecTabParent")
 
       assert.is_nil(windowType("mxpSpecTabChild"), "the tab outlived the frame it was docked into")
+    end)
+
+    -- LEFT and TOP place a frame at a spot of its own instead of along an
+    -- edge, so it floats over the main window rather than taking space from it
+    it("takes no main window space for a frame placed at a position", function()
+      finally(function() closeFrame("mxpSpecPlacedFrame") end)
+      local columns, rows = getColumnCount("main"), getRowCount("main")
+
+      openFrame("mxpSpecPlacedFrame", 'Left="10%" Top="10%" Width="30%" Height="30%"')
+
+      assert.are.equal("miniconsole", windowType("mxpSpecPlacedFrame"))
+      assert.are.equal(columns, getColumnCount("main"))
+      assert.are.equal(rows, getRowCount("main"))
+    end)
+
+    it("takes no main window space for a frame given only a TOP", function()
+      finally(function() closeFrame("mxpSpecTopFrame") end)
+      local columns, rows = getColumnCount("main"), getRowCount("main")
+
+      openFrame("mxpSpecTopFrame", 'Top="10%" Width="30%" Height="30%"')
+
+      assert.are.equal("miniconsole", windowType("mxpSpecTopFrame"))
+      assert.are.equal(columns, getColumnCount("main"))
+      assert.are.equal(rows, getRowCount("main"))
+    end)
+
+    -- the first tab turns its parent into a tab widget; later ones join it, and
+    -- closing one of them leaves the others and the parent alone
+    it("closes one tab of a frame without its sibling or its parent", function()
+      finally(function()
+        closeFrame("mxpSpecTabSecond")
+        closeFrame("mxpSpecTabFirst")
+        closeFrame("mxpSpecTabHost")
+      end)
+      openFrame("mxpSpecTabHost", 'Align="right" Width="30%" Height="50%" TITLE="Host"')
+      openFrame("mxpSpecTabFirst", 'DOCK="mxpSpecTabHost" Align="client" TITLE="First"')
+      openFrame("mxpSpecTabSecond", 'DOCK="mxpSpecTabHost" Align="client" TITLE="Second"')
+      local columns = getColumnCount("main")
+      assert.are.equal("miniconsole", windowType("mxpSpecTabFirst"))
+      assert.are.equal("miniconsole", windowType("mxpSpecTabSecond"))
+      assert.is_true(windowVisible("mxpSpecTabFirst"))
+      assert.is_false(windowVisible("mxpSpecTabSecond"))
+
+      closeFrame("mxpSpecTabFirst")
+
+      assert.is_nil(windowType("mxpSpecTabFirst"))
+      assert.are.equal("miniconsole", windowType("mxpSpecTabSecond"))
+      assert.is_true(windowVisible("mxpSpecTabSecond"), "the tab left showing is not the one that remains")
+      assert.are.equal("miniconsole", windowType("mxpSpecTabHost"))
+      assert.are.equal(columns, getColumnCount("main"), "closing a tab changed the space its parent takes")
     end)
 
     it("shows the tag as text when the frame it names is not there", function()

@@ -23,13 +23,24 @@
 
 #include <QMap>
 #include <QMultiMap>
+#include <QStringList>
 
-class QString;
 
-
+// The fonts Mudlet and its profiles' packages add to the application's font
+// database. A value member of the application object like HostManager, so a
+// profile reaches it through self() rather than through the main window.
 class FontManager
 {
 public:
+    Q_DISABLE_COPY_MOVE(FontManager)
+    FontManager();
+    ~FontManager();
+
+    // Null outside the application object's lifetime
+    static FontManager* self() { return smpSelf; }
+    // Every family the font database knows, including those added here
+    static QStringList availableFonts();
+
     void addFonts();
     void loadFont(const QString& filePath, const QString& profileName, const QString& belongsTo = "main");
     bool fontAlreadyLoaded(const QString& filePath, const QString& profileName);
@@ -37,6 +48,8 @@ public:
     void addEmojiFont();
 
 private:
+    inline static FontManager* smpSelf = nullptr;
+
     void loadFonts(const QString& folder);
     void rememberFont(const QString& filePath, int fontID, const QString& profileName, const QString& belongsTo);
 

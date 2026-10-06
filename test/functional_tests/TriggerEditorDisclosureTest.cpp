@@ -38,6 +38,7 @@
 #include <QToolButton>
 
 #include "MudletInstanceCoordinator.h"
+#include "HostDialogs.h"
 #include "MudletApp.h"
 #include "PortableModeTestHelper.h"
 #include "ProfileTestHelper.h"
@@ -125,10 +126,10 @@ private slots:
     mpHost = TestProfile::create(mHostname, mLocalhost, mPort);
     QVERIFY2(mpHost, "No active host after profile creation");
     QSignalSpy connected(&(mpHost->mTelnet), &cTelnet::signal_connected);
-    QVERIFY2(connected.wait(1000), "Could not connect with the host.");
+    QVERIFY2(connected.wait(1s), "Could not connect with the host.");
 
     mudlet::self()->slot_showScriptDialog();
-    mpEditor = mpHost->mpEditorDialog;
+    mpEditor = HostDialogs::of(mpHost).mpEditorDialog;
     QVERIFY2(mpEditor, "Editor dialog should be created");
     // wide enough that the main area lays out at its natural size rather than
     // squeezed, which is what the geometry assertions below measure

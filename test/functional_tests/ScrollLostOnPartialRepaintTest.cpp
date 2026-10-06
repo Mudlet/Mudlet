@@ -17,6 +17,7 @@
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
 
+#include <QScrollBar>
 #include <QTemporaryDir>
 #include <QtTest/QtTest>
 
@@ -32,6 +33,8 @@
 #include "mudlet.h"
 
 #include "GroupedTest.h"
+
+using namespace std::chrono_literals;
 
 /*
  * A screen cache owes one property: an incremental paint draws what a forced
@@ -96,7 +99,7 @@ private slots:
         // and a smaller default window would skip the case while ctest still
         // reported a pass
         mudlet::self()->resize(1200, 800);
-        QTest::qWait(100);
+        QTest::qWait(100ms);
         const int screenHeight = pane->mScreenHeight;
         QVERIFY2(screenHeight >= 20, "the pane is too short to leave the top of the buffer by more than the ten-line shortcut");
 
@@ -178,6 +181,33 @@ private slots:
                  "is missing from the pane until something unrelated forces a full repaint");
     }
 
+    // Output that arrives soon after a paint leaves the scrollbar to the paint
+    // pacer, and a full repaint landing first must not take that with it
+    void test_aRepaintBeforeThePacerFiresLeavesTheScrollBarCurrent()
+    {
+        startProfile(mpHostname, mpLocalhost, mpPort);
+        auto host = mudlet::self()->getActiveHost();
+        QVERIFY2(host && host->mpConsole, "no main console");
+        TTextEdit* pane = host->mpConsole->mUpperPane;
+        QVERIFY(pane);
+        QScrollBar* scrollBar = host->mpConsole->mpScrollBar;
+        QVERIFY(scrollBar);
+        auto* lua = host->getLuaInterpreter();
+
+        lua->compileAndExecuteScript(qsl("for i = 1, 200 do echo('FILLER ' .. i .. '\\n') end\n"));
+        qApp->processEvents();
+        pane->repaint();
+        lua->compileAndExecuteScript(qsl("echo('PACED_LINE\\n')\n"));
+        QVERIFY2(pane->mpPaintPacer->isActive(), "the line arrived after the paint window closed, so the pacer this case is about never started");
+        pane->forceUpdate();
+        pane->repaint();
+
+        // not QTRY: later output from the connection refreshes the scrollbar
+        // within its retry window and would hide the loss
+        QTest::qWait(100ms);
+        QCOMPARE(scrollBar->maximum(), host->mpConsole->buffer.getLastLineNumber() + 1);
+    }
+
 private:
     void startProfile(const QString& hostname, const QString& address, const QString& port)
     {
@@ -186,7 +216,7 @@ private:
             QFAIL("No active host available for the test.");
         }
         QSignalSpy spy(&(host->mTelnet), &cTelnet::signal_connected);
-        if (!spy.wait(2000)) {
+        if (!spy.wait(2s)) {
             QFAIL("Could not connect with the host.");
         }
     }

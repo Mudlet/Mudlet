@@ -52,7 +52,7 @@
 
 using namespace std::chrono_literals;
 
-TCommandLine::TCommandLine(Host* pHost, const QString& name, CommandLineType type, TConsole* pConsole, QWidget* parent)
+TCommandLine::TCommandLine(Host* pHost, const QString& name, enums::CommandLineType type, TConsole* pConsole, QWidget* parent)
 : QPlainTextEdit(parent)
 , mCommandLineName(name)
 , mpHost(pHost)
@@ -69,7 +69,7 @@ TCommandLine::TCommandLine(Host* pHost, const QString& name, CommandLineType typ
     document()->setDocumentMargin(2);
     connect(document(), &QTextDocument::contentsChange, this, &TCommandLine::slot_contentsChange);
 
-    if (mType & (MainCommandLine | ConsoleCommandLine)) {
+    if (mType & (enums::MainCommandLine | enums::ConsoleCommandLine)) {
         // put an outline around the command line when it is integrated into
         // bottom of a TConsole - so that it can be visually separated from
         // the text output area - particulary when "dark" mode is in effect
@@ -85,7 +85,7 @@ TCommandLine::TCommandLine(Host* pHost, const QString& name, CommandLineType typ
 
     setPalette(mRegularPalette);
     //style subCommandLines by stylesheet
-    if (mType != MainCommandLine) {
+    if (mType != enums::MainCommandLine) {
         const QColor c = mpHost->mCommandLineBgColor;
         const QString styleSheet{qsl("QPlainTextEdit{background-color: rgb(%1, %2, %3);}").arg(c.red()).arg(c.green()).arg(c.blue())};
         setStyleSheet(styleSheet);
@@ -684,8 +684,8 @@ void TCommandLine::focusInEvent(QFocusEvent* event)
     // if it was Qt::ActiveWindowFocusReason as that gets used just by
     // switching away and back to the Mudlet application and it messes up
     // the record:
-    if (event->reason() != Qt::ActiveWindowFocusReason) {
-        mpHost->recordActiveCommandLine(this);
+    if (mpHost && event->reason() != Qt::ActiveWindowFocusReason && mpHost->mpConsole) {
+        mpHost->mpConsole->recordActiveCommandLine(this);
     }
 
     QPlainTextEdit::focusInEvent(event);
@@ -706,7 +706,7 @@ void TCommandLine::focusOutEvent(QFocusEvent* event)
 void TCommandLine::hideEvent(QHideEvent* event)
 {
     // Redirect focus to main commandline when hiding a SubCommandLine to prevent keyboard input being trapped
-    if (mType == SubCommandLine && hasFocus() && mpHost && mpHost->mpConsole && mpHost->mpConsole->mpCommandLine) {
+    if (mType == enums::SubCommandLine && hasFocus() && mpHost && mpHost->mpConsole && mpHost->mpConsole->mpCommandLine) {
         mpHost->mpConsole->mpCommandLine->setFocus();
     }
 
@@ -740,7 +740,7 @@ void TCommandLine::adjustHeight()
     int lines = static_cast<int>(document()->size().height());
     // Workaround for SubCommandLines textCursor not visible in some situations
     // SubCommandLines cannot autoresize
-    if (mType == SubCommandLine) {
+    if (mType == enums::SubCommandLine) {
         if (lines <= 1) {
             verticalScrollBar()->triggerAction(QScrollBar::SliderToMinimum);
         }
@@ -1071,7 +1071,7 @@ void TCommandLine::enterCommand(QKeyEvent* event)
     QStringList commandList = toPlainText().split(QChar::LineFeed);
 
     for (QString& command : commandList) {
-        if (mType != MainCommandLine && mActionFunction) {
+        if (mType != enums::MainCommandLine && mActionFunction) {
             mpHost->getLuaInterpreter()->callCmdLineAction(mActionFunction, command);
         } else {
             mpHost->send(command);
@@ -1079,7 +1079,7 @@ void TCommandLine::enterCommand(QKeyEvent* event)
             mpHost->playerSentLineFromCommandLine();
         }
         // send command to your MiniConsole
-        if (mType == ConsoleCommandLine && !mActionFunction && mpHost->mCommandEchoMode != Host::CommandEchoMode::Never) {
+        if (mType == enums::ConsoleCommandLine && !mActionFunction && mpHost->mCommandEchoMode != Host::CommandEchoMode::Never) {
             // This usage of commandList modifies the content!!!
             mpConsole->printCommand(command);
         }
@@ -1533,7 +1533,7 @@ void TCommandLine::slot_adjustAccessibleNames()
     const bool multipleProfilesActive = (HostManager::self()->getHostCount() > 1);
     const QString hostName{mpHost ? mpHost->getName() : QString()};
     switch (mType) {
-    case MainCommandLine:
+    case enums::MainCommandLine:
         if (multipleProfilesActive) {
             /*:
             Accessibility-friendly name to describe the main command line for a
@@ -1567,7 +1567,7 @@ void TCommandLine::slot_adjustAccessibleNames()
                                         "locally."));
         }
         break;
-    case SubCommandLine:
+    case enums::SubCommandLine:
         if (multipleProfilesActive) {
             /*:
             Accessibility-friendly name to describe an extra command line on
@@ -1600,7 +1600,7 @@ void TCommandLine::slot_adjustAccessibleNames()
                                         "locally."));
         }
         break;
-    case ConsoleCommandLine:
+    case enums::ConsoleCommandLine:
         // The mCommandLine for this type is the same as the parent TConsole
         if (multipleProfilesActive) {
             /*:
@@ -1634,7 +1634,7 @@ void TCommandLine::slot_adjustAccessibleNames()
                                         "locally."));
         }
         break;
-    case UnknownType:
+    case enums::UnknownCommandLine:
         Q_UNREACHABLE();
     }
 }

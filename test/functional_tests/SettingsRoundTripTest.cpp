@@ -31,15 +31,19 @@
 #include <QTemporaryDir>
 #include <QtTest/QtTest>
 
+#include <QApplication>
 #include <QCheckBox>
+#include <QColorDialog>
 #include <QComboBox>
 #include <QLabel>
 #include <QLineEdit>
+#include <QPointer>
 #include <QPushButton>
 #include <QSignalSpy>
 #include <QSpinBox>
 #include <QStandardItemModel>
 #include <QTimeEdit>
+#include <QTimer>
 
 #include "PortableModeTestHelper.h"
 #include "ProfileTestHelper.h"
@@ -57,6 +61,8 @@
 
 #include "GroupedTest.h"
 
+using namespace std::chrono_literals;
+
 class SettingsRoundTripTest : public QObject
 {
     Q_OBJECT
@@ -73,6 +79,7 @@ private:
     // One Host serves the whole class, so anything a case moves is put back by
     // cleanup() - which runs whether or not the case reached its own end
     QList<std::function<void()>> mRestorers;
+    QPointer<QTimer> mpColorDialogTimer;
 
     void restoreLater(std::function<void()> restorer) { mRestorers.append(std::move(restorer)); }
 
@@ -98,16 +105,24 @@ private:
         mpPreferences = nullptr;
     }
 
-    // The chat port has no setter on the Host, so the only way to put one back
-    // is the field that moved it
-    void writeChatPortThroughADialog(const quint16 port)
+    // QColorDialog::getColor() runs an event loop of its own until it is
+    // answered, so the answer comes from a timer armed before the button is
+    // clicked. cleanup() stops a timer whose dialog never came.
+    void pickInTheNextColorDialog(const QColor& color)
     {
-        openPreferences();
-        QSignalSpy applySpy(mpPreferences, &dlgProfilePreferences::signal_preferencesSaved);
-        mpPreferences->lineEdit_mmcpPort->setText(QString::number(port));
-        emit mpPreferences->lineEdit_mmcpPort->editingFinished();
-        applyAndWait(applySpy);
-        closePreferences();
+        auto* pTimer = new QTimer(this);
+        mpColorDialogTimer = pTimer;
+        connect(pTimer, &QTimer::timeout, this, [pTimer, color]() {
+            auto* pDialog = qobject_cast<QColorDialog*>(QApplication::activeModalWidget());
+            if (!pDialog) {
+                return;
+            }
+            pTimer->stop();
+            pTimer->deleteLater();
+            pDialog->setCurrentColor(color);
+            pDialog->accept();
+        });
+        pTimer->start(20ms);
     }
 
     bool runLua(const QString& code) const { return mpHost->getLuaInterpreter()->compileAndExecuteScript(code); }
@@ -183,6 +198,7 @@ private slots:
 
     void cleanup()
     {
+        delete mpColorDialogTimer;
         closePreferences();
         // Reverse order, so a case that moved one setting twice ends on the
         // value it started with
@@ -240,6 +256,7 @@ private slots:
         const bool priorUnixEol = mpHost->mUSE_UNIX_EOL;
         const bool priorEchoLuaErrors = mpHost->mEchoLuaErrors;
         const bool priorTimestamps = mpHost->mIsLoggingTimestamps;
+        const bool priorAntiAlias = mpHost->fontsAntiAlias();
         restoreLater([=, this]() {
             mpHost->mWrapAt = priorWrapAt;
             mpHost->mWrapIndentCount = priorWrapIndent;
@@ -257,6 +274,7 @@ private slots:
             mpHost->mUSE_UNIX_EOL = priorUnixEol;
             mpHost->mEchoLuaErrors = priorEchoLuaErrors;
             mpHost->mIsLoggingTimestamps = priorTimestamps;
+            mpHost->setFontsAntiAlias(priorAntiAlias);
         });
 
         mpHost->mWrapAt = wrapAt;
@@ -275,6 +293,7 @@ private slots:
         mpHost->mUSE_UNIX_EOL = !priorUnixEol;
         mpHost->mEchoLuaErrors = !priorEchoLuaErrors;
         mpHost->mIsLoggingTimestamps = !priorTimestamps;
+        mpHost->setFontsAntiAlias(!priorAntiAlias);
 
         openPreferences();
 
@@ -293,6 +312,7 @@ private slots:
         QCOMPARE(mpPreferences->USE_UNIX_EOL->isChecked(), !priorUnixEol);
         QCOMPARE(mpPreferences->checkBox_echoLuaErrors->isChecked(), !priorEchoLuaErrors);
         QCOMPARE(mpPreferences->mIsLoggingTimestamps->isChecked(), !priorTimestamps);
+        QCOMPARE(mpPreferences->checkBox_antiAlias->isChecked(), !priorAntiAlias);
     }
 
     // ...and the other direction: what the user leaves in a control is what the
@@ -312,6 +332,9 @@ private slots:
         const QTime debugInterval(0, 0, 3, 500);
         const auto echoMode = Host::CommandEchoMode::Never;
         const auto blankLines = Host::BlankLineBehaviour::ReplaceWithSpace;
+        // Stored trimmed, and the username lowercased as Discord compares it
+        const QString discordUserName = qsl("round_trip_user");
+        const QString chatPrefix = qsl("[rt]");
 
         const int priorWrapAt = mpHost->mWrapAt;
         const int priorWrapIndent = mpHost->mWrapIndentCount;
@@ -329,10 +352,17 @@ private slots:
         const bool priorEchoLuaErrors = mpHost->mEchoLuaErrors;
         const bool priorForceLf = mpHost->mUSE_FORCE_LF_AFTER_PROMPT;
         const bool priorIreBugfix = mpHost->mUSE_IRE_DRIVER_BUGFIX;
+        const bool priorColorSpaceId = mpHost->getHaveColorSpaceId();
         const bool priorAutoClear = mpHost->mAutoClearCommandLineAfterSend;
         const bool priorPasswordMasking = mpHost->disablePasswordMasking();
         const bool priorRunAllKeys = mpHost->getKeyUnit()->mRunAllKeyMatches;
         const bool priorTimestamps = mpHost->mIsLoggingTimestamps;
+        const bool priorAntiAlias = mpHost->fontsAntiAlias();
+        const QString priorDiscordUserName = mpHost->getRequiredDiscordUserName();
+        const QString priorChatPrefix = mpHost->getMMCPChatPrefix();
+        const bool priorPrefixEmotes = mpHost->getMMCPPrefixEmotes();
+        const bool priorChatNewline = mpHost->getMMCPAddChatMessageNewline();
+        const bool priorSnoopInMain = mpHost->getMMCPShowSnoopInMainConsole();
         restoreLater([=, this]() {
             mpHost->mWrapAt = priorWrapAt;
             mpHost->mWrapIndentCount = priorWrapIndent;
@@ -350,10 +380,17 @@ private slots:
             mpHost->mEchoLuaErrors = priorEchoLuaErrors;
             mpHost->mUSE_FORCE_LF_AFTER_PROMPT = priorForceLf;
             mpHost->set_USE_IRE_DRIVER_BUGFIX(priorIreBugfix);
+            mpHost->setHaveColorSpaceId(priorColorSpaceId);
             mpHost->mAutoClearCommandLineAfterSend = priorAutoClear;
             mpHost->setDisablePasswordMasking(priorPasswordMasking);
             mpHost->getKeyUnit()->mRunAllKeyMatches = priorRunAllKeys;
             mpHost->mIsLoggingTimestamps = priorTimestamps;
+            mpHost->setFontsAntiAlias(priorAntiAlias);
+            mpHost->setRequiredDiscordUserName(priorDiscordUserName);
+            mpHost->setMMCPChatPrefix(priorChatPrefix);
+            mpHost->setMMCPPrefixEmotes(priorPrefixEmotes);
+            mpHost->setMMCPAddChatMessageNewline(priorChatNewline);
+            mpHost->setMMCPShowSnoopInMainConsole(priorSnoopInMain);
         });
 
         QVERIFY(priorWrapAt != wrapAt);
@@ -364,6 +401,8 @@ private slots:
         QVERIFY(priorDebugInterval != debugInterval);
         QVERIFY(priorEchoMode != echoMode);
         QVERIFY(priorBlankLines != blankLines);
+        QVERIFY(priorDiscordUserName != discordUserName);
+        QVERIFY(priorChatPrefix != chatPrefix);
 
         QSignalSpy applySpy(mpPreferences, &dlgProfilePreferences::signal_preferencesSaved);
 
@@ -371,6 +410,8 @@ private slots:
         // typed into is deliberately left alone by an apply somebody else started
         mpPreferences->lineEdit_logFileName->setText(logFileName);
         mpPreferences->doubleclick_ignore_lineedit->setText(doubleClickIgnore);
+        mpPreferences->lineEdit_discordUserName->setText(qsl("  Round_Trip_User "));
+        mpPreferences->lineEdit_mmcpChatMessagePrefix->setText(qsl(" %1 ").arg(chatPrefix));
 
         mpPreferences->wrap_at_spinBox->setValue(wrapAt);
         mpPreferences->indent_wrapped_spinBox->setValue(wrapIndent);
@@ -387,10 +428,15 @@ private slots:
         mpPreferences->checkBox_echoLuaErrors->setChecked(!priorEchoLuaErrors);
         mpPreferences->checkBox_mUSE_FORCE_LF_AFTER_PROMPT->setChecked(!priorForceLf);
         mpPreferences->checkBox_USE_IRE_DRIVER_BUGFIX->setChecked(!priorIreBugfix);
+        mpPreferences->checkBox_expectCSpaceIdInColonLessMColorCode->setChecked(!priorColorSpaceId);
         mpPreferences->auto_clear_input_line_checkbox->setChecked(!priorAutoClear);
         mpPreferences->disable_password_masking_checkbox->setChecked(!priorPasswordMasking);
         mpPreferences->checkBox_runAllKeyBindings->setChecked(!priorRunAllKeys);
         mpPreferences->mIsLoggingTimestamps->setChecked(!priorTimestamps);
+        mpPreferences->checkBox_antiAlias->setChecked(!priorAntiAlias);
+        mpPreferences->checkBox_mmcpPrefixEmotes->setChecked(!priorPrefixEmotes);
+        mpPreferences->checkBox_mmcpAddChatMessageNewline->setChecked(!priorChatNewline);
+        mpPreferences->checkBox_mmcpSnoopInMainConsole->setChecked(!priorSnoopInMain);
 
         // Nothing has reached the Host yet: these controls are written by the
         // apply rather than by a slot of their own
@@ -415,10 +461,17 @@ private slots:
         QCOMPARE(mpHost->mEchoLuaErrors, !priorEchoLuaErrors);
         QCOMPARE(mpHost->mUSE_FORCE_LF_AFTER_PROMPT, !priorForceLf);
         QCOMPARE(mpHost->mUSE_IRE_DRIVER_BUGFIX, !priorIreBugfix);
+        QCOMPARE(mpHost->getHaveColorSpaceId(), !priorColorSpaceId);
         QCOMPARE(mpHost->mAutoClearCommandLineAfterSend, !priorAutoClear);
         QCOMPARE(mpHost->disablePasswordMasking(), !priorPasswordMasking);
         QCOMPARE(mpHost->getKeyUnit()->mRunAllKeyMatches, !priorRunAllKeys);
         QCOMPARE(mpHost->mIsLoggingTimestamps, !priorTimestamps);
+        QCOMPARE(mpHost->fontsAntiAlias(), !priorAntiAlias);
+        QCOMPARE(mpHost->getRequiredDiscordUserName(), discordUserName);
+        QCOMPARE(mpHost->getMMCPChatPrefix(), chatPrefix);
+        QCOMPARE(mpHost->getMMCPPrefixEmotes(), !priorPrefixEmotes);
+        QCOMPARE(mpHost->getMMCPAddChatMessageNewline(), !priorChatNewline);
+        QCOMPARE(mpHost->getMMCPShowSnoopInMainConsole(), !priorSnoopInMain);
 
         // The one field that is not stored as it is typed: each character
         // becomes a member of the set of characters a double click stops at
@@ -613,9 +666,7 @@ private slots:
     {
         const quint16 priorPort = mpHost->getMMCPPort();
         restoreLater([=, this]() {
-            if (mpHost->getMMCPPort() != priorPort) {
-                writeChatPortThroughADialog(priorPort);
-            }
+            mpHost->setMMCPPort(priorPort);
         });
 
         const quint16 chosenPort = 4711;
@@ -738,6 +789,53 @@ private slots:
         mpHost->getPlayerRoomStyleDetails(hostStyle, hostOuter, hostInner, hostOuterColor, hostInnerColor);
         QCOMPARE(hostOuter, static_cast<quint8>(outer));
         QCOMPARE(hostInner, static_cast<quint8>(inner));
+    }
+
+    // A picked colour goes to the map for drawing and to the Host for saving,
+    // each button to its own end of the ring
+    void test_aPickedPlayerRoomColourReachesTheMapAndTheHostTogether()
+    {
+        QVERIFY2(mpHost->mpMap, "the profile has no map, so the player room controls are never enabled");
+        const QColor priorMapOuterColor = mpHost->mpMap->mPlayerRoomOuterColor;
+        const QColor priorMapInnerColor = mpHost->mpMap->mPlayerRoomInnerColor;
+        const quint8 priorMapStyle = mpHost->mpMap->mPlayerRoomStyle;
+        quint8 priorStyle = 0;
+        quint8 priorOuter = 0;
+        quint8 priorInner = 0;
+        QColor priorOuterColor;
+        QColor priorInnerColor;
+        mpHost->getPlayerRoomStyleDetails(priorStyle, priorOuter, priorInner, priorOuterColor, priorInnerColor);
+        restoreLater([=, this]() {
+            mpHost->mpMap->mPlayerRoomOuterColor = priorMapOuterColor;
+            mpHost->mpMap->mPlayerRoomInnerColor = priorMapInnerColor;
+            mpHost->mpMap->mPlayerRoomStyle = priorMapStyle;
+            mpHost->setPlayerRoomStyleDetails(priorStyle, priorOuter, priorInner, priorOuterColor, priorInnerColor);
+        });
+
+        openPreferences();
+        // Style 3 is the only one that offers the colour buttons
+        mpPreferences->comboBox_playerRoomStyle->setCurrentIndex(3);
+        QVERIFY(mpPreferences->pushButton_playerRoomPrimaryColor->isEnabled());
+
+        const QColor outerColor(12, 34, 56);
+        const QColor innerColor(65, 43, 21);
+        QVERIFY(priorOuterColor != outerColor && priorInnerColor != innerColor);
+
+        pickInTheNextColorDialog(outerColor);
+        mpPreferences->pushButton_playerRoomPrimaryColor->click();
+        pickInTheNextColorDialog(innerColor);
+        mpPreferences->pushButton_playerRoomSecondaryColor->click();
+
+        QCOMPARE(mpHost->mpMap->mPlayerRoomOuterColor, outerColor);
+        QCOMPARE(mpHost->mpMap->mPlayerRoomInnerColor, innerColor);
+        quint8 hostStyle = 0;
+        quint8 hostOuter = 0;
+        quint8 hostInner = 0;
+        QColor hostOuterColor;
+        QColor hostInnerColor;
+        mpHost->getPlayerRoomStyleDetails(hostStyle, hostOuter, hostInner, hostOuterColor, hostInnerColor);
+        QCOMPARE(hostOuterColor, outerColor);
+        QCOMPARE(hostInnerColor, innerColor);
     }
 
     // Resetting the colours puts back every one of the sixteen ANSI colours and

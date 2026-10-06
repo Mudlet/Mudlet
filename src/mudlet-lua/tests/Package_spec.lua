@@ -2062,6 +2062,22 @@ describe("Tests installing an archive whose config.lua will not run", function()
   end)
 end)
 
+describe("Tests installing an archive whose config.lua leaves its globals in an awkward state", function()
+  -- The manifest is read back from the globals the script left behind, outside the protected
+  -- call that ran it, where a Lua error cannot be caught
+  it("installs under the name its config.lua asks for and keeps its details", function()
+    local name = "mudlet-spec-trickyconfig"
+    defer(function() removeFixturePackage(name) end)
+
+    installUntilConfirmed(installPackage, fixtureDirectory .. "/" .. name .. ".mpackage",
+                          function() return packageInstalled(name) end, "the fixture with the awkward globals")
+
+    assert.equals("Mudlet test suite", getPackageInfo(name, "author"))
+    assert.is_nil(getPackageInfo(name)["1"], "a global with a number for its name was filed as a detail")
+    assert.equals(1, exists(name .. " alias", "alias"), "the archive's contents were not installed")
+  end)
+end)
+
 describe("Tests the functionality of verbosePackageInstall", function()
   it("installs the package and says so on the main console", function()
     defer(function() removeFixturePackage(minimalPackage) end)
@@ -2516,6 +2532,57 @@ describe("Tests installing a package file from a later Mudlet", function()
     -- though the package itself stays registered, the same way one whose XML is
     -- malformed does
     assert.equals(0, exists(name .. " trigger", "trigger"), "an unreadable file's trigger was installed anyway")
+  end)
+end)
+
+-- A package XML can carry a profile's settings, read the same way a profile's
+-- own save file is when it opens. A module entry there can stop short of its
+-- file, sync flag and priority in a hand-edited or truncated file.
+describe("Tests installing a package XML whose profile settings list an incomplete module", function()
+  local name = "mudlet-spec-incomplete-module-entry"
+  local moduleName = "mudlet-spec-incomplete-module"
+  local xml = getMudletHomeDir() .. "/" .. name .. ".xml"
+
+  it("installs the package and leaves the incomplete module out", function()
+    defer(function()
+      removeFixturePackage(name)
+      os.remove(xml)
+    end)
+    -- Every setting a <Host> element's attributes leave out is turned off as it
+    -- is read, so carry over the ones this profile has rather than change them
+    -- for the specs that run after this one
+    assert.is_true(waitForProfileSaveToPass(), "a profile save was still running")
+    local saved, savedTo = saveProfile()
+    assert.is_true(saved, tostring(savedTo))
+    assert.is_true(waitForProfileSaveToPass(), "the profile save was still running")
+    local settings = readFile(savedTo)
+    local hostElement = settings:match("<Host%s[^>]*>")
+    assert.is_string(hostElement, "the profile's save has no Host element to copy the settings of")
+    local borders = {}
+    for _, border in ipairs({"borderTopHeight", "borderBottomHeight", "borderLeftWidth", "borderRightWidth"}) do
+      borders[#borders + 1] = settings:match("<" .. border .. ">[^<]*</" .. border .. ">") or ""
+    end
+
+    writePackageXml(xml, table.concat({
+      '<HostPackage>',
+      hostElement,
+      table.concat(borders),
+      '<mInstalledModules><key>' .. moduleName .. '</key><priority>0</priority></mInstalledModules>',
+      '</Host>',
+      '</HostPackage>',
+      '<AliasPackage>',
+      '<Alias isActive="yes" isFolder="no">',
+      '<name>' .. name .. ' alias</name><packageName></packageName><script></script>',
+      '<command></command><regex>^' .. name .. '$</regex>',
+      '</Alias>',
+      '</AliasPackage>',
+    }, "\n"))
+
+    installUntilConfirmed(installPackage, xml, function() return packageInstalled(name) end, "the package " .. name)
+
+    assert.equals(1, exists(name .. " alias", "alias"), "the package's alias was not installed")
+    assert.is_false(moduleInstalled(moduleName), "a module with no file to load was listed")
+    assert.is_nil(getModulePath(moduleName))
   end)
 end)
 
@@ -3039,6 +3106,151 @@ describe("Tests a module round trip through the XML writer and reader", function
     assert.is_true(itemsAreInstalled(), "the module the save wrote could not be installed again")
     assert.equals(timersLeft + 1, exists(name .. " timer", "timer"), "the module the save wrote came back without its timer")
     assert.is_true(mudletSpecModuleRoundTripRuns > runsBefore, "the reinstalled module's script did not run")
+  end)
+end)
+
+-- Every kind of item compiles its Lua as it is read in, and each kind has its
+-- own copy of the code that files a failure away for the install to own up to.
+-- The script and trigger copies are pinned above; these are the other four.
+describe("Tests installing a package whose timer, alias, button and key do not compile", function()
+  local name = "mudlet-spec-broken-items"
+  local xml = getMudletHomeDir() .. "/" .. name .. ".xml"
+  local installAnswer, installReason
+
+  setup(function()
+    writePackageXml(xml, table.concat({
+      '<TimerPackage>',
+      '<Timer isActive="no" isFolder="no" isTempTimer="no">',
+      '<name>' .. name .. ' timer</name><packageName></packageName><script>timer is not lua(</script>',
+      '<command></command><time>00:00:30.000</time>',
+      '</Timer>',
+      '</TimerPackage>',
+      '<AliasPackage>',
+      '<Alias isActive="yes" isFolder="no">',
+      '<name>' .. name .. ' alias</name><packageName></packageName><script>alias is not lua(</script>',
+      '<command></command><regex>^' .. name .. '$</regex>',
+      '</Alias>',
+      '</AliasPackage>',
+      '<ActionPackage>',
+      '<Action isActive="no" isFolder="no" isPushButton="no" isFlatButton="no" useCustomLayout="no">',
+      '<name>' .. name .. ' button</name><packageName></packageName><script>button is not lua(</script><css></css>',
+      '<commandButtonUp></commandButtonUp><commandButtonDown></commandButtonDown><icon></icon>',
+      '<orientation>0</orientation><location>0</location><posX>0</posX><posY>0</posY>',
+      '<mButtonState>1</mButtonState><sizeX>0</sizeX><sizeY>0</sizeY><buttonColumn>1</buttonColumn>',
+      '<buttonFillerOffset>0</buttonFillerOffset><buttonRotation>0</buttonRotation>',
+      '</Action>',
+      '</ActionPackage>',
+      '<KeyPackage>',
+      '<Key isActive="yes" isFolder="no">',
+      '<name>' .. name .. ' key</name><packageName></packageName><script>key is not lua(</script>',
+      '<command></command><keyCode>16777268</keyCode><keyModifier>67108864</keyModifier>',
+      '</Key>',
+      '</KeyPackage>',
+    }, "\n"))
+    installAnswer, installReason = installUntilConfirmed(installPackage, xml, function() return packageInstalled(name) end, "the package " .. name)
+  end)
+
+  teardown(function()
+    removeFixturePackage(name)
+    os.remove(xml)
+  end)
+
+  it("installs every item anyway, so each can be fixed in the editor", function()
+    assert.equals(1, exists(name .. " timer", "timer"))
+    assert.equals(1, exists(name .. " alias", "alias"))
+    assert.equals(1, exists(name .. " button", "button"))
+    assert.equals(1, exists(name .. " key", "keybind"))
+  end)
+
+  it("names each of the four in the reason installPackage() hands back", function()
+    assert.is_true(installAnswer)
+    for _, kind in ipairs({"timer", "alias", "button", "key"}) do
+      assert.is_true(contains(installReason, name .. " " .. kind), "the broken " .. kind .. " was not reported: " .. tostring(installReason))
+    end
+  end)
+end)
+
+-- A save file numbers the sixteen basic colours its own way and the reader maps
+-- them back to ANSI. Anything past sixteen has no old number, so it is taken as
+-- the 256-colour index it already is - which is what lets a colour trigger on an
+-- xterm colour survive a save and a load.
+describe("Tests importing a colour trigger on a colour past the basic sixteen", function()
+  local name = "mudlet-spec-colour-256"
+  local xml = getMudletHomeDir() .. "/" .. name .. ".xml"
+
+  setup(function()
+    writePackageXml(xml, table.concat({
+      '<TriggerPackage>',
+      '<Trigger isActive="yes" isFolder="no" isTempTrigger="no" isMultiline="no" isPerlSlashGOption="no"',
+      '         isColorizerTrigger="no" isFilterTrigger="no" isSoundTrigger="no" isColorTrigger="yes">',
+      '<name>' .. name .. ' trigger</name>',
+      '<script>mudletSpecColour256 = (mudletSpecColour256 or 0) + 1</script>',
+      '<triggerType>0</triggerType><conditonLineDelta>0</conditonLineDelta><mStayOpen>0</mStayOpen>',
+      '<mCommand></mCommand><packageName></packageName>',
+      -- 196 in the foreground, and -2 (ignored) in the background
+      '<regexCodeList><string>FG196BG-2</string></regexCodeList>',
+      '<regexCodePropertyList><integer>6</integer></regexCodePropertyList>',
+      '</Trigger>',
+      '</TriggerPackage>',
+    }, "\n"))
+    installUntilConfirmed(installPackage, xml, function() return packageInstalled(name) end, "the package " .. name)
+  end)
+
+  teardown(function()
+    removeFixturePackage(name)
+    os.remove(xml)
+    _G.mudletSpecColour256 = nil
+  end)
+
+  it("fires on text in that xterm colour, whatever the background", function()
+    assert.is_nil(mudletSpecColour256)
+
+    feedTriggers("\n\27[38;5;196;44mmudlet spec colour 256\27[0m\n")
+    pumpEvents(50)
+
+    assert.equals(1, mudletSpecColour256, "the trigger did not fire on xterm colour 196")
+  end)
+
+  it("does not fire on a neighbouring xterm colour", function()
+    local before = mudletSpecColour256 or 0
+
+    feedTriggers("\n\27[38;5;197mmudlet spec colour 197\27[0m\n")
+    pumpEvents(50)
+
+    assert.equals(before, mudletSpecColour256 or 0, "the trigger fired on xterm colour 197")
+  end)
+end)
+
+describe("Tests installing a module whose XML cannot be read", function()
+  it("says the module could not be loaded, and keeps it listed", function()
+    local name = "mudlet-spec-badxml"
+    defer(function() removeFixtureModule(name) end)
+    assert.is_true(waitForProfileSaveToPass(), "a profile save was still running")
+
+    local mark = getLastLineNumber("main")
+    installFixtureModule(name)
+    local text = textFrom(mark)
+
+    -- installFixtureModule() only returns once the module is listed
+    assert.is_true(containsWrapped(text, 'Failed to load module "' .. name .. '"'), text)
+  end)
+
+  it("says so for a bare XML module too", function()
+    local name = "mudlet-spec-badxml-bare"
+    local path = scratchDirectory .. "/" .. name .. ".xml"
+    defer(function()
+      removeFixtureModule(name)
+      os.remove(path)
+      lfs.rmdir(scratchDirectory)
+    end)
+    lfs.mkdir(scratchDirectory)
+    copyFile(fixtureDirectory .. "/sources/" .. name .. "/" .. name .. ".xml", path)
+    assert.is_true(waitForProfileSaveToPass(), "a profile save was still running")
+
+    local mark = getLastLineNumber("main")
+    installUntilConfirmed(installModule, path, function() return moduleInstalled(name) end, "the truncated bare XML module")
+
+    assert.is_true(containsWrapped(textFrom(mark), 'Failed to load module "' .. name .. '"'), textFrom(mark))
   end)
 end)
 

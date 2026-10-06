@@ -32,6 +32,7 @@
 #include <chrono>
 
 #include "Host.h"
+#include "HostDialogs.h"
 #include "MudletInstanceCoordinator.h"
 #include "MudletApp.h"
 #include "PortableModeTestHelper.h"
@@ -215,11 +216,11 @@ private slots:
         mpHost = TestProfile::create(mProfileName, mLocalhost, QString::number(mpServer->serverPort()));
         QVERIFY2(mpHost, "No active host available for the test.");
         QSignalSpy connectedSpy(&(mpHost->mTelnet), &cTelnet::signal_connected);
-        QVERIFY2(connectedSpy.wait(1000), "Could not connect with the host.");
+        QVERIFY2(connectedSpy.wait(1s), "Could not connect with the host.");
 
         mudlet::self()->slot_showScriptDialog();
         QTest::qWait(100ms);
-        mpEditor = mpHost->mpEditorDialog;
+        mpEditor = HostDialogs::of(mpHost).mpEditorDialog;
         QVERIFY2(mpEditor, "the editor dialog was not created");
 
         populateProfile();
@@ -236,8 +237,8 @@ private slots:
         // ~Host would do this, but only if the host is ever destroyed - deleting
         // the editor here keeps the leak checker satisfied either way
         if (mpHost) {
-            if (auto* pEditor = mpHost->mpEditorDialog.data()) {
-                mpHost->mpEditorDialog = nullptr;
+            if (auto* pEditor = HostDialogs::of(mpHost).mpEditorDialog.data()) {
+                HostDialogs::of(mpHost).mpEditorDialog = nullptr;
                 delete pEditor;
             }
         }
@@ -392,6 +393,46 @@ private slots:
         QTreeWidgetItem* selected = mpEditor->treeWidget_triggers->currentItem();
         QVERIFY2(selected, "no trigger became current after its search result was chosen");
         QCOMPARE(selected->text(0), qsl("qaNestedTrigger"));
+    }
+
+    // A script that adds an item marks every tree stale; showing the result's
+    // view then rebuilds them, which must not free the item about to be selected
+    void test_selectingAResultAfterAScriptAddedAnItemSelectsIt()
+    {
+        mpEditor->slot_showScripts();
+        search(qsl("qaNestedTrigger"));
+        QTreeWidgetItem* result = mpEditor->treeWidget_searchResults->topLevelItem(0);
+        QVERIFY(result);
+
+        QVERIFY(mpHost->getLuaInterpreter()->compileAndExecuteScript(qsl("permAlias('qaStaleAlias', '', '^qaStale$', '')")));
+        QVERIFY2(mpEditor->mNeedUpdateData, "the script did not mark the editor's trees as stale");
+
+        mpEditor->slot_itemSelectedInSearchResults(result);
+
+        QCOMPARE(mpEditor->mCurrentView, EditorViewType::cmTriggerView);
+        QTreeWidgetItem* selected = mpEditor->treeWidget_triggers->currentItem();
+        QVERIFY2(selected, "no trigger became current after its search result was chosen");
+        QCOMPARE(selected->text(0), qsl("qaNestedTrigger"));
+        QVERIFY(!mpEditor->treeWidget_aliases->findItems(qsl("qaStaleAlias"), Qt::MatchExactly | Qt::MatchRecursive).isEmpty());
+    }
+
+    void test_selectingAVariableResultAfterAScriptAddedAnItemSelectsIt()
+    {
+        mpEditor->setSearchOptions(enums::EditorSearchOptionIncludeVariables);
+        mpEditor->slot_showScripts();
+        search(qsl("qaSearchVariable"));
+        QTreeWidgetItem* result = topLevelResultFor(qsl("Variable"));
+        QVERIFY(result);
+
+        QVERIFY(mpHost->getLuaInterpreter()->compileAndExecuteScript(qsl("permAlias('qaStaleVarAlias', '', '^qaStaleVar$', '')")));
+        QVERIFY2(mpEditor->mNeedUpdateData, "the script did not mark the editor's trees as stale");
+
+        mpEditor->slot_itemSelectedInSearchResults(result);
+
+        QCOMPARE(mpEditor->mCurrentView, EditorViewType::cmVarsView);
+        QTreeWidgetItem* selected = mpEditor->treeWidget_variables->currentItem();
+        QVERIFY2(selected, "no variable became current after its search result was chosen");
+        QCOMPARE(selected->text(0), qsl("qaSearchVariable"));
     }
 
     // The find box inside the script pane marks every match as the term is

@@ -147,7 +147,7 @@ private slots:
         }
 
         QSignalSpy connectedSpy(&(mpHost->mTelnet), &cTelnet::signal_connected);
-        if (!connectedSpy.wait(2000)) {
+        if (!connectedSpy.wait(2s)) {
             QFAIL("Could not connect with the host.");
         }
 
@@ -158,7 +158,7 @@ private slots:
                          [this]() {
                              return mpHost->mTelnet.mGA_Driver;
                          },
-                         5000),
+                         5s),
                  "The stub's GA never reached cTelnet, so no latency would ever be measured");
     }
 
@@ -264,11 +264,11 @@ private slots:
                 [this]() {
                     return mpHost->mTelnet.getConnectionState() == QAbstractSocket::UnconnectedState;
                 },
-                5000));
+                5s));
 
         QSignalSpy connectedSpy(&(mpHost->mTelnet), &cTelnet::signal_connected);
         mpHost->mTelnet.connectIt(mLocalhost, mPort.toInt());
-        QVERIFY2(connectedSpy.wait(5000), "The profile did not reconnect to the stub");
+        QVERIFY2(connectedSpy.wait(5s), "The profile did not reconnect to the stub");
         // Long enough that finishing the old connection's measurement here would
         // read as a round trip several times the one before it
         runEventLoop(800ms);

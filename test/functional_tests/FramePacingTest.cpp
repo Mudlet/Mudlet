@@ -174,7 +174,7 @@ private slots:
                          [this]() {
                              return mPaintCount > 0;
                          },
-                         2000),
+                         2s),
                  "the pane never repainted at all in the 2s after the print, so the harness is dead rather than the pacer being at fault");
 
         // The wait above cannot say which repaint satisfied it - an unrelated one
@@ -195,7 +195,7 @@ private:
         }
 
         QSignalSpy spy(&(host->mTelnet), &cTelnet::signal_connected);
-        if (!spy.wait(2000)) {
+        if (!spy.wait(2s)) {
             QFAIL("Could not connect with the host.");
         }
     }
