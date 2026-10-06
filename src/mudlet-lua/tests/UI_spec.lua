@@ -1889,6 +1889,23 @@ describe("Tests UI functions", function()
         assert.are.equal(1000, found.max)
       end)
 
+      it("should leave out only the windowed readings when asked to", function()
+        local anchorless = "Race : Human           Mana     :  1000/ 1000      Autoexit (X)"
+        assert.is_true(#BaseUI.parseVitalsLine(anchorless) > 0)
+        for _, hit in ipairs(BaseUI.parseVitalsLine(anchorless, true)) do
+          assert.is_not_true(hit.windowed)
+        end
+        local tableRow = "| Race: Undead Atavian | Health: 4252/4252 |"
+        local trusted = {}
+        for _, hit in ipairs(BaseUI.parseVitalsLine(tableRow)) do
+          if not hit.windowed then
+            trusted[#trusted + 1] = hit
+          end
+        end
+        assert.is_true(#trusted > 0)
+        assert.are.same(trusted, BaseUI.parseVitalsLine(tableRow, true))
+      end)
+
       it("should open the score window when a score command goes out", function()
         local saved = BaseUI.scoreWindowUntil
         BaseUI.scoreWindowUntil = nil
@@ -2017,6 +2034,10 @@ describe("Tests UI functions", function()
 
       it("is precompiled rather than recompiled per line", function()
         assert.is_true(BaseUI.shapesArePrecompiled())
+      end)
+
+      it("gates each shape only on the start of its own regex", function()
+        assert.is_true(BaseUI.prefixesLeadTheirShapes())
       end)
 
       -- restore whatever the assertions do: a raised vitalsLock left behind
