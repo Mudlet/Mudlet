@@ -169,7 +169,8 @@ private slots:
             }
         }
         if (!canvasTallRows) {
-            QTest::newRow("canvas-tall") << tallEdgeInk << vera << 30 << QColor(Qt::white) << QColor(Qt::black) << QColor(Qt::red) << 30.0;
+            // No text: the test skips this row, so the missing coverage shows in the results
+            QTest::newRow("canvas-tall") << QString() << vera << 30 << QColor(Qt::white) << QColor(Qt::black) << QColor(Qt::red) << 30.0;
         }
         QTest::newRow("very large") << qsl("ƒjÅ") << vera << 150 << QColor(Qt::white) << QColor(Qt::black) << QColor(Qt::red) << 30.0;
         QTest::newRow("whitespace") << qsl("   ") << vera << 12 << QColor(Qt::white) << QColor(Qt::black) << QColor(Qt::red) << 30.0;
@@ -184,6 +185,9 @@ private slots:
         QFETCH(QColor, bg);
         QFETCH(QColor, outline);
         QFETCH(qreal, zoom);
+        if (text.isEmpty()) {
+            QSKIP("no installed font has a line height that divides the canvas height");
+        }
 
         TMap* pMap = mpHost->mpMap.data();
         const std::optional<QString> font = fontName.isEmpty() ? std::nullopt : std::optional<QString>(fontName);
