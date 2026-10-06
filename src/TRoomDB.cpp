@@ -160,8 +160,6 @@ void TRoomDB::updateEntranceMap(TRoom* pR, bool isMapLoading)
     // rooms and know which other rooms are impacted by this change in a single lookup.
     if (pR) {
         const int id = pR->getId();
-        QHash<int, int> const exits = pR->getExits();
-        QList<int> const toExits = exits.keys();
         QString values;
         // to update this we need to iterate the entire entranceMap and remove invalid
         // connections. I'm not sure if this is efficient for every update, and given
@@ -174,16 +172,26 @@ void TRoomDB::updateEntranceMap(TRoom* pR, bool isMapLoading)
         if (!isMapLoading) {
             deleteValuesFromEntranceMap(id); // When LOADING a map, will never need to do this
         }
-        for (const int toExit : toExits) {
+        // A load can record a room's entrances twice, and a room can have more
+        // than one exit to the same room. Asked of the mirror, which walks this
+        // room's exits rather than every entrance into toExit:
+        const auto addEntrance = [&](const int toExit) {
             if (showDebug) {
                 values.append(qsl("%1,").arg(toExit));
             }
-            // A load can record a room's entrances twice. Asked of the mirror,
-            // which walks this room's exits rather than every entrance into toExit:
-            if (!entranceMapBySource.contains(id, toExit)) {
-                entranceMap.insert(toExit, id);
-                entranceMapBySource.insert(id, toExit);
+            if (entranceMapBySource.contains(id, toExit)) {
+                return;
             }
+            entranceMap.insert(toExit, id);
+            entranceMapBySource.insert(id, toExit);
+        };
+        for (int direction = DIR_NORTH; direction <= DIR_OUT; ++direction) {
+            if (const int toExit = pR->getExit(direction); toExit != -1) {
+                addEntrance(toExit);
+            }
+        }
+        for (const int toExit : pR->getSpecialExits()) {
+            addEntrance(toExit);
         }
         if (showDebug) {
             if (!values.isEmpty()) {
