@@ -2017,6 +2017,12 @@ function ansi2string(text)
   return result
 end
 
+-- given an xterm256 index, returns an rgb string for decho use
+local function convertindex(tag)
+  local ansi = string.format("ansi_%03d", tag)
+  return color_table[ansi] or false
+end
+
 -- function for converting a raw ANSI string into something decho can process
 -- italics and underline not currently supported since decho doesn't support them
 -- bold is emulated so it is supported, up to an extent
@@ -2024,6 +2030,9 @@ function ansi2decho(text, ansi_default_color)
   assert(type(text) == 'string', 'ansi2decho: bad argument #1 type (expected string, got '..type(text)..'!)')
   local lastColour = ansi_default_color
   local coloursToUse = nil
+
+  -- filled on the first escape and kept for this call only, so edits to color_table still apply
+  local colours, lightColours
 
   -- match each set of ansi tags, ie [0;36;40m and convert to decho equivalent.
   -- this works since both ansi colours and echo don't need closing tags and map to each other
@@ -2034,18 +2043,12 @@ function ansi2decho(text, ansi_default_color)
     if s:find(":") then delim = ":" end
     local t = string.split(s, delim) -- split the codes into an indexed table
 
-    -- given an xterm256 index, returns an rgb string for decho use
-    local function convertindex(tag)
-      local ansi = string.format("ansi_%03d", tag)
-      return color_table[ansi] or false
-    end
-    local colours = {}
-    for i = 0, 7 do
-      colours[i] = convertindex(i)
-    end
-    local lightColours = {}
-    for i = 0, 7 do
-      lightColours[i] = convertindex(i+8)
+    if not colours then
+      colours, lightColours = {}, {}
+      for i = 0, 7 do
+        colours[i] = convertindex(i)
+        lightColours[i] = convertindex(i + 8)
+      end
     end
     coloursToUse = coloursToUse or colours
 
