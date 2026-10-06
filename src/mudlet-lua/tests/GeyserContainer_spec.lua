@@ -229,6 +229,116 @@ describe("Tests functionality of Geyser.Container", function()
       assert.are.same({x = 400, y = 150, width = 100, height = 100}, geometry("gcsLeaf"))
     end)
 
+    -- a window laid out again with the constraints it already had keeps the
+    -- getters they compiled to, so these pin each way the constraints or the
+    -- getters can have changed in between. Each window is laid out a second
+    -- time before the change, so that it has getters to keep.
+    describe("when a window is laid out again", function()
+      local box
+
+      local function laidOut(cons)
+        local made = track(Geyser.Label:new(cons, box))
+        made:set_constraints()
+        return made
+      end
+
+      before_each(function()
+        box = track(Geyser.Container:new({name = "gcsAgainBox", x = 100, y = 50, width = 400, height = 200}))
+      end)
+
+      it("keeps the getters of a window whose constraints have not changed", function()
+        local label = laidOut({name = "gcsAgainSame", x = "50%", y = 0, width = "50%", height = "20px"})
+        local getters = {label.get_x, label.get_y, label.get_width, label.get_height}
+        label:set_constraints()
+        box:move(110, 60)
+        assert.are.same(getters, {label.get_x, label.get_y, label.get_width, label.get_height})
+        assert.are.same({x = 310, y = 60, width = 200, height = 20}, geometry("gcsAgainSame"))
+      end)
+
+      it("re-resolves a constraint assigned to the window directly", function()
+        local label = laidOut({name = "gcsAgainField", x = "50%", y = 0, width = "50%", height = 20})
+        assert.are.same({x = 300, y = 50, width = 200, height = 20}, geometry("gcsAgainField"))
+        label.x = "25%"
+        label.width = "-10px"
+        label:set_constraints()
+        assert.are.same({x = 200, y = 50, width = 290, height = 20}, geometry("gcsAgainField"))
+      end)
+
+      it("rewrites a number constraint as pixels every time", function()
+        local label = laidOut({name = "gcsAgainNumber", x = 10, y = 0, width = 50, height = 20})
+        label.x = 30
+        label:set_constraints()
+        assert.are.equal("30px", label.x)
+        assert.are.same({x = 130, y = 50, width = 50, height = 20}, geometry("gcsAgainNumber"))
+      end)
+
+      it("calls a function constraint that replaced another", function()
+        local label = laidOut({name = "gcsAgainFunction", x = function() return 25 end, y = 0, width = 50, height = 20})
+        assert.are.equal(125, geometry("gcsAgainFunction").x)
+        label.x = function() return 40 end
+        label:set_constraints()
+        assert.are.equal(140, geometry("gcsAgainFunction").x)
+      end)
+
+      it("puts back a getter that was replaced", function()
+        local label = laidOut({name = "gcsAgainGetter", x = "50%", y = 0, width = "50%", height = 20})
+        label.get_width = function() return 1 end
+        label.get_x = nil
+        label:set_constraints()
+        assert.are.equal(200, label:get_width())
+        assert.are.equal(300, label:get_x())
+        assert.are.same({x = 300, y = 50, width = 200, height = 20}, geometry("gcsAgainGetter"))
+      end)
+
+      it("follows the font size of a character constraint", function()
+        local label = laidOut({name = "gcsAgainChars", x = 0, y = 0, width = "10c", height = 20, fontSize = 8})
+        label.fontSize = 16
+        label:set_constraints()
+        assert.are.equal(10 * calcFontSize(16), geometry("gcsAgainChars").width)
+      end)
+
+      it("follows its container when that is moved and resized", function()
+        laidOut({name = "gcsAgainFollow", x = "50%", y = "50%", width = "50%", height = "50%"})
+        box:move(0, 0)
+        box:resize(200, 100)
+        assert.are.same({x = 100, y = 50, width = 100, height = 50}, geometry("gcsAgainFollow"))
+      end)
+
+      it("leaves the numeric locale as it found it", function()
+        local before = os.setlocale(nil, "numeric")
+        finally(function() os.setlocale(before, "numeric") end)
+        -- a locale other than the "C" Geyser parses in, where the platform has one
+        local other = os.setlocale("C.UTF-8", "numeric") or os.setlocale("C.utf8", "numeric") or os.setlocale("POSIX", "numeric") or before
+        local label = laidOut({name = "gcsAgainLocale", x = "12.5%", y = 0, width = "50%", height = 20})
+        label:move("12.5%", 0)
+        label:move("12.5%", 0)
+        assert.are.equal(other, os.setlocale(nil, "numeric"))
+        assert.are.equal(150, geometry("gcsAgainLocale").x)
+      end)
+
+      it("builds a getter again for a window that has lost it", function()
+        local window = {}
+        local cons = {x = "10px", y = "20px", width = "30px", height = "40px"}
+        Geyser.calc_constraints(window, cons)
+        window.get_x = nil
+        collectgarbage("collect")
+        collectgarbage("collect")
+        Geyser.calc_constraints(window, cons)
+        assert.is_function(window.get_x)
+        assert.are.equal(10, window:get_x())
+      end)
+
+      it("does not keep a deleted window alive", function()
+        local refs = setmetatable({}, {__mode = "v"})
+        refs.child = Geyser.Container:new({name = "gcsAgainGone", x = "10%", y = function() return 5 end, width = "50%", height = "50%"}, box)
+        refs.child:move("20%", nil)
+        refs.child:delete()
+        collectgarbage("collect")
+        collectgarbage("collect")
+        assert.is_nil(refs.child)
+      end)
+    end)
+
     -- set_constraints walks every descendant itself, and reposition() walks them
     -- again, so each window used to be placed once per ancestor it had. The three
     -- specs below pin the single pass and the two kinds of child that only the
@@ -866,6 +976,83 @@ describe("Tests functionality of Geyser.Container", function()
       assert.are.same({x = 400, y = 400, width = 20, height = 20}, geometry("gcsReposition"))
       GeyserReposition("sysWindowResizeEvent", mainWidth, mainHeight)
       assert.are.same({x = 10, y = 10, width = 100, height = 50}, geometry("gcsReposition"))
+    end)
+
+    -- the main window's size is pinned by hand here, so that the layout comes
+    -- out the same on every machine; boxes holding a fixed size child are laid
+    -- out by organize() on every resize, nested ones several times over
+    it("lays nested boxes with fixed and stretching children out for the new size", function()
+      local realWidth, realHeight = Geyser.get_width, Geyser.get_height
+      local function mainWindow(width, height)
+        Geyser.get_width = function() return width end
+        Geyser.get_height = function() return height end
+      end
+      finally(function()
+        Geyser.get_width, Geyser.get_height = realWidth, realHeight
+        GeyserReposition("sysWindowResizeEvent")
+      end)
+      mainWindow(1000, 800)
+      local outer = track(Geyser.Container:new({name = "gcsNested", x = "10%", y = "10%", width = "50%", height = "50%"}))
+      local column = Geyser.VBox:new({name = "gcsNestedColumn", x = 0, y = 0, width = "100%", height = "100%"}, outer)
+      Geyser.Label:new({name = "gcsNestedHeader", height = 40, v_policy = Geyser.Fixed}, column)
+      local row = Geyser.HBox:new({name = "gcsNestedRow"}, column)
+      Geyser.Label:new({name = "gcsNestedFooter", height = 60, v_policy = Geyser.Fixed}, column)
+      Geyser.Label:new({name = "gcsNestedTag", width = 100, h_policy = Geyser.Fixed}, row)
+      local inner = Geyser.VBox:new({name = "gcsNestedInner"}, row)
+      Geyser.Label:new({name = "gcsNestedWide", h_stretch_factor = 2}, row)
+      Geyser.Label:new({name = "gcsNestedTop", height = 50, v_policy = Geyser.Fixed}, inner)
+      Geyser.Label:new({name = "gcsNestedRest"}, inner)
+
+      local function layout()
+        local result = {}
+        for _, name in ipairs({"Header", "Footer", "Tag", "Wide", "Top", "Rest"}) do
+          result[name] = geometry("gcsNested" .. name)
+        end
+        return result
+      end
+      local big = {
+        Header = {x = 100, y = 80, width = 500, height = 40},
+        Footer = {x = 100, y = 420, width = 500, height = 60},
+        Tag = {x = 100, y = 120, width = 100, height = 300},
+        Wide = {x = 333, y = 120, width = 266, height = 300},
+        Top = {x = 200, y = 120, width = 133, height = 50},
+        -- 250 in exact arithmetic, but the share is handed on as a percentage
+        -- string and comes back a hair under, which the widget truncates
+        Rest = {x = 200, y = 170, width = 133, height = 249},
+      }
+      local small = {
+        Header = {x = 80, y = 60, width = 400, height = 40},
+        Footer = {x = 80, y = 300, width = 400, height = 60},
+        -- the row starts 40/300ths of the way down, which comes back a hair
+        -- under 100 the same way
+        Tag = {x = 80, y = 99, width = 100, height = 200},
+        Wide = {x = 280, y = 99, width = 200, height = 200},
+        Top = {x = 180, y = 99, width = 100, height = 50},
+        Rest = {x = 180, y = 149, width = 100, height = 150},
+      }
+      assert.are.same(big, layout())
+      mainWindow(800, 600)
+      GeyserReposition("sysWindowResizeEvent")
+      assert.are.same(small, layout())
+      local constraints = {}
+      for _, window in ipairs({column, row, inner}) do
+        for _, name in ipairs(window.windows) do
+          local child = window.windowList[name]
+          constraints[name] = {child.x, child.y, child.width, child.height}
+        end
+      end
+      mainWindow(1000, 800)
+      GeyserReposition("sysWindowResizeEvent")
+      assert.are.same(big, layout())
+      mainWindow(800, 600)
+      GeyserReposition("sysWindowResizeEvent")
+      assert.are.same(small, layout())
+      for _, window in ipairs({column, row, inner}) do
+        for _, name in ipairs(window.windows) do
+          local child = window.windowList[name]
+          assert.are.same(constraints[name], {child.x, child.y, child.width, child.height})
+        end
+      end
     end)
 
     it("ignores events that are not window resizes", function()
