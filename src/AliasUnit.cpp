@@ -27,7 +27,6 @@
 #include "TAlias.h"
 #include "TLuaInterpreter.h"
 #include "Tree.h"
-#include "dlgTriggerEditor.h"
 #include "utils.h"
 
 #include <QDebug>
@@ -112,10 +111,11 @@ void AliasUnit::uninstall(const QString& packageName)
 
 void AliasUnit::compileAll()
 {
+    // Switched off ones as well: a reset has just closed the Lua state their
+    // compiled functions lived in, and switching one back on later does
+    // not compile it again
     for (auto alias : mAliasRootNodeList) {
-        if (alias->isActive()) {
-            alias->compileAll();
-        }
+        alias->compileAll();
     }
 }
 
@@ -288,26 +288,44 @@ int AliasUnit::getNewID()
 
 bool AliasUnit::processDataStream(const QString& data)
 {
+    // Dropped rather than sent: every sibling expansion still pending would otherwise reach
+    // the game as a command of its own
+    if (mRunawayExpansionStopped) {
+        return true;
+    }
     if (mProcessingDepth >= scmMaxProcessingDepth) {
+        mRunawayExpansionStopped = true;
         qWarning().nospace() << "AliasUnit::processDataStream(...) aborting: alias processing recursion reached the limit of " << scmMaxProcessingDepth
                              << " - probably an alias that expands into itself.";
         //: %1 is the command being expanded, %2 the depth limit. Shown in the game window when an alias keeps expanding into itself
         mpHost->postMessage(tr("[ ERROR ] - Alias processing stopped to prevent a crash: \"%1\" was expanded by an alias %2 times in a row, each time producing a command that matched an alias "
-                               "again. It goes to the game unexpanded. Send from the alias with send() rather than expandAlias(), or give it a pattern that does not match what it sends.")
+                               "again. It goes to the game unexpanded, and any other command an alias expands further along that chain is discarded. Send from "
+                               "the alias with send() rather than expandAlias(), or give it a pattern that does not match what it sends.")
                                     .arg(data, QString::number(scmMaxProcessingDepth)));
         return false;
     }
 
     TLuaInterpreter* Lua = mpHost->getLuaInterpreter();
+    if (Lua->buildingCaptureTables()) {
+        qWarning().nospace() << "AliasUnit::processDataStream(...) WARNING - not expanding " << data
+                             << " as a garbage collection finaliser sent it while the capture tables were being built; it goes to the game unexpanded.";
+        return false;
+    }
     Lua->set_lua_string(qsl("command"), data);
     bool state = false;
     //Using copy fixes https://github.com/Mudlet/Mudlet/issues/4297
-    auto copyOfNodeList = mAliasRootNodeList;
+    const std::vector<TAlias*> copyOfNodeList(mAliasRootNodeList.cbegin(), mAliasRootNodeList.cend());
+    // Encoded once for every alias; matching has always stopped at a NUL in the command
+    QByteArray haystack = data.toUtf8();
+    haystack.truncate(qstrlen(haystack.constData()));
 
     mProcessingDepth++;
     const auto processingGuard = qScopeGuard([this] {
         mProcessingDepth--;
         Q_ASSERT(mProcessingDepth >= 0);
+        if (mProcessingDepth <= 1) {
+            mRunawayExpansionStopped = false;
+        }
         if (mProcessingDepth == 0) {
             doCleanup();
         }
@@ -318,7 +336,7 @@ bool AliasUnit::processDataStream(const QString& data)
             continue;
         }
         // = data.replace( "\n", "" );
-        if (alias->match(data)) {
+        if (alias->match(haystack)) {
             state = true;
         }
     }
@@ -392,9 +410,7 @@ bool AliasUnit::enableAlias(const QString& name)
         }
         pT->setIsActive(true);
         found = true;
-        if (mpHost->mpEditorDialog) {
-            mpHost->mpEditorDialog->refreshAliasIcon(pT->getID());
-        }
+        emit mpHost->signal_aliasToggled(pT->getID());
     }
     return found;
 }
@@ -408,9 +424,7 @@ bool AliasUnit::disableAlias(const QString& name)
     for (auto it = begin; it != end; ++it) {
         it.value()->setIsActive(false);
         found = true;
-        if (mpHost->mpEditorDialog) {
-            mpHost->mpEditorDialog->refreshAliasIcon(it.value()->getID());
-        }
+        emit mpHost->signal_aliasToggled(it.value()->getID());
     }
     return found;
 }
@@ -418,23 +432,27 @@ bool AliasUnit::disableAlias(const QString& name)
 
 bool AliasUnit::killAlias(const QString& name)
 {
-    for (auto alias : mAliasRootNodeList) {
-        if (alias->getName() != name) {
+    // By the lookup table rather than a walk of every alias; see TimerUnit::killTimer()
+    const auto [begin, end] = mLookupTable.equal_range(name);
+    for (auto it = begin; it != end; ++it) {
+        TAlias* alias = it.value();
+        // Only a top level item was ever killable: one inside a group goes with
+        // its group, and freeing it separately as well would free it twice
+        if (alias->getParent()) {
             continue;
         }
         // Names are not unique, so keep looking rather than give up on the first
-        // same-named alias that cannot be killed - a permanent alias loaded from
-        // the profile precedes this session's temporaries in this list, and
-        // reporting a failure over it would strand a killable alias
+        // same-named alias that cannot be killed - a permanent one would strand
+        // a killable temporary
         if (!alias->isTemporary()) {
             // only temporary Aliases can be killed
             continue;
         }
-        // An already killed alias is only unlinked from this list once doCleanup()
+        // An already killed alias is only unlinked from the lookup table once doCleanup()
         // gets to free it, which cannot happen while an alias script is on the
         // call stack - so until then it is still findable by name. Killing it a
         // second time achieves nothing:
-        if (mCleanupSet.contains(alias)) {
+        if (mCleanupSet.contains(alias) || uninstallList.contains(alias)) {
             continue;
         }
         alias->setIsActive(false);

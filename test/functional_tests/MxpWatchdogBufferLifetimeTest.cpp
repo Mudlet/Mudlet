@@ -104,7 +104,7 @@ private slots:
         }
 
         QSignalSpy spy2(&(mpHost->mTelnet), &cTelnet::signal_connected);
-        if (!spy2.wait(2000)) {
+        if (!spy2.wait(2s)) {
             QFAIL("Could not connect with the host.");
         }
     }
@@ -156,7 +156,10 @@ private slots:
         mpHost->mMxpProcessor.getMxpTagBuilder().reset();
         mpHost->mMxpProcessor.setLastEntityValue(QString());
 
-        auto* pBuffer = new TBuffer(mpHost, mpHost->mpConsole);
+        auto* pBuffer = new TBuffer(mpHost);
+        // The watchdog only writes out a tag stalled in the main console's
+        // buffer, so this one has to pass for it:
+        pBuffer->mpModel = &mpHost->mainConsoleModel();
         std::string stalledTag{"<send"};
         pBuffer->translateToPlainText(stalledTag, true);
         QVERIFY2(mpHost->mMxpProcessor.getMxpTagBuilder().isInsideTag(), "the feed left no tag open, so no watchdog was armed");
@@ -166,9 +169,9 @@ private slots:
         // signal that the continuation is pending but has not run yet.
         QElapsedTimer elapsed;
         elapsed.start();
-        while (elapsed.elapsed() < 8000 && mpHost->mMxpProcessor.getEntityValue().isEmpty()) {
+        while (elapsed.durationElapsed() < 8s && mpHost->mMxpProcessor.getEntityValue().isEmpty()) {
             pumpOnce();
-            QThread::usleep(200);
+            QThread::sleep(200us);
         }
         QVERIFY2(!mpHost->mMxpProcessor.getEntityValue().isEmpty(), "the watchdog never reached its unfreeze phase, so nothing was queued to test");
 

@@ -1,8 +1,8 @@
 # DUPLICATE WORKFLOW: This file is paired with build-mudlet-win-pr.yml
 # Changes here likely need to be mirrored there as well, apart from the
-# ccache save step below: only builds of development write
+# ccache trim and save steps below: only builds of development write
 # this shared cache, every other build restores read-only, so
-# build-mudlet-win-pr.yml has no equivalent save step at all. The same goes for
+# build-mudlet-win-pr.yml has no equivalent steps at all. The same goes for
 # the profile-guided build of releases and PTBs, which a pull request never makes.
 name: 🔨 Build Mudlet (windows)
 on:
@@ -100,6 +100,7 @@ jobs:
       run: |
         ccache --recompress 19
         ccache --show-compression
+        echo "CCACHE_BUILD_START=$(date +%s)" >> "$GITHUB_ENV"
 
     - name: (Windows) Build
       shell: msys2 {0}
@@ -117,6 +118,17 @@ jobs:
         # are PTBs, so a broken profile-guided build shows up the next morning, not on release day
         MUDLET_PGO_BUILD: ${{ startsWith(github.ref, 'refs/tags/Mudlet-') || github.event_name == 'schedule' || github.event.inputs.scheduled == 'true' || github.event.inputs.pgo == 'true' }}
       run: $GITHUB_WORKSPACE/CI/build-mudlet-for-windows.sh
+
+    # A hit refreshes an entry's timestamp, so whatever this build left untouched
+    # is an object it no longer compiles. Dropping it saves one build's working
+    # set - under half of the 500M cap it would otherwise fill. Skipped after a
+    # failed build, which stops early and would leave most of that looking stale.
+    - name: Trim the ccache to what this build used
+      if: success() && env.CCACHE_BUILD_START
+      shell: msys2 {0}
+      env:
+        CCACHE_DIR: ${{runner.workspace}}/ccache
+      run: ccache --evict-older-than "$(( $(date +%s) - CCACHE_BUILD_START + 60 ))s"
 
     - name: check ccache stats post build
       shell: msys2 {0}
@@ -137,9 +149,9 @@ jobs:
         ctest --test-dir $GITHUB_WORKSPACE/build-$MSYSTEM/test --output-on-failure -j $(nproc)
 
     - name: (Windows) Run Lua tests
-      # ~94s measured here, and a slow runner can take half again as long - kept in
-      # step with the other platforms
-      timeout-minutes: 6
+      # 270-315s measured here, and a slow runner has taken 354s - kept in step
+      # with the other platforms
+      timeout-minutes: 12
       shell: msys2 {0}
       env:
         AUTORUN_BUSTED_TESTS: 'true'
@@ -251,7 +263,7 @@ jobs:
     - name: (Windows) Sign binaries with SignPath
       id: sign-binaries
       if: steps.upload-unsigned-binaries.outcome == 'success'
-      uses: signpath/github-action-submit-signing-request@v3
+      uses: signpath/github-action-submit-signing-request@v2
       with:
         api-token: ${{secrets.SIGNPATH_API_TOKEN}}
         organization-id: ${{secrets.SIGNPATH_ORGANIZATION_ID}}
@@ -349,7 +361,7 @@ jobs:
     - name: (Windows) Sign installer with SignPath
       id: sign-installer
       if: steps.upload-unsigned-installer.outcome == 'success'
-      uses: signpath/github-action-submit-signing-request@v3
+      uses: signpath/github-action-submit-signing-request@v2
       with:
         api-token: ${{secrets.SIGNPATH_API_TOKEN}}
         organization-id: ${{secrets.SIGNPATH_ORGANIZATION_ID}}

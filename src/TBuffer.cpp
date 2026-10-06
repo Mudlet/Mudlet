@@ -25,7 +25,6 @@
 
 #include "Host.h"
 #include "LuaLiteral.h"
-#include "TConsole.h"
 #include "TConsoleModel.h"
 #include "TEvent.h"
 #include "THyperlinkCompactManager.h"
@@ -56,7 +55,9 @@
 
 #include <algorithm>
 #include <cstring>
+#include <span>
 #include <iterator>
+#include <limits>
 #include <optional>
 #include <utility>
 #include <chrono>
@@ -177,6 +178,45 @@ QString currentTimeStamp()
         cachedStamp = now.time().toString(TBuffer::smTimeStampFormat);
     }
     return cachedStamp;
+}
+
+// Writes "rgb(r,g,b)" without the allocations QString::number() and arg() make
+void appendHtmlRgb(QString& s, const QRgb color)
+{
+    const auto appendChannel = [&s](const int value) {
+        char digits[3];
+        qsizetype count = 0;
+        if (value >= 100) {
+            digits[count++] = static_cast<char>('0' + value / 100);
+        }
+        if (value >= 10) {
+            digits[count++] = static_cast<char>('0' + (value / 10) % 10);
+        }
+        digits[count++] = static_cast<char>('0' + value % 10);
+        s.append(QLatin1StringView(digits, count));
+    };
+    s.append(QLatin1StringView("rgb("));
+    appendChannel(qRed(color));
+    s.append(QLatin1Char(','));
+    appendChannel(qGreen(color));
+    s.append(QLatin1Char(','));
+    appendChannel(qBlue(color));
+    s.append(QLatin1Char(')'));
+}
+
+void appendHtmlEscaped(QString& s, const QChar* text, const qsizetype length)
+{
+    qsizetype runStart = 0;
+    for (qsizetype i = 0; i < length; ++i) {
+        const char16_t c = text[i].unicode();
+        if (c != u'<' && c != u'>') {
+            continue;
+        }
+        s.append(text + runStart, i - runStart);
+        s.append(c == u'<' ? QLatin1StringView("&lt;") : QLatin1StringView("&gt;"));
+        runStart = i + 1;
+    }
+    s.append(text + runStart, length - runStart);
 }
 
 // Asks for the cache line holding the allocator's bookkeeping for a heap block,
@@ -466,10 +506,9 @@ TChar::TChar(const QColor& foreground, const QColor& background, const TChar::At
 {
 }
 
-TChar::TChar(TConsole* pC)
-: mFgColor(pC ? pC->mFormatCurrent.mFgColor : QColorConstants::White.rgba())
-, mBgColor(pC ? pC->mFormatCurrent.mBgColor : QColorConstants::Black.rgba())
-, mFlags(pC ? pC->mFormatCurrent.allDisplayAttributes() : AttributeFlag::None)
+TChar::TChar()
+: mFgColor(QColorConstants::White.rgba())
+, mBgColor(QColorConstants::Black.rgba())
 {
 }
 
@@ -528,9 +567,8 @@ static quint64 colorFingerprint(const std::vector<TChar>& line)
 
 // Store for text and attributes (such as character color) to be drawn on screen
 // Contents are rendered by a TTextEdit
-TBuffer::TBuffer(Host* pH, TConsole* pConsole)
-: mpConsole(pConsole)
-, mBlack(pH->mBlack)
+TBuffer::TBuffer(Host* pH)
+: mBlack(pH->mBlack)
 , mLightBlack(pH->mLightBlack)
 , mRed(pH->mRed)
 , mLightRed(pH->mLightRed)
@@ -577,11 +615,6 @@ TBuffer::~TBuffer()
         // timer with the buffer, just below, drops both:
         mTagWatchdog->stop();
     }
-    if (mpServerWrapFlushTimer) {
-        // The timeout lambda captures 'this':
-        mpServerWrapFlushTimer->stop();
-        QObject::disconnect(mpServerWrapFlushTimer, nullptr, nullptr, nullptr);
-    }
 }
 
 TBuffer::TBuffer(const TBuffer& other)
@@ -598,7 +631,6 @@ TBuffer::TBuffer(const TBuffer& other)
 , mWrapHangingIndent(other.mWrapHangingIndent)
 , mCursorY(other.mCursorY)
 , mEchoingText(other.mEchoingText)
-, mpConsole(other.mpConsole)
 , mGotESC(other.mGotESC)
 , mGotEscCharset(other.mGotEscCharset)
 , mGotCSI(other.mGotCSI)
@@ -657,6 +689,7 @@ TBuffer::TBuffer(const TBuffer& other)
 , lastTextToLog(other.lastTextToLog)
 , mEncoding(other.mEncoding)
 , mDecoder(other.mDecoder)
+, mMultibyteDecoder(multibyteDecoderFor(other.mDecoder, other.mEncoding))
 , mCurrentHyperlinkCommand(other.mCurrentHyperlinkCommand)
 , mCurrentHyperlinkHint(other.mCurrentHyperlinkHint)
 , mCurrentHyperlinkLinkId(other.mCurrentHyperlinkLinkId)
@@ -696,7 +729,6 @@ TBuffer& TBuffer::operator=(const TBuffer& other)
         mWrapHangingIndent = other.mWrapHangingIndent;
         mCursorY = other.mCursorY;
         mEchoingText = other.mEchoingText;
-        mpConsole = other.mpConsole;
         mGotESC = other.mGotESC;
         mGotEscCharset = other.mGotEscCharset;
         mGotCSI = other.mGotCSI;
@@ -755,6 +787,7 @@ TBuffer& TBuffer::operator=(const TBuffer& other)
         lastTextToLog = other.lastTextToLog;
         mEncoding = other.mEncoding;
         mDecoder = other.mDecoder;
+        mMultibyteDecoder = multibyteDecoderFor(mDecoder, mEncoding);
         mCurrentHyperlinkCommand = other.mCurrentHyperlinkCommand;
         mCurrentHyperlinkHint = other.mCurrentHyperlinkHint;
         mCurrentHyperlinkLinkId = other.mCurrentHyperlinkLinkId;
@@ -785,14 +818,6 @@ void TBuffer::setBufferSize(int requestedLinesLimit, int batch)
     if (requestedLinesLimit < 100) {
         requestedLinesLimit = 100;
     }
-    if (batch >= requestedLinesLimit) {
-        batch = requestedLinesLimit / 10;
-    }
-    // shrinkBuffer() pops one line per batch step, so a batch of none at all
-    // switches trimming off and lets the buffer grow past its limit
-    if (batch < 1) {
-        batch = 1;
-    }
     // clip the maximum to something reasonable that the machine can handle
     auto max = getMaxBufferSize();
     if (requestedLinesLimit > max) {
@@ -800,6 +825,17 @@ void TBuffer::setBufferSize(int requestedLinesLimit, int batch)
         mLinesLimit = max;
     } else {
         mLinesLimit = requestedLinesLimit;
+    }
+    // checked against the clipped limit: shrinkBuffer() pops a whole batch as
+    // soon as the buffer passes it, and a batch bigger than that pops lines
+    // that are not there
+    if (batch >= mLinesLimit) {
+        batch = mLinesLimit / 10;
+    }
+    // shrinkBuffer() pops one line per batch step, so a batch of none at all
+    // switches trimming off and lets the buffer grow past its limit
+    if (batch < 1) {
+        batch = 1;
     }
 
     mBatchDeleteSize = batch;
@@ -812,13 +848,17 @@ int TBuffer::getMaxBufferSize()
     // Mudlet is 32bit mainly on Windows, see where the practical limit for a process 2GB:
     // https://docs.microsoft.com/en-us/windows/win32/memory/memory-limits-for-windows-releases#memory-and-address-space-limits
     // 64bit: set to 80% of what is available to us, swap not included
-    const int64_t maxProcessMemoryBytes = (QSysInfo::WordSize == 32) ? 1600_MB : (memoryTotal * 0.80);
+    // the query answers -1 when it fails, which would leave room for no lines at all
+    const int64_t maxProcessMemoryBytes = (QSysInfo::WordSize == 32 || memoryTotal <= 0) ? 1600_MB : (memoryTotal * 0.80);
     auto maxLines = (maxProcessMemoryBytes / TCHAR_IN_BYTES) / mpHost->mWrapAt;
     // now we've calculated how many lines can we fit in 80% of memory, ignoring memory use for other things like triggers/aliases, Lua scripts, etc
     // so shave that down by 20%
     maxLines = (maxLines / 100) * 80;
 
-    return maxLines;
+    // a huge wrap width divides the estimate down to nothing, but few lines
+    // are ever that long, so keep the floor setBufferSize() gives a request;
+    // a wrap of 1 on a machine with a lot of memory overflows an int
+    return static_cast<int>(std::clamp<int64_t>(maxLines, 100, std::numeric_limits<int>::max()));
 }
 
 void TBuffer::updateColors()
@@ -1358,8 +1398,15 @@ void TBuffer::translateToPlainTextInner(std::string& incoming, const bool isFrom
                     // point it into localBuffer rather than at any temporary
                     const QByteArray temp = QByteArray::fromRawData(localBuffer.data() + localBufferPosition, dataLength);
                     bool isOk = false;
-                    const int spacesNeeded = temp.toInt(&isOk);
-                    if (isOk && spacesNeeded > 0) {
+                    const int requested = temp.toInt(&isOk);
+                    // Like a terminal's, the cursor stops at the right margin: the
+                    // count comes from the game, and unbounded, one sequence or a
+                    // run of them could ask for gigabytes of spaces.
+                    constexpr int maxLineWidth = 1000;
+                    const int margin = std::max(1, std::min(mWrapAt, maxLineWidth));
+                    const int column = static_cast<int>(mMudLine.size() % margin);
+                    const int spacesNeeded = std::min(requested, margin - 1 - column);
+                    if (isOk && requested > 0) {
                         // Note: we are using the background color for the
                         // foreground color as well so that we are transparent:
                         const TChar c(mBackGroundColor, mBackGroundColor, computeCurrentAttributeFlags());
@@ -2019,7 +2066,9 @@ bool TBuffer::commitLine(char ch, size_t& localBufferPosition, const bool isFrom
             mServerWrapPendingSegmentLength = segmentLength;
             mServerWrapPendingSegmentStart = segmentStart;
             mCurrentHyperlinkStartsAfterHeldText = mHyperlinkActive && mCurrentHyperlinkText.isEmpty();
-            startServerWrapFlushTimer();
+            if (mpModel) {
+                emit mpModel->mNotifier.serverWrapLineHeld();
+            }
             ++localBufferPosition;
             return true;
         }
@@ -2128,20 +2177,20 @@ void TBuffer::commitLineData(QString line, std::vector<TChar> chars, const char 
             promptBuffer.back() = false;
         }
     }
-    // Every game line passes here (TConsole::print() sees only client output). Mirroring before runTriggers()
+    // Every game line passes here (TConsoleModel::print() sees only client output). Mirroring before runTriggers()
     // keeps arrival order, so script output in response follows it, but lines that triggers gag or rewrite
     // are still mirrored as sent. Mirroring at log() below would trade the other way and copy wrapLine()'s
     // fragments instead of the line as sent.
     if (Q_UNLIKELY(mudlet::smMirrorToStdOut)) {
-        if (Q_LIKELY(!mpConsole.isNull())) {
+        if (Q_LIKELY(mpModel)) {
             // Read back out of the buffer rather than from line, which every
             // path above has moved from by now
-            mpConsole->mirrorLineToStdOut(lineBuffer.back());
+            mpModel->mirrorLineToStdOut(lineBuffer.back());
         } else {
             static bool mirrorWithoutConsoleReported = false;
             if (!mirrorWithoutConsoleReported) {
                 mirrorWithoutConsoleReported = true;
-                qWarning() << "--mirror: a buffer with no console of its own is committing lines, which cannot be copied to standard output";
+                qWarning() << "--mirror: a buffer with no console model is committing lines, which cannot be copied to standard output";
             }
         }
     }
@@ -2490,35 +2539,6 @@ void TBuffer::flushPendingServerWrapJoin(const bool endsHyperlink)
     }
 }
 
-void TBuffer::startServerWrapFlushTimer()
-{
-    if (!mpServerWrapFlushTimer) {
-        if (!mpConsole) {
-            return;
-        }
-        mpServerWrapFlushTimer = new QTimer(mpConsole);
-        // Named so that a test can find it on the console and observe the state
-        // it leaves behind, which no polling assertion can catch: the posting
-        // timer in cTelnet::slot_timerPosting() calls finalize() too and hides
-        // an unpainted line within a tick of it being committed
-        mpServerWrapFlushTimer->setObjectName(qsl("serverWrapFlushTimer"));
-        mpServerWrapFlushTimer->setSingleShot(true);
-        mpServerWrapFlushTimer->setInterval(csmServerWrapFlushDelayMs);
-        QObject::connect(mpServerWrapFlushTimer, &QTimer::timeout, mpConsole, [this]() {
-            if (!mpHost || !mpHost->mpConsole) {
-                return;
-            }
-            // Mimic TMainConsole::printOnDisplay() so that trigger-context
-            // functions behave the same as for any other committed line:
-            mpHost->mpConsole->mTriggerEngineMode = true;
-            flushPendingServerWrapJoin();
-            mpHost->mpConsole->mTriggerEngineMode = false;
-            mpHost->finalizeMainConsole();
-        });
-    }
-    mpServerWrapFlushTimer->start();
-}
-
 const std::vector<TChar>* TBuffer::preTriggerPassLine(int lineNumber) const
 {
     if (lineNumber >= 0 && lineNumber == mPreTriggerPassLineNumber && mPreTriggerPassSnapshotTaken) {
@@ -2586,22 +2606,23 @@ void TBuffer::processMxpWatchdogCallback()
         mWatchdogPhase = WatchdogPhase::Phase2_Unfreeze;
         mTagWatchdog->start(MAX_TAG_TIMEOUT_MS);
     } else if (mWatchdogPhase == WatchdogPhase::Phase2_Unfreeze) {
-        if (isMxpParserFrozen && mpConsole) {
+        // The continuation commits into this buffer and finalizes the main
+        // console's view, so it needs that view and this to be its buffer:
+        if (isMxpParserFrozen && !mpHost->mpConsole.isNull() && mpModel == &mpHost->mainConsoleModel()) {
             mpHost->mMxpProcessor.setLastEntityValue(QString::fromStdString('<' + currentTagContent));
             const TChar style(mForeGroundColor, mBackGroundColor, computeCurrentAttributeFlags());
             QPointer<Host> hostGuard = mpHost;
-            QPointer<TConsole> consoleGuard = mpConsole;
             // The continuation writes into this buffer through the captured
             // 'this', so what has to cancel it is this buffer going away - not
             // the console going away, which is a different and longer life. The
             // watchdog timer is owned by the buffer, so naming it as the context
             // object ties the two together: destroying the buffer destroys the
             // timer, and that drops any continuation still queued against it.
-            QTimer::singleShot(0ms, mTagWatchdog.get(), [this, style, hostGuard, consoleGuard]() {
+            QTimer::singleShot(0ms, mTagWatchdog.get(), [this, style, hostGuard]() {
                 // commitLine() and finalize() below both reach the main console
                 // through the host, and that pointer empties on its own when the
                 // profile's console goes:
-                if (!hostGuard || !consoleGuard || !hostGuard->mpConsole) {
+                if (!hostGuard || hostGuard->mpConsole.isNull()) {
                     return;
                 }
                 QString lastEntityValue = hostGuard->mMxpProcessor.getEntityValue();
@@ -2754,8 +2775,8 @@ void TBuffer::decodeSGR38(const SgrParameters& parameters, bool isColonSeparated
             if (!isColonSeparated) {
 #if !defined(DEBUG_SGR_PROCESSING)
                 qDebug() << "Unhandled color space identifier in a SGR...;38;2;" << parameters.at(2)
-                         << ";...m sequence - if 16M colors items are missing blue elements you may have checked the \"Expect Color Space Id in SGR...(3|4)8;2;....m codes\" option on the Special "
-                            "Options tab of the preferences when it is not needed!";
+                         << ";...m sequence - if 16M colors items are missing blue elements you may have checked the \"Expect Color Space Id in SGR...(3|4)8;2;....m codes\" option on the "
+                            "Compatibility card of the Connection settings when it is not needed!";
 #else
                 qDebug().noquote().nospace() << "TBuffer::decodeSGR38(...) WARNING - unhandled color space identifier in a SGR...;38;2;" << parameters.at(2)
                                              << ";...m sequence treating it as the default (empty) case!";
@@ -2919,8 +2940,8 @@ void TBuffer::decodeSGR48(const SgrParameters& parameters, bool isColonSeparated
             if (!isColonSeparated) {
 #if !defined(DEBUG_SGR_PROCESSING)
                 qDebug() << "Unhandled color space identifier in a SGR...;48;2;" << parameters.at(2)
-                         << ";...m sequence - if 16M colors items are missing blue elements you may have checked the \"Expect Color Space Id in SGR...(3|4)8;2;....m codes\" option on the Special "
-                            "Options tab of the preferences when it is not needed!";
+                         << ";...m sequence - if 16M colors items are missing blue elements you may have checked the \"Expect Color Space Id in SGR...(3|4)8;2;....m codes\" option on the "
+                            "Compatibility card of the Connection settings when it is not needed!";
 #else
                 qDebug().noquote().nospace() << "TBuffer::decodeSGR48(...) WARNING - unhandled color space identifier in a SGR...;48;2;" << parameters.at(2)
                                              << ";...m sequence treating it as the default (empty) case!";
@@ -3852,13 +3873,8 @@ void TBuffer::decodeOSC(const QString& sequence)
                     if (isValid) {
                         // This will refresh the "main" console as it is only this
                         // class instance associated with that one that is to be
-                        // changed by this method. With no console, this buffer's own
-                        // palette, which stamps the text, must still be refreshed:
-                        if (pHost->mpConsole) {
-                            pHost->mpConsole->changeColors();
-                        } else {
-                            pHost->refreshMainConsoleColors();
-                        }
+                        // changed by this method:
+                        pHost->applyMainConsoleColors();
                         // Also need to update the Lua sub-system's "color_table"
                         pHost->updateAnsi16ColorsInTable();
                     }
@@ -3959,13 +3975,13 @@ void TBuffer::decodeOSC(const QString& sequence)
                 qDebug() << "[OSC] Config param preview:" << (configParam.length() > 100 ? configParam.left(100) + "..." : configParam);
 #endif
 
-                if (!presetName.isEmpty() && !configParam.isEmpty() && mpConsole) {
+                if (!presetName.isEmpty() && !configParam.isEmpty() && mpModel) {
                     // Parse the JSON configuration
                     QJsonParseError parseError;
                     QJsonDocument doc = QJsonDocument::fromJson(configParam.toUtf8(), &parseError);
 
                     if (parseError.error == QJsonParseError::NoError && doc.isObject()) {
-                        mpConsole->getHyperlinkCompactManager().registerPreset(presetName, doc.object());
+                        mpModel->mHyperlinkCompactManager.registerPreset(presetName, doc.object());
 #if defined(DEBUG_OSC_PROCESSING)
                         qDebug() << "[OSC] Successfully registered preset:" << presetName;
 #endif
@@ -3977,8 +3993,7 @@ void TBuffer::decodeOSC(const QString& sequence)
                     }
                 } else {
 #if defined(DEBUG_OSC_PROCESSING)
-                    qDebug() << "[OSC] Preset registration skipped - presetName empty:" << presetName.isEmpty() << "configParam empty:" << configParam.isEmpty()
-                             << "mpConsole:" << (mpConsole != nullptr) << "mpHyperlinkCompactManager:" << (mpConsole != nullptr);
+                    qDebug() << "[OSC] Preset registration skipped - presetName empty:" << presetName.isEmpty() << "configParam empty:" << configParam.isEmpty() << "mpModel:" << (mpModel != nullptr);
 #endif
                 }
                 // Preset definitions don't create visible hyperlinks
@@ -4171,15 +4186,15 @@ void TBuffer::decodeOSC(const QString& sequence)
             mLinkOriginalBackgrounds[mCurrentHyperlinkLinkId] = mBackGroundColor;
 
             // Initialize selection state if this link has selection settings
-            if (mCurrentHyperlinkStyling.selection.hasSelectionSettings && mpConsole) {
+            if (mCurrentHyperlinkStyling.selection.hasSelectionSettings && mpModel) {
                 const QString& group = mCurrentHyperlinkStyling.selection.group;
                 const QString& value = mCurrentHyperlinkStyling.selection.value;
 
                 // Configure group exclusivity mode
-                mpConsole->getHyperlinkSelectionManager().setGroupExclusive(group, mCurrentHyperlinkStyling.selection.exclusive);
+                mpModel->mHyperlinkSelectionManager.setGroupExclusive(group, mCurrentHyperlinkStyling.selection.exclusive);
 
                 // Register the link with the selection manager
-                mpConsole->getHyperlinkSelectionManager().setSelected(group, value, mCurrentHyperlinkStyling.selection.selected);
+                mpModel->mHyperlinkSelectionManager.setSelected(group, value, mCurrentHyperlinkStyling.selection.selected);
 
                 // Update link selection state (visual styling will be applied when link closes)
                 setLinkSelected(mCurrentHyperlinkLinkId, mCurrentHyperlinkStyling.selection.selected);
@@ -4302,8 +4317,8 @@ bool TBuffer::parseUriQueryParameters(const QString& uri, Mudlet::HyperlinkStyli
     if (!presetName.isEmpty() || !configJson.isEmpty()) {
         QJsonObject baseConfig;
 
-        if (!presetName.isEmpty() && mpConsole) {
-            baseConfig = mpConsole->getHyperlinkCompactManager().getPreset(presetName);
+        if (!presetName.isEmpty() && mpModel) {
+            baseConfig = mpModel->mHyperlinkCompactManager.getPreset(presetName);
 #if defined(DEBUG_OSC_PROCESSING)
             if (!baseConfig.isEmpty()) {
                 qDebug() << "[OSC] Resolved preset" << presetName;
@@ -4314,7 +4329,7 @@ bool TBuffer::parseUriQueryParameters(const QString& uri, Mudlet::HyperlinkStyli
         } else {
 #if defined(DEBUG_OSC_PROCESSING)
             if (!presetName.isEmpty()) {
-                qDebug() << "[OSC] Cannot resolve preset - missing console or manager";
+                qDebug() << "[OSC] Cannot resolve preset - no console model";
             }
 #endif
         }
@@ -4327,9 +4342,9 @@ bool TBuffer::parseUriQueryParameters(const QString& uri, Mudlet::HyperlinkStyli
             if (parseError.error == QJsonParseError::NoError && overrideDoc.isObject()) {
                 QJsonObject overrideConfig = overrideDoc.object();
 
-                if (!baseConfig.isEmpty() && mpConsole) {
+                if (!baseConfig.isEmpty() && mpModel) {
                     // Deep merge: override takes precedence
-                    baseConfig = mpConsole->getHyperlinkCompactManager().mergeConfigs(baseConfig, overrideConfig);
+                    baseConfig = mpModel->mHyperlinkCompactManager.mergeConfigs(baseConfig, overrideConfig);
 #if defined(DEBUG_OSC_PROCESSING)
                     qDebug() << "[OSC] Merged preset with override config";
 #endif
@@ -4356,7 +4371,7 @@ bool TBuffer::parseUriQueryParameters(const QString& uri, Mudlet::HyperlinkStyli
 
 QJsonObject TBuffer::expandJsonShorthands(const QJsonObject& obj)
 {
-    if (!mpConsole) {
+    if (!mpModel) {
         return obj; // No manager available, return unchanged
     }
 
@@ -4368,7 +4383,7 @@ QJsonObject TBuffer::expandJsonShorthands(const QJsonObject& obj)
 
         QMap<QString, QString> singleKeyMap;
         singleKeyMap.insert(originalKey, qsl("placeholder")); // Value doesn't matter for key expansion
-        QMap<QString, QString> expandedMap = mpConsole->getHyperlinkCompactManager().expandShorthand(singleKeyMap);
+        QMap<QString, QString> expandedMap = mpModel->mHyperlinkCompactManager.expandShorthand(singleKeyMap);
 
         // Guard against empty or multi-key expanded maps to prevent assertion/UB
         QString resultKey;
@@ -4396,7 +4411,7 @@ QJsonObject TBuffer::expandJsonShorthands(const QJsonObject& obj)
             QJsonObject toAdd = resultValue.toObject();
 
             // When both shorthand and full names exist, shorthand takes precedence
-            result[resultKey] = mpConsole->getHyperlinkCompactManager().mergeConfigs(toAdd, existing);
+            result[resultKey] = mpModel->mHyperlinkCompactManager.mergeConfigs(toAdd, existing);
         } else {
             result[resultKey] = resultValue;
         }
@@ -5170,13 +5185,8 @@ void TBuffer::resetColors()
 
     // This will refresh the "main" console as it is only this class instance
     // associated with that one that will call this method from the
-    // decodeOSC(...) method. With no console, this buffer's own palette,
-    // which stamps the text, must still be refreshed:
-    if (pHost->mpConsole) {
-        pHost->mpConsole->changeColors();
-    } else {
-        pHost->refreshMainConsoleColors();
-    }
+    // decodeOSC(...) method:
+    pHost->applyMainConsoleColors();
 
     // Also need to update the Lua sub-system's "color_table"
     pHost->updateAnsi16ColorsInTable();
@@ -5229,7 +5239,7 @@ void TBuffer::appendFormatted(const QString& text, const std::vector<TChar>& for
     // Check for text/formatting size mismatch - this is a programming error
     if (text.size() != static_cast<qsizetype>(formatting.size())) {
         qWarning() << "TBuffer::appendFormatted: text size" << text.size() << "differs from formatting size" << formatting.size()
-                   << "- using longer length with default formatting for missing entries";
+                   << "- missing entries get default formatting and extra ones are ignored";
     }
 
     const int lastLineBeforeWrap = buffer.size() - 1;
@@ -5238,35 +5248,48 @@ void TBuffer::appendFormatted(const QString& text, const std::vector<TChar>& for
     materialisePreTriggerPassLine(lastLineBeforeWrap);
 
     bool firstChar = lineBuffer.back().isEmpty();
+    // Only into an empty line: reserving exactly ahead of a line that keeps
+    // being added to would regrow it on every call rather than geometrically
+    if (firstChar) {
+        lineBuffer.back().reserve(text.size());
+        buffer.back().reserve(text.size());
+    }
     QHash<int, int> remappedLinkIds;
-    const qsizetype length = std::max(text.size(), static_cast<qsizetype>(formatting.size()));
+    const qsizetype formatted = std::min(text.size(), static_cast<qsizetype>(formatting.size()));
     const TChar defaultChar;
-
-    for (qsizetype i = 0; i < length; ++i) {
-        if (i >= text.size()) {
+    // Each stretch between line feeds is copied whole, as copying it a
+    // character at a time cost more than everything else here put together
+    qsizetype runStart = 0;
+    while (true) {
+        qsizetype runEnd = text.indexOf(QChar::LineFeed, runStart);
+        if (runEnd < 0) {
+            runEnd = text.size();
+        }
+        if (const qsizetype runLength = runEnd - runStart; runLength > 0) {
+            lineBuffer.back().append(QStringView(text).sliced(runStart, runLength));
+            std::vector<TChar>& chars = buffer.back();
+            const size_t first = chars.size();
+            if (const qsizetype copied = std::clamp<qsizetype>(formatted - runStart, 0, runLength); copied > 0) {
+                const auto from = formatting.begin() + runStart;
+                chars.insert(chars.end(), from, from + copied);
+                for (TChar& ch : std::span(chars).subspan(first)) {
+                    if (ch.mLinkIndex) {
+                        ch.mLinkIndex = remapLinkId(sourceLinkStore, ch.mLinkIndex, remappedLinkIds);
+                    }
+                }
+            }
+            chars.resize(first + runLength, defaultChar);
+            if (firstChar) {
+                timeBuffer.back() = currentTimeStamp();
+                firstChar = false;
+            }
+        }
+        if (runEnd == text.size()) {
             break;
         }
-
-        const QChar ch = text.at(i);
-        if (ch == QChar::LineFeed) {
-            firstChar = true;
-            appendEmptyLine();
-            continue;
-        }
-
-        const TChar& srcChar = (i < static_cast<qsizetype>(formatting.size())) ? formatting.at(i) : defaultChar;
-
-        const int destLinkId = remapLinkId(sourceLinkStore, srcChar.linkIndex(), remappedLinkIds);
-
-        lineBuffer.back().append(ch);
-        TChar destChar(srcChar);
-        destChar.mLinkIndex = destLinkId;
-        buffer.back().push_back(destChar);
-
-        if (firstChar) {
-            timeBuffer.back() = currentTimeStamp();
-            firstChar = false;
-        }
+        firstChar = true;
+        appendEmptyLine();
+        runStart = runEnd + 1;
     }
 
     appendEmptyLine();
@@ -5282,8 +5305,8 @@ void TBuffer::appendFormatted(const QString& text, const std::vector<TChar>& for
         shrinkBuffer();
     }
 
-    if (!mpConsole.isNull()) {
-        mpConsole->handleLinesOverflowEvent(lineBuffer.size());
+    if (mpModel) {
+        emit mpModel->mNotifier.linesAppended(lineBuffer.size());
     }
 }
 
@@ -5314,8 +5337,8 @@ void TBuffer::append(const QString& text, int sub_start, int sub_end, const QCol
     // want to check - for TConsoles that have been set to be "non-scrollable"
     // - that the content has not exceeded the number of lines that can be
     // shown in the upper pane and to raise an event if it has
-    if (!mpConsole.isNull()) {
-        mpConsole->handleLinesOverflowEvent(lineBuffer.size());
+    if (mpModel) {
+        emit mpModel->mNotifier.linesAppended(lineBuffer.size());
     }
 }
 
@@ -5428,7 +5451,7 @@ bool TBuffer::insertInLine(QPoint& P, const QString& text, const TChar& format)
             return false;
         }
         if (x >= static_cast<int>(buffer.at(y).size())) {
-            TChar c(mpConsole);
+            TChar c = currentFormat();
             expandLine(y, x - buffer.at(y).size(), c);
         }
         // Insert the whole run in one operation. Inserting one character at a
@@ -5446,14 +5469,15 @@ bool TBuffer::insertInLine(QPoint& P, const QString& text, const TChar& format)
 // P2 is exclusive: P2.x() is one past the last character copied, matching every
 // other consumer of a P_begin/P_end pair. Still poorly designed in that no
 // consideration is given to P2.y() != P1.y(), i.e. a copy of more than one line.
-TBuffer TBuffer::copy(QPoint& P1, QPoint& P2)
+// slice is cleared and refilled rather than built afresh: constructing a TBuffer
+// costs more than copying a line into one, and the clipboard is copied into a lot.
+void TBuffer::copyInto(const QPoint& P1, const QPoint& P2, TBuffer& slice) const
 {
-    TBuffer slice(mpHost);
     slice.clear();
     const int y = P1.y();
     int x = P1.x();
     if (y < 0 || y >= static_cast<int>(buffer.size())) {
-        return slice;
+        return;
     }
 
     // Ensure x starts within the valid range, and adjust P2.x() if it's out of bounds
@@ -5466,16 +5490,14 @@ TBuffer TBuffer::copy(QPoint& P1, QPoint& P2)
         const std::vector<TChar> formatting(buffer.at(y).cbegin() + x, buffer.at(y).cbegin() + P2x_corrected);
         slice.appendFormatted(lineBuffer.at(y).mid(x, P2x_corrected - x), formatting, mLinkStore);
     }
-    return slice;
 }
 
 // This is constrained to P1.y() == P2.y()....
-TBuffer TBuffer::cut(QPoint& P1, QPoint& P2)
+void TBuffer::cutInto(QPoint& P1, QPoint& P2, TBuffer& slice)
 {
-    TBuffer slice = copy(P1, P2);
-    TChar format(mpConsole);
+    copyInto(P1, P2, slice);
+    TChar format = currentFormat();
     replaceInLine(P1, P2, QString(), format);
-    return slice;
 }
 
 // Only the first line of chunk is pasted, and it goes in at P:
@@ -5719,8 +5741,7 @@ void TBuffer::log(int fromLine, int toLine)
 {
     // The log file, its stream and the on/off flag are core model state, so
     // this needs a Host but no view - which is what lets a profile with no main
-    // console widget write a log at all. The one thing that still notices a
-    // missing view is the HTML timestamp background in bufferToHtml().
+    // console widget write a log at all.
     // See TBuffer::clear() on why the model is reached through the
     // null-tolerant accessor.
     TConsoleModel* pModel = mpHost.isNull() ? nullptr : mpHost->mainConsoleModelOrNull();
@@ -5754,16 +5775,28 @@ void TBuffer::log(int fromLine, int toLine)
 
 QString TBuffer::assembleLog(int fromLine, int toLine)
 {
-    QStringList linesToLog;
-    for (int i = fromLine; i <= toLine; ++i) {
-        if (mpHost->mIsCurrentLogFileInHtmlFormat) {
-            // This only handles a single line of logged text at a time:
-            linesToLog << bufferToHtml(mpHost->mIsLoggingTimestamps, i);
-        } else {
-            linesToLog << ((mpHost->mIsLoggingTimestamps && !timeBuffer.at(i).isEmpty()) ? timeBuffer.at(i).left(TBuffer::smTimeStampFormat.length()) : QString()) % lineBuffer.at(i) % QChar::LineFeed;
-        }
+    const bool html = mpHost->mIsCurrentLogFileInHtmlFormat;
+    const bool timestamps = mpHost->mIsLoggingTimestamps;
+    if (html && fromLine == toLine) {
+        return bufferToHtml(timestamps, fromLine);
     }
-    return linesToLog.join(QString());
+
+    QString text;
+    if (!html && fromLine == toLine) {
+        text.reserve(TBuffer::smTimeStampFormat.length() + lineBuffer.at(fromLine).size() + 1);
+    }
+    for (int i = fromLine; i <= toLine; ++i) {
+        if (html) {
+            text.append(bufferToHtml(timestamps, i));
+            continue;
+        }
+        if (timestamps && !timeBuffer.at(i).isEmpty()) {
+            text.append(QStringView(timeBuffer.at(i)).left(TBuffer::smTimeStampFormat.length()));
+        }
+        text.append(lineBuffer.at(i));
+        text.append(QChar::LineFeed);
+    }
+    return text;
 }
 
 // logs the remaining output when logging gets stopped, without duplication checks
@@ -5809,7 +5842,7 @@ void TBuffer::appendLog(const QString& text)
 // the last line of the result sits relative to startLine: 0 for a single line
 // that needed no wrapping, 2 for one split into three, and for a range of
 // several lines its length less one whether any of them were split or not.
-// TConsole::insertLink() and TConsole::printCommand() add it to startLine to
+// TConsoleModel::insertLink() and TConsole::printCommand() add it to startLine to
 // place the cursor and the repaint range.
 int TBuffer::wrapLine(int startLine, int maxWidth, int indentSize, int hangingIndentSize)
 {
@@ -5821,11 +5854,14 @@ int TBuffer::wrapLine(int startLine, int maxWidth, int indentSize, int hangingIn
     // the line replaces the characters the pass is matching against:
     materialisePreTriggerPassLine(startLine);
 
-    // consider moving this upstream and returning an error if you try to set indentation higher than wrapWidth
-    // a negative indent needs discarding too: the insert() applying it below
-    // takes an unsigned count, so it would ask for a huge allocation
-    const int indent = (indentSize > 0 && indentSize < maxWidth) ? indentSize : 0;
-    const int hangingIndent = (hangingIndentSize > 0 && hangingIndentSize < maxWidth) ? hangingIndentSize : 0;
+    // Checked here, not in the setters, as the wrap width can change after them.
+    // Each wrapped line pads indent columns per (maxWidth - indent) of text, so an
+    // indent is held to half the width: near the width a long line becomes one
+    // padded line per character and exhausts memory. One as wide as the width is
+    // dropped, and so is a negative one, as the insert() applying it takes an
+    // unsigned count.
+    const int indent = (indentSize > 0 && indentSize < maxWidth) ? std::min(indentSize, maxWidth / 2) : 0;
+    const int hangingIndent = (hangingIndentSize > 0 && hangingIndentSize < maxWidth) ? std::min(hangingIndentSize, maxWidth / 2) : 0;
     const int total = static_cast<int>(buffer.size());
 
     // Leading lines that getWrapInfo() finds no break points in stay where they
@@ -5975,27 +6011,14 @@ int TBuffer::wrapLine(int startLine, int maxWidth, int indentSize, int hangingIn
     return 0;
 }
 
+// Any column is accepted, even one past the end of the line: insertInLine() pads the gap when text lands there.
 bool TBuffer::moveCursor(QPoint& where)
 {
-    const int x = where.x();
     const int y = where.y();
-    if (y < 0) {
-        return false;
-    }
-    if (y >= static_cast<int>(buffer.size())) {
-        return false;
-    }
-
-    if (static_cast<int>(buffer[y].size()) - 1 > x) {
-        TChar c(mpConsole);
-        // CHECKME: should "buffer[cookedY].size() - 1" be bracketed - which would change the -1 to +1 in the following:
-        expandLine(y, x - buffer[y].size() - 1, c);
-    }
-    return true;
+    return y >= 0 && y < static_cast<int>(buffer.size());
 }
 
-// Needed, at least, as a filler for missing lines past end of the lineBuffer
-// requested by lua function getLines(...):
+// line() returns a reference, so a line number outside the buffer needs a string that outlives the call
 QString badLineError = qsl("ERROR: invalid line number");
 
 QString& TBuffer::line(int lineNumber)
@@ -6173,7 +6196,7 @@ void TBuffer::finaliseActiveHyperlink()
 // if it should start concealed.
 void TBuffer::registerLinkVisibility(const int linkId, const int column, const int length, const Mudlet::HyperlinkStyling& styling)
 {
-    if (!mpConsole) {
+    if (!mpModel) {
         return;
     }
     if (length <= 0) {
@@ -6188,7 +6211,7 @@ void TBuffer::registerLinkVisibility(const int linkId, const int column, const i
 #if defined(DEBUG_OSC_PROCESSING)
     qDebug() << "[OSC] Registering hyperlink" << linkId << "line:" << line << "col:" << column << "length:" << length << "text:" << linkText;
 #endif
-    const bool shouldStartConcealed = mpConsole->getHyperlinkVisibilityManager().registerHyperlink(linkId, line, column, length, linkText, styling);
+    const bool shouldStartConcealed = mpModel->mHyperlinkVisibilityManager.registerHyperlink(linkId, line, column, length, linkText, styling);
 
     // If link should start concealed, replace its text with spaces in mMudLine
     // Skip if spoiler already did this to avoid double-replacement
@@ -6227,22 +6250,24 @@ void TBuffer::maskSpoilerText(const int linkId, QString& line, const int column,
     line.replace(column, length, QString(length, QChar::Space));
 }
 
-// Both branches check that this buffer is the one the manager tracks: a
-// scratch buffer can carry a console back-pointer, and every model builds its
-// buffer before a view attaches, so reaching a manager on the strength of the
-// pointer alone would let one buffer drop another's links.
+// A scratch buffer has no model, so it cannot reach - and drop - the links of
+// the buffer it was copied from.
 THyperlinkVisibilityManager* TBuffer::hyperlinkVisibilityManagerOrNull()
 {
-    if (mpConsole) {
-        return (this == &mpConsole->buffer) ? &mpConsole->getHyperlinkVisibilityManager() : nullptr;
+    return mpModel ? &mpModel->mHyperlinkVisibilityManager : nullptr;
+}
+
+// What pads a short line and fills a cut: the model's current format without
+// its link, or the built-in default for a buffer that is nobody's model's.
+TChar TBuffer::currentFormat() const
+{
+    TChar format;
+    if (mpModel) {
+        format.mFgColor = mpModel->mFormatCurrent.mFgColor;
+        format.mBgColor = mpModel->mFormatCurrent.mBgColor;
+        format.mFlags = mpModel->mFormatCurrent.allDisplayAttributes();
     }
-    // The main console's model outlives the view built on it and keeps taking
-    // lines meanwhile, so stopping at mpConsole would give up maintaining its
-    // links too early. mainConsoleModelOrNull() rather than mainConsoleModel()
-    // because this also runs from the TBuffer constructor, before Host holds
-    // the model.
-    TConsoleModel* pModel = mpHost.isNull() ? nullptr : mpHost->mainConsoleModelOrNull();
-    return (pModel && this == &pModel->buffer) ? &pModel->mHyperlinkVisibilityManager : nullptr;
+    return format;
 }
 
 void TBuffer::clear()
@@ -6414,9 +6439,9 @@ void TBuffer::shrinkBuffer()
         mCursorY--;
     }
     // We need to adjust the search result line as some lines have now gone
-    // away - there is nothing to adjust when the model has no view attached:
-    if (mpConsole) {
-        mpConsole->mCurrentSearchResult = qMax(0, mpConsole->mCurrentSearchResult - mBatchDeleteSize);
+    // away:
+    if (mpModel) {
+        mpModel->mCurrentSearchResult = qMax(0, mpModel->mCurrentSearchResult - mBatchDeleteSize);
     }
     mPreTriggerPassLineNumber = -1;
 
@@ -6438,8 +6463,8 @@ void TBuffer::shrinkBuffer()
     // Tracked OSC 8 hyperlinks are addressed by line number, so they shift with
     // everything else - any whose line just went away are dropped
     QSet<int> trackedLinkIds;
-    if (mpConsole) {
-        auto& hyperlinkManager = mpConsole->getHyperlinkVisibilityManager();
+    if (mpModel) {
+        auto& hyperlinkManager = mpModel->mHyperlinkVisibilityManager;
         hyperlinkManager.adjustLineNumbers(0, mBatchDeleteSize);
         trackedLinkIds = hyperlinkManager.trackedLinkIds();
     }
@@ -6456,18 +6481,13 @@ void TBuffer::shrinkBuffer()
     }
 
     // Scripts keep their own line-index bookkeeping, so they have to be told
-    // the indexes shifted whether or not anyone is watching the text. The
-    // console's name and type still live on the view, but a buffer without one
-    // can only be the main console's model - every other model is owned by the
-    // view built on it - and that console is always named "main":
-    const bool namedConsole =
-            mpConsole ? (mpConsole->getType() & (TConsole::MainConsole | TConsole::UserWindow | TConsole::SubConsole | TConsole::Buffer)) : (this == &mpHost->mainConsoleModel().buffer);
-    if (namedConsole) {
+    // the indexes shifted whether or not anyone is watching the text:
+    if (mpModel && mpModel->mScriptAddressable) {
         // Signal to lua subsystem that indexes into the Console will need adjusting
         TEvent bufferShrinkEvent{};
         bufferShrinkEvent.mArgumentList.append(QLatin1String("sysBufferShrinkEvent"));
         bufferShrinkEvent.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
-        bufferShrinkEvent.mArgumentList.append(mpConsole ? mpConsole->mConsoleName : qsl("main"));
+        bufferShrinkEvent.mArgumentList.append(mpModel->mConsoleName);
         bufferShrinkEvent.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
         bufferShrinkEvent.mArgumentList.append(QString::number(mBatchDeleteSize));
         bufferShrinkEvent.mArgumentTypeList.append(ARGUMENT_TYPE_NUMBER);
@@ -6741,6 +6761,9 @@ QString TBuffer::bufferToHtml(const bool showTimeStamp /*= false*/, const int ro
         // row - this can have been triggered by a -1 argument
         lastPos = static_cast<int>(buffer.at(cookedRow).size());
     }
+    // Room for the text and a span or two of markup, so most lines are built
+    // without regrowing the string
+    s.reserve(160 + 2 * (lastPos - pos));
 
     TChar::AttributeFlags currentFlags = TChar::None;
     QRgb currentFgColor = qRgb(0, 0, 0);
@@ -6756,15 +6779,18 @@ QString TBuffer::bufferToHtml(const bool showTimeStamp /*= false*/, const int ro
     // then we need:
     // <span timestamp format>Timestamp (13 chars)</span><span default>___padding spaces___</span><span first chunk style>first chunk...
     // we will NOT need a closing "</span>"
+    const QColor consoleBgColor{mpModel ? mpModel->mBgColor : QColor(Qt::black)};
     if (showTimeStamp && !timeBuffer.at(row).isEmpty()) {
         // Use the console's background so the timestamp blends in with the
         // rest of the text, as done in TTextEdit::layoutLine(...).
-        const QColor timeStampBgColor{mpConsole ? mpConsole->getConsoleBgColor() : QColor(Qt::black)};
-        s.append(qsl("<span style=\"color: rgb(200,150,0); background: %1; \">%2").arg(timeStampBgColor.name(), timeBuffer.at(row).left(TBuffer::smTimeStampFormat.length())));
+        s.append(QLatin1StringView("<span style=\"color: rgb(200,150,0); background: "));
+        s.append(consoleBgColor.name());
+        s.append(QLatin1StringView("; \">"));
+        s.append(QStringView(timeBuffer.at(row)).left(TBuffer::smTimeStampFormat.length()));
         // Set the current idea of what the formatting is so we can spot if it
         // changes:
         currentFgColor = qRgb(200, 150, 0);
-        currentBgColor = timeStampBgColor.rgba();
+        currentBgColor = consoleBgColor.rgba();
         currentFlags = TChar::None;
         // We are no longer before the first span - so we need to flag that
         // there will be one to close:
@@ -6785,40 +6811,37 @@ QString TBuffer::bufferToHtml(const bool showTimeStamp /*= false*/, const int ro
         s.append(qsl("<span>%1").arg(QString(spacePadding, QChar::Space)));
     }
 
-    for (auto cookedPos = static_cast<size_t>(pos); pos < lastPos; ++cookedPos, ++pos) {
-        const int charLinkIndex = buffer.at(cookedRow).at(cookedPos).linkIndex();
+    const std::vector<TChar>& lineChars = buffer.at(cookedRow);
+    const QString& lineText = lineBuffer.at(row);
+    // Text is read in runs straight from the QString, so never past its end
+    lastPos = std::min(lastPos, static_cast<int>(lineText.size()));
+    const bool enableBlink = (mpHost != nullptr) && mpHost->getEnableBlinkText();
+    int textRunStart = pos;
+    for (; pos < lastPos; ++pos) {
+        const TChar& ch = lineChars[static_cast<size_t>(pos)];
+        const int charLinkIndex = ch.linkIndex();
+        QRgb charBgColor = ch.backgroundRgba();
+        if (qAlpha(charBgColor) == 0) {
+            // A transparent cell (e.g. a system message) has no colour of its
+            // own on screen - it shows the console's background through it -
+            // so fall back to that rather than exporting alpha-0 as black.
+            charBgColor = consoleBgColor.rgba();
+        }
         // Do we need to start a new span?
-        if (firstSpan || buffer.at(cookedRow).at(cookedPos).foregroundRgba() != currentFgColor || buffer.at(cookedRow).at(cookedPos).backgroundRgba() != currentBgColor
-            || (buffer.at(cookedRow).at(cookedPos).mFlags & TChar::TestMask) != currentFlags || charLinkIndex != currentLinkIndex) {
+        if (firstSpan || ch.foregroundRgba() != currentFgColor || charBgColor != currentBgColor || (ch.mFlags & TChar::TestMask) != currentFlags || charLinkIndex != currentLinkIndex) {
+            appendHtmlEscaped(s, lineText.constData() + textRunStart, pos - textRunStart);
+            textRunStart = pos;
             if (firstSpan) {
                 firstSpan = false; // The first span - won't need to close the previous one
             } else {
                 s.append(QLatin1String("</span>"));
             }
-            currentFgColor = buffer.at(cookedRow).at(cookedPos).foregroundRgba();
-            currentBgColor = buffer.at(cookedRow).at(cookedPos).backgroundRgba();
-            if (qAlpha(currentBgColor) == 0) {
-                // A transparent cell (e.g. a system message) has no colour of its
-                // own on screen - it shows the console's background through it -
-                // so fall back to that rather than exporting alpha-0 as black.
-                currentBgColor = (mpConsole ? mpConsole->getConsoleBgColor() : QColor(Qt::black)).rgba();
-            }
-            currentFlags = buffer.at(cookedRow).at(cookedPos).mFlags & TChar::TestMask;
+            currentFgColor = ch.foregroundRgba();
+            currentBgColor = charBgColor;
+            currentFlags = ch.mFlags & TChar::TestMask;
             currentLinkIndex = charLinkIndex;
 
             // clang-format off
-            // Determine blink class if any (only when blink is enabled in settings)
-            QString blinkClass;
-            const bool enableBlink = (mpHost != nullptr) && mpHost->getEnableBlinkText();
-
-            if (enableBlink) {
-                if (currentFlags & TChar::FastBlink) {
-                    blinkClass = qsl(" class='blink-fast'");
-                } else if (currentFlags & TChar::Blink) {
-                    blinkClass = qsl(" class='blink-slow'");
-                }
-            }
-
             // Build text-decoration CSS including decoration colors from TLinkStore
             QString textDecorationCss;
             if (currentFlags & (TChar::Underline | TChar::StrikeOut | TChar::Overline)) {
@@ -6858,44 +6881,39 @@ QString TBuffer::bufferToHtml(const bool showTimeStamp /*= false*/, const int ro
                     }
 
                     if (hasDecorationColor) {
-                        textDecorationCss.append(qsl(" text-decoration-color: rgb(%1,%2,%3);")
-                            .arg(QString::number(decorationColor.red()),
-                                 QString::number(decorationColor.green()),
-                                 QString::number(decorationColor.blue())));
+                        textDecorationCss.append(QLatin1StringView(" text-decoration-color: "));
+                        appendHtmlRgb(textDecorationCss, decorationColor.rgb());
+                        textDecorationCss.append(QLatin1Char(';'));
                     }
                 }
             }
 
-            if (currentFlags & TChar::Reverse) {
-                // Swap the fore and background colours:
-                s.append(qsl("<span%9 style=\"color: rgb(%1,%2,%3); background: rgb(%4,%5,%6);%7%8")
-                         .arg(QString::number(qRed(currentBgColor)), QString::number(qGreen(currentBgColor)), QString::number(qBlue(currentBgColor)), // args 1 to 3
-                              QString::number(qRed(currentFgColor)), QString::number(qGreen(currentFgColor)), QString::number(qBlue(currentFgColor)), // args 4 to 6
-                              currentFlags & TChar::Bold ? QLatin1String(" font-weight: bold;") : QString(), // arg 7
-                              currentFlags & TChar::Italic ? QLatin1String(" font-style: italic;") : QString(), // arg 8
-                              blinkClass) // arg 9
-                         + textDecorationCss
-                         + qsl("\">"));
-            } else {
-                s.append(qsl("<span%9 style=\"color: rgb(%1,%2,%3); background: rgb(%4,%5,%6);%7%8")
-                         .arg(QString::number(qRed(currentFgColor)), QString::number(qGreen(currentFgColor)), QString::number(qBlue(currentFgColor)), // args 1 to 3
-                              QString::number(qRed(currentBgColor)), QString::number(qGreen(currentBgColor)), QString::number(qBlue(currentBgColor)), // args 4 to 6
-                              currentFlags & TChar::Bold ? QLatin1String(" font-weight: bold;") : QString(), // arg 7
-                              currentFlags & TChar::Italic ? QLatin1String(" font-style: italic;") : QString(), // arg 8
-                              blinkClass) // arg 9
-                         + textDecorationCss
-                         + qsl("\">"));
-            }
             // clang-format on
-        }
-        if (lineBuffer.at(row).at(pos) == QChar('<')) {
-            s.append(QLatin1String("&lt;"));
-        } else if (lineBuffer.at(row).at(pos) == QChar('>')) {
-            s.append("&gt;");
-        } else {
-            s.append(lineBuffer.at(row).at(pos));
+            s.append(QLatin1StringView("<span"));
+            if (enableBlink) {
+                if (currentFlags & TChar::FastBlink) {
+                    s.append(QLatin1StringView(" class='blink-fast'"));
+                } else if (currentFlags & TChar::Blink) {
+                    s.append(QLatin1StringView(" class='blink-slow'"));
+                }
+            }
+            const bool reverse = currentFlags.testFlag(TChar::Reverse);
+            s.append(QLatin1StringView(" style=\"color: "));
+            appendHtmlRgb(s, reverse ? currentBgColor : currentFgColor);
+            s.append(QLatin1StringView("; background: "));
+            appendHtmlRgb(s, reverse ? currentFgColor : currentBgColor);
+            s.append(QLatin1Char(';'));
+            if (currentFlags & TChar::Bold) {
+                s.append(QLatin1StringView(" font-weight: bold;"));
+            }
+            if (currentFlags & TChar::Italic) {
+                s.append(QLatin1StringView(" font-style: italic;"));
+            }
+            s.append(textDecorationCss);
+            s.append(QLatin1StringView("\">"));
         }
     }
+    appendHtmlEscaped(s, lineText.constData() + textRunStart, pos - textRunStart);
     if (!s.isEmpty()) {
         s.append(QLatin1String("</span>"));
         // Needed to balance the very first open <span>, but only if we have
@@ -7481,8 +7499,7 @@ bool TBuffer::processGBSequence(const std::string& bufferData, const bool isFrom
         // decoder - and check number of codepoints returned
 
         QString codePoint;
-        if (TEncodingHelper::isEncodingAvailable(mEncoding)) {
-            codePoint = TEncodingHelper::decode(QByteArray::fromRawData(bufferData.data() + pos, gbSequenceLength), mEncoding);
+        if (decodeMultibyteSequence(QByteArrayView(bufferData.data() + pos, gbSequenceLength), codePoint)) {
             switch (codePoint.size()) {
             default:
                 Q_UNREACHABLE(); // This can't happen, unless we got pos or gbSequenceLength wrong
@@ -7596,8 +7613,7 @@ bool TBuffer::processBig5Sequence(const std::string& bufferData, const bool isFr
         // decoder - and check number of codepoints returned
 
         QString codePoint;
-        if (TEncodingHelper::isEncodingAvailable(mEncoding)) {
-            codePoint = TEncodingHelper::decode(QByteArray::fromRawData(bufferData.data() + pos, big5SequenceLength), mEncoding);
+        if (decodeMultibyteSequence(QByteArrayView(bufferData.data() + pos, big5SequenceLength), codePoint)) {
             switch (codePoint.size()) {
             default:
                 Q_UNREACHABLE(); // This can't happen, unless we got pos or big5SequenceLength wrong
@@ -7620,6 +7636,7 @@ bool TBuffer::processBig5Sequence(const std::string& bufferData, const bool isFr
                 qDebug().nospace() << "TBuffer::processBig5Sequence(...) " << big5SequenceLength << "-byte Big5 sequence accepted, it is " << codePoint.size() << " QChar(s) long [" << codePoint
                                    << "] and is in the " << dataIdentity.c_str() << " range";
 #endif
+                isNonBmpCharacter = codePoint.size() == 2;
                 mMudLine.append(codePoint);
                 break;
             case 0:
@@ -7718,8 +7735,7 @@ bool TBuffer::processEUC_KRSequence(const std::string& bufferData, const bool is
         // decoder - and check number of codepoints returned
 
         QString codePoint;
-        if (TEncodingHelper::isEncodingAvailable(mEncoding)) {
-            codePoint = TEncodingHelper::decode(QByteArray::fromRawData(bufferData.data() + pos, eucSequenceLength), mEncoding);
+        if (decodeMultibyteSequence(QByteArrayView(bufferData.data() + pos, eucSequenceLength), codePoint)) {
             switch (codePoint.size()) {
             default:
                 Q_UNREACHABLE(); // This can't happen, unless we got pos or eucSequenceLength wrong
@@ -7742,6 +7758,7 @@ bool TBuffer::processEUC_KRSequence(const std::string& bufferData, const bool is
                 qDebug().nospace() << "TBuffer::processEUC_KRSequence(...) " << eucSequenceLength << "-byte EUC-KR sequence accepted, it is " << codePoint.size() << " QChar(s) long [" << codePoint
                                    << "] and is in the " << dataIdentity.c_str() << " range";
 #endif
+                isNonBmpCharacter = codePoint.size() == 2;
                 mMudLine.append(codePoint);
                 break;
             case 0:
@@ -7802,11 +7819,40 @@ TBuffer::Decoder TBuffer::decoderFor(const QByteArray& encoding)
     return Decoder::Ascii;
 }
 
+QStringDecoder TBuffer::multibyteDecoderFor(const Decoder decoder, const QByteArray& encoding)
+{
+    switch (decoder) {
+    case Decoder::Gbk:
+    case Decoder::Gb18030:
+    case Decoder::EucKr:
+    case Decoder::Big5:
+        return QStringDecoder(encoding.constData());
+    default:
+        return {};
+    }
+}
+
+// Falls back to TEncodingHelper (lookup tables, Qt5Compat codecs) for Qt builds without ICU
+bool TBuffer::decodeMultibyteSequence(QByteArrayView bytes, QString& decoded)
+{
+    if (mMultibyteDecoder.isValid()) {
+        mMultibyteDecoder.resetState();
+        decoded = mMultibyteDecoder.decode(bytes);
+        return true;
+    }
+    if (!TEncodingHelper::isEncodingAvailable(mEncoding)) {
+        return false;
+    }
+    decoded = TEncodingHelper::decode(bytes.toByteArray(), mEncoding);
+    return true;
+}
+
 void TBuffer::encodingChanged(const QByteArray& newEncoding)
 {
     if (mEncoding != newEncoding) {
         mEncoding = newEncoding;
         mDecoder = decoderFor(mEncoding);
+        mMultibyteDecoder = multibyteDecoderFor(mDecoder, mEncoding);
         if (mEncoding == "GBK" || mEncoding == "GB18030" || mEncoding == "BIG5" || mEncoding == "BIG5-HKSCS" || mEncoding == "EUC-KR") {
             if (!TEncodingHelper::isEncodingAvailable(mEncoding)) {
                 qCritical().nospace() << "encodingChanged(" << newEncoding << ") ERROR: This encoding cannot be handled as a required codec was not found in the system!";
@@ -8490,8 +8536,8 @@ void TBuffer::revealSpoilerLink(int linkIndex)
 
     mLinkOriginalText.remove(linkIndex);
 
-    if (mpConsole) {
-        mpConsole->update();
+    if (mpModel) {
+        emit mpModel->mNotifier.spoilerRevealed();
     }
 }
 
@@ -8507,8 +8553,8 @@ void TBuffer::clearGroupSelection(const QString& group, const QString& exceptVal
 
         auto styling = mLinkStore.getStyling(linkIndex);
         if (styling.selection.hasSelectionSettings && styling.selection.group == group && styling.selection.value != exceptValue) {
-            if (mpConsole) {
-                mpConsole->getHyperlinkSelectionManager().setSelected(styling.selection.group, styling.selection.value, false);
+            if (mpModel) {
+                mpModel->mHyperlinkSelectionManager.setSelected(styling.selection.group, styling.selection.value, false);
             }
 
             setLinkSelected(linkIndex, false);
@@ -8867,7 +8913,7 @@ void TBuffer::updateLinkCharacters(int linkIndex)
     qDebug() << "[OSC] Character search completed for link" << linkIndex << "- Total characters searched:" << totalCharacters << "- Matching characters found:" << matchingCharacters;
 #endif
 
-    if (mpConsole) {
-        mpConsole->repaintPanes();
+    if (mpModel) {
+        emit mpModel->mNotifier.linkCharactersChanged();
     }
 }

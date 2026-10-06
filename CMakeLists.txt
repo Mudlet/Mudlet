@@ -274,9 +274,24 @@ endif()
 
 find_program(CCACHE_FOUND ccache)
 if(CCACHE_FOUND)
-  set(CMAKE_C_COMPILER_LAUNCHER ccache)
-  set(CMAKE_CXX_COMPILER_LAUNCHER ccache)
+  # Checkouts and worktrees only share hits once a base_dir turns their absolute
+  # paths relative, so default it to this checkout unless one is configured
+  execute_process(
+    COMMAND ${CCACHE_FOUND} --get-config base_dir
+    OUTPUT_VARIABLE ccacheBaseDir
+    OUTPUT_STRIP_TRAILING_WHITESPACE
+    ERROR_QUIET)
+  if(ccacheBaseDir STREQUAL "")
+    set(MUDLET_CCACHE_ENV "CCACHE_BASEDIR=${CMAKE_SOURCE_DIR}")
+    set(CMAKE_C_COMPILER_LAUNCHER ${CMAKE_COMMAND} -E env ${MUDLET_CCACHE_ENV} ${CCACHE_FOUND})
+    set(CMAKE_CXX_COMPILER_LAUNCHER ${CMAKE_COMMAND} -E env ${MUDLET_CCACHE_ENV} ${CCACHE_FOUND})
+  else()
+    set(CMAKE_C_COMPILER_LAUNCHER ccache)
+    set(CMAKE_CXX_COMPILER_LAUNCHER ccache)
+  endif()
 endif(CCACHE_FOUND)
+
+include(PrecompiledHeaders)
 
 # credit to https://github.com/heavyai/heavydb/blob/72c90bc290b79dd30240da41c103a00720f6b050/CMakeLists.txt#L119
 macro(set_alternate_linker linker)

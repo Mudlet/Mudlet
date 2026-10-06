@@ -350,6 +350,37 @@ describe("Tests Big5 decoding", function()
 
     assert.equals("你", decoded(bytes(0xA7, 0x41)))
   end)
+
+  -- 0x8F 0xA2 is U+2863B, two UTF-16 units that each need their own format;
+  -- a line short of one aborted Mudlet as soon as it was drawn
+  it("keeps the format of the text after a character outside the BMP", function()
+    using("BIG5-HKSCS")
+
+    local lines, mark = decodedLines("enc:" .. bytes(0x8F, 0xA2) .. "\27[32mx\27[0m")
+    local fed, between
+    for i = #lines, 1, -1 do
+      if lines[i]:match("^enc:") then
+        fed = mark + i - 1
+        between = lines[i]:match("^enc:(.-)x")
+        break
+      end
+    end
+    assert.is_not_nil(fed, "no line carrying the fed bytes reached the buffer")
+    -- a replacement mark would leave nothing outside the BMP to misalign the format;
+    -- macOS's codec drops the character (#10408) or maps it into the Private Use Area,
+    -- which tests nothing but is no failure
+    if getOS() ~= "mac" then
+      assert.same({0x2863B}, codePoints(between))
+    end
+    moveCursor("main", 0, fed)
+    local found = selectString("main", "x", 1)
+    local color = {getFgColor("main")}
+    deselect("main")
+    moveCursorEnd("main")
+
+    assert.is_true(found > 0)
+    assert.same({0, 128, 0}, color)
+  end)
 end)
 
 describe("Tests EUC-KR decoding", function()
@@ -377,6 +408,21 @@ describe("Tests EUC-KR decoding", function()
     using("EUC-KR")
 
     assert.equals(replacement, decoded(bytes(0xC7, 0x20)))
+  end)
+end)
+
+describe("Tests changing from one double byte encoding to another", function()
+
+  it("decodes with the encoding most recently selected", function()
+    using("GBK")
+    assert.equals("你", decoded(bytes(0xC4, 0xE3)))
+
+    -- GBK would read this pair as a private use character
+    assert.is_true(setServerEncoding("BIG5"))
+    assert.equals("你", decoded(bytes(0xA7, 0x41)))
+
+    assert.is_true(setServerEncoding("EUC-KR"))
+    assert.equals("한", decoded(bytes(0xC7, 0xD1)))
   end)
 end)
 

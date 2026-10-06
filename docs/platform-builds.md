@@ -55,6 +55,13 @@ ccache is enabled automatically whenever it is installed. A full cache evicts ob
 so branch switches can trigger near-full rebuilds — run `ccache -s`, and if `Cache size` has
 reached `Max cache size`, raise it with `ccache -M <n>G`.
 
+Checkouts and worktrees share one cache: unless ccache has a `base_dir` configured, CMake sets it
+to each checkout. Debug builds share only with `hash_dir` off (`ccache --set-config=hash_dir=false`),
+and then a debugger may show source from whichever checkout first compiled an object. Keep absolute
+paths out of compile definitions that reach many files, as `base_dir` does not rewrite a path
+inside a `-D` value. Setting `QT_RCC_SOURCE_DATE_OVERRIDE=1` in the environment lets the
+compiled-in resources (fonts, images) share as well, as rcc otherwise records each file's mtime.
+
 ## Building on Windows
 
 For complete setup instructions, see: https://wiki.mudlet.org/w/Compiling_Mudlet#Windows
