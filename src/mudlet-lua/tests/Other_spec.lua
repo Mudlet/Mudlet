@@ -2055,15 +2055,70 @@ describe("Tests Other.lua functions", function()
     end)
   end)
 
+  describe("Tests table.save and table.load round-trips", function()
+    local path
+
+    before_each(function()
+      -- a name no file holds yet, so the cleanup below can only delete what the spec wrote
+      repeat
+        path = string.format("%s/table-save-spec-%d.lua", getMudletHomeDir(), math.random(1e9))
+      until not io.exists(path)
+    end)
+
+    after_each(function()
+      os.remove(path)
+    end)
+
+    it("should bring back nested tables, a table reached twice and a table used as a key", function()
+      local shared = { value = "shared" }
+      local original = {
+        name = "room",
+        [3] = 7,
+        exits = { north = 2, south = 4 },
+        first = shared,
+        second = shared,
+        [{ "key" }] = { deeper = { deepest = true } },
+      }
+
+      table.save(path, original)
+      local loaded = {}
+      table.load(path, loaded)
+
+      assert.equals("room", loaded.name)
+      assert.equals(7, loaded[3])
+      assert.same({ north = 2, south = 4 }, loaded.exits)
+      assert.same({ value = "shared" }, loaded.first)
+      assert.equals(loaded.first, loaded.second)
+      local tableKeys = {}
+      for key, value in pairs(loaded) do
+        if type(key) == "table" then
+          tableKeys[#tableKeys + 1] = { key = key, value = value }
+        end
+      end
+      assert.equals(1, #tableKeys)
+      assert.same({ "key" }, tableKeys[1].key)
+      assert.same({ deeper = { deepest = true } }, tableKeys[1].value)
+    end)
+
+    it("should bring back every one of many nested tables", function()
+      local rooms = {}
+      for i = 1, 500 do
+        rooms[i] = { id = i, exits = { north = i + 1, south = i - 1 } }
+      end
+
+      table.save(path, rooms)
+      local loaded = {}
+      table.load(path, loaded)
+
+      assert.same(rooms, loaded)
+    end)
+  end)
+
     --[[
     TODO:
       remember()
       loadVars()
       saveVars()
-      table.save()
-      table.pickle()
-      tacle.load()
-      table.unpickle()
       getColorWildcard()
       lockExit()
       hasExitLock()
