@@ -36,8 +36,55 @@
 #include <QString>
 #include <QStringBuilder>
 
+#include <algorithm>
 #include <cstddef>
+#include <limits>
 
+namespace {
+// QDataStream reads a list held inside a map itself, with no chance to check
+// its length first (#10689), so these maps are read one entry at a time.
+// Like QDataStream's own reader, they leave the map empty when a read fails.
+void readCustomLinePoints(QDataStream& ifs, QMap<QString, QList<QPointF>>& lines)
+{
+    lines.clear();
+    const qint64 pointBytes = ifs.floatingPointPrecision() == QDataStream::DoublePrecision ? 2 * sizeof(double) : 2 * sizeof(float);
+    quint32 count = 0;
+    ifs >> count;
+    for (quint32 i = 0; i < count && ifs.status() == QDataStream::Ok; ++i) {
+        QString direction;
+        ifs >> direction;
+        if (!TMap::listLengthFits(ifs, pointBytes)) {
+            break;
+        }
+        QList<QPointF> points;
+        ifs >> points;
+        lines.insert(direction, points);
+    }
+    if (ifs.status() != QDataStream::Ok) {
+        lines.clear();
+    }
+}
+
+void readCustomLineColorComponents(QDataStream& ifs, QMap<QString, QList<int>>& colors)
+{
+    colors.clear();
+    quint32 count = 0;
+    ifs >> count;
+    for (quint32 i = 0; i < count && ifs.status() == QDataStream::Ok; ++i) {
+        QString direction;
+        ifs >> direction;
+        if (!TMap::listLengthFits(ifs, sizeof(qint32))) {
+            break;
+        }
+        QList<int> components;
+        ifs >> components;
+        colors.insert(direction, components);
+    }
+    if (ifs.status() != QDataStream::Ok) {
+        colors.clear();
+    }
+}
+} // namespace
 
 // Helper needed to allow Qt::PenStyle enum to be unserialised (read from file)
 // in Qt5 - the compilation errors that result in not having this are really
@@ -65,6 +112,7 @@ QDataStream& operator>>(QDataStream& ds, Qt::PenStyle& value)
     return ds;
 }
 
+static quint64 smLastSerial = 0;
 static const QColor scDefaultHighlightForeground(QColor(255, 150, 0));
 static const QColor scDefaultHighlightBackground(QColor(0, 0, 0));
 
@@ -72,6 +120,7 @@ TRoom::TRoom(TRoomDB* pRDB)
 : highlightColor(scDefaultHighlightForeground)
 , highlightColor2(scDefaultHighlightBackground)
 , mpRoomDB(pRDB)
+, mSerial(++smLastSerial)
 {
     // Here rather than at file scope because mX is private. TRoom mixes access
     // levels, which makes offsetof conditionally-supported; GCC and Clang
@@ -1055,13 +1104,13 @@ void TRoom::restore(QDataStream& ifs, int roomID, int version)
             // In version 20 we stopped storing a QString form for the line
             // style - and we also switched to lower case for the normal exit
             // direction keys and using a QColor to store the color:
-            ifs >> customLines;
+            readCustomLinePoints(ifs, customLines);
             ifs >> customLinesArrow;
             ifs >> customLinesColor;
             ifs >> customLinesStyle;
         } else {
             QMap<QString, QList<QPointF>> oldLinesData;
-            ifs >> oldLinesData;
+            readCustomLinePoints(ifs, oldLinesData);
             QMapIterator<QString, QList<QPointF>> itCustomLine(oldLinesData);
             while (itCustomLine.hasNext()) {
                 itCustomLine.next();
@@ -1091,7 +1140,7 @@ void TRoom::restore(QDataStream& ifs, int roomID, int version)
             }
 
             QMap<QString, QList<int>> oldLinesColorData;
-            ifs >> oldLinesColorData;
+            readCustomLineColorComponents(ifs, oldLinesColorData);
             QMapIterator<QString, QList<int>> itCustomLineColor(oldLinesColorData);
             while (itCustomLineColor.hasNext()) {
                 itCustomLineColor.next();
@@ -1164,10 +1213,14 @@ void TRoom::restore(QDataStream& ifs, int roomID, int version)
         if (version >= 21) {
             ifs >> mSpecialExitLocks;
         }
-        ifs >> exitLocks;
+        if (TMap::listLengthFits(ifs, sizeof(qint32))) {
+            ifs >> exitLocks;
+        }
     }
     if (version >= 13) {
-        ifs >> exitStubs;
+        if (TMap::listLengthFits(ifs, sizeof(qint32))) {
+            ifs >> exitStubs;
+        }
     }
     if (version >= 16) {
         ifs >> exitWeights;
@@ -1575,6 +1628,45 @@ void TRoom::auditExits(const QHash<int, int> roomRemapping)
             mpRoomDB->mpMap->postMessage(infoMsg);
         }
         mpRoomDB->mpMap->appendRoomErrorMsg(id, infoMsg, true);
+    }
+
+    // Only a corrupt file can hold a custom line point outside the range of room
+    // coordinates, and the 2D map's arithmetic overflows to infinity on one
+    {
+        QStringList outOfRange;
+        for (auto itCustomLine = customLines.cbegin(); itCustomLine != customLines.cend(); ++itCustomLine) {
+            const QList<QPointF>& points = itCustomLine.value();
+            if (!std::all_of(points.cbegin(), points.cend(), [](const QPointF& point) {
+                    constexpr double lowest = std::numeric_limits<int>::min();
+                    constexpr double highest = std::numeric_limits<int>::max();
+                    // NaN fails these comparisons too
+                    return point.x() >= lowest && point.x() <= highest && point.y() >= lowest && point.y() <= highest;
+                })) {
+                outOfRange.append(itCustomLine.key());
+            }
+        }
+        for (const QString& exitKey : std::as_const(outOfRange)) {
+            customLines.remove(exitKey);
+            customLinesColor.remove(exitKey);
+            customLinesStyle.remove(exitKey);
+            customLinesArrow.remove(exitKey);
+            customLinesCopy.remove(exitKey);
+            customLinesColorCopy.remove(exitKey);
+            customLinesStyleCopy.remove(exitKey);
+            customLinesArrowCopy.remove(exitKey);
+        }
+        if (!outOfRange.isEmpty()) {
+            // The room's extents and its area's index of rooms with lines were worked out on load
+            calcRoomDimensions();
+            //: %1 is the room ID, %2 is a list of exits whose custom lines were removed
+            const QString infoMsg = tr("[ INFO ]  - In room with ID: %1 found one or more custom lines with a point outside the range of room coordinates, which were removed: %2.")
+                                            .arg(id)
+                                            .arg(outOfRange.join(QLatin1String(", ")));
+            if (TMap::smShowMapAuditErrors) {
+                mpRoomDB->mpMap->postMessage(infoMsg);
+            }
+            mpRoomDB->mpMap->appendRoomErrorMsg(id, infoMsg, true);
+        }
     }
 
     // Custom Lines - points - the master element - if the entry for an exit is

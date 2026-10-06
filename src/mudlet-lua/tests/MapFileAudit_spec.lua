@@ -261,6 +261,38 @@ describe("Tests the audit of a damaged binary map file", function()
     end)
   end)
 
+  describe("Tests custom lines", function()
+    -- the 2D map's arithmetic overflows to infinity beyond the range of room coordinates
+    it("removes a custom line with a point outside the range of room coordinates and keeps the rest", function()
+      local area = newArea("MapFileAuditSpecOutOfRangeLine")
+      local room = newRoom(area, 0)
+      local east = newRoom(area, 1)
+      local west = newRoom(area, -1)
+      local north = newRoom(area, 2)
+      assert.is_true(setExit(room, east, "east"))
+      assert.is_true(setExit(room, west, "west"))
+      assert.is_true(setExit(room, north, "north"))
+      assert.is_true(addCustomLine(room, {{4321.25, 7, 0}}, "e", "solid line", {1, 2, 3}, true))
+      assert.is_true(addCustomLine(room, {{1234.5, 7, 0}}, "n", "solid line", {1, 2, 3}, true))
+      -- the control, with a point at the lowest room coordinate
+      assert.is_true(addCustomLine(room, {{-0.5, 0.5, 0}, {-2147483648, 0.5, 0}}, "w", "dot line", {4, 5, 6}, false))
+
+      reloadWith(function(data)
+        -- a point is two doubles, most significant byte first: 4321.25 becomes
+        -- minus infinity and 1234.5 becomes 2^31, one past the largest room coordinate
+        data = planted(data, "\64\176\225\64\0\0\0\0", "\255\240\0\0\0\0\0\0", 1)
+        return planted(data, "\64\147\74\0\0\0\0\0", "\65\224\0\0\0\0\0\0", 1)
+      end)
+
+      local lines = getCustomLines1(room) or {}
+      assert.is_nil(lines["e"])
+      assert.is_nil(lines["n"])
+      assert.is_table(lines["w"])
+      assert.are.equal("dot line", lines["w"].attributes.style)
+      assert.are.equal(-2147483648, lines["w"].points[2][1])
+    end)
+  end)
+
   describe("Tests the 2D map zoom", function()
     -- getMapZoom() would report infinity and the next save would keep it
     it("gives an area whose saved zoom text reads as infinity the default zoom", function()

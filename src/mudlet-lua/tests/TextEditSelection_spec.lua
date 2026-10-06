@@ -65,6 +65,13 @@ describe("Tests selection against lines it does not fit", function()
       assert.equals(0, length)
     end)
 
+    it("returns -1 at once on an empty line however many matches are asked for", function()
+      moveCursor(window, 0, 1)
+      local started = os.clock()
+      assert.equals(-1, selectString(window, "bravo", 2000000000))
+      assert.is_true(os.clock() - started < 1)
+    end)
+
     it("returns -1 and clears the selection when the text is absent", function()
       moveCursor(window, 0, 3)
       assert.equals(8, selectString(window, "golf", 1))
