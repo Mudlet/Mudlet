@@ -689,7 +689,9 @@ private slots:
         pDlg->save();
 
         QVERIFY(subject());
-        QVERIFY2(subject()->getExits().isEmpty(), "the old dialog wrote its exits onto a new room that reused the id");
+        for (int direction = DIR_NORTH; direction <= DIR_OUT; ++direction) {
+            QVERIFY2(!subject()->hasExit(direction), "the old dialog wrote its exits onto a new room that reused the id");
+        }
         QVERIFY2(subject()->getSpecialExits().isEmpty(), "the old dialog wrote its special exits onto a new room that reused the id");
         QVERIFY2(!pDlg->isVisible(), "the dialog stayed open on a room that no longer exists");
     }
