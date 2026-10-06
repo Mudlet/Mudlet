@@ -1445,12 +1445,7 @@ void TRoomDB::setAreaRooms(const int areaId, const QSet<int>& roomIds)
         return;
     }
 
-    QSetIterator<int> itAreaRoom(roomIds);
-    while (itAreaRoom.hasNext()) {
-        pA->addRoom(itAreaRoom.next());
-    }
-
-    pA->calcSpan(); // The area extents will need recalculation after adding the rooms
+    pA->addRooms(roomIds);
 }
 
 bool getUserDataBool(const QMap<QString, QString>& userData, const QString& key, bool defaultValue)
