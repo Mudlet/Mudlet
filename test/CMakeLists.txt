@@ -9,6 +9,10 @@ endif()
 
 find_package(Qt6 6.8.2 REQUIRED COMPONENTS Test Network Gui Widgets)
 
+# No test calls QFINDTESTDATA, and the checkout paths Qt Test would otherwise
+# define on every test compile keep ccache from sharing objects between worktrees
+set(QT_SKIP_DEFAULT_TESTCASE_DIRS ON)
+
 # On Windows Qt diverts QTest's stdout to OutputDebugString unless it believes
 # stderr has a console attached, which an MSYS2 shell or a CI runner does not give
 # it, so a failing test reports an exit code and nothing else (#9747). Deferred so
