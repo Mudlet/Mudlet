@@ -1214,12 +1214,12 @@ local compiledPattern = setmetatable({}, {
   end,
 })
 
--- for the test suite: how many shapes parseVitalsLine walks
+-- for the test suite: how many shapes the vitals scan walks
 function BaseUI.vitalsShapeCount()
   return #vitalsLinePatterns
 end
 
--- for the test suite: parseVitalsLine skips a shape whose prefix misses, which
+-- for the test suite: the vitals scan skips a shape whose prefix misses, which
 -- is only sound while the prefix is where the shape's own regex starts
 function BaseUI.prefixesLeadTheirShapes()
   for _, pattern in ipairs(vitalsLinePatterns) do
@@ -1230,7 +1230,7 @@ function BaseUI.prefixesLeadTheirShapes()
   return true
 end
 
--- for the test suite: parseVitalsLine never tries a shape on a line without
+-- for the test suite: the vitals scan never tries a shape on a line without
 -- the literal it needs, which is only sound while no such line can match it
 function BaseUI.needsHoldOn(text)
   for _, pattern in ipairs(vitalsLinePatterns) do
@@ -1293,7 +1293,8 @@ local function parseVitalsNumber(text)
   if not text then
     return nil
   end
-  return tonumber((text:gsub(",", "")))
+  -- most numbers have no separator, which gsub would copy all the same
+  return tonumber(text) or tonumber((text:gsub(",", "")))
 end
 
 -- readings above this are ids, timestamps or garbage, never vitals
@@ -1321,19 +1322,16 @@ local function candidateShapesFor(mask, skipWindowed)
   return shapes
 end
 
--- pure so the test suite can drive it: turns one plain-text line into a list
--- of { stat, kind, current, max, percent, pattern, gated, windowed }
--- readings (kind "bare" means a current with no maximum; gated rows need
--- the recurrence gate in BaseUI.onVitalsLine before they may drive a gauge,
--- windowed rows the post-"score" window). Chat-shaped lines yield nothing.
+-- calls visit(state, index, pattern, current, max, percent) for each reading
+-- in one plain-text line, in shape order; chat-shaped lines have none.
 -- Nonsense readings - a max of zero, a wildly overhealed current, absurd
 -- magnitudes - are dropped here so a score-screen misread can never paint a
--- broken gauge. skipWindowed leaves out the windowed rows, for a caller that
--- would only throw them away.
-function BaseUI.parseVitalsLine(text, skipWindowed)
-  local readings = {}
+-- broken gauge. skipWindowed leaves out the windowed shapes, for a caller that
+-- would only throw their readings away. A visitor rather than a list because
+-- most prompts read several shapes, and the tables cost more than the regexes
+local function scanVitalsLine(text, skipWindowed, visit, state)
   if type(text) ~= "string" or BaseUI.chatLikeLine(text) then
-    return readings
+    return
   end
   local lowered = text:lower()
   local mask = 0
@@ -1362,36 +1360,70 @@ function BaseUI.parseVitalsLine(text, skipWindowed)
     if live then
       first, second = rex.match(text, compiledPattern[pattern.regex])
     end
-    local reading
-    if pattern.kind == "curmax" and first then
-      local current, max = parseVitalsNumber(first), parseVitalsNumber(second)
-      if current and max and max &gt; 0 and max &lt; maxSaneVital
-         and current &lt;= max * maxOverhealFactor then
-        reading = { stat = pattern.stat, kind = pattern.kind, current = current, max = max }
+    if first then
+      local kind = pattern.kind
+      if kind == "curmax" then
+        local current, max = parseVitalsNumber(first), parseVitalsNumber(second)
+        if current and max and max &gt; 0 and max &lt; maxSaneVital
+           and current &lt;= max * maxOverhealFactor then
+          visit(state, index, pattern, current, max, nil)
+        end
+      elseif kind == "percent" then
+        local percent = tonumber(first)
+        if percent and percent &lt;= 100 then
+          visit(state, index, pattern, nil, nil, percent)
+        end
+      elseif kind == "bare" then
+        local current = tonumber(first)
+        if current and current &lt; maxSaneVital then
+          visit(state, index, pattern, current, nil, nil)
+        end
       end
-    elseif pattern.kind == "percent" and first then
-      local percent = tonumber(first)
-      if percent and percent &lt;= 100 then
-        reading = { stat = pattern.stat, kind = pattern.kind, percent = percent }
-      end
-    elseif pattern.kind == "bare" and first then
-      local current = tonumber(first)
-      if current and current &lt; maxSaneVital then
-        reading = { stat = pattern.stat, kind = pattern.kind, current = current }
-      end
-    end
-    if reading then
-      reading.pattern = index
-      reading.gated = pattern.gated
-      reading.windowed = pattern.windowed
-      table.insert(readings, reading)
     end
   end
+end
+
+local function addReading(readings, index, pattern, current, max, percent)
+  readings[#readings + 1] = {
+    stat = pattern.stat, kind = pattern.kind, current = current, max = max, percent = percent,
+    pattern = index, gated = pattern.gated, windowed = pattern.windowed,
+  }
+end
+
+-- pure so the test suite can drive it: turns one plain-text line into a list
+-- of { stat, kind, current, max, percent, pattern, gated, windowed }
+-- readings (kind "bare" means a current with no maximum; gated rows need
+-- the recurrence gate in BaseUI.onVitalsLine before they may drive a gauge,
+-- windowed rows the post-"score" window); see scanVitalsLine for the rest
+function BaseUI.parseVitalsLine(text, skipWindowed)
+  local readings = {}
+  scanVitalsLine(text, skipWindowed, addReading, readings)
   return readings
 end
 
 function BaseUI.scoreWindowOpen()
   return BaseUI.scoreWindowUntil ~= nil and getEpoch() &lt; BaseUI.scoreWindowUntil
+end
+
+-- scanVitalsLine visitor for onVitalsLine: a line's readings merged per stat.
+-- Windowed shapes are only scanned while the score window is open
+local function mergeReading(updates, index, pattern, current, max, percent)
+  if pattern.gated and not pattern.windowed then
+    local seen = (BaseUI.shapeSightings[index] or 0) + 1
+    BaseUI.shapeSightings[index] = seen
+    if seen &lt; 3 then
+      return
+    end
+  end
+  if pattern.kind == "bare" then
+    BaseUI.maybeRequestScore()
+  end
+  local stat = pattern.stat
+  local update = updates[stat] or {}
+  update.current = current or update.current
+  update.max = max or update.max
+  update.percent = percent or update.percent
+  updates[stat] = update
 end
 
 -- lastChatLine keeps a line the chat layer routed out of the vitals layer; the
@@ -1405,26 +1437,7 @@ function BaseUI.onVitalsLine()
   BaseUI.lastVitalsLine = lineNumber
   local updates = {}
   local windowOpen = BaseUI.scoreWindowOpen()
-  for _, reading in ipairs(BaseUI.parseVitalsLine(line, not windowOpen)) do
-    local live = true
-    if reading.windowed then
-      live = windowOpen
-    elseif reading.gated then
-      local seen = (BaseUI.shapeSightings[reading.pattern] or 0) + 1
-      BaseUI.shapeSightings[reading.pattern] = seen
-      live = seen &gt;= 3
-    end
-    if live then
-      if reading.kind == "bare" then
-        BaseUI.maybeRequestScore()
-      end
-      local update = updates[reading.stat] or {}
-      update.current = reading.current or update.current
-      update.max = reading.max or update.max
-      update.percent = reading.percent or update.percent
-      updates[reading.stat] = update
-    end
-  end
+  scanVitalsLine(line, not windowOpen, mergeReading, updates)
   if next(updates) then
     BaseUI.applyVitals("prompt", updates)
     -- building the dock resizes the main window, which can renumber lines;
