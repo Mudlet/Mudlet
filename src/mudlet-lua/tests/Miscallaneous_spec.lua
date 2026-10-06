@@ -982,6 +982,33 @@ describe("Tests C++ functions in the Miscallaneous category", function()
         end)
       end)
 
+      describe("Tests the functionality of logging in plain text", function()
+        it("writes each received line on a line of its own", function()
+          local logPath
+          local htmlLogging = getConfig("logInHTML")
+          finally(function()
+            if logPath then
+              startLogging(false)
+              os.remove(logPath)
+            end
+            setConfig("logInHTML", htmlLogging)
+          end)
+          setConfig("logInHTML", false)
+
+          local started, _, startPath = startLogging(true)
+          assert.is_true(started, "logging was already on, so the log file is not this spec's to delete")
+          logPath = startPath
+          feedTelnet("\27[0m\27[31mSpecTextLogA\27[0m\nSpecTextLogB\n")
+          -- a received line is only written once the next one commits
+          feedTelnet("SpecTextLogFlush\n")
+          startLogging(false)
+
+          local contents = readFile(logPath)
+          assert.is_string(contents, "the text log file that was closed is not readable")
+          assert.is_true(contains(contents, "SpecTextLogA\nSpecTextLogB\n"), "the received lines were not logged one per line")
+        end)
+      end)
+
       describe("Tests the functionality of appendLog", function()
         it("raises a Lua error when called with no arguments", function()
           assertArgError(function() appendLog() end, "appendLog: bad argument #1 type")
