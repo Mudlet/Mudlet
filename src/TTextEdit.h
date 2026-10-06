@@ -93,6 +93,7 @@ public:
     void updateHorizontalScrollBar();
     void highlightSelection();
     void unHighlight();
+    void endDrag() { mMouseTracking = false; }
     void focusInEvent(QFocusEvent* event) override;
     int imageTopLine();
     int bufferScrollDown(int lines);
@@ -139,6 +140,7 @@ public:
     friend class FramePacingTest;
     friend class FrontendRefreshSeamTest;
     friend class MainConsoleSelectionTest;
+    friend class OpaqueConsolePaintTest;
     friend class ScrollLostOnPartialRepaintTest;
     friend class TTextEditBlinkTest;
     friend class PipelineBenchmark;
@@ -205,6 +207,11 @@ private:
     int convertMouseXToBufferX(const int mouseX, const int lineNumber, bool* isOutOfbounds, bool* isOverTimeStamp = nullptr) const;
     int getGraphemeWidth(uint unicode) const;
     void normaliseSelection();
+    // Borrows mScreenBuffer's rows, so it must not outlive a reallocation of it.
+    QImage cachedScreen();
+    void slideScreenWindow(int deviceRows);
+    bool backgroundIsOpaque() const;
+    void paintNothing(const QRect&);
     // Coalescing replacement for update() on the paths that new output drives.
     // Those paints run inside the receive loop, so one per network packet
     // delays the next packet; capping them at one per csmPaintPaceMs lets a
@@ -248,11 +255,12 @@ private:
     // the bottom of a cell cannot be erased by the line below it. Both callers
     // depend on that order, which is why none of this is reachable from outside.
     void layoutLine(int lineNumber, int lineOfScreen, const TChar& timeStampStyle, LineLayout& layout, int* offset = nullptr) const;
-    void paintBackgrounds(QPainter&, const LineLayout&) const;
-    void paintForegrounds(QPainter&, TGlyphCache&, const LineLayout&, const QRect& clip = QRect()) const;
+    void paintBackgrounds(QPainter&, const LineLayout&, const QRect& cleared = QRect(), const QColor& clearedTo = QColor()) const;
+    // Returns the y just below the deepest ink it painted.
+    int paintForegrounds(QPainter&, TGlyphCache&, const LineLayout&, const QRect& clip = QRect()) const;
     void drawCustomDecorations(QPainter&, const QColor&, const QRect&, const TChar&) const;
     int layoutGrapheme(LineLayout& layout, const QPoint& cursor, QStringView grapheme, const int column, const int line, const TChar& charStyle) const;
-    void paintGraphemeForeground(QPainter&, TGlyphCache&, const GraphemeRun&) const;
+    int paintGraphemeForeground(QPainter&, TGlyphCache&, const GraphemeRun&) const;
 
     // Reused between paints to keep their capacity rather than reallocating a
     // line's worth of graphemes on every repaint.
@@ -293,13 +301,21 @@ private:
     QPointer<Host> mpHost;
     // screen height in characters
     int mScreenHeight;
-    // currently viewed screen area
-    QPixmap mScreenMap;
-    // What each paint draws into, swapped with mScreenMap once the frame is
-    // finished. Two buffers rather than one because a QPixmap shared with
-    // mScreenMap would deep-copy itself the moment a QPainter opened on it,
-    // which is exactly the full-surface copy this reuse exists to avoid.
-    QPixmap mRenderBuffer;
+    // The cached screen is a window mScreenTop device rows down a buffer twice
+    // its height: a scroll slides the window over the rows that are still valid
+    // instead of copying the whole screen up or down, and only once the window
+    // reaches an end of the buffer are those rows moved back to the other end.
+    QImage mScreenBuffer;
+    int mScreenTop = 0;
+    // Device size of the frame last left in the window; empty while none is.
+    QSize mCachedScreenSize;
+    // Cosmetic repaints - hover, selection - draw here, over a copy of the
+    // window's damaged rows, as they must leave the cached screen as they
+    // found it. The other rows hold stale ink that is never shown.
+    QImage mRenderBuffer;
+    // What the cached screen was last cleared to, so a change of it can retire
+    // the cached ink drawn over the old one.
+    QColor mCacheClearColor = Qt::transparent;
     // Buffer lines whose text changed where it stands, so the cached screen
     // cannot be trusted for the rows they land on. -1 for "none pending".
     int mDirtyFirstLine = -1;
@@ -322,6 +338,8 @@ private:
     QElapsedTimer mSincePaint;
     // What the deferred repaint has to cover once the pacer fires.
     QRegion mPendingPaintRegion;
+    // The whole pane went to update() since the last paint, so asking again only costs time.
+    bool mWholePaneRequested = false;
     // The scrollbar repaints on every range change, so new output moves it
     // with the paced frame rather than with every packet.
     bool mScrollBarUpdatePending = false;
