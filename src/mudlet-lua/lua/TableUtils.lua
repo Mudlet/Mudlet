@@ -531,6 +531,39 @@ end
 
 
 
+-- _comp() matches these types by raw ==, which a table key reproduces, so only tables
+-- and userdata (which may have __eq) need comparing one by one. NaN equals nothing and
+-- cannot be a key, so it is left out.
+local hashable = { string = true, number = true, boolean = true, ["function"] = true, thread = true }
+
+local function indexValues(set)
+  local plain, others = {}, {}
+  for _, val in pairs(set) do
+    if hashable[type(val)] then
+      if val == val then
+        plain[val] = true
+      end
+    else
+      others[#others + 1] = val
+    end
+  end
+  return plain, others
+end
+
+local function holdsValue(plain, others, val)
+  if hashable[type(val)] then
+    return plain[val] == true
+  end
+  for i = 1, #others do
+    if _comp(val, others[i]) then
+      return true
+    end
+  end
+  return false
+end
+
+
+
 --- Table Intersection.
 ---
 --- @return Returns a numerically indexed table that is the intersection of the provided tables.
@@ -547,12 +580,14 @@ function table.n_intersection(...)
   local function intersect(set1, set2)
     local intersection_keys = {}
     local result = {}
+    local plain, others
     for _, val1 in pairs(set1) do
-      for _, val2 in pairs(set2) do
-        if _comp(val1, val2) and not intersection_keys[val1] then
-          table.insert(result, val1)
-          intersection_keys[val1] = true
-        end
+      if not plain then
+        plain, others = indexValues(set2)
+      end
+      if not intersection_keys[val1] and holdsValue(plain, others, val1) then
+        table.insert(result, val1)
+        intersection_keys[val1] = true
       end
     end
     return result
@@ -605,15 +640,13 @@ function table.n_complement(set1, set2)
   end
 
   local complement = {}
+  local plain, others
 
   for _, val1 in pairs(set1) do
-    local insert = true
-    for _, val2 in pairs(set2) do
-      if _comp(val1, val2) then
-        insert = false
-      end
+    if not plain then
+      plain, others = indexValues(set2)
     end
-    if insert then
+    if not holdsValue(plain, others, val1) then
       table.insert(complement, val1)
     end
   end
