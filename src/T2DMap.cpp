@@ -5053,7 +5053,7 @@ void T2DMap::slot_showPropertiesDialog()
 
     bool isAtLeastOneRoom = false;
     QSetIterator<int> itRoom = mMultiSelectionSet;
-    QSet<TRoom*> roomPtrsSet;
+    QSet<int> roomIdsSet;
 
     QHash<QString, int> usedNames;
     QHash<int, int> usedColors;
@@ -5063,11 +5063,12 @@ void T2DMap::slot_showPropertiesDialog()
     int hiddenRoomCount = 0;
 
     while (itRoom.hasNext()) {
-        TRoom* room = mpMap->mpRoomDB->getRoom(itRoom.next());
+        const int roomId = itRoom.next();
+        TRoom* room = mpMap->mpRoomDB->getRoom(roomId);
         if (!room) {
             continue;
         }
-        roomPtrsSet.insert(room);
+        roomIdsSet.insert(roomId);
         isAtLeastOneRoom = true;
 
         // Scan and count all the different names used
@@ -5128,7 +5129,7 @@ void T2DMap::slot_showPropertiesDialog()
     }
 
     mpDlgRoomProperties = new dlgRoomProperties(mpHost, this);
-    mpDlgRoomProperties->init(usedNames, usedColors, usedSymbols, usedWeights, usedLockStatus, hiddenRoomCount, roomPtrsSet);
+    mpDlgRoomProperties->init(usedNames, usedColors, usedSymbols, usedWeights, usedLockStatus, hiddenRoomCount, roomIdsSet);
     mpDlgRoomProperties->show();
     mpDlgRoomProperties->raise();
     connect(mpDlgRoomProperties, &dlgRoomProperties::signal_save_symbol, this, &T2DMap::slot_setRoomProperties);
@@ -5157,7 +5158,7 @@ void T2DMap::slot_setRoomProperties(bool changeName,
                                     QColor newBorderColor,
                                     bool changeBorderThickness,
                                     int newBorderThickness,
-                                    QSet<TRoom*> rooms)
+                                    QSet<int> roomIds)
 {
     if (newName.isEmpty()) {
         newName = QString();
@@ -5179,11 +5180,9 @@ void T2DMap::slot_setRoomProperties(bool changeName,
         newSymbol = newSymbol.normalized(QString::NormalizationForm_C, QChar::Unicode_10_0);
     }
 
-    QSetIterator<TRoom*> itpRoom(rooms);
-    TRoom* room = nullptr;
-
-    while (itpRoom.hasNext()) {
-        room = itpRoom.next();
+    for (const int roomId : std::as_const(roomIds)) {
+        // The dialog is not modal, so rooms may have gone while it was open
+        TRoom* room = mpMap->mpRoomDB->getRoom(roomId);
         if (!room) {
             continue;
         }
@@ -5222,9 +5221,9 @@ void T2DMap::slot_setRoomProperties(bool changeName,
     mpMap->setUnsaved(__func__);
 }
 
-void T2DMap::slot_previewBorderProperties(QSet<TRoom*> rooms)
+void T2DMap::slot_previewBorderProperties(QSet<int> roomIds)
 {
-    Q_UNUSED(rooms)
+    Q_UNUSED(roomIds)
     repaint();
     update();
 }

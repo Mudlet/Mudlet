@@ -114,6 +114,7 @@ public:
     int getOut() const { return out; }
     void setOut(int id) { out = id; }
     int getId() const { return id; }
+    quint64 serial() const { return mSerial; }
     int getArea() const { return area; }
     void audit(QHash<int, int>, QHash<int, int>);
     void auditExits(QHash<int, int>);
@@ -239,6 +240,8 @@ private:
     QSet<QString> mSpecialExitLocks;
 
     TRoomDB* mpRoomDB = nullptr;
+    // Unique for the whole run, unlike an id, which a new room can reuse
+    const quint64 mSerial;
     // The room DB owns every TRoom, so it has to be able to unhook one it is
     // about to delete - ~TRoom() otherwise reaches back into it with an id that
     // may belong to a different room by then. See TRoomDB::restoreSingleRoom().

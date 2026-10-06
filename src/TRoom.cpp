@@ -110,6 +110,7 @@ QDataStream& operator>>(QDataStream& ds, Qt::PenStyle& value)
     return ds;
 }
 
+static quint64 smLastSerial = 0;
 static const QColor scDefaultHighlightForeground(QColor(255, 150, 0));
 static const QColor scDefaultHighlightBackground(QColor(0, 0, 0));
 
@@ -117,6 +118,7 @@ TRoom::TRoom(TRoomDB* pRDB)
 : highlightColor(scDefaultHighlightForeground)
 , highlightColor2(scDefaultHighlightBackground)
 , mpRoomDB(pRDB)
+, mSerial(++smLastSerial)
 {
     // Here rather than at file scope because mX is private. TRoom mixes access
     // levels, which makes offsetof conditionally-supported; GCC and Clang
