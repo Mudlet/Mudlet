@@ -224,6 +224,7 @@ public:
     const QByteArray& getEncoding() const { return mEncoding; }
     QPair<bool, QString> setEncoding(const QByteArray&, bool saveValue = true);
     void postMessage(QString);
+    void postCharacterModeWarning();
     const QByteArrayList& getEncodingsList() const { return mAcceptableEncodings; }
     std::optional<QAbstractSocket::SocketError> error() const;
     QString errorString();
@@ -344,6 +345,9 @@ signals:
     void signal_promptReceived();
 
     void signal_bell();
+    // Whether this player still needs telling is the frontend's call; it answers
+    // through postCharacterModeWarning()
+    void signal_characterModeDetected();
 
     void signal_packageDownloadStarted(const QString& title, const QString& cancelText);
     void signal_packageDownloadProgress(qint64 got, qint64 total);
@@ -395,6 +399,9 @@ private:
     void processSocketData(char* data, int size, const bool loopbackTesting = false);
     void initStreamDecompressor();
     int decompressBuffer(char*& in_buffer, int& length, char* out_buffer);
+    // Sends DONT for the running MCCP stream and stops decompressing it, for a
+    // stream that can no longer be followed.
+    void refuseCompressedStream();
     void reset();
     void handleFailedConnection();
     void sendLoginAndPass();
@@ -529,6 +536,17 @@ private:
     z_stream mZstream = {};
 
     bool mNeedDecompression = false;
+    // The MCCP version whose start sequence began the stream being inflated
+    char mCompressionOption = OPT_COMPRESS2;
+    // Input of earlier reads inflate() took without producing any output yet -
+    // a stream header, or the first bytes of text a game sent instead of the
+    // stream it announced, to give back if it turns out to be the latter.
+    std::string mUninflatedInput;
+    // Real text fails the header check within two bytes; past this many the
+    // stream is taken to be compressed and nothing is kept.
+    inline static const size_t scmMaxUninflatedInput = 32;
+    // Whether mUninflatedInput still holds every byte the stream has taken
+    bool mUninflatedInputComplete = true;
     // Re-entry depth of processSocketData() while draining leftover
     // (de)compressed data; bounds stack use and decompression-bomb output.
     int mDecompressionRecursionDepth = 0;

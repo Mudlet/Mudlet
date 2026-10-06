@@ -55,6 +55,67 @@ describe("Alias processing", function()
             assert.are.equal(1, sends, "the call past the cap should go to the game once, unexpanded")
         end)
 
+        it("stops an alias that expands into itself more than once per run", function()
+            local fired = 0
+            local id
+            id = tempAlias("^expand_into_myself_twice$", function()
+                fired = fired + 1
+                -- Without the fix this branches 2^50 ways; bail out so the spec fails instead of hanging
+                if fired > 1000 then
+                    killAlias(id)
+                    return
+                end
+                expandAlias("expand_into_myself_twice", false)
+                expandAlias("expand_into_myself_twice", false)
+            end)
+            local sends = 0
+            local handler = registerAnonymousEventHandler("sysDataSendRequest", function(_, command)
+                if command == "expand_into_myself_twice" then
+                    sends = sends + 1
+                end
+            end)
+
+            expandAlias("expand_into_myself_twice", false)
+
+            killAnonymousEventHandler(handler)
+            killAlias(id)
+            -- Each of the outermost alias's two calls runs one chain down to the cap
+            assert.are.equal(99, fired)
+            assert.are.equal(2, sends, "only the calls that hit the cap should reach the game")
+        end)
+
+        it("still sends what another alias on the same command expands after a runaway is stopped", function()
+            local fired = 0
+            local runaway
+            runaway = tempAlias("^runaway_(start|again)$", function()
+                fired = fired + 1
+                if fired > 1000 then
+                    killAlias(runaway)
+                    return
+                end
+                expandAlias("runaway_again", false)
+                expandAlias("runaway_again", false)
+            end)
+            -- Matches only the typed command, so it runs once, after the runaway's chain
+            local other = tempAlias("^runaway_start$", function()
+                expandAlias("other_alias_command", false)
+            end)
+            local otherSends = 0
+            local handler = registerAnonymousEventHandler("sysDataSendRequest", function(_, command)
+                if command == "other_alias_command" then
+                    otherSends = otherSends + 1
+                end
+            end)
+
+            expandAlias("runaway_start", false)
+
+            killAnonymousEventHandler(handler)
+            killAlias(runaway)
+            killAlias(other)
+            assert.is_true(fired < 1000, "the runaway should be stopped, fired " .. fired .. " times")
+            assert.are.equal(1, otherSends, "the other alias's command should reach the game")
+        end)
+
         -- The "command" field of an alias is sent as if typed, so one that
         -- matches its own pattern recurses without any Lua in between
         it("stops an alias whose command matches itself", function()
@@ -706,6 +767,33 @@ describe("Alias processing", function()
             assert.are.equal("sword", _G.AliasSpec.what)
         end)
 
+        it("gives a child alias the command and its captures when its parent does not match", function()
+            _G.AliasSpec = {}
+            -- permanent aliases cannot be killed, so a profile that has run this
+            -- before already has them and only needs them switched back on
+            if exists("SpecParentNeverMatches", "alias") == 0 then
+                permAlias("SpecParentNeverMatches", "", "^spec_parent_never_matches$", [[_G.AliasSpec.parent = true]])
+                permAlias("SpecChildOfNonMatching", "SpecParentNeverMatches", [[^spec_child (\w+) ü (\d+)$]], [==[
+                    _G.AliasSpec.whole = matches[1]
+                    _G.AliasSpec.word = matches[2]
+                    _G.AliasSpec.number = matches[3]
+                ]==])
+            end
+            enableAlias("SpecParentNeverMatches")
+            enableAlias("SpecChildOfNonMatching")
+            finally(function()
+                disableAlias("SpecChildOfNonMatching")
+                disableAlias("SpecParentNeverMatches")
+            end)
+
+            expandAlias("spec_child héllo ü 42", false)
+
+            assert.is_nil(_G.AliasSpec.parent)
+            assert.are.equal("spec_child héllo ü 42", _G.AliasSpec.whole)
+            assert.are.equal("héllo", _G.AliasSpec.word)
+            assert.are.equal("42", _G.AliasSpec.number)
+        end)
+
         it("leaves out a named group that took no part in the match", function()
             _G.AliasSpec = {}
             local id = tempAlias([[^named_alias_alt (?:(?<left>aaa)|(?<right>bbb))$]], [==[
@@ -907,9 +995,8 @@ describe("Alias processing", function()
         end)
 
         it("killAlias finds a temporary alias behind a same-named permanent one", function()
-            -- killAlias walks the root node list in creation order, so a permanent
-            -- alias restored from the profile sits in front of this session's
-            -- temporaries: it must be scanned past, not reported as a failure
+            -- a permanent alias can share a temporary's name (its id), and must
+            -- be passed over rather than reported as a failure
             local seed = tempAlias("^spec_kill_order_seed$", [[]])
             killAlias(seed)
             -- permAlias itself takes seed + 1, so the next temporary takes seed + 2

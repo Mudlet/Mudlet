@@ -27,10 +27,12 @@
 #include "ProfileTestHelper.h"
 #include "EditorUndoStack.h"
 #include "Host.h"
+#include "HostDialogs.h"
 #include "MudletInstanceCoordinator.h"
 #include "TAction.h"
 #include "TAlias.h"
 #include "TKey.h"
+#include "TScript.h"
 #include "TTimer.h"
 #include "TTreeWidget.h"
 #include "TTrigger.h"
@@ -39,6 +41,7 @@
 #include "dlgActionMainArea.h"
 #include "dlgAliasMainArea.h"
 #include "dlgConnectionProfiles.h"
+#include "dlgScriptsMainArea.h"
 #include "dlgTimersMainArea.h"
 #include "dlgTriggerEditor.h"
 #include "dlgTriggerPatternEdit.h"
@@ -108,7 +111,7 @@ private:
     }
 
     QSignalSpy spy2(&(mpHost->mTelnet), &cTelnet::signal_connected);
-    if (!spy2.wait(1000)) {
+    if (!spy2.wait(1s)) {
       QFAIL("Could not connect with the host.");
     }
   }
@@ -153,7 +156,7 @@ private slots:
     mudlet::self()->slot_showScriptDialog();
     QTest::qWait(100ms);
 
-    mpEditor = mpHost->mpEditorDialog;
+    mpEditor = HostDialogs::of(mpHost).mpEditorDialog;
     QVERIFY2(mpEditor != nullptr, "Editor dialog should be created");
     QVERIFY2(mpEditor->mpUndoStack != nullptr, "Undo stack should exist");
 
@@ -2018,6 +2021,52 @@ private slots:
     QCOMPARE(mpEditor->mpScriptsBaseItem->childCount(), 1);
 
     cleanupAll(mItemTypes[3]);
+  }
+
+  void testUndoDeleteWhileAScriptHasUnsavedChanges() {
+    mpEditor->slot_showScripts();
+    cleanupAll(mItemTypes[3]);
+    mpEditor->slot_showAliases();
+    cleanupAll(mItemTypes[2]);
+
+    mpEditor->slot_showScripts();
+    mpEditor->addScript(false);
+    QTreeWidgetItem *script = mpEditor->mpScriptsBaseItem->child(0);
+    const int scriptID = script->data(0, Qt::UserRole).toInt();
+    const QString originalName = mpHost->getScriptUnit()->getScript(scriptID)->getName();
+
+    mpEditor->slot_showAliases();
+    mpEditor->addAlias(false);
+    QTreeWidgetItem *alias = mpEditor->mpAliasBaseItem->child(0);
+    mpEditor->treeWidget_aliases->setCurrentItem(alias);
+    mpEditor->slot_deleteItemOrGroup();
+    QCOMPARE(mpEditor->mpAliasBaseItem->childCount(), 0);
+
+    mpEditor->slot_showScripts();
+    script = mpEditor->mpScriptsBaseItem->child(0);
+    mpEditor->treeWidget_scripts->setCurrentItem(script);
+    mpEditor->slot_scriptsSelected(script);
+    mpEditor->mpScriptsMainArea->lineEdit_script_name->setText(qsl("renamed before undo"));
+
+    // Undo shows the restored alias, which saves the script edit as a new command and
+    // drops the undone delete from the stack while the undo is still using it
+    mpEditor->mpUndoStack->undo();
+    QCOMPARE(mpEditor->mpAliasBaseItem->childCount(), 1);
+    QCOMPARE(mpHost->getScriptUnit()->getScript(scriptID)->getName(), qsl("renamed before undo"));
+
+    mpEditor->mpUndoStack->undo();
+    QCOMPARE(mpHost->getScriptUnit()->getScript(scriptID)->getName(), originalName);
+    // The nested save must not have left the stack thinking this undo changed nothing
+    QCOMPARE(mpEditor->mpScriptsMainArea->lineEdit_script_name->text(), originalName);
+
+    // Only works if the alias's new ID was remapped onto the earlier add command
+    mpEditor->mpUndoStack->undo();
+    QCOMPARE(mpEditor->mpAliasBaseItem->childCount(), 0);
+
+    mpEditor->slot_showScripts();
+    cleanupAll(mItemTypes[3]);
+    mpEditor->slot_showAliases();
+    cleanupAll(mItemTypes[2]);
   }
 
   void testMultiTriggerPasteIntoGroup() {

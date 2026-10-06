@@ -40,6 +40,8 @@
 
 #include "GroupedTest.h"
 
+using namespace std::chrono_literals;
+
 class ProfileFolderNameTest : public QObject
 {
     Q_OBJECT
@@ -124,7 +126,7 @@ private slots:
                 []() {
                     return mudlet::self()->mpConnectionDialog != nullptr;
                 },
-                5000));
+                5s));
     }
 
     void cleanupTestCase()

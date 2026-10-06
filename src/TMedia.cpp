@@ -26,7 +26,9 @@
 
 #include "HostManager.h"
 #include "MudletApp.h"
+#include "MudletMedia.h"
 #include "TDebug.h"
+#include "mudlet.h"
 
 #include <QDir>
 #include <QFileInfo>
@@ -39,6 +41,10 @@
 #include <QSaveFile>
 #include <QStandardPaths>
 #include <QTimer>
+
+#include <algorithm>
+
+using namespace std::chrono_literals;
 
 namespace {
 // Holds TMediaPlayer::reservedForPlay() for as long as a play() call is setting that player up,
@@ -82,6 +88,9 @@ bool mediaTypeNamed(const QJsonObject& json)
 
     return !mediaTypeJSON.isString() || !mediaTypeJSON.toString().isEmpty();
 }
+
+// Every pass is a playlist entry built up front, so a huge count from a game would hang Mudlet
+constexpr int maxQueuedLoops = 10000;
 } // namespace
 
 // Public
@@ -1392,7 +1401,7 @@ void TMedia::connectMediaPlayer(std::shared_ptr<TMediaPlayer>& player)
         // by the time the turn comes: a track that took the player over in between owns it now.
         const quint64 claimedAt = lockedPlayer->claimGeneration();
 
-        QTimer::singleShot(0, this, [this, weakPlayer, claimedAt] {
+        QTimer::singleShot(0ms, this, [this, weakPlayer, claimedAt] {
             const auto endingPlayer = weakPlayer.lock();
 
             if (!endingPlayer || !endingPlayer->mediaPlayer() || endingPlayer->claimGeneration() != claimedAt) {
@@ -1611,7 +1620,9 @@ std::shared_ptr<TMediaPlayer> TMedia::getMediaPlayer(TMediaData& mediaData)
     }
 
     // No available player, create a new one
-    mudlet::self()->watchAudioOutputDevices();
+    if (auto* media = MudletMedia::self()) {
+        media->watchAudioOutputDevices();
+    }
     auto newPlayer = std::make_shared<TMediaPlayer>(mpHost, mediaData);
 
     if (!newPlayer || !newPlayer->mediaPlayer()) {
@@ -1739,7 +1750,7 @@ void TMedia::releaseMediaSourceAfterEvents(const std::shared_ptr<TMediaPlayer>& 
     const quint64 claimedAt = player->claimGeneration();
     const quint64 continuedAt = player->continuationGeneration();
 
-    QTimer::singleShot(0, this, [this, weakPlayer, endedData, claimedAt, continuedAt, playbackStateDecides] {
+    QTimer::singleShot(0ms, this, [this, weakPlayer, endedData, claimedAt, continuedAt, playbackStateDecides] {
         const auto lockedPlayer = weakPlayer.lock();
         const bool stillOurs = lockedPlayer && lockedPlayer->claimGeneration() == claimedAt;
         // Two ways the same playback can have carried on during the deferred turn. On a
@@ -2074,7 +2085,7 @@ void TMedia::play(TMediaData& mediaData)
                 playlist->clear();
             } else {
                 if (!playlist->isEmpty() && playlist->mediaCount() > 1) { // Purge media from the previous playlist
-                    playlist->removeMedia(playlist->nextIndex(), playlist->mediaCount());
+                    playlist->removeMedia(playlist->nextIndex(), playlist->mediaCount() - 1);
                 }
 
                 return; // No action required. Continue playing the same media.
@@ -2129,14 +2140,14 @@ void TMedia::play(TMediaData& mediaData)
                     playlist->clear();
                 } else {
                     if (!playlist->isEmpty() && playlist->mediaCount() > 1) { // Purge media from the previous playlist
-                        playlist->removeMedia(playlist->nextIndex(), playlist->mediaCount());
+                        playlist->removeMedia(playlist->nextIndex(), playlist->mediaCount() - 1);
                     }
 
                     mediaData.setMediaLoops(mediaData.mediaLoops() - 1); // Subtract the currently playing media from the total
                 }
             }
 
-            for (int k = 0; k < mediaData.mediaLoops(); k++) {
+            for (int k = 0, loops = std::min(mediaData.mediaLoops(), maxQueuedLoops); k < loops; k++) {
                 absolutePathFileName = fileNameList.size() > 1 ? fileNameList.at(QRandomGenerator::global()->bounded(fileNameList.size()))
                                                                : (mediaData.mediaInput() == TMediaData::MediaInputStream ? TMedia::getStreamUrl(mediaData) : fileNameList.at(0));
 
@@ -2171,11 +2182,11 @@ void TMedia::play(TMediaData& mediaData)
     if (audioOutput) {
         switch (mediaData.mediaProtocol()) {
         case TMediaData::MediaProtocolAPI:
-            audioOutput->setMuted(mudlet::self()->muteAPI());
+            audioOutput->setMuted(MudletMedia::self() && MudletMedia::self()->apiMuted());
             break;
         case TMediaData::MediaProtocolGMCP:
         case TMediaData::MediaProtocolMSP:
-            audioOutput->setMuted(mudlet::self()->muteGame());
+            audioOutput->setMuted(MudletMedia::self() && MudletMedia::self()->gameMuted());
             break;
         }
     } else {

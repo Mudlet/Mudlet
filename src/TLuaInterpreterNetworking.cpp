@@ -26,36 +26,23 @@
 
 #include "TLuaInterpreter.h"
 
-#include "EAction.h"
 #include "Host.h"
 #include "TAlias.h"
 #include "TArea.h"
 #include "TCommandLine.h"
-#include "TConsole.h"
 #include "TDebug.h"
 #include "TEvent.h"
-#include "TFlipButton.h"
 #include "TForkedProcess.h"
-#include "TLabel.h"
+#include "TIrcClient.h"
 #include "TMap.h"
 #include "TMapLabel.h"
 #include "TMedia.h"
 #include "TRoomDB.h"
 #include "TTabBar.h"
-#include "TTextEdit.h"
 #include "TTimer.h"
 #include "ctelnet.h"
-#include "dlgComposer.h"
-#include "dlgIRC.h"
-#include "dlgMapper.h"
-#include "dlgModuleManager.h"
-#include "dlgTriggerEditor.h"
 #include "mapInfoContributorManager.h"
-#include "mudlet.h"
 #include "MudletApp.h"
-#if defined(INCLUDE_3DMAPPER)
-#include "glwidget_integration.h"
-#endif
 
 #include <algorithm>
 #include <limits>
@@ -188,10 +175,10 @@ int TLuaInterpreter::getIrcChannels(lua_State* L)
 {
     Host* pHost = &getHostFromLua(L);
     QStringList channels;
-    if (pHost->mpDlgIRC) {
-        channels = pHost->mpDlgIRC->getChannels();
+    if (pHost->mpIrcClient) {
+        channels = pHost->mpIrcClient->getChannels();
     } else {
-        channels = dlgIRC::readIrcChannels(pHost);
+        channels = TIrcClient::readIrcChannels(pHost);
     }
 
     lua_newtable(L);
@@ -210,8 +197,8 @@ int TLuaInterpreter::getIrcConnectedHost(lua_State* L)
     Host* pHost = &getHostFromLua(L);
     QString cHostName;
     QString error = qsl("no client active");
-    if (pHost->mpDlgIRC) {
-        cHostName = pHost->mpDlgIRC->getConnectedHost();
+    if (pHost->mpIrcClient) {
+        cHostName = pHost->mpIrcClient->getConnectedHost();
 
         if (cHostName.isEmpty()) {
             error = qsl("not yet connected");
@@ -232,10 +219,10 @@ int TLuaInterpreter::getIrcNick(lua_State* L)
 {
     Host* pHost = &getHostFromLua(L);
     QString nick;
-    if (pHost->mpDlgIRC) {
-        nick = pHost->mpDlgIRC->getNickName();
+    if (pHost->mpIrcClient) {
+        nick = pHost->mpIrcClient->getNickName();
     } else {
-        nick = dlgIRC::readIrcNickName(pHost);
+        nick = TIrcClient::readIrcNickName(pHost);
     }
 
     lua_pushstring(L, nick.toUtf8().constData());
@@ -249,14 +236,14 @@ int TLuaInterpreter::getIrcServer(lua_State* L)
     QString hname;
     int hport = 0;
     bool hsecure = false;
-    if (pHost->mpDlgIRC) {
-        hname = pHost->mpDlgIRC->getHostName();
-        hport = pHost->mpDlgIRC->getHostPort();
-        hsecure = pHost->mpDlgIRC->getHostSecure();
+    if (pHost->mpIrcClient) {
+        hname = pHost->mpIrcClient->getHostName();
+        hport = pHost->mpIrcClient->getHostPort();
+        hsecure = pHost->mpIrcClient->getHostSecure();
     } else {
-        hname = dlgIRC::readIrcHostName(pHost);
-        hport = dlgIRC::readIrcHostPort(pHost);
-        hsecure = dlgIRC::readIrcHostSecure(pHost);
+        hname = TIrcClient::readIrcHostName(pHost);
+        hport = TIrcClient::readIrcHostPort(pHost);
+        hsecure = TIrcClient::readIrcHostSecure(pHost);
     }
 
     lua_pushstring(L, hname.toUtf8().constData());
@@ -294,9 +281,8 @@ int TLuaInterpreter::restartIrc(lua_State* L)
 {
     Host* pHost = &getHostFromLua(L);
     bool rv = false;
-    if (pHost->mpDlgIRC) {
-        pHost->mpDlgIRC->ircRestart();
-        rv = true;
+    if (pHost->mpIrcClient) {
+        rv = pHost->mpIrcClient->restart();
     }
 
     lua_pushboolean(L, rv);
@@ -418,26 +404,24 @@ int TLuaInterpreter::sendIrc(lua_State* L)
     const char* msgText = lua_tolstring(L, 2, &msgLength);
     const QString msg{QString::fromUtf8(msgText, static_cast<qsizetype>(msgLength))};
 
-    // also checked in dlgIRC::sendMsg(), but here too so a bad call doesn't open an IRC client
-    const auto arguments = dlgIRC::validateMsgArguments(target, msg);
+    // also checked in TIrcClient::sendText(), but here too so a bad call doesn't open an IRC client
+    const auto arguments = TIrcClient::validateMsgArguments(target, msg);
     if (!arguments.first) {
         return warnArgumentValue(L, __func__, arguments.second);
     }
 
     Host* pHost = &getHostFromLua(L);
-    if (!pHost->mpDlgIRC) {
+    if (!pHost->mpIrcClient) {
         // create a new irc client if one isn't ready.
-        pHost->mpDlgIRC = new dlgIRC(pHost);
-        pHost->mpDlgIRC->raise();
-        pHost->mpDlgIRC->show();
+        pHost->showIrcClient();
     }
 
     // wait for our client to be ready before sending messages.
-    if (!pHost->mpDlgIRC->mReadyForSending) {
+    if (!pHost->mpIrcClient->mReadyForSending) {
         return warnArgumentValue(L, __func__, "not ready to send just yet");
     }
 
-    const auto result = pHost->mpDlgIRC->sendText(target, msg);
+    const auto result = pHost->mpIrcClient->sendText(target, msg);
     if (!result.first) {
         return warnArgumentValue(L, __func__, result.second);
     }
@@ -454,11 +438,7 @@ int TLuaInterpreter::openIRC(lua_State* L)
         return warnArgumentValue(L, __func__, "no host found");
     }
 
-    if (!pHost->mpDlgIRC) {
-        pHost->mpDlgIRC = new dlgIRC(pHost);
-    }
-    pHost->mpDlgIRC->raise();
-    pHost->mpDlgIRC->show();
+    pHost->showIrcClient();
 
     lua_pushboolean(L, true);
     return 1;
@@ -542,7 +522,7 @@ int TLuaInterpreter::sendTelnetChannel102(lua_State* L)
 }
 
 // An IRC channel name holds neither of the two characters its list is taken apart
-// on: the stored list is space-joined (dlgIRC::writeIrcChannels) and the JOIN
+// on: the stored list is space-joined (TIrcClient::writeIrcChannels) and the JOIN
 // command is comma-joined, so a name carrying either would come back as two
 // channels. Every kind of whitespace is refused rather than only the space it is
 // joined on, because an IRC channel name may hold none of it.
@@ -578,7 +558,7 @@ int TLuaInterpreter::setIrcChannels(lua_State* L)
     }
 
     Host* pHost = &getHostFromLua(L);
-    QPair<bool, QString> const result = dlgIRC::writeIrcChannels(pHost, newchannels);
+    QPair<bool, QString> const result = TIrcClient::writeIrcChannels(pHost, newchannels);
     if (!result.first) {
         return warnArgumentValue(L, __func__, qsl("unable to save channels, reason: %1").arg(result.second));
     }
@@ -603,7 +583,7 @@ int TLuaInterpreter::setIrcNick(lua_State* L)
     }
 
     Host* pHost = &getHostFromLua(L);
-    QPair<bool, QString> const result = dlgIRC::writeIrcNickName(pHost, nick);
+    QPair<bool, QString> const result = TIrcClient::writeIrcNickName(pHost, nick);
     if (!result.first) {
         return warnArgumentValue(L, __func__, qsl("unable to save nick name, reason: %1").arg(result.second));
     }
@@ -654,30 +634,30 @@ int TLuaInterpreter::setIrcServer(lua_State* L)
     // Validate before the first write, so a refused password can't leave the new server
     // paired with the old credential.
     if (passwordGiven) {
-        const QPair<bool, QString> passwordValid = dlgIRC::validateIrcPassword(password);
+        const QPair<bool, QString> passwordValid = TIrcClient::validateIrcPassword(password);
         if (!passwordValid.first) {
             return warnArgumentValue(L, __func__, qsl("unable to save password, reason: %1").arg(passwordValid.second));
         }
     }
 
     Host* pHost = &getHostFromLua(L);
-    QPair<bool, QString> result = dlgIRC::writeIrcHostName(pHost, QString::fromUtf8(hostName));
+    QPair<bool, QString> result = TIrcClient::writeIrcHostName(pHost, QString::fromUtf8(hostName));
     if (!result.first) {
         return warnArgumentValue(L, __func__, qsl("unable to save hostname, reason: %1").arg(result.second));
     }
 
-    result = dlgIRC::writeIrcHostPort(pHost, port);
+    result = TIrcClient::writeIrcHostPort(pHost, port);
     if (!result.first) {
         return warnArgumentValue(L, __func__, qsl("unable to save port, reason: %1").arg(result.second));
     }
 
-    result = dlgIRC::writeIrcHostSecure(pHost, secure);
+    result = TIrcClient::writeIrcHostSecure(pHost, secure);
     if (!result.first) {
         return warnArgumentValue(L, __func__, qsl("unable to save secure, reason: %1").arg(result.second));
     }
 
     if (passwordGiven) {
-        result = dlgIRC::writeIrcPassword(pHost, password);
+        result = TIrcClient::writeIrcPassword(pHost, password);
         if (!result.first) {
             return warnArgumentValue(L, __func__, qsl("unable to save password, reason: %1").arg(result.second));
         }

@@ -37,8 +37,6 @@
 class Host;
 class mudlet;
 class TAction;
-class TEasyButtonBar;
-class TToolBar;
 
 class ActionUnit
 {
@@ -74,13 +72,6 @@ public:
     void endProcessing();
     int processingDepth() const { return mProcessingDepth; }
     void updateAllToolbars();
-    std::list<QPointer<TToolBar>> getToolBarList() { return mToolBarList; }
-    TAction* getHeadAction(TToolBar*);
-    TAction* getHeadAction(TEasyButtonBar*);
-    void regenerateToolBars();
-    void regenerateEasyButtonBars();
-    void constructToolbar(TAction*, TToolBar* pToolBar);
-    void constructToolbar(TAction*, TEasyButtonBar* pTB);
     std::pair<bool, QString> showToolBar(const QString&);
     std::pair<bool, QString> hideToolBar(const QString&);
 
@@ -106,8 +97,6 @@ private:
     // doCleanup() must not delete actions then - see ActionUnit::uninstall():
     int mProcessingDepth = 0;
     bool mModuleMember = false;
-    std::list<QPointer<TToolBar>> mToolBarList;
-    std::list<QPointer<TEasyButtonBar>> mEasyButtonBarList;
 };
 
 #endif // MUDLET_ACTIONUNIT_H

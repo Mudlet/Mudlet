@@ -402,14 +402,14 @@ private slots:
         QVERIFY(QMetaObject::invokeMethod(manager, "slot_installPackageFromRepository"));
         QVERIFY2(downloadDialogStillUp(manager), "No progress dialog was raised for the download");
 
-        QTRY_VERIFY_WITH_TIMEOUT(!dismisser.seen().isEmpty(), 15000);
+        QTRY_VERIFY_WITH_TIMEOUT(!dismisser.seen().isEmpty(), 15s);
         QVERIFY2(dismisser.seen().constFirst().contains(qsl("failing-package")), "The reported failure was not the one this test arranged");
 
-        QTRY_VERIFY_WITH_TIMEOUT(settle() && !downloadDialogStillUp(manager), 15000);
+        QTRY_VERIFY_WITH_TIMEOUT(settle() && !downloadDialogStillUp(manager), 15s);
         QVERIFY2(manager->findChildren<QNetworkAccessManager*>().isEmpty(), "The batch's network manager outlived the batch");
 
         manager->close();
-        QTRY_VERIFY_WITH_TIMEOUT(settle() && manager.isNull(), 15000);
+        QTRY_VERIFY_WITH_TIMEOUT(settle() && manager.isNull(), 15s);
     }
 
     // A selected package the repository index cannot answer for never gets as far
@@ -426,13 +426,13 @@ private slots:
 
         QVERIFY(QMetaObject::invokeMethod(manager, "slot_installPackageFromRepository"));
 
-        QTRY_VERIFY_WITH_TIMEOUT(!dismisser.seen().isEmpty(), 15000);
+        QTRY_VERIFY_WITH_TIMEOUT(!dismisser.seen().isEmpty(), 15s);
         QVERIFY2(dismisser.seen().constFirst().contains(qsl("nameless-package")), "The reported failure was not the one this test arranged");
 
-        QTRY_VERIFY_WITH_TIMEOUT(settle() && !downloadDialogStillUp(manager), 15000);
+        QTRY_VERIFY_WITH_TIMEOUT(settle() && !downloadDialogStillUp(manager), 15s);
 
         manager->close();
-        QTRY_VERIFY_WITH_TIMEOUT(settle() && manager.isNull(), 15000);
+        QTRY_VERIFY_WITH_TIMEOUT(settle() && manager.isNull(), 15s);
     }
 
     // The file a download is written into is a child of the dialog, so closing the
@@ -457,7 +457,7 @@ private slots:
 #endif
 
         manager->close();
-        QTRY_VERIFY_WITH_TIMEOUT(settle() && manager.isNull(), 15000);
+        QTRY_VERIFY_WITH_TIMEOUT(settle() && manager.isNull(), 15s);
 
 #ifdef Q_OS_LINUX
         QCOMPARE(openHandlesFor(downloadPath), 0);
@@ -482,13 +482,13 @@ private slots:
 
         QVERIFY(QMetaObject::invokeMethod(manager, "slot_installPackageFromRepository"));
 
-        QTRY_VERIFY_WITH_TIMEOUT(!dismisser.seen().isEmpty(), 15000);
+        QTRY_VERIFY_WITH_TIMEOUT(!dismisser.seen().isEmpty(), 15s);
         QVERIFY2(dismisser.seen().constFirst().contains(qsl("blocked-package")), "The reported failure was not the one this test arranged");
 
-        QTRY_VERIFY_WITH_TIMEOUT(settle() && !downloadDialogStillUp(manager), 15000);
+        QTRY_VERIFY_WITH_TIMEOUT(settle() && !downloadDialogStillUp(manager), 15s);
 
         manager->close();
-        QTRY_VERIFY_WITH_TIMEOUT(settle() && manager.isNull(), 15000);
+        QTRY_VERIFY_WITH_TIMEOUT(settle() && manager.isNull(), 15s);
         QVERIFY(QDir(downloadPath).removeRecursively());
     }
 
@@ -523,7 +523,7 @@ private slots:
 
         QVERIFY(QMetaObject::invokeMethod(manager, "slot_installPackageFromRepository"));
 
-        QTRY_VERIFY_WITH_TIMEOUT(settle() && dismisser.seen().size() == 3, 30000);
+        QTRY_VERIFY_WITH_TIMEOUT(settle() && dismisser.seen().size() == 3, 30s);
 
         // Without this the run could come out green having never stacked one box
         // inside another, which is the whole of what it is here to exercise. The
@@ -538,10 +538,10 @@ private slots:
         QVERIFY2(dismisser.seen().at(1).contains(qsl("b-nameless-refusal")), "The refusal's warning was not the one underneath");
         QVERIFY2(dismisser.seen().at(2).contains(qsl("c-second-download")), "The selection after the refusal was never processed");
 
-        QTRY_VERIFY_WITH_TIMEOUT(settle() && !downloadDialogStillUp(manager), 15000);
+        QTRY_VERIFY_WITH_TIMEOUT(settle() && !downloadDialogStillUp(manager), 15s);
 
         manager->close();
-        QTRY_VERIFY_WITH_TIMEOUT(settle() && manager.isNull(), 15000);
+        QTRY_VERIFY_WITH_TIMEOUT(settle() && manager.isNull(), 15s);
     }
 
     // The same nesting, with the refusal last. That ordering is what actually
@@ -570,15 +570,54 @@ private slots:
 
         QVERIFY(QMetaObject::invokeMethod(manager, "slot_installPackageFromRepository"));
 
-        QTRY_VERIFY_WITH_TIMEOUT(settle() && dismisser.seen().size() == 3, 30000);
+        QTRY_VERIFY_WITH_TIMEOUT(settle() && dismisser.seen().size() == 3, 30s);
 
         QVERIFY2(dismisser.sawStacking(), "No two warnings were ever open at once, so nothing finished inside the refusal and the case under test never happened");
         QVERIFY2(!dismisser.progressGoneWhileBoxUp(), "The batch was wound up while the loop was still stopped inside the refusal's warning");
 
-        QTRY_VERIFY_WITH_TIMEOUT(settle() && !downloadDialogStillUp(manager), 15000);
+        QTRY_VERIFY_WITH_TIMEOUT(settle() && !downloadDialogStillUp(manager), 15s);
 
         manager->close();
-        QTRY_VERIFY_WITH_TIMEOUT(settle() && manager.isNull(), 15000);
+        QTRY_VERIFY_WITH_TIMEOUT(settle() && manager.isNull(), 15s);
+    }
+
+    // A refusal's warning box runs an event loop, and a script installing or
+    // removing a package inside it rebuilds the list the selection was taken
+    // from, freeing its items. The selections after the box still have to be
+    // the packages the user picked.
+    void test_aListRebuiltInsideARefusalStillDownloadsTheRestOfTheSelection()
+    {
+        mpProxy->setAnswer(StubProxy::Answer::Refuse);
+        MessageBoxDismisser dismisser;
+        // Holds the lone refusal box up long enough for the rebuild below to
+        // happen inside it; nothing stacks on it, so the cap is what ends it
+        dismisser.setWaitForStacking(1s);
+
+        QPointer<dlgPackageManager> manager =
+                openManagerListing({repositoryEntry(qsl("a-nameless-refusal"), QString()), repositoryEntry(qsl("b-after-the-rebuild"), qsl("b-after-the-rebuild.mpackage"))});
+        QVERIFY2(selectPackages(manager, {qsl("a-nameless-refusal"), qsl("b-after-the-rebuild")}), "The packages under test were not listed in the Explore view");
+
+        bool rebuiltInsideTheBox = false;
+        QTimer rebuilder;
+        connect(&rebuilder, &QTimer::timeout, this, [this, &rebuiltInsideTheBox]() {
+            auto* box = qobject_cast<QMessageBox*>(QApplication::activeModalWidget());
+            if (!rebuiltInsideTheBox && box && box->text().contains(qsl("a-nameless-refusal"))) {
+                rebuiltInsideTheBox = true;
+                emit mpHost->signal_packageListChanged();
+            }
+        });
+        rebuilder.start(5ms);
+
+        QVERIFY(QMetaObject::invokeMethod(manager, "slot_installPackageFromRepository"));
+
+        QTRY_VERIFY_WITH_TIMEOUT(settle() && dismisser.seen().size() == 2, 30s);
+        QVERIFY2(rebuiltInsideTheBox, "The package list was never rebuilt while the refusal was up, so the case under test never happened");
+        QVERIFY2(dismisser.seen().at(1).contains(qsl("b-after-the-rebuild")), "The selection after the rebuild was not the package that was picked");
+
+        QTRY_VERIFY_WITH_TIMEOUT(settle() && !downloadDialogStillUp(manager), 15s);
+
+        manager->close();
+        QTRY_VERIFY_WITH_TIMEOUT(settle() && manager.isNull(), 15s);
     }
 };
 

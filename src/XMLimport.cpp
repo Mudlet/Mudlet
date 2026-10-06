@@ -23,14 +23,12 @@
 #include "XMLimport.h"
 
 
-#include "dlgMapper.h"
 #include "LuaInterface.h"
 #include "CredentialManager.h"
 #include "SecureStringUtils.h"
 #include "TAction.h"
 #include "TAlias.h"
 #include "TKey.h"
-#include "TMainConsole.h"
 #include "TMap.h"
 #include "TRoomDB.h"
 #include "TRoom.h"
@@ -192,12 +190,8 @@ std::pair<bool, QString> XMLimport::importPackage(QFile* pfile, QString packName
                 } else {
                     readMap();
                     mpHost->mpMap->audit();
-                    if (mpHost->mpMap->mpMapper) {
-                        mpHost->mpMap->mpMapper->mp2dMap->init();
-                        mpHost->mpMap->mpMapper->updateAreaComboBox();
-                        mpHost->mpMap->mpMapper->resetAreaComboBoxToPlayerRoomArea();
-                        mpHost->mpMap->mpMapper->show();
-                    }
+                    mpHost->mpMap->announceMapLoaded(true);
+                    mpHost->mpMap->requestMapperShown();
                 }
             } else {
                 qDebug().nospace() << "XMLimport::importPackage(...) ERROR: "
@@ -1246,10 +1240,12 @@ void XMLimport::readHost(Host* pHost)
     pHost->loadPackageInfo();
     // A package import comes through here too, into a profile that does have a
     // console - and that one needs the whole restyle, not just the model:
-    if (pHost->mpConsole) {
-        pHost->mpConsole->changeColors();
-    } else {
-        pHost->refreshMainConsoleColors();
+    pHost->applyMainConsoleColors();
+    if (!pHost->mpConsole) {
+        TConsoleModel& model = pHost->mainConsoleModel();
+        model.setWrapAt(pHost->mWrapAt);
+        model.setIndentCount(pHost->mWrapIndentCount);
+        model.setHangingIndentCount(pHost->mWrapHangingIndentCount);
     }
 }
 
@@ -1887,7 +1883,14 @@ void XMLimport::readModulesDetailsMap(QMap<QString, QStringList>& map)
                 // The last expected detail for the entry - so store this
                 // completed entry into the QMap
                 entry << readElementText();
-                map[key] = entry;
+                // Every reader of an entry indexes its file, sync flag and priority, so a hand-edited or
+                // truncated file that leaves one out would read past the end of it
+                if (entry.size() >= 3) {
+                    map[key] = entry;
+                } else {
+                    // Quoted so that QDebug escapes any control characters the file put in the name
+                    qWarning().nospace() << "XMLimport::readModulesDetailsMap() WARNING - ignoring the module " << key << " as its entry is missing some of its details.";
+                }
                 entry.clear();
             } else {
                 readUnknownElement(qsl("ModulesDetailsMap"));

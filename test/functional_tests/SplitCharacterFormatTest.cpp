@@ -26,6 +26,7 @@
 #include "TMainConsole.h"
 #include "TTextEdit.h"
 #include "TEncodingHelper.h"
+#include "TGlyphCache.h"
 #include "TelnetServerStub.h"
 #include "mudlet.h"
 
@@ -451,8 +452,10 @@ private slots:
         image.fill(Qt::black);
         QPainter painter(&image);
         painter.setFont(pane->font());
+        TGlyphCache glyphCache;
+        glyphCache.setFont(painter.font(), *painter.device());
         pane->paintBackgrounds(painter, layout);
-        pane->paintForegrounds(painter, layout);
+        pane->paintForegrounds(painter, glyphCache, layout);
         painter.end();
 
         // Anti-aliased ink blends its colour into the cell's background, so it

@@ -78,6 +78,9 @@ std::atomic<bool> mudletDictionariesInUse = false;
 QMutex settingsMutex;
 QPointer<QSettings> smpSettings;
 QString smInterfaceLanguage;
+bool smStorePasswordsSecurely = true;
+bool smFirstLaunch = false;
+bool smDarkMode = false;
 
 constexpr int maxPathComponentLength = 50;
 constexpr int pathComponentDigestLength = 16;
@@ -654,6 +657,36 @@ void MudletApp::setInterfaceLanguage(const QString& language)
 {
     const QMutexLocker locker(&settingsMutex);
     smInterfaceLanguage = language;
+}
+
+bool MudletApp::storingPasswordsSecurely()
+{
+    return smStorePasswordsSecurely;
+}
+
+void MudletApp::setStorePasswordsSecurely(const bool storeSecurely)
+{
+    smStorePasswordsSecurely = storeSecurely;
+}
+
+bool MudletApp::firstLaunch()
+{
+    return smFirstLaunch;
+}
+
+void MudletApp::setFirstLaunch(const bool firstLaunch)
+{
+    smFirstLaunch = firstLaunch;
+}
+
+bool MudletApp::darkMode()
+{
+    return smDarkMode;
+}
+
+void MudletApp::setDarkMode(const bool dark)
+{
+    smDarkMode = dark;
 }
 
 const QString& MudletApp::buildSuffix()
