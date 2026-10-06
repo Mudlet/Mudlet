@@ -236,7 +236,11 @@ public:
         mPublishedEntityValue = value;
     }
 
-    void setVariable(const QString& name, const QString& value) override {}
+    QList<QPair<QString, QString>> mVariables;
+    void setVariable(const QString& name, const QString& value) override
+    {
+        mVariables.append({name, value});
+    }
 
     // MXP Frame/Dest tracking
     bool createMxpFrameCalled = false;

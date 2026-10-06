@@ -426,8 +426,8 @@ public:
     void setWrapIndent(int i) { mWrapIndent = i; }
     void setWrapHangingIndent(int i) { mWrapHangingIndent = i; }
     void updateColors();
-    TBuffer copy(QPoint&, QPoint&);
-    TBuffer cut(QPoint&, QPoint&);
+    void copyInto(const QPoint&, const QPoint&, TBuffer& slice) const;
+    void cutInto(QPoint&, QPoint&, TBuffer& slice);
     void paste(QPoint&, const TBuffer&);
     void setBufferSize(int requestedLinesLimit, int batch);
     int getMaxBufferSize();
