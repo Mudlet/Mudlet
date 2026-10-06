@@ -66,12 +66,14 @@ TConsoleModel::TConsoleModel(Host* pHost)
     buffer.mpModel = this;
 }
 
-QStringList TConsoleModel::lines(int from, int to)
+QStringList TConsoleModel::lines(int from, int to) const
 {
     QStringList ret;
-    const int delta = abs(from - to);
-    for (int i = 0; i < delta; i++) {
-        ret << buffer.line(from + i);
+    // 64-bit, as from - to overflows an int for a script's extreme arguments
+    const qint64 first = from;
+    const qint64 end = std::min(first + qAbs(first - to), static_cast<qint64>(buffer.lineBuffer.size()));
+    for (qint64 i = std::max<qint64>(first, 0); i < end; ++i) {
+        ret << buffer.lineBuffer.at(i);
     }
     return ret;
 }
@@ -155,12 +157,14 @@ int TConsoleModel::selectString(const QString& text, int numOfMatch)
         TDebug(Qt::gray, Qt::black, TDebug::Category::Selection) << TDebug::csmContinue << buffer.line(mUserCursor.y()) << "\n" >> mpHost;
     }
 
+    const QString li = buffer.line(mUserCursor.y());
+    if (li.isEmpty()) {
+        deselect();
+        return -1;
+    }
+
     int begin = -1;
     for (int i = 0; i < numOfMatch; i++) {
-        const QString li = buffer.line(mUserCursor.y());
-        if (li.isEmpty()) {
-            continue;
-        }
         begin = li.indexOf(text, begin + 1);
 
         if (begin == -1) {
