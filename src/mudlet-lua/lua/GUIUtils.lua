@@ -1114,23 +1114,18 @@ function getHTMLformat(fmt)
   return result
 end
 
--- https://wiki.mudlet.org/w/Manual:Lua_Functions#getLabelFormat
--- used by xEcho for getting the default format for a label, taking into account
--- the background color setting and stylesheet
-function getLabelFormat(win)
-  assert(win, "getLabelFormat: requires at least one argument")
-  local r,g,b = 192, 192, 192
-  local reset = {
-    foreground = { r, g, b },
-    background = "rgba(0, 0, 0, 0)",
+-- what getLabelFormat() last read out of each label's stylesheet, by label name, kept
+-- with the stylesheet it was read from so a changed one is read afresh
+local labelStyleSheetFormats = {}
+
+local function parseLabelStyleSheet(stylesheet)
+  local parsed = {
     bold = false,
     italic = false,
     overline = false,
-    reverse = false,
     strikeout = false,
     underline = false,
   }
-  local stylesheet = getLabelStyleSheet(win)
   if stylesheet ~= "" then
     if stylesheet:find(";") then
       local styleTable = {}
@@ -1144,37 +1139,64 @@ function getLabelFormat(win)
       end
 
       if styleTable.color then
-        reset.foreground = styleTable.color
+        parsed.foreground = styleTable.color
       end
 
       if styleTable["text-decoration"] then
         local td = styleTable["text-decoration"]
         if td:match("underline") then
-          reset.underline = true
+          parsed.underline = true
         end
         if td:match("overline") then
-          reset.overline = true
+          parsed.overline = true
         end
         if td:match("line%-through") then
-          reset.strikeout = true
+          parsed.strikeout = true
         end
       end
 
       if styleTable.font then
-        reset.bold = styleTable.font:match("bold") and true or false
-        reset.italic = styleTable.font:match("italic") and true or false
+        parsed.bold = styleTable.font:match("bold") and true or false
+        parsed.italic = styleTable.font:match("italic") and true or false
       end
 
       if styleTable["font-weight"] and styleTable["font-weight"]:match("bold") then
-        reset.bold = true
+        parsed.bold = true
       end
 
       if styleTable["font-style"] and styleTable["font-style"]:match("italic") then
-        reset.italic = true
+        parsed.italic = true
       end
     end
   end
-  return reset
+  return parsed
+end
+
+-- https://wiki.mudlet.org/w/Manual:Lua_Functions#getLabelFormat
+-- used by xEcho for getting the default format for a label, taking into account
+-- the background color setting and stylesheet
+function getLabelFormat(win)
+  assert(win, "getLabelFormat: requires at least one argument")
+  local stylesheet = getLabelStyleSheet(win)
+  local cached = labelStyleSheetFormats[win]
+  local parsed
+  if cached and cached.stylesheet == stylesheet then
+    parsed = cached.parsed
+  else
+    parsed = parseLabelStyleSheet(stylesheet)
+    labelStyleSheetFormats[win] = { stylesheet = stylesheet, parsed = parsed }
+  end
+  -- a new table every call, as callers are free to change the one they get
+  return {
+    foreground = parsed.foreground or { 192, 192, 192 },
+    background = "rgba(0, 0, 0, 0)",
+    bold = parsed.bold,
+    italic = parsed.italic,
+    overline = parsed.overline,
+    reverse = false,
+    strikeout = parsed.strikeout,
+    underline = parsed.underline,
+  }
 end
 
 _Echos = {
@@ -1345,8 +1367,8 @@ local processedEchoToHTML = function(t, reset)
     underline = false
   }
   local format = table.deepcopy(reset)
-  local result = getHTMLformat(format)
-  for _,v in ipairs(t) do
+  local parts = { getHTMLformat(format) }
+  for i,v in ipairs(t) do
     local formatChanged = false
     if type(v) == "table" then
       if v.fg then
@@ -1391,16 +1413,15 @@ local processedEchoToHTML = function(t, reset)
       format = table.deepcopy(reset)
       formatChanged = true
     end
-    v = formatChanged and getHTMLformat(format) or v
-    result = result .. v
+    parts[i + 1] = formatChanged and getHTMLformat(format) or v
   end
-  return result
+  return table.concat(parts)
 end
 
 --- Generic color echo and insert function (allowing hecho, decho, cecho, hinsertText, dinsertText and cinsertText).
 ---
 --- @param style Hex, Decimal or Color
---- @param insert boolean flag to determine echo/insert behaviour
+--- @param func name of the function to write with: echo, insertText, echoLink, insertLink, echoPopup or insertPopup
 --- @param win windowName optional
 --- @param str text with embedded color information
 ---
@@ -1411,14 +1432,16 @@ end
 --- @see dinsertText
 --- @see hinsertText
 function xEcho(style, func, ...)
+  local arg1, arg2 = ...
+  if type(arg1) ~= 'string' then
+    error(style:sub(1,1):lower() .. func .. ': bad argument #1, string expected, got '..type(arg1)..'!)')
+  end
+
   local win, str, cmd, hint, fmt
-  local out
-  local args = { ... }
-  local n = #args
-
-  assert(type(args[1]) == 'string', style:sub(1,1):lower() .. func .. ': bad argument #1, string expected, got '..type(args[1])..'!)')
-
-  if string.find(func, "Link") then
+  local plain = func == "echo" or func == "insertText"
+  if not plain and string.find(func, "Link") then
+    local args = { ... }
+    local n = #args
     if n < 3 then
       error 'Insufficient arguments, usage: ([window, ] string, command, hint)'
     elseif n == 3 then
@@ -1430,7 +1453,9 @@ function xEcho(style, func, ...)
     else
       error 'Improper arguments, usage: ([window, ] string, command, hint)'
     end
-  elseif string.find(func, "Popup") then
+  elseif not plain and string.find(func, "Popup") then
+    local args = { ... }
+    local n = #args
     if n < 3 then
       error 'Insufficient arguments, usage: ([window, ] string, {commands}, {hints})'
     elseif n == 3 then
@@ -1444,21 +1469,17 @@ function xEcho(style, func, ...)
     end
 
   else
-    if args[1] and args[2] and args[1] ~= "main" then
-      win, str = args[1], args[2]
-    elseif args[1] and args[2] and args[1] == "main" then
-      str = args[2]
+    if arg1 and arg2 and arg1 ~= "main" then
+      win, str = arg1, arg2
+    elseif arg1 and arg2 and arg1 == "main" then
+      str = arg2
     else
-      str = args[1]
+      str = arg1
     end
   end
   win = win or "main"
 
-  out = function(...)
-    _G[func](...)
-  end
-
-  if windowType(win) == "label" and win ~= "main" then
+  if win ~= "main" and windowType(win) == "label" then
     str = str:gsub("\n", "<br>")
     local t = _Echos.Process(str, style)
     if func ~= "echo" then
@@ -1469,7 +1490,6 @@ function xEcho(style, func, ...)
     echo(win, result)
   else
     local t = _Echos.Process(str, style)
-    deselect(win)
     resetFormat(win)
     for _, v in ipairs(t) do
       if type(v) == 'table' then
@@ -1505,14 +1525,14 @@ function xEcho(style, func, ...)
       elseif v == "\27reset" then
         resetFormat(win)
       else
-        if func == 'echo' or func == 'insertText' then
-          out(win, v)
+        if plain then
+          _G[func](win, v)
           if func == 'insertText' then
             moveCursor(win, getColumnNumber(win) + string.len(v), getLineNumber(win))
           end
         else
           -- if fmt then setUnderline(win, true) end -- not sure if underline is necessary unless asked for
-          out(win, v, cmd, hint, (fmt == true and true or false))
+          _G[func](win, v, cmd, hint, fmt == true)
         end
       end
     end
@@ -1973,8 +1993,8 @@ do
       text = arg1
     end
 
-    local selection = {getSelection(windowname)}
-    if _comp(selection, {"", 0, 0}) then
+    local selected, start, length = getSelection(windowname)
+    if selected == "" and start == 0 and length == 0 then
       return nil, "replace: nothing is selected to be replaced. Did selectString return -1?"
     end
     text = text or ""
@@ -2030,21 +2050,34 @@ function ansi2string(text)
   return result
 end
 
+local ansiColorNames = {}
+for index = 0, 255 do
+  ansiColorNames[index] = string.format("ansi_%03d", index)
+end
+local basicColourNames, brightColourNames = {}, {}
+for index = 0, 7 do
+  basicColourNames[index] = ansiColorNames[index]
+  brightColourNames[index] = ansiColorNames[index + 8]
+end
+
+-- given an xterm256 index, returns an rgb string for decho use
+local function convertindex(tag)
+  local name = ansiColorNames[tag] or string.format("ansi_%03d", tag)
+  return color_table[name] or false
+end
+
+-- a field left empty or out, as in 38;2;;5m or 38;2m, counts as 0
+local function rgbComponent(field)
+  return tonumber(field) or 0
+end
+
 -- function for converting a raw ANSI string into something decho can process
 -- italics and underline not currently supported since decho doesn't support them
 -- bold is emulated so it is supported, up to an extent
 function ansi2decho(text, ansi_default_color)
   assert(type(text) == 'string', 'ansi2decho: bad argument #1 type (expected string, got '..type(text)..'!)')
   local lastColour = ansi_default_color
-  local coloursToUse = nil
-
-  -- given an xterm256 index, returns an rgb string for decho use
-  local function convertindex(tag)
-    local ansi = string.format("ansi_%03d", tag)
-    return color_table[ansi] or false
-  end
-  -- looked up at the first escape sequence, and then shared by the rest of this string
-  local colours, lightColours
+  local namesToUse = basicColourNames
 
   -- match each set of ansi tags, ie [0;36;40m and convert to decho equivalent.
   -- this works since both ansi colours and echo don't need closing tags and map to each other
@@ -2054,18 +2087,6 @@ function ansi2decho(text, ansi_default_color)
     local delim = ";"
     if s:find(":") then delim = ":" end
     local t = string.split(s, delim) -- split the codes into an indexed table
-
-    if not colours then
-      colours = {}
-      for i = 0, 7 do
-        colours[i] = convertindex(i)
-      end
-      lightColours = {}
-      for i = 0, 7 do
-        lightColours[i] = convertindex(i+8)
-      end
-    end
-    coloursToUse = coloursToUse or colours
 
     -- since fg/bg can come in different order and we need them as fg:bg for decho, collect
     -- the data first, then assemble it in the order we need at the end
@@ -2081,14 +2102,14 @@ function ansi2decho(text, ansi_default_color)
         -- reset attributes
         output[#output + 1] = "<r>"
         fg, bg = nil, nil
-        coloursToUse = colours
+        namesToUse = basicColourNames
         lastColour = ansi_default_color
       elseif code == "1" then
         -- light or bold
-        coloursToUse = lightColours
+        namesToUse = brightColourNames
       elseif code == "22" then
         -- not light or bold
-        coloursToUse = colours
+        namesToUse = basicColourNames
       elseif code == "3" then
         formatCodeHandled = true
         output[#output+1] = "<i>"
@@ -2127,32 +2148,37 @@ function ansi2decho(text, ansi_default_color)
         local cmd = code - (layerCode * 10) -- extract the actual "command"
         -- 0-7 is a colour, 8 is xterm256
         local colour = nil
+        local cutShort = false
 
         if cmd == 8 and t[i + 1] == '5' then
           -- xterm256, colour indexed
-          colour = convertindex(tonumber(t[i + 2]))
+          local index = tonumber(t[i + 2])
+          cutShort = index == nil
+          colour = index and convertindex(index)
           i = i + 2
 
         elseif cmd == 8 and t[i + 1] == '2' then
           -- xterm256, rgb
           if delim == ";" then
-            colour = { t[i + 2] or '0', t[i + 3] or '0', t[i + 4] or '0' }
+            colour = { rgbComponent(t[i + 2]), rgbComponent(t[i + 3]), rgbComponent(t[i + 4]) }
             i = i + 4
           elseif delim == ":" then
-            colour = { t[i + 3] or '0', t[i + 4] or '0', t[i + 5] or '0' }
+            colour = { rgbComponent(t[i + 3]), rgbComponent(t[i + 4]), rgbComponent(t[i + 5]) }
             i = i + 5
           end
         elseif layerCode == 9 or layerCode == 10 then
           --light colours
-          colour = lightColours[cmd]
+          colour = color_table[brightColourNames[cmd]]
         elseif layerCode == 4 then
           -- background colours know no "bright" for
-          colour = colours[cmd]  -- mudlet
+          colour = color_table[basicColourNames[cmd]]  -- mudlet
         else -- usual ANSI colour index
-          colour = coloursToUse[cmd]
+          colour = color_table[namesToUse[cmd]]
         end
 
-        if layerCode == 3 or layerCode == 9 then
+        if cutShort then
+          -- a sequence cut short, like 38;5m, names no colour, so nothing changes
+        elseif layerCode == 3 or layerCode == 9 then
           fg = colour
           lastColour = cmd
         elseif layerCode == 4 or layerCode == 10 then
@@ -2164,8 +2190,10 @@ function ansi2decho(text, ansi_default_color)
       -- code such as 'bold' or 'dim'.
       -- In those cases, if there's a previous color, we are supposed to
       -- modify it
-      if not formatCodeHandled and lastColour then
-        fg = coloursToUse[lastColour]
+      -- only the eight basic colours have a bright form: after an xterm256 or
+      -- rgb foreground lastColour is 8, and that colour stays as it is
+      if not formatCodeHandled then
+        fg = color_table[namesToUse[lastColour]] or fg
       end
 
       i = i + 1

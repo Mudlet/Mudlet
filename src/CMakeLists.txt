@@ -85,6 +85,7 @@ set(mudlet_SRCS
     EditorItemXMLHelpers.cpp
     EditorModifyPropertyCommand.cpp
     EditorMoveItemCommand.cpp
+    EditorAutoCompleteFocusHandler.cpp
     EditorToggleActiveCommand.cpp
     EditorUndoStack.cpp
     EventLoopPump.cpp
@@ -363,6 +364,7 @@ set(mudlet_HDRS
     EditorItemXMLHelpers.h
     EditorModifyPropertyCommand.h
     EditorMoveItemCommand.h
+    EditorAutoCompleteFocusHandler.h
     EditorToggleActiveCommand.h
     EditorUndoStack.h
     enums.h
@@ -795,8 +797,11 @@ target_compile_definitions(${LIB_MUDLET_TARGET} PUBLIC APP_VERSION="${APP_VERSIO
 target_compile_definitions(${LIB_MUDLET_TARGET}
   PRIVATE
     APP_TARGET="${APP_TARGET}"
-    LUA_DEFAULT_PATH="${LUA_DEFAULT_DIR}"
-    LUA_SOURCE_PATH="${CMAKE_CURRENT_SOURCE_DIR}/mudlet-lua/lua")
+    LUA_DEFAULT_PATH="${LUA_DEFAULT_DIR}")
+# Only on the file that reads it: ccache's base_dir cannot rewrite a path in a
+# definition, so on every file it would stop worktrees sharing any cache hits.
+set_property(SOURCE TLuaInterpreter.cpp APPEND PROPERTY
+  COMPILE_DEFINITIONS LUA_SOURCE_PATH="${CMAKE_CURRENT_SOURCE_DIR}/mudlet-lua/lua")
 
 if(USE_OWN_QTKEYCHAIN)
     target_compile_definitions(${LIB_MUDLET_TARGET} PUBLIC INCLUDE_OWN_QT6_KEYCHAIN QTKEYCHAIN_NO_EXPORT)
@@ -940,6 +945,13 @@ endif()
 if(WIN32)
   target_link_libraries(${EXE_MUDLET_TARGET} ws2_32)
   set_target_properties(${EXE_MUDLET_TARGET} PROPERTIES WIN32_EXECUTABLE ON)
+  # Windows reserves only 1 MiB of stack by default, and Qt recurses once per overlapping sibling widget
+  # when repainting, so a few thousand labels overflowed it; 8 MiB matches the Linux and macOS main thread
+  if(MSVC)
+    target_link_options(${EXE_MUDLET_TARGET} PRIVATE "/STACK:8388608")
+  else()
+    target_link_options(${EXE_MUDLET_TARGET} PRIVATE "LINKER:--stack,8388608")
+  endif()
   # The UNICODE and _UNICODE definitions are needed to make
   # (QString) mudlet::getShortPathName(const QString& name) work in Windows:
   target_compile_definitions(${EXE_MUDLET_TARGET} PRIVATE UNICODE _UNICODE)

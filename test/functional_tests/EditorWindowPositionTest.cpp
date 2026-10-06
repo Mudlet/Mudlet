@@ -89,7 +89,7 @@ private:
         }
 
         QSignalSpy spy(&(pHost->mTelnet), &cTelnet::signal_connected);
-        if (!spy.wait(2000)) {
+        if (!spy.wait(2s)) {
             QTest::qFail(qPrintable(qsl("Could not connect with the host for '%1'.").arg(profileName)), __FILE__, __LINE__);
             return nullptr;
         }

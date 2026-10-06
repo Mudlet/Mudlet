@@ -38,6 +38,8 @@
 
 #include "GroupedTest.h"
 
+using namespace std::chrono_literals;
+
 // Where a button bar ends up: a docked bar in the console's top, left or right
 // strip by its location, a floating toolbar (location 4) as a dock on the main
 // window, and neither left behind once its action stops being a root one.
@@ -80,7 +82,7 @@ private:
             QFAIL("No active host available for the test.");
         }
         QSignalSpy connected(&(host->mTelnet), &cTelnet::signal_connected);
-        if (!connected.wait(2000)) {
+        if (!connected.wait(2s)) {
             QFAIL("Could not connect with the host.");
         }
     }
@@ -414,6 +416,84 @@ private slots:
         QVERIFY(console->actionEasyButtonBar(root));
     }
 
+    // A bar directly in a package stays in the package's list of children
+    // until it is gone, so each of its entries going redraws it after the
+    // editor has already cleared its host.
+    void test_aButtonBarInAPackageDeletedFromTheEditorIsNotRedrawn()
+    {
+        startProfile(mpHostname, mpLocalhost, mpPort);
+        auto* host = mudlet::self()->getActiveHost();
+        QVERIFY2(host, "No active host available for the test.");
+        auto* console = host->mpConsole.data();
+        QVERIFY(console);
+
+        auto* package = makeRootBar(host, qsl("placementDeletedPackage"), 0, false);
+        package->mPackageName = qsl("placementDeletedPackage");
+        auto* packaged = new TAction(package, host);
+        packaged->setName(qsl("placementDeletedPackageBar"));
+        packaged->setIsFolder(true);
+        packaged->setIsActive(true);
+        host->getActionUnit()->registerAction(packaged);
+        for (const QString& name : {qsl("placementDeletedPackageBar first"), qsl("placementDeletedPackageBar second")}) {
+            auto* entry = new TAction(packaged, host);
+            entry->setName(name);
+            entry->setIsActive(true);
+            host->getActionUnit()->registerAction(entry);
+        }
+        host->getActionUnit()->updateAllToolbars();
+        QPointer<TEasyButtonBar> bar = console->actionEasyButtonBar(packaged);
+        QVERIFY2(bar && !bar->isHidden(), "a bar directly in a package has to be showing first, or deleting it proves nothing");
+
+        // As EditorDeleteItemCommand::redo() does
+        host->getActionUnit()->unregisterAction(packaged);
+        packaged->mpHost = nullptr;
+        delete packaged;
+
+        QVERIFY(package->mpMyChildrenList->empty());
+        QVERIFY2(!bar || bar->isHidden(), "the deleted bar is still showing");
+    }
+
+    void test_aMenuDeletedFromTheEditorLeavesNoButtonOnItsBar()
+    {
+        startProfile(mpHostname, mpLocalhost, mpPort);
+        auto* host = mudlet::self()->getActiveHost();
+        QVERIFY2(host, "No active host available for the test.");
+
+        const QString menuName = qsl("placementDeletedMenu");
+        auto* root = makeRootBar(host, qsl("placementDeletedMenuBar"), 0, false);
+        auto* menu = new TAction(root, host);
+        menu->setName(menuName);
+        menu->setIsFolder(true);
+        menu->setIsActive(true);
+        host->getActionUnit()->registerAction(menu);
+        auto* entry = new TAction(menu, host);
+        entry->setName(qsl("placementDeletedMenu entry"));
+        entry->setIsActive(true);
+        host->getActionUnit()->registerAction(entry);
+        host->getActionUnit()->updateAllToolbars();
+        QPointer<TEasyButtonBar> bar = host->mpConsole->actionEasyButtonBar(root);
+        QVERIFY(bar);
+        auto menuButtons = [&bar, &menuName]() {
+            // Each redraw replaces the bar's widget with deleteLater()
+            QCoreApplication::sendPostedEvents(nullptr, QEvent::DeferredDelete);
+            qsizetype count = 0;
+            for (const auto* button : bar->findChildren<QPushButton*>()) {
+                count += button->text() == menuName;
+            }
+            return count;
+        };
+        QCOMPARE(menuButtons(), 1);
+
+        // As EditorDeleteItemCommand::redo() does
+        host->getActionUnit()->unregisterAction(menu);
+        menu->mpHost = nullptr;
+        delete menu;
+
+        QVERIFY(root->mpMyChildrenList->empty());
+        QVERIFY(bar);
+        QCOMPARE(menuButtons(), 0);
+    }
+
     // Moving or resizing a floating toolbar raises its layout-changed flag, and
     // committing the layout clears it and tells the window there is a layout to
     // save again.
@@ -499,7 +579,7 @@ private slots:
     {
         if (auto* self = mudlet::self()) {
             if (auto* host = self->getActiveHost()) {
-                QTest::qWait(50);
+                QTest::qWait(50ms);
                 host->waitForProfileSave();
             }
         }

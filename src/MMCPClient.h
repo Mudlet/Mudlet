@@ -46,6 +46,7 @@ class MMCPClient : public QObject
 
 public:
     MMCPClient(Host*, MMCPServer*);
+    ~MMCPClient() override;
 
     bool incoming(qintptr);
     void tryConnect(const QString&, quint16);

@@ -26,7 +26,6 @@
 
 
 #include "Host.h"
-#include "T2DMap.h"
 #include "TRoomDB.h"
 
 #include <QBuffer>
@@ -54,7 +53,7 @@ static const int kPixmapDataLineSize = 64;
 TArea::TArea(TMap* pMap, TRoomDB* pRDB)
 : mpRoomDB(pRDB)
 , mpMap(pMap)
-, mLast2DMapZoom(T2DMap::csmDefaultXYZoom)
+, mLast2DMapZoom(TMap::scmDefaultXYZoom)
 {
 }
 
@@ -814,7 +813,9 @@ void TArea::writeJsonArea(QJsonArray& array) const
     }
     if (currentRoomCount % 10 != 0) {
         // Must add on any remainder otherwise the total will be wrong:
-        mpMap->incrementJsonProgressDialog(true, true, currentRoomCount % 10);
+        if (mpMap->incrementJsonProgressDialog(true, true, currentRoomCount % 10)) {
+            return;
+        }
     }
     const QJsonValue roomsValue{roomsArray};
     areaObj.insert(QLatin1String("rooms"), roomsValue);
@@ -1188,7 +1189,7 @@ bool TArea::hasPermanentLabels() const
 
 void TArea::set2DMapZoom(const qreal zoom)
 {
-    if (zoom >= T2DMap::csmMinXYZoom) {
+    if (qIsFinite(zoom) && zoom >= TMap::scmMinXYZoom) {
         mLast2DMapZoom = zoom;
     }
 }
