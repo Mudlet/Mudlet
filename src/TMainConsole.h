@@ -183,7 +183,7 @@ public:
     bool hideSubConsole(const QString& name);
     bool resizeSubConsole(const QString& name, int width, int height);
     bool moveSubConsole(const QString& name, int x, int y);
-    bool reparentWindow(const QString& windowname, const QString& name, int x, int y, bool show);
+    std::pair<bool, QString> reparentWindow(const QString& windowname, const QString& name, int x, int y, bool show);
     std::optional<QSize> consoleFontSize(const QString& name) const;
     bool setSubConsoleBackgroundColor(const QString& name, const QColor& color);
     bool setSubConsoleBackgroundImage(const QString& name, const QString& path, int mode);
