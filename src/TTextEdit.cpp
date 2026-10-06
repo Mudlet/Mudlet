@@ -617,6 +617,7 @@ int TTextEdit::paintForegrounds(QPainter& painter, TGlyphCache& glyphCache, cons
             inkBottom = std::max(inkBottom, paintGraphemeForeground(painter, glyphCache, run));
         }
     }
+    glyphCache.flush(painter);
     if (!clip.isNull()) {
         painter.restore();
     }
@@ -1033,14 +1034,15 @@ int TTextEdit::paintGraphemeForeground(QPainter& painter, TGlyphCache& glyphCach
         return std::numeric_limits<int>::min();
     }
 
-    if (painter.pen().color() != effectiveFgColor) {
-        painter.setPen(effectiveFgColor);
-    }
     TGlyphCache::Style style;
     style.setFlag(TGlyphCache::Bold, isBold);
     style.setFlag(TGlyphCache::Italic, isItalics);
     qreal inkBottom = textRect.y();
     if (Q_UNLIKELY(useQtDecoration)) {
+        glyphCache.flush(painter);
+        if (painter.pen().color() != effectiveFgColor) {
+            painter.setPen(effectiveFgColor);
+        }
         // drawGlyphRun() draws these decorations differently, so they stay with drawText()
         QFont font = TGlyphCache::styled(this->font(), style);
         font.setOverline(useQtOverline);
@@ -1052,11 +1054,14 @@ int TTextEdit::paintGraphemeForeground(QPainter& painter, TGlyphCache& glyphCach
         painter.drawText(textRect, Qt::AlignCenter | Qt::TextDontClip | Qt::TextSingleLine, grapheme.toString());
         inkBottom = glyphCache.inkBottom(textRect, grapheme, style);
     } else if (grapheme.size() != 1 || grapheme.at(0) != QChar::Space) {
-        inkBottom = glyphCache.drawCentered(painter, textRect, grapheme, style);
+        inkBottom = glyphCache.queueCentered(painter, textRect, grapheme, style, effectiveFgColor);
     }
 
     // Draw custom decorations (colored underlines, overlines, strikethrough)
-    drawCustomDecorations(painter, effectiveFgColor, textRect, charStyle);
+    if (attributes & (TChar::Underline | TChar::Overline | TChar::StrikeOut)) {
+        glyphCache.flush(painter);
+        drawCustomDecorations(painter, effectiveFgColor, textRect, charStyle);
+    }
     // Rounded out, and a pixel more for antialiasing at the edge of the outline
     return std::max(qCeil(inkBottom) + 1, textRect.y() + textRect.height());
 }
