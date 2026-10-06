@@ -245,6 +245,17 @@ ccache is installed. A full cache evicts objects continuously, so switching bran
 near-full rebuild. Run `ccache -s`; if `Cache size` has reached `Max cache size`, raise it with
 `ccache -M <n>G`.
 
+Worktrees share that cache: unless you have set a `base_dir` yourself, CMake sets one per
+checkout, so paths inside each checkout reach ccache relative. The Debug presets (`-g`) also need
+`ccache --set-config=hash_dir=false`, and exporting `QT_RCC_SOURCE_DATE_OVERRIDE=1` wherever you
+build lets the generated resource sources, which otherwise carry each checkout's file mtimes, match
+too; the remote session hook does both. `base_dir` rewrites path arguments but not a path inside a
+`-D` value, so a define carrying `CMAKE_SOURCE_DIR` or a build-tree path makes every file it reaches
+miss in every other checkout: put such defines on the source files that read them
+(`set_property(SOURCE …)`), not on a whole target. Under Clang, targets with a precompiled header
+share nothing between checkouts: the header records its build tree's path and fails to load from
+another, so `cmake/PrecompiledHeaders.cmake` turns `base_dir` off for those targets.
+
 **Sanitizers are on by default** on every non-Windows build, regardless of build type
 (`src/cmake/EnableSanitizers.cmake` defaults `USE_SANITIZER` to `address`). They cost both compile
 time and runtime speed. Use a `-nosan` or `-release` preset when not chasing a memory bug; both
