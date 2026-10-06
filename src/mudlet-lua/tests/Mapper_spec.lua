@@ -3742,6 +3742,171 @@ describe("Tests saveMap and loadMap", function()
     end)
   end)
 
+  -- QDataStream hands a list's length prefix straight to QList::reserve(), so
+  -- one flipped byte in a binary map asked for gigabytes (#10689). The memory
+  -- is never touched, so it never becomes resident: VmPeak is where it shows.
+  describe("Tests loadMap on a binary map with a corrupt list length", function()
+    local corruptPath = getMudletHomeDir() .. "/mapper_spec_corrupt_length.dat"
+    -- /proc/self/status counts in KiB
+    local gibibyteKiB = 1024 * 1024
+    local allowedRise = gibibyteKiB / 4
+
+    local function memoryKiB()
+      local status = io.open("/proc/self/status", "r")
+      if not status then
+        return nil
+      end
+      local text = status:read("*a")
+      status:close()
+      return tonumber(text:match("VmPeak:%s*(%d+)")), tonumber(text:match("VmSize:%s*(%d+)"))
+    end
+
+    -- big endian, as QDataStream writes it
+    local function int32(n)
+      return string.char(math.floor(n / 16777216) % 256, math.floor(n / 65536) % 256, math.floor(n / 256) % 256, n % 256)
+    end
+
+    -- Saves the map and writes a copy with the top byte of the length the
+    -- marker starts with set to `highByte`; the marker has to occur exactly once
+    local function writeCorruptCopy(marker, highByte, version)
+      if version then
+        assert.is_true(saveMap(savePath, version))
+      else
+        assert.is_true(saveMap(savePath))
+      end
+      local file = assert(io.open(savePath, "rb"))
+      local data = file:read("*a")
+      file:close()
+      local at = data:find(marker, 1, true)
+      assert.is_truthy(at, "the marker is not in the saved map")
+      assert.is_nil(data:find(marker, at + 1, true), "the marker is in the saved map more than once")
+      file = assert(io.open(corruptPath, "wb"))
+      file:write(data:sub(1, at - 1) .. string.char(highByte) .. data:sub(at + 1))
+      file:close()
+    end
+
+    -- Loads the corrupt copy, asserting that VmPeak did not rise by anything
+    -- like the `requestKiB` its length asks for
+    local function assertCorruptLengthIsNotReserved(marker, highByte, requestKiB, version)
+      if not memoryKiB() then
+        pending("needs VmPeak from /proc/self/status")
+        return
+      end
+      writeCorruptCopy(marker, highByte, version)
+      -- the intact file first: whatever a first load maps in for good is then
+      -- already counted, and it has to load for the corrupt one to mean anything
+      assert.is_true(loadMap(savePath), "the uncorrupted map did not load")
+
+      local peakBefore, sizeBefore = memoryKiB()
+      -- VmPeak only rises once VmSize passes the old peak, so a request that
+      -- would not get there cannot be seen
+      if peakBefore - sizeBefore + allowedRise >= requestKiB then
+        pending("VmPeak is already too far above VmSize to show the request")
+        return
+      end
+      loadMap(corruptPath)
+      local rise = memoryKiB() - peakBefore
+      assert.is_true(rise < allowedRise, "loading asked for " .. rise .. " KiB more")
+    end
+
+    local function assertCorruptCopyLoadsQuickly()
+      local started = os.clock()
+      loadMap(corruptPath)
+      local took = os.clock() - started
+      assert.is_true(took < 5, "loading took " .. took .. " seconds of CPU")
+    end
+
+    local function oneRoomMap(z)
+      deleteMap()
+      local area = addAreaName("MapperSpecCorruptLengthArea")
+      local room = createRoomID()
+      addRoom(room)
+      setRoomArea(room, area)
+      setRoomCoordinates(room, 3, 5, z)
+      return room, area
+    end
+
+    local function roomWithExitNorth()
+      local room, area = oneRoomMap(0)
+      local exitRoom = createRoomID()
+      addRoom(exitRoom)
+      setRoomArea(exitRoom, area)
+      setRoomCoordinates(exitRoom, 3, 6, 0)
+      setExit(room, exitRoom, "n")
+      return room
+    end
+
+    after_each(function()
+      os.remove(corruptPath)
+    end)
+
+    it("does not reserve memory for an area's z level list on a length alone", function()
+      oneRoomMap(7777)
+      -- the level list, then the area exits, of which there are none: the
+      -- per-level extents that come later carry the level too, but no zero
+      local marker = int32(1) .. int32(7777) .. int32(0)
+      -- 0x1b000001 levels of four bytes each
+      assertCorruptLengthIsNotReserved(marker, 0x1b, 1.6 * gibibyteKiB)
+    end)
+
+    -- the length, then the codes for out, in and down
+    local threeDirections = int32(3) .. int32(12) .. int32(11) .. int32(10)
+
+    it("does not reserve memory for a room's exit lock list on a length alone", function()
+      local room = oneRoomMap(0)
+      lockExit(room, "out", true)
+      lockExit(room, "in", true)
+      lockExit(room, "down", true)
+      assertCorruptLengthIsNotReserved(threeDirections, 0x1b, 1.6 * gibibyteKiB)
+    end)
+
+    it("does not reserve memory for a room's exit stub list on a length alone", function()
+      local room = oneRoomMap(0)
+      setExitStub(room, "out", true)
+      setExitStub(room, "in", true)
+      setExitStub(room, "down", true)
+      assertCorruptLengthIsNotReserved(threeDirections, 0x1b, 1.6 * gibibyteKiB)
+    end)
+
+    -- before format 18 an area's rooms were a list, which reserves, not a set
+    it("does not reserve memory for an older format's area room list on a length alone", function()
+      local room = oneRoomMap(7777)
+      assertCorruptLengthIsNotReserved(int32(1) .. int32(room) .. int32(1) .. int32(7777), 0x1b, 1.6 * gibibyteKiB, 17)
+    end)
+
+    -- the points of a custom line are a list inside a map, which QDataStream
+    -- reads without giving the caller a look at the inner length
+    it("does not reserve memory for a custom line's points on a length alone", function()
+      local room = roomWithExitNorth()
+      assert.is_true(addCustomLine(room, {{4321.25, 7, 0}}, "n", "solid line", {255, 0, 0}, false))
+      -- one point, whose x is the double 4321.25; 0x07000001 points of sixteen bytes each
+      assertCorruptLengthIsNotReserved(int32(1) .. "\64\176\225\64\0\0\0\0", 0x07, 1.6 * gibibyteKiB)
+    end)
+
+    it("does not reserve memory for a custom line's points in an older format", function()
+      local room = roomWithExitNorth()
+      assert.is_true(addCustomLine(room, {{4321.25, 7, 0}}, "n", "solid line", {255, 0, 0}, false))
+      assertCorruptLengthIsNotReserved(int32(1) .. "\64\176\225\64\0\0\0\0", 0x07, 1.6 * gibibyteKiB, 19)
+    end)
+
+    it("does not reserve memory for a custom line's colour in an older format on a length alone", function()
+      local room = roomWithExitNorth()
+      assert.is_true(addCustomLine(room, {{0, 7, 0}}, "n", "solid line", {201, 202, 203}, false))
+      -- before format 20 a line's colour was a list of its three components
+      assertCorruptLengthIsNotReserved(int32(3) .. int32(201) .. int32(202) .. int32(203), 0x1b, 1.6 * gibibyteKiB, 19)
+    end)
+
+    -- Without a status check the area count alone drives the loop, which
+    -- keeps making areas after the file has run out: 16 million of them took
+    -- longer than ten minutes
+    it("stops reading areas once the file has run out", function()
+      oneRoomMap(0)
+      -- the count of two areas, the default area's id and its empty room list
+      writeCorruptCopy(int32(2) .. "\255\255\255\255" .. int32(0), 0x01)
+      assertCorruptCopyLoadsQuickly()
+    end)
+  end)
+
   describe("Tests loadMap importing an XML map", function()
     -- the fixture's own IDs, so that a load which quietly did nothing cannot
     -- be mistaken for a successful import
