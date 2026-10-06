@@ -60,6 +60,7 @@
 #include <QProgressDialog>
 #include <QUiLoader>
 #include <QSaveFile>
+#include <QScopeGuard>
 #include <QScrollBar>
 #include <QShortcut>
 #include <QSizePolicy>
@@ -2687,38 +2688,45 @@ bool TMainConsole::moveSubConsole(const QString& name, int x, int y)
 
 // The non-label half of setWindow()'s dispatch, tried in a fixed order, so that
 // a name held by two kinds of element always moves the same one.
-bool TMainConsole::reparentWindow(const QString& windowname, const QString& name, int x, int y, bool show)
+std::pair<bool, QString> TMainConsole::reparentWindow(const QString& windowname, const QString& name, int x, int y, bool show)
 {
-    QWidget* pW = parentWidgetFor(windowname);
-    const auto reparent = [this, &name, pW, x, y, show](QWidget* pElement) {
-        pElement->setParent(pW);
-        pElement->move(x, y);
-        if (show) {
-            pElement->show();
-        }
-        reportGeometry(name);
-        reportVisibilityWithin(pElement);
-        return true;
-    };
+    QWidget* pElement = nullptr;
+    auto pC = mSubConsoleMap.value(name);
+    if (pC) {
+        pElement = pC;
+    } else if (auto pS = mScrollBoxMap.value(name)) {
+        pElement = pS;
+    } else if (auto pN = mSubCommandLineMap.value(name)) {
+        pElement = pN;
+    } else if (auto pT = mTextBoxMap.value(name)) {
+        pElement = pT;
+    } else if (mpMapper && !name.compare(QLatin1String("mapper"), Qt::CaseInsensitive)) {
+        pElement = mpMapper;
+    }
+    if (!pElement) {
+        return {false, qsl("element '%1' not found").arg(name)};
+    }
 
-    if (auto pC = mSubConsoleMap.value(name)) {
+    QWidget* pW = parentWidgetFor(windowname);
+    // setParent() accepts a cycle, after which Qt walks the parent chain forever
+    for (QWidget* pAncestor = pW; pAncestor; pAncestor = pAncestor->parentWidget()) {
+        if (pAncestor == pElement) {
+            return {false, qsl("element '%1' cannot be moved into itself or into one of its own children").arg(name)};
+        }
+    }
+
+    if (pC) {
         pC->mOldX = x;
         pC->mOldY = y;
-        return reparent(pC);
     }
-    if (auto pS = mScrollBoxMap.value(name)) {
-        return reparent(pS);
+    pElement->setParent(pW);
+    pElement->move(x, y);
+    if (show) {
+        pElement->show();
     }
-    if (auto pN = mSubCommandLineMap.value(name)) {
-        return reparent(pN);
-    }
-    if (auto pT = mTextBoxMap.value(name)) {
-        return reparent(pT);
-    }
-    if (mpMapper && !name.compare(QLatin1String("mapper"), Qt::CaseInsensitive)) {
-        return reparent(mpMapper);
-    }
-    return false;
+    reportGeometry(name);
+    reportVisibilityWithin(pElement);
+    return {true, QString()};
 }
 
 std::optional<QSize> TMainConsole::consoleFontSize(const QString& name) const
@@ -3910,6 +3918,15 @@ void TMainConsole::closeEvent(QCloseEvent* event)
     }
 
     qDebug().nospace().noquote() << "TMainConsole::closeEvent(...) INFO - received by \"" << mpHost->getName() << "\".";
+    // The sysExitEvent handlers, the save question and the save wait all run the
+    // event loop; a close or reset of this profile reached from a script meanwhile
+    // would delete this console, or the Lua state, under this call.
+    mpHost->getLuaInterpreter()->enterNestedEventLoop();
+    const auto nestedLoopGuard = qScopeGuard([pHost = QPointer<Host>(mpHost)]() {
+        if (pHost) {
+            pHost->getLuaInterpreter()->leaveNestedEventLoop();
+        }
+    });
     TEvent conCloseEvent{};
     conCloseEvent.mArgumentList.append(qsl("sysExitEvent"));
     conCloseEvent.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
