@@ -2893,9 +2893,19 @@ void T2DMap::paintEvent(QPaintEvent* e)
     QSet<QPair<int, int>> usedRoomPositions;
 
     if (mudlet::self()->mDrawUpperLowerLevels) {
-        // draw rooms on lower z-level - iterate only the rooms actually on that
-        // level instead of scanning every room in the area
-        const QSet<int>& lowerLevelRooms = pDrawnArea->getRoomsForZ(zLevel - 1);
+        const TAreaGridIndex& gridIndex = pDrawnArea->getGridIndex();
+        // Zoomed out over the whole area, walking the index costs more than the flat room set.
+        // The area keeps its y extremes negated, unlike roomBounds.
+        const bool viewportHoldsArea =
+                roomBounds.left() <= pDrawnArea->min_x && roomBounds.right() >= pDrawnArea->max_x && roomBounds.top() <= -pDrawnArea->max_y && roomBounds.bottom() >= -pDrawnArea->min_y;
+        auto neighbouringLevelRooms = [&](const int z) {
+            if (viewportHoldsArea) {
+                const QSet<int>& rooms = pDrawnArea->getRoomsForZ(z);
+                return QList<int>(rooms.cbegin(), rooms.cend());
+            }
+            return gridIndex.roomsInViewport(z, roomBounds.left(), roomBounds.right(), roomBounds.top(), roomBounds.bottom());
+        };
+        const QList<int> lowerLevelRooms = neighbouringLevelRooms(zLevel - 1);
         for (const int currentAreaRoom : lowerLevelRooms) {
             TRoom* room = mpMap->mpRoomDB->getRoom(currentAreaRoom);
             if (!room) {
@@ -2921,8 +2931,7 @@ void T2DMap::paintEvent(QPaintEvent* e)
             }
         }
 
-        // draw rooms on upper z-level
-        const QSet<int>& upperLevelRooms = pDrawnArea->getRoomsForZ(zLevel + 1);
+        const QList<int> upperLevelRooms = neighbouringLevelRooms(zLevel + 1);
         for (const int currentAreaRoom : upperLevelRooms) {
             TRoom* room = mpMap->mpRoomDB->getRoom(currentAreaRoom);
             if (!room) {
