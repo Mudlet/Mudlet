@@ -1072,6 +1072,11 @@ if(UNIX AND NOT APPLE)
   # CMAKE_INSTALL_PREFIX is automagically set on Unix to DESTDIR environment
   # variable and is prefixed onto relative DESTINATION values
   install(
+	DIRECTORY "../translations/lua/"
+	DESTINATION "share/mudlet/lua/translations"
+	FILES_MATCHING PATTERN "*.json"
+	PERMISSIONS OWNER_READ OWNER_WRITE GROUP_READ WORLD_READ)
+  install(
     DIRECTORY "mudlet-lua/lua"
     DESTINATION "share/mudlet"
     FILES_MATCHING
