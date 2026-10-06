@@ -742,9 +742,17 @@ if not _TEST then
   end
 end
 
+-- One function shared by every deleteFull() call: a string script would be
+-- compiled into a new Lua chunk each time a line is gagged.
+local function deletePromptLine()
+  if isPrompt() then
+    deleteLine()
+  end
+end
+
 function deleteFull()
   deleteLine()
-  tempLineTrigger(1, 1, [[if isPrompt() then deleteLine() end]])
+  tempLineTrigger(1, 1, deletePromptLine)
 end
 
 function deleteMultiline(maxLines)

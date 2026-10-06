@@ -269,13 +269,29 @@ function table.n_collect(tbl, func)
   local func_type = type(func)
   assert(func_type == "function", string.format("table.n_collect: bad argument #2 type (function to run against each item in tbl as function expected, got %s)", func_type))
   local matches = {}
+  -- A value is kept unless it == one already kept. Strings, booleans and
+  -- numbers other than NaN are == exactly when they are the same table key,
+  -- so a set finds their duplicates without rescanning `matches`. Tables,
+  -- functions and userdata can only == one another, possibly through an __eq
+  -- metamethod, so they are still compared one by one, in the same order, but
+  -- only against each other. NaN equals nothing and is always kept.
+  local seen = {}
+  local others
   for key,value in pairs(tbl) do
-    -- table.contains matches keys and nested values too, so a value equal to
-    -- an index already in `matches` looked like a duplicate. table.index_of
-    -- compares by value over ipairs, which is the semantics a list of unique
-    -- values needs, and is what the sibling table.n_matches already uses.
-    if func(value) == true and not table.index_of(matches, value) then
-      table.insert(matches, value)
+    if func(value) == true then
+      local valueType = type(value)
+      if valueType == "string" or valueType == "boolean" or (valueType == "number" and value == value) then
+        if not seen[value] then
+          seen[value] = true
+          matches[#matches + 1] = value
+        end
+      else
+        others = others or {}
+        if not table.index_of(others, value) then
+          others[#others + 1] = value
+          matches[#matches + 1] = value
+        end
+      end
     end
   end
   return matches
@@ -325,13 +341,21 @@ function table.n_matches(tbl, ...)
   assert(tbl_type == "table", string.format("table.n_matches: bad argument #1 type (table to check using string.match as table expected, got %s)", tbl_type))
   local patterns = {...}
   local matches = {}
+  -- only strings and numbers are kept, and those are == exactly when they are
+  -- the same table key, except NaN, which equals nothing and is always kept
+  local seen = {}
   for index,pattern in ipairs(patterns) do
     local ptype = type(pattern)
     assert(ptype == "string", string.format("table.n_matches: bad argument #%d type (pattern to check as string expected, got %s)", index+1, ptype))
     for key,value in pairs(tbl) do
       local valueType = type(value)
-      if (valueType == "string" or valueType == "number") and string.match(value, pattern) and not table.index_of(matches, value) then
-        table.insert(matches, value)
+      if (valueType == "string" or valueType == "number") and string.match(value, pattern) then
+        if value ~= value then
+          matches[#matches + 1] = value
+        elseif not seen[value] then
+          seen[value] = true
+          matches[#matches + 1] = value
+        end
       end
     end
   end
