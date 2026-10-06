@@ -1618,6 +1618,15 @@ describe("Tests UI functions", function()
       end
     end
 
+    -- each line with its digits swapped for others, which a shape must not tell apart
+    local function assertDigitsReadAlike(line)
+      local shapes = BaseUI.vitalsShapesMatching(line)
+      for _, digit in ipairs({ "0", "1", "5", "9" }) do
+        local swapped = line:gsub("%d", digit)
+        assert.are.same(shapes, BaseUI.vitalsShapesMatching(swapped), swapped)
+      end
+    end
+
     local function kindCount(hits, kind)
       local count = 0
       for _, hit in ipairs(hits) do
@@ -1655,6 +1664,38 @@ describe("Tests UI functions", function()
       assert.is_not_nil(mp)
       assert.are.equal(210, mp.current)
       assert.are.equal(250, mp.max)
+    end)
+
+    it("should read each line's own numbers when lines differ only in them", function()
+      -- a max of zero drops the first line's readings, the others still have theirs
+      assert.are.same({}, BaseUI.parseVitalsLine("HP: 523/000 MP: 210/000 [same shape]"))
+      local hits = BaseUI.parseVitalsLine("HP: 417/600 MP: 198/250 [same shape]")
+      assert.are.equal(417, reading(hits, "hp", "curmax").current)
+      assert.are.equal(600, reading(hits, "hp", "curmax").max)
+      assert.are.equal(198, reading(hits, "mp", "curmax").current)
+      hits = BaseUI.parseVitalsLine("HP: 900/999 MP: 110/250 [same shape]")
+      assert.are.equal(900, reading(hits, "hp", "curmax").current)
+      assert.are.equal(110, reading(hits, "mp", "curmax").current)
+      assert.are.same({}, BaseUI.parseVitalsLine("HP: 523/000 MP: 210/000 [same shape]"))
+    end)
+
+    it("should not let a line whose numbers are a different length decide what another matches", function()
+      local function trusted(hits, stat)
+        for _, hit in ipairs(hits) do
+          if hit.stat == stat and hit.kind == "curmax" and not hit.windowed then
+            return hit
+          end
+        end
+      end
+      -- a SMAUG row anchor allows 15 characters of label, digits included
+      assert.is_nil(trusted(BaseUI.parseVitalsLine("Pract1234567890123: 5   Hitpoints: 90 of 90 [digit count]"), "hp"))
+      local hp = trusted(BaseUI.parseVitalsLine("Pract12: 5   Hitpoints: 90 of 90 [digit count]"), "hp")
+      assert.are.equal(90, hp and hp.max)
+      -- thousands separators only group in threes
+      BaseUI.parseVitalsLine("Health: 12,34/5,678 [digit count]")
+      hp = trusted(BaseUI.parseVitalsLine("Health: 1,234/5,678 [digit count]"), "hp")
+      assert.are.equal(1234, hp and hp.current)
+      assert.are.equal(5678, hp and hp.max)
     end)
 
     it("should parse labelled percentages without needing a maximum", function()
@@ -1865,6 +1906,18 @@ describe("Tests UI functions", function()
         end)
       end
 
+      it("matches the same shapes whatever digits these screens hold", function()
+        for _, screen in ipairs(screens) do
+          assertDigitsReadAlike(screen.line)
+        end
+      end)
+
+      it("gates each shape only on a literal these screens cannot match without", function()
+        for _, screen in ipairs(screens) do
+          assert.is_true(BaseUI.needsHoldOn(screen.line), screen.name)
+        end
+      end)
+
       it("should not read guild points or bare xp from an LPMud row", function()
         local hits = BaseUI.parseVitalsLine("Hp: 143 (167) Gp: 240 (240) Xp: 267000")
         assert.is_nil(reading(hits, "mp"))
@@ -1887,6 +1940,23 @@ describe("Tests UI functions", function()
         assert.is_true(found.windowed == true)
         assert.are.equal(1000, found.current)
         assert.are.equal(1000, found.max)
+      end)
+
+      it("should leave out only the windowed readings when asked to", function()
+        local anchorless = "Race : Human           Mana     :  1000/ 1000      Autoexit (X)"
+        assert.is_true(#BaseUI.parseVitalsLine(anchorless) > 0)
+        for _, hit in ipairs(BaseUI.parseVitalsLine(anchorless, true)) do
+          assert.is_not_true(hit.windowed)
+        end
+        local tableRow = "| Race: Undead Atavian | Health: 4252/4252 |"
+        local trusted = {}
+        for _, hit in ipairs(BaseUI.parseVitalsLine(tableRow)) do
+          if not hit.windowed then
+            trusted[#trusted + 1] = hit
+          end
+        end
+        assert.is_true(#trusted > 0)
+        assert.are.same(trusted, BaseUI.parseVitalsLine(tableRow, true))
       end)
 
       it("should open the score window when a score command goes out", function()
@@ -2019,6 +2089,32 @@ describe("Tests UI functions", function()
         assert.is_true(BaseUI.shapesArePrecompiled())
       end)
 
+      it("gates each shape only on the start of its own regex", function()
+        assert.is_true(BaseUI.prefixesLeadTheirShapes())
+      end)
+
+      it("remembers what a line matched only while no shape tells digits apart", function()
+        assert.is_true(BaseUI.shapesTreatDigitsAlike())
+        assert.is_true(BaseUI.shapesTreatDigitsAlike({ { regex = [[^HP: (\d{1,3})/(\d{2,})]] } }))
+        for _, regex in ipairs({ [[^HP: 1(\d+)]], [[^HP: (\d)\1]], [[^HP: (?<n>\d)\k<n>]],
+            [[^HP: (?<n>\d)(?P=n)]], [[^HP: (\d)(?(1)x)]], [[^HP: \x{31}(\d+)]], [[^HP: \o{61}(\d+)]] }) do
+          assert.is_false(BaseUI.shapesTreatDigitsAlike({ { regex = regex } }), regex)
+          assert.is_false(BaseUI.shapesTreatDigitsAlike({ { regex = "^HP: (\\d+)", prefix = regex } }), regex)
+        end
+      end)
+
+      it("matches the same shapes whatever digits a line holds", function()
+        for _, line in ipairs(readableLines) do
+          assertDigitsReadAlike(line)
+        end
+      end)
+
+      it("gates each shape only on a literal it cannot match without", function()
+        for _, line in ipairs(readableLines) do
+          assert.is_true(BaseUI.needsHoldOn(line), line)
+        end
+      end)
+
       -- restore whatever the assertions do: a raised vitalsLock left behind
       -- makes createVitalsTriggers a silent no-op for every later test
       local savedIds, savedLock
@@ -2120,6 +2216,102 @@ describe("Tests UI functions", function()
           assert.is_true(matched, "no line above exercises the shape: " .. regex)
         end
       end)
+    end)
+  end)
+
+  -- the vitals trigger's callback, fed lines the way the trigger would: it
+  -- reads the global line and the line number, both stood in for in _G, as
+  -- busted gives a spec file an environment of its own
+  describe("Test BaseUI.onVitalsLine", function()
+    if not (type(BaseUI) == "table" and type(BaseUI.onVitalsLine) == "function") then
+      it("needs the base UI package installed", function()
+        pending("BaseUI.onVitalsLine is unavailable in this profile")
+      end)
+      return
+    end
+
+    local saved, applied, scoreRequests, lineNumber
+
+    before_each(function()
+      saved = {
+        applyVitals = BaseUI.applyVitals,
+        maybeRequestScore = BaseUI.maybeRequestScore,
+        shapeSightings = BaseUI.shapeSightings,
+        scoreWindowUntil = BaseUI.scoreWindowUntil,
+        lastVitalsLine = BaseUI.lastVitalsLine,
+        lastChatLine = BaseUI.lastChatLine,
+        getLineNumber = _G.getLineNumber,
+        line = _G.line,
+      }
+      applied, scoreRequests, lineNumber = {}, 0, 1000
+      BaseUI.applyVitals = function(_, updates)
+        applied[#applied + 1] = updates
+      end
+      BaseUI.maybeRequestScore = function()
+        scoreRequests = scoreRequests + 1
+      end
+      BaseUI.shapeSightings = {}
+      BaseUI.scoreWindowUntil = nil
+      BaseUI.lastVitalsLine, BaseUI.lastChatLine = nil, nil
+      _G.getLineNumber = function()
+        return lineNumber
+      end
+    end)
+
+    after_each(function()
+      BaseUI.applyVitals = saved.applyVitals
+      BaseUI.maybeRequestScore = saved.maybeRequestScore
+      BaseUI.shapeSightings = saved.shapeSightings
+      BaseUI.scoreWindowUntil = saved.scoreWindowUntil
+      BaseUI.lastVitalsLine = saved.lastVitalsLine
+      BaseUI.lastChatLine = saved.lastChatLine
+      _G.getLineNumber = saved.getLineNumber
+      _G.line = saved.line
+    end)
+
+    local function see(text)
+      lineNumber = lineNumber + 1
+      _G.line = text
+      BaseUI.onVitalsLine()
+    end
+
+    it("should trust a gated prompt shape from its third sighting", function()
+      see("<100/120hp 50/60m 80/90mv>")
+      see("<100/120hp 50/60m 80/90mv>")
+      assert.are.same({}, applied)
+      see("<90/120hp 50/60m 80/90mv>")
+      assert.are.same({
+        { hp = { current = 90, max = 120 }, mp = { current = 50, max = 60 }, mv = { current = 80, max = 90 } },
+      }, applied)
+    end)
+
+    it("should trust a score-table cell on first sight", function()
+      see("| Race: Undead Atavian | Health: 4252/4252 |")
+      assert.are.same({ { hp = { current = 4252, max = 4252 } } }, applied)
+    end)
+
+    it("should read an anchorless score row only while the score window is open", function()
+      local row = "Race : Human           Mana     :  1000/ 1000      Autoexit (X)"
+      see(row)
+      assert.are.same({}, applied)
+      BaseUI.scoreWindowUntil = getEpoch() + 60
+      see(row)
+      assert.are.same({ { mp = { current = 1000, max = 1000 } } }, applied)
+    end)
+
+    it("should ask for the score screen when a current with no maximum is trusted", function()
+      see("523h 120m >")
+      see("523h 120m >")
+      assert.are.equal(0, scoreRequests)
+      see("523h 120m >")
+      assert.are.equal(2, scoreRequests)
+      assert.are.same({ { hp = { current = 523 }, mp = { current = 120 } } }, applied)
+    end)
+
+    it("should read a line only once however often its trigger fires", function()
+      see("| Race: Undead Atavian | Health: 4252/4252 |")
+      BaseUI.onVitalsLine()
+      assert.are.equal(1, #applied)
     end)
   end)
 
@@ -5128,6 +5320,32 @@ describe("Window and label state", function()
       assert.are.equal(("window '%s' not found"):format(unknown), err)
     end)
 
+    -- Qt does not refuse the parent cycle this would make, and then hangs walking it
+    it("refuses to move a scroll box into itself or into one of its own children", function()
+      local outer = name("wlsCycleOuter")
+      local inner = name("wlsCycleInner")
+      local innermost = name("wlsCycleInnermost")
+      finally(function()
+        deleteScrollBox(innermost)
+        deleteScrollBox(inner)
+        deleteScrollBox(outer)
+      end)
+      assert.is_true(createScrollBox(outer, 0, 0, 300, 300))
+      assert.is_true(createScrollBox(outer, inner, 0, 0, 200, 200))
+      assert.is_true(createScrollBox(inner, innermost, 0, 0, 100, 100))
+
+      for _, destination in ipairs({outer, inner, innermost}) do
+        local ok, err = setWindow(destination, outer, 0, 0, true)
+        assert.is_nil(ok, destination)
+        assert.are.equal(("element '%s' cannot be moved into itself or into one of its own children"):format(outer), err)
+      end
+      assert.are.same({0, 0, 300, 300}, {getWindowGeometry(outer)})
+
+      -- moving a box up and out of the one holding it is no cycle
+      assert.is_true(setWindow(outer, innermost, 5, 6, true))
+      assert.are.same({5, 6, 100, 100}, {getWindowGeometry(innermost)})
+    end)
+
     -- Moving the map out of its dock widget would split it from a parent it
     -- cannot be put back into, and naming that widget as a destination would
     -- otherwise fall through to a plain "not found", reading as though the
@@ -6202,6 +6420,26 @@ describe("Console buffer size", function()
     -- the count is the index of the open line at the end, so it is the number
     -- of finished lines above it
     assert.are.equal(150 - 99, getLineCount(console))
+  end)
+
+  -- #10839: the machine's maximum is worked out per wrap column, so a huge
+  -- main wrap width brought it down to no lines at all, while the batch was
+  -- kept as asked and the first trim popped lines that were not there
+  it("a huge main wrap width leaves a working limit and batch", function()
+    local mainWrap = getWindowWrap("main")
+    finally(function() setWindowWrap("main", mainWrap) end)
+    assert.is_true(setWindowWrap("main", 2000000000))
+    assert.is_true(setConsoleBufferSize(console, 1000, 100))
+    local linesLimit, batchSize = getConsoleBufferSize(console)
+    assert.is_true(linesLimit >= 100, "lines limit was " .. linesLimit)
+    assert.is_true(batchSize >= 1 and batchSize < linesLimit, "batch size was " .. batchSize)
+
+    clearWindow(console)
+    for lineNumber = 1, 300 do
+      echo(console, ("huge wrap line %d\n"):format(lineNumber))
+    end
+    local last = getLastLineNumber(console)
+    assert.are.same({"huge wrap line 300"}, getLines(console, last - 1, last))
   end)
 
   it("useMaximum raises the main console to the buffer maximum", function()

@@ -349,6 +349,54 @@ private slots:
         QVERIFY2(destination.mLinkStore.getStyling(destinationId).isBold, "the copied link's styling did not come across intact");
     }
 
+    // Text that spans line feeds, with a negative link index and one character
+    // more than it has formatting for
+    void test_appendedLinesKeepEachCharactersFormatting()
+    {
+        TBuffer source(mpHost);
+        const int sourceId = source.mLinkStore.addLinks(QStringList{qsl("send('lines')")}, QStringList{qsl("hint")}, mpHost);
+        QVERIFY(sourceId > 0);
+
+        const TChar red(Qt::red, Qt::black);
+        const TChar green(Qt::green, Qt::black);
+        const TChar linked(Qt::white, Qt::black, TChar::None, sourceId);
+        const TChar unlinked(Qt::blue, Qt::black, TChar::None, -1);
+        const std::vector<TChar> formatting{red, unlinked, TChar(), linked, linked, TChar(), TChar(), green};
+
+        TBuffer destination(mpHost);
+        destination.appendFormatted(qsl("ab\nLK\n\ncd"), formatting, source.mLinkStore);
+
+        QCOMPARE(destination.lineBuffer.mid(0, 5), (QStringList{qsl("ab"), qsl("LK"), QString(), qsl("cd"), QString()}));
+        QCOMPARE(destination.buffer.at(0).size(), std::size_t(2));
+        QCOMPARE(destination.buffer.at(0).at(0).foreground(), QColor(Qt::red));
+        QCOMPARE(destination.buffer.at(0).at(1).foreground(), QColor(Qt::blue));
+        QCOMPARE(destination.buffer.at(0).at(1).linkIndex(), 0);
+        const int destinationId = destination.buffer.at(1).at(0).linkIndex();
+        QVERIFY2(destinationId > 0, "the copied characters carry no link index, so this test covers nothing");
+        QCOMPARE(destination.buffer.at(1).at(1).linkIndex(), destinationId);
+        QCOMPARE(destination.mLinkStore.getLinksConst(destinationId), QStringList{qsl("send('lines')")});
+        QVERIFY(destination.buffer.at(2).empty());
+        QCOMPARE(destination.buffer.at(3).size(), std::size_t(2));
+        QCOMPARE(destination.buffer.at(3).at(0).foreground(), QColor(Qt::green));
+        QCOMPARE(destination.buffer.at(3).at(1).foreground(), TChar().foreground());
+        QCOMPARE(destination.buffer.at(3).at(1).linkIndex(), 0);
+    }
+
+    // The formatting runs out before the second line even starts
+    void test_appendedLinesPastTheFormattingGetTheDefault()
+    {
+        TBuffer source(mpHost);
+        TBuffer destination(mpHost);
+        destination.appendFormatted(qsl("ab\ncd"), std::vector<TChar>{TChar(Qt::red, Qt::black)}, source.mLinkStore);
+
+        QCOMPARE(destination.lineBuffer.mid(0, 2), (QStringList{qsl("ab"), qsl("cd")}));
+        QCOMPARE(destination.buffer.at(0).at(0).foreground(), QColor(Qt::red));
+        QCOMPARE(destination.buffer.at(0).at(1).foreground(), TChar().foreground());
+        QCOMPARE(destination.buffer.at(1).size(), std::size_t(2));
+        QCOMPARE(destination.buffer.at(1).at(0).foreground(), TChar().foreground());
+        QCOMPARE(destination.buffer.at(1).at(1).foreground(), TChar().foreground());
+    }
+
 private:
     TConsole* miniconsole() const { return mpHost->mpConsole->subConsoleWidget(mMiniName); }
 
