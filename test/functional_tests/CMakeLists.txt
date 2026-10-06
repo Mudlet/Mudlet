@@ -87,6 +87,7 @@ set(WINDOW_GROUP_TEST_SOURCES
     WrapLineRewrapTest.cpp
     ScrollLostOnPartialRepaintTest.cpp
     ScrollBarContrastTest.cpp
+    OpaqueConsolePaintTest.cpp
 )
 
 # Profiles: their config dir, their folders, and loading, saving and deleting them
@@ -103,6 +104,7 @@ set(PROFILE_GROUP_TEST_SOURCES
     CredentialFilePermissionsTest.cpp
     DefaultGameDeleteTest.cpp
     DictionaryRoundTripTest.cpp
+    ForceCloseTest.cpp
     ProfileCloseGuardTest.cpp
     MissingDisplayFontTest.cpp
     PortableRootNoticeTest.cpp
@@ -466,10 +468,10 @@ add_dependencies(functional_media_tests vosk_stub)
 # Passed rather than reconstructed in the test: the suffix rules above are the
 # only place the platform naming is decided, and a test guessing at it would
 # silently skip instead of failing when they change.
-foreach(stubUser functional_window_tests functional_media_tests)
-    target_compile_definitions(${stubUser} PRIVATE
-        MUDLET_VOSK_STUB_LIBRARY="$<TARGET_FILE:vosk_stub>")
-endforeach()
+# Only on the files that read it, so the rest of both groups' objects stay
+# free of build-tree paths and ccache can share them between worktrees.
+set_property(SOURCE SpeechAcrossProfilesTest.cpp SpeechBridgeLuaTest.cpp SpeechRecognizerContractTest.cpp
+    APPEND PROPERTY COMPILE_DEFINITIONS MUDLET_VOSK_STUB_LIBRARY="$<TARGET_FILE:vosk_stub>")
 
 # AppStartupTeardownTest and HeadlessVersionTest run the shipped application
 # instead of linking it, so they need that binary's path and need it built by the
@@ -477,7 +479,8 @@ endforeach()
 # a plain variable local to src/CMakeLists.txt, so a rename there fails generation
 # here rather than quietly depending on nothing.
 add_dependencies(functional_teardown_tests mudlet_executable)
-target_compile_definitions(functional_teardown_tests PRIVATE MUDLET_APP_BINARY="$<TARGET_FILE:mudlet_executable>")
+set_property(SOURCE AppStartupTeardownTest.cpp HeadlessVersionTest.cpp
+    APPEND PROPERTY COMPILE_DEFINITIONS MUDLET_APP_BINARY="$<TARGET_FILE:mudlet_executable>")
 
 # Every list's cases, so a grouped test's properties are the solo ones verbatim
 foreach(test_name ${allFunctionalTestNames})
@@ -723,8 +726,8 @@ set_tests_properties(ScrollLostOnPartialRepaintTest PROPERTIES TIMEOUT 300)
 # reconnecting in others, so it needs a longer timeout
 set_tests_properties(TelnetStringSequenceRecoveryTest PROPERTIES TIMEOUT 300)
 
-# CopyAsImageTest and MainConsoleSelectionTest create a fresh profile per test method, so they need a longer timeout
-set_tests_properties(CopyAsImageTest MainConsoleSelectionTest PROPERTIES TIMEOUT 300)
+# CopyAsImageTest, MainConsoleSelectionTest and OpaqueConsolePaintTest create a fresh profile per test method, so they need a longer timeout
+set_tests_properties(CopyAsImageTest MainConsoleSelectionTest OpaqueConsolePaintTest PROPERTIES TIMEOUT 300)
 
 # TDiscordModeTest drives the real discord-rpc library end-to-end. The library's
 # reconnect backoff is a process-global (60s ceiling) that the suite's
