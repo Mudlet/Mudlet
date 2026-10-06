@@ -2387,13 +2387,13 @@ bool Host::copyToClipboard(const QString& name)
     if (!pModel) {
         return false;
     }
-    *mpClipboard = pModel->buffer.copy(pModel->P_begin, pModel->P_end);
+    pModel->buffer.copyInto(pModel->P_begin, pModel->P_end, *mpClipboard);
     return true;
 }
 
 void Host::cutMainConsoleToClipboard()
 {
-    *mpClipboard = mpMainConsoleModel->buffer.cut(mpMainConsoleModel->P_begin, mpMainConsoleModel->P_end);
+    mpMainConsoleModel->buffer.cutInto(mpMainConsoleModel->P_begin, mpMainConsoleModel->P_end, *mpClipboard);
     markSelectionDirty(*mpMainConsoleModel);
 }
 
