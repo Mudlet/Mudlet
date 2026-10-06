@@ -871,10 +871,7 @@ void TRoom::offset(const int deltaX, const int deltaY, const int deltaZ)
 
 void TRoom::calcRoomDimensions()
 {
-    min_x = mX;
-    max_x = mX;
-    min_y = mY;
-    max_y = mY;
+    calcCustomLineBounds();
 
     if (customLines.empty()) {
         // It may have just lost its last line; a stale index entry costs every frame a lookup and cull.
@@ -888,6 +885,14 @@ void TRoom::calcRoomDimensions()
     }
 
     indexCustomLines();
+}
+
+void TRoom::calcCustomLineBounds()
+{
+    min_x = mX;
+    max_x = mX;
+    min_y = mY;
+    max_y = mY;
 
     QMapIterator<QString, QList<QPointF>> it(customLines);
     while (it.hasNext()) {
@@ -1178,7 +1183,8 @@ void TRoom::restore(QDataStream& ifs, int roomID, int version)
         ifs >> exitWeights;
         ifs >> doors;
     }
-    calcRoomDimensions();
+    // Not calcRoomDimensions(): TMap::restore() then runs TArea::calcSpan(), which rebuilds the custom line index.
+    calcCustomLineBounds();
 }
 
 void TRoom::audit(const QHash<int, int> roomRemapping, const QHash<int, int> areaRemapping)
