@@ -69,6 +69,7 @@
 #include <QToolTip>
 #include <QWidgetAction>
 #include <QVersionNumber>
+#include <optional>
 
 using namespace std::chrono_literals;
 
@@ -161,13 +162,23 @@ void TTextEdit::forceUpdate()
 
 void TTextEdit::scheduleUpdate(const QRect& rect)
 {
-    mPendingPaintRegion += rect.isValid() ? rect : QWidget::rect();
+    if (mWholePaneRequested) {
+        // A script echoing in a loop lands here on every line; the scrollbar
+        // catches up once the event loop runs, as the paint itself will.
+        if (mScrollBarUpdatePending && !mpPaintPacer->isActive()) {
+            mpPaintPacer->start(0);
+        }
+        return;
+    }
+    const QRect area = rect.isValid() ? rect : QWidget::rect();
+    mPendingPaintRegion += area;
 
     // Nothing painted recently, so this frame's window is open: Qt still merges
     // whatever else arrives before the event loop gets around to painting.
     if (!mSincePaint.isValid() || mSincePaint.elapsed() >= csmPaintPaceMs) {
         applyPendingScrollBarUpdate();
         update(mPendingPaintRegion);
+        mWholePaneRequested = area.contains(QWidget::rect());
         mPendingPaintRegion = QRegion();
         return;
     }
@@ -547,7 +558,13 @@ void TTextEdit::layoutLine(int lineNumber, int lineOfScreen, const TChar& timeSt
     QPoint cursor(-mCursorX, lineOfScreen);
     // References rather than copies: the layout keeps views into these strings.
     const QString& lineText = mpBuffer->lineBuffer.at(lineNumber);
-    QTextBoundaryFinder boundaryFinder(QTextBoundaryFinder::Grapheme, lineText);
+    // Printable ASCII is one grapheme per QChar, so such a line - nearly every
+    // line of a MUD - needs none of the boundary finder's Unicode analysis.
+    const bool oneQCharPerGrapheme = lineBreakInfo::printableAscii(lineText);
+    std::optional<QTextBoundaryFinder> boundaryFinder;
+    if (!oneQCharPerGrapheme) {
+        boundaryFinder.emplace(QTextBoundaryFinder::Grapheme, lineText);
+    }
     int currentSize = lineText.size();
     if (mpConsole->showTimeStamps()) {
         const QString& timestamp = mpBuffer->timeBuffer.at(lineNumber);
@@ -567,7 +584,7 @@ void TTextEdit::layoutLine(int lineNumber, int lineOfScreen, const TChar& timeSt
 
     int columnWithOutTimestamp = 0;
     for (int indexOfChar = 0, total = lineText.size(); indexOfChar < total;) {
-        const int nextBoundary = boundaryFinder.toNextBoundary();
+        const int nextBoundary = oneQCharPerGrapheme ? indexOfChar + 1 : boundaryFinder->toNextBoundary();
         if (Q_UNLIKELY(nextBoundary <= indexOfChar)) {
             // toNextBoundary() reports -1 once it can no longer advance, which
             // would send indexOfChar backwards and index the line out of bounds
@@ -1635,6 +1652,7 @@ void TTextEdit::paintNothing(const QRect& r)
 void TTextEdit::paintEvent(QPaintEvent* e)
 {
     mSincePaint.restart();
+    mWholePaneRequested = false;
     if (!mPendingPaintRegion.isEmpty()) {
         // Whatever this paint covers is current now, so a deferred repaint of it
         // would be redundant. Only the remainder - if a partial expose left one -
