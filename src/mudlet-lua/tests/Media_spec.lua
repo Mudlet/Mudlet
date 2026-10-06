@@ -891,6 +891,40 @@ describe("Media playback effects with a generated sound file", function()
     assert.equals(0, #getPlayingSounds())
   end)
 
+  it("a huge finite loop count returns promptly", function()
+    if mediaPlaybackUnavailable() then
+      return
+    end
+    writeSoundFiles()
+    local started = os.clock()
+    assert.is_true(playSoundFile({name = soundFile, key = "busted-many-loops", loops = 10000000}))
+    assert.is_true(os.clock() - started < 0.5)
+    assert.is_not_nil(waitForEvent("sysMediaStarted", 5000))
+  end)
+
+  it("asking again for looping music that is playing replaces the passes still queued", function()
+    if mediaPlaybackUnavailable() then
+      return
+    end
+    local finished, started = {}, {}
+    collect("sysMediaFinished", finished)
+    collect("sysMediaStarted", started)
+
+    local secondFile = "busted-media-second.wav"
+    writeMediaFile(secondFile, 1000)
+    onCleanup(function() os.remove(mediaDirectory .. "/" .. secondFile) end)
+    assert.is_true(playMusicFile({name = secondFile, key = "busted-requeued", loops = 3}))
+    waitForCount("sysMediaStarted", started, 1)
+
+    -- continue keeps the pass that is playing and counts it as one of the two
+    assert.is_true(playMusicFile({name = secondFile, key = "busted-requeued", loops = 2}))
+    waitForCount("sysMediaFinished", finished, 2)
+    waitForEvent("sysMediaStarted", 1500)
+    assert.equals(2, #started)
+    assert.equals(2, #finished)
+    assert.equals(0, #getPlayingMusic())
+  end)
+
   it("a start position begins playback part way into the file", function()
     if mediaPlaybackUnavailable() then
       return
@@ -3671,6 +3705,24 @@ describe("Tests the text-to-speech Lua API", function()
         assert.is_true(ttsSetVoiceByName(voices[2]))
         assert.equals(voices[2], ttsGetCurrentVoice())
         assert.same({voices[2]}, changes)
+      end)
+
+      -- Its proof comes at the end of the run rather than here: the engine
+      -- outlives the main window, so it can report a line ending after the
+      -- profiles are gone. Leaving a stream of one-word lines to be spoken
+      -- quickly while the profile closes keeps the engine changing state all
+      -- the way through shutdown; a crash shows as a sanitizer report at exit.
+      it("speech still queued when Mudlet quits does not crash it", function()
+        if noMockEngine() then
+          return
+        end
+        local handler = registerAnonymousEventHandler("sysExitEvent", function()
+          ttsSetRate(1)
+          for line = 1, 200 do
+            ttsQueue("line" .. line)
+          end
+        end, true)
+        assert.is_number(handler)
       end)
     end)
   end)
