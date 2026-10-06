@@ -2861,9 +2861,9 @@ describe("Tests exporting the profile to a file with saveProfile", function()
   local exportedPath = scratchDirectory .. "/mudlet-spec-exported.xml"
   -- U+FFFC U+241B, which is how an ESC is held in a save file
   local encodedEscape = "\239\191\188\226\144\155"
-  -- Control characters a save gives back unchanged, each one twice in a row,
-  -- as the import hands them back to the export raw
-  local controlCodes = {1, 2, 3, 4, 5, 6, 7, 8, 11, 12, 14, 15, 18, 19, 20, 21, 22, 25, 26, 27, 28, 29, 30, 31}
+  -- Every control character a save file has a control picture for, each one
+  -- twice in a row, as the import hands them back to the export raw
+  local controlCodes = {1, 2, 3, 4, 5, 6, 7, 8, 11, 12, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31}
   local rawControls, encodedControls = {}, {}
   for index, code in ipairs(controlCodes) do
     rawControls[index] = string.char(code):rep(2)
@@ -2996,6 +2996,19 @@ describe("Tests exporting the profile to a file with saveProfile", function()
     assert.equals("-- " .. rawControls, (getScript(name .. " control script")))
     assert.is_true(contains(exported, "<script>-- " .. encodedControls .. "</script>"),
                    "the exported script does not hold every control character encoded")
+  end)
+
+  it("writes a newline in an attribute as the reference XML reads back as one", function()
+    -- A stopwatch name is held in an attribute, which is only written on a full save
+    local watch = createStopWatch(name .. " stop\nwatch")
+    setStopWatchPersistence(watch, true)
+    assert.is_true(waitForProfileSaveToPass(), "a profile save was still running")
+    local ok, savedPath = saveProfile()
+    deleteStopWatch(watch)
+    assert.is_true(ok, savedPath)
+    assert.is_true(waitForProfileSaveToPass(), "the profile save did not finish")
+    assert.is_true(contains(readFile(savedPath), 'name="' .. name .. ' stop&#10;watch"'),
+                   "the saved profile does not hold the stopwatch name's newline as a reference")
   end)
 
   it("writes a key's binding back", function()
