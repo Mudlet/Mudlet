@@ -100,10 +100,30 @@ function Geyser.calc_constraints (window, cons, container)
       --        scale will be "0,5" instead of "0.5"-> syntax error
       --        Need to find out if there's more such cases in Geyser
       
-      -- compile the getter
-      window[getter] = function(self, my_container)
-        my_container = container
-        return my_container[min]() + scale * my_container[max]() + offset
+      -- compile the getter, leaving out the terms that are always zero: a getter
+      -- calls its container's, all the way up, on every resize and gauge update
+      -- an offset of -0 ("0%-0") keeps the full sum, whose zero terms give 0, not -0
+      local scaled = scale ~= 0
+      if 1 / offset == -math.huge then
+        window[getter] = function()
+          return container[min]() + scale * container[max]() + offset
+        end
+      elseif min == "return_zero" and not scaled then
+        window[getter] = function()
+          return offset
+        end
+      elseif min == "return_zero" then
+        window[getter] = function()
+          return scale * container[max]() + offset
+        end
+      elseif not scaled then
+        window[getter] = function()
+          return container[min]() + offset
+        end
+      else
+        window[getter] = function()
+          return container[min]() + scale * container[max]() + offset
+        end
       end
       
       
@@ -165,11 +185,33 @@ function Geyser.calc_constraints (window, cons, container)
         end
       end
       
-      -- compile the getter
-      window[getter] = function(self, my_container)
-        my_container = container
-        self = window
-        return my_container[max]() + my_container[min]() + pos + func() - self[pos_func]()
+      -- compile the getter, leaving out the terms that are always zero
+      -- a function constraint is parsed as "0", so it is never negative; the
+      -- 0 + keeps the arithmetic that coerces what the function returns
+      if func ~= return_zero and min == "return_zero" then
+        window[getter] = function()
+          return 0 + func()
+        end
+      elseif func ~= return_zero then
+        window[getter] = function()
+          return container[min]() + func()
+        end
+      elseif not negative and min == "return_zero" then
+        window[getter] = function()
+          return pos
+        end
+      elseif not negative then
+        window[getter] = function()
+          return container[min]() + pos
+        end
+      elseif pos_func == "return_zero" then
+        window[getter] = function()
+          return container[max]() + container[min]() + pos
+        end
+      else
+        window[getter] = function()
+          return container[max]() + container[min]() + pos - window[pos_func]()
+        end
       end
     end
     

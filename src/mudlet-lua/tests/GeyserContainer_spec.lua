@@ -197,6 +197,20 @@ describe("Tests functionality of Geyser.Container", function()
       assert.are.same({x = 25, y = 0, width = 50, height = 20}, geometry("gcsFunctionConstraint"))
     end)
 
+    it("offsets a function constraint by its container's position", function()
+      local container = track(Geyser.Container:new({name = "gcsFuncOffsetBox", x = 100, y = 50, width = 200, height = 100}))
+      local label = track(Geyser.Label:new({
+        name = "gcsFunctionOffset",
+        x = function() return 25 end,
+        y = function() return 5 end,
+        width = function() return 50 end,
+        -- a number in a string is coerced, as Lua arithmetic does
+        height = function() return "20" end,
+      }, container))
+      assert.are.same({x = 125, y = 55, width = 50, height = 20}, geometry("gcsFunctionOffset"))
+      assert.are.equal(20, label:get_height())
+    end)
+
     it("raises an error on a constraint it cannot parse", function()
       -- the object is registered before its constraints are resolved, so the
       -- failed attempt has to be swept out of the root window list by hand
@@ -227,6 +241,21 @@ describe("Tests functionality of Geyser.Container", function()
       track(Geyser.Label:new({name = "gcsLeaf", x = "50%", y = "50%", width = "50%", height = "50%"}, middle))
       -- middle spans x 300..500, y 50..250, so the leaf starts halfway into it
       assert.are.same({x = 400, y = 150, width = 100, height = 100}, geometry("gcsLeaf"))
+    end)
+
+    it("resolves a percentage that takes no share of its container", function()
+      local container = track(Geyser.Container:new({name = "gcsNoShareBox", x = 100, y = 50, width = 400, height = 200}))
+      track(Geyser.Label:new({name = "gcsNoShare", x = "0%+7", y = "-100%+3", width = "-100%+40", height = "0%+20"}, container))
+      -- -100% takes the whole container away again, the same as 0%
+      assert.are.same({x = 107, y = 53, width = 40, height = 20}, geometry("gcsNoShare"))
+    end)
+
+    it("gives a size of 0%-0 as 0, not -0", function()
+      local container = track(Geyser.Container:new({name = "gcsNegZeroBox", x = 0, y = 0, width = 400, height = 200}))
+      local label = track(Geyser.Label:new({name = "gcsNegZero", x = 0, y = 0, width = "0%-0", height = "-100%-0"}, container))
+      -- Adjustable.Container formats sizes as percentages, where -0 prints as "-0.00000%"
+      assert.are.equal(math.huge, 1 / label:get_width())
+      assert.are.equal(math.huge, 1 / label:get_height())
     end)
 
     -- a window laid out again with the constraints it already had keeps the
