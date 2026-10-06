@@ -38,6 +38,7 @@
 #include <QQueue>
 #include <QSet>
 #include <QString>
+#include <QStringDecoder>
 #include <QStringList>
 #include <QStringView>
 #include <QVarLengthArray>
@@ -226,8 +227,10 @@ public:
     bool hasSplitFormat() const { return mRightHalf; }
     TChar rightHalf() const;
 
-    QColor foreground() const { return QColor::fromRgba(mFgColor); }
-    QColor background() const { return QColor::fromRgba(mBgColor); }
+    // The same color QColor::fromRgba() gives, built inline: that one is an
+    // out-of-line call, and painting asks for both colors of every cell.
+    QColor foreground() const { return QColor(qRed(mFgColor), qGreen(mFgColor), qBlue(mFgColor), qAlpha(mFgColor)); }
+    QColor background() const { return QColor(qRed(mBgColor), qGreen(mBgColor), qBlue(mBgColor), qAlpha(mBgColor)); }
     // For comparing colors without building a QColor:
     QRgb foregroundRgba() const { return mFgColor; }
     QRgb backgroundRgba() const { return mBgColor; }
@@ -472,8 +475,8 @@ public:
     void setWrapIndent(int i) { mWrapIndent = i; }
     void setWrapHangingIndent(int i) { mWrapHangingIndent = i; }
     void updateColors();
-    TBuffer copy(QPoint&, QPoint&);
-    TBuffer cut(QPoint&, QPoint&);
+    void copyInto(const QPoint&, const QPoint&, TBuffer& slice) const;
+    void cutInto(QPoint&, QPoint&, TBuffer& slice);
     void paste(QPoint&, const TBuffer&);
     void setBufferSize(int requestedLinesLimit, int batch);
     int getMaxBufferSize();
@@ -539,6 +542,8 @@ private:
     static bool doubleByteTrail(Decoder, quint8);
     void styleForCurrentLink(TChar&);
     void flushPendingLead();
+    static QStringDecoder multibyteDecoderFor(Decoder, const QByteArray&);
+    bool decodeMultibyteSequence(QByteArrayView, QString&);
     // Views into the string decodeSGR() was handed, so none may outlive that call.
     using SgrParameters = QVarLengthArray<QStringView, 12>;
     void decodeSGR(QStringView);
@@ -729,6 +734,9 @@ private:
 
     QByteArray mEncoding;
     Decoder mDecoder = Decoder::Ascii;
+    // Opening an ICU converter costs far more than decoding the one character
+    // each processGBSequence() etc. call needs, so one is kept per encoding
+    QStringDecoder mMultibyteDecoder;
 
     // OSC 8 hyperlink tracking
     QStringList mCurrentHyperlinkCommand;
