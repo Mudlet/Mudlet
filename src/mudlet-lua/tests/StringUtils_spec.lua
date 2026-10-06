@@ -469,6 +469,155 @@ describe("Tests StringUtils.lua functions", function()
       assert.equals("fresh", f("{fstringSpecStale}"))
     end)
 
+    it("should interpolate several plain names, with text around and between them", function()
+      local first, second = "one", 2
+      local result = f("[{first}]{second}{first} and {second}!")
+      assert.equals("[one]2one and 2!", result)
+    end)
+
+    it("should resolve several names in one string from locals, globals and nil", function()
+      _G.fstringSpecMixed = "global"
+      local fromLocal = "local"
+      local result = f("{fromLocal} {fstringSpecMixed} {fstringSpecAbsent}")
+      _G.fstringSpecMixed = nil
+      assert.equals("local global nil", result)
+    end)
+
+    it("should render a local holding nil as nil even when a global shares its name", function()
+      _G.fstringSpecShadowed = "global"
+      local fstringSpecShadowed = nil
+      local result = f("{fstringSpecShadowed}")
+      _G.fstringSpecShadowed = nil
+      assert.equals("nil", result)
+    end)
+
+    it("should take a name's locals from the caller's callers as well", function()
+      local fromOuter = "outer"
+      local function middle()
+        local fromMiddle = "middle"
+        local function inner()
+          local result = f("{fromMiddle} {fromOuter}")
+          return result
+        end
+        return (inner())
+      end
+      assert.equals("middle outer", middle())
+    end)
+
+    it("should find a single name in a caller's caller", function()
+      local fromOuter = "outer"
+      local function inner()
+        local result = f("{fromOuter}")
+        return result
+      end
+      local function middle()
+        local result = inner()
+        return result
+      end
+      assert.equals("outer", middle())
+    end)
+
+    it("should let a function inside an expression read the caller's locals, whatever f calls its own", function()
+      local i, out, code, part = "i", "out", "code", "part"
+      local function pick(name)
+        return name
+      end
+      assert.equals("i", f("{(function() return i end)()}"))
+      assert.equals("out", f("{(function() return out end)()}"))
+      assert.equals("code", f("{(function() return code end)()}"))
+      assert.equals("part", f("{(function() return part end)()}"))
+      assert.equals("i", f("{pick((function() return i end)())}"))
+    end)
+
+    it("should read each name when its block runs, so an earlier block can change it", function()
+      local n, m = 0, "m"
+      local function inc()
+        n = n + 1
+        return n
+      end
+      local result = f("{inc()} {n} {m}")
+      assert.equals("1 1 m", result)
+    end)
+
+    it("should not let a nested f see the outer f's internal locals", function()
+      local i, out, parts = "mine", "mine2", "mine3"
+      local result = f("{f('{i}')}|{f('{out}')}|{f('{parts}')}")
+      assert.equals("mine|mine2|mine3", result)
+    end)
+
+    it("should reuse a template with fresh locals on every call", function()
+      local results = {}
+      for _, v in ipairs({"a", "b", "c"}) do
+        local item = v
+        local n = #results
+        results[n + 1] = f("{item}-{item}/{n}")
+      end
+      assert.same({"a-a/0", "b-b/1", "c-c/2"}, results)
+    end)
+
+    it("should render a name repeated in one template", function()
+      local a = 1
+      local result = f("{a}{a}{a}")
+      assert.equals("111", result)
+    end)
+
+    it("should prefer the innermost local when a name exists at several depths", function()
+      local x, y = "outer-x", "outer-y"
+      local function inner()
+        local x, y = "inner-x", "inner-y"
+        local both = f("{x}{y}")
+        local single = f("{x}{x}")
+        return both, single
+      end
+      local both, single = inner()
+      assert.equals("inner-xinner-y", both)
+      assert.equals("inner-xinner-x", single)
+    end)
+
+    it("should mix plain names and expressions, with text after the last block", function()
+      local a, b = 1, 2
+      local result = f("{a}+{b}={a + b} {a}{(b * 2)}-tail")
+      assert.equals("1+2=3 14-tail", result)
+    end)
+
+    it("should leave a template with no complete block untouched", function()
+      assert.equals("a{b", f("a{b"))
+    end)
+
+    it("should read line and matches through a plain name", function()
+      _G.line = "hello"
+      local plain = f("{line}")
+      local shadowed
+      do
+        local line = "local"
+        shadowed = f("{line}")
+      end
+      _G.line = nil
+      assert.equals("hello", plain)
+      assert.equals("local", shadowed)
+    end)
+
+    it("should read a plain name's global from the environment f itself is given", function()
+      local sandbox = setmetatable({fstringSpecPlainSandboxed = "inside"}, {__index = _G})
+      local original = getfenv(f)
+      setfenv(f, sandbox)
+      local ok, plain, pair = pcall(function()
+        return f("{fstringSpecPlainSandboxed}"), f("{fstringSpecPlainSandboxed}{fstringSpecPlainSandboxed}")
+      end)
+      setfenv(f, original)
+      assert.is_true(ok)
+      assert.equals("inside", plain)
+      assert.equals("insideinside", pair)
+    end)
+
+    it("should treat a Lua keyword in braces as an expression, not a name", function()
+      assert.equals("nil true false", f("{nil} {true} {false}"))
+    end)
+
+    it("should evaluate a block whose expression holds braces of its own", function()
+      assert.equals("2", f("{({1, 2})[2]}"))
+    end)
+
     it("should keep an expression's globals through an f nested inside it", function()
       assert.equals("1", f("{(function() fstringSpecNested = 1 local _ = f('{2}') return fstringSpecNested end)()}"))
     end)
