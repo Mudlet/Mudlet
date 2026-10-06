@@ -389,6 +389,46 @@ private slots:
         QCOMPARE(copiedText(pane), line);
     }
 
+    // A script deleting lines while a line drag is held can take the line the
+    // drag started on, which the next move then read past the end of the buffer
+    void test_lineDragAcrossDeletedLinesLeavesNoSelection()
+    {
+        TTextEdit* pane = paneShowingProse();
+        QVERIFY2(pane, "the prose never reached the upper pane");
+        Host* host = mudlet::self()->getActiveHost();
+
+        const QPointF pressPos = cellInMiddleRow(pane, 33);
+        sendMouse(pane, QEvent::MouseButtonPress, Qt::LeftButton, Qt::LeftButton, pressPos, Qt::ControlModifier);
+        QVERIFY2(pane->mDragStart.y() > 0, "the press did not start the drag below the first line");
+        QVERIFY2(host->getLuaInterpreter()->compileAndExecuteScript(qsl("for i = 1, 25 do moveCursor(0, 0) deleteLine() end")), "the deleteLine() calls failed");
+        QVERIFY(host->mpConsole->buffer.getLastLineNumber() < pane->mDragStart.y());
+        const QString highlightedByThePress = highlightedText();
+
+        moveAndReleaseLeftButton(pane, QPointF(pressPos.x(), pane->mFontHeight / 2.0), Qt::ControlModifier);
+
+        QCOMPARE(highlightedText(), highlightedByThePress);
+    }
+
+    // Output after a clearWindow() reuses the line numbers a held drag started
+    // from, and the drag must not carry on into text the user never pressed on
+    void test_lineDragAcrossAClearedAndRefilledWindowLeavesNoSelection()
+    {
+        TTextEdit* pane = paneShowingProse();
+        QVERIFY2(pane, "the prose never reached the upper pane");
+        Host* host = mudlet::self()->getActiveHost();
+
+        const QPointF pressPos = cellInMiddleRow(pane, 33);
+        sendMouse(pane, QEvent::MouseButtonPress, Qt::LeftButton, Qt::LeftButton, pressPos, Qt::ControlModifier);
+        QVERIFY2(pane->mDragStart.y() > 0, "the press did not start the drag below the first line");
+        QVERIFY2(host->getLuaInterpreter()->compileAndExecuteScript(qsl("clearWindow()\nfor i = 1, 200 do echo('refill ' .. i .. '\\n') end")), "the clearWindow() and echo calls failed");
+        QVERIFY(host->mpConsole->buffer.getLastLineNumber() > pane->mDragStart.y());
+
+        moveAndReleaseLeftButton(pane, QPointF(pressPos.x(), pane->mFontHeight / 2.0), Qt::ControlModifier);
+
+        QCOMPARE(highlightedText(), QString());
+        QCOMPARE(copiedText(pane), mNothingCopied);
+    }
+
     void test_characterAnalysisDescribesEveryCodePoint()
     {
         TTextEdit* pane = paneShowingProse();
@@ -848,6 +888,50 @@ private slots:
         const QString ranFor = lua_isstring(L, -1) ? QString::fromUtf8(lua_tostring(L, -1)) : QString();
         lua_pop(L, 1);
         QCOMPARE(ranFor, qsl("testMouseUniqueName"));
+
+        menu->close();
+        QCoreApplication::sendPostedEvents(nullptr, QEvent::DeferredDelete);
+    }
+
+    // The menu is non-modal, so a script can remove a mouse event while its
+    // entry is still showing. Picking it then indexed an empty list, so a
+    // regression aborts the run rather than failing this case.
+    void test_aMouseEventRemovedWhileItsMenuIsOpenDoesNothing()
+    {
+        TTextEdit* pane = paneShowingProse();
+        QVERIFY2(pane, "No upper pane showing the prose");
+
+        auto host = mudlet::self()->getActiveHost();
+        QVERIFY2(host->getLuaInterpreter()->compileAndExecuteScript(qsl("removedMouseEventRan = false\n"
+                                                                        "function removedMouseEventHandler() removedMouseEventRan = true end\n"
+                                                                        "registerAnonymousEventHandler('testRemovedMouseEvent', 'removedMouseEventHandler')\n"
+                                                                        "addMouseEvent('testRemovedMouseUnique', 'testRemovedMouseEvent', 'Removed while open')\n")),
+                 "the addMouseEvent() call failed");
+
+        const QPointF pos = cellInMiddleRow(pane, 5);
+        sendMouse(pane, QEvent::MouseButtonPress, Qt::RightButton, Qt::RightButton, pos);
+        sendMouse(pane, QEvent::MouseButtonRelease, Qt::RightButton, Qt::NoButton, pos);
+        QPointer<QMenu> menu = pane->findChildren<QMenu*>().value(0);
+        QVERIFY2(menu, "the right click put up no menu");
+
+        QAction* entry = nullptr;
+        for (QAction* pAction : menu->actions()) {
+            if (pAction->text() == qsl("Removed while open")) {
+                entry = pAction;
+                break;
+            }
+        }
+        QVERIFY2(entry, "the mouse event got no entry in the console's right-click menu");
+
+        QVERIFY2(host->getLuaInterpreter()->compileAndExecuteScript(qsl("removeMouseEvent('testRemovedMouseUnique')\n")), "the removeMouseEvent() call failed");
+        entry->trigger();
+
+        lua_State* L = host->getLuaInterpreter()->getLuaGlobalState();
+        lua_getglobal(L, "removedMouseEventRan");
+        const bool ran = lua_toboolean(L, -1);
+        lua_pop(L, 1);
+        QVERIFY2(!ran, "a removed mouse event still raised its event");
+        QVERIFY2(!host->mConsoleActions.contains(qsl("testRemovedMouseUnique")), "picking a removed mouse event left an empty entry behind");
 
         menu->close();
         QCoreApplication::sendPostedEvents(nullptr, QEvent::DeferredDelete);

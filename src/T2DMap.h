@@ -31,7 +31,6 @@
 #include <QCache>
 #include <QColor>
 #include <QFont>
-#include <QFutureWatcher>
 #include <QPixmap>
 #include <QPointer>
 #include <QPointF>
@@ -214,7 +213,6 @@ public:
     TMap* mpMap = nullptr;
     QPointer<Host> mpHost;
     qreal xyzoom;
-    QFutureWatcher<std::pair<bool, QString>>* mpExportWatcher = nullptr;
     int mRX = 0;
     int mRY = 0;
     QPoint mPHighlight;
@@ -357,8 +355,8 @@ public slots:
                                 QColor newBorderColor,
                                 bool changeBorderThickness,
                                 int newBorderThickness,
-                                QSet<TRoom*> rooms);
-    void slot_previewBorderProperties(QSet<TRoom*> rooms);
+                                QSet<int> roomIds);
+    void slot_previewBorderProperties(QSet<int> roomIds);
     void slot_setImage();
     void slot_movePosition();
     void slot_moveRoom();
