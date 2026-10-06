@@ -1158,6 +1158,7 @@ describe("Tests C++ functions in the Miscallaneous category", function()
           assert.is_string(contents, "the HTML log file that was closed is not readable")
           assert.is_true(contains(contents, "background: rgb(12,34,56)"), "the transparent text did not take the console's background colour in the log")
           assert.is_false(contains(contents, "background: rgb(0,0,0)"), "the transparent text was logged as black")
+          assert.is_true(contains(contents, ">SpecHtmlTransparent</span>"), "the transparent text was split into a span per character")
         end)
       end)
 
