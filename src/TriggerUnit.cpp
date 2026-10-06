@@ -557,6 +557,11 @@ void TriggerUnit::processDataStream(const QString& data, int line)
         return;
     }
 
+    if (mpHost->getLuaInterpreter()->buildingCaptureTables()) {
+        qWarning() << "TriggerUnit::processDataStream(...) WARNING - not running triggers on a line a garbage collection finaliser fed while the capture tables were being built.";
+        return;
+    }
+
     // Encoded, when a perl pattern asks, into storage borrowed from the unit so only a line longer than
     // any before allocates. Moved out rather than lent, so a nested pass finds the member empty and
     // cannot resize the outer pass's buffer.
@@ -573,6 +578,9 @@ void TriggerUnit::processDataStream(const QString& data, int line)
     const auto processingGuard = qScopeGuard([this] {
         mProcessingDepth--;
         Q_ASSERT(mProcessingDepth >= 0);
+        if (mProcessingDepth <= 1) {
+            mRunawayFeedStopped = false;
+        }
         if (mProcessingDepth == 0) {
             // Deletion is deferred while any pass runs, so these pointers stayed
             // valid; drop them before doCleanup() frees the underlying triggers.
