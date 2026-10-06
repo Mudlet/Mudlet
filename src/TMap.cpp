@@ -49,6 +49,7 @@
 #include <QSaveFile>
 #include <QScopeGuard>
 #include <QSizeF>
+#include <QtEndian>
 #include <QXmlStreamReader>
 #include <chrono>
 #include <cmath>
@@ -1746,6 +1747,45 @@ bool TMap::validatePotentialMapFile(QFile& file, QDataStream& ifs)
     return true;
 }
 
+// QDataStream hands a list's length prefix straight to QList::reserve(), so a
+// corrupt one in a map file asks for gigabytes (#10689). Call this before
+// every QList read from a binary map - QSet and QMap readers do not reserve -
+// and read a QMap holding QLists an entry at a time, as TRoom::restore() does.
+// A length the rest of the file could not hold fails the stream. Reads carry
+// on after that, out of step, so the loops over areas, labels and rooms check
+// the status and stop at the end of the record being read.
+bool TMap::listLengthFits(QDataStream& ifs, const qint64 minBytesPerElement)
+{
+    Q_ASSERT(minBytesPerElement > 0);
+    if (ifs.status() != QDataStream::Ok) {
+        return false;
+    }
+    QIODevice* pDevice = ifs.device();
+    // bytesAvailable() is only the rest of the file on a random access device,
+    // so on anything else there is nothing to check against
+    if (!pDevice || pDevice->isSequential()) {
+        return true;
+    }
+    // A four byte length is only right while the stream stays at Qt_5_12:
+    // from Qt_6_7 a larger one can follow it
+    Q_ASSERT(ifs.version() < QDataStream::Qt_6_7);
+    constexpr qint64 lengthSize = sizeof(quint32);
+    const QByteArray lengthBytes = pDevice->peek(lengthSize);
+    if (lengthBytes.size() != lengthSize) {
+        ifs.setStatus(QDataStream::ReadPastEnd);
+        return false;
+    }
+    const quint32 length = qFromBigEndian<quint32>(lengthBytes.constData());
+    const qint64 bytesLeft = pDevice->bytesAvailable() - lengthSize;
+    if (length > bytesLeft / minBytesPerElement) {
+        qWarning().nospace() << "TMap::listLengthFits() WARNING - the list at byte " << pDevice->pos() << " of the map file claims " << length << " entries, more than the " << bytesLeft
+                             << " bytes left could hold; reading stops here.";
+        ifs.setStatus(QDataStream::ReadCorruptData);
+        return false;
+    }
+    return true;
+}
+
 bool TMap::restore(QString location)
 {
     const MapOperationScope operationScope(this);
@@ -1898,7 +1938,7 @@ bool TMap::restore(QString location)
             int areaSize = 0;
             ifs >> areaSize;
             // restore area table
-            for (int i = 0; i < areaSize; i++) {
+            for (int i = 0; i < areaSize && ifs.status() == QDataStream::Ok; i++) {
                 auto pA = new TArea(this, mpRoomDB.get());
                 int areaID = 0;
                 ifs >> areaID;
@@ -1908,13 +1948,17 @@ bool TMap::restore(QString location)
                     ifs >> pA->rooms;
                 } else {
                     QList<int> oldRoomsList;
-                    ifs >> oldRoomsList;
+                    if (listLengthFits(ifs, sizeof(qint32))) {
+                        ifs >> oldRoomsList;
+                    }
                     pA->rooms = QSet<int>{oldRoomsList.begin(), oldRoomsList.end()};
                 }
                 // Can be useful when analysing suspect map files!
                 //                qDebug() << "TMap::restore(...)" << "Area:" << areaID;
                 //                qDebug() << "Rooms:" << pA->rooms;
-                ifs >> pA->zLevels;
+                if (listLengthFits(ifs, sizeof(qint32))) {
+                    ifs >> pA->zLevels;
+                }
                 ifs >> pA->mAreaExits;
                 ifs >> pA->gridMode;
                 ifs >> pA->max_x;
@@ -1951,7 +1995,7 @@ bool TMap::restore(QString location)
                 if (mVersion >= 21) {
                     int mapLabelsCount = -1;
                     ifs >> mapLabelsCount;
-                    for (int i = 0; i < mapLabelsCount; ++i) {
+                    for (int i = 0; i < mapLabelsCount && ifs.status() == QDataStream::Ok; ++i) {
                         int labelId = -1;
                         ifs >> labelId;
                         TMapLabel label;
@@ -1999,7 +2043,7 @@ bool TMap::restore(QString location)
             int areasWithLabelsTotal = 0;
             ifs >> areasWithLabelsTotal;
             int areasWithLabelsCounter = 0;
-            while (!ifs.atEnd() && areasWithLabelsCounter < areasWithLabelsTotal) {
+            while (!ifs.atEnd() && ifs.status() == QDataStream::Ok && areasWithLabelsCounter < areasWithLabelsTotal) {
                 int areaID = -1;
                 int areaLabelsTotal = 0;
                 ifs >> areaLabelsTotal;
@@ -2007,7 +2051,7 @@ bool TMap::restore(QString location)
                 ifs >> areaID;
                 int areaLabelCounter = 0;
                 auto pA = mpRoomDB->getArea(areaID);
-                while (!ifs.atEnd() && areaLabelCounter < areaLabelsTotal) {
+                while (!ifs.atEnd() && ifs.status() == QDataStream::Ok && areaLabelCounter < areaLabelsTotal) {
                     int labelID = 0;
                     ifs >> labelID;
                     TMapLabel label;
@@ -2046,7 +2090,9 @@ bool TMap::restore(QString location)
             }
         }
 
-        while (!ifs.atEnd()) {
+        // A corrupt stream carries on reading, out of step with the records,
+        // so stop at the first sign of one rather than make rooms of the rest
+        while (!ifs.atEnd() && ifs.status() == QDataStream::Ok) {
             int i = 0;
             ifs >> i;
             auto pT = new TRoom(mpRoomDB.get());
@@ -2208,12 +2254,14 @@ bool TMap::retrieveMapFileStats(QString profile, QString* latestFileName = nullp
             *areaCount = areaSize;
         }
         // read each area
-        for (qsizetype i = 0; i < areaSize; ++i) {
+        for (qsizetype i = 0; i < areaSize && ifs.status() == QDataStream::Ok; ++i) {
             TArea pA(nullptr, nullptr);
             int areaID;
             ifs >> areaID;
             ifs >> pA.rooms;
-            ifs >> pA.zLevels;
+            if (listLengthFits(ifs, sizeof(qint32))) {
+                ifs >> pA.zLevels;
+            }
             ifs >> pA.mAreaExits;
             ifs >> pA.gridMode;
             ifs >> pA.max_x;
@@ -2249,7 +2297,7 @@ bool TMap::retrieveMapFileStats(QString profile, QString* latestFileName = nullp
             if (otherProfileVersion >= 21) {
                 int mapLabelsCount = -1;
                 ifs >> mapLabelsCount;
-                for (int i = 0; i < mapLabelsCount; ++i) {
+                for (int i = 0; i < mapLabelsCount && ifs.status() == QDataStream::Ok; ++i) {
                     int labelId = -1;
                     ifs >> labelId;
                     TMapLabel label;
@@ -2291,13 +2339,13 @@ bool TMap::retrieveMapFileStats(QString profile, QString* latestFileName = nullp
         int areasWithLabelsTotal = 0;
         ifs >> areasWithLabelsTotal;
         int areasWithLabelsCounter = 0;
-        while (!ifs.atEnd() && areasWithLabelsCounter < areasWithLabelsTotal) {
+        while (!ifs.atEnd() && ifs.status() == QDataStream::Ok && areasWithLabelsCounter < areasWithLabelsTotal) {
             int areaID = -1;
             int areaLabelsTotal = 0;
             ifs >> areaLabelsTotal;
             ifs >> areaID;
             int areaLabelCounter = 0;
-            while (!ifs.atEnd() && areaLabelCounter < areaLabelsTotal) {
+            while (!ifs.atEnd() && ifs.status() == QDataStream::Ok && areaLabelCounter < areaLabelsTotal) {
                 int labelID;
                 ifs >> labelID;
                 TMapLabel label;
@@ -2327,7 +2375,7 @@ bool TMap::retrieveMapFileStats(QString profile, QString* latestFileName = nullp
 
     TRoom _pT(nullptr);
     QSet<int> _dummyRoomIdSet;
-    while (!ifs.atEnd()) {
+    while (!ifs.atEnd() && ifs.status() == QDataStream::Ok) {
         int i;
         ifs >> i;
         _pT.restore(ifs, i, otherProfileVersion);

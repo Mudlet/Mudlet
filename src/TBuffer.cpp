@@ -5788,11 +5788,14 @@ int TBuffer::wrapLine(int startLine, int maxWidth, int indentSize, int hangingIn
     // the line replaces the characters the pass is matching against:
     materialisePreTriggerPassLine(startLine);
 
-    // consider moving this upstream and returning an error if you try to set indentation higher than wrapWidth
-    // a negative indent needs discarding too: the insert() applying it below
-    // takes an unsigned count, so it would ask for a huge allocation
-    const int indent = (indentSize > 0 && indentSize < maxWidth) ? indentSize : 0;
-    const int hangingIndent = (hangingIndentSize > 0 && hangingIndentSize < maxWidth) ? hangingIndentSize : 0;
+    // Checked here, not in the setters, as the wrap width can change after them.
+    // Each wrapped line pads indent columns per (maxWidth - indent) of text, so an
+    // indent is held to half the width: near the width a long line becomes one
+    // padded line per character and exhausts memory. One as wide as the width is
+    // dropped, and so is a negative one, as the insert() applying it takes an
+    // unsigned count.
+    const int indent = (indentSize > 0 && indentSize < maxWidth) ? std::min(indentSize, maxWidth / 2) : 0;
+    const int hangingIndent = (hangingIndentSize > 0 && hangingIndentSize < maxWidth) ? std::min(hangingIndentSize, maxWidth / 2) : 0;
     const int total = static_cast<int>(buffer.size());
 
     // Leading lines that getWrapInfo() finds no break points in stay where they
@@ -5949,8 +5952,7 @@ bool TBuffer::moveCursor(QPoint& where)
     return y >= 0 && y < static_cast<int>(buffer.size());
 }
 
-// Needed, at least, as a filler for missing lines past end of the lineBuffer
-// requested by lua function getLines(...):
+// line() returns a reference, so a line number outside the buffer needs a string that outlives the call
 QString badLineError = qsl("ERROR: invalid line number");
 
 QString& TBuffer::line(int lineNumber)

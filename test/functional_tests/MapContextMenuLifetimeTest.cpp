@@ -49,6 +49,7 @@
 #include "ProfileTestHelper.h"
 #include "T2DMap.h"
 #include "TArea.h"
+#include "TLuaInterpreter.h"
 #include "TMap.h"
 #include "TRoom.h"
 #include "TRoomDB.h"
@@ -499,6 +500,26 @@ private slots:
         item->trigger();
         QVERIFY2(lua(qsl("assert(specRemovedEventSeen == 1)")), "the item raised an event for a map event that was removed");
         QVERIFY(lua(qsl("killAnonymousEventHandler(specRemovedEventHandler)")));
+    }
+
+    // Lua cannot pick a menu item, so this cannot be a busted spec. Without the
+    // fix only a sanitizer build sees the freed room being read.
+    void test_setPlayerLocationSurvivesAHandlerThatDeletesTheRoom()
+    {
+        buildMap();
+        showMapper();
+        QVERIFY(mpHost->getLuaInterpreter()->compileAndExecuteScript(
+                qsl("setLocationHandler = registerAnonymousEventHandler('sysManualLocationSetEvent', function(_, roomId) deleteRoom(roomId) end)")));
+
+        rightClickAt(pointUnitsFromCentre(1, 0));
+        QPointer<QMenu> menu = mp2dMap->mActiveContextMenu;
+        QVERIFY2(menu, "the right click on a room put up no menu");
+        QAction* item = menuItem(menu, qsl("Set player location"));
+        QVERIFY2(item, "the room menu has no set player location item");
+        item->trigger();
+
+        QVERIFY(mpHost->getLuaInterpreter()->compileAndExecuteScript(qsl("killAnonymousEventHandler(setLocationHandler)")));
+        QVERIFY2(!map()->mpRoomDB->getRoom(kEastRoomId), "the handler did not delete the room, so nothing was freed under the item");
     }
 
     // The line's second point, picked and right-clicked
