@@ -75,6 +75,9 @@ struct TConsoleModel
     // model and returns for any other.
     void toggleLogging(bool isMessageEnabled);
     void reportFailedLogStart(const QString& path, const QString& reason);
+    // Each flush is a write() to the OS, so lines logged in one pass of the
+    // event loop are flushed together once it returns, rather than one by one.
+    void scheduleLogFlush();
     // The cursor scripts read and write through: moveCursor() leaves it where it was for a line
     // outside the buffer, and moveCursorEnd() puts it on the last character of the last line.
     bool moveCursor(int x, int y);
@@ -266,6 +269,7 @@ struct TConsoleModel
     QString mLogFileName;
     QTextStream mLogStream;
     bool mLogToLogFile = false;
+    bool mLogFlushPending = false;
     // Path and reason of a failed start, for a caller with no console to read the report off.
     QString mLogStartFailure;
 };

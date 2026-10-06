@@ -5763,7 +5763,7 @@ void TBuffer::log(int fromLine, int toLine)
     // enters a command after in-game text - then skip recording the last line
     if (fromLine != lastLoggedFromLine && toLine != lastloggedToLine) {
         pModel->mLogStream << lastTextToLog;
-        pModel->mLogStream.flush();
+        pModel->scheduleLogFlush();
     }
 
     // record the last log call into a temporary buffer - we'll actually log
