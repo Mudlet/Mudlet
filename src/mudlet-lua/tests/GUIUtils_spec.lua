@@ -131,6 +131,9 @@ describe("Tests the GUI utilities as far as possible without mudlet", function()
         { "\27[38;2m", "<0,0,0>"},
         { "\27[38;2;120m", "<120,0,0>"},
         { "\27[38;2;120;134m", "<120,134,0>"},
+        { "\27[38;2;m", "<0,0,0>"},
+        { "\27[38;2;10;20;m", "<10,20,0>"},
+        { "\27[38:2::10::30m", "<10,0,30>"},
         { "\27[38;5;4m", "<0,0,128>"},
         { "\27[48;5;3m", "<:128,128,0>"},
         { "\27[38;5;4;48;5;3m", "<0,0,128:128,128,0>"},
@@ -143,6 +146,33 @@ describe("Tests the GUI utilities as far as possible without mudlet", function()
         { "\27[38;5;240m", "<88,88,88>"},
         { "\27[48;5;245m", "<:138,138,138>"},
         { "\27[38;5;240;48;5;245m", "<88,88,88:138,138,138>"},
+      }
+      for _, seq in ipairs(sequences) do
+        local actualResult = ansi2decho(seq[1])
+        assert.are.same(seq[2], actualResult)
+      end
+    end)
+
+    it("Should skip an xterm256 colour cut short before its index", function()
+      local sequences = {
+        {"\27[38;5mfoo", "foo"},
+        {"\27[38;5;mfoo", "foo"},
+        {"\27[48;5mfoo", "foo"},
+        {"\27[31;38;5mX", "<128,0,0>X"},
+        {"\27[41;48;5mX", "<:128,0,0>X"},
+        {"\27[38;5;;31mX", "<128,0,0>X"},
+        {"\27[31m\27[38;5m\27[1mX", "<128,0,0><255,0,0>X"},
+      }
+      for _, seq in ipairs(sequences) do
+        local actualResult = ansi2decho(seq[1])
+        assert.are.same(seq[2], actualResult)
+      end
+    end)
+
+    it("Should keep an xterm256 or rgb foreground when bold follows it", function()
+      local sequences = {
+        {"\27[38;5;196;1mX", "<255,0,0>X"},
+        {"\27[38;2;10;20;30;1mX", "<10,20,30>X"},
       }
       for _, seq in ipairs(sequences) do
         local actualResult = ansi2decho(seq[1])

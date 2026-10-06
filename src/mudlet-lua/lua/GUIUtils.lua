@@ -2023,6 +2023,11 @@ local function convertindex(tag)
   return color_table[ansi] or false
 end
 
+-- a field left empty or out, as in 38;2;;5m or 38;2m, counts as 0
+local function rgbComponent(field)
+  return tonumber(field) or 0
+end
+
 -- function for converting a raw ANSI string into something decho can process
 -- italics and underline not currently supported since decho doesn't support them
 -- bold is emulated so it is supported, up to an extent
@@ -2112,19 +2117,22 @@ function ansi2decho(text, ansi_default_color)
         local cmd = code - (layerCode * 10) -- extract the actual "command"
         -- 0-7 is a colour, 8 is xterm256
         local colour = nil
+        local cutShort = false
 
         if cmd == 8 and t[i + 1] == '5' then
           -- xterm256, colour indexed
-          colour = convertindex(tonumber(t[i + 2]))
+          local index = tonumber(t[i + 2])
+          cutShort = index == nil
+          colour = index and convertindex(index)
           i = i + 2
 
         elseif cmd == 8 and t[i + 1] == '2' then
           -- xterm256, rgb
           if delim == ";" then
-            colour = { t[i + 2] or '0', t[i + 3] or '0', t[i + 4] or '0' }
+            colour = { rgbComponent(t[i + 2]), rgbComponent(t[i + 3]), rgbComponent(t[i + 4]) }
             i = i + 4
           elseif delim == ":" then
-            colour = { t[i + 3] or '0', t[i + 4] or '0', t[i + 5] or '0' }
+            colour = { rgbComponent(t[i + 3]), rgbComponent(t[i + 4]), rgbComponent(t[i + 5]) }
             i = i + 5
           end
         elseif layerCode == 9 or layerCode == 10 then
@@ -2137,7 +2145,9 @@ function ansi2decho(text, ansi_default_color)
           colour = coloursToUse[cmd]
         end
 
-        if layerCode == 3 or layerCode == 9 then
+        if cutShort then
+          -- a sequence cut short, like 38;5m, names no colour, so nothing changes
+        elseif layerCode == 3 or layerCode == 9 then
           fg = colour
           lastColour = cmd
         elseif layerCode == 4 or layerCode == 10 then
@@ -2149,7 +2159,9 @@ function ansi2decho(text, ansi_default_color)
       -- code such as 'bold' or 'dim'.
       -- In those cases, if there's a previous color, we are supposed to
       -- modify it
-      if not formatCodeHandled and lastColour then
+      -- only the eight basic colours have a bright form: after an xterm256 or
+      -- rgb foreground lastColour is 8, and that colour stays as it is
+      if not formatCodeHandled and lastColour and coloursToUse[lastColour] then
         fg = coloursToUse[lastColour]
       end
 
