@@ -2000,6 +2000,12 @@ void dlgTriggerEditor::slot_itemSelectedInSearchResults(QTreeWidgetItem* pItem)
         return;
     }
 
+    // Showing the item's view rebuilds stale trees, which would free the items found below
+    if (mNeedUpdateData) {
+        saveOpenChanges();
+        rebuildStaleTrees();
+    }
+
     // For changing views from one type to another (e.g. script->triggers), we have to show
     // the new view first before changing the TreeWidgetItem. Because we save changes to
     // the current item when it is left, if we change the TreeWidgetItem and then swap
@@ -2355,6 +2361,11 @@ void dlgTriggerEditor::slot_itemSelectedInSearchResults(QTreeWidgetItem* pItem)
         LuaInterface* lI = mpHost->getLuaInterface();
         VarUnit* vu = lI->getVarUnit();
         const QStringList varShort = pItem->data(0, IdRole).toStringList();
+        // A stale-tree rebuild empties the variables tree without refilling it,
+        // leaving mpVarBaseItem freed
+        if (!treeWidget_variables->topLevelItemCount()) {
+            repopulateVars();
+        }
         QList<QTreeWidgetItem*> list;
         recurseVariablesDown(mpVarBaseItem, list);
         QListIterator<QTreeWidgetItem*> it(list);
@@ -10456,21 +10467,26 @@ void dlgTriggerEditor::autoSave()
     mpHost->saveProfile(QString(), qsl("autosave"));
 }
 
+void dlgTriggerEditor::rebuildStaleTrees()
+{
+    treeWidget_triggers->clear();
+    treeWidget_aliases->clear();
+    treeWidget_timers->clear();
+    treeWidget_scripts->clear();
+    treeWidget_actions->clear();
+    treeWidget_keys->clear();
+    treeWidget_variables->clear();
+    fillout_form();
+    mNeedUpdateData = false;
+    resolveCurrentView();
+}
+
 void dlgTriggerEditor::enterEvent(TEnterEvent* event)
 {
     Q_UNUSED(event)
     if (mNeedUpdateData) {
         saveOpenChanges();
-        treeWidget_triggers->clear();
-        treeWidget_aliases->clear();
-        treeWidget_timers->clear();
-        treeWidget_scripts->clear();
-        treeWidget_actions->clear();
-        treeWidget_keys->clear();
-        treeWidget_variables->clear();
-        fillout_form();
-        mNeedUpdateData = false;
-        resolveCurrentView();
+        rebuildStaleTrees();
     }
 }
 
@@ -10479,16 +10495,7 @@ void dlgTriggerEditor::focusInEvent(QFocusEvent* pE)
     Q_UNUSED(pE)
     if (mNeedUpdateData) {
         saveOpenChanges();
-        treeWidget_triggers->clear();
-        treeWidget_aliases->clear();
-        treeWidget_timers->clear();
-        treeWidget_scripts->clear();
-        treeWidget_actions->clear();
-        treeWidget_keys->clear();
-        treeWidget_variables->clear();
-        fillout_form();
-        mNeedUpdateData = false;
-        resolveCurrentView();
+        rebuildStaleTrees();
     }
 
     if (mCurrentView == EditorViewType::cmUnknownView) {
@@ -10550,16 +10557,7 @@ void dlgTriggerEditor::changeView(EditorViewType view)
     saveOpenChanges();
 
     if (mNeedUpdateData) {
-        treeWidget_triggers->clear();
-        treeWidget_aliases->clear();
-        treeWidget_timers->clear();
-        treeWidget_scripts->clear();
-        treeWidget_actions->clear();
-        treeWidget_keys->clear();
-        treeWidget_variables->clear();
-        fillout_form();
-        mNeedUpdateData = false;
-        resolveCurrentView();
+        rebuildStaleTrees();
     }
 
     // in lieu of readonly

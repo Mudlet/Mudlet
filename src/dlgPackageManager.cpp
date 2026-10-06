@@ -383,7 +383,12 @@ void dlgPackageManager::slot_installPackageFromFile()
 
 void dlgPackageManager::slot_installPackageFromRepository()
 {
-    const QList<QListWidgetItem*> selected = packageList->selectedItems();
+    // Names, not items: a warning below runs an event loop, in which a package
+    // installed or removed by a script rebuilds the list and frees its items
+    QStringList selected;
+    for (const QListWidgetItem* item : packageList->selectedItems()) {
+        selected << item->text();
+    }
     if (selected.isEmpty()) {
         return;
     }
@@ -469,9 +474,7 @@ void dlgPackageManager::slot_installPackageFromRepository()
         progress->deleteLater();
     });
 
-    for (QListWidgetItem* item : selected) {
-        const QString packageName = item->text();
-
+    for (const QString& packageName : std::as_const(selected)) {
         QJsonObject foundObj;
         if (packageLookup.contains(packageName)) {
             foundObj = packageLookup.value(packageName);

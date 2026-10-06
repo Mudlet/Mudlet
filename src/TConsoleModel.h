@@ -177,8 +177,8 @@ struct TConsoleModel
     void moveCursorEnd();
     void deleteLineAtCursor();
 
-    // Half-open: lines(n, n) is empty. Not const because TBuffer::line() returns a mutable QString&.
-    QStringList lines(int from, int to);
+    // Half-open: lines(n, n) is empty. Lines outside the buffer are left out.
+    QStringList lines(int from, int to) const;
 
     // Selecting a run of the cursor's line, painting it and restoring the format, for colorizer triggers
     // and scripts. Needs no view; the painting calls return whether the buffer changed, the view's cue to
