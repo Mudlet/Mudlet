@@ -689,6 +689,7 @@ TBuffer::TBuffer(const TBuffer& other)
 , lastTextToLog(other.lastTextToLog)
 , mEncoding(other.mEncoding)
 , mDecoder(other.mDecoder)
+, mMultibyteDecoder(multibyteDecoderFor(other.mDecoder, other.mEncoding))
 , mCurrentHyperlinkCommand(other.mCurrentHyperlinkCommand)
 , mCurrentHyperlinkHint(other.mCurrentHyperlinkHint)
 , mCurrentHyperlinkLinkId(other.mCurrentHyperlinkLinkId)
@@ -786,6 +787,7 @@ TBuffer& TBuffer::operator=(const TBuffer& other)
         lastTextToLog = other.lastTextToLog;
         mEncoding = other.mEncoding;
         mDecoder = other.mDecoder;
+        mMultibyteDecoder = multibyteDecoderFor(mDecoder, mEncoding);
         mCurrentHyperlinkCommand = other.mCurrentHyperlinkCommand;
         mCurrentHyperlinkHint = other.mCurrentHyperlinkHint;
         mCurrentHyperlinkLinkId = other.mCurrentHyperlinkLinkId;
@@ -7497,8 +7499,7 @@ bool TBuffer::processGBSequence(const std::string& bufferData, const bool isFrom
         // decoder - and check number of codepoints returned
 
         QString codePoint;
-        if (TEncodingHelper::isEncodingAvailable(mEncoding)) {
-            codePoint = TEncodingHelper::decode(QByteArray::fromRawData(bufferData.data() + pos, gbSequenceLength), mEncoding);
+        if (decodeMultibyteSequence(QByteArrayView(bufferData.data() + pos, gbSequenceLength), codePoint)) {
             switch (codePoint.size()) {
             default:
                 Q_UNREACHABLE(); // This can't happen, unless we got pos or gbSequenceLength wrong
@@ -7612,8 +7613,7 @@ bool TBuffer::processBig5Sequence(const std::string& bufferData, const bool isFr
         // decoder - and check number of codepoints returned
 
         QString codePoint;
-        if (TEncodingHelper::isEncodingAvailable(mEncoding)) {
-            codePoint = TEncodingHelper::decode(QByteArray::fromRawData(bufferData.data() + pos, big5SequenceLength), mEncoding);
+        if (decodeMultibyteSequence(QByteArrayView(bufferData.data() + pos, big5SequenceLength), codePoint)) {
             switch (codePoint.size()) {
             default:
                 Q_UNREACHABLE(); // This can't happen, unless we got pos or big5SequenceLength wrong
@@ -7735,8 +7735,7 @@ bool TBuffer::processEUC_KRSequence(const std::string& bufferData, const bool is
         // decoder - and check number of codepoints returned
 
         QString codePoint;
-        if (TEncodingHelper::isEncodingAvailable(mEncoding)) {
-            codePoint = TEncodingHelper::decode(QByteArray::fromRawData(bufferData.data() + pos, eucSequenceLength), mEncoding);
+        if (decodeMultibyteSequence(QByteArrayView(bufferData.data() + pos, eucSequenceLength), codePoint)) {
             switch (codePoint.size()) {
             default:
                 Q_UNREACHABLE(); // This can't happen, unless we got pos or eucSequenceLength wrong
@@ -7820,11 +7819,40 @@ TBuffer::Decoder TBuffer::decoderFor(const QByteArray& encoding)
     return Decoder::Ascii;
 }
 
+QStringDecoder TBuffer::multibyteDecoderFor(const Decoder decoder, const QByteArray& encoding)
+{
+    switch (decoder) {
+    case Decoder::Gbk:
+    case Decoder::Gb18030:
+    case Decoder::EucKr:
+    case Decoder::Big5:
+        return QStringDecoder(encoding.constData());
+    default:
+        return {};
+    }
+}
+
+// Falls back to TEncodingHelper (lookup tables, Qt5Compat codecs) for Qt builds without ICU
+bool TBuffer::decodeMultibyteSequence(QByteArrayView bytes, QString& decoded)
+{
+    if (mMultibyteDecoder.isValid()) {
+        mMultibyteDecoder.resetState();
+        decoded = mMultibyteDecoder.decode(bytes);
+        return true;
+    }
+    if (!TEncodingHelper::isEncodingAvailable(mEncoding)) {
+        return false;
+    }
+    decoded = TEncodingHelper::decode(bytes.toByteArray(), mEncoding);
+    return true;
+}
+
 void TBuffer::encodingChanged(const QByteArray& newEncoding)
 {
     if (mEncoding != newEncoding) {
         mEncoding = newEncoding;
         mDecoder = decoderFor(mEncoding);
+        mMultibyteDecoder = multibyteDecoderFor(mDecoder, mEncoding);
         if (mEncoding == "GBK" || mEncoding == "GB18030" || mEncoding == "BIG5" || mEncoding == "BIG5-HKSCS" || mEncoding == "EUC-KR") {
             if (!TEncodingHelper::isEncodingAvailable(mEncoding)) {
                 qCritical().nospace() << "encodingChanged(" << newEncoding << ") ERROR: This encoding cannot be handled as a required codec was not found in the system!";

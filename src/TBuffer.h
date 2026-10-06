@@ -38,6 +38,7 @@
 #include <QQueue>
 #include <QSet>
 #include <QString>
+#include <QStringDecoder>
 #include <QStringList>
 #include <QStringView>
 #include <QVarLengthArray>
@@ -487,6 +488,8 @@ private:
     bool processGBSequence(const std::string&, bool, bool, size_t, size_t&, bool&);
     bool processBig5Sequence(const std::string&, bool, size_t, size_t&, bool&);
     bool processEUC_KRSequence(const std::string&, bool, size_t, size_t&, bool&);
+    static QStringDecoder multibyteDecoderFor(Decoder, const QByteArray&);
+    bool decodeMultibyteSequence(QByteArrayView, QString&);
     // Views into the string decodeSGR() was handed, so none may outlive that call.
     using SgrParameters = QVarLengthArray<QStringView, 12>;
     void decodeSGR(QStringView);
@@ -670,6 +673,9 @@ private:
 
     QByteArray mEncoding;
     Decoder mDecoder = Decoder::Ascii;
+    // Opening an ICU converter costs far more than decoding the one character
+    // each processGBSequence() etc. call needs, so one is kept per encoding
+    QStringDecoder mMultibyteDecoder;
 
     // OSC 8 hyperlink tracking
     QStringList mCurrentHyperlinkCommand;
