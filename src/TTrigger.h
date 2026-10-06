@@ -485,6 +485,11 @@ private:
     void processSubstringMatch(const QString& haystack, const QString& needle, int regexNumber, int posOffset, int where, int lineNumber);
     void processColorPattern(int patternNumber, std::list<std::string>& captureList, std::list<int>& posList, int lineNumber);
     void processPromptMatch(int patternNumber);
+    bool fireReachesLua() const;
+    void executeWithCaptures(const std::list<std::string>& captureList,
+                             const std::list<int>& posList,
+                             const NameGroupMatches* nameGroups = nullptr,
+                             const QMap<QString, QPair<int, int>>* namePositions = nullptr);
     const std::string& patternUtf8(int patternNumber) const;
 
 
