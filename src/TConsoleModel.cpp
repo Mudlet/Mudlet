@@ -67,12 +67,14 @@ TConsoleModel::TConsoleModel(Host* pHost)
     buffer.mpModel = this;
 }
 
-QStringList TConsoleModel::lines(int from, int to)
+QStringList TConsoleModel::lines(int from, int to) const
 {
     QStringList ret;
-    const int delta = abs(from - to);
-    for (int i = 0; i < delta; i++) {
-        ret << buffer.line(from + i);
+    // 64-bit, as from - to overflows an int for a script's extreme arguments
+    const qint64 first = from;
+    const qint64 end = std::min(first + qAbs(first - to), static_cast<qint64>(buffer.lineBuffer.size()));
+    for (qint64 i = std::max<qint64>(first, 0); i < end; ++i) {
+        ret << buffer.lineBuffer.at(i);
     }
     return ret;
 }

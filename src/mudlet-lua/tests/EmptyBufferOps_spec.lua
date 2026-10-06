@@ -10,7 +10,7 @@
 -- buffer and for a one-line one alike. Asking for line 0 is what tells them
 -- apart, and every case here depends on the buffer really being empty.
 local function assertEmpty(window)
-  assert.equals("ERROR: invalid line number", getLines(window, 0, 1)[1])
+  assert.are.same({}, getLines(window, 0, 1))
 end
 
 local function linesContain(window, needle)

@@ -5952,8 +5952,7 @@ bool TBuffer::moveCursor(QPoint& where)
     return y >= 0 && y < static_cast<int>(buffer.size());
 }
 
-// Needed, at least, as a filler for missing lines past end of the lineBuffer
-// requested by lua function getLines(...):
+// line() returns a reference, so a line number outside the buffer needs a string that outlives the call
 QString badLineError = qsl("ERROR: invalid line number");
 
 QString& TBuffer::line(int lineNumber)
