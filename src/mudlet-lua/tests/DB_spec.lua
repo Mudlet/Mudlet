@@ -4387,3 +4387,38 @@ describe("Tests db:_closeAll", function()
     assert.is_nil(db.__env)
   end)
 end)
+
+describe("luasql's __tostring", function()
+  local env, conn, cursor
+
+  before_each(function()
+    env = luasql.sqlite3()
+    conn = env:connect(":memory:")
+    cursor = conn:execute("SELECT 1")
+  end)
+
+  after_each(function()
+    cursor:close()
+    conn:close()
+    env:close()
+  end)
+
+  it("raises an error when called without its object", function()
+    assert.has_error(function() env.__tostring() end)
+    assert.has_error(function() conn.__tostring() end)
+    assert.has_error(function() cursor.__tostring() end)
+  end)
+
+  it("raises an error when called on another kind of object", function()
+    assert.has_error(function() env.__tostring(cursor) end)
+    assert.has_error(function() conn.__tostring(io.stdout) end)
+    assert.has_error(function() cursor.__tostring("SELECT 1") end)
+  end)
+
+  it("still describes its own object", function()
+    assert.truthy(tostring(env):find("^SQLite3 environment"))
+    assert.truthy(tostring(conn):find("^SQLite3 connection"))
+    assert.truthy(env.__tostring(env):find("^SQLite3 environment"))
+    assert.truthy(cursor:__tostring():find("^SQLite3 cursor"))
+  end)
+end)

@@ -646,6 +646,56 @@ private slots:
         QVERIFY2(subject()->getExit(DIR_NORTH) == scmNearRoom, "save() on a dialog with no room wrote over another room's exits");
     }
 
+    // The dialog is not modal, so a script can delete its room while it is open
+    void savingAfterTheRoomIsDeletedClosesWithoutWriting()
+    {
+        buildMap();
+        auto* pDlg = openDialogOn(scmSubjectRoom);
+        pDlg->show();
+        pDlg->weight_n->setValue(13);
+
+        QVERIFY(roomDB()->removeRoom(scmSubjectRoom));
+        pDlg->save();
+
+        QVERIFY(!subject());
+        QVERIFY2(!pDlg->isVisible(), "the dialog stayed open on a room that no longer exists");
+    }
+
+    // deleteMap() and loading another map free the room the dialog was opened on
+    void savingAfterTheMapIsClearedClosesWithoutWriting()
+    {
+        buildMap();
+        auto* pDlg = openDialogOn(scmSubjectRoom);
+        pDlg->show();
+        pDlg->weight_n->setValue(13);
+
+        map()->mapClear();
+        pDlg->save();
+
+        QVERIFY(!subject());
+        QVERIFY2(!pDlg->isVisible(), "the dialog stayed open on a room that no longer exists");
+    }
+
+    void savingAfterTheRoomIdIsReusedLeavesTheNewRoomAlone()
+    {
+        buildMap();
+        auto* pDlg = openDialogOn(scmSubjectRoom);
+        pDlg->show();
+        pDlg->weight_n->setValue(13);
+
+        QVERIFY(roomDB()->removeRoom(scmSubjectRoom));
+        QVERIFY(map()->addRoom(scmSubjectRoom));
+        QVERIFY(map()->setRoomArea(scmSubjectRoom, mAreaId));
+        pDlg->save();
+
+        QVERIFY(subject());
+        for (int direction = DIR_NORTH; direction <= DIR_OUT; ++direction) {
+            QVERIFY2(!subject()->hasExit(direction), "the old dialog wrote its exits onto a new room that reused the id");
+        }
+        QVERIFY2(subject()->getSpecialExits().isEmpty(), "the old dialog wrote its special exits onto a new room that reused the id");
+        QVERIFY2(!pDlg->isVisible(), "the dialog stayed open on a room that no longer exists");
+    }
+
     // Regression test for issue #10423: dlgRoomExits' constructor used to hand
     // specialExits two parentless delegates through setItemDelegateForColumn(),
     // which does not take ownership, so both outlived the dialog with nothing

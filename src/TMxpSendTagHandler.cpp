@@ -26,6 +26,8 @@ TMxpTagHandlerResult TMxpSendTagHandler::handleStartTag(TMxpContext& ctx, TMxpCl
 {
     mLastCaption.clear();
     mCurrentTagContent.clear();
+    // <SEND .../> never gets an end tag, so must not start collecting
+    mInsideTag = !tag->isEmpty();
 
     QString href = extractHref(tag);
     QString hint = extractHint(tag);
@@ -151,6 +153,7 @@ TMxpTagHandlerResult TMxpSendTagHandler::handleEndTag(TMxpContext& ctx, TMxpClie
 void TMxpSendTagHandler::resetCurrentTagContent(TMxpClient& client)
 {
     mIsHrefInContent = false;
+    mInsideTag = false;
     mCurrentTagContent.clear();
     client.setLinkMode(false);
 }
@@ -179,5 +182,7 @@ void TMxpSendTagHandler::updateHrefInLinks(TMxpClient& client) const
 }
 void TMxpSendTagHandler::handleContent(char ch)
 {
-    mCurrentTagContent.append(ch);
+    if (mInsideTag) {
+        mCurrentTagContent.append(ch);
+    }
 }
