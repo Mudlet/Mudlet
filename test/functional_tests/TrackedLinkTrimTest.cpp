@@ -49,6 +49,8 @@
 
 #include "GroupedTest.h"
 
+using namespace std::chrono_literals;
+
 class TrackedLinkTrimTest : public QObject
 {
     Q_OBJECT
@@ -93,7 +95,7 @@ private slots:
         auto host = TestProfile::create(mHostname, mLocalhost, mPort);
         QVERIFY2(host, "no active host available for the test");
         QSignalSpy connectionSpy(&(host->mTelnet), &cTelnet::signal_connected);
-        QVERIFY2(connectionSpy.wait(2000), "could not connect with the host");
+        QVERIFY2(connectionSpy.wait(2s), "could not connect with the host");
 
         mpHost = HostManager::self()->getHost(mHostname);
         QVERIFY(mpHost);
@@ -143,7 +145,7 @@ private slots:
         auto* pConsole = mpHost->mpConsole.data();
         auto& buffer = pConsole->buffer;
         auto& manager = pConsole->getHyperlinkVisibilityManager();
-        QVERIFY(pConsole->clear(qsl("main")));
+        QVERIFY(mpHost->clearWindow(qsl("main")));
         buffer.setBufferSize(csmLinesLimit, csmBatchDeleteSize);
 
         fill(pConsole, qsl("seed"), 45);
@@ -174,7 +176,7 @@ private slots:
         auto* pConsole = mpHost->mpConsole.data();
         auto& buffer = pConsole->buffer;
         auto& manager = pConsole->getHyperlinkVisibilityManager();
-        QVERIFY(pConsole->clear(qsl("main")));
+        QVERIFY(mpHost->clearWindow(qsl("main")));
 
         fill(pConsole, qsl("seed"), 3);
         const int goingId = appendLink(pConsole);
@@ -228,7 +230,7 @@ private slots:
         QVERIFY(manager.registerHyperlink(linkId, registeredOn, 0, mLinkText.length(), mLinkText, concealedRevealStyling()));
         QCOMPARE(pConsole->getLinkStore().getLinksConst(linkId), QStringList{mLinkCommand});
 
-        QVERIFY(pConsole->clear(qsl("main")));
+        QVERIFY(mpHost->clearWindow(qsl("main")));
         qApp->processEvents();
 
         QVERIFY2(pConsole->getLinkStore().getLinksConst(linkId).isEmpty(), "clearing the window left the link's command behind");
@@ -241,7 +243,7 @@ private slots:
     {
         auto* pConsole = mpHost->mpConsole.data();
         auto& manager = pConsole->getHyperlinkVisibilityManager();
-        QVERIFY(pConsole->clear(qsl("main")));
+        QVERIFY(mpHost->clearWindow(qsl("main")));
 
         fill(pConsole, qsl("seed"), 3);
         const int linkId = appendLink(pConsole);
@@ -255,7 +257,7 @@ private slots:
         QVERIFY2(manager.mPendingHiddenCount > 0, "nothing was queued, so clearing it below proves nothing");
         QVERIFY2(manager.mpAnnouncementTimer->isActive(), "nothing was queued, so clearing it below proves nothing");
 
-        QVERIFY(pConsole->clear(qsl("main")));
+        QVERIFY(mpHost->clearWindow(qsl("main")));
 
         QCOMPARE(manager.mPendingHiddenCount, 0);
         QVERIFY2(!manager.mpAnnouncementTimer->isActive(), "the announcement still fires after the links it counts have gone");
@@ -269,7 +271,7 @@ private slots:
         auto* pConsole = mpHost->mpConsole.data();
         auto& buffer = pConsole->buffer;
         auto& manager = pConsole->getHyperlinkVisibilityManager();
-        QVERIFY(pConsole->clear(qsl("main")));
+        QVERIFY(mpHost->clearWindow(qsl("main")));
 
         fill(pConsole, qsl("seed"), 3);
         const int linkId = appendLink(pConsole);
@@ -299,7 +301,7 @@ private slots:
     {
         auto* pConsole = mpHost->mpConsole.data();
         auto& manager = pConsole->getHyperlinkVisibilityManager();
-        QVERIFY(pConsole->clear(qsl("main")));
+        QVERIFY(mpHost->clearWindow(qsl("main")));
 
         fill(pConsole, qsl("seed"), 3);
         const int linkId = appendLink(pConsole);

@@ -47,6 +47,8 @@
 
 #include "GroupedTest.h"
 
+using namespace std::chrono_literals;
+
 // Accepts the IRC client's connection and keeps every byte of it. It answers
 // nothing: IrcConnection writes as soon as open() has put it in the connecting
 // state, so no registration handshake is needed to see what it sends.
@@ -138,7 +140,7 @@ private:
                 [this, line]() {
                     return wireLines().contains(line);
                 },
-                5000);
+                5s);
     }
 
 private slots:
@@ -176,7 +178,7 @@ private slots:
             delete mpHost->mpDlgIRC;
             // ~dlgIRC() sends a QUIT, and the next test's wire must not be
             // holding it when it looks for a command of its own
-            QTest::qWait(100);
+            QTest::qWait(100ms);
         }
     }
 
@@ -259,7 +261,7 @@ private slots:
                          [this]() {
                              return !wireLines().isEmpty();
                          },
-                         5000),
+                         5s),
                  "the IRC client never reached the stub server");
 
         const QStringList commandsThatAreNotCommandsHere = {
@@ -294,7 +296,7 @@ private slots:
                          [this]() {
                              return !wireLines().isEmpty();
                          },
-                         5000),
+                         5s),
                  "the IRC client never reached the stub server");
         // what a joined channel leaves behind, without needing the server to say so
         mpHost->mpIrcClient->mReadyForSending = true;
@@ -319,7 +321,7 @@ private slots:
                          [this]() {
                              return !wireLines().isEmpty();
                          },
-                         5000),
+                         5s),
                  "the IRC client never reached the stub server");
 
         QVERIFY(!mpHost->mpIrcClient->sendText(qsl("#guard"), qsl("MARK\r\nQUIT :injected-quit")).first);
@@ -346,7 +348,7 @@ private slots:
                          [this]() {
                              return !wireLines().isEmpty();
                          },
-                         5000),
+                         5s),
                  "the IRC client never reached the stub server");
 
         // a comma-separated target list is legal in the protocol and has always

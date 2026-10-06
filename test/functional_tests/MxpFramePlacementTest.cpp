@@ -32,6 +32,7 @@
 #include "HostManager.h"
 #include "MudletInstanceCoordinator.h"
 #include "TLuaInterpreter.h"
+#include "TCommandLine.h"
 #include "TMainConsole.h"
 #include "TMxpFrameManager.h"
 #include "TMxpFrameWidgets.h"
@@ -173,7 +174,7 @@ private slots:
         }
 
         QSignalSpy spy2(&(mpHost->mTelnet), &cTelnet::signal_connected);
-        if (!spy2.wait(2000)) {
+        if (!spy2.wait(2s)) {
             QFAIL("Could not connect with the host.");
         }
 

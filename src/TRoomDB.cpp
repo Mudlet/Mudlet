@@ -24,13 +24,11 @@
 
 #include "Host.h"
 #include "TArea.h"
-#include "T2DMap.h"
 #include "TMap.h"
 
 #include <QDataStream>
 #include <QElapsedTimer>
 #include <QRegularExpression>
-#include <QVarLengthArray>
 
 const QString ROOM_UI_SHOWNAME = qsl("room.ui_showName");
 const QString ROOM_UI_NAMEPOS = qsl("room.ui_nameOffset");
@@ -174,33 +172,26 @@ void TRoomDB::updateEntranceMap(TRoom* pR, bool isMapLoading)
         if (!isMapLoading) {
             deleteValuesFromEntranceMap(id); // When LOADING a map, will never need to do this
         }
-        // Read straight off the room, without building a hash of its exits per
-        // room - twice per room while a map loads. A destination that several
-        // exits share is looked up once, as a busy room has many entrances to walk:
-        QVarLengthArray<int, 16> filed;
-        const auto fileEntrance = [this, id, &values, &filed](const int toExit) {
-            if (filed.contains(toExit)) {
-                return;
-            }
-            filed.append(toExit);
+        // A load can record a room's entrances twice, and a room can have more
+        // than one exit to the same room. Asked of the mirror, which walks this
+        // room's exits rather than every entrance into toExit:
+        const auto addEntrance = [&](const int toExit) {
             if (showDebug) {
                 values.append(qsl("%1,").arg(toExit));
             }
-            if (!entranceMap.contains(toExit, id)) {
-                // entranceMap is a QMultiHash, so multiple, identical entries is
-                // more than possible - it was actually happening and making
-                // entranceMap get larger than needed...!
-                entranceMap.insert(toExit, id);
-                entranceMapBySource.insert(id, toExit);
+            if (entranceMapBySource.contains(id, toExit)) {
+                return;
             }
+            entranceMap.insert(toExit, id);
+            entranceMapBySource.insert(id, toExit);
         };
-        for (const int toExit : {pR->north, pR->northeast, pR->east, pR->southeast, pR->south, pR->southwest, pR->west, pR->northwest, pR->up, pR->down, pR->in, pR->out}) {
-            if (toExit != -1) {
-                fileEntrance(toExit);
+        for (int direction = DIR_NORTH; direction <= DIR_OUT; ++direction) {
+            if (const int toExit = pR->getExit(direction); toExit != -1) {
+                addEntrance(toExit);
             }
         }
-        for (const int toExit : std::as_const(pR->mSpecialExits)) {
-            fileEntrance(toExit);
+        for (const int toExit : pR->getSpecialExits()) {
+            addEntrance(toExit);
         }
         if (showDebug) {
             if (!values.isEmpty()) {
@@ -245,39 +236,51 @@ bool TRoomDB::__removeRoom(int id)
             if (r) {
                 if (r->getNorth() == id) {
                     r->setNorth(-1);
+                    r->removeExitExtras(DIR_NORTH);
                 }
                 if (r->getNortheast() == id) {
                     r->setNortheast(-1);
+                    r->removeExitExtras(DIR_NORTHEAST);
                 }
                 if (r->getNorthwest() == id) {
                     r->setNorthwest(-1);
+                    r->removeExitExtras(DIR_NORTHWEST);
                 }
                 if (r->getEast() == id) {
                     r->setEast(-1);
+                    r->removeExitExtras(DIR_EAST);
                 }
                 if (r->getWest() == id) {
                     r->setWest(-1);
+                    r->removeExitExtras(DIR_WEST);
                 }
                 if (r->getSouth() == id) {
                     r->setSouth(-1);
+                    r->removeExitExtras(DIR_SOUTH);
                 }
                 if (r->getSoutheast() == id) {
                     r->setSoutheast(-1);
+                    r->removeExitExtras(DIR_SOUTHEAST);
                 }
                 if (r->getSouthwest() == id) {
                     r->setSouthwest(-1);
+                    r->removeExitExtras(DIR_SOUTHWEST);
                 }
                 if (r->getUp() == id) {
                     r->setUp(-1);
+                    r->removeExitExtras(DIR_UP);
                 }
                 if (r->getDown() == id) {
                     r->setDown(-1);
+                    r->removeExitExtras(DIR_DOWN);
                 }
                 if (r->getIn() == id) {
                     r->setIn(-1);
+                    r->removeExitExtras(DIR_IN);
                 }
                 if (r->getOut() == id) {
                     r->setOut(-1);
+                    r->removeExitExtras(DIR_OUT);
                 }
                 r->removeAllSpecialExitsToRoom(id);
                 // The plain setters above do not touch the area exit records,
@@ -386,6 +389,7 @@ void TRoomDB::removeRoom(QSet<int>& ids)
 bool TRoomDB::removeArea(int id)
 {
     if (TArea* pA = areas.value(id)) {
+        mpMap->areasAboutToBeDeleted();
         if (!rooms.isEmpty()) {
             // During map deletion rooms will already
             // have been cleared so this would not
@@ -1187,6 +1191,7 @@ void TRoomDB::clearMapDB()
     timer.start();
 
     ++mMapGeneration;
+    mpMap->areasAboutToBeDeleted();
 
     // Set bulk deletion mode to prevent expensive individual cleanup
     mBulkDeletionMode = true;
@@ -1381,6 +1386,7 @@ void TRoomDB::deleteDisplacedArea(int areaID, TArea* pA)
     if (!pExisting || pExisting == pA) {
         return;
     }
+    mpMap->areasAboutToBeDeleted();
     // Prevent TArea::~TArea() from re-entrantly calling removeArea(this),
     // mirroring the pattern in TRoomDB::removeArea(int)
     pExisting->mpRoomDB = nullptr;
@@ -1463,7 +1469,7 @@ bool TRoomDB::set2DMapZoom(const int areaId, const qreal zoom) const
     if (!pA) {
         return false;
     }
-    if (zoom < T2DMap::csmMinXYZoom) {
+    if (zoom < TMap::scmMinXYZoom) {
         return false;
     }
     pA->set2DMapZoom(zoom);
@@ -1474,7 +1480,7 @@ qreal TRoomDB::get2DMapZoom(const int areaId) const
 {
     auto pA = areas.value(areaId);
     if (!pA) {
-        return T2DMap::csmDefaultXYZoom;
+        return TMap::scmDefaultXYZoom;
     }
     return pA->get2DMapZoom();
 }

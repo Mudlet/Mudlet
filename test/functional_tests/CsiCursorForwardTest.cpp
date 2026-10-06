@@ -52,6 +52,8 @@
 
 #include "GroupedTest.h"
 
+using namespace std::chrono_literals;
+
 class CsiCursorForwardTest : public QObject
 {
     Q_OBJECT
@@ -85,7 +87,7 @@ private:
         QByteArray data = payload;
         data.append("\r\n");
         mpHost->mTelnet.loopbackTest(data);
-        QTest::qWait(50);
+        QTest::qWait(50ms);
     }
 
     // The buffer's last line is the empty one waiting for the next output, so
@@ -137,7 +139,7 @@ private slots:
             QFAIL("No active host available for the test.");
         }
         QSignalSpy connected(&(mpHost->mTelnet), &cTelnet::signal_connected);
-        if (!connected.wait(3000)) {
+        if (!connected.wait(3s)) {
             QFAIL("Could not connect with the host.");
         }
     }

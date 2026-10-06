@@ -93,7 +93,7 @@ private slots:
                 []() {
                     return mudlet::self()->mpConnectionDialog && mudlet::self()->mpConnectionDialog->isVisible();
                 },
-                5000));
+                5s));
     }
 
     void cleanupTestCase()

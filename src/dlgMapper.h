@@ -112,6 +112,10 @@ protected:
     bool eventFilter(QObject* watched, QEvent* event) override;
 
 private:
+    // Only the mapper TMap::mpMapper names acts on the map's cues, as other
+    // mappers of the same profile (in a detached window, say) are not drawing it.
+    bool drawsTheMap() const;
+    void connectMapCues();
     void setupEmptyStateOverlay();
     void repositionEmptyStateOverlay();
     void setupProgressOverlay();

@@ -93,7 +93,7 @@ private:
                 [this, &text]() {
                     return mpServer->received().contains(text);
                 },
-                5000);
+                5s);
     }
 
     void writeNotesFile(const QString& fileName, const QByteArray& content) const
@@ -107,7 +107,7 @@ private:
 
     void startProfile(const QString& hostname, const QString& address, const QString& port)
     {
-        QTimer::singleShot(0, qApp, [hostname, address, port]() {
+        QTimer::singleShot(0ms, qApp, [hostname, address, port]() {
             const auto dialog = []() {
                 return mudlet::self()->mpConnectionDialog.data();
             };
@@ -118,7 +118,7 @@ private:
                         [&dialog]() {
                             return dialog() && dialog()->isVisible();
                         },
-                        5000)) {
+                        5s)) {
                 qWarning() << "the connection dialog never appeared";
                 return;
             }
@@ -128,7 +128,7 @@ private:
                             [field]() {
                                 return QApplication::focusWidget() == field;
                             },
-                            5000)) {
+                            5s)) {
                     return true;
                 }
                 qWarning() << "focus never reached the" << name << "field";
@@ -156,7 +156,7 @@ private:
         });
 
         QSignalSpy spy(mudlet::self(), &mudlet::signal_profileLoaded);
-        if (!spy.wait(5000)) {
+        if (!spy.wait(5s)) {
             QFAIL("Profile took too long to load.");
         }
         auto* host = mudlet::self()->getActiveHost();
@@ -165,7 +165,7 @@ private:
         }
 
         QSignalSpy spy2(&(host->mTelnet), &cTelnet::signal_connected);
-        if (!spy2.wait(2000)) {
+        if (!spy2.wait(2s)) {
             QFAIL("Could not connect with the host.");
         }
     }
@@ -340,7 +340,7 @@ private slots:
         auto* sendTimer = notepad->findChild<QTimer*>();
         QVERIFY2(sendTimer, "the notepad has no timer pacing the lines it sends");
         QSignalSpy firstLineSent(sendTimer, &QTimer::timeout);
-        QVERIFY2(firstLineSent.wait(5000), "the notepad never got round to sending the first line");
+        QVERIFY2(firstLineSent.wait(5s), "the notepad never got round to sending the first line");
         QVERIFY(QMetaObject::invokeMethod(notepad.data(), "slot_stopSending"));
 
         QVERIFY2(waitForServerToReceive("north"), "the line already on its way when sending was stopped never reached the game");
