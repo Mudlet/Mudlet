@@ -126,6 +126,25 @@ describe("Tests how a console wraps the lines it is given", function()
       assert.are.same(wrapped(10, "aaaa bbbb cccc dddd", 0, 0),
                       wrapped(10, "aaaa bbbb cccc dddd", 0, 10))
     end)
+
+    it("keeps an indent of half the window", function()
+      assert.are.same({"     aaaa ", "     bbbb ", "     cccc ", "     dddd"},
+                      wrapped(10, "aaaa bbbb cccc dddd", 5, 5))
+    end)
+
+    it("holds indents wider than half the window to half of it", function()
+      assert.are.same(wrapped(10, "aaaa bbbb cccc dddd", 5, 5),
+                      wrapped(10, "aaaa bbbb cccc dddd", 6, 6))
+    end)
+
+    -- an indent one short of the width would pad every character of a long
+    -- line onto a line of its own, enough to run out of memory
+    it("does not split a long line into a line per character for an indent near the width", function()
+      local out = wrapped(100, string.rep("x", 20000), 99, 99)
+      assert.are.equal(400, #out)
+      assert.are.equal(string.rep(" ", 50) .. string.rep("x", 50), out[2])
+      assert.are.equal(20000, #table.concat(out):gsub(" ", ""))
+    end)
   end)
 
   describe("Tests when a line is wrapped", function()

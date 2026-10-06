@@ -47,9 +47,12 @@
 #include <QPainter>
 #include <QPixmap>
 #include <QSaveFile>
+#include <QScopeGuard>
 #include <QSizeF>
+#include <QtEndian>
 #include <QXmlStreamReader>
 #include <chrono>
+#include <cmath>
 #include <limits>
 #include <queue>
 
@@ -60,6 +63,10 @@
 using namespace std::chrono_literals;
 
 namespace {
+// An image label is painted scaled from its pixmap, so past this many pixels a
+// bigger one only costs memory: at 30000 pixels square it is gigabytes.
+constexpr qreal cMaxImageLabelPixels = 4096.0 * 4096.0;
+
 // A map file can carry a room symbol scaling factor that TMap's own setter
 // would refuse - hand-edited, from a third-party tool, or written by a Mudlet
 // whose JSON reader truncated it (issue #10176). Loading cannot go through the
@@ -315,7 +322,6 @@ int compSign(int a, int b)
 // reason why it cannot.
 QString TMap::connectExitStubByDirection(const int fromRoomId, const int dirType)
 {
-    Q_ASSERT_X(scmUnitVectors.contains(dirType), "TMap::connectExitStubByDirection(...)", "there is no unitVector.value() for the given dirType");
     Q_ASSERT_X(scmReverseDirections.contains(dirType), "TMap::connectExitStubByDirection(...)", "there is no scmReverseDirections.value() for the given dirType");
 
     TRoom* pFromR = mpRoomDB->getRoom(fromRoomId);
@@ -333,6 +339,7 @@ QString TMap::connectExitStubByDirection(const int fromRoomId, const int dirType
     }
 
     const int reverseDir = scmReverseDirections.value(dirType);
+    // In and out have no unit vector, and the zero vector they get here matches a room at the same coordinates
     const QVector3D unitVector = scmUnitVectors.value(dirType);
     // QVector3D is composed of floating point values so we need to round them
     // if we want to assign them to integral variables without compiler warnings!
@@ -620,6 +627,9 @@ bool TMap::setExit(int from, int to, int dir)
         ret = false;
     }
     pR->setExitStub(dir, false);
+    if (ret && to == -1) {
+        pR->removeExitExtras(dir);
+    }
     mMapGraphNeedsUpdate = true;
     TArea* pA = mpRoomDB->getArea(pR->getArea());
     if (!pA) {
@@ -862,6 +872,8 @@ void TMap::initGraph()
 {
     QElapsedTimer _time;
     _time.start();
+    const ScriptCallbackScope callbackScope(this);
+    mGraphBuildInProgress = true;
     locations.clear();
     roomidToIndex.clear();
     g.clear();
@@ -954,6 +966,7 @@ void TMap::initGraph()
         }
     } // End of foreach(location l, locations)
 
+    mGraphBuildInProgress = false;
     mMapGraphNeedsUpdate = false;
     qDebug() << "TMap::initGraph() INFO: built graph with:" << locations.size() << "(" << roomCount << ") locations(roomCount), and discarded" << unUsableRoomSet.count()
              << "other NOT usable rooms and found:" << edgeCount << "distinct, usable edges in:" << _time.nsecsElapsed() * 1.0e-6 << "ms.";
@@ -1041,18 +1054,22 @@ bool TMap::searchGraph(const vertex start, const vertex goal)
 
 bool TMap::findPath(int from, int to)
 {
+    mPathList.clear();
+    mDirList.clear();
+    mWeightList.clear();
+    // Clear the previous path data here so that if the following test is
+    // passed, the data is empty - and valid for THAT case!
+
+    if (mGraphBuildInProgress) {
+        return false;
+    }
+
     if (mMapGraphNeedsUpdate) {
         initGraph();
     }
 
     QElapsedTimer t;
     t.start();
-
-    mPathList.clear();
-    mDirList.clear();
-    mWeightList.clear();
-    // Clear the previous path data here so that if the following test is
-    // passed, the data is empty - and valid for THAT case!
 
     if (from == to) {
         return true; // Take a short-cut for trivial "already there" case!
@@ -1730,6 +1747,45 @@ bool TMap::validatePotentialMapFile(QFile& file, QDataStream& ifs)
     return true;
 }
 
+// QDataStream hands a list's length prefix straight to QList::reserve(), so a
+// corrupt one in a map file asks for gigabytes (#10689). Call this before
+// every QList read from a binary map - QSet and QMap readers do not reserve -
+// and read a QMap holding QLists an entry at a time, as TRoom::restore() does.
+// A length the rest of the file could not hold fails the stream. Reads carry
+// on after that, out of step, so the loops over areas, labels and rooms check
+// the status and stop at the end of the record being read.
+bool TMap::listLengthFits(QDataStream& ifs, const qint64 minBytesPerElement)
+{
+    Q_ASSERT(minBytesPerElement > 0);
+    if (ifs.status() != QDataStream::Ok) {
+        return false;
+    }
+    QIODevice* pDevice = ifs.device();
+    // bytesAvailable() is only the rest of the file on a random access device,
+    // so on anything else there is nothing to check against
+    if (!pDevice || pDevice->isSequential()) {
+        return true;
+    }
+    // A four byte length is only right while the stream stays at Qt_5_12:
+    // from Qt_6_7 a larger one can follow it
+    Q_ASSERT(ifs.version() < QDataStream::Qt_6_7);
+    constexpr qint64 lengthSize = sizeof(quint32);
+    const QByteArray lengthBytes = pDevice->peek(lengthSize);
+    if (lengthBytes.size() != lengthSize) {
+        ifs.setStatus(QDataStream::ReadPastEnd);
+        return false;
+    }
+    const quint32 length = qFromBigEndian<quint32>(lengthBytes.constData());
+    const qint64 bytesLeft = pDevice->bytesAvailable() - lengthSize;
+    if (length > bytesLeft / minBytesPerElement) {
+        qWarning().nospace() << "TMap::listLengthFits() WARNING - the list at byte " << pDevice->pos() << " of the map file claims " << length << " entries, more than the " << bytesLeft
+                             << " bytes left could hold; reading stops here.";
+        ifs.setStatus(QDataStream::ReadCorruptData);
+        return false;
+    }
+    return true;
+}
+
 bool TMap::restore(QString location)
 {
     const MapOperationScope operationScope(this);
@@ -1882,7 +1938,7 @@ bool TMap::restore(QString location)
             int areaSize = 0;
             ifs >> areaSize;
             // restore area table
-            for (int i = 0; i < areaSize; i++) {
+            for (int i = 0; i < areaSize && ifs.status() == QDataStream::Ok; i++) {
                 auto pA = new TArea(this, mpRoomDB.get());
                 int areaID = 0;
                 ifs >> areaID;
@@ -1892,13 +1948,17 @@ bool TMap::restore(QString location)
                     ifs >> pA->rooms;
                 } else {
                     QList<int> oldRoomsList;
-                    ifs >> oldRoomsList;
+                    if (listLengthFits(ifs, sizeof(qint32))) {
+                        ifs >> oldRoomsList;
+                    }
                     pA->rooms = QSet<int>{oldRoomsList.begin(), oldRoomsList.end()};
                 }
                 // Can be useful when analysing suspect map files!
                 //                qDebug() << "TMap::restore(...)" << "Area:" << areaID;
                 //                qDebug() << "Rooms:" << pA->rooms;
-                ifs >> pA->zLevels;
+                if (listLengthFits(ifs, sizeof(qint32))) {
+                    ifs >> pA->zLevels;
+                }
                 ifs >> pA->mAreaExits;
                 ifs >> pA->gridMode;
                 ifs >> pA->max_x;
@@ -1930,13 +1990,12 @@ bool TMap::restore(QString location)
                     ifs >> pA->mUserData;
                 } else if (mVersion >= 17) {
                     ifs >> pA->mUserData;
-                    const qreal fallback_map2DZoom = pA->mUserData.take(QLatin1String("system.fallback_map2DZoom")).toDouble();
-                    pA->mLast2DMapZoom = (fallback_map2DZoom >= scmMinXYZoom) ? fallback_map2DZoom : scmDefaultXYZoom;
+                    pA->set2DMapZoom(pA->mUserData.take(QLatin1String("system.fallback_map2DZoom")).toDouble());
                 }
                 if (mVersion >= 21) {
                     int mapLabelsCount = -1;
                     ifs >> mapLabelsCount;
-                    for (int i = 0; i < mapLabelsCount; ++i) {
+                    for (int i = 0; i < mapLabelsCount && ifs.status() == QDataStream::Ok; ++i) {
                         int labelId = -1;
                         ifs >> labelId;
                         TMapLabel label;
@@ -1984,7 +2043,7 @@ bool TMap::restore(QString location)
             int areasWithLabelsTotal = 0;
             ifs >> areasWithLabelsTotal;
             int areasWithLabelsCounter = 0;
-            while (!ifs.atEnd() && areasWithLabelsCounter < areasWithLabelsTotal) {
+            while (!ifs.atEnd() && ifs.status() == QDataStream::Ok && areasWithLabelsCounter < areasWithLabelsTotal) {
                 int areaID = -1;
                 int areaLabelsTotal = 0;
                 ifs >> areaLabelsTotal;
@@ -1992,7 +2051,7 @@ bool TMap::restore(QString location)
                 ifs >> areaID;
                 int areaLabelCounter = 0;
                 auto pA = mpRoomDB->getArea(areaID);
-                while (!ifs.atEnd() && areaLabelCounter < areaLabelsTotal) {
+                while (!ifs.atEnd() && ifs.status() == QDataStream::Ok && areaLabelCounter < areaLabelsTotal) {
                     int labelID = 0;
                     ifs >> labelID;
                     TMapLabel label;
@@ -2031,7 +2090,9 @@ bool TMap::restore(QString location)
             }
         }
 
-        while (!ifs.atEnd()) {
+        // A corrupt stream carries on reading, out of step with the records,
+        // so stop at the first sign of one rather than make rooms of the rest
+        while (!ifs.atEnd() && ifs.status() == QDataStream::Ok) {
             int i = 0;
             ifs >> i;
             auto pT = new TRoom(mpRoomDB.get());
@@ -2193,12 +2254,14 @@ bool TMap::retrieveMapFileStats(QString profile, QString* latestFileName = nullp
             *areaCount = areaSize;
         }
         // read each area
-        for (qsizetype i = 0; i < areaSize; ++i) {
+        for (qsizetype i = 0; i < areaSize && ifs.status() == QDataStream::Ok; ++i) {
             TArea pA(nullptr, nullptr);
             int areaID;
             ifs >> areaID;
             ifs >> pA.rooms;
-            ifs >> pA.zLevels;
+            if (listLengthFits(ifs, sizeof(qint32))) {
+                ifs >> pA.zLevels;
+            }
             ifs >> pA.mAreaExits;
             ifs >> pA.gridMode;
             ifs >> pA.max_x;
@@ -2234,7 +2297,7 @@ bool TMap::retrieveMapFileStats(QString profile, QString* latestFileName = nullp
             if (otherProfileVersion >= 21) {
                 int mapLabelsCount = -1;
                 ifs >> mapLabelsCount;
-                for (int i = 0; i < mapLabelsCount; ++i) {
+                for (int i = 0; i < mapLabelsCount && ifs.status() == QDataStream::Ok; ++i) {
                     int labelId = -1;
                     ifs >> labelId;
                     TMapLabel label;
@@ -2276,13 +2339,13 @@ bool TMap::retrieveMapFileStats(QString profile, QString* latestFileName = nullp
         int areasWithLabelsTotal = 0;
         ifs >> areasWithLabelsTotal;
         int areasWithLabelsCounter = 0;
-        while (!ifs.atEnd() && areasWithLabelsCounter < areasWithLabelsTotal) {
+        while (!ifs.atEnd() && ifs.status() == QDataStream::Ok && areasWithLabelsCounter < areasWithLabelsTotal) {
             int areaID = -1;
             int areaLabelsTotal = 0;
             ifs >> areaLabelsTotal;
             ifs >> areaID;
             int areaLabelCounter = 0;
-            while (!ifs.atEnd() && areaLabelCounter < areaLabelsTotal) {
+            while (!ifs.atEnd() && ifs.status() == QDataStream::Ok && areaLabelCounter < areaLabelsTotal) {
                 int labelID;
                 ifs >> labelID;
                 TMapLabel label;
@@ -2312,7 +2375,7 @@ bool TMap::retrieveMapFileStats(QString profile, QString* latestFileName = nullp
 
     TRoom _pT(nullptr);
     QSet<int> _dummyRoomIdSet;
-    while (!ifs.atEnd()) {
+    while (!ifs.atEnd() && ifs.status() == QDataStream::Ok) {
         int i;
         ifs >> i;
         _pT.restore(ifs, i, otherProfileVersion);
@@ -2428,12 +2491,16 @@ int TMap::createMapImageLabel(int area, QString imagePath, float x, float y, flo
     label.noScaling = false;
     label.temporary = temporary;
 
-    const QRectF drawRect = QRectF(0, 0, static_cast<qreal>(width * zoom), static_cast<qreal>(height * zoom));
+    QSizeF pixSize(static_cast<qreal>(width * zoom), static_cast<qreal>(height * zoom));
+    const qreal pixels = pixSize.width() * pixSize.height();
+    if (qIsFinite(pixels) && pixels > cMaxImageLabelPixels) {
+        pixSize *= std::sqrt(cMaxImageLabelPixels / pixels);
+    }
     const QPixmap imagePixmap = QPixmap(imagePath);
-    QPixmap pix = QPixmap(drawRect.size().toSize());
+    QPixmap pix = QPixmap(pixSize.toSize());
     pix.fill(Qt::transparent);
     QPainter lp(&pix);
-    lp.drawPixmap(QPoint(0, 0), imagePixmap.scaled(drawRect.size().toSize()));
+    lp.drawPixmap(QPoint(0, 0), imagePixmap.scaled(pixSize.toSize()));
     label.size = QSizeF(width, height);
     label.pix = pix;
 
@@ -3305,6 +3372,12 @@ std::pair<bool, QString> TMap::writeJsonMapFile(const QString& dest)
         return {false, qsl("import or export already in progress")};
     }
 
+    mJsonExportInProgress = true;
+    mJsonExportLostAnArea = false;
+    const auto exportEnded = qScopeGuard([this]() {
+        mJsonExportInProgress = false;
+    });
+
     mProgressDialogRoomsTotal = mpRoomDB->getRoomMap().count();
     mProgressDialogAreasTotal = mpRoomDB->getAreaMap().count();
     mProgressDialogLabelsTotal = 0;
@@ -3377,6 +3450,9 @@ std::pair<bool, QString> TMap::writeJsonMapFile(const QString& dest)
         file.cancelWriting();
         emit signal_mapProgressClose();
         mMapProgressStandalone = false;
+        if (mJsonExportLostAnArea) {
+            return {false, qsl("an area was deleted while the map was being exported")};
+        }
         return {false, qsl("aborted by user")};
     }
 
@@ -3670,6 +3746,12 @@ std::pair<bool, QString> TMap::readJsonMapFile(const QString& source, const bool
 
     // This is it - the point at which the new map gets activated:
     mpRoomDB = std::move(pNewRoomDB);
+    // The routing graph holds pointers to the rooms just destroyed, and the bulk
+    // deletion skipped the per-room cleanup that would otherwise have flagged it:
+    roomidToIndex.clear();
+    edgeHash.clear();
+    locations.clear();
+    mMapGraphNeedsUpdate = true;
     // Need to update the master copy of these details in the Host class:
     mpHost->setPlayerRoomStyleDetails(mPlayerRoomStyle, mPlayerRoomOuterDiameterPercentage, mPlayerRoomInnerDiameterPercentage, mPlayerRoomOuterColor, mPlayerRoomInnerColor);
     // And redraw the indicator if a 2D map is being shown:
@@ -3811,6 +3893,16 @@ bool TMap::incrementJsonProgressDialog(const bool isExportNotImport, const bool 
     }
     qApp->processEvents();
     return mMapProgressCancelRequested;
+}
+
+void TMap::areasAboutToBeDeleted()
+{
+    // The export walks the live areas and pumps the event loop as it goes, so a
+    // script can delete the one it is writing; it stops at its next progress step
+    if (mJsonExportInProgress) {
+        mJsonExportLostAnArea = true;
+        mMapProgressCancelRequested = true;
+    }
 }
 
 void TMap::announceMapLoaded(const bool showPlayerArea)
