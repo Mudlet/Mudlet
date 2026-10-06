@@ -1230,6 +1230,17 @@ function BaseUI.prefixesLeadTheirShapes()
   return true
 end
 
+-- for the test suite: the shapes a full walk finds in a line, without the memo
+function BaseUI.vitalsShapesMatching(text)
+  local indices = {}
+  for index, pattern in ipairs(vitalsLinePatterns) do
+    if rex.match(text, compiledPattern[pattern.regex]) then
+      indices[#indices + 1] = index
+    end
+  end
+  return indices
+end
+
 -- for the test suite: the vitals scan never tries a shape on a line without
 -- the literal it needs, which is only sound while no such line can match it
 function BaseUI.needsHoldOn(text)
@@ -1322,6 +1333,53 @@ local function candidateShapesFor(mask, skipWindowed)
   return shapes
 end
 
+local function readShape(index, pattern, visit, state, first, second)
+  local kind = pattern.kind
+  if kind == "curmax" then
+    local current, max = parseVitalsNumber(first), parseVitalsNumber(second)
+    if current and max and max &gt; 0 and max &lt; maxSaneVital
+       and current &lt;= max * maxOverhealFactor then
+      visit(state, index, pattern, current, max, nil)
+    end
+  elseif kind == "percent" then
+    local percent = tonumber(first)
+    if percent and percent &lt;= 100 then
+      visit(state, index, pattern, nil, nil, percent)
+    end
+  elseif kind == "bare" then
+    local current = tonumber(first)
+    if current and current &lt; maxSaneVital then
+      visit(state, index, pattern, current, nil, nil)
+    end
+  end
+end
+
+-- a literal digit, a backreference or a condition on a group lets a regex tell
+-- digits apart, and the memo below is only sound while none can. The braces of
+-- a \x or \o escape name a character, which may be a digit, not a count
+local function shapesTreatDigitsAlike(patterns)
+  for _, pattern in ipairs(patterns or vitalsLinePatterns) do
+    for _, regex in ipairs({ pattern.regex, pattern.prefix or "" }) do
+      if regex:find("\\[xo]{") then
+        return false
+      end
+      regex = regex:gsub("{%d*,?%d*}", "")
+      if regex:find("%d") or regex:find("\\[kg]") or regex:find("(?P=", 1, true) or regex:find("(?(", 1, true) then
+        return false
+      end
+    end
+  end
+  return true
+end
+BaseUI.shapesTreatDigitsAlike = shapesTreatDigitsAlike
+local memoIsSound = shapesTreatDigitsAlike()
+
+-- a line with its digits read as 0 -&gt; the shapes that matched it, in order:
+-- prompts and combat lines repeat with only their numbers changing
+local matchedShapes, matchedShapesWithoutWindowed = {}, {}
+local matchedShapeBytes = 0
+local noShapes = {}
+
 -- calls visit(state, index, pattern, current, max, percent) for each reading
 -- in one plain-text line, in shape order; chat-shaped lines have none.
 -- Nonsense readings - a max of zero, a wildly overhealed current, absurd
@@ -1332,6 +1390,22 @@ end
 local function scanVitalsLine(text, skipWindowed, visit, state)
   if type(text) ~= "string" or BaseUI.chatLikeLine(text) then
     return
+  end
+  local skeleton, known, matched
+  if memoIsSound then
+    skeleton = text:gsub("%d", "0")
+    known = skipWindowed and matchedShapesWithoutWindowed or matchedShapes
+    matched = known[skeleton]
+    if matched then
+      for _, index in ipairs(matched) do
+        local pattern = vitalsLinePatterns[index]
+        local first, second = rex.match(text, compiledPattern[pattern.regex])
+        if first then
+          readShape(index, pattern, visit, state, first, second)
+        end
+      end
+      return
+    end
   end
   local lowered = text:lower()
   local mask = 0
@@ -1361,25 +1435,18 @@ local function scanVitalsLine(text, skipWindowed, visit, state)
       first, second = rex.match(text, compiledPattern[pattern.regex])
     end
     if first then
-      local kind = pattern.kind
-      if kind == "curmax" then
-        local current, max = parseVitalsNumber(first), parseVitalsNumber(second)
-        if current and max and max &gt; 0 and max &lt; maxSaneVital
-           and current &lt;= max * maxOverhealFactor then
-          visit(state, index, pattern, current, max, nil)
-        end
-      elseif kind == "percent" then
-        local percent = tonumber(first)
-        if percent and percent &lt;= 100 then
-          visit(state, index, pattern, nil, nil, percent)
-        end
-      elseif kind == "bare" then
-        local current = tonumber(first)
-        if current and current &lt; maxSaneVital then
-          visit(state, index, pattern, current, nil, nil)
-        end
-      end
+      matched = matched or {}
+      matched[#matched + 1] = index
+      readShape(index, pattern, visit, state, first, second)
     end
+  end
+  if skeleton then
+    if matchedShapeBytes &gt;= 100000 then
+      matchedShapes, matchedShapesWithoutWindowed, matchedShapeBytes = {}, {}, 0
+      known = skipWindowed and matchedShapesWithoutWindowed or matchedShapes
+    end
+    matchedShapeBytes = matchedShapeBytes + #skeleton
+    known[skeleton] = matched or noShapes
   end
 end
 
