@@ -2427,36 +2427,57 @@ int TMap::createMapLabel(int area,
     label.noScaling = noScaling;
     label.temporary = temporary;
 
-    const QRectF lr = QRectF(0, 0, 2000, 2000);
-    QPixmap pix(lr.size().toSize());
-    pix.fill(Qt::transparent);
-
-    QPainter lp(&pix);
-    lp.fillRect(lr, label.bgColor);
-    lp.setRenderHint(QPainter::Antialiasing);
+    const QRect canvas(0, 0, 2000, 2000);
+    const QRectF textRect(20, 70, 2000, 2000);
+    const int textFlags = Qt::AlignLeft | Qt::AlignTop;
 
     QFont font(fontName.has_value() ? fontName.value() : QString(), fontSize);
     label.font = font;
+
+    // Lays the text out without drawing it, the same way drawText() does, so
+    // only the part of the canvas the label keeps needs allocating and filling
+    QRectF br;
+    {
+        QPixmap probe(1, 1);
+        QPainter probePainter(&probe);
+        probePainter.setFont(font);
+        br = probePainter.boundingRect(textRect, textFlags, label.text);
+    }
+    const QRect brRect = br.normalized().toRect();
+    // QPixmap::copy() clips to the pixmap and copies all of it for an empty rectangle
+    QRect kept = brRect.intersected(canvas);
+    if (kept.isEmpty()) {
+        kept = canvas;
+    }
+
+    QPixmap pix(kept.size());
+    pix.fill(Qt::transparent);
+
+    QPainter lp(&pix);
+    lp.translate(-kept.topLeft());
+    lp.fillRect(canvas, label.bgColor);
+    lp.setRenderHint(QPainter::Antialiasing);
     lp.setFont(font);
 
     QPen outlinePen(label.outlineColor);
     outlinePen.setWidth(1);
     lp.setPen(outlinePen);
 
-    QRectF br;
-
+    // Asking for the bounding rectangle makes Qt lay out every line; without it,
+    // text exactly as tall as textRect is laid out short and left unclipped
+    QRectF drawnBr;
     if (label.fgColor != label.outlineColor) {
-        lp.drawText(QRect(19, 70, 2000, 2000), Qt::AlignLeft | Qt::AlignTop, label.text, &br);
-        lp.drawText(QRect(21, 70, 2000, 2000), Qt::AlignLeft | Qt::AlignTop, label.text, &br);
-        lp.drawText(QRect(20, 69, 2000, 2000), Qt::AlignLeft | Qt::AlignTop, label.text, &br);
-        lp.drawText(QRect(20, 71, 2000, 2000), Qt::AlignLeft | Qt::AlignTop, label.text, &br);
+        lp.drawText(textRect.translated(-1, 0), textFlags, label.text, &drawnBr);
+        lp.drawText(textRect.translated(1, 0), textFlags, label.text, &drawnBr);
+        lp.drawText(textRect.translated(0, -1), textFlags, label.text, &drawnBr);
+        lp.drawText(textRect.translated(0, 1), textFlags, label.text, &drawnBr);
     }
     lp.setPen(label.fgColor);
-    lp.drawText(QRect(20, 70, 2000, 2000), Qt::AlignLeft | Qt::AlignTop, label.text, &br);
+    lp.drawText(textRect, textFlags, label.text, &drawnBr);
+    lp.end();
 
     label.size = br.normalized().size();
-    const QRect brRect = br.normalized().toRect();
-    label.pix = pix.copy(brRect.topLeft().x(), brRect.topLeft().y(), brRect.width(), brRect.height());
+    label.pix = pix;
     const QSizeF s = QSizeF(label.size.width() / zoom, label.size.height() / zoom);
     label.size = s;
     label.clickSize = s;
