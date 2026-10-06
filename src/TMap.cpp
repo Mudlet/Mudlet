@@ -556,16 +556,7 @@ QString TMap::connectExitStubByDirectionAndToId(const int fromRoomId, const int 
 
 int TMap::createNewRoomID(int minimumId)
 {
-    int _id = 0;
-    if (minimumId > 0) {
-        _id = minimumId - 1;
-    }
-
-    do {
-        ; // Empty loop as increment done in test
-    } while (mpRoomDB->getRoom(++_id));
-
-    return _id;
+    return mpRoomDB->lowestFreeRoomId(std::max(minimumId, 1));
 }
 
 bool TMap::setExit(int from, int to, int dir)
