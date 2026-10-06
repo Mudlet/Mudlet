@@ -69,6 +69,7 @@
 #include <QToolTip>
 #include <QWidgetAction>
 #include <QVersionNumber>
+#include <optional>
 
 using namespace std::chrono_literals;
 
@@ -547,7 +548,13 @@ void TTextEdit::layoutLine(int lineNumber, int lineOfScreen, const TChar& timeSt
     QPoint cursor(-mCursorX, lineOfScreen);
     // References rather than copies: the layout keeps views into these strings.
     const QString& lineText = mpBuffer->lineBuffer.at(lineNumber);
-    QTextBoundaryFinder boundaryFinder(QTextBoundaryFinder::Grapheme, lineText);
+    // Printable ASCII is one grapheme per QChar, so such a line - nearly every
+    // line of a MUD - needs none of the boundary finder's Unicode analysis.
+    const bool oneQCharPerGrapheme = lineBreakInfo::printableAscii(lineText);
+    std::optional<QTextBoundaryFinder> boundaryFinder;
+    if (!oneQCharPerGrapheme) {
+        boundaryFinder.emplace(QTextBoundaryFinder::Grapheme, lineText);
+    }
     int currentSize = lineText.size();
     if (mpConsole->showTimeStamps()) {
         const QString& timestamp = mpBuffer->timeBuffer.at(lineNumber);
@@ -567,7 +574,7 @@ void TTextEdit::layoutLine(int lineNumber, int lineOfScreen, const TChar& timeSt
 
     int columnWithOutTimestamp = 0;
     for (int indexOfChar = 0, total = lineText.size(); indexOfChar < total;) {
-        const int nextBoundary = boundaryFinder.toNextBoundary();
+        const int nextBoundary = oneQCharPerGrapheme ? indexOfChar + 1 : boundaryFinder->toNextBoundary();
         if (Q_UNLIKELY(nextBoundary <= indexOfChar)) {
             // toNextBoundary() reports -1 once it can no longer advance, which
             // would send indexOfChar backwards and index the line out of bounds
