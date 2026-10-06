@@ -178,10 +178,9 @@ void TRoomDB::updateEntranceMap(TRoom* pR, bool isMapLoading)
             if (showDebug) {
                 values.append(qsl("%1,").arg(toExit));
             }
-            if (!entranceMap.contains(toExit, id)) {
-                // entranceMap is a QMultiHash, so multiple, identical entries is
-                // more than possible - it was actually happening and making
-                // entranceMap get larger than needed...!
+            // A load can record a room's entrances twice. Asked of the mirror,
+            // which walks this room's exits rather than every entrance into toExit:
+            if (!entranceMapBySource.contains(id, toExit)) {
                 entranceMap.insert(toExit, id);
                 entranceMapBySource.insert(id, toExit);
             }
