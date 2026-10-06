@@ -28,7 +28,6 @@
 #include "TConsoleModel.h"
 #include "TTrigger.h"
 #include "TriggerMatchPool.h"
-#include "dlgTriggerEditor.h"
 
 #include <QScopeGuard>
 
@@ -558,6 +557,11 @@ void TriggerUnit::processDataStream(const QString& data, int line)
         return;
     }
 
+    if (mpHost->getLuaInterpreter()->buildingCaptureTables()) {
+        qWarning() << "TriggerUnit::processDataStream(...) WARNING - not running triggers on a line a garbage collection finaliser fed while the capture tables were being built.";
+        return;
+    }
+
     // Encoded, when a perl pattern asks, into storage borrowed from the unit so only a line longer than
     // any before allocates. Moved out rather than lent, so a nested pass finds the member empty and
     // cannot resize the outer pass's buffer.
@@ -574,6 +578,9 @@ void TriggerUnit::processDataStream(const QString& data, int line)
     const auto processingGuard = qScopeGuard([this] {
         mProcessingDepth--;
         Q_ASSERT(mProcessingDepth >= 0);
+        if (mProcessingDepth <= 1) {
+            mRunawayFeedStopped = false;
+        }
         if (mProcessingDepth == 0) {
             // Deletion is deferred while any pass runs, so these pointers stayed
             // valid; drop them before doCleanup() frees the underlying triggers.
@@ -686,7 +693,7 @@ void TriggerUnit::processDataStream(const QString& data, int line)
                     textDecided = true;
                 } else if (filter.mKind == TRootTriggerFilter::Kind::Color) {
                     if (!lineColorsKnown) {
-                        lineColorsUniform = TTrigger::uniformLineColors(mpHost, line, static_cast<int>(data.length()), lineForeground, lineBackground);
+                        lineColorsUniform = TTrigger::uniformLineColors(mpHost, line, lineForeground, lineBackground);
                         lineColorsKnown = true;
                     }
                     if (lineColorsUniform && filter.lacksColors(lineForeground, lineBackground)) {
@@ -739,10 +746,11 @@ void TriggerUnit::processDataStream(const QString& data, int line)
 
 void TriggerUnit::compileAll()
 {
+    // Switched off ones as well: a reset has just closed the Lua state their
+    // compiled functions lived in, and switching one back on later does
+    // not compile it again
     for (auto trigger : mTriggerRootNodeList) {
-        if (trigger->isActive()) {
-            trigger->compileAll();
-        }
+        trigger->compileAll();
     }
 }
 
@@ -806,9 +814,7 @@ bool TriggerUnit::enableTrigger(const QString& name)
         }
         it.value()->setIsActive(true);
         found = true;
-        if (mpHost->mpEditorDialog) {
-            mpHost->mpEditorDialog->refreshTriggerIcon(it.value()->getID());
-        }
+        emit mpHost->signal_triggerToggled(it.value()->getID());
     }
     return found;
 }
@@ -822,9 +828,7 @@ bool TriggerUnit::disableTrigger(const QString& name)
     for (auto it = begin; it != end; ++it) {
         it.value()->setIsActive(false);
         found = true;
-        if (mpHost->mpEditorDialog) {
-            mpHost->mpEditorDialog->refreshTriggerIcon(it.value()->getID());
-        }
+        emit mpHost->signal_triggerToggled(it.value()->getID());
     }
     return found;
 }

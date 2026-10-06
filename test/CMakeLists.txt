@@ -9,6 +9,10 @@ endif()
 
 find_package(Qt6 6.8.2 REQUIRED COMPONENTS Test Network Gui Widgets)
 
+# No test calls QFINDTESTDATA, and the checkout paths Qt Test would otherwise
+# define on every test compile keep ccache from sharing objects between worktrees
+set(QT_SKIP_DEFAULT_TESTCASE_DIRS ON)
+
 # On Windows Qt diverts QTest's stdout to OutputDebugString unless it believes
 # stderr has a console attached, which an MSYS2 shell or a CI runner does not give
 # it, so a failing test reports an exit code and nothing else (#9747). Deferred so
@@ -107,8 +111,11 @@ set(UNIT_TESTS
     ProfileNameValidationTest
 )
 
+mudlet_add_test_pch_provider(mudlet_unit_test_pch)
+
 foreach(test_name ${UNIT_TESTS})
     add_executable(${test_name} ${test_name}.cpp)
+    mudlet_reuse_test_pch(${test_name} mudlet_unit_test_pch)
     add_dependencies(${test_name} ${LIB_MUDLET_TARGET})
     # mudlet_lsan_hooks has to be linked explicitly, see src/CMakeLists.txt
     target_link_libraries(${test_name} PRIVATE Qt6::Test ${LIB_MUDLET_TARGET} mudlet_lsan_hooks)

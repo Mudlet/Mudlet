@@ -60,6 +60,8 @@
 
 #include "GroupedTest.h"
 
+using namespace std::chrono_literals;
+
 class MirrorToStdOutTest : public QObject
 {
     Q_OBJECT
@@ -123,7 +125,7 @@ private:
         // cases are about is what is on the line, so the separator comes off
         // here rather than being asserted on. Nothing else can leave a carriage
         // return at the end of one: cTelnet strips those the game sends and
-        // TConsole::echo() those a script sends.
+        // TConsoleModel::echo() those a script sends.
         for (QString& line : lines) {
             if (line.endsWith(QChar::CarriageReturn)) {
                 line.chop(1);
@@ -190,7 +192,7 @@ private:
     {
         startCapture();
         const bool succeeded = mpHost->getLuaInterpreter()->compileAndExecuteScript(script);
-        QTest::qWait(50);
+        QTest::qWait(50ms);
         stopCapture();
         return succeeded;
     }
@@ -228,7 +230,7 @@ private slots:
             QFAIL("No active host available for the test.");
         }
         QSignalSpy connected(&(mpHost->mTelnet), &cTelnet::signal_connected);
-        if (!connected.wait(3000)) {
+        if (!connected.wait(3s)) {
             QFAIL("Could not connect with the host.");
         }
 
@@ -239,7 +241,7 @@ private slots:
                     [this]() {
                         return mpHost->mpConsole->buffer.lineBuffer.contains(mWelcomeMessage);
                     },
-                    5000)) {
+                    5s)) {
             QFAIL("The server stub's welcome message never reached the console.");
         }
 
@@ -273,7 +275,7 @@ private slots:
         // and cTelnet only picks the shortened timeout up once it has.
         mudlet::smMirrorToStdOut = false;
         mpHost->mTelnet.setPostingTimeout(csmPostingTimeoutMs);
-        QTest::qWait(350);
+        QTest::qWait(350ms);
         mpHost->mBlankLineBehaviour = Host::BlankLineBehaviour::Show;
         mpHost->mpConsole->buffer.clear();
         mCapturedOutput.clear();
@@ -415,6 +417,19 @@ private slots:
         QVERIFY(runLua(qsl("echo(\"first half, \") echo(\"second half\\n\")")));
 
         QCOMPARE(mirroredLines(), QStringList{qsl("first half, second half")});
+        QCOMPARE(mirroredLines(), shownLines());
+    }
+
+    // A game line lands below a line the print path left unfinished, so the
+    // unfinished one is written out first, and client output after the game
+    // line follows it.
+    void test_anUnfinishedEchoIsMirroredAheadOfTheGameLineAfterIt()
+    {
+        QVERIFY(runLua(qsl("echo(\"left unfinished\")")));
+        feedLineFromServer("game line below it");
+        QVERIFY(runLua(qsl("echo(\"after the game line\\n\")")));
+
+        QCOMPARE(mirroredLines(), QStringList({qsl("left unfinished"), qsl("game line below it"), qsl("after the game line")}));
         QCOMPARE(mirroredLines(), shownLines());
     }
 

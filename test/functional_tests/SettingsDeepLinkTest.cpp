@@ -50,6 +50,8 @@
 
 #include "GroupedTest.h"
 
+using namespace std::chrono_literals;
+
 class SettingsDeepLinkTest : public QObject
 {
     Q_OBJECT
@@ -112,7 +114,7 @@ private:
                     [this]() {
                         return mpPreferences->findChild<QWidget*>(qsl("settingsSpotlight")) != nullptr;
                     },
-                    5000)) {
+                    5s)) {
             return nullptr;
         }
         return mpPreferences->findChild<QWidget*>(qsl("settingsSpotlight"));
@@ -316,7 +318,7 @@ private slots:
                          [this]() {
                              return mpPreferences->findChild<QWidget*>(qsl("settingsSpotlight")) == nullptr;
                          },
-                         8000),
+                         8s),
                  "the spotlight was still a child of the dialog long after its animation had finished");
     }
 };

@@ -124,9 +124,9 @@ jobs:
         MUDLET_MEDIA_TESTS_REQUIRE_PLAYBACK: 1
 
     - name: (Windows) Run Lua tests
-      # ~94s measured here, and a slow runner can take half again as long - kept in
-      # step with the other platforms
-      timeout-minutes: 6
+      # 270-315s measured here, and a slow runner has taken 354s - kept in step
+      # with the other platforms
+      timeout-minutes: 12
       shell: msys2 {0}
       env:
         AUTORUN_BUSTED_TESTS: 'true'
@@ -228,7 +228,7 @@ jobs:
     - name: (Windows) Sign binaries with SignPath
       id: sign-binaries
       if: steps.upload-unsigned-binaries.outcome == 'success'
-      uses: signpath/github-action-submit-signing-request@v3
+      uses: signpath/github-action-submit-signing-request@v2
       with:
         api-token: ${{secrets.SIGNPATH_API_TOKEN}}
         organization-id: ${{secrets.SIGNPATH_ORGANIZATION_ID}}
@@ -326,7 +326,7 @@ jobs:
     - name: (Windows) Sign installer with SignPath
       id: sign-installer
       if: steps.upload-unsigned-installer.outcome == 'success'
-      uses: signpath/github-action-submit-signing-request@v3
+      uses: signpath/github-action-submit-signing-request@v2
       with:
         api-token: ${{secrets.SIGNPATH_API_TOKEN}}
         organization-id: ${{secrets.SIGNPATH_ORGANIZATION_ID}}

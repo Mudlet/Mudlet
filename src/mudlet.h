@@ -29,6 +29,8 @@
 #include "discord.h"
 #include "FontManager.h"
 #include "HostManager.h"
+#include "MudletMedia.h"
+#include "MudletReplay.h"
 #include "ShortcutsManager.h"
 #include "SpeechRecognizerFactory.h"
 #include "utils.h"
@@ -47,7 +49,6 @@
 #include <QPointer>
 #include <QSystemTrayIcon>
 #include <QTextOption>
-#include <QTime>
 
 #if defined(INCLUDE_OWN_QT6_KEYCHAIN)
 #include <qtkeychain/keychain.h>
@@ -62,7 +63,6 @@ class QCloseEvent;
 class QDateTime;
 class QDockWidget;
 class QKeyEvent;
-class QMediaDevices;
 class QMediaPlayer;
 class QMenu;
 class QLabel;
@@ -239,7 +239,6 @@ public:
     bool isGoingDown() { return mIsGoingDown; }
     bool closeHeldOffByEventPump(Host*) const;
     Host* loadProfile(const QString&, const bool, const QString& saveFileName = QString());
-    bool loadReplay(Host*, const QString&, QString* pErrMsg = nullptr);
     bool loadWindowLayout();
     enums::controlsVisibility menuBarVisibility() const { return mMenuBarVisibility; }
     bool canHideToolBar() const { return mMenuBarVisibility != enums::visibleNever; }
@@ -263,8 +262,6 @@ public:
     // to tell other profiles to reload the updated
     // maps (via signal_profileMapReloadRequested(...))
     void requestProfilesToReloadMaps(QList<QString>);
-    void replayOver();
-    bool replayStart(Host*);
     std::pair<bool, QString> resetProfileIcon(const QString&);
     bool saveWindowLayout();
     void scanForMudletTranslations(const QString&);
@@ -273,7 +270,6 @@ public:
     bool setClickthrough(Host*, const QString&, bool);
     void setEditorTextoptions(bool isTabsAndSpacesToBeShown, bool isLinesAndParagraphsToBeShown);
     void setEditorTreeWidgetIconSize(int);
-    void setGlobalStyleSheet(const QString&);
     void setInterfaceLanguage(const QString&);
     void setMenuBarVisibility(enums::controlsVisibility);
     std::pair<bool, QString> setProfileIcon(const QString& profile, const QString& newIconPath);
@@ -282,7 +278,6 @@ public:
     void setInvertMapZoom(const bool);
     void setShowTabConnectionIndicators(const bool);
     void setupPreInstallPackages(const QString&, const QString&, const bool);
-    void watchAudioOutputDevices();
     void setToolBarIconSize(int);
     void setToolBarVisibility(enums::controlsVisibility);
     void showChangelogIfUpdated();
@@ -341,10 +336,6 @@ public:
     void updateDiscordNamedIcon();
     void updateMultiViewControls();
     void writeSettings();
-    bool muteAPI() const { return mMuteAPI; }
-    bool muteGame() const { return mMuteGame; }
-    bool mediaMuted() const { return mMuteAPI && mMuteGame; }
-    bool mediaUnmuted() const { return !mMuteAPI && !mMuteGame; }
     bool profileExists(const QString& profileName);
     bool showSplitscreenTutorial();
     void showedSplitscreenTutorial();
@@ -404,12 +395,10 @@ public:
     QToolBar* mpMainToolBar = nullptr;
     QPointer<ShortcutsManager> mpShortcutsManager;
     TTabBar* mpTabBar = nullptr;
-    int mReplaySpeed = 1;
     // More modern Desktop styles no longer include icons on the buttons in
     // QDialogButtonBox buttons - but some users are using Desktops (KDE4?) that
     // does use them - use this flag to determine whether we should apply our
     // icons to override some of them:
-    QTime mReplayTime;
     bool mShowIconsOnDialogs = true;
     // This is the state for the tri-state control on the preferences and
     // means:
@@ -470,9 +459,6 @@ public slots:
     void slot_moduleManager();
     void slot_mudletDiscord();
     void slot_multiView(const bool);
-    void slot_muteMedia();
-    void slot_muteAPI(const bool);
-    void slot_muteGame(const bool);
     void slot_newDataOnHost(const QString&, bool isLowerPriorityChange = false);
     void slot_notes();
     void slot_openMappingScriptsPage();
@@ -492,8 +478,6 @@ public slots:
     void slot_activateDetachedWindowProfile();
     void slot_replay();
     void slot_replayPauseToggled(const bool);
-    void slot_replaySpeedUp();
-    void slot_replaySpeedDown();
     void slot_replayStop();
     void slot_restoreMainMenu() { setMenuBarVisibility(enums::visibleAlways); }
     void slot_restoreMainToolBar() { synchronizeToolBarVisibility(true); }
@@ -579,8 +563,11 @@ signals:
 
 private slots:
     void slot_assignShortcutsFromProfile(Host* pHost = nullptr);
-    void slot_audioOutputDeviceChanged();
     void slot_compactInputLine(const bool);
+    void slot_muteSet(bool apiNotGame, bool muted);
+    void slot_replayOver();
+    void slot_replaySpeedChanged(int speed);
+    void slot_replayStarted();
     void slot_passwordMigratedToPortableStorage(QKeychain::Job*);
     void slot_passwordMigratedToSecureStorage(QKeychain::Job*);
 #if defined(INCLUDE_UPDATER)
@@ -613,11 +600,11 @@ private:
     void loadTranslators(const QString&);
     void migrateDebugConsole(Host*);
     void setupTrayIcon();
+    void setGlobalStyleSheet(const QString&);
     // Not const: HostManager::getHostCount() is not
     bool toolBarShouldBeVisible();
     void reshowRequiredMainConsoles();
     void updateReplayTimeLabel();
-    void toggleMute(bool state, QAction* toolbarAction, QAction* menuAction, bool isAPINotGame, const QString& unmuteText, const QString& muteText);
     dlgTriggerEditor* createMudletEditor();
     static void showEditorRestoringWindowState(QWidget* editor);
 
@@ -640,7 +627,11 @@ private:
     // Stores the translated names for the Encodings for the static and thus
     // const TBuffer::csmEncodingTable:
     QMap<QByteArray, QString> mEncodingNameMap;
+    // Before mHostManager, so it is destroyed after the profiles that reach it
+    MudletMedia mMedia;
     HostManager mHostManager;
+    // After mHostManager, so it is gone before the profiles that reach it are
+    MudletReplay mReplay;
     QKeySequence mKeySequenceCloseProfile;
     QKeySequence mKeySequenceConnect;
     QKeySequence mKeySequenceDisconnect;
@@ -665,6 +656,8 @@ private:
     // A depth, not a flag: the guarded load entry points call one another
     int mProfileLoadsInProgress = 0;
     bool mCloseRequestedDuringProfileLoad = false;
+    // From armForceClose() until the close it queued has run
+    bool mForceClosePending = false;
     // Whether multi-view is in effect:
     enums::controlsVisibility mMenuBarVisibility = enums::visibleAlways;
     // Used to ensure that mudlet::slot_updateShortcuts() only runs once each
@@ -673,9 +666,6 @@ private:
     std::optional<bool> mMenuVisibleState;
     QString mMudletDiscordInvite = qsl("https://www.mudlet.org/chat");
     bool mMultiView = false;
-    bool mMuteAPI = false;
-    bool mMuteGame = false;
-    QMediaDevices* mpMediaDevices = nullptr;
     QPointer<QAction> mpActionAbout;
     QPointer<QAction> mpActionAboutWithUpdates;
     QPointer<QAction> mpActionAliases;
@@ -785,9 +775,6 @@ private:
     QPointer<QShortcut> mpShortcutPreviousProfile;
     std::array<QPointer<QShortcut>, 9> mpShortcutsSwitchToProfile;
     QPointer<QTimer> mpTimerReplay;
-    // The profile playing the replay, which need not be the one in front, so the toolbar's buttons
-    // reach it rather than whichever is active.
-    QPointer<Host> mpReplayingHost;
     QPointer<QTimer> mpBlinkTimer;
     QElapsedTimer mBlinkElapsedTimer;
     qreal mBlinkTimeMs = 0.0;

@@ -951,7 +951,7 @@ void MMCPServer::clientMessage(const QString& fromStr, const QString& message)
     if (!mpHost || mpHost->isClosingDown()) {
         // Don't try to process any messages if the profile is dying - otherwise
         // we can get seg. faults when we try to use
-        // TMainConsole::printOnDisplay(...) - I found this the hard way! Slysven
+        // Host::printOnDisplay(...) - I found this the hard way! Slysven
         return;
     }
 
@@ -974,7 +974,7 @@ void MMCPServer::clientMessage(const QString& fromStr, const QString& message)
 
     // This uses a UTF-8 encoding:
     std::string trimmedStdStr = coloredStr.toStdString();
-    // The message sent to TMainConsole::printOnDisplay(...) MUST be in the
+    // The message sent to Host::printOnDisplay(...) MUST be in the
     // current Game Server Encoding - so we are going to have to transcode the
     // data if it is anything other than ASCII. Given that the primary usage for
     // MMCP is initially the Medievia MUD and that will be using the custom
@@ -985,7 +985,7 @@ void MMCPServer::clientMessage(const QString& fromStr, const QString& message)
         return;
     }
 
-    // TMainConsole::printOnDisplay(...) calls TBuffer::translateToPlainText(...)
+    // Host::printOnDisplay(...) calls TBuffer::translateToPlainText(...)
     // and if the data sent to that does NOT end with a Line-Feed - or certain
     // other end-of-line indications the text does not get flushed to the
     // display until it does - so actually we need to re-append a final

@@ -39,6 +39,8 @@
 
 #include "GroupedTest.h"
 
+using namespace std::chrono_literals;
+
 class TutorialInvitationFocusTest : public QObject
 {
     Q_OBJECT
@@ -73,7 +75,7 @@ private slots:
                 []() {
                     return mudlet::self()->mpConnectionDialog && mudlet::self()->mpConnectionDialog->isVisible();
                 },
-                5000));
+                5s));
     }
 
     void cleanupTestCase()
@@ -97,7 +99,7 @@ private slots:
                 [dialog]() {
                     return QApplication::focusWidget() == dialog->listWidget_profiles;
                 },
-                5000);
+                5s);
 
         QCOMPARE(QApplication::focusWidget(), static_cast<QWidget*>(dialog->listWidget_profiles));
     }

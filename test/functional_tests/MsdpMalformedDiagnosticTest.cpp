@@ -35,6 +35,8 @@
 
 #include "GroupedTest.h"
 
+using namespace std::chrono_literals;
+
 /*
  * Dropping a variable whose structure markers do not balance is only worth
  * anything for the diagnostic it leaves: from Lua the drop and a failed yajl
@@ -177,7 +179,7 @@ private:
             return nullptr;
         }
         QSignalSpy spy(&(host->mTelnet), &cTelnet::signal_connected);
-        if (!spy.wait(2000)) {
+        if (!spy.wait(2s)) {
             QTest::qFail("Could not connect with the host.", __FILE__, __LINE__);
             return nullptr;
         }

@@ -26,8 +26,10 @@
 #include "dlgProfilePreferences.h"
 
 #include "CredentialManager.h"
+#include "EditorAutoCompleteFocusHandler.h"
 #include "GMCPAuthenticator.h"
 #include "Host.h"
+#include "HostDialogs.h"
 #include "HostManager.h"
 #include "MudletApp.h"
 #include "TAction.h"
@@ -68,6 +70,7 @@
 #include <QFileDialog>
 #include <QFileInfo>
 #include <QFontDialog>
+#include <QFutureWatcher>
 #include <QIcon>
 #include <QJsonArray>
 #include <QJsonDocument>
@@ -162,6 +165,13 @@ dlgProfilePreferences::dlgProfilePreferences(QWidget* pParentWidget, Host* pHost
     // init generated dialog
     setupUi(this);
     buildShell();
+
+    // The theme/font preview below has autocomplete switched on like the script
+    // editor's own widget, so it needs the same treatment: without it edbee's
+    // completion list takes the keyboard focus while its popup is open
+    // (see #5310). Done here rather than in loadEditorTab() so it holds even
+    // when that returns early for want of a profile.
+    new EditorAutoCompleteFocusHandler(edbeePreviewWidget, this);
 
     mpTimer_apply = new QTimer(this);
     mpTimer_apply->setSingleShot(true);
@@ -746,6 +756,16 @@ void dlgProfilePreferences::buildShell()
     pTitleRowLayout->addStretch(1);
     pContentLayout->addWidget(pTitleRow);
 
+    // Tab skips disabled controls and screen readers only call them unavailable, so with no profile the
+    // explanation has to be a Tab stop itself
+    mpLabel_noProfileNotice = new QLabel(pContent);
+    mpLabel_noProfileNotice->setObjectName(qsl("settingsNoProfileNotice"));
+    mpLabel_noProfileNotice->setWordWrap(true);
+    mpLabel_noProfileNotice->setMaximumWidth(scmContentColumnWidth);
+    mpLabel_noProfileNotice->setFocusPolicy(Qt::TabFocus);
+    mpLabel_noProfileNotice->hide();
+    pContentLayout->addWidget(mpLabel_noProfileNotice);
+
     mpStackedWidget_categories = new QStackedWidget(pContent);
     mpStackedWidget_categories->setObjectName(qsl("settingsStack"));
     pContentLayout->addWidget(mpStackedWidget_categories, 1);
@@ -789,7 +809,7 @@ void dlgProfilePreferences::buildShell()
 
     auto* pCard_dataEncoding = createCard(qsl("card_dataEncoding"));
     addCardRow(pCard_dataEncoding, label_encoding, comboBox_encoding);
-    moveIntoCard(groupBox_specialOptions, {checkBox_USE_IRE_DRIVER_BUGFIX});
+    moveIntoCard(groupBox_specialOptions, {checkBox_USE_IRE_DRIVER_BUGFIX, checkBox_expectCSpaceIdInColonLessMColorCode});
     reflowCompatibilityCard();
     auto* pCard_network = createCard(qsl("card_network"));
     addCardRow(pCard_network, label_networkPacketTimeout, doubleSpinBox_networkPacketTimeout);
@@ -904,6 +924,13 @@ void dlgProfilePreferences::placeBannerOn(QWidget* pColumn)
     pColumnLayout->insertWidget(0, mpFrame_migrationBanner);
     // Reparenting hides a widget, and the page may not be showing yet
     mpFrame_migrationBanner->show();
+}
+
+void dlgProfilePreferences::updateNoProfileNotice()
+{
+    mpLabel_noProfileNotice->setVisible(!mpHost);
+    // Screen readers can read a dialog's description out as it opens, before Tab would reach the notice
+    setAccessibleDescription(mpHost ? QString() : mpLabel_noProfileNotice->text());
 }
 
 void dlgProfilePreferences::buildSearchResultsPage()
@@ -1169,6 +1196,11 @@ void dlgProfilePreferences::retranslateShell()
         mpFrame_migrationBanner->findChild<QPushButton*>(qsl("settingsMigrationBannerDismiss"))->setText(tr("Got it"));
     }
 
+    //: Notice above the settings page when the dialog has no profile - it was opened before any was loaded, or its profile has since closed - explaining why most settings are greyed out. Screen readers may also read it out as the dialog opens.
+    mpLabel_noProfileNotice->setText(tr("These settings are not linked to an open profile, so the ones that belong to a profile are greyed out. "
+                                        "To change those, including the accessibility options, open Settings from a loaded profile."));
+    updateNoProfileNotice();
+
     setSearchKeywords();
 
     // Nothing is current while the shell is being built, and search sets its own title on the next query
@@ -1249,6 +1281,10 @@ void dlgProfilePreferences::setSearchKeywords()
     synonyms.append({groupBox_font, tr("font, typeface, size, monospace, antialiasing")});
     //: Comma-separated synonyms for the settings search - translate to what a player would type, do not transliterate. This one is for how long Mudlet waits for the game to answer.
     synonyms.append({label_networkPacketTimeout, tr("timeout, lag, latency, slow connection")});
+    //: Comma-separated synonyms for the settings search - translate to what a player would type, do not transliterate. This one is for workarounds needed by some games, which used to be on a tab called "Special options".
+    synonyms.append({groupBox_specialOptions, tr("special options, workaround, old game, compatibility")});
+    //: Comma-separated synonyms for the settings search - translate to what a player would type, do not transliterate. This one is for script debugging options, which used to be on a tab called "Special options".
+    synonyms.append({groupBox_debug, tr("special options, advanced, debug, developer")});
     for (const auto& [pControl, words] : synonyms) {
         pControl->setProperty(scmProp_searchKeywords, words);
     }
@@ -1357,7 +1393,7 @@ void dlgProfilePreferences::showSubpage(const QString& categoryKey, const QStrin
     mpStackedWidget_categories->setCurrentWidget(pPage);
     capColumnWidth(pPage);
     // As on a category page, the cap above measured cards without their padding
-    QTimer::singleShot(0, this, [this, pPage]() {
+    QTimer::singleShot(0ms, this, [this, pPage]() {
         if (pPage && mpStackedWidget_categories->currentWidget() == pPage) {
             capColumnWidth(pPage);
         }
@@ -1582,7 +1618,7 @@ void dlgProfilePreferences::setCardDescriptions()
     //: Description line under the "Performance" card title on the Advanced settings page
     setCardDescription(findChild<QGroupBox*>(qsl("card_performance")), tr("Ways Mudlet speeds up your scripts. Leave these on unless a script or package misbehaves."));
     //: Description line under the "Developer" card title on the Advanced settings page
-    setCardDescription(groupBox_debug, tr("Diagnostics for people writing packages and scripts. Leave these off for ordinary play."));
+    setCardDescription(groupBox_debug, tr("How much Mudlet's debugging tools report while you work on scripts."));
 }
 
 void dlgProfilePreferences::buildProtocolsSubpage()
@@ -1940,9 +1976,6 @@ void dlgProfilePreferences::reflowWideCards()
     }
     gridLayout_groupBox_iconsAndToolbars->setColumnStretch(2, 1);
 
-    // Alone on its row, so it drifts right unless it spans both columns
-    gridLayout_groupBox_debug->removeWidget(checkBox_expectCSpaceIdInColonLessMColorCode);
-    gridLayout_groupBox_debug->addWidget(checkBox_expectCSpaceIdInColonLessMColorCode, 0, 0, 1, 2);
     // Otherwise the time edit takes the row's stretch and spans the whole card
     horizontalLayout_timerDebugOutputMinimumInterval->setStretch(1, 0);
     horizontalLayout_timerDebugOutputMinimumInterval->addStretch(1);
@@ -1975,13 +2008,15 @@ void dlgProfilePreferences::reflowDisplayOptionsCard()
     gridLayout_groupBox_displayOptions->addWidget(doubleclick_ignore_lineedit, 3, 1);
 }
 
-// The .ui ends this card with the reconnect notice, but the workaround moved here lands after it,
-// stranding the notice between two checkboxes.
+// The .ui ends this card with the reconnect notice, but the workarounds moved here land after it,
+// stranding the notice between checkboxes.
 void dlgProfilePreferences::reflowCompatibilityCard()
 {
-    takeOutOfLayout(gridLayout_groupBox_specialOptions, {checkBox_USE_IRE_DRIVER_BUGFIX, need_reconnect_for_specialoption});
+    takeOutOfLayout(gridLayout_groupBox_specialOptions, {checkBox_USE_IRE_DRIVER_BUGFIX, checkBox_expectCSpaceIdInColonLessMColorCode, need_reconnect_for_specialoption});
     gridLayout_groupBox_specialOptions->addWidget(checkBox_USE_IRE_DRIVER_BUGFIX, 2, 1);
-    gridLayout_groupBox_specialOptions->addWidget(need_reconnect_for_specialoption, 3, 0, 1, 2);
+    // Its label is too long to share a row
+    gridLayout_groupBox_specialOptions->addWidget(checkBox_expectCSpaceIdInColonLessMColorCode, 3, 0, 1, 2);
+    gridLayout_groupBox_specialOptions->addWidget(need_reconnect_for_specialoption, 4, 0, 1, 2);
 }
 
 void dlgProfilePreferences::updateColumnWidthCaps()
@@ -2114,8 +2149,8 @@ static void collectFocusableInLayoutOrder(const QLayout* pLayout, QList<QWidget*
 // order. Only the showing page's widgets are traversed, so one chain in sidebar order fixes it.
 void dlgProfilePreferences::rebuildTabOrder()
 {
-    // Traversal skips a hidden chevron rather than getting trapped on it
-    QList<QWidget*> chain{mpLineEdit_search, mpButton_searchBack, mpButton_subpageBack, mpListWidget_categories};
+    // Traversal skips a hidden chevron or notice rather than getting trapped on it
+    QList<QWidget*> chain{mpLineEdit_search, mpButton_searchBack, mpButton_subpageBack, mpListWidget_categories, mpLabel_noProfileNotice};
     const auto collectPage = [&chain, this](const int pageIndex) {
         auto* pScrollArea = qobject_cast<QScrollArea*>(mpStackedWidget_categories->widget(pageIndex));
         QWidget* pColumn = pScrollArea ? pScrollArea->widget() : nullptr;
@@ -2242,7 +2277,7 @@ void dlgProfilePreferences::spotlight(QWidget* pTarget)
     if (!pTarget) {
         return;
     }
-    QTimer::singleShot(0, this, [this, pTarget = QPointer<QWidget>(pTarget)]() {
+    QTimer::singleShot(0ms, this, [this, pTarget = QPointer<QWidget>(pTarget)]() {
         if (!pTarget) {
             return;
         }
@@ -2731,7 +2766,7 @@ void dlgProfilePreferences::slot_categorySelected(const int row)
     capColumnWidth(pShownPage);
     // Card padding arrives with the stylesheet when the page is first shown, after the cap above. Without a
     // re-cap, a page needing more than the reading width is capped 34px short and clips.
-    QTimer::singleShot(0, this, [this, pShownPage]() {
+    QTimer::singleShot(0ms, this, [this, pShownPage]() {
         if (pShownPage && mpStackedWidget_categories->currentWidget() == pShownPage) {
             capColumnWidth(pShownPage);
             // A grown cap moves the sidebar breakpoint and the window's maximum width, otherwise not
@@ -2973,6 +3008,8 @@ void dlgProfilePreferences::applyShellStyle()
                                       "QGroupBox[settingsCard=\"true\"] QGroupBox::title { subcontrol-origin: margin; subcontrol-position: top left; left: 0px; padding: 0px; }"
                                       "#settingsMigrationBanner { background-color: %4; border: 1px solid %7; border-radius: 8px; }"
                                       "#settingsMigrationBannerTitle { font-weight: bold; }"
+                                      "#settingsNoProfileNotice { background-color: %4; border: 1px solid %7; border-radius: 8px; padding: 12px 16px; }"
+                                      "#settingsNoProfileNotice:focus { border: 1px solid %5; }"
                                       "#settingsSearchHeader { font-weight: bold; font-size: 110%; color: %2; }"
                                       "#settingsSearchEmpty { padding: 32px; color: %9; }"
                                       "QLabel[searchMatch=\"true\"], QCheckBox[searchMatch=\"true\"], QRadioButton[searchMatch=\"true\"], QPushButton[searchMatch=\"true\"]"
@@ -3444,6 +3481,7 @@ void dlgProfilePreferences::disableHostDetails()
     if (mpCard_discord) {
         mpCard_discord->hide();
     }
+    groupBox_MMCPOptions->setEnabled(false);
 
     // ===== tab_shortcuts =====
     groupBox_main_window_shortcuts->setEnabled(false);
@@ -3455,6 +3493,7 @@ void dlgProfilePreferences::disableHostDetails()
     checkBox_advertiseScreenReader->setEnabled(false);
     checkBox_enableClosedCaption->setEnabled(false);
     checkBox_enableBlinkText->setEnabled(false);
+    checkBox_f3SearchEnabled->setEnabled(false);
     comboBox_blankLinesBehaviour->setEnabled(false);
     comboBox_caretModeKey->setEnabled(false);
 
@@ -3463,17 +3502,18 @@ void dlgProfilePreferences::disableHostDetails()
     groupBox_purgeMediaCache->setEnabled(false);
     // ----- groupBox_specialOptions -----
     need_reconnect_for_specialoption->hide();
+    checkBox_expectCSpaceIdInColonLessMColorCode->setEnabled(false);
 
     groupbox_searchEngineSelection->setEnabled(false);
-    // ----- groupBox_debug -----
-    checkBox_expectCSpaceIdInColonLessMColorCode->setEnabled(false);
-    // This acts on a label within this groupBox:
     slot_hidePasswordMigrationLabel();
+    // ----- groupBox_debug -----
     checkBox_debugShowAllCodepointProblems->setEnabled(false);
     widget_timerDebugOutputMinimumInterval->setEnabled(false);
     checkBox_lazyCaptureGlobals->setEnabled(false);
     label_networkPacketTimeout->setEnabled(false);
     doubleSpinBox_networkPacketTimeout->setEnabled(false);
+
+    updateNoProfileNotice();
 }
 
 void dlgProfilePreferences::enableHostDetails()
@@ -3565,6 +3605,7 @@ void dlgProfilePreferences::enableHostDetails()
     // ===== tab_chat =====
     groupBox_discordPrivacy->show();
     mpCard_discord->show();
+    groupBox_MMCPOptions->setEnabled(true);
 
     // ===== tab_shortcuts =====
     groupBox_main_window_shortcuts->setEnabled(true);
@@ -3576,20 +3617,24 @@ void dlgProfilePreferences::enableHostDetails()
     checkBox_advertiseScreenReader->setEnabled(true);
     checkBox_enableClosedCaption->setEnabled(true);
     checkBox_enableBlinkText->setEnabled(true);
+    checkBox_f3SearchEnabled->setEnabled(true);
     comboBox_blankLinesBehaviour->setEnabled(true);
     comboBox_caretModeKey->setEnabled(true);
 
     // ===== tab_specialOptions =====
     groupBox_specialOptions->setEnabled(true);
     groupBox_purgeMediaCache->setEnabled(true);
+    // ----- groupBox_specialOptions -----
+    checkBox_expectCSpaceIdInColonLessMColorCode->setEnabled(true);
     groupbox_searchEngineSelection->setEnabled(true);
     // ----- groupBox_debug -----
-    checkBox_expectCSpaceIdInColonLessMColorCode->setEnabled(true);
     widget_timerDebugOutputMinimumInterval->setEnabled(true);
     checkBox_debugShowAllCodepointProblems->setEnabled(true);
     checkBox_lazyCaptureGlobals->setEnabled(true);
     label_networkPacketTimeout->setEnabled(true);
     doubleSpinBox_networkPacketTimeout->setEnabled(true);
+
+    updateNoProfileNotice();
 }
 
 // Every write is signal-blocked: a control writing the value straight back could undo a language or
@@ -3652,6 +3697,10 @@ void dlgProfilePreferences::populateApplicationSettings()
         comboBox_appearance->setCurrentIndex(pMudlet->mAppearance);
     }
     {
+        const QSignalBlocker blocker(telnetHandlerEnabled);
+        telnetHandlerEnabled->setChecked(MudletApp::getQSettings()->value("telnetHandlerEnabled", false).toBool());
+    }
+    {
         // The one setting here that lives in its own QSettings group rather than
         // in the mudlet instance, so the only one with no change to announce
         const QSignalBlocker blocker(comboBox_crashReportPolicy);
@@ -3670,7 +3719,7 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
     // it is a positive value:
     spinBox_displayFontSize->setMaximum(std::max(pHost->getDisplayFont().pointSize(), 40));
     spinBox_displayFontSize->setValue(std::max(1, pHost->getDisplayFont().pointSize()));
-    checkBox_antiAlias->setChecked(!pHost->mNoAntiAlias);
+    checkBox_antiAlias->setChecked(pHost->fontsAntiAlias());
 
     connect(fontComboBox_displayFont, &QFontComboBox::currentFontChanged, this, &dlgProfilePreferences::slot_displayFontChanged, Qt::UniqueConnection);
     connect(spinBox_displayFontSize, qOverload<int>(&QSpinBox::valueChanged), this, &dlgProfilePreferences::slot_displayFontSizeChanged, Qt::UniqueConnection);
@@ -3913,7 +3962,7 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
         checkBox_discordServerAccessToState->setChecked(!(discordFlags & Host::DiscordSetState));
         checkBox_discordServerAccessToPartyInfo->setChecked(!(discordFlags & Host::DiscordSetPartyInfo));
         checkBox_discordServerAccessToTimerInfo->setChecked(!(discordFlags & Host::DiscordSetTimeInfo));
-        lineEdit_discordUserName->setText(pHost->mRequiredDiscordUserName);
+        lineEdit_discordUserName->setText(pHost->getRequiredDiscordUserName());
         lineEdit_discordUserName->setToolTip(utils::richText(tr("Mudlet will only show Rich Presence information while you use this Discord username (useful if you have multiple Discord accounts). "
                                                                 "Leave empty to show it for any Discord account you log in to. This must be the unique Discord username that uses a restricted "
                                                                 "lowercase ASCII character set and not any \"Nickname\" that you may have set for a particular Server.")));
@@ -3939,8 +3988,8 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
     lineEdit_mmcpChatMessagePrefix->setText(pHost->getMMCPChatPrefix());
 
     /* Possible inclusion in 4.20.1
-    checkBox_mmcpAutostartServer->setChecked(pHost->mMMCPAutostartServer);
-    checkBox_mmcpAllowPeekReq->setChecked(pHost->mMMCPAllowPeekRequests);
+    checkBox_mmcpAutostartServer->setChecked(pHost->getMMCPAutoStartServer());
+    checkBox_mmcpAllowPeekReq->setChecked(pHost->getMMCPAllowPeekRequests());
     checkBox_mmcpAutoAcceptCalls->setChecked(pHost->getMMCPAutoAcceptCalls());
     */
 
@@ -3997,7 +4046,6 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
     mFORCE_MCCP_OFF->setChecked(pHost->mFORCE_NO_COMPRESSION);
     mFORCE_GA_OFF->setChecked(pHost->mFORCE_GA_OFF);
     mAlertOnNewData->setChecked(pHost->mAlertOnNewData);
-    telnetHandlerEnabled->setChecked(MudletApp::getQSettings()->value("telnetHandlerEnabled", false).toBool());
     //encoding->setCurrentIndex( pHost->mEncoding );
     mFORCE_SAVE_ON_EXIT->setChecked(pHost->mFORCE_SAVE_ON_EXIT);
 
@@ -6475,17 +6523,10 @@ void dlgProfilePreferences::applyAll()
             pHost->mLogFileNameFormat = comboBox_logFileNameFormat->currentData().toString();
         }
         if (mSnapshot.dirty(checkBox_antiAlias)) {
-            pHost->mNoAntiAlias = !checkBox_antiAlias->isChecked();
+            pHost->setFontsAntiAlias(checkBox_antiAlias->isChecked());
         }
         if (mSnapshot.dirty(mAlertOnNewData)) {
             pHost->mAlertOnNewData = mAlertOnNewData->isChecked();
-        }
-
-        if (mSnapshot.dirty(telnetHandlerEnabled)) {
-            QSettings* settings = MudletApp::getQSettings();
-            if (settings->value("telnetHandlerEnabled", false).toBool() != telnetHandlerEnabled->isChecked()) {
-                settings->setValue("telnetHandlerEnabled", telnetHandlerEnabled->isChecked());
-            }
         }
 
         if (mSnapshot.dirty(groupBox_proxy)) {
@@ -6574,10 +6615,11 @@ void dlgProfilePreferences::applyAll()
             pHost->setShowIdsInEditor(checkBox_showIdNumbers->isChecked());
         }
         // Re-theming an open script editor fully reconfigures edbee, so only when one of these changed
-        if (pHost->mpEditorDialog
-            && mSnapshot.anyDirty({code_editor_theme_selection_combobox, checkBox_showSpacesAndTabs, checkBox_showLineFeedsAndParagraphs, checkBox_autocompleteLuaCode, checkBox_showBidi})) {
+        auto* pDialogs = HostDialogs::find(pHost);
+        if (auto* pEditor = pDialogs ? pDialogs->mpEditorDialog.data() : nullptr;
+            pEditor && mSnapshot.anyDirty({code_editor_theme_selection_combobox, checkBox_showSpacesAndTabs, checkBox_showLineFeedsAndParagraphs, checkBox_autocompleteLuaCode, checkBox_showBidi})) {
             // From the Host, which the write above updated, not a box a script may have moved on from
-            pHost->mpEditorDialog->setThemeAndOtherSettings(MudletApp::darkMode() ? pHost->mEditorThemeDark : pHost->mEditorTheme);
+            pEditor->setThemeAndOtherSettings(MudletApp::darkMode() ? pHost->mEditorThemeDark : pHost->mEditorTheme);
         }
 
         if (mSnapshot.dirty(script_preview_combobox)) {
@@ -6648,8 +6690,8 @@ void dlgProfilePreferences::applyAll()
 
         if (mSnapshot.dirty(lineEdit_discordUserName)) {
             const QString newDiscordUserName = lineEdit_discordUserName->text().trimmed().toLower();
-            if (pHost->mRequiredDiscordUserName != newDiscordUserName) {
-                pHost->mRequiredDiscordUserName = newDiscordUserName;
+            if (pHost->getRequiredDiscordUserName() != newDiscordUserName) {
+                pHost->setRequiredDiscordUserName(newDiscordUserName);
                 Discord::self()->UpdatePresence();
             }
         }
@@ -6659,29 +6701,29 @@ void dlgProfilePreferences::applyAll()
             pHost->setMMCPChatName(lineEdit_mmcpChatName->text().trimmed());
         }
         if (mSnapshot.dirty(lineEdit_mmcpChatMessagePrefix)) {
-            pHost->mMMCPChatPrefix = lineEdit_mmcpChatMessagePrefix->text().trimmed();
+            pHost->setMMCPChatPrefix(lineEdit_mmcpChatMessagePrefix->text().trimmed());
         }
         if (mSnapshot.dirty(lineEdit_mmcpPort)) {
             bool ok;
             const quint16 port = lineEdit_mmcpPort->text().toUShort(&ok);
-            pHost->mMMCPChatPort = ok ? port : csDefaultMMCPHostPort;
+            pHost->setMMCPPort(ok ? port : csDefaultMMCPHostPort);
         }
 
         // These MMCP options' check boxes are commented out of profile_preferences.ui, so there is nothing to read
-        /* restore these along with the check boxes:
-        pHost->mMMCPAutostartServer = checkBox_mmcpAutostartServer->isChecked();
-        pHost->mMMCPAutoAcceptCalls = checkBox_mmcpAutoAcceptCalls->isChecked();
-        pHost->mMMCPAllowPeekRequests = checkBox_mmcpAllowPeekReq->isChecked();
+        /* restore these along with the check boxes, and give Host the setters:
+        pHost->setMMCPAutoStartServer(checkBox_mmcpAutostartServer->isChecked());
+        pHost->setMMCPAutoAcceptCalls(checkBox_mmcpAutoAcceptCalls->isChecked());
+        pHost->setMMCPAllowPeekRequests(checkBox_mmcpAllowPeekReq->isChecked());
         */
 
         if (mSnapshot.dirty(checkBox_mmcpPrefixEmotes)) {
-            pHost->mMMCPPrefixEmotes = checkBox_mmcpPrefixEmotes->isChecked();
+            pHost->setMMCPPrefixEmotes(checkBox_mmcpPrefixEmotes->isChecked());
         }
         if (mSnapshot.dirty(checkBox_mmcpAddChatMessageNewline)) {
-            pHost->mMMCPAddChatMessageNewline = checkBox_mmcpAddChatMessageNewline->isChecked();
+            pHost->setMMCPAddChatMessageNewline(checkBox_mmcpAddChatMessageNewline->isChecked());
         }
         if (mSnapshot.dirty(checkBox_mmcpSnoopInMainConsole)) {
-            pHost->mMMCPShowSnoopInMainConsole = checkBox_mmcpSnoopInMainConsole->isChecked();
+            pHost->setMMCPShowSnoopInMainConsole(checkBox_mmcpSnoopInMainConsole->isChecked());
         }
         if (mSnapshot.dirty(checkBox_enableOSC8Hyperlinks)) {
             pHost->mEnableOSC8Hyperlinks = checkBox_enableOSC8Hyperlinks->isChecked();
@@ -6788,6 +6830,12 @@ void dlgProfilePreferences::applyAll()
     }
     if (mSnapshot.dirty(comboBox_appearance)) {
         pMudlet->setAppearance(static_cast<enums::Appearance>(comboBox_appearance->currentIndex()));
+    }
+    if (mSnapshot.dirty(telnetHandlerEnabled)) {
+        QSettings* settings = MudletApp::getQSettings();
+        if (settings->value("telnetHandlerEnabled", false).toBool() != telnetHandlerEnabled->isChecked()) {
+            settings->setValue("telnetHandlerEnabled", telnetHandlerEnabled->isChecked());
+        }
     }
 
     Discord::self()->UpdatePresence();
@@ -8187,7 +8235,7 @@ void dlgProfilePreferences::slot_changePlayerRoomStyle(const int index)
     setButtonColor(pushButton_playerRoomPrimaryColor, pHost->mpMap->mPlayerRoomOuterColor, true);
     setButtonColor(pushButton_playerRoomSecondaryColor, pHost->mpMap->mPlayerRoomInnerColor, true);
     pHost->mpMap->mPlayerRoomStyle = static_cast<quint8>(style);
-    pHost->mPlayerRoomStyle = static_cast<quint8>(style);
+    pHost->setPlayerRoomStyle(static_cast<quint8>(style));
     if (!pHost->mpMap->mpMapper || !pHost->mpMap->mpMapper->mp2dMap) {
         return;
     }
@@ -8204,7 +8252,7 @@ void dlgProfilePreferences::slot_setPlayerRoomPrimaryColor()
     }
 
     setPlayerRoomColor(pushButton_playerRoomPrimaryColor, mpHost->mpMap->mPlayerRoomOuterColor);
-    pHost->mPlayerRoomOuterColor = mpHost->mpMap->mPlayerRoomOuterColor;
+    pHost->setPlayerRoomOuterColor(mpHost->mpMap->mPlayerRoomOuterColor);
     if (comboBox_playerRoomStyle->currentIndex() != 3) {
         return;
     }
@@ -8225,7 +8273,7 @@ void dlgProfilePreferences::slot_setPlayerRoomSecondaryColor()
     }
 
     setPlayerRoomColor(pushButton_playerRoomSecondaryColor, mpHost->mpMap->mPlayerRoomInnerColor);
-    pHost->mPlayerRoomInnerColor = mpHost->mpMap->mPlayerRoomInnerColor;
+    pHost->setPlayerRoomInnerColor(mpHost->mpMap->mPlayerRoomInnerColor);
     if (comboBox_playerRoomStyle->currentIndex() != 3) {
         return;
     }
@@ -8247,7 +8295,7 @@ void dlgProfilePreferences::slot_setPlayerRoomOuterDiameter(const int value)
 
     if (value < 256 && pHost->mpMap->mPlayerRoomOuterDiameterPercentage != value) {
         pHost->mpMap->mPlayerRoomOuterDiameterPercentage = static_cast<quint8>(value);
-        pHost->mPlayerRoomOuterDiameterPercentage = static_cast<quint8>(value);
+        pHost->setPlayerRoomOuterDiameter(static_cast<quint8>(value));
         if (pHost->mpMap->mpMapper && pHost->mpMap->mpMapper->mp2dMap) {
             // And update the displayed map:
             pHost->mpMap->mpMapper->mp2dMap->update();
@@ -8264,7 +8312,7 @@ void dlgProfilePreferences::slot_setPlayerRoomInnerDiameter(const int value)
 
     if (value < 256 && pHost->mpMap->mPlayerRoomInnerDiameterPercentage != value) {
         pHost->mpMap->mPlayerRoomInnerDiameterPercentage = static_cast<quint8>(value);
-        pHost->mPlayerRoomInnerDiameterPercentage = static_cast<quint8>(value);
+        pHost->setPlayerRoomInnerDiameter(static_cast<quint8>(value));
         if (pHost->mpMap->mpMapper && pHost->mpMap->mpMapper->mp2dMap) {
             // Redefine the QGradientStops
             pHost->mpMap->mpMapper->mp2dMap->setPlayerRoomStyle(qBound(0, comboBox_playerRoomStyle->currentIndex(), 3));

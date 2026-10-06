@@ -1618,6 +1618,15 @@ describe("Tests UI functions", function()
       end
     end
 
+    -- each line with its digits swapped for others, which a shape must not tell apart
+    local function assertDigitsReadAlike(line)
+      local shapes = BaseUI.vitalsShapesMatching(line)
+      for _, digit in ipairs({ "0", "1", "5", "9" }) do
+        local swapped = line:gsub("%d", digit)
+        assert.are.same(shapes, BaseUI.vitalsShapesMatching(swapped), swapped)
+      end
+    end
+
     local function kindCount(hits, kind)
       local count = 0
       for _, hit in ipairs(hits) do
@@ -1655,6 +1664,38 @@ describe("Tests UI functions", function()
       assert.is_not_nil(mp)
       assert.are.equal(210, mp.current)
       assert.are.equal(250, mp.max)
+    end)
+
+    it("should read each line's own numbers when lines differ only in them", function()
+      -- a max of zero drops the first line's readings, the others still have theirs
+      assert.are.same({}, BaseUI.parseVitalsLine("HP: 523/000 MP: 210/000 [same shape]"))
+      local hits = BaseUI.parseVitalsLine("HP: 417/600 MP: 198/250 [same shape]")
+      assert.are.equal(417, reading(hits, "hp", "curmax").current)
+      assert.are.equal(600, reading(hits, "hp", "curmax").max)
+      assert.are.equal(198, reading(hits, "mp", "curmax").current)
+      hits = BaseUI.parseVitalsLine("HP: 900/999 MP: 110/250 [same shape]")
+      assert.are.equal(900, reading(hits, "hp", "curmax").current)
+      assert.are.equal(110, reading(hits, "mp", "curmax").current)
+      assert.are.same({}, BaseUI.parseVitalsLine("HP: 523/000 MP: 210/000 [same shape]"))
+    end)
+
+    it("should not let a line whose numbers are a different length decide what another matches", function()
+      local function trusted(hits, stat)
+        for _, hit in ipairs(hits) do
+          if hit.stat == stat and hit.kind == "curmax" and not hit.windowed then
+            return hit
+          end
+        end
+      end
+      -- a SMAUG row anchor allows 15 characters of label, digits included
+      assert.is_nil(trusted(BaseUI.parseVitalsLine("Pract1234567890123: 5   Hitpoints: 90 of 90 [digit count]"), "hp"))
+      local hp = trusted(BaseUI.parseVitalsLine("Pract12: 5   Hitpoints: 90 of 90 [digit count]"), "hp")
+      assert.are.equal(90, hp and hp.max)
+      -- thousands separators only group in threes
+      BaseUI.parseVitalsLine("Health: 12,34/5,678 [digit count]")
+      hp = trusted(BaseUI.parseVitalsLine("Health: 1,234/5,678 [digit count]"), "hp")
+      assert.are.equal(1234, hp and hp.current)
+      assert.are.equal(5678, hp and hp.max)
     end)
 
     it("should parse labelled percentages without needing a maximum", function()
@@ -1865,6 +1906,18 @@ describe("Tests UI functions", function()
         end)
       end
 
+      it("matches the same shapes whatever digits these screens hold", function()
+        for _, screen in ipairs(screens) do
+          assertDigitsReadAlike(screen.line)
+        end
+      end)
+
+      it("gates each shape only on a literal these screens cannot match without", function()
+        for _, screen in ipairs(screens) do
+          assert.is_true(BaseUI.needsHoldOn(screen.line), screen.name)
+        end
+      end)
+
       it("should not read guild points or bare xp from an LPMud row", function()
         local hits = BaseUI.parseVitalsLine("Hp: 143 (167) Gp: 240 (240) Xp: 267000")
         assert.is_nil(reading(hits, "mp"))
@@ -1887,6 +1940,23 @@ describe("Tests UI functions", function()
         assert.is_true(found.windowed == true)
         assert.are.equal(1000, found.current)
         assert.are.equal(1000, found.max)
+      end)
+
+      it("should leave out only the windowed readings when asked to", function()
+        local anchorless = "Race : Human           Mana     :  1000/ 1000      Autoexit (X)"
+        assert.is_true(#BaseUI.parseVitalsLine(anchorless) > 0)
+        for _, hit in ipairs(BaseUI.parseVitalsLine(anchorless, true)) do
+          assert.is_not_true(hit.windowed)
+        end
+        local tableRow = "| Race: Undead Atavian | Health: 4252/4252 |"
+        local trusted = {}
+        for _, hit in ipairs(BaseUI.parseVitalsLine(tableRow)) do
+          if not hit.windowed then
+            trusted[#trusted + 1] = hit
+          end
+        end
+        assert.is_true(#trusted > 0)
+        assert.are.same(trusted, BaseUI.parseVitalsLine(tableRow, true))
       end)
 
       it("should open the score window when a score command goes out", function()
@@ -2019,6 +2089,32 @@ describe("Tests UI functions", function()
         assert.is_true(BaseUI.shapesArePrecompiled())
       end)
 
+      it("gates each shape only on the start of its own regex", function()
+        assert.is_true(BaseUI.prefixesLeadTheirShapes())
+      end)
+
+      it("remembers what a line matched only while no shape tells digits apart", function()
+        assert.is_true(BaseUI.shapesTreatDigitsAlike())
+        assert.is_true(BaseUI.shapesTreatDigitsAlike({ { regex = [[^HP: (\d{1,3})/(\d{2,})]] } }))
+        for _, regex in ipairs({ [[^HP: 1(\d+)]], [[^HP: (\d)\1]], [[^HP: (?<n>\d)\k<n>]],
+            [[^HP: (?<n>\d)(?P=n)]], [[^HP: (\d)(?(1)x)]], [[^HP: \x{31}(\d+)]], [[^HP: \o{61}(\d+)]] }) do
+          assert.is_false(BaseUI.shapesTreatDigitsAlike({ { regex = regex } }), regex)
+          assert.is_false(BaseUI.shapesTreatDigitsAlike({ { regex = "^HP: (\\d+)", prefix = regex } }), regex)
+        end
+      end)
+
+      it("matches the same shapes whatever digits a line holds", function()
+        for _, line in ipairs(readableLines) do
+          assertDigitsReadAlike(line)
+        end
+      end)
+
+      it("gates each shape only on a literal it cannot match without", function()
+        for _, line in ipairs(readableLines) do
+          assert.is_true(BaseUI.needsHoldOn(line), line)
+        end
+      end)
+
       -- restore whatever the assertions do: a raised vitalsLock left behind
       -- makes createVitalsTriggers a silent no-op for every later test
       local savedIds, savedLock
@@ -2120,6 +2216,102 @@ describe("Tests UI functions", function()
           assert.is_true(matched, "no line above exercises the shape: " .. regex)
         end
       end)
+    end)
+  end)
+
+  -- the vitals trigger's callback, fed lines the way the trigger would: it
+  -- reads the global line and the line number, both stood in for in _G, as
+  -- busted gives a spec file an environment of its own
+  describe("Test BaseUI.onVitalsLine", function()
+    if not (type(BaseUI) == "table" and type(BaseUI.onVitalsLine) == "function") then
+      it("needs the base UI package installed", function()
+        pending("BaseUI.onVitalsLine is unavailable in this profile")
+      end)
+      return
+    end
+
+    local saved, applied, scoreRequests, lineNumber
+
+    before_each(function()
+      saved = {
+        applyVitals = BaseUI.applyVitals,
+        maybeRequestScore = BaseUI.maybeRequestScore,
+        shapeSightings = BaseUI.shapeSightings,
+        scoreWindowUntil = BaseUI.scoreWindowUntil,
+        lastVitalsLine = BaseUI.lastVitalsLine,
+        lastChatLine = BaseUI.lastChatLine,
+        getLineNumber = _G.getLineNumber,
+        line = _G.line,
+      }
+      applied, scoreRequests, lineNumber = {}, 0, 1000
+      BaseUI.applyVitals = function(_, updates)
+        applied[#applied + 1] = updates
+      end
+      BaseUI.maybeRequestScore = function()
+        scoreRequests = scoreRequests + 1
+      end
+      BaseUI.shapeSightings = {}
+      BaseUI.scoreWindowUntil = nil
+      BaseUI.lastVitalsLine, BaseUI.lastChatLine = nil, nil
+      _G.getLineNumber = function()
+        return lineNumber
+      end
+    end)
+
+    after_each(function()
+      BaseUI.applyVitals = saved.applyVitals
+      BaseUI.maybeRequestScore = saved.maybeRequestScore
+      BaseUI.shapeSightings = saved.shapeSightings
+      BaseUI.scoreWindowUntil = saved.scoreWindowUntil
+      BaseUI.lastVitalsLine = saved.lastVitalsLine
+      BaseUI.lastChatLine = saved.lastChatLine
+      _G.getLineNumber = saved.getLineNumber
+      _G.line = saved.line
+    end)
+
+    local function see(text)
+      lineNumber = lineNumber + 1
+      _G.line = text
+      BaseUI.onVitalsLine()
+    end
+
+    it("should trust a gated prompt shape from its third sighting", function()
+      see("<100/120hp 50/60m 80/90mv>")
+      see("<100/120hp 50/60m 80/90mv>")
+      assert.are.same({}, applied)
+      see("<90/120hp 50/60m 80/90mv>")
+      assert.are.same({
+        { hp = { current = 90, max = 120 }, mp = { current = 50, max = 60 }, mv = { current = 80, max = 90 } },
+      }, applied)
+    end)
+
+    it("should trust a score-table cell on first sight", function()
+      see("| Race: Undead Atavian | Health: 4252/4252 |")
+      assert.are.same({ { hp = { current = 4252, max = 4252 } } }, applied)
+    end)
+
+    it("should read an anchorless score row only while the score window is open", function()
+      local row = "Race : Human           Mana     :  1000/ 1000      Autoexit (X)"
+      see(row)
+      assert.are.same({}, applied)
+      BaseUI.scoreWindowUntil = getEpoch() + 60
+      see(row)
+      assert.are.same({ { mp = { current = 1000, max = 1000 } } }, applied)
+    end)
+
+    it("should ask for the score screen when a current with no maximum is trusted", function()
+      see("523h 120m >")
+      see("523h 120m >")
+      assert.are.equal(0, scoreRequests)
+      see("523h 120m >")
+      assert.are.equal(2, scoreRequests)
+      assert.are.same({ { hp = { current = 523 }, mp = { current = 120 } } }, applied)
+    end)
+
+    it("should read a line only once however often its trigger fires", function()
+      see("| Race: Undead Atavian | Health: 4252/4252 |")
+      BaseUI.onVitalsLine()
+      assert.are.equal(1, #applied)
     end)
   end)
 
@@ -3054,8 +3246,8 @@ describe("Tests UI functions", function()
     end)
   end)
 
-  -- these all resolve their window through the shared CONSOLE macro, which
-  -- returns nil plus a 'window "..." not found' message for an unknown name.
+  -- these all return nil plus a 'window "..." not found' message for an
+  -- unknown name.
   -- Each is called with otherwise-valid arguments so the lookup is what fails.
   describe("unknown-window contracts", function()
     local badWindowCalls = {
@@ -3609,14 +3801,22 @@ describe("Window state getters", function()
     it("returns nil and a message naming an unknown label", function()
       local result, err = getLabelText("wdgNoSuchLabel")
       assert.is_nil(result)
-      assert.are.equal("string", type(err))
-      assert.is_truthy(err:find("wdgNoSuchLabel", 1, true))
+      assert.are.equal('label "wdgNoSuchLabel" not found', err)
     end)
 
-    it("returns nil and a message for a non-label window", function()
-      local result, err = getLabelText(consoleName)
-      assert.is_nil(result)
-      assert.are.equal("string", type(err))
+    -- every kind of window shares the one name space, so a name that is some
+    -- other kind of window must not be taken for a label
+    it("returns nil and a message for every kind of window that is not a label", function()
+      for _, otherName in ipairs({consoleName, scrollBoxName, cmdLineName, textEditName, userWindowName}) do
+        local result, err = getLabelText(otherName)
+        assert.is_nil(result, otherName)
+        assert.are.equal(('label "%s" not found'):format(otherName), err)
+      end
+    end)
+
+    it("reads a label that sits inside a user window", function()
+      echo(childLabelName, "inside the user window")
+      assert.are.equal("inside the user window", getLabelText(childLabelName))
     end)
 
     it("errors when called without a label name", function()
@@ -4539,14 +4739,11 @@ describe("Window and label state", function()
       assert.is_false(timeStampsEnabled(console))
     end)
 
-    -- Both refusals share one message, and on the enable path it reads
-    -- "timestamps were not enabled ..." when they in fact already are - so the
-    -- shape is asserted rather than that wrong wording, which should change.
     it("enableTimeStamps refuses when timestamps are already on", function()
       enableTimeStamps(console)
       local ok, err = enableTimeStamps(console)
       assert.is_nil(ok)
-      assert.is_string(err)
+      assert.are.equal(('timestamps were already enabled for the "%s" console'):format(console), err)
       disableTimeStamps(console)
     end)
 
@@ -4831,7 +5028,7 @@ describe("Window and label state", function()
     it("rejects an unknown blink mode", function()
       local ok, err = setTextFormat(console, 0, 0, 0, 1, 2, 3, false, false, false, false, false, false, "sometimes")
       assert.is_nil(ok)
-      assert.are.equal('blink mode must be "none", "slow", or "fast", got "sometimes"', err)
+      assert.are.equal('blink mode must be "none", "slow" or "fast", got "sometimes"', err)
     end)
 
     it("takes numbers as well as booleans for the attribute flags", function()
@@ -5002,6 +5199,37 @@ describe("Window and label state", function()
     end)
   end)
 
+  describe("command echo on the main console", function()
+    -- A sent command is echoed on a line of its own when the line before is not a prompt
+    local function echoedCommandColours(command)
+      echo("\n")
+      send(command, true)
+      moveCursor("main", 0, getLastLineNumber("main") - 1)
+      assert.are.equal(command, getCurrentLine())
+      assert.is_true(selectString(command, 1) >= 0)
+      local fg, bg = {getFgColor()}, {getBgColor()}
+      deselect()
+      moveCursorEnd()
+      return fg, bg
+    end
+
+    it("is written in the colours setCommandForegroundColor and setCommandBackgroundColor set", function()
+      local command = name("wlsEchoedCommand")
+      local originalFg, originalBg = echoedCommandColours(command)
+      finally(function()
+        setCommandForegroundColor(unpack(originalFg))
+        setCommandBackgroundColor(unpack(originalBg))
+      end)
+      assert.is_true(setCommandForegroundColor(11, 22, 33))
+      assert.is_true(setCommandBackgroundColor(44, 55, 66))
+
+      local fg, bg = echoedCommandColours(command)
+
+      assert.are.same({11, 22, 33}, {fg[1], fg[2], fg[3]})
+      assert.are.same({44, 55, 66}, {bg[1], bg[2], bg[3]})
+    end)
+  end)
+
   describe("getImageSize", function()
     it("returns the size of a bundled image", function()
       local w, h = getImageSize(":/icons/mudlet.png")
@@ -5090,6 +5318,32 @@ describe("Window and label state", function()
       local ok, err = setWindow(unknown, label, 0, 0, true)
       assert.is_nil(ok)
       assert.are.equal(("window '%s' not found"):format(unknown), err)
+    end)
+
+    -- Qt does not refuse the parent cycle this would make, and then hangs walking it
+    it("refuses to move a scroll box into itself or into one of its own children", function()
+      local outer = name("wlsCycleOuter")
+      local inner = name("wlsCycleInner")
+      local innermost = name("wlsCycleInnermost")
+      finally(function()
+        deleteScrollBox(innermost)
+        deleteScrollBox(inner)
+        deleteScrollBox(outer)
+      end)
+      assert.is_true(createScrollBox(outer, 0, 0, 300, 300))
+      assert.is_true(createScrollBox(outer, inner, 0, 0, 200, 200))
+      assert.is_true(createScrollBox(inner, innermost, 0, 0, 100, 100))
+
+      for _, destination in ipairs({outer, inner, innermost}) do
+        local ok, err = setWindow(destination, outer, 0, 0, true)
+        assert.is_nil(ok, destination)
+        assert.are.equal(("element '%s' cannot be moved into itself or into one of its own children"):format(outer), err)
+      end
+      assert.are.same({0, 0, 300, 300}, {getWindowGeometry(outer)})
+
+      -- moving a box up and out of the one holding it is no cycle
+      assert.is_true(setWindow(outer, innermost, 5, 6, true))
+      assert.are.same({5, 6, 100, 100}, {getWindowGeometry(innermost)})
     end)
 
     -- Moving the map out of its dock widget would split it from a parent it
@@ -5919,6 +6173,76 @@ describe("Label movies", function()
         end)
       end
     end
+
+    -- a label's text takes the place of its movie, although the label keeps
+    -- the movie itself and the profile goes on counting it
+    it("text echoed onto a label leaves the movie functions nothing to drive", function()
+      local totalBefore = gifStats()
+      echo(label, "text instead")
+      assert.are.equal(totalBefore, gifStats())
+      for _, movieFunction in ipairs(movieFunctions) do
+        local functionName, call = movieFunction[1], movieFunction[2]
+        if functionName ~= "setMovie" then
+          local ok, err = call(label)
+          assert.is_nil(ok, functionName)
+          assert.are.equal(("no movie found at label '%s'"):format(label), err, functionName)
+        end
+      end
+    end)
+
+    -- the label and its movie are looked up before the rest of the arguments
+    -- are, so a missing one is reported rather than a bad argument raised
+    local badSecondArgument = {
+      {"setMovieSpeed", function(labelName) return setMovieSpeed(labelName, "fast") end},
+      {"setMovieFrame", function(labelName) return setMovieFrame(labelName, "second") end},
+      {"scaleMovie", function(labelName) return scaleMovie(labelName, "yes") end},
+    }
+    for _, movieFunction in ipairs(badSecondArgument) do
+      local functionName, call = movieFunction[1], movieFunction[2]
+
+      it(functionName .. " reports an unknown label before a bad second argument", function()
+        local unknown = "movieNoSuchLabel" .. suffix
+        local ok, err = call(unknown)
+        assert.is_nil(ok)
+        assert.are.equal(('label "%s" not found'):format(unknown), err)
+      end)
+
+      it(functionName .. " reports a missing movie before a bad second argument", function()
+        local ok, err = call(labelWithoutMovie)
+        assert.is_nil(ok)
+        assert.are.equal(("no movie found at label '%s'"):format(labelWithoutMovie), err)
+      end)
+    end
+
+    describe("with the name of another kind of window", function()
+      local otherName = "movieOtherKindOfWindow" .. suffix
+
+      after_each(function()
+        deleteScrollBox(otherName)
+        deleteCommandLine(otherName)
+        deleteTextEdit(otherName)
+      end)
+
+      local kinds = {
+        {"scroll box", function() return createScrollBox(otherName, 0, 0, 50, 20) end},
+        {"command line", function() return createCommandLine(otherName, 0, 0, 50, 20) end},
+        {"text edit", function() return createTextEdit("main", otherName, 0, 0, 50, 20) end},
+      }
+
+      for _, kind in ipairs(kinds) do
+        it("refuses every movie function for a " .. kind[1], function()
+          assert.is_true(kind[2]())
+          for _, movieFunction in ipairs(movieFunctions) do
+            local functionName, call = movieFunction[1], movieFunction[2]
+            if functionName ~= "setMovie" then
+              local ok, err = call(otherName)
+              assert.is_nil(ok, functionName)
+              assert.are.equal(('label "%s" not found'):format(otherName), err, functionName)
+            end
+          end
+        end)
+      end
+    end)
   end)
 end)
 
@@ -6096,6 +6420,26 @@ describe("Console buffer size", function()
     -- the count is the index of the open line at the end, so it is the number
     -- of finished lines above it
     assert.are.equal(150 - 99, getLineCount(console))
+  end)
+
+  -- #10839: the machine's maximum is worked out per wrap column, so a huge
+  -- main wrap width brought it down to no lines at all, while the batch was
+  -- kept as asked and the first trim popped lines that were not there
+  it("a huge main wrap width leaves a working limit and batch", function()
+    local mainWrap = getWindowWrap("main")
+    finally(function() setWindowWrap("main", mainWrap) end)
+    assert.is_true(setWindowWrap("main", 2000000000))
+    assert.is_true(setConsoleBufferSize(console, 1000, 100))
+    local linesLimit, batchSize = getConsoleBufferSize(console)
+    assert.is_true(linesLimit >= 100, "lines limit was " .. linesLimit)
+    assert.is_true(batchSize >= 1 and batchSize < linesLimit, "batch size was " .. batchSize)
+
+    clearWindow(console)
+    for lineNumber = 1, 300 do
+      echo(console, ("huge wrap line %d\n"):format(lineNumber))
+    end
+    local last = getLastLineNumber(console)
+    assert.are.same({"huge wrap line 300"}, getLines(console, last - 1, last))
   end)
 
   it("useMaximum raises the main console to the buffer maximum", function()
@@ -7487,6 +7831,176 @@ describe("Colour getters on a console with nothing in it", function()
     assert.are.equal(0, getLineCount(console))
     assert.are.equal(0, select("#", getFgColor(console)))
     assert.are.equal(0, select("#", getBgColor(console)))
+  end)
+end)
+
+-- getFgColor, getBgColor, isAnsiFgColor and isAnsiBgColor read the character a
+-- selection starts on - with no selection that is the start of the buffer, not
+-- the cursor getTextFormat falls back to - and setTextFormat sets the format
+-- of what is written next.
+describe("Colour getters and setTextFormat by window name", function()
+  local suffix = ("-%d-%d"):format(os.time(), math.random(100000))
+  local console = "colourByNameConsole" .. suffix
+
+  before_each(function()
+    createMiniConsole("main", console, 0, 0, 300, 60)
+    setTextFormat(console, 1, 2, 3, 10, 20, 30, false, false, false)
+    echo(console, "abc")
+    setTextFormat(console, 4, 5, 6, 40, 50, 60, false, false, false)
+    echo(console, "def\n")
+    moveCursor(console, 0, 0)
+  end)
+
+  after_each(function()
+    deleteMiniConsole(console)
+  end)
+
+  -- the main console's line holding the word, selected from its start
+  local function selectOnMain(word)
+    moveCursorEnd()
+    for _ = 1, 10 do
+      if selectString(word, 1) == 0 then
+        return
+      end
+      moveCursorUp()
+    end
+    error(("could not find %s on the main console"):format(word))
+  end
+
+  local function restoreMain()
+    resetFormat()
+    deselect()
+    moveCursorEnd()
+  end
+
+  it("read the first character of a selection at the start of a line", function()
+    selectSection(console, 0, 3)
+    assert.are.same({10, 20, 30}, {getFgColor(console)})
+    assert.are.same({1, 2, 3}, {getBgColor(console)})
+  end)
+
+  it("read the first character of a selection that starts mid-line", function()
+    selectSection(console, 3, 3)
+    assert.are.same({40, 50, 60}, {getFgColor(console)})
+    assert.are.same({4, 5, 6}, {getBgColor(console)})
+    selectSection(console, 2, 3)
+    assert.are.same({10, 20, 30}, {getFgColor(console)})
+    assert.are.same({1, 2, 3}, {getBgColor(console)})
+  end)
+
+  it("read the start of the buffer rather than the cursor when nothing is selected", function()
+    moveCursor(console, 4, 0)
+    deselect(console)
+    assert.are.same({10, 20, 30}, {getFgColor(console)})
+    assert.are.same({1, 2, 3}, {getBgColor(console)})
+    assert.are.same({40, 50, 60}, getTextFormat(console).foreground)
+  end)
+
+  it("answer nothing for a selection that starts past the end of its line", function()
+    assert.is_true(selectSection(console, 6, 0))
+    assert.are.equal(0, select("#", getFgColor(console)))
+    assert.are.equal(0, select("#", getBgColor(console)))
+  end)
+
+  it("answer nothing for a window that does not exist", function()
+    local unknown = "colourByNameMissing" .. suffix
+    assert.are.equal(0, select("#", getFgColor(unknown)))
+    assert.are.equal(0, select("#", getBgColor(unknown)))
+  end)
+
+  it("setTextFormat changes what is written next and leaves what is there alone", function()
+    assert.is_true(setTextFormat(console, 7, 8, 9, 70, 80, 90, false, false, false))
+    selectSection(console, 0, 3)
+    assert.are.same({10, 20, 30}, {getFgColor(console)})
+    echo(console, "ghi\n")
+    moveCursor(console, 0, 1)
+    selectSection(console, 0, 3)
+    assert.are.same({70, 80, 90}, {getFgColor(console)})
+    assert.are.same({7, 8, 9}, {getBgColor(console)})
+  end)
+
+  it("take the main console by name, by an empty name and when it is left out", function()
+    finally(restoreMain)
+    local word = "colourByNameMain" .. suffix
+    assert.is_true(setTextFormat("main", 11, 12, 13, 21, 22, 23, false, false, false))
+    echo("\n" .. word)
+    assert.is_true(setTextFormat("", 31, 32, 33, 41, 42, 43, false, false, false))
+    echo("X")
+    assert.is_true(setTextFormat(nil, 51, 52, 53, 61, 62, 63, false, false, false))
+    echo("Y\n")
+    selectOnMain(word)
+    assert.are.same({21, 22, 23}, {getFgColor()})
+    assert.are.same({21, 22, 23}, {getFgColor("main")})
+    assert.are.same({21, 22, 23}, {getFgColor("")})
+    assert.are.same({11, 12, 13}, {getBgColor()})
+    assert.are.same({11, 12, 13}, {getBgColor("main")})
+    assert.are.same({11, 12, 13}, {getBgColor("")})
+    selectSection(#word, 1)
+    assert.are.same({41, 42, 43}, {getFgColor()})
+    assert.are.same({31, 32, 33}, {getBgColor()})
+    selectSection(#word + 1, 1)
+    assert.are.same({61, 62, 63}, {getFgColor()})
+    assert.are.same({51, 52, 53}, {getBgColor()})
+  end)
+
+  it("isAnsiFgColor and isAnsiBgColor answer for the main console's selection, not a mini console's", function()
+    finally(restoreMain)
+    local word = "colourByNameAnsi" .. suffix
+    feedTriggers(("\27[31;42m%s\27[0m\n"):format(word))
+    selectOnMain(word)
+    selectSection(console, 3, 3)
+    assert.is_true(isAnsiFgColor(4))
+    assert.is_true(isAnsiBgColor(6))
+    assert.is_false(isAnsiFgColor(6))
+    assert.is_false(isAnsiBgColor(4))
+  end)
+
+  it("isAnsiFgColor and isAnsiBgColor match no palette entry for an RGB colour outside it", function()
+    finally(restoreMain)
+    local word = "colourByNameRgb" .. suffix
+    feedTriggers(("\27[38;2;1;2;3;48;2;4;5;6m%s\27[0m\n"):format(word))
+    selectOnMain(word)
+    assert.are.same({1, 2, 3}, {getFgColor()})
+    assert.are.same({4, 5, 6}, {getBgColor()})
+    for index = 0, 16 do
+      assert.is_false(isAnsiFgColor(index), ("RGB foreground answered to ANSI colour %d"):format(index))
+      assert.is_false(isAnsiBgColor(index), ("RGB background answered to ANSI colour %d"):format(index))
+    end
+  end)
+
+  it("isAnsiFgColor and isAnsiBgColor refuse a selection past its line's end before the colour number", function()
+    finally(restoreMain)
+    local word = "colourByNameEnd" .. suffix
+    feedTriggers(word .. "\n")
+    selectOnMain(word)
+    assert.is_true(selectSection(#word, 0))
+    assert.are.equal(0, select("#", getFgColor()))
+    local ok, err = isAnsiFgColor(99)
+    assert.is_nil(ok)
+    assert.are.equal("current selection invalid in window 'main'", err)
+    ok, err = isAnsiBgColor(99)
+    assert.is_nil(ok)
+    assert.are.equal("current selection invalid in window 'main'", err)
+  end)
+
+  it("setTextFormat checks its arguments before it looks for the window", function()
+    local unknown = "colourByNameMissing" .. suffix
+    local ok, err = pcall(setTextFormat, {}, 0, 0, 0, 0, 0, 0, false, false, false)
+    assert.is_false(ok)
+    assert.is_truthy(err:find("bad argument #1 type", 1, true))
+    ok, err = pcall(setTextFormat, unknown, "red", 0, 0, 0, 0, 0, false, false, false)
+    assert.is_false(ok)
+    assert.is_truthy(err:find("setTextFormat: bad argument #2 type", 1, true))
+    ok, err = pcall(setTextFormat, unknown, 0, 0, 0, 0, 0, 0, "yes", false, false)
+    assert.is_false(ok)
+    assert.is_truthy(err:find("setTextFormat: bad argument #8 type", 1, true))
+    local result
+    result, err = setTextFormat(unknown, 0, 0, 0, 0, 0, 0, false, false, false, false, false, false, "sometimes")
+    assert.is_nil(result)
+    assert.are.equal('blink mode must be "none", "slow" or "fast", got "sometimes"', err)
+    result, err = setTextFormat(unknown, 0, 0, 0, 0, 0, 0, false, false, false)
+    assert.is_false(result)
+    assert.are.equal(("window '%s' does not exist"):format(unknown), err)
   end)
 end)
 

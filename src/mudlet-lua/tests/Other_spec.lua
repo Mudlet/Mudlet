@@ -1526,7 +1526,7 @@ describe("Tests Other.lua functions", function()
       assert.is_true(setConfig("mapperButton", "scripted"))
       local ok, err = setConfig("mapperButton", "sideways")
       assert.is_nil(ok)
-      assert.is_string(err)
+      assert.equals('mapperButton must be "default", "scripted" or "disabled", got "sideways"', err)
       assert.equals("scripted", getConfig("mapperButton"))
       restore("mapperButton")
     end)
@@ -1692,46 +1692,48 @@ describe("Tests Other.lua functions", function()
       local original = getConfig("showSentText", true)
       originalValues.showSentText = original
 
+      -- the refusal is the only place a script can read which modes there are
       local ok, err = setConfig("showSentText", "sometimes")
       assert.is_nil(ok)
-      assert.is_string(err)
+      assert.equals('showSentText must be "never", "always" or "script", got "sometimes"', err)
       assert.equals(original, getConfig("showSentText", true), "a rejected mode was applied anyway")
 
+      -- a number is read as the string it would print as, so it is refused as
+      -- a mode it does not have rather than as the wrong type
+      local okNumber, errNumber = setConfig("showSentText", 42)
+      assert.is_nil(okNumber)
+      assert.equals('showSentText must be "never", "always" or "script", got "42"', errNumber)
+      assert.equals(original, getConfig("showSentText", true))
+
       -- neither a boolean nor a string is not a mode at all
-      local okType, errType = setConfig("showSentText", 42)
+      local okType, errType = setConfig("showSentText", {})
       assert.is_nil(okType)
-      assert.is_string(errType)
+      assert.equals("showSentText must be a boolean or a string, got table", errType)
       assert.equals(original, getConfig("showSentText", true))
       originalValues.showSentText = nil
     end)
 
     -- Each of these keys refuses a value outside its own set. The refusal has to
-    -- carry the set, because that list is the only place a script author can
-    -- read what the key accepts.
-    it("lists what it accepts when refusing a string enum, and changes nothing", function()
-      local enums = {
-        blankLinesBehaviour = {"replacewithspace", "sideways"},
-        controlCharacterHandling = {"picture", "sideways"},
-        ambiguousEAsianWidthCharacters = {"narrow", "sideways"},
-      }
-      for key, pair in pairs(enums) do
-        local expectedInMessage, rejected = pair[1], pair[2]
+    -- name the key and carry the set, because that list is the only place a
+    -- script author can read what the key accepts - blankLinesBehaviour and
+    -- controlCharacterHandling used to name other keys (#10391).
+    local enumRefusals = {
+      blankLinesBehaviour = 'blankLinesBehaviour must be "show", "hide" or "replacewithspace", got "sideways"',
+      controlCharacterHandling = 'controlCharacterHandling must be "asis", "oem" or "picture", got "sideways"',
+      ambiguousEAsianWidthCharacters = 'ambiguousEAsianWidthCharacters must be "narrow", "wide" or "auto", got "sideways"',
+      caretShortcut = 'caretShortcut must be "none", "tab", "ctrltab" or "f6", got "sideways"',
+    }
+    for key, expected in pairs(enumRefusals) do
+      it("names " .. key .. " and what it accepts when refusing a value, and changes nothing", function()
         snapshot(key)
         local before = getConfig(key)
-        local ok, err = setConfig(key, rejected)
-        assert.is_nil(ok, key .. " accepted '" .. rejected .. "'")
-        assert.is_string(err)
-        assert.is_truthy(err:find(expectedInMessage, 1, true),
-          key .. " did not say it accepts '" .. expectedInMessage .. "', got: " .. tostring(err))
+        local ok, err = setConfig(key, "sideways")
+        assert.is_nil(ok, key .. " accepted 'sideways'")
+        assert.equals(expected, err)
         assert.equals(before, getConfig(key), key .. " was changed by a rejected value")
         restore(key)
-      end
-    end)
-
-    -- the refusals for blankLinesBehaviour and controlCharacterHandling name
-    -- caretShortcut and commandLineHistorySaveSize instead of the key that was
-    -- actually rejected (#10391)
-    pending("names the key it rejected in every string enum refusal")
+      end)
+    end
 
     -- A setting that changed raises sysSettingChanged with its getConfig key
     -- and the new value. Writing the value a setting already holds raises
@@ -2275,6 +2277,85 @@ describe("Tests the timer API", function()
       assert.is_false(killTimer("W2aPermTimerUnkillable"))
       assert.equals(before + 1, exists("W2aPermTimerUnkillable", "timer"),
         "a permanent timer survives killTimer")
+    end)
+
+    it("finds a temporary timer behind a same-named permanent one", function()
+      -- a permanent timer can share a temporary's name (its id), and must be
+      -- passed over rather than reported as a failure
+      local seed = trackTemp(tempTimer(10, [[]]))
+      killTimer(seed)
+      -- permTimer itself takes seed + 1, so the next temporary takes seed + 2
+      local sharedName = tostring(seed + 2)
+      assert.is_true(permTimer(trackPerm(sharedName), "", 30, [[]]) > 0)
+
+      local tempId = trackTemp(tempTimer(10, [[]]))
+      assert.are.equal(seed + 2, tempId, "ids should still be handed out in sequence")
+      assert.is_true(killTimer(tempId), "killTimer must pass over the permanent timer")
+    end)
+
+    -- A package can carry temporary timers, which install inside its folder;
+    -- only top level temporaries were ever killTimer()'s to free
+    describe("with temporary timers inside a package", function()
+      local function timerXml(name, folder, inner)
+        return string.format([[<%s isActive="yes" isFolder="%s" isTempTimer="yes" isOffsetTimer="no">
+<name>%s</name><script></script><command></command><packageName></packageName><time>00:00:30.000</time>%s</%s>
+]], folder and "TimerGroup" or "Timer", folder and "yes" or "no", name, inner or "", folder and "TimerGroup" or "Timer")
+      end
+
+      local function installTimers(packageName, body)
+        local path = getMudletHomeDir() .. "/" .. packageName .. ".xml"
+        local file = assert(io.open(path, "w"))
+        file:write([[<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE MudletPackage>
+<MudletPackage version="1.001">
+	<TimerPackage>
+]] .. body .. [[
+	</TimerPackage>
+</MudletPackage>
+]])
+        file:close()
+        assert.is_true(installPackage(path))
+        return path
+      end
+
+      local function removeTimers(packageName, path)
+        uninstallPackage(packageName)
+        os.remove(path)
+      end
+
+      local function settle()
+        -- the deferred deletes are flushed once a timer has fired
+        trackTemp(tempTimer(0, function() raiseEvent("otherSpecKillSettled") end))
+        assert.equals("otherSpecKillSettled", waitForEvent("otherSpecKillSettled", 5000))
+      end
+
+      it("leaves them to their package, under their name or the id they were made with", function()
+        local grandchildren = ""
+        for i = 1, 4 do
+          grandchildren = grandchildren .. timerXml("OtherSpecKillGrandchild" .. i)
+        end
+        local path = installTimers("OtherSpecKillPackage",
+          timerXml("OtherSpecKillFolder", true, timerXml("OtherSpecKillTempChild"))
+          .. timerXml("OtherSpecKillTempGroup", true, grandchildren))
+        finally(function() removeTimers("OtherSpecKillPackage", path) end)
+
+        local id = findItems("OtherSpecKillTempChild", "timer")[1]
+        assert.is_not_nil(id)
+        assert.is_false(killTimer(tostring(id)))
+        assert.is_false(killTimer("OtherSpecKillTempChild"))
+        -- a temporary group inside the package frees its own timers, so
+        -- killing them as well would free each one twice
+        for i = 1, 4 do
+          assert.is_false(killTimer("OtherSpecKillGrandchild" .. i))
+        end
+        assert.is_false(killTimer("OtherSpecKillTempGroup"))
+
+        settle()
+        assert.are.equal(1, exists("OtherSpecKillTempChild", "timer"))
+        for i = 1, 4 do
+          assert.are.equal(1, exists("OtherSpecKillGrandchild" .. i, "timer"))
+        end
+      end)
     end)
 
     it("returns false the second time, as the timer is already dead", function()
@@ -3159,5 +3240,98 @@ describe("Tests the script API", function()
       assert.are.equal("function", type(onConnect))
       assert.are.same({}, {onConnect()})
     end)
+  end)
+end)
+
+describe("Tests how raiseEvent finds the Lua event dispatcher", function()
+  -- Mudlet looks the dispatcher up by name for every event, so it has to see
+  -- whatever that name means at the time, not what it meant the first time
+
+  it("calls a dispatcher redefined after earlier events", function()
+    local original = _G.dispatchEventToFunctions
+    local seen = {}
+    raiseEvent("otherSpecDispatchRedefined", "before")
+    local ok, message = pcall(function()
+      _G.dispatchEventToFunctions = function(event, ...)
+        seen[#seen + 1] = event
+        return original(event, ...)
+      end
+      raiseEvent("otherSpecDispatchRedefined", "after")
+    end)
+    _G.dispatchEventToFunctions = original
+
+    assert.is_true(ok, tostring(message))
+    assert.are.same({"otherSpecDispatchRedefined"}, seen)
+  end)
+
+  it("looks in the globals table setfenv(0) gave the thread", function()
+    local original = getfenv(0)
+    local seen = {}
+    raiseEvent("otherSpecDispatchSwapped", "before")
+    local swapped = setmetatable({
+      dispatchEventToFunctions = function(event, ...)
+        seen[#seen + 1] = event
+        return original.dispatchEventToFunctions(event, ...)
+      end,
+    }, {__index = original})
+    local ok, message = pcall(function()
+      setfenv(0, swapped)
+      raiseEvent("otherSpecDispatchSwapped", "after")
+    end)
+    setfenv(0, original)
+
+    assert.is_true(ok, tostring(message))
+    assert.are.same({"otherSpecDispatchSwapped"}, seen)
+  end)
+
+  it("finds a dispatcher that only a globals metatable supplies", function()
+    local original = getfenv(0)
+    local seen = {}
+    raiseEvent("otherSpecDispatchSupplied", "before")
+    local swapped = setmetatable({}, {__index = function(_, key)
+      if key == "dispatchEventToFunctions" then
+        return function(event, ...)
+          seen[#seen + 1] = event
+          return original.dispatchEventToFunctions(event, ...)
+        end
+      end
+      return original[key]
+    end})
+    local ok, message = pcall(function()
+      setfenv(0, swapped)
+      raiseEvent("otherSpecDispatchSupplied", "after")
+      raiseEvent("otherSpecDispatchSupplied", "again")
+    end)
+    setfenv(0, original)
+
+    assert.is_true(ok, tostring(message))
+    assert.are.same({"otherSpecDispatchSupplied", "otherSpecDispatchSupplied"}, seen)
+  end)
+end)
+
+describe("Tests that raiseEvent hands numbers over unchanged", function()
+  local function roundTrip(value)
+    local received
+    local id = registerAnonymousEventHandler("otherSpecNumberRoundTrip", function(_, number)
+      received = number
+    end)
+    raiseEvent("otherSpecNumberRoundTrip", value)
+    killAnonymousEventHandler(id)
+    return received
+  end
+
+  it("keeps whole numbers, fractions and the largest exact integers", function()
+    for _, value in ipairs({0, 1, -1, 42, -123456789, 2^53 - 1, -(2^53 - 1), 2^53, 2^53 + 2, 2^63, 1e300, 0.1, -2.5, 1/3, 5e-324}) do
+      local received = roundTrip(value)
+      assert.are.equal("number", type(received))
+      assert.are.equal(string.format("%.17g", value), string.format("%.17g", received))
+    end
+  end)
+
+  it("keeps infinities and NaN", function()
+    assert.are.equal(math.huge, roundTrip(math.huge))
+    assert.are.equal(-math.huge, roundTrip(-math.huge))
+    local nan = roundTrip(0/0)
+    assert.is_true(nan ~= nan)
   end)
 end)

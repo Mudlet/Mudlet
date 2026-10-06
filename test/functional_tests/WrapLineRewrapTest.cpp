@@ -36,6 +36,8 @@
 
 #include "GroupedTest.h"
 
+using namespace std::chrono_literals;
+
 // TBuffer::wrapLine() rebuilds every line from its start line to the end of the
 // buffer, and its callers rely on more than the text coming back out intact:
 // the count it returns positions the user cursor and the repaint range, and the
@@ -106,7 +108,7 @@ private slots:
     }
 
     // The count is not "lines added": it is every line in the rewrapped range
-    // bar one, whether that line was split or not. TConsole::insertLink() moves
+    // bar one, whether that line was split or not. TConsoleModel::insertLink() moves
     // the user cursor down by it, so a line that needed no wrapping still has
     // to be counted.
     void test_rewrapCountsEveryLineInItsRange()
@@ -347,7 +349,7 @@ private slots:
         const int linesAt30 = nonEmptyLineCount(console);
 
         console->setWrapAt(8);
-        // TConsole::luaWrapLine() is the only production path that rewraps a
+        // wrapLine() is the only production path that rewraps a
         // scrollback at a new width - resizing the window does not
         runLua(qsl("wrapLine('%1', 0)").arg(mMiniConsole));
 
@@ -495,8 +497,8 @@ private slots:
         const QString heldLine = QString(64, QChar('x')) + qsl(" alpha");
         runLua(qsl("feedTelnet('%1\\n')").arg(heldLine));
 
-        auto* flushTimer = console->findChild<QTimer*>(qsl("serverWrapFlushTimer"));
-        QVERIFY2(flushTimer && flushTimer->isActive(), "the full-width line was not held back for a continuation");
+        QTimer* flushTimer = &host->mServerWrapFlushTimer;
+        QVERIFY2(flushTimer->isActive(), "the full-width line was not held back for a continuation");
 
         int sizeAtFlush = -1;
         int cursorAtFlush = -1;
@@ -509,7 +511,7 @@ private slots:
                          [&]() {
                              return bufferHasLine(console, heldLine);
                          },
-                         5000),
+                         5s),
                  "held full-width line was not flushed after the game went quiet");
         QVERIFY2(sizeAtFlush > 0, "the flush timer never fired, so the line was committed by some other path");
         QCOMPARE(cursorAtFlush, sizeAtFlush);
@@ -599,7 +601,7 @@ private:
         }
 
         QSignalSpy connectedSpy(&(host->mTelnet), &cTelnet::signal_connected);
-        if (!connectedSpy.wait(2000)) {
+        if (!connectedSpy.wait(2s)) {
             QFAIL("Could not connect with the host.");
         }
     }
@@ -656,7 +658,7 @@ private:
                     [host]() {
                         return host->mTelnet.getConnectionState() == QAbstractSocket::UnconnectedState;
                     },
-                    5000)) {
+                    5s)) {
             qWarning() << "Profile did not go offline in time; feedTelnet() calls will fail";
         }
         return host;
