@@ -138,15 +138,16 @@ void TriggerUnit::addTriggerRootNode(TTrigger* pT, int parentPosition, int child
         pT->setID(getNewID());
     }
     if ((parentPosition == -1) || (childPosition >= static_cast<int>(mTriggerRootNodeList.size()))) {
-        mTriggerRootNodeList.push_back(pT);
-        markRootNodeAppended(pT);
+        if (listRootNode(pT, mTriggerRootNodeList.end())) {
+            markRootNodeAppended(pT);
+        }
     } else {
         markRootNodeListReordered();
         // insert item at proper position
         int cnt = 0;
         for (auto it = mTriggerRootNodeList.begin(); it != mTriggerRootNodeList.end(); it++) {
             if (cnt >= childPosition) {
-                mTriggerRootNodeList.insert(it, pT);
+                listRootNode(pT, it);
                 break;
             }
             cnt++;
@@ -176,7 +177,7 @@ void TriggerUnit::reParentTrigger(int childID, int oldParentID, int newParentID,
         pOldParent->popChild(pChild);
     } else {
         markRootNodeRemoved(pChild);
-        mTriggerRootNodeList.remove(pChild);
+        unlistRootNode(pChild);
     }
 
     // Convert enum mode to the internal flags
@@ -216,7 +217,7 @@ void TriggerUnit::removeTriggerRootNode(TTrigger* pT)
     mLookupTable.remove(pT->getName(), pT);
     mTriggerMap.remove(pT->getID());
     markRootNodeRemoved(pT);
-    mTriggerRootNodeList.remove(pT);
+    unlistRootNode(pT);
 }
 
 TTrigger* TriggerUnit::getTrigger(int id)
@@ -333,10 +334,28 @@ void TriggerUnit::reorderTriggersAfterPackageImport()
     }
     markRootNodeListReordered();
     for (auto& trigger : tempList) {
-        mTriggerRootNodeList.remove(trigger);
+        unlistRootNode(trigger);
     }
     for (auto& trigger : tempList) {
-        mTriggerRootNodeList.push_back(trigger);
+        listRootNode(trigger, mTriggerRootNodeList.end());
+    }
+}
+
+bool TriggerUnit::listRootNode(TTrigger* pT, std::list<TTrigger*>::iterator before)
+{
+    if (mRootNodePositions.contains(pT)) {
+        return false;
+    }
+    mRootNodePositions.insert(pT, mTriggerRootNodeList.insert(before, pT));
+    return true;
+}
+
+void TriggerUnit::unlistRootNode(TTrigger* pT)
+{
+    const auto position = mRootNodePositions.constFind(pT);
+    if (position != mRootNodePositions.cend()) {
+        mTriggerRootNodeList.erase(position.value());
+        mRootNodePositions.erase(position);
     }
 }
 
