@@ -4082,6 +4082,13 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
         mpMenu = new QMenu(tr("Other profiles to Map to:"), this);
     }
 
+    // Rebuilt on every refresh, which must not drop the destinations already ticked
+    QSet<QString> chosenProfiles;
+    for (const auto* pAction : mpMenu->actions()) {
+        if (pAction->isChecked()) {
+            chosenProfiles.insert(pAction->text());
+        }
+    }
     mpMenu->clear();
     for (unsigned int i = 0, total = profileList.size(); i < total; ++i) {
         const QString s = profileList.at(i);
@@ -4094,13 +4101,14 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
 
         auto pItem = new QAction(s, mpMenu);
         pItem->setCheckable(true);
-        pItem->setChecked(false);
+        pItem->setChecked(chosenProfiles.contains(s));
         mpMenu->addAction(pItem);
         //Enable it as we now have at least one profile to copy to
         pushButton_chooseProfiles->setEnabled(true);
     }
 
     pushButton_chooseProfiles->setMenu(mpMenu);
+    slot_chosenProfilesChanged(nullptr);
 
     fillOutMapHistory();
 
@@ -4929,7 +4937,11 @@ void dlgProfilePreferences::loadEditorTab()
 
     populateThemesList();
     mudlet::loadEdbeeTheme(pHost->getEditorTheme(), pHost->getEditorThemeFile());
-    populateScriptsList();
+    // Walking every scripted item stalls a large profile, too long to repeat on every refresh; a profile
+    // change empties the list in clearHostDetails()
+    if (!script_preview_combobox->count()) {
+        populateScriptsList();
+    }
 
     // pre-select the current theme
     code_editor_theme_selection_combobox->lineEdit()->setPlaceholderText(qsl("Select theme"));
@@ -5753,7 +5765,10 @@ void dlgProfilePreferences::fillOutMapHistory()
         return;
     }
 
-    // Map files change while the dialog is open, so rebuild, resetting the enabled state to an empty list's
+    // Map files change while the dialog is open, so rebuild, resetting the enabled state to an empty list's.
+    // The rebuild follows every change, so it keeps an older map that was picked to load; the newest entry
+    // is not kept, so a map saved since takes its place at the top.
+    const QVariant pickedMapFile = comboBox_mapHistory->currentIndex() > 0 ? comboBox_mapHistory->currentData() : QVariant();
     {
         const QSignalBlocker blocker(comboBox_mapHistory);
         comboBox_mapHistory->clear();
@@ -5836,6 +5851,10 @@ void dlgProfilePreferences::fillOutMapHistory()
                 }
             }
         }
+    }
+    if (const int pickedIndex = comboBox_mapHistory->findData(pickedMapFile); pickedMapFile.isValid() && pickedIndex >= 0) {
+        const QSignalBlocker blocker(comboBox_mapHistory);
+        comboBox_mapHistory->setCurrentIndex(pickedIndex);
     }
     if (comboBox_mapHistory->count()) {
         comboBox_mapHistory->setEnabled(true);
