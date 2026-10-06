@@ -591,19 +591,22 @@ void TTextEdit::layoutLine(int lineNumber, int lineOfScreen, const TChar& timeSt
     }
 }
 
-void TTextEdit::paintBackgrounds(QPainter& painter, const LineLayout& layout) const
+void TTextEdit::paintBackgrounds(QPainter& painter, const LineLayout& layout, const QRect& cleared, const QColor& clearedTo) const
 {
     for (const GraphemeRun& run : layout) {
-        if (run.fillsBackground) {
+        // Filling a cell just cleared to its own color changes nothing, as long as
+        // no ink has been painted into it since, which is for the caller to ensure.
+        if (run.fillsBackground && !(run.bgColor == clearedTo && cleared.contains(run.textRect))) {
             painter.fillRect(run.textRect, run.bgColor);
         }
     }
 }
 
-void TTextEdit::paintForegrounds(QPainter& painter, TGlyphCache& glyphCache, const LineLayout& layout, const QRect& clip) const
+int TTextEdit::paintForegrounds(QPainter& painter, TGlyphCache& glyphCache, const LineLayout& layout, const QRect& clip) const
 {
+    int inkBottom = std::numeric_limits<int>::min();
     if (layout.empty()) {
-        return;
+        return inkBottom;
     }
     if (!clip.isNull()) {
         painter.save();
@@ -611,12 +614,13 @@ void TTextEdit::paintForegrounds(QPainter& painter, TGlyphCache& glyphCache, con
     }
     for (const GraphemeRun& run : layout) {
         if (run.style) {
-            paintGraphemeForeground(painter, glyphCache, run);
+            inkBottom = std::max(inkBottom, paintGraphemeForeground(painter, glyphCache, run));
         }
     }
     if (!clip.isNull()) {
         painter.restore();
     }
+    return inkBottom;
 }
 
 void TTextEdit::replaceControlCharacterWith_Picture(const uint unicode, QStringView grapheme, const int column, QStringView& outGrapheme, int& charWidth) const
@@ -970,18 +974,17 @@ int TTextEdit::layoutGrapheme(LineLayout& layout, const QPoint& cursor, QStringV
     if (caretIsHere) {
         run.bgColor = mCaretColor;
     }
-    // Main console cells are always filled: over a background image or a
-    // translucent console background the cell has to be opaque (#8885), and
-    // keeping it unconditional leaves the paint order in drawForeground() as the
-    // only thing protecting ink that overflows its cell (#9070, #9719). Other
-    // console types skip cells matching the console background so that the
-    // widget underneath shows through.
+    // Main console cells are filled: over a background image or a translucent
+    // console background the cell has to be opaque (#8885), and the fill covers ink
+    // that overflows from the line above (#9070, #9719), so drawForeground() skips
+    // one only below the deepest ink painted so far. Other console types skip cells
+    // matching the console background so that the widget underneath shows through.
     run.fillsBackground = !run.textRect.isNull() && (mpConsole->getType() == TConsole::MainConsole || run.bgColor != mpConsole->getConsoleBgColor());
     layout.push_back(std::move(run));
     return charWidth;
 }
 
-void TTextEdit::paintGraphemeForeground(QPainter& painter, TGlyphCache& glyphCache, const GraphemeRun& run) const
+int TTextEdit::paintGraphemeForeground(QPainter& painter, TGlyphCache& glyphCache, const GraphemeRun& run) const
 {
     const QColor& fgColor = run.fgColor;
     const QRect& textRect = run.textRect;
@@ -1027,7 +1030,7 @@ void TTextEdit::paintGraphemeForeground(QPainter& painter, TGlyphCache& glyphCac
     const bool useQtDecoration = useQtUnderline || useQtOverline || useQtStrikeOut;
 
     if (textRect.isNull()) {
-        return;
+        return std::numeric_limits<int>::min();
     }
 
     if (painter.pen().color() != effectiveFgColor) {
@@ -1036,6 +1039,7 @@ void TTextEdit::paintGraphemeForeground(QPainter& painter, TGlyphCache& glyphCac
     TGlyphCache::Style style;
     style.setFlag(TGlyphCache::Bold, isBold);
     style.setFlag(TGlyphCache::Italic, isItalics);
+    qreal inkBottom = textRect.y();
     if (Q_UNLIKELY(useQtDecoration)) {
         // drawGlyphRun() draws these decorations differently, so they stay with drawText()
         QFont font = TGlyphCache::styled(this->font(), style);
@@ -1046,12 +1050,15 @@ void TTextEdit::paintGraphemeForeground(QPainter& painter, TGlyphCache& glyphCac
             painter.setFont(font);
         }
         painter.drawText(textRect, Qt::AlignCenter | Qt::TextDontClip | Qt::TextSingleLine, grapheme.toString());
+        inkBottom = glyphCache.inkBottom(textRect, grapheme, style);
     } else if (grapheme.size() != 1 || grapheme.at(0) != QChar::Space) {
-        glyphCache.drawCentered(painter, textRect, grapheme, style);
+        inkBottom = glyphCache.drawCentered(painter, textRect, grapheme, style);
     }
 
     // Draw custom decorations (colored underlines, overlines, strikethrough)
     drawCustomDecorations(painter, effectiveFgColor, textRect, charStyle);
+    // Rounded out, and a pixel more for antialiasing at the edge of the outline
+    return std::max(qCeil(inkBottom) + 1, textRect.y() + textRect.height());
 }
 
 void TTextEdit::drawCustomDecorations(QPainter& painter, const QColor& defaultColor, const QRect& textRect, const TChar& charStyle) const
@@ -1503,17 +1510,22 @@ void TTextEdit::drawForeground(QPainter& painter, const QRect& r)
     // no background fill can wipe out ink which overflowed out of its cell.
     mPreviousLineLayout.clear();
     bool lineAboveRestored = false;
+    // Glyphs can reach down past the line below their own, into cells whose
+    // backgrounds go down after them, so those cells must still be filled.
+    int inkBottom = std::numeric_limits<int>::min();
     for (int i = drawFrom; i <= drawTo; ++i) {
         if (!hasBufferLine(i + lineOffset)) {
             break;
         }
         layoutLine(i + lineOffset, i, timeStampStyle, mCurrentLineLayout, &mScreenOffset);
-        paintBackgrounds(p, mCurrentLineLayout);
+        QRect stillClear = deleteRect;
+        stillClear.setTop(std::max(deleteRect.top(), inkBottom));
+        paintBackgrounds(p, mCurrentLineLayout, stillClear, clearColor);
         if (!lineAboveRestored) {
-            paintForegrounds(p, *mpGlyphCache, mOverflowLineLayout, deleteRect);
+            inkBottom = std::max(inkBottom, paintForegrounds(p, *mpGlyphCache, mOverflowLineLayout, deleteRect));
             lineAboveRestored = true;
         }
-        paintForegrounds(p, *mpGlyphCache, mPreviousLineLayout);
+        inkBottom = std::max(inkBottom, paintForegrounds(p, *mpGlyphCache, mPreviousLineLayout));
         mPreviousLineLayout.swap(mCurrentLineLayout);
     }
     if (!lineAboveRestored) {

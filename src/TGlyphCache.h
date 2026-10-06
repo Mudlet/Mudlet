@@ -54,8 +54,10 @@ public:
     void setFont(const QFont&, const QPaintDevice&);
     // Places the grapheme exactly where drawText(cell, Qt::AlignCenter |
     // Qt::TextDontClip | Qt::TextSingleLine, grapheme) would have put it,
-    // shaped with the font given to the last setFont().
-    void drawCentered(QPainter&, const QRect& cell, QStringView grapheme, Style);
+    // shaped with the font given to the last setFont(). Returns how far down its ink reaches.
+    qreal drawCentered(QPainter&, const QRect& cell, QStringView grapheme, Style);
+    // Where drawCentered() would leave the bottom of the grapheme's ink, without drawing it.
+    qreal inkBottom(const QRect& cell, QStringView grapheme, Style);
     qsizetype size() const { return mEntries.size(); }
     // The display font as a cell in this style is drawn with, for text that
     // does not go through the cache, so that both paths agree on its weight.
@@ -84,7 +86,12 @@ private:
         QList<QGlyphRun> runs;
         qreal advance = 0.0;
         qreal height = 0.0;
+        // Below the origin, from the glyphs' outlines: stacked combining marks
+        // can reach several lines past the line box the runs' own bounds give.
+        qreal inkBottom = 0.0;
     };
+
+    static QPointF origin(const QRect& cell, const Entry&);
 
     const Entry& lookup(QStringView grapheme, Style);
     Entry shape(QStringView grapheme, Style) const;

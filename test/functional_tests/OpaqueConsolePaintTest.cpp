@@ -17,6 +17,7 @@
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
 
+#include <QPainter>
 #include <QScopeGuard>
 #include <QTemporaryDir>
 #include <QtTest/QtTest>
@@ -128,6 +129,104 @@ private slots:
         QVERIFY2(!pane->testAttribute(Qt::WA_OpaquePaintEvent), "a pane with nothing to draw still covers what lies beneath it");
     }
 
+    // The band a paint redraws is cleared to the console's background first, so
+    // only the cells of that color may go unfilled.
+    void test_aCellWithItsOwnBackgroundIsFilledOverTheClearedBand()
+    {
+        TTextEdit* pane = startPane();
+        QVERIFY(pane);
+        auto* lua = mudlet::self()->getActiveHost()->getLuaInterpreter();
+        lua->compileAndExecuteScript(qsl("setBackgroundColor(20, 40, 90)\n"));
+        const QString colouredLine = qsl("setBgColor(200, 30, 30) echo('XXXX') resetFormat() echo(' plain\\n')\n");
+        const QRgb cellColor = QColor(200, 30, 30).rgb();
+        // The X glyphs cover well under half of their four cells
+        const qreal dpr = pane->devicePixelRatioF();
+        const int twoCells = qRound(2 * pane->mFontWidth * pane->mFontHeight * dpr * dpr);
+
+        lua->compileAndExecuteScript(colouredLine);
+        settle(pane);
+        QVERIFY(pane->testAttribute(Qt::WA_OpaquePaintEvent));
+        const int afterFullRedraw = pixelsOf(pane->cachedScreen(), cellColor);
+        QVERIFY2(afterFullRedraw >= twoCells, qPrintable(qsl("a full redraw left %1 pixels of the cells' own background, fewer than two cells' worth (%2)").arg(afterFullRedraw).arg(twoCells)));
+
+        // And as the one new line a scroll leaves to draw
+        lua->compileAndExecuteScript(colouredLine);
+        pane->repaint();
+        const int afterScroll = pixelsOf(pane->cachedScreen(), cellColor);
+        QVERIFY2(afterScroll - afterFullRedraw >= twoCells,
+                 qPrintable(qsl("drawing one more such line added %1 pixels of the cells' own background, fewer than two cells' worth (%2)").arg(afterScroll - afterFullRedraw).arg(twoCells)));
+    }
+
+    // Over an image the band is cleared to transparent, so the cells of the
+    // console's own color still have to be filled to cover it.
+    void test_cellsOfTheConsolesColorCoverABackgroundImage()
+    {
+        TTextEdit* pane = startPane();
+        QVERIFY(pane);
+        Host* host = mudlet::self()->getActiveHost();
+        auto* lua = host->getLuaInterpreter();
+        const QString imagePath = mConfigDir.filePath(qsl("cells.png"));
+        QImage image(16, 16, QImage::Format_RGB32);
+        image.fill(Qt::darkGreen);
+        QVERIFY(image.save(imagePath));
+        QVERIFY(host->mpConsole->setConsoleBackgroundImage(imagePath, 1));
+        const auto restore = qScopeGuard([host] {
+            host->mpConsole->resetConsoleBackgroundImage();
+        });
+        const qreal dpr = pane->devicePixelRatioF();
+        const int tenCells = qRound(10 * pane->mFontWidth * pane->mFontHeight * dpr * dpr);
+
+        // Black too, the default, as it is what a transparent clear holds once its alpha is dropped
+        for (const QColor& color : {QColor(20, 40, 90), QColor(Qt::black)}) {
+            lua->compileAndExecuteScript(qsl("setBackgroundColor(%1, %2, %3)\n"
+                                             "setBgColor(%1, %2, %3) echo(string.rep(' ', 20)) resetFormat() echo('\\n')\n")
+                                                 .arg(color.red())
+                                                 .arg(color.green())
+                                                 .arg(color.blue()));
+            settle(pane);
+            QVERIFY(!pane->testAttribute(Qt::WA_OpaquePaintEvent));
+            const int filled = pixelsOf(pane->cachedScreen(), color.rgba());
+            QVERIFY2(filled >= tenCells,
+                     qPrintable(qsl("over a background image, the cells of the console's own color %1 left only %2 pixels filled, fewer than ten cells' worth (%3)")
+                                        .arg(color.name())
+                                        .arg(filled)
+                                        .arg(tenCells)));
+        }
+    }
+
+    // Ink reaching two or more lines down lands in cells whose backgrounds go down
+    // after it, and a partial redraw starting below its line cannot put it back,
+    // so a full redraw must not keep it either.
+    void test_inkFromTwoLinesUpIsFilledOverLikeAnyRedrawWould()
+    {
+        TTextEdit* pane = startPane();
+        QVERIFY(pane);
+        Host* host = mudlet::self()->getActiveHost();
+        auto* lua = host->getLuaInterpreter();
+        // A family whose marks stack, unlike the bundled monospaced ones
+        lua->compileAndExecuteScript(qsl("setBackgroundColor(20, 40, 90)\nsetFont('main', 'DejaVu Sans')\n"));
+        settle(pane);
+        // U+0E39 THAI CHARACTER SARA UU, stacked
+        const QString deep = qsl("a") + QString(24, QChar(0x0E39));
+        const int deepReach = inkBottomOf(pane->font(), deep, QRect(0, 0, pane->mFontWidth, pane->mFontHeight));
+        if (deepReach <= 2 * pane->mFontHeight) {
+            QSKIP(qPrintable(qsl("stacked marks reach only %1 pixels down a %2 pixel cell in %3").arg(deepReach).arg(pane->mFontHeight).arg(QFontInfo(pane->font()).family())));
+        }
+        lua->compileAndExecuteScript(qsl("echo('a' .. string.rep('\\224\\184\\185', 24) .. '\\n')\n"
+                                         "for i = 1, 4 do echo(string.rep(' ', 10) .. '\\n') end\n"));
+        settle(pane);
+        QVERIFY(pane->testAttribute(Qt::WA_OpaquePaintEvent));
+        const int deepLine = host->mpConsole->buffer.lineBuffer.lastIndexOf(deep);
+        QVERIFY(deepLine >= 0);
+        const int row = deepLine - pane->imageTopLine();
+        QVERIFY2(row >= 0 && row + 2 < pane->mScreenHeight, qPrintable(qsl("the stacked line is on row %1 of %2").arg(row).arg(pane->mScreenHeight)));
+
+        const qreal dpr = pane->devicePixelRatioF();
+        const QImage twoRowsDown = pane->cachedScreen().copy(QRect(0, qCeil((row + 2) * pane->mFontHeight * dpr), qFloor(3 * pane->mFontWidth * dpr), qFloor(pane->mFontHeight * dpr)));
+        const int inked = twoRowsDown.width() * twoRowsDown.height() - pixelsOf(twoRowsDown, QColor(20, 40, 90).rgb());
+        QVERIFY2(inked == 0, qPrintable(qsl("%1 pixels of the cells two rows below the stacked marks kept their ink").arg(inked)));
+    }
+
     // A new background reaches the pane as an ordinary repaint, which would
     // otherwise keep every cached row but the last.
     void test_aNewBackgroundReachesEveryCachedRow()
@@ -144,7 +243,11 @@ private slots:
         // From translucent and then from another opaque color, as the first
         // also changes the cached screen's format
         for (const QColor& color : {QColor(20, 40, 90), QColor(90, 20, 40)}) {
-            lua->compileAndExecuteScript(qsl("setBackgroundColor(%1, %2, %3)\n").arg(color.red()).arg(color.green()).arg(color.blue()));
+            lua->compileAndExecuteScript(qsl("setBackgroundColor(%1, %2, %3)\n"
+                                             "setBgColor(%1, %2, %3) echo(string.rep(' ', 20)) resetFormat() echo('\\n')\n")
+                                                 .arg(color.red())
+                                                 .arg(color.green())
+                                                 .arg(color.blue()));
             pane->repaint();
             pane->repaint();
             QVERIFY(pane->testAttribute(Qt::WA_OpaquePaintEvent));
@@ -362,6 +465,39 @@ private:
         }
     }
 
+    // How far below the top of the cell drawText() leaves ink, for the grapheme centered in it
+    static int inkBottomOf(const QFont& font, const QString& grapheme, const QRect& cell)
+    {
+        const int above = cell.height() * 4;
+        QImage image(cell.width() * 4, cell.height() * 12, QImage::Format_RGB32);
+        image.fill(Qt::black);
+        {
+            QPainter painter(&image);
+            painter.setFont(font);
+            painter.setPen(Qt::white);
+            painter.drawText(cell.translated(cell.width(), above), Qt::AlignCenter | Qt::TextDontClip | Qt::TextSingleLine, grapheme);
+        }
+        for (int y = image.height() - 1; y >= 0; --y) {
+            const auto* line = reinterpret_cast<const QRgb*>(image.constScanLine(y));
+            if (std::any_of(line, line + image.width(), [](const QRgb pixel) {
+                    return qRed(pixel) > 0;
+                })) {
+                return y + 1 - above;
+            }
+        }
+        return 0;
+    }
+
+    static int pixelsOf(const QImage& image, const QRgb color)
+    {
+        int count = 0;
+        for (int y = 0; y < image.height(); ++y) {
+            const auto* line = reinterpret_cast<const QRgb*>(image.constScanLine(y));
+            count += std::count(line, line + image.width(), color);
+        }
+        return count;
+    }
+
     // Rendered onto magenta without the pane's own window background, so any
     // pixel the pane leaves alone stays magenta.
     static int unpaintedPixels(TTextEdit* pane)
@@ -370,13 +506,7 @@ private:
         target.fill(Qt::magenta);
         pane->forceUpdate();
         pane->render(&target, QPoint(), QRegion(), QWidget::RenderFlags());
-        int count = 0;
-        const QRgb magenta = QColor(Qt::magenta).rgba();
-        for (int y = 0; y < target.height(); ++y) {
-            const auto* line = reinterpret_cast<const QRgb*>(target.constScanLine(y));
-            count += std::count(line, line + target.width(), magenta);
-        }
-        return count;
+        return pixelsOf(target, QColor(Qt::magenta).rgba());
     }
 
     void startProfile(const QString& hostname, const QString& address, const QString& port)
