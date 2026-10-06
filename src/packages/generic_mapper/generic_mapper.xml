@@ -4194,8 +4194,15 @@ function map.sanitizeRoomName(roomtitle)
 end
 
 function map.eventHandler(event, ...)
+    -- onNewLine arrives for every line, so it is answered first; and naming ... rather
+    -- than reading arg spares Lua 5.1 building an arg table on every call
+    if event == "onNewLine" then
+        grab_line()
+        return
+    end
+    local arg1, arg2 = ...
     if event == "onNewRoom" then
-        handle_exits(arg[1])
+        handle_exits(arg1)
         if walking and map.configs.speedwalk_wait then
             continue_walk(true)
         end
@@ -4218,11 +4225,9 @@ function map.eventHandler(event, ...)
         move_queue = {}
     elseif event == "onForcedMove" then
         map.echo("onForcedMove",true)
-        capture_move_cmd(arg[1],arg[2]=="true")
-    elseif event == "onNewLine" then
-        grab_line()
+        capture_move_cmd(arg1,arg2=="true")
     elseif event == "sysDataSendRequest" then
-        capture_move_cmd(arg[1])
+        capture_move_cmd(arg1)
         -- check to prevent multiple version checks in a row without user intervention
         if map.update_waiting and map.update_timer then
             map.update_waiting = nil
@@ -4231,7 +4236,7 @@ function map.eventHandler(event, ...)
             map.checkVersion()
         end
     elseif event == "sysDownloadDone" and downloading then
-        local file = arg[1]
+        local file = arg1
         if string.ends(file,"/map.dat") then
             loadMap(file)
             downloading = false
@@ -4242,7 +4247,7 @@ function map.eventHandler(event, ...)
             update_version()
         end
     elseif event == "sysDownloadError" and downloading then
-        local file = arg[1]
+        local file = arg1
         if string.ends(file,"/versions.lua") and mudlet.translations.interfacelanguage == "zh_CN" then
             -- update to the current download path for chinese user
             if map.configs.download_path == "https://raw.githubusercontent.com/Mudlet/Mudlet/development/src/packages/generic_mapper" then
@@ -4264,8 +4269,8 @@ function map.eventHandler(event, ...)
         walking = false
         map.echo("Mapping and speedwalking stopped.")
     elseif event == "sysManualLocationSetEvent" then
-      set_room(arg[1])
-    elseif event == "sysUninstallPackage" and not map.updatingMapper and arg[1] == "generic_mapper" then
+      set_room(arg1)
+    elseif event == "sysUninstallPackage" and not map.updatingMapper and arg1 == "generic_mapper" then
         for _,id in ipairs(map.registeredEvents) do
             killAnonymousEventHandler(id)
         end
