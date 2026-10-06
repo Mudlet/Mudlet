@@ -356,6 +356,7 @@ public:
     QString assembleLog(int fromLine, int toLine);
     inline int skipSpacesAtBeginOfLine(const int row, const int column);
     void addLink(bool, const QString& text, QStringList& command, QStringList& hint, const TChar& format, const QVector<int>& luaReference = QVector<int>());
+    int addLinkToStore(const QStringList& links, const QStringList& hints, const QVector<int>& luaReference = QVector<int>(), const QString& expireName = QString());
     QString bufferToHtml(const bool showTimeStamp = false, const int row = -1, const int endColumn = -1, const int startColumn = 0, int spacePadding = 0);
     int size() { return static_cast<int>(buffer.size()); }
     bool isEmpty() const { return buffer.size() == 0; }
@@ -474,6 +475,7 @@ public:
     bool mEchoingText = false;
 
 private:
+    int mLinesUntilLinkSweep = 0;
     THyperlinkVisibilityManager* hyperlinkVisibilityManagerOrNull();
     TChar currentFormat() const;
     inline QList<WrapInfo> getWrapInfo(const QString& lineText, bool isNewline, const int maxWidth, const int indent, const int hangingIndent);

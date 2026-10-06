@@ -29,6 +29,7 @@
  * elapsing before a trim, which is how flaky tests start.
  */
 
+#include <QScopeGuard>
 #include <QSignalSpy>
 #include <QTemporaryDir>
 #include <QTimer>
@@ -167,6 +168,55 @@ private slots:
         QVERIFY2(lineContaining(buffer, qsl("seed line 0")) < 0, "the buffer did not trim, so this test proves nothing");
         QCOMPARE(pConsole->getLinkStore().getLinksConst(linkId), QStringList{mLinkCommand});
         QCOMPARE(pConsole->getLinkStore().getHintsConst(linkId), QStringList{mLinkHint});
+    }
+
+    // Trims sweep a quarter of the buffer apart, so the link that last had a reused
+    // id may not have been swept yet - or may still be on screen
+    void test_aRecycledLinkIdStartsWithoutTheOldLinksState()
+    {
+        auto* pConsole = mpHost->mpConsole.data();
+        auto& buffer = pConsole->buffer;
+        QVERIFY(mpHost->clearWindow(qsl("main")));
+        buffer.mLinkStore = TLinkStore(3);
+        const auto restoreStore = qScopeGuard([this, &buffer] {
+            mpHost->clearWindow(qsl("main"));
+            buffer.mLinkStore = TLinkStore();
+        });
+
+        const int oldId = appendLink(pConsole);
+        buffer.markLinkAsVisited(oldId);
+        buffer.setFocusedLink(oldId);
+        QVERIFY2(buffer.isLinkVisited(oldId), "seeding the visited state did not take");
+
+        int newId = 0;
+        for (int i = 0; i < 3; ++i) {
+            newId = appendLink(pConsole);
+        }
+        QCOMPARE(newId, oldId);
+        QVERIFY2(!buffer.isLinkVisited(newId), "a recycled id inherited the old link's visited state");
+        QCOMPARE(buffer.getFocusedLink(), 0);
+    }
+
+    // Enter runs the focused link, so it has to go with its line on the trim that
+    // removes it, not at the next scheduled sweep
+    void test_aFocusedLinkLeavesTheStoreWithItsLine_data()
+    {
+        QTest::addColumn<bool>("conceal");
+        QTest::newRow("shown") << false;
+        QTest::newRow("concealed") << true;
+    }
+
+    void test_aFocusedLinkLeavesTheStoreWithItsLine()
+    {
+        QFETCH(bool, conceal);
+        bool unfocusedOutlivedItsLine = false;
+        QVERIFY(trimLinkAway(false, conceal, unfocusedOutlivedItsLine));
+        QVERIFY2(unfocusedOutlivedItsLine, "the trim that removed the link swept the store anyway, so this test proves nothing");
+
+        bool focusedOutlivedItsLine = true;
+        QVERIFY(trimLinkAway(true, conceal, focusedOutlivedItsLine));
+        QVERIFY2(!focusedOutlivedItsLine, "a focused link outlived its line in the store");
+        QCOMPARE(mpHost->mpConsole->buffer.getFocusedLink(), 0);
     }
 
     // A wholeline concealment deletes the link's own line, so every link below
@@ -379,6 +429,43 @@ private:
         styling.visibility.isConcealed = false;
         styling.visibility.delayMs = 600000;
         return styling;
+    }
+
+    // Fills the buffer past one trim, appends a link and prints until its line is
+    // trimmed away, reporting whether the store still holds the link at that point
+    bool trimLinkAway(const bool focus, const bool conceal, bool& outlivedItsLine) const
+    {
+        auto* pConsole = mpHost->mpConsole.data();
+        auto& buffer = pConsole->buffer;
+        auto& manager = pConsole->getHyperlinkVisibilityManager();
+        if (!mpHost->clearWindow(qsl("main"))) {
+            return false;
+        }
+        buffer.setBufferSize(csmLinesLimit, csmBatchDeleteSize);
+        fill(pConsole, qsl("seed"), csmLinesLimit + 1);
+        const int linkId = appendLink(pConsole);
+        if (focus) {
+            buffer.setFocusedLink(linkId);
+        }
+        if (conceal) {
+            manager.registerHyperlink(linkId, lineContaining(buffer, mLinkText), 0, mLinkText.length(), mLinkText, concealLaterStyling());
+            manager.concealLink(linkId);
+            if (buffer.collectActiveLinkIds().contains(linkId)) {
+                return false;
+            }
+        }
+        // a concealed link's line is found through its tracking, as its characters carry no index
+        const auto onItsLine = [&] {
+            return conceal ? manager.trackedLinkIds().contains(linkId) : lineContaining(buffer, mLinkText) >= 0;
+        };
+        for (int i = 0; i < 2 * csmLinesLimit && onItsLine(); ++i) {
+            pConsole->print(qsl("filler line %1\n").arg(i));
+        }
+        if (onItsLine()) {
+            return false;
+        }
+        outlivedItsLine = !pConsole->getLinkStore().getLinksConst(linkId).isEmpty();
+        return true;
     }
 
     void fill(TConsole* pConsole, const QString& tag, const int lines) const

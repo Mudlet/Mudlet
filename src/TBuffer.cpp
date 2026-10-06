@@ -839,6 +839,7 @@ void TBuffer::setBufferSize(int requestedLinesLimit, int batch)
     }
 
     mBatchDeleteSize = batch;
+    mLinesUntilLinkSweep = 0;
 }
 
 // naive calculation to get a reasonable limit for a maximum buffer size
@@ -916,13 +917,34 @@ int TBuffer::getLastLineNumber()
 
 void TBuffer::addLink(bool trigMode, const QString& text, QStringList& command, QStringList& hint, const TChar& format, const QVector<int>& luaReference)
 {
-    const int id = mLinkStore.addLinks(command, hint, mpHost, luaReference);
+    const int id = addLinkToStore(command, hint, luaReference);
 
     if (!trigMode) {
         append(text, 0, text.length(), format.foreground(), format.background(), format.mFlags, id);
     } else {
         appendLine(text, 0, text.length(), format.foreground(), format.background(), format.mFlags, id);
     }
+}
+
+int TBuffer::addLinkToStore(const QStringList& links, const QStringList& hints, const QVector<int>& luaReference, const QString& expireName)
+{
+    const int id = mLinkStore.addLinks(links, hints, mpHost, luaReference, expireName);
+
+    // The store recycles ids, and a link trimmed or deleted since the last sweep
+    // would otherwise hand its visited, spoiler and interaction state to this one
+    mLinkStates.remove(id);
+    mVisitedLinks.remove(id);
+    mLinkSelectionState.remove(id);
+    mLinkOriginalBackgrounds.remove(id);
+    mLinkOriginalCharacters.remove(id);
+    mLinkOriginalText.remove(id);
+    mPendingSelectionStyling.remove(id);
+    for (int* index : {&mCurrentHoveredLinkIndex, &mCurrentActiveLinkIndex, &mCurrentFocusedLinkIndex, &mLastClickedLinkIndex}) {
+        if (*index == id) {
+            *index = 0;
+        }
+    }
+    return id;
 }
 
 /* ANSI color codes: sequence = "ESCAPE + [ code_1; ... ; code_n m"
@@ -4176,7 +4198,7 @@ void TBuffer::decodeOSC(const QString& sequence)
 
             mCurrentHyperlinkCommand = command;
             mCurrentHyperlinkHint = hint;
-            mCurrentHyperlinkLinkId = mLinkStore.addLinks(command, hint, mpHost, QVector<int>());
+            mCurrentHyperlinkLinkId = addLinkToStore(command, hint);
 
             // Store the styling for this link so it can be retrieved later
             mLinkStore.setStyling(mCurrentHyperlinkLinkId, mCurrentHyperlinkStyling);
@@ -5218,7 +5240,7 @@ int TBuffer::remapLinkId(const TLinkStore& sourceLinkStore, const int sourceLink
         luaReference.append(mpHost && sourceReference > 0 ? mpHost->mLuaInterpreter.duplicateLuaRegistryIndex(sourceReference) : 0);
     }
 
-    destLinkId = mLinkStore.addLinks(sourceLinkStore.getLinksConst(sourceLinkId), sourceLinkStore.getHintsConst(sourceLinkId), mpHost, luaReference, sourceLinkStore.getExpireName(sourceLinkId));
+    destLinkId = addLinkToStore(sourceLinkStore.getLinksConst(sourceLinkId), sourceLinkStore.getHintsConst(sourceLinkId), luaReference, sourceLinkStore.getExpireName(sourceLinkId));
     if (sourceLinkStore.hasStyling(sourceLinkId)) {
         mLinkStore.setStyling(destLinkId, sourceLinkStore.getStyling(sourceLinkId));
     }
@@ -6422,6 +6444,19 @@ bool TBuffer::deleteLine(int y)
 
 void TBuffer::shrinkBuffer()
 {
+    // The link sweep below reads every character in the buffer, so it waits for a
+    // quarter of the buffer to be trimmed - but Enter runs the focused link, so a
+    // trim that removes that one sweeps at once
+    bool sweepLinks = mLinesUntilLinkSweep <= 0;
+    if (!sweepLinks && mCurrentFocusedLinkIndex) {
+        const auto holdsFocusedLink = [this](const std::vector<TChar>& line) {
+            return std::any_of(line.cbegin(), line.cend(), [this](const TChar& c) {
+                return c.linkIndex() == mCurrentFocusedLinkIndex;
+            });
+        };
+        sweepLinks = std::any_of(buffer.cbegin(), buffer.cbegin() + mBatchDeleteSize, holdsFocusedLink);
+    }
+
     for (int i = 0; i < mBatchDeleteSize; ++i) {
         // The lines going away were written a whole buffer ago, so freeing each
         // one stalls on a cache miss for its allocator header. Asking for the
@@ -6462,16 +6497,20 @@ void TBuffer::shrinkBuffer()
 
     // Tracked OSC 8 hyperlinks are addressed by line number, so they shift with
     // everything else - any whose line just went away are dropped
-    QSet<int> trackedLinkIds;
     if (mpModel) {
         auto& hyperlinkManager = mpModel->mHyperlinkVisibilityManager;
+        // A concealed link's characters carry no index, so only its tracking says it was trimmed
+        const bool focusedLinkTracked = !sweepLinks && mCurrentFocusedLinkIndex && hyperlinkManager.trackedLinkIds().contains(mCurrentFocusedLinkIndex);
         hyperlinkManager.adjustLineNumbers(0, mBatchDeleteSize);
-        trackedLinkIds = hyperlinkManager.trackedLinkIds();
+        sweepLinks = sweepLinks || (focusedLinkTracked && !hyperlinkManager.trackedLinkIds().contains(mCurrentFocusedLinkIndex));
     }
 
-    // Clean up unreferenced links after removing old lines. A concealed link's
-    // characters carry no index, so it has to be named to survive the sweep
-    clearLinkState(trackedLinkIds);
+    if (sweepLinks) {
+        mLinesUntilLinkSweep = mLinesLimit / 4;
+        // A concealed link's characters carry no index, so it has to be named to survive the sweep
+        clearLinkState(mpModel ? mpModel->mHyperlinkVisibilityManager.trackedLinkIds() : QSet<int>());
+    }
+    mLinesUntilLinkSweep -= mBatchDeleteSize;
 
     // Everything below needs the Host, whether or not there is a view: on app
     // quit the profile is destroyed while its widgets are still only queued for
@@ -6581,7 +6620,7 @@ bool TBuffer::applyLink(const QPoint& P_begin, const QPoint& P_end, const QStrin
                     }
                 }
                 if (linkID == 0) {
-                    linkID = mLinkStore.addLinks(linkFunction, linkHint, mpHost, luaReference);
+                    linkID = addLinkToStore(linkFunction, linkHint, luaReference);
                 }
                 buffer.at(y).at(x++).mLinkIndex = linkID;
             }
