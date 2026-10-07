@@ -113,7 +113,7 @@ bool TAlias::match(const QByteArray& haystack)
         return false;
     }
 
-    QSharedPointer<pcre2_code> re = mpRegex;
+    const QSharedPointer<pcre2_code>& re = mpRegex;
     if (re == nullptr) {
         return false; //regex compile error
     }

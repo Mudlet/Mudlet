@@ -340,6 +340,9 @@ public:
     void replaceActionButton(TAction* pAction, TFlipButton* pButton);
     void replaceActionMenuEntry(TAction* pAction, EAction* pEntry);
     void setActionButtonChecked(TAction* pAction, bool checked);
+    // Gives a plain button its action's stylesheet without rebuilding its bar; false
+    // when the action is drawn as anything else.
+    bool restyleActionButton(TAction* pAction);
     // Floating toolbars are the main window's children rather than this
     // console's, so the profile has to delete them itself.
     const std::list<QPointer<TToolBar>>& actionToolBars() const { return mToolBarList; }

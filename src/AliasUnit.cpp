@@ -135,13 +135,13 @@ void AliasUnit::addAliasRootNode(TAlias* pT, int parentPosition, int childPositi
         pT->setID(getNewID());
     }
     if ((parentPosition == -1) || (childPosition >= static_cast<int>(mAliasRootNodeList.size()))) {
-        mAliasRootNodeList.push_back(pT);
+        listRootNode(pT, mAliasRootNodeList.end());
     } else {
         // insert item at proper position
         int cnt = 0;
         for (auto it = mAliasRootNodeList.begin(); it != mAliasRootNodeList.end(); it++) {
             if (cnt >= childPosition) {
-                mAliasRootNodeList.insert(it, pT);
+                listRootNode(pT, it);
                 break;
             }
             cnt++;
@@ -166,7 +166,7 @@ void AliasUnit::reParentAlias(int childID, int oldParentID, int newParentID, int
     if (pOldParent) {
         pOldParent->popChild(pChild);
     } else {
-        mAliasRootNodeList.remove(pChild);
+        unlistRootNode(pChild);
     }
 
     if (pNewParent) {
@@ -200,7 +200,23 @@ void AliasUnit::removeAliasRootNode(TAlias* pT)
     // rest of the session
     mLookupTable.remove(pT->getName(), pT);
     mAliasMap.remove(pT->getID());
-    mAliasRootNodeList.remove(pT);
+    unlistRootNode(pT);
+}
+
+void AliasUnit::listRootNode(TAlias* pT, std::list<TAlias*>::iterator before)
+{
+    if (!mRootNodePositions.contains(pT)) {
+        mRootNodePositions.insert(pT, mAliasRootNodeList.insert(before, pT));
+    }
+}
+
+void AliasUnit::unlistRootNode(TAlias* pT)
+{
+    const auto position = mRootNodePositions.constFind(pT);
+    if (position != mRootNodePositions.cend()) {
+        mAliasRootNodeList.erase(position.value());
+        mRootNodePositions.erase(position);
+    }
 }
 
 void AliasUnit::removeAllTempAliases()

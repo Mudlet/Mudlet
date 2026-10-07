@@ -2523,7 +2523,7 @@ local function copy2color(name,win,str,inst)
     -- happens when the text is not on the current line, which is all selectString() searches
     return ""
   end
-  local style, endspan, result, r, g, b, rb, gb, bb, cr, cg, cb, crb, cgb, cbb, char
+  local style, endspan, r, g, b, rb, gb, bb, cr, cg, cb, crb, cgb, cbb, char
   local selectSection, getFgColor, getBgColor = selectSection, getFgColor, getBgColor
   local conversions = {
     ["¦"] = "&brvbar;",
@@ -2543,7 +2543,17 @@ local function copy2color(name,win,str,inst)
     style = "%s<%d,%d,%d:%d,%d,%d>%s"
     endspan = "<r>"
   end
-  for index = start + 1, start + len do
+  -- utf8.sub() and growing the result a character at a time both rescan from the
+  -- start of the line, which made long lines quadratic
+  local lineChars, lastIndex = {}, start + len
+  for lineChar in line:gmatch("[%z\1-\127\194-\244][\128-\191]*") do
+    lineChars[#lineChars + 1] = lineChar
+    if #lineChars == lastIndex then
+      break
+    end
+  end
+  local pieces = {}
+  for index = start + 1, lastIndex do
     if win ~= "main" then
       selectSection(win, index - 1, 1)
       r,g,b = getFgColor(win)
@@ -2554,20 +2564,20 @@ local function copy2color(name,win,str,inst)
       rb,gb,bb = getBgColor()
     end
 
-    char = utf8.sub(line, index, index)
+    char = lineChars[index] or ""
     if name == "copy2html" then
       char = conversions[char] or char -- replace HTML entities (if they are in the table)
     end
 
     if r ~= cr or g ~= cg or b ~= cb or rb ~= crb or gb ~= cgb or bb ~= cbb then
       cr,cg,cb,crb,cgb,cbb = r,g,b,rb,gb,bb
-      result = string.format(style, result and (result..endspan) or "", r, g, b, rb, gb, bb, char)
+      pieces[#pieces + 1] = string.format(style, #pieces > 0 and endspan or "", r, g, b, rb, gb, bb, char)
     else
-      result = result .. char
+      pieces[#pieces + 1] = char
     end
   end
-  result = result .. endspan
-  return result
+  pieces[#pieces + 1] = endspan
+  return table.concat(pieces)
 end
 
 --- copies text with color information in decho format
