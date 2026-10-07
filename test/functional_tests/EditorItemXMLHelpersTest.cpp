@@ -281,6 +281,24 @@ private slots:
         QVERIFY2(exportTriggerToXML(restored) == snapshot, qPrintable(readable(exportTriggerToXML(restored)) + qsl("\n---- expected ----\n") + readable(snapshot)));
     }
 
+    void test_nestedTriggerGroupsAreRecreatedInOrder()
+    {
+        TTrigger* group = newTrigger(qsl("eixh nested group"));
+        group->setIsFolder(true);
+        dressTrigger(newTrigger(qsl("eixh nested first"), group), qsl("first"));
+        TTrigger* subGroup = newTrigger(qsl("eixh nested subgroup"), group);
+        subGroup->setIsFolder(true);
+        dressTrigger(newTrigger(qsl("eixh nested grandchild"), subGroup), qsl("grandchild"));
+        dressTrigger(newTrigger(qsl("eixh nested last"), group), qsl("last"));
+        const QString snapshot = exportTriggerToXML(group);
+
+        TTrigger* restored = importTriggerFromXML(snapshot, nullptr, mpHost, 0);
+
+        QVERIFY(restored);
+        QCOMPARE(restored->getChildrenList()->size(), 3);
+        QVERIFY2(exportTriggerToXML(restored) == snapshot, qPrintable(readable(exportTriggerToXML(restored)) + qsl("\n---- expected ----\n") + readable(snapshot)));
+    }
+
     void test_triggerIsRestoredOverAnEditFromItsSnapshot()
     {
         TTrigger* trigger = newTrigger(qsl("eixh trigger edited"));
