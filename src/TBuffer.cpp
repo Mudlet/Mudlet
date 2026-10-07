@@ -503,7 +503,7 @@ TChar::TChar(const QColor& foreground, const QColor& background, const TChar::At
 : mFgColor(foreground.rgba())
 , mBgColor(background.rgba())
 , mFlags(flags)
-, mLinkIndex(linkIndex)
+, mLinkIndex(linkIndex > 0 ? static_cast<quint16>(linkIndex) : 0)
 {
 }
 
