@@ -939,7 +939,7 @@ void Host::reloadModules()
 {
     //synchronize modules across sessions
     for (auto otherHost : *HostManager::self()) {
-        if (otherHost == this || !otherHost->mpConsole) {
+        if (otherHost == this || !otherHost->consoleFrontend()) {
             continue;
         }
         const QMap<QString, int>& modulePri = otherHost->mModulePriorities;
