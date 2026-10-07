@@ -35,6 +35,8 @@
 #include <QTimer>
 #include <QtTest/QtTest>
 
+#include <limits>
+
 #include "MudletApp.h"
 #include "PortableModeTestHelper.h"
 #include "ProfileTestHelper.h"
@@ -171,9 +173,59 @@ private slots:
     }
 
     // Trims sweep a quarter of the buffer apart, so the link that last had a reused
-    // id may not have been swept yet - or may still be on screen
-    void test_aRecycledLinkIdStartsWithoutTheOldLinksState()
+    // id may have been trimmed without being swept yet
+    void test_aRecycledLinkIdStartsWithoutTheTrimmedLinksState()
     {
+        auto* pConsole = mpHost->mpConsole.data();
+        auto& buffer = pConsole->buffer;
+        const auto restoreStore = qScopeGuard([this, &buffer] {
+            mpHost->clearWindow(qsl("main"));
+            buffer.mLinkStore = TLinkStore();
+        });
+
+        // Which trim sweeps depends on how far the buffer filled before the link
+        // went in, so try one batch either way and use whichever left it unswept
+        bool trimmedUnswept = false;
+        int oldId = 0;
+        for (const int offset : {0, csmBatchDeleteSize}) {
+            QVERIFY(mpHost->clearWindow(qsl("main")));
+            buffer.mLinkStore = TLinkStore(3);
+            buffer.setBufferSize(csmLinesLimit, csmBatchDeleteSize);
+            fill(pConsole, qsl("seed"), csmLinesLimit + 1 + offset);
+            oldId = appendLink(pConsole);
+            buffer.markLinkAsVisited(oldId);
+            for (int i = 0; i < 2 * csmLinesLimit && lineContaining(buffer, mLinkText) >= 0; ++i) {
+                pConsole->print(qsl("filler line %1\n").arg(i));
+            }
+            QVERIFY(lineContaining(buffer, mLinkText) < 0);
+            if (buffer.isLinkVisited(oldId)) {
+                trimmedUnswept = true;
+                break;
+            }
+        }
+        QVERIFY2(trimmedUnswept, "every trim that removed the link swept it, so this test proves nothing");
+
+        int newId = 0;
+        for (int i = 0; i < 3; ++i) {
+            newId = appendLink(pConsole);
+        }
+        QCOMPARE(newId, oldId);
+        QVERIFY2(!buffer.isLinkVisited(newId), "a recycled id inherited the trimmed link's visited state");
+    }
+
+    // A link can leave the screen without its line going: replaced by a trigger,
+    // covered by another link, or cleared with the line it is on
+    void test_aLinkRemovedFromItsLineLeavesNoStateForItsId_data()
+    {
+        QTest::addColumn<int>("removal");
+        QTest::newRow("replaced") << 0;
+        QTest::newRow("covered by another link") << 1;
+        QTest::newRow("line cleared") << 2;
+    }
+
+    void test_aLinkRemovedFromItsLineLeavesNoStateForItsId()
+    {
+        QFETCH(int, removal);
         auto* pConsole = mpHost->mpConsole.data();
         auto& buffer = pConsole->buffer;
         QVERIFY(mpHost->clearWindow(qsl("main")));
@@ -183,18 +235,193 @@ private slots:
             buffer.mLinkStore = TLinkStore();
         });
 
-        const int oldId = appendLink(pConsole);
+        QStringList commands{mLinkCommand};
+        QStringList hints{mLinkHint};
+        TChar format;
+        buffer.addLink(false, mLinkText, commands, hints, format);
+        const int oldId = pConsole->getLinkStore().getCurrentLinkID();
         buffer.markLinkAsVisited(oldId);
-        buffer.setFocusedLink(oldId);
-        QVERIFY2(buffer.isLinkVisited(oldId), "seeding the visited state did not take");
+        const int line = buffer.getLastLineNumber();
+        QPoint start(0, line);
+        QPoint end(mLinkText.size(), line);
+        switch (removal) {
+        case 0:
+            QVERIFY(buffer.replaceInLine(start, end, qsl("gone"), format));
+            break;
+        case 1:
+            QVERIFY(buffer.applyLink(start, end, commands, hints));
+            break;
+        default:
+            buffer.clearLastLine();
+        }
+        pConsole->print(qsl("\n"));
+        QVERIFY(lineContaining(buffer, mLinkText) < 0 || buffer.getLinkIndexAt(line, 0) != oldId);
 
         int newId = 0;
-        for (int i = 0; i < 3; ++i) {
+        for (int i = 0; i < 3 && newId != oldId; ++i) {
             newId = appendLink(pConsole);
         }
         QCOMPARE(newId, oldId);
-        QVERIFY2(!buffer.isLinkVisited(newId), "a recycled id inherited the old link's visited state");
+        QVERIFY2(!buffer.isLinkVisited(newId), "a recycled id inherited the removed link's visited state");
+    }
+
+    // When the newest link with an id goes early, or never reaches the screen, the
+    // older one still showing must leave its state behind when it is trimmed
+    void test_anOlderLinkTrimmedAfterItsIdWasHandedOutAgainLeavesNoState_data()
+    {
+        QTest::addColumn<bool>("newerLinkShown");
+        QTest::newRow("newer link gagged") << true;
+        QTest::newRow("newer link without text") << false;
+    }
+
+    void test_anOlderLinkTrimmedAfterItsIdWasHandedOutAgainLeavesNoState()
+    {
+        QFETCH(bool, newerLinkShown);
+        auto* pConsole = mpHost->mpConsole.data();
+        auto& buffer = pConsole->buffer;
+        QVERIFY(mpHost->clearWindow(qsl("main")));
+        buffer.mLinkStore = TLinkStore(3);
+        buffer.setBufferSize(csmLinesLimit, csmBatchDeleteSize);
+        const auto restoreStore = qScopeGuard([this, &buffer] {
+            mpHost->clearWindow(qsl("main"));
+            buffer.mLinkStore = TLinkStore();
+        });
+
+        const int oldId = appendLink(pConsole);
+        buffer.markLinkAsVisited(oldId);
+        for (int i = 0; i < 2; ++i) {
+            appendLink(pConsole);
+        }
+        if (newerLinkShown) {
+            QCOMPARE(appendLink(pConsole), oldId);
+            const int newerLine = buffer.getLastLineNumber() - 1;
+            QCOMPARE(buffer.getLinkIndexAt(newerLine, 0), oldId);
+            QVERIFY(buffer.deleteLine(newerLine));
+        } else {
+            QStringList commands{mLinkCommand};
+            QStringList hints{mLinkHint};
+            buffer.addLink(false, QString(), commands, hints, TChar());
+            QCOMPARE(pConsole->getLinkStore().getCurrentLinkID(), oldId);
+        }
+
+        // A sweep while the older link still shows keeps its state
+        buffer.clearLinkState();
+        QVERIFY(buffer.isLinkVisited(oldId));
+
+        buffer.mLinesUntilLinkSweep = std::numeric_limits<int>::max();
+        for (int i = 0; i < 2 * csmLinesLimit && lineContaining(buffer, mLinkText) >= 0; ++i) {
+            pConsole->print(qsl("filler line %1\n").arg(i));
+        }
+        QVERIFY(lineContaining(buffer, mLinkText) < 0);
+
+        int newId = 0;
+        for (int i = 0; i < 3 && newId != oldId; ++i) {
+            newId = appendLink(pConsole);
+        }
+        QCOMPARE(newId, oldId);
+        QVERIFY2(!buffer.isLinkVisited(newId), "a recycled id inherited the trimmed link's visited state");
+    }
+
+    // Enter runs the focused id, which must not outlive its link when that id was
+    // handed out again to a link that never put any text in the buffer
+    void test_aFocusedLinkTrimmedAfterItsIdWentToAnEmptyLinkLosesFocus()
+    {
+        auto* pConsole = mpHost->mpConsole.data();
+        auto& buffer = pConsole->buffer;
+        QVERIFY(mpHost->clearWindow(qsl("main")));
+        buffer.mLinkStore = TLinkStore(3);
+        buffer.setBufferSize(csmLinesLimit, csmBatchDeleteSize);
+        const auto restoreStore = qScopeGuard([this, &buffer] {
+            mpHost->clearWindow(qsl("main"));
+            buffer.mLinkStore = TLinkStore();
+        });
+
+        const int oldId = appendLink(pConsole);
+        for (int i = 0; i < 2; ++i) {
+            appendLink(pConsole);
+        }
+        buffer.clearLinkState();
+        buffer.setFocusedLink(oldId);
+        QStringList commands{mLinkCommand};
+        QStringList hints{mLinkHint};
+        buffer.addLink(false, QString(), commands, hints, TChar());
+        QCOMPARE(pConsole->getLinkStore().getCurrentLinkID(), oldId);
+
+        buffer.mLinesUntilLinkSweep = std::numeric_limits<int>::max();
+        for (int i = 0; i < 2 * csmLinesLimit && lineContaining(buffer, mLinkText) >= 0; ++i) {
+            pConsole->print(qsl("filler line %1\n").arg(i));
+        }
+        QVERIFY(lineContaining(buffer, mLinkText) < 0);
         QCOMPARE(buffer.getFocusedLink(), 0);
+    }
+
+    // Once every id has been handed out, a link-dense buffer trims only links whose
+    // ids already belong to newer ones further down, and recording those would make
+    // the next link added rescan the whole buffer on every trim
+    void test_trimmingLinksWhoseIdsWereHandedOutAgainRecordsNone()
+    {
+        auto* pConsole = mpHost->mpConsole.data();
+        auto& buffer = pConsole->buffer;
+        QVERIFY(mpHost->clearWindow(qsl("main")));
+        buffer.mLinkStore = TLinkStore(10);
+        buffer.setBufferSize(csmLinesLimit, csmBatchDeleteSize);
+        const auto restoreStore = qScopeGuard([this, &buffer] {
+            mpHost->clearWindow(qsl("main"));
+            buffer.mLinkStore = TLinkStore();
+        });
+
+        for (int i = 0; i < 4 * csmLinesLimit; ++i) {
+            appendLink(pConsole);
+            QVERIFY2(buffer.mLinkIdsRemovedSinceSweep.isEmpty(), qPrintable(qsl("link %1 left the trimmed ids recorded").arg(i)));
+        }
+        // the last trim removed links rather than lines without any
+        QVERIFY(buffer.getLinkIndexAt(0, 0) > 0);
+    }
+
+    // A link still on screen when its id comes round again shares that id with the
+    // new one, so each spoiler must reveal its own text where it is
+    void test_spoilersSharingARecycledIdEachRevealTheirOwnText()
+    {
+        auto* pConsole = mpHost->mpConsole.data();
+        auto& buffer = pConsole->buffer;
+        QVERIFY(mpHost->clearWindow(qsl("main")));
+        buffer.mLinkStore = TLinkStore(3);
+        const auto restoreStore = qScopeGuard([this, &buffer] {
+            mpHost->clearWindow(qsl("main"));
+            buffer.mLinkStore = TLinkStore();
+        });
+        const auto printSpoiler = [this](const QString& text) {
+            std::string data = qsl("\x1b]8;;send:reveal?config={\"spoiler\":true}\x1b\\%1\x1b]8;;\x1b\\\n").arg(text).toStdString();
+            mpHost->printOnDisplay(data, true);
+        };
+
+        const auto lastLinkLine = [&buffer] {
+            for (int i = buffer.getLastLineNumber(); i >= 0; --i) {
+                if (buffer.getLinkIndexAt(i, 0) > 0) {
+                    return i;
+                }
+            }
+            return -1;
+        };
+
+        printSpoiler(qsl("OLDER"));
+        const int olderLine = lastLinkLine();
+        QVERIFY(olderLine >= 0);
+        const int oldId = buffer.getLinkIndexAt(olderLine, 0);
+        QVERIFY2(buffer.isSpoilerUnrevealed(oldId), "the first spoiler was not masked");
+
+        for (int i = 0; i < 2; ++i) {
+            appendLink(pConsole);
+        }
+        printSpoiler(qsl("NEWER"));
+        const int newerLine = lastLinkLine();
+        QVERIFY(newerLine > olderLine);
+        QCOMPARE(buffer.getLinkIndexAt(newerLine, 0), oldId);
+        QCOMPARE(buffer.getLinkIndexAt(olderLine, 0), oldId);
+
+        buffer.revealSpoilerLink(oldId);
+        QCOMPARE(buffer.line(olderLine).trimmed(), qsl("OLDER"));
+        QCOMPARE(buffer.line(newerLine).trimmed(), qsl("NEWER"));
     }
 
     // Enter runs the focused link, so it has to go with its line on the trim that
