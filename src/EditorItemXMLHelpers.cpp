@@ -348,6 +348,9 @@ TTrigger* importTriggerFromXML(const QString& xmlSnapshot, TTrigger* pParent, Ho
     }
 
     pT->compileAll();
+    // The active state was applied before the patterns and code that let it take,
+    // so an item that could not be activated then is switched off for good otherwise
+    pT->setIsActive(pT->shouldBeActive());
 
     for (auto childNode : triggerNode.children()) {
         QString childNodeName = QString::fromStdString(childNode.name());
@@ -458,6 +461,8 @@ bool updateTriggerFromXML(TTrigger* pT, const QString& xmlSnapshot)
     pT->setRegexCodeList(patterns, patternKinds);
 
     pT->compileAll();
+    // See importTriggerFromXML()
+    pT->setIsActive(pT->shouldBeActive());
 
     return true;
 }
@@ -543,6 +548,8 @@ TAlias* importAliasFromXML(const QString& xmlSnapshot, TAlias* pParent, Host* ho
     }
 
     pA->compileAll();
+    // See importTriggerFromXML()
+    pA->setIsActive(pA->shouldBeActive());
 
     // Recursively import child aliases
     for (auto childNode : aliasNode.children()) {
@@ -620,6 +627,8 @@ bool updateAliasFromXML(TAlias* pA, const QString& xmlSnapshot)
     }
 
     pA->compileAll();
+    // See importTriggerFromXML()
+    pA->setIsActive(pA->shouldBeActive());
 
     return true;
 }
@@ -873,6 +882,8 @@ TScript* importScriptFromXML(const QString& xmlSnapshot, TScript* pParent, Host*
     }
 
     pS->compileAll();
+    // See importTriggerFromXML()
+    pS->setIsActive(pS->shouldBeActive());
 
     // Recursively import child scripts
     for (auto childNode : scriptNode.children()) {
@@ -954,6 +965,8 @@ bool updateScriptFromXML(TScript* pS, const QString& xmlSnapshot)
     pS->setEventHandlerList(eventHandlers);
 
     pS->compileAll();
+    // See importTriggerFromXML()
+    pS->setIsActive(pS->shouldBeActive());
 
     return true;
 }
@@ -1040,6 +1053,8 @@ TKey* importKeyFromXML(const QString& xmlSnapshot, TKey* pParent, Host* host, in
     }
 
     pK->compileAll();
+    // See importTriggerFromXML()
+    pK->setIsActive(pK->shouldBeActive());
 
     // Recursively import child keys
     for (auto childNode : keyNode.children()) {
@@ -1118,6 +1133,8 @@ bool updateKeyFromXML(TKey* pK, const QString& xmlSnapshot)
     }
 
     pK->compileAll();
+    // See importTriggerFromXML()
+    pK->setIsActive(pK->shouldBeActive());
 
     return true;
 }
@@ -1232,6 +1249,8 @@ TAction* importActionFromXML(const QString& xmlSnapshot, TAction* pParent, Host*
     }
 
     pA->compileAll();
+    // See importTriggerFromXML()
+    pA->setIsActive(pA->shouldBeActive());
 
     // Recursively import child actions
     for (auto childNode : actionNode.children()) {
@@ -1335,6 +1354,8 @@ bool updateActionFromXML(TAction* pA, const QString& xmlSnapshot)
     }
 
     pA->compileAll();
+    // See importTriggerFromXML()
+    pA->setIsActive(pA->shouldBeActive());
 
     return true;
 }

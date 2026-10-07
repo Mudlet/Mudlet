@@ -1655,6 +1655,16 @@ std::pair<QString, QFont::Weight> Host::parseFontNameAndStyle(const QString& fon
     return {fontName, QFont::Normal};
 }
 
+// setFamilies() rather than QFont(name), which reads the name as a comma separated,
+// quoted list: "No Such Font," or "'" then names no family at all and gets the
+// default font, which is not the stand-in platformResolvesFontFamily() compares against
+static QString familyDrawnFor(const QString& name)
+{
+    QFont font;
+    font.setFamilies({name});
+    return QFontInfo(font).family();
+}
+
 // Whether the platform makes a font of the name itself: the font database lists only installed families,
 // but fontconfig resolves "Helvetica", "Times" or "monospace" and Windows has a substitution table. Qt
 // answers a meaningless name with one fixed stand-in, so landing elsewhere means recognised; an alias
@@ -1667,7 +1677,7 @@ static bool platformResolvesFontFamily(const QString& requested)
 
     // A UUID so that no machine can have a font by that name and make every unknown family look resolved
     static const QString unrecognisedName = QUuid::createUuid().toString();
-    static const QString unrecognisedFamily = QFontInfo(QFont(unrecognisedName)).family();
+    static const QString unrecognisedFamily = familyDrawnFor(unrecognisedName);
 
     static const bool nameResolutionIsReadable = []() {
         if (unrecognisedFamily.compare(unrecognisedName, Qt::CaseInsensitive) == 0) {
@@ -1684,7 +1694,7 @@ static bool platformResolvesFontFamily(const QString& requested)
         return false;
     }
 
-    return QFontInfo(QFont(requested)).family() != unrecognisedFamily;
+    return familyDrawnFor(requested) != unrecognisedFamily;
 }
 
 // The font database's spelling, not the typed one: getFont() reports it and the Geyser wrappers remember it
@@ -2436,12 +2446,14 @@ bool Host::appendClipboard(const QString& name)
 void Host::setMainConsoleBufferSize(int linesLimit, int batchDeleteSize, bool useMaximum)
 {
     TBuffer& buffer = mpMainConsoleModel->buffer;
+    mUseMaxConsoleBufferSize = useMaximum;
     if (useMaximum) {
-        linesLimit = buffer.getMaxBufferSize();
+        // Left as the size to return to once the maximum is no longer used
+        buffer.setBufferSize(buffer.getMaxBufferSize(), batchDeleteSize);
+        return;
     }
     buffer.setBufferSize(linesLimit, batchDeleteSize);
     mConsoleBufferSize = linesLimit;
-    mUseMaxConsoleBufferSize = useMaximum;
 }
 
 // Hot: the trigger engine reads the model for every character of a colour
@@ -4186,7 +4198,7 @@ void Host::setWideAmbiguousEAsianGlyphs(const Qt::CheckState state)
         // Set things automatically
         mAutoAmbigousWidthGlyphsSetting = true;
 
-        if (encoding == "GBK" || encoding == "GB18030" || encoding == "BIG5" || encoding == "BIG5-HKSCS" || encoding == "EUC-KR") {
+        if (encoding == "GBK" || encoding == "GB18030" || encoding == "BIG5" || encoding == "BIG5-HKSCS" || encoding == "EUC-KR" || encoding == "SHIFT_JIS" || encoding == "EUC-JP") {
             // Need to use wide width for ambiguous characters
             if (!mWideAmbigousWidthGlyphs) {
                 // But the last setting was narrow - so we need to change
@@ -4690,6 +4702,7 @@ void Host::setSpellDic(const QString& newDict)
     }
     mSpellDic = newDict;
     mSpellChecker.setSystemDictionary(newDict);
+    recheckCommandLineSpelling();
 }
 
 void Host::setEnableSpellCheck(const bool enable)
@@ -4702,6 +4715,15 @@ void Host::setEnableSpellCheck(const bool enable)
     // wanted. Not during a load: it is warmed once at the end, after the profile's own settings are read.
     if (enable && !mIsProfileLoadingSequence) {
         emit signal_spellCheckEnabled();
+    }
+    recheckCommandLineSpelling();
+}
+
+// Words already in the input line keep the marks they were given until checked again
+void Host::recheckCommandLineSpelling()
+{
+    if (mpConsole && !mIsProfileLoadingSequence) {
+        mpConsole->updateCommandLineSpellCheck(mEnableSpellCheck);
     }
 }
 
