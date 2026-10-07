@@ -500,6 +500,14 @@ describe("Tests the GUI utilities as far as possible without mudlet", function()
         assert.equals(table.concat(expected) .. "<r>", copy2decho(windowName))
       end)
 
+      it("Should copy every character as HTML, closing each colour's span and escaping as it goes", function()
+        local expected = {}
+        for i, segment in ipairs(segments) do
+          expected[i] = string.format("%s<span style='color: rgb(%s);background: rgb(%s);'>%s", i > 1 and "</span>" or "", segment.fg, segment.bg, (segment.text:gsub("×", "&times;")))
+        end
+        assert.equals(table.concat(expected) .. "</span>", copy2html(windowName))
+      end)
+
       it("Should copy a substring from the far end of the line", function()
         assert.equals("<198,100,200:0,0,198>中198 <r><199,100,200:0,0,199>é×<r>", copy2decho(windowName, "中198 é×"))
         assert.equals("<span style='color: rgb(200,100,200);background: rgb(0,0,200);'>中200</span>", copy2html(windowName, "中200"))
