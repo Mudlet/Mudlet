@@ -36,7 +36,6 @@
 #include "MMCP.h"
 #include "MMCPServer.h"
 #include "mudlet.h"
-#include "TConsole.h"
 #include "TConsoleFrontend.h"
 #include "TConsoleModel.h"
 #include "TDebug.h"
