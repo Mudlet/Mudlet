@@ -1203,8 +1203,7 @@ void TCommandLine::handleAutoCompletion()
         mAutoCompletionCount = 0;
     }
     for (int i = mAutoCompletionCount; i < mHistoryList.size(); i++) {
-        const QString h = mHistoryList[i].mid(0, neu.size());
-        if (neu == h) {
+        if (mHistoryList[i].startsWith(neu)) {
             mAutoCompletionCount = i;
             mLastCompletion = mHistoryList[i];
             setPlainText(mHistoryList[i]);
@@ -1216,8 +1215,8 @@ void TCommandLine::handleAutoCompletion()
             moveCursor(QTextCursor::End, QTextCursor::KeepAnchor);
             return;
         }
-        moveCursor(QTextCursor::End, QTextCursor::MoveAnchor);
     }
+    moveCursor(QTextCursor::End, QTextCursor::MoveAnchor);
     mAutoCompletionCount = -1;
 }
 
