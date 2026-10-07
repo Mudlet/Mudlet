@@ -53,6 +53,22 @@ describe("Trigger processing", function()
         return not packageInstalled(packageName), reason
     end
 
+    -- pcre2_jit_compile() reports success on a (*NO_JIT) pattern without making
+    -- any JIT code, and pcre2_jit_match() then fails every subject
+    describe("a pattern starting with (*NO_JIT)", function()
+
+        it("still matches", function()
+            local captured
+            local id = tempRegexTrigger([[(*NO_JIT)^nojit_trigger_probe (\w+)$]], function()
+                captured = matches[2]
+            end)
+            feedTriggers("nojit_trigger_probe world\n")
+            killTrigger(id)
+            assert.are.equal("world", captured)
+        end)
+
+    end)
+
     -- Test for nested trigger processing with self-deletion
     -- This verifies the fix that uses mProcessingDepth counter instead of a bool flag
     -- (same fix as for aliases - see Alias_spec.lua for detailed explanation)
@@ -1631,10 +1647,10 @@ describe("Trigger processing", function()
             assert.is_true(fired, "a complex regex trigger should fire on its pattern")
         end)
 
-        -- The match-all (/g) loop steps one byte after an empty match, so on a line
-        -- holding a multi-byte character it can land mid-character. pcre2 then
-        -- rejects the offset and TTrigger::match_perl() ends the loop, dropping
-        -- every capture past that character (#10112). matchAll is argument 8.
+        -- The match-all (/g) loop steps on after an empty match, so on a line holding
+        -- a multi-byte character it must step past the whole character: landing inside
+        -- one has ended the loop, dropping every capture past it (#10112), and has found
+        -- an extra empty match there. matchAll is argument 8.
         it("keeps collecting captures past a multi-byte character", function()
             -- feedTriggers() transcodes into the server encoding, so a non-UTF-8
             -- one would strip the character and let this pass without testing it
@@ -1670,6 +1686,27 @@ describe("Trigger processing", function()
                 end
             end
             assert.is_true(found, "the capture after the multi-byte character was dropped")
+        end)
+
+        -- One character, so one empty match before it: stepping a byte at a time
+        -- after an empty match gave one more inside the character as well
+        it("finds the same matches around a multi-byte character as around a plain one", function()
+            assert.are.equal("UTF-8", getServerEncoding(), "this spec needs a UTF-8 server encoding to feed a multi-byte character")
+            _G.TrigSpec = {seen = {}}
+            local id = tempComplexRegexTrigger("SpecComplexMatchAllSameCount", [[(\d*)]],
+                function()
+                    _G.TrigSpec.seen = {}
+                    for i = 1, #matches do
+                        _G.TrigSpec.seen[i] = matches[i]
+                    end
+                end,
+                0, -1, -1, 0, 1, -1, -1, 0, 0, 0)
+            assert.is_number(id)
+            finally(function() killTrigger("SpecComplexMatchAllSameCount") end)
+            feedTriggers("\ncafe 9\n")
+            local plain = _G.TrigSpec.seen
+            feedTriggers("caf\195\169 9\n")
+            assert.are.same(plain, _G.TrigSpec.seen)
         end)
 
         -- Every capture a match-all fire collects at a non-empty match carries

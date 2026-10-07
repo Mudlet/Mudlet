@@ -220,7 +220,13 @@ bool TAlias::match(const QByteArray& haystack)
             if (options == 0) {
                 break;
             }
-            ovector[1] = start_offset + 1;
+            // Past the whole character, as pcre2demo.c does: PCRE2_MATCH_INVALID_UTF
+            // matches empty at an offset inside one, a match of its own in every result
+            PCRE2_SIZE nextOffset = start_offset + 1;
+            while (nextOffset < static_cast<PCRE2_SIZE>(haystackCLength) && (static_cast<unsigned char>(haystackC[nextOffset]) & 0xC0) == 0x80) {
+                ++nextOffset;
+            }
+            ovector[1] = nextOffset;
             continue;
         }
         if (rc < 0) {
@@ -304,7 +310,9 @@ void TAlias::compileRegex()
         }
         setError(qsl("<b>%1</b>").arg(tr(R"(Error: in "Pattern:", faulty regular expression, reason: "%1".)").arg(error)));
     } else {
-        mRegexJitCompiled = (pcre2_jit_compile(re.data(), PCRE2_JIT_COMPLETE) == 0);
+        // A (*NO_JIT) pattern compiles "successfully" to no JIT code, and pcre2_jit_match() then fails every subject
+        size_t jitSize = 0;
+        mRegexJitCompiled = pcre2_jit_compile(re.data(), PCRE2_JIT_COMPLETE) == 0 && pcre2_pattern_info(re.data(), PCRE2_INFO_JITSIZE, &jitSize) == 0 && jitSize > 0;
         mOK_init = true;
     }
 
