@@ -1768,12 +1768,16 @@ bool TMap::listLengthFits(QDataStream& ifs, const qint64 minBytesPerElement)
     // from Qt_6_7 a larger one can follow it
     Q_ASSERT(ifs.version() < QDataStream::Qt_6_7);
     constexpr qint64 lengthSize = sizeof(quint32);
-    const QByteArray lengthBytes = pDevice->peek(lengthSize);
-    if (lengthBytes.size() != lengthSize) {
+    quint32 rawLength = 0;
+    if (pDevice->peek(reinterpret_cast<char*>(&rawLength), lengthSize) != lengthSize) {
         ifs.setStatus(QDataStream::ReadPastEnd);
         return false;
     }
-    const quint32 length = qFromBigEndian<quint32>(lengthBytes.constData());
+    const quint32 length = qFromBigEndian<quint32>(&rawLength);
+    // Most lists in a map are empty, and bytesAvailable() asks the OS for the file size
+    if (!length) {
+        return true;
+    }
     const qint64 bytesLeft = pDevice->bytesAvailable() - lengthSize;
     if (length > bytesLeft / minBytesPerElement) {
         qWarning().nospace() << "TMap::listLengthFits() WARNING - the list at byte " << pDevice->pos() << " of the map file claims " << length << " entries, more than the " << bytesLeft
