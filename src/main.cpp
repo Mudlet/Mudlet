@@ -226,6 +226,7 @@ QTranslator* loadTranslationsForCommandLine()
     // Not MudletApp::getQSettings(): it stays null until setupConfig(), which a --help or --version run never
     // reaches. Same file and format as setupConfig() opens - keep the spellings in step.
     QSettings settings(qsl("%1/Mudlet.ini").arg(MudletApp::getMudletPath(enums::mainPath)), QSettings::IniFormat);
+    MudletApp::noteEarlySettingsStatus(settings);
     auto interfaceLanguage = settings.value(QLatin1String("interfaceLanguage")).toString();
     auto userLocale = interfaceLanguage.isEmpty() ? QLocale::system() : QLocale(interfaceLanguage);
     if (userLocale == QLocale::c()) {
@@ -296,6 +297,7 @@ static void applyHighDpiRoundingPolicyFromConfig(int argc, char* argv[])
     }
 
     const QSettings settings(iniPath, QSettings::IniFormat);
+    MudletApp::noteEarlySettingsStatus(settings);
     const QString value = settings.value(qsl("highDpiScaleFactorRoundingPolicy")).toString();
     if (value.isEmpty()) {
         return;

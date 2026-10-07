@@ -317,13 +317,13 @@ void KeyUnit::addKeyRootNode(TKey* pT, int parentPosition, int childPosition, bo
     }
 
     if ((parentPosition == -1) || (childPosition >= static_cast<int>(mKeyRootNodeList.size()))) {
-        mKeyRootNodeList.push_back(pT);
+        listRootNode(pT, mKeyRootNodeList.end());
     } else {
         // insert item at proper position
         int cnt = 0;
         for (auto it = mKeyRootNodeList.begin(); it != mKeyRootNodeList.end(); it++) {
             if (cnt >= childPosition) {
-                mKeyRootNodeList.insert(it, pT);
+                listRootNode(pT, it);
                 break;
             }
             cnt++;
@@ -346,7 +346,7 @@ void KeyUnit::reParentKey(int childID, int oldParentID, int newParentID, int par
     if (pOldParent) {
         pOldParent->popChild(pChild);
     } else {
-        mKeyRootNodeList.remove(pChild);
+        unlistRootNode(pChild);
     }
     if (pNewParent) {
         pNewParent->addChild(pChild, parentPosition, childPosition);
@@ -379,7 +379,23 @@ void KeyUnit::removeKeyRootNode(TKey* pT)
     // session
     mLookupTable.remove(pT->getName(), pT);
     mKeyMap.remove(pT->getID());
-    mKeyRootNodeList.remove(pT);
+    unlistRootNode(pT);
+}
+
+void KeyUnit::listRootNode(TKey* pT, std::list<TKey*>::iterator before)
+{
+    if (!mRootNodePositions.contains(pT)) {
+        mRootNodePositions.insert(pT, mKeyRootNodeList.insert(before, pT));
+    }
+}
+
+void KeyUnit::unlistRootNode(TKey* pT)
+{
+    const auto position = mRootNodePositions.constFind(pT);
+    if (position != mRootNodePositions.cend()) {
+        mKeyRootNodeList.erase(position.value());
+        mRootNodePositions.erase(position);
+    }
 }
 
 TKey* KeyUnit::getKey(int id)

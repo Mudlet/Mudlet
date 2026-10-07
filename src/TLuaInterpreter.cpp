@@ -7824,10 +7824,9 @@ QPair<int, QString> TLuaInterpreter::startTempTimer(double timeout, const QStrin
         return qMakePair(-1, qsl("unable to compile \"%1\", reason: %2").arg(function, errMsg));
     }
 
-    const int id = pT->getID();
+    // setIsActive() starts it: starting it again would make Qt find and unregister it among every live timer
     pT->setIsActive(true);
-    pT->enableTimer(id);
-    return qMakePair(id, QString());
+    return qMakePair(pT->getID(), QString());
 }
 
 // No documentation available in wiki - internal function
@@ -9030,8 +9029,12 @@ int TLuaInterpreter::setConfig(lua_State* L)
 
     if (host.mpMap && host.mpMap->mpMapper) {
         if (key == qsl("mapRoomSize")) {
+            const int size = getVerifiedInt(L, __func__, 2, "value");
+            if (size < 1) {
+                return warnArgumentValue(L, __func__, qsl("mapRoomSize must be at least 1, got %1").arg(size));
+            }
             // Through float, as dlgMapper::slot_roomSize() rounds it:
-            host.mRoomSize = static_cast<float>(getVerifiedInt(L, __func__, 2, "value") / 10.0);
+            host.mRoomSize = static_cast<float>(size / 10.0);
             host.mpMap->announceMapperSettingChanged(TMap::MapperSetting::RoomSize);
             return success();
         }
