@@ -2737,9 +2737,10 @@ void Host::slot_purgeTemps()
 // event loop pass - see mDeferredSaveTimer.
 void Host::slot_saveProfileAfterPackageChange()
 {
-    if (currentlySavingProfile()) {
-        // saveProfile() would refuse outright, and this is the only save the
-        // package change has coming: ask again once the one in flight is out of
+    if (currentlySavingProfile() || mPackageInstallsInProgress > 0) {
+        // saveProfile() would refuse outright during a save, and one started
+        // under an install would hold up that install's scripts. This is the only
+        // save the package change has coming: ask again once either is out of
         // the way rather than leaving the change unwritten until something else
         // happens to save. The profile close stops this timer, so the retries
         // cannot outlive the profile.
@@ -2958,6 +2959,13 @@ std::pair<bool, QString> Host::installPackage(const QString& fileName, enums::Pa
                 deferredSaveHandlerConnection);
         return {true, QString()};
     }
+
+    // The unpacking dialog pumps the event loop, where the save an earlier install
+    // owes would otherwise start and leave this one's scripts loading under it
+    ++mPackageInstallsInProgress;
+    const auto installsInProgressGuard = qScopeGuard([this] {
+        --mPackageInstallsInProgress;
+    });
 
     // Every failure below returns a reason, and most callers drop it: the package
     // manager logs it silently, the repository install names only which packages failed,
@@ -3465,9 +3473,6 @@ std::pair<bool, QString> Host::installPackage(const QString& fileName, enums::Pa
         }
     }
     emit signal_editorCleanResetRequested();
-    if (thing == enums::PackageModuleType::Package) {
-        saveProfile();
-    }
     // reorder permanent and temporary triggers: perm first, temp second
     mTriggerUnit.reorderTriggersAfterPackageImport();
 
@@ -3559,6 +3564,10 @@ std::pair<bool, QString> Host::installPackage(const QString& fileName, enums::Pa
     if (thing != enums::PackageModuleType::Package) {
         // Use a timer to save profile after module installation completes
         mDeferredSaveTimer.start(100ms);
+    } else if (!mIsProfileLoadingSequence) {
+        // Not saved on the spot: a save in flight puts the next install off until
+        // it finishes, so a batch of installs would queue behind one save each
+        mDeferredSaveTimer.start(0ms);
     }
 
     return {true, itemErrors};
@@ -3804,15 +3813,15 @@ void Host::runUninstallsDeferredByAnInstall(const QList<DeferredUninstall>& defe
         return packageNames;
     };
 
-    // uninstallPackage() refuses during a save, and a package install saves on its way out, so wait it out.
-    // A module install's save starts 100ms after this was queued, so this is a no-op for it. Not while
+    // uninstallPackage() refuses during a save, so wait out any that is running. An install's own save
+    // starts on a later event loop pass than this was queued for, so it is not one of them. Not while
     // closing: the wait pumps the event loop, and the close has its own save to finish.
     if (currentlySavingProfile() && !isClosingDown()) {
         waitForProfileSave();
     }
 
-    // Closing, already or via the pump above. The script was told these removals were happening and the
-    // install saved the packages, so name what is left behind rather than let it silently return next session.
+    // Closing, already or via the pump above. The script was told these removals were happening, so name
+    // what is left behind rather than let it silently return next session.
     if (isClosingDown()) {
         qWarning() << "Host::runUninstallsDeferredByAnInstall() WARNING - the profile is closing down, so" << names(deferred)
                    << "were left installed although their own install scripts asked for them to be removed.";
