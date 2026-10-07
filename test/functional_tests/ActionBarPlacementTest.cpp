@@ -18,6 +18,7 @@
  ***************************************************************************/
 
 #include <QLayout>
+#include <QMenu>
 #include <QMoveEvent>
 #include <QResizeEvent>
 #include <QTemporaryDir>
@@ -96,6 +97,64 @@ private:
     }
 
     static bool laidOutIn(QWidget* strip, QWidget* bar) { return strip->layout()->indexOf(bar) >= 0; }
+
+    // A redraw replaces a bar's buttons with deleteLater()
+    static QPushButton* buttonNamed(QWidget* bar, const QString& name)
+    {
+        QCoreApplication::sendPostedEvents(nullptr, QEvent::DeferredDelete);
+        for (auto* button : bar->findChildren<QPushButton*>()) {
+            if (button->text() == name) {
+                return button;
+            }
+        }
+        return nullptr;
+    }
+
+    void restyleAMenuOn(const int location)
+    {
+        startProfile(mpHostname, mpLocalhost, mpPort);
+        auto* host = mudlet::self()->getActiveHost();
+        QVERIFY2(host, "No active host available for the test.");
+
+        auto* root = makeRootBar(host, qsl("placementStyledMenuBar"), location, false);
+        auto* menu = new TAction(root, host);
+        menu->setName(qsl("placementStyledMenu"));
+        menu->setIsFolder(true);
+        menu->setIsActive(true);
+        host->getActionUnit()->registerAction(menu);
+        auto* group = new TAction(menu, host);
+        group->setName(qsl("placementStyledMenu group"));
+        group->setIsFolder(true);
+        group->setIsActive(true);
+        host->getActionUnit()->registerAction(group);
+        auto* entry = new TAction(group, host);
+        entry->setName(qsl("placementStyledMenu entry"));
+        entry->setIsActive(true);
+        host->getActionUnit()->registerAction(entry);
+        host->getActionUnit()->updateAllToolbars();
+        QPointer<QWidget> bar = location == 4 ? static_cast<QWidget*>(host->mpConsole->actionToolBar(root)) : host->mpConsole->actionEasyButtonBar(root);
+        QVERIFY(bar);
+        const QString css = qsl("color: red;");
+        auto styledMenu = [&bar, &css]() -> QMenu* {
+            QCoreApplication::sendPostedEvents(nullptr, QEvent::DeferredDelete);
+            for (auto* candidate : bar->findChildren<QMenu*>()) {
+                if (candidate->styleSheet() == css) {
+                    return candidate;
+                }
+            }
+            return nullptr;
+        };
+        QVERIFY(!styledMenu());
+
+        QVERIFY(host->getLuaInterpreter()->compileAndExecuteScript(qsl("setButtonStyleSheet('placementStyledMenu', 'color: red;')")));
+        QVERIFY2(styledMenu(), "the menus in the menu should have taken its stylesheet");
+        QPointer<QPushButton> menuButton = buttonNamed(bar, qsl("placementStyledMenu"));
+        QVERIFY(menuButton);
+
+        QVERIFY(host->getLuaInterpreter()->compileAndExecuteScript(qsl("setButtonStyleSheet('placementStyledMenu', 'color: red;')")));
+        QCoreApplication::sendPostedEvents(nullptr, QEvent::DeferredDelete);
+        QVERIFY2(menuButton, "the same stylesheet again should not have redrawn the bar");
+    }
 
 private slots:
     void initTestCase()
@@ -574,6 +633,115 @@ private slots:
 
         QVERIFY(!host->commitLayoutUpdates());
     }
+
+    // A plain button's stylesheet styles nothing but its own button
+    void test_restylingAButtonKeepsTheButtonsOnItsBar()
+    {
+        startProfile(mpHostname, mpLocalhost, mpPort);
+        auto* host = mudlet::self()->getActiveHost();
+        QVERIFY2(host, "No active host available for the test.");
+
+        auto* root = makeRootBar(host, qsl("placementStyledButtons"), 0);
+        auto* other = new TAction(root, host);
+        other->setName(qsl("placementStyledButtons other"));
+        other->setIsActive(true);
+        host->getActionUnit()->registerAction(other);
+        host->getActionUnit()->updateAllToolbars();
+        QPointer<TEasyButtonBar> bar = host->mpConsole->actionEasyButtonBar(root);
+        QVERIFY(bar);
+        QPointer<QPushButton> styled = buttonNamed(bar, qsl("placementStyledButtons button"));
+        QPointer<QPushButton> unstyled = buttonNamed(bar, qsl("placementStyledButtons other"));
+        QVERIFY(styled && unstyled);
+
+        QVERIFY(host->getLuaInterpreter()->compileAndExecuteScript(qsl("setButtonStyleSheet('placementStyledButtons button', 'color: red;')")));
+        QCoreApplication::sendPostedEvents(nullptr, QEvent::DeferredDelete);
+        QVERIFY2(styled && unstyled, "restyling a button should not have redrawn its bar");
+        QCOMPARE(styled->styleSheet(), qsl("color: red;"));
+    }
+
+    // The editor changes an action's stylesheet as it is typed and redraws only when it is saved
+    void test_restylingAButtonToTheStylesheetTypedInTheEditorRestylesIt()
+    {
+        startProfile(mpHostname, mpLocalhost, mpPort);
+        auto* host = mudlet::self()->getActiveHost();
+        QVERIFY2(host, "No active host available for the test.");
+
+        auto* root = makeRootBar(host, qsl("placementTypedStyle"), 0);
+        host->getActionUnit()->updateAllToolbars();
+        auto* typed = static_cast<TAction*>(root->mpMyChildrenList->front());
+        typed->css = qsl("color: red;");
+
+        QVERIFY(host->getLuaInterpreter()->compileAndExecuteScript(qsl("setButtonStyleSheet('placementTypedStyle button', 'color: red;')")));
+        QPointer<QPushButton> button = buttonNamed(host->mpConsole->actionEasyButtonBar(root), qsl("placementTypedStyle button"));
+        QVERIFY(button);
+        QCOMPARE(button->styleSheet(), qsl("color: red;"));
+    }
+
+    // The moved action's old button outlives the redraw until deferred deletes run, so actionButton() still returns it
+    void test_restylingAButtonMovedOutToBeABarRestylesTheBar()
+    {
+        startProfile(mpHostname, mpLocalhost, mpPort);
+        auto* host = mudlet::self()->getActiveHost();
+        QVERIFY2(host, "No active host available for the test.");
+
+        auto* root = makeRootBar(host, qsl("placementMovedOut"), 0);
+        host->getActionUnit()->updateAllToolbars();
+        auto* moved = static_cast<TAction*>(root->mpMyChildrenList->front());
+        QVERIFY(buttonNamed(host->mpConsole->actionEasyButtonBar(root), qsl("placementMovedOut button")));
+        host->getActionUnit()->reParentAction(moved->getID(), root->getID(), 0);
+        host->getActionUnit()->updateAllToolbars();
+
+        QVERIFY(host->getLuaInterpreter()->compileAndExecuteScript(qsl("setButtonStyleSheet('placementMovedOut button', 'color: red;')")));
+        QPointer<TEasyButtonBar> bar = host->mpConsole->actionEasyButtonBar(moved);
+        QVERIFY(bar);
+        QCOMPARE(bar->styleSheet(), qsl("color: red;"));
+    }
+
+    void test_restylingAButtonMovedIntoAPackageRestylesItsToolbar()
+    {
+        startProfile(mpHostname, mpLocalhost, mpPort);
+        auto* host = mudlet::self()->getActiveHost();
+        QVERIFY2(host, "No active host available for the test.");
+
+        auto* root = makeRootBar(host, qsl("placementMovedIn"), 0);
+        // A floating toolbar in a package takes its stylesheet from its own action
+        auto* package = makeRootBar(host, qsl("placementMovedInPackage"), 4, false);
+        package->mPackageName = qsl("placementMovedInPackage");
+        host->getActionUnit()->updateAllToolbars();
+        auto* moved = static_cast<TAction*>(root->mpMyChildrenList->front());
+        QVERIFY(buttonNamed(host->mpConsole->actionEasyButtonBar(root), qsl("placementMovedIn button")));
+        host->getActionUnit()->reParentAction(moved->getID(), root->getID(), package->getID());
+        host->getActionUnit()->updateAllToolbars();
+
+        QVERIFY(host->getLuaInterpreter()->compileAndExecuteScript(qsl("setButtonStyleSheet('placementMovedIn button', 'color: red;')")));
+        QPointer<TToolBar> toolBar = host->mpConsole->actionToolBar(moved);
+        QVERIFY(toolBar);
+        QCOMPARE(toolBar->styleSheet(), qsl("color: red;"));
+    }
+
+    // Changing only the stylesheet doesn't mark the action changed, so updateAllToolbars() leaves a floating toolbar's buttons alone
+    void test_restylingAButtonOnAFloatingToolbarRestylesIt()
+    {
+        startProfile(mpHostname, mpLocalhost, mpPort);
+        auto* host = mudlet::self()->getActiveHost();
+        QVERIFY2(host, "No active host available for the test.");
+
+        auto* floating = makeRootBar(host, qsl("placementStyledFloating"), 4);
+        host->getActionUnit()->updateAllToolbars();
+        QPointer<TToolBar> toolBar = host->mpConsole->actionToolBar(floating);
+        QVERIFY(toolBar);
+        QVERIFY(buttonNamed(toolBar, qsl("placementStyledFloating button")));
+
+        QVERIFY(host->getLuaInterpreter()->compileAndExecuteScript(qsl("setButtonStyleSheet('placementStyledFloating button', 'color: red;')")));
+        QPointer<QPushButton> button = buttonNamed(toolBar, qsl("placementStyledFloating button"));
+        QVERIFY(button);
+        QCOMPARE(button->styleSheet(), qsl("color: red;"));
+    }
+
+    // A menu's stylesheet also styles the menus of the groups inside it
+    void test_restylingAMenuRestylesTheMenusInIt() { restyleAMenuOn(0); }
+
+    void test_restylingAMenuOnAFloatingToolbarRestylesTheMenusInIt() { restyleAMenuOn(4); }
 
     void cleanup()
     {

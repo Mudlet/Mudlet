@@ -1021,6 +1021,25 @@ void TMainConsole::setActionButtonChecked(TAction* pAction, const bool checked)
     }
 }
 
+bool TMainConsole::restyleActionButton(TAction* pAction)
+{
+    // A bar's or a menu's stylesheet also styles the widgets of the actions under
+    // it, and a bar in a package is a child of the package's root action
+    const TAction* pParent = pAction->getParent();
+    if (pAction->isFolder() || !pParent || (!pParent->getParent() && !pParent->mPackageName.isEmpty())) {
+        return false;
+    }
+    TFlipButton* pButton = actionButton(pAction);
+    if (!pButton) {
+        return false;
+    }
+    // The editor changes an action's stylesheet without redrawing its button
+    if (pButton->styleSheet() != pAction->css) {
+        pButton->setStyleSheet(pAction->css);
+    }
+    return true;
+}
+
 void TMainConsole::deleteActionToolBars()
 {
     const auto toolBars = mToolBarList;
