@@ -623,6 +623,7 @@ TBuffer::TBuffer(const TBuffer& other)
 , lineBuffer(other.lineBuffer)
 , timeBuffer(other.timeBuffer)
 , promptBuffer(other.promptBuffer)
+, wrapGapBuffer(other.wrapGapBuffer)
 , mLinkStore(other.mLinkStore)
 , mLinesLimit(other.mLinesLimit)
 , mBatchDeleteSize(other.mBatchDeleteSize)
@@ -721,6 +722,7 @@ TBuffer& TBuffer::operator=(const TBuffer& other)
         lineBuffer = other.lineBuffer;
         timeBuffer = other.timeBuffer;
         promptBuffer = other.promptBuffer;
+        wrapGapBuffer = other.wrapGapBuffer;
         mLinkStore = other.mLinkStore;
         mLinesLimit = other.mLinesLimit;
         mBatchDeleteSize = other.mBatchDeleteSize;
@@ -2156,6 +2158,7 @@ void TBuffer::commitLineData(QString line, std::vector<TChar> chars, const char 
         } else {
             promptBuffer.append(false);
         }
+        wrapGapBuffer.append(0);
     } else {
         if (!line.isEmpty()) {
             // The last line is empty, so this is the whole of it
@@ -2243,6 +2246,11 @@ void TBuffer::commitLineData(QString line, std::vector<TChar> chars, const char 
     const int lastValidLine = static_cast<int>(lineBuffer.size()) - 1;
     const int wrapStartLine = (lastValidLine >= 0) ? std::min(lineIndex, lastValidLine) : 0;
     const int addedLines = wrapLine(wrapStartLine, mWrapAt, mWrapIndent, mWrapHangingIndent);
+    // The line feed ended this line, so an empty wrapped line left by the
+    // spaces it ended on is where the next line starts, not more of this one
+    if (!lineBuffer.isEmpty() && lineBuffer.back().isEmpty() && timeBuffer.back() == TBuffer::smBlankTimeStamp) {
+        timeBuffer.back() = QString();
+    }
 
     // Skip logging if a trigger deleted the line that was being committed;
     // deleteLines() has already adjusted the deferred logging state
@@ -2257,6 +2265,7 @@ void TBuffer::commitLineData(QString line, std::vector<TChar> chars, const char 
         lineBuffer.push_back(QString());
         timeBuffer.push_back(QString());
         promptBuffer << false;
+        wrapGapBuffer.append(0);
     }
 
     if (static_cast<int>(buffer.size()) > mLinesLimit) {
@@ -5265,6 +5274,9 @@ void TBuffer::appendFormatted(const QString& text, const std::vector<TChar>& for
         if (runEnd < 0) {
             runEnd = text.size();
         }
+        while (firstChar && runStart < runEnd && dropSpaceAtWrap(text.at(runStart))) {
+            ++runStart;
+        }
         if (const qsizetype runLength = runEnd - runStart; runLength > 0) {
             lineBuffer.back().append(QStringView(text).sliced(runStart, runLength));
             std::vector<TChar>& chars = buffer.back();
@@ -5280,7 +5292,10 @@ void TBuffer::appendFormatted(const QString& text, const std::vector<TChar>& for
             }
             chars.resize(first + runLength, defaultChar);
             if (firstChar) {
-                timeBuffer.back() = currentTimeStamp();
+                // an empty wrapped line is the rest of the line above it
+                if (timeBuffer.back() != TBuffer::smBlankTimeStamp) {
+                    timeBuffer.back() = currentTimeStamp();
+                }
                 firstChar = false;
             }
         }
@@ -5408,6 +5423,9 @@ void TBuffer::appendLine(const QString& text,
             appendEmptyLine();
             continue;
         }
+        if (firstChar && dropSpaceAtWrap(thisChar)) {
+            continue;
+        }
 
         lineBuffer.back().append(thisChar);
         const TChar styling(fgColor, bgColor, (mEchoingText ? (TChar::Echo | flags) : flags), linkID);
@@ -5418,8 +5436,11 @@ void TBuffer::appendLine(const QString& text,
         // before JSON styling is applied
 
         if (firstChar) {
-            // Replayed held-back content supplies its arrival time:
-            timeBuffer.back() = timeStampOverride.isEmpty() ? currentTimeStamp() : timeStampOverride;
+            // Replayed held-back content supplies its arrival time, and an
+            // empty wrapped line is the rest of the line above it:
+            if (timeBuffer.back() != TBuffer::smBlankTimeStamp) {
+                timeBuffer.back() = timeStampOverride.isEmpty() ? currentTimeStamp() : timeStampOverride;
+            }
             firstChar = false;
         }
     }
@@ -5431,6 +5452,7 @@ void TBuffer::appendEmptyLine()
     lineBuffer.push_back(QString());
     timeBuffer << currentTimeStamp();
     promptBuffer << false;
+    wrapGapBuffer.append(0);
 }
 
 // This was called "insert" but that is commonly used for built in methods and
@@ -5898,6 +5920,7 @@ int TBuffer::wrapLine(int startLine, int maxWidth, int indentSize, int hangingIn
     QStringList tempList;
     QStringList timeList;
     QList<bool> promptList;
+    QList<quint16> wrapGapList;
     int lineCount = 0;
     for (int i = firstRewrappedLine; i < total; ++i) {
         lineCount++;
@@ -5910,6 +5933,7 @@ int TBuffer::wrapLine(int startLine, int maxWidth, int indentSize, int hangingIn
             queue.push(std::move(newBufferLine));
             timeList.append(time);
             promptList.append(false);
+            wrapGapList.append(wrapGapBuffer.at(i));
             continue;
         }
 
@@ -5932,6 +5956,7 @@ int TBuffer::wrapLine(int startLine, int maxWidth, int indentSize, int hangingIn
             queue.push(std::move(buffer[i]));
             timeList.append(time);
             promptList.append(isPrompt);
+            wrapGapList.append(wrapGapBuffer.at(i));
             continue;
         }
         const QString qIndent(indent, QChar::Space);
@@ -5943,6 +5968,7 @@ int TBuffer::wrapLine(int startLine, int maxWidth, int indentSize, int hangingIn
         // off the back of the buffer, which is what discards it.
         const std::vector<TChar>& sourceChars = buffer[i];
         const int sourceSize = static_cast<int>(sourceChars.size());
+        int previousSegmentEnd = -1;
         for (const WrapInfo w : std::as_const(lineBreaks)) {
             // skip TChars as needed
             if (newBufferCharPosition < w.firstChar) {
@@ -5970,13 +5996,25 @@ int TBuffer::wrapLine(int startLine, int maxWidth, int indentSize, int hangingIn
             // everything else
             newLineText.append(lineText.mid(w.firstChar, w.lastChar - w.firstChar));
             tempList.append(newLineText);
-            if (w.isNewline) {
+            if (w.isNewline && previousSegmentEnd >= 0 && time == TBuffer::smBlankTimeStamp) {
+                // A line feed inserted into a wrapped line starts a line of its
+                // own, which the blank timestamp would join back onto the last
+                timeList.append(currentTimeStamp());
+            } else if (w.isNewline) {
                 timeList.append(time);
             } else {
                 timeList.append(TBuffer::smBlankTimeStamp);
             }
             queue.push(std::move(newBufferLine));
             promptList.append(isPrompt);
+            // getWrapInfo() only ever skips spaces between the segments of a
+            // line, and the first segment carries over the source line's own gap
+            int wrapGap = 0;
+            if (!w.isNewline) {
+                wrapGap = (previousSegmentEnd < 0) ? wrapGapBuffer.at(i) : w.firstChar - previousSegmentEnd;
+            }
+            wrapGapList.append(static_cast<quint16>(std::min<int>(wrapGap, std::numeric_limits<quint16>::max())));
+            previousSegmentEnd = w.lastChar;
             newBufferLine.clear();
             newLineText = QString();
         }
@@ -5986,6 +6024,7 @@ int TBuffer::wrapLine(int startLine, int maxWidth, int indentSize, int hangingIn
         lineBuffer.pop_back();
         timeBuffer.pop_back();
         promptBuffer.pop_back();
+        wrapGapBuffer.pop_back();
     }
 
     const int rewrappedLines = static_cast<int>(queue.size());
@@ -5993,12 +6032,19 @@ int TBuffer::wrapLine(int startLine, int maxWidth, int indentSize, int hangingIn
         if (tempList[i].isEmpty()) {
             queue.pop();
             appendEmptyLine();
+            // A break that leaves only dropped spaces for the last line keeps
+            // it wrapped, for whatever is echoed next to carry on from them
+            if (timeList[i] == TBuffer::smBlankTimeStamp) {
+                timeBuffer.back() = TBuffer::smBlankTimeStamp;
+                wrapGapBuffer.back() = wrapGapList[i];
+            }
         } else {
             buffer.push_back(std::move(queue.front()));
             queue.pop();
             lineBuffer.append(tempList[i]);
             timeBuffer.append(timeList[i]);
             promptBuffer.push_back(promptList[i]);
+            wrapGapBuffer.append(wrapGapList[i]);
         }
     }
 
@@ -6020,6 +6066,50 @@ bool TBuffer::moveCursor(QPoint& where)
 
 // line() returns a reference, so a line number outside the buffer needs a string that outlives the call
 QString badLineError = qsl("ERROR: invalid line number");
+
+// Wrapping drops the spaces a wrapped line would start with, so the ones that
+// text echoed onto an empty wrapped line starts with are dropped the same way,
+// and counted for a copy to put back
+bool TBuffer::dropSpaceAtWrap(const QChar c)
+{
+    if (c != QChar::Space || !lineBuffer.back().isEmpty() || timeBuffer.back() != TBuffer::smBlankTimeStamp) {
+        return false;
+    }
+    if (wrapGapBuffer.back() < std::numeric_limits<quint16>::max()) {
+        ++wrapGapBuffer.back();
+    }
+    return true;
+}
+
+bool TBuffer::wrapsFromPreviousLine(const int lineNumber) const
+{
+    // a blank timestamp is what marks a line wrapLine() split off another
+    return lineNumber > 0 && lineNumber < timeBuffer.size() && timeBuffer.at(lineNumber) == TBuffer::smBlankTimeStamp;
+}
+
+// How many spaces word wrapping dropped at the break before this line - only
+// meaningful when wrapsFromPreviousLine() is true
+int TBuffer::wrapGapBefore(const int lineNumber) const
+{
+    Q_ASSERT_X(wrapGapBuffer.size() == lineBuffer.size(), "TBuffer::wrapGapBefore", "wrapGapBuffer is out of step with lineBuffer");
+    return wrapGapBuffer.value(lineNumber);
+}
+
+// How many columns at the start of a wrapped line are padding rather than text.
+// getWrapInfo() skips the spaces a wrapped segment would otherwise start with,
+// so every space leading one is hanging indent.
+int TBuffer::wrapIndentWidth(const int lineNumber) const
+{
+    if (lineNumber < 0 || lineNumber >= lineBuffer.size()) {
+        return 0;
+    }
+    const QString& text = lineBuffer.at(lineNumber);
+    int width = 0;
+    while (width < text.size() && text.at(width) == QChar::Space) {
+        ++width;
+    }
+    return width;
+}
 
 QString& TBuffer::line(int lineNumber)
 {
@@ -6322,6 +6412,7 @@ void TBuffer::clear()
     lineBuffer << QString();
     timeBuffer << QString();
     promptBuffer.push_back(false);
+    wrapGapBuffer.append(0);
 }
 
 void TBuffer::clearLinkState(const QSet<int>& stillLiveLinkIds)
@@ -6412,6 +6503,10 @@ void TBuffer::clearLastLine()
         if (!lineBuffer.isEmpty()) {
             lineBuffer.back().clear();
         }
+        // what goes in its place starts a line rather than carrying on one
+        if (!timeBuffer.isEmpty() && timeBuffer.back() == TBuffer::smBlankTimeStamp) {
+            timeBuffer.back() = QString();
+        }
     }
 }
 
@@ -6435,6 +6530,7 @@ void TBuffer::shrinkBuffer()
         lineBuffer.pop_front();
         promptBuffer.pop_front();
         timeBuffer.pop_front();
+        wrapGapBuffer.pop_front();
         buffer.pop_front();
         mCursorY--;
     }
@@ -6499,11 +6595,17 @@ bool TBuffer::deleteLines(int from, int to)
 {
     if ((from >= 0) && (from < static_cast<int>(buffer.size())) && (from <= to) && (to < static_cast<int>(buffer.size()))) {
         const int delta = to - from + 1;
+        // What was wrapped off a line that goes starts a line of its own now,
+        // rather than following on from whichever line is left above it
+        if (!wrapsFromPreviousLine(from) && wrapsFromPreviousLine(to + 1)) {
+            timeBuffer[to + 1] = timeBuffer.at(from);
+        }
 
         for (int i = from, total = from + delta; i < total; ++i) {
             lineBuffer.removeAt(i);
             timeBuffer.removeAt(i);
             promptBuffer.removeAt(i);
+            wrapGapBuffer.removeAt(i);
         }
 
         buffer.erase(buffer.begin() + from, buffer.begin() + to + 1);
