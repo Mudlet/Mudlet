@@ -1187,7 +1187,7 @@ void TRoom::restore(QDataStream& ifs, int roomID, int version)
     calcCustomLineBounds();
 }
 
-void TRoom::audit(const QHash<int, int> roomRemapping, const QHash<int, int> areaRemapping)
+void TRoom::audit(const QHash<int, int>& roomRemapping, const QHash<int, int>& areaRemapping)
 {
     if (areaRemapping.contains(area)) {
         userData.insert(qsl("audit.remapped_area"), QString::number(area));
@@ -1197,28 +1197,27 @@ void TRoom::audit(const QHash<int, int> roomRemapping, const QHash<int, int> are
     auditExits(roomRemapping);
 }
 
-void TRoom::auditExits(const QHash<int, int> roomRemapping)
+void TRoom::auditExits(const QHash<int, int>& roomRemapping)
 {
     // Clone all the structures into working copies that we can eliminate valid
     // members from to identify any rogue members before removing them:
 
     QMap<QString, int> exitWeightsCopy = exitWeights;
-    QSet<int> exitStubsCopy{exitStubs.begin(), exitStubs.end()};
-    QSet<int> exitLocksCopy{exitLocks.begin(), exitLocks.end()};
+    // Filled by insert() as constructing a QSet from a range allocates its
+    // buckets even when the range is empty, as it usually is here:
+    QSet<int> exitStubsCopy;
+    for (const int dirCode : std::as_const(exitStubs)) {
+        exitStubsCopy.insert(dirCode);
+    }
+    QSet<int> exitLocksCopy;
+    for (const int dirCode : std::as_const(exitLocks)) {
+        exitLocksCopy.insert(dirCode);
+    }
     QMap<QString, int> doorsCopy = doors;
     QMap<QString, QList<QPointF>> customLinesCopy = customLines;
     QMap<QString, QColor> customLinesColorCopy = customLinesColor;
     QMap<QString, Qt::PenStyle> customLinesStyleCopy = customLinesStyle;
     QMap<QString, bool> customLinesArrowCopy = customLinesArrow;
-
-    exitWeightsCopy.detach(); // Make deep copies now, this will happen anyhow once we start to remove valid members
-    exitStubsCopy.detach();
-    exitLocksCopy.detach();
-    doorsCopy.detach();
-    customLinesCopy.detach();
-    customLinesColorCopy.detach();
-    customLinesStyleCopy.detach();
-    customLinesArrowCopy.detach();
 
     auditExit(north,
               DIR_NORTH,
@@ -1702,7 +1701,7 @@ void TRoom::auditExits(const QHash<int, int> roomRemapping)
 
 void TRoom::auditExit(int& exitRoomId,                     // Reference to where exit goes to
                       const int dirCode,                   // DIR_xxx code for this exit - to access stubs & locks
-                      const QString exitKey,               // To access doors, weights and custom exit line elements
+                      const QString& exitKey,              // To access doors, weights and custom exit line elements
                       QMap<QString, int>& exitWeightsPool, // References to working copies of things - valid ones will be removed
                       QSet<int>& exitStubsPool,
                       QSet<int>& exitLocksPool,
@@ -1711,7 +1710,7 @@ void TRoom::auditExit(int& exitRoomId,                     // Reference to where
                       QMap<QString, QColor>& customLinesColorPool,
                       QMap<QString, Qt::PenStyle>& customLinesStylePool,
                       QMap<QString, bool>& customLinesArrowPool,
-                      const QHash<int, int> roomRemapping)
+                      const QHash<int, int>& roomRemapping)
 {
     // -1 is also what every absent exit holds, so a room renumbered from that
     // id cannot take the exits that led to it without taking all the others:
