@@ -1062,6 +1062,67 @@ private slots:
         QCOMPARE(movedLine.constLast(), QPointF(1.0, 6.0));
     }
 
+    // The area files its rooms by position, by how far it reaches and by how
+    // long their exits are; a dragged room has to be refiled in all of them
+    // without the area rebuilding them from scratch.
+    void test_aDraggedRoomIsFiledWhereItLanded()
+    {
+        buildMap();
+        QVERIFY(map()->setExit(kPlayerRoomId, kEastRoomId, DIR_EAST));
+        QVERIFY(map()->setExit(kEastRoomId, kPlayerRoomId, DIR_WEST));
+        showMapper(false);
+        QVERIFY(!area()->lodVisibleExitRooms(0, 1).contains(kPlayerRoomId));
+        const quint32 lodRebuilds = area()->lodExitIndexRebuildCount();
+
+        dragFromTo(pointUnitsFromCentre(1, -0.2), pointUnitsFromCentre(1, 1.8));
+
+        QCOMPARE(area()->getRoomsByPosition(1, 2, 0), QList<int>{kEastRoomId});
+        QVERIFY(area()->getRoomsByPosition(1, 0, 0).isEmpty());
+        // The area's y extremes run the other way to the rooms' y:
+        QCOMPARE(area()->min_y, -2);
+        QCOMPARE(area()->yminForZ.value(0), -2);
+        // The exit between the two rooms now spans two units, at both ends:
+        const QList<int> lodRooms = area()->lodVisibleExitRooms(0, 1);
+        QVERIFY(lodRooms.contains(kPlayerRoomId));
+        QVERIFY(lodRooms.contains(kEastRoomId));
+        QCOMPARE(area()->lodExitIndexRebuildCount(), lodRebuilds);
+    }
+
+    // Which of the rooms in a drag moves first is down to how a QSet orders
+    // them, so one can briefly land on another that has yet to move away.
+    void test_roomsDraggedTogetherCanLandWhereEachOtherWere()
+    {
+        buildMap();
+        showMapper(false);
+        dragFromTo(pointUnitsFromCentre(-1.5, 0.5), pointUnitsFromCentre(1.5, -0.5));
+        QCOMPARE(mp2dMap->mMultiSelectionSet, (QSet<int>{kWestRoomId, kPlayerRoomId, kEastRoomId}));
+
+        dragFromTo(pointUnitsFromCentre(0, -0.2), pointUnitsFromCentre(1, -0.2));
+
+        QVERIFY(area()->getRoomsByPosition(-1, 0, 0).isEmpty());
+        QCOMPARE(area()->getRoomsByPosition(0, 0, 0), QList<int>{kWestRoomId});
+        QCOMPARE(area()->getRoomsByPosition(1, 0, 0), QList<int>{kPlayerRoomId});
+        QCOMPARE(area()->getRoomsByPosition(2, 0, 0), QList<int>{kEastRoomId});
+        QCOMPARE(area()->max_x, 2);
+        QCOMPARE(area()->xmaxForZ.value(0), 2);
+    }
+
+    void test_draggingEveryRoomInTheAreaRefilesThemAll()
+    {
+        buildMap();
+        showMapper(false);
+        dragFromTo(pointUnitsFromCentre(-1.5, 1.5), pointUnitsFromCentre(1.5, -1.5));
+        QCOMPARE(mp2dMap->mMultiSelectionSet, area()->getAreaRooms());
+
+        dragFromTo(pointUnitsFromCentre(0, -0.2), pointUnitsFromCentre(1, -0.2));
+
+        QVERIFY(area()->getRoomsByPosition(-1, 0, 0).isEmpty());
+        QCOMPARE(area()->getRoomsByPosition(0, 0, 0), QList<int>{kWestRoomId});
+        QCOMPARE(area()->getRoomsByPosition(2, 0, 0), QList<int>{kEastRoomId});
+        QCOMPARE(area()->min_x, 0);
+        QCOMPARE(area()->max_x, 2);
+    }
+
     // Clicking a map label picks it up, and clicking it again puts it down.
     void test_clickingALabelPicksItUpAndClickingItAgainPutsItDown()
     {
