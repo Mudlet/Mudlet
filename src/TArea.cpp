@@ -376,6 +376,26 @@ void TArea::addRoom(int id)
     }
 }
 
+void TArea::addRooms(const QSet<int>& ids)
+{
+    bool added = false;
+    for (const int id : ids) {
+        if (!mpRoomDB->getRoom(id)) {
+            const QString error = tr("roomID=%1 does not exist, can not set properties of a non-existent room!").arg(id);
+            mpMap->mpHost->printSystemMessage(error);
+        } else if (rooms.contains(id)) {
+            qDebug() << "TArea::addRooms(" << id << ") No creation! room already exists";
+        } else {
+            rooms.insert(id);
+            added = true;
+        }
+    }
+    if (added) {
+        bumpRoomsVersion();
+    }
+    calcSpan();
+}
+
 void TArea::addRoomWithCustomLines(int id, int z)
 {
     if (!rooms.contains(id)) {
