@@ -672,6 +672,29 @@ private slots:
         QCOMPARE(pCommandLine->toPlainText(), qsl("qzxdropme"));
     }
 
+    // The whole cycle, in order: each word once, the most recent first and the
+    // registered suggestions ahead of the buffer. Case tells words apart, but the
+    // blacklist ignores it, and a match has to start at the beginning of a word.
+    void test_tabCyclesEachMatchOnceMostRecentFirst()
+    {
+        mpHost->mpConsole->print(qsl("qzyalpha qzybravo qzyalpha\n"));
+        mpHost->mpConsole->print(qsl("QZYALPHA x-qzycharlie zqzydelta qzyecho_x qzyecho, qzyalpha.\n"));
+        TCommandLine* pCommandLine = freshCommandLine();
+        QVERIFY(pCommandLine);
+        pCommandLine->addSuggestion(qsl("qzysuggested"));
+        pCommandLine->addBlacklist(qsl("QZYBRAVO"));
+
+        type(pCommandLine, qsl("say qzy"));
+        QStringList offered;
+        for (int press_ = 0; press_ < 7; ++press_) {
+            press(pCommandLine, Qt::Key_Tab);
+            offered << pCommandLine->toPlainText();
+        }
+
+        const QStringList expected{qsl("say qzysuggested"), qsl("say qzyalpha"), qsl("say qzyecho"), qsl("say qzyecho_x"), qsl("say qzycharlie"), qsl("say QZYALPHA"), qsl("say QZYALPHA")};
+        QCOMPARE(offered, expected);
+    }
+
     // The completion pool and the blacklist cannot be read back from Lua, so
     // only a Tab shows that the Lua functions filling them reached the command
     // line they named.
