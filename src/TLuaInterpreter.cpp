@@ -7824,10 +7824,9 @@ QPair<int, QString> TLuaInterpreter::startTempTimer(double timeout, const QStrin
         return qMakePair(-1, qsl("unable to compile \"%1\", reason: %2").arg(function, errMsg));
     }
 
-    const int id = pT->getID();
+    // setIsActive() starts it: starting it again would make Qt find and unregister it among every live timer
     pT->setIsActive(true);
-    pT->enableTimer(id);
-    return qMakePair(id, QString());
+    return qMakePair(pT->getID(), QString());
 }
 
 // No documentation available in wiki - internal function
