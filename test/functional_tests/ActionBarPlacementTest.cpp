@@ -18,6 +18,7 @@
  ***************************************************************************/
 
 #include <QLayout>
+#include <QMenu>
 #include <QMoveEvent>
 #include <QResizeEvent>
 #include <QTemporaryDir>
@@ -73,6 +74,56 @@ private:
         button->setIsActive(true);
         host->getActionUnit()->registerAction(button);
         return action;
+    }
+
+    // A menu holding a submenu, so a redraw replaces both a button's menu and a
+    // menu entry's menu
+    TAction* addMenuWithASubmenu(Host* host, TAction* root)
+    {
+        TAction* menu = nullptr;
+        TAction* parent = root;
+        for (const QString& name : {qsl("placementSubmenuMenu"), qsl("placementSubmenuSubmenu")}) {
+            auto* folder = new TAction(parent, host);
+            folder->setName(name);
+            folder->setIsFolder(true);
+            folder->setIsActive(true);
+            host->getActionUnit()->registerAction(folder);
+            menu = menu ? menu : folder;
+            parent = folder;
+        }
+        auto* entry = new TAction(parent, host);
+        entry->setName(qsl("placementSubmenuEntry"));
+        entry->setIsActive(true);
+        host->getActionUnit()->registerAction(entry);
+        return menu;
+    }
+
+    static qsizetype menusOnTheBarOf(Host* host, TAction* root)
+    {
+        // The widgets a redraw replaces are only queued for deletion
+        QCoreApplication::sendPostedEvents(nullptr, QEvent::DeferredDelete);
+        QWidget* bar = root->mLocation == 4 ? static_cast<QWidget*>(host->mpConsole->actionToolBar(root)) : host->mpConsole->actionEasyButtonBar(root);
+        return bar ? bar->findChildren<QMenu*>().size() : -1;
+    }
+
+    void redrawingABarWithASubmenuKeepsItsMenuCountOn(const int location)
+    {
+        startProfile(mpHostname, mpLocalhost, mpPort);
+        auto* host = mudlet::self()->getActiveHost();
+        QVERIFY2(host, "No active host available for the test.");
+
+        auto* root = makeRootBar(host, qsl("placementSubmenuBar"), location, false);
+        auto* menu = addMenuWithASubmenu(host, root);
+        host->getActionUnit()->updateAllToolbars();
+        const qsizetype drawnOnce = menusOnTheBarOf(host, root);
+        QVERIFY2(drawnOnce >= 2, "the menu and its submenu have to be on the bar first, or redrawing it proves nothing");
+
+        for (int redraw = 0; redraw < 3; ++redraw) {
+            // A floating toolbar is only redrawn once something in it has changed
+            menu->setDataChanged();
+            host->getActionUnit()->updateAllToolbars();
+        }
+        QCOMPARE(menusOnTheBarOf(host, root), drawnOnce);
     }
 
     void startProfile(const QString& hostname, const QString& address, const QString& port)
@@ -492,6 +543,57 @@ private slots:
         QVERIFY(root->mpMyChildrenList->empty());
         QVERIFY(bar);
         QCOMPARE(menuButtons(), 0);
+    }
+
+    // Each redraw builds every menu on a bar afresh, so the ones it replaces
+    // have to go with the buttons and entries they were on
+    void test_redrawingADockedBarWithASubmenuLeavesNoOldMenusBehind() { redrawingABarWithASubmenuKeepsItsMenuCountOn(0); }
+
+    void test_redrawingAFloatingToolbarWithASubmenuLeavesNoOldMenusBehind() { redrawingABarWithASubmenuKeepsItsMenuCountOn(4); }
+
+    // A switched off menu gets no button, so its old one only goes with the
+    // toolbar's old buttons and is never replaced
+    void test_aMenuSwitchedOffAndOnAgainOnAFloatingToolbarLeavesNoOldMenusBehind()
+    {
+        startProfile(mpHostname, mpLocalhost, mpPort);
+        auto* host = mudlet::self()->getActiveHost();
+        QVERIFY2(host, "No active host available for the test.");
+
+        auto* root = makeRootBar(host, qsl("placementSwitchedMenuBar"), 4, false);
+        auto* menu = addMenuWithASubmenu(host, root);
+        host->getActionUnit()->updateAllToolbars();
+        const qsizetype drawnOnce = menusOnTheBarOf(host, root);
+        QVERIFY2(drawnOnce >= 2, "the menu and its submenu have to be on the toolbar first, or switching it proves nothing");
+
+        for (const bool active : {false, true}) {
+            // As the editor does, which marks what it switches as changed
+            menu->setIsActive(active);
+            menu->setDataChanged();
+            host->getActionUnit()->updateAllToolbars();
+        }
+        QCOMPARE(menusOnTheBarOf(host, root), drawnOnce);
+    }
+
+    void test_aDeletedSubmenuLeavesNoMenuBehind()
+    {
+        startProfile(mpHostname, mpLocalhost, mpPort);
+        auto* host = mudlet::self()->getActiveHost();
+        QVERIFY2(host, "No active host available for the test.");
+
+        auto* root = makeRootBar(host, qsl("placementDeletedSubmenuBar"), 0, false);
+        auto* menu = addMenuWithASubmenu(host, root);
+        host->getActionUnit()->updateAllToolbars();
+        const qsizetype drawnOnce = menusOnTheBarOf(host, root);
+        QVERIFY2(drawnOnce >= 2, "the menu and its submenu have to be on the bar first, or deleting one proves nothing");
+
+        auto* submenu = static_cast<TAction*>(menu->mpMyChildrenList->front());
+        // As EditorDeleteItemCommand::redo() does
+        host->getActionUnit()->unregisterAction(submenu);
+        submenu->mpHost = nullptr;
+        delete submenu;
+        host->getActionUnit()->updateAllToolbars();
+
+        QCOMPARE(menusOnTheBarOf(host, root), drawnOnce - 1);
     }
 
     // Moving or resizing a floating toolbar raises its layout-changed flag, and
