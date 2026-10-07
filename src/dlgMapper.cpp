@@ -669,6 +669,15 @@ void dlgMapper::slot_setMapperPanelVisible(bool panelVisible)
     widget_panel->setVisible(panelVisible);
 }
 
+bool dlgMapper::showing3DView() const
+{
+#if defined(INCLUDE_3DMAPPER)
+    return glWidget && glWidget->isVisible();
+#else
+    return false;
+#endif
+}
+
 void dlgMapper::slot_toggle3DView(const bool is3DMode)
 {
 #if defined(INCLUDE_3DMAPPER)
