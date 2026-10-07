@@ -1964,9 +1964,19 @@ QPair<int, QString> Host::createStopWatch(const QString& name)
             }
         }
     }
+    // Ids go to the lowest free one, so while they run 1..n without a gap that is n + 1
     int newWatchId = 1;
-    while (mStopWatchMap.count(newWatchId) > 0) {
-        ++newWatchId;
+    if (!mStopWatchMap.empty() && mStopWatchMap.cbegin()->first == 1 && mStopWatchMap.crbegin()->first == static_cast<int>(mStopWatchMap.size())) {
+        newWatchId = static_cast<int>(mStopWatchMap.size()) + 1;
+    } else {
+        for (const auto& [watchId, pWatch] : mStopWatchMap) {
+            if (watchId > newWatchId) {
+                break;
+            }
+            if (watchId == newWatchId) {
+                ++newWatchId;
+            }
+        }
     }
 
     auto pStopWatch = std::make_unique<stopWatch>();
