@@ -174,6 +174,9 @@ private:
     void addCommonFields(QJsonObject& payload) const;
 
     bool clientDrivenOAuthAvailable() const;
+    // A saved character name and password, for a game that takes them, sign the player in ahead of
+    // any saved token. Shared by the replay and the promise of it, so the two cannot disagree.
+    bool savedCredentialsOutrankToken() const;
 
     Host* mpHost;
     // Every mutation of the stored sign-in goes through here, so only one sequence of store
@@ -286,6 +289,11 @@ private:
     // just removed, and a rotation re-saves it under a fresh value - leaving Forget with nothing to show
     // for itself. Not part of mConn: it must monotonically increase, never reset.
     unsigned int mForgetGeneration = 0;
+    // Whether this connection's Char.Login.Default named a way to sign in. A token arriving without one
+    // was minted by a game that never offered Char.Login here, so it is not kept: nothing would replay
+    // it. Per socket rather than in mConn, which a later Default resets; mSupportedAuthTypes cannot
+    // answer it either, as it outlives the connection that set it.
+    bool mSignInOffered = false;
     // The credential store holds the sign-in's record in the format from before the token had a key of
     // its own, with the token inside it - which a read leaves where it is, since the profile is no place
     // for a secret. Cleared once a save or a removal has dealt with that record - by a store job's
