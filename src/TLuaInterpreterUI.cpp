@@ -41,7 +41,6 @@
 #include "HostManager.h"
 #include "TAction.h"
 #include "TArea.h"
-#include "TConsole.h"
 #include "TConsoleFrontend.h"
 #include "TDebug.h"
 #include "TEvent.h"
@@ -51,7 +50,6 @@
 #include "TRoomDB.h"
 #include "TTabBar.h"
 #include "TTimer.h"
-#include "dlgIRC.h"
 #include "mapInfoContributorManager.h"
 #include "mudlet.h"
 
