@@ -304,7 +304,9 @@ void TAlias::compileRegex()
         }
         setError(qsl("<b>%1</b>").arg(tr(R"(Error: in "Pattern:", faulty regular expression, reason: "%1".)").arg(error)));
     } else {
-        mRegexJitCompiled = (pcre2_jit_compile(re.data(), PCRE2_JIT_COMPLETE) == 0);
+        // A (*NO_JIT) pattern compiles "successfully" to no JIT code, and pcre2_jit_match() then fails every subject
+        size_t jitSize = 0;
+        mRegexJitCompiled = pcre2_jit_compile(re.data(), PCRE2_JIT_COMPLETE) == 0 && pcre2_pattern_info(re.data(), PCRE2_INFO_JITSIZE, &jitSize) == 0 && jitSize > 0;
         mOK_init = true;
     }
 

@@ -31,6 +31,22 @@ describe("Alias processing", function()
 
     end)
 
+    -- pcre2_jit_compile() reports success on a (*NO_JIT) pattern without making
+    -- any JIT code, and pcre2_jit_match() then fails every subject
+    describe("a pattern starting with (*NO_JIT)", function()
+
+        it("still matches", function()
+            local captured
+            local id = tempAlias([[(*NO_JIT)^nojit_alias_probe (\w+)$]], function()
+                captured = matches[2]
+            end)
+            expandAlias("nojit_alias_probe there", false)
+            killAlias(id)
+            assert.are.equal("there", captured)
+        end)
+
+    end)
+
     describe("runaway recursion", function()
 
         it("stops an alias that keeps expanding into itself", function()
