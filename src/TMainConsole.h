@@ -69,6 +69,8 @@ public:
     TConsole* createSubConsole(const QString& name, QWidget* parent);
     TMxpFrameWidgets& mxpFrameWidgets() { return *mpMxpFrameWidgets; }
     const TMxpFrameWidgets& mxpFrameWidgets() const { return *mpMxpFrameWidgets; }
+    TMxpFrameFrontend& mxpFrames() override;
+    const TMxpFrameFrontend& mxpFrames() const override;
     bool createScrollBox(const QString& windowname, const QString& name, int x, int y, int width, int height) override;
     bool raiseWindow(const QString& name) override;
     bool lowerWindow(const QString& name) override;
