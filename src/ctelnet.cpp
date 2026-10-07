@@ -183,6 +183,8 @@ cTelnet::cTelnet(Host* pH, const QString& profileName)
     if (mAcceptableEncodings.isEmpty()) {
         mAcceptableEncodings << "UTF-8";
         mAcceptableEncodings << "EUC-KR";
+        mAcceptableEncodings << "SHIFT_JIS";
+        mAcceptableEncodings << "EUC-JP";
         mAcceptableEncodings << "GBK";
         mAcceptableEncodings << "GB18030";
         mAcceptableEncodings << "BIG5";

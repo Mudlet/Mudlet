@@ -1189,3 +1189,82 @@ describe("Tests the bulk copy of plain text runs", function()
     end)
   end)
 end)
+
+-- A game may send an SGR sequence between the two bytes of a legacy double-byte
+-- character to give its right half a different rendition. The halves' colours
+-- are checked in SplitCharacterFormatTest, as only the left half is visible to Lua.
+describe("Tests a double-byte character restyled between its bytes", function()
+  local characters = {
+    {"BIG5", bytes(0xA4, 0xA4), "中"},
+    {"BIG5-HKSCS", bytes(0xA7, 0x41), "你"},
+    {"GBK", bytes(0xD6, 0xD0), "中"},
+    {"GB18030", bytes(0xD6, 0xD0), "中"},
+    {"EUC-KR", bytes(0xC7, 0xD1), "한"},
+    {"SHIFT_JIS", bytes(0x93, 0xFA), "日"},
+    {"EUC-JP", bytes(0xC6, 0xFC), "日"},
+  }
+
+  local function split(pair)
+    return "\27[31m" .. pair:sub(1, 1) .. "\27[32m" .. pair:sub(2, 2)
+  end
+
+  for _, character in ipairs(characters) do
+    local encoding, pair, text = unpack(character)
+
+    it("decodes it whole in " .. encoding, function()
+      using(encoding)
+      assert.equals(text .. "X", decoded(split(pair) .. "X\27[0m"))
+    end)
+  end
+
+  it("lets a trigger match the whole character", function()
+    -- busted keeps only the last finally(), so this one also restores the encoding
+    local restoreEncoding = restoreServerEncoding()
+    assert.is_true(setServerEncoding("BIG5"))
+    local matches = 0
+    local trigger = tempExactMatchTrigger("enc:中X", function()
+      matches = matches + 1
+    end)
+    finally(function()
+      killTrigger(trigger)
+      restoreEncoding()
+    end)
+    decoded(split(bytes(0xA4, 0xA4)) .. "X\27[0m")
+    assert.equals(1, matches)
+  end)
+
+  it("reports the left half's colour and gives what follows the right half's", function()
+    local restoreEncoding = restoreServerEncoding()
+    assert.is_true(setServerEncoding("BIG5"))
+    finally(function()
+      deselect("main")
+      restoreEncoding()
+    end)
+    local lines, line = decodedLines("\27[31mR" .. bytes(0xA4) .. "\27[32m" .. bytes(0xA4) .. "G\27[0m")
+    assert.equals("R中G", lines[1])
+    local function colourAt(column)
+      assert.is_true(moveCursor("main", 0, line))
+      assert.is_true(selectSection("main", column, 1))
+      return {getFgColor("main")}
+    end
+    assert.same(colourAt(0), colourAt(1))
+    assert.are_not.same(colourAt(2), colourAt(1))
+  end)
+
+  it("ends the character at a control sequence that is not SGR", function()
+    using("BIG5")
+    -- X is a valid trail byte, so this also shows the lead was not held for it
+    assert.equals(replacement .. "X", decoded(bytes(0xA4) .. "\27[31m\27[2KX\27[0m"))
+  end)
+
+  it("ends the character at the end of the line", function()
+    using("BIG5")
+    assert.equals(replacement, decoded(bytes(0xA4) .. "\27[31m"))
+    assert.equals("X", decoded("\27[0mX"))
+  end)
+
+  it("ends the character at a byte that cannot be its trail", function()
+    using("EUC-KR")
+    assert.equals(replacement .. "X", decoded(bytes(0xC7) .. "\27[31mX\27[0m"))
+  end)
+end)

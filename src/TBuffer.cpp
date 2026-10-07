@@ -40,6 +40,7 @@
 #include "mudlet.h"
 
 #include <QDateTime>
+#include <QHash>
 #include <QJsonArray>
 #include <QJsonDocument>
 #include <QJsonObject>
@@ -502,7 +503,7 @@ TChar::TChar(const QColor& foreground, const QColor& background, const TChar::At
 : mFgColor(foreground.rgba())
 , mBgColor(background.rgba())
 , mFlags(flags)
-, mLinkIndex(linkIndex)
+, mLinkIndex(linkIndex > 0 ? static_cast<quint16>(linkIndex) : 0)
 {
 }
 
@@ -514,9 +515,82 @@ TChar::TChar()
 
 // Note: this operator compares ALL aspects of 'this' against 'other' which may
 // not be wanted in every case:
-bool TChar::operator==(const TChar& other)
+bool TChar::operator==(const TChar& other) const
 {
-    return mLinkIndex == other.mLinkIndex && mFgColor == other.mFgColor && mBgColor == other.mBgColor && mFlags == other.mFlags;
+    return mLinkIndex == other.mLinkIndex && mFgColor == other.mFgColor && mBgColor == other.mBgColor && mFlags == other.mFlags && mRightHalf == other.mRightHalf;
+}
+
+namespace {
+struct HalfRendition
+{
+    QRgb foreground;
+    QRgb background;
+    TChar::AttributeFlags flags;
+    bool operator==(const HalfRendition& other) const { return foreground == other.foreground && background == other.background && flags == other.flags; }
+};
+
+size_t qHash(const HalfRendition& rendition, size_t seed = 0)
+{
+    return qHashMulti(seed, rendition.foreground, rendition.background, rendition.flags.toInt());
+}
+
+// Only games that split a character's bytes with SGR sequences add to this, and
+// they use a handful of distinct renditions, so entries are never freed. Slot 0
+// is unused, as a zero index means "not split". Main thread only.
+std::vector<HalfRendition>& halfRenditions()
+{
+    static std::vector<HalfRendition> renditions(1);
+    return renditions;
+}
+
+quint16 internHalfRendition(const HalfRendition& rendition)
+{
+    static QHash<HalfRendition, quint16> indexes;
+    if (const auto found = indexes.constFind(rendition); found != indexes.cend()) {
+        return found.value();
+    }
+    auto& renditions = halfRenditions();
+    if (renditions.size() > std::numeric_limits<quint16>::max()) {
+        // Only a hostile stream gets here: its further splits are painted in one colour
+        return 0;
+    }
+    const auto index = static_cast<quint16>(renditions.size());
+    renditions.push_back(rendition);
+    indexes.insert(rendition, index);
+    return index;
+}
+} // namespace
+
+void TChar::setRightHalf(const QRgb foreground, const QRgb background, AttributeFlags flags)
+{
+    flags &= TestMask;
+    if (foreground == mFgColor && background == mBgColor && flags == (mFlags & TestMask)) {
+        mRightHalf = 0;
+        return;
+    }
+    mRightHalf = internHalfRendition({foreground, background, flags});
+}
+
+void TChar::restyleRightHalf(const QRgb* foreground, const QRgb* background, const AttributeFlags mask, const AttributeFlags flags)
+{
+    // By value: interning may reallocate the table
+    const HalfRendition right = halfRenditions()[mRightHalf];
+    setRightHalf(foreground ? *foreground : right.foreground, background ? *background : right.background, (right.flags & ~mask) | (flags & mask));
+}
+
+TChar TChar::rightHalf() const
+{
+    TChar result(*this);
+    // The copy-constructor deselects, but the half is painted as part of this character:
+    result.mFlags = mFlags;
+    if (mRightHalf) {
+        const HalfRendition& right = halfRenditions()[mRightHalf];
+        result.mFgColor = right.foreground;
+        result.mBgColor = right.background;
+        result.mFlags = (mFlags & ~TestMask) | right.flags;
+        result.mRightHalf = 0;
+    }
+    return result;
 }
 
 quint8 TChar::alternateFont() const
@@ -678,12 +752,16 @@ TBuffer::TBuffer(const TBuffer& other)
 , mServerWrapPendingSegmentLength(other.mServerWrapPendingSegmentLength)
 , mServerWrapPendingSegmentStart(other.mServerWrapPendingSegmentStart)
 , mIncompleteSequenceBytes(other.mIncompleteSequenceBytes)
+, mPendingLead(other.mPendingLead)
+, mPendingLeadFormat(other.mPendingLeadFormat)
 , mLocalGotESC(other.mLocalGotESC)
 , mLocalGotEscCharset(other.mLocalGotEscCharset)
 , mLocalGotCSI(other.mLocalGotCSI)
 , mLocalGotOSC(other.mLocalGotOSC)
 , mLocalGotString(other.mLocalGotString)
 , mLocalIncompleteSequenceBytes(other.mLocalIncompleteSequenceBytes)
+, mLocalPendingLead(other.mLocalPendingLead)
+, mLocalPendingLeadFormat(other.mLocalPendingLeadFormat)
 , mProcessingLocalFeed(other.mProcessingLocalFeed)
 , lastLoggedFromLine(other.lastLoggedFromLine)
 , lastloggedToLine(other.lastloggedToLine)
@@ -777,12 +855,16 @@ TBuffer& TBuffer::operator=(const TBuffer& other)
         mServerWrapPendingSegmentLength = other.mServerWrapPendingSegmentLength;
         mServerWrapPendingSegmentStart = other.mServerWrapPendingSegmentStart;
         mIncompleteSequenceBytes = other.mIncompleteSequenceBytes;
+        mPendingLead = other.mPendingLead;
+        mPendingLeadFormat = other.mPendingLeadFormat;
         mLocalGotESC = other.mLocalGotESC;
         mLocalGotEscCharset = other.mLocalGotEscCharset;
         mLocalGotCSI = other.mLocalGotCSI;
         mLocalGotOSC = other.mLocalGotOSC;
         mLocalGotString = other.mLocalGotString;
         mLocalIncompleteSequenceBytes = other.mLocalIncompleteSequenceBytes;
+        mLocalPendingLead = other.mLocalPendingLead;
+        mLocalPendingLeadFormat = other.mLocalPendingLeadFormat;
         mProcessingLocalFeed = other.mProcessingLocalFeed;
         lastLoggedFromLine = other.lastLoggedFromLine;
         lastloggedToLine = other.lastloggedToLine;
@@ -1012,12 +1094,14 @@ void TBuffer::resetSequenceParserState()
     mGotOSC = false;
     mGotString = false;
     mIncompleteSequenceBytes.clear();
+    mPendingLead = 0;
     mLocalGotESC = false;
     mLocalGotEscCharset = false;
     mLocalGotCSI = false;
     mLocalGotOSC = false;
     mLocalGotString = false;
     mLocalIncompleteSequenceBytes.clear();
+    mLocalPendingLead = 0;
     mWarnedAboutStringSequence = false;
 }
 
@@ -1045,6 +1129,8 @@ void TBuffer::swapParserSequenceState()
     std::swap(mGotOSC, mLocalGotOSC);
     std::swap(mGotString, mLocalGotString);
     std::swap(mIncompleteSequenceBytes, mLocalIncompleteSequenceBytes);
+    std::swap(mPendingLead, mLocalPendingLead);
+    std::swap(mPendingLeadFormat, mLocalPendingLeadFormat);
 }
 
 void TBuffer::translateToPlainText(std::string& incoming, const bool isFromServer)
@@ -1119,6 +1205,8 @@ void TBuffer::translateToPlainTextInner(std::string& incoming, const bool isFrom
         }
         // The other channel's held-over bytes are equally stale:
         mLocalIncompleteSequenceBytes.clear();
+        mPendingLead = 0;
+        mLocalPendingLead = 0;
     }
 
     if (isFromServer && !mIncompleteSequenceBytes.empty()) {
@@ -1241,6 +1329,10 @@ void TBuffer::translateToPlainTextInner(std::string& incoming, const bool isFrom
 
         if (mGotESC) {
             mGotESC = false;
+            if (Q_UNLIKELY(mPendingLead) && ch != '[') {
+                // Only SGR may come between the bytes of a double-byte character:
+                flushPendingLead();
+            }
             if (ch == '[' || ch == ']') {
                 mGotCSI = (ch == '[');
                 mGotOSC = (ch == ']');
@@ -1289,6 +1381,9 @@ void TBuffer::translateToPlainTextInner(std::string& incoming, const bool isFrom
                                                << " bytes without a final byte, discarding it to recover.";
                 localBufferPosition += 1 + spanEnd - spanStart;
                 mGotCSI = false;
+                if (Q_UNLIKELY(mPendingLead)) {
+                    flushPendingLead();
+                }
                 // Go around while loop again:
                 continue;
             }
@@ -1308,6 +1403,10 @@ void TBuffer::translateToPlainTextInner(std::string& incoming, const bool isFrom
                     commitLine(CHAR_CARRIAGE_RETURN, markerPosition, isFromServer, false);
                 }
                 return;
+            }
+
+            if (Q_UNLIKELY(mPendingLead) && localBuffer[spanEnd] != 'm') {
+                flushPendingLead();
             }
 
             // Only now that a complete sequence is in hand, test whether the
@@ -1575,6 +1674,11 @@ void TBuffer::translateToPlainTextInner(std::string& incoming, const bool isFrom
 
         // We are outside of a CSI or OSC sequence if we get to here:
 
+        // Not for a flush marker (decodableLength()), which a character's bytes may straddle:
+        if (Q_UNLIKELY(mPendingLead) && localBufferPosition < localBufferDecodableLength && !doubleByteTrail(mDecoder, static_cast<quint8>(ch))) {
+            flushPendingLead();
+        }
+
         if (localBufferPosition >= endOfLiteralEntity && mpHost->mMxpProcessor.isEnabled()) {
             if (mpHost->mTelnet.isMXPEnabled() || mpHost->getForceMXPProcessorOn()) {
                 if (mpHost->mMxpProcessor.mode() != MXP_MODE_LOCKED) {
@@ -1742,6 +1846,8 @@ void TBuffer::translateToPlainTextInner(std::string& incoming, const bool isFrom
         bool isTwoTCharsNeeded = false;
         // A decoder ran out mid-sequence and stored its bytes for the next chunk:
         bool heldIncompleteSequence = false;
+        // The byte just decoded was the trail of a character whose lead byte is in mPendingLead:
+        bool completesSplitCharacter = false;
 
         if (!encodingLookupTable.isEmpty()) {
             auto index = static_cast<quint8>(ch);
@@ -1752,16 +1858,26 @@ void TBuffer::translateToPlainTextInner(std::string& incoming, const bool isFrom
             }
         } else if (mDecoder == Decoder::Latin1) {
             mMudLine.append(QChar::fromLatin1(ch));
-        } else if (mDecoder == Decoder::Gbk) {
-            heldIncompleteSequence = !processGBSequence(localBuffer, isFromServer, false, localBufferDecodableLength, localBufferPosition, isTwoTCharsNeeded);
-        } else if (mDecoder == Decoder::Gb18030) {
-            heldIncompleteSequence = !processGBSequence(localBuffer, isFromServer, true, localBufferDecodableLength, localBufferPosition, isTwoTCharsNeeded);
-        } else if (mDecoder == Decoder::EucKr) {
-            heldIncompleteSequence = !processEUC_KRSequence(localBuffer, isFromServer, localBufferDecodableLength, localBufferPosition, isTwoTCharsNeeded);
-        } else if (mDecoder == Decoder::Big5) {
-            heldIncompleteSequence = !processBig5Sequence(localBuffer, isFromServer, localBufferDecodableLength, localBufferPosition, isTwoTCharsNeeded);
         } else if (mDecoder == Decoder::Utf8) {
             heldIncompleteSequence = !processUtf8Sequence(localBuffer, isFromServer, localBufferDecodableLength, localBufferPosition, isTwoTCharsNeeded);
+        } else if (mDecoder != Decoder::Ascii) {
+            if (Q_UNLIKELY(mPendingLead)) {
+                // Anything but a trail byte flushed the lead before getting here
+                const std::string pair{mPendingLead, ch};
+                size_t pairPosition = 0;
+                processDoubleByteSequence(pair, isFromServer, pair.size(), pairPosition, isTwoTCharsNeeded);
+                mPendingLead = 0;
+                completesSplitCharacter = true;
+            } else if (Q_UNLIKELY(localBufferPosition + 1 < localBufferDecodableLength && localBuffer[localBufferPosition + 1] == '\033') && doubleByteLead(mDecoder, static_cast<quint8>(ch))) {
+                // Some games restyle the right half of a character between its
+                // two bytes; hold the lead byte and let the SGR be parsed as usual:
+                mPendingLead = ch;
+                mPendingLeadFormat = TChar((!mIsDefaultColor && mBold) ? mForeGroundColorLight : mForeGroundColor, mBackGroundColor, computeCurrentAttributeFlags());
+                ++localBufferPosition;
+                continue;
+            } else {
+                heldIncompleteSequence = !processDoubleByteSequence(localBuffer, isFromServer, localBufferDecodableLength, localBufferPosition, isTwoTCharsNeeded);
+            }
         } else {
             // Default - no encoding case - reject anything that has MS Bit set
             // as that isn't ASCII which is what no encoding specifies!
@@ -1788,127 +1904,14 @@ void TBuffer::translateToPlainTextInner(std::string& incoming, const bool isFrom
         }
 
         TChar c((!mIsDefaultColor && mBold) ? mForeGroundColorLight : mForeGroundColor, mBackGroundColor, computeCurrentAttributeFlags());
-
-        if (mHyperlinkActive) {
-            c.mLinkIndex = mCurrentHyperlinkLinkId;
-
-            // Store the original ANSI-formatted character before applying JSON styling
-            // This is needed for ANSI base restoration when pseudo-classes are inactive
-            if (!mLinkOriginalCharacters.contains(mCurrentHyperlinkLinkId)) {
-                mLinkOriginalCharacters[mCurrentHyperlinkLinkId] = c;
-#if defined(DEBUG_OSC_PROCESSING)
-                qDebug().nospace().noquote() << "TBuffer::translateToPlainText(): Stored original character for link " << mCurrentHyperlinkLinkId << " with ANSI colors: fg=" << c.foreground().name()
-                                             << " bg=" << c.background().name() << " flags=" << c.mFlags;
-#endif
-            }
-
-            // Apply base styling first (if any)
-            if (mCurrentHyperlinkStyling.hasForegroundColor) {
-                c.setForeground(mCurrentHyperlinkStyling.foregroundColor);
-            }
-
-            if (mCurrentHyperlinkStyling.hasBackgroundColor) {
-                c.setBackground(mCurrentHyperlinkStyling.backgroundColor);
-            }
-
-            // For preset-only links, base styling may be empty but pseudo-class styling exists
-            // Apply effective styling with :link pseudo-class to ensure preset colors show
-            Mudlet::HyperlinkStyling effectiveStyling = getEffectiveHyperlinkStyling(mCurrentHyperlinkLinkId);
-            if (effectiveStyling.hasCustomStyling) {
-                if (effectiveStyling.hasForegroundColor) {
-                    c.setForeground(effectiveStyling.foregroundColor);
-                }
-                if (effectiveStyling.hasBackgroundColor) {
-                    c.setBackground(effectiveStyling.backgroundColor);
-                }
-                if (effectiveStyling.isBold) {
-                    c.mFlags |= TChar::Bold;
-                }
-                if (effectiveStyling.isItalic) {
-                    c.mFlags |= TChar::Italic;
-                }
-                if (effectiveStyling.isUnderlined) {
-                    c.mFlags |= TChar::Underline;
-                    switch (effectiveStyling.underlineStyle) {
-                    case Mudlet::HyperlinkStyling::UnderlineWavy:
-                        c.mFlags |= TChar::UnderlineWavy;
-                        break;
-                    case Mudlet::HyperlinkStyling::UnderlineDotted:
-                        c.mFlags |= TChar::UnderlineDotted;
-                        break;
-                    case Mudlet::HyperlinkStyling::UnderlineDashed:
-                        c.mFlags |= TChar::UnderlineDashed;
-                        break;
-                    case Mudlet::HyperlinkStyling::UnderlineSolid:
-                    case Mudlet::HyperlinkStyling::UnderlineNone:
-                    default:
-                        break;
-                    }
-                }
-                if (effectiveStyling.isOverlined) {
-                    c.mFlags |= TChar::Overline;
-                }
-                if (effectiveStyling.isStrikeOut) {
-                    c.mFlags |= TChar::StrikeOut;
-                }
-            }
-
-            // Only re-apply base styling if effective pseudo-class styling is not present
-            // This prevents base decoration flags from overriding pseudo-class cascade decisions
-            if (!effectiveStyling.hasCustomStyling) {
-                if (mCurrentHyperlinkStyling.isUnderlined) {
-                    c.mFlags |= TChar::Underline;
-
-                    switch (mCurrentHyperlinkStyling.underlineStyle) {
-                    case Mudlet::HyperlinkStyling::UnderlineWavy:
-                        c.mFlags |= TChar::UnderlineWavy;
-                        break;
-                    case Mudlet::HyperlinkStyling::UnderlineDotted:
-                        c.mFlags |= TChar::UnderlineDotted;
-                        break;
-                    case Mudlet::HyperlinkStyling::UnderlineDashed:
-                        c.mFlags |= TChar::UnderlineDashed;
-                        break;
-                    case Mudlet::HyperlinkStyling::UnderlineSolid:
-                    case Mudlet::HyperlinkStyling::UnderlineNone:
-                    default:
-                        break;
-                    }
-                }
-
-                if (mCurrentHyperlinkStyling.isOverlined) {
-                    c.mFlags |= TChar::Overline;
-                }
-
-                if (mCurrentHyperlinkStyling.isStrikeOut) {
-                    c.mFlags |= TChar::StrikeOut;
-                }
-
-                if (mCurrentHyperlinkStyling.isBold) {
-                    c.mFlags |= TChar::Bold;
-                }
-
-                if (mCurrentHyperlinkStyling.isItalic) {
-                    c.mFlags |= TChar::Italic;
-                }
-            }
-
-            // Only apply underline if explicitly set in styling (respects OSC 8 default of no underline)
-            // Note: This differs from other Mudlet hyperlinks which default to underlined
+        if (Q_UNLIKELY(completesSplitCharacter)) {
+            // Styled before the SGR that came between the bytes, which styles the right half:
+            const TChar rightHalf(c);
+            c = mPendingLeadFormat;
+            c.setRightHalf(rightHalf);
         }
 
-        if (mpHost->mMxpClient.isInLinkMode()) {
-            c.mLinkIndex = mLinkStore.getCurrentLinkID();
-            c.mFlags |= TChar::Underline;
-        }
-
-        if (mpHost->mMxpClient.hasFgColor()) {
-            c.setForeground(mpHost->mMxpClient.getFgColor());
-        }
-
-        if (mpHost->mMxpClient.hasBgColor()) {
-            c.setBackground(mpHost->mMxpClient.getBgColor());
-        }
+        styleForCurrentLink(c);
 
         if (isTwoTCharsNeeded) {
             // CHECK: Do we need to duplicate stuff for mMXP_LINK_MODE - yes I think we do:
@@ -1930,7 +1933,7 @@ void TBuffer::translateToPlainTextInner(std::string& incoming, const bool isFrom
                     mCurrentHyperlinkStartColumn = static_cast<int>(mMudBuffer.size()) - 1; // -1 because we just added 1 char
                 }
                 mCurrentHyperlinkText += QString(QChar(ch));
-            } else if (!(mpHost->mMxpProcessor.isEnabled() && (mpHost->mTelnet.isMXPEnabled() || mpHost->getForceMXPProcessorOn()))) {
+            } else if (!completesSplitCharacter && !(mpHost->mMxpProcessor.isEnabled() && (mpHost->mTelnet.isMXPEnabled() || mpHost->getForceMXPProcessorOn()))) {
                 // Plain text bytes decode to themselves with the format just computed, so a run takes one
                 // append and one fill. Not for MXP, which must see every byte, nor hyperlink text, built per character.
                 size_t runEnd = localBufferPosition + 1;
@@ -5541,12 +5544,9 @@ void TBuffer::paste(QPoint& P, const TBuffer& chunk)
         // Character at a time because insertInLine() applies a single TChar to
         // the whole run it is given, and every character here can differ
         QPoint P_current(x + cx, y);
-        insertInLine(P_current,
-                     QString(chunk.lineBuffer.at(0).at(cx)),
-                     TChar(chunk.buffer.at(0).at(cx).foreground(),
-                           chunk.buffer.at(0).at(cx).background(),
-                           chunk.buffer.at(0).at(cx).mFlags,
-                           remapLinkId(chunk.mLinkStore, chunk.buffer.at(0).at(cx).linkIndex(), remappedLinkIds)));
+        TChar format(chunk.buffer.at(0).at(cx));
+        format.mLinkIndex = remapLinkId(chunk.mLinkStore, format.linkIndex(), remappedLinkIds);
+        insertInLine(P_current, QString(chunk.lineBuffer.at(0).at(cx)), format);
     }
 }
 
@@ -6730,7 +6730,7 @@ bool TBuffer::applyAttribute(const QPoint& P_begin, const QPoint& P_end, const T
                         return true;
                     }
                 }
-                buffer.at(y).at(x).mFlags = (buffer.at(y).at(x).mFlags & ~(attributes)) | (state ? attributes : TChar::None);
+                buffer.at(y).at(x).setAttributes(attributes, state);
                 ++x;
             }
         }
@@ -7926,6 +7926,255 @@ bool TBuffer::processEUC_KRSequence(const std::string& bufferData, const bool is
     return true;
 }
 
+bool TBuffer::processDoubleByteSequence(const std::string& data, const bool isFromServer, const size_t length, size_t& position, bool& isNonBmpCharacter)
+{
+    switch (mDecoder) {
+    case Decoder::Gbk:
+        return processGBSequence(data, isFromServer, false, length, position, isNonBmpCharacter);
+    case Decoder::Gb18030:
+        return processGBSequence(data, isFromServer, true, length, position, isNonBmpCharacter);
+    case Decoder::EucKr:
+        return processEUC_KRSequence(data, isFromServer, length, position, isNonBmpCharacter);
+    case Decoder::Big5:
+        return processBig5Sequence(data, isFromServer, length, position, isNonBmpCharacter);
+    case Decoder::ShiftJis:
+    case Decoder::EucJp:
+        return processJapaneseSequence(data, isFromServer, length, position, isNonBmpCharacter);
+    default:
+        Q_UNREACHABLE_RETURN(true);
+    }
+}
+
+// The widest ranges the double-byte decoders accept, which decide the validity
+// of the pair. Only full-width characters are split: not GB18030's four-byte
+// sequences, EUC-JP's three-byte ones, nor half-width katakana.
+bool TBuffer::doubleByteLead(const Decoder decoder, const quint8 byte)
+{
+    switch (decoder) {
+    case Decoder::Gbk:
+    case Decoder::Gb18030:
+    case Decoder::Big5:
+        return byte >= 0x81 && byte <= 0xFE;
+    case Decoder::ShiftJis:
+        return (byte >= 0x81 && byte <= 0x9F) || (byte >= 0xE0 && byte <= 0xFC);
+    case Decoder::EucKr:
+    case Decoder::EucJp:
+        return byte >= 0xA1 && byte <= 0xFE;
+    default:
+        return false;
+    }
+}
+
+bool TBuffer::doubleByteTrail(const Decoder decoder, const quint8 byte)
+{
+    switch (decoder) {
+    case Decoder::Gbk:
+    case Decoder::Gb18030:
+        return byte >= 0x40 && byte <= 0xFE && byte != 0x7F;
+    case Decoder::Big5:
+        return (byte >= 0x40 && byte <= 0x7E) || (byte >= 0xA1 && byte <= 0xFE);
+    case Decoder::ShiftJis:
+        return byte >= 0x40 && byte <= 0xFC && byte != 0x7F;
+    case Decoder::EucKr:
+    case Decoder::EucJp:
+        return byte >= 0xA1 && byte <= 0xFE;
+    default:
+        return false;
+    }
+}
+
+bool TBuffer::processJapaneseSequence(const std::string& data, const bool isFromServer, const size_t length, size_t& position, bool& isNonBmpCharacter)
+{
+    isNonBmpCharacter = false;
+    const auto lead = static_cast<quint8>(data[position]);
+    // Printable ASCII is itself in both encodings; C0 and DEL go through the codec, which may remap them:
+    if (lead >= 0x20 && lead < 0x7F) {
+        mMudLine.append(QChar::fromLatin1(lead));
+        return true;
+    }
+    size_t count = 1;
+    if (mDecoder == Decoder::ShiftJis) {
+        if (doubleByteLead(Decoder::ShiftJis, lead)) {
+            count = 2;
+        }
+    } else if (lead == 0x8F) {
+        count = 3;
+    } else if (lead == 0x8E || doubleByteLead(Decoder::EucJp, lead)) {
+        count = 2;
+    }
+    for (size_t offset = 1; offset < count; ++offset) {
+        if (position + offset >= length) {
+            if (isFromServer) {
+                mIncompleteSequenceBytes = data.substr(position, length - position);
+                return false;
+            }
+            mMudLine.append(QChar::ReplacementCharacter);
+            position = length - 1;
+            return true;
+        }
+        const auto trail = static_cast<quint8>(data[position + offset]);
+        // EUC-JP's half-width katakana follow 0x8E:
+        const bool valid = (mDecoder == Decoder::EucJp && lead == 0x8E) ? (trail >= 0xA1 && trail <= 0xDF) : doubleByteTrail(mDecoder, trail);
+        if (!valid) {
+            // The byte that broke the sequence starts the next one:
+            mMudLine.append(QChar::ReplacementCharacter);
+            position += offset - 1;
+            return true;
+        }
+    }
+    QString decoded;
+    decodeMultibyteSequence(QByteArrayView(data.data() + position, count), decoded);
+    if (decoded.isEmpty() || decoded.contains(QChar::ReplacementCharacter)) {
+        mMudLine.append(QChar::ReplacementCharacter);
+    } else {
+        mMudLine.append(decoded);
+        isNonBmpCharacter = decoded.size() == 2;
+    }
+    position += count - 1;
+    return true;
+}
+
+// The OSC 8 hyperlink or MXP link the game is sending, and MXP colors, style every character decoded while they last:
+void TBuffer::styleForCurrentLink(TChar& c)
+{
+    if (mHyperlinkActive) {
+        c.mLinkIndex = mCurrentHyperlinkLinkId;
+
+        // Store the original ANSI-formatted character before applying JSON styling
+        // This is needed for ANSI base restoration when pseudo-classes are inactive
+        if (!mLinkOriginalCharacters.contains(mCurrentHyperlinkLinkId)) {
+            mLinkOriginalCharacters[mCurrentHyperlinkLinkId] = c;
+#if defined(DEBUG_OSC_PROCESSING)
+            qDebug().nospace().noquote() << "TBuffer::translateToPlainText(): Stored original character for link " << mCurrentHyperlinkLinkId << " with ANSI colors: fg=" << c.foreground().name()
+                                         << " bg=" << c.background().name() << " flags=" << c.mFlags;
+#endif
+        }
+
+        // Apply base styling first (if any)
+        if (mCurrentHyperlinkStyling.hasForegroundColor) {
+            c.setForeground(mCurrentHyperlinkStyling.foregroundColor);
+        }
+
+        if (mCurrentHyperlinkStyling.hasBackgroundColor) {
+            c.setBackground(mCurrentHyperlinkStyling.backgroundColor);
+        }
+
+        // For preset-only links, base styling may be empty but pseudo-class styling exists
+        // Apply effective styling with :link pseudo-class to ensure preset colors show
+        Mudlet::HyperlinkStyling effectiveStyling = getEffectiveHyperlinkStyling(mCurrentHyperlinkLinkId);
+        if (effectiveStyling.hasCustomStyling) {
+            if (effectiveStyling.hasForegroundColor) {
+                c.setForeground(effectiveStyling.foregroundColor);
+            }
+            if (effectiveStyling.hasBackgroundColor) {
+                c.setBackground(effectiveStyling.backgroundColor);
+            }
+            if (effectiveStyling.isBold) {
+                c.setAttributes(TChar::Bold, true);
+            }
+            if (effectiveStyling.isItalic) {
+                c.setAttributes(TChar::Italic, true);
+            }
+            if (effectiveStyling.isUnderlined) {
+                c.setAttributes(TChar::Underline, true);
+                switch (effectiveStyling.underlineStyle) {
+                case Mudlet::HyperlinkStyling::UnderlineWavy:
+                    c.setAttributes(TChar::UnderlineWavy, true);
+                    break;
+                case Mudlet::HyperlinkStyling::UnderlineDotted:
+                    c.setAttributes(TChar::UnderlineDotted, true);
+                    break;
+                case Mudlet::HyperlinkStyling::UnderlineDashed:
+                    c.setAttributes(TChar::UnderlineDashed, true);
+                    break;
+                case Mudlet::HyperlinkStyling::UnderlineSolid:
+                case Mudlet::HyperlinkStyling::UnderlineNone:
+                default:
+                    break;
+                }
+            }
+            if (effectiveStyling.isOverlined) {
+                c.setAttributes(TChar::Overline, true);
+            }
+            if (effectiveStyling.isStrikeOut) {
+                c.setAttributes(TChar::StrikeOut, true);
+            }
+        }
+
+        // Only re-apply base styling if effective pseudo-class styling is not present
+        // This prevents base decoration flags from overriding pseudo-class cascade decisions
+        if (!effectiveStyling.hasCustomStyling) {
+            if (mCurrentHyperlinkStyling.isUnderlined) {
+                c.setAttributes(TChar::Underline, true);
+
+                switch (mCurrentHyperlinkStyling.underlineStyle) {
+                case Mudlet::HyperlinkStyling::UnderlineWavy:
+                    c.setAttributes(TChar::UnderlineWavy, true);
+                    break;
+                case Mudlet::HyperlinkStyling::UnderlineDotted:
+                    c.setAttributes(TChar::UnderlineDotted, true);
+                    break;
+                case Mudlet::HyperlinkStyling::UnderlineDashed:
+                    c.setAttributes(TChar::UnderlineDashed, true);
+                    break;
+                case Mudlet::HyperlinkStyling::UnderlineSolid:
+                case Mudlet::HyperlinkStyling::UnderlineNone:
+                default:
+                    break;
+                }
+            }
+
+            if (mCurrentHyperlinkStyling.isOverlined) {
+                c.setAttributes(TChar::Overline, true);
+            }
+
+            if (mCurrentHyperlinkStyling.isStrikeOut) {
+                c.setAttributes(TChar::StrikeOut, true);
+            }
+
+            if (mCurrentHyperlinkStyling.isBold) {
+                c.setAttributes(TChar::Bold, true);
+            }
+
+            if (mCurrentHyperlinkStyling.isItalic) {
+                c.setAttributes(TChar::Italic, true);
+            }
+        }
+
+        // Only apply underline if explicitly set in styling (respects OSC 8 default of no underline)
+        // Note: This differs from other Mudlet hyperlinks which default to underlined
+    }
+
+    if (mpHost->mMxpClient.isInLinkMode()) {
+        c.mLinkIndex = mLinkStore.getCurrentLinkID();
+        c.setAttributes(TChar::Underline, true);
+    }
+
+    if (mpHost->mMxpClient.hasFgColor()) {
+        c.setForeground(mpHost->mMxpClient.getFgColor());
+    }
+
+    if (mpHost->mMxpClient.hasBgColor()) {
+        c.setBackground(mpHost->mMxpClient.getBgColor());
+    }
+}
+
+void TBuffer::flushPendingLead()
+{
+    // What came after the lead byte was not its trail byte:
+    mPendingLead = 0;
+    mMudLine.append(QChar::ReplacementCharacter);
+    TChar c(mPendingLeadFormat);
+    styleForCurrentLink(c);
+    mMudBuffer.push_back(c);
+    if (mHyperlinkActive) {
+        if (mCurrentHyperlinkText.isEmpty()) {
+            mCurrentHyperlinkStartColumn = static_cast<int>(mMudBuffer.size()) - 1;
+        }
+        mCurrentHyperlinkText += QChar::ReplacementCharacter;
+    }
+}
+
 TBuffer::Decoder TBuffer::decoderFor(const QByteArray& encoding)
 {
     if (encoding == "UTF-8") {
@@ -7946,6 +8195,12 @@ TBuffer::Decoder TBuffer::decoderFor(const QByteArray& encoding)
     if (encoding == "BIG5" || encoding == "BIG5-HKSCS") {
         return Decoder::Big5;
     }
+    if (encoding == "SHIFT_JIS") {
+        return Decoder::ShiftJis;
+    }
+    if (encoding == "EUC-JP") {
+        return Decoder::EucJp;
+    }
     return Decoder::Ascii;
 }
 
@@ -7956,6 +8211,8 @@ QStringDecoder TBuffer::multibyteDecoderFor(const Decoder decoder, const QByteAr
     case Decoder::Gb18030:
     case Decoder::EucKr:
     case Decoder::Big5:
+    case Decoder::ShiftJis:
+    case Decoder::EucJp:
         return QStringDecoder(encoding.constData());
     default:
         return {};
@@ -7983,7 +8240,7 @@ void TBuffer::encodingChanged(const QByteArray& newEncoding)
         mEncoding = newEncoding;
         mDecoder = decoderFor(mEncoding);
         mMultibyteDecoder = multibyteDecoderFor(mDecoder, mEncoding);
-        if (mEncoding == "GBK" || mEncoding == "GB18030" || mEncoding == "BIG5" || mEncoding == "BIG5-HKSCS" || mEncoding == "EUC-KR") {
+        if (mEncoding == "GBK" || mEncoding == "GB18030" || mEncoding == "BIG5" || mEncoding == "BIG5-HKSCS" || mEncoding == "EUC-KR" || mEncoding == "SHIFT_JIS" || mEncoding == "EUC-JP") {
             if (!TEncodingHelper::isEncodingAvailable(mEncoding)) {
                 qCritical().nospace() << "encodingChanged(" << newEncoding << ") ERROR: This encoding cannot be handled as a required codec was not found in the system!";
             } else {
@@ -8958,6 +9215,7 @@ void TBuffer::updateLinkCharacters(int linkIndex)
                     // Restore ALL ANSI formatting flags including decorations,
                     // keeping the character selected if it is now
                     tchar.mFlags = (tchar.mFlags & TChar::Selected) | (originalChar.mFlags & ~TChar::Selected);
+                    tchar.mRightHalf = originalChar.mRightHalf;
 
                     // DON'T continue here - let the pseudo-class styling below override the ANSI base
                     // This allows e.g. :visited{color:#bb66dd} to work with ANSI base formatting
@@ -8986,53 +9244,53 @@ void TBuffer::updateLinkCharacters(int linkIndex)
 
                 // Update text decorations (only for CSS styling, not ANSI-base)
                 if (effectiveStyling.isUnderlined) {
-                    tchar.mFlags |= TChar::Underline;
+                    tchar.setAttributes(TChar::Underline, true);
 
                     // Apply underline style
                     // First clear any existing underline style flags
-                    tchar.mFlags &= ~(TChar::UnderlineWavy | TChar::UnderlineDotted | TChar::UnderlineDashed);
+                    tchar.setAttributes(TChar::UnderlineWavy | TChar::UnderlineDotted | TChar::UnderlineDashed, false);
 
                     switch (effectiveStyling.underlineStyle) {
                     case Mudlet::HyperlinkStyling::UnderlineWavy:
-                        tchar.mFlags |= TChar::UnderlineWavy;
+                        tchar.setAttributes(TChar::UnderlineWavy, true);
                         break;
                     case Mudlet::HyperlinkStyling::UnderlineDotted:
-                        tchar.mFlags |= TChar::UnderlineDotted;
+                        tchar.setAttributes(TChar::UnderlineDotted, true);
                         break;
                     case Mudlet::HyperlinkStyling::UnderlineDashed:
-                        tchar.mFlags |= TChar::UnderlineDashed;
+                        tchar.setAttributes(TChar::UnderlineDashed, true);
                         break;
                     default:
                         break;
                     }
                 } else {
-                    tchar.mFlags &= ~TChar::Underline;
-                    tchar.mFlags &= ~(TChar::UnderlineWavy | TChar::UnderlineDotted | TChar::UnderlineDashed);
+                    tchar.setAttributes(TChar::Underline, false);
+                    tchar.setAttributes(TChar::UnderlineWavy | TChar::UnderlineDotted | TChar::UnderlineDashed, false);
                 }
 
                 if (effectiveStyling.isOverlined) {
-                    tchar.mFlags |= TChar::Overline;
+                    tchar.setAttributes(TChar::Overline, true);
                 } else {
-                    tchar.mFlags &= ~TChar::Overline;
+                    tchar.setAttributes(TChar::Overline, false);
                 }
 
                 if (effectiveStyling.isStrikeOut) {
-                    tchar.mFlags |= TChar::StrikeOut;
+                    tchar.setAttributes(TChar::StrikeOut, true);
                 } else {
-                    tchar.mFlags &= ~TChar::StrikeOut;
+                    tchar.setAttributes(TChar::StrikeOut, false);
                 }
 
                 // Update bold and italic
                 if (effectiveStyling.isBold) {
-                    tchar.mFlags |= TChar::Bold;
+                    tchar.setAttributes(TChar::Bold, true);
                 } else {
-                    tchar.mFlags &= ~TChar::Bold;
+                    tchar.setAttributes(TChar::Bold, false);
                 }
 
                 if (effectiveStyling.isItalic) {
-                    tchar.mFlags |= TChar::Italic;
+                    tchar.setAttributes(TChar::Italic, true);
                 } else {
-                    tchar.mFlags &= ~TChar::Italic;
+                    tchar.setAttributes(TChar::Italic, false);
                 }
             }
         }

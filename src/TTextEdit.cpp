@@ -613,8 +613,9 @@ void TTextEdit::paintBackgrounds(QPainter& painter, const LineLayout& layout, co
     for (const GraphemeRun& run : layout) {
         // Filling a cell just cleared to its own color changes nothing, as long as
         // no ink has been painted into it since, which is for the caller to ensure.
-        if (run.fillsBackground && !(run.bgColor == clearedTo && cleared.contains(run.textRect))) {
-            painter.fillRect(run.textRect, run.bgColor);
+        const QRect& cell = run.halfRect.isNull() ? run.textRect : run.halfRect;
+        if (run.fillsBackground && !(run.bgColor == clearedTo && cleared.contains(cell))) {
+            painter.fillRect(cell, run.bgColor);
         }
     }
 }
@@ -630,9 +631,21 @@ int TTextEdit::paintForegrounds(QPainter& painter, TGlyphCache& glyphCache, cons
         painter.setClipRect(clip);
     }
     for (const GraphemeRun& run : layout) {
-        if (run.style) {
-            inkBottom = std::max(inkBottom, paintGraphemeForeground(painter, glyphCache, run));
+        if (!run.style) {
+            continue;
         }
+        if (Q_LIKELY(run.halfRect.isNull())) {
+            inkBottom = std::max(inkBottom, paintGraphemeForeground(painter, glyphCache, run, *run.style));
+            continue;
+        }
+        // Queued glyphs are drawn under whatever clip is set when they are flushed
+        glyphCache.flush(painter);
+        painter.save();
+        // Clipped sideways only, so ink overflowing the line above or below still shows:
+        painter.setClipRect(QRect(run.halfRect.x(), painter.window().y(), run.halfRect.width(), painter.window().height()), Qt::IntersectClip);
+        inkBottom = std::max(inkBottom, paintGraphemeForeground(painter, glyphCache, run, run.rightHalf ? run.style->rightHalf() : *run.style));
+        glyphCache.flush(painter);
+        painter.restore();
     }
     glyphCache.flush(painter);
     if (!clip.isNull()) {
@@ -957,6 +970,20 @@ int TTextEdit::layoutGrapheme(LineLayout& layout, const QPoint& cursor, QStringV
         run.textRect = QRect(mFontWidth * cursor.x(), mFontHeight * cursor.y(), mFontWidth * charWidth, mFontHeight);
     }
     const bool caretIsHere = mpHost && mpHost->caretEnabled() && mCaretLine == line && mCaretColumn == column;
+    resolveRunColors(run, charStyle, caretIsHere);
+    if (Q_UNLIKELY(charStyle.hasSplitFormat()) && charWidth == 2) {
+        run.halfRect = QRect(run.textRect.x(), run.textRect.y(), mFontWidth, mFontHeight);
+        layout.push_back(run);
+        run.rightHalf = true;
+        run.halfRect.translate(mFontWidth, 0);
+        resolveRunColors(run, charStyle.rightHalf(), caretIsHere);
+    }
+    layout.push_back(std::move(run));
+    return charWidth;
+}
+
+void TTextEdit::resolveRunColors(GraphemeRun& run, const TChar& charStyle, const bool caretIsHere) const
+{
     const bool swapColors = charStyle.isReversed() != (charStyle.isSelected() != caretIsHere);
     if (Q_UNLIKELY(charStyle.isFound())) {
         if (Q_UNLIKELY(swapColors)) {
@@ -998,16 +1025,13 @@ int TTextEdit::layoutGrapheme(LineLayout& layout, const QPoint& cursor, QStringV
     // one only below the deepest ink painted so far. Other console types skip cells
     // matching the console background so that the widget underneath shows through.
     run.fillsBackground = !run.textRect.isNull() && (mpConsole->getType() == TConsole::MainConsole || run.bgColor != mpConsole->getConsoleBgColor());
-    layout.push_back(std::move(run));
-    return charWidth;
 }
 
-int TTextEdit::paintGraphemeForeground(QPainter& painter, TGlyphCache& glyphCache, const GraphemeRun& run) const
+int TTextEdit::paintGraphemeForeground(QPainter& painter, TGlyphCache& glyphCache, const GraphemeRun& run, const TChar& charStyle) const
 {
     const QColor& fgColor = run.fgColor;
     const QRect& textRect = run.textRect;
     const QStringView grapheme = run.grapheme;
-    const TChar& charStyle = *run.style;
     const TChar::AttributeFlags attributes = charStyle.allDisplayAttributes();
     const bool isBold = attributes & TChar::Bold;
     const bool isBlinking = attributes & (TChar::Blink | TChar::FastBlink);
