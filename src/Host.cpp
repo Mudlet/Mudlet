@@ -5161,7 +5161,7 @@ std::pair<bool, QString> Host::openWindow(const QString& name, bool loadLayout, 
                "Host::openWindow(...)",
                "An existing console with a dock was expected to be a User Window but it isn't");
 
-    return mpConsole->openUserWindow(name, loadLayout, autoDock, area);
+    return consoleFrontend()->openUserWindow(name, loadLayout, autoDock, area);
 }
 
 // Must refuse up front: TMainConsole::createMiniConsole(), createScrollBox() and createLabel() put an
@@ -5194,8 +5194,8 @@ std::pair<bool, QString> Host::createMiniConsole(const QString& windowname, cons
         // reusing an existing mini console causes the lua function to seem to
         // fail - is this as per Wiki?
         // This part was causing problems with UserWindows
-        mpConsole->resizeSubConsole(name, width, height);
-        mpConsole->moveSubConsole(name, x, y);
+        consoleFrontend()->resizeSubConsole(name, width, height);
+        consoleFrontend()->moveSubConsole(name, x, y);
         return {false, qsl("miniconsole '%1' already exists, moving/resizing '%1'").arg(name)};
     }
     return {false, qsl("miniconsole/userwindow '%1' already exists").arg(name)};
@@ -5212,12 +5212,12 @@ std::pair<bool, QString> Host::createScrollBox(const QString& windowname, const 
     }
 
     if (!mWindowRegistry.hasScrollBox(name)) {
-        if (mpConsole->createScrollBox(windowname, name, x, y, width, height)) {
+        if (consoleFrontend()->createScrollBox(windowname, name, x, y, width, height)) {
             return {true, QString()};
         }
     } else {
-        mpConsole->resizePlainWindow(name, width, height);
-        mpConsole->movePlainWindow(name, x, y);
+        consoleFrontend()->resizePlainWindow(name, width, height);
+        consoleFrontend()->movePlainWindow(name, x, y);
         return {false, qsl("scrollBox '%1' already exists, moving/resizing '%1'").arg(name)};
     }
     return {false, qsl("scrollBox '%1' already exists").arg(name)};
@@ -5323,7 +5323,7 @@ bool Host::createBuffer(const QString& name)
     }
 
     if (!mWindowRegistry.hasSubConsole(name)) {
-        return mpConsole->createBuffer(name);
+        return consoleFrontend()->createBuffer(name);
     }
     return false;
 }
@@ -5354,11 +5354,11 @@ bool Host::showWindow(const QString& name)
     }
 
     if (mWindowRegistry.hasSubConsole(name)) {
-        return mpConsole->showSubConsole(name);
+        return consoleFrontend()->showSubConsole(name);
     }
 
     if (mWindowRegistry.hasPlainWindow(name)) {
-        return mpConsole->showPlainWindow(name);
+        return consoleFrontend()->showPlainWindow(name);
     }
 
     return false;
@@ -5376,11 +5376,11 @@ bool Host::hideWindow(const QString& name)
     }
 
     if (mWindowRegistry.hasSubConsole(name)) {
-        return mpConsole->hideSubConsole(name);
+        return consoleFrontend()->hideSubConsole(name);
     }
 
     if (mWindowRegistry.hasPlainWindow(name)) {
-        return mpConsole->hidePlainWindow(name);
+        return consoleFrontend()->hidePlainWindow(name);
     }
 
     return false;
@@ -5397,11 +5397,11 @@ bool Host::resizeWindow(const QString& name, int x1, int y1)
     }
 
     if (mWindowRegistry.hasSubConsole(name)) {
-        return mpConsole->resizeSubConsole(name, x1, y1);
+        return consoleFrontend()->resizeSubConsole(name, x1, y1);
     }
 
     if (mWindowRegistry.hasPlainWindow(name)) {
-        return mpConsole->resizePlainWindow(name, x1, y1);
+        return consoleFrontend()->resizePlainWindow(name, x1, y1);
     }
 
     return false;
@@ -5418,11 +5418,11 @@ bool Host::moveWindow(const QString& name, int x1, int y1)
     }
 
     if (mWindowRegistry.hasSubConsole(name)) {
-        return mpConsole->moveSubConsole(name, x1, y1);
+        return consoleFrontend()->moveSubConsole(name, x1, y1);
     }
 
     if (mWindowRegistry.hasPlainWindow(name)) {
-        return mpConsole->movePlainWindow(name, x1, y1);
+        return consoleFrontend()->movePlainWindow(name, x1, y1);
     }
 
     return false;
@@ -5459,7 +5459,7 @@ std::pair<bool, QString> Host::setWindow(const QString& windowname, const QStrin
         return {false, qsl("element '%1' not found").arg(name)};
     }
 
-    if (mpConsole->reparentWindow(windowname, name, x1, y1, show)) {
+    if (consoleFrontend()->reparentWindow(windowname, name, x1, y1, show)) {
         return {true, QString()};
     }
 
@@ -5529,7 +5529,7 @@ bool Host::closeWindow(const QString& name)
     // Unlike hideWindow() this one is deaf to labels, scroll boxes, command
     // lines and text boxes - only a sub-console can be closed by name
     if (mWindowRegistry.hasSubConsole(name)) {
-        return mpConsole->hideSubConsole(name);
+        return consoleFrontend()->hideSubConsole(name);
     }
     return false;
 }
