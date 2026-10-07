@@ -53,9 +53,15 @@
 
 using namespace std::chrono_literals;
 
-TMapViewFrontend* TMap::mapViewFrontend() const
+dlgMapper* TMap::mapper() const
 {
     return mpMapper.data();
+}
+
+void TMap::setMapper(dlgMapper* pMapper)
+{
+    mpMapper = pMapper;
+    mpMapViewFrontend = pMapper;
 }
 
 dlgMapper::dlgMapper(QWidget* parent, Host* pH, TMap* pM)
@@ -148,7 +154,7 @@ dlgMapper::dlgMapper(QWidget* parent, Host* pH, TMap* pM)
 
 bool dlgMapper::drawsTheMap() const
 {
-    return mpMap && mpMap->mpMapper == this;
+    return mpMap && mpMap->mapper() == this;
 }
 
 void dlgMapper::connectMapCues()
@@ -663,7 +669,7 @@ void dlgMapper::slot_togglePanel()
     // The host holds the setting; widget_panel->isVisible() is also false while
     // the whole map dock is hidden, which would make this a no-op:
     const bool show = !mpHost->mShowPanel;
-    // This widget is not necessarily the one the host knows as mpMap->mpMapper,
+    // This widget is not necessarily the one the host knows as mpMap->mapper(),
     // which is all the setter pushes the change to:
     slot_setMapperPanelVisible(show);
     mpHost->setMapperPanelVisible(show);

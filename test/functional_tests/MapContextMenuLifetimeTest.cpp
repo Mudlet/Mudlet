@@ -130,11 +130,11 @@ private:
         // refuses to select a custom line.
         mpHost->mMapViewOnly = false;
         mpHost->mRoomSize = kRoomSize;
-        if (!map()->mpMapper) {
+        if (!map()->mapper()) {
             mpHost->showHideOrCreateMapper(false);
         }
-        QVERIFY(map()->mpMapper);
-        mp2dMap = map()->mpMapper->mp2dMap;
+        QVERIFY(map()->mapper());
+        mp2dMap = map()->mapper()->mp2dMap;
         QVERIFY(mp2dMap);
         mp2dMap->init();
         mp2dMap->resize(kWidgetWidth, kWidgetHeight);

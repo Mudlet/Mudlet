@@ -6123,7 +6123,7 @@ void mudlet::slot_showMapperDialog()
             auto mapWidget = existingMapDock->widget();
 
             if (auto mainMapper = qobject_cast<dlgMapper*>(mapWidget)) {
-                pMap->mpMapper = mainMapper;
+                pMap->setMapper(mainMapper);
             }
         } else if (mpCurrentMapDockWidget == existingMapDock) {
             // If we're hiding the current map, clear the global reference and restore host's default mapper
@@ -6156,7 +6156,7 @@ void mudlet::slot_showMapperDialog()
     newMapDockWidget->setObjectName(qsl("dockMap_%1_main").arg(profileName));
 
     // Store the host's default mapper temporarily so we can restore it later
-    QPointer<dlgMapper> hostMapper = pMap->mpMapper;
+    QPointer<dlgMapper> hostMapper = pMap->mapper();
 
     // Create a new mapper instance for the main window's per-profile dock widget
     // We need to copy player room style details first
@@ -6170,7 +6170,7 @@ void mudlet::slot_showMapperDialog()
 
     // CRITICAL: Set the map's active mapper to our main window instance
     // This ensures map updates go to our main window dock widget instead of the host's default
-    pMap->mpMapper = mainMapper;
+    pMap->setMapper(mainMapper);
 
     // Initialize the mapper
     if (pMap->mpRoomDB && !pMap->mpRoomDB->isEmpty()) {
@@ -6248,7 +6248,7 @@ void mudlet::slot_showMapperDialog()
             auto mapWidget = mapDockWidget->widget();
 
             if (auto mainMapper = qobject_cast<dlgMapper*>(mapWidget)) {
-                pMap->mpMapper = mainMapper;
+                pMap->setMapper(mainMapper);
             }
         }
 
@@ -9863,7 +9863,7 @@ void mudlet::updateMainWindowDockWidgetVisibilityForProfile(const QString& profi
                         if (auto mainMapper = qobject_cast<dlgMapper*>(mapWidget)) {
                             // Only set as active mapper if the dock widget should be visible
                             if (shouldBeVisible) {
-                                pMap->mpMapper = mainMapper;
+                                pMap->setMapper(mainMapper);
 #if defined(DEBUG_WINDOW_HANDLING)
                                 qDebug() << "mudlet: Set active mapper for main window profile" << profileName;
 #endif
@@ -10086,7 +10086,7 @@ void mudlet::transferDockWidgetFromDetachedWindow(const QString& profileName, TD
             // Ensure the map's active mapper points to our main window instance
             auto mapWidget = mapDockWidget->widget();
             if (auto mainMapper = qobject_cast<dlgMapper*>(mapWidget)) {
-                pMap->mpMapper = mainMapper;
+                pMap->setMapper(mainMapper);
             }
         }
 

@@ -3233,9 +3233,9 @@ void T2DMap::paintEvent(QPaintEvent* e)
     dlgMapper::paintMapInfo(renderTimer, painter, mpHost, mpMap, roomID, mAreaID, mMultiSelectionSet.size(), infoColor, xOffset, 20, width(), mFontHeight);
 
     // The area combobox belongs to the main mapper, which a secondary view may exist without
-    if (!mIsSecondaryView && mpMap->mpMapper) {
+    if (!mIsSecondaryView && mpMap->mapper()) {
         static bool isAreaWidgetValid = true; // Remember between uses
-        QFont _f = mpMap->mpMapper->comboBox_showArea->font();
+        QFont _f = mpMap->mapper()->comboBox_showArea->font();
         if (isAreaWidgetValid) {
             if (mAreaID == -1                       // the map being shown is the "default" area
                 && !mpMap->getDefaultAreaShown()) { // the area widget is not showing the "default" area
@@ -3259,7 +3259,7 @@ void T2DMap::paintEvent(QPaintEvent* e)
             }
         }
 
-        mpMap->mpMapper->comboBox_showArea->setFont(_f);
+        mpMap->mapper()->comboBox_showArea->setFont(_f);
     }
 
     if (!mHelpMsg.isEmpty()) {
@@ -5411,8 +5411,8 @@ void T2DMap::slot_newMap()
     mpMap->updateArea(-1);
     isCenterViewCall = false;
     mpMap->setUnsaved(__func__);
-    if (mpMap->mpMapper) {
-        mpMap->mpMapper->resetAreaComboBoxToPlayerRoomArea();
+    if (mpMap->mapper()) {
+        mpMap->mapper()->resetAreaComboBoxToPlayerRoomArea();
     }
 }
 
@@ -5480,8 +5480,8 @@ void T2DMap::slot_setArea()
             mpMap->postMessage(tr("[  OK  ]  - Added \"%1\" (%2) area to map.").arg(newAreaName, QString::number(newAreaId)));
             mpMap->setUnsaved(__func__);
 
-            if (mpMap->mpMapper) {
-                mpMap->mpMapper->updateAreaComboBox();
+            if (mpMap->mapper()) {
+                mpMap->mapper()->updateAreaComboBox();
             }
         }
         mMultiRect = QRect(0, 0, 0, 0);
@@ -5491,8 +5491,8 @@ void T2DMap::slot_setArea()
         }
         if (!mMultiSelectionSet.isEmpty()) {
             const auto& targetAreaName = mpMap->mpRoomDB->getAreaNamesMap().value(newAreaId);
-            if (!mIsSecondaryView && mpMap->mpMapper) {
-                mpMap->mpMapper->comboBox_showArea->setCurrentText(targetAreaName);
+            if (!mIsSecondaryView && mpMap->mapper()) {
+                mpMap->mapper()->comboBox_showArea->setCurrentText(targetAreaName);
             }
             switchArea(targetAreaName);
             // The rooms are still selected, so land on them rather than on
@@ -5511,8 +5511,8 @@ void T2DMap::slot_setArea()
     set_room_area_dialog->show();
     set_room_area_dialog->raise();
 
-    if (!mIsSecondaryView && mpMap->mpMapper) {
-        arealist_combobox->setCurrentIndex(mpMap->mpMapper->getCurrentShownAreaIndex());
+    if (!mIsSecondaryView && mpMap->mapper()) {
+        arealist_combobox->setCurrentIndex(mpMap->mapper()->getCurrentShownAreaIndex());
     } else {
         arealist_combobox->setCurrentIndex(arealist_combobox->findData(QString::number(mAreaID)));
     }
@@ -5643,13 +5643,13 @@ void T2DMap::slot_configureAreas()
         // Refresh every dropdown that lists area names - the primary
         // mapper's and every secondary view's, not just whichever one
         // opened this dialog.
-        if (mpMap && mpMap->mpMapper) {
-            mpMap->mpMapper->updateAreaComboBox();
+        if (mpMap && mpMap->mapper()) {
+            mpMap->mapper()->updateAreaComboBox();
             // Only follow the rename into the dropdown if it's the area the
             // primary mapper is actually showing - otherwise this would
             // move the dropdown to an area the map isn't displaying.
-            if (mpMap->mpMapper->mp2dMap && areaId == mpMap->mpMapper->mp2dMap->getAreaId() && mpMap->mpMapper->comboBox_showArea) {
-                mpMap->mpMapper->comboBox_showArea->setCurrentText(newName);
+            if (mpMap->mapper()->mp2dMap && areaId == mpMap->mapper()->mp2dMap->getAreaId() && mpMap->mapper()->comboBox_showArea) {
+                mpMap->mapper()->comboBox_showArea->setCurrentText(newName);
             }
         }
         if (mpMap && mpMap->getViewManager()) {
@@ -5687,8 +5687,8 @@ void T2DMap::slot_configureAreas()
             }
         }
 
-        if (mpMap && mpMap->mpMapper) {
-            mpMap->mpMapper->updateAreaComboBox();
+        if (mpMap && mpMap->mapper()) {
+            mpMap->mapper()->updateAreaComboBox();
         }
         if (mpMap && mpMap->getViewManager()) {
             mpMap->getViewManager()->updateAllViews();
@@ -5726,8 +5726,8 @@ void T2DMap::slot_configureAreas()
         // Refresh every dropdown that lists area names - the primary
         // mapper's and every secondary view's, not just whichever one
         // opened this dialog.
-        if (mpMap->mpMapper) {
-            mpMap->mpMapper->updateAreaComboBox();
+        if (mpMap->mapper()) {
+            mpMap->mapper()->updateAreaComboBox();
         }
         if (mpMap->getViewManager()) {
             mpMap->getViewManager()->updateAllViews();
@@ -5736,12 +5736,12 @@ void T2DMap::slot_configureAreas()
         // Every map that was showing the deleted area needs to move off it -
         // paintEvent() can't draw an area that no longer exists - not just
         // whichever view opened this dialog.
-        if (mpMap->mpMapper && mpMap->mpMapper->mp2dMap && mpMap->mpMapper->mp2dMap->getAreaId() == areaId) {
-            auto* comboBox = mpMap->mpMapper->comboBox_showArea;
+        if (mpMap->mapper() && mpMap->mapper()->mp2dMap && mpMap->mapper()->mp2dMap->getAreaId() == areaId) {
+            auto* comboBox = mpMap->mapper()->comboBox_showArea;
             if (comboBox && comboBox->count() > 0) {
-                mpMap->mpMapper->slot_switchArea(comboBox->currentIndex());
+                mpMap->mapper()->slot_switchArea(comboBox->currentIndex());
             } else {
-                mpMap->mpMapper->mp2dMap->switchArea(mpMap->getDefaultAreaName());
+                mpMap->mapper()->mp2dMap->switchArea(mpMap->getDefaultAreaName());
             }
         }
         if (mpMap->getViewManager()) {

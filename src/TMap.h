@@ -341,10 +341,11 @@ public:
 #if defined(INCLUDE_3DMAPPER)
     QPointer<QOpenGLWidget> mpM;
 #endif
-    QPointer<dlgMapper> mpMapper;
-    // mpMapper as core code drives it; null when that is. Defined in dlgMapper.cpp, which can see
-    // that dlgMapper is a TMapViewFrontend.
-    TMapViewFrontend* mapViewFrontend() const;
+    // Defined in dlgMapper.cpp: both need dlgMapper complete, setMapper() to see it is a TMapViewFrontend.
+    dlgMapper* mapper() const;
+    void setMapper(dlgMapper* pMapper);
+    // mapper() as core code drives it; null when that is.
+    TMapViewFrontend* mapViewFrontend() const { return mpMapper.isNull() ? nullptr : mpMapViewFrontend; }
     QMap<int, int> roomidToIndex;
 
     // User-registered mapper context menu entries (addMapEvent()/addMapMenu());
@@ -459,6 +460,9 @@ private:
 
     // The same object as mpViewManager, set with it by setViewManager().
     TMapViewsFrontend* mpViewsFrontend = nullptr;
+    QPointer<dlgMapper> mpMapper;
+    // The same object as mpMapper, set with it by setMapper(); read only while mpMapper is set.
+    TMapViewFrontend* mpMapViewFrontend = nullptr;
 
     // A* leaving the route in mSearchPredecessor; see the definition for why not boost::astar_search().
     bool searchGraph(const vertex start, const vertex goal);
