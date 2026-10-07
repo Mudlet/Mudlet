@@ -98,7 +98,7 @@ describe("Tests that the generic mapper does not read more of the map than a ste
 
     before_each(function()
       savedPath, savedWaiting, savedTimer = map.configs.download_path, map.update_waiting, map.update_timer
-      savedDownloading = downloadingIndex and debug.getupvalue(map.checkVersion, downloadingIndex)
+      savedDownloading = downloadingIndex and select(2, debug.getupvalue(map.checkVersion, downloadingIndex))
       map.update_waiting, map.update_timer = nil, nil
     end)
 
