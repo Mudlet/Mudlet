@@ -2294,6 +2294,14 @@ describe("Tests the timer API", function()
       assert.equals(1, _G.W2aTimerSpec.fired)
     end)
 
+    it("counts down a code-string timer from the moment it is made", function()
+      local id = trackTemp(tempTimer(5, [[_G.W2aTimerSpec.fired = _G.W2aTimerSpec.fired + 1]]))
+      assert.equals(1, isActive(id, "timer"))
+      local left = remainingTime(id)
+      assert.is_true(left > 4.5 and left <= 5, "a new 5s timer should have about 5s left, got: " .. tostring(left))
+      assert.is_true(killTimer(id))
+    end)
+
     it("fires a function body", function()
       trackTemp(tempTimer(0.05, function()
         _G.W2aTimerSpec.fired = _G.W2aTimerSpec.fired + 1
