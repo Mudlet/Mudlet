@@ -216,7 +216,7 @@ std::pair<bool, QString> TMainConsole::setLabelStyleSheet(const QString& name, c
 
     auto pL = mLabelMap.value(name);
     if (pL) {
-        pL->setStyleSheet(stylesheet);
+        pL->restyle(stylesheet);
         return {true, QString()};
     }
     return {false, qsl("label name '%1' not found").arg(name)};
