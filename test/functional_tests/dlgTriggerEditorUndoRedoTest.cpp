@@ -25,6 +25,7 @@
 #include "MudletApp.h"
 #include "PortableModeTestHelper.h"
 #include "ProfileTestHelper.h"
+#include "EditorDeleteItemCommand.h"
 #include "EditorUndoStack.h"
 #include "Host.h"
 #include "HostDialogs.h"
@@ -656,6 +657,28 @@ private slots:
     return count;
   }
 
+  // Names the first restored descendant whose record the delete command lost track of
+  static QString staleRecord(const EditorDeleteItemCommand *command, const QTreeWidgetItem *item) {
+    const int parentID = item->data(0, Qt::UserRole).toInt();
+    for (int i = 0; i < item->childCount(); ++i) {
+      const QTreeWidgetItem *child = item->child(i);
+      const int childID = child->data(0, Qt::UserRole).toInt();
+      const auto *info = command->getDeletedItemInfo(childID);
+      if (!command->affectedItemIDs().contains(childID) || !info) {
+        return qsl("%1 (ID %2) has no record").arg(child->text(0)).arg(childID);
+      }
+      if (info->parentID != parentID || info->positionInParent != i) {
+        return qsl("%1 (ID %2) is recorded under %3 at %4, not %5 at %6")
+            .arg(child->text(0)).arg(childID).arg(info->parentID).arg(info->positionInParent).arg(parentID).arg(i);
+      }
+      const QString stale = staleRecord(command, child);
+      if (!stale.isEmpty()) {
+        return stale;
+      }
+    }
+    return QString();
+  }
+
   void testRedoDeletesEverySameNamedItem_data() {
     QTest::addColumn<int>("itemTypeIndex");
     QTest::addColumn<QString>("itemTypeName");
@@ -737,6 +760,11 @@ private slots:
       mpEditor->mpUndoStack->undo();
       QCOMPARE(itemType.baseItem()->childCount(), 1);
       QCOMPARE(countDescendants(itemType.baseItem()->child(0)), 6);
+      const auto *command = dynamic_cast<const EditorDeleteItemCommand *>(
+          mpEditor->mpUndoStack->getLastExecutedCommand());
+      QVERIFY(command);
+      const QString stale = staleRecord(command, itemType.baseItem()->child(0));
+      QVERIFY2(stale.isEmpty(), qPrintable(qsl("%1: %2").arg(itemTypeName, stale)));
       mpEditor->mpUndoStack->redo();
       QVERIFY2(itemType.baseItem()->childCount() == 0,
                qPrintable(qsl("%1: redo of the folder delete left %2 items")
