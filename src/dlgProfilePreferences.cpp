@@ -26,6 +26,7 @@
 #include "dlgProfilePreferences.h"
 
 #include "CredentialManager.h"
+#include "EditorAutoCompleteFocusHandler.h"
 #include "GMCPAuthenticator.h"
 #include "Host.h"
 #include "HostDialogs.h"
@@ -69,6 +70,7 @@
 #include <QFileDialog>
 #include <QFileInfo>
 #include <QFontDialog>
+#include <QFutureWatcher>
 #include <QIcon>
 #include <QJsonArray>
 #include <QJsonDocument>
@@ -163,6 +165,13 @@ dlgProfilePreferences::dlgProfilePreferences(QWidget* pParentWidget, Host* pHost
     // init generated dialog
     setupUi(this);
     buildShell();
+
+    // The theme/font preview below has autocomplete switched on like the script
+    // editor's own widget, so it needs the same treatment: without it edbee's
+    // completion list takes the keyboard focus while its popup is open
+    // (see #5310). Done here rather than in loadEditorTab() so it holds even
+    // when that returns early for want of a profile.
+    new EditorAutoCompleteFocusHandler(edbeePreviewWidget, this);
 
     mpTimer_apply = new QTimer(this);
     mpTimer_apply->setSingleShot(true);
@@ -3094,6 +3103,10 @@ void dlgProfilePreferences::connectApplyTriggers()
     for (auto* pDateTimeEdit : findChildren<QDateTimeEdit*>()) {
         connect(pDateTimeEdit, &QDateTimeEdit::dateTimeChanged, this, &dlgProfilePreferences::slot_scheduleApply, Qt::UniqueConnection);
     }
+    for (auto* pAbstractSpinBox : findChildren<QAbstractSpinBox*>()) {
+        // Return on a QDateTimeEdit leaves its line edit modified and emits nothing from it
+        connect(pAbstractSpinBox, &QAbstractSpinBox::editingFinished, this, &dlgProfilePreferences::slot_lineEditFinished, Qt::UniqueConnection);
+    }
     for (auto* pLineEdit : findChildren<QLineEdit*>()) {
         if (pLineEdit == mpLineEdit_search) {
             continue;
@@ -3157,6 +3170,10 @@ static enums::controlsVisibility visibilityFromComboIndex(const int index)
 // field holds a half-typed word, which neither the apply nor the snapshot takes as a setting.
 static bool beingTypedInto(const QObject* pControl)
 {
+    // A spin box types into a line edit of its own, while emitting valueChanged() for each digit that makes a number
+    if (const auto* pSpinBox = qobject_cast<const QAbstractSpinBox*>(pControl)) {
+        pControl = pSpinBox->findChild<QLineEdit*>(QString(), Qt::FindDirectChildrenOnly);
+    }
     const auto* pLineEdit = qobject_cast<const QLineEdit*>(pControl);
     return pLineEdit && pLineEdit->hasFocus() && pLineEdit->isModified();
 }
@@ -4065,6 +4082,13 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
         mpMenu = new QMenu(tr("Other profiles to Map to:"), this);
     }
 
+    // Rebuilt on every refresh, which must not drop the destinations already ticked
+    QSet<QString> chosenProfiles;
+    for (const auto* pAction : mpMenu->actions()) {
+        if (pAction->isChecked()) {
+            chosenProfiles.insert(pAction->text());
+        }
+    }
     mpMenu->clear();
     for (unsigned int i = 0, total = profileList.size(); i < total; ++i) {
         const QString s = profileList.at(i);
@@ -4077,13 +4101,14 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
 
         auto pItem = new QAction(s, mpMenu);
         pItem->setCheckable(true);
-        pItem->setChecked(false);
+        pItem->setChecked(chosenProfiles.contains(s));
         mpMenu->addAction(pItem);
         //Enable it as we now have at least one profile to copy to
         pushButton_chooseProfiles->setEnabled(true);
     }
 
     pushButton_chooseProfiles->setMenu(mpMenu);
+    slot_chosenProfilesChanged(nullptr);
 
     fillOutMapHistory();
 
@@ -4912,7 +4937,11 @@ void dlgProfilePreferences::loadEditorTab()
 
     populateThemesList();
     mudlet::loadEdbeeTheme(pHost->getEditorTheme(), pHost->getEditorThemeFile());
-    populateScriptsList();
+    // Walking every scripted item stalls a large profile, too long to repeat on every refresh; a profile
+    // change empties the list in clearHostDetails()
+    if (!script_preview_combobox->count()) {
+        populateScriptsList();
+    }
 
     // pre-select the current theme
     code_editor_theme_selection_combobox->lineEdit()->setPlaceholderText(qsl("Select theme"));
@@ -5736,7 +5765,10 @@ void dlgProfilePreferences::fillOutMapHistory()
         return;
     }
 
-    // Map files change while the dialog is open, so rebuild, resetting the enabled state to an empty list's
+    // Map files change while the dialog is open, so rebuild, resetting the enabled state to an empty list's.
+    // The rebuild follows every change, so it keeps an older map that was picked to load; the newest entry
+    // is not kept, so a map saved since takes its place at the top.
+    const QVariant pickedMapFile = comboBox_mapHistory->currentIndex() > 0 ? comboBox_mapHistory->currentData() : QVariant();
     {
         const QSignalBlocker blocker(comboBox_mapHistory);
         comboBox_mapHistory->clear();
@@ -5819,6 +5851,10 @@ void dlgProfilePreferences::fillOutMapHistory()
                 }
             }
         }
+    }
+    if (const int pickedIndex = comboBox_mapHistory->findData(pickedMapFile); pickedMapFile.isValid() && pickedIndex >= 0) {
+        const QSignalBlocker blocker(comboBox_mapHistory);
+        comboBox_mapHistory->setCurrentIndex(pickedIndex);
     }
     if (comboBox_mapHistory->count()) {
         comboBox_mapHistory->setEnabled(true);
@@ -6852,7 +6888,11 @@ void dlgProfilePreferences::slot_scheduleApply()
 void dlgProfilePreferences::slot_lineEditFinished()
 {
     // Clearing the modified flag marks this edit finished - see beingTypedInto()
-    if (auto* pLineEdit = qobject_cast<QLineEdit*>(sender()); pLineEdit) {
+    QObject* pEditor = sender();
+    if (auto* pSpinBox = qobject_cast<QAbstractSpinBox*>(pEditor)) {
+        pEditor = pSpinBox->findChild<QLineEdit*>(QString(), Qt::FindDirectChildrenOnly);
+    }
+    if (auto* pLineEdit = qobject_cast<QLineEdit*>(pEditor); pLineEdit) {
         pLineEdit->setModified(false);
     }
     slot_scheduleApply();

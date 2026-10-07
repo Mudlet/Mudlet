@@ -32,6 +32,7 @@
 #include "TAction.h"
 #include "TAlias.h"
 #include "TKey.h"
+#include "TScript.h"
 #include "TTimer.h"
 #include "TTreeWidget.h"
 #include "TTrigger.h"
@@ -40,6 +41,7 @@
 #include "dlgActionMainArea.h"
 #include "dlgAliasMainArea.h"
 #include "dlgConnectionProfiles.h"
+#include "dlgScriptsMainArea.h"
 #include "dlgTimersMainArea.h"
 #include "dlgTriggerEditor.h"
 #include "dlgTriggerPatternEdit.h"
@@ -77,6 +79,39 @@ private:
     QTreeWidgetItem *baseItem() const { return getBaseItem(); }
     TTreeWidget *treeWidget() const { return getTreeWidget(); }
   };
+
+  void reParentInModel(EditorViewType viewType, int childID, int oldParentID,
+                       int newParentID, int position) {
+    const auto mode = TreeItemInsertMode::AtPosition;
+    switch (viewType) {
+    case EditorViewType::cmTriggerView:
+      mpHost->getTriggerUnit()->reParentTrigger(childID, oldParentID,
+                                                newParentID, mode, position);
+      break;
+    case EditorViewType::cmTimerView:
+      mpHost->getTimerUnit()->reParentTimer(childID, oldParentID, newParentID,
+                                            mode, position);
+      break;
+    case EditorViewType::cmAliasView:
+      mpHost->getAliasUnit()->reParentAlias(childID, oldParentID, newParentID,
+                                            mode, position);
+      break;
+    case EditorViewType::cmScriptView:
+      mpHost->getScriptUnit()->reParentScript(childID, oldParentID,
+                                              newParentID, mode, position);
+      break;
+    case EditorViewType::cmKeysView:
+      mpHost->getKeyUnit()->reParentKey(childID, oldParentID, newParentID,
+                                        mode, position);
+      break;
+    case EditorViewType::cmActionView:
+      mpHost->getActionUnit()->reParentAction(childID, oldParentID,
+                                              newParentID, mode, position);
+      break;
+    default:
+      QFAIL("No model to move the item in for this view");
+    }
+  }
 
   std::vector<ItemTypeInfo> mItemTypes;
 
@@ -773,6 +808,10 @@ private slots:
 
       mpEditor->slot_itemMoved(grandchildID, oldParentID, newParentID,
                                oldPosition, newPosition);
+      // A real drag moves the item in the model too, straight after emitting
+      // itemMoved; without it, undo would list the item under its old parent twice
+      reParentInModel(itemType.viewType, grandchildID, oldParentID,
+                      newParentID, newPosition);
 
       QVERIFY2(parent->childCount() == 3 &&
                    childWithGrandchild->childCount() == 0,
@@ -2019,6 +2058,52 @@ private slots:
     QCOMPARE(mpEditor->mpScriptsBaseItem->childCount(), 1);
 
     cleanupAll(mItemTypes[3]);
+  }
+
+  void testUndoDeleteWhileAScriptHasUnsavedChanges() {
+    mpEditor->slot_showScripts();
+    cleanupAll(mItemTypes[3]);
+    mpEditor->slot_showAliases();
+    cleanupAll(mItemTypes[2]);
+
+    mpEditor->slot_showScripts();
+    mpEditor->addScript(false);
+    QTreeWidgetItem *script = mpEditor->mpScriptsBaseItem->child(0);
+    const int scriptID = script->data(0, Qt::UserRole).toInt();
+    const QString originalName = mpHost->getScriptUnit()->getScript(scriptID)->getName();
+
+    mpEditor->slot_showAliases();
+    mpEditor->addAlias(false);
+    QTreeWidgetItem *alias = mpEditor->mpAliasBaseItem->child(0);
+    mpEditor->treeWidget_aliases->setCurrentItem(alias);
+    mpEditor->slot_deleteItemOrGroup();
+    QCOMPARE(mpEditor->mpAliasBaseItem->childCount(), 0);
+
+    mpEditor->slot_showScripts();
+    script = mpEditor->mpScriptsBaseItem->child(0);
+    mpEditor->treeWidget_scripts->setCurrentItem(script);
+    mpEditor->slot_scriptsSelected(script);
+    mpEditor->mpScriptsMainArea->lineEdit_script_name->setText(qsl("renamed before undo"));
+
+    // Undo shows the restored alias, which saves the script edit as a new command and
+    // drops the undone delete from the stack while the undo is still using it
+    mpEditor->mpUndoStack->undo();
+    QCOMPARE(mpEditor->mpAliasBaseItem->childCount(), 1);
+    QCOMPARE(mpHost->getScriptUnit()->getScript(scriptID)->getName(), qsl("renamed before undo"));
+
+    mpEditor->mpUndoStack->undo();
+    QCOMPARE(mpHost->getScriptUnit()->getScript(scriptID)->getName(), originalName);
+    // The nested save must not have left the stack thinking this undo changed nothing
+    QCOMPARE(mpEditor->mpScriptsMainArea->lineEdit_script_name->text(), originalName);
+
+    // Only works if the alias's new ID was remapped onto the earlier add command
+    mpEditor->mpUndoStack->undo();
+    QCOMPARE(mpEditor->mpAliasBaseItem->childCount(), 0);
+
+    mpEditor->slot_showScripts();
+    cleanupAll(mItemTypes[3]);
+    mpEditor->slot_showAliases();
+    cleanupAll(mItemTypes[2]);
   }
 
   void testMultiTriggerPasteIntoGroup() {

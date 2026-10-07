@@ -64,6 +64,22 @@
 
 using namespace std::chrono_literals;
 
+// The unpacking dialog is parentless, so only an application-wide filter sees it shown.
+class UnpackingDialogShowCounter : public QObject
+{
+public:
+    int mShown = 0;
+
+protected:
+    bool eventFilter(QObject* watched, QEvent* event) override
+    {
+        if (event->type() == QEvent::Show && watched->objectName() == QLatin1String("package_manager_unpack")) {
+            ++mShown;
+        }
+        return false;
+    }
+};
+
 // Exercises the widget-free seams introduced when Host was de-widgeted: the
 // dockable map widget is now created and owned by the profile's main console
 // (TMainConsole), and the mapping-script reminder and package-unpacking dialogs
@@ -456,6 +472,29 @@ private slots:
         QCOMPARE(showSpy.count(), 0);
         QCOMPARE(hideSpy.count(), 0);
         QVERIFY2(!host->mpConsole->mpUnpackingDialog, "A small package must install without the unpacking dialog.");
+    }
+
+    // A new profile installs the bundled default packages as it loads, and a
+    // dialog per package cost more than the unzips it covered.
+    void test_noUnpackingDialogForABundledPackage()
+    {
+        UnpackingDialogShowCounter dialogShows;
+        qApp->installEventFilter(&dialogShows);
+        startProfile(mHostname, mLocalhost, mPort);
+        auto host = mudlet::self()->getActiveHost();
+        QVERIFY2(host, "No active host available for the test.");
+
+        const QString packageName = qsl("echo");
+        QTRY_VERIFY(!host->currentlySavingProfile());
+        QVERIFY2(host->mInstalledPackages.contains(packageName), "The new profile did not install the bundled package as it loaded.");
+        QCOMPARE(dialogShows.mShown, 0);
+
+        QVERIFY2(host->uninstallPackage(packageName, enums::PackageModuleType::Package), "Could not uninstall the bundled package to reinstall it.");
+        QTRY_VERIFY(!host->currentlySavingProfile());
+        auto [ok, message] = host->installPackage(qsl(":/packages/echo/echo.mpackage"), enums::PackageModuleType::Package, false);
+        QVERIFY2(ok, qPrintable(message));
+        QVERIFY2(host->mInstalledPackages.contains(packageName), "The bundled package was not reinstalled.");
+        QCOMPARE(dialogShows.mShown, 0);
     }
 
     // The map dock moved from Host to TMainConsole, so disposing of it is now the

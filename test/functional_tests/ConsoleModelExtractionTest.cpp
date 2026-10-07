@@ -1148,6 +1148,38 @@ private slots:
         QFile::remove(logFileName);
     }
 
+    // Lines are flushed once per pass of the event loop rather than one by
+    // one, so a reader tailing the file must still see them without logging
+    // having to stop first.
+    void test_loggedLinesReachTheFileWhileLogging()
+    {
+        startProfile();
+        auto host = mudlet::self()->getActiveHost();
+        QVERIFY2(host, "No active host available for the test.");
+        TConsoleModel& model = host->mainConsoleModel();
+
+        model.toggleLogging(false);
+        QVERIFY2(model.mLogToLogFile, "Could not start a log.");
+        const QString logFileName = model.mLogFileName;
+        auto stopLogging = qScopeGuard([&model, &logFileName] {
+            if (model.mLogToLogFile) {
+                model.toggleLogging(false);
+            }
+            QFile::remove(logFileName);
+        });
+
+        appendModelLine(model.buffer, qsl("logged-while-running-one"));
+        appendModelLine(model.buffer, qsl("logged-while-running-two"));
+        // Held back for duplicate detection, so this one only lets the second
+        // line out of the deferred slot.
+        appendModelLine(model.buffer, qsl("logged-while-running-three"));
+
+        QVERIFY2(!readFile(logFileName).contains(qsl("logged-while-running-two")), "A logged line was flushed on its own, before the event loop ran.");
+        QTRY_VERIFY2(readFile(logFileName).contains(qsl("logged-while-running-two")), "Logged lines never reached the file while the log was still running.");
+        QVERIFY2(model.mLogToLogFile, "The log stopped on its own.");
+        QVERIFY2(readFile(logFileName).contains(qsl("logged-while-running-one")), "The first logged line never reached the file.");
+    }
+
     // rgb(22,22,22) is the colour the console's own background replaced (#9419)
     void test_htmlLogTimestampTakesTheConsoleBackground()
     {

@@ -39,6 +39,9 @@
 #include <QCheckBox>
 #include <QFrame>
 #include <QLineEdit>
+#include <QMenu>
+#include <QPushButton>
+#include <QScopeGuard>
 #include <QScrollArea>
 #include <QSignalSpy>
 #include <QSpinBox>
@@ -50,6 +53,7 @@
 #include "SettingsTestHelper.h"
 #include "Host.h"
 #include "MudletInstanceCoordinator.h"
+#include "TLuaInterpreter.h"
 #include "TelnetServerStub.h"
 #include "dlgProfilePreferences.h"
 #include "mudlet.h"
@@ -403,6 +407,125 @@ private slots:
 
         QCOMPARE(pSearch->text(), qsl("color"));
         QCOMPARE(pStack->currentIndex(), resultsPage);
+    }
+    // The map history list is rebuilt with the rest of the page, and picking
+    // an entry is itself a change that schedules the re-read, so the pick has
+    // to come through it or the older map can never be loaded
+    void test_aPickedOlderMapStaysPickedAfterTheSettingsAreReread()
+    {
+        const QString mapsPath = MudletApp::getMudletPath(enums::profileMapsPath, mProfileName);
+        QVERIFY(QDir().mkpath(mapsPath));
+        const QString olderMap = qsl("%1/2026-01-01#10-00-00map.dat").arg(mapsPath);
+        const QString newerMap = qsl("%1/2026-01-02#10-00-00map.dat").arg(mapsPath);
+        const auto removeMaps = qScopeGuard([olderMap, newerMap]() {
+            QFile::remove(olderMap);
+            QFile::remove(newerMap);
+        });
+        for (const auto& [fileName, age] : {std::pair{olderMap, 2h}, std::pair{newerMap, 1h}}) {
+            QFile file(fileName);
+            QVERIFY(file.open(QIODevice::WriteOnly));
+            QVERIFY(file.setFileTime(QDateTime::currentDateTime().addSecs(-std::chrono::seconds(age).count()), QFileDevice::FileModificationTime));
+        }
+        openPreferences();
+        auto* pHistory = mpPreferences->comboBox_mapHistory;
+        const int olderIndex = pHistory->findData(QVariant(QFileInfo(olderMap).absoluteFilePath()));
+        QVERIFY2(olderIndex > 0, qPrintable(qsl("the older map is not below the newest in the history list: %1").arg(olderIndex)));
+
+        QSignalSpy applySpy(mpPreferences, &dlgProfilePreferences::signal_preferencesSaved);
+        pHistory->setCurrentIndex(olderIndex);
+        QVERIFY2(TestSettings::waitForApply(applySpy), "the debounce never wrote the settings back");
+        returnToTheDialog();
+
+        QCOMPARE(pHistory->currentData().toString(), QFileInfo(olderMap).absoluteFilePath());
+    }
+
+    // Only an older pick is kept, as Load would otherwise pass over a map
+    // saved after the dialog opened
+    void test_aMapSavedWhileTheDialogIsOpenBecomesTheDefaultPick()
+    {
+        const QString mapsPath = MudletApp::getMudletPath(enums::profileMapsPath, mProfileName);
+        QVERIFY(QDir().mkpath(mapsPath));
+        const QString olderMap = qsl("%1/2026-01-01#10-00-00map.dat").arg(mapsPath);
+        const QString newerMap = qsl("%1/2026-01-02#10-00-00map.dat").arg(mapsPath);
+        const auto removeMaps = qScopeGuard([olderMap, newerMap]() {
+            QFile::remove(olderMap);
+            QFile::remove(newerMap);
+        });
+        {
+            QFile file(olderMap);
+            QVERIFY(file.open(QIODevice::WriteOnly));
+            QVERIFY(file.setFileTime(QDateTime::currentDateTime().addSecs(-3600), QFileDevice::FileModificationTime));
+        }
+        openPreferences();
+        auto* pHistory = mpPreferences->comboBox_mapHistory;
+        QCOMPARE(pHistory->currentData().toString(), QFileInfo(olderMap).absoluteFilePath());
+
+        {
+            QFile file(newerMap);
+            QVERIFY(file.open(QIODevice::WriteOnly));
+        }
+        QSignalSpy applySpy(mpPreferences, &dlgProfilePreferences::signal_preferencesSaved);
+        mpPreferences->checkBox_echoLuaErrors->click();
+        QVERIFY2(TestSettings::waitForApply(applySpy), "the debounce never wrote the settings back");
+        returnToTheDialog();
+
+        QCOMPARE(pHistory->currentIndex(), 0);
+        QCOMPARE(pHistory->currentData().toString(), QFileInfo(newerMap).absoluteFilePath());
+    }
+
+    // The destinations live only in the menu, which a re-read rebuilds from
+    // the profiles on disk
+    void test_tickedCopyMapDestinationsSurviveTheSettingsBeingReread()
+    {
+        const QString otherProfile = qsl("SettingsLiveSync-Destination");
+        QVERIFY(QDir().mkpath(MudletApp::getMudletPath(enums::profileHomePath, otherProfile)));
+        const auto removeOtherProfile = qScopeGuard([otherProfile]() {
+            deleteProfileDirectory(otherProfile);
+        });
+        openPreferences();
+        QMenu* pMenu = mpPreferences->pushButton_chooseProfiles->menu();
+        QVERIFY(pMenu);
+        QAction* pDestination = nullptr;
+        for (auto* pAction : pMenu->actions()) {
+            if (pAction->text() == otherProfile) {
+                pDestination = pAction;
+            }
+        }
+        QVERIFY2(pDestination, "the other profile is not offered as a destination");
+        pDestination->trigger();
+        QVERIFY(mpPreferences->pushButton_copyMap->isEnabled());
+
+        QSignalSpy applySpy(mpPreferences, &dlgProfilePreferences::signal_preferencesSaved);
+        mpPreferences->checkBox_echoLuaErrors->click();
+        QVERIFY2(TestSettings::waitForApply(applySpy), "the debounce never wrote the settings back");
+        returnToTheDialog();
+
+        QStringList ticked;
+        for (const auto* pAction : mpPreferences->pushButton_chooseProfiles->menu()->actions()) {
+            if (pAction->isChecked()) {
+                ticked << pAction->text();
+            }
+        }
+        QCOMPARE(ticked, QStringList{otherProfile});
+        QVERIFY2(mpPreferences->pushButton_copyMap->isEnabled(), "the copy button greyed out though a destination is still ticked");
+    }
+
+    // Filling the preview list walks every scripted item in the profile, which
+    // stalls a large one for a quarter of a second, too long to pay on every
+    // change and every return to the window
+    void test_theScriptPreviewListIsNotRebuiltWhenTheSettingsAreReread()
+    {
+        mpHost->getLuaInterpreter()->compileAndExecuteScript(qsl("permRegexTrigger('previewProbe', '', {'^preview probe$'}, 'local x = 1')"));
+        openPreferences();
+        QVERIFY2(mpPreferences->script_preview_combobox->findText(qsl("previewProbe (trigger)")) >= 0, "the scripted trigger is not offered for preview");
+        QSignalSpy removals(mpPreferences->script_preview_combobox->model(), &QAbstractItemModel::rowsAboutToBeRemoved);
+
+        returnToTheDialog();
+        QSignalSpy applySpy(mpPreferences, &dlgProfilePreferences::signal_preferencesSaved);
+        mpPreferences->checkBox_echoLuaErrors->click();
+        QVERIFY2(TestSettings::waitForApply(applySpy), "the debounce never wrote the settings back");
+
+        QCOMPARE(removals.count(), 0);
     }
 };
 

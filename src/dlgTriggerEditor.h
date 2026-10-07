@@ -412,6 +412,7 @@ private:
     void saveOpenChanges();
     EditorViewType determineViewFromVisibleTree();
     EditorViewType resolveCurrentView();
+    void rebuildStaleTrees();
     void saveTrigger();
     void saveAlias();
     void computeAliasIcon(TAlias* pT, QIcon& icon, QString& itemDescription) const;

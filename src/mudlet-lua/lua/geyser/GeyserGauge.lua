@@ -199,6 +199,16 @@ local function backSpacing(gauge)
   return left, right, top, bottom, unreadable
 end
 
+-- the stock reposition, as loaded, so that one a script wrapped later still runs
+local containerReposition = Geyser.Container.reposition
+
+-- A fill whose corner stays put only needs resizing for a new value - unless
+-- something inside the front label, or a reposition of its own, has to follow.
+local function resizesInPlace(fill, front)
+  return fill.cornerFixed and front.reposition == containerReposition and front.redraw == nil
+    and next(front.windowList) == nil
+end
+
 -- Gives the front label the constraints for one orientation. They are functions
 -- rather than "<n>px" because a negative pixel constraint is measured from the
 -- opposite edge, which is not what a negative margin asks for, and they read the
@@ -210,6 +220,8 @@ local function setFrontConstraints(gauge)
   local fill = gauge.frontFill
   local front = gauge.front
   local orientation = gauge.orientation
+  -- whether x and y below leave the value out
+  fill.cornerFixed = orientation ~= "vertical" and orientation ~= "goofy"
 
   if orientation == "horizontal" then
     front.x = function() return fill.left end
@@ -312,20 +324,22 @@ function Geyser.Gauge:setValue (currentValue, maxValue, text)
   end
 
   local fill = self.frontFill
-  local moved = fill.value ~= self.value or fill.left ~= leftOffset or fill.right ~= rightOffset
-                or fill.top ~= topOffset or fill.bottom ~= bottomOffset
+  local filled = fill.value ~= self.value
+  local spaced = fill.left ~= leftOffset or fill.right ~= rightOffset or fill.top ~= topOffset or fill.bottom ~= bottomOffset
   fill.value, fill.left, fill.right, fill.top, fill.bottom = self.value, leftOffset, rightOffset, topOffset, bottomOffset
 
   -- The constraints read the fill table, so a new value only needs the front
-  -- label laid out again, and a gauge sitting on the value it already has -
-  -- which the gauges a UI repaints wholesale on every prompt usually are - does
-  -- not even need that.
+  -- label laid out again - or just resized, when its corner stays put - and a
+  -- gauge sitting on the value it already has, which the gauges a UI repaints
+  -- wholesale on every prompt usually are, does not even need that.
   local front = self.front
   if fill.orientation ~= self.orientation or front.x ~= fill.x or front.y ~= fill.y
      or front.width ~= fill.width or front.height ~= fill.height then
     setFrontConstraints(self)
-  elseif moved then
+  elseif spaced or (filled and not resizesInPlace(fill, front)) then
     front:reposition()
+  elseif filled then
+    resizeWindow(front.name, front:get_width(), front:get_height())
   end
 
   if text then
