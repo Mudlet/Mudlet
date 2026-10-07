@@ -170,7 +170,7 @@ public:
     TDockWidget* dockWidget(const QString& name) const { return mDockWidgetMap.value(name); }
     QStringList dockWidgetNames() const { return QStringList(mDockWidgetMap.keys()); }
     // Host forwards these by name; each also handles the name's dock, so the core needs one branch each.
-    void closeSubConsole(const QString& name);
+    void closeSubConsole(const QString& name) override;
     void changeSubConsoleColors(const QString& name) override;
     bool showSubConsole(const QString& name) override;
     bool hideSubConsole(const QString& name) override;
@@ -183,8 +183,8 @@ public:
     bool resetSubConsoleBackgroundImage(const QString& name) override;
     bool setSubConsoleCommandBackgroundColor(const QString& name, const QColor& color) override;
     bool setSubConsoleCommandForegroundColor(const QString& name, const QColor& color) override;
-    void setDockLayoutChanged(const QString& name);
-    bool clearDockLayoutChanged(const QString& name);
+    void setDockLayoutChanged(const QString& name) override;
+    bool clearDockLayoutChanged(const QString& name) override;
     TCommandLine* subCommandLineWidget(const QString& name) const { return mSubCommandLineMap.value(name); }
     QList<TCommandLine*> subCommandLineWidgets() const { return mSubCommandLineMap.values(); }
     void setCommandLinePlaceholderText(const QString& text) override;
@@ -266,27 +266,20 @@ public:
     // requestRepaint() for after echoing a command, skipped while the mapper
     // has a 3D view - or, in builds without one, while there is any mapper.
     void requestRepaintAfterCommand();
-    // Brings the bars in line with the root actions (for a package, with the
-    // toolbars in it): makes, fills and places each, and destroys any left from
-    // an action that has switched between docked and floating.
-    void regenerateToolBars(const std::list<TAction*>& rootActions);
-    void regenerateEasyButtonBars(const std::list<TAction*>& rootActions);
-    // Takes an action's bars out of the window without destroying them, for an
-    // action that is being removed or has stopped being a root one.
-    void detachActionBars(TAction* pAction);
+    void regenerateToolBars(const std::list<TAction*>& rootActions) override;
+    void regenerateEasyButtonBars(const std::list<TAction*>& rootActions) override;
+    void detachActionBars(TAction* pAction) override;
     // Each action's bars, looked up by the action. An action shown as a menu on
     // another's bar (on a floating toolbar, any entry of such a menu) is
     // recorded against that bar too, so what is asked of its bar here is done
     // to the whole bar.
-    bool hasEasyButtonBar(TAction* pAction) const;
+    bool hasEasyButtonBar(TAction* pAction) const override;
     TToolBar* actionToolBar(TAction* pAction) const;
     TEasyButtonBar* actionEasyButtonBar(TAction* pAction) const;
     void setActionToolBar(TAction* pAction, TToolBar* pToolBar);
     void setActionEasyButtonBar(TAction* pAction, TEasyButtonBar* pBar);
-    // For a child moved out from under pOldParent: the child no longer belongs
-    // to whichever of its bars it shared with its old parent.
-    void releaseParentActionBars(TAction* pOldParent, TAction* pChild);
-    void renameActionToolBar(TAction* pAction, const QString& name);
+    void releaseParentActionBars(TAction* pOldParent, TAction* pChild) override;
+    void renameActionToolBar(TAction* pAction, const QString& name) override;
     void setActionToolBarVisible(TAction* pAction, bool visible);
     void hideActionEasyButtonBar(TAction* pAction);
     // The button and the menu entry a bar draws an action as; the one each
@@ -297,13 +290,13 @@ public:
     // Floating toolbars are the main window's children rather than this
     // console's, so the profile has to delete them itself.
     const std::list<QPointer<TToolBar>>& actionToolBars() const { return mToolBarList; }
-    void deleteActionToolBars();
-    void deleteActionToolBarsLater();
+    void deleteActionToolBars() override;
+    void deleteActionToolBarsLater() override;
     // A floating toolbar that has moved or been resized since the layout was
     // last saved; committing clears the flags and answers whether any was raised.
     void setToolBarLayoutChanged(TToolBar* pToolBar);
-    bool commitToolBarLayoutChanges();
-    void discardToolBarLayoutChanges();
+    bool commitToolBarLayoutChanges() override;
+    void discardToolBarLayoutChanges() override;
     void showMapperScriptReminder();
     void showUnpackingProgress(const QString& message, const QString& title);
     void closeUnpackingProgress();

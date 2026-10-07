@@ -505,7 +505,7 @@ Host::~Host()
     emit signal_destroyProfileDialogs();
 
     if (mpConsole) {
-        mpConsole->deleteActionToolBars();
+        consoleFrontend()->deleteActionToolBars();
     }
 
     mStopWatchMap.clear();
@@ -588,11 +588,11 @@ void Host::closeChildren()
 
     // A snapshot: closing one removes it (and a user window's dock) from the registry.
     for (const QString& consoleName : mWindowRegistry.subConsoleNames()) {
-        mpConsole->closeSubConsole(consoleName);
+        consoleFrontend()->closeSubConsole(consoleName);
     }
 
     if (mpConsole) {
-        mpConsole->deleteActionToolBarsLater();
+        consoleFrontend()->deleteActionToolBarsLater();
     }
 }
 
@@ -6015,7 +6015,7 @@ void Host::setDockLayoutUpdated(const QString& name)
     }
 
     if (Q_LIKELY(mWindowRegistry.hasDockWidget(name)) && !mDockLayoutChanges.contains(name)) {
-        mpConsole->setDockLayoutChanged(name);
+        consoleFrontend()->setDockLayoutChanged(name);
         mDockLayoutChanges.append(name);
     }
 }
@@ -6027,7 +6027,7 @@ bool Host::commitLayoutUpdates(bool flush)
         // commit changes (or rather clear the layout changed flags) for dockwidget
         // consoles (user windows)
         for (const auto& dockedConsoleName : std::as_const(mDockLayoutChanges)) {
-            if (mpConsole->clearDockLayoutChanged(dockedConsoleName)) {
+            if (consoleFrontend()->clearDockLayoutChanged(dockedConsoleName)) {
                 updated = true;
             }
         }
@@ -6036,8 +6036,8 @@ bool Host::commitLayoutUpdates(bool flush)
 
     if (mpConsole) {
         if (flush) {
-            mpConsole->discardToolBarLayoutChanges();
-        } else if (mpConsole->commitToolBarLayoutChanges()) {
+            consoleFrontend()->discardToolBarLayoutChanges();
+        } else if (consoleFrontend()->commitToolBarLayoutChanges()) {
             updated = true;
         }
     }
