@@ -230,10 +230,10 @@ private slots:
         // freshly drawn one have to agree with a full redraw.
         lua->compileAndExecuteScript(script);
         pane->repaint(QRect(0, 0, pane->width(), pane->height() / 2));
-        const QImage afterIncremental = pane->mScreenMap.toImage();
+        const QImage afterIncremental = pane->cachedScreen().copy();
         pane->forceUpdate();
         pane->repaint();
-        const QImage authoritative = pane->mScreenMap.toImage();
+        const QImage authoritative = pane->cachedScreen().copy();
         QVERIFY2(!afterIncremental.isNull() && !authoritative.isNull(), "no cached screen to compare");
         QVERIFY2(afterIncremental == authoritative, "the scroll left the background runs drawn differently from a full redraw");
 
