@@ -196,8 +196,6 @@ void TEasyButtonBar::fillMenu(TAction* pAction, QMenu* pMenu)
         if (!pTAction->isActive()) {
             continue;
         }
-        // Through the bar's own action: the editor clears the host of an
-        // action it deletes, which still has its entries drawn as they go
         mpTAction->mpHost->mpConsole->setActionEasyButtonBar(pAction, this);
         auto pEAction = new EAction(pAction->mpHost, QIcon(pAction->getIcon()), pTAction->getName(), pTAction->mID);
         pEAction->setStatusTip(pTAction->getName());
@@ -216,9 +214,7 @@ void TEasyButtonBar::fillMenu(TAction* pAction, QMenu* pMenu)
         }
 
         if (pTAction->isFolder()) {
-            // Adding a QWidget derived pointer to new QMenu() means the menu
-            // will be destroyed when the pointed to item is, we just need to
-            // find the item that it is attached to - ah ha, try the toolbar...
+            // Deleted along with its entry, see deleteMenuEntryLater() in TMainConsole.cpp
             auto pNewMenu = new QMenu(this);
             pEAction->setMenu(pNewMenu);
 

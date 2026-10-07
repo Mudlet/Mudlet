@@ -39,6 +39,8 @@
 #include "dlgConnectionProfiles.h"
 #include "mudlet.h"
 
+using namespace std::chrono_literals;
+
 // The Central Debug Console filters at the point a message is written rather
 // than when it is drawn, so that switching a filter leaves what is already on
 // screen alone and a filtered-out message costs nothing at all. These tests pin
@@ -376,7 +378,7 @@ private slots:
         TDebug(Qt::blue, Qt::black, TDebug::Category::TriggerMatch) << "timed message\n" >> host;
         const QString arrivalTime = QTime::currentTime().toString(TBuffer::smTimeStampFormat);
 
-        QTest::qWait(1200);
+        QTest::qWait(1200ms);
         TDebug::setPaused(false);
 
         auto* console = mudlet::smpDebugConsole.data();
@@ -599,7 +601,7 @@ private slots:
 
         // Long enough that a stamp taken when the sink arrives cannot land
         // inside the arrival window:
-        QTest::qWait(100);
+        QTest::qWait(100ms);
         TDebug::setSink(&sink);
         TDebug(Qt::blue, Qt::black, TDebug::Category::TriggerMatch) << "written with a sink\n" >> nullptr;
 
@@ -690,7 +692,7 @@ private slots:
 
         // Long enough that a stamp taken on resume cannot land inside the
         // arrival window:
-        QTest::qWait(100);
+        QTest::qWait(100ms);
         TDebug::setPaused(false);
 
         QCOMPARE(sink.lines.size(), 2);
@@ -830,7 +832,7 @@ private slots:
 
         TDebug::addHost(standIn.host(), qsl("Late profile"));
         // the tab refresh is asked for once idle
-        QTest::qWait(50);
+        QTest::qWait(50ms);
 
         QCOMPARE(TDebug::getTag(standIn.host()).isNull(), false);
     }
@@ -1001,7 +1003,7 @@ private:
     // Starts a profile by driving the connection dialog, as a user would.
     void startProfile(const QString& hostname, const QString& address, const QString& port)
     {
-        QTimer::singleShot(0, qApp, [hostname, address, port]() {
+        QTimer::singleShot(0ms, qApp, [hostname, address, port]() {
             const auto dialog = []() {
                 return mudlet::self()->mpConnectionDialog.data();
             };
@@ -1017,7 +1019,7 @@ private:
                         [&dialog]() {
                             return dialog() && dialog()->isVisible();
                         },
-                        5000)) {
+                        5s)) {
                 qWarning() << "the connection dialog never appeared";
                 return;
             }
@@ -1031,7 +1033,7 @@ private:
                             [field]() {
                                 return QApplication::focusWidget() == field;
                             },
-                            5000)) {
+                            5s)) {
                     return true;
                 }
                 qWarning() << "focus never reached the" << name << "field";
@@ -1059,7 +1061,7 @@ private:
         });
 
         QSignalSpy spy(mudlet::self(), &mudlet::signal_profileLoaded);
-        if (!spy.wait(5000)) {
+        if (!spy.wait(5s)) {
             QFAIL("Profile took too long to load.");
         }
         auto host = mudlet::self()->getActiveHost();
@@ -1068,7 +1070,7 @@ private:
         }
 
         QSignalSpy spy2(&(host->mTelnet), &cTelnet::signal_connected);
-        if (!spy2.wait(2000)) {
+        if (!spy2.wait(2s)) {
             QFAIL("Could not connect with the host.");
         }
     }

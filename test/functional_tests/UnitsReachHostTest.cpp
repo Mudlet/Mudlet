@@ -48,6 +48,8 @@
 #include "ctelnet.h"
 #include "mudlet.h"
 
+using namespace std::chrono_literals;
+
 extern "C" {
 #if defined(INCLUDE_VERSIONED_LUA_HEADERS)
 #include <lua5.1/lauxlib.h>
@@ -160,7 +162,7 @@ private slots:
         pTimer->setIsActive(true);
         pTimer->enableTimer();
 
-        QTRY_VERIFY2_WITH_TIMEOUT(luaInt(qsl("urhFired")) >= 1, "the timer never ran its script", 3000);
+        QTRY_VERIFY2_WITH_TIMEOUT(luaInt(qsl("urhFired")) >= 1, "the timer never ran its script", 3s);
 
         // The destructor unregisters the timer and stops its QTimer
         delete pTimer;
@@ -264,7 +266,7 @@ private:
         }
 
         QSignalSpy spy2(&(host->mTelnet), &cTelnet::signal_connected);
-        if (!spy2.wait(2000)) {
+        if (!spy2.wait(2s)) {
             QFAIL("Could not connect with the host.");
         }
     }

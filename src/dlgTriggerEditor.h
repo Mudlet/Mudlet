@@ -30,6 +30,7 @@
 #include "ui_trigger_editor.h"
 
 #include <QPointer>
+#include <QRegularExpression>
 #include <unordered_map>
 
 #include "TAction.h"
@@ -412,6 +413,7 @@ private:
     void saveOpenChanges();
     EditorViewType determineViewFromVisibleTree();
     EditorViewType resolveCurrentView();
+    void rebuildStaleTrees();
     void saveTrigger();
     void saveAlias();
     void computeAliasIcon(TAlias* pT, QIcon& icon, QString& itemDescription) const;
@@ -707,6 +709,9 @@ private:
     QAction* mSaveItem = nullptr;
 
     enums::EditorSearchOptions mSearchOptions = enums::EditorSearchOptionNone;
+    // Reused for every field a whole-word search looks at, as each new QRegularExpression is JIT-compiled anew
+    mutable QString mWholeWordSearchNeedle;
+    mutable QRegularExpression mWholeWordSearchRegex;
     QSplitter* searchSplitter;
 
     // This has a menu which the following QActions are inserted into:

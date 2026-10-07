@@ -72,37 +72,6 @@
 
 using namespace std::chrono_literals;
 
-// Counts the paint events one widget receives.
-class PaintCounter : public QObject
-{
-public:
-    explicit PaintCounter(QWidget* widget)
-    : mpWidget(widget)
-    {
-        widget->installEventFilter(this);
-    }
-    ~PaintCounter() override
-    {
-        if (mpWidget) {
-            mpWidget->removeEventFilter(this);
-        }
-    }
-
-    int mCount = 0;
-
-protected:
-    bool eventFilter(QObject* watched, QEvent* event) override
-    {
-        if (event->type() == QEvent::Paint) {
-            ++mCount;
-        }
-        return QObject::eventFilter(watched, event);
-    }
-
-private:
-    QPointer<QWidget> mpWidget;
-};
-
 // A game that accepts one connection and can drop it on demand, which is all
 // either test needs of a server.
 class LoopbackGameStub : public QObject
@@ -339,7 +308,7 @@ private slots:
                              lineNumber = lineHolding(console, qsl("OSCSEAM1"));
                              return lineNumber >= 0;
                          },
-                         8000),
+                         8s),
                  "the line carrying the link never reached the buffer");
         // Concealment keeps the character count identical so buffer indices stay
         // valid, which is why the text is replaced space for space.
@@ -381,15 +350,15 @@ private slots:
                              console->mLowerPane->mForceUpdate = false;
                              return false;
                          },
-                         12000),
+                         12s),
                  "the hyperlink never changed visibility, so nothing here was exercised");
         QCOMPARE(console->buffer.lineBuffer.at(lineNumber), qsl("OSCSEAM1(HIDDENWORD)OSCSEAM1"));
         QVERIFY2(upperForced, "the upper pane was not forced to redraw for a hyperlink that had just been revealed");
         QVERIFY2(lowerForced, "the lower pane was not forced to redraw for a hyperlink that had just been revealed");
     }
 
-    // repaintPanes() paints synchronously, so a paint landing on the upper pane
-    // between the call and the observer can only have come from this wire.
+    // As with visibility above, mForceUpdate is what proves the panes were
+    // forced to redraw the restyled lines rather than reuse their cached pixmap.
     void test_restylingALinksCharactersRepaintsThePanes()
     {
         Host* host = startProfile();
@@ -399,16 +368,22 @@ private slots:
         const int linkId = feedSpoilerLink(host, qsl("OSCPAINT1"));
         QVERIFY2(linkId > 0, "no spoiler link reached the buffer");
 
-        PaintCounter upperPaints(console->mUpperPane);
-        int paintsSeen = -1;
+        console->mUpperPane->mForceUpdate = false;
+        console->mLowerPane->mForceUpdate = false;
+        bool observed = false;
+        bool upperForced = false;
+        bool lowerForced = false;
         QObject observerContext;
         connect(&console->model().mNotifier, &TConsoleModelNotifier::linkCharactersChanged, &observerContext, [&]() {
-            paintsSeen = upperPaints.mCount;
+            observed = true;
+            upperForced = console->mUpperPane->mForceUpdate;
+            lowerForced = console->mLowerPane->mForceUpdate;
         });
 
         console->buffer.updateLinkCharacters(linkId);
-        QVERIFY2(paintsSeen >= 0, "restyling the link's characters raised no notification");
-        QVERIFY2(paintsSeen > 0, "the upper pane was not repainted for a link whose characters had just been restyled");
+        QVERIFY2(observed, "restyling the link's characters raised no notification");
+        QVERIFY2(upperForced, "the upper pane was not forced to redraw for a link whose characters had just been restyled");
+        QVERIFY2(lowerForced, "the lower pane was not forced to redraw for a link whose characters had just been restyled");
     }
 
     // The repaint half of restyling a selection by name. The console's model
@@ -542,7 +517,7 @@ private:
                     lineNumber = lineHolding(console, marker);
                     return lineNumber >= 0;
                 },
-                8000);
+                8s);
         if (!landed) {
             return 0;
         }
@@ -589,7 +564,7 @@ private:
                 [&]() {
                     return readingIndex(seen, name, occurrence) >= 0;
                 },
-                8000);
+                8s);
     }
 
     // A QVERIFY2 here returns from this helper rather than from the test slot,
@@ -627,7 +602,7 @@ private:
             return nullptr;
         }
         QSignalSpy connected(&host->mTelnet, &cTelnet::signal_connected);
-        if (host->mTelnet.getConnectionState() != QAbstractSocket::ConnectedState && !connected.wait(8000)) {
+        if (host->mTelnet.getConnectionState() != QAbstractSocket::ConnectedState && !connected.wait(8s)) {
             qWarning("could not connect to the stub");
             return nullptr;
         }

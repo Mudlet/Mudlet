@@ -31,6 +31,7 @@
 #include <QDir>
 #include <QFileInfo>
 #include <QFontInfo>
+#include <QTimer>
 
 #include <cerrno>
 #include <cstdio>
@@ -67,12 +68,14 @@ TConsoleModel::TConsoleModel(Host* pHost)
     buffer.mpModel = this;
 }
 
-QStringList TConsoleModel::lines(int from, int to)
+QStringList TConsoleModel::lines(int from, int to) const
 {
     QStringList ret;
-    const int delta = abs(from - to);
-    for (int i = 0; i < delta; i++) {
-        ret << buffer.line(from + i);
+    // 64-bit, as from - to overflows an int for a script's extreme arguments
+    const qint64 first = from;
+    const qint64 end = std::min(first + qAbs(first - to), static_cast<qint64>(buffer.lineBuffer.size()));
+    for (qint64 i = std::max<qint64>(first, 0); i < end; ++i) {
+        ret << buffer.lineBuffer.at(i);
     }
     return ret;
 }
@@ -156,12 +159,14 @@ int TConsoleModel::selectString(const QString& text, int numOfMatch)
         TDebug(Qt::gray, Qt::black, TDebug::Category::Selection) << TDebug::csmContinue << buffer.line(mUserCursor.y()) << "\n" >> mpHost;
     }
 
+    const QString li = buffer.line(mUserCursor.y());
+    if (li.isEmpty()) {
+        deselect();
+        return -1;
+    }
+
     int begin = -1;
     for (int i = 0; i < numOfMatch; i++) {
-        const QString li = buffer.line(mUserCursor.y());
-        if (li.isEmpty()) {
-            continue;
-        }
         begin = li.indexOf(text, begin + 1);
 
         if (begin == -1) {
@@ -538,6 +543,22 @@ void TConsoleModel::reportFailedLogStart(const QString& path, const QString& rea
     //: Error shown on the main console when a log file could not be opened. %1 is the file, %2 is the reason
     mpHost->postMessage(QCoreApplication::translate("TConsoleModel", "[ ERROR ] - Could not start logging to \"%1\": %2").arg(path, reason));
     mpHost->raiseLoggingStateChanged(false);
+}
+
+void TConsoleModel::scheduleLogFlush()
+{
+    if (mLogFlushPending) {
+        return;
+    }
+    mLogFlushPending = true;
+    QTimer::singleShot(0, &mNotifier, [this]() {
+        mLogFlushPending = false;
+        // Closing the file flushed the stream already, and flushing a stream
+        // whose device is closed latches WriteFailed on it
+        if (mLogFile.isOpen()) {
+            mLogStream.flush();
+        }
+    });
 }
 
 void TConsoleModel::toggleLogging(bool isMessageEnabled)
