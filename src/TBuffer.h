@@ -855,6 +855,10 @@ private:
 
     // Track links that need selection styling applied after buffer commit
     QSet<int> mPendingSelectionStyling;
+    // The first line committed while such a link was open or pending, so applying
+    // its styling need not walk the whole scrollback; -1 when there is none
+    int mSelectionStylingFromLine = -1;
+    bool selectionLinkOpen() const { return mHyperlinkActive && mCurrentHyperlinkStyling.selection.hasSelectionSettings; }
 
 public:
     // Methods for link state management (used by TTextEdit event handlers)
@@ -872,7 +876,7 @@ public:
     bool isSpoilerUnrevealed(int linkIndex) const { return mLinkOriginalText.contains(linkIndex); }
     void clearGroupSelection(const QString& group, const QString& exceptValue);
     void applyPendingSelectionStyling();
-    void updateLinkCharacters(int linkIndex);
+    void updateLinkCharacters(int linkIndex, int fromLine = 0);
     int getHoveredLink() const { return mCurrentHoveredLinkIndex; }
     int getActiveLink() const { return mCurrentActiveLinkIndex; }
     int getFocusedLink() const { return mCurrentFocusedLinkIndex; }

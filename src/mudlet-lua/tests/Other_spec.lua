@@ -770,6 +770,26 @@ describe("Tests Other.lua functions", function()
         assert.is_nil(ok)
         assert.is_string(err)
       end)
+
+      it("hands out the lowest free id, reusing one freed by deleteStopWatch", function()
+        local function createAndCheckLowestFree()
+          local before = getStopWatches()
+          local id = track(createStopWatch(false))
+          assert.is_number(id)
+          assert.is_nil(before[id], "id " .. id .. " was already in use")
+          for lower = 1, id - 1 do
+            assert.is_table(before[lower], "id " .. lower .. " was free but " .. id .. " was handed out")
+          end
+          return id
+        end
+        local ids = {}
+        for i = 1, 3 do
+          ids[i] = createAndCheckLowestFree()
+        end
+        assert.is_true(deleteStopWatch(ids[2]))
+        assert.equals(ids[2], createAndCheckLowestFree())
+        createAndCheckLowestFree()
+      end)
     end)
 
     describe("getStopWatchTime and adjustStopWatch", function()
@@ -2272,6 +2292,14 @@ describe("Tests the timer API", function()
       ]]))
       waitFor("w2aTempTimerFired")
       assert.equals(1, _G.W2aTimerSpec.fired)
+    end)
+
+    it("counts down a code-string timer from the moment it is made", function()
+      local id = trackTemp(tempTimer(5, [[_G.W2aTimerSpec.fired = _G.W2aTimerSpec.fired + 1]]))
+      assert.equals(1, isActive(id, "timer"))
+      local left = remainingTime(id)
+      assert.is_true(left > 4.5 and left <= 5, "a new 5s timer should have about 5s left, got: " .. tostring(left))
+      assert.is_true(killTimer(id))
     end)
 
     it("fires a function body", function()

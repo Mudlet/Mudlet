@@ -2252,10 +2252,12 @@ void TConsole::setCompactInputLine(const bool state)
 
 void TConsole::repaintPanes() const
 {
+    // Queued, not painted here: a flood of lines carrying selected links would
+    // otherwise paint the whole pane once per line
     mUpperPane->updateScreenView();
-    mUpperPane->repaint();
+    mUpperPane->forceUpdate();
     mLowerPane->updateScreenView();
-    mLowerPane->repaint();
+    mLowerPane->forceUpdate();
 }
 
 void TConsole::setProfileName(const QString& newName)
