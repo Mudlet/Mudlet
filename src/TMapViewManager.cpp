@@ -27,9 +27,10 @@
 #include "TRoomDB.h"
 #include "utils.h"
 
-TMapViewsFrontend* TMap::mapViewsFrontend() const
+void TMap::setViewManager(TMapViewManager* pViewManager)
 {
-    return mpViewManager;
+    mpViewManager = pViewManager;
+    mpViewsFrontend = pViewManager;
 }
 
 TMapViewManager::TMapViewManager(Host* pHost, TMap* pMap)
