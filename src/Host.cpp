@@ -44,7 +44,7 @@
 #include "TIrcClient.h"
 #include "TLabelModel.h"
 #include "TMap.h"
-#include "TMapViewManager.h"
+#include "TMapViewsFrontend.h"
 #include "TMedia.h"
 #include "TRoomDB.h"
 #include "TScript.h"
@@ -4939,7 +4939,7 @@ std::pair<int, QString> Host::createMapView(int areaId)
         return {0, qsl("no map present or loaded")};
     }
 
-    auto* viewManager = mpMap->getViewManager();
+    auto* viewManager = mpMap->mapViewsFrontend();
     if (!viewManager) {
         return {0, qsl("no view manager available")};
     }
@@ -4953,7 +4953,7 @@ std::pair<bool, QString> Host::closeMapView(int viewId)
         return {false, qsl("no map present or loaded")};
     }
 
-    auto* viewManager = mpMap->getViewManager();
+    auto* viewManager = mpMap->mapViewsFrontend();
     if (!viewManager) {
         return {false, qsl("no view manager available")};
     }
@@ -4967,7 +4967,7 @@ std::pair<int, QString> Host::closeAllMapViews()
         return {0, qsl("no map present or loaded")};
     }
 
-    auto* viewManager = mpMap->getViewManager();
+    auto* viewManager = mpMap->mapViewsFrontend();
     if (!viewManager) {
         return {0, qsl("no view manager available")};
     }
@@ -4982,7 +4982,7 @@ QList<int> Host::getMapViewIds() const
         return {};
     }
 
-    auto* viewManager = mpMap->getViewManager();
+    auto* viewManager = mpMap->mapViewsFrontend();
     if (!viewManager) {
         qWarning() << "Host::getMapViewIds() - no view manager available";
         return {};
