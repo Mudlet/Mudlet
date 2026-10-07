@@ -3128,6 +3128,10 @@ void dlgTriggerEditor::delete_alias()
 
     QTreeWidgetItem* newSelection = nullptr;
     QList<QTreeWidgetItem*> removedItems;
+    // Emptied silently so each removed row doesn't re-lay out the rest of the selection and reload
+    // the form, and so the setCurrentItem() below is a real change the view gets told about
+    QSignalBlocker selectionBlocker(treeWidget_aliases->selectionModel());
+    treeWidget_aliases->selectionModel()->clear();
     for (QTreeWidgetItem* pItem : std::as_const(selectedItems)) {
         QTreeWidgetItem* pParentItem = pItem->parent();
         const int itemId = pItem->data(0, Qt::UserRole).toInt();
@@ -3156,6 +3160,7 @@ void dlgTriggerEditor::delete_alias()
             delete pT;
         }
     }
+    selectionBlocker.unblock();
 
     if (!deletedItems.isEmpty()) {
         auto* qtCmd = new EditorDeleteItemCommand(EditorViewType::cmAliasView, deletedItems, mpHost);
@@ -3283,6 +3288,8 @@ void dlgTriggerEditor::delete_action()
 
     QTreeWidgetItem* newSelection = nullptr;
     QList<QTreeWidgetItem*> removedItems;
+    QSignalBlocker selectionBlocker(treeWidget_actions->selectionModel());
+    treeWidget_actions->selectionModel()->clear();
     for (QTreeWidgetItem* pItem : std::as_const(selectedItems)) {
         QTreeWidgetItem* pParentItem = pItem->parent();
         const int itemId = pItem->data(0, Qt::UserRole).toInt();
@@ -3316,6 +3323,7 @@ void dlgTriggerEditor::delete_action()
             delete pT;
         }
     }
+    selectionBlocker.unblock();
 
     if (!deletedItems.isEmpty()) {
         auto* qtCmd = new EditorDeleteItemCommand(EditorViewType::cmActionView, deletedItems, mpHost);
@@ -3377,6 +3385,8 @@ void dlgTriggerEditor::delete_variable()
 
     QTreeWidgetItem* newSelection = nullptr;
     QList<QTreeWidgetItem*> removedItems;
+    QSignalBlocker selectionBlocker(treeWidget_variables->selectionModel());
+    treeWidget_variables->selectionModel()->clear();
     for (QTreeWidgetItem* pItem : std::as_const(selectedItems)) {
         QTreeWidgetItem* pParentItem = pItem->parent();
         TVar* var = treeWidget_variables->variableForRow(vu, pItem);
@@ -3410,6 +3420,7 @@ void dlgTriggerEditor::delete_variable()
             delete var;
         }
     }
+    selectionBlocker.unblock();
 
     if (newSelection && !newSelection->treeWidget()) {
         newSelection = mpVarBaseItem;
@@ -3519,6 +3530,8 @@ void dlgTriggerEditor::delete_script()
 
     QTreeWidgetItem* newSelection = nullptr;
     QList<QTreeWidgetItem*> removedItems;
+    QSignalBlocker selectionBlocker(treeWidget_scripts->selectionModel());
+    treeWidget_scripts->selectionModel()->clear();
     for (QTreeWidgetItem* pItem : std::as_const(selectedItems)) {
         QTreeWidgetItem* pParentItem = pItem->parent();
         const int itemId = pItem->data(0, Qt::UserRole).toInt();
@@ -3547,6 +3560,7 @@ void dlgTriggerEditor::delete_script()
             delete pT;
         }
     }
+    selectionBlocker.unblock();
 
     if (!deletedItems.isEmpty()) {
         auto* qtCmd = new EditorDeleteItemCommand(EditorViewType::cmScriptView, deletedItems, mpHost);
@@ -3661,6 +3675,8 @@ void dlgTriggerEditor::delete_key()
 
     QTreeWidgetItem* newSelection = nullptr;
     QList<QTreeWidgetItem*> removedItems;
+    QSignalBlocker selectionBlocker(treeWidget_keys->selectionModel());
+    treeWidget_keys->selectionModel()->clear();
     for (QTreeWidgetItem* pItem : std::as_const(selectedItems)) {
         QTreeWidgetItem* pParentItem = pItem->parent();
         const int itemId = pItem->data(0, Qt::UserRole).toInt();
@@ -3689,6 +3705,7 @@ void dlgTriggerEditor::delete_key()
             delete pT;
         }
     }
+    selectionBlocker.unblock();
 
     if (!deletedItems.isEmpty()) {
         auto* qtCmd = new EditorDeleteItemCommand(EditorViewType::cmKeysView, deletedItems, mpHost);
@@ -3808,6 +3825,8 @@ void dlgTriggerEditor::delete_trigger()
 
     QTreeWidgetItem* newSelection = nullptr;
     QList<QTreeWidgetItem*> removedItems;
+    QSignalBlocker selectionBlocker(treeWidget_triggers->selectionModel());
+    treeWidget_triggers->selectionModel()->clear();
     for (QTreeWidgetItem* pItem : std::as_const(selectedItems)) {
         QTreeWidgetItem* pParentItem = pItem->parent();
         const int itemId = pItem->data(0, Qt::UserRole).toInt();
@@ -3836,6 +3855,7 @@ void dlgTriggerEditor::delete_trigger()
             delete pT;
         }
     }
+    selectionBlocker.unblock();
 
     if (!deletedItems.isEmpty()) {
         auto* qtCmd = new EditorDeleteItemCommand(EditorViewType::cmTriggerView, deletedItems, mpHost);
@@ -3950,6 +3970,8 @@ void dlgTriggerEditor::delete_timer()
 
     QTreeWidgetItem* newSelection = nullptr;
     QList<QTreeWidgetItem*> removedItems;
+    QSignalBlocker selectionBlocker(treeWidget_timers->selectionModel());
+    treeWidget_timers->selectionModel()->clear();
     for (QTreeWidgetItem* pItem : std::as_const(selectedItems)) {
         QTreeWidgetItem* pParentItem = pItem->parent();
         const int itemId = pItem->data(0, Qt::UserRole).toInt();
@@ -3978,6 +4000,7 @@ void dlgTriggerEditor::delete_timer()
             delete pT;
         }
     }
+    selectionBlocker.unblock();
 
     if (!deletedItems.isEmpty()) {
         auto* qtCmd = new EditorDeleteItemCommand(EditorViewType::cmTimerView, deletedItems, mpHost);
