@@ -7707,26 +7707,19 @@ Host* mudlet::loadProfile(const QString& profile_name, const bool playOnline, co
 
 void mudlet::slot_newDataOnHost(const QString& hostName, const bool isLowerPriorityChange)
 {
+    // A detached profile's tab lives in its own window's tab bar, which shows
+    // one profile at a time regardless of multiview:
+    if (auto pDetachedWindow = mDetachedWindows.value(hostName)) {
+        pDetachedWindow->markTabActivity(hostName, isLowerPriorityChange);
+        return;
+    }
     if (mMultiView) {
         // We do not need to mark tabs with activity if they are all on show anyhow:
         return;
     }
     Host* pHost = mHostManager.getHost(hostName);
     if (pHost && pHost != mpCurrentActiveHost) {
-        if (mpTabBar->count() > 1) {
-            if (!isLowerPriorityChange) {
-                mpTabBar->setTabBold(hostName, true);
-                mpTabBar->setTabItalic(hostName, false);
-                mpTabBar->update();
-            } else if (isLowerPriorityChange && !mpTabBar->tabBold(hostName)) {
-                // Local, lower priority change so only change the
-                // styling if it is not already modified - so that the
-                // higher priority remote change indication will not
-                // get changed by a later local one:
-                mpTabBar->setTabItalic(hostName, true);
-                mpTabBar->update();
-            }
-        }
+        mpTabBar->markActivity(hostName, isLowerPriorityChange);
     }
 }
 
@@ -8228,9 +8221,7 @@ void mudlet::activateProfile(Host* pHost)
 
     // Reset the tab back to "normal" to undo the effect of it having its style
     // changed on new data:
-    mpTabBar->setTabBold(newActiveTabIndex, false);
-    mpTabBar->setTabItalic(newActiveTabIndex, false);
-    mpTabBar->setTabUnderline(newActiveTabIndex, false);
+    mpTabBar->clearActivity(newActiveTabIndex);
 
     mpCurrentActiveHost = pHost;
 
