@@ -74,6 +74,13 @@ static QString decompressXML(const QString& data)
     return QString::fromUtf8(decompressed);
 }
 
+static TTrigger* importTriggerNode(pugi::xml_node triggerNode, TTrigger* pParent, Host* host, int position);
+static TAlias* importAliasNode(pugi::xml_node aliasNode, TAlias* pParent, Host* host, int position);
+static TTimer* importTimerNode(pugi::xml_node timerNode, TTimer* pParent, Host* host, int position);
+static TScript* importScriptNode(pugi::xml_node scriptNode, TScript* pParent, Host* host, int position);
+static TKey* importKeyNode(pugi::xml_node keyNode, TKey* pParent, Host* host, int position);
+static TAction* importActionNode(pugi::xml_node actionNode, TAction* pParent, Host* host, int position);
+
 // XML Export/Import functions - used by both EditorUndoSystem and EditorAddItemCommand
 QString exportTriggerToXML(TTrigger* trigger)
 {
@@ -270,6 +277,11 @@ TTrigger* importTriggerFromXML(const QString& xmlSnapshot, TTrigger* pParent, Ho
         return nullptr;
     }
 
+    return importTriggerNode(triggerNode, pParent, host, position);
+}
+
+static TTrigger* importTriggerNode(pugi::xml_node triggerNode, TTrigger* pParent, Host* host, int position)
+{
     auto pT = new TTrigger(nullptr, host);
 
     if (pParent) {
@@ -352,16 +364,8 @@ TTrigger* importTriggerFromXML(const QString& xmlSnapshot, TTrigger* pParent, Ho
     for (auto childNode : triggerNode.children()) {
         QString childNodeName = QString::fromStdString(childNode.name());
         if (childNodeName == "Trigger" || childNodeName == "TriggerGroup") {
-            pugi::xml_document childDoc;
-            auto childRoot = childDoc.append_child("TriggerSnapshot");
-            childRoot.append_copy(childNode);
-
-            std::ostringstream oss;
-            childDoc.save(oss);
-            QString childXML = QString::fromStdString(oss.str());
-
             // Recursively import the child with current trigger as parent (position -1 = append to end)
-            importTriggerFromXML(childXML, pT, host, -1);
+            importTriggerNode(childNode, pT, host, -1);
         }
     }
 
@@ -501,6 +505,11 @@ TAlias* importAliasFromXML(const QString& xmlSnapshot, TAlias* pParent, Host* ho
         return nullptr;
     }
 
+    return importAliasNode(aliasNode, pParent, host, position);
+}
+
+static TAlias* importAliasNode(pugi::xml_node aliasNode, TAlias* pParent, Host* host, int position)
+{
     // Create new alias without parent (so it doesn't auto-add to end)
     auto pA = new TAlias(nullptr, host);
 
@@ -548,15 +557,7 @@ TAlias* importAliasFromXML(const QString& xmlSnapshot, TAlias* pParent, Host* ho
     for (auto childNode : aliasNode.children()) {
         QString childNodeName = QString::fromStdString(childNode.name());
         if (childNodeName == "Alias" || childNodeName == "AliasGroup") {
-            pugi::xml_document childDoc;
-            auto childRoot = childDoc.append_child("AliasSnapshot");
-            childRoot.append_copy(childNode);
-
-            std::ostringstream oss;
-            childDoc.save(oss);
-            QString childXML = QString::fromStdString(oss.str());
-
-            importAliasFromXML(childXML, pA, host);
+            importAliasNode(childNode, pA, host, -1);
         }
     }
 
@@ -663,6 +664,11 @@ TTimer* importTimerFromXML(const QString& xmlSnapshot, TTimer* pParent, Host* ho
         return nullptr;
     }
 
+    return importTimerNode(timerNode, pParent, host, position);
+}
+
+static TTimer* importTimerNode(pugi::xml_node timerNode, TTimer* pParent, Host* host, int position)
+{
     // Create new timer without parent (so it doesn't auto-add to end)
     auto pT = new TTimer(nullptr, host);
 
@@ -710,15 +716,7 @@ TTimer* importTimerFromXML(const QString& xmlSnapshot, TTimer* pParent, Host* ho
     for (auto childNode : timerNode.children()) {
         QString childNodeName = QString::fromStdString(childNode.name());
         if (childNodeName == "Timer" || childNodeName == "TimerGroup") {
-            pugi::xml_document childDoc;
-            auto childRoot = childDoc.append_child("TimerSnapshot");
-            childRoot.append_copy(childNode);
-
-            std::ostringstream oss;
-            childDoc.save(oss);
-            QString childXML = QString::fromStdString(oss.str());
-
-            importTimerFromXML(childXML, pT, host);
+            importTimerNode(childNode, pT, host, -1);
         }
     }
 
@@ -826,6 +824,11 @@ TScript* importScriptFromXML(const QString& xmlSnapshot, TScript* pParent, Host*
         return nullptr;
     }
 
+    return importScriptNode(scriptNode, pParent, host, position);
+}
+
+static TScript* importScriptNode(pugi::xml_node scriptNode, TScript* pParent, Host* host, int position)
+{
     // Create new script without parent (so it doesn't auto-add to end)
     auto pS = new TScript(nullptr, host);
 
@@ -878,15 +881,7 @@ TScript* importScriptFromXML(const QString& xmlSnapshot, TScript* pParent, Host*
     for (auto childNode : scriptNode.children()) {
         QString childNodeName = QString::fromStdString(childNode.name());
         if (childNodeName == "Script" || childNodeName == "ScriptGroup") {
-            pugi::xml_document childDoc;
-            auto childRoot = childDoc.append_child("ScriptSnapshot");
-            childRoot.append_copy(childNode);
-
-            std::ostringstream oss;
-            childDoc.save(oss);
-            QString childXML = QString::fromStdString(oss.str());
-
-            importScriptFromXML(childXML, pS, host);
+            importScriptNode(childNode, pS, host, -1);
         }
     }
 
@@ -997,6 +992,11 @@ TKey* importKeyFromXML(const QString& xmlSnapshot, TKey* pParent, Host* host, in
         return nullptr;
     }
 
+    return importKeyNode(keyNode, pParent, host, position);
+}
+
+static TKey* importKeyNode(pugi::xml_node keyNode, TKey* pParent, Host* host, int position)
+{
     // Create new key without parent (so it doesn't auto-add to end)
     auto pK = new TKey(nullptr, host);
 
@@ -1045,15 +1045,7 @@ TKey* importKeyFromXML(const QString& xmlSnapshot, TKey* pParent, Host* host, in
     for (auto childNode : keyNode.children()) {
         QString childNodeName = QString::fromStdString(childNode.name());
         if (childNodeName == "Key" || childNodeName == "KeyGroup") {
-            pugi::xml_document childDoc;
-            auto childRoot = childDoc.append_child("KeySnapshot");
-            childRoot.append_copy(childNode);
-
-            std::ostringstream oss;
-            childDoc.save(oss);
-            QString childXML = QString::fromStdString(oss.str());
-
-            importKeyFromXML(childXML, pK, host);
+            importKeyNode(childNode, pK, host, -1);
         }
     }
 
@@ -1161,6 +1153,11 @@ TAction* importActionFromXML(const QString& xmlSnapshot, TAction* pParent, Host*
         return nullptr;
     }
 
+    return importActionNode(actionNode, pParent, host, position);
+}
+
+static TAction* importActionNode(pugi::xml_node actionNode, TAction* pParent, Host* host, int position)
+{
     // Create new action without parent (so it doesn't auto-add to end)
     auto pA = new TAction(nullptr, host);
 
@@ -1237,15 +1234,7 @@ TAction* importActionFromXML(const QString& xmlSnapshot, TAction* pParent, Host*
     for (auto childNode : actionNode.children()) {
         QString childNodeName = QString::fromStdString(childNode.name());
         if (childNodeName == "Action" || childNodeName == "ActionGroup") {
-            pugi::xml_document childDoc;
-            auto childRoot = childDoc.append_child("ActionSnapshot");
-            childRoot.append_copy(childNode);
-
-            std::ostringstream oss;
-            childDoc.save(oss);
-            QString childXML = QString::fromStdString(oss.str());
-
-            importActionFromXML(childXML, pA, host);
+            importActionNode(childNode, pA, host, -1);
         }
     }
 
