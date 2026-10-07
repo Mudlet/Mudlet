@@ -680,6 +680,44 @@ describe("Tests mapper functions against a shared fixture", function()
       assert.is_nil(getAreaTable()["MapperSpecDeleteMe"])
     end)
 
+    it("removes every room of a large area and the exits other areas had into them", function()
+      local doomed = addAreaName("MapperSpecDeleteMany")
+      local survivor = addAreaName("MapperSpecDeleteManyNeighbour")
+      local base, count = 991000000, 2000
+      for i = 1, count do
+        addRoom(base + i)
+        setRoomArea(base + i, doomed)
+        setRoomCoordinates(base + i, i % 50, math.floor(i / 50), 0)
+        if i > 1 then
+          setExit(base + i, base + i - 1, "w")
+          setExit(base + i - 1, base + i, "e")
+        end
+        if i % 7 == 0 then
+          addSpecialExit(base + i, base + 1, "jump " .. i)
+        end
+      end
+      local outside = base + count + 1
+      addRoom(outside)
+      setRoomArea(outside, survivor)
+      setExit(outside, base + 1, "n")
+      setExit(outside, base + count, "s")
+      addSpecialExit(outside, base + 500, "climb")
+      finally(function()
+        deleteArea("MapperSpecDeleteManyNeighbour")
+        deleteArea("MapperSpecDeleteMany")
+      end)
+
+      assert.is_true(deleteArea(doomed))
+
+      for i = 1, count do
+        assert.is_false(roomExists(base + i))
+      end
+      assert.is_true(roomExists(outside))
+      assert.are.same({}, getRoomExits(outside))
+      assert.are.same({}, getSpecialExitsSwap(outside))
+      assert.is_nil(getAreaTable()["MapperSpecDeleteMany"])
+    end)
+
     it("returns nil and a message for an unknown areaID", function()
       local ok, err = deleteArea(missingAreaId)
       assert.is_nil(ok)
