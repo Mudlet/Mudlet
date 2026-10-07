@@ -465,6 +465,54 @@ describe("Tests the GUI utilities as far as possible without mudlet", function()
       assert.spy(_G.getCurrentLine).was.called()
       _G.getCurrentLine = oldgcl
     end)
+
+    describe("on a long line of many colours and multibyte characters", function()
+      local windowName = "guiUtilsCopyDechoLongLine"
+      local segments = {}
+
+      setup(function()
+        createBuffer(windowName)
+        setWindowWrap(windowName, 100000)
+        for i = 1, 200 do
+          segments[i] = { fg = string.format("%d,%d,%d", i, 100, 200), bg = string.format("0,0,%d", i), text = string.format("é×中%d ", i) }
+        end
+      end)
+
+      teardown(function()
+        deleteMiniConsole(windowName)
+      end)
+
+      before_each(function()
+        clearWindow(windowName)
+        local parts = {}
+        for i, segment in ipairs(segments) do
+          parts[i] = string.format("<%s:%s>%s", segment.fg, segment.bg, segment.text)
+        end
+        decho(windowName, table.concat(parts) .. "\n")
+        moveCursor(windowName, 0, 0)
+      end)
+
+      it("Should copy every character with its own colours", function()
+        local expected = {}
+        for i, segment in ipairs(segments) do
+          expected[i] = string.format("%s<%s:%s>%s", i > 1 and "<r>" or "", segment.fg, segment.bg, segment.text)
+        end
+        assert.equals(table.concat(expected) .. "<r>", copy2decho(windowName))
+      end)
+
+      it("Should copy every character as HTML, closing each colour's span and escaping as it goes", function()
+        local expected = {}
+        for i, segment in ipairs(segments) do
+          expected[i] = string.format("%s<span style='color: rgb(%s);background: rgb(%s);'>%s", i > 1 and "</span>" or "", segment.fg, segment.bg, (segment.text:gsub("×", "&times;")))
+        end
+        assert.equals(table.concat(expected) .. "</span>", copy2html(windowName))
+      end)
+
+      it("Should copy a substring from the far end of the line", function()
+        assert.equals("<198,100,200:0,0,198>中198 <r><199,100,200:0,0,199>é×<r>", copy2decho(windowName, "中198 é×"))
+        assert.equals("<span style='color: rgb(200,100,200);background: rgb(0,0,200);'>中200</span>", copy2html(windowName, "中200"))
+      end)
+    end)
   end)
 
   describe("Tests the functionality of copy2html", function()
