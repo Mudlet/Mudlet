@@ -706,6 +706,7 @@ TBuffer::TBuffer(const TBuffer& other)
 , mCurrentHoveredLinkIndex(other.mCurrentHoveredLinkIndex)
 , mCurrentActiveLinkIndex(other.mCurrentActiveLinkIndex)
 , mCurrentFocusedLinkIndex(other.mCurrentFocusedLinkIndex)
+, mSelectionStylingFromLine(other.mSelectionStylingFromLine)
 {
     mTagWatchdog->setSingleShot(true);
     QObject::connect(mTagWatchdog.get(), &QTimer::timeout, [this]() {
@@ -718,6 +719,7 @@ TBuffer& TBuffer::operator=(const TBuffer& other)
     if (this != &other) {
         bufferLine = other.bufferLine;
         buffer = other.buffer;
+        mSelectionStylingFromLine = other.mSelectionStylingFromLine;
         lineBuffer = other.lineBuffer;
         timeBuffer = other.timeBuffer;
         promptBuffer = other.promptBuffer;
@@ -2196,6 +2198,9 @@ void TBuffer::commitLineData(QString line, std::vector<TChar> chars, const char 
     }
     const int lineIndex = lineBuffer.size() - 1;
     mCommitLineIndices.append(lineIndex);
+    if (!mPendingSelectionStyling.isEmpty() || selectionLinkOpen()) {
+        mSelectionStylingFromLine = (mSelectionStylingFromLine < 0) ? lineIndex : std::min(mSelectionStylingFromLine, lineIndex);
+    }
     if (!mSkipTriggerProcessing) {
         // Color triggers match the colors as received, so a line recolored earlier in the pass keeps its
         // originals; materialisePreTriggerPassLine() copies them lazily as most lines are never touched.
@@ -6459,6 +6464,9 @@ void TBuffer::shrinkBuffer()
             commitLineIndex = (commitLineIndex < mBatchDeleteSize) ? -1 : commitLineIndex - mBatchDeleteSize;
         }
     }
+    if (mSelectionStylingFromLine >= 0) {
+        mSelectionStylingFromLine = std::max(0, mSelectionStylingFromLine - mBatchDeleteSize);
+    }
 
     // Tracked OSC 8 hyperlinks are addressed by line number, so they shift with
     // everything else - any whose line just went away are dropped
@@ -6535,6 +6543,9 @@ bool TBuffer::deleteLines(int from, int to)
             } else if (commitLineIndex > to) {
                 commitLineIndex -= delta;
             }
+        }
+        if (mSelectionStylingFromLine > from) {
+            mSelectionStylingFromLine = std::max(from, mSelectionStylingFromLine - delta);
         }
 
         // Tracked OSC 8 hyperlinks are addressed by line number too, so they
@@ -8584,10 +8595,15 @@ void TBuffer::applyPendingSelectionStyling()
 #if defined(DEBUG_OSC_PROCESSING)
         qDebug() << "[OSC] Processing pending selection styling for" << mPendingSelectionStyling.size() << "links";
 #endif
+        // A link split by a flush marker started on an earlier line than the one it ended on
+        const int fromLine = std::max(0, mSelectionStylingFromLine);
         for (const int linkId : std::as_const(mPendingSelectionStyling)) {
-            updateLinkCharacters(linkId);
+            updateLinkCharacters(linkId, fromLine);
         }
         mPendingSelectionStyling.clear();
+    }
+    if (!selectionLinkOpen()) {
+        mSelectionStylingFromLine = -1;
     }
 }
 
@@ -8750,7 +8766,7 @@ QString TBuffer::getLinkTooltip(int linkIndex) const
 
 // Update all TChar objects in the buffer that have the specified linkIndex
 // with the effective styling for the current state
-void TBuffer::updateLinkCharacters(int linkIndex)
+void TBuffer::updateLinkCharacters(int linkIndex, int fromLine)
 {
     if (linkIndex <= 0) {
         return;
@@ -8792,7 +8808,7 @@ void TBuffer::updateLinkCharacters(int linkIndex)
 #endif
 
     // Iterate through all lines in the buffer
-    for (size_t lineNumber = 0; lineNumber < buffer.size(); ++lineNumber) {
+    for (auto lineNumber = static_cast<size_t>(std::max(0, fromLine)); lineNumber < buffer.size(); ++lineNumber) {
         auto& line = buffer[lineNumber];
         // Iterate through all characters in the line
         for (auto& tchar : line) {
