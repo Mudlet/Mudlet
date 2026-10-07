@@ -129,6 +129,9 @@ public:
     // A sub-console is a mini console, user window or buffer. createBuffer() fails for a name already a
     // sub-console's, the others for a name that is not one; they act on a user window's dock with it.
     virtual bool createBuffer(const QString& name) = 0;
+    // Fails for a name already a sub-console's. Puts the mini console in the scroll box or user window
+    // named windowname, else on the main window, at font size 12, shown.
+    virtual bool addMiniConsole(const QString& windowname, const QString& name, int x, int y, int width, int height) = 0;
     virtual std::pair<bool, QString> deleteMiniConsole(const QString& name) = 0;
     virtual bool showSubConsole(const QString& name) = 0;
     virtual bool hideSubConsole(const QString& name) = 0;
@@ -264,6 +267,8 @@ public:
     // removed or has stopped being a root one.
     virtual void detachActionBars(TAction* pAction) = 0;
     virtual bool hasEasyButtonBar(TAction* pAction) const = 0;
+    // Checks or unchecks the action's button and its entry in a bar's menu, where it has them.
+    virtual void setActionButtonChecked(TAction* pAction, bool checked) = 0;
     // For a child moved out from under pOldParent: the child no longer belongs to whichever of its bars
     // it shared with its old parent.
     virtual void releaseParentActionBars(TAction* pOldParent, TAction* pChild) = 0;

@@ -44,7 +44,6 @@
 #include "TEvent.h"
 #include "TForkedProcess.h"
 #include "TKey.h"
-#include "TMainConsole.h"
 #include "TMap.h"
 #include "TMapLabel.h"
 #include "TMedia.h"
@@ -1824,8 +1823,8 @@ int TLuaInterpreter::setButtonState(lua_State* L)
 
     if (pItem->mButtonState != checked) {
         pItem->mButtonState = checked;
-        if (auto* pConsole = getHostFromLua(L).mpConsole.data()) {
-            pConsole->setActionButtonChecked(pItem, checked);
+        if (auto* pFrontend = getHostFromLua(L).consoleFrontend()) {
+            pFrontend->setActionButtonChecked(pItem, checked);
         }
         lua_pushboolean(L, true);
         return 1;

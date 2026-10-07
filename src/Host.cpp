@@ -5186,7 +5186,7 @@ std::pair<bool, QString> Host::createMiniConsole(const QString& windowname, cons
     }
 
     if (!mWindowRegistry.hasSubConsole(name)) {
-        if (mpConsole->createMiniConsole(windowname, name, x, y, width, height)) {
+        if (consoleFrontend()->addMiniConsole(windowname, name, x, y, width, height)) {
             return {true, QString()};
         }
     } else if (!mWindowRegistry.hasDockWidget(name)) {
