@@ -770,6 +770,26 @@ describe("Tests Other.lua functions", function()
         assert.is_nil(ok)
         assert.is_string(err)
       end)
+
+      it("hands out the lowest free id, reusing one freed by deleteStopWatch", function()
+        local function createAndCheckLowestFree()
+          local before = getStopWatches()
+          local id = track(createStopWatch(false))
+          assert.is_number(id)
+          assert.is_nil(before[id], "id " .. id .. " was already in use")
+          for lower = 1, id - 1 do
+            assert.is_table(before[lower], "id " .. lower .. " was free but " .. id .. " was handed out")
+          end
+          return id
+        end
+        local ids = {}
+        for i = 1, 3 do
+          ids[i] = createAndCheckLowestFree()
+        end
+        assert.is_true(deleteStopWatch(ids[2]))
+        assert.equals(ids[2], createAndCheckLowestFree())
+        createAndCheckLowestFree()
+      end)
     end)
 
     describe("getStopWatchTime and adjustStopWatch", function()
@@ -1553,6 +1573,21 @@ describe("Tests Other.lua functions", function()
       restore("mapRoomSize")
     end)
 
+    it("refuses a mapRoomSize below 1", function()
+      assert.is_true(openMapWidget(), "mapRoomSize cannot be set without the map widget")
+      snapshot("mapRoomSize")
+      finally(function() restore("mapRoomSize") end)
+      assert.is_true(setConfig("mapRoomSize", 7))
+      for _, size in ipairs({0, -3}) do
+        local ok, err = setConfig("mapRoomSize", size)
+        assert.is_nil(ok)
+        assert.equals("mapRoomSize must be at least 1, got " .. size, err)
+        assert.equals(7, getConfig("mapRoomSize"))
+      end
+      assert.is_true(setConfig("mapRoomSize", 1))
+      assert.equals(1, getConfig("mapRoomSize"))
+    end)
+
     it("validates the undoServerWrapWidth range when the option exists", function()
       if getConfig("undoServerWrapWidth") == nil then
         -- option not present in this build; setting it is rejected as unknown
@@ -2257,6 +2292,14 @@ describe("Tests the timer API", function()
       ]]))
       waitFor("w2aTempTimerFired")
       assert.equals(1, _G.W2aTimerSpec.fired)
+    end)
+
+    it("counts down a code-string timer from the moment it is made", function()
+      local id = trackTemp(tempTimer(5, [[_G.W2aTimerSpec.fired = _G.W2aTimerSpec.fired + 1]]))
+      assert.equals(1, isActive(id, "timer"))
+      local left = remainingTime(id)
+      assert.is_true(left > 4.5 and left <= 5, "a new 5s timer should have about 5s left, got: " .. tostring(left))
+      assert.is_true(killTimer(id))
     end)
 
     it("fires a function body", function()

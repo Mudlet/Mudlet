@@ -55,6 +55,7 @@
 #include <QLabel>
 #include <QLayout>
 #include <QLineEdit>
+#include <QMenu>
 #include <QMessageBox>
 #include <QMimeData>
 #include <QProgressDialog>
@@ -216,7 +217,7 @@ std::pair<bool, QString> TMainConsole::setLabelStyleSheet(const QString& name, c
 
     auto pL = mLabelMap.value(name);
     if (pL) {
-        pL->setStyleSheet(stylesheet);
+        pL->restyle(stylesheet);
         return {true, QString()};
     }
     return {false, qsl("label name '%1' not found").arg(name)};
@@ -894,6 +895,18 @@ void TMainConsole::detachActionBars(TAction* pAction)
     }
 }
 
+// A QAction does not own its menu, which is parented to the bar instead
+static void deleteMenuEntryLater(EAction* pEntry)
+{
+    if (!pEntry) {
+        return;
+    }
+    if (QMenu* pMenu = pEntry->menu()) {
+        pMenu->deleteLater();
+    }
+    pEntry->deleteLater();
+}
+
 TMainConsole::ActionBars& TMainConsole::actionBarsFor(TAction* pAction)
 {
     auto it = mActionBars.find(pAction);
@@ -903,6 +916,7 @@ TMainConsole::ActionBars& TMainConsole::actionBarsFor(TAction* pAction)
         // longer reach this console through its Host.
         connect(pAction, &QObject::destroyed, this, [this, pAction]() {
             const ActionBars bars = mActionBars.take(pAction);
+            deleteMenuEntryLater(bars.mpMenuEntry);
             if (bars.mpToolBar) {
                 bars.mpToolBar->hide();
             }
@@ -995,9 +1009,7 @@ void TMainConsole::replaceActionButton(TAction* pAction, TFlipButton* pButton)
 void TMainConsole::replaceActionMenuEntry(TAction* pAction, EAction* pEntry)
 {
     ActionBars& bars = actionBarsFor(pAction);
-    if (bars.mpMenuEntry) {
-        bars.mpMenuEntry->deleteLater();
-    }
+    deleteMenuEntryLater(bars.mpMenuEntry);
     bars.mpMenuEntry = pEntry;
 }
 
@@ -1019,6 +1031,25 @@ void TMainConsole::setActionButtonChecked(TAction* pAction, const bool checked)
     if (TFlipButton* pButton = actionButton(pAction)) {
         pButton->setChecked(checked);
     }
+}
+
+bool TMainConsole::restyleActionButton(TAction* pAction)
+{
+    // A bar's or a menu's stylesheet also styles the widgets of the actions under
+    // it, and a bar in a package is a child of the package's root action
+    const TAction* pParent = pAction->getParent();
+    if (pAction->isFolder() || !pParent || (!pParent->getParent() && !pParent->mPackageName.isEmpty())) {
+        return false;
+    }
+    TFlipButton* pButton = actionButton(pAction);
+    if (!pButton) {
+        return false;
+    }
+    // The editor changes an action's stylesheet without redrawing its button
+    if (pButton->styleSheet() != pAction->css) {
+        pButton->setStyleSheet(pAction->css);
+    }
+    return true;
 }
 
 void TMainConsole::deleteActionToolBars()
@@ -1521,10 +1552,14 @@ void TMainConsole::setCommandLinePlaceholderText(const QString& text)
 
 void TMainConsole::updateCommandLineSpellCheck(bool enabled)
 {
-    if (enabled) {
-        mpCommandLine->recheckWholeLine();
-    } else {
-        mpCommandLine->clearMarksOnWholeLine();
+    QList<TCommandLine*> commandLines = mSubCommandLineMap.values();
+    commandLines.prepend(mpCommandLine);
+    for (auto pCommandLine : commandLines) {
+        if (enabled) {
+            pCommandLine->recheckWholeLine();
+        } else {
+            pCommandLine->clearMarksOnWholeLine();
+        }
     }
 }
 

@@ -776,6 +776,114 @@ private slots:
     mpEditor->mpUndoStack->clear();
   }
 
+  void testDeletingManySelectedItemsChangesSelectionOnce_data() {
+    QTest::addColumn<int>("itemTypeIndex");
+    QTest::addColumn<QString>("itemTypeName");
+
+    QTest::newRow("Trigger") << 0 << "Trigger";
+    QTest::newRow("Timer") << 1 << "Timer";
+    QTest::newRow("Alias") << 2 << "Alias";
+    QTest::newRow("Script") << 3 << "Script";
+    QTest::newRow("Key") << 4 << "Key";
+    QTest::newRow("Action") << 5 << "Action";
+  }
+
+  void testDeletingManySelectedItemsChangesSelectionOnce() {
+    QFETCH(int, itemTypeIndex);
+    QFETCH(QString, itemTypeName);
+
+    const auto &itemType = mItemTypes[itemTypeIndex];
+    itemType.showView();
+    cleanupAll(itemType);
+
+    constexpr int itemCount = 30;
+    itemType.treeWidget()->setCurrentItem(itemType.baseItem());
+    itemType.addFolder();
+    QTreeWidgetItem *folder = itemType.baseItem()->child(0);
+    QVERIFY(folder);
+    for (int i = 0; i < itemCount; ++i) {
+      itemType.treeWidget()->setCurrentItem(folder);
+      itemType.addItem();
+    }
+    QCOMPARE(folder->childCount(), itemCount);
+
+    itemType.treeWidget()->clearSelection();
+    for (int i = 0; i < itemCount; ++i) {
+      folder->child(i)->setSelected(true);
+    }
+    itemType.treeWidget()->setCurrentItem(folder->child(itemCount - 1), 0,
+                                          QItemSelectionModel::NoUpdate);
+
+    QSignalSpy selectionSpy(itemType.treeWidget(),
+                            &QTreeWidget::itemSelectionChanged);
+    mpEditor->slot_deleteItemOrGroup();
+
+    QCOMPARE(folder->childCount(), 0);
+    QVERIFY2(selectionSpy.count() <= 1,
+             qPrintable(qsl("%1: selection changed %2 times")
+                            .arg(itemTypeName)
+                            .arg(selectionSpy.count())));
+    QTreeWidgetItem *current = itemType.treeWidget()->currentItem();
+    QVERIFY(current);
+    QVERIFY(current->isSelected());
+    QCOMPARE(itemType.treeWidget()->selectedItems().size(), 1);
+
+    mpEditor->mpUndoStack->undo();
+    QCOMPARE(itemType.baseItem()->child(0)->childCount(), itemCount);
+
+    cleanupAll(itemType);
+    mpEditor->mpUndoStack->clear();
+  }
+
+  void testDeletingAnItemMovesTheCurrentItemToTheOneAbove_data() {
+    QTest::addColumn<int>("itemTypeIndex");
+    QTest::addColumn<QString>("itemTypeName");
+
+    QTest::newRow("Trigger") << 0 << "Trigger";
+    QTest::newRow("Timer") << 1 << "Timer";
+    QTest::newRow("Alias") << 2 << "Alias";
+    QTest::newRow("Script") << 3 << "Script";
+    QTest::newRow("Key") << 4 << "Key";
+    QTest::newRow("Action") << 5 << "Action";
+  }
+
+  // The view only scrolls to, and announces, a current item it is told about
+  void testDeletingAnItemMovesTheCurrentItemToTheOneAbove() {
+    QFETCH(int, itemTypeIndex);
+    QFETCH(QString, itemTypeName);
+
+    const auto &itemType = mItemTypes[itemTypeIndex];
+    itemType.showView();
+    cleanupAll(itemType);
+
+    itemType.treeWidget()->setCurrentItem(itemType.baseItem());
+    itemType.addFolder();
+    QTreeWidgetItem *folder = itemType.baseItem()->child(0);
+    QVERIFY(folder);
+    for (int i = 0; i < 4; ++i) {
+      itemType.treeWidget()->setCurrentItem(folder);
+      itemType.addItem();
+    }
+    QCOMPARE(folder->childCount(), 4);
+
+    QTreeWidgetItem *above = folder->child(1);
+    itemType.treeWidget()->setCurrentItem(folder->child(2));
+
+    QSignalSpy currentSpy(itemType.treeWidget(),
+                          &QTreeWidget::currentItemChanged);
+    mpEditor->slot_deleteItemOrGroup();
+
+    QCOMPARE(folder->childCount(), 3);
+    QCOMPARE(itemType.treeWidget()->currentItem(), above);
+    QVERIFY2(!currentSpy.isEmpty(),
+             qPrintable(itemTypeName + ": the view was never told the "
+                                       "current item changed"));
+    QCOMPARE(currentSpy.last().at(0).value<QTreeWidgetItem *>(), above);
+
+    cleanupAll(itemType);
+    mpEditor->mpUndoStack->clear();
+  }
+
   // ========================================================================
   // CATEGORY 4: ID Remapping
   // ========================================================================
