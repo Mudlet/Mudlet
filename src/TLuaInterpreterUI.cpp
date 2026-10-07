@@ -3194,9 +3194,8 @@ int TLuaInterpreter::setButtonStyleSheet(lua_State* L)
         if (!action) {
             continue;
         }
-        const bool changed = action->css != css;
         action->css = css;
-        if ((host.mpConsole && host.mpConsole->restyleActionButton(action)) || !changed) {
+        if (host.mpConsole && host.mpConsole->restyleActionButton(action)) {
             continue;
         }
         // Without this a floating toolbar skips its rebuild

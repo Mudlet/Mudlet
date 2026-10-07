@@ -148,12 +148,43 @@ private:
 
         QVERIFY(host->getLuaInterpreter()->compileAndExecuteScript(qsl("setButtonStyleSheet('placementStyledMenu', 'color: red;')")));
         QVERIFY2(styledMenu(), "the menus in the menu should have taken its stylesheet");
-        QPointer<QPushButton> menuButton = buttonNamed(bar, qsl("placementStyledMenu"));
-        QVERIFY(menuButton);
+    }
 
-        QVERIFY(host->getLuaInterpreter()->compileAndExecuteScript(qsl("setButtonStyleSheet('placementStyledMenu', 'color: red;')")));
+    // The editor changes an action's stylesheet as it is typed and redraws only when it is saved
+    void restyleAMenuToTheStylesheetTypedInTheEditorOn(const int location)
+    {
+        startProfile(mpHostname, mpLocalhost, mpPort);
+        auto* host = mudlet::self()->getActiveHost();
+        QVERIFY2(host, "No active host available for the test.");
+
+        auto* root = makeRootBar(host, qsl("placementTypedMenu"), location, false);
+        auto* menu = new TAction(root, host);
+        menu->setName(qsl("placementTypedMenu menu"));
+        menu->setIsFolder(true);
+        menu->setIsActive(true);
+        host->getActionUnit()->registerAction(menu);
+        auto* group = new TAction(menu, host);
+        group->setName(qsl("placementTypedMenu group"));
+        group->setIsFolder(true);
+        group->setIsActive(true);
+        host->getActionUnit()->registerAction(group);
+        auto* entry = new TAction(group, host);
+        entry->setName(qsl("placementTypedMenu entry"));
+        entry->setIsActive(true);
+        host->getActionUnit()->registerAction(entry);
+        host->getActionUnit()->updateAllToolbars();
+        QPointer<QWidget> bar = location == 4 ? static_cast<QWidget*>(host->mpConsole->actionToolBar(root)) : host->mpConsole->actionEasyButtonBar(root);
+        QVERIFY(bar);
+        const QString css = qsl("color: red;");
+        menu->css = css;
+
+        QVERIFY(host->getLuaInterpreter()->compileAndExecuteScript(qsl("setButtonStyleSheet('placementTypedMenu menu', 'color: red;')")));
         QCoreApplication::sendPostedEvents(nullptr, QEvent::DeferredDelete);
-        QVERIFY2(menuButton, "the same stylesheet again should not have redrawn the bar");
+        bool styled = false;
+        for (auto* candidate : bar->findChildren<QMenu*>()) {
+            styled = styled || candidate->styleSheet() == css;
+        }
+        QVERIFY2(styled, "the menu should have taken the stylesheet typed in the editor");
     }
 
 private slots:
@@ -742,6 +773,10 @@ private slots:
     void test_restylingAMenuRestylesTheMenusInIt() { restyleAMenuOn(0); }
 
     void test_restylingAMenuOnAFloatingToolbarRestylesTheMenusInIt() { restyleAMenuOn(4); }
+
+    void test_restylingAMenuToTheStylesheetTypedInTheEditorRestylesIt() { restyleAMenuToTheStylesheetTypedInTheEditorOn(0); }
+
+    void test_restylingAMenuOnAFloatingToolbarToTheStylesheetTypedInTheEditorRestylesIt() { restyleAMenuToTheStylesheetTypedInTheEditorOn(4); }
 
     void cleanup()
     {
