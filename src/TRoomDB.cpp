@@ -362,8 +362,10 @@ void TRoomDB::removeRoom(QSet<int>& ids)
                                   // ALTERED by TArea::removeRoom( int room )
                                   // for each room that is removed
     quint64 const roomcount = mpTempRoomDeletionSet->size();
-    while (!mpTempRoomDeletionSet->isEmpty()) {
-        const int deleteRoomId = *(mpTempRoomDeletionSet->constBegin());
+    // Not taken from the front of the set each time: a QHash does not shrink as it
+    // is emptied, so finding its first entry walks ever more empty buckets
+    const QList<int> roomIdsToDelete = mpTempRoomDeletionSet->values();
+    for (const int deleteRoomId : roomIdsToDelete) {
         TRoom* pR = getRoom(deleteRoomId);
         if (pR) {
             deletedRoomIds.insert(deleteRoomId);
