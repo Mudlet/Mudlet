@@ -2927,13 +2927,7 @@ local function find_link(name, exits, dir, max_distance)
         end
         if not stubmap[dir] or not coordmap[stubmap[dir]] then return end
         local dx,dy,dz = unpack(coordmap[stubmap[dir]])
-        local minx, maxx, miny, maxy, minz, maxz = find_area_limits(map.currentArea)
         local rooms, match, stubs
-        if max_distance then
-            minx, maxx = x - max_distance, x + max_distance
-            miny, maxy = y - max_distance, y + max_distance
-            minz, maxz = z - max_distance, z + max_distance
-        end
         -- find link from room hash first
         if map.prompt.hash then
             local room = getRoomIDbyHash(map.prompt.hash)
@@ -2941,6 +2935,15 @@ local function find_link(name, exits, dir, max_distance)
                 match = room
             end
         else
+            local minx, maxx, miny, maxy, minz, maxz
+            if max_distance then
+                minx, maxx = x - max_distance, x + max_distance
+                miny, maxy = y - max_distance, y + max_distance
+                minz, maxz = z - max_distance, z + max_distance
+            else
+                -- reads every room in the area, so only when the search is unbounded
+                minx, maxx, miny, maxy, minz, maxz = find_area_limits(map.currentArea)
+            end
             repeat
                 x, y, z = x + dx, y + dy, z + dz
                 rooms = getRoomsByPosition(map.currentArea,x,y,z)
@@ -4232,7 +4235,8 @@ function map.eventHandler(event, ...)
         if map.update_waiting and map.update_timer then
             map.update_waiting = nil
         -- check to ensure version check cycle is started
-        elseif not map.update_waiting and not map.update_timer then
+        -- with no download path there is nothing to check, and checking reads the whole map
+        elseif not map.update_waiting and not map.update_timer and map.configs.download_path ~= "" then
             map.checkVersion()
         end
     elseif event == "sysDownloadDone" and downloading then
