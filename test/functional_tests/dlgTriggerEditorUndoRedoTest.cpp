@@ -648,6 +648,56 @@ private slots:
     mpEditor->mpUndoStack->clear();
   }
 
+  void testUndoDeleteWithTheBaseItemSelected_data() {
+    QTest::addColumn<int>("itemTypeIndex");
+    QTest::addColumn<QString>("itemTypeName");
+
+    QTest::newRow("Trigger") << 0 << "Trigger";
+    QTest::newRow("Timer") << 1 << "Timer";
+    QTest::newRow("Alias") << 2 << "Alias";
+    QTest::newRow("Script") << 3 << "Script";
+    QTest::newRow("Key") << 4 << "Key";
+    QTest::newRow("Action") << 5 << "Action";
+  }
+
+  // As Ctrl+A does, which also selects the base item every top-level item
+  // sits under
+  void testUndoDeleteWithTheBaseItemSelected() {
+    QFETCH(int, itemTypeIndex);
+    QFETCH(QString, itemTypeName);
+
+    const auto &itemType = mItemTypes[itemTypeIndex];
+    itemType.showView();
+    cleanupAll(itemType);
+
+    itemType.treeWidget()->setCurrentItem(itemType.baseItem());
+    itemType.addFolder();
+    QTreeWidgetItem *folder = itemType.baseItem()->child(0);
+    QVERIFY(folder != nullptr);
+    itemType.treeWidget()->setCurrentItem(folder);
+    itemType.addItem();
+    QCOMPARE(folder->childCount(), 1);
+
+    itemType.treeWidget()->clearSelection();
+    itemType.treeWidget()->setCurrentItem(folder, 0,
+                                          QItemSelectionModel::NoUpdate);
+    itemType.baseItem()->setSelected(true);
+    folder->setSelected(true);
+    folder->child(0)->setSelected(true);
+
+    mpEditor->slot_deleteItemOrGroup();
+    QVERIFY2(itemType.baseItem()->childCount() == 0,
+             qPrintable(itemTypeName + ": the folder should be deleted"));
+
+    mpEditor->mpUndoStack->undo();
+    QTreeWidgetItem *restored = itemType.baseItem()->child(0);
+    QVERIFY2(restored != nullptr && restored->childCount() == 1,
+             qPrintable(itemTypeName +
+                        ": undo should bring back the folder and its child"));
+
+    cleanupAll(itemType);
+  }
+
   // ========================================================================
   // CATEGORY 4: ID Remapping
   // ========================================================================
