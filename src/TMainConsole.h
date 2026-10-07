@@ -79,11 +79,20 @@ public:
     // False when closeEvent() refused, e.g. the user cancelled the save prompt:
     bool requestClose();
     void requestRepaint();
-    QFont displayFont() const;
-    void setProfileStyleSheet(const QString& styleSheet);
-    // Lays the console out again for Host's current borders and raises
-    // sysWindowResizeEvent with the room they leave
-    void applyBorders();
+    QFont displayFont() const override;
+    void setProfileStyleSheet(const QString& styleSheet) override;
+    void applyBorders() override;
+    // TConsole's, which as non-virtual members of another base cannot implement TConsoleFrontend's themselves.
+    void setConsoleBgColor(int r, int g, int b, int a) override { TConsole::setConsoleBgColor(r, g, b, a); }
+    bool setConsoleBackgroundImage(const QString& imgPath, int mode) override { return TConsole::setConsoleBackgroundImage(imgPath, mode); }
+    bool resetConsoleBackgroundImage() override { return TConsole::resetConsoleBackgroundImage(); }
+    bool setWindowBackgroundImage(const QString& imgPath, int mode) override { return TConsole::setWindowBackgroundImage(imgPath, mode); }
+    bool resetWindowBackgroundImage() override { return TConsole::resetWindowBackgroundImage(); }
+    void setBorderColor(const QColor& color) override { TConsole::setBorderColor(color); }
+    void changeColors() override { TConsole::changeColors(); }
+    void setFont(const QFont& font) override { TConsole::setFont(font); }
+    void setFont(const QFont& font, bool forceChange) { TConsole::setFont(font, forceChange); }
+    void setFontSize(int size) override { TConsole::setFontSize(size); }
     // Hands TMap::mpMapper back to this profile's own mapper, if it has one
     void restoreOwnMapper();
     bool createBuffer(const QString& name) override;
@@ -163,18 +172,18 @@ public:
     QStringList dockWidgetNames() const { return QStringList(mDockWidgetMap.keys()); }
     // Host forwards these by name; each also handles the name's dock, so the core needs one branch each.
     void closeSubConsole(const QString& name);
-    void changeSubConsoleColors(const QString& name);
+    void changeSubConsoleColors(const QString& name) override;
     bool showSubConsole(const QString& name) override;
     bool hideSubConsole(const QString& name) override;
     bool resizeSubConsole(const QString& name, int width, int height) override;
     bool moveSubConsole(const QString& name, int x, int y) override;
     bool reparentWindow(const QString& windowname, const QString& name, int x, int y, bool show) override;
-    std::optional<QSize> consoleFontSize(const QString& name) const;
-    bool setSubConsoleBackgroundColor(const QString& name, const QColor& color);
-    bool setSubConsoleBackgroundImage(const QString& name, const QString& path, int mode);
-    bool resetSubConsoleBackgroundImage(const QString& name);
-    bool setSubConsoleCommandBackgroundColor(const QString& name, const QColor& color);
-    bool setSubConsoleCommandForegroundColor(const QString& name, const QColor& color);
+    std::optional<QSize> consoleFontSize(const QString& name) const override;
+    bool setSubConsoleBackgroundColor(const QString& name, const QColor& color) override;
+    bool setSubConsoleBackgroundImage(const QString& name, const QString& path, int mode) override;
+    bool resetSubConsoleBackgroundImage(const QString& name) override;
+    bool setSubConsoleCommandBackgroundColor(const QString& name, const QColor& color) override;
+    bool setSubConsoleCommandForegroundColor(const QString& name, const QColor& color) override;
     void setDockLayoutChanged(const QString& name);
     bool clearDockLayoutChanged(const QString& name);
     TCommandLine* subCommandLineWidget(const QString& name) const { return mSubCommandLineMap.value(name); }
@@ -207,13 +216,8 @@ public:
     bool setWindowHorizontalScrollBarVisible(const QString& name, bool visible) override;
     bool setWindowScrolling(const QString& name, bool enabled) override;
     bool scrollWindowTo(const QString& name, int line, bool toEnd) override;
-    // The font operations, found by name as the scroll bar ones are. The main console's
-    // font is the profile's display font, which Host keeps and tells scripts
-    // about when it changes.
-    // The console keeps its point size. Answers whether the font was taken
-    // and, when not, why.
-    std::optional<std::pair<bool, QString>> setWindowFontFamily(const QString& name, const QString& family, QFont::Weight weight);
-    bool setWindowFontSize(const QString& name, int size);
+    std::optional<std::pair<bool, QString>> setWindowFontFamily(const QString& name, const QString& family, QFont::Weight weight) override;
+    bool setWindowFontSize(const QString& name, int size) override;
     bool setWindowCommandLineVisible(const QString& name, bool visible) override;
     TTextBox* textBoxWidget(const QString& name) const { return mTextBoxMap.value(name); }
     bool setTextBoxText(const QString& name, const QString& text) override;

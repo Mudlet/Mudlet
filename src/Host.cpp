@@ -1462,13 +1462,13 @@ void Host::updateConsolesFont()
     event.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
     event.mArgumentList.append(qsl("main window font"));
     event.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
-    event.mArgumentList.append(mpConsole->displayFont().family());
+    event.mArgumentList.append(consoleFrontend()->displayFont().family());
     event.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
-    event.mArgumentList.append(QString::number(mpConsole->displayFont().pointSize()));
+    event.mArgumentList.append(QString::number(consoleFrontend()->displayFont().pointSize()));
     event.mArgumentTypeList.append(ARGUMENT_TYPE_NUMBER);
     raiseEvent(event);
 
-    emit signal_consoleFontChanged(mpConsole->displayFont());
+    emit signal_consoleFontChanged(consoleFrontend()->displayFont());
 }
 
 // a little message to make the player feel special for helping us find bugs
@@ -1530,8 +1530,8 @@ std::pair<bool, QString> Host::setDisplayFont(const QFont& font, const DisplayFo
     }
 
     if (mpConsole) {
-        if (mpConsole->displayFont() != font) {
-            mpConsole->setFont(font);
+        if (consoleFrontend()->displayFont() != font) {
+            consoleFrontend()->setFont(font);
 
             updateConsolesFont();
         }
@@ -1575,8 +1575,8 @@ void Host::setDisplayFontFromString(const QString& fontData)
 void Host::setDisplayFontSize(int size)
 {
     if (mpConsole) {
-        if (mpConsole->displayFont().pointSize() != size) {
-            mpConsole->setFontSize(size);
+        if (consoleFrontend()->displayFont().pointSize() != size) {
+            consoleFrontend()->setFontSize(size);
             updateConsolesFont();
         }
 
@@ -2481,7 +2481,7 @@ void Host::refreshMainConsoleColors()
 void Host::applyMainConsoleColors()
 {
     if (mpConsole) {
-        mpConsole->changeColors();
+        consoleFrontend()->changeColors();
     } else {
         refreshMainConsoleColors();
     }
@@ -5496,10 +5496,10 @@ void Host::refreshColours()
         return;
     }
 
-    mpConsole->changeColors();
+    consoleFrontend()->changeColors();
     mpMap->refreshMapperColours();
     for (const QString& subConsoleName : windowRegistry().subConsoleNames()) {
-        mpConsole->changeSubConsoleColors(subConsoleName);
+        consoleFrontend()->changeSubConsoleColors(subConsoleName);
     }
 }
 
@@ -5691,7 +5691,7 @@ QSize Host::calcFontSize(const QString& windowName)
         return QSize(-1, -1);
     }
 
-    return mpConsole->consoleFontSize(windowName).value_or(QSize(-1, -1));
+    return consoleFrontend()->consoleFontSize(windowName).value_or(QSize(-1, -1));
 }
 
 bool Host::setProfileStyleSheet(const QString& styleSheet)
@@ -5701,7 +5701,7 @@ bool Host::setProfileStyleSheet(const QString& styleSheet)
     }
 
     mProfileStyleSheet = styleSheet;
-    mpConsole->setProfileStyleSheet(styleSheet);
+    consoleFrontend()->setProfileStyleSheet(styleSheet);
     emit signal_profileStyleSheetChanged(styleSheet);
     return true;
 }
@@ -5713,7 +5713,7 @@ bool Host::setBackgroundColor(const QString& name, int r, int g, int b, int alph
         return false;
     }
 
-    if (mpConsole->setSubConsoleBackgroundColor(name, QColor(r, g, b, alpha))) {
+    if (consoleFrontend()->setSubConsoleBackgroundColor(name, QColor(r, g, b, alpha))) {
         return true;
     }
 
@@ -5750,11 +5750,11 @@ bool Host::setBackgroundImage(const QString& name, QString& imgPath, int mode, b
     }
 
     if (fullWindow) {
-        return mpConsole->setWindowBackgroundImage(imgPath, mode);
+        return consoleFrontend()->setWindowBackgroundImage(imgPath, mode);
     }
 
     if (name.isEmpty() || name.compare(qsl("main"), Qt::CaseSensitive) == 0) {
-        mpConsole->setConsoleBackgroundImage(imgPath, mode);
+        consoleFrontend()->setConsoleBackgroundImage(imgPath, mode);
         return true;
     }
 
@@ -5762,7 +5762,7 @@ bool Host::setBackgroundImage(const QString& name, QString& imgPath, int mode, b
         return consoleFrontend()->setLabelBackgroundImage(name, imgPath);
     }
 
-    return mpConsole->setSubConsoleBackgroundImage(name, imgPath, mode);
+    return consoleFrontend()->setSubConsoleBackgroundImage(name, imgPath, mode);
 }
 
 bool Host::resetBackgroundImage(const QString& name, bool fullWindow)
@@ -5772,11 +5772,11 @@ bool Host::resetBackgroundImage(const QString& name, bool fullWindow)
     }
 
     if (fullWindow) {
-        return mpConsole->resetWindowBackgroundImage();
+        return consoleFrontend()->resetWindowBackgroundImage();
     }
 
     if (name.isEmpty() || name.compare(qsl("main"), Qt::CaseSensitive) == 0) {
-        mpConsole->resetConsoleBackgroundImage();
+        consoleFrontend()->resetConsoleBackgroundImage();
         return true;
     }
 
@@ -5784,7 +5784,7 @@ bool Host::resetBackgroundImage(const QString& name, bool fullWindow)
         return consoleFrontend()->resetLabelBackgroundImage(name);
     }
 
-    return mpConsole->resetSubConsoleBackgroundImage(name);
+    return consoleFrontend()->resetSubConsoleBackgroundImage(name);
 }
 
 bool Host::setSvgTint(const QString& name, const QColor& color)
@@ -5884,7 +5884,7 @@ bool Host::setCommandBackgroundColor(const QString& name, int r, int g, int b, i
         return false;
     }
 
-    return mpConsole->setSubConsoleCommandBackgroundColor(name, QColor(r, g, b, alpha));
+    return consoleFrontend()->setSubConsoleCommandBackgroundColor(name, QColor(r, g, b, alpha));
 }
 
 bool Host::setCommandForegroundColor(const QString& name, int r, int g, int b, int alpha)
@@ -5893,7 +5893,7 @@ bool Host::setCommandForegroundColor(const QString& name, int r, int g, int b, i
         return false;
     }
 
-    return mpConsole->setSubConsoleCommandForegroundColor(name, QColor(r, g, b, alpha));
+    return consoleFrontend()->setSubConsoleCommandForegroundColor(name, QColor(r, g, b, alpha));
 }
 
 void Host::setProfileBackgroundColor(const QColor& color)
@@ -5901,7 +5901,7 @@ void Host::setProfileBackgroundColor(const QColor& color)
     mBgColor = color;
     // Host outlives its main console; with no view, the buffer's colours must still follow:
     if (mpConsole) {
-        mpConsole->setConsoleBgColor(color.red(), color.green(), color.blue(), color.alpha());
+        consoleFrontend()->setConsoleBgColor(color.red(), color.green(), color.blue(), color.alpha());
     } else {
         refreshMainConsoleColors();
     }
@@ -6273,7 +6273,7 @@ std::optional<QFont> Host::windowFont(const QString& name) const
         return {};
     }
     if (pModel == mpMainConsoleModel.get()) {
-        return {mpConsole->displayFont()};
+        return {consoleFrontend()->displayFont()};
     }
     return {pModel->mUpperPaneFont};
 }
@@ -6462,7 +6462,7 @@ void Host::setBorders(QMargins borders)
     if (mpConsole.isNull()) {
         return;
     }
-    mpConsole->applyBorders();
+    consoleFrontend()->applyBorders();
 }
 
 void Host::setUserBorders(const QMargins borders)
@@ -6526,7 +6526,7 @@ void Host::setRemoteEchoingActive(bool active)
 QFont Host::getDisplayFont()
 {
     if (mpConsole) {
-        return mpConsole->displayFont();
+        return consoleFrontend()->displayFont();
     }
 
     qDebug().noquote().nospace() << "Host::getDisplayFont() INFO - No TMainConsole to get font from - faking it";

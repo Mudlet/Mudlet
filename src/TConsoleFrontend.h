@@ -20,11 +20,12 @@
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
 
+#include <QFont>
+
 #include <optional>
 #include <utility>
 
 class QColor;
-class QFont;
 class QSize;
 class QString;
 
@@ -165,6 +166,43 @@ public:
     // A negative line counts back from the end. One at or past the end, or toEnd, puts the console back
     // to following new lines.
     virtual bool scrollWindowTo(const QString& name, int line, bool toEnd) = 0;
+
+    // These name a console as the scroll bar ones do; for a name that is none of those, setWindowFontSize()
+    // fails and the others have no value. This console's font is the profile's display font, which Host
+    // keeps and tells scripts about when it changes.
+    // A new family keeps the point size; the answer says whether the font was taken and, when not, why.
+    virtual std::optional<std::pair<bool, QString>> setWindowFontFamily(const QString& name, const QString& family, QFont::Weight weight) = 0;
+    virtual bool setWindowFontSize(const QString& name, int size) = 0;
+    // The width of a 'W' and the height of a line in that console's font.
+    virtual std::optional<QSize> consoleFontSize(const QString& name) const = 0;
+
+    // This console's own appearance. The image modes are 1 border, 2 center, 3 tile and 4 style, whose
+    // path is a style sheet fragment instead; the window background also takes 5, cover, which fails for
+    // a file that is not an image. Any other mode fails.
+    virtual void setConsoleBgColor(int r, int g, int b, int a) = 0;
+    virtual bool setConsoleBackgroundImage(const QString& imgPath, int mode) = 0;
+    virtual bool resetConsoleBackgroundImage() = 0;
+    // The window background spans the borders as well as the text, and hides the border colour.
+    virtual bool setWindowBackgroundImage(const QString& imgPath, int mode) = 0;
+    virtual bool resetWindowBackgroundImage() = 0;
+    virtual void setBorderColor(const QColor& color) = 0;
+    // Re-applies the profile's colours.
+    virtual void changeColors() = 0;
+    // Also styles every user window's dock and the map's.
+    virtual void setProfileStyleSheet(const QString& styleSheet) = 0;
+    // Lays the console out again for Host's current borders and raises sysWindowResizeEvent with the room they leave.
+    virtual void applyBorders() = 0;
+    virtual QFont displayFont() const = 0;
+    virtual void setFont(const QFont& font) = 0;
+    virtual void setFontSize(int size) = 0;
+
+    // These fail only for a name that is not a sub-console's, for which changeSubConsoleColors() does nothing.
+    virtual bool setSubConsoleBackgroundColor(const QString& name, const QColor& color) = 0;
+    virtual bool setSubConsoleBackgroundImage(const QString& name, const QString& path, int mode) = 0;
+    virtual bool resetSubConsoleBackgroundImage(const QString& name) = 0;
+    virtual bool setSubConsoleCommandBackgroundColor(const QString& name, const QColor& color) = 0;
+    virtual bool setSubConsoleCommandForegroundColor(const QString& name, const QColor& color) = 0;
+    virtual void changeSubConsoleColors(const QString& name) = 0;
 
 protected:
     // The view is a widget whose owner deletes it as one, so nothing deletes it through this interface.
