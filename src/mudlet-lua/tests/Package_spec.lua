@@ -177,7 +177,7 @@ local function writePackageXml(path, body, version)
   file:close()
 end
 
--- Every install and uninstall here starts an asynchronous profile save, and
+-- Every install and uninstall here owes an asynchronous profile save, and
 -- while one is running the package API stops doing what it is told: an install
 -- is postponed and answered with a bare true (see the pending spec at the end
 -- of this file), an uninstall is refused, and a module reload is dropped. Lua
@@ -3001,10 +3001,12 @@ describe("Tests exporting the profile to a file with saveProfile", function()
   it("writes a newline in an attribute as the reference XML reads back as one", function()
     -- A stopwatch name is held in an attribute, which is only written on a full save
     local watch = createStopWatch(name .. " stop\nwatch")
+    -- Kept until the file is read: the save the setup's install still owes can
+    -- run after this one and rewrite the same file within the same second
+    finally(function() deleteStopWatch(watch) end)
     setStopWatchPersistence(watch, true)
     assert.is_true(waitForProfileSaveToPass(), "a profile save was still running")
     local ok, savedPath = saveProfile()
-    deleteStopWatch(watch)
     assert.is_true(ok, savedPath)
     assert.is_true(waitForProfileSaveToPass(), "the profile save did not finish")
     assert.is_true(contains(readFile(savedPath), 'name="' .. name .. ' stop&#10;watch"'),

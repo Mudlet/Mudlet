@@ -540,4 +540,84 @@ describe("Tests the audit of a damaged binary map file", function()
       assert.are.equal(names[first] .. "_001", names[second])
     end)
   end)
+
+  describe("Tests what a sound map keeps through a save and load", function()
+    local function sorted(list)
+      local copy = {}
+      for _, value in pairs(list or {}) do
+        copy[#copy + 1] = value
+      end
+      table.sort(copy)
+      return copy
+    end
+
+    it("lists each room that leads into a room once, whichever kind of exit it uses", function()
+      local area = newArea("MapFileAuditSpecEntrances")
+      local target = newRoom(area, 0)
+      local twoWays = newRoom(area, 1)
+      local northOnly = newRoom(area, 2)
+      local specialOnly = newRoom(area, 3)
+      local elsewhere = newRoom(area, 4)
+      assert.is_true(setExit(twoWays, target, "east"))
+      assert.is_true(setExit(twoWays, target, "up"))
+      assert.is_true(addSpecialExit(twoWays, target, "squeeze through"))
+      assert.is_true(setExit(northOnly, target, "north"))
+      assert.is_true(addSpecialExit(specialOnly, target, "climb down"))
+      assert.is_true(setExit(target, elsewhere, "west"))
+
+      reloadWith(function(data) return data end)
+
+      assert.are.same(sorted({twoWays, northOnly, specialOnly}), sorted(getAllRoomEntrances(target)))
+      assert.are.same({target}, sorted(getAllRoomEntrances(elsewhere)))
+      assert.are.same({}, sorted(getAllRoomEntrances(twoWays)))
+    end)
+
+    it("keeps a room's exit stubs and exit locks", function()
+      local area = newArea("MapFileAuditSpecStubsAndLocks")
+      local oneEach = newRoom(area, 0)
+      local several = newRoom(area, 1)
+      local neighbour = newRoom(area, 2)
+      setExitStub(oneEach, "north", true)
+      assert.is_true(setExit(oneEach, neighbour, "east"))
+      lockExit(oneEach, "east", true)
+      setExitStub(several, "north", true)
+      setExitStub(several, "south", true)
+      setExitStub(several, "up", true)
+      assert.is_true(setExit(several, neighbour, "east"))
+      assert.is_true(setExit(several, neighbour, "west"))
+      lockExit(several, "east", true)
+      lockExit(several, "west", true)
+
+      reloadWith(function(data) return data end)
+
+      assert.are.same({1}, sorted(getExitStubs1(oneEach)))
+      assert.is_true(hasExitLock(oneEach, "east"))
+      assert.are.same({1, 6, 9}, sorted(getExitStubs1(several)))
+      assert.is_true(hasExitLock(several, "east"))
+      assert.is_true(hasExitLock(several, "west"))
+    end)
+
+    it("drops a duplicated exit stub or exit lock that the file holds", function()
+      local area = newArea("MapFileAuditSpecDuplicates")
+      local room = newRoom(area, 0)
+      local neighbour = newRoom(area, 1)
+      assert.is_true(setExit(room, neighbour, "east"))
+      assert.is_true(setExit(room, neighbour, "west"))
+      lockExit(room, "east", true)
+      lockExit(room, "west", true)
+      setExitStub(room, "north", true)
+      setExitStub(room, "south", true)
+
+      -- the locks then the stubs, each a count followed by the direction codes
+      reloadWith(function(data)
+        return planted(data,
+          int32(2) .. int32(4) .. int32(5) .. int32(2) .. int32(1) .. int32(6),
+          int32(2) .. int32(4) .. int32(4) .. int32(2) .. int32(1) .. int32(1), 1)
+      end)
+
+      assert.are.same({1}, sorted(getExitStubs1(room)))
+      assert.is_true(hasExitLock(room, "east"))
+      assert.is_false(hasExitLock(room, "west"))
+    end)
+  end)
 end)

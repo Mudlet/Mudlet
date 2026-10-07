@@ -31,6 +31,7 @@
 #include <QDir>
 #include <QFileInfo>
 #include <QFontInfo>
+#include <QTimer>
 
 #include <cerrno>
 #include <cstdio>
@@ -542,6 +543,22 @@ void TConsoleModel::reportFailedLogStart(const QString& path, const QString& rea
     //: Error shown on the main console when a log file could not be opened. %1 is the file, %2 is the reason
     mpHost->postMessage(QCoreApplication::translate("TConsoleModel", "[ ERROR ] - Could not start logging to \"%1\": %2").arg(path, reason));
     mpHost->raiseLoggingStateChanged(false);
+}
+
+void TConsoleModel::scheduleLogFlush()
+{
+    if (mLogFlushPending) {
+        return;
+    }
+    mLogFlushPending = true;
+    QTimer::singleShot(0, &mNotifier, [this]() {
+        mLogFlushPending = false;
+        // Closing the file flushed the stream already, and flushing a stream
+        // whose device is closed latches WriteFailed on it
+        if (mLogFile.isOpen()) {
+            mLogStream.flush();
+        }
+    });
 }
 
 void TConsoleModel::toggleLogging(bool isMessageEnabled)

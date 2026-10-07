@@ -37,6 +37,7 @@
 #include <QDir>
 #include <QFile>
 #include <QFileInfo>
+#include <QHash>
 #include <QLibraryInfo>
 #include <QMutex>
 #include <atomic>
@@ -77,6 +78,7 @@ std::atomic<bool> mudletDictionariesInUse = false;
 // there is no way round the cycle.
 QMutex settingsMutex;
 QPointer<QSettings> smpSettings;
+QHash<QString, QSettings::Status> smEarlySettingsErrors;
 QString smInterfaceLanguage;
 bool smStorePasswordsSecurely = true;
 bool smFirstLaunch = false;
@@ -611,7 +613,7 @@ QSettings* MudletApp::getQSettings()
         return smpSettings;
     }
     // Null until mudlet::setupConfig() has settled the root and had its chance
-    // to report what the resolution found: nothing may open Mudlet.ini before
+    // to report what the resolution found: nothing may write Mudlet.ini before
     // the user has been told which directory they are about to be running in.
     const QString root = installedConfigRoot();
     if (root.isEmpty()) {
@@ -620,15 +622,33 @@ QSettings* MudletApp::getQSettings()
     // parented to the application, not the main window: the window deletes
     // itself on close and the Updater keeps using this QSettings past that point.
     smpSettings = new QSettings(qsl("%1/Mudlet.ini").arg(root), QSettings::IniFormat, QCoreApplication::instance());
-    if (smpSettings->status() != QSettings::NoError) {
+    // See noteEarlySettingsStatus()
+    smpSettings->allKeys();
+    QSettings::Status status = smpSettings->status();
+    if (status == QSettings::NoError) {
+        status = smEarlySettingsErrors.value(smpSettings->fileName(), QSettings::NoError);
+    }
+    if (status != QSettings::NoError) {
         // A corrupt or unreadable file still builds a perfectly usable-looking
         // QSettings whose reads all return the caller's default and whose writes
         // all vanish, so say so rather than let every preference silently reset
-        qWarning().nospace() << "MudletApp::getQSettings() ERROR - \"" << smpSettings->fileName() << "\" is "
-                             << (smpSettings->status() == QSettings::FormatError ? "not valid INI" : "not readable or writable")
-                             << ", so settings read from it fall back to defaults and changes to them will not be saved.";
+        qWarning().nospace().noquote() << "MudletApp::getQSettings() ERROR - \"" << smpSettings->fileName() << "\" is "
+                                       << (status == QSettings::FormatError ? "not valid INI" : "not readable or writable")
+                                       << ", so settings read from it fall back to defaults and changes to them will not be saved.";
     }
     return smpSettings;
+}
+
+void MudletApp::noteEarlySettingsStatus(const QSettings& settings)
+{
+    // Only the section headers are parsed up front; the lines in a section are
+    // parsed, and their errors reported, on its first read
+    settings.allKeys();
+    if (settings.status() == QSettings::NoError) {
+        return;
+    }
+    const QMutexLocker locker(&settingsMutex);
+    smEarlySettingsErrors.insert(settings.fileName(), settings.status());
 }
 
 bool MudletApp::portableRootInUse()

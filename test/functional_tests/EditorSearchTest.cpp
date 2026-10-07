@@ -173,6 +173,10 @@ private:
         pScript->setScript(qsl("-- %1 lives here too\n").arg(mNeedle));
         mpHost->getScriptUnit()->registerScript(pScript);
 
+        auto* pLongScript = new TScript(qsl("qaMultiLineScript"), mpHost);
+        pLongScript->setScript(qsl("local a = 1\n-- qaLater qaLaterWord\nlocal b = qaLater\n"));
+        mpHost->getScriptUnit()->registerScript(pLongScript);
+
         auto* pTimer = new TTimer(qsl("qaSearchTimer"), QTime(0, 0, 30), mpHost);
         pTimer->setCommand(qsl("%1 command").arg(mNeedle));
         mpHost->getTimerUnit()->registerTimer(pTimer);
@@ -327,6 +331,29 @@ private slots:
 
         search(qsl("qaSearchTimer"));
         QVERIFY2(totalResultRows() > 0, "a whole word was not matched in whole-word mode");
+    }
+
+    // One search after another, with the needle or the case option changed in
+    // between, must each match on their own terms
+    void test_wholeWordSearchFollowsTheNeedleAndCaseOption()
+    {
+        mpEditor->setSearchOptions(enums::EditorSearchOptionWholeWord);
+        search(qsl("qalater"));
+        QCOMPARE(resultsFor(qsl("Script")), QStringList({qsl("Lua code (2:4)"), qsl("Lua code (3:11)")}));
+
+        search(qsl("QALATERWORD"));
+        QCOMPARE(resultsFor(qsl("Script")), QStringList({qsl("Lua code (2:12)")}));
+
+        mpEditor->setSearchOptions(enums::EditorSearchOptionWholeWord | enums::EditorSearchOptionCaseSensitive);
+        search(qsl("QALATERWORD"));
+        QCOMPARE(resultsFor(qsl("Script")), QStringList());
+
+        search(qsl("qaLater"));
+        QCOMPARE(resultsFor(qsl("Script")), QStringList({qsl("Lua code (2:4)"), qsl("Lua code (3:11)")}));
+
+        mpEditor->setSearchOptions(enums::EditorSearchOptionWholeWord);
+        search(qsl("QALATER"));
+        QCOMPARE(resultsFor(qsl("Script")), QStringList({qsl("Lua code (2:4)"), qsl("Lua code (3:11)")}));
     }
 
     // Variables live in the Lua state rather than in a unit, so they are only
