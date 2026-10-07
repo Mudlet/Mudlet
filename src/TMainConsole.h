@@ -318,8 +318,10 @@ public:
     void regenerateToolBars(const std::list<TAction*>& rootActions);
     void regenerateEasyButtonBars(const std::list<TAction*>& rootActions);
     // Takes an action's bars out of the window without destroying them, for an
-    // action that is being removed or has stopped being a root one.
+    // action that is being removed.
     void detachActionBars(TAction* pAction);
+    // Destroys an action's own bars, for one that is now a menu on another's.
+    void disposeActionBars(TAction* pAction);
     // Each action's bars, looked up by the action. An action shown as a menu on
     // another's bar (on a floating toolbar, any entry of such a menu) is
     // recorded against that bar too, so what is asked of its bar here is done

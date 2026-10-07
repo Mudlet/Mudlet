@@ -894,6 +894,25 @@ void TMainConsole::detachActionBars(TAction* pAction)
     }
 }
 
+void TMainConsole::disposeActionBars(TAction* pAction)
+{
+    if (TEasyButtonBar* pBar = actionEasyButtonBar(pAction)) {
+        detachEasyButtonBar(pBar, pAction->mLocation);
+        mEasyButtonBarList.remove(pBar);
+        pBar->hide();
+        pBar->deleteLater();
+        setActionEasyButtonBar(pAction, nullptr);
+    }
+    if (TToolBar* pToolBar = actionToolBar(pAction)) {
+        pToolBar->setFloating(false);
+        undockToolBar(pToolBar);
+        mToolBarList.remove(pToolBar);
+        pToolBar->hide();
+        pToolBar->deleteLater();
+        setActionToolBar(pAction, nullptr);
+    }
+}
+
 TMainConsole::ActionBars& TMainConsole::actionBarsFor(TAction* pAction)
 {
     auto it = mActionBars.find(pAction);

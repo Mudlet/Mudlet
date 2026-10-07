@@ -204,6 +204,12 @@ void ActionUnit::reParentAction(int childID, int oldParentID, int newParentID, i
     if (!pChild) {
         return;
     }
+    // Only a root action, or one directly inside a package, is drawn as a bar of its own; deeper down it is a menu
+    auto ownsABarUnder = [](const TAction* pParent) {
+        return !pParent || (!pParent->getParent() && !pParent->mPackageName.isEmpty());
+    };
+    const bool hadABar = ownsABarUnder(pOldParent);
+    const bool wasAPackageRoot = !pOldParent && !pChild->mPackageName.isEmpty();
 
     if (pOldParent) {
         pChild->setDataChanged();
@@ -233,10 +239,16 @@ void ActionUnit::reParentAction(int childID, int oldParentID, int newParentID, i
 
     pChild->setDataChanged();
 
-    if ((!pOldParent) && (pNewParent)) {
-        // A profile with no view has no console, so no bars to take down
-        if (mpHost->mpConsole) {
-            mpHost->mpConsole->detachActionBars(pChild);
+    // A profile with no view has no console, so no bars to take down
+    if (mpHost->mpConsole) {
+        if (hadABar && !ownsABarUnder(pNewParent)) {
+            mpHost->mpConsole->disposeActionBars(pChild);
+        }
+        // Its children had bars of their own only while it was a root
+        if (wasAPackageRoot && pNewParent) {
+            for (auto* pPackaged : *pChild->mpMyChildrenList) {
+                mpHost->mpConsole->disposeActionBars(static_cast<TAction*>(pPackaged));
+            }
         }
     }
 }
