@@ -683,6 +683,32 @@ bool dlgMapper::showing3DView() const
 #endif
 }
 
+void dlgMapper::shift3DViewCamera(float verticalAngle, float horizontalAngle, float rotationAngle)
+{
+#if defined(INCLUDE_3DMAPPER)
+    if (auto* modernWidget = dynamic_cast<ModernGLWidget*>(mpMap->mpM.data())) {
+        modernWidget->shiftCamera(verticalAngle, horizontalAngle, rotationAngle);
+    }
+#else
+    Q_UNUSED(verticalAngle)
+    Q_UNUSED(horizontalAngle)
+    Q_UNUSED(rotationAngle)
+#endif
+}
+
+void dlgMapper::set3DViewCameraPosition(float r, float theta, float phi)
+{
+#if defined(INCLUDE_3DMAPPER)
+    if (auto* modernWidget = dynamic_cast<ModernGLWidget*>(mpMap->mpM.data())) {
+        modernWidget->setCameraPosition(r, theta, phi);
+    }
+#else
+    Q_UNUSED(r)
+    Q_UNUSED(theta)
+    Q_UNUSED(phi)
+#endif
+}
+
 void dlgMapper::slot_toggle3DView(const bool is3DMode)
 {
 #if defined(INCLUDE_3DMAPPER)
