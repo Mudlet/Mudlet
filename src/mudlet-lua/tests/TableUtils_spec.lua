@@ -971,6 +971,23 @@ describe("Tests TableUtils.lua functions", function()
       local actual = table.n_intersection(t1,t2,t3)
       assert.same(expected, actual)
     end)
+
+    it("should match tables by content and keep the first table's order without duplicates", function()
+      local t1 = {3, {a = 1}, "x", 3, {a = 2}, 1}
+      local t2 = {1, {a = 1}, "x", 3}
+      local actual = table.n_intersection(t1, t2)
+      assert.same({3, {a = 1}, "x", 1}, actual)
+      assert.equals(t1[2], actual[2])
+    end)
+
+    it("should tell numbers from strings and keep false values", function()
+      assert.same({false, 1}, table.n_intersection({false, "2", 1}, {1, "1", 2, false}))
+    end)
+
+    it("should never match NaN", function()
+      local nan = 0/0
+      assert.same({1}, table.n_intersection({nan, 1}, {nan, 1}))
+    end)
   end)
 
   describe("Tests the functionality of table.complement", function()
@@ -990,6 +1007,28 @@ describe("Tests TableUtils.lua functions", function()
       local expected = {1,3,5}
       local actual = table.n_complement(t1,t2)
       assert.same(expected, actual)
+    end)
+
+    it("should keep duplicates and the first table's order, and match tables by content", function()
+      local t1 = {5, {a = 1}, "5", 5, {a = 2}, true, 1}
+      local t2 = {1, {a = 1}, false}
+      assert.same({5, "5", 5, {a = 2}, true}, table.n_complement(t1, t2))
+    end)
+
+    it("should keep NaN, which equals nothing", function()
+      local actual = table.n_complement({0/0, 1}, {0/0})
+      assert.equals(2, #actual)
+      assert.is_true(actual[1] ~= actual[1])
+      assert.equals(1, actual[2])
+    end)
+
+    it("should match functions by identity", function()
+      local f1, f2 = function() end, function() end
+      assert.same({f2}, table.n_complement({f1, f2}, {f1}))
+    end)
+
+    it("should return an empty table for an empty first table", function()
+      assert.same({}, table.n_complement({}, {1}))
     end)
   end)
 
