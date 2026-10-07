@@ -6020,7 +6020,7 @@ void dlgTriggerEditor::saveTrigger()
     TTrigger* pT = mpHost->getTriggerUnit()->getTrigger(triggerID);
     if (pT) {
         // Capture OLD state before modifications (for undo)
-        QString oldStateXML = exportTriggerToXML(pT);
+        QString oldStateXML = exportTriggerToXML(pT, SnapshotScope::ItemOnly);
 
         pT->setName(name);
         pT->setCommand(command);
@@ -6169,7 +6169,7 @@ void dlgTriggerEditor::saveTrigger()
         pItem->setData(0, Qt::AccessibleDescriptionRole, itemDescription);
 
         // Capture NEW state after modifications (for redo)
-        QString newStateXML = exportTriggerToXML(pT);
+        QString newStateXML = exportTriggerToXML(pT, SnapshotScope::ItemOnly);
 
         // Only push undo command if something actually changed
         if (oldStateXML != newStateXML) {
@@ -6205,7 +6205,7 @@ void dlgTriggerEditor::saveTimer()
     TTimer* pT = mpHost->getTimerUnit()->getTimer(timerID);
     if (pT) {
         // Capture OLD state before modifications (for undo)
-        QString oldStateXML = exportTimerToXML(pT);
+        QString oldStateXML = exportTimerToXML(pT, SnapshotScope::ItemOnly);
 
         pT->setName(name);
         const QString command = mpTimersMainArea->lineEdit_timer_command->text();
@@ -6310,7 +6310,7 @@ void dlgTriggerEditor::saveTimer()
         pItem->setData(0, Qt::AccessibleDescriptionRole, itemDescription);
 
         // Capture NEW state after modifications (for redo)
-        QString newStateXML = exportTimerToXML(pT);
+        QString newStateXML = exportTimerToXML(pT, SnapshotScope::ItemOnly);
 
         // Only push undo command if something actually changed
         if (oldStateXML != newStateXML) {
@@ -6361,7 +6361,7 @@ void dlgTriggerEditor::saveAlias()
     TAlias* pT = mpHost->getAliasUnit()->getAlias(triggerID);
     if (pT) {
         // Capture OLD state before modifications (for undo)
-        QString oldStateXML = exportAliasToXML(pT);
+        QString oldStateXML = exportAliasToXML(pT, SnapshotScope::ItemOnly);
 
         pT->setName(name);
         pT->setCommand(substitution);
@@ -6425,7 +6425,7 @@ void dlgTriggerEditor::saveAlias()
         pItem->setData(0, Qt::AccessibleDescriptionRole, itemDescription);
 
         // Capture NEW state after modifications (for redo)
-        QString newStateXML = exportAliasToXML(pT);
+        QString newStateXML = exportAliasToXML(pT, SnapshotScope::ItemOnly);
 
         // Only push undo command if something actually changed
         if (oldStateXML != newStateXML) {
@@ -6687,7 +6687,7 @@ void dlgTriggerEditor::saveAction()
     TAction* pA = mpHost->getActionUnit()->getAction(actionID);
     if (pA) {
         // Capture OLD state before modifications (for undo)
-        QString oldStateXML = exportActionToXML(pA);
+        QString oldStateXML = exportActionToXML(pA, SnapshotScope::ItemOnly);
 
         // Check if data has been changed before it gets updated.
         bool actionDataChanged = false;
@@ -6805,7 +6805,7 @@ void dlgTriggerEditor::saveAction()
         }
 
         // Capture NEW state after modifications (for redo)
-        QString newStateXML = exportActionToXML(pA);
+        QString newStateXML = exportActionToXML(pA, SnapshotScope::ItemOnly);
 
         // Only push undo command if something actually changed
         if (oldStateXML != newStateXML) {
@@ -6885,7 +6885,7 @@ void dlgTriggerEditor::saveScript()
     }
 
     // Capture OLD state before modifications (for undo)
-    QString oldStateXML = exportScriptToXML(pT);
+    QString oldStateXML = exportScriptToXML(pT, SnapshotScope::ItemOnly);
 
     pT->setName(name);
     pT->setEventHandlerList(handlerList);
@@ -6991,7 +6991,7 @@ void dlgTriggerEditor::saveScript()
     pItem->setData(0, Qt::AccessibleDescriptionRole, itemDescription);
 
     // Capture NEW state after modifications (for redo)
-    QString newStateXML = exportScriptToXML(pT);
+    QString newStateXML = exportScriptToXML(pT, SnapshotScope::ItemOnly);
 
     // Only push undo command if something actually changed
     if (oldStateXML != newStateXML) {
@@ -7420,7 +7420,7 @@ void dlgTriggerEditor::saveKey()
     TKey* pT = mpHost->getKeyUnit()->getKey(triggerID);
     if (pT) {
         // Capture OLD state before modifications (for undo)
-        QString oldStateXML = exportKeyToXML(pT);
+        QString oldStateXML = exportKeyToXML(pT, SnapshotScope::ItemOnly);
 
         const QString old_name = pT->getName();
         pItem->setText(0, name);
@@ -7531,7 +7531,7 @@ void dlgTriggerEditor::saveKey()
         pItem->setData(0, Qt::AccessibleDescriptionRole, itemDescription);
 
         // Capture NEW state after modifications (for redo)
-        QString newStateXML = exportKeyToXML(pT);
+        QString newStateXML = exportKeyToXML(pT, SnapshotScope::ItemOnly);
 
         // Only push undo command if something actually changed
         if (oldStateXML != newStateXML) {
@@ -13448,10 +13448,10 @@ void dlgTriggerEditor::keyGrabCallback(const Qt::Key key, const Qt::KeyboardModi
                 return;
             }
 
-            QString oldStateXML = exportKeyToXML(pT);
+            QString oldStateXML = exportKeyToXML(pT, SnapshotScope::ItemOnly);
             pT->setKeyCode(key);
             pT->setKeyModifiers(modifier);
-            QString newStateXML = exportKeyToXML(pT);
+            QString newStateXML = exportKeyToXML(pT, SnapshotScope::ItemOnly);
 
             showKeyTakenWarning(pItem, takenKeyWarning(pT), true);
 
@@ -15399,10 +15399,10 @@ void dlgTriggerEditor::slot_saveProperty_TriggerName()
         return;
     }
 
-    QString oldStateXML = exportTriggerToXML(pT);
+    QString oldStateXML = exportTriggerToXML(pT, SnapshotScope::ItemOnly);
     pT->setName(newName);
     mpCurrentTriggerItem->setText(0, newName);
-    QString newStateXML = exportTriggerToXML(pT);
+    QString newStateXML = exportTriggerToXML(pT, SnapshotScope::ItemOnly);
 
     pushTriggerPropertyCommand(mpUndoStack, mpHost, triggerID, newName, qsl("name"), oldStateXML, newStateXML);
 }
@@ -15425,9 +15425,9 @@ void dlgTriggerEditor::slot_saveProperty_TriggerCommand()
         return;
     }
 
-    QString oldStateXML = exportTriggerToXML(pT);
+    QString oldStateXML = exportTriggerToXML(pT, SnapshotScope::ItemOnly);
     pT->setCommand(newCommand);
-    QString newStateXML = exportTriggerToXML(pT);
+    QString newStateXML = exportTriggerToXML(pT, SnapshotScope::ItemOnly);
 
     pushTriggerPropertyCommand(mpUndoStack, mpHost, triggerID, pT->getName(), qsl("command"), oldStateXML, newStateXML);
 }
@@ -15450,9 +15450,9 @@ void dlgTriggerEditor::slot_saveProperty_TriggerStayOpen()
         return;
     }
 
-    QString oldStateXML = exportTriggerToXML(pT);
+    QString oldStateXML = exportTriggerToXML(pT, SnapshotScope::ItemOnly);
     pT->mStayOpen = newValue;
-    QString newStateXML = exportTriggerToXML(pT);
+    QString newStateXML = exportTriggerToXML(pT, SnapshotScope::ItemOnly);
 
     pushTriggerPropertyCommand(mpUndoStack, mpHost, triggerID, pT->getName(), qsl("stayOpen"), oldStateXML, newStateXML);
 }
@@ -15477,14 +15477,14 @@ void dlgTriggerEditor::slot_saveProperty_TriggerLineMargin()
         return;
     }
 
-    QString oldStateXML = exportTriggerToXML(pT);
+    QString oldStateXML = exportTriggerToXML(pT, SnapshotScope::ItemOnly);
     if (newValue >= 0) {
         pT->setConditionLineDelta(newValue);
         pT->setIsMultiline(true);
     } else {
         pT->setIsMultiline(false);
     }
-    QString newStateXML = exportTriggerToXML(pT);
+    QString newStateXML = exportTriggerToXML(pT, SnapshotScope::ItemOnly);
 
     pushTriggerPropertyCommand(mpUndoStack, mpHost, triggerID, pT->getName(), qsl("lineMargin"), oldStateXML, newStateXML);
 }
@@ -15507,9 +15507,9 @@ void dlgTriggerEditor::slot_saveProperty_TriggerFilterTrigger()
         return;
     }
 
-    QString oldStateXML = exportTriggerToXML(pT);
+    QString oldStateXML = exportTriggerToXML(pT, SnapshotScope::ItemOnly);
     pT->mFilterTrigger = newValue;
-    QString newStateXML = exportTriggerToXML(pT);
+    QString newStateXML = exportTriggerToXML(pT, SnapshotScope::ItemOnly);
 
     pushTriggerPropertyCommand(mpUndoStack, mpHost, triggerID, pT->getName(), qsl("filterTrigger"), oldStateXML, newStateXML);
 }
@@ -15532,9 +15532,9 @@ void dlgTriggerEditor::slot_saveProperty_TriggerPerlSlashG()
         return;
     }
 
-    QString oldStateXML = exportTriggerToXML(pT);
+    QString oldStateXML = exportTriggerToXML(pT, SnapshotScope::ItemOnly);
     pT->mPerlSlashGOption = newValue;
-    QString newStateXML = exportTriggerToXML(pT);
+    QString newStateXML = exportTriggerToXML(pT, SnapshotScope::ItemOnly);
 
     pushTriggerPropertyCommand(mpUndoStack, mpHost, triggerID, pT->getName(), qsl("perlSlashG"), oldStateXML, newStateXML);
 }
@@ -15557,9 +15557,9 @@ void dlgTriggerEditor::slot_saveProperty_TriggerSoundEnabled()
         return;
     }
 
-    QString oldStateXML = exportTriggerToXML(pT);
+    QString oldStateXML = exportTriggerToXML(pT, SnapshotScope::ItemOnly);
     pT->mSoundTrigger = newValue;
-    QString newStateXML = exportTriggerToXML(pT);
+    QString newStateXML = exportTriggerToXML(pT, SnapshotScope::ItemOnly);
 
     pushTriggerPropertyCommand(mpUndoStack, mpHost, triggerID, pT->getName(), qsl("soundEnabled"), oldStateXML, newStateXML);
 }
@@ -15582,9 +15582,9 @@ void dlgTriggerEditor::slot_saveProperty_TriggerSoundFile()
         return;
     }
 
-    QString oldStateXML = exportTriggerToXML(pT);
+    QString oldStateXML = exportTriggerToXML(pT, SnapshotScope::ItemOnly);
     pT->setSound(newValue);
-    QString newStateXML = exportTriggerToXML(pT);
+    QString newStateXML = exportTriggerToXML(pT, SnapshotScope::ItemOnly);
 
     pushTriggerPropertyCommand(mpUndoStack, mpHost, triggerID, pT->getName(), qsl("soundFile"), oldStateXML, newStateXML);
 }
@@ -15607,9 +15607,9 @@ void dlgTriggerEditor::slot_saveProperty_TriggerColorizer()
         return;
     }
 
-    QString oldStateXML = exportTriggerToXML(pT);
+    QString oldStateXML = exportTriggerToXML(pT, SnapshotScope::ItemOnly);
     pT->setIsColorizerTrigger(newValue);
-    QString newStateXML = exportTriggerToXML(pT);
+    QString newStateXML = exportTriggerToXML(pT, SnapshotScope::ItemOnly);
 
     pushTriggerPropertyCommand(mpUndoStack, mpHost, triggerID, pT->getName(), qsl("colorizer"), oldStateXML, newStateXML);
 }
@@ -15683,10 +15683,10 @@ void dlgTriggerEditor::slot_saveProperty_AliasName()
         return;
     }
 
-    QString oldStateXML = exportAliasToXML(pT);
+    QString oldStateXML = exportAliasToXML(pT, SnapshotScope::ItemOnly);
     pT->setName(newName);
     mpCurrentAliasItem->setText(0, newName);
-    QString newStateXML = exportAliasToXML(pT);
+    QString newStateXML = exportAliasToXML(pT, SnapshotScope::ItemOnly);
 
     pushAliasPropertyCommand(mpUndoStack, mpHost, aliasID, newName, qsl("name"), oldStateXML, newStateXML);
 }
@@ -15717,9 +15717,9 @@ void dlgTriggerEditor::slot_saveProperty_AliasPattern()
         return;
     }
 
-    QString oldStateXML = exportAliasToXML(pT);
+    QString oldStateXML = exportAliasToXML(pT, SnapshotScope::ItemOnly);
     pT->setRegexCode(newPattern);
-    QString newStateXML = exportAliasToXML(pT);
+    QString newStateXML = exportAliasToXML(pT, SnapshotScope::ItemOnly);
 
     pushAliasPropertyCommand(mpUndoStack, mpHost, aliasID, pT->getName(), qsl("pattern"), oldStateXML, newStateXML);
 
@@ -15753,9 +15753,9 @@ void dlgTriggerEditor::slot_saveProperty_AliasCommand()
         return;
     }
 
-    QString oldStateXML = exportAliasToXML(pT);
+    QString oldStateXML = exportAliasToXML(pT, SnapshotScope::ItemOnly);
     pT->setCommand(newCommand);
-    QString newStateXML = exportAliasToXML(pT);
+    QString newStateXML = exportAliasToXML(pT, SnapshotScope::ItemOnly);
 
     pushAliasPropertyCommand(mpUndoStack, mpHost, aliasID, pT->getName(), qsl("command"), oldStateXML, newStateXML);
 
@@ -15798,10 +15798,10 @@ void dlgTriggerEditor::slot_saveProperty_TimerName()
         return;
     }
 
-    QString oldStateXML = exportTimerToXML(pT);
+    QString oldStateXML = exportTimerToXML(pT, SnapshotScope::ItemOnly);
     pT->setName(newName);
     mpCurrentTimerItem->setText(0, newName);
-    QString newStateXML = exportTimerToXML(pT);
+    QString newStateXML = exportTimerToXML(pT, SnapshotScope::ItemOnly);
 
     pushTimerPropertyCommand(mpUndoStack, mpHost, timerID, newName, qsl("name"), oldStateXML, newStateXML);
 }
@@ -15824,9 +15824,9 @@ void dlgTriggerEditor::slot_saveProperty_TimerCommand()
         return;
     }
 
-    QString oldStateXML = exportTimerToXML(pT);
+    QString oldStateXML = exportTimerToXML(pT, SnapshotScope::ItemOnly);
     pT->setCommand(newCommand);
-    QString newStateXML = exportTimerToXML(pT);
+    QString newStateXML = exportTimerToXML(pT, SnapshotScope::ItemOnly);
 
     pushTimerPropertyCommand(mpUndoStack, mpHost, timerID, pT->getName(), qsl("command"), oldStateXML, newStateXML);
 }
@@ -15852,9 +15852,9 @@ void dlgTriggerEditor::slot_saveProperty_TimerTime()
         return;
     }
 
-    QString oldStateXML = exportTimerToXML(pT);
+    QString oldStateXML = exportTimerToXML(pT, SnapshotScope::ItemOnly);
     pT->setTime(newTime);
-    QString newStateXML = exportTimerToXML(pT);
+    QString newStateXML = exportTimerToXML(pT, SnapshotScope::ItemOnly);
 
     pushTimerPropertyCommand(mpUndoStack, mpHost, timerID, pT->getName(), qsl("time"), oldStateXML, newStateXML);
 }
@@ -15895,10 +15895,10 @@ void dlgTriggerEditor::slot_saveProperty_ScriptName()
         return;
     }
 
-    QString oldStateXML = exportScriptToXML(pT);
+    QString oldStateXML = exportScriptToXML(pT, SnapshotScope::ItemOnly);
     pT->setName(newName);
     mpCurrentScriptItem->setText(0, newName);
-    QString newStateXML = exportScriptToXML(pT);
+    QString newStateXML = exportScriptToXML(pT, SnapshotScope::ItemOnly);
 
     pushScriptPropertyCommand(mpUndoStack, mpHost, scriptID, newName, qsl("name"), oldStateXML, newStateXML);
 }
@@ -15925,9 +15925,9 @@ void dlgTriggerEditor::slot_saveProperty_ScriptEventHandlers()
         return;
     }
 
-    QString oldStateXML = exportScriptToXML(pT);
+    QString oldStateXML = exportScriptToXML(pT, SnapshotScope::ItemOnly);
     pT->setEventHandlerList(newHandlers);
-    QString newStateXML = exportScriptToXML(pT);
+    QString newStateXML = exportScriptToXML(pT, SnapshotScope::ItemOnly);
 
     pushScriptPropertyCommand(mpUndoStack, mpHost, scriptID, pT->getName(), qsl("eventHandlers"), oldStateXML, newStateXML);
 }
@@ -15967,10 +15967,10 @@ void dlgTriggerEditor::slot_saveProperty_KeyName()
         return;
     }
 
-    QString oldStateXML = exportKeyToXML(pT);
+    QString oldStateXML = exportKeyToXML(pT, SnapshotScope::ItemOnly);
     pT->setName(newName);
     mpCurrentKeyItem->setText(0, newName);
-    QString newStateXML = exportKeyToXML(pT);
+    QString newStateXML = exportKeyToXML(pT, SnapshotScope::ItemOnly);
 
     pushKeyPropertyCommand(mpUndoStack, mpHost, keyID, newName, qsl("name"), oldStateXML, newStateXML);
 }
@@ -15993,9 +15993,9 @@ void dlgTriggerEditor::slot_saveProperty_KeyCommand()
         return;
     }
 
-    QString oldStateXML = exportKeyToXML(pT);
+    QString oldStateXML = exportKeyToXML(pT, SnapshotScope::ItemOnly);
     pT->setCommand(newCommand);
-    QString newStateXML = exportKeyToXML(pT);
+    QString newStateXML = exportKeyToXML(pT, SnapshotScope::ItemOnly);
 
     pushKeyPropertyCommand(mpUndoStack, mpHost, keyID, pT->getName(), qsl("command"), oldStateXML, newStateXML);
 }
@@ -16036,10 +16036,10 @@ void dlgTriggerEditor::slot_saveProperty_ActionName()
         return;
     }
 
-    QString oldStateXML = exportActionToXML(pT);
+    QString oldStateXML = exportActionToXML(pT, SnapshotScope::ItemOnly);
     pT->setName(newName);
     mpCurrentActionItem->setText(0, newName);
-    QString newStateXML = exportActionToXML(pT);
+    QString newStateXML = exportActionToXML(pT, SnapshotScope::ItemOnly);
 
     pushActionPropertyCommand(mpUndoStack, mpHost, actionID, newName, qsl("name"), oldStateXML, newStateXML);
 }
@@ -16062,9 +16062,9 @@ void dlgTriggerEditor::slot_saveProperty_ActionCommandDown()
         return;
     }
 
-    QString oldStateXML = exportActionToXML(pT);
+    QString oldStateXML = exportActionToXML(pT, SnapshotScope::ItemOnly);
     pT->setCommandButtonDown(newCommand);
-    QString newStateXML = exportActionToXML(pT);
+    QString newStateXML = exportActionToXML(pT, SnapshotScope::ItemOnly);
 
     pushActionPropertyCommand(mpUndoStack, mpHost, actionID, pT->getName(), qsl("commandDown"), oldStateXML, newStateXML);
 }
@@ -16087,9 +16087,9 @@ void dlgTriggerEditor::slot_saveProperty_ActionCommandUp()
         return;
     }
 
-    QString oldStateXML = exportActionToXML(pT);
+    QString oldStateXML = exportActionToXML(pT, SnapshotScope::ItemOnly);
     pT->setCommandButtonUp(newCommand);
-    QString newStateXML = exportActionToXML(pT);
+    QString newStateXML = exportActionToXML(pT, SnapshotScope::ItemOnly);
 
     pushActionPropertyCommand(mpUndoStack, mpHost, actionID, pT->getName(), qsl("commandUp"), oldStateXML, newStateXML);
 }
@@ -16112,9 +16112,9 @@ void dlgTriggerEditor::slot_saveProperty_ActionIsPushDown()
         return;
     }
 
-    QString oldStateXML = exportActionToXML(pT);
+    QString oldStateXML = exportActionToXML(pT, SnapshotScope::ItemOnly);
     pT->setIsPushDownButton(newValue);
-    QString newStateXML = exportActionToXML(pT);
+    QString newStateXML = exportActionToXML(pT, SnapshotScope::ItemOnly);
 
     pushActionPropertyCommand(mpUndoStack, mpHost, actionID, pT->getName(), qsl("isPushDown"), oldStateXML, newStateXML);
 }
@@ -16137,9 +16137,9 @@ void dlgTriggerEditor::slot_saveProperty_ActionBarColumns()
         return;
     }
 
-    QString oldStateXML = exportActionToXML(pT);
+    QString oldStateXML = exportActionToXML(pT, SnapshotScope::ItemOnly);
     pT->setButtonColumns(newValue);
-    QString newStateXML = exportActionToXML(pT);
+    QString newStateXML = exportActionToXML(pT, SnapshotScope::ItemOnly);
 
     pushActionPropertyCommand(mpUndoStack, mpHost, actionID, pT->getName(), qsl("buttonColumn"), oldStateXML, newStateXML);
 }
@@ -16162,9 +16162,9 @@ void dlgTriggerEditor::slot_saveProperty_ActionBarFillerOffset()
         return;
     }
 
-    QString oldStateXML = exportActionToXML(pT);
+    QString oldStateXML = exportActionToXML(pT, SnapshotScope::ItemOnly);
     pT->setButtonFillerOffset(newValue);
-    QString newStateXML = exportActionToXML(pT);
+    QString newStateXML = exportActionToXML(pT, SnapshotScope::ItemOnly);
 
     pushActionPropertyCommand(mpUndoStack, mpHost, actionID, pT->getName(), qsl("buttonFillerOffset"), oldStateXML, newStateXML);
 }
@@ -16188,9 +16188,9 @@ void dlgTriggerEditor::slot_saveProperty_ActionBarOrientation()
         return;
     }
 
-    QString oldStateXML = exportActionToXML(pT);
+    QString oldStateXML = exportActionToXML(pT, SnapshotScope::ItemOnly);
     pT->mOrientation = newValue;
-    QString newStateXML = exportActionToXML(pT);
+    QString newStateXML = exportActionToXML(pT, SnapshotScope::ItemOnly);
 
     pushActionPropertyCommand(mpUndoStack, mpHost, actionID, pT->getName(), qsl("orientation"), oldStateXML, newStateXML);
 }
@@ -16214,9 +16214,9 @@ void dlgTriggerEditor::slot_saveProperty_ActionBarLocation()
         return;
     }
 
-    QString oldStateXML = exportActionToXML(pT);
+    QString oldStateXML = exportActionToXML(pT, SnapshotScope::ItemOnly);
     pT->mLocation = newValue;
-    QString newStateXML = exportActionToXML(pT);
+    QString newStateXML = exportActionToXML(pT, SnapshotScope::ItemOnly);
 
     pushActionPropertyCommand(mpUndoStack, mpHost, actionID, pT->getName(), qsl("barLocation"), oldStateXML, newStateXML);
 }
@@ -16239,9 +16239,9 @@ void dlgTriggerEditor::slot_saveProperty_ActionButtonRotation()
         return;
     }
 
-    QString oldStateXML = exportActionToXML(pT);
+    QString oldStateXML = exportActionToXML(pT, SnapshotScope::ItemOnly);
     pT->setButtonRotation(newValue);
-    QString newStateXML = exportActionToXML(pT);
+    QString newStateXML = exportActionToXML(pT, SnapshotScope::ItemOnly);
 
     pushActionPropertyCommand(mpUndoStack, mpHost, actionID, pT->getName(), qsl("buttonRotation"), oldStateXML, newStateXML);
 }
@@ -16264,9 +16264,9 @@ void dlgTriggerEditor::slot_saveProperty_ActionCSS()
         return;
     }
 
-    QString oldStateXML = exportActionToXML(pT);
+    QString oldStateXML = exportActionToXML(pT, SnapshotScope::ItemOnly);
     pT->css = newCSS;
-    QString newStateXML = exportActionToXML(pT);
+    QString newStateXML = exportActionToXML(pT, SnapshotScope::ItemOnly);
 
     pushActionPropertyCommand(mpUndoStack, mpHost, actionID, pT->getName(), qsl("css"), oldStateXML, newStateXML);
 }

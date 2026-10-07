@@ -82,7 +82,7 @@ static TKey* importKeyNode(pugi::xml_node keyNode, TKey* pParent, Host* host, in
 static TAction* importActionNode(pugi::xml_node actionNode, TAction* pParent, Host* host, int position);
 
 // XML Export/Import functions - used by both EditorUndoSystem and EditorAddItemCommand
-QString exportTriggerToXML(TTrigger* trigger)
+QString exportTriggerToXML(TTrigger* trigger, SnapshotScope scope)
 {
     if (!trigger) {
         return QString();
@@ -92,14 +92,14 @@ QString exportTriggerToXML(TTrigger* trigger)
     auto root = doc.append_child("TriggerSnapshot");
 
     XMLexport exporter(trigger);
-    exporter.writeTrigger(trigger, root);
+    exporter.writeTrigger(trigger, root, scope == SnapshotScope::ItemAndChildren);
 
     std::ostringstream oss;
     doc.save(oss);
     return compressXML(QString::fromStdString(oss.str()));
 }
 
-QString exportAliasToXML(TAlias* alias)
+QString exportAliasToXML(TAlias* alias, SnapshotScope scope)
 {
     if (!alias) {
         return QString();
@@ -109,14 +109,14 @@ QString exportAliasToXML(TAlias* alias)
     auto root = doc.append_child("AliasSnapshot");
 
     XMLexport exporter(alias);
-    exporter.writeAlias(alias, root);
+    exporter.writeAlias(alias, root, scope == SnapshotScope::ItemAndChildren);
 
     std::ostringstream oss;
     doc.save(oss);
     return compressXML(QString::fromStdString(oss.str()));
 }
 
-QString exportTimerToXML(TTimer* timer)
+QString exportTimerToXML(TTimer* timer, SnapshotScope scope)
 {
     if (!timer) {
         return QString();
@@ -126,14 +126,14 @@ QString exportTimerToXML(TTimer* timer)
     auto root = doc.append_child("TimerSnapshot");
 
     XMLexport exporter(timer);
-    exporter.writeTimer(timer, root);
+    exporter.writeTimer(timer, root, scope == SnapshotScope::ItemAndChildren);
 
     std::ostringstream oss;
     doc.save(oss);
     return compressXML(QString::fromStdString(oss.str()));
 }
 
-QString exportScriptToXML(TScript* script)
+QString exportScriptToXML(TScript* script, SnapshotScope scope)
 {
     if (!script) {
         return QString();
@@ -143,14 +143,14 @@ QString exportScriptToXML(TScript* script)
     auto root = doc.append_child("ScriptSnapshot");
 
     XMLexport exporter(script);
-    exporter.writeScript(script, root);
+    exporter.writeScript(script, root, scope == SnapshotScope::ItemAndChildren);
 
     std::ostringstream oss;
     doc.save(oss);
     return compressXML(QString::fromStdString(oss.str()));
 }
 
-QString exportKeyToXML(TKey* key)
+QString exportKeyToXML(TKey* key, SnapshotScope scope)
 {
     if (!key) {
         return QString();
@@ -160,14 +160,14 @@ QString exportKeyToXML(TKey* key)
     auto root = doc.append_child("KeySnapshot");
 
     XMLexport exporter(key);
-    exporter.writeKey(key, root);
+    exporter.writeKey(key, root, scope == SnapshotScope::ItemAndChildren);
 
     std::ostringstream oss;
     doc.save(oss);
     return compressXML(QString::fromStdString(oss.str()));
 }
 
-QString exportActionToXML(TAction* action)
+QString exportActionToXML(TAction* action, SnapshotScope scope)
 {
     if (!action) {
         return QString();
@@ -177,7 +177,7 @@ QString exportActionToXML(TAction* action)
     auto root = doc.append_child("ActionSnapshot");
 
     XMLexport exporter(action);
-    exporter.writeAction(action, root);
+    exporter.writeAction(action, root, scope == SnapshotScope::ItemAndChildren);
 
     std::ostringstream oss;
     doc.save(oss);
