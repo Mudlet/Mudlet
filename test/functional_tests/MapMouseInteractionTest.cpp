@@ -957,6 +957,55 @@ private slots:
         QCOMPARE(mp2dMap->mMultiSelectionSet, expected);
     }
 
+    // The list of selected rooms is rebuilt when the box takes in different
+    // rooms, not on every move of the mouse, which on a big selection costs
+    // more than the time between two moves.
+    void test_theListOfSelectedRoomsIsOnlyRebuiltWhenTheSelectionChanges()
+    {
+        buildMap();
+        showMapper(false);
+
+        const QPoint from = pointUnitsFromCentre(-1.5, 1.5);
+        pressAt(from);
+        moveTo(from);
+        moveTo(pointUnitsFromCentre(0.5, -0.5));
+        const QSet<int> quarter{kNorthWestRoomId, kNorthRoomId, kWestRoomId, kPlayerRoomId};
+        QCOMPARE(listedRoomIds(), quarter);
+
+        QSignalSpy rowsInserted(mp2dMap->mMultiSelectionListWidget.model(), &QAbstractItemModel::rowsInserted);
+        // Still short of the rooms to the east and south.
+        moveTo(pointUnitsFromCentre(0.6, -0.6));
+        QCOMPARE(mp2dMap->mMultiSelectionSet, quarter);
+        QCOMPARE(rowsInserted.count(), 0);
+        QCOMPARE(listedRoomIds(), quarter);
+
+        moveTo(pointUnitsFromCentre(1.5, -0.5));
+        const QSet<int> withTheEastColumn{kNorthWestRoomId, kNorthRoomId, kNorthEastRoomId, kWestRoomId, kPlayerRoomId, kEastRoomId};
+        QCOMPARE(listedRoomIds(), withTheEastColumn);
+        releaseAt(pointUnitsFromCentre(1.5, -0.5));
+        QCOMPARE(mp2dMap->mMultiSelectionSet, withTheEastColumn);
+    }
+
+    // A shift-press on a room adds it to the selection before the drag's first
+    // move, which does not change the selection again, so the list has to have
+    // taken the room in at the press.
+    void test_aShiftDragListsTheRoomItsPressAdded()
+    {
+        buildMap();
+        showMapper(false);
+        dragFromTo(pointUnitsFromCentre(-1.5, 1.5), pointUnitsFromCentre(0.5, -0.5));
+
+        const QPoint south = pointUnitsFromCentre(0, -1);
+        pressAt(south, Qt::ShiftModifier);
+        moveTo(south, Qt::ShiftModifier);
+        moveTo(south + QPoint(1, 1), Qt::ShiftModifier);
+
+        const QSet<int> expected{kNorthWestRoomId, kNorthRoomId, kWestRoomId, kPlayerRoomId, kSouthRoomId};
+        QCOMPARE(mp2dMap->mMultiSelectionSet, expected);
+        QCOMPARE(listedRoomIds(), expected);
+        releaseAt(south + QPoint(1, 1), Qt::ShiftModifier);
+    }
+
     // The same drag while viewing pans instead of drawing a box, which is what
     // the map being locked for viewing means.
     void test_draggingWhileViewingDrawsNoSelectionBox()
