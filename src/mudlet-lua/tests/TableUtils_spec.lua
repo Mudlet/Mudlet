@@ -359,6 +359,30 @@ describe("Tests TableUtils.lua functions", function()
       -- == settles it without asking the metamethod
       assert.are.equal(2, eqCalls)
     end)
+
+    it("should still drop repeats of earlier tables once an __eq table turns up", function()
+      local mt = { __eq = function(a, b) return a.id == b.id end }
+      local t1 = { 1 }
+      local t2 = setmetatable({}, { __index = t1 })
+      local a1 = setmetatable({ id = 1 }, mt)
+      local a2 = setmetatable({ id = 1 }, mt)
+      local b1 = setmetatable({ id = 2 }, mt)
+      local actual = table.n_collect({ t1, t2, t1, a1, t1, a2, t2, b1, a1 }, keepAll)
+      assert.are.equal(4, #actual)
+      assert.are.equal(t1, actual[1])
+      assert.are.equal(t2, actual[2])
+      assert.are.equal(a1, actual[3])
+      assert.are.equal(b1, actual[4])
+    end)
+
+    it("should use __eq even when __metatable hides the metatable", function()
+      local mt = { __eq = function(a, b) return a.id == b.id end, __metatable = "locked" }
+      local a1 = setmetatable({ id = 1 }, mt)
+      local a2 = setmetatable({ id = 1 }, mt)
+      local actual = table.n_collect({ a1, a2 }, keepAll)
+      assert.are.equal(1, #actual)
+      assert.are.equal(a1, actual[1])
+    end)
   end)
 
   describe("Tests the functionality of table.matches", function()

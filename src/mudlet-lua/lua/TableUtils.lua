@@ -257,6 +257,10 @@ function table.collect(tbl, func)
   return matches
 end
 
+-- debug.getmetatable, as getmetatable returns a __metatable field instead of
+-- the metatable whose __eq == would use; without it, compare one by one
+local getRawMetatable = debug and debug.getmetatable
+
 --- Checks each item in a table against a provided function and returns a table of items
 --- for which the function returns true. Unlike table.collect it ignores keys and returns 
 --- a table which is guaranteed to be traversable using ipairs()
@@ -272,11 +276,14 @@ function table.n_collect(tbl, func)
   -- A value is kept unless it == one already kept. Strings, booleans and
   -- numbers other than NaN are == exactly when they are the same table key,
   -- so a set finds their duplicates without rescanning `matches`. Tables,
-  -- functions and userdata can only == one another, possibly through an __eq
-  -- metamethod, so they are still compared one by one, in the same order, but
-  -- only against each other. NaN equals nothing and is always kept.
+  -- functions and userdata can only == one another, and until one with an
+  -- __eq metamethod turns up, == between them is identity, so the same set
+  -- works for them too. From then on they are compared one by one, in the
+  -- same order, but only against each other. NaN equals nothing and is
+  -- always kept.
   local seen = {}
   local others
+  local compareOthers = not getRawMetatable
   for key,value in pairs(tbl) do
     if func(value) == true then
       local valueType = type(value)
@@ -285,9 +292,22 @@ function table.n_collect(tbl, func)
           seen[value] = true
           matches[#matches + 1] = value
         end
+      elseif valueType == "number" then
+        matches[#matches + 1] = value
       else
         others = others or {}
-        if not table.index_of(others, value) then
+        if not compareOthers then
+          local metatable = getRawMetatable(value)
+          compareOthers = metatable ~= nil and rawget(metatable, "__eq") ~= nil
+        end
+        local kept
+        if compareOthers then
+          kept = table.index_of(others, value)
+        else
+          kept = seen[value]
+        end
+        if not kept then
+          seen[value] = true
           others[#others + 1] = value
           matches[#matches + 1] = value
         end
