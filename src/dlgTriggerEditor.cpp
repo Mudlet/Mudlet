@@ -2626,6 +2626,10 @@ void dlgTriggerEditor::highlightSearchMatches()
 void dlgTriggerEditor::emitScriptSearchMatches(
         const QString& scriptText, const QString& searchText, const QString& name, int objectId, const QString& parentLabel, EditorViewType viewType, QTreeWidgetItem*& parent)
 {
+    // Most scripts hold no match, and splitting each one into lines costs more than one look at it whole
+    if (!containsSearchMatch(scriptText, searchText)) {
+        return;
+    }
     const QStringList textList = scriptText.split(qsl("\n"));
     const int total = textList.count();
     for (int index = 0; index < total; ++index) {
@@ -13948,8 +13952,11 @@ int dlgTriggerEditor::findSearchMatch(const QString& haystack, const QString& ne
         if (!(mSearchOptions & enums::EditorSearchOptionCaseSensitive)) {
             options |= QRegularExpression::CaseInsensitiveOption;
         }
-        QRegularExpression regex(qsl("\\b%1\\b").arg(QRegularExpression::escape(needle)), options);
-        QRegularExpressionMatch match = regex.match(haystack, from);
+        if (needle != mWholeWordSearchNeedle || options != mWholeWordSearchRegex.patternOptions()) {
+            mWholeWordSearchRegex = QRegularExpression(qsl("\\b%1\\b").arg(QRegularExpression::escape(needle)), options);
+            mWholeWordSearchNeedle = needle;
+        }
+        const QRegularExpressionMatch match = mWholeWordSearchRegex.match(haystack, from);
         if (match.hasMatch()) {
             return match.capturedStart();
         }
