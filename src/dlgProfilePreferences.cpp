@@ -4217,7 +4217,7 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
         connect(spinBox_playerRoomInnerDiameter, qOverload<int>(&QSpinBox::valueChanged), this, &dlgProfilePreferences::slot_setPlayerRoomInnerDiameter, Qt::UniqueConnection);
 
         // Initialize room, exit, and border size controls
-        spinBox_roomSize->setValue(pHost->mRoomSize * 10);
+        spinBox_roomSize->setValue(qRound(pHost->mRoomSize * 10));
         // mLineSize/mRoomBorderSize are inversely proportional to thickness
         // (exitWidth = 1/eSize * ...), convert to a direct 1-11 scale
         // using a simple reciprocal: mLineSize = 50 / spinner, spinner = 50 / mLineSize
@@ -8666,9 +8666,9 @@ void dlgProfilePreferences::slot_changeShowTabConnectionIndicators(bool state)
 void dlgProfilePreferences::slot_roomSizeChanged(int size)
 {
     if (mpHost) {
-        mpHost->mRoomSize = static_cast<float>(size) / 10.0f;
+        mpHost->mRoomSize = size / 10.0;
         if (mpHost->mpMap && mpHost->mpMap->mpMapper && mpHost->mpMap->mpMapper->mp2dMap) {
-            mpHost->mpMap->mpMapper->mp2dMap->setRoomSize(static_cast<float>(size) / 10.0f);
+            mpHost->mpMap->mpMapper->mp2dMap->setRoomSize(mpHost->mRoomSize);
             mpHost->mpMap->mpMapper->mp2dMap->update();
         }
     }
