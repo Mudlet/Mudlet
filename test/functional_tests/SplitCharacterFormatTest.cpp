@@ -218,7 +218,8 @@ private slots:
         const int line = lastTextLine();
         QPoint from(0, line);
         QPoint to(1, line);
-        const TBuffer slice = buffer().copy(from, to);
+        TBuffer slice(mpHost);
+        buffer().copyInto(from, to, slice);
         QVERIFY(slice.buffer.at(0).front().hasSplitFormat());
 
         QPoint at(0, target);
