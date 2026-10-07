@@ -26,6 +26,7 @@
 #include <utility>
 
 class QColor;
+class QRect;
 class QSize;
 class QString;
 
@@ -203,6 +204,45 @@ public:
     virtual bool setSubConsoleCommandBackgroundColor(const QString& name, const QColor& color) = 0;
     virtual bool setSubConsoleCommandForegroundColor(const QString& name, const QColor& color) = 0;
     virtual void changeSubConsoleColors(const QString& name) = 0;
+
+    // An embedded mapper, in the user window windowname names, else on this console for an empty name or
+    // "main"; any other name fails, as does a map dock on screen, while a hidden one is removed. The first
+    // raises mapOpenEvent, loading the profile's map if none is loaded; later calls move and resize it.
+    virtual std::pair<bool, QString> createMapper(const QString& windowname, int x, int y, int width, int height) = 0;
+    // The map dock, for when nothing draws the map: made hidden around a new mapper that then does.
+    virtual void createMapperDock(const QString& title, const QString& objectName) = 0;
+    // Docks the dock createMapperDock() made on the right, restores the saved window layout and then shows
+    // the dock and its mapper regardless of it.
+    virtual void showNewMapperDock() = 0;
+    // Shows the map dock and places it by area as openUserWindow() does; only floating uses the position
+    // and size, each left alone when either of its values is -1. Fails when there is no map dock.
+    virtual std::pair<bool, QString> placeMapWidget(const QString& area, int x, int y, int width, int height) = 0;
+    // mapWidgetCreated() does not mean on screen, which is what the four after it go by: while the map
+    // dock is hidden they fail or have no value.
+    virtual bool mapWidgetCreated() const = 0;
+    virtual bool setMapWidgetTitle(const QString& title) = 0;
+    virtual std::optional<QString> mapWidgetTitle() const = 0;
+    virtual std::optional<QRect> mapWidgetGeometry() const = 0;
+    virtual bool hideMapWidget() = 0;
+    // Hands TMap::mpMapper back to this profile's own mapper, if it has one.
+    virtual void restoreOwnMapper() = 0;
+
+    // The mapper drawing the map is TMap::mpMapper, which a main window or detached window dock may have
+    // borrowed from this console, so these act on that one and do nothing when there is none.
+    // After a map load: redraw from scratch and show the player's area.
+    virtual void showLoadedMap() = 0;
+    // After a failed load: redraw from scratch, staying on the area shown.
+    virtual void showMapAfterFailedLoad() = 0;
+    // The map was already loaded when the mapper was made: show the player's area.
+    virtual void showMapAtPlayerArea() = 0;
+    // A mapper in a dock counts as shown when its dock does, and is shown and hidden with it; no mapper
+    // counts as not shown.
+    virtual bool mapperShown() const = 0;
+    virtual void setMapperShown(bool shown) = 0;
+    virtual void setMapperPanelVisible(bool visible) = 0;
+    virtual void setMapLargeAreaExitArrows(bool enabled) = 0;
+    // Also repaints the map's 3D view, if one is open.
+    virtual void requestMapRepaint() = 0;
 
 protected:
     // The view is a widget whose owner deletes it as one, so nothing deletes it through this interface.

@@ -93,13 +93,12 @@ public:
     void setFont(const QFont& font) override { TConsole::setFont(font); }
     void setFont(const QFont& font, bool forceChange) { TConsole::setFont(font, forceChange); }
     void setFontSize(int size) override { TConsole::setFontSize(size); }
-    // Hands TMap::mpMapper back to this profile's own mapper, if it has one
-    void restoreOwnMapper();
+    void restoreOwnMapper() override;
     bool createBuffer(const QString& name) override;
     std::pair<bool, QString> setUserWindowStyleSheet(const QString& name, const QString& userWindowStyleSheet) override;
     std::pair<bool, QString> setUserWindowTitle(const QString& name, const QString& text) override;
     bool createLabel(const QString& windowname, const QString& name, int x, int y, int width, int height, bool fillBackground, bool clickThrough) override;
-    std::pair<bool, QString> createMapper(const QString& windowname, int, int, int, int);
+    std::pair<bool, QString> createMapper(const QString& windowname, int, int, int, int) override;
     std::pair<bool, QString> createCommandLine(const QString& windowname, const QString& name, int, int, int, int) override;
     void registerSubCommandLine(const QString& name, TCommandLine* pCommandLine);
     void deregisterSubCommandLine(TCommandLine* pCommandLine);
@@ -248,34 +247,22 @@ public:
     void setMapProgressDialogValue(int value);
     void disableMapProgressDialogCancel();
     void closeMapProgressDialog();
-    void createMapperDock(const QString& title, const QString& objectName);
-    // Docks the dock createMapperDock() made on the right, restores the saved
-    // window layout and then shows the dock and its mapper regardless of it.
-    void showNewMapperDock();
-    std::pair<bool, QString> placeMapWidget(const QString& area, int x, int y, int width, int height);
-    // The map dock's state as values, so the core never holds the widget. mapWidgetCreated() does not
-    // mean on screen, which is what the four after it go by.
-    bool mapWidgetCreated() const;
-    bool setMapWidgetTitle(const QString& title);
-    std::optional<QString> mapWidgetTitle() const;
-    std::optional<QRect> mapWidgetGeometry() const;
-    bool hideMapWidget();
-    // The mapper drawing the map is TMap::mpMapper, which a main window or
-    // detached window dock may have borrowed from this console, so these act on
-    // that one and do nothing when there is none.
-    // After a map load: redraw from scratch and show the player's area.
-    void showLoadedMap();
-    // After a failed load: redraw from scratch, staying on the area shown.
-    void showMapAfterFailedLoad();
-    // The map was already loaded when the mapper was made: show the player's area.
-    void showMapAtPlayerArea();
-    // A mapper in a dock counts as shown when its dock does, and is shown and
-    // hidden with it.
-    bool mapperShown() const;
-    void setMapperShown(bool shown);
-    void setMapperPanelVisible(bool visible);
-    void setMapLargeAreaExitArrows(bool enabled);
-    void requestMapRepaint();
+    void createMapperDock(const QString& title, const QString& objectName) override;
+    void showNewMapperDock() override;
+    std::pair<bool, QString> placeMapWidget(const QString& area, int x, int y, int width, int height) override;
+    bool mapWidgetCreated() const override;
+    bool setMapWidgetTitle(const QString& title) override;
+    std::optional<QString> mapWidgetTitle() const override;
+    std::optional<QRect> mapWidgetGeometry() const override;
+    bool hideMapWidget() override;
+    void showLoadedMap() override;
+    void showMapAfterFailedLoad() override;
+    void showMapAtPlayerArea() override;
+    bool mapperShown() const override;
+    void setMapperShown(bool shown) override;
+    void setMapperPanelVisible(bool visible) override;
+    void setMapLargeAreaExitArrows(bool enabled) override;
+    void requestMapRepaint() override;
     // requestRepaint() for after echoing a command, skipped while the mapper
     // has a 3D view - or, in builds without one, while there is any mapper.
     void requestRepaintAfterCommand();

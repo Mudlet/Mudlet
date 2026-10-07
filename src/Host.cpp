@@ -602,7 +602,7 @@ void Host::loadMap()
     if (mpMap->restore(QString())) {
         mpMap->audit();
         if (mpConsole) {
-            mpConsole->showLoadedMap();
+            consoleFrontend()->showLoadedMap();
         }
     }
 }
@@ -685,11 +685,11 @@ bool Host::loadMapFile(const QString& location)
     if (mpMap->restore(filePathName)) {
         mpMap->audit();
         if (mpConsole) {
-            mpConsole->showLoadedMap();
+            consoleFrontend()->showLoadedMap();
         }
         result = true;
     } else if (mpConsole) {
-        mpConsole->showMapAfterFailedLoad();
+        consoleFrontend()->showMapAfterFailedLoad();
     }
 
     if (filePathName.isEmpty()) {
@@ -4915,14 +4915,14 @@ void Host::restoreOwnMapper()
     }
 
     if (mpConsole) {
-        mpConsole->restoreOwnMapper();
+        consoleFrontend()->restoreOwnMapper();
     }
 }
 
 std::pair<bool, QString> Host::setMapperTitle(const QString& title)
 {
     const QString newTitle = title.isEmpty() ? tr("Map - %1").arg(mHostName) : title;
-    if (!mpConsole || !mpConsole->setMapWidgetTitle(newTitle)) {
+    if (!mpConsole || !consoleFrontend()->setMapWidgetTitle(newTitle)) {
         return {false, qsl("no floating/dockable type map window found")};
     }
 
@@ -4935,7 +4935,7 @@ std::optional<QString> Host::getMapperTitle() const
         return {};
     }
 
-    return mpConsole->mapWidgetTitle();
+    return consoleFrontend()->mapWidgetTitle();
 }
 
 std::pair<int, QString> Host::createMapView(int areaId)
@@ -5057,7 +5057,7 @@ void Host::setAnnounceIncomingText(const bool state)
 void Host::setMapperPanelVisible(const bool state)
 {
     if (mpConsole) {
-        mpConsole->setMapperPanelVisible(state);
+        consoleFrontend()->setMapperPanelVisible(state);
     }
     changeSetting(mShowPanel, state, qsl("mapperPanelVisible"));
 }
@@ -5437,7 +5437,7 @@ std::pair<bool, QString> Host::setWindow(const QString& windowname, const QStrin
     if (mWindowRegistry.hasDockWidget(name)) {
         return {false, qsl("element '%1' is the base of a floating/dockable user window and may not be moved").arg(name)};
     }
-    if (mpConsole->mapWidgetCreated()) {
+    if (consoleFrontend()->mapWidgetCreated()) {
         if (!name.compare(QLatin1String("mapper"), Qt::CaseInsensitive)) {
             return {false, qsl("element '%1' is the map in a floating/dockable window and may not be moved").arg(name)};
         }
@@ -5472,11 +5472,11 @@ std::pair<bool, QString> Host::openMapWidget(const QString& area, int x, int y, 
         return {false, qsl("no console for this profile - it may be closing")};
     }
 
-    if (!mpConsole->mapWidgetCreated() && mpMap->mpMapper.isNull()) {
+    if (!consoleFrontend()->mapWidgetCreated() && mpMap->mpMapper.isNull()) {
         showHideOrCreateMapper(true);
     }
 
-    return mpConsole->placeMapWidget(area, x, y, width, height);
+    return consoleFrontend()->placeMapWidget(area, x, y, width, height);
 }
 
 // The inverse of moveMapWidget()/resizeMapWidget(), which reach the dock widget
@@ -5487,7 +5487,7 @@ std::optional<QRect> Host::mapWidgetGeometry() const
         return {};
     }
 
-    return mpConsole->mapWidgetGeometry();
+    return consoleFrontend()->mapWidgetGeometry();
 }
 
 void Host::refreshColours()
@@ -5511,10 +5511,10 @@ std::pair<bool, QString> Host::closeMapWidget()
 
     // Checked first so a profile that never made a widget is told apart from one that hid it.
     // createMapper() nulls the widget when it takes a hidden one over, so that also answers never-made.
-    if (!mpConsole->mapWidgetCreated()) {
+    if (!consoleFrontend()->mapWidgetCreated()) {
         return {false, qsl("no map widget found to close")};
     }
-    if (!mpConsole->hideMapWidget()) {
+    if (!consoleFrontend()->hideMapWidget()) {
         return {false, qsl("map widget already closed")};
     }
     return {true, QString()};
@@ -5962,13 +5962,13 @@ bool Host::mapperShown() const
     if (!mpMap || !mpConsole) {
         return false;
     }
-    return mpConsole->mapperShown();
+    return consoleFrontend()->mapperShown();
 }
 
 void Host::toggleMapperVisibility()
 {
     if (mpConsole) {
-        mpConsole->setMapperShown(!mapperShown());
+        consoleFrontend()->setMapperShown(!mapperShown());
     }
 }
 
@@ -5981,7 +5981,7 @@ void Host::createMapper(const bool loadDefaultMap)
     }
     auto pMap = mpMap.data();
     auto hostName(getName());
-    mpConsole->createMapperDock(tr("Map - %1").arg(hostName), qsl("dockMap_%1").arg(hostName));
+    consoleFrontend()->createMapperDock(tr("Map - %1").arg(hostName), qsl("dockMap_%1").arg(hostName));
 
     if (loadDefaultMap && pMap->mpRoomDB->isEmpty()) {
         qDebug() << "Host::create_mapper() - restore map case 3.";
@@ -5989,7 +5989,7 @@ void Host::createMapper(const bool loadDefaultMap)
         const QDateTime now(QDateTime::currentDateTime());
         if (pMap->restore(QString())) {
             pMap->audit();
-            mpConsole->showLoadedMap();
+            consoleFrontend()->showLoadedMap();
         }
 
         pMap->pushErrorMessagesToFile(tr("Loading map(3) at %1 report").arg(now.toString(Qt::ISODate)), true);
@@ -5997,9 +5997,9 @@ void Host::createMapper(const bool loadDefaultMap)
     } else {
         // Needed to set the area selector widget to right area when map is
         // loaded by clicking on Map main toolbar button:
-        mpConsole->showMapAtPlayerArea();
+        consoleFrontend()->showMapAtPlayerArea();
     }
-    mpConsole->showNewMapperDock();
+    consoleFrontend()->showNewMapperDock();
 
     check_for_mappingscript();
     TEvent mapOpenEvent{};
@@ -6384,7 +6384,7 @@ void Host::setLargeAreaExitArrows(const bool state)
     if (mLargeAreaExitArrows != state) {
         mLargeAreaExitArrows = state;
         if (mpMap && mpConsole) {
-            mpConsole->setMapLargeAreaExitArrows(state);
+            consoleFrontend()->setMapLargeAreaExitArrows(state);
         }
     }
 }
@@ -6602,7 +6602,7 @@ std::pair<bool, QString> Host::setExperimentEnabled(const QString& experimentKey
 #if defined(INCLUDE_3DMAPPER)
     // Refresh maps if any experiments changed the 3D map
     if (mpMap && mpConsole) {
-        mpConsole->requestMapRepaint();
+        consoleFrontend()->requestMapRepaint();
     }
 #endif
 
