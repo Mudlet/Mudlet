@@ -113,6 +113,22 @@ describe("Tests MXP handling", function()
       assertLineShown("\27[1z<B>Greetings < hunters & sorcerers</B>\27[7z", "Greetings < hunters & sorcerers")
     end)
 
+    -- text is taken a run of bytes at a time, and a tag or entity has to end
+    -- the run on whichever byte of it it starts
+    it("finds a tag or an entity wherever it falls in a run of text", function()
+      for offset = 0, 8 do
+        local text = "MXPRUN" .. offset .. ("x"):rep(offset)
+        assertLineShown(("\27[1z%s<B>bold</B>%s&lt;"):format(text, text), ("%sbold%s<"):format(text, text))
+      end
+    end)
+
+    it("ends a run of text at a non-ASCII character wherever it falls", function()
+      for offset = 0, 8 do
+        local text = "MXPHIGH" .. offset .. ("x"):rep(offset)
+        assertLineShown(("%sé%s<B>b</B>%s€"):format(text, text, text), ("%sé%sb%s€"):format(text, text, text))
+      end
+    end)
+
     -- a locked line shows its tags verbatim, so a switch to it that was acted
     -- on would leave the <B> pair on the line
     it("ignores an MXP mode switch in text a script fed", function()

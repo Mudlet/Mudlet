@@ -475,6 +475,24 @@ private slots:
         QCOMPARE(luaString(qsl("stt.getInfo().modelPath")), model);
     }
 
+    // A load that fails leaves the engine in error with no model at all, so a
+    // start there must not talk of reloading one - nor of the engine never
+    // having been initialized, which is what the message for Uninitialized says.
+    void aStartAfterAFailedLoadDoesNotOfferAReload()
+    {
+        requireStub();
+        QVERIFY(runLua(qsl("_loadOk = stt.init([[%1]])").arg(unloadableStubModelDirectory())).isNull());
+        QVERIFY2(!luaTrue(qsl("_loadOk")), "the unloadable stand-in model loaded, so this case is not about a failed load");
+        QCOMPARE(luaString(qsl("stt.getInfo().state")), qsl("error"));
+        QVERIFY2(luaString(qsl("stt.getInfo().modelPath")).isEmpty(), "a failed load still names a model, so there is one to reload");
+
+        QVERIFY(runLua(qsl("_startOk, _startWhy = stt.start()")).isNull());
+        const QString why = luaString(qsl("_startWhy"));
+        QVERIFY2(!luaTrue(qsl("_startOk")), "a start after a failed load reported success");
+        QVERIFY2(why.contains(qsl("error state")) && why.contains(qsl("stt.init()")), qPrintable(why));
+        QVERIFY2(!why.contains(qsl("reload")) && !why.contains(qsl("not initialized")), qPrintable(why));
+    }
+
     // Reloading a library that is not there has nothing to report success about,
     // and a false with nothing else leaves the caller no way to tell why.
     void aReloadThatFindsNoLibrarySaysWhy()

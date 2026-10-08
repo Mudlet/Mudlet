@@ -62,14 +62,50 @@ describe("Tests functionality of Geyser.Color", function()
       assert.are.same({1, 2, 3, 4}, {Geyser.Color.parse({r = 1, g = 2, b = 3, a = 4})})
     end)
 
-    -- only the names are looked up, never the components behind them: Mudlet
-    -- rewrites color_table's entries in place when the ANSI palette changes
+    -- what a name read as is remembered, so read it before the change: Mudlet
+    -- rewrites color_table's entries when the ANSI palette changes
     it("gives the current value of a colour whose entry changed", function()
       local restore = color_table.white
       finally(function() color_table.white = restore end)
       assert.are.same({255, 255, 255, 255}, {Geyser.Color.parse("white")})
       color_table.white = {1, 2, 3}
       assert.are.same({1, 2, 3, 255}, {Geyser.Color.parse("white")})
+    end)
+
+    -- a name already read is remembered, so ask once before each change
+    it("gives the current value of a colour whose components changed in place", function()
+      local entry = color_table.white
+      local restore = {entry[1], entry[2], entry[3], entry[4]}
+      finally(function()
+        entry[1], entry[2], entry[3], entry[4] = restore[1], restore[2], restore[3], restore[4]
+      end)
+      assert.are.same({255, 255, 255, 255}, {Geyser.Color.parse("white")})
+      entry[1], entry[2], entry[3] = 1, 2, 3
+      assert.are.same({1, 2, 3, 255}, {Geyser.Color.parse("white")})
+      entry[4] = 4
+      assert.are.same({1, 2, 3, 4}, {Geyser.Color.parse("white")})
+    end)
+
+    it("gives nothing for a colour taken out of color_table after it was read", function()
+      color_table.gcsGoneColour = {7, 8, 9}
+      finally(function() color_table.gcsGoneColour = nil end)
+      assert.are.same({7, 8, 9, 255}, {Geyser.Color.parse("gcsGoneColour")})
+      color_table.gcsGoneColour = nil
+      assert.is_nil(Geyser.Color.parse("gcsGoneColour"))
+    end)
+
+    it("asks a find_color_name() a script put in place about a colour it read before", function()
+      local original = Geyser.Color.find_color_name
+      finally(function() Geyser.Color.find_color_name = original end)
+      assert.are.same({255, 255, 255, 255}, {Geyser.Color.parse("white")})
+      assert.are.equal("#ffffff", Geyser.Color.hex("white"))
+      Geyser.Color.find_color_name = function(color)
+        return color == "white" and "red" or original(color)
+      end
+      assert.are.same({255, 0, 0, 255}, {Geyser.Color.parse("white")})
+      assert.are.equal("#ff0000", Geyser.Color.hex("white"))
+      Geyser.Color.find_color_name = original
+      assert.are.same({255, 255, 255, 255}, {Geyser.Color.parse("white")})
     end)
 
     it("gives nothing for a colour it cannot read", function()
@@ -116,6 +152,29 @@ describe("Tests functionality of Geyser.Color", function()
       assert.are.equal("|cffffffff", Geyser.Color.hhexa("white"))
       assert.are.equal("<255,255,255>", Geyser.Color.hdec("white"))
       assert.are.equal("<255,255,255,255>", Geyser.Color.hdeca("white"))
+    end)
+
+    -- what a string formats to is remembered, so ask twice
+    it("formats the same string the same way every time", function()
+      for _ = 1, 2 do
+        assert.are.equal("#aa00ff", Geyser.Color.hex("#AA00FF"))
+        assert.are.equal("#aa00ff", Geyser.Color.hex("#AA00FF10"))
+        assert.are.equal("#be00ff", Geyser.Color.hex("<190,0,255>"))
+        assert.are.equal("#ffffff", Geyser.Color.hex("white"))
+      end
+    end)
+
+    it("formats the current value of a colour whose entry changed", function()
+      local restore = color_table.white
+      finally(function() color_table.white = restore end)
+      assert.are.equal("#ffffff", Geyser.Color.hex("white"))
+      assert.are.equal("#ffffff", Geyser.Color.hex("WHITE"))
+      color_table.white = {1, 2, 3}
+      assert.are.equal("#010203", Geyser.Color.hex("white"))
+      assert.are.equal("#010203", Geyser.Color.hex("WHITE"))
+      color_table.white[3] = 4
+      assert.are.equal("#010204", Geyser.Color.hex("white"))
+      assert.are.same({1, 2, 4, 255}, {Geyser.Color.parse("WHITE")})
     end)
 
     -- the alpha forms are the only ones that can carry a fourth component, so

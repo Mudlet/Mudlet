@@ -18,6 +18,7 @@
  ***************************************************************************/
 
 #include <QFileInfo>
+#include <QScopeGuard>
 #include <QSignalSpy>
 #include <QTemporaryDir>
 #include <QtTest/QtTest>
@@ -222,6 +223,55 @@ private slots:
             resizeWindow(size.width(), size.height());
             QVERIFY2(mpHost->mpConsole->getMainWindowSize() == measuredMainWindowSize(), qPrintable(mismatch(mpHost->mpConsole->getMainWindowSize(), measuredMainWindowSize())));
         }
+    }
+
+    // Qt gives a dock added beside visible ones nothing but its minimum height,
+    // and a user window's console has none
+    void test_aUserWindowDockedBesideAnotherGetsAShareOfTheArea()
+    {
+        const QString first = qsl("mwsrFirstDock");
+        const QString second = qsl("mwsrSecondDock");
+        const auto hideBoth = qScopeGuard([this, first, second]() {
+            runLua(qsl("hideWindow('%1') hideWindow('%2')").arg(first, second));
+            settle();
+        });
+        runLua(qsl("openUserWindow('%1', false)").arg(first));
+        settle();
+        const int alone = dockSize(first).height();
+        QVERIFY2(alone > 100, qPrintable(qsl("the first user window is only %1 high on its own").arg(alone)));
+
+        runLua(qsl("openUserWindow('%1', false)").arg(second));
+        settle();
+        const int firstHeight = dockSize(first).height();
+        const int secondHeight = dockSize(second).height();
+        QVERIFY2(secondHeight > alone / 4, qPrintable(qsl("the second user window is %1 high beside the first's %2").arg(secondHeight).arg(firstHeight)));
+        QVERIFY2(firstHeight > alone / 4, qPrintable(qsl("the first user window was squeezed to %1").arg(firstHeight)));
+        QCOMPARE(mpHost->mpConsole->getUserWindowSize(second), dockSize(second));
+    }
+
+    // Geyser hides a window created hidden in the same call that opens it, so the
+    // share has to be taken when it is first shown instead
+    void test_aUserWindowHiddenAsItOpensGetsAShareOfTheAreaWhenShown()
+    {
+        const QString first = qsl("mwsrShownFirstDock");
+        const QString second = qsl("mwsrHiddenSecondDock");
+        const auto hideBoth = qScopeGuard([this, first, second]() {
+            runLua(qsl("hideWindow('%1') hideWindow('%2')").arg(first, second));
+            settle();
+        });
+        runLua(qsl("openUserWindow('%1', false)").arg(first));
+        settle();
+        const int alone = dockSize(first).height();
+        QVERIFY2(alone > 100, qPrintable(qsl("the first user window is only %1 high on its own").arg(alone)));
+
+        runLua(qsl("openUserWindow('%1', false) hideWindow('%1')").arg(second));
+        settle();
+        runLua(qsl("showWindow('%1')").arg(second));
+        settle();
+        const int firstHeight = dockSize(first).height();
+        const int secondHeight = dockSize(second).height();
+        QVERIFY2(secondHeight > alone / 4, qPrintable(qsl("the second user window is %1 high beside the first's %2").arg(secondHeight).arg(firstHeight)));
+        QVERIFY2(firstHeight > alone / 4, qPrintable(qsl("the first user window was squeezed to %1").arg(firstHeight)));
     }
 
     // user windows are reported through a cache of their own, which used to keep
