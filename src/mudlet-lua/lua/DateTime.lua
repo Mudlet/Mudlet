@@ -85,6 +85,10 @@ end
 --- is false, then a Lua time table will be returned. Details of the time tables are provided
 --- in the http://www.lua.org/pil/22.1.html. <br/><br/>
 ---
+--- A format without a date part (such as "^%H:%M:%S$") returns a time table without year, month, day
+--- or isdst; with as_epoch, it is placed on today's date. A partial date takes the current year (and month,
+--- when it has a day) and starts a missing month or day at 1, so "^%Y-%m$" gives the first of that month. <br/><br/>
+---
 --- Supported Format Codes
 ---   </pre>
 ---   %b   Abbreviated Month Name
@@ -141,7 +145,22 @@ function datetime:parse(source, format, as_epoch)
 
     dt.min = tonumber(m.minute)
     dt.sec = tonumber(m.second)
-    dt.isdst = os.date("*t", os.time(dt))["isdst"]
+
+    if as_epoch then
+      local today = os.date("*t")
+      if not (dt.year or dt.month or dt.day) then
+        dt.year, dt.month, dt.day = today.year, today.month, today.day
+      end
+      -- today's day in a parsed month could be past its end, which os.time() rolls into the next month
+      dt.year = dt.year or today.year
+      dt.month = dt.month or (dt.day and today.month or 1)
+      dt.day = dt.day or 1
+    end
+
+    -- os.time() raises on a table without a full date
+    if dt.year and dt.month and dt.day then
+      dt.isdst = os.date("*t", os.time(dt))["isdst"]
+    end
 
     if as_epoch then
       return os.time(dt)
