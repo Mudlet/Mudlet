@@ -1162,7 +1162,12 @@ describe("Tests the Client.GUI package offer", function()
     local file = io.open(served, "wb")
     assert.is_not_nil(file, "could not write " .. served)
     file:close()
-    local url = "file://" .. served:gsub("\\", "/"):gsub("[%%#%?%s]", function(character) return string.format("%%%02X", character:byte()) end)
+    local path = served:gsub("\\", "/"):gsub("[%%#%?%s]", function(character) return string.format("%%%02X", character:byte()) end)
+    -- A Windows path starts with its drive letter, which Qt would read as the URL's host
+    if path:sub(1, 1) ~= "/" then
+      path = "/" .. path
+    end
+    local url = "file://" .. path
 
     local mark = getLastLineNumber("main")
     local ok, msg = feedTelnet('<T_IAC><T_SB><O_GMCP>Client.GUI {"version": "1", "url": "' .. url .. '"}<T_IAC><T_SE>')
