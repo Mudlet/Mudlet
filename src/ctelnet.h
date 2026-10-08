@@ -460,6 +460,7 @@ private:
 
 private slots:
     void slot_networkLatencyBeat();
+    void slot_replaySpeedChanged(int speed);
     void slot_passwordMaskTimeout();
 
 private:
@@ -648,6 +649,8 @@ private:
     bool mReplayChunkPending = false;
     // The gap scaled by replay speed, or what was left of it when paused mid-wait.
     int mReplayChunkDelay = 0;
+    // The replay speed mReplayChunkDelay was worked out at
+    int mReplayChunkSpeed = 1;
     // Not QTimer::singleShot, so pausing can stop it and keep the remaining time.
     QTimer* mpReplayChunkTimer = nullptr;
     // Used to disable the TConsole ending messages if run from lua:

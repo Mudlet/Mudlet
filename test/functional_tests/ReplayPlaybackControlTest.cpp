@@ -549,6 +549,48 @@ private slots:
         QTRY_VERIFY_WITH_TIMEOUT(bufferContains(qsl("REPLAY_THREE")), 5s);
     }
 
+    // The chunk a pause holds was read at the old speed, and Faster has to
+    // shorten the wait it still owes rather than only the gaps read after it
+    void fasterShortensTheGapAPausedReplayHolds()
+    {
+        const QString file = writeReplay(qsl("pausedfaster.dat"), {{20, QByteArrayLiteral("REPLAY_ONE\r\n")}, {20000, QByteArrayLiteral("REPLAY_TWO\r\n")}});
+        QVERIFY(!file.isEmpty());
+        QVERIFY(MudletReplay::self()->load(mpHost, file));
+        QTRY_VERIFY(bufferContains(qsl("REPLAY_ONE")));
+
+        QAction* pause = replayAction(qsl("replay_pause_action"));
+        QAction* faster = replayAction(qsl("replay_speed_up_action"));
+        QVERIFY(pause);
+        QVERIFY(faster);
+        pause->trigger();
+        QVERIFY(mpHost->mTelnet.replayPaused());
+        for (int click = 0; click < 10; ++click) {
+            faster->trigger();
+        }
+        QCOMPARE(MudletReplay::self()->speed(), 1024);
+        pause->trigger();
+
+        QTRY_VERIFY2_WITH_TIMEOUT(bufferContains(qsl("REPLAY_TWO")), "resuming at the top speed still waited out a gap read at normal speed", 5s);
+    }
+
+    // ...and the same for the wait already running when Faster is pressed
+    void fasterShortensTheGapAlreadyRunning()
+    {
+        const QString file = writeReplay(qsl("runningfaster.dat"), {{20, QByteArrayLiteral("REPLAY_ONE\r\n")}, {20000, QByteArrayLiteral("REPLAY_TWO\r\n")}});
+        QVERIFY(!file.isEmpty());
+        QVERIFY(MudletReplay::self()->load(mpHost, file));
+        QTRY_VERIFY(bufferContains(qsl("REPLAY_ONE")));
+
+        QAction* faster = replayAction(qsl("replay_speed_up_action"));
+        QVERIFY(faster);
+        for (int click = 0; click < 10; ++click) {
+            faster->trigger();
+        }
+        QCOMPARE(MudletReplay::self()->speed(), 1024);
+
+        QTRY_VERIFY2_WITH_TIMEOUT(bufferContains(qsl("REPLAY_TWO")), "Faster left the gap already being waited out at normal speed", 5s);
+    }
+
     // The reason MudletReplay::start() takes a Host*: the buttons have to drive the
     // profile that started the replay, not whichever one happens to be in
     // front. With a single profile those are the same and nothing is proven.

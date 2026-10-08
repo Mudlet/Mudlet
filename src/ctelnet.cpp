@@ -5518,6 +5518,7 @@ bool cTelnet::loadReplay(const QString& name, QString* pErrMsg)
         mReplayChunkPending = false;
         mReplayChunkDelay = 0;
         if (auto* replay = MudletReplay::self(); replay && replay->start(mpHost)) {
+            connect(replay, &MudletReplay::signal_replaySpeedChanged, this, &cTelnet::slot_replaySpeedChanged, Qt::UniqueConnection);
             auto [ok, modifiedFormat] = testReadReplayFile();
             if (Q_LIKELY(ok)) {
                 mReplayHasFaultyFormat = modifiedFormat;
@@ -5594,6 +5595,7 @@ void cTelnet::loadReplayChunk()
         loadBuffer[loadedBytes] = '\0';
         auto* replay = MudletReplay::self();
         mReplayChunkDelay = replay ? replay->advance(offset) : offset;
+        mReplayChunkSpeed = replay ? replay->speed() : 1;
         mReplayChunkPending = true;
         if (!mReplayPaused) {
             mpReplayChunkTimer->start(mReplayChunkDelay);
@@ -5632,6 +5634,23 @@ void cTelnet::resumeReplay()
     if (mReplayChunkPending) {
         mpReplayChunkTimer->start(mReplayChunkDelay);
     }
+}
+
+// The wait for the chunk already read was worked out at the old speed, so it
+// is rescaled - whether it is running or held by a pause
+void cTelnet::slot_replaySpeedChanged(int speed)
+{
+    if (!loadingReplay || !mReplayChunkPending || speed < 1) {
+        return;
+    }
+
+    if (mReplayPaused) {
+        mReplayChunkDelay = static_cast<int>(static_cast<qint64>(mReplayChunkDelay) * mReplayChunkSpeed / speed);
+    } else if (mpReplayChunkTimer->isActive()) {
+        const qint64 remaining = qMax(0, mpReplayChunkTimer->remainingTime());
+        mpReplayChunkTimer->start(static_cast<int>(remaining * mReplayChunkSpeed / speed));
+    }
+    mReplayChunkSpeed = speed;
 }
 
 void cTelnet::stopReplay()
