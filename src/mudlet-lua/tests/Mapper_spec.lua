@@ -3384,6 +3384,9 @@ describe("Tests route weights and extreme coordinates on a scratch area", functi
     -- 0 hands the exit back to the weight of the room it leads to, which is 1
     setExitWeight(ids[3], "east", 0)
     assert.are.same({4294967295, "2147483647,2147483647,1"}, weigh(ids[1], ids[4]))
+    -- past what an unsigned 32-bit total holds, so it only passes if the sum is 64-bit
+    setExitWeight(ids[3], "east", 2147483647)
+    assert.are.same({6442450941, "2147483647,2147483647,2147483647"}, weigh(ids[1], ids[4]))
   end)
 
   -- Only a sanitizer build can see these go wrong: the y coordinate is negated
