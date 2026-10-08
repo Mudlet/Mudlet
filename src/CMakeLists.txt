@@ -41,6 +41,7 @@ endif()
 
 # Add every .cpp source file here, kept in alphabetical order (case-insensitive).
 set(mudlet_SRCS
+    ../3rdparty/qt-tags-widget/src/qtagedit.cpp
     ActionUnit.cpp
     AliasUnit.cpp
     AltFocusMenuBarDisable.cpp
@@ -319,6 +320,7 @@ set(mudlet_HDRS
     ../3rdparty/discord/rpc/include/discord_register.h
     ../3rdparty/discord/rpc/include/discord_rpc.h
     ../3rdparty/kdtoolbox/singleshot_connect/singleshot_connect.h
+    ../3rdparty/qt-tags-widget/include/QTagEdit/qtagedit.hpp
     ActionUnit.h
     AliasUnit.h
     AltFocusMenuBarDisable.h
@@ -865,7 +867,6 @@ target_link_libraries(
         ${LIB_MUDLET_TARGET}
         communi
         edbee-lib
-        QTagEdit
         Boost::boost
         HUNSPELL::HUNSPELL
         LUA51::LUA51
@@ -881,6 +882,12 @@ target_include_directories(${LIB_MUDLET_TARGET} INTERFACE
     ${CMAKE_CURRENT_SOURCE_DIR}
     ${CMAKE_CURRENT_BINARY_DIR}/${LIB_MUDLET_TARGET}_autogen/include
 )
+
+# qt-tags-widget's own CMakeLists builds a library with install() rules, so its
+# one source is compiled in here instead of adding that project.
+target_include_directories(${LIB_MUDLET_TARGET}
+  PUBLIC ${CMAKE_SOURCE_DIR}/3rdparty/qt-tags-widget/include
+  PRIVATE ${CMAKE_SOURCE_DIR}/3rdparty/qt-tags-widget/include/QTagEdit)
 
 if (SYSINFO_LIBRARY)
   target_link_libraries(${LIB_MUDLET_TARGET} ${SYSINFO_LIBRARY} ${KVM_LIBRARY})

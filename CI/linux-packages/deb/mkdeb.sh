@@ -33,7 +33,7 @@ if [[ ${#DEVELOPMENT_FILES[@]} -gt 0 ]]; then
   echo "==> dropping development files staged into the package:" >&2
   printf '      %s\n' "${DEVELOPMENT_FILES[@]}" >&2
   echo "    a vendored project's install() rules reached this tree - add EXCLUDE_FROM_ALL to" >&2
-  echo "    its add_subdirectory() in CMakeLists.txt, as 3rdparty/qt-tags-widget has" >&2
+  echo "    its add_subdirectory() in CMakeLists.txt" >&2
   (cd "$STAGE" && rm -rf -- "${DEVELOPMENT_FILES[@]}")
   find "$STAGE" -mindepth 1 -type d -empty -delete
 else
