@@ -1251,6 +1251,36 @@ describe("Tests Other.lua functions", function()
       assert.is_boolean(cfg.editorAutoComplete)
     end)
 
+    -- the no-argument table is built from a list kept in Other.lua, which has
+    -- to be told about every key the C++ side gains
+    it("includes the IRC and the CHARSET/NEW-ENVIRON keys in the table", function()
+      local cfg = getConfig()
+      for _, key in ipairs({"enableCHARSET", "enableNEWENVIRON", "ircChannels", "ircHostName",
+                            "ircHostPort", "ircHostSecure"}) do
+        assert.is_not_nil(cfg[key], "getConfig() left out " .. key)
+        assert.equals(getConfig(key), cfg[key], "getConfig() disagrees with getConfig('" .. key .. "')")
+      end
+      -- by name only: an unset nick reads as a random one, and the password is a credential
+      assert.is_nil(cfg.ircNickName)
+      assert.is_nil(cfg.ircPassword)
+    end)
+
+    it("restores the IRC server settings from a getConfig() snapshot", function()
+      local saved = getConfig()
+      finally(function()
+        setConfig({ircHostName = saved.ircHostName, ircHostPort = saved.ircHostPort, ircChannels = saved.ircChannels})
+      end)
+      assert.is_true(setConfig("ircHostName", "irc.example.org"))
+      assert.is_true(setConfig("ircHostPort", saved.ircHostPort == 5499 and 5498 or 5499))
+      assert.is_true(setConfig("ircChannels", "#mudletspec"))
+      for k, v in pairs(saved) do
+        setConfig(k, v)
+      end
+      assert.equals(saved.ircHostName, getConfig("ircHostName"))
+      assert.equals(saved.ircHostPort, getConfig("ircHostPort"))
+      assert.equals(saved.ircChannels, getConfig("ircChannels"))
+    end)
+
     it("round-trips every boolean configuration option", function()
       local settable = 0
       for key, value in pairs(getConfig()) do

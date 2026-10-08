@@ -1304,6 +1304,9 @@ function getConfig(...)
     -- This list contains all configuration options that are available in both getConfig and setConfig
     -- NOTE: Some options like "showMapInfo", "hideMapInfo" are setConfig-only write operations
     -- Some options like "logDirectory", "specialForceMXPProcessorOn" are getConfig-only read operations  
+    -- "ircNickName" and "ircPassword" are left out on purpose and only answered by name: an unset
+    -- nick reads as a fresh random one, which a restored snapshot would store for good, and the
+    -- password would show up in every dump of the table
     local list = {
       "advertiseScreenReader",
       "ambiguousEAsianWidthCharacters",
@@ -1317,6 +1320,7 @@ function getConfig(...)
       "controlCharacterHandling",
       "editorAutoComplete",
       "enableBlinkText",
+      "enableCHARSET",
       "enableClosedCaption",
       "enableGMCP",
       "enableMNES",
@@ -1326,10 +1330,15 @@ function getConfig(...)
       "enableMTTS",
       "enableMXP",
       "enableNAWS",
+      "enableNEWENVIRON",
       "f3SearchEnabled",
       "fixUnnecessaryLinebreaks",
       "forceNewEnvironNegotiationOff",
       "inputLineStrictUnixEndings",
+      "ircChannels",
+      "ircHostName",
+      "ircHostPort",
+      "ircHostSecure",
       "lazyCaptureGlobals",
       "logDirectory",                    -- read-only in getConfig
       "logInHTML",
