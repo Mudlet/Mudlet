@@ -327,7 +327,7 @@ bool AliasUnit::processDataStream(const QString& data)
                              << " as a garbage collection finaliser sent it while the capture tables were being built; it goes to the game unexpanded.";
         return false;
     }
-    Lua->set_lua_string(qsl("command"), data);
+    Lua->setExpandedCommand(data);
     bool state = false;
     //Using copy fixes https://github.com/Mudlet/Mudlet/issues/4297
     const std::vector<TAlias*> copyOfNodeList(mAliasRootNodeList.cbegin(), mAliasRootNodeList.cend());

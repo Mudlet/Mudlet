@@ -2225,6 +2225,7 @@ void TTrigger::executeWithCaptures(const std::list<std::string>& captureList, co
 
 void TTrigger::execute()
 {
+    const TLuaInterpreter::ScriptCallerScope triggerScript(*mpLua, false);
     // Only root triggers carry a lineage, so a trigger nested in a folder or a
     // filter chain reads the one on the root its subtree hangs from. Creations
     // that go under a parent rather than to the root list are outside this

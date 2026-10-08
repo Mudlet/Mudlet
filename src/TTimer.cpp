@@ -231,6 +231,7 @@ void TTimer::execute()
         qWarning() << "TTimer::execute() called on destroyed timer - ID:" << mID << "Name:" << mName;
         return;
     }
+    const TLuaInterpreter::ScriptCallerScope timerScript(mpHost->mLuaInterpreter, false);
 
     // Whilst this frame is on the stack TimerUnit::uninstall() must defer deleting
     // this profile's timers: the scripts run below can uninstall their own package

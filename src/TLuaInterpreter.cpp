@@ -3102,12 +3102,9 @@ int TLuaInterpreter::expandAlias(lua_State* L)
     // script would otherwise resume holding the nested command, and an alias or
     // trigger script an emptied matches table:
     TLuaInterpreter* pL = host.getLuaInterpreter();
-    // Only an alias script has a "command" of its own to get back. Anywhere else -
-    // a trigger, timer, key binding, button or event handler - "command" keeps
-    // what was expanded, as it always has, and scripts such as the Repeater
-    // package read it later as the last command:
-    const bool restoreCommand = host.getAliasUnit()->processingDepth() > 0;
-    const int dispatchDepth = pL->pushNestedDispatchState();
+    // Anywhere but in an alias script, "command" keeps what was expanded: packages
+    // such as Repeater read it afterwards as the last command
+    const int dispatchDepth = pL->pushNestedDispatchState(pL->runningAliasScript());
     if (dispatchDepth < 0) {
         qWarning().nospace() << "TLuaInterpreter::expandAlias(...) WARNING - not expanding " << payload << " as a garbage collection finaliser asked for it while the capture tables were being built.";
         lua_pushboolean(L, false);
@@ -3116,7 +3113,7 @@ int TLuaInterpreter::expandAlias(lua_State* L)
     // Host::send will encode the UTF encoded data here in the wanted Server
     // encoding:
     host.send(payload, wantPrint, false);
-    pL->popNestedDispatchState(dispatchDepth, restoreCommand);
+    pL->popNestedDispatchState(dispatchDepth);
     lua_pushboolean(L, true);
     return 1;
 }
@@ -3714,7 +3711,7 @@ void TLuaInterpreter::clearCaptureGroups()
 // No documentation available in wiki - internal function
 // Returns the depth of the entry it parked, for the matching
 // popNestedDispatchState() to unwind to.
-int TLuaInterpreter::pushNestedDispatchState()
+int TLuaInterpreter::pushNestedDispatchState(const bool parkCommand)
 {
     // The matching pop moves the parked lists back over any a build is walking
     if (buildingCaptureTables()) {
@@ -3737,15 +3734,19 @@ int TLuaInterpreter::pushNestedDispatchState()
     lua_pushliteral(L, "multimatches");
     lua_rawget(L, LUA_GLOBALSINDEX);
     const int multimatchesRef = luaL_ref(L, LUA_REGISTRYINDEX);
-    lua_pushliteral(L, "command");
-    lua_rawget(L, LUA_GLOBALSINDEX);
-    const int commandRef = luaL_ref(L, LUA_REGISTRYINDEX);
+    int commandRef = LUA_NOREF;
+    if (parkCommand) {
+        lua_pushliteral(L, "command");
+        lua_rawget(L, LUA_GLOBALSINDEX);
+        commandRef = luaL_ref(L, LUA_REGISTRYINDEX);
+    }
     lua_settop(L, callerStackTop);
 
     NestedDispatchState& saved = mNestedDispatchStates.emplace_back();
     saved.matchesRef = matchesRef;
     saved.multimatchesRef = multimatchesRef;
     saved.commandRef = commandRef;
+    saved.parksCommand = parkCommand;
     saved.captureScopeOpen = mCaptureScopeOpen;
     // Copies rather than moves: a script the dispatch runs before any pattern has
     // matched - a sysDataSendRequest handler, say - still reads these through
@@ -3775,7 +3776,7 @@ void TLuaInterpreter::releaseNestedDispatchState(NestedDispatchState& state)
 }
 
 // No documentation available in wiki - internal function
-void TLuaInterpreter::popNestedDispatchState(const int depth, const bool restoreCommand)
+void TLuaInterpreter::popNestedDispatchState(const int depth)
 {
     if (depth < 0 || static_cast<std::size_t>(depth) >= mNestedDispatchStates.size()) {
         qWarning().nospace() << "TLuaInterpreter::popNestedDispatchState(" << depth << ") ERROR - nothing is parked at that depth, so the calling script keeps whatever the nested dispatch left it.";
@@ -3819,16 +3820,13 @@ void TLuaInterpreter::popNestedDispatchState(const int depth, const bool restore
     lua_pushliteral(L, "multimatches");
     lua_rawgeti(L, LUA_REGISTRYINDEX, saved.multimatchesRef);
     lua_rawset(L, LUA_GLOBALSINDEX);
-    if (restoreCommand) {
-        // What the nested pass left in "command" is what it has always held once
-        // the alias pass is over, and scripts read it then as the last command -
-        // so keep it for settleCommandAfterAliasPass(). If "command" still holds
-        // what an earlier restore in this pass put back, nothing has been sent
-        // or assigned since, and the value kept then is still the one
+    if (saved.parksCommand) {
+        // Kept for settleCommandAfterAliasPass(), unless all that has written
+        // "command" since the last restore is a restore deeper in this pass
         lua_pushliteral(L, "command");
         lua_rawget(L, LUA_GLOBALSINDEX);
         bool keepEarlier = false;
-        if (mCommandBeforeRestoreRef != LUA_NOREF) {
+        if (mPassCommandRef != LUA_NOREF && mCommandsExpanded == mCommandsExpandedAtRestore) {
             lua_rawgeti(L, LUA_REGISTRYINDEX, mRestoredCommandRef);
             keepEarlier = lua_rawequal(L, -1, -2);
             lua_pop(L, 1);
@@ -3836,12 +3834,13 @@ void TLuaInterpreter::popNestedDispatchState(const int depth, const bool restore
         if (keepEarlier) {
             lua_pop(L, 1);
         } else {
-            luaL_unref(L, LUA_REGISTRYINDEX, mCommandBeforeRestoreRef);
-            mCommandBeforeRestoreRef = luaL_ref(L, LUA_REGISTRYINDEX);
+            luaL_unref(L, LUA_REGISTRYINDEX, mPassCommandRef);
+            mPassCommandRef = luaL_ref(L, LUA_REGISTRYINDEX);
         }
         luaL_unref(L, LUA_REGISTRYINDEX, mRestoredCommandRef);
         lua_rawgeti(L, LUA_REGISTRYINDEX, saved.commandRef);
         mRestoredCommandRef = luaL_ref(L, LUA_REGISTRYINDEX);
+        mCommandsExpandedAtRestore = mCommandsExpanded;
         lua_pushliteral(L, "command");
         lua_rawgeti(L, LUA_REGISTRYINDEX, saved.commandRef);
         lua_rawset(L, LUA_GLOBALSINDEX);
@@ -3856,31 +3855,44 @@ void TLuaInterpreter::popNestedDispatchState(const int depth, const bool restore
 }
 
 // No documentation available in wiki - internal function
-// Called as the outermost alias pass ends. An alias script got its own "command"
-// back from each expandAlias() it made, but once the pass is over "command"
-// holds the last command expanded, as it always has - unless a script has
-// assigned it since, which wins as it always has
+void TLuaInterpreter::setExpandedCommand(const QString& command)
+{
+    set_lua_string(qsl("command"), command);
+    ++mCommandsExpanded;
+}
+
+// No documentation available in wiki - internal function
+// Called as the outermost alias pass ends: an alias script had its own "command"
+// back while it ran, but what is read afterwards is the last command expanded,
+// or whatever a script set it to since
 void TLuaInterpreter::settleCommandAfterAliasPass()
 {
-    if (mCommandBeforeRestoreRef == LUA_NOREF || !pGlobalLua) {
+    if (mPassCommandRef == LUA_NOREF) {
+        return;
+    }
+    if (!pGlobalLua) {
+        mPassCommandRef = LUA_NOREF;
+        mRestoredCommandRef = LUA_NOREF;
         return;
     }
     lua_State* L = pGlobalLua;
     const int callerStackTop = lua_gettop(L);
-    lua_pushliteral(L, "command");
-    lua_rawget(L, LUA_GLOBALSINDEX);
-    lua_rawgeti(L, LUA_REGISTRYINDEX, mRestoredCommandRef);
-    const bool untouched = lua_rawequal(L, -1, -2);
-    lua_settop(L, callerStackTop);
+    bool untouched = false;
+    if (mCommandsExpanded == mCommandsExpandedAtRestore) {
+        lua_pushliteral(L, "command");
+        lua_rawget(L, LUA_GLOBALSINDEX);
+        lua_rawgeti(L, LUA_REGISTRYINDEX, mRestoredCommandRef);
+        untouched = lua_rawequal(L, -1, -2);
+        lua_settop(L, callerStackTop);
+    }
     if (untouched) {
         lua_pushliteral(L, "command");
-        lua_rawgeti(L, LUA_REGISTRYINDEX, mCommandBeforeRestoreRef);
+        lua_rawgeti(L, LUA_REGISTRYINDEX, mPassCommandRef);
         lua_rawset(L, LUA_GLOBALSINDEX);
     }
-    lua_settop(L, callerStackTop);
-    luaL_unref(L, LUA_REGISTRYINDEX, mCommandBeforeRestoreRef);
+    luaL_unref(L, LUA_REGISTRYINDEX, mPassCommandRef);
     luaL_unref(L, LUA_REGISTRYINDEX, mRestoredCommandRef);
-    mCommandBeforeRestoreRef = LUA_NOREF;
+    mPassCommandRef = LUA_NOREF;
     mRestoredCommandRef = LUA_NOREF;
 }
 
@@ -6559,7 +6571,7 @@ void TLuaInterpreter::initLuaGlobals()
         // corrupt a freshly-issued registry index, which is what
         // Host::resetProfile_phase2() drains DeferredDelete to stop labels doing.
         mNestedDispatchStates.clear();
-        mCommandBeforeRestoreRef = LUA_NOREF;
+        mPassCommandRef = LUA_NOREF;
         mRestoredCommandRef = LUA_NOREF;
         mEventHandlerLookupRefs.clear();
         stopSpawnedProcesses();

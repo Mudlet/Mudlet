@@ -383,6 +383,7 @@ bool TAlias::compileScript()
 
 void TAlias::execute()
 {
+    const TLuaInterpreter::ScriptCallerScope aliasScript(mpHost->mLuaInterpreter, true);
     if (!mCommand.isEmpty()) {
         mpHost->send(mCommand);
     }

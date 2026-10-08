@@ -61,6 +61,7 @@ extern "C" {
 #include <vector>
 #include <memory>
 #include <optional>
+#include <utility>
 
 class Host;
 class TAction;
@@ -146,9 +147,29 @@ public:
     void adjustCaptureGroupsForReplace(int x, int replacedLength, const QString& replacement);
     void clearCaptureGroups();
     bool buildingCaptureTables();
-    int pushNestedDispatchState();
-    void popNestedDispatchState(const int depth, const bool restoreCommand);
+    int pushNestedDispatchState(const bool parkCommand);
+    void popNestedDispatchState(const int depth);
+    void setExpandedCommand(const QString&);
     void settleCommandAfterAliasPass();
+    bool runningAliasScript() const { return mRunningAliasScript; }
+    // expandAlias() gives "command" back only to an alias script, so whatever runs
+    // a script that can start inside one says which kind it is
+    class ScriptCallerScope
+    {
+    public:
+        ScriptCallerScope(TLuaInterpreter& lua, const bool aliasScript)
+        : mLua(lua)
+        , mWasAliasScript(std::exchange(lua.mRunningAliasScript, aliasScript))
+        {
+        }
+        ~ScriptCallerScope() { mLua.mRunningAliasScript = mWasAliasScript; }
+        ScriptCallerScope(const ScriptCallerScope&) = delete;
+        ScriptCallerScope& operator=(const ScriptCallerScope&) = delete;
+
+    private:
+        TLuaInterpreter& mLua;
+        const bool mWasAliasScript;
+    };
     bool callEventHandler(const QString& function, const TEvent& pE);
     bool callCmdLineAction(const int func, QString);
     bool callAnonymousFunction(const int func, QString name);
@@ -1082,7 +1103,7 @@ private:
     int mIndexHandlerRef = LUA_NOREF;
     int mNewindexHandlerRef = LUA_NOREF;
     // expandAlias() overwrites "command" and the captures; the caller's are saved here (one entry per
-    // nesting level) and restored when the pass returns - "command" only for a caller that is an alias.
+    // nesting level) and restored when the pass returns - "command" only for an alias script.
     struct NestedDispatchState
     {
         std::vector<std::string> captureGroupList;
@@ -1095,13 +1116,18 @@ private:
         int matchesRef = LUA_NOREF;
         int multimatchesRef = LUA_NOREF;
         int commandRef = LUA_NOREF;
+        bool parksCommand = false;
         bool captureScopeOpen = false;
     };
     std::vector<NestedDispatchState> mNestedDispatchStates;
-    // While an alias pass runs: the "command" an alias script's restore replaced,
-    // and the value put back in its place, for settleCommandAfterAliasPass()
-    int mCommandBeforeRestoreRef = LUA_NOREF;
+    bool mRunningAliasScript = false;
+    // While an alias pass runs, for settleCommandAfterAliasPass(): the "command"
+    // the pass ends with unless a script changes it, the value the last restore
+    // put back, and how many commands had been expanded by then
+    int mPassCommandRef = LUA_NOREF;
     int mRestoredCommandRef = LUA_NOREF;
+    quint64 mCommandsExpanded = 0;
+    quint64 mCommandsExpandedAtRestore = 0;
     void releaseNestedDispatchState(NestedDispatchState&);
     // Registry references to how callEventHandler() finds each handler, by
     // handler name: the name itself, read raw from the globals, or else the
