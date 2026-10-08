@@ -1177,7 +1177,10 @@ end
 -- the background color setting and stylesheet
 function getLabelFormat(win)
   assert(win, "getLabelFormat: requires at least one argument")
-  local stylesheet = getLabelStyleSheet(win)
+  local stylesheet, err = getLabelStyleSheet(win)
+  if not stylesheet then
+    return nil, err
+  end
   local cached = labelStyleSheetFormats[win]
   local parsed
   if cached and cached.stylesheet == stylesheet then
