@@ -9,10 +9,13 @@ prettywrite = inspect
 
 -- Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#showCaptureGroups
 function showCaptureGroups()
+  -- named groups are also listed under their number, so skip the name keys
   for k, v in pairs( matches ) do
-    selectCaptureGroup( tonumber(k) )
-    setFgColor( math.random(0, 255), math.random(0, 255), math.random(0, 255) )
-    setBgColor( math.random(0, 255), math.random(0, 255), math.random(0, 255) )
+    if type(k) == "number" then
+      selectCaptureGroup( k )
+      setFgColor( math.random(0, 255), math.random(0, 255), math.random(0, 255) )
+      setBgColor( math.random(0, 255), math.random(0, 255), math.random(0, 255) )
+    end
   end
 end
 

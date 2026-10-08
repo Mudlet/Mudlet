@@ -204,5 +204,21 @@ describe("Tests DebugTools.lua functions", function()
       -- group no longer wears the colour the rest of the line does
       assert.are_not.same(defaultFormat, groupFormat)
     end)
+
+    it("Should recolour named capture groups without raising an error", function()
+      local ok, err, groupFormat, defaultFormat
+      local id = tempRegexTrigger("^You wave (?<what>goodbye) to (?<who>everyone)\\.$", function()
+        selectString("You wave", 1)
+        defaultFormat = getTextFormat().foreground
+        ok, err = pcall(showCaptureGroups)
+        selectString("everyone", 1)
+        groupFormat = getTextFormat().foreground
+      end)
+      feedTriggers("You wave goodbye to everyone.\n")
+      killTrigger(id)
+
+      assert.is_true(ok, err)
+      assert.are_not.same(defaultFormat, groupFormat)
+    end)
   end)
 end)
