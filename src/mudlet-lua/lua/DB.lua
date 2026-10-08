@@ -46,7 +46,9 @@ function db:_sql_convert(value)
   if value == nil then
     return "NULL"
   elseif t == "TEXT" and type(value) == "string" then
-    return '"' .. value:gsub("'", "''") .. '"'
+    -- single quotes: sqlite reads a double-quoted default as an identifier first, so a '"' in it
+    -- breaks the statement and a doubled '' is kept as two quotes
+    return "'" .. value:gsub("'", "''") .. "'"
   elseif t == "NULL" then
     return "NULL"
   elseif t == "INTEGER" then
@@ -785,6 +787,32 @@ local function normalize_sql(sql)
 end
 
 
+-- Blanks each quoted part, '...' or "...", in one pass: a text default may hold the other kind of
+-- quote, which a pass per kind would pair with the next column name's. A doubled quote is an escaped
+-- one. Same-length blanks keep every offset lined up with the text itself.
+local function blank_quoted(text)
+  local pieces = {}
+  local position = 1
+  while true do
+    local start = text:find("[\"']", position)
+    if not start then
+      break
+    end
+    local quote = text:sub(start, start)
+    local stop = text:find(quote, start + 1, true)
+    while stop and text:sub(stop + 1, stop + 1) == quote do
+      stop = text:find(quote, stop + 2, true)
+    end
+    stop = stop or #text
+    pieces[#pieces + 1] = text:sub(position, start - 1)
+    pieces[#pieces + 1] = (" "):rep(stop - start + 1)
+    position = stop + 1
+  end
+  pieces[#pieces + 1] = text:sub(position)
+  return table.concat(pieces)
+end
+
+
 -- NOT LUADOC
 -- Extracts UNIQUE constraints from a CREATE TABLE statement.
 -- This includes both column-level constraints (e.g., "col1" TEXT UNIQUE ON CONFLICT REPLACE)
@@ -810,12 +838,7 @@ function db:_extract_table_constraints(sql)
 
   -- A column name and a default value are both quoted, and either can hold the
   -- word, so the search runs over a copy with the quoted parts blanked out.
-  -- Same-length blanks keep every offset lined up with the content itself.
-  local function blank(quoted)
-    return (" "):rep(#quoted)
-  end
-  local searchable = content:gsub('"[^"]*"', blank)
-  searchable = searchable:gsub("'[^']*'", blank)
+  local searchable = blank_quoted(content)
 
   -- Each UNIQUE is picked up with the column list it may carry, then with the
   -- ON CONFLICT clause it may carry. Both parts are optional: SQLite defaults
@@ -907,12 +930,8 @@ local function unique_targets(sql)
     return counts
   end
 
-  -- quoted names and defaults may hold a comma, a bracket or "unique", so scan a copy with them
-  -- blanked; same-length blanks keep offsets lined up
-  local function blank(quoted)
-    return (" "):rep(#quoted)
-  end
-  local searchable = content:gsub('"[^"]*"', blank):gsub("'[^']*'", blank)
+  -- quoted names and defaults may hold a comma, a bracket or "unique", so scan a copy with them blanked
+  local searchable = blank_quoted(content)
 
   for _, part in ipairs(split_on_commas(content, searchable)) do
     local text, scan = part.text, part.scan
@@ -958,6 +977,11 @@ local function drops_a_unique(expected_sql, actual_sql)
   end
 
   return false
+end
+
+
+local function report_failed_statement(s_name, what, err, sql)
+  printError("db:create - "..s_name.." - "..what..": "..tostring(err).."\n"..sql, true, false)
 end
 
 
@@ -1038,7 +1062,13 @@ function db:_migrate(db_name, s_name, force)
     -- supported to define the primary key of any sheet.
     local sql = db:_build_create_table_sql(schema, s_name)
     db:echo_sql(sql)
-    conn:execute(sql)
+    -- reported rather than raised, as db:create is meant to run unguarded: without this the
+    -- sheet's handle looks normal and every later call fails with "no such table" instead
+    local created, create_err = conn:execute(sql)
+    if not created then
+      report_failed_statement(s_name, "could not create the sheet", create_err, sql)
+      return
+    end
 
   else
     -- At this point we know that the sheet already exists, but we are concerned if the current
@@ -1250,7 +1280,10 @@ function db:_migrate(db_name, s_name, force)
         local def = db:_sql_convert(v.default)
         local sql = sql_add:format(s_name, v.name, t, def)
         db:echo_sql(sql)
-        conn:execute(sql)
+        local added, add_err = conn:execute(sql)
+        if not added then
+          report_failed_statement(s_name, "could not add the column \""..v.name.."\"", add_err, sql)
+        end
       end
     elseif
     #missing + table.size(current_columns) > table.size(schema.columns) + 1
@@ -1560,7 +1593,10 @@ function db:_migrate_indexes(conn, s_name, schema, current_columns)
           db:_sql_columns(value)
         )
         db:echo_sql(sql)
-        conn:execute(sql)
+        local made, index_err = conn:execute(sql)
+        if not made then
+          report_failed_statement(s_name, "could not create an index", index_err, sql)
+        end
       end
 
     end
