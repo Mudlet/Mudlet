@@ -157,7 +157,25 @@ dlgPackageExporter::dlgPackageExporter(QWidget* parent, Host* pHost)
     connect(mpHost, &QObject::destroyed, this, &dlgPackageExporter::close);
 }
 
-dlgPackageExporter::~dlgPackageExporter() = default;
+dlgPackageExporter::~dlgPackageExporter()
+{
+    // An export still in flight loses its finished handler along with this dialog
+    if (!mExportRunning) {
+        return;
+    }
+    QApplication::restoreOverrideCursor();
+    if (!mpZipWatcher) {
+        mExportingPackage = false;
+        return;
+    }
+    // The zip goes on writing the package, so no other export may start on its staging folder until it is done
+    QFutureWatcherBase* watcher = mpZipWatcher;
+    watcher->setParent(qApp);
+    connect(watcher, &QFutureWatcherBase::finished, qApp, [watcher]() {
+        mExportingPackage = false;
+        watcher->deleteLater();
+    });
+}
 
 void dlgPackageExporter::setModuleCreationMode(bool isModule)
 {
@@ -926,6 +944,7 @@ void dlgPackageExporter::slot_exportPackage()
     const QString tempPath = qsl("%1/").arg(stagingDirName);
 
     mExportingPackage = true;
+    mExportRunning = true;
     QApplication::setOverrideCursor(Qt::BusyCursor);
     checkToEnableExportButton();
 
@@ -960,6 +979,7 @@ void dlgPackageExporter::slot_exportPackage()
         assetsFuture.cancel();
         mExportingPackage = false;
         checkToEnableExportButton();
+        mExportRunning = false;
         QApplication::restoreOverrideCursor();
         return;
     }
@@ -988,8 +1008,10 @@ void dlgPackageExporter::slot_exportPackage()
             displayResultMessage(message, false);
             isOk = false;
         } else {
-            auto future = QtConcurrent::run(dlgPackageExporter::zipPackage, stagingDirName, mPackagePathFileName, mXmlPathFileName, mPackageName, mPackageComment);
-            auto watcher = new QFutureWatcher<std::pair<bool, QString>>;
+            mpZipCancelled = std::make_shared<std::atomic<bool>>(false);
+            auto future = QtConcurrent::run(dlgPackageExporter::zipPackage, stagingDirName, mPackagePathFileName, mXmlPathFileName, mPackageName, mPackageComment, mpZipCancelled);
+            auto watcher = new QFutureWatcher<std::pair<bool, QString>>(this);
+            mpZipWatcher = watcher;
             connect(watcher, &QFutureWatcher<std::pair<bool, QString>>::finished, this, [=, this]() {
                 mExportingPackage = false;
                 checkToEnableExportButton();
@@ -1016,6 +1038,7 @@ void dlgPackageExporter::slot_exportPackage()
                                 displayResultMessage(tr("Module \"%1\" exported but failed to uninstall existing version").arg(mPackageName.toHtmlEscaped()), false);
                                 mCancelButton->setVisible(false);
                                 mCloseButton->setVisible(true);
+                                mExportRunning = false;
                                 QApplication::restoreOverrideCursor();
                                 return;
                             }
@@ -1044,9 +1067,11 @@ void dlgPackageExporter::slot_exportPackage()
                 }
                 mCancelButton->setVisible(false);
                 mCloseButton->setVisible(true);
+                mExportRunning = false;
                 QApplication::restoreOverrideCursor();
 
                 // Clean up the watcher
+                mpZipWatcher = nullptr;
                 watcher->deleteLater();
             });
             watcher->setFuture(future);
@@ -1060,6 +1085,7 @@ void dlgPackageExporter::slot_exportPackage()
         checkToEnableExportButton();
         mCancelButton->setVisible(false);
         mCloseButton->setVisible(true);
+        mExportRunning = false;
         QApplication::restoreOverrideCursor();
     }
 
@@ -1379,8 +1405,12 @@ std::pair<bool, QString> dlgPackageExporter::copyAssetsToTmp(const QStringList& 
     return {true, QString{}};
 }
 
-std::pair<bool, QString>
-dlgPackageExporter::zipPackage(const QString& stagingDirName, const QString& packagePathFileName, const QString& xmlPathFileName, const QString& packageName, const QString& packageComment)
+std::pair<bool, QString> dlgPackageExporter::zipPackage(const QString& stagingDirName,
+                                                        const QString& packagePathFileName,
+                                                        const QString& xmlPathFileName,
+                                                        const QString& packageName,
+                                                        const QString& packageComment,
+                                                        [[maybe_unused]] std::shared_ptr<std::atomic<bool>> cancelled)
 {
     bool isOk = true;
     QString error;
@@ -1542,10 +1572,10 @@ dlgPackageExporter::zipPackage(const QString& stagingDirName, const QString& pac
         zip_set_archive_comment(archive, packageComment.toUtf8().constData(), static_cast<zip_uint16_t>(packageComment.toUtf8().length()));
 
 #if defined(LIBZIP_SUPPORTS_CANCELLING)
-        auto cancel_callback = [](zip*, void*) -> int {
-            return !mExportingPackage;
+        auto cancel_callback = [](zip*, void* state) -> int {
+            return static_cast<std::atomic<bool>*>(state)->load();
         };
-        zip_register_cancel_callback_with_state(archive, cancel_callback, nullptr, nullptr);
+        zip_register_cancel_callback_with_state(archive, cancel_callback, nullptr, cancelled.get());
 #endif
 
         // THIS is the point that the archive gets created from the
@@ -2088,6 +2118,9 @@ QString dlgPackageExporter::getActualPath() const
 
 void dlgPackageExporter::slot_cancelExport()
 {
+    if (mpZipCancelled) {
+        mpZipCancelled->store(true);
+    }
     mExportingPackage = false;
     checkToEnableExportButton();
 

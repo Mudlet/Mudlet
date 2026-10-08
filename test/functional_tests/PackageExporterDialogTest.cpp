@@ -31,6 +31,7 @@
 #include <QStandardPaths>
 #include <QTemporaryDir>
 #include <QTextEdit>
+#include <QThreadPool>
 #include <QTimer>
 #include <QTreeWidget>
 #include <QtTest/QtTest>
@@ -1317,6 +1318,35 @@ private slots:
 
         packageList->setCurrentIndex(withoutIconIndex);
         QVERIFY2(iconLabel->isHidden(), "the icon label was left showing for a package that has no icon");
+    }
+
+    // The zip is written on a worker thread and wound up by a handler that dies
+    // with the dialog, so a dialog closed mid-export must still finish its
+    // package, take the busy cursor down and leave the next one able to export.
+    void test_closingTheDialogMidExportLeavesExportingPossible_10441()
+    {
+        const QString packageName = packageNamed(qsl("exporter-closed-mid-export"));
+        makeTrigger(qsl("exporter mid-export trigger"), nullptr);
+        openExporter();
+        QVERIFY(checkItem(triggersTop(), qsl("exporter mid-export trigger")));
+        nameField()->setText(packageName);
+        QVERIFY2(!QApplication::overrideCursor(), "a cursor was already overridden before the export began");
+
+        mpExporter->slot_exportPackage();
+        QVERIFY2(infoLabel()->text().contains(qsl("Exporting package...")), qPrintable(qsl("The zip was never started; the dialog said: \"%1\"").arg(infoLabel()->text())));
+        // no event loop has run since, so the export's finished handler cannot have
+        delete mpExporter;
+        mpExporter = nullptr;
+        QVERIFY2(!QApplication::overrideCursor(), "the busy cursor was left up after the exporting dialog went away");
+        QThreadPool::globalInstance()->waitForDone(30000);
+        QVERIFY2(QFileInfo::exists(packagePath(packageName)), "closing the dialog stopped its package from being written");
+        // the zip's end is reported through the event loop
+        QApplication::processEvents();
+
+        openExporter();
+        QVERIFY(checkItem(triggersTop(), qsl("exporter mid-export trigger")));
+        nameField()->setText(packageNamed(qsl("exporter-after-closed-export")));
+        QVERIFY2(exportButton()->isEnabled(), qPrintable(qsl("Exporting stayed blocked after the dialog that was exporting went away; the button said: \"%1\"").arg(exportButton()->toolTip())));
     }
 };
 
