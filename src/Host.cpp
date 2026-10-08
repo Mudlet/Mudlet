@@ -3180,6 +3180,7 @@ std::pair<bool, QString> Host::installPackage(const QString& fileName, enums::Pa
     // Filled per XML file by the archive branch, reported once both branches are done.
     QStringList itemsWithErrors;
     QStringList itemsWithErrorNames;
+    QString moduleLoadError;
     // A package file that broke before a single item could be read out of it would be listed, and saved into
     // the profile, with nothing in it. As nothing of it ran, taking it back leaves nothing behind. One that
     // got as far as an item stays installed and is warned about, as its items are running.
@@ -3405,6 +3406,7 @@ std::pair<bool, QString> Host::installPackage(const QString& fileName, enums::Pa
                 } else {
                     qWarning() << "Host::installPackage() WARNING - failed to load module" << packageName << ":" << errorMsg;
                     postMessage(tr("[ WARN ]  - Failed to load module \"%1\": %2").arg(packageName, errorMsg));
+                    moduleLoadError = errorMsg;
                 }
             } else if (!success && !anItemWasRead) {
                 file2.close();
@@ -3470,6 +3472,7 @@ std::pair<bool, QString> Host::installPackage(const QString& fileName, enums::Pa
             } else {
                 qWarning() << "Host::installPackage() WARNING - failed to load module" << packageName << ":" << errorMsg;
                 postMessage(tr("[ WARN ]  - Failed to load module \"%1\": %2").arg(packageName, errorMsg));
+                moduleLoadError = errorMsg;
             }
         } else if (!success && !reader.readAnItem()) {
             file2.close();
@@ -3519,11 +3522,20 @@ std::pair<bool, QString> Host::installPackage(const QString& fileName, enums::Pa
     // reorder permanent and temporary triggers: perm first, temp second
     mTriggerUnit.reorderTriggersAfterPackageImport();
 
+    // A module whose XML stopped part-way still runs the items read before the break, so its handlers
+    // hear of it, with the load error alongside any item's. Only one that brought in nothing goes unannounced.
+    const bool moduleLoadedNothing = thing != enums::PackageModuleType::Package && !mModulesLoadedOk.contains(packageName) && !anythingIsInstalledUnder(packageName);
+    QString eventErrors = itemErrors;
+    if (!moduleLoadError.isEmpty()) {
+        const QString loadError = qsl("%1: %2").arg(packageName, moduleLoadError);
+        eventErrors = eventErrors.isEmpty() ? loadError : qsl("%1; %2").arg(eventErrors, loadError);
+    }
+
     // Defer raising install events until the next event loop iteration
     // This ensures all package installation is complete (including variable loading)
     // before event handlers execute, preventing Lua state corruption. Kept queued
     // for the ordering the deferred-uninstall drain below depends on, too.
-    QTimer::singleShot(0ms, this, [this, guard = QPointer<Host>(this), thing, packageName, fileName, itemErrors]() {
+    QTimer::singleShot(0ms, this, [this, guard = QPointer<Host>(this), thing, packageName, fileName, moduleLoadedNothing, eventErrors]() {
         // The queued call can still be delivered once this Host has been
         // destroyed - the profile save queued the same way was #9653 - and the
         // isClosingDown() check below would then be read off freed memory. The
@@ -3537,8 +3549,9 @@ std::pair<bool, QString> Host::installPackage(const QString& fileName, enums::Pa
             return;
         }
 
-        // Don't raise install events for modules that failed to load
-        if (thing != enums::PackageModuleType::Package && !mModulesLoadedOk.contains(packageName)) {
+        // A script may have uninstalled it again before this was delivered
+        const bool stillInstalled = thing == enums::PackageModuleType::Package ? mInstalledPackages.contains(packageName) : mInstalledModules.contains(packageName);
+        if (moduleLoadedNothing || !stillInstalled) {
             return;
         }
 
@@ -3551,8 +3564,8 @@ std::pair<bool, QString> Host::installPackage(const QString& fileName, enums::Pa
         genericInstallEvent.mArgumentList.append(packageName);
         genericInstallEvent.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
         // Only added when there are errors, so handlers declaring the usual arguments are unaffected
-        if (!itemErrors.isEmpty()) {
-            genericInstallEvent.mArgumentList.append(itemErrors);
+        if (!eventErrors.isEmpty()) {
+            genericInstallEvent.mArgumentList.append(eventErrors);
             genericInstallEvent.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
         }
         raiseEvent(genericInstallEvent);
@@ -3577,8 +3590,8 @@ std::pair<bool, QString> Host::installPackage(const QString& fileName, enums::Pa
         detailedInstallEvent.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
         detailedInstallEvent.mArgumentList.append(fileName);
         detailedInstallEvent.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
-        if (!itemErrors.isEmpty()) {
-            detailedInstallEvent.mArgumentList.append(itemErrors);
+        if (!eventErrors.isEmpty()) {
+            detailedInstallEvent.mArgumentList.append(eventErrors);
             detailedInstallEvent.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
         }
         raiseEvent(detailedInstallEvent);
@@ -3613,7 +3626,7 @@ std::pair<bool, QString> Host::installPackage(const QString& fileName, enums::Pa
         mDeferredSaveTimer.start(0ms);
     }
 
-    return {true, itemErrors};
+    return {true, eventErrors};
 }
 
 
