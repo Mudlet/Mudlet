@@ -451,6 +451,7 @@ private:
     void gotRest(std::string&);
     void gotPrompt(std::string&);
     void postData(bool endsWithPromptMarker = false);
+    void postHeldDataBeforeEncodingChange();
     void raiseProtocolEvent(const QString& name, const QString& protocol);
     void beginNetworkLatencyMeasurement();
     void finishNetworkLatencyMeasurement();

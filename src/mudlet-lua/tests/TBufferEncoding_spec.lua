@@ -423,6 +423,61 @@ describe("Tests changing from one double byte encoding to another", function()
     assert.is_true(setServerEncoding("EUC-KR"))
     assert.equals("한", decoded(bytes(0xC7, 0xD1)))
   end)
+
+  -- cTelnet holds the tail of a line until its newline, so a lead byte that
+  -- arrived under the old encoding must not be paired with a byte that arrives
+  -- under the new one - see issue #10390
+  it("does not pair a byte held over from the old encoding with one in the new", function()
+    using("GBK")
+    local mark = getLastLineNumber("main")
+    assert.is_true(feedTelnet("enc:" .. bytes(0xC4)))
+    -- in Big5 0xC4 0x5A is a character of its own
+    assert.is_true(setServerEncoding("BIG5"))
+    assert.is_true(feedTelnet(bytes(0x5A) .. "\r\n"))
+
+    local lines = getLines("main", mark, getLastLineNumber("main") + 1)
+    assert.is_truthy(table.concat(lines, "|"):find("enc:Z", 1, true), table.concat(lines, "|"))
+  end)
+
+  it("does not pair a byte from the old encoding with one in the new when the game changes it", function()
+    using("GBK")
+    assert.is_true(feedTelnet("<T_IAC><T_DO><O_CHARS>"))
+    finally(function() feedTelnet("<T_IAC><T_DONT><O_CHARS>") end)
+    local mark = getLastLineNumber("main")
+    -- the request comes in the same read as the text ahead of it
+    assert.is_true(feedTelnet("inband:" .. bytes(0xC4) .. "<T_IAC><T_SB><O_CHARS><01>;BIG5<T_IAC><T_SE>"))
+    assert.equals("BIG5", getServerEncoding())
+    assert.is_true(feedTelnet(bytes(0x5A) .. "\r\n"))
+
+    local lines = getLines("main", mark, getLastLineNumber("main") + 1)
+    assert.is_truthy(table.concat(lines, "|"):find("inband:Z", 1, true), table.concat(lines, "|"))
+  end)
+
+  it("keeps a colour code split across an encoding change", function()
+    using("GBK")
+    local function redOn(prefix, fromLine)
+      for line = fromLine, getLastLineNumber("main") do
+        moveCursor("main", 0, line)
+        if getCurrentLine("main"):sub(1, #prefix) == prefix then
+          assert.is_true(selectString("RED", 1) >= 0, getCurrentLine("main"))
+          local colour = {getFgColor("main")}
+          deselect()
+          return colour
+        end
+      end
+      error("no line starting '" .. prefix .. "'")
+    end
+    local mark = getLastLineNumber("main")
+    assert.is_true(feedTelnet("encref:\27[31mRED\27[0m\r\n"))
+    local red = redOn("encref:", mark)
+
+    -- an escape sequence is ASCII, so it means the same in either encoding
+    mark = getLastLineNumber("main")
+    assert.is_true(feedTelnet("encsgr:\27[3"))
+    assert.is_true(setServerEncoding("BIG5"))
+    assert.is_true(feedTelnet("1mRED\27[0m\r\n"))
+    assert.same(red, redOn("encsgr:", mark))
+  end)
 end)
 
 describe("Tests a UTF-8 sequence cut short by a byte that cannot continue it", function()

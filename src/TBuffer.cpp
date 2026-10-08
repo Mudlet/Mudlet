@@ -1297,12 +1297,11 @@ void TBuffer::translateToPlainTextInner(std::string& incoming, const bool isFrom
     const QByteArray usedEncoding = mpHost->mTelnet.getEncoding();
     if (mEncoding != usedEncoding) {
         encodingChanged(usedEncoding);
-        // Will have to dump any stored bytes as they will be in the old
-        // encoding and the following code block to prepend them is used for
-        // both bytes that are held over as part of a multi-byte encoding that
-        // was incomplete at the end of the last packet AND ALSO for ANSI code
-        // sequences that were not complete at the end of the last packet:
-        if (!mIncompleteSequenceBytes.empty()) {
+        // Bytes held over from a multi-byte character that was incomplete at
+        // the end of the last packet are in the old encoding, so dump them.
+        // The same store also holds an ANSI code sequence that was incomplete
+        // there, which is ASCII and means the same in either, so keep that:
+        if (!mIncompleteSequenceBytes.empty() && !(mGotESC || mGotEscCharset || mGotCSI || mGotOSC || mGotString)) {
 #if defined(DEBUG_SGR_PROCESSING) || defined(DEBUG_OSC_PROCESSING) || defined(DEBUG_UTF8_PROCESSING) || defined(DEBUG_GB_PROCESSING) || defined(DEBUG_BIG5_PROCESSING)
             qDebug() << "TBuffer::translateToPlainText(...) WARNING - Dumping residual bytes that were carried over from previous packet onto incoming data - the encoding has changed and they may no "
                         "longer be usable!";

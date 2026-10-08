@@ -481,6 +481,17 @@ QString cTelnet::errorString()
     return mpSocket->errorString();
 }
 
+// The tail of a line still waiting for its newline is in the encoding being
+// replaced, and TBuffer only drops bytes held across a change if it holds them
+// itself - so it has to have them before the change, or they would be decoded
+// together with what follows under the new encoding.
+void cTelnet::postHeldDataBeforeEncodingChange()
+{
+    if (!mMudData.empty()) {
+        postData();
+    }
+}
+
 // newEncoding must be EITHER: one of the FIXED non-translatable values in
 // cTelnet::csmAcceptableEncodings
 // OR "ASCII"
@@ -496,6 +507,7 @@ QPair<bool, QString> cTelnet::setEncoding(const QByteArray& newEncoding, const b
     if (newEncoding.isEmpty() || newEncoding == "ASCII") {
         reportedEncoding = "ASCII";
         if (!mEncoding.isEmpty()) {
+            postHeldDataBeforeEncodingChange();
             // This will disable transcoding on:
             // input in TBuffer::translateToPlainText(...)
             // incoming OOB in TLuaInterpreter::encodeBytes(...)
@@ -530,6 +542,7 @@ QPair<bool, QString> cTelnet::setEncoding(const QByteArray& newEncoding, const b
                          QLatin1String(R"(Encoding ")") % newEncoding % QLatin1String("\" does not exist;\nuse one of the following:\n\"ASCII\", \"") % QLatin1String(fixedUpEncodings.join(R"(", ")"))
                                  % QLatin1String(R"(".)"));
     } else if (mEncoding != newEncoding && ("M_" + mEncoding) != newEncoding) {
+        postHeldDataBeforeEncodingChange();
         encodingChanged(newEncoding);
 
         if (saveValue) {
@@ -6050,6 +6063,12 @@ void cTelnet::processSocketData(char* in_buffer, int amount, const bool loopback
                 }
 
                 if (iac && (ch == TN_SE)) { //IAC SE - end of subcommand
+                    if (command.size() > 2 && command[2] == OPT_CHARSET) {
+                        // The text ahead of it in this read is in the encoding a
+                        // request may be about to replace, so hand it on first:
+                        gotRest(cleandata);
+                        cleandata = "";
+                    }
                     processTelnetCommand(command);
                     command = "";
                     iac = false;
