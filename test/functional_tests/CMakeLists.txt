@@ -112,6 +112,7 @@ set(PROFILE_GROUP_TEST_SOURCES
     ProfileCloseGuardTest.cpp
     MissingDisplayFontTest.cpp
     PortableRootNoticeTest.cpp
+    ProfileDataWriteTest.cpp
     ProfileDeletionSafetyTest.cpp
     ProfileDictionaryTest.cpp
     ProfileFolderNameTest.cpp

@@ -4235,24 +4235,9 @@ void Host::setCmdLineSettings(const enums::CommandLineType type, const bool save
     writeProfileIniData(qsl("CommandLines/SaveHistory/%1").arg(localName), saveCommands ? qsl("true") : qsl("false"));
 }
 
-// Derived from the one in dlgConnectionProfile class - but it does not need a
-// host name argument...
 QPair<bool, QString> Host::writeProfileData(const QString& item, const QString& what)
 {
-    QSaveFile file(MudletApp::getMudletPath(enums::profileDataItemPath, getName(), item));
-    if (file.open(QIODevice::WriteOnly | QIODevice::Unbuffered)) {
-        QDataStream ofs(&file);
-        ofs.setVersion(QDataStream::Qt_5_12);
-        ofs << what;
-        if (!file.commit()) {
-            qDebug() << "Host::writeProfileData: writing host data: " << file.errorString();
-        }
-    }
-
-    if (file.error() == QFile::NoError) {
-        return qMakePair(true, QString());
-    }
-    return qMakePair(false, file.errorString());
+    return MudletApp::writeProfileData(getName(), item, what);
 }
 
 // Similar to the above, a convenience for reading profile data for this host.
