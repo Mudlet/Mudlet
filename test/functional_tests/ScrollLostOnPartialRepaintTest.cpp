@@ -18,7 +18,6 @@
  ***************************************************************************/
 
 #include <QPainter>
-#include <QScopeGuard>
 #include <QScrollBar>
 #include <QTemporaryDir>
 #include <QtTest/QtTest>
@@ -254,9 +253,6 @@ private slots:
         // the welcome lands 100ms after connecting, and output arriving during
         // the wait below refreshes the scrollbar and hides the loss
         mpServer->setSendsWelcome(false);
-        const auto restoreWelcome = qScopeGuard([this]() {
-            mpServer->setSendsWelcome(true);
-        });
         startProfile(mpHostname, mpLocalhost, mpPort);
         auto host = mudlet::self()->getActiveHost();
         QVERIFY2(host && host->mpConsole, "no main console");

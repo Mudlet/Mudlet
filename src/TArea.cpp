@@ -910,12 +910,15 @@ void TArea::writeJsonUserData(QJsonObject& obj) const
 // the live map, and a map file can hold them for labels that no longer exist.
 void TArea::dropFileOnlyUserData(QMap<QString, QString>& userData)
 {
+    // exactly the form a save writes, so "_007" or "_+5" stay a script's own
     const auto labelKey = [](const QString& key, const QLatin1String prefix) {
-        bool isLabelId = false;
-        if (key.startsWith(prefix)) {
-            QStringView(key).mid(prefix.size()).toInt(&isLabelId);
+        if (!key.startsWith(prefix)) {
+            return false;
         }
-        return isLabelId;
+        const QStringView suffix = QStringView(key).mid(prefix.size());
+        bool isNumber = false;
+        const int labelId = suffix.toInt(&isNumber);
+        return isNumber && labelId >= 0 && suffix == QString::number(labelId);
     };
     userData.removeIf([&labelKey](const QMap<QString, QString>::iterator& it) {
         return it.key() == QLatin1String("system.fallback_map2DZoom") || labelKey(it.key(), QLatin1String("system.labelFont_")) || labelKey(it.key(), QLatin1String("system.labelOutlineColor_"));
