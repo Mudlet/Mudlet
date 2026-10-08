@@ -121,6 +121,7 @@ private:
     bool carriesLink() const;
     QString withoutInjectedLinkStyles(const QString& text) const;
     void applyBackgroundColor();
+    void applyLinkStyle(const QString& text);
     void reapplyLinkStyle();
 
     QColor& mBackgroundColor;

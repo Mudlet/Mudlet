@@ -160,9 +160,14 @@ QString TLabel::withoutInjectedLinkStyles(const QString& text) const
     return result;
 }
 
-void TLabel::setText(const QString& givenText)
+void TLabel::setText(const QString& text)
 {
-    const QString text = withoutInjectedLinkStyles(givenText);
+    applyLinkStyle(withoutInjectedLinkStyles(text));
+}
+
+// Takes text that already has no injected styles: a style here that matches one injected is the user's own.
+void TLabel::applyLinkStyle(const QString& text)
+{
     mUnstyledText = text;
     const bool hasAnchor = containsAnchorTag(text);
 
@@ -747,7 +752,7 @@ void TLabel::reapplyLinkStyle()
 {
     // a pixmap or movie takes the text out of QLabel's content slot
     if (const QString currentText = text(); !currentText.isEmpty() && containsAnchorTag(currentText)) {
-        setText(mUnstyledText);
+        applyLinkStyle(mUnstyledText);
     }
 }
 
