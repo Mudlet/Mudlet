@@ -3336,6 +3336,115 @@ describe("Tests importing a colour trigger on a colour past the basic sixteen", 
   end)
 end)
 
+-- The Mudlet Tutorial installs from the connection screen's "Start Tutorial"
+describe("Tests uninstalling the Mudlet Tutorial", function()
+  local name = "Mudlet Tutorial"
+  local archive = ":/packages/mudlet-tutorial/mudlet-tutorial.mpackage"
+
+  -- Overrides a global for the rest of the spec; Package_spec's own environment
+  -- would only shadow it, and the packages read their globals from _G
+  local function override(globalName, value)
+    local original = _G[globalName]
+    defer(function() _G[globalName] = original end)
+    _G[globalName] = value
+    return original
+  end
+
+  -- the tutorial takes the generic mapper away as it starts, and clears the
+  -- screen and changes the map's info as it goes, none of which is a spec's to do
+  local function keepTheProfile()
+    local realUninstall = _G.uninstallPackage
+    override("uninstallPackage", function(packageName)
+      if packageName == "generic_mapper" then
+        return true
+      end
+      return realUninstall(packageName)
+    end)
+    local mapInfoChanges = { count = 0 }
+    override("clearWindow", function() end)
+    for _, call in ipairs({ "enableMapInfo", "disableMapInfo" }) do
+      override(call, function()
+        mapInfoChanges.count = mapInfoChanges.count + 1
+      end)
+    end
+    -- a profile that is to show the UI tour holds the lesson back until the tour ends
+    local tourPending = mudlet.uiTourPending
+    defer(function() mudlet.uiTourPending = tourPending end)
+    mudlet.uiTourPending = nil
+    defer(function()
+      deleteNamedEventHandler("mudlet-tutorial", "parser")
+      _G.hq = nil
+    end)
+    return mapInfoChanges
+  end
+
+  local function install()
+    defer(function() removeFixturePackage(name) end)
+    installUntilConfirmed(installPackage, archive, function() return packageInstalled(name) end, "the tutorial")
+  end
+
+  it("gives back the input, doSpeedWalk and windows it took", function()
+    local playersSpeedWalk = function() end
+    override("doSpeedWalk", playersSpeedWalk)
+    keepTheProfile()
+    -- the lesson's own timers, not the ones the generic mapper sets as the map opens
+    local tutorialScripts = {}
+    for _, script in ipairs({ "Mini Quest", "Mini-Game Intro", "Misc Functions", "GUI Tutorial", "Set up Map", "Room Scripts", "Init" }) do
+      tutorialScripts['[string "Script: ' .. script .. '"]'] = true
+    end
+    local timers = {}
+    local realTempTimer = _G.tempTimer
+    override("tempTimer", function(...)
+      local id = realTempTimer(...)
+      if tutorialScripts[debug.getinfo(2, "S").short_src] then
+        timers[#timers + 1] = id
+      end
+      return id
+    end)
+    local playersLabel = Geyser.Label:new({ name = "packageSpecTutorialLabel", x = 0, y = 0, width = 10, height = 10 })
+    defer(function() playersLabel:delete() end)
+
+    install()
+    assert.is_true(waitUntil(function() return type(_G.hq) == "table" and _G.hq.mainMenuContainer ~= nil end, 2000), "the lesson never started")
+    assert.are_not.equal(playersSpeedWalk, _G.doSpeedWalk, "the tutorial did not take doSpeedWalk over")
+    assert.is_true(playersLabel.hidden, "the lesson did not hide the player's windows")
+    -- the first step queues timers of its own
+    _G.hq.guiTutorialStep1()
+    local lessonWindows = { _G.hq.guiStep1Container }
+
+    removeFixturePackage(name)
+
+    assert.are.same({}, getNamedEventHandlers("mudlet-tutorial"))
+    assert.are.equal(playersSpeedWalk, _G.doSpeedWalk)
+    assert.is_falsy(playersLabel.hidden)
+    for _, window in ipairs(lessonWindows) do
+      assert.is_true(window.hidden, window.name .. " was left on screen")
+    end
+    assert.is_nil(_G.hq)
+    -- the lesson's next steps are queued on timers that index hq
+    assert.is_true(#timers > 0, "SETUP: the lesson queued no timers")
+    for _, id in ipairs(timers) do
+      assert.is_nil(remainingTime(id), "a lesson timer is still waiting to fire")
+    end
+  end)
+
+  it("does not start the lesson when the UI tour ends after it was uninstalled", function()
+    local mapInfoChanges = keepTheProfile()
+    mudlet.uiTourPending = true
+
+    install()
+    pumpEvents(100)
+    removeFixturePackage(name)
+    install()
+    pumpEvents(100)
+    raiseEvent("sysUiTourFinished")
+    pumpEvents(100)
+
+    -- each lesson start turns the map's short and full info off and the empty one on
+    assert.are.equal(3, mapInfoChanges.count)
+  end)
+end)
+
 describe("Tests installing a module whose XML cannot be read", function()
   it("says the module could not be loaded, and keeps it listed", function()
     local name = "mudlet-spec-badxml"

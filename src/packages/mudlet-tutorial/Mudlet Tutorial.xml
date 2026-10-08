@@ -410,6 +410,14 @@ hq.help("Using the toolbar above, go to Games -&gt; Close Profile (Alt+W) to ret
 			<script>uninstallPackage("generic_mapper")
 
 hq = hq or {}
+hq.timers = hq.timers or {}
+
+-- the lesson's timers index hq when they fire, so uninstalling has to kill them
+function hq.tempTimer(seconds, code)
+  local id = tempTimer(seconds, code)
+  hq.timers[#hq.timers + 1] = id
+  return id
+end
 
 clearWindow()
 closeMapWidget()</script>
@@ -437,28 +445,28 @@ function hq.parser(event, command)
     hq.state = "INTRODUCTION"
   
     echo(f"\nWelcome {hq.char.name}.  You have passed the Adventurer's Guild test and set out to stake your claim as a hero.\n")
-    tempTimer(2, function() echo("\nYou pass through mountain high and valley low, braving rain and the bitter, cold snow.\n") end)
-    tempTimer(4, function() echo("\nAs you wander into a small village you notice a sign tacked to the gates.\n") end)
-    tempTimer(6, function() echo("\n\"Assistant Wanted for the Hamlet of Whitehaven.  Apply to Sheriff.\"\n") end)
-    tempTimer(8, function() echo("\nAh, your first true test as a new adventurer! You step through the gates to seek out the sheriff.\n") end)
-    tempTimer(12, function() echo("\nAs luck would have it you find him immediately and introduce yourself.\n") end)
-    tempTimer(14, function() echo(f("\nThe Sheriff says, 'Well met {hq.char.name}.  I'm looking for an assistant.  Think you can handle the job?'\n")) end)
-    tempTimer(16, function() echo("\nBefore you can respond he shoves a map into your hands.\n") end)
-    tempTimer(20, function() echo("\nThe Sheriff says, 'Here is a map of the village to help you get aquainted.  Welcome aboard!'\n") end)
+    hq.tempTimer(2, function() echo("\nYou pass through mountain high and valley low, braving rain and the bitter, cold snow.\n") end)
+    hq.tempTimer(4, function() echo("\nAs you wander into a small village you notice a sign tacked to the gates.\n") end)
+    hq.tempTimer(6, function() echo("\n\"Assistant Wanted for the Hamlet of Whitehaven.  Apply to Sheriff.\"\n") end)
+    hq.tempTimer(8, function() echo("\nAh, your first true test as a new adventurer! You step through the gates to seek out the sheriff.\n") end)
+    hq.tempTimer(12, function() echo("\nAs luck would have it you find him immediately and introduce yourself.\n") end)
+    hq.tempTimer(14, function() echo(f("\nThe Sheriff says, 'Well met {hq.char.name}.  I'm looking for an assistant.  Think you can handle the job?'\n")) end)
+    hq.tempTimer(16, function() echo("\nBefore you can respond he shoves a map into your hands.\n") end)
+    hq.tempTimer(20, function() echo("\nThe Sheriff says, 'Here is a map of the village to help you get aquainted.  Welcome aboard!'\n") end)
  
-    tempTimer(22, hq.initMap)
-    tempTimer(22, hq.showLayout)
-    tempTimer(22, function() hq.state = "PLAYING" end)
+    hq.tempTimer(22, hq.initMap)
+    hq.tempTimer(22, hq.showLayout)
+    hq.tempTimer(22, function() hq.state = "PLAYING" end)
     
-    tempTimer(24, function() hq.help("Mudlet provides a built-in map to help you explore.  Some games provide maps to help you learn, some don't to encourage exploration but you can always make your own.\n") end)
-    tempTimer(25, function() echo("The Sheriff says, 'As your first task I need you to go buy me some lunch from the fruit vendor to the north.  It is marked with a 'F' on your map.'\n") end)
-    tempTimer(25, function() 
+    hq.tempTimer(24, function() hq.help("Mudlet provides a built-in map to help you explore.  Some games provide maps to help you learn, some don't to encourage exploration but you can always make your own.\n") end)
+    hq.tempTimer(25, function() echo("The Sheriff says, 'As your first task I need you to go buy me some lunch from the fruit vendor to the north.  It is marked with a 'F' on your map.'\n") end)
+    hq.tempTimer(25, function() 
       echo("The Sheriff gives you some coins.\n")
       hq.char.inv = {}
       table.insert(hq.char.inv, "some silver coins")
     end)
     
-    tempTimer(26, function() 
+    hq.tempTimer(26, function() 
       hq.help("MUDs are divided into different 'rooms' where each represents a location on the map (the red squares).  It could be a house, a section of road, or part of a forest.  MUDs allow movement betweens these rooms by typing commands like; &lt;r&gt;&lt;b&gt;north&lt;r&gt;&lt;dark_sea_green&gt; or &lt;r&gt;&lt;b&gt;west&lt;r&gt;&lt;dark_sea_green&gt;, &lt;r&gt;&lt;b&gt;in&lt;r&gt;&lt;dark_sea_green&gt; or &lt;r&gt;&lt;b&gt;out&lt;r&gt;&lt;dark_sea_green&gt;.  See if you can navigate to the fruit vendor ('F') using the commands and following the map.\n\nHINT: it is two rooms north of your current location which is marked with the red circle.")
       cecho(hq.prompt)
     end)
@@ -779,7 +787,7 @@ function hq.guiTutorialStart()
   hq.mainMenuLabel:setStyleSheet(hq.labelCSS)
   hq.addNextButton(hq.mainMenuLabel, hq.guiTutorialStep1)
   
-  tempTimer(0.2, function() clearWindow() end)
+  hq.tempTimer(0.2, function() clearWindow() end)
 
 end
 
@@ -811,13 +819,13 @@ function hq.guiTutorialStep1()
   hq.guiStep1Label:setStyleSheet(hq.labelCSS)
   hq.addNextButton(hq.guiStep1Label, hq.guiTutorialStep2)
   
-  tempTimer(1, function() hq.guiStep1Container:flash(0.2) end)
-  tempTimer(1.5, function() hq.guiStep1Container:flash(0.2) end)
-  tempTimer(2, function() hq.guiStep1Container:flash(0.2) end)
+  hq.tempTimer(1, function() hq.guiStep1Container:flash(0.2) end)
+  hq.tempTimer(1.5, function() hq.guiStep1Container:flash(0.2) end)
+  hq.tempTimer(2, function() hq.guiStep1Container:flash(0.2) end)
   
-  tempTimer(3, function() echo("This is the main window text.\n") end)
-  tempTimer(4, function() echo("Anything coming from the game will show up here.\n") end)
-  tempTimer(5, function() cecho("&lt;cyan&gt;It may also show in colour if your game supports this :)&lt;r&gt;\n") end)
+  hq.tempTimer(3, function() echo("This is the main window text.\n") end)
+  hq.tempTimer(4, function() echo("Anything coming from the game will show up here.\n") end)
+  hq.tempTimer(5, function() cecho("&lt;cyan&gt;It may also show in colour if your game supports this :)&lt;r&gt;\n") end)
 
 end
 
@@ -846,12 +854,12 @@ function hq.guiTutorialStep2()
   hq.guiStep2Label:setStyleSheet(hq.labelCSS)
   hq.addNextButton(hq.guiStep2Label, hq.guiTutorialStep3)
   
-  tempTimer(1, function() setCmdLineStyleSheet("main", [[ QPlainTextEdit { background-color: grey; }]]) end)
-  tempTimer(1.2, function() setCmdLineStyleSheet("main", [[ QPlainTextEdit { background-color: black; }]]) end)
-  tempTimer(1.5, function() setCmdLineStyleSheet("main", [[ QPlainTextEdit { background-color: grey; }]]) end)
-  tempTimer(1.7, function() setCmdLineStyleSheet("main", [[ QPlainTextEdit { background-color: black; }]]) end)
-  tempTimer(2, function() setCmdLineStyleSheet("main", [[ QPlainTextEdit { background-color: grey; }]]) end)
-  tempTimer(2.2, function() setCmdLineStyleSheet("main", [[ QPlainTextEdit { background-color: black; }]]) end)
+  hq.tempTimer(1, function() setCmdLineStyleSheet("main", [[ QPlainTextEdit { background-color: grey; }]]) end)
+  hq.tempTimer(1.2, function() setCmdLineStyleSheet("main", [[ QPlainTextEdit { background-color: black; }]]) end)
+  hq.tempTimer(1.5, function() setCmdLineStyleSheet("main", [[ QPlainTextEdit { background-color: grey; }]]) end)
+  hq.tempTimer(1.7, function() setCmdLineStyleSheet("main", [[ QPlainTextEdit { background-color: black; }]]) end)
+  hq.tempTimer(2, function() setCmdLineStyleSheet("main", [[ QPlainTextEdit { background-color: grey; }]]) end)
+  hq.tempTimer(2.2, function() setCmdLineStyleSheet("main", [[ QPlainTextEdit { background-color: black; }]]) end)
 
 end
 
@@ -981,6 +989,8 @@ end</script>
                    ["u"] = "d",
                    ["d"] = "u" }
 
+hq.savedDoSpeedWalk = hq.savedDoSpeedWalk or doSpeedWalk
+
 function doSpeedWalk()
 
   echo("You point to your map but it fails to magically transport you anywhere.\n")
@@ -1050,9 +1060,9 @@ function hq.drawMapHint()
   local dismissMapHint = function() hq.mapHintContainer:hide() end
   hq.mapHintLabel:setStyleSheet(hq.labelCSS)
   hq.addNextButton(hq.mapHintLabel, dismissMapHint)
-  tempTimer(1, function() hq.mapperWindow:flash(0.2) end)
-  tempTimer(1.5, function() hq.mapperWindow:flash(0.2) end)
-  tempTimer(2, function() hq.mapperWindow:flash(0.2) end)
+  hq.tempTimer(1, function() hq.mapperWindow:flash(0.2) end)
+  hq.tempTimer(1.5, function() hq.mapperWindow:flash(0.2) end)
+  hq.tempTimer(2, function() hq.mapperWindow:flash(0.2) end)
 
 end
 
@@ -1214,6 +1224,16 @@ function hq.showLayout()
 end 
 
 local function beginTutorial()
+  -- the lesson's Geyser.hideAll() calls hide the player's own windows too
+  -- a lesson started again (its script saved, say) finds them hidden by the first
+  if not hq.windowsShownBefore then
+    hq.windowsShownBefore = {}
+    for _, window in pairs(Geyser.windowList) do
+      if not window.hidden then
+        hq.windowsShownBefore[#hq.windowsShownBefore + 1] = window
+      end
+    end
+  end
   hq.initMapperWindow()
   hq.guiTutorialStart()
   hq.hideLayout()
@@ -1222,10 +1242,37 @@ end
 
 -- when Mudlet's UI tour is about to run, hold the lesson until it finishes
 if mudlet and mudlet.uiTourPending then
-  registerAnonymousEventHandler("sysUiTourFinished", beginTutorial, true)
+  hq.tourHandler = registerAnonymousEventHandler("sysUiTourFinished", beginTutorial, true)
 else
-  tempTimer(0, beginTutorial)
-end</script>
+  hq.tempTimer(0, beginTutorial)
+end
+
+if hq.uninstallHandler then
+  killAnonymousEventHandler(hq.uninstallHandler)
+end
+hq.uninstallHandler = registerAnonymousEventHandler("sysUninstallPackage", function(_, packageName)
+  if packageName ~= "Mudlet Tutorial" then
+    return
+  end
+  killAnonymousEventHandler(hq.uninstallHandler)
+  if hq.tourHandler then
+    killAnonymousEventHandler(hq.tourHandler)
+  end
+  for _, id in ipairs(hq.timers) do
+    killTimer(id)
+  end
+  deleteNamedEventHandler("mudlet-tutorial", "parser")
+  doSpeedWalk = hq.savedDoSpeedWalk
+  for _, value in pairs(hq) do
+    if type(value) == "table" and value.windowname and type(value.hide) == "function" then
+      value:hide()
+    end
+  end
+  for _, window in ipairs(hq.windowsShownBefore or {}) do
+    window:show()
+  end
+  hq = nil
+end)</script>
 				<eventHandlerList />
 			</Script>
 		</ScriptGroup>
