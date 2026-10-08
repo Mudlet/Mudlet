@@ -671,6 +671,37 @@ describe("Tests the package info accessors", function()
       assert.is_true(setPackageInfo(minimalPackage, "spec-added", "yes"))
       assert.equals("yes", getPackageInfo(minimalPackage, "spec-added"))
     end)
+
+    it("returns nil+msg for a package that is not installed", function()
+      local ghost = "mudlet-spec-not-installed"
+      local ok, err = setPackageInfo(ghost, "title", "I am not here")
+      assert.is_nil(ok)
+      assert.is_true(contains(err, "not found"), tostring(err))
+      assert.same({}, getPackageInfo(ghost), "the details were filed for a package that is not installed")
+    end)
+
+    it("returns nil+msg for the name the package is installed under", function()
+      local ok, err = setPackageInfo(minimalPackage, "mpackage", "mudlet-spec-renamed")
+      assert.is_nil(ok)
+      assert.is_true(contains(err, "cannot be changed"), tostring(err))
+      assert.equals(minimalPackage, getPackageInfo(minimalPackage, "mpackage"))
+      assert.is_true(packageInstalled(minimalPackage))
+    end)
+
+    it("lets a package's own script describe it while the package is being read in", function()
+      local name = "mudlet-spec-describesitself"
+      local xml = getMudletHomeDir() .. "/" .. name .. ".xml"
+      defer(function()
+        removeFixturePackage(name)
+        os.remove(xml)
+      end)
+      writePackageXml(xml, '<ScriptPackage><Script isActive="yes" isFolder="no"><name>' .. name .. ' script</name><packageName></packageName>'
+                           .. '<script>setPackageInfo("' .. name .. '", "spec-set-by-itself", "yes")</script><eventHandlerList /></Script></ScriptPackage>')
+
+      installUntilConfirmed(installPackage, xml, function() return packageInstalled(name) end, "the package " .. name)
+
+      assert.equals("yes", getPackageInfo(name, "spec-set-by-itself"))
+    end)
   end)
 end)
 
@@ -811,6 +842,39 @@ describe("Tests the module accessors", function()
       assert.is_true(setModuleInfo(moduleName, "version", "8.8"))
       assert.equals("8.8", getModuleInfo(moduleName, "version"))
       assert.equals("8.8", getModuleInfo(moduleName).version)
+    end)
+
+    it("returns nil+msg for a module that is not installed", function()
+      local ghost = "mudlet-spec-not-installed"
+      local ok, err = setModuleInfo(ghost, "title", "I am not here")
+      assert.is_nil(ok)
+      assert.is_true(contains(err, "not found"), tostring(err))
+      assert.same({}, getModuleInfo(ghost), "the details were filed for a module that is not installed")
+    end)
+
+    it("returns nil+msg for the name the module is installed under", function()
+      local ok, err = setModuleInfo(moduleName, "mpackage", "mudlet-spec-renamed")
+      assert.is_nil(ok)
+      assert.is_true(contains(err, "cannot be changed"), tostring(err))
+      assert.equals(moduleName, getModuleInfo(moduleName, "mpackage"))
+      assert.is_true(moduleInstalled(moduleName))
+    end)
+
+    it("lets a module's own script describe it while the module is being read in", function()
+      local name = "mudlet-spec-describesitselfmodule"
+      local xml = scratchDirectory .. "/" .. name .. ".xml"
+      defer(function()
+        removeFixtureModule(name)
+        os.remove(xml)
+        lfs.rmdir(scratchDirectory)
+      end)
+      lfs.mkdir(scratchDirectory)
+      writePackageXml(xml, '<ScriptPackage><Script isActive="yes" isFolder="no"><name>' .. name .. ' script</name><packageName></packageName>'
+                           .. '<script>setModuleInfo("' .. name .. '", "spec-set-by-itself", "yes")</script><eventHandlerList /></Script></ScriptPackage>')
+
+      installUntilConfirmed(installModule, xml, function() return moduleInstalled(name) end, "the module " .. name)
+
+      assert.equals("yes", getModuleInfo(name, "spec-set-by-itself"))
     end)
   end)
 
