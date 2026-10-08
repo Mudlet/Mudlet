@@ -1579,11 +1579,12 @@ describe("Tests installing one name as both a package and a module", function()
                     "the reload left the folder it unpacked into in the profile, under the archive's file name")
   end)
 
-  -- The folder an install is staged in is taken away again on every way out, so
-  -- one still sitting there is the leavings of an install that was interrupted.
-  -- Unpacking on top of it would import whatever it still holds under the name
-  -- being installed, which is somebody else's items under the user's package.
-  it("does not install what a staging folder left over from an interrupted install holds", function()
+  -- A folder with the staging folder's name may be left over from an interrupted
+  -- install, or be a package's own: "x.mudlet-installing" is a name a package can
+  -- have. Unpacking on top of it would import whatever it holds under the name
+  -- being installed, and clearing it out would delete files nobody knows the
+  -- owner of, so the install stages in a fresh folder of its own and leaves it be.
+  it("neither installs nor deletes what a folder with the staging folder's name holds", function()
     lfs.mkdir(scratchDirectory)
     local squatterDirectory = scratchDirectory .. "/under-the-file-name"
     lfs.mkdir(squatterDirectory)
@@ -1638,6 +1639,7 @@ describe("Tests installing one name as both a package and a module", function()
                           "the renaming fixture as a module past a leftover staging folder")
 
     assert.equals(0, exists("mudlet-spec-leftover alias", "alias"), "the leftover staging folder's items were installed under the module's name")
+    assert.is_true(fileExists(leftOver .. "/mudlet-spec-leftover.xml"), "the install deleted a folder it did not make")
   end)
 
   it("refuses a module whose config.lua renames it onto an installed module", function()
@@ -2964,7 +2966,9 @@ describe("Tests installing an archive named after one of the profile's own folde
     assert.is_true(contains(reason, "keeps its own files"), tostring(reason))
     assert.is_false(packageInstalled("media"), "the package was installed into the profile's media folder")
     assert.is_false(fileExists(media), "the refused install left a media folder behind")
-    assert.is_false(fileExists(getMudletHomeDir() .. "/media.mudlet-installing"), "the refused install stranded the folder it unpacked")
+    for entry in lfs.dir(getMudletHomeDir()) do
+      assert.is_nil(entry:find("^media%.mudlet%-installing"), "the refused install stranded the folder it unpacked: " .. entry)
+    end
     assert.is_false(fileExists(getMudletHomeDir() .. "/mudlet-spec-claimsmedia"), "the refused install stranded the folder it unpacked")
   end)
 

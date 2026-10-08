@@ -82,6 +82,7 @@
 #include <QSet>
 #include <QScopeGuard>
 #include <QSettings>
+#include <QTemporaryDir>
 #include <QTemporaryFile>
 #include <QTextStream>
 #include <QThread>
@@ -2973,6 +2974,19 @@ static bool theProfileKeepsItsOwnDataIn(const QString& name)
     return false;
 }
 
+// A folder of its own to unpack an archive into beside the profile's package folders. The name is made
+// unpredictable, so it can never be a folder some package already owns. Ends in a separator, as
+// utils::unzip() expects.
+static QString aFreshFolderToUnpackInto(const QString& profileHome, const QString& packageName)
+{
+    QTemporaryDir folder(qsl("%1/%2.mudlet-installing-XXXXXX").arg(profileHome, packageName));
+    if (!folder.isValid()) {
+        return QString();
+    }
+    folder.setAutoRemove(false);
+    return folder.path() + QLatin1Char('/');
+}
+
 std::pair<bool, QString> Host::installPackage(const QString& fileName, enums::PackageModuleType thing, bool quiet)
 {
     // Wait for profile save to complete before installing package
@@ -3207,8 +3221,10 @@ std::pair<bool, QString> Host::installPackage(const QString& fileName, enums::Pa
         // Unpacking into a folder the other kind, or the profile itself, owns would overwrite its files, and the
         // rename below would carry it off. Such an archive unpacks beside it, moving in once its manifest's name proves free.
         const bool unpackAside = !crossKindRefusalOnTheFileName.isEmpty() || (refuseTheProfilesOwnFolders && theProfileKeepsItsOwnDataIn(packageName));
-        const QString _dest = !unpackAside ? MudletApp::getMudletPath(enums::profilePackagePath, getName(), packageName)
-                                           : MudletApp::getMudletPath(enums::profilePackagePath, getName(), packageName + qsl(".mudlet-installing"));
+        const QString _dest = !unpackAside ? MudletApp::getMudletPath(enums::profilePackagePath, getName(), packageName) : aFreshFolderToUnpackInto(_home, packageName);
+        if (_dest.isEmpty()) {
+            return fail(qsl("could not create destination folder"));
+        }
         // home directory for the PROFILE
         const QDir _tmpDir(_home);
         // directory to store the expanded archive file contents
@@ -3217,11 +3233,7 @@ std::pair<bool, QString> Host::installPackage(const QString& fileName, enums::Pa
         // name, and then whatever its config.lua says, so it can just as well name
         // a folder of the profile's that was already here ("map", "log",
         // "current") - see the refusal further down.
-        if (unpackAside && QDir(_dest).exists() && QDir(_dest).absolutePath().startsWith(QDir(_home).absolutePath() + QLatin1Char('/'))) {
-            // Only this makes a ".mudlet-installing" folder and every exit removes it, so one here is left from an unfinished install
-            removeDir(_dest, _dest);
-        }
-        const bool destinationAlreadyExisted = QDir(_dest).exists();
+        const bool destinationAlreadyExisted = !unpackAside && QDir(_dest).exists();
         const bool mkpathSuccessful = _tmpDir.mkpath(_dest);
         if (!mkpathSuccessful) {
             return fail(qsl("could not create destination folder"));
