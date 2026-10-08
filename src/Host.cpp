@@ -5336,6 +5336,10 @@ std::pair<bool, QString> Host::createMiniConsole(const QString& windowname, cons
         return {false, qsl("window '%1' not found").arg(windowname)};
     }
 
+    if (mWindowRegistry.hasLabel(name)) {
+        return {false, qsl("label with the name '%1' already exists").arg(name)};
+    }
+
     if (!mWindowRegistry.hasSubConsole(name)) {
         if (mpConsole->createMiniConsole(windowname, name, x, y, width, height)) {
             return {true, QString()};
@@ -5362,6 +5366,10 @@ std::pair<bool, QString> Host::createScrollBox(const QString& windowname, const 
         return {false, qsl("window '%1' not found").arg(windowname)};
     }
 
+    if (mWindowRegistry.hasLabel(name)) {
+        return {false, qsl("label with the name '%1' already exists").arg(name)};
+    }
+
     if (!mWindowRegistry.hasScrollBox(name)) {
         if (mpConsole->createScrollBox(windowname, name, x, y, width, height)) {
             return {true, QString()};
@@ -5386,7 +5394,8 @@ std::pair<bool, QString> Host::createLabel(const QString& windowname, const QStr
 
     const bool labelExists = mWindowRegistry.hasLabel(name);
     const bool subConsoleExists = mWindowRegistry.hasSubConsole(name);
-    if (!labelExists && !subConsoleExists) {
+    const bool plainWindowExists = mWindowRegistry.hasPlainWindow(name);
+    if (!labelExists && !subConsoleExists && !plainWindowExists) {
         if (mpConsole->createLabel(windowname, name, x, y, width, height, fillBg, clickthrough)) {
             return {true, QString()};
         }
@@ -5394,6 +5403,8 @@ std::pair<bool, QString> Host::createLabel(const QString& windowname, const QStr
         return {false, qsl("label '%1' already exists").arg(name)};
     } else if (subConsoleExists) {
         return {false, qsl("a miniconsole/userwindow with the name '%1' already exists").arg(name)};
+    } else if (plainWindowExists) {
+        return {false, qsl("a scroll box, command line or text edit with the name '%1' already exists").arg(name)};
     }
     return {false, qsl("could not create label '%1'").arg(name)};
 }
