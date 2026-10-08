@@ -326,6 +326,17 @@ bool SherpaRecognizer::sherpaAvailable()
     return sLibraryLoaded;
 }
 
+bool SherpaRecognizer::libraryPresent()
+{
+    if (sLibraryLoadAttempted) {
+        return sLibraryLoaded;
+    }
+    const QStringList paths = librarySearchPaths();
+    return std::any_of(paths.cbegin(), paths.cend(), [](const QString& path) {
+        return QFileInfo::exists(path);
+    });
+}
+
 bool SherpaRecognizer::resetLibraryLoadState()
 {
     // Whether the module actually went. QLibrary::unload() refuses while

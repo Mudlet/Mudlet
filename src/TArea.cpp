@@ -26,7 +26,6 @@
 
 
 #include "Host.h"
-#include "T2DMap.h"
 #include "TRoomDB.h"
 
 #include <QBuffer>
@@ -54,7 +53,7 @@ static const int kPixmapDataLineSize = 64;
 TArea::TArea(TMap* pMap, TRoomDB* pRDB)
 : mpRoomDB(pRDB)
 , mpMap(pMap)
-, mLast2DMapZoom(T2DMap::csmDefaultXYZoom)
+, mLast2DMapZoom(TMap::scmDefaultXYZoom)
 {
 }
 
@@ -375,6 +374,26 @@ void TArea::addRoom(int id)
         const QString error = tr("roomID=%1 does not exist, can not set properties of a non-existent room!").arg(id);
         mpMap->mpHost->printSystemMessage(error);
     }
+}
+
+void TArea::addRooms(const QSet<int>& ids)
+{
+    bool added = false;
+    for (const int id : ids) {
+        if (!mpRoomDB->getRoom(id)) {
+            const QString error = tr("roomID=%1 does not exist, can not set properties of a non-existent room!").arg(id);
+            mpMap->mpHost->printSystemMessage(error);
+        } else if (rooms.contains(id)) {
+            qDebug() << "TArea::addRooms(" << id << ") No creation! room already exists";
+        } else {
+            rooms.insert(id);
+            added = true;
+        }
+    }
+    if (added) {
+        bumpRoomsVersion();
+    }
+    calcSpan();
 }
 
 void TArea::addRoomWithCustomLines(int id, int z)
@@ -766,11 +785,17 @@ const QMultiMap<int, QPair<QString, int>> TArea::getAreaExitRoomData() const
 
 int TArea::createLabelId() const
 {
-    int labelId = -1;
-    do {
-    } while (mMapLabels.contains(++labelId));
-    if (labelId < 0) {
-        labelId = -1;
+    if (mMapLabels.isEmpty()) {
+        return 0;
+    }
+    // The keys are sorted: when they fill 0..n-1 the lowest free id is n,
+    // otherwise it is the first one out of step
+    if (mMapLabels.firstKey() >= 0 && mMapLabels.lastKey() == mMapLabels.size() - 1) {
+        return mMapLabels.lastKey() + 1;
+    }
+    int labelId = 0;
+    for (auto it = mMapLabels.lowerBound(0); it != mMapLabels.cend() && it.key() == labelId; ++it) {
+        ++labelId;
     }
     return labelId;
 }
@@ -814,7 +839,9 @@ void TArea::writeJsonArea(QJsonArray& array) const
     }
     if (currentRoomCount % 10 != 0) {
         // Must add on any remainder otherwise the total will be wrong:
-        mpMap->incrementJsonProgressDialog(true, true, currentRoomCount % 10);
+        if (mpMap->incrementJsonProgressDialog(true, true, currentRoomCount % 10)) {
+            return;
+        }
     }
     const QJsonValue roomsValue{roomsArray};
     areaObj.insert(QLatin1String("rooms"), roomsValue);
@@ -1188,7 +1215,7 @@ bool TArea::hasPermanentLabels() const
 
 void TArea::set2DMapZoom(const qreal zoom)
 {
-    if (zoom >= T2DMap::csmMinXYZoom) {
+    if (qIsFinite(zoom) && zoom >= TMap::scmMinXYZoom) {
         mLast2DMapZoom = zoom;
     }
 }

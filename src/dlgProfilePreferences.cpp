@@ -26,6 +26,7 @@
 #include "dlgProfilePreferences.h"
 
 #include "CredentialManager.h"
+#include "EditorAutoCompleteFocusHandler.h"
 #include "GMCPAuthenticator.h"
 #include "Host.h"
 #include "HostDialogs.h"
@@ -69,6 +70,7 @@
 #include <QFileDialog>
 #include <QFileInfo>
 #include <QFontDialog>
+#include <QFutureWatcher>
 #include <QIcon>
 #include <QJsonArray>
 #include <QJsonDocument>
@@ -163,6 +165,13 @@ dlgProfilePreferences::dlgProfilePreferences(QWidget* pParentWidget, Host* pHost
     // init generated dialog
     setupUi(this);
     buildShell();
+
+    // The theme/font preview below has autocomplete switched on like the script
+    // editor's own widget, so it needs the same treatment: without it edbee's
+    // completion list takes the keyboard focus while its popup is open
+    // (see #5310). Done here rather than in loadEditorTab() so it holds even
+    // when that returns early for want of a profile.
+    new EditorAutoCompleteFocusHandler(edbeePreviewWidget, this);
 
     mpTimer_apply = new QTimer(this);
     mpTimer_apply->setSingleShot(true);
@@ -1384,7 +1393,7 @@ void dlgProfilePreferences::showSubpage(const QString& categoryKey, const QStrin
     mpStackedWidget_categories->setCurrentWidget(pPage);
     capColumnWidth(pPage);
     // As on a category page, the cap above measured cards without their padding
-    QTimer::singleShot(0, this, [this, pPage]() {
+    QTimer::singleShot(0ms, this, [this, pPage]() {
         if (pPage && mpStackedWidget_categories->currentWidget() == pPage) {
             capColumnWidth(pPage);
         }
@@ -2268,7 +2277,7 @@ void dlgProfilePreferences::spotlight(QWidget* pTarget)
     if (!pTarget) {
         return;
     }
-    QTimer::singleShot(0, this, [this, pTarget = QPointer<QWidget>(pTarget)]() {
+    QTimer::singleShot(0ms, this, [this, pTarget = QPointer<QWidget>(pTarget)]() {
         if (!pTarget) {
             return;
         }
@@ -2757,7 +2766,7 @@ void dlgProfilePreferences::slot_categorySelected(const int row)
     capColumnWidth(pShownPage);
     // Card padding arrives with the stylesheet when the page is first shown, after the cap above. Without a
     // re-cap, a page needing more than the reading width is capped 34px short and clips.
-    QTimer::singleShot(0, this, [this, pShownPage]() {
+    QTimer::singleShot(0ms, this, [this, pShownPage]() {
         if (pShownPage && mpStackedWidget_categories->currentWidget() == pShownPage) {
             capColumnWidth(pShownPage);
             // A grown cap moves the sidebar breakpoint and the window's maximum width, otherwise not
@@ -2784,8 +2793,17 @@ void dlgProfilePreferences::slot_sidebarItemClicked(QListWidgetItem* pItem)
         QDesktopServices::openUrl(QUrl(url));
         return;
     }
+    const QString key = pItem->data(scmRole_categoryKey).toString();
+    if (key.isEmpty()) {
+        return;
+    }
+    // A search keeps the sidebar's current row, so choosing that category again is no row change either
+    if (mSearchActive) {
+        slot_categorySelected(mpListWidget_categories->row(pItem));
+        return;
+    }
     // Choosing a subpage's own category is no row change, so the row-changed slot would not leave the subpage
-    if (const QString key = pItem->data(scmRole_categoryKey).toString(); !key.isEmpty() && mCurrentSubpage.startsWith(key + QLatin1Char('/'))) {
+    if (mCurrentSubpage.startsWith(key + QLatin1Char('/'))) {
         leaveSubpage();
     }
 }
@@ -3094,6 +3112,10 @@ void dlgProfilePreferences::connectApplyTriggers()
     for (auto* pDateTimeEdit : findChildren<QDateTimeEdit*>()) {
         connect(pDateTimeEdit, &QDateTimeEdit::dateTimeChanged, this, &dlgProfilePreferences::slot_scheduleApply, Qt::UniqueConnection);
     }
+    for (auto* pAbstractSpinBox : findChildren<QAbstractSpinBox*>()) {
+        // Return on a QDateTimeEdit leaves its line edit modified and emits nothing from it
+        connect(pAbstractSpinBox, &QAbstractSpinBox::editingFinished, this, &dlgProfilePreferences::slot_lineEditFinished, Qt::UniqueConnection);
+    }
     for (auto* pLineEdit : findChildren<QLineEdit*>()) {
         if (pLineEdit == mpLineEdit_search) {
             continue;
@@ -3157,6 +3179,10 @@ static enums::controlsVisibility visibilityFromComboIndex(const int index)
 // field holds a half-typed word, which neither the apply nor the snapshot takes as a setting.
 static bool beingTypedInto(const QObject* pControl)
 {
+    // A spin box types into a line edit of its own, while emitting valueChanged() for each digit that makes a number
+    if (const auto* pSpinBox = qobject_cast<const QAbstractSpinBox*>(pControl)) {
+        pControl = pSpinBox->findChild<QLineEdit*>(QString(), Qt::FindDirectChildrenOnly);
+    }
     const auto* pLineEdit = qobject_cast<const QLineEdit*>(pControl);
     return pLineEdit && pLineEdit->hasFocus() && pLineEdit->isModified();
 }
@@ -3878,6 +3904,7 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
     connect(checkBox_undoServerWrap, &QCheckBox::toggled, label_undo_server_wrap_experimental, &QWidget::setVisible, Qt::UniqueConnection);
 
     console_buffer_size_spinBox->setValue(pHost->getConsoleBufferSize());
+    mBufferSizeBeforeMax = pHost->getConsoleBufferSize();
     checkBox_useMaxBufferSize->setChecked(pHost->getUseMaxConsoleBufferSize());
 
     // Set maximum buffer size based on system capabilities and update tooltip
@@ -4065,6 +4092,13 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
         mpMenu = new QMenu(tr("Other profiles to Map to:"), this);
     }
 
+    // Rebuilt on every refresh, which must not drop the destinations already ticked
+    QSet<QString> chosenProfiles;
+    for (const auto* pAction : mpMenu->actions()) {
+        if (pAction->isChecked()) {
+            chosenProfiles.insert(pAction->text());
+        }
+    }
     mpMenu->clear();
     for (unsigned int i = 0, total = profileList.size(); i < total; ++i) {
         const QString s = profileList.at(i);
@@ -4077,13 +4111,14 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
 
         auto pItem = new QAction(s, mpMenu);
         pItem->setCheckable(true);
-        pItem->setChecked(false);
+        pItem->setChecked(chosenProfiles.contains(s));
         mpMenu->addAction(pItem);
         //Enable it as we now have at least one profile to copy to
         pushButton_chooseProfiles->setEnabled(true);
     }
 
     pushButton_chooseProfiles->setMenu(mpMenu);
+    slot_chosenProfilesChanged(nullptr);
 
     fillOutMapHistory();
 
@@ -4191,7 +4226,7 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
         connect(spinBox_playerRoomInnerDiameter, qOverload<int>(&QSpinBox::valueChanged), this, &dlgProfilePreferences::slot_setPlayerRoomInnerDiameter, Qt::UniqueConnection);
 
         // Initialize room, exit, and border size controls
-        spinBox_roomSize->setValue(pHost->mRoomSize * 10);
+        spinBox_roomSize->setValue(qRound(pHost->mRoomSize * 10));
         // mLineSize/mRoomBorderSize are inversely proportional to thickness
         // (exitWidth = 1/eSize * ...), convert to a direct 1-11 scale
         // using a simple reciprocal: mLineSize = 50 / spinner, spinner = 50 / mLineSize
@@ -4567,12 +4602,7 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
         mSnapshot.addEditor(key, sequenceEdit);
         shortcutsRow++;
         connect(sequenceEdit, &QKeySequenceEdit::editingFinished, this, [=]() {
-            QKeySequence newSequence;
-            if (!sequenceEdit->keySequence().isEmpty() && !sequenceEdit->keySequence().matches(QKeySequence(Qt::Key_Escape))) {
-                newSequence = sequenceEdit->keySequence();
-            }
-            sequenceEdit->setKeySequence(newSequence);
-            currentShortcuts[key] = newSequence;
+            currentShortcuts[key] = sequenceEdit->keySequence();
             updateShortcutConflictWarning();
             slot_scheduleApply();
         });
@@ -4912,7 +4942,11 @@ void dlgProfilePreferences::loadEditorTab()
 
     populateThemesList();
     mudlet::loadEdbeeTheme(pHost->getEditorTheme(), pHost->getEditorThemeFile());
-    populateScriptsList();
+    // Walking every scripted item stalls a large profile, too long to repeat on every refresh; a profile
+    // change empties the list in clearHostDetails()
+    if (!script_preview_combobox->count()) {
+        populateScriptsList();
+    }
 
     // pre-select the current theme
     code_editor_theme_selection_combobox->lineEdit()->setPlaceholderText(qsl("Select theme"));
@@ -5736,7 +5770,10 @@ void dlgProfilePreferences::fillOutMapHistory()
         return;
     }
 
-    // Map files change while the dialog is open, so rebuild, resetting the enabled state to an empty list's
+    // Map files change while the dialog is open, so rebuild, resetting the enabled state to an empty list's.
+    // The rebuild follows every change, so it keeps an older map that was picked to load; the newest entry
+    // is not kept, so a map saved since takes its place at the top.
+    const QVariant pickedMapFile = comboBox_mapHistory->currentIndex() > 0 ? comboBox_mapHistory->currentData() : QVariant();
     {
         const QSignalBlocker blocker(comboBox_mapHistory);
         comboBox_mapHistory->clear();
@@ -5819,6 +5856,10 @@ void dlgProfilePreferences::fillOutMapHistory()
                 }
             }
         }
+    }
+    if (const int pickedIndex = comboBox_mapHistory->findData(pickedMapFile); pickedMapFile.isValid() && pickedIndex >= 0) {
+        const QSignalBlocker blocker(comboBox_mapHistory);
+        comboBox_mapHistory->setCurrentIndex(pickedIndex);
     }
     if (comboBox_mapHistory->count()) {
         comboBox_mapHistory->setEnabled(true);
@@ -6345,23 +6386,23 @@ void dlgProfilePreferences::applyAll()
         // Save console buffer settings and apply them
         if (mSnapshot.anyDirty({checkBox_useMaxBufferSize, console_buffer_size_spinBox})) {
             const bool useMaxBuffer = mSnapshot.dirty(checkBox_useMaxBufferSize) ? checkBox_useMaxBufferSize->isChecked() : pHost->getUseMaxConsoleBufferSize();
-            int newBufferSize;
-
-            if (useMaxBuffer && pHost->mpConsole) {
-                newBufferSize = pHost->mpConsole->buffer.getMaxBufferSize();
-            } else {
-                newBufferSize = mSnapshot.dirty(console_buffer_size_spinBox) ? console_buffer_size_spinBox->value() : pHost->getConsoleBufferSize();
+            // The profile keeps the size the user chose while the maximum is in
+            // charge, so unticking the maximum has a size to go back to
+            int chosenBufferSize = pHost->getConsoleBufferSize();
+            if (useMaxBuffer) {
+                chosenBufferSize = mBufferSizeBeforeMax;
+            } else if (mSnapshot.dirty(console_buffer_size_spinBox)) {
+                chosenBufferSize = console_buffer_size_spinBox->value();
             }
 
-            // Calculate batch delete size as 5% of buffer size (minimum 100)
-            const int newBatchDeleteSize = std::max(100, newBufferSize / 5);
-
-            if (pHost->getConsoleBufferSize() != newBufferSize || pHost->getUseMaxConsoleBufferSize() != useMaxBuffer) {
-                pHost->setConsoleBufferSize(newBufferSize);
+            if (pHost->getConsoleBufferSize() != chosenBufferSize || pHost->getUseMaxConsoleBufferSize() != useMaxBuffer) {
+                pHost->setConsoleBufferSize(chosenBufferSize);
                 pHost->setUseMaxConsoleBufferSize(useMaxBuffer);
 
-                // Apply the new buffer size to the main console
                 if (pHost->mpConsole) {
+                    const int newBufferSize = useMaxBuffer ? pHost->mpConsole->buffer.getMaxBufferSize() : chosenBufferSize;
+                    // Calculate batch delete size as 5% of buffer size (minimum 100)
+                    const int newBatchDeleteSize = std::max(100, newBufferSize / 5);
                     pHost->mpConsole->buffer.setBufferSize(newBufferSize, newBatchDeleteSize);
                 }
             }
@@ -6852,7 +6893,11 @@ void dlgProfilePreferences::slot_scheduleApply()
 void dlgProfilePreferences::slot_lineEditFinished()
 {
     // Clearing the modified flag marks this edit finished - see beingTypedInto()
-    if (auto* pLineEdit = qobject_cast<QLineEdit*>(sender()); pLineEdit) {
+    QObject* pEditor = sender();
+    if (auto* pSpinBox = qobject_cast<QAbstractSpinBox*>(pEditor)) {
+        pEditor = pSpinBox->findChild<QLineEdit*>(QString(), Qt::FindDirectChildrenOnly);
+    }
+    if (auto* pLineEdit = qobject_cast<QLineEdit*>(pEditor); pLineEdit) {
         pLineEdit->setModified(false);
     }
     slot_scheduleApply();
@@ -8399,16 +8444,16 @@ void dlgProfilePreferences::slot_toggleUseMaxBufferSize(bool checked)
     }
 
     if (checked) {
-        // When max is enabled, set spinbox to max value and disable it
+        // A size typed into the box may not have been applied yet
+        mBufferSizeBeforeMax = console_buffer_size_spinBox->value();
         if (pHost->mpConsole) {
             const int maxBufferSize = pHost->mpConsole->buffer.getMaxBufferSize();
             console_buffer_size_spinBox->setValue(maxBufferSize);
         }
         console_buffer_size_spinBox->setEnabled(false);
     } else {
-        // When max is disabled, enable the spinbox and set to stored value
         console_buffer_size_spinBox->setEnabled(true);
-        console_buffer_size_spinBox->setValue(pHost->getConsoleBufferSize());
+        console_buffer_size_spinBox->setValue(mBufferSizeBeforeMax);
     }
 }
 
@@ -8630,9 +8675,9 @@ void dlgProfilePreferences::slot_changeShowTabConnectionIndicators(bool state)
 void dlgProfilePreferences::slot_roomSizeChanged(int size)
 {
     if (mpHost) {
-        mpHost->mRoomSize = static_cast<float>(size) / 10.0f;
+        mpHost->mRoomSize = size / 10.0;
         if (mpHost->mpMap && mpHost->mpMap->mpMapper && mpHost->mpMap->mpMapper->mp2dMap) {
-            mpHost->mpMap->mpMapper->mp2dMap->setRoomSize(static_cast<float>(size) / 10.0f);
+            mpHost->mpMap->mpMapper->mp2dMap->setRoomSize(mpHost->mRoomSize);
             mpHost->mpMap->mpMapper->mp2dMap->update();
         }
     }

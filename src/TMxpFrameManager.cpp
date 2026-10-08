@@ -678,9 +678,12 @@ void TMxpFrameManager::layoutTabFrame(TMxpFrame* frame)
     parentFrame->childFrames.append(frame);
     frame->shown = TMxpFrame::Shown::Tab;
 
-    // If this is the first child tab, select it
-    // (The parent frame's own tab at index 0 is typically unused for content)
-    widgets->createTabFrame(frame->name, frame->title, parentFrame->name, frameSize, frame->scrolling, parentFrame->childFrames.size() == 1);
+    // The first tab is brought to the front, as the parent's own tab at index 0 is typically unused for content.
+    // childFrames also holds the frames nested in the parent, so only the tabs count.
+    const bool firstTab = std::none_of(parentFrame->childFrames.cbegin(), parentFrame->childFrames.cend(), [frame](const TMxpFrame* child) {
+        return child != frame && child->shown == TMxpFrame::Shown::Tab;
+    });
+    widgets->createTabFrame(frame->name, frame->title, parentFrame->name, frameSize, frame->scrolling, firstTab);
 }
 
 QSize TMxpFrameManager::calculateFrameSize(const QString& spec, const QSize& containerSize, bool isHeight)

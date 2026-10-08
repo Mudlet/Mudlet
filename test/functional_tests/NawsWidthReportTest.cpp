@@ -168,7 +168,7 @@ private slots:
             QTest::keyClick(QApplication::focusWidget(), Qt::Key_Return);
         });
         QSignalSpy profileLoaded(mudlet::self(), &mudlet::signal_profileLoaded);
-        QVERIFY2(profileLoaded.wait(6000), "the first profile did not finish loading");
+        QVERIFY2(profileLoaded.wait(6s), "the first profile did not finish loading");
         mpHost = mudlet::self()->getActiveHost();
         QVERIFY(mpHost);
 
@@ -274,6 +274,25 @@ private slots:
         const auto updates = mpServer->nawsUpdates();
         QVERIFY2(updates.size() == 1, describe(updates).constData());
         QCOMPARE(updates.constFirst().width(), withoutGutter - TBuffer::smTimeStampFormat.size());
+    }
+
+    // A wrap width no wider than the gutter leaves the game a single column,
+    // never a width of 0 or one that wraps round to a very wide window.
+    void aWrapNarrowerThanTheGutterReportsOneColumn()
+    {
+        settle(800ms);
+        const int wrapBefore = mpHost->mWrapAt;
+        mpHost->mpConsole->slot_toggleTimeStamps(true);
+        settle(800ms);
+
+        mpServer->clearNawsUpdates();
+        runLua(mpHost, qsl("setWindowWrap('main', 5)"));
+        settle(800ms);
+        const auto updates = mpServer->nawsUpdates();
+        runLua(mpHost, qsl("setWindowWrap('main', %1)").arg(wrapBefore));
+
+        QVERIFY2(!updates.isEmpty(), describe(updates).constData());
+        QCOMPARE(updates.constLast().width(), 1);
     }
 
     // A profile in a background tab has its own borders and its own font, so
