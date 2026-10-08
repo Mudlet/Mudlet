@@ -59,8 +59,8 @@ int TAccessibleTextEdit::lineForOffset(int offset, int* lengthSoFar = nullptr) c
 
     // If the offset is at or past the end of the contents, consider it to be on
     // the last character.
-    if (offset >= characterCount()) {
-        offset = std::max(0, characterCount() - 1);
+    if (const int count = characterCount(); offset >= count) {
+        offset = std::max(0, count - 1);
     }
 
     for (int i = 0; i < lineBuffer.length(); i++) {
@@ -91,8 +91,8 @@ int TAccessibleTextEdit::columnForOffset(int offset) const
 
     // If the offset is at or past the end of the contents, consider it to be on
     // the last character.
-    if (offset >= characterCount()) {
-        offset = std::max(0, characterCount() - 1);
+    if (const int count = characterCount(); offset >= count) {
+        offset = std::max(0, count - 1);
     }
 
     lineForOffset(offset, &lengthSoFar);
@@ -265,7 +265,6 @@ QString TAccessibleTextEdit::text(QAccessible::Text text) const
  * Returns the text from startOffset to endOffset. The startOffset is the
  * first character that will be returned. The endOffset is the first
  * character that will not be returned.
- * performance note - this is called extremely frequently on the same line, should be cached
  */
 QString TAccessibleTextEdit::text(int startOffset, int endOffset) const
 {
@@ -273,18 +272,51 @@ QString TAccessibleTextEdit::text(int startOffset, int endOffset) const
         return QString();
     }
 
-    QString ret = text(QAccessible::Value).mid(startOffset, endOffset - startOffset);
+    // A reversed range hands back everything from startOffset on
+    if (endOffset < startOffset) {
+        endOffset = characterCount();
+    }
+
+    // Only the lines the range covers, as the whole scrollback runs to megabytes
+    QString ret;
+    ret.reserve(endOffset - startOffset);
+    int lineStart = 0;
+    for (const QString& line : std::as_const(textEdit()->mpBuffer->lineBuffer)) {
+        if (lineStart >= endOffset) {
+            break;
+        }
+        // The offset of the '\n' that text() puts after this line
+        const int lineEnd = lineStart + line.length();
+        if (lineEnd >= startOffset) {
+            const int from = std::max(startOffset, lineStart) - lineStart;
+            const int to = std::min(endOffset, lineEnd) - lineStart;
+            ret += QStringView(line).mid(from, to - from);
+            if (endOffset > lineEnd) {
+                ret += QChar::LineFeed;
+            }
+        }
+        lineStart = lineEnd + 1;
+    }
 
     return ret;
 }
 
 /*
  * Returns the length of the text (total size including spaces).
- * performance note - this is called extremely frequently on the same line, should be cached
  */
 int TAccessibleTextEdit::characterCount() const
 {
-    return text(QAccessible::Value).length();
+    const QStringList& lineBuffer = textEdit()->mpBuffer->lineBuffer;
+    if (lineBuffer.isEmpty()) {
+        return 0;
+    }
+
+    // The length of text(QAccessible::Value), without building it
+    qsizetype count = lineBuffer.size() - 1;
+    for (const QString& line : lineBuffer) {
+        count += line.length();
+    }
+    return static_cast<int>(count);
 }
 
 bool TAccessibleTextEdit::lineIsVisible(int line) const
@@ -551,6 +583,38 @@ QString TAccessibleTextEdit::attributes(int offset, int* startOffset, int* endOf
     return ret;
 }
 
+// Qt splits Thai into words with a dictionary over a whole script run, and a
+// run carries on over the digits, spaces, punctuation and newlines after it, so
+// a window of lines only finds the same word boundaries if no Thai run reaches it.
+bool TAccessibleTextEdit::thaiRunReaches(int firstLine, int lastLine) const
+{
+    const QStringList& lineBuffer = textEdit()->mpBuffer->lineBuffer;
+    bool windowHasScript = false;
+    for (int i = firstLine; i <= lastLine; ++i) {
+        for (const QChar c : lineBuffer.at(i)) {
+            if (c.script() == QChar::Script_Thai) {
+                return true;
+            }
+            windowHasScript = windowHasScript || c.script() > QChar::Script_Common;
+        }
+    }
+
+    // A mark joins the run of the character it sits on, whatever its own script
+    for (int i = firstLine - 1; i >= 0; --i) {
+        const QString& text = lineBuffer.at(i);
+        for (auto it = text.crbegin(); it != text.crend(); ++it) {
+            if (it->script() == QChar::Script_Thai) {
+                return true;
+            }
+            if (it->script() > QChar::Script_Common && !it->isMark()) {
+                return false;
+            }
+        }
+    }
+    // Leading digits, spaces and punctuation join the first run with a script
+    return !windowHasScript;
+}
+
 /*
  * Auxiliary function for textAtOffset() and textAfterOffset().
  */
@@ -571,14 +635,31 @@ QString TAccessibleTextEdit::textAroundOffset(TAccessibleTextEdit::TextOp operat
         return QString();
     }
 
-    const QString contents = text(QAccessible::Value);
+    TBuffer* buffer = textEdit()->mpBuffer;
 
     if (boundaryType == QAccessible::TextBoundaryType::WordBoundary || boundaryType == QAccessible::TextBoundaryType::SentenceBoundary) {
+        // Word and sentence boundaries always fall after a '\n' (UAX #29 WB3a,
+        // SB4), so neither of the two steps below can go further than the start
+        // of the line two before the offset's, or the start of the line two after.
+        const QStringList& lineBuffer = buffer->lineBuffer;
+        int windowStart = 0;
+        const int line = lineForOffset(offset, &windowStart);
+        int firstWindowLine = std::max(0, line - 2);
+        int lastWindowLine = std::min(static_cast<int>(lineBuffer.size()) - 1, line + 2);
+        if (boundaryType == QAccessible::TextBoundaryType::WordBoundary && thaiRunReaches(firstWindowLine, lastWindowLine)) {
+            firstWindowLine = 0;
+            lastWindowLine = static_cast<int>(lineBuffer.size()) - 1;
+        }
+        for (int i = firstWindowLine; i < line; ++i) {
+            windowStart -= lineBuffer.at(i).length() + 1;
+        }
+        const QString contents = lineBuffer.mid(firstWindowLine, lastWindowLine - firstWindowLine + 1).join(QChar::LineFeed);
+
         QTextBoundaryFinder::BoundaryType type = boundaryType == QAccessible::TextBoundaryType::WordBoundary ? QTextBoundaryFinder::BoundaryType::Word : QTextBoundaryFinder::BoundaryType::Sentence;
         QTextBoundaryFinder finder = QTextBoundaryFinder(type, contents);
         int start = 0, end = 0;
 
-        finder.setPosition(offset);
+        finder.setPosition(offset - windowStart);
 
         if (operation == TAccessibleTextEdit::TextOp::BeforeOffset) {
             end = finder.toPreviousBoundary();
@@ -598,14 +679,13 @@ QString TAccessibleTextEdit::textAroundOffset(TAccessibleTextEdit::TextOp operat
             return QString();
         }
 
-        *startOffset = start;
-        *endOffset = end;
+        *startOffset = windowStart + start;
+        *endOffset = windowStart + end;
 
         return contents.mid(start, end - start);
     }
 
     QString ret;
-    TBuffer* buffer = textEdit()->mpBuffer;
 
     if (boundaryType == QAccessible::TextBoundaryType::CharBoundary) {
         if (operation == TAccessibleTextEdit::TextOp::BeforeOffset) {
@@ -614,17 +694,18 @@ QString TAccessibleTextEdit::textAroundOffset(TAccessibleTextEdit::TextOp operat
             offset += 1;
         }
 
-        if (offset < 0 || offset >= contents.length()) {
+        if (offset < 0 || offset >= characterCount()) {
             // The documentation doesn't say what to put in startOffset and
             // endOffset in this case.
             *startOffset = *endOffset = 0;
             return QString();
         }
 
-        int lineNum = lineForOffset(offset);
-        QString line(buffer->line(lineNum));
+        int lineStart = 0;
+        const QString& line = buffer->line(lineForOffset(offset, &lineStart));
+        const int column = offset - lineStart;
 
-        ret = QString(line[columnForOffset(offset)]);
+        ret = QString(column < line.length() ? line.at(column) : QChar(QChar::LineFeed));
         *startOffset = offset;
         *endOffset = offset + 1;
     } else {
@@ -689,6 +770,9 @@ QString TAccessibleTextEdit::textAfterOffset(int offset, QAccessible::TextBounda
         *startOffset = offset;
         *endOffset = characterCount();
 
+        if (!offsetIsInvalid(offset)) {
+            return text(offset, *endOffset);
+        }
         return text(QAccessible::Value).mid(offset);
     }
 
@@ -751,6 +835,9 @@ QString TAccessibleTextEdit::textBeforeOffset(int offset, QAccessible::TextBound
         *startOffset = 0;
         *endOffset = offset;
 
+        if (!offsetIsInvalid(offset)) {
+            return text(0, offset);
+        }
         return text(QAccessible::Value).left(offset);
     }
 
