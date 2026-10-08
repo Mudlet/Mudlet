@@ -2228,23 +2228,23 @@ describe("MMCP effects against a scripted chat peer", function()
       ensurePeer()
       local mark = captureSeq()
       -- 1 MiB exactly: the code byte and the payload, with the 0xff after them.
-      -- The payload is 1 KiB lines, as one 1 MiB line takes the console many
-      -- minutes to lay out under a sanitizer
-      local lineHex = string.rep("78", 1023)
-      tellPeer({action = "send_hex", hex = "1f" .. string.rep(lineHex .. "0a", 1023) .. lineHex})
+      -- A side channel frame, as snoop data is drawn on the console as one line,
+      -- which takes many minutes to lay out under a sanitizer
+      local payloadLength = 1024 * 1024 - 1 - #"Big,"
+      tellPeer({action = "send_hex", hex = "28" .. "4269672c" .. string.rep("78", payloadLength)})
       pump(500)
-      local name, from, message = nil, nil, nil
-      local handlerId = registerAnonymousEventHandler("sysMMCPIncomingSnoopMessage", function(_, ...)
-        name = "sysMMCPIncomingSnoopMessage"
-        from, message = ...
+      local name, from, channel, message = nil, nil, nil, nil
+      local handlerId = registerAnonymousEventHandler("sysMMCPSideChannelMessage", function(_, ...)
+        name = "sysMMCPSideChannelMessage"
+        from, channel, message = ...
       end)
       finally(function() killAnonymousEventHandler(handlerId) end)
       peerSendsRaw(string.char(255))
       assert.is_true(waitUntil(function() return name ~= nil end, 5000))
       assert.equals(PEER_NAME, from)
+      assert.equals("Big", channel)
       assert.is_string(message)
-      local _, count = message:gsub("x", "")
-      assert.equals(1024 * 1023, count)
+      assert.equals(payloadLength, #message)
       assert.is_table(peerClient())
       assert.is_nil(waitForPeerEvent(mark, function(event)
         return event.type == "disconnect"
