@@ -251,6 +251,69 @@ describe("HTTP and download functions validate arguments before issuing a reques
     end)
   end)
 
+  describe("a url that is not http or https", function()
+    -- file:, qrc: and data: urls would hand local or bundled content back as
+    -- though it had been downloaded
+    local refused = {"file:///etc/hosts", "qrc:/icons/mudlet.png", "data:text/plain,hello", "ftp://localhost/file.txt"}
+    -- downloadFile() only copies to a local path, so a local file is still fine there
+    local refusedByDownloadFile = {"qrc:/icons/mudlet.png", "data:text/plain,hello", "ftp://localhost/file.txt"}
+
+    local function assertRefused(url, ok, err)
+      assert.is_nil(ok, url)
+      local scheme = url:match("^(%a+):")
+      assert.is_true(contains(err, "unsupported scheme '" .. scheme .. "'"), url .. " gave: " .. tostring(err))
+    end
+
+    it("is refused by downloadFile, unless it is a local file", function()
+      for _, url in ipairs(refusedByDownloadFile) do
+        local target = getMudletHomeDir() .. "/busted-refused-scheme.txt"
+        local ok, err = downloadFile(target, url)
+        assertRefused(url, ok, err)
+      end
+    end)
+
+    it("still lets downloadFile copy a local file", function()
+      local source = getMudletHomeDir() .. "/busted-local-download-source.txt"
+      local target = getMudletHomeDir() .. "/busted-local-download-copy.txt"
+      finally(function()
+        os.remove(source)
+        os.remove(target)
+      end)
+      local file = io.open(source, "w")
+      file:write("mudlet-spec-local-copy")
+      file:close()
+
+      assert.is_true(downloadFile(target, source))
+      assert.equals("sysDownloadDone", (waitForEvent("sysDownloadDone", 2000)))
+      local copy = io.open(target, "r")
+      assert.is_not_nil(copy, "the local file was not copied")
+      local body = copy:read("*a")
+      copy:close()
+      assert.equals("mudlet-spec-local-copy", body)
+    end)
+
+    it("is refused by getHTTP", function()
+      for _, url in ipairs(refused) do
+        assertRefused(url, getHTTP(url))
+      end
+    end)
+
+    it("is refused by postHTTP, putHTTP, deleteHTTP and customHTTP", function()
+      for _, url in ipairs(refused) do
+        assertRefused(url, postHTTP("payload", url))
+        assertRefused(url, putHTTP("payload", url))
+        assertRefused(url, deleteHTTP(url))
+        assertRefused(url, customHTTP("REPORT", "payload", url))
+      end
+    end)
+
+    it("is refused for a local path, which would otherwise be read as a file: url", function()
+      local ok, err = getHTTP(getMudletHomeDir())
+      assert.is_nil(ok)
+      assert.is_true(contains(err, "unsupported scheme 'file'"), tostring(err))
+    end)
+  end)
+
   describe("customHTTP", function()
     it("raises a Lua error when the method is missing", function()
       assertArgError(function() customHTTP() end, "customHTTP: bad argument")
