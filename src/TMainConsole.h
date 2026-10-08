@@ -29,6 +29,7 @@
 #include <QFile>
 #include <QHash>
 #include <QPointer>
+#include <QStack>
 #include <QTextStream>
 #include <QWidget>
 #include <memory>
@@ -71,8 +72,19 @@ public:
     bool lowerWindow(const QString& name);
     bool showWindow(const QString& name);
     bool hideWindow(const QString& name);
-    bool clear(const QString& name);
     void setProfileName(const QString&) override;
+    // What Host needs of this console's own widget, named rather than reached
+    // through the QWidget API so that a view with no widget could answer too.
+    // False when closeEvent() refused, e.g. the user cancelled the save prompt:
+    bool requestClose();
+    void requestRepaint();
+    QFont displayFont() const;
+    void setProfileStyleSheet(const QString& styleSheet);
+    // Lays the console out again for Host's current borders and raises
+    // sysWindowResizeEvent with the room they leave
+    void applyBorders();
+    // Hands TMap::mpMapper back to this profile's own mapper, if it has one
+    void restoreOwnMapper();
     bool createBuffer(const QString& name);
     std::pair<bool, QString> setUserWindowStyleSheet(const QString& name, const QString& userWindowStyleSheet);
     std::optional<QString> getUserWindowStyleSheet(const QString& name) const;
@@ -143,7 +155,12 @@ public:
     TConsole* deregisterSubConsole(const QString& name);
     void registerDockWidget(const QString& name, TDockWidget* pDockWidget);
     TDockWidget* deregisterDockWidget(const QString& name);
-    TDockWidget* createUserWindow(const QString& name);
+    // Makes the user window if the name is free and shows it, then floats it
+    // ("f") or docks it ("r", "l", "t", "b"), each also accepted as the word it
+    // stands for; an empty area leaves it where it is. An unknown area is
+    // refused with the window already showing. A name held by a miniconsole is
+    // refused before anything is made.
+    std::pair<bool, QString> openUserWindow(const QString& name, bool loadLayout, bool autoDock, const QString& area);
     TConsole* subConsoleWidget(const QString& name) const { return mSubConsoleMap.value(name); }
     QString subConsoleName(TConsole* pConsole) const { return mSubConsoleMap.key(pConsole); }
     TDockWidget* dockWidget(const QString& name) const { return mDockWidgetMap.value(name); }
@@ -155,7 +172,7 @@ public:
     bool hideSubConsole(const QString& name);
     bool resizeSubConsole(const QString& name, int width, int height);
     bool moveSubConsole(const QString& name, int x, int y);
-    bool reparentWindow(const QString& windowname, const QString& name, int x, int y, bool show);
+    std::pair<bool, QString> reparentWindow(const QString& windowname, const QString& name, int x, int y, bool show);
     std::optional<QSize> consoleFontSize(const QString& name) const;
     bool setSubConsoleBackgroundColor(const QString& name, const QColor& color);
     bool setSubConsoleBackgroundImage(const QString& name, const QString& path, int mode);
@@ -164,7 +181,6 @@ public:
     bool setSubConsoleCommandForegroundColor(const QString& name, const QColor& color);
     std::optional<QRect> getSubConsoleGeometry(const QString& name) const;
     std::optional<bool> getSubConsoleVisible(const QString& name) const;
-    void setDockWidgetStyleSheets(const QString& styleSheet);
     void setDockLayoutChanged(const QString& name);
     bool clearDockLayoutChanged(const QString& name);
     TCommandLine* subCommandLineWidget(const QString& name) const { return mSubCommandLineMap.value(name); }
@@ -172,7 +188,12 @@ public:
     void setCommandLinePlaceholderText(const QString& text);
     void updateCommandLineSpellCheck(bool enabled);
     void setCommandLineText(const QString& text);
-    TCommandLine* raiseCommandLine();
+    // The command line the player used last for this profile, so the focus can
+    // go back to it on returning to the profile.
+    void recordActiveCommandLine(TCommandLine*);
+    void forgetCommandLine(TCommandLine*);
+    // Raises and focuses that command line, or this console's own when none is on record.
+    void focusActiveCommandLine();
     // The command line operations the core forwards to this view by name, never
     // by widget. An empty name or "main" is this console's own command line, any
     // other one made by createCommandLine() or a mini console's; each reports
@@ -261,9 +282,9 @@ public:
     void disableMapProgressDialogCancel();
     void closeMapProgressDialog();
     void createMapperDock(const QString& title, const QString& objectName);
-    dlgMapper* dockedMapper() const;
-    void showMapWidget();
-    void dockMapWidget(Qt::DockWidgetArea area);
+    // Docks the dock createMapperDock() made on the right, restores the saved
+    // window layout and then shows the dock and its mapper regardless of it.
+    void showNewMapperDock();
     std::pair<bool, QString> placeMapWidget(const QString& area, int x, int y, int width, int height);
     // The map dock's state as values, so the core never holds the widget. mapWidgetCreated() does not
     // mean on screen, which is what the four after it go by.
@@ -272,6 +293,25 @@ public:
     std::optional<QString> mapWidgetTitle() const;
     std::optional<QRect> mapWidgetGeometry() const;
     bool hideMapWidget();
+    // The mapper drawing the map is TMap::mpMapper, which a main window or
+    // detached window dock may have borrowed from this console, so these act on
+    // that one and do nothing when there is none.
+    // After a map load: redraw from scratch and show the player's area.
+    void showLoadedMap();
+    // After a failed load: redraw from scratch, staying on the area shown.
+    void showMapAfterFailedLoad();
+    // The map was already loaded when the mapper was made: show the player's area.
+    void showMapAtPlayerArea();
+    // A mapper in a dock counts as shown when its dock does, and is shown and
+    // hidden with it.
+    bool mapperShown() const;
+    void setMapperShown(bool shown);
+    void setMapperPanelVisible(bool visible);
+    void setMapLargeAreaExitArrows(bool enabled);
+    void requestMapRepaint();
+    // requestRepaint() for after echoing a command, skipped while the mapper
+    // has a 3D view - or, in builds without one, while there is any mapper.
+    void requestRepaintAfterCommand();
     // Brings the bars in line with the root actions (for a package, with the
     // toolbars in it): makes, fills and places each, and destroys any left from
     // an action that has switched between docked and floating.
@@ -300,6 +340,9 @@ public:
     void replaceActionButton(TAction* pAction, TFlipButton* pButton);
     void replaceActionMenuEntry(TAction* pAction, EAction* pEntry);
     void setActionButtonChecked(TAction* pAction, bool checked);
+    // Gives a plain button its action's stylesheet without rebuilding its bar; false
+    // when the action is drawn as anything else.
+    bool restyleActionButton(TAction* pAction);
     // Floating toolbars are the main window's children rather than this
     // console's, so the profile has to delete them itself.
     const std::list<QPointer<TToolBar>>& actionToolBars() const { return mToolBarList; }
@@ -319,10 +362,11 @@ public:
     // The view's part of Host::printOnDisplay(). startIncomingText() starts
     // timing the pass for the latency box and answers whether to alert the user
     // if the text changes the buffer; finishIncomingText() schedules the paced
-    // latency box refresh and marks the profile's tab.
+    // latency box refresh and, unless the pass carried no text, marks the
+    // profile's tab.
     bool startIncomingText();
     void alertNewData();
-    void finishIncomingText();
+    void finishIncomingText(bool carriesText);
     void finalize();
     void refreshSubconsoles();
 
@@ -371,6 +415,9 @@ signals:
 
 
 private:
+    dlgMapper* dockedMapper() const;
+    void dockMapWidget(Qt::DockWidgetArea area);
+    TDockWidget* createUserWindow(const QString& name);
     TToolBar* createToolBar(TAction* pAction, const QString& name);
     TEasyButtonBar* createEasyButtonBar(TAction* pRootAction, const QString& name);
     void attachEasyButtonBar(TEasyButtonBar* pBar, int location);
@@ -412,6 +459,7 @@ private:
     // which would also say "no map widget" while the main window is hidden (e.g. in the tray).
     QDockWidget* mapWidget() const;
     void registerLabelWidget(const QString& name, TLabel* pLabel);
+    TCommandLine* activeCommandLine();
     void deregisterLabelWidget(TLabel* pLabel);
 
     // With registerSubCommandLine()/deregisterSubCommandLine(), all scroll box, text box and command line
@@ -428,6 +476,7 @@ private:
     QMap<QString, QPointer<TConsole>> mSubConsoleMap;
     QMap<QString, TDockWidget*> mDockWidgetMap;
     QMap<QString, TCommandLine*> mSubCommandLineMap;
+    QStack<QPointer<TCommandLine>> mLastCommandLineUsed;
     QMap<QString, TTextBox*> mTextBoxMap;
     QMap<QString, TScrollBox*> mScrollBoxMap;
 

@@ -82,7 +82,7 @@ private slots:
                 []() {
                     return mudlet::self()->mpConnectionDialog && mudlet::self()->mpConnectionDialog->isVisible();
                 },
-                5000));
+                5s));
     }
 
     void cleanupTestCase()
@@ -108,8 +108,9 @@ private slots:
     }
 
     // A read that timed out can still be answered afterwards, and by then the load it was holding
-    // up has run without it: that second answer may fill an empty password field and nothing else.
-    void test_aLateKeychainAnswerTouchesNothingButAnEmptyPasswordField()
+    // up has run without it: that second answer may fill the password field and nothing else, and
+    // not even that over a password the user typed.
+    void test_aLateKeychainAnswerTouchesNothingButAnUntypedPasswordField()
     {
         // A dialog of its own: completing the queued load at the end closes whichever dialog it
         // runs on, and the shared one is what the case below needs. Never shown, so no keychain
@@ -128,6 +129,8 @@ private slots:
         {
             const QSignalBlocker blocker(dlg->character_password_entry);
             dlg->character_password_entry->setText(qsl("typed-while-waiting"));
+            // what typing it, rather than a store's answer, leaves behind
+            dlg->character_password_entry->setModified(true);
         }
 
         dlg->mKeychainOperationProfile = mProfileName;
@@ -171,6 +174,28 @@ private slots:
         dlg->passwordArrivedLate(mProfileName, true, qsl("from-the-keychain"), QString());
 
         QCOMPARE(dlg->character_password_entry->text(), qsl("from-the-keychain"));
+        dlg->deleteLater();
+    }
+
+    // At the deadline the lookup answers with the encrypted file's copy when it has one, and a
+    // keychain write leaves that copy as it was: the keychain's late answer is the newer password.
+    void test_aLateKeychainAnswerReplacesTheFilesCopyInTheField()
+    {
+        auto* dlg = new dlgConnectionProfiles(mudlet::self());
+        {
+            const QSignalBlocker blocker(dlg->listWidget_profiles);
+            auto* profileItem = new QListWidgetItem(mProfileName, dlg->listWidget_profiles);
+            profileItem->setData(dlgConnectionProfiles::csmNameRole, mProfileName);
+            dlg->listWidget_profiles->setCurrentItem(profileItem);
+        }
+
+        dlg->mKeychainOperationProfile = mProfileName;
+        dlg->passwordRetrieved(mProfileName, true, qsl("older-file-secret"), QString());
+        QCOMPARE(dlg->character_password_entry->text(), qsl("older-file-secret"));
+
+        dlg->passwordArrivedLate(mProfileName, true, qsl("newer-keychain-secret"), QString());
+
+        QCOMPARE(dlg->character_password_entry->text(), qsl("newer-keychain-secret"));
         dlg->deleteLater();
     }
 

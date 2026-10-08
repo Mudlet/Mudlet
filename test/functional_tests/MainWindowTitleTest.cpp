@@ -45,6 +45,8 @@
 
 #include "GroupedTest.h"
 
+using namespace std::chrono_literals;
+
 class MainWindowTitleTest : public QObject
 {
     Q_OBJECT
@@ -67,7 +69,7 @@ private:
             return;
         }
         QSignalSpy connected(&(pHost->mTelnet), &cTelnet::signal_connected);
-        if (!connected.wait(2000)) {
+        if (!connected.wait(2s)) {
             QTest::qFail(qPrintable(qsl("'%1' could not connect to the stub server").arg(profileName)), __FILE__, __LINE__);
         }
     }
@@ -115,7 +117,7 @@ private slots:
                 [&detachedWindow]() {
                     return detachedWindow.isNull();
                 },
-                2000));
+                2s));
     }
 
     void cleanupTestCase()
@@ -152,7 +154,7 @@ private slots:
                          [this]() {
                              return HostManager::self()->getHost(mFirstProfile) == nullptr;
                          },
-                         10000),
+                         10s),
                  "the first profile never closed");
 
         // the detached profile is still loaded, which is the whole point: the

@@ -46,6 +46,8 @@ signals:
     void newLinesWritten();
     // mShowTimeStamps was flipped.
     void timeStampsToggled();
+    // The buffer was emptied, so view state indexing its old lines is stale.
+    void bufferCleared();
     void spoilerRevealed();
 };
 

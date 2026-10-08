@@ -368,6 +368,7 @@ private:
     void guardScrollWheel();
     void buildMigrationBanner();
     void placeBannerOn(QWidget* pColumn);
+    void updateNoProfileNotice();
     void showCategory(const QString& key, QWidget* pSpotlightTarget = nullptr);
     void spotlight(QWidget* pTarget);
     void applyShellStyle();
@@ -440,6 +441,7 @@ private:
     QLabel* mpLabel_pageTitle = nullptr;
     QLabel* mpLabel_pageTitleIcon = nullptr;
     QFrame* mpFrame_migrationBanner = nullptr;
+    QLabel* mpLabel_noProfileNotice = nullptr;
     QScrollArea* mpScrollArea_searchResults = nullptr;
     QVBoxLayout* mpLayout_searchResults = nullptr;
     QLabel* mpLabel_searchEmpty = nullptr;
@@ -482,6 +484,8 @@ private:
     // Each category's icon as rich text for search headers, recoloured by restyleSidebarIcons()
     QMap<QString, QString> mCategoryIconMarkup;
     QTimer* mpTimer_apply = nullptr;
+    // The scrollback size the box showed when the maximum was ticked, to put back when it is unticked
+    int mBufferSizeBeforeMax = 0;
     // Debounces typing so a part-typed query does not move most cards onto the results page and back
     QTimer* mpTimer_search = nullptr;
     QString mPendingSearch;

@@ -163,10 +163,13 @@ private slots:
     void notice_ctcpPingReplyIsReportedAsTheRoundTrip()
     {
         // however long a slow machine takes over it, the round trip lies between
-        // the five seconds ago it was sent and the time it was formatted by
-        const qint64 sent = QDateTime::currentSecsSinceEpoch() - 5;
+        // the five seconds ago it was sent and the time it was formatted by. Read
+        // as formatSeconds() reads it: on Unix currentDateTime() rounds to the
+        // millisecond, so near a second boundary it is a second ahead of
+        // currentSecsSinceEpoch().
+        const qint64 sent = QDateTime::currentDateTime().toSecsSinceEpoch() - 5;
         const QString text = forLua(":bob!u@h NOTICE me :\001PING " + QByteArray::number(sent) + "\001");
-        const qint64 latest = QDateTime::currentSecsSinceEpoch() - sent;
+        const qint64 latest = QDateTime::currentDateTime().toSecsSinceEpoch() - sent;
         const QRegularExpressionMatch match = QRegularExpression(QStringLiteral("^! bob replied in (\\d+)s$")).match(text);
         QVERIFY2(match.hasMatch(), qPrintable(text));
         const qint64 seconds = match.captured(1).toLongLong();

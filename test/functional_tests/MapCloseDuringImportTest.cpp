@@ -39,6 +39,10 @@
  * memory happens to hold. Without the fix that assertion fails - and under ASan
  * the run additionally reports the use-after-free that follows it.
  *
+ * The same pump also runs a script's deleteArea() or deleteMap() under an
+ * export, which walks the live areas: the export has to stop rather than carry
+ * on over the area it was writing.
+ *
  * Run with: ctest -R MapCloseDuringImportTest -V
  */
 
@@ -54,6 +58,7 @@
 #include "Host.h"
 #include "HostManager.h"
 #include "MudletInstanceCoordinator.h"
+#include "TArea.h"
 #include "TMap.h"
 #include "TRoomDB.h"
 #include "mudlet.h"
@@ -224,6 +229,55 @@ private slots:
         QCOMPARE(writeMessage, qsl("aborted by user"));
         QVERIFY2(waitForProfileToClose(mExportTargetName), "the deferred close never completed once the export had unwound");
         QVERIFY2(mapWatch.isNull(), "the TMap outlived the profile it belongs to");
+    }
+
+    void test_deletingAnAreaDuringAJsonExportStopsIt_data()
+    {
+        QTest::addColumn<QString>("how");
+        QTest::newRow("deleteArea") << qsl("deleteArea");
+        QTest::newRow("deleteMap") << qsl("deleteMap");
+        // What restore() does to an area of the same id when createMapper() loads a map over one with no rooms
+        QTest::newRow("replaceArea") << qsl("replaceArea");
+    }
+
+    void test_deletingAnAreaDuringAJsonExportStopsIt()
+    {
+        QFETCH(QString, how);
+        Host* pHost = addProfile(qsl("MapAreaDeletedDuringExport-%1-Test").arg(QLatin1String(QTest::currentDataTag())));
+        QVERIFY2(pHost, "failed to create the Host");
+        buildMap(pHost);
+        if (QTest::currentTestFailed()) {
+            return;
+        }
+        TMap* pMap = pHost->mpMap.data();
+        const int firstAreaWithRooms = pMap->mpRoomDB->getRoom(1)->getArea();
+
+        bool deleted = false;
+        const QMetaObject::Connection deleteOnProgress = connect(pMap, &TMap::signal_mapProgressSetValue, pMap, [&](int roomsWritten) {
+            if (deleted) {
+                return;
+            }
+            if (!roomsWritten) {
+                // Outlasts the progress throttle, so the step after the first
+                // area's rooms runs the event loop too
+                QTest::qSleep(60);
+                return;
+            }
+            deleted = true;
+            if (how == qsl("deleteMap")) {
+                pMap->mapClear();
+            } else if (how == qsl("deleteArea")) {
+                QVERIFY(pMap->mpRoomDB->removeArea(firstAreaWithRooms));
+            } else {
+                pMap->mpRoomDB->restoreSingleArea(firstAreaWithRooms, new TArea(pMap, pMap->mpRoomDB.get()));
+            }
+        });
+        const auto [wrote, writeMessage] = pMap->writeJsonMapFile(qsl("%1/area-deleted-during-export.json").arg(mSaveDir.path()));
+        disconnect(deleteOnProgress);
+
+        QVERIFY2(deleted, "the export never ran the event loop part way through an area");
+        QVERIFY2(!wrote, "the export carried on over the area deleted under it");
+        QCOMPARE(writeMessage, qsl("an area was deleted while the map was being exported"));
     }
 };
 
