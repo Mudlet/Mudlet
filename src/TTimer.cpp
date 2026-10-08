@@ -274,9 +274,10 @@ void TTimer::execute()
                 timer->enableTimer(timer->getID());
             }
         }
+        // Not disableTimer(mID): that would also stop the offset children just armed above
         if (isOffsetTimer()) {
-            disableTimer(mID);
             deactivate();
+            mpQTimer->stop();
         }
     }
 
@@ -343,9 +344,11 @@ void TTimer::disableTimer(int id)
         mpQTimer->stop();
     }
 
+    // Offset children too: one armed by its parent would otherwise still fire, and
+    // deactivate() leaves their wanted state alone for the parent to re-arm them
     for (auto* timerNode : *mpMyChildrenList) {
         auto* timer = static_cast<TTimer*>(timerNode);
-        if (!timer->isOffsetTimer() && timer->shouldBeActive()) {
+        if (timer->shouldBeActive()) {
             timer->disableTimer(timer->getID());
         }
     }
