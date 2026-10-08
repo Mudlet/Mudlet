@@ -1637,6 +1637,41 @@ describe("Tests Geyser.Label font, link style and tooltip", function()
       assert.is_truthy(getLabelText("glfLink"):find("#00ffff", 1, true))
     end)
 
+    it("leaves a Lua command link holding quotes intact, and resetLinkStyle takes the colour away again", function()
+      setLinkStyle("glfLink", "#00ffff", "#ff00ff")
+      echo("glfLink", [[<a href="myFunction('arg')">go</a>]])
+      assert.are.equal([[<a href="myFunction('arg')" style="color: #00ffff;">go</a>]], getLabelText("glfLink"))
+      echo("glfLink", [[<a href='myFunction("arg")'>go</a>]])
+      assert.are.equal([[<a href='myFunction("arg")' style="color: #00ffff;">go</a>]], getLabelText("glfLink"))
+
+      resetLinkStyle("glfLink")
+      assert.are.equal([[<a href='myFunction("arg")'>go</a>]], getLabelText("glfLink"))
+    end)
+
+    it("does not grow a text that is styled again", function()
+      setLinkStyle("glfLink", "#00ffff", "#ff00ff")
+      echo("glfLink", [[<a href="plain()">go</a>]])
+      local styled = getLabelText("glfLink")
+      for _ = 1, 3 do
+        echo("glfLink", getLabelText("glfLink"))
+      end
+      assert.are.equal(styled, getLabelText("glfLink"))
+    end)
+
+    it("takes away the styling of a text that was styled again, even one added to", function()
+      setLinkStyle("glfLink", "#00ffff", "#ff00ff")
+      echo("glfLink", [[<a href="plain()">go</a>]])
+      echo("glfLink", getLabelText("glfLink") .. " and more")
+      resetLinkStyle("glfLink")
+      assert.are.equal([[<a href="plain()">go</a> and more]], getLabelText("glfLink"))
+    end)
+
+    it("styles the links a label already shows", function()
+      echo("glfLink", [[<a href="plain()">go</a>]])
+      setLinkStyle("glfLink", "#00ffff", "#ff00ff")
+      assert.are.equal([[<a href="plain()" style="color: #00ffff;">go</a>]], getLabelText("glfLink"))
+    end)
+
     pending("Geyser.Label:setLinkStyle reporting whether the styling reached the label - the three wrappers discard the nil and error message their global answers with, and Mudlet has no link style getter")
   end)
 

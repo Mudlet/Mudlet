@@ -121,8 +121,49 @@ TLabel::~TLabel()
     }
 }
 
-void TLabel::setText(const QString& text)
+// The closing quote has to be the one that opened the value: a Lua command link holds the other kind.
+static const QRegularExpression& anchorTag()
 {
+    static const QRegularExpression anchor(qsl("<a\\s+href=(\"[^\"]*\"|'[^']*')([^>]*)>"));
+    return anchor;
+}
+
+static const QRegularExpression& anchorStyleAttribute()
+{
+    static const QRegularExpression styleAttribute(qsl("\\s*style=(\"[^\"]*\"|'[^']*')"));
+    return styleAttribute;
+}
+
+// Text read back with getLabelText() carries the styles an earlier pass wrote into its anchors, which
+// would otherwise outlive resetLinkStyle(); only a style this label wrote itself is taken out.
+QString TLabel::withoutInjectedLinkStyles(const QString& text) const
+{
+    if (mInjectedLinkStyles.isEmpty()) {
+        return text;
+    }
+
+    QString result = text;
+    QList<QRegularExpressionMatch> matches;
+    QRegularExpressionMatchIterator it = anchorTag().globalMatch(result);
+    while (it.hasNext()) {
+        matches.prepend(it.next());
+    }
+    for (const auto& match : matches) {
+        QString otherAttrs = match.captured(2);
+        const QRegularExpressionMatch style = anchorStyleAttribute().match(otherAttrs);
+        if (!style.hasMatch() || !mInjectedLinkStyles.contains(style.captured(1).mid(1).chopped(1))) {
+            continue;
+        }
+        otherAttrs.remove(style.capturedStart(), style.capturedLength());
+        result.replace(match.capturedStart(), match.capturedLength(), qsl("<a href=%1%2>").arg(match.captured(1), otherAttrs));
+    }
+    return result;
+}
+
+void TLabel::setText(const QString& givenText)
+{
+    const QString text = withoutInjectedLinkStyles(givenText);
+    mUnstyledText = text;
     const bool hasAnchor = containsAnchorTag(text);
 
     setTextInteractionFlags(hasAnchor ? scmLinkInteraction : Qt::TextInteractionFlags(Qt::NoTextInteraction));
@@ -138,8 +179,7 @@ void TLabel::setText(const QString& text)
         // because Mudlet's HTML generation (via echo(), setLabelText(), etc.) consistently
         // uses this format. User-provided HTML outside this pattern will still render as
         // clickable links (Qt handles that), but won't receive custom styling.
-        static const QRegularExpression anchorRegex(qsl("<a\\s+href=([\"'][^\"']*[\"'])([^>]*)>"));
-        QRegularExpressionMatchIterator it = anchorRegex.globalMatch(styledText);
+        QRegularExpressionMatchIterator it = anchorTag().globalMatch(styledText);
 
         // Process matches in reverse order to avoid offset issues
         QList<QRegularExpressionMatch> matches;
@@ -172,6 +212,7 @@ void TLabel::setText(const QString& text)
 
             if (!linkStyle.isEmpty()) {
                 linkStyle = linkStyle.trimmed();
+                mInjectedLinkStyles.insert(linkStyle);
 
                 QString replacement;
                 if (otherAttrs.contains(qsl("style="))) {
@@ -180,7 +221,8 @@ void TLabel::setText(const QString& text)
                     replacement = qsl("<a href=%1 style=\"%2\"").arg(hrefPart, linkStyle);
                     // Intentionally overwrites any existing style attribute rather than merging
                     // to keep implementation simple for the common case (labels without pre-existing inline styles)
-                    otherAttrs.remove(QRegularExpression(qsl("style=([\"'][^\"']*[\"'])")));
+                    // with the whitespace before it, or every re-render would leave one more space behind
+                    otherAttrs.remove(anchorStyleAttribute());
                     replacement += otherAttrs + qsl(">");
                 } else {
                     replacement = qsl("<a href=%1 style=\"%2\"%3>").arg(hrefPart, linkStyle, otherAttrs);
@@ -670,10 +712,8 @@ void TLabel::setLinkStyle(const QString& linkColor, const QString& linkVisitedCo
     setPalette(palette);
     mPaletteSetSinceStyled = true;
 
-    // Note: Widget stylesheets don't affect QTextDocument rendering
-    // Link colors are applied via inline styles in setText()
-
-    // Force update to re-render with new styles
+    // Widget stylesheets don't affect QTextDocument rendering, so links already shown are re-styled inline
+    reapplyLinkStyle();
     update();
 }
 
@@ -691,17 +731,23 @@ void TLabel::resetLinkStyle()
     mLinkVisitedColor.clear();
     mLinkUnderline = true;
 
-    // Force update to re-render with new styles
+    // the styles setText() wrote into the anchors would otherwise stay
+    reapplyLinkStyle();
     update();
 }
 
 void TLabel::clearVisitedLinks()
 {
     mVisitedLinks.clear();
+    reapplyLinkStyle();
+}
 
-    QString currentText = text();
-    if (!currentText.isEmpty() && containsAnchorTag(currentText)) {
-        setText(currentText);
+// Re-styles from the text as it was given, not text(): that already carries the styling of the last pass.
+void TLabel::reapplyLinkStyle()
+{
+    // a pixmap or movie takes the text out of QLabel's content slot
+    if (const QString currentText = text(); !currentText.isEmpty() && containsAnchorTag(currentText)) {
+        setText(mUnstyledText);
     }
 }
 
@@ -713,13 +759,7 @@ void TLabel::slot_linkActivated(const QString& link)
 
     if (!mLinkVisitedColor.isEmpty()) {
         mVisitedLinks.insert(link);
-
-        // Refresh the label to update link colors
-        // We need to re-apply the current text to trigger the styling update
-        QString currentText = text();
-        if (!currentText.isEmpty() && containsAnchorTag(currentText)) {
-            setText(currentText);
-        }
+        reapplyLinkStyle();
     }
 
     // Check for custom schemes by looking for the colon separator

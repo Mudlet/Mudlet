@@ -253,6 +253,31 @@ private slots:
         QCOMPARE(label()->textInteractionFlags(), Qt::LinksAccessibleByMouse | Qt::LinksAccessibleByKeyboard);
     }
 
+    void test_aClickedLinkAloneTakesTheVisitedColour()
+    {
+        label()->setLinkStyle(qsl("#00ffff"), qsl("#ff00ff"), true);
+        label()->clearVisitedLinks();
+        // the first link is the longer by far, so the middle of the text is on it
+        label()->setText(qsl("<a href=\"anchorVisitedOne()\">gogogogogogogo</a><a href=\"anchorVisitedTwo()\">x</a>"));
+        mpHost->getLuaInterpreter()->compileAndExecuteScript(qsl("function anchorVisitedOne() end\nfunction anchorVisitedTwo() end\n"));
+        QVERIFY2(centreIsOnTheLabel(), "the point this case clicks is outside the label, so it would miss the link");
+
+        QSignalSpy activated(label(), &QLabel::linkActivated);
+        QTest::mouseClick(label(), Qt::LeftButton, Qt::NoModifier, linkCentre());
+        QCOMPARE(activated.count(), 1);
+        QCOMPARE(activated.first().first().toString(), qsl("anchorVisitedOne()"));
+
+        QCOMPARE(label()->text(),
+                 qsl("<a href=\"anchorVisitedOne()\" style=\"color: #ff00ff;\">gogogogogogogo</a>"
+                     "<a href=\"anchorVisitedTwo()\" style=\"color: #00ffff;\">x</a>"));
+
+        label()->clearVisitedLinks();
+        QCOMPARE(label()->text(),
+                 qsl("<a href=\"anchorVisitedOne()\" style=\"color: #00ffff;\">gogogogogogogo</a>"
+                     "<a href=\"anchorVisitedTwo()\" style=\"color: #00ffff;\">x</a>"));
+        label()->resetLinkStyle();
+    }
+
     void test_aClickOnALinkStillReachesTheLabelsOwnCallbacks()
     {
         label()->resetLinkStyle();
