@@ -163,10 +163,13 @@ private slots:
     void notice_ctcpPingReplyIsReportedAsTheRoundTrip()
     {
         // however long a slow machine takes over it, the round trip lies between
-        // the five seconds ago it was sent and the time it was formatted by
-        const qint64 sent = QDateTime::currentSecsSinceEpoch() - 5;
+        // the five seconds ago it was sent and the time it was formatted by. Read
+        // as formatSeconds() reads it: on Unix currentDateTime() rounds to the
+        // millisecond, so near a second boundary it is a second ahead of
+        // currentSecsSinceEpoch().
+        const qint64 sent = QDateTime::currentDateTime().toSecsSinceEpoch() - 5;
         const QString text = forLua(":bob!u@h NOTICE me :\001PING " + QByteArray::number(sent) + "\001");
-        const qint64 latest = QDateTime::currentSecsSinceEpoch() - sent;
+        const qint64 latest = QDateTime::currentDateTime().toSecsSinceEpoch() - sent;
         const QRegularExpressionMatch match = QRegularExpression(QStringLiteral("^! bob replied in (\\d+)s$")).match(text);
         QVERIFY2(match.hasMatch(), qPrintable(text));
         const qint64 seconds = match.captured(1).toLongLong();
@@ -623,6 +626,60 @@ private slots:
         QVERIFY2(!text.contains(QStringLiteral("is on")), qPrintable(text));
     }
 
+    // The slots communi lays a WHOIS out in, with only what RPL_WHOISIDLE
+    // (317) fills in - the sign-on time and the idle seconds - left to the case
+    static QStringList whoisParameters(const QString& signOn, const QString& idle)
+    {
+        return {QStringLiteral("Bob Smith"), QStringLiteral("irc.example.org"), QStringLiteral("Example Network"), QString(), QString(), signOn, idle, QString(), QString(), QString()};
+    }
+
+    // A server need not send 317 at all, and communi then reports a sign-on
+    // at the epoch and an idle time of none, neither of which is so
+    void whois_withoutAnIdleReplySaysNothingAboutIdleTime()
+    {
+        auto* message = new IrcWhoisMessage(&mConnection);
+        message->setPrefix(QStringLiteral("bob!ident@example.org"));
+        message->setParameters(whoisParameters(QString(), QString()));
+        const QString text = IrcMessageFormatter::formatMessage(message, true);
+        QVERIFY2(!text.contains(QStringLiteral("idle")), qPrintable(text));
+        QVERIFY2(!text.contains(QStringLiteral("connected since")), qPrintable(text));
+        QCOMPARE(text.count(QLatin1Char('\n')), 1);
+    }
+
+    // RFC 1459's 317 carries only the idle seconds - "bob 42 :seconds idle" -
+    // so what lands in the sign-on slot is that trailing text, not a time
+    void whois_idleReplyWithoutASignOnTimeShowsOnlyTheIdleTime()
+    {
+        auto* message = new IrcWhoisMessage(&mConnection);
+        message->setPrefix(QStringLiteral("bob!ident@example.org"));
+        message->setParameters(whoisParameters(QStringLiteral("seconds idle"), QStringLiteral("42")));
+        const QString text = IrcMessageFormatter::formatMessage(message, true);
+        QVERIFY2(text.contains(QStringLiteral("[WHOIS] bob has been idle 42 secs")), qPrintable(text));
+        QVERIFY2(!text.contains(QStringLiteral("connected since")), qPrintable(text));
+    }
+
+    void whois_idleReplyWithASignOnTimeShowsBoth()
+    {
+        auto* message = new IrcWhoisMessage(&mConnection);
+        message->setPrefix(QStringLiteral("bob!ident@example.org"));
+        message->setParameters(whoisParameters(QStringLiteral("1700000000"), QStringLiteral("0")));
+        const QString text = IrcMessageFormatter::formatMessage(message, true);
+        const QString since = QDateTime::fromSecsSinceEpoch(1700000000).toString();
+        QVERIFY2(text.contains(QStringLiteral("[WHOIS] bob is connected since %1 (idle 0 secs)").arg(since)), qPrintable(text));
+    }
+
+    // A sign-on time past 2038 no longer fits the 32-bit int since() reads
+    void whois_signOnTimeAfter2038IsShown()
+    {
+        auto* message = new IrcWhoisMessage(&mConnection);
+        message->setPrefix(QStringLiteral("bob!ident@example.org"));
+        message->setParameters(whoisParameters(QStringLiteral("4102444800"), QStringLiteral("5")));
+        QVERIFY(message->isValid());
+        const QString text = IrcMessageFormatter::formatMessage(message, true);
+        const QString since = QDateTime::fromSecsSinceEpoch(4102444800LL).toString();
+        QVERIFY2(text.contains(QStringLiteral("[WHOIS] bob is connected since %1 (idle 5 secs)").arg(since)), qPrintable(text));
+    }
+
     void whowas_reportsTheAccountTheyWereLoggedInAs()
     {
         auto* message = new IrcWhowasMessage(&mConnection);
@@ -651,6 +708,39 @@ private slots:
         message->setParameters({QStringLiteral("Bob Smith"), QStringLiteral("irc.example.org"), QStringLiteral("Example Network")});
         const QString text = IrcMessageFormatter::formatMessage(message, true);
         QVERIFY2(text.contains(QStringLiteral("[WHOWAS] bob was ident@example.org (Bob Smith)")), qPrintable(text));
+    }
+
+    // Each thing a WHOIS or WHOWAS reply says is a line of its own, not run
+    // on into the one before it
+    void whois_putsEveryLineOnItsOwn()
+    {
+        auto* message = new IrcWhoisMessage(&mConnection);
+        message->setPrefix(QStringLiteral("bob!ident@example.org"));
+        QStringList parameters = whoisParameters(QStringLiteral("1700000000"), QStringLiteral("0"));
+        parameters[3] = QStringLiteral("bobaccount");
+        message->setParameters(parameters);
+        const QStringList lines = IrcMessageFormatter::formatMessage(message, true).split(QLatin1Char('\n'));
+        QCOMPARE(lines.size(), 4);
+        for (const QString& line : lines) {
+            QVERIFY2(line.startsWith(QStringLiteral("[WHOIS] bob ")) && line.count(QStringLiteral("[WHOIS]")) == 1, qPrintable(line));
+        }
+        const QString html = IrcMessageFormatter::formatMessage(message, false);
+        QVERIFY2(html.count(QStringLiteral("<br />\n")) == 3 && html.count(QStringLiteral("[WHOIS]")) == 4, qPrintable(html));
+        QVERIFY2(html.contains(QStringLiteral("(Bob Smith)<br />\n[WHOIS] bob is connected via irc.example.org (Example Network)<br />\n[WHOIS] bob is connected since ")), qPrintable(html));
+        QVERIFY2(html.endsWith(QStringLiteral(")<br />\n[WHOIS] bob is logged in as bobaccount</font>")), qPrintable(html));
+    }
+
+    void whowas_putsEveryLineOnItsOwn()
+    {
+        auto* message = new IrcWhowasMessage(&mConnection);
+        message->setPrefix(QStringLiteral("bob!ident@example.org"));
+        message->setParameters({QStringLiteral("Bob Smith"), QStringLiteral("irc.example.org"), QStringLiteral("Example Network"), QStringLiteral("bobaccount")});
+        QCOMPARE(IrcMessageFormatter::formatMessage(message, true),
+                 QStringLiteral("[WHOWAS] bob was ident@example.org (Bob Smith)\n[WHOWAS] bob was connected via irc.example.org (Example Network)\n[WHOWAS] bob was logged in as bobaccount"));
+        const QString html = IrcMessageFormatter::formatMessage(message, false);
+        QVERIFY2(html.endsWith(QStringLiteral("] [WHOWAS] bob was ident@example.org (Bob Smith)<br />\n[WHOWAS] bob was connected via irc.example.org (Example Network)<br />\n[WHOWAS] bob was logged "
+                                              "in as bobaccount</font>")),
+                 qPrintable(html));
     }
 
     void whoReply_marksAnAwayUser()

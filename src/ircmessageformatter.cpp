@@ -22,6 +22,7 @@
 #include "ircmessageformatter.h"
 
 #include <IrcTextFormat>
+#include <QDateTime>
 #include <QUrl>
 
 // communi escapes only & and < before stripping formatting; scripts want the text as sent.
@@ -443,41 +444,59 @@ QString IrcMessageFormatter::formatUnknownMessage(IrcMessage* message, bool isFo
     return QObject::tr("? %2 %3 %4").arg(nameFor(message->nick(), isForLua), nameFor(message->command(), isForLua), contentFor(message->parameters().join(" "), isForLua));
 }
 
+// A reply that says several things puts each on its own line, as the MOTD does
+static QString joinLines(const QStringList& lines, bool isForLua)
+{
+    return lines.join(isForLua ? QStringLiteral("\n") : QStringLiteral("<br />\n"));
+}
+
 QString IrcMessageFormatter::formatWhoisMessage(IrcWhoisMessage* message, bool isForLua)
 {
     const QString nick = nameFor(message->nick(), isForLua);
-    QString wData;
-    wData = QObject::tr("[WHOIS] %1 is %2@%3 (%4)").arg(nick, nameFor(message->ident(), isForLua), nameFor(message->host(), isForLua), contentFor(message->realName(), isForLua));
-    wData += QObject::tr("[WHOIS] %1 is connected via %2 (%3)").arg(nick, nameFor(message->server(), isForLua), contentFor(message->info(), isForLua));
-    wData += QObject::tr("[WHOIS] %1 is connected since %2 (idle %3)").arg(nick, message->since().toString(), formatDuration(message->idle()));
+    QStringList lines;
+    lines << QObject::tr("[WHOIS] %1 is %2@%3 (%4)").arg(nick, nameFor(message->ident(), isForLua), nameFor(message->host(), isForLua), contentFor(message->realName(), isForLua));
+    lines << QObject::tr("[WHOIS] %1 is connected via %2 (%3)").arg(nick, nameFor(message->server(), isForLua), contentFor(message->info(), isForLua));
+    // RPL_WHOISIDLE is optional, and the sign-on time in it is an extension to RFC 1459.
+    // communi reads a missing one as the epoch and a missing idle time as zero.
+    const QString idle = message->parameters().value(6);
+    if (!idle.isEmpty()) {
+        // parsed here rather than through since(), which reads it as a 32-bit int
+        const qint64 signOn = message->parameters().value(5).toLongLong();
+        if (signOn > 0) {
+            lines << QObject::tr("[WHOIS] %1 is connected since %2 (idle %3)").arg(nick, QDateTime::fromSecsSinceEpoch(signOn).toString(), formatDuration(message->idle()));
+        } else {
+            //: %1 is the nick, %2 how long they have been idle, e.g. '3 mins 20 secs'
+            lines << QObject::tr("[WHOIS] %1 has been idle %2").arg(nick, formatDuration(message->idle()));
+        }
+    }
     if (!message->awayReason().isEmpty()) {
-        wData += QObject::tr("[WHOIS] %1 is away: %2").arg(nick, contentFor(message->awayReason(), isForLua));
+        lines << QObject::tr("[WHOIS] %1 is away: %2").arg(nick, contentFor(message->awayReason(), isForLua));
     }
     if (!message->account().isEmpty()) {
-        wData += QObject::tr("[WHOIS] %1 is logged in as %2").arg(nick, nameFor(message->account(), isForLua));
+        lines << QObject::tr("[WHOIS] %1 is logged in as %2").arg(nick, nameFor(message->account(), isForLua));
     }
     if (!message->address().isEmpty()) {
-        wData += QObject::tr("[WHOIS] %1 is connected from %2").arg(nick, nameFor(message->address(), isForLua));
+        lines << QObject::tr("[WHOIS] %1 is connected from %2").arg(nick, nameFor(message->address(), isForLua));
     }
     if (message->isSecure()) {
-        wData += QObject::tr("[WHOIS] %1 is using a secure connection").arg(nick);
+        lines << QObject::tr("[WHOIS] %1 is using a secure connection").arg(nick);
     }
     if (!message->channels().isEmpty()) {
-        wData += QObject::tr("[WHOIS] %1 is on %2").arg(nick, nameFor(message->channels().join(" "), isForLua));
+        lines << QObject::tr("[WHOIS] %1 is on %2").arg(nick, nameFor(message->channels().join(" "), isForLua));
     }
-    return wData;
+    return joinLines(lines, isForLua);
 }
 
 QString IrcMessageFormatter::formatWhowasMessage(IrcWhowasMessage* message, bool isForLua)
 {
     const QString nick = nameFor(message->nick(), isForLua);
-    QString wData;
-    wData = QObject::tr("[WHOWAS] %1 was %2@%3 (%4)").arg(nick, nameFor(message->ident(), isForLua), nameFor(message->host(), isForLua), contentFor(message->realName(), isForLua));
-    wData += QObject::tr("[WHOWAS] %1 was connected via %2 (%3)").arg(nick, nameFor(message->server(), isForLua), contentFor(message->info(), isForLua));
+    QStringList lines;
+    lines << QObject::tr("[WHOWAS] %1 was %2@%3 (%4)").arg(nick, nameFor(message->ident(), isForLua), nameFor(message->host(), isForLua), contentFor(message->realName(), isForLua));
+    lines << QObject::tr("[WHOWAS] %1 was connected via %2 (%3)").arg(nick, nameFor(message->server(), isForLua), contentFor(message->info(), isForLua));
     if (!message->account().isEmpty()) {
-        wData += QObject::tr("[WHOWAS] %1 was logged in as %2").arg(nick, nameFor(message->account(), isForLua));
+        lines << QObject::tr("[WHOWAS] %1 was logged in as %2").arg(nick, nameFor(message->account(), isForLua));
     }
-    return wData;
+    return joinLines(lines, isForLua);
 }
 
 QString IrcMessageFormatter::formatWhoReplyMessage(IrcWhoReplyMessage* message, bool isForLua)

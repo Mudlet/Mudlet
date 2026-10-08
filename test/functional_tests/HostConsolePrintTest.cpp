@@ -53,6 +53,8 @@
 
 #include "GroupedTest.h"
 
+using namespace std::chrono_literals;
+
 class HostConsolePrintTest : public QObject
 {
     Q_OBJECT
@@ -166,7 +168,7 @@ private slots:
         QVERIFY2(mpHost, "Could not create the test profile - see the warning above for the step that timed out.");
         QSignalSpy connected(&mpHost->mTelnet, &cTelnet::signal_connected);
         if (connected.isEmpty()) {
-            QVERIFY2(connected.wait(15000), "The test profile never connected to the stub server.");
+            QVERIFY2(connected.wait(15s), "The test profile never connected to the stub server.");
         }
         QVERIFY(mpHost->mpConsole);
         mSavedLogFileNameFormat = mpHost->mLogFileNameFormat;
@@ -512,7 +514,7 @@ private slots:
         // QSignalSpy::wait() waits for the *next* signal after the ones it
         // already holds:
         if (disconnected.isEmpty()) {
-            QVERIFY2(disconnected.wait(15000), "the test profile never noticed the disconnection");
+            QVERIFY2(disconnected.wait(15s), "the test profile never noticed the disconnection");
         }
 
         QVERIFY(!telnet.recordingReplay());

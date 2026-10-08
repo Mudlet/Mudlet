@@ -746,11 +746,82 @@ private slots:
                          [&]() {
                              return lastLineHolding(buffer, qsl("WDOGVIEW <send")) >= 0;
                          },
-                         8000),
+                         8s),
                  "The stalled tag was never written out as text.");
         // Both watchdog phases have to have run, or something other than the
         // watchdog wrote it out.
         QVERIFY2(sinceFeed.elapsed() >= 2 * TBuffer::MAX_TAG_TIMEOUT_MS - 100, qPrintable(qsl("The tag was written out after %1ms, before the watchdog could have.").arg(sinceFeed.elapsed())));
+    }
+
+    // The line the watchdog writes out came from the game, so its triggers have
+    // to run in trigger context: replace() shifting the capture positions is
+    // one of the things that depends on it.
+    void test_aStalledMxpTagLineRunsItsTriggersInTriggerContext()
+    {
+        startProfile();
+        auto host = mudlet::self()->getActiveHost();
+        QVERIFY2(host, "No active host available for the test.");
+        QVERIFY2(host->mpConsole, "The active host has no main console.");
+
+        runLua(host,
+               qsl("wdogCapture = 'trigger never ran'\n"
+                   "wdogTriggerId = tempRegexTrigger([[^WDOGCTX (<\\w+)]], function()\n"
+                   "  selectString('WDOGCTX', 1)\n"
+                   "  replace('WDOGCONTEXT')\n"
+                   "  selectCaptureGroup(2)\n"
+                   "  wdogCapture = getSelection()\n"
+                   "  deselect()\n"
+                   "end)"));
+        QTest::qWait(1000ms);
+        TBuffer& buffer = host->mainConsoleModel().buffer;
+        QElapsedTimer sinceFeed;
+        sinceFeed.start();
+        feedStalledMxpTag(host, buffer, "WDOGCTX <send");
+
+        QVERIFY2(QTest::qWaitFor(
+                         [&]() {
+                             return luaGlobalString(host, "wdogCapture") != qsl("trigger never ran");
+                         },
+                         8s),
+                 "The trigger never ran on the line the watchdog wrote out.");
+        // Anything else writing the line out would already be in trigger context
+        QVERIFY2(sinceFeed.elapsed() >= 2 * TBuffer::MAX_TAG_TIMEOUT_MS - 100, qPrintable(qsl("The tag was written out after %1ms, before the watchdog could have.").arg(sinceFeed.elapsed())));
+        runLua(host, qsl("killTrigger(wdogTriggerId)"));
+        QCOMPARE(luaGlobalString(host, "wdogCapture"), qsl("<send"));
+    }
+
+    // The line a disconnect writes out is from the game too
+    void test_aHeldServerWrappedLineWrittenOutByADisconnectRunsItsTriggersInTriggerContext()
+    {
+        startProfile();
+        auto host = mudlet::self()->getActiveHost();
+        QVERIFY2(host, "No active host available for the test.");
+        QVERIFY2(host->mpConsole, "The active host has no main console.");
+
+        runLua(host,
+               qsl("dcCapture = 'trigger never ran'\n"
+                   "dcTriggerId = tempRegexTrigger([[^x+ (alpha)$]], function()\n"
+                   "  selectString('xxxx', 1)\n"
+                   "  replace('y')\n"
+                   "  selectCaptureGroup(2)\n"
+                   "  dcCapture = getSelection()\n"
+                   "  deselect()\n"
+                   "end)"));
+        TBuffer& buffer = host->mainConsoleModel().buffer;
+        host->mUndoServerWrap = true;
+        host->mUndoServerWrapWidth = 80;
+        auto restoreWrap = qScopeGuard([host]() { host->mUndoServerWrap = false; });
+
+        // 70 characters, inside the join band for a wrap column of 80
+        const QString heldLine = QString(64, QChar('x')) + qsl(" alpha");
+        std::string data = heldLine.toStdString() + "\n";
+        buffer.translateToPlainText(data, true);
+        QCOMPARE(buffer.mServerWrapPendingLine, heldLine);
+
+        host->mTelnet.slot_socketDisconnected();
+        runLua(host, qsl("killTrigger(dcTriggerId)"));
+        QVERIFY2(buffer.mServerWrapPendingLine.isEmpty(), "The disconnect did not write the held line out.");
+        QCOMPARE(luaGlobalString(host, "dcCapture"), qsl("alpha"));
     }
 
     // Writing the stalled tag out commits it and finalizes through the main
@@ -855,7 +926,7 @@ private slots:
                          [&]() {
                              return lastLineHolding(model->buffer, heldLine) >= 0;
                          },
-                         3000),
+                         3s),
                  "The held line was never committed with no view.");
         // A timer may fire slightly early, hence the margin
         QVERIFY2(sinceFeed.elapsed() >= TBuffer::csmServerWrapFlushDelayMs - 50, qPrintable(qsl("The held line was committed after %1ms, before the flush delay was up.").arg(sinceFeed.elapsed())));
@@ -882,7 +953,7 @@ private slots:
         QVERIFY2(host->mpConsole, "The active host has no main console.");
         host->mUndoServerWrap = true;
         host->mUndoServerWrapWidth = 80;
-        host->mServerWrapFlushTimer.setInterval(std::chrono::minutes(1));
+        host->mServerWrapFlushTimer.setInterval(1min);
 
         const QString heldLine = QString(64, QChar('y')) + qsl(" omega");
         std::string data = heldLine.toStdString() + "\n";
@@ -1146,6 +1217,38 @@ private slots:
         QCOMPARE(model->buffer.lastloggedToLine, -1);
 
         QFile::remove(logFileName);
+    }
+
+    // Lines are flushed once per pass of the event loop rather than one by
+    // one, so a reader tailing the file must still see them without logging
+    // having to stop first.
+    void test_loggedLinesReachTheFileWhileLogging()
+    {
+        startProfile();
+        auto host = mudlet::self()->getActiveHost();
+        QVERIFY2(host, "No active host available for the test.");
+        TConsoleModel& model = host->mainConsoleModel();
+
+        model.toggleLogging(false);
+        QVERIFY2(model.mLogToLogFile, "Could not start a log.");
+        const QString logFileName = model.mLogFileName;
+        auto stopLogging = qScopeGuard([&model, &logFileName] {
+            if (model.mLogToLogFile) {
+                model.toggleLogging(false);
+            }
+            QFile::remove(logFileName);
+        });
+
+        appendModelLine(model.buffer, qsl("logged-while-running-one"));
+        appendModelLine(model.buffer, qsl("logged-while-running-two"));
+        // Held back for duplicate detection, so this one only lets the second
+        // line out of the deferred slot.
+        appendModelLine(model.buffer, qsl("logged-while-running-three"));
+
+        QVERIFY2(!readFile(logFileName).contains(qsl("logged-while-running-two")), "A logged line was flushed on its own, before the event loop ran.");
+        QTRY_VERIFY2(readFile(logFileName).contains(qsl("logged-while-running-two")), "Logged lines never reached the file while the log was still running.");
+        QVERIFY2(model.mLogToLogFile, "The log stopped on its own.");
+        QVERIFY2(readFile(logFileName).contains(qsl("logged-while-running-one")), "The first logged line never reached the file.");
     }
 
     // rgb(22,22,22) is the colour the console's own background replaced (#9419)
@@ -1917,7 +2020,7 @@ noViewCursor = table.concat(results, '|')
             host->setConsoleBufferSize(12345);
             host->setUseMaxConsoleBufferSize(false);
             runLua(host, qsl("setConsoleBufferSize('%1', 700, 70, true)\n").arg(name));
-            QCOMPARE(host->getConsoleBufferSize(), maxBufferSize);
+            QCOMPARE(host->getConsoleBufferSize(), 12345);
             QVERIFY(host->getUseMaxConsoleBufferSize());
             QCOMPARE(host->mpConsole->buffer.mLinesLimit, maxBufferSize);
             QCOMPARE(host->mpConsole->buffer.mBatchDeleteSize, 70);
@@ -2002,8 +2105,30 @@ headlessProblems = table.concat(headlessProblems, '; ')
 
         runLua(host, qsl("setConsoleBufferSize('main', 700, 70, true)\n"));
         QCOMPARE(model->buffer.mLinesLimit, maxBufferSize);
-        QCOMPARE(host->getConsoleBufferSize(), maxBufferSize);
+        QCOMPARE(host->getConsoleBufferSize(), 700);
         QVERIFY(host->getUseMaxConsoleBufferSize());
+    }
+
+    void test_clearWindowClearsTheModelWithNoView()
+    {
+        startProfile();
+        auto host = mudlet::self()->getActiveHost();
+        QVERIFY2(host, "No active host available for the test.");
+        QVERIFY2(host->mpConsole, "The active host has no main console.");
+        std::shared_ptr<TConsoleModel> model = host->sharedMainConsoleModel();
+        destroyTheView(host);
+
+        appendModelLine(model->buffer, qsl("headless one"));
+        appendModelLine(model->buffer, qsl("headless two"));
+        QVERIFY(model->buffer.size() > 2);
+
+        runLua(host, qsl("headlessClearAnswers = select('#', clearWindow('main'))"));
+
+        QCOMPARE(luaGlobalNumber(host, "headlessClearAnswers"), 0);
+        QCOMPARE(static_cast<int>(model->buffer.size()), 1);
+        QCOMPARE(model->buffer.line(0), QString());
+        QVERIFY(!host->clearWindow(qsl("noSuchWindow")));
+        QVERIFY(host->clearWindow(QString()));
     }
 
     // A write past the end of a line pads it out in the model's current format,
@@ -2161,7 +2286,7 @@ paste('main')
                     [this, &sizeWithGutter, gutter]() {
                         return !mpServer->nawsUpdates().isEmpty() && mpServer->nawsUpdates().constLast() == sizeWithGutter(gutter);
                     },
-                    5000);
+                    5s);
         };
 
         // IAC DO NAWS
@@ -2331,7 +2456,7 @@ noViewTimeStampReport = table.concat(noViewTimeStampProblems, '; ')
                          [host]() {
                              return host->mTelnet.getConnectionState() == QAbstractSocket::ConnectedState;
                          },
-                         5000),
+                         5s),
                  "The view-less profile did not connect.");
         // IAC DO NAWS
         mpServer->sendRaw(QByteArray("\xFF\xFD\x1F", 3));
@@ -2339,7 +2464,7 @@ noViewTimeStampReport = table.concat(noViewTimeStampProblems, '; ')
                          [this]() {
                              return !mpServer->nawsUpdates().isEmpty();
                          },
-                         5000),
+                         5s),
                  "The view-less profile never answered IAC DO NAWS.");
         QCOMPARE(mpServer->nawsUpdates().constLast(), QSize(std::min(host->mScreenWidth, host->mWrapAt), host->mScreenHeight));
     }
@@ -2364,7 +2489,7 @@ noViewTimeStampReport = table.concat(noViewTimeStampProblems, '; ')
                     [this, &sizeWithGutter, gutter]() {
                         return !mpServer->nawsUpdates().isEmpty() && mpServer->nawsUpdates().constLast() == sizeWithGutter(gutter);
                     },
-                    5000);
+                    5s);
         };
 
         host->mTelnet.connectIt(mLocalhost, mPort.toInt());
@@ -2372,7 +2497,7 @@ noViewTimeStampReport = table.concat(noViewTimeStampProblems, '; ')
                          [host]() {
                              return host->mTelnet.getConnectionState() == QAbstractSocket::ConnectedState;
                          },
-                         5000),
+                         5s),
                  "The view-less profile did not connect.");
         // IAC DO NAWS
         mpServer->sendRaw(QByteArray("\xFF\xFD\x1F", 3));
@@ -2391,12 +2516,12 @@ noViewTimeStampReport = table.concat(noViewTimeStampProblems, '; ')
         qsizetype reported = mpServer->nawsUpdates().size();
         runLua(host, qsl("enableTimeStamps()\n"));
         QVERIFY(host->mainConsoleShowsTimeStamps());
-        QTest::qWait(500);
+        QTest::qWait(500ms);
         QVERIFY2(onlyFullWidthSince(reported), "Timestamps turned on from Lua with no view took a gutter off the game's width.");
 
         reported = mpServer->nawsUpdates().size();
         runLua(host, qsl("disableTimeStamps()\n"));
-        QTest::qWait(500);
+        QTest::qWait(500ms);
         QVERIFY2(onlyFullWidthSince(reported), "Timestamps turned off from Lua with no view changed the game's width.");
     }
 
@@ -3079,7 +3204,7 @@ noViewSelectionReport = table.concat(noViewSelectionProblems, '; ')
         QCOMPARE(registeredGifs(host), 1);
 
         runLua(host, qsl("deleteMiniConsole('%1')\n").arg(windowName));
-        QTRY_VERIFY_WITH_TIMEOUT(movie.isNull(), 5000);
+        QTRY_VERIFY_WITH_TIMEOUT(movie.isNull(), 5s);
 
         QCOMPARE(luaGifTotal(host), 0);
     }
@@ -3106,7 +3231,7 @@ noViewSelectionReport = table.concat(noViewSelectionProblems, '; ')
         QCOMPARE(registeredGifs(host), 1);
 
         runLua(host, qsl("deleteScrollBox('%1')\n").arg(scrollBoxName));
-        QTRY_VERIFY_WITH_TIMEOUT(movie.isNull(), 5000);
+        QTRY_VERIFY_WITH_TIMEOUT(movie.isNull(), 5s);
 
         QCOMPARE(luaGifTotal(host), 0);
     }
@@ -3388,7 +3513,7 @@ noViewSelectionReport = table.concat(noViewSelectionProblems, '; ')
         // the name. Deregistration is identity-checked for exactly this. Waiting
         // on the widget itself rather than on a fixed delay, because the whole
         // point of the assertion below is that the destructor has already run.
-        QTRY_VERIFY_WITH_TIMEOUT(firstWidget.isNull(), 5000);
+        QTRY_VERIFY_WITH_TIMEOUT(firstWidget.isNull(), 5s);
         QVERIFY2(host->windowRegistry().subConsoleModel(miniName) == secondModel,
                  qPrintable(qsl("The deferred destruction of a deleted miniconsole evicted the replacement that had taken its name: registered %1, expected %2, the deleted one was %3, the console's "
                                 "own widget map holds %4, the replacement widget is %5.")
@@ -3445,7 +3570,7 @@ noViewSelectionReport = table.concat(noViewSelectionProblems, '; ')
         // the destructor's deregistration and of nothing else.
         QVERIFY2(host->windowRegistry().hasSubConsole(nestedName), "Deleting a user window deregistered the miniconsole inside it before the widget was destroyed.");
 
-        QTRY_VERIFY_WITH_TIMEOUT(nestedWidget.isNull(), 5000);
+        QTRY_VERIFY_WITH_TIMEOUT(nestedWidget.isNull(), 5s);
         QVERIFY2(!host->windowRegistry().hasSubConsole(nestedName), "Destroying a user window left the miniconsole inside it in the profile's window registry.");
         QVERIFY2(!host->windowType(nestedName).has_value(), "Host still reports a window type for a miniconsole destroyed with the user window it was in.");
     }
@@ -3474,7 +3599,7 @@ noViewSelectionReport = table.concat(noViewSelectionProblems, '; ')
 
         const auto [windowDeleted, windowDeleteMessage] = host->mpConsole->deleteMiniConsole(userWindowName);
         QVERIFY2(windowDeleted, qPrintable(windowDeleteMessage));
-        QTRY_VERIFY_WITH_TIMEOUT(nestedWidget.isNull(), 5000);
+        QTRY_VERIFY_WITH_TIMEOUT(nestedWidget.isNull(), 5s);
 
         // First, because the ones after it act on whatever this hands back
         QVERIFY2(!host->mpConsole->subConsoleWidget(nestedName), "The console's own map still hands out a miniconsole destroyed with the user window it was in.");
@@ -3754,6 +3879,7 @@ noViewSelectionReport = table.concat(noViewSelectionProblems, '; ')
         // The profile's stylesheet reaches every dock by way of the console
         const QString styleSheet = qsl("QDockWidget { border: 2px solid #123456; }");
         QVERIFY2(host->setProfileStyleSheet(styleSheet), "setProfileStyleSheet() was refused.");
+        QCOMPARE(host->mpConsole->styleSheet(), styleSheet);
         QCOMPARE(dockWidget->styleSheet(), styleSheet);
 
         // and the layout-changed flag is raised and cleared on the dock, by name.
@@ -3764,6 +3890,139 @@ noViewSelectionReport = table.concat(noViewSelectionProblems, '; ')
         QVERIFY2(dockWidget->property("layoutChanged").toBool(), "setDockLayoutUpdated() did not reach the dock widget.");
         QVERIFY2(host->commitLayoutUpdates(), "commitLayoutUpdates() did not report the dock's raised flag.");
         QVERIFY2(!dockWidget->property("layoutChanged").toBool(), "commitLayoutUpdates() left the dock's flag raised.");
+    }
+
+    // openWindow() shows a user window and docks or floats it where it is told,
+    // refusing names that are something else and areas it does not know.
+    void test_openWindowShowsAndPlacesTheUserWindow()
+    {
+        startProfile();
+        auto host = mudlet::self()->getActiveHost();
+        QVERIFY2(host, "No active host available for the test.");
+        QVERIFY2(host->mpConsole, "The active host has no main console.");
+
+        QCOMPARE(host->openWindow(QString(), false, true, QString()), std::make_pair(false, qsl("an userwindow cannot have an empty string as its name")));
+
+        const QString miniConsoleName = qsl("openWindowMiniConsole");
+        QVERIFY2(host->createMiniConsole(qsl("main"), miniConsoleName, 0, 0, 50, 50).first, "The miniconsole was not created.");
+        QCOMPARE(host->openWindow(miniConsoleName, false, true, QString()), std::make_pair(false, qsl("userwindow '%1' already exists").arg(miniConsoleName)));
+        QVERIFY2(!host->mpConsole->dockWidget(miniConsoleName), "Refusing a miniconsole's name still made a dock for it.");
+
+        const QString name = qsl("openWindowPlacement");
+        const std::pair<bool, QString> opened{true, QString()};
+        QCOMPARE(host->openWindow(name, false, false, QString()), opened);
+        TDockWidget* dockWidget = host->mpConsole->dockWidget(name);
+        QVERIFY2(dockWidget, "openWindow() made no dock.");
+        QCOMPARE(host->mpConsole->subConsoleWidget(name)->getType(), TConsole::UserWindow);
+        QVERIFY2(!dockWidget->isHidden(), "openWindow() left the new user window hidden.");
+        QCOMPARE(dockWidget->allowedAreas(), Qt::NoDockWidgetArea);
+        QCOMPARE(mudlet::self()->dockWidgetArea(dockWidget), Qt::RightDockWidgetArea);
+        QVERIFY2(!dockWidget->hasLayoutAlready, "openWindow() marked the layout as loaded when it was told not to load it.");
+
+        // Re-opening shows the same dock again rather than refusing the name
+        QVERIFY2(host->hideWindow(name), "hideWindow() did not find the user window.");
+        QCOMPARE(host->openWindow(name, false, true, QString()), opened);
+        QCOMPARE(host->mpConsole->dockWidget(name), dockWidget);
+        QVERIFY2(!dockWidget->isHidden(), "Re-opening the user window left it hidden.");
+        QCOMPARE(dockWidget->allowedAreas(), Qt::AllDockWidgetAreas);
+
+        // Floating it between each docking tells a dock that stayed put from one
+        // that went where it was sent
+        const QList<std::pair<QString, Qt::DockWidgetArea>> areas{{qsl("l"), Qt::LeftDockWidgetArea},
+                                                                  {qsl("t"), Qt::TopDockWidgetArea},
+                                                                  {qsl("b"), Qt::BottomDockWidgetArea},
+                                                                  {qsl("r"), Qt::RightDockWidgetArea},
+                                                                  {qsl("left"), Qt::LeftDockWidgetArea},
+                                                                  {qsl("top"), Qt::TopDockWidgetArea},
+                                                                  {qsl("bottom"), Qt::BottomDockWidgetArea},
+                                                                  {qsl("right"), Qt::RightDockWidgetArea}};
+        bool floatingWord = false;
+        for (const auto& [area, expected] : areas) {
+            const QString floating = floatingWord ? qsl("floating") : qsl("f");
+            floatingWord = !floatingWord;
+            QCOMPARE(host->openWindow(name, false, true, floating), opened);
+            QVERIFY2(dockWidget->isFloating(), qPrintable(qsl("Area '%1' did not float the user window.").arg(floating)));
+            QCOMPARE(host->openWindow(name, false, true, area), opened);
+            QVERIFY2(!dockWidget->isFloating(), qPrintable(qsl("Area '%1' left the user window floating.").arg(area)));
+            QCOMPARE(mudlet::self()->dockWidgetArea(dockWidget), expected);
+        }
+
+        // An unknown area is refused, but only once the window is showing
+        QVERIFY2(host->hideWindow(name), "hideWindow() did not find the user window.");
+        QCOMPARE(host->openWindow(name, false, true, qsl("middle")),
+                 std::make_pair(false, qsl(R"(docking option "middle" not available. available docking options are "t" top, "b" bottom, "r" right, "l" left and "f" floating)")));
+        QVERIFY2(!dockWidget->isHidden(), "Refusing an unknown area left the user window hidden.");
+        QCOMPARE(mudlet::self()->dockWidgetArea(dockWidget), Qt::RightDockWidgetArea);
+        QVERIFY2(!dockWidget->isFloating(), "Refusing an unknown area floated the user window.");
+
+        // The first open that asks for the saved layout restores it; later ones
+        // leave the window where the script has since put it.
+        auto removeLayout = qScopeGuard([]() {
+            QFile::remove(MudletApp::getMudletPath(enums::mainDataItemPath, qsl("windowLayout.dat")));
+            QFile::remove(MudletApp::getMudletPath(enums::mainDataItemPath, qsl("windowLayoutGeometry.dat")));
+        });
+        QCOMPARE(host->openWindow(name, false, true, qsl("l")), opened);
+        runLua(host, qsl("layoutSavedForOpenWindow = tostring(saveWindowLayout())\n"));
+        QCOMPARE(luaGlobalString(host, "layoutSavedForOpenWindow"), qsl("true"));
+        QCOMPARE(host->openWindow(name, false, true, qsl("b")), opened);
+        QCOMPARE(mudlet::self()->dockWidgetArea(dockWidget), Qt::BottomDockWidgetArea);
+        QCOMPARE(host->openWindow(name, true, true, QString()), opened);
+        QVERIFY2(dockWidget->hasLayoutAlready, "Loading the layout did not mark it as loaded.");
+        QCOMPARE(mudlet::self()->dockWidgetArea(dockWidget), Qt::LeftDockWidgetArea);
+        QCOMPARE(host->openWindow(name, false, true, qsl("b")), opened);
+        QCOMPARE(host->openWindow(name, true, true, QString()), opened);
+        QCOMPARE(mudlet::self()->dockWidgetArea(dockWidget), Qt::BottomDockWidgetArea);
+
+        // A miniconsole inside a user window is destroyed with it, later and
+        // without being deregistered, so its name is only free once that has run
+        const QString childName = qsl("openWindowChildConsole");
+        QVERIFY2(host->createMiniConsole(name, childName, 0, 0, 50, 50).first, "The miniconsole inside the user window was not created.");
+        const QPointer<TConsole> child = host->mpConsole->subConsoleWidget(childName);
+        QVERIFY2(host->mpConsole->deleteMiniConsole(name).first, "The user window was not deleted.");
+        QCOMPARE(host->openWindow(childName, false, true, QString()), std::make_pair(false, qsl("userwindow '%1' already exists").arg(childName)));
+        QCoreApplication::sendPostedEvents(nullptr, QEvent::DeferredDelete);
+        QVERIFY2(child.isNull(), "The miniconsole inside the deleted user window was never destroyed.");
+        QCOMPARE(host->openWindow(childName, false, true, QString()), opened);
+        QCOMPARE(host->mpConsole->subConsoleWidget(childName)->getType(), TConsole::UserWindow);
+    }
+
+    // mudlet::slot_tabMoved() pairs each tab with its console by the console's
+    // HostName property, so renaming a profile has to rename that too.
+    void test_renamingAProfileRenamesItsConsoleWidget()
+    {
+        startProfile();
+        auto host = mudlet::self()->getActiveHost();
+        QVERIFY2(host, "No active host available for the test.");
+        QVERIFY2(host->mpConsole, "The active host has no main console.");
+        QCOMPARE(host->mpConsole->property("HostName").toString(), mHostname);
+
+        const QString newName = qsl("Test-ConsoleModelRenamed");
+        auto restoreName = qScopeGuard([host, this]() {
+            host->setName(mHostname);
+        });
+        host->setName(newName);
+        QCOMPARE(host->mpConsole->property("HostName").toString(), newName);
+    }
+
+    // New borders lay the main console out again, and scripts hear the room
+    // they leave: the console's own size less the borders and the command line.
+    void test_newBordersRaiseTheResizeEventForTheRoomTheyLeave()
+    {
+        startProfile();
+        auto host = mudlet::self()->getActiveHost();
+        QVERIFY2(host, "No active host available for the test.");
+        QVERIFY2(host->mpConsole, "The active host has no main console.");
+        const QSize consoleSize = host->mpConsole->size();
+        QVERIFY2(consoleSize.width() != consoleSize.height(), "The console is square, so a width and height swapped over would go unnoticed.");
+
+        runLua(host,
+               qsl("borderResizeWidth, borderResizeHeight = -1, -1\n"
+                   "registerAnonymousEventHandler('sysWindowResizeEvent', function(_, w, h) borderResizeWidth, borderResizeHeight = w, h end)\n"));
+        host->setUserBorders(QMargins(30, 20, 10, 5));
+
+        QCOMPARE(host->mpConsole->size(), consoleSize);
+        QCOMPARE(luaGlobalNumber(host, "borderResizeWidth"), consoleSize.width() - 30 - 10);
+        QCOMPARE(luaGlobalNumber(host, "borderResizeHeight"), consoleSize.height() - 20 - 5 - host->mpConsole->mpCommandLine->height());
     }
 
     // Every profile's sub-consoles are restyled when the application palette
@@ -3859,7 +4118,7 @@ noViewSelectionReport = table.concat(noViewSelectionProblems, '; ')
         // of the destroyed() handler and of nothing else.
         QVERIFY2(host->windowRegistry().hasCommandLine(commandLineName), "Deleting a scroll box deregistered the command line inside it before the widget was destroyed.");
 
-        QTRY_VERIFY_WITH_TIMEOUT(commandLineWidget.isNull(), 5000);
+        QTRY_VERIFY_WITH_TIMEOUT(commandLineWidget.isNull(), 5s);
 
         QVERIFY2(!host->windowRegistry().hasCommandLine(commandLineName), "Destroying a scroll box left the command line inside it in the profile's window registry.");
         QVERIFY2(!host->windowType(commandLineName).has_value(), "Host still reports a window type for a command line destroyed with the scroll box it was in.");
@@ -3896,7 +4155,7 @@ noViewSelectionReport = table.concat(noViewSelectionProblems, '; ')
         TCommandLine* replacement = host->mpConsole->subCommandLineWidget(commandLineName);
         QVERIFY2(replacement && replacement != original, "Creating a command line over a deleted name did not produce a new widget.");
 
-        QTRY_VERIFY_WITH_TIMEOUT(original.isNull(), 5000);
+        QTRY_VERIFY_WITH_TIMEOUT(original.isNull(), 5s);
 
         QVERIFY2(host->windowRegistry().hasCommandLine(commandLineName), "The old command line's deferred delete took its replacement's registry entry with it.");
         QCOMPARE(host->windowType(commandLineName), std::optional<QString>(qsl("commandline")));
@@ -3964,7 +4223,7 @@ noViewSelectionReport = table.concat(noViewSelectionProblems, '; ')
         // the destroyed() handler and of nothing else.
         QVERIFY2(host->windowRegistry().hasScrollBox(scrollBoxName), "Deleting a user window deregistered the scroll box inside it before the widget was destroyed.");
 
-        QTRY_VERIFY_WITH_TIMEOUT(widget.isNull(), 5000);
+        QTRY_VERIFY_WITH_TIMEOUT(widget.isNull(), 5s);
 
         QVERIFY2(!host->windowType(scrollBoxName).has_value(), "Host still reports a window type for a scroll box destroyed with its user window.");
         QVERIFY2(!host->windowRegistry().hasScrollBox(scrollBoxName), "A scroll box destroyed with its user window stayed in the profile's window registry.");
@@ -4001,7 +4260,7 @@ noViewSelectionReport = table.concat(noViewSelectionProblems, '; ')
         // the destroyed() handler and of nothing else.
         QVERIFY2(host->windowRegistry().hasTextBox(textBoxName), "Deleting a user window deregistered the text edit inside it before the widget was destroyed.");
 
-        QTRY_VERIFY_WITH_TIMEOUT(widget.isNull(), 5000);
+        QTRY_VERIFY_WITH_TIMEOUT(widget.isNull(), 5s);
 
         QVERIFY2(!host->windowType(textBoxName).has_value(), "Host still reports a window type for a text edit destroyed with its user window.");
         QVERIFY2(!host->windowRegistry().hasTextBox(textBoxName), "A text edit destroyed with its user window stayed in the profile's window registry.");
@@ -4062,6 +4321,9 @@ noViewSelectionReport = table.concat(noViewSelectionProblems, '; ')
     // getFont() does not report.
     void test_setFontKeepsALabelsPointSize()
     {
+#ifndef INCLUDE_FONTS
+        QSKIP("Built with WITH_FONTS=NO, so there is no bundled Ubuntu Mono to give the label");
+#else
         startProfile();
         auto host = mudlet::self()->getActiveHost();
         QVERIFY2(host, "No active host available for the test.");
@@ -4089,6 +4351,7 @@ noViewSelectionReport = table.concat(noViewSelectionProblems, '; ')
         QCOMPARE(label->font().family(), qsl("Ubuntu Mono"));
         QCOMPARE(label->font().weight(), QFont::Bold);
         QCOMPARE(label->font().pointSize(), 19);
+#endif
     }
 
     void test_getMousePositionIsRelativeToTheMainConsole()
@@ -4200,7 +4463,7 @@ noViewSelectionReport = table.concat(noViewSelectionProblems, '; ')
         QVERIFY2(host->windowRegistry().hasScrollBox(innerName), "Deleting a scroll box deregistered the scroll box inside it before the widget was destroyed.");
         QVERIFY2(host->windowRegistry().hasTextBox(textBoxName), "Deleting a scroll box deregistered the text edit inside it before the widget was destroyed.");
 
-        QTRY_VERIFY_WITH_TIMEOUT(inner.isNull() && textBox.isNull(), 5000);
+        QTRY_VERIFY_WITH_TIMEOUT(inner.isNull() && textBox.isNull(), 5s);
 
         QVERIFY2(!host->windowRegistry().hasScrollBox(innerName), "A scroll box destroyed with the scroll box it was in stayed in the profile's window registry.");
         QVERIFY2(!host->windowRegistry().hasTextBox(textBoxName), "A text edit destroyed with the scroll box it was in stayed in the profile's window registry.");
@@ -4290,7 +4553,7 @@ noViewSelectionReport = table.concat(noViewSelectionProblems, '; ')
         }
         QVERIFY2(replacement, "Creating a scroll box over a deleted name did not produce a new widget.");
 
-        QTRY_VERIFY_WITH_TIMEOUT(original.isNull(), 5000);
+        QTRY_VERIFY_WITH_TIMEOUT(original.isNull(), 5s);
 
         QVERIFY2(host->windowRegistry().hasScrollBox(scrollBoxName), "The old scroll box's deferred delete took its replacement's registry entry with it.");
         QCOMPARE(host->windowType(scrollBoxName), std::optional<QString>(qsl("scrollbox")));
@@ -4328,7 +4591,7 @@ noViewSelectionReport = table.concat(noViewSelectionProblems, '; ')
         TTextBox* replacement = host->mpConsole->textBoxWidget(textBoxName);
         QVERIFY2(replacement && replacement != original, "Creating a text edit over a deleted name did not produce a new widget.");
 
-        QTRY_VERIFY_WITH_TIMEOUT(original.isNull(), 5000);
+        QTRY_VERIFY_WITH_TIMEOUT(original.isNull(), 5s);
 
         QVERIFY2(host->windowRegistry().hasTextBox(textBoxName), "The old text edit's deferred delete took its replacement's registry entry with it.");
         QCOMPARE(host->windowType(textBoxName), std::optional<QString>(qsl("textedit")));
@@ -4350,7 +4613,7 @@ private:
                     [host]() {
                         return host->mTelnet.getConnectionState() == QAbstractSocket::ConnectedState;
                     },
-                    5000)) {
+                    5s)) {
             QFAIL("Could not connect with the host.");
         }
     }
@@ -4383,7 +4646,7 @@ private:
                          [&console]() {
                              return console.isNull();
                          },
-                         5000),
+                         5s),
                  "The main console view was not destroyed by closing the profile.");
         QVERIFY2(host->mpConsole.isNull(), "The host still points at a main console.");
     }

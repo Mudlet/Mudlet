@@ -281,6 +281,24 @@ private slots:
         QVERIFY2(exportTriggerToXML(restored) == snapshot, qPrintable(readable(exportTriggerToXML(restored)) + qsl("\n---- expected ----\n") + readable(snapshot)));
     }
 
+    void test_nestedTriggerGroupsAreRecreatedInOrder()
+    {
+        TTrigger* group = newTrigger(qsl("eixh nested group"));
+        group->setIsFolder(true);
+        dressTrigger(newTrigger(qsl("eixh nested first"), group), qsl("first"));
+        TTrigger* subGroup = newTrigger(qsl("eixh nested subgroup"), group);
+        subGroup->setIsFolder(true);
+        dressTrigger(newTrigger(qsl("eixh nested grandchild"), subGroup), qsl("grandchild"));
+        dressTrigger(newTrigger(qsl("eixh nested last"), group), qsl("last"));
+        const QString snapshot = exportTriggerToXML(group);
+
+        TTrigger* restored = importTriggerFromXML(snapshot, nullptr, mpHost, 0);
+
+        QVERIFY(restored);
+        QCOMPARE(restored->getChildrenList()->size(), 3);
+        QVERIFY2(exportTriggerToXML(restored) == snapshot, qPrintable(readable(exportTriggerToXML(restored)) + qsl("\n---- expected ----\n") + readable(snapshot)));
+    }
+
     void test_triggerIsRestoredOverAnEditFromItsSnapshot()
     {
         TTrigger* trigger = newTrigger(qsl("eixh trigger edited"));
@@ -481,6 +499,70 @@ private slots:
         QVERIFY2(exportActionToXML(action) == before, qPrintable(readable(exportActionToXML(action)) + qsl("\n---- expected ----\n") + readable(before)));
     }
 
+    // The editor snapshots a group before and after every save of it, so the
+    // snapshot leaves out what the group holds; restoring it must still work.
+    void test_anItemOnlySnapshotHoldsTheGroupButNotWhatItHolds()
+    {
+        const auto holdsOnly = [](const QString& snapshot, const QString& groupName, const QString& childName) {
+            const QString xml = readable(snapshot);
+            return xml.contains(groupName) && !xml.contains(childName);
+        };
+
+        TTrigger* triggerGroup = newTrigger(qsl("eixh lone trigger group"));
+        triggerGroup->setIsFolder(true);
+        newTrigger(qsl("eixh lone trigger child"), triggerGroup);
+        const QString triggerSnapshot = exportTriggerToXML(triggerGroup, SnapshotScope::ItemOnly);
+        QVERIFY2(holdsOnly(triggerSnapshot, qsl("eixh lone trigger group"), qsl("eixh lone trigger child")), qPrintable(readable(triggerSnapshot)));
+        triggerGroup->setName(qsl("eixh lone trigger renamed"));
+        QVERIFY(updateTriggerFromXML(triggerGroup, triggerSnapshot));
+        QCOMPARE(triggerGroup->getName(), qsl("eixh lone trigger group"));
+
+        TAlias* aliasGroup = newAlias(qsl("eixh lone alias group"));
+        aliasGroup->setIsFolder(true);
+        newAlias(qsl("eixh lone alias child"), aliasGroup);
+        const QString aliasSnapshot = exportAliasToXML(aliasGroup, SnapshotScope::ItemOnly);
+        QVERIFY2(holdsOnly(aliasSnapshot, qsl("eixh lone alias group"), qsl("eixh lone alias child")), qPrintable(readable(aliasSnapshot)));
+        aliasGroup->setName(qsl("eixh lone alias renamed"));
+        QVERIFY(updateAliasFromXML(aliasGroup, aliasSnapshot));
+        QCOMPARE(aliasGroup->getName(), qsl("eixh lone alias group"));
+
+        TTimer* timerGroup = newTimer(qsl("eixh lone timer group"));
+        timerGroup->setIsFolder(true);
+        newTimer(qsl("eixh lone timer child"), timerGroup);
+        const QString timerSnapshot = exportTimerToXML(timerGroup, SnapshotScope::ItemOnly);
+        QVERIFY2(holdsOnly(timerSnapshot, qsl("eixh lone timer group"), qsl("eixh lone timer child")), qPrintable(readable(timerSnapshot)));
+        timerGroup->setName(qsl("eixh lone timer renamed"));
+        QVERIFY(updateTimerFromXML(timerGroup, timerSnapshot));
+        QCOMPARE(timerGroup->getName(), qsl("eixh lone timer group"));
+
+        TScript* scriptGroup = newScript(qsl("eixh lone script group"));
+        scriptGroup->setIsFolder(true);
+        newScript(qsl("eixh lone script child"), scriptGroup);
+        const QString scriptSnapshot = exportScriptToXML(scriptGroup, SnapshotScope::ItemOnly);
+        QVERIFY2(holdsOnly(scriptSnapshot, qsl("eixh lone script group"), qsl("eixh lone script child")), qPrintable(readable(scriptSnapshot)));
+        scriptGroup->setName(qsl("eixh lone script renamed"));
+        QVERIFY(updateScriptFromXML(scriptGroup, scriptSnapshot));
+        QCOMPARE(scriptGroup->getName(), qsl("eixh lone script group"));
+
+        TKey* keyGroup = newKey(qsl("eixh lone key group"));
+        keyGroup->setIsFolder(true);
+        newKey(qsl("eixh lone key child"), keyGroup);
+        const QString keySnapshot = exportKeyToXML(keyGroup, SnapshotScope::ItemOnly);
+        QVERIFY2(holdsOnly(keySnapshot, qsl("eixh lone key group"), qsl("eixh lone key child")), qPrintable(readable(keySnapshot)));
+        keyGroup->setName(qsl("eixh lone key renamed"));
+        QVERIFY(updateKeyFromXML(keyGroup, keySnapshot));
+        QCOMPARE(keyGroup->getName(), qsl("eixh lone key group"));
+
+        TAction* actionGroup = newAction(qsl("eixh lone button group"));
+        actionGroup->setIsFolder(true);
+        newAction(qsl("eixh lone button child"), actionGroup);
+        const QString actionSnapshot = exportActionToXML(actionGroup, SnapshotScope::ItemOnly);
+        QVERIFY2(holdsOnly(actionSnapshot, qsl("eixh lone button group"), qsl("eixh lone button child")), qPrintable(readable(actionSnapshot)));
+        actionGroup->setName(qsl("eixh lone button renamed"));
+        QVERIFY(updateActionFromXML(actionGroup, actionSnapshot));
+        QCOMPARE(actionGroup->getName(), qsl("eixh lone button group"));
+    }
+
     // A snapshot is written by XMLexport, which numbers the sixteen basic colours
     // of a colour pattern the way a save file does. Read back without turning
     // them into ANSI numbers again, a deleted colour trigger came back matching
@@ -527,6 +609,43 @@ private slots:
         QVERIFY(updateTriggerFromXML(trigger, before));
 
         QVERIFY2(trigger->getPatternsList().isEmpty(), qPrintable(trigger->getPatternsList().join(qsl(", "))));
+    }
+
+    // The snapshot's active state is applied before its patterns and code, while
+    // the item still holds ones that cannot be activated - none, a broken regex,
+    // broken Lua - and switching on again once they are restored is what was missing
+    void test_restoringPatternsAnItemCouldNotRunWithoutSwitchesItBackOn()
+    {
+        TTrigger* firstPattern = newTrigger(qsl("eixh trigger given its first pattern"));
+        QVERIFY(firstPattern->setRegexCodeList({qsl("eixh first pattern")}, {REGEX_SUBSTRING}));
+        QVERIFY(firstPattern->setIsActive(true));
+        const QString withPattern = exportTriggerToXML(firstPattern);
+        firstPattern->setRegexCodeList({}, {});
+        QVERIFY(!firstPattern->isActive());
+        QVERIFY(updateTriggerFromXML(firstPattern, withPattern));
+        QVERIFY2(firstPattern->isActive(), "a redo that gave the trigger its pattern back left it switched off");
+
+        TTrigger* brokenRegex = newTrigger(qsl("eixh trigger given a broken regex"));
+        QVERIFY(brokenRegex->setRegexCodeList({qsl("^eixh")}, {REGEX_PERL}));
+        QVERIFY(brokenRegex->setIsActive(true));
+        const QString working = exportTriggerToXML(brokenRegex);
+        brokenRegex->setRegexCodeList({qsl("(eixh unclosed")}, {REGEX_PERL});
+        QVERIFY(!brokenRegex->isActive());
+        QVERIFY(updateTriggerFromXML(brokenRegex, working));
+        QVERIFY2(brokenRegex->isActive(), "undoing the edit that broke the trigger's regex left it switched off");
+
+        TScript* brokenLua = newScript(qsl("eixh script given broken Lua"));
+        // compile() rather than setScript() alone: a bare Host blocks compiling until a profile has loaded
+        brokenLua->setScript(qsl("local eixh = 1"));
+        brokenLua->compile();
+        QVERIFY(brokenLua->setIsActive(true));
+        const QString compiling = exportScriptToXML(brokenLua);
+        brokenLua->setScript(qsl("if then end"));
+        brokenLua->compile();
+        brokenLua->setIsActive(true);
+        QVERIFY(!brokenLua->isActive());
+        QVERIFY(updateScriptFromXML(brokenLua, compiling));
+        QVERIFY2(brokenLua->isActive(), "undoing the edit that broke the script's Lua left it switched off");
     }
 
     // The same for a script given its first event handler: undoing that has to
