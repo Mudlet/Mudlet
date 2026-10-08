@@ -1501,7 +1501,7 @@ function db:_drop_orphaned_indexes(conn, s_name, schema)
 
     elseif index_match then
       cols = {}
-      for col in index_match:gmatch('"(%w+)"') do
+      for col in index_match:gmatch('"([^"]+)"') do
         table.insert(cols, col)
       end
       table.sort(cols)
