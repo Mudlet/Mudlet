@@ -525,7 +525,7 @@ private:
     const QString createFileHeaderLine(QString, QChar);
     void warnIfMapProgressUnwired(const char* context, bool transferPath);
     void writeJsonUserData(QJsonObject&) const;
-    void readJsonUserData(const QJsonObject&);
+    static QMap<QString, QString> readJsonUserData(const QJsonObject&);
     bool validatePotentialMapFile(QFile&, QDataStream&);
     void flushSymbolCaches();
 

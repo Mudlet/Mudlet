@@ -3665,8 +3665,9 @@ std::pair<bool, QString> TMap::readJsonMapFile(const QString& source, const bool
 
     mDefaultAreaName = mapObj[QLatin1String("defaultAreaName")].toString();
     mUnnamedAreaName = mapObj[QLatin1String("anonymousAreaName")].toString();
+    QMap<QString, QString> userData;
     if (mapObj.contains(QLatin1String("userData"))) {
-        readJsonUserData(mapObj[QLatin1String("userData")].toObject());
+        userData = readJsonUserData(mapObj[QLatin1String("userData")].toObject());
     }
     const QString mapSymbolFontText = mapObj[QLatin1String("mapSymbolFontDetails")].toString();
     // qRound() returns an int, so dividing by an int literal here used to be
@@ -3758,6 +3759,7 @@ std::pair<bool, QString> TMap::readJsonMapFile(const QString& source, const bool
 
     mCustomEnvColors.swap(customEnvColors);
     mEnvColors.swap(envColors);
+    mUserData.swap(userData);
     mIsOnlyMapSymbolFontToBeUsed = isOnlyMapSymbolFontToBeUsed;
     QFont mapSymbolFont;
     mapSymbolFont.fromString(mapSymbolFontText);
@@ -3814,18 +3816,15 @@ void TMap::writeJsonUserData(QJsonObject& obj) const
 }
 
 // Takes a userData object and parses all its elements
-void TMap::readJsonUserData(const QJsonObject& obj)
+QMap<QString, QString> TMap::readJsonUserData(const QJsonObject& obj)
 {
-    if (obj.isEmpty()) {
-        // Skip doing anything more if there is nothing to do:
-        return;
-    }
-
+    QMap<QString, QString> userData;
     for (auto& key : obj.keys()) {
         if (obj.value(key).isString()) {
-            mUserData.insert(key, obj.value(key).toString());
+            userData.insert(key, obj.value(key).toString());
         }
     }
+    return userData;
 }
 
 // Inserts a color as an array of 3 or 4 ints (cast to doubles) into the
