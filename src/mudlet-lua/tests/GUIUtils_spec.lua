@@ -1671,6 +1671,15 @@ describe("Tests the GUI utilities as far as possible without mudlet", function()
       selectAll(windowName, "cat", function() funcCalls = funcCalls + 1 end)
       assert.equals(3, funcCalls)
     end)
+
+    it("Should answer nil and a message for a window that does not exist", function()
+      local called = false
+      local ok, result, message = pcall(selectAll, "selectAllNoSuchWindow", "cat", function() called = true end)
+      assert.is_true(ok, result)
+      assert.is_nil(result)
+      assert.is_string(message)
+      assert.is_false(called)
+    end)
   end)
 
   describe("Tests the functionality of PadHexNum", function()
@@ -2633,6 +2642,40 @@ describe("Tests the GUI utilities as far as possible without mudlet", function()
       assert.are.same(color_table.blue, formatAt(windowName, 2, 1).foreground)
     end)
 
+    it("Should insert each piece after one that is not ASCII", function()
+      -- é is two bytes, 漢字 six, and 😀 four bytes and two columns
+      for _, case in ipairs({{"é", "éXAB"}, {"漢字", "漢字XAB"}, {"😀", "😀XAB"}}) do
+        clearWindow(windowName)
+        echo(windowName, "AB\n")
+        moveCursor(windowName, 0, 0)
+        cinsertText(windowName, case[1] .. "<red>X")
+        moveCursor(windowName, 0, 0)
+        assert.equals(case[2], currentLine(windowName))
+      end
+    end)
+
+    it("Should insert each piece after bytes that are not valid UTF-8", function()
+      local replacement = "\239\191\189"
+      -- a stray continuation byte, a truncated emoji and an encoded surrogate
+      for _, case in ipairs({{"\128", 1}, {"\240\159\152", 3}, {"\237\160\128", 3}}) do
+        clearWindow(windowName)
+        echo(windowName, "AB\n")
+        moveCursor(windowName, 0, 0)
+        cinsertText(windowName, case[1] .. "<red>X")
+        moveCursor(windowName, 0, 0)
+        assert.equals(string.rep(replacement, case[2]) .. "XAB", currentLine(windowName))
+      end
+    end)
+
+    it("Should answer nil and a message for an insert into a window that does not exist", function()
+      for _, insert in ipairs({{cinsertText, "<red>x"}, {dinsertText, "<255,0,0>x"}, {hinsertText, "#ff0000x"}}) do
+        local ok, result, message = pcall(insert[1], "guiUtilsNoSuchWindow", insert[2])
+        assert.is_true(ok, result)
+        assert.is_nil(result)
+        assert.equals("window does not exist", message)
+      end
+    end)
+
     it("Should return nothing", function()
       assert.equals(0, select("#", cecho(windowName, "<red>x")))
       assert.equals(0, select("#", xEcho("Color", "echo", windowName, "<red>x")))
@@ -3173,6 +3216,15 @@ describe("Tests the GUI utilities as far as possible without mudlet", function()
       assert.equals("brand new", currentLine())
       hreplaceLine(windowName, "#0000ffnewer still")
       assert.equals("newer still", currentLine())
+    end)
+
+    it("Should answer nil and a message for a window that does not exist", function()
+      for _, colourReplace in ipairs({creplace, dreplace, hreplace}) do
+        local ok, result, message = pcall(colourReplace, "guiUtilsNoSuchWindow", "x")
+        assert.is_true(ok, result)
+        assert.is_nil(result)
+        assert.is_string(message)
+      end
     end)
 
     it("Should error when the window name is not a string", function()

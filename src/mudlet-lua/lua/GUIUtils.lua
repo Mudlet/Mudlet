@@ -1418,6 +1418,42 @@ local processedEchoToHTML = function(t, reset)
   return table.concat(parts)
 end
 
+-- Cursor columns count UTF-16 code units: one per character, two for one outside the BMP.
+-- Each byte of a malformed sequence becomes its own U+FFFD when Qt decodes the text.
+local function utf16Length(str)
+  local length, i, n = 0, 1, #str
+  while i <= n do
+    local lead = str:byte(i)
+    local size, low, high = 1, 0x80, 0xBF
+    if lead >= 0xC2 and lead <= 0xDF then
+      size = 2
+    elseif lead >= 0xE0 and lead <= 0xEF then
+      size = 3
+      if lead == 0xE0 then low = 0xA0 elseif lead == 0xED then high = 0x9F end
+    elseif lead >= 0xF0 and lead <= 0xF4 then
+      size = 4
+      if lead == 0xF0 then low = 0x90 elseif lead == 0xF4 then high = 0x8F end
+    end
+    local valid = size > 1 and i + size - 1 <= n
+    if valid then
+      local second = str:byte(i + 1)
+      valid = second >= low and second <= high
+      for j = i + 2, i + size - 1 do
+        local byte = str:byte(j)
+        valid = valid and byte >= 0x80 and byte <= 0xBF
+      end
+    end
+    if valid then
+      length = length + (size == 4 and 2 or 1)
+      i = i + size
+    else
+      length = length + 1
+      i = i + 1
+    end
+  end
+  return length
+end
+
 --- Generic color echo and insert function (allowing hecho, decho, cecho, hinsertText, dinsertText and cinsertText).
 ---
 --- @param style Hex, Decimal or Color
@@ -1489,6 +1525,9 @@ function xEcho(style, func, ...)
     local result = processedEchoToHTML(t, reset)
     echo(win, result)
   else
+    if func == "insertText" and not getColumnNumber(win) then
+      return nil, "window does not exist"
+    end
     local t = _Echos.Process(str, style)
     resetFormat(win)
     for _, v in ipairs(t) do
@@ -1528,7 +1567,7 @@ function xEcho(style, func, ...)
         if plain then
           _G[func](win, v)
           if func == 'insertText' then
-            moveCursor(win, getColumnNumber(win) + string.len(v), getLineNumber(win))
+            moveCursor(win, getColumnNumber(win) + utf16Length(v), getLineNumber(win))
           end
         else
           -- if fmt then setUnderline(win, true) end -- not sure if underline is necessary unless asked for
@@ -1598,7 +1637,7 @@ end
 --- @see xEcho
 --- @see hecho
 function hinsertText(...)
-  xEcho("Hex", "insertText", ...)
+  return xEcho("Hex", "insertText", ...)
 end
 
 
@@ -1607,7 +1646,7 @@ end
 --- @see xEcho
 --- @see decho
 function dinsertText(...)
-  xEcho("Decimal", "insertText", ...)
+  return xEcho("Decimal", "insertText", ...)
 end
 
 
@@ -1616,7 +1655,7 @@ end
 --- @see xEcho
 --- @see cecho
 function cinsertText(...)
-  xEcho("Color", "insertText", ...)
+  return xEcho("Color", "insertText", ...)
 end
 
 
@@ -2361,6 +2400,9 @@ function xReplace(window, text, type)
     window = "main"
   end
   local str, start, stop = getSelection(window)
+  if not str then
+    return nil, start
+  end
 	if window ~= "main" then
 		replace(window, "")
     moveCursor(window, start, getLineNumber(window))
@@ -2369,13 +2411,13 @@ function xReplace(window, text, type)
     moveCursor(start, getLineNumber())
 	end
   if type == 'c' then
-    cinsertText(window, text)
+    return cinsertText(window, text)
   elseif type == 'd' then
-    dinsertText(window, text)
+    return dinsertText(window, text)
   elseif type == 'h' then
-    hinsertText(window, text)
+    return hinsertText(window, text)
   else
-    insertText(window, text)
+    return insertText(window, text)
   end
 end
 
@@ -2384,7 +2426,7 @@ end
 --- @param text The text to replace the selection with.
 function creplace(window, text)
   assert(type(window) == 'string', 'creplace: bad argument #1 type (expected string, got '..type(window)..'!)')
-  xReplace(window, text, 'c')
+  return xReplace(window, text, 'c')
 end
 
 --- version of replaceLine function that allows for color, by way of cinsertText
@@ -2397,7 +2439,7 @@ function creplaceLine(window, text)
   else
     selectCurrentLine(window)
   end
-  creplace(window, text)
+  return creplace(window, text)
 end
 
 --- version of replace function that allows for color, by way of dinsertText
@@ -2405,7 +2447,7 @@ end
 --- @param text The text to replace the selection with.
 function dreplace(window, text)
   assert(type(window) == 'string', 'dreplace: bad argument #1 type (expected string, got '..type(window)..'!)')
-  xReplace(window, text, 'd')
+  return xReplace(window, text, 'd')
 end
 
 --- version of replaceLine function that allows for color, by way of dinsertText
@@ -2418,7 +2460,7 @@ function dreplaceLine(window, text)
   else
     selectCurrentLine(window)
   end
-  dreplace(window, text)
+  return dreplace(window, text)
 end
 
 --- version of replace function that allows for color, by way of hinsertText
@@ -2426,7 +2468,7 @@ end
 --- @param text The text to replace the selection with.
 function hreplace(window, text)
   assert(type(window) == 'string', 'hreplace: bad argument #1 type (expected string, got '..type(window)..'!)')
-  xReplace(window, text, 'h')
+  return xReplace(window, text, 'h')
 end
 
 --- version of replaceLine function that allows for color, by way of hinsertText
@@ -2439,7 +2481,7 @@ function hreplaceLine(window, text)
   else
     selectCurrentLine(window)
   end
-  hreplace(window, text)
+  return hreplace(window, text)
 end
 
 function resetLabelToolTip(label)
@@ -3144,15 +3186,20 @@ function selectAll(windowName, str, func)
   end
 
   local count = 1
-  if windowName then
-    while selectString(windowName, str, count) > -1 do
-      func()
-      count = count + 1
+  while true do
+    local pos, err
+    if windowName then
+      pos, err = selectString(windowName, str, count)
+    else
+      pos, err = selectString(str, count)
     end
-  else
-    while selectString(str, count) > -1 do
-      func()
-      count = count + 1
+    if not pos then
+      return nil, err
     end
+    if pos == -1 then
+      return
+    end
+    func()
+    count = count + 1
   end
 end
