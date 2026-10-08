@@ -4647,19 +4647,25 @@ void dlgProfilePreferences::updateShortcutConflictWarning()
                 reported.append(j);
             }
         }
-        if (labels.size() < 2) {
+        // addCommand() refuses a key Mudlet holds, but nothing stops a Mudlet shortcut moving onto a command's key
+        const QStringList holders = mudlet::self()->addonCommandsUsingShortcut(sequence, mpHost, true);
+        if (labels.size() + holders.size() < 2) {
             continue;
         }
         const QString sequenceText = sequence.toString(QKeySequence::NativeText);
-        if (labels.size() == 2) {
+        if (labels.size() == 2 && holders.isEmpty()) {
             //: Inline warning on the shortcuts preferences page when exactly two actions have been given the same shortcut. %1 and %2 are the action names, %3 is the shortcut itself.
             warnings.append(tr("Warning: '%1' and '%2' now share the shortcut %3 - neither will work until one of them is changed.").arg(labels.at(0), labels.at(1), sequenceText));
+        } else if (labels.size() == 1 && holders.size() == 1) {
+            //: Inline warning on the shortcuts preferences page when one of Mudlet's actions has been given a shortcut an add-on command already holds. %1 is the action name, %2 the shortcut itself, %3 a comma separated list of the commands holding it: each command's name in quotes, or "a command from another profile".
+            warnings.append(tr("Warning: '%1' now shares the shortcut %2 with %3 - neither will work until one of them is changed.").arg(labels.at(0), sequenceText, holders.join(qsl(", "))));
         } else {
             QStringList quotedLabels;
             for (const auto& label : labels) {
                 quotedLabels.append(qsl("'%1'").arg(label));
             }
-            //: Inline warning on the shortcuts preferences page when three or more actions have been given the same shortcut. %1 is the list of action names (each already quoted), %2 is the shortcut itself.
+            quotedLabels.append(holders);
+            //: Inline warning on the shortcuts preferences page when three or more actions or add-on commands have been given the same shortcut. %1 is the list of them, each already quoted (an add-on command from another profile appears as "a command from another profile"), %2 is the shortcut itself.
             warnings.append(tr("Warning: %1 now share the shortcut %2 - none of them will work until they are changed.").arg(quotedLabels.join(qsl(", ")), sequenceText));
         }
     }
