@@ -10,17 +10,22 @@ permissions:
   contents: write
   actions: write
 
-# Both build workflows trigger this; don't cancel the first - the second trigger completes the release
-concurrency:
-  group: create-github-release-${{ github.event.workflow_run.head_sha }}
-  cancel-in-progress: false
-
 jobs:
   create-release:
     runs-on: ubuntu-latest
     if: >
       github.repository_owner == 'Mudlet' &&
       github.event.workflow_run.conclusion == 'success'
+    # Both build workflows trigger this; don't cancel the first - the second trigger completes the release.
+    # Held by this job rather than the whole run: the Linux package build's attach job takes the same
+    # group, and linux-packages below waits for that build to finish.
+    concurrency:
+      group: create-github-release-${{ github.event.workflow_run.head_sha }}
+      cancel-in-progress: false
+    outputs:
+      type: ${{ steps.release-type.outputs.type }}
+      tag: ${{ steps.release-type.outputs.tag }}
+      published: ${{ steps.verify.outputs.published }}
 
     steps:
       - name: Check if platform builds completed
@@ -430,6 +435,7 @@ jobs:
 
       # Confirm against the live release, not just the files we meant to upload
       - name: Verify published release checksums
+        id: verify
         if: steps.release-type.outputs.type == 'release' || steps.release-type.outputs.type == 'ptb'
         env:
           RELEASE_TAG: ${{ steps.release-type.outputs.tag }}
@@ -455,15 +461,7 @@ jobs:
           echo "Published assets:"
           cat published-final/assets.txt
           bash release-scripts/CI/verify-release-checksums.sh published-final/SHA256SUMS.txt published-final/assets.txt
-
-      # A GITHUB_TOKEN release fires no release event, so start the package build here, best-effort.
-      - name: Start the Linux package build
-        if: steps.release-type.outputs.type == 'release' && vars.LINUX_PACKAGES_BASE_URL != ''
-        continue-on-error: true
-        env:
-          RELEASE_TAG: ${{ steps.release-type.outputs.tag }}
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: gh workflow run build-linux-packages.yml --repo "${GITHUB_REPOSITORY}" -f tag="${RELEASE_TAG}" -f publish=true
+          echo "published=true" >> "$GITHUB_OUTPUT"
 
       # Generate and upload Sparkle appcast XML for macOS updates
       - name: Add SSH agent for appcast upload
@@ -591,3 +589,83 @@ jobs:
               echo "::warning::Appcast not yet accessible at ${url}"
             fi
           done
+
+  # A GITHUB_TOKEN release fires no release event, so start the package build here. A job of its own so
+  # waiting on it holds up nothing else, and so a failed package build turns this run red.
+  linux-packages:
+    name: Build the Linux packages
+    needs: create-release
+    # once the release is verified, even if a later step such as the appcast upload then fails
+    if: >
+      needs.create-release.outputs.published == 'true' &&
+      !cancelled() &&
+      needs.create-release.outputs.type == 'release' &&
+      vars.LINUX_PACKAGES_BASE_URL != ''
+    runs-on: ubuntu-latest
+    # the package build's matrix jobs may take 120 minutes each, then it attaches and publishes
+    timeout-minutes: 240
+    steps:
+      - name: Start the Linux package build and wait for it
+        env:
+          RELEASE_TAG: ${{ needs.create-release.outputs.tag }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          # build-linux-packages.yml's run-name for a publishing dispatch
+          export RUN_TITLE="Build Linux packages for ${RELEASE_TAG} (publish)"
+          list_runs() {
+            gh run list --repo "${GITHUB_REPOSITORY}" --workflow build-linux-packages.yml \
+              --event workflow_dispatch --limit 50 --json databaseId,displayTitle "$@"
+          }
+          # gh workflow run does not say which run it started; run ids only grow, so ours is the
+          # first above the newest from before the dispatch whose run-name names this tag
+          previous=""
+          for _ in 1 2 3 4 5; do
+            previous=$(list_runs --jq '[.[].databaseId] | max // 0') && break
+            previous=""
+            sleep 10
+          done
+          if [[ -z "${previous}" ]]; then
+            echo "::error::Could not list the Linux package builds, so did not start one for ${RELEASE_TAG}"
+            exit 1
+          fi
+          gh workflow run build-linux-packages.yml --repo "${GITHUB_REPOSITORY}" -f tag="${RELEASE_TAG}" -f publish=true
+
+          run_id=""
+          for _ in $(seq 1 30); do
+            run_id=$(list_runs --jq "[.[] | select(.databaseId > ${previous} and .displayTitle == \$ENV.RUN_TITLE) | .databaseId] | min // empty") || run_id=""
+            if [[ -n "${run_id}" ]]; then
+              break
+            fi
+            sleep 10
+          done
+          if [[ -z "${run_id}" ]]; then
+            echo "::error::Started the Linux package build for ${RELEASE_TAG} but could not find its run"
+            exit 1
+          fi
+
+          url="${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${run_id}"
+          echo "Linux package build for ${RELEASE_TAG}: ${url}" >> "$GITHUB_STEP_SUMMARY"
+          echo "Waiting for the Linux package build at ${url}"
+          # gh run watch also exits non-zero when it loses the API, so the run's own result decides
+          result=""
+          for _ in 1 2 3; do
+            gh run watch "${run_id}" --repo "${GITHUB_REPOSITORY}" --exit-status --interval 60 > /dev/null || true
+            result=$(gh run view "${run_id}" --repo "${GITHUB_REPOSITORY}" --json status,conclusion \
+              --jq '.status + " " + .conclusion') || result=""
+            if [[ "${result}" == completed* ]]; then
+              break
+            fi
+            sleep 30
+          done
+          case "${result}" in
+            "completed success")
+              ;;
+            completed*)
+              echo "::error::The Linux package build for ${RELEASE_TAG} ended '${result#completed }': ${url}"
+              exit 1
+              ;;
+            *)
+              echo "::error::Lost track of the Linux package build for ${RELEASE_TAG} (last status: '${result:-unknown}'), check it at ${url}"
+              exit 1
+              ;;
+          esac

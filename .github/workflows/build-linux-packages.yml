@@ -1,4 +1,9 @@
 name: 📦 Build Linux packages
+# create-github-release.yml finds the build it dispatched by this name
+run-name: >-
+  ${{ github.event_name == 'workflow_dispatch'
+      && format('Build Linux packages for {0}{1}', inputs.tag, inputs.publish && ' (publish)' || '')
+      || github.event.pull_request.title }}
 on:
   workflow_dispatch:
     inputs:
