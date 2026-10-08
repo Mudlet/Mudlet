@@ -3779,6 +3779,18 @@ describe("Tests saveMap and loadMap", function()
       assert.are.same({roomA}, getAllRoomEntrances(roomB))
     end)
 
+    -- format 20 carries the area's zoom and its labels' fonts and outline
+    -- colours as extra area user data, which only the file is meant to see
+    it("leaves the live area user data alone when it saves", function()
+      local area = buildMap()
+      assert.is_true(setAreaUserData(area, "climate", "temperate"))
+      createMapLabel(area, "Saved Label", 0, 0, 0, 255, 255, 255, 0, 0, 0,
+                     30.0, 50, true, true, "", 255, 50, false)
+
+      assert.is_true(saveMap(savePath, 20))
+      assert.are.same({climate = "temperate"}, getAllAreaUserData(area))
+    end)
+
     it("replaces what is on the map rather than merging into it", function()
       buildMap()
       saveMap(savePath)
