@@ -524,9 +524,16 @@ void TTreeWidget::addVariableRows(VarUnit* pVarUnit, QTreeWidgetItem* pParent, T
     pParent->addChildren(cList);
 }
 
+TTreeWidget::~TTreeWidget()
+{
+    qDeleteAll(mNewVariableForRow);
+}
+
+// An unsaved new variable is in no table yet, so its row's entry is the only owner it has
 void TTreeWidget::clearVariableRows()
 {
     mVariableForRow.clear();
+    qDeleteAll(mNewVariableForRow);
     mNewVariableForRow.clear();
 }
 
@@ -543,6 +550,7 @@ void TTreeWidget::adoptVariableTree(VarUnit* pVarUnit)
         return;
     }
     mVariableForRow.clear();
+    qDeleteAll(mNewVariableForRow);
     mNewVariableForRow.clear();
     mVariablesGeneration = pVarUnit->treeGeneration();
 }
@@ -572,7 +580,7 @@ void TTreeWidget::setNewVariableForRow(VarUnit* pVarUnit, QTreeWidgetItem* pItem
 void TTreeWidget::forgetRow(QTreeWidgetItem* pItem)
 {
     mVariableForRow.remove(pItem);
-    mNewVariableForRow.remove(pItem);
+    delete mNewVariableForRow.take(pItem);
 }
 
 void TTreeWidget::forgetNewVariableForRow(QTreeWidgetItem* pItem)
