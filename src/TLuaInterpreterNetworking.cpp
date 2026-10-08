@@ -684,14 +684,15 @@ int TLuaInterpreter::setIrcServer(lua_State* L)
     }
     lua_pushnil(L);
     while (lua_next(L, index) != 0) {
-        // key at index -2 and value at index -1
-        if (lua_type(L, -1) != LUA_TSTRING || lua_type(L, -2) != LUA_TSTRING) {
-            lua_pushfstring(L,
-                            "%s: bad argument #%d type (custom headers must be strings, got header: %s (should be string) and value: %s (should be string))",
-                            functionName,
-                            index,
-                            luaL_typename(L, -2),
-                            luaL_typename(L, -1));
+        // key at index -2 and value at index -1; only a key already known to be a
+        // string may be read with lua_tostring(), which would convert a number key
+        // in place and break lua_next()
+        if (lua_type(L, -2) != LUA_TSTRING) {
+            lua_pushfstring(L, "%s: bad argument #%d type (custom header names must be strings, got %s)", functionName, index, luaL_typename(L, -2));
+            lua_error(L);
+        }
+        if (lua_type(L, -1) != LUA_TSTRING) {
+            lua_pushfstring(L, "%s: bad argument #%d type (custom header \"%s\" must have a string value, got %s)", functionName, index, lua_tostring(L, -2), luaL_typename(L, -1));
             lua_error(L);
         }
         // removes value, but keeps key for next iteration

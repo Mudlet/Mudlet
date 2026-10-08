@@ -177,6 +177,16 @@ describe("HTTP and download functions validate arguments before issuing a reques
     it("raises a Lua error when a header value is not a string", function()
       assertArgError(function() getHTTP("http://localhost/", {["X-Test"] = 5}) end, "getHTTP: bad argument")
     end)
+
+    it("blames the value, naming its header, when only the value is wrong", function()
+      assertArgError(function() getHTTP("http://localhost/", {["X-Test"] = {}}) end,
+        'getHTTP: bad argument #2 type (custom header "X-Test" must have a string value, got table)')
+    end)
+
+    it("blames the name when a header name is not a string", function()
+      assertArgError(function() getHTTP("http://localhost/", {"value"}) end,
+        "getHTTP: bad argument #2 type (custom header names must be strings, got number)")
+    end)
   end)
 
   describe("deleteHTTP", function()
