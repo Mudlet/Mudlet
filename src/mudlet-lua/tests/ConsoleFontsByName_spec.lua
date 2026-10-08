@@ -1,8 +1,8 @@
 -- Every one of these finds its console by name: an empty name or "main" is the
 -- main console, and any other is a mini console, user window or buffer. Every
 -- kind of window shares the one name space, so a name that belongs to some
--- other kind must not be taken for a console. getFont and setFont also reach a
--- label, but only once no console answers to the name.
+-- other kind must not be taken for a console. They also reach a label, but
+-- only once no console answers to the name.
 describe("Tests that the font functions find their console by name", function()
   local suffix = ("-%d-%d"):format(os.time(), math.random(100000))
   local unknown = "specFontsByNameNoSuchWindow" .. suffix
@@ -33,11 +33,11 @@ describe("Tests that the font functions find their console by name", function()
 
   -- an array rather than a keyed table so the specs are always generated in
   -- the same order
-  local consoleOnly = {
+  local sizeCalls = {
     {"getFontSize", function(n) return getFontSize(n) end},
     {"setFontSize", function(n) return setFontSize(n, 10) end},
   }
-  local labelsToo = {
+  local familyCalls = {
     {"getFont", function(n) return getFont(n) end},
     {"setFont", function(n) return setFont(n, families[1]) end},
   }
@@ -69,8 +69,8 @@ describe("Tests that the font functions find their console by name", function()
   end
 
   it("refuses a name that is no window at all", function()
-    assertRefuses(unknown, consoleOnly)
-    assertRefuses(unknown, labelsToo)
+    assertRefuses(unknown, sizeCalls)
+    assertRefuses(unknown, familyCalls)
   end)
 
   describe("with the name of another kind of window", function()
@@ -92,16 +92,25 @@ describe("Tests that the font functions find their console by name", function()
     for _, kind in ipairs(kinds) do
       it("refuses every font function for a " .. kind[1], function()
         assert.is_true(kind[2]())
-        assertRefuses(otherName, consoleOnly)
-        assertRefuses(otherName, labelsToo)
+        assertRefuses(otherName, sizeCalls)
+        assertRefuses(otherName, familyCalls)
       end)
     end
 
-    it("refuses the size of a label, but reaches its font", function()
+    it("reaches the font and the font size of a label", function()
       assert.is_true(createLabel(otherName, 0, 0, 50, 20, 1))
-      assertRefuses(otherName, consoleOnly)
+      assert.are.same({true}, {setFontSize(otherName, 17)})
+      assert.are.same({17}, {getFontSize(otherName)})
       assert.is_true(setFont(otherName, families[1]))
       assert.are.equal(families[1], getFont(otherName))
+      assert.are.same({17}, {getFontSize(otherName)})
+    end)
+
+    it("reaches the font size of a label sized in pixels by its style sheet", function()
+      assert.is_true(createLabel(otherName, 0, 0, 50, 20, 1))
+      setLabelStyleSheet(otherName, "font-size: 12px;")
+      local size = getFontSize(otherName)
+      assert.is_true(type(size) == "number" and size > 0, "getFontSize answered " .. tostring(size))
     end)
   end)
 
