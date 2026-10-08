@@ -433,6 +433,7 @@ public:
     // not "all well": a queued install, an unreadable config.lua and an
     // XML that stopped part-way report themselves on the console instead.
     std::pair<bool, QString> installPackage(const QString& fileName, enums::PackageModuleType thing, bool quiet = false);
+    void reportScriptsThatFailedToLoad();
     bool uninstallPackage(const QString&, enums::PackageModuleType thing);
     bool removeDir(const QString&, const QString&);
     // whyNotRead, when given, is set to why no manifest came back - telling a

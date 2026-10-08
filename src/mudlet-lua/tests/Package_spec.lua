@@ -2771,6 +2771,84 @@ describe("Tests installing a package whose Lua does not work", function()
   end)
 end)
 
+-- The install-time report covers the install only, so from the next launch on a
+-- script whose body fails as the profile opens has to be reported then (#10929).
+-- The suite's own profile cannot be reopened from inside it, so this loads a
+-- second one, which reads its own console back from a script of its own.
+describe("Tests opening a profile whose script fails as it loads", function()
+  local name = "mudlet-spec-load-broken-script"
+  local directory = getMudletHomeDir():match("^(.*)[/\\]") .. "/" .. name
+  -- written into the profile made here, so a profile of the same name that
+  -- this spec did not make is never deleted
+  local marker = directory .. "/mudlet-spec-fixture"
+
+  local function removeTree(path)
+    if lfs.attributes(path, "mode") ~= "directory" then
+      os.remove(path)
+      return
+    end
+    for entry in lfs.dir(path) do
+      if entry ~= "." and entry ~= ".." then
+        removeTree(path .. "/" .. entry)
+      end
+    end
+    lfs.rmdir(path)
+  end
+
+  local function loaded()
+    local entry = getProfiles()[name]
+    return entry ~= nil and entry.loaded
+  end
+
+  it("names the script on that profile's console", function()
+    if not os.getenv("MUDLET_TEST_MODE") then
+      pending("waiting for the other profile needs pumpEvents(), which is refused outside MUDLET_TEST_MODE")
+      return
+    end
+    if lfs.attributes(marker) then
+      removeTree(directory)
+    end
+    assert.is_nil(lfs.attributes(directory), "a profile named " .. name .. " already exists and is not this spec's to delete")
+    local consoleText
+    local handler = registerAnonymousEventHandler("mudletSpecLoadBrokenConsole", function(_, text)
+      consoleText = text
+    end)
+    finally(function()
+      killAnonymousEventHandler(handler)
+      if loaded() then
+        closeProfile(name)
+      end
+      waitUntil(function() return not loaded() end, 5000)
+      if lfs.attributes(marker) then
+        removeTree(directory)
+      end
+    end)
+    lfs.mkdir(directory)
+    io.open(marker, "w"):close()
+    lfs.mkdir(directory .. "/current")
+    writePackageXml(directory .. "/current/2026-01-01#00-00-00.xml", table.concat({
+      '<ScriptPackage>',
+      '<Script isActive="yes" isFolder="no">',
+      '<name>mudlet-spec-fails-at-load</name><packageName></packageName>',
+      '<script>mudletSpecMissingAtLoad()</script>',
+      '<eventHandlerList />',
+      '</Script>',
+      '<Script isActive="yes" isFolder="no">',
+      '<name>mudlet-spec-load-reporter</name><packageName></packageName>',
+      '<script>tempTimer(0, function() raiseGlobalEvent("mudletSpecLoadBrokenConsole", table.concat(getLines("main", 0, getLastLineNumber("main") + 1), "\\n")) end)</script>',
+      '<eventHandlerList />',
+      '</Script>',
+      '</ScriptPackage>',
+    }, "\n"))
+
+    assert.is_true(loadProfile(name, true))
+    assert.is_true(waitUntil(function() return consoleText ~= nil end, 5000), "the other profile never reported its console")
+
+    assert.is_true(containsWrapped(consoleText, '"mudlet-spec-fails-at-load"'), consoleText)
+    assert.is_false(containsWrapped(consoleText, '"mudlet-spec-load-reporter"'), "a script that ran fine was reported too: " .. consoleText)
+  end)
+end)
+
 -- The same failure the way a player meets it: an archive, whose XML files are
 -- read one at a time, holding more than one script that stops with an error.
 describe("Tests installing a package archive whose scripts stop with an error", function()

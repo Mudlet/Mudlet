@@ -2940,6 +2940,30 @@ static bool packageUnpacksAFolder(const QString& fileName)
     return fileName.endsWith(qsl(".zip"), Qt::CaseInsensitive) || fileName.endsWith(qsl(".mpackage"), Qt::CaseInsensitive);
 }
 
+// Without this a script whose body fails as the profile opens is only marked in the editor.
+// Modules are left out for the reason installPackage() does not report them while a profile opens.
+void Host::reportScriptsThatFailedToLoad()
+{
+    QStringList names;
+    for (auto* pScript : mScriptUnit.getScriptList()) {
+        if (!pScript->getLoadingError()) {
+            continue;
+        }
+        const TScript* pRoot = pScript;
+        while (pRoot->getParent()) {
+            pRoot = pRoot->getParent();
+        }
+        if (!mInstalledModules.contains(pRoot->mPackageName)) {
+            names << pScript->getName();
+        }
+    }
+    if (names.isEmpty()) {
+        return;
+    }
+    //: %1 is the names of the scripts, separated by ", " and each already in its own pair of quotes
+    postMessage(tr("[ WARN ]  - These scripts failed to run when the profile loaded: \"%1\". Open them in the editor to see why.").arg(names.join(qsl("\", \""))));
+}
+
 std::pair<bool, QString> Host::installPackage(const QString& fileName, enums::PackageModuleType thing, bool quiet)
 {
     // Wait for profile save to complete before installing package
