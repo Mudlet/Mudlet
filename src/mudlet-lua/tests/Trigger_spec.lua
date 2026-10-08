@@ -53,6 +53,22 @@ describe("Trigger processing", function()
         return not packageInstalled(packageName), reason
     end
 
+    -- pcre2_jit_compile() reports success on a (*NO_JIT) pattern without making
+    -- any JIT code, and pcre2_jit_match() then fails every subject
+    describe("a pattern starting with (*NO_JIT)", function()
+
+        it("still matches", function()
+            local captured
+            local id = tempRegexTrigger([[(*NO_JIT)^nojit_trigger_probe (\w+)$]], function()
+                captured = matches[2]
+            end)
+            feedTriggers("nojit_trigger_probe world\n")
+            killTrigger(id)
+            assert.are.equal("world", captured)
+        end)
+
+    end)
+
     -- Test for nested trigger processing with self-deletion
     -- This verifies the fix that uses mProcessingDepth counter instead of a bool flag
     -- (same fix as for aliases - see Alias_spec.lua for detailed explanation)
@@ -1631,10 +1647,10 @@ describe("Trigger processing", function()
             assert.is_true(fired, "a complex regex trigger should fire on its pattern")
         end)
 
-        -- The match-all (/g) loop steps one byte after an empty match, so on a line
-        -- holding a multi-byte character it can land mid-character. pcre2 then
-        -- rejects the offset and TTrigger::match_perl() ends the loop, dropping
-        -- every capture past that character (#10112). matchAll is argument 8.
+        -- The match-all (/g) loop steps on after an empty match, so on a line holding
+        -- a multi-byte character it must step past the whole character: landing inside
+        -- one has ended the loop, dropping every capture past it (#10112), and has found
+        -- an extra empty match there. matchAll is argument 8.
         it("keeps collecting captures past a multi-byte character", function()
             -- feedTriggers() transcodes into the server encoding, so a non-UTF-8
             -- one would strip the character and let this pass without testing it
@@ -1670,6 +1686,27 @@ describe("Trigger processing", function()
                 end
             end
             assert.is_true(found, "the capture after the multi-byte character was dropped")
+        end)
+
+        -- One character, so one empty match before it: stepping a byte at a time
+        -- after an empty match gave one more inside the character as well
+        it("finds the same matches around a multi-byte character as around a plain one", function()
+            assert.are.equal("UTF-8", getServerEncoding(), "this spec needs a UTF-8 server encoding to feed a multi-byte character")
+            _G.TrigSpec = {seen = {}}
+            local id = tempComplexRegexTrigger("SpecComplexMatchAllSameCount", [[(\d*)]],
+                function()
+                    _G.TrigSpec.seen = {}
+                    for i = 1, #matches do
+                        _G.TrigSpec.seen[i] = matches[i]
+                    end
+                end,
+                0, -1, -1, 0, 1, -1, -1, 0, 0, 0)
+            assert.is_number(id)
+            finally(function() killTrigger("SpecComplexMatchAllSameCount") end)
+            feedTriggers("\ncafe 9\n")
+            local plain = _G.TrigSpec.seen
+            feedTriggers("caf\195\169 9\n")
+            assert.are.same(plain, _G.TrigSpec.seen)
         end)
 
         -- Every capture a match-all fire collects at a non-empty match carries
@@ -2495,6 +2532,54 @@ describe("Trigger processing", function()
             assert.is_true(spec.wasPrompt, "isPrompt() was false on a prompt line the trigger had just gagged")
         end)
 
+        it("isPrompt stays true after a prompt trigger clears the main window", function()
+            _G.TrigSpec = {fired = 0}
+            liveTriggerId = tempPromptTrigger(function()
+                _G.TrigSpec.fired = _G.TrigSpec.fired + 1
+                clearWindow()
+                _G.TrigSpec.linesAfter = getLineCount()
+                _G.TrigSpec.wasPrompt = isPrompt()
+            end)
+            assert.is_true(liveTriggerId > 0, "the prompt trigger was not created")
+
+            echo("\nfirst\nsecond\n")
+            local ok, msg = feedTelnet("SpecPromptCleared> <T_IAC><T_GA>")
+            local spec = _G.TrigSpec
+            feedTelnet("\r\n")
+            deselect()
+
+            assert.is_true(ok, "start the suite with --offline, see the tests README - feedTelnet said: " .. tostring(msg))
+            assert.are.equal(1, spec.fired, "the prompt trigger did not fire on the line ended by IAC GA")
+            assert.are.equal(0, spec.linesAfter, "clearWindow() did not leave the one empty line")
+            assert.is_true(spec.wasPrompt, "isPrompt() was false on a prompt line the trigger had just cleared away")
+        end)
+
+        -- On line 0 the cursor sits on the one line a clear leaves whether or not
+        -- the prompt went, so only the engine cursor can tell the two apart.
+        it("isPrompt stays true after a prompt trigger on the first line clears the main window", function()
+            _G.TrigSpec = {fired = 0}
+            liveTriggerId = tempPromptTrigger(function()
+                _G.TrigSpec.fired = _G.TrigSpec.fired + 1
+                _G.TrigSpec.lineBefore = getLineNumber()
+                clearWindow()
+                _G.TrigSpec.linesAfter = getLineCount()
+                _G.TrigSpec.wasPrompt = isPrompt()
+            end)
+            assert.is_true(liveTriggerId > 0, "the prompt trigger was not created")
+
+            clearWindow()
+            local ok, msg = feedTelnet("SpecPromptClearedFirst> <T_IAC><T_GA>")
+            local spec = _G.TrigSpec
+            feedTelnet("\r\n")
+            deselect()
+
+            assert.is_true(ok, "start the suite with --offline, see the tests README - feedTelnet said: " .. tostring(msg))
+            assert.are.equal(1, spec.fired, "the prompt trigger did not fire on the line ended by IAC GA")
+            assert.are.equal(0, spec.lineBefore, "the prompt did not arrive on line 0, so this spec proves nothing")
+            assert.are.equal(0, spec.linesAfter, "clearWindow() did not leave the one empty line")
+            assert.is_true(spec.wasPrompt, "isPrompt() was false on a first-line prompt the trigger had just cleared away")
+        end)
+
         it("isPrompt stays false after an ordinary trigger gags the line it matched", function()
             _G.TrigSpec = {fired = 0}
             liveTriggerId = tempRegexTrigger("^SpecOrdinaryGagged$", gagAndReadIsPrompt)
@@ -3317,6 +3402,61 @@ describe("Trigger processing", function()
             end)
         end)
 
+    end)
+
+    -- Installing a package moves the temporary triggers behind the permanent
+    -- ones it brought, keeping them in the order they were made in.
+    describe("temporary triggers made before a package is installed", function()
+
+        local packageName = "mudlet-spec-triggerkinds"
+        local specDirectory = debug.getinfo(1, "S").source:match("^@(.*)[/\\]")
+        assert(specDirectory, "Trigger_spec.lua has to be run from a file so that it can find its fixtures")
+        local fixture = specDirectory .. "/fixtures/packages/sources/" .. packageName .. "/" .. packageName .. ".xml"
+
+        if not os.getenv("MUDLET_TEST_MODE") then
+            it("needs test mode", function()
+                pending("installing the trigger-kinds fixture needs MUDLET_TEST_MODE (pumpEvents() does nothing without it)")
+            end)
+            return
+        end
+
+        it("fire after the package's triggers, in the order they were made", function()
+            local ids = {}
+            finally(function()
+                for _, id in pairs(ids) do
+                    killTrigger(id)
+                end
+                disableTrigger(packageName .. " colourise exact")
+                local gone, reason = removePackage(packageName)
+                assert.is_true(gone, "the " .. packageName .. " fixture was left behind: " .. tostring(reason))
+                _G.TriggerKindsSpec = nil
+            end)
+            _G.TriggerKindsSpec = {}
+            removePackage(packageName)
+            local fired = {}
+            for i = 1, 4 do
+                ids[i] = tempExactMatchTrigger("tkexact line", function()
+                    fired[#fired + 1] = _G.TriggerKindsSpec.exactFired and i or -i
+                end)
+            end
+            killTrigger(ids[2])
+
+            local reason
+            for _ = 1, 3 do
+                if packageInstalled(packageName) then
+                    break
+                end
+                waitForProfileSaveToPass()
+                local _, message = installPackage(fixture)
+                reason = message or reason
+                pumpEvents(200)
+            end
+            assert.is_true(packageInstalled(packageName), "could not install the " .. packageName .. " fixture: " .. tostring(reason))
+            enableTrigger(packageName .. " colourise exact")
+
+            feedTriggers("tkexact line\n")
+            assert.are.same({1, 3, 4}, fired, "a negative number is a temporary trigger that fired before the package's own")
+        end)
     end)
 
     -- A trigger created from another trigger's script (tempTrigger() & Co.) still

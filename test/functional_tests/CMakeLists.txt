@@ -38,6 +38,7 @@ set(WINDOW_GROUP_TEST_SOURCES
     ConsoleModelExtractionTest.cpp
     ConsoleTextStyleTest.cpp
     CopyAsImageTest.cpp
+    SplitCharacterFormatTest.cpp
     DebugConsoleFilterTest.cpp
     FrontendRefreshSeamTest.cpp
     CommandLineKeyHandlingTest.cpp
@@ -48,6 +49,7 @@ set(WINDOW_GROUP_TEST_SOURCES
     GlyphOverflowTest.cpp
     HyperlinkModelSplitTest.cpp
     HostConsolePrintTest.cpp
+    DetachedWindowTabActivityTest.cpp
     AboutDialogLicencesTest.cpp
     LabelAnchorInteractionTest.cpp
     MainWindowTitleTest.cpp
@@ -68,10 +70,12 @@ set(WINDOW_GROUP_TEST_SOURCES
     MxpWatchdogBufferLifetimeTest.cpp
     NarrowWindowWrapTest.cpp
     NotepadTest.cpp
+    TabActivityMarkTest.cpp
     MenuShortcutTeardownTest.cpp
     NawsWidthReportTest.cpp
     DetachedWindowToolBarIconSizeTest.cpp
     DetachedWindowToolBarVisibilityTest.cpp
+    DetachedWindowMuteStateTest.cpp
     PastedLinkStateTest.cpp
     ProfileSwitchMiniconsoleTest.cpp
     RecolouredLineCacheTest.cpp
@@ -214,6 +218,8 @@ set(MAP_GROUP_TEST_SOURCES
     MapOffscreenCustomLineTest.cpp
     MapFileStatsTest.cpp
     MapTextLabelCacheTest.cpp
+    MapViewAreaListTest.cpp
+    MapLabelRenderTest.cpp
     MapViewCueTest.cpp
     LuaMapperCueTest.cpp
     MapLockNoOpTest.cpp

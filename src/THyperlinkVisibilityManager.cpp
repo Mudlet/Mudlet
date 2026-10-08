@@ -441,7 +441,7 @@ void THyperlinkVisibilityManager::removeLinksOnLine(int lineNumber)
     stopTimerIfNotNeeded();
 }
 
-void THyperlinkVisibilityManager::adjustLineNumbers(int deletedLineStart, int deletedLineCount)
+QList<int> THyperlinkVisibilityManager::adjustLineNumbers(int deletedLineStart, int deletedLineCount)
 {
     QList<int> toRemove;
 
@@ -460,6 +460,7 @@ void THyperlinkVisibilityManager::adjustLineNumbers(int deletedLineStart, int de
     }
 
     stopTimerIfNotNeeded();
+    return toRemove;
 }
 
 void THyperlinkVisibilityManager::clear()

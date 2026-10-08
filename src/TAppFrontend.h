@@ -78,8 +78,9 @@ public:
         CommandSurface surfaces = CommandSurface::Both;
     };
 
-    // Why a command could not be placed, so the binding can say which
-    virtual int addAddonCommand(const CommandRequest& request, Host* pHost, QString& error) = 0;
+    // package: whose code asked, empty for none. error: why a command could not
+    // be placed, so the binding can say which.
+    virtual int addAddonCommand(const CommandRequest& request, Host* pHost, const QString& package, QString& error) = 0;
     virtual bool removeAddonCommand(int commandId, Host* pHost) = 0;
     virtual bool setAddonCommandEnabled(int commandId, bool enabled, Host* pHost) = 0;
     virtual bool setAddonCommandChecked(int commandId, bool checked, Host* pHost) = 0;
