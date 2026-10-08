@@ -4446,6 +4446,21 @@ describe("Tests db:create on schemas sqlite refuses or reads differently", funct
     assert.is_truthy(string.find(warnings, 'db:create - people - could not add the column "added"', 1, true))
   end)
 
+  it("reports an index it could not create rather than returning as if it had", function()
+    local mydb = createCollectingWarnings({people = {name = ""}})
+    -- a table already holding the name db:_index_name gives the index makes sqlite refuse it
+    local conn = db.__conn[dbName]
+    assert.is_truthy(conn:execute("CREATE TABLE idx_people_c_name (x)"))
+    conn:commit()
+
+    local ok, result, warnings = pcall(createCollectingWarnings, {people = {name = "", _index = {"name"}}})
+    assert.is_true(ok, result)
+    assert.is_truthy(string.find(warnings, "db:create - people - could not create an index: ", 1, true))
+    assert.is_truthy(string.find(warnings, "there is already a table named idx_people_c_name", 1, true))
+    assert.is_truthy(string.find(warnings, "CREATE INDEX IF NOT EXISTS idx_people_c_name ON people", 1, true))
+    assert.is_true(db:add(mydb.people, {name = "Bob"}))
+  end)
+
   it("reads the uniqueness that follows a text default holding a double quote", function()
     local sql = [[CREATE TABLE people ("_row_id" INTEGER PRIMARY KEY AUTOINCREMENT, "note" TEXT NULL DEFAULT '5" ruler', ]] ..
       [["name" TEXT NULL DEFAULT '' UNIQUE ON CONFLICT FAIL, "city" TEXT NULL DEFAULT 'it''s')]]
