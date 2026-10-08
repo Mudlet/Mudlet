@@ -127,6 +127,7 @@ jobs:
         echo "lines_changed=$lines_changed" >> "$GITHUB_OUTPUT"
 
     - name: send in a pull request
+      id: cpr
       uses: peter-evans/create-pull-request@v8
       if: steps.getdiff.outputs.lines_changed > 0
       with:
@@ -151,13 +152,15 @@ jobs:
       env:
         DUPLICATE_COUNT: ${{ steps.update.outputs.duplicate_count }}
         DUPLICATES: ${{ steps.update.outputs.duplicates }}
+        # with no data change there is no pull request, so the check stays on the commit that was scraped
+        HEAD_SHA: ${{ steps.cpr.outputs.pull-request-head-sha || github.sha }}
       with:
         script: |
           await github.rest.checks.create({
             owner: context.repo.owner,
             repo: context.repo.repo,
             name: 'wiki manual duplicates',
-            head_sha: context.sha,
+            head_sha: process.env.HEAD_SHA,
             status: 'completed',
             conclusion: 'neutral',
             output: {
