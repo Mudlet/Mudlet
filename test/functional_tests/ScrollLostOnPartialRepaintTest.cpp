@@ -261,9 +261,15 @@ private slots:
 
         lua->compileAndExecuteScript(qsl("for i = 1, 200 do echo('FILLER ' .. i .. '\\n') end\n"));
         qApp->processEvents();
-        pane->repaint();
-        lua->compileAndExecuteScript(qsl("echo('PACED_LINE\\n')\n"));
-        QVERIFY2(pane->mpPaintPacer->isActive(), "the line arrived after the paint window closed, so the pacer this case is about never started");
+        // The paint window is 16ms from the start of the paint, which a loaded
+        // runner can use up before the echo lands, so try again until one does
+        bool paced = false;
+        for (int attempt = 0; attempt < 20 && !paced; ++attempt) {
+            pane->repaint();
+            lua->compileAndExecuteScript(qsl("echo('PACED_LINE\\n')\n"));
+            paced = pane->mpPaintPacer->isActive();
+        }
+        QVERIFY2(paced, "no line arrived before the paint window closed, so the pacer this case is about never started");
         pane->forceUpdate();
         pane->repaint();
 
