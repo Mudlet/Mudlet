@@ -204,6 +204,13 @@ private slots:
         QTest::newRow("-so --version") << QStringList{qsl("-so"), qsl("--version")} << bogusPlatformPlugin() << QString() << versionMarker << helpMarker;
         QTest::newRow("-mp -h") << QStringList{qsl("-mp"), qsl("-h")} << bogusPlatformPlugin() << QString() << helpMarker << versionMarker;
 
+        // -h and -v grouped with Mudlet's other no-value short options are the
+        // same run as given alone, and the group is not an unknown option
+        QTest::newRow("-qv, no display") << QStringList{qsl("-qv")} << QString() << QString() << versionMarker << QStringList{qsl("Report bugs to"), qsl("Warning:")};
+        QTest::newRow("-qv, no platform plugin") << QStringList{qsl("-qv")} << bogusPlatformPlugin() << QString() << versionMarker << helpMarker;
+        QTest::newRow("-fh, no platform plugin") << QStringList{qsl("-fh")} << bogusPlatformPlugin() << QString() << helpMarker << versionMarker;
+        QTest::newRow("-smv, no platform plugin") << QStringList{qsl("-smv")} << bogusPlatformPlugin() << QString() << versionMarker << helpMarker;
+
         // Qt's own options are still in the list such a run is read from, so
         // they must neither be compacted into a letter that means something to
         // Mudlet - the 'h' of -stylesheet answering with the help page - nor be
