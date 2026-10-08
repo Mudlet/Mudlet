@@ -918,4 +918,41 @@ describe("presence the game sends over GMCP", function()
     assert.equals(1750000000, startTime)
     assert.equals(0, endTime, "a start time that lands in the end timestamp as well turns the elapsed timer into a countdown")
   end)
+
+  it("leaves the party alone when the payload says nothing about one (#10724)", function()
+    if not readyForDiscord() then
+      return
+    end
+    assert.is_true(setDiscordParty(4, 12))
+    feedDiscordStatus('{"state": "only a state"}')
+
+    assert.equals("only a state", getDiscordState())
+    local size, maximum = getDiscordParty()
+    assert.equals(4, size)
+    assert.equals(12, maximum)
+  end)
+
+  it("leaves the party alone when the payload's party values are not numbers (#10724)", function()
+    if not readyForDiscord() then
+      return
+    end
+    assert.is_true(setDiscordParty(4, 12))
+    feedDiscordStatus('{"partysize": "four", "partymax": "twelve"}')
+
+    local size, maximum = getDiscordParty()
+    assert.equals(4, size)
+    assert.equals(12, maximum)
+  end)
+
+  it("still sets the party from a payload that carries one", function()
+    if not readyForDiscord() then
+      return
+    end
+    assert.is_true(setDiscordParty(4, 12))
+    feedDiscordStatus('{"partysize": 2, "partymax": 6}')
+
+    local size, maximum = getDiscordParty()
+    assert.equals(2, size)
+    assert.equals(6, maximum)
+  end)
 end)

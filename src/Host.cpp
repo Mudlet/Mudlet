@@ -4576,9 +4576,10 @@ void Host::processGMCPDiscordStatus(const QJsonObject& discordInfo)
     int partyMaxValue = -1;
     auto partyMax = discordInfo.value(qsl("partymax"));
     auto partySize = discordInfo.value(qsl("partysize"));
-    if (partyMax != QJsonValue::Undefined || partySize != QJsonValue::Undefined) {
-        Discord::self()->setServerOrigin(this, DiscordSetPartyInfo);
+    if (!partyMax.isDouble() && !partySize.isDouble()) {
+        return;
     }
+    Discord::self()->setServerOrigin(this, DiscordSetPartyInfo);
     if (partyMax.isDouble()) {
         partyMaxValue = static_cast<int>(partyMax.toDouble());
         if (partyMaxValue > 0 && partySize.isDouble()) {
