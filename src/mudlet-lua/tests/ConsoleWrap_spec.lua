@@ -226,11 +226,9 @@ describe("Tests how a console wraps the lines it is given", function()
 
     it("gives a continued line no timestamp of its own", function()
       wrapAt(20)
-      -- getTimestamp() refuses line zero, so the wrapped line goes second
-      echo(win, "first\n")
       echo(win, "aaaaaaaaaa bbbbbbbbbb cccc\n")
-      assert.is_not.matches("^%-+%s*$", getTimestamp(win, 1))
-      assert.matches("^%-+%s*$", getTimestamp(win, 2))
+      assert.is_not.matches("^%-+%s*$", getTimestamp(win, 0))
+      assert.matches("^%-+%s*$", getTimestamp(win, 1))
     end)
   end)
 

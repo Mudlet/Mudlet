@@ -2368,8 +2368,9 @@ int TLuaInterpreter::getTimestamp(lua_State* L)
 
     const auto luaLine = getVerifiedInt(L, __func__, s, "line number");
     const QString name = n > 1 ? QString{lua_tostring(L, 1)} : QString();
-    if (luaLine < 1) {
-        return warnArgumentValue(L, __func__, qsl("line number %1 invalid, it should be greater than zero").arg(luaLine));
+    // Counted from 0, like getLineNumber() and moveCursor()
+    if (luaLine < 0) {
+        return warnArgumentValue(L, __func__, qsl("line number %1 invalid, it should not be negative").arg(luaLine));
     }
 
     auto pModel = getHostFromLua(L).consoleModelNamed(name);
