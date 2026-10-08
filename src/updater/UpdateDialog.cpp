@@ -658,8 +658,12 @@ void UpdateDialog::handleFeedReady()
     mFeedLoadFailed = false;
     mUpdates = mFeed->getUpdates(dblsqd::Release::getCurrentRelease());
     mReleases = mFeed->getReleases();
-    if (!mUpdates.isEmpty()) {
-        mLatestRelease = mUpdates.first();
+    mLatestRelease = mUpdates.isEmpty() ? Release() : mUpdates.first();
+    // An install the user asked for answers the offer it was made on, so it
+    // only carries over into this check while its download is still running
+    if (!mFeed->isDownloading()) {
+        mAccepted = false;
+        mAcceptedInstallButton = nullptr;
     }
 
     if (mType == ManualChangelog) {
@@ -674,7 +678,10 @@ void UpdateDialog::handleFeedReady()
     mUpdateFilePath = settingsValue(qsl("updateFilePath"), "", mSettings).toString();
     if (!mUpdateFilePath.isEmpty() && QFile::exists(mUpdateFilePath)) {
         QString updateFileVersion = settingsValue(qsl("updateFileVersion"), "", mSettings).toString();
-        if (updateFileVersion != mLatestRelease.getVersion() || updateFileVersion == QApplication::applicationVersion()) {
+        const QString offeredVersion = mLatestRelease.getVersion();
+        // A check that offers nothing supersedes nothing: the release may only
+        // be waiting for its checksums
+        if ((!offeredVersion.isEmpty() && updateFileVersion != offeredVersion) || updateFileVersion == QApplication::applicationVersion()) {
             if (!QFile::remove(mUpdateFilePath)) {
                 qWarning() << "Failed to remove stale update file:" << mUpdateFilePath;
             }
@@ -727,7 +734,9 @@ void UpdateDialog::handleDownloadFinished()
     mIsDownloadFinished = true;
     mUpdateFilePath = filePath;
     setSettingsValue(qsl("updateFilePath"), mUpdateFilePath, mSettings);
-    setSettingsValue(qsl("updateFileVersion"), mLatestRelease.getVersion(), mSettings);
+    // Asked of the Feed: a check that answered during the download may have changed
+    // mLatestRelease, and Updater's twice-daily check downloads without the dialog
+    setSettingsValue(qsl("updateFileVersion"), mFeed->getCurrentDownload().getVersion(), mSettings);
 
     if (mAccepted) {
         if (mAcceptedInstallButton == nullptr) {
@@ -743,6 +752,9 @@ void UpdateDialog::handleDownloadFinished()
 
 void UpdateDialog::handleDownloadError(const QString& message)
 {
+    // Before the box: its event loop can run a later download to the end
+    mAccepted = false;
+    mAcceptedInstallButton = nullptr;
     //: Title for the download error warning dialog
     const QString errorTitle = tr("Download Error");
     //: Message shown in the download error warning dialog, followed by the specific error details

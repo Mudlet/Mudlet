@@ -114,7 +114,7 @@ private:
     QList<Release> mUpdates;
     Release mLatestRelease;
     QList<QAbstractButton*> mInstallButtons;
-    QAbstractButton* mAcceptedInstallButton;
+    QAbstractButton* mAcceptedInstallButton{nullptr};
     bool mOpenExternalLinks{true};
     QString mMinVersion;
     QString mMaxVersion;
