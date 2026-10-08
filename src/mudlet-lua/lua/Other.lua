@@ -467,11 +467,15 @@ local speedwalkDelay
 local speedwalkList
 local speedwalkShow
 
+local function speedwalkInProgress()
+  return speedwalkTimerID or (speedwalkList and #speedwalkList > 0)
+end
+
 --- Stops a speedwalk and clears the walklist
 function stopSpeedwalk()
   -- not through pauseSpeedwalk(), which would raise sysSpeedwalkPaused for a pause nobody asked for;
   -- a paused walk has no timer but is still there to resume, so it is stopped too
-  if speedwalkTimerID or (speedwalkList and #speedwalkList > 0) then
+  if speedwalkInProgress() then
     if speedwalkTimerID then
       killTimer(speedwalkTimerID)
       speedwalkTimerID = false
@@ -518,7 +522,12 @@ function speedwalktimer(walklist, walkdelay, show)
     speedwalkTimerID = false
     return
   end
+  local walkInProgress = speedwalkList
   send(walklist[1], show)
+  -- a sysDataSendRequest handler may have stopped this walk or started another, which now owns the timer
+  if speedwalkList ~= walkInProgress then
+    return
+  end
   table.remove(walklist, 1)
   if #walklist > 0 then
     speedwalkTimerID = tempTimer(walkdelay, function()
@@ -577,12 +586,20 @@ function speedwalk(dirString, backwards, delay, show)
   end
   -- two timer chains at once would interleave their steps, and a paused walk left behind could be resumed
   stopSpeedwalk()
-  raiseEvent("sysSpeedwalkStarted")
+  if speedwalkInProgress() then
+    return nil, "speedwalk(): a sysSpeedwalkStopped handler started another speedwalk"
+  end
   if delay then
     speedwalkShow = show
     speedwalkDelay = delay
     speedwalkList = walklist
-    speedwalktimer(walklist, delay, show)
+  end
+  raiseEvent("sysSpeedwalkStarted")
+  if delay then
+    -- a sysSpeedwalkStarted handler may have stopped this walk or started another
+    if speedwalkList == walklist then
+      speedwalktimer(walklist, delay, show)
+    end
   else
     for _, direction in ipairs(walklist) do
       send(direction, show)

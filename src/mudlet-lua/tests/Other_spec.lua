@@ -511,20 +511,6 @@ describe("Tests Other.lua functions", function()
       assert.has_error(function() speedwalk() end, "speedwalk: bad argument #1 type (directions as string expected, got nil!)")
     end)
 
-    it("leaves nothing to pause or stop once a delayed walk has finished", function()
-      speedwalk("n;e;s", false, 0.01)
-      assert.are.equal("sysSpeedwalkFinished", (waitForEvent("sysSpeedwalkFinished", 5000)))
-      assert.are.same({"n", "e", "s"}, sent)
-
-      local ok, err = pauseSpeedwalk()
-      assert.is_nil(ok)
-      assert.are.equal("pauseSpeedwalk(): no active speedwalk found", err)
-      ok, err = stopSpeedwalk()
-      assert.is_nil(ok)
-      assert.are.equal("stopSpeedwalk(): no active speedwalk found", err)
-      assert.are.same({"sysSpeedwalkStarted", "sysSpeedwalkFinished"}, seen)
-    end)
-
     it("does not report a pause when a running walk is stopped", function()
       speedwalk("4n", false, 10)
       assert.is_true(stopSpeedwalk())
@@ -548,16 +534,89 @@ describe("Tests Other.lua functions", function()
       assert.are.same({"sysSpeedwalkStarted", "sysSpeedwalkPaused", "sysSpeedwalkStopped", "sysSpeedwalkStarted", "sysSpeedwalkFinished"}, seen)
     end)
 
-    it("stops a running delayed walk before starting another", function()
-      speedwalk("3n", false, 0.01)
-      speedwalk("3s", false, 0.01)
-      assert.are.equal("sysSpeedwalkFinished", (waitForEvent("sysSpeedwalkFinished", 5000)))
+    -- waitForEvent only pumps the event loop in test mode
+    if not os.getenv("MUDLET_TEST_MODE") then
+      pending("the specs that wait for a delayed speedwalk's timers - need MUDLET_TEST_MODE for waitForEvent")
+    else
       -- give a second timer chain, had one survived, time to show itself
-      tempTimer(0.1, function() raiseEvent("speedwalkSpecSettled") end)
-      waitForEvent("speedwalkSpecSettled", 5000)
-      assert.are.same({"n", "s", "s", "s"}, sent)
-      assert.are.same({"sysSpeedwalkStarted", "sysSpeedwalkStopped", "sysSpeedwalkStarted", "sysSpeedwalkFinished"}, seen)
-    end)
+      local function settle()
+        tempTimer(0.1, function() raiseEvent("speedwalkSpecSettled") end)
+        waitForEvent("speedwalkSpecSettled", 5000)
+      end
+
+      it("leaves nothing to pause or stop once a delayed walk has finished", function()
+        speedwalk("n;e;s", false, 0.01)
+        assert.are.equal("sysSpeedwalkFinished", (waitForEvent("sysSpeedwalkFinished", 5000)))
+        assert.are.same({"n", "e", "s"}, sent)
+
+        local ok, err = pauseSpeedwalk()
+        assert.is_nil(ok)
+        assert.are.equal("pauseSpeedwalk(): no active speedwalk found", err)
+        ok, err = stopSpeedwalk()
+        assert.is_nil(ok)
+        assert.are.equal("stopSpeedwalk(): no active speedwalk found", err)
+        assert.are.same({"sysSpeedwalkStarted", "sysSpeedwalkFinished"}, seen)
+      end)
+
+      it("stops a running delayed walk before starting another", function()
+        speedwalk("3n", false, 0.01)
+        speedwalk("3s", false, 0.01)
+        assert.are.equal("sysSpeedwalkFinished", (waitForEvent("sysSpeedwalkFinished", 5000)))
+        settle()
+        assert.are.same({"n", "s", "s", "s"}, sent)
+        assert.are.same({"sysSpeedwalkStarted", "sysSpeedwalkStopped", "sysSpeedwalkStarted", "sysSpeedwalkFinished"}, seen)
+      end)
+
+      it("starts no walk of its own once a sysSpeedwalkStopped handler has started one", function()
+        speedwalk("4n", false, 0.01)
+        local handled = false
+        handlers[#handlers + 1] = registerAnonymousEventHandler("sysSpeedwalkStopped", function()
+          if not handled then
+            handled = true
+            speedwalk("3e", false, 0.01)
+          end
+        end)
+        local ok, err = speedwalk("2s", false, 0.01)
+        assert.are.equal("sysSpeedwalkFinished", (waitForEvent("sysSpeedwalkFinished", 5000)))
+        settle()
+        assert.are.same({"n", "e", "e", "e"}, sent)
+        assert.are.same({"sysSpeedwalkStarted", "sysSpeedwalkStopped", "sysSpeedwalkStarted", "sysSpeedwalkFinished"}, seen)
+        assert.is_nil(ok)
+        assert.are.equal("speedwalk(): a sysSpeedwalkStopped handler started another speedwalk", err)
+      end)
+
+      it("hands over to a walk a sysSpeedwalkStarted handler starts", function()
+        local handled = false
+        handlers[#handlers + 1] = registerAnonymousEventHandler("sysSpeedwalkStarted", function()
+          if not handled then
+            handled = true
+            speedwalk("3e", false, 0.01)
+          end
+        end)
+        speedwalk("2n", false, 0.01)
+        assert.are.equal("sysSpeedwalkFinished", (waitForEvent("sysSpeedwalkFinished", 5000)))
+        settle()
+        assert.are.same({"e", "e", "e"}, sent)
+        assert.are.same({"sysSpeedwalkStarted", "sysSpeedwalkStopped", "sysSpeedwalkStarted", "sysSpeedwalkFinished"}, seen)
+      end)
+
+      it("hands over to a walk a sysDataSendRequest handler starts during the last step", function()
+        local steps = 0
+        handlers[#handlers + 1] = registerAnonymousEventHandler("sysDataSendRequest", function()
+          steps = steps + 1
+          if steps == 2 then
+            speedwalk("3e", false, 10)
+          end
+        end)
+        speedwalk("2n", false, 0.01)
+        assert.are.equal("sysSpeedwalkStarted", (waitForEvent("sysSpeedwalkStarted", 5000)))
+        settle()
+        assert.is_true(pauseSpeedwalk())
+        assert.is_true(stopSpeedwalk())
+        assert.are.same({"n", "n", "e"}, sent)
+        assert.are.same({"sysSpeedwalkStarted", "sysSpeedwalkStopped", "sysSpeedwalkStarted", "sysSpeedwalkPaused", "sysSpeedwalkStopped"}, seen)
+      end)
+    end
   end)
 
   describe("Tests the interface language Mudlet publishes", function()
