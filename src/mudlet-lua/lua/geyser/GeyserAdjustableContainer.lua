@@ -609,7 +609,8 @@ function Adjustable.Container:connectToBorder(border)
     if not self.attached then
         return nil, "connectToBorder: the container is not attached to a border"
     end
-    if not Adjustable.Container.Attached[border] then
+    -- detach() leaves an empty table behind once the last container on a border has gone
+    if not Adjustable.Container.Attached[border] or not next(Adjustable.Container.Attached[border]) then
         return nil, string.format("connectToBorder: nothing is attached to the %s border", border)
     end
     self.connectedToBorder = self.connectedToBorder or {}
@@ -707,7 +708,8 @@ end
 --- attaches your container to the given border
 -- attach is only possible if the container is located near the border
 -- @param border possible border values are "top", "bottom", "right", "left", in any case
--- @return true, or nil and an error message for any other border
+-- @return true, or nil and an error message for any other border, or if the container is hidden,
+-- minimized or too far from that border to attach
 function Adjustable.Container:attachToBorder(border)
     -- the registry and adjustBorder() both work in lower case
     border = type(border) == "string" and border:lower()
@@ -727,8 +729,12 @@ function Adjustable.Container:attachToBorder(border)
     Adjustable.Container.Attached[border][self.name] = self
     self.attached = border
     self:adjustBorder()
-    self.resizeHandlerID=registerAnonymousEventHandler("sysWindowResizeEvent", function() self:resizeBorder() end)
     closeAllLevels(self.rCLabel)
+    -- adjustBorder() detaches a container that is hidden, minimized or out of reach of the border
+    if self.attached ~= border then
+        return nil, string.format("attachToBorder: the container is hidden, minimized or too far from the %s border to attach", border)
+    end
+    self.resizeHandlerID=registerAnonymousEventHandler("sysWindowResizeEvent", function() self:resizeBorder() end)
     return true
 end
 
