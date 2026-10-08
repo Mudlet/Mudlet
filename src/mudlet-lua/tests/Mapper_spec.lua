@@ -680,6 +680,44 @@ describe("Tests mapper functions against a shared fixture", function()
       assert.is_nil(getAreaTable()["MapperSpecDeleteMe"])
     end)
 
+    it("removes every room of a large area and the exits other areas had into them", function()
+      local doomed = addAreaName("MapperSpecDeleteMany")
+      local survivor = addAreaName("MapperSpecDeleteManyNeighbour")
+      local base, count = 991000000, 2000
+      for i = 1, count do
+        addRoom(base + i)
+        setRoomArea(base + i, doomed)
+        setRoomCoordinates(base + i, i % 50, math.floor(i / 50), 0)
+        if i > 1 then
+          setExit(base + i, base + i - 1, "w")
+          setExit(base + i - 1, base + i, "e")
+        end
+        if i % 7 == 0 then
+          addSpecialExit(base + i, base + 1, "jump " .. i)
+        end
+      end
+      local outside = base + count + 1
+      addRoom(outside)
+      setRoomArea(outside, survivor)
+      setExit(outside, base + 1, "n")
+      setExit(outside, base + count, "s")
+      addSpecialExit(outside, base + 500, "climb")
+      finally(function()
+        deleteArea("MapperSpecDeleteManyNeighbour")
+        deleteArea("MapperSpecDeleteMany")
+      end)
+
+      assert.is_true(deleteArea(doomed))
+
+      for i = 1, count do
+        assert.is_false(roomExists(base + i))
+      end
+      assert.is_true(roomExists(outside))
+      assert.are.same({}, getRoomExits(outside))
+      assert.are.same({}, getSpecialExitsSwap(outside))
+      assert.is_nil(getAreaTable()["MapperSpecDeleteMany"])
+    end)
+
     it("returns nil and a message for an unknown areaID", function()
       local ok, err = deleteArea(missingAreaId)
       assert.is_nil(ok)
@@ -1191,6 +1229,24 @@ describe("Tests mapper functions against a shared fixture", function()
       -- rA1 (east) and rA3 (west) both lead into rA2
       assert.is_true(set[rA1])
       assert.is_true(set[rA3])
+    end)
+
+    it("getAllRoomEntrances lists a room once however many of its exits lead in", function()
+      local from = createRoomID(); addRoom(from); setRoomArea(from, areaAlpha)
+      local viaSpecial = createRoomID(); addRoom(viaSpecial); setRoomArea(viaSpecial, areaAlpha)
+      local to = createRoomID(); addRoom(to); setRoomArea(to, areaAlpha)
+      finally(function()
+        deleteRoom(from); deleteRoom(viaSpecial); deleteRoom(to)
+      end)
+
+      assert.is_true(setExit(from, to, "north"))
+      assert.is_true(setExit(from, to, "up"))
+      assert.is_true(addSpecialExit(from, to, "climb"))
+      assert.is_true(addSpecialExit(viaSpecial, to, "crawl"))
+
+      local entrances = getAllRoomEntrances(to)
+      table.sort(entrances)
+      assert.are.same({from, viaSpecial}, entrances)
     end)
 
     it("getAllRoomEntrances returns nil and a message for an unknown room", function()
@@ -1980,6 +2036,25 @@ describe("Tests mapper functions against a shared fixture", function()
       assert.are.equal("MapperSpecShared", labels[first].Text)
       assert.are.same({1, 1, 0}, {labels[second].X, labels[second].Y, labels[second].Z})
       assert.is_nil(labels[other])
+    end)
+
+    it("createMapLabel takes the lowest label id that is free", function()
+      local area = addAreaName("MapperSpecLabelIds")
+      finally(function() deleteArea(area) end)
+      local function create()
+        return createMapLabel(area, "MapperSpecId", 0, 0, 0, 255, 255, 255, 0, 0, 0, 30, 10)
+      end
+
+      assert.are.same({0, 1, 2, 3}, {create(), create(), create(), create()})
+      deleteMapLabel(area, 1)
+      assert.are.equal(1, create())
+      assert.are.equal(4, create())
+      deleteMapLabel(area, 0)
+      deleteMapLabel(area, 2)
+      assert.are.same({0, 2, 5}, {create(), create(), create()})
+      deleteMapLabel(area, 5)
+      deleteMapLabel(area, 4)
+      assert.are.equal(4, create())
     end)
 
     it("getMapLabel hard-errors when the label is neither a number nor a string", function()
@@ -3694,6 +3769,16 @@ describe("Tests saveMap and loadMap", function()
       assertMapRestored()
     end)
 
+    it("lists each entrance into a room once after a reload", function()
+      buildMap()
+      assert.are.same({roomA}, getAllRoomEntrances(roomB))
+
+      assert.is_true(saveMap(savePath))
+      deleteMap()
+      assert.is_true(loadMap(savePath))
+      assert.are.same({roomA}, getAllRoomEntrances(roomB))
+    end)
+
     it("replaces what is on the map rather than merging into it", function()
       buildMap()
       saveMap(savePath)
@@ -3977,6 +4062,30 @@ describe("Tests saveMap and loadMap", function()
     -- mCustomEnvColors, a different map, so there is nothing to read this back
     -- with from Lua
     pending("the environment colours an XML map declares have no Lua getter")
+
+    it("keeps the entrances of a room whose ID a later room in the file reuses", function()
+      local duplicatePath = getMudletHomeDir() .. "/mapper_spec_duplicate.xml"
+      finally(function() os.remove(duplicatePath) end)
+      local file = assert(io.open(duplicatePath, "w"))
+      file:write([[<?xml version="1.0" encoding="UTF-8"?>
+<map>
+  <areas><area id="4001" name="Mapper Spec Duplicate Area"/></areas>
+  <rooms>
+    <room id="4001" area="4001"><coord x="0" y="0" z="0"/><exit direction="north" target="4002"/></room>
+    <room id="4002" area="4001"><coord x="0" y="1" z="0"/></room>
+    <room id="4003" area="4001"><coord x="1" y="0" z="0"/></room>
+    <room id="4001" area="4001"><coord x="0" y="0" z="0"/><exit special="1" command="jump" target="4003"/></room>
+  </rooms>
+</map>
+]])
+      file:close()
+
+      -- the second 4001 is refused, but reading its special exit must not
+      -- have dropped the entrance the first one recorded
+      assert.is_true(loadMap(duplicatePath))
+      assert.are.equal(4002, getRoomExits(4001)["north"])
+      assert.are.same({4001}, getAllRoomEntrances(4002))
+    end)
 
     it("throws away the map that was there before the import", function()
       local stray = createRoomID()

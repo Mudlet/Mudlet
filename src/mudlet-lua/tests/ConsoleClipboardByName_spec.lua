@@ -79,6 +79,38 @@ describe("Tests that the clipboard and buffer size functions find their console 
     assertRefuses(unknown)
   end)
 
+  -- A copied function link holds a registry reference of its own, which the
+  -- clipboard has to let go of when it is given something else to hold.
+  -- Slots are counted by what they hold rather than how many there are, as
+  -- a leaked reference can reuse a slot an earlier spec released.
+  local function referencesTo(fn)
+    local count = 0
+    for _, value in pairs(debug.getregistry()) do
+      if value == fn then
+        count = count + 1
+      end
+    end
+    return count
+  end
+
+  it("lets go of a copied function link when copy() replaces it", function()
+    local fn = function() end
+    clearWindow(helper)
+    echoLink(helper, "FNLINK", fn, "hint")
+    echo(helper, "\n")
+    moveCursor(helper, 0, 0)
+    selectCurrentLine(helper)
+    copy(helper)
+    local held = referencesTo(fn)
+    for _ = 1, 20 do
+      copy(helper)
+    end
+    deselect(helper)
+    -- the helper's own link and the clipboard's copy of it
+    assert.are.equal(2, held)
+    assert.are.equal(held, referencesTo(fn))
+  end)
+
   describe("with the name of another kind of window", function()
     local otherName = "specClipboardByNameOtherWindow" .. suffix
 
@@ -254,6 +286,19 @@ describe("Tests that the clipboard and buffer size functions find their console 
       echo("main", "\n")
       deselect("main")
       moveCursorEnd("main")
+    end)
+
+    it("lets go of a copied function link when cut() replaces it", function()
+      local fn = function() end
+      local marker = "specClipboardByNameCut" .. suffix
+      echoLink("main", marker, fn, "hint")
+      echo("main", " plain\n")
+      selectOnMain(marker)
+      copy("main")
+      assert.are.equal(2, referencesTo(fn))
+      selectOnMain(" plain")
+      cut()
+      assert.are.equal(1, referencesTo(fn))
     end)
 
     -- names that are all the main console's, and how to hand each one over

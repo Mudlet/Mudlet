@@ -177,7 +177,7 @@ local function writePackageXml(path, body, version)
   file:close()
 end
 
--- Every install and uninstall here starts an asynchronous profile save, and
+-- Every install and uninstall here owes an asynchronous profile save, and
 -- while one is running the package API stops doing what it is told: an install
 -- is postponed and answered with a bare true (see the pending spec at the end
 -- of this file), an uninstall is refused, and a module reload is dropped. Lua
@@ -2163,16 +2163,39 @@ describe("Tests the functionality of verbosePackageInstall", function()
     -- announcement's own name is checked for having been trimmed
     assert.is_false(containsWrapped(text, "Installing '" .. getMudletHomeDir()), text)
   end)
+  -- installPackage() asks for a quiet install, so nothing but this line tells
+  -- the player who dropped the file which parts of it are not working
+  it("says which parts of a package are not working", function()
+    local name = "mudlet-spec-brokenscripts"
+    defer(function()
+      removeFixturePackage(name)
+      _G.mudletSpecBrokenScriptsRuns = nil
+    end)
+    local path = fixtureDirectory .. "/" .. name .. ".mpackage"
+    assert.is_true(waitForProfileSaveToPass(), "a profile save was still running")
+    local mark = getLastLineNumber("main")
+
+    verbosePackageInstall(path)
+
+    local text = textFrom(mark)
+    assert.is_true(packageInstalled(name), "the package was not installed")
+    assert.is_true(containsWrapped(text, "Package '" .. path .. "' was installed, but not everything in it is working:"), text)
+    assert.is_true(containsWrapped(text, name .. " first"), text)
+    assert.is_true(containsWrapped(text, name .. " second"), text)
+    -- shown as the script wrote it, not taken as decho's formatting
+    assert.is_true(containsWrapped(text, "markup <b>bold</b> quote"), text)
+  end)
 end)
 
 describe("Tests the functionality of verboseModuleInstall", function()
   -- A module is installed from a copy inside the profile for the same reason
   -- installFixtureModule() does it: a save rewrites a synced module's own
   -- .mpackage, which must not be the committed fixture.
-  local function stageModule()
+  local function stageModule(name)
+    name = name or moduleName
     lfs.mkdir(scratchDirectory)
-    local path = scratchDirectory .. "/" .. moduleName .. ".mpackage"
-    copyFile(fixtureDirectory .. "/" .. moduleName .. ".mpackage", path)
+    local path = scratchDirectory .. "/" .. name .. ".mpackage"
+    copyFile(fixtureDirectory .. "/" .. name .. ".mpackage", path)
     return path
   end
 
@@ -2201,6 +2224,25 @@ describe("Tests the functionality of verboseModuleInstall", function()
     assert.is_true(containsWrapped(text, "Installing '" .. path .. "' failed:"), text)
     assert.is_true(containsWrapped(text, "could not open file"), text)
     assert.is_false(moduleInstalled("mudlet-spec-there-is-no-such-module"))
+  end)
+  it("says which parts of a module are not working", function()
+    local name = "mudlet-spec-brokenscripts"
+    defer(function()
+      removeFixtureModule(name)
+      _G.mudletSpecBrokenScriptsRuns = nil
+    end)
+    local path = stageModule(name)
+    assert.is_true(waitForProfileSaveToPass(), "a profile save was still running")
+    local mark = getLastLineNumber("main")
+
+    verboseModuleInstall(path)
+
+    local text = textFrom(mark)
+    assert.is_true(moduleInstalled(name), "the module was not installed")
+    assert.is_true(containsWrapped(text, "Module '" .. path .. "' was installed, but not everything in it is working:"), text)
+    assert.is_true(containsWrapped(text, name .. " first"), text)
+    assert.is_true(containsWrapped(text, name .. " second"), text)
+    assert.is_true(containsWrapped(text, "markup <b>bold</b> quote"), text)
   end)
 end)
 
@@ -2861,6 +2903,15 @@ describe("Tests exporting the profile to a file with saveProfile", function()
   local exportedPath = scratchDirectory .. "/mudlet-spec-exported.xml"
   -- U+FFFC U+241B, which is how an ESC is held in a save file
   local encodedEscape = "\239\191\188\226\144\155"
+  -- Every control character a save file has a control picture for, each one
+  -- twice in a row, as the import hands them back to the export raw
+  local controlCodes = {1, 2, 3, 4, 5, 6, 7, 8, 11, 12, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31}
+  local rawControls, encodedControls = {}, {}
+  for index, code in ipairs(controlCodes) do
+    rawControls[index] = string.char(code):rep(2)
+    encodedControls[index] = ("\239\191\188\226\144" .. string.char(128 + code)):rep(2)
+  end
+  rawControls, encodedControls = table.concat(rawControls), table.concat(encodedControls)
   -- The colour numbers a save file uses are not the ANSI ones Mudlet matches
   -- on, and the two tables that convert between them are meant to be each
   -- other's inverse - so a pattern that survives a trip through both unchanged
@@ -2896,6 +2947,11 @@ describe("Tests exporting the profile to a file with saveProfile", function()
       '<Script isActive="yes" isFolder="no">',
       '<name>' .. name .. ' escape script</name><packageName></packageName>',
       '<script>mudletSpecExportedEscape = "' .. encodedEscape .. '"</script>',
+      '<eventHandlerList/>',
+      '</Script>',
+      '<Script isActive="yes" isFolder="no">',
+      '<name>' .. name .. ' control script</name><packageName></packageName>',
+      '<script>-- ' .. encodedControls .. '</script>',
       '<eventHandlerList/>',
       '</Script>',
       '</ScriptPackage>',
@@ -2976,6 +3032,27 @@ describe("Tests exporting the profile to a file with saveProfile", function()
     assert.is_true(contains(exported, 'mudletSpecExportedEscape = "' .. encodedEscape .. '"'),
                    "the exported script does not hold the encoded escape")
     assert.is_false(contains(exported, "\27"), "the export wrote a raw control character, which XML cannot carry")
+  end)
+
+  it("writes every control character back as a placeholder and a control picture", function()
+    assert.equals("-- " .. rawControls, (getScript(name .. " control script")))
+    assert.is_true(contains(exported, "<script>-- " .. encodedControls .. "</script>"),
+                   "the exported script does not hold every control character encoded")
+  end)
+
+  it("writes a newline in an attribute as the reference XML reads back as one", function()
+    -- A stopwatch name is held in an attribute, which is only written on a full save
+    local watch = createStopWatch(name .. " stop\nwatch")
+    -- Kept until the file is read: the save the setup's install still owes can
+    -- run after this one and rewrite the same file within the same second
+    finally(function() deleteStopWatch(watch) end)
+    setStopWatchPersistence(watch, true)
+    assert.is_true(waitForProfileSaveToPass(), "a profile save was still running")
+    local ok, savedPath = saveProfile()
+    assert.is_true(ok, savedPath)
+    assert.is_true(waitForProfileSaveToPass(), "the profile save did not finish")
+    assert.is_true(contains(readFile(savedPath), 'name="' .. name .. ' stop&#10;watch"'),
+                   "the saved profile does not hold the stopwatch name's newline as a reference")
   end)
 
   it("writes a key's binding back", function()

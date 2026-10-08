@@ -38,6 +38,7 @@ set(WINDOW_GROUP_TEST_SOURCES
     ConsoleModelExtractionTest.cpp
     ConsoleTextStyleTest.cpp
     CopyAsImageTest.cpp
+    SplitCharacterFormatTest.cpp
     DebugConsoleFilterTest.cpp
     FrontendRefreshSeamTest.cpp
     CommandLineKeyHandlingTest.cpp
@@ -48,6 +49,7 @@ set(WINDOW_GROUP_TEST_SOURCES
     GlyphOverflowTest.cpp
     HyperlinkModelSplitTest.cpp
     HostConsolePrintTest.cpp
+    DetachedWindowTabActivityTest.cpp
     AboutDialogLicencesTest.cpp
     LabelAnchorInteractionTest.cpp
     MainWindowTitleTest.cpp
@@ -68,6 +70,7 @@ set(WINDOW_GROUP_TEST_SOURCES
     MxpWatchdogBufferLifetimeTest.cpp
     NarrowWindowWrapTest.cpp
     NotepadTest.cpp
+    TabActivityMarkTest.cpp
     MenuShortcutTeardownTest.cpp
     NawsWidthReportTest.cpp
     DetachedWindowToolBarIconSizeTest.cpp
@@ -87,6 +90,7 @@ set(WINDOW_GROUP_TEST_SOURCES
     WrapLineRewrapTest.cpp
     ScrollLostOnPartialRepaintTest.cpp
     ScrollBarContrastTest.cpp
+    OpaqueConsolePaintTest.cpp
 )
 
 # Profiles: their config dir, their folders, and loading, saving and deleting them
@@ -213,6 +217,7 @@ set(MAP_GROUP_TEST_SOURCES
     MapOffscreenCustomLineTest.cpp
     MapFileStatsTest.cpp
     MapTextLabelCacheTest.cpp
+    MapLabelRenderTest.cpp
     MapViewCueTest.cpp
     LuaMapperCueTest.cpp
     MapLockNoOpTest.cpp
@@ -725,8 +730,8 @@ set_tests_properties(ScrollLostOnPartialRepaintTest PROPERTIES TIMEOUT 300)
 # reconnecting in others, so it needs a longer timeout
 set_tests_properties(TelnetStringSequenceRecoveryTest PROPERTIES TIMEOUT 300)
 
-# CopyAsImageTest and MainConsoleSelectionTest create a fresh profile per test method, so they need a longer timeout
-set_tests_properties(CopyAsImageTest MainConsoleSelectionTest PROPERTIES TIMEOUT 300)
+# CopyAsImageTest, MainConsoleSelectionTest and OpaqueConsolePaintTest create a fresh profile per test method, so they need a longer timeout
+set_tests_properties(CopyAsImageTest MainConsoleSelectionTest OpaqueConsolePaintTest PROPERTIES TIMEOUT 300)
 
 # TDiscordModeTest drives the real discord-rpc library end-to-end. The library's
 # reconnect backoff is a process-global (60s ceiling) that the suite's

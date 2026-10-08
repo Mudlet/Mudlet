@@ -1411,6 +1411,7 @@ int TLuaInterpreter::setModulePriority(lua_State* L)
         return warnArgumentValue(L, __func__, "module doesn't exist");
     }
     host.mModulePriorities[moduleName] = modulePriority;
+    emit host.signal_moduleListChangedByScript();
     return 0;
 }
 
@@ -2368,8 +2369,9 @@ int TLuaInterpreter::getTimestamp(lua_State* L)
 
     const auto luaLine = getVerifiedInt(L, __func__, s, "line number");
     const QString name = n > 1 ? QString{lua_tostring(L, 1)} : QString();
-    if (luaLine < 1) {
-        return warnArgumentValue(L, __func__, qsl("line number %1 invalid, it should be greater than zero").arg(luaLine));
+    // Counted from 0, like getLineNumber() and moveCursor()
+    if (luaLine < 0) {
+        return warnArgumentValue(L, __func__, qsl("line number %1 invalid, it should not be negative").arg(luaLine));
     }
 
     auto pModel = getHostFromLua(L).consoleModelNamed(name);
@@ -3837,6 +3839,31 @@ void TLuaInterpreter::adjustCaptureGroups(int x, int a)
     for (auto& [pos, length] : mCapturedNameGroupsPosList) {
         if (pos >= x) {
             pos += a;
+        }
+    }
+}
+
+// The capture that was exactly the replaced text keeps its start and takes on the
+// replacement's length; adjustCaptureGroups() would move its start instead, as
+// though the text had been inserted in front of it
+void TLuaInterpreter::adjustCaptureGroupsForReplace(int x, int replacedLength, const QString& replacement)
+{
+    const int delta = replacement.size() - replacedLength;
+    const std::size_t count = std::min(mCaptureGroupPosList.size(), mCaptureGroupList.size());
+    for (std::size_t i = 0; i < count; ++i) {
+        int& pos = mCaptureGroupPosList[i];
+        if (pos == x && QString::fromStdString(mCaptureGroupList[i]).size() == replacedLength) {
+            mCaptureGroupList[i] = replacement.toStdString();
+        } else if (pos > x) {
+            pos += delta;
+        }
+    }
+
+    for (auto& [pos, length] : mCapturedNameGroupsPosList) {
+        if (pos == x && length == replacedLength) {
+            length = replacement.size();
+        } else if (pos > x) {
+            pos += delta;
         }
     }
 }
@@ -5786,6 +5813,23 @@ bool TLuaInterpreter::callLabelCallbackEvent(const int func, const QEvent* qE)
     return true;
 }
 
+// Whether "return <name>" does nothing but read the global of that name. Of
+// the keywords only these three compile there, so they are the ones to exclude.
+static bool plainGlobalName(const QString& name)
+{
+    if (name.isEmpty() || name == QLatin1String("nil") || name == QLatin1String("true") || name == QLatin1String("false")) {
+        return false;
+    }
+    for (qsizetype i = 0; i < name.size(); ++i) {
+        const char16_t c = name.at(i).unicode();
+        const bool letter = (c >= u'a' && c <= u'z') || (c >= u'A' && c <= u'Z') || c == u'_';
+        if (!letter && (i == 0 || c < u'0' || c > u'9')) {
+            return false;
+        }
+    }
+    return true;
+}
+
 // No documentation available in wiki - internal function
 bool TLuaInterpreter::callEventHandler(const QString& function, const TEvent& pE)
 {
@@ -5814,16 +5858,39 @@ bool TLuaInterpreter::callEventHandler(const QString& function, const TEvent& pE
     // Compiling the lookup costs far more than running it, and every event
     // pays for at least one - dispatchEventToFunctions is always registered -
     // so each handler name is compiled once. Running the chunk still looks the
-    // name up afresh, so a handler that is redefined or removed is seen:
+    // name up afresh, so a handler that is redefined or removed is seen. A
+    // plain global name skips the chunk: what the globals table holds under it
+    // is what "return name" would find, and only when it holds nothing - so a
+    // metamethod could supply or reject the name - does the chunk run instead:
+    const auto loadLookup = [L, &function] {
+        return luaL_loadstring(L, qsl("return %1").arg(function).toUtf8().constData());
+    };
     int error = 0;
+    bool resolved = false;
     if (const auto cached = mEventHandlerLookupRefs.constFind(function); cached != mEventHandlerLookupRefs.cend()) {
         lua_rawgeti(L, LUA_REGISTRYINDEX, cached.value());
-        // A freshly loaded chunk would take whatever globals table the thread
-        // has now, which setfenv(0, ...) can have changed since this one was:
-        lua_pushvalue(L, LUA_GLOBALSINDEX);
-        lua_setfenv(L, -2);
+        if (lua_type(L, -1) == LUA_TSTRING) {
+            lua_rawget(L, LUA_GLOBALSINDEX);
+            resolved = !lua_isnil(L, -1);
+            if (!resolved) {
+                lua_pop(L, 1);
+                // The chunk takes the name's place, so a name that only a
+                // metamethod supplies is not compiled again on every event:
+                error = loadLookup();
+                if (!error) {
+                    lua_pushvalue(L, -1);
+                    lua_rawseti(L, LUA_REGISTRYINDEX, cached.value());
+                }
+            }
+        } else {
+            // A freshly loaded chunk would take whatever globals table the
+            // thread has now, which setfenv(0, ...) can have changed since
+            // this one was:
+            lua_pushvalue(L, LUA_GLOBALSINDEX);
+            lua_setfenv(L, -2);
+        }
     } else {
-        error = luaL_loadstring(L, qsl("return %1").arg(function).toUtf8().constData());
+        error = loadLookup();
         if (!error) {
             // Script names come and go with renames, so keep this from growing
             // without bound - but far above the handler count of any real
@@ -5834,11 +5901,15 @@ bool TLuaInterpreter::callEventHandler(const QString& function, const TEvent& pE
                 }
                 mEventHandlerLookupRefs.clear();
             }
-            lua_pushvalue(L, -1);
+            if (plainGlobalName(function)) {
+                lua_pushstring(L, function.toUtf8().constData());
+            } else {
+                lua_pushvalue(L, -1);
+            }
             mEventHandlerLookupRefs.insert(function, luaL_ref(L, LUA_REGISTRYINDEX));
         }
     }
-    if (!error) {
+    if (!error && !resolved) {
         error = lua_pcall(L, 0, LUA_MULTRET, 0);
     }
     if (error) {
@@ -7780,10 +7851,9 @@ QPair<int, QString> TLuaInterpreter::startTempTimer(double timeout, const QStrin
         return qMakePair(-1, qsl("unable to compile \"%1\", reason: %2").arg(function, errMsg));
     }
 
-    const int id = pT->getID();
+    // setIsActive() starts it: starting it again would make Qt find and unregister it among every live timer
     pT->setIsActive(true);
-    pT->enableTimer(id);
-    return qMakePair(id, QString());
+    return qMakePair(pT->getID(), QString());
 }
 
 // No documentation available in wiki - internal function
@@ -8986,8 +9056,12 @@ int TLuaInterpreter::setConfig(lua_State* L)
 
     if (host.mpMap && host.mpMap->mpMapper) {
         if (key == qsl("mapRoomSize")) {
+            const int size = getVerifiedInt(L, __func__, 2, "value");
+            if (size < 1) {
+                return warnArgumentValue(L, __func__, qsl("mapRoomSize must be at least 1, got %1").arg(size));
+            }
             // Through float, as dlgMapper::slot_roomSize() rounds it:
-            host.mRoomSize = static_cast<float>(getVerifiedInt(L, __func__, 2, "value") / 10.0);
+            host.mRoomSize = static_cast<float>(size / 10.0);
             host.mpMap->announceMapperSettingChanged(TMap::MapperSetting::RoomSize);
             return success();
         }

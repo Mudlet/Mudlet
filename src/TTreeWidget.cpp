@@ -462,15 +462,28 @@ QTreeWidgetItem* TTreeWidget::findItemByTriggerID(QTreeWidgetItem* pParent, int 
     return nullptr;
 }
 
+// Shared by every row of one walk: a table of tens of thousands of members
+// would otherwise load its icons from the resources that many times
+struct TTreeWidget::VariableRowLook
+{
+    QIcon tableIcon{QPixmap(qsl(":/icons/table.png"))};
+    QIcon functionIcon{QPixmap(qsl(":/icons/function.png"))};
+    QIcon variableIcon{QPixmap(qsl(":/icons/variable.png"))};
+    QBrush unsaveableBrush{QColor("grey")};
+    QString saveToolTip;
+};
+
 void TTreeWidget::buildVariableRows(VarUnit* pVarUnit, QTreeWidgetItem* pParent, TVar* pVariable, bool showHidden)
 {
     // Old rows stand for variables this walk replaces, so drop them rather than re-validate by stamp
     clearVariableRows();
     mVariablesGeneration = pVarUnit->treeGeneration();
-    addVariableRows(pVarUnit, pParent, pVariable, showHidden);
+    //: Tooltip on a row in the editor's Variables view, offering to keep that variable between sessions
+    const VariableRowLook look{.saveToolTip = utils::richText(tr("Checked variables will be saved and loaded with your profile."))};
+    addVariableRows(pVarUnit, pParent, pVariable, showHidden, look);
 }
 
-void TTreeWidget::addVariableRows(VarUnit* pVarUnit, QTreeWidgetItem* pParent, TVar* pVariable, bool showHidden)
+void TTreeWidget::addVariableRows(VarUnit* pVarUnit, QTreeWidgetItem* pParent, TVar* pVariable, bool showHidden, const VariableRowLook& look)
 {
     QList<QTreeWidgetItem*> cList;
     for (TVar* child : pVariable->getChildren(true)) {
@@ -478,38 +491,34 @@ void TTreeWidget::addVariableRows(VarUnit* pVarUnit, QTreeWidgetItem* pParent, T
             continue;
         }
         auto pItem = new QTreeWidgetItem(QStringList() << child->getName());
-        pItem->setText(0, child->getName());
         pItem->setFlags(Qt::ItemIsEnabled | Qt::ItemIsSelectable | Qt::ItemIsDropEnabled | Qt::ItemIsDragEnabled | Qt::ItemIsAutoTristate | Qt::ItemIsUserCheckable);
-        //: Tooltip on a row in the editor's Variables view, offering to keep that variable between sessions
-        pItem->setToolTip(0, utils::richText(tr("Checked variables will be saved and loaded with your profile.")));
+        pItem->setToolTip(0, look.saveToolTip);
         pItem->setCheckState(0, Qt::Unchecked);
         if (pVarUnit->isSaved(child)) {
             pItem->setCheckState(0, Qt::Checked);
         }
         if (!pVarUnit->shouldSave(child)) {
             pItem->setFlags(pItem->flags() & ~(Qt::ItemIsDropEnabled | Qt::ItemIsDragEnabled | Qt::ItemIsUserCheckable));
-            pItem->setForeground(0, QBrush(QColor("grey")));
+            pItem->setForeground(0, look.unsaveableBrush);
             const QString reason = pVarUnit->getUnsaveableReason(child);
             pItem->setToolTip(0, reason.isEmpty() ? QString() : utils::richText(reason));
         }
         pItem->setData(0, Qt::UserRole, child->getValueType());
-        QIcon icon;
         switch (child->getValueType()) {
         case LUA_TTABLE:
-            icon.addPixmap(QPixmap(qsl(":/icons/table.png")), QIcon::Normal, QIcon::Off);
+            pItem->setIcon(0, look.tableIcon);
             break;
         case LUA_TFUNCTION:
-            icon.addPixmap(QPixmap(qsl(":/icons/function.png")), QIcon::Normal, QIcon::Off);
+            pItem->setIcon(0, look.functionIcon);
             break;
         default:
-            icon.addPixmap(QPixmap(qsl(":/icons/variable.png")), QIcon::Normal, QIcon::Off);
+            pItem->setIcon(0, look.variableIcon);
             break;
         }
-        pItem->setIcon(0, icon);
         mVariableForRow.insert(pItem, child);
         cList.append(pItem);
         if (child->getValueType() == LUA_TTABLE) {
-            addVariableRows(pVarUnit, pItem, child, showHidden);
+            addVariableRows(pVarUnit, pItem, child, showHidden, look);
         }
     }
     pParent->addChildren(cList);
