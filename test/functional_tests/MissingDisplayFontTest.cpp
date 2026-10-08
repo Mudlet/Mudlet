@@ -656,9 +656,9 @@ private slots:
         const QString absentPath = mArchiveDir.filePath(qsl("font-absent.xml"));
         QVERIFY2(writeHostPackageXml(absentPath, absentFamily), "could not write the package XML");
         QVERIFY2(pHost->installPackage(absentPath, enums::PackageModuleType::Package).first, "the package naming an uninstalled font did not install");
-        // An install saves the profile, and installPackage() defers a second one
-        // for as long as that save is in flight - so without this the next install
-        // is only queued and the case would pass on a font that never arrived.
+        // installPackage() defers an install for as long as a save is in flight -
+        // so without this the next install could be only queued and the case would
+        // pass on a font that never arrived.
         pHost->waitForProfileSave();
         QCOMPARE(pHost->getDisplayFont().family(), absentFamily);
         QCOMPARE(pHost->getDisplayFontForSaving().family(), mMissingFamily);

@@ -24,7 +24,9 @@
 #include "EditorCommand.h"
 
 #include <QDebug>
+#include <QSet>
 #include <typeinfo>
+#include <utility>
 
 EditorUndoStack::EditorUndoStack(QObject* parent)
 : QUndoStack(parent)
@@ -49,14 +51,20 @@ EditorUndoStack::EditorUndoStack(QObject* parent)
             affectedCommandIndex = mPreviousIndex - 1;
         }
 
+        const bool undone = newIndex < mPreviousIndex;
+        // Updated before emitting: a handler can push a command, whose own index change must not be overwritten
+        mPreviousIndex = newIndex;
+
         // Emit itemsChanged for the affected command (including all children for macros)
         if (affectedCommandIndex >= 0 && affectedCommandIndex < count()) {
             const QUndoCommand* cmd = command(affectedCommandIndex);
+            if (undone) {
+                if (auto* deleteCmd = dynamic_cast<const EditorDeleteItemCommand*>(cmd)) {
+                    mUndoneDeleteIDChanges = deleteCmd->getIDChanges();
+                }
+            }
             emitChangesForCommand(cmd);
         }
-
-        // Update previous index for next change
-        mPreviousIndex = newIndex;
     });
 }
 
@@ -126,14 +134,15 @@ void EditorUndoStack::collectAffectedItems(const QUndoCommand* cmd, QMap<EditorV
         QList<int> itemIDs = mudletCmd->affectedItemIDs();
 
         // Add to the map, avoiding duplicates and invalid IDs
+        QList<int>& affectedIDs = affectedItemsByView[viewType];
+        QSet<int> seenIDs{affectedIDs.cbegin(), affectedIDs.cend()};
         for (int id : std::as_const(itemIDs)) {
             // Skip invalid IDs (0 or negative)
-            if (id <= 0) {
+            if (id <= 0 || seenIDs.contains(id)) {
                 continue;
             }
-            if (!affectedItemsByView[viewType].contains(id)) {
-                affectedItemsByView[viewType].append(id);
-            }
+            seenIDs.insert(id);
+            affectedIDs.append(id);
         }
     }
 
@@ -186,21 +195,16 @@ void EditorUndoStack::undo()
 
     // Get the command that will be undone (if any)
     if (index() > 0) {
-        const QUndoCommand* cmd = command(index() - 1);
 #if defined(DEBUG_UNDO_REDO)
+        const QUndoCommand* cmd = command(index() - 1);
         qDebug() << "EditorUndoStack::undo() - Undoing command:" << (cmd ? cmd->text() : QStringLiteral("null")) << "at index" << (index() - 1);
         qDebug() << "EditorUndoStack::undo() - Command pointer:" << static_cast<const void*>(cmd) << "Type info:" << (cmd ? typeid(*cmd).name() : "null");
         qDebug() << "EditorUndoStack::undo() - Command has" << (cmd ? cmd->childCount() : 0) << "children";
 #endif
 
-        // Check if this is a DeleteItemCommand BEFORE calling undo (matching redo pattern)
-        // This prevents accessing potentially invalidated memory after the undo operation
-        const EditorDeleteItemCommand* deleteCmd = dynamic_cast<const EditorDeleteItemCommand*>(cmd);
-#if defined(DEBUG_UNDO_REDO)
-        if (deleteCmd) {
-            qDebug() << "EditorUndoStack::undo() - Command is a DeleteItemCommand, will need ID remapping";
-        }
-#endif
+        // The undone command itself may already be freed once the base undo returns, so the
+        // indexChanged handler copies a delete command's ID changes into mUndoneDeleteIDChanges
+        mUndoneDeleteIDChanges.clear();
 
         // Call the base class undo
         QUndoStack::undo();
@@ -209,20 +213,18 @@ void EditorUndoStack::undo()
         qDebug() << "EditorUndoStack::undo() - Base undo completed, new index:" << index();
 #endif
 
-        // Check if this is a DeleteItemCommand that restored items with new IDs
-        if (deleteCmd) {
-            QList<QPair<int, int>> idChanges = deleteCmd->getIDChanges();
+        // A DeleteItemCommand restores items with new IDs
+        const QList<QPair<int, int>> idChanges = std::exchange(mUndoneDeleteIDChanges, {});
 #if defined(DEBUG_UNDO_REDO)
-            qDebug() << "EditorUndoStack::undo() - DeleteItemCommand restored items with ID changes:" << idChanges.size();
+        qDebug() << "EditorUndoStack::undo() - DeleteItemCommand restored items with ID changes:" << idChanges.size();
 #endif
-            for (const auto& change : std::as_const(idChanges)) {
-                int oldID = change.first;
-                int newID = change.second;
+        for (const auto& change : idChanges) {
+            int oldID = change.first;
+            int newID = change.second;
 #if defined(DEBUG_UNDO_REDO)
-                qDebug() << "EditorUndoStack::undo() - Remapping ID" << oldID << "->" << newID;
+            qDebug() << "EditorUndoStack::undo() - Remapping ID" << oldID << "->" << newID;
 #endif
-                remapItemIDs(oldID, newID);
-            }
+            remapItemIDs(oldID, newID);
         }
     } else {
 #if defined(DEBUG_UNDO_REDO)

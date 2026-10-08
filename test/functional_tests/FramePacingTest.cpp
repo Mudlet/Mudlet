@@ -17,6 +17,7 @@
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
 
+#include <QScrollBar>
 #include <QTemporaryDir>
 #include <QtTest/QtTest>
 #include <chrono>
@@ -73,12 +74,15 @@ private:
 
     QObject* mpWatchedPane = nullptr;
     int mPaintCount = 0;
+    QRegion mFirstPaintRegion;
 
 protected:
     bool eventFilter(QObject* watched, QEvent* event) override
     {
         if (watched == mpWatchedPane && event->type() == QEvent::Paint) {
-            ++mPaintCount;
+            if (mPaintCount++ == 0) {
+                mFirstPaintRegion = static_cast<QPaintEvent*>(event)->region();
+            }
         }
         return QObject::eventFilter(watched, event);
     }
@@ -184,6 +188,96 @@ private slots:
         // that apart would need a deadline between the two repaints, which is the
         // wall-clock trap this test was flaky for in the first place.
         QVERIFY2(pacerFired.count() == 1, "the pacer armed a frame and then never fired, so the held-back line waits on an unrelated repaint to appear");
+    }
+
+    void test_aBurstInsideOneFrameMovesTheScrollBarOnceNotPerLine()
+    {
+        mpServer->setWelcomeMessage(qsl("hello\r\nthere\r\n"));
+        startProfile(mpHostname, mpLocalhost, mpPort);
+        QVERIFY2(waitForTextInBuffer(qsl("there")), "welcome text never reached the buffer");
+
+        mudlet::self()->resize(1200, 800);
+        QTest::qWait(200ms);
+
+        auto host = mudlet::self()->getActiveHost();
+        QVERIFY(host);
+        auto console = host->mpConsole;
+        QVERIFY(console);
+        TTextEdit* pane = console->mUpperPane;
+        QVERIFY(pane);
+        QScrollBar* scrollBar = console->mpScrollBar;
+        QVERIFY(scrollBar);
+
+        mpWatchedPane = pane;
+        pane->installEventFilter(this);
+        pane->repaint();
+
+        // A script echoing in a loop never returns to the event loop between lines,
+        // so the frame the first line opens is still unpainted when the rest arrive.
+        pane->mSincePaint.invalidate();
+        mPaintCount = 0;
+        console->print(qsl("burst 0\n"));
+        const int maximumAfterFirstLine = scrollBar->maximum();
+        for (int i = 1; i < 50; ++i) {
+            console->print(qsl("burst %1\n").arg(i));
+        }
+        QCOMPARE(mPaintCount, 0);
+        QCOMPARE(scrollBar->maximum(), maximumAfterFirstLine);
+
+        const int lastLine = console->buffer.getLastLineNumber();
+        QVERIFY2(QTest::qWaitFor(
+                         [&]() {
+                             return mPaintCount > 0 && scrollBar->maximum() == lastLine + 1 && scrollBar->value() == console->buffer.size();
+                         },
+                         2s),
+                 qPrintable(qsl("after the burst the pane painted %1 times and the scrollbar stands at %2 of %3, not at the end of %4 lines")
+                                    .arg(mPaintCount)
+                                    .arg(scrollBar->value())
+                                    .arg(scrollBar->maximum())
+                                    .arg(lastLine + 1)));
+    }
+
+    void test_aRowAskedForFirstDoesNotStopTheNewLinesBeingPainted()
+    {
+        mpServer->setWelcomeMessage(qsl("hello\r\nthere\r\n"));
+        startProfile(mpHostname, mpLocalhost, mpPort);
+        QVERIFY2(waitForTextInBuffer(qsl("there")), "welcome text never reached the buffer");
+
+        mudlet::self()->resize(1200, 800);
+        QTest::qWait(200ms);
+
+        auto host = mudlet::self()->getActiveHost();
+        QVERIFY(host);
+        auto console = host->mpConsole;
+        QVERIFY(console);
+        TTextEdit* pane = console->mUpperPane;
+        QVERIFY(pane);
+
+        mpWatchedPane = pane;
+        pane->installEventFilter(this);
+        pane->repaint();
+
+        // A script recolouring a line already on screen asks for that row alone;
+        // the echo after it asks for the whole pane, which must not be taken as
+        // already asked for because it overlaps the row.
+        pane->mSincePaint.invalidate();
+        mPaintCount = 0;
+        const int lastLine = console->buffer.getLastLineNumber();
+        pane->markLinesDirty(lastLine, lastLine);
+        console->print(qsl("after the recolour\n"));
+        QCOMPARE(mPaintCount, 0);
+
+        QVERIFY2(QTest::qWaitFor(
+                         [this]() {
+                             return mPaintCount > 0;
+                         },
+                         2s),
+                 "the pane never repainted after the print");
+        const QRegion unpainted = QRegion(pane->rect()).subtracted(mFirstPaintRegion);
+        QVERIFY2(unpainted.isEmpty(),
+                 qPrintable(qsl("the first paint after the print covered %1 of the pane's %2 pixel rows, so the new line was left unpainted")
+                                    .arg(mFirstPaintRegion.boundingRect().height())
+                                    .arg(pane->height())));
     }
 
 private:
