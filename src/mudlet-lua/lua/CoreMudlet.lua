@@ -446,8 +446,11 @@ if false then
 
 
 
-  --- <b><u>TODO</u></b>  insertHTML - TLuaInterpreter::insertHTML
-  function insertHTML()
+  --- Inserts text at the cursor position of the main console, exactly like insertText(). The markup is
+  --- inserted verbatim: HTML is not interpreted.
+  ---
+  --- @see insertText
+  function insertHTML(text)
   end
 
 
