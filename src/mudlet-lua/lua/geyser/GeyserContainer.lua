@@ -295,13 +295,14 @@ end
 -- This is very useful to see where a container actually is if you've
 -- forgotten its details or as an alert function to notify the user.
 -- @param time Time in seconds to flash for, default is 1.0s.
--- @param[opt=true] onHidden Optional, use as an alert function and don't flash hidden containers.
+-- @param[opt=true] onHidden Optional, pass false to use it as an alert function that doesn't flash hidden containers.
 function Geyser.Container:flash (time, onHidden)
   local time = time or 1.0
-  local onHidden = onHidden ~= false
-  
-  if not onHidden then return end
-  
+
+  if onHidden == false and (self.hidden or self.auto_hidden) then
+    return
+  end
+
   local x, y, width, height = self.get_x(), self.get_y(), self.get_width(), self.get_height()
   local name = self.name .. "_dimensions_flash"
   createLabel(self.windowname ,name, x, y, width, height, 1)
