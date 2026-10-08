@@ -3374,6 +3374,11 @@ int TLuaInterpreter::setFontSize(lua_State* L)
         // just throw an error, no default needed.
         return warnArgumentValue(L, __func__, "size cannot be 0 or negative");
     }
+    // Far past any screen, and well short of where Qt gives up on the font and reports no family for it
+    static constexpr int maxFontSize = 1000;
+    if (size > maxFontSize) {
+        return warnArgumentValue(L, __func__, qsl("size %1 is too large, it cannot be more than %2").arg(size).arg(maxFontSize));
+    }
 
     const QString consoleName{windowName};
     const Host& host = getHostFromLua(L);
