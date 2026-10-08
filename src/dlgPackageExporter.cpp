@@ -943,6 +943,8 @@ void dlgPackageExporter::slot_exportPackage()
 
     const QString tempPath = qsl("%1/").arg(stagingDirName);
 
+    // Made before Cancel is shown and the event loop runs, so that an early Cancel reaches the zip
+    mpZipCancelled = std::make_shared<std::atomic<bool>>(false);
     mExportingPackage = true;
     mExportRunning = true;
     QApplication::setOverrideCursor(Qt::BusyCursor);
@@ -1008,7 +1010,6 @@ void dlgPackageExporter::slot_exportPackage()
             displayResultMessage(message, false);
             isOk = false;
         } else {
-            mpZipCancelled = std::make_shared<std::atomic<bool>>(false);
             auto future = QtConcurrent::run(dlgPackageExporter::zipPackage, stagingDirName, mPackagePathFileName, mXmlPathFileName, mPackageName, mPackageComment, mpZipCancelled);
             auto watcher = new QFutureWatcher<std::pair<bool, QString>>(this);
             mpZipWatcher = watcher;

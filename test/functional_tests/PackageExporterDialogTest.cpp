@@ -1348,6 +1348,38 @@ private slots:
         nameField()->setText(packageNamed(qsl("exporter-after-closed-export")));
         QVERIFY2(exportButton()->isEnabled(), qPrintable(qsl("Exporting stayed blocked after the dialog that was exporting went away; the button said: \"%1\"").arg(exportButton()->toolTip())));
     }
+
+    // Cancel is shown, and the event loop runs, before the zip is started
+    void test_cancellingBeforeTheZipStartsStopsThePackageBeingWritten_10441()
+    {
+#if !defined(LIBZIP_SUPPORTS_CANCELLING)
+        QSKIP("this libzip cannot cancel an export");
+#endif
+        const QString packageName = packageNamed(qsl("exporter-cancelled-early"));
+        makeTrigger(qsl("exporter early cancel trigger"), nullptr);
+        openExporter();
+        QVERIFY(checkItem(triggersTop(), qsl("exporter early cancel trigger")));
+        nameField()->setText(packageName);
+
+        bool cancelClicked = false;
+        QMetaObject::invokeMethod(
+                this,
+                [this, &cancelClicked]() {
+                    auto* box = mpExporter->findChild<QDialogButtonBox*>(qsl("buttonBox"));
+                    for (auto* button : box->buttons()) {
+                        if (box->buttonRole(button) == QDialogButtonBox::ResetRole && !button->isHidden()) {
+                            button->click();
+                            cancelClicked = true;
+                        }
+                    }
+                },
+                Qt::QueuedConnection);
+        mpExporter->slot_exportPackage();
+        QVERIFY2(cancelClicked, "the Cancel button was not showing while the export was getting ready");
+        QVERIFY(waitForExportToSettle());
+        QVERIFY2(infoLabel()->text().contains(qsl("Export cancelled.")), qPrintable(qsl("Cancelling did not stop the export; the dialog said: \"%1\"").arg(infoLabel()->text())));
+        QVERIFY2(!QFileInfo::exists(packagePath(packageName)), "the package was written although the export was cancelled");
+    }
 };
 
 #include "PackageExporterDialogTest.moc"
