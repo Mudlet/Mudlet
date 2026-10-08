@@ -228,6 +228,21 @@ describe("Tests functionality of Adjustable.Container", function()
       assert.are.same({x = 50, y = 90, width = 140, height = 110}, geometry("gasPaddedChild"))
     end)
 
+    it("setPadding refuses a negative or non-numeric padding and leaves the container usable", function()
+      Geyser.Label:new({name = "gasBadPaddingChild", x = 0, y = 0, width = "100%", height = "100%"}, container)
+      for _, padding in ipairs({-5, "nonsense", false, math.huge, "inf"}) do
+        local ok, message = container:setPadding(padding)
+        assert.is_nil(ok)
+        assert.is_truthy(message:find("padding as a number of 0 or more expected", 1, true))
+      end
+      assert.has_no.errors(function() container:setPadding() end)
+      assert.are.equal(10, container.padding)
+      assert.is_true(container:setPadding(10))
+      container:move(20, 30)
+      container:unlockContainer()
+      assert.are.same({x = 30, y = 50, width = 180, height = 170}, geometry("gasBadPaddingChild"))
+    end)
+
     it("hides and shows every widget it owns", function()
       container:hide()
       assert.is_false(windowVisible("gasContaineradjLabel"))
@@ -2221,6 +2236,18 @@ describe("Tests Adjustable.Container borders, persistence and menu items", funct
       local message = container:load(nil, scratchDir)
       assert.is_string(message)
       assert.is_truthy(message:find("Couldn't load settings from", 1, true))
+    end)
+
+    it("keeps its padding when the saved one is negative", function()
+      local container = make("gapSavedBadPadding")
+      container:save(nil, scratchDir)
+      local saved = {}
+      table.load(scratchDir .. "gapSavedBadPadding.lua", saved)
+      saved.padding = -5
+      table.save(scratchDir .. "gapSavedBadPadding.lua", saved)
+
+      assert.has_no.errors(function() container:load(nil, scratchDir) end)
+      assert.are.equal(10, container.padding)
     end)
 
     it("brings back the padding, lock style and border margin", function()
