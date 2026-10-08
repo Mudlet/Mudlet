@@ -271,7 +271,7 @@ public:
     bool isClosingForced() const { return mForcedClose; }
     bool requestClose();
 
-    unsigned int assemblePath();
+    qint64 assemblePath();
     bool checkForMappingScript();
     bool checkForCustomSpeedwalk();
 

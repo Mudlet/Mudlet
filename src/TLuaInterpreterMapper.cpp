@@ -2080,10 +2080,10 @@ int TLuaInterpreter::getPath(lua_State* L)
     }
 
     const bool ret = host.mpMap->gotoRoom(originRoomId, targetRoomId);
-    const int totalWeight = host.assemblePath(); // Needed even if unsuccessful, to clear lua tables then
+    const qint64 totalWeight = host.assemblePath(); // Needed even if unsuccessful, to clear lua tables then
     if (ret) {
         lua_pushboolean(L, true);
-        lua_pushnumber(L, totalWeight);
+        lua_pushnumber(L, static_cast<lua_Number>(totalWeight));
         return 2;
     }
     lua_pushboolean(L, false);
@@ -2611,8 +2611,7 @@ int TLuaInterpreter::gotoRoom(lua_State* L)
     }
 
     if (!host.mpMap->gotoRoom(targetRoomId)) {
-        const int totalWeight = host.assemblePath(); // Needed if unsuccessful to clear lua speedwalk tables
-        Q_UNUSED(totalWeight)
+        host.assemblePath(); // Needed if unsuccessful to clear lua speedwalk tables
         return warnArgumentValue(L, __func__, qsl("no path found from current room to room with id %1").arg(targetRoomId), true);
     }
     host.startSpeedWalk();

@@ -1790,9 +1790,9 @@ bool Host::substituteMissingDisplayFont()
 }
 
 // Now returns the total weight of the path
-unsigned int Host::assemblePath()
+qint64 Host::assemblePath()
 {
-    unsigned int totalWeight = 0;
+    qint64 totalWeight = 0;
     QStringList pathList;
     for (const int i : std::as_const(mpMap->mPathList)) {
         const QString n = QString::number(i);
@@ -1839,8 +1839,7 @@ bool Host::checkForCustomSpeedwalk()
 
 void Host::startSpeedWalk()
 {
-    const int totalWeight = assemblePath();
-    Q_UNUSED(totalWeight)
+    assemblePath();
     const QString f = qsl("doSpeedWalk");
     const QString n = QString();
     mLuaInterpreter.call(f, n);

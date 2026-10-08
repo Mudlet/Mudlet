@@ -1212,7 +1212,7 @@ bool TMap::findPath(int from, int to)
         // the "previousVertex = p[currentVertex]" operation at the start of
         // the do{} loop - added a test for this so should bail out if it
         // happens - Slysven
-        mWeightList.prepend(r.cost);
+        mWeightList.prepend(static_cast<int>(r.cost));
         switch (r.direction) {
             /*
              * Do not translate the directions into the user's locale here,

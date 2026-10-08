@@ -48,12 +48,13 @@ struct location
     TRoom* pR; // 4 or 8 bytes? - so may have reduced size from 20 to 8 or 12 plus padding...?
 };
 
-typedef float cost;
+// double, not float: weights go up to INT_MAX and a route sums several of them, all exactly.
+typedef double cost;
 
 // Used to record edge details and to deduplicate parallel ones:
 struct route
 {
-    float cost;              // Needed during establishing the best parallel edge
+    double cost;             // Needed during establishing the best parallel edge
     quint8 direction;        // Use DIR_xxx values to code exit direction
     QString specialExitName; // If direction is DIR_OTHER then this is needed
 };
@@ -80,9 +81,10 @@ public:
         if (m_location[m_goal].pR->getArea() != m_location[u].pR->getArea()) {
             return 1;
         }
-        CostType dx = m_location[m_goal].pR->x() - m_location[u].pR->x();
-        CostType dy = m_location[m_goal].pR->y() - m_location[u].pR->y();
-        CostType dz = m_location[m_goal].pR->z() - m_location[u].pR->z();
+        // Subtracted as CostType: two coordinates anywhere in the int range can differ by more than an int holds.
+        const CostType dx = static_cast<CostType>(m_location[m_goal].pR->x()) - m_location[u].pR->x();
+        const CostType dy = static_cast<CostType>(m_location[m_goal].pR->y()) - m_location[u].pR->y();
+        const CostType dz = static_cast<CostType>(m_location[m_goal].pR->z()) - m_location[u].pR->z();
 
         return std::sqrt(dx * dx + dy * dy + dz * dz);
     }
