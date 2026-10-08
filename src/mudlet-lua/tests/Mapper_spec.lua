@@ -3477,7 +3477,9 @@ describe("Tests getCollisionLocationsInArea on a scratch area", function()
     room(0, 0, 3); room(0, 0, 3)
     room(1, 1, 0)
     room(5, 2, 0)
-    assert.are.same({{-2, 1, 0}, {5, 1, 0}, {0, 0, 3}}, getCollisionLocationsInArea(area))
+    -- y comes before -2,1 and 5,1 but x comes after, so sorting by x before y would fail
+    room(9, 0, 0); room(9, 0, 0)
+    assert.are.same({{9, 0, 0}, {-2, 1, 0}, {5, 1, 0}, {0, 0, 3}}, getCollisionLocationsInArea(area))
   end)
 end)
 
