@@ -219,6 +219,7 @@ public:
     void addVar(bool);
     int canRecast(QTreeWidgetItem*, int newNameType, int newValueType);
     void saveVar();
+    void moveVariableRowToSortedPlace(QTreeWidgetItem*, TVar*);
     void showVariableRenameRefused(TVar*);
     void repopulateVars();
     void changeView(EditorViewType);

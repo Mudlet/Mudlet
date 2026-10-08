@@ -7425,10 +7425,67 @@ void dlgTriggerEditor::saveVar()
         break;
     }
     pItem->setIcon(0, icon);
+    moveVariableRowToSortedPlace(pItem, variable);
     mChangingVar = false;
     slot_variableSelected(pItem);
     if (renameRefused) {
         showVariableRenameRefused(variable);
+    }
+}
+
+// A full rebuild sorts the rows, so a row named in place has to go where that
+// sort would put it
+void dlgTriggerEditor::moveVariableRowToSortedPlace(QTreeWidgetItem* pItem, TVar* pVariable)
+{
+    QTreeWidgetItem* pParentItem = pItem->parent();
+    if (!pParentItem || !pVariable) {
+        return;
+    }
+    VarUnit* varUnit = mpHost->getLuaInterface()->getVarUnit();
+    const int from = pParentItem->indexOfChild(pItem);
+    int to = pParentItem->childCount() - 1;
+    for (int i = 0; i < pParentItem->childCount(); ++i) {
+        if (i == from) {
+            continue;
+        }
+        QTreeWidgetItem* pSiblingItem = pParentItem->child(i);
+        TVar* pSibling = treeWidget_variables->variableForRow(varUnit, pSiblingItem);
+        if (!pSibling) {
+            pSibling = treeWidget_variables->newVariableForRow(varUnit, pSiblingItem);
+        }
+        if (pSibling && TVarLessThan(pVariable, pSibling)) {
+            to = i > from ? i - 1 : i;
+            break;
+        }
+    }
+    if (to == from) {
+        return;
+    }
+
+    // The view forgets the expanded state of every row taken out of it, and
+    // moves the current row off one it loses
+    QTreeWidgetItem* pCurrentItem = treeWidget_variables->currentItem();
+    QList<QTreeWidgetItem*> expandedItems;
+    QList<QTreeWidgetItem*> pendingItems{pItem};
+    while (!pendingItems.isEmpty()) {
+        QTreeWidgetItem* pEntry = pendingItems.takeLast();
+        if (pEntry->isExpanded()) {
+            expandedItems.append(pEntry);
+        }
+        for (int i = 0; i < pEntry->childCount(); ++i) {
+            pendingItems.append(pEntry->child(i));
+        }
+    }
+    // Taking the current row would otherwise re-enter the selection slots,
+    // which save whatever row they then find current
+    const QSignalBlocker blocker(treeWidget_variables);
+    pParentItem->takeChild(from);
+    pParentItem->insertChild(to, pItem);
+    for (QTreeWidgetItem* pExpandedItem : std::as_const(expandedItems)) {
+        pExpandedItem->setExpanded(true);
+    }
+    if (pCurrentItem && treeWidget_variables->currentItem() != pCurrentItem) {
+        treeWidget_variables->setCurrentItem(pCurrentItem);
     }
 }
 
