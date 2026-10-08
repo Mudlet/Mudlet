@@ -375,7 +375,9 @@ void TMxpFrameWidgets::reportSize()
     // getMainWindowSize() rather than mpMainFrame's own geometry, which
     // TConsole::resizeEvent() sets to the full console size until the layout
     // corrects it
-    mpMainConsole->mpHost->mMxpFrameManager.setMainConsoleSize(mpMainConsole->getMainWindowSize(), mpMainConsole->size());
+    // A console hidden by a tab switch is 0 wide, but the container it returns to can be measured
+    const QSize consoleSize = mpMainConsole->isHidden() && mpMainConsole->parentWidget() ? mpMainConsole->parentWidget()->size() : mpMainConsole->size();
+    mpMainConsole->mpHost->mMxpFrameManager.setMainConsoleSize(mpMainConsole->getMainWindowSize(), consoleSize);
 }
 
 void TMxpFrameWidgets::reportTabAreaSize(const QString& headerName, const QSize& size)

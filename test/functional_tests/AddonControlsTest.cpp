@@ -707,6 +707,49 @@ private slots:
         QVERIFY2(!freeDescription.contains(pEditor->descKeyTaken), qPrintable(qsl("a binding that fires says its key is in use: %1").arg(freeDescription)));
     }
 
+    // The player saving a binding that does nothing is likely the one trying
+    // to find out why, so the save must not take the explanation away
+    void test_savingABindingOnATakenKeyKeepsItsWarning()
+    {
+        dlgTriggerEditor* pEditor = editorFor(mpFirstHost);
+        QVERIFY2(pEditor, "the profile's editor could not be opened");
+
+        QVERIFY2(runLua(mpFirstHost, qsl("_takenSaveId = permKey('TakenSave', '', mudlet.keymodifier.Control + mudlet.keymodifier.Alt, mudlet.key.T, [[echo('bound')]])")).isNull(),
+                 "the key binding could not be made");
+        const int takenId = luaGlobalNumber(mpFirstHost, qsl("_takenSaveId"));
+
+        pEditor->enterEvent(nullptr);
+        pEditor->slot_showKeys();
+        QTreeWidgetItem* pTaken = keyItem(pEditor, takenId);
+        QVERIFY2(pTaken, "the key binding is not in the editor's tree");
+
+        pEditor->showInfo(QString());
+        pEditor->treeWidget_keys->setCurrentItem(pTaken);
+        pEditor->slot_keySelected(pTaken);
+        const QString selectedText = editorSaid(pEditor);
+        pEditor->slot_saveSelectedItem();
+        const QString savedText = editorSaid(pEditor);
+        const QString savedDescription = accessibleDescription(pTaken);
+        // The Save Item action goes through slot_saveEdits() rather than slot_saveSelectedItem()
+        pEditor->showInfo(QString());
+        pEditor->slot_saveEdits();
+        const QString saveItemText = editorSaid(pEditor);
+        // Leaving the keys view saves the binding too, and the warning is no
+        // concern of the view switched to
+        pEditor->slot_showTriggers();
+        const QString otherViewText = editorSaid(pEditor);
+        pEditor->slot_showKeys();
+        pEditor->treeWidget_keys->setCurrentItem(pTaken);
+
+        pEditor->slot_deleteItemOrGroup();
+        pEditor->mpUndoStack->clear();
+        QVERIFY2(selectedText.contains(qsl("Toggle Time Stamps")), qPrintable(qsl("selecting a binding on one of Mudlet's own keys did not warn about it: %1").arg(selectedText)));
+        QVERIFY2(savedText.contains(qsl("Toggle Time Stamps")), qPrintable(qsl("saving a binding on one of Mudlet's own keys took its warning away: %1").arg(savedText)));
+        QVERIFY2(saveItemText.contains(qsl("Toggle Time Stamps")), qPrintable(qsl("the Save Item action took a taken key's warning away: %1").arg(saveItemText)));
+        QVERIFY2(savedDescription.count(pEditor->descKeyTaken) == 1, qPrintable(qsl("a saved binding on a taken key should say so to a screen reader once: %1").arg(savedDescription)));
+        QVERIFY2(!otherViewText.contains(qsl("Toggle Time Stamps")), qPrintable(qsl("a binding's warning followed the player into another view: %1").arg(otherViewText)));
+    }
+
     // addCommand() turns down a key Mudlet holds, but the preferences will move
     // one of Mudlet's shortcuts onto a command's key. Naming only Mudlet would
     // send the player to change a shortcut that is not the only thing in the way.

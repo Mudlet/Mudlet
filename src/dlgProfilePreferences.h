@@ -484,6 +484,8 @@ private:
     // Each category's icon as rich text for search headers, recoloured by restyleSidebarIcons()
     QMap<QString, QString> mCategoryIconMarkup;
     QTimer* mpTimer_apply = nullptr;
+    // The scrollback size the box showed when the maximum was ticked, to put back when it is unticked
+    int mBufferSizeBeforeMax = 0;
     // Debounces typing so a part-typed query does not move most cards onto the results page and back
     QTimer* mpTimer_search = nullptr;
     QString mPendingSearch;

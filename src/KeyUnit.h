@@ -26,6 +26,7 @@
 
 #include "utils.h"
 
+#include <QHash>
 #include <QList>
 #include <QMap>
 #include <QMultiMap>
@@ -105,12 +106,17 @@ private:
     void addKeyRootNode(TKey* pT, int parentPosition = -1, int childPosition = -1, bool moveKey = false);
     void addKey(TKey* pT);
     void removeKeyRootNode(TKey* pT);
+    void listRootNode(TKey* pT, std::list<TKey*>::iterator before);
+    void unlistRootNode(TKey* pT);
     void removeKey(TKey*);
 
 
     QPointer<Host> mpHost;
     QMap<int, TKey*> mKeyMap;
     std::list<TKey*> mKeyRootNodeList;
+    // Where each root node sits in mKeyRootNodeList: std::list::remove() walks the whole list,
+    // which made freeing a batch of temporary keys quadratic
+    QHash<TKey*, std::list<TKey*>::iterator> mRootNodePositions;
     int mMaxID;
     bool mModuleMember;
     QMap<int, QString> mKeys;
