@@ -3177,6 +3177,9 @@ std::pair<bool, QString> Host::installPackage(const QString& fileName, enums::Pa
         emit signal_editorCleanResetRequested();
     }
     QFile file2;
+    auto noPackageFoundReason = [&fileName]() {
+        return qsl("no package found in %1 - no Mudlet package file in it could be read").arg(fileName);
+    };
     // Filled per XML file by the archive branch, reported once both branches are done.
     QStringList itemsWithErrors;
     QStringList itemsWithErrorNames;
@@ -3184,8 +3187,12 @@ std::pair<bool, QString> Host::installPackage(const QString& fileName, enums::Pa
         const QString _home = MudletApp::getMudletPath(enums::profileHomePath, getName());
         // Unpacking into a folder the other kind owns would overwrite its files, and the rename below would
         // carry it off. A clashing archive unpacks beside it, moving in once its manifest's name proves free.
-        const QString _dest = crossKindRefusalOnTheFileName.isEmpty() ? MudletApp::getMudletPath(enums::profilePackagePath, getName(), packageName)
-                                                                      : MudletApp::getMudletPath(enums::profilePackagePath, getName(), packageName + qsl(".mudlet-installing"));
+        // So does one whose folder is already there for any other reason, or a refusal would leave the
+        // archive's files mixed into it. A sync and profile loading reuse the module's own folder on purpose.
+        const QString theFolderNamedAfterTheFile = MudletApp::getMudletPath(enums::profilePackagePath, getName(), packageName);
+        const bool aFolderIsNamedAfterTheFile = thing != enums::PackageModuleType::ModuleSync && !mIsProfileLoadingSequence && QDir(theFolderNamedAfterTheFile).exists();
+        const bool unpackBesideTheFolder = !crossKindRefusalOnTheFileName.isEmpty() || aFolderIsNamedAfterTheFile;
+        const QString _dest = unpackBesideTheFolder ? MudletApp::getMudletPath(enums::profilePackagePath, getName(), packageName + qsl(".mudlet-installing")) : theFolderNamedAfterTheFile;
         // home directory for the PROFILE
         const QDir _tmpDir(_home);
         // directory to store the expanded archive file contents
@@ -3194,7 +3201,7 @@ std::pair<bool, QString> Host::installPackage(const QString& fileName, enums::Pa
         // name, and then whatever its config.lua says, so it can just as well name
         // a folder of the profile's that was already here ("map", "log",
         // "current") - see the refusal further down.
-        if (!crossKindRefusalOnTheFileName.isEmpty() && QDir(_dest).exists() && QDir(_dest).absolutePath().startsWith(QDir(_home).absolutePath() + QLatin1Char('/'))) {
+        if (unpackBesideTheFolder && QDir(_dest).exists() && QDir(_dest).absolutePath().startsWith(QDir(_home).absolutePath() + QLatin1Char('/'))) {
             // Only this makes a ".mudlet-installing" folder and every exit removes it, so one here is left from an unfinished install
             removeDir(_dest, _dest);
         }
@@ -3325,6 +3332,30 @@ std::pair<bool, QString> Host::installPackage(const QString& fileName, enums::Pa
                     movedIntoPlace = _dir.rename(_dir.absolutePath(), newpath);
                 }
             }
+            // A folder of the package's own name that nothing installed owns is left over - a crash before the
+            // profile was saved, an uninstall that could not remove every file - and is installed over. Only once
+            // the archive has proved to hold a package, so a refusal leaves it untouched.
+            const bool installsOverALeftoverFolder = !movedIntoPlace && aFolderIsNamedAfterTheFile && crossKindRefusalOnTheFileName.isEmpty()
+                                                     && QDir(newpath).absolutePath() == QDir(theFolderNamedAfterTheFile).absolutePath() && !theProfileKeepsItsOwnDataIn(packageName);
+            if (installsOverALeftoverFolder) {
+                bool holdsAPackageFile = false;
+                const QFileInfoList candidates = _dir.entryInfoList({qsl("*.xml"), qsl("*.trigger")}, QDir::Files);
+                for (const auto& candidate : candidates) {
+                    if (candidate.isReadable()) {
+                        holdsAPackageFile = true;
+                        break;
+                    }
+                }
+                if (!holdsAPackageFile) {
+                    return refuseTheRenamedInstall(noPackageFoundReason());
+                }
+                discardTheFolderThisInstallMade();
+                folderThisInstallMade.clear();
+                if (!utils::unzip(actualFileName, theFolderNamedAfterTheFile, _tmpDir)) {
+                    return refuseTheRenamedInstall(qsl("could not unzip package"));
+                }
+                movedIntoPlace = true;
+            }
             if (movedIntoPlace) {
                 if (!folderThisInstallMade.isEmpty()) {
                     folderThisInstallMade = QDir(newpath).absolutePath();
@@ -3411,7 +3442,7 @@ std::pair<bool, QString> Host::installPackage(const QString& fileName, enums::Pa
             if (!discardTheFolderThisInstallMade()) {
                 qWarning() << "Host::installPackage() WARNING - refused" << fileName << "as package" << packageName << "but leaving" << _dir.absolutePath() << "alone: this install did not make it";
             }
-            return fail(qsl("no package found in %1 - no Mudlet package file in it could be read").arg(fileName));
+            return fail(noPackageFoundReason());
         }
     } else {
         file2.setFileName(fileName);

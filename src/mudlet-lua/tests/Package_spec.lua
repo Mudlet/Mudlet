@@ -177,6 +177,33 @@ local function writePackageXml(path, body, version)
   file:close()
 end
 
+-- Writes a zip archive of empty, stored files under the given names. Empty entries need no
+-- checksum, so this can be done here, and it can store names that no zip tool would - one
+-- that climbs out of the folder it is unpacked into, say.
+local function writeArchiveOfEmptyFiles(path, entries)
+  local function le(value, bytes)
+    local out = {}
+    for i = 1, bytes do
+      out[i] = string.char(value % 256)
+      value = math.floor(value / 256)
+    end
+    return table.concat(out)
+  end
+  local localHeaders, centralDirectory, offset = {}, {}, 0
+  for i, entry in ipairs(entries) do
+    local common = le(20, 2) .. le(0, 2) .. le(0, 2) .. le(0, 2) .. le(0x21, 2) .. le(0, 4) .. le(0, 4) .. le(0, 4) .. le(#entry, 2) .. le(0, 2)
+    local header = le(0x04034b50, 4) .. common .. entry
+    localHeaders[i] = header
+    centralDirectory[i] = le(0x02014b50, 4) .. le(20, 2) .. common .. le(0, 2) .. le(0, 2) .. le(0, 2) .. le(0, 4) .. le(offset, 4) .. entry
+    offset = offset + #header
+  end
+  local directory = table.concat(centralDirectory)
+  local file = io.open(path, "wb")
+  assert.is_not_nil(file, "could not write " .. path)
+  file:write(table.concat(localHeaders) .. directory .. le(0x06054b50, 4) .. le(0, 2) .. le(0, 2) .. le(#entries, 2) .. le(#entries, 2) .. le(#directory, 4) .. le(offset, 4) .. le(0, 2))
+  file:close()
+end
+
 -- Every install and uninstall here owes an asynchronous profile save, and
 -- while one is running the package API stops doing what it is told: an install
 -- is postponed and answered with a bare true (see the pending spec at the end
@@ -365,6 +392,59 @@ describe("Tests the functionality of installPackage", function()
     -- the profile under the archive's name (#9654)
     assert.is_false(fileExists(getMudletHomeDir() .. "/mudlet-spec-notazip"),
                     "the failed unpacking stranded the folder it had made in the profile")
+  end)
+
+  it("leaves nothing of a refused archive in a folder that was already in the profile", function()
+    local name = "mudlet-spec-occupied"
+    local standIn = getMudletHomeDir() .. "/" .. name
+    local occupant = standIn .. "/please-do-not-delete-me.txt"
+    local stray = standIn .. "/mudlet-spec-stray.txt"
+    local archive = getMudletHomeDir() .. "/" .. name .. ".mpackage"
+    lfs.mkdir(standIn)
+    local file = io.open(occupant, "w")
+    assert.is_not_nil(file, "could not write to " .. occupant)
+    file:write("the install did not make this folder, so it may not write into it")
+    file:close()
+    defer(function()
+      os.remove(stray)
+      os.remove(occupant)
+      lfs.rmdir(standIn)
+      os.remove(archive)
+    end)
+    -- no package XML in it, so the install is refused once it has been unpacked
+    writeArchiveOfEmptyFiles(archive, {"mudlet-spec-stray.txt"})
+
+    installUntilRefused(installPackage, archive)
+
+    assert.is_false(packageInstalled(name))
+    assert.is_true(fileExists(occupant), "the refused install deleted a folder that was in the profile before it ran")
+    assert.is_false(fileExists(stray), "the refused install left its files in a folder that was in the profile before it ran")
+    assert.is_false(fileExists(standIn .. ".mudlet-installing"), "the refused install left the folder it unpacked into")
+  end)
+
+  it("installs a package over a folder of its name that was left in the profile", function()
+    -- left by a crash before the profile was saved, or an uninstall that could not remove every file
+    local leftover = getMudletHomeDir() .. "/" .. minimalPackage
+    local oldFile = leftover .. "/mudlet-spec-left-over.txt"
+    lfs.mkdir(leftover)
+    local file = io.open(oldFile, "w")
+    assert.is_not_nil(file, "could not write to " .. oldFile)
+    file:write("left behind by an earlier install")
+    file:close()
+    defer(function()
+      removeFixturePackage(minimalPackage)
+      os.remove(oldFile)
+      lfs.rmdir(leftover)
+    end)
+
+    local ok, err = installUntilConfirmed(installPackage, fixtureDirectory .. "/" .. minimalPackage .. ".mpackage",
+                                          function() return packageInstalled(minimalPackage) end, "the fixture package over its leftover folder")
+
+    assert.is_true(ok, tostring(err))
+    assert.is_true(packageInstalled(minimalPackage))
+    assert.equals(1, exists(minimalPackage .. " alias", "alias"))
+    assert.is_true(fileExists(leftover .. "/" .. minimalPackage .. ".xml"), "the package was not unpacked into its folder")
+    assert.is_false(fileExists(leftover .. ".mudlet-installing"), "the install left the folder it unpacked into")
   end)
 
   it("leaves a folder that was already in the profile alone when the unpacking fails", function()
