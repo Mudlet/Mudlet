@@ -557,7 +557,8 @@ function Adjustable.Container:adjustConnectedContainers()
     for k in pairs(self.connectedContainers) do
         local container = Adjustable.Container.all[k]
         if container then
-            if container.attached == where then
+            -- a hidden container keeps following the border it takes back when shown
+            if (container.attached or container.hiddenAttached) == where then
                 if where == "right" or where == "left" then
                     height = nil
                     y = nil
@@ -606,7 +607,9 @@ function Adjustable.Container:connectToBorder(border)
     if not oppositeBorder[border] then
         return nil, "connectToBorder: bad argument #1 value (\"top\", \"bottom\", \"left\" or \"right\" expected)"
     end
-    if not self.attached then
+    -- a hidden container connects through the border it takes back when shown
+    local attached = self.attached or self.hiddenAttached
+    if not attached then
         return nil, "connectToBorder: the container is not attached to a border"
     end
     if not Adjustable.Container.Attached[border] then
@@ -618,7 +621,7 @@ function Adjustable.Container:connectToBorder(border)
     for k,v in pairs(Adjustable.Container.Attached[border]) do
         v.connectedContainers = v.connectedContainers or {}
         v.connectedContainers[self.name] = true
-        if self.attached == border then
+        if attached == border then
             v.connectedToBorder = v.connectedToBorder or {}
             v.connectedToBorder[border] = true
             self.connectedContainers[k] = v
@@ -715,6 +718,12 @@ function Adjustable.Container:attachToBorder(border)
         return nil, "attachToBorder: bad argument #1 value (\"top\", \"bottom\", \"left\" or \"right\" expected)"
     end
     if self.attached then self:detach() end
+    -- a hidden container reserves nothing, so it takes the border when shown
+    if self.hidden or self.auto_hidden then
+        self.hiddenAttached = border
+        return true
+    end
+    self.hiddenAttached = nil
     Adjustable.Container.Attached[border] = Adjustable.Container.Attached[border] or {}
     -- the registry is keyed by name, so a still live container of the same name
     -- has to be taken off the border properly instead of being dropped from it:
@@ -738,6 +747,7 @@ function Adjustable.Container:detach()
     -- a container of the same name may have taken over the registration, so
     -- only unregister while it is still ours - the same guard type_delete uses
     local where = self.attached
+    self.hiddenAttached = nil
     local attachedTo = Adjustable.Container.Attached and Adjustable.Container.Attached[where]
     if attachedTo and attachedTo[self.name] == self then
         attachedTo[self.name] = nil
@@ -858,10 +868,9 @@ function Adjustable.Container:onClickL()
     end
 end
 
--- internal function: adjusts/sets the borders if an container gets hidden
+-- internal function: onClick close event
 function Adjustable.Container:hideObj()
     self:hide()
-    self:adjustBorder()
 end
 
 -- internal function: onClick minimize event
@@ -1031,10 +1040,24 @@ function Adjustable.Container:remove(window)
     end
 end
 
--- overridden show function to prevent to show the right click menu on show
+-- overridden hide function to give the border back while hidden, remembering it for show()
+function Adjustable.Container:hide(auto)
+    local attached = self.attached
+    Geyser.Container.hide(self, auto)
+    if attached then
+        self:detach()
+        self.hiddenAttached = attached
+    end
+end
+
+-- overridden show function to prevent to show the right click menu on show,
+-- and to take back the border the container was attached to when it was hidden
 function Adjustable.Container:show(auto)
     Geyser.Container.show(self, auto)
     closeAllLevels(self.rCLabel)
+    if self.hiddenAttached and not (self.hidden or self.auto_hidden) then
+        self:attachToBorder(self.hiddenAttached)
+    end
 end
 
 --- saves your container settings
@@ -1071,6 +1094,7 @@ function Adjustable.Container:save(slot, dir)
     mytable.origh= self.origh
     mytable.locked = self.locked
     mytable.attached = self.attached
+    mytable.hiddenAttached = self.hiddenAttached
     mytable.lockStyle = self.lockStyle
     mytable.padding = self.padding
     mytable.attachedMargin = self.attachedMargin
@@ -1152,6 +1176,8 @@ function Adjustable.Container:load(slot, dir)
         self.origh = mytable.origh
     end
 
+    -- detached first, so a hidden container is not shown back onto the border it had before the load
+    self:detach()
     if mytable.auto_hidden or mytable.hidden then
         self:hide()
         if not mytable.hidden then
@@ -1162,9 +1188,8 @@ function Adjustable.Container:load(slot, dir)
         self:show()
     end
 
-    self:detach()
-    if mytable.attached then
-        self:attachToBorder(mytable.attached) 
+    if mytable.attached or mytable.hiddenAttached then
+        self:attachToBorder(mytable.attached or mytable.hiddenAttached)
     end
 
     self:adjustBorder()

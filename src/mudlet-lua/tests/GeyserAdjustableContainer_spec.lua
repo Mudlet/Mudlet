@@ -2604,6 +2604,117 @@ describe("Tests Adjustable.Container borders, persistence and menu items", funct
       assert.is_false(container.attached)
       assert.are.equal(0, getBorderLeft())
     end)
+
+    it("takes its border back when shown again after the close button", function()
+      local container = make("gapHideObjShow", {width = 150})
+      container:attachToBorder("left")
+      local reserved = getBorderLeft()
+
+      container:hideObj()
+      container:show()
+
+      assert.are.equal("left", container.attached)
+      assert.are.equal(reserved, getBorderLeft())
+    end)
+
+    it("gives its border back while hidden by hide() and takes it back on show()", function()
+      local container = make("gapHideShow", {width = 150})
+      container:attachToBorder("left")
+      local reserved = getBorderLeft()
+
+      container:hide()
+      assert.is_false(container.attached)
+      assert.are.equal(0, getBorderLeft())
+
+      container:show()
+      assert.are.equal("left", container.attached)
+      assert.are.equal(reserved, getBorderLeft())
+    end)
+
+    it("stays detached when shown after being detached while hidden", function()
+      local container = make("gapHideDetach", {width = 150})
+      container:attachToBorder("left")
+      container:hide()
+      container:detach()
+      container:show()
+      assert.is_false(container.attached)
+      assert.are.equal(0, getBorderLeft())
+    end)
+
+    it("comes back attached from a layout saved while hidden", function()
+      local container = make("gapHiddenSaved", {width = 150})
+      container:attachToBorder("left")
+      local reserved = getBorderLeft()
+      container:hide()
+      container:save(nil, scratchDir)
+      container:show()
+      container:detach()
+
+      container:load(nil, scratchDir)
+      assert.is_true(container.hidden)
+      assert.are.equal(0, getBorderLeft())
+      container:show()
+      assert.are.equal("left", container.attached)
+      assert.are.equal(reserved, getBorderLeft())
+    end)
+
+    it("keeps following the container it is connected to while hidden", function()
+      local anchor = make("gapHiddenAnchor", {width = 150, height = 200})
+      local follower = make("gapHiddenFollower", {width = 150, y = 250, height = 200})
+      anchor:attachToBorder("left")
+      follower:attachToBorder("left")
+      follower:connectToBorder("left")
+
+      follower:hide()
+      anchor:resize(250, nil)
+      anchor:adjustConnectedContainers()
+      assert.are.equal(anchor:get_x(), follower:get_x())
+      assert.are.equal(anchor:get_width(), follower:get_width())
+
+      follower:show()
+      assert.are.equal("left", follower.attached)
+      assert.are.equal(anchor:get_width(), follower:get_width())
+    end)
+
+    it("connects again from a layout saved while hidden", function()
+      local anchor = make("gapHiddenSavedAnchor", {width = 150, height = 200})
+      local follower = make("gapHiddenSavedFollower", {width = 150, y = 250, height = 200})
+      anchor:attachToBorder("left")
+      follower:attachToBorder("left")
+      follower:connectToBorder("left")
+      follower:hide()
+      follower:save(nil, scratchDir)
+      -- as at the next start, where nothing has connected to it yet
+      follower:disconnect()
+
+      follower:load(nil, scratchDir)
+      follower:show()
+      assert.is_true(anchor.connectedContainers[follower.name])
+      anchor:resize(250, nil)
+      anchor:adjustConnectedContainers()
+      assert.are.equal(anchor:get_width(), follower:get_width())
+    end)
+
+    it("does not take back the border it was hidden from when loading a layout", function()
+      local container = make("gapHiddenLoadOrder", {width = 150, height = 150})
+      container:attachToBorder("left")
+      container:save(nil, scratchDir)
+      container:detach()
+      container:attachToBorder("top")
+      container:hide()
+
+      local borders = {}
+      container.attachToBorder = function(self, border)
+        borders[#borders + 1] = border
+        return Adjustable.Container.attachToBorder(self, border)
+      end
+      finally(function() container.attachToBorder = nil end)
+      container:load(nil, scratchDir)
+
+      assert.are.same({"left"}, borders)
+      assert.are.equal("left", container.attached)
+      assert.are.equal(0, getBorderTop())
+    end)
   end)
 
   describe("Adjustable.Container:setAbsolute/setPercent", function()
