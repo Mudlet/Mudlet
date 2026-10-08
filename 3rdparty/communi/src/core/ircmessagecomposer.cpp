@@ -78,7 +78,7 @@ void IrcMessageComposer::composeMessage(IrcNumericMessage* message)
 {
     switch (message->code()) {
     case Irc::RPL_MOTDSTART:
-        d.messages.push(new IrcMotdMessage(d.connection));
+        startCompose(new IrcMotdMessage(d.connection));
         d.messages.top()->setPrefix(message->prefix());
         d.messages.top()->setParameters(QStringList(message->parameters().value(0)));
         break;
@@ -100,26 +100,26 @@ void IrcMessageComposer::composeMessage(IrcNumericMessage* message)
             d.messages.push(new IrcMotdMessage(d.connection));
             d.messages.top()->setPrefix(message->prefix());
             d.messages.top()->setParameters(QStringList() << message->parameters().value(0) << message->parameters().value(1));
-            finishCompose(message);
+            finishCompose(message, IrcMessage::Motd);
         }
         break;
     case Irc::RPL_ENDOFMOTD:
-        finishCompose(message);
+        finishCompose(message, IrcMessage::Motd);
         break;
 
     case Irc::RPL_NAMREPLY: {
-        if (d.messages.empty() || d.messages.top()->type() != IrcMessage::Names)
-            d.messages.push(new IrcNamesMessage(d.connection));
-        d.messages.top()->setPrefix(message->prefix());
         int count = message->parameters().count();
         QString channel = message->parameters().value(count - 2);
+        if (d.messages.empty() || d.messages.top()->type() != IrcMessage::Names || d.messages.top()->parameters().value(0) != channel)
+            startCompose(new IrcNamesMessage(d.connection));
+        d.messages.top()->setPrefix(message->prefix());
         QStringList names = d.messages.top()->parameters().mid(1);
         names += message->parameters().value(count - 1).split(QLatin1Char(' '), Qt::SkipEmptyParts);
         d.messages.top()->setParameters(QStringList() << channel << names);
         break;
     }
     case Irc::RPL_ENDOFNAMES:
-        finishCompose(message);
+        finishCompose(message, IrcMessage::Names);
         break;
 
     case Irc::RPL_TOPIC:
@@ -128,7 +128,7 @@ void IrcMessageComposer::composeMessage(IrcNumericMessage* message)
         d.messages.top()->setPrefix(message->prefix());
         d.messages.top()->setCommand(QString::number(message->code()));
         d.messages.top()->setParameters(QStringList() << message->parameters().value(1) << message->parameters().value(2));
-        finishCompose(message);
+        finishCompose(message, IrcMessage::Topic);
         break;
 
     case Irc::RPL_INVITING:
@@ -137,7 +137,7 @@ void IrcMessageComposer::composeMessage(IrcNumericMessage* message)
         d.messages.top()->setPrefix(message->prefix());
         d.messages.top()->setCommand(QString::number(message->code()));
         d.messages.top()->setParameters(QStringList() << message->parameters().value(1) << message->parameters().value(2));
-        finishCompose(message);
+        finishCompose(message, IrcMessage::Invite);
         break;
 
     case Irc::RPL_WHOREPLY: {
@@ -153,7 +153,7 @@ void IrcMessageComposer::composeMessage(IrcNumericMessage* message)
         int index = last.indexOf(QLatin1Char(' ')); // ignore hopcount
         if (index != -1)
             d.messages.top()->setParameters(d.messages.top()->parameters() << last.mid(index + 1)); // real name
-        finishCompose(message);
+        finishCompose(message, IrcMessage::WhoReply);
         break;
     }
 
@@ -162,11 +162,11 @@ void IrcMessageComposer::composeMessage(IrcNumericMessage* message)
         d.messages.top()->setPrefix(message->prefix());
         d.messages.top()->setCommand(QString::number(message->code()));
         d.messages.top()->setParameters(message->parameters().mid(1));
-        finishCompose(message);
+        finishCompose(message, IrcMessage::Mode);
         break;
 
     case Irc::RPL_AWAY:
-        if (!d.messages.isEmpty() && d.messages.top()->type() == IrcMessage::Whois) {
+        if (!d.messages.isEmpty() && d.messages.top()->type() == IrcMessage::Whois && d.messages.top()->nick() == message->parameters().value(1)) {
             replaceParam(9, message->parameters().value(2)); // away reason
             break;
         }
@@ -183,11 +183,11 @@ void IrcMessageComposer::composeMessage(IrcNumericMessage* message)
             d.messages.top()->setPrefix(message->parameters().value(0));
             d.messages.top()->setParameters(message->parameters().mid(1));
         }
-        finishCompose(message);
+        finishCompose(message, IrcMessage::Away);
         break;
 
     case Irc::RPL_WHOISUSER:
-        d.messages.push(new IrcWhoisMessage(d.connection));
+        startCompose(new IrcWhoisMessage(d.connection));
         d.messages.top()->setPrefix(message->parameters().value(1)
                                     + "!" + message->parameters().value(2)
                                     + "@" + message->parameters().value(3));
@@ -204,7 +204,7 @@ void IrcMessageComposer::composeMessage(IrcNumericMessage* message)
         break;
 
     case Irc::RPL_WHOWASUSER:
-        d.messages.push(new IrcWhowasMessage(d.connection));
+        startCompose(new IrcWhowasMessage(d.connection));
         d.messages.top()->setPrefix(message->parameters().value(1)
                                     + "!" + message->parameters().value(2)
                                     + "@" + message->parameters().value(3));
@@ -246,21 +246,41 @@ void IrcMessageComposer::composeMessage(IrcNumericMessage* message)
         break;
 
     case Irc::RPL_ENDOFWHOIS:
+        finishCompose(message, IrcMessage::Whois);
+        break;
     case Irc::RPL_ENDOFWHOWAS:
-        finishCompose(message);
+        finishCompose(message, IrcMessage::Whowas);
         break;
     }
 }
 
-void IrcMessageComposer::finishCompose(IrcMessage* message)
+// Mudlet change to the vendored communi, as is finishCompose(): an older block of this type can
+// never be closed now, so it is delivered as it stands rather than stranded on the stack
+void IrcMessageComposer::startCompose(IrcMessage* composed)
 {
-    if (!d.messages.isEmpty()) {
-        IrcMessage* composed = d.messages.pop();
-        composed->setTimeStamp(message->timeStamp());
-        if (message->testFlag(IrcMessage::Implicit))
-            composed->setFlag(IrcMessage::Implicit);
-        emit messageComposed(composed);
+    for (qsizetype index = d.messages.count() - 1; index >= 0; --index) {
+        if (d.messages.at(index)->type() == composed->type()) {
+            emit messageComposed(d.messages.takeAt(index));
+            break;
+        }
     }
+    d.messages.push(composed);
+}
+
+void IrcMessageComposer::finishCompose(IrcMessage* message, IrcMessage::Type type)
+{
+    // Closes only a block of its own type, so a stray "end of" cannot emit another one half-built
+    for (qsizetype index = d.messages.count() - 1; index >= 0; --index) {
+        if (d.messages.at(index)->type() == type) {
+            IrcMessage* composed = d.messages.takeAt(index);
+            composed->setTimeStamp(message->timeStamp());
+            if (message->testFlag(IrcMessage::Implicit))
+                composed->setFlag(IrcMessage::Implicit);
+            emit messageComposed(composed);
+            return;
+        }
+    }
+    ircDebug(d.connection, IrcDebug::Status) << "dropping orphaned end of composed message" << type;
 }
 
 void IrcMessageComposer::replaceParam(int index, const QString& param)

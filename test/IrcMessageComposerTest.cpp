@@ -305,6 +305,89 @@ private slots:
         QCOMPARE(whowases.count(), 1);
         QVERIFY2(whowases.constFirst().parameters.contains(QStringLiteral("other.example")), qPrintable(whowases.constFirst().parameters.join(QLatin1Char('|'))));
     }
+
+    // #10798: an "end of" numeric for a different block must not emit the WHOIS
+    // half-built, which would leave the rest of it with nothing to fill in
+    void strayEndOfMotd_duringAWhois_leavesTheWhoisOpen()
+    {
+        say({":qa.irc.test 311 QAtester bob ident host.example * :Bob Example",
+             ":qa.irc.test 376 QAtester :End of /MOTD command.",
+             ":qa.irc.test 312 QAtester bob other.example :Some other server",
+             ":qa.irc.test 318 QAtester bob :End of /WHOIS list."});
+
+        const QList<SeenMessage> whoises = ofType(IrcMessage::Whois);
+        QCOMPARE(whoises.count(), 1);
+        QVERIFY2(whoises.constFirst().parameters.contains(QStringLiteral("other.example")), qPrintable(whoises.constFirst().parameters.join(QLatin1Char('|'))));
+        QCOMPARE(ofType(IrcMessage::Motd).count(), 0);
+    }
+
+    // #10798: the same for a MOTD and a stray end of a names list
+    void strayEndOfNames_duringAMotd_leavesTheMotdOpen()
+    {
+        say({":qa.irc.test 375 QAtester :- qa.irc.test Message of the Day -",
+             ":qa.irc.test 372 QAtester :- first line",
+             ":qa.irc.test 366 QAtester #qa :End of /NAMES list.",
+             ":qa.irc.test 372 QAtester :- second line",
+             ":qa.irc.test 376 QAtester :End of /MOTD command."});
+
+        const QList<SeenMessage> motds = ofType(IrcMessage::Motd);
+        QCOMPARE(motds.count(), 1);
+        QVERIFY2(motds.constFirst().parameters.contains(QStringLiteral("- first line")), qPrintable(motds.constFirst().parameters.join(QLatin1Char('|'))));
+        QVERIFY2(motds.constFirst().parameters.contains(QStringLiteral("- second line")), qPrintable(motds.constFirst().parameters.join(QLatin1Char('|'))));
+        QCOMPARE(ofType(IrcMessage::Names).count(), 0);
+    }
+
+    // A MOTD that ends while a names list opened inside it is still being sent closes
+    // from under it, and the names list keeps collecting until its own end
+    void motdEndingInsideANamesList_bothComplete()
+    {
+        say({":qa.irc.test 375 QAtester :- qa.irc.test Message of the Day -",
+             ":qa.irc.test 372 QAtester :- first line",
+             ":qa.irc.test 353 QAtester = #qa :alice bob",
+             ":qa.irc.test 376 QAtester :End of /MOTD command.",
+             ":qa.irc.test 353 QAtester = #qa :carol",
+             ":qa.irc.test 366 QAtester #qa :End of /NAMES list."});
+
+        const QList<SeenMessage> motds = ofType(IrcMessage::Motd);
+        QCOMPARE(motds.count(), 1);
+        QVERIFY2(motds.constFirst().parameters.contains(QStringLiteral("- first line")), qPrintable(motds.constFirst().parameters.join(QLatin1Char('|'))));
+        const QList<SeenMessage> names = ofType(IrcMessage::Names);
+        QCOMPARE(names.count(), 1);
+        QVERIFY2(names.constFirst().parameters.contains(QStringLiteral("alice")), qPrintable(names.constFirst().parameters.join(QLatin1Char('|'))));
+        QVERIFY2(names.constFirst().parameters.contains(QStringLiteral("carol")), qPrintable(names.constFirst().parameters.join(QLatin1Char('|'))));
+    }
+
+    // A WHOIS whose end never arrives must not swallow the away replies that
+    // follow it for other nicks, nor stay open forever under later ones
+    void unfinishedWhois_doesNotSwallowLaterReplies()
+    {
+        say({":qa.irc.test 311 QAtester bob ident host.example * :Bob Example", ":qa.irc.test 376 QAtester :End of /MOTD command.", ":qa.irc.test 301 QAtester alice :gone fishing"});
+
+        const QList<SeenMessage> aways = ofType(IrcMessage::Away);
+        QCOMPARE(aways.count(), 1);
+        QVERIFY2(aways.constFirst().parameters.contains(QStringLiteral("gone fishing")), qPrintable(aways.constFirst().parameters.join(QLatin1Char('|'))));
+
+        say({":qa.irc.test 311 QAtester carol ident host.example * :Carol Example",
+             ":qa.irc.test 312 QAtester carol other.example :Some other server",
+             ":qa.irc.test 318 QAtester carol :End of /WHOIS list."});
+
+        const QList<SeenMessage> whoises = ofType(IrcMessage::Whois);
+        QCOMPARE(whoises.count(), 2);
+        QVERIFY2(whoises.constLast().parameters.contains(QStringLiteral("Carol Example")), qPrintable(whoises.constLast().parameters.join(QLatin1Char('|'))));
+        QVERIFY2(whoises.constLast().parameters.contains(QStringLiteral("other.example")), qPrintable(whoises.constLast().parameters.join(QLatin1Char('|'))));
+    }
+
+    // A names list whose end never arrives must not lend its nicks to the next
+    // channel's list
+    void unfinishedNamesList_isNotMergedIntoTheNextChannels()
+    {
+        say({":qa.irc.test 353 QAtester = #first :alice", ":qa.irc.test 353 QAtester = #second :bob", ":qa.irc.test 366 QAtester #second :End of /NAMES list."});
+
+        const QList<SeenMessage> names = ofType(IrcMessage::Names);
+        QVERIFY(!names.isEmpty());
+        QCOMPARE(names.constLast().parameters.value(0), QStringLiteral("#second"));
+        QVERIFY2(!names.constLast().parameters.contains(QStringLiteral("alice")), qPrintable(names.constLast().parameters.join(QLatin1Char('|'))));
+    }
 };
 
 QTEST_MAIN(IrcMessageComposerTest)
