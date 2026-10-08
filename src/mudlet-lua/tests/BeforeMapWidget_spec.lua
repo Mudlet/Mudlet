@@ -4,6 +4,19 @@
 -- Geyser.Mapper persists the same way. So this file is named to sort ahead of
 -- every spec that makes one: busted runs its files in sorted order.
 
+-- First in the first file to touch the map: loading, clearing or opening a
+-- map each copies the profile's sixteen ANSI colours into it again
+describe("Tests the environment colours a profile starts out with", function()
+  it("starts environments 257 to 272 out as the profile's ANSI colours", function()
+    local atStart = getCustomEnvColorTable()
+    deleteMap()
+    local copiedAgain = getCustomEnvColorTable()
+    for env = 257, 272 do
+      assert.are.same(copiedAgain[env], atStart[env], "environment " .. env)
+    end
+  end)
+end)
+
 describe("Tests secondary map views in a profile without a mapper", function()
   local areaId, roomId
 

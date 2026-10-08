@@ -296,6 +296,9 @@ Host::Host(int port, const QString& hostname, const QString& login, const QStrin
     // so its own constructor can't do this.
     mTelnet.reset();
 
+    // Not in TMap's constructor: mpMap is declared ahead of the colours this copies
+    mpMap->restore16ColorSet();
+
     TDebug::addHost(this, mHostName);
     setDisplayFont(QFont(scmDefaultFontFamily, 14, QFont::Normal));
 
