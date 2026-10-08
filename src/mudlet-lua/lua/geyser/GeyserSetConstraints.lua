@@ -30,6 +30,13 @@ local function unchanged(window, cons, container)
     and window.get_width == last.get_width and window.get_height == last.get_height
 end
 
+-- Internal function: raise for a constraint that cannot be parsed, putting the
+-- numeric locale back first since calc_constraints switched it to "C"
+local function invalidConstraint(window, dimension, value, oldlocale)
+  os.setlocale(oldlocale, "numeric")
+  error(string.format("Geyser: element '%s' has an invalid %s constraint %q", tostring(window.name), dimension, tostring(value)), 0)
+end
+
 function Geyser.calc_constraints (window, cons, container)
   -- If container is nil then by default it is the dimensions of the main window
   container = container or Geyser
@@ -53,6 +60,10 @@ function Geyser.calc_constraints (window, cons, container)
   for _, v in ipairs { "x", "y", "width", "height" } do
     local getter = "get_" .. v -- name of the function to calculate the
     local num
+    local kind = type(cons[v])
+    if kind ~= "string" and kind ~= "number" and kind ~= "function" then
+      invalidConstraint(window, v, cons[v], oldlocale)
+    end
     -- if passed a number assume pixels are meant
     if type(cons[v]) == "number" then
       cons[v] = string.format("%dpx", cons[v])
@@ -74,6 +85,9 @@ function Geyser.calc_constraints (window, cons, container)
       -- scale is a value between 0 and 1
       -- offset is always in pixel
       local scale, offset = string.match(num,"([%+%-%d%p]+)%%%s*([%+%-%d%p]*)")
+      if not tonumber(scale) then
+        invalidConstraint(window, v, cons[v], oldlocale)
+      end
       local negative = string.find(scale, "-") or false -- detect "negative" 0
       scale = tonumber(scale) / 100.0
       offset = tonumber(offset) or 0
@@ -148,6 +162,9 @@ function Geyser.calc_constraints (window, cons, container)
       local min = "return_zero"
       local func = return_zero
       local pos = tonumber((string.gsub(num, "%a", "")))
+      if not pos then
+        invalidConstraint(window, v, cons[v], oldlocale)
+      end
       
       -- give func the function value if a function is given
       if type(cons[v]) == "function" then

@@ -61,6 +61,11 @@ function Geyser:base_add (window, cons)
     window.container:remove(window)
   end
 
+  window.windowname = window.windowname or self.windowname or "main"
+  -- compiled before the window is registered: one whose constraints raise would
+  -- otherwise stay behind without getters and trip every later layout pass
+  Geyser.calc_constraints(window, cons, self)
+
   -- Assume control of this window
   window.container = self
   -- Don't allow duplication of same name in container
@@ -69,8 +74,7 @@ function Geyser:base_add (window, cons)
   end
   self.windowList[window.name] = window
 
-  window.windowname = window.windowname or window.container.windowname or "main"
-  Geyser.set_constraints(window, cons, self)
+  window:reposition()
   if not self.defer_updates then
     window:reposition()
   end
