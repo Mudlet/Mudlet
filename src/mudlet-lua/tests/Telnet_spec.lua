@@ -1126,6 +1126,62 @@ describe("Tests the Client.GUI package offer", function()
     assert.is_truthy(downloadStarted(mark, "RegressCompleteGui"), "a complete offer was not acted on either: " .. displayedSince(mark))
   end)
 
+  it("installs nothing from a Client.GUI download that came back empty", function()
+    local name = "mudlet-spec-emptygui"
+    local source = getMudletHomeDir() .. "/mudlet-spec-emptygui-source"
+    local served = source .. "/" .. name .. ".xml"
+    local downloaded = getMudletHomeDir() .. "/" .. name .. ".xml"
+    local previousClient = gmcp.Client
+    -- the starter UI stands aside on sysServerGuiInstalled and saves that in its
+    -- settings, which are not this spec's to change
+    local standAside = BaseUI and BaseUI.standAside
+    local seen = {}
+    local handler = registerAnonymousEventHandler("sysServerGuiInstalled", function(_, packageName)
+      seen[#seen + 1] = packageName
+    end)
+    finally(function()
+      killAnonymousEventHandler(handler)
+      gmcp.Client = previousClient
+      if standAside then
+        BaseUI.standAside = standAside
+      end
+      for _ = 1, 100 do
+        if not table.contains(getPackages(), name) or uninstallPackage(name) then
+          break
+        end
+        pumpEvents(50)
+      end
+      os.remove(downloaded)
+      os.remove(served)
+      lfs.rmdir(source)
+    end)
+    if standAside then
+      BaseUI.standAside = function() end
+    end
+    lfs.mkdir(source)
+    local file = io.open(served, "wb")
+    assert.is_not_nil(file, "could not write " .. served)
+    file:close()
+    local url = "file://" .. served:gsub("\\", "/"):gsub("[%%#%?%s]", function(character) return string.format("%%%02X", character:byte()) end)
+
+    local mark = getLastLineNumber("main")
+    local ok, msg = feedTelnet('<T_IAC><T_SB><O_GMCP>Client.GUI {"version": "1", "url": "' .. url .. '"}<T_IAC><T_SE>')
+    assert.is_true(ok, "start the suite with --offline, see the tests README - feedTelnet said: " .. tostring(msg))
+    assert.is_truthy(downloadStarted(mark, name), "the offer never reached the downloader: " .. displayedSince(mark))
+    for _ = 1, 100 do
+      if shownSince(mark, "was empty") or #seen > 0 then
+        break
+      end
+      pumpEvents(50)
+    end
+
+    -- the URL is shown decoded, so only its end is matched
+    assert.is_truthy(shownSince(mark, "/" .. name .. ".xml' was empty"), displayedSince(mark))
+    assert.same({}, seen, "an empty download was announced as the game's interface")
+    assert.is_false(table.contains(getPackages(), name), "an empty download was registered as a package")
+    assert.is_nil(lfs.attributes(downloaded), "an empty download was written into the profile")
+  end)
+
   -- a game with an interface of its own can decline the built-in starter UI,
   -- which Mudlet passes on as the event an installed interface raises
   it("raises sysServerGuiInstalled when the game declines the starter UI", function()
