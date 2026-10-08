@@ -187,6 +187,7 @@ public:
     void switchArea(const QString& newAreaName);
     void switchArea(int areaId);
     void clearSelection();
+    void forgetDeletedRoom(int roomId);
 
     // Schedules a repaint through a single-shot timer, coalescing multiple
     // rapid requests (e.g. during mouse wheel zoom or pan drag) into at most

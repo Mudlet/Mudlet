@@ -964,6 +964,25 @@ private slots:
         QCOMPARE(mp2dMap->mMultiSelectionSet, expected);
     }
 
+    // A deleted room left in the selection is still reported by
+    // getMapSelection() and still acted on by the context menu.
+    void test_deletingASelectedRoomDropsItFromTheSelection()
+    {
+        buildMap();
+        showMapper(false);
+        dragFromTo(pointUnitsFromCentre(-1.5, 1.5), pointUnitsFromCentre(0.5, -0.5));
+        QCOMPARE(mp2dMap->mMultiSelectionSet, (QSet<int>{1, kNorthRoomId, kWestRoomId, kPlayerRoomId}));
+        const int centre = mp2dMap->getCenterSelectedRoomId();
+        QVERIFY(mp2dMap->mMultiSelectionSet.contains(centre));
+
+        QVERIFY(runLua(qsl("deleteRoom(%1)").arg(centre)));
+
+        QSet<int> remaining{1, kNorthRoomId, kWestRoomId, kPlayerRoomId};
+        remaining.remove(centre);
+        QCOMPARE(mp2dMap->mMultiSelectionSet, remaining);
+        QVERIFY2(remaining.contains(mp2dMap->getCenterSelectedRoomId()), "the selection's centre is still the deleted room");
+    }
+
     // The list of selected rooms is rebuilt when the box takes in different
     // rooms, not on every move of the mouse, which on a big selection costs
     // more than the time between two moves.

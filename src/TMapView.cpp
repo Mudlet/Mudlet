@@ -61,6 +61,7 @@ TMapView::TMapView(int viewId, Host* pHost, TMap* pMap, QWidget* parent)
         mp2dMap->flushSymbolPixmapCache();
         mp2dMap->update();
     });
+    connect(mpMap, &TMap::signal_roomDeleted, mp2dMap, &T2DMap::forgetDeletedRoom);
 
     setFont(qApp->font());
     setPalette(QApplication::palette());
