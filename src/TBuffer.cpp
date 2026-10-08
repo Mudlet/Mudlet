@@ -296,6 +296,26 @@ bool eightPrintableAsciiBytes(const char* bytes)
     return !(belowSpace | aboveTilde);
 }
 
+// As eightPrintableAsciiBytes(), but also false when any byte could start an MXP tag or entity
+bool eightPlainMxpTextBytes(const char* bytes)
+{
+    if (!eightPrintableAsciiBytes(bytes)) {
+        return false;
+    }
+    quint64 word = 0;
+    std::memcpy(&word, bytes, sizeof(word));
+    constexpr quint64 ones = 0x0101010101010101ULL;
+    constexpr quint64 highBits = 0x8080808080808080ULL;
+    const quint64 tagStarts = word ^ (ones * '<');
+    const quint64 entityStarts = word ^ (ones * '&');
+    return !(((tagStarts - ones) & ~tagStarts & highBits) | ((entityStarts - ones) & ~entityStarts & highBits));
+}
+
+bool plainMxpTextByte(const char byte)
+{
+    return bulkCopyableTextByte(byte) && byte != '<' && byte != '&';
+}
+
 // The byte classes of a CSI sequence, ECMA-48 5.4: a parameter string is
 // made of bytes 0x30 to 0x3F ("0123456789:;<=>?"), so '<', '=', '>' and '?'
 // do not end it when they turn up after the first byte - games do emit them
@@ -2019,22 +2039,39 @@ void TBuffer::translateToPlainTextInner(std::string& incoming, const bool isFrom
                     mCurrentHyperlinkStartColumn = static_cast<int>(mMudBuffer.size()) - 1; // -1 because we just added 1 char
                 }
                 mCurrentHyperlinkText += QString(QChar(ch));
-            } else if (!completesSplitCharacter && !(mpHost->mMxpProcessor.isEnabled() && (mpHost->mTelnet.isMXPEnabled() || mpHost->getForceMXPProcessorOn()))) {
+            } else if (!completesSplitCharacter) {
                 // Plain text bytes decode to themselves with the format just computed, so a run takes one
-                // append and one fill. Not for MXP, which must see every byte, nor hyperlink text, built per character.
-                size_t runEnd = localBufferPosition + 1;
-                const char* const bytes = localBuffer.data();
-                while (runEnd + 8 <= localBufferLength && eightPrintableAsciiBytes(bytes + runEnd)) {
-                    runEnd += 8;
-                }
-                while (runEnd < localBufferLength && bulkCopyableTextByte(bytes[runEnd])) {
-                    ++runEnd;
-                }
-                const size_t runLength = runEnd - (localBufferPosition + 1);
-                if (runLength) {
-                    mMudLine.append(QLatin1StringView(localBuffer.data() + localBufferPosition + 1, static_cast<qsizetype>(runLength)));
-                    mMudBuffer.insert(mMudBuffer.cend(), runLength, c);
-                    localBufferPosition = runEnd - 1;
+                // append and one fill. Not hyperlink text, built per character. MXP must see every byte,
+                // but between tags and entities it only hands them on as content, which it takes a run at once.
+                TMxpProcessor& mxp = mpHost->mMxpProcessor;
+                const bool mxpSeesText = mxp.isEnabled() && (mpHost->mTelnet.isMXPEnabled() || mpHost->getForceMXPProcessorOn());
+                if (!mxpSeesText || (localBufferPosition + 1 >= endOfLiteralEntity && mxp.mode() != MXP_MODE_LOCKED && mxp.readingText())) {
+                    size_t runEnd = localBufferPosition + 1;
+                    const char* const bytes = localBuffer.data();
+                    if (mxpSeesText) {
+                        while (runEnd + 8 <= localBufferLength && eightPlainMxpTextBytes(bytes + runEnd)) {
+                            runEnd += 8;
+                        }
+                        while (runEnd < localBufferLength && plainMxpTextByte(bytes[runEnd])) {
+                            ++runEnd;
+                        }
+                    } else {
+                        while (runEnd + 8 <= localBufferLength && eightPrintableAsciiBytes(bytes + runEnd)) {
+                            runEnd += 8;
+                        }
+                        while (runEnd < localBufferLength && bulkCopyableTextByte(bytes[runEnd])) {
+                            ++runEnd;
+                        }
+                    }
+                    const size_t runLength = runEnd - (localBufferPosition + 1);
+                    if (runLength) {
+                        if (mxpSeesText) {
+                            mxp.processRawInput(QByteArrayView(bytes + localBufferPosition + 1, static_cast<qsizetype>(runLength)));
+                        }
+                        mMudLine.append(QLatin1StringView(bytes + localBufferPosition + 1, static_cast<qsizetype>(runLength)));
+                        mMudBuffer.insert(mMudBuffer.cend(), runLength, c);
+                        localBufferPosition = runEnd - 1;
+                    }
                 }
             }
         }
