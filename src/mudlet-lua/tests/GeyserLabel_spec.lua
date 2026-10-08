@@ -1680,6 +1680,16 @@ describe("Tests Geyser.Label font, link style and tooltip", function()
       assert.are.equal(own, getLabelText("glfLink"))
     end)
 
+    it("keeps a link color the script wrote itself that matches a link color the label no longer uses", function()
+      setLinkStyle("glfLink", "#00ffff", "#ff00ff")
+      echo("glfLink", [[<a href="plain()">go</a>]])
+      setLinkStyle("glfLink", "#ffff00", "#ff00ff")
+      local own = [[<a href="plain()" style="color: #00ffff;">go</a>]]
+      echo("glfLink", own)
+      resetLinkStyle("glfLink")
+      assert.are.equal(own, getLabelText("glfLink"))
+    end)
+
     pending("Geyser.Label:setLinkStyle reporting whether the styling reached the label - the three wrappers discard the nil and error message their global answers with, and Mudlet has no link style getter")
   end)
 

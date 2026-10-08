@@ -128,7 +128,7 @@ private:
     QPixmap mSvgPixmapCache;
     // what setText() was given, before the link styling was written into its anchors
     QString mUnstyledText;
-    // every style attribute value setText() has written into an anchor
+    // the style attribute values the last styling pass wrote into the anchors
     QSet<QString> mInjectedLinkStyles;
     // set when the link styling replaces the palette the stylesheet gave the label
     bool mPaletteSetSinceStyled = false;

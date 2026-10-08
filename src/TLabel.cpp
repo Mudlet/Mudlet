@@ -172,6 +172,8 @@ void TLabel::applyLinkStyle(const QString& text)
     const bool hasAnchor = containsAnchorTag(text);
 
     setTextInteractionFlags(hasAnchor ? scmLinkInteraction : Qt::TextInteractionFlags(Qt::NoTextInteraction));
+    // a script echoes back what the label shows now, so a style from an earlier pass is its own
+    mInjectedLinkStyles.clear();
 
     // If we have link styling configured and the text contains HTML links,
     // we need to inject inline styles because QTextDocument doesn't use
