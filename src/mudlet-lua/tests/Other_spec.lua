@@ -1213,8 +1213,7 @@ describe("Tests Other.lua functions", function()
     -- than hard-coded, so this adapts to whichever build runs it. Every value
     -- changed here is restored (config is written to the profile on close). Keys
     -- with lossy or multi-valued representations (showSentText, the string enums
-    -- and the numeric/table keys) are handled in dedicated tests below; map keys
-    -- (which need an open mapper to set) are exercised only when settable.
+    -- and the numeric/table keys) are handled in dedicated tests below.
     local originalValues = {}
     -- show3dMapView is skipped because flipping it to true opens the 3D OpenGL
     -- map view. Initialising the software GL stack under headless CI leaks
@@ -1261,8 +1260,7 @@ describe("Tests Other.lua functions", function()
             assert.equals(not value, getConfig(key), "round-trip failed for boolean config key: " .. key)
             settable = settable + 1
           else
-            -- not settable in this environment (e.g. a map option with the
-            -- mapper closed); the getter still returns a boolean
+            -- not settable in this environment; the getter still returns a boolean
             assert.is_boolean(getConfig(key), "expected boolean for config key: " .. key)
           end
           restore(key)
@@ -1429,11 +1427,11 @@ describe("Tests Other.lua functions", function()
       assert.is_true(exercised > 0, "expected at least one string enum config option")
     end)
 
-    -- These keys go to the 2D map widget itself, so setConfig() only knows them
-    -- while the mapper is open - with it closed they are refused as unknown.
-    describe("the map keys that need an open mapper", function()
+    -- With the mapper open these keys also reach the 2D map widget itself;
+    -- BeforeMapWidget_spec.lua covers setting them with no mapper.
+    describe("the map keys with the mapper open", function()
       before_each(function()
-        assert.is_true(openMapWidget(), "these keys cannot be set without the map widget")
+        assert.is_true(openMapWidget(), "these keys are meant to be set with the map widget open")
       end)
 
       it("round-trips mapExitSize", function()
