@@ -634,6 +634,45 @@ describe("Trigger processing", function()
             assert.is_false(matchedStale, "The green text pulled left must not be matched as red")
         end)
 
+        -- Here the run under test is the one recolored, so an edit that takes
+        -- the edited line as the new original loses its game color.
+        for _, edit in ipairs({
+            {"text is inserted", function()
+                moveCursor(0, getLineNumber())
+                insertText("ZZZZ")
+            end},
+            {"part of the line is replaced", function()
+                if selectString("FF", 1) > -1 then
+                    replace("")
+                end
+            end},
+        }) do
+            it("should keep the original colors of a recolored run after " .. edit[1], function()
+                _G.recolorEditMatches = {}
+
+                local editor = tempRegexTrigger("^EEEEFFFF$", function()
+                    if selectString("EEEE", 1) > -1 then
+                        setFgColor(0, 0, 255)
+                    end
+                    resetFormat()
+                    deselect()
+                    edit[2]()
+                    resetFormat()
+                end)
+                local colorTrigger = tempAnsiColorTrigger(1, -1,
+                    [[table.insert(_G.recolorEditMatches, matches[1])]])
+
+                feedTriggers("\n\27[31mEEEE\27[32mFFFF\27[0m\n")
+
+                local matched = contains(_G.recolorEditMatches, "EEEE")
+                killTrigger(editor)
+                killTrigger(colorTrigger)
+                _G.recolorEditMatches = nil
+
+                assert.is_true(matched, "The recolored red run should still be matched as red")
+            end)
+        end
+
         it("should match colors an earlier trigger pushed past the line's original end", function()
             _G.pushedColorMatches = {}
             local lengthened = false
