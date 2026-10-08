@@ -2950,8 +2950,8 @@ static bool nameIsAStepOutOfTheProfile(const QString& name)
 }
 
 // Package folders sit beside the profile's own, so a package of one of these names would share that folder.
-// media is only made on the first download, so a package can find it missing and take the name first.
-static bool theProfileKeepsItsOwnDataIn(const QString& name)
+// Gives the folder it would share, or nothing.
+static QString theProfilesOwnFolderCalled(const QString& name)
 {
     QString folder = name;
 #if defined(Q_OS_WINDOWS) || defined(Q_OS_MACOS)
@@ -2968,10 +2968,15 @@ static bool theProfileKeepsItsOwnDataIn(const QString& name)
 #endif
     for (const auto ownFolder : {QLatin1String("map"), QLatin1String("log"), QLatin1String("current"), QLatin1String("media")}) {
         if (!folder.compare(ownFolder, caseSensitivity)) {
-            return true;
+            return ownFolder;
         }
     }
-    return false;
+    return QString();
+}
+
+static bool theProfileKeepsItsOwnDataIn(const QString& name)
+{
+    return !theProfilesOwnFolderCalled(name).isEmpty();
 }
 
 // A folder of its own to unpack an archive into beside the profile's package folders. The name is made
@@ -3314,7 +3319,10 @@ std::pair<bool, QString> Host::installPackage(const QString& fileName, enums::Pa
             //: %1 is the name the package's config.lua asked to be installed under
             return refuseTheRenamedInstall(tr("The config.lua of this package asks to be installed as \"%1\", which is not a name a package can have.").arg(packageName));
         }
-        if (refuseTheProfilesOwnFolders && theProfileKeepsItsOwnDataIn(packageName)) {
+        // map, log and current are made with the profile. media is only made on the first download, so until then a
+        // package may take the name; uninstallPackage() then leaves that folder, and what is downloaded into it, alone.
+        if (const QString ownFolder = theProfilesOwnFolderCalled(packageName);
+            refuseTheProfilesOwnFolders && !ownFolder.isEmpty() && (ownFolder != QLatin1String("media") || QDir(MudletApp::getMudletPath(enums::profileMediaPath, getName())).exists())) {
             //: %1 is the name the package would be installed under, which is also the name of a folder Mudlet keeps the profile's own files in, such as its maps or logs
             return refuseTheRenamedInstall(
                     tr("A package cannot be installed as \"%1\", as the profile keeps its own files in the folder of that name. Please rename it and try again.").arg(packageName));

@@ -2938,17 +2938,19 @@ describe("Tests uninstalling a package named after one of the profile's own fold
 end)
 
 -- An archive unpacks into the profile folder of its name, so one of these names
--- would put the package in among the profile's own files and its uninstall would
--- take them away again. media is the one a package can find missing, as it is
--- only made on the first download.
+-- would put the package in among the profile's own files. map, log and current
+-- are made with the profile; media is only made on the first download, so a
+-- package may take that name while it is missing, and is refused it from then on.
 describe("Tests installing an archive named after one of the profile's own folders", function()
   local media = getMudletHomeDir() .. "/media"
+  local claimsMedia = fixtureDirectory .. "/mudlet-spec-claimsmedia.mpackage"
 
-  it("refuses a config.lua that asks for the profile's media folder", function()
+  it("lets a config.lua take the media name while the profile has no media folder, and its uninstall keeps the downloads", function()
     if fileExists(media) then
-      pending("the profile already has a media folder, which an install was always refused for")
+      pending("the profile already has a media folder, so the name is not free to take")
       return
     end
+    local downloaded = media .. "/mudlet-spec-downloaded.wav"
     defer(function()
       removeFixturePackage("media")
       if fileExists(media) then
@@ -2961,11 +2963,42 @@ describe("Tests installing an archive named after one of the profile's own folde
       end
     end)
 
-    local reason = installUntilRefused(installPackage, fixtureDirectory .. "/mudlet-spec-claimsmedia.mpackage")
+    installUntilConfirmed(installPackage, claimsMedia, function() return packageInstalled("media") end, "the package claiming media")
+    for entry in lfs.dir(getMudletHomeDir()) do
+      assert.is_nil(entry:find("^media%.mudlet%-installing"), "the install stranded the folder it unpacked: " .. entry)
+    end
+    local file = io.open(downloaded, "wb")
+    assert.is_not_nil(file, "could not write " .. downloaded)
+    file:write("what the game sent")
+    file:close()
+    removeFixturePackage("media")
+
+    assert.is_false(packageInstalled("media"), "the package was not uninstalled")
+    assert.is_true(fileExists(downloaded), "uninstalling the package deleted what the profile downloaded into its media folder")
+  end)
+
+  it("refuses a config.lua that asks for the media folder once the profile has one", function()
+    local precious = media .. "/mudlet-spec-precious.wav"
+    local madeTheFolder = not fileExists(media)
+    lfs.mkdir(media)
+    defer(function()
+      removeFixturePackage("media")
+      os.remove(precious)
+      if madeTheFolder then
+        lfs.rmdir(media)
+      end
+    end)
+    local file = io.open(precious, "wb")
+    assert.is_not_nil(file, "could not write " .. precious)
+    file:write("not the package's")
+    file:close()
+
+    local reason = installUntilRefused(installPackage, claimsMedia)
 
     assert.is_true(contains(reason, "keeps its own files"), tostring(reason))
     assert.is_false(packageInstalled("media"), "the package was installed into the profile's media folder")
-    assert.is_false(fileExists(media), "the refused install left a media folder behind")
+    assert.is_true(fileExists(precious), "the refused install touched the profile's media files")
+    assert.is_false(fileExists(media .. "/config.lua"), "the refused install unpacked into the profile's media folder")
     for entry in lfs.dir(getMudletHomeDir()) do
       assert.is_nil(entry:find("^media%.mudlet%-installing"), "the refused install stranded the folder it unpacked: " .. entry)
     end
