@@ -63,6 +63,7 @@ class TArea;
 class TMapViewManager;
 class TRoom;
 class TRoomDB;
+class TMapLabel;
 class QFile;
 class QNetworkAccessManager;
 class MapInfoContributorManager;
@@ -168,6 +169,8 @@ public:
     bool serialize(QDataStream&, int saveVersion = 0);
     static bool listLengthFits(QDataStream&, qint64 minBytesPerElement);
     bool restore(QString location);
+    static void restoreLabelFontFromUserData(TMapLabel&, int labelId, QMap<QString, QString>& userData);
+    static void restoreLabelOutlineColorFromUserData(TMapLabel&, int labelId, QMap<QString, QString>& userData);
     bool retrieveMapFileStats(QString, QString*, int*, int*, qsizetype*, qsizetype*);
     void initGraph();
     QString connectExitStubByDirection(const int fromRoomId, const int dirType);

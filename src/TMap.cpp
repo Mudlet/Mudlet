@@ -83,35 +83,6 @@ qreal usableSymbolFontFudgeFactor(const qreal fromFile)
     return qBound(TMap::scmMinimumSymbolFontFudgeFactor, fromFile, TMap::scmMaximumSymbolFontFudgeFactor);
 }
 
-// Restores font information from userData that was stored during binary serialization.
-// Font data is stored as "family|pointSize|weight|italic" to avoid binary format version changes.
-void restoreLabelFontFromUserData(TMapLabel& label, int labelId, QMap<QString, QString>& userData)
-{
-    const QString fontKey = qsl("system.labelFont_%1").arg(labelId);
-    if (userData.contains(fontKey)) {
-        const QStringList fontParts = userData.take(fontKey).split(QLatin1Char('|'));
-        if (fontParts.size() == 4) {
-            label.font = QFont(fontParts.at(0), fontParts.at(1).toInt(), fontParts.at(2).toInt(), fontParts.at(3).toInt() != 0);
-        } else {
-            qWarning("TMap: Failed to parse font data for label %d, expected 4 parts but got %lld", labelId, fontParts.size());
-        }
-    }
-}
-
-// Outline color data is stored as "r|g|b|a" to avoid binary format version changes.
-void restoreLabelOutlineColorFromUserData(TMapLabel& label, int labelId, QMap<QString, QString>& userData)
-{
-    const QString colorKey = qsl("system.labelOutlineColor_%1").arg(labelId);
-    if (userData.contains(colorKey)) {
-        const QStringList colorParts = userData.take(colorKey).split(QLatin1Char('|'));
-        if (colorParts.size() == 4) {
-            label.outlineColor = QColor(colorParts.at(0).toInt(), colorParts.at(1).toInt(), colorParts.at(2).toInt(), colorParts.at(3).toInt());
-        } else {
-            qWarning("TMap: Failed to parse outline color data for label %d, expected 4 parts but got %lld", labelId, colorParts.size());
-        }
-    }
-}
-
 enum class MapFileCheckResult { ValidMap, NotAMap, ParseError };
 
 struct MapFileCheck
@@ -151,6 +122,35 @@ MapFileCheck fileHoldsMapData(QFile& file)
     return check;
 }
 } // anonymous namespace
+
+// Restores font information from userData that was stored during binary serialization.
+// Font data is stored as "family|pointSize|weight|italic" to avoid binary format version changes.
+void TMap::restoreLabelFontFromUserData(TMapLabel& label, int labelId, QMap<QString, QString>& userData)
+{
+    const QString fontKey = qsl("system.labelFont_%1").arg(labelId);
+    if (userData.contains(fontKey)) {
+        const QStringList fontParts = userData.take(fontKey).split(QLatin1Char('|'));
+        if (fontParts.size() == 4) {
+            label.font = QFont(fontParts.at(0), fontParts.at(1).toInt(), fontParts.at(2).toInt(), fontParts.at(3).toInt() != 0);
+        } else {
+            qWarning("TMap: Failed to parse font data for label %d, expected 4 parts but got %lld", labelId, fontParts.size());
+        }
+    }
+}
+
+// Outline color data is stored as "r|g|b|a" to avoid binary format version changes.
+void TMap::restoreLabelOutlineColorFromUserData(TMapLabel& label, int labelId, QMap<QString, QString>& userData)
+{
+    const QString colorKey = qsl("system.labelOutlineColor_%1").arg(labelId);
+    if (userData.contains(colorKey)) {
+        const QStringList colorParts = userData.take(colorKey).split(QLatin1Char('|'));
+        if (colorParts.size() == 4) {
+            label.outlineColor = QColor(colorParts.at(0).toInt(), colorParts.at(1).toInt(), colorParts.at(2).toInt(), colorParts.at(3).toInt());
+        } else {
+            qWarning("TMap: Failed to parse outline color data for label %d, expected 4 parts but got %lld", labelId, colorParts.size());
+        }
+    }
+}
 
 TMap::TMap(Host* pH, const QString& profileName)
 : mDefaultAreaName(tr("Default Area"))

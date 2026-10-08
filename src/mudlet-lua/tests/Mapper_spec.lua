@@ -4729,6 +4729,79 @@ describe("Tests saveJsonMap and loadJsonMap", function()
     -- data without emptying it first, and the JSON import never reaches the
     -- clear a binary load gets, so keys the previous map had outlive it.
     pending("map user data from the map being replaced survives a JSON import")
+    local function exportedLabels(area)
+      assert.is_true(saveJsonMap(jsonPath))
+      local file = assert(io.open(jsonPath, "r"))
+      local document = yajl.to_value(file:read("*a"))
+      file:close()
+      for _, exportedArea in ipairs(document.areas) do
+        if exportedArea.id == area then
+          local labels = {}
+          for _, label in ipairs(exportedArea.labels or {}) do
+            labels[label.id] = label
+          end
+          return labels
+        end
+      end
+      error("area " .. tostring(area) .. " is not in the exported document")
+    end
+
+    -- getMapLabel() reports neither the outline nor the font, so they are
+    -- read from what a second export makes of the imported labels (#10680)
+    it("puts a map label's outline colour back, and no font on a label that had none", function()
+      deleteMap()
+      local area = addAreaName("MapperSpecJsonLabelOutlineArea")
+      roomA = createRoomID(); addRoom(roomA); setRoomArea(roomA, area)
+      local outlinedId = createMapLabel(area, "Outlined", 0, 0, 0, 255, 255, 255, 0, 0, 0,
+                                        30.0, 12, true, false, "Bitstream Vera Sans", 255, 50, false, 255, 255, 0)
+      local fontlessId = createMapLabel(area, "Fontless", 1, 1, 0, 255, 255, 255, 0, 0, 0,
+                                        30.0, 12, true, false, "", 255, 50, false)
+      local before = exportedLabels(area)
+      assert.is_nil(before[fontlessId].font)
+
+      roundTrip()
+
+      local after = exportedLabels(area)
+      assert.is_table(after[outlinedId].outlineColor)
+      assert.are.same({255, 255, 0}, after[outlinedId].outlineColor.color24RGB)
+      assert.are.equal("Bitstream Vera Sans", after[outlinedId].font.family)
+      assert.is_nil(after[fontlessId].font)
+    end)
+
+    it("takes a label's outline colour and font from the area user data of a file that has them only there", function()
+      deleteMap()
+      local area = addAreaName("MapperSpecJsonLabelFallbackArea")
+      roomA = createRoomID(); addRoom(roomA); setRoomArea(roomA, area)
+      local labelId = createMapLabel(area, "Fallback", 0, 0, 0, 255, 255, 255, 0, 0, 0,
+                                     30.0, 12, true, false, "", 255, 50, false)
+      assert.is_true(saveJsonMap(jsonPath))
+      local file = assert(io.open(jsonPath, "r"))
+      local document = yajl.to_value(file:read("*a"))
+      file:close()
+      for _, exportedArea in ipairs(document.areas) do
+        if exportedArea.id == area then
+          for _, label in ipairs(exportedArea.labels) do
+            label.outlineColor = nil
+            label.font = nil
+          end
+          exportedArea.userData = exportedArea.userData or {}
+          exportedArea.userData["system.labelOutlineColor_" .. labelId] = "0|128|255|255"
+          exportedArea.userData["system.labelFont_" .. labelId] = "Bitstream Vera Sans|12|400|0"
+        end
+      end
+      file = assert(io.open(jsonPath, "w"))
+      file:write(yajl.to_string(document))
+      file:close()
+      deleteMap()
+      assert.is_true(loadJsonMap(jsonPath))
+
+      local after = exportedLabels(area)
+      assert.are.same({0, 128, 255}, after[labelId].outlineColor.color24RGB)
+      assert.are.equal("Bitstream Vera Sans", after[labelId].font.family)
+      assert.is_nil(getAllAreaUserData(area)["system.labelOutlineColor_" .. labelId])
+      assert.is_nil(getAllAreaUserData(area)["system.labelFont_" .. labelId])
+    end)
+
   end)
 
   describe("Tests the saveJsonMap and loadJsonMap argument contract", function()

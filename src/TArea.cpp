@@ -1014,6 +1014,10 @@ void TArea::writeJsonLabel(QJsonArray& array, const int id, const TMapLabel* pLa
     // Invert the logic here as we are saying "scaled" rather than "unscaled":
     labelObj.insert(QLatin1String("scaledels"), !pLabel->noScaling);
 
+    QJsonObject outlineColorObj;
+    TMap::writeJsonColor(outlineColorObj, pLabel->outlineColor);
+    labelObj.insert(QLatin1String("outlineColor"), outlineColorObj);
+
     if (!pLabel->font.family().isEmpty()) {
         QJsonObject fontObj;
         fontObj.insert(QLatin1String("family"), pLabel->font.family());
@@ -1065,12 +1069,27 @@ void TArea::readJsonLabel(const QJsonObject& labelObj)
 
     label.noScaling = !labelObj.value(QLatin1String("scaledels")).toBool(true);
 
+    if (labelObj.value(QLatin1String("outlineColor")).isObject()) {
+        const QColor outlineColor = TMap::readJsonColor(labelObj.value(QLatin1String("outlineColor")).toObject());
+        if (outlineColor.isValid()) {
+            label.outlineColor = outlineColor;
+        }
+    } else {
+        // A file exported after a binary save had put the binary format's copy in the area's user data
+        TMap::restoreLabelOutlineColorFromUserData(label, labelId, mUserData);
+    }
+
     if (labelObj.contains(QLatin1String("font"))) {
         const QJsonObject fontObj = labelObj.value(QLatin1String("font")).toObject();
         label.font = QFont(fontObj.value(QLatin1String("family")).toString(),
                            fontObj.value(QLatin1String("pointSize")).toInt(),
                            fontObj.value(QLatin1String("weight")).toInt(),
                            fontObj.value(QLatin1String("italic")).toBool());
+    } else {
+        // A default QFont has the application's family, which would give the
+        // label a font it never had - the writer leaves the key out for none
+        label.font = QFont(QString());
+        TMap::restoreLabelFontFromUserData(label, labelId, mUserData);
     }
 
     mMapLabels.insert(labelId, label);
