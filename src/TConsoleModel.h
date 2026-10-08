@@ -146,6 +146,12 @@ struct TConsoleModel
     void mirrorToStdOut(const QString& text);
     // For a complete line: TBuffer::commitLineData() passes it as sent, before triggers can gag or rewrite it.
     void mirrorLineToStdOut(const QString& line);
+    // For text written while triggers run: it lands in a line already mirrored as sent, so it is held
+    // until flushMirroredTriggerText() writes it out as lines of its own.
+    void mirrorTriggerTextToStdOut(const QString& text);
+    void flushMirroredTriggerText();
+    // This console's held text and, for a sub-console, the main console's
+    void flushHeldMirrorText();
     // What a write at mUserCursor leaves the view to do: show the lines it
     // appended, or repaint firstLine..lastLine, which it changed in place.
     struct WriteResult
@@ -245,6 +251,8 @@ struct TConsoleModel
     QString mProfileName;
     // --mirror text not yet ended by a line feed.
     QString mMirrorPendingLine;
+    // --mirror text written while triggers run, not yet flushed.
+    QString mMirrorTriggerText;
     bool mScriptAddressable = false;
     // The line on which the current search result has been found, or the next
     // one is to start (currently only for the main console). An index into the

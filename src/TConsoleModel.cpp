@@ -118,6 +118,7 @@ void TConsoleModel::clear()
     buffer.clear();
     // --mirror's pending line went with the buffer.
     mMirrorPendingLine.clear();
+    mMirrorTriggerText.clear();
     mUserCursor = QPoint();
     // Past the line left, so isPrompt() sees that the line a trigger runs for went too, even when it was line 0
     if (mTriggerEngineMode) {
@@ -322,6 +323,7 @@ TConsoleModel::CommandEcho TConsoleModel::printCommand(QString& msg)
             msg.prepend(QChar::LineFeed);
         }
         buffer.appendLine(msg, 0, msg.size() - 1, mCommandFgColor, mCommandBgColor);
+        mirrorTriggerTextToStdOut(msg);
         return {};
     }
 
@@ -330,6 +332,12 @@ TConsoleModel::CommandEcho TConsoleModel::printCommand(QString& msg)
         QPoint P(buffer.buffer.at(lineBeforeNewContent).size(), lineBeforeNewContent);
         const TChar format(mCommandFgColor, mCommandBgColor);
         buffer.insertInLine(P, msg, format);
+        // the prompt was mirrored when it arrived, so the command gets a line of its own
+        if (Q_UNLIKELY(mudlet::smMirrorToStdOut) && !msg.isEmpty()) {
+            for (const QString& line : msg.split(QChar::LineFeed)) {
+                mirrorLineToStdOut(line);
+            }
+        }
         const int down = buffer.wrapLine(lineBeforeNewContent);
         buffer.promptBuffer[lineBeforeNewContent] = false;
         return {CommandEcho::Kind::PromptLine, lineBeforeNewContent, lineBeforeNewContent + 1 + down};
@@ -344,6 +352,10 @@ namespace {
 // silently losing every line.
 void writeMirrorLine(const QString& line)
 {
+    // A caller part way through several lines when an earlier one failed
+    if (!mudlet::smMirrorToStdOut) {
+        return;
+    }
     QByteArray output = line.toUtf8();
     output.append('\n');
     const size_t length = static_cast<size_t>(output.size());
@@ -375,6 +387,7 @@ void TConsoleModel::mirrorToStdOut(const QString& text)
         return;
     }
 
+    flushHeldMirrorText();
     // Text may be a fragment (Lua's print() sends its newline separately, echo() need not end a line),
     // so like TBuffer::appendLine(), write a line out only once a line feed ends it.
     QStringList fragments = text.split(QChar::LineFeed);
@@ -393,6 +406,7 @@ void TConsoleModel::mirrorLineToStdOut(const QString& line)
         return;
     }
 
+    flushHeldMirrorText();
     const QString prefix = mirrorPrefix(mProfileName, mConsoleName);
     // Like TBuffer::commitLineData(), put a committed line below a non-empty open line, not onto it.
     if (!mMirrorPendingLine.isEmpty()) {
@@ -400,6 +414,53 @@ void TConsoleModel::mirrorLineToStdOut(const QString& line)
         mMirrorPendingLine.clear();
     }
     writeMirrorLine(prefix + line);
+}
+
+void TConsoleModel::mirrorTriggerTextToStdOut(const QString& text)
+{
+    if (Q_LIKELY(!mudlet::smMirrorToStdOut)) {
+        return;
+    }
+    mMirrorTriggerText.append(text);
+}
+
+void TConsoleModel::flushHeldMirrorText()
+{
+    // Only the main console runs in trigger mode, and what a trigger wrote there first goes out first
+    TConsoleModel* mainConsole = mpHost ? mpHost->mainConsoleModelOrNull() : nullptr;
+    if (mainConsole && mainConsole != this) {
+        mainConsole->flushMirroredTriggerText();
+    }
+    flushMirroredTriggerText();
+}
+
+void TConsoleModel::flushMirroredTriggerText()
+{
+    if (Q_LIKELY(mMirrorTriggerText.isEmpty())) {
+        return;
+    }
+
+    QStringList lines = mMirrorTriggerText.split(QChar::LineFeed);
+    mMirrorTriggerText.clear();
+    // What precedes the first line feed went onto the end of an existing line, and what follows the
+    // last one ends where the line it is on does, so neither is a line of its own when empty.
+    if (lines.constFirst().isEmpty()) {
+        lines.removeFirst();
+    }
+    if (!lines.isEmpty() && lines.constLast().isEmpty()) {
+        lines.removeLast();
+    }
+    if (lines.isEmpty()) {
+        return;
+    }
+    const QString prefix = mirrorPrefix(mProfileName, mConsoleName);
+    if (!mMirrorPendingLine.isEmpty()) {
+        writeMirrorLine(prefix + mMirrorPendingLine);
+        mMirrorPendingLine.clear();
+    }
+    for (const QString& line : lines) {
+        writeMirrorLine(prefix + line);
+    }
 }
 
 // Sets or resets all the given attributes, and no others.
@@ -425,11 +486,16 @@ void TConsoleModel::echoLink(const QString& text, QStringList& commands, QString
 {
     if (useCurrentFormat) {
         buffer.addLink(mTriggerEngineMode, text, commands, hints, mFormatCurrent, luaReferences);
-        return;
+    } else {
+        // the main console's links are coloured against the profile's own background
+        const QColor background = (mpHost && mpHost->mainConsoleModelOrNull() == this) ? mpHost->mBgColor : mBgColor;
+        buffer.addLink(mTriggerEngineMode, text, commands, hints, standardLinkFormat(background), luaReferences);
     }
-    // the main console's links are coloured against the profile's own background
-    const QColor background = (mpHost && mpHost->mainConsoleModelOrNull() == this) ? mpHost->mBgColor : mBgColor;
-    buffer.addLink(mTriggerEngineMode, text, commands, hints, standardLinkFormat(background), luaReferences);
+    if (mTriggerEngineMode) {
+        mirrorTriggerTextToStdOut(text);
+    } else {
+        mirrorToStdOut(text);
+    }
 }
 
 TConsoleModel::WriteResult TConsoleModel::insertLink(const QString& text, QStringList& commands, QStringList& hints, const bool useCurrentFormat, const QVector<int>& luaReferences)
@@ -442,6 +508,7 @@ TConsoleModel::WriteResult TConsoleModel::insertLink(const QString& text, QStrin
         QPoint at = start;
         buffer.insertInLine(at, text, format);
         buffer.applyLink(start, end, commands, hints, luaReferences);
+        mirrorTriggerTextToStdOut(text);
         if (start.y() < mEngineCursor) {
             return {false, mUserCursor.y(), mUserCursor.y()};
         }
@@ -484,6 +551,7 @@ bool TConsoleModel::echo(QString& text)
         } else {
             buffer.appendLine(text, 0, text.size() - 1, mFormatCurrent.foreground(), mFormatCurrent.background(), mFormatCurrent.allDisplayAttributes());
         }
+        mirrorTriggerTextToStdOut(text);
     } else {
         buffer.append(text, 0, text.size(), mFormatCurrent.foreground(), mFormatCurrent.background(), mFormatCurrent.allDisplayAttributes());
         appended = true;
@@ -498,6 +566,7 @@ TConsoleModel::WriteResult TConsoleModel::insertText(const QString& text)
         mpHost->getLuaInterpreter()->adjustCaptureGroups(mUserCursor.x(), text.size());
         QPoint at = mUserCursor;
         buffer.insertInLine(at, text, mFormatCurrent);
+        mirrorTriggerTextToStdOut(text);
         if (at.y() < mEngineCursor) {
             return {false, mUserCursor.y(), mUserCursor.y()};
         }

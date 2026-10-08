@@ -522,18 +522,130 @@ private slots:
         QVERIFY(!shownLines().contains(qsl("gag this line")));
     }
 
-    // Text a trigger adds with echo() is put into the line by
-    // TBuffer::insertInLine(), which no copy is made from, so the line is
-    // copied as the game sent it. Pins the one hole left in the option.
-    void test_textATriggerEchoesIsNotMirrored()
+    // The line is copied as the game sent it before the trigger runs, so what a
+    // trigger writes into it follows as a line of its own once the pass is over.
+    void test_textATriggerEchoesIsMirroredAfterTheLine()
     {
-        QVERIFY(runLua(qsl("tempRegexTrigger([[^echo onto this line$]], [[echo(\" [added]\")]])")));
+        QVERIFY(runLua(qsl("tempRegexTrigger([[^echo onto this line$]], [[echo(\" [added]\") cecho(\" <red>[cechoed]\")]])")));
 
         feedLineFromServer("echo onto this line");
 
-        QCOMPARE(timesMirrored(qsl("echo onto this line")), 1);
-        QCOMPARE(timesMirroredContaining(qsl("[added]")), 0);
-        QCOMPARE(shownLines().filter(qsl("[added]")).size(), 1);
+        QCOMPARE(mirroredLines(), QStringList({qsl("echo onto this line"), qsl(" [added] [cechoed]")}));
+        QCOMPARE(shownLines(), QStringList{qsl("echo onto this line [added] [cechoed]")});
+    }
+
+    // A line feed in a trigger's echo starts a line on screen, so it starts one
+    // in the stream too, and text after the trigger is not run onto it.
+    void test_linesATriggerEchoesAreMirroredOneLinePerLineShown()
+    {
+        QVERIFY(runLua(qsl("tempRegexTrigger([[^echo below this line$]], [[echo(\"\\nfirst below\\n\\nsecond below\")]])")));
+
+        feedLineFromServer("echo below this line");
+        QVERIFY(runLua(qsl("echo(\"after the trigger\\n\")")));
+
+        const QStringList expected{qsl("echo below this line"), qsl("first below"), QString(), qsl("second below"), qsl("after the trigger")};
+        QCOMPARE(mirroredLines(), expected);
+        QCOMPARE(shownLines(), expected);
+    }
+
+    // Every way a trigger writes into its line is held and follows the line as
+    // sent, in the order written and ahead of the next line of the same packet.
+    void test_everyTriggerWriteIsMirroredInOrderBeforeTheNextLine()
+    {
+        QVERIFY(runLua(qsl("tempRegexTrigger([[^write into this line$]], "
+                           "[[echoLink(\" [link]\", \"\", \"\") insertLink(\" [inserted link]\", \"\", \"\") "
+                           "insertText(\" [inserted]\") send(\"a command\", true)]])")));
+
+        feedLineFromServer("write into this line\r\nthe next line");
+
+        QCOMPARE(mirroredLines(), QStringList({qsl("write into this line"), qsl(" [link] [inserted link] [inserted]"), qsl("a command"), qsl("the next line")}));
+    }
+
+    // A sub-console is not in trigger mode, so what a trigger writes to it is
+    // copied at once; the main console's held text has to go out ahead of it.
+    void test_triggerTextIsMirroredAheadOfASubConsoleLineWrittenAfterIt()
+    {
+        QVERIFY(runLua(qsl("createMiniConsole(\"mirrorChat\", 0, 0, 200, 100) "
+                           "tempRegexTrigger([[^echo then write elsewhere$]], [[echo(\" [added]\") echo(\"mirrorChat\", \"elsewhere\\n\")]])")));
+
+        feedLineFromServer("echo then write elsewhere");
+
+        const QString main = qsl("%1.main| ").arg(mHostname);
+        const QStringList expected{main + qsl("echo then write elsewhere"), main + qsl(" [added]"), qsl("%1.mirrorChat| elsewhere").arg(mHostname)};
+        QCOMPARE(mCapturedOutput.filter(QRegularExpression(qsl("write elsewhere|\\[added\\]|\\| elsewhere$"))), expected);
+    }
+
+    // A sysBufferShrinkEvent handler runs in trigger mode but after the trigger
+    // pass, so what it echoes must not wait for more game text to be copied.
+    void test_textEchoedAfterTheTriggerPassIsMirroredWithoutMoreOutput()
+    {
+        TBuffer& buffer = mpHost->mpConsole->buffer;
+        const int savedLinesLimit = buffer.mLinesLimit;
+        const int savedBatchDeleteSize = buffer.mBatchDeleteSize;
+        auto restore = qScopeGuard([&buffer, savedLinesLimit, savedBatchDeleteSize]() {
+            buffer.setBufferSize(savedLinesLimit, savedBatchDeleteSize);
+        });
+        buffer.setBufferSize(100, 10);
+        QVERIFY(runLua(qsl("mirrorShrinkHandler = registerAnonymousEventHandler(\"sysBufferShrinkEvent\", function() echo(\"buffer trimmed\") end, true)")));
+
+        QByteArray bulk;
+        for (int i = 0; i < 90; ++i) {
+            bulk.append(qsl("filler %1\r\n").arg(i).toLatin1());
+        }
+        feedFromServer(bulk, 50);
+        for (int i = 0; i < 30 && !shownLines().contains(qsl("buffer trimmed")); ++i) {
+            feedLineFromServer(qsl("one more %1").arg(i).toLatin1());
+        }
+        QVERIFY(runLua(qsl("killAnonymousEventHandler(mirrorShrinkHandler)")));
+
+        QVERIFY(shownLines().contains(qsl("buffer trimmed")));
+        QCOMPARE(timesMirrored(qsl("buffer trimmed")), 1);
+    }
+
+    // Once a write fails --mirror is off, and the rest of the same batch of
+    // lines must neither be written nor warn again.
+    void test_aFailedWriteTurnsMirroringOffWithOneWarning()
+    {
+        static int failedWriteWarnings = 0;
+        static QtMessageHandler previousHandler = nullptr;
+        failedWriteWarnings = 0;
+        previousHandler = qInstallMessageHandler([](QtMsgType type, const QMessageLogContext& context, const QString& message) {
+            if (message.startsWith(qsl("--mirror: could not write"))) {
+                ++failedWriteWarnings;
+                return;
+            }
+            previousHandler(type, context, message);
+        });
+        std::fflush(stdout);
+        const int savedStdOut = dup(fileno(stdout));
+        QVERIFY(savedStdOut != -1);
+        const int fullFd = open("/dev/full", O_WRONLY);
+        if (fullFd == -1) {
+            close(savedStdOut);
+            qInstallMessageHandler(previousHandler);
+            QSKIP("no /dev/full to make standard output fail");
+        }
+        QVERIFY(dup2(fullFd, fileno(stdout)) != -1);
+        close(fullFd);
+
+        const bool succeeded = mpHost->getLuaInterpreter()->compileAndExecuteScript(qsl("echo(\"first\\nsecond\\nthird\\n\")"));
+
+        std::fflush(stdout);
+        dup2(savedStdOut, fileno(stdout));
+        close(savedStdOut);
+        clearerr(stdout);
+        qInstallMessageHandler(previousHandler);
+        QVERIFY(succeeded);
+        QVERIFY(!mudlet::smMirrorToStdOut);
+        QCOMPARE(failedWriteWarnings, 1);
+    }
+
+    void test_echoLinkIsMirrored()
+    {
+        QVERIFY(runLua(qsl("echoLink(\"a link\", [[echo('clicked')]], \"hint\") echo(\" after it\\n\")")));
+
+        QCOMPARE(mirroredLines(), QStringList{qsl("a link after it")});
+        QCOMPARE(mirroredLines(), shownLines());
     }
 
     // A prompt is ended by IAC GA rather than by a newline, which is a line
@@ -548,6 +660,41 @@ private slots:
 
         QCOMPARE(timesMirrored(qsl("HP:100 MP:50 > ")), 1);
         QCOMPARE(mirroredLines(), shownLines());
+    }
+
+    // A command typed at a prompt is written onto the prompt's line, which was
+    // copied when it arrived, so the command is copied as a line of its own.
+    void test_aCommandTypedAtAPromptIsMirrored()
+    {
+        QByteArray prompt("HP:90 MP:40 > ");
+        prompt.append(static_cast<char>(0xFF)); // TN_IAC
+        prompt.append(static_cast<char>(0xF9)); // TN_GA
+        feedFromServer(prompt, 50);
+        QVERIFY(mpHost->mpConsole->buffer.promptBuffer.at(mpHost->mpConsole->buffer.size() - 2));
+
+        startCapture();
+        mpHost->send(qsl("look at the prompt"), true, true);
+        stopCapture();
+
+        QCOMPARE(mirroredLines(), QStringList({qsl("HP:90 MP:40 > "), qsl("look at the prompt")}));
+        QCOMPARE(shownLines(), QStringList{qsl("HP:90 MP:40 > look at the prompt")});
+    }
+
+    // Enter on an empty command line at a prompt adds nothing on screen, so it
+    // adds nothing to the stream either.
+    void test_anEmptyCommandAtAPromptIsNotMirrored()
+    {
+        QByteArray prompt("HP:80 MP:30 > ");
+        prompt.append(static_cast<char>(0xFF)); // TN_IAC
+        prompt.append(static_cast<char>(0xF9)); // TN_GA
+        feedFromServer(prompt, 50);
+        QVERIFY(mpHost->mpConsole->buffer.promptBuffer.at(mpHost->mpConsole->buffer.size() - 2));
+
+        startCapture();
+        mpHost->send(QString(), true, true);
+        stopCapture();
+
+        QCOMPARE(mirroredLines(), QStringList{qsl("HP:80 MP:30 > ")});
     }
 };
 
