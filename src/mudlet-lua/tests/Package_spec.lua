@@ -3481,6 +3481,44 @@ describe("Tests installing a module whose XML cannot be read", function()
     assert.same({}, installEvents, "a module with nothing running was announced as installed")
   end)
 
+  -- Back to back, with no event loop pass between them, so the install events are still queued
+  local function installThenUninstall(install, uninstall, path, name, installed)
+    assert.is_true(waitForProfileSaveToPass(), "a profile save was still running")
+    install(path)
+    return installed(name) and uninstall(name) == true
+  end
+
+  it("does not announce a module that was uninstalled before its install events were raised", function()
+    local path = scratchDirectory .. "/" .. minimalPackage .. ".mpackage"
+    lfs.mkdir(scratchDirectory)
+    copyFile(fixtureDirectory .. "/" .. minimalPackage .. ".mpackage", path)
+    defer(function() removeFixtureModule(minimalPackage) end)
+    local installEvents = collectEventsForSpec("sysInstall")
+    local moduleEvents = collectEventsForSpec("sysLuaInstallModule")
+
+    local uninstalled = installThenUninstall(installModule, uninstallModule, path, minimalPackage, moduleInstalled)
+    pumpEvents(300)
+
+    assert.is_true(uninstalled, "SETUP: the module could not be installed and uninstalled back to back")
+    assert.is_false(moduleInstalled(minimalPackage))
+    assert.same({}, installEvents, "a module that was already gone was announced as installed")
+    assert.same({}, moduleEvents, "a module that was already gone was announced as installed")
+  end)
+
+  it("does not announce a package that was uninstalled before its install events were raised", function()
+    defer(function() removeFixturePackage(minimalPackage) end)
+    local installEvents = collectEventsForSpec("sysInstall")
+    local packageEvents = collectEventsForSpec("sysInstallPackage")
+
+    local uninstalled = installThenUninstall(installPackage, uninstallPackage, fixtureDirectory .. "/" .. minimalPackage .. ".mpackage", minimalPackage, packageInstalled)
+    pumpEvents(300)
+
+    assert.is_true(uninstalled, "SETUP: the package could not be installed and uninstalled back to back")
+    assert.is_false(packageInstalled(minimalPackage))
+    assert.same({}, installEvents, "a package that was already gone was announced as installed")
+    assert.same({}, packageEvents, "a package that was already gone was announced as installed")
+  end)
+
   it("says so for a bare XML module too", function()
     local name = "mudlet-spec-badxml-bare"
     local path = scratchDirectory .. "/" .. name .. ".xml"

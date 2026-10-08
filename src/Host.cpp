@@ -3601,7 +3601,9 @@ std::pair<bool, QString> Host::installPackage(const QString& fileName, enums::Pa
             return;
         }
 
-        if (moduleLoadedNothing) {
+        // A script may have uninstalled it again before this was delivered
+        const bool stillInstalled = thing == enums::PackageModuleType::Package ? mInstalledPackages.contains(packageName) : mInstalledModules.contains(packageName);
+        if (moduleLoadedNothing || !stillInstalled) {
             return;
         }
 
