@@ -3769,6 +3769,41 @@ describe("Tests saveMap and loadMap", function()
       assertMapRestored()
     end)
 
+    it("leaves the live area user data alone when saving", function()
+      deleteMap()
+      local area = addAreaName("MapperSpecSaveAreaDataArea")
+      local room = createRoomID(); addRoom(room); setRoomArea(room, area)
+      assert.is_true(setAreaUserData(area, "area.key", "mine"))
+      assert.is_true(setMapZoom(33, area))
+      local labelId = createMapLabel(area, "Label", 0, 0, 0, 255, 255, 255, 0, 0, 0,
+                                     30.0, 12, true, false, "Bitstream Vera Sans", 255, 50, false, 255, 255, 0)
+      assert.is_true(labelId >= 0)
+
+      assert.is_true(saveMap(savePath))
+      assert.are.same({["area.key"] = "mine"}, getAllAreaUserData(area))
+
+      assert.is_true(loadMap(savePath))
+      assert.are.same({["area.key"] = "mine"}, getAllAreaUserData(area))
+      assert.are.equal(33, getMapZoom(area))
+    end)
+
+    it("leaves the live room user data alone when saving a room border", function()
+      deleteMap()
+      local area = addAreaName("MapperSpecSaveRoomBorderArea")
+      local room = createRoomID(); addRoom(room); setRoomArea(room, area)
+      assert.is_true(setRoomBorderColor(room, 40, 50, 60, 255))
+      assert.is_true(setRoomBorderThickness(room, 3))
+      assert.is_true(setRoomUserData(room, "ukey", "uval"))
+
+      assert.is_true(saveMap(savePath))
+      assert.are.same({ukey = "uval"}, getAllRoomUserData(room))
+
+      assert.is_true(loadMap(savePath))
+      assert.are.same({ukey = "uval"}, getAllRoomUserData(room))
+      assert.are.same({40, 50, 60, 255}, {getRoomBorderColor(room)})
+      assert.are.equal(3, getRoomBorderThickness(room))
+    end)
+
     it("lists each entrance into a room once after a reload", function()
       buildMap()
       assert.are.same({roomA}, getAllRoomEntrances(roomB))
@@ -4709,6 +4744,41 @@ describe("Tests saveJsonMap and loadJsonMap", function()
       roundTrip()
 
       assert.are.same({climate = "temperate", ruler = "nobody"}, getAllAreaUserData(area))
+    end)
+
+    it("takes the binary format's fallbacks out of the user data of a file that has them", function()
+      deleteMap()
+      local area = addAreaName("MapperSpecJsonLeakedKeysArea")
+      roomA = createRoomID(); addRoom(roomA); setRoomArea(roomA, area)
+      assert.is_true(setAreaUserData(area, "climate", "temperate"))
+      assert.is_true(setRoomUserData(roomA, "kind", "cave"))
+      assert.is_true(saveJsonMap(jsonPath))
+      local file = assert(io.open(jsonPath, "r"))
+      local document = yajl.to_value(file:read("*a"))
+      file:close()
+      for _, exportedArea in ipairs(document.areas) do
+        if exportedArea.id == area then
+          exportedArea.zoom2D = nil
+          exportedArea.userData["system.fallback_map2DZoom"] = "27"
+          exportedArea.userData["system.labelOutlineColor_77"] = "1|2|3|255"
+          for _, room in ipairs(exportedArea.rooms) do
+            room.border = nil
+            room.userData["room.ui_borderColor"] = "#ff0a141e"
+            room.userData["room.ui_borderThickness"] = "4"
+          end
+        end
+      end
+      file = assert(io.open(jsonPath, "w"))
+      file:write(yajl.to_string(document))
+      file:close()
+      deleteMap()
+
+      assert.is_true(loadJsonMap(jsonPath))
+
+      assert.are.same({climate = "temperate"}, getAllAreaUserData(area))
+      assert.are.same({kind = "cave"}, getAllRoomUserData(roomA))
+      assert.are.same({10, 20, 30, 255}, {getRoomBorderColor(roomA)})
+      assert.are.equal(4, getRoomBorderThickness(roomA))
     end)
 
     -- TMap::readJsonColor returns QColor(red, green, blue) for a colour array of

@@ -1377,11 +1377,13 @@ bool TMap::serialize(QDataStream& ofs, int saveVersion)
         ofs << pA->pos;
         ofs << pA->isZone;
         ofs << pA->zoneAreaRef;
+        // A local copy so that saving does not modify the live area's user data:
+        QMap<QString, QString> areaUserData{pA->mUserData};
         if (mSaveVersion >= 21) {
             // Revised in version 21 to store the value directly:
             ofs << pA->mLast2DMapZoom;
         } else {
-            pA->mUserData.insert(QLatin1String("system.fallback_map2DZoom"), QString::number(pA->get2DMapZoom()));
+            areaUserData.insert(QLatin1String("system.fallback_map2DZoom"), QString::number(pA->get2DMapZoom()));
         }
         // Store font and outline color info for labels in userData (avoids binary format version change)
         const auto permanentLabelsList{pA->getPermanentLabelIds()};
@@ -1393,13 +1395,13 @@ bool TMap::serialize(QDataStream& ofs, int saveVersion)
                 }
                 const QString fontKey = qsl("system.labelFont_%1").arg(labelID);
                 const QString fontValue = qsl("%1|%2|%3|%4").arg(label.font.family()).arg(label.font.pointSize()).arg(label.font.weight()).arg(label.font.italic() ? 1 : 0);
-                pA->mUserData.insert(fontKey, fontValue);
+                areaUserData.insert(fontKey, fontValue);
             }
             const QString outlineColorKey = qsl("system.labelOutlineColor_%1").arg(labelID);
             const QString outlineColorValue = qsl("%1|%2|%3|%4").arg(label.outlineColor.red()).arg(label.outlineColor.green()).arg(label.outlineColor.blue()).arg(label.outlineColor.alpha());
-            pA->mUserData.insert(outlineColorKey, outlineColorValue);
+            areaUserData.insert(outlineColorKey, outlineColorValue);
         }
-        ofs << pA->mUserData;
+        ofs << areaUserData;
         if (mSaveVersion >= 21) {
             // Revised in version 21 to store labels within the TArea class:
             // Also we now have temporary labels, so we need to count the
@@ -1542,18 +1544,6 @@ bool TMap::serialize(QDataStream& ofs, int saveVersion)
             ofs << pR->mSymbolColor;
         }
 
-        // Border properties are stored in userData (not binary stream) to avoid map bloat
-        if (pR->mBorderColor.isValid()) {
-            pR->userData.insert(ROOM_UI_BORDERCOLOR, pR->mBorderColor.name(QColor::HexArgb));
-        } else {
-            pR->userData.remove(ROOM_UI_BORDERCOLOR);
-        }
-        if (pR->mBorderThickness > 0) {
-            pR->userData.insert(ROOM_UI_BORDERTHICKNESS, QString::number(pR->mBorderThickness));
-        } else {
-            pR->userData.remove(ROOM_UI_BORDERTHICKNESS);
-        }
-
         // Formats before 21 carry the hidden flag and symbol color - and
         // formats before 19 the symbol - as user data fallbacks; use a local
         // copy so that saving does not modify the live room's user data.
@@ -1561,6 +1551,17 @@ bool TMap::serialize(QDataStream& ofs, int saveVersion)
         // carries it, so none may appear in formats which store the value
         // directly in the stream:
         QMap<QString, QString> userData{pR->userData};
+        // Border properties are stored in userData (not binary stream) to avoid map bloat
+        if (pR->mBorderColor.isValid()) {
+            userData.insert(ROOM_UI_BORDERCOLOR, pR->mBorderColor.name(QColor::HexArgb));
+        } else {
+            userData.remove(ROOM_UI_BORDERCOLOR);
+        }
+        if (pR->mBorderThickness > 0) {
+            userData.insert(ROOM_UI_BORDERTHICKNESS, QString::number(pR->mBorderThickness));
+        } else {
+            userData.remove(ROOM_UI_BORDERTHICKNESS);
+        }
         if (mSaveVersion < 21) {
             if (pR->hidden) {
                 userData.insert(QLatin1String("system.fallback_hidden"), QLatin1String("true"));

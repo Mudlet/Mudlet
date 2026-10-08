@@ -861,6 +861,10 @@ std::pair<int, QString> TArea::readJsonArea(const QJsonArray& array, const int a
     const QString name{areaObj.value(QLatin1String("name")).toString()};
     gridMode = areaObj.value(QLatin1String("gridMode")).toBool();
     readJsonUserData(areaObj.value(QLatin1String("userData")).toObject());
+    // A file exported after a binary save can have the binary format's fallbacks in the user data
+    if (const QString zoom = mUserData.take(QLatin1String("system.fallback_map2DZoom")); !zoom.isEmpty()) {
+        set2DMapZoom(zoom.toDouble());
+    }
     int roomCount = 0;
     for (int roomIndex = 0, total = areaObj.value(QLatin1String("rooms")).toArray().count(); roomIndex < total; ++roomIndex) {
         TRoom* pR = new TRoom(mpRoomDB);
@@ -885,6 +889,10 @@ std::pair<int, QString> TArea::readJsonArea(const QJsonArray& array, const int a
     if (areaObj.contains(QLatin1String("labels")) && areaObj.value(QLatin1String("labels")).isArray()) {
         readJsonLabels(areaObj);
     }
+    // Any the labels read above did not take are for labels the file does not have
+    mUserData.removeIf([](QMap<QString, QString>::iterator item) {
+        return item.key().startsWith(QLatin1String("system.labelFont_")) || item.key().startsWith(QLatin1String("system.labelOutlineColor_"));
+    });
     return {id, name};
 }
 
