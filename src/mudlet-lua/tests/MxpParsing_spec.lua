@@ -290,6 +290,18 @@ describe("Tests the MXP line modes a game switches between", function()
     assert.is_false(boldAt("MXPPARSERESETPLAIN"))
   end)
 
+  -- reset sets open mode rather than the default, so neither a locked nor a
+  -- secure default carries over to the line
+  it("opens the line on a reset whatever the default mode is", function()
+    finally(function() feed("\27[5z\r\n") end)
+    feed("\27[7z\r\n")
+    assert.equals("MXPRESETFROMLOCKED", displayed("\27[3z<B>MXPRESETFROMLOCKED</B>\r\n"))
+    feed("\27[6z\r\n")
+    assert.equals("<SEND href=\"x\">MXPRESETFROMSECURE</SEND>", displayed("\27[3z<SEND href=\"x\">MXPRESETFROMSECURE</SEND>\r\n"))
+    -- and only the line: the default it came from applies again on the next one
+    assert.equals("MXPAFTERRESET", displayed("<SEND href=\"x\">MXPAFTERRESET</SEND>\r\n"))
+  end)
+
   it("ignores a mode switch that carries no number", function()
     -- the line stays open: B is taken out and SEND is not, which neither a
     -- secure nor a locked reading of the switch would do

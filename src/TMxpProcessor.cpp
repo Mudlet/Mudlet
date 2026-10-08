@@ -212,7 +212,8 @@ bool TMxpProcessor::setMode(int modeCode)
     case MXP_MODE_CODE_RESET: //  reset (MXP 0.4 or later) - close all open tags.  Set mode to Open.  Set text color and properties to default.
         mMxpTagBuilder.reset();
         mpMxpClient->resetTextProperties();
-        mMXP_MODE = mMXP_DEFAULT;
+        // Open, not the default: a secure default would let this line use secure tags
+        mMXP_MODE = MXP_MODE_OPEN;
         break;
     case MXP_MODE_CODE_TEMP_SECURE: // temp secure mode (MXP 0.4 or later) - set secure mode for the next tag only.  Must be immediately followed by a < character to start a tag.  Remember to set secure mode when closing the tag also.
         mMXP_MODE = MXP_MODE_TEMP_SECURE;
