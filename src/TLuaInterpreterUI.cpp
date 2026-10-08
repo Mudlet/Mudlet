@@ -30,6 +30,7 @@
 #include "MudletApp.h"
 #include "TLuaInterpreter.h"
 
+#include <QApplication>
 #include <QClipboard>
 #include <QGuiApplication>
 
@@ -40,6 +41,7 @@
 #include "Host.h"
 #include "HostManager.h"
 #include "TAction.h"
+#include "TAppFrontend.h"
 #include "TArea.h"
 #include "TConsole.h"
 #include "TDebug.h"
@@ -48,20 +50,17 @@
 #include "TMapLabel.h"
 #include "TMedia.h"
 #include "TRoomDB.h"
-#include "TTabBar.h"
 #include "TTimer.h"
-#include "dlgIRC.h"
 #include "mapInfoContributorManager.h"
-#include "mudlet.h"
 
 #include <array>
+#include <cstring>
 #include <limits>
 #include <math.h>
 
 #include <QCollator>
 #include <QCoreApplication>
 #include <QDir>
-#include <QFileDialog>
 #include <QFileInfo>
 #include <QVector>
 #ifdef QT_TEXTTOSPEECH_LIB
@@ -298,7 +297,7 @@ int TLuaInterpreter::alert(lua_State* L)
         }
     }
 
-    if (auto* application = mudlet::self()) {
+    if (auto* application = TAppFrontend::instance()) {
         application->alertUser(qRound(luaAlertDuration * 1000.0));
     }
 
@@ -1551,7 +1550,7 @@ int TLuaInterpreter::getImageSize(lua_State* L)
         return warnArgumentValue(L, __func__, "image location cannot be an empty string");
     }
 
-    auto size = mudlet::self()->getImageSize(imageLocation);
+    auto size = TAppFrontend::instance()->getImageSize(imageLocation);
     if (!size) {
         return warnArgumentValue(L, __func__, qsl("couldn't retrieve image size, is the location '%1' correct?").arg(imageLocation));
     }
@@ -1713,7 +1712,7 @@ int TLuaInterpreter::getMousePosition(lua_State* L)
 int TLuaInterpreter::getProfileTabNumber(lua_State* L)
 {
     Host& host = getHostFromLua(L);
-    auto profileIndex = mudlet::self()->mpTabBar->tabIndex(host.getName());
+    auto profileIndex = TAppFrontend::instance()->profileTabIndex(host.getName());
     if (profileIndex != -1) {
         lua_pushnumber(L, profileIndex + 1);
         return 1;
@@ -2351,7 +2350,7 @@ int TLuaInterpreter::isAnsiFgColor(lua_State* L)
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#loadWindowLayout
 int TLuaInterpreter::loadWindowLayout(lua_State* L)
 {
-    lua_pushboolean(L, mudlet::self()->loadWindowLayout());
+    lua_pushboolean(L, TAppFrontend::instance()->loadWindowLayout());
     return 1;
 }
 
@@ -2643,15 +2642,7 @@ int TLuaInterpreter::resizeWindow(lua_State* L)
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#saveWindowLayout
 int TLuaInterpreter::saveWindowLayout(lua_State* L)
 {
-    mudlet* pMudlet = mudlet::self();
-    // the flag is what makes the save on the way out a no-op, and a save asked
-    // for from a script is no substitute for that one, so it goes back up only
-    // if this call really saved
-    const bool hadSavedLayout = pMudlet->mHasSavedLayout;
-    pMudlet->mHasSavedLayout = false;
-    const bool saved = pMudlet->saveWindowLayout();
-    pMudlet->mHasSavedLayout = hadSavedLayout && saved;
-    lua_pushboolean(L, saved);
+    lua_pushboolean(L, TAppFrontend::instance()->saveWindowLayoutForScript());
     return 1;
 }
 
@@ -2814,7 +2805,7 @@ int TLuaInterpreter::setActiveProfile(lua_State* L)
         return 2;
     }
 
-    mudlet::self()->mpTabBar->setCurrentIndex(mudlet::self()->mpTabBar->tabIndex(profileName));
+    TAppFrontend::instance()->setActiveProfileTab(profileName);
     lua_pushboolean(L, true);
     return 1;
 }
@@ -2845,7 +2836,7 @@ int TLuaInterpreter::setAppStyleSheet(lua_State* L)
     event.mArgumentList.append(host.getName());
     event.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
     qApp->setStyleSheet(styleSheet);
-    mudlet::self()->refreshTabBarsAfterStyleChange();
+    TAppFrontend::instance()->refreshTabBarsAfterStyleChange();
     HostManager::self()->postInterHostEvent(nullptr, event, true);
     lua_pushboolean(L, true);
     return 1;
@@ -3185,14 +3176,24 @@ int TLuaInterpreter::setButtonStyleSheet(lua_State* L)
     if (actionIds.empty()) {
         return warnArgumentValue(L, __func__, qsl("no button named '%1' found").arg(name));
     }
+    // updateAllToolbars() rebuilds every button bar, too slow for scripts that restyle a button on each prompt
+    bool rebuild = false;
     for (auto actionId : actionIds) {
         auto action = host.getActionUnit()->getAction(actionId);
         if (!action) {
             continue;
         }
         action->css = css;
+        if (host.mpConsole && host.mpConsole->restyleActionButton(action)) {
+            continue;
+        }
+        // Without this a floating toolbar skips its rebuild
+        action->setDataChanged();
+        rebuild = true;
     }
-    host.getActionUnit()->updateAllToolbars();
+    if (rebuild) {
+        host.getActionUnit()->updateAllToolbars();
+    }
     lua_pushboolean(L, 1);
     return 1;
 }
@@ -3749,7 +3750,7 @@ int TLuaInterpreter::setMainWindowSize(lua_State* L)
 {
     const int x1 = getVerifiedInt(L, __func__, 1, "mainWidth");
     const int y1 = getVerifiedInt(L, __func__, 2, "mainHeight");
-    mudlet::self()->resize(x1, y1);
+    TAppFrontend::instance()->resizeMainWindow(x1, y1);
     return 0;
 }
 
@@ -4660,6 +4661,38 @@ int TLuaInterpreter::movieFunc(lua_State* L, const char* funcName)
     return 1;
 }
 
+// Of same-named items, the running script owns its body and what that body calls
+// directly - not what it reaches through a C function such as raiseEvent()
+static QString packageOfFrame(lua_State* L, Host& host, const int level, const lua_Debug& frame)
+{
+    const QString source = QString::fromUtf8(frame.source);
+    const bool fromRunningScript = source == host.mRunningScript.chunkName;
+    if (fromRunningScript && !std::strcmp(frame.what, "main")) {
+        return host.mRunningScript.package;
+    }
+    const QSet<QString> owners = host.packagesOwningChunk(source);
+    if (owners.size() == 1) {
+        return *owners.constBegin();
+    }
+    if (fromRunningScript && owners.contains(host.mRunningScript.package)) {
+        lua_Debug caller;
+        for (int below = level + 1; lua_getstack(L, below, &caller) && lua_getinfo(L, "S", &caller); ++below) {
+            if (!caller.what || !caller.source || source != QString::fromUtf8(caller.source)) {
+                break;
+            }
+            if (!std::strcmp(caller.what, "main")) {
+                return host.mRunningScript.package;
+            }
+        }
+    }
+    if (owners.size() > 1 && TDebug::wants(TDebug::Category::LuaWarning)) {
+        TDebug(Qt::black, Qt::yellow, TDebug::Category::LuaWarning) << "addCommand: the code that called it could belong to any of " << QStringList(owners.cbegin(), owners.cend()).join(qsl(", "))
+                                                                    << " (an empty name is the profile), so this command will not be removed when a package is uninstalled\n"
+                >> &host;
+    }
+    return {};
+}
+
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#addCommand
 int TLuaInterpreter::addCommand(lua_State* L)
 {
@@ -4667,7 +4700,7 @@ int TLuaInterpreter::addCommand(lua_State* L)
         return warnArgumentValue(L, __func__, "addCommand needs a table, e.g. addCommand{name = 'Speech', menuPath = 'Speech'}");
     }
 
-    mudlet::CommandRequest request;
+    TAppFrontend::CommandRequest request;
     // Leaving a field out and giving it the wrong type are different mistakes:
     // the first asks for nothing, the second asks for something and is ignored.
     // menuPath is the one that bites, because the path is conceptually a list
@@ -4764,23 +4797,37 @@ int TLuaInterpreter::addCommand(lua_State* L)
     // Leaving surfaces out means "wherever this client puts commands", which is
     // both. Naming it and naming nothing in it is refused above.
     if (!named) {
-        request.surfaces = mudlet::CommandSurface::Both;
+        request.surfaces = TAppFrontend::CommandSurface::Both;
     } else if (wantsMenu && wantsToolbar) {
-        request.surfaces = mudlet::CommandSurface::Both;
+        request.surfaces = TAppFrontend::CommandSurface::Both;
     } else if (wantsToolbar) {
-        request.surfaces = mudlet::CommandSurface::Toolbar;
+        request.surfaces = TAppFrontend::CommandSurface::Toolbar;
     } else {
-        request.surfaces = mudlet::CommandSurface::Menu;
+        request.surfaces = TAppFrontend::CommandSurface::Menu;
     }
 
     auto& host = getHostFromLua(L);
-    mudlet* pMudlet = mudlet::self();
-    if (!pMudlet) {
+    auto pFrontend = TAppFrontend::instance();
+    if (!pFrontend) {
         return warnArgumentValue(L, __func__, "mudlet instance not available");
     }
 
+    // The nearest Lua frame decides: further up, a command typed through the
+    // "lua" alias would belong to whichever package provides that alias
+    QString package;
+    lua_Debug frame;
+    for (int level = 1; lua_getstack(L, level, &frame); ++level) {
+        if (!lua_getinfo(L, "S", &frame) || !frame.what || !std::strcmp(frame.what, "C")) {
+            continue;
+        }
+        if (frame.source) {
+            package = packageOfFrame(L, host, level, frame);
+        }
+        break;
+    }
+
     QString error;
-    const int commandId = pMudlet->addAddonCommand(request, &host, error);
+    const int commandId = pFrontend->addAddonCommand(request, &host, package, error);
     if (commandId < 0) {
         return warnArgumentValue(L, __func__, error.isEmpty() ? qsl("the command could not be placed") : error);
     }
@@ -4795,12 +4842,12 @@ int TLuaInterpreter::removeCommand(lua_State* L)
     const int commandId = getVerifiedInt(L, __func__, 1, "commandId");
 
     auto& host = getHostFromLua(L);
-    mudlet* pMudlet = mudlet::self();
-    if (!pMudlet) {
+    auto pFrontend = TAppFrontend::instance();
+    if (!pFrontend) {
         return warnArgumentValue(L, __func__, "mudlet instance not available");
     }
 
-    lua_pushboolean(L, pMudlet->removeAddonCommand(commandId, &host));
+    lua_pushboolean(L, pFrontend->removeAddonCommand(commandId, &host));
     return 1;
 }
 
@@ -4810,12 +4857,12 @@ int TLuaInterpreter::enableCommand(lua_State* L)
     const int commandId = getVerifiedInt(L, __func__, 1, "commandId");
 
     auto& host = getHostFromLua(L);
-    mudlet* pMudlet = mudlet::self();
-    if (!pMudlet) {
+    auto pFrontend = TAppFrontend::instance();
+    if (!pFrontend) {
         return warnArgumentValue(L, __func__, "mudlet instance not available");
     }
 
-    lua_pushboolean(L, pMudlet->setAddonCommandEnabled(commandId, true, &host));
+    lua_pushboolean(L, pFrontend->setAddonCommandEnabled(commandId, true, &host));
     return 1;
 }
 
@@ -4825,12 +4872,12 @@ int TLuaInterpreter::disableCommand(lua_State* L)
     const int commandId = getVerifiedInt(L, __func__, 1, "commandId");
 
     auto& host = getHostFromLua(L);
-    mudlet* pMudlet = mudlet::self();
-    if (!pMudlet) {
+    auto pFrontend = TAppFrontend::instance();
+    if (!pFrontend) {
         return warnArgumentValue(L, __func__, "mudlet instance not available");
     }
 
-    lua_pushboolean(L, pMudlet->setAddonCommandEnabled(commandId, false, &host));
+    lua_pushboolean(L, pFrontend->setAddonCommandEnabled(commandId, false, &host));
     return 1;
 }
 
@@ -4841,12 +4888,12 @@ int TLuaInterpreter::setCommandChecked(lua_State* L)
     const bool checked = getVerifiedBool(L, __func__, 2, "checked");
 
     auto& host = getHostFromLua(L);
-    mudlet* pMudlet = mudlet::self();
-    if (!pMudlet) {
+    auto pFrontend = TAppFrontend::instance();
+    if (!pFrontend) {
         return warnArgumentValue(L, __func__, "mudlet instance not available");
     }
 
-    lua_pushboolean(L, pMudlet->setAddonCommandChecked(commandId, checked, &host));
+    lua_pushboolean(L, pFrontend->setAddonCommandChecked(commandId, checked, &host));
     return 1;
 }
 
@@ -4857,12 +4904,12 @@ int TLuaInterpreter::setCommandPinned(lua_State* L)
     const bool pinned = getVerifiedBool(L, __func__, 2, "pinned");
 
     auto& host = getHostFromLua(L);
-    mudlet* pMudlet = mudlet::self();
-    if (!pMudlet) {
+    auto pFrontend = TAppFrontend::instance();
+    if (!pFrontend) {
         return warnArgumentValue(L, __func__, "mudlet instance not available");
     }
 
-    lua_pushboolean(L, pMudlet->setAddonCommandPinned(commandId, pinned, &host));
+    lua_pushboolean(L, pFrontend->setAddonCommandPinned(commandId, pinned, &host));
     return 1;
 }
 
@@ -4873,12 +4920,12 @@ int TLuaInterpreter::setCommandIcon(lua_State* L)
     const QString icon = getVerifiedString(L, __func__, 2, "icon");
 
     auto& host = getHostFromLua(L);
-    mudlet* pMudlet = mudlet::self();
-    if (!pMudlet) {
+    auto pFrontend = TAppFrontend::instance();
+    if (!pFrontend) {
         return warnArgumentValue(L, __func__, "mudlet instance not available");
     }
 
-    lua_pushboolean(L, pMudlet->setAddonCommandIcon(commandId, icon, &host));
+    lua_pushboolean(L, pFrontend->setAddonCommandIcon(commandId, icon, &host));
     return 1;
 }
 
@@ -4889,12 +4936,12 @@ int TLuaInterpreter::setCommandTooltip(lua_State* L)
     const QString tooltip = getVerifiedString(L, __func__, 2, "tooltip");
 
     auto& host = getHostFromLua(L);
-    mudlet* pMudlet = mudlet::self();
-    if (!pMudlet) {
+    auto pFrontend = TAppFrontend::instance();
+    if (!pFrontend) {
         return warnArgumentValue(L, __func__, "mudlet instance not available");
     }
 
-    lua_pushboolean(L, pMudlet->setAddonCommandTooltip(commandId, tooltip, &host));
+    lua_pushboolean(L, pFrontend->setAddonCommandTooltip(commandId, tooltip, &host));
     return 1;
 }
 
@@ -4922,13 +4969,13 @@ int TLuaInterpreter::setCommandPulse(lua_State* L)
     }
 
     auto& host = getHostFromLua(L);
-    mudlet* pMudlet = mudlet::self();
-    if (!pMudlet) {
+    auto pFrontend = TAppFrontend::instance();
+    if (!pFrontend) {
         return warnArgumentValue(L, __func__, "mudlet instance not available");
     }
 
     QString error;
-    const bool success = pMudlet->setAddonCommandPulse(commandId, enabled, color1, color2, interval, &host, error);
+    const bool success = pFrontend->setAddonCommandPulse(commandId, enabled, color1, color2, interval, &host, error);
     if (!success && !error.isEmpty()) {
         return warnArgumentValue(L, __func__, error);
     }
@@ -4958,12 +5005,10 @@ int TLuaInterpreter::invokeFileDialog(lua_State* L)
         }
     }
 
-    if (!luaDir) {
-        const QString fileName = QFileDialog::getExistingDirectory(nullptr, title, location);
-        lua_pushstring(L, fileName.toUtf8().constData());
-        return 1;
+    QString fileName;
+    if (auto* frontend = TAppFrontend::instance()) {
+        fileName = luaDir ? frontend->getOpenFileName(title, location) : frontend->getExistingDirectory(title, location);
     }
-    const QString fileName = QFileDialog::getOpenFileName(nullptr, title, location);
     lua_pushstring(L, fileName.toUtf8().constData());
     return 1;
 }

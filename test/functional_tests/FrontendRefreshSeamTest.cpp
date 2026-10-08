@@ -72,37 +72,6 @@
 
 using namespace std::chrono_literals;
 
-// Counts the paint events one widget receives.
-class PaintCounter : public QObject
-{
-public:
-    explicit PaintCounter(QWidget* widget)
-    : mpWidget(widget)
-    {
-        widget->installEventFilter(this);
-    }
-    ~PaintCounter() override
-    {
-        if (mpWidget) {
-            mpWidget->removeEventFilter(this);
-        }
-    }
-
-    int mCount = 0;
-
-protected:
-    bool eventFilter(QObject* watched, QEvent* event) override
-    {
-        if (event->type() == QEvent::Paint) {
-            ++mCount;
-        }
-        return QObject::eventFilter(watched, event);
-    }
-
-private:
-    QPointer<QWidget> mpWidget;
-};
-
 // A game that accepts one connection and can drop it on demand, which is all
 // either test needs of a server.
 class LoopbackGameStub : public QObject
@@ -388,8 +357,8 @@ private slots:
         QVERIFY2(lowerForced, "the lower pane was not forced to redraw for a hyperlink that had just been revealed");
     }
 
-    // repaintPanes() paints synchronously, so a paint landing on the upper pane
-    // between the call and the observer can only have come from this wire.
+    // As with visibility above, mForceUpdate is what proves the panes were
+    // forced to redraw the restyled lines rather than reuse their cached pixmap.
     void test_restylingALinksCharactersRepaintsThePanes()
     {
         Host* host = startProfile();
@@ -399,16 +368,22 @@ private slots:
         const int linkId = feedSpoilerLink(host, qsl("OSCPAINT1"));
         QVERIFY2(linkId > 0, "no spoiler link reached the buffer");
 
-        PaintCounter upperPaints(console->mUpperPane);
-        int paintsSeen = -1;
+        console->mUpperPane->mForceUpdate = false;
+        console->mLowerPane->mForceUpdate = false;
+        bool observed = false;
+        bool upperForced = false;
+        bool lowerForced = false;
         QObject observerContext;
         connect(&console->model().mNotifier, &TConsoleModelNotifier::linkCharactersChanged, &observerContext, [&]() {
-            paintsSeen = upperPaints.mCount;
+            observed = true;
+            upperForced = console->mUpperPane->mForceUpdate;
+            lowerForced = console->mLowerPane->mForceUpdate;
         });
 
         console->buffer.updateLinkCharacters(linkId);
-        QVERIFY2(paintsSeen >= 0, "restyling the link's characters raised no notification");
-        QVERIFY2(paintsSeen > 0, "the upper pane was not repainted for a link whose characters had just been restyled");
+        QVERIFY2(observed, "restyling the link's characters raised no notification");
+        QVERIFY2(upperForced, "the upper pane was not forced to redraw for a link whose characters had just been restyled");
+        QVERIFY2(lowerForced, "the lower pane was not forced to redraw for a link whose characters had just been restyled");
     }
 
     // The repaint half of restyling a selection by name. The console's model
@@ -519,6 +494,34 @@ private slots:
         QCOMPARE(console->buffer.line(line), qsl("keep  keep"));
         QVERIFY2(console->mUpperPane->mDirtyFirstLine == line && console->mUpperPane->mDirtyLastLine == line, "cut() did not mark the line it changed for the upper pane to redraw");
         QVERIFY2(console->mLowerPane->mDirtyFirstLine == line && console->mLowerPane->mDirtyLastLine == line, "cut() did not mark the line it changed for the lower pane to redraw");
+    }
+
+    void test_replacingOnTheMainConsoleRedrawsThatLine()
+    {
+        Host* host = startProfile();
+        QVERIFY(host);
+        TMainConsole* console = host->mpConsole;
+        QVERIFY(console);
+        QVERIFY2(host->getLuaInterpreter()->compileAndExecuteScript(qsl("echo('first\\nkeep seamOld keep\\nthird\\n')\n")), "the main console could not be written to");
+        int line = -1;
+        for (int i = console->buffer.size() - 1; i >= 0; --i) {
+            if (console->buffer.line(i).contains(qsl("seamOld"))) {
+                line = i;
+                break;
+            }
+        }
+        QVERIFY2(line > 0, "the line to replace in is not below the first line, so a redraw of line 0 would pass");
+        QVERIFY2(host->getLuaInterpreter()->compileAndExecuteScript(qsl("moveCursor('main', 0, %1)\nselectString('seamOld', 1)\n").arg(line)), "the text to replace could not be selected");
+        for (TTextEdit* pane : {console->mUpperPane, console->mLowerPane}) {
+            pane->mDirtyFirstLine = -1;
+            pane->mDirtyLastLine = -1;
+        }
+
+        QVERIFY2(host->getLuaInterpreter()->compileAndExecuteScript(qsl("replace('NEW')")), "replace() failed");
+
+        QCOMPARE(console->buffer.line(line), qsl("keep NEW keep"));
+        QVERIFY2(console->mUpperPane->mDirtyFirstLine == line && console->mUpperPane->mDirtyLastLine == line, "replace() did not mark the line it changed for the upper pane to redraw");
+        QVERIFY2(console->mLowerPane->mDirtyFirstLine == line && console->mLowerPane->mDirtyLastLine == line, "replace() did not mark the line it changed for the lower pane to redraw");
     }
 
 private:

@@ -615,8 +615,9 @@ void TTextEdit::paintBackgrounds(QPainter& painter, const LineLayout& layout, co
     for (const GraphemeRun& run : layout) {
         // Filling a cell just cleared to its own color changes nothing, as long as
         // no ink has been painted into it since, which is for the caller to ensure.
-        if (run.fillsBackground && !(run.bgColor == clearedTo && cleared.contains(run.textRect))) {
-            painter.fillRect(run.textRect, run.bgColor);
+        const QRect& cell = run.halfRect.isNull() ? run.textRect : run.halfRect;
+        if (run.fillsBackground && !(run.bgColor == clearedTo && cleared.contains(cell))) {
+            painter.fillRect(cell, run.bgColor);
         }
     }
 }
@@ -632,9 +633,21 @@ int TTextEdit::paintForegrounds(QPainter& painter, TGlyphCache& glyphCache, cons
         painter.setClipRect(clip);
     }
     for (const GraphemeRun& run : layout) {
-        if (run.style) {
-            inkBottom = std::max(inkBottom, paintGraphemeForeground(painter, glyphCache, run));
+        if (!run.style) {
+            continue;
         }
+        if (Q_LIKELY(run.halfRect.isNull())) {
+            inkBottom = std::max(inkBottom, paintGraphemeForeground(painter, glyphCache, run, *run.style));
+            continue;
+        }
+        // Queued glyphs are drawn under whatever clip is set when they are flushed
+        glyphCache.flush(painter);
+        painter.save();
+        // Clipped sideways only, so ink overflowing the line above or below still shows:
+        painter.setClipRect(QRect(run.halfRect.x(), painter.window().y(), run.halfRect.width(), painter.window().height()), Qt::IntersectClip);
+        inkBottom = std::max(inkBottom, paintGraphemeForeground(painter, glyphCache, run, run.rightHalf ? run.style->rightHalf() : *run.style));
+        glyphCache.flush(painter);
+        painter.restore();
     }
     glyphCache.flush(painter);
     if (!clip.isNull()) {
@@ -959,6 +972,20 @@ int TTextEdit::layoutGrapheme(LineLayout& layout, const QPoint& cursor, QStringV
         run.textRect = QRect(mFontWidth * cursor.x(), mFontHeight * cursor.y(), mFontWidth * charWidth, mFontHeight);
     }
     const bool caretIsHere = mpHost && mpHost->caretEnabled() && mCaretLine == line && mCaretColumn == column;
+    resolveRunColors(run, charStyle, caretIsHere);
+    if (Q_UNLIKELY(charStyle.hasSplitFormat()) && charWidth == 2) {
+        run.halfRect = QRect(run.textRect.x(), run.textRect.y(), mFontWidth, mFontHeight);
+        layout.push_back(run);
+        run.rightHalf = true;
+        run.halfRect.translate(mFontWidth, 0);
+        resolveRunColors(run, charStyle.rightHalf(), caretIsHere);
+    }
+    layout.push_back(std::move(run));
+    return charWidth;
+}
+
+void TTextEdit::resolveRunColors(GraphemeRun& run, const TChar& charStyle, const bool caretIsHere) const
+{
     const bool swapColors = charStyle.isReversed() != (charStyle.isSelected() != caretIsHere);
     if (Q_UNLIKELY(charStyle.isFound())) {
         if (Q_UNLIKELY(swapColors)) {
@@ -978,12 +1005,14 @@ int TTextEdit::layoutGrapheme(LineLayout& layout, const QPoint& cursor, QStringV
             run.bgColor = (charStyle.background().lightness() < 128) ? Qt::white : Qt::black;
         } else {
             // A transparent cell (e.g. a system message) has no colour of its own
-            // to swap in as the text pen - painting with alpha 0 would make the
-            // glyph invisible - so fall back to the console's real background.
+            // to swap in as the text pen, so fall back to the console's real
+            // background. Opaque either way, as a script can make the console
+            // background, and with it game text's, translucent or invisible.
             QColor background = charStyle.background();
             if (background.alpha() == 0) {
                 background = mpConsole->getConsoleBgColor();
             }
+            background.setAlpha(255);
             run.fgColor = background;
             run.bgColor = charStyle.foreground();
         }
@@ -1000,16 +1029,13 @@ int TTextEdit::layoutGrapheme(LineLayout& layout, const QPoint& cursor, QStringV
     // one only below the deepest ink painted so far. Other console types skip cells
     // matching the console background so that the widget underneath shows through.
     run.fillsBackground = !run.textRect.isNull() && (mpConsole->getType() == TConsole::MainConsole || run.bgColor != mpConsole->getConsoleBgColor());
-    layout.push_back(std::move(run));
-    return charWidth;
 }
 
-int TTextEdit::paintGraphemeForeground(QPainter& painter, TGlyphCache& glyphCache, const GraphemeRun& run) const
+int TTextEdit::paintGraphemeForeground(QPainter& painter, TGlyphCache& glyphCache, const GraphemeRun& run, const TChar& charStyle) const
 {
     const QColor& fgColor = run.fgColor;
     const QRect& textRect = run.textRect;
     const QStringView grapheme = run.grapheme;
-    const TChar& charStyle = *run.style;
     const TChar::AttributeFlags attributes = charStyle.allDisplayAttributes();
     const bool isBold = attributes & TChar::Bold;
     const bool isBlinking = attributes & (TChar::Blink | TChar::FastBlink);
@@ -2861,16 +2887,29 @@ QString TTextEdit::getSelectedText(const QChar& newlineChar, const bool showTime
         }
     }
 
-    if (showTimestamps) {
-        QStringList timestamps = mpBuffer->timeBuffer.mid(startLine, endLine - startLine + 1);
-        QStringList result;
-        std::transform(textLines.cbegin(), textLines.cend(), timestamps.cbegin(), std::back_inserter(result), [](const QString& text, const QString& timestamp) {
-            return timestamp + text;
-        });
-        textLines = result;
+    // A line that word wrapping split off goes back on the end of the one
+    // before, as the game sent it, rather than being copied as a line of its own
+    QString text;
+    for (qsizetype i = 0; i < textLines.size(); ++i) {
+        const int y = static_cast<int>(startLine + i);
+        QStringView line = textLines.at(i);
+        if (mpBuffer->wrapsFromPreviousLine(y)) {
+            const qsizetype columnsNotSelected = (i == 0) ? startPos : 0;
+            line = line.sliced(std::clamp<qsizetype>(mpBuffer->wrapIndentWidth(y) - columnsNotSelected, 0, line.size()));
+            if (i > 0) {
+                text.append(QString(mpBuffer->wrapGapBefore(y), QChar::Space));
+            }
+        } else {
+            if (i > 0) {
+                text.append(newlineChar);
+            }
+            if (showTimestamps) {
+                text.append(mpBuffer->timeBuffer.at(y));
+            }
+        }
+        text.append(line);
     }
-
-    return textLines.join(newlineChar);
+    return text;
 }
 
 void TTextEdit::mouseReleaseEvent(QMouseEvent* event)
@@ -3973,14 +4012,13 @@ void TTextEdit::slot_mouseAction(const QString& uniqueName)
     event.mArgumentList.append(mpConsole->mConsoleName);
 
     event.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
-    event.mArgumentList.append(QString::number(mPA.x()));
-    event.mArgumentTypeList.append(ARGUMENT_TYPE_NUMBER);
-    event.mArgumentList.append(QString::number(mPA.y()));
-    event.mArgumentTypeList.append(ARGUMENT_TYPE_NUMBER);
-    event.mArgumentList.append(QString::number(mPB.x()));
-    event.mArgumentTypeList.append(ARGUMENT_TYPE_NUMBER);
-    event.mArgumentList.append(QString::number(mPB.y()));
-    event.mArgumentTypeList.append(ARGUMENT_TYPE_NUMBER);
+
+    // mPA and mPB outlive a dropped selection, so without one the handler gets nils rather than old coordinates
+    const bool selected = hasSelectedText();
+    for (const int coordinate : {mPA.x(), mPA.y(), mPB.x(), mPB.y()}) {
+        event.mArgumentList.append(selected ? QString::number(coordinate) : QString());
+        event.mArgumentTypeList.append(selected ? ARGUMENT_TYPE_NUMBER : ARGUMENT_TYPE_NIL);
+    }
     mpHost->raiseEvent(event);
 }
 
@@ -4068,7 +4106,8 @@ void TTextEdit::updateCaret()
         if (mCaretLine < lineOffset) {
             scrollTo(mCaretLine + 1);
         } else if (mCaretLine >= lineOffset + mScreenHeight) {
-            int emptyLastLine = mpBuffer->lineBuffer.last().isEmpty();
+            // Turning caret mode on calls this before moving a caret that deleteLine() may have left on an emptied buffer
+            const int emptyLastLine = !mpBuffer->lineBuffer.isEmpty() && mpBuffer->lineBuffer.last().isEmpty();
             if (mCaretLine == mpBuffer->lineBuffer.length() - 1 - emptyLastLine) {
                 scrollTo(mCaretLine + 2);
             } else {
@@ -4374,6 +4413,25 @@ void TTextEdit::keyPressEvent(QKeyEvent* event)
         // if not command line ignore
     }
 
+    // deleteLine() can empty the buffer, or shorten it past the caret, without moving the caret
+    if (mpBuffer->lineBuffer.isEmpty()) {
+        switch (event->key()) {
+        case Qt::Key_Up:
+        case Qt::Key_Down:
+        case Qt::Key_Left:
+        case Qt::Key_Right:
+        case Qt::Key_Home:
+        case Qt::Key_End:
+        case Qt::Key_PageUp:
+        case Qt::Key_PageDown:
+            return;
+        default:
+            break;
+        }
+    } else if (mCaretLine >= mpBuffer->lineBuffer.size()) {
+        initializeCaret();
+    }
+
     qsizetype newCaretLine = -1;
     qsizetype newCaretColumn = -1;
 
@@ -4576,7 +4634,8 @@ void TTextEdit::keyPressEvent(QKeyEvent* event)
     case Qt::Key_End:
         if (QGuiApplication::keyboardModifiers().testFlag(Qt::ControlModifier)) {
             const int emptyLastLine = mpBuffer->lineBuffer.last().isEmpty() ? 1 : 0;
-            newCaretLine = mpBuffer->lineBuffer.length() - 1 - emptyLastLine;
+            // A cleared buffer holds a single empty line, which is both the first and the trailing one
+            newCaretLine = std::max(0, static_cast<int>(mpBuffer->lineBuffer.length()) - 1 - emptyLastLine);
             newCaretColumn = std::max(0, static_cast<int>(mpBuffer->lineBuffer[newCaretLine].length()) - 1);
             if (auto* app = mudlet::self()) {
                 //: Screen-reader announcement when the user presses Ctrl+End in caret mode to jump to the latest (most recent) content in the buffer
