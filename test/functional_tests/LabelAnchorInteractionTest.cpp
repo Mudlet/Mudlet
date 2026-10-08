@@ -284,6 +284,7 @@ private slots:
         QTest::newRow("upper-case JAVASCRIPT") << qsl("JAVASCRIPT:void(0)");
         QTest::newRow("mailto") << qsl("mailto:send()");
         QTest::newRow("tel") << qsl("tel:send()");
+        QTest::newRow("sms") << qsl("sms:send()");
     }
 
     // Each link is also valid Lua, calling a method of a global named for its scheme, which sets a sentinel if run
@@ -298,7 +299,8 @@ private slots:
                                                                  "javascript = {void = ran}\n"
                                                                  "JAVASCRIPT = javascript\n"
                                                                  "mailto = {send = ran}\n"
-                                                                 "tel = mailto\n"));
+                                                                 "tel = mailto\n"
+                                                                 "sms = mailto\n"));
         QVERIFY2(centreIsOnTheLabel(), "the point this case clicks is outside the label, so it would miss the link");
 
         QSignalSpy activated(label(), &QLabel::linkActivated);
@@ -306,7 +308,7 @@ private slots:
 
         QCOMPARE(activated.count(), 1);
         QVERIFY2(luaHolds(qsl("anchorSchemeRan == false")), "the link was run as Lua");
-        mpHost->getLuaInterpreter()->compileAndExecuteScript(qsl("javascript, JAVASCRIPT, mailto, tel = nil, nil, nil, nil"));
+        mpHost->getLuaInterpreter()->compileAndExecuteScript(qsl("javascript, JAVASCRIPT, mailto, tel, sms = nil, nil, nil, nil, nil"));
     }
 
     void test_aLuaCommandLinkWithAColonRuns_data()
@@ -316,6 +318,7 @@ private slots:
 
         QTest::newRow("method call") << qsl("anchorColon:go()") << qsl("anchorColon.ran == 1");
         QTest::newRow("colon in a string") << qsl("anchorColonText = 'at 12:00'") << qsl("anchorColonText == 'at 12:00'");
+        QTest::newRow("URL-like string") << qsl("anchorColonText = 'at://home'") << qsl("anchorColonText == 'at://home'");
     }
 
     void test_aLuaCommandLinkWithAColonRuns()
