@@ -268,6 +268,15 @@ private:
         return file.write(QJsonDocument(root).toJson()) > 0;
     }
 
+    QByteArray readRepositoryIndex() const
+    {
+        QFile file(qsl("%1/mpkg.packages.json").arg(profileHome()));
+        if (!file.open(QIODevice::ReadOnly)) {
+            return QByteArray();
+        }
+        return file.readAll();
+    }
+
     static QJsonObject repositoryEntry(const QString& name, const QString& fileName)
     {
         QJsonObject entry;
@@ -615,6 +624,35 @@ private slots:
         QVERIFY2(dismisser.seen().at(1).contains(qsl("b-after-the-rebuild")), "The selection after the rebuild was not the package that was picked");
 
         QTRY_VERIFY_WITH_TIMEOUT(settle() && !downloadDialogStillUp(manager), 15s);
+
+        manager->close();
+        QTRY_VERIFY_WITH_TIMEOUT(settle() && manager.isNull(), 15s);
+    }
+
+    // A selection the index cannot answer for sends the package manager to fetch
+    // a fresh index. When that fetch fails the index already on disk is still
+    // the best there is, and it is what the Explore view is filled from next time.
+    void test_aFailedIndexRefreshKeepsTheCachedIndex_10217()
+    {
+        mpProxy->setAnswer(StubProxy::Answer::Refuse);
+        MessageBoxDismisser dismisser;
+
+        QPointer<dlgPackageManager> manager =
+                openManagerListing({repositoryEntry(qsl("a-unanswerable-package"), QString()), repositoryEntry(qsl("b-cached-package"), qsl("b-cached-package.mpackage"))});
+        const QByteArray cachedIndex = readRepositoryIndex();
+        QVERIFY2(!cachedIndex.isEmpty(), "The repository index was not seeded");
+        QVERIFY2(selectPackages(manager, {qsl("a-unanswerable-package")}), "The package under test was not listed in the Explore view");
+
+        QVERIFY(QMetaObject::invokeMethod(manager, "slot_installPackageFromRepository"));
+
+        QTRY_VERIFY_WITH_TIMEOUT(!dismisser.seen().isEmpty(), 15s);
+        QVERIFY2(dismisser.seen().constFirst().contains(qsl("a-unanswerable-package")), "The reported failure was not the one this test arranged");
+        // the refresh's network manager is disposed of by the handler that ends it
+        QTRY_VERIFY_WITH_TIMEOUT(settle() && manager->findChildren<QNetworkAccessManager*>().isEmpty(), 15s);
+
+        QCOMPARE(readRepositoryIndex(), cachedIndex);
+        const QStringList leftovers = QDir(profileHome()).entryList({qsl("mpkg.packages.json?*")}, QDir::Files | QDir::Hidden);
+        QVERIFY2(leftovers.isEmpty(), qPrintable(qsl("The failed refresh left files behind: %1").arg(leftovers.join(qsl(", ")))));
 
         manager->close();
         QTRY_VERIFY_WITH_TIMEOUT(settle() && manager.isNull(), 15s);
