@@ -158,13 +158,13 @@ void TimerUnit::addTimerRootNode(TTimer* pT, int parentPosition, int childPositi
     }
 
     if ((parentPosition == -1) || (childPosition >= static_cast<int>(mTimerRootNodeList.size()))) {
-        mTimerRootNodeList.push_back(pT);
+        listRootNode(pT, mTimerRootNodeList.end());
     } else {
         // insert item at proper position
         int cnt = 0;
         for (auto it = mTimerRootNodeList.begin(); it != mTimerRootNodeList.end(); it++) {
             if (cnt >= childPosition) {
-                mTimerRootNodeList.insert(it, pT);
+                listRootNode(pT, it);
                 break;
             }
             cnt++;
@@ -190,7 +190,7 @@ void TimerUnit::reParentTimer(int childID, int oldParentID, int newParentID, int
         pOldParent->popChild(pChild);
     }
     if (!pOldParent) {
-        mTimerRootNodeList.remove(pChild);
+        unlistRootNode(pChild);
     }
     if (pNewParent) {
         pNewParent->addChild(pChild, parentPosition, childPosition);
@@ -241,7 +241,23 @@ void TimerUnit::_removeTimerRootNode(TTimer* pT)
     // the session
     mLookupTable.remove(pT->getName(), pT);
     mTimerMap.remove(pT->getID());
-    mTimerRootNodeList.remove(pT);
+    unlistRootNode(pT);
+}
+
+void TimerUnit::listRootNode(TTimer* pT, std::list<TTimer*>::iterator before)
+{
+    if (!mRootNodePositions.contains(pT)) {
+        mRootNodePositions.insert(pT, mTimerRootNodeList.insert(before, pT));
+    }
+}
+
+void TimerUnit::unlistRootNode(TTimer* pT)
+{
+    const auto position = mRootNodePositions.constFind(pT);
+    if (position != mRootNodePositions.cend()) {
+        mTimerRootNodeList.erase(position.value());
+        mRootNodePositions.erase(position);
+    }
 }
 
 TTimer* TimerUnit::getTimer(int id)

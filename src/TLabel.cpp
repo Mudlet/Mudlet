@@ -605,7 +605,23 @@ void TLabel::setBackgroundColor(const QColor& color)
         }
         sheet.append(newColor);
     }
+    if (!restyle(sheet)) {
+        applyBackgroundColor();
+    }
+}
+
+// QWidget::setStyleSheet() repolishes and repaints even when handed the sheet it
+// already has. Re-applying one still matters when it names a file, as that is what
+// makes Qt reload an image rewritten on disk, and after the link styling replaced the
+// palette, as that is what restores the colours the sheet sets.
+bool TLabel::restyle(const QString& sheet)
+{
+    if (sheet == styleSheet() && !mPaletteSetSinceStyled && !sheet.contains(qsl("url("), Qt::CaseInsensitive)) {
+        return false;
+    }
+    mPaletteSetSinceStyled = false;
     setStyleSheet(sheet);
+    return true;
 }
 
 // Qt hands a widget back the palette it saved when it first styled it, so every
@@ -669,6 +685,7 @@ void TLabel::setLinkStyle(const QString& linkColor, const QString& linkVisitedCo
     }
 
     setPalette(palette);
+    mPaletteSetSinceStyled = true;
 
     // Note: Widget stylesheets don't affect QTextDocument rendering
     // Link colors are applied via inline styles in setText()
@@ -685,6 +702,7 @@ void TLabel::resetLinkStyle()
         palette.setColor(QPalette::Window, mBackgroundColor);
     }
     setPalette(palette);
+    mPaletteSetSinceStyled = true;
 
     mLinkColor.clear();
     mLinkVisitedColor.clear();

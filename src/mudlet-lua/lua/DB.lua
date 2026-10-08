@@ -1816,9 +1816,7 @@ function db:aggregate(field, fn, query, distinct)
       return count
     end
     -- Only datetime left
-    local utc_epoch = datetime:parse(count, nil, true)
-    local locale_diff = datetime:calculate_UTCdiff(utc_epoch)
-    return db:Timestamp(utc_epoch + locale_diff)
+    return db:Timestamp(db:_epoch_from_utc(count))
   else
     return 0
   end
@@ -2124,6 +2122,34 @@ end
 
 
 -- NOT LUADOC
+-- Converts a UTC "YYYY-MM-DD HH:MM:SS" string, as sqlite's datetime() stores it, to an
+-- epoch. Done arithmetically (Howard Hinnant's days_from_civil) rather than through
+-- os.time, which can only read local time and is slow enough to dominate a db:fetch.
+function db:_epoch_from_utc(value)
+  local year, month, day, hour, min, sec = value:match("^(%d%d%d%d)%-(%d%d)%-(%d%d) (%d%d):(%d%d):(%d%d)$")
+  if not year then
+    local utc_epoch = datetime:parse(value, nil, true)
+    return utc_epoch + datetime:calculate_UTCdiff(utc_epoch)
+  end
+
+  -- an out-of-range month rolls over into the year, as os.time does
+  month = tonumber(month)
+  year = tonumber(year) + math.floor((month - 1) / 12)
+  month = (month - 1) % 12 + 1
+  if month <= 2 then
+    year = year - 1
+  end
+  local era = math.floor(year / 400)
+  local year_of_era = year - era * 400
+  local day_of_year = math.floor((153 * ((month + 9) % 12) + 2) / 5) + tonumber(day) - 1
+  local day_of_era = year_of_era * 365 + math.floor(year_of_era / 4) - math.floor(year_of_era / 100) + day_of_year
+  local days = era * 146097 + day_of_era - 719468
+  return days * 86400 + tonumber(hour) * 3600 + tonumber(min) * 60 + tonumber(sec)
+end
+
+
+
+-- NOT LUADOC
 -- After a table so retrieved from the database, this function coerces values to
 -- their proper types. Specifically, numbers and datetimes become the proper
 -- types.
@@ -2141,10 +2167,7 @@ function db:_coerce_sheet(sheet, tbl, columns)
           if (tbl[k] == nil) then
             tbl[k] = db:Timestamp(nil)
           else
-            -- the value, tbl[k], is a UTC timestamp
-            local utc_epoch = datetime:parse(tbl[k], nil, true)
-            local locale_diff = datetime:calculate_UTCdiff(utc_epoch)
-            tbl[k] = db:Timestamp(utc_epoch + locale_diff)
+            tbl[k] = db:Timestamp(db:_epoch_from_utc(tbl[k]))
           end
         end
       end
