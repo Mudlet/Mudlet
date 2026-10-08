@@ -325,6 +325,9 @@ describe("Tests that the link and text functions find their console by name", fu
             {"no text is selected - cannot create popup", function(fn) return setPopup(window, {fn}, {"hint"}) end},
             {"text is empty - cannot create link", function(fn) return insertLink(window, "", fn, "hint") end},
             {"text is empty - cannot create popup", function(fn) return insertPopup(window, "", {fn}, {"hint"}) end},
+            -- text that starts with a NUL byte is empty once it is a QString
+            {"text is empty - cannot create link", function(fn) return insertLink(window, "\0hidden", fn, "hint") end},
+            {"text is empty - cannot create popup", function(fn) return insertPopup(window, "\0hidden", {fn}, {"hint"}) end},
           }) do
             local refusal, call = entry[1], entry[2]
             assert.are.same({nil, refusal}, {call(function() end)})
