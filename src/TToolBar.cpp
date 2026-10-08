@@ -233,9 +233,7 @@ void TToolBar::addActionToMenu(TAction* pAction, QMenu* pMenu)
     pMenu->addAction(pEAction);
 
     if (pAction->isFolder()) {
-        // The use of mudlet::self() here meant that the QMenu was not destroyed
-        // until the mudlet instance is at the end of the application!
-        // Changed to use the toolbar
+        // Deleted along with its entry, see deleteMenuEntryLater() in TMainConsole.cpp
         auto pNewMenu = new QMenu(this);
         pNewMenu->setStyleSheet(pAction->css);
         pEAction->setMenu(pNewMenu);
@@ -314,6 +312,12 @@ void TToolBar::slot_pressed(const bool isChecked)
 
 void TToolBar::clear()
 {
+    // A folder button's menu is parented to this toolbar, so it would outlive the button
+    for (auto* pButton : mpWidget->findChildren<QPushButton*>(Qt::FindDirectChildrenOnly)) {
+        if (QMenu* pMenu = pButton->menu()) {
+            pMenu->deleteLater();
+        }
+    }
     auto pW = new QWidget(this);
     setWidget(pW);
     mpWidget->deleteLater();

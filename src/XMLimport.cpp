@@ -25,6 +25,7 @@
 
 #include "LuaInterface.h"
 #include "CredentialManager.h"
+#include "Host.h"
 #include "SecureStringUtils.h"
 #include "TAction.h"
 #include "TAlias.h"
@@ -37,7 +38,7 @@
 #include "TTrigger.h"
 #include "TVar.h"
 #include "VarUnit.h"
-#include "mudlet.h"
+#include "TAppFrontend.h"
 #include "enums.h"
 
 #include <QBuffer>
@@ -406,7 +407,9 @@ void XMLimport::readMap()
 
         mpHost->mpMap->mpRoomDB->setAreaRooms(areaId, areaRoomsSet);
         currentRoomCount += areaRoomsSet.count();
-        mpHost->mpMap->reportProgressToProgressDialog(currentRoomCount, roomTotal);
+        if (!itAreaWithRooms.hasNext() || mapProgressDue()) {
+            mpHost->mpMap->reportProgressToProgressDialog(currentRoomCount, roomTotal);
+        }
     }
 }
 
@@ -451,6 +454,17 @@ void XMLimport::readArea()
 
         mpHost->mpMap->mpRoomDB->addArea(id, name);
     }
+}
+
+// Each report repaints the map beneath its translucent progress overlay, which
+// costs more than parsing the rooms in between when the reports come too often
+bool XMLimport::mapProgressDue()
+{
+    if (mMapProgressTimer.isValid() && mMapProgressTimer.elapsed() < 30) {
+        return false;
+    }
+    mMapProgressTimer.start();
+    return true;
 }
 
 void XMLimport::readRooms(QMultiHash<int, int>& areaRoomsHash)
@@ -599,7 +613,7 @@ void XMLimport::readRoom(QMultiHash<int, int>& areamRoomMultiHash, unsigned int*
     }
 
     if (pT->id > 0) {
-        if (++(*roomCount) % 100 == 0) {
+        if (++(*roomCount) % 100 == 0 && mapProgressDue()) {
             mpHost->mpMap->reportStringToProgressDialog(tr("Parsing room data [count: %1]...").arg(*roomCount));
         }
         areamRoomMultiHash.insert(pT->area, pT->id);
@@ -1059,9 +1073,7 @@ void XMLimport::readHost(Host* pHost)
     const bool compactInputLine = attributes().value(QLatin1String("CompactInputLine")) == YES;
     pHost->setCompactInputLine(compactInputLine);
 
-    if (mudlet::self()->mpCurrentActiveHost == pHost) {
-        mudlet::self()->dactionInputLine->setChecked(compactInputLine);
-    }
+    TAppFrontend::instance()->setCompactInputLineChecked(pHost, compactInputLine);
 
     if (attributes().hasAttribute(QLatin1String("CommandLineHistorySaveSize"))) {
         pHost->setCommandLineHistorySaveSize(attributes().value(QLatin1String("CommandLineHistorySaveSize")).toInt());
