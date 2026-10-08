@@ -195,18 +195,10 @@ void TMap::mapClear()
     mpRoomDB->clearMapDB();
     mEnvColors.clear();
     mRoomIdHash.clear();
-    mTargetID = 0;
-    mPathList.clear();
-    mDirList.clear();
-    mWeightList.clear();
     mCustomEnvColors.clear();
     // Need to restore the default colours:
     restore16ColorSet();
-    roomidToIndex.clear();
-    edgeHash.clear();
-    locations.clear();
-    mMapGraphNeedsUpdate = true;
-    mNewMove = true;
+    clearRoutes();
     mVersion = mDefaultVersion;
     mUserData.clear();
 
@@ -216,6 +208,19 @@ void TMap::mapClear()
     // Must also reset the mapper area selection control to reflect that it now
     // only has the "Default Area" after TRoomDB::clearMapDB() has been run.
     emit signal_mapCleared();
+}
+
+void TMap::clearRoutes()
+{
+    mTargetID = 0;
+    mPathList.clear();
+    mDirList.clear();
+    mWeightList.clear();
+    roomidToIndex.clear();
+    edgeHash.clear();
+    locations.clear();
+    mMapGraphNeedsUpdate = true;
+    mNewMove = true;
 }
 
 // The supplied message should contain a localised message and no "WARNING:" or other prefixes:
@@ -1800,78 +1805,75 @@ bool TMap::restore(QString location)
     const MapOperationScope operationScope(this);
     qDebug().noquote().nospace() << "TMap::restore(\"" << location << "\") INFO: restoring map of Profile: \"" << mProfileName << "\" URL: " << mpHost->getUrl();
 
-    QElapsedTimer _time;
-    _time.start();
-    QString folder;
-    QStringList entries;
-
     if (location.isEmpty()) {
-        folder = MudletApp::getMudletPath(enums::profileMapsPath, mProfileName);
-        const QDir dir(folder);
-        QStringList filters;
-        filters << qsl("*.[dD][aA][tT]");
-        filters << qsl("*.[jJ][sS][oO][nN]");
-        entries = dir.entryList(filters, QDir::Files, QDir::Time);
-    }
-
-    bool canRestore = true;
-    if (entries.empty() && location.isEmpty()) {
-        canRestore = false;
-    }
-
-    QDataStream ifs;
-    QFile file;
-    if (canRestore && (!entries.empty() || !location.isEmpty())) {
-        // We get to here if there is one or more entries OR location is
-        // supplied - if the latter then there is only one file to consider but
-        // if the former we may have to check more than one to find a valid
-        // map file:
-        bool foundValidFile = false;
-        if (location.isEmpty()) {
-            // Look through the entries:
-            QStringListIterator itFileName(entries);
-            auto fileName = qsl("%1/%2").arg(folder, itFileName.next());
+        // A crash or a full disk while saving leaves the newest file damaged,
+        // so the next newest that loads is the one to fall back on
+        const QString folder = MudletApp::getMudletPath(enums::profileMapsPath, mProfileName);
+        const QStringList entries = QDir(folder).entryList({qsl("*.[dD][aA][tT]"), qsl("*.[jJ][sS][oO][nN]")}, QDir::Files, QDir::Time);
+        for (const QString& entry : entries) {
+            const QString fileName = qsl("%1/%2").arg(folder, entry);
+            if (entry != entries.constFirst()) {
+                //: Shown when the newest map file of a profile could not be loaded and an older one is tried. %1 is the older file's path and name.
+                const QString infoMsg = tr("[ INFO ]  - Trying the next newest map file instead:\n"
+                                           "\"%1\".")
+                                                .arg(fileName);
+                appendErrorMsgWithNoLf(infoMsg);
+                postMessage(infoMsg);
+            }
             if (!fileName.endsWith(qsl(".json"), Qt::CaseInsensitive)) {
-                file.setFileName(fileName);
-                if (validatePotentialMapFile(file, ifs)) {
-                    foundValidFile = true;
-                }
-
-            } else {
-                if (auto [isOk, message] = readJsonMapFile(fileName, true); !isOk) {
-                    // Failed to read the JSON file
-                    const QString errMsg = tr("[ ALERT ] - Failed to load a Mudlet JSON Map file, reason:\n"
-                                              "%1; the file is:\n"
-                                              "\"%2\".")
-                                                   .arg(message, fileName);
-                    appendErrorMsgWithNoLf(errMsg);
-                    postMessage(errMsg);
-                    const QString infoMsg = tr("[ INFO ]  - Ignoring this map file.");
-                    appendErrorMsgWithNoLf(infoMsg);
-                    postMessage(infoMsg);
-                } else {
-                    // immediately leave on success:
+                if (restore(fileName)) {
                     return true;
                 }
+            } else {
+                // The map user data starts empty, as for a binary file, and comes back if the file does not load
+                QMap<QString, QString> previousUserData;
+                previousUserData.swap(mUserData);
+                auto [isOk, message] = readJsonMapFile(fileName, true);
+                if (isOk) {
+                    return true;
+                }
+                mUserData.swap(previousUserData);
+                const QString errMsg = tr("[ ALERT ] - Failed to load a Mudlet JSON Map file, reason:\n"
+                                          "%1; the file is:\n"
+                                          "\"%2\".")
+                                               .arg(message, fileName);
+                appendErrorMsgWithNoLf(errMsg);
+                postMessage(errMsg);
+                const QString infoMsg = tr("[ INFO ]  - Ignoring this map file.");
+                appendErrorMsgWithNoLf(infoMsg);
+                postMessage(infoMsg);
             }
-
             // Allow for somethings to be updated - especially on Windows?
             qApp->processEvents();
-        } else {
-            file.setFileName(location);
-            if (validatePotentialMapFile(file, ifs)) {
-                foundValidFile = true;
-            }
         }
-        if (!foundValidFile) {
-            canRestore = false;
-        }
-    } else if (canRestore && !location.isEmpty()) {
-        file.setFileName(location);
-        canRestore = validatePotentialMapFile(file, ifs);
+        return false;
     }
 
+    QElapsedTimer _time;
+    _time.start();
+    QDataStream ifs;
+    QFile file(location);
+    const int previousVersion = mVersion;
+    const int previousSaveVersion = mSaveVersion;
+    bool canRestore = validatePotentialMapFile(file, ifs);
+
+    // Read into a fresh room database, to swap in only once the whole file has
+    // been read, so that one which fails part way leaves the loaded map alone
+    std::unique_ptr<TRoomDB> previousRoomDB;
+    QMap<int, int> previousEnvColors;
+    QMap<int, QColor> previousCustomEnvColors;
+    QMap<QString, QString> previousUserData;
+    QHash<QString, int> previousRoomIdHash;
+    const QFont previousSymbolFont = mMapSymbolFont;
+    const qreal previousSymbolFontFudgeFactor = mMapSymbolFontFudgeFactor;
+    const bool previousOnlySymbolFontUsed = mIsOnlyMapSymbolFontToBeUsed;
     if (canRestore) {
+        previousRoomDB = std::exchange(mpRoomDB, std::make_unique<TRoomDB>(this));
+        previousEnvColors.swap(mEnvColors);
+        previousCustomEnvColors.swap(mCustomEnvColors);
+        previousUserData.swap(mUserData);
+        previousRoomIdHash.swap(mRoomIdHash);
+
         // As all but the room reading have version checks the fact that sub-4
         // files will still be parsed despite canRestore being false is probably OK
         if (mVersion >= 4) {
@@ -2108,6 +2110,32 @@ bool TMap::restore(QString location)
             pT->restore(ifs, i, mVersion);
             mpRoomDB->restoreSingleRoom(i, pT);
         }
+
+        if (ifs.status() != QDataStream::Ok) {
+            //: Shown when a binary map file ends, or stops making sense, part way through. %1 is the file's path and name.
+            const QString errMsg = tr("[ ALERT ] - The map file is truncated or damaged, so it could not be read completely. The file is:\n"
+                                      "\"%1\".")
+                                           .arg(file.fileName());
+            appendErrorMsgWithNoLf(errMsg);
+            postMessage(errMsg);
+            mpRoomDB = std::move(previousRoomDB);
+            mEnvColors.swap(previousEnvColors);
+            mCustomEnvColors.swap(previousCustomEnvColors);
+            mUserData.swap(previousUserData);
+            mRoomIdHash.swap(previousRoomIdHash);
+            mMapSymbolFont = previousSymbolFont;
+            mMapSymbolFontFudgeFactor = previousSymbolFontFudgeFactor;
+            mIsOnlyMapSymbolFontToBeUsed = previousOnlySymbolFontUsed;
+            mVersion = previousVersion;
+            mSaveVersion = previousSaveVersion;
+            return false;
+        }
+
+        areasAboutToBeDeleted();
+        mpRoomDB->continueGenerationOf(*previousRoomDB);
+        previousRoomDB.reset();
+        clearRoutes();
+        emit signal_mapCleared();
 
         restore16ColorSet();
 
@@ -3775,13 +3803,15 @@ std::pair<bool, QString> TMap::readJsonMapFile(const QString& source, const bool
     qDebug().nospace().noquote() << "TMap::readJsonMapFile(...) INFO - parsed a file (version: " << formatVersion << ") containing " << mProgressDialogRoomsCount << " rooms.";
 
     // This is it - the point at which the new map gets activated:
-    mpRoomDB = std::move(pNewRoomDB);
-    // The routing graph holds pointers to the rooms just destroyed, and the bulk
-    // deletion skipped the per-room cleanup that would otherwise have flagged it:
-    roomidToIndex.clear();
-    edgeHash.clear();
-    locations.clear();
-    mMapGraphNeedsUpdate = true;
+    std::unique_ptr<TRoomDB> previousRoomDB = std::exchange(mpRoomDB, std::move(pNewRoomDB));
+    mpRoomDB->continueGenerationOf(*previousRoomDB);
+    previousRoomDB.reset();
+    // The route and the routing graph hold ids and pointers into the rooms just
+    // destroyed, and the bulk deletion skipped the per-room cleanup that flags them
+    clearRoutes();
+    // A JSON file has no binary format version, and audit() converts maps older than 16
+    mVersion = mDefaultVersion;
+    emit signal_mapCleared();
     // Need to update the master copy of these details in the Host class:
     mpHost->setPlayerRoomStyleDetails(mPlayerRoomStyle, mPlayerRoomOuterDiameterPercentage, mPlayerRoomInnerDiameterPercentage, mPlayerRoomOuterColor, mPlayerRoomInnerColor);
     // And redraw the indicator if a 2D map is being shown:

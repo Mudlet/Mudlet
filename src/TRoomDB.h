@@ -90,6 +90,8 @@ public:
     // Bumped on every clear. Holders of room/area/label ids that can outlive one (e.g. a dialog open
     // across loadMap()) compare it to detect stale ids, since the next map reuses them.
     unsigned int mapGeneration() const { return mMapGeneration; }
+    // For one that replaces another, so that the ids held from that one read as stale here too
+    void continueGenerationOf(const TRoomDB& previous) { mMapGeneration = previous.mMapGeneration + 1; }
     void auditRooms(QHash<int, int>&, QHash<int, int>&);
     bool addRoom(int id, TRoom* pR, bool isMapLoading = false);
     int getAreaID(TArea* pA);

@@ -472,6 +472,7 @@ public slots:
 
 
 private:
+    void clearRoutes();
     void resetSearchState(const std::size_t roomCount);
 
     // A* leaving the route in mSearchPredecessor; see the definition for why not boost::astar_search().

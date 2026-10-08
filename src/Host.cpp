@@ -674,8 +674,6 @@ bool Host::loadMapFile(const QString& location)
         return false;
     }
 
-    mpMap->mapClear();
-
     // The same resolution saveMapFile and importMapFile use, so that a map
     // written under a bare name is looked for where it was written:
     QString filePathName = location;

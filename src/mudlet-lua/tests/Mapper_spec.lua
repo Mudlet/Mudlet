@@ -3633,12 +3633,11 @@ describe("Tests saveMap and loadMap", function()
     end)
   end)
 
-  -- Careful with the order of anything added here: a load that fails can still
-  -- have emptied the map first, both for a missing binary file
-  -- (Host::loadMapFile clears before it restores) and for a map document
-  -- that will not parse (TMap::readXmlMapFile clears before it parses), so most
-  -- of these leave no map behind for the next spec. A file that is not a map
-  -- document at all is the exception: it is refused before the clear.
+  -- Careful with the order of anything added here: a map document that will
+  -- not parse has emptied the map first (TMap::readXmlMapFile clears before it
+  -- parses), so it leaves no map behind for the next spec. A file that is not
+  -- a map document at all is refused before the clear, and a binary map file
+  -- that cannot be read leaves the loaded map alone.
   describe("Tests the loadMap argument contract", function()
     it("hard-errors on a path that is not a string", function()
       assert.has_error(function() loadMap({}) end)
@@ -3675,9 +3674,145 @@ describe("Tests saveMap and loadMap", function()
       assert.is_false(loadMap(path))
     end)
 
-    -- loadMap() clears the map before it reads the file, so an unreadable one
-    -- destroys the map that was loaded (#10394) - unlike the XML path above.
-    pending("a binary map file that cannot be read leaves the loaded map alone")
+    local function keeperMap(areaName)
+      deleteMap()
+      local area = addAreaName(areaName)
+      local rooms = {}
+      for i = 1, 17 do
+        local id = createRoomID()
+        addRoom(id)
+        setRoomArea(id, area)
+        setRoomCoordinates(id, i, 0, 0)
+        setRoomName(id, "room number " .. i)
+        rooms[i] = id
+      end
+      return rooms, area
+    end
+
+    local function assertKept(rooms, area, firstName)
+      assert.are.equal(#rooms, table.size(getRooms()))
+      assert.are.equal(firstName, getRoomName(rooms[1]))
+      assert.are.equal(area, getRoomArea(rooms[#rooms]))
+      assert.are.equal("room number " .. #rooms, getRoomName(rooms[#rooms]))
+    end
+
+    it("keeps the loaded map when a binary map file cannot be read (#10394)", function()
+      local path = getMudletHomeDir() .. "/mapper_spec_unreadable.dat"
+      finally(function() os.remove(path) end)
+      local rooms, area = keeperMap("MapperSpecUnreadableKeepArea")
+      writeBinaryMapVersion(path, 0)
+
+      assert.is_false(loadMap(path))
+
+      assertKept(rooms, area, "room number 1")
+    end)
+
+    it("keeps a temporary map label when a binary map file cannot be read", function()
+      local path = getMudletHomeDir() .. "/mapper_spec_unreadable.dat"
+      finally(function() os.remove(path) end)
+      local _, area = keeperMap("MapperSpecUnreadableLabelArea")
+      local temporaryId = createMapLabel(area, "Temporary", 1, 1, 0, 255, 255, 255, 0, 0, 0,
+                                         30.0, 50, true, true, "", 255, 50, true)
+      writeBinaryMapVersion(path, 0)
+
+      assert.is_false(loadMap(path))
+
+      assert.are.equal("Temporary", getMapLabels(area)[temporaryId])
+    end)
+
+    it("falls back to the next newest map file when the newest is cut short", function()
+      local olderPath = mapDirectory .. "/mapper_spec_older_whole.dat"
+      local newestPath = mapDirectory .. "/mapper_spec_newest_cut_short.dat"
+      finally(function()
+        os.remove(olderPath)
+        os.remove(newestPath)
+      end)
+      local rooms, area = keeperMap("MapperSpecNewestCutShortArea")
+      assert.is_true(saveMap(olderPath))
+      local file = assert(io.open(olderPath, "rb"))
+      local data = file:read("*a")
+      file:close()
+      file = assert(io.open(newestPath, "wb"))
+      file:write(data:sub(1, #data - 3))
+      file:close()
+      -- ahead of any other file in the folder, the cut one first
+      assert.is_true(lfs.touch(olderPath, os.time() + 60, os.time() + 60))
+      assert.is_true(lfs.touch(newestPath, os.time() + 120, os.time() + 120))
+      deleteMap()
+
+      -- with no file named, loadMap() looks for the newest one, as at profile start
+      assert.is_true(loadMap())
+
+      assertKept(rooms, area, "room number 1")
+    end)
+
+    it("replaces the map user data when the newest map file is a JSON one", function()
+      local jsonPath = mapDirectory .. "/mapper_spec_newest.json"
+      finally(function() os.remove(jsonPath) end)
+      local rooms, area = keeperMap("MapperSpecNewestJsonArea")
+      setMapUserData("mapper.spec.in.the.file", "from the file")
+      assert.is_true(saveJsonMap(jsonPath))
+      assert.is_true(lfs.touch(jsonPath, os.time() + 120, os.time() + 120))
+      clearMapUserData()
+      setMapUserData("mapper.spec.only.in.the.loaded.map", "from the loaded map")
+
+      assert.is_true(loadMap())
+
+      assertKept(rooms, area, "room number 1")
+      assert.are.equal("from the file", getMapUserData("mapper.spec.in.the.file"))
+      assert.is_nil(getMapUserData("mapper.spec.only.in.the.loaded.map"))
+    end)
+
+    it("replaces the map user data on falling back past a JSON map file that will not parse", function()
+      local olderPath = mapDirectory .. "/mapper_spec_older_whole.json"
+      local newestPath = mapDirectory .. "/mapper_spec_newest_broken.json"
+      finally(function()
+        os.remove(olderPath)
+        os.remove(newestPath)
+      end)
+      local rooms, area = keeperMap("MapperSpecOlderJsonArea")
+      setMapUserData("mapper.spec.in.the.file", "from the file")
+      assert.is_true(saveJsonMap(olderPath))
+      local file = assert(io.open(newestPath, "w"))
+      file:write("{ this is not JSON")
+      file:close()
+      assert.is_true(lfs.touch(olderPath, os.time() + 60, os.time() + 60))
+      assert.is_true(lfs.touch(newestPath, os.time() + 120, os.time() + 120))
+      clearMapUserData()
+      setMapUserData("mapper.spec.only.in.the.loaded.map", "from the loaded map")
+
+      assert.is_true(loadMap())
+
+      assertKept(rooms, area, "room number 1")
+      assert.are.equal("from the file", getMapUserData("mapper.spec.in.the.file"))
+      assert.is_nil(getMapUserData("mapper.spec.only.in.the.loaded.map"))
+    end)
+
+    it("refuses a binary map file cut short, keeping the loaded map", function()
+      local wholePath = getMudletHomeDir() .. "/mapper_spec_whole.dat"
+      local cutPath = getMudletHomeDir() .. "/mapper_spec_cut_short.dat"
+      finally(function()
+        os.remove(wholePath)
+        os.remove(cutPath)
+      end)
+      local rooms, area = keeperMap("MapperSpecCutShortKeepArea")
+      assert.is_true(saveMap(wholePath))
+      local file = assert(io.open(wholePath, "rb"))
+      local data = file:read("*a")
+      file:close()
+      -- so that only the map from before the load can pass, not the file's
+      setRoomName(rooms[1], "Only In The Loaded Map")
+
+      -- one cut inside the header, one inside the last room
+      for _, length in ipairs({40, #data - 3}) do
+        file = assert(io.open(cutPath, "wb"))
+        file:write(data:sub(1, length))
+        file:close()
+
+        assert.is_false(loadMap(cutPath), "cut to " .. length .. " bytes")
+        assertKept(rooms, area, "Only In The Loaded Map")
+      end
+    end)
 
     it("returns nil and a message naming the missing XML file", function()
       local ok, message = loadMap(mapDirectory .. "/nosuchmapfile.xml")
