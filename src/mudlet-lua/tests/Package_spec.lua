@@ -223,7 +223,7 @@ local function installUntilRefused(install, path)
   assert.is_true(false, "the install was never refused")
 end
 
--- reloadModule() is postponed the same way and then quietly dropped, so ask
+-- reloadModule() during a profile save is postponed and then quietly dropped, so ask
 -- until the reload is observable.
 local function reloadModuleUntil(name, reloaded)
   for attempt = 1, 3 do
@@ -391,7 +391,6 @@ describe("Tests the functionality of installPackage", function()
   end)
 
   it("waits out a profile save and hands a script the real answer", function()
-    -- A script's install waits out a running save, so its answer is the real one
     assert.is_true(waitForProfileSaveToPass(), "a profile save was still running")
     local mark = getLastLineNumber("main")
     assert.is_true(saveProfile())
@@ -1958,8 +1957,7 @@ describe("Tests installing an archive whose config.lua will not run", function()
     defer(function() removeFixturePackage("mudlet-spec-badconfig-renamed") end)
 
     -- marked before the first attempt so that the announcement is caught whichever
-    -- attempt goes through: an install asked for while the profile is being saved
-    -- is put off, answers true and says nothing
+    -- attempt goes through
     local mark = getLastLineNumber("main")
     -- the manifest names the package, and it is read by running it: one line
     -- that raises throws away the name, author, version and description above
@@ -2273,20 +2271,24 @@ describe("Tests the functionality of installPackageFromUrl", function()
   end)
 
   it("installs a download that finishes while the profile is being saved", function()
+    local originalVerbosePackageInstall = _G.verbosePackageInstall
     defer(function()
+      _G.verbosePackageInstall = originalVerbosePackageInstall
       removeFixturePackage(minimalPackage)
       os.remove(getMudletHomeDir() .. "/" .. downloadedName)
     end)
     assert.is_true(waitForProfileSaveToPass(), "a profile save was still running")
     local destination = getMudletHomeDir() .. "/" .. downloadedName
-    -- registered first, so it runs before the handler installPackageFromUrl() adds
+    -- The save starts inside the download handler's own call to install, so it is certainly running
+    -- when the install is asked for: anonymous handlers run in no set order, so a sysDownloadDone
+    -- handler of this spec's own could just as well run after the install
     local savedFirst = false
-    local handler = registerAnonymousEventHandler("sysDownloadDone", function(_, saveTo)
-      if saveTo == destination then
+    _G.verbosePackageInstall = function(path, ...)
+      if path == destination then
         savedFirst = saveProfile() and true or false
       end
-    end)
-    defer(function() killAnonymousEventHandler(handler) end)
+      return originalVerbosePackageInstall(path, ...)
+    end
 
     installPackageFromUrl(downloadedName, fileUrl(fixtureDirectory .. "/" .. downloadedName))
 
