@@ -266,11 +266,12 @@ end
 
 
 -- string.format's %s stops at a NUL, and so does sqlite reading a statement, so a value holding
--- one cuts the statement short and leaves it to fail on whatever was left of it
+-- one cuts the statement short and leaves it to fail on whatever was left of it. tostring, as a
+-- db:exp() is a table whose text goes into the statement as it is
 local function nul_byte_message(action, values, query)
   local holding
   for key, value in pairs(values) do
-    if type(value) == "string" and value:find("\0", 1, true) then
+    if tostring(value):find("\0", 1, true) then
       holding = "the value for \""..tostring(key).."\""
       break
     end
@@ -2046,11 +2047,13 @@ function db:update(sheet, tbl)
 
   local set_chunks = {}
   local set_block = [["%s" = %s]]
+  local written = {}
 
   for k, v in pairs(db.__schema[db_name][s_name]['columns']) do
     if tbl[k] then
       local field = sheet[k]
       set_chunks[#set_chunks + 1] = set_block:format(k, db:_coerce(field, tbl[k]))
+      written[k] = tbl[k]
     end
   end
 
@@ -2059,7 +2062,8 @@ function db:update(sheet, tbl)
 
   local sql = table.concat(sql_chunks, " ")
   db:echo_sql(sql)
-  local nul_msg = nul_byte_message("update "..s_name, tbl)
+  -- only the columns written: a fetched row may carry fields of the script's own
+  local nul_msg = nul_byte_message("update "..s_name, written)
   if nul_msg then error(nul_msg, 2) end
   assert(conn:execute(sql))
   if db.__autocommit[db_name] then

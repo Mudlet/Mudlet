@@ -2787,10 +2787,6 @@ describe("Tests db:add, db:update and db:set on a NUL byte", function()
     return result, table.concat(collected, "\n")
   end
 
-  local function createCollectingWarnings(sheets)
-    return collectingWarnings(function() return db:create(dbName, sheets) end)
-  end
-
   after_each(function()
     if not pcall(function() db:close(dbName) end) then
       db.__conn[dbName] = nil
@@ -2842,6 +2838,14 @@ describe("Tests db:add, db:update and db:set on a NUL byte", function()
       assert.are.equal("other=cd,plain=ab", payloads())
     end)
 
+    it("is not refused by db:update for a field of the row's that is not a column", function()
+      local row = db:fetch(mydb.items, db:eq(mydb.items.tag, "plain"))[1]
+      row.payload = "ef"
+      row.raw = "a\0b"
+      db:update(mydb.items, row)
+      assert.are.equal("other=cd,plain=ef", payloads())
+    end)
+
     it("is refused by db:set, in the value or in the query, before any row is touched", function()
       local ok, err = pcall(db.set, db, mydb.items.payload, "x\0y", db:eq(mydb.items.tag, "plain"))
       assert.is_false(ok)
@@ -2850,6 +2854,19 @@ describe("Tests db:add, db:update and db:set on a NUL byte", function()
       ok, err = pcall(db.set, db, mydb.items.payload, "x", db:eq(mydb.items.tag, "pla\0in"))
       assert.is_false(ok)
       assert.is_truthy(string.find(err, "can not set a field in items: the query holds a NUL byte", 1, true))
+      assert.are.equal("other=cd,plain=ab", payloads())
+    end)
+
+    it("is refused in a db:exp() given to db:set or db:add, before any row is touched", function()
+      local ok, err = pcall(db.set, db, mydb.items.payload, db:exp("'x\0' || payload"), db:eq(mydb.items.tag, "plain"))
+      assert.is_false(ok)
+      assert.is_truthy(string.find(err, 'can not set a field in items: the value for "payload" holds a NUL byte', 1, true))
+
+      local added, warnings = collectingWarnings(function()
+        return db:add(mydb.items, {tag = "nul", payload = db:exp("'x\0y'")})
+      end)
+      assert.is_nil(added)
+      assert.is_truthy(string.find(warnings, 'can not add to items: the value for "payload" holds a NUL byte', 1, true))
       assert.are.equal("other=cd,plain=ab", payloads())
     end)
   end)
