@@ -10526,7 +10526,7 @@ void dlgTriggerEditor::timerEvent(QTimerEvent* event)
 
 void dlgTriggerEditor::autoSave()
 {
-    mpHost->saveProfile(QString(), qsl("autosave"));
+    mpHost->saveProfileReportingFailure(qsl("autosave"));
 }
 
 void dlgTriggerEditor::rebuildStaleTrees()

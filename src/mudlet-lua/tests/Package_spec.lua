@@ -3126,29 +3126,54 @@ describe("Tests exporting the profile to a file with saveProfile", function()
 
   -- Only opening the file is tried before the call answers; the write itself
   -- runs afterwards on a pool thread, so a folder that goes away in between can
-  -- only be reported on the console.
+  -- only be reported on the console. The writer keeps its temporary file in the
+  -- folder until the very end, so moving the folder away at any point before
+  -- then makes the write fail, and a large export keeps the writer busy long
+  -- past the move.
   it("says so on the console when the write fails after the call has answered", function()
-    assert.is_true(waitForProfileSaveToPass(), "a profile save was still running")
+    local bulk = "mudlet-spec-bulky"
+    local bulkXml = scratchDirectory .. "/" .. bulk .. ".xml"
     local folder = scratchDirectory .. "/mudlet-spec-gone-before-the-write"
     local moved = folder .. "-moved"
+    lfs.mkdir(scratchDirectory)
     lfs.mkdir(folder)
     defer(function()
-      os.remove(moved .. "/mudlet-spec-raced.xml")
-      lfs.rmdir(moved)
-      os.remove(folder .. "/mudlet-spec-raced.xml")
-      lfs.rmdir(folder)
+      removeFixturePackage(bulk)
+      os.remove(bulkXml)
+      for _, directory in ipairs({moved, folder}) do
+        if fileExists(directory) then
+          for entry in lfs.dir(directory) do
+            if entry ~= "." and entry ~= ".." then
+              os.remove(directory .. "/" .. entry)
+            end
+          end
+          lfs.rmdir(directory)
+        end
+      end
     end)
+    writePackageXml(bulkXml, table.concat({
+      '<ScriptPackage>',
+      '<Script isActive="no" isFolder="no">',
+      '<name>' .. bulk .. ' script</name><packageName></packageName>',
+      '<script>--[[' .. string.rep("mudlet spec ", 1024 * 1024) .. ']]</script><eventHandlerList/>',
+      '</Script>',
+      '</ScriptPackage>',
+    }, "\n"))
+    installUntilConfirmed(installPackage, bulkXml, function() return packageInstalled(bulk) end, "the bulky package")
+    assert.is_true(waitForProfileSaveToPass(), "a profile save was still running")
     local mark = getLastLineNumber("main")
 
     local ok = saveProfile(folder, "mudlet-spec-raced")
-    assert.is_true(os.rename(folder, moved))
+    local movedAway, whyNot = os.rename(folder, moved)
 
     assert.is_true(ok)
     assert.is_true(waitForProfileSaveToPass(), "the profile save never finished")
-    if fileExists(moved .. "/mudlet-spec-raced.xml") then
-      pending("the write finished before its folder could be moved away, so there was no failure to report")
+    if not movedAway then
+      -- Windows will not move a folder while a file in it is open
+      pending("the folder could not be moved away while it was being written to: " .. tostring(whyNot))
       return
     end
+    assert.is_false(fileExists(moved .. "/mudlet-spec-raced.xml"), "SETUP: the write finished before its folder was moved away")
     assert.is_true(containsWrapped(textFrom(mark), "The profile could not be saved to"), textFrom(mark))
   end)
 

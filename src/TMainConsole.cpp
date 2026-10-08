@@ -3982,8 +3982,7 @@ void TMainConsole::closeEvent(QCloseEvent* event)
     if (mpHost->mFORCE_SAVE_ON_EXIT || mpHost->isClosingForced()) {
         mudlet::self()->saveWindowLayout();
         mpHost->modulesToWrite.clear();
-        // We are not checking the status result from here!
-        mpHost->saveProfile();
+        mpHost->saveProfileReportingFailure();
 
         if (mpHost->mpMap && mpHost->mpMap->mpRoomDB) {
             // There is a map loaded - but it *could* have no rooms at all!
