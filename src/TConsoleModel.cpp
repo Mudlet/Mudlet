@@ -508,11 +508,10 @@ TConsoleModel::WriteResult TConsoleModel::insertText(const QString& text)
 void TConsoleModel::replace(const QString& text)
 {
     if (mTriggerEngineMode) {
-        const int selected = P_end.x() - P_begin.x();
         if (P_begin == P_end) {
             mpHost->getLuaInterpreter()->adjustCaptureGroups(P_begin.x(), text.size());
-        } else if (text.size() != selected) {
-            mpHost->getLuaInterpreter()->adjustCaptureGroups(P_begin.x(), text.size() - selected);
+        } else {
+            mpHost->getLuaInterpreter()->adjustCaptureGroupsForReplace(P_begin.x(), P_end.x() - P_begin.x(), text);
         }
     }
     buffer.replaceInLine(P_begin, P_end, text, mFormatCurrent);

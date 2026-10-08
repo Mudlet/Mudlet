@@ -143,6 +143,7 @@ public:
     void setMultiCaptureGroups(std::list<std::list<std::string>>&& captureList, std::list<std::list<int>>&& posList, QVector<NameGroupMatches>&& nameMatches);
     void takeBackMultiCaptureGroups(std::list<std::list<std::string>>& captureList, std::list<std::list<int>>& posList);
     void adjustCaptureGroups(int x, int a);
+    void adjustCaptureGroupsForReplace(int x, int replacedLength, const QString& replacement);
     void clearCaptureGroups();
     bool buildingCaptureTables();
     int pushNestedDispatchState();
