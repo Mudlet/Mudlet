@@ -87,6 +87,11 @@ TDetachedWindow::TDetachedWindow(const QString& profileName, TMainConsole* conso
     createMenus();
     restoreWindowGeometry();
 
+    if (auto* media = MudletMedia::self()) {
+        showMuteState();
+        connect(media, &MudletMedia::signal_muteSet, this, &TDetachedWindow::showMuteState);
+    }
+
     // Set initial toolbar visibility based on main window state
     if (mpToolBar) {
         mpToolBar->setVisible(toolbarVisible);
@@ -415,24 +420,27 @@ void TDetachedWindow::createMenus()
     //: This explains the "Mute all media" item in the "Options" menu in the menubar of a detached Mudlet window.
     mpMenuMuteMediaAction->setStatusTip(tr("Mutes all media played."));
     mpMenuMuteMediaAction->setCheckable(true);
+    mpMenuMuteMediaAction->setObjectName(qsl("menuMuteMedia"));
     connect(mpMenuMuteMediaAction, &QAction::triggered, this, &TDetachedWindow::slot_muteMedia);
     optionsMenu->addAction(mpMenuMuteMediaAction);
 
     //: This is an item in the "Options" menu in the menubar of a detached Mudlet window.
-    auto muteAPIAction = new QAction(tr("Mute sounds from Mudlet (triggers, scripts, etc.)"), this);
+    mpMenuMuteAPIAction = new QAction(tr("Mute sounds from Mudlet (triggers, scripts, etc.)"), this);
     //: This explains the "Mute sounds from Mudlet (triggers, scripts, etc.)" item in the "Options" menu in the menubar of a detached Mudlet window.
-    muteAPIAction->setStatusTip(tr("Mutes media played by the Lua API and scripts."));
-    muteAPIAction->setCheckable(true);
-    connect(muteAPIAction, &QAction::triggered, this, &TDetachedWindow::slot_muteAPI);
-    optionsMenu->addAction(muteAPIAction);
+    mpMenuMuteAPIAction->setStatusTip(tr("Mutes media played by the Lua API and scripts."));
+    mpMenuMuteAPIAction->setCheckable(true);
+    mpMenuMuteAPIAction->setObjectName(qsl("menuMuteAPI"));
+    connect(mpMenuMuteAPIAction, &QAction::triggered, this, &TDetachedWindow::slot_muteAPI);
+    optionsMenu->addAction(mpMenuMuteAPIAction);
 
     //: This is an item in the "Options" menu in the menubar of a detached Mudlet window.
-    auto muteGameAction = new QAction(tr("Mute sounds from the game (MCMP, MSP)"), this);
+    mpMenuMuteGameAction = new QAction(tr("Mute sounds from the game (MCMP, MSP)"), this);
     //: This explains the "Mute sounds from the game (MCMP, MSP)" item in the "Options" menu in the menubar of a detached Mudlet window.
-    muteGameAction->setStatusTip(tr("Mutes media played by the game (MCMP, MSP)."));
-    muteGameAction->setCheckable(true);
-    connect(muteGameAction, &QAction::triggered, this, &TDetachedWindow::slot_muteGame);
-    optionsMenu->addAction(muteGameAction);
+    mpMenuMuteGameAction->setStatusTip(tr("Mutes media played by the game (MCMP, MSP)."));
+    mpMenuMuteGameAction->setCheckable(true);
+    mpMenuMuteGameAction->setObjectName(qsl("menuMuteGame"));
+    connect(mpMenuMuteGameAction, &QAction::triggered, this, &TDetachedWindow::slot_muteGame);
+    optionsMenu->addAction(mpMenuMuteGameAction);
 
     // Window menu - matches main window order (except reattach vs detach)
     //: This is the name of a menu in the menubar of a detached Mudlet window. Please do not add an "&" to the translation: it would become a keyboard shortcut for the whole window and stop one of the window's other shortcuts from working.
@@ -3130,6 +3138,24 @@ void TDetachedWindow::slot_mudletDiscord()
     }
 }
 
+
+void TDetachedWindow::showMuteState()
+{
+    auto* media = MudletMedia::self();
+    if (!media) {
+        return;
+    }
+    const bool allMuted = media->allMuted();
+    for (QAction* pAction : {mpMenuMuteMediaAction, mpActionMuteMedia}) {
+        pAction->setChecked(allMuted);
+    }
+    for (QAction* pAction : {mpMenuMuteAPIAction, mpActionMuteAPI}) {
+        pAction->setChecked(media->apiMuted());
+    }
+    for (QAction* pAction : {mpMenuMuteGameAction, mpActionMuteGame}) {
+        pAction->setChecked(media->gameMuted());
+    }
+}
 
 void TDetachedWindow::slot_muteMedia()
 {
