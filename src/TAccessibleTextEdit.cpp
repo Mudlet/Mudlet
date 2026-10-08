@@ -122,7 +122,7 @@ void TAccessibleTextEdit::selection(int selectionIndex, int* startOffset, int* e
     }
 
     *startOffset = offsetForPosition(edit->mPA.y(), edit->mPA.x());
-    *endOffset = offsetForPosition(edit->mPB.y(), edit->mPB.x());
+    *endOffset = edit->selectionEndOffset();
 }
 
 /*

@@ -225,6 +225,7 @@ private:
     inline void replaceControlCharacterWith_Picture(const uint, QStringView, const int, QStringView&, int&) const;
     inline void replaceControlCharacterWith_OEMFont(const uint, QStringView, const int, QStringView&, int&) const;
     int offsetForPosition(int line, int column) const;
+    int selectionEndOffset() const;
     bool hasBufferLine(int lineNumber) const;
     static int overflowRowsUsed(const QImage& image, const int fromRow, const QColor& background);
     TChar timeStampCharStyle() const;

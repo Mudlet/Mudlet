@@ -110,6 +110,16 @@ private:
         return pInterface ? pInterface->textInterface() : nullptr;
     }
 
+    // Three clicks inside the double-click interval select a whole line
+    void tripleClickLine(const int line) const
+    {
+        const int fontHeight = pane()->fontMetrics().height();
+        const QPoint where(pane()->fontMetrics().averageCharWidth() * 2, (line - pane()->imageTopLine()) * fontHeight + fontHeight / 2);
+        for (int click = 0; click < 3; ++click) {
+            QTest::mouseClick(pane(), Qt::LeftButton, Qt::NoModifier, where);
+        }
+    }
+
     bool lineIsOnScreen(const int line) const { return line >= pane()->imageTopLine() && line < pane()->imageTopLine() + pane()->getScreenHeight(); }
 
     // A sentence running on over a line break, empty lines, abbreviations,
@@ -487,14 +497,9 @@ private slots:
     // QAccessibleTextInterface's end offset is the first character that is NOT
     // selected, so text(start, end) has to hand back exactly what was selected -
     // which is what a screen reader reads out when it announces a selection.
-    // Mudlet reports one less: addSelection() stores the last selected cell in
-    // mPB and selection() returns that offset unchanged, so the final character
-    // is dropped and a one-character selection comes back as an empty range
-    // while selectionCount() still says there is one. A stock QTextEdit, which
-    // implements the same interface, reports the range asked for.
-    //
-    // QEXPECT_FAIL rather than a weaker assertion, so this case goes red the day
-    // the off-by-one is fixed and the markers can be taken back out.
+    // addSelection() stores the last selected cell in mPB, so selection() has
+    // to report one past it, or a one-character selection comes back as an
+    // empty range while selectionCount() still says there is one (#10411).
     void test_theReportedSelectionRoundTripsThroughTheTextItSelected()
     {
         QAccessibleTextInterface* ti = textInterface();
@@ -509,7 +514,6 @@ private slots:
         ti->selection(0, &reportedStart, &reportedEnd);
 
         QCOMPARE(reportedStart, start);
-        QEXPECT_FAIL("", "#10411: selection() reports endOffset - 1, so the last selected character is lost", Continue);
         QCOMPARE(ti->text(reportedStart, reportedEnd), mSecondMarker);
 
         ti->removeSelection(0);
@@ -517,8 +521,24 @@ private slots:
         ti->selection(0, &reportedStart, &reportedEnd);
 
         QCOMPARE(ti->selectionCount(), 1);
-        QEXPECT_FAIL("", "#10411: a one-character selection is reported as an empty range", Continue);
         QCOMPARE(reportedEnd - reportedStart, 1);
+    }
+
+    // A triple-click selects a line by leaving mPB one past its last character,
+    // so the reported range must stop at the newline rather than take it in
+    void test_aWholeLineSelectionIsReportedWithoutItsNewline()
+    {
+        QAccessibleTextInterface* ti = textInterface();
+        QVERIFY(ti);
+        const int line = lineOf(mSecondMarker);
+        QVERIFY2(lineIsOnScreen(line), "the line being selected is off screen, so no selection region could be built for it");
+        int reportedStart = -1;
+        int reportedEnd = -1;
+
+        tripleClickLine(line);
+        ti->selection(0, &reportedStart, &reportedEnd);
+
+        QCOMPARE(ti->text(reportedStart, reportedEnd), mSecondMarker);
     }
 
     // setSelection is addSelection under another name, and both refuse an index
