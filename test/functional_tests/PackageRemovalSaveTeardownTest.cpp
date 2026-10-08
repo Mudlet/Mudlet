@@ -266,6 +266,53 @@ private slots:
         QCOMPARE(saveSpy.count(), 1);
     }
 
+    // ...and so does a batch of installs. One that saved on the spot left that
+    // save in flight, which put the next install off until it had finished, so
+    // the Package Manager's multi-file install queued behind a save per package.
+    // Its installs are not quiet, so each shows the unpacking dialog, which pumps
+    // the event loop the save owed by the install before it is waiting in.
+    void test_aBatchOfInstallsOwesOneSave_data()
+    {
+        QTest::addColumn<bool>("quiet");
+        QTest::newRow("from a script") << true;
+        QTest::newRow("from the Package Manager") << false;
+    }
+
+    void test_aBatchOfInstallsOwesOneSave()
+    {
+        QFETCH(bool, quiet);
+        QTemporaryDir archiveDir;
+        QVERIFY2(archiveDir.isValid(), "Could not create a temporary directory for the test archives");
+        const QStringList packageNames{qsl("install-save-batch-one"), qsl("install-save-batch-two"), qsl("install-save-batch-three")};
+        for (const auto& packageName : packageNames) {
+            QVERIFY2(writeInstallableArchive(archiveDir.filePath(qsl("%1.mpackage").arg(packageName)), packageName), "Could not write a test archive");
+        }
+
+        mpHost->waitForProfileSave();
+        QSignalSpy saveSpy(mpHost, &Host::profileSaveStarted);
+        // no pumping in between, as in the Package Manager's loop
+        for (const auto& packageName : packageNames) {
+            auto [ok, message] = mpHost->installPackage(archiveDir.filePath(qsl("%1.mpackage").arg(packageName)), enums::PackageModuleType::Package, quiet);
+            QVERIFY2(ok, qPrintable(message));
+            QVERIFY2(mpHost->mInstalledPackages.contains(packageName), qPrintable(qsl("%1 was put off behind a save rather than installed").arg(packageName)));
+        }
+        QVERIFY2(mpHost->hasPendingProfileSave(), "The installs left the profile no save to do");
+        QVERIFY2(saveSpy.isEmpty(), "A save started partway through the batch");
+
+        QTRY_VERIFY_WITH_TIMEOUT(saveSpy.count() >= 1, 5s);
+        mpHost->waitForProfileSave();
+        QCOMPARE(saveSpy.count(), 1);
+        for (const auto& packageName : packageNames) {
+            QVERIFY2(lastSavedProfileContains(mProfileName, qsl("<string>%1</string>").arg(packageName)), qPrintable(qsl("The saved profile is missing %1").arg(packageName)));
+        }
+
+        for (const auto& packageName : packageNames) {
+            QVERIFY2(mpHost->uninstallPackage(packageName, enums::PackageModuleType::Package), "A package could not be uninstalled");
+        }
+        QTRY_VERIFY_WITH_TIMEOUT(!mpHost->hasPendingProfileSave(), 5s);
+        mpHost->waitForProfileSave();
+    }
+
     // Refusing an archive that installed nothing takes the folder it unpacked
     // away again (#9654) - and nothing else. The package name can be whatever an
     // untrusted archive's config.lua says, and ".." names the folder that holds
@@ -325,7 +372,7 @@ private slots:
 
     // The Package Manager's repository install deletes each archive as soon as
     // installPackage() returns (dlgPackageManager::slot_installPackageFromRepository), and
-    // its first pass leaves a save in flight. During a save an uninstall is refused
+    // a save can be in flight between its passes. During a save an uninstall is refused
     // outright and an install is put off, so a second pass that updates an existing
     // package would keep the old copy and then wait on a file already deleted. This
     // replays the loop's order for two packages, the second of them an update.
@@ -352,7 +399,9 @@ private slots:
         auto [first, firstMessage] = mpHost->installPackage(firstPath, enums::PackageModuleType::Package, true);
         QVERIFY2(first, qPrintable(firstMessage));
         QVERIFY2(QFile::remove(firstPath), "Could not delete the first archive the way the loop does");
-        QVERIFY2(mpHost->currentlySavingProfile(), "SETUP: the first pass left no save for the second to run into");
+        // The first pass only owes a save, so stand in for one that is running anyway
+        mpHost->saveProfile();
+        QVERIFY2(mpHost->currentlySavingProfile(), "SETUP: there is no save in flight for the second pass to run into");
 
         // ...and its second pass, which is the one at risk.
         mpHost->waitForProfileSave();

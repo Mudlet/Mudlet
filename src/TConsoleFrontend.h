@@ -170,7 +170,7 @@ public:
     virtual bool lowerWindow(const QString& name) = 0;
     // As raiseWindow() but never a label, which reparentLabel() moves. The new parent is the scroll box,
     // else the user window, named windowname, or this console when there is neither.
-    virtual bool reparentWindow(const QString& windowname, const QString& name, int x, int y, bool show) = 0;
+    virtual std::pair<bool, QString> reparentWindow(const QString& windowname, const QString& name, int x, int y, bool show) = 0;
 
     // An empty name or "main" is this console, any other a mini console, user window or buffer; each
     // fails for a name that is none of those.
@@ -270,6 +270,9 @@ public:
     virtual bool hasEasyButtonBar(TAction* pAction) const = 0;
     // Checks or unchecks the action's button and its entry in a bar's menu, where it has them.
     virtual void setActionButtonChecked(TAction* pAction, bool checked) = 0;
+    // Gives a plain button its action's stylesheet without rebuilding its bar; false when the action is drawn
+    // as anything else.
+    virtual bool restyleActionButton(TAction* pAction) = 0;
     // For a child moved out from under pOldParent: the child no longer belongs to whichever of its bars
     // it shared with its old parent.
     virtual void releaseParentActionBars(TAction* pOldParent, TAction* pChild) = 0;
@@ -296,9 +299,10 @@ public:
     virtual bool startIncomingText() = 0;
     // Asks the desktop to draw the player's attention to Mudlet's window until it is next activated.
     virtual void alertNewData() = 0;
-    // Ends the timing, schedules the paced latency box refresh and has the profile's tab marked for new text,
-    // which shows only while another profile's tab is the active one and Mudlet is not in multi-view.
-    virtual void finishIncomingText() = 0;
+    // Ends the timing, schedules the paced latency box refresh and, unless the pass carried no text, has the
+    // profile's tab marked for new text, which shows only while another profile's tab is the active one and
+    // Mudlet is not in multi-view.
+    virtual void finishIncomingText(bool carriesText) = 0;
     // Does what showNewLines() does, for the end of a batch of incoming text.
     virtual void finalize() = 0;
 

@@ -185,7 +185,7 @@ public:
     bool hideSubConsole(const QString& name) override;
     bool resizeSubConsole(const QString& name, int width, int height) override;
     bool moveSubConsole(const QString& name, int x, int y) override;
-    bool reparentWindow(const QString& windowname, const QString& name, int x, int y, bool show) override;
+    std::pair<bool, QString> reparentWindow(const QString& windowname, const QString& name, int x, int y, bool show) override;
     std::optional<QSize> consoleFontSize(const QString& name) const override;
     bool setSubConsoleBackgroundColor(const QString& name, const QColor& color) override;
     bool setSubConsoleBackgroundImage(const QString& name, const QString& path, int mode) override;
@@ -290,6 +290,9 @@ public:
     void replaceActionButton(TAction* pAction, TFlipButton* pButton);
     void replaceActionMenuEntry(TAction* pAction, EAction* pEntry);
     void setActionButtonChecked(TAction* pAction, bool checked) override;
+    // Gives a plain button its action's stylesheet without rebuilding its bar; false
+    // when the action is drawn as anything else.
+    bool restyleActionButton(TAction* pAction) override;
     // Floating toolbars are the main window's children rather than this
     // console's, so the profile has to delete them itself.
     const std::list<QPointer<TToolBar>>& actionToolBars() const { return mToolBarList; }
@@ -308,7 +311,7 @@ public:
     void toggleLogging(bool);
     bool startIncomingText() override;
     void alertNewData() override;
-    void finishIncomingText() override;
+    void finishIncomingText(bool carriesText) override;
     void finalize() override;
     void refreshSubconsoles();
 

@@ -518,6 +518,94 @@ private slots:
         QCOMPARE(mpPreferences->console_buffer_size_spinBox->value(), chosenSize);
     }
 
+    // Ticking the maximum is applied straight away, and the size the user chose
+    // has to outlive that for unticking it, then or on a later visit, to put it back
+    void test_untickingAnAppliedMaximumBufferSizeBringsBackTheChosenSize()
+    {
+        QVERIFY2(mpHost->mpConsole, "the profile has no console, so it has no maximum buffer size to offer");
+        TBuffer& buffer = mpHost->mpConsole->buffer;
+        const int priorBufferSize = mpHost->getConsoleBufferSize();
+        const bool priorUseMax = mpHost->getUseMaxConsoleBufferSize();
+        const int priorLinesLimit = buffer.mLinesLimit;
+        const int priorBatchDeleteSize = buffer.mBatchDeleteSize;
+        restoreLater([=, this, &buffer]() {
+            mpHost->setConsoleBufferSize(priorBufferSize);
+            mpHost->setUseMaxConsoleBufferSize(priorUseMax);
+            buffer.setBufferSize(priorLinesLimit, priorBatchDeleteSize);
+        });
+
+        const int chosenSize = 12345;
+        mpHost->setMainConsoleBufferSize(chosenSize, 1000, false);
+        const int maximumSize = buffer.getMaxBufferSize();
+        QVERIFY2(maximumSize != chosenSize, "the machine's maximum buffer size happens to be the size this case picked, so the two cannot be told apart");
+
+        // As setConsoleBufferSize("main", ..., true) does
+        mpHost->setMainConsoleBufferSize(999, 1000, true);
+        QCOMPARE(buffer.mLinesLimit, maximumSize);
+        QCOMPARE(mpHost->getConsoleBufferSize(), chosenSize);
+        mpHost->setMainConsoleBufferSize(chosenSize, 1000, false);
+
+        openPreferences();
+        QSignalSpy tickSpy(mpPreferences, &dlgProfilePreferences::signal_preferencesSaved);
+        mpPreferences->checkBox_useMaxBufferSize->click();
+        QVERIFY2(applyAndWait(tickSpy), "ticking the maximum was never applied");
+        QCOMPARE(buffer.mLinesLimit, maximumSize);
+
+        QSignalSpy untickSpy(mpPreferences, &dlgProfilePreferences::signal_preferencesSaved);
+        mpPreferences->checkBox_useMaxBufferSize->click();
+        QCOMPARE(mpPreferences->console_buffer_size_spinBox->value(), chosenSize);
+        QVERIFY2(applyAndWait(untickSpy), "unticking the maximum was never applied");
+        QCOMPARE(buffer.mLinesLimit, chosenSize);
+
+        QSignalSpy retickSpy(mpPreferences, &dlgProfilePreferences::signal_preferencesSaved);
+        mpPreferences->checkBox_useMaxBufferSize->click();
+        QVERIFY2(applyAndWait(retickSpy), "ticking the maximum again was never applied");
+        closePreferences();
+
+        openPreferences();
+        QCOMPARE(mpPreferences->console_buffer_size_spinBox->value(), maximumSize);
+        QSignalSpy laterUntickSpy(mpPreferences, &dlgProfilePreferences::signal_preferencesSaved);
+        mpPreferences->checkBox_useMaxBufferSize->click();
+        QCOMPARE(mpPreferences->console_buffer_size_spinBox->value(), chosenSize);
+        QVERIFY2(applyAndWait(laterUntickSpy), "unticking the maximum on a later visit was never applied");
+        QCOMPARE(buffer.mLinesLimit, chosenSize);
+        QCOMPARE(mpHost->getConsoleBufferSize(), chosenSize);
+    }
+
+    // Applying is debounced, so a size typed just before ticking the maximum has
+    // not reached the profile yet when the tick overwrites the box with the maximum
+    void test_aSizeEditedJustBeforeTickingTheMaximumIsKept()
+    {
+        QVERIFY2(mpHost->mpConsole, "the profile has no console, so it has no maximum buffer size to offer");
+        TBuffer& buffer = mpHost->mpConsole->buffer;
+        const int priorBufferSize = mpHost->getConsoleBufferSize();
+        const bool priorUseMax = mpHost->getUseMaxConsoleBufferSize();
+        const int priorLinesLimit = buffer.mLinesLimit;
+        const int priorBatchDeleteSize = buffer.mBatchDeleteSize;
+        restoreLater([=, this, &buffer]() {
+            mpHost->setConsoleBufferSize(priorBufferSize);
+            mpHost->setUseMaxConsoleBufferSize(priorUseMax);
+            buffer.setBufferSize(priorLinesLimit, priorBatchDeleteSize);
+        });
+
+        mpHost->setMainConsoleBufferSize(12345, 1000, false);
+        const int editedSize = 23456;
+        QVERIFY2(buffer.getMaxBufferSize() != editedSize, "the machine's maximum buffer size happens to be the size this case picked, so the two cannot be told apart");
+
+        openPreferences();
+        QSignalSpy tickSpy(mpPreferences, &dlgProfilePreferences::signal_preferencesSaved);
+        mpPreferences->console_buffer_size_spinBox->setValue(editedSize);
+        mpPreferences->checkBox_useMaxBufferSize->click();
+        QVERIFY2(applyAndWait(tickSpy), "ticking the maximum was never applied");
+        QCOMPARE(mpHost->getConsoleBufferSize(), editedSize);
+
+        QSignalSpy untickSpy(mpPreferences, &dlgProfilePreferences::signal_preferencesSaved);
+        mpPreferences->checkBox_useMaxBufferSize->click();
+        QCOMPARE(mpPreferences->console_buffer_size_spinBox->value(), editedSize);
+        QVERIFY2(applyAndWait(untickSpy), "unticking the maximum was never applied");
+        QCOMPARE(buffer.mLinesLimit, editedSize);
+    }
+
     // The width to undo a server's wrapping at is only a setting while the
     // undoing is on (#10165's neighbour: an experimental option says so, too)
     void test_theUndoWrapWidthIsOnlyReachableWhileUndoingIsOn()
