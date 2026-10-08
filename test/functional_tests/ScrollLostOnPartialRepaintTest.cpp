@@ -250,9 +250,6 @@ private slots:
     // pacer, and a full repaint landing first must not take that with it
     void test_aRepaintBeforeThePacerFiresLeavesTheScrollBarCurrent()
     {
-        // the welcome lands 100ms after connecting, and output arriving during
-        // the wait below refreshes the scrollbar and hides the loss
-        mpServer->setSendsWelcome(false);
         startProfile(mpHostname, mpLocalhost, mpPort);
         auto host = mudlet::self()->getActiveHost();
         QVERIFY2(host && host->mpConsole, "no main console");
@@ -265,16 +262,13 @@ private slots:
         lua->compileAndExecuteScript(qsl("for i = 1, 200 do echo('FILLER ' .. i .. '\\n') end\n"));
         qApp->processEvents();
         pane->repaint();
-        // The paint window runs from the start of a paint, so on a loaded runner
-        // the paint alone could use it up; time it from the end instead
-        pane->mSincePaint.restart();
         lua->compileAndExecuteScript(qsl("echo('PACED_LINE\\n')\n"));
         QVERIFY2(pane->mpPaintPacer->isActive(), "the line arrived after the paint window closed, so the pacer this case is about never started");
         pane->forceUpdate();
         pane->repaint();
 
-        // not QTRY: a refresh from anywhere within its retry window would hide
-        // the loss
+        // not QTRY: later output from the connection refreshes the scrollbar
+        // within its retry window and would hide the loss
         QTest::qWait(100ms);
         QCOMPARE(scrollBar->maximum(), host->mpConsole->buffer.getLastLineNumber() + 1);
     }

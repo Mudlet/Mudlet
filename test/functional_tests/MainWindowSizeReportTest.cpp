@@ -87,31 +87,6 @@ private:
         return (pDock && pDock->widget()) ? pDock->widget()->size() : QSize();
     }
 
-    // What the share logic in TMainConsole reads, so a dock left squeezed says why
-    QString dockState(const QString& name) const
-    {
-        mudlet* window = mudlet::self();
-        TDockWidget* pDock = mpHost->mpConsole->dockWidget(name);
-        if (!pDock) {
-            return qsl("no dock named %1").arg(name);
-        }
-        const Qt::DockWidgetArea area = window->dockWidgetArea(pDock);
-        int docksInArea = 0;
-        for (auto* other : window->findChildren<QDockWidget*>()) {
-            if (other->isVisible() && !other->isFloating() && other->parentWidget() == window && window->dockWidgetArea(other) == area) {
-                ++docksInArea;
-            }
-        }
-        return qsl("dock visible %1, floating %2, area %3, dock height %4, console visible %5, font height %6, visible docks in its area %7")
-                .arg(pDock->isVisible())
-                .arg(pDock->isFloating())
-                .arg(static_cast<int>(area))
-                .arg(pDock->height())
-                .arg(pDock->widget() && pDock->widget()->isVisible())
-                .arg(pDock->fontMetrics().height())
-                .arg(docksInArea);
-    }
-
     int luaInt(const QString& global) const
     {
         lua_State* L = mpHost->mLuaInterpreter.getLuaGlobalState();
@@ -269,7 +244,7 @@ private slots:
         settle();
         const int firstHeight = dockSize(first).height();
         const int secondHeight = dockSize(second).height();
-        QVERIFY2(secondHeight > alone / 4, qPrintable(qsl("the second user window is %1 high beside the first's %2 (%3)").arg(secondHeight).arg(firstHeight).arg(dockState(second))));
+        QVERIFY2(secondHeight > alone / 4, qPrintable(qsl("the second user window is %1 high beside the first's %2").arg(secondHeight).arg(firstHeight)));
         QVERIFY2(firstHeight > alone / 4, qPrintable(qsl("the first user window was squeezed to %1").arg(firstHeight)));
         QCOMPARE(mpHost->mpConsole->getUserWindowSize(second), dockSize(second));
     }
@@ -295,7 +270,7 @@ private slots:
         settle();
         const int firstHeight = dockSize(first).height();
         const int secondHeight = dockSize(second).height();
-        QVERIFY2(secondHeight > alone / 4, qPrintable(qsl("the second user window is %1 high beside the first's %2 (%3)").arg(secondHeight).arg(firstHeight).arg(dockState(second))));
+        QVERIFY2(secondHeight > alone / 4, qPrintable(qsl("the second user window is %1 high beside the first's %2").arg(secondHeight).arg(firstHeight)));
         QVERIFY2(firstHeight > alone / 4, qPrintable(qsl("the first user window was squeezed to %1").arg(firstHeight)));
     }
 
