@@ -112,15 +112,6 @@ void restoreLabelOutlineColorFromUserData(TMapLabel& label, int labelId, QMap<QS
     }
 }
 
-// Older saves wrote these into the live area user data, so a map file can carry
-// them for labels deleted since; whatever no label took on reading is junk
-void dropUnclaimedLabelKeys(QMap<QString, QString>& userData)
-{
-    userData.removeIf([](const QMap<QString, QString>::iterator& it) {
-        return it.key().startsWith(QLatin1String("system.labelFont_")) || it.key().startsWith(QLatin1String("system.labelOutlineColor_"));
-    });
-}
-
 enum class MapFileCheckResult { ValidMap, NotAMap, ParseError };
 
 struct MapFileCheck
@@ -1386,8 +1377,10 @@ bool TMap::serialize(QDataStream& ofs, int saveVersion)
         ofs << pA->pos;
         ofs << pA->isZone;
         ofs << pA->zoneAreaRef;
-        // A local copy so that saving does not modify the live area's user data:
+        // A local copy so that saving does not modify the live area's user data,
+        // holding only the file-only keys for what this save writes:
         QMap<QString, QString> userData{pA->mUserData};
+        TArea::dropFileOnlyUserData(userData);
         if (mSaveVersion >= 21) {
             // Revised in version 21 to store the value directly:
             ofs << pA->mLast2DMapZoom;
@@ -2110,8 +2103,9 @@ bool TMap::restore(QString location)
             }
         }
 
+        // whatever the labels did not take is for labels that no longer exist
         for (auto* pA : mpRoomDB->getAreaMap()) {
-            dropUnclaimedLabelKeys(pA->mUserData);
+            TArea::dropFileOnlyUserData(pA->mUserData);
         }
 
         // A corrupt stream carries on reading, out of step with the records,

@@ -3795,8 +3795,7 @@ describe("Tests saveMap and loadMap", function()
 
     it("drops label keys in a map file that no label in it claims", function()
       local area = buildMap()
-      -- what a save that wrote into the live data left behind for a label
-      -- deleted after it
+      -- keys a map file can hold for a label that no longer exists
       assert.is_true(setAreaUserData(area, "system.labelFont_99", "Sans|10|50|0"))
       assert.is_true(setAreaUserData(area, "system.labelOutlineColor_99", "1|2|3|255"))
       assert.is_true(saveMap(savePath))
@@ -4736,6 +4735,21 @@ describe("Tests saveJsonMap and loadJsonMap", function()
       roundTrip()
 
       assert.are.same({climate = "temperate", ruler = "nobody"}, getAllAreaUserData(area))
+    end)
+
+    it("leaves out the label keys a binary save keeps as area user data", function()
+      deleteMap()
+      local area = addAreaName("MapperSpecJsonLabelKeysArea")
+      roomA = createRoomID(); addRoom(roomA); setRoomArea(roomA, area)
+      assert.is_true(setAreaUserData(area, "climate", "temperate"))
+      -- what a JSON file exported from a map those keys had got into holds
+      assert.is_true(setAreaUserData(area, "system.labelFont_99", "Sans|10|50|0"))
+      assert.is_true(setAreaUserData(area, "system.labelOutlineColor_99", "1|2|3|255"))
+      assert.is_true(setAreaUserData(area, "system.fallback_map2DZoom", "20"))
+
+      roundTrip()
+
+      assert.are.same({climate = "temperate"}, getAllAreaUserData(area))
     end)
 
     -- TMap::readJsonColor returns QColor(red, green, blue) for a colour array of

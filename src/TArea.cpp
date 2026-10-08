@@ -905,6 +905,16 @@ void TArea::writeJsonUserData(QJsonObject& obj) const
     obj.insert(QLatin1String("userData"), userDatasValue);
 }
 
+// The binary format keeps an area's zoom (below format 21) and its labels'
+// fonts and outline colors as user data under these keys. They mean nothing in
+// the live map, and a map file can hold them for labels that no longer exist.
+void TArea::dropFileOnlyUserData(QMap<QString, QString>& userData)
+{
+    userData.removeIf([](const QMap<QString, QString>::iterator& it) {
+        return it.key() == QLatin1String("system.fallback_map2DZoom") || it.key().startsWith(QLatin1String("system.labelFont_")) || it.key().startsWith(QLatin1String("system.labelOutlineColor_"));
+    });
+}
+
 // Takes a userData object and parses all its elements
 void TArea::readJsonUserData(const QJsonObject& obj)
 {
@@ -918,6 +928,8 @@ void TArea::readJsonUserData(const QJsonObject& obj)
             mUserData.insert(key, obj.value(key).toString());
         }
     }
+    // labels carry their font and outline color in their own JSON fields
+    dropFileOnlyUserData(mUserData);
 }
 
 void TArea::writeJsonLabels(QJsonObject& obj) const
