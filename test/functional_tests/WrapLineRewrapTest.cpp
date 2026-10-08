@@ -553,6 +553,62 @@ private slots:
         QVERIFY(console->buffer.lineBuffer.constLast().isEmpty());
     }
 
+    // Not wrapping, but the same per-line lists: TBuffer::deleteLines() takes a
+    // range, and each list has to lose the same lines the TChars do, or the
+    // text, timestamps and prompt flags of the lines below land on other lines.
+    void test_deletingARangeOfLinesKeepsEveryLineListInStep()
+    {
+        auto* console = consoleWithWrapWidth(200);
+        QVERIFY(console);
+        echo(qsl("line one\\nline two\\nline three\\nline four\\nline five\\n"));
+        TBuffer& buffer = console->buffer;
+        QCOMPARE(buffer.lineBuffer.size(), 6);
+        buffer.timeBuffer[3] = qsl("sentinel");
+        buffer.promptBuffer[3] = true;
+        buffer.wrapGapBuffer[3] = 7;
+
+        QVERIFY(buffer.deleteLines(0, 2));
+
+        QCOMPARE(buffer.lineBuffer.size(), 3);
+        QCOMPARE(static_cast<qsizetype>(buffer.buffer.size()), buffer.lineBuffer.size());
+        QCOMPARE(buffer.timeBuffer.size(), buffer.lineBuffer.size());
+        QCOMPARE(buffer.promptBuffer.size(), buffer.lineBuffer.size());
+        QCOMPARE(buffer.wrapGapBuffer.size(), buffer.lineBuffer.size());
+        QCOMPARE(buffer.line(0), qsl("line four"));
+        QCOMPARE(buffer.line(1), qsl("line five"));
+        QCOMPARE(static_cast<qsizetype>(buffer.buffer.at(0).size()), buffer.line(0).size());
+        QCOMPARE(buffer.timeBuffer.at(0), qsl("sentinel"));
+        QVERIFY(buffer.promptBuffer.at(0));
+        QVERIFY(!buffer.promptBuffer.at(1));
+        QCOMPARE(buffer.wrapGapBuffer.at(0), 7);
+    }
+
+    // A blank timestamp marks a line wrapped off the one above. Deleting a range
+    // that holds the start of the next line's logical line has to give that line
+    // the timestamp of the start, which need not be the first line of the range;
+    // a range of continuation lines alone leaves it following on as before.
+    void test_deletingARangeOfWrappedLinesKeepsTheLogicalLinesApart()
+    {
+        auto* console = consoleWithWrapWidth(200);
+        QVERIFY(console);
+        echo(qsl("X\\nY\\nZ\\nW\\nV\\nU\\n"));
+        TBuffer& buffer = console->buffer;
+        QCOMPARE(buffer.lineBuffer.size(), 7);
+        const QStringList stamps{qsl("stamp X"), TBuffer::smBlankTimeStamp, qsl("stamp Z"), TBuffer::smBlankTimeStamp, TBuffer::smBlankTimeStamp, TBuffer::smBlankTimeStamp};
+        for (int i = 0; i < stamps.size(); ++i) {
+            buffer.timeBuffer[i] = stamps.at(i);
+        }
+
+        QVERIFY(buffer.deleteLines(4, 4));
+        QCOMPARE(buffer.line(4), qsl("U"));
+        QCOMPARE(buffer.timeBuffer.at(4), TBuffer::smBlankTimeStamp);
+
+        QVERIFY(buffer.deleteLines(1, 2));
+        QCOMPARE(buffer.line(1), qsl("W"));
+        QCOMPARE(buffer.timeBuffer.at(1), qsl("stamp Z"));
+        QCOMPARE(buffer.timeBuffer.at(2), TBuffer::smBlankTimeStamp);
+    }
+
     // Declared last: without the clamp this aborts, taking the rest of the run
     // with it. The Lua setter refuses a negative now, so the indent is written
     // from C++ to reach wrapLine()'s clamp at all.

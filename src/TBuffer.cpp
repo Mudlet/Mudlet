@@ -6796,17 +6796,21 @@ bool TBuffer::deleteLines(int from, int to)
         }
 
         // What was wrapped off a line that goes starts a line of its own now,
-        // rather than following on from whichever line is left above it
-        if (!wrapsFromPreviousLine(from) && wrapsFromPreviousLine(to + 1)) {
-            timeBuffer[to + 1] = timeBuffer.at(from);
+        // rather than following on from whichever line is left above it - and
+        // the line it was wrapped off is the last one in the range to start one
+        if (wrapsFromPreviousLine(to + 1)) {
+            for (int i = to; i >= from; --i) {
+                if (!wrapsFromPreviousLine(i)) {
+                    timeBuffer[to + 1] = timeBuffer.at(i);
+                    break;
+                }
+            }
         }
 
-        for (int i = from, total = from + delta; i < total; ++i) {
-            lineBuffer.removeAt(i);
-            timeBuffer.removeAt(i);
-            promptBuffer.removeAt(i);
-            wrapGapBuffer.removeAt(i);
-        }
+        lineBuffer.remove(from, delta);
+        timeBuffer.remove(from, delta);
+        promptBuffer.remove(from, delta);
+        wrapGapBuffer.remove(from, delta);
 
         buffer.erase(buffer.begin() + from, buffer.begin() + to + 1);
         if (mPreTriggerPassLineNumber >= from) {
