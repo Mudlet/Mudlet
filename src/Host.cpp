@@ -69,6 +69,7 @@
 #include <QEventLoop>
 #include <QFileInfo>
 #include <QFontInfo>
+#include <QFontMetrics>
 #include <QJsonDocument>
 #include <QJsonObject>
 #include <QJsonValue>
