@@ -86,8 +86,9 @@ end
 --- in the http://www.lua.org/pil/22.1.html. <br/><br/>
 ---
 --- A format without a date part (such as "^%H:%M:%S$") returns a time table without year, month, day
---- or isdst; with as_epoch, it is placed on today's date. A partial date takes the current year (and month,
---- when it has a day) and starts a missing month or day at 1, so "^%Y-%m$" gives the first of that month. <br/><br/>
+--- or isdst; with as_epoch, it is placed on today's date. A partial date returns a time table with only the
+--- fields it parsed; with as_epoch, it takes the current year (and month, when it has a day) and starts a
+--- missing month or day at 1, so "^%Y-%m$" gives the first of that month. <br/><br/>
 ---
 --- Supported Format Codes
 ---   </pre>
