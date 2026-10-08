@@ -119,6 +119,21 @@ function string:trim()
   end
 end
 
+local patternEscapes = {
+  ["%"] = "%%",
+  ["^"] = "%^",
+  ["$"] = "%$",
+  ["("] = "%(",
+  [")"] = "%)",
+  ["["] = "%[",
+  ["]"] = "%]",
+  ["."] = "%.",
+  ["*"] = "%*",
+  ["+"] = "%+",
+  ["-"] = "%-",
+  ["?"] = "%?",
+}
+
 --- Documentation: https://wiki.mudlet.org/w/Manual:String_Functions#string.patternEscape
 function string.patternEscape(self)
   local gsub = string.gsub
@@ -126,21 +141,10 @@ function string.patternEscape(self)
   if selfType ~= "string" then
     printError(f"string.patternEscape: bad argument #1 type (string to escape as string expected, got {selfType})", true, true)
   end
-  local replacements = {
-    ["%"] = "%%",
-    ["^"] = "%^",
-    ["$"] = "%$",
-    ["("] = "%(",
-    [")"] = "%)",
-    ["["] = "%[",
-    ["]"] = "%]",
-    ["."] = "%.",
-    ["*"] = "%*",
-    ["+"] = "%+",
-    ["-"] = "%-",
-    ["?"] = "%?",
-  }
-  local escaped = gsub(self, ".", replacements)
+  -- every magic character is punctuation, so %p visits only the bytes that
+  -- could need escaping; any other punctuation is not in the table, and gsub
+  -- leaves a match the table has no entry for as it was
+  local escaped = gsub(self, "%p", patternEscapes)
   return escaped
 end
 
@@ -151,21 +155,7 @@ function utf8.patternEscape(self)
   if selfType ~= "string" then
     printError(f"utf8.patternEscape: bad argument #1 type (string to escape as string expected, got {selfType})", true, true)
   end
-  local replacements = {
-    ["%"] = "%%",
-    ["^"] = "%^",
-    ["$"] = "%$",
-    ["("] = "%(",
-    [")"] = "%)",
-    ["["] = "%[",
-    ["]"] = "%]",
-    ["."] = "%.",
-    ["*"] = "%*",
-    ["+"] = "%+",
-    ["-"] = "%-",
-    ["?"] = "%?",
-  }
-  local escaped = gsub(self, ".", replacements)
+  local escaped = gsub(self, ".", patternEscapes)
   return escaped
 end
 
