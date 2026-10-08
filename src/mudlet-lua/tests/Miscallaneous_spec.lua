@@ -938,6 +938,38 @@ describe("Tests C++ functions in the Miscallaneous category", function()
         assert.is_true(contains(tostring(message), "absolute path"), "saveProfile() answered " .. tostring(message))
         assert.is_false(fileExists(escapee), "the save landed at " .. escapee)
       end)
+
+      -- Mudlet.ini is otherwise only written at quit, so an unclean exit after
+      -- an explicit save would still lose the application-wide settings
+      it("writes the application-wide settings to Mudlet.ini as well", function()
+        local iniFile = getMudletHomeDir():match("^(.*)/profiles/[^/]+$") .. "/Mudlet.ini"
+        local original = getConfig("showTabConnectionIndicators")
+        finally(function()
+          setConfig("showTabConnectionIndicators", original)
+          -- and on disk too, or Mudlet.ini keeps the flipped value until the next save
+          saveWaitingOutAnyOtherSave()
+        end)
+        assert.is_true(setConfig("showTabConnectionIndicators", not original))
+
+        local saved, message = saveWaitingOutAnyOtherSave()
+        if not saved and not testMode then
+          pending("the profile save was refused and only test mode can wait one out: " .. tostring(message))
+          return
+        end
+        assert.is_true(saved, tostring(message))
+
+        local wanted = "showTabConnectionIndicators=" .. tostring(not original)
+        local found = false
+        local file = io.open(iniFile, "r")
+        assert.is_not_nil(file, "no Mudlet.ini at " .. iniFile)
+        for line in file:lines() do
+          if line == wanted then
+            found = true
+          end
+        end
+        file:close()
+        assert.is_true(found, "Mudlet.ini did not get " .. wanted)
+      end)
     end)
 
     describe("Tests the logging functions", function()

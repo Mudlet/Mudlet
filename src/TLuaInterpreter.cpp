@@ -1461,6 +1461,11 @@ int TLuaInterpreter::saveProfile(lua_State* L)
     auto [ok, filename, error] = saveAsFile.isNull() ? host.saveProfile(saveToDir) : host.saveProfileAs(saveAsPathFileName);
 
     if (ok) {
+        // Mudlet.ini is otherwise only written at quit, so an unclean exit
+        // would lose the application-wide half of the settings saved here
+        if (mudlet* pMudlet = mudlet::self()) {
+            pMudlet->writeSettings();
+        }
         lua_pushboolean(L, true);
         lua_pushstring(L, (filename.toUtf8().constData()));
         return 2;
