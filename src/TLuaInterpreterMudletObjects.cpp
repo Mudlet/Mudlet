@@ -962,7 +962,7 @@ int TLuaInterpreter::isActive(lua_State* L)
     } else if (!type.compare(QLatin1String("trigger"), Qt::CaseInsensitive)) {
         if (isId) {
             auto pT = host.getTriggerUnit()->getTrigger(id);
-            cnt = (static_cast<bool>(pT) && pT->isActive()) ? 1 : 0;
+            cnt = (static_cast<bool>(pT) && pT->isActive() && (!checkAncestors || pT->ancestorsActive())) ? 1 : 0;
         } else {
             const auto [begin, end] = host.getTriggerUnit()->mLookupTable.equal_range(nameOrId);
             for (auto itpItem = begin; itpItem != end; ++itpItem) {
@@ -976,7 +976,7 @@ int TLuaInterpreter::isActive(lua_State* L)
     } else if (!type.compare(QLatin1String("alias"), Qt::CaseInsensitive)) {
         if (isId) {
             auto pT = host.getAliasUnit()->getAlias(id);
-            cnt = (static_cast<bool>(pT) && pT->isActive()) ? 1 : 0;
+            cnt = (static_cast<bool>(pT) && pT->isActive() && (!checkAncestors || pT->ancestorsActive())) ? 1 : 0;
         } else {
             const auto [begin, end] = host.getAliasUnit()->mLookupTable.equal_range(nameOrId);
             for (auto itpItem = begin; itpItem != end; ++itpItem) {
@@ -990,7 +990,7 @@ int TLuaInterpreter::isActive(lua_State* L)
     } else if (!type.compare(QLatin1String("keybind"), Qt::CaseInsensitive)) {
         if (isId) {
             auto pT = host.getKeyUnit()->getKey(id);
-            cnt = (static_cast<bool>(pT) && pT->isActive()) ? 1 : 0;
+            cnt = (static_cast<bool>(pT) && pT->isActive() && (!checkAncestors || pT->ancestorsActive())) ? 1 : 0;
         } else {
             const auto [begin, end] = host.getKeyUnit()->mLookupTable.equal_range(nameOrId);
             for (auto itpItem = begin; itpItem != end; ++itpItem) {
@@ -1004,7 +1004,7 @@ int TLuaInterpreter::isActive(lua_State* L)
     } else if (!type.compare(QLatin1String("button"), Qt::CaseInsensitive)) {
         if (isId) {
             auto pT = host.getActionUnit()->getAction(id);
-            cnt = (static_cast<bool>(pT) && pT->isActive()) ? 1 : 0;
+            cnt = (static_cast<bool>(pT) && pT->isActive() && (!checkAncestors || pT->ancestorsActive())) ? 1 : 0;
         } else {
             QMap<int, TAction*> const actions = host.getActionUnit()->getActionList();
             for (auto action : actions) {
@@ -1017,7 +1017,7 @@ int TLuaInterpreter::isActive(lua_State* L)
     } else if (!type.compare(QLatin1String("script"), Qt::CaseInsensitive)) {
         if (isId) {
             auto pT = host.getScriptUnit()->getScript(id);
-            cnt = (static_cast<bool>(pT) && pT->isActive()) ? 1 : 0;
+            cnt = (static_cast<bool>(pT) && pT->isActive() && (!checkAncestors || pT->ancestorsActive())) ? 1 : 0;
         } else {
             QMap<int, TScript*> const scripts = host.getScriptUnit()->getScriptList();
             for (auto script : scripts) {

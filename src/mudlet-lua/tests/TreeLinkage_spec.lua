@@ -49,7 +49,7 @@ describe("tree linkage", function()
 
   -- Turning a group off silences what hangs below it without touching those
   -- items' own switches, and reaches only its own branch.
-  local function silencesOnlyItsOwnBranch(itemType, names, enable, disable)
+  local function silencesOnlyItsOwnBranch(itemType, names, ids, enable, disable)
     local function effective(name)
       return isActive(name, itemType, true) == 1
     end
@@ -69,6 +69,8 @@ describe("tree linkage", function()
     assert.is_false(effective(names.sibling), "the sibling should be silenced by the group above it")
     assert.is_true(switchedOn(names.leaf), "the leaf's own switch must survive an ancestor being turned off")
     assert.is_true(switchedOn(names.sibling), "the sibling's own switch must survive an ancestor being turned off")
+    assert.are.equal(0, isActive(ids.leaf, itemType, true), "asked by id, the leaf should be silenced by the group above it too")
+    assert.are.equal(1, isActive(ids.leaf, itemType), "asked by id without checking ancestors, the leaf's own switch is still on")
 
     enable(names.top)
     assert.is_true(effective(names.leaf), "the leaf should come back when the group above it does")
@@ -94,7 +96,7 @@ describe("tree linkage", function()
     }
     assertCreated(ids, "trigger")
 
-    silencesOnlyItsOwnBranch("trigger", names, enableTrigger, disableTrigger)
+    silencesOnlyItsOwnBranch("trigger", names, ids, enableTrigger, disableTrigger)
   end)
 
   it("links aliases to the groups above them", function()
@@ -112,7 +114,7 @@ describe("tree linkage", function()
     }
     assertCreated(ids, "alias")
 
-    silencesOnlyItsOwnBranch("alias", names, enableAlias, disableAlias)
+    silencesOnlyItsOwnBranch("alias", names, ids, enableAlias, disableAlias)
   end)
 
   it("links keys to the groups above them", function()
@@ -130,7 +132,7 @@ describe("tree linkage", function()
     }
     assertCreated(ids, "keybind")
 
-    silencesOnlyItsOwnBranch("keybind", names, enableKey, disableKey)
+    silencesOnlyItsOwnBranch("keybind", names, ids, enableKey, disableKey)
   end)
 
   it("links scripts to the groups above them", function()
@@ -151,7 +153,7 @@ describe("tree linkage", function()
     }
     assertCreated(ids, "script")
 
-    silencesOnlyItsOwnBranch("script", names, enableScript, disableScript)
+    silencesOnlyItsOwnBranch("script", names, ids, enableScript, disableScript)
   end)
 
   -- Timers are the one type that cannot merely be masked by an ancestor: a timer
