@@ -4725,29 +4725,32 @@ describe("Tests saveJsonMap and loadJsonMap", function()
     end)
 
     it("keeps a colour whose alpha in the file is out of range, as opaque", function()
-      deleteMap()
-      local area = addAreaName("MapperSpecJsonAlphaOutOfRangeArea")
-      roomA = createRoomID(); addRoom(roomA); setRoomArea(roomA, area)
-      assert.is_true(setRoomBorderColor(roomA, 44, 55, 66, 128))
-      assert.is_true(saveJsonMap(jsonPath))
-      local file = assert(io.open(jsonPath, "r"))
-      local document = yajl.to_value(file:read("*a"))
-      file:close()
-      for _, exportedArea in ipairs(document.areas) do
-        for _, room in ipairs(exportedArea.rooms or {}) do
-          if room.id == roomA then
-            room.border.color32RGBA = {44, 55, 66, 256}
+      -- 1e20 and -1e20 are beyond the range of an int as well as of an alpha
+      for _, outOfRange in ipairs({256, -1, 1e20, -1e20}) do
+        deleteMap()
+        local area = addAreaName("MapperSpecJsonAlphaOutOfRangeArea")
+        roomA = createRoomID(); addRoom(roomA); setRoomArea(roomA, area)
+        assert.is_true(setRoomBorderColor(roomA, 44, 55, 66, 128))
+        assert.is_true(saveJsonMap(jsonPath))
+        local file = assert(io.open(jsonPath, "r"))
+        local document = yajl.to_value(file:read("*a"))
+        file:close()
+        for _, exportedArea in ipairs(document.areas) do
+          for _, room in ipairs(exportedArea.rooms or {}) do
+            if room.id == roomA then
+              room.border.color32RGBA = {44, 55, 66, outOfRange}
+            end
           end
         end
+        file = assert(io.open(jsonPath, "w"))
+        file:write(yajl.to_string(document))
+        file:close()
+        deleteMap()
+
+        assert.is_true(loadJsonMap(jsonPath))
+
+        assert.are.same({44, 55, 66, 255}, {getRoomBorderColor(roomA)}, "alpha " .. outOfRange)
       end
-      file = assert(io.open(jsonPath, "w"))
-      file:write(yajl.to_string(document))
-      file:close()
-      deleteMap()
-
-      assert.is_true(loadJsonMap(jsonPath))
-
-      assert.are.same({44, 55, 66, 255}, {getRoomBorderColor(roomA)})
     end)
 
     -- TRoom::writeJsonExitStubs looks the stub's door up under the long

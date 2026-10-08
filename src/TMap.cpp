@@ -3866,16 +3866,23 @@ QColor TMap::readJsonColor(const QJsonObject& obj)
     } else {
         colorRGBAArray = obj.value(QLatin1String("color24RGB")).toArray();
     }
+    // Checked before rounding, as rounding a double beyond the range of int is undefined
+    const auto component = [&colorRGBAArray](const int index) {
+        const double value = colorRGBAArray.at(index).toDouble();
+        return (value > -0.5 && value < 255.5) ? qRound(value) : -1;
+    };
     const int size = colorRGBAArray.size();
     if ((size == 3 || size == 4) && colorRGBAArray.at(0).isDouble() && colorRGBAArray.at(1).isDouble() && colorRGBAArray.at(2).isDouble()) {
-        red = qRound(colorRGBAArray.at(0).toDouble());
-        green = qRound(colorRGBAArray.at(1).toDouble());
-        blue = qRound(colorRGBAArray.at(2).toDouble());
+        red = component(0);
+        green = component(1);
+        blue = component(2);
+        if (red < 0 || green < 0 || blue < 0) {
+            return QColor();
+        }
         if (hasAlpha && size == 4 && colorRGBAArray.at(3).isDouble()) {
-            alpha = qRound(colorRGBAArray.at(3).toDouble());
             // QColor refuses the whole colour for an alpha out of range
-            if (alpha < 0 || alpha > 255) {
-                alpha = 255;
+            if (const int value = component(3); value >= 0) {
+                alpha = value;
             }
         }
         return QColor(red, green, blue, alpha);
