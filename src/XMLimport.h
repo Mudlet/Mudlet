@@ -25,11 +25,11 @@
  ***************************************************************************/
 
 
-#include "dlgTriggerEditor.h"
 #include "EditorCommand.h"
 #include "utils.h"
 
 #include <QCoreApplication>
+#include <QElapsedTimer>
 #include <QFile>
 #include <QMap>
 #include <QMargins>
@@ -82,6 +82,7 @@ private:
     void readMap();
     void readRoom(QMultiHash<int, int>&, unsigned int*);
     void readRooms(QMultiHash<int, int>&);
+    bool mapProgressDue();
     void readRoomFeature(TRoom*);
     void readRoomFeatures(TRoom*);
     void readEnvColor();
@@ -136,6 +137,7 @@ private:
     bool gotScript = false;
     int module = 0;
     int mMaxRoomId = 0;
+    QElapsedTimer mMapProgressTimer;
     quint8 mVersionMajor = 1;  // 0 to 255
     quint16 mVersionMinor = 0; // 0 to 999 for 3 digit decimal value. Cannot be a quint8 as that only allows x.255 for the decimal
 };

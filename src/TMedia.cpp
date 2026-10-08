@@ -28,7 +28,6 @@
 #include "MudletApp.h"
 #include "MudletMedia.h"
 #include "TDebug.h"
-#include "mudlet.h"
 
 #include <QDir>
 #include <QFileInfo>

@@ -2431,6 +2431,31 @@ describe("Tests UI functions", function()
       assert.are.equal(1, exists(buttonId, "button"))
       assert.are.equal(1, isActive(buttonId, "button"))
     end)
+
+    it("showing a button toolbar again does not stack another copy of its buttons", function()
+      if not os.getenv("MUDLET_TEST_MODE") then
+        pending("the layout only settles once pumpEvents() has run")
+        return
+      end
+      local stackToolbarName = "bustedTempButtonStack" .. suffix
+      tempButtonToolbar(stackToolbarName, 0, 0)
+      tempButton(stackToolbarName, "bustedTempStackButton" .. suffix, 0)
+      -- every showToolBar() rebuilds each bar; the bars it replaced must leave
+      -- the window then and there, as this whole run is one Lua call that never
+      -- returns to the event loop that would delete them
+      assert.is_true(showToolBar(stackToolbarName))
+      pumpEvents(200)
+      local _, heightBefore = getMainWindowSize()
+      for _ = 1, 5 do
+        showToolBar(stackToolbarName)
+      end
+      pumpEvents(200)
+      local _, heightAfter = getMainWindowSize()
+      -- hidden, a bar takes no room, so later specs get their rows back
+      hideToolBar(stackToolbarName)
+      pumpEvents(200)
+      assert.are.equal(heightBefore, heightAfter)
+    end)
   end)
 
   -- The getTextFormat suites earlier in this file are largely diagnostic: they
