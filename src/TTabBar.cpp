@@ -460,6 +460,19 @@ void TTabBar::mousePressEvent(QMouseEvent* event)
     QTabBar::mousePressEvent(event);
 }
 
+// Qt moves the pressed tab past its neighbours as it is dragged, so the index
+// taken at the press would otherwise name whichever tab now sits there
+void TTabBar::slot_tabMoved(int from, int to)
+{
+    if (mDragIndex == from) {
+        mDragIndex = to;
+    } else if (from < mDragIndex && to >= mDragIndex) {
+        --mDragIndex;
+    } else if (from > mDragIndex && to <= mDragIndex) {
+        ++mDragIndex;
+    }
+}
+
 void TTabBar::mouseMoveEvent(QMouseEvent* event)
 {
     // Check if we should start a drag operation

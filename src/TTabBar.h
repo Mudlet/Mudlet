@@ -107,6 +107,7 @@ public:
     {
         setStyle(&mStyle);
         setAcceptDrops(true);
+        connect(this, &QTabBar::tabMoved, this, &TTabBar::slot_tabMoved);
     }
     ~TTabBar() = default;
 
@@ -183,6 +184,7 @@ private:
 
 private slots:
     void onDetachedTabReattach(const QString& tabName);
+    void slot_tabMoved(int from, int to);
 
 protected:
     void mousePressEvent(QMouseEvent* event) override;

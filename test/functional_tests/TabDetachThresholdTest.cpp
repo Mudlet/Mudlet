@@ -271,6 +271,36 @@ private slots:
                 qPrintable(qsl("the same %1px of vertical travel with %2px of sideways travel beside it did not reach the threshold").arg(mDiagonalVerticalDistance).arg(mDiagonalHorizontalDistance)));
     }
 
+    // Sliding a tab past its neighbour is Qt reordering the bar, and the drag
+    // that then leaves the bar downwards tears out the tab being dragged - which
+    // no longer sits at the index the press landed on
+    void test_aTabDraggedPastItsNeighbourDetachesItself()
+    {
+        const QSignalSpy detachSpy(mpTabBar, &TTabBar::tabDetachRequested);
+        const QSignalSpy movedSpy(mpTabBar, &QTabBar::tabMoved);
+        const QPoint press = mpTabBar->tabRect(0).center();
+        QCOMPARE(mpTabBar->tabAt(press), 0);
+        const QString draggedProfile = mpTabBar->tabData(0).toString();
+        pressAt(press);
+
+        // Past the middle of the next tab, in steps as a real drag would make
+        const int across = mpTabBar->tabRect(1).center().x() - press.x() + mpTabBar->tabRect(1).width() / 4;
+        for (int step = 1; step <= 4; ++step) {
+            moveTo(press + QPoint(across * step / 4, 0));
+        }
+        QVERIFY2(!movedSpy.isEmpty(), "Qt did not reorder the tabs on the sideways drag, so this case cannot tell the indices apart");
+        QVERIFY(detachSpy.isEmpty());
+
+        // Measured from the press, so the sideways leg counts against the
+        // vertical share the detach asks for
+        const QPoint below = press + QPoint(across, qMax(mPastThresholdDistance, across * 3));
+        moveTo(below);
+
+        QCOMPARE(detachSpy.count(), 1);
+        QCOMPARE(mpTabBar->tabData(detachSpy.at(0).at(0).toInt()).toString(), draggedProfile);
+        sendMouse(QEvent::MouseButtonRelease, Qt::LeftButton, Qt::NoButton, below);
+    }
+
 private:
     // mouseMoveEvent() maps the local position to global itself rather than
     // reading the event's, so the two are kept consistent here
