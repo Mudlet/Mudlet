@@ -873,7 +873,7 @@ end
 --- minimizes the container
 -- hides everything beside the title
 function Adjustable.Container:minimize()
-    if self.minimized and self.locked then
+    if self.minimized then
         return
     end
     self.origh = self.height
@@ -1532,7 +1532,9 @@ function Adjustable.Container:new(cons,container)
         Adjustable.Container.all[me.name]:detach()
     end
 
+    -- minimize() skips a container already flagged as minimized
     if me.minimized then
+        me.minimized = false
         me:minimize()
     end
 

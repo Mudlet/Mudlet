@@ -111,6 +111,23 @@ describe("Tests functionality of Adjustable.Container", function()
 
       ac:delete()
     end)
+
+    it("comes up collapsed to its title bar when created minimized", function()
+      local ac = Adjustable.Container:new({
+        name = "testMinimizedContainer",
+        x = 0, y = 0, width = 200, height = 200,
+        minimized = true,
+        autoLoad = false,
+        autoSave = false
+      })
+      finally(function() ac:delete() end)
+
+      assert.is_true(ac.minimized)
+      assert.equals(tonumber(ac.buttonsize) + 10, ac:get_height())
+      assert.is_true(ac.Inside.hidden)
+      ac:restore()
+      assert.equals(200, ac:get_height())
+    end)
   end)
 
   -- Geometry, visibility and title readback, asserted on the widgets the
@@ -274,6 +291,14 @@ describe("Tests functionality of Adjustable.Container", function()
       assert.is_true(minimized.height < 200)
       -- buttonsize is stored as a string, hence the conversion
       assert.are.equal(tonumber(container.buttonsize) + 10, minimized.height)
+      container:restore()
+      assert.is_false(container.minimized)
+      assert.are.same({x = 20, y = 30, width = 200, height = 200}, geometry("gasContaineradjLabel"))
+    end)
+
+    it("keeps the height to restore to when minimized twice", function()
+      container:minimize()
+      container:minimize()
       container:restore()
       assert.is_false(container.minimized)
       assert.are.same({x = 20, y = 30, width = 200, height = 200}, geometry("gasContaineradjLabel"))
