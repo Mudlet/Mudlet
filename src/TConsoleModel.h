@@ -83,6 +83,9 @@ struct TConsoleModel
     bool moveCursor(int x, int y);
     void moveCursorEnd();
     void deleteLineAtCursor();
+    // Leaves the one empty line a cleared buffer holds, with the cursor on it. A selection is kept, now
+    // no longer valid, so replace() does not take it for no selection at all.
+    void clear();
 
     // Half-open: lines(n, n) is empty. Lines outside the buffer are left out.
     QStringList lines(int from, int to) const;
