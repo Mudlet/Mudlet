@@ -9463,6 +9463,9 @@ int TLuaInterpreter::setConfig(lua_State* L)
     }
     if (key == qsl("commandLineHistorySaveSize")) {
         const auto value = getVerifiedInt(L, __func__, 2, "value");
+        if (value < 0 || value > 1000000) {
+            return warnArgumentValue(L, __func__, qsl("commandLineHistorySaveSize %1 is outside of the supported range of 0 to 1000000").arg(value));
+        }
         host.setCommandLineHistorySaveSize(value);
         return success();
     }

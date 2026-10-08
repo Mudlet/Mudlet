@@ -6411,9 +6411,10 @@ void Host::setMxpBorders(const QMargins borders)
 
 void Host::setCommandLineHistorySaveSize(const int lines)
 {
-    if (mCommandLineHistorySaveSize != lines) {
-        mCommandLineHistorySaveSize = lines;
-    }
+    // Clamped to the range setConfig() takes, as a profile saved before that
+    // check can carry anything: a negative size would save the whole history
+    // and INT_MAX would overflow the "+ 1" in TCommandLine::slot_saveHistory()
+    mCommandLineHistorySaveSize = qBound(0, lines, 1000000);
 }
 
 QString Host::getEditorTheme() const

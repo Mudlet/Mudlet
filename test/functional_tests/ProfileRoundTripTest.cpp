@@ -603,6 +603,10 @@ private slots:
             legacyXml.replace(from, to);
         }
 
+        // Any size at all was taken before setConfig() range-checked it
+        QVERIFY(legacyXml.count(qsl("CommandLineHistorySaveSize=\"500\"")) == 1);
+        legacyXml.replace(qsl("CommandLineHistorySaveSize=\"500\""), qsl("CommandLineHistorySaveSize=\"-5\""));
+
         QTemporaryDir legacyDir;
         QVERIFY(legacyDir.isValid());
         const QString legacyPath = qsl("%1/legacy.xml").arg(legacyDir.path());
@@ -806,6 +810,7 @@ private slots:
         QCOMPARE(mpLegacyTarget->getControlCharacterMode(), ControlCharacterMode::OEM);
         QCOMPARE(mpLegacyTarget->getWideAmbiguousEAsianGlyphsControlState(), Qt::Unchecked);
         QVERIFY(!mpLegacyTarget->getLargeAreaExitArrows());
+        QCOMPARE(mpLegacyTarget->getCommandLineHistorySaveSize(), 0);
     }
 
     // A persistent stopwatch comes back under its own name, still running or

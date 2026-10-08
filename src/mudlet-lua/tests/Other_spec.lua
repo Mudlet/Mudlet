@@ -1558,6 +1558,24 @@ describe("Tests Other.lua functions", function()
       restore("commandLineHistorySaveSize")
     end)
 
+    -- the save adds one to the size, so INT_MAX would overflow every time the
+    -- profile closes; 0 is how saving the history is turned off
+    it("refuses a commandLineHistorySaveSize below 0 or above 1000000", function()
+      snapshot("commandLineHistorySaveSize")
+      finally(function() restore("commandLineHistorySaveSize") end)
+      assert.is_true(setConfig("commandLineHistorySaveSize", 42))
+      for _, size in ipairs({-5, 1000001, 2147483647}) do
+        local ok, err = setConfig("commandLineHistorySaveSize", size)
+        assert.is_nil(ok, "a size of " .. size .. " was taken")
+        assert.equals("commandLineHistorySaveSize " .. size .. " is outside of the supported range of 0 to 1000000", err)
+        assert.equals(42, getConfig("commandLineHistorySaveSize"))
+      end
+      assert.is_true(setConfig("commandLineHistorySaveSize", 0))
+      assert.equals(0, getConfig("commandLineHistorySaveSize"))
+      assert.is_true(setConfig("commandLineHistorySaveSize", 1000000))
+      assert.equals(1000000, getConfig("commandLineHistorySaveSize"))
+    end)
+
     -- A script saving the settings it changes and putting them back afterwards
     -- hands getConfig()'s answer straight back to setConfig(), so both have to
     -- speak the same unit - otherwise the rooms shrink every time it does.
