@@ -619,6 +619,43 @@ private slots:
         manager->close();
         QTRY_VERIFY_WITH_TIMEOUT(settle() && manager.isNull(), 15s);
     }
+
+    void test_aPackageMissingFromTheIndexSaysSo_10948_data()
+    {
+        QTest::addColumn<bool>("inUpdates");
+        QTest::newRow("Explore") << false;
+        QTest::newRow("Updates") << true;
+    }
+
+    // A row can outlive the index entry it was made from, and choosing it then
+    // has to say why there is nothing to show rather than leave the pane blank,
+    // or offer links and an icon for a package the index cannot name.
+    void test_aPackageMissingFromTheIndexSaysSo_10948()
+    {
+        QFETCH(bool, inUpdates);
+        mpProxy->setAnswer(StubProxy::Answer::Refuse);
+
+        QPointer<dlgPackageManager> manager = openManagerListing({repositoryEntry(qsl("listed-package"), qsl("listed-package.mpackage"))});
+        QVERIFY(manager);
+        if (inUpdates) {
+            manager->pushButton_updates->click();
+        }
+        manager->packageList->addItem(qsl("vanished-package"));
+        const auto rows = manager->packageList->findItems(qsl("vanished-package"), Qt::MatchExactly);
+        QCOMPARE(rows.size(), 1);
+        const qsizetype requestsBefore = manager->findChildren<QNetworkAccessManager*>().size();
+
+        manager->packageList->setCurrentItem(rows.constFirst());
+
+        const QString shown = manager->packageDescription->toPlainText();
+        QVERIFY2(shown.contains(qsl("vanished-package")), qPrintable(qsl("The details pane did not say what became of the package, it held: \"%1\"").arg(shown)));
+        QVERIFY2(manager->pushButton_website->isHidden(), "The website button was offered for a package the index does not list");
+        QVERIFY2(manager->pushButton_report->isHidden(), "The report button was offered for a package the index does not list");
+        QVERIFY2(manager->findChildren<QNetworkAccessManager*>().size() == requestsBefore, "An icon was requested for a package the index does not list");
+
+        manager->close();
+        QTRY_VERIFY_WITH_TIMEOUT(settle() && manager.isNull(), 15s);
+    }
 };
 
 #include "PackageRepositoryDownloadTest.moc"

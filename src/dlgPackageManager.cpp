@@ -614,22 +614,24 @@ void dlgPackageManager::slot_itemChanged(QListWidgetItem* pItem)
         fillPackageDetails(packageName, packageInfo.value(qsl("title")), packageInfo.value(qsl("author")), packageInfo.value(qsl("version")));
 
     } else if (mCurrentView == NavigationView::Explore) {
-        pushButton_website->show();
-        pushButton_report->show();
-        downloadIcon(packageName);
-
         if (packageLookup.contains(packageName)) {
+            pushButton_website->show();
+            pushButton_report->show();
+            downloadIcon(packageName);
+
             QJsonObject packageObj = packageLookup.value(packageName);
             fillPackageDetails(
                     packageObj.value(qsl("mpackage")).toString(), packageObj.value(qsl("title")).toString(), packageObj.value(qsl("author")).toString(), packageObj.value(qsl("version")).toString());
             packageDescription->setMarkdown(packageObj.value(qsl("description")).toString());
+        } else {
+            showMissingFromIndex(packageName);
         }
     } else if (mCurrentView == NavigationView::Updates) {
-        pushButton_website->show();
-        pushButton_report->show();
-        downloadIcon(packageName);
-
         if (packageLookup.contains(packageName)) {
+            pushButton_website->show();
+            pushButton_report->show();
+            downloadIcon(packageName);
+
             QJsonObject packageObj = packageLookup.value(packageName);
             const auto packageInfo = mpHost->mPackageInfo.value(packageName);
             const QString installedVersion = packageInfo.value(qsl("version"));
@@ -641,6 +643,8 @@ void dlgPackageManager::slot_itemChanged(QListWidgetItem* pItem)
             label_version->setText(tr("Version %1 → %2").arg(installedVersion, repoVersion));
 
             packageDescription->setMarkdown(packageObj.value(qsl("description")).toString());
+        } else {
+            showMissingFromIndex(packageName);
         }
     }
 }
@@ -988,6 +992,14 @@ void dlgPackageManager::showImportStatus(const QString& message)
     label_importStatus->setStyleSheet(qsl("QLabel { padding: 8px; }"));
     label_importStatus->show();
     QTimer::singleShot(4s, label_importStatus, &QWidget::hide);
+}
+
+// A row whose package the index no longer lists: the list predates the index it is checked against
+void dlgPackageManager::showMissingFromIndex(const QString& packageName)
+{
+    qWarning() << "dlgPackageManager::showMissingFromIndex() WARNING - package not found in the repository index:" << packageName;
+    //: Package manager - shown in the details pane when the selected package is not in the downloaded package index. %1 is the package name
+    packageDescription->setPlainText(tr("The details of '%1' could not be found in the package index. It may have been renamed or removed; try reopening the package manager.").arg(packageName));
 }
 
 void dlgPackageManager::updateUpdatesBadge()
