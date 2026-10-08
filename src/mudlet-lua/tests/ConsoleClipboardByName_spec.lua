@@ -71,8 +71,8 @@ describe("Tests that the clipboard and buffer size functions find their console 
     return last, getLines("main", last, last + 1)[1]
   end
 
-  it("answers nothing to pasteWindow() of a name that is no window at all", function()
-    assert.are.equal(0, select("#", pasteWindow(unknown)))
+  it("refuses pasteWindow() of a name that is no window at all", function()
+    assert.are.same({nil, ('window "%s" not found'):format(unknown)}, {pasteWindow(unknown)})
   end)
 
   it("refuses a name that is no window at all", function()
@@ -350,7 +350,7 @@ describe("Tests that the clipboard and buffer size functions find their console 
         copyToClipboard("specClipboardByNamePasteWindow" .. suffix)
         moveCursorEnd("main")
         local last, line = mainTail()
-        assert.are.equal(0, select("#", pasteWindow(name)))
+        assert.are.same({nil, ('window "%s" not found'):format(name)}, {pasteWindow(name)})
         assert.are.same({last, line}, {mainTail()})
       end)
     end

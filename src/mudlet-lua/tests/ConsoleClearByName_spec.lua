@@ -1,7 +1,7 @@
 -- clearWindow() finds its console by name: none, an empty name or "main" is
 -- the main console, and any other is a mini console, user window or buffer.
--- It answers nothing whether or not it found one, so that clearing the main
--- console from the command line does not print a result onto it.
+-- It answers nothing when it found one, so that clearing the main console from
+-- the command line does not print a result onto it.
 describe("Tests that clearWindow() finds its console by name", function()
   local suffix = ("-%d-%d"):format(os.time(), math.random(100000))
   local unknown = "specClearByNameNoSuchWindow" .. suffix
@@ -59,10 +59,10 @@ describe("Tests that clearWindow() finds its console by name", function()
     assert.has_error(function() clearWindow(true) end)
   end)
 
-  it("answers nothing and clears nothing for a name that is no window at all", function()
+  it("refuses and clears nothing for a name that is no window at all", function()
     local mainLast = getLastLineNumber("main")
     local siblingLast = getLastLineNumber(sibling)
-    assert.are.equal(0, select("#", clearWindow(unknown)))
+    assert.are.same({nil, ('window "%s" not found'):format(unknown)}, {clearWindow(unknown)})
     assert.are.equal(mainLast, getLastLineNumber("main"))
     assert.are.equal(siblingLast, getLastLineNumber(sibling))
   end)
@@ -85,11 +85,11 @@ describe("Tests that clearWindow() finds its console by name", function()
     }
 
     for _, kind in ipairs(kinds) do
-      it("answers nothing and clears nothing for a " .. kind[1], function()
+      it("refuses and clears nothing for a " .. kind[1], function()
         assert.is_true(kind[2]())
         local mainLast = getLastLineNumber("main")
         local siblingLast = getLastLineNumber(sibling)
-        assert.are.equal(0, select("#", clearWindow(otherName)))
+        assert.are.same({nil, ('window "%s" not found'):format(otherName)}, {clearWindow(otherName)})
         assert.are.equal(mainLast, getLastLineNumber("main"))
         assert.are.equal(siblingLast, getLastLineNumber(sibling))
       end)

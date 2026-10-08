@@ -29,8 +29,8 @@ describe("Tests that the timestamp and wrap functions find their console by name
     end
   end
 
-  -- wrapLine() answers nothing whichever console it rewraps, so check that the
-  -- name did not reach the main console by giving it a line wrapLine() would split
+  -- check that a refused name did not reach the main console by giving it a
+  -- line wrapLine() would split
   local function assertLeavesMainAlone(windowName)
     local mainWrap = getWindowWrap("main")
     finally(function() setWindowWrap("main", mainWrap) end)
@@ -48,7 +48,7 @@ describe("Tests that the timestamp and wrap functions find their console by name
 
     setWindowWrap("main", 20)
     local before = getLines("main", line, getLineCount())
-    assert.are.equal(0, select("#", wrapLine(windowName, line)))
+    assert.are.same({nil, ('window "%s" not found'):format(windowName)}, {wrapLine(windowName, line)})
     assert.are.same(before, getLines("main", line, getLineCount()))
   end
 
@@ -92,7 +92,7 @@ describe("Tests that the timestamp and wrap functions find their console by name
     end
   end)
 
-  it("answers nothing from wrapLine() for a name that is no window at all", function()
+  it("refuses wrapLine() for a name that is no window at all", function()
     assertLeavesMainAlone(unknown)
   end)
 

@@ -353,8 +353,7 @@ int TLuaInterpreter::calcFontSize(lua_State* L)
     }
 
     if (size.width() <= -1) {
-        lua_pushnil(L);
-        return 1;
+        return windowNotFound(L, windowName);
     }
 
     lua_pushnumber(L, size.width());
@@ -388,11 +387,12 @@ int TLuaInterpreter::clearUserWindow(lua_State* L)
     }
 
     Host& host = getHostFromLua(L);
-    host.clearWindow(windowName);
-    // Note that exceptionally THIS function does not return a true/nil+error
-    // message on failure - because on success this could plonk a "true" on the
-    // main screen if run from the command line - which sort of messes with the
-    // idea of clearing it of text!
+    if (!host.clearWindow(windowName)) {
+        return windowNotFound(L, windowName);
+    }
+    // Note that exceptionally THIS function does not return true on success -
+    // because this could plonk a "true" on the main screen if run from the
+    // command line - which sort of messes with the idea of clearing it of text!
     return 0;
 }
 
@@ -951,8 +951,13 @@ int TLuaInterpreter::disableClickthrough(lua_State* L)
     const QString windowName{WINDOW_NAME(L, 1)};
 
     Host& host = getHostFromLua(L);
+    if (!host.mpConsole) {
+        return warnArgumentValue(L, __func__, no_main_window_value);
+    }
 
-    host.setClickthrough(windowName, false);
+    if (!host.setClickthrough(windowName, false)) {
+        return warnArgumentValue(L, __func__, qsl("label name '%1' not found").arg(windowName));
+    }
     return 0;
 }
 
@@ -1108,7 +1113,9 @@ int TLuaInterpreter::echoUserWindow(lua_State* L)
     const char* windowName = WINDOW_NAME(L, 1);
     const QString text = getVerifiedString(L, __func__, 2, "text");
     Host& host = getHostFromLua(L);
-    host.echoWindow(QString{windowName}, text);
+    if (!host.echoWindow(QString{windowName}, text)) {
+        return windowNotFound(L, QString{windowName});
+    }
     return 0;
 }
 
@@ -1174,8 +1181,13 @@ int TLuaInterpreter::enableClickthrough(lua_State* L)
     const QString windowName{WINDOW_NAME(L, 1)};
 
     Host& host = getHostFromLua(L);
+    if (!host.mpConsole) {
+        return warnArgumentValue(L, __func__, no_main_window_value);
+    }
 
-    host.setClickthrough(windowName, true);
+    if (!host.setClickthrough(windowName, true)) {
+        return warnArgumentValue(L, __func__, qsl("label name '%1' not found").arg(windowName));
+    }
     return 0;
 }
 
@@ -1361,7 +1373,10 @@ int TLuaInterpreter::getBgColor(lua_State* L)
     }
 
     auto pModel = getHostFromLua(L).consoleModelNamed(windowName);
-    const TChar* pChar = pModel ? pModel->selectionStartChar() : nullptr;
+    if (!pModel) {
+        return windowNotFound(L, windowName);
+    }
+    const TChar* pChar = pModel->selectionStartChar();
     if (!pChar) {
         return 0;
     }
@@ -1492,7 +1507,10 @@ int TLuaInterpreter::getFgColor(lua_State* L)
     }
 
     auto pModel = getHostFromLua(L).consoleModelNamed(windowName);
-    const TChar* pChar = pModel ? pModel->selectionStartChar() : nullptr;
+    if (!pModel) {
+        return windowNotFound(L, windowName);
+    }
+    const TChar* pChar = pModel->selectionStartChar();
     if (!pChar) {
         return 0;
     }
@@ -2055,7 +2073,12 @@ int TLuaInterpreter::hideWindow(lua_State* L)
     const QString text = getVerifiedString(L, __func__, 1, "name");
 
     Host& host = getHostFromLua(L);
-    host.hideWindow(text);
+    if (!host.mpConsole) {
+        return warnArgumentValue(L, __func__, no_main_window_value);
+    }
+    if (!host.hideWindow(text)) {
+        return windowNotFound(L, text);
+    }
 
     return 0;
 }
@@ -2411,7 +2434,12 @@ int TLuaInterpreter::moveWindow(lua_State* L)
     const double y1 = getVerifiedDouble(L, __func__, 3, "y");
     const QString text{lua_tostring(L, 1)};
     Host& host = getHostFromLua(L);
-    host.moveWindow(text, static_cast<int>(x1), static_cast<int>(y1));
+    if (!host.mpConsole) {
+        return warnArgumentValue(L, __func__, no_main_window_value);
+    }
+    if (!host.moveWindow(text, static_cast<int>(x1), static_cast<int>(y1))) {
+        return windowNotFound(L, text);
+    }
     return 0;
 }
 
@@ -2639,7 +2667,12 @@ int TLuaInterpreter::resizeWindow(lua_State* L)
     const double y1 = getVerifiedDouble(L, __func__, 3, "height");
     const QString text{lua_tostring(L, 1)};
     Host& host = getHostFromLua(L);
-    host.resizeWindow(text, static_cast<int>(x1), static_cast<int>(y1));
+    if (!host.mpConsole) {
+        return warnArgumentValue(L, __func__, no_main_window_value);
+    }
+    if (!host.resizeWindow(text, static_cast<int>(x1), static_cast<int>(y1))) {
+        return windowNotFound(L, text);
+    }
     return 0;
 }
 
@@ -4532,15 +4565,18 @@ int TLuaInterpreter::wrapLine(lua_State* L)
     Host& host = getHostFromLua(L);
     if (!host.mpConsole) {
         // Sub-windows die with the view, but the main buffer is the model's and keeps the view's wrap settings.
-        if (isMain(windowName)) {
-            TBuffer& buffer = host.mainConsoleModel().buffer;
-            buffer.wrapLine(lineNumber, buffer.mWrapAt, buffer.mWrapIndent, buffer.mWrapHangingIndent);
+        if (!isMain(windowName)) {
+            return windowNotFound(L, windowName);
         }
+        TBuffer& buffer = host.mainConsoleModel().buffer;
+        buffer.wrapLine(lineNumber, buffer.mWrapAt, buffer.mWrapIndent, buffer.mWrapHangingIndent);
         return 0;
     }
-    if (auto pModel = host.consoleModelNamed(windowName)) {
-        pModel->wrapLine(lineNumber);
+    auto pModel = host.consoleModelNamed(windowName);
+    if (!pModel) {
+        return windowNotFound(L, windowName);
     }
+    pModel->wrapLine(lineNumber);
     return 0;
 }
 
@@ -4553,7 +4589,9 @@ int TLuaInterpreter::pasteWindow(lua_State* L)
     }
     const QString windowName{WINDOW_NAME(L, 1)};
     Host& host = getHostFromLua(L);
-    host.pasteWindow(windowName);
+    if (!host.pasteWindow(windowName)) {
+        return windowNotFound(L, windowName);
+    }
     return 0;
 }
 
