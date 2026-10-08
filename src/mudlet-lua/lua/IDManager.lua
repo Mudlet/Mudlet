@@ -16,14 +16,29 @@ function IDMgr:register(name, typ, object)
     triggers = tempTrigger,
     regexTriggers = tempRegexTrigger
   }
-  self:stop(name, typ)
   local trigger, func, oneShot = object.trigger, object.func, object.oneShot
   local register = reg[typ]
-  local ok, err = pcall(register, trigger, func, oneShot)
+  local ok, id, refusal = pcall(register, trigger, func, oneShot)
   if not ok then
-    return nil, err
+    return nil, id
   end
-  object.handlerID = err
+  -- a creator that refuses, such as tempTimer given code that does not compile, answers -1 and why
+  if id == -1 then
+    return nil, refusal
+  end
+  -- registerAnonymousEventHandler answers with the existing id for a function name already on the
+  -- event, and that handler keeps its own one-shot setting, so a change of it needs a fresh handler
+  local current = self[typ][name]
+  if not current or current.handlerID ~= id then
+    self:stop(name, typ)
+  elseif not current.oneShot ~= not oneShot then
+    self:stop(name, typ)
+    ok, id = pcall(register, trigger, func, oneShot)
+    if not ok then
+      return nil, id
+    end
+  end
+  object.handlerID = id
   self[typ][name] = object
   return true
 end
@@ -256,6 +271,11 @@ end
 local function extractUpstreamError(funcName, err)
   local splitPattern = string.format("%s: ", funcName)
   local errMsg = err:split(splitPattern)[2]
+  -- a refusal rather than a bad argument: it has no argument number to shift, and
+  -- may quote the user's own code or pattern
+  if not errMsg then
+    return err
+  end
   local argNumber = tonumber(errMsg:match("#(%d+)"))
   if argNumber then
     errMsg = errMsg:gsub("#" .. argNumber, "#" .. (argNumber + 2))

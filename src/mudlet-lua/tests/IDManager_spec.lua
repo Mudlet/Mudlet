@@ -56,6 +56,52 @@ describe("Tests the functionality of IDMgr", function()
         assert.is_equal(handlerName2, handlerList2[1])
         deleteAllNamedEventHandlers(user2)
       end)
+
+      it("Should leave the working handler alone when a re-registration fails", function()
+        assert.is_true(registerNamedEventHandler(user, handlerName, eventName, func))
+        assert.has_error(function() registerNamedEventHandler(user, handlerName, eventName, 42) end)
+        raiseEvent(eventName)
+        assert.spy(handlerSpy).was_called(1)
+        assert.are.same({handlerName}, getNamedEventHandlers(user))
+      end)
+
+      it("Should keep a handler given as a function name firing when it is registered again", function()
+        _G.IDMgrSpecNamedHandler = func
+        finally(function() _G.IDMgrSpecNamedHandler = nil end)
+        assert.is_true(registerNamedEventHandler(user, handlerName, eventName, "IDMgrSpecNamedHandler"))
+        assert.is_true(registerNamedEventHandler(user, handlerName, eventName, "IDMgrSpecNamedHandler"))
+        raiseEvent(eventName)
+        assert.spy(handlerSpy).was_called(1)
+      end)
+
+      it("Should make a handler given as a function name one-shot when it is registered again as one", function()
+        _G.IDMgrSpecNamedHandler = func
+        finally(function() _G.IDMgrSpecNamedHandler = nil end)
+        assert.is_true(registerNamedEventHandler(user, handlerName, eventName, "IDMgrSpecNamedHandler"))
+        assert.is_true(registerNamedEventHandler(user, handlerName, eventName, "IDMgrSpecNamedHandler", true))
+        raiseEvent(eventName)
+        raiseEvent(eventName)
+        assert.spy(handlerSpy).was_called(1)
+      end)
+
+      it("Should make a one-shot handler given as a function name lasting when it is registered again", function()
+        _G.IDMgrSpecNamedHandler = func
+        finally(function() _G.IDMgrSpecNamedHandler = nil end)
+        assert.is_true(registerNamedEventHandler(user, handlerName, eventName, "IDMgrSpecNamedHandler", true))
+        assert.is_true(registerNamedEventHandler(user, handlerName, eventName, "IDMgrSpecNamedHandler"))
+        raiseEvent(eventName)
+        raiseEvent(eventName)
+        assert.spy(handlerSpy).was_called(2)
+      end)
+
+      it("Should keep a running handler given as a function name firing when it is resumed", function()
+        _G.IDMgrSpecNamedHandler = func
+        finally(function() _G.IDMgrSpecNamedHandler = nil end)
+        assert.is_true(registerNamedEventHandler(user, handlerName, eventName, "IDMgrSpecNamedHandler"))
+        resumeNamedEventHandler(user, handlerName)
+        raiseEvent(eventName)
+        assert.spy(handlerSpy).was_called(1)
+      end)
     end)
 
     describe("Tests the functionality of stopNamedEventHandler", function()
@@ -198,6 +244,16 @@ describe("Tests the functionality of IDMgr", function()
     end)
 
     describe("Tests registering, stopping and deleting named timers", function()
+      it("Should keep the running timer when the new code does not compile", function()
+        assert.is_true(registerNamedTimer(user, timerName, time, function() end))
+        local register = function()
+          registerNamedTimer(user, timerName, time, "echo('#1 unclosed")
+        end
+        assert.error_matches(register, "echo('#1 unclosed", nil, true)
+        local remaining = remainingNamedTimer(user, timerName)
+        assert.is_true(type(remaining) == "number" and remaining > 0, "the running timer should be left alone, got " .. tostring(remaining))
+      end)
+
       it("Should register a named timer and list it as active", function()
         local ok = registerNamedTimer(user, timerName, time, function() end)
         assert.is_true(ok)
@@ -806,11 +862,18 @@ describe("Tests the functionality of IDMgr", function()
         assert.are.same({}, mgr:getTimers())
       end)
 
-      -- BUG: IDMgr:register stops whatever is registered under the name before
-      -- it tries the new registration, and puts nothing back when that fails,
-      -- so a re-registration with a bad argument kills a working timer while
-      -- leaving the name in getTimers() looking registered.
-      pending("Should leave the running timer alone when a re-registration fails")
+      it("Should leave the running timer alone when a re-registration fails", function()
+        mgr:registerTimer("timer", 5000, function() end)
+        local firstID = mgr.timers["timer"].handlerID
+
+        local ok, err = mgr:registerTimer("timer", "not a number", function() end)
+
+        assert.is_nil(ok)
+        assert.is_string(err)
+        assert.are.equal(firstID, mgr.timers["timer"].handlerID)
+        assert.is_number(remainingTime(firstID), "the failed re-registration must not kill the working timer")
+        assert.are.same({"timer"}, mgr:getTimers())
+      end)
     end)
 
     describe("Tests the functionality of IDMgr:stopTimer", function()
