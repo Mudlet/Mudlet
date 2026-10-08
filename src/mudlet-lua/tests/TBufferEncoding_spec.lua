@@ -979,6 +979,25 @@ describe("Tests a character whose bytes are split by the posting timeout", funct
     assert.same({"", ":end"}, perLine)
   end)
 
+  it("adds no line for the marker when blank lines are replaced with a space", function()
+    if timerUnavailable() then return end
+    -- the text is ASCII, so the encoding can stay as it is and this test's one
+    -- finally() is free to put the setting back
+    local original = getConfig("blankLinesBehaviour")
+    finally(function() setConfig("blankLinesBehaviour", original) end)
+    setConfig("blankLinesBehaviour", "replacewithspace")
+
+    -- The marker only ends a line that has text on it; with none it is not a
+    -- blank line the game sent, so it must not become a line of one space -
+    -- see issue #10934. The game's own blank line still does.
+    local mark = getLastLineNumber("main")
+    feed("blank:one\n")
+    beQuiet()
+    feed("blank:two\n\n")
+    beQuiet()
+    assert.same({"blank:one", "blank:two", " ", ""}, getLines("main", mark, getLastLineNumber("main") + 1))
+  end)
+
   it("spends a held character set designation on the byte after the pause", function()
     if timerUnavailable() then return end
     using("UTF-8")
