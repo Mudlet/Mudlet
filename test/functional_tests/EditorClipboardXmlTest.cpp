@@ -233,7 +233,7 @@ private slots:
         mpHost = TestProfile::create(mProfileName, mLocalhost, QString::number(mpServer->serverPort()));
         QVERIFY2(mpHost, "No active host available for the test.");
         QSignalSpy connectedSpy(&(mpHost->mTelnet), &cTelnet::signal_connected);
-        QVERIFY2(connectedSpy.wait(1000), "Could not connect with the host.");
+        QVERIFY2(connectedSpy.wait(1s), "Could not connect with the host.");
 
         mudlet::self()->slot_showScriptDialog();
         QTest::qWait(100ms);

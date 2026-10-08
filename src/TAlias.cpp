@@ -82,14 +82,13 @@ TAlias::~TAlias()
 
 void TAlias::setName(const QString& name)
 {
-    if (!isTemporary()) {
-        mpHost->getAliasUnit()->mLookupTable.remove(mName, this);
-    }
+    // killAlias() trusts this table to hold only current names of live aliases
+    mpHost->getAliasUnit()->mLookupTable.remove(mName, this);
     mName = name;
     mpHost->getAliasUnit()->mLookupTable.insert(name, this);
 }
 
-bool TAlias::match(const QString& haystack)
+bool TAlias::match(const QByteArray& haystack)
 {
     // Guard against re-entrancy: cleanup may have deleted this alias while
     // match() was still on the call stack
@@ -114,19 +113,12 @@ bool TAlias::match(const QString& haystack)
         return false;
     }
 
-    QSharedPointer<pcre2_code> re = mpRegex;
+    const QSharedPointer<pcre2_code>& re = mpRegex;
     if (re == nullptr) {
         return false; //regex compile error
     }
 
-    const QByteArray utf8Data = haystack.toUtf8();
-    const size_t utf8Length = utf8Data.size();
-    char* haystackC = static_cast<char*>(malloc(utf8Length + 1));
-    if (!haystackC) {
-        return false;
-    }
-    memcpy(haystackC, utf8Data.constData(), utf8Length);
-    haystackC[utf8Length] = '\0';
+    const char* haystackC = haystack.constData();
 
     // These must be initialised before any goto so the latter does not jump
     // over them:
@@ -137,7 +129,7 @@ bool TAlias::match(const QString& haystack)
     std::list<std::string> captureList;
     std::list<int> posList;
     uint32_t name_entry_size = 0;
-    int haystackCLength = strlen(haystackC);
+    const int haystackCLength = haystack.size();
     int rc = 0;
     int i = 0;
     pcre2_match_data* match_data = nullptr;
@@ -155,7 +147,9 @@ bool TAlias::match(const QString& haystack)
         goto MUD_ERROR;
     }
 
-    rc = pcre2_match(re.data(), reinterpret_cast<PCRE2_SPTR>(haystackC), haystackCLength, 0, 0, match_data, nullptr);
+    // pcre2_match() finds the JIT code itself, but only after option and argument checks repeated for every alias
+    rc = mRegexJitCompiled ? pcre2_jit_match(re.data(), reinterpret_cast<PCRE2_SPTR>(haystackC), haystackCLength, 0, 0, match_data, nullptr)
+                           : pcre2_match(re.data(), reinterpret_cast<PCRE2_SPTR>(haystackC), haystackCLength, 0, 0, match_data, nullptr);
 
     if (rc < 0) {
         goto MUD_ERROR;
@@ -170,7 +164,7 @@ bool TAlias::match(const QString& haystack)
     matchCondition = true; // alias has matched
 
     for (i = 0; i < rc; i++) {
-        char* substring_start = haystackC + ovector[2 * i];
+        const char* substring_start = haystackC + ovector[2 * i];
         int substring_length = ovector[2 * i + 1] - ovector[2 * i];
 
         std::string match;
@@ -226,7 +220,13 @@ bool TAlias::match(const QString& haystack)
             if (options == 0) {
                 break;
             }
-            ovector[1] = start_offset + 1;
+            // Past the whole character, as pcre2demo.c does: PCRE2_MATCH_INVALID_UTF
+            // matches empty at an offset inside one, a match of its own in every result
+            PCRE2_SIZE nextOffset = start_offset + 1;
+            while (nextOffset < static_cast<PCRE2_SIZE>(haystackCLength) && (static_cast<unsigned char>(haystackC[nextOffset]) & 0xC0) == 0x80) {
+                ++nextOffset;
+            }
+            ovector[1] = nextOffset;
             continue;
         }
         if (rc < 0) {
@@ -234,7 +234,7 @@ bool TAlias::match(const QString& haystack)
         }
 
         for (i = 0; i < rc; i++) {
-            char* substring_start = haystackC + ovector[2 * i];
+            const char* substring_start = haystackC + ovector[2 * i];
             int substring_length = ovector[2 * i + 1] - ovector[2 * i];
             std::string match;
             if (substring_length < 1) {
@@ -270,7 +270,6 @@ MUD_ERROR:
         }
     }
 
-    free(haystackC);
     return matchCondition;
 }
 
@@ -300,6 +299,7 @@ void TAlias::compileRegex()
             pcre2_code_deleter);
 
     if (re == nullptr) {
+        mRegexJitCompiled = false;
         mOK_init = false;
         PCRE2_UCHAR errorBuffer[256];
         pcre2_get_error_message(errorcode, errorBuffer, sizeof(errorBuffer));
@@ -310,7 +310,9 @@ void TAlias::compileRegex()
         }
         setError(qsl("<b>%1</b>").arg(tr(R"(Error: in "Pattern:", faulty regular expression, reason: "%1".)").arg(error)));
     } else {
-        pcre2_jit_compile(re.data(), PCRE2_JIT_COMPLETE);
+        // A (*NO_JIT) pattern compiles "successfully" to no JIT code, and pcre2_jit_match() then fails every subject
+        size_t jitSize = 0;
+        mRegexJitCompiled = pcre2_jit_compile(re.data(), PCRE2_JIT_COMPLETE) == 0 && pcre2_pattern_info(re.data(), PCRE2_INFO_JITSIZE, &jitSize) == 0 && jitSize > 0;
         mOK_init = true;
     }
 
