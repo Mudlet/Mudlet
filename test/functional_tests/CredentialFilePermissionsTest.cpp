@@ -288,6 +288,23 @@ private slots:
         QVERIFY2(!reachableByOthers(legacyPath), "reading the copy left by the earlier naming scheme left it readable by other accounts on this machine");
     }
 
+    // With "store passwords securely" off, the profile's password is kept in plain text in its
+    // "password" data file, which must be owner-only after a save or a read
+    void test_thePlainTextProfilePasswordIsOwnerOnly()
+    {
+#if !defined(Q_OS_UNIX)
+        QSKIP("there are no POSIX permission bits to check on this platform");
+#endif
+        const QString item = qsl("password");
+        const QString path = MudletApp::getMudletPath(enums::profileDataItemPath, mProfile, item);
+        QVERIFY(MudletApp::writeProfileData(mProfile, item, mPassword).first);
+        QVERIFY2(!reachableByOthers(path), "saving the profile's password left a file other accounts on this machine can read");
+
+        QVERIFY(openToEveryone(path));
+        QCOMPARE(MudletApp::readProfileData(mProfile, item), mPassword);
+        QVERIFY2(!reachableByOthers(path), "reading the profile's password left it readable by other accounts on this machine");
+    }
+
     // The passwords/<key>.dat pair SecureStringUtils offers on its own, which has no caller
     // in Mudlet today but writes the same kind of secret
     void test_theStandaloneSecureStringUtilsStoreIsOwnerOnlyToo()

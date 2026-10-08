@@ -4240,20 +4240,9 @@ QPair<bool, QString> Host::writeProfileData(const QString& item, const QString& 
     return MudletApp::writeProfileData(getName(), item, what);
 }
 
-// Similar to the above, a convenience for reading profile data for this host.
 QString Host::readProfileData(const QString& item)
 {
-    QFile file(MudletApp::getMudletPath(enums::profileDataItemPath, getName(), item));
-    const bool success = file.open(QIODevice::ReadOnly);
-    QString ret;
-    if (success) {
-        QDataStream ifs(&file);
-        ifs.setVersion(QDataStream::Qt_5_12);
-        ifs >> ret;
-        file.close();
-    }
-
-    return ret;
+    return MudletApp::readProfileData(getName(), item);
 }
 
 // makes fonts in a given package/module be available for Mudlet scripting

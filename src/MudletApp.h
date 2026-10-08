@@ -129,6 +129,9 @@ public:
     // a digest of the whole input, as callers file data (e.g. passwords) under it and must not collide.
     static QString sanitizeForPath(const QString& input);
 
+    // Items that hold a password in plain text, which only the owner may read
+    static bool profileDataItemHoldsSecret(const QString& item);
+
     static QString readProfileData(const QString& profile, const QString& item);
 
     // Creates the profile's directory if missing, so writing for a nonexistent profile brings it into being
