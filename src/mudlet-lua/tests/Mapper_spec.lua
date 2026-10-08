@@ -4744,10 +4744,12 @@ describe("Tests saveJsonMap and loadJsonMap", function()
       assert.is_true(setAreaUserData(area, "system.labelFont_99", "Sans|10|50|0"))
       assert.is_true(setAreaUserData(area, "system.labelOutlineColor_99", "1|2|3|255"))
       assert.is_true(setAreaUserData(area, "system.fallback_map2DZoom", "20"))
+      -- not a label id, so not a key a save writes
+      assert.is_true(setAreaUserData(area, "system.labelFont_default", "kept"))
 
       roundTrip()
 
-      assert.are.same({climate = "temperate"}, getAllAreaUserData(area))
+      assert.are.same({climate = "temperate", ["system.labelFont_default"] = "kept"}, getAllAreaUserData(area))
     end)
 
     -- TMap::readJsonColor returns QColor(red, green, blue) for a colour array of
