@@ -1179,6 +1179,68 @@ private slots:
         QCoreApplication::sendPostedEvents(nullptr, QEvent::DeferredDelete);
     }
 
+    // #11401: a dropped selection leaves mPA and mPB behind, so an action picked
+    // without one must not hand them on as though they were still selected.
+    void test_aMouseEventPickedWithoutASelectionGetsNoCoordinates()
+    {
+        TTextEdit* pane = paneShowingProse();
+        QVERIFY2(pane, "No upper pane showing the prose");
+
+        auto host = mudlet::self()->getActiveHost();
+        QVERIFY2(host->getLuaInterpreter()->compileAndExecuteScript(
+                         qsl("mouseSelectionSeen = ''\n"
+                             "function mouseSelectionTestHandler(_, _, _, startCol, startLine, endCol, endLine)\n"
+                             "  mouseSelectionSeen = string.format('%s %s %s %s', tostring(startCol), tostring(startLine), tostring(endCol), tostring(endLine))\n"
+                             "end\n"
+                             "registerAnonymousEventHandler('testMouseSelection', 'mouseSelectionTestHandler')\n"
+                             "addMouseEvent('testMouseSelectionUnique', 'testMouseSelection', 'Show the selection')\n")),
+                 "the addMouseEvent() call failed");
+
+        auto selectionTheActionSees = [&]() -> QString {
+            const QPointF pos = cellInMiddleRow(pane, 8);
+            sendMouse(pane, QEvent::MouseButtonPress, Qt::RightButton, Qt::RightButton, pos);
+            sendMouse(pane, QEvent::MouseButtonRelease, Qt::RightButton, Qt::NoButton, pos);
+            QPointer<QMenu> menu = pane->findChildren<QMenu*>().value(0);
+            if (!menu) {
+                return qsl("no menu");
+            }
+            const QList<QAction*> actions = menu->actions();
+            const auto entry = std::find_if(actions.cbegin(), actions.cend(), [](QAction* pAction) {
+                return pAction->text() == qsl("Show the selection");
+            });
+            if (entry == actions.cend()) {
+                return qsl("no entry");
+            }
+            (*entry)->trigger();
+            menu->close();
+            QCoreApplication::sendPostedEvents(nullptr, QEvent::DeferredDelete);
+
+            lua_State* L = host->getLuaInterpreter()->getLuaGlobalState();
+            lua_getglobal(L, "mouseSelectionSeen");
+            const QString seen = QString::fromUtf8(lua_tostring(L, -1));
+            lua_pop(L, 1);
+            return seen;
+        };
+
+        QCOMPARE(selectionTheActionSees(), qsl("nil nil nil nil"));
+
+        const QPointF dragStart = cellInMiddleRow(pane, 5);
+        const QPointF dragEnd = cellInMiddleRow(pane, 15);
+        sendMouse(pane, QEvent::MouseButtonPress, Qt::LeftButton, Qt::LeftButton, dragStart);
+        sendMouse(pane, QEvent::MouseMove, Qt::NoButton, Qt::LeftButton, dragEnd);
+        sendMouse(pane, QEvent::MouseButtonRelease, Qt::LeftButton, Qt::NoButton, dragEnd);
+        QVERIFY2(pane->hasSelectedText(), "the drag selected nothing");
+        const QString selected = qsl("%1 %2 %3 %4").arg(pane->mPA.x()).arg(pane->mPA.y()).arg(pane->mPB.x()).arg(pane->mPB.y());
+        QCOMPARE(selectionTheActionSees(), selected);
+
+        QTest::qWait(350ms); // long enough after the drag's press not to count as a double-click
+        const QPointF elsewhere = cellInMiddleRow(pane, 40);
+        sendMouse(pane, QEvent::MouseButtonPress, Qt::LeftButton, Qt::LeftButton, elsewhere);
+        sendMouse(pane, QEvent::MouseButtonRelease, Qt::LeftButton, Qt::NoButton, elsewhere);
+        QVERIFY2(!pane->hasSelectedText(), "the click elsewhere left the selection in place");
+        QCOMPARE(selectionTheActionSees(), qsl("nil nil nil nil"));
+    }
+
     // The menu is non-modal, so a script can remove a mouse event while its
     // entry is still showing. Picking it then indexed an empty list, so a
     // regression aborts the run rather than failing this case.

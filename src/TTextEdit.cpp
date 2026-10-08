@@ -3992,14 +3992,13 @@ void TTextEdit::slot_mouseAction(const QString& uniqueName)
     event.mArgumentList.append(mpConsole->mConsoleName);
 
     event.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
-    event.mArgumentList.append(QString::number(mPA.x()));
-    event.mArgumentTypeList.append(ARGUMENT_TYPE_NUMBER);
-    event.mArgumentList.append(QString::number(mPA.y()));
-    event.mArgumentTypeList.append(ARGUMENT_TYPE_NUMBER);
-    event.mArgumentList.append(QString::number(mPB.x()));
-    event.mArgumentTypeList.append(ARGUMENT_TYPE_NUMBER);
-    event.mArgumentList.append(QString::number(mPB.y()));
-    event.mArgumentTypeList.append(ARGUMENT_TYPE_NUMBER);
+
+    // mPA and mPB outlive a dropped selection, so without one the handler gets nils rather than old coordinates
+    const bool selected = hasSelectedText();
+    for (const int coordinate : {mPA.x(), mPA.y(), mPB.x(), mPB.y()}) {
+        event.mArgumentList.append(selected ? QString::number(coordinate) : QString());
+        event.mArgumentTypeList.append(selected ? ARGUMENT_TYPE_NUMBER : ARGUMENT_TYPE_NIL);
+    }
     mpHost->raiseEvent(event);
 }
 
