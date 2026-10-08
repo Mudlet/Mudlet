@@ -4432,6 +4432,13 @@ describe("Window and label state", function()
       assert.is_truthy(err:find("setLabelClickCallback: bad argument #2 type (function expected, got number!)", 1, true))
     end)
 
+    it("setLabelClickCallback reports why a string that does not compile was refused", function()
+      local ok, err = pcall(setLabelClickCallback, label, "this is not valid lua(")
+      assert.is_false(ok)
+      assert.is_truthy(err:find("setLabelClickCallback: bad argument #2 value (", 1, true))
+      assert.is_falsy(err:find("got nil", 1, true))
+    end)
+
     it("setLabelClickCallback rejects an empty label name", function()
       local ok, err = setLabelClickCallback("", function() end)
       assert.is_nil(ok)
