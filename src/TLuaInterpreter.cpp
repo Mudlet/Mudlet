@@ -4131,6 +4131,7 @@ void TLuaInterpreter::setMSDPTable(QString& key, const QString& string_data)
 void TLuaInterpreter::parseJSON(QString& key, const QString& string_data, const QString& protocol)
 {
     // key is in format of Blah.Blah or Blah.Blah.Bleh - we want to push & pre-create the tables as appropriate
+    const ScriptCallerScope callerScope(*this, false);
     lua_State* L = pGlobalLua;
     // Our callers push exactly the protocol's global table for us to fill in and
     // we consume it, so everything below that is the stack of whatever C

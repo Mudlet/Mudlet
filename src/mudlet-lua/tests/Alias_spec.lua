@@ -878,30 +878,37 @@ describe("Alias processing", function()
                 assert.are.equal("command_filter_step", seen.inFilter, "the filter got the alias's command back")
             end)
 
-            local commandFieldTriggerPath = getMudletHomeDir() .. "/alias-command-field-trigger.xml"
+            local function specPackagePath(name)
+                return getMudletHomeDir() .. "/" .. name .. ".xml"
+            end
 
             -- busted keeps only the last finally() a spec registers, so the spec's own
             -- calls this
-            local function uninstallCommandFieldTrigger()
+            local function uninstallSpecPackage(name)
                 -- uninstallPackage() refuses while the profile save the install
                 -- started is still running
                 local removed = false
                 for _ = 1, 100 do
-                    if uninstallPackage("alias-command-field-trigger") == true then
+                    if uninstallPackage(name) == true then
                         removed = true
                         break
                     end
                     pumpEvents(50)
                 end
-                os.remove(commandFieldTriggerPath)
+                os.remove(specPackagePath(name))
                 pumpEvents(200)
-                assert.is_true(removed, "could not uninstall the command field trigger package")
+                assert.is_true(removed, "could not uninstall the " .. name .. " package")
+            end
+
+            local function installSpecPackage(name, xml)
+                local file = assert(io.open(specPackagePath(name), "w"))
+                file:write(xml)
+                file:close()
+                assert.is_true(installPackage(specPackagePath(name)))
             end
 
             -- A trigger for "command_field_trigger" whose Command field is "command_field_sent"
-            local function installCommandFieldTrigger()
-                local file = assert(io.open(commandFieldTriggerPath, "w"))
-                file:write([[<?xml version="1.0" encoding="UTF-8"?>
+            local commandFieldTriggerXml = [[<?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE MudletPackage>
 <MudletPackage version="1.001">
 	<TriggerPackage>
@@ -935,10 +942,32 @@ describe("Alias processing", function()
 		<HiddenVariables />
 	</VariablePackage>
 </MudletPackage>
-]])
-                file:close()
-                assert.is_true(installPackage(commandFieldTriggerPath))
-            end
+]]
+
+            -- An alias for "command_field_alias" whose Command field is "command_field_sent"
+            -- and whose script reads command
+            local commandFieldAliasXml = [[<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE MudletPackage>
+<MudletPackage version="1.001">
+	<TriggerPackage />
+	<TimerPackage />
+	<AliasPackage>
+		<Alias isActive="yes" isFolder="no">
+			<name>command_field_alias</name>
+			<script>aliasSpecSeenInCommandFieldAlias = command</script>
+			<command>command_field_sent</command>
+			<packageName></packageName>
+			<regex>^command_field_alias$</regex>
+		</Alias>
+	</AliasPackage>
+	<ActionPackage />
+	<ScriptPackage />
+	<KeyPackage />
+	<VariablePackage>
+		<HiddenVariables />
+	</VariablePackage>
+</MudletPackage>
+]]
 
             -- The Command field is sent with no script in between, so the alias pass
             -- it starts is not the feeding alias's own
@@ -960,9 +989,9 @@ describe("Alias processing", function()
                     killAlias(lastId)
                     killAlias(sentId)
                     killAlias(feederId)
-                    uninstallCommandFieldTrigger()
+                    uninstallSpecPackage("alias-command-field-trigger")
                 end)
-                installCommandFieldTrigger()
+                installSpecPackage("alias-command-field-trigger", commandFieldTriggerXml)
 
                 expandFromHandler("command_field_feeder")
 
@@ -995,9 +1024,9 @@ describe("Alias processing", function()
                     killAlias(sentId)
                     killAnonymousEventHandler(handlerId)
                     killAlias(senderId)
-                    uninstallCommandFieldTrigger()
+                    uninstallSpecPackage("alias-command-field-trigger")
                 end)
-                installCommandFieldTrigger()
+                installSpecPackage("alias-command-field-trigger", commandFieldTriggerXml)
 
                 expandFromHandler("command_unmatched_sender")
 
@@ -1039,6 +1068,89 @@ describe("Alias processing", function()
                 expandFromHandler("command_before_raise")
 
                 assert.are.equal("command_before_raise", seen.inHandler, "the handler did not read the alias's command")
+            end)
+
+            it("gives an alias with a command field, run by an alias's expansion, the last command expanded", function()
+                if not os.getenv("MUDLET_TEST_MODE") then
+                    pending("uninstalling the fixture needs pumpEvents(), which does nothing outside MUDLET_TEST_MODE")
+                    return
+                end
+                _G.aliasSpecSeenInCommandFieldAlias = nil
+                local seen = {}
+                local lastId = tempAlias([[^command_field_last$]], function() end)
+                local sentId = tempAlias([[^command_field_sent$]], function()
+                    expandAlias("command_field_last", false)
+                end)
+                local outerId = tempAlias([[^command_field_outer$]], function()
+                    expandAlias("command_field_alias", false)
+                    seen.inOuter = command
+                end)
+                finally(function()
+                    killAlias(lastId)
+                    killAlias(sentId)
+                    killAlias(outerId)
+                    _G.aliasSpecSeenInCommandFieldAlias = nil
+                    uninstallSpecPackage("alias-command-field-alias")
+                end)
+                installSpecPackage("alias-command-field-alias", commandFieldAliasXml)
+
+                expandFromHandler("command_field_outer")
+
+                assert.are.equal("command_field_last", rawget(_G, "aliasSpecSeenInCommandFieldAlias"), "the alias read a command an alias its command field ran was given back")
+                assert.are.equal("command_field_outer", seen.inOuter, "the outer alias did not get its own command back")
+                assert.are.equal("command_field_last", command, "command did not end up holding the last command expanded")
+            end)
+
+            it("leaves command holding what a nested alias set it to after its own expansion", function()
+                local innerId = tempAlias([[^command_nested_set_inner$]], function() end)
+                local midId = tempAlias([[^command_nested_set_mid$]], function()
+                    expandAlias("command_nested_set_inner", false)
+                    _G.command = "command_set_by_mid"
+                end)
+                local outerId = tempAlias([[^command_nested_set_outer$]], function()
+                    expandAlias("command_nested_set_mid", false)
+                end)
+                finally(function()
+                    killAlias(innerId)
+                    killAlias(midId)
+                    killAlias(outerId)
+                end)
+
+                expandFromHandler("command_nested_set_outer")
+
+                assert.are.equal("command_set_by_mid", command, "what the nested alias set was replaced by a command it expanded")
+            end)
+
+            it("gives an alias its own command back from an expansion of several commands", function()
+                local seen = {}
+                local firstInnerId = tempAlias([[^command_split_first_inner$]], function() end)
+                local firstId = tempAlias([[^command_split_first$]], function()
+                    expandAlias("command_split_first_inner", false)
+                    seen.inFirst = command
+                end)
+                local secondInnerId = tempAlias([[^command_split_second_inner$]], function() end)
+                local secondId = tempAlias([[^command_split_second$]], function()
+                    expandAlias("command_split_second_inner", false)
+                    seen.inSecond = command
+                end)
+                local outerId = tempAlias([[^command_split_outer$]], function()
+                    expandAlias("command_split_first;;command_split_second", false)
+                    seen.inOuter = command
+                end)
+                finally(function()
+                    killAlias(firstInnerId)
+                    killAlias(firstId)
+                    killAlias(secondInnerId)
+                    killAlias(secondId)
+                    killAlias(outerId)
+                end)
+
+                expandFromHandler("command_split_outer")
+
+                assert.are.equal("command_split_first", seen.inFirst, "the first alias did not get its own command back")
+                assert.are.equal("command_split_second", seen.inSecond, "the second alias did not get its own command back")
+                assert.are.equal("command_split_outer", seen.inOuter, "the alias did not get its own command back")
+                assert.are.equal("command_split_second_inner", command, "command did not end up holding the last command expanded")
             end)
 
             it("leaves command holding the last command expanded once the alias pass is over", function()
