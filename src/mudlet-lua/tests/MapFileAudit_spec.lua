@@ -230,6 +230,56 @@ describe("Tests the audit of a damaged binary map file", function()
     end)
   end)
 
+  describe("Tests custom lines", function()
+    -- the 2D map's arithmetic overflows to infinity beyond the range of room coordinates
+    it("removes a custom line with a point outside the range of room coordinates and keeps the rest", function()
+      local area = newArea("MapFileAuditSpecOutOfRangeLine")
+      local room = newRoom(area, 0)
+      local east = newRoom(area, 1)
+      local west = newRoom(area, -1)
+      local north = newRoom(area, 2)
+      assert.is_true(setExit(room, east, "east"))
+      assert.is_true(setExit(room, west, "west"))
+      assert.is_true(setExit(room, north, "north"))
+      assert.is_true(addCustomLine(room, {{4321.25, 7, 0}}, "e", "solid line", {1, 2, 3}, true))
+      assert.is_true(addCustomLine(room, {{1234.5, 7, 0}}, "n", "solid line", {1, 2, 3}, true))
+      -- the control, with a point at the lowest room coordinate
+      assert.is_true(addCustomLine(room, {{-0.5, 0.5, 0}, {-2147483648, 0.5, 0}}, "w", "dot line", {4, 5, 6}, false))
+
+      reloadWith(function(data)
+        -- a point is two doubles, most significant byte first: 4321.25 becomes
+        -- minus infinity and 1234.5 becomes 2^31, one past the largest room coordinate
+        data = planted(data, "\64\176\225\64\0\0\0\0", "\255\240\0\0\0\0\0\0", 1)
+        return planted(data, "\64\147\74\0\0\0\0\0", "\65\224\0\0\0\0\0\0", 1)
+      end)
+
+      local lines = getCustomLines1(room) or {}
+      assert.is_nil(lines["e"])
+      assert.is_nil(lines["n"])
+      assert.is_table(lines["w"])
+      assert.are.equal("dot line", lines["w"].attributes.style)
+      assert.are.equal(-2147483648, lines["w"].points[2][1])
+    end)
+  end)
+
+  describe("Tests the 2D map zoom", function()
+    -- getMapZoom() would report infinity and the next save would keep it
+    it("gives an area whose saved zoom text reads as infinity the default zoom", function()
+      openMapWidget()
+      local area = newArea("MapFileAuditSpecInfiniteZoomText")
+      newRoom(area, 0)
+      assert.is_true(setMapZoom(4321.25, area))
+
+      reloadWith(function(data)
+        -- format 20 keeps the zoom as text in the area user data, in UTF-16;
+        -- the conversion ignores the trailing spaces that keep the length
+        return planted(data, "\0004\0003\0002\0001\000.\0002\0005", "\000i\000n\000f\000 \000 \000 \000 ", 1)
+      end, 20)
+
+      assert.are.equal(20, getMapZoom(area))
+    end)
+  end)
+
   describe("Tests room IDs", function()
     it("renumbers a room whose ID is below one and keeps its area, exits and hash", function()
       local area = newArea("MapFileAuditSpecBadRoomId")
@@ -264,6 +314,10 @@ describe("Tests the audit of a damaged binary map file", function()
       assert.are.same(expected, areaRooms)
       assert.are.equal(renumbered, getRoomExits(from)["east"])
       assert.are.equal(from, getRoomExits(renumbered)["west"])
+      -- the load recorded both entrances under the old ID, so the audit has
+      -- to record them again under the new one
+      assert.are.same({from}, getAllRoomEntrances(renumbered))
+      assert.is_truthy(table.contains(getAllRoomEntrances(from), renumbered))
       assert.are.equal(renumbered, getRoomIDbyHash("MapFileAuditSpecBadRoomHash"))
       -- and is found where it stands, not under the ID it was loaded with
       local x, y, z = getRoomCoordinates(renumbered)
@@ -325,6 +379,7 @@ describe("Tests the audit of a damaged binary map file", function()
       assert.is_not_nil(renumbered, "the room with the bad ID was lost")
       assert.is_true(renumbered >= 1)
       assert.are.same({["climb the rope"] = renumbered}, getSpecialExitsSwap(from))
+      assert.are.same({from}, getAllRoomEntrances(renumbered))
     end)
 
     it("keeps a room whose ID is below one when it loads a JSON map", function()
@@ -483,6 +538,86 @@ describe("Tests the audit of a damaged binary map file", function()
       assert.is_string(names[first])
       assert.are_not.equal("", names[first])
       assert.are.equal(names[first] .. "_001", names[second])
+    end)
+  end)
+
+  describe("Tests what a sound map keeps through a save and load", function()
+    local function sorted(list)
+      local copy = {}
+      for _, value in pairs(list or {}) do
+        copy[#copy + 1] = value
+      end
+      table.sort(copy)
+      return copy
+    end
+
+    it("lists each room that leads into a room once, whichever kind of exit it uses", function()
+      local area = newArea("MapFileAuditSpecEntrances")
+      local target = newRoom(area, 0)
+      local twoWays = newRoom(area, 1)
+      local northOnly = newRoom(area, 2)
+      local specialOnly = newRoom(area, 3)
+      local elsewhere = newRoom(area, 4)
+      assert.is_true(setExit(twoWays, target, "east"))
+      assert.is_true(setExit(twoWays, target, "up"))
+      assert.is_true(addSpecialExit(twoWays, target, "squeeze through"))
+      assert.is_true(setExit(northOnly, target, "north"))
+      assert.is_true(addSpecialExit(specialOnly, target, "climb down"))
+      assert.is_true(setExit(target, elsewhere, "west"))
+
+      reloadWith(function(data) return data end)
+
+      assert.are.same(sorted({twoWays, northOnly, specialOnly}), sorted(getAllRoomEntrances(target)))
+      assert.are.same({target}, sorted(getAllRoomEntrances(elsewhere)))
+      assert.are.same({}, sorted(getAllRoomEntrances(twoWays)))
+    end)
+
+    it("keeps a room's exit stubs and exit locks", function()
+      local area = newArea("MapFileAuditSpecStubsAndLocks")
+      local oneEach = newRoom(area, 0)
+      local several = newRoom(area, 1)
+      local neighbour = newRoom(area, 2)
+      setExitStub(oneEach, "north", true)
+      assert.is_true(setExit(oneEach, neighbour, "east"))
+      lockExit(oneEach, "east", true)
+      setExitStub(several, "north", true)
+      setExitStub(several, "south", true)
+      setExitStub(several, "up", true)
+      assert.is_true(setExit(several, neighbour, "east"))
+      assert.is_true(setExit(several, neighbour, "west"))
+      lockExit(several, "east", true)
+      lockExit(several, "west", true)
+
+      reloadWith(function(data) return data end)
+
+      assert.are.same({1}, sorted(getExitStubs1(oneEach)))
+      assert.is_true(hasExitLock(oneEach, "east"))
+      assert.are.same({1, 6, 9}, sorted(getExitStubs1(several)))
+      assert.is_true(hasExitLock(several, "east"))
+      assert.is_true(hasExitLock(several, "west"))
+    end)
+
+    it("drops a duplicated exit stub or exit lock that the file holds", function()
+      local area = newArea("MapFileAuditSpecDuplicates")
+      local room = newRoom(area, 0)
+      local neighbour = newRoom(area, 1)
+      assert.is_true(setExit(room, neighbour, "east"))
+      assert.is_true(setExit(room, neighbour, "west"))
+      lockExit(room, "east", true)
+      lockExit(room, "west", true)
+      setExitStub(room, "north", true)
+      setExitStub(room, "south", true)
+
+      -- the locks then the stubs, each a count followed by the direction codes
+      reloadWith(function(data)
+        return planted(data,
+          int32(2) .. int32(4) .. int32(5) .. int32(2) .. int32(1) .. int32(6),
+          int32(2) .. int32(4) .. int32(4) .. int32(2) .. int32(1) .. int32(1), 1)
+      end)
+
+      assert.are.same({1}, sorted(getExitStubs1(room)))
+      assert.is_true(hasExitLock(room, "east"))
+      assert.is_false(hasExitLock(room, "west"))
     end)
   end)
 end)

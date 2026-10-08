@@ -970,6 +970,29 @@ private slots:
         QCOMPARE(frameGeometry(qsl("status")), whileHidden);
     }
 
+    // An EXTERNAL frame is sized against the console, which a background tab leaves 0 wide
+    void test_externalFrameOpenedInABackgroundTabIsSizedAgainstTheConsole()
+    {
+        const QSize consoleSize = mpHost->mpConsole->size();
+        QVERIFY2(ensureSecondProfile(), "the second profile did not load");
+        // closed again here, as its tab bar would change the window every later case lays out in
+        const auto closeSecondProfile = qScopeGuard([this]() {
+            showTab(mHostname);
+            mudlet::self()->slot_closeProfileByName(mSecondHostname);
+            QTest::qWait(1000ms);
+        });
+        showTab(mSecondHostname);
+        QVERIFY2(mpHost->mpConsole->isHidden(), "the profile should be in a background tab by now");
+
+        QVERIFY(createFrame(qsl("popup"), qsl("left"), qsl("50%"), qsl("25%"), {{qsl("EXTERNAL"), qsl("true")}}));
+
+        QWidget* popup = frameWidget(qsl("popup"));
+        QVERIFY(popup);
+        // the second profile's tab bar may take a few pixels off the height the console comes back with
+        QCOMPARE(popup->width(), consoleSize.width() * 50 / 100);
+        QVERIFY2(qAbs(popup->height() - consoleSize.height() * 25 / 100) <= 20, qPrintable(qsl("popup is %1 high").arg(popup->height())));
+    }
+
     // A header opened while its profile waits in a background tab is not laid
     // out until the profile comes back, so what is nested in its tabs has to be
     // placed again then, against the pages the header finally gives them

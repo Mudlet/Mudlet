@@ -1165,6 +1165,7 @@ private:
     // Stores a boolean setting and tells scripts about it.
     void changeSetting(bool& setting, const bool state, const QString& settingName);
     void setBorders(const QMargins);
+    void recheckCommandLineSpelling();
     void installPackageFonts(const QString& packageName);
     void processGMCPDiscordStatus(const QJsonObject& discordInfo);
     void processGMCPDiscordInfo(const QJsonObject& discordInfo);
@@ -1239,6 +1240,9 @@ private:
     // A stack because installs nest and a self-reloading module is on it twice, so what comes off has to be
     // what this call put on rather than whatever carries the name.
     QStack<QString> mPackagesBeingInstalled;
+    // installPackage() calls under way, from the save-in-progress check to the return - which the save a
+    // package change owes waits for - see slot_saveProfileAfterPackageChange()
+    int mPackageInstallsInProgress = 0;
     // What those scripts asked for, carried out by
     // runUninstallsDeferredByAnInstall() once the outermost install has finished
     // and the install events it queued have gone out.

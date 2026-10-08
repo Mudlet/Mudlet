@@ -276,6 +276,25 @@ private slots:
         QCOMPARE(updates.constFirst().width(), withoutGutter - TBuffer::smTimeStampFormat.size());
     }
 
+    // A wrap width no wider than the gutter leaves the game a single column,
+    // never a width of 0 or one that wraps round to a very wide window.
+    void aWrapNarrowerThanTheGutterReportsOneColumn()
+    {
+        settle(800ms);
+        const int wrapBefore = mpHost->mWrapAt;
+        mpHost->mpConsole->slot_toggleTimeStamps(true);
+        settle(800ms);
+
+        mpServer->clearNawsUpdates();
+        runLua(mpHost, qsl("setWindowWrap('main', 5)"));
+        settle(800ms);
+        const auto updates = mpServer->nawsUpdates();
+        runLua(mpHost, qsl("setWindowWrap('main', %1)").arg(wrapBefore));
+
+        QVERIFY2(!updates.isEmpty(), describe(updates).constData());
+        QCOMPARE(updates.constLast().width(), 1);
+    }
+
     // A profile in a background tab has its own borders and its own font, so
     // the console on screen says nothing about how much room it has. Whatever
     // it is told while it waits has to be what it finds when it comes back:
