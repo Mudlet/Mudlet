@@ -4742,6 +4742,25 @@ describe("Tests saveJsonMap and loadJsonMap", function()
       assert.are.same({["mapper.spec.exported"] = "A"}, getAllMapUserData())
     end)
 
+    it("empties the map user data when the file has none", function()
+      deleteMap()
+      local area = addAreaName("MapperSpecJsonNoMapDataArea")
+      roomA = createRoomID(); addRoom(roomA); setRoomArea(roomA, area)
+      clearMapUserData()
+      finally(clearMapUserData)
+      -- an export with no map user data leaves the field out altogether
+      assert.is_true(saveJsonMap(jsonPath))
+      local file = assert(io.open(jsonPath, "r"))
+      assert.is_nil(yajl.to_value(file:read("*a")).userData)
+      file:close()
+
+      deleteMap()
+      assert.is_true(setMapUserData("mapper.spec.replaced", "B"))
+      assert.is_true(loadJsonMap(jsonPath))
+
+      assert.are.same({}, getAllMapUserData())
+    end)
+
   end)
 
   describe("Tests the saveJsonMap and loadJsonMap argument contract", function()
