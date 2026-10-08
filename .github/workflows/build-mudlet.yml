@@ -812,13 +812,15 @@ jobs:
   # until GitHub's least-recently-used eviction, which is as likely to drop a
   # current entry that only development builds restore. The Windows workflow
   # saves under the same scheme and is swept here too.
+  # Deliberately not `needs: compile-mudlet`: that would queue it for a runner only
+  # once the slowest leg ends, often long after later pushes have built. Started
+  # alongside the builds, it keeps the previous push's entries, which they restore.
   prune-superseded-ccache:
     name: Delete superseded ccache entries
-    needs: compile-mudlet
     # Skipped on PTBs, which save no ccache. A failed sweep must not fail the run:
     # releases from development are built from whichever platforms' runs succeeded.
     if: >-
-      always() && github.repository_owner == 'Mudlet' && github.ref == 'refs/heads/development'
+      github.repository_owner == 'Mudlet' && github.ref == 'refs/heads/development'
       && github.event_name != 'schedule' && github.event.inputs.scheduled != 'true'
     continue-on-error: true
     runs-on: ubuntu-latest
