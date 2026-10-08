@@ -525,11 +525,11 @@ private slots:
         QVERIFY2(host->mpConsole, "The active host has no main console.");
         destroyTheView(host);
 
-        const bool savedMirrorToStdOut = mudlet::smMirrorToStdOut;
+        const bool savedMirrorToStdOut = MudletApp::smMirrorToStdOut;
         auto restoreMirrorToStdOut = qScopeGuard([savedMirrorToStdOut]() {
-            mudlet::smMirrorToStdOut = savedMirrorToStdOut;
+            MudletApp::smMirrorToStdOut = savedMirrorToStdOut;
         });
-        mudlet::smMirrorToStdOut = true;
+        MudletApp::smMirrorToStdOut = true;
         startStdOutCapture();
         host->printToMainConsole(qsl("ViewlessOpen"));
         std::string gameLines{"ViewlessGame one\nViewlessGame two\n"};
@@ -537,7 +537,7 @@ private slots:
         std::string prompt{"ViewlessPrompt> \xff"};
         host->printOnDisplay(prompt, true);
         host->printSystemMessage(qsl("ViewlessAfter\n"));
-        mudlet::smMirrorToStdOut = false;
+        MudletApp::smMirrorToStdOut = false;
         const QStringList captured = stopStdOutCapture();
 
         const QString prefix = qsl("%1.main| ").arg(mHostname);
@@ -751,6 +751,77 @@ private slots:
         // Both watchdog phases have to have run, or something other than the
         // watchdog wrote it out.
         QVERIFY2(sinceFeed.elapsed() >= 2 * TBuffer::MAX_TAG_TIMEOUT_MS - 100, qPrintable(qsl("The tag was written out after %1ms, before the watchdog could have.").arg(sinceFeed.elapsed())));
+    }
+
+    // The line the watchdog writes out came from the game, so its triggers have
+    // to run in trigger context: replace() shifting the capture positions is
+    // one of the things that depends on it.
+    void test_aStalledMxpTagLineRunsItsTriggersInTriggerContext()
+    {
+        startProfile();
+        auto host = mudlet::self()->getActiveHost();
+        QVERIFY2(host, "No active host available for the test.");
+        QVERIFY2(host->mpConsole, "The active host has no main console.");
+
+        runLua(host,
+               qsl("wdogCapture = 'trigger never ran'\n"
+                   "wdogTriggerId = tempRegexTrigger([[^WDOGCTX (<\\w+)]], function()\n"
+                   "  selectString('WDOGCTX', 1)\n"
+                   "  replace('WDOGCONTEXT')\n"
+                   "  selectCaptureGroup(2)\n"
+                   "  wdogCapture = getSelection()\n"
+                   "  deselect()\n"
+                   "end)"));
+        QTest::qWait(1000ms);
+        TBuffer& buffer = host->mainConsoleModel().buffer;
+        QElapsedTimer sinceFeed;
+        sinceFeed.start();
+        feedStalledMxpTag(host, buffer, "WDOGCTX <send");
+
+        QVERIFY2(QTest::qWaitFor(
+                         [&]() {
+                             return luaGlobalString(host, "wdogCapture") != qsl("trigger never ran");
+                         },
+                         8s),
+                 "The trigger never ran on the line the watchdog wrote out.");
+        // Anything else writing the line out would already be in trigger context
+        QVERIFY2(sinceFeed.elapsed() >= 2 * TBuffer::MAX_TAG_TIMEOUT_MS - 100, qPrintable(qsl("The tag was written out after %1ms, before the watchdog could have.").arg(sinceFeed.elapsed())));
+        runLua(host, qsl("killTrigger(wdogTriggerId)"));
+        QCOMPARE(luaGlobalString(host, "wdogCapture"), qsl("<send"));
+    }
+
+    // The line a disconnect writes out is from the game too
+    void test_aHeldServerWrappedLineWrittenOutByADisconnectRunsItsTriggersInTriggerContext()
+    {
+        startProfile();
+        auto host = mudlet::self()->getActiveHost();
+        QVERIFY2(host, "No active host available for the test.");
+        QVERIFY2(host->mpConsole, "The active host has no main console.");
+
+        runLua(host,
+               qsl("dcCapture = 'trigger never ran'\n"
+                   "dcTriggerId = tempRegexTrigger([[^x+ (alpha)$]], function()\n"
+                   "  selectString('xxxx', 1)\n"
+                   "  replace('y')\n"
+                   "  selectCaptureGroup(2)\n"
+                   "  dcCapture = getSelection()\n"
+                   "  deselect()\n"
+                   "end)"));
+        TBuffer& buffer = host->mainConsoleModel().buffer;
+        host->mUndoServerWrap = true;
+        host->mUndoServerWrapWidth = 80;
+        auto restoreWrap = qScopeGuard([host]() { host->mUndoServerWrap = false; });
+
+        // 70 characters, inside the join band for a wrap column of 80
+        const QString heldLine = QString(64, QChar('x')) + qsl(" alpha");
+        std::string data = heldLine.toStdString() + "\n";
+        buffer.translateToPlainText(data, true);
+        QCOMPARE(buffer.mServerWrapPendingLine, heldLine);
+
+        host->mTelnet.slot_socketDisconnected();
+        runLua(host, qsl("killTrigger(dcTriggerId)"));
+        QVERIFY2(buffer.mServerWrapPendingLine.isEmpty(), "The disconnect did not write the held line out.");
+        QCOMPARE(luaGlobalString(host, "dcCapture"), qsl("alpha"));
     }
 
     // Writing the stalled tag out commits it and finalizes through the main
@@ -1146,6 +1217,38 @@ private slots:
         QCOMPARE(model->buffer.lastloggedToLine, -1);
 
         QFile::remove(logFileName);
+    }
+
+    // Lines are flushed once per pass of the event loop rather than one by
+    // one, so a reader tailing the file must still see them without logging
+    // having to stop first.
+    void test_loggedLinesReachTheFileWhileLogging()
+    {
+        startProfile();
+        auto host = mudlet::self()->getActiveHost();
+        QVERIFY2(host, "No active host available for the test.");
+        TConsoleModel& model = host->mainConsoleModel();
+
+        model.toggleLogging(false);
+        QVERIFY2(model.mLogToLogFile, "Could not start a log.");
+        const QString logFileName = model.mLogFileName;
+        auto stopLogging = qScopeGuard([&model, &logFileName] {
+            if (model.mLogToLogFile) {
+                model.toggleLogging(false);
+            }
+            QFile::remove(logFileName);
+        });
+
+        appendModelLine(model.buffer, qsl("logged-while-running-one"));
+        appendModelLine(model.buffer, qsl("logged-while-running-two"));
+        // Held back for duplicate detection, so this one only lets the second
+        // line out of the deferred slot.
+        appendModelLine(model.buffer, qsl("logged-while-running-three"));
+
+        QVERIFY2(!readFile(logFileName).contains(qsl("logged-while-running-two")), "A logged line was flushed on its own, before the event loop ran.");
+        QTRY_VERIFY2(readFile(logFileName).contains(qsl("logged-while-running-two")), "Logged lines never reached the file while the log was still running.");
+        QVERIFY2(model.mLogToLogFile, "The log stopped on its own.");
+        QVERIFY2(readFile(logFileName).contains(qsl("logged-while-running-one")), "The first logged line never reached the file.");
     }
 
     // rgb(22,22,22) is the colour the console's own background replaced (#9419)
@@ -1917,7 +2020,7 @@ noViewCursor = table.concat(results, '|')
             host->setConsoleBufferSize(12345);
             host->setUseMaxConsoleBufferSize(false);
             runLua(host, qsl("setConsoleBufferSize('%1', 700, 70, true)\n").arg(name));
-            QCOMPARE(host->getConsoleBufferSize(), maxBufferSize);
+            QCOMPARE(host->getConsoleBufferSize(), 12345);
             QVERIFY(host->getUseMaxConsoleBufferSize());
             QCOMPARE(host->mpConsole->buffer.mLinesLimit, maxBufferSize);
             QCOMPARE(host->mpConsole->buffer.mBatchDeleteSize, 70);
@@ -2002,7 +2105,7 @@ headlessProblems = table.concat(headlessProblems, '; ')
 
         runLua(host, qsl("setConsoleBufferSize('main', 700, 70, true)\n"));
         QCOMPARE(model->buffer.mLinesLimit, maxBufferSize);
-        QCOMPARE(host->getConsoleBufferSize(), maxBufferSize);
+        QCOMPARE(host->getConsoleBufferSize(), 700);
         QVERIFY(host->getUseMaxConsoleBufferSize());
     }
 

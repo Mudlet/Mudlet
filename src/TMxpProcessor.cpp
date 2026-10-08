@@ -292,8 +292,11 @@ TMxpProcessingResult TMxpProcessor::processMxpInput(char& ch, bool resolveCustom
     }
 
     // Keep the tag builder in sync with the session encoding so attribute
-    // bytes are decoded correctly on non-UTF-8 sessions.
-    mMxpTagBuilder.setEncoding(mpMxpClient->getEncoding());
+    // bytes are decoded correctly on non-UTF-8 sessions. Only a tag being read
+    // decodes with it, and copying it for every byte of text adds up:
+    if (ch == '<' || mMxpTagBuilder.isInsideTag()) {
+        mMxpTagBuilder.setEncoding(mpMxpClient->getEncoding());
+    }
 
     // Newline while inside a tag: MXP tags cannot span lines
     // Reject the partial tag as literal text, then let the newline trigger line commit
@@ -454,4 +457,9 @@ TMxpProcessingResult TMxpProcessor::rejectCurrentTag()
 void TMxpProcessor::processRawInput(char ch)
 {
     mMxpTagProcessor.handleContent(ch);
+}
+
+void TMxpProcessor::processRawInput(QByteArrayView bytes)
+{
+    mMxpTagProcessor.handleContentBytes(bytes);
 }

@@ -871,10 +871,7 @@ void TRoom::offset(const int deltaX, const int deltaY, const int deltaZ)
 
 void TRoom::calcRoomDimensions()
 {
-    min_x = mX;
-    max_x = mX;
-    min_y = mY;
-    max_y = mY;
+    calcCustomLineBounds();
 
     if (customLines.empty()) {
         // It may have just lost its last line; a stale index entry costs every frame a lookup and cull.
@@ -888,6 +885,14 @@ void TRoom::calcRoomDimensions()
     }
 
     indexCustomLines();
+}
+
+void TRoom::calcCustomLineBounds()
+{
+    min_x = mX;
+    max_x = mX;
+    min_y = mY;
+    max_y = mY;
 
     QMapIterator<QString, QList<QPointF>> it(customLines);
     while (it.hasNext()) {
@@ -1178,10 +1183,11 @@ void TRoom::restore(QDataStream& ifs, int roomID, int version)
         ifs >> exitWeights;
         ifs >> doors;
     }
-    calcRoomDimensions();
+    // Not calcRoomDimensions(): TMap::restore() then runs TArea::calcSpan(), which rebuilds the custom line index.
+    calcCustomLineBounds();
 }
 
-void TRoom::audit(const QHash<int, int> roomRemapping, const QHash<int, int> areaRemapping)
+void TRoom::audit(const QHash<int, int>& roomRemapping, const QHash<int, int>& areaRemapping)
 {
     if (areaRemapping.contains(area)) {
         userData.insert(qsl("audit.remapped_area"), QString::number(area));
@@ -1191,28 +1197,27 @@ void TRoom::audit(const QHash<int, int> roomRemapping, const QHash<int, int> are
     auditExits(roomRemapping);
 }
 
-void TRoom::auditExits(const QHash<int, int> roomRemapping)
+void TRoom::auditExits(const QHash<int, int>& roomRemapping)
 {
     // Clone all the structures into working copies that we can eliminate valid
     // members from to identify any rogue members before removing them:
 
     QMap<QString, int> exitWeightsCopy = exitWeights;
-    QSet<int> exitStubsCopy{exitStubs.begin(), exitStubs.end()};
-    QSet<int> exitLocksCopy{exitLocks.begin(), exitLocks.end()};
+    // Filled by insert() as constructing a QSet from a range allocates its
+    // buckets even when the range is empty, as it usually is here:
+    QSet<int> exitStubsCopy;
+    for (const int dirCode : std::as_const(exitStubs)) {
+        exitStubsCopy.insert(dirCode);
+    }
+    QSet<int> exitLocksCopy;
+    for (const int dirCode : std::as_const(exitLocks)) {
+        exitLocksCopy.insert(dirCode);
+    }
     QMap<QString, int> doorsCopy = doors;
     QMap<QString, QList<QPointF>> customLinesCopy = customLines;
     QMap<QString, QColor> customLinesColorCopy = customLinesColor;
     QMap<QString, Qt::PenStyle> customLinesStyleCopy = customLinesStyle;
     QMap<QString, bool> customLinesArrowCopy = customLinesArrow;
-
-    exitWeightsCopy.detach(); // Make deep copies now, this will happen anyhow once we start to remove valid members
-    exitStubsCopy.detach();
-    exitLocksCopy.detach();
-    doorsCopy.detach();
-    customLinesCopy.detach();
-    customLinesColorCopy.detach();
-    customLinesStyleCopy.detach();
-    customLinesArrowCopy.detach();
 
     auditExit(north,
               DIR_NORTH,
@@ -1566,6 +1571,22 @@ void TRoom::auditExits(const QHash<int, int> roomRemapping)
         mpRoomDB->mpMap->appendRoomErrorMsg(id, infoMsg, true);
     }
 
+    // ExitStubs - only a corrupt file can leave one here, with a direction code
+    // that the rest of the code cannot handle:
+    if (!exitStubsCopy.isEmpty()) {
+        QStringList extras;
+        for (const int dirCode : std::as_const(exitStubsCopy)) {
+            extras.append(dirCodeToDisplayName(dirCode));
+            exitStubs.removeAll(dirCode);
+        }
+        //: %1 is the room ID, %2 is a list of exit stub items
+        const QString infoMsg = tr("[ INFO ]  - In room with ID: %1 found one or more surplus exit stub items that were removed: %2.").arg(id).arg(extras.join(QLatin1String(", ")));
+        if (TMap::smShowMapAuditErrors) {
+            mpRoomDB->mpMap->postMessage(infoMsg);
+        }
+        mpRoomDB->mpMap->appendRoomErrorMsg(id, infoMsg, true);
+    }
+
     // Only a corrupt file can hold a custom line point outside the range of room
     // coordinates, and the 2D map's arithmetic overflows to infinity on one
     {
@@ -1696,7 +1717,7 @@ void TRoom::auditExits(const QHash<int, int> roomRemapping)
 
 void TRoom::auditExit(int& exitRoomId,                     // Reference to where exit goes to
                       const int dirCode,                   // DIR_xxx code for this exit - to access stubs & locks
-                      const QString exitKey,               // To access doors, weights and custom exit line elements
+                      const QString& exitKey,              // To access doors, weights and custom exit line elements
                       QMap<QString, int>& exitWeightsPool, // References to working copies of things - valid ones will be removed
                       QSet<int>& exitStubsPool,
                       QSet<int>& exitLocksPool,
@@ -1705,7 +1726,7 @@ void TRoom::auditExit(int& exitRoomId,                     // Reference to where
                       QMap<QString, QColor>& customLinesColorPool,
                       QMap<QString, Qt::PenStyle>& customLinesStylePool,
                       QMap<QString, bool>& customLinesArrowPool,
-                      const QHash<int, int> roomRemapping)
+                      const QHash<int, int>& roomRemapping)
 {
     // -1 is also what every absent exit holds, so a room renumbered from that
     // id cannot take the exits that led to it without taking all the others:
@@ -1745,9 +1766,8 @@ void TRoom::auditExit(int& exitRoomId,                     // Reference to where
             if (!exitStubs.contains(dirCode)) {
                 // Add a stub (this is so we can retain doors and locks, though exit weights and custom lines will go)
                 exitStubs.append(dirCode);
-                // Remove a (now valid) stub in this direction from check pool
-                exitStubsPool.remove(dirCode);
             }
+            exitStubsPool.remove(dirCode);
 
             exitRoomId = -1;
 
