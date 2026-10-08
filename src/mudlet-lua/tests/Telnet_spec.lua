@@ -414,6 +414,18 @@ describe("Tests the rest of the SGR decoder", function()
     assert.is_true(isAnsiBgColor(4), "an empty background colour type disturbed the background")
   end)
 
+  -- a sequence with an intermediate byte is held over a split between two
+  -- reads like any other, rather than its tail reaching the screen
+  it("carries a sequence with an intermediate byte over to the next read", function()
+    for i, case in ipairs({{"\27[1 ", "qAB"}, {"\27[38;5;-", "1mAB"}}) do
+      local marker = ("SgrSplitInt%d"):format(i)
+      assert.is_true(feedTelnet(marker .. "(" .. case[1]))
+      assert.is_true(feedTelnet(case[2] .. ")" .. marker .. "\r\n"))
+      local line = lineNumberOf(marker)
+      assert.equals(marker .. "(AB)" .. marker, line and getLines("main", line, line + 1)[1])
+    end
+  end)
+
   it("ignores a sub-parameter colour type Mudlet does not render", function()
     feed("\27[31mSgrSubTypeA \27[38:1mSgrSubTypeB \27[38:3mSgrSubTypeC")
     selectMarker("SgrSubTypeB")

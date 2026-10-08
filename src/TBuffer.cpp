@@ -1477,6 +1477,13 @@ void TBuffer::translateToPlainTextInner(std::string& incoming, const bool isFrom
             while (spanEnd < localBufferLength && csiParameterByte(localBuffer[spanEnd])) {
                 ++spanEnd;
             }
+            // A sequence with intermediate bytes runs on to its final byte, even when a malformed one has
+            // parameter bytes after them, or that tail would reach the screen as game text:
+            size_t const parametersEnd = spanEnd;
+            while (spanEnd < localBufferLength && (csiIntermediateByte(localBuffer[spanEnd]) || csiParameterByte(localBuffer[spanEnd]))) {
+                ++spanEnd;
+            }
+            bool const hasIntermediateBytes = spanEnd != parametersEnd;
 
             if (spanEnd - spanStart >= MAX_CSI_SEQUENCE_LENGTH) {
                 // The parameter string is far longer than any valid CSI (which
@@ -1511,9 +1518,13 @@ void TBuffer::translateToPlainTextInner(std::string& incoming, const bool isFrom
                 return;
             }
 
-            if (Q_UNLIKELY(mPendingLead) && localBuffer[spanEnd] != 'm') {
+            if (Q_UNLIKELY(mPendingLead) && (hasIntermediateBytes || localBuffer[spanEnd] != 'm')) {
                 flushPendingLead();
             }
+
+            // Only a final byte belongs to the sequence: the newline, escape or lead byte that cut one short
+            // is left to be read, or eating it would join two lines, drop the next sequence or break a character
+            const bool hasFinalByte = csiFinalByte(localBuffer[spanEnd]);
 
             // Only now that a complete sequence is in hand, test whether the
             // first byte is within the usable subset of the allowed value - or
@@ -1527,9 +1538,7 @@ void TBuffer::translateToPlainTextInner(std::string& incoming, const bool isFrom
                 qDebug().noquote().nospace() << "TBuffer::translateToPlainText(...) INFO - detected a private/reserved CSI sequence beginning with \"CSI"
                                              << localBuffer.substr(spanStart, spanEnd - spanStart).c_str() << "\" which Mudlet cannot interpret.";
 #endif
-                // So skip over it as far as we can - will still possibly have
-                // garbage beyond the end which will still be shown...
-                localBufferPosition += 1 + spanEnd - spanStart;
+                localBufferPosition += spanEnd - spanStart + (hasFinalByte ? 1 : 0);
                 mGotCSI = false;
                 // Go around while loop again:
                 continue;
@@ -1542,27 +1551,13 @@ void TBuffer::translateToPlainTextInner(std::string& incoming, const bool isFrom
             // should be in the (ASCII) range '@' to '~' and the end of that
             // range 'p' to '~' is for "private" or "experimental" use.
 
-            if (csiIntermediateByte(localBuffer[spanEnd])) {
-                // We do not handle any sequences with intermediate bytes
-                // Report it and then ignore it, try and find out what the byte
-                // afterwards is as it might help to debug things
-                if (spanEnd + 1 < localBufferLength) {
-                    // Yeah there is another byte we can report as the final byte
-                    qDebug().noquote().nospace() << "TBuffer::translateToPlainText(...) INFO - detected a CSI sequence with an 'intermediate' byte ('" << localBuffer[spanEnd]
-                                                 << "') and a 'final' byte ('" << localBuffer[spanEnd + 1] << "') which Mudlet cannot interpret.";
-                } else {
-                    qDebug().noquote().nospace() << "TBuffer::translateToPlainText(...) INFO - detected a CSI sequence with an 'intermediate' byte ('" << localBuffer[spanEnd]
-                                                 << "') which Mudlet cannot interpret.";
-                }
-                // So skip over it as far as we can - will still be possible to
-                // have garbage beyond the end which will still be shown...
-                localBufferPosition += 1 + spanEnd - spanStart;
-                mGotCSI = false;
-                // Go around while loop again:
-                continue;
-            }
-
-            if (csiFinalByte(localBuffer[spanEnd])) {
+            if (hasIntermediateBytes && hasFinalByte) {
+                // We do not handle any sequences with intermediate bytes, so
+                // report it and skip it along with its final byte - which the
+                // general step at the end of this block does
+                qDebug().noquote().nospace() << "TBuffer::translateToPlainText(...) INFO - detected a CSI sequence with an 'intermediate' byte ('" << localBuffer[parametersEnd]
+                                             << "') and a 'final' byte ('" << localBuffer[spanEnd] << "') which Mudlet cannot interpret.";
+            } else if (hasFinalByte) {
                 // We have a valid CSI sequence - but is it one we handle?
                 // We currently only handle the 'm' for SGR and the 'z' for
                 // Zuggsoft's MXP protocol:
@@ -1671,10 +1666,7 @@ void TBuffer::translateToPlainTextInner(std::string& incoming, const bool isFrom
             } // End of the isAValidFinalByte test
 
             mGotCSI = false;
-            // Step over the parameter string and final byte, unless that is a control byte: a sequence with no
-            // final byte doesn't own the newline or escape that stopped the scan, and eating it would join two
-            // lines or drop the next sequence:
-            localBufferPosition += spanEnd - spanStart + (static_cast<unsigned char>(localBuffer[spanEnd]) < ' ' ? 0 : 1);
+            localBufferPosition += spanEnd - spanStart + (hasFinalByte ? 1 : 0);
             // Go around while loop again:
             continue;
 
