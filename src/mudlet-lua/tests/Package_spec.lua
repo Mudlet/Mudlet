@@ -465,6 +465,31 @@ describe("Tests the functionality of installPackage", function()
     assert.is_false(aStagingFolderIsLeftFor(minimalPackage), "the install left the folder it unpacked into")
   end)
 
+  it("leaves alone a folder called after the package with .mudlet-installing on the end", function()
+    -- a name a package can have, beside a leftover folder that makes the archive unpack aside
+    local leftover = getMudletHomeDir() .. "/" .. minimalPackage
+    local lookalike = leftover .. ".mudlet-installing"
+    local kept = lookalike .. "/please-do-not-delete-me.txt"
+    lfs.mkdir(leftover)
+    lfs.mkdir(lookalike)
+    local file = io.open(kept, "w")
+    assert.is_not_nil(file, "could not write to " .. kept)
+    file:write("this folder is not the install's to delete")
+    file:close()
+    defer(function()
+      removeFixturePackage(minimalPackage)
+      os.remove(kept)
+      lfs.rmdir(lookalike)
+      lfs.rmdir(leftover)
+    end)
+
+    local ok, err = installUntilConfirmed(installPackage, fixtureDirectory .. "/" .. minimalPackage .. ".mpackage",
+                                          function() return packageInstalled(minimalPackage) end, "the fixture package over its leftover folder")
+
+    assert.is_true(ok, tostring(err))
+    assert.is_true(fileExists(kept), "the install deleted a folder it did not make")
+  end)
+
   it("leaves a folder that was already in the profile alone when the unpacking fails", function()
     -- the archive's own file name decides where it unpacks, so an archive named
     -- after a folder the profile already has - "map", "log", or anything else
