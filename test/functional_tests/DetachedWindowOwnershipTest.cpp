@@ -50,7 +50,9 @@
 #include "HostDialogs.h"
 #include "HostManager.h"
 #include "MudletInstanceCoordinator.h"
+#include "TCommandLine.h"
 #include "TDetachedWindow.h"
+#include "TMainConsole.h"
 #include "TTabBar.h"
 #include "TelnetServerStub.h"
 #include "dlgTriggerEditor.h"
@@ -181,6 +183,25 @@ private slots:
         // activation settles instead of a moment those could still move it from
         QTest::qWait(200ms);
         QCOMPARE(QApplication::activeWindow(), mpDetachedWindow.data());
+    }
+
+    // The player carries on typing straight after the drag, so the profile they
+    // dragged out has to have the keyboard in its new window (#10754)
+    void test_theDetachedProfilesCommandLineHasTheKeyboard()
+    {
+        QVERIFY(mpDetachedWindow);
+        Host* pHost = HostManager::self()->getHost(mSecondHostname);
+        QVERIFY(pHost && pHost->mpConsole);
+        // A drag starts with a press on the tab bar, which takes the keyboard there,
+        // and left alone the new window hands it to its own tab bar
+        reattachAndWait(mSecondHostname);
+        QTest::qWait(200ms); // the reattach's own deferred focus changes
+        mudlet::self()->mpTabBar->setFocus(Qt::MouseFocusReason);
+        mpDetachedWindow = detachSecondProfile();
+        QVERIFY(mpDetachedWindow);
+        // Unconditional for the same reason as the case above
+        QTest::qWait(200ms);
+        QCOMPARE(QApplication::focusWidget(), static_cast<QWidget*>(pHost->mpConsole->mpCommandLine.data()));
     }
 
     void test_reattachingDestroysTheDetachedWindow()
