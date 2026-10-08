@@ -137,6 +137,7 @@ public:
     int mOldCaretColumn = 0;
 
     friend class CopyAsImageTest;
+    friend class SplitCharacterFormatTest;
     friend class FramePacingTest;
     friend class FrontendRefreshSeamTest;
     friend class MainConsoleSelectionTest;
@@ -246,6 +247,10 @@ private:
         // not be modified. A null pointer marks a background-only run, such as
         // the caret block on an empty line.
         const TChar* style = nullptr;
+        // Set on the two runs a double-width glyph with a split rendition
+        // (TChar::hasSplitFormat()) is laid out as: each paints only its cell.
+        QRect halfRect;
+        bool rightHalf = false;
         bool fillsBackground = false;
     };
     using LineLayout = std::vector<GraphemeRun>;
@@ -260,7 +265,8 @@ private:
     int paintForegrounds(QPainter&, TGlyphCache&, const LineLayout&, const QRect& clip = QRect()) const;
     void drawCustomDecorations(QPainter&, const QColor&, const QRect&, const TChar&) const;
     int layoutGrapheme(LineLayout& layout, const QPoint& cursor, QStringView grapheme, const int column, const int line, const TChar& charStyle) const;
-    int paintGraphemeForeground(QPainter&, TGlyphCache&, const GraphemeRun&) const;
+    void resolveRunColors(GraphemeRun&, const TChar&, bool caretIsHere) const;
+    int paintGraphemeForeground(QPainter&, TGlyphCache&, const GraphemeRun&, const TChar&) const;
 
     // Reused between paints to keep their capacity rather than reallocating a
     // line's worth of graphemes on every repaint.
