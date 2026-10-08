@@ -2305,6 +2305,80 @@ describe("Tests the functionality of installPackageFromUrl", function()
     assert.is_true(containsWrapped(text, "Downloading package from"), text)
     assert.is_true(containsWrapped(text, "[ WARN ]"), text)
   end)
+
+  -- Stand-ins for downloadFile() and the install it leads to, so that the
+  -- downloads finish in the order a spec raises them and nothing is installed.
+  -- Set on _G because a spec's own globals are sandboxed from Other.lua's.
+  -- Returns the list of paths an install was attempted for.
+  local function fakeDownloads(fakeDownloadFile)
+    local realDownloadFile, realVerboseInstall = _G.downloadFile, _G.verbosePackageInstall
+    local installed = {}
+    defer(function()
+      _G.downloadFile, _G.verbosePackageInstall = realDownloadFile, realVerboseInstall
+    end)
+    _G.downloadFile = fakeDownloadFile or function() return true end
+    _G.verbosePackageInstall = function(path) installed[#installed + 1] = path end
+    return installed
+  end
+
+  it("still installs its own download when another one finishes first", function()
+    local installed = fakeDownloads()
+    local destination = getMudletHomeDir() .. "/" .. downloadedName
+    local mark = getLastLineNumber("main")
+
+    installPackageFromUrl(downloadedName, "http://127.0.0.1/" .. downloadedName)
+    raiseEvent("sysDownloadDone", getMudletHomeDir() .. "/mudlet-spec-some-other-download.txt")
+    raiseEvent("sysDownloadDone", destination)
+
+    assert.same({destination}, installed)
+    -- and with its download done, a late error for the same file is not reported
+    raiseEvent("sysDownloadError", "mudlet-spec-late-error", destination)
+    assert.is_false(containsWrapped(textFrom(mark), "mudlet-spec-late-error"), textFrom(mark))
+  end)
+
+  it("still reports its own failure when another download fails first", function()
+    local installed = fakeDownloads()
+    local destination = getMudletHomeDir() .. "/" .. downloadedName
+    local mark = getLastLineNumber("main")
+
+    installPackageFromUrl(downloadedName, "http://127.0.0.1/" .. downloadedName)
+    raiseEvent("sysDownloadError", "mudlet-spec-other-error", getMudletHomeDir() .. "/mudlet-spec-some-other-download.txt")
+    raiseEvent("sysDownloadError", "mudlet-spec-own-error", destination)
+
+    local text = textFrom(mark)
+    assert.is_false(containsWrapped(text, "mudlet-spec-other-error"), text)
+    assert.is_true(containsWrapped(text, "mudlet-spec-own-error"), text)
+    -- and with its download failed, a late completion is not installed
+    raiseEvent("sysDownloadDone", destination)
+    assert.same({}, installed)
+  end)
+
+  it("says why a download was refused, and installs nothing later", function()
+    local installed = fakeDownloads(function() return nil, "mudlet-spec-refusal" end)
+    local destination = getMudletHomeDir() .. "/" .. downloadedName
+    local mark = getLastLineNumber("main")
+
+    installPackageFromUrl(downloadedName, "http://127.0.0.1/" .. downloadedName)
+
+    local text = textFrom(mark)
+    assert.is_true(containsWrapped(text, "mudlet-spec-refusal"), text)
+    assert.is_false(containsWrapped(text, "Downloading package from"), text)
+    -- a download that never started leaves nothing waiting for one to the same file
+    raiseEvent("sysDownloadDone", getMudletHomeDir() .. "/mudlet-spec-some-other-download.txt")
+    raiseEvent("sysDownloadDone", destination)
+    assert.same({}, installed)
+  end)
+
+  it("leaves nothing waiting for a download that raised an error", function()
+    local installed = fakeDownloads(function() error("mudlet-spec-raised") end)
+    local destination = getMudletHomeDir() .. "/" .. downloadedName
+
+    assert.has_error(function() installPackageFromUrl(downloadedName, "http://127.0.0.1/" .. downloadedName) end)
+
+    raiseEvent("sysDownloadDone", getMudletHomeDir() .. "/mudlet-spec-some-other-download.txt")
+    raiseEvent("sysDownloadDone", destination)
+    assert.same({}, installed)
+  end)
 end)
 
 describe("Tests the functionality of packageDrop", function()
