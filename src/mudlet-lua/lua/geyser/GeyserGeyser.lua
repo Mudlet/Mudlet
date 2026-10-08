@@ -56,15 +56,16 @@ end
 function Geyser:base_add (window, cons)
   cons = cons or window -- 'cons' is optional
 
+  -- compiled before the window changes containers: one whose constraints raise
+  -- stays where it was, rather than left without getters in the new container,
+  -- where it would trip every later layout pass
+  window.windowname = window.windowname or self.windowname or "main"
+  Geyser.calc_constraints(window, cons, self)
+
   -- Stop other container from controlling this window
   if window.container then
     window.container:remove(window)
   end
-
-  window.windowname = window.windowname or self.windowname or "main"
-  -- compiled before the window is registered: one whose constraints raise would
-  -- otherwise stay behind without getters and trip every later layout pass
-  Geyser.calc_constraints(window, cons, self)
 
   -- Assume control of this window
   window.container = self
