@@ -265,6 +265,12 @@ TConsole::TConsole(Host* pH, const QString& name, const ConsoleType type, QWidge
         mBorders = mpHost->borders();
         mCommandBgColor = mpHost->mCommandBgColor;
         mCommandFgColor = mpHost->mCommandFgColor;
+    } else if (mType == Buffer) {
+        // Only a starting point: setWindowWrap() and friends keep a buffer's
+        // own settings nowhere else, so nothing may copy the profile's over them later
+        setWrapAt(mpHost->mWrapAt);
+        setIndentCount(mpHost->mWrapIndentCount);
+        setHangingIndentCount(mpHost->mWrapHangingIndentCount);
     }
 
     QWidget::setFont(mDisplayFontDetails.makeFont());
@@ -1288,7 +1294,7 @@ void TConsole::changeColors()
         // refreshMainConsoleColors() above already did this one
         buffer.updateColors();
     }
-    if (mType & (MainConsole | Buffer)) {
+    if (mType == MainConsole) {
         // the console's own copies too, as wrapLine() rewraps with those
         setWrapAt(mpHost->mWrapAt);
         setIndentCount(mpHost->mWrapIndentCount);
