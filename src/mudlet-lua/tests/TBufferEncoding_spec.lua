@@ -577,9 +577,10 @@ describe("Tests a double byte character cut short by a byte that cannot be its s
       local mark = getLastLineNumber("main")
 
       feed("dbcolour:" .. lead)
-      feed("\27[31mRED\27[0m\r\n")
+      -- a space can't be any encoding's second byte, so the lead byte can't join it as a split character
+      feed("\27[31m RED\27[0m\r\n")
 
-      assert.same({"dbcolour:" .. kept(lead) .. "RED"}, shownLines("dbcolour:", mark), encoding)
+      assert.same({"dbcolour:" .. kept(lead) .. " RED"}, shownLines("dbcolour:", mark), encoding)
       assert.same(redReference, colourOf("RED", "dbcolour:", mark), encoding)
       assert.are_not.same(redReference, colourOf("dbcolour:", "dbcolour:", mark), encoding)
     end
