@@ -309,6 +309,11 @@ void TEasyButtonBar::clear()
     // Transfer the object name to the new instance:
     auto widgetObjectName(mpWidget->objectName());
     mpWidget->setObjectName(QString());
+    // deleteLater() waits for a return to the event loop it was called from, which
+    // a nested processEvents() never is, so until then the old buttons would still
+    // be laid out above the new ones
+    layout()->removeWidget(mpWidget);
+    mpWidget->hide();
     mpWidget->deleteLater();
     mpWidget = pW;
     mpWidget->setObjectName(widgetObjectName);
