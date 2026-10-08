@@ -39,9 +39,6 @@
 #include "TDebug.h"
 #include "TDebugFilterBar.h"
 #include "MudletInstanceCoordinator.h"
-#include "SherpaRecognizer.h"
-#include "SpeechRecognizer.h"
-#include "SpeechRecognizerFactory.h"
 #include "TDetachedWindow.h"
 #include "TDockWidget.h"
 #include "TEvent.h"
@@ -53,16 +50,14 @@
 #include "TMedia.h"
 #include "TGameDetails.h"
 #include "TRoomDB.h"
+#include "TSpeechBridge.h"
 #include "TSpellChecker.h"
 #include "TTabBar.h"
 #include "TUiTour.h"
-#include "VoskRecognizer.h"
 #include "XMLimport.h"
 
-#if defined(Q_OS_MACOS)
-#include "AppleSpeechRecognizer.h"
-#endif
 #include "dlgAboutDialog.h"
+#include "dlgComposer.h"
 #include "dlgConnectionProfiles.h"
 #include "dlgIRC.h"
 #include "dlgMapper.h"
@@ -85,7 +80,6 @@
 #include <QDesktopServices>
 #include <QFile>
 #include <QFileDialog>
-#include <QJsonArray>
 #include <QJsonDocument>
 #include <QImage>
 #include <QKeyEvent>
@@ -185,413 +179,12 @@ public:
 /*static*/ void mudlet::start()
 {
     smpSelf = new mudlet;
+    TAppFrontend::setInstance(smpSelf.data());
 }
 
 /*static*/ mudlet* mudlet::self()
 {
     return smpSelf;
-}
-
-SpeechRecognizer* mudlet::speechRecognizer() const
-{
-    return mpSpeechRecognizer;
-}
-
-void mudlet::raiseSpeechEvent(const QString& name, const QString& value)
-{
-    // The owner outranks the active profile: with the microphone held, every
-    // result, state change and fault belongs to the session that is running,
-    // whatever the player has since tabbed to. Only with nobody listening does
-    // "the profile in front" become the right answer - that is where a refusal
-    // from stt.init() goes. Capability changes are not here at all: they
-    // describe the engine rather than a session, so announceSpeechCapabilities-
-    // IfChanged() raises them on every profile.
-    //
-    // With one exception, and it is worth exactly one sentence. An engine that
-    // ends a session says so in two steps - the state first, so that a handler
-    // is never told the microphone is still open, and then what became of the
-    // phrase that was in flight - and the release rides on the first of them.
-    // The second step is the one that says the words are lost, and it belongs
-    // to the profile that spoke them rather than to whoever is in front now. So
-    // the state handler leaves that profile behind for the next event and this
-    // spends it, once: a release with no session ending behind it - the
-    // ordinary stop - leaves nothing here, and routing goes straight back to
-    // the profile in front.
-    Host* pHost = mpMicrophoneOwner.data();
-    if (!pHost && mpMicrophoneOwnerEnding) {
-        pHost = mpMicrophoneOwnerEnding.data();
-        mpMicrophoneOwnerEnding = nullptr;
-    }
-    if (!pHost) {
-        pHost = getActiveHost();
-    }
-    raiseSpeechEventOn(pHost, name, value);
-}
-
-void mudlet::raiseSpeechEventOn(Host* pHost, const QString& name, const QString& value)
-{
-    if (!pHost) {
-        // A fault landing as the last profile closes has nowhere to be raised,
-        // and dropping it silently leaves no trace of it anywhere. Only the
-        // error path is logged: the result and state events are ordinary
-        // traffic, and warning on every one of those would bury this.
-        if (name == qsl("sysSTTError")) {
-            qWarning().noquote() << "speech recognition error with no active profile to report it to:" << value;
-        }
-        return;
-    }
-    const bool error = (name == qsl("sysSTTError"));
-    if (error && mSpeechErrorsBeingDelivered > 0) {
-        return;
-    }
-    TEvent event{};
-    event.mArgumentList.append(name);
-    event.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
-    event.mArgumentList.append(value);
-    event.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
-    if (error) {
-        ++mSpeechErrorsBeingDelivered;
-    }
-    pHost->raiseEvent(event);
-    if (error) {
-        --mSpeechErrorsBeingDelivered;
-    }
-}
-
-Host* mudlet::microphoneOwner() const
-{
-    return mpMicrophoneOwner;
-}
-
-bool mudlet::claimMicrophoneFor(Host* pHost)
-{
-    if (!pHost) {
-        return false;
-    }
-    if (mpMicrophoneOwner == pHost) {
-        return true;
-    }
-
-    // A phrase still being decoded is owed to the profile that spoke it, and
-    // the claim is what routes it there - so the microphone cannot change hands
-    // until that has landed. Taking it here would orphan the phrase: the owner
-    // would move, the result would arrive for a profile that never said it, and
-    // the one that did would be left with a session that simply stopped.
-    //
-    // Refused rather than waited for, because a decode can outlive the call. It
-    // is the same answer docs/stt-api.md already gives a stop-then-start on a
-    // backend that finalises asynchronously - try again in a moment - and the
-    // caller passes that on rather than a session of somebody else's being
-    // destroyed for a start that was going to be refused anyway.
-    if (mpSpeechRecognizer && mpSpeechRecognizer->state() == SpeechRecognizer::State::Processing) {
-        return false;
-    }
-
-
-    // Told before the microphone moves, and through the old owner by name
-    // rather than through raiseSpeechEvent(): a moment later the owner is the
-    // profile that asked for it, and the notice would arrive at the game that is
-    // about to start listening instead of the one that just stopped.
-    Host* pLosing = mpMicrophoneOwner;
-    if (pLosing) {
-        raiseSpeechEventOn(pLosing, qsl("sysSTTHandover"), pHost->getName());
-        // Ended rather than merely renamed. One decoder means the audio the old
-        // profile was collecting cannot be kept while the new one records over
-        // it, and leaving it running would route the rest of a half-spoken
-        // phrase to a game that never asked for it. The stop happens while the
-        // old owner still holds the claim, so the state changes it raises are
-        // its news too - and the release that triggers is why the assignment
-        // below comes last.
-        if (mpSpeechRecognizer && (mpSpeechRecognizer->listening() || mpSpeechRecognizer->starting())) {
-            mpSpeechRecognizer->stopListening();
-        }
-
-        // Asked again, because the state to test is the one the stop left behind
-        // rather than the one before it. A backend that finalises the last phrase
-        // asynchronously - AppleSpeechRecognizer does - returns from the stop
-        // while still Processing, so the guard above saw only Listening and had
-        // nothing to catch. Moving the owner now would hand that phrase to the
-        // profile taking the microphone instead of the one that spoke it.
-        //
-        // The caller gets the same "try again in a moment" it gets above. The
-        // losing profile has already been told of the handover, and that stands:
-        // its session really has ended, and it keeps the microphone only until
-        // its phrase lands, when the session's end releases it. The retry then
-        // finds nobody holding it and announces nothing, so the handover is told
-        // once. Announcing it after the stop instead would put it behind the
-        // state change, and docs/stt-api.md tells a script the state change is
-        // what follows sysSTTHandover.
-        if (mpSpeechRecognizer && mpSpeechRecognizer->state() == SpeechRecognizer::State::Processing) {
-            return false;
-        }
-    }
-
-    mpMicrophoneOwner = pHost;
-    refreshMicrophoneMarkers();
-    return true;
-}
-
-void mudlet::releaseMicrophone()
-{
-    if (!mpMicrophoneOwner) {
-        return;
-    }
-    mpMicrophoneOwner = nullptr;
-    refreshMicrophoneMarkers();
-}
-
-// Which Backend enum value corresponds to a live recognizer's concrete type.
-// Not kept as a member: the object's own type already says which backend
-// built it, so a second, parallel note of the same fact could only drift from
-// it. Returns Auto for a null recognizer or a type this does not recognise,
-// which initSpeechRecognition() below treats as "nothing to compare against".
-static SpeechRecognizerFactory::Backend currentSpeechBackend(SpeechRecognizer* pRecognizer)
-{
-    if (qobject_cast<SherpaRecognizer*>(pRecognizer)) {
-        return SpeechRecognizerFactory::Backend::Sherpa;
-    }
-    if (qobject_cast<VoskRecognizer*>(pRecognizer)) {
-        return SpeechRecognizerFactory::Backend::Vosk;
-    }
-#if defined(Q_OS_MACOS)
-    if (qobject_cast<AppleSpeechRecognizer*>(pRecognizer)) {
-        return SpeechRecognizerFactory::Backend::Platform;
-    }
-#endif
-    return SpeechRecognizerFactory::Backend::Auto;
-}
-
-void mudlet::initSpeechRecognition(SpeechRecognizerFactory::Backend backend)
-{
-    if (mpSpeechRecognizer) {
-        // Auto and "the backend already built" both keep what is there:
-        // stt.start() and the other Lua setters pass Auto or an on-demand
-        // choice on every call, and rebuilding on every one of those would
-        // tear down a working recognizer under a caller who never asked to
-        // switch engines.
-        if (backend == SpeechRecognizerFactory::Backend::Auto || backend == currentSpeechBackend(mpSpeechRecognizer)) {
-            return;
-        }
-    }
-
-    // Build the replacement before touching what is already working. The
-    // backend is derived from the model directory's layout, so a mistyped path
-    // on a machine with only one engine installed resolves to the other one and
-    // create() answers nullptr - and tearing down first would have cost the
-    // caller their loaded model to answer a call that could not be honoured.
-    SpeechRecognizer* pReplacement = SpeechRecognizerFactory::create(backend, this);
-    if (!pReplacement) {
-        return;
-    }
-
-    // Everything about the replacement is established - wired up, then
-    // published - before the old engine is touched. Retiring it first raised
-    // sysSTTStateChanged from its releaseResources() while mpSpeechRecognizer
-    // still pointed at it, so a Lua handler calling stt.init() from that event
-    // built and initialised an engine the outer frame then threw away: three
-    // consecutive statements acting on three different objects. A re-entrant
-    // caller now finds the new engine already in place and fully connected.
-    // Bridge glue only: recognizer signals surface as Lua events on the active
-    // profile. Text routing, UI state and policy all belong to the packages
-    // consuming these events, not to the core.
-    connect(pReplacement, &SpeechRecognizer::partialResult, this, [this](const QString& text) {
-        raiseSpeechEvent(qsl("sysSTTPartialResult"), text);
-    });
-    connect(pReplacement, &SpeechRecognizer::finalResult, this, [this](const QString& text) {
-        // Counted while it is delivered, so that a handler closing the engine on
-        // the strength of this very phrase is not told the phrase was lost -
-        // see sttClose(). Counted rather than flagged: a handler is free to
-        // finalise another one from inside this one.
-        ++mSpeechResultsBeingDelivered;
-        raiseSpeechEvent(qsl("sysSTTResult"), text);
-        --mSpeechResultsBeingDelivered;
-    });
-    connect(pReplacement, &SpeechRecognizer::errorOccurred, this, [this](const QString& message) {
-        raiseSpeechEvent(qsl("sysSTTError"), message);
-    });
-    // Word-level detail travels as one JSON string argument: table arguments
-    // need per-Host Lua registry bookkeeping this glue should not own, and a
-    // string is the one type every client's event system carries
-    connect(pReplacement, &SpeechRecognizer::wordsResult, this, [this](const QVariantList& words) {
-        QJsonArray array;
-        for (const QVariant& word : words) {
-            array.append(QJsonObject::fromVariantMap(word.toMap()));
-        }
-        raiseSpeechEvent(qsl("sysSTTWords"), QString::fromUtf8(QJsonDocument(array).toJson(QJsonDocument::Compact)));
-    });
-    // Documented as re-readable rather than cached, so the change has to reach a
-    // consumer that did read it once. The recognizer noticing its own view move
-    // is a trigger, not the decision: whether Lua saw a change is decided
-    // against what Lua was last told, which is what the engine cannot know.
-    connect(pReplacement, &SpeechRecognizer::capabilitiesChanged, this, [this](SpeechRecognizer::Capabilities) {
-        announceSpeechCapabilitiesIfChanged();
-    });
-    connect(pReplacement, &SpeechRecognizer::stateChanged, this, [this](SpeechRecognizer::State newState) {
-        QString stateName;
-        switch (newState) {
-        case SpeechRecognizer::State::Ready:
-            stateName = qsl("ready");
-            break;
-        case SpeechRecognizer::State::Starting:
-            stateName = qsl("starting");
-            break;
-        case SpeechRecognizer::State::Listening:
-            stateName = qsl("listening");
-            break;
-        case SpeechRecognizer::State::Processing:
-            stateName = qsl("processing");
-            break;
-        case SpeechRecognizer::State::Error:
-            stateName = qsl("error");
-            break;
-        case SpeechRecognizer::State::Uninitialized:
-            stateName = qsl("uninitialized");
-            break;
-        }
-        raiseSpeechEvent(qsl("sysSTTStateChanged"), stateName);
-        // Released only once the event above has gone to the profile that owned
-        // the session, so the state change that ends a session is still the old
-        // owner's news. Processing keeps the claim: the phrase is still being
-        // decoded and its result is owed to the same profile.
-        //
-        // Against the state the engine is in now rather than the one the event
-        // described: a handler of that event can have started a session of its
-        // own - "ready" is exactly where a package waits to start listening -
-        // and it took the microphone as it did. Releasing on the older state
-        // would leave that session running with nobody holding it, which
-        // stt.listening() answers for by saying no.
-        const SpeechRecognizer::State settledState = mpSpeechRecognizer ? mpSpeechRecognizer->state() : newState;
-        switch (settledState) {
-        case SpeechRecognizer::State::Ready:
-        case SpeechRecognizer::State::Error:
-        case SpeechRecognizer::State::Uninitialized:
-            // Left for whatever the engine says next, and for that alone - see
-            // raiseSpeechEvent(). An engine that ends a session mid-phrase
-            // reports the loss immediately after this state change, and the
-            // profile that was speaking is the one that needs to hear it.
-            mpMicrophoneOwnerEnding = mpMicrophoneOwner;
-            QTimer::singleShot(0ms, this, [this]() {
-                mpMicrophoneOwnerEnding = nullptr;
-            });
-            releaseMicrophone();
-            break;
-        case SpeechRecognizer::State::Starting:
-        case SpeechRecognizer::State::Listening:
-        case SpeechRecognizer::State::Processing:
-            break;
-        }
-    });
-
-    // Latched, then swapped, then retired: the old engine is only released
-    // once mpSpeechRecognizer already names its replacement. It is parented to
-    // this and has live signal connections - releaseResources() drops its
-    // native resources, disconnect() detaches the connections made above for
-    // it, and deleteLater() - rather than delete - defers the destruction,
-    // since a handler reached through one of those connections may still be on
-    // the stack (the same reentrancy hazard SherpaRecognizer::slot_pcmReady()
-    // guards against).
-    SpeechRecognizer* pRetiring = mpSpeechRecognizer;
-    mpSpeechRecognizer = pReplacement;
-    if (pRetiring) {
-        // Disconnected first: releaseResources() sets the state and, on a
-        // backend whose capabilities follow the model, announces the change -
-        // and mpSpeechRecognizer already names the replacement by now, so a
-        // handler reached from either event would read the new engine while
-        // being told about the dead one. The retirement is meant to be silent.
-        // Said before releaseResources() below, which is what resets the state
-        // this reads - not before the disconnect, which has no bearing on it:
-        // raiseSpeechEvent() goes to the microphone's owner rather than over
-        // the retiring engine's connections. An engine swap reached from
-        // stt.init() while a phrase is in flight takes that phrase with it,
-        // and rule 1 requires a drop the script did not ask for to report.
-        if (pRetiring->listening() || pRetiring->state() == SpeechRecognizer::State::Processing) {
-            raiseSpeechEvent(qsl("sysSTTError"), qsl("changing the speech engine stopped the listening session that was under way - anything said during it is lost"));
-        }
-        pRetiring->disconnect();
-        pRetiring->releaseResources();
-        pRetiring->deleteLater();
-    }
-
-    // Last, once mpSpeechRecognizer names the engine Lua will read and the old
-    // one is released and detached - it is awaiting deleteLater() rather than
-    // already destroyed, which is what lets stt.init() compare against it. A recognizer existing at all changes what getInfo() answers,
-    // and so does replacing one engine with another that can do different
-    // things - neither of which any recognizer is in a position to announce for
-    // itself. Reached whenever an engine is created or swapped - any stt call
-    // that finds none built, or asks for a different one - so a package
-    // following the event rather than re-reading no longer believes an engine's
-    // first answer for ever (#10760).
-    announceSpeechCapabilitiesIfChanged();
-}
-
-// The capabilities payload as stt.getInfo() would report them: with no
-// recognizer every one is false, which is what sttGetInfo() pushes and so what
-// a consumer reads before anything has created one.
-static QString speechCapabilitiesPayload(const SpeechRecognizer* pRecognizer)
-{
-    const SpeechRecognizer::Capabilities current = pRecognizer ? pRecognizer->capabilities() : SpeechRecognizer::Capabilities{};
-    QJsonObject capabilities;
-    capabilities.insert(qsl("biasing"), current.biasing);
-    capabilities.insert(qsl("grammar"), current.grammar);
-    capabilities.insert(qsl("words"), current.wordResults);
-    // Carried like the rest: docs/stt-api.md promises this event the same keys
-    // as getInfo().capabilities, and a package rebuilding from the event would
-    // otherwise read a missing key as "this engine never can" - on Vosk,
-    // exactly the flag that moves when the library is unloaded or reloaded.
-    capabilities.insert(qsl("sensitivityTuning"), current.sensitivityTuning);
-    capabilities.insert(qsl("onDevice"), current.onDevice);
-    return QString::fromUtf8(QJsonDocument(capabilities).toJson(QJsonDocument::Compact));
-}
-
-void mudlet::announceSpeechCapabilitiesIfChanged()
-{
-    if (mAnnouncedSpeechCapabilities.isEmpty()) {
-        // What Lua has been reading from getInfo() all along, so that a
-        // recognizer coming into existence registers as the change it is
-        mAnnouncedSpeechCapabilities = speechCapabilitiesPayload(nullptr);
-    }
-
-    const QString current = speechCapabilitiesPayload(mpSpeechRecognizer);
-    if (current == mAnnouncedSpeechCapabilities) {
-        return;
-    }
-    // Every profile, not just the microphone's owner - the one event here that
-    // is broadcast. Results, state and faults belong to the session that is
-    // running, so they go to whoever holds the microphone. Capabilities are not
-    // a property of a session at all: they describe the engine, and every
-    // profile reads the same ones back from stt.getInfo(). Sending this to the
-    // owner alone would change what the other profiles read while telling only
-    // one of them, which is the same fault this function exists to fix.
-    //
-    // Over a copy of the list, because each raise runs Lua and a handler may
-    // open or close a profile while this is walking it.
-    const QList<QSharedPointer<Host>> profiles = mHostManager.hostList();
-    // Nothing to deliver to means nothing is announced and nothing is recorded:
-    // the baseline must only ever name what was actually delivered. Recording an
-    // announcement that went nowhere would leave every later comparison finding
-    // the baseline already equal, and the change would never be made good.
-    if (profiles.isEmpty()) {
-        return;
-    }
-    // Recorded before the first raise, not after the last: a handler reached
-    // from one of these is free to call back in here, and an unrecorded
-    // baseline would let it announce the same move again.
-    mAnnouncedSpeechCapabilities = current;
-    for (const auto& pHost : profiles) {
-        // Each raise runs Lua, and reacting to a capability change by calling
-        // stt.reloadLibrary() or stt.init() is the documented thing to do - so a
-        // handler can land back in here, announce a newer payload to every
-        // profile, and return. Carrying on would then deliver this older one to
-        // the profiles the outer loop has not reached, leaving them holding a
-        // value nothing will correct: the baseline already names the newer one.
-        // The same shape as MudletMedia::setMuted()'s guard over its list.
-        if (mAnnouncedSpeechCapabilities != current) {
-            break;
-        }
-        if (pHost) {
-            raiseSpeechEventOn(pHost.data(), qsl("sysSTTCapabilitiesChanged"), current);
-        }
-    }
 }
 
 QToolBar* mudlet::addonToolBarFor(QMainWindow* pContainer) const
@@ -877,10 +470,11 @@ bool mudlet::addonShortcutUsable(const QKeySequence& sequence, const Host* pHost
     // key handling rather than by Qt, so a menu item placed over one takes the
     // key away silently - the item gets the event first and the binding simply
     // stops firing. Only a single-chunk sequence can clash, as a binding is one
-    // key and its modifiers.
+    // key and its modifiers. A switched off binding counts: enableKey() checks
+    // for no commands, and scripts commonly switch groups of bindings on and off.
     if (pHost && sequence.count() == 1) {
         const QKeyCombination combination = sequence[0];
-        if (const TKey* pKey = pHost->getKeyUnit()->firstMatch(combination.key(), combination.keyboardModifiers())) {
+        if (const TKey* pKey = pHost->getKeyUnit()->firstBinding(combination.key(), combination.keyboardModifiers())) {
             // A temporary binding is named after its own id and one made in the
             // editor need never have been given a name, so there is nothing
             // worth quoting: saying what holds the key beats quoting a label
@@ -935,7 +529,7 @@ void mudlet::applyAddonIcon(QToolButton* button, QAction* action, const QString&
     }
 }
 
-int mudlet::addAddonCommand(const CommandRequest& request, Host* pHost, QString& error)
+int mudlet::addAddonCommand(const CommandRequest& request, Host* pHost, const QString& package, QString& error)
 {
     const bool wantsToolbar = request.surfaces != CommandSurface::Menu;
     const bool wantsMenu = request.surfaces != CommandSurface::Toolbar;
@@ -1032,6 +626,7 @@ int mudlet::addAddonCommand(const CommandRequest& request, Host* pHost, QString&
     const int commandId = mNextAddonCommandId++;
     AddonCommand command;
     command.pHost = pHost;
+    command.package = package;
     command.request = request;
     command.icon = request.icon;
     command.tooltip = request.tooltip;
@@ -1353,7 +948,7 @@ void mudlet::warnProfilesLosingBindingTo(const QKeySequence& sequence, Host* pHo
         if (pOtherHost.isNull() || pOtherHost.data() == pHost || pOtherHost->isClosingDown()) {
             continue;
         }
-        if (!pOtherHost->getKeyUnit()->wouldMatch(combination.key(), combination.keyboardModifiers())) {
+        if (!pOtherHost->getKeyUnit()->firstBinding(combination.key(), combination.keyboardModifiers())) {
             continue;
         }
         // The editor rather than the console. A package re-places its commands
@@ -1541,7 +1136,7 @@ void mudlet::unplaceAddonCommand(AddonCommand& command)
     command.container = nullptr;
 }
 
-QStringList mudlet::addonCommandsUsingShortcut(const QKeySequence& sequence, const Host* pHost) const
+QStringList mudlet::addonCommandsUsingShortcut(const QKeySequence& sequence, const Host* pHost, const bool onlyLiveWhileShown) const
 {
     QStringList holders;
     bool anotherProfile = false;
@@ -1552,9 +1147,13 @@ QStringList mudlet::addonCommandsUsingShortcut(const QKeySequence& sequence, con
         if (!pAction || pAction->shortcut() != sequence) {
             continue;
         }
+        // Qt's shortcut map skips a disabled action, so it leaves the key to the other holder
+        if (onlyLiveWhileShown && !command.enabled) {
+            continue;
+        }
         if (command.pHost == pHost) {
             holders.append(qsl("\"%1\"").arg(addonPlainLabel(pAction->text())));
-        } else {
+        } else if (!onlyLiveWhileShown || command.pinned) {
             anotherProfile = true;
         }
     }
@@ -1596,12 +1195,12 @@ QString mudlet::ownShortcutUsingKey(const Qt::Key key, const Qt::KeyboardModifie
     return {};
 }
 
-void mudlet::removeAddonCommandsForHost(Host* pHost)
+void mudlet::removeAddonCommandsForHost(Host* pHost, const QString& package)
 {
     QList<int> doomed;
-    for (auto it = mAddonCommands.constBegin(); it != mAddonCommands.constEnd(); ++it) {
-        if (it.value().pHost == pHost) {
-            doomed.append(it.key());
+    for (const auto [commandId, command] : std::as_const(mAddonCommands).asKeyValueRange()) {
+        if (command.pHost == pHost && (package.isEmpty() || command.package == package)) {
+            doomed.append(commandId);
         }
     }
     for (int commandId : doomed) {
@@ -1798,6 +1397,17 @@ mudlet::mudlet()
     // statics, so one serves every mudlet instance and is never uninstalled:
     static DebugProfileObserver debugProfileObserver;
     TDebug::setProfileObserver(&debugProfileObserver);
+    // A child rather than a member, so it and the recognizer it owns are torn
+    // down with the main window's other children
+    mpSpeechBridge = new TSpeechBridge(this);
+    connect(mpSpeechBridge, &TSpeechBridge::microphoneOwnerChanged, this, &mudlet::refreshMicrophoneMarkers);
+    // Queued, so a tab change before the event loop first runs - while a test or startup is still
+    // building profiles - does not reach Discord, which also only starts polling then.
+    QTimer::singleShot(0ms, this, [this]() {
+        if (mDiscord.libraryLoaded()) {
+            connect(this, &mudlet::signal_tabChanged, &mDiscord, &Discord::UpdatePresence);
+        }
+    });
     // Initialisation happens later in setupConfig() and init()
 }
 
@@ -2503,8 +2113,13 @@ void mudlet::setupConfig()
         // on screen once the connection dialog is up
         mRejectedPortableMarker = resolution.portableMarker;
         mRejectedPortableRoot = resolution.rejectedRoot;
-        qWarning().nospace().noquote() << "mudlet::setupConfig() WARN - \"" << mRejectedPortableMarker << "\" names the data directory \"" << mRejectedPortableRoot
-                                       << "\", which Mudlet cannot use, so \"" << confPath << "\" is in use instead. Profiles kept where the marker points will not be listed until it is corrected.";
+        if (mRejectedPortableRoot.isEmpty()) {
+            qWarning().nospace().noquote() << "mudlet::setupConfig() WARN - \"" << mRejectedPortableMarker << "\" names no data directory, so \"" << confPath << "\" is in use.";
+        } else {
+            qWarning().nospace().noquote() << "mudlet::setupConfig() WARN - \"" << mRejectedPortableMarker << "\" names the data directory \"" << mRejectedPortableRoot
+                                           << "\", which Mudlet cannot use, so \"" << confPath
+                                           << "\" is in use instead. Profiles kept where the marker points will not be listed until it is corrected.";
+        }
     }
     if (resolution.migrationPending) {
         qInfo().nospace() << "mudlet::setupConfig() INFO: XDG_CONFIG_HOME is set but $XDG_CONFIG_HOME/mudlet holds no profiles, so the existing " << confPath
@@ -2541,14 +2156,22 @@ void mudlet::warnAboutRejectedPortableRoot()
     // Qt::AutoText - a path holding a '<' would be taken for markup and mangled,
     // and this is the one message that has to name the file exactly right
     notice->setTextFormat(Qt::PlainText);
-    //: Title of the warning shown at startup when portable.txt names a data directory Mudlet cannot use
+    //: Title of the warning shown at startup when portable.txt names a data directory Mudlet cannot use, or names none at all
     notice->setWindowTitle(tr("Portable data directory unusable"));
-    //: %1 is the full path of the portable.txt file, %2 the data directory it names that Mudlet cannot use
-    notice->setText(tr("%1 names the data directory %2, which Mudlet cannot use.").arg(marker, rejectedRoot));
-    //: %1 is the full path of the directory Mudlet has fallen back to for profiles and settings
-    notice->setInformativeText(tr("Mudlet is using %1 instead, so profiles kept in the portable directory will not be listed. "
-                                  "Correct the file and restart Mudlet to use that directory again.")
-                                       .arg(MudletApp::getMudletPath(enums::mainPath)));
+    if (rejectedRoot.isEmpty()) {
+        //: %1 is the full path of a portable.txt file whose first line is empty or that could not be read, so it names no data directory
+        notice->setText(tr("%1 names no data directory.").arg(marker));
+        //: %1 is the full path of the directory Mudlet uses for profiles and settings
+        notice->setInformativeText(
+                tr("Mudlet is using %1. To keep profiles in a portable data directory, write its path into the file and restart Mudlet.").arg(MudletApp::getMudletPath(enums::mainPath)));
+    } else {
+        //: %1 is the full path of the portable.txt file, %2 the data directory it names that Mudlet cannot use
+        notice->setText(tr("%1 names the data directory %2, which Mudlet cannot use.").arg(marker, rejectedRoot));
+        //: %1 is the full path of the directory Mudlet has fallen back to for profiles and settings
+        notice->setInformativeText(tr("Mudlet is using %1 instead, so profiles kept in the portable directory will not be listed. "
+                                      "Correct the file and restart Mudlet to use that directory again.")
+                                           .arg(MudletApp::getMudletPath(enums::mainPath)));
+    }
     notice->setIcon(QMessageBox::Warning);
     // Never exec(): that spins a nested event loop inside startup, which an
     // unattended run - mudlet --profile under CI - has nobody to end. open() is
@@ -2892,6 +2515,10 @@ void mudlet::loadMaps()
             {"UTF-8", tr("UTF-8 (Recommended)")},
             //: Keep the English translation intact, so if a user accidentally changes to a language they don't understand, they can change back e.g. ISO 8859-2 (Центральная Европа/Central European)
             {"EUC-KR", tr("EUC-KR (Korean)")},
+            //: Keep the English translation intact, so if a user accidentally changes to a language they don't understand, they can change back e.g. ISO 8859-2 (Центральная Европа/Central European)
+            {"SHIFT_JIS", tr("Shift JIS (Japanese)")},
+            //: Keep the English translation intact, so if a user accidentally changes to a language they don't understand, they can change back e.g. ISO 8859-2 (Центральная Европа/Central European)
+            {"EUC-JP", tr("EUC-JP (Japanese)")},
             //: Keep the English translation intact, so if a user accidentally changes to a language they don't understand, they can change back e.g. ISO 8859-2 (Центральная Европа/Central European)
             {"GBK", tr("GBK (Chinese)")},
             //: Keep the English translation intact, so if a user accidentally changes to a language they don't understand, they can change back e.g. ISO 8859-2 (Центральная Европа/Central European)
@@ -3745,21 +3372,7 @@ void mudlet::closeHost(const QString& name)
     // Every command this profile placed, on whichever surface
     removeAddonCommandsForHost(pH);
 
-    // A profile that closes while holding the microphone takes its session with
-    // it. Left running, the owner pointer would clear with the Host and every
-    // further result would fall through to whichever profile is now in front -
-    // a game that never asked to listen, receiving the tail of someone else's
-    // phrase. The all-profiles-gone case below is the same rule with nobody
-    // left to hand back to.
-    if (mpMicrophoneOwner == pH) {
-        // Processing counts: a phrase still decoding for the profile that is
-        // going away has nowhere to be delivered, and the release below would
-        // otherwise let it fall through to whichever profile is now in front.
-        if (mpSpeechRecognizer && (mpSpeechRecognizer->listening() || mpSpeechRecognizer->starting() || mpSpeechRecognizer->state() == SpeechRecognizer::State::Processing)) {
-            mpSpeechRecognizer->cancel();
-        }
-        releaseMicrophone();
-    }
+    mpSpeechBridge->profileClosing(pH);
 
     mpTabBar->removeTab(name);
     // PLACEMARKER: Host destruction (1) - from all sources
@@ -3768,13 +3381,8 @@ void mudlet::closeHost(const QString& name)
     emit signal_hostDestroyed(pH, --hostCount);
     // This is what kills the Host instance:
     mHostManager.deleteHost(name);
-    // One recognizer is shared across profiles and outlives any one of them,
-    // but with none left there is no profile to raise sysSTT* on and nobody to
-    // stop it: a session the closing profile started would otherwise hold the
-    // microphone open, recording light and all, for the rest of the run.
-    if (!mHostManager.getHostCount() && mpSpeechRecognizer) {
-        mpSpeechRecognizer->cancel();
-        mpSpeechRecognizer->releaseResources();
+    if (!mHostManager.getHostCount()) {
+        mpSpeechBridge->allProfilesClosed();
     }
     emit signal_adjustAccessibleNames();
     updateMultiViewControls();
@@ -4006,6 +3614,9 @@ void mudlet::addConsoleForNewHost(Host* pH)
     connect(pH, &Host::signal_discordGameChanged, this, &mudlet::updateDiscordNamedIcon);
     connect(pH, &Host::signal_profileResetting, this, [this, pH]() {
         removeAddonCommandsForHost(pH);
+    });
+    connect(pH, &Host::signal_packageRemoved, this, [this, pH](const QString& packageName) {
+        removeAddonCommandsForHost(pH, packageName);
     });
 
     // Give the map the manager of its secondary views, and wire the map engine's
@@ -4397,10 +4008,11 @@ void mudlet::updateMainWindowTitle()
 // background listening, and nothing anywhere saying the microphone was live.
 QString mudlet::mainWindowMicrophoneMarker() const
 {
-    if (!mpMicrophoneOwner || mDetachedWindows.contains(mpMicrophoneOwner->getName())) {
+    Host* pOwner = mpSpeechBridge ? mpSpeechBridge->microphoneOwner() : nullptr;
+    if (!pOwner || mDetachedWindows.contains(pOwner->getName())) {
         return QString();
     }
-    return microphoneMarkerFor(mpMicrophoneOwner->getName());
+    return microphoneMarkerFor(pOwner->getName());
 }
 
 // An open microphone said where the window manager will show it. Every other
@@ -4414,7 +4026,8 @@ QString mudlet::mainWindowMicrophoneMarker() const
 // title is no place to guess at it.
 QString mudlet::microphoneMarkerFor(const QString& profileName) const
 {
-    if (!mpMicrophoneOwner || mpMicrophoneOwner->getName() != profileName) {
+    Host* pOwner = mpSpeechBridge ? mpSpeechBridge->microphoneOwner() : nullptr;
+    if (!pOwner || pOwner->getName() != profileName) {
         return QString();
     }
     //: Added to the title of the window whose profile has the microphone open, after the profile name
@@ -4694,6 +4307,72 @@ void mudlet::hideEvent(QHideEvent* event)
     QMainWindow::hideEvent(event);
 }
 
+bool mudlet::saveWindowLayoutForScript()
+{
+    // the flag is what makes the save on the way out a no-op, and a save asked
+    // for from a script is no substitute for that one, so it goes back up only
+    // if this call really saved
+    const bool hadSavedLayout = mHasSavedLayout;
+    mHasSavedLayout = false;
+    const bool saved = saveWindowLayout();
+    mHasSavedLayout = hadSavedLayout && saved;
+    return saved;
+}
+
+bool mudlet::openProfile(const QString& profileName, bool connect)
+{
+    const bool loaded = loadProfile(profileName, connect);
+    slot_connectionDialogueFinished(profileName, connect);
+    enableToolbarButtons();
+    return loaded;
+}
+
+bool mudlet::requestProfileTabClose(const QString& profileName)
+{
+    const int index = mpTabBar->tabIndex(profileName);
+    if (index == -1) {
+        return false;
+    }
+    emit mpTabBar->tabCloseRequested(index);
+    return true;
+}
+
+int mudlet::profileTabIndex(const QString& profileName) const
+{
+    return mpTabBar->tabIndex(profileName);
+}
+
+void mudlet::setActiveProfileTab(const QString& profileName)
+{
+    mpTabBar->setCurrentIndex(mpTabBar->tabIndex(profileName));
+}
+
+QObject* mudlet::openComposer(Host* pHost, const QString& title, const QString& text)
+{
+    auto* composer = new dlgComposer(pHost);
+    composer->init(title, text);
+    composer->raise();
+    composer->show();
+    return composer;
+}
+
+void mudlet::closeComposer(QObject* composer)
+{
+    if (auto* window = qobject_cast<QWidget*>(composer)) {
+        window->close();
+    }
+}
+
+QString mudlet::getOpenFileName(const QString& title, const QString& location)
+{
+    return QFileDialog::getOpenFileName(nullptr, title, location);
+}
+
+QString mudlet::getExistingDirectory(const QString& title, const QString& location)
+{
+    return QFileDialog::getExistingDirectory(nullptr, title, location);
+}
+
 std::optional<QSize> mudlet::getImageSize(const QString& imageLocation)
 {
     // QImage reads an SVG only where the qsvg image plugin is deployed, so the
@@ -4722,6 +4401,24 @@ Host* mudlet::getActiveHost()
     }
 
     return nullptr;
+}
+
+void mudlet::setCompactInputLineChecked(Host* pHost, bool checked)
+{
+    if (mpCurrentActiveHost == pHost) {
+        dactionInputLine->setChecked(checked);
+    }
+}
+
+void mudlet::showNotification(const QString& title, const QString& text, std::optional<int> msecs)
+{
+    mTrayIcon.show();
+    if (msecs.has_value()) {
+        mTrayIcon.showMessage(title, text, mTrayIcon.icon(), msecs.value());
+    } else {
+        mTrayIcon.showMessage(title, text, mTrayIcon.icon());
+    }
+    mTrayIcon.hide();
 }
 
 // Received when the OS/DE/WM tells Mudlet to close (or we force the close
@@ -5061,6 +4758,7 @@ void mudlet::setToolBarIconSize(const int s)
     if (mpToolBarReplay) {
         mpToolBarReplay->setIconSize(mpMainToolBar->iconSize());
         mpToolBarReplay->setToolButtonStyle(mpMainToolBar->toolButtonStyle());
+        fitReplayPauseButton();
     }
     // The signal first: a detached window sets its own toolbar's size from it,
     // and the buttons below are sized from the toolbar of whichever window each
@@ -7113,6 +6811,9 @@ mudlet::~mudlet()
 
     saveDetachedWindowsGeometry();
 
+    if (TAppFrontend::instance() == this) {
+        TAppFrontend::setInstance(nullptr);
+    }
     mudlet::smpSelf = nullptr;
 }
 
@@ -7267,6 +6968,7 @@ void mudlet::slot_replayStarted()
     mpActionReplayPause->setToolTip(utils::richText(tr("Hold the replay where it is. It carries on from the same point when you resume.")));
     mpToolBarReplay->addAction(mpActionReplayPause);
     mpToolBarReplay->widgetForAction(mpActionReplayPause)->setObjectName(mpActionReplayPause->objectName());
+    fitReplayPauseButton();
 
     //: Button on the replay toolbar that ends the replay early
     mpActionReplayStop = new QAction(style()->standardIcon(QStyle::SP_MediaStop), tr("Stop"), this);
@@ -7303,6 +7005,10 @@ void mudlet::slot_replayStarted()
     mpTimerReplay->setSingleShot(false);
     connect(mpTimerReplay.data(), &QTimer::timeout, this, &mudlet::updateReplayTimeLabel);
 
+    // As wide as the readout gets while paused: otherwise pausing pushes the
+    // buttons along, and a second click meant for Resume lands on the label
+    mpLabelReplayTime->setText(replayTimeLabelText(QTime(0, 0).toString(mTimeFormat), true));
+    mpLabelReplayTime->setMinimumWidth(mpLabelReplayTime->sizeHint().width());
     updateReplayTimeLabel();
 
     mpLabelReplaySpeedDisplay->show();
@@ -7322,16 +7028,38 @@ void mudlet::updateReplayTimeLabel()
         return;
     }
 
-    //: Elapsed time readout on the replay toolbar. %1 is the time itself
-    QString text = tr("Time: %1").arg(mReplay.elapsed().toString(mTimeFormat));
     // A replay can be quiet for long stretches, so read "held" from the profile, not the button, to report
     // what playback is actually doing:
-    if (Host* pHost = mReplay.host(); pHost && pHost->mTelnet.replayPaused()) {
+    Host* pHost = mReplay.host();
+    const bool paused = pHost && pHost->mTelnet.replayPaused();
+    mpLabelReplayTime->setText(replayTimeLabelText(mReplay.elapsed().toString(mTimeFormat), paused));
+    mpLabelReplayTime->show();
+}
+
+QString mudlet::replayTimeLabelText(const QString& time, const bool paused) const
+{
+    //: Elapsed time readout on the replay toolbar. %1 is the time itself
+    QString text = tr("Time: %1").arg(time);
+    if (paused) {
         //: Replaces the elapsed-time readout on the replay toolbar while the replay is held. %1 is the already translated and formatted "Time: ..." text, so do not add a time prefix of your own
         text = tr("%1 (paused)").arg(text);
     }
-    mpLabelReplayTime->setText(qsl("<font size=25><b>%1</b></font>").arg(text));
-    mpLabelReplayTime->show();
+    return qsl("<font size=25><b>%1</b></font>").arg(text);
+}
+
+// As wide as it is while it reads Resume, or pausing pushes the buttons after it along
+void mudlet::fitReplayPauseButton()
+{
+    QWidget* pauseButton = mpToolBarReplay->widgetForAction(mpActionReplayPause);
+    const QString currentText = mpActionReplayPause->text();
+    //: Button on the replay toolbar that lets a held replay carry on
+    mpActionReplayPause->setText(tr("Resume"));
+    const int resumeWidth = pauseButton->sizeHint().width();
+    //: Button on the replay toolbar that holds the replay where it is
+    mpActionReplayPause->setText(tr("Pause"));
+    const int pauseWidth = pauseButton->sizeHint().width();
+    mpActionReplayPause->setText(currentText);
+    pauseButton->setMinimumWidth(std::max(resumeWidth, pauseWidth));
 }
 
 void mudlet::slot_replayPauseToggled(const bool paused)
@@ -7712,26 +7440,19 @@ Host* mudlet::loadProfile(const QString& profile_name, const bool playOnline, co
 
 void mudlet::slot_newDataOnHost(const QString& hostName, const bool isLowerPriorityChange)
 {
+    // A detached profile's tab lives in its own window's tab bar, which shows
+    // one profile at a time regardless of multiview:
+    if (auto pDetachedWindow = mDetachedWindows.value(hostName)) {
+        pDetachedWindow->markTabActivity(hostName, isLowerPriorityChange);
+        return;
+    }
     if (mMultiView) {
         // We do not need to mark tabs with activity if they are all on show anyhow:
         return;
     }
     Host* pHost = mHostManager.getHost(hostName);
     if (pHost && pHost != mpCurrentActiveHost) {
-        if (mpTabBar->count() > 1) {
-            if (!isLowerPriorityChange) {
-                mpTabBar->setTabBold(hostName, true);
-                mpTabBar->setTabItalic(hostName, false);
-                mpTabBar->update();
-            } else if (isLowerPriorityChange && !mpTabBar->tabBold(hostName)) {
-                // Local, lower priority change so only change the
-                // styling if it is not already modified - so that the
-                // higher priority remote change indication will not
-                // get changed by a later local one:
-                mpTabBar->setTabItalic(hostName, true);
-                mpTabBar->update();
-            }
-        }
+        mpTabBar->markActivity(hostName, isLowerPriorityChange);
     }
 }
 
@@ -8141,35 +7862,6 @@ QString mudlet::autodetectPreferredLanguage()
     return qsl("en_US");
 }
 
-std::pair<bool, QString> mudlet::setProfileIcon(const QString& profile, const QString& newIconPath)
-{
-    QDir dir;
-    auto profileIconPath = MudletApp::getMudletPath(enums::profileDataItemPath, profile, qsl("profileicon"));
-    if (QFileInfo::exists(profileIconPath) && !dir.remove(profileIconPath)) {
-        qWarning() << "mudlet::setProfileIcon() ERROR: couldn't remove existing icon" << profileIconPath;
-        return {false, qsl("couldn't remove existing icon file")};
-    }
-
-    if (!QFile::copy(newIconPath, profileIconPath)) {
-        qWarning() << "mudlet::setProfileIcon() ERROR: couldn't copy new icon" << newIconPath << " to" << profileIconPath;
-        return {false, qsl("couldn't copy icon file into new location")};
-    }
-
-    return {true, QString()};
-}
-
-std::pair<bool, QString> mudlet::resetProfileIcon(const QString& profile)
-{
-    QDir dir;
-    auto profileIconPath = MudletApp::getMudletPath(enums::profileDataItemPath, profile, qsl("profileicon"));
-    if (QFileInfo::exists(profileIconPath) && !dir.remove(profileIconPath)) {
-        qWarning() << "mudlet::resetProfileIcon() ERROR: couldn't remove existing icon" << profileIconPath;
-        return {false, qsl("couldn't remove existing icon file")};
-    }
-
-    return {true, QString()};
-}
-
 void mudlet::activateProfile(Host* pHost)
 {
     QMap<QString, int> hostNameToTabMap;
@@ -8233,9 +7925,7 @@ void mudlet::activateProfile(Host* pHost)
 
     // Reset the tab back to "normal" to undo the effect of it having its style
     // changed on new data:
-    mpTabBar->setTabBold(newActiveTabIndex, false);
-    mpTabBar->setTabItalic(newActiveTabIndex, false);
-    mpTabBar->setTabUnderline(newActiveTabIndex, false);
+    mpTabBar->clearActivity(newActiveTabIndex);
 
     mpCurrentActiveHost = pHost;
 
@@ -9425,16 +9115,18 @@ void mudlet::moveProfileFromMainToDetachedWindow(const QString& profileName, int
     // Remove tab from main window tab bar
     mpTabBar->removeTab(tabIndex);
 
-    // Force tab bar repaint after removing tab
-    mpTabBar->repaint();
-    mpTabBar->update();
-    QCoreApplication::processEvents();
-
     // Add profile to target detached window
     targetWindow->addProfile(profileName, console);
 
     // Add profile to the detached windows map
     mDetachedWindows[profileName] = targetWindow;
+
+    // Only now that the profile has its new home: a timer delivered by
+    // processEvents() may run the orphan check, which reattaches any profile it
+    // finds in neither the main window nor a detached one
+    mpTabBar->repaint();
+    mpTabBar->update();
+    QCoreApplication::processEvents();
 
     // Update multi-view controls
     updateMultiViewControls();

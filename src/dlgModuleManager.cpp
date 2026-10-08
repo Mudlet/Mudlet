@@ -138,6 +138,8 @@ void dlgModuleManager::showModuleSync(const QString& module, const bool sync)
             continue;
         }
         if (auto* checkItem = moduleTable->item(row, 2)) {
+            // The host already has the new flag; letting itemChanged through would copy the row's stale priority back
+            const QSignalBlocker blocker(moduleTable);
             checkItem->setCheckState(sync ? Qt::Checked : Qt::Unchecked);
         }
         return;
