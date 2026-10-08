@@ -961,6 +961,31 @@ describe("Trigger processing", function()
             assert.has_error(function() feedTriggers({}) end)
         end)
 
+        -- The fed text runs a whole trigger pass inside the calling script
+        it("gives the calling trigger back its matches after a nested feed (#10796)", function()
+            local seen = {}
+            local inner = tempRegexTrigger([[^nested_feed_inner (\w+)$]], function()
+                seen.innerMatch = matches[2]
+            end)
+            local outer = tempRegexTrigger([[^nested_feed_outer (\w+)$]], function()
+                seen.beforeMatch = matches[2]
+                feedTriggers("\nnested_feed_inner deeper\n")
+                seen.afterFullMatch = matches[1]
+                seen.afterMatch = matches[2]
+            end)
+            finally(function()
+                killTrigger(inner)
+                killTrigger(outer)
+            end)
+
+            feedTriggers("\nnested_feed_outer thing\n")
+
+            assert.are.equal("thing", seen.beforeMatch)
+            assert.are.equal("deeper", seen.innerMatch, "the inner trigger should see its own capture")
+            assert.are.equal("nested_feed_outer thing", seen.afterFullMatch, "matches[1] was emptied by the nested feed")
+            assert.are.equal("thing", seen.afterMatch, "the calling trigger's capture was emptied by the nested feed")
+        end)
+
         it("stops a trigger that feeds itself more than one matching line", function()
             local fired = 0
             local refusals = 0
@@ -4746,7 +4771,7 @@ describe("Trigger processing", function()
             assert.are.equal("bbb", _G.LazyGlobalsSpec.second, "a fire that had not looked at multimatches yet lost it to the nested pass")
         end)
 
-        it("leaves a fire the empty table after a trigger pass it started", function()
+        it("hands a fire back its captures after a trigger pass it started (#10796)", function()
             local seen = {}
             trigger(tempRegexTrigger("^LazyFeedInner (\\w+)$", function()
                 seen.inner = matches[2]
@@ -4766,7 +4791,7 @@ describe("Trigger processing", function()
 
             assert.are.equal("inner", seen.inner)
             assert.are.equal("table", seen.type)
-            assert.is_nil(seen.capture, "a nested trigger pass that fired leaves the empty table behind it")
+            assert.are.equal("outer", seen.capture, "a nested trigger pass that fired emptied the caller's matches")
             assert.are.equal("outer", seen.untouched, "a nested pass that fired nothing should leave matches alone")
         end)
 
