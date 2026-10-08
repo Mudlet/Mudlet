@@ -928,7 +928,7 @@ void TArea::readJsonUserData(const QJsonObject& obj)
             mUserData.insert(key, obj.value(key).toString());
         }
     }
-    // labels carry their font and outline color in their own JSON fields
+    // a JSON label keeps its font in its own fields and nothing reads these
     dropFileOnlyUserData(mUserData);
 }
 

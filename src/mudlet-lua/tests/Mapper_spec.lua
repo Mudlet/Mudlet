@@ -3793,16 +3793,14 @@ describe("Tests saveMap and loadMap", function()
       assert.are.same({climate = "temperate"}, getAllAreaUserData(area))
     end)
 
-    it("drops label keys in a map file that no label in it claims", function()
-      local area = buildMap()
-      -- keys a map file can hold for a label that no longer exists
-      assert.is_true(setAreaUserData(area, "system.labelFont_99", "Sans|10|50|0"))
-      assert.is_true(setAreaUserData(area, "system.labelOutlineColor_99", "1|2|3|255"))
-      assert.is_true(saveMap(savePath))
-      deleteMap()
+    it("drops label keys a map file holds for labels that no longer exist", function()
+      -- see fixtures/maps/README.md for what the file holds
+      assert.is_true(loadMap(specDirectory .. "/fixtures/maps/stale-label-keys.dat"))
+      local area = getAreaTable()["StaleLabelKeysArea"]
+      assert.is_number(area)
 
-      assert.is_true(loadMap(savePath))
-      assert.are.same({}, getAllAreaUserData(area))
+      assert.are.same({climate = "temperate"}, getAllAreaUserData(area))
+      assert.are.equal("Kept Label", getMapLabels(area)[0])
     end)
 
     it("replaces what is on the map rather than merging into it", function()
