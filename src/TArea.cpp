@@ -918,7 +918,7 @@ void TArea::dropFileOnlyUserData(QMap<QString, QString>& userData)
         const QStringView suffix = QStringView(key).mid(prefix.size());
         bool isNumber = false;
         const int labelId = suffix.toInt(&isNumber);
-        return isNumber && labelId >= 0 && suffix == QString::number(labelId);
+        return isNumber && suffix == QString::number(labelId);
     };
     userData.removeIf([&labelKey](const QMap<QString, QString>::iterator& it) {
         return it.key() == QLatin1String("system.fallback_map2DZoom") || labelKey(it.key(), QLatin1String("system.labelFont_")) || labelKey(it.key(), QLatin1String("system.labelOutlineColor_"));
