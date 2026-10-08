@@ -677,6 +677,7 @@ local vitalsNodes = {
   { "Char", "Vitals" },
   { "char", "vitals" },
   { "Char", "Maxstats" },
+  { "Char", "MaxStats" },
   { "char", "maxstats" },
   { "Char", "Status" },
   { "char", "status" },
@@ -2838,6 +2839,7 @@ end
 onEvent("gmcp.Char.Vitals", "BaseUI.updateVitals")
 onEvent("gmcp.char.vitals", "BaseUI.updateVitals")
 onEvent("gmcp.Char.Maxstats", "BaseUI.updateVitals")
+onEvent("gmcp.Char.MaxStats", "BaseUI.updateVitals")
 onEvent("gmcp.char.maxstats", "BaseUI.updateVitals")
 onEvent("gmcp.Char.Status", "BaseUI.updateVitals")
 onEvent("gmcp.char.status", "BaseUI.updateVitals")
