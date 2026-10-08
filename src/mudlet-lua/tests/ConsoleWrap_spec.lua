@@ -165,6 +165,47 @@ describe("Tests how a console wraps the lines it is given", function()
       assert.are.same({"aaaa bbbb ", "cccc dddd ", "eeee"}, lines())
     end)
 
+    -- Wider than the main console's own width, so a rewrap at that width shows
+    local longRun = string.rep("y", 300)
+
+    it("rewraps text insertText() puts into a line with a newline to this console's width", function()
+      wrapAt(10)
+      echo(win, "abc\n")
+      moveCursor(win, 0, 0)
+      insertText(win, "x\n" .. longRun)
+      local result = lines()
+      for index, line in ipairs(result) do
+        assert.is_true(#line <= 10, "line " .. index .. " is " .. #line .. " characters wide")
+      end
+      assert.are.equal("x" .. longRun .. "abc", table.concat(result))
+    end)
+
+    it("rewraps a link insertLink() puts into a line with a newline to this console's width", function()
+      wrapAt(10)
+      echo(win, "abc\n")
+      moveCursor(win, 0, 0)
+      insertLink(win, "x\n" .. longRun, "", "")
+      local result = lines()
+      for index, line in ipairs(result) do
+        assert.is_true(#line <= 10, "line " .. index .. " is " .. #line .. " characters wide")
+      end
+      assert.are.equal("x" .. longRun .. "abc", table.concat(result))
+    end)
+
+    it("rewraps inserted text the way echo() wraps it in a console whose wrap was never set", function()
+      local unset = "consoleWrapSpecUnsetWindow"
+      createMiniConsole(unset, 0, 0, 400, 300)
+      echo(unset, "x" .. longRun .. "\n")
+      local echoed = getLines(unset, 0, getLineCount(unset))
+      clearWindow(unset)
+      echo(unset, "abc\n")
+      moveCursor(unset, 0, 0)
+      insertText(unset, "x" .. longRun .. "\n")
+      local inserted = getLines(unset, 0, getLineCount(unset))
+      deleteMiniConsole(unset)
+      assert.are.same(echoed, {inserted[1]})
+    end)
+
     it("wraps a line that was added to before its newline arrived", function()
       wrapAt(20)
       echo(win, "keeps going")

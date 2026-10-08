@@ -398,6 +398,8 @@ public:
     bool insertInLine(QPoint& cursor, const QString& what, const TChar& format);
     void expandLine(int y, int count, TChar&);
     int wrapLine(int startLine, int maxWidth, int indentSize, int hangingIndentSize);
+    // At the width and indents text is appended with
+    int wrapLine(int startLine) { return wrapLine(startLine, mWrapAt, mWrapIndent, mWrapHangingIndent); }
     void log(int, int);
     QString assembleLog(int fromLine, int toLine);
     inline int skipSpacesAtBeginOfLine(const int row, const int column);
