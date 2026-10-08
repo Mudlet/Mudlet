@@ -469,8 +469,13 @@ local speedwalkShow
 
 --- Stops a speedwalk and clears the walklist
 function stopSpeedwalk()
-  local active = pauseSpeedwalk()
-  if active then
+  -- not through pauseSpeedwalk(), which would raise sysSpeedwalkPaused for a pause nobody asked for;
+  -- a paused walk has no timer but is still there to resume, so it is stopped too
+  if speedwalkTimerID or (speedwalkList and #speedwalkList > 0) then
+    if speedwalkTimerID then
+      killTimer(speedwalkTimerID)
+      speedwalkTimerID = false
+    end
     speedwalkList = {}
     raiseEvent("sysSpeedwalkStopped")
     return true
@@ -509,6 +514,10 @@ end
 
 --- <b><u>TODO</u></b> speedwalktimer()
 function speedwalktimer(walklist, walkdelay, show)
+  if #walklist == 0 then
+    speedwalkTimerID = false
+    return
+  end
   send(walklist[1], show)
   table.remove(walklist, 1)
   if #walklist > 0 then
@@ -516,6 +525,8 @@ function speedwalktimer(walklist, walkdelay, show)
       speedwalktimer(walklist, walkdelay, show)
     end)
   else
+    -- the last step's timer has already fired, so there is nothing left to pause or stop
+    speedwalkTimerID = false
     raiseEvent("sysSpeedwalkFinished")
   end
 end
@@ -524,11 +535,9 @@ end
 
 --- <b><u>TODO</u></b> speedwalk(dirString, backwards, delay, optional show)
 function speedwalk(dirString, backwards, delay, show)
+  assert(type(dirString) == "string", string.format("speedwalk: bad argument #1 type (directions as string expected, got %s!)", type(dirString)))
   dirString = dirString:lower()
-  local walkdelay = delay
   if show ~= false then show = true end
-  speedwalkShow = show
-  speedwalkDelay = delay
   local walklist = {}
   local long_dir = {north = 'n', south = 's', east = 'e', west = 'w', up = 'u', down = 'd'}
   for k,v in pairs(long_dir) do
@@ -548,33 +557,37 @@ function speedwalk(dirString, backwards, delay, show)
     ni = "out",
     tuo = "in"
   }
-  raiseEvent("sysSpeedwalkStarted")
   if not backwards then
     for count, direction in string.gmatch(dirString, "([0-9]*)([neswudio][ewnu]?t?)") do
       count = (count == "" and 1 or count)
       for i = 1, count do
-        if delay then
-          walklist[#walklist + 1] = direction
-        else
-          send(direction, show)
-        end
+        walklist[#walklist + 1] = direction
       end
     end
   else
     for direction, count in string.gmatch(dirString:reverse(), "(t?[ewnu]?[neswudio])([0-9]*)") do
       count = (count == "" and 1 or count:reverse())
       for i = 1, count do
-        if delay then
-          walklist[#walklist + 1] = reversedir[direction]
-        else
-          send(reversedir[direction], show)
-        end
+        walklist[#walklist + 1] = reversedir[direction]
       end
     end
   end
-  if walkdelay then
+  if #walklist == 0 then
+    return nil, "speedwalk(): no directions found in the walk to take"
+  end
+  -- two timer chains at once would interleave their steps, and a paused walk left behind could be resumed
+  stopSpeedwalk()
+  raiseEvent("sysSpeedwalkStarted")
+  if delay then
+    speedwalkShow = show
+    speedwalkDelay = delay
     speedwalkList = walklist
-    speedwalktimer(walklist, walkdelay, show)
+    speedwalktimer(walklist, delay, show)
+  else
+    for _, direction in ipairs(walklist) do
+      send(direction, show)
+    end
+    raiseEvent("sysSpeedwalkFinished")
   end
 end
 

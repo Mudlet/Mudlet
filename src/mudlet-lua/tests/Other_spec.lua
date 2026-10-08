@@ -465,6 +465,101 @@ describe("Tests Other.lua functions", function()
     end)
   end)
 
+  describe("Tests the events a speedwalk raises over its whole life", function()
+    local speedwalkEvents = {"sysSpeedwalkStarted", "sysSpeedwalkFinished", "sysSpeedwalkPaused", "sysSpeedwalkResumed", "sysSpeedwalkStopped"}
+    local seen, handlers, sent
+    local realSend
+
+    before_each(function()
+      seen, handlers, sent = {}, {}, {}
+      for _, eventName in ipairs(speedwalkEvents) do
+        handlers[#handlers + 1] = registerAnonymousEventHandler(eventName, function(event) seen[#seen + 1] = event end)
+      end
+      realSend = _G.send
+      _G.send = function(command, show) sent[#sent + 1] = command; return realSend(command, show) end
+    end)
+
+    after_each(function()
+      _G.send = realSend
+      for _, handler in ipairs(handlers) do
+        killAnonymousEventHandler(handler)
+      end
+      pcall(resumeSpeedwalk)
+      pcall(stopSpeedwalk)
+    end)
+
+    it("raises sysSpeedwalkFinished after a walk with no delay", function()
+      speedwalk("2n1e")
+      assert.are.same({"n", "n", "e"}, sent)
+      assert.are.same({"sysSpeedwalkStarted", "sysSpeedwalkFinished"}, seen)
+    end)
+
+    it("refuses a walk with no directions in it, without starting one", function()
+      for _, walk in ipairs({"xyzzy", "", "5", ";;;", "0n"}) do
+        local ok, err = speedwalk(walk)
+        assert.is_nil(ok, walk)
+        assert.are.equal("speedwalk(): no directions found in the walk to take", err)
+        ok = speedwalk(walk, false, 0.01)
+        assert.is_nil(ok, walk)
+      end
+      assert.are.same({}, sent)
+      assert.are.same({}, seen)
+    end)
+
+    it("raises a bad argument error for directions that are not a string", function()
+      assert.has_error(function() speedwalk(42) end, "speedwalk: bad argument #1 type (directions as string expected, got number!)")
+      assert.has_error(function() speedwalk() end, "speedwalk: bad argument #1 type (directions as string expected, got nil!)")
+    end)
+
+    it("leaves nothing to pause or stop once a delayed walk has finished", function()
+      speedwalk("n;e;s", false, 0.01)
+      assert.are.equal("sysSpeedwalkFinished", (waitForEvent("sysSpeedwalkFinished", 5000)))
+      assert.are.same({"n", "e", "s"}, sent)
+
+      local ok, err = pauseSpeedwalk()
+      assert.is_nil(ok)
+      assert.are.equal("pauseSpeedwalk(): no active speedwalk found", err)
+      ok, err = stopSpeedwalk()
+      assert.is_nil(ok)
+      assert.are.equal("stopSpeedwalk(): no active speedwalk found", err)
+      assert.are.same({"sysSpeedwalkStarted", "sysSpeedwalkFinished"}, seen)
+    end)
+
+    it("does not report a pause when a running walk is stopped", function()
+      speedwalk("4n", false, 10)
+      assert.is_true(stopSpeedwalk())
+      assert.are.same({"sysSpeedwalkStarted", "sysSpeedwalkStopped"}, seen)
+    end)
+
+    it("stops a paused walk, so there is nothing left to resume", function()
+      speedwalk("5n", false, 10)
+      assert.is_true(pauseSpeedwalk())
+      assert.is_true(stopSpeedwalk())
+      assert.is_nil(resumeSpeedwalk())
+      assert.are.same({"sysSpeedwalkStarted", "sysSpeedwalkPaused", "sysSpeedwalkStopped"}, seen)
+    end)
+
+    it("stops a paused walk before starting another", function()
+      speedwalk("5n", false, 10)
+      assert.is_true(pauseSpeedwalk())
+      speedwalk("3e")
+      assert.is_nil(resumeSpeedwalk())
+      assert.are.same({"n", "e", "e", "e"}, sent)
+      assert.are.same({"sysSpeedwalkStarted", "sysSpeedwalkPaused", "sysSpeedwalkStopped", "sysSpeedwalkStarted", "sysSpeedwalkFinished"}, seen)
+    end)
+
+    it("stops a running delayed walk before starting another", function()
+      speedwalk("3n", false, 0.01)
+      speedwalk("3s", false, 0.01)
+      assert.are.equal("sysSpeedwalkFinished", (waitForEvent("sysSpeedwalkFinished", 5000)))
+      -- give a second timer chain, had one survived, time to show itself
+      tempTimer(0.1, function() raiseEvent("speedwalkSpecSettled") end)
+      waitForEvent("speedwalkSpecSettled", 5000)
+      assert.are.same({"n", "s", "s", "s"}, sent)
+      assert.are.same({"sysSpeedwalkStarted", "sysSpeedwalkStopped", "sysSpeedwalkStarted", "sysSpeedwalkFinished"}, seen)
+    end)
+  end)
+
   describe("Tests the interface language Mudlet publishes", function()
 
     -- mudlet.translations.interfacelanguage is what translateTable() and
