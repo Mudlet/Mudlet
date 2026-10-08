@@ -2535,6 +2535,9 @@ void Host::printOnDisplay(std::string& data, const bool isFromServer)
     // The view only times the pass, flashes the taskbar and marks the profile's
     // tab; the text is processed whether or not there is one.
     const bool alertWanted = mpConsole && mpConsole->startIncomingText() && isFromServer;
+    // cTelnet::slot_timerPosting() posts a bare "\r" when nothing followed the
+    // game's last newline. Read before translateToPlainText() parses data away.
+    const bool carriesText = !(data.size() == 1 && data.front() == '\r');
     TConsoleModel& model = *mpMainConsoleModel;
     TBuffer& buffer = model.buffer;
 
@@ -2568,7 +2571,7 @@ void Host::printOnDisplay(std::string& data, const bool isFromServer)
     }
 
     if (mpConsole) {
-        mpConsole->finishIncomingText();
+        mpConsole->finishIncomingText(carriesText);
     }
 }
 

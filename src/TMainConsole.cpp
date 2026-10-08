@@ -3108,12 +3108,15 @@ void TMainConsole::alertNewData()
     QApplication::alert(mudlet::self(), 0);
 }
 
-void TMainConsole::finishIncomingText()
+void TMainConsole::finishIncomingText(const bool carriesText)
 {
     Q_ASSERT_X(mpLineEdit_networkLatency, "TMainConsole::finishIncomingText()", "mpLineEdit_networkLatency does not point to a valid QLineEdit");
     mLatencyProcessT = mProcessingTimer.elapsed() / 1000.0;
     if (!mpLatencyBoxPacer->isActive()) {
         mpLatencyBoxPacer->start();
+    }
+    if (!carriesText) {
+        return;
     }
     // Modify the tab text if this is not the currently active host - this
     // method is only used on the "main" console so no need to filter depending

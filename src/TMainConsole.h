@@ -362,10 +362,11 @@ public:
     // The view's part of Host::printOnDisplay(). startIncomingText() starts
     // timing the pass for the latency box and answers whether to alert the user
     // if the text changes the buffer; finishIncomingText() schedules the paced
-    // latency box refresh and marks the profile's tab.
+    // latency box refresh and, unless the pass carried no text, marks the
+    // profile's tab.
     bool startIncomingText();
     void alertNewData();
-    void finishIncomingText();
+    void finishIncomingText(bool carriesText);
     void finalize();
     void refreshSubconsoles();
 
