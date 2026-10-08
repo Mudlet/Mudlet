@@ -77,6 +77,8 @@ static const char* bad_label_value = "label \"%s\" not found";
 // A Host outlives its main console (closing the window destroys the view while Lua keeps running),
 // so widget-only queries report this rather than dereference what is gone.
 static const char* no_main_window_value = "the profile has no main window";
+// TCommandLine always sends the main command line's text to the game
+static const char* main_cmdline_action_value = "the main command line's action cannot be changed, it always sends its text to the game";
 
 // No documentation available in wiki - internal function
 static bool isMain(const QString& name)
@@ -2580,6 +2582,9 @@ int TLuaInterpreter::resetCmdLineAction(lua_State* L)
         lua_pushboolean(L, true);
         return 1;
     }
+    if (isMain(name)) {
+        return warnArgumentValue(L, __func__, main_cmdline_action_value);
+    }
     return warnArgumentValue(L, __func__, qsl("command line name '%1' not found").arg(name));
 }
 
@@ -2905,6 +2910,16 @@ int TLuaInterpreter::setBackgroundColor(lua_State* L)
     if (isMain(windowName)) {
         host.setProfileBackgroundColor(QColor(r, g, b, alpha));
     } else if (!host.setBackgroundColor(windowName, r, g, b, alpha)) {
+        const auto kind = host.windowType(windowName);
+        if (kind == qsl("commandline")) {
+            return warnArgumentValue(L, __func__, qsl("'%1' is a command line, use setCmdLineStyleSheet() to set its background").arg(windowName));
+        }
+        if (kind == qsl("textedit")) {
+            return warnArgumentValue(L, __func__, qsl("'%1' is a text edit, use setTextEditStyleSheet() to set its background").arg(windowName));
+        }
+        if (kind == qsl("scrollbox")) {
+            return warnArgumentValue(L, __func__, qsl("'%1' is a scroll box, which has no background color of its own").arg(windowName));
+        }
         return warnArgumentValue(L, __func__, qsl("window/label '%1' not found").arg(windowName));
     }
     lua_pushboolean(L, true);
@@ -3240,6 +3255,9 @@ int TLuaInterpreter::setCmdLineAction(lua_State* L)
 
     if (!host.setCmdLineAction(name, func)) {
         luaL_unref(L, LUA_REGISTRYINDEX, func);
+        if (isMain(name)) {
+            return warnArgumentValue(L, __func__, main_cmdline_action_value);
+        }
         return warnArgumentValue(L, __func__, qsl("command line name '%1' not found").arg(name));
     }
 
