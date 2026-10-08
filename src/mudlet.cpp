@@ -2600,7 +2600,9 @@ void mudlet::initEdbee()
     grammarManager->readGrammarFile(QLatin1String(":/edbee_defaults/Lua.tmLanguage"));
 
     //Open and parse the luaFunctionList document into a stringlist for use with autocomplete
-    loadLuaFunctionList();
+    if (!loadLuaFunctionList()) {
+        qWarning() << "mudlet: the Lua function list could not be loaded, so the script editors will offer no API autocompletion";
+    }
 
     //QFile file(fileName);
     //if( file.exists() && file.open(QIODevice::ReadOnly) ) {
@@ -7491,21 +7493,31 @@ bool mudlet::loadLuaFunctionList()
 {
     auto jsonFile = QFile(qsl(":/lua-function-list.json"));
     if (!jsonFile.open(QFile::ReadOnly)) {
+        qWarning().nospace().noquote() << "mudlet::loadLuaFunctionList() WARNING - could not open \"" << jsonFile.fileName() << "\": " << jsonFile.errorString();
         return false;
     }
 
     const QByteArray data = jsonFile.readAll();
     jsonFile.close();
 
-    auto json_doc = QJsonDocument::fromJson(data);
+    QJsonParseError parseError;
+    auto json_doc = QJsonDocument::fromJson(data, &parseError);
 
-    if (json_doc.isNull() || !json_doc.isObject()) {
+    if (json_doc.isNull()) {
+        qWarning().nospace().noquote() << "mudlet::loadLuaFunctionList() WARNING - \"" << jsonFile.fileName() << "\" is not valid JSON: " << parseError.errorString() << " at offset "
+                                       << parseError.offset;
+        return false;
+    }
+
+    if (!json_doc.isObject()) {
+        qWarning().nospace().noquote() << "mudlet::loadLuaFunctionList() WARNING - \"" << jsonFile.fileName() << "\" does not hold a JSON object";
         return false;
     }
 
     const QJsonObject json_obj = json_doc.object();
 
     if (json_obj.isEmpty()) {
+        qWarning().nospace().noquote() << "mudlet::loadLuaFunctionList() WARNING - \"" << jsonFile.fileName() << "\" lists no functions";
         return false;
     }
 
