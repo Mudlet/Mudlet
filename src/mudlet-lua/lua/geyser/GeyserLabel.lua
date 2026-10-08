@@ -594,6 +594,21 @@ function Geyser.Label:setTiledBackgroundImage (imageFileName)
   self:setStyleSheet("background-image: url(" .. imageFileName .. ");")
 end
 
+--- Takes away the label's background image, whether set by setBackgroundImage or setTiledBackgroundImage
+-- @return true, or nil and a message
+function Geyser.Label:resetBackgroundImage()
+  local ok, err = resetBackgroundImage(self.name)
+  if not ok then
+    return nil, err
+  end
+  -- the C++ reset edits the stylesheet, which setStyleSheet() would otherwise re-apply as it was
+  if self.stylesheet then
+    self.stylesheet = getLabelStyleSheet(self.name)
+  end
+  self:autoAdjustSize()
+  return true
+end
+
 --- Sets a callback to be used when this label is clicked. When this
 -- function is called by the event system, details of the event will be
 -- appended as the final argument (see @{mouseClickEvent})

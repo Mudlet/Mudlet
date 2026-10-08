@@ -451,6 +451,13 @@ bool TLabel::setSvgImage(const QString& path)
     return true;
 }
 
+// a url() may hold a ';' of its own, as a data: URI does
+static const QRegularExpression& backgroundImageDeclaration()
+{
+    static const QRegularExpression declaration(qsl("(?<![-\\w])background-image\\s*:(?:[^;(}]|\\([^)]*\\))*;?"));
+    return declaration;
+}
+
 void TLabel::resetBackgroundImage()
 {
     // the SVG layer and whatever image sits in QLabel's content slot go together;
@@ -459,6 +466,24 @@ void TLabel::resetBackgroundImage()
     if (!pixmap().isNull() || movie()) {
         stopMovie();
         clear();
+    }
+    // a stylesheet background image, as Geyser.Label:setTiledBackgroundImage() sets: a bare declaration,
+    // where one inside a {...} rule is the script's own, such as a :hover image
+    QString sheet = styleSheet();
+    QList<QRegularExpressionMatch> topLevel;
+    QRegularExpressionMatchIterator it = backgroundImageDeclaration().globalMatch(sheet);
+    while (it.hasNext()) {
+        const QRegularExpressionMatch match = it.next();
+        const QStringView before = QStringView(sheet).left(match.capturedStart());
+        if (before.count(u'{') == before.count(u'}')) {
+            topLevel.prepend(match);
+        }
+    }
+    if (!topLevel.isEmpty()) {
+        for (const auto& match : topLevel) {
+            sheet.remove(match.capturedStart(), match.capturedLength());
+        }
+        restyle(sheet);
     }
 }
 

@@ -857,6 +857,35 @@ describe("Tests functionality of Geyser.Label widget state", function()
       label:setTiledBackgroundImage("/tmp/whatever.png")
       assert.are.equal("background-image: url(/tmp/whatever.png);", getLabelStyleSheet("glsTiled"))
     end)
+
+    it("resetBackgroundImage takes a tiled image away, and only the image", function()
+      local label = track(Geyser.Label:new({name = "glsTiledReset", x = 0, y = 0, width = 40, height = 20}))
+      setLabelStyleSheet("glsTiledReset", "border: 1px solid red; background-image: url(data:image/png;base64,AAAA); color: blue;")
+      assert.is_true(resetBackgroundImage("glsTiledReset"))
+      assert.are.equal("border: 1px solid red;  color: blue;", getLabelStyleSheet("glsTiledReset"))
+
+      label:setTiledBackgroundImage(":/icons/mudlet.png")
+      assert.is_true(resetBackgroundImage("glsTiledReset"))
+      assert.are.equal("", getLabelStyleSheet("glsTiledReset"))
+    end)
+
+    it("resetBackgroundImage leaves an image inside a rule of the stylesheet alone", function()
+      track(Geyser.Label:new({name = "glsHoverImage", x = 0, y = 0, width = 40, height = 20}))
+      local sheet = "QLabel{color: red;} QLabel::hover{background-image: url(hover.png);}"
+      setLabelStyleSheet("glsHoverImage", sheet)
+      assert.is_true(resetBackgroundImage("glsHoverImage"))
+      assert.are.equal(sheet, getLabelStyleSheet("glsHoverImage"))
+    end)
+
+    it("Geyser.Label:resetBackgroundImage takes a tiled image away for good", function()
+      local label = track(Geyser.Label:new({name = "glsTiledGeyserReset", x = 0, y = 0, width = 40, height = 20}))
+      label:setTiledBackgroundImage(":/icons/mudlet.png")
+      assert.is_true(label:resetBackgroundImage())
+      -- with no argument, setStyleSheet puts back the sheet the label remembers
+      label:setStyleSheet()
+      assert.are.equal("", getLabelStyleSheet("glsTiledGeyserReset"))
+      assert.are.equal("", label.stylesheet)
+    end)
   end)
 end)
 
