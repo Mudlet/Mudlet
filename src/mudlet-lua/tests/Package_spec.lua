@@ -530,13 +530,13 @@ describe("Tests the functionality of uninstallPackage", function()
     assertArgError(function() uninstallPackage() end, "uninstallPackage: bad argument #1 type")
   end)
 
-  -- uninstallPackage() answers nil with no message where uninstallModule()
-  -- answers false: two conventions for the same case, pinned as they are
-  -- because packages published today read one or the other.
-  it("returns nil and no message for a package that is not installed", function()
+  -- uninstallPackage() answers nil where uninstallModule() answers false: two
+  -- conventions for the same case, pinned as they are because packages
+  -- published today read one or the other.
+  it("returns nil and says so for a package that is not installed", function()
     local ok, err = uninstallPackage("mudlet-spec-never-installed")
     assert.is_nil(ok)
-    assert.is_nil(err)
+    assert.is_true(contains(err, "is not installed"), tostring(err))
   end)
 
   it("removes the package, its items and its folder, and raises the uninstall events", function()
@@ -1791,6 +1791,18 @@ describe("Tests uninstalling a package while the profile is being saved", functi
     assert.is_true(removed, "the uninstall was abandoned after its own events had already gone out")
     assert.is_false(packageInstalled(minimalPackage), "the package stayed listed after being told it was uninstalled")
     assert.equals(0, exists(minimalPackage .. " alias", "alias"), "the package's alias outlived its uninstall")
+  end)
+
+  it("returns nil and says why for an installed package while a save is running", function()
+    withFixturePackage(minimalPackage)
+    assert.is_true(waitForProfileSaveToPass(), "a profile save was still running")
+    assert.is_true(saveProfile())
+
+    local ok, err = uninstallPackage(minimalPackage)
+
+    assert.is_nil(ok)
+    assert.is_true(contains(err, "profile save is in progress"), tostring(err))
+    assert.is_true(packageInstalled(minimalPackage), "a refused uninstall took the package away")
   end)
 
   it("reports an uninstall a handler had already carried out as done", function()
