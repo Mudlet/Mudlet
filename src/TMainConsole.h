@@ -176,7 +176,7 @@ public:
     bool hideSubConsole(const QString& name);
     bool resizeSubConsole(const QString& name, int width, int height);
     bool moveSubConsole(const QString& name, int x, int y);
-    bool reparentWindow(const QString& windowname, const QString& name, int x, int y, bool show);
+    std::pair<bool, QString> reparentWindow(const QString& windowname, const QString& name, int x, int y, bool show);
     std::optional<QSize> consoleFontSize(const QString& name) const;
     bool setSubConsoleBackgroundColor(const QString& name, const QColor& color);
     bool setSubConsoleBackgroundImage(const QString& name, const QString& path, int mode);
@@ -328,6 +328,9 @@ public:
     void replaceActionButton(TAction* pAction, TFlipButton* pButton);
     void replaceActionMenuEntry(TAction* pAction, EAction* pEntry);
     void setActionButtonChecked(TAction* pAction, bool checked);
+    // Gives a plain button its action's stylesheet without rebuilding its bar; false
+    // when the action is drawn as anything else.
+    bool restyleActionButton(TAction* pAction);
     // Floating toolbars are the main window's children rather than this
     // console's, so the profile has to delete them itself.
     const std::list<QPointer<TToolBar>>& actionToolBars() const { return mToolBarList; }
@@ -347,10 +350,11 @@ public:
     // The view's part of Host::printOnDisplay(). startIncomingText() starts
     // timing the pass for the latency box and answers whether to alert the user
     // if the text changes the buffer; finishIncomingText() schedules the paced
-    // latency box refresh and marks the profile's tab.
+    // latency box refresh and, unless the pass carried no text, marks the
+    // profile's tab.
     bool startIncomingText();
     void alertNewData();
-    void finishIncomingText();
+    void finishIncomingText(bool carriesText);
     void finalize();
     void refreshSubconsoles();
 

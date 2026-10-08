@@ -26,8 +26,8 @@
 
 #include "Host.h"
 #include "TAction.h"
+#include "TAppFrontend.h"
 #include "Tree.h"
-#include "mudlet.h"
 #include "TMainConsole.h"
 #include "utils.h"
 
@@ -294,6 +294,11 @@ void ActionUnit::unregisterAction(TAction* pT)
     if (!pT) {
         return;
     }
+    // The bars are redrawn from the tree below, and the undo stack clears this
+    // action's host before deleting it, so they must no longer reach it
+    if (pT->getParent()) {
+        pT->getParent()->popChild(pT);
+    }
     if (pT->getParent() && pT->getParent()->mPackageName.isEmpty()) {
         removeAction(pT);
         updateAllToolbars();
@@ -409,7 +414,9 @@ std::pair<bool, QString> ActionUnit::setToolBarActive(const QString& name, const
     if (found) {
         updateAllToolbars();
     }
-    mudlet::self()->processEventLoopHack();
+    if (auto* pFrontend = TAppFrontend::instance()) {
+        pFrontend->processEventLoopHack();
+    }
     if (found) {
         return {true, QString()};
     }

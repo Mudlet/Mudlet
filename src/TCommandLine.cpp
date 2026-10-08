@@ -648,7 +648,7 @@ void TCommandLine::focusInEvent(QFocusEvent* event)
     // if it was Qt::ActiveWindowFocusReason as that gets used just by
     // switching away and back to the Mudlet application and it messes up
     // the record:
-    if (event->reason() != Qt::ActiveWindowFocusReason && mpHost->mainConsoleView()) {
+    if (mpHost && event->reason() != Qt::ActiveWindowFocusReason && mpHost->mainConsoleView()) {
         mpHost->mainConsoleView()->recordActiveCommandLine(this);
     }
 
@@ -1115,74 +1115,71 @@ void TCommandLine::handleTabCompletion(bool direction)
     buffer.replace(QChar(0x21af), QChar::LineFeed);
     buffer.replace(QChar::LineFeed, QChar::Space);
 
-    QStringList wordList = buffer.split(QRegularExpression(qsl(R"(\b)"), QRegularExpression::UseUnicodePropertiesOption), Qt::SkipEmptyParts);
-    wordList.append(
-            commandLineSuggestions
-                    .values()); // hindsight 20/20 I do not need to split this to a separate table, a check to not append buffer to this table and only append suggested list does same thing for far less overhead.
-    const QStringList blacklist = tabCompleteBlacklist.values();
-    QStringList toDelete;
-
-    for (const QString& wstr : std::as_const(wordList)) {
-        if (blacklist.contains(wstr, Qt::CaseInsensitive)) {
-            toDelete += wstr;
-        }
-    }
-    for (const QString& dstr : std::as_const(toDelete)) {
-        wordList.removeAll(dstr);
-    }
-
     if (direction) {
         mTabCompletionCount++;
     } else {
         mTabCompletionCount--;
     }
-    if (!wordList.empty()) {
-        if (mTabCompletionTyped.endsWith(QChar::Space)) {
-            return;
-        }
-        QString lastWord;
-        const QRegularExpression reg = QRegularExpression(qsl(R"(\b(\w+)$)"), QRegularExpression::UseUnicodePropertiesOption);
-        const QRegularExpressionMatch match = reg.match(mTabCompletionTyped);
-        const int typePosition = match.capturedStart();
-        if (reg.captureCount() >= 1) {
-            lastWord = match.captured(1);
-        } else {
-            lastWord = QString();
-        }
+    if (mTabCompletionTyped.endsWith(QChar::Space)) {
+        return;
+    }
+    QString lastWord;
+    const QRegularExpression reg = QRegularExpression(qsl(R"(\b(\w+)$)"), QRegularExpression::UseUnicodePropertiesOption);
+    const QRegularExpressionMatch match = reg.match(mTabCompletionTyped);
+    const int typePosition = match.capturedStart();
+    if (reg.captureCount() >= 1) {
+        lastWord = match.captured(1);
+    } else {
+        lastWord = QString();
+    }
 
-        QStringList filterList = wordList.filter(QRegularExpression(qsl(R"(^%1\w+)").arg(lastWord), QRegularExpression::CaseInsensitiveOption | QRegularExpression::UseUnicodePropertiesOption));
-
-        if (filterList.empty()) {
-            return;
-        }
-        int offset = 0;
-        forever
-        {
-            const QString tmp = filterList.back();
-            filterList.removeAll(tmp);
-            filterList.insert(offset, tmp);
-            ++offset;
-            if (offset >= filterList.size()) {
-                break;
-            }
-        }
-
-        if (!filterList.empty()) {
-            if (mTabCompletionCount >= filterList.size()) {
-                mTabCompletionCount = filterList.size() - 1;
-            }
-            if (mTabCompletionCount < 0) {
-                mTabCompletionCount = 0;
-            }
-
-            const QString proposal = filterList[mTabCompletionCount];
-            const QString userWords = mTabCompletionTyped.left(typePosition);
-            setPlainText(QString(userWords + proposal));
-            mudlet::self()->announce(proposal);
-            moveCursor(QTextCursor::End, QTextCursor::MoveAnchor);
-            mTabCompletionOld = toPlainText();
+    // One pass over the buffer collects only the words that can complete lastWord, so
+    // deduplicating and the blacklist work on those rather than on every word
+    const auto options = QRegularExpression::CaseInsensitiveOption | QRegularExpression::UseUnicodePropertiesOption;
+    QStringList candidates;
+    const QRegularExpression bufferWord(qsl(R"((?<!\w)%1\w+)").arg(lastWord), options);
+    for (const QRegularExpressionMatch& wordMatch : bufferWord.globalMatch(buffer)) {
+        candidates.append(wordMatch.captured());
+    }
+    const QRegularExpression suggestion(qsl(R"(^%1\w+)").arg(lastWord), options);
+    for (const QString& word : std::as_const(commandLineSuggestions)) {
+        if (word.contains(suggestion)) {
+            candidates.append(word);
         }
     }
+
+    // Each word once, the most recently seen first
+    QStringList filterList;
+    QSet<QString> seen;
+    for (auto it = candidates.crbegin(); it != candidates.crend(); ++it) {
+        if (seen.contains(*it)) {
+            continue;
+        }
+        seen.insert(*it);
+        const bool blacklisted = std::any_of(tabCompleteBlacklist.cbegin(), tabCompleteBlacklist.cend(), [it](const QString& banned) {
+            return it->compare(banned, Qt::CaseInsensitive) == 0;
+        });
+        if (!blacklisted) {
+            filterList.append(*it);
+        }
+    }
+
+    if (filterList.empty()) {
+        return;
+    }
+    if (mTabCompletionCount >= filterList.size()) {
+        mTabCompletionCount = filterList.size() - 1;
+    }
+    if (mTabCompletionCount < 0) {
+        mTabCompletionCount = 0;
+    }
+
+    const QString proposal = filterList[mTabCompletionCount];
+    const QString userWords = mTabCompletionTyped.left(typePosition);
+    setPlainText(QString(userWords + proposal));
+    mudlet::self()->announce(proposal);
+    moveCursor(QTextCursor::End, QTextCursor::MoveAnchor);
+    mTabCompletionOld = toPlainText();
 }
 
 // Hitting the cursor up key gets you in autocompletion mode.
@@ -1206,8 +1203,7 @@ void TCommandLine::handleAutoCompletion()
         mAutoCompletionCount = 0;
     }
     for (int i = mAutoCompletionCount; i < mHistoryList.size(); i++) {
-        const QString h = mHistoryList[i].mid(0, neu.size());
-        if (neu == h) {
+        if (mHistoryList[i].startsWith(neu)) {
             mAutoCompletionCount = i;
             mLastCompletion = mHistoryList[i];
             setPlainText(mHistoryList[i]);
@@ -1219,8 +1215,8 @@ void TCommandLine::handleAutoCompletion()
             moveCursor(QTextCursor::End, QTextCursor::KeepAnchor);
             return;
         }
-        moveCursor(QTextCursor::End, QTextCursor::MoveAnchor);
     }
+    moveCursor(QTextCursor::End, QTextCursor::MoveAnchor);
     mAutoCompletionCount = -1;
 }
 

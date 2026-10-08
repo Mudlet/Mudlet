@@ -220,6 +220,7 @@ set(mudlet_SRCS
     TRoomDB.cpp
     TScript.cpp
     TScrollBox.cpp
+    TSpeechBridge.cpp
     TSpellChecker.cpp
     TSplitter.cpp
     TSplitterHandle.cpp
@@ -416,6 +417,7 @@ set(mudlet_HDRS
     TAccessibleTextEdit.h
     TAction.h
     TAlias.h
+    TAppFrontend.h
     TArea.h
     TAreaGridIndex.h
     TAreaLodExitIndex.h
@@ -507,6 +509,7 @@ set(mudlet_HDRS
     TRoomDB.h
     TScript.h
     TScrollBox.h
+    TSpeechBridge.h
     TSpellChecker.h
     TSplitter.h
     TSplitterHandle.h
@@ -945,6 +948,13 @@ endif()
 if(WIN32)
   target_link_libraries(${EXE_MUDLET_TARGET} ws2_32)
   set_target_properties(${EXE_MUDLET_TARGET} PROPERTIES WIN32_EXECUTABLE ON)
+  # Windows reserves only 1 MiB of stack by default, and Qt recurses once per overlapping sibling widget
+  # when repainting, so a few thousand labels overflowed it; 8 MiB matches the Linux and macOS main thread
+  if(MSVC)
+    target_link_options(${EXE_MUDLET_TARGET} PRIVATE "/STACK:8388608")
+  else()
+    target_link_options(${EXE_MUDLET_TARGET} PRIVATE "LINKER:--stack,8388608")
+  endif()
   # The UNICODE and _UNICODE definitions are needed to make
   # (QString) mudlet::getShortPathName(const QString& name) work in Windows:
   target_compile_definitions(${EXE_MUDLET_TARGET} PRIVATE UNICODE _UNICODE)

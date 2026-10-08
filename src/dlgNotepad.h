@@ -91,6 +91,7 @@ private:
     void setupAddTabButton();
     void setupFindBar();
     void highlightAllMatches();
+    void scheduleRehighlight();
     void clearSearchHighlights();
     bool migrateOldNotesFile();
     void startSendingLines(const QStringList& lines);
@@ -99,6 +100,7 @@ private:
     QToolButton* mpAddTabButton = nullptr;
     bool mUiSetupComplete = false;
     bool mNeedToSave = false;
+    bool mRehighlightPending = false;
     QAction* action_stop = nullptr;
     QAction* action_prependText = nullptr;
     QAction* action_prependTextLabel = nullptr;
