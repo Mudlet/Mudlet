@@ -114,18 +114,19 @@ describe("Tests functionality of Geyser.HBox", function()
     end)
 
     it("tiles children edge to edge when the box does not divide into whole pixels", function()
-      local box = track(Geyser.HBox:new({name = "ghbTile", x = 20, y = 20, width = 600, height = 100}))
+      local box = track(Geyser.HBox:new({name = "ghbTile", x = 20, y = 20, width = 100, height = 100}))
       for index = 1, 3 do
         track(Geyser.Label:new({name = "ghbTile" .. index}, box))
       end
+      -- the thirds end at 53.33 and 86.67, so the middle child takes the spare pixel
       local right = 20
-      for index = 1, 3 do
+      for index, width in ipairs({33, 34, 33}) do
         local child = geometry("ghbTile" .. index)
         assert.are.equal(right, child.x)
-        assert.are.equal(200, child.width)
+        assert.are.equal(width, child.width)
         right = child.x + child.width
       end
-      assert.are.equal(620, right)
+      assert.are.equal(120, right)
     end)
   end)
 
