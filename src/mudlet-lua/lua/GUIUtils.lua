@@ -2676,7 +2676,11 @@ end
 local setLabelCursorLayer = setLabelCursor
 function setLabelCursor(labelname, cursorShape)
   if type(cursorShape) == "string" then
-    cursorShape = mudlet.cursor[cursorShape]
+    local shape = mudlet.cursor[cursorShape]
+    if not shape then
+      return nil, string.format("cursor shape '%s' not found. see https://doc.qt.io/qt-5/qt.html#CursorShape-enum", cursorShape)
+    end
+    cursorShape = shape
   end
   return setLabelCursorLayer(labelname, cursorShape)
 end

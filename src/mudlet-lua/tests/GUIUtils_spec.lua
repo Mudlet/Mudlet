@@ -3344,12 +3344,14 @@ describe("Tests the GUI utilities as far as possible without mudlet", function()
 
     it("Should map a cursor name to the id the C++ layer wants", function()
       -- the name to id mapping is the Lua half of this function; the C++ half
-      -- only accepts a number, so a name that is not in mudlet.cursor has to
-      -- reach it as nil and be refused
+      -- only accepts a number, so a name that is not in mudlet.cursor is refused
+      -- here, the same way the C++ half refuses a number it does not know
       assert.is_true(setLabelCursor(labelName, "OpenHand"))
       assert.is_true(setLabelCursor(labelName, mudlet.cursor.OpenHand))
       assert.is_nil(mudlet.cursor.definitelyNotACursor)
-      assert.has_error(function() setLabelCursor(labelName, "definitelyNotACursor") end)
+      local ok, err = setLabelCursor(labelName, "definitelyNotACursor")
+      assert.is_nil(ok)
+      assert.are.equal("cursor shape 'definitelyNotACursor' not found. see https://doc.qt.io/qt-5/qt.html#CursorShape-enum", err)
     end)
 
     it("Should reset the cursor by asking for shape -1", function()

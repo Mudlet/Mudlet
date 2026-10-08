@@ -42,6 +42,12 @@ describe("Tests CursorShapes.lua", function()
       end
     end)
 
+    it("Should refuse a name that is not a shape, the way it refuses an unknown number", function()
+      local ok, err = setLabelCursor(labelName, "NoSuchCursor")
+      assert.is_nil(ok)
+      assert.equals("cursor shape 'NoSuchCursor' not found. see https://doc.qt.io/qt-5/qt.html#CursorShape-enum", err)
+    end)
+
     it("Should not give two names the same shape", function()
       local seen = {}
       for name, shape in pairs(mudlet.cursor) do
