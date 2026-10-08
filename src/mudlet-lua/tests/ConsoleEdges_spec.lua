@@ -271,11 +271,11 @@ describe("Console edges", function()
   describe("refuses names it cannot use", function()
     it("an empty name for a command line or a text edit", function()
       local ok, err = createCommandLine("", 0, 0, 100, 20)
-      assert.is_nil(ok)
+      assert.is_false(ok)
       assert.are.equal("a commandLine cannot have an empty string as its name", err)
 
       ok, err = createTextEdit("", 0, 0, 100, 20)
-      assert.is_nil(ok)
+      assert.is_false(ok)
       assert.are.equal("a text edit cannot have an empty string as its name", err)
     end)
 
@@ -290,11 +290,11 @@ describe("Console edges", function()
       assert.is_true(createTextEdit(textEdit, 0, 30, 100, 20))
 
       local ok, err = createCommandLine(cmdLine, 0, 0, 100, 20)
-      assert.is_nil(ok)
+      assert.is_false(ok)
       assert.are.equal("couldn't create commandLine", err)
 
       ok, err = createTextEdit(textEdit, 0, 0, 100, 20)
-      assert.is_nil(ok)
+      assert.is_false(ok)
       assert.are.equal("couldn't create text edit", err)
     end)
 

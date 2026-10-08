@@ -60,12 +60,9 @@ describe("Tests elements created into a named parent window", function()
     end)
 
     it("refuses to create a command line rather than putting it on the main console", function()
-      -- createCommandLine and createTextEdit report a refusal as nil where the
-      -- other three use false; the shapes are inconsistent, and these examples
-      -- pin what each one does today rather than what it ought to do
       local ok, message = createCommandLine("pwcNoSuchWindow", track("pwcStrayCmdLine"), 0, 0, 120, 30)
 
-      assert.is_nil(ok)
+      assert.is_false(ok)
       assert.are.equal("window 'pwcNoSuchWindow' not found", message)
       assert.is_nil(windowType("pwcStrayCmdLine"))
     end)
@@ -73,7 +70,7 @@ describe("Tests elements created into a named parent window", function()
     it("refuses to create a text edit rather than putting it on the main console", function()
       local ok, message = createTextEdit("pwcNoSuchWindow", track("pwcStrayTextEdit"), 0, 0, 120, 80)
 
-      assert.is_nil(ok)
+      assert.is_false(ok)
       assert.are.equal("window 'pwcNoSuchWindow' not found", message)
       assert.is_nil(windowType("pwcStrayTextEdit"))
     end)
