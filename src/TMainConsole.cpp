@@ -3108,16 +3108,14 @@ void TMainConsole::alertNewData()
     QApplication::alert(mudlet::self(), 0);
 }
 
-void TMainConsole::finishIncomingText(const bool linesCommitted)
+void TMainConsole::finishIncomingText(const bool carriesText)
 {
     Q_ASSERT_X(mpLineEdit_networkLatency, "TMainConsole::finishIncomingText()", "mpLineEdit_networkLatency does not point to a valid QLineEdit");
     mLatencyProcessT = mProcessingTimer.elapsed() / 1000.0;
     if (!mpLatencyBoxPacer->isActive()) {
         mpLatencyBoxPacer->start();
     }
-    // cTelnet posts what followed the server's last newline a moment after the
-    // line, usually nothing - which must not mark a tab the player has left
-    if (!linesCommitted) {
+    if (!carriesText) {
         return;
     }
     // Modify the tab text if this is not the currently active host - this

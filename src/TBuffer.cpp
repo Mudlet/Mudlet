@@ -2185,7 +2185,6 @@ void TBuffer::commitLineData(QString line, std::vector<TChar> chars, const char 
             promptBuffer.back() = false;
         }
     }
-    ++mCommittedLineCount;
     // Every game line passes here (TConsoleModel::print() sees only client output). Mirroring before runTriggers()
     // keeps arrival order, so script output in response follows it, but lines that triggers gag or rewrite
     // are still mirrored as sent. Mirroring at log() below would trade the other way and copy wrapLine()'s
