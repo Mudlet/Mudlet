@@ -6192,11 +6192,15 @@ int TBuffer::wrapLine(int startLine, int maxWidth, int indentSize, int hangingIn
     return 0;
 }
 
-// Any column is accepted, even one past the end of the line: insertInLine() pads the gap when text lands there.
+// A column past the end of the line is accepted, as insertInLine() pads the gap when text lands there,
+// but only as far as one echo may write: a column near INT_MAX would pad until memory runs out.
 bool TBuffer::moveCursor(QPoint& where)
 {
     const int y = where.y();
-    return y >= 0 && y < static_cast<int>(buffer.size());
+    if (y < 0 || y >= static_cast<int>(buffer.size())) {
+        return false;
+    }
+    return where.x() <= static_cast<int>(buffer[y].size()) + MAX_CHARACTERS_PER_ECHO;
 }
 
 // line() returns a reference, so a line number outside the buffer needs a string that outlives the call
