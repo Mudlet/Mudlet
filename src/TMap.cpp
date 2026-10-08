@@ -3871,11 +3871,13 @@ QColor TMap::readJsonColor(const QJsonObject& obj)
         red = qRound(colorRGBAArray.at(0).toDouble());
         green = qRound(colorRGBAArray.at(1).toDouble());
         blue = qRound(colorRGBAArray.at(2).toDouble());
-        return QColor(red, green, blue);
-    }
-
-    if (hasAlpha && size == 4 && colorRGBAArray.at(3).isDouble()) {
-        alpha = qRound(colorRGBAArray.at(3).toDouble());
+        if (hasAlpha && size == 4 && colorRGBAArray.at(3).isDouble()) {
+            alpha = qRound(colorRGBAArray.at(3).toDouble());
+            // QColor refuses the whole colour for an alpha out of range
+            if (alpha < 0 || alpha > 255) {
+                alpha = 255;
+            }
+        }
         return QColor(red, green, blue, alpha);
     }
 
