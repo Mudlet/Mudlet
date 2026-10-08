@@ -1337,7 +1337,9 @@ std::tuple<bool, QString, QString> Host::saveProfile(const QString& saveFolder, 
         // save that clears/replaces mModulesToSync, making this save skip the module
         // sync it owes to other profiles.
         if (syncModules) {
+            mSyncingModulesAfterSave = true;
             reloadModules();
+            mSyncingModulesAfterSave = false;
         }
         mWritingHostAndModules = false;
         // Drop each module writer from `writers`; the last removal emits

@@ -2828,7 +2828,8 @@ static int pushInstallSucceeded(lua_State* L, const QString& warning)
 // save out instead, so the answer is the real one.
 static bool waitOutAProfileSave(Host& host)
 {
-    if (host.currentlySavingProfile()) {
+    // Reached from the end of the save itself, which cannot finish until this returns
+    if (host.currentlySavingProfile() && !host.syncingModulesAfterSave()) {
         host.waitForProfileSave();
     }
     return !host.currentlySavingProfile();
