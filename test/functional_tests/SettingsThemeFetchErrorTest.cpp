@@ -32,6 +32,7 @@
  */
 
 #include <QDir>
+#include <QSettings>
 #include <QTemporaryDir>
 #include <QtTest/QtTest>
 
@@ -139,6 +140,27 @@ private:
                                     .arg(QString::number(wrapped.width()), QString::number(available))));
     }
 
+    // Fetched from a file instead of the network, so it fails the same way every
+    // run. What is under test is what the label says once the fetch has failed.
+    void fetchThemesFrom(const QUrl& url)
+    {
+        MudletApp::getQSettings()->setValue(qsl("colorSublimeThemesURL"), url.toString());
+        qunsetenv("MUDLET_TEST_NO_THEME_DOWNLOAD");
+        openPreferences(QSize(1060, 760));
+        selectCategory(qsl("editor"));
+        qputenv("MUDLET_TEST_NO_THEME_DOWNLOAD", "1");
+        MudletApp::getQSettings()->remove(qsl("colorSublimeThemesURL"));
+    }
+
+    void verifyTheFailureIsOnShow(const QString& situation, const QString& reason = QString())
+    {
+        QLabel* pLabel = mpPreferences->theme_download_label;
+        QTRY_VERIFY2_WITH_TIMEOUT(pLabel->text().startsWith(qsl("Could not update themes: ")) && pLabel->text().endsWith(reason),
+                                  qPrintable(qsl("%1, but the label says \"%2\" and is %3").arg(situation, pLabel->text(), pLabel->isVisible() ? qsl("on show") : qsl("hidden"))),
+                                  10000);
+        QVERIFY2(pLabel->isVisible(), qPrintable(qsl("%1, and the label saying so is hidden").arg(situation)));
+    }
+
 private slots:
     void initTestCase()
     {
@@ -194,6 +216,44 @@ private slots:
     {
         openPreferences(QSize(1060, 760));
         verifyTheWholeErrorIsOnShow();
+    }
+
+    void test_aThemeDownloadThatCannotBeUnpackedSaysSo()
+    {
+        QTemporaryDir downloads;
+        QVERIFY(downloads.isValid());
+        QFile notAnArchive(downloads.filePath(qsl("themes.zip")));
+        QVERIFY(notAnArchive.open(QIODevice::WriteOnly));
+        QVERIFY(notAnArchive.write("this is not a zip archive") > 0);
+        notAnArchive.close();
+
+        fetchThemesFrom(QUrl::fromLocalFile(notAnArchive.fileName()));
+        if (QTest::currentTestFailed()) {
+            return;
+        }
+        const QString reason = qsl("the downloaded themes could not be unpacked");
+        verifyTheFailureIsOnShow(reason, reason);
+    }
+
+    // The themes on offer are still not the latest a few seconds later, so the
+    // message must not go away - nor be swapped for one saying an update is under way
+    void test_aFailedThemeDownloadStaysOnShow()
+    {
+        QTemporaryDir downloads;
+        QVERIFY(downloads.isValid());
+        fetchThemesFrom(QUrl::fromLocalFile(downloads.filePath(qsl("there-is-no-such-file.zip"))));
+        if (QTest::currentTestFailed()) {
+            return;
+        }
+        verifyTheFailureIsOnShow(qsl("the themes could not be downloaded"));
+        if (QTest::currentTestFailed()) {
+            return;
+        }
+        const QString failure = mpPreferences->theme_download_label->text();
+
+        QTest::qWait(6000);
+        QVERIFY2(mpPreferences->theme_download_label->isVisible(), "the failed theme update was hidden again after a few seconds");
+        QCOMPARE(mpPreferences->theme_download_label->text(), failure);
     }
 
     // A line the reading column cannot fit does not make the page scroll to it:

@@ -7170,6 +7170,9 @@ void dlgProfilePreferences::maybeDownloadEditorThemes()
         return;
     }
 
+    // An earlier attempt may have left its failure on the label
+    //: Shown under the editor theme list in the preferences while the latest themes are being downloaded
+    theme_download_label->setText(tr("Updating themes from colorsublime.github.io..."));
     theme_download_label->show();
 
     auto manager = new QNetworkAccessManager(this);
@@ -7188,14 +7191,16 @@ void dlgProfilePreferences::maybeDownloadEditorThemes()
     pHost->updateProxySettings(manager);
     QNetworkReply* getReply = manager->get(request);
 
+    // Left on show until the next attempt: the themes listed are then not the latest
+    auto failThemeUpdate = [this](const QString& reason) {
+        qWarning() << "dlgProfilePreferences: could not update the editor themes:" << reason;
+        //: Shown under the editor theme list in the preferences; %1 is why the download failed, either a network error or "the downloaded themes could not be unpacked"
+        theme_download_label->setText(tr("Could not update themes: %1").arg(reason));
+        theme_download_label->show();
+    };
+
     connect(getReply, &QNetworkReply::errorOccurred, this, [=, this](QNetworkReply::NetworkError) {
-        // The label hides the message after a few seconds, so this is the only lasting record
-        qWarning() << "dlgProfilePreferences: could not update the editor themes:" << getReply->errorString();
-        theme_download_label->setText(tr("Could not update themes: %1").arg(getReply->errorString()));
-        QTimer::singleShot(5s, theme_download_label, [label = theme_download_label] {
-            label->hide();
-            label->setText(tr("Updating themes from colorsublime.github.io..."));
-        });
+        failThemeUpdate(getReply->errorString());
         getReply->deleteLater();
     });
 
@@ -7210,16 +7215,25 @@ void dlgProfilePreferences::maybeDownloadEditorThemes()
                         }
 
                         const QByteArray downloadedArchive = reply->readAll();
+                        reply->deleteLater();
 
                         tempThemesArchive = new QTemporaryFile(this);
                         if (!tempThemesArchive->open()) {
+                            failThemeUpdate(tempThemesArchive->errorString());
+                            tempThemesArchive->deleteLater();
                             return;
                         }
-                        tempThemesArchive->write(downloadedArchive);
+                        if (tempThemesArchive->write(downloadedArchive) != downloadedArchive.size()) {
+                            failThemeUpdate(tempThemesArchive->errorString());
+                            tempThemesArchive->deleteLater();
+                            return;
+                        }
                         tempThemesArchive->close();
 
                         const QTemporaryDir temporaryDir;
                         if (!temporaryDir.isValid()) {
+                            failThemeUpdate(temporaryDir.errorString());
+                            tempThemesArchive->deleteLater();
                             return;
                         }
 
@@ -7229,16 +7243,18 @@ void dlgProfilePreferences::maybeDownloadEditorThemes()
                         connect(watcher, &QFutureWatcher<bool>::finished, this, [=, this]() {
                             if (future.result()) {
                                 populateThemesList();
+                                theme_download_label->hide();
 
                                 emit signal_themeUpdateCompleted();
+                            } else {
+                                //: Shown after "Could not update themes: " when the downloaded editor themes could not be unpacked
+                                failThemeUpdate(tr("the downloaded themes could not be unpacked"));
                             }
 
-                            theme_download_label->hide();
                             tempThemesArchive->deleteLater();
                             watcher->deleteLater();
                         });
                         watcher->setFuture(future);
-                        reply->deleteLater();
                     },
                     getReply));
 }
