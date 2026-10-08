@@ -4545,18 +4545,29 @@ describe("Tests saveJsonMap and loadJsonMap", function()
       assert.are.equal(2, doors["wriggle"])
     end)
 
-    it("keeps a stub exit's door where the long and short direction names match", function()
+    -- the eight compass directions too, whose long and short names differ
+    it("puts a stub exit's door back in each of the twelve directions", function()
+      local directions = {north = "n", northeast = "ne", northwest = "nw", east = "e", west = "w", south = "s",
+                          southeast = "se", southwest = "sw", up = "up", down = "down", ["in"] = "in", out = "out"}
       deleteMap()
       local area = addAreaName("MapperSpecJsonStubDoorArea")
       roomA = createRoomID(); addRoom(roomA); setRoomArea(roomA, area)
-      setExitStub(roomA, "up", true)
-      setDoor(roomA, "up", 2)
+      -- a door state of its own per direction, cycling through all three
+      local expected = {}
+      local index = 0
+      for long, short in pairs(directions) do
+        setExitStub(roomA, long, true)
+        expected[short] = index % 3 + 1
+        assert.is_true(setDoor(roomA, short, expected[short]), long)
+        index = index + 1
+      end
 
       roundTrip()
 
-      -- the eight compass directions lose this:
-      -- https://github.com/Mudlet/Mudlet/issues/10369
-      assert.are.equal(2, getDoors(roomA)["up"])
+      local doors = getDoors(roomA)
+      for long, short in pairs(directions) do
+        assert.are.equal(expected[short], doors[short], long)
+      end
     end)
 
     it("puts a custom environment colour back", function()
@@ -4718,12 +4729,6 @@ describe("Tests saveJsonMap and loadJsonMap", function()
     -- colours included, so the test above can only use an opaque one.
     -- https://github.com/Mudlet/Mudlet/issues/10368
     pending("a translucent room border colour loses its alpha on import")
-
-    -- TRoom::writeJsonExitStubs looks the stub's door up under the long
-    -- direction name while TRoom::doors is keyed by the short one, so a door on
-    -- a stub survives only for up, down, in and out, whose two spellings match
-    -- https://github.com/Mudlet/Mudlet/issues/10369
-    pending("a stub exit's door is dropped on export in the eight compass directions")
 
     -- TMap::readJsonUserData inserts each key it reads into the live map's user
     -- data without emptying it first, and the JSON import never reaches the

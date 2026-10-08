@@ -2498,7 +2498,8 @@ void TRoom::writeJsonExitStubs(QJsonObject& obj) const
         QJsonObject exitStubObj;
         const QJsonValue stubNameValue{stubName};
         exitStubObj.insert(QLatin1String("name"), stubNameValue);
-        writeJsonDoor(exitStubObj, stubName);
+        // TRoom::doors is keyed by the short direction name:
+        writeJsonDoor(exitStubObj, dirCodeToShortString(stringToDirCode(stubName)));
         if (exitLocks.contains(stringToDirCode(stubName))) {
             exitStubObj.insert(QLatin1String("locked"), true);
         }
