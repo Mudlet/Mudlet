@@ -2320,6 +2320,20 @@ describe("Tests Other.lua functions", function()
 
       assert.same({ a = 1, b = 2 }, _G.saveVarsSpecValue)
     end)
+
+    it("should hand back what table.save reports when the write fails", function()
+      _G.saveVarsSpecValue = "kept"
+      remember("saveVarsSpecValue")
+      local realSave = table.save
+      finally(function() table.save = realSave end)
+      table.save = function() return nil, "SavedVariables.lua: No space left on device" end
+
+      local saved, msg = saveVars()
+      table.save = realSave
+
+      assert.is_nil(saved)
+      assert.equals("SavedVariables.lua: No space left on device", msg)
+    end)
   end)
 
     --[[
