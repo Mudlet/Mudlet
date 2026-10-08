@@ -383,7 +383,6 @@ bool TAlias::compileScript()
 
 void TAlias::execute()
 {
-    const TLuaInterpreter::ScriptCallerScope aliasScript(mpHost->mLuaInterpreter, true);
     if (!mCommand.isEmpty()) {
         mpHost->send(mCommand);
     }
@@ -394,7 +393,7 @@ void TAlias::execute()
     }
 
     if (mRegisteredAnonymousLuaFunction) {
-        mpHost->mLuaInterpreter.call_luafunction(this, mName);
+        mpHost->mLuaInterpreter.call_luafunction(this, mName, true);
         return;
     }
 
@@ -402,7 +401,7 @@ void TAlias::execute()
         return;
     }
 
-    mpHost->mLuaInterpreter.call(mFuncName, mName);
+    mpHost->mLuaInterpreter.call(mFuncName, mName, false, true);
 }
 
 QString TAlias::packageName(TAlias* pAlias)

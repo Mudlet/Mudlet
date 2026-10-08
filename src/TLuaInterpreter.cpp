@@ -3354,6 +3354,7 @@ int TLuaInterpreter::getProcessID(lua_State* L)
 // No documentation available in wiki - internal function
 bool TLuaInterpreter::compileAndExecuteScript(const QString& code)
 {
+    const ScriptCallerScope callerScope(*this, false);
     if (code.isEmpty()) {
         return false;
     }
@@ -3433,6 +3434,7 @@ QString TLuaInterpreter::formatLuaCode(const QString& code)
 // No documentation available in wiki - internal function
 bool TLuaInterpreter::compile(const QString& code, QString& errorMsg, const QString& name)
 {
+    const ScriptCallerScope callerScope(*this, false);
     lua_State* L = pGlobalLua;
     // This runs on the global lua_State, which is shared with whatever C
     // function is calling us, so everything already on the stack is that
@@ -3746,7 +3748,6 @@ int TLuaInterpreter::pushNestedDispatchState(const bool parkCommand)
     saved.matchesRef = matchesRef;
     saved.multimatchesRef = multimatchesRef;
     saved.commandRef = commandRef;
-    saved.parksCommand = parkCommand;
     saved.captureScopeOpen = mCaptureScopeOpen;
     // Copies rather than moves: a script the dispatch runs before any pattern has
     // matched - a sysDataSendRequest handler, say - still reads these through
@@ -3820,30 +3821,29 @@ void TLuaInterpreter::popNestedDispatchState(const int depth)
     lua_pushliteral(L, "multimatches");
     lua_rawgeti(L, LUA_REGISTRYINDEX, saved.multimatchesRef);
     lua_rawset(L, LUA_GLOBALSINDEX);
-    if (saved.parksCommand) {
+    if (saved.commandRef != LUA_NOREF) {
         // Kept for settleCommandAfterAliasPass(), unless all that has written
         // "command" since the last restore is a restore deeper in this pass
         lua_pushliteral(L, "command");
         lua_rawget(L, LUA_GLOBALSINDEX);
         bool keepEarlier = false;
-        if (mPassCommandRef != LUA_NOREF && mCommandsExpanded == mCommandsExpandedAtRestore) {
-            lua_rawgeti(L, LUA_REGISTRYINDEX, mRestoredCommandRef);
+        if (mPassCommand.passCommandRef != LUA_NOREF && mCommandsExpanded == mPassCommand.commandsExpandedAtRestore) {
+            lua_rawgeti(L, LUA_REGISTRYINDEX, mPassCommand.restoredCommandRef);
             keepEarlier = lua_rawequal(L, -1, -2);
             lua_pop(L, 1);
         }
         if (keepEarlier) {
             lua_pop(L, 1);
         } else {
-            luaL_unref(L, LUA_REGISTRYINDEX, mPassCommandRef);
-            mPassCommandRef = luaL_ref(L, LUA_REGISTRYINDEX);
+            luaL_unref(L, LUA_REGISTRYINDEX, mPassCommand.passCommandRef);
+            mPassCommand.passCommandRef = luaL_ref(L, LUA_REGISTRYINDEX);
         }
-        luaL_unref(L, LUA_REGISTRYINDEX, mRestoredCommandRef);
-        lua_rawgeti(L, LUA_REGISTRYINDEX, saved.commandRef);
-        mRestoredCommandRef = luaL_ref(L, LUA_REGISTRYINDEX);
-        mCommandsExpandedAtRestore = mCommandsExpanded;
         lua_pushliteral(L, "command");
         lua_rawgeti(L, LUA_REGISTRYINDEX, saved.commandRef);
         lua_rawset(L, LUA_GLOBALSINDEX);
+        luaL_unref(L, LUA_REGISTRYINDEX, mPassCommand.restoredCommandRef);
+        mPassCommand.restoredCommandRef = std::exchange(saved.commandRef, LUA_NOREF);
+        mPassCommand.commandsExpandedAtRestore = mCommandsExpanded;
     }
     lua_settop(L, callerStackTop);
     // Only now, as pushing a name can run a finaliser, which has to find what
@@ -3862,38 +3862,45 @@ void TLuaInterpreter::setExpandedCommand(const QString& command)
 }
 
 // No documentation available in wiki - internal function
-// Called as the outermost alias pass ends: an alias script had its own "command"
-// back while it ran, but what is read afterwards is the last command expanded,
-// or whatever a script set it to since
-void TLuaInterpreter::settleCommandAfterAliasPass()
+// For a pass that a script other than an alias starts: its alias scripts' restores
+// are settled when it ends, apart from those of any alias pass it runs inside
+TLuaInterpreter::PassCommandState TLuaInterpreter::beginAliasPassCommand()
 {
-    if (mPassCommandRef == LUA_NOREF) {
-        return;
+    PassCommandState outer = std::exchange(mPassCommand, PassCommandState{});
+    outer.luaStateGeneration = mLuaStateGeneration;
+    return outer;
+}
+
+// No documentation available in wiki - internal function
+// An alias script had its own "command" back while it ran, but what is read once
+// the pass is over is the last command expanded, or whatever a script set it to
+void TLuaInterpreter::settleCommandAfterAliasPass(PassCommandState& outer)
+{
+    PassCommandState reinstated = std::exchange(outer, PassCommandState{});
+    if (reinstated.luaStateGeneration != mLuaStateGeneration) {
+        reinstated = PassCommandState{};
     }
-    if (!pGlobalLua) {
-        mPassCommandRef = LUA_NOREF;
-        mRestoredCommandRef = LUA_NOREF;
+    const PassCommandState ending = std::exchange(mPassCommand, reinstated);
+    if (ending.passCommandRef == LUA_NOREF || !pGlobalLua) {
         return;
     }
     lua_State* L = pGlobalLua;
     const int callerStackTop = lua_gettop(L);
     bool untouched = false;
-    if (mCommandsExpanded == mCommandsExpandedAtRestore) {
+    if (mCommandsExpanded == ending.commandsExpandedAtRestore) {
         lua_pushliteral(L, "command");
         lua_rawget(L, LUA_GLOBALSINDEX);
-        lua_rawgeti(L, LUA_REGISTRYINDEX, mRestoredCommandRef);
+        lua_rawgeti(L, LUA_REGISTRYINDEX, ending.restoredCommandRef);
         untouched = lua_rawequal(L, -1, -2);
         lua_settop(L, callerStackTop);
     }
     if (untouched) {
         lua_pushliteral(L, "command");
-        lua_rawgeti(L, LUA_REGISTRYINDEX, mPassCommandRef);
+        lua_rawgeti(L, LUA_REGISTRYINDEX, ending.passCommandRef);
         lua_rawset(L, LUA_GLOBALSINDEX);
     }
-    luaL_unref(L, LUA_REGISTRYINDEX, mPassCommandRef);
-    luaL_unref(L, LUA_REGISTRYINDEX, mRestoredCommandRef);
-    mPassCommandRef = LUA_NOREF;
-    mRestoredCommandRef = LUA_NOREF;
+    luaL_unref(L, LUA_REGISTRYINDEX, ending.passCommandRef);
+    luaL_unref(L, LUA_REGISTRYINDEX, ending.restoredCommandRef);
 }
 
 // No documentation available in wiki - internal function
@@ -5278,8 +5285,9 @@ void TLuaInterpreter::setMatches(lua_State* L, const MultimatchesSource source)
 }
 
 // No documentation available in wiki - internal function
-bool TLuaInterpreter::call_luafunction(void* pT, const QString& itemName)
+bool TLuaInterpreter::call_luafunction(void* pT, const QString& itemName, const bool aliasScript)
 {
+    const ScriptCallerScope callerScope(*this, aliasScript);
     QElapsedTimer executionTimer;
 
     if (TDebug::wants(TDebug::Category::LuaSuccess)) {
@@ -5359,6 +5367,7 @@ void TLuaInterpreter::delete_luafunction(const QString& name)
 // as well as the boolean return value from the function
 std::pair<bool, bool> TLuaInterpreter::callLuaFunctionReturnBool(void* pT, const QString& itemName)
 {
+    const ScriptCallerScope callerScope(*this, false);
     QElapsedTimer executionTimer;
 
     if (TDebug::wants(TDebug::Category::LuaSuccess)) {
@@ -5419,8 +5428,9 @@ std::pair<bool, bool> TLuaInterpreter::callLuaFunctionReturnBool(void* pT, const
 // No documentation available in wiki - internal function
 // Third argument hides the "LUA OK" type message if it true which may be used
 // to cut down on spammy output if things are okay.
-bool TLuaInterpreter::call(const QString& function, const QString& mName, const bool muteDebugOutput)
+bool TLuaInterpreter::call(const QString& function, const QString& mName, const bool muteDebugOutput, const bool aliasScript)
 {
+    const ScriptCallerScope callerScope(*this, aliasScript);
     QElapsedTimer executionTimer;
 
     if (TDebug::wants(TDebug::Category::LuaSuccess)) {
@@ -5459,6 +5469,7 @@ bool TLuaInterpreter::call(const QString& function, const QString& mName, const 
 // No documentation available in wiki - internal function
 std::pair<bool, bool> TLuaInterpreter::callReturnBool(const QString& function, const QString& mName)
 {
+    const ScriptCallerScope callerScope(*this, false);
     QElapsedTimer executionTimer;
 
     if (TDebug::wants(TDebug::Category::LuaSuccess)) {
@@ -5559,6 +5570,7 @@ void TLuaInterpreter::logEventError(const QString& event, const QString& error)
 // No documentation available in wiki - internal function
 bool TLuaInterpreter::callConditionFunction(std::string& function, const QString& mName)
 {
+    const ScriptCallerScope callerScope(*this, false);
     QElapsedTimer executionTimer;
 
     if (TDebug::wants(TDebug::Category::LuaSuccess)) {
@@ -5603,6 +5615,7 @@ bool TLuaInterpreter::callConditionFunction(std::string& function, const QString
 // No documentation available in wiki - internal function
 bool TLuaInterpreter::callMulti(const QString& function, const QString& mName)
 {
+    const ScriptCallerScope callerScope(*this, false);
     QElapsedTimer executionTimer;
 
     if (TDebug::wants(TDebug::Category::LuaSuccess)) {
@@ -5643,6 +5656,7 @@ bool TLuaInterpreter::callMulti(const QString& function, const QString& mName)
 // No documentation available in wiki - internal function
 std::pair<bool, bool> TLuaInterpreter::callMultiReturnBool(const QString& function, const QString& mName)
 {
+    const ScriptCallerScope callerScope(*this, false);
     QElapsedTimer executionTimer;
 
     if (TDebug::wants(TDebug::Category::LuaSuccess)) {
@@ -5689,6 +5703,7 @@ std::pair<bool, bool> TLuaInterpreter::callMultiReturnBool(const QString& functi
 // No documentation available in wiki - internal function
 bool TLuaInterpreter::callReference(lua_State* L, QString name, int parameters)
 {
+    const ScriptCallerScope callerScope(*this, false);
     // Our callers have already pushed the function and its arguments for us, so
     // anything below those belongs to whichever C function we are nested in.
     // A negative level would make lua_settop() pop relatively instead:
@@ -5903,6 +5918,7 @@ static bool plainGlobalName(const QString& name)
 // No documentation available in wiki - internal function
 bool TLuaInterpreter::callEventHandler(const QString& function, const TEvent& pE)
 {
+    const ScriptCallerScope callerScope(*this, false);
     if (function.isEmpty()) {
         return false;
     }
@@ -6134,6 +6150,7 @@ void TLuaInterpreter::captureEventForWaits(const TEvent& pE)
 // No documentation available in wiki - internal function
 double TLuaInterpreter::condenseMapLoad()
 {
+    const ScriptCallerScope callerScope(*this, false);
     QElapsedTimer executionTimer;
 
     if (TDebug::wants(TDebug::Category::LuaSuccess)) {
@@ -6571,8 +6588,8 @@ void TLuaInterpreter::initLuaGlobals()
         // corrupt a freshly-issued registry index, which is what
         // Host::resetProfile_phase2() drains DeferredDelete to stop labels doing.
         mNestedDispatchStates.clear();
-        mPassCommandRef = LUA_NOREF;
-        mRestoredCommandRef = LUA_NOREF;
+        mPassCommand = PassCommandState{};
+        ++mLuaStateGeneration;
         mEventHandlerLookupRefs.clear();
         stopSpawnedProcesses();
         mClosingGlobalLua = true;

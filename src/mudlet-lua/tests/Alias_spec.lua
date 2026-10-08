@@ -692,6 +692,15 @@ describe("Alias processing", function()
 
         -- Packages such as Repeater read "command" after an expandAlias() as the last command sent
         describe("command for scripts other than the calling alias", function()
+            -- Not straight from the spec: run through the runTests alias, that would
+            -- be an alias script, which gets its own "command" back
+            local function expandFromHandler(text)
+                local handlerId = registerAnonymousEventHandler("aliasSpecExpandFromHandler", function()
+                    expandAlias(text, false)
+                end)
+                raiseEvent("aliasSpecExpandFromHandler")
+                killAnonymousEventHandler(handlerId)
+            end
 
             it("leaves command holding what an event handler expanded", function()
                 local seen = {}
@@ -765,7 +774,7 @@ describe("Alias processing", function()
                     killAlias(aliasId)
                 end)
 
-                expandAlias("command_raiser", false)
+                expandFromHandler("command_raiser")
 
                 assert.are.equal("command_from_raised_handler", seen.inHandler, "the handler got the alias's command back")
                 assert.are.equal("command_from_raised_handler", command, "command did not keep what the handler expanded")
@@ -785,10 +794,84 @@ describe("Alias processing", function()
                     killAlias(aliasId)
                 end)
 
-                expandAlias("command_feeder", false)
+                expandFromHandler("command_feeder")
 
                 assert.are.equal("command_from_fed_trigger", seen.inTrigger, "the trigger got the alias's command back")
                 assert.are.equal("command_from_fed_trigger", command, "command did not keep what the trigger expanded")
+            end)
+
+            it("gives an event handler that an alias raised the last command when its command expands further", function()
+                local seen = {}
+                local innerId = tempAlias([[^command_chain_inner$]], function() end)
+                local midId = tempAlias([[^command_chain_mid$]], function()
+                    expandAlias("command_chain_inner", false)
+                end)
+                local handlerId = registerAnonymousEventHandler("aliasSpecCommandChain", function()
+                    expandAlias("command_chain_mid", false)
+                    seen.inHandler = command
+                end)
+                local outerId = tempAlias([[^command_chain_outer$]], function()
+                    raiseEvent("aliasSpecCommandChain")
+                end)
+                finally(function()
+                    killAlias(innerId)
+                    killAlias(midId)
+                    killAnonymousEventHandler(handlerId)
+                    killAlias(outerId)
+                end)
+
+                expandFromHandler("command_chain_outer")
+
+                assert.are.equal("command_chain_inner", seen.inHandler, "the handler got a command the nested alias was given back")
+            end)
+
+            it("gives the doSpeedWalk() that an alias's gotoRoom() runs the command it expanded", function()
+                local originalRoom = getPlayerRoom()
+                local savedSpeedWalk = rawget(_G, "doSpeedWalk")
+                local area = addAreaName("AliasSpecSpeedWalk")
+                local from = createRoomID()
+                addRoom(from)
+                setRoomArea(from, area)
+                setRoomCoordinates(from, 0, 0, 0)
+                local to = createRoomID()
+                addRoom(to)
+                setRoomArea(to, area)
+                setRoomCoordinates(to, 0, 1, 0)
+                setExit(from, to, "n")
+                -- centerview() only places the player with a mapper to show it in
+                local openedMapper = false
+                if not centerview(from) then
+                    openedMapper = openMapWidget()
+                    centerview(from)
+                end
+                local seen = {}
+                local stepId = tempAlias([[^command_speedwalk_step$]], function() end)
+                local walkerId = tempAlias([[^command_speedwalker$]], function()
+                    seen.walked = gotoRoom(to)
+                end)
+                _G.doSpeedWalk = function()
+                    expandAlias("command_speedwalk_step", false)
+                    seen.inSpeedWalk = command
+                end
+                finally(function()
+                    _G.doSpeedWalk = savedSpeedWalk
+                    killAlias(stepId)
+                    killAlias(walkerId)
+                    if originalRoom and originalRoom > 0 then
+                        centerview(originalRoom)
+                    end
+                    deleteRoom(from)
+                    deleteRoom(to)
+                    deleteArea(area)
+                    if openedMapper then
+                        closeMapWidget()
+                    end
+                end)
+
+                expandFromHandler("command_speedwalker")
+
+                assert.is_true(seen.walked, "gotoRoom() found no way there, so doSpeedWalk() never ran")
+                assert.are.equal("command_speedwalk_step", seen.inSpeedWalk, "doSpeedWalk() got the alias's command back")
             end)
 
             it("leaves command holding the last command expanded once the alias pass is over", function()
@@ -828,7 +911,7 @@ describe("Alias processing", function()
                     killAlias(outerId)
                 end)
 
-                expandAlias("command_several thing", false)
+                expandFromHandler("command_several thing")
 
                 assert.are.equal("command_several_third", command)
             end)
@@ -850,7 +933,7 @@ describe("Alias processing", function()
                     killAlias(againId)
                 end)
 
-                expandAlias("command_again", false)
+                expandFromHandler("command_again")
 
                 assert.are.equal("command_again", command, "an earlier command was taken for the last one expanded")
             end)
@@ -867,7 +950,7 @@ describe("Alias processing", function()
                     killAlias(outerId)
                 end)
 
-                expandAlias("command_same thing", false)
+                expandFromHandler("command_same thing")
 
                 assert.are.equal("command_same_inner", rawget(_G, "command"))
             end)
@@ -884,7 +967,7 @@ describe("Alias processing", function()
                     killAlias(outerId)
                 end)
 
-                expandAlias("command_assigned thing", false)
+                expandFromHandler("command_assigned thing")
 
                 assert.are.equal("assigned by the alias", rawget(_G, "command"), "the script's own assignment was overwritten")
             end)

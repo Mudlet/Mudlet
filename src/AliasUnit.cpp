@@ -335,15 +335,23 @@ bool AliasUnit::processDataStream(const QString& data)
     QByteArray haystack = data.toUtf8();
     haystack.truncate(qstrlen(haystack.constData()));
 
+    // A pass that an alias script starts is part of that script's pass
+    const bool settlesCommand = !Lua->runningAliasScript();
+    TLuaInterpreter::PassCommandState outerPassCommand;
+    if (settlesCommand) {
+        outerPassCommand = Lua->beginAliasPassCommand();
+    }
     mProcessingDepth++;
-    const auto processingGuard = qScopeGuard([this] {
+    const auto processingGuard = qScopeGuard([this, Lua, settlesCommand, &outerPassCommand] {
         mProcessingDepth--;
         Q_ASSERT(mProcessingDepth >= 0);
         if (mProcessingDepth <= 1) {
             mRunawayExpansionStopped = false;
         }
+        if (settlesCommand) {
+            Lua->settleCommandAfterAliasPass(outerPassCommand);
+        }
         if (mProcessingDepth == 0) {
-            mpHost->getLuaInterpreter()->settleCommandAfterAliasPass();
             doCleanup();
         }
     });

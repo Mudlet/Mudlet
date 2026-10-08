@@ -2807,7 +2807,6 @@ void Host::raiseEvent(const TEvent& pE)
     }
 
     static const QString star = qsl("*");
-    const TLuaInterpreter::ScriptCallerScope handlerScript(mLuaInterpreter, false);
 
     // A handler can uninstall its own package mid-dispatch (a common package
     // auto-updater pattern): whilst this frame is on the stack

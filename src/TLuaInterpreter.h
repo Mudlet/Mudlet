@@ -101,12 +101,12 @@ public:
     void initIndenterGlobals();
     lua_State* getLuaGlobalState();
 
-    bool call(const QString& function, const QString& mName, const bool muteDebugOutput = false);
+    bool call(const QString& function, const QString& mName, const bool muteDebugOutput = false, const bool aliasScript = false);
     std::pair<bool, bool> callReturnBool(const QString& function, const QString& mName);
     bool callMulti(const QString& function, const QString& mName);
     std::pair<bool, bool> callMultiReturnBool(const QString& function, const QString& mName);
     bool callConditionFunction(std::string& function, const QString& mName);
-    bool call_luafunction(void* pT, const QString& itemName = QString());
+    bool call_luafunction(void* pT, const QString& itemName = QString(), const bool aliasScript = false);
     void delete_luafunction(void* pT);
     void delete_luafunction(const QString& name);
     std::pair<bool, bool> callLuaFunctionReturnBool(void* pT, const QString& itemName = QString());
@@ -149,27 +149,20 @@ public:
     bool buildingCaptureTables();
     int pushNestedDispatchState(const bool parkCommand);
     void popNestedDispatchState(const int depth);
-    void setExpandedCommand(const QString&);
-    void settleCommandAfterAliasPass();
-    bool runningAliasScript() const { return mRunningAliasScript; }
-    // expandAlias() gives "command" back only to an alias script, so whatever runs
-    // a script that can start inside one says which kind it is
-    class ScriptCallerScope
+    // While an alias pass runs, for settleCommandAfterAliasPass(): the "command"
+    // the pass ends with unless a script changes it, the value the last restore
+    // put back, and how many commands had been expanded by then
+    struct PassCommandState
     {
-    public:
-        ScriptCallerScope(TLuaInterpreter& lua, const bool aliasScript)
-        : mLua(lua)
-        , mWasAliasScript(std::exchange(lua.mRunningAliasScript, aliasScript))
-        {
-        }
-        ~ScriptCallerScope() { mLua.mRunningAliasScript = mWasAliasScript; }
-        ScriptCallerScope(const ScriptCallerScope&) = delete;
-        ScriptCallerScope& operator=(const ScriptCallerScope&) = delete;
-
-    private:
-        TLuaInterpreter& mLua;
-        const bool mWasAliasScript;
+        int passCommandRef = LUA_NOREF;
+        int restoredCommandRef = LUA_NOREF;
+        quint64 commandsExpandedAtRestore = 0;
+        quint64 luaStateGeneration = 0;
     };
+    void setExpandedCommand(const QString&);
+    PassCommandState beginAliasPassCommand();
+    void settleCommandAfterAliasPass(PassCommandState& outer);
+    bool runningAliasScript() const { return mRunningAliasScript; }
     bool callEventHandler(const QString& function, const TEvent& pE);
     bool callCmdLineAction(const int func, QString);
     bool callAnonymousFunction(const int func, QString name);
@@ -1116,18 +1109,33 @@ private:
         int matchesRef = LUA_NOREF;
         int multimatchesRef = LUA_NOREF;
         int commandRef = LUA_NOREF;
-        bool parksCommand = false;
         bool captureScopeOpen = false;
     };
     std::vector<NestedDispatchState> mNestedDispatchStates;
     bool mRunningAliasScript = false;
-    // While an alias pass runs, for settleCommandAfterAliasPass(): the "command"
-    // the pass ends with unless a script changes it, the value the last restore
-    // put back, and how many commands had been expanded by then
-    int mPassCommandRef = LUA_NOREF;
-    int mRestoredCommandRef = LUA_NOREF;
+    // expandAlias() gives "command" back only to an alias script, so every way into
+    // a script says whether it is one
+    class ScriptCallerScope
+    {
+    public:
+        ScriptCallerScope(TLuaInterpreter& lua, const bool aliasScript)
+        : mLua(lua)
+        , mWasAliasScript(std::exchange(lua.mRunningAliasScript, aliasScript))
+        {
+        }
+        ~ScriptCallerScope() { mLua.mRunningAliasScript = mWasAliasScript; }
+        ScriptCallerScope(const ScriptCallerScope&) = delete;
+        ScriptCallerScope& operator=(const ScriptCallerScope&) = delete;
+
+    private:
+        TLuaInterpreter& mLua;
+        const bool mWasAliasScript;
+    };
+    PassCommandState mPassCommand;
     quint64 mCommandsExpanded = 0;
-    quint64 mCommandsExpandedAtRestore = 0;
+    // Bumped as the Lua state is replaced, so a PassCommandState kept from before
+    // is not settled against the registry of the new one
+    quint64 mLuaStateGeneration = 0;
     void releaseNestedDispatchState(NestedDispatchState&);
     // Registry references to how callEventHandler() finds each handler, by
     // handler name: the name itself, read raw from the globals, or else the
