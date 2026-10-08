@@ -276,6 +276,68 @@ private slots:
         QVERIFY2(luaHolds(qsl("anchorReleases == 1")), "the label's release callback did not fire");
     }
 
+    void test_aLinkOfANonLuaSchemeIsNotRun_data()
+    {
+        QTest::addColumn<QString>("link");
+
+        QTest::newRow("javascript") << qsl("javascript:void(0)");
+        QTest::newRow("upper-case JAVASCRIPT") << qsl("JAVASCRIPT:void(0)");
+        QTest::newRow("mailto") << qsl("mailto:send()");
+        QTest::newRow("tel") << qsl("tel:send()");
+    }
+
+    // Each link is also valid Lua, calling a method of a global named for its scheme, which sets a sentinel if run
+    void test_aLinkOfANonLuaSchemeIsNotRun()
+    {
+        QFETCH(QString, link);
+
+        label()->resetLinkStyle();
+        label()->setText(qsl("<a href=\"%1\">go</a>").arg(link));
+        mpHost->getLuaInterpreter()->compileAndExecuteScript(qsl("anchorSchemeRan = false\n"
+                                                                 "local ran = function() anchorSchemeRan = true end\n"
+                                                                 "javascript = {void = ran}\n"
+                                                                 "JAVASCRIPT = javascript\n"
+                                                                 "mailto = {send = ran}\n"
+                                                                 "tel = mailto\n"));
+        QVERIFY2(centreIsOnTheLabel(), "the point this case clicks is outside the label, so it would miss the link");
+
+        QSignalSpy activated(label(), &QLabel::linkActivated);
+        QTest::mouseClick(label(), Qt::LeftButton, Qt::NoModifier, linkCentre());
+
+        QCOMPARE(activated.count(), 1);
+        QVERIFY2(luaHolds(qsl("anchorSchemeRan == false")), "the link was run as Lua");
+        mpHost->getLuaInterpreter()->compileAndExecuteScript(qsl("javascript, JAVASCRIPT, mailto, tel = nil, nil, nil, nil"));
+    }
+
+    void test_aLuaCommandLinkWithAColonRuns_data()
+    {
+        QTest::addColumn<QString>("command");
+        QTest::addColumn<QString>("ran");
+
+        QTest::newRow("method call") << qsl("anchorColon:go()") << qsl("anchorColon.ran == 1");
+        QTest::newRow("colon in a string") << qsl("anchorColonText = 'at 12:00'") << qsl("anchorColonText == 'at 12:00'");
+    }
+
+    void test_aLuaCommandLinkWithAColonRuns()
+    {
+        QFETCH(QString, command);
+        QFETCH(QString, ran);
+
+        label()->resetLinkStyle();
+        label()->setText(qsl("<a href=\"%1\">go</a>").arg(command));
+        mpHost->getLuaInterpreter()->compileAndExecuteScript(qsl("anchorColon = {ran = 0}\n"
+                                                                 "function anchorColon:go() self.ran = self.ran + 1 end\n"
+                                                                 "anchorColonText = nil\n"));
+        QVERIFY2(centreIsOnTheLabel(), "the point this case clicks is outside the label, so it would miss the link");
+
+        QSignalSpy activated(label(), &QLabel::linkActivated);
+        QTest::mouseClick(label(), Qt::LeftButton, Qt::NoModifier, linkCentre());
+
+        QCOMPARE(activated.count(), 1);
+        QCOMPARE(activated.first().first().toString(), command);
+        QVERIFY2(luaHolds(ran), "the link's Lua command did not run");
+    }
+
     void test_aRightClickOpensNoMenuOfQtsOwn_data()
     {
         QTest::addColumn<QString>("text");
