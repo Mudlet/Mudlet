@@ -113,7 +113,7 @@ describe("Tests the GUI utilities as far as possible without mudlet", function()
       end
     end)
 
-    it("Should leave normal text and other escape sequences alone", function()
+    it("Should leave normal text and MXP line mode sequences alone", function()
       local sequences = {
         {"Hello World", "Hello World"},
         {"[Something in braces]", "[Something in braces]"},
@@ -1437,6 +1437,17 @@ describe("Tests the GUI utilities as far as possible without mudlet", function()
       { "\27[38;5mtrunc", string = "trunc", decho = "trunc" },
       { "\27[38;2;1mtrunc2", string = "trunc2", decho = "<1,0,0>trunc2" },
       { "\27[1;30mdark\27[0;30mblack", string = "darkblack", decho = "<128,128,128>dark<r><0,0,0>black", lastColour = 0 },
+      -- escape sequences other than SGR are dropped rather than passed through (#10647)
+      { "\27[?25hVISIBLE", string = "VISIBLE", decho = "VISIBLE" },
+      { "A\27[5CB", string = "A     B", decho = "A     B" },
+      { "A\27[CB\27[0CC\27[2;3CD", string = "ABCD", decho = "ABCD" },
+      { "A\27[3", string = "A", decho = "A" },
+      { "\27[3\nB\27[1\27[32mC", string = "\nBC", decho = "\nB<0,128,0>C", lastColour = 2 },
+      { "X\27]8;;http://a", string = "X", decho = "X" },
+      { "\27]0;title\nline\7", string = "\nline\7", decho = "\nline\7" },
+      { "X\27]8;;http://a\27\\L\27]8;;\27\\Y", string = "XLY", decho = "XLY" },
+      { "\27]0;title\7\27[31mred", string = "red", decho = "<128,0,0>red", lastColour = 1 },
+      { "\27[1 qA\27[38;5;-1mB\27(BC\27cD\27E", string = "ABCDE", decho = "ABCDE" },
     }
 
     -- a case leaves out what it does not pin, such as output that comes from a known bug

@@ -2081,11 +2081,25 @@ function hecho2string(text)
 end
 
 local ansiPattern = rex.new("\\e\\[([0-9:;]*?)m")
+-- the escape sequences TBuffer drops from game text: a string sequence (OSC, DCS, SOS, PM or APC)
+-- up to its terminator or the end of its line, any CSI but SGR and an MXP line mode up to its final
+-- byte or the byte that cuts it short, a character set designation, the short escapes, a stray ESC;
+-- first, a cursor forward, which TBuffer writes as spaces
+local ansiNonSgrPattern = rex.new("\\e\\[([0-9]+)C|\\e[\\]PX^_](?:[^\\a\\e\\n\\r]|\\e(?!\\\\))*(?:\\a|\\e\\\\)?|\\e\\[(?![0-9:;]*m|[0-9]*z)[\\x20-\\x3F]*[\\x40-\\x7E]?|\\e[()*+][\\x30-\\x7E]|\\e[78c\\\\]|\\e(?!\\[[0-9:;]*m|\\[[0-9]*z)")
+
+local function replaceNonSgrEscape(cursorForward)
+  -- the cap is TBuffer's widest line, as a count from the game is unbounded
+  return cursorForward and string.rep(" ", math.min(tonumber(cursorForward), 1000)) or ""
+end
+
+local function convertNonSgrEscapes(text)
+  return (rex.gsub(text, ansiNonSgrPattern, replaceNonSgrEscape))
+end
 
 -- function for converting a raw ANSI string into plain strings
 function ansi2string(text)
   assert(type(text) == 'string', 'ansi2string: bad argument #1 type (expected string, got '..type(text)..'!)')
-  local result = rex.gsub(text, ansiPattern, "")
+  local result = rex.gsub(convertNonSgrEscapes(text), ansiPattern, "")
   return result
 end
 
@@ -2120,7 +2134,7 @@ function ansi2decho(text, ansi_default_color)
 
   -- match each set of ansi tags, ie [0;36;40m and convert to decho equivalent.
   -- this works since both ansi colours and echo don't need closing tags and map to each other
-  local result = rex.gsub(text, ansiPattern, function(s)
+  local result = rex.gsub(convertNonSgrEscapes(text), ansiPattern, function(s)
     local output = {} -- assemble the output into this table
 
     local delim = ";"
