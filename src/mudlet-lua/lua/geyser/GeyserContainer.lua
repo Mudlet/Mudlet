@@ -102,14 +102,25 @@ function Geyser.Container:calculate_dynamic_window_size()
   return ret_size
 end
 
+-- Internal function: this window's x, y, width and height in whole pixels. Each
+-- edge is rounded, rather than each size truncated, so windows whose edges meet
+-- at a fraction of a pixel, such as the children of an HBox, still tile.
+function Geyser.Container:pixel_geometry()
+  local x, y = self:get_x(), self:get_y()
+  local left, top = math.floor(x + 0.5), math.floor(y + 0.5)
+  local right, bottom = math.floor(x + self:get_width() + 0.5), math.floor(y + self:get_height() + 0.5)
+  return left, top, right - left, bottom - top
+end
+
 --- Responsible for placing/moving/resizing this window to the correct place/size.
 -- Called on window resize events.
 -- @param skipChildren If true, place only this window, for a caller that walks
 --                     the children itself.
 function Geyser.Container:reposition (skipChildren)
   if self.type ~= "userwindow" then
-    moveWindow(self.name, self:get_x(), self:get_y())
-    resizeWindow(self.name, self:get_width(), self:get_height())
+    local x, y, width, height = self:pixel_geometry()
+    moveWindow(self.name, x, y)
+    resizeWindow(self.name, width, height)
   end
   -- deal with all children of this container
   if not skipChildren then

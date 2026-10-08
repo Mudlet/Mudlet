@@ -1086,12 +1086,11 @@ function Geyser.Label:new (cons, container)
   -- workaround for createLabel possibly being overwritten and not understanding the new parent argument
   -- see https://github.com/Mudlet/Mudlet/issues/3393
   local ok, err
+  local x, y, width, height = me:pixel_geometry()
   if me.windowname == "main" then
-    ok, err = createLabel(me.name, me:get_x(), me:get_y(),
-      me:get_width(), me:get_height(), me.fillBg)
+    ok, err = createLabel(me.name, x, y, width, height, me.fillBg)
   else
-    ok, err = createLabel(me.windowname, me.name, me:get_x(), me:get_y(),
-      me:get_width(), me:get_height(), me.fillBg)
+    ok, err = createLabel(me.windowname, me.name, x, y, width, height, me.fillBg)
   end
   if not mudlet.elementCreated(me.windowname, me.name, ok, err) then
     printError(string.format("Geyser.Label '%s' was not created: %s", me.name, err or "unknown error"), false, false)

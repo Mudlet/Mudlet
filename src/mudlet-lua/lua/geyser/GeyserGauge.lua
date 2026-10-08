@@ -339,7 +339,8 @@ function Geyser.Gauge:setValue (currentValue, maxValue, text)
   elseif spaced or (filled and not resizesInPlace(fill, front)) then
     front:reposition()
   elseif filled then
-    resizeWindow(front.name, front:get_width(), front:get_height())
+    local _, _, width, height = front:pixel_geometry()
+    resizeWindow(front.name, width, height)
   end
 
   if text then

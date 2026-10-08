@@ -610,8 +610,7 @@ function Geyser.MiniConsole:new (cons, container)
   -- Now create the MiniConsole using primitives
   if not string.find(me.name, ".+Class$") then
     me.windowname = me.windowname or me.container.windowname or "main"
-    local ok, err = createMiniConsole(me.windowname,me.name, me:get_x(), me:get_y(),
-    me:get_width(), me:get_height())
+    local ok, err = createMiniConsole(me.windowname,me.name, me:pixel_geometry())
     if not mudlet.elementCreated(me.windowname, me.name, ok, err) then
       printError(string.format("Geyser.MiniConsole '%s' was not created: %s", me.name, err or "unknown error"), false, false)
     end

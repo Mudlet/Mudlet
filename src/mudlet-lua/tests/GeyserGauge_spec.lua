@@ -536,8 +536,8 @@ describe("Tests functionality of Geyser.Gauge", function()
       local gauge = track(Geyser.Gauge:new({name = "ggsLeadingDot", x = 0, y = 0, width = 200, height = 100}))
       gauge:setStyleSheet("margin: .5px;", "margin: .5px;")
       -- .5px used to match the "5px" inside it and inset the gauge tenfold; half
-      -- a pixel each side comes off the size and rounds away on the position
-      assert.are.same({x = 0, y = 0, width = 199, height = 99}, geometry("ggsLeadingDot_front"))
+      -- a pixel each side moves both edges in by half a pixel, which rounds up
+      assert.are.same({x = 1, y = 1, width = 199, height = 99}, geometry("ggsLeadingDot_front"))
     end)
 
     it("reads border longhands", function()

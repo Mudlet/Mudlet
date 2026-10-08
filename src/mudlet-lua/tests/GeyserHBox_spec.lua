@@ -100,11 +100,9 @@ describe("Tests functionality of Geyser.HBox", function()
       assert.are.same({x = 0, y = 0, width = 100, height = 60}, geometry("ghbFixedChild"))
       local dynamic = geometry("ghbDynamic")
       assert.are.equal(200, dynamic.width)
-      -- the dynamic child should start at 100, where the fixed one ends, but
-      -- organize() hands out positions as percentages: a third of 300px comes
-      -- back as 99.999999999999 and Mudlet truncates it, leaving a one pixel
-      -- gap. Pinned so the day the layout is fixed this spec says so.
-      assert.are.equal(99, dynamic.x)
+      -- organize() hands out positions as percentages, so a third of 300px comes
+      -- back as 99.999999999999; the edge is rounded, leaving no gap
+      assert.are.equal(100, dynamic.x)
     end)
 
     it("gives a stretch factor its extra share of the width", function()
@@ -113,6 +111,21 @@ describe("Tests functionality of Geyser.HBox", function()
       track(Geyser.Label:new({name = "ghbStretchB"}, box))
       assert.are.same({x = 0, y = 0, width = 300, height = 100}, geometry("ghbStretchA"))
       assert.are.same({x = 300, y = 0, width = 100, height = 100}, geometry("ghbStretchB"))
+    end)
+
+    it("tiles children edge to edge when the box does not divide into whole pixels", function()
+      local box = track(Geyser.HBox:new({name = "ghbTile", x = 20, y = 20, width = 600, height = 100}))
+      for index = 1, 3 do
+        track(Geyser.Label:new({name = "ghbTile" .. index}, box))
+      end
+      local right = 20
+      for index = 1, 3 do
+        local child = geometry("ghbTile" .. index)
+        assert.are.equal(right, child.x)
+        assert.are.equal(200, child.width)
+        right = child.x + child.width
+      end
+      assert.are.equal(620, right)
     end)
   end)
 
