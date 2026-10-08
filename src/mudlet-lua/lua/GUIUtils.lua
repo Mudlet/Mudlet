@@ -472,10 +472,9 @@ end
 ---   </pre>
 function getRGB(colorName)
   assert(type(colorName) == 'string', 'getRGB: bad argument #1 type (expected string, got '..type(colorName)..'!)')
-  local red = color_table[colorName][1]
-  local green = color_table[colorName][2]
-  local blue = color_table[colorName][3]
-  return red, green, blue
+  local color = color_table[colorName]
+  assert(color, 'getRGB: bad argument #1 value (unknown color name "'..colorName..'")')
+  return color[1], color[2], color[3]
 end
 
 
