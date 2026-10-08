@@ -1290,7 +1290,7 @@ private slots:
         if (VoskRecognizer::libraryAvailable() || SherpaRecognizer::sherpaAvailable()) {
             QSKIP("a model-based engine is installed here, so there is nothing for this case to install");
         }
-        QVERIFY2(!mudlet::self()->speechRecognizer(), "a live recognizer would answer for the paths instead of detection");
+        QVERIFY2(!TSpeechBridge::instance()->speechRecognizer(), "a live recognizer would answer for the paths instead of detection");
 
         const QString stub = QDir(VoskRecognizer::userLibraryPath()).filePath(QFileInfo(qsl(MUDLET_VOSK_STUB_LIBRARY)).fileName());
         QVERIFY(QDir().mkpath(VoskRecognizer::userLibraryPath()));
