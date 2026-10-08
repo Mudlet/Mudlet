@@ -4928,6 +4928,9 @@ describe("Tests saveJsonMap and loadJsonMap", function()
       buildMap()
       local area = getRoomArea(roomA)
       assert.is_true(setAreaUserData(area, "mapper.spec.kept", "yes"))
+      local labelId = createMapLabel(area, "MapperSpecBlankAreaLabel", 2, -3, 0, 255, 255, 255, 0, 0, 0,
+                                     30.0, 50, true, true, "", 255, 50, false)
+      assert.is_true(labelId >= 0)
       reimportWith(function(document)
         for _, exportedArea in ipairs(document.areas) do
           if exportedArea.id == area then
@@ -4939,6 +4942,10 @@ describe("Tests saveJsonMap and loadJsonMap", function()
       assert.are.equal(area, getRoomArea(roomA))
       assert.are.equal(area, getRoomArea(roomB))
       assert.are.same({["mapper.spec.kept"] = "yes"}, getAllAreaUserData(area))
+      local label = getMapLabel(area, labelId)
+      assert.is_table(label)
+      assert.are.equal("MapperSpecBlankAreaLabel", label.Text)
+      assert.are.same({2, -3, 0}, {label.X, label.Y, label.Z})
       local name = getAreaTableSwap()[area]
       assert.is_string(name)
       assert.are_not.equal("", name)
