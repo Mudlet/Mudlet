@@ -4729,6 +4729,25 @@ describe("Tests saveJsonMap and loadJsonMap", function()
     -- data without emptying it first, and the JSON import never reaches the
     -- clear a binary load gets, so keys the previous map had outlive it.
     pending("map user data from the map being replaced survives a JSON import")
+
+    it("puts each area's 2D map zoom back", function()
+      deleteMap()
+      local zooms = {MapperSpecJsonZoomA = 33, MapperSpecJsonZoomB = 44.5, MapperSpecJsonZoomC = 1234}
+      local areas = {}
+      for name, zoom in pairs(zooms) do
+        local area = addAreaName(name)
+        local room = createRoomID(); addRoom(room); setRoomArea(room, area)
+        roomA = room
+        assert.is_true(setMapZoom(zoom, area))
+        areas[name] = area
+      end
+
+      roundTrip()
+
+      for name, zoom in pairs(zooms) do
+        assert.are.equal(zoom, getMapZoom(areas[name]), name)
+      end
+    end)
   end)
 
   describe("Tests the saveJsonMap and loadJsonMap argument contract", function()
