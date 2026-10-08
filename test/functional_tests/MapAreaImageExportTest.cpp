@@ -276,7 +276,9 @@ private slots:
 
         survivingView->mpMap = pClosingMap;
         survivingView->mpHost = pClosingHost;
-        const QString unwritablePath = qsl("%1/no-such-directory/closing.png").arg(mConfigDir.path());
+        // A directory under the image's name passes the checks made before the save
+        const QString unwritablePath = qsl("%1/closing.png").arg(mConfigDir.path());
+        QVERIFY(QDir().mkpath(unwritablePath));
         QTest::ignoreMessage(QtWarningMsg, QRegularExpression(qsl("profile \"%1\" closed before this export finished: Failed to save image to .*closing\\.png").arg(closingProfile)));
         const auto [exported, message] = survivingView->exportAreaToImage(areaId, unwritablePath);
         QVERIFY2(exported, qPrintable(message));
