@@ -63,6 +63,7 @@
 
 #include <chrono>
 #include <cstring>
+#include <limits>
 #include <QtConcurrentRun>
 #include <QCoreApplication>
 #include <QDataStream>
@@ -4202,10 +4203,24 @@ std::tuple<QString, bool> Host::getCmdLineSettings(const enums::CommandLineType 
     // Get the highest number used so far:
     bool isOk = false;
     auto usedIndex = readProfileIniData(qsl("CommandLines/UsedIndexes")).toInt(&isOk);
-    if (!isOk || !usedIndex) {
-        // The value was not found / is null - so force it to be the right one
-        // to start with, remembering that it will be incremented before use:
+    if (!isOk || usedIndex <= 0 || usedIndex == std::numeric_limits<int>::max()) {
+        // The value was not found / is null / cannot be incremented - so rebuild it from the
+        // history files already handed out, which a new command line must not share:
         usedIndex = 0;
+        QSettings& settings = profileIni();
+        settings.beginGroup(qsl("CommandLines/NameMapping"));
+        for (const auto& key : settings.childKeys()) {
+            const QString mappedFile = settings.value(key).toString();
+            if (!mappedFile.startsWith(qsl("command_history_"))) {
+                continue;
+            }
+            bool parsed = false;
+            const int mappedIndex = mappedFile.mid(qsl("command_history_").size()).toInt(&parsed);
+            if (parsed && mappedIndex > usedIndex && mappedIndex < std::numeric_limits<int>::max()) {
+                usedIndex = mappedIndex;
+            }
+        }
+        settings.endGroup();
     }
     // Increment it and save the new value
     writeProfileIniData(qsl("CommandLines/UsedIndexes"), QString::number(++usedIndex));
