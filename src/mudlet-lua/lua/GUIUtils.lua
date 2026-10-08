@@ -611,16 +611,28 @@ function mudlet.elementCreated(windowName, name, ok, err)
   if err == string.format("window '%s' not found", windowName) then
     return false
   end
+  if mudlet.elementNameTaken(name, err) then
+    return false
+  end
+  return windowType(name) ~= nil
+end
+
+--- Answers whether a create...() call was refused because another kind of element holds the name.
+-- Whatever the caller goes on to do with that name - hide it, echo into it, style it - lands on
+-- that other element, so a caller that gets this refusal has to stop there.
+-- @param name the element's name
+-- @param err the creator's second return value
+function mudlet.elementNameTaken(name, err)
   for _, taken in ipairs({
     "label with the name '%s' already exists",
     "a miniconsole/userwindow with the name '%s' already exists",
     "a scroll box, command line or text edit with the name '%s' already exists",
   }) do
     if err == string.format(taken, name) then
-      return false
+      return true
     end
   end
-  return windowType(name) ~= nil
+  return false
 end
 
 

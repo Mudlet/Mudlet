@@ -345,9 +345,48 @@ describe("Console edges", function()
         deleteLabel(label)
       end)
       assert.is_true(createLabel(label, 0, 0, 100, 20, 1))
-      console = Geyser.MiniConsole:new({name = label, x = 0, y = 30, width = 100, height = 50})
+      local taken = ("label with the name '%s' already exists"):format(label)
+      local err
+      console, err = Geyser.MiniConsole:new({name = label, x = 0, y = 30, width = 100, height = 50})
+      assert.is_nil(console)
+      assert.are.equal(taken, err)
+      assert.is_nil(Geyser.windowList[label])
       assert.spy(printErrorSpy).was.called(1)
-      assert.are.same({false, ("label with the name '%s' already exists"):format(label)}, {createConsole(label, 8, 20, 5, 0, 0)})
+      assert.are.same({false, taken}, {createConsole(label, 8, 20, 5, 0, 0)})
+      assert.spy(printErrorSpy).was.called(2)
+    end)
+
+    it("a Geyser element refused a name leaves the element that holds it alone", function()
+      local textEdit, console = name("TextEditTakenGeyser"), name("ConsoleTakenGeyser")
+      local printErrorSpy = spy.on(_G, "printError")
+      local made = {}
+      finally(function()
+        _G.printError:revert()
+        for _, element in ipairs(made) do
+          Geyser:remove(element)
+        end
+        deleteTextEdit(textEdit)
+        deleteMiniConsole(console)
+        deleteLabel(textEdit)
+        deleteLabel(console)
+      end)
+      assert.is_true(createTextEdit(textEdit, 0, 0, 100, 20))
+      assert.is_true(createMiniConsole(console, 0, 30, 100, 50))
+      for _, entry in ipairs({
+        {textEdit, "a scroll box, command line or text edit with the name '%s' already exists"},
+        {console, "a miniconsole/userwindow with the name '%s' already exists"},
+      }) do
+        local label, err = Geyser.Label:new({name = entry[1], hidden = true, message = "from the label"})
+        if label then
+          made[#made + 1] = label
+        end
+        assert.is_nil(label)
+        assert.are.equal(entry[2]:format(entry[1]), err)
+        assert.is_nil(Geyser.windowList[entry[1]])
+        assert.is_true(windowVisible(entry[1]))
+      end
+      assert.are.equal("textedit", windowType(textEdit))
+      assert.are.equal("", getCurrentLine(console))
       assert.spy(printErrorSpy).was.called(2)
     end)
 

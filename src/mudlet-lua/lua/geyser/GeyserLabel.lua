@@ -1095,6 +1095,10 @@ function Geyser.Label:new (cons, container)
   end
   if not mudlet.elementCreated(me.windowname, me.name, ok, err) then
     printError(string.format("Geyser.Label '%s' was not created: %s", me.name, err or "unknown error"), false, false)
+    if mudlet.elementNameTaken(me.name, err) then
+      me.container:remove(me)
+      return nil, err
+    end
   end
 -- Geyser.Container:new() settles the hidden constraint before there is a widget to hide, so the hide is made good here
   if me.hidden or me.auto_hidden then
