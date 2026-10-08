@@ -3784,8 +3784,9 @@ describe("Tests saveMap and loadMap", function()
     it("leaves the live area user data alone when it saves", function()
       local area = buildMap()
       assert.is_true(setAreaUserData(area, "climate", "temperate"))
-      createMapLabel(area, "Saved Label", 0, 0, 0, 255, 255, 255, 0, 0, 0,
-                     30.0, 50, true, true, "", 255, 50, false)
+      local labelId = createMapLabel(area, "Saved Label", 0, 0, 0, 255, 255, 255, 0, 0, 0,
+                                     30.0, 50, true, true, "", 255, 50, false)
+      assert.is_true(labelId >= 0, "the label whose keys this checks was never made")
 
       -- pinned below 21 so the zoom key stays covered whatever the default is
       assert.is_true(saveMap(savePath, 20))
