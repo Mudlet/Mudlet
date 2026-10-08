@@ -245,13 +245,13 @@ private slots:
             QFAIL("The server stub's welcome message never reached the console.");
         }
 
-        mSavedMirrorToStdOut = mudlet::smMirrorToStdOut;
+        mSavedMirrorToStdOut = MudletApp::smMirrorToStdOut;
         mSavedPostingTimeout = mpHost->mTelnet.getPostingTimeout();
     }
 
     void cleanupTestCase()
     {
-        mudlet::smMirrorToStdOut = mSavedMirrorToStdOut;
+        MudletApp::smMirrorToStdOut = mSavedMirrorToStdOut;
         if (mpHost) {
             mpHost->mTelnet.setPostingTimeout(mSavedPostingTimeout);
         }
@@ -273,16 +273,16 @@ private slots:
         // Settle with the option off: a posting timer the previous case armed
         // has to be allowed to fire before anything is collected for this one,
         // and cTelnet only picks the shortened timeout up once it has.
-        mudlet::smMirrorToStdOut = false;
+        MudletApp::smMirrorToStdOut = false;
         mpHost->mTelnet.setPostingTimeout(csmPostingTimeoutMs);
         QTest::qWait(350ms);
         mpHost->mBlankLineBehaviour = Host::BlankLineBehaviour::Show;
         mpHost->mainConsoleView()->buffer.clear();
         mCapturedOutput.clear();
-        mudlet::smMirrorToStdOut = true;
+        MudletApp::smMirrorToStdOut = true;
     }
 
-    void cleanup() { mudlet::smMirrorToStdOut = false; }
+    void cleanup() { MudletApp::smMirrorToStdOut = false; }
 
     void test_gameTextIsMirrored()
     {
@@ -455,7 +455,7 @@ private slots:
 
     void test_nothingIsMirroredWithoutTheOption()
     {
-        mudlet::smMirrorToStdOut = false;
+        MudletApp::smMirrorToStdOut = false;
 
         feedLineFromServer("this run was not asked for");
         QVERIFY(runLua(qsl("print(\"neither was this\")")));
@@ -465,7 +465,7 @@ private slots:
 
         // ... and the feed itself was alive throughout, so the two counts above
         // are the option being off rather than nothing having been fed.
-        mudlet::smMirrorToStdOut = true;
+        MudletApp::smMirrorToStdOut = true;
         feedLineFromServer("this run was asked for");
 
         QCOMPARE(timesMirrored(qsl("this run was asked for")), 1);

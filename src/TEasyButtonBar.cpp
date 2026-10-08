@@ -214,9 +214,7 @@ void TEasyButtonBar::fillMenu(TAction* pAction, QMenu* pMenu)
         }
 
         if (pTAction->isFolder()) {
-            // Adding a QWidget derived pointer to new QMenu() means the menu
-            // will be destroyed when the pointed to item is, we just need to
-            // find the item that it is attached to - ah ha, try the toolbar...
+            // Deleted along with its entry, see deleteMenuEntryLater() in TMainConsole.cpp
             auto pNewMenu = new QMenu(this);
             pEAction->setMenu(pNewMenu);
 
@@ -311,6 +309,11 @@ void TEasyButtonBar::clear()
     // Transfer the object name to the new instance:
     auto widgetObjectName(mpWidget->objectName());
     mpWidget->setObjectName(QString());
+    // deleteLater() waits for a return to the event loop it was called from, which
+    // a nested processEvents() never is, so until then the old buttons would still
+    // be laid out above the new ones
+    layout()->removeWidget(mpWidget);
+    mpWidget->hide();
     mpWidget->deleteLater();
     mpWidget = pW;
     mpWidget->setObjectName(widgetObjectName);

@@ -260,3 +260,16 @@ describe("Tests that the selection and format functions find their console by na
     end
   end)
 end)
+
+describe("Tests that getSelection reads the line the selection is on", function()
+  it("after the cursor moves to another line", function()
+    local mini = ("specSelectionLine-%d-%d"):format(os.time(), math.random(100000))
+    createMiniConsole(mini, 0, 0, 300, 200)
+    finally(function() deleteMiniConsole(mini) end)
+    echo(mini, "first line here\nsecond other\n")
+    moveCursor(mini, 0, 0)
+    assert.are.equal(6, selectString(mini, "line", 1))
+    assert.is_true(moveCursor(mini, 0, 1))
+    assert.are.same({"line", 6, 4}, {getSelection(mini)})
+  end)
+end)
