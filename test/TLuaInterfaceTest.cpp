@@ -25,6 +25,7 @@
 
 #include <QRegularExpression>
 
+#include <algorithm>
 #include <cstdlib>
 #include <memory>
 #include <vector>
@@ -1165,6 +1166,71 @@ private slots: // NOLINT(readability-redundant-access-specifiers)
                 }
             }
         }
+    }
+
+    // getChildren() sorts by keys it works out once per member rather than by
+    // calling TVarLessThan(), so the two have to agree on where every name goes
+    void testGetChildrenSortsTheWayTVarLessThanOrders()
+    {
+        TVar parent;
+        for (const QString& name : {qsl("b"), qsl("10"), qsl("a"), qsl("_G"), qsl("2"), qsl("A"), qsl("-1"), QString(), qsl("11a")}) {
+            auto* child = new TVar();
+            child->setName(name, LUA_TSTRING);
+            parent.addChild(child);
+        }
+
+        const QList<TVar*> children = parent.getChildren(true);
+        QVERIFY(std::is_sorted(children.cbegin(), children.cend(), TVarLessThan));
+        QStringList sorted;
+        for (TVar* child : children) {
+            sorted << child->getName();
+        }
+        QCOMPARE(sorted, (QStringList{qsl("-1"), qsl("2"), qsl("10"), QString(), qsl("11a"), qsl("_G"), qsl("A"), qsl("a"), qsl("b")}));
+    }
+
+    void testShortVarPathReadsLikeTheJoinedShortVarName()
+    {
+        auto addChild = [](TVar* parent, const QString& name) {
+            auto* child = new TVar();
+            child->setName(name, LUA_TSTRING);
+            child->setParent(parent);
+            parent->addChild(child);
+            return child;
+        };
+        TVar globals;
+        globals.setName(qsl("_G"), LUA_TSTRING);
+        TVar* table = addChild(&globals, qsl("pathT"));
+        TVar* blank = addChild(table, QString());
+        TVar* shadow = addChild(table, qsl("_G"));
+        const QList<TVar*> vars{
+                &globals, table, blank, addChild(blank, qsl("leaf")), addChild(table, qsl("dot.ted")), shadow, addChild(shadow, qsl("deep")), addChild(addChild(table, qsl("3")), qsl("y"))};
+        VarUnit* vu = interface->getVarUnit();
+
+        for (TVar* var : vars) {
+            QCOMPARE(vu->shortVarPath(var), vu->shortVarName(var).join(qsl(".")));
+        }
+        QCOMPARE(vu->shortVarPath(vars.at(3)), qsl("pathT..leaf"));
+        QCOMPARE(vu->shortVarPath(nullptr), QString());
+    }
+
+    // shouldSave() stops counting once a table is past the limit, but the
+    // reason the view gives for refusing it still carries the whole count
+    void testOversizedTableIsRefusedWithItsFullCount()
+    {
+        execLua("bigT = {} for i = 1, 3 do bigT[i] = {} for j = 1, 4000 do bigT[i][j] = j end end "
+                "edgeT = {} for i = 1, 100 do edgeT[i] = {} for j = 1, 99 do edgeT[i][j] = j end end");
+        interface->getVars(false);
+        VarUnit* vu = interface->getVarUnit();
+        TVar* big = findGlobal(qsl("bigT"));
+        TVar* edge = findGlobal(qsl("edgeT"));
+        QVERIFY(big);
+        QVERIFY(edge);
+
+        QVERIFY2(!vu->shouldSave(big), "3 tables of 4,000 are 12,003 items, over the limit");
+        const QString reason = vu->getUnsaveableReason(big);
+        QVERIFY2(reason.contains(QLocale::system().toString(12003)), qPrintable(reason));
+        QVERIFY2(vu->shouldSave(edge), "100 tables of 99 are exactly 10,000 items, which is still allowed");
+        QVERIFY(vu->getUnsaveableReason(edge).isEmpty());
     }
 
     // A global is free to have a dot in its own name, and everything the

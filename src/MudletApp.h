@@ -145,6 +145,11 @@ public:
     // Callers that can run before mudlet::setupConfig() have to check; the rest
     // run long after startup and dereference it directly.
     static QSettings* getQSettings();
+    // For a QSettings that reads Mudlet.ini before getQSettings() exists. Qt hands
+    // a file parsed moments ago to the next QSettings without parsing it again,
+    // and only the one that parsed it hears of a format error, so getQSettings()
+    // would otherwise never report one.
+    static void noteEarlySettingsStatus(const QSettings&);
 
     // Whether the config root in force actually came from a portable.txt. False
     // when a marker was present but named a root that had to be refused, which is

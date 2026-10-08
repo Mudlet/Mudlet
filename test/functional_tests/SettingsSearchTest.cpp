@@ -321,6 +321,28 @@ private slots:
         QCOMPARE(cardPlacements(), before);
     }
 
+    // A search keeps the sidebar's current row, so clicking the category it was
+    // started from changes no row: the click itself has to end the search
+    void test_clickingTheCategoryTheSearchStartedFromLeavesSearchMode()
+    {
+        const QStringList before = cardPlacements();
+        const int displayRow = TestSettings::rowOf(mpPreferences, qsl("mainDisplay"));
+        QVERIFY(displayRow >= 0);
+        sidebar()->setCurrentRow(displayRow);
+        QCoreApplication::processEvents();
+        search(qsl("wrap"));
+        QCOMPARE(stack()->currentWidget(), pageOf(qsl("searchResults")));
+
+        QListWidgetItem* pItem = sidebar()->item(displayRow);
+        QTest::mouseClick(sidebar()->viewport(), Qt::LeftButton, Qt::NoModifier, sidebar()->visualItemRect(pItem).center());
+        QCoreApplication::processEvents();
+
+        QVERIFY2(searchField()->text().isEmpty(), "the search field still holds the query after its own category was clicked");
+        QCOMPARE(stack()->currentWidget(), pageOf(qsl("mainDisplay")));
+        QVERIFY(pItem->isSelected());
+        QCOMPARE(cardPlacements(), before);
+    }
+
     // A click on a control of a result card leaves the keyboard focus inside a
     // card the results only borrowed. The next run of the query hands that card
     // back to its own page, clearing the focus it carries, so the focus falls to
@@ -455,6 +477,15 @@ private slots:
 
         search(qsl("nvda"));
         QCOMPARE(mpPreferences->groupBox_accessibility->parentWidget(), resultsColumn());
+    }
+
+    void test_theBritishSpellingFindsTheColourCards()
+    {
+        for (const QString& query : {qsl("colour"), qsl("colours")}) {
+            search(query);
+            QVERIFY2(mpPreferences->groupBox_displayColors->parentWidget() == resultsColumn(), qPrintable(query));
+            QVERIFY2(mpPreferences->groupBox_mapperColors->parentWidget() == resultsColumn(), qPrintable(query));
+        }
     }
 
     // Accents and keyboard accelerators are folded out of both sides of the
