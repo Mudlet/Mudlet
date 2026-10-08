@@ -22,8 +22,9 @@ function IDMgr:register(name, typ, object)
   if not ok then
     return nil, id
   end
-  -- a creator that refuses, such as tempTimer given code that does not compile, answers -1 and why
-  if id == -1 then
+  -- a creator that refuses answers nil (tempRegexTrigger given a pattern that does not compile)
+  -- or -1 (tempTimer given code that does not compile) and why
+  if id == nil or id == -1 then
     return nil, refusal
   end
   -- registerAnonymousEventHandler answers with the existing id for a function name already on the
