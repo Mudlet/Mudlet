@@ -3135,11 +3135,20 @@ describe("Tests exporting the profile to a file with saveProfile", function()
     local bulkXml = scratchDirectory .. "/" .. bulk .. ".xml"
     local folder = scratchDirectory .. "/mudlet-spec-gone-before-the-write"
     local moved = folder .. "-moved"
+    -- saves of a profile this size can take longer than the usual wait
+    local function waitForTheBulkySave()
+      return waitUntil(function() return installPackage("") == nil end, 30000)
+    end
     lfs.mkdir(scratchDirectory)
     lfs.mkdir(folder)
     defer(function()
       removeFixturePackage(bulk)
       os.remove(bulkXml)
+    end)
+    -- Its own clean-up, run first, so the folders still go when the uninstall gives up. Windows will not delete
+    -- a file the save still has open, so wait for it here too for a spec that failed before its own wait.
+    defer(function()
+      waitForTheBulkySave()
       for _, directory in ipairs({moved, folder}) do
         if fileExists(directory) then
           for entry in lfs.dir(directory) do
@@ -3160,14 +3169,14 @@ describe("Tests exporting the profile to a file with saveProfile", function()
       '</ScriptPackage>',
     }, "\n"))
     installUntilConfirmed(installPackage, bulkXml, function() return packageInstalled(bulk) end, "the bulky package")
-    assert.is_true(waitForProfileSaveToPass(), "a profile save was still running")
+    assert.is_true(waitForTheBulkySave(), "a profile save was still running")
     local mark = getLastLineNumber("main")
 
     local ok = saveProfile(folder, "mudlet-spec-raced")
     local movedAway, whyNot = os.rename(folder, moved)
 
     assert.is_true(ok)
-    assert.is_true(waitForProfileSaveToPass(), "the profile save never finished")
+    assert.is_true(waitForTheBulkySave(), "the profile save never finished")
     if not movedAway then
       -- Windows will not move a folder while a file in it is open
       pending("the folder could not be moved away while it was being written to: " .. tostring(whyNot))
