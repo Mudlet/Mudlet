@@ -356,9 +356,9 @@ if false then
 
 
   --- Returns a Lua table with the content of the lines on a per line basis. Absolute line numbers are used.
-  --- For from_line_number < to_line_number, lines outside the buffer are left out, so t[1] is the first requested
-  --- line that exists: getLines(-5, 2) returns lines 0 and 1 as t[1] and t[2], and a range wholly outside the buffer
-  --- returns an empty table. A reversed range is read forward from from_line_number instead.
+  --- Lines outside the buffer are left out, so t[1] is the first requested line that exists: getLines(-5, 2) returns
+  --- lines 0 and 1 as t[1] and t[2], and a range wholly outside the buffer returns an empty table. A reversed range
+  --- names the same lines as the ordered one: getLines(3, 1) returns lines 1 and 2, as getLines(1, 3) does.
   ---
   --- @return section of the content of the screen text buffer. The form of the return value is: Lua_table[relative_linenumber, content]
   function getLines(from_line_number, to_line_number)

@@ -71,10 +71,10 @@ TConsoleModel::TConsoleModel(Host* pHost)
 QStringList TConsoleModel::lines(int from, int to) const
 {
     QStringList ret;
-    // 64-bit, as from - to overflows an int for a script's extreme arguments
-    const qint64 first = from;
-    const qint64 end = std::min(first + qAbs(first - to), static_cast<qint64>(buffer.lineBuffer.size()));
-    for (qint64 i = std::max<qint64>(first, 0); i < end; ++i) {
+    // a reversed pair names the same lines as the ordered one
+    const int first = std::min(from, to);
+    const qint64 end = std::min(static_cast<qint64>(std::max(from, to)), static_cast<qint64>(buffer.lineBuffer.size()));
+    for (qint64 i = std::max(first, 0); i < end; ++i) {
         ret << buffer.lineBuffer.at(i);
     }
     return ret;
