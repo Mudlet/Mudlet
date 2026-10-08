@@ -3159,6 +3159,53 @@ private slots:
 
         mpHost->closeMapView(viewId);
     }
+
+    void test_aMapViewClosedWithItsCloseButtonIsForgotten()
+    {
+        const auto [viewId, error] = mpHost->createMapView();
+        QVERIFY2(viewId > 0, qPrintable(error));
+        TMapViewManager* manager = map()->getViewManager();
+        QPointer<QDockWidget> dock = qobject_cast<QDockWidget*>(manager->getView(viewId)->parentWidget());
+        QVERIFY(dock);
+        QSignalSpy closed(manager, &TMapViewManager::viewClosed);
+
+        // what the window's X button does
+        dock->close();
+        QCoreApplication::sendPostedEvents(nullptr, QEvent::DeferredDelete);
+
+        QVERIFY2(!dock, "closing the window only hid it");
+        QVERIFY(!manager->getViewIds().contains(viewId));
+        QCOMPARE(closed.count(), 1);
+        QCOMPARE(closed.first().first().toInt(), viewId);
+        QVERIFY(!mpHost->closeMapView(viewId).first);
+    }
+
+    void test_aMapViewWhoseWindowIsDestroyedIsForgotten()
+    {
+        const auto [viewId, error] = mpHost->createMapView();
+        QVERIFY2(viewId > 0, qPrintable(error));
+        TMapViewManager* manager = map()->getViewManager();
+        QSignalSpy closed(manager, &TMapViewManager::viewClosed);
+
+        delete manager->getView(viewId)->parentWidget();
+
+        QVERIFY(!manager->getViewIds().contains(viewId));
+        QCOMPARE(manager->getView(viewId), nullptr);
+        QCOMPARE(closed.count(), 1);
+    }
+
+    void test_closingAMapViewReportsItOnce()
+    {
+        const auto [viewId, error] = mpHost->createMapView();
+        QVERIFY2(viewId > 0, qPrintable(error));
+        TMapViewManager* manager = map()->getViewManager();
+        QSignalSpy closed(manager, &TMapViewManager::viewClosed);
+
+        QVERIFY(mpHost->closeMapView(viewId).first);
+        QCoreApplication::sendPostedEvents(nullptr, QEvent::DeferredDelete);
+
+        QCOMPARE(closed.count(), 1);
+    }
 };
 
 #include "MapMouseInteractionTest.moc"
