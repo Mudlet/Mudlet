@@ -26,6 +26,7 @@
 #include "VarUnit.h"
 #include "utils.h"
 
+#include <cmath>
 #include <csetjmp>
 
 extern "C" {
@@ -41,6 +42,27 @@ extern "C" {
 }
 
 static jmp_buf buf;
+
+// lua_tostring() writes %.14g, which does not round-trip every double (#10630);
+// adding digits only until it does keeps a number like 0.1 written as 0.1.
+static QString numberToText(const lua_Number number)
+{
+    // QString::number() writes -0 as "0", and a NaN never equals what it reads back as
+    if (number == 0) {
+        return std::signbit(number) ? qsl("-0") : qsl("0");
+    }
+    if (std::isnan(number)) {
+        return qsl("nan");
+    }
+    QString text;
+    for (int precision = 14; precision <= 17; ++precision) {
+        text = QString::number(number, 'g', precision);
+        if (text.toDouble() == number) {
+            break;
+        }
+    }
+    return text;
+}
 
 LuaInterface::LuaInterface(lua_State* L)
 : mL(L)
@@ -656,7 +678,9 @@ QString LuaInterface::getValue(TVar* var)
         QString value;
         if (valueType == LUA_TBOOLEAN) {
             value = lua_toboolean(mL, -1) == 0 ? QLatin1String("false") : QLatin1String("true");
-        } else if (valueType == LUA_TNUMBER || valueType == LUA_TSTRING) {
+        } else if (valueType == LUA_TNUMBER) {
+            value = numberToText(lua_tonumber(mL, -1));
+        } else if (valueType == LUA_TSTRING) {
             value = lua_tostring(mL, -1);
         }
         lua_settop(mL, entryTop);
@@ -784,7 +808,9 @@ void LuaInterface::iterateTable(lua_State* L, int index, TVar* tVar, bool hide)
                     mTruncatedSavedTables.append(variableName);
                 }
             }
-        } else if (vType == LUA_TSTRING || vType == LUA_TNUMBER) {
+        } else if (vType == LUA_TNUMBER) {
+            var->setValue(numberToText(lua_tonumber(L, -1)));
+        } else if (vType == LUA_TSTRING) {
             lua_pushvalue(L, -1);
             valueName = lua_tostring(L, -1);
             var->setValue(valueName);
