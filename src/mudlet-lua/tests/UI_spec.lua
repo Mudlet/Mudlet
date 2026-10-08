@@ -4946,11 +4946,11 @@ describe("Window and label state", function()
       assert.is_true(removeCommandLineMenuEvent(menuLabel))
     end)
 
-    it("removing a menu event twice reports false and a message", function()
+    it("removing a menu event twice reports nil and a message", function()
       addCommandLineMenuEvent(menuLabel, "wlsMenuEvent")
       removeCommandLineMenuEvent(menuLabel)
       local ok, err = removeCommandLineMenuEvent(menuLabel)
-      assert.is_false(ok)
+      assert.is_nil(ok)
       assert.are.equal(("removeCommandLineMenuEvent: cannot remove '%s', menu item does not exist"):format(menuLabel), err)
     end)
 
