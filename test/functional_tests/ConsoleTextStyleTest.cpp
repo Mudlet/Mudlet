@@ -37,6 +37,8 @@
 
 #include "GroupedTest.h"
 
+using namespace std::chrono_literals;
+
 // GlyphCacheTest proves TGlyphCache draws what drawText() would; this proves
 // TTextEdit hands it, and the decorated drawText() path, the font each cell's
 // attributes call for - so a bold cell really is drawn bold.
@@ -180,7 +182,7 @@ private:
             return nullptr;
         }
         QSignalSpy connected(&(mudlet::self()->getActiveHost()->mTelnet), &cTelnet::signal_connected);
-        if (!connected.wait(2000)) {
+        if (!connected.wait(2s)) {
             return nullptr;
         }
         auto* host = mudlet::self()->getActiveHost();
@@ -195,7 +197,7 @@ private:
                 [host]() {
                     return host->mTelnet.getConnectionState() == QAbstractSocket::UnconnectedState;
                 },
-                5000);
+                5s);
         return host;
     }
 

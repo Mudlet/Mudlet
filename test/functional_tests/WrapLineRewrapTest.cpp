@@ -36,6 +36,8 @@
 
 #include "GroupedTest.h"
 
+using namespace std::chrono_literals;
+
 // TBuffer::wrapLine() rebuilds every line from its start line to the end of the
 // buffer, and its callers rely on more than the text coming back out intact:
 // the count it returns positions the user cursor and the repaint range, and the
@@ -509,7 +511,7 @@ private slots:
                          [&]() {
                              return bufferHasLine(console, heldLine);
                          },
-                         5000),
+                         5s),
                  "held full-width line was not flushed after the game went quiet");
         QVERIFY2(sizeAtFlush > 0, "the flush timer never fired, so the line was committed by some other path");
         QCOMPARE(cursorAtFlush, sizeAtFlush);
@@ -599,7 +601,7 @@ private:
         }
 
         QSignalSpy connectedSpy(&(host->mTelnet), &cTelnet::signal_connected);
-        if (!connectedSpy.wait(2000)) {
+        if (!connectedSpy.wait(2s)) {
             QFAIL("Could not connect with the host.");
         }
     }
@@ -656,7 +658,7 @@ private:
                     [host]() {
                         return host->mTelnet.getConnectionState() == QAbstractSocket::UnconnectedState;
                     },
-                    5000)) {
+                    5s)) {
             qWarning() << "Profile did not go offline in time; feedTelnet() calls will fail";
         }
         return host;

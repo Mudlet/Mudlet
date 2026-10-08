@@ -45,6 +45,8 @@
 
 #include "GroupedTest.h"
 
+using namespace std::chrono_literals;
+
 class EditorReshowTest : public QObject
 {
     Q_OBJECT
@@ -85,7 +87,7 @@ private slots:
         mpHost = TestProfile::create(mProfileName, mLocalhost, mPort);
         QVERIFY2(mpHost, "no active host after creating the profile");
         QSignalSpy connected(&(mpHost->mTelnet), &cTelnet::signal_connected);
-        QVERIFY2(connected.wait(2000), "could not connect the profile to the stub server");
+        QVERIFY2(connected.wait(2s), "could not connect the profile to the stub server");
     }
 
     void cleanupTestCase()

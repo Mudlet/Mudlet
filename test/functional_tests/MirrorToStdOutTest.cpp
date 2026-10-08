@@ -60,6 +60,8 @@
 
 #include "GroupedTest.h"
 
+using namespace std::chrono_literals;
+
 class MirrorToStdOutTest : public QObject
 {
     Q_OBJECT
@@ -190,7 +192,7 @@ private:
     {
         startCapture();
         const bool succeeded = mpHost->getLuaInterpreter()->compileAndExecuteScript(script);
-        QTest::qWait(50);
+        QTest::qWait(50ms);
         stopCapture();
         return succeeded;
     }
@@ -228,7 +230,7 @@ private slots:
             QFAIL("No active host available for the test.");
         }
         QSignalSpy connected(&(mpHost->mTelnet), &cTelnet::signal_connected);
-        if (!connected.wait(3000)) {
+        if (!connected.wait(3s)) {
             QFAIL("Could not connect with the host.");
         }
 
@@ -239,7 +241,7 @@ private slots:
                     [this]() {
                         return mpHost->mpConsole->buffer.lineBuffer.contains(mWelcomeMessage);
                     },
-                    5000)) {
+                    5s)) {
             QFAIL("The server stub's welcome message never reached the console.");
         }
 
@@ -273,7 +275,7 @@ private slots:
         // and cTelnet only picks the shortened timeout up once it has.
         mudlet::smMirrorToStdOut = false;
         mpHost->mTelnet.setPostingTimeout(csmPostingTimeoutMs);
-        QTest::qWait(350);
+        QTest::qWait(350ms);
         mpHost->mBlankLineBehaviour = Host::BlankLineBehaviour::Show;
         mpHost->mpConsole->buffer.clear();
         mCapturedOutput.clear();

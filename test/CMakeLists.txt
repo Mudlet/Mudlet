@@ -9,6 +9,10 @@ endif()
 
 find_package(Qt6 6.8.2 REQUIRED COMPONENTS Test Network Gui Widgets)
 
+# No test calls QFINDTESTDATA, and the checkout paths Qt Test would otherwise
+# define on every test compile keep ccache from sharing objects between worktrees
+set(QT_SKIP_DEFAULT_TESTCASE_DIRS ON)
+
 # On Windows Qt diverts QTest's stdout to OutputDebugString unless it believes
 # stderr has a console attached, which an MSYS2 shell or a CI runner does not give
 # it, so a failing test reports an exit code and nothing else (#9747). Deferred so
@@ -107,8 +111,11 @@ set(UNIT_TESTS
     ProfileNameValidationTest
 )
 
+mudlet_add_test_pch_provider(mudlet_unit_test_pch)
+
 foreach(test_name ${UNIT_TESTS})
     add_executable(${test_name} ${test_name}.cpp)
+    mudlet_reuse_test_pch(${test_name} mudlet_unit_test_pch)
     add_dependencies(${test_name} ${LIB_MUDLET_TARGET})
     # mudlet_lsan_hooks has to be linked explicitly, see src/CMakeLists.txt
     target_link_libraries(${test_name} PRIVATE Qt6::Test ${LIB_MUDLET_TARGET} mudlet_lsan_hooks)
@@ -190,6 +197,19 @@ add_test(NAME IrcMessageComposerTest COMMAND $<TARGET_FILE:IrcMessageComposerTes
 set_tests_properties(IrcMessageComposerTest PROPERTIES
     ENVIRONMENT "ASAN_OPTIONS=detect_leaks=0"
     TIMEOUT 60
+)
+
+# The application style's kept Fusion title bar icons. Built from the one source it
+# covers, which needs nothing but Qt Widgets.
+add_executable(AltFocusMenuBarDisableTest
+    AltFocusMenuBarDisableTest.cpp
+    ${CMAKE_SOURCE_DIR}/src/AltFocusMenuBarDisable.cpp
+)
+target_include_directories(AltFocusMenuBarDisableTest PRIVATE ${CMAKE_SOURCE_DIR}/src)
+target_link_libraries(AltFocusMenuBarDisableTest PRIVATE Qt6::Test Qt6::Widgets)
+add_test(NAME AltFocusMenuBarDisableTest COMMAND $<TARGET_FILE:AltFocusMenuBarDisableTest>)
+set_tests_properties(AltFocusMenuBarDisableTest PROPERTIES
+    ENVIRONMENT "ASAN_OPTIONS=detect_leaks=0;QT_QPA_PLATFORM=offscreen"
 )
 
 add_executable(CrashReportUploadTest

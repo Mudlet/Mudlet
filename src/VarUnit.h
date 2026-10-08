@@ -43,12 +43,11 @@ class VarUnit
 public:
     VarUnit();
     ~VarUnit();
-    QStringList varName(TVar*);
     QStringList shortVarName(TVar*);
+    QString shortVarPath(TVar*);
     bool varExists(TVar*);
     bool shouldSave(TVar*);
     void addVariable(TVar*);
-    void removeVariable(TVar*);
     void setBase(TVar*);
     TVar* getBase();
     void clear();
@@ -90,7 +89,7 @@ public:
 
 private:
     bool rootNameReadsAsAMemberPath(TVar*) const;
-    int countTableItems(TVar*);
+    int countTableItems(TVar*, int limit);
     void rememberHiddenTable(TVar*, const QString& fullName);
     void forgetHiddenTable(const QString& fullName);
     void forgetHiddenTableAddress(const void* table);
@@ -99,7 +98,6 @@ private:
     static quint64 nextTreeGeneration();
     quint64 mTreeGeneration = nextTreeGeneration();
     std::unique_ptr<TVar> base;
-    QSet<QString> variableSet;
     QSet<const void*> mPointers;
     // what un-hiding a name has to hand back to hiddenTables
     QHash<QString, const void*> mHiddenTableByName;
