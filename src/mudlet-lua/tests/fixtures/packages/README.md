@@ -46,6 +46,7 @@ deliberately.
 | `mudlet-spec-renamer` | archive whose `config.lua` installs it under a different name (`mudlet-spec-renamed`) than the file it came in |
 | `mudlet-spec-dotted` | archive whose `config.lua` names it with a `.xml` on the end, which is trimmed off before it is installed |
 | `mudlet-spec-nested` | archive whose `config.lua` name hides a second ending under the first, so one pass over it and two give different answers |
+| `mudlet-spec-claimsmedia` | archive whose `config.lua` asks to be installed as `media`, the folder the profile keeps downloaded sounds in, so the install has to be refused |
 | `mudlet-spec-renamer2` | the same installed name as `mudlet-spec-renamer` but different details, so a refused install's effect on them is observable |
 | `mudlet-spec-varsonly` | archive holding one variable and no items at all, so a module of it installs and runs while every unit an uninstall clears stays empty |
 | `sources/mudlet-spec-badxml-bare` | bare package XML that is truncated, for the same failure reached without an archive around it |

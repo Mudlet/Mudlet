@@ -2940,6 +2940,39 @@ static bool packageUnpacksAFolder(const QString& fileName)
     return fileName.endsWith(qsl(".zip"), Qt::CaseInsensitive) || fileName.endsWith(qsl(".mpackage"), Qt::CaseInsensitive);
 }
 
+// sanitizePackageName() strips folders and extensions wherever they appear, so a name of nothing else
+// comes back as "." or ".." ("...mpackage" gives ".."), and the archive is unpacked straight into
+// whatever this settles on - ".." being the folder holding every profile.
+static bool nameIsAStepOutOfTheProfile(const QString& name)
+{
+    return name.isEmpty() || name == QLatin1String(".") || name == QLatin1String("..") || name.contains(QLatin1Char('/')) || name.contains(QLatin1Char('\\'));
+}
+
+// Package folders sit beside the profile's own, so a package of one of these names would share that folder.
+// media is only made on the first download, so a package can find it missing and take the name first.
+static bool theProfileKeepsItsOwnDataIn(const QString& name)
+{
+    QString folder = name;
+#if defined(Q_OS_WINDOWS) || defined(Q_OS_MACOS)
+    // The file system ignores case, so "Log" is the profile's "log" folder
+    const Qt::CaseSensitivity caseSensitivity = Qt::CaseInsensitive;
+#else
+    const Qt::CaseSensitivity caseSensitivity = Qt::CaseSensitive;
+#endif
+#if defined(Q_OS_WINDOWS)
+    // Windows drops trailing dots and spaces from a path, so "media." is the "media" folder too
+    while (folder.endsWith(QLatin1Char('.')) || folder.endsWith(QLatin1Char(' '))) {
+        folder.chop(1);
+    }
+#endif
+    for (const auto ownFolder : {QLatin1String("map"), QLatin1String("log"), QLatin1String("current"), QLatin1String("media")}) {
+        if (!folder.compare(ownFolder, caseSensitivity)) {
+            return true;
+        }
+    }
+    return false;
+}
+
 std::pair<bool, QString> Host::installPackage(const QString& fileName, enums::PackageModuleType thing, bool quiet)
 {
     // Wait for profile save to complete before installing package
@@ -3116,19 +3149,6 @@ std::pair<bool, QString> Host::installPackage(const QString& fileName, enums::Pa
         return QString();
     };
 
-    // sanitizePackageName() strips folders and extensions wherever they appear, so a name of nothing else
-    // comes back as "." or ".." ("...mpackage" gives ".."), and the archive is unpacked straight into
-    // whatever this settles on - ".." being the folder holding every profile.
-    auto nameIsAStepOutOfTheProfile = [](const QString& name) {
-        return name.isEmpty() || name == QLatin1String(".") || name == QLatin1String("..") || name.contains(QLatin1Char('/')) || name.contains(QLatin1Char('\\'));
-    };
-    // A manifest can ask for a profile folder's name, as they sit beside package folders. map, log and
-    // current exist from profile creation, which turns that away; media is only made on first download,
-    // possibly after a module took the name, and then the two share a folder.
-    auto theProfileKeepsItsOwnDataIn = [](const QString& name) {
-        return name == QLatin1String("map") || name == QLatin1String("log") || name == QLatin1String("current") || name == QLatin1String("media");
-    };
-
     QString packageName = sanitizePackageName(fileName);
     if (nameIsAStepOutOfTheProfile(packageName)) {
         //: %1 is the file the user tried to install, which has no name of its own left once the folders it sits in and its extension are taken off
@@ -3182,10 +3202,13 @@ std::pair<bool, QString> Host::installPackage(const QString& fileName, enums::Pa
     QStringList itemsWithErrorNames;
     if (packageUnpacksAFolder(fileName)) {
         const QString _home = MudletApp::getMudletPath(enums::profileHomePath, getName());
-        // Unpacking into a folder the other kind owns would overwrite its files, and the rename below would
-        // carry it off. A clashing archive unpacks beside it, moving in once its manifest's name proves free.
-        const QString _dest = crossKindRefusalOnTheFileName.isEmpty() ? MudletApp::getMudletPath(enums::profilePackagePath, getName(), packageName)
-                                                                      : MudletApp::getMudletPath(enums::profilePackagePath, getName(), packageName + qsl(".mudlet-installing"));
+        // A module sync and a profile load reinstall what the profile already has, which may predate this refusal
+        const bool refuseTheProfilesOwnFolders = thing != enums::PackageModuleType::ModuleSync && !mIsProfileLoadingSequence;
+        // Unpacking into a folder the other kind, or the profile itself, owns would overwrite its files, and the
+        // rename below would carry it off. Such an archive unpacks beside it, moving in once its manifest's name proves free.
+        const bool unpackAside = !crossKindRefusalOnTheFileName.isEmpty() || (refuseTheProfilesOwnFolders && theProfileKeepsItsOwnDataIn(packageName));
+        const QString _dest = !unpackAside ? MudletApp::getMudletPath(enums::profilePackagePath, getName(), packageName)
+                                           : MudletApp::getMudletPath(enums::profilePackagePath, getName(), packageName + qsl(".mudlet-installing"));
         // home directory for the PROFILE
         const QDir _tmpDir(_home);
         // directory to store the expanded archive file contents
@@ -3194,7 +3217,7 @@ std::pair<bool, QString> Host::installPackage(const QString& fileName, enums::Pa
         // name, and then whatever its config.lua says, so it can just as well name
         // a folder of the profile's that was already here ("map", "log",
         // "current") - see the refusal further down.
-        if (!crossKindRefusalOnTheFileName.isEmpty() && QDir(_dest).exists() && QDir(_dest).absolutePath().startsWith(QDir(_home).absolutePath() + QLatin1Char('/'))) {
+        if (unpackAside && QDir(_dest).exists() && QDir(_dest).absolutePath().startsWith(QDir(_home).absolutePath() + QLatin1Char('/'))) {
             // Only this makes a ".mudlet-installing" folder and every exit removes it, so one here is left from an unfinished install
             removeDir(_dest, _dest);
         }
@@ -3278,6 +3301,11 @@ std::pair<bool, QString> Host::installPackage(const QString& fileName, enums::Pa
         if (nameIsAStepOutOfTheProfile(packageName)) {
             //: %1 is the name the package's config.lua asked to be installed under
             return refuseTheRenamedInstall(tr("The config.lua of this package asks to be installed as \"%1\", which is not a name a package can have.").arg(packageName));
+        }
+        if (refuseTheProfilesOwnFolders && theProfileKeepsItsOwnDataIn(packageName)) {
+            //: %1 is the name the package would be installed under, which is also the name of a folder Mudlet keeps the profile's own files in, such as its maps or logs
+            return refuseTheRenamedInstall(
+                    tr("A package cannot be installed as \"%1\", as the profile keeps its own files in the folder of that name. Please rename it and try again.").arg(packageName));
         }
         // The name is settled now and config.lua may have changed it, so clashes are answered here (an
         // archive with no manifest gets the same answer as above). Before the per-kind checks and before
@@ -3874,8 +3902,14 @@ bool Host::uninstallPackage(const QString& packageName, enums::PackageModuleType
 
     getActionUnit()->updateAllToolbars();
 
-    const QString dest = MudletApp::getMudletPath(enums::profilePackagePath, getName(), packageName);
-    removeDir(dest, dest);
+    // The name comes from the profile save, which can be hand-edited or older than the install-time checks,
+    // and a profile folder of that name holds the profile's own data, not just the package's files.
+    if (nameIsAStepOutOfTheProfile(packageName) || theProfileKeepsItsOwnDataIn(packageName)) {
+        qWarning().noquote().nospace() << "Host::uninstallPackage() WARNING - not removing the folder of \"" << packageName << "\" as it is not a folder of the package's own.";
+    } else {
+        const QString dest = MudletApp::getMudletPath(enums::profilePackagePath, getName(), packageName);
+        removeDir(dest, dest);
+    }
 
     // The fonts this package brought went out with it, so a display font that
     // came from it is now missing and Qt would quietly render some other family

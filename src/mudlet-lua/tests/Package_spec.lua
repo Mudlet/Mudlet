@@ -2891,6 +2891,114 @@ describe("Tests installing a map file as if it were a package", function()
   end)
 end)
 
+-- A package's folder is the profile folder of the same name, so one named after
+-- a folder the profile keeps its own data in must not take that folder with it
+-- when it goes. A bare XML package has no folder and is let in under any name;
+-- what is pinned here is that uninstalling it never deletes the profile's data.
+-- "LOG" is the profile's log folder wherever the file system ignores case.
+describe("Tests uninstalling a package named after one of the profile's own folders", function()
+  for _, name in ipairs({"media", "log", "map", "current", "LOG"}) do
+    it("leaves the profile's " .. name:lower() .. " folder alone for a package called " .. name, function()
+      local folder = getMudletHomeDir() .. "/" .. name:lower()
+      local precious = folder .. "/mudlet-spec-precious.txt"
+      local xml = scratchDirectory .. "/" .. name .. ".xml"
+      local madeTheFolder = not fileExists(folder)
+      lfs.mkdir(folder)
+      lfs.mkdir(scratchDirectory)
+      defer(function()
+        removeFixturePackage(name)
+        os.remove(precious)
+        if madeTheFolder then
+          lfs.rmdir(folder)
+        end
+        os.remove(xml)
+        lfs.rmdir(scratchDirectory)
+      end)
+      local file = io.open(precious, "wb")
+      assert.is_not_nil(file, "could not write " .. precious)
+      file:write("not the package's")
+      file:close()
+      writePackageXml(xml, table.concat({
+        '<ScriptPackage>',
+        '<Script isActive="yes" isFolder="no">',
+        '<name>mudlet-spec ' .. name .. ' script</name><packageName></packageName>',
+        '<script></script><eventHandlerList/>',
+        '</Script>',
+        '</ScriptPackage>',
+      }, "\n"))
+
+      installUntilConfirmed(installPackage, xml, function() return packageInstalled(name) end, "the package " .. name)
+      removeFixturePackage(name)
+
+      assert.is_true(fileExists(precious), "uninstalling the package " .. name .. " deleted the profile's own " .. name:lower() .. " folder")
+    end)
+  end
+end)
+
+-- An archive unpacks into the profile folder of its name, so one of these names
+-- would put the package in among the profile's own files and its uninstall would
+-- take them away again. media is the one a package can find missing, as it is
+-- only made on the first download.
+describe("Tests installing an archive named after one of the profile's own folders", function()
+  local media = getMudletHomeDir() .. "/media"
+
+  it("refuses a config.lua that asks for the profile's media folder", function()
+    if fileExists(media) then
+      pending("the profile already has a media folder, which an install was always refused for")
+      return
+    end
+    defer(function()
+      removeFixturePackage("media")
+      if fileExists(media) then
+        for entry in lfs.dir(media) do
+          if entry ~= "." and entry ~= ".." then
+            os.remove(media .. "/" .. entry)
+          end
+        end
+        lfs.rmdir(media)
+      end
+    end)
+
+    local reason = installUntilRefused(installPackage, fixtureDirectory .. "/mudlet-spec-claimsmedia.mpackage")
+
+    assert.is_true(contains(reason, "keeps its own files"), tostring(reason))
+    assert.is_false(packageInstalled("media"), "the package was installed into the profile's media folder")
+    assert.is_false(fileExists(media), "the refused install left a media folder behind")
+    assert.is_false(fileExists(getMudletHomeDir() .. "/media.mudlet-installing"), "the refused install stranded the folder it unpacked")
+    assert.is_false(fileExists(getMudletHomeDir() .. "/mudlet-spec-claimsmedia"), "the refused install stranded the folder it unpacked")
+  end)
+
+  it("unpacks an archive whose file is called media beside the profile's media folder", function()
+    local precious = media .. "/mudlet-spec-precious.wav"
+    local archive = scratchDirectory .. "/media.mpackage"
+    local madeTheFolder = not fileExists(media)
+    lfs.mkdir(media)
+    lfs.mkdir(scratchDirectory)
+    defer(function()
+      removeFixturePackage(minimalPackage)
+      os.remove(precious)
+      if madeTheFolder then
+        lfs.rmdir(media)
+      end
+      os.remove(archive)
+      lfs.rmdir(scratchDirectory)
+    end)
+    local file = io.open(precious, "wb")
+    assert.is_not_nil(file, "could not write " .. precious)
+    file:write("not the package's")
+    file:close()
+    -- its config.lua renames it, so the name it ends up with is a package's own
+    copyFile(fixtureDirectory .. "/" .. minimalPackage .. ".mpackage", archive)
+
+    installUntilConfirmed(installPackage, archive, function() return packageInstalled(minimalPackage) end, "the archive called media")
+
+    assert.is_true(fileExists(precious), "the install carried the profile's media folder off as the package's")
+    assert.is_false(fileExists(getMudletHomeDir() .. "/" .. minimalPackage .. "/mudlet-spec-precious.wav"),
+                    "the profile's media files ended up in the package's folder")
+    assert.is_false(fileExists(media .. "/config.lua"), "the archive was unpacked into the profile's media folder")
+  end)
+end)
+
 -- The one place a spec can reach the XML writer is saveProfile()'s "save as"
 -- form, which writes every permanent item out without the profile's settings.
 -- What is worth pinning there is the half of the format that is not stored the
