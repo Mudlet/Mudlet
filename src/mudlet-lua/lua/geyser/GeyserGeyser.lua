@@ -206,6 +206,13 @@ function Geyser:changeContainer (container)
   if not container or not container.windowList or self == container then
     return nil, "didn't get a valid container"
   end
+  local ancestor = container.container
+  while ancestor do
+    if ancestor == self then
+      return nil, "can't move "..self.name.." into one of its own children"
+    end
+    ancestor = ancestor.container
+  end
   --Nothing to change
   if self.container == container then
     return nil, "nothing to change. "..self.name.." is already in this container"

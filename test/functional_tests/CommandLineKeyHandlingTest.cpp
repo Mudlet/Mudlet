@@ -38,6 +38,8 @@
 #include <QScopeGuard>
 #include <QSignalSpy>
 #include <QTemporaryDir>
+#include <QTextBlock>
+#include <QTextLayout>
 #include <QtTest/QtTest>
 
 #include <chrono>
@@ -177,7 +179,7 @@ private:
                 [this, &text]() {
                     return mpServer->received().contains(text);
                 },
-                5000);
+                5s);
     }
 
 private slots:
@@ -482,6 +484,37 @@ private slots:
         QCOMPARE(selection(pCommandLine), qsl("lo world"));
     }
 
+    // Each further Up moves on to the next older entry that starts with what was
+    // typed, passing over the rest, and once none is left the typed text stays
+    // with the caret at its end.
+    void test_upStepsOnlyThroughEntriesThatStartWithTheTypedText()
+    {
+        TCommandLine* pCommandLine = freshCommandLine();
+        QVERIFY(pCommandLine);
+
+        for (const QString& command : {qsl("look"), qsl("north"), qsl("look at sign"), qsl("say look")}) {
+            type(pCommandLine, command);
+            press(pCommandLine, Qt::Key_Return);
+        }
+        type(pCommandLine, qsl("lo"));
+        QVERIFY(selection(pCommandLine).isEmpty());
+
+        press(pCommandLine, Qt::Key_Up);
+        QCOMPARE(pCommandLine->toPlainText(), qsl("look at sign"));
+        QCOMPARE(selection(pCommandLine), qsl("ok at sign"));
+
+        press(pCommandLine, Qt::Key_Up);
+        QCOMPARE(pCommandLine->toPlainText(), qsl("look"));
+        QCOMPARE(selection(pCommandLine), qsl("ok"));
+
+        press(pCommandLine, Qt::Key_Escape);
+        type(pCommandLine, qsl("xyz"));
+        press(pCommandLine, Qt::Key_Up);
+        QCOMPARE(pCommandLine->toPlainText(), qsl("xyz"));
+        QVERIFY(selection(pCommandLine).isEmpty());
+        QCOMPARE(pCommandLine->textCursor().position(), 3);
+    }
+
     // A password typed at a game's login prompt arrives with remote echo on, and
     // must not be left in a history the next player at the keyboard can page
     // through.
@@ -672,6 +705,29 @@ private slots:
         QCOMPARE(pCommandLine->toPlainText(), qsl("qzxdropme"));
     }
 
+    // The whole cycle, in order: each word once, the most recent first and the
+    // registered suggestions ahead of the buffer. Case tells words apart, but the
+    // blacklist ignores it, and a match has to start at the beginning of a word.
+    void test_tabCyclesEachMatchOnceMostRecentFirst()
+    {
+        mpHost->mpConsole->print(qsl("qzyalpha qzybravo qzyalpha\n"));
+        mpHost->mpConsole->print(qsl("QZYALPHA x-qzycharlie zqzydelta qzyecho_x qzyecho, qzyalpha.\n"));
+        TCommandLine* pCommandLine = freshCommandLine();
+        QVERIFY(pCommandLine);
+        pCommandLine->addSuggestion(qsl("qzysuggested"));
+        pCommandLine->addBlacklist(qsl("QZYBRAVO"));
+
+        type(pCommandLine, qsl("say qzy"));
+        QStringList offered;
+        for (int press_ = 0; press_ < 7; ++press_) {
+            press(pCommandLine, Qt::Key_Tab);
+            offered << pCommandLine->toPlainText();
+        }
+
+        const QStringList expected{qsl("say qzysuggested"), qsl("say qzyalpha"), qsl("say qzyecho"), qsl("say qzyecho_x"), qsl("say qzycharlie"), qsl("say QZYALPHA"), qsl("say QZYALPHA")};
+        QCOMPARE(offered, expected);
+    }
+
     // The completion pool and the blacklist cannot be read back from Lua, so
     // only a Tab shows that the Lua functions filling them reached the command
     // line they named.
@@ -731,6 +787,21 @@ private slots:
 
         QVERIFY(runLua(qsl("selectCmdLineText('%1')").arg(mLineName)));
         QCOMPARE(selection(pCommandLine), qsl("printedX appendedY"));
+
+        QVERIFY(runLua(qsl("printCmdLine('%1', 'row one\\nrow two')").arg(mLineName)));
+        type(pCommandLine, qsl("X"));
+        QCOMPARE(pCommandLine->toPlainText(), qsl("row one\nrow twoX"));
+
+        QVERIFY(runLua(qsl("appendCmdLine('%1', '\\nrow three')").arg(mLineName)));
+        type(pCommandLine, qsl("Y"));
+        QCOMPARE(pCommandLine->toPlainText(), qsl("row one\nrow twoX\nrow threeY"));
+
+        // A row that only wraps on screen ends its first row the same way
+        const QString wrapping = qsl("word ").repeated(200).trimmed();
+        QVERIFY(runLua(qsl("printCmdLine('%1', '%2')").arg(mLineName, wrapping)));
+        QVERIFY2(pCommandLine->document()->firstBlock().layout()->lineCount() > 1, "the long text did not wrap, so this case would prove nothing");
+        type(pCommandLine, qsl("Z"));
+        QCOMPARE(pCommandLine->toPlainText(), wrapping + qsl("Z"));
     }
 
     // The main command line grows to show every row of what Lua puts into it,
