@@ -1236,6 +1236,10 @@ int TLuaInterpreter::feedTriggers(lua_State* L)
     QByteArray data{bytes, static_cast<qsizetype>(length)};
     // As cTelnet::processSocketData() does for game data:
     data.replace('\0', QByteArray());
+    // TBuffer would commit the CR of a CRLF as a line of its own, so it goes as
+    // it does from a game; a lone CR stays, as it is how a script flushes a line
+    // still being fed:
+    data.replace("\r\n", "\n");
 
     const QByteArray currentEncoding = host.mTelnet.getEncoding();
     if (dataIsUtf8Encoded) {

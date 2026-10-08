@@ -324,6 +324,17 @@ describe("Tests what feedTriggers will and will not carry", function()
     assert.same({"FeedNulHeadFeedNulTail", "FeedNulNext", ""}, lines)
   end)
 
+  -- A game's line endings arrive as CR LF and Mudlet drops the CR, so captured
+  -- output replayed through feedTriggers() has to come out the same - see issue #10646
+  it("takes a CR LF line ending as one line ending", function()
+    assert.is_true(setServerEncoding("UTF-8"))
+    local mark = getLastLineNumber("main")
+
+    assert.is_true(feedTriggers("FeedCrLfOne\r\nFeedCrLfTwo\r\n"))
+    local lines = getLines("main", mark, getLastLineNumber("main") + 1)
+    assert.same({"FeedCrLfOne", "FeedCrLfTwo", ""}, lines)
+  end)
+
   it("raises on arguments it cannot make sense of", function()
     assertArgError(function() return feedTriggers({}) end, "bad argument #1 type")
     assertArgError(function() return feedTriggers("FeedEncNever\n", "yes") end, "bad argument #2 type")
