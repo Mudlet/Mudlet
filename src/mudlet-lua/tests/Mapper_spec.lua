@@ -4802,6 +4802,25 @@ describe("Tests saveJsonMap and loadJsonMap", function()
       assert.is_nil(getAllAreaUserData(area)["system.labelFont_" .. labelId])
     end)
 
+    it("does not give a deleted label's font to a later label given its id", function()
+      local binaryPath = getMudletHomeDir() .. "/mapper_spec_label_reused_id.dat"
+      finally(function() os.remove(binaryPath) end)
+      deleteMap()
+      local area = addAreaName("MapperSpecJsonLabelReusedIdArea")
+      roomA = createRoomID(); addRoom(roomA); setRoomArea(roomA, area)
+      local deletedId = createMapLabel(area, "Deleted", 0, 0, 0, 255, 255, 255, 0, 0, 0,
+                                       30.0, 12, true, false, "Bitstream Vera Sans", 255, 50, false)
+      assert.is_true(saveMap(binaryPath))
+      deleteMapLabel(area, deletedId)
+      local reusedId = createMapLabel(area, "Fontless", 0, 0, 0, 255, 255, 255, 0, 0, 0,
+                                      30.0, 12, true, false, "", 255, 50, false)
+      assert.are.equal(deletedId, reusedId)
+
+      roundTrip()
+
+      assert.is_nil(exportedLabels(area)[reusedId].font)
+    end)
+
   end)
 
   describe("Tests the saveJsonMap and loadJsonMap argument contract", function()

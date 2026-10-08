@@ -2564,6 +2564,10 @@ void TMap::deleteMapLabel(int area, int labelId)
         if (!label.temporary) {
             setUnsaved(__func__);
         }
+        // A binary save keeps the label's font and outline color in the area's
+        // user data, where a later label given this id would pick them up
+        pA->mUserData.remove(qsl("system.labelFont_%1").arg(labelId));
+        pA->mUserData.remove(qsl("system.labelOutlineColor_%1").arg(labelId));
         emit signal_mapLabelsChanged();
     }
 }
