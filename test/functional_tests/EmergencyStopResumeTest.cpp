@@ -27,6 +27,9 @@
  * - a tempTimer() created from a Lua function has no script string, since its
  *   callback lives in the Lua registry, and the resume used to leave the QTimer
  *   of one stopped for the rest of the session (#10751)
+ * - a timer whose script does not compile is still armed, and the resume used
+ *   to switch it off for good, so fixing the script no longer brought it back
+ *   (#10794)
  * - the resume must not restart a timer that is only waiting to be freed,
  *   whether it was killed or is a spent one-shot (#9887). A killed timer keeps
  *   shouldBeActive() true, so nothing in the activation path alone stops the
@@ -422,6 +425,34 @@ private slots:
         mpHost->reenableAllTriggers();
         QCOMPARE(unit->remainingTime(id), -1);
         QVERIFY2(!unit->getTimer(id)->isActive(), "a timer the user disabled must stay off across a stop and resume");
+    }
+
+    // #10794: a timer whose script stops compiling stays armed, so fixing the
+    // script brings it back, and the resume has to leave it so rather than
+    // switch it off for the rest of the session
+    void test_timerWithBrokenScriptRecoversAfterResume()
+    {
+        auto* unit = mpHost->getTimerUnit();
+        const QString name = qsl("emergency stop broken script timer");
+        auto [id, message] = mpHost->mLuaInterpreter.startPermTimer(name, QString(), scmTimerSeconds, qsl("brokenScriptTicks = 1"));
+        QVERIFY2(id > 0, qPrintable(message));
+        mRunningTimerNames << name;
+        QVERIFY(unit->enableTimer(name));
+        auto* pTimer = unit->getTimer(id);
+        QVERIFY(pTimer);
+
+        QVERIFY2(!pTimer->setScript(qsl("this is not lua ((")), "the broken script should not have compiled");
+        QVERIFY2(unit->remainingTime(id) > 0, "a script that stops compiling leaves its timer armed");
+
+        mpHost->stopAllTriggers();
+        QCOMPARE(unit->remainingTime(id), -1);
+
+        mpHost->reenableAllTriggers();
+        QVERIFY2(unit->remainingTime(id) > 0, "the resume must put back the armed timer the emergency stop found");
+
+        QVERIFY(pTimer->setScript(qsl("brokenScriptTicks = 2")));
+        QVERIFY2(pTimer->isActive(), "fixing the script should have brought the timer back");
+        QVERIFY(unit->remainingTime(id) > 0);
     }
 
 private:
