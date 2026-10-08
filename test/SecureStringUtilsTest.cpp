@@ -17,7 +17,13 @@
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
 
+#include <CredentialManager.h>
 #include <SecureStringUtils.h>
+#include <utils.h>
+#include <QCryptographicHash>
+#include <QMessageAuthenticationCode>
+#include <QScopeGuard>
+#include <QStandardPaths>
 #include <QtTest/QtTest>
 #include <QTemporaryDir>
 #include <QVersionNumber>
@@ -43,6 +49,9 @@ private slots:
     void testVersionCompatibility();
     void testXMLImportProxyPasswordLogic();
     void testConveniencePasswordMethods();
+    void testUnstorableKeyRefusesToEncrypt();
+    void testDerivableKeyStillDecryptsOldFiles();
+    void testReadingAnOldFileReencryptsIt();
     void cleanupTestCase();
 
 private:
@@ -416,6 +425,147 @@ void SecureStringUtilsTest::testConveniencePasswordMethods()
     QVERIFY(!SecureStringUtils::storePassword(testProfile, "invalid/key", testPassword));
     
     qDebug() << "Convenience password methods tests passed";
+}
+
+static QString profileKeyFilePath(const QString& profile)
+{
+    return QStandardPaths::writableLocation(QStandardPaths::AppConfigLocation) + qsl("/profiles/%1/encryption_key").arg(profile);
+}
+
+// Where XDG_CONFIG_HOME is not honoured these profiles live in the real config folder, so a
+// run must neither depend on nor leave behind what an earlier one wrote there
+static bool removeTestProfile(const QString& profile)
+{
+    return QDir(QStandardPaths::writableLocation(QStandardPaths::AppConfigLocation) + qsl("/profiles/%1").arg(profile)).removeRecursively();
+}
+
+// #10926: with nowhere to keep a random key, encrypting with the key anyone can derive from
+// the profile name would only look like protection
+void SecureStringUtilsTest::testUnstorableKeyRefusesToEncrypt()
+{
+    const QString profile = qsl("KeyCannotBeStored");
+    QVERIFY(removeTestProfile(profile));
+    auto cleanup = qScopeGuard([&profile] {
+        removeTestProfile(profile);
+    });
+    // A directory where the key file belongs makes it impossible to write
+    QVERIFY(QDir().mkpath(profileKeyFilePath(profile)));
+
+    QVERIFY(SecureStringUtils::encryptStringForProfile(qsl("secret"), profile).isEmpty());
+    QVERIFY(!SecureStringUtils::storePassword(profile, qsl("character"), qsl("secret")));
+}
+
+// A file an older Mudlet encrypted with the derivable key, built the way it built one
+static QString encryptWithDerivableKey(const QString& plaintext, const QString& profile)
+{
+    QCryptographicHash keyHash(QCryptographicHash::Sha256);
+    keyHash.addData(qsl("Mudlet").toUtf8());
+    keyHash.addData(profile.toUtf8());
+    keyHash.addData(qsl("MudletProfileEncryption2025").toUtf8());
+    const QByteArray profileKey = keyHash.result();
+
+    const QByteArray salt(16, '\x5a');
+    const QByteArray nonce(16, '\xa5');
+    QByteArray derivedKey = profileKey + salt;
+    for (int i = 0; i < 100000; ++i) {
+        QCryptographicHash round(QCryptographicHash::Sha256);
+        round.addData(derivedKey);
+        round.addData(salt);
+        derivedKey = round.result();
+    }
+
+    const QByteArray cipherKey = QCryptographicHash::hash(derivedKey + nonce, QCryptographicHash::Sha256);
+    QByteArray encrypted = plaintext.toUtf8();
+    for (int i = 0; i < encrypted.size(); ++i) {
+        encrypted[i] = encrypted[i] ^ cipherKey[i % cipherKey.size()];
+    }
+    const QByteArray hmac = QMessageAuthenticationCode::hash(salt + nonce + encrypted, derivedKey, QCryptographicHash::Sha256);
+
+    QByteArray result;
+    result.append(static_cast<char>(2));
+    result.append(salt);
+    result.append(nonce);
+    result.append(hmac);
+    result.append(encrypted);
+    return QString::fromLatin1(result.toBase64());
+}
+
+void SecureStringUtilsTest::testDerivableKeyStillDecryptsOldFiles()
+{
+    const QString profile = qsl("WroteWithTheDerivableKey");
+    QVERIFY(removeTestProfile(profile));
+    auto cleanup = qScopeGuard([&profile] {
+        removeTestProfile(profile);
+    });
+    const QString oldFile = encryptWithDerivableKey(qsl("saved_long_ago"), profile);
+
+    QCOMPARE(SecureStringUtils::decryptStringForProfile(oldFile, profile), qsl("saved_long_ago"));
+    QVERIFY2(!QFile::exists(profileKeyFilePath(profile)), "decrypting created a key file, which cannot decrypt anything already saved");
+
+    // ...and still once a random key has been stored for the passwords saved since
+    const QString newFile = SecureStringUtils::encryptStringForProfile(qsl("saved_today"), profile);
+    QVERIFY(!newFile.isEmpty());
+    QVERIFY(QFile::exists(profileKeyFilePath(profile)));
+    QCOMPARE(SecureStringUtils::decryptStringForProfile(newFile, profile), qsl("saved_today"));
+    QCOMPARE(SecureStringUtils::decryptStringForProfile(oldFile, profile), qsl("saved_long_ago"));
+}
+
+// The derivable key protects nothing, so a file still under it is rewritten under the profile's
+// own key as soon as it has been read
+void SecureStringUtilsTest::testReadingAnOldFileReencryptsIt()
+{
+    const QString profile = qsl("ReadAnOldPasswordFile");
+    QVERIFY(removeTestProfile(profile));
+    auto cleanup = qScopeGuard([&profile] {
+        removeTestProfile(profile);
+    });
+    const QString oldFile = encryptWithDerivableKey(qsl("saved_long_ago"), profile);
+
+    const QString passwordFile = QStandardPaths::writableLocation(QStandardPaths::AppConfigLocation) + qsl("/profiles/%1/passwords/character.dat").arg(profile);
+    QVERIFY(QDir().mkpath(QFileInfo(passwordFile).absolutePath()));
+    const auto readStoredCiphertext = [&passwordFile]() {
+        QFile file(passwordFile);
+        if (!file.open(QIODevice::ReadOnly)) {
+            return QString();
+        }
+        QDataStream ifs(&file);
+        ifs.setVersion(QDataStream::Qt_5_12);
+        QString ciphertext;
+        ifs >> ciphertext;
+        return ciphertext;
+    };
+    {
+        QFile file(passwordFile);
+        QVERIFY(file.open(QIODevice::WriteOnly));
+        QDataStream ofs(&file);
+        ofs.setVersion(QDataStream::Qt_5_12);
+        ofs << oldFile;
+    }
+    QCOMPARE(readStoredCiphertext(), oldFile);
+
+    QCOMPARE(SecureStringUtils::retrievePassword(profile, qsl("character")), qsl("saved_long_ago"));
+
+    const QString rewritten = readStoredCiphertext();
+    QVERIFY2(rewritten != oldFile, "the file is still encrypted with the key anyone can derive from the profile name");
+    QVERIFY(QFile::exists(profileKeyFilePath(profile)));
+    QCOMPARE(SecureStringUtils::retrievePassword(profile, qsl("character")), qsl("saved_long_ago"));
+
+    // ...and the same for the credential store's own files
+    const QString credentialFile = QStandardPaths::writableLocation(QStandardPaths::AppConfigLocation) + qsl("/profiles/%1/passwords/proxy").arg(profile);
+    {
+        QFile file(credentialFile);
+        QVERIFY(file.open(QIODevice::WriteOnly | QIODevice::Text));
+        QVERIFY(file.write(encryptWithDerivableKey(qsl("proxy_long_ago"), profile).toUtf8()) > 0);
+    }
+    QCOMPARE(CredentialManager::retrieveCredential(profile, qsl("proxy")), qsl("proxy_long_ago"));
+    {
+        QFile file(credentialFile);
+        QVERIFY(file.open(QIODevice::ReadOnly | QIODevice::Text));
+        const QString stored = QString::fromUtf8(file.readAll());
+        QVERIFY(!stored.isEmpty());
+        QVERIFY2(SecureStringUtils::decryptStringForProfile(stored, profile) == qsl("proxy_long_ago"), "the rewritten credential no longer decrypts");
+        QVERIFY2(stored != encryptWithDerivableKey(qsl("proxy_long_ago"), profile), "the credential is still encrypted with the key anyone can derive from the profile name");
+    }
 }
 
 void SecureStringUtilsTest::cleanupTestCase()

@@ -705,6 +705,10 @@ void dlgConnectionProfiles::writeSecurePassword(const QString& profile, const QS
             }
         } else {
             qWarning() << "dlgConnectionProfiles: Failed to store password for profile" << profile << ":" << errorMessage;
+            if (safeThis) {
+                //: Shown in the connection dialog when a password could not be saved, for example because there is nowhere to keep the key that encrypts it. %1 is a profile name.
+                safeThis->showNotification(tr("The password for '%1' could not be saved.").arg(profile), safeThis->notificationAreaIconLabelWarning);
+            }
         }
 
         // Clean up the credential manager

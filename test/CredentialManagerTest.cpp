@@ -139,6 +139,7 @@ private slots:
     void testCredentialExistsWithoutHandingOverTheSecret();
     void testAsyncEmptyArgumentsAreReportedThroughTheCallback();
     void testAsyncApiRefusesTheKeysTheStaticApiRefuses();
+    void testAStoreWithNowhereToKeepTheKeyFails();
     void cleanupTestCase();
 
 private:
@@ -987,6 +988,34 @@ void CredentialManagerTest::testAsyncApiRefusesTheKeysTheStaticApiRefuses()
     QVERIFY(stored);
     QCOMPARE(CredentialManager::retrieveCredential(profile, accepted), QString("async_secret"));
     CredentialManager::removeCredential(profile, accepted);
+}
+
+// #10926: with no encryption key that can be stored, the password is not saved, and the
+// callback the connection dialog waits on has to say so
+void CredentialManagerTest::testAStoreWithNowhereToKeepTheKeyFails()
+{
+    CredentialManager manager;
+    const QString profile = qsl("NowhereToKeepTheKey");
+    const QString profileDir = qsl("%1/profiles/%2").arg(QStandardPaths::writableLocation(QStandardPaths::AppConfigLocation), profile);
+    QVERIFY(QDir(profileDir).removeRecursively());
+    // A directory where the key file belongs makes it impossible to write
+    QVERIFY(QDir().mkpath(profileDir + qsl("/encryption_key")));
+
+    bool answered = false;
+    bool stored = true;
+    manager.storePassword(profile, qsl("character"), qsl("cannot_be_protected"), [&](bool success, const QString&) {
+        answered = true;
+        stored = success;
+    });
+    QVERIFY(QTest::qWaitFor(
+            [&answered]() {
+                return answered;
+            },
+            5000));
+    QVERIFY2(!stored, "the store reported a password saved that it had no key to protect");
+    QVERIFY(CredentialManager::retrieveCredential(profile, qsl("character")).isEmpty());
+
+    QVERIFY(QDir(profileDir).removeRecursively());
 }
 
 void CredentialManagerTest::cleanupTestCase()

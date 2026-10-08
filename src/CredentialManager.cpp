@@ -1601,8 +1601,12 @@ QString CredentialManager::retrieveCredentialFromFile(const QString& profileName
         return QString();
     }
 
-    // Decrypt credential using profile-specific key
-    QString decrypted = SecureStringUtils::decryptStringForProfile(encrypted, profileName);
+    bool usedDerivableKey = false;
+    QString decrypted = SecureStringUtils::decryptStringForProfile(encrypted, profileName, &usedDerivableKey);
+
+    if (usedDerivableKey && !writeCredentialFile(filePath, profileName, decrypted)) {
+        qWarning() << "CredentialManager: could not re-encrypt the" << key << "credential saved under the derivable key for profile" << profileName;
+    }
 
     if (decrypted.isEmpty()) {
         qWarning() << "CredentialManager: Failed to decrypt credential for profile" << profileName;
