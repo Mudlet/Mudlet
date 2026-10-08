@@ -9,14 +9,22 @@ Geyser.ScrollBox = Geyser.Window:new({
     name = "ScrollBoxClass"
 })
 
+-- Internal function: children are laid out inside the box's own widget, so from
+-- its origin and at the whole pixel size the widget got, not its fractional one
+local function frameChildren(box, width, height)
+    box.get_x = function() return 0 end
+    box.get_y = function() return 0 end
+    box.get_width = function() return width end
+    box.get_height = function() return height end
+end
+
 -- Overridden reposition for special coordination handling
 function Geyser.ScrollBox:reposition(skipChildren)
     Geyser.calc_constraints(self, self, self.container)
     local x, y, width, height = self:pixel_geometry()
     moveWindow(self.name, x, y)
     resizeWindow(self.name, width, height)
-    self.get_x = function() return 0 end
-    self.get_y = function() return 0 end
+    frameChildren(self, width, height)
       -- deal with all children of this container
     if not skipChildren then
         for k, v in pairs(self.windowList) do
@@ -52,7 +60,8 @@ function Geyser.ScrollBox:new (cons, container)
     setmetatable(me, self)
     self.__index = self
     
-    local ok, err = createScrollBox(me.windowname, me.name, me:pixel_geometry())
+    local x, y, width, height = me:pixel_geometry()
+    local ok, err = createScrollBox(me.windowname, me.name, x, y, width, height)
     -- the object is returned and registered as a parent window either way, so report a failed creation
     if not mudlet.elementCreated(me.windowname, me.name, ok, err) then
         printError(string.format("Geyser.ScrollBox '%s' was not created: %s", me.name, err or "unknown error"), false, false)
@@ -71,8 +80,7 @@ function Geyser.ScrollBox:new (cons, container)
     Geyser.parentWindows[me.name] = me
 
     --ScrollBox needs special coordinate handling for the children in it
-    me.get_x = function() return 0 end
-    me.get_y = function() return 0 end
+    frameChildren(me, width, height)
     
     -- if me.stylesheet then 
     --     me:setStyleSheet()
