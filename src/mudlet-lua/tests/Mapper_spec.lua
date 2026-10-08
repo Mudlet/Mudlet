@@ -325,6 +325,56 @@ describe("Tests addRoom", function()
 
 end)
 
+-- What these specs create goes in an area of their own, which after_each deletes.
+describe("Tests room function refusals on a scratch area", function()
+  local areaName = "MapperSpecRoomRefusals"
+  local area
+
+  local function room(x, y, z)
+    local id = createRoomID()
+    addRoom(id)
+    setRoomArea(id, area)
+    setRoomCoordinates(id, x, y, z or 0)
+    return id
+  end
+
+  setup(function()
+    assert.is_true(openMapWidget())
+  end)
+
+  before_each(function()
+    area = addAreaName(areaName)
+  end)
+
+  after_each(function()
+    deleteArea(areaName)
+  end)
+
+  it("room functions return nil and a message for a room that does not exist", function()
+    local missing = 990000101
+    local expected = ("number %d is not a valid roomID"):format(missing)
+    for _, name in ipairs({"getRoomExits", "getRoomEnv", "getRoomWeight", "getRoomHidden", "clearSpecialExits"}) do
+      local result, err = _G[name](missing)
+      assert.is_nil(result, name)
+      assert.are.equal(expected, err, name)
+    end
+    local locked, err = hasExitLock(missing, "north")
+    assert.is_nil(locked)
+    assert.are.equal(expected, err)
+    local deleted
+    deleted, err = deleteRoom(0)
+    assert.is_nil(deleted)
+    assert.are.equal("number 0 is not a valid roomID", err)
+  end)
+
+  it("clearSpecialExits returns true once it has cleared a room's special exits", function()
+    local from, to = room(0, 0), room(1, 0)
+    assert.is_true(addSpecialExit(from, to, "climb"))
+    assert.is_true(clearSpecialExits(from))
+    assert.is_nil(next(getSpecialExitsSwap(from)))
+  end)
+end)
+
 describe("Tests map info functions", function()
 
   describe("Tests getMapInfo", function()

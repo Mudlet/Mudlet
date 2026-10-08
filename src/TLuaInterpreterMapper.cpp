@@ -928,11 +928,13 @@ int TLuaInterpreter::clearSpecialExits(lua_State* L)
     const int id_from = getVerifiedInt(L, __func__, 1, "roomID");
     const Host& host = getHostFromLua(L);
     TRoom* pR = host.mpMap->mpRoomDB->getRoom(id_from);
-    if (pR) {
-        pR->clearSpecialExits();
-        host.mpMap->updateArea(pR->getArea());
+    if (!pR) {
+        return warnArgumentValue(L, __func__, csmInvalidRoomID.arg(id_from));
     }
-    return 0;
+    pR->clearSpecialExits();
+    host.mpMap->updateArea(pR->getArea());
+    lua_pushboolean(L, true);
+    return 1;
 }
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#closeMapWidget
 int TLuaInterpreter::closeMapWidget(lua_State* L)
@@ -1331,7 +1333,7 @@ int TLuaInterpreter::deleteRoom(lua_State* L)
 {
     const int id = getVerifiedInt(L, __func__, 1, "roomID");
     if (id <= 0) {
-        return 0;
+        return warnArgumentValue(L, __func__, csmInvalidRoomID.arg(id));
     }
     const Host& host = getHostFromLua(L);
     if (host.mpMap->scriptCallbackInProgress()) {
@@ -2222,7 +2224,7 @@ int TLuaInterpreter::getRoomEnv(lua_State* L)
         lua_pushnumber(L, pR->environment);
         return 1;
     }
-    return 0;
+    return warnArgumentValue(L, __func__, csmInvalidRoomID.arg(roomID));
 }
 
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#getRoomExits
@@ -2296,7 +2298,7 @@ int TLuaInterpreter::getRoomExits(lua_State* L)
         }
         return 1;
     }
-    return 0;
+    return warnArgumentValue(L, __func__, csmInvalidRoomID.arg(id));
 }
 
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#getRoomHashByID
@@ -2483,7 +2485,7 @@ int TLuaInterpreter::getRoomWeight(lua_State* L)
         lua_pushnumber(L, pR->getWeight());
         return 1;
     }
-    return 0;
+    return warnArgumentValue(L, __func__, csmInvalidRoomID.arg(roomId));
 }
 
 // documented in the wiki!
@@ -2640,7 +2642,7 @@ int TLuaInterpreter::hasExitLock(lua_State* L)
         lua_pushboolean(L, pR->hasExitLock(dir));
         return 1;
     }
-    return 0;
+    return warnArgumentValue(L, __func__, csmInvalidRoomID.arg(id));
 }
 
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#hasSpecialExitLock
@@ -4337,7 +4339,7 @@ int TLuaInterpreter::getRoomHidden(lua_State* L)
         lua_pushboolean(L, pR->isHidden());
         return 1;
     }
-    return 0;
+    return warnArgumentValue(L, __func__, csmInvalidRoomID.arg(roomId));
 }
 
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#getHiddenRooms
