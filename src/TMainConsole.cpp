@@ -55,11 +55,13 @@
 #include <QLabel>
 #include <QLayout>
 #include <QLineEdit>
+#include <QMenu>
 #include <QMessageBox>
 #include <QMimeData>
 #include <QProgressDialog>
 #include <QUiLoader>
 #include <QSaveFile>
+#include <QScopeGuard>
 #include <QScrollBar>
 #include <QShortcut>
 #include <QSizePolicy>
@@ -84,6 +86,48 @@ TWindowRegistry::SubConsoleKind subConsoleKindOf(const TConsole::ConsoleType typ
     default:
         return TWindowRegistry::SubConsoleKind::Other;
     }
+}
+
+// Qt gives a dock added beside visible ones only its minimum size along the
+// area, which for a console is nothing, so it comes up without a single line.
+// Measured after the layout has run, so a size a saved layout restored stays.
+void shareDockAreaIfSqueezed(QPointer<TDockWidget> dock)
+{
+    using namespace std::chrono_literals;
+    QTimer::singleShot(0ms, dock, [dock]() {
+        mudlet* window = mudlet::self();
+        if (!window || dock->isFloating() || !dock->widget()) {
+            return;
+        }
+        // Hidden before its first layout, as Geyser does to a window created hidden, it keeps no size of
+        // its own and is squeezed the same way when shown
+        if (!dock->isVisible()) {
+            const auto retry = [dock]() {
+                shareDockAreaIfSqueezed(dock);
+            };
+            QObject::connect(dock.data(), &QDockWidget::visibilityChanged, dock.data(), retry, Qt::SingleShotConnection);
+            return;
+        }
+        const Qt::DockWidgetArea area = window->dockWidgetArea(dock);
+        const Qt::Orientation orientation = (area == Qt::TopDockWidgetArea || area == Qt::BottomDockWidgetArea) ? Qt::Horizontal : Qt::Vertical;
+        const auto extent = [orientation](const QWidget* widget) {
+            return orientation == Qt::Vertical ? widget->height() : widget->width();
+        };
+        if (extent(dock->widget()) >= dock->fontMetrics().height()) {
+            return;
+        }
+        int total = 0;
+        int docks = 0;
+        for (auto* other : window->findChildren<QDockWidget*>()) {
+            if (other->isVisible() && !other->isFloating() && other->parentWidget() == window && window->dockWidgetArea(other) == area) {
+                total += extent(other);
+                ++docks;
+            }
+        }
+        if (docks > 1) {
+            window->resizeDocks({dock.data()}, {total / docks}, orientation);
+        }
+    });
 }
 
 } // namespace
@@ -215,7 +259,7 @@ std::pair<bool, QString> TMainConsole::setLabelStyleSheet(const QString& name, c
 
     auto pL = mLabelMap.value(name);
     if (pL) {
-        pL->setStyleSheet(stylesheet);
+        pL->restyle(stylesheet);
         return {true, QString()};
     }
     return {false, qsl("label name '%1' not found").arg(name)};
@@ -402,6 +446,7 @@ std::pair<bool, QString> TMainConsole::openUserWindow(const QString& name, bool 
     auto dockwidget = dockWidget(name);
     if (!dockwidget) {
         dockwidget = createUserWindow(name);
+        shareDockAreaIfSqueezed(dockwidget);
     }
     dockwidget->update();
 
@@ -893,6 +938,18 @@ void TMainConsole::detachActionBars(TAction* pAction)
     }
 }
 
+// A QAction does not own its menu, which is parented to the bar instead
+static void deleteMenuEntryLater(EAction* pEntry)
+{
+    if (!pEntry) {
+        return;
+    }
+    if (QMenu* pMenu = pEntry->menu()) {
+        pMenu->deleteLater();
+    }
+    pEntry->deleteLater();
+}
+
 TMainConsole::ActionBars& TMainConsole::actionBarsFor(TAction* pAction)
 {
     auto it = mActionBars.find(pAction);
@@ -902,6 +959,7 @@ TMainConsole::ActionBars& TMainConsole::actionBarsFor(TAction* pAction)
         // longer reach this console through its Host.
         connect(pAction, &QObject::destroyed, this, [this, pAction]() {
             const ActionBars bars = mActionBars.take(pAction);
+            deleteMenuEntryLater(bars.mpMenuEntry);
             if (bars.mpToolBar) {
                 bars.mpToolBar->hide();
             }
@@ -994,9 +1052,7 @@ void TMainConsole::replaceActionButton(TAction* pAction, TFlipButton* pButton)
 void TMainConsole::replaceActionMenuEntry(TAction* pAction, EAction* pEntry)
 {
     ActionBars& bars = actionBarsFor(pAction);
-    if (bars.mpMenuEntry) {
-        bars.mpMenuEntry->deleteLater();
-    }
+    deleteMenuEntryLater(bars.mpMenuEntry);
     bars.mpMenuEntry = pEntry;
 }
 
@@ -1018,6 +1074,25 @@ void TMainConsole::setActionButtonChecked(TAction* pAction, const bool checked)
     if (TFlipButton* pButton = actionButton(pAction)) {
         pButton->setChecked(checked);
     }
+}
+
+bool TMainConsole::restyleActionButton(TAction* pAction)
+{
+    // A bar's or a menu's stylesheet also styles the widgets of the actions under
+    // it, and a bar in a package is a child of the package's root action
+    const TAction* pParent = pAction->getParent();
+    if (pAction->isFolder() || !pParent || (!pParent->getParent() && !pParent->mPackageName.isEmpty())) {
+        return false;
+    }
+    TFlipButton* pButton = actionButton(pAction);
+    if (!pButton) {
+        return false;
+    }
+    // The editor changes an action's stylesheet without redrawing its button
+    if (pButton->styleSheet() != pAction->css) {
+        pButton->setStyleSheet(pAction->css);
+    }
+    return true;
 }
 
 void TMainConsole::deleteActionToolBars()
@@ -1520,10 +1595,14 @@ void TMainConsole::setCommandLinePlaceholderText(const QString& text)
 
 void TMainConsole::updateCommandLineSpellCheck(bool enabled)
 {
-    if (enabled) {
-        mpCommandLine->recheckWholeLine();
-    } else {
-        mpCommandLine->clearMarksOnWholeLine();
+    QList<TCommandLine*> commandLines = mSubCommandLineMap.values();
+    commandLines.prepend(mpCommandLine);
+    for (auto pCommandLine : commandLines) {
+        if (enabled) {
+            pCommandLine->recheckWholeLine();
+        } else {
+            pCommandLine->clearMarksOnWholeLine();
+        }
     }
 }
 
@@ -1620,13 +1699,14 @@ std::optional<QString> TMainConsole::getCommandLineText(const QString& name) con
     return {pN->toPlainText()};
 }
 
-// The caret goes to the end of the first line, with nothing selected.
+// The caret goes to the end, with nothing selected.
 static void putTextOnCommandLine(TCommandLine* pN, const QString& text)
 {
     pN->setPlainText(text);
     QTextCursor cur = pN->textCursor();
     cur.clearSelection();
-    cur.movePosition(QTextCursor::EndOfLine);
+    // Not EndOfLine: that is the end of the first row of text that has a newline or wraps
+    cur.movePosition(QTextCursor::End);
     pN->setTextCursor(cur);
     pN->adjustHeight();
 }
@@ -2554,36 +2634,43 @@ bool TMainConsole::moveSubConsole(const QString& name, int x, int y)
 
 // The non-label half of setWindow()'s dispatch, tried in a fixed order, so that
 // a name held by two kinds of element always moves the same one.
-bool TMainConsole::reparentWindow(const QString& windowname, const QString& name, int x, int y, bool show)
+std::pair<bool, QString> TMainConsole::reparentWindow(const QString& windowname, const QString& name, int x, int y, bool show)
 {
-    QWidget* pW = parentWidgetFor(windowname);
-    const auto reparent = [pW, x, y, show](QWidget* pElement) {
-        pElement->setParent(pW);
-        pElement->move(x, y);
-        if (show) {
-            pElement->show();
-        }
-        return true;
-    };
+    QWidget* pElement = nullptr;
+    auto pC = mSubConsoleMap.value(name);
+    if (pC) {
+        pElement = pC;
+    } else if (auto pS = mScrollBoxMap.value(name)) {
+        pElement = pS;
+    } else if (auto pN = mSubCommandLineMap.value(name)) {
+        pElement = pN;
+    } else if (auto pT = mTextBoxMap.value(name)) {
+        pElement = pT;
+    } else if (mpMapper && !name.compare(QLatin1String("mapper"), Qt::CaseInsensitive)) {
+        pElement = mpMapper;
+    }
+    if (!pElement) {
+        return {false, qsl("element '%1' not found").arg(name)};
+    }
 
-    if (auto pC = mSubConsoleMap.value(name)) {
+    QWidget* pW = parentWidgetFor(windowname);
+    // setParent() accepts a cycle, after which Qt walks the parent chain forever
+    for (QWidget* pAncestor = pW; pAncestor; pAncestor = pAncestor->parentWidget()) {
+        if (pAncestor == pElement) {
+            return {false, qsl("element '%1' cannot be moved into itself or into one of its own children").arg(name)};
+        }
+    }
+
+    if (pC) {
         pC->mOldX = x;
         pC->mOldY = y;
-        return reparent(pC);
     }
-    if (auto pS = mScrollBoxMap.value(name)) {
-        return reparent(pS);
+    pElement->setParent(pW);
+    pElement->move(x, y);
+    if (show) {
+        pElement->show();
     }
-    if (auto pN = mSubCommandLineMap.value(name)) {
-        return reparent(pN);
-    }
-    if (auto pT = mTextBoxMap.value(name)) {
-        return reparent(pT);
-    }
-    if (mpMapper && !name.compare(QLatin1String("mapper"), Qt::CaseInsensitive)) {
-        return reparent(mpMapper);
-    }
-    return false;
+    return {true, QString()};
 }
 
 std::optional<QSize> TMainConsole::consoleFontSize(const QString& name) const
@@ -3065,12 +3152,15 @@ void TMainConsole::alertNewData()
     QApplication::alert(mudlet::self(), 0);
 }
 
-void TMainConsole::finishIncomingText()
+void TMainConsole::finishIncomingText(const bool carriesText)
 {
     Q_ASSERT_X(mpLineEdit_networkLatency, "TMainConsole::finishIncomingText()", "mpLineEdit_networkLatency does not point to a valid QLineEdit");
     mLatencyProcessT = mProcessingTimer.elapsed() / 1000.0;
     if (!mpLatencyBoxPacer->isActive()) {
         mpLatencyBoxPacer->start();
+    }
+    if (!carriesText) {
+        return;
     }
     // Modify the tab text if this is not the currently active host - this
     // method is only used on the "main" console so no need to filter depending
@@ -3513,12 +3603,14 @@ QFont TMainConsole::displayFont() const
 void TMainConsole::applyBorders()
 {
     // A console put away by a tab switch is zero pixels wide, so the resize
-    // event below tells it nothing about the room its new borders leave
+    // event below tells it nothing about the room its new borders leave, and
+    // scripts are told about the container it comes back to instead
     syncHiddenScreenDimensions();
     const QSize s = size();
     QResizeEvent event(s, s);
     QCoreApplication::sendEvent(this, &event);
-    raiseMudletSysWindowResizeEvent(s.width(), s.height());
+    const QSize reported = isHidden() && parentWidget() ? parentWidget()->size() : s;
+    raiseMudletSysWindowResizeEvent(reported.width(), reported.height());
 }
 
 // createMapper() records the embedded mapper here and puts it in the main frame
@@ -3873,6 +3965,15 @@ void TMainConsole::closeEvent(QCloseEvent* event)
     }
 
     qDebug().nospace().noquote() << "TMainConsole::closeEvent(...) INFO - received by \"" << mpHost->getName() << "\".";
+    // The sysExitEvent handlers, the save question and the save wait all run the
+    // event loop; a close or reset of this profile reached from a script meanwhile
+    // would delete this console, or the Lua state, under this call.
+    mpHost->getLuaInterpreter()->enterNestedEventLoop();
+    const auto nestedLoopGuard = qScopeGuard([pHost = QPointer<Host>(mpHost)]() {
+        if (pHost) {
+            pHost->getLuaInterpreter()->leaveNestedEventLoop();
+        }
+    });
     TEvent conCloseEvent{};
     conCloseEvent.mArgumentList.append(qsl("sysExitEvent"));
     conCloseEvent.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);

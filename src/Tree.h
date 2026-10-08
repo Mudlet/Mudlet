@@ -26,6 +26,7 @@
 
 #include <QString>
 
+#include <algorithm>
 #include <iostream>
 #include <list>
 
@@ -313,11 +314,10 @@ void Tree<T>::setParent(T* pParent)
 template <class T>
 bool Tree<T>::popChild(Tree<T>* pChild)
 {
-    for (auto it = mpMyChildrenList->begin(); it != mpMyChildrenList->end(); it++) {
-        if (*it == pChild) {
-            mpMyChildrenList->remove(pChild);
-            return true;
-        }
+    // erase(), not remove(): remove() rescans the whole list, and a folder pops every child as it is torn down
+    if (const auto it = std::find(mpMyChildrenList->begin(), mpMyChildrenList->end(), pChild); it != mpMyChildrenList->end()) {
+        mpMyChildrenList->erase(it);
+        return true;
     }
     return false;
 }
