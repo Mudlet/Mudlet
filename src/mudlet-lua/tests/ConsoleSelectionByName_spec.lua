@@ -258,6 +258,16 @@ describe("Tests that the selection and format functions find their console by na
         assert.is_true(resetFormat(name))
       end)
     end
+
+    it("names the main console in getTextFormat()'s refusal however it was named", function()
+      local line = markerLine()
+      moveCursor("main", -1, line)
+      for _, args in ipairs({{}, {""}, {"main"}}) do
+        local ok, err = getTextFormat(unpack(args))
+        assert.is_nil(ok)
+        assert.are.equal("current selection invalid in window 'main'", err)
+      end
+    end)
   end)
 end)
 
