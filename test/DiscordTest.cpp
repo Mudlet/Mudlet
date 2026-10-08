@@ -297,6 +297,25 @@ private slots:
         QVERIFY2(checked >= 22, qPrintable(qsl("only categorised %1 Discord Lua functions - has the source moved?").arg(checked)));
     }
 
+    // #10723: an empty or partial address must not match a known game whose URL
+    // merely contains it, or Discord advertises an arbitrary game.
+    void testGameIntegrationNeedsAKnownAddress()
+    {
+        Discord discord;
+
+        QCOMPARE(discord.gameIntegrationSupported(QString()), qMakePair(false, QString()));
+        QVERIFY(!discord.gameIntegrationSupported(qsl("mud.com")).first);
+        QVERIFY(!discord.gameIntegrationSupported(qsl("realms.com")).first);
+        QVERIFY(!discord.gameIntegrationSupported(qsl("ironrealms.com")).first);
+
+        QCOMPARE(discord.gameIntegrationSupported(qsl("achaea.com")), qMakePair(true, qsl("achaea")));
+        QCOMPARE(discord.gameIntegrationSupported(qsl("iron-ach.ironrealms.com")), qMakePair(true, qsl("achaea")));
+        QCOMPARE(discord.gameIntegrationSupported(qsl("IRON-ACH.IRONREALMS.COM")), qMakePair(true, qsl("achaea")));
+        QCOMPARE(discord.gameIntegrationSupported(qsl("mud.clessidra.it")), qMakePair(true, qsl("clessidra")));
+        QCOMPARE(discord.gameIntegrationSupported(qsl("game.wotmud.org")), qMakePair(true, qsl("wotmud")));
+        QCOMPARE(discord.gameIntegrationSupported(qsl("localhost")), qMakePair(true, qsl("localhost")));
+    }
+
     void cleanupTestCase() {}
 };
 

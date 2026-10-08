@@ -501,6 +501,10 @@ void Discord::UpdatePresence()
 
 QString Discord::deduceGameName(const QString& address)
 {
+    if (address.isEmpty()) {
+        return QString();
+    }
+
     // Handle using localhost as an off-line testing case
     if (address == QLatin1String("localhost") || address == QLatin1String("127.0.0.1") || address == QLatin1String("::1")) {
         return qsl("localhost");
@@ -563,7 +567,7 @@ QString Discord::deduceGameName(const QString& address)
         itServer.next();
         QVectorIterator<QString> itUrl(itServer.value());
         while (itUrl.hasNext()) {
-            if (itUrl.next().contains(address)) {
+            if (itUrl.next().compare(address, Qt::CaseInsensitive) == 0) {
                 return itServer.key();
             }
         }
