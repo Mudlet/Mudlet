@@ -362,7 +362,7 @@ public:
     QPointer<QOpenGLWidget> mpM;
 #endif
     QPointer<dlgMapper> mpMapper;
-    QMap<int, int> roomidToIndex;
+    QHash<int, int> roomidToIndex;
 
     // User-registered mapper context menu entries (addMapEvent()/addMapMenu());
     // session-only state, never saved with the map.
@@ -514,7 +514,7 @@ private:
     int mScriptCallbackDepth = 0;
     bool mGraphBuildInProgress = false;
 
-    void addDirectionalRoute(QHash<unsigned int, route>& bestRoutes,
+    void addDirectionalRoute(std::vector<std::pair<unsigned int, route>>& bestRoutes,
                              const QMap<QString, int>& exitWeights,
                              unsigned int source,
                              TRoom* pSourceR,

@@ -299,10 +299,12 @@ bool TMxpFrameWidgets::removeFromParentTabs(const QString& name, const QString& 
 
 void TMxpFrameWidgets::destroyFrame(const QString& name)
 {
-    mpMainConsole->deregisterSubConsole(name);
-    mpMainConsole->deregisterDockWidget(name);
-
     const Widgets widgets = mFrames.take(name);
+    // No dock to deregister: frames never make one, and a dock of this name is a script's user window.
+    // A script can also delete the frame's console and reuse its name for a window of its own
+    if (mpMainConsole->subConsoleWidget(name) == widgets.console.data()) {
+        mpMainConsole->deregisterSubConsole(name);
+    }
     delete widgets.widget.data();
 }
 
@@ -375,7 +377,9 @@ void TMxpFrameWidgets::reportSize()
     // getMainWindowSize() rather than mpMainFrame's own geometry, which
     // TConsole::resizeEvent() sets to the full console size until the layout
     // corrects it
-    mpMainConsole->mpHost->mMxpFrameManager.setMainConsoleSize(mpMainConsole->getMainWindowSize(), mpMainConsole->size());
+    // A console hidden by a tab switch is 0 wide, but the container it returns to can be measured
+    const QSize consoleSize = mpMainConsole->isHidden() && mpMainConsole->parentWidget() ? mpMainConsole->parentWidget()->size() : mpMainConsole->size();
+    mpMainConsole->mpHost->mMxpFrameManager.setMainConsoleSize(mpMainConsole->getMainWindowSize(), consoleSize);
 }
 
 void TMxpFrameWidgets::reportTabAreaSize(const QString& headerName, const QSize& size)

@@ -164,6 +164,16 @@ static QString noEngineMessage()
     return qsl("the speech engine library is not installed, so speech recognition cannot be used - looked in: %1").arg(speechLibrarySearchPaths().join(qsl(", ")));
 }
 
+// A failed load leaves no model, and model-less backends never have one, so
+// "reload" is said only when there is one
+static QString errorStateStartMessage(const SpeechRecognizer* pRecognizer)
+{
+    if (pRecognizer->modelPath().isEmpty()) {
+        return qsl("speech recognition is in an error state - call stt.init() before listening again");
+    }
+    return qsl("speech recognition is in an error state - reload the model with stt.init() before listening again");
+}
+
 // words follows a symbol resolved from the library, so unloading or reloading it
 // changes what the backend can do without anything else happening. Announced
 // here because docs/stt-api.md tells consumers to re-read capabilities on a
@@ -216,8 +226,8 @@ static SpeechRecognizerFactory::Backend onDemandSpeechBackend()
 
 // Which model-based backend's on-disk install paths answer stt.getModelPath(),
 // stt.getLibraryPath() and getInfo().searchPaths: whichever is actually loaded
-// when it is one of these two, the auto-preferred installed backend otherwise,
-// and Vosk's own paths as the last resort - so these platform-tier reads
+// when it is one of these two, sherpa when it is installed, and Vosk's own
+// paths otherwise - so these platform-tier reads
 // always name a real, checkable directory, exactly as they did before sherpa
 // or the built-in macOS backend existed. The macOS backend never answers for
 // these: it installs no library and needs no model, so it has no paths of its
@@ -232,8 +242,13 @@ static SpeechRecognizerFactory::Backend modelBasedBackendForPaths(TSpeechBridge*
         return SpeechRecognizerFactory::Backend::Vosk;
     }
 
-    const auto backends = SpeechRecognizerFactory::availableBackends();
-    return backends.isEmpty() ? SpeechRecognizerFactory::Backend::Vosk : backends.first();
+    // Not availableBackends(), which loads every engine and latches the answer:
+    // a package asking where to install one, before installing it, would then
+    // be told by stt.init() that it is not installed. Sherpa leads that list,
+    // so whether it is there is the whole choice. Before any probe that is
+    // whether its file is on its search paths, which misses one only the
+    // system loader finds and counts one that will not load.
+    return SherpaRecognizer::libraryPresent() ? SpeechRecognizerFactory::Backend::Sherpa : SpeechRecognizerFactory::Backend::Vosk;
 }
 
 // The directory stt.getModelPath() answers with: the same engine choice, so a
@@ -559,6 +574,14 @@ int TLuaInterpreter::sttStart(lua_State* L)
         return warnArgumentValue(L, funcName, message);
     }
 
+    // Before initialized(), which is false in Error too. Reported to the caller:
+    // the fault took the microphone claim, so there is no owner to route by.
+    if (pRecognizer->state() == SpeechRecognizer::State::Error) {
+        const QString message = errorStateStartMessage(pRecognizer);
+        reportSpeechRefusalTo(getHostFromLua(L), message);
+        return warnArgumentValue(L, funcName, message);
+    }
+
     if (!pRecognizer->initialized()) {
         const QString message = qsl("speech recognizer not initialized with a model - call stt.init() first");
         reportSpeechRefusal(message);
@@ -625,8 +648,9 @@ int TLuaInterpreter::sttStop(lua_State* L)
         const QString message = qsl("nothing was stopped - speech recognition is in an error state; the sysSTTError event carries the reason");
         // Raised as well as returned: docs/stt-api.md's "refusals speak" covers
         // every refusal the engine caused, and a consumer driving the bridge
-        // from events alone heard nothing at all about this one.
-        reportSpeechRefusal(message);
+        // from events alone heard nothing at all about this one. To the caller,
+        // as the fault took the microphone claim that routing would go by.
+        reportSpeechRefusalTo(getHostFromLua(L), message);
         return warnArgumentValue(L, funcName, message);
     }
 
@@ -714,6 +738,12 @@ int TLuaInterpreter::sttToggle(lua_State* L)
     pBridge->initSpeechRecognition(onDemandSpeechBackend());
 
     auto* pRecognizer = pBridge->speechRecognizer();
+    // Asked first, as in stt.start()
+    if (pRecognizer && pRecognizer->state() == SpeechRecognizer::State::Error) {
+        const QString message = errorStateStartMessage(pRecognizer);
+        reportSpeechRefusalTo(getHostFromLua(L), message);
+        return warnArgumentValue(L, funcName, message);
+    }
     if (!pRecognizer || !pRecognizer->initialized()) {
         const QString message = pRecognizer ? qsl("speech recognizer not initialized - call stt.init() first") : noEngineMessage();
         reportSpeechRefusal(message);
@@ -929,8 +959,8 @@ int TLuaInterpreter::sttGetInfo(lua_State* L)
 
 // stt.getModelPath()
 // Get the default path where speech models should be stored, for whichever
-// model-based engine is actually loaded (falling back to the auto-preferred
-// installed one, then Vosk, when none is loaded yet).
+// model-based engine is actually loaded (falling back to sherpa when it is
+// installed, then Vosk, when none is loaded yet).
 // Returns the path as a string.
 int TLuaInterpreter::sttGetModelPath(lua_State* L)
 {

@@ -334,6 +334,61 @@ describe("Tests StringUtils.lua functions", function()
         assert.equals(replacement, string.patternEscape(original))
       end
     end)
+
+    -- the twelve pattern magic characters gain a "%" in front, every other
+    -- byte - other punctuation, control characters, NUL and bytes >= 0x80 -
+    -- passes through untouched
+    local magic = "%^$()[].*+-?"
+    local function expectedEscape(str)
+      local out = {}
+      for i = 1, #str do
+        local c = str:sub(i, i)
+        out[#out + 1] = magic:find(c, 1, true) and ("%" .. c) or c
+      end
+      return table.concat(out)
+    end
+
+    it("Should escape exactly the magic characters among all 256 byte values", function()
+      for byte = 0, 255 do
+        local c = string.char(byte)
+        assert.equals(expectedEscape(c), string.patternEscape(c), "byte " .. byte)
+        assert.equals(expectedEscape("a" .. c .. "b" .. c), string.patternEscape("a" .. c .. "b" .. c), "byte " .. byte)
+      end
+      local all = {}
+      for byte = 0, 255 do
+        all[#all + 1] = string.char(byte)
+      end
+      all = table.concat(all)
+      assert.equals(expectedEscape(all), string.patternEscape(all))
+    end)
+
+    it("Should leave multibyte UTF-8 text alone", function()
+      assert.equals("Café %(été%) 👊 %[ü%]", string.patternEscape("Café (été) 👊 [ü]"))
+      assert.equals("naïve %- 日本語%.", string.patternEscape("naïve - 日本語."))
+    end)
+
+    it("Should return a pattern that finds the original text literally", function()
+      for _, original in ipairs({"a.b", "[x]", "100%", "^start$", "(a+b)*c-d?", "Café (été) 👊"}) do
+        local escaped = string.patternEscape(original)
+        assert.are.same({1, #original}, {string.find(original, escaped)})
+        assert.equals(original, string.match("xx" .. original .. "yy", escaped))
+      end
+    end)
+
+    it("Should return one value, and an empty string for an empty string", function()
+      assert.equals(1, select("#", string.patternEscape("a.b")))
+      assert.equals(1, select("#", ("a.b"):patternEscape()))
+      assert.equals("", string.patternEscape(""))
+    end)
+
+    it("Should raise an error for a non-string argument", function()
+      for _, bad in ipairs({5, {}, true}) do
+        local ok, err = pcall(string.patternEscape, bad)
+        assert.is_false(ok)
+        assert.is_truthy(tostring(err):find("string.patternEscape: bad argument #1 type", 1, true), tostring(err))
+      end
+      assert.has_error(function() string.patternEscape() end)
+    end)
   end)
 
   describe("Tests the functionality of utf8.patternEscape", function()
@@ -365,6 +420,36 @@ describe("Tests StringUtils.lua functions", function()
       }
       for original, replacement in pairs(replacements) do
         assert.equals(replacement, utf8.patternEscape(original))
+      end
+    end)
+
+    it("Should escape exactly the magic characters among all ASCII characters", function()
+      local magic = "%^$()[].*+-?"
+      for byte = 0, 127 do
+        local c = string.char(byte)
+        local expected = magic:find(c, 1, true) and ("%" .. c) or c
+        assert.equals(expected, utf8.patternEscape(c), "byte " .. byte)
+        assert.equals("é" .. expected .. "👊" .. expected, utf8.patternEscape("é" .. c .. "👊" .. c), "byte " .. byte)
+      end
+    end)
+
+    it("Should leave multibyte characters whole", function()
+      assert.equals("naïve %- 日本語%. %(👊%)", utf8.patternEscape("naïve - 日本語. (👊)"))
+      local escaped = utf8.patternEscape("Café (été) [ü]")
+      assert.equals("Café %(été%) %[ü%]", escaped)
+      assert.equals("Café (été) [ü]", utf8.match("xx Café (été) [ü] yy", escaped))
+    end)
+
+    it("Should return one value, and an empty string for an empty string", function()
+      assert.equals(1, select("#", utf8.patternEscape("a.b")))
+      assert.equals("", utf8.patternEscape(""))
+    end)
+
+    it("Should raise an error for a non-string argument", function()
+      for _, bad in ipairs({5, {}, true}) do
+        local ok, err = pcall(utf8.patternEscape, bad)
+        assert.is_false(ok)
+        assert.is_truthy(tostring(err):find("utf8.patternEscape: bad argument #1 type", 1, true), tostring(err))
       end
     end)
   end)
