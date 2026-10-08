@@ -1174,8 +1174,28 @@ describe("Tests TableUtils.lua functions", function()
       assert.equals("inherited", copy.inner.anything)
     end)
 
-    -- table._contains guards against this with a "seen" set; deepcopy has none
-    pending("table.deepcopy copies a table that reaches itself - it recurses until the Lua stack overflows - issue #10414")
+    it("should copy a table that reaches itself, directly or through another", function()
+      local original = { name = "root", child = {} }
+      original.me = original
+      original.child.parent = original
+
+      local copy = table.deepcopy(original)
+
+      assert.are_not.equal(original, copy)
+      assert.equals(copy, copy.me)
+      assert.are_not.equal(original.child, copy.child)
+      assert.equals(copy, copy.child.parent)
+      assert.equals("root", copy.name)
+    end)
+
+    it("should copy a table reached twice into two copies, as it does when there is no cycle", function()
+      local shared = { value = 1 }
+      local copy = table.deepcopy({ first = shared, second = shared })
+      assert.are_not.equal(shared, copy.first)
+      assert.are_not.equal(copy.first, copy.second)
+      copy.first.value = 2
+      assert.equals(1, copy.second.value)
+    end)
   end)
 
   describe("Tests the functionality of spairs on an empty table", function()
