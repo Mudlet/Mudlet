@@ -4930,6 +4930,20 @@ describe("Tests saveJsonMap and loadJsonMap", function()
       pending("importing a blank-named area leaks it")
     end)
 
+    it("warns about a room whose id another room in the file already has", function()
+      buildMap()
+      reimportWith(function(document)
+        findRoom(document, roomB).id = roomA
+      end)
+
+      assert.is_true(roomExists(roomA))
+      assert.is_false(roomExists(roomB))
+      local last = getLastLineNumber("main")
+      -- joined without separators because a long message wraps across console lines
+      local recent = table.concat(getLines("main", math.max(0, last - 30), last + 1), "")
+      assert.is_truthy(recent:find("more than one room with id " .. roomA, 1, true), recent)
+    end)
+
     it("drops a special exit whose target id is below one before the audit sees it", function()
       buildMap()
       reimportWith(function(document)

@@ -869,6 +869,11 @@ std::pair<int, QString> TArea::readJsonArea(const QJsonArray& array, const int a
         // one for the audit to renumber and frees one whose id is taken:
         if (mpRoomDB->restoreSingleRoom(roomId, pR)) {
             rooms.insert(roomId);
+        } else {
+            //: Shown when a JSON map file holds two rooms with the same id. %1 is the room id, %2 the id of the area the dropped room was in.
+            const QString warnMsg = tr("[ WARN ]  - The map file has more than one room with id %1, so the one in area %2 has been left out.").arg(QString::number(roomId), QString::number(id));
+            mpMap->appendErrorMsgWithNoLf(warnMsg, false);
+            mpMap->postMessage(warnMsg);
         }
         if (++roomCount % 10 == 0) {
             if (mpMap->incrementJsonProgressDialog(false, true, 10)) {
