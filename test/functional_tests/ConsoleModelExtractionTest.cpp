@@ -2896,7 +2896,7 @@ expectMissing('setBold', setBold('nosuchwindow', true))
 expectMissing('setFgColor', setFgColor('nosuchwindow', 1, 2, 3))
 expectMissing('setBgColor', setBgColor('nosuchwindow', 1, 2, 3))
 expectMissing('resetFormat', resetFormat('nosuchwindow'))
-expectValues('getFgColor of a missing window', {}, getFgColor('nosuchwindow'))
+expectMissing('getFgColor', getFgColor('nosuchwindow'))
 expectValues('setTextFormat of a missing window', {false, "window 'nosuchwindow' does not exist"}, setTextFormat('nosuchwindow', 0, 0, 0, 0, 0, 0, false, false, false))
 
 noViewSelectionReport = table.concat(noViewSelectionProblems, '; ')
