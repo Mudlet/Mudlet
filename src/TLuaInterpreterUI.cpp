@@ -467,10 +467,10 @@ int TLuaInterpreter::createCommandLine(lua_State* L)
 
     const Host& host = getHostFromLua(L);
     if (!host.mpConsole) {
-        return warnArgumentValue(L, __func__, no_main_window_value);
+        return warnArgumentValue(L, __func__, no_main_window_value, true);
     }
     if (auto [success, message] = host.mpConsole->createCommandLine(windowName, commandLineName, x, y, width, height); !success) {
-        return warnArgumentValue(L, __func__, message);
+        return warnArgumentValue(L, __func__, message, true);
     }
 
     lua_pushboolean(L, true);
@@ -703,10 +703,10 @@ int TLuaInterpreter::createTextEdit(lua_State* L)
 
     const Host& host = getHostFromLua(L);
     if (!host.mpConsole) {
-        return warnArgumentValue(L, __func__, no_main_window_value);
+        return warnArgumentValue(L, __func__, no_main_window_value, true);
     }
     if (auto [success, message] = host.mpConsole->createTextBox(windowName, textEditName, x, y, width, height); !success) {
-        return warnArgumentValue(L, __func__, message);
+        return warnArgumentValue(L, __func__, message, true);
     }
 
     lua_pushboolean(L, true);
