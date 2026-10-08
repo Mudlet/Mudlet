@@ -36,6 +36,7 @@
 #include <QFileInfo>
 #include <QSignalSpy>
 #include <QTemporaryDir>
+#include <QTimer>
 #include <QtTest/QtTest>
 #include <string>
 
@@ -140,6 +141,8 @@ private slots:
         for (const QString& profileName : detachedProfiles) {
             mudlet::self()->slot_tabReattachRequested(profileName);
         }
+        QVERIFY(mudlet::self()->getDetachedWindows().isEmpty());
+        QCOMPARE(mudlet::self()->mpTabBar->count(), 3);
     }
 
     void test_gameTextForAProfileBehindAnotherTabMarksItsTab()
@@ -154,6 +157,42 @@ private slots:
 
         QVERIFY2(pTabBar->tabBold(mSecondHostname), "the game sent text to a profile behind another tab of a detached window, and its tab does not say so");
         QVERIFY(!pTabBar->tabItalic(mSecondHostname));
+    }
+
+    // cTelnet posts whatever followed the server's last newline a moment after
+    // the line itself, and that is usually nothing at all
+    void test_anEmptyPostLeavesAHiddenProfilesTabAlone()
+    {
+        TDetachedWindow* pWindow = gatherSecondAndThirdIntoOneWindow();
+        QVERIFY(pWindow);
+        TTabBar* pTabBar = tabBarOf(pWindow);
+        QVERIFY(pTabBar);
+        QVERIFY(!pTabBar->tabBold(mSecondHostname));
+
+        // What cTelnet::slot_timerPosting() posts when nothing was held back
+        std::string nothing{"\r"};
+        mpSecondHost->printOnDisplay(nothing, true);
+
+        QVERIFY2(!pTabBar->tabBold(mSecondHostname), "a post that added no text marked the tab of a profile behind another one");
+    }
+
+    // A chat capture that moves a line elsewhere and gags it leaves the main
+    // buffer looking as it did, but the player still has text to read
+    void test_aGaggedLineStillMarksAHiddenProfilesTab()
+    {
+        TDetachedWindow* pWindow = gatherSecondAndThirdIntoOneWindow();
+        QVERIFY(pWindow);
+        TTabBar* pTabBar = tabBarOf(pWindow);
+        QVERIFY(pTabBar);
+        QVERIFY(!pTabBar->tabBold(mSecondHostname));
+        QVERIFY(mpSecondHost->getLuaInterpreter()->compileAndExecuteScript(qsl("gagTriggerId = tempTrigger('The wind howls.', function() deleteLine() end)")));
+
+        sendGameText(mpSecondHost);
+        const bool marked = pTabBar->tabBold(mSecondHostname);
+        // Removed ahead of the assertion, which returns on failure
+        QVERIFY(mpSecondHost->getLuaInterpreter()->compileAndExecuteScript(qsl("killTrigger(gagTriggerId)")));
+
+        QVERIFY2(marked, "a line a trigger gagged left the hidden profile's tab unmarked");
     }
 
     void test_gameTextForTheProfileOnShowLeavesItsTabAlone()
@@ -230,6 +269,32 @@ private slots:
 
         pTabBar->setCurrentIndex(pTabBar->tabIndex(mSecondHostname));
         QVERIFY2(!pTabBar->tabBold(mSecondHostname), "the player switched to the profile and its tab still claims text they have not seen");
+    }
+
+    // mudlet runs an orphan check from a timer, which reattaches any profile it
+    // finds in neither the main window nor a detached one. A move that yields to
+    // the event loop part way through must not leave the profile in that state,
+    // or the check gives it a main window tab as well as its new window.
+    void test_aProfileMovingIntoAWindowIsNeverOrphaned()
+    {
+        mudlet::self()->slot_tabDetachRequested(mudlet::self()->mpTabBar->tabIndex(mSecondHostname), QPoint(200, 200));
+        TDetachedWindow* pWindow = mudlet::self()->getDetachedWindows().value(mSecondHostname);
+        QVERIFY(pWindow);
+
+        bool checked = false;
+        QStringList orphansMidMove;
+        QTimer::singleShot(0, mudlet::self(), [&checked, &orphansMidMove]() {
+            checked = true;
+            orphansMidMove = mudlet::self()->getOrphanedProfiles();
+            mudlet::self()->reattachOrphanedProfiles();
+        });
+        mudlet::self()->slot_profileDetachToWindow(mThirdHostname, pWindow);
+        QCoreApplication::processEvents();
+
+        QVERIFY(checked);
+        QVERIFY2(orphansMidMove.isEmpty(), qPrintable(qsl("orphaned while moving into a detached window: %1").arg(orphansMidMove.join(qsl(", ")))));
+        QCOMPARE(mudlet::self()->getDetachedWindows().value(mThirdHostname), pWindow);
+        QCOMPARE(mudlet::self()->mpTabBar->count(), 1);
     }
 
 private:

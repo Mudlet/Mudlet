@@ -9415,16 +9415,18 @@ void mudlet::moveProfileFromMainToDetachedWindow(const QString& profileName, int
     // Remove tab from main window tab bar
     mpTabBar->removeTab(tabIndex);
 
-    // Force tab bar repaint after removing tab
-    mpTabBar->repaint();
-    mpTabBar->update();
-    QCoreApplication::processEvents();
-
     // Add profile to target detached window
     targetWindow->addProfile(profileName, console);
 
     // Add profile to the detached windows map
     mDetachedWindows[profileName] = targetWindow;
+
+    // Only now that the profile has its new home: a timer delivered by
+    // processEvents() may run the orphan check, which reattaches any profile it
+    // finds in neither the main window nor a detached one
+    mpTabBar->repaint();
+    mpTabBar->update();
+    QCoreApplication::processEvents();
 
     // Update multi-view controls
     updateMultiViewControls();

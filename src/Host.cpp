@@ -2550,6 +2550,7 @@ void Host::printOnDisplay(std::string& data, const bool isFromServer)
     model.mTriggerEngineMode = true;
     const int beforeTranslateLastLineNumber = buffer.getLastLineNumber();
     const QString beforeTranslateLastLine = alertWanted ? buffer.line(beforeTranslateLastLineNumber - 1) : QString();
+    const quint64 beforeTranslateCommittedLineCount = buffer.committedLineCount();
     buffer.translateToPlainText(data, isFromServer);
     model.mTriggerEngineMode = wasInTriggerEngineMode;
 
@@ -2568,7 +2569,7 @@ void Host::printOnDisplay(std::string& data, const bool isFromServer)
     }
 
     if (mpConsole) {
-        mpConsole->finishIncomingText();
+        mpConsole->finishIncomingText(buffer.committedLineCount() != beforeTranslateCommittedLineCount);
     }
 }
 

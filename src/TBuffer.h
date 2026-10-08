@@ -429,6 +429,9 @@ public:
     void appendBuffer(const TBuffer& chunk);
     bool moveCursor(QPoint& where);
     int getLastLineNumber();
+    // Lines committed since the buffer was made, which unlike the line count
+    // trimming and deleteLine() cannot hold steady while text arrives
+    quint64 committedLineCount() const { return mCommittedLineCount; }
     QStringList getEndLines(int);
     void clear();
     void clearLinkState(const QSet<int>& stillLiveLinkIds = {});
@@ -520,6 +523,7 @@ public:
     TLinkStore mLinkStore;
     int mLinesLimit = 10000;
     int mBatchDeleteSize = 1000;
+    quint64 mCommittedLineCount = 0;
     int mWrapAt = 99999999;
     int mWrapIndent = 0;
     int mWrapHangingIndent = 0;
