@@ -254,7 +254,8 @@ if false then
   --- sets off such a script reads what that script expanded, while such a script reads the alias's own command if the
   --- alias has already had it back from an expandAlias() call of its own. Once the alias pass is over, "command" holds
   --- the last command expanded, unless a script has since set it to a different value. A command sent at the command
-  --- line is unaffected: every alias it runs sees it in "command" as before.
+  --- line is still given to each alias it runs in "command", unless a script an earlier one of those aliases set off
+  --- has expanded another command since.
   ---
   --- @see send
   function expandAlias(command, print=1)

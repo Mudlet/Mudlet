@@ -68,7 +68,7 @@ public:
     void _uninstall(TAlias* pChild, const QString& packageName);
     void reParentAlias(int childID, int oldParentID, int newParentID, int parentPosition = -1, int childPosition = -1);
     void reParentAlias(int childID, int oldParentID, int newParentID, TreeItemInsertMode mode, int position = 0);
-    bool processDataStream(const QString&, const bool aliasScriptPass = false);
+    bool processDataStream(const QString&);
     void stopAllTriggers();
     void reenableAllTriggers();
     std::tuple<QString, int, int, int> assembleReport();

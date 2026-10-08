@@ -302,7 +302,7 @@ int AliasUnit::getNewID()
     return ++mMaxID;
 }
 
-bool AliasUnit::processDataStream(const QString& data, const bool aliasScriptPass)
+bool AliasUnit::processDataStream(const QString& data)
 {
     // Dropped rather than sent: every sibling expansion still pending would otherwise reach
     // the game as a command of its own
@@ -335,20 +335,15 @@ bool AliasUnit::processDataStream(const QString& data, const bool aliasScriptPas
     QByteArray haystack = data.toUtf8();
     haystack.truncate(qstrlen(haystack.constData()));
 
-    TLuaInterpreter::PassCommandState outerPassCommand;
-    if (!aliasScriptPass) {
-        outerPassCommand = Lua->beginAliasPassCommand();
-    }
+    TLuaInterpreter::PassCommandState outerPassCommand = Lua->beginAliasPassCommand();
     mProcessingDepth++;
-    const auto processingGuard = qScopeGuard([this, Lua, aliasScriptPass, &outerPassCommand] {
+    const auto processingGuard = qScopeGuard([this, Lua, &outerPassCommand] {
         mProcessingDepth--;
         Q_ASSERT(mProcessingDepth >= 0);
         if (mProcessingDepth <= 1) {
             mRunawayExpansionStopped = false;
         }
-        if (!aliasScriptPass) {
-            Lua->settleCommandAfterAliasPass(outerPassCommand);
-        }
+        Lua->settleCommandAfterAliasPass(outerPassCommand);
         if (mProcessingDepth == 0) {
             doCleanup();
         }

@@ -1890,7 +1890,7 @@ QPair<QString, QString> Host::getSearchEngine()
 
 // cmd is UTF-16BE encoded here, but will be transcoded to Server's one by
 // cTelnet::sendData(...) call:
-void Host::send(QString cmd, bool wantPrint, bool dontExpandAliases, bool aliasScriptPass)
+void Host::send(QString cmd, bool wantPrint, bool dontExpandAliases)
 {
     // Record that the player (or a script acting for them) has interacted this connection; a later
     // unsolicited GMCP Char.Login.URL may then auto-open the browser (see GMCPAuthenticator).
@@ -1951,7 +1951,7 @@ void Host::send(QString cmd, bool wantPrint, bool dontExpandAliases, bool aliasS
             continue;
         }
 
-        if (!mAliasUnit.processDataStream(command, aliasScriptPass)) {
+        if (!mAliasUnit.processDataStream(command)) {
             mTelnet.sendData(command, true, true);
         }
     }

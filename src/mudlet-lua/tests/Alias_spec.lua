@@ -691,7 +691,7 @@ describe("Alias processing", function()
         end)
 
         -- Packages such as Repeater read "command" after an expandAlias() as the last command sent
-        describe("command for scripts other than the calling alias", function()
+        describe("command around expandAlias()", function()
             -- Not straight from the spec: run through the runTests alias, that would
             -- be an alias script, which gets its own "command" back
             local function expandFromHandler(text)
@@ -1151,6 +1151,103 @@ describe("Alias processing", function()
                 assert.are.equal("command_split_second", seen.inSecond, "the second alias did not get its own command back")
                 assert.are.equal("command_split_outer", seen.inOuter, "the alias did not get its own command back")
                 assert.are.equal("command_split_second_inner", command, "command did not end up holding the last command expanded")
+            end)
+
+            -- Every way a trigger's script is run: expiring ones report back whether
+            -- to renew, and multi-line ones are handed multimatches
+            for _, kind in ipairs({
+                {name = "an expiring trigger with a function script", make = function(pattern)
+                    return tempRegexTrigger(pattern, function()
+                        expandAlias("command_from_kind_trigger", false)
+                        _G.aliasSpecSeenInKindTrigger = command
+                    end, 1)
+                end},
+                {name = "an expiring trigger with a script of text", make = function(pattern)
+                    return tempRegexTrigger(pattern, [[expandAlias("command_from_kind_trigger", false) aliasSpecSeenInKindTrigger = command]], 1)
+                end},
+                {name = "a multi-line trigger", make = function(pattern)
+                    return tempComplexRegexTrigger("aliasSpecKindTrigger", pattern,
+                        [[expandAlias("command_from_kind_trigger", false) aliasSpecSeenInKindTrigger = command]], 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, nil)
+                end},
+                {name = "an expiring multi-line trigger", make = function(pattern)
+                    return tempComplexRegexTrigger("aliasSpecKindTrigger", pattern,
+                        [[expandAlias("command_from_kind_trigger", false) aliasSpecSeenInKindTrigger = command]], 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1)
+                end},
+            }) do
+                it("gives " .. kind.name .. " that an alias fed the command the trigger expanded", function()
+                    _G.aliasSpecSeenInKindTrigger = nil
+                    local triggerId = kind.make([[^command_fed_kind_trigger$]])
+                    local aliasId = tempAlias([[^command_kind_feeder$]], function()
+                        feedTriggers("\ncommand_fed_kind_trigger\n")
+                    end)
+                    finally(function()
+                        killTrigger(triggerId)
+                        killTrigger("aliasSpecKindTrigger")
+                        killAlias(aliasId)
+                        _G.aliasSpecSeenInKindTrigger = nil
+                    end)
+
+                    expandFromHandler("command_kind_feeder")
+
+                    assert.are.equal("command_from_kind_trigger", rawget(_G, "aliasSpecSeenInKindTrigger"), "the trigger got the alias's command back")
+                end)
+            end
+
+            it("leaves command holding what a script an alias set off set it to after expanding", function()
+                local lookId = tempAlias([[^command_reset_look$]], function() end)
+                local otherId = tempAlias([[^command_reset_other$]], function() end)
+                local handlerId = registerAnonymousEventHandler("aliasSpecCommandResetToAlias", function()
+                    expandAlias("command_reset_other", false)
+                    _G.command = "command_reset_go"
+                end)
+                local goId = tempAlias([[^command_reset_go$]], function()
+                    expandAlias("command_reset_look", false)
+                    raiseEvent("aliasSpecCommandResetToAlias")
+                end)
+                finally(function()
+                    killAlias(lookId)
+                    killAlias(otherId)
+                    killAnonymousEventHandler(handlerId)
+                    killAlias(goId)
+                end)
+
+                expandFromHandler("command_reset_go")
+
+                assert.are.equal("command_reset_go", command, "what the handler set was replaced by a command the alias expanded")
+            end)
+
+            -- expandAlias("") runs no alias pass, so leaves command as it was
+            it("leaves command holding the last command expanded after an alias's empty expansion", function()
+                local innerId = tempAlias([[^command_empty_inner$]], function() end)
+                local outerId = tempAlias([[^command_empty_outer$]], function()
+                    expandAlias("command_empty_inner", false)
+                    expandAlias("", false)
+                end)
+                finally(function()
+                    killAlias(innerId)
+                    killAlias(outerId)
+                end)
+
+                expandFromHandler("command_empty_outer")
+
+                assert.are.equal("command_empty_inner", command, "the empty expansion replaced the last command expanded")
+            end)
+
+            it("leaves command holding what an alias set it to before an empty expansion", function()
+                local innerId = tempAlias([[^command_empty_set_inner$]], function() end)
+                local outerId = tempAlias([[^command_empty_set_outer$]], function()
+                    expandAlias("command_empty_set_inner", false)
+                    _G.command = "command_set_before_empty"
+                    expandAlias("", false)
+                end)
+                finally(function()
+                    killAlias(innerId)
+                    killAlias(outerId)
+                end)
+
+                expandFromHandler("command_empty_set_outer")
+
+                assert.are.equal("command_set_before_empty", command, "what the alias set was replaced by a command it expanded")
             end)
 
             it("leaves command holding the last command expanded once the alias pass is over", function()

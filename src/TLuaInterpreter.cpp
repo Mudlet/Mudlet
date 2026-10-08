@@ -3112,7 +3112,7 @@ int TLuaInterpreter::expandAlias(lua_State* L)
     }
     // Host::send will encode the UTF encoded data here in the wanted Server
     // encoding:
-    host.send(payload, wantPrint, false, pL->mRunningAliasScript);
+    host.send(payload, wantPrint, false);
     pL->popNestedDispatchState(dispatchDepth);
     lua_pushboolean(L, true);
     return 1;
@@ -3822,8 +3822,8 @@ void TLuaInterpreter::popNestedDispatchState(const int depth)
     lua_rawgeti(L, LUA_REGISTRYINDEX, saved.multimatchesRef);
     lua_rawset(L, LUA_GLOBALSINDEX);
     if (saved.commandRef != LUA_NOREF) {
-        // Kept for settleCommandAfterAliasPass(), unless all that has written
-        // "command" since the last restore is a restore deeper in this pass
+        // Kept for settleCommandAfterAliasPass(), unless nothing has changed "command"
+        // since this pass's last restore, as when expandAlias("") runs no pass
         lua_pushliteral(L, "command");
         lua_rawget(L, LUA_GLOBALSINDEX);
         bool keepEarlier = false;
@@ -3862,9 +3862,8 @@ void TLuaInterpreter::setExpandedCommand(const QString& command)
 }
 
 // No documentation available in wiki - internal function
-// For any pass that is not part of an alias script's own expandAlias(): what alias
-// scripts were given back inside it is settled when it ends, except inside a nested
-// pass that settles itself
+// Every alias pass settles what alias scripts were given back inside it when it ends,
+// so the state of the pass it runs inside is set aside until then
 TLuaInterpreter::PassCommandState TLuaInterpreter::beginAliasPassCommand()
 {
     PassCommandState outer = std::exchange(mPassCommand, PassCommandState{});

@@ -282,9 +282,7 @@ public:
     ScriptUnit* getScriptUnit() { return &mScriptUnit; }
     GifTracker* getGifTracker() { return &mGifTracker; }
 
-    // aliasScriptPass: the alias passes this runs are part of the alias script whose
-    // expandAlias() asked for them, so do not settle "command" when they end
-    void send(QString cmd, bool wantPrint = true, bool dontExpandAliases = false, bool aliasScriptPass = false);
+    void send(QString cmd, bool wantPrint = true, bool dontExpandAliases = false);
 
     int getHostID() { return mHostID; }
 
