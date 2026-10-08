@@ -114,6 +114,10 @@ public:
     // retrieved value), so callers such as UI code need not materialize the secret just to test presence.
     void credentialExists(const QString& profileName, const QString& key, std::function<void(bool exists)> callback, StoreScope scope = StoreScope::PreferredStore);
 
+    // A failed retrieval's errorMessage when the only copy is an encrypted file this profile cannot
+    // decrypt, so a caller can ask for the password again rather than say none is saved
+    static QString unreadableFileError(const QString& profileName);
+
     // What this manager's last store left readable by other accounts, or empty. Kept per manager, not
     // process-wide, so the report is about this store and not a failure elsewhere in the meantime.
     QString unprotectedSecretPath() const { return mUnprotectedSecretPath; }
@@ -163,7 +167,8 @@ private:
     static bool isValidKeyName(const QString& key);
     static bool storeCredentialToFile(const QString& profileName, const QString& key, const QString& credential);
     bool storeCredentialToFileForThisOperation(const QString& profileName, const QString& key, const QString& credential);
-    static QString retrieveCredentialFromFile(const QString& profileName, const QString& key);
+    // unreadable, when given, is set if a credential file exists but could not be read or decrypted
+    static QString retrieveCredentialFromFile(const QString& profileName, const QString& key, bool* unreadable = nullptr);
     static bool removeCredentialFromFile(const QString& profileName, const QString& key);
 
     // One place a lookup may find the password: a keychain entry, or the encrypted file. recover
@@ -197,6 +202,8 @@ private:
         // The first read that failed for a reason other than there being no such entry, reported in
         // place of "not found" if nothing turns up.
         QString keychainError;
+        // The encrypted file is there but could not be decrypted, reported if nothing else turns up
+        bool fileUnreadable = false;
         // Whether any read has reached the store, answering either with a password or with "no such
         // entry". Until one has, a refusal is the store itself saying no - locked, or a prompt the
         // player dismissed - and the layouts behind it cannot be read either. Once one has, every

@@ -139,6 +139,7 @@ private slots:
     void testCredentialExistsWithoutHandingOverTheSecret();
     void testAsyncEmptyArgumentsAreReportedThroughTheCallback();
     void testAsyncApiRefusesTheKeysTheStaticApiRefuses();
+    void testAnUndecryptableFileIsNotReportedAsNoPassword();
     void cleanupTestCase();
 
 private:
@@ -987,6 +988,45 @@ void CredentialManagerTest::testAsyncApiRefusesTheKeysTheStaticApiRefuses()
     QVERIFY(stored);
     QCOMPARE(CredentialManager::retrieveCredential(profile, accepted), QString("async_secret"));
     CredentialManager::removeCredential(profile, accepted);
+}
+
+// #10925: the dialog has to be able to tell the player a saved password is unreadable,
+// rather than leave them looking at an empty field as if none had been saved
+void CredentialManagerTest::testAnUndecryptableFileIsNotReportedAsNoPassword()
+{
+    CredentialManager manager;
+    const QString profile = qsl("UndecryptableProfile");
+    const QString key = qsl("character");
+
+    bool stored = false;
+    manager.storePassword(profile, key, qsl("soon_unreadable"), [&](bool success, const QString&) {
+        stored = success;
+    });
+    QVERIFY(stored);
+
+    QFile file(credentialPath(profile, key));
+    QVERIFY(file.open(QIODevice::WriteOnly | QIODevice::Truncate));
+    QVERIFY(file.write("this is not anything Mudlet encrypted") > 0);
+    file.close();
+
+    bool retrieved = true;
+    QString retrieveError;
+    manager.retrievePassword(profile, key, [&](bool success, QString, const QString& error) {
+        retrieved = success;
+        retrieveError = error;
+    });
+    QVERIFY(!retrieved);
+    QCOMPARE(retrieveError, CredentialManager::unreadableFileError(profile));
+
+    // ...while a profile that never had one saved still says so
+    manager.retrievePassword(qsl("NeverSavedAnything"), key, [&](bool success, QString, const QString& error) {
+        retrieved = success;
+        retrieveError = error;
+    });
+    QVERIFY(!retrieved);
+    QVERIFY(retrieveError != CredentialManager::unreadableFileError(qsl("NeverSavedAnything")));
+
+    CredentialManager::removeCredential(profile, key);
 }
 
 void CredentialManagerTest::cleanupTestCase()

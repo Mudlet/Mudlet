@@ -28,6 +28,7 @@
  */
 
 #include "PortableModeTestHelper.h"
+#include "CredentialManager.h"
 #include "MudletInstanceCoordinator.h"
 #include "MudletApp.h"
 #include "dlgConnectionProfiles.h"
@@ -297,6 +298,38 @@ private slots:
         QVERIFY2(dlg->mPendingProfileLoad.isEmpty(), "a load queued for another profile was left queued");
         QVERIFY2(!dlg->mPendingConnect, "a connection queued for another profile was left queued");
         QVERIFY2(dlg->mKeychainOperationProfile.isEmpty(), "the answered read is still recorded as in flight");
+        dlg->deleteLater();
+    }
+
+    // #10925: a saved password that cannot be decrypted is reported, and a Connect waiting on it
+    // stops there so the player sees why and can type it, rather than connect without it
+    void test_anUnreadablePasswordIsReported()
+    {
+        const QString profile = qsl("ConnDialogUnreadable-Test");
+        auto* dlg = new dlgConnectionProfiles(mudlet::self());
+        {
+            const QSignalBlocker blocker(dlg->listWidget_profiles);
+            auto* profileItem = new QListWidgetItem(profile, dlg->listWidget_profiles);
+            profileItem->setData(dlgConnectionProfiles::csmNameRole, profile);
+            dlg->listWidget_profiles->setCurrentItem(profileItem);
+        }
+        dlg->passwordRetrieved(profile, false, QString(), qsl("No stored credentials found for profile %1").arg(profile));
+        QVERIFY2(!dlg->notificationAreaMessageBox->text().contains(qsl("could not be read")), "a profile with no saved password was told its password could not be read");
+
+        dlg->mKeychainOperationProfile = profile;
+        dlg->mPendingProfileLoad = profile;
+        dlg->mPendingConnect = true;
+        dlg->showKeychainWait();
+        bool connected = false;
+        connect(dlg, &QDialog::accepted, dlg, [&connected]() {
+            connected = true;
+        });
+
+        dlg->passwordRetrieved(profile, false, QString(), CredentialManager::unreadableFileError(profile));
+        QVERIFY2(dlg->notificationAreaMessageBox->text().contains(qsl("could not be read")), qPrintable(dlg->notificationAreaMessageBox->text()));
+        QVERIFY2(!connected, "the profile connected without the password, and the warning went with the dialog");
+        QVERIFY2(!dlg->mKeychainWaitShown, "the dialog was left waiting");
+        QVERIFY2(dlg->mPendingProfileLoad.isEmpty(), "the Connect was left queued");
         dlg->deleteLater();
     }
 

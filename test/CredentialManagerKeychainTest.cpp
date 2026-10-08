@@ -82,6 +82,7 @@ private slots:
     void testARecoveredPasswordSurvivesAKeychainThatRefusesToStoreIt();
     void testAKeychainErrorIsReportedRatherThanNothingFound_data();
     void testAKeychainErrorIsReportedRatherThanNothingFound();
+    void testAnUndecryptableFileIsReportedRatherThanNothingFound();
     void testAStoreThatRefusesIsNotAskedForEveryOtherLayout();
     void testAFreshRefusalSparesTheNextLookupTheStore();
     void testARefusalOfTheSignInsOnlyKeychainReadSparesTheNextLookup();
@@ -1325,6 +1326,27 @@ void CredentialManagerKeychainTest::testAKeychainErrorIsReportedRatherThanNothin
     // looking in the others: the read after it is answered here, so the chain runs to the end. Only
     // refusals with nothing answered between them are the store itself saying no (#11029).
     QCOMPARE(staller.reads().size(), expectedReads(mProfile, mKey).size());
+}
+
+// #10925: with nothing in the keychain, a file that is there but cannot be decrypted is a
+// password the player has to type again, not one that was never saved
+void CredentialManagerKeychainTest::testAnUndecryptableFileIsReportedRatherThanNothingFound()
+{
+    QVERIFY(CredentialManager::storeCredential(mProfile, mKey, QStringLiteral("soon_unreadable")));
+    QFile file(CredentialManager::generateFilePath(mProfile, mKey));
+    QVERIFY(file.open(QIODevice::WriteOnly | QIODevice::Truncate));
+    QVERIFY(file.write("this is not anything Mudlet encrypted") > 0);
+    file.close();
+
+    JobStaller staller;
+    staller.answerOtherReadsNotFound();
+    CredentialManager manager;
+    manager.mJobStartHook = staller.hook();
+
+    const auto answer = startRetrieval(manager, mProfile, mKey);
+    QVERIFY(waitForAnswer(answer));
+    QVERIFY(!answer->success);
+    QCOMPARE(answer->error, CredentialManager::unreadableFileError(mProfile));
 }
 
 // SlySven's report (#11029): a locked or dismissed keychain was asked once per historical layout,

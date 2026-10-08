@@ -3005,6 +3005,7 @@ void dlgConnectionProfiles::slot_loadPasswordAsync()
 void dlgConnectionProfiles::passwordRetrieved(const QString& profileName, bool success, const QString& password, const QString& errorMessage)
 {
     const bool profileStillSelected = listWidget_profiles->currentItem() && listWidget_profiles->currentItem()->data(csmNameRole).toString() == profileName;
+    bool passwordUnreadable = false;
 
     // Clear the operation flag first
     mKeychainOperationProfile.clear();
@@ -3033,7 +3034,16 @@ void dlgConnectionProfiles::passwordRetrieved(const QString& profileName, bool s
                 loadPasswordFromSettings(profileName);
             }
             qDebug() << "dlgConnectionProfiles: Credential retrieval unsuccessful for" << profileName << "-" << errorMessage;
+            passwordUnreadable = character_password_entry->text().isEmpty() && errorMessage == CredentialManager::unreadableFileError(profileName);
         }
+    }
+
+    // A Connect waiting on this read stops here, so the warning stays up and the password can be typed
+    if (passwordUnreadable) {
+        abandonPendingProfileLoad();
+        //: Shown in the connection dialog when a password was saved for the profile but its file could not be decrypted, for example because it is damaged
+        showNotification(tr("The saved password for this profile could not be read. Please enter it again."), notificationAreaIconLabelWarning);
+        return;
     }
 
     // Check if there's a pending connection waiting for this password load

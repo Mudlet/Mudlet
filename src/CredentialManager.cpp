@@ -607,13 +607,18 @@ void CredentialManager::retrievePassword(
         runLookupStage(lookup, 0);
     } else {
         // Use SecureStringUtils directly (portable/test mode)
-        QString password = retrieveCredentialFromFile(profileName, key);
+        bool unreadable = false;
+        QString password = retrieveCredentialFromFile(profileName, key, &unreadable);
         bool success = !password.isEmpty();
+        QString errorMessage;
+        if (!success) {
+            errorMessage = unreadable ? unreadableFileError(profileName) : qsl("No password stored in encrypted file storage");
+        }
 
         if (callback) {
             // Empty password is normal for first-time profiles - not an error. Move the buffer so the
             // receiver takes sole ownership and can scrub the secret in place.
-            callback(success, std::move(password), success ? QString() : qsl("No password stored in encrypted file storage"), false);
+            callback(success, std::move(password), errorMessage, false);
         }
     }
 }
@@ -746,8 +751,14 @@ void CredentialManager::runLookupStage(const LookupPtr& lookup, std::size_t inde
     if (index >= lookup->stages.size()) {
         // A keychain that refused a read may still hold the password, so say so rather than
         // reporting that nothing is stored.
-        const QString error =
-                lookup->keychainError.isEmpty() ? qsl("No stored credentials found for profile %1").arg(lookup->profileName) : qsl("Could not read the keychain: %1").arg(lookup->keychainError);
+        QString error;
+        if (!lookup->keychainError.isEmpty()) {
+            error = qsl("Could not read the keychain: %1").arg(lookup->keychainError);
+        } else if (lookup->fileUnreadable) {
+            error = unreadableFileError(lookup->profileName);
+        } else {
+            error = qsl("No stored credentials found for profile %1").arg(lookup->profileName);
+        }
         finishLookup(lookup, false, QString(), error);
         return;
     }
@@ -762,7 +773,7 @@ void CredentialManager::runLookupStage(const LookupPtr& lookup, std::size_t inde
         return;
     }
     if (stage.fromFile) {
-        QString password = retrieveCredentialFromFile(lookup->profileName, lookup->key);
+        QString password = retrieveCredentialFromFile(lookup->profileName, lookup->key, &lookup->fileUnreadable);
         if (password.isEmpty()) {
             runLookupStage(lookup, index + 1);
             return;
@@ -1543,7 +1554,12 @@ bool CredentialManager::storeCredentialToFile(const QString& profileName, const 
     return true;
 }
 
-QString CredentialManager::retrieveCredentialFromFile(const QString& profileName, const QString& key)
+/*static*/ QString CredentialManager::unreadableFileError(const QString& profileName)
+{
+    return qsl("The saved password for profile %1 could not be decrypted").arg(profileName);
+}
+
+QString CredentialManager::retrieveCredentialFromFile(const QString& profileName, const QString& key, bool* unreadable)
 {
     QString filePath = generateFilePath(profileName, key);
 
@@ -1583,6 +1599,9 @@ QString CredentialManager::retrieveCredentialFromFile(const QString& profileName
         // Only log warning if file should exist (not for first-time access)
         if (file.exists()) {
             qWarning() << "CredentialManager: Failed to open existing file for reading:" << filePath << "Error:" << file.errorString();
+            if (unreadable) {
+                *unreadable = true;
+            }
         }
 
         return QString();
@@ -1606,6 +1625,9 @@ QString CredentialManager::retrieveCredentialFromFile(const QString& profileName
 
     if (decrypted.isEmpty()) {
         qWarning() << "CredentialManager: Failed to decrypt credential for profile" << profileName;
+        if (unreadable) {
+            *unreadable = true;
+        }
     } else {
         // Logged here because the caller can't tell keychain from file fallback. The key is named because
         // this also serves the proxy password and credentialExists()'s reconnect token.
