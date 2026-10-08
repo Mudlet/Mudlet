@@ -36,8 +36,8 @@ struct pcre2_real_match_data_8;
 
 // Evaluates "could this trigger fire on this line?" for a batch across a few threads, so the
 // sequential pass that follows visits only those that can. The predicates read only the trigger and
-// the line, which makes them safe off the main thread; anything with an effect (captures, colouring,
-// Lua) stays on the main thread, in order.
+// the line and write only the trigger's own prescan result, which makes them safe off the main thread;
+// anything with an effect (captures, colouring, Lua) stays on the main thread, in order.
 //
 // The caller takes chunks like any helper and only waits for chunks a helper has claimed. A helper
 // asleep at publish joins whichever batch is current when it wakes, so the caller pays a notify,
@@ -64,13 +64,18 @@ public:
     // time: the batch lives in the pool until this returns.
     bool prescan(TTrigger* const* triggers, int count, quint32 passId, const char* subject, int subjectLength, const QString& haystack, const TBigramFilter& lineBigrams, bool dropsText);
 
-    // Regex searches per line below which the fork-join costs more than it saves. Searches, not
-    // triggers: disabled, multiline or already-settled triggers run none and should not open the pool.
+    // Failed regex searches per line below which the fork-join costs more than it saves (all searches when
+    // missesPerMatch() is zero). Searches, not triggers: disabled, multiline or already-settled triggers run
+    // none and should not open the pool. See TriggerUnit::prescanPays().
     int threshold() const { return mThreshold; }
-    // Across all threads; the caller weighs it against threshold() for the next line
+    // Across all threads; the caller weighs them against threshold() for the next line
     int regexSearchesInLastBatch() const { return mRegexSearchesInLastBatch; }
+    int regexMatchesInLastBatch() const { return mRegexMatchesInLastBatch; }
     // Lines a chunk must carry before its matching is worth sharing out; see TriggerUnit::processDataStream()
     int floodChunkLines() const { return mFloodChunkLines; }
+    // Failed regex searches a line must have run for each one that matched. Zero counts every search
+    // towards threshold(), matched or not.
+    int missesPerMatch() const { return mMissesPerMatch; }
     // Helpers plus the calling thread. Zero only when the pool is off, the one case where it declines
     // every batch, so this also says whether the parallel path is in use.
     int workerCount() const { return mThreads.empty() ? 0 : static_cast<int>(mThreads.size()) + 1; }
@@ -108,6 +113,7 @@ private:
     // spatial prefetcher pulls 64-byte lines in pairs. Not std::hardware_destructive_interference_size:
     // GCC says 64 on x86 and libc++ does not define it.
     static constexpr std::size_t scmCacheLine = 128;
+    static constexpr uint32_t scmScratchOvectorPairs = 32;
 
     // Read by every helper on every spin, written only at construction or shutdown, so this line stays
     // valid in every cache while the pool works.
@@ -127,7 +133,9 @@ private:
     alignas(scmCacheLine) Job mJob;
     // Main thread only, on mJob's line; mEpoch reaches the helpers inside mCursor.
     quint64 mPrescanCount = 0;
+    int mMissesPerMatch = 0;
     int mRegexSearchesInLastBatch = 0;
+    int mRegexMatchesInLastBatch = 0;
     uint32_t mEpoch = 0;
 
     // One word, so a single fetch_add claims a chunk and says which batch, and how large, it belongs to;
@@ -136,6 +144,8 @@ private:
     alignas(scmCacheLine) std::atomic<uint64_t> mCursor{0};
     // Chunks finished:32 | regex searches run:32, so a chunk reports both in the fetch_add the join waits on
     alignas(scmCacheLine) std::atomic<uint64_t> mDone{0};
+    // Added to before mDone, whose release publishes it; a word of its own so no count can carry into the chunks
+    std::atomic<uint32_t> mMatchesDone{0};
 };
 
 #endif // MUDLET_TRIGGERMATCHPOOL_H

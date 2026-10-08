@@ -686,6 +686,10 @@ int TLuaInterpreter::getProfileStats(lua_State* L)
         lua_pushnumber(L, static_cast<double>(TriggerMatchPool::instance().prescanCount()));
         lua_settable(L, -3);
 
+        lua_pushstring(L, "prescanMatchesReused");
+        lua_pushnumber(L, static_cast<double>(TTrigger::prescanMatchesReused()));
+        lua_settable(L, -3);
+
         lua_pushstring(L, "rootFilterEpoch");
         lua_pushnumber(L, static_cast<double>(host.getTriggerUnit()->rootFilterEpoch()));
         lua_settable(L, -3);

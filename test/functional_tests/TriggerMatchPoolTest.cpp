@@ -141,10 +141,10 @@ private slots:
         const quint32 passId = TTrigger::nextPrescanPassId();
         QVERIFY(pool.prescan(&trigger, 1, passId, subject.constData(), static_cast<int>(subject.size()), line, unprepared, false));
 
-        TTrigger::setPrescanPassId(passId);
+        TTrigger::setPrescanPass(passId, subject.constData(), static_cast<int>(subject.size()));
         const TUtf8Subject matchSubject(subject.constData(), static_cast<int>(subject.size()));
         const bool matched = trigger->match(matchSubject, line, 0, 0, &unprepared);
-        TTrigger::setPrescanPassId(0);
+        TTrigger::setPrescanPass(0, nullptr, 0);
         QVERIFY(matched);
         QCOMPARE(luaInteger(mpHost, "bigramHits"), 1);
         mpHost->getLuaInterpreter()->compileAndExecuteScript(qsl("killTrigger(bigramTriggerId)"));

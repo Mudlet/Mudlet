@@ -51,6 +51,7 @@
 #include <QStringView>
 #include <QVector>
 
+#include <algorithm>
 #include <cstdint>
 #include <cstring>
 #include <deque>
@@ -566,8 +567,12 @@ static void pcre2_match_data_deleter(pcre2_match_data* pointer)
 
 quint64 TTrigger::smStructureGeneration = 0;
 quint64 TTrigger::smRegexSearches = 0;
+quint64 TTrigger::smRegexMatches = 0;
+quint64 TTrigger::smPrescanMatchesReused = 0;
 quint32 TTrigger::smPrescanPassId = 0;
 quint32 TTrigger::smPrescanPassIdCounter = 0;
+const char* TTrigger::smPrescanSubject = nullptr;
+int TTrigger::smPrescanSubjectLength = 0;
 
 //FIXME: lock if code *OR* regex doesn't compile
 bool TTrigger::setRegexCodeList(QStringList patterns, QList<int> patternKinds, bool existingTrigger)
@@ -575,6 +580,7 @@ bool TTrigger::setRegexCodeList(QStringList patterns, QList<int> patternKinds, b
     ++smStructureGeneration;
     // A verdict on the old patterns says nothing about the new ones, and this can run mid-line
     mPrescanPassId = 0;
+    mPrescanMatchedPattern = -1;
     patterns.replaceInStrings("\n", "");
     mPatterns.clear();
     mSubstringPatterns.clear();
@@ -897,6 +903,33 @@ void TUtf8Subject::encode() const
     mpPendingLine = nullptr;
 }
 
+// The one search both match_perl() and prescanMayFire() make, so the prescan's answer and any match it
+// leaves behind are what the main thread would have found. Safe off the main thread.
+int TTrigger::search(const int patternNumber, const char* subject, const int subjectLength, pcre2_match_data* matchData) const
+{
+    const pcre2_code* re = mRegexes[patternNumber].data();
+    // pcre2_match() finds the JIT code itself, but only after option and argument checks repeated every line
+    return mRegexJitCompiled[patternNumber] ? pcre2_jit_match(re, reinterpret_cast<PCRE2_SPTR>(subject), subjectLength, 0, 0, matchData, nullptr)
+                                            : pcre2_match(re, reinterpret_cast<PCRE2_SPTR>(subject), subjectLength, 0, 0, matchData, nullptr);
+}
+
+// Null if the pattern did not compile or pcre2 could not allocate
+pcre2_match_data* TTrigger::matchDataFor(const int patternNumber)
+{
+    QSharedPointer<pcre2_match_data>& matchData = mMatchData[patternNumber];
+    if (!matchData && mRegexes[patternNumber]) {
+        matchData.reset(pcre2_match_data_create_from_pattern(mRegexes[patternNumber].data(), nullptr), pcre2_match_data_deleter);
+    }
+    return matchData.data();
+}
+
+void TTrigger::createPrescanMatchData()
+{
+    for (size_t i = 0; i < mRegexes.size() && i < mMatchData.size(); ++i) {
+        matchDataFor(static_cast<int>(i));
+    }
+}
+
 bool TTrigger::match_perl(const TUtf8Subject& subject, const QString& haystack, int patternNumber, int posOffset, int lineNumber, const TBigramFilter* pLineBigrams)
 {
     if (Q_UNLIKELY(patternNumber < 0 || patternNumber >= static_cast<int>(mRegexes.size()))) {
@@ -917,6 +950,20 @@ bool TTrigger::match_perl(const TUtf8Subject& subject, const QString& haystack, 
         return false; //regex compile error
     }
 
+    // The prescan already ran the patterns up to the first that matched, against this same subject: those
+    // before it fail and that one's result is in its match data. Subject compared last, as data() encodes.
+    if (mPrescanMatchedPattern >= 0 && mPrescanPassId == smPrescanPassId && subject.data() == smPrescanSubject && subject.length() == smPrescanSubjectLength) {
+        if (patternNumber < mPrescanMatchedPattern) {
+            return false;
+        }
+        if (patternNumber == mPrescanMatchedPattern) {
+            mPrescanMatchedPattern = -1;
+            ++smPrescanMatchesReused;
+            processRegexMatch(subject.data(), haystack, patternNumber, posOffset, re, subject.length(), mMatchData[patternNumber].data(), mPrescanMatchRc, lineNumber);
+            return true;
+        }
+    }
+
     // A line without the text every match has to hold is dismissed here, by
     // the line's summary where it has one and then by a search, which is still
     // far cheaper than the pcre2 call it saves. The QString holds the whole
@@ -933,14 +980,12 @@ bool TTrigger::match_perl(const TUtf8Subject& subject, const QString& haystack, 
         }
     }
 
-    QSharedPointer<pcre2_match_data>& matchData = mMatchData[patternNumber];
-    if (!matchData) {
-        matchData.reset(pcre2_match_data_create_from_pattern(re.data(), nullptr), pcre2_match_data_deleter);
-        if (!matchData) {
-            return false;
-        }
+    pcre2_match_data* match_data = matchDataFor(patternNumber);
+    if (!match_data) {
+        return false;
     }
-    pcre2_match_data* match_data = matchData.data();
+    // The search below can overwrite the match data a prescan left its result in
+    mPrescanMatchedPattern = -1;
 
     // Counts only searches a prescan could have run instead
     if (!mIsMultiline) {
@@ -949,12 +994,13 @@ bool TTrigger::match_perl(const TUtf8Subject& subject, const QString& haystack, 
     // Asked for only now, past the pre-check, which is what leaves most lines never encoded
     const char* const haystackC = subject.data();
     const int haystackCLength = subject.length();
-    // pcre2_match() finds the JIT code itself, but only after option and argument checks repeated every line
-    const int rc = mRegexJitCompiled[patternNumber] ? pcre2_jit_match(re.data(), reinterpret_cast<PCRE2_SPTR>(haystackC), haystackCLength, 0, 0, match_data, nullptr)
-                                                    : pcre2_match(re.data(), reinterpret_cast<PCRE2_SPTR>(haystackC), haystackCLength, 0, 0, match_data, nullptr);
+    const int rc = search(patternNumber, haystackC, haystackCLength, match_data);
 
     if (rc < 0) {
         return false;
+    }
+    if (!mIsMultiline) {
+        ++smRegexMatches;
     }
 
     processRegexMatch(haystackC, haystack, patternNumber, posOffset, re, haystackCLength, match_data, rc, lineNumber);
@@ -1631,9 +1677,16 @@ void TTrigger::processExactMatch(int patternNumber, int posOffset, int lineNumbe
 // line: line number in the buffer
 // posOffset: position in the line to start matching from; used by child triggers
 
-bool TTrigger::prescanMayFire(
-        const char* haystackC, const int haystackCLength, const QString& haystack, const TBigramFilter& lineBigrams, const bool lineDropsText, pcre2_match_data* scratch, int& regexSearches) const
+bool TTrigger::prescanMayFire(const char* haystackC,
+                              const int haystackCLength,
+                              const QString& haystack,
+                              const TBigramFilter& lineBigrams,
+                              const bool lineDropsText,
+                              pcre2_match_data* scratch,
+                              int& regexSearches,
+                              int& regexMatches)
 {
+    mPrescanMatchedPattern = -1;
     // False means "cannot possibly do anything on this line". Anything depending on more than the line
     // text (multiline state, a line counter, a colour scan of the buffer, Lua) gets a yes.
     if (!isActive() || !mpMyChildrenList) {
@@ -1701,12 +1754,31 @@ bool TTrigger::prescanMayFire(
                 }
             }
             ++regexSearches;
-            const int rc = mRegexJitCompiled[patternNumber] ? pcre2_jit_match(re.data(), reinterpret_cast<PCRE2_SPTR>(haystackC), haystackCLength, 0, 0, scratch, nullptr)
-                                                            : pcre2_match(re.data(), reinterpret_cast<PCRE2_SPTR>(haystackC), haystackCLength, 0, 0, scratch, nullptr);
-            if (rc >= 0) {
+            // Into the thread's scratch: most searches fail, and touching the pattern's own match data for
+            // each would move it between cores line after line
+            int rc = search(patternNumber, haystackC, haystackCLength, scratch);
+            if (rc < 0) {
+                break;
+            }
+            ++regexMatches;
+            // A match is left in the pattern's own match data for match_perl() to take
+            pcre2_match_data* matchData = patternNumber < static_cast<int>(mMatchData.size()) ? mMatchData[patternNumber].data() : nullptr;
+            if (!matchData) {
                 return true;
             }
-            break;
+            const uint32_t pairs = pcre2_get_ovector_count(matchData);
+            if (rc > 0 && pairs <= pcre2_get_ovector_count(scratch)) {
+                std::copy_n(pcre2_get_ovector_pointer(scratch), 2 * pairs, pcre2_get_ovector_pointer(matchData));
+            } else {
+                // More groups than the scratch has room for
+                rc = search(patternNumber, haystackC, haystackCLength, matchData);
+                if (rc < 0) {
+                    return true;
+                }
+            }
+            mPrescanMatchedPattern = patternNumber;
+            mPrescanMatchRc = rc;
+            return true;
         }
 
         case REGEX_BEGIN_OF_LINE_SUBSTRING:
