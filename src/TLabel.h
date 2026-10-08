@@ -119,6 +119,7 @@ private:
     static constexpr Qt::TextInteractionFlags scmLinkInteraction = Qt::LinksAccessibleByMouse | Qt::LinksAccessibleByKeyboard;
 
     bool carriesLink() const;
+    bool forwardRightClickToConsole(QMouseEvent* event);
     void applyBackgroundColor();
 
     QColor& mBackgroundColor;

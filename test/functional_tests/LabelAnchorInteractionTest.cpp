@@ -26,6 +26,7 @@
  */
 
 #include <QContextMenuEvent>
+#include <QMenu>
 #include <QSignalSpy>
 #include <QtTest/QtTest>
 #include <QTextDocument>
@@ -38,6 +39,7 @@
 #include "TLabel.h"
 #include "TLuaInterpreter.h"
 #include "TMainConsole.h"
+#include "TTextEdit.h"
 #include "TelnetServerStub.h"
 #include "ctelnet.h"
 #include "dlgConnectionProfiles.h"
@@ -84,6 +86,22 @@ private:
     // margins or alignment, so a click aimed by it can miss the widget - which
     // would read as a callback that did not fire.
     bool centreIsOnTheLabel() const { return label()->rect().contains(linkCentre()); }
+
+    // Right-clicks a label and closes whatever popup that opened, handing back
+    // the menu's parent and whether it was the console's own menu rather than a
+    // link's, so a case can clean up before it asserts
+    static std::pair<QObject*, bool> rightClickLabel(TLabel* pLabel)
+    {
+        QTest::mouseClick(pLabel, Qt::RightButton, Qt::NoModifier, pLabel->rect().center());
+        auto* popup = qobject_cast<QMenu*>(QApplication::activePopupWidget());
+        if (!popup) {
+            return {nullptr, false};
+        }
+        const std::pair<QObject*, bool> result{popup->parent(), popup->findChild<QAction*>(qsl("consoleSelectAll")) != nullptr};
+        popup->close();
+        QTest::qWait(50ms);
+        return result;
+    }
 
 private slots:
     void initTestCase()
@@ -312,6 +330,76 @@ private slots:
         // An ignored context menu event is offered to each ancestor in turn, so
         // this covers the label and everything it sits in.
         QVERIFY2(!menuEvent.isAccepted(), "the label, or a widget it sits in, took the context menu event instead of passing it on");
+    }
+
+    // A label over the output must not cost the player the console's context
+    // menu, unless the label has a click callback of its own to answer with (#10753)
+    void test_aRightClickOnALabelWithoutCallbacksOpensTheConsoleMenu()
+    {
+        const QString name = qsl("rightClickForwardLabel");
+        auto [created, createMessage] = mpHost->createLabel(qsl("main"), name, 50, 100, 200, 50, true, false);
+        QVERIFY2(created, qPrintable(createMessage));
+        TLabel* pLabel = mpHost->mpConsole->labelWidget(name);
+        QVERIFY(pLabel);
+        pLabel->show();
+        TTextEdit* pPane = mpHost->mpConsole->mUpperPane;
+        QVERIFY2(pPane->rect().contains(pPane->mapFromGlobal(pLabel->mapToGlobal(pLabel->rect().center()))), "the label is not over the console's text, so there is no menu to reach");
+        QVERIFY2(!QApplication::activePopupWidget(), "a popup was already open before this case right-clicked");
+
+        const auto [menuParent, consoleMenu] = rightClickLabel(pLabel);
+
+        QVERIFY(mpHost->getLuaInterpreter()->compileAndExecuteScript(qsl("setLabelClickCallback('%1', function() end)").arg(name)));
+        const auto [unexpectedParent, unexpectedMenu] = rightClickLabel(pLabel);
+        Q_UNUSED(unexpectedMenu)
+        mpHost->mpConsole->deleteLabel(name);
+
+        QVERIFY2(menuParent == pPane && consoleMenu, "a right-click on a label with no callbacks did not open the console's context menu");
+        QVERIFY2(!unexpectedParent, "the console's menu opened over a label whose own click callback answers right-clicks");
+    }
+
+    // The menu belongs to whatever the label covers, which over a miniconsole is
+    // the miniconsole rather than the main console behind it
+    void test_aRightClickOnALabelOverAMiniconsoleOpensThatConsolesMenu()
+    {
+        const QString mini = qsl("rightClickUnderLabelMini");
+        const QString name = qsl("rightClickOverMiniLabel");
+        QVERIFY(mpHost->getLuaInterpreter()->compileAndExecuteScript(qsl("createMiniConsole('%1', 40, 90, 300, 120)").arg(mini)));
+        TConsole* pMini = mpHost->mpConsole->subConsoleWidget(mini);
+        QVERIFY(pMini);
+        auto [created, createMessage] = mpHost->createLabel(qsl("main"), name, 50, 100, 200, 50, true, false);
+        QVERIFY2(created, qPrintable(createMessage));
+        TLabel* pLabel = mpHost->mpConsole->labelWidget(name);
+        QVERIFY(pLabel);
+        pLabel->show();
+        pLabel->raise();
+
+        const auto [menuParent, consoleMenu] = rightClickLabel(pLabel);
+        mpHost->mpConsole->deleteLabel(name);
+        QVERIFY(mpHost->getLuaInterpreter()->compileAndExecuteScript(qsl("hideWindow('%1')").arg(mini)));
+
+        QVERIFY2(menuParent == pMini->mUpperPane && consoleMenu, "a right-click on a label over a miniconsole did not open that miniconsole's menu");
+    }
+
+    // The player cannot see a link the label hides, so a right-click there must
+    // not reveal it or offer its commands, only the console's own menu
+    void test_aRightClickOnALabelOverALinkOpensTheConsoleMenuNotTheLinks()
+    {
+        const QString name = qsl("rightClickOverLinkLabel");
+        QVERIFY(mpHost->getLuaInterpreter()->compileAndExecuteScript(
+                qsl("for i = 1, 80 do echoPopup(string.rep('L', 300), {[[qaHiddenLinkRan = true]], [[qaHiddenLinkRan = true]]}, {'one', 'two'}) echo('\\n') end")));
+        QTest::qWait(100ms);
+        auto [created, createMessage] = mpHost->createLabel(qsl("main"), name, 50, 100, 200, 50, true, false);
+        QVERIFY2(created, qPrintable(createMessage));
+        TLabel* pLabel = mpHost->mpConsole->labelWidget(name);
+        QVERIFY(pLabel);
+        pLabel->show();
+
+        const auto [menuParent, consoleMenu] = rightClickLabel(pLabel);
+        mpHost->mpConsole->deleteLabel(name);
+        mpHost->mpConsole->buffer.clear();
+
+        QVERIFY2(menuParent == mpHost->mpConsole->mUpperPane, "a right-click on a label over a link opened no menu from the console");
+        QVERIFY2(consoleMenu, "a right-click on a label offered the commands of the link it hides");
     }
 };
 
