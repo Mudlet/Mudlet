@@ -335,15 +335,14 @@ bool AliasUnit::processDataStream(const QString& data)
     QByteArray haystack = data.toUtf8();
     haystack.truncate(qstrlen(haystack.constData()));
 
-    TLuaInterpreter::PassCommandState outerPassCommand = Lua->beginAliasPassCommand();
     mProcessingDepth++;
-    const auto processingGuard = qScopeGuard([this, Lua, &outerPassCommand] {
+    const auto processingGuard = qScopeGuard([this, Lua] {
         mProcessingDepth--;
         Q_ASSERT(mProcessingDepth >= 0);
         if (mProcessingDepth <= 1) {
             mRunawayExpansionStopped = false;
         }
-        Lua->settleCommandAfterAliasPass(outerPassCommand);
+        Lua->settleCommandAfterAliasPass();
         if (mProcessingDepth == 0) {
             doCleanup();
         }

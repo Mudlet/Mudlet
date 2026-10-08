@@ -150,18 +150,15 @@ public:
     int pushNestedDispatchState(const bool parkCommand);
     void popNestedDispatchState(const int depth);
     // While an alias pass runs, for settleCommandAfterAliasPass(): the "command"
-    // the pass ends with unless a script changes it, the value the last restore
-    // put back, and how many commands had been expanded by then
+    // the pass ends with unless a script changes it, and the value the last
+    // restore put back
     struct PassCommandState
     {
         int passCommandRef = LUA_NOREF;
         int restoredCommandRef = LUA_NOREF;
-        quint64 commandsExpandedAtRestore = 0;
-        quint64 luaStateGeneration = 0;
     };
     void setExpandedCommand(const QString&);
-    PassCommandState beginAliasPassCommand();
-    void settleCommandAfterAliasPass(PassCommandState& outer);
+    void settleCommandAfterAliasPass();
     // expandAlias() gives "command" back only to an alias script, so every way into
     // a script says whether it is one
     class ScriptCallerScope
@@ -1131,10 +1128,6 @@ private:
     std::vector<NestedDispatchState> mNestedDispatchStates;
     bool mRunningAliasScript = false;
     PassCommandState mPassCommand;
-    quint64 mCommandsExpanded = 0;
-    // Bumped as the Lua state is replaced, so a PassCommandState kept from before
-    // is not settled against the registry of the new one
-    quint64 mLuaStateGeneration = 0;
     void releaseNestedDispatchState(NestedDispatchState&);
     // Registry references to how callEventHandler() finds each handler, by
     // handler name: the name itself, read raw from the globals, or else the

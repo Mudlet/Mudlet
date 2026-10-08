@@ -3823,11 +3823,11 @@ void TLuaInterpreter::popNestedDispatchState(const int depth)
     lua_rawset(L, LUA_GLOBALSINDEX);
     if (saved.commandRef != LUA_NOREF) {
         // Kept for settleCommandAfterAliasPass(), unless nothing has changed "command"
-        // since this pass's last restore, as when expandAlias("") runs no pass
+        // since the last restore, as when expandAlias("") runs no pass
         lua_pushliteral(L, "command");
         lua_rawget(L, LUA_GLOBALSINDEX);
         bool keepEarlier = false;
-        if (mPassCommand.passCommandRef != LUA_NOREF && mCommandsExpanded == mPassCommand.commandsExpandedAtRestore) {
+        if (mPassCommand.passCommandRef != LUA_NOREF) {
             lua_rawgeti(L, LUA_REGISTRYINDEX, mPassCommand.restoredCommandRef);
             keepEarlier = lua_rawequal(L, -1, -2);
             lua_pop(L, 1);
@@ -3843,7 +3843,6 @@ void TLuaInterpreter::popNestedDispatchState(const int depth)
         lua_rawset(L, LUA_GLOBALSINDEX);
         luaL_unref(L, LUA_REGISTRYINDEX, mPassCommand.restoredCommandRef);
         mPassCommand.restoredCommandRef = std::exchange(saved.commandRef, LUA_NOREF);
-        mPassCommand.commandsExpandedAtRestore = mCommandsExpanded;
     }
     lua_settop(L, callerStackTop);
     // Only now, as pushing a name can run a finaliser, which has to find what
@@ -3855,45 +3854,34 @@ void TLuaInterpreter::popNestedDispatchState(const int depth)
 }
 
 // No documentation available in wiki - internal function
+// What an enclosing alias pass kept for settleCommandAfterAliasPass() is out of date
+// once another command is expanded
 void TLuaInterpreter::setExpandedCommand(const QString& command)
 {
+    const PassCommandState outOfDate = std::exchange(mPassCommand, PassCommandState{});
+    if (pGlobalLua) {
+        luaL_unref(pGlobalLua, LUA_REGISTRYINDEX, outOfDate.passCommandRef);
+        luaL_unref(pGlobalLua, LUA_REGISTRYINDEX, outOfDate.restoredCommandRef);
+    }
     set_lua_string(qsl("command"), command);
-    ++mCommandsExpanded;
-}
-
-// No documentation available in wiki - internal function
-// Every alias pass settles what alias scripts were given back inside it when it ends,
-// so the state of the pass it runs inside is set aside until then
-TLuaInterpreter::PassCommandState TLuaInterpreter::beginAliasPassCommand()
-{
-    PassCommandState outer = std::exchange(mPassCommand, PassCommandState{});
-    outer.luaStateGeneration = mLuaStateGeneration;
-    return outer;
 }
 
 // No documentation available in wiki - internal function
 // An alias script had its own "command" back while it ran, but what is read once
 // the pass is over is the last command expanded, or whatever a script set it to
-void TLuaInterpreter::settleCommandAfterAliasPass(PassCommandState& outer)
+void TLuaInterpreter::settleCommandAfterAliasPass()
 {
-    PassCommandState reinstated = std::exchange(outer, PassCommandState{});
-    if (reinstated.luaStateGeneration != mLuaStateGeneration) {
-        reinstated = PassCommandState{};
-    }
-    const PassCommandState ending = std::exchange(mPassCommand, reinstated);
+    const PassCommandState ending = std::exchange(mPassCommand, PassCommandState{});
     if (ending.passCommandRef == LUA_NOREF || !pGlobalLua) {
         return;
     }
     lua_State* L = pGlobalLua;
     const int callerStackTop = lua_gettop(L);
-    bool untouched = false;
-    if (mCommandsExpanded == ending.commandsExpandedAtRestore) {
-        lua_pushliteral(L, "command");
-        lua_rawget(L, LUA_GLOBALSINDEX);
-        lua_rawgeti(L, LUA_REGISTRYINDEX, ending.restoredCommandRef);
-        untouched = lua_rawequal(L, -1, -2);
-        lua_settop(L, callerStackTop);
-    }
+    lua_pushliteral(L, "command");
+    lua_rawget(L, LUA_GLOBALSINDEX);
+    lua_rawgeti(L, LUA_REGISTRYINDEX, ending.restoredCommandRef);
+    const bool untouched = lua_rawequal(L, -1, -2);
+    lua_settop(L, callerStackTop);
     if (untouched) {
         lua_pushliteral(L, "command");
         lua_rawgeti(L, LUA_REGISTRYINDEX, ending.passCommandRef);
@@ -6590,7 +6578,6 @@ void TLuaInterpreter::initLuaGlobals()
         // Host::resetProfile_phase2() drains DeferredDelete to stop labels doing.
         mNestedDispatchStates.clear();
         mPassCommand = PassCommandState{};
-        ++mLuaStateGeneration;
         mEventHandlerLookupRefs.clear();
         stopSpawnedProcesses();
         mClosingGlobalLua = true;

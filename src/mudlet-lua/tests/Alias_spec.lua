@@ -1121,6 +1121,73 @@ describe("Alias processing", function()
                 assert.are.equal("command_set_by_mid", command, "what the nested alias set was replaced by a command it expanded")
             end)
 
+            it("leaves command holding what a nested alias set it to, even when that is the outer alias's command", function()
+                local firstId = tempAlias([[^command_echo_first$]], function() end)
+                local setterId = tempAlias([[^command_echo_setter$]], function()
+                    _G.command = "command_echo_outer"
+                end)
+                local outerId = tempAlias([[^command_echo_outer$]], function()
+                    expandAlias("command_echo_first", false)
+                    expandAlias("command_echo_setter", false)
+                end)
+                finally(function()
+                    killAlias(firstId)
+                    killAlias(setterId)
+                    killAlias(outerId)
+                end)
+
+                expandFromHandler("command_echo_outer")
+
+                assert.are.equal("command_echo_outer", command, "what the nested alias set was taken for the outer alias's own command")
+            end)
+
+            it("leaves command holding what an alias set it to after an empty expansion it made with another value", function()
+                local innerId = tempAlias([[^command_reset_after_empty_inner$]], function() end)
+                local outerId = tempAlias([[^command_reset_after_empty$]], function()
+                    expandAlias("command_reset_after_empty_inner", false)
+                    _G.command = "command_reset_after_empty_temporary"
+                    expandAlias("", false)
+                    _G.command = "command_reset_after_empty"
+                end)
+                finally(function()
+                    killAlias(innerId)
+                    killAlias(outerId)
+                end)
+
+                expandFromHandler("command_reset_after_empty")
+
+                assert.are.equal("command_reset_after_empty", command, "what the alias set last was taken for a value it had been given back")
+            end)
+
+            -- A script's top-level code runs as it is compiled, and that is no alias script
+            it("gives a script an alias compiles the last command expanded", function()
+                local scriptName = "Alias spec script compiled by an alias"
+                if getScript(scriptName) == -1 then
+                    -- an empty body would make this a script folder
+                    assert.is_true(permScript(scriptName, "", "-- deliberately does nothing") > 0)
+                end
+                local body = [[
+                    expandAlias("command_compiled_inner", false)
+                    aliasSpecSeenInCompiledScript = command
+                ]]
+                _G.aliasSpecSeenInCompiledScript = nil
+                local innerId = tempAlias([[^command_compiled_inner$]], function() end)
+                local outerId = tempAlias([[^command_compiled_outer$]], function()
+                    setScript(scriptName, body)
+                end)
+                finally(function()
+                    killAlias(innerId)
+                    killAlias(outerId)
+                    setScript(scriptName, "-- deliberately does nothing")
+                    disableScript(scriptName)
+                    _G.aliasSpecSeenInCompiledScript = nil
+                end)
+
+                expandFromHandler("command_compiled_outer")
+
+                assert.are.equal("command_compiled_inner", rawget(_G, "aliasSpecSeenInCompiledScript"), "the script was given the alias's command back")
+            end)
+
             it("gives an alias its own command back from an expansion of several commands", function()
                 local seen = {}
                 local firstInnerId = tempAlias([[^command_split_first_inner$]], function() end)
