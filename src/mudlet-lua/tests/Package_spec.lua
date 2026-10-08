@@ -3077,6 +3077,81 @@ describe("Tests exporting the profile to a file with saveProfile", function()
     assert.is_true(contains(button, "<commandButtonDown>mudlet spec down</commandButtonDown>"), button)
   end)
 
+  -- The export is written on a pool thread after the call has answered, so a
+  -- target it cannot open has to be found out before then.
+  it("returns nil and says why for an export into a folder that does not exist", function()
+    assert.is_true(waitForProfileSaveToPass(), "a profile save was still running")
+    local missing = scratchDirectory .. "/mudlet-spec-no-such-folder"
+
+    local ok, reason = saveProfile(missing, "mudlet-spec-exported-nowhere")
+
+    assert.is_nil(ok)
+    assert.is_true(contains(reason, "Couldn't save"), tostring(reason))
+    assert.is_false(fileExists(missing))
+  end)
+
+  it("returns nil and says why for a save into a folder that cannot be made", function()
+    assert.is_true(waitForProfileSaveToPass(), "a profile save was still running")
+    -- a file where the folder should be, which no platform can make a folder of
+    local blocker = scratchDirectory .. "/mudlet-spec-not-a-folder"
+    local file = io.open(blocker, "wb")
+    assert.is_not_nil(file, "could not write " .. blocker)
+    file:close()
+    defer(function() os.remove(blocker) end)
+
+    local ok, reason = saveProfile(blocker)
+
+    assert.is_nil(ok)
+    assert.is_true(contains(reason, "Couldn't save"), tostring(reason))
+  end)
+
+  it("makes a save folder that does not exist yet and saves into it", function()
+    assert.is_true(waitForProfileSaveToPass(), "a profile save was still running")
+    local folder = scratchDirectory .. "/mudlet-spec-made-by-the-save"
+    local path
+    defer(function()
+      if path then
+        os.remove(path)
+      end
+      lfs.rmdir(folder)
+    end)
+
+    local ok
+    ok, path = saveProfile(folder)
+
+    assert.is_true(ok, tostring(path))
+    assert.is_true(contains(path, folder .. "/"), tostring(path))
+    assert.is_true(waitUntil(function() return fileExists(path) end, 5000), "nothing was written to " .. tostring(path))
+  end)
+
+  -- Only opening the file is tried before the call answers; the write itself
+  -- runs afterwards on a pool thread, so a folder that goes away in between can
+  -- only be reported on the console.
+  it("says so on the console when the write fails after the call has answered", function()
+    assert.is_true(waitForProfileSaveToPass(), "a profile save was still running")
+    local folder = scratchDirectory .. "/mudlet-spec-gone-before-the-write"
+    local moved = folder .. "-moved"
+    lfs.mkdir(folder)
+    defer(function()
+      os.remove(moved .. "/mudlet-spec-raced.xml")
+      lfs.rmdir(moved)
+      os.remove(folder .. "/mudlet-spec-raced.xml")
+      lfs.rmdir(folder)
+    end)
+    local mark = getLastLineNumber("main")
+
+    local ok = saveProfile(folder, "mudlet-spec-raced")
+    assert.is_true(os.rename(folder, moved))
+
+    assert.is_true(ok)
+    assert.is_true(waitForProfileSaveToPass(), "the profile save never finished")
+    if fileExists(moved .. "/mudlet-spec-raced.xml") then
+      pending("the write finished before its folder could be moved away, so there was no failure to report")
+      return
+    end
+    assert.is_true(containsWrapped(textFrom(mark), "The profile could not be saved to"), textFrom(mark))
+  end)
+
   it("refuses a second export while the first is still running", function()
     assert.is_true(waitForProfileSaveToPass(), "a profile save was still running")
     local ok = saveProfile(scratchDirectory, "mudlet-spec-exported-twice")

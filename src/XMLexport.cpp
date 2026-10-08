@@ -228,9 +228,14 @@ void XMLexport::runAsyncSave(const QString& fileName, const QString& xmlSavedKey
     // deleteLater() below needs an event loop that is still running to be delivered,
     // and the save that matters most here is the one on the way out.
     auto watcher = new QFutureWatcher<bool>(host);
-    connect(watcher, &QFutureWatcher<bool>::finished, host, [host, xmlSavedKey]() {
+    connect(watcher, &QFutureWatcher<bool>::finished, host, [host, xmlSavedKey, fileName, watcher]() {
         if (!host) {
             return;
+        }
+        // The caller was told the save had started long before this, so the console is the only place left to say it
+        if (!watcher->result()) {
+            //: %1 is the file the profile was being saved to
+            host->postMessage(tr("[ ERROR ] - The profile could not be saved to \"%1\".").arg(fileName));
         }
         host->xmlSaved(xmlSavedKey);
     });

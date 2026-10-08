@@ -13347,8 +13347,11 @@ void dlgTriggerEditor::slot_profileSaveAsAction()
     }
     slot_saveEdits();
 
-    mpHost->saveProfileAs(fileName);
+    auto [ok, filename, error] = mpHost->saveProfileAs(fileName);
     mSavingAs = false;
+    if (!ok && !error.isEmpty()) {
+        QMessageBox::critical(this, tr("Couldn't save profile"), tr("Sorry, couldn't save your profile - got the following error: %1").arg(error));
+    }
 }
 
 bool dlgTriggerEditor::eventFilter(QObject* watched, QEvent* event)
