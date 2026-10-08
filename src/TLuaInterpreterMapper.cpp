@@ -481,6 +481,9 @@ int TLuaInterpreter::addCustomLine(lua_State* L)
         }
         lua_pop(L, 1);
     }
+    if (tind < 3) {
+        return warnArgumentValue(L, __func__, qsl("the color table in the fifth argument has %1 component(s) but red, green and blue are all needed").arg(tind));
+    }
 
     const bool arrow = getVerifiedBool(L, __func__, 6, "end with arrow");
 

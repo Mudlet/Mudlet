@@ -297,6 +297,43 @@ describe("Tests per-room border functions", function()
 
 end)
 
+-- What these specs create goes in an area of their own, which after_each deletes.
+describe("Tests addCustomLine colour refusals on a scratch area", function()
+  local areaName = "MapperSpecCustomLineColours"
+  local area
+
+  local function room(x, y, z)
+    local id = createRoomID()
+    addRoom(id)
+    setRoomArea(id, area)
+    setRoomCoordinates(id, x, y, z or 0)
+    return id
+  end
+
+  setup(function()
+    assert.is_true(openMapWidget())
+  end)
+
+  before_each(function()
+    area = addAreaName(areaName)
+  end)
+
+  after_each(function()
+    deleteArea(areaName)
+  end)
+
+  it("addCustomLine refuses a colour table with fewer than three components", function()
+    local from, to = room(0, 0), room(0, 1)
+    setExit(from, to, "north")
+    for _, colour in ipairs({{}, {12}, {0, 255}}) do
+      local ok, err = addCustomLine(from, to, "n", "solid line", colour, false)
+      assert.is_nil(ok)
+      assert.are.equal(("the color table in the fifth argument has %d component(s) but red, green and blue are all needed"):format(#colour), err)
+    end
+    assert.is_nil(getCustomLines1(from)["n"])
+  end)
+end)
+
 describe("Tests addRoom", function()
 
   it("should return true when the room is created", function()
