@@ -53,7 +53,7 @@
 
 using namespace std::chrono_literals;
 
-TCommandLine::TCommandLine(Host* pHost, const QString& name, CommandLineType type, TConsole* pConsole, QWidget* parent)
+TCommandLine::TCommandLine(Host* pHost, const QString& name, enums::CommandLineType type, TConsole* pConsole, QWidget* parent)
 : QPlainTextEdit(parent)
 , mCommandLineName(name)
 , mpHost(pHost)
@@ -70,7 +70,7 @@ TCommandLine::TCommandLine(Host* pHost, const QString& name, CommandLineType typ
     document()->setDocumentMargin(2);
 
     // Create password toggle button for MainCommandLine only
-    if (mType == MainCommandLine) {
+    if (mType == enums::MainCommandLine) {
         mpPasswordToggleButton = new QToolButton(this);
         mpPasswordToggleButton->setMinimumSize(QSize(20, 20));
         mpPasswordToggleButton->setMaximumSize(QSize(20, 20));
@@ -82,7 +82,7 @@ TCommandLine::TCommandLine(Host* pHost, const QString& name, CommandLineType typ
         connect(mpPasswordToggleButton, &QToolButton::clicked, this, &TCommandLine::slot_togglePasswordVisibility);
     }
 
-    if (mType & (MainCommandLine | ConsoleCommandLine)) {
+    if (mType & (enums::MainCommandLine | enums::ConsoleCommandLine)) {
         // put an outline around the command line when it is integrated into
         // bottom of a TConsole - so that it can be visually separated from
         // the text output area - particulary when "dark" mode is in effect
@@ -98,7 +98,7 @@ TCommandLine::TCommandLine(Host* pHost, const QString& name, CommandLineType typ
 
     setPalette(mRegularPalette);
     //style subCommandLines by stylesheet
-    if (mType != MainCommandLine) {
+    if (mType != enums::MainCommandLine) {
         const QColor c = mpHost->mCommandLineBgColor;
         const QString styleSheet{qsl("QPlainTextEdit{background-color: rgb(%1, %2, %3);}").arg(c.red()).arg(c.green()).arg(c.blue())};
         setStyleSheet(styleSheet);
@@ -128,7 +128,7 @@ TCommandLine::TCommandLine(Host* pHost, const QString& name, CommandLineType typ
     // Forward textChanged signal for hyperlink visibility triggers
     connect(this, &QPlainTextEdit::textChanged, this, &TCommandLine::commandLineTextChanged);
 
-    if (mType == MainCommandLine) { // Limit to the main command line only
+    if (mType == enums::MainCommandLine) { // Limit to the main command line only
         connect(mpHost, &Host::signal_remoteEchoChanged, this, [this](bool isRemoteEcho) {
             this->setEchoSuppression(isRemoteEcho);
         });
@@ -149,7 +149,7 @@ void TCommandLine::processNormalKey(QEvent* event)
     }
 
     // Track if user types during echo suppression for content preservation logic
-    if (mIsEchoSuppressed && mType == MainCommandLine) {
+    if (mIsEchoSuppressed && mType == enums::MainCommandLine) {
         mUserTypedDuringEchoSuppression = true;
     }
 
@@ -648,8 +648,8 @@ void TCommandLine::focusInEvent(QFocusEvent* event)
     // if it was Qt::ActiveWindowFocusReason as that gets used just by
     // switching away and back to the Mudlet application and it messes up
     // the record:
-    if (event->reason() != Qt::ActiveWindowFocusReason) {
-        mpHost->recordActiveCommandLine(this);
+    if (mpHost && event->reason() != Qt::ActiveWindowFocusReason && mpHost->mpConsole) {
+        mpHost->mpConsole->recordActiveCommandLine(this);
     }
 
     QPlainTextEdit::focusInEvent(event);
@@ -670,7 +670,7 @@ void TCommandLine::focusOutEvent(QFocusEvent* event)
 void TCommandLine::hideEvent(QHideEvent* event)
 {
     // Redirect focus to main commandline when hiding a SubCommandLine to prevent keyboard input being trapped
-    if (mType == SubCommandLine && hasFocus() && mpHost && mpHost->mpConsole && mpHost->mpConsole->mpCommandLine) {
+    if (mType == enums::SubCommandLine && hasFocus() && mpHost && mpHost->mpConsole && mpHost->mpConsole->mpCommandLine) {
         mpHost->mpConsole->mpCommandLine->setFocus();
     }
 
@@ -704,7 +704,7 @@ void TCommandLine::adjustHeight()
     int lines = static_cast<int>(document()->size().height());
     // Workaround for SubCommandLines textCursor not visible in some situations
     // SubCommandLines cannot autoresize
-    if (mType == SubCommandLine) {
+    if (mType == enums::SubCommandLine) {
         if (lines <= 1) {
             verticalScrollBar()->triggerAction(QScrollBar::SliderToMinimum);
         }
@@ -978,7 +978,7 @@ void TCommandLine::mousePressEvent(QMouseEvent* event)
 {
     // Prevent selection, drag/drop of text in the command line when echo suppression is on
     // Allow right-click to show the context menu (enables Paste)
-    if (mIsEchoSuppressed && mType == MainCommandLine && event->button() != Qt::RightButton) {
+    if (mIsEchoSuppressed && mType == enums::MainCommandLine && event->button() != Qt::RightButton) {
         event->ignore();
         return;
     }
@@ -1041,13 +1041,13 @@ void TCommandLine::enterCommand(QKeyEvent* event)
     QStringList commandList = toPlainText().split(QChar::LineFeed);
 
     for (QString& command : commandList) {
-        if (mType != MainCommandLine && mActionFunction) {
+        if (mType != enums::MainCommandLine && mActionFunction) {
             mpHost->getLuaInterpreter()->callCmdLineAction(mActionFunction, command);
         } else {
             mpHost->send(command);
         }
         // send command to your MiniConsole
-        if (mType == ConsoleCommandLine && !mActionFunction && mpHost->mCommandEchoMode != Host::CommandEchoMode::Never) {
+        if (mType == enums::ConsoleCommandLine && !mActionFunction && mpHost->mCommandEchoMode != Host::CommandEchoMode::Never) {
             // This usage of commandList modifies the content!!!
             mpConsole->printCommand(command);
         }
@@ -1116,74 +1116,71 @@ void TCommandLine::handleTabCompletion(bool direction)
     buffer.replace(QChar(0x21af), QChar::LineFeed);
     buffer.replace(QChar::LineFeed, QChar::Space);
 
-    QStringList wordList = buffer.split(QRegularExpression(qsl(R"(\b)"), QRegularExpression::UseUnicodePropertiesOption), Qt::SkipEmptyParts);
-    wordList.append(
-            commandLineSuggestions
-                    .values()); // hindsight 20/20 I do not need to split this to a separate table, a check to not append buffer to this table and only append suggested list does same thing for far less overhead.
-    const QStringList blacklist = tabCompleteBlacklist.values();
-    QStringList toDelete;
-
-    for (const QString& wstr : std::as_const(wordList)) {
-        if (blacklist.contains(wstr, Qt::CaseInsensitive)) {
-            toDelete += wstr;
-        }
-    }
-    for (const QString& dstr : std::as_const(toDelete)) {
-        wordList.removeAll(dstr);
-    }
-
     if (direction) {
         mTabCompletionCount++;
     } else {
         mTabCompletionCount--;
     }
-    if (!wordList.empty()) {
-        if (mTabCompletionTyped.endsWith(QChar::Space)) {
-            return;
-        }
-        QString lastWord;
-        const QRegularExpression reg = QRegularExpression(qsl(R"(\b(\w+)$)"), QRegularExpression::UseUnicodePropertiesOption);
-        const QRegularExpressionMatch match = reg.match(mTabCompletionTyped);
-        const int typePosition = match.capturedStart();
-        if (reg.captureCount() >= 1) {
-            lastWord = match.captured(1);
-        } else {
-            lastWord = QString();
-        }
+    if (mTabCompletionTyped.endsWith(QChar::Space)) {
+        return;
+    }
+    QString lastWord;
+    const QRegularExpression reg = QRegularExpression(qsl(R"(\b(\w+)$)"), QRegularExpression::UseUnicodePropertiesOption);
+    const QRegularExpressionMatch match = reg.match(mTabCompletionTyped);
+    const int typePosition = match.capturedStart();
+    if (reg.captureCount() >= 1) {
+        lastWord = match.captured(1);
+    } else {
+        lastWord = QString();
+    }
 
-        QStringList filterList = wordList.filter(QRegularExpression(qsl(R"(^%1\w+)").arg(lastWord), QRegularExpression::CaseInsensitiveOption | QRegularExpression::UseUnicodePropertiesOption));
-
-        if (filterList.empty()) {
-            return;
-        }
-        int offset = 0;
-        forever
-        {
-            const QString tmp = filterList.back();
-            filterList.removeAll(tmp);
-            filterList.insert(offset, tmp);
-            ++offset;
-            if (offset >= filterList.size()) {
-                break;
-            }
-        }
-
-        if (!filterList.empty()) {
-            if (mTabCompletionCount >= filterList.size()) {
-                mTabCompletionCount = filterList.size() - 1;
-            }
-            if (mTabCompletionCount < 0) {
-                mTabCompletionCount = 0;
-            }
-
-            const QString proposal = filterList[mTabCompletionCount];
-            const QString userWords = mTabCompletionTyped.left(typePosition);
-            setPlainText(QString(userWords + proposal));
-            mudlet::self()->announce(proposal);
-            moveCursor(QTextCursor::End, QTextCursor::MoveAnchor);
-            mTabCompletionOld = toPlainText();
+    // One pass over the buffer collects only the words that can complete lastWord, so
+    // deduplicating and the blacklist work on those rather than on every word
+    const auto options = QRegularExpression::CaseInsensitiveOption | QRegularExpression::UseUnicodePropertiesOption;
+    QStringList candidates;
+    const QRegularExpression bufferWord(qsl(R"((?<!\w)%1\w+)").arg(lastWord), options);
+    for (const QRegularExpressionMatch& wordMatch : bufferWord.globalMatch(buffer)) {
+        candidates.append(wordMatch.captured());
+    }
+    const QRegularExpression suggestion(qsl(R"(^%1\w+)").arg(lastWord), options);
+    for (const QString& word : std::as_const(commandLineSuggestions)) {
+        if (word.contains(suggestion)) {
+            candidates.append(word);
         }
     }
+
+    // Each word once, the most recently seen first
+    QStringList filterList;
+    QSet<QString> seen;
+    for (auto it = candidates.crbegin(); it != candidates.crend(); ++it) {
+        if (seen.contains(*it)) {
+            continue;
+        }
+        seen.insert(*it);
+        const bool blacklisted = std::any_of(tabCompleteBlacklist.cbegin(), tabCompleteBlacklist.cend(), [it](const QString& banned) {
+            return it->compare(banned, Qt::CaseInsensitive) == 0;
+        });
+        if (!blacklisted) {
+            filterList.append(*it);
+        }
+    }
+
+    if (filterList.empty()) {
+        return;
+    }
+    if (mTabCompletionCount >= filterList.size()) {
+        mTabCompletionCount = filterList.size() - 1;
+    }
+    if (mTabCompletionCount < 0) {
+        mTabCompletionCount = 0;
+    }
+
+    const QString proposal = filterList[mTabCompletionCount];
+    const QString userWords = mTabCompletionTyped.left(typePosition);
+    setPlainText(QString(userWords + proposal));
+    mudlet::self()->announce(proposal);
+    moveCursor(QTextCursor::End, QTextCursor::MoveAnchor);
+    mTabCompletionOld = toPlainText();
 }
 
 // Hitting the cursor up key gets you in autocompletion mode.
@@ -1207,8 +1204,7 @@ void TCommandLine::handleAutoCompletion()
         mAutoCompletionCount = 0;
     }
     for (int i = mAutoCompletionCount; i < mHistoryList.size(); i++) {
-        const QString h = mHistoryList[i].mid(0, neu.size());
-        if (neu == h) {
+        if (mHistoryList[i].startsWith(neu)) {
             mAutoCompletionCount = i;
             mLastCompletion = mHistoryList[i];
             setPlainText(mHistoryList[i]);
@@ -1220,8 +1216,8 @@ void TCommandLine::handleAutoCompletion()
             moveCursor(QTextCursor::End, QTextCursor::KeepAnchor);
             return;
         }
-        moveCursor(QTextCursor::End, QTextCursor::MoveAnchor);
     }
+    moveCursor(QTextCursor::End, QTextCursor::MoveAnchor);
     mAutoCompletionCount = -1;
 }
 
@@ -1502,7 +1498,7 @@ void TCommandLine::slot_adjustAccessibleNames()
     const bool multipleProfilesActive = (HostManager::self()->getHostCount() > 1);
     const QString hostName{mpHost ? mpHost->getName() : QString()};
     switch (mType) {
-    case MainCommandLine:
+    case enums::MainCommandLine:
         if (multipleProfilesActive) {
             /*:
             Accessibility-friendly name to describe the main command line for a
@@ -1536,7 +1532,7 @@ void TCommandLine::slot_adjustAccessibleNames()
                                         "locally."));
         }
         break;
-    case SubCommandLine:
+    case enums::SubCommandLine:
         if (multipleProfilesActive) {
             /*:
             Accessibility-friendly name to describe an extra command line on
@@ -1569,7 +1565,7 @@ void TCommandLine::slot_adjustAccessibleNames()
                                         "locally."));
         }
         break;
-    case ConsoleCommandLine:
+    case enums::ConsoleCommandLine:
         // The mCommandLine for this type is the same as the parent TConsole
         if (multipleProfilesActive) {
             /*:
@@ -1603,7 +1599,7 @@ void TCommandLine::slot_adjustAccessibleNames()
                                         "locally."));
         }
         break;
-    case UnknownType:
+    case enums::UnknownCommandLine:
         Q_UNREACHABLE();
     }
 }
@@ -1712,7 +1708,7 @@ void TCommandLine::setEchoSuppression(bool suppress)
 {
     // Echo suppression (password masking) only applies to the main command line
     // SubCommandLines and ConsoleCommandLines are not affected by server password prompts
-    if (mType != MainCommandLine) {
+    if (mType != enums::MainCommandLine) {
         return;
     }
 
@@ -1853,7 +1849,7 @@ void TCommandLine::setEchoSuppression(bool suppress)
 void TCommandLine::paintEvent(QPaintEvent* event)
 {
     // Only mask text for the main command line when echo is suppressed and password is not visible
-    if (mIsEchoSuppressed && mType == MainCommandLine && !mPasswordVisible) {
+    if (mIsEchoSuppressed && mType == enums::MainCommandLine && !mPasswordVisible) {
         QPainter painter(viewport());
         QTextCursor cursor = textCursor();
         QTextBlock block = document()->firstBlock();
@@ -1874,7 +1870,7 @@ void TCommandLine::paintEvent(QPaintEvent* event)
 
 void TCommandLine::slot_togglePasswordVisibility()
 {
-    if (!mIsEchoSuppressed || mType != MainCommandLine) {
+    if (!mIsEchoSuppressed || mType != enums::MainCommandLine) {
         return;
     }
 

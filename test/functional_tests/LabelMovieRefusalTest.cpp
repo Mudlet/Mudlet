@@ -127,7 +127,7 @@ private slots:
         });
 
         QSignalSpy spy(mudlet::self(), &mudlet::signal_profileLoaded);
-        if (!spy.wait(1000)) {
+        if (!spy.wait(1s)) {
             QFAIL("Profile took too long to load.");
         }
         mpHost = mudlet::self()->getActiveHost();

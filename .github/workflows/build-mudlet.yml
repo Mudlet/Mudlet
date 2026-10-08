@@ -1,9 +1,11 @@
 # DUPLICATE WORKFLOW: This file is paired with build-mudlet-pr.yml
 # Changes here likely need to be mirrored there as well, apart from the
-# ccache/Lua/xcb-util-cursor save steps below and the ccache trim and
-# prune that go with them: only builds of development write these shared
-# caches, every other build restores read-only, so build-mudlet-pr.yml
-# has no equivalent steps at all.
+# ccache/Lua/Lua rocks/xcb-util-cursor save steps below and the ccache trim
+# and prune that go with them: only builds of development write these shared
+# caches, every other build restores read-only, so build-mudlet-pr.yml has no
+# equivalent steps at all.
+# build-mudlet-pr.yml also runs its macOS C++ tests after packaging, alongside
+# the Lua tests; here they stay ahead of a package step that can publish.
 name: 🔨 Build Mudlet
 on:
   push:
@@ -28,7 +30,7 @@ jobs:
     if: ${{ github.repository_owner == 'Mudlet' }}
     env:
       LUA_VERSION: '5.1.5'
-      CCACHE_MAXSIZE: 500M
+      CCACHE_MAXSIZE: ${{ matrix.ccache_maxsize || '500M' }}
       CCACHE_COMPRESSLEVEL: ${{ (github.ref_name == 'development' && github.event_name != 'schedule' && github.event.inputs.scheduled != 'true') && '19' || '1' }}
     strategy:
       fail-fast: false
@@ -44,6 +46,10 @@ jobs:
             gcc_compiler_version: 12
             qt: '6.11.1'
             ccache_id: ubuntu-gcc-asan
+            # 22.04's ccache 4.5 cleans each sixteenth of the cache on its own, and at
+            # 500M that is smaller than the 35-50MB precompiled header - which GCC does
+            # not build reproducibly, so a rebuilt one misses every file using it
+            ccache_maxsize: 2G
             deploy: 'deploy'
             run_tests: 'true'
             # Enable AddressSanitizer for PTB and testing builds, but not release
@@ -56,6 +62,7 @@ jobs:
             gcc_compiler_version: 12
             qt: '6.11.1'
             ccache_id: ubuntu-gcc
+            ccache_maxsize: 2G
           - os: ubuntu-26.04
             buildname: 'ubuntu / clang'
             compiler: clang_64
@@ -124,6 +131,25 @@ jobs:
       if: runner.os == 'macOS'
       uses: leafo/gh-actions-luarocks@v6
 
+    # Keyed on the runner image, as the rocks link against its Homebrew libraries, and on
+    # the script that installs them. A tagged release installs its rocks afresh, since the
+    # app bundles them. As with ccache, saves are keyed per run and restores prefix-match
+    # the newest, so a set that fails its check is replaced rather than restored for good.
+    - name: (macOS) Work out the Lua rocks cache key
+      if: runner.os == 'macOS'
+      id: rocks
+      run: |
+        echo "prefix=luarocks-${{ matrix.os }}-${{ runner.arch }}-${ImageVersion:?is not set}-${{ hashFiles('CI/install-lua-rocks.sh') }}-" >> "$GITHUB_OUTPUT"
+
+    - name: (macOS) Restore Lua rocks cache
+      if: runner.os == 'macOS' && !startsWith(github.ref, 'refs/tags/')
+      id: cache-luarocks
+      uses: actions/cache/restore@v6
+      with:
+        path: ~/.luarocks
+        key: ${{ steps.rocks.outputs.prefix }}
+        restore-keys: ${{ steps.rocks.outputs.prefix }}
+
     - name: (macOS) Install dependencies
       if: runner.os == 'macOS'
       env:
@@ -179,8 +205,14 @@ jobs:
         # Help CMake find keg-only Homebrew packages (PCRE2 is keg-only on macOS)
         echo "PKG_CONFIG_PATH=${HOMEBREW_PREFIX}/opt/pcre2/lib/pkgconfig:$PKG_CONFIG_PATH" >> $GITHUB_ENV
 
-        # Install lua-yajl early to generate translation statistics
-        luarocks --lua-version 5.1 install --local lua-yajl YAJL_DIR=${HOMEBREW_PREFIX}/opt/yajl
+        # Install lua-yajl early to generate translation statistics - unless the cache held
+        # every rock, and they all still load against this runner's Homebrew libraries
+        if [ -n "${{ steps.cache-luarocks.outputs.cache-matched-key }}" ] \
+          && ${{github.workspace}}/CI/install-lua-rocks.sh --check; then
+          echo "LUA_ROCKS_CACHED=true" >> $GITHUB_ENV
+        else
+          HOMEBREW_PREFIX="${HOMEBREW_PREFIX}" ${{github.workspace}}/CI/install-lua-rocks.sh lua-yajl
+        fi
 
         # Allow stats generation script to see location of lua-yajl
         eval "$(luarocks path --local --lua-version "5.1")"
@@ -250,7 +282,7 @@ jobs:
         echo "CCACHE_DIR=${{runner.workspace}}/ccache" >> $GITHUB_ENV
 
         # Install lua-yajl early to generate translation statistics
-        luarocks --lua-version 5.1 install --local lua-yajl
+        ${{github.workspace}}/CI/install-lua-rocks.sh lua-yajl
 
         # Allow stats generation script to see location of lua-yajl
         eval "$(luarocks path --local --lua-version "5.1")"
@@ -344,6 +376,8 @@ jobs:
          echo "WITH_UPDATER=no" >> $GITHUB_ENV
          echo "WITH_3DMAPPER=no" >> $GITHUB_ENV
          echo "WITH_FONTS=no" >> $GITHUB_ENV
+         # The one job that builds without precompiled headers, so a missing #include still fails somewhere
+         echo "CMAKE_DISABLE_PRECOMPILE_HEADERS=ON" >> $GITHUB_ENV
 
     # Saves are keyed per commit, so the primary key deliberately matches no entry
     # and every restore prefix-matches the newest. On a tagged release the
@@ -429,28 +463,9 @@ jobs:
 
     - name: install dependencies for packaging/tests
       run: |
-        LUAROCKS="luarocks --lua-version 5.1 install --local"
-
-        $LUAROCKS LuaFileSystem
-        $LUAROCKS luautf8
-        $LUAROCKS lpeg
-
-        if [ "$RUNNER_OS" = "macOS" ]; then
-          $LUAROCKS lua-zip ZIP_DIR=${HOMEBREW_PREFIX}/opt/libzip
-          $LUAROCKS LuaSQL-SQLite3 2.6.1 SQLITE_DIR=${HOMEBREW_PREFIX}/opt/sqlite
-          $LUAROCKS lrexlib-pcre2 PCRE2_DIR=${HOMEBREW_PREFIX}/opt/pcre2
-        else
-          $LUAROCKS lua-zip
-          $LUAROCKS LuaSQL-SQLite3 2.6.1
-          $LUAROCKS lrexlib-pcre2
+        if [ "${LUA_ROCKS_CACHED}" != "true" ]; then
+          ${{github.workspace}}/CI/install-lua-rocks.sh
         fi
-
-        # CI changelog generation dependencies
-        $LUAROCKS argparse
-        $LUAROCKS lunajson
-
-        # Lua-based tests
-        $LUAROCKS busted
 
         # necessary for Qt multimedia and modern Qt
         # libfuse2 could be needed for linuxdeployqt on Ubuntu 22.04:
@@ -461,6 +476,15 @@ jobs:
         BUILD_FOLDER: ${{runner.workspace}}/b/ninja
         RUNNER_OS: ${{runner.os}}
         DEPLOY: ${{matrix.deploy}}
+
+    - name: (macOS) Save Lua rocks cache
+      if: >-
+        runner.os == 'macOS' && github.ref_name == 'development'
+        && env.LUA_ROCKS_CACHED != 'true'
+      uses: actions/cache/save@v6
+      with:
+        path: ~/.luarocks
+        key: ${{ steps.rocks.outputs.prefix }}${{ github.run_id }}-${{ github.run_attempt }}
 
     - name: (Linux) Run C++ tests
       if: runner.os == 'Linux' && matrix.run_tests == 'true'
@@ -477,7 +501,9 @@ jobs:
     - name: (macOS) Run C++ tests
       if: runner.os == 'macOS' && matrix.run_tests == 'true'
       working-directory: '${{runner.workspace}}/b/ninja'
-      run: ctest --output-on-failure -j $(sysctl -n hw.ncpu)
+      # Twice the cores: most of these tests wait on timers and sockets rather than compute.
+      # On the 3-core arm64 runner -j6 took the run from 330s to 213s, and -j9 was slower (245s).
+      run: ctest --output-on-failure -j $(( 2 * $(sysctl -n hw.ncpu) ))
 
     # Skipped after the full ctest run, which covers these, and with BUILD_TESTING=OFF (bare ctest exits 8)
     - name: Run QTest
