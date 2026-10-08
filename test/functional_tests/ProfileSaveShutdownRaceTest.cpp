@@ -224,7 +224,7 @@ private slots:
         // Now let the quit run where it belongs, with the save it has to wait for
         // already properly under way.
         mpHost = nullptr;
-        QTRY_VERIFY_WITH_TIMEOUT(hostGuard.isNull(), 10000);
+        QTRY_VERIFY_WITH_TIMEOUT(hostGuard.isNull(), 10s);
         QVERIFY2(mCloseAccepted, "Closing the profile was refused");
         QCOMPARE(gaveUpWaitingWarnings, 0);
         QVERIFY2(lastSavedProfileContains(mProfileName, mKeptPackage), "The save the quit waited for reached no profile on disk");

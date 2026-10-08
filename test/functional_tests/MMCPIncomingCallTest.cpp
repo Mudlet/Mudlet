@@ -47,6 +47,8 @@
 
 #include "GroupedTest.h"
 
+using namespace std::chrono_literals;
+
 namespace {
 const QByteArray csListenerName = QByteArrayLiteral("Listener");
 
@@ -147,7 +149,7 @@ private:
                 [this, &name]() {
                     return client(name) != nullptr;
                 },
-                5000);
+                5s);
     }
 
     bool waitForNoClient(const QString& name) const
@@ -156,7 +158,7 @@ private:
                 [this, &name]() {
                     return client(name) == nullptr;
                 },
-                5000);
+                5s);
     }
 
     // Places a call and answers it, leaving a caller that is fully connected
@@ -180,7 +182,7 @@ private:
                         const QByteArray& received = caller->received();
                         return received.indexOf(static_cast<char>(End), received.indexOf(versionStart)) != -1;
                     },
-                    5000)) {
+                    5s)) {
             return nullptr;
         }
         caller->clearReceived();
@@ -263,7 +265,7 @@ private slots:
                          [this]() {
                              return server()->getClients().isEmpty();
                          },
-                         5000),
+                         5s),
                  "a caller from this case is still in the peer list");
     }
 
@@ -423,7 +425,7 @@ private slots:
         // a connection request goes unanswered rather than getting an empty list
         caller->clearReceived();
         caller->send(frame(RequestConnections));
-        QTest::qWait(300);
+        QTest::qWait(300ms);
         QVERIFY2(caller->received().isEmpty(), caller->received().toHex().constData());
 
         hangUp(caller, qsl("Eta"));
@@ -456,7 +458,7 @@ private slots:
         QVERIFY2(asking->waitToReceive(frame(Message, "<CHAT> " + csListenerName + " doesn't have any other connections")), asking->received().constData());
         asking->clearReceived();
         asking->send(frame(RequestConnections));
-        QTest::qWait(300);
+        QTest::qWait(300ms);
         QVERIFY2(asking->received().isEmpty(), asking->received().toHex().constData());
 
         hangUp(other, qsl("Iota"));
@@ -473,7 +475,7 @@ private slots:
         // nobody is served yet, so a chat to everybody goes no further
         const QByteArray fromOther = frame(TextEveryone, "Lambda chats to everybody, 'first'\n");
         other->send(fromOther);
-        QTest::qWait(300);
+        QTest::qWait(300ms);
         QVERIFY2(served->received().isEmpty(), served->received().constData());
 
         QVERIFY(server()->serve(qsl("Kappa")).first);
@@ -492,7 +494,7 @@ private slots:
         served->send(fromServed);
         QVERIFY2(other->waitToReceive(fromServed), other->received().constData());
         // but not back to the peer who said it
-        QTest::qWait(200);
+        QTest::qWait(200ms);
         QVERIFY2(!served->received().contains("'third'"), served->received().constData());
 
         hangUp(other, qsl("Lambda"));

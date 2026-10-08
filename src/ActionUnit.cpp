@@ -131,10 +131,9 @@ void ActionUnit::endProcessing()
 
 void ActionUnit::compileAll()
 {
+    // Hidden toolbars as well - see AliasUnit::compileAll()
     for (auto action : mActionRootNodeList) {
-        if (action->isActive()) {
-            action->compileAll();
-        }
+        action->compileAll();
     }
 }
 
@@ -294,6 +293,11 @@ void ActionUnit::unregisterAction(TAction* pT)
 {
     if (!pT) {
         return;
+    }
+    // The bars are redrawn from the tree below, and the undo stack clears this
+    // action's host before deleting it, so they must no longer reach it
+    if (pT->getParent()) {
+        pT->getParent()->popChild(pT);
     }
     if (pT->getParent() && pT->getParent()->mPackageName.isEmpty()) {
         removeAction(pT);

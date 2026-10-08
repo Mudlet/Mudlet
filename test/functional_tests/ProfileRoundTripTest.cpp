@@ -63,6 +63,8 @@
 
 #include "GroupedTest.h"
 
+using namespace std::chrono_literals;
+
 namespace {
 template <typename T>
 QString dbgString(const T& value)
@@ -463,7 +465,7 @@ private:
         }
 
         QSignalSpy spy2(&(host->mTelnet), &cTelnet::signal_connected);
-        if (host->mTelnet.getConnectionState() != QAbstractSocket::ConnectedState && !spy2.wait(8000)) {
+        if (host->mTelnet.getConnectionState() != QAbstractSocket::ConnectedState && !spy2.wait(8s)) {
             QFAIL("Could not connect with the host.");
         }
     }

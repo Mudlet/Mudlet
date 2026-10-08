@@ -3187,14 +3187,24 @@ int TLuaInterpreter::setButtonStyleSheet(lua_State* L)
     if (actionIds.empty()) {
         return warnArgumentValue(L, __func__, qsl("no button named '%1' found").arg(name));
     }
+    // updateAllToolbars() rebuilds every button bar, too slow for scripts that restyle a button on each prompt
+    bool rebuild = false;
     for (auto actionId : actionIds) {
         auto action = host.getActionUnit()->getAction(actionId);
         if (!action) {
             continue;
         }
         action->css = css;
+        if (host.mpConsole && host.mpConsole->restyleActionButton(action)) {
+            continue;
+        }
+        // Without this a floating toolbar skips its rebuild
+        action->setDataChanged();
+        rebuild = true;
     }
-    host.getActionUnit()->updateAllToolbars();
+    if (rebuild) {
+        host.getActionUnit()->updateAllToolbars();
+    }
     lua_pushboolean(L, 1);
     return 1;
 }
@@ -4071,7 +4081,7 @@ int TLuaInterpreter::setTextFormat(lua_State* L)
         if (lua_isstring(L, ++s)) {
             blinkMode = lua_tostring(L, s);
             if (blinkMode != qsl("none") && blinkMode != qsl("slow") && blinkMode != qsl("fast")) {
-                return warnArgumentValue(L, __func__, qsl("blink mode must be \"none\", \"slow\", or \"fast\", got \"%1\"").arg(blinkMode));
+                return warnArgumentChoice(L, __func__, qsl("blink mode"), {qsl("none"), qsl("slow"), qsl("fast")}, blinkMode);
             }
         } else {
             lua_pushfstring(L, "setTextFormat: bad argument #%d type (blink mode as string {\"none\"/\"slow\"/\"fast\"} is optional, got %s!)", s, luaL_typename(L, s));

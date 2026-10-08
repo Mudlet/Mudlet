@@ -211,6 +211,7 @@ private:
             buffer.lineBuffer.pop_front();
             buffer.promptBuffer.pop_front();
             buffer.timeBuffer.pop_front();
+            buffer.wrapGapBuffer.pop_front();
             buffer.buffer.pop_front();
             buffer.mCursorY--;
         }
@@ -521,6 +522,7 @@ private slots:
         buffer.lineBuffer.clear();
         buffer.timeBuffer.clear();
         buffer.promptBuffer.clear();
+        buffer.wrapGapBuffer.clear();
         buffer.buffer.clear();
         buffer.mCursorY = 0;
 
@@ -627,7 +629,7 @@ private:
         }
 
         QSignalSpy spy2(&(host->mTelnet), &cTelnet::signal_connected);
-        if (!spy2.wait(2000)) {
+        if (!spy2.wait(2s)) {
             qWarning() << "Could not connect with the host.";
             return false;
         }

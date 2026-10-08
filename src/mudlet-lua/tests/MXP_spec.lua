@@ -113,6 +113,22 @@ describe("Tests MXP handling", function()
       assertLineShown("\27[1z<B>Greetings < hunters & sorcerers</B>\27[7z", "Greetings < hunters & sorcerers")
     end)
 
+    -- text is taken a run of bytes at a time, and a tag or entity has to end
+    -- the run on whichever byte of it it starts
+    it("finds a tag or an entity wherever it falls in a run of text", function()
+      for offset = 0, 8 do
+        local text = "MXPRUN" .. offset .. ("x"):rep(offset)
+        assertLineShown(("\27[1z%s<B>bold</B>%s&lt;"):format(text, text), ("%sbold%s<"):format(text, text))
+      end
+    end)
+
+    it("ends a run of text at a non-ASCII character wherever it falls", function()
+      for offset = 0, 8 do
+        local text = "MXPHIGH" .. offset .. ("x"):rep(offset)
+        assertLineShown(("%sé%s<B>b</B>%s€"):format(text, text, text), ("%sé%sb%s€"):format(text, text, text))
+      end
+    end)
+
     -- a locked line shows its tags verbatim, so a switch to it that was acted
     -- on would leave the <B> pair on the line
     it("ignores an MXP mode switch in text a script fed", function()
@@ -587,6 +603,24 @@ describe("Tests MXP handling", function()
       assert.is_true(windowVisible("mxpSpecTabSecond"), "the tab left showing is not the one that remains")
       assert.are.equal("miniconsole", windowType("mxpSpecTabHost"))
       assert.are.equal(columns, getColumnCount("main"), "closing a tab changed the space its parent takes")
+    end)
+
+    -- the parent's own tab is empty, so its first tab comes to the front even
+    -- when a frame was nested in the parent before it
+    it("brings the first tab to the front of a frame that already has one nested in it", function()
+      finally(function()
+        closeFrame("mxpSpecNestTab")
+        closeFrame("mxpSpecNestInner")
+        closeFrame("mxpSpecNestHost")
+      end)
+      openFrame("mxpSpecNestHost", 'Align="right" Width="30%" Height="50%" TITLE="Host"')
+      feedTriggers('<DEST mxpSpecNestHost><FRAME Name="mxpSpecNestInner" Align="bottom" Height="25%"></DEST>' .. "\n")
+      assert.are.equal("miniconsole", windowType("mxpSpecNestInner"), "the frame was not nested in the host")
+
+      openFrame("mxpSpecNestTab", 'DOCK="mxpSpecNestHost" Align="client" TITLE="Tab"')
+
+      assert.are.equal("miniconsole", windowType("mxpSpecNestTab"))
+      assert.is_true(windowVisible("mxpSpecNestTab"), "the first tab was left behind the host's empty one")
     end)
 
     it("shows the tag as text when the frame it names is not there", function()

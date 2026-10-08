@@ -38,6 +38,21 @@
 
 using namespace std::chrono_literals;
 
+class StyleChangeCounter : public QObject
+{
+public:
+    int mCount = 0;
+
+protected:
+    bool eventFilter(QObject* watched, QEvent* event) override
+    {
+        if (event->type() == QEvent::StyleChange) {
+            ++mCount;
+        }
+        return QObject::eventFilter(watched, event);
+    }
+};
+
 // A label's background colour has to survive the script giving the label a
 // stylesheet afterwards (#10019). What getBackgroundColor() reports is covered by
 // UI_spec; this is what actually reaches the screen, which Lua cannot see.
@@ -106,7 +121,7 @@ private slots:
         }
 
         QSignalSpy connected(&(mpHost->mTelnet), &cTelnet::signal_connected);
-        if (!connected.wait(2000)) {
+        if (!connected.wait(2s)) {
             QFAIL("Could not connect with the host.");
         }
 
@@ -250,6 +265,90 @@ private slots:
         runLua(qsl("setLabelStyleSheet('lbpTarget', [[qproperty-alignment: 'AlignHCenter';]])"));
 
         QCOMPARE(paintedColour(), backdropColour());
+    }
+
+    // a status bar re-sets its labels' sheets on every prompt, and each identical one
+    // used to cost a repolish and a repaint
+    void test_identicalStyleSheetIsNotReapplied()
+    {
+        createTargetCovering(1);
+        TLabel* pLabel = mpHost->mpConsole->labelWidget(qsl("lbpTarget"));
+        StyleChangeCounter counter;
+        pLabel->installEventFilter(&counter);
+
+        runLua(qsl("setLabelStyleSheet('lbpTarget', [[border: 1px solid white;]])"));
+        QVERIFY2(counter.mCount > 0, "the counter never saw the first stylesheet arrive");
+        counter.mCount = 0;
+        runLua(qsl("setLabelStyleSheet('lbpTarget', [[border: 1px solid white;]])"));
+        QCOMPARE(counter.mCount, 0);
+
+        runLua(qsl("setBackgroundColor('lbpTarget', 255, 255, 0, 255)"));
+        QVERIFY2(counter.mCount > 0, "a new background colour did not restyle the label");
+        counter.mCount = 0;
+        runLua(qsl("setBackgroundColor('lbpTarget', 255, 255, 0, 255)"));
+        QCOMPARE(counter.mCount, 0);
+        QCOMPARE(paintedColour(), QColor(255, 255, 0));
+
+        runLua(qsl("setBackgroundColor('lbpTarget', 0, 255, 255, 255)"));
+        QVERIFY2(counter.mCount > 0, "a different background colour did not restyle the label");
+        QCOMPARE(paintedColour(), QColor(0, 255, 255));
+    }
+
+    // a background-color only inside a pseudo-state block leaves the colour to the
+    // palette, which an identical sheet that is skipped no longer refreshes
+    void test_unchangedSheetStillPaintsANewBackgroundColour()
+    {
+        createTargetCovering(1);
+        runLua(qsl("setLabelStyleSheet('lbpTarget', [[QLabel:hover { background-color: rgba(255, 255, 0, 255); }]])"));
+        runLua(qsl("setBackgroundColor('lbpTarget', 255, 255, 0, 255)"));
+
+        QCOMPARE(paintedColour(), QColor(255, 255, 0));
+    }
+
+    // resetting the link style replaces the palette, dropping the text colour the sheet
+    // set, and re-applying the sheet is what brings it back
+    void test_identicalStyleSheetRestoresItsColoursAfterTheLinkStyleIsReset()
+    {
+        createTargetCovering(1);
+        TLabel* pLabel = mpHost->mpConsole->labelWidget(qsl("lbpTarget"));
+        const QString script = qsl("setLabelStyleSheet('lbpTarget', [[color: rgb(255, 0, 0);]])");
+        runLua(script);
+        QCOMPARE(pLabel->palette().color(QPalette::WindowText), QColor(255, 0, 0));
+
+        runLua(qsl("resetLinkStyle('lbpTarget')"));
+        runLua(script);
+
+        QCOMPARE(pLabel->palette().color(QPalette::WindowText), QColor(255, 0, 0));
+    }
+
+    // re-applying the sheet it already has is how a script makes Qt reload an image
+    // it rewrote on disk
+    void test_identicalStyleSheetNamingAnImageReloadsIt()
+    {
+        createTargetCovering(1);
+        QTemporaryDir imageDir;
+        QVERIFY(imageDir.isValid());
+        const QString path = imageDir.filePath(qsl("background.png"));
+        const QDateTime now = QDateTime::currentDateTime();
+        // Qt caches a file's image by its modification time, so the rewrite has to move it
+        auto writeImage = [&path](const QColor& colour, const QDateTime& modified) {
+            QImage image(8, 8, QImage::Format_RGB32);
+            image.fill(colour);
+            if (!image.save(path)) {
+                return false;
+            }
+            QFile file(path);
+            return file.open(QIODevice::ReadWrite) && file.setFileTime(modified, QFileDevice::FileModificationTime);
+        };
+        const QString script = qsl("setLabelStyleSheet('lbpTarget', [[border-image: url(\"%1\");]])").arg(path);
+
+        QVERIFY(writeImage(QColor(255, 0, 0), now.addSecs(-100)));
+        runLua(script);
+        QCOMPARE(paintedColour(), QColor(255, 0, 0));
+
+        QVERIFY(writeImage(QColor(0, 0, 255), now));
+        runLua(script);
+        QCOMPARE(paintedColour(), QColor(0, 0, 255));
     }
 };
 

@@ -212,6 +212,7 @@ bool SelectionRectangleHandler::handleMouseMove(T2DMap::MapInteractionContext& c
             }
         }
 
+        const QSet<int> previousSelection = mMapWidget.mMultiSelectionSet;
         if (hasShift) {
             mMapWidget.mMultiSelectionSet = mMapWidget.mMultiSelectionAnchorSet;
             mMapWidget.mMultiSelectionSet.unite(rectangleSelection);
@@ -242,7 +243,11 @@ bool SelectionRectangleHandler::handleMouseMove(T2DMap::MapInteractionContext& c
         }
 
         if (mMapWidget.mMultiSelectionSet.size() > 1) {
-            populateMultiSelectionWidget();
+            // Most moves leave the selection as it was, and rebuilding the list
+            // for thousands of rooms takes longer than a mouse move's interval
+            if (mMapWidget.mMultiSelectionSet != previousSelection || mMapWidget.mMultiSelectionListWidget.isHidden()) {
+                populateMultiSelectionWidget();
+            }
         } else {
             mMapWidget.mMultiSelectionListWidget.hide();
         }

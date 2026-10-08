@@ -898,7 +898,7 @@ private slots:
                          [pWindow]() {
                              return QApplication::activeWindow() == pWindow;
                          },
-                         2000),
+                         2s),
                  "the detached window never became the active one, so this cannot test what follows focus");
 
         QVERIFY2(buttonIn(pWindow, qsl("SpeechFollow")), "a pinned command did not follow the player into the window they moved to");
@@ -931,7 +931,7 @@ private slots:
                          [pWindow]() {
                              return QApplication::activeWindow() == pWindow;
                          },
-                         2000),
+                         2s),
                  "the detached window never became the active one, so the pinned command never left home");
         QVERIFY2(menuItemIn(pWindow, qsl("SpeechPinnedItem")), "the pinned command did not follow the player into the other window");
 
@@ -945,7 +945,7 @@ private slots:
                          []() {
                              return QApplication::activeWindow() == mudlet::self();
                          },
-                         2000),
+                         2s),
                  "the main window never became the active one, so the pinned command never came home");
 
         const bool itemCameBack = menuItemIn(mudlet::self(), qsl("SpeechPinnedItem")) != nullptr;
@@ -1403,6 +1403,90 @@ private slots:
         QCOMPARE(errorsToProfileInFront, qsl("0"));
     }
 
+    // stt.stop() refused in an error state, by the same rule as stt.cancel():
+    // there is no claim left to route by, so the profile in front must not hear it
+    void test_aStopRefusedInAnErrorStateIsReportedToTheCaller()
+    {
+        mudlet::self()->activateProfile(mpSecondHost);
+        StandInRecognizer* pEngine = installStandInEngine();
+        QVERIFY2(pEngine, "the stand-in engine was not installed");
+        pEngine->initialize(QString());
+        pEngine->faultTheEngine();
+
+        for (Host* pHost : {mpFirstHost, mpSecondHost}) {
+            QVERIFY(runLua(pHost,
+                           qsl("_sttFaultErrorsHeard = '0'\n_sttFaultErrorHandler = registerAnonymousEventHandler('sysSTTError', function() _sttFaultErrorsHeard = "
+                               "tostring(tonumber(_sttFaultErrorsHeard) + 1) end)"))
+                            .isNull());
+        }
+
+        QVERIFY(runLua(mpFirstHost, qsl("_sttFaultStopOk, _sttFaultStopWhy = stt.stop()")).isNull());
+        const bool stopSucceeded = luaGlobalBoolean(mpFirstHost, qsl("_sttFaultStopOk"));
+        const QString why = luaGlobalString(mpFirstHost, qsl("_sttFaultStopWhy"));
+        const QString errorsToCaller = luaGlobalString(mpFirstHost, qsl("_sttFaultErrorsHeard"));
+        const QString errorsToProfileInFront = luaGlobalString(mpSecondHost, qsl("_sttFaultErrorsHeard"));
+
+        for (Host* pHost : {mpFirstHost, mpSecondHost}) {
+            runLua(pHost, qsl("killAnonymousEventHandler(_sttFaultErrorHandler)"));
+        }
+        retireStandInEngine();
+
+        QVERIFY2(!stopSucceeded, "a stop in an error state reported success");
+        QVERIFY2(why.contains(qsl("error state")), qPrintable(qsl("the refusal does not say why: \"%1\"").arg(why)));
+        QCOMPARE(errorsToCaller, qsl("1"));
+        QCOMPARE(errorsToProfileInFront, qsl("0"));
+    }
+
+    // A fault while listening leaves the model loaded - getInfo() still names
+    // it - so a start refused there says to reload it, not that the engine was
+    // never initialized, which initialized() being false in Error would suggest.
+    void test_aStartInAnErrorStateSaysToReloadTheModel_data()
+    {
+        QTest::addColumn<QString>("call");
+        QTest::newRow("start") << qsl("stt.start");
+        QTest::newRow("toggle") << qsl("stt.toggle");
+    }
+
+    void test_aStartInAnErrorStateSaysToReloadTheModel()
+    {
+        QFETCH(QString, call);
+        // The caller is not the profile in front, so a refusal routed by
+        // focus rather than to the caller shows up in the wrong profile
+        mudlet::self()->activateProfile(mpSecondHost);
+        StandInRecognizer* pEngine = installStandInEngine();
+        QVERIFY2(pEngine, "the stand-in engine was not installed");
+        pEngine->initialize(QString());
+        pEngine->faultTheEngine();
+
+        for (Host* pHost : {mpFirstHost, mpSecondHost}) {
+            QVERIFY(runLua(pHost,
+                           qsl("_sttFaultErrorsHeard = '0'\n_sttFaultErrorHandler = registerAnonymousEventHandler('sysSTTError', function() _sttFaultErrorsHeard = "
+                               "tostring(tonumber(_sttFaultErrorsHeard) + 1) end)"))
+                            .isNull());
+        }
+
+        QVERIFY(runLua(mpFirstHost, qsl("_sttFaultStartOk, _sttFaultStartWhy = %1()").arg(call)).isNull());
+        const bool startSucceeded = luaGlobalBoolean(mpFirstHost, qsl("_sttFaultStartOk"));
+        const QString why = luaGlobalString(mpFirstHost, qsl("_sttFaultStartWhy"));
+        const QString errorsToCaller = luaGlobalString(mpFirstHost, qsl("_sttFaultErrorsHeard"));
+        const QString errorsToProfileInFront = luaGlobalString(mpSecondHost, qsl("_sttFaultErrorsHeard"));
+        const bool stillFaulted = pEngine->state() == SpeechRecognizer::State::Error;
+        const Host* pOwnerAfter = mudlet::self()->microphoneOwner();
+
+        for (Host* pHost : {mpFirstHost, mpSecondHost}) {
+            runLua(pHost, qsl("killAnonymousEventHandler(_sttFaultErrorHandler)"));
+        }
+        retireStandInEngine();
+
+        QVERIFY2(!startSucceeded, "a start in an error state reported success");
+        QVERIFY2(why.contains(qsl("error state")) && why.contains(qsl("reload")), qPrintable(qsl("the refusal does not say to reload the model: \"%1\"").arg(why)));
+        QVERIFY2(!why.contains(qsl("not initialized")), qPrintable(qsl("the refusal blames a missing model that is loaded: \"%1\"").arg(why)));
+        QCOMPARE(errorsToCaller, qsl("1"));
+        QCOMPARE(errorsToProfileInFront, qsl("0"));
+        QVERIFY2(stillFaulted, "a refused start moved the engine out of its error state");
+        QVERIFY2(!pOwnerAfter, "a refused start left the microphone claimed");
+    }
+
     // The microphone cannot change hands while the last phrase is still being
     // decoded: the result is owed to the profile that spoke it, and the claim
     // is what routes it there. Refused rather than waited for, since a decode
@@ -1675,7 +1759,7 @@ private slots:
                          [pWindow]() {
                              return QApplication::activeWindow() == pWindow;
                          },
-                         2000),
+                         2s),
                  "the detached window never became active, so this cannot test what happens when focus leaves it");
         QVERIFY2(buttonIn(pWindow, qsl("SpeechStay")), "the pinned command did not follow the player into the detached window");
 

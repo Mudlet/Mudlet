@@ -51,6 +51,7 @@
 #include "glwidget_integration.h"
 #endif
 
+#include <algorithm>
 #include <limits>
 #include <math.h>
 
@@ -58,6 +59,7 @@
 #include <QCoreApplication>
 #include <QFileInfo>
 #include <QMovie>
+#include <QStringMatcher>
 #include <QVector>
 #ifdef QT_TEXTTOSPEECH_LIB
 #include <QTextToSpeech>
@@ -74,6 +76,9 @@ static bool isMain(const QString& name)
     }
     return false;
 }
+
+static const char* const csmMapInUseByCallback = "rooms and areas cannot be deleted, nor the map replaced, from inside an exit weight filter or map info callback";
+static const char* const csmPathfindingInExitWeightFilter = "a path cannot be found from inside an exit weight filter";
 
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#getCustomLines
 int TLuaInterpreter::getCustomLines(lua_State* L)
@@ -276,9 +281,7 @@ int TLuaInterpreter::addAreaName(lua_State* L)
     const int areaId = host.mpMap->mpRoomDB->addArea(name);
     lua_pushnumber(L, areaId);
 
-    if (host.mpMap->mpMapper) {
-        host.mpMap->mpMapper->updateAreaComboBox();
-    }
+    host.mpMap->announceAreaListChanged();
 
     host.mpMap->setUnsaved(__func__);
     host.mpMap->updateArea(areaId);
@@ -367,6 +370,11 @@ int TLuaInterpreter::addCustomLine(lua_State* L)
                                         coordinate);
                         return lua_error(L);
                     }
+                    // Room coordinates are ints; beyond them the z cast is undefined and
+                    // the 2D map's arithmetic overflows to infinity. NaN fails this too
+                    if (const lua_Number value = lua_tonumber(L, -1); !(value >= std::numeric_limits<int>::min() && value <= std::numeric_limits<int>::max())) {
+                        return warnArgumentValue(L, __func__, qsl("the %1-coordinate of point #%2 is outside the range of room coordinates").arg(QLatin1Char("xyz"[j - 1])).arg(i));
+                    }
                     switch (j) {
                     case 1:
                         ++xCount;
@@ -426,7 +434,7 @@ int TLuaInterpreter::addCustomLine(lua_State* L)
         } else if (!lineStyleString.compare(QLatin1String("dash dot dot line"))) {
             line_style = Qt::DashDotDotLine;
         } else {
-            return warnArgumentValue(L, __func__, qsl("invalid line style '%1', only use one of: 'solid line', 'dot line', 'dash line', 'dash dot line' or 'dash dot dot line'").arg(lineStyleString));
+            return warnArgumentChoice(L, __func__, qsl("line style"), {qsl("solid line"), qsl("dot line"), qsl("dash line"), qsl("dash dot line"), qsl("dash dot dot line")}, lineStyleString);
         }
     }
 
@@ -751,15 +759,8 @@ int TLuaInterpreter::centerview(lua_State* L)
 
     host.mpMap->mRoomIdHash[host.getName()] = roomId;
     host.mpMap->mNewMove = true;
-
-    if (host.mpMap->mpMapper->mp2dMap) {
-        host.mpMap->mpMapper->mp2dMap->isCenterViewCall = true;
-    }
     host.mpMap->updateArea(pR->getArea());
-    if (host.mpMap->mpMapper->mp2dMap) {
-        host.mpMap->mpMapper->mp2dMap->isCenterViewCall = false;
-        host.mpMap->mpMapper->resetAreaComboBoxToPlayerRoomArea();
-    }
+    host.mpMap->requestPlayerAreaShown();
     lua_pushboolean(L, true);
     return 1;
 }
@@ -986,7 +987,7 @@ int TLuaInterpreter::connectExitStub(lua_State* L)
             hasDirection = true;
         } else if (lua_type(L, 2) == LUA_TNUMBER) {
             const int value = qRound(lua_tonumber(L, 2));
-            if (value >= DIR_OUT || value <= DIR_NORTH) {
+            if (value >= DIR_NORTH && value <= DIR_OUT) {
                 // Ambiguous - look in more detail and check whether there is a
                 // a room with the given number and/or an exit stub:
                 const bool hasRoomWithNumberAsId = static_cast<bool>(host.mpMap->mpRoomDB->getRoom(value));
@@ -1246,6 +1247,9 @@ int TLuaInterpreter::deleteArea(lua_State* L)
     if (!host.mpMap || !host.mpMap->mpRoomDB) {
         return warnArgumentValue(L, __func__, "no map present or loaded");
     }
+    if (host.mpMap->scriptCallbackInProgress()) {
+        return warnArgumentValue(L, __func__, csmMapInUseByCallback);
+    }
 
     if (lua_isnumber(L, 1)) {
         id = static_cast<int>(lua_tonumber(L, 1));
@@ -1282,9 +1286,7 @@ int TLuaInterpreter::deleteArea(lua_State* L)
     }
 
     if (result) {
-        if (host.mpMap->mpMapper) {
-            host.mpMap->mpMapper->updateAreaComboBox();
-        }
+        host.mpMap->announceAreaListChanged();
         host.mpMap->setUnsaved(__func__);
         host.mpMap->updateArea(id);
         host.mpMap->mMapGraphNeedsUpdate = true;
@@ -1304,6 +1306,9 @@ int TLuaInterpreter::deleteMap(lua_State* L)
         // still succeed immediately after this function has been used!
         return warnArgumentValue(L, __func__, "no map present or loaded");
     }
+    if (host.mpMap->scriptCallbackInProgress()) {
+        return warnArgumentValue(L, __func__, csmMapInUseByCallback);
+    }
 
     host.mpMap->mapClear();
 
@@ -1321,6 +1326,9 @@ int TLuaInterpreter::deleteRoom(lua_State* L)
         return 0;
     }
     const Host& host = getHostFromLua(L);
+    if (host.mpMap->scriptCallbackInProgress()) {
+        return warnArgumentValue(L, __func__, csmMapInUseByCallback);
+    }
     int areaId = -1;
     if (auto* pR = host.mpMap->mpRoomDB->getRoom(id)) {
         areaId = pR->getArea();
@@ -2059,6 +2067,9 @@ int TLuaInterpreter::getPath(lua_State* L)
     if (!host.mpMap->mpRoomDB->getRoom(targetRoomId)) {
         return warnArgumentValue(L, __func__, qsl("number %1 is not a valid target roomID").arg(targetRoomId));
     }
+    if (host.mpMap->graphBuildInProgress()) {
+        return warnArgumentValue(L, __func__, csmPathfindingInExitWeightFilter);
+    }
 
     const bool ret = host.mpMap->gotoRoom(originRoomId, targetRoomId);
     const int totalWeight = host.assemblePath(); // Needed even if unsuccessful, to clear lua tables then
@@ -2587,6 +2598,9 @@ int TLuaInterpreter::gotoRoom(lua_State* L)
     if (!host.mpMap->mpRoomDB->getRoom(targetRoomId)) {
         return warnArgumentValue(L, __func__, qsl("number %1 is not a valid target roomID").arg(targetRoomId));
     }
+    if (host.mpMap->graphBuildInProgress()) {
+        return warnArgumentValue(L, __func__, csmPathfindingInExitWeightFilter);
+    }
 
     if (!host.mpMap->gotoRoom(targetRoomId)) {
         const int totalWeight = host.assemblePath(); // Needed if unsuccessful to clear lua speedwalk tables
@@ -2697,6 +2711,9 @@ int TLuaInterpreter::loadJsonMap(lua_State* L)
     if (!pHost || !pHost->mpMap || !pHost->mpMap->mpMapper || !pHost->mpMap->mpMapper->mp2dMap) {
         return warnArgumentValue(L, __func__, "no map present or loaded");
     }
+    if (pHost->mpMap->scriptCallbackInProgress()) {
+        return warnArgumentValue(L, __func__, csmMapInUseByCallback);
+    }
 
     auto source = getVerifiedString(L, __func__, 1, "import pathFileName");
     if (source.isEmpty()) {
@@ -2710,10 +2727,8 @@ int TLuaInterpreter::loadJsonMap(lua_State* L)
     // Must run the audit() process now - as it is no longer done within
     // TMap::readJsonMapFile(...) as that can now be used elsewhere:
     pHost->mpMap->audit();
-    pHost->mpMap->mpMapper->mp2dMap->init();
-    pHost->mpMap->mpMapper->updateAreaComboBox();
-    pHost->mpMap->mpMapper->resetAreaComboBoxToPlayerRoomArea();
-    pHost->mpMap->mpMapper->show();
+    pHost->mpMap->announceMapLoaded(true);
+    pHost->mpMap->requestMapperShown();
 
     lua_pushboolean(L, true);
     return 1;
@@ -2727,6 +2742,9 @@ int TLuaInterpreter::loadMap(lua_State* L)
     QString location;
     if (lua_gettop(L)) {
         location = getVerifiedString(L, __func__, 1, "Map pathFile {loads last stored map if omitted}", true);
+    }
+    if (host.mpMap && host.mpMap->scriptCallbackInProgress()) {
+        return warnArgumentValue(L, __func__, csmMapInUseByCallback);
     }
 
     bool isOk = false;
@@ -3298,35 +3316,43 @@ int TLuaInterpreter::searchRoom(lua_State* L)
         }
         return warnArgumentValue(L, __func__, csmInvalidRoomID.arg(room_id));
     }
-    QList<TRoom*> const roomList = host.mpMap->mpRoomDB->getRoomPtrList();
-    lua_newtable(L);
-    QList<int> roomIdsFound;
-    for (auto pR : roomList) {
+    const Qt::CaseSensitivity sensitivity = caseSensitive ? Qt::CaseSensitive : Qt::CaseInsensitive;
+    // Mapping scripts look up every room they arrive in by name, so this walks
+    // every room of the map on each move: the matcher prepares the search once
+    // rather than per room, as QString::contains() would. Not for a case
+    // insensitive search for anything outside the BMP, though, which Qt's
+    // matcher never finds:
+    const bool beyondBmp = std::any_of(room.cbegin(), room.cend(), [](const QChar c) {
+        return c.isSurrogate();
+    });
+    const bool useMatcher = !exactMatch && (caseSensitive || !beyondBmp);
+    const QStringMatcher matcher(useMatcher ? room : QString(), sensitivity);
+    // Pushed only once the walk is over: pushing can run a Lua finalizer, which
+    // could add, delete or rename rooms under the iterator - so each is also
+    // looked up afresh when it is pushed, as it always was
+    QList<int> found;
+    for (const TRoom* pR : host.mpMap->mpRoomDB->getRoomMap()) {
         if (!pR) {
             continue;
         }
+        bool matches = false;
         if (exactMatch) {
-            if (pR->name.compare(room, caseSensitive ? Qt::CaseSensitive : Qt::CaseInsensitive) == 0) {
-                roomIdsFound.append(pR->getId());
-            }
+            // Case folding is one UTF-16 unit for one, so names of another
+            // length need no folding to rule out, which is most of the cost:
+            matches = pR->name.size() == room.size() && pR->name.compare(room, sensitivity) == 0;
         } else {
-            if (pR->name.contains(room, caseSensitive ? Qt::CaseSensitive : Qt::CaseInsensitive)) {
-                roomIdsFound.append(pR->getId());
-            }
+            matches = useMatcher ? matcher.indexIn(pR->name) != -1 : pR->name.contains(room, sensitivity);
+        }
+        if (matches) {
+            found.append(pR->getId());
         }
     }
-    if (!roomIdsFound.isEmpty()) {
-        for (const int i : roomIdsFound) {
-            TRoom* pR = host.mpMap->mpRoomDB->getRoom(i);
-            // This test is to keep Coverity happy as it thinks pR could be
-            // a nullptr in some odd situation {CID 1415023}:
-            if (pR) {
-                const QString name = pR->name;
-                const int roomID = pR->getId();
-                lua_pushnumber(L, roomID);
-                lua_pushstring(L, name.toUtf8().constData());
-                lua_settable(L, -3);
-            }
+    lua_newtable(L);
+    for (const int roomId : found) {
+        if (const TRoom* pR = host.mpMap->mpRoomDB->getRoom(roomId)) {
+            lua_pushnumber(L, roomId);
+            lua_pushstring(L, pR->name.toUtf8().constData());
+            lua_settable(L, -3);
         }
     }
     return 1;
@@ -3500,23 +3526,12 @@ int TLuaInterpreter::setAreaName(lua_State* L)
         return 1;
     }
 
-    bool isCurrentAreaRenamed = false;
-    if (host.mpMap->mpMapper) {
-        if (id > 0 && host.mpMap->mpRoomDB->getAreaNamesMap().value(id) == host.mpMap->mpMapper->comboBox_showArea->currentText()) {
-            isCurrentAreaRenamed = true;
-        }
-    }
-
+    const QString oldName = host.mpMap->mpRoomDB->getAreaNamesMap().value(id);
     const bool result = host.mpMap->mpRoomDB->setAreaName(id, newName);
     if (result) {
         host.mpMap->setUnsaved(__func__);
         host.mpMap->updateArea(id);
-        if (host.mpMap->mpMapper) {
-            host.mpMap->mpMapper->updateAreaComboBox();
-            if (isCurrentAreaRenamed) {
-                host.mpMap->mpMapper->comboBox_showArea->setCurrentText(newName);
-            }
-        }
+        host.mpMap->announceAreaRenamed(oldName, newName);
     }
     lua_pushboolean(L, result);
     return 1;

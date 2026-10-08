@@ -34,6 +34,8 @@
 #include <QListWidget>
 #include <QScrollArea>
 #include <QSignalSpy>
+#include <QSpinBox>
+#include <QTimeEdit>
 
 #include "MudletApp.h"
 #include "PortableModeTestHelper.h"
@@ -46,6 +48,8 @@
 #include "mudlet.h"
 
 #include "GroupedTest.h"
+
+using namespace std::chrono_literals;
 
 class SettingsInstantApplyTest : public QObject
 {
@@ -262,6 +266,150 @@ private slots:
         mpHost->mCommandSeparator = before;
     }
 
+    // A spin box emits valueChanged() for every digit that makes a number, so
+    // on the way to 80 the wrap width is 8 for as long as the user pauses
+    void test_typingANumberAppliesOnlyOnceTheEditIsFinished()
+    {
+        openPreferences();
+        selectCategory(qsl("mainDisplay"));
+        QSpinBox* pWrapAt = mpPreferences->wrap_at_spinBox;
+        const int before = mpHost->mWrapAt;
+        const int typed = (before == 80) ? 70 : 80;
+
+        QSignalSpy applySpy(mpPreferences, &dlgProfilePreferences::signal_preferencesSaved);
+        pWrapAt->setFocus();
+        pWrapAt->selectAll();
+        QTest::keyClicks(pWrapAt, QString::number(typed / 10));
+        QCOMPARE(pWrapAt->value(), typed / 10);
+        QVERIFY2(TestSettings::waitForApply(applySpy), "the first digit never scheduled an apply");
+        QCOMPARE(mpHost->mWrapAt, before);
+
+        applySpy.clear();
+        QTest::keyClicks(pWrapAt, qsl("0"));
+        QTest::keyClick(pWrapAt, Qt::Key_Return);
+        QVERIFY2(TestSettings::waitForApply(applySpy), "finishing the edit never wrote the settings back");
+        QCOMPARE(mpHost->mWrapAt, typed);
+
+        mpHost->mWrapAt = before;
+    }
+
+    // People pause before pressing Return, so the apply the last digit started
+    // has run, and skipped the field, before the edit is finished
+    void test_aNumberFinishedAfterAPauseIsStillApplied()
+    {
+        openPreferences();
+        selectCategory(qsl("mainDisplay"));
+        QSpinBox* pWrapAt = mpPreferences->wrap_at_spinBox;
+        const int before = mpHost->mWrapAt;
+        const int typed = (before == 80) ? 70 : 80;
+
+        QSignalSpy applySpy(mpPreferences, &dlgProfilePreferences::signal_preferencesSaved);
+        pWrapAt->setFocus();
+        pWrapAt->selectAll();
+        QTest::keyClicks(pWrapAt, QString::number(typed));
+        QVERIFY2(TestSettings::waitForApply(applySpy), "typing never scheduled an apply");
+        QCOMPARE(mpHost->mWrapAt, before);
+
+        applySpy.clear();
+        QTest::keyClick(pWrapAt, Qt::Key_Return);
+        QVERIFY2(TestSettings::waitForApply(applySpy), "finishing the edit never wrote the settings back");
+        QCOMPARE(mpHost->mWrapAt, typed);
+
+        mpHost->mWrapAt = before;
+    }
+
+    // QDateTimeEdit handles Return itself, without finishing its line edit the
+    // way the other spin boxes do
+    void test_aTimeIsAppliedOnReturn()
+    {
+        openPreferences();
+        selectCategory(qsl("advanced"));
+        QTimeEdit* pInterval = mpPreferences->timeEdit_timerDebugOutputMinimumInterval;
+        QVERIFY2(pInterval->isVisible(), "the timer debug interval is not on the Advanced page");
+        const QTime before = mpHost->mTimerDebugOutputSuppressionInterval;
+        const int typedSeconds = (before.second() == 45) ? 35 : 45;
+
+        QSignalSpy applySpy(mpPreferences, &dlgProfilePreferences::signal_preferencesSaved);
+        pInterval->setFocus();
+        pInterval->setSelectedSection(QDateTimeEdit::SecondSection);
+        QTest::keyClicks(pInterval, QString::number(typedSeconds));
+        QCOMPARE(pInterval->time().second(), typedSeconds);
+        QTest::keyClick(pInterval, Qt::Key_Return);
+        QVERIFY2(TestSettings::waitForApply(applySpy), "finishing the edit never wrote the settings back");
+        QVERIFY(pInterval->hasFocus());
+        QCOMPARE(mpHost->mTimerDebugOutputSuppressionInterval.second(), typedSeconds);
+
+        mpHost->mTimerDebugOutputSuppressionInterval = before;
+    }
+
+    // Retyping a larger scrollback size passes through smaller ones, and the
+    // next line from the game trims the buffer to whichever one is applied
+    void test_aNumberIsAppliedWhenTheFieldIsLeft()
+    {
+        openPreferences();
+        selectCategory(qsl("mainDisplay"));
+        QSpinBox* pBufferSize = mpPreferences->console_buffer_size_spinBox;
+        const int before = mpHost->getConsoleBufferSize();
+        const int typed = (before == 50000) ? 60000 : 50000;
+        const QString digits = QString::number(typed);
+
+        QSignalSpy applySpy(mpPreferences, &dlgProfilePreferences::signal_preferencesSaved);
+        pBufferSize->setFocus();
+        pBufferSize->selectAll();
+        QTest::keyClicks(pBufferSize, digits.left(3));
+        QVERIFY2(TestSettings::waitForApply(applySpy), "the first digits never scheduled an apply");
+        QCOMPARE(mpHost->getConsoleBufferSize(), before);
+
+        applySpy.clear();
+        QTest::keyClicks(pBufferSize, digits.mid(3));
+        mpPreferences->wrap_at_spinBox->setFocus();
+        QVERIFY2(TestSettings::waitForApply(applySpy), "leaving the field never wrote the settings back");
+        QCOMPARE(mpHost->getConsoleBufferSize(), typed);
+
+        mpHost->setConsoleBufferSize(before);
+    }
+
+    // Holding back a number until the field is left must not lose it when
+    // leaving the field is closing the dialog
+    void test_aNumberStillBeingTypedIsAppliedOnClose()
+    {
+        openPreferences();
+        selectCategory(qsl("mainDisplay"));
+        QSpinBox* pWrapAt = mpPreferences->wrap_at_spinBox;
+        const int before = mpHost->mWrapAt;
+        const int typed = (before == 80) ? 70 : 80;
+
+        pWrapAt->setFocus();
+        pWrapAt->selectAll();
+        QTest::keyClicks(pWrapAt, QString::number(typed));
+        mpPreferences->close();
+        QCOMPARE(mpHost->mWrapAt, typed);
+
+        mpHost->mWrapAt = before;
+    }
+
+    // An arrow step is a whole value rather than part of one, so it applies
+    // without the field having to be left
+    void test_steppingANumberAppliesWithoutLeavingTheField()
+    {
+        openPreferences();
+        selectCategory(qsl("mainDisplay"));
+        QSpinBox* pWrapAt = mpPreferences->wrap_at_spinBox;
+        const int before = mpHost->mWrapAt;
+
+        QSignalSpy applySpy(mpPreferences, &dlgProfilePreferences::signal_preferencesSaved);
+        pWrapAt->setFocus();
+        // after typing, so the step has a modified field to finish
+        pWrapAt->selectAll();
+        QTest::keyClicks(pWrapAt, QString::number(before));
+        QTest::keyClick(pWrapAt, Qt::Key_Up);
+        QVERIFY2(TestSettings::waitForApply(applySpy), "the step never wrote the settings back");
+        QVERIFY(pWrapAt->hasFocus());
+        QCOMPARE(mpHost->mWrapAt, before + 1);
+
+        mpHost->mWrapAt = before;
+    }
+
     // The ten protocol toggles are ordinary checkboxes on the subpage the
     // Connection page's protocols card leads to, so instant apply reaches them
     // the same way it reaches every other checkbox.
@@ -326,7 +474,7 @@ private slots:
                          [&saveDir]() {
                              return !saveDir.entryList({qsl("*.xml")}, QDir::Files).isEmpty();
                          },
-                         30000),
+                         30s),
                  "closing the settings never wrote the profile out");
 
         mpHost->mFORCE_SAVE_ON_EXIT = saveOnExitBefore;
