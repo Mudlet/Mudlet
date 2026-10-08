@@ -727,24 +727,6 @@ void localDiscordPresence::setSmallImageKey(const QString& text)
     utils::copyUtf8String(mSmallImageKey, sizeof(mSmallImageKey), utf8Data.constData(), utf8Data.size());
 }
 
-void localDiscordPresence::setJoinSecret(const QString& text)
-{
-    const QByteArray utf8Data = text.toUtf8();
-    utils::copyUtf8String(mJoinSecret, sizeof(mJoinSecret), utf8Data.constData(), utf8Data.size());
-}
-
-void localDiscordPresence::setMatchSecret(const QString& text)
-{
-    const QByteArray utf8Data = text.toUtf8();
-    utils::copyUtf8String(mMatchSecret, sizeof(mMatchSecret), utf8Data.constData(), utf8Data.size());
-}
-
-void localDiscordPresence::setSpectateSecret(const QString& text)
-{
-    const QByteArray utf8Data = text.toUtf8();
-    utils::copyUtf8String(mSpectateSecret, sizeof(mSpectateSecret), utf8Data.constData(), utf8Data.size());
-}
-
 bool Discord::usingMudletsDiscordID(Host* pHost) const
 {
     return (!mHostApplicationIDs.contains(pHost));

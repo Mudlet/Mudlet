@@ -92,9 +92,6 @@ public:
     void setLargeImageText(const QString&);
     void setSmallImageKey(const QString&);
     void setSmallImageText(const QString&);
-    void setJoinSecret(const QString&);
-    void setMatchSecret(const QString&);
-    void setSpectateSecret(const QString&);
     void setPartySize(const int size) { mPartySize = size; }
     void setPartyMax(const int maximum) { mPartyMax = maximum; }
     DiscordRichPresence convert() const;
