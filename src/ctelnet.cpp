@@ -4374,9 +4374,10 @@ void cTelnet::processTelnetCommand(const std::string& telnetCommand)
             const auto type = static_cast<unsigned char>(data[1]);
             // Only access telnetCommand[2] if it exists
             const auto telnetOption = telnetCommand.size() > 2 ? static_cast<unsigned char>(data[2]) : 0;
-            QString msg = telnetCommand.c_str();
+            // A script-handled option may carry any bytes at all, so they go to Lua as they came:
+            QByteArray payload{telnetCommand.data(), static_cast<qsizetype>(telnetCommand.size())};
             if (telnetCommand.size() >= 6) {
-                msg = msg.mid(3, telnetCommand.size() - 5);
+                payload = payload.mid(3, telnetCommand.size() - 5);
             }
 
             TEvent event{};
@@ -4386,8 +4387,8 @@ void cTelnet::processTelnetCommand(const std::string& telnetCommand)
             event.mArgumentTypeList.append(ARGUMENT_TYPE_NUMBER);
             event.mArgumentList.append(QString::number(telnetOption));
             event.mArgumentTypeList.append(ARGUMENT_TYPE_NUMBER);
-            event.mArgumentList.append(msg);
-            event.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
+            event.mArgumentList.append(QString::fromLatin1(payload));
+            event.mArgumentTypeList.append(ARGUMENT_TYPE_BYTES);
             mpHost->raiseEvent(event);
         }
     }

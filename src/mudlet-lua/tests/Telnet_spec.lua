@@ -1223,6 +1223,30 @@ describe("Tests addSupportedTelnetOption", function()
   end)
 end)
 
+describe("Tests the sysTelnetEvent raised for an option scripts handle", function()
+  -- A script-handled option can carry binary data, so its payload has to reach
+  -- Lua byte for byte, NULs and bytes from 0x80 up included
+  it("hands the subnegotiation payload over byte for byte", function()
+    addSupportedTelnetOption(137)
+    local received = {}
+    local handler = registerAnonymousEventHandler("sysTelnetEvent", function(_, kind, option, data)
+      if option == 137 then
+        received[kind] = data
+      end
+    end)
+    finally(function() killAnonymousEventHandler(handler) end)
+
+    -- the IAC is doubled in the stream, as telnet escapes it
+    local ok, msg = feedTelnet("<T_IAC><T_SB>" .. string.char(137) .. "AB<00>CD\195\169<T_IAC><T_IAC>EF<T_IAC><T_SE>")
+    assert.is_true(ok, "start the suite with --offline, see the tests README - feedTelnet said: " .. tostring(msg))
+    assert.equals("AB\0CD\195\169\255EF", received[250])
+
+    -- a command too short to carry a payload hands over the whole command
+    assert.is_true(feedTelnet("<T_IAC><T_WILL>" .. string.char(137)))
+    assert.equals("\255\251\137", received[251])
+  end)
+end)
+
 describe("Tests telnet option negotiation", function()
 
   local function feed(data)
