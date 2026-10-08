@@ -218,6 +218,7 @@ set(MAP_GROUP_TEST_SOURCES
     MapOffscreenCustomLineTest.cpp
     MapFileStatsTest.cpp
     MapTextLabelCacheTest.cpp
+    MapViewAreaListTest.cpp
     MapLabelRenderTest.cpp
     MapViewCueTest.cpp
     LuaMapperCueTest.cpp
