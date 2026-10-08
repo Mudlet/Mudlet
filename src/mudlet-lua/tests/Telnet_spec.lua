@@ -1683,31 +1683,26 @@ describe("Tests MCCP compressed streams", function()
     assert.is_truthy(shown:find("MCCPV1PLAINAFTER", 1, true), shown)
   end)
 
-  -- One read that inflates past the decompression bomb cap cannot be followed
-  -- to the end, and the part it drops leaves the stream unreadable, so the
-  -- stream has to be refused there rather than fed whatever comes next.
-  it("refuses a stream that inflates past the cap in one read", function()
+  -- One read can inflate to more than the drain works through in one go: the
+  -- rest has to be shown too, with the stream still readable after it
+  it("shows all of a stream that inflates past the depth of one drain", function()
     -- zlib.compress(string.rep("\0", 1000000) .. "MCCPTAILOFBOMB\r\n", 9): NULs
-    -- are not displayed, so the cap is reached without drawing ~1 MB of text.
+    -- are not displayed, so the depth is reached without drawing ~1 MB of text.
     -- It has to inflate to more than scmMaxDecompressionRecursion * BUFFER_SIZE
-    -- (8 * 100000 bytes in ctelnet), or raising either leaves the cap unreached.
+    -- (8 * 100000 bytes in ctelnet), or the drain never goes that deep.
     local bomb = "\120\218\237\193\209\9\0\16\20\0\64\223\202\80\40\165\188\248\176\255\44\6\113\119\41\1"
       .. string.rep("\0", 968)
       .. "\191\138\222\207\173\115\237\209\118\180\146\31\105\128\4\26"
     local mark = getLastLineNumber("main")
     feed("<T_IAC><T_WILL><O_MCCP2>")
     feed("<T_IAC><T_SB><O_MCCP2><T_IAC><T_SE>" .. escaped(bomb))
-    -- what a game sends once it has seen the DONT
-    feed("MCCPPLAINAFTERCAP\r\n")
+    -- the stream ended with the bomb, so this is plain text
+    feed("MCCPPLAINAFTERBOMB\r\n")
     local shown = linesSince(mark)
-    assert.is_truthy(shown:find("Too much compressed data to process at once", 1, true), shown)
-    assert.is_falsy(shown:find("MCCP decompression error", 1, true), "the plain text was fed to the dropped stream: " .. shown)
-    assert.is_truthy(shown:find("MCCPPLAINAFTERCAP", 1, true), shown)
-
-    feed("<T_IAC><T_WILL><O_MCCP2>")
-    feed("<T_IAC><T_SB><O_MCCP2><T_IAC><T_SE>" .. escaped(COMPRESSED))
-    shown = linesSince(mark)
-    assert.is_truthy(shown:find("MCCPDECOMPRESSEDOK MCCPDECOMPRESSEDOK MCCPDECOMPRESSEDOK", 1, true), "offering MCCP again did not bring it back: " .. shown)
+    assert.is_truthy(shown:find("MCCPTAILOFBOMB", 1, true), shown)
+    assert.is_falsy(shown:find("Too much compressed data to process at once", 1, true), shown)
+    assert.is_falsy(shown:find("MCCP decompression error", 1, true), shown)
+    assert.is_truthy(shown:find("MCCPPLAINAFTERBOMB", 1, true), shown)
   end)
 end)
 
