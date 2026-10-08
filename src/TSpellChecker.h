@@ -49,6 +49,7 @@ public:
     TSpellChecker& operator=(const TSpellChecker&) = delete;
 
     void setSystemDictionary(const QString&);
+    bool systemDictionaryMissing() const { return mSystemDictionaryMissing; }
     // Builds the system handle (when spell check is on) and prepares the user
     // dictionary. Only a view schedules it (TMainConsole ctor), so a profile
     // without one builds both lazily on first use.
@@ -117,6 +118,8 @@ private:
     // front of every keystroke. Cleared, with smSharedDictionaryFailed, by
     // applyUserDictionaryOptions().
     bool mProfileDictionaryFailed = false;
+    // Remembered for the same reason, until a dictionary is picked again
+    bool mSystemDictionaryMissing = false;
     QByteArray mHunspellCodecName_system;
     // To update the profile dictionary we actually have to track all the words
     // in it so we load the contents into this on startup and adjust it as we

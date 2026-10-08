@@ -260,6 +260,17 @@ private slots:
         mpHost->setUserDictionaryOptions(true, true);
         QVERIFY2(TSpellChecker::sharedDictionary(), "switching to the profile dictionary and back left the shared dictionary refused, so only a restart retries it");
     }
+
+    // Hunspell_create() cannot fail: for files that are not there it hands back an
+    // empty dictionary, which marks every word typed as misspelt (#10153)
+    void test_aSystemDictionaryThatIsNotThereIsNotLoaded()
+    {
+        mpHost->setSpellDic(qsl("mudlet_no_such_dictionary"));
+        QVERIFY2(!mpHost->spellChecker().systemHandle(), "a dictionary with no files was loaded, and would mark every word as misspelt");
+
+        const QString reason = reasonFrom(qsl("local ok, why = spellCheckWord(\"kalamazoo\"); reason = why"));
+        QVERIFY2(reason.contains(qsl("no main dictionaries found")), qPrintable(qsl("spellCheckWord() answered '%1'").arg(reason)));
+    }
 };
 
 #include "SpellDictionaryFailureTest.moc"

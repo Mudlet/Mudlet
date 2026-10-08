@@ -3851,6 +3851,14 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
             }
         }
 
+        // Shown rather than left to fall back to the first entry, which reads as
+        // the profile's choice and would be saved as it
+        if (currentIndex < 0 && !currentDictionary.isEmpty()) {
+            //: %1 is the code of the spell-check dictionary the profile uses, such as "de_DE", when no dictionary file of that name is on this computer
+            comboBox_dictionary->addItem(tr("%1 - not available").arg(currentDictionary), currentDictionary);
+            currentIndex = comboBox_dictionary->count() - 1;
+        }
+
         if (currentIndex >= 0) {
             comboBox_dictionary->setCurrentIndex(currentIndex);
         }

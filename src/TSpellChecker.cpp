@@ -26,8 +26,10 @@
 #include "utils.h"
 
 #include <QCollator>
+#include <QCoreApplication>
 #include <QDebug>
 #include <QFile>
+#include <QFileInfo>
 #include <QMultiMap>
 #include <QSaveFile>
 #include <QTextBoundaryFinder>
@@ -36,7 +38,6 @@
 
 #if defined(Q_OS_WINDOWS)
 #include <QCryptographicHash>
-#include <QFileInfo>
 #include <QRegularExpression>
 #include <QScopedArrayPointer>
 #include <windows.h>
@@ -173,11 +174,12 @@ TSpellChecker::~TSpellChecker()
 
 void TSpellChecker::setSystemDictionary(const QString& newDict)
 {
-    if (newDict.isEmpty() || mSystemDictionary == newDict) {
+    if (newDict.isEmpty() || (mSystemDictionary == newDict && !mSystemDictionaryMissing)) {
         return;
     }
 
     mSystemDictionary = newDict;
+    mSystemDictionaryMissing = false;
 
     if (mpHunspell_system) {
         Hunspell_destroy(mpHunspell_system);
@@ -213,7 +215,7 @@ void TSpellChecker::warmDictionaries()
 
 Hunhandle* TSpellChecker::systemHandle()
 {
-    if (!mpHunspell_system) {
+    if (!mpHunspell_system && !mSystemDictionaryMissing) {
         if (mSystemDictionary.isEmpty()) {
             // A profile whose XML names no dictionary never calls
             // Host::setSpellDic(), so the platform's starting one has to be
@@ -248,6 +250,20 @@ void TSpellChecker::loadSystemDictionary()
     sanitizeUtf8Path(spell_aff);
     sanitizeUtf8Path(spell_dic);
 #endif
+
+    // Hunspell_create() cannot fail: given files that are not there it hands back
+    // an empty dictionary, which marks every word as misspelt
+    if (!QFileInfo::exists(spell_aff) || !QFileInfo::exists(spell_dic)) {
+        mSystemDictionaryMissing = true;
+        qWarning().noquote().nospace() << "TSpellChecker::loadSystemDictionary() WARNING - the Hunspell dictionary \"" << mSystemDictionary << "\" is not available, as \"" << spell_aff << "\" and \""
+                                       << spell_dic << "\" are not both there.";
+        //: %1 is the name of the spell-check dictionary the profile uses, such as "de_DE"
+        mpHost->postMessage(QCoreApplication::translate("TSpellChecker",
+                                                        "[ WARN ]  - The spell-check dictionary \"%1\" that this profile uses is not available on this computer, "
+                                                        "so nothing will be spell-checked until another one is picked in the preferences.")
+                                    .arg(mSystemDictionary));
+        return;
+    }
 
     mpHunspell_system = Hunspell_create(spell_aff.toUtf8().constData(), spell_dic.toUtf8().constData());
     if (mpHunspell_system) {

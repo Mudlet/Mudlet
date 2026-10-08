@@ -4817,7 +4817,8 @@ QString Host::getSpellDic() const
 
 void Host::setSpellDic(const QString& newDict)
 {
-    if (newDict.isEmpty() || mSpellDic == newDict) {
+    // The same name again is a retry when it could not be found the last time
+    if (newDict.isEmpty() || (mSpellDic == newDict && !mSpellChecker.systemDictionaryMissing())) {
         return;
     }
     mSpellDic = newDict;
