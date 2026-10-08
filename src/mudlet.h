@@ -936,6 +936,9 @@ private:
 
     // Detached windows for profiles
     QMap<QString, QPointer<TDetachedWindow>> mDetachedWindows;
+    // The main tab bar slot each profile was detached from, for its window's
+    // reattach action to put it back there
+    QHash<QString, int> mDetachedFromTabIndex;
 
     // The map actions' enabled state before the active profile's
     // "mapperButton" setConfig mode is applied on top - the last baseline the

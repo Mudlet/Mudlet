@@ -3757,6 +3757,7 @@ void mudlet::closeHost(const QString& name)
     }
 
     // Clean up detached window mapping for this profile
+    mDetachedFromTabIndex.remove(name);
     if (mDetachedWindows.contains(name)) {
 #if defined(DEBUG_WINDOW_HANDLING)
         qDebug() << "mudlet::closeHost: Removing detached window mapping for profile" << name;
@@ -4819,6 +4820,7 @@ void mudlet::closeEvent(QCloseEvent* event)
     }
 
     mDetachedWindows.clear();
+    mDetachedFromTabIndex.clear();
 
     // Since we are here the close is to be completed:
     writeSettings();
@@ -8872,6 +8874,7 @@ void mudlet::slot_detachedWindowClosed(const QString& profileName)
     // Clean up when detached window is closed
     if (mDetachedWindows.contains(profileName)) {
         mDetachedWindows.remove(profileName);
+        mDetachedFromTabIndex.remove(profileName);
 
         // Update tab bar auto-hide behavior since detached windows changed
         updateMainWindowTabBarAutoHide();
@@ -8966,6 +8969,7 @@ void mudlet::detachTab(int tabIndex, const QPoint& position)
         }
     }
 
+    mDetachedFromTabIndex.insert(profileName, tabIndex);
     // Remove tab from main window tab bar since it will be in the detached window
     mpTabBar->removeTab(tabIndex);
 
@@ -8991,7 +8995,7 @@ void mudlet::detachTab(int tabIndex, const QPoint& position)
 
     // Connect signals
     connect(detachedWindow, &TDetachedWindow::reattachRequested, this, [this](const QString& profileName) {
-        slot_tabReattachRequested(profileName, -1); // Use default insert index
+        slot_tabReattachRequested(profileName, mDetachedFromTabIndex.value(profileName, -1));
     });
     connect(detachedWindow, &TDetachedWindow::windowClosed, this, &mudlet::slot_detachedWindowClosed);
     connect(detachedWindow, &TDetachedWindow::profileDetachToWindowRequested, this, &mudlet::slot_profileDetachToWindow);
@@ -9164,6 +9168,7 @@ void mudlet::reattachTab(const QString& profileName, int insertIndex)
     // This is essential because activateProfile checks mDetachedWindows to decide
     // whether to show the console, and we need it to see this profile as being in main window
     mDetachedWindows.remove(safeProfileName);
+    mDetachedFromTabIndex.remove(safeProfileName);
 
     // Force activation of the profile to ensure it's properly shown
     Host* pHost = mHostManager.getHost(safeProfileName);
@@ -9462,6 +9467,7 @@ void mudlet::moveProfileFromMainToDetachedWindow(const QString& profileName, int
         return;
     }
 
+    mDetachedFromTabIndex.insert(profileName, tabIndex);
     // Remove tab from main window tab bar
     mpTabBar->removeTab(tabIndex);
 
@@ -9733,6 +9739,7 @@ void mudlet::moveProfileFromDetachedToMainWindow(const QString& profileName, TDe
     // This is essential because activateProfile checks mDetachedWindows to decide
     // whether to show the console, and we need it to see this profile as being in main window
     mDetachedWindows.remove(profileName);
+    mDetachedFromTabIndex.remove(profileName);
 
     // Force activation of the profile to ensure it's properly shown
     // This is important because the timing of events during tab moves can be tricky
