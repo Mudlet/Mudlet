@@ -3822,8 +3822,8 @@ void TLuaInterpreter::popNestedDispatchState(const int depth)
     lua_rawgeti(L, LUA_REGISTRYINDEX, saved.multimatchesRef);
     lua_rawset(L, LUA_GLOBALSINDEX);
     if (saved.commandRef != LUA_NOREF) {
-        // Kept for settleCommandAfterAliasPass(), unless nothing has changed "command"
-        // since the last restore, as when expandAlias("") runs no pass
+        // Kept for settleCommandAfterAliasPass(), unless no pass has run and nothing has
+        // set "command" since the last restore, as when expandAlias("") runs no pass
         lua_pushliteral(L, "command");
         lua_rawget(L, LUA_GLOBALSINDEX);
         bool keepEarlier = false;
