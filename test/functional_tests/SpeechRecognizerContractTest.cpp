@@ -1282,6 +1282,43 @@ private slots:
         lua_pop(L, 1);
     }
 
+    // A package asks where to install the engine, installs it there and calls
+    // stt.init(): asking must not have settled detection on "not installed"
+    void askingForTheInstallPathsDoesNotSettleDetection()
+    {
+        if (VoskRecognizer::libraryAvailable() || SherpaRecognizer::sherpaAvailable()) {
+            QSKIP("a model-based engine is installed here, so there is nothing for this case to install");
+        }
+        QVERIFY2(!mudlet::self()->speechRecognizer(), "a live recognizer would answer for the paths instead of detection");
+
+        const QString stub = QDir(VoskRecognizer::userLibraryPath()).filePath(QFileInfo(qsl(MUDLET_VOSK_STUB_LIBRARY)).fileName());
+        QVERIFY(QDir().mkpath(VoskRecognizer::userLibraryPath()));
+        QFile::remove(stub);
+        VoskRecognizer::resetLibraryLoadState();
+        VoskRecognizer::unloadLibraryByRequest(false);
+        SherpaRecognizer::resetLibraryLoadState();
+        if (SherpaRecognizer::libraryPresent()) {
+            QSKIP("a sherpa-onnx library file that will not load is on its search paths here, so the getters answer for sherpa-onnx");
+        }
+        auto removeStub = qScopeGuard([stub]() {
+            // Unmapped before it is deleted, as Windows will not remove a loaded module
+            VoskRecognizer::resetLibraryLoadState();
+            QFile::remove(stub);
+        });
+
+        lua_State* L = luaL_newstate();
+        QVERIFY(L);
+        auto closeState = qScopeGuard([L]() {
+            lua_close(L);
+        });
+        TLuaInterpreter::sttGetLibraryPath(L);
+        TLuaInterpreter::sttGetModelPath(L);
+        QCOMPARE(QString::fromUtf8(lua_tostring(L, -2)), VoskRecognizer::userLibraryPath());
+
+        QVERIFY2(QFile::copy(qsl(MUDLET_VOSK_STUB_LIBRARY), stub), "the stand-in speech library could not be installed");
+        QVERIFY2(VoskRecognizer::libraryAvailable(), "asking for the install paths settled detection on \"not installed\" before the engine was installed");
+    }
+
     // gap 3: stt.listModels() must show what is on disk for every model-based
     // engine, not only Vosk's directory - a downloaded sherpa model has to
     // stay visible even with nothing loaded. Unlike the two cases above, this

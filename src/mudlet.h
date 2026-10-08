@@ -316,8 +316,11 @@ public:
     // long after a package has taken F3 - at which point Qt disables both.
     // A command belonging to another profile is reported without its name:
     // that is the other package's business and nothing this profile can act
-    // on, the same rule addonShortcutUsable() follows.
-    QStringList addonCommandsUsingShortcut(const QKeySequence& sequence, const Host* pHost) const;
+    // on, the same rule addonShortcutUsable() follows. onlyLiveWhileShown is
+    // for a key that is only live while pHost is shown: it leaves out what Qt
+    // would not offer the key to then - a disabled command, and another
+    // profile's command unless it is pinned, since otherwise it is hidden.
+    QStringList addonCommandsUsingShortcut(const QKeySequence& sequence, const Host* pHost, const bool onlyLiveWhileShown = false) const;
     // What Mudlet's own shortcut on this key is called, empty when Mudlet has
     // nothing on it or a key binding there would still win
     QString ownShortcutUsingKey(const Qt::Key, const Qt::KeyboardModifiers) const;
@@ -605,6 +608,8 @@ private:
     bool toolBarShouldBeVisible();
     void reshowRequiredMainConsoles();
     void updateReplayTimeLabel();
+    QString replayTimeLabelText(const QString& time, const bool paused) const;
+    void fitReplayPauseButton();
     dlgTriggerEditor* createMudletEditor();
     static void showEditorRestoringWindowState(QWidget* editor);
 
@@ -656,6 +661,8 @@ private:
     // A depth, not a flag: the guarded load entry points call one another
     int mProfileLoadsInProgress = 0;
     bool mCloseRequestedDuringProfileLoad = false;
+    // From armForceClose() until the close it queued has run
+    bool mForceClosePending = false;
     // Whether multi-view is in effect:
     enums::controlsVisibility mMenuBarVisibility = enums::visibleAlways;
     // Used to ensure that mudlet::slot_updateShortcuts() only runs once each

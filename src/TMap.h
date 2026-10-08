@@ -71,11 +71,33 @@ class TMap : public QObject
 {
     Q_OBJECT
 
+public:
+    // Host settings the 2D map keeps a copy of to draw with
+    enum class MapperSetting { RoomSize, ExitSize, RoundRooms, ShowRoomIds, ShowGrid };
+
 signals:
     void signal_saveErrorChanged(bool hasError);
     void signal_areaChanged(int areaId);
     void signal_mmpMapLocationChanged();
     void signal_mapSymbolFontChanged();
+
+    // Cues for the mapper drawing this map (mpMapper); the symbol cache one
+    // also reaches every secondary map view. With no mapper nothing listens.
+    void signal_mapperColoursChanged();
+    void signal_mapCleared();
+    void signal_mapLabelsChanged();
+    void signal_mapLoaded(bool showPlayerArea);
+    void signal_mapperShowRequested();
+    void signal_mapDownloadEnded();
+    void signal_symbolCachesStale();
+    void signal_playerRoomStyleChanged();
+    void signal_areaListChanged();
+    void signal_areaRenamed(const QString& oldName, const QString& newName);
+    void signal_playerAreaShowRequested();
+    void signal_defaultAreaVisibilitySet(bool wasShown);
+    void signal_mapInfoContributorsChanged();
+    void signal_mapRepaintRequested();
+    void signal_mapperSettingChanged(TMap::MapperSetting setting);
 
     // Map-progress seam for the libmudlet split (#8681, #9011): the map engine
     // must stay free of Qt Widgets, so it emits these pre-translated payloads for
@@ -123,6 +145,17 @@ public:
     bool setExit(int from, int to, int dir);
     bool setRoomCoordinates(int id, int x, int y, int z);
     void updateArea(int areaId);
+    // For a whole map read in outside TMap, as XMLimport does:
+    void announceMapLoaded(bool showPlayerArea);
+    void requestMapperShown();
+    // For changes the Lua API makes to the map or to the mapper's settings:
+    void announceAreaListChanged();
+    void announceAreaRenamed(const QString& oldName, const QString& newName);
+    void requestPlayerAreaShown();
+    void announceDefaultAreaVisibilitySet(bool wasShown);
+    void announceMapInfoContributorsChanged();
+    void requestMapRepaint();
+    void announceMapperSettingChanged(MapperSetting setting);
 
     void audit();
     inline static bool smShowMapAuditErrors = false;
@@ -133,6 +166,7 @@ public:
     bool gotoRoom(int);
     bool gotoRoom(int, int);
     bool serialize(QDataStream&, int saveVersion = 0);
+    static bool listLengthFits(QDataStream&, qint64 minBytesPerElement);
     bool restore(QString location);
     bool retrieveMapFileStats(QString, QString*, int*, int*, qsizetype*, qsizetype*);
     void initGraph();
@@ -196,6 +230,28 @@ public:
     void requestMapOperationAbort();
     bool mapOperationAbortRequested() const { return mMapOperationAbortRequested; }
 
+    // Held while Lua runs from inside C++ that keeps raw TRoom/TArea pointers across the call (the
+    // exit weight filter while the graph is built, map info contributors while the map is painted),
+    // so the Lua functions that free rooms or areas must refuse while this is held.
+    class ScriptCallbackScope
+    {
+    public:
+        explicit ScriptCallbackScope(TMap* pMap)
+        : mpMap(pMap)
+        {
+            ++mpMap->mScriptCallbackDepth;
+        }
+        ~ScriptCallbackScope() { --mpMap->mScriptCallbackDepth; }
+        ScriptCallbackScope(const ScriptCallbackScope&) = delete;
+        ScriptCallbackScope& operator=(const ScriptCallbackScope&) = delete;
+
+    private:
+        TMap* mpMap = nullptr;
+    };
+    bool scriptCallbackInProgress() const { return mScriptCallbackDepth > 0; }
+    // initGraph() runs the exit weight filter, which must not start another search mid-build.
+    bool graphBuildInProgress() const { return mGraphBuildInProgress; }
+
     // Show which rooms have which symbols:
     QHash<QString, QSet<int>> roomSymbolsHash();
 
@@ -231,6 +287,8 @@ public:
     std::pair<bool, QString> readJsonMapFile(const QString&, const bool translatableTexts = false);
     qsizetype getCurrentProgressRoomCount() const { return mProgressDialogRoomsCount; }
     bool incrementJsonProgressDialog(const bool isExportNotImport, const bool isRoomNotLabel, const int increment = 1);
+    // TRoomDB calls this before it deletes an area or clears the map.
+    void areasAboutToBeDeleted();
     QString getDefaultAreaName() const { return mDefaultAreaName; }
     QString getUnnamedAreaName() const { return mUnnamedAreaName; }
 
@@ -253,6 +311,7 @@ public:
 
 
     std::unique_ptr<TRoomDB> mpRoomDB;
+    // Made by the GUI when it gives the profile a console, so null without one.
     // Non-owning: Qt parent-child system (TMap as parent) handles lifetime.
     TMapViewManager* mpViewManager = nullptr;
     QMap<int, int> mEnvColors;
@@ -260,6 +319,7 @@ public:
     QString mProfileName;
 
     TMapViewManager* getViewManager() { return mpViewManager; }
+    void setViewManager(TMapViewManager* pViewManager) { mpViewManager = pViewManager; }
 
     // Was a single int mRoomId but that breaks things when maps are
     // copied/shared between profiles - so now we track the profile name
@@ -302,7 +362,7 @@ public:
     QPointer<QOpenGLWidget> mpM;
 #endif
     QPointer<dlgMapper> mpMapper;
-    QMap<int, int> roomidToIndex;
+    QHash<int, int> roomidToIndex;
 
     // User-registered mapper context menu entries (addMapEvent()/addMapMenu());
     // session-only state, never saved with the map.
@@ -451,8 +511,10 @@ private:
     // requestMapOperationAbort() is asked again on every retry of a deferred
     // profile close, and asking twice would abort a network reply twice over.
     bool mMapOperationAbortRequested = false;
+    int mScriptCallbackDepth = 0;
+    bool mGraphBuildInProgress = false;
 
-    void addDirectionalRoute(QHash<unsigned int, route>& bestRoutes,
+    void addDirectionalRoute(std::vector<std::pair<unsigned int, route>>& bestRoutes,
                              const QMap<QString, int>& exitWeights,
                              unsigned int source,
                              TRoom* pSourceR,
@@ -496,6 +558,8 @@ private:
     bool mMapProgressIsTransfer = false;
     bool mMapProgressCancelRequested = false;
     int mMapProgressStandaloneMaximum = 0;
+    bool mJsonExportInProgress = false;
+    bool mJsonExportLostAnArea = false;
     // Using during updates of text in progress dialog partially from other
     // classes:
     qsizetype mProgressDialogAreasTotal = 0;

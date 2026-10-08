@@ -47,6 +47,7 @@
 #include "MudletApp.h"
 #include "PortableModeTestHelper.h"
 #include "ShortcutsManager.h"
+#include "TKeySequenceEdit.h"
 #include "TMainConsole.h"
 #include "Host.h"
 #include "HostDialogs.h"
@@ -55,6 +56,7 @@
 #include "TLuaInterpreter.h"
 #include "TelnetServerStub.h"
 #include "dlgConnectionProfiles.h"
+#include "dlgProfilePreferences.h"
 #include "dlgTriggerEditor.h"
 #include "mudlet.h"
 
@@ -149,6 +151,45 @@ private:
             return -1;
         }
         return luaGlobalNumber(pHost, qsl("_addonId"));
+    }
+
+    // What the first profile's Shortcuts page warns once the named Mudlet shortcuts
+    // are moved onto the sequence; they are put back before it returns. Null when
+    // an editor could not be found.
+    QString shortcutsPageWarning(const QStringList& shortcutKeys, const QKeySequence& sequence, bool& clearedAfterwards) const
+    {
+        ShortcutsManager* pManager = mudlet::self()->shortcutsManager();
+        auto* pPreferences = new dlgProfilePreferences(mudlet::self(), mpFirstHost);
+        QList<QPair<TKeySequenceEdit*, QKeySequence>> moved;
+        for (const QString& shortcutKey : shortcutKeys) {
+            for (auto* pEdit : pPreferences->findChildren<TKeySequenceEdit*>()) {
+                const QWidget* pNamed = pEdit->focusProxy() ? pEdit->focusProxy() : pEdit;
+                if (pNamed->accessibleName() == pManager->getLabel(shortcutKey)) {
+                    moved.append({pEdit, pEdit->keySequence()});
+                    break;
+                }
+            }
+        }
+        QString warning;
+        clearedAfterwards = false;
+        if (moved.size() == shortcutKeys.size()) {
+            warning = qsl("");
+            for (const auto& [pEdit, original] : moved) {
+                pEdit->setKeySequence(sequence);
+                emit pEdit->editingFinished();
+            }
+            if (!pPreferences->label_shortcutsConflictWarning->isHidden()) {
+                warning = pPreferences->label_shortcutsConflictWarning->text();
+            }
+            for (const auto& [pEdit, original] : moved) {
+                pEdit->setKeySequence(original);
+                emit pEdit->editingFinished();
+            }
+            clearedAfterwards = pPreferences->label_shortcutsConflictWarning->isHidden();
+        }
+        // Deleted before its apply timer runs, so nothing reaches the profile's saved shortcuts
+        delete pPreferences;
+        return warning;
     }
 
     // The reason a refused command gave, which is the half a package can act on.
@@ -682,6 +723,49 @@ private slots:
         QVERIFY2(!freeDescription.contains(pEditor->descKeyTaken), qPrintable(qsl("a binding that fires says its key is in use: %1").arg(freeDescription)));
     }
 
+    // The player saving a binding that does nothing is likely the one trying
+    // to find out why, so the save must not take the explanation away
+    void test_savingABindingOnATakenKeyKeepsItsWarning()
+    {
+        dlgTriggerEditor* pEditor = editorFor(mpFirstHost);
+        QVERIFY2(pEditor, "the profile's editor could not be opened");
+
+        QVERIFY2(runLua(mpFirstHost, qsl("_takenSaveId = permKey('TakenSave', '', mudlet.keymodifier.Control + mudlet.keymodifier.Alt, mudlet.key.T, [[echo('bound')]])")).isNull(),
+                 "the key binding could not be made");
+        const int takenId = luaGlobalNumber(mpFirstHost, qsl("_takenSaveId"));
+
+        pEditor->enterEvent(nullptr);
+        pEditor->slot_showKeys();
+        QTreeWidgetItem* pTaken = keyItem(pEditor, takenId);
+        QVERIFY2(pTaken, "the key binding is not in the editor's tree");
+
+        pEditor->showInfo(QString());
+        pEditor->treeWidget_keys->setCurrentItem(pTaken);
+        pEditor->slot_keySelected(pTaken);
+        const QString selectedText = editorSaid(pEditor);
+        pEditor->slot_saveSelectedItem();
+        const QString savedText = editorSaid(pEditor);
+        const QString savedDescription = accessibleDescription(pTaken);
+        // The Save Item action goes through slot_saveEdits() rather than slot_saveSelectedItem()
+        pEditor->showInfo(QString());
+        pEditor->slot_saveEdits();
+        const QString saveItemText = editorSaid(pEditor);
+        // Leaving the keys view saves the binding too, and the warning is no
+        // concern of the view switched to
+        pEditor->slot_showTriggers();
+        const QString otherViewText = editorSaid(pEditor);
+        pEditor->slot_showKeys();
+        pEditor->treeWidget_keys->setCurrentItem(pTaken);
+
+        pEditor->slot_deleteItemOrGroup();
+        pEditor->mpUndoStack->clear();
+        QVERIFY2(selectedText.contains(qsl("Toggle Time Stamps")), qPrintable(qsl("selecting a binding on one of Mudlet's own keys did not warn about it: %1").arg(selectedText)));
+        QVERIFY2(savedText.contains(qsl("Toggle Time Stamps")), qPrintable(qsl("saving a binding on one of Mudlet's own keys took its warning away: %1").arg(savedText)));
+        QVERIFY2(saveItemText.contains(qsl("Toggle Time Stamps")), qPrintable(qsl("the Save Item action took a taken key's warning away: %1").arg(saveItemText)));
+        QVERIFY2(savedDescription.count(pEditor->descKeyTaken) == 1, qPrintable(qsl("a saved binding on a taken key should say so to a screen reader once: %1").arg(savedDescription)));
+        QVERIFY2(!otherViewText.contains(qsl("Toggle Time Stamps")), qPrintable(qsl("a binding's warning followed the player into another view: %1").arg(otherViewText)));
+    }
+
     // addCommand() turns down a key Mudlet holds, but the preferences will move
     // one of Mudlet's shortcuts onto a command's key. Naming only Mudlet would
     // send the player to change a shortcut that is not the only thing in the way.
@@ -706,6 +790,71 @@ private slots:
         pManager->setShortcut(qsl("Toggle Time Stamps"), &original);
         QVERIFY2(made, "the key binding could not be made");
         QVERIFY2(text.contains(qsl("Toggle Time Stamps")) && text.contains(qsl("BothHoldBinding")), qPrintable(qsl("the warning does not name both holders of the key: %1").arg(text)));
+    }
+
+    // The Shortcuts page warns about two of Mudlet's shortcuts on one key, and a
+    // command's key ends the same way: Qt disables both
+    void test_theShortcutsPageWarnsWhenAMudletShortcutTakesACommandsKey()
+    {
+        const int commandId = addCommand(mpFirstHost, qsl("name = 'PreferencesClash', menuPath = 'ClashTest', shortcut = 'Ctrl+Shift+F9'"));
+        QVERIFY2(commandId > 0, "the command could not be placed on a key nothing was holding");
+        bool clearedAfterwards = false;
+        const QString warning = shortcutsPageWarning({qsl("Notepad")}, QKeySequence(qsl("Ctrl+Shift+F9")), clearedAfterwards);
+        runLua(mpFirstHost, qsl("removeCommand(%1)").arg(commandId));
+
+        QVERIFY2(warning.contains(qsl("Notepad")) && warning.contains(qsl("PreferencesClash")), qPrintable(qsl("the page does not warn about the command's key: \"%1\"").arg(warning)));
+        QVERIFY2(clearedAfterwards, "the warning stayed after the shortcut moved off the command's key");
+    }
+
+    // Mudlet's shortcuts are only live while their profile is shown, and another
+    // profile's command is hidden then unless it is pinned
+    void test_theShortcutsPageWarnsAboutAnotherProfilesCommandOnlyWhilePinned()
+    {
+        const int commandId = addCommand(mpSecondHost, qsl("name = 'OtherProfileClash', menuPath = 'ClashTest', shortcut = 'Ctrl+Shift+F10'"));
+        QVERIFY2(commandId > 0, "the command could not be placed on a key nothing was holding");
+        bool clearedAfterwards = false;
+        const QString unpinnedWarning = shortcutsPageWarning({qsl("Notepad")}, QKeySequence(qsl("Ctrl+Shift+F10")), clearedAfterwards);
+        runLua(mpSecondHost, qsl("setCommandPinned(%1, true)").arg(commandId));
+        const QString pinnedWarning = shortcutsPageWarning({qsl("Notepad")}, QKeySequence(qsl("Ctrl+Shift+F10")), clearedAfterwards);
+        runLua(mpSecondHost, qsl("removeCommand(%1)").arg(commandId));
+
+        QVERIFY2(!unpinnedWarning.isNull(), "the Notepad shortcut's editor could not be found");
+        QVERIFY2(unpinnedWarning.isEmpty(), qPrintable(qsl("the page warned about a hidden command, which cannot take the key: \"%1\"").arg(unpinnedWarning)));
+        QVERIFY2(pinnedWarning.contains(qsl("Notepad")) && pinnedWarning.contains(qsl("a command from another profile")),
+                 qPrintable(qsl("the page does not warn about a pinned command from another profile: \"%1\"").arg(pinnedWarning)));
+        QVERIFY2(!pinnedWarning.contains(qsl("OtherProfileClash")), "the page named a command from a different profile");
+    }
+
+    // A disabled command's menu item keeps its key, but Qt leaves the key to the Mudlet shortcut then
+    void test_theShortcutsPageWarnsAboutACommandOnlyWhileEnabled()
+    {
+        const int commandId = addCommand(mpFirstHost, qsl("name = 'DisabledClash', menuPath = 'ClashTest', shortcut = 'Ctrl+Shift+F12'"));
+        QVERIFY2(commandId > 0, "the command could not be placed on a key nothing was holding");
+        QVERIFY2(callReturnedTrue(mpFirstHost, qsl("disableCommand(%1)").arg(commandId)), "the command could not be disabled");
+        bool clearedAfterwards = false;
+        const QString disabledWarning = shortcutsPageWarning({qsl("Notepad")}, QKeySequence(qsl("Ctrl+Shift+F12")), clearedAfterwards);
+        QVERIFY2(callReturnedTrue(mpFirstHost, qsl("enableCommand(%1)").arg(commandId)), "the command could not be enabled again");
+        const QString enabledWarning = shortcutsPageWarning({qsl("Notepad")}, QKeySequence(qsl("Ctrl+Shift+F12")), clearedAfterwards);
+        runLua(mpFirstHost, qsl("removeCommand(%1)").arg(commandId));
+
+        QVERIFY2(!disabledWarning.isNull(), "the Notepad shortcut's editor could not be found");
+        QVERIFY2(disabledWarning.isEmpty(), qPrintable(qsl("the page warned about a disabled command, which cannot take the key: \"%1\"").arg(disabledWarning)));
+        QVERIFY2(enabledWarning.contains(qsl("DisabledClash")), qPrintable(qsl("the page does not warn about the command once it is enabled again: \"%1\"").arg(enabledWarning)));
+    }
+
+    // One line per key, however many hold it
+    void test_theShortcutsPageWarnsOnceWhenMudletAndACommandAllShareAKey()
+    {
+        const int commandId = addCommand(mpFirstHost, qsl("name = 'ThreeWayClash', menuPath = 'ClashTest', shortcut = 'Ctrl+Shift+F11'"));
+        QVERIFY2(commandId > 0, "the command could not be placed on a key nothing was holding");
+        bool clearedAfterwards = false;
+        const QString warning = shortcutsPageWarning({qsl("Notepad"), qsl("Show Map")}, QKeySequence(qsl("Ctrl+Shift+F11")), clearedAfterwards);
+        runLua(mpFirstHost, qsl("removeCommand(%1)").arg(commandId));
+
+        QVERIFY2(!warning.contains(QChar::LineFeed), qPrintable(qsl("one key got more than one warning: \"%1\"").arg(warning)));
+        QVERIFY2(warning.contains(qsl("Notepad")) && warning.contains(qsl("Show Map")) && warning.contains(qsl("ThreeWayClash")),
+                 qPrintable(qsl("the warning does not name everything holding the key: \"%1\"").arg(warning)));
+        QVERIFY2(clearedAfterwards, "the warning stayed after the shortcuts moved off the key");
     }
 
     // docs/addon-ui-api.md gives the click event the id as addCommand returned

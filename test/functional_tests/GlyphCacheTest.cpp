@@ -99,9 +99,13 @@ private:
         return font;
     }
 
+    // Runs of two cells share a color, so a queue both grows and breaks on a change
+    static QColor cellColor(const int index) { return (index / 2) % 2 ? QColor(90, 160, 230) : QColor(220, 200, 120); }
+
     // Draws every cell once into a fresh surface, starting at xOffset columns,
-    // with drawText() or with the cache.
-    static QImage render(const QFont& font, const qreal devicePixelRatio, const bool viaPixmap, const TGlyphCache::Style style, TGlyphCache* cache, const int xOffset = 0)
+    // with drawText() or with the cache - which, when queued, is handed the
+    // whole line before it draws any of it.
+    static QImage render(const QFont& font, const qreal devicePixelRatio, const bool viaPixmap, const TGlyphCache::Style style, TGlyphCache* cache, const int xOffset = 0, const bool queued = false)
     {
         const QFontMetrics metrics(font);
         const int cellWidth = metrics.averageCharWidth();
@@ -121,21 +125,30 @@ private:
             painter.begin(&image);
         }
         painter.setFont(font);
-        painter.setPen(QColor(220, 200, 120));
         if (cache) {
             cache->setFont(painter.font(), *painter.device());
         } else {
             painter.setFont(styled(painter.font(), style));
         }
         int column = xOffset;
+        int index = 0;
         for (const Cell& cell : cells()) {
             const QRect rect(column * cellWidth, cellHeight, cell.columns * cellWidth, cellHeight);
-            if (cache) {
-                cache->drawCentered(painter, rect, cell.grapheme, style);
+            const QColor color = cellColor(index++);
+            if (queued) {
+                cache->queueCentered(painter, rect, cell.grapheme, style, color);
             } else {
-                painter.drawText(rect, csmTextFlags, cell.grapheme);
+                painter.setPen(color);
+                if (cache) {
+                    cache->drawCentered(painter, rect, cell.grapheme, style);
+                } else {
+                    painter.drawText(rect, csmTextFlags, cell.grapheme);
+                }
             }
             column += cell.columns;
+        }
+        if (queued) {
+            cache->flush(painter);
         }
         painter.end();
         return viaPixmap ? pixmap.toImage() : image;
@@ -236,6 +249,39 @@ private slots:
         const qsizetype shaped = cache.size();
         QCOMPARE(differingPixels(render(font, devicePixelRatio, viaPixmap, cacheStyle, &cache, xOffset), expected), 0);
         QCOMPARE(cache.size(), shaped);
+    }
+
+    void batchesMatchDrawText_data()
+    {
+        QTest::addColumn<int>("pointSize");
+        QTest::addColumn<qreal>("devicePixelRatio");
+        QTest::addColumn<int>("style");
+
+        for (const int pointSize : {10, 11}) {
+            for (const qreal ratio : {1.0, 1.25, 2.0}) {
+                QTest::addRow("%dpt at %.2fx, plain", pointSize, ratio) << pointSize << ratio << int(TGlyphCache::Plain);
+                QTest::addRow("%dpt at %.2fx, bold italic", pointSize, ratio) << pointSize << ratio << int((TGlyphCache::Bold | TGlyphCache::Italic).toInt());
+            }
+        }
+        // Past 64 device pixels Qt fills a call's glyphs as a single path rather
+        // than blitting them from its glyph cache
+        QTest::addRow("40pt at 2.00x, plain") << 40 << 2.0 << int(TGlyphCache::Plain);
+        QTest::addRow("40pt at 2.00x, bold italic") << 40 << 2.0 << int((TGlyphCache::Bold | TGlyphCache::Italic).toInt());
+    }
+
+    // A line drawn as one queue - across color changes and the fallback fonts
+    // the emoji and CJK cells need - comes out as it does cell by cell.
+    void batchesMatchDrawText()
+    {
+        QFETCH(int, pointSize);
+        QFETCH(qreal, devicePixelRatio);
+        QFETCH(int, style);
+
+        const QFont font = testFont(pointSize);
+        const auto cacheStyle = TGlyphCache::Style::fromInt(style);
+        const QImage expected = render(font, devicePixelRatio, true, cacheStyle, nullptr);
+        TGlyphCache cache;
+        QCOMPARE(differingPixels(render(font, devicePixelRatio, true, cacheStyle, &cache, 0, true), expected), 0);
     }
 
     // Glyphs are shaped in logical coordinates, so moving a window to a screen
