@@ -1258,6 +1258,17 @@ void TBuffer::translateToPlainText(std::string& incoming, const bool isFromServe
     mProcessingLocalFeed = true;
     swapParserSequenceState();
     translateToPlainTextInner(incoming, false);
+    // A local feed arrives whole, so a sequence it left open was never going to
+    // be finished - carried over, it would swallow the start of the next feed:
+    if (Q_UNLIKELY(mPendingLead)) {
+        flushPendingLead();
+    }
+    mGotESC = false;
+    mGotEscCharset = false;
+    mGotCSI = false;
+    mGotOSC = false;
+    mGotString = false;
+    mIncompleteSequenceBytes.clear();
     swapParserSequenceState();
     mProcessingLocalFeed = false;
 }

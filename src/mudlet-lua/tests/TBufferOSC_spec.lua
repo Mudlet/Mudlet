@@ -146,13 +146,14 @@ describe("Tests TBuffer OSC sequence handling", function()
       assert.equals("APCBEL1()APCBEL1", findRecentLine("APCBEL1"))
     end)
 
-    -- As with the private-CSI case below, two feedTriggers() calls cannot express
-    -- a packet split; what carries between local feeds is the mGotString latch,
-    -- not the pending bytes.
-    it("should swallow an APC sequence whose bytes arrive across two local feeds", function()
+    -- A local feed arrives whole, so a sequence still open at its end ends with
+    -- it rather than swallowing the next feed's text (#9926). A sequence the
+    -- game splits across packets is covered by the posting timeout cases in
+    -- TBufferEncoding_spec.lua.
+    it("should end an APC sequence a local feed leaves open with that feed", function()
       assert.is_true(feedTriggers("APCSPLIT1(\027_first half "))
       assert.is_true(feedTriggers("second half\027\\)APCSPLIT1\n"))
-      assert.equals("APCSPLIT1()APCSPLIT1", findRecentLine("APCSPLIT1"))
+      assert.equals("APCSPLIT1(second half)APCSPLIT1", findRecentLine("APCSPLIT1"))
     end)
 
     it("should still render OSC 8 hyperlink text", function()
@@ -266,16 +267,17 @@ describe("Tests TBuffer OSC sequence handling", function()
       assert.equals("NLESC4)", findRecentLine("NLESC4"))
     end)
 
-    it("should apply a trailing escape to the next packet", function()
+    -- as for the APC sequence above, a local feed's trailing escape ends with it
+    it("should not apply a trailing escape to the next local feed", function()
       assert.is_true(feedTriggers("SPLITESC1(\027"))
       assert.is_true(feedTriggers("7 then ABC)SPLITESC1\n"))
-      assert.equals("SPLITESC1( then ABC)SPLITESC1", findRecentLine("SPLITESC1"))
+      assert.equals("SPLITESC1(7 then ABC)SPLITESC1", findRecentLine("SPLITESC1"))
     end)
 
-    it("should apply a trailing designation to the next packet", function()
+    it("should not apply a trailing designation to the next local feed", function()
       assert.is_true(feedTriggers("SPLITINT1(\027("))
       assert.is_true(feedTriggers("B)SPLITINT1\n"))
-      assert.equals("SPLITINT1()SPLITINT1", findRecentLine("SPLITINT1"))
+      assert.equals("SPLITINT1(B)SPLITINT1", findRecentLine("SPLITINT1"))
     end)
 
     it("should not eat a multibyte character starting the next packet", function()
@@ -314,16 +316,14 @@ describe("Tests TBuffer OSC sequence handling", function()
       assert.equals("CSIPRIV3()CSIPRIV3", findRecentLine("CSIPRIV3"))
     end)
 
-    -- Two feedTriggers() calls cannot express a packet split: a local feed keeps
-    -- its own mGotCSI latch between calls but drops the incomplete bytes, since
-    -- the carry is gated on isFromServer. So the latch swallows the "l" rather
-    -- than "?25" surviving. This still fails without the fix - the "25l" leaks -
-    -- but it does not guard the private branch's ordering against the
-    -- incomplete-packet check, which needs a real split from the socket.
-    it("should not leak a private sequence whose bytes arrive across two local feeds", function()
+    -- Two feedTriggers() calls cannot express a packet split: a local feed ends
+    -- whatever sequence it leaves open (#9926), so the "?25" is dropped with it
+    -- and the "l" is the next feed's text. A split from the game is covered by
+    -- the posting timeout cases in TBufferEncoding_spec.lua.
+    it("should not leak a private sequence a local feed leaves open", function()
       assert.is_true(feedTriggers("CSISPLIT1(\027[?25"))
       assert.is_true(feedTriggers("l)CSISPLIT1\n"))
-      assert.equals("CSISPLIT1()CSISPLIT1", findRecentLine("CSISPLIT1"))
+      assert.equals("CSISPLIT1(l)CSISPLIT1", findRecentLine("CSISPLIT1"))
     end)
 
     -- Guards the other direction: an ordinary digit-initial parameter string and

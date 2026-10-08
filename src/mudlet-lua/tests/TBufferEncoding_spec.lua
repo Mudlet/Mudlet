@@ -979,6 +979,31 @@ describe("Tests a character whose bytes are split by the posting timeout", funct
     assert.same({"", ":end"}, perLine)
   end)
 
+  it("keeps a private CSI sequence the marker lands inside", function()
+    if timerUnavailable() then return end
+    using("UTF-8")
+
+    -- Mudlet does not act on a private sequence, but it has to consume all of
+    -- it: had the held "?25" not been joined to the "l" after the pause, "25l"
+    -- would have printed as text
+    local text, lines, perLine = splitAcrossTimeout("\27[?25", "l")
+    assert.equals(":end", text)
+    assert.equals(2, lines)
+    assert.same({"", ":end"}, perLine)
+  end)
+
+  it("keeps an APC string sequence the marker lands inside", function()
+    if timerUnavailable() then return end
+    using("UTF-8")
+
+    -- the payload is consumed, not decoded, but it is consumed through to the
+    -- terminator that arrives after the pause
+    local text, lines, perLine = splitAcrossTimeout("\27_first half ", "second half\27\\")
+    assert.equals(":end", text)
+    assert.equals(2, lines)
+    assert.same({"", ":end"}, perLine)
+  end)
+
   it("commits the text ahead of an operating system command the marker lands inside", function()
     if timerUnavailable() then return end
     using("UTF-8")

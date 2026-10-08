@@ -312,6 +312,31 @@ describe("Tests what feedTriggers will and will not carry", function()
     assert.is_true(contains(textFrom(mark), "FeedEncUtf8 \195\169 \226\130\172"), "the UTF-8 text did not arrive unchanged")
   end)
 
+  -- Each feed is whole, so an escape sequence it leaves unfinished is never
+  -- going to be finished, and must not eat the start of the next feed - see issue #9926
+  it("does not finish one feed's unfinished escape sequence with the next feed", function()
+    assert.is_true(setServerEncoding("UTF-8"))
+    local mark = getLastLineNumber("main")
+
+    -- had the sequence carried over, the "C" would complete it as CSI 5 C
+    assert.is_true(feedTriggers("FeedHalfEscape \27[5"))
+    assert.is_true(feedTriggers("Cont\n"))
+    assert.is_true(contains(textFrom(mark), "FeedHalfEscape Cont"), textFrom(mark))
+  end)
+
+  it("does not pair one feed's unfinished double byte character with the next feed", function()
+    local original = getServerEncoding()
+    finally(function() setServerEncoding(original) end)
+    assert.is_true(setServerEncoding("BIG5"))
+    local mark = getLastLineNumber("main")
+
+    -- In Big5 0xA4 0x5A is one character. A colour code after the lead byte
+    -- has it held for the trail byte, which a whole feed has no more of.
+    assert.is_true(feedTriggers("FeedHalfBig5 " .. string.char(0xA4) .. "\27[0m", false))
+    assert.is_true(feedTriggers("Z\n", false))
+    assert.is_true(contains(textFrom(mark), "FeedHalfBig5 \239\191\189Z"), textFrom(mark))
+  end)
+
   it("raises on arguments it cannot make sense of", function()
     assertArgError(function() return feedTriggers({}) end, "bad argument #1 type")
     assertArgError(function() return feedTriggers("FeedEncNever\n", "yes") end, "bad argument #2 type")
