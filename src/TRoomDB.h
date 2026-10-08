@@ -79,6 +79,7 @@ public:
     // Whether an area is already using this name, without areaNamesMap.values()'s
     // full copy of every area name just to scan it once.
     bool hasAreaName(const QString& name) const;
+    QString unusedUnnamedAreaName() const;
     void updateEntranceMap(TRoom*, bool isMapLoading = false);
     void updateEntranceMap(int);
     const QMultiHash<int, int>& getEntranceHash() const { return entranceMap; }

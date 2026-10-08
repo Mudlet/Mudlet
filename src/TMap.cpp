@@ -3665,6 +3665,10 @@ std::pair<bool, QString> TMap::readJsonMapFile(const QString& source, const bool
 
     mDefaultAreaName = mapObj[QLatin1String("defaultAreaName")].toString();
     mUnnamedAreaName = mapObj[QLatin1String("anonymousAreaName")].toString();
+    if (mUnnamedAreaName.isEmpty()) {
+        // A file not written by Mudlet may not say, and an empty one cannot name an area
+        mUnnamedAreaName = tr("Unnamed Area");
+    }
     if (mapObj.contains(QLatin1String("userData"))) {
         readJsonUserData(mapObj[QLatin1String("userData")].toObject());
     }
@@ -3737,6 +3741,8 @@ std::pair<bool, QString> TMap::readJsonMapFile(const QString& source, const bool
 
     auto pNewRoomDB = std::make_unique<TRoomDB>(this);
     bool abort = false;
+    // Named once every other area is in, so that the name given cannot be one a later area has
+    std::vector<std::pair<int, std::unique_ptr<TArea>>> unnamedAreas;
     for (int i = 0, total = mapObj.value(QLatin1String("areas")).toArray().count(); i < total; ++i) {
         std::unique_ptr<TArea> pArea = std::make_unique<TArea>(this, pNewRoomDB.get());
         auto [id, name] = pArea->readJsonArea(mapObj.value(QLatin1String("areas")).toArray(), i);
@@ -3745,8 +3751,14 @@ std::pair<bool, QString> TMap::readJsonMapFile(const QString& source, const bool
             abort = true;
             break;
         }
+        if (name.isEmpty()) {
+            unnamedAreas.emplace_back(id, std::move(pArea));
+            continue;
+        }
         // This will populate the TRoomDB::areas and TRoomDB::areaNameMap:
-        pNewRoomDB->addArea(pArea.release(), id, name);
+        if (pNewRoomDB->addArea(pArea.get(), id, name)) {
+            pArea.release();
+        }
     }
     if (abort) {
         emit signal_mapProgressClose();
@@ -3754,6 +3766,17 @@ std::pair<bool, QString> TMap::readJsonMapFile(const QString& source, const bool
         mDefaultAreaName = oldDefaultAreaName;
         mUnnamedAreaName = oldUnnamedName;
         return {false, (translatableTexts ? tr("aborted by user") : qsl("aborted by user"))};
+    }
+    for (auto& [id, pArea] : unnamedAreas) {
+        // TRoomDB::addArea() refuses a blank name, which would lose the area's user data and labels
+        const QString name = pNewRoomDB->unusedUnnamedAreaName();
+        //: Shown when an area in a JSON map file has an empty name. %1 is the area's id, %2 the name it is given instead.
+        const QString warnMsg = tr(R"([ WARN ]  - The area with id %1 has no name in the map file, so it has been called "%2".)").arg(QString::number(id), name);
+        appendErrorMsgWithNoLf(warnMsg, false);
+        postMessage(warnMsg);
+        if (pNewRoomDB->addArea(pArea.get(), id, name)) {
+            pArea.release();
+        }
     }
 
     mCustomEnvColors.swap(customEnvColors);
