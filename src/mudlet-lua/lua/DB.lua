@@ -949,6 +949,23 @@ local function unique_targets(sql)
 end
 
 
+local function same_unique_targets(expected_sql, actual_sql)
+  local expected, actual = unique_targets(expected_sql), unique_targets(actual_sql)
+  for target, count in pairs(expected) do
+    if actual[target] ~= count then
+      return false
+    end
+  end
+  for target in pairs(actual) do
+    if expected[target] == nil then
+      return false
+    end
+  end
+
+  return true
+end
+
+
 local function drops_a_unique(expected_sql, actual_sql)
   local expected = unique_targets(expected_sql)
   for target, count in pairs(unique_targets(actual_sql)) do
@@ -1064,7 +1081,8 @@ function db:_migrate(db_name, s_name, force)
         local expected_constraints = db:_extract_table_constraints(expected_sql)
         local actual_constraints = db:_extract_table_constraints(actual_sql)
 
-        if expected_constraints ~= actual_constraints then
+        -- both: the fingerprint carries ON CONFLICT but not which column a single-column UNIQUE is on
+        if expected_constraints ~= actual_constraints or not same_unique_targets(expected_sql, actual_sql) then
           table_constraints_changed = true
           -- a skipped _unique entry is likely a typo, and once fixed its rule can't be restored over
           -- duplicates let in meanwhile, so hold back only a rebuild that would drop an enforced rule
@@ -1179,7 +1197,9 @@ function db:_migrate(db_name, s_name, force)
         local new_create_sql = db:_build_create_table_sql(schema, s_name)
 
         sql_chunks[#sql_chunks + 1] = new_create_sql .. ";"
-        sql_chunks[#sql_chunks + 1] = string.format("INSERT INTO %s SELECT %s FROM %s_bak;", s_name, fields_sql, s_name)
+        -- named on both sides: the new table also has the columns this create adds, which take their default
+        sql_chunks[#sql_chunks + 1] =
+          string.format("INSERT INTO %s (%s) SELECT %s FROM %s_bak;", s_name, fields_sql, fields_sql, s_name)
         sql_chunks[#sql_chunks + 1] = "DROP TABLE " .. s_name .. "_bak;"
 
         for i, sql in ipairs(sql_chunks) do
@@ -1210,20 +1230,6 @@ function db:_migrate(db_name, s_name, force)
         -- Commit the migration transaction
         db:echo_sql("COMMIT")
         conn:commit()
-
-        -- After recreating the table with new constraints, add any new columns that didn't exist before
-        for k, v in pairs(schema.columns) do
-          if not current_columns[k] then
-            local sql_add = 'ALTER TABLE %s ADD COLUMN "%s" %s NULL DEFAULT %s'
-            local t = db:_sql_type(v)
-            local def = db:_sql_convert(v)
-            local sql = sql_add:format(s_name, k, t, def)
-            db:echo_sql(sql)
-            conn:execute(sql)
-            -- Update current_columns to reflect the newly added column
-            current_columns[k] = ""
-          end
-        end
       end
     else
       -- also reached when the rebuild was held back to keep a uniqueness rule
