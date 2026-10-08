@@ -37,6 +37,8 @@
 
 #include <QAction>
 #include <QFileInfo>
+#include <QMenu>
+#include <QMenuBar>
 #include <QSignalSpy>
 #include <QTemporaryDir>
 #include <QToolBar>
@@ -189,12 +191,7 @@ private slots:
         QAction* pToggleAction = toolBarToggleAction(pDetachedWindow);
         QVERIFY(pToggleAction);
         QVERIFY2(pDetachedToolBar->isVisible(), "the window detached with the toolbar turned on started out without one");
-        // The constructor shows the toolbar without going through
-        // TDetachedWindow::setToolBarVisibility(), so the menu item starts out
-        // unchecked next to a visible toolbar - put the two in step here, or the
-        // assertion below would hold whatever the settings path does
-        mudlet::self()->setToolBarVisibility(enums::visibleAlways);
-        QVERIFY2(pToggleAction->isChecked(), "the setting did not check the detached window's Show Toolbar menu item, so the assertion below would test nothing");
+        QVERIFY2(pToggleAction->isChecked(), "the detached window's Show Toolbar menu item is unchecked, so the assertion below would test nothing");
 
         mudlet::self()->setToolBarVisibility(enums::visibleNever);
 
@@ -306,6 +303,110 @@ private slots:
 
         QVERIFY2(!mudlet::self()->mpMainToolBar->isVisible(), "the settings path has started guarding the main window's toolbar against a hide - see this case's comment");
         QCOMPARE(pDetachedToolBar->isVisible(), mudlet::self()->mpMainToolBar->isVisible());
+    }
+
+    // The window is built hidden, so its toolbar reads as hidden whatever it
+    // was told, and the menu item cannot be seeded from that
+    void test_aFreshlyDetachedWindowsShowToolbarItemMatchesItsToolBar()
+    {
+        mudlet::self()->setToolBarVisibility(enums::visibleAlways);
+        TDetachedWindow* pDetachedWindow = detachProfile(mSecondHostname);
+        QVERIFY(pDetachedWindow);
+        QToolBar* pDetachedToolBar = detachedToolBar(pDetachedWindow);
+        QVERIFY(pDetachedToolBar);
+        QAction* pToggleAction = toolBarToggleAction(pDetachedWindow);
+        QVERIFY(pToggleAction);
+
+        QVERIFY(pDetachedToolBar->isVisible());
+        QVERIFY2(pToggleAction->isChecked(), "a window detached with its toolbar showing has its Show Toolbar menu item unchecked");
+    }
+
+    // A menu item no menu holds is one nobody can click
+    void test_theShowToolbarItemIsInTheWindowMenu()
+    {
+        mudlet::self()->setToolBarVisibility(enums::visibleAlways);
+        TDetachedWindow* pDetachedWindow = detachProfile(mSecondHostname);
+        QVERIFY(pDetachedWindow);
+        QAction* pToggleAction = toolBarToggleAction(pDetachedWindow);
+        QVERIFY(pToggleAction);
+
+        QMenu* pHoldingMenu = nullptr;
+        const QList<QAction*> menuBarActions = pDetachedWindow->menuBar()->actions();
+        for (QAction* pMenuAction : menuBarActions) {
+            if (pMenuAction->menu() && pMenuAction->menu()->actions().contains(pToggleAction)) {
+                pHoldingMenu = pMenuAction->menu();
+            }
+        }
+        QVERIFY2(pHoldingMenu, "no menu of the detached window holds its Show Toolbar item");
+        emit pHoldingMenu->aboutToShow();
+        QVERIFY(pToggleAction->isEnabled());
+
+        // Hiding the toolbar with the menu bar never shown would leave the
+        // window with neither, so the item is not offered then
+        mudlet::self()->setMenuBarVisibility(enums::visibleNever);
+        emit pHoldingMenu->aboutToShow();
+        QVERIFY2(!pToggleAction->isEnabled(), "the Show Toolbar item offers to hide the last of the window's controls");
+    }
+
+    void test_theMenuBarSettingReachesAnOpenDetachedWindow()
+    {
+        mudlet::self()->setToolBarVisibility(enums::visibleAlways);
+        TDetachedWindow* pDetachedWindow = detachProfile(mSecondHostname);
+        QVERIFY(pDetachedWindow);
+        QVERIFY2(pDetachedWindow->menuBar()->isVisible(), "the window detached with the menu bar turned on started out without one");
+
+        mudlet::self()->setMenuBarVisibility(enums::visibleNever);
+        QVERIFY2(!mudlet::self()->menuBar()->isVisible(), "the main window did not take the setting either, so this run tested nothing");
+        QVERIFY2(!pDetachedWindow->menuBar()->isVisible(), "the already-detached window kept the menu bar the setting turned off");
+
+        mudlet::self()->setMenuBarVisibility(enums::visibleAlways);
+        QVERIFY2(pDetachedWindow->menuBar()->isVisible(), "the already-detached window did not get back the menu bar the setting turned on");
+    }
+
+    void test_aFreshlyDetachedWindowStartsWithTheMenuBarTheSettingAsksFor()
+    {
+        mudlet::self()->setToolBarVisibility(enums::visibleAlways);
+        mudlet::self()->setMenuBarVisibility(enums::visibleNever);
+        TDetachedWindow* pDetachedWindow = detachProfile(mSecondHostname);
+        QVERIFY(pDetachedWindow);
+
+        QVERIFY2(!pDetachedWindow->menuBar()->isVisible(), "a window detached while the menu bar was turned off has one");
+    }
+
+    // Qt fires no shortcut of an action whose only container is a hidden menu
+    // bar, so a window without its menu bar still has to answer them
+    void test_theMenuShortcutsStillWorkWithTheMenuBarHidden()
+    {
+        mudlet::self()->setToolBarVisibility(enums::visibleAlways);
+        mudlet::self()->setMenuBarVisibility(enums::visibleNever);
+        TDetachedWindow* pDetachedWindow = detachProfile(mSecondHostname);
+        QVERIFY(pDetachedWindow);
+        QVERIFY(pDetachedWindow->menuBar()->isHidden());
+
+        const QKeySequence timeStampSequence(Qt::CTRL | Qt::ALT | Qt::Key_T);
+        QAction* pTimeStampAction = nullptr;
+        const QList<QAction*> menuBarActions = pDetachedWindow->menuBar()->actions();
+        for (QAction* pMenuAction : menuBarActions) {
+            const QList<QAction*> menuActions = pMenuAction->menu() ? pMenuAction->menu()->actions() : QList<QAction*>();
+            for (QAction* pAction : menuActions) {
+                if (pAction->shortcut() == timeStampSequence) {
+                    pTimeStampAction = pAction;
+                }
+            }
+        }
+        QVERIFY2(pTimeStampAction, "no menu item of the detached window has the time stamp shortcut, so there is nothing to press");
+
+        QVERIFY2(QTest::qWaitFor(
+                         [pDetachedWindow]() {
+                             pDetachedWindow->activateWindow();
+                             return QApplication::activeWindow() == pDetachedWindow;
+                         },
+                         2000ms),
+                 "the detached window never became the active window, so its window shortcuts could not be reached");
+        QSignalSpy triggeredSpy(pTimeStampAction, &QAction::triggered);
+        QTest::keyClick(pDetachedWindow, Qt::Key_T, Qt::ControlModifier | Qt::AltModifier);
+        QCOMPARE(triggeredSpy.count(), 1);
+        pTimeStampAction->trigger();
     }
 
 private:

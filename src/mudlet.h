@@ -608,6 +608,7 @@ private:
     void setGlobalStyleSheet(const QString&);
     // Not const: HostManager::getHostCount() is not
     bool toolBarShouldBeVisible();
+    bool menuBarShouldBeVisible();
     void reshowRequiredMainConsoles();
     void updateReplayTimeLabel();
     QString replayTimeLabelText(const QString& time, const bool paused) const;

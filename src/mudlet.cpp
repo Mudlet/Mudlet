@@ -5114,12 +5114,20 @@ void mudlet::setMenuBarVisibility(const enums::controlsVisibility state)
 // This only adjusts the visibility as appropriate
 void mudlet::adjustMenuBarVisibility()
 {
-    const int hostCount = mHostManager.getHostCount();
-    if ((hostCount < 1 && (mMenuBarVisibility & enums::visibleAlways)) || (hostCount >= 1 && (mMenuBarVisibility & enums::visibleMaskNormally))) {
-        menuBar()->show();
-    } else {
-        menuBar()->hide();
+    const bool menuBarVisible = menuBarShouldBeVisible();
+    menuBar()->setVisible(menuBarVisible);
+
+    for (const auto& detachedWindow : std::as_const(mDetachedWindows)) {
+        if (detachedWindow) {
+            detachedWindow->setMenuBarVisibility(menuBarVisible);
+        }
     }
+}
+
+bool mudlet::menuBarShouldBeVisible()
+{
+    const int hostCount = mHostManager.getHostCount();
+    return (hostCount < 1 && (mMenuBarVisibility & enums::visibleAlways)) || (hostCount >= 1 && (mMenuBarVisibility & enums::visibleMaskNormally));
 }
 
 void mudlet::setToolBarVisibility(const enums::controlsVisibility state)
@@ -5192,7 +5200,7 @@ void mudlet::adjustToolBarVisibility()
 
     // Detached windows only get the toolbar state in their constructor and from the toolbar's own toggle,
     // so push the setting to them too. They mirror the main window even for a hide canHideToolBar() would
-    // refuse: a detached window always keeps its own menu bar.
+    // refuse, and are left with the same console context menu to get the controls back.
     for (const auto& detachedWindow : std::as_const(mDetachedWindows)) {
         if (detachedWindow) {
             detachedWindow->setToolBarVisibility(toolBarVisible);
@@ -8984,6 +8992,7 @@ void mudlet::detachTab(int tabIndex, const QPoint& position)
     // Create detached window with toolbar state inherited from main window
     bool toolbarVisible = (mpMainToolBar && mpMainToolBar->isVisible());
     auto detachedWindow = new TDetachedWindow(profileName, console, toolbarVisible);
+    detachedWindow->setMenuBarVisibility(menuBarShouldBeVisible());
     mDetachedWindows.insert(profileName, detachedWindow);
 
     // Transfer any dock widgets from the main window to the detached window

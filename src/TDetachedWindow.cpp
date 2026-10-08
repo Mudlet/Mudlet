@@ -93,9 +93,7 @@ TDetachedWindow::TDetachedWindow(const QString& profileName, TMainConsole* conso
     }
 
     // Set initial toolbar visibility based on main window state
-    if (mpToolBar) {
-        mpToolBar->setVisible(toolbarVisible);
-    }
+    setToolBarVisibility(toolbarVisible);
 
     // Set window properties
     //: This is the title of a Mudlet window which was detached from the main Mudlet window, and %1 is the name of the profile.
@@ -577,6 +575,7 @@ void TDetachedWindow::createMenus()
     //: This explains the "Show Toolbar" action for toolbar visibility in a detached Mudlet window.
     mpActionToggleToolBar->setStatusTip(tr("Show or hide the toolbar"));
     connect(mpActionToggleToolBar, &QAction::triggered, this, &TDetachedWindow::slot_toggleToolBarVisibility);
+    mpWindowMenu->insertAction(minimizeAction, mpActionToggleToolBar);
 
     // Connect the Window menu's aboutToShow signal to update the window list
     connect(mpWindowMenu, &QMenu::aboutToShow, this, &TDetachedWindow::updateWindowMenu);
@@ -1202,6 +1201,9 @@ void TDetachedWindow::updateMenuShortcuts()
         }
 
         action->setShortcut(resolveShortcut(key, fallback));
+        // Held by the window too: Qt fires no shortcut of an action whose only
+        // container is a hidden menu bar
+        addAction(action);
     };
 
 #if defined(Q_OS_MACOS)
@@ -1712,6 +1714,11 @@ void TDetachedWindow::setToolBarVisibility(bool visible)
     }
 }
 
+void TDetachedWindow::setMenuBarVisibility(bool visible)
+{
+    menuBar()->setVisible(visible);
+}
+
 bool TDetachedWindow::isToolBarVisible() const
 {
     // Returns false when mpToolBar is null — callers that distinguish
@@ -1765,6 +1772,9 @@ void TDetachedWindow::updateWindowMenu()
     if (!pMudlet) {
         return;
     }
+
+    // Disabled when hiding would cause lockout (menu bar also never shown)
+    mpActionToggleToolBar->setEnabled(!(isToolBarVisible() && !canHideToolBar()));
 
     // Clean up existing window list actions
     for (QAction* action : std::as_const(mWindowListActions)) {
