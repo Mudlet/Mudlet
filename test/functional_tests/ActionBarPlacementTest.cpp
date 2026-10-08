@@ -102,7 +102,7 @@ private:
     {
         // The widgets a redraw replaces are only queued for deletion
         QCoreApplication::sendPostedEvents(nullptr, QEvent::DeferredDelete);
-        QWidget* bar = root->mLocation == 4 ? static_cast<QWidget*>(host->mpConsole->actionToolBar(root)) : host->mpConsole->actionEasyButtonBar(root);
+        QWidget* bar = root->mLocation == 4 ? static_cast<QWidget*>(host->mainConsoleView()->actionToolBar(root)) : host->mainConsoleView()->actionEasyButtonBar(root);
         return bar ? bar->findChildren<QMenu*>().size() : -1;
     }
 
@@ -182,7 +182,7 @@ private:
         entry->setIsActive(true);
         host->getActionUnit()->registerAction(entry);
         host->getActionUnit()->updateAllToolbars();
-        QPointer<QWidget> bar = location == 4 ? static_cast<QWidget*>(host->mpConsole->actionToolBar(root)) : host->mpConsole->actionEasyButtonBar(root);
+        QPointer<QWidget> bar = location == 4 ? static_cast<QWidget*>(host->mainConsoleView()->actionToolBar(root)) : host->mainConsoleView()->actionEasyButtonBar(root);
         QVERIFY(bar);
         const QString css = qsl("color: red;");
         auto styledMenu = [&bar, &css]() -> QMenu* {
@@ -223,7 +223,7 @@ private:
         entry->setIsActive(true);
         host->getActionUnit()->registerAction(entry);
         host->getActionUnit()->updateAllToolbars();
-        QPointer<QWidget> bar = location == 4 ? static_cast<QWidget*>(host->mpConsole->actionToolBar(root)) : host->mpConsole->actionEasyButtonBar(root);
+        QPointer<QWidget> bar = location == 4 ? static_cast<QWidget*>(host->mainConsoleView()->actionToolBar(root)) : host->mainConsoleView()->actionEasyButtonBar(root);
         QVERIFY(bar);
         const QString css = qsl("color: red;");
         menu->css = css;
@@ -779,7 +779,7 @@ private slots:
         other->setIsActive(true);
         host->getActionUnit()->registerAction(other);
         host->getActionUnit()->updateAllToolbars();
-        QPointer<TEasyButtonBar> bar = host->mpConsole->actionEasyButtonBar(root);
+        QPointer<TEasyButtonBar> bar = host->mainConsoleView()->actionEasyButtonBar(root);
         QVERIFY(bar);
         QPointer<QPushButton> styled = buttonNamed(bar, qsl("placementStyledButtons button"));
         QPointer<QPushButton> unstyled = buttonNamed(bar, qsl("placementStyledButtons other"));
@@ -804,7 +804,7 @@ private slots:
         typed->css = qsl("color: red;");
 
         QVERIFY(host->getLuaInterpreter()->compileAndExecuteScript(qsl("setButtonStyleSheet('placementTypedStyle button', 'color: red;')")));
-        QPointer<QPushButton> button = buttonNamed(host->mpConsole->actionEasyButtonBar(root), qsl("placementTypedStyle button"));
+        QPointer<QPushButton> button = buttonNamed(host->mainConsoleView()->actionEasyButtonBar(root), qsl("placementTypedStyle button"));
         QVERIFY(button);
         QCOMPARE(button->styleSheet(), qsl("color: red;"));
     }
@@ -819,12 +819,12 @@ private slots:
         auto* root = makeRootBar(host, qsl("placementMovedOut"), 0);
         host->getActionUnit()->updateAllToolbars();
         auto* moved = static_cast<TAction*>(root->mpMyChildrenList->front());
-        QVERIFY(buttonNamed(host->mpConsole->actionEasyButtonBar(root), qsl("placementMovedOut button")));
+        QVERIFY(buttonNamed(host->mainConsoleView()->actionEasyButtonBar(root), qsl("placementMovedOut button")));
         host->getActionUnit()->reParentAction(moved->getID(), root->getID(), 0);
         host->getActionUnit()->updateAllToolbars();
 
         QVERIFY(host->getLuaInterpreter()->compileAndExecuteScript(qsl("setButtonStyleSheet('placementMovedOut button', 'color: red;')")));
-        QPointer<TEasyButtonBar> bar = host->mpConsole->actionEasyButtonBar(moved);
+        QPointer<TEasyButtonBar> bar = host->mainConsoleView()->actionEasyButtonBar(moved);
         QVERIFY(bar);
         QCOMPARE(bar->styleSheet(), qsl("color: red;"));
     }
@@ -841,12 +841,12 @@ private slots:
         package->mPackageName = qsl("placementMovedInPackage");
         host->getActionUnit()->updateAllToolbars();
         auto* moved = static_cast<TAction*>(root->mpMyChildrenList->front());
-        QVERIFY(buttonNamed(host->mpConsole->actionEasyButtonBar(root), qsl("placementMovedIn button")));
+        QVERIFY(buttonNamed(host->mainConsoleView()->actionEasyButtonBar(root), qsl("placementMovedIn button")));
         host->getActionUnit()->reParentAction(moved->getID(), root->getID(), package->getID());
         host->getActionUnit()->updateAllToolbars();
 
         QVERIFY(host->getLuaInterpreter()->compileAndExecuteScript(qsl("setButtonStyleSheet('placementMovedIn button', 'color: red;')")));
-        QPointer<TToolBar> toolBar = host->mpConsole->actionToolBar(moved);
+        QPointer<TToolBar> toolBar = host->mainConsoleView()->actionToolBar(moved);
         QVERIFY(toolBar);
         QCOMPARE(toolBar->styleSheet(), qsl("color: red;"));
     }
@@ -860,7 +860,7 @@ private slots:
 
         auto* floating = makeRootBar(host, qsl("placementStyledFloating"), 4);
         host->getActionUnit()->updateAllToolbars();
-        QPointer<TToolBar> toolBar = host->mpConsole->actionToolBar(floating);
+        QPointer<TToolBar> toolBar = host->mainConsoleView()->actionToolBar(floating);
         QVERIFY(toolBar);
         QVERIFY(buttonNamed(toolBar, qsl("placementStyledFloating button")));
 

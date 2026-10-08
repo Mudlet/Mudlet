@@ -761,7 +761,7 @@ private slots:
         startProfile();
         auto host = mudlet::self()->getActiveHost();
         QVERIFY2(host, "No active host available for the test.");
-        QVERIFY2(host->mpConsole, "The active host has no main console.");
+        QVERIFY2(host->mainConsoleView(), "The active host has no main console.");
 
         runLua(host,
                qsl("wdogCapture = 'trigger never ran'\n"
@@ -796,7 +796,7 @@ private slots:
         startProfile();
         auto host = mudlet::self()->getActiveHost();
         QVERIFY2(host, "No active host available for the test.");
-        QVERIFY2(host->mpConsole, "The active host has no main console.");
+        QVERIFY2(host->mainConsoleView(), "The active host has no main console.");
 
         runLua(host,
                qsl("dcCapture = 'trigger never ran'\n"

@@ -246,7 +246,7 @@ private slots:
         const int secondHeight = dockSize(second).height();
         QVERIFY2(secondHeight > alone / 4, qPrintable(qsl("the second user window is %1 high beside the first's %2").arg(secondHeight).arg(firstHeight)));
         QVERIFY2(firstHeight > alone / 4, qPrintable(qsl("the first user window was squeezed to %1").arg(firstHeight)));
-        QCOMPARE(mpHost->mpConsole->getUserWindowSize(second), dockSize(second));
+        QCOMPARE(mpHost->mainConsoleView()->getUserWindowSize(second), dockSize(second));
     }
 
     // Geyser hides a window created hidden in the same call that opens it, so the

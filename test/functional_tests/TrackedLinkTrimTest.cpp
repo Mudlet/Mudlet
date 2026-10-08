@@ -176,7 +176,7 @@ private slots:
     // id may have been trimmed without being swept yet
     void test_aRecycledLinkIdStartsWithoutTheTrimmedLinksState()
     {
-        auto* pConsole = mpHost->mpConsole.data();
+        auto* pConsole = mpHost->mainConsoleView();
         auto& buffer = pConsole->buffer;
         const auto restoreStore = qScopeGuard([this, &buffer] {
             mpHost->clearWindow(qsl("main"));
@@ -226,7 +226,7 @@ private slots:
     void test_aLinkRemovedFromItsLineLeavesNoStateForItsId()
     {
         QFETCH(int, removal);
-        auto* pConsole = mpHost->mpConsole.data();
+        auto* pConsole = mpHost->mainConsoleView();
         auto& buffer = pConsole->buffer;
         QVERIFY(mpHost->clearWindow(qsl("main")));
         buffer.mLinkStore = TLinkStore(3);
@@ -277,7 +277,7 @@ private slots:
     void test_anOlderLinkTrimmedAfterItsIdWasHandedOutAgainLeavesNoState()
     {
         QFETCH(bool, newerLinkShown);
-        auto* pConsole = mpHost->mpConsole.data();
+        auto* pConsole = mpHost->mainConsoleView();
         auto& buffer = pConsole->buffer;
         QVERIFY(mpHost->clearWindow(qsl("main")));
         buffer.mLinkStore = TLinkStore(3);
@@ -326,7 +326,7 @@ private slots:
     // handed out again to a link that never put any text in the buffer
     void test_aFocusedLinkTrimmedAfterItsIdWentToAnEmptyLinkLosesFocus()
     {
-        auto* pConsole = mpHost->mpConsole.data();
+        auto* pConsole = mpHost->mainConsoleView();
         auto& buffer = pConsole->buffer;
         QVERIFY(mpHost->clearWindow(qsl("main")));
         buffer.mLinkStore = TLinkStore(3);
@@ -360,7 +360,7 @@ private slots:
     // the next link added rescan the whole buffer on every trim
     void test_trimmingLinksWhoseIdsWereHandedOutAgainRecordsNone()
     {
-        auto* pConsole = mpHost->mpConsole.data();
+        auto* pConsole = mpHost->mainConsoleView();
         auto& buffer = pConsole->buffer;
         QVERIFY(mpHost->clearWindow(qsl("main")));
         buffer.mLinkStore = TLinkStore(10);
@@ -382,7 +382,7 @@ private slots:
     // new one, so each spoiler must reveal its own text where it is
     void test_spoilersSharingARecycledIdEachRevealTheirOwnText()
     {
-        auto* pConsole = mpHost->mpConsole.data();
+        auto* pConsole = mpHost->mainConsoleView();
         auto& buffer = pConsole->buffer;
         QVERIFY(mpHost->clearWindow(qsl("main")));
         buffer.mLinkStore = TLinkStore(3);
@@ -443,7 +443,7 @@ private slots:
         bool focusedOutlivedItsLine = true;
         QVERIFY(trimLinkAway(true, conceal, focusedOutlivedItsLine));
         QVERIFY2(!focusedOutlivedItsLine, "a focused link outlived its line in the store");
-        QCOMPARE(mpHost->mpConsole->buffer.getFocusedLink(), 0);
+        QCOMPARE(mpHost->mainConsoleView()->buffer.getFocusedLink(), 0);
     }
 
     // A wholeline concealment deletes the link's own line, so every link below
@@ -662,7 +662,7 @@ private:
     // trimmed away, reporting whether the store still holds the link at that point
     bool trimLinkAway(const bool focus, const bool conceal, bool& outlivedItsLine) const
     {
-        auto* pConsole = mpHost->mpConsole.data();
+        auto* pConsole = mpHost->mainConsoleView();
         auto& buffer = pConsole->buffer;
         auto& manager = pConsole->getHyperlinkVisibilityManager();
         if (!mpHost->clearWindow(qsl("main"))) {
