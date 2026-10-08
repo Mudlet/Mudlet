@@ -548,6 +548,7 @@ private:
     void shrinkBuffer();
     void spliceInsertIntoPreTriggerPassLine(int y, int x, int count, const TChar& format);
     void spliceEraseFromPreTriggerPassLine(int y, int x, int xEnd);
+    void wrapPreTriggerPassLine(const WrapInfo& firstSegment, int indentWidth);
     void noteFoundLines(int first, int last);
     void materialisePreTriggerPassLine(int y);
     int remapLinkId(const TLinkStore& sourceLinkStore, int sourceLinkId, QHash<int, int>& remappedLinkIds, int line = -1);

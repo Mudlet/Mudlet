@@ -786,6 +786,44 @@ describe("Trigger processing", function()
             assert.is_true(matchedAny, "the red text should still be matched after the line was wrapped")
         end)
 
+        -- An indent shifts the line's first segment right, so the original colors
+        -- have to shift with it, and stay shifted for an edit made after the wrap.
+        for _, edit in ipairs({
+            {"", function() end},
+            {" and then inserts text", function()
+                moveCursor(0, getLineNumber())
+                insertText("Z")
+            end},
+        }) do
+            it("should match original colors past the indent when a trigger wraps the line" .. edit[1], function()
+                _G.wrapIndentMatches = {}
+                local savedWrap = getWindowWrap("main")
+                finally(function()
+                    setWindowWrap("main", savedWrap)
+                    setWindowWrapIndent("main", 0)
+                    _G.wrapIndentMatches = nil
+                end)
+                setWindowWrap("main", 40)
+                setWindowWrapIndent("main", 2)
+
+                local wrapper = tempRegexTrigger("^AAAA WRAPINDENT ", function()
+                    wrapLine("main", getLineNumber())
+                    edit[2]()
+                    resetFormat()
+                end)
+                local colorTrigger = tempAnsiColorTrigger(1, -1,
+                    [[table.insert(_G.wrapIndentMatches, table.concat(matches, ","))]])
+
+                feedTriggers("\n\27[31mAAAA\27[32m WRAPINDENT bbbb cccc dddd eeee ffff gggg hhhh\27[0m\n")
+
+                killTrigger(wrapper)
+                killTrigger(colorTrigger)
+
+                -- the indent takes the color of the red text it precedes
+                assert.are.same({"  AAAA"}, _G.wrapIndentMatches)
+            end)
+        end
+
     end)
 
     describe("tempAnsiColorTrigger callbacks", function()

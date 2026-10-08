@@ -2718,6 +2718,26 @@ void TBuffer::spliceEraseFromPreTriggerPassLine(int y, int x, int xEnd)
     }
 }
 
+// wrapLine() leaves only the first segment of the trigger-pass line in its place,
+// so the snapshot is cut and indented the same way to stay in step with it.
+void TBuffer::wrapPreTriggerPassLine(const WrapInfo& firstSegment, int indentWidth)
+{
+    const int known = static_cast<int>(mPreTriggerPassLine.size());
+    const int from = std::min(firstSegment.firstChar, known);
+    const int to = std::min(firstSegment.lastChar, known);
+    if (from < to) {
+        const TChar indentColors = mPreTriggerPassLine[from];
+        mPreTriggerPassLine.erase(mPreTriggerPassLine.begin() + to, mPreTriggerPassLine.end());
+        mPreTriggerPassLine.erase(mPreTriggerPassLine.begin(), mPreTriggerPassLine.begin() + from);
+        if (firstSegment.needsIndent) {
+            mPreTriggerPassLine.insert(mPreTriggerPassLine.begin(), static_cast<std::size_t>(indentWidth), indentColors);
+        }
+    } else {
+        mPreTriggerPassLine.clear();
+    }
+    mPreTriggerPassLineUniformity = PassLineUniformity::Unknown;
+}
+
 void TBuffer::materialisePreTriggerPassLine(int y)
 {
     if (!mPreTriggerPassSnapshotTaken && y >= 0 && y == mPreTriggerPassLineNumber && y < static_cast<int>(buffer.size())) {
@@ -6115,6 +6135,10 @@ int TBuffer::wrapLine(int startLine, int maxWidth, int indentSize, int hangingIn
             promptList.append(isPrompt);
             wrapGapList.append(wrapGapBuffer.at(i));
             continue;
+        }
+        // Only a pass line whose first segment stays at its own index can keep its snapshot
+        if (i == mPreTriggerPassLineNumber && mPreTriggerPassSnapshotTaken && firstRewrappedLine + static_cast<int>(queue.size()) == i) {
+            wrapPreTriggerPassLine(lineBreaks.first(), lineBreaks.first().isNewline ? indent : hangingIndent);
         }
         const QString qIndent(indent, QChar::Space);
         const QString qHangingIndent(hangingIndent, QChar::Space);
