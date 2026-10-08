@@ -322,6 +322,55 @@ describe("Tests the audit of a damaged binary map file", function()
       -- and is found where it stands, not under the ID it was loaded with
       local x, y, z = getRoomCoordinates(renumbered)
       assert.are.same({renumbered}, getRoomsByPosition1(area, x, y, z))
+      assert.are.same({renumbered}, getAllRoomEntrances(from))
+      assert.are.same({from}, getAllRoomEntrances(renumbered))
+    end)
+
+    it("keeps the player in a room it renumbers", function()
+      local area = newArea("MapFileAuditSpecPlayerRoom")
+      newRoom(area, 0)
+      newRoom(area, 1, distantRoomId)
+      setRoomName(distantRoomId, "MapFileAuditSpecPlayerRoom")
+      centerview(distantRoomId)
+      assert.are.equal(distantRoomId, getPlayerRoom())
+
+      reloadWith(function(data)
+        -- the room's own key, its place in its area's list of rooms and the player's room
+        return planted(data, int32(distantRoomId), int32(-7), 3)
+      end)
+
+      local renumbered
+      for id, name in pairs(getRooms()) do
+        if name == "MapFileAuditSpecPlayerRoom" then
+          renumbered = id
+        end
+      end
+      assert.is_not_nil(renumbered, "the room with the bad ID was lost")
+      assert.are.equal(renumbered, getPlayerRoom())
+    end)
+
+    it("leaves a player in no room there when it renumbers a room 0", function()
+      local area = newArea("MapFileAuditSpecNoPlayerRoom")
+      local gone = newRoom(area, 0)
+      newRoom(area, 1, distantRoomId)
+      setRoomName(distantRoomId, "MapFileAuditSpecNoPlayerRoom")
+      centerview(gone)
+      deleteRoom(gone)
+      assert.are.equal(0, getPlayerRoom())
+
+      reloadWith(function(data)
+        -- the room's own key and its place in its area's list of rooms
+        return planted(data, int32(distantRoomId), int32(0), 2)
+      end)
+
+      local renumbered
+      for id, name in pairs(getRooms()) do
+        if name == "MapFileAuditSpecNoPlayerRoom" then
+          renumbered = id
+        end
+      end
+      assert.is_not_nil(renumbered, "room 0 was lost")
+      assert.are.equal(0, getPlayerRoom())
     end)
 
     it("renumbers a room whose ID is -1 without giving it every absent exit on the map", function()
@@ -419,6 +468,7 @@ describe("Tests the audit of a damaged binary map file", function()
       -- audit could send it to the renumbered room
       assert.is_nil(getRoomExits(from)["east"])
       assert.are.equal(from, getRoomExits(renumbered)["west"])
+      assert.are.same({renumbered}, getAllRoomEntrances(from))
     end)
   end)
 

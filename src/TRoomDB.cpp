@@ -1207,6 +1207,16 @@ void TRoomDB::auditRooms(QHash<int, int>& roomRemapping, QHash<int, int>& areaRe
         }
     }
     // END OF TASK 8
+
+    // Loading filed the renumbered rooms, and every exit to one, under the ids
+    // they had in the file
+    if (!roomRemapping.isEmpty()) {
+        entranceMap.clear();
+        entranceMapBySource.clear();
+        for (TRoom* pR : std::as_const(rooms)) {
+            updateEntranceMap(pR, true);
+        }
+    }
 }
 
 void TRoomDB::clearMapDB()
