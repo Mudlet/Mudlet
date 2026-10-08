@@ -248,12 +248,12 @@ if false then
   --- Note: expandAlias() leaves the captures of the script that called it alone. The aliases it runs are given the
   --- expanded command in "command" and their own captures in "matches", and once the call returns the calling script
   --- has back the "matches" and "multimatches" it had before it - so a capture read after an expandAlias() call is
-  --- still the caller's own. An alias script also gets its own "command" back from each expandAlias() call it makes.
-  --- Called from any other script - a trigger, timer, key binding, button or event handler, even one an alias set off
-  --- with raiseEvent() or feedTriggers() - "command" holds the last command expanded, so an alias that sets off such a
-  --- script reads what that script expanded, while such a script reads the alias's own command if the alias has
-  --- already had it back from an expandAlias() call of its own. Once the alias pass is over, "command" holds the
-  --- last command expanded, unless a script has since set it to a different value. A command sent at the command
+  --- still the caller's own. An alias script also gets its own "command" back from each expandAlias() call it makes
+  --- while it runs. Called from any other script - a trigger, timer, key binding, button or event handler, even one an
+  --- alias set off with raiseEvent() or feedTriggers() - "command" holds the last command expanded, so an alias that
+  --- sets off such a script reads what that script expanded, while such a script reads the alias's own command if the
+  --- alias has already had it back from an expandAlias() call of its own. Once the alias pass is over, "command" holds
+  --- the last command expanded, unless a script has since set it to a different value. A command sent at the command
   --- line is unaffected: every alias it runs sees it in "command" as before.
   ---
   --- @see send

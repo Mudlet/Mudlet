@@ -878,42 +878,29 @@ describe("Alias processing", function()
                 assert.are.equal("command_filter_step", seen.inFilter, "the filter got the alias's command back")
             end)
 
-            -- The Command field is sent with no script in between, so the alias pass
-            -- it starts is not the feeding alias's own
-            it("leaves an alias that fed a trigger with a command field the last command expanded", function()
-                if not os.getenv("MUDLET_TEST_MODE") then
-                    pending("uninstalling the fixture needs pumpEvents(), which does nothing outside MUDLET_TEST_MODE")
-                    return
-                end
-                local path = getMudletHomeDir() .. "/alias-command-field-trigger.xml"
-                local seen = {}
-                local lastId = tempAlias([[^command_field_last$]], function() end)
-                local sentId = tempAlias([[^command_field_sent$]], function()
-                    expandAlias("command_field_last", false)
-                end)
-                local feederId = tempAlias([[^command_field_feeder$]], function()
-                    feedTriggers("\ncommand_field_trigger\n")
-                    seen.inFeeder = command
-                end)
-                finally(function()
-                    killAlias(lastId)
-                    killAlias(sentId)
-                    killAlias(feederId)
-                    -- uninstallPackage() refuses while the profile save the install
-                    -- started is still running
-                    local removed = false
-                    for _ = 1, 100 do
-                        if uninstallPackage("alias-command-field-trigger") == true then
-                            removed = true
-                            break
-                        end
-                        pumpEvents(50)
+            local commandFieldTriggerPath = getMudletHomeDir() .. "/alias-command-field-trigger.xml"
+
+            -- busted keeps only the last finally() a spec registers, so the spec's own
+            -- calls this
+            local function uninstallCommandFieldTrigger()
+                -- uninstallPackage() refuses while the profile save the install
+                -- started is still running
+                local removed = false
+                for _ = 1, 100 do
+                    if uninstallPackage("alias-command-field-trigger") == true then
+                        removed = true
+                        break
                     end
-                    os.remove(path)
-                    pumpEvents(200)
-                    assert.is_true(removed, "could not uninstall the command field trigger package")
-                end)
-                local file = assert(io.open(path, "w"))
+                    pumpEvents(50)
+                end
+                os.remove(commandFieldTriggerPath)
+                pumpEvents(200)
+                assert.is_true(removed, "could not uninstall the command field trigger package")
+            end
+
+            -- A trigger for "command_field_trigger" whose Command field is "command_field_sent"
+            local function installCommandFieldTrigger()
+                local file = assert(io.open(commandFieldTriggerPath, "w"))
                 file:write([[<?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE MudletPackage>
 <MudletPackage version="1.001">
@@ -950,11 +937,108 @@ describe("Alias processing", function()
 </MudletPackage>
 ]])
                 file:close()
-                assert.is_true(installPackage(path))
+                assert.is_true(installPackage(commandFieldTriggerPath))
+            end
+
+            -- The Command field is sent with no script in between, so the alias pass
+            -- it starts is not the feeding alias's own
+            it("leaves an alias that fed a trigger with a command field the last command expanded", function()
+                if not os.getenv("MUDLET_TEST_MODE") then
+                    pending("uninstalling the fixture needs pumpEvents(), which does nothing outside MUDLET_TEST_MODE")
+                    return
+                end
+                local seen = {}
+                local lastId = tempAlias([[^command_field_last$]], function() end)
+                local sentId = tempAlias([[^command_field_sent$]], function()
+                    expandAlias("command_field_last", false)
+                end)
+                local feederId = tempAlias([[^command_field_feeder$]], function()
+                    feedTriggers("\ncommand_field_trigger\n")
+                    seen.inFeeder = command
+                end)
+                finally(function()
+                    killAlias(lastId)
+                    killAlias(sentId)
+                    killAlias(feederId)
+                    uninstallCommandFieldTrigger()
+                end)
+                installCommandFieldTrigger()
 
                 expandFromHandler("command_field_feeder")
 
                 assert.are.equal("command_field_last", seen.inFeeder, "the alias read a command an alias in the trigger's pass was given back")
+            end)
+
+            -- What an alias expands that no alias takes goes to the game from inside
+            -- its expandAlias() call, raising sysDataSendRequest on the way
+            it("leaves a handler of the send an alias's expandAlias() makes the last command expanded", function()
+                if not os.getenv("MUDLET_TEST_MODE") then
+                    pending("uninstalling the fixture needs pumpEvents(), which does nothing outside MUDLET_TEST_MODE")
+                    return
+                end
+                local seen = {}
+                local lastId = tempAlias([[^command_field_last$]], function() end)
+                local sentId = tempAlias([[^command_field_sent$]], function()
+                    expandAlias("command_field_last", false)
+                end)
+                local handlerId = registerAnonymousEventHandler("sysDataSendRequest", function(_, sent)
+                    if sent == "command_unmatched_send" then
+                        feedTriggers("\ncommand_field_trigger\n")
+                        seen.inHandler = command
+                    end
+                end)
+                local senderId = tempAlias([[^command_unmatched_sender$]], function()
+                    expandAlias("command_unmatched_send", false)
+                end)
+                finally(function()
+                    killAlias(lastId)
+                    killAlias(sentId)
+                    killAnonymousEventHandler(handlerId)
+                    killAlias(senderId)
+                    uninstallCommandFieldTrigger()
+                end)
+                installCommandFieldTrigger()
+
+                expandFromHandler("command_unmatched_sender")
+
+                assert.are.equal("command_field_last", seen.inHandler, "the handler read a command an alias in the trigger's pass was given back")
+            end)
+
+            it("gives an alias with a script of text its own command back", function()
+                _G.aliasSpecSeenInTextAlias = nil
+                local innerId = tempAlias([[^command_text_inner$]], function() end)
+                local outerId = tempAlias([[^command_text_outer (\w+)$]],
+                    [[expandAlias("command_text_inner", false) aliasSpecSeenInTextAlias = command]])
+                finally(function()
+                    killAlias(innerId)
+                    killAlias(outerId)
+                    _G.aliasSpecSeenInTextAlias = nil
+                end)
+
+                expandFromHandler("command_text_outer thing")
+
+                assert.are.equal("command_text_outer thing", rawget(_G, "aliasSpecSeenInTextAlias"), "the alias did not get its own command back")
+            end)
+
+            it("gives an event handler that an alias raises after its own expansion the alias's command", function()
+                local seen = {}
+                local innerId = tempAlias([[^command_before_raise_inner$]], function() end)
+                local handlerId = registerAnonymousEventHandler("aliasSpecCommandAfterOwnExpansion", function()
+                    seen.inHandler = command
+                end)
+                local outerId = tempAlias([[^command_before_raise$]], function()
+                    expandAlias("command_before_raise_inner", false)
+                    raiseEvent("aliasSpecCommandAfterOwnExpansion")
+                end)
+                finally(function()
+                    killAlias(innerId)
+                    killAnonymousEventHandler(handlerId)
+                    killAlias(outerId)
+                end)
+
+                expandFromHandler("command_before_raise")
+
+                assert.are.equal("command_before_raise", seen.inHandler, "the handler did not read the alias's command")
             end)
 
             it("leaves command holding the last command expanded once the alias pass is over", function()

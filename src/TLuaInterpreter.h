@@ -180,10 +180,6 @@ public:
         TLuaInterpreter& mLua;
         const bool mWasAliasScript;
     };
-    // Only the pass an alias script's own expandAlias() starts is part of that
-    // script's pass, not one sent from the Command field of an item it sets off
-    bool takeAliasScriptPass() { return std::exchange(mAliasScriptPass, false); }
-    void endAliasScriptPass(const bool aliasScriptPass) { mAliasScriptPass = aliasScriptPass; }
     bool callEventHandler(const QString& function, const TEvent& pE);
     bool callCmdLineAction(const int func, QString);
     bool callAnonymousFunction(const int func, QString name);
@@ -1134,7 +1130,6 @@ private:
     };
     std::vector<NestedDispatchState> mNestedDispatchStates;
     bool mRunningAliasScript = false;
-    bool mAliasScriptPass = false;
     PassCommandState mPassCommand;
     quint64 mCommandsExpanded = 0;
     // Bumped as the Lua state is replaced, so a PassCommandState kept from before
