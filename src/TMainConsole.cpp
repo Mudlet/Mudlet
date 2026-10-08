@@ -3974,6 +3974,12 @@ void TMainConsole::closeEvent(QCloseEvent* event)
             pHost->getLuaInterpreter()->leaveNestedEventLoop();
         }
     });
+    mpHost->pauseServerWrapFlush();
+    const auto serverWrapFlushGuard = qScopeGuard([pHost = QPointer<Host>(mpHost), event]() {
+        if (pHost && !event->isAccepted()) {
+            pHost->resumeServerWrapFlush();
+        }
+    });
     TEvent conCloseEvent{};
     conCloseEvent.mArgumentList.append(qsl("sysExitEvent"));
     conCloseEvent.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);

@@ -747,6 +747,9 @@ private:
     // which reads members declared much later - mBgColor among them. Same class of
     // bug as #10229, which had to move a call rather than a declaration.
     bool mIsClosingDown = false;
+    bool mServerWrapFlushPaused = false;
+    // The flush timer ran out, or was stopped, while paused
+    bool mServerWrapFlushDue = false;
 
 public:
     // Make this the first public member instantiated so we can use ITS font
@@ -910,6 +913,11 @@ public:
     // quiet without sending one. Here rather than on the view because the
     // flush runs the trigger pipeline, which is the core's work.
     QTimer mServerWrapFlushTimer;
+    // A held line stays held while the close asks whether to save, as the
+    // profile may be about to go: Cancel resumes the flush, a close drops it.
+    void pauseServerWrapFlush();
+    void resumeServerWrapFlush();
+    bool serverWrapFlushPaused() const { return mServerWrapFlushPaused; }
 
     int mConsoleBufferSize = 100000;
     bool mUseMaxConsoleBufferSize = false;
