@@ -74,12 +74,26 @@ void TForkedProcess::slot_finished(int exitCode, QProcess::ExitStatus exitStatus
 
 void TForkedProcess::slot_receivedData()
 {
+    lua_State* L = mpInterpreter->pGlobalLua;
     while (canReadLine()) {
         QByteArray line = readLine();
+        const int callerStackTop = lua_gettop(L);
+        if (!lua_checkstack(L, 2)) {
+            return;
+        }
         // Call lua function by stored Reference
-        lua_rawgeti(mpInterpreter->pGlobalLua, LUA_REGISTRYINDEX, callBackFunctionRef);
-        lua_pushstring(mpInterpreter->pGlobalLua, line.data());
-        lua_pcall(mpInterpreter->pGlobalLua, 1, 0, 0);
+        lua_rawgeti(L, LUA_REGISTRYINDEX, callBackFunctionRef);
+        lua_pushstring(L, line.data());
+        if (lua_pcall(L, 1, 0, 0)) {
+            std::string e = "Lua error:";
+            if (lua_isstring(L, -1)) {
+                e += lua_tostring(L, -1);
+            } else {
+                e.append("error object is a ").append(luaL_typename(L, -1)).append(" value");
+            }
+            mpInterpreter->logError(e, qsl("spawn() callback"), qsl("no debug data available"));
+        }
+        lua_settop(L, callerStackTop);
     }
 }
 
