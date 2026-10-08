@@ -2572,7 +2572,17 @@ local function copy2color(name,win,str,inst)
     -- happens when you try to use copy2decho() on an empty line
     return ""
   end
-  local start, len = selectString(win, str, inst), utf8.len(str)
+  -- selectString() and selectSection() count UTF-16 code units, in which a
+  -- character beyond the BMP (a four byte UTF-8 sequence, e.g. an emoji) takes two
+  local utf8Char = "[%z\1-\127\194-\244][\128-\191]*"
+  local function units(char)
+    return char:byte() >= 240 and 2 or 1
+  end
+  local start = selectString(win, str, inst)
+  local len = 0
+  for strChar in str:gmatch(utf8Char) do
+    len = len + units(strChar)
+  end
   if start < 0 then
     -- happens when the text is not on the current line, which is all selectString() searches
     return ""
@@ -2599,36 +2609,36 @@ local function copy2color(name,win,str,inst)
   end
   -- utf8.sub() and growing the result a character at a time both rescan from the
   -- start of the line, which made long lines quadratic
-  local lineChars, lastIndex = {}, start + len
-  for lineChar in line:gmatch("[%z\1-\127\194-\244][\128-\191]*") do
-    lineChars[#lineChars + 1] = lineChar
-    if #lineChars == lastIndex then
+  local pieces = {}
+  local offset, stop = 0, start + len
+  for lineChar in line:gmatch(utf8Char) do
+    if offset >= stop then
       break
     end
-  end
-  local pieces = {}
-  for index = start + 1, lastIndex do
-    if win ~= "main" then
-      selectSection(win, index - 1, 1)
-      r,g,b = getFgColor(win)
-      rb,gb,bb = getBgColor(win)
-    else
-      selectSection(index - 1, 1)
-      r,g,b = getFgColor()
-      rb,gb,bb = getBgColor()
-    end
+    if offset >= start then
+      if win ~= "main" then
+        selectSection(win, offset, 1)
+        r,g,b = getFgColor(win)
+        rb,gb,bb = getBgColor(win)
+      else
+        selectSection(offset, 1)
+        r,g,b = getFgColor()
+        rb,gb,bb = getBgColor()
+      end
 
-    char = lineChars[index] or ""
-    if name == "copy2html" then
-      char = conversions[char] or char -- replace HTML entities (if they are in the table)
-    end
+      char = lineChar
+      if name == "copy2html" then
+        char = conversions[char] or char -- replace HTML entities (if they are in the table)
+      end
 
-    if r ~= cr or g ~= cg or b ~= cb or rb ~= crb or gb ~= cgb or bb ~= cbb then
-      cr,cg,cb,crb,cgb,cbb = r,g,b,rb,gb,bb
-      pieces[#pieces + 1] = string.format(style, #pieces > 0 and endspan or "", r, g, b, rb, gb, bb, char)
-    else
-      pieces[#pieces + 1] = char
+      if r ~= cr or g ~= cg or b ~= cb or rb ~= crb or gb ~= cgb or bb ~= cbb then
+        cr,cg,cb,crb,cgb,cbb = r,g,b,rb,gb,bb
+        pieces[#pieces + 1] = string.format(style, #pieces > 0 and endspan or "", r, g, b, rb, gb, bb, char)
+      else
+        pieces[#pieces + 1] = char
+      end
     end
+    offset = offset + units(lineChar)
   end
   pieces[#pieces + 1] = endspan
   return table.concat(pieces)

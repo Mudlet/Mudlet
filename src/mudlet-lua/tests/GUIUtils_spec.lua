@@ -513,6 +513,34 @@ describe("Tests the GUI utilities as far as possible without mudlet", function()
         assert.equals("<span style='color: rgb(200,100,200);background: rgb(0,0,200);'>中200</span>", copy2html(windowName, "中200"))
       end)
     end)
+
+    describe("on a line with characters beyond the BMP", function()
+      local windowName = "guiUtilsCopyDechoEmoji"
+
+      setup(function()
+        createBuffer(windowName)
+      end)
+
+      teardown(function()
+        deleteMiniConsole(windowName)
+      end)
+
+      before_each(function()
+        clearWindow(windowName)
+        decho(windowName, "<0,255,0:0,0,0>😀abc<255,0,0:0,0,0>😀de\n")
+        moveCursor(windowName, 0, 0)
+      end)
+
+      it("Should copy every character of a match that follows one", function()
+        assert.equals("<0,255,0:0,0,0>abc<r>", copy2decho(windowName, "abc"))
+        assert.equals("<0,255,0:0,0,0>c<r><255,0,0:0,0,0>😀d<r>", copy2decho(windowName, "c😀d"))
+        assert.equals("<span style='color: rgb(0,255,0);background: rgb(0,0,0);'>abc</span>", copy2html(windowName, "abc"))
+      end)
+
+      it("Should copy the whole line", function()
+        assert.equals("<0,255,0:0,0,0>😀abc<r><255,0,0:0,0,0>😀de<r>", copy2decho(windowName))
+      end)
+    end)
   end)
 
   describe("Tests the functionality of copy2html", function()
