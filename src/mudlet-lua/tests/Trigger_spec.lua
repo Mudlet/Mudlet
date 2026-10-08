@@ -747,6 +747,102 @@ describe("Trigger processing", function()
             assert.is_true(matchedAny, "the red text should still be matched after the line was wrapped")
         end)
 
+        -- deleting a line above the one being processed moves it up, and the
+        -- colour matcher has to follow it rather than read past the end of the buffer
+        it("should still match after an earlier trigger deletes a line above the one being processed", function()
+            local fired = {}
+            feedTriggers("\27[31mline above that a trigger deletes\27[0m\n")
+            local doomed = getLineNumber()
+            local deleter = tempTrigger("DeleteAboveMarker", function()
+                moveCursor(0, doomed)
+                deleteLine()
+            end)
+            local colorTrigger = tempAnsiColorTrigger(1, -1, function() fired[#fired + 1] = matches[1] end)
+            finally(function()
+                killTrigger(deleter)
+                killTrigger(colorTrigger)
+            end)
+
+            feedTriggers("\27[31mDeleteAboveMarker red text\27[0m\n")
+
+            assert.are.same({"DeleteAboveMarker red text"}, fired)
+        end)
+
+        it("should match the original colors of a recolored line after a line above it is deleted", function()
+            local fired = {}
+            feedTriggers("\27[31mline above a recolored one\27[0m\n")
+            local doomed = getLineNumber()
+            local recolorAndDelete = tempTrigger("RecolorThenDeleteAbove", function()
+                selectString("RecolorThenDeleteAbove", 1)
+                setFgColor(0, 255, 0)
+                resetFormat()
+                moveCursor(0, doomed)
+                deleteLine()
+            end)
+            local colorTrigger = tempAnsiColorTrigger(1, -1, function() fired[#fired + 1] = matches[1] end)
+            finally(function()
+                killTrigger(recolorAndDelete)
+                killTrigger(colorTrigger)
+            end)
+
+            feedTriggers("\27[31mRecolorThenDeleteAbove red\27[0m\n")
+
+            assert.are.same({"RecolorThenDeleteAbove red"}, fired)
+        end)
+
+        it("should still match after the buffer trims its oldest lines during the pass", function()
+            local lines, batch = getConsoleBufferSize("main")
+            local fired = {}
+            local echoer, colorTrigger
+            finally(function()
+                if echoer then killTrigger(echoer) end
+                if colorTrigger then killTrigger(colorTrigger) end
+                -- a plain set clears "use the maximum", which asking for it again
+                -- gives back the old limit if it was on
+                setConsoleBufferSize("main", lines, batch, true)
+                if getConsoleBufferSize("main") ~= lines then
+                    setConsoleBufferSize("main", lines, batch)
+                end
+            end)
+            setConsoleBufferSize("main", 100, 10)
+            for i = 1, 110 do
+                feedTriggers("trim filler " .. i .. "\n")
+            end
+            -- echo() output waits for the pass to end, but lines fed from a trigger
+            -- are committed at once: enough of them take the buffer past its limit
+            echoer = tempTrigger("TrimDuringPassMarker", function()
+                for i = 1, 30 do
+                    feedTriggers("trim nested " .. i .. "\n")
+                end
+            end)
+            colorTrigger = tempAnsiColorTrigger(1, -1, function() fired[#fired + 1] = matches[1] end)
+
+            feedTriggers("\27[31mTrimDuringPassMarker red\27[0m\n")
+
+            assert.are.same({"TrimDuringPassMarker red"}, fired)
+        end)
+
+        it("should still match after a trigger in a nested pass deletes a line above", function()
+            local fired = {}
+            feedTriggers("\27[31mline above that a nested trigger deletes\27[0m\n")
+            local doomed = getLineNumber()
+            local outer = tempTrigger("NestedPassOuterMarker", function() feedTriggers("NestedPassInnerMarker\n") end)
+            local inner = tempTrigger("NestedPassInnerMarker", function()
+                moveCursor(0, doomed)
+                deleteLine()
+            end)
+            local colorTrigger = tempAnsiColorTrigger(1, -1, function() fired[#fired + 1] = matches[1] end)
+            finally(function()
+                killTrigger(outer)
+                killTrigger(inner)
+                killTrigger(colorTrigger)
+            end)
+
+            feedTriggers("\27[31mNestedPassOuterMarker red\27[0m\n")
+
+            assert.are.same({"NestedPassOuterMarker red"}, fired)
+        end)
+
     end)
 
     describe("tempAnsiColorTrigger callbacks", function()
@@ -3070,6 +3166,17 @@ describe("Trigger processing", function()
             -- bytes would stop the child short of its anchor.
             feed("Цель: 🐉 Оружие: меч\n")
             assert.are.equal("меч", _G.ColorFilterSpec.perlChildWeapon)
+        end)
+
+        it("hands a colour parent's children its line after lines above it are deleted", function()
+            -- one line goes to a trigger ahead of the parent, the next to the
+            -- parent's own script, both from the same index
+            feed("colour chain line the deleter removes\n")
+            local doomed = getLineNumber()
+            feed("colour chain line the parent removes\n")
+            _G.ColorFilterSpec.chainDoomed = doomed
+            feed("\27[35mChainDeleteMarker magenta\27[0m\n")
+            assert.are.equal("ChainDeleteMarker magenta", _G.ColorFilterSpec.colourChainChildCapture)
         end)
 
     end)

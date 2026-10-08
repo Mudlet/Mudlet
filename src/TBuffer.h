@@ -420,6 +420,9 @@ public:
     // The one color pair shared by every character of that same line, or
     // nullptr when its colors vary or there is no snapshot for it:
     const TChar* preTriggerPassLineUniformColors(int lineNumber);
+    // Where the line a trigger pass started on is now, as a trigger earlier in
+    // the pass can delete lines above it; -1 once it has been deleted itself
+    int triggerPassLineNow(int lineNumber) const;
     int find(int line, const QString& what, int pos);
     QStringList split(int line, const QString& splitter);
     QStringList split(int line, const QRegularExpression& splitter);
@@ -549,6 +552,7 @@ private:
     void syncPreTriggerPassLine(int y);
     void noteFoundLines(int first, int last);
     void materialisePreTriggerPassLine(int y);
+    void triggerPassLinesRemoved(int from, int to);
     int remapLinkId(const TLinkStore& sourceLinkStore, int sourceLinkId, QHash<int, int>& remappedLinkIds, int line = -1);
     int calculateWrapPosition(int lineNumber, int begin, int end);
     void handleNewLine();
@@ -696,6 +700,11 @@ private:
     // Parked between lines so the trigger-pass snapshot reuses its allocation:
     std::vector<TChar> mSpareTriggerPassLine;
     int mPreTriggerPassLineNumber = -1;
+    // The index the current trigger pass was handed, which mPreTriggerPassLineNumber moves on from
+    int mTriggerPassLineAsCommitted = -1;
+    // The pass lines of the passes a trigger calling feedTriggers() has paused, which
+    // move with deleted and trimmed lines just as the current one does
+    QList<int> mEnclosingTriggerPassLineNumbers;
     // Meaningful only inside a trigger pass: false until something overwrites
     // the committed line, while the game's colors are still readable from it:
     bool mPreTriggerPassSnapshotTaken = true;

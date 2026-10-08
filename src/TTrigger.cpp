@@ -855,12 +855,16 @@ TRootTriggerFilter TTrigger::rootFilter() const
     return filter;
 }
 
-bool TTrigger::uniformLineColors(Host* pHost, const int line, QRgb& foreground, QRgb& background)
+bool TTrigger::uniformLineColors(Host* pHost, int line, QRgb& foreground, QRgb& background)
 {
-    if (!pHost || line < 0) {
+    if (!pHost) {
         return false;
     }
     TBuffer& buffer = pHost->mainConsoleModel().buffer;
+    line = buffer.triggerPassLineNow(line);
+    if (line < 0) {
+        return false;
+    }
     if (line >= static_cast<int>(buffer.buffer.size())) {
         return false;
     }
@@ -1357,15 +1361,18 @@ bool TTrigger::match_color_pattern(int line, int patternNumber, int posOffset, i
     bool canExecute = false;
     CaptureLists lists;
     TConsoleModel& consoleModel = mpHost->mainConsoleModel();
-    if (line >= static_cast<int>(consoleModel.buffer.buffer.size())) {
+    // Read where the line is now, but hand children the line as committed, which
+    // they resolve for themselves after this trigger's script has run
+    const int lineNow = consoleModel.buffer.triggerPassLineNow(line);
+    if (lineNow < 0 || lineNow >= static_cast<int>(consoleModel.buffer.buffer.size())) {
         return false;
     }
-    std::vector<TChar>& bufferLine = consoleModel.buffer.buffer[line];
-    const QString& lineBuffer = consoleModel.buffer.lineBuffer[line];
+    std::vector<TChar>& bufferLine = consoleModel.buffer.buffer[lineNow];
+    const QString& lineBuffer = consoleModel.buffer.lineBuffer[lineNow];
     // Match against the colors as they arrived from the game, not as already
     // recolored by other triggers or scripts earlier in this trigger pass; with
     // no snapshot taken, or past its end, the line itself still holds them:
-    const std::vector<TChar>* pPassLine = consoleModel.buffer.preTriggerPassLine(line);
+    const std::vector<TChar>* pPassLine = consoleModel.buffer.preTriggerPassLine(lineNow);
     // Filter ("only pass matches") parents hand children just the matched
     // capture, so restrict the scan to that window; for top-level triggers
     // the window covers the whole line:
@@ -1411,7 +1418,7 @@ bool TTrigger::match_color_pattern(int line, int patternNumber, int posOffset, i
                && ((ansiBg == scmIgnored) || ((ansiBg == scmDefault) && character.backgroundRgba() == defaultBg) || (patternBgValid && character.backgroundRgba() == patternBg));
     };
 
-    if (const TChar* pUniformColors = uniformWindowColors(consoleModel.buffer, pPassLine, line, start, end)) {
+    if (const TChar* pUniformColors = uniformWindowColors(consoleModel.buffer, pPassLine, lineNow, start, end)) {
         if (!colorsMatch(*pUniformColors)) {
             return false;
         }

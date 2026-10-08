@@ -2337,13 +2337,15 @@ void TBuffer::commitLineData(QString line, std::vector<TChar> chars, const char 
         // Save/restore gives each nested pass its own snapshot; the spare member recycles its allocation:
         std::vector<TChar> savedPassLine;
         savedPassLine.swap(mPreTriggerPassLine);
-        const int savedPassLineNumber = mPreTriggerPassLineNumber;
+        mEnclosingTriggerPassLineNumbers.append(mPreTriggerPassLineNumber);
+        const int savedPassLineAsCommitted = mTriggerPassLineAsCommitted;
         const bool savedPassSnapshotTaken = mPreTriggerPassSnapshotTaken;
         const PassLineUniformity savedPassLineUniformity = mPreTriggerPassLineUniformity;
         mPreTriggerPassLine.swap(mSpareTriggerPassLine);
         mPreTriggerPassLine.clear();
         mPreTriggerPassSnapshotTaken = false;
         mPreTriggerPassLineNumber = lineIndex;
+        mTriggerPassLineAsCommitted = lineIndex;
         mPreTriggerPassLineUniformity = PassLineUniformity::Unknown;
 #ifndef QT_NO_DEBUG
         const quint64 committedColors = colorFingerprint(buffer.back());
@@ -2361,7 +2363,8 @@ void TBuffer::commitLineData(QString line, std::vector<TChar> chars, const char 
             std::vector<TChar>().swap(mSpareTriggerPassLine);
         }
         mPreTriggerPassLine.swap(savedPassLine);
-        mPreTriggerPassLineNumber = savedPassLineNumber;
+        mPreTriggerPassLineNumber = mEnclosingTriggerPassLineNumbers.takeLast();
+        mTriggerPassLineAsCommitted = savedPassLineAsCommitted;
         mPreTriggerPassSnapshotTaken = savedPassSnapshotTaken;
         mPreTriggerPassLineUniformity = savedPassLineUniformity;
     }
@@ -2675,6 +2678,27 @@ void TBuffer::flushPendingServerWrapJoin(const bool endsHyperlink)
     if (heldVisibility.linkId && heldVisibility.startsAfterHeldText) {
         registerLinkVisibility(heldVisibility.linkId, heldVisibility.startColumn, heldVisibility.continuationLength - heldVisibility.startColumn, heldVisibility.styling);
     }
+}
+
+void TBuffer::triggerPassLinesRemoved(const int from, const int to)
+{
+    const int delta = to - from + 1;
+    const auto follow = [from, to, delta](int& lineNumber) {
+        if (lineNumber > to) {
+            lineNumber -= delta;
+        } else if (lineNumber >= from) {
+            lineNumber = -1;
+        }
+    };
+    follow(mPreTriggerPassLineNumber);
+    for (int& lineNumber : mEnclosingTriggerPassLineNumbers) {
+        follow(lineNumber);
+    }
+}
+
+int TBuffer::triggerPassLineNow(int lineNumber) const
+{
+    return (lineNumber >= 0 && lineNumber == mTriggerPassLineAsCommitted) ? mPreTriggerPassLineNumber : lineNumber;
 }
 
 const std::vector<TChar>* TBuffer::preTriggerPassLine(int lineNumber) const
@@ -6716,7 +6740,7 @@ void TBuffer::shrinkBuffer()
     if (mpModel) {
         mpModel->mCurrentSearchResult = qMax(0, mpModel->mCurrentSearchResult - mBatchDeleteSize);
     }
-    mPreTriggerPassLineNumber = -1;
+    triggerPassLinesRemoved(0, mBatchDeleteSize - 1);
     if (mLastFoundLine >= mBatchDeleteSize) {
         mFirstFoundLine = std::max(0, mFirstFoundLine - mBatchDeleteSize);
         mLastFoundLine -= mBatchDeleteSize;
@@ -6809,9 +6833,7 @@ bool TBuffer::deleteLines(int from, int to)
         }
 
         buffer.erase(buffer.begin() + from, buffer.begin() + to + 1);
-        if (mPreTriggerPassLineNumber >= from) {
-            mPreTriggerPassLineNumber = -1;
-        }
+        triggerPassLinesRemoved(from, to);
         if (mLastFoundLine >= from) {
             mLastFoundLine = (mLastFoundLine > to) ? mLastFoundLine - delta : from - 1;
             if (mFirstFoundLine > to) {
