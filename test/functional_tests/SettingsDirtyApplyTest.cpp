@@ -37,6 +37,7 @@
 #include <QDir>
 #include <QFileInfo>
 #include <QMargins>
+#include <QScopeGuard>
 #include <QTemporaryDir>
 #include <QtTest/QtTest>
 
@@ -442,6 +443,36 @@ private slots:
 
         QCOMPARE(pSettings->value(qsl("telnetHandlerEnabled")).toBool(), !shown);
         pSettings->setValue(qsl("telnetHandlerEnabled"), shown);
+    }
+
+    // #10234: a choice that never reaches the ssl_tsl file is undone the next time the profile
+    // connects through the connection dialog, which seeds its Secure checkbox from that file
+    void test_theSecureConnectionChoiceReachesTheProfileFile()
+    {
+        const bool sslBefore = mpHost->mSslTsl;
+        const QString fileBefore = mpHost->readProfileData(qsl("ssl_tsl"));
+        auto restore = qScopeGuard([this, sslBefore, fileBefore]() {
+            mpHost->mSslTsl = sslBefore;
+            mpHost->writeProfileData(qsl("ssl_tsl"), fileBefore);
+        });
+        mpHost->mSslTsl = false;
+        QVERIFY(mpHost->writeProfileData(qsl("ssl_tsl"), QString::number(Qt::Unchecked)).first);
+        openPreferences();
+        QVERIFY2(!mpPreferences->groupBox_ssl->isChecked(), "the secure connection setting already showed as on, so turning it on proves nothing");
+
+        QSignalSpy applySpy(mpPreferences, &dlgProfilePreferences::signal_preferencesSaved);
+        mpPreferences->groupBox_ssl->setChecked(true);
+        QVERIFY2(TestSettings::waitForApply(applySpy), "turning on the secure connection never wrote the settings back");
+
+        QVERIFY(mpHost->mSslTsl);
+        QCOMPARE(mpHost->readProfileData(qsl("ssl_tsl")).toInt(), static_cast<int>(Qt::Checked));
+
+        applySpy.clear();
+        mpPreferences->groupBox_ssl->setChecked(false);
+        QVERIFY2(TestSettings::waitForApply(applySpy), "turning off the secure connection never wrote the settings back");
+
+        QVERIFY(!mpHost->mSslTsl);
+        QCOMPARE(mpHost->readProfileData(qsl("ssl_tsl")).toInt(), static_cast<int>(Qt::Unchecked));
     }
 };
 

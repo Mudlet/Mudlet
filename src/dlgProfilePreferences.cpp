@@ -6590,6 +6590,11 @@ void dlgProfilePreferences::applyAll()
         //tab security
         if (mSnapshot.dirty(groupBox_ssl)) {
             pHost->mSslTsl = groupBox_ssl->isChecked();
+            // The connection dialog seeds its Secure checkbox from this file, and hands that back
+            // to the profile on connect
+            if (const auto [written, error] = pHost->writeProfileData(qsl("ssl_tsl"), QString::number(groupBox_ssl->isChecked() ? Qt::Checked : Qt::Unchecked)); !written) {
+                qWarning().nospace().noquote() << "dlgProfilePreferences::applyAll() WARNING - could not save the secure connection setting for profile \"" << pHost->getName() << "\": " << error;
+            }
         }
         if (mSnapshot.dirty(checkBox_expired)) {
             pHost->mSslIgnoreExpired = checkBox_expired->isChecked();
