@@ -75,6 +75,7 @@ set(WINDOW_GROUP_TEST_SOURCES
     NawsWidthReportTest.cpp
     DetachedWindowToolBarIconSizeTest.cpp
     DetachedWindowToolBarVisibilityTest.cpp
+    DetachedWindowMuteStateTest.cpp
     PastedLinkStateTest.cpp
     ProfileSwitchMiniconsoleTest.cpp
     RecolouredLineCacheTest.cpp
@@ -217,6 +218,7 @@ set(MAP_GROUP_TEST_SOURCES
     MapOffscreenCustomLineTest.cpp
     MapFileStatsTest.cpp
     MapTextLabelCacheTest.cpp
+    MapViewAreaListTest.cpp
     MapLabelRenderTest.cpp
     MapViewCueTest.cpp
     LuaMapperCueTest.cpp

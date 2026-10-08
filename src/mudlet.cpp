@@ -936,7 +936,7 @@ void mudlet::applyAddonIcon(QToolButton* button, QAction* action, const QString&
     }
 }
 
-int mudlet::addAddonCommand(const CommandRequest& request, Host* pHost, QString& error)
+int mudlet::addAddonCommand(const CommandRequest& request, Host* pHost, const QString& package, QString& error)
 {
     const bool wantsToolbar = request.surfaces != CommandSurface::Menu;
     const bool wantsMenu = request.surfaces != CommandSurface::Toolbar;
@@ -1033,6 +1033,7 @@ int mudlet::addAddonCommand(const CommandRequest& request, Host* pHost, QString&
     const int commandId = mNextAddonCommandId++;
     AddonCommand command;
     command.pHost = pHost;
+    command.package = package;
     command.request = request;
     command.icon = request.icon;
     command.tooltip = request.tooltip;
@@ -1601,12 +1602,12 @@ QString mudlet::ownShortcutUsingKey(const Qt::Key key, const Qt::KeyboardModifie
     return {};
 }
 
-void mudlet::removeAddonCommandsForHost(Host* pHost)
+void mudlet::removeAddonCommandsForHost(Host* pHost, const QString& package)
 {
     QList<int> doomed;
-    for (auto it = mAddonCommands.constBegin(); it != mAddonCommands.constEnd(); ++it) {
-        if (it.value().pHost == pHost) {
-            doomed.append(it.key());
+    for (const auto [commandId, command] : std::as_const(mAddonCommands).asKeyValueRange()) {
+        if (command.pHost == pHost && (package.isEmpty() || command.package == package)) {
+            doomed.append(commandId);
         }
     }
     for (int commandId : doomed) {
@@ -4028,6 +4029,9 @@ void mudlet::addConsoleForNewHost(Host* pH)
     connect(pH, &Host::signal_discordGameChanged, this, &mudlet::updateDiscordNamedIcon);
     connect(pH, &Host::signal_profileResetting, this, [this, pH]() {
         removeAddonCommandsForHost(pH);
+    });
+    connect(pH, &Host::signal_packageRemoved, this, [this, pH](const QString& packageName) {
+        removeAddonCommandsForHost(pH, packageName);
     });
 
     // Give the map the manager of its secondary views, and wire the map engine's

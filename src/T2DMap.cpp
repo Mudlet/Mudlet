@@ -4942,7 +4942,8 @@ void T2DMap::slot_movePosition()
         return;
     }
 
-    TRoom* pR_start = mpMap->mpRoomDB->getRoom(mMultiSelectionHighlightRoomId);
+    const int startRoomId = mMultiSelectionHighlightRoomId;
+    TRoom* pR_start = mpMap->mpRoomDB->getRoom(startRoomId);
     // pR has already been validated by getCenterSelection() but add explicit check
     if (!pR_start) {
         return;
@@ -5005,7 +5006,10 @@ void T2DMap::slot_movePosition()
         pB_abort->setIcon(QIcon::fromTheme(key_dialog_cancel, QIcon(key_icon_dialog_cancel)));
     }
 
-    if (dialog->exec() == QDialog::Accepted) {
+    const bool accepted = dialog->exec() == QDialog::Accepted;
+    // The dialog's event loop runs scripts, which may delete the room
+    pR_start = mpMap->mpRoomDB->getRoom(startRoomId);
+    if (accepted && pR_start) {
         const int dx = pLEx->text().toInt() - pR_start->x();
         const int dy = pLEy->text().toInt() - pR_start->y();
         const int dz = pLEz->text().toInt() - pR_start->z();
@@ -5261,7 +5265,8 @@ void T2DMap::slot_spread()
         return;
     }
 
-    TRoom* pR_centerRoom = mpMap->mpRoomDB->getRoom(mMultiSelectionHighlightRoomId);
+    const int centerRoomId = mMultiSelectionHighlightRoomId;
+    TRoom* pR_centerRoom = mpMap->mpRoomDB->getRoom(centerRoomId);
     if (!pR_centerRoom) {
         return;
     }
@@ -5282,6 +5287,12 @@ void T2DMap::slot_spread()
                                             1,    // Step
                                             &isOk);
     if (spread == 1 || !isOk) {
+        return;
+    }
+
+    // The dialog's event loop runs scripts, which may delete the room
+    pR_centerRoom = mpMap->mpRoomDB->getRoom(centerRoomId);
+    if (!pR_centerRoom) {
         return;
     }
 
@@ -5331,7 +5342,8 @@ void T2DMap::slot_shrink()
         return;
     }
 
-    TRoom* pR_centerRoom = mpMap->mpRoomDB->getRoom(mMultiSelectionHighlightRoomId);
+    const int centerRoomId = mMultiSelectionHighlightRoomId;
+    TRoom* pR_centerRoom = mpMap->mpRoomDB->getRoom(centerRoomId);
     if (!pR_centerRoom) {
         return;
     }
@@ -5352,6 +5364,12 @@ void T2DMap::slot_shrink()
                                             1,    // Step
                                             &isOk);
     if (spread == 1 || !isOk) {
+        return;
+    }
+
+    // The dialog's event loop runs scripts, which may delete the room
+    pR_centerRoom = mpMap->mpRoomDB->getRoom(centerRoomId);
+    if (!pR_centerRoom) {
         return;
     }
 
