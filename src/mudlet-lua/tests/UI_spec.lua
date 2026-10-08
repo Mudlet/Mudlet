@@ -2451,6 +2451,54 @@ describe("Tests UI functions", function()
       assert.is_nil(BaseUI.settings.standingAside)
       assert.is_false(BaseUI.dormant())
     end)
+
+    -- A profile has one map widget. A game's Client.GUI package that embeds a
+    -- mapper opens it while the package is being installed, which raises
+    -- mapOpenEvent before sysServerGuiInstalled has stood this UI aside
+    describe("when the map opens with map data in the profile", function()
+      if not os.getenv("MUDLET_TEST_MODE") then
+        it("needs test mode", function()
+          pending("the map is taken on a timer, which only pumpEvents() runs")
+        end)
+        return
+      end
+
+      local saved, createMapper
+
+      before_each(function()
+        saved = { container = BaseUI.container, map = BaseUI.map, placeholder = BaseUI.mapPlaceholder }
+        BaseUI.container = BaseUI.container or { hide = function() end, adjustBorder = function() end }
+        BaseUI.map, BaseUI.mapPlaceholder = nil, nil
+        BaseUI.settings.hidden, BaseUI.settings.standingAside = nil, nil
+        stub(BaseUI, "mapHasData", true)
+        stub(BaseUI, "layoutDock")
+        createMapper = stub(BaseUI, "createMapper")
+      end)
+
+      after_each(function()
+        BaseUI.mapHasData:revert()
+        BaseUI.layoutDock:revert()
+        BaseUI.createMapper:revert()
+        BaseUI.container, BaseUI.map, BaseUI.mapPlaceholder = saved.container, saved.map, saved.placeholder
+      end)
+
+      -- centerview() raises sysMapAreaChanged there and then, so a package that
+      -- loads its game's map while installing raises it before standing this UI aside
+      for _, event in ipairs({ "mapOpenEvent", "sysMapAreaChanged", "sysMapDownloadEvent", "gmcp.Room.Info" }) do
+        it("should leave the map to a game interface that raises " .. event .. " while being installed", function()
+          BaseUI.checkMapData(event)
+          BaseUI.standAside("sysServerGuiInstalled", "SomeGameUI")
+          pumpEvents(100)
+          assert.stub(createMapper).was_not_called()
+        end)
+      end
+
+      it("should still take the map when no game interface claims it", function()
+        BaseUI.checkMapData("mapOpenEvent")
+        pumpEvents(100)
+        assert.stub(createMapper).was_called(1)
+      end)
+    end)
   end)
 
   describe("tempButtonToolbar and tempButton return values", function()

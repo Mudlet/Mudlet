@@ -1926,11 +1926,18 @@ end
 -- profile has no map data, so a placeholder holds its spot until the first
 -- room exists (made by a mapping script, a map download or a manual load).
 -- Cheap to poll: getRooms() stays empty right up until the swap happens.
-function BaseUI.checkMapData()
+function BaseUI.checkMapData(event)
   if not BaseUI.container or BaseUI.map or BaseUI.dormant() then
     return
   end
   if not BaseUI.mapHasData() then
+    return
+  end
+  -- a game's Client.GUI package opens the map, or loads one, while it is being
+  -- installed, and sysServerGuiInstalled only stands this UI aside once that
+  -- install returns
+  if event then
+    tempTimer(0, BaseUI.checkMapData)
     return
   end
   if BaseUI.mapPlaceholder then
