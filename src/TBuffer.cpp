@@ -1775,6 +1775,11 @@ void TBuffer::translateToPlainTextInner(std::string& incoming, const bool isFrom
             // backslash of a String Terminator would hide that terminator:
             mIncompleteSequenceBytes.clear();
             std::remove_copy(localBuffer.cbegin() + spanStart, localBuffer.cend(), std::back_inserter(mIncompleteSequenceBytes), CHAR_CARRIAGE_RETURN);
+            if (localBufferDecodableLength < localBufferLength) {
+                // As for a split CSI, the flush marker still has to commit the text ahead of the sequence:
+                size_t markerPosition = localBufferDecodableLength;
+                commitLine(CHAR_CARRIAGE_RETURN, markerPosition, isFromServer, false);
+            }
             return;
         }
 

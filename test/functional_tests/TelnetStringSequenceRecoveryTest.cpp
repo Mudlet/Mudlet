@@ -397,14 +397,15 @@ private slots:
     // Bounding the sequence at the end of a line must not break a well-formed
     // one that arrives in several packets - including one that pauses for
     // longer than cTelnet's 300ms idle flush, which puts a carriage return
-    // through the parser part way through the payload.
+    // through the parser part way through the payload. That flush commits the
+    // text ahead of the sequence, as it does ahead of a split CSI (#10897).
     void wellFormedSequenceSplitAcrossReads()
     {
         sendFromServerAndSettle(QByteArrayLiteral("PRE-SPLIT") + QByteArrayLiteral("\x1b") + QByteArrayLiteral("P") + QByteArrayLiteral("SEQ"));
 
         sendFromServer(QByteArrayLiteral("PAYLOAD") + csStringTerminator + QByteArrayLiteral("POST-SPLIT") + csCrLf);
 
-        QVERIFY2(waitForBufferText(qsl("PRE-SPLITPOST-SPLIT")), qPrintable(qsl("A sequence split across two reads lost the text around it: '%1'").arg(joinedBuffer())));
+        QVERIFY2(waitForBufferText(qsl("PRE-SPLIT\nPOST-SPLIT")), qPrintable(qsl("A sequence split across two reads lost the text around it: '%1'").arg(joinedBuffer())));
         QVERIFY2(!joinedBuffer().contains(qsl("SEQ")), qPrintable(qsl("Payload of the split sequence was displayed: '%1'").arg(joinedBuffer())));
     }
 

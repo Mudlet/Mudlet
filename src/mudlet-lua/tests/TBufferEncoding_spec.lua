@@ -979,6 +979,19 @@ describe("Tests a character whose bytes are split by the posting timeout", funct
     assert.same({"", ":end"}, perLine)
   end)
 
+  it("commits the text ahead of an operating system command the marker lands inside", function()
+    if timerUnavailable() then return end
+    using("UTF-8")
+
+    -- A prompt followed by a title the game has not finished sending: the
+    -- marker has to show the prompt, as it does ahead of a split colour
+    -- sequence, rather than leave it waiting on the rest - see issue #10897
+    local text, lines, perLine = splitAcrossTimeout("HP:100 > \27]0;title", "\27\\")
+    assert.equals("HP:100 > :end", text)
+    assert.equals(2, lines)
+    assert.same({"HP:100 > ", ":end"}, perLine)
+  end)
+
   it("spends a held character set designation on the byte after the pause", function()
     if timerUnavailable() then return end
     using("UTF-8")
