@@ -877,6 +877,21 @@ describe("Tests functionality of Geyser.Label widget state", function()
       assert.are.equal(sheet, getLabelStyleSheet("glsHoverImage"))
     end)
 
+    it("resetBackgroundImage passes over comments and quoted text in the stylesheet", function()
+      track(Geyser.Label:new({name = "glsCommentedImage", x = 0, y = 0, width = 40, height = 20}))
+      setLabelStyleSheet("glsCommentedImage", "/* background-image: url(old.png) */ color: blue; background-image: url(current.png);")
+      assert.is_true(resetBackgroundImage("glsCommentedImage"))
+      assert.are.equal("/* background-image: url(old.png) */ color: blue; ", getLabelStyleSheet("glsCommentedImage"))
+
+      setLabelStyleSheet("glsCommentedImage", [[background-image: url("image (1); copy.png"); color: blue;]])
+      assert.is_true(resetBackgroundImage("glsCommentedImage"))
+      assert.are.equal(" color: blue;", getLabelStyleSheet("glsCommentedImage"))
+
+      setLabelStyleSheet("glsCommentedImage", "/* { */ background-image: url(current.png);")
+      assert.is_true(resetBackgroundImage("glsCommentedImage"))
+      assert.are.equal("/* { */ ", getLabelStyleSheet("glsCommentedImage"))
+    end)
+
     it("Geyser.Label:resetBackgroundImage takes a tiled image away for good", function()
       local label = track(Geyser.Label:new({name = "glsTiledGeyserReset", x = 0, y = 0, width = 40, height = 20}))
       label:setTiledBackgroundImage(":/icons/mudlet.png")
