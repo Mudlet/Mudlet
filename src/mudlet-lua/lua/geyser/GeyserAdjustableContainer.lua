@@ -820,10 +820,15 @@ function Adjustable.Container:unlockContainer()
     self:setTitle()
 end
 
--- internal function: a padding goes into "-"..padding constraints, which only a finite number of 0 or more survives
+-- internal function: a padding goes into "-"..padding constraints, which only a number of 0 or more
+-- survives; the constraint parser strips letters, so it is rounded to where tostring() writes no exponent
 local function validPadding(padding)
     padding = tonumber(padding)
-    if padding and padding >= 0 and padding < math.huge then
+    if not (padding and padding >= 0 and padding < math.huge) then
+        return nil
+    end
+    padding = math.floor(padding * 10000 + 0.5) / 10000
+    if not tostring(padding):find("e", 1, true) then
         return padding
     end
 end

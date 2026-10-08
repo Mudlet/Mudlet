@@ -230,7 +230,7 @@ describe("Tests functionality of Adjustable.Container", function()
 
     it("setPadding refuses a negative or non-numeric padding and leaves the container usable", function()
       Geyser.Label:new({name = "gasBadPaddingChild", x = 0, y = 0, width = "100%", height = "100%"}, container)
-      for _, padding in ipairs({-5, "nonsense", false, math.huge, "inf"}) do
+      for _, padding in ipairs({-5, "nonsense", false, math.huge, "inf", 1e20}) do
         local ok, message = container:setPadding(padding)
         assert.is_nil(ok)
         assert.is_truthy(message:find("padding as a number of 0 or more expected", 1, true))
@@ -241,6 +241,17 @@ describe("Tests functionality of Adjustable.Container", function()
       container:move(20, 30)
       container:unlockContainer()
       assert.are.same({x = 30, y = 50, width = 180, height = 170}, geometry("gasBadPaddingChild"))
+    end)
+
+    it("setPadding takes a padding too small to print without an exponent", function()
+      Geyser.Label:new({name = "gasTinyPaddingChild", x = 0, y = 0, width = "100%", height = "100%"}, container)
+      for _, padding in ipairs({"0.00001", 0.00001}) do
+        assert.has_no.errors(function() assert.is_true(container:setPadding(padding)) end)
+        container:move(20, 30)
+        container:unlockContainer()
+        assert.are.same({x = 20, y = 30, width = 200, height = 200}, geometry("gasTinyPaddingChild"))
+      end
+      container:setPadding(10)
     end)
 
     it("hides and shows every widget it owns", function()
