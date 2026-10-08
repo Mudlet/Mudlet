@@ -6612,6 +6612,9 @@ void T2DMap::clearSelection()
 
 void T2DMap::forgetDeletedRoom(const int roomId)
 {
+    // A drag still in progress rebuilds the selection from these on its next move
+    mMultiSelectionBaseSet.remove(roomId);
+    mMultiSelectionAnchorSet.remove(roomId);
     if (!mMultiSelectionSet.remove(roomId)) {
         return;
     }

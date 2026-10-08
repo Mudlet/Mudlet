@@ -983,6 +983,35 @@ private slots:
         QVERIFY2(remaining.contains(mp2dMap->getCenterSelectedRoomId()), "the selection's centre is still the deleted room");
     }
 
+    // A shift-drag rebuilds the selection on each move from the rooms selected
+    // at its press, and a ctrl-drag from the rooms it toggles, so a room a
+    // script deletes mid-drag must leave those too or the next move brings it back.
+    void test_aRoomDeletedMidDragIsNotBroughtBackByTheDrag()
+    {
+        buildMap();
+        showMapper(false);
+        dragFromTo(pointUnitsFromCentre(-1.5, 1.5), pointUnitsFromCentre(0.5, -0.5));
+
+        const QPoint south = pointUnitsFromCentre(0, -1);
+        pressAt(south, Qt::ShiftModifier);
+        moveTo(south, Qt::ShiftModifier);
+        QVERIFY(runLua(qsl("deleteRoom(%1)").arg(kNorthWestRoomId)));
+        moveTo(south + QPoint(1, 1), Qt::ShiftModifier);
+        const QSet<int> afterShiftDrag{kNorthRoomId, kWestRoomId, kPlayerRoomId, kSouthRoomId};
+        QCOMPARE(mp2dMap->mMultiSelectionSet, afterShiftDrag);
+        releaseAt(south + QPoint(1, 1), Qt::ShiftModifier);
+
+        const QPoint emptySpot = pointUnitsFromCentre(3.5, 3.5);
+        pressAt(emptySpot, Qt::ControlModifier);
+        moveTo(emptySpot, Qt::ControlModifier);
+        QVERIFY(runLua(qsl("deleteRoom(%1)").arg(kNorthRoomId)));
+        moveTo(emptySpot + QPoint(1, 1), Qt::ControlModifier);
+        const QSet<int> afterCtrlDrag{kWestRoomId, kPlayerRoomId, kSouthRoomId};
+        QCOMPARE(mp2dMap->mMultiSelectionSet, afterCtrlDrag);
+        releaseAt(emptySpot + QPoint(1, 1), Qt::ControlModifier);
+        QCOMPARE(mp2dMap->mMultiSelectionSet, afterCtrlDrag);
+    }
+
     // The list of selected rooms is rebuilt when the box takes in different
     // rooms, not on every move of the mouse, which on a big selection costs
     // more than the time between two moves.
