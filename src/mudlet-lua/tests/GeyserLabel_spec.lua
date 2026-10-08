@@ -2037,6 +2037,13 @@ describe("Tests Geyser.Label right click menus", function()
     it("raises for an item that is not in the menu", function()
       assert.has_error(function() label:changeMenuIndex("Nowhere", 1) end)
     end)
+
+    it("raises a readable error for an index past the end, leaving the menu alone", function()
+      assert.has_error(function() label:changeMenuIndex("Third", 99) end, "changeMenuIndex: index 99 out of range (1-3)")
+      assert.has_error(function() label:changeMenuIndex("Third", 0) end, "changeMenuIndex: index 0 out of range (1-3)")
+      assert.are.same({"First", "Second", "Third"}, menuOrder())
+      assert.are.same({"First", "Second", "Third"}, label.rightClickMenu.MenuItems)
+    end)
   end)
 
   describe("Geyser.Label:styleMenuItems", function()
