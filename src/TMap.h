@@ -121,7 +121,9 @@ public:
     ~TMap();
     void mapClear();
     void refreshMapperColours();
+    // Returns the new label's id, -1 for an unknown area or scmUnreadableImageLabel.
     int createMapImageLabel(int area, QString filePath, float x, float y, float z, float width, float height, float zoom, bool showOnTop, bool temporary);
+    static constexpr int scmUnreadableImageLabel = -2;
     int createMapLabel(int area,
                        const QString& text,
                        float x,
