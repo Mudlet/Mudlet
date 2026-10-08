@@ -414,6 +414,22 @@ describe("Tests the rest of the SGR decoder", function()
     assert.is_true(isAnsiBgColor(4), "an empty background colour type disturbed the background")
   end)
 
+  -- only the colour is unusable, so the parameters either side of it still
+  -- apply, and its type is not read as an SGR code of its own
+  it("applies the parameters around a colour whose type is empty, zero, unreadable or not rendered", function()
+    for i, colour in ipairs({"38;;", "38;0;", "38;<;", "38;1;", "38;9;", "48;;", "48;0;", "48;<;", "48;1;", "48;9;"}) do
+      local marker = ("SgrBadTypeAttr%d"):format(i)
+      feed("\27[3;41;" .. colour .. "4m" .. marker)
+      local format = formatOf(marker)
+      assert.is_true(format.italic, "the italic before SGR " .. colour .. " was dropped")
+      assert.is_true(format.underline, "the underline after SGR " .. colour .. " was dropped")
+      assert.is_false(format.bold, "the type of SGR " .. colour .. " was read as bold")
+      assert.is_false(format.strikeout, "the type of SGR " .. colour .. " was read as strikeout")
+      selectMarker(marker)
+      assert.is_true(isAnsiBgColor(4), "the background before SGR " .. colour .. " was dropped")
+    end
+  end)
+
   it("ignores a sub-parameter colour type Mudlet does not render", function()
     feed("\27[31mSgrSubTypeA \27[38:1mSgrSubTypeB \27[38:3mSgrSubTypeC")
     selectMarker("SgrSubTypeB")

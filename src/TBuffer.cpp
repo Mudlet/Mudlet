@@ -3162,9 +3162,10 @@ void TBuffer::decodeSGR(const QStringView sequence)
                     bool isOk = false;
                     const int sgr38_type = madeElements.at(1).toInt(&isOk);
                     if (madeElements.at(1).isEmpty() || !isOk || sgr38_type == 0) {
-                        // Oh dear that parameter is empty or equivalent to zero
-                        // so we cannot do anything more
-                        return;
+                        // Only this colour is unusable: step over its type and
+                        // carry on with the parameters after it, as terminals do
+                        ++paraIndex;
+                        continue;
                     }
 
                     switch (sgr38_type) {
@@ -3231,6 +3232,8 @@ void TBuffer::decodeSGR(const QStringView sequence)
                         // transparent, is no use to us
                         [[fallthrough]];
                     default:
+                        // Step over the type, or it is read as an SGR code of its own
+                        ++paraIndex;
                         break;
                     }
                 }
@@ -3258,9 +3261,10 @@ void TBuffer::decodeSGR(const QStringView sequence)
                     bool isOk = false;
                     const int sgr48_type = madeElements.at(1).toInt(&isOk);
                     if (madeElements.at(1).isEmpty() || !isOk || sgr48_type == 0) {
-                        // Oh dear that parameter is empty or equivalent to zero
-                        // so we cannot do anything more
-                        return;
+                        // Only this colour is unusable: step over its type and
+                        // carry on with the parameters after it, as terminals do
+                        ++paraIndex;
+                        continue;
                     }
 
                     switch (sgr48_type) {
@@ -3327,6 +3331,8 @@ void TBuffer::decodeSGR(const QStringView sequence)
                         // transparent, is no use to us
                         [[fallthrough]];
                     default:
+                        // Step over the type, or it is read as an SGR code of its own
+                        ++paraIndex;
                         break;
                     }
                 }
@@ -3623,9 +3629,10 @@ void TBuffer::decodeSGR(const QStringView sequence)
                     bool isOk = false;
                     const int sgr38_type = madeElements.at(1).toInt(&isOk);
                     if (madeElements.at(1).isEmpty() || !isOk || sgr38_type == 0) {
-                        // Oh dear that parameter is empty or equivalent to zero
-                        // so we cannot do anything more
-                        return;
+                        // Only this colour is unusable: step over its type and
+                        // carry on with the parameters after it, as terminals do
+                        ++paraIndex;
+                        continue;
                     }
 
                     switch (sgr38_type) {
@@ -3694,6 +3701,8 @@ void TBuffer::decodeSGR(const QStringView sequence)
                         // transparent, is no use to us
                         [[fallthrough]];
                     default:
+                        // Step over the type, or it is read as an SGR code of its own
+                        ++paraIndex;
                         break;
                     }
                 } break;
@@ -3743,9 +3752,10 @@ void TBuffer::decodeSGR(const QStringView sequence)
                     bool isOk = false;
                     const int sgr48_type = madeElements.at(1).toInt(&isOk);
                     if (madeElements.at(1).isEmpty() || !isOk || sgr48_type == 0) {
-                        // Oh dear that parameter is empty or equivalent to zero
-                        // so we cannot do anything more
-                        return;
+                        // Only this colour is unusable: step over its type and
+                        // carry on with the parameters after it, as terminals do
+                        ++paraIndex;
+                        continue;
                     }
 
                     switch (sgr48_type) {
@@ -3812,6 +3822,8 @@ void TBuffer::decodeSGR(const QStringView sequence)
                         // transparent, is no use to us
                         [[fallthrough]];
                     default:
+                        // Step over the type, or it is read as an SGR code of its own
+                        ++paraIndex;
                         break;
                     }
                 } break;
