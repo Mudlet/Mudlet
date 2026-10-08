@@ -313,6 +313,11 @@ private slots:
         const bool parentTracked = parent->hasMouseTracking();
         parent->setMouseTracking(true);
         parent->installEventFilter(&underneath);
+        // a failed check returns early, and the cases after this one share the parent
+        auto restoreParent = qScopeGuard([parent, parentTracked, &underneath] {
+            parent->removeEventFilter(&underneath);
+            parent->setMouseTracking(parentTracked);
+        });
         moveTo(linkCentre());
         QCOMPARE(label()->cursor().shape(), Qt::PointingHandCursor);
         QVERIFY2(underneath.mMoves == 1, "a label with no move callback kept a move over its link to itself");
@@ -325,8 +330,6 @@ private slots:
                                                                      .arg(mLabelName));
         QVERIFY2(luaHolds(qsl("anchorMoveRegistered")), "the move callback did not reach the label");
         moveTo(linkCentre());
-        parent->removeEventFilter(&underneath);
-        parent->setMouseTracking(parentTracked);
         QVERIFY2(luaHolds(qsl("anchorMoves == 1")), "the label's move callback did not fire over its link");
         QVERIFY2(underneath.mMoves == 2, "a label's move callback did not keep the move to itself");
         QCOMPARE(label()->cursor().shape(), Qt::PointingHandCursor);
