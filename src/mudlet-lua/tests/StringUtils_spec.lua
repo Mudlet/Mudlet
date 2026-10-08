@@ -25,6 +25,16 @@ describe("Tests StringUtils.lua functions", function()
       assert.equals("", ("This is a test"):cut(0))
       assert.equals("", (""):cut(0))
     end)
+
+    it("should count characters rather than bytes, never splitting a multi-byte one", function()
+      assert.equals("hé", ("héllo"):cut(2))
+      assert.equals("héllo", ("héllo"):cut(5))
+      assert.equals("日本", ("日本語"):cut(2))
+    end)
+
+    it("should cut by bytes when the string is not valid UTF-8", function()
+      assert.equals("a\255", ("a\255bc"):cut(2))
+    end)
   end)
 
   describe("Tests the functionality of string.enclose", function()
