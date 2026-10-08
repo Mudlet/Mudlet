@@ -3837,11 +3837,12 @@ bool Host::uninstallPackage(const QString& packageName, enums::PackageModuleType
     mKeyUnit.uninstall(packageName);
     // Not for a ModuleSync, which brings the module back with its Lua state and
     // ids - unless the name is also a package's, which a sync removes for good.
+    // Its fonts stay for the same reason: the reinstall does not register them again.
     if (thing != enums::PackageModuleType::ModuleSync || installedBothWays) {
         emit signal_packageRemoved(packageName);
-    }
-    if (auto* fonts = FontManager::self()) {
-        fonts->unloadFonts(getName(), packageName);
+        if (auto* fonts = FontManager::self()) {
+            fonts->unloadFonts(getName(), packageName);
+        }
     }
     if (isModule) {
         mInstalledModules.remove(packageName);

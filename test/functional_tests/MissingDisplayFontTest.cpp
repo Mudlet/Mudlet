@@ -85,6 +85,8 @@ private:
     // comes from: unlike a family Mudlet bundles, taking the package away really
     // does take this one off the machine.
     const QString mPackageSuppliedFamily = qsl("Zqxwvu Package Font Mono");
+    // The same for a module, so neither case can be fed by what the other left registered
+    const QString mModuleSuppliedFamily = qsl("Zqxwvu Modules Font Mono");
     // Stands for a name no font database lists but the platform resolves anyway, like
     // the fontconfig alias "Helvetica". Which names those are is up to the machine, so
     // the cases make one of their own out of Qt's substitution table, which every
@@ -746,6 +748,44 @@ private slots:
         const QString shown = consoleText(pHost);
         QVERIFY2(shown.contains(qsl("[ WARN ]")), qPrintable(qsl("no warning reached the main console; it holds: %1").arg(shown)));
         QVERIFY2(shown.contains(mPackageSuppliedFamily), qPrintable(qsl("the warning does not name the font that went missing; the console holds: %1").arg(shown)));
+    }
+
+    // A reload is an uninstall and an install both marked as a module sync, and
+    // the install does not register the module's fonts again - so the uninstall
+    // must not take them away either (#10249).
+    void test_reloadingTheModuleAFontCameFromKeepsTheFont()
+    {
+        const QString moduleName = qsl("font-reload");
+        const QString modulePath = mArchiveDir.filePath(qsl("%1.mpackage").arg(moduleName));
+        const QByteArray fontBytes = renamedFontBytes(qsl(":/fonts/ttf-bitstream-vera-1.10/VeraMono.ttf"), Host::scmDefaultFontFamily, mModuleSuppliedFamily);
+        QVERIFY2(!fontBytes.isEmpty(), "the bundled font could not be read out of the Qt resources and renamed");
+        const QList<std::pair<QString, QByteArray>> entries{{qsl("%1.ttf").arg(moduleName), fontBytes}, {qsl("%1.xml").arg(moduleName), minimalPackageXml(moduleName)}};
+        QVERIFY2(writeArchive(modulePath, entries), "could not write the test module archive");
+
+        const QString profileName = qsl("MissingDisplayFont-Reload-Test");
+        QVERIFY2(writeProfileSave(profileName, Host::scmDefaultFontFamily), "could not write the test profile save");
+
+        Host* pHost = mudlet::self()->loadProfile(profileName, false);
+        QVERIFY(pHost);
+        QVERIFY2(pHost->mLoadedOk, "the test profile save could not be loaded");
+        mudlet::self()->slot_connectionDialogueFinished(profileName, false);
+        QVERIFY2(pHost->mpConsole, "the profile came up without a main console");
+        QVERIFY2(!FontManager::availableFonts().contains(mModuleSuppliedFamily, Qt::CaseInsensitive), "the module's family is already installed, so this cannot tell whether it went away");
+
+        QVERIFY2(pHost->installPackage(modulePath, enums::PackageModuleType::ModuleFromUI).first, "the module carrying the font did not install");
+        pHost->waitForProfileSave();
+        QVERIFY2(FontManager::availableFonts().contains(mModuleSuppliedFamily, Qt::CaseInsensitive), "the module's font was never registered");
+        QVERIFY(pHost->setDisplayFont(QFont(mModuleSuppliedFamily, 12), Host::DisplayFontChange::UserChoice).first);
+
+        pHost->reloadModule(moduleName);
+        pHost->waitForProfileSave();
+        QVERIFY2(pHost->mInstalledModules.contains(moduleName), "the module did not come back from its reload");
+        QVERIFY2(FontManager::availableFonts().contains(mModuleSuppliedFamily, Qt::CaseInsensitive), "reloading the module took its font off the machine");
+        QCOMPARE(pHost->getDisplayFont().family(), mModuleSuppliedFamily);
+
+        QVERIFY2(pHost->uninstallPackage(moduleName, enums::PackageModuleType::ModuleFromUI), "the module did not uninstall at the end");
+        pHost->waitForProfileSave();
+        QVERIFY2(!FontManager::availableFonts().contains(mModuleSuppliedFamily, Qt::CaseInsensitive), "uninstalling the module left its font on the machine");
     }
 };
 
