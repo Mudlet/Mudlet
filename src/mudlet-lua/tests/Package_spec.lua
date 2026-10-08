@@ -2569,8 +2569,7 @@ describe("Tests reading a saved number that an earlier save wrote", function()
   end)
 
   it("does not take other text that holds nan for a NaN", function()
-    local value = mudletSpecSavedNumber.notANumber
-    assert.equals(value, value)
+    assert.equals(0, mudletSpecSavedNumber.notANumber)
   end)
 end)
 
