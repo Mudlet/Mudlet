@@ -1096,8 +1096,13 @@ void cTelnet::slot_socketDisconnected()
     postData();
     if (mpHost->mpConsole) {
         // A line held back for server-wrap undoing is complete now that the
-        // connection is gone - commit it before the disconnect messages:
-        mpHost->mainConsoleModel().buffer.flushPendingServerWrapJoin();
+        // connection is gone - commit it, in trigger context as for any other
+        // line from the game, before the disconnect messages:
+        TConsoleModel& model = mpHost->mainConsoleModel();
+        const bool wasInTriggerEngineMode = model.mTriggerEngineMode;
+        model.mTriggerEngineMode = true;
+        model.buffer.flushPendingServerWrapJoin();
+        model.mTriggerEngineMode = wasInTriggerEngineMode;
     }
 
     // Commit now; ~QSaveFile() would cancel the save and delete the temporary file:

@@ -2770,7 +2770,11 @@ void TBuffer::processMxpWatchdogCallback()
                 for (qsizetype i = 0; i < lastEntityValue.size(); ++i) {
                     mMudBuffer.push_back(style);
                 }
+                // In trigger context, as for every other line the game sends
+                const bool wasInTriggerEngineMode = mpModel->mTriggerEngineMode;
+                mpModel->mTriggerEngineMode = true;
                 commitLine('\r', unusedBufferPosition);
+                mpModel->mTriggerEngineMode = wasInTriggerEngineMode;
                 hostGuard->mMxpProcessor.getMxpTagBuilder().reset();
                 hostGuard->finalizeMainConsole();
             });
