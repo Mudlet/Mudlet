@@ -55,13 +55,11 @@ private slots:
 
             player.refreshAudioOutput();
 
-            // Ownership rather than QMediaPlayer::audioOutput(), which reports no output at all
-            // from here on - that is #11012, still open, so asserting it would pin the bug
-            // rather than the fix.
             const auto owned = player.mediaPlayer()->findChildren<QAudioOutput*>(Qt::FindDirectChildrenOnly);
             QCOMPARE(owned.size(), 1);
             QVERIFY2(owned.constFirst() != displaced, "The player still owns the output it was refreshed away from, which is already queued for deletion.");
             replacement = owned.constFirst();
+            QVERIFY2(player.mediaPlayer()->audioOutput() == replacement, "The player reports no audio output after a device change, so volume and mute stop reaching it (#11012).");
 
             // Deferred, not immediate: #9237 also replaced a manual delete of an output the
             // backend may still be holding, and only the old one still being alive at this
@@ -73,6 +71,29 @@ private slots:
         }
 
         QVERIFY2(replacement.isNull(), "The audio output a device change installed outlived the player that was using it, so nothing will ever delete it.");
+    }
+
+    // A second device change reads the volume and mute to carry over from the output the
+    // first one installed, so that output has to still be the one the player reports (#11012).
+    void test_repeatedDeviceChangesKeepVolumeMuteAndASingleAudioOutput()
+    {
+        TMediaData mediaData{};
+        TMediaPlayer player(nullptr, mediaData);
+        QAudioOutput* original = player.mediaPlayer()->audioOutput();
+        QVERIFY(original);
+        original->setVolume(0.25f);
+        original->setMuted(true);
+
+        for (int change = 1; change <= 3; ++change) {
+            player.refreshAudioOutput();
+            QTest::qWait(1ms);
+
+            QAudioOutput* current = player.mediaPlayer()->audioOutput();
+            QVERIFY2(current, qPrintable(qsl("The player reports no audio output after device change %1.").arg(change)));
+            QCOMPARE(current->volume(), 0.25f);
+            QVERIFY(current->isMuted());
+            QCOMPARE(player.mediaPlayer()->findChildren<QAudioOutput*>(Qt::FindDirectChildrenOnly).size(), 1);
+        }
     }
 };
 
