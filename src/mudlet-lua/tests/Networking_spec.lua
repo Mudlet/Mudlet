@@ -868,6 +868,19 @@ describe("MMCP effects against a scripted chat peer", function()
   local peerRequired = os.getenv("MUDLET_TEST_REQUIRE_MMCP_PEER")
   local commandCounter = 0
   local originalChatName
+  local originalBorders
+  local originalRouteChatLine
+
+  -- The chat lines these specs display match the base UI's "someone chats"
+  -- trigger, which would dock its chat window on the right border and leave the
+  -- main console narrower for every later spec.
+  setup(function()
+    originalBorders = getBorderSizes()
+    if BaseUI then
+      originalRouteChatLine = BaseUI.routeChatLine
+      BaseUI.routeChatLine = function() end
+    end
+  end)
 
   local function readFile(path)
     local handle = io.open(path, "r")
@@ -2198,11 +2211,18 @@ describe("MMCP effects against a scripted chat peer", function()
 
   end)
 
+  it("leaves the main console's borders as it found them", function()
+    assert.are.same(originalBorders, getBorderSizes())
+  end)
+
   -- Restores whatever chat name the profile was carrying before these specs
   -- ran, so nothing that follows sees a name this file chose.
   teardown(function()
     if originalChatName then
       mmcp.chatName(originalChatName)
+    end
+    if BaseUI and originalRouteChatLine then
+      BaseUI.routeChatLine = originalRouteChatLine
     end
   end)
 end)
