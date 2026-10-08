@@ -4087,7 +4087,8 @@ void TTextEdit::updateCaret()
         if (mCaretLine < lineOffset) {
             scrollTo(mCaretLine + 1);
         } else if (mCaretLine >= lineOffset + mScreenHeight) {
-            int emptyLastLine = mpBuffer->lineBuffer.last().isEmpty();
+            // Turning caret mode on calls this before moving a caret that deleteLine() may have left on an emptied buffer
+            const int emptyLastLine = !mpBuffer->lineBuffer.isEmpty() && mpBuffer->lineBuffer.last().isEmpty();
             if (mCaretLine == mpBuffer->lineBuffer.length() - 1 - emptyLastLine) {
                 scrollTo(mCaretLine + 2);
             } else {
@@ -4393,6 +4394,25 @@ void TTextEdit::keyPressEvent(QKeyEvent* event)
         // if not command line ignore
     }
 
+    // deleteLine() can empty the buffer, or shorten it past the caret, without moving the caret
+    if (mpBuffer->lineBuffer.isEmpty()) {
+        switch (event->key()) {
+        case Qt::Key_Up:
+        case Qt::Key_Down:
+        case Qt::Key_Left:
+        case Qt::Key_Right:
+        case Qt::Key_Home:
+        case Qt::Key_End:
+        case Qt::Key_PageUp:
+        case Qt::Key_PageDown:
+            return;
+        default:
+            break;
+        }
+    } else if (mCaretLine >= mpBuffer->lineBuffer.size()) {
+        initializeCaret();
+    }
+
     qsizetype newCaretLine = -1;
     qsizetype newCaretColumn = -1;
 
@@ -4595,7 +4615,8 @@ void TTextEdit::keyPressEvent(QKeyEvent* event)
     case Qt::Key_End:
         if (QGuiApplication::keyboardModifiers().testFlag(Qt::ControlModifier)) {
             const int emptyLastLine = mpBuffer->lineBuffer.last().isEmpty() ? 1 : 0;
-            newCaretLine = mpBuffer->lineBuffer.length() - 1 - emptyLastLine;
+            // A cleared buffer holds a single empty line, which is both the first and the trailing one
+            newCaretLine = std::max(0, static_cast<int>(mpBuffer->lineBuffer.length()) - 1 - emptyLastLine);
             newCaretColumn = std::max(0, static_cast<int>(mpBuffer->lineBuffer[newCaretLine].length()) - 1);
             if (auto* app = mudlet::self()) {
                 //: Screen-reader announcement when the user presses Ctrl+End in caret mode to jump to the latest (most recent) content in the buffer
