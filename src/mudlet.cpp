@@ -7738,6 +7738,8 @@ Host* mudlet::loadProfile(const QString& profile_name, const bool playOnline, co
         }
 
         pHost->refreshPackageFonts();
+        // Not this profile: its own check waits until its modules have brought their fonts
+        Host::restoreMissingDisplayFonts(pHost);
 
         // Is this a new profile created through 'copy profile (settings only)'? install default packages into it
         if (entries.size() == 1 && entries.first() == QLatin1String("Copied profile (settings only).xml")) {

@@ -3484,6 +3484,10 @@ std::pair<bool, QString> Host::installPackage(const QString& fileName, enums::Pa
     // reorder permanent and temporary triggers: perm first, temp second
     mTriggerUnit.reorderTriggersAfterPackageImport();
 
+    // Not straight after installPackageFonts(): a refused install takes the fonts out
+    // again, and changing the font runs the profile's sysSettingChanged handlers.
+    restoreMissingDisplayFonts();
+
     // Defer raising install events until the next event loop iteration
     // This ensures all package installation is complete (including variable loading)
     // before event handlers execute, preventing Lua state corruption. Kept queued
@@ -4298,6 +4302,47 @@ void Host::refreshPackageFonts()
     for (const auto& package : std::as_const(mInstalledPackages)) {
         installPackageFonts(package);
     }
+}
+
+void Host::restoreMissingDisplayFonts(const Host* except)
+{
+    if (auto* hosts = HostManager::self()) {
+        for (const auto& pHost : hosts->hostList()) {
+            if (pHost.data() != except) {
+                pHost->restoreMissingDisplayFont();
+            }
+        }
+    }
+}
+
+bool Host::restoreMissingDisplayFont()
+{
+    if (mMissingDisplayFontFamily.isEmpty()) {
+        return false;
+    }
+
+    const auto resolved = resolveFontFamily(mMissingDisplayFontFamily);
+    if (!resolved.available) {
+        return false;
+    }
+
+    QFont font = getDisplayFont();
+    font.setFamily(resolved.family);
+    // An exact match resolves to a Normal weight, which is no reason to drop the saved one
+    if (resolved.family.compare(mMissingDisplayFontFamily, Qt::CaseInsensitive) != 0) {
+        font.setWeight(resolved.weight);
+    }
+    if (const auto [applied, error] = setDisplayFont(font); !applied) {
+        qWarning().nospace().noquote() << "Host::restoreMissingDisplayFont() WARNING - the font \"" << mMissingDisplayFontFamily << "\" is installed again but was refused: " << error;
+        return false;
+    }
+
+    const QString family = mMissingDisplayFontFamily;
+    mMissingDisplayFontFamily.clear();
+    mTelnet.sendInfoNewEnvironValue(qsl("FONT"));
+    //: %1 is the font family the profile asked for, which had been missing and has just been installed by a package
+    postMessage(tr("[ INFO ]  - The font \"%1\" that this profile uses is installed again, so it is being used instead of the default.").arg(family));
+    return true;
 }
 
 void Host::setEnableBlinkText(const bool enable)

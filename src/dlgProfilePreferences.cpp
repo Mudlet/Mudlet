@@ -3746,6 +3746,8 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
     connect(spinBox_displayFontSize, qOverload<int>(&QSpinBox::valueChanged), this, &dlgProfilePreferences::slot_displayFontSizeChanged, Qt::UniqueConnection);
     connect(checkBox_antiAlias, &QCheckBox::clicked, this, &dlgProfilePreferences::slot_displayFontAliasingChanged, Qt::UniqueConnection);
 
+    connect(pHost, &Host::signal_consoleFontChanged, this, &dlgProfilePreferences::slot_hostDisplayFontChanged, Qt::UniqueConnection);
+
     // Emptied first so a second run replaces the list
     {
         const QSignalBlocker blocker(search_engine_combobox);
@@ -8668,6 +8670,14 @@ void dlgProfilePreferences::slot_displayFontSizeChanged()
     if (!mpHost.isNull() && updateDisplayFont(Host::DisplayFontChange::Adjustment)) {
         mpHost->mTelnet.sendInfoNewEnvironValue(qsl("FONT_SIZE"));
     }
+}
+
+// The family can change behind the dialog, as when a package brings a missing one back,
+// and the next size or antialiasing change here would otherwise put back the one shown
+void dlgProfilePreferences::slot_hostDisplayFontChanged(const QFont& font)
+{
+    const QSignalBlocker blocker(fontComboBox_displayFont);
+    fontComboBox_displayFont->setCurrentFont(font);
 }
 
 void dlgProfilePreferences::slot_displayFontAliasingChanged()

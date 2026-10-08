@@ -46,6 +46,7 @@
 #include <QtTest/QtTest>
 
 #include <QFont>
+#include <QFontComboBox>
 #include <QFontDatabase>
 #include <QFontInfo>
 #include <QTemporaryDir>
@@ -61,6 +62,7 @@
 #include "TLuaInterpreter.h"
 #include "TMainConsole.h"
 #include "TTextBox.h"
+#include "dlgProfilePreferences.h"
 #include "mudlet.h"
 
 #include "GroupedTest.h"
@@ -235,7 +237,7 @@ private:
         return file.write(xml.toUtf8()) != -1;
     }
 
-    bool writeProfileSave(const QString& profileName, const QString& fontFamily, const QString& moduleName = QString(), const QString& modulePath = QString())
+    bool writeProfileSave(const QString& profileName, const QString& fontFamily, const QString& moduleName = QString(), const QString& modulePath = QString(), const QString& packageName = QString())
     {
         const QString folder = MudletApp::getMudletPath(enums::profileXmlFilesPath, profileName);
         if (!QDir().mkpath(folder)) {
@@ -253,6 +255,12 @@ private:
                           "<priority>0</priority>\n"
                           "</mInstalledModules>\n")
                               .arg(moduleName, modulePath);
+        }
+        if (!packageName.isEmpty()) {
+            modules.append(qsl("<mInstalledPackages>\n"
+                               "<string>%1</string>\n"
+                               "</mInstalledPackages>\n")
+                                   .arg(packageName));
         }
         const QString xml = qsl("<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n"
                                 "<!DOCTYPE MudletPackage>\n"
@@ -746,6 +754,113 @@ private slots:
         const QString shown = consoleText(pHost);
         QVERIFY2(shown.contains(qsl("[ WARN ]")), qPrintable(qsl("no warning reached the main console; it holds: %1").arg(shown)));
         QVERIFY2(shown.contains(mPackageSuppliedFamily), qPrintable(qsl("the warning does not name the font that went missing; the console holds: %1").arg(shown)));
+    }
+
+    // The way back from the case above: the profile still asks for the family,
+    // so once a package brings it again the console returns to it (#10250)
+    void test_reinstallingThePackageAFontCameFromBringsTheFontBack()
+    {
+        const QString packageName = qsl("font-reinstall");
+        const QString packagePath = mArchiveDir.filePath(qsl("%1.mpackage").arg(packageName));
+        const QByteArray fontBytes = renamedFontBytes(qsl(":/fonts/ttf-bitstream-vera-1.10/VeraMono.ttf"), Host::scmDefaultFontFamily, mPackageSuppliedFamily);
+        QVERIFY2(!fontBytes.isEmpty(), "the bundled font could not be read out of the Qt resources and renamed");
+        const QList<std::pair<QString, QByteArray>> entries{{qsl("%1.ttf").arg(packageName), fontBytes}, {qsl("%1.xml").arg(packageName), minimalPackageXml(packageName)}};
+        QVERIFY2(writeArchive(packagePath, entries), "could not write the test package archive");
+
+        const QString profileName = qsl("MissingDisplayFont-Reinstall-Test");
+        QVERIFY2(writeProfileSave(profileName, Host::scmDefaultFontFamily), "could not write the test profile save");
+
+        Host* pHost = mudlet::self()->loadProfile(profileName, false);
+        QVERIFY(pHost);
+        QVERIFY2(pHost->mLoadedOk, "the test profile save could not be loaded");
+        mudlet::self()->slot_connectionDialogueFinished(profileName, false);
+        QVERIFY2(pHost->mpConsole, "the profile came up without a main console");
+        QVERIFY2(!FontManager::availableFonts().contains(mPackageSuppliedFamily, Qt::CaseInsensitive), "the package's family is already installed, so this cannot tell whether it went away");
+
+        QVERIFY2(pHost->installPackage(packagePath, enums::PackageModuleType::Package).first, "the package carrying the font did not install");
+        pHost->waitForProfileSave();
+        QFont boldFont(mPackageSuppliedFamily, 12);
+        boldFont.setWeight(QFont::Bold);
+        QVERIFY(pHost->setDisplayFont(boldFont, Host::DisplayFontChange::UserChoice).first);
+        QVERIFY2(pHost->uninstallPackage(packageName, enums::PackageModuleType::Package), "the package did not uninstall");
+        pHost->waitForProfileSave();
+        QCOMPARE(pHost->getDisplayFont().family(), Host::scmDefaultFontFamily);
+        QCOMPARE(pHost->getDisplayFontForSaving().family(), mPackageSuppliedFamily);
+
+        // The fonts are registered for the whole application, so another profile wanting the family gets it back too
+        const QString otherProfileName = qsl("MissingDisplayFont-Reinstall-Other-Test");
+        QVERIFY2(writeProfileSave(otherProfileName, mPackageSuppliedFamily), "could not write the other test profile save");
+        Host* pOtherHost = mudlet::self()->loadProfile(otherProfileName, false);
+        QVERIFY(pOtherHost);
+        QVERIFY2(pOtherHost->mLoadedOk, "the other test profile save could not be loaded");
+        mudlet::self()->slot_connectionDialogueFinished(otherProfileName, false);
+        QVERIFY2(pOtherHost->mpConsole, "the other profile came up without a main console");
+        QCOMPARE(pOtherHost->getDisplayFont().family(), Host::scmDefaultFontFamily);
+
+        // An open preferences dialog must not keep offering the stand-in, which its next size change would put back
+        auto* pPreferences = new dlgProfilePreferences(mudlet::self(), pHost);
+        QCOMPARE(pPreferences->fontComboBox_displayFont->currentFont().family(), Host::scmDefaultFontFamily);
+
+        // Opening the other profile ran the save the uninstall queued, and an install waits for a save
+        pHost->waitForProfileSave();
+        QVERIFY2(pHost->installPackage(packagePath, enums::PackageModuleType::Package).first, "the package carrying the font did not install again");
+        pHost->waitForProfileSave();
+        QVERIFY2(FontManager::availableFonts().contains(mPackageSuppliedFamily, Qt::CaseInsensitive), "the package's font was not registered again");
+
+        QCOMPARE(pHost->getDisplayFont().family(), mPackageSuppliedFamily);
+        QCOMPARE(pHost->getDisplayFont().pointSize(), 12);
+        QCOMPARE(pHost->getDisplayFont().weight(), QFont::Bold);
+        QCOMPARE(pHost->getDisplayFontForSaving().family(), mPackageSuppliedFamily);
+        const QString shown = consoleText(pHost);
+        QVERIFY2(shown.contains(qsl("[ INFO ]")), qPrintable(qsl("nothing told the player the font is back; the console holds: %1").arg(shown)));
+        QCOMPARE(pPreferences->fontComboBox_displayFont->currentFont().family(), mPackageSuppliedFamily);
+        delete pPreferences;
+        QCOMPARE(pOtherHost->getDisplayFont().family(), mPackageSuppliedFamily);
+
+        QVERIFY2(pHost->uninstallPackage(packageName, enums::PackageModuleType::Package), "the package did not uninstall at the end");
+        pHost->waitForProfileSave();
+    }
+
+    // Opening a profile registers its packages' fonts for the whole application too,
+    // so one already open that stood in for the family gets it back (#10250)
+    void test_openingAProfileWhosePackageCarriesTheFontBringsItBackForTheOthers()
+    {
+        const QString packageName = qsl("font-on-open");
+        const QByteArray fontBytes = renamedFontBytes(qsl(":/fonts/ttf-bitstream-vera-1.10/VeraMono.ttf"), Host::scmDefaultFontFamily, mPackageSuppliedFamily);
+        QVERIFY2(!fontBytes.isEmpty(), "the bundled font could not be read out of the Qt resources and renamed");
+        QVERIFY2(!FontManager::availableFonts().contains(mPackageSuppliedFamily, Qt::CaseInsensitive),
+                 "the package's family is already installed, so this cannot tell whether opening the profile brought it");
+
+        const QString waitingProfileName = qsl("MissingDisplayFont-Open-Waiting-Test");
+        QVERIFY2(writeProfileSave(waitingProfileName, mPackageSuppliedFamily), "could not write the waiting test profile save");
+        Host* pWaitingHost = mudlet::self()->loadProfile(waitingProfileName, false);
+        QVERIFY(pWaitingHost);
+        QVERIFY2(pWaitingHost->mLoadedOk, "the waiting test profile save could not be loaded");
+        mudlet::self()->slot_connectionDialogueFinished(waitingProfileName, false);
+        QVERIFY2(pWaitingHost->mpConsole, "the waiting profile came up without a main console");
+        QCOMPARE(pWaitingHost->getDisplayFont().family(), Host::scmDefaultFontFamily);
+
+        const QString carryingProfileName = qsl("MissingDisplayFont-Open-Carrying-Test");
+        QVERIFY2(writeProfileSave(carryingProfileName, Host::scmDefaultFontFamily, QString(), QString(), packageName), "could not write the carrying test profile save");
+        const QString packageFolder = MudletApp::getMudletPath(enums::profilePackagePath, carryingProfileName, packageName);
+        QVERIFY(QDir().mkpath(packageFolder));
+        QFile fontFile(qsl("%1/%2.ttf").arg(packageFolder, packageName));
+        QVERIFY(fontFile.open(QIODevice::WriteOnly));
+        QCOMPARE(fontFile.write(fontBytes), fontBytes.size());
+        fontFile.close();
+
+        Host* pCarryingHost = mudlet::self()->loadProfile(carryingProfileName, false);
+        QVERIFY(pCarryingHost);
+        QVERIFY2(pCarryingHost->mLoadedOk, "the carrying test profile save could not be loaded");
+        mudlet::self()->slot_connectionDialogueFinished(carryingProfileName, false);
+        QVERIFY2(FontManager::availableFonts().contains(mPackageSuppliedFamily, Qt::CaseInsensitive), "opening the profile did not register its package's font");
+
+        QCOMPARE(pWaitingHost->getDisplayFont().family(), mPackageSuppliedFamily);
+        QCOMPARE(pWaitingHost->getDisplayFontForSaving().family(), mPackageSuppliedFamily);
+        const QString shown = consoleText(pWaitingHost);
+        QVERIFY2(shown.contains(qsl("[ INFO ]")), qPrintable(qsl("nothing told the player the font is back; the console holds: %1").arg(shown)));
+
+        FontManager::self()->unloadFonts(carryingProfileName, packageName);
     }
 };
 

@@ -234,6 +234,7 @@ private slots:
     void slot_displayFontChanged();
     void slot_displayFontSizeChanged();
     void slot_displayFontAliasingChanged();
+    void slot_hostDisplayFontChanged(const QFont&);
     void slot_changeShowTabConnectionIndicators(bool state);
     void slot_crashReportPolicyChanged(int index);
     // Named rather than lambdas so initWithHost() can connect them with Qt::UniqueConnection

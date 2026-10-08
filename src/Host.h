@@ -524,6 +524,12 @@ public:
     // alone even when that is not registered, there being nothing better to move
     // it to. Returns true when the display font was changed.
     bool substituteMissingDisplayFont();
+    // The way back from substituteMissingDisplayFont() once a package brings the
+    // family it stood in for. Returns true when the display font was changed.
+    bool restoreMissingDisplayFont();
+    // Fonts are registered for the whole application, so one profile's package can
+    // bring back the family any open profile stood in for
+    static void restoreMissingDisplayFonts(const Host* except = nullptr);
     // Every package or module that could own the code a Lua chunk came from, by
     // the "Script: name" style item names or a file's package folder; "" is the profile
     QSet<QString> packagesOwningChunk(const QString& chunkName);
