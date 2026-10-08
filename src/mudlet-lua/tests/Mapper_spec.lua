@@ -4781,6 +4781,78 @@ describe("Tests saveJsonMap and loadJsonMap", function()
       assert.are.equal(4, getRoomBorderThickness(roomA))
     end)
 
+    local function rewriteExport(edit)
+      assert.is_true(saveJsonMap(jsonPath))
+      local file = assert(io.open(jsonPath, "r"))
+      local document = yajl.to_value(file:read("*a"))
+      file:close()
+      edit(document)
+      file = assert(io.open(jsonPath, "w"))
+      file:write(yajl.to_string(document))
+      file:close()
+      deleteMap()
+      assert.is_true(loadJsonMap(jsonPath))
+    end
+
+    it("keeps the fallbacks in the user data of a file for a label it has", function()
+      deleteMap()
+      local area = addAreaName("MapperSpecJsonKeptLabelKeysArea")
+      roomA = createRoomID(); addRoom(roomA); setRoomArea(roomA, area)
+      local labelId = createMapLabel(area, "Label", 0, 0, 0, 255, 255, 255, 0, 0, 0,
+                                     30.0, 12, true, false, "", 255, 50, false)
+      local outlineKey = "system.labelOutlineColor_" .. labelId
+      rewriteExport(function(document)
+        for _, exportedArea in ipairs(document.areas) do
+          if exportedArea.id == area then
+            exportedArea.userData = exportedArea.userData or {}
+            exportedArea.userData[outlineKey] = "1|2|3|255"
+            for _, label in ipairs(exportedArea.labels) do
+              label.outlineColor = nil
+            end
+          end
+        end
+      end)
+
+      assert.is_true(saveJsonMap(jsonPath))
+      local file = assert(io.open(jsonPath, "r"))
+      local document = yajl.to_value(file:read("*a"))
+      file:close()
+      local keyValue, outlineColor
+      for _, exportedArea in ipairs(document.areas) do
+        if exportedArea.id == area then
+          keyValue = (exportedArea.userData or {})[outlineKey]
+          for _, label in ipairs(exportedArea.labels or {}) do
+            if label.id == labelId then
+              outlineColor = label.outlineColor and table.concat(label.outlineColor.color24RGB or {}, "|")
+            end
+          end
+        end
+      end
+      -- kept in the area's user data, or as the label's own outline colour by a reader that takes it
+      assert.is_true(keyValue == "1|2|3|255" or outlineColor == "1|2|3")
+    end)
+
+    it("leaves out a stale border thickness in the user data of a file with a border object", function()
+      deleteMap()
+      local area = addAreaName("MapperSpecJsonStaleBorderArea")
+      roomA = createRoomID(); addRoom(roomA); setRoomArea(roomA, area)
+      assert.is_true(setRoomBorderColor(roomA, 40, 50, 60, 255))
+      rewriteExport(function(document)
+        for _, exportedArea in ipairs(document.areas) do
+          for _, room in ipairs(exportedArea.rooms or {}) do
+            if room.id == roomA then
+              room.userData = room.userData or {}
+              room.userData["room.ui_borderThickness"] = "4"
+            end
+          end
+        end
+      end)
+
+      assert.are.same({40, 50, 60, 255}, {getRoomBorderColor(roomA)})
+      assert.are.equal(0, getRoomBorderThickness(roomA))
+      assert.is_nil(getAllRoomUserData(roomA)["room.ui_borderThickness"])
+    end)
+
     -- TMap::readJsonColor returns QColor(red, green, blue) for a colour array of
     -- either three or four values, so the alpha the exporter wrote as
     -- "color32RGBA" never reaches the QColor and comes back as 255. Every colour

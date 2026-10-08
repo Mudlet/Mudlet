@@ -1973,8 +1973,14 @@ int TRoom::readJsonRoom(const QJsonArray& array, const int index, const int area
     name = roomObj.value(QLatin1String("name")).toString();
     area = areaId;
     readJsonUserData(roomObj.value(QLatin1String("userData")).toObject());
-    // A file exported after a binary save can have them there, and any "border" object read below wins
-    takeBorderFromUserData();
+    // A file exported after a binary save can have them there too, but where it
+    // has a "border" object, that alone says what the border is
+    if (roomObj.contains(QLatin1String("border"))) {
+        userData.remove(ROOM_UI_BORDERCOLOR);
+        userData.remove(ROOM_UI_BORDERTHICKNESS);
+    } else {
+        takeBorderFromUserData();
+    }
 
     const QJsonArray coordinatesArray = roomObj.value(QLatin1String("coordinates")).toArray();
     mX = coordinatesArray.at(0).toInt();

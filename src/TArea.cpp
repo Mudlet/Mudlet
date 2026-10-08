@@ -889,9 +889,22 @@ std::pair<int, QString> TArea::readJsonArea(const QJsonArray& array, const int a
     if (areaObj.contains(QLatin1String("labels")) && areaObj.value(QLatin1String("labels")).isArray()) {
         readJsonLabels(areaObj);
     }
-    // Any the labels read above did not take are for labels the file does not have
-    mUserData.removeIf([](QMap<QString, QString>::iterator item) {
-        return item.key().startsWith(QLatin1String("system.labelFont_")) || item.key().startsWith(QLatin1String("system.labelOutlineColor_"));
+    // Those for a label the file does not have are left over from one since deleted,
+    // while for one it has they can be the only copy of its font or outline color
+    const QLatin1String fontPrefix{"system.labelFont_"};
+    const QLatin1String outlineColorPrefix{"system.labelOutlineColor_"};
+    mUserData.removeIf([this, fontPrefix, outlineColorPrefix](QMap<QString, QString>::iterator item) {
+        QStringView labelIdText{item.key()};
+        if (labelIdText.startsWith(fontPrefix)) {
+            labelIdText = labelIdText.sliced(fontPrefix.size());
+        } else if (labelIdText.startsWith(outlineColorPrefix)) {
+            labelIdText = labelIdText.sliced(outlineColorPrefix.size());
+        } else {
+            return false;
+        }
+        bool isNumber = false;
+        const int labelId = labelIdText.toInt(&isNumber);
+        return !isNumber || !mMapLabels.contains(labelId);
     });
     return {id, name};
 }
