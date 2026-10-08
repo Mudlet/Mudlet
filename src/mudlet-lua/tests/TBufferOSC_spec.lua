@@ -796,4 +796,95 @@ describe("Tests TBuffer OSC sequence handling", function()
     end)
   end)
 
+  -- A link the game marks as already selected is drawn in its selected style,
+  -- which takes over from the formatting the game wrapped it in once the line
+  -- it is on is committed - and a flush marker can commit the start of that
+  -- line, link and all, before the rest of it has arrived
+  describe("Tests OSC 8 links that start out selected", function()
+    local italic = "\027[3m"
+    local selectedLink = "\027]8;;send:x?config={\"selection\":{\"group\":\"g\",\"value\":\"v\",\"selected\":true},"
+      .. "\"style\":{\"color\":\"#00ff00\",\"selected\":{\"color\":\"#ff0000\"}}}\027\\"
+    local closeLink = "\027]8;;\027\\\027[0m"
+
+    local function assertSelectedStyle(needle, word)
+      local lastLine = getLastLineNumber("main")
+      local first = math.max(0, lastLine - 15)
+      local lines = getLines("main", first, lastLine + 1)
+      for i = #lines, 1, -1 do
+        if lines[i]:find(needle, 1, true) then
+          moveCursor("main", 0, first + i - 1)
+          assert.are_not.equal(-1, selectString("main", word, 1))
+          local format = getTextFormat("main")
+          moveCursorEnd("main")
+          assert.are.same({ 255, 0, 0 }, format.foreground)
+          assert.is_false(format.italic)
+          return
+        end
+      end
+      error(needle .. " is not on any of the last lines")
+    end
+
+    it("should draw a link in its selected style alone", function()
+      assert.is_true(feedTriggers("SELWHOLE1 " .. italic .. selectedLink .. "picked" .. closeLink .. " SELWHOLE1\n"))
+      assertSelectedStyle("SELWHOLE1", "picked")
+    end)
+
+    it("should draw the part of a link a flush marker committed early in its selected style", function()
+      assert.is_true(feedTriggers("SELFLUSH1 " .. italic .. selectedLink .. "early\r"))
+      assert.is_true(feedTriggers("late" .. closeLink .. " SELFLUSH2\n"))
+      assertSelectedStyle("SELFLUSH1", "early")
+      assertSelectedStyle("SELFLUSH2", "late")
+    end)
+
+    it("should draw the early part in its selected style when a line above it is deleted", function()
+      assert.is_true(feedTriggers("SELDELETE0 a line to delete\n"))
+      assert.is_true(feedTriggers("SELDELETE1 " .. italic .. selectedLink .. "early\r"))
+      local lastLine = getLastLineNumber("main")
+      local doomed
+      for lineNumber = lastLine, math.max(0, lastLine - 3), -1 do
+        if getLines("main", lineNumber, lineNumber + 1)[1]:find("SELDELETE0", 1, true) then
+          doomed = lineNumber
+          break
+        end
+      end
+      assert.is_not_nil(doomed)
+      moveCursor("main", 0, doomed)
+      deleteLine("main")
+      moveCursorEnd("main")
+      assert.is_nil(findRecentLine("SELDELETE0"))
+      assert.is_true(feedTriggers("late" .. closeLink .. " SELDELETE2\n"))
+      assertSelectedStyle("SELDELETE1", "early")
+      assertSelectedStyle("SELDELETE2", "late")
+    end)
+
+    it("should draw the early part in its selected style when the scrollback is trimmed in between", function()
+      local lines, batch = getConsoleBufferSize("main")
+      local trimmedLimit, trimmedBatch = 100, 10
+      setConsoleBufferSize("main", trimmedLimit, trimmedBatch)
+      finally(function()
+        setConsoleBufferSize("main", lines, batch)
+      end)
+      -- the buffer drops a batch of lines whenever it outgrows its limit, so
+      -- once it has, it does so again exactly a batch of lines later
+      local before = getLineCount("main")
+      for _ = 1, 10 * trimmedLimit do
+        feedTriggers("SELTRIM filler\n")
+        local now = getLineCount("main")
+        if now < before then
+          break
+        end
+        before = now
+      end
+      for _ = 1, trimmedBatch - 1 do
+        feedTriggers("SELTRIM filler\n")
+      end
+      before = getLineCount("main")
+      assert.is_true(feedTriggers("SELTRIM1 " .. italic .. selectedLink .. "early\r"))
+      assert.is_true(getLineCount("main") < before)
+      assert.is_true(feedTriggers("late" .. closeLink .. " SELTRIM2\n"))
+      assertSelectedStyle("SELTRIM1", "early")
+      assertSelectedStyle("SELTRIM2", "late")
+    end)
+  end)
+
 end)

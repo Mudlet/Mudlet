@@ -206,6 +206,7 @@ private:
         pR1->customLinesColor.insert(qsl("n"), scmCustomLineColor);
         pR1->customLinesStyle.insert(qsl("n"), Qt::DashLine);
         pR1->customLinesArrow.insert(qsl("n"), true);
+        pR1->calcRoomDimensions();
 
         TRoom* pR2 = pDB->getRoom(scmRoom2);
         QVERIFY(pR2);
@@ -322,14 +323,14 @@ private:
         QCOMPARE(pAreaA->mUserData, expectedAreaAUserData());
 
         // Nothing on the load path sets out to build the per-area index of
-        // rooms holding custom lines. It falls out of three separate calls
-        // made for something else - TRoom::restore()'s room dimensions, the
-        // span recalculation at the end of TMap::restore(), and TArea::clean()
-        // during the audit - so cutting any one of them leaves it built by the
-        // other two and every other assertion here still passing. This is what
-        // is left to notice the day the last one goes: the mapper consults the
-        // index only for rooms that are off screen, so what silently stops
-        // being drawn is a custom line running into view from outside it.
+        // rooms holding custom lines. It falls out of two separate calls made
+        // for something else - the span recalculation at the end of
+        // TMap::restore(), and TArea::clean() during the audit - so cutting
+        // either one leaves it built by the other and every other assertion
+        // here still passing. This is what is left to notice the day the last
+        // one goes: the mapper consults the index only for rooms that are off
+        // screen, so what silently stops being drawn is a custom line running
+        // into view from outside it.
         QVERIFY2(
                 pAreaA->getCustomLineRoomsForZ(0).contains(scmRoom1),
                 qPrintable(qsl("room %1 holds a custom line but is missing from area A's index for z 0, loaded from format version %2").arg(QString::number(scmRoom1), QString::number(savedVersion))));
@@ -382,6 +383,11 @@ private:
         QCOMPARE(pR1->customLinesColor, (QMap<QString, QColor>{{qsl("n"), scmCustomLineColor}}));
         QCOMPARE(pR1->customLinesStyle, (QMap<QString, Qt::PenStyle>{{qsl("n"), Qt::DashLine}}));
         QCOMPARE(pR1->customLinesArrow, (QMap<QString, bool>{{qsl("n"), true}}));
+        // The mapper culls a room with custom lines by these, so wrong ones hide the lines.
+        QCOMPARE(pR1->min_x, 0.0);
+        QCOMPARE(pR1->max_x, 3.0);
+        QCOMPARE(pR1->min_y, -2.5);
+        QCOMPARE(pR1->max_y, 4.0);
         // The format 19 leg runs after the format 17/18 ones, so this also
         // guards against a < 19 save leaving a stray system.fallback_symbol
         // entry behind in the live source room's user data:
