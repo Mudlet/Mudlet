@@ -49,7 +49,7 @@ function GUIDropManager.createDropManager()
             local containervar = ""
             local locked = ""
             if v.windowname ~= "main" then
-                container = v.containervar or getKeyFrom(v.container, ".container")
+                container = v.containervar or GUIDropManager.getKeyFrom(v.container, ".container")
                 if not container then
                     container = "Geyser.windowList."..v.windowname.."Container.windowList."..v.windowname
                 end
@@ -96,14 +96,23 @@ end</script>
     if iteration &gt; depth then
         return nil, "key not found"
     end
+    -- the key found is written into the GUIDropManager script, so only keys that
+    -- make a valid Lua path are followed
+    local function validName(key)
+        return type(key) == "string" and key:match("^[%a_][%w_]*$") ~= nil
+    end
     for k,v in pairs(table) do
-        if type(v) == "table" and k ~= "_G" then
-            for k1,v1 in pairs(v) do
-                tempTable[k.."."..k1] = v1
+        if type(k) == "string" and (iteration &gt; 1 or validName(k)) then
+            if type(v) == "table" and k ~= "_G" then
+                for k1,v1 in pairs(v) do
+                    if validName(k1) then
+                        tempTable[k.."."..k1] = v1
+                    end
+                end
             end
-        end
-        if v == value and not string.find(k, exclude) then
-            return k
+            if v == value and not string.find(k, exclude) then
+                return k
+            end
         end
     end
     return GUIDropManager.getKeyFrom(value, exclude, depth, tempTable, iteration + 1)    
@@ -136,6 +145,15 @@ end</script>
     if not table.contains(acceptable_suffix, suffix) then
         return
     end
+
+    local acontainer = Geyser
+    if consoleName ~= "main" then
+        local userWindow = Geyser.windowList[consoleName.."Container"]
+        acontainer = userWindow and userWindow.windowList[consoleName]
+        if not acontainer then
+            return
+        end
+    end
     local main_width, main_height = getMainWindowSize()
     local image_width, image_height = getImageSize(fname)
     
@@ -150,7 +168,8 @@ end</script>
     
     posx = math.max(0, posx - (image_width/10))
     posy = math.max(0, posy - (image_height/10))
-    local imgName = fname:match("([^%/]+)%..+$")
+    local baseName = fname:match("([^/\\]+)$")
+    local imgName = baseName:match("(.+)%.[^.]+$") or baseName
     
     if not (io.exists(getMudletHomeDir() .. "/GUIDropImages/")) then
         lfs.mkdir(getMudletHomeDir() .. "/GUIDropImages/")
@@ -167,12 +186,6 @@ end</script>
         outfile:close()
     end
     
-    local acontainer
-    if consoleName == "main" then
-        acontainer = Geyser
-    else
-        acontainer = Geyser.windowList[consoleName.."Container"].windowList[consoleName]
-    end
     --convert filename to be a feasible variablename
     local containername = string.gsub(imgName,"[^_%w]","")
     --if filename is only composed of number convert it
@@ -213,7 +226,25 @@ end</script>
     GUIDropImages[labelname].imgName = imgName .. ".".. suffix
     GUIDropManager.createDropScript()
 end
-registerAnonymousEventHandler("sysDropEvent", "GUIDropManager.ImageDrop")</script>
+if GUIDropManager.dropHandler then
+    killAnonymousEventHandler(GUIDropManager.dropHandler)
+end
+GUIDropManager.dropHandler = registerAnonymousEventHandler("sysDropEvent", "GUIDropManager.ImageDrop")
+
+if GUIDropManager.uninstallHandler then
+    killAnonymousEventHandler(GUIDropManager.uninstallHandler)
+end
+-- GUIDropManager and GUIDropImages are kept: the images already dropped, their
+-- menu items and the GUIDropManager script the drops wrote all refer to them
+GUIDropManager.uninstallHandler = registerAnonymousEventHandler("sysUninstallPackage", function(_, packageName)
+    if packageName ~= "gui-drop" then
+        return
+    end
+    killAnonymousEventHandler(GUIDropManager.dropHandler)
+    killAnonymousEventHandler(GUIDropManager.uninstallHandler)
+    GUIDropManager.dropHandler = nil
+    GUIDropManager.uninstallHandler = nil
+end)</script>
 			<eventHandlerList />
 		</Script>
 		<Script isActive="yes" isFolder="no">
@@ -268,7 +299,7 @@ local function convertToLabel(s)
     table.remove(Adjustable.Container.all_windows, table.index_of(Adjustable.Container.all_windows, s.name))
     Adjustable.Container.all[s.name] = nil
     if io.exists(getMudletHomeDir().."/AdjustableContainer/"..s.name..".lua") then
-        os.remove(getMudletHomeDir().."/AdjdustableContainer/"..s.name..".lua")
+        os.remove(getMudletHomeDir().."/AdjustableContainer/"..s.name..".lua")
     end  
 end
 
@@ -296,7 +327,7 @@ function Adjustable.Container:setDropImg()
     self:newCustomItem("deleteImage", function(s) deleteImage(s) GUIDropManager.createDropManager() Adjustable.Container:saveAll() end)
     self:newCustomItem("convertToLabel",  function(s) convertToLabel(s) GUIDropManager.createDropManager() Adjustable.Container:saveAll() end)
     self:newCustomItem("saveAll",  function(s) Adjustable.Container:saveAll() end)
-    self:newCustomItem("loadAll",  function(s) Adjustable.Container:saveAll() end)
+    self:newCustomItem("loadAll",  function(s) Adjustable.Container:loadAll() end)
     self:newCustomItem("updateScript",  function(s) Adjustable.Container:saveAll() GUIDropManager.createDropManager() end)
 end</script>
 			<eventHandlerList />

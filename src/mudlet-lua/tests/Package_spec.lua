@@ -3369,6 +3369,48 @@ describe("Tests installing a module whose XML cannot be read", function()
   end)
 end)
 
+-- gui-drop installs into fresh profiles, the self-test one included
+describe("Tests uninstalling the gui-drop package", function()
+  local name = "gui-drop"
+  local archive = ":/packages/gui-drop/gui-drop.mpackage"
+
+  it("stops taking dropped images but keeps the ones already dropped working", function()
+    if not packageInstalled(name) then
+      pending("gui-drop is not installed in this profile")
+      return
+    end
+    local droppedCopy = getMudletHomeDir() .. "/GUIDropImages/packageSpecAfterUninstall.png"
+    local keptCopy = getMudletHomeDir() .. "/GUIDropImages/packageSpecKept.png"
+    defer(function()
+      os.remove(droppedCopy)
+      os.remove(keptCopy)
+      installUntilConfirmed(installPackage, archive, function() return packageInstalled(name) end, name)
+    end)
+    defer(function()
+      os.remove(scratchDirectory .. "/packageSpecAfterUninstall.png")
+      os.remove(scratchDirectory .. "/packageSpecKept.png")
+      lfs.rmdir(scratchDirectory)
+    end)
+    lfs.mkdir(scratchDirectory)
+    local kept = scratchDirectory .. "/packageSpecKept.png"
+    copyFile(specDirectory .. "/fixtures/images/solid-magenta-4x4.png", kept)
+    local image = scratchDirectory .. "/packageSpecAfterUninstall.png"
+    copyFile(specDirectory .. "/fixtures/images/solid-magenta-4x4.png", image)
+    GUIDropManager.ImageDrop("sysDropEvent", kept, "png", 10, 10, "main")
+    local keptImage = GUIDropImages.packageSpecKept
+    assert.is_not_nil(keptImage, "SETUP: the image was not dropped")
+    keptImage:setDropImg()
+
+    removeFixturePackage(name)
+    raiseEvent("sysDropEvent", image, "png", 10, 10, "main")
+
+    assert.is_false(fileExists(droppedCopy), "the uninstalled package still copied a dropped image into the profile")
+    local ok, err = pcall(keptImage.customItems.deleteImage[2], keptImage)
+    assert.is_true(ok, tostring(err))
+    assert.is_nil(GUIDropImages.packageSpecKept)
+  end)
+end)
+
 -- Once a package is gone nothing knows its commands' ids, so whatever its Lua
 -- placed has to go with it: left behind, a command stays on screen, keeps
 -- raising sysCommandClicked, and holds its shortcut against the same package's
