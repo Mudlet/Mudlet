@@ -600,9 +600,17 @@ end
 
 --- connect your container to a border
 -- @param border main border ("top", "bottom", "left", "right")
+-- @return true, or nil and an error message if the border does not exist or there is nothing to connect to
 function Adjustable.Container:connectToBorder(border)
-    if not self.attached or not Adjustable.Container.Attached[border] then
-        return
+    border = type(border) == "string" and border:lower()
+    if not oppositeBorder[border] then
+        return nil, "connectToBorder: bad argument #1 value (\"top\", \"bottom\", \"left\" or \"right\" expected)"
+    end
+    if not self.attached then
+        return nil, "connectToBorder: the container is not attached to a border"
+    end
+    if not Adjustable.Container.Attached[border] then
+        return nil, string.format("connectToBorder: nothing is attached to the %s border", border)
     end
     self.connectedToBorder = self.connectedToBorder or {}
     self.connectedToBorder[border] = true
@@ -617,6 +625,7 @@ function Adjustable.Container:connectToBorder(border)
         end
         v:adjustConnectedContainers()
     end
+    return true
 end
 
 --- adds elements to connect containers to borders into the right click menu
@@ -697,8 +706,14 @@ end
 
 --- attaches your container to the given border
 -- attach is only possible if the container is located near the border
--- @param border possible border values are "top", "bottom", "right", "left"
+-- @param border possible border values are "top", "bottom", "right", "left", in any case
+-- @return true, or nil and an error message for any other border
 function Adjustable.Container:attachToBorder(border)
+    -- the registry and adjustBorder() both work in lower case
+    border = type(border) == "string" and border:lower()
+    if not oppositeBorder[border] then
+        return nil, "attachToBorder: bad argument #1 value (\"top\", \"bottom\", \"left\" or \"right\" expected)"
+    end
     if self.attached then self:detach() end
     Adjustable.Container.Attached[border] = Adjustable.Container.Attached[border] or {}
     -- the registry is keyed by name, so a still live container of the same name
@@ -714,6 +729,7 @@ function Adjustable.Container:attachToBorder(border)
     self:adjustBorder()
     self.resizeHandlerID=registerAnonymousEventHandler("sysWindowResizeEvent", function() self:resizeBorder() end)
     closeAllLevels(self.rCLabel)
+    return true
 end
 
 --- detaches the given container
