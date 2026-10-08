@@ -1277,6 +1277,10 @@ void dlgProfilePreferences::setSearchKeywords()
     synonyms.append({groupBox_main_window_shortcuts, tr("keyboard shortcuts, hotkeys, key bindings, accelerators")});
     //: Comma-separated synonyms for the settings search - translate to what a player would type, do not transliterate. This one is for saving the profile when Mudlet is closed.
     synonyms.append({mFORCE_SAVE_ON_EXIT, tr("autosave, save on exit, backup")});
+    //: Comma-separated synonyms for the settings search - translate to what a player would type, do not transliterate. This one is for the colours the game's text and background are drawn in.
+    synonyms.append({groupBox_displayColors, tr("colour, colours, palette, ANSI colours, background")});
+    //: Comma-separated synonyms for the settings search - translate to what a player would type, do not transliterate. This one is for the colours the map is drawn in.
+    synonyms.append({groupBox_mapperColors, tr("colour, colours, map colours, palette, background")});
     //: Comma-separated synonyms for the settings search - translate to what a player would type, do not transliterate. This one is for the font the game's text is drawn in.
     synonyms.append({groupBox_font, tr("font, typeface, size, monospace, antialiasing")});
     //: Comma-separated synonyms for the settings search - translate to what a player would type, do not transliterate. This one is for how long Mudlet waits for the game to answer.

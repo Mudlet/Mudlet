@@ -479,6 +479,15 @@ private slots:
         QCOMPARE(mpPreferences->groupBox_accessibility->parentWidget(), resultsColumn());
     }
 
+    void test_theBritishSpellingFindsTheColourCards()
+    {
+        for (const QString& query : {qsl("colour"), qsl("colours")}) {
+            search(query);
+            QVERIFY2(mpPreferences->groupBox_displayColors->parentWidget() == resultsColumn(), qPrintable(query));
+            QVERIFY2(mpPreferences->groupBox_mapperColors->parentWidget() == resultsColumn(), qPrintable(query));
+        }
+    }
+
     // Accents and keyboard accelerators are folded out of both sides of the
     // comparison, so a query typed without either still finds what carries them
     void test_aQueryWithoutAccentsFindsACardThatHasThem()
