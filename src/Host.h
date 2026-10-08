@@ -48,6 +48,7 @@
 #include <QMargins>
 #include <QPointer>
 #include <QRect>
+#include <QSet>
 #include <QStack>
 #include <QTextStream>
 #include <QTimer>
@@ -529,6 +530,17 @@ public:
     // alone even when that is not registered, there being nothing better to move
     // it to. Returns true when the display font was changed.
     bool substituteMissingDisplayFont();
+    // Every package or module that could own the code a Lua chunk came from, by
+    // the "Script: name" style item names or a file's package folder; "" is the profile
+    QSet<QString> packagesOwningChunk(const QString& chunkName);
+    // The script whose top-level code is running, so code it runs directly can
+    // be told apart from another script of the same name in another package
+    struct RunningScript
+    {
+        QString chunkName;
+        QString package;
+    };
+    RunningScript mRunningScript;
     // What to write into the profile: the display font with the family the profile
     // asked for put back in place of any stand-in the above had to pick. Saving the
     // stand-in instead would make this machine's lack of a font the profile's own
@@ -1161,6 +1173,8 @@ signals:
     void signal_discordGameChanged();
     // A reset is about to replace the Lua state, so whatever it placed in the frontend has to go.
     void signal_profileResetting();
+    // A package or module's items are gone, so whatever its Lua placed in the frontend has to go too.
+    void signal_packageRemoved(const QString& packageName);
     // The frontend owns the editor, notepad and IRC client it opens for a
     // profile. On close it closes them and lets go of them; on destruction it
     // deletes them there and then, while the units the editor references still
@@ -1193,6 +1207,7 @@ private slots:
     void slot_saveProfileAfterPackageChange();
 
 private:
+    QString packageOwningFile(const QString& fileName);
     // Inserts at the console's cursor, or appends when no line follows it.
     void pasteClipboardInto(TConsoleModel& model);
     // Repaints the lines holding the console's selection, when it is on screen.
@@ -1200,6 +1215,7 @@ private:
     // Stores a boolean setting and tells scripts about it.
     void changeSetting(bool& setting, const bool state, const QString& settingName);
     void setBorders(const QMargins);
+    void recheckCommandLineSpelling();
     void installPackageFonts(const QString& packageName);
     void processGMCPDiscordStatus(const QJsonObject& discordInfo);
     void processGMCPDiscordInfo(const QJsonObject& discordInfo);
@@ -1274,6 +1290,9 @@ private:
     // A stack because installs nest and a self-reloading module is on it twice, so what comes off has to be
     // what this call put on rather than whatever carries the name.
     QStack<QString> mPackagesBeingInstalled;
+    // installPackage() calls under way, from the save-in-progress check to the return - which the save a
+    // package change owes waits for - see slot_saveProfileAfterPackageChange()
+    int mPackageInstallsInProgress = 0;
     // What those scripts asked for, carried out by
     // runUninstallsDeferredByAnInstall() once the outermost install has finished
     // and the install events it queued have gone out.

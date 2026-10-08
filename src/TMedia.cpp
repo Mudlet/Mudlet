@@ -28,7 +28,6 @@
 #include "MudletApp.h"
 #include "MudletMedia.h"
 #include "TDebug.h"
-#include "mudlet.h"
 
 #include <QDir>
 #include <QFileInfo>
@@ -41,6 +40,8 @@
 #include <QSaveFile>
 #include <QStandardPaths>
 #include <QTimer>
+
+#include <algorithm>
 
 using namespace std::chrono_literals;
 
@@ -86,6 +87,9 @@ bool mediaTypeNamed(const QJsonObject& json)
 
     return !mediaTypeJSON.isString() || !mediaTypeJSON.toString().isEmpty();
 }
+
+// Every pass is a playlist entry built up front, so a huge count from a game would hang Mudlet
+constexpr int maxQueuedLoops = 10000;
 } // namespace
 
 // Public
@@ -2080,7 +2084,7 @@ void TMedia::play(TMediaData& mediaData)
                 playlist->clear();
             } else {
                 if (!playlist->isEmpty() && playlist->mediaCount() > 1) { // Purge media from the previous playlist
-                    playlist->removeMedia(playlist->nextIndex(), playlist->mediaCount());
+                    playlist->removeMedia(playlist->nextIndex(), playlist->mediaCount() - 1);
                 }
 
                 return; // No action required. Continue playing the same media.
@@ -2135,14 +2139,14 @@ void TMedia::play(TMediaData& mediaData)
                     playlist->clear();
                 } else {
                     if (!playlist->isEmpty() && playlist->mediaCount() > 1) { // Purge media from the previous playlist
-                        playlist->removeMedia(playlist->nextIndex(), playlist->mediaCount());
+                        playlist->removeMedia(playlist->nextIndex(), playlist->mediaCount() - 1);
                     }
 
                     mediaData.setMediaLoops(mediaData.mediaLoops() - 1); // Subtract the currently playing media from the total
                 }
             }
 
-            for (int k = 0; k < mediaData.mediaLoops(); k++) {
+            for (int k = 0, loops = std::min(mediaData.mediaLoops(), maxQueuedLoops); k < loops; k++) {
                 absolutePathFileName = fileNameList.size() > 1 ? fileNameList.at(QRandomGenerator::global()->bounded(fileNameList.size()))
                                                                : (mediaData.mediaInput() == TMediaData::MediaInputStream ? TMedia::getStreamUrl(mediaData) : fileNameList.at(0));
 

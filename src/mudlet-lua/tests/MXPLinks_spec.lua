@@ -172,6 +172,25 @@ describe("Tests the Lua an MXP link runs", function()
     })
   end)
 
+  -- colour codes cut the text a SEND wraps into pieces, and it keeps them all
+  it("sends all the text a bare SEND wraps when colour codes break it up", function()
+    assertRunsOnly(actionsAfter("<SEND>north \27[31mgate\27[0m road</SEND>"), "send", "north gate road")
+  end)
+
+  -- an & that starts no entity is put back as text the MXP parser skips, and
+  -- none of it may reach the SEND as text after the parser skipped it
+  it("hands a SEND the text after an unknown entity only once", function()
+    for data, allowed in pairs({
+      ["<SEND>salt & pepper</SEND>"] = {"salt pepper", "salt & pepper"},
+      ["<SEND>MXPLIT &bogus;tail</SEND>"] = {"MXPLIT tail", "MXPLIT &bogus;tail"},
+    }) do
+      local actions = actionsAfter(data)
+      assert.is_table(actions, data)
+      local sent = run(actions[1])[1][2][1]
+      assert.is_true(sent == allowed[1] or sent == allowed[2], ("%s sent %q"):format(data, sent))
+    end
+  end)
+
   -- a bare <A> takes its address from the text it wraps; none of that text may
   -- carry over into the links that come after it
   describe("Tests the address a bare A takes from its text", function()
