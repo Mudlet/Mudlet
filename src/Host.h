@@ -392,7 +392,7 @@ public:
 
     void startSpeedWalk();
     void startSpeedWalk(int sourceRoom, int targetRoom);
-    void reloadModule(const QString& reloadModuleName, const QString& syncingFromHost = QString());
+    std::pair<bool, QString> reloadModule(const QString& reloadModuleName, const QString& syncingFromHost = QString(), bool quiet = false);
     std::pair<bool, QString> changeModuleSync(const QString& enableModuleName, const QLatin1String& value);
     std::pair<bool, QString> getModuleSync(const QString& moduleName);
     bool blockScripts() { return mBlockScriptCompile; }
