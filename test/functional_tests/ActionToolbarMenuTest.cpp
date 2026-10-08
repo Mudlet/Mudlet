@@ -415,6 +415,40 @@ private slots:
         QVERIFY(entry->isChecked());
     }
 
+    // A push-down button saved down is restored while the profile loads: its
+    // script runs, but its command belongs to a click and must not be sent or
+    // echoed on every load (#10632).
+    void test_aPushDownButtonRestoredDownOnLoadRunsItsScriptWithoutSendingItsCommand()
+    {
+        startProfile(mpHostname, mpLocalhost, mpPort);
+        auto* host = mudlet::self()->getActiveHost();
+        QVERIFY2(host, "No active host available for the test.");
+
+        auto* master = makeAction(host, nullptr, qsl("pushDownTestPackage"), true);
+        master->mPackageName = qsl("pushDownTestPackage");
+        master->mModuleMasterFolder = true;
+        master->mLocation = 0;
+        auto* toolbar = makeAction(host, master, qsl("pushDownTestToolbar"), true);
+        toolbar->mLocation = 0;
+        auto* button = makeAction(host, toolbar, qsl("pushDownTestButton"), false);
+        button->setIsPushDownButton(true);
+        button->mButtonState = true;
+        button->setCommandButtonDown(qsl("QA_BUTTON_DOWN_COMMAND"));
+        QVERIFY(button->setScript(qsl("qaPushDownRan = (qaPushDownRan or 0) + 1")));
+        host->mInstalledPackages << qsl("pushDownTestPackage");
+
+        // Sending runs the command through the aliases, so one matching it sees any send
+        QVERIFY(host->mLuaInterpreter.compileAndExecuteScript(qsl("qaPushDownRan = nil; qaCommandSent = 0; "
+                                                                  "tempAlias([[^QA_BUTTON_DOWN_COMMAND$]], [[qaCommandSent = qaCommandSent + 1]])")));
+
+        host->mIsProfileLoadingSequence = true;
+        host->getActionUnit()->updateAllToolbars();
+        host->mIsProfileLoadingSequence = false;
+
+        QVERIFY2(host->mLuaInterpreter.compileAndExecuteScript(qsl("assert(qaPushDownRan == 1)")), "restoring the button on load did not run its script once");
+        QVERIFY2(host->mLuaInterpreter.compileAndExecuteScript(qsl("assert(qaCommandSent == 0)")), "restoring the button on load sent its command");
+    }
+
     void cleanup()
     {
         if (auto* self = mudlet::self()) {
