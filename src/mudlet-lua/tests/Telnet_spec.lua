@@ -371,6 +371,26 @@ describe("Tests the rest of the SGR decoder", function()
     assert.is_true(isAnsiBgColor(4), "an unreadable background index was treated as a request for index zero")
   end)
 
+  -- as xterm does, an index past the end of the 256-colour palette changes
+  -- nothing, rather than reading as black or overflowing the greyscale ramp
+  it("leaves the colour alone when an indexed colour's index is out of range", function()
+    for i, index in ipairs({"256", "999", "2147483647"}) do
+      local before, after = ("SgrBigIdxFgA%d"):format(i), ("SgrBigIdxFgB%d"):format(i)
+      feed("\27[31m" .. before .. " \27[38;5;" .. index .. "m" .. after)
+      selectMarker(before)
+      assert.is_true(isAnsiFgColor(4), "the precondition colour did not take")
+      selectMarker(after)
+      assert.is_true(isAnsiFgColor(4), "colour index " .. index .. " changed the foreground")
+
+      before, after = ("SgrBigIdxBgA%d"):format(i), ("SgrBigIdxBgB%d"):format(i)
+      feed("\27[41m" .. before .. " \27[48;5;" .. index .. "m" .. after)
+      selectMarker(before)
+      assert.is_true(isAnsiBgColor(4), "the precondition background did not take")
+      selectMarker(after)
+      assert.is_true(isAnsiBgColor(4), "colour index " .. index .. " changed the background")
+    end
+  end)
+
   -- types 3 (direct CMY) and 4 (direct CMYK) are not rendered, but their
   -- arguments still have to be stepped over or the codes behind them are read
   -- as colour requests of their own
