@@ -576,12 +576,9 @@ QPair<bool, QString> TSpellChecker::removeWord(const QString& word)
     const QString affixPath(qsl("%1.aff").arg(pathFileBaseName));
     QHash<QString, unsigned int> graphemeCounts;
 
-    // The file will have previously been created, so it being missing now is
-    // not expected and aborts the save:
-    const int oldWordCount = getDictionaryWordCount(dictionaryPath);
-    if (oldWordCount == -1) {
-        return false;
-    }
+    // Only reported on: a file that has gone missing or lost its count since it
+    // was read is no reason to lose the words the session added
+    const int oldWordCount = qMax(0, getDictionaryWordCount(dictionaryPath));
 
     QStringList wordList{wordSet.begin(), wordSet.end()};
 
@@ -625,8 +622,16 @@ QPair<bool, QString> TSpellChecker::removeWord(const QString& word)
 
     bool isOk = false;
     oldWC = dictionaryLine.toInt(&isOk);
+    // A file written by hand may have no count, and then its first line is a word
+    bool lineIsAWord = !isOk && !dictionaryLine.isEmpty();
+    if (lineIsAWord) {
+        qWarning().nospace().noquote() << "TSpellChecker::scanDictionaryFile(\"" << dict.fileName() << "\") WARNING - the first line is not a word count, so it is kept as a word.";
+    }
     do {
-        ds.readLineInto(&dictionaryLine);
+        if (!lineIsAWord) {
+            ds.readLineInto(&dictionaryLine);
+        }
+        lineIsAWord = false;
         if (!dictionaryLine.isEmpty()) {
             wl << dictionaryLine;
             QTextBoundaryFinder graphemeFinder(QTextBoundaryFinder::Grapheme, dictionaryLine);
@@ -718,7 +723,7 @@ QPair<bool, QString> TSpellChecker::removeWord(const QString& word)
     return true;
 }
 
-// Returns -1 on significant failure (where the caller will have to bail out)
+// Returns -1 when the file cannot be read or does not start with a count
 /*static*/ int TSpellChecker::getDictionaryWordCount(const QString& dictionaryPath)
 {
     QFile dict(dictionaryPath);
@@ -732,7 +737,6 @@ QPair<bool, QString> TSpellChecker::removeWord(const QString& word)
     QString dictionaryLine;
     // The header line is not the count to report: an empty dictionary declares
     // one word so that hunspell will load it - see overwriteDictionaryFile(...).
-    // It is still read, as an unparsable one means a file we should not touch:
     ds.readLineInto(&dictionaryLine);
     bool isOk = false;
     dictionaryLine.toInt(&isOk);

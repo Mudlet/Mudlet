@@ -75,6 +75,8 @@ private:
     const QString mZeroCountProfile = qsl("dictionary zero");
     const QString mQuietProfile = qsl("dictionary quiet");
     const QString mAffixProfile = qsl("dictionary affix");
+    const QString mCountlessProfile = qsl("dictionary countless");
+    const QString mVanishedProfile = qsl("dictionary vanished");
 
     QString dictionaryPath(const QString& profileName) const { return MudletApp::getMudletPath(enums::profileDataItemPath, profileName, qsl("profile.dic")); }
 
@@ -134,6 +136,8 @@ private slots:
         makeProfileFolder(mZeroCountProfile);
         makeProfileFolder(mQuietProfile);
         makeProfileFolder(mAffixProfile);
+        makeProfileFolder(mCountlessProfile);
+        makeProfileFolder(mVanishedProfile);
     }
 
     void cleanupTestCase()
@@ -271,6 +275,33 @@ private slots:
         QString graphemes = lines.at(1).mid(4);
         std::sort(graphemes.begin(), graphemes.end());
         QCOMPARE(graphemes, qsl("abdhinrs"));
+    }
+
+    // The wiki tells players the file is theirs to edit, and a word list typed in
+    // by hand has no count on top, so its first line is a word to keep (#10863)
+    void test_aDictionaryWithNoCountKeepsItsFirstWord()
+    {
+        writeDictionary(mCountlessProfile, qsl("zorkmid\nfrotz\n"));
+
+        QSet<QString> wordSet;
+        Hunhandle* handle = TSpellChecker::prepareProfileDictionary(mCountlessProfile, wordSet);
+        QVERIFY2(handle, "prepareProfileDictionary() gave up before reaching hunspell");
+        Hunspell_destroy(handle);
+
+        QCOMPARE(wordSet, QSet<QString>({qsl("frotz"), qsl("zorkmid")}));
+        QCOMPARE(dictionaryLines(mCountlessProfile), QStringList({qsl("2"), qsl("frotz"), qsl("zorkmid")}));
+    }
+
+    // The count of the words already on disk is only reported on, so a file that
+    // went away during the session must not cost the words added in it (#10863)
+    void test_savingWhenTheDictionaryFileHasGoneKeepsTheWords()
+    {
+        QVERIFY(!QFileInfo::exists(dictionaryPath(mVanishedProfile)));
+        QSet<QString> wordSet{qsl("zorkmid"), qsl("frotz")};
+
+        QVERIFY2(TSpellChecker::saveDictionary(MudletApp::getMudletPath(enums::profileDataItemPath, mVanishedProfile, qsl("profile")), wordSet),
+                 "saveDictionary() gave up on the words because the file it was saving them to had gone");
+        QCOMPARE(dictionaryLines(mVanishedProfile), QStringList({qsl("2"), qsl("frotz"), qsl("zorkmid")}));
     }
 };
 
