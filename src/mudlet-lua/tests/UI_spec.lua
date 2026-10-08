@@ -4739,6 +4739,32 @@ describe("Window and label state", function()
       assert.is_truthy(err:find("setBorderTop: bad argument #1 type", 1, true))
     end)
 
+    it("every border setter refuses a negative or overflowing size and leaves the borders alone", function()
+      -- the console takes opposite borders off its own size, which such values overflow
+      setBorderSizes(6, 6, 6, 6)
+      local function refusal(size)
+        return {nil, ("border size %d is out of range, it must be between 0 and 16777215"):format(size)}
+      end
+      assert.are.same(refusal(-10), {setBorderTop(-10)})
+      assert.are.same(refusal(-2147483640), {setBorderLeft(-2147483640)})
+      assert.are.same(refusal(-1), {setBorderRight(-1)})
+      assert.are.same(refusal(2147483640), {setBorderBottom(2147483640)})
+      assert.are.same(refusal(-50), {setBorderSizes(-50)})
+      assert.are.same(refusal(-5), {setBorderSizes(4, -5)})
+      assert.are.same(refusal(-3), {setBorderSizes(1, 2, -3)})
+      assert.are.same(refusal(-4), {setBorderSizes(1, 2, 3, -4)})
+      assert.are.same({top = 6, right = 6, bottom = 6, left = 6}, getBorderSizes())
+      -- 0 is how a border is taken away again
+      assert.are.same({true}, {setBorderLeft(0)})
+      assert.are.equal(0, getBorderLeft())
+      -- so that a refusal can be told from a success by the first value alone
+      assert.are.same({true}, {setBorderTop(6)})
+      assert.are.same({true}, {setBorderRight(6)})
+      assert.are.same({true}, {setBorderBottom(6)})
+      assert.are.same({true}, {setBorderSizes(6)})
+      assert.are.same({true}, {setBorderSizes()})
+    end)
+
     it("setBorderColor round-trips through getBorderColor", function()
       setBorderColor(11, 22, 33)
       assert.are.same({11, 22, 33}, {getBorderColor()})
