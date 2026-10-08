@@ -2940,38 +2940,6 @@ static bool packageUnpacksAFolder(const QString& fileName)
     return fileName.endsWith(qsl(".zip"), Qt::CaseInsensitive) || fileName.endsWith(qsl(".mpackage"), Qt::CaseInsensitive);
 }
 
-// Raised twice - a generic event and a detailed one - to serve both a simple need ("I just want the
-// uninstall event") and a more specific one ("I need to know the module was uninstalled via Lua").
-static void raiseUninstallEvents(Host& host, const QString& packageName, enums::PackageModuleType thing)
-{
-    TEvent genericUninstallEvent{};
-    genericUninstallEvent.mArgumentList.append(QLatin1String("sysUninstall"));
-    genericUninstallEvent.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
-    genericUninstallEvent.mArgumentList.append(packageName);
-    genericUninstallEvent.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
-    host.raiseEvent(genericUninstallEvent);
-
-    TEvent detailedUninstallEvent{};
-    switch (thing) {
-    case enums::PackageModuleType::Package:
-        detailedUninstallEvent.mArgumentList.append(QLatin1String("sysUninstallPackage"));
-        break;
-    case enums::PackageModuleType::ModuleFromUI:
-        detailedUninstallEvent.mArgumentList.append(QLatin1String("sysUninstallModule"));
-        break;
-    case enums::PackageModuleType::ModuleSync:
-        detailedUninstallEvent.mArgumentList.append(QLatin1String("sysSyncUninstallModule"));
-        break;
-    case enums::PackageModuleType::ModuleFromScript:
-        detailedUninstallEvent.mArgumentList.append(QLatin1String("sysLuaUninstallModule"));
-        break;
-    }
-    detailedUninstallEvent.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
-    detailedUninstallEvent.mArgumentList.append(packageName);
-    detailedUninstallEvent.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
-    host.raiseEvent(detailedUninstallEvent);
-}
-
 std::pair<bool, QString> Host::installPackage(const QString& fileName, enums::PackageModuleType thing, bool quiet)
 {
     // Wait for profile save to complete before installing package
@@ -3213,53 +3181,26 @@ std::pair<bool, QString> Host::installPackage(const QString& fileName, enums::Pa
     QStringList itemsWithErrors;
     QStringList itemsWithErrorNames;
     QString moduleLoadError;
-    // An install's script asked to remove the package being read in. Queued after the install events so
-    // handlers hear sysInstall before sysUninstall: zero timers fire in registration order, which Qt does
-    // but doesn't promise, so Package_spec.lua pins it. Only once the install stack is empty, or a nested
-    // install would run a removal owed to the outer one before its sysInstall. The snapshot keeps a drain
-    // from carrying a later one's work.
-    auto queueTheUninstallsDeferredByAnInstall = [this]() {
-        if (!mPackagesBeingInstalled.isEmpty() || mUninstallsDeferredByAnInstall.isEmpty()) {
-            return;
-        }
-        const auto deferred = mUninstallsDeferredByAnInstall;
-        mUninstallsDeferredByAnInstall.clear();
-        QTimer::singleShot(0ms, this, [this, guard = QPointer<Host>(this), deferred]() {
-            // The queued call can arrive after this Host is destroyed
-            if (!guard) {
-                return;
-            }
-            runUninstallsDeferredByAnInstall(deferred);
-        });
-    };
-    // importPackage() keeps the items it read before the XML broke, so a package whose XML could not be
-    // read would be listed, saved into the profile and run half of itself. Modules are left listed: their
-    // source file is the user's, and a sync or reload reads it again.
-    auto takeBackAPackageThatDidNotLoad = [this, &queueTheUninstallsDeferredByAnInstall](const QString& packageName) {
-        // Its scripts have run and may have set up handlers, timers and windows that only these tear down
-        raiseUninstallEvents(*this, packageName, enums::PackageModuleType::Package);
+    // A package file that broke before a single item could be read out of it would be listed, and saved into
+    // the profile, with nothing in it. As nothing of it ran, taking it back leaves nothing behind. One that
+    // got as far as an item stays installed and is warned about, as its items are running.
+    auto takeBackAPackageNothingWasReadFrom = [this](const QString& packageName) {
         mInstalledPackages.removeAll(packageName);
+        // A file from a later Mudlet is turned away after the empty folders for its items were made
         mTriggerUnit.uninstall(packageName);
         mTimerUnit.uninstall(packageName);
         mAliasUnit.uninstall(packageName);
         mActionUnit.uninstall(packageName);
         mScriptUnit.uninstall(packageName);
         mKeyUnit.uninstall(packageName);
-        emit signal_packageRemoved(packageName);
         if (auto* fonts = FontManager::self()) {
             fonts->unloadFonts(getName(), packageName);
         }
-        // A removal its scripts asked for has nothing left to remove
-        mUninstallsDeferredByAnInstall.removeIf([&packageName](const DeferredUninstall& request) {
-            return request.packageName == packageName && request.thing == enums::PackageModuleType::Package;
-        });
-        // A package its scripts installed may have asked for its own removal, which waits for this one
-        queueTheUninstallsDeferredByAnInstall();
         getActionUnit()->updateAllToolbars();
         emit signal_editorCleanResetRequested();
-        substituteMissingDisplayFont();
+        emit signal_packageListChanged();
     };
-    auto packageDidNotLoadReason = [](const QString& packageName, const QString& errorMsg) {
+    auto nothingCouldBeReadReason = [](const QString& packageName, const QString& errorMsg) {
         //: %1 is the package name, %2 is the reason its contents could not be read
         return tr("the contents of package \"%1\" could not be read: %2").arg(packageName, errorMsg);
     };
@@ -3435,6 +3376,7 @@ std::pair<bool, QString> Host::installPackage(const QString& fileName, enums::Pa
         _filterList << qsl("*.xml") << qsl("*.trigger");
         const QFileInfoList entries = _dir.entryInfoList(_filterList, QDir::Files);
         bool registeredFromArchive = false;
+        bool anItemWasRead = false;
         for (auto& entry : entries) {
             file2.setFileName(entry.absoluteFilePath());
             if (!file2.open(QFile::ReadOnly | QFile::Text)) {
@@ -3455,6 +3397,7 @@ std::pair<bool, QString> Host::installPackage(const QString& fileName, enums::Pa
             mPackagesBeingInstalled.push(packageName);
             auto [success, errorMsg] = reader.importPackage(&file2, packageName, static_cast<int>(thing));
             mPackagesBeingInstalled.pop();
+            anItemWasRead = anItemWasRead || reader.readAnItem();
             itemsWithErrors << reader.itemsWithErrors();
             itemsWithErrorNames << reader.itemsWithErrorNames();
             if (thing != enums::PackageModuleType::Package) {
@@ -3465,17 +3408,19 @@ std::pair<bool, QString> Host::installPackage(const QString& fileName, enums::Pa
                     postMessage(tr("[ WARN ]  - Failed to load module \"%1\": %2").arg(packageName, errorMsg));
                     moduleLoadError = errorMsg;
                 }
-            } else if (!success) {
+            } else if (!success && !anItemWasRead) {
                 file2.close();
-                takeBackAPackageThatDidNotLoad(packageName);
-                // Not the whole snapshot: its scripts have run, and may have installed or described others
-                if (packageInfoBeforeConfig.contains(packageName)) {
-                    mPackageInfo[packageName] = packageInfoBeforeConfig.value(packageName);
-                } else {
-                    mPackageInfo.remove(packageName);
-                }
+                takeBackAPackageNothingWasReadFrom(packageName);
+                takeBackWhatTheManifestOverwrote();
                 discardTheFolderThisInstallMade();
-                return fail(packageDidNotLoadReason(packageName, errorMsg));
+                return fail(nothingCouldBeReadReason(packageName, errorMsg));
+            } else if (!success) {
+                // Only modules were ever asked whether their contents loaded, so a
+                // package whose XML is corrupt was registered, left in the profile
+                // and never mentioned - the silence this whole change is about
+                qWarning() << "Host::installPackage() WARNING - failed to load package" << packageName << ":" << errorMsg;
+                //: %1 is the package name, %2 is the reason its contents could not be read
+                postMessage(tr("[ WARN ]  - Failed to load package \"%1\": %2").arg(packageName, errorMsg));
             }
             file2.close();
         }
@@ -3529,11 +3474,14 @@ std::pair<bool, QString> Host::installPackage(const QString& fileName, enums::Pa
                 postMessage(tr("[ WARN ]  - Failed to load module \"%1\": %2").arg(packageName, errorMsg));
                 moduleLoadError = errorMsg;
             }
-        } else if (!success) {
+        } else if (!success && !reader.readAnItem()) {
             file2.close();
-            takeBackAPackageThatDidNotLoad(packageName);
-            removePackageInfo(packageName, false);
-            return fail(packageDidNotLoadReason(packageName, errorMsg));
+            takeBackAPackageNothingWasReadFrom(packageName);
+            return fail(nothingCouldBeReadReason(packageName, errorMsg));
+        } else if (!success) {
+            qWarning() << "Host::installPackage() WARNING - failed to load package" << packageName << ":" << errorMsg;
+            //: %1 is the package name, %2 is the reason its contents could not be read
+            postMessage(tr("[ WARN ]  - Failed to load package \"%1\": %2").arg(packageName, errorMsg));
         }
         file2.close();
     }
@@ -3649,8 +3597,22 @@ std::pair<bool, QString> Host::installPackage(const QString& fileName, enums::Pa
         raiseEvent(detailedInstallEvent);
     });
 
-    // After the install events above, so handlers hear sysInstall before sysUninstall
-    queueTheUninstallsDeferredByAnInstall();
+    // An install's script asked to remove the package being read in. Queued after the install events so
+    // handlers hear sysInstall before sysUninstall: zero timers fire in registration order, which Qt does
+    // but doesn't promise, so Package_spec.lua pins it. Only once the install stack is empty, or a nested
+    // install would run a removal owed to the outer one before its sysInstall. The snapshot keeps a drain
+    // from carrying a later one's work.
+    if (mPackagesBeingInstalled.isEmpty() && !mUninstallsDeferredByAnInstall.isEmpty()) {
+        const auto deferred = mUninstallsDeferredByAnInstall;
+        mUninstallsDeferredByAnInstall.clear();
+        QTimer::singleShot(0ms, this, [this, guard = QPointer<Host>(this), deferred]() {
+            // As above: the queued call can arrive after this Host is destroyed.
+            if (!guard) {
+                return;
+            }
+            runUninstallsDeferredByAnInstall(deferred);
+        });
+    }
 
     emit signal_packageListChanged();
 
@@ -3853,7 +3815,35 @@ bool Host::uninstallPackage(const QString& packageName, enums::PackageModuleType
 
     //PackageModuleType::ModuleSync seems to be only used for reloading/syncing
     //No need to remove package info as it can cause the info to be lost
-    raiseUninstallEvents(*this, packageName, thing);
+    // raise 2 events - a generic one and a more detailed one to serve both
+    // a simple need ("I just want the uninstall event") and a more specific need
+    // ("I specifically need to know when the module was uninstalled via Lua")
+    TEvent genericUninstallEvent{};
+    genericUninstallEvent.mArgumentList.append(QLatin1String("sysUninstall"));
+    genericUninstallEvent.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
+    genericUninstallEvent.mArgumentList.append(packageName);
+    genericUninstallEvent.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
+    raiseEvent(genericUninstallEvent);
+
+    TEvent detailedUninstallEvent{};
+    switch (thing) {
+    case enums::PackageModuleType::Package:
+        detailedUninstallEvent.mArgumentList.append(QLatin1String("sysUninstallPackage"));
+        break;
+    case enums::PackageModuleType::ModuleFromUI:
+        detailedUninstallEvent.mArgumentList.append(QLatin1String("sysUninstallModule"));
+        break;
+    case enums::PackageModuleType::ModuleSync:
+        detailedUninstallEvent.mArgumentList.append(QLatin1String("sysSyncUninstallModule"));
+        break;
+    case enums::PackageModuleType::ModuleFromScript:
+        detailedUninstallEvent.mArgumentList.append(QLatin1String("sysLuaUninstallModule"));
+        break;
+    }
+    detailedUninstallEvent.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
+    detailedUninstallEvent.mArgumentList.append(packageName);
+    detailedUninstallEvent.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
+    raiseEvent(detailedUninstallEvent);
 
     // A handler of the events above may have started a save the top guard couldn't see. Refusing is too
     // late - handlers were told, and packages dismantle themselves on hearing it (generic_mapper kills all
