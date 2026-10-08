@@ -76,8 +76,10 @@ public:
     bool processDataStream(const Qt::Key, const Qt::KeyboardModifiers);
     // Query-only counterpart to processDataStream(), which executes what it matches
     bool wouldMatch(const Qt::Key, const Qt::KeyboardModifiers) const;
-    // The binding wouldMatch() found, for naming it in a clash report
+    // The binding wouldMatch() found
     const TKey* firstMatch(const Qt::Key, const Qt::KeyboardModifiers) const;
+    // As firstMatch(), but switched off bindings count too, as enableKey() can make them fire
+    const TKey* firstBinding(const Qt::Key, const Qt::KeyboardModifiers) const;
     void markCleanup(TKey* pT);
     void doCleanup();
     int processingDepth() const { return mProcessingDepth; }

@@ -877,10 +877,11 @@ bool mudlet::addonShortcutUsable(const QKeySequence& sequence, const Host* pHost
     // key handling rather than by Qt, so a menu item placed over one takes the
     // key away silently - the item gets the event first and the binding simply
     // stops firing. Only a single-chunk sequence can clash, as a binding is one
-    // key and its modifiers.
+    // key and its modifiers. A switched off binding counts: enableKey() checks
+    // for no commands, and scripts commonly switch groups of bindings on and off.
     if (pHost && sequence.count() == 1) {
         const QKeyCombination combination = sequence[0];
-        if (const TKey* pKey = pHost->getKeyUnit()->firstMatch(combination.key(), combination.keyboardModifiers())) {
+        if (const TKey* pKey = pHost->getKeyUnit()->firstBinding(combination.key(), combination.keyboardModifiers())) {
             // A temporary binding is named after its own id and one made in the
             // editor need never have been given a name, so there is nothing
             // worth quoting: saying what holds the key beats quoting a label
@@ -1353,7 +1354,7 @@ void mudlet::warnProfilesLosingBindingTo(const QKeySequence& sequence, Host* pHo
         if (pOtherHost.isNull() || pOtherHost.data() == pHost || pOtherHost->isClosingDown()) {
             continue;
         }
-        if (!pOtherHost->getKeyUnit()->wouldMatch(combination.key(), combination.keyboardModifiers())) {
+        if (!pOtherHost->getKeyUnit()->firstBinding(combination.key(), combination.keyboardModifiers())) {
             continue;
         }
         // The editor rather than the console. A package re-places its commands

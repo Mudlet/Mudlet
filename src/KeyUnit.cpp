@@ -169,6 +169,22 @@ const TKey* KeyUnit::firstMatch(const Qt::Key key, const Qt::KeyboardModifiers m
     return nullptr;
 }
 
+const TKey* KeyUnit::firstBinding(const Qt::Key key, const Qt::KeyboardModifiers modifiers) const
+{
+    for (auto keyObject : mKeyRootNodeList) {
+        // Only whole top level items are ever queued for deletion; see enableKey()
+        if (!keyObject || mCleanupSet.contains(keyObject) || uninstallList.contains(keyObject)) {
+            continue;
+        }
+
+        if (const TKey* match = keyObject->firstBinding(key, modifiers)) {
+            return match;
+        }
+    }
+
+    return nullptr;
+}
+
 void KeyUnit::compileAll()
 {
     // Switched off ones as well: a reset has just closed the Lua state their
