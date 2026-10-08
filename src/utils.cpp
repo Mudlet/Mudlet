@@ -53,6 +53,24 @@ bool utils::unzip(const QString& archivePath, const QString& destination, const 
         return false;
     }
 
+    // An entry such as "../x" would otherwise be written outside the destination ("Zip Slip"). A
+    // backslash counts as a separator because Windows treats it as one.
+    const QString root = QDir::cleanPath(QDir(destination).absolutePath());
+    // cleanPath() keeps the trailing separator of a filesystem root ("/", "C:/")
+    const QString rootWithSeparator = root.endsWith(QLatin1Char('/')) ? root : root + QLatin1Char('/');
+    auto staysInsideDestination = [&root, &rootWithSeparator](const QString& entryInArchive) {
+        QString entry = entryInArchive;
+        entry.replace(QLatin1Char('\\'), QLatin1Char('/'));
+        const QString target = QDir::cleanPath(rootWithSeparator + entry);
+        return target == root || target.startsWith(rootWithSeparator);
+    };
+    auto refuseEscapingEntry = [&](const QString& entryInArchive) {
+        qWarning().noquote().nospace() << "utils::unzip(\"" << archivePath << "\", \"" << destination << "\", \"" << tmpDir.absolutePath() << "\") WARNING - refusing the archive, its entry \""
+                                       << entryInArchive << "\" would be written outside the destination";
+        zip_close(archive);
+        return false;
+    };
+
     // Gather the needed directories first rather than relying on (zero length) entries ending in '/',
     // which some archive building libraries omit.
     QMap<QString, QString> directoriesNeededMap;
@@ -63,6 +81,9 @@ bool utils::unzip(const QString& archivePath, const QString& destination, const 
         // than read the previous entry's leftovers
         if (!zip_stat_index(archive, static_cast<zip_uint64_t>(i), 0, &zs) && (zs.valid & ZIP_STAT_NAME)) {
             const QString entryInArchive(zs.name);
+            if (!staysInsideDestination(entryInArchive)) {
+                return refuseEscapingEntry(entryInArchive);
+            }
             const QString pathInArchive(entryInArchive.section(qsl("/"), 0, -2));
             if (entryInArchive.endsWith(QLatin1Char('/'))) {
                 if (!directoriesNeededMap.contains(pathInArchive)) {
@@ -99,6 +120,9 @@ bool utils::unzip(const QString& archivePath, const QString& destination, const 
             return false;
         }
         const QString entryInArchive(zs.name);
+        if (!staysInsideDestination(entryInArchive)) {
+            return refuseEscapingEntry(entryInArchive);
+        }
         if (!entryInArchive.endsWith(QLatin1Char('/'))) {
             zf = zip_fopen_index(archive, static_cast<zip_uint64_t>(i), 0);
             if (!zf) {

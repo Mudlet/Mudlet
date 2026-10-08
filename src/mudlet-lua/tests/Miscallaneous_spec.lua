@@ -1716,6 +1716,82 @@ describe("Tests C++ functions in the Miscallaneous category", function()
         assert.is_false(fileExists(extractDirectory .. "/readme.txt"))
       end)
 
+      -- Stored, empty entries need no checksum, so the archive can be written here: no zip
+      -- tool would store a name that climbs out of the folder it is unpacked into.
+      local function writeArchiveOfEmptyFiles(path, entries)
+        local function le(value, bytes)
+          local out = {}
+          for i = 1, bytes do
+            out[i] = string.char(value % 256)
+            value = math.floor(value / 256)
+          end
+          return table.concat(out)
+        end
+        local localHeaders, centralDirectory, offset = {}, {}, 0
+        for i, entry in ipairs(entries) do
+          local common = le(20, 2) .. le(0, 2) .. le(0, 2) .. le(0, 2) .. le(0x21, 2) .. le(0, 4) .. le(0, 4) .. le(0, 4) .. le(#entry, 2) .. le(0, 2)
+          local header = le(0x04034b50, 4) .. common .. entry
+          localHeaders[i] = header
+          centralDirectory[i] = le(0x02014b50, 4) .. le(20, 2) .. common .. le(0, 2) .. le(0, 2) .. le(0, 2) .. le(0, 4) .. le(offset, 4) .. entry
+          offset = offset + #header
+        end
+        local directory = table.concat(centralDirectory)
+        writeFile(path, table.concat(localHeaders) .. directory .. le(0x06054b50, 4) .. le(0, 2) .. le(0, 2) .. le(#entries, 2) .. le(#entries, 2) .. le(#directory, 4) .. le(offset, 4) .. le(0, 2))
+      end
+
+      -- safe.txt comes first, so finding it unpacked means entries were written before the refusal
+      local function assertRefusesEscapingArchive(entries, outsideNames)
+        local base = getMudletHomeDir() .. "/mudlet-spec-unzipslip"
+        local inside = base .. "/inside"
+        local archive = base .. "/slip.zip"
+        local outside = {}
+        for i, name in ipairs(outsideNames) do
+          outside[i] = base .. "/" .. name
+        end
+        finally(function()
+          for _, path in ipairs(outside) do
+            os.remove(path)
+          end
+          os.remove(inside .. "/safe.txt")
+          for _, entry in ipairs(entries) do
+            os.remove(inside .. "/" .. entry)
+          end
+          lfs.rmdir(inside .. "/sub")
+          lfs.rmdir(inside)
+          os.remove(archive)
+          lfs.rmdir(base)
+        end)
+        lfs.mkdir(base)
+        writeArchiveOfEmptyFiles(archive, entries)
+
+        assert.is_true(unzipAsync(archive, inside))
+
+        local event = waitForEvent("sysUnzipError", 5000)
+        assert.equals("sysUnzipError", event)
+        for _, path in ipairs(outside) do
+          assert.is_false(fileExists(path), path .. " was written outside the extract location")
+        end
+        assert.is_false(fileExists(inside .. "/safe.txt"), "part of the refused archive was unpacked before it was refused")
+      end
+
+      it("refuses an archive whose entries would be written outside the extract location", function()
+        if not testMode then
+          pending("waiting for sysUnzipError needs MUDLET_TEST_MODE")
+          return
+        end
+        assertRefusesEscapingArchive({"safe.txt", "../mudlet-spec-escaped.txt", "sub/../../mudlet-spec-escaped-too.txt"},
+                                     {"mudlet-spec-escaped.txt", "mudlet-spec-escaped-too.txt"})
+      end)
+
+      it("refuses an archive that climbs out of the extract location with a backslash", function()
+        if not testMode then
+          pending("waiting for sysUnzipError needs MUDLET_TEST_MODE")
+          return
+        end
+        -- Windows takes a backslash as a separator, so this escapes there; elsewhere it is still refused
+        assertRefusesEscapingArchive({"safe.txt", "..\\mudlet-spec-escaped-back.txt"}, {"mudlet-spec-escaped-back.txt"})
+      end)
+
       it("survives the profile that asked for it closing before the extraction reports back", function()
         if not testMode then
           pending("pumping events after closing the other profile needs MUDLET_TEST_MODE")
