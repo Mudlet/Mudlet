@@ -152,7 +152,8 @@ private:
 
     // ...and one that installs rather than being refused: an archive is only a
     // package if it holds a Mudlet package XML, empty though this one's units are.
-    static bool writeInstallableArchive(const QString& path, const QString& packageName)
+    // paddingBytes adds an uncompressed filler entry, to make the archive file at least that large.
+    static bool writeInstallableArchive(const QString& path, const QString& packageName, const qint64 paddingBytes = 0)
     {
         static const char packageXml[] = "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n"
                                          "<!DOCTYPE MudletPackage>\n"
@@ -160,7 +161,32 @@ private:
                                          "<TriggerPackage /><TimerPackage /><AliasPackage /><ActionPackage />\n"
                                          "<ScriptPackage /><KeyPackage /><VariablePackage><HiddenVariables /></VariablePackage>\n"
                                          "</MudletPackage>\n";
-        return writeArchive(path, qsl("%1.xml").arg(packageName), QByteArray(packageXml, sizeof(packageXml) - 1));
+        if (paddingBytes <= 0) {
+            return writeArchive(path, qsl("%1.xml").arg(packageName), QByteArray(packageXml, sizeof(packageXml) - 1));
+        }
+        int errorCode = 0;
+        zip* archive = zip_open(path.toUtf8().constData(), ZIP_CREATE | ZIP_TRUNCATE, &errorCode);
+        if (!archive) {
+            return false;
+        }
+        zip_source* xmlSource = zip_source_buffer(archive, packageXml, sizeof(packageXml) - 1, 0);
+        if (!xmlSource || zip_file_add(archive, qsl("%1.xml").arg(packageName).toUtf8().constData(), xmlSource, ZIP_FL_ENC_UTF_8) < 0) {
+            zip_source_free(xmlSource);
+            zip_discard(archive);
+            return false;
+        }
+        // zip_source_buffer() does not copy, so this must outlive zip_close()
+        const QByteArray padding(paddingBytes, '\0');
+        zip_source* paddingSource = zip_source_buffer(archive, padding.constData(), static_cast<zip_uint64_t>(padding.size()), 0);
+        const zip_int64_t index = paddingSource ? zip_file_add(archive, "padding.bin", paddingSource, ZIP_FL_ENC_UTF_8) : -1;
+        if (index < 0 || zip_set_file_compression(archive, static_cast<zip_uint64_t>(index), ZIP_CM_STORE, 0) < 0) {
+            if (index < 0) {
+                zip_source_free(paddingSource);
+            }
+            zip_discard(archive);
+            return false;
+        }
+        return zip_close(archive) == 0;
     }
 
     // ...and one that both installs and renames itself, which is what makes an
@@ -269,8 +295,9 @@ private slots:
     // ...and so does a batch of installs. One that saved on the spot left that
     // save in flight, which put the next install off until it had finished, so
     // the Package Manager's multi-file install queued behind a save per package.
-    // Its installs are not quiet, so each shows the unpacking dialog, which pumps
-    // the event loop the save owed by the install before it is waiting in.
+    // Its installs are not quiet, and an archive large enough to show the
+    // unpacking dialog has it pump the event loop the save owed by the install
+    // before it is waiting in, so that case's archives are padded past the size.
     void test_aBatchOfInstallsOwesOneSave_data()
     {
         QTest::addColumn<bool>("quiet");
@@ -285,17 +312,20 @@ private slots:
         QVERIFY2(archiveDir.isValid(), "Could not create a temporary directory for the test archives");
         const QStringList packageNames{qsl("install-save-batch-one"), qsl("install-save-batch-two"), qsl("install-save-batch-three")};
         for (const auto& packageName : packageNames) {
-            QVERIFY2(writeInstallableArchive(archiveDir.filePath(qsl("%1.mpackage").arg(packageName)), packageName), "Could not write a test archive");
+            QVERIFY2(writeInstallableArchive(archiveDir.filePath(qsl("%1.mpackage").arg(packageName)), packageName, quiet ? 0 : Host::scmArchiveSizeWorthAnUnpackingDialog),
+                     "Could not write a test archive");
         }
 
         mpHost->waitForProfileSave();
         QSignalSpy saveSpy(mpHost, &Host::profileSaveStarted);
+        QSignalSpy dialogSpy(mpHost, &Host::signal_showUnpackingProgress);
         // no pumping in between, as in the Package Manager's loop
         for (const auto& packageName : packageNames) {
             auto [ok, message] = mpHost->installPackage(archiveDir.filePath(qsl("%1.mpackage").arg(packageName)), enums::PackageModuleType::Package, quiet);
             QVERIFY2(ok, qPrintable(message));
             QVERIFY2(mpHost->mInstalledPackages.contains(packageName), qPrintable(qsl("%1 was put off behind a save rather than installed").arg(packageName)));
         }
+        QCOMPARE(dialogSpy.count(), quiet ? 0 : packageNames.size());
         QVERIFY2(mpHost->hasPendingProfileSave(), "The installs left the profile no save to do");
         QVERIFY2(saveSpy.isEmpty(), "A save started partway through the batch");
 

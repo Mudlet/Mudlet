@@ -166,6 +166,8 @@ class Host : public QObject
     friend class HostWidgetDecouplingTest;
     // Allows the functional test to answer the keychain lookup in place of a keychain:
     friend class TelnetLatePasswordTest;
+    // Allows the functional test to size its archives past the unpacking dialog's threshold:
+    friend class PackageRemovalSaveTeardownTest;
 
 public:
     Host(int port, const QString& mHostName, const QString& login, const QString& pass, int host_id);
