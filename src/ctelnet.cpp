@@ -259,6 +259,7 @@ void cTelnet::reset()
     abandonNetworkLatencyMeasurement();
     command = "";
     mMudData = "";
+    mMxpDetectionTail.clear();
 
     mServerRequestedSGA = false;
     mCharacterModeDetected = false;
@@ -5172,6 +5173,9 @@ void cTelnet::gotPrompt(std::string& mud_data)
 
     if (!mpHost->mPromptedForMXPProcessorOn && !mpHost->getForceMXPProcessorOn() && !isMXPEnabled()) {
         trackMXPElementDetection(mud_data);
+    } else {
+        // gotRest() may still scan, and must not join its next read to one this read came between
+        mMxpDetectionTail.clear();
     }
 
     // Patch for servers that need GA/EOR for prompt fixups
@@ -5233,7 +5237,16 @@ void cTelnet::trackMXPElementDetection(const std::string& line)
         return;
     }
 
-    if (!containsMxpModeSwitch(line)) {
+    // ESC[#z is four bytes, so three carried over from the last read are enough to complete one
+    constexpr size_t tailLength = 3;
+    const bool found = containsMxpModeSwitch(line) || (!mMxpDetectionTail.empty() && containsMxpModeSwitch(mMxpDetectionTail + line.substr(0, tailLength)));
+    if (line.size() >= tailLength) {
+        mMxpDetectionTail.assign(line, line.size() - tailLength, tailLength);
+    } else {
+        mMxpDetectionTail += line;
+        mMxpDetectionTail.erase(0, mMxpDetectionTail.size() > tailLength ? mMxpDetectionTail.size() - tailLength : 0);
+    }
+    if (!found) {
         return;
     }
 
@@ -5300,11 +5313,9 @@ void cTelnet::slot_timerPosting()
         return;
     }
 
+    // Not scanned for MXP: gotRest() saw these bytes as they came in, and scanning them again with the
+    // flush marker would put that, not the read's last bytes, in the tail the next read is joined to
     mMudData += "\r";
-
-    if (!mpHost->mPromptedForMXPProcessorOn && !mpHost->getForceMXPProcessorOn() && !isMXPEnabled()) {
-        trackMXPElementDetection(mMudData);
-    }
 
     postData();
     mMudData = "";

@@ -2058,6 +2058,52 @@ describe("MXP auto-detection from the mode switch escape", function()
     feed("\r\n")
   end)
 
+  -- each feedTelnet() is a read of its own, as two packets from the game are
+  for cut = 1, 3 do
+    it(("finds the switch when it is split between two reads after byte %d"):format(cut), function()
+      local mark = getLastLineNumber("main")
+      local switch = "\27[1z"
+      feed(switch:sub(1, cut))
+      feed(switch:sub(cut + 1) .. "<send>MXPSPLITLOOK</send>\r\n")
+      assert.is_true(getConfig("promptForMXPProcessorOn"))
+      -- and in time for the line it opens to be read as MXP
+      local lines = getLines("main", mark, getLastLineNumber("main"))
+      assert.equals("MXPSPLITLOOK", lines[#lines])
+    end)
+  end
+
+  it("finds the switch when each of its bytes is a read of its own", function()
+    for byte in ("\27[1z"):gmatch(".") do
+      feed(byte)
+    end
+    feed("<send>MXPSPLITBYTES</send>\r\n")
+    assert.is_true(getConfig("promptForMXPProcessorOn"))
+  end)
+
+  -- the game pausing mid-switch for longer than the network packet timeout
+  -- makes cTelnet flush what it holds, which must not lose the switch's start
+  it("finds the switch when the posting timer flushes between its two reads", function()
+    local quietFor = function()
+      for _ = 1, 10 do
+        assert.is_true(pumpEvents(50), "pumpEvents needs MUDLET_TEST_MODE set, see the tests README")
+      end
+    end
+    local mark = getLastLineNumber("main")
+    feed("MXPTIMERCHECK")
+    quietFor()
+    local flushed = getLines("main", mark, getLastLineNumber("main") + 1)
+    feed("\r\n")
+    if not table.contains(flushed, "MXPTIMERCHECK") then
+      -- an IAC GA from an earlier spec stops the posting timer for the session
+      pending("cTelnet's posting timer is not running in this session")
+      return
+    end
+    feed("\27[1")
+    quietFor()
+    feed("z<send>MXPTIMERSPLIT</send>\r\n")
+    assert.is_true(getConfig("promptForMXPProcessorOn"))
+  end)
+
   it("ignores a mode number MXP does not define", function()
     feed("\27[8z<send>look</send>\r\n")
     assert.is_false(getConfig("promptForMXPProcessorOn"))

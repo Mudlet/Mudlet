@@ -592,6 +592,8 @@ private:
 
     std::string mMudData;
     bool mIsTimerPosting = false;
+    // The last bytes trackMXPElementDetection() saw, so an ESC[#z split between two reads is found
+    std::string mMxpDetectionTail;
     // Beats while a write waits on its reply - see NETWORK_LATENCY_BEAT in
     // ctelnet.cpp:
     QTimer* mpNetworkLatencyBeatTimer = nullptr;
