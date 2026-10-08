@@ -3104,7 +3104,7 @@ int TLuaInterpreter::expandAlias(lua_State* L)
     TLuaInterpreter* pL = host.getLuaInterpreter();
     // Anywhere but in an alias script, "command" keeps what was expanded: packages
     // such as Repeater read it afterwards as the last command
-    const int dispatchDepth = pL->pushNestedDispatchState(pL->runningAliasScript());
+    const int dispatchDepth = pL->pushNestedDispatchState(pL->mRunningAliasScript);
     if (dispatchDepth < 0) {
         qWarning().nospace() << "TLuaInterpreter::expandAlias(...) WARNING - not expanding " << payload << " as a garbage collection finaliser asked for it while the capture tables were being built.";
         lua_pushboolean(L, false);
@@ -3112,7 +3112,9 @@ int TLuaInterpreter::expandAlias(lua_State* L)
     }
     // Host::send will encode the UTF encoded data here in the wanted Server
     // encoding:
+    const bool outerAliasScriptPass = std::exchange(pL->mAliasScriptPass, pL->mRunningAliasScript);
     host.send(payload, wantPrint, false);
+    pL->mAliasScriptPass = outerAliasScriptPass;
     pL->popNestedDispatchState(dispatchDepth);
     lua_pushboolean(L, true);
     return 1;

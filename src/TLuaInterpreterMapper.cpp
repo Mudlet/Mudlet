@@ -2900,6 +2900,7 @@ int TLuaInterpreter::registerMapInfo(lua_State* L)
             name,
             [=](int roomID, int selectionSize, int areaId, int displayAreaId, QColor& infoColor) {
                 Q_UNUSED(infoColor)
+                const ScriptCallerScope callerScope(*pHost->getLuaInterpreter(), false);
                 const int callerStackTop = lua_gettop(L);
                 lua_rawgeti(L, LUA_REGISTRYINDEX, callback);
                 if (roomID > 0) {
@@ -3818,6 +3819,7 @@ TLuaInterpreter::ExitWeightFilterResult TLuaInterpreter::applyExitWeightFilter(i
         return result;
     }
 
+    const ScriptCallerScope callerScope(*this, false);
     lua_State* L = pGlobalLua;
     lua_rawgeti(L, LUA_REGISTRYINDEX, mExitWeightFilterRef);
     lua_pushinteger(L, roomId);

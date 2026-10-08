@@ -825,53 +825,136 @@ describe("Alias processing", function()
                 assert.are.equal("command_chain_inner", seen.inHandler, "the handler got a command the nested alias was given back")
             end)
 
-            it("gives the doSpeedWalk() that an alias's gotoRoom() runs the command it expanded", function()
-                local originalRoom = getPlayerRoom()
-                local savedSpeedWalk = rawget(_G, "doSpeedWalk")
-                local area = addAreaName("AliasSpecSpeedWalk")
+            it("gives a trigger with a script of text that an alias fed the command the trigger expanded", function()
+                _G.aliasSpecSeenInTextTrigger = nil
+                local triggerId = tempRegexTrigger([[^command_fed_text_trigger$]],
+                    [[expandAlias("command_from_text_trigger", false) aliasSpecSeenInTextTrigger = command]])
+                local aliasId = tempAlias([[^command_text_feeder$]], function()
+                    feedTriggers("\ncommand_fed_text_trigger\n")
+                end)
+                finally(function()
+                    killTrigger(triggerId)
+                    killAlias(aliasId)
+                    _G.aliasSpecSeenInTextTrigger = nil
+                end)
+
+                expandFromHandler("command_text_feeder")
+
+                assert.are.equal("command_from_text_trigger", rawget(_G, "aliasSpecSeenInTextTrigger"), "the trigger got the alias's command back")
+            end)
+
+            it("gives the exit weight filter that an alias's getPath() runs the command it expanded", function()
+                local area = addAreaName("AliasSpecExitWeightFilter")
                 local from = createRoomID()
                 addRoom(from)
                 setRoomArea(from, area)
-                setRoomCoordinates(from, 0, 0, 0)
                 local to = createRoomID()
                 addRoom(to)
                 setRoomArea(to, area)
                 setRoomCoordinates(to, 0, 1, 0)
                 setExit(from, to, "n")
-                -- centerview() only places the player with a mapper to show it in
-                local openedMapper = false
-                if not centerview(from) then
-                    openedMapper = openMapWidget()
-                    centerview(from)
-                end
                 local seen = {}
-                local stepId = tempAlias([[^command_speedwalk_step$]], function() end)
-                local walkerId = tempAlias([[^command_speedwalker$]], function()
-                    seen.walked = gotoRoom(to)
+                local stepId = tempAlias([[^command_filter_step$]], function() end)
+                local finderId = tempAlias([[^command_path_finder$]], function()
+                    seen.found = getPath(from, to)
                 end)
-                _G.doSpeedWalk = function()
-                    expandAlias("command_speedwalk_step", false)
-                    seen.inSpeedWalk = command
-                end
+                setExitWeightFilter(function()
+                    expandAlias("command_filter_step", false)
+                    seen.inFilter = command
+                    return 1
+                end)
                 finally(function()
-                    _G.doSpeedWalk = savedSpeedWalk
+                    setExitWeightFilter(nil)
                     killAlias(stepId)
-                    killAlias(walkerId)
-                    if originalRoom and originalRoom > 0 then
-                        centerview(originalRoom)
-                    end
+                    killAlias(finderId)
                     deleteRoom(from)
                     deleteRoom(to)
                     deleteArea(area)
-                    if openedMapper then
-                        closeMapWidget()
-                    end
                 end)
 
-                expandFromHandler("command_speedwalker")
+                expandFromHandler("command_path_finder")
 
-                assert.is_true(seen.walked, "gotoRoom() found no way there, so doSpeedWalk() never ran")
-                assert.are.equal("command_speedwalk_step", seen.inSpeedWalk, "doSpeedWalk() got the alias's command back")
+                assert.is_true(seen.found, "getPath() found no way there")
+                assert.are.equal("command_filter_step", seen.inFilter, "the filter got the alias's command back")
+            end)
+
+            -- The Command field is sent with no script in between, so the alias pass
+            -- it starts is not the feeding alias's own
+            it("leaves an alias that fed a trigger with a command field the last command expanded", function()
+                if not os.getenv("MUDLET_TEST_MODE") then
+                    pending("uninstalling the fixture needs pumpEvents(), which does nothing outside MUDLET_TEST_MODE")
+                    return
+                end
+                local path = getMudletHomeDir() .. "/alias-command-field-trigger.xml"
+                local seen = {}
+                local lastId = tempAlias([[^command_field_last$]], function() end)
+                local sentId = tempAlias([[^command_field_sent$]], function()
+                    expandAlias("command_field_last", false)
+                end)
+                local feederId = tempAlias([[^command_field_feeder$]], function()
+                    feedTriggers("\ncommand_field_trigger\n")
+                    seen.inFeeder = command
+                end)
+                finally(function()
+                    killAlias(lastId)
+                    killAlias(sentId)
+                    killAlias(feederId)
+                    -- uninstallPackage() refuses while the profile save the install
+                    -- started is still running
+                    local removed = false
+                    for _ = 1, 100 do
+                        if uninstallPackage("alias-command-field-trigger") == true then
+                            removed = true
+                            break
+                        end
+                        pumpEvents(50)
+                    end
+                    os.remove(path)
+                    pumpEvents(200)
+                    assert.is_true(removed, "could not uninstall the command field trigger package")
+                end)
+                local file = assert(io.open(path, "w"))
+                file:write([[<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE MudletPackage>
+<MudletPackage version="1.001">
+	<TriggerPackage>
+		<Trigger isActive="yes" isFolder="no" isTempTrigger="no" isMultiline="no" isPerlSlashGOption="no" isColorizerTrigger="no" isFilterTrigger="no" isSoundTrigger="no" isColorTrigger="no" isColorTriggerFg="no" isColorTriggerBg="no">
+			<name>command_field_trigger</name>
+			<script></script>
+			<triggerType>0</triggerType>
+			<conditonLineDelta>0</conditonLineDelta>
+			<mStayOpen>0</mStayOpen>
+			<mCommand>command_field_sent</mCommand>
+			<packageName></packageName>
+			<mFgColor>#ff0000</mFgColor>
+			<mBgColor>#ffff00</mBgColor>
+			<mSoundFile></mSoundFile>
+			<colorTriggerFgColor>#000000</colorTriggerFgColor>
+			<colorTriggerBgColor>#000000</colorTriggerBgColor>
+			<regexCodeList>
+				<string>^command_field_trigger$</string>
+			</regexCodeList>
+			<regexCodePropertyList>
+				<integer>1</integer>
+			</regexCodePropertyList>
+		</Trigger>
+	</TriggerPackage>
+	<TimerPackage />
+	<AliasPackage />
+	<ActionPackage />
+	<ScriptPackage />
+	<KeyPackage />
+	<VariablePackage>
+		<HiddenVariables />
+	</VariablePackage>
+</MudletPackage>
+]])
+                file:close()
+                assert.is_true(installPackage(path))
+
+                expandFromHandler("command_field_feeder")
+
+                assert.are.equal("command_field_last", seen.inFeeder, "the alias read a command an alias in the trigger's pass was given back")
             end)
 
             it("leaves command holding the last command expanded once the alias pass is over", function()

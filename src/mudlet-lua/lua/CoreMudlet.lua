@@ -44,7 +44,8 @@ if false then
 
   --- The <i>command variable</i> holds initial user command e.g. unchanged by any aliases or triggers.
   --- This is typically used in alias scripts, where an expandAlias() call the script makes does not change it. Anywhere
-  --- else it holds the last command that went through the aliases, including one sent by expandAlias() - see expandAlias().
+  --- else it holds the last command that went through the aliases, including one sent by expandAlias(), or, in a script
+  --- that an alias sets off after an expandAlias() call of its own, the alias's command - see expandAlias().
   ---
   --- @see line
   ---
@@ -250,9 +251,10 @@ if false then
   --- still the caller's own. An alias script also gets its own "command" back from each expandAlias() call it makes.
   --- Called from any other script - a trigger, timer, key binding, button or event handler, even one an alias set off
   --- with raiseEvent() or feedTriggers() - "command" holds the last command expanded, so an alias that sets off such a
-  --- script reads what that script expanded. Once the alias pass is over, "command" holds the last command expanded,
-  --- unless a script has since set it to a different value. A command sent at the command line is unaffected: every
-  --- alias it runs sees it in "command" as before.
+  --- script reads what that script expanded, while such a script reads the alias's own command if the alias has
+  --- already had it back from an expandAlias() call of its own. Once the alias pass is over, "command" holds the
+  --- last command expanded, unless a script has since set it to a different value. A command sent at the command
+  --- line is unaffected: every alias it runs sees it in "command" as before.
   ---
   --- @see send
   function expandAlias(command, print=1)
