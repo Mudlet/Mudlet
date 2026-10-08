@@ -691,11 +691,11 @@ int TLuaInterpreter::Wait(lua_State* L)
 {
     const int n = lua_gettop(L);
     if (n != 1) {
-        lua_pushstring(L, "Wait: wrong number of arguments");
+        lua_pushstring(L, "wait: wrong number of arguments");
         return lua_error(L);
     }
 
-    const int luaSleepMsec = getVerifiedInt(L, __func__, 1, "sleep time in msec");
+    const int luaSleepMsec = getVerifiedInt(L, "wait", 1, "sleep time in msec");
     msleep(luaSleepMsec);
     return 0;
 }
@@ -895,9 +895,21 @@ int TLuaInterpreter::spawn(lua_State* L)
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#loadReplay
 int TLuaInterpreter::loadReplay(lua_State* L)
 {
-    const QString replayFileName = getVerifiedString(L, __func__, 1, "replay file name");
+    return loadReplayFile(L, __func__);
+}
+
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#loadRawFile
+int TLuaInterpreter::loadRawFile(lua_State* L)
+{
+    return loadReplayFile(L, __func__);
+}
+
+// No documentation available in wiki - internal function
+int TLuaInterpreter::loadReplayFile(lua_State* L, const char* functionName)
+{
+    const QString replayFileName = getVerifiedString(L, functionName, 1, "replay file name");
     if (replayFileName.isEmpty()) {
-        return warnArgumentValue(L, __func__, "a blank string is not a valid replay file name");
+        return warnArgumentValue(L, functionName, "a blank string is not a valid replay file name");
     }
 
     Host& host = getHostFromLua(L);
@@ -908,7 +920,7 @@ int TLuaInterpreter::loadReplay(lua_State* L)
     }
     // Although we only use English text for Lua messages the errMsg could
     // contain a Windows pathFileName which may use non-ASCII characters:
-    return warnArgumentValue(L, __func__, qsl("unable to start replay, reason: '%1'").arg(errMsg));
+    return warnArgumentValue(L, functionName, qsl("unable to start replay, reason: '%1'").arg(errMsg));
 }
 
 // Internal helper for feedTelnet(...) and socketRaw(...) that enables the
@@ -3132,12 +3144,12 @@ int TLuaInterpreter::sendCmdLine(lua_State* L)
 // encoded in the required Mud Server encoding.
 int TLuaInterpreter::sendRaw(lua_State* L)
 {
-    if (!checkStringArg(L, __func__, 1, "command")) {
+    if (!checkStringArg(L, "send", 1, "command")) {
         return lua_error(L);
     }
     bool wantPrint = true;
     if (lua_gettop(L) > 1) {
-        wantPrint = getVerifiedBool(L, __func__, 2, "showOnScreen", true);
+        wantPrint = getVerifiedBool(L, "send", 2, "showOnScreen", true);
     }
     const QString text{lua_tostring(L, 1)};
     Host& host = getHostFromLua(L);
@@ -6672,14 +6684,14 @@ void TLuaInterpreter::initLuaGlobals()
     lua_register(pGlobalLua, "setProfileIcon", TLuaInterpreter::setProfileIcon);
     lua_register(pGlobalLua, "resetProfileIcon", TLuaInterpreter::resetProfileIcon);
     lua_register(pGlobalLua, "getCurrentLine", TLuaInterpreter::getCurrentLine);
-    lua_register(pGlobalLua, "setMiniConsoleFontSize", TLuaInterpreter::setFontSize);
+    lua_register(pGlobalLua, "setMiniConsoleFontSize", TLuaInterpreter::setMiniConsoleFontSize);
     lua_register(pGlobalLua, "selectCurrentLine", TLuaInterpreter::selectCurrentLine);
     lua_register(pGlobalLua, "spawn", TLuaInterpreter::spawn);
     lua_register(pGlobalLua, "getButtonState", TLuaInterpreter::getButtonState);
     lua_register(pGlobalLua, "setButtonState", TLuaInterpreter::setButtonState);
     lua_register(pGlobalLua, "showToolBar", TLuaInterpreter::showToolBar);
     lua_register(pGlobalLua, "hideToolBar", TLuaInterpreter::hideToolBar);
-    lua_register(pGlobalLua, "loadRawFile", TLuaInterpreter::loadReplay);
+    lua_register(pGlobalLua, "loadRawFile", TLuaInterpreter::loadRawFile);
     lua_register(pGlobalLua, "loadReplay", TLuaInterpreter::loadReplay);
     lua_register(pGlobalLua, "setBold", TLuaInterpreter::setBold);
     lua_register(pGlobalLua, "setItalics", TLuaInterpreter::setItalics);

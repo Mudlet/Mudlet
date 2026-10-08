@@ -144,11 +144,11 @@ int TForkedProcess::startProcess(TLuaInterpreter* pInterpreter, lua_State* L)
 {
     const int n = lua_gettop(L);
     if (n < 2) {
-        lua_pushstring(L, "Need read function and process name as parameters.");
+        lua_pushstring(L, "spawn: need read function and process name as parameters.");
         return lua_error(L);
     }
     if (!lua_isfunction(L, 1)) {
-        lua_pushstring(L, "Need read function as first parameter.");
+        lua_pushstring(L, "spawn: need read function as first parameter.");
         return lua_error(L);
     }
     for (int i = 2; i <= n; ++i) {

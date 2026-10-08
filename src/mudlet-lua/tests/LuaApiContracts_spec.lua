@@ -347,6 +347,47 @@ describe("Tests the shape of the feeding functions' bad-argument errors", functi
   end
 end)
 
+-- Each of these reached a primitive registered or written under another name,
+-- and the refusal named that one instead of the function the script called (#10705)
+describe("Tests that functions sharing an implementation refuse under their own name", function()
+
+  local cases = {
+    {label = "setMiniConsoleFontSize with nothing", call = function() return setMiniConsoleFontSize() end,
+      expected = "setMiniConsoleFontSize: bad argument #2 type (size as number expected, got no value!)"},
+    {label = "setMiniConsoleFontSize with a bad size", call = function() return setMiniConsoleFontSize("main", {}) end,
+      expected = "setMiniConsoleFontSize: bad argument #2 type (size as number expected, got table!)"},
+    {label = "setCommandBackgroundColor", call = function() return setCommandBackgroundColor() end,
+      expected = "setCommandBackgroundColor: bad argument #1 type"},
+    {label = "setCommandForegroundColor", call = function() return setCommandForegroundColor() end,
+      expected = "setCommandForegroundColor: bad argument #1 type"},
+    {label = "loadRawFile", call = function() return loadRawFile(nil) end,
+      expected = "loadRawFile: bad argument #1 type (replay file name as string expected, got nil!)"},
+    {label = "resetLabelToolTip", call = function() return resetLabelToolTip() end,
+      expected = "resetLabelToolTip: bad argument #1 type"},
+    {label = "resetUserWindowTitle", call = function() return resetUserWindowTitle() end,
+      expected = "resetUserWindowTitle: bad argument #1 type"},
+    {label = "cechoPopup", call = function() return cechoPopup("main", "x", 3) end, expected = "cechoPopup: bad argument #2 type"},
+    {label = "dechoPopup", call = function() return dechoPopup("main", "x", 3) end, expected = "dechoPopup: bad argument #2 type"},
+    {label = "hechoPopup", call = function() return hechoPopup("main", "x", 3) end, expected = "hechoPopup: bad argument #2 type"},
+    {label = "cinsertPopup", call = function() return cinsertPopup("main", "x", 3) end, expected = "cinsertPopup: bad argument #2 type"},
+    {label = "dinsertPopup", call = function() return dinsertPopup("main", "x", 3) end, expected = "dinsertPopup: bad argument #2 type"},
+    {label = "hinsertPopup", call = function() return hinsertPopup("main", "x", 3) end, expected = "hinsertPopup: bad argument #2 type"},
+    {label = "cechoPopup given a window", call = function() return cechoPopup("main", "x", "notATable", {"hint"}) end,
+      expected = "cechoPopup: bad argument #3 type"},
+    {label = "cechoLink without a window", call = function() return cechoLink("x", {}, "hint") end, expected = "cechoLink: bad argument #2 type"},
+    {label = "setHexFgColor", call = function() return setHexFgColor("zzzzzz") end, expected = "setHexFgColor needs a 6 digit hex color code."},
+    {label = "setHexBgColor", call = function() return setHexBgColor("main", "zzzzzz") end, expected = "setHexBgColor needs a 6 digit hex color code."},
+  }
+
+  for _, case in ipairs(cases) do
+    it(case.label .. " names itself", function()
+      local ok, err = pcall(case.call)
+      assert.is_false(ok, "the call was accepted instead of raising")
+      assert.is_true(contains(err, case.expected), "expected " .. case.expected .. " - got: " .. tostring(err))
+    end)
+  end
+end)
+
 describe("Tests announce and showNotification", function()
 
   local processingKinds = {"importantall", "importantmostrecent", "all", "mostrecent", "currentthenmostrecent"}

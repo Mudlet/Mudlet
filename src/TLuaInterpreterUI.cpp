@@ -3796,6 +3796,30 @@ int TLuaInterpreter::getMapWindowTitle(lua_State* L)
     return warnArgumentValue(L, __func__, "no floating/dockable type map window found");
 }
 
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#setMiniConsoleFontSize
+int TLuaInterpreter::setMiniConsoleFontSize(lua_State* L)
+{
+    const char* windowName = "";
+    int s = 1;
+    // A size alone sets the main window's, as setFontSize() does
+    if (lua_gettop(L) != 1) {
+        windowName = WINDOW_NAME(L, s++);
+    }
+
+    const int size = getVerifiedInt(L, __func__, s, "size");
+    if (size <= 0) {
+        return warnArgumentValue(L, __func__, "size cannot be 0 or negative");
+    }
+
+    const QString consoleName{windowName};
+    const Host& host = getHostFromLua(L);
+    if (!host.mpConsole || !host.mpConsole->setWindowFontSize(consoleName, size)) {
+        return windowNotFound(L, consoleName);
+    }
+    lua_pushboolean(L, true);
+    return 1;
+}
+
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#setMovie
 int TLuaInterpreter::setMovie(lua_State* L)
 {
@@ -4375,7 +4399,7 @@ int TLuaInterpreter::setCommandBackgroundColor(lua_State* L)
             return warnArgumentValue(L, __func__, csmInvalidRedValue.arg(r));
         }
     } else {
-        lua_pushfstring(L, "setBackgroundColor: bad argument #%d type (window name as string, or red value 0-255 as number expected, got %s!)", s, luaL_typename(L, s));
+        lua_pushfstring(L, "setCommandBackgroundColor: bad argument #%d type (window name as string, or red value 0-255 as number expected, got %s!)", s, luaL_typename(L, s));
         return lua_error(L);
     }
 
@@ -4432,7 +4456,7 @@ int TLuaInterpreter::setCommandForegroundColor(lua_State* L)
             return warnArgumentValue(L, __func__, csmInvalidRedValue.arg(r));
         }
     } else {
-        lua_pushfstring(L, "setBackgroundColor: bad argument #%d type (window name as string, or red value 0-255 as number expected, got %s!)", s, luaL_typename(L, s));
+        lua_pushfstring(L, "setCommandForegroundColor: bad argument #%d type (window name as string, or red value 0-255 as number expected, got %s!)", s, luaL_typename(L, s));
         return lua_error(L);
     }
 

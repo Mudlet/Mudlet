@@ -338,6 +338,10 @@ function setGaugeWindow(windowName, gaugeName, x, y, show)
     show = true
   end
   assert(gaugesTable[gaugeName], "setGaugeWindow: no such gauge exists.")
+  assert(type(windowName) == "string", "setGaugeWindow: bad argument #1 type (window name as string expected, got " .. type(windowName) .. "!)")
+  assert(tonumber(x), "setGaugeWindow: bad argument #3 type (x-coordinate as number expected, got " .. type(x) .. "!)")
+  assert(tonumber(y), "setGaugeWindow: bad argument #4 type (y-coordinate as number expected, got " .. type(y) .. "!)")
+  assert(type(show) == "boolean", "setGaugeWindow: bad argument #5 type (show element as boolean expected, got " .. type(show) .. "!)")
   setWindow(windowName, gaugeName .. "_back", x, y, show)
   setWindow(windowName, gaugeName .. "_front", x, y, show)
   setWindow(windowName, gaugeName .. "_text", x, y, show)
@@ -405,6 +409,8 @@ end
 function setGaugeToolTip(gaugeName, text, duration)
   duration = duration or 0
   assert(gaugesTable[gaugeName], "setGaugeToolTip: no such gauge exists.")
+  assert(type(text) == 'string' or type(text) == 'number', 'setGaugeToolTip: bad argument #2 type (text as string expected, got '..type(text)..'!)')
+  assert(tonumber(duration), 'setGaugeToolTip: bad argument #3 type (duration as number expected, got '..type(duration)..'!)')
   setLabelToolTip(gaugeName .. "_text", text, duration)
 end
 
@@ -1474,6 +1480,7 @@ function xEcho(style, func, ...)
   end
 
   local win, str, cmd, hint, fmt
+  local windowLeftOut = false
   local plain = func == "echo" or func == "insertText"
   if not plain and string.find(func, "Link") then
     local args = { ... }
@@ -1482,8 +1489,10 @@ function xEcho(style, func, ...)
       error 'Insufficient arguments, usage: ([window, ] string, command, hint)'
     elseif n == 3 then
       str, cmd, hint = ...
+      windowLeftOut = true
     elseif n == 4 and type(args[4]) == 'boolean' then
       str, cmd, hint, fmt = ...
+      windowLeftOut = true
     elseif n >= 4 and type(args[4]) == 'string' then
       win, str, cmd, hint, fmt = ...
     else
@@ -1496,8 +1505,10 @@ function xEcho(style, func, ...)
       error 'Insufficient arguments, usage: ([window, ] string, {commands}, {hints})'
     elseif n == 3 then
       str, cmd, hint = ...
+      windowLeftOut = true
     elseif n == 4 and type(args[4]) == 'boolean' then
       str, cmd, hint, fmt = ...
+      windowLeftOut = true
     elseif n >= 4 and type(args[4]) == 'table' then
       win, str, cmd, hint, fmt = ...
     else
@@ -1571,7 +1582,18 @@ function xEcho(style, func, ...)
           end
         else
           -- if fmt then setUnderline(win, true) end -- not sure if underline is necessary unless asked for
-          _G[func](win, v, cmd, hint, fmt == true)
+          local ok, err = pcall(_G[func], win, v, cmd, hint, fmt == true)
+          if not ok then
+            -- named and numbered for the call the script made: the primitive is
+            -- always handed a window, which that call may have left out
+            if type(err) == "string" and err:sub(1, #func + 1) == func .. ":" then
+              err = style:sub(1, 1):lower() .. err
+              if windowLeftOut then
+                err = err:gsub("bad argument #(%d+)", function(position) return "bad argument #" .. (tonumber(position) - 1) end, 1)
+              end
+            end
+            error(err, 0)
+          end
         end
       end
     end
@@ -2272,7 +2294,7 @@ function setHexFgColor(windowName, colorString)
     win = nil
   end
 
-  if #col ~= 6 then
+  if type(col) ~= "string" or not col:match("^%x%x%x%x%x%x$") then
     error("setHexFgColor needs a 6 digit hex color code.")
   end
 
@@ -2302,7 +2324,7 @@ function setHexBgColor(windowName, colorString)
     win = nil
   end
 
-  if #col ~= 6 then
+  if type(col) ~= "string" or not col:match("^%x%x%x%x%x%x$") then
     error("setHexBgColor needs a 6 digit hex color code.")
   end
 
@@ -2485,6 +2507,7 @@ function hreplaceLine(window, text)
 end
 
 function resetLabelToolTip(label)
+  assert(type(label) == 'string' or type(label) == 'number', 'resetLabelToolTip: bad argument #1 type (label name as string expected, got '..type(label)..'!)')
   return setLabelToolTip(label, "")
 end
 
@@ -2751,6 +2774,7 @@ for i = 1, #callBackFunc do
 end
 
 function resetUserWindowTitle(windowname)
+  assert(type(windowname) == 'string' or type(windowname) == 'number', 'resetUserWindowTitle: bad argument #1 type (name as string expected, got '..type(windowname)..'!)')
   return setUserWindowTitle(windowname, "")
 end
 
