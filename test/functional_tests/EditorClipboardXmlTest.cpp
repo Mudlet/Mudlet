@@ -300,6 +300,49 @@ private slots:
         QVERIFY2(clipboard.contains(itemName), "the copied XML does not name the item that was copied");
     }
 
+    // Copy with nothing to copy is a no-op, as it is anywhere else: a modal box
+    // here freezes the editor until it is dismissed (#10778). The timer closes
+    // any box that does open, so a failure does not hang the run.
+    void test_copyWithNothingSelectedOpensNoMessageBox_data() { test_copyPutsTheItemsOwnXmlOnTheClipboard_data(); }
+
+    void test_copyWithNothingSelectedOpensNoMessageBox()
+    {
+        QFETCH(int, view);
+        const auto viewType = static_cast<EditorViewType>(view);
+        showView(viewType);
+        QTreeWidget* tree = treeFor(viewType);
+        QVERIFY(tree);
+
+        // a row standing for an item that is gone is the other way to have nothing to copy
+        auto* pStaleItem = new QTreeWidgetItem(tree, QStringList{qsl("qaClipStaleRow")});
+        pStaleItem->setData(0, Qt::UserRole, -1);
+
+        for (const bool withStaleRow : {false, true}) {
+            tree->clearSelection();
+            if (withStaleRow) {
+                pStaleItem->setSelected(true);
+            }
+            const QString untouched = qsl("qaClipUntouched");
+            QApplication::clipboard()->setText(untouched);
+
+            int boxesOpened = 0;
+            QTimer closer;
+            connect(&closer, &QTimer::timeout, &closer, [&boxesOpened]() {
+                if (QWidget* pModal = QApplication::activeModalWidget()) {
+                    ++boxesOpened;
+                    pModal->close();
+                }
+            });
+            closer.start(20ms);
+            mpEditor->slot_copyXml();
+            closer.stop();
+
+            QVERIFY2(boxesOpened == 0, withStaleRow ? "copying a row whose item is gone opened a message box" : "copying with nothing selected opened a message box");
+            QCOMPARE(QApplication::clipboard()->text(), untouched);
+        }
+        delete pStaleItem;
+    }
+
     void test_pastingACopiedItemAddsASecondOne_data() { test_copyPutsTheItemsOwnXmlOnTheClipboard_data(); }
 
     void test_pastingACopiedItemAddsASecondOne()
