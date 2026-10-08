@@ -140,6 +140,13 @@ private:
         auto* pTimer = new TTimer(qsl("qaMoveTimer"), QTime(0, 0, 30), mpHost);
         QVERIFY(mpHost->getTimerUnit()->registerTimer(pTimer));
 
+        auto* pInactiveTimerFolder = new TTimer(qsl("qaMoveInactiveTimerFolder"), QTime(0, 0, 1), mpHost);
+        pInactiveTimerFolder->setIsFolder(true);
+        QVERIFY(mpHost->getTimerUnit()->registerTimer(pInactiveTimerFolder));
+
+        auto* pInactiveTimer = new TTimer(qsl("qaMoveInactiveTimer"), QTime(0, 0, 30), mpHost);
+        QVERIFY(mpHost->getTimerUnit()->registerTimer(pInactiveTimer));
+
         auto* pTimerSubFolder = new TTimer(qsl("qaMoveTimerSubFolder"), QTime(0, 0, 1), mpHost);
         pTimerSubFolder->setIsFolder(true);
         QVERIFY(mpHost->getTimerUnit()->registerTimer(pTimerSubFolder));
@@ -264,8 +271,6 @@ private slots:
         TTimer* pTimer = mpHost->getTimerUnit()->getTimer(timerItem->data(0, Qt::UserRole).toInt());
         QVERIFY(pFolder && pTimer);
         QVERIFY2(!pTimer->getParent(), "the timer was already inside something before the move");
-        // Only the active-timer icons are exercised here: the inactive one is
-        // painted from an icon path that does not exist (#10401)
         pFolder->setShouldBeActive(true);
         pTimer->setShouldBeActive(true);
 
@@ -275,6 +280,26 @@ private slots:
         QCOMPARE(pTimer->getParent(), pFolder);
         QCOMPARE(movedSpy.count(), 1);
         QVERIFY2(!folderItem->child(0)->icon(0).isNull(), "the moved timer was left with no icon");
+    }
+
+    void test_droppingAnInactiveTimerOnAnInactiveFolderRepaintsIt()
+    {
+        mpEditor->slot_showTimers();
+        auto* tree = mpEditor->treeWidget_timers;
+        QTreeWidgetItem* folderItem = itemNamed(tree, qsl("qaMoveInactiveTimerFolder"));
+        QTreeWidgetItem* timerItem = itemNamed(tree, qsl("qaMoveInactiveTimer"));
+        QVERIFY(folderItem && timerItem);
+
+        TTimer* pFolder = mpHost->getTimerUnit()->getTimer(folderItem->data(0, Qt::UserRole).toInt());
+        TTimer* pTimer = mpHost->getTimerUnit()->getTimer(timerItem->data(0, Qt::UserRole).toInt());
+        QVERIFY(pFolder && pTimer);
+        pFolder->setShouldBeActive(false);
+        pTimer->setShouldBeActive(false);
+
+        moveOntoFolder(tree, timerItem, folderItem);
+
+        QCOMPARE(pTimer->getParent(), pFolder);
+        QVERIFY2(!folderItem->child(0)->icon(0).isNull(), "the moved inactive timer was left with no icon (#10401)");
     }
 
     // Outside a drag the tree is a plain view, so rearranging it must not write
