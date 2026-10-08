@@ -47,6 +47,21 @@
 
 using namespace std::chrono_literals;
 
+// A move a widget ignores is offered to its parent next, which is where a filter on the parent sees it
+class MoveCounter : public QObject
+{
+public:
+    int mMoves = 0;
+
+    bool eventFilter(QObject* watched, QEvent* event) override
+    {
+        if (event->type() == QEvent::MouseMove) {
+            ++mMoves;
+        }
+        return QObject::eventFilter(watched, event);
+    }
+};
+
 class LabelAnchorInteractionTest : public QObject
 {
     Q_OBJECT
@@ -274,6 +289,47 @@ private slots:
         QCOMPARE(activated.count(), 1);
         QVERIFY2(luaHolds(qsl("anchorClicks == 1")), "the label's click callback did not fire");
         QVERIFY2(luaHolds(qsl("anchorReleases == 1")), "the label's release callback did not fire");
+    }
+
+    void test_aLinkShowsThePointingHand()
+    {
+        label()->resetLinkStyle();
+        label()->unsetCursor();
+        label()->setText(qsl("<a href='https://example.com'>go</a>"));
+        QVERIFY2(centreIsOnTheLabel(), "the point this case hovers is outside the label, so it would miss the link");
+
+        // moves are sent rather than made with the real pointer, which a headless run has no control over
+        auto moveTo = [this](const QPoint& where) {
+            QMouseEvent move(QEvent::MouseMove, where, label()->mapToGlobal(where), Qt::NoButton, Qt::NoButton, Qt::NoModifier);
+            QApplication::sendEvent(label(), &move);
+        };
+
+        moveTo(QPoint(label()->width() - 1, label()->height() - 1));
+        QVERIFY(label()->cursor().shape() != Qt::PointingHandCursor);
+        // with no move callback the move goes on to whatever is underneath, such as the map
+        MoveCounter underneath;
+        QWidget* parent = label()->parentWidget();
+        // Qt drops a buttonless move on its way up at a widget that does not track the mouse
+        const bool parentTracked = parent->hasMouseTracking();
+        parent->setMouseTracking(true);
+        parent->installEventFilter(&underneath);
+        moveTo(linkCentre());
+        QCOMPARE(label()->cursor().shape(), Qt::PointingHandCursor);
+        QVERIFY2(underneath.mMoves == 1, "a label with no move callback kept a move over its link to itself");
+        moveTo(QPoint(label()->width() - 1, label()->height() - 1));
+        QVERIFY(label()->cursor().shape() != Qt::PointingHandCursor);
+
+        // left registered: all it does is count
+        mpHost->getLuaInterpreter()->compileAndExecuteScript(qsl("anchorMoves = 0\n"
+                                                                 "anchorMoveRegistered = setLabelMoveCallback('%1', function() anchorMoves = anchorMoves + 1 end)\n")
+                                                                     .arg(mLabelName));
+        QVERIFY2(luaHolds(qsl("anchorMoveRegistered")), "the move callback did not reach the label");
+        moveTo(linkCentre());
+        parent->removeEventFilter(&underneath);
+        parent->setMouseTracking(parentTracked);
+        QVERIFY2(luaHolds(qsl("anchorMoves == 1")), "the label's move callback did not fire over its link");
+        QVERIFY2(underneath.mMoves == 2, "a label's move callback did not keep the move to itself");
+        QCOMPARE(label()->cursor().shape(), Qt::PointingHandCursor);
     }
 
     void test_aRightClickOpensNoMenuOfQtsOwn_data()
