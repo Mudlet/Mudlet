@@ -1051,8 +1051,12 @@ std::pair<bool, QString> Host::reloadModule(const QString& syncModuleName, const
                 &Host::profileSaveFinished,
                 obj,
                 [=, this]() {
-                    // Not quiet: the caller has been answered, so nobody else can report a failure now
-                    reloadModule(syncModuleName);
+                    // The caller was answered before this ran, so whatever goes wrong is said here, once, whether
+                    // or not the module had loaded cleanly before - one that loaded part-way had items to lose too
+                    if (auto [reloaded, reason] = reloadModule(syncModuleName, QString(), true); !reloaded) {
+                        //: %1 is the name of the module, %2 is the reason the reload that was waiting for a profile save to finish failed
+                        postMessage(tr("[ WARN ]  - Module \"%1\" could not be reloaded: %2").arg(syncModuleName, reason));
+                    }
                     obj->deleteLater();
                 },
                 deferredSaveHandlerConnection);

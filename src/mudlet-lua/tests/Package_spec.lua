@@ -1117,6 +1117,30 @@ describe("Tests the functionality of reloadModule", function()
       assert.is_true(contains(err, "could not unzip package"), tostring(err))
     end)
 
+    -- A reload asked for during a save is carried out once the save is done, and
+    -- by then the script has its answer, so a failure is only reported on the
+    -- console. A module whose XML stopped part-way is not counted as loaded but
+    -- still has the items read before that, which the failed reload takes away.
+    it("says so on the console when a reload put off by a save fails afterwards", function()
+      local backupPath = modulePath .. ".backup"
+      copyFile(modulePath, backupPath)
+      defer(function() restoreTheModule(backupPath) end)
+      copyFile(fixtureDirectory .. "/mudlet-spec-badmodule.mpackage", modulePath)
+      assert.is_true(waitForProfileSaveToPass(), "a profile save was still running, so the reload would be postponed")
+      assert.is_nil(reloadModule(moduleName), "SETUP: the module's XML was read in after all")
+      assert.equals(1, exists(moduleName .. " alias", "alias"), "SETUP: the module did not load part-way")
+      copyFile(fixtureDirectory .. "/mudlet-spec-notazip.mpackage", modulePath)
+      assert.is_true(waitForProfileSaveToPass(), "a profile save was still running")
+      local mark = getLastLineNumber("main")
+      assert.is_true(saveProfile())
+
+      assert.is_true(reloadModule(moduleName), "the reload was not put off until the save had finished")
+
+      assert.is_true(waitForProfileSaveToPass(), "the profile save never finished")
+      pumpEvents(200)
+      assert.is_true(containsWrapped(textFrom(mark), 'Module "' .. moduleName .. '" could not be reloaded'), textFrom(mark))
+    end)
+
     it("returns why when the module's XML could not be imported", function()
       local backupPath = modulePath .. ".backup"
       copyFile(modulePath, backupPath)
