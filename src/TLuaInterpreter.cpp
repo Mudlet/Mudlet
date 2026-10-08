@@ -1174,7 +1174,9 @@ int TLuaInterpreter::feedTelnet(lua_State* L)
         return lua_error(L);
     }
 
-    const QByteArray rawData{lua_tostring(L, 1)};
+    size_t rawLength = 0;
+    const char* rawBytes = lua_tolstring(L, 1, &rawLength);
+    const QByteArray rawData{rawBytes, static_cast<qsizetype>(rawLength)};
     // We need to convert any "<*>" codes to their raw byte forms:
     QByteArray cookedData{parseTelnetCodes(rawData)};
     if (rawData.isEmpty()) {
@@ -1229,7 +1231,11 @@ int TLuaInterpreter::feedTriggers(lua_State* L)
     if (lua_gettop(L) > 1) {
         dataIsUtf8Encoded = getVerifiedBool(L, __func__, 2, "Utf8Encoded", true);
     }
-    const QByteArray data{lua_tostring(L, 1)};
+    size_t length = 0;
+    const char* bytes = lua_tolstring(L, 1, &length);
+    QByteArray data{bytes, static_cast<qsizetype>(length)};
+    // As cTelnet::processSocketData() does for game data:
+    data.replace('\0', QByteArray());
 
     const QByteArray currentEncoding = host.mTelnet.getEncoding();
     if (dataIsUtf8Encoded) {
