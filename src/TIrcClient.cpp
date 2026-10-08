@@ -462,13 +462,23 @@ QStringList TIrcClient::readIrcChannels(Host* pH)
     return channels;
 }
 
+// The readers put a default in place of an empty or out of range value, so the
+// writers refuse one rather than report a setting that will never be used.
 QPair<bool, QString> TIrcClient::writeIrcHostName(Host* pH, const QString& hostname)
 {
+    if (hostname.isEmpty()) {
+        return {false, qsl("hostname must not be empty")};
+    }
+
     return pH->writeProfileData(TIrcClient::HostNameCfgItem, hostname);
 }
 
 QPair<bool, QString> TIrcClient::writeIrcHostPort(Host* pH, int port)
 {
+    if (port < 1 || port > 65535) {
+        return {false, qsl("invalid port number %1 given, it must be in range 1 to 65535").arg(port)};
+    }
+
     return pH->writeProfileData(TIrcClient::HostPortCfgItem, QString::number(port));
 }
 
@@ -481,6 +491,9 @@ QPair<bool, QString> TIrcClient::writeIrcNickName(Host* pH, const QString& nickn
 {
     // Sent as "NICK <nickname>" at registration, bypassing validateMsgArguments(); IrcConnection
     // takes only the first word, but a line break within it would start an injected command.
+    if (nickname.isEmpty()) {
+        return {false, qsl("nick must not be empty")};
+    }
     if (textBreaksIrcLine(nickname) || textHasSpace(nickname)) {
         return {false, qsl("nick name \"%1\" must be a single word, without a line break or a null character").arg(escapedForError(nickname))};
     }
@@ -512,7 +525,31 @@ QPair<bool, QString> TIrcClient::writeIrcPassword(Host* pH, const QString& passw
     return pH->writeProfileData(TIrcClient::PasswordCfgItem, password);
 }
 
+// An IRC channel name holds neither of the two characters its list is taken apart
+// on: the stored list is space-joined (writeIrcChannels) and the JOIN command is
+// comma-joined, so a name carrying either would come back as two channels. Every
+// kind of whitespace is refused rather than only the space it is joined on,
+// because an IRC channel name may hold none of it.
+bool TIrcClient::validIrcChannelName(const QString& channel)
+{
+    if (!channel.startsWith(QLatin1Char('#')) && !channel.startsWith(QLatin1Char('&')) && !channel.startsWith(QLatin1Char('+'))) {
+        return false;
+    }
+    return std::none_of(channel.cbegin(), channel.cend(), [](const QChar character) {
+        return character.isSpace() || character == QLatin1Char(',');
+    });
+}
+
 QPair<bool, QString> TIrcClient::writeIrcChannels(Host* pH, const QStringList& channels)
 {
+    if (channels.isEmpty()) {
+        return {false, qsl("no (valid) channel names provided")};
+    }
+    for (const QString& channel : channels) {
+        if (!validIrcChannelName(channel)) {
+            return {false, qsl("channel name \"%1\" must start with #, & or + and hold no space or comma").arg(escapedForError(channel))};
+        }
+    }
+
     return pH->writeProfileData(TIrcClient::ChannelsCfgItem, channels.join(qsl(" ")));
 }

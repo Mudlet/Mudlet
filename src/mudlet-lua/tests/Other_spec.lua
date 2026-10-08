@@ -1973,22 +1973,50 @@ describe("Tests Other.lua functions", function()
         assert.equals("#mudlet #mudlet-spec", getConfig("ircChannels"))
       end)
 
-      -- An unusable port would strand the IRC client on a connect attempt it
-      -- can never make, so the reader falls back rather than handing it out
-      it("reads back the default port when the stored one is out of range", function()
+      -- The readers put a default in place of an empty or out of range value,
+      -- so the writers refuse one rather than answer true for a setting that
+      -- would never be used - as setIrcServer(), setIrcNick() and
+      -- setIrcChannels() already do
+      it("refuses a port outside 1 to 65535 and keeps the stored one", function()
         finally(snapshotIrc())
 
-        assert.is_true(setConfig("ircHostPort", 6697))
-        assert.equals(6697, getConfig("ircHostPort"))
+        for _, port in ipairs({1, 65535, 6699}) do
+          assert.is_true(setConfig("ircHostPort", port))
+          assert.equals(port, getConfig("ircHostPort"))
+        end
+        for _, port in ipairs({-1, 0, 65536, 70000}) do
+          local ok, err = setConfig("ircHostPort", port)
+          assert.is_nil(ok, "port " .. port .. " was taken")
+          assert.equals("invalid port number " .. port .. " given, it must be in range 1 to 65535", err)
+          assert.equals(6699, getConfig("ircHostPort"))
+        end
+      end)
 
-        -- the writer takes any integer today; whether it starts refusing this
-        -- one is not what is being pinned, only that the reader never answers
-        -- with a port nothing can connect to
-        local stored = setConfig("ircHostPort", 70000)
-        local fallback = getConfig("ircHostPort")
-        assert.is_true(fallback >= 1 and fallback <= 65535, "an unusable port was handed out: " .. tostring(fallback))
-        if stored then
-          assert.are_not.equals(6697, fallback, "the stored port was left in place rather than replaced by the default")
+      it("refuses an empty host or nick name and keeps the stored one", function()
+        finally(snapshotIrc())
+
+        assert.is_true(setConfig("ircHostName", "irc.mudlet-spec.invalid"))
+        local ok, err = setConfig("ircHostName", "")
+        assert.is_nil(ok)
+        assert.equals("hostname must not be empty", err)
+        assert.equals("irc.mudlet-spec.invalid", getConfig("ircHostName"))
+
+        assert.is_true(setConfig("ircNickName", "MudletSpecNick"))
+        ok, err = setConfig("ircNickName", "")
+        assert.is_nil(ok)
+        assert.equals("nick must not be empty", err)
+        assert.equals("MudletSpecNick", getConfig("ircNickName"))
+      end)
+
+      it("refuses a channel list with a name that is not a channel", function()
+        finally(snapshotIrc())
+
+        assert.is_true(setConfig("ircChannels", "#mudlet-spec"))
+        for _, channels in ipairs({"nohash", "#mudlet nohash", "#mudlet,#spec", ""}) do
+          local ok, err = setConfig("ircChannels", channels)
+          assert.is_nil(ok, "'" .. channels .. "' was taken")
+          assert.is_string(err)
+          assert.equals("#mudlet-spec", getConfig("ircChannels"))
         end
       end)
     end)
