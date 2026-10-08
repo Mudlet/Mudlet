@@ -1539,7 +1539,7 @@ private slots:
         const QString errorsToCaller = luaGlobalString(mpFirstHost, qsl("_sttFaultErrorsHeard"));
         const QString errorsToProfileInFront = luaGlobalString(mpSecondHost, qsl("_sttFaultErrorsHeard"));
         const bool stillFaulted = pEngine->state() == SpeechRecognizer::State::Error;
-        const Host* pOwnerAfter = mudlet::self()->microphoneOwner();
+        const Host* pOwnerAfter = TSpeechBridge::instance()->microphoneOwner();
 
         for (Host* pHost : {mpFirstHost, mpSecondHost}) {
             runLua(pHost, qsl("killAnonymousEventHandler(_sttFaultErrorHandler)"));
