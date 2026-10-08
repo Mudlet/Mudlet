@@ -283,6 +283,9 @@ int TLuaInterpreter::addAreaName(lua_State* L)
     lua_pushnumber(L, areaId);
 
     host.mpMap->announceAreaListChanged();
+    if (auto* viewManager = host.mpMap->getViewManager()) {
+        viewManager->updateAllViews();
+    }
 
     host.mpMap->setUnsaved(__func__);
     host.mpMap->updateArea(areaId);
@@ -1279,6 +1282,7 @@ int TLuaInterpreter::deleteArea(lua_State* L)
         return lua_error(L);
     }
 
+    const int deletedAreaId = id ? id : host.mpMap->mpRoomDB->getAreaNamesMap().key(name);
     bool result = false;
     if (!id) {
         result = host.mpMap->mpRoomDB->removeArea(name);
@@ -1288,6 +1292,10 @@ int TLuaInterpreter::deleteArea(lua_State* L)
 
     if (result) {
         host.mpMap->announceAreaListChanged();
+        if (auto* viewManager = host.mpMap->getViewManager()) {
+            viewManager->updateAllViews();
+            viewManager->switchViewsShowingArea(deletedAreaId);
+        }
         host.mpMap->setUnsaved(__func__);
         host.mpMap->updateArea(id);
         host.mpMap->mMapGraphNeedsUpdate = true;
@@ -3533,6 +3541,9 @@ int TLuaInterpreter::setAreaName(lua_State* L)
         host.mpMap->setUnsaved(__func__);
         host.mpMap->updateArea(id);
         host.mpMap->announceAreaRenamed(oldName, newName);
+        if (auto* viewManager = host.mpMap->getViewManager()) {
+            viewManager->updateAllViews();
+        }
     }
     lua_pushboolean(L, result);
     return 1;
