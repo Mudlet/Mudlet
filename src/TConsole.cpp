@@ -265,6 +265,12 @@ TConsole::TConsole(Host* pH, const QString& name, const ConsoleType type, QWidge
         mBorders = mpHost->borders();
         mCommandBgColor = mpHost->mCommandBgColor;
         mCommandFgColor = mpHost->mCommandFgColor;
+    } else if (mType == Buffer) {
+        // Only a starting point: setWindowWrap() and friends keep a buffer's
+        // own settings nowhere else, so nothing may copy the profile's over them later
+        setWrapAt(mpHost->mWrapAt);
+        setIndentCount(mpHost->mWrapIndentCount);
+        setHangingIndentCount(mpHost->mWrapHangingIndentCount);
     }
 
     QWidget::setFont(mDisplayFontDetails.makeFont());
@@ -1052,6 +1058,9 @@ void TConsole::clear()
 
 void TConsole::bufferCleared()
 {
+    // A drag held across the clear would otherwise carry on from whatever line later reuses its index
+    mUpperPane->endDrag();
+    mLowerPane->endDrag();
     mUpperPane->resetHScrollbar();
     clearSelection();
     clearSplit();
@@ -1283,7 +1292,7 @@ void TConsole::changeColors()
         // refreshMainConsoleColors() above already did this one
         buffer.updateColors();
     }
-    if (mType & (MainConsole | Buffer)) {
+    if (mType == MainConsole) {
         // the console's own copies too, as wrapLine() rewraps with those
         setWrapAt(mpHost->mWrapAt);
         setIndentCount(mpHost->mWrapIndentCount);
@@ -2247,10 +2256,12 @@ void TConsole::setCompactInputLine(const bool state)
 
 void TConsole::repaintPanes() const
 {
+    // Queued, not painted here: a flood of lines carrying selected links would
+    // otherwise paint the whole pane once per line
     mUpperPane->updateScreenView();
-    mUpperPane->repaint();
+    mUpperPane->forceUpdate();
     mLowerPane->updateScreenView();
-    mLowerPane->repaint();
+    mLowerPane->forceUpdate();
 }
 
 void TConsole::setProfileName(const QString& newName)

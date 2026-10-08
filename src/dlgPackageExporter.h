@@ -86,19 +86,25 @@ public:
     void recurseActions(TAction*, QTreeWidgetItem*);
     void listTimers();
     void recurseTimers(TTimer*, QTreeWidgetItem*);
+    TTrigger* triggerOf(const QMap<QTreeWidgetItem*, int>&, QTreeWidgetItem*) const;
+    TTimer* timerOf(const QMap<QTreeWidgetItem*, int>&, QTreeWidgetItem*) const;
+    TAlias* aliasOf(const QMap<QTreeWidgetItem*, int>&, QTreeWidgetItem*) const;
+    TAction* actionOf(const QMap<QTreeWidgetItem*, int>&, QTreeWidgetItem*) const;
+    TScript* scriptOf(const QMap<QTreeWidgetItem*, int>&, QTreeWidgetItem*) const;
+    TKey* keyOf(const QMap<QTreeWidgetItem*, int>&, QTreeWidgetItem*) const;
     static void copy_directory(const QString &fromDir, const QString &toDir, bool overwrite);
-    QMap<QTreeWidgetItem*, TTrigger*> triggerMap;
-    QMap<QTreeWidgetItem*, TTrigger*> modTriggerMap;
-    QMap<QTreeWidgetItem*, TAlias*> aliasMap;
-    QMap<QTreeWidgetItem*, TAlias*> modAliasMap;
-    QMap<QTreeWidgetItem*, TScript*> scriptMap;
-    QMap<QTreeWidgetItem*, TScript*> modScriptMap;
-    QMap<QTreeWidgetItem*, TKey*> keyMap;
-    QMap<QTreeWidgetItem*, TKey*> modKeyMap;
-    QMap<QTreeWidgetItem*, TAction*> actionMap;
-    QMap<QTreeWidgetItem*, TAction*> modActionMap;
-    QMap<QTreeWidgetItem*, TTimer*> timerMap;
-    QMap<QTreeWidgetItem*, TTimer*> modTimerMap;
+    QMap<QTreeWidgetItem*, int> triggerMap;
+    QMap<QTreeWidgetItem*, int> modTriggerMap;
+    QMap<QTreeWidgetItem*, int> aliasMap;
+    QMap<QTreeWidgetItem*, int> modAliasMap;
+    QMap<QTreeWidgetItem*, int> scriptMap;
+    QMap<QTreeWidgetItem*, int> modScriptMap;
+    QMap<QTreeWidgetItem*, int> keyMap;
+    QMap<QTreeWidgetItem*, int> modKeyMap;
+    QMap<QTreeWidgetItem*, int> actionMap;
+    QMap<QTreeWidgetItem*, int> modActionMap;
+    QMap<QTreeWidgetItem*, int> timerMap;
+    QMap<QTreeWidgetItem*, int> modTimerMap;
     // This will hold the absolute pathFileName for the XML file that will
     // contain the Mudlet items to go into the package:
     QString mXmlPathFileName;
