@@ -199,6 +199,19 @@ set_tests_properties(IrcMessageComposerTest PROPERTIES
     TIMEOUT 60
 )
 
+# The application style's kept Fusion title bar icons. Built from the one source it
+# covers, which needs nothing but Qt Widgets.
+add_executable(AltFocusMenuBarDisableTest
+    AltFocusMenuBarDisableTest.cpp
+    ${CMAKE_SOURCE_DIR}/src/AltFocusMenuBarDisable.cpp
+)
+target_include_directories(AltFocusMenuBarDisableTest PRIVATE ${CMAKE_SOURCE_DIR}/src)
+target_link_libraries(AltFocusMenuBarDisableTest PRIVATE Qt6::Test Qt6::Widgets)
+add_test(NAME AltFocusMenuBarDisableTest COMMAND $<TARGET_FILE:AltFocusMenuBarDisableTest>)
+set_tests_properties(AltFocusMenuBarDisableTest PROPERTIES
+    ENVIRONMENT "ASAN_OPTIONS=detect_leaks=0;QT_QPA_PLATFORM=offscreen"
+)
+
 add_executable(CrashReportUploadTest
     CrashReportUploadTest.cpp
     ${CMAKE_SOURCE_DIR}/src/crash_reporter/sendCrashReport.cpp

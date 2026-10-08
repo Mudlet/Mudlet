@@ -1,4 +1,4 @@
--- moveCursor() accepts any column on an existing line, including one past its
+-- moveCursor() accepts a column on an existing line up to one echo past its
 -- end. The cursor move itself leaves the line alone; insertText() at such a
 -- column pads the gap with spaces so the text lands at that column, while
 -- echo() ignores the user cursor and appends.
