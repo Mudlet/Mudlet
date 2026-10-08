@@ -4233,7 +4233,9 @@ void cTelnet::processTelnetCommand(const std::string& telnetCommand)
                 enableMXP = true;
                 qDebug() << "MXP enabled via subnegotiation";
                 mpHost->mMxpProcessor.enable();
-                mpHost->mMxpProcessor.setMode(MXP_MODE_CODE_LOCK_LOCKED);
+                // Open is the initial default mode in the MXP spec: a game that
+                // wants another one locks it in with its own ESC[#z switch
+                mpHost->mMxpProcessor.setMode(MXP_MODE_CODE_LOCK_OPEN);
                 raiseProtocolEvent("sysProtocolEnabled", "MXP");
             }
             return;
