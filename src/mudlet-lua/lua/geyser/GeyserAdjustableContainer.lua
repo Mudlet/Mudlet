@@ -663,15 +663,12 @@ function Adjustable.Container:disconnect()
     if not self.connectedToBorder then
         return
     end
-    for k in pairs(self.connectedToBorder) do
-        if Adjustable.Container.Attached[k] then
-            for k1,v1 in pairs(Adjustable.Container.Attached[k]) do
-                if v1.connectedContainers and v1.connectedContainers[self.name] then
-                    v1.connectedContainers[self.name] = nil
-                    if table.is_empty(v1.connectedContainers) then
-                        v1.connectedContainers = nil
-                    end
-                end
+    -- every container, not just those on the border: a hidden one has left it but still links back
+    for _, container in pairs(Adjustable.Container.all) do
+        if container.connectedContainers and container.connectedContainers[self.name] then
+            container.connectedContainers[self.name] = nil
+            if table.is_empty(container.connectedContainers) then
+                container.connectedContainers = nil
             end
         end
     end

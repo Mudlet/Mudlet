@@ -2709,6 +2709,24 @@ describe("Tests Adjustable.Container borders, persistence and menu items", funct
       assert.are.equal(anchor:get_width(), follower:get_width())
     end)
 
+    it("disconnect unhooks it from a container that is hidden", function()
+      local anchor = make("gapHiddenDropAnchor", {width = 150, height = 200})
+      local follower = make("gapHiddenDropFollower", {width = 150, y = 250, height = 200})
+      anchor:attachToBorder("left")
+      follower:attachToBorder("left")
+      follower:connectToBorder("left")
+      local followerWidth = follower:get_width()
+
+      anchor:hide()
+      follower:disconnect()
+      anchor:show()
+
+      assert.is_nil(anchor.connectedContainers)
+      anchor:resize(250, nil)
+      anchor:adjustConnectedContainers()
+      assert.are.equal(followerWidth, follower:get_width())
+    end)
+
     it("connects again from a layout saved while hidden", function()
       local anchor = make("gapHiddenSavedAnchor", {width = 150, height = 200})
       local follower = make("gapHiddenSavedFollower", {width = 150, y = 250, height = 200})
