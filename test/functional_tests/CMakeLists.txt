@@ -430,6 +430,13 @@ add_grouped_test_binary(functional_starterui_tests ${STARTERUI_GROUP_TEST_SOURCE
 add_grouped_test_binary(functional_teardown_tests ${TEARDOWN_GROUP_TEST_SOURCES})
 add_grouped_test_binary(functional_media_tests ${MEDIA_GROUP_TEST_SOURCES})
 
+# On macOS the app reads its dictionaries from the bundle's Resources folder,
+# which a test binary only has if it is put next to it by hand
+if(APPLE)
+    file(COPY ${CMAKE_SOURCE_DIR}/src/en_US.dic ${CMAKE_SOURCE_DIR}/src/en_US.aff
+         DESTINATION ${CMAKE_CURRENT_BINARY_DIR}/../Resources)
+endif()
+
 # A stand-in libvosk, so SpeechRecognizerContractTest and SpeechBridgeLuaTest can
 # reach the code below VoskRecognizer's library guard on a machine with no speech
 # engine - which is every CI runner. Named exactly as the real library is on each platform,
