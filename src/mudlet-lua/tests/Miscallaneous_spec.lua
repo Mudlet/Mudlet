@@ -938,6 +938,16 @@ describe("Tests C++ functions in the Miscallaneous category", function()
         assert.is_true(contains(tostring(message), "absolute path"), "saveProfile() answered " .. tostring(message))
         assert.is_false(fileExists(escapee), "the save landed at " .. escapee)
       end)
+
+      -- Taken as no folder at all, a table would aim the save at the root of the
+      -- filesystem instead, so it is refused as the file name argument is
+      it("raises for a folder that is not a string", function()
+        local folder = scratchFolder("mudlet-spec-save-folder-type")
+
+        local ok, err = pcall(saveProfile, {}, folder .. "/mudlet-spec-saved")
+        assert.is_false(ok, "saveProfile() took a table as its folder")
+        assert.is_true(contains(tostring(err), "saveProfile: bad argument #1 type"), "saveProfile() raised " .. tostring(err))
+      end)
     end)
 
     describe("Tests the logging functions", function()
