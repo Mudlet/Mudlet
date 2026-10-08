@@ -3085,14 +3085,9 @@ int TLuaInterpreter::expandAlias(lua_State* L)
         return lua_error(L);
     }
     bool wantPrint = true;
-    if (lua_gettop(L) > 1) {
-        // check if the 2nd argument is a 'false', but don't match if it is 'nil'
-        // because expandAlias("command") should be the same as expandAlias("command", nil)
-        if (lua_isnil(L, 2)) {
-            wantPrint = false;
-        } else {
-            wantPrint = getVerifiedBool(L, __func__, 2, "echo", true);
-        }
+    // expandAlias("command", nil) must behave like expandAlias("command")
+    if (lua_gettop(L) > 1 && !lua_isnil(L, 2)) {
+        wantPrint = getVerifiedBool(L, __func__, 2, "echo", true);
     }
     const QString payload{lua_tostring(L, 1)};
     Host& host = getHostFromLua(L);

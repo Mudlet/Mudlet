@@ -375,6 +375,19 @@ describe("Alias processing", function()
             assert.are.equal(1, sends, "the command never reached the game")
         end)
 
+        it("echoes the command for a nil echo flag just as it does with none (#10749)", function()
+            local function echoed(...)
+                local mark = getLastLineNumber("main")
+                expandAlias(...)
+                return table.concat(getLines("main", mark, getLastLineNumber("main") + 1), "")
+            end
+
+            -- checked first: on a profile that never echoes commands both would be silent
+            assert.is_truthy(echoed("expand_alias_echo_absent"):find("expand_alias_echo_absent", 1, true), "this profile does not echo commands, so the spec cannot tell the two apart")
+            assert.is_truthy(echoed("expand_alias_echo_nil", nil):find("expand_alias_echo_nil", 1, true), "a nil echo flag suppressed the echo")
+            assert.is_falsy(echoed("expand_alias_echo_false", false):find("expand_alias_echo_false", 1, true), "an explicit false should still suppress the echo")
+        end)
+
     end)
 
     -- A nested expandAlias() runs a whole alias pass inside the caller's script,
