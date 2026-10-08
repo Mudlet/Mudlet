@@ -3,7 +3,8 @@
 # ccache/Lua/Lua rocks/xcb-util-cursor save steps below and the ccache trim
 # and prune that go with them: only builds of development write these shared
 # caches, every other build restores read-only, so build-mudlet-pr.yml has no
-# equivalent steps at all.
+# equivalent steps at all. The same goes for the profile-guided build of
+# releases and PTBs, which a pull request never makes.
 # build-mudlet-pr.yml also runs its macOS C++ tests after packaging, alongside
 # the Lua tests; here they stay ahead of a package step that can publish.
 name: 🔨 Build Mudlet
@@ -15,6 +16,10 @@ on:
     inputs:
       scheduled:
         description: 'Imitate a PTB'
+        required: false
+        default: 'false'
+      pgo:
+        description: 'Build macOS profile-guided, as a tagged release does'
         required: false
         default: 'false'
   schedule:
@@ -32,6 +37,10 @@ jobs:
       LUA_VERSION: '5.1.5'
       CCACHE_MAXSIZE: ${{ matrix.ccache_maxsize || '500M' }}
       CCACHE_COMPRESSLEVEL: ${{ (github.ref_name == 'development' && github.event_name != 'schedule' && github.event.inputs.scheduled != 'true') && '19' || '1' }}
+      # macOS releases are built profile-guided - see cmake/ProfileGuidedOptimization.cmake - and
+      # so are PTBs, at their own build type, so a broken profile-guided build shows up the next
+      # morning rather than on release day
+      MUDLET_PGO_BUILD: ${{ matrix.pgo == 'true' && (startsWith(github.ref, 'refs/tags/Mudlet-') || github.event_name == 'schedule' || github.event.inputs.scheduled == 'true' || github.event.inputs.pgo == 'true') }}
     strategy:
       fail-fast: false
       matrix:
@@ -77,6 +86,7 @@ jobs:
             ccache_id: macos-x64
             deploy: 'deploy'
             build_tests: 'false'
+            pgo: 'true'
           - os: macos-15
             buildname: 'macos (arm64) / c++, lua tests'
             compiler: clang_64
@@ -84,6 +94,7 @@ jobs:
             ccache_id: macos-arm64
             deploy: 'deploy'
             run_tests: 'true'
+            pgo: 'true'
 
     steps:
     - name: Checkout Mudlet source code
@@ -422,16 +433,22 @@ jobs:
         ccache --show-compression
         echo "CCACHE_BUILD_START=$(date +%s)" >> "$GITHUB_ENV"
 
+    # A profile-guided build (releases and PTBs) builds only an instrumented PipelineBenchmark
+    # here, to train on - it needs the test tree even where the job ships
+    # without one. Building mudlet in this pass would send the instrumented
+    # binary's debug files to Sentry.
     - name: Build Mudlet
       uses: lukka/run-cmake@v10.9
       with:
-        configurePreset: ${{ runner.os == 'macOS' && (matrix.build_tests == 'false' && 'ci-macos-no-tests' || 'ci-macos') || 'ci-linux' }}
-        buildPreset: ${{ runner.os == 'macOS' && (matrix.build_tests == 'false' && 'ci-macos-no-tests' || 'ci-macos') || 'ci-linux' }}
+        configurePreset: ${{ runner.os == 'macOS' && ((matrix.build_tests == 'false' && env.MUDLET_PGO_BUILD != 'true') && 'ci-macos-no-tests' || 'ci-macos') || 'ci-linux' }}
+        buildPreset: ${{ runner.os == 'macOS' && ((matrix.build_tests == 'false' && env.MUDLET_PGO_BUILD != 'true') && 'ci-macos-no-tests' || 'ci-macos') || 'ci-linux' }}
+        buildPresetAdditionalArgs: ${{ env.MUDLET_PGO_BUILD == 'true' && '[''--target'', ''PipelineBenchmark'']' || '[]' }}
       env:
         NINJA_STATUS: '[%f/%t %o/sec] '
         # The run-varying half of the ci-linux/ci-macos presets - everything else
         # about the configuration lives in CMakePresets.json
-        CMAKE_BUILD_TYPE: ${{ startsWith(github.ref, 'refs/tags/Mudlet-') && 'Release' || '' }}
+        CMAKE_BUILD_TYPE: ${{ (startsWith(github.ref, 'refs/tags/Mudlet-') || (matrix.pgo == 'true' && github.event.inputs.pgo == 'true')) && 'Release' || '' }}
+        MUDLET_PGO: ${{ env.MUDLET_PGO_BUILD == 'true' && 'GENERATE' || '' }}
         USE_SANITIZER: ${{ matrix.enable_asan == 'true' && !startsWith(github.ref, 'refs/tags/Mudlet-') && 'Address' || '' }}
         WITH_SENTRY: 'ON'
         SENTRY_SEND_DEBUG: ${{ (startsWith(github.ref, 'refs/tags/') || github.event_name == 'schedule' || github.event.inputs.scheduled == 'true') && '1' || '0' }}
@@ -451,6 +468,7 @@ jobs:
       if: >-
         always() && github.ref_name == 'development'
         && github.event_name != 'schedule' && github.event.inputs.scheduled != 'true'
+        && env.MUDLET_PGO_BUILD != 'true'
       uses: actions/cache/save@v6
       with:
         path: ${{runner.workspace}}/ccache
@@ -485,6 +503,17 @@ jobs:
       with:
         path: ~/.luarocks
         key: ${{ steps.rocks.outputs.prefix }}${{ github.run_id }}-${{ github.run_attempt }}
+
+    # After the Lua rocks are installed above, as the training run needs them
+    - name: (macOS) Train, then do the profile-guided build
+      if: env.MUDLET_PGO_BUILD == 'true'
+      run: |
+        ${{github.workspace}}/CI/pgo-train.sh ${{runner.workspace}}/b/ninja
+        cmake -B ${{runner.workspace}}/b/ninja -DMUDLET_PGO=USE -DBUILD_TESTING=${{ matrix.build_tests == 'false' && 'OFF' || 'ON' }}
+        cmake --build ${{runner.workspace}}/b/ninja
+      env:
+        NINJA_STATUS: '[%f/%t %o/sec] '
+        SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
 
     - name: (Linux) Run C++ tests
       if: runner.os == 'Linux' && matrix.run_tests == 'true'

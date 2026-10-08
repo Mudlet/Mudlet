@@ -677,6 +677,15 @@ if(USE_UPDATER)
   target_sources(${LIB_MUDLET_TARGET} PRIVATE $<TARGET_OBJECTS:mudlet_build_time>)
 endif()
 
+# Clang drops the profile of a function whose code changed since the training
+# with only a warning, which the test binaries' own main()s bury in dozens of
+# harmless ones - so for the code that ships it is an error. main.cpp is the
+# exception, as the profile's main() is PipelineBenchmark's.
+if(MUDLET_PGO STREQUAL "USE" AND MUDLET_PGO_COMPILER STREQUAL "Clang")
+  target_compile_options(${LIB_MUDLET_TARGET} PRIVATE -Werror=backend-plugin)
+  set_source_files_properties(main.cpp PROPERTIES COMPILE_OPTIONS -Wno-error=backend-plugin)
+endif()
+
 ########################### Debugging code inclusions ##########################
 # Controls the include/selection of extra code to aide developers debug various
 # features of Mudlet, generally speaking they will not be '#define'd in

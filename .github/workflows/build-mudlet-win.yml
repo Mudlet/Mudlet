@@ -2,7 +2,8 @@
 # Changes here likely need to be mirrored there as well, apart from the
 # ccache trim and save steps below: only builds of development write
 # this shared cache, every other build restores read-only, so
-# build-mudlet-win-pr.yml has no equivalent steps at all.
+# build-mudlet-win-pr.yml has no equivalent steps at all. The same goes for
+# the profile-guided build of releases and PTBs, which a pull request never makes.
 name: 🔨 Build Mudlet (windows)
 on:
   push:
@@ -12,6 +13,10 @@ on:
     inputs:
       scheduled:
         description: 'Imitate a PTB'
+        required: false
+        default: 'false'
+      pgo:
+        description: 'Build profile-guided, as a tagged release does'
         required: false
         default: 'false'
   schedule:
@@ -109,6 +114,9 @@ jobs:
         SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
         SENTRY_DSN: ${{ secrets.SENTRY_DSN }}
         WITH_SENTRY: "ON"
+        # Releases are built profile-guided - see cmake/ProfileGuidedOptimization.cmake - and so
+        # are PTBs, so a broken profile-guided build shows up the next morning, not on release day
+        MUDLET_PGO_BUILD: ${{ startsWith(github.ref, 'refs/tags/Mudlet-') || github.event_name == 'schedule' || github.event.inputs.scheduled == 'true' || github.event.inputs.pgo == 'true' }}
       run: $GITHUB_WORKSPACE/CI/build-mudlet-for-windows.sh
 
     # A hit refreshes an entry's timestamp, so whatever this build left untouched
@@ -209,6 +217,7 @@ jobs:
       if: >-
         always() && github.ref_name == 'development'
         && github.event_name != 'schedule' && github.event.inputs.scheduled != 'true'
+        && github.event.inputs.pgo != 'true'
       uses: actions/cache/save@v6
       with:
         path: ${{runner.workspace}}/ccache
