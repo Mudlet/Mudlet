@@ -174,6 +174,7 @@ set(TRIGGER_GROUP_TEST_SOURCES
     TFeedTriggersRecursionTest.cpp
     TriggerMatchPoolTest.cpp
     TreeChildTeardownTest.cpp
+    TriggerSoundArgumentTest.cpp
     UnitDeferredDeleteTest.cpp
     UnitProcessingDepthTest.cpp
     UnitsReachHostTest.cpp
