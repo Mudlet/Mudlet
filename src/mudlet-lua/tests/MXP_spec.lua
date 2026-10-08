@@ -605,6 +605,24 @@ describe("Tests MXP handling", function()
       assert.are.equal(columns, getColumnCount("main"), "closing a tab changed the space its parent takes")
     end)
 
+    -- the parent's own tab is empty, so its first tab comes to the front even
+    -- when a frame was nested in the parent before it
+    it("brings the first tab to the front of a frame that already has one nested in it", function()
+      finally(function()
+        closeFrame("mxpSpecNestTab")
+        closeFrame("mxpSpecNestInner")
+        closeFrame("mxpSpecNestHost")
+      end)
+      openFrame("mxpSpecNestHost", 'Align="right" Width="30%" Height="50%" TITLE="Host"')
+      feedTriggers('<DEST mxpSpecNestHost><FRAME Name="mxpSpecNestInner" Align="bottom" Height="25%"></DEST>' .. "\n")
+      assert.are.equal("miniconsole", windowType("mxpSpecNestInner"), "the frame was not nested in the host")
+
+      openFrame("mxpSpecNestTab", 'DOCK="mxpSpecNestHost" Align="client" TITLE="Tab"')
+
+      assert.are.equal("miniconsole", windowType("mxpSpecNestTab"))
+      assert.is_true(windowVisible("mxpSpecNestTab"), "the first tab was left behind the host's empty one")
+    end)
+
     it("shows the tag as text when the frame it names is not there", function()
       finally(function() closeFrame("mxpSpecFocusFrame") end)
       openFrame("mxpSpecFocusFrame", 'Align="left" Width="25%" Height="50%"')
