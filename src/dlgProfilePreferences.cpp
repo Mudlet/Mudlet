@@ -1277,6 +1277,10 @@ void dlgProfilePreferences::setSearchKeywords()
     synonyms.append({groupBox_main_window_shortcuts, tr("keyboard shortcuts, hotkeys, key bindings, accelerators")});
     //: Comma-separated synonyms for the settings search - translate to what a player would type, do not transliterate. This one is for saving the profile when Mudlet is closed.
     synonyms.append({mFORCE_SAVE_ON_EXIT, tr("autosave, save on exit, backup")});
+    //: Comma-separated synonyms for the settings search - translate to what a player would type, do not transliterate. This one is for the colours the game's text and background are drawn in.
+    synonyms.append({groupBox_displayColors, tr("colour, colours, palette, ANSI colours, background")});
+    //: Comma-separated synonyms for the settings search - translate to what a player would type, do not transliterate. This one is for the colours the map is drawn in.
+    synonyms.append({groupBox_mapperColors, tr("colour, colours, map colours, palette, background")});
     //: Comma-separated synonyms for the settings search - translate to what a player would type, do not transliterate. This one is for the font the game's text is drawn in.
     synonyms.append({groupBox_font, tr("font, typeface, size, monospace, antialiasing")});
     //: Comma-separated synonyms for the settings search - translate to what a player would type, do not transliterate. This one is for how long Mudlet waits for the game to answer.
@@ -2793,8 +2797,17 @@ void dlgProfilePreferences::slot_sidebarItemClicked(QListWidgetItem* pItem)
         QDesktopServices::openUrl(QUrl(url));
         return;
     }
+    const QString key = pItem->data(scmRole_categoryKey).toString();
+    if (key.isEmpty()) {
+        return;
+    }
+    // A search keeps the sidebar's current row, so choosing that category again is no row change either
+    if (mSearchActive) {
+        slot_categorySelected(mpListWidget_categories->row(pItem));
+        return;
+    }
     // Choosing a subpage's own category is no row change, so the row-changed slot would not leave the subpage
-    if (const QString key = pItem->data(scmRole_categoryKey).toString(); !key.isEmpty() && mCurrentSubpage.startsWith(key + QLatin1Char('/'))) {
+    if (mCurrentSubpage.startsWith(key + QLatin1Char('/'))) {
         leaveSubpage();
     }
 }
@@ -3103,6 +3116,10 @@ void dlgProfilePreferences::connectApplyTriggers()
     for (auto* pDateTimeEdit : findChildren<QDateTimeEdit*>()) {
         connect(pDateTimeEdit, &QDateTimeEdit::dateTimeChanged, this, &dlgProfilePreferences::slot_scheduleApply, Qt::UniqueConnection);
     }
+    for (auto* pAbstractSpinBox : findChildren<QAbstractSpinBox*>()) {
+        // Return on a QDateTimeEdit leaves its line edit modified and emits nothing from it
+        connect(pAbstractSpinBox, &QAbstractSpinBox::editingFinished, this, &dlgProfilePreferences::slot_lineEditFinished, Qt::UniqueConnection);
+    }
     for (auto* pLineEdit : findChildren<QLineEdit*>()) {
         if (pLineEdit == mpLineEdit_search) {
             continue;
@@ -3166,6 +3183,10 @@ static enums::controlsVisibility visibilityFromComboIndex(const int index)
 // field holds a half-typed word, which neither the apply nor the snapshot takes as a setting.
 static bool beingTypedInto(const QObject* pControl)
 {
+    // A spin box types into a line edit of its own, while emitting valueChanged() for each digit that makes a number
+    if (const auto* pSpinBox = qobject_cast<const QAbstractSpinBox*>(pControl)) {
+        pControl = pSpinBox->findChild<QLineEdit*>(QString(), Qt::FindDirectChildrenOnly);
+    }
     const auto* pLineEdit = qobject_cast<const QLineEdit*>(pControl);
     return pLineEdit && pLineEdit->hasFocus() && pLineEdit->isModified();
 }
@@ -3887,6 +3908,7 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
     connect(checkBox_undoServerWrap, &QCheckBox::toggled, label_undo_server_wrap_experimental, &QWidget::setVisible, Qt::UniqueConnection);
 
     console_buffer_size_spinBox->setValue(pHost->getConsoleBufferSize());
+    mBufferSizeBeforeMax = pHost->getConsoleBufferSize();
     checkBox_useMaxBufferSize->setChecked(pHost->getUseMaxConsoleBufferSize());
 
     // Set maximum buffer size based on system capabilities and update tooltip
@@ -4074,6 +4096,13 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
         mpMenu = new QMenu(tr("Other profiles to Map to:"), this);
     }
 
+    // Rebuilt on every refresh, which must not drop the destinations already ticked
+    QSet<QString> chosenProfiles;
+    for (const auto* pAction : mpMenu->actions()) {
+        if (pAction->isChecked()) {
+            chosenProfiles.insert(pAction->text());
+        }
+    }
     mpMenu->clear();
     for (unsigned int i = 0, total = profileList.size(); i < total; ++i) {
         const QString s = profileList.at(i);
@@ -4086,13 +4115,14 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
 
         auto pItem = new QAction(s, mpMenu);
         pItem->setCheckable(true);
-        pItem->setChecked(false);
+        pItem->setChecked(chosenProfiles.contains(s));
         mpMenu->addAction(pItem);
         //Enable it as we now have at least one profile to copy to
         pushButton_chooseProfiles->setEnabled(true);
     }
 
     pushButton_chooseProfiles->setMenu(mpMenu);
+    slot_chosenProfilesChanged(nullptr);
 
     fillOutMapHistory();
 
@@ -4200,7 +4230,7 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
         connect(spinBox_playerRoomInnerDiameter, qOverload<int>(&QSpinBox::valueChanged), this, &dlgProfilePreferences::slot_setPlayerRoomInnerDiameter, Qt::UniqueConnection);
 
         // Initialize room, exit, and border size controls
-        spinBox_roomSize->setValue(pHost->mRoomSize * 10);
+        spinBox_roomSize->setValue(qRound(pHost->mRoomSize * 10));
         // mLineSize/mRoomBorderSize are inversely proportional to thickness
         // (exitWidth = 1/eSize * ...), convert to a direct 1-11 scale
         // using a simple reciprocal: mLineSize = 50 / spinner, spinner = 50 / mLineSize
@@ -4576,12 +4606,7 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
         mSnapshot.addEditor(key, sequenceEdit);
         shortcutsRow++;
         connect(sequenceEdit, &QKeySequenceEdit::editingFinished, this, [=]() {
-            QKeySequence newSequence;
-            if (!sequenceEdit->keySequence().isEmpty() && !sequenceEdit->keySequence().matches(QKeySequence(Qt::Key_Escape))) {
-                newSequence = sequenceEdit->keySequence();
-            }
-            sequenceEdit->setKeySequence(newSequence);
-            currentShortcuts[key] = newSequence;
+            currentShortcuts[key] = sequenceEdit->keySequence();
             updateShortcutConflictWarning();
             slot_scheduleApply();
         });
@@ -4626,19 +4651,25 @@ void dlgProfilePreferences::updateShortcutConflictWarning()
                 reported.append(j);
             }
         }
-        if (labels.size() < 2) {
+        // addCommand() refuses a key Mudlet holds, but nothing stops a Mudlet shortcut moving onto a command's key
+        const QStringList holders = mudlet::self()->addonCommandsUsingShortcut(sequence, mpHost, true);
+        if (labels.size() + holders.size() < 2) {
             continue;
         }
         const QString sequenceText = sequence.toString(QKeySequence::NativeText);
-        if (labels.size() == 2) {
+        if (labels.size() == 2 && holders.isEmpty()) {
             //: Inline warning on the shortcuts preferences page when exactly two actions have been given the same shortcut. %1 and %2 are the action names, %3 is the shortcut itself.
             warnings.append(tr("Warning: '%1' and '%2' now share the shortcut %3 - neither will work until one of them is changed.").arg(labels.at(0), labels.at(1), sequenceText));
+        } else if (labels.size() == 1 && holders.size() == 1) {
+            //: Inline warning on the shortcuts preferences page when one of Mudlet's actions has been given a shortcut an add-on command already holds. %1 is the action name, %2 the shortcut itself, %3 a comma separated list of the commands holding it: each command's name in quotes, or "a command from another profile".
+            warnings.append(tr("Warning: '%1' now shares the shortcut %2 with %3 - neither will work until one of them is changed.").arg(labels.at(0), sequenceText, holders.join(qsl(", "))));
         } else {
             QStringList quotedLabels;
             for (const auto& label : labels) {
                 quotedLabels.append(qsl("'%1'").arg(label));
             }
-            //: Inline warning on the shortcuts preferences page when three or more actions have been given the same shortcut. %1 is the list of action names (each already quoted), %2 is the shortcut itself.
+            quotedLabels.append(holders);
+            //: Inline warning on the shortcuts preferences page when three or more actions or add-on commands have been given the same shortcut. %1 is the list of them, each already quoted (an add-on command from another profile appears as "a command from another profile"), %2 is the shortcut itself.
             warnings.append(tr("Warning: %1 now share the shortcut %2 - none of them will work until they are changed.").arg(quotedLabels.join(qsl(", ")), sequenceText));
         }
     }
@@ -4921,7 +4952,11 @@ void dlgProfilePreferences::loadEditorTab()
 
     populateThemesList();
     mudlet::loadEdbeeTheme(pHost->getEditorTheme(), pHost->getEditorThemeFile());
-    populateScriptsList();
+    // Walking every scripted item stalls a large profile, too long to repeat on every refresh; a profile
+    // change empties the list in clearHostDetails()
+    if (!script_preview_combobox->count()) {
+        populateScriptsList();
+    }
 
     // pre-select the current theme
     code_editor_theme_selection_combobox->lineEdit()->setPlaceholderText(qsl("Select theme"));
@@ -5745,7 +5780,10 @@ void dlgProfilePreferences::fillOutMapHistory()
         return;
     }
 
-    // Map files change while the dialog is open, so rebuild, resetting the enabled state to an empty list's
+    // Map files change while the dialog is open, so rebuild, resetting the enabled state to an empty list's.
+    // The rebuild follows every change, so it keeps an older map that was picked to load; the newest entry
+    // is not kept, so a map saved since takes its place at the top.
+    const QVariant pickedMapFile = comboBox_mapHistory->currentIndex() > 0 ? comboBox_mapHistory->currentData() : QVariant();
     {
         const QSignalBlocker blocker(comboBox_mapHistory);
         comboBox_mapHistory->clear();
@@ -5828,6 +5866,10 @@ void dlgProfilePreferences::fillOutMapHistory()
                 }
             }
         }
+    }
+    if (const int pickedIndex = comboBox_mapHistory->findData(pickedMapFile); pickedMapFile.isValid() && pickedIndex >= 0) {
+        const QSignalBlocker blocker(comboBox_mapHistory);
+        comboBox_mapHistory->setCurrentIndex(pickedIndex);
     }
     if (comboBox_mapHistory->count()) {
         comboBox_mapHistory->setEnabled(true);
@@ -6354,23 +6396,23 @@ void dlgProfilePreferences::applyAll()
         // Save console buffer settings and apply them
         if (mSnapshot.anyDirty({checkBox_useMaxBufferSize, console_buffer_size_spinBox})) {
             const bool useMaxBuffer = mSnapshot.dirty(checkBox_useMaxBufferSize) ? checkBox_useMaxBufferSize->isChecked() : pHost->getUseMaxConsoleBufferSize();
-            int newBufferSize;
-
-            if (useMaxBuffer && pHost->mpConsole) {
-                newBufferSize = pHost->mpConsole->buffer.getMaxBufferSize();
-            } else {
-                newBufferSize = mSnapshot.dirty(console_buffer_size_spinBox) ? console_buffer_size_spinBox->value() : pHost->getConsoleBufferSize();
+            // The profile keeps the size the user chose while the maximum is in
+            // charge, so unticking the maximum has a size to go back to
+            int chosenBufferSize = pHost->getConsoleBufferSize();
+            if (useMaxBuffer) {
+                chosenBufferSize = mBufferSizeBeforeMax;
+            } else if (mSnapshot.dirty(console_buffer_size_spinBox)) {
+                chosenBufferSize = console_buffer_size_spinBox->value();
             }
 
-            // Calculate batch delete size as 5% of buffer size (minimum 100)
-            const int newBatchDeleteSize = std::max(100, newBufferSize / 5);
-
-            if (pHost->getConsoleBufferSize() != newBufferSize || pHost->getUseMaxConsoleBufferSize() != useMaxBuffer) {
-                pHost->setConsoleBufferSize(newBufferSize);
+            if (pHost->getConsoleBufferSize() != chosenBufferSize || pHost->getUseMaxConsoleBufferSize() != useMaxBuffer) {
+                pHost->setConsoleBufferSize(chosenBufferSize);
                 pHost->setUseMaxConsoleBufferSize(useMaxBuffer);
 
-                // Apply the new buffer size to the main console
                 if (pHost->mpConsole) {
+                    const int newBufferSize = useMaxBuffer ? pHost->mpConsole->buffer.getMaxBufferSize() : chosenBufferSize;
+                    // Calculate batch delete size as 5% of buffer size (minimum 100)
+                    const int newBatchDeleteSize = std::max(100, newBufferSize / 5);
                     pHost->mpConsole->buffer.setBufferSize(newBufferSize, newBatchDeleteSize);
                 }
             }
@@ -6861,7 +6903,11 @@ void dlgProfilePreferences::slot_scheduleApply()
 void dlgProfilePreferences::slot_lineEditFinished()
 {
     // Clearing the modified flag marks this edit finished - see beingTypedInto()
-    if (auto* pLineEdit = qobject_cast<QLineEdit*>(sender()); pLineEdit) {
+    QObject* pEditor = sender();
+    if (auto* pSpinBox = qobject_cast<QAbstractSpinBox*>(pEditor)) {
+        pEditor = pSpinBox->findChild<QLineEdit*>(QString(), Qt::FindDirectChildrenOnly);
+    }
+    if (auto* pLineEdit = qobject_cast<QLineEdit*>(pEditor); pLineEdit) {
         pLineEdit->setModified(false);
     }
     slot_scheduleApply();
@@ -8408,16 +8454,16 @@ void dlgProfilePreferences::slot_toggleUseMaxBufferSize(bool checked)
     }
 
     if (checked) {
-        // When max is enabled, set spinbox to max value and disable it
+        // A size typed into the box may not have been applied yet
+        mBufferSizeBeforeMax = console_buffer_size_spinBox->value();
         if (pHost->mpConsole) {
             const int maxBufferSize = pHost->mpConsole->buffer.getMaxBufferSize();
             console_buffer_size_spinBox->setValue(maxBufferSize);
         }
         console_buffer_size_spinBox->setEnabled(false);
     } else {
-        // When max is disabled, enable the spinbox and set to stored value
         console_buffer_size_spinBox->setEnabled(true);
-        console_buffer_size_spinBox->setValue(pHost->getConsoleBufferSize());
+        console_buffer_size_spinBox->setValue(mBufferSizeBeforeMax);
     }
 }
 
@@ -8639,9 +8685,9 @@ void dlgProfilePreferences::slot_changeShowTabConnectionIndicators(bool state)
 void dlgProfilePreferences::slot_roomSizeChanged(int size)
 {
     if (mpHost) {
-        mpHost->mRoomSize = static_cast<float>(size) / 10.0f;
+        mpHost->mRoomSize = size / 10.0;
         if (mpHost->mpMap && mpHost->mpMap->mpMapper && mpHost->mpMap->mpMapper->mp2dMap) {
-            mpHost->mpMap->mpMapper->mp2dMap->setRoomSize(static_cast<float>(size) / 10.0f);
+            mpHost->mpMap->mpMapper->mp2dMap->setRoomSize(mpHost->mRoomSize);
             mpHost->mpMap->mpMapper->mp2dMap->update();
         }
     }

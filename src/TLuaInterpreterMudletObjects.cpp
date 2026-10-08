@@ -1039,7 +1039,11 @@ int TLuaInterpreter::isPrompt(lua_State* L)
 {
     const TConsoleModel& model = getHostFromLua(L).mainConsoleModel();
     const int userCursorY = model.mUserCursor.y();
-    if (userCursorY < model.buffer.promptBuffer.size() && userCursorY >= 0) {
+    const int lastLine = static_cast<int>(model.buffer.promptBuffer.size()) - 1;
+    // A trigger that gagged its line, or cleared the window, leaves the cursor past or on the last line left: only
+    // the pass still knows whether the line it ran for was a prompt.
+    const bool engineLineGone = model.mTriggerEngineMode && model.mEngineCursor > lastLine && userCursorY >= lastLine;
+    if (!engineLineGone && userCursorY < model.buffer.promptBuffer.size() && userCursorY >= 0) {
         lua_pushboolean(L, model.buffer.promptBuffer.at(userCursorY));
         return 1;
     }

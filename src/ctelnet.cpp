@@ -183,6 +183,8 @@ cTelnet::cTelnet(Host* pH, const QString& profileName)
     if (mAcceptableEncodings.isEmpty()) {
         mAcceptableEncodings << "UTF-8";
         mAcceptableEncodings << "EUC-KR";
+        mAcceptableEncodings << "SHIFT_JIS";
+        mAcceptableEncodings << "EUC-JP";
         mAcceptableEncodings << "GBK";
         mAcceptableEncodings << "GB18030";
         mAcceptableEncodings << "BIG5";
@@ -1094,8 +1096,13 @@ void cTelnet::slot_socketDisconnected()
     postData();
     if (mpHost->mpConsole) {
         // A line held back for server-wrap undoing is complete now that the
-        // connection is gone - commit it before the disconnect messages:
-        mpHost->mainConsoleModel().buffer.flushPendingServerWrapJoin();
+        // connection is gone - commit it, in trigger context as for any other
+        // line from the game, before the disconnect messages:
+        TConsoleModel& model = mpHost->mainConsoleModel();
+        const bool wasInTriggerEngineMode = model.mTriggerEngineMode;
+        model.mTriggerEngineMode = true;
+        model.buffer.flushPendingServerWrapJoin();
+        model.mTriggerEngineMode = wasInTriggerEngineMode;
     }
 
     // Commit now; ~QSaveFile() would cancel the save and delete the temporary file:
@@ -1883,9 +1890,11 @@ void cTelnet::sendCurrentNAWS()
         return;
     }
     // Use the smaller of the screen width or the wrapAt, then subtract the
-    // width of the time stamps if they are drawn - with no view they are not:
+    // width of the time stamps if they are drawn - with no view they are not.
+    // Never below 1: RFC 1073 reads 0 as unknown, and a negative width goes on
+    // the wire as a very wide one.
     const bool gutterDrawn = pHost->mpConsole && pHost->mainConsoleShowsTimeStamps();
-    int naws_x = std::min(pHost->mScreenWidth, pHost->mWrapAt) - (gutterDrawn ? TBuffer::smTimeStampFormat.size() : 0);
+    int naws_x = std::max(1, std::min(pHost->mScreenWidth, pHost->mWrapAt) - static_cast<int>(gutterDrawn ? TBuffer::smTimeStampFormat.size() : 0));
     int naws_y = pHost->mScreenHeight;
     if ((naws_y > 0) && (myOptionState.test(static_cast<size_t>(OPT_NAWS))) && ((mNaws_x != naws_x) || (mNaws_y != naws_y))) {
         sendNAWS(naws_x, naws_y);
@@ -5191,7 +5200,7 @@ void cTelnet::gotPrompt(std::string& mud_data)
         }
     }
 
-    postData();
+    postData(true);
     mMudData = "";
     mIsTimerPosting = false;
 }
@@ -5305,7 +5314,7 @@ void cTelnet::slot_timerPosting()
     }
 }
 
-void cTelnet::postData()
+void cTelnet::postData(const bool endsWithPromptMarker)
 {
     if (!mpHost || mpHost->isClosingDown() || !mpHost->mpConsole) {
         return;
@@ -5328,7 +5337,7 @@ void cTelnet::postData()
     // translateToPlainText - MXP DEST routing happens inside that process
     mpHost->printOnDisplay(data, true);
     if (mpHost->mMMCPServer && !mpHost->mIsRemoteEchoingActive) {
-        mpHost->mMMCPServer->receiveFromPlayer(snooped ? original : data);
+        mpHost->mMMCPServer->receiveFromPlayer(snooped ? original : data, endsWithPromptMarker);
     }
 
     // Hand the capacity back so the next packet appends without a malloc. A

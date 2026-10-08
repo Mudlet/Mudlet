@@ -376,6 +376,26 @@ void TArea::addRoom(int id)
     }
 }
 
+void TArea::addRooms(const QSet<int>& ids)
+{
+    bool added = false;
+    for (const int id : ids) {
+        if (!mpRoomDB->getRoom(id)) {
+            const QString error = tr("roomID=%1 does not exist, can not set properties of a non-existent room!").arg(id);
+            mpMap->mpHost->printSystemMessage(error);
+        } else if (rooms.contains(id)) {
+            qDebug() << "TArea::addRooms(" << id << ") No creation! room already exists";
+        } else {
+            rooms.insert(id);
+            added = true;
+        }
+    }
+    if (added) {
+        bumpRoomsVersion();
+    }
+    calcSpan();
+}
+
 void TArea::addRoomWithCustomLines(int id, int z)
 {
     if (!rooms.contains(id)) {
@@ -765,11 +785,17 @@ const QMultiMap<int, QPair<QString, int>> TArea::getAreaExitRoomData() const
 
 int TArea::createLabelId() const
 {
-    int labelId = -1;
-    do {
-    } while (mMapLabels.contains(++labelId));
-    if (labelId < 0) {
-        labelId = -1;
+    if (mMapLabels.isEmpty()) {
+        return 0;
+    }
+    // The keys are sorted: when they fill 0..n-1 the lowest free id is n,
+    // otherwise it is the first one out of step
+    if (mMapLabels.firstKey() >= 0 && mMapLabels.lastKey() == mMapLabels.size() - 1) {
+        return mMapLabels.lastKey() + 1;
+    }
+    int labelId = 0;
+    for (auto it = mMapLabels.lowerBound(0); it != mMapLabels.cend() && it.key() == labelId; ++it) {
+        ++labelId;
     }
     return labelId;
 }

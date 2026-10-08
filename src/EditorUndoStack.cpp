@@ -24,6 +24,7 @@
 #include "EditorCommand.h"
 
 #include <QDebug>
+#include <QSet>
 #include <typeinfo>
 #include <utility>
 
@@ -133,14 +134,15 @@ void EditorUndoStack::collectAffectedItems(const QUndoCommand* cmd, QMap<EditorV
         QList<int> itemIDs = mudletCmd->affectedItemIDs();
 
         // Add to the map, avoiding duplicates and invalid IDs
+        QList<int>& affectedIDs = affectedItemsByView[viewType];
+        QSet<int> seenIDs{affectedIDs.cbegin(), affectedIDs.cend()};
         for (int id : std::as_const(itemIDs)) {
             // Skip invalid IDs (0 or negative)
-            if (id <= 0) {
+            if (id <= 0 || seenIDs.contains(id)) {
                 continue;
             }
-            if (!affectedItemsByView[viewType].contains(id)) {
-                affectedItemsByView[viewType].append(id);
-            }
+            seenIDs.insert(id);
+            affectedIDs.append(id);
         }
     }
 
