@@ -986,6 +986,42 @@ private slots:
         QVERIFY2(console->buffer.buffer.at(y).at(0).isSelected(), "text arriving on a selected line deselected the characters that were already on it");
     }
 
+    // Selected text takes its background as the pen, and a transparent cell
+    // borrows the console's for that - whose alpha a script may have set to 0
+    void test_selectedTransparentTextStaysVisibleOnATransparentConsole()
+    {
+        mpServer->setWelcomeMessage(qsl("selection test\r\n"));
+        startProfile(mpHostname, mpLocalhost, mpPort);
+        QVERIFY2(waitForTextInBuffer(qsl("selection test")), "the welcome text never reached the buffer");
+        Host* host = mudlet::self()->getActiveHost();
+        QVERIFY(host->getLuaInterpreter()->compileAndExecuteScript(qsl("setBackgroundColor('main', 10, 20, 30, 0)")));
+
+        TMainConsole* console = host->mpConsole;
+        TTextEdit* pane = upperPane();
+        QVERIFY2(pane, "No upper pane available");
+        // a system message, then game text on a background barely there
+        for (const QColor& background : {QColor(QColorConstants::Transparent), QColor(10, 20, 30, 1)}) {
+            const QString text = qsl("system\n");
+            console->buffer.append(text, 0, text.size(), QColorConstants::White, background, TChar::None, 0);
+            const int y = console->buffer.getLastLineNumber() - 1;
+            QCOMPARE(console->buffer.line(y), qsl("system"));
+            for (auto& character : console->buffer.buffer[y]) {
+                character.select();
+            }
+
+            TTextEdit::LineLayout layout;
+            pane->layoutLine(y, 0, pane->timeStampCharStyle(), layout);
+            int glyphs = 0;
+            for (const auto& run : layout) {
+                if (run.style && !run.grapheme.isEmpty()) {
+                    ++glyphs;
+                    QCOMPARE(run.fgColor, QColor(10, 20, 30));
+                }
+            }
+            QCOMPARE(glyphs, 6);
+        }
+    }
+
     // #6363: the mouse cursor becomes a hand over a link, and the reset back to
     // the I-beam lives inside two bounds checks in updateTextCursor(). Leaving
     // the link sideways lands on a character that answers those checks, so the
