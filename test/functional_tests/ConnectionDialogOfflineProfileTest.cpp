@@ -57,14 +57,20 @@ private:
     // A folder and nothing else, which is what the dialog's own New button
     // leaves behind when the name is committed and the address never filled in
     const QString mAddresslessProfile = qsl("Addressless-ConnDialogOffline");
+    // A game from the catalog with an empty folder, whose details all come from the catalog
+    const QString mCatalogProfile = qsl("Achaea");
+    // A catalog game the catalog turns TLS on for
+    const QString mSecureCatalogProfile = qsl("StickMUD");
 
     dlgConnectionProfiles* dialog() const { return mudlet::self()->mpConnectionDialog.data(); }
 
-    void selectTestProfile()
+    void selectTestProfile() { selectProfile(mAddresslessProfile); }
+
+    void selectProfile(const QString& name)
     {
         auto* pDialog = dialog();
-        const auto items = pDialog->findData(*pDialog->listWidget_profiles, mAddresslessProfile, dlgConnectionProfiles::csmNameRole);
-        QVERIFY2(!items.isEmpty(), "The addressless test profile is missing from the games list");
+        const auto items = pDialog->findData(*pDialog->listWidget_profiles, name, dlgConnectionProfiles::csmNameRole);
+        QVERIFY2(!items.isEmpty(), qPrintable(qsl("%1 is missing from the games list").arg(name)));
         pDialog->listWidget_profiles->setCurrentItem(items.first());
     }
 
@@ -79,6 +85,8 @@ private slots:
         QVERIFY(mXdgDir.isValid());
         QVERIFY(QDir().mkpath(qsl("%1/mudlet/profiles").arg(mXdgDir.path()))); // profiles/ = XDG opt-in
         QVERIFY(QDir().mkpath(qsl("%1/mudlet/profiles/%2").arg(mXdgDir.path(), mAddresslessProfile)));
+        QVERIFY(QDir().mkpath(qsl("%1/mudlet/profiles/%2").arg(mXdgDir.path(), mCatalogProfile)));
+        QVERIFY(QDir().mkpath(qsl("%1/mudlet/profiles/%2").arg(mXdgDir.path(), mSecureCatalogProfile)));
         qputenv("XDG_CONFIG_HOME", mXdgDir.path().toUtf8());
 
         mudlet::start();
@@ -137,6 +145,61 @@ private slots:
         dialog()->host_name_entry->clear();
         QVERIFY2(!dialog()->connect_button->isEnabled(), "Connect stayed available with the address taken away");
         QVERIFY2(dialog()->offline_button->isEnabled(), "Taking the address away took the Offline button with it");
+    }
+
+    // #10917: showing a profile is not editing it, so the catalog's details must not be written
+    // into the folder, where they would outlive any later change to the catalog
+    void test_selectingACatalogGameWritesNothingIntoItsFolder()
+    {
+        QVERIFY2(dialog(), "No connection dialog to test against");
+        selectTestProfile();
+        selectProfile(mCatalogProfile);
+
+        QVERIFY2(!dialog()->host_name_entry->text().isEmpty(), "The catalog gave the game no address, so this proves nothing");
+        QVERIFY2(!dialog()->port_entry->text().isEmpty(), "The catalog gave the game no port, so this proves nothing");
+        for (const QString& item : {qsl("url"), qsl("port"), qsl("ssl_tsl"), qsl("description"), qsl("autologin"), qsl("autoreconnect")}) {
+            QVERIFY2(!QFileInfo::exists(MudletApp::getMudletPath(enums::profileDataItemPath, mCatalogProfile, item)), qPrintable(qsl("selecting the game wrote its %1 file").arg(item)));
+        }
+        QVERIFY2(dialog()->connect_button->isEnabled(), "the catalog's details were not validated once the form was filled in");
+    }
+
+    // The player's own Secure choice is kept in ssl_tsl, which the catalog's default must not override
+    void test_aSavedSecureChoiceBeatsTheCatalogs()
+    {
+        QVERIFY2(dialog(), "No connection dialog to test against");
+        QVERIFY(MudletApp::writeProfileData(mSecureCatalogProfile, qsl("ssl_tsl"), QString::number(Qt::Unchecked)).first);
+        selectTestProfile();
+        selectProfile(mSecureCatalogProfile);
+
+        QVERIFY2(!dialog()->port_entry->text().isEmpty(), "The catalog gave the game no port, so this proves nothing");
+        QVERIFY2(!dialog()->port_ssl_tsl->isChecked(), "the catalog's TLS default replaced the Secure choice saved for the profile");
+    }
+
+    // A copy's name is not in the catalog, so it has to be given the details the original only had from there
+    void test_aCopyOfACatalogGameKeepsItsDetails()
+    {
+        QVERIFY2(dialog(), "No connection dialog to test against");
+        QVERIFY(MudletApp::writeProfileData(mSecureCatalogProfile, qsl("ssl_tsl"), QString::number(Qt::Unchecked)).first);
+        selectTestProfile();
+        selectProfile(mSecureCatalogProfile);
+
+        dialog()->slot_copyProfile();
+        const QString copy = mSecureCatalogProfile + qsl("1");
+        QVERIFY2(QTest::qWaitFor(
+                         [this]() {
+                             return !dialog()->mCopyingProfile;
+                         },
+                         10s),
+                 "the copy never finished");
+        QCOMPARE(MudletApp::readProfileData(copy, qsl("url")), qsl("stickmud.com"));
+        QCOMPARE(MudletApp::readProfileData(copy, qsl("port")), qsl("7670"));
+        QVERIFY2(MudletApp::readProfileData(copy, qsl("ssl_tsl")).toInt() == Qt::Unchecked, "the copy turned on the TLS the player had turned off");
+
+        selectProfile(mSecureCatalogProfile);
+        dialog()->slot_copyOnlySettingsOfProfile();
+        const QString settingsCopy = mSecureCatalogProfile + qsl("2");
+        QCOMPARE(MudletApp::readProfileData(settingsCopy, qsl("url")), qsl("stickmud.com"));
+        QCOMPARE(MudletApp::readProfileData(settingsCopy, qsl("port")), qsl("7670"));
     }
 };
 

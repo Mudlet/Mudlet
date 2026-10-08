@@ -55,6 +55,7 @@
 #include <QSignalBlocker>
 #include <QTabBar>
 #include <QTime>
+#include <array>
 #include <chrono>
 #include <sstream>
 
@@ -1439,6 +1440,15 @@ void dlgConnectionProfiles::slot_itemClicked(QListWidgetItem* pItem)
             host_url = (*it).hostUrl;
         }
     }
+
+    // Showing a profile is not editing it: these fields' slots would pin the catalog's details in it
+    std::array blockers{QSignalBlocker(host_name_entry),
+                        QSignalBlocker(port_entry),
+                        QSignalBlocker(port_ssl_tsl),
+                        QSignalBlocker(autologin_checkBox),
+                        QSignalBlocker(auto_reconnect),
+                        QSignalBlocker(mud_description_textedit)};
+
     host_name_entry->setText(host_url);
 
     QString host_port = readProfileData(profile_name, qsl("port"));
@@ -1453,7 +1463,10 @@ void dlgConnectionProfiles::slot_itemClicked(QListWidgetItem* pItem)
         auto it = TGameDetails::findGame(profile_name);
         if (it != TGameDetails::scmDefaultGames.end()) {
             host_port = QString::number((*it).port);
-            port_ssl_tsl->setChecked((*it).tlsEnabled);
+            // ssl_tsl is the player's own choice, so the catalog's is only the default
+            if (val.isEmpty()) {
+                port_ssl_tsl->setChecked((*it).tlsEnabled);
+            }
         }
     }
 
@@ -1516,6 +1529,12 @@ void dlgConnectionProfiles::slot_itemClicked(QListWidgetItem* pItem)
         website_entry->show();
     }
     website_entry->setText(val);
+
+    // Unblocked first, as validateProfile() trims a bad port through port_entry's own slot
+    for (auto& blocker : blockers) {
+        blocker.unblock();
+    }
+    validateProfile();
 
     profile_history->clear();
 
@@ -2076,10 +2095,12 @@ void dlgConnectionProfiles::slot_copyProfile()
     mpCopyProfile->setEnabled(false);
     auto future = QtConcurrent::run(dlgConnectionProfiles::copyFolder, MudletApp::getMudletPath(enums::profileHomePath, oldname), MudletApp::getMudletPath(enums::profileHomePath, profile_name));
     auto watcher = new QFutureWatcher<bool>(this);
-    connect(watcher, &QFutureWatcher<bool>::finished, this, [this, profile_name, oldPassword, watcher]() {
+    connect(watcher, &QFutureWatcher<bool>::finished, this, [this, profile_name, oldPassword, data, watcher]() {
         if (!mProfileList.contains(profile_name)) {
             mProfileList << profile_name;
         }
+
+        writeDetailsTheCopyLacks(profile_name, data);
 
         // The copy takes every file in the profile directory, and the saved sign-in's record is one
         // of them now that it lives there. Its token is not: that is filed under the profile it was
@@ -2126,6 +2147,24 @@ void dlgConnectionProfiles::slot_copyProfile()
         watcher->deleteLater();
     });
     watcher->setFuture(future);
+}
+
+// Details the original only had from the game catalog are not in its folder, and the copy's name
+// will not find them there
+void dlgConnectionProfiles::writeDetailsTheCopyLacks(const QString& profileName, const CopiedProfileData& data)
+{
+    if (readProfileData(profileName, qsl("port")).isEmpty() && !data.port.isEmpty()) {
+        writeProfileData(profileName, qsl("port"), data.port);
+        if (readProfileData(profileName, qsl("ssl_tsl")).isEmpty()) {
+            writeProfileData(profileName, qsl("ssl_tsl"), QString::number(data.sslTsl));
+        }
+    }
+    if (readProfileData(profileName, qsl("url")).isEmpty() && !data.host.isEmpty()) {
+        writeProfileData(profileName, qsl("url"), data.host);
+    }
+    if (readProfileData(profileName, qsl("description")).isEmpty() && !data.description.isEmpty()) {
+        writeProfileData(profileName, qsl("description"), data.description);
+    }
 }
 
 dlgConnectionProfiles::CopiedProfileData dlgConnectionProfiles::captureProfileData() const
@@ -2236,6 +2275,7 @@ void dlgConnectionProfiles::slot_copyOnlySettingsOfProfile()
         QFile::copy(filePath, newFilePath);
     }
 
+    writeDetailsTheCopyLacks(profile_name, data);
     copyProfileSettingsOnly(oldname, profile_name);
 
     mProfileList << profile_name;
