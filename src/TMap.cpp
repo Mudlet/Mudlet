@@ -112,6 +112,15 @@ void restoreLabelOutlineColorFromUserData(TMapLabel& label, int labelId, QMap<QS
     }
 }
 
+// Older saves wrote these into the live area user data, so a map file can carry
+// them for labels deleted since; whatever no label took on reading is junk
+void dropUnclaimedLabelKeys(QMap<QString, QString>& userData)
+{
+    userData.removeIf([](const QMap<QString, QString>::iterator& it) {
+        return it.key().startsWith(QLatin1String("system.labelFont_")) || it.key().startsWith(QLatin1String("system.labelOutlineColor_"));
+    });
+}
+
 enum class MapFileCheckResult { ValidMap, NotAMap, ParseError };
 
 struct MapFileCheck
@@ -2099,6 +2108,10 @@ bool TMap::restore(QString location)
                 }
                 ++areasWithLabelsCounter;
             }
+        }
+
+        for (auto* pA : mpRoomDB->getAreaMap()) {
+            dropUnclaimedLabelKeys(pA->mUserData);
         }
 
         // A corrupt stream carries on reading, out of step with the records,

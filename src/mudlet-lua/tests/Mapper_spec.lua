@@ -3779,16 +3779,29 @@ describe("Tests saveMap and loadMap", function()
       assert.are.same({roomA}, getAllRoomEntrances(roomB))
     end)
 
-    -- format 20 carries the area's zoom and its labels' fonts and outline
-    -- colours as extra area user data, which only the file is meant to see
+    -- a save carries its labels' fonts and outline colours, and below format
+    -- 21 the area's zoom, as extra area user data that only the file should see
     it("leaves the live area user data alone when it saves", function()
       local area = buildMap()
       assert.is_true(setAreaUserData(area, "climate", "temperate"))
       createMapLabel(area, "Saved Label", 0, 0, 0, 255, 255, 255, 0, 0, 0,
                      30.0, 50, true, true, "", 255, 50, false)
 
-      assert.is_true(saveMap(savePath, 20))
+      assert.is_true(saveMap(savePath))
       assert.are.same({climate = "temperate"}, getAllAreaUserData(area))
+    end)
+
+    it("drops label keys in a map file that no label in it claims", function()
+      local area = buildMap()
+      -- what a save that wrote into the live data left behind for a label
+      -- deleted after it
+      assert.is_true(setAreaUserData(area, "system.labelFont_99", "Sans|10|50|0"))
+      assert.is_true(setAreaUserData(area, "system.labelOutlineColor_99", "1|2|3|255"))
+      assert.is_true(saveMap(savePath))
+      deleteMap()
+
+      assert.is_true(loadMap(savePath))
+      assert.are.same({}, getAllAreaUserData(area))
     end)
 
     it("replaces what is on the map rather than merging into it", function()

@@ -1765,10 +1765,7 @@ describe("Trigger processing", function()
         -- between the two. Each measurement is the cheapest of five runs,
         -- because scheduling noise only ever adds, and the two lines take turns
         -- so a slow patch on the runner cannot cost one line all five of its
-        -- runs. The collector is stopped for the runs rather than trusted to
-        -- stay a whole live heap away: how big that heap is depends on what ran
-        -- before, and a cycle landing in the long line's runs and not the short
-        -- one's inflates the ratio by as much as it costs.
+        -- runs.
         --
         -- Subtracting an unarmed baseline to leave only what the trigger adds
         -- is what this did first, and it could not be made to hold. On the
@@ -1788,6 +1785,11 @@ describe("Trigger processing", function()
                 -- divide by. Feeding until the run is clear of that floor and
                 -- dividing by the number of feeds keeps both measurements
                 -- per-feed and comparable.
+                --
+                -- a collection cycle landing in one line's runs and not the
+                -- other's skews the ratio by whatever it costs
+                collectgarbage()
+                collectgarbage("stop")
                 local feeds, taken = 0, 0
                 local started = os.clock()
                 repeat
@@ -1799,6 +1801,7 @@ describe("Trigger processing", function()
                 -- needs, so giving up past it leaves the short > 0 assertion
                 -- below to report the dead clock.
                 until taken >= 0.02 or feeds >= 100
+                collectgarbage("restart")
                 return taken / feeds
             end
             _G.TrigSpec = {captures = 0}
@@ -1812,15 +1815,12 @@ describe("Trigger processing", function()
             end)
             local shortLine, longLine = string.rep("word ", shortReps), string.rep("word ", longReps)
             local short, long, shortCaptures, longCaptures
-            collectgarbage()
-            collectgarbage("stop")
             for _ = 1, 5 do
                 short = math.min(short or math.huge, costOf(shortLine))
                 shortCaptures = _G.TrigSpec.captures
                 long = math.min(long or math.huge, costOf(longLine))
                 longCaptures = _G.TrigSpec.captures
             end
-            collectgarbage("restart")
             assert.is_true(killTrigger("SpecComplexMatchAllCost"), "a temporary complex trigger should be removable by name")
             -- without this the trigger could have stopped matching, or stopped
             -- matching all, and the two costs would agree on measuring nothing
