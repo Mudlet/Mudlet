@@ -710,8 +710,8 @@ private slots:
     // blacklist ignores it, and a match has to start at the beginning of a word.
     void test_tabCyclesEachMatchOnceMostRecentFirst()
     {
-        mpHost->mpConsole->print(qsl("qzyalpha qzybravo qzyalpha\n"));
-        mpHost->mpConsole->print(qsl("QZYALPHA x-qzycharlie zqzydelta qzyecho_x qzyecho, qzyalpha.\n"));
+        mpHost->mainConsoleView()->print(qsl("qzyalpha qzybravo qzyalpha\n"));
+        mpHost->mainConsoleView()->print(qsl("QZYALPHA x-qzycharlie zqzydelta qzyecho_x qzyecho, qzyalpha.\n"));
         TCommandLine* pCommandLine = freshCommandLine();
         QVERIFY(pCommandLine);
         pCommandLine->addSuggestion(qsl("qzysuggested"));

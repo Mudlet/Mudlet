@@ -973,7 +973,7 @@ private slots:
     // An EXTERNAL frame is sized against the console, which a background tab leaves 0 wide
     void test_externalFrameOpenedInABackgroundTabIsSizedAgainstTheConsole()
     {
-        const QSize consoleSize = mpHost->mpConsole->size();
+        const QSize consoleSize = mpHost->mainConsoleView()->size();
         QVERIFY2(ensureSecondProfile(), "the second profile did not load");
         // closed again here, as its tab bar would change the window every later case lays out in
         const auto closeSecondProfile = qScopeGuard([this]() {
@@ -982,7 +982,7 @@ private slots:
             QTest::qWait(1000ms);
         });
         showTab(mSecondHostname);
-        QVERIFY2(mpHost->mpConsole->isHidden(), "the profile should be in a background tab by now");
+        QVERIFY2(mpHost->mainConsoleView()->isHidden(), "the profile should be in a background tab by now");
 
         QVERIFY(createFrame(qsl("popup"), qsl("left"), qsl("50%"), qsl("25%"), {{qsl("EXTERNAL"), qsl("true")}}));
 

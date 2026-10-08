@@ -144,7 +144,7 @@ private:
         if (QTest::currentTestFailed() || !waitForTextInBuffer(qsl("ready"))) {
             return nullptr;
         }
-        auto console = mudlet::self()->getActiveHost()->mpConsole;
+        auto console = mudlet::self()->getActiveHost()->mainConsoleView();
         console->print(qsl("before\n"));
         console->setWrapAt(wrapAt);
         console->setHangingIndentCount(hangingIndent);
@@ -182,7 +182,7 @@ private:
 
     int lineNumberOf(const QString& text)
     {
-        const TBuffer& buffer = mudlet::self()->getActiveHost()->mpConsole->buffer;
+        const TBuffer& buffer = mudlet::self()->getActiveHost()->mainConsoleView()->buffer;
         return static_cast<int>(buffer.lineBuffer.lastIndexOf(text));
     }
 
@@ -191,7 +191,7 @@ private:
     // Moves the end of the selection to the last character in the buffer
     void selectToTheEnd(TTextEdit* pane)
     {
-        const TBuffer& buffer = mudlet::self()->getActiveHost()->mpConsole->buffer;
+        const TBuffer& buffer = mudlet::self()->getActiveHost()->mainConsoleView()->buffer;
         int lastLine = static_cast<int>(buffer.lineBuffer.size()) - 1;
         while (lastLine > 0 && buffer.lineBuffer.at(lastLine).isEmpty()) {
             --lastLine;
@@ -744,7 +744,7 @@ private slots:
     {
         TTextEdit* pane = paneWithWrappedText(mSeveralSpaces + QChar::LineFeed, 16, 4);
         QVERIFY2(pane, "the wrapped text never reached the upper pane");
-        auto& buffer = mudlet::self()->getActiveHost()->mpConsole->buffer;
+        auto& buffer = mudlet::self()->getActiveHost()->mainConsoleView()->buffer;
         const int continuation = pane->mPA.y() + 1;
         QVERIFY2(buffer.line(continuation).startsWith(qsl("    ")), qPrintable(qsl("the second line was not indented: '%1'").arg(buffer.line(continuation))));
 
@@ -760,7 +760,7 @@ private slots:
     {
         TTextEdit* pane = paneWithWrappedText(mSeveralSpaces + QChar::LineFeed, 16, 4);
         QVERIFY2(pane, "the wrapped text never reached the upper pane");
-        auto& buffer = mudlet::self()->getActiveHost()->mpConsole->buffer;
+        auto& buffer = mudlet::self()->getActiveHost()->mainConsoleView()->buffer;
         const int firstLine = pane->mPA.y();
         const int clockColumn = static_cast<int>(buffer.line(firstLine + 1).indexOf(qsl("clock")));
         QVERIFY2(clockColumn > 4, qPrintable(buffer.line(firstLine + 1)));
@@ -903,7 +903,7 @@ private slots:
     {
         TTextEdit* pane = paneWithWrappedText(qsl("the quick brown fox jumps over the lazy dog\n"), 16, 0);
         QVERIFY2(pane, "the wrapped text never reached the upper pane");
-        auto& buffer = mudlet::self()->getActiveHost()->mpConsole->buffer;
+        auto& buffer = mudlet::self()->getActiveHost()->mainConsoleView()->buffer;
         const int continuation = pane->mPA.y() + 1;
         QVERIFY2(buffer.line(continuation).startsWith(qsl("fox ")), qPrintable(buffer.line(continuation)));
 
@@ -996,7 +996,7 @@ private slots:
         Host* host = mudlet::self()->getActiveHost();
         QVERIFY(host->getLuaInterpreter()->compileAndExecuteScript(qsl("setBackgroundColor('main', 10, 20, 30, 0)")));
 
-        TMainConsole* console = host->mpConsole;
+        TMainConsole* console = host->mainConsoleView();
         TTextEdit* pane = upperPane();
         QVERIFY2(pane, "No upper pane available");
         // a system message, then game text on a background barely there

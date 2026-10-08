@@ -272,7 +272,7 @@ private slots:
     void test_identicalStyleSheetIsNotReapplied()
     {
         createTargetCovering(1);
-        TLabel* pLabel = mpHost->mpConsole->labelWidget(qsl("lbpTarget"));
+        TLabel* pLabel = mpHost->mainConsoleView()->labelWidget(qsl("lbpTarget"));
         StyleChangeCounter counter;
         pLabel->installEventFilter(&counter);
 
@@ -310,7 +310,7 @@ private slots:
     void test_identicalStyleSheetRestoresItsColoursAfterTheLinkStyleIsReset()
     {
         createTargetCovering(1);
-        TLabel* pLabel = mpHost->mpConsole->labelWidget(qsl("lbpTarget"));
+        TLabel* pLabel = mpHost->mainConsoleView()->labelWidget(qsl("lbpTarget"));
         const QString script = qsl("setLabelStyleSheet('lbpTarget', [[color: rgb(255, 0, 0);]])");
         runLua(script);
         QCOMPARE(pLabel->palette().color(QPalette::WindowText), QColor(255, 0, 0));

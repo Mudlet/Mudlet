@@ -153,7 +153,7 @@ private:
             return;
         }
         for (const QString& line : mTrickyLines) {
-            mpHost->mpConsole->print(line + QChar::LineFeed);
+            mpHost->mainConsoleView()->print(line + QChar::LineFeed);
         }
     }
 

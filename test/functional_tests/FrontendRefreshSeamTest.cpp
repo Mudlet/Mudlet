@@ -500,7 +500,7 @@ private slots:
     {
         Host* host = startProfile();
         QVERIFY(host);
-        TMainConsole* console = host->mpConsole;
+        TMainConsole* console = host->mainConsoleView();
         QVERIFY(console);
         QVERIFY2(host->getLuaInterpreter()->compileAndExecuteScript(qsl("echo('first\\nkeep seamOld keep\\nthird\\n')\n")), "the main console could not be written to");
         int line = -1;
