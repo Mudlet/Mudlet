@@ -291,7 +291,8 @@ bool dlgIRC::processCustomCommand(IrcCommand* cmd)
             }
         }
         if (buffer && buffer->title() != mpClient->serverBuffer()->title()) {
-            bufferList->setCurrentIndex(bufferModel->index(bufferModel->find(mpClient->connection()->host())));
+            // By the buffer, not by name: the server renames it once it says who it is
+            bufferList->setCurrentIndex(bufferModel->index(mpClient->serverBuffer()));
             buffer->close();
         }
         return true;

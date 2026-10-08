@@ -26,6 +26,7 @@
 
 #include "utils.h"
 
+#include <QHash>
 #include <QList>
 #include <QMap>
 #include <QMultiMap>
@@ -75,8 +76,10 @@ public:
     bool processDataStream(const Qt::Key, const Qt::KeyboardModifiers);
     // Query-only counterpart to processDataStream(), which executes what it matches
     bool wouldMatch(const Qt::Key, const Qt::KeyboardModifiers) const;
-    // The binding wouldMatch() found, for naming it in a clash report
+    // The binding wouldMatch() found
     const TKey* firstMatch(const Qt::Key, const Qt::KeyboardModifiers) const;
+    // As firstMatch(), but switched off bindings count too, as enableKey() can make them fire
+    const TKey* firstBinding(const Qt::Key, const Qt::KeyboardModifiers) const;
     void markCleanup(TKey* pT);
     void doCleanup();
     int processingDepth() const { return mProcessingDepth; }
@@ -103,12 +106,17 @@ private:
     void addKeyRootNode(TKey* pT, int parentPosition = -1, int childPosition = -1, bool moveKey = false);
     void addKey(TKey* pT);
     void removeKeyRootNode(TKey* pT);
+    void listRootNode(TKey* pT, std::list<TKey*>::iterator before);
+    void unlistRootNode(TKey* pT);
     void removeKey(TKey*);
 
 
     QPointer<Host> mpHost;
     QMap<int, TKey*> mKeyMap;
     std::list<TKey*> mKeyRootNodeList;
+    // Where each root node sits in mKeyRootNodeList: std::list::remove() walks the whole list,
+    // which made freeing a batch of temporary keys quadratic
+    QHash<TKey*, std::list<TKey*>::iterator> mRootNodePositions;
     int mMaxID;
     bool mModuleMember;
     QMap<int, QString> mKeys;

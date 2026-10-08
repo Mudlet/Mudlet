@@ -55,6 +55,8 @@
 
 #include "GroupedTest.h"
 
+using namespace std::chrono_literals;
+
 class PackageExporterTest : public QObject
 {
     Q_OBJECT
@@ -85,11 +87,10 @@ private:
 
     // The exporter maps its own tree items onto the profile's items, so this is
     // how a test says "tick the row for that trigger"
-    template <typename T>
-    QTreeWidgetItem* itemFor(const QMap<QTreeWidgetItem*, T*>& map, const QString& name) const
+    QTreeWidgetItem* itemFor(const QMap<QTreeWidgetItem*, int>& map, const QString& name) const
     {
         for (auto it = map.cbegin(); it != map.cend(); ++it) {
-            if (it.value()->getName() == name) {
+            if (it.key()->text(0) == name) {
                 return it.key();
             }
         }
@@ -98,8 +99,7 @@ private:
 
     // ticking through the raw pointer would crash the whole class if the row
     // were ever missing, which is exactly when a readable failure is wanted
-    template <typename T>
-    bool tickRow(const QMap<QTreeWidgetItem*, T*>& map, const QString& name) const
+    bool tickRow(const QMap<QTreeWidgetItem*, int>& map, const QString& name) const
     {
         QTreeWidgetItem* row = itemFor(map, name);
         if (!row) {
@@ -156,7 +156,7 @@ private:
                 [closeButton]() {
                     return !closeButton->isHidden();
                 },
-                30000);
+                30s);
         QCoreApplication::sendPostedEvents(nullptr, QEvent::DeferredDelete);
         return settled;
     }
@@ -192,7 +192,7 @@ private slots:
         mpHost = TestProfile::create(mProfileName, mLocalhost, QString::number(mpServer->serverPort()));
         QVERIFY2(mpHost, "No active host available for the test.");
         QSignalSpy connectedSpy(&(mpHost->mTelnet), &cTelnet::signal_connected);
-        QVERIFY2(connectedSpy.wait(1000), "Could not connect with the host.");
+        QVERIFY2(connectedSpy.wait(1s), "Could not connect with the host.");
 
         // getActualPath() falls back to this setting when the user has not
         // browsed for a location, which is the only way a test can steer where

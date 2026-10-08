@@ -289,6 +289,100 @@ describe("Tests TableUtils.lua functions", function()
       table.sort(actual, function(a, b) return tostring(a) < tostring(b) end)
       assert.are.same({ 5, "x" }, actual)
     end)
+
+    local function keepAll() return true end
+
+    it("should keep the first occurrence of each value, in list order", function()
+      assert.are.same({ 3, 1, 2 }, table.n_collect({ 3, 1, 3, 2, 1, 2 }, keepAll))
+      assert.are.same({ "b", "a", "c" }, table.n_collect({ "b", "a", "b", "c", "a" }, keepAll))
+      local big = {}
+      for i = 1, 600 do big[i] = "v" .. (i % 250) end
+      local expected = {}
+      for i = 1, 250 do expected[i] = "v" .. (i % 250) end
+      assert.are.same(expected, table.n_collect(big, keepAll))
+    end)
+
+    it("should only collect values for which func returns exactly true", function()
+      local truthy = function(value) return value end
+      assert.are.same({ true }, table.n_collect({ "a", 1, true, false }, truthy))
+      local calls = {}
+      table.n_collect({ "x", "x", "y" }, function(value) calls[#calls + 1] = value; return true end)
+      assert.are.same({ "x", "x", "y" }, calls)
+    end)
+
+    it("should tell apart values of different types that print alike", function()
+      assert.are.same({ 1, "1", true, "true" }, table.n_collect({ 1, "1", true, "true", 1, "1", true, "true" }, keepAll))
+      assert.are.same({ true, false }, table.n_collect({ true, false, true, false }, keepAll))
+    end)
+
+    it("should treat numbers that compare equal as duplicates", function()
+      local negativeZero = -tonumber("0")
+      assert.are.same({ 1 }, table.n_collect({ 1, 1.0, 2 / 2 }, keepAll))
+      assert.are.equal(1, #table.n_collect({ 0, negativeZero }, keepAll))
+      assert.are.equal(1, #table.n_collect({ math.huge, 1 / 0 }, keepAll))
+    end)
+
+    it("should keep every NaN, as NaN never equals itself", function()
+      local nan = 0 / 0
+      local actual = table.n_collect({ nan, 1, nan, 1, nan }, keepAll)
+      assert.are.equal(4, #actual)
+      assert.are_not.equal(actual[1], actual[1])
+      assert.are.equal(1, actual[2])
+      assert.are_not.equal(actual[3], actual[3])
+      assert.are_not.equal(actual[4], actual[4])
+    end)
+
+    it("should compare tables, functions and userdata by identity", function()
+      local t1, t2 = { 1 }, { 1 }
+      local f1 = function() end
+      local actual = table.n_collect({ t1, t2, t1, f1, f1, "s" }, keepAll)
+      assert.are.equal(4, #actual)
+      assert.are.equal(t1, actual[1])
+      assert.are.equal(t2, actual[2])
+      assert.are.equal(f1, actual[3])
+      assert.are.equal("s", actual[4])
+    end)
+
+    it("should treat tables an __eq metamethod calls equal as duplicates", function()
+      local eqCalls = 0
+      local mt = { __eq = function(a, b) eqCalls = eqCalls + 1; return a.id == b.id end }
+      local a1 = setmetatable({ id = 1 }, mt)
+      local a2 = setmetatable({ id = 1 }, mt)
+      local b1 = setmetatable({ id = 2 }, mt)
+      local actual = table.n_collect({ a1, "x", a2, b1, 7, a1 }, keepAll)
+      assert.are.equal(4, #actual)
+      assert.are.equal(a1, actual[1])
+      assert.are.equal("x", actual[2])
+      assert.are.equal(b1, actual[3])
+      assert.are.equal(7, actual[4])
+      -- a2 against a1; b1 against a1; the second a1 is the same table, so
+      -- == settles it without asking the metamethod
+      assert.are.equal(2, eqCalls)
+    end)
+
+    it("should still drop repeats of earlier tables once an __eq table turns up", function()
+      local mt = { __eq = function(a, b) return a.id == b.id end }
+      local t1 = { 1 }
+      local t2 = setmetatable({}, { __index = t1 })
+      local a1 = setmetatable({ id = 1 }, mt)
+      local a2 = setmetatable({ id = 1 }, mt)
+      local b1 = setmetatable({ id = 2 }, mt)
+      local actual = table.n_collect({ t1, t2, t1, a1, t1, a2, t2, b1, a1 }, keepAll)
+      assert.are.equal(4, #actual)
+      assert.are.equal(t1, actual[1])
+      assert.are.equal(t2, actual[2])
+      assert.are.equal(a1, actual[3])
+      assert.are.equal(b1, actual[4])
+    end)
+
+    it("should use __eq even when __metatable hides the metatable", function()
+      local mt = { __eq = function(a, b) return a.id == b.id end, __metatable = "locked" }
+      local a1 = setmetatable({ id = 1 }, mt)
+      local a2 = setmetatable({ id = 1 }, mt)
+      local actual = table.n_collect({ a1, a2 }, keepAll)
+      assert.are.equal(1, #actual)
+      assert.are.equal(a1, actual[1])
+    end)
   end)
 
   describe("Tests the functionality of table.matches", function()
@@ -457,6 +551,35 @@ describe("Tests TableUtils.lua functions", function()
       local actual = table.n_matches(tbl, "pass.+")
       assert.same(expected, actual)
     end)
+
+    it("should keep the first match of each value, pattern by pattern in list order", function()
+      assert.are.same({ "b2", "a1", "c3" }, table.n_matches({ "b2", "a1", "b2", "c3", "a1" }, "%d"))
+      assert.are.same({ "a1", "a2", "b1" }, table.n_matches({ "b1", "a1", "a2", "b1" }, "^a", "%d"))
+      assert.are.same({ "ab" }, table.n_matches({ "ab", "ab" }, "a", "b"))
+      local big = {}
+      for i = 1, 600 do big[i] = "v" .. (i % 250) end
+      local expected = {}
+      for i = 1, 250 do expected[i] = "v" .. (i % 250) end
+      assert.are.same(expected, table.n_matches(big, "^v"))
+    end)
+
+    it("should match numbers as text and treat equal numbers as duplicates", function()
+      assert.are.same({ 12, "12", 3 }, table.n_matches({ 12, "12", 12.0, 3, "x" }, "%d"))
+    end)
+
+    it("should keep every NaN that matches, as NaN never equals itself", function()
+      local nan = 0 / 0
+      -- patterns that match however the C runtime spells NaN
+      local actual = table.n_matches({ nan, nan, "word" }, ".", "%S")
+      -- each pattern adds both NaNs again; the string is only added once
+      assert.are.equal(5, #actual)
+      local nans, strings = 0, 0
+      for _, value in ipairs(actual) do
+        if value ~= value then nans = nans + 1 elseif value == "word" then strings = strings + 1 end
+      end
+      assert.are.equal(4, nans)
+      assert.are.equal(1, strings)
+    end)
   end)
 
   describe("Tests the functionality of table.contains", function()
@@ -530,6 +653,20 @@ describe("Tests TableUtils.lua functions", function()
         }
       }
       assert.is_false(table.contains(tbl, "five"))
+    end)
+
+    it("should stop at the first nil among the values to look for", function()
+      local tbl = {"one"}
+      assert.is_true(table.contains(tbl, "two", "one"))
+      assert.is_false(table.contains(tbl, "two", nil, "one"))
+    end)
+
+    it("should search a table reached by two routes", function()
+      local shared = {needle = "deep"}
+      local tbl = {a = {shared}, b = {shared}}
+      assert.is_true(table.contains(tbl, "deep"))
+      assert.is_true(table.contains(tbl, "needle"))
+      assert.is_false(table.contains(tbl, "absent"))
     end)
 
     it("should cope with a table that holds itself", function()
@@ -858,6 +995,23 @@ describe("Tests TableUtils.lua functions", function()
       local actual = table.n_intersection(t1,t2,t3)
       assert.same(expected, actual)
     end)
+
+    it("should match tables by content and keep the first table's order without duplicates", function()
+      local t1 = {3, {a = 1}, "x", 3, {a = 2}, 1}
+      local t2 = {1, {a = 1}, "x", 3}
+      local actual = table.n_intersection(t1, t2)
+      assert.same({3, {a = 1}, "x", 1}, actual)
+      assert.equals(t1[2], actual[2])
+    end)
+
+    it("should tell numbers from strings and keep false values", function()
+      assert.same({false, 1}, table.n_intersection({false, "2", 1}, {1, "1", 2, false}))
+    end)
+
+    it("should never match NaN", function()
+      local nan = 0/0
+      assert.same({1}, table.n_intersection({nan, 1}, {nan, 1}))
+    end)
   end)
 
   describe("Tests the functionality of table.complement", function()
@@ -877,6 +1031,28 @@ describe("Tests TableUtils.lua functions", function()
       local expected = {1,3,5}
       local actual = table.n_complement(t1,t2)
       assert.same(expected, actual)
+    end)
+
+    it("should keep duplicates and the first table's order, and match tables by content", function()
+      local t1 = {5, {a = 1}, "5", 5, {a = 2}, true, 1}
+      local t2 = {1, {a = 1}, false}
+      assert.same({5, "5", 5, {a = 2}, true}, table.n_complement(t1, t2))
+    end)
+
+    it("should keep NaN, which equals nothing", function()
+      local actual = table.n_complement({0/0, 1}, {0/0})
+      assert.equals(2, #actual)
+      assert.is_true(actual[1] ~= actual[1])
+      assert.equals(1, actual[2])
+    end)
+
+    it("should match functions by identity", function()
+      local f1, f2 = function() end, function() end
+      assert.same({f2}, table.n_complement({f1, f2}, {f1}))
+    end)
+
+    it("should return an empty table for an empty first table", function()
+      assert.same({}, table.n_complement({}, {1}))
     end)
   end)
 
