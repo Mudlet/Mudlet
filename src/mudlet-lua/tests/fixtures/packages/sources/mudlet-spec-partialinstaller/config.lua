@@ -1,5 +1,0 @@
-mpackage = [[mudlet-spec-partialinstaller]]
-author = [[Mudlet test suite]]
-title = [[Fixture whose script installs another package before its XML breaks, for Package_spec.lua]]
-version = [[1.0]]
-description = [[A valid archive whose script installs the package named by mudletSpecPartialInstallerInstalls as it is read in, and whose XML then stops mid-element, so the install is refused after that other package has gone in.]]

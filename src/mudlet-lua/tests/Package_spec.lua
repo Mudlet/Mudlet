@@ -1922,14 +1922,49 @@ describe("Tests installing an archive that is nothing but a manifest", function(
 end)
 
 describe("Tests installing an archive whose package XML cannot be read", function()
-  it("refuses the package and says its contents could not be read", function()
+  it("says the package's contents could not be read", function()
     local name = "mudlet-spec-badxml"
+    -- the install queues a save of its own, and uninstallPackage() is refused
+    -- while one runs, so use the helper that keeps asking
+    defer(function() removeFixturePackage(name) end)
+
+    assert.is_true(waitForProfileSaveToPass(), "a profile save was still running")
+
+    local mark = getLastLineNumber("main")
+    -- the archive unpacks cleanly and holds a config.lua, so the install gets as
+    -- far as reading the XML - which is malformed. Only modules were ever asked
+    -- whether their contents loaded, so this used to install to silence.
+    local ok = installPackage(fixtureDirectory .. "/" .. name .. ".mpackage")
+    local text = textFrom(mark)
+
+    assert.is_true(containsWrapped(text, 'Failed to load package "' .. name .. '"'), text)
+    -- the install still answers true and leaves the package listed, the same way a
+    -- module whose XML will not load stays listed: what changes is that it is said
+    assert.is_true(ok)
+    assert.is_true(packageInstalled(name))
+  end)
+
+  it("says the same for a package XML installed without an archive around it", function()
+    -- the report lives twice, once per branch, and a bare XML is a route of its
+    -- own: the editor's import and installPackage() with an .xml path both take it
+    local name = "mudlet-spec-badxml-bare"
+    defer(function() removeFixturePackage(name) end)
+
+    local mark = getLastLineNumber("main")
+    installUntilConfirmed(installPackage, fixtureDirectory .. "/sources/" .. name .. "/" .. name .. ".xml",
+                          function() return packageInstalled(name) end, "the truncated bare XML")
+
+    assert.is_true(containsWrapped(textFrom(mark), 'Failed to load package "' .. name .. '"'), textFrom(mark))
+  end)
+
+  -- Nothing at all could be read out of these, so listing them would put an empty
+  -- package in the profile - as a file saved as plain text, or one cut off before
+  -- its first item, would be
+  it("refuses an archive whose package file nothing could be read out of", function()
+    local name = "mudlet-spec-unreadablexml"
     -- only needed should the refusal regress and leave the package installed
     defer(function() removeFixturePackage(name) end)
 
-    -- the archive unpacks cleanly and holds a config.lua, so the install gets as
-    -- far as reading the XML - which is malformed. A package listed after that
-    -- would be saved into the profile with none of its contents.
     local err = installUntilRefused(installPackage, fixtureDirectory .. "/" .. name .. ".mpackage")
 
     assert.is_true(contains(err, 'the contents of package "' .. name .. '" could not be read'), tostring(err))
@@ -1938,112 +1973,38 @@ describe("Tests installing an archive whose package XML cannot be read", functio
     assert.is_false(fileExists(getMudletHomeDir() .. "/" .. name), "the refused package stranded the folder it unpacked")
   end)
 
-  it("takes back the items it read before its XML broke", function()
-    local name = "mudlet-spec-partialxml"
-    defer(function() removeFixturePackage(name) end)
-
-    local err = installUntilRefused(installPackage, fixtureDirectory .. "/" .. name .. ".mpackage")
-
-    assert.is_true(contains(err, "could not be read"), tostring(err))
-    assert.is_false(packageInstalled(name))
-    assert.equals(0, exists(name .. " alias", "alias"), "the refused package left the alias it read before the break")
-  end)
-
-  -- Written by hand, as only the items before the break are of interest
-  local function writeTruncatedPackageXml(path, body)
-    local file = io.open(path, "wb")
-    assert.is_not_nil(file, "could not write " .. path)
-    file:write('<?xml version="1.0" encoding="UTF-8"?>\n<!DOCTYPE MudletPackage>\n<MudletPackage version="1.001">\n' .. body .. '\n<AliasPackage>\n<Alias isActive="yes" isFolder="no">\n<name>cut off he')
-    file:close()
-  end
-
-  local function scriptPackage(itemName, code)
-    return '<ScriptPackage><Script isActive="yes" isFolder="no"><name>' .. itemName .. '</name><packageName></packageName><script>' .. code .. '</script><eventHandlerList /></Script></ScriptPackage>'
-  end
-
-  it("takes back its items and tells the package's scripts it is gone, without announcing it", function()
-    local name = "mudlet-spec-partialeverything"
+  it("refuses an empty package XML installed without an archive around it", function()
+    local name = "mudlet-spec-emptyxml"
     local xml = getMudletHomeDir() .. "/" .. name .. ".xml"
-    local installEvents = collectEventsForSpec("sysInstall")
-    local packageEvents = collectEventsForSpec("sysInstallPackage")
-    _G.mudletSpecPartialHeardItsRemoval = nil
     defer(function()
-      if _G.mudletSpecPartialHandler then
-        killAnonymousEventHandler(_G.mudletSpecPartialHandler)
-      end
-      _G.mudletSpecPartialHandler = nil
-      _G.mudletSpecPartialHeardItsRemoval = nil
       removeFixturePackage(name)
       os.remove(xml)
     end)
-    writeTruncatedPackageXml(xml, table.concat({
-      '<TriggerPackage><Trigger isActive="yes" isFolder="no" isTempTrigger="no" isMultiline="no" isPerlSlashGOption="no" isColorizerTrigger="no" isFilterTrigger="no" isSoundTrigger="no" isColorTrigger="no">',
-      '<name>' .. name .. ' trigger</name><script></script><triggerType>0</triggerType><conditonLineDelta>0</conditonLineDelta><mStayOpen>0</mStayOpen>',
-      '<mCommand></mCommand><packageName></packageName><regexCodeList><string>' .. name .. '</string></regexCodeList><regexCodePropertyList><integer>0</integer></regexCodePropertyList>',
-      '</Trigger></TriggerPackage>',
-      scriptPackage(name .. " script", '_G.mudletSpecPartialHandler = registerAnonymousEventHandler("sysUninstallPackage", function(_, which) if which == "' .. name .. '" then _G.mudletSpecPartialHeardItsRemoval = true end end)'),
-    }, "\n"))
+    local file = io.open(xml, "wb")
+    assert.is_not_nil(file, "could not write " .. xml)
+    file:close()
 
     local err = installUntilRefused(installPackage, xml)
-    pumpEvents(200)
-
-    assert.is_true(contains(err, "could not be read"), tostring(err))
-    assert.is_false(packageInstalled(name))
-    assert.equals(0, exists(name .. " trigger", "trigger"))
-    assert.equals(0, exists(name .. " script", "script"))
-    assert.is_true(_G.mudletSpecPartialHeardItsRemoval, "the package's own sysUninstallPackage handler never heard it was taken back")
-    assert.same({}, installEvents, "a refused package was announced as installed")
-    assert.same({}, packageEvents, "a refused package was announced as installed")
-  end)
-
-  it("keeps the details of a package its scripts installed before its XML broke", function()
-    local name = "mudlet-spec-partialinstaller"
-    _G.mudletSpecPartialInstallerInstalls = fixtureDirectory .. "/" .. minimalPackage .. ".mpackage"
-    defer(function()
-      _G.mudletSpecPartialInstallerInstalls = nil
-      removeFixturePackage(minimalPackage)
-      removeFixturePackage(name)
-    end)
-
-    local err = installUntilRefused(installPackage, fixtureDirectory .. "/" .. name .. ".mpackage")
-
-    assert.is_true(contains(err, "could not be read"), tostring(err))
-    assert.is_false(packageInstalled(name))
-    assert.same({}, getPackageInfo(name), "the refused package left the details its config.lua filed")
-    assert.is_true(packageInstalled(minimalPackage), "SETUP: the refused package's script did not install the fixture package")
-    assert.equals("1.0", getPackageInfo(minimalPackage, "version"), "taking back the refused package took the details of the one its script installed")
-  end)
-
-  it("carries out a removal that a package its scripts installed asked for", function()
-    local outer, inner = "mudlet-spec-partialouter", "mudlet-spec-partialinner"
-    local outerXml = getMudletHomeDir() .. "/" .. outer .. ".xml"
-    local innerXml = getMudletHomeDir() .. "/" .. inner .. ".xml"
-    defer(function()
-      removeFixturePackage(inner)
-      removeFixturePackage(outer)
-      os.remove(innerXml)
-      os.remove(outerXml)
-    end)
-    -- its removal is put off until the outer install, still reading in, has finished
-    writePackageXml(innerXml, scriptPackage(inner .. " script", 'uninstallPackage("' .. inner .. '")'))
-    writeTruncatedPackageXml(outerXml, scriptPackage(outer .. " script", 'installPackage([[' .. innerXml .. ']])'))
-
-    local err = installUntilRefused(installPackage, outerXml)
-
-    assert.is_true(contains(err, "could not be read"), tostring(err))
-    assert.is_true(waitUntil(function() return not packageInstalled(inner) end, 3000),
-                   "the removal the inner package's script asked for was never carried out")
-  end)
-
-  it("refuses a package XML installed without an archive around it too", function()
-    -- the check lives twice, once per branch, and a bare XML is a route of its
-    -- own: the editor's import and installPackage() with an .xml path both take it
-    local name = "mudlet-spec-badxml-bare"
-    defer(function() removeFixturePackage(name) end)
-
-    local err = installUntilRefused(installPackage, fixtureDirectory .. "/sources/" .. name .. "/" .. name .. ".xml")
 
     assert.is_true(contains(err, 'the contents of package "' .. name .. '" could not be read'), tostring(err))
+    assert.is_false(packageInstalled(name))
+  end)
+
+  it("refuses a package XML that broke before its first item", function()
+    local name = "mudlet-spec-cutbeforeitems"
+    local xml = getMudletHomeDir() .. "/" .. name .. ".xml"
+    defer(function()
+      removeFixturePackage(name)
+      os.remove(xml)
+    end)
+    local file = io.open(xml, "wb")
+    assert.is_not_nil(file, "could not write " .. xml)
+    file:write('<?xml version="1.0" encoding="UTF-8"?>\n<!DOCTYPE MudletPackage>\n<MudletPackage version="1.001">\n<AliasPack')
+    file:close()
+
+    local err = installUntilRefused(installPackage, xml)
+
+    assert.is_true(contains(err, "could not be read"), tostring(err))
     assert.is_false(packageInstalled(name))
   end)
 end)
@@ -2699,8 +2660,8 @@ describe("Tests installing a package file from a later Mudlet", function()
 
     assert.is_true(containsWrapped(text, "you need a newer Mudlet"), text)
     assert.is_true(contains(err, "you need a newer Mudlet"), tostring(err))
-    -- the file is refused as a whole, so nothing in it is installed, and nor is
-    -- the package, the same as one whose XML is malformed
+    -- the file is refused as a whole, so nothing in it is installed, and as
+    -- nothing could be read out of it, nor is the package
     assert.equals(0, exists(name .. " trigger", "trigger"), "an unreadable file's trigger was installed anyway")
     assert.is_false(packageInstalled(name))
   end)

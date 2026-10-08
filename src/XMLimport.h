@@ -62,6 +62,8 @@ public:
     const QStringList& itemsWithErrors() const { return mItemsWithErrors; }
     // The same items by name only, for the console: the Lua error is for the item's author, not the installer.
     const QStringList& itemsWithErrorNames() const { return mItemsWithErrorNames; }
+    // Whether the file got as far as a trigger, timer, alias, button, key or script, even one it broke inside
+    bool readAnItem() const { return gotTrigger || gotTimer || gotAlias || gotKey || gotAction || gotScript; }
     // A save file numbers the sixteen basic colours of a colour pattern its own
     // way (see XMLexport::remapAnsiToColorNumber()), this turns them back.
     static void remapColorsToAnsiNumber(QStringList&, const QList<int>&);
