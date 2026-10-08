@@ -3355,6 +3355,28 @@ describe("Tests installing a package whose alias pattern does not compile", func
     assert.is_true(contains(reason, name .. " alias: "), "the broken pattern was not reported: " .. tostring(reason))
     assert.is_false(contains(reason, name .. " working alias"), "an alias whose pattern compiles was reported as broken: " .. tostring(reason))
   end)
+
+  it("names an alias whose pattern comes before its name", function()
+    local name = "mudlet-spec-broken-alias-pattern-first"
+    local xml = getMudletHomeDir() .. "/" .. name .. ".xml"
+    defer(function()
+      removeFixturePackage(name)
+      os.remove(xml)
+    end)
+    writePackageXml(xml, table.concat({
+      '<AliasPackage>',
+      '<Alias isActive="yes" isFolder="no">',
+      '<regex>^(unclosed</regex><command></command>',
+      '<name>' .. name .. ' alias</name><packageName></packageName><script></script>',
+      '</Alias>',
+      '</AliasPackage>',
+    }, "\n"))
+
+    local ok, reason = installUntilConfirmed(installPackage, xml, function() return packageInstalled(name) end, "the package " .. name)
+
+    assert.is_true(ok)
+    assert.is_true(contains(reason, name .. " alias: "), "the broken pattern was not reported under the alias's name: " .. tostring(reason))
+  end)
 end)
 
 -- A save file numbers the sixteen basic colours its own way and the reader maps

@@ -1620,6 +1620,8 @@ int XMLimport::readAlias(TAlias* pParent)
     }
 
     bool scriptFailedToCompile = false;
+    bool patternFailedToCompile = false;
+    QString patternError;
     const QString what = name().toString();
     while (!atEnd()) {
         readNext();
@@ -1644,17 +1646,22 @@ int XMLimport::readAlias(TAlias* pParent)
                 pT->mCommand = readElementText();
             } else if (name() == qsl("regex")) {
                 pT->setRegexCode(readElementText());
-                if (!pT->mOK_init) {
-                    mItemsWithErrors.append(qsl("%1: %2").arg(pT->getName(), compileErrorAsPlainText(pT->getError())));
-                    if (!scriptFailedToCompile) {
-                        mItemsWithErrorNames.append(pT->getName());
-                    }
-                }
+                // Kept now, as a script that fails to compile later replaces the error
+                patternFailedToCompile = !pT->mOK_init;
+                patternError = patternFailedToCompile ? compileErrorAsPlainText(pT->getError()) : QString();
             } else if (name() == qsl("AliasGroup") || name() == qsl("Alias")) {
                 readAlias(pT);
             } else {
                 readUnknownElement(what);
             }
+        }
+    }
+
+    // Once the alias is read, as its <regex> can come before its <name>
+    if (patternFailedToCompile) {
+        mItemsWithErrors.append(qsl("%1: %2").arg(pT->getName(), patternError));
+        if (!scriptFailedToCompile) {
+            mItemsWithErrorNames.append(pT->getName());
         }
     }
 
