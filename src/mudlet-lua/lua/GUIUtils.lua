@@ -435,9 +435,14 @@ function PadHexNum(incString)
 end
 
 
+-- %X of an out of range component is not two digits (-5 gives FFFFFFFFFFFFFFFB)
+local function clampColorComponent(value)
+  return math.min(255, math.max(0, math.floor(value)))
+end
 
 --- Converts an RGB value into an HTML compliant(label usable) HEX number.
 --- This function is colorNames aware and can take any defined global color as its first argument.
+--- Components are rounded down and clamped to 0-255.
 ---
 --- @usage Both following commands will returns "FFFFFF".
 ---   <pre>
@@ -456,9 +461,9 @@ function RGB2Hex(red, green, blue)
     l_Red, l_Green, l_Blue = red, green, blue
   end
 
-  return PadHexNum(string.format("%X", l_Red)) ..
-  PadHexNum(string.format("%X", l_Green)) ..
-  PadHexNum(string.format("%X", l_Blue))
+  return PadHexNum(string.format("%X", clampColorComponent(l_Red))) ..
+  PadHexNum(string.format("%X", clampColorComponent(l_Green))) ..
+  PadHexNum(string.format("%X", clampColorComponent(l_Blue)))
 end
 
 
@@ -2983,10 +2988,10 @@ local function processedColorsToEchoString(colorType, colors, cacheChecked)
   if colorType == "hex" then
     local fg,bg = "", ""
     if colors.fg then
-      fg = string.format("%02x%02x%02x", unpack(colors.fg))
+      fg = string.format("%02x%02x%02x", clampColorComponent(colors.fg[1]), clampColorComponent(colors.fg[2]), clampColorComponent(colors.fg[3]))
     end
     if colors.bg then
-      bg = string.format(",%02x%02x%02x", unpack(colors.bg))
+      bg = string.format(",%02x%02x%02x", clampColorComponent(colors.bg[1]), clampColorComponent(colors.bg[2]), clampColorComponent(colors.bg[3]))
     end
     result = string.format("#%s%s", fg, bg)
   elseif colorType == "color" then

@@ -1263,6 +1263,10 @@ describe("Tests the GUI utilities as far as possible without mudlet", function()
         local actual = decho2hecho(dechoString)
         assert.equal(expected, actual)
       end)
+
+      it('clamps an out of range component rather than writing more than two hex digits', function()
+        assert.equal("#ff0000,00ff00x", decho2hecho("<999,0,0:0,300,0>x"))
+      end)
     end)
 
     describe("Tests the functionality of decho2html", function()
@@ -1398,8 +1402,8 @@ describe("Tests the GUI utilities as far as possible without mudlet", function()
       { "<255,0,0:>trail", string = "trail", ansi = "\27[38:2::255:0:0m\27[48:2:::0:0mtrail", cecho = "<ansi_light_red>trail", hecho = "#ff0000trail" },
       { "</b>x</i>y", string = "xy", ansi = "\27[22mx\27[23my", cecho = "</b>x</i>y", hecho = "#/bx#/iy" },
       { "</r>x", string = "x", ansi = raises, cecho = "x", hecho = "x" },
-      { "<300,0,0>over", string = "over", ansi = "\27[38:2::300:0:0mover", cecho = raises, hecho = "#12c0000over" },
-      { "<0,0,0:300,0,0>bgover", string = "bgover", ansi = "\27[38:2::0:0:0m\27[48:2::300:0:0mbgover", cecho = raises, hecho = "#000000,12c0000bgover" },
+      { "<300,0,0>over", string = "over", ansi = "\27[38:2::300:0:0mover", cecho = raises, hecho = "#ff0000over" },
+      { "<0,0,0:300,0,0>bgover", string = "bgover", ansi = "\27[38:2::0:0:0m\27[48:2::300:0:0mbgover", cecho = raises, hecho = "#000000,ff0000bgover" },
       { "a<0,0,0:1,2,3,4>b<9,9,9,999>c", string = "ab<9,9,9,999>c", ansi = "a\27[38:2::0:0:0m\27[48:2::1:2:3mb\27[38:2::9:9:9mc", cecho = "a<ansi_black:ansi_black>b<9,9,9,999>c", hecho = "a#000000,010203b<9,9,9,999>c" },
     }
     local hechoCases = {
@@ -1755,8 +1759,6 @@ describe("Tests the GUI utilities as far as possible without mudlet", function()
       assert.equals("FF0000", RGB2Hex(255, 0, 0))
     end)
 
-    -- in 0-255 only: RGB2Hex range-checks nothing, so an out of range component
-    -- still produces a longer string. That is a separate defect from the padding
     it("Should return six hex digits for every component value in 0-255", function()
       for _, component in ipairs({0, 1, 9, 10, 15, 16, 17, 128, 255}) do
         local hex = RGB2Hex(component, component, component)
@@ -1765,6 +1767,11 @@ describe("Tests the GUI utilities as far as possible without mudlet", function()
           assert.equals(component, tonumber(hex:sub(position, position + 1), 16))
         end
       end
+    end)
+
+    it("Should clamp an out of range component to 0-255", function()
+      assert.equals("FF0000", RGB2Hex(300, -5, 0))
+      assert.equals("FF7F00", RGB2Hex(255.9, 127.5, -0.5))
     end)
   end)
 
