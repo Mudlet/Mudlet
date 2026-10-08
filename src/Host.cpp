@@ -82,6 +82,7 @@
 #include <QSet>
 #include <QScopeGuard>
 #include <QSettings>
+#include <QTemporaryDir>
 #include <QTemporaryFile>
 #include <QTextStream>
 #include <QThread>
@@ -2940,6 +2941,38 @@ static bool packageUnpacksAFolder(const QString& fileName)
     return fileName.endsWith(qsl(".zip"), Qt::CaseInsensitive) || fileName.endsWith(qsl(".mpackage"), Qt::CaseInsensitive);
 }
 
+// A folder of its own to unpack an archive into beside the profile's package folders. The name is made
+// unpredictable, so it can never be a folder some package already owns. Ends in a separator, as
+// utils::unzip() expects.
+static QString aFreshFolderToUnpackInto(const QString& profileHome, const QString& packageName)
+{
+    QTemporaryDir folder(qsl("%1/%2.mudlet-installing-XXXXXX").arg(profileHome, packageName));
+    if (!folder.isValid()) {
+        return QString();
+    }
+    folder.setAutoRemove(false);
+    return folder.path() + QLatin1Char('/');
+}
+
+// A package may keep its user's settings in its own folder, so what the archive does not replace is kept
+static bool copyWhatTheArchiveLacks(const QString& leftoverFolder, const QString& unpackedFolder)
+{
+    const QDir from(leftoverFolder);
+    const QDir to(unpackedFolder);
+    QDirIterator leftoverFiles(leftoverFolder, QDir::Files | QDir::Hidden, QDirIterator::Subdirectories);
+    while (leftoverFiles.hasNext()) {
+        const QString source = leftoverFiles.next();
+        const QString target = to.absoluteFilePath(from.relativeFilePath(source));
+        if (QFileInfo::exists(target)) {
+            continue;
+        }
+        if (!to.mkpath(QFileInfo(target).absolutePath()) || !QFile::copy(source, target)) {
+            return false;
+        }
+    }
+    return true;
+}
+
 std::pair<bool, QString> Host::installPackage(const QString& fileName, enums::PackageModuleType thing, bool quiet)
 {
     // Wait for profile save to complete before installing package
@@ -3192,7 +3225,10 @@ std::pair<bool, QString> Host::installPackage(const QString& fileName, enums::Pa
         const QString theFolderNamedAfterTheFile = MudletApp::getMudletPath(enums::profilePackagePath, getName(), packageName);
         const bool aFolderIsNamedAfterTheFile = thing != enums::PackageModuleType::ModuleSync && !mIsProfileLoadingSequence && QDir(theFolderNamedAfterTheFile).exists();
         const bool unpackBesideTheFolder = !crossKindRefusalOnTheFileName.isEmpty() || aFolderIsNamedAfterTheFile;
-        const QString _dest = unpackBesideTheFolder ? MudletApp::getMudletPath(enums::profilePackagePath, getName(), packageName + qsl(".mudlet-installing")) : theFolderNamedAfterTheFile;
+        const QString _dest = unpackBesideTheFolder ? aFreshFolderToUnpackInto(_home, packageName) : theFolderNamedAfterTheFile;
+        if (_dest.isEmpty()) {
+            return fail(qsl("could not create destination folder"));
+        }
         // home directory for the PROFILE
         const QDir _tmpDir(_home);
         // directory to store the expanded archive file contents
@@ -3201,11 +3237,7 @@ std::pair<bool, QString> Host::installPackage(const QString& fileName, enums::Pa
         // name, and then whatever its config.lua says, so it can just as well name
         // a folder of the profile's that was already here ("map", "log",
         // "current") - see the refusal further down.
-        if (unpackBesideTheFolder && QDir(_dest).exists() && QDir(_dest).absolutePath().startsWith(QDir(_home).absolutePath() + QLatin1Char('/'))) {
-            // Only this makes a ".mudlet-installing" folder and every exit removes it, so one here is left from an unfinished install
-            removeDir(_dest, _dest);
-        }
-        const bool destinationAlreadyExisted = QDir(_dest).exists();
+        const bool destinationAlreadyExisted = !unpackBesideTheFolder && QDir(_dest).exists();
         const bool mkpathSuccessful = _tmpDir.mkpath(_dest);
         if (!mkpathSuccessful) {
             return fail(qsl("could not create destination folder"));
@@ -3349,11 +3381,26 @@ std::pair<bool, QString> Host::installPackage(const QString& fileName, enums::Pa
                 if (!holdsAPackageFile) {
                     return refuseTheRenamedInstall(noPackageFoundReason());
                 }
-                discardTheFolderThisInstallMade();
-                folderThisInstallMade.clear();
-                if (!utils::unzip(actualFileName, theFolderNamedAfterTheFile, _tmpDir)) {
-                    return refuseTheRenamedInstall(qsl("could not unzip package"));
+                if (!copyWhatTheArchiveLacks(theFolderNamedAfterTheFile, _dir.absolutePath())) {
+                    return refuseTheRenamedInstall(qsl("could not copy the files of the folder already called %1").arg(packageName));
                 }
+                // Swapped in by renames alone, so every failure leaves the leftover folder as it was
+                const QString aside = aFreshFolderToUnpackInto(_home, packageName);
+                const QString leftoverAside = aside + packageName;
+                if (aside.isEmpty() || !QDir().rename(theFolderNamedAfterTheFile, leftoverAside)) {
+                    if (!aside.isEmpty()) {
+                        QDir().rmdir(aside);
+                    }
+                    return refuseTheRenamedInstall(qsl("could not move the folder already called %1 aside").arg(packageName));
+                }
+                if (!_dir.rename(_dir.absolutePath(), newpath)) {
+                    QDir().rename(leftoverAside, theFolderNamedAfterTheFile);
+                    QDir().rmdir(aside);
+                    return refuseTheRenamedInstall(qsl("could not move package %1 into place").arg(packageName));
+                }
+                removeDir(aside, aside);
+                // It holds the leftover's files as well now, so no later refusal may remove it
+                folderThisInstallMade.clear();
                 movedIntoPlace = true;
             }
             if (movedIntoPlace) {

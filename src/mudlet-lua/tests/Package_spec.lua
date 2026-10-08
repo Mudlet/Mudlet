@@ -129,6 +129,17 @@ local function containsWrapped(haystack, needle)
   return contains((tostring(haystack):gsub("%s+", "")), (needle:gsub("%s+", "")))
 end
 
+-- An archive is staged in "<name>.mudlet-installing-" and a random suffix beside the profile's folders
+local function aStagingFolderIsLeftFor(name)
+  local prefix = name .. ".mudlet-installing-"
+  for entry in lfs.dir(getMudletHomeDir()) do
+    if entry:sub(1, #prefix) == prefix then
+      return true
+    end
+  end
+  return false
+end
+
 -- A file: URL for a local path, in the three-slash form that keeps a Windows
 -- drive letter from being read as the host name. The checkout these fixtures
 -- live in can sit anywhere, so the characters that would otherwise end the path
@@ -419,7 +430,7 @@ describe("Tests the functionality of installPackage", function()
     assert.is_false(packageInstalled(name))
     assert.is_true(fileExists(occupant), "the refused install deleted a folder that was in the profile before it ran")
     assert.is_false(fileExists(stray), "the refused install left its files in a folder that was in the profile before it ran")
-    assert.is_false(fileExists(standIn .. ".mudlet-installing"), "the refused install left the folder it unpacked into")
+    assert.is_false(aStagingFolderIsLeftFor(name), "the refused install left the folder it unpacked into")
   end)
 
   it("installs a package over a folder of its name that was left in the profile", function()
@@ -431,8 +442,14 @@ describe("Tests the functionality of installPackage", function()
     assert.is_not_nil(file, "could not write to " .. oldFile)
     file:write("left behind by an earlier install")
     file:close()
+    local staleXml = leftover .. "/" .. minimalPackage .. ".xml"
+    file = io.open(staleXml, "w")
+    assert.is_not_nil(file, "could not write to " .. staleXml)
+    file:write("not the package's XML, which the archive's own copy replaces")
+    file:close()
     defer(function()
       removeFixturePackage(minimalPackage)
+      os.remove(staleXml)
       os.remove(oldFile)
       lfs.rmdir(leftover)
     end)
@@ -444,7 +461,8 @@ describe("Tests the functionality of installPackage", function()
     assert.is_true(packageInstalled(minimalPackage))
     assert.equals(1, exists(minimalPackage .. " alias", "alias"))
     assert.is_true(fileExists(leftover .. "/" .. minimalPackage .. ".xml"), "the package was not unpacked into its folder")
-    assert.is_false(fileExists(leftover .. ".mudlet-installing"), "the install left the folder it unpacked into")
+    assert.is_true(fileExists(oldFile), "the install took away a file of the folder it installed over")
+    assert.is_false(aStagingFolderIsLeftFor(minimalPackage), "the install left the folder it unpacked into")
   end)
 
   it("leaves a folder that was already in the profile alone when the unpacking fails", function()
