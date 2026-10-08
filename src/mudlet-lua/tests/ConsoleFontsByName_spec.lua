@@ -109,9 +109,34 @@ describe("Tests that the font functions find their console by name", function()
     it("reaches the font size of a label sized in pixels by its style sheet", function()
       assert.is_true(createLabel(otherName, 0, 0, 50, 20, 1))
       setLabelStyleSheet(otherName, "font-size: 12px;")
-      local size = getFontSize(otherName)
-      assert.is_true(type(size) == "number" and size > 0, "getFontSize answered " .. tostring(size))
+      local small = getFontSize(otherName)
+      setLabelStyleSheet(otherName, "font-size: 48px;")
+      local large = getFontSize(otherName)
+      local answered = ("getFontSize answered %s for 12px and %s for 48px"):format(tostring(small), tostring(large))
+      assert.is_true(type(small) == "number" and small > 0, answered)
+      -- points per pixel depend on the display, but four times the pixels is
+      -- about four times the points on any of them
+      assert.is_true(type(large) == "number" and large >= 3 * small and large <= 5 * small, answered)
     end)
+  end)
+
+  it("lets a console win a name a label also carries", function()
+    local shared = "specFontsByNameShared" .. suffix
+    assert.is_true(createLabel(shared, 0, 0, 50, 20, 1))
+    finally(function()
+      deleteMiniConsole(shared)
+      deleteLabel(shared)
+    end)
+    assert.are.same({true}, {setFontSize(shared, 17)})
+    -- a new mini console starts at 12
+    assert.is_true(createMiniConsole(shared, 0, 0, 300, 200))
+    assert.are.same({12}, {getFontSize(shared)})
+
+    assert.are.same({true}, {setFontSize(shared, 21)})
+    assert.are.same({21}, {getFontSize(shared)})
+    -- with the console gone the name reaches the label again, at its own size
+    assert.is_true(deleteMiniConsole(shared))
+    assert.are.same({17}, {getFontSize(shared)})
   end)
 
   it("checks the arguments before it looks for the console", function()
