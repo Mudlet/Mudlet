@@ -2000,6 +2000,12 @@ void dlgTriggerEditor::slot_itemSelectedInSearchResults(QTreeWidgetItem* pItem)
         return;
     }
 
+    // Showing the item's view rebuilds stale trees, which would free the items found below
+    if (mNeedUpdateData) {
+        saveOpenChanges();
+        rebuildStaleTrees();
+    }
+
     // For changing views from one type to another (e.g. script->triggers), we have to show
     // the new view first before changing the TreeWidgetItem. Because we save changes to
     // the current item when it is left, if we change the TreeWidgetItem and then swap
@@ -2355,6 +2361,11 @@ void dlgTriggerEditor::slot_itemSelectedInSearchResults(QTreeWidgetItem* pItem)
         LuaInterface* lI = mpHost->getLuaInterface();
         VarUnit* vu = lI->getVarUnit();
         const QStringList varShort = pItem->data(0, IdRole).toStringList();
+        // A stale-tree rebuild empties the variables tree without refilling it,
+        // leaving mpVarBaseItem freed
+        if (!treeWidget_variables->topLevelItemCount()) {
+            repopulateVars();
+        }
         QList<QTreeWidgetItem*> list;
         recurseVariablesDown(mpVarBaseItem, list);
         QListIterator<QTreeWidgetItem*> it(list);
@@ -2616,6 +2627,10 @@ void dlgTriggerEditor::highlightSearchMatches()
 void dlgTriggerEditor::emitScriptSearchMatches(
         const QString& scriptText, const QString& searchText, const QString& name, int objectId, const QString& parentLabel, EditorViewType viewType, QTreeWidgetItem*& parent)
 {
+    // Most scripts hold no match, and splitting each one into lines costs more than one look at it whole
+    if (!containsSearchMatch(scriptText, searchText)) {
+        return;
+    }
     const QStringList textList = scriptText.split(qsl("\n"));
     const int total = textList.count();
     for (int index = 0; index < total; ++index) {
@@ -2999,12 +3014,24 @@ void dlgTriggerEditor::recursiveSearchKeys(TKey* pTriggerParent, const QString& 
 }
 
 
+// Undo restores an item from its own snapshot only when no ancestor was deleted along with it
+static bool hasSelectedAncestor(const QTreeWidgetItem* pItem, const QSet<QTreeWidgetItem*>& selectedItemsSet, const QTreeWidgetItem* pBaseItem)
+{
+    for (QTreeWidgetItem* pParent = pItem->parent(); pParent && pParent != pBaseItem; pParent = pParent->parent()) {
+        if (selectedItemsSet.contains(pParent)) {
+            return true;
+        }
+    }
+    return false;
+}
+
 void dlgTriggerEditor::delete_alias()
 {
     QList<QTreeWidgetItem*> selectedItems = treeWidget_aliases->selectedItems();
     if (selectedItems.isEmpty()) {
         return;
     }
+    const QSet<QTreeWidgetItem*> selectedItemsSet{selectedItems.cbegin(), selectedItems.cend()};
 
     QStringList itemNames;
     QList<TAlias*> aliasesToDelete;
@@ -3025,7 +3052,7 @@ void dlgTriggerEditor::delete_alias()
     QList<EditorDeleteItemCommand::DeletedItemInfo> deletedItems;
 
     // Recursive lambda to capture an alias and all its descendants
-    std::function<void(TAlias*, int, int)> captureAliasAndChildren = [&](TAlias* pT, int parentID, int positionInParent) {
+    std::function<void(TAlias*, int, int, bool)> captureAliasAndChildren = [&](TAlias* pT, int parentID, int positionInParent, bool withSnapshot) {
         if (!pT) {
             return;
         }
@@ -3036,20 +3063,22 @@ void dlgTriggerEditor::delete_alias()
         info.parentID = parentID;
         info.positionInParent = positionInParent;
 
-        pugi::xml_document doc;
-        auto root = doc.append_child("AliasSnapshot");
-        XMLexport exporter(pT);
-        exporter.writeAlias(pT, root);
-        std::ostringstream oss;
-        doc.save(oss);
-        info.xmlSnapshot = QString::fromStdString(oss.str());
+        if (withSnapshot) {
+            pugi::xml_document doc;
+            auto root = doc.append_child("AliasSnapshot");
+            XMLexport exporter(pT);
+            exporter.writeAlias(pT, root);
+            std::ostringstream oss;
+            doc.save(oss);
+            info.xmlSnapshot = QString::fromStdString(oss.str());
+        }
 
         deletedItems.append(info);
 
         if (pT->mpMyChildrenList) {
             int i = 0;
             for (auto* pChild : *pT->mpMyChildrenList) {
-                captureAliasAndChildren(static_cast<TAlias*>(pChild), pT->getID(), i);
+                captureAliasAndChildren(static_cast<TAlias*>(pChild), pT->getID(), i, false);
                 ++i;
             }
         }
@@ -3102,7 +3131,7 @@ void dlgTriggerEditor::delete_alias()
                 }
             }
 
-            captureAliasAndChildren(pT, parentID, positionInParent);
+            captureAliasAndChildren(pT, parentID, positionInParent, !hasSelectedAncestor(pItem, selectedItemsSet, mpAliasBaseItem));
         }
     }
 
@@ -3118,6 +3147,10 @@ void dlgTriggerEditor::delete_alias()
 
     QTreeWidgetItem* newSelection = nullptr;
     QList<QTreeWidgetItem*> removedItems;
+    // Emptied silently so each removed row doesn't re-lay out the rest of the selection and reload
+    // the form, and so the setCurrentItem() below is a real change the view gets told about
+    QSignalBlocker selectionBlocker(treeWidget_aliases->selectionModel());
+    treeWidget_aliases->selectionModel()->clear();
     for (QTreeWidgetItem* pItem : std::as_const(selectedItems)) {
         QTreeWidgetItem* pParentItem = pItem->parent();
         const int itemId = pItem->data(0, Qt::UserRole).toInt();
@@ -3146,6 +3179,7 @@ void dlgTriggerEditor::delete_alias()
             delete pT;
         }
     }
+    selectionBlocker.unblock();
 
     if (!deletedItems.isEmpty()) {
         auto* qtCmd = new EditorDeleteItemCommand(EditorViewType::cmAliasView, deletedItems, mpHost);
@@ -3209,7 +3243,7 @@ void dlgTriggerEditor::delete_action()
     QList<EditorDeleteItemCommand::DeletedItemInfo> deletedItems;
 
     // Recursive lambda to capture an action and all its descendants
-    std::function<void(TAction*, int, int)> captureActionAndChildren = [&](TAction* pT, int parentID, int positionInParent) {
+    std::function<void(TAction*, int, int, bool)> captureActionAndChildren = [&](TAction* pT, int parentID, int positionInParent, bool withSnapshot) {
         if (!pT) {
             return;
         }
@@ -3220,21 +3254,22 @@ void dlgTriggerEditor::delete_action()
         info.parentID = parentID;
         info.positionInParent = positionInParent;
 
-        // Export action to XML snapshot
-        pugi::xml_document doc;
-        auto root = doc.append_child("ActionSnapshot");
-        XMLexport exporter(pT);
-        exporter.writeAction(pT, root);
-        std::ostringstream oss;
-        doc.save(oss);
-        info.xmlSnapshot = QString::fromStdString(oss.str());
+        if (withSnapshot) {
+            pugi::xml_document doc;
+            auto root = doc.append_child("ActionSnapshot");
+            XMLexport exporter(pT);
+            exporter.writeAction(pT, root);
+            std::ostringstream oss;
+            doc.save(oss);
+            info.xmlSnapshot = QString::fromStdString(oss.str());
+        }
 
         deletedItems.append(info);
 
         if (pT->mpMyChildrenList) {
             int i = 0;
             for (auto* pChild : *pT->mpMyChildrenList) {
-                captureActionAndChildren(static_cast<TAction*>(pChild), pT->getID(), i);
+                captureActionAndChildren(static_cast<TAction*>(pChild), pT->getID(), i, false);
                 ++i;
             }
         }
@@ -3257,7 +3292,7 @@ void dlgTriggerEditor::delete_action()
             }
 
             // Recursively capture this action and all its children
-            captureActionAndChildren(pT, parentID, positionInParent);
+            captureActionAndChildren(pT, parentID, positionInParent, !hasSelectedAncestor(pItem, selectedItemsSet, mpActionBaseItem));
         }
     }
 
@@ -3273,6 +3308,8 @@ void dlgTriggerEditor::delete_action()
 
     QTreeWidgetItem* newSelection = nullptr;
     QList<QTreeWidgetItem*> removedItems;
+    QSignalBlocker selectionBlocker(treeWidget_actions->selectionModel());
+    treeWidget_actions->selectionModel()->clear();
     for (QTreeWidgetItem* pItem : std::as_const(selectedItems)) {
         QTreeWidgetItem* pParentItem = pItem->parent();
         const int itemId = pItem->data(0, Qt::UserRole).toInt();
@@ -3306,6 +3343,7 @@ void dlgTriggerEditor::delete_action()
             delete pT;
         }
     }
+    selectionBlocker.unblock();
 
     if (!deletedItems.isEmpty()) {
         auto* qtCmd = new EditorDeleteItemCommand(EditorViewType::cmActionView, deletedItems, mpHost);
@@ -3367,6 +3405,8 @@ void dlgTriggerEditor::delete_variable()
 
     QTreeWidgetItem* newSelection = nullptr;
     QList<QTreeWidgetItem*> removedItems;
+    QSignalBlocker selectionBlocker(treeWidget_variables->selectionModel());
+    treeWidget_variables->selectionModel()->clear();
     for (QTreeWidgetItem* pItem : std::as_const(selectedItems)) {
         QTreeWidgetItem* pParentItem = pItem->parent();
         TVar* var = treeWidget_variables->variableForRow(vu, pItem);
@@ -3377,7 +3417,6 @@ void dlgTriggerEditor::delete_variable()
             if (parent) {
                 parent->removeChild(var);
             }
-            vu->removeVariable(var);
 
             if (pParentItem && !newSelection) {
                 newSelection = pParentItem;
@@ -3401,6 +3440,7 @@ void dlgTriggerEditor::delete_variable()
             delete var;
         }
     }
+    selectionBlocker.unblock();
 
     if (newSelection && !newSelection->treeWidget()) {
         newSelection = mpVarBaseItem;
@@ -3425,6 +3465,7 @@ void dlgTriggerEditor::delete_script()
     if (selectedItems.isEmpty()) {
         return;
     }
+    const QSet<QTreeWidgetItem*> selectedItemsSet{selectedItems.cbegin(), selectedItems.cend()};
 
     QStringList itemNames;
     QList<TScript*> scriptsToDelete;
@@ -3445,7 +3486,7 @@ void dlgTriggerEditor::delete_script()
     QList<EditorDeleteItemCommand::DeletedItemInfo> deletedItems;
 
     // Recursive lambda to capture a script and all its descendants
-    std::function<void(TScript*, int, int)> captureScriptAndChildren = [&](TScript* pT, int parentID, int positionInParent) {
+    std::function<void(TScript*, int, int, bool)> captureScriptAndChildren = [&](TScript* pT, int parentID, int positionInParent, bool withSnapshot) {
         if (!pT) {
             return;
         }
@@ -3456,21 +3497,22 @@ void dlgTriggerEditor::delete_script()
         info.parentID = parentID;
         info.positionInParent = positionInParent;
 
-        // Export script to XML snapshot
-        pugi::xml_document doc;
-        auto root = doc.append_child("ScriptSnapshot");
-        XMLexport exporter(pT);
-        exporter.writeScript(pT, root);
-        std::ostringstream oss;
-        doc.save(oss);
-        info.xmlSnapshot = QString::fromStdString(oss.str());
+        if (withSnapshot) {
+            pugi::xml_document doc;
+            auto root = doc.append_child("ScriptSnapshot");
+            XMLexport exporter(pT);
+            exporter.writeScript(pT, root);
+            std::ostringstream oss;
+            doc.save(oss);
+            info.xmlSnapshot = QString::fromStdString(oss.str());
+        }
 
         deletedItems.append(info);
 
         if (pT->mpMyChildrenList) {
             int i = 0;
             for (auto* pChild : *pT->mpMyChildrenList) {
-                captureScriptAndChildren(static_cast<TScript*>(pChild), pT->getID(), i);
+                captureScriptAndChildren(static_cast<TScript*>(pChild), pT->getID(), i, false);
                 ++i;
             }
         }
@@ -3494,7 +3536,7 @@ void dlgTriggerEditor::delete_script()
             }
 
             // Recursively capture this script and all its children
-            captureScriptAndChildren(pT, parentID, positionInParent);
+            captureScriptAndChildren(pT, parentID, positionInParent, !hasSelectedAncestor(pItem, selectedItemsSet, mpScriptsBaseItem));
         }
     }
 
@@ -3510,6 +3552,8 @@ void dlgTriggerEditor::delete_script()
 
     QTreeWidgetItem* newSelection = nullptr;
     QList<QTreeWidgetItem*> removedItems;
+    QSignalBlocker selectionBlocker(treeWidget_scripts->selectionModel());
+    treeWidget_scripts->selectionModel()->clear();
     for (QTreeWidgetItem* pItem : std::as_const(selectedItems)) {
         QTreeWidgetItem* pParentItem = pItem->parent();
         const int itemId = pItem->data(0, Qt::UserRole).toInt();
@@ -3538,6 +3582,7 @@ void dlgTriggerEditor::delete_script()
             delete pT;
         }
     }
+    selectionBlocker.unblock();
 
     if (!deletedItems.isEmpty()) {
         auto* qtCmd = new EditorDeleteItemCommand(EditorViewType::cmScriptView, deletedItems, mpHost);
@@ -3567,6 +3612,7 @@ void dlgTriggerEditor::delete_key()
     if (selectedItems.isEmpty()) {
         return;
     }
+    const QSet<QTreeWidgetItem*> selectedItemsSet{selectedItems.cbegin(), selectedItems.cend()};
 
     QStringList itemNames;
     QList<TKey*> keysToDelete;
@@ -3587,7 +3633,7 @@ void dlgTriggerEditor::delete_key()
     QList<EditorDeleteItemCommand::DeletedItemInfo> deletedItems;
 
     // Recursive lambda to capture a key and all its descendants
-    std::function<void(TKey*, int, int)> captureKeyAndChildren = [&](TKey* pT, int parentID, int positionInParent) {
+    std::function<void(TKey*, int, int, bool)> captureKeyAndChildren = [&](TKey* pT, int parentID, int positionInParent, bool withSnapshot) {
         if (!pT) {
             return;
         }
@@ -3598,21 +3644,22 @@ void dlgTriggerEditor::delete_key()
         info.parentID = parentID;
         info.positionInParent = positionInParent;
 
-        // Export key to XML snapshot
-        pugi::xml_document doc;
-        auto root = doc.append_child("KeySnapshot");
-        XMLexport exporter(pT);
-        exporter.writeKey(pT, root);
-        std::ostringstream oss;
-        doc.save(oss);
-        info.xmlSnapshot = QString::fromStdString(oss.str());
+        if (withSnapshot) {
+            pugi::xml_document doc;
+            auto root = doc.append_child("KeySnapshot");
+            XMLexport exporter(pT);
+            exporter.writeKey(pT, root);
+            std::ostringstream oss;
+            doc.save(oss);
+            info.xmlSnapshot = QString::fromStdString(oss.str());
+        }
 
         deletedItems.append(info);
 
         if (pT->mpMyChildrenList) {
             int i = 0;
             for (auto* pChild : *pT->mpMyChildrenList) {
-                captureKeyAndChildren(static_cast<TKey*>(pChild), pT->getID(), i);
+                captureKeyAndChildren(static_cast<TKey*>(pChild), pT->getID(), i, false);
                 ++i;
             }
         }
@@ -3636,7 +3683,7 @@ void dlgTriggerEditor::delete_key()
             }
 
             // Recursively capture this key and all its children
-            captureKeyAndChildren(pT, parentID, positionInParent);
+            captureKeyAndChildren(pT, parentID, positionInParent, !hasSelectedAncestor(pItem, selectedItemsSet, mpKeyBaseItem));
         }
     }
 
@@ -3652,6 +3699,8 @@ void dlgTriggerEditor::delete_key()
 
     QTreeWidgetItem* newSelection = nullptr;
     QList<QTreeWidgetItem*> removedItems;
+    QSignalBlocker selectionBlocker(treeWidget_keys->selectionModel());
+    treeWidget_keys->selectionModel()->clear();
     for (QTreeWidgetItem* pItem : std::as_const(selectedItems)) {
         QTreeWidgetItem* pParentItem = pItem->parent();
         const int itemId = pItem->data(0, Qt::UserRole).toInt();
@@ -3680,6 +3729,7 @@ void dlgTriggerEditor::delete_key()
             delete pT;
         }
     }
+    selectionBlocker.unblock();
 
     if (!deletedItems.isEmpty()) {
         auto* qtCmd = new EditorDeleteItemCommand(EditorViewType::cmKeysView, deletedItems, mpHost);
@@ -3709,6 +3759,7 @@ void dlgTriggerEditor::delete_trigger()
     if (selectedItems.isEmpty()) {
         return;
     }
+    const QSet<QTreeWidgetItem*> selectedItemsSet{selectedItems.cbegin(), selectedItems.cend()};
 
     QStringList itemNames;
     QList<TTrigger*> triggersToDelete;
@@ -3729,7 +3780,7 @@ void dlgTriggerEditor::delete_trigger()
     QList<EditorDeleteItemCommand::DeletedItemInfo> deletedItems;
 
     // Recursive lambda to capture a trigger and all its descendants
-    std::function<void(TTrigger*, int, int)> captureTriggerAndChildren = [&](TTrigger* pT, int parentID, int positionInParent) {
+    std::function<void(TTrigger*, int, int, bool)> captureTriggerAndChildren = [&](TTrigger* pT, int parentID, int positionInParent, bool withSnapshot) {
         if (!pT) {
             return;
         }
@@ -3740,21 +3791,22 @@ void dlgTriggerEditor::delete_trigger()
         info.parentID = parentID;
         info.positionInParent = positionInParent;
 
-        // Export trigger to XML snapshot
-        pugi::xml_document doc;
-        auto root = doc.append_child("TriggerSnapshot");
-        XMLexport exporter(pT);
-        exporter.writeTrigger(pT, root);
-        std::ostringstream oss;
-        doc.save(oss);
-        info.xmlSnapshot = QString::fromStdString(oss.str());
+        if (withSnapshot) {
+            pugi::xml_document doc;
+            auto root = doc.append_child("TriggerSnapshot");
+            XMLexport exporter(pT);
+            exporter.writeTrigger(pT, root);
+            std::ostringstream oss;
+            doc.save(oss);
+            info.xmlSnapshot = QString::fromStdString(oss.str());
+        }
 
         deletedItems.append(info);
 
         if (pT->mpMyChildrenList) {
             int i = 0;
             for (auto* pChild : *pT->mpMyChildrenList) {
-                captureTriggerAndChildren(static_cast<TTrigger*>(pChild), pT->getID(), i);
+                captureTriggerAndChildren(static_cast<TTrigger*>(pChild), pT->getID(), i, false);
                 ++i;
             }
         }
@@ -3783,7 +3835,7 @@ void dlgTriggerEditor::delete_trigger()
             }
 
             // Recursively capture this trigger and all its children
-            captureTriggerAndChildren(pT, parentID, positionInParent);
+            captureTriggerAndChildren(pT, parentID, positionInParent, !hasSelectedAncestor(pItem, selectedItemsSet, mpTriggerBaseItem));
         }
     }
 
@@ -3799,6 +3851,8 @@ void dlgTriggerEditor::delete_trigger()
 
     QTreeWidgetItem* newSelection = nullptr;
     QList<QTreeWidgetItem*> removedItems;
+    QSignalBlocker selectionBlocker(treeWidget_triggers->selectionModel());
+    treeWidget_triggers->selectionModel()->clear();
     for (QTreeWidgetItem* pItem : std::as_const(selectedItems)) {
         QTreeWidgetItem* pParentItem = pItem->parent();
         const int itemId = pItem->data(0, Qt::UserRole).toInt();
@@ -3827,6 +3881,7 @@ void dlgTriggerEditor::delete_trigger()
             delete pT;
         }
     }
+    selectionBlocker.unblock();
 
     if (!deletedItems.isEmpty()) {
         auto* qtCmd = new EditorDeleteItemCommand(EditorViewType::cmTriggerView, deletedItems, mpHost);
@@ -3856,6 +3911,7 @@ void dlgTriggerEditor::delete_timer()
     if (selectedItems.isEmpty()) {
         return;
     }
+    const QSet<QTreeWidgetItem*> selectedItemsSet{selectedItems.cbegin(), selectedItems.cend()};
 
     QStringList itemNames;
     QList<TTimer*> timersToDelete;
@@ -3876,7 +3932,7 @@ void dlgTriggerEditor::delete_timer()
     QList<EditorDeleteItemCommand::DeletedItemInfo> deletedItems;
 
     // Recursive lambda to capture a timer and all its descendants
-    std::function<void(TTimer*, int, int)> captureTimerAndChildren = [&](TTimer* pT, int parentID, int positionInParent) {
+    std::function<void(TTimer*, int, int, bool)> captureTimerAndChildren = [&](TTimer* pT, int parentID, int positionInParent, bool withSnapshot) {
         if (!pT) {
             return;
         }
@@ -3887,21 +3943,22 @@ void dlgTriggerEditor::delete_timer()
         info.parentID = parentID;
         info.positionInParent = positionInParent;
 
-        // Export timer to XML snapshot
-        pugi::xml_document doc;
-        auto root = doc.append_child("TimerSnapshot");
-        XMLexport exporter(pT);
-        exporter.writeTimer(pT, root);
-        std::ostringstream oss;
-        doc.save(oss);
-        info.xmlSnapshot = QString::fromStdString(oss.str());
+        if (withSnapshot) {
+            pugi::xml_document doc;
+            auto root = doc.append_child("TimerSnapshot");
+            XMLexport exporter(pT);
+            exporter.writeTimer(pT, root);
+            std::ostringstream oss;
+            doc.save(oss);
+            info.xmlSnapshot = QString::fromStdString(oss.str());
+        }
 
         deletedItems.append(info);
 
         if (pT->mpMyChildrenList) {
             int i = 0;
             for (auto* pChild : *pT->mpMyChildrenList) {
-                captureTimerAndChildren(static_cast<TTimer*>(pChild), pT->getID(), i);
+                captureTimerAndChildren(static_cast<TTimer*>(pChild), pT->getID(), i, false);
                 ++i;
             }
         }
@@ -3925,7 +3982,7 @@ void dlgTriggerEditor::delete_timer()
             }
 
             // Recursively capture this timer and all its children
-            captureTimerAndChildren(pT, parentID, positionInParent);
+            captureTimerAndChildren(pT, parentID, positionInParent, !hasSelectedAncestor(pItem, selectedItemsSet, mpTimerBaseItem));
         }
     }
 
@@ -3941,6 +3998,8 @@ void dlgTriggerEditor::delete_timer()
 
     QTreeWidgetItem* newSelection = nullptr;
     QList<QTreeWidgetItem*> removedItems;
+    QSignalBlocker selectionBlocker(treeWidget_timers->selectionModel());
+    treeWidget_timers->selectionModel()->clear();
     for (QTreeWidgetItem* pItem : std::as_const(selectedItems)) {
         QTreeWidgetItem* pParentItem = pItem->parent();
         const int itemId = pItem->data(0, Qt::UserRole).toInt();
@@ -3969,6 +4028,7 @@ void dlgTriggerEditor::delete_timer()
             delete pT;
         }
     }
+    selectionBlocker.unblock();
 
     if (!deletedItems.isEmpty()) {
         auto* qtCmd = new EditorDeleteItemCommand(EditorViewType::cmTimerView, deletedItems, mpHost);
@@ -5984,7 +6044,7 @@ void dlgTriggerEditor::saveTrigger()
     TTrigger* pT = mpHost->getTriggerUnit()->getTrigger(triggerID);
     if (pT) {
         // Capture OLD state before modifications (for undo)
-        QString oldStateXML = exportTriggerToXML(pT);
+        QString oldStateXML = exportTriggerToXML(pT, SnapshotScope::ItemOnly);
 
         pT->setName(name);
         pT->setCommand(command);
@@ -6133,7 +6193,7 @@ void dlgTriggerEditor::saveTrigger()
         pItem->setData(0, Qt::AccessibleDescriptionRole, itemDescription);
 
         // Capture NEW state after modifications (for redo)
-        QString newStateXML = exportTriggerToXML(pT);
+        QString newStateXML = exportTriggerToXML(pT, SnapshotScope::ItemOnly);
 
         // Only push undo command if something actually changed
         if (oldStateXML != newStateXML) {
@@ -6169,7 +6229,7 @@ void dlgTriggerEditor::saveTimer()
     TTimer* pT = mpHost->getTimerUnit()->getTimer(timerID);
     if (pT) {
         // Capture OLD state before modifications (for undo)
-        QString oldStateXML = exportTimerToXML(pT);
+        QString oldStateXML = exportTimerToXML(pT, SnapshotScope::ItemOnly);
 
         pT->setName(name);
         const QString command = mpTimersMainArea->lineEdit_timer_command->text();
@@ -6274,7 +6334,7 @@ void dlgTriggerEditor::saveTimer()
         pItem->setData(0, Qt::AccessibleDescriptionRole, itemDescription);
 
         // Capture NEW state after modifications (for redo)
-        QString newStateXML = exportTimerToXML(pT);
+        QString newStateXML = exportTimerToXML(pT, SnapshotScope::ItemOnly);
 
         // Only push undo command if something actually changed
         if (oldStateXML != newStateXML) {
@@ -6325,7 +6385,7 @@ void dlgTriggerEditor::saveAlias()
     TAlias* pT = mpHost->getAliasUnit()->getAlias(triggerID);
     if (pT) {
         // Capture OLD state before modifications (for undo)
-        QString oldStateXML = exportAliasToXML(pT);
+        QString oldStateXML = exportAliasToXML(pT, SnapshotScope::ItemOnly);
 
         pT->setName(name);
         pT->setCommand(substitution);
@@ -6389,7 +6449,7 @@ void dlgTriggerEditor::saveAlias()
         pItem->setData(0, Qt::AccessibleDescriptionRole, itemDescription);
 
         // Capture NEW state after modifications (for redo)
-        QString newStateXML = exportAliasToXML(pT);
+        QString newStateXML = exportAliasToXML(pT, SnapshotScope::ItemOnly);
 
         // Only push undo command if something actually changed
         if (oldStateXML != newStateXML) {
@@ -6651,7 +6711,7 @@ void dlgTriggerEditor::saveAction()
     TAction* pA = mpHost->getActionUnit()->getAction(actionID);
     if (pA) {
         // Capture OLD state before modifications (for undo)
-        QString oldStateXML = exportActionToXML(pA);
+        QString oldStateXML = exportActionToXML(pA, SnapshotScope::ItemOnly);
 
         // Check if data has been changed before it gets updated.
         bool actionDataChanged = false;
@@ -6769,7 +6829,7 @@ void dlgTriggerEditor::saveAction()
         }
 
         // Capture NEW state after modifications (for redo)
-        QString newStateXML = exportActionToXML(pA);
+        QString newStateXML = exportActionToXML(pA, SnapshotScope::ItemOnly);
 
         // Only push undo command if something actually changed
         if (oldStateXML != newStateXML) {
@@ -6849,7 +6909,7 @@ void dlgTriggerEditor::saveScript()
     }
 
     // Capture OLD state before modifications (for undo)
-    QString oldStateXML = exportScriptToXML(pT);
+    QString oldStateXML = exportScriptToXML(pT, SnapshotScope::ItemOnly);
 
     pT->setName(name);
     pT->setEventHandlerList(handlerList);
@@ -6955,7 +7015,7 @@ void dlgTriggerEditor::saveScript()
     pItem->setData(0, Qt::AccessibleDescriptionRole, itemDescription);
 
     // Capture NEW state after modifications (for redo)
-    QString newStateXML = exportScriptToXML(pT);
+    QString newStateXML = exportScriptToXML(pT, SnapshotScope::ItemOnly);
 
     // Only push undo command if something actually changed
     if (oldStateXML != newStateXML) {
@@ -7052,6 +7112,20 @@ void dlgTriggerEditor::showKeyTakenWarning(QTreeWidgetItem* pItem, const QString
         description = description.isEmpty() ? descKeyTaken : description + suffix;
     }
     pItem->setData(0, Qt::AccessibleDescriptionRole, description);
+}
+
+// Only after an explicit save: saveKey() also runs on leaving the keys view, where the warning
+// would stay over the next view and keep its intro from showing
+void dlgTriggerEditor::rewarnAboutCurrentKey()
+{
+    if (!mpCurrentKeyItem) {
+        return;
+    }
+    const TKey* pT = mpHost->getKeyUnit()->getKey(mpCurrentKeyItem->data(0, Qt::UserRole).toInt());
+    // A failed compile's error is what the banner should keep showing
+    if (pT && pT->state()) {
+        showKeyTakenWarning(mpCurrentKeyItem, takenKeyWarning(pT), false);
+    }
 }
 
 int dlgTriggerEditor::canRecast(QTreeWidgetItem* pItem, int newNameType, int newValueType)
@@ -7384,7 +7458,7 @@ void dlgTriggerEditor::saveKey()
     TKey* pT = mpHost->getKeyUnit()->getKey(triggerID);
     if (pT) {
         // Capture OLD state before modifications (for undo)
-        QString oldStateXML = exportKeyToXML(pT);
+        QString oldStateXML = exportKeyToXML(pT, SnapshotScope::ItemOnly);
 
         const QString old_name = pT->getName();
         pItem->setText(0, name);
@@ -7495,7 +7569,7 @@ void dlgTriggerEditor::saveKey()
         pItem->setData(0, Qt::AccessibleDescriptionRole, itemDescription);
 
         // Capture NEW state after modifications (for redo)
-        QString newStateXML = exportKeyToXML(pT);
+        QString newStateXML = exportKeyToXML(pT, SnapshotScope::ItemOnly);
 
         // Only push undo command if something actually changed
         if (oldStateXML != newStateXML) {
@@ -10456,21 +10530,26 @@ void dlgTriggerEditor::autoSave()
     mpHost->saveProfile(QString(), qsl("autosave"));
 }
 
+void dlgTriggerEditor::rebuildStaleTrees()
+{
+    treeWidget_triggers->clear();
+    treeWidget_aliases->clear();
+    treeWidget_timers->clear();
+    treeWidget_scripts->clear();
+    treeWidget_actions->clear();
+    treeWidget_keys->clear();
+    treeWidget_variables->clear();
+    fillout_form();
+    mNeedUpdateData = false;
+    resolveCurrentView();
+}
+
 void dlgTriggerEditor::enterEvent(TEnterEvent* event)
 {
     Q_UNUSED(event)
     if (mNeedUpdateData) {
         saveOpenChanges();
-        treeWidget_triggers->clear();
-        treeWidget_aliases->clear();
-        treeWidget_timers->clear();
-        treeWidget_scripts->clear();
-        treeWidget_actions->clear();
-        treeWidget_keys->clear();
-        treeWidget_variables->clear();
-        fillout_form();
-        mNeedUpdateData = false;
-        resolveCurrentView();
+        rebuildStaleTrees();
     }
 }
 
@@ -10479,16 +10558,7 @@ void dlgTriggerEditor::focusInEvent(QFocusEvent* pE)
     Q_UNUSED(pE)
     if (mNeedUpdateData) {
         saveOpenChanges();
-        treeWidget_triggers->clear();
-        treeWidget_aliases->clear();
-        treeWidget_timers->clear();
-        treeWidget_scripts->clear();
-        treeWidget_actions->clear();
-        treeWidget_keys->clear();
-        treeWidget_variables->clear();
-        fillout_form();
-        mNeedUpdateData = false;
-        resolveCurrentView();
+        rebuildStaleTrees();
     }
 
     if (mCurrentView == EditorViewType::cmUnknownView) {
@@ -10550,16 +10620,7 @@ void dlgTriggerEditor::changeView(EditorViewType view)
     saveOpenChanges();
 
     if (mNeedUpdateData) {
-        treeWidget_triggers->clear();
-        treeWidget_aliases->clear();
-        treeWidget_timers->clear();
-        treeWidget_scripts->clear();
-        treeWidget_actions->clear();
-        treeWidget_keys->clear();
-        treeWidget_variables->clear();
-        fillout_form();
-        mNeedUpdateData = false;
-        resolveCurrentView();
+        rebuildStaleTrees();
     }
 
     // in lieu of readonly
@@ -11174,6 +11235,7 @@ void dlgTriggerEditor::slot_saveEdits()
         break;
     case EditorViewType::cmKeysView:
         saveKey();
+        rewarnAboutCurrentKey();
         break;
     case EditorViewType::cmVarsView:
         saveVar();
@@ -11439,6 +11501,7 @@ void dlgTriggerEditor::slot_saveSelectedItem()
         break;
     case EditorViewType::cmKeysView:
         saveKey();
+        rewarnAboutCurrentKey();
         break;
     case EditorViewType::cmVarsView:
         saveVar();
@@ -13425,10 +13488,10 @@ void dlgTriggerEditor::keyGrabCallback(const Qt::Key key, const Qt::KeyboardModi
                 return;
             }
 
-            QString oldStateXML = exportKeyToXML(pT);
+            QString oldStateXML = exportKeyToXML(pT, SnapshotScope::ItemOnly);
             pT->setKeyCode(key);
             pT->setKeyModifiers(modifier);
-            QString newStateXML = exportKeyToXML(pT);
+            QString newStateXML = exportKeyToXML(pT, SnapshotScope::ItemOnly);
 
             showKeyTakenWarning(pItem, takenKeyWarning(pT), true);
 
@@ -13952,8 +14015,11 @@ int dlgTriggerEditor::findSearchMatch(const QString& haystack, const QString& ne
         if (!(mSearchOptions & enums::EditorSearchOptionCaseSensitive)) {
             options |= QRegularExpression::CaseInsensitiveOption;
         }
-        QRegularExpression regex(qsl("\\b%1\\b").arg(QRegularExpression::escape(needle)), options);
-        QRegularExpressionMatch match = regex.match(haystack, from);
+        if (needle != mWholeWordSearchNeedle || options != mWholeWordSearchRegex.patternOptions()) {
+            mWholeWordSearchRegex = QRegularExpression(qsl("\\b%1\\b").arg(QRegularExpression::escape(needle)), options);
+            mWholeWordSearchNeedle = needle;
+        }
+        const QRegularExpressionMatch match = mWholeWordSearchRegex.match(haystack, from);
         if (match.hasMatch()) {
             return match.capturedStart();
         }
@@ -15373,10 +15439,10 @@ void dlgTriggerEditor::slot_saveProperty_TriggerName()
         return;
     }
 
-    QString oldStateXML = exportTriggerToXML(pT);
+    QString oldStateXML = exportTriggerToXML(pT, SnapshotScope::ItemOnly);
     pT->setName(newName);
     mpCurrentTriggerItem->setText(0, newName);
-    QString newStateXML = exportTriggerToXML(pT);
+    QString newStateXML = exportTriggerToXML(pT, SnapshotScope::ItemOnly);
 
     pushTriggerPropertyCommand(mpUndoStack, mpHost, triggerID, newName, qsl("name"), oldStateXML, newStateXML);
 }
@@ -15399,9 +15465,9 @@ void dlgTriggerEditor::slot_saveProperty_TriggerCommand()
         return;
     }
 
-    QString oldStateXML = exportTriggerToXML(pT);
+    QString oldStateXML = exportTriggerToXML(pT, SnapshotScope::ItemOnly);
     pT->setCommand(newCommand);
-    QString newStateXML = exportTriggerToXML(pT);
+    QString newStateXML = exportTriggerToXML(pT, SnapshotScope::ItemOnly);
 
     pushTriggerPropertyCommand(mpUndoStack, mpHost, triggerID, pT->getName(), qsl("command"), oldStateXML, newStateXML);
 }
@@ -15424,9 +15490,9 @@ void dlgTriggerEditor::slot_saveProperty_TriggerStayOpen()
         return;
     }
 
-    QString oldStateXML = exportTriggerToXML(pT);
+    QString oldStateXML = exportTriggerToXML(pT, SnapshotScope::ItemOnly);
     pT->mStayOpen = newValue;
-    QString newStateXML = exportTriggerToXML(pT);
+    QString newStateXML = exportTriggerToXML(pT, SnapshotScope::ItemOnly);
 
     pushTriggerPropertyCommand(mpUndoStack, mpHost, triggerID, pT->getName(), qsl("stayOpen"), oldStateXML, newStateXML);
 }
@@ -15451,14 +15517,14 @@ void dlgTriggerEditor::slot_saveProperty_TriggerLineMargin()
         return;
     }
 
-    QString oldStateXML = exportTriggerToXML(pT);
+    QString oldStateXML = exportTriggerToXML(pT, SnapshotScope::ItemOnly);
     if (newValue >= 0) {
         pT->setConditionLineDelta(newValue);
         pT->setIsMultiline(true);
     } else {
         pT->setIsMultiline(false);
     }
-    QString newStateXML = exportTriggerToXML(pT);
+    QString newStateXML = exportTriggerToXML(pT, SnapshotScope::ItemOnly);
 
     pushTriggerPropertyCommand(mpUndoStack, mpHost, triggerID, pT->getName(), qsl("lineMargin"), oldStateXML, newStateXML);
 }
@@ -15481,9 +15547,9 @@ void dlgTriggerEditor::slot_saveProperty_TriggerFilterTrigger()
         return;
     }
 
-    QString oldStateXML = exportTriggerToXML(pT);
+    QString oldStateXML = exportTriggerToXML(pT, SnapshotScope::ItemOnly);
     pT->mFilterTrigger = newValue;
-    QString newStateXML = exportTriggerToXML(pT);
+    QString newStateXML = exportTriggerToXML(pT, SnapshotScope::ItemOnly);
 
     pushTriggerPropertyCommand(mpUndoStack, mpHost, triggerID, pT->getName(), qsl("filterTrigger"), oldStateXML, newStateXML);
 }
@@ -15506,9 +15572,9 @@ void dlgTriggerEditor::slot_saveProperty_TriggerPerlSlashG()
         return;
     }
 
-    QString oldStateXML = exportTriggerToXML(pT);
+    QString oldStateXML = exportTriggerToXML(pT, SnapshotScope::ItemOnly);
     pT->mPerlSlashGOption = newValue;
-    QString newStateXML = exportTriggerToXML(pT);
+    QString newStateXML = exportTriggerToXML(pT, SnapshotScope::ItemOnly);
 
     pushTriggerPropertyCommand(mpUndoStack, mpHost, triggerID, pT->getName(), qsl("perlSlashG"), oldStateXML, newStateXML);
 }
@@ -15531,9 +15597,9 @@ void dlgTriggerEditor::slot_saveProperty_TriggerSoundEnabled()
         return;
     }
 
-    QString oldStateXML = exportTriggerToXML(pT);
+    QString oldStateXML = exportTriggerToXML(pT, SnapshotScope::ItemOnly);
     pT->mSoundTrigger = newValue;
-    QString newStateXML = exportTriggerToXML(pT);
+    QString newStateXML = exportTriggerToXML(pT, SnapshotScope::ItemOnly);
 
     pushTriggerPropertyCommand(mpUndoStack, mpHost, triggerID, pT->getName(), qsl("soundEnabled"), oldStateXML, newStateXML);
 }
@@ -15556,9 +15622,9 @@ void dlgTriggerEditor::slot_saveProperty_TriggerSoundFile()
         return;
     }
 
-    QString oldStateXML = exportTriggerToXML(pT);
+    QString oldStateXML = exportTriggerToXML(pT, SnapshotScope::ItemOnly);
     pT->setSound(newValue);
-    QString newStateXML = exportTriggerToXML(pT);
+    QString newStateXML = exportTriggerToXML(pT, SnapshotScope::ItemOnly);
 
     pushTriggerPropertyCommand(mpUndoStack, mpHost, triggerID, pT->getName(), qsl("soundFile"), oldStateXML, newStateXML);
 }
@@ -15581,9 +15647,9 @@ void dlgTriggerEditor::slot_saveProperty_TriggerColorizer()
         return;
     }
 
-    QString oldStateXML = exportTriggerToXML(pT);
+    QString oldStateXML = exportTriggerToXML(pT, SnapshotScope::ItemOnly);
     pT->setIsColorizerTrigger(newValue);
-    QString newStateXML = exportTriggerToXML(pT);
+    QString newStateXML = exportTriggerToXML(pT, SnapshotScope::ItemOnly);
 
     pushTriggerPropertyCommand(mpUndoStack, mpHost, triggerID, pT->getName(), qsl("colorizer"), oldStateXML, newStateXML);
 }
@@ -15657,10 +15723,10 @@ void dlgTriggerEditor::slot_saveProperty_AliasName()
         return;
     }
 
-    QString oldStateXML = exportAliasToXML(pT);
+    QString oldStateXML = exportAliasToXML(pT, SnapshotScope::ItemOnly);
     pT->setName(newName);
     mpCurrentAliasItem->setText(0, newName);
-    QString newStateXML = exportAliasToXML(pT);
+    QString newStateXML = exportAliasToXML(pT, SnapshotScope::ItemOnly);
 
     pushAliasPropertyCommand(mpUndoStack, mpHost, aliasID, newName, qsl("name"), oldStateXML, newStateXML);
 }
@@ -15691,9 +15757,9 @@ void dlgTriggerEditor::slot_saveProperty_AliasPattern()
         return;
     }
 
-    QString oldStateXML = exportAliasToXML(pT);
+    QString oldStateXML = exportAliasToXML(pT, SnapshotScope::ItemOnly);
     pT->setRegexCode(newPattern);
-    QString newStateXML = exportAliasToXML(pT);
+    QString newStateXML = exportAliasToXML(pT, SnapshotScope::ItemOnly);
 
     pushAliasPropertyCommand(mpUndoStack, mpHost, aliasID, pT->getName(), qsl("pattern"), oldStateXML, newStateXML);
 
@@ -15727,9 +15793,9 @@ void dlgTriggerEditor::slot_saveProperty_AliasCommand()
         return;
     }
 
-    QString oldStateXML = exportAliasToXML(pT);
+    QString oldStateXML = exportAliasToXML(pT, SnapshotScope::ItemOnly);
     pT->setCommand(newCommand);
-    QString newStateXML = exportAliasToXML(pT);
+    QString newStateXML = exportAliasToXML(pT, SnapshotScope::ItemOnly);
 
     pushAliasPropertyCommand(mpUndoStack, mpHost, aliasID, pT->getName(), qsl("command"), oldStateXML, newStateXML);
 
@@ -15772,10 +15838,10 @@ void dlgTriggerEditor::slot_saveProperty_TimerName()
         return;
     }
 
-    QString oldStateXML = exportTimerToXML(pT);
+    QString oldStateXML = exportTimerToXML(pT, SnapshotScope::ItemOnly);
     pT->setName(newName);
     mpCurrentTimerItem->setText(0, newName);
-    QString newStateXML = exportTimerToXML(pT);
+    QString newStateXML = exportTimerToXML(pT, SnapshotScope::ItemOnly);
 
     pushTimerPropertyCommand(mpUndoStack, mpHost, timerID, newName, qsl("name"), oldStateXML, newStateXML);
 }
@@ -15798,9 +15864,9 @@ void dlgTriggerEditor::slot_saveProperty_TimerCommand()
         return;
     }
 
-    QString oldStateXML = exportTimerToXML(pT);
+    QString oldStateXML = exportTimerToXML(pT, SnapshotScope::ItemOnly);
     pT->setCommand(newCommand);
-    QString newStateXML = exportTimerToXML(pT);
+    QString newStateXML = exportTimerToXML(pT, SnapshotScope::ItemOnly);
 
     pushTimerPropertyCommand(mpUndoStack, mpHost, timerID, pT->getName(), qsl("command"), oldStateXML, newStateXML);
 }
@@ -15826,9 +15892,9 @@ void dlgTriggerEditor::slot_saveProperty_TimerTime()
         return;
     }
 
-    QString oldStateXML = exportTimerToXML(pT);
+    QString oldStateXML = exportTimerToXML(pT, SnapshotScope::ItemOnly);
     pT->setTime(newTime);
-    QString newStateXML = exportTimerToXML(pT);
+    QString newStateXML = exportTimerToXML(pT, SnapshotScope::ItemOnly);
 
     pushTimerPropertyCommand(mpUndoStack, mpHost, timerID, pT->getName(), qsl("time"), oldStateXML, newStateXML);
 }
@@ -15869,10 +15935,10 @@ void dlgTriggerEditor::slot_saveProperty_ScriptName()
         return;
     }
 
-    QString oldStateXML = exportScriptToXML(pT);
+    QString oldStateXML = exportScriptToXML(pT, SnapshotScope::ItemOnly);
     pT->setName(newName);
     mpCurrentScriptItem->setText(0, newName);
-    QString newStateXML = exportScriptToXML(pT);
+    QString newStateXML = exportScriptToXML(pT, SnapshotScope::ItemOnly);
 
     pushScriptPropertyCommand(mpUndoStack, mpHost, scriptID, newName, qsl("name"), oldStateXML, newStateXML);
 }
@@ -15899,9 +15965,9 @@ void dlgTriggerEditor::slot_saveProperty_ScriptEventHandlers()
         return;
     }
 
-    QString oldStateXML = exportScriptToXML(pT);
+    QString oldStateXML = exportScriptToXML(pT, SnapshotScope::ItemOnly);
     pT->setEventHandlerList(newHandlers);
-    QString newStateXML = exportScriptToXML(pT);
+    QString newStateXML = exportScriptToXML(pT, SnapshotScope::ItemOnly);
 
     pushScriptPropertyCommand(mpUndoStack, mpHost, scriptID, pT->getName(), qsl("eventHandlers"), oldStateXML, newStateXML);
 }
@@ -15941,10 +16007,10 @@ void dlgTriggerEditor::slot_saveProperty_KeyName()
         return;
     }
 
-    QString oldStateXML = exportKeyToXML(pT);
+    QString oldStateXML = exportKeyToXML(pT, SnapshotScope::ItemOnly);
     pT->setName(newName);
     mpCurrentKeyItem->setText(0, newName);
-    QString newStateXML = exportKeyToXML(pT);
+    QString newStateXML = exportKeyToXML(pT, SnapshotScope::ItemOnly);
 
     pushKeyPropertyCommand(mpUndoStack, mpHost, keyID, newName, qsl("name"), oldStateXML, newStateXML);
 }
@@ -15967,9 +16033,9 @@ void dlgTriggerEditor::slot_saveProperty_KeyCommand()
         return;
     }
 
-    QString oldStateXML = exportKeyToXML(pT);
+    QString oldStateXML = exportKeyToXML(pT, SnapshotScope::ItemOnly);
     pT->setCommand(newCommand);
-    QString newStateXML = exportKeyToXML(pT);
+    QString newStateXML = exportKeyToXML(pT, SnapshotScope::ItemOnly);
 
     pushKeyPropertyCommand(mpUndoStack, mpHost, keyID, pT->getName(), qsl("command"), oldStateXML, newStateXML);
 }
@@ -16010,10 +16076,10 @@ void dlgTriggerEditor::slot_saveProperty_ActionName()
         return;
     }
 
-    QString oldStateXML = exportActionToXML(pT);
+    QString oldStateXML = exportActionToXML(pT, SnapshotScope::ItemOnly);
     pT->setName(newName);
     mpCurrentActionItem->setText(0, newName);
-    QString newStateXML = exportActionToXML(pT);
+    QString newStateXML = exportActionToXML(pT, SnapshotScope::ItemOnly);
 
     pushActionPropertyCommand(mpUndoStack, mpHost, actionID, newName, qsl("name"), oldStateXML, newStateXML);
 }
@@ -16036,9 +16102,9 @@ void dlgTriggerEditor::slot_saveProperty_ActionCommandDown()
         return;
     }
 
-    QString oldStateXML = exportActionToXML(pT);
+    QString oldStateXML = exportActionToXML(pT, SnapshotScope::ItemOnly);
     pT->setCommandButtonDown(newCommand);
-    QString newStateXML = exportActionToXML(pT);
+    QString newStateXML = exportActionToXML(pT, SnapshotScope::ItemOnly);
 
     pushActionPropertyCommand(mpUndoStack, mpHost, actionID, pT->getName(), qsl("commandDown"), oldStateXML, newStateXML);
 }
@@ -16061,9 +16127,9 @@ void dlgTriggerEditor::slot_saveProperty_ActionCommandUp()
         return;
     }
 
-    QString oldStateXML = exportActionToXML(pT);
+    QString oldStateXML = exportActionToXML(pT, SnapshotScope::ItemOnly);
     pT->setCommandButtonUp(newCommand);
-    QString newStateXML = exportActionToXML(pT);
+    QString newStateXML = exportActionToXML(pT, SnapshotScope::ItemOnly);
 
     pushActionPropertyCommand(mpUndoStack, mpHost, actionID, pT->getName(), qsl("commandUp"), oldStateXML, newStateXML);
 }
@@ -16086,9 +16152,9 @@ void dlgTriggerEditor::slot_saveProperty_ActionIsPushDown()
         return;
     }
 
-    QString oldStateXML = exportActionToXML(pT);
+    QString oldStateXML = exportActionToXML(pT, SnapshotScope::ItemOnly);
     pT->setIsPushDownButton(newValue);
-    QString newStateXML = exportActionToXML(pT);
+    QString newStateXML = exportActionToXML(pT, SnapshotScope::ItemOnly);
 
     pushActionPropertyCommand(mpUndoStack, mpHost, actionID, pT->getName(), qsl("isPushDown"), oldStateXML, newStateXML);
 }
@@ -16111,9 +16177,9 @@ void dlgTriggerEditor::slot_saveProperty_ActionBarColumns()
         return;
     }
 
-    QString oldStateXML = exportActionToXML(pT);
+    QString oldStateXML = exportActionToXML(pT, SnapshotScope::ItemOnly);
     pT->setButtonColumns(newValue);
-    QString newStateXML = exportActionToXML(pT);
+    QString newStateXML = exportActionToXML(pT, SnapshotScope::ItemOnly);
 
     pushActionPropertyCommand(mpUndoStack, mpHost, actionID, pT->getName(), qsl("buttonColumn"), oldStateXML, newStateXML);
 }
@@ -16136,9 +16202,9 @@ void dlgTriggerEditor::slot_saveProperty_ActionBarFillerOffset()
         return;
     }
 
-    QString oldStateXML = exportActionToXML(pT);
+    QString oldStateXML = exportActionToXML(pT, SnapshotScope::ItemOnly);
     pT->setButtonFillerOffset(newValue);
-    QString newStateXML = exportActionToXML(pT);
+    QString newStateXML = exportActionToXML(pT, SnapshotScope::ItemOnly);
 
     pushActionPropertyCommand(mpUndoStack, mpHost, actionID, pT->getName(), qsl("buttonFillerOffset"), oldStateXML, newStateXML);
 }
@@ -16162,9 +16228,9 @@ void dlgTriggerEditor::slot_saveProperty_ActionBarOrientation()
         return;
     }
 
-    QString oldStateXML = exportActionToXML(pT);
+    QString oldStateXML = exportActionToXML(pT, SnapshotScope::ItemOnly);
     pT->mOrientation = newValue;
-    QString newStateXML = exportActionToXML(pT);
+    QString newStateXML = exportActionToXML(pT, SnapshotScope::ItemOnly);
 
     pushActionPropertyCommand(mpUndoStack, mpHost, actionID, pT->getName(), qsl("orientation"), oldStateXML, newStateXML);
 }
@@ -16188,9 +16254,9 @@ void dlgTriggerEditor::slot_saveProperty_ActionBarLocation()
         return;
     }
 
-    QString oldStateXML = exportActionToXML(pT);
+    QString oldStateXML = exportActionToXML(pT, SnapshotScope::ItemOnly);
     pT->mLocation = newValue;
-    QString newStateXML = exportActionToXML(pT);
+    QString newStateXML = exportActionToXML(pT, SnapshotScope::ItemOnly);
 
     pushActionPropertyCommand(mpUndoStack, mpHost, actionID, pT->getName(), qsl("barLocation"), oldStateXML, newStateXML);
 }
@@ -16213,9 +16279,9 @@ void dlgTriggerEditor::slot_saveProperty_ActionButtonRotation()
         return;
     }
 
-    QString oldStateXML = exportActionToXML(pT);
+    QString oldStateXML = exportActionToXML(pT, SnapshotScope::ItemOnly);
     pT->setButtonRotation(newValue);
-    QString newStateXML = exportActionToXML(pT);
+    QString newStateXML = exportActionToXML(pT, SnapshotScope::ItemOnly);
 
     pushActionPropertyCommand(mpUndoStack, mpHost, actionID, pT->getName(), qsl("buttonRotation"), oldStateXML, newStateXML);
 }
@@ -16238,9 +16304,9 @@ void dlgTriggerEditor::slot_saveProperty_ActionCSS()
         return;
     }
 
-    QString oldStateXML = exportActionToXML(pT);
+    QString oldStateXML = exportActionToXML(pT, SnapshotScope::ItemOnly);
     pT->css = newCSS;
-    QString newStateXML = exportActionToXML(pT);
+    QString newStateXML = exportActionToXML(pT, SnapshotScope::ItemOnly);
 
     pushActionPropertyCommand(mpUndoStack, mpHost, actionID, pT->getName(), qsl("css"), oldStateXML, newStateXML);
 }

@@ -36,6 +36,7 @@
 #include "HostManager.h"
 #include "TAction.h"
 #include "TAlias.h"
+#include "TAppFrontend.h"
 #include "TArea.h"
 #include "TConsoleFrontend.h"
 #include "TConsoleModel.h"
@@ -48,11 +49,9 @@
 #include "TMedia.h"
 #include "TRoomDB.h"
 #include "TScript.h"
-#include "TTabBar.h"
 #include "TTimer.h"
 #include "TriggerMatchPool.h"
 #include "mapInfoContributorManager.h"
-#include "mudlet.h"
 #include "TGameDetails.h"
 
 #include <QScopeGuard>
@@ -82,6 +81,7 @@
 #endif // MUDLET_MEMORY_TRACKING
 #include <QCollator>
 #include <QCoreApplication>
+#include <QDir>
 #include <QFileInfo>
 #include <QVector>
 #ifdef QT_TEXTTOSPEECH_LIB
@@ -1038,7 +1038,11 @@ int TLuaInterpreter::isPrompt(lua_State* L)
 {
     const TConsoleModel& model = getHostFromLua(L).mainConsoleModel();
     const int userCursorY = model.mUserCursor.y();
-    if (userCursorY < model.buffer.promptBuffer.size() && userCursorY >= 0) {
+    const int lastLine = static_cast<int>(model.buffer.promptBuffer.size()) - 1;
+    // A trigger that gagged its line, or cleared the window, leaves the cursor past or on the last line left: only
+    // the pass still knows whether the line it ran for was a prompt.
+    const bool engineLineGone = model.mTriggerEngineMode && model.mEngineCursor > lastLine && userCursorY >= lastLine;
+    if (!engineLineGone && userCursorY < model.buffer.promptBuffer.size() && userCursorY >= 0) {
         lua_pushboolean(L, model.buffer.promptBuffer.at(userCursorY));
         return 1;
     }
@@ -1447,6 +1451,17 @@ int TLuaInterpreter::printCmdLine(lua_State* L)
     return 0;
 }
 
+// An event carries its numbers as text. 17 significant digits bring any double
+// back unchanged, and a whole number below 2^53 reads the same either way, but
+// the integer formatter takes a fraction of the time.
+static QString eventNumberText(const double number)
+{
+    if (number == std::trunc(number) && std::abs(number) < 9007199254740992.0) {
+        return QString::number(static_cast<qint64>(number));
+    }
+    return QString::number(number, 'g', 17);
+}
+
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#raiseEvent
 int TLuaInterpreter::raiseEvent(lua_State* L)
 {
@@ -1460,9 +1475,7 @@ int TLuaInterpreter::raiseEvent(lua_State* L)
     for (int i = n; i >= 1; i--) {
         switch (lua_type(L, -1)) {
         case LUA_TNUMBER:
-            // https://en.wikipedia.org/wiki/Double-precision_floating-point_format#IEEE_754_double-precision_binary_floating-point_format:_binary64
-            // suggests that 17 decimal digits is the most we can rely on:
-            event.mArgumentList.prepend(QString::number(lua_tonumber(L, -1), 'g', 17));
+            event.mArgumentList.prepend(eventNumberText(lua_tonumber(L, -1)));
             event.mArgumentTypeList.prepend(ARGUMENT_TYPE_NUMBER);
             lua_pop(L, 1);
             break;
@@ -1512,8 +1525,8 @@ int TLuaInterpreter::raiseEvent(lua_State* L)
 // down too.
 static bool shuttingDown(const QPointer<Host>& pHost)
 {
-    mudlet* pMudlet = mudlet::self();
-    return !pHost || pHost->isClosingDown() || !pMudlet || pMudlet->isGoingDown();
+    auto pFrontend = TAppFrontend::instance();
+    return !pHost || pHost->isClosingDown() || !pFrontend || pFrontend->quitting();
 }
 
 // No documentation available in wiki - internal, test-only function
@@ -1700,7 +1713,7 @@ int TLuaInterpreter::raiseGlobalEvent(lua_State* L)
         // raiseEvent(...) and not one from another profile! - Slysven
         switch (lua_type(L, i)) {
         case LUA_TNUMBER:
-            event.mArgumentList.append(QString::number(lua_tonumber(L, i), 'g', 17));
+            event.mArgumentList.append(eventNumberText(lua_tonumber(L, i)));
             event.mArgumentTypeList.append(ARGUMENT_TYPE_NUMBER);
             break;
         case LUA_TSTRING:
@@ -1773,7 +1786,7 @@ int TLuaInterpreter::resetProfileIcon(lua_State* L)
 {
     Host& host = getHostFromLua(L);
 
-    auto [success, message] = mudlet::self()->resetProfileIcon(host.getName());
+    auto [success, message] = MudletApp::resetProfileIcon(host.getName());
     if (!success) {
         return warnArgumentValue(L, __func__, message);
     }
@@ -1885,7 +1898,7 @@ int TLuaInterpreter::setProfileIcon(lua_State* L)
 
     Host& host = getHostFromLua(L);
 
-    auto [success, message] = mudlet::self()->setProfileIcon(host.getName(), iconPath);
+    auto [success, message] = MudletApp::setProfileIcon(host.getName(), iconPath);
     if (!success) {
         return warnArgumentValue(L, __func__, message);
     }
@@ -3107,11 +3120,7 @@ int TLuaInterpreter::loadProfile(lua_State* L)
         return 2;
     }
 
-    bool success = mudlet::self()->loadProfile(profileName, !offline);
-    mudlet::self()->slot_connectionDialogueFinished(profileName, !offline);
-    mudlet::self()->enableToolbarButtons();
-
-    if (!success) {
+    if (!TAppFrontend::instance()->openProfile(profileName, !offline)) {
         lua_pushnil(L);
         lua_pushfstring(L, "loadProfile: failed to load profile '%s'", profileName.toUtf8().constData());
         return 2;
@@ -3147,13 +3156,11 @@ int TLuaInterpreter::closeProfile(lua_State* L)
         return 2;
     }
 
-    auto profileIndex = mudlet::self()->mpTabBar->tabIndex(profileName);
-    if (profileIndex != -1) {
-        emit mudlet::self() -> mpTabBar->tabCloseRequested(profileIndex);
-        lua_pushboolean(L, true);
-        return 1;
+    if (!TAppFrontend::instance()->requestProfileTabClose(profileName)) {
+        return 0;
     }
-    return 0;
+    lua_pushboolean(L, true);
+    return 1;
 }
 
 #ifdef MUDLET_MEMORY_TRACKING

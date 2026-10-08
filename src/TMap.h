@@ -168,6 +168,7 @@ public:
     bool gotoRoom(int);
     bool gotoRoom(int, int);
     bool serialize(QDataStream&, int saveVersion = 0);
+    static bool listLengthFits(QDataStream&, qint64 minBytesPerElement);
     bool restore(QString location);
     bool retrieveMapFileStats(QString, QString*, int*, int*, qsizetype*, qsizetype*);
     void initGraph();
@@ -231,6 +232,28 @@ public:
     void requestMapOperationAbort();
     bool mapOperationAbortRequested() const { return mMapOperationAbortRequested; }
 
+    // Held while Lua runs from inside C++ that keeps raw TRoom/TArea pointers across the call (the
+    // exit weight filter while the graph is built, map info contributors while the map is painted),
+    // so the Lua functions that free rooms or areas must refuse while this is held.
+    class ScriptCallbackScope
+    {
+    public:
+        explicit ScriptCallbackScope(TMap* pMap)
+        : mpMap(pMap)
+        {
+            ++mpMap->mScriptCallbackDepth;
+        }
+        ~ScriptCallbackScope() { --mpMap->mScriptCallbackDepth; }
+        ScriptCallbackScope(const ScriptCallbackScope&) = delete;
+        ScriptCallbackScope& operator=(const ScriptCallbackScope&) = delete;
+
+    private:
+        TMap* mpMap = nullptr;
+    };
+    bool scriptCallbackInProgress() const { return mScriptCallbackDepth > 0; }
+    // initGraph() runs the exit weight filter, which must not start another search mid-build.
+    bool graphBuildInProgress() const { return mGraphBuildInProgress; }
+
     // Show which rooms have which symbols:
     QHash<QString, QSet<int>> roomSymbolsHash();
 
@@ -266,6 +289,8 @@ public:
     std::pair<bool, QString> readJsonMapFile(const QString&, const bool translatableTexts = false);
     qsizetype getCurrentProgressRoomCount() const { return mProgressDialogRoomsCount; }
     bool incrementJsonProgressDialog(const bool isExportNotImport, const bool isRoomNotLabel, const int increment = 1);
+    // TRoomDB calls this before it deletes an area or clears the map.
+    void areasAboutToBeDeleted();
     QString getDefaultAreaName() const { return mDefaultAreaName; }
     QString getUnnamedAreaName() const { return mUnnamedAreaName; }
 
@@ -346,7 +371,7 @@ public:
     void setMapper(dlgMapper* pMapper);
     // mapper() as core code drives it; null when that is.
     TMapViewFrontend* mapViewFrontend() const { return mpMapper.isNull() ? nullptr : mpMapViewFrontend; }
-    QMap<int, int> roomidToIndex;
+    QHash<int, int> roomidToIndex;
 
     // User-registered mapper context menu entries (addMapEvent()/addMapMenu());
     // session-only state, never saved with the map.
@@ -501,8 +526,10 @@ private:
     // requestMapOperationAbort() is asked again on every retry of a deferred
     // profile close, and asking twice would abort a network reply twice over.
     bool mMapOperationAbortRequested = false;
+    int mScriptCallbackDepth = 0;
+    bool mGraphBuildInProgress = false;
 
-    void addDirectionalRoute(QHash<unsigned int, route>& bestRoutes,
+    void addDirectionalRoute(std::vector<std::pair<unsigned int, route>>& bestRoutes,
                              const QMap<QString, int>& exitWeights,
                              unsigned int source,
                              TRoom* pSourceR,
@@ -546,6 +573,8 @@ private:
     bool mMapProgressIsTransfer = false;
     bool mMapProgressCancelRequested = false;
     int mMapProgressStandaloneMaximum = 0;
+    bool mJsonExportInProgress = false;
+    bool mJsonExportLostAnArea = false;
     // Using during updates of text in progress dialog partially from other
     // classes:
     qsizetype mProgressDialogAreasTotal = 0;

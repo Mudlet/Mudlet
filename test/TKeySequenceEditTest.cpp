@@ -21,6 +21,7 @@
 #include "utils.h"
 
 #include <QApplication>
+#include <QDialog>
 #include <QLineEdit>
 #include <QSignalSpy>
 #include <QVBoxLayout>
@@ -177,6 +178,47 @@ private slots:
 
         QTest::keyClick(lineEdit, Qt::Key_Tab, Qt::ShiftModifier);
         QCOMPARE(edit.keySequence(), sequence);
+    }
+
+    // Esc closes the settings dialog the editors sit in, so it must reach the
+    // dialog rather than be recorded over the binding that was just set
+    void escapeIsLeftToTheDialogAndKeepsTheBinding()
+    {
+        QDialog dialog;
+        auto* layout = new QVBoxLayout(&dialog);
+        const QKeySequence sequence(qsl("Ctrl+J"));
+        auto* edit = new TKeySequenceEdit(sequence, qsl("Script editor"), &dialog);
+        layout->addWidget(edit);
+        QSignalSpy finished(edit, &QKeySequenceEdit::editingFinished);
+        QSignalSpy rejected(&dialog, &QDialog::rejected);
+
+        QTest::keyClick(innerLineEdit(*edit), Qt::Key_Escape);
+
+        QCOMPARE(edit->keySequence(), sequence);
+        QCOMPARE(finished.count(), 0);
+        QCOMPARE(rejected.count(), 1);
+    }
+
+    void backspaceAndDeleteClearTheBinding()
+    {
+        const QList<QKeyCombination> combinations{QKeyCombination(Qt::Key_Backspace), QKeyCombination(Qt::Key_Delete), QKeyCombination(Qt::KeypadModifier, Qt::Key_Delete)};
+        for (const QKeyCombination combination : combinations) {
+            TKeySequenceEdit edit(QKeySequence(qsl("Ctrl+J")), qsl("Script editor"));
+            QSignalSpy finished(&edit, &QKeySequenceEdit::editingFinished);
+
+            QTest::keyClick(innerLineEdit(edit), combination.key(), combination.keyboardModifiers());
+
+            QVERIFY2(edit.keySequence().isEmpty(), qPrintable(edit.keySequence().toString()));
+            QCOMPARE(finished.count(), 1);
+        }
+    }
+
+    void escapeWithAModifierIsStillRecorded()
+    {
+        TKeySequenceEdit edit(QKeySequence(), qsl("Script editor"));
+
+        QTest::keyClick(innerLineEdit(edit), Qt::Key_Escape, Qt::ShiftModifier);
+        QCOMPARE(edit.keySequence(), QKeySequence(Qt::SHIFT | Qt::Key_Escape));
     }
 
     // The traversal tests need real focus movement: the capture is committed

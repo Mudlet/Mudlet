@@ -451,13 +451,17 @@ private:
     }
 
     // Answers the factor dialog that Spread and Shrink put up; a factor of 0
-    // cancels it instead.
-    bool pickFactorItem(const QString& text, const int factor)
+    // cancels it instead. A script given here runs while the dialog is up,
+    // just before it is answered.
+    bool pickFactorItem(const QString& text, const int factor, const QString& scriptWhileUp = QString())
     {
-        answerNextModalDialog([factor](QWidget* pDialog) {
+        answerNextModalDialog([this, factor, scriptWhileUp](QWidget* pDialog) {
             auto* pInput = qobject_cast<QInputDialog*>(pDialog);
             if (!pInput) {
                 return false;
+            }
+            if (!scriptWhileUp.isEmpty()) {
+                runLua(scriptWhileUp);
             }
             if (factor) {
                 pInput->setIntValue(factor);
@@ -472,13 +476,16 @@ private:
 
     // Answers the coordinates dialog Move to position puts up. Its three
     // fields are the only line edits on it and are made in x, y, z order.
-    bool pickMoveToPosition(const int x, const int y, const int z)
+    bool pickMoveToPosition(const int x, const int y, const int z, const QString& scriptWhileUp = QString())
     {
-        answerNextModalDialog([x, y, z](QWidget* pDialog) {
+        answerNextModalDialog([this, x, y, z, scriptWhileUp](QWidget* pDialog) {
             auto* pMoveDialog = qobject_cast<QDialog*>(pDialog);
             const QList<QLineEdit*> fields = pDialog->findChildren<QLineEdit*>();
             if (!pMoveDialog || fields.size() != 3) {
                 return false;
+            }
+            if (!scriptWhileUp.isEmpty()) {
+                runLua(scriptWhileUp);
             }
             fields[0]->setText(QString::number(x));
             fields[1]->setText(QString::number(y));
@@ -958,6 +965,55 @@ private slots:
         QCOMPARE(mp2dMap->mMultiSelectionSet, expected);
     }
 
+    // The list of selected rooms is rebuilt when the box takes in different
+    // rooms, not on every move of the mouse, which on a big selection costs
+    // more than the time between two moves.
+    void test_theListOfSelectedRoomsIsOnlyRebuiltWhenTheSelectionChanges()
+    {
+        buildMap();
+        showMapper(false);
+
+        const QPoint from = pointUnitsFromCentre(-1.5, 1.5);
+        pressAt(from);
+        moveTo(from);
+        moveTo(pointUnitsFromCentre(0.5, -0.5));
+        const QSet<int> quarter{kNorthWestRoomId, kNorthRoomId, kWestRoomId, kPlayerRoomId};
+        QCOMPARE(listedRoomIds(), quarter);
+
+        QSignalSpy rowsInserted(mp2dMap->mMultiSelectionListWidget.model(), &QAbstractItemModel::rowsInserted);
+        // Still short of the rooms to the east and south.
+        moveTo(pointUnitsFromCentre(0.6, -0.6));
+        QCOMPARE(mp2dMap->mMultiSelectionSet, quarter);
+        QCOMPARE(rowsInserted.count(), 0);
+        QCOMPARE(listedRoomIds(), quarter);
+
+        moveTo(pointUnitsFromCentre(1.5, -0.5));
+        const QSet<int> withTheEastColumn{kNorthWestRoomId, kNorthRoomId, kNorthEastRoomId, kWestRoomId, kPlayerRoomId, kEastRoomId};
+        QCOMPARE(listedRoomIds(), withTheEastColumn);
+        releaseAt(pointUnitsFromCentre(1.5, -0.5));
+        QCOMPARE(mp2dMap->mMultiSelectionSet, withTheEastColumn);
+    }
+
+    // A shift-press on a room adds it to the selection before the drag's first
+    // move, which does not change the selection again, so the list has to have
+    // taken the room in at the press.
+    void test_aShiftDragListsTheRoomItsPressAdded()
+    {
+        buildMap();
+        showMapper(false);
+        dragFromTo(pointUnitsFromCentre(-1.5, 1.5), pointUnitsFromCentre(0.5, -0.5));
+
+        const QPoint south = pointUnitsFromCentre(0, -1);
+        pressAt(south, Qt::ShiftModifier);
+        moveTo(south, Qt::ShiftModifier);
+        moveTo(south + QPoint(1, 1), Qt::ShiftModifier);
+
+        const QSet<int> expected{kNorthWestRoomId, kNorthRoomId, kWestRoomId, kPlayerRoomId, kSouthRoomId};
+        QCOMPARE(mp2dMap->mMultiSelectionSet, expected);
+        QCOMPARE(listedRoomIds(), expected);
+        releaseAt(south + QPoint(1, 1), Qt::ShiftModifier);
+    }
+
     // The same drag while viewing pans instead of drawing a box, which is what
     // the map being locked for viewing means.
     void test_draggingWhileViewingDrawsNoSelectionBox()
@@ -1012,6 +1068,67 @@ private slots:
         QCOMPARE(movedLine.size(), 2);
         QCOMPARE(movedLine.constFirst(), QPointF(1.0, 5.0));
         QCOMPARE(movedLine.constLast(), QPointF(1.0, 6.0));
+    }
+
+    // The area files its rooms by position, by how far it reaches and by how
+    // long their exits are; a dragged room has to be refiled in all of them
+    // without the area rebuilding them from scratch.
+    void test_aDraggedRoomIsFiledWhereItLanded()
+    {
+        buildMap();
+        QVERIFY(map()->setExit(kPlayerRoomId, kEastRoomId, DIR_EAST));
+        QVERIFY(map()->setExit(kEastRoomId, kPlayerRoomId, DIR_WEST));
+        showMapper(false);
+        QVERIFY(!area()->lodVisibleExitRooms(0, 1).contains(kPlayerRoomId));
+        const quint32 lodRebuilds = area()->lodExitIndexRebuildCount();
+
+        dragFromTo(pointUnitsFromCentre(1, -0.2), pointUnitsFromCentre(1, 1.8));
+
+        QCOMPARE(area()->getRoomsByPosition(1, 2, 0), QList<int>{kEastRoomId});
+        QVERIFY(area()->getRoomsByPosition(1, 0, 0).isEmpty());
+        // The area's y extremes run the other way to the rooms' y:
+        QCOMPARE(area()->min_y, -2);
+        QCOMPARE(area()->yminForZ.value(0), -2);
+        // The exit between the two rooms now spans two units, at both ends:
+        const QList<int> lodRooms = area()->lodVisibleExitRooms(0, 1);
+        QVERIFY(lodRooms.contains(kPlayerRoomId));
+        QVERIFY(lodRooms.contains(kEastRoomId));
+        QCOMPARE(area()->lodExitIndexRebuildCount(), lodRebuilds);
+    }
+
+    // Which of the rooms in a drag moves first is down to how a QSet orders
+    // them, so one can briefly land on another that has yet to move away.
+    void test_roomsDraggedTogetherCanLandWhereEachOtherWere()
+    {
+        buildMap();
+        showMapper(false);
+        dragFromTo(pointUnitsFromCentre(-1.5, 0.5), pointUnitsFromCentre(1.5, -0.5));
+        QCOMPARE(mp2dMap->mMultiSelectionSet, (QSet<int>{kWestRoomId, kPlayerRoomId, kEastRoomId}));
+
+        dragFromTo(pointUnitsFromCentre(0, -0.2), pointUnitsFromCentre(1, -0.2));
+
+        QVERIFY(area()->getRoomsByPosition(-1, 0, 0).isEmpty());
+        QCOMPARE(area()->getRoomsByPosition(0, 0, 0), QList<int>{kWestRoomId});
+        QCOMPARE(area()->getRoomsByPosition(1, 0, 0), QList<int>{kPlayerRoomId});
+        QCOMPARE(area()->getRoomsByPosition(2, 0, 0), QList<int>{kEastRoomId});
+        QCOMPARE(area()->max_x, 2);
+        QCOMPARE(area()->xmaxForZ.value(0), 2);
+    }
+
+    void test_draggingEveryRoomInTheAreaRefilesThemAll()
+    {
+        buildMap();
+        showMapper(false);
+        dragFromTo(pointUnitsFromCentre(-1.5, 1.5), pointUnitsFromCentre(1.5, -1.5));
+        QCOMPARE(mp2dMap->mMultiSelectionSet, area()->getAreaRooms());
+
+        dragFromTo(pointUnitsFromCentre(0, -0.2), pointUnitsFromCentre(1, -0.2));
+
+        QVERIFY(area()->getRoomsByPosition(-1, 0, 0).isEmpty());
+        QCOMPARE(area()->getRoomsByPosition(0, 0, 0), QList<int>{kWestRoomId});
+        QCOMPARE(area()->getRoomsByPosition(2, 0, 0), QList<int>{kEastRoomId});
+        QCOMPARE(area()->min_x, 0);
+        QCOMPARE(area()->max_x, 2);
     }
 
     // Clicking a map label picks it up, and clicking it again puts it down.
@@ -2734,6 +2851,55 @@ private slots:
         QVERIFY(map()->isUnsaved());
     }
 
+    // The factor and coordinates dialogs run their own event loop, in which a
+    // script can delete the room the selection is centred on.
+    void test_spreadingAroundARoomAScriptDeletedLeavesTheRestWhereTheyAre()
+    {
+        buildMap();
+        showMapper(false);
+        dragFromTo(pointUnitsFromCentre(-1.5, 0.5), pointUnitsFromCentre(1.5, -0.5));
+        QCOMPARE(mp2dMap->mMultiSelectionHighlightRoomId, kPlayerRoomId);
+        rightClickAt(pointUnitsFromCentre(1, 0));
+
+        QVERIFY(pickFactorItem(qsl("Spread..."), 3, qsl("deleteRoom(%1)").arg(kPlayerRoomId)));
+
+        QVERIFY(!map()->mpRoomDB->getRoom(kPlayerRoomId));
+        QCOMPARE(roomPosition(kWestRoomId), QVector3D(-1, 0, 0));
+        QCOMPARE(roomPosition(kEastRoomId), QVector3D(1, 0, 0));
+    }
+
+    void test_shrinkingAroundARoomAScriptDeletedLeavesTheRestWhereTheyAre()
+    {
+        buildMap();
+        QVERIFY(map()->setRoomCoordinates(kWestRoomId, -4, 0, 0));
+        QVERIFY(map()->setRoomCoordinates(kEastRoomId, 4, 0, 0));
+        showMapper(false);
+        dragFromTo(pointUnitsFromCentre(-4.5, 0.5), pointUnitsFromCentre(4.5, -0.5));
+        QCOMPARE(mp2dMap->mMultiSelectionHighlightRoomId, kPlayerRoomId);
+        rightClickAt(pointUnitsFromCentre(4, 0));
+
+        QVERIFY(pickFactorItem(qsl("Shrink..."), 2, qsl("deleteRoom(%1)").arg(kPlayerRoomId)));
+
+        QVERIFY(!map()->mpRoomDB->getRoom(kPlayerRoomId));
+        QCOMPARE(roomPosition(kWestRoomId), QVector3D(-4, 0, 0));
+        QCOMPARE(roomPosition(kEastRoomId), QVector3D(4, 0, 0));
+    }
+
+    void test_movingASelectionWhoseHighlightedRoomAScriptDeletedLeavesTheRestWhereTheyAre()
+    {
+        buildMap();
+        showMapper(false);
+        dragFromTo(pointUnitsFromCentre(-1.5, 0.5), pointUnitsFromCentre(1.5, -0.5));
+        QCOMPARE(mp2dMap->mMultiSelectionHighlightRoomId, kPlayerRoomId);
+        rightClickAt(pointUnitsFromCentre(1, 0));
+
+        QVERIFY(pickMoveToPosition(3, 2, 1, qsl("deleteRoom(%1)").arg(kPlayerRoomId)));
+
+        QVERIFY(!map()->mpRoomDB->getRoom(kPlayerRoomId));
+        QCOMPARE(roomPosition(kWestRoomId), QVector3D(-1, 0, 0));
+        QCOMPARE(roomPosition(kEastRoomId), QVector3D(1, 0, 0));
+    }
+
     void test_moveToPositionCarriesTheCustomLinesAlong()
     {
         buildMap();
@@ -3049,6 +3215,53 @@ private slots:
         QCOMPARE(map()->mapper()->comboBox_showArea->findText(qsl("Other")), -1);
 
         mpHost->closeMapView(viewId);
+    }
+
+    void test_aMapViewClosedWithItsCloseButtonIsForgotten()
+    {
+        const auto [viewId, error] = mpHost->createMapView();
+        QVERIFY2(viewId > 0, qPrintable(error));
+        TMapViewManager* manager = map()->getViewManager();
+        QPointer<QDockWidget> dock = qobject_cast<QDockWidget*>(manager->getView(viewId)->parentWidget());
+        QVERIFY(dock);
+        QSignalSpy closed(manager, &TMapViewManager::viewClosed);
+
+        // what the window's X button does
+        dock->close();
+        QCoreApplication::sendPostedEvents(nullptr, QEvent::DeferredDelete);
+
+        QVERIFY2(!dock, "closing the window only hid it");
+        QVERIFY(!manager->getViewIds().contains(viewId));
+        QCOMPARE(closed.count(), 1);
+        QCOMPARE(closed.first().first().toInt(), viewId);
+        QVERIFY(!mpHost->closeMapView(viewId).first);
+    }
+
+    void test_aMapViewWhoseWindowIsDestroyedIsForgotten()
+    {
+        const auto [viewId, error] = mpHost->createMapView();
+        QVERIFY2(viewId > 0, qPrintable(error));
+        TMapViewManager* manager = map()->getViewManager();
+        QSignalSpy closed(manager, &TMapViewManager::viewClosed);
+
+        delete manager->getView(viewId)->parentWidget();
+
+        QVERIFY(!manager->getViewIds().contains(viewId));
+        QCOMPARE(manager->getView(viewId), nullptr);
+        QCOMPARE(closed.count(), 1);
+    }
+
+    void test_closingAMapViewReportsItOnce()
+    {
+        const auto [viewId, error] = mpHost->createMapView();
+        QVERIFY2(viewId > 0, qPrintable(error));
+        TMapViewManager* manager = map()->getViewManager();
+        QSignalSpy closed(manager, &TMapViewManager::viewClosed);
+
+        QVERIFY(mpHost->closeMapView(viewId).first);
+        QCoreApplication::sendPostedEvents(nullptr, QEvent::DeferredDelete);
+
+        QCOMPARE(closed.count(), 1);
     }
 };
 

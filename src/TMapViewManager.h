@@ -67,10 +67,9 @@ signals:
     void viewCreated(int viewId);
     void viewClosed(int viewId);
 
-private slots:
-    void slot_viewClosed();
-
 private:
+    void forgetView(int viewId);
+
     // View IDs start at 1; 0 is reserved as an error/invalid indicator in return values
     int mNextViewId = 1;
     QPointer<Host> mpHost;
