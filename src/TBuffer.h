@@ -398,10 +398,14 @@ public:
     bool insertInLine(QPoint& cursor, const QString& what, const TChar& format);
     void expandLine(int y, int count, TChar&);
     int wrapLine(int startLine, int maxWidth, int indentSize, int hangingIndentSize);
+    // At the width and indents text is appended with
+    int wrapLine(int startLine) { return wrapLine(startLine, mWrapAt, mWrapIndent, mWrapHangingIndent); }
     void log(int, int);
     QString assembleLog(int fromLine, int toLine);
     inline int skipSpacesAtBeginOfLine(const int row, const int column);
     void addLink(bool, const QString& text, QStringList& command, QStringList& hint, const TChar& format, const QVector<int>& luaReference = QVector<int>());
+    // line is the first the link can land on, by default the last line
+    int addLinkToStore(const QStringList& links, const QStringList& hints, const QVector<int>& luaReference = QVector<int>(), const QString& expireName = QString(), int line = -1);
     QString bufferToHtml(const bool showTimeStamp = false, const int row = -1, const int endColumn = -1, const int startColumn = 0, int spacePadding = 0);
     int size() { return static_cast<int>(buffer.size()); }
     // Whether word wrapping split this line off the end of the one before it
@@ -527,13 +531,25 @@ public:
     bool mEchoingText = false;
 
 private:
+    // Reads which removed links are waiting for a sweep
+    friend class TrackedLinkTrimTest;
+    int mLinesUntilLinkSweep = 0;
+    QSet<int> mLinkIdsRemovedSinceSweep;
+    qint64 mLinesRemovedTotal = 0;
+    QHash<int, qint64> mLinkIdIssuedAtLine;
+    bool linkHoldsState(const int id) const;
+    QSet<int> collectLiveLinkIdsResettingIssueLines();
+    void dropStateOfRemovedLinks();
+    void noteRemovedLinkId(int id, qint64 lastLine);
+    void noteRemovedLinks(const std::vector<TChar>& line, qint64 lineNumber, int from = 0, int to = -1);
     THyperlinkVisibilityManager* hyperlinkVisibilityManagerOrNull();
     TChar currentFormat() const;
     inline QList<WrapInfo> getWrapInfo(const QString& lineText, bool isNewline, const int maxWidth, const int indent, const int hangingIndent);
     void shrinkBuffer();
     void syncPreTriggerPassLine(int y);
+    void noteFoundLines(int first, int last);
     void materialisePreTriggerPassLine(int y);
-    int remapLinkId(const TLinkStore& sourceLinkStore, int sourceLinkId, QHash<int, int>& remappedLinkIds);
+    int remapLinkId(const TLinkStore& sourceLinkStore, int sourceLinkId, QHash<int, int>& remappedLinkIds, int line = -1);
     int calculateWrapPosition(int lineNumber, int begin, int end);
     void handleNewLine();
     void translateToPlainTextInner(std::string& incoming, bool isFromServer);
@@ -801,6 +817,11 @@ private:
     int mCurrentFocusedLinkIndex = 0; // Which link has keyboard focus (0 = none)
     int mLastClickedLinkIndex = 0;    // Last clicked link - suppresses hover until mouse leaves
 
+    // The lines that may hold a TChar::Found mark, so clearing them does not walk the
+    // whole buffer; a conservative range, kept in step as lines are removed and rewrapped
+    int mFirstFoundLine = -1;
+    int mLastFoundLine = -1;
+
     // Flag to skip trigger processing during documentation injection
     bool mSkipTriggerProcessing = false;
 
@@ -842,6 +863,10 @@ private:
 
     // Track links that need selection styling applied after buffer commit
     QSet<int> mPendingSelectionStyling;
+    // The first line committed while such a link was open or pending, so applying
+    // its styling need not walk the whole scrollback; -1 when there is none
+    int mSelectionStylingFromLine = -1;
+    bool selectionLinkOpen() const { return mHyperlinkActive && mCurrentHyperlinkStyling.selection.hasSelectionSettings; }
 
 public:
     // Methods for link state management (used by TTextEdit event handlers)
@@ -859,7 +884,7 @@ public:
     bool isSpoilerUnrevealed(int linkIndex) const { return mLinkOriginalText.contains(linkIndex); }
     void clearGroupSelection(const QString& group, const QString& exceptValue);
     void applyPendingSelectionStyling();
-    void updateLinkCharacters(int linkIndex);
+    void updateLinkCharacters(int linkIndex, int fromLine = 0);
     int getHoveredLink() const { return mCurrentHoveredLinkIndex; }
     int getActiveLink() const { return mCurrentActiveLinkIndex; }
     int getFocusedLink() const { return mCurrentFocusedLinkIndex; }

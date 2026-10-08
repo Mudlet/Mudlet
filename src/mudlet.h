@@ -299,8 +299,9 @@ public:
         CommandSurface surfaces = CommandSurface::Both;
     };
 
-    // Why a command could not be placed, so the binding can say which
-    int addAddonCommand(const CommandRequest& request, Host* pHost, QString& error);
+    // package: whose code asked, empty for none. error: why a command could not
+    // be placed, so the binding can say which.
+    int addAddonCommand(const CommandRequest& request, Host* pHost, const QString& package, QString& error);
     bool removeAddonCommand(int commandId, Host* pHost);
     bool setAddonCommandEnabled(int commandId, bool enabled, Host* pHost);
     bool setAddonCommandChecked(int commandId, bool checked, Host* pHost);
@@ -308,16 +309,20 @@ public:
     bool setAddonCommandTooltip(int commandId, const QString& tooltip, Host* pHost);
     bool setAddonCommandPinned(int commandId, bool pinned, Host* pHost);
     bool setAddonCommandPulse(int commandId, bool enabled, const QString& color1, const QString& color2, int interval, Host* pHost, QString& error);
-    // Every command a profile placed, dropped when it closes or resets
-    void removeAddonCommandsForHost(Host* pHost);
+    // Every command a profile placed, dropped when it closes or resets - or only
+    // those a package or module made, when one is named, on its uninstall
+    void removeAddonCommandsForHost(Host* pHost, const QString& package = QString());
     // Which add-on commands hold this key, named as the player reads them.
     // The clash check only runs when a package asks for a key, and Mudlet's
     // own bindings can appear afterwards - the buffer search is switched on
     // long after a package has taken F3 - at which point Qt disables both.
     // A command belonging to another profile is reported without its name:
     // that is the other package's business and nothing this profile can act
-    // on, the same rule addonShortcutUsable() follows.
-    QStringList addonCommandsUsingShortcut(const QKeySequence& sequence, const Host* pHost) const;
+    // on, the same rule addonShortcutUsable() follows. onlyLiveWhileShown is
+    // for a key that is only live while pHost is shown: it leaves out what Qt
+    // would not offer the key to then - a disabled command, and another
+    // profile's command unless it is pinned, since otherwise it is hidden.
+    QStringList addonCommandsUsingShortcut(const QKeySequence& sequence, const Host* pHost, const bool onlyLiveWhileShown = false) const;
     // What Mudlet's own shortcut on this key is called, empty when Mudlet has
     // nothing on it or a key binding there would still win
     QString ownShortcutUsingKey(const Qt::Key, const Qt::KeyboardModifiers) const;
@@ -605,6 +610,8 @@ private:
     bool toolBarShouldBeVisible();
     void reshowRequiredMainConsoles();
     void updateReplayTimeLabel();
+    QString replayTimeLabelText(const QString& time, const bool paused) const;
+    void fitReplayPauseButton();
     dlgTriggerEditor* createMudletEditor();
     static void showEditorRestoringWindowState(QWidget* editor);
 
@@ -817,6 +824,8 @@ private:
         // refuse it a second time.
         CommandRequest request;
         QPointer<Host> pHost;
+        // Empty for a command no package's code created
+        QString package;
         // The window the widgets below currently live in; null while unplaced
         QPointer<QMainWindow> container;
         QPointer<QToolButton> button;

@@ -986,6 +986,42 @@ private slots:
         QVERIFY2(console->buffer.buffer.at(y).at(0).isSelected(), "text arriving on a selected line deselected the characters that were already on it");
     }
 
+    // Selected text takes its background as the pen, and a transparent cell
+    // borrows the console's for that - whose alpha a script may have set to 0
+    void test_selectedTransparentTextStaysVisibleOnATransparentConsole()
+    {
+        mpServer->setWelcomeMessage(qsl("selection test\r\n"));
+        startProfile(mpHostname, mpLocalhost, mpPort);
+        QVERIFY2(waitForTextInBuffer(qsl("selection test")), "the welcome text never reached the buffer");
+        Host* host = mudlet::self()->getActiveHost();
+        QVERIFY(host->getLuaInterpreter()->compileAndExecuteScript(qsl("setBackgroundColor('main', 10, 20, 30, 0)")));
+
+        TMainConsole* console = host->mpConsole;
+        TTextEdit* pane = upperPane();
+        QVERIFY2(pane, "No upper pane available");
+        // a system message, then game text on a background barely there
+        for (const QColor& background : {QColor(QColorConstants::Transparent), QColor(10, 20, 30, 1)}) {
+            const QString text = qsl("system\n");
+            console->buffer.append(text, 0, text.size(), QColorConstants::White, background, TChar::None, 0);
+            const int y = console->buffer.getLastLineNumber() - 1;
+            QCOMPARE(console->buffer.line(y), qsl("system"));
+            for (auto& character : console->buffer.buffer[y]) {
+                character.select();
+            }
+
+            TTextEdit::LineLayout layout;
+            pane->layoutLine(y, 0, pane->timeStampCharStyle(), layout);
+            int glyphs = 0;
+            for (const auto& run : layout) {
+                if (run.style && !run.grapheme.isEmpty()) {
+                    ++glyphs;
+                    QCOMPARE(run.fgColor, QColor(10, 20, 30));
+                }
+            }
+            QCOMPARE(glyphs, 6);
+        }
+    }
+
     // #6363: the mouse cursor becomes a hand over a link, and the reset back to
     // the I-beam lives inside two bounds checks in updateTextCursor(). Leaving
     // the link sideways lands on a character that answers those checks, so the
@@ -1177,6 +1213,68 @@ private slots:
 
         menu->close();
         QCoreApplication::sendPostedEvents(nullptr, QEvent::DeferredDelete);
+    }
+
+    // #11401: a dropped selection leaves mPA and mPB behind, so an action picked
+    // without one must not hand them on as though they were still selected.
+    void test_aMouseEventPickedWithoutASelectionGetsNoCoordinates()
+    {
+        TTextEdit* pane = paneShowingProse();
+        QVERIFY2(pane, "No upper pane showing the prose");
+
+        auto host = mudlet::self()->getActiveHost();
+        QVERIFY2(host->getLuaInterpreter()->compileAndExecuteScript(
+                         qsl("mouseSelectionSeen = ''\n"
+                             "function mouseSelectionTestHandler(_, _, _, startCol, startLine, endCol, endLine)\n"
+                             "  mouseSelectionSeen = string.format('%s %s %s %s', tostring(startCol), tostring(startLine), tostring(endCol), tostring(endLine))\n"
+                             "end\n"
+                             "registerAnonymousEventHandler('testMouseSelection', 'mouseSelectionTestHandler')\n"
+                             "addMouseEvent('testMouseSelectionUnique', 'testMouseSelection', 'Show the selection')\n")),
+                 "the addMouseEvent() call failed");
+
+        auto selectionTheActionSees = [&]() -> QString {
+            const QPointF pos = cellInMiddleRow(pane, 8);
+            sendMouse(pane, QEvent::MouseButtonPress, Qt::RightButton, Qt::RightButton, pos);
+            sendMouse(pane, QEvent::MouseButtonRelease, Qt::RightButton, Qt::NoButton, pos);
+            QPointer<QMenu> menu = pane->findChildren<QMenu*>().value(0);
+            if (!menu) {
+                return qsl("no menu");
+            }
+            const QList<QAction*> actions = menu->actions();
+            const auto entry = std::find_if(actions.cbegin(), actions.cend(), [](QAction* pAction) {
+                return pAction->text() == qsl("Show the selection");
+            });
+            if (entry == actions.cend()) {
+                return qsl("no entry");
+            }
+            (*entry)->trigger();
+            menu->close();
+            QCoreApplication::sendPostedEvents(nullptr, QEvent::DeferredDelete);
+
+            lua_State* L = host->getLuaInterpreter()->getLuaGlobalState();
+            lua_getglobal(L, "mouseSelectionSeen");
+            const QString seen = QString::fromUtf8(lua_tostring(L, -1));
+            lua_pop(L, 1);
+            return seen;
+        };
+
+        QCOMPARE(selectionTheActionSees(), qsl("nil nil nil nil"));
+
+        const QPointF dragStart = cellInMiddleRow(pane, 5);
+        const QPointF dragEnd = cellInMiddleRow(pane, 15);
+        sendMouse(pane, QEvent::MouseButtonPress, Qt::LeftButton, Qt::LeftButton, dragStart);
+        sendMouse(pane, QEvent::MouseMove, Qt::NoButton, Qt::LeftButton, dragEnd);
+        sendMouse(pane, QEvent::MouseButtonRelease, Qt::LeftButton, Qt::NoButton, dragEnd);
+        QVERIFY2(pane->hasSelectedText(), "the drag selected nothing");
+        const QString selected = qsl("%1 %2 %3 %4").arg(pane->mPA.x()).arg(pane->mPA.y()).arg(pane->mPB.x()).arg(pane->mPB.y());
+        QCOMPARE(selectionTheActionSees(), selected);
+
+        QTest::qWait(350ms); // long enough after the drag's press not to count as a double-click
+        const QPointF elsewhere = cellInMiddleRow(pane, 40);
+        sendMouse(pane, QEvent::MouseButtonPress, Qt::LeftButton, Qt::LeftButton, elsewhere);
+        sendMouse(pane, QEvent::MouseButtonRelease, Qt::LeftButton, Qt::NoButton, elsewhere);
+        QVERIFY2(!pane->hasSelectedText(), "the click elsewhere left the selection in place");
+        QCOMPARE(selectionTheActionSees(), qsl("nil nil nil nil"));
     }
 
     // The menu is non-modal, so a script can remove a mouse event while its

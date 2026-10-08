@@ -47,7 +47,12 @@
 #include "TMapViewManager.h"
 #include "TMedia.h"
 #include "TRoomDB.h"
+#include "TAction.h"
+#include "TAlias.h"
+#include "TKey.h"
 #include "TScript.h"
+#include "TTimer.h"
+#include "TTrigger.h"
 #include "utils.h"
 #include "VarUnit.h"
 #include "XMLexport.h"
@@ -64,6 +69,7 @@
 #include <QDirIterator>
 #include <QElapsedTimer>
 #include <QEventLoop>
+#include <QFileInfo>
 #include <QFontInfo>
 #include <QJsonDocument>
 #include <QJsonObject>
@@ -73,6 +79,7 @@
 #include <QRandomGenerator>
 #include <QRegularExpression>
 #include <QSaveFile>
+#include <QSet>
 #include <QScopeGuard>
 #include <QSettings>
 #include <QTemporaryFile>
@@ -1964,9 +1971,19 @@ QPair<int, QString> Host::createStopWatch(const QString& name)
             }
         }
     }
+    // Ids go to the lowest free one, so while they run 1..n without a gap that is n + 1
     int newWatchId = 1;
-    while (mStopWatchMap.count(newWatchId) > 0) {
-        ++newWatchId;
+    if (!mStopWatchMap.empty() && mStopWatchMap.cbegin()->first == 1 && mStopWatchMap.crbegin()->first == static_cast<int>(mStopWatchMap.size())) {
+        newWatchId = static_cast<int>(mStopWatchMap.size()) + 1;
+    } else {
+        for (const auto& [watchId, pWatch] : mStopWatchMap) {
+            if (watchId > newWatchId) {
+                break;
+            }
+            if (watchId == newWatchId) {
+                ++newWatchId;
+            }
+        }
     }
 
     auto pStopWatch = std::make_unique<stopWatch>();
@@ -2525,6 +2542,9 @@ void Host::printOnDisplay(std::string& data, const bool isFromServer)
     // The view only times the pass, flashes the taskbar and marks the profile's
     // tab; the text is processed whether or not there is one.
     const bool alertWanted = mpConsole && mpConsole->startIncomingText() && isFromServer;
+    // cTelnet::slot_timerPosting() posts a bare "\r" when nothing followed the
+    // game's last newline. Read before translateToPlainText() parses data away.
+    const bool carriesText = !(data.size() == 1 && data.front() == '\r');
     TConsoleModel& model = *mpMainConsoleModel;
     TBuffer& buffer = model.buffer;
 
@@ -2558,7 +2578,7 @@ void Host::printOnDisplay(std::string& data, const bool isFromServer)
     }
 
     if (mpConsole) {
-        mpConsole->finishIncomingText();
+        mpConsole->finishIncomingText(carriesText);
     }
 }
 
@@ -2727,9 +2747,10 @@ void Host::slot_purgeTemps()
 // event loop pass - see mDeferredSaveTimer.
 void Host::slot_saveProfileAfterPackageChange()
 {
-    if (currentlySavingProfile()) {
-        // saveProfile() would refuse outright, and this is the only save the
-        // package change has coming: ask again once the one in flight is out of
+    if (currentlySavingProfile() || mPackageInstallsInProgress > 0) {
+        // saveProfile() would refuse outright during a save, and one started
+        // under an install would hold up that install's scripts. This is the only
+        // save the package change has coming: ask again once either is out of
         // the way rather than leaving the change unwritten until something else
         // happens to save. The profile close stops this timer, so the retries
         // cannot outlive the profile.
@@ -2948,6 +2969,13 @@ std::pair<bool, QString> Host::installPackage(const QString& fileName, enums::Pa
                 deferredSaveHandlerConnection);
         return {true, QString()};
     }
+
+    // The unpacking dialog pumps the event loop, where the save an earlier install
+    // owes would otherwise start and leave this one's scripts loading under it
+    ++mPackageInstallsInProgress;
+    const auto installsInProgressGuard = qScopeGuard([this] {
+        --mPackageInstallsInProgress;
+    });
 
     // Every failure below returns a reason, and most callers drop it: the package
     // manager logs it silently, the repository install names only which packages failed,
@@ -3453,9 +3481,6 @@ std::pair<bool, QString> Host::installPackage(const QString& fileName, enums::Pa
         }
     }
     emit signal_editorCleanResetRequested();
-    if (thing == enums::PackageModuleType::Package) {
-        saveProfile();
-    }
     // reorder permanent and temporary triggers: perm first, temp second
     mTriggerUnit.reorderTriggersAfterPackageImport();
 
@@ -3547,6 +3572,10 @@ std::pair<bool, QString> Host::installPackage(const QString& fileName, enums::Pa
     if (thing != enums::PackageModuleType::Package) {
         // Use a timer to save profile after module installation completes
         mDeferredSaveTimer.start(100ms);
+    } else if (!mIsProfileLoadingSequence) {
+        // Not saved on the spot: a save in flight puts the next install off until
+        // it finishes, so a batch of installs would queue behind one save each
+        mDeferredSaveTimer.start(0ms);
     }
 
     return {true, itemErrors};
@@ -3594,6 +3623,92 @@ bool Host::removeDir(const QString& dirName, const QString& originalPath)
     }
 
     return result;
+}
+
+QSet<QString> Host::packagesOwningChunk(const QString& chunkName)
+{
+    // A file loaded with dofile() or require() is named "@" and its path
+    if (chunkName.startsWith(QLatin1Char('@'))) {
+        const QString package = packageOwningFile(chunkName.mid(1));
+        return package.isEmpty() ? QSet<QString>() : QSet<QString>{package};
+    }
+
+    const qsizetype separator = chunkName.indexOf(qsl(": "));
+    if (separator < 0) {
+        return {};
+    }
+    const QStringView kind = QStringView(chunkName).left(separator);
+    const QString name = chunkName.mid(separator + 2);
+
+    QSet<QString> owners;
+    // Disabled items count: their code may already have run, and permScript()
+    // makes them disabled. Items with no code, like a package's folder, do not.
+    auto addOwner = [&owners](auto* item) {
+        if (!item || item->isTemporary() || item->getScript().isEmpty()) {
+            return;
+        }
+        auto* root = item;
+        while (root->getParent()) {
+            root = root->getParent();
+        }
+        owners.insert(root->mPackageName);
+    };
+
+    if (kind == u"Script") {
+        for (const int id : mScriptUnit.findItems(name)) {
+            addOwner(mScriptUnit.getScript(id));
+        }
+    } else if (kind == u"Trigger") {
+        for (const int id : mTriggerUnit.findItems(name)) {
+            addOwner(mTriggerUnit.getTrigger(id));
+        }
+    } else if (kind == u"Alias") {
+        for (const int id : mAliasUnit.findItems(name, true, true)) {
+            addOwner(mAliasUnit.getAlias(id));
+        }
+    } else if (kind == u"Timer") {
+        for (const int id : mTimerUnit.findItems(name)) {
+            addOwner(mTimerUnit.getTimer(id));
+        }
+    } else if (kind == u"Key") {
+        for (const int id : mKeyUnit.findItems(name, true, true)) {
+            addOwner(mKeyUnit.getKey(id));
+        }
+    } else if (kind == u"Button") {
+        for (const int id : mActionUnit.findItems(name)) {
+            addOwner(mActionUnit.getAction(id));
+        }
+    }
+    return owners;
+}
+
+QString Host::packageOwningFile(const QString& fileName)
+{
+    // Only the folder Mudlet unpacked a package into: a module file can sit
+    // anywhere, and the folder around it may hold the player's own Lua
+#if defined(Q_OS_WINDOWS) || defined(Q_OS_MACOS)
+    const Qt::CaseSensitivity caseSensitivity = Qt::CaseInsensitive;
+#else
+    const Qt::CaseSensitivity caseSensitivity = Qt::CaseSensitive;
+#endif
+    auto canonical = [](const QString& path) {
+        const QString resolved = QFileInfo(path).canonicalFilePath();
+        return resolved.isEmpty() ? QDir::cleanPath(QDir(path).absolutePath()) : resolved;
+    };
+    const QString path = canonical(QDir::fromNativeSeparators(fileName));
+    const QString profileHome = canonical(MudletApp::getMudletPath(enums::profileHomePath, getName())) + QLatin1Char('/');
+    if (!path.startsWith(profileHome, caseSensitivity)) {
+        return {};
+    }
+    const QString folder = path.mid(profileHome.size()).section(QLatin1Char('/'), 0, 0);
+    QStringList candidates = mInstalledPackages;
+    candidates << mInstalledModules.keys();
+    for (const QString& name : candidates) {
+        if (!name.compare(folder, caseSensitivity)) {
+            return name;
+        }
+    }
+    return {};
 }
 
 void Host::removePackageInfo(const QString& packageName, const bool isModule)
@@ -3720,6 +3835,11 @@ bool Host::uninstallPackage(const QString& packageName, enums::PackageModuleType
     mActionUnit.uninstall(packageName);
     mScriptUnit.uninstall(packageName);
     mKeyUnit.uninstall(packageName);
+    // Not for a ModuleSync, which brings the module back with its Lua state and
+    // ids - unless the name is also a package's, which a sync removes for good.
+    if (thing != enums::PackageModuleType::ModuleSync || installedBothWays) {
+        emit signal_packageRemoved(packageName);
+    }
     if (auto* fonts = FontManager::self()) {
         fonts->unloadFonts(getName(), packageName);
     }
@@ -3792,15 +3912,15 @@ void Host::runUninstallsDeferredByAnInstall(const QList<DeferredUninstall>& defe
         return packageNames;
     };
 
-    // uninstallPackage() refuses during a save, and a package install saves on its way out, so wait it out.
-    // A module install's save starts 100ms after this was queued, so this is a no-op for it. Not while
+    // uninstallPackage() refuses during a save, so wait out any that is running. An install's own save
+    // starts on a later event loop pass than this was queued for, so it is not one of them. Not while
     // closing: the wait pumps the event loop, and the close has its own save to finish.
     if (currentlySavingProfile() && !isClosingDown()) {
         waitForProfileSave();
     }
 
-    // Closing, already or via the pump above. The script was told these removals were happening and the
-    // install saved the packages, so name what is left behind rather than let it silently return next session.
+    // Closing, already or via the pump above. The script was told these removals were happening, so name
+    // what is left behind rather than let it silently return next session.
     if (isClosingDown()) {
         qWarning() << "Host::runUninstallsDeferredByAnInstall() WARNING - the profile is closing down, so" << names(deferred)
                    << "were left installed although their own install scripts asked for them to be removed.";
@@ -5163,6 +5283,7 @@ bool Host::replaceWindowText(const QString& name, const QString& text)
         return false;
     }
     pModel->replace(text);
+    markSelectionDirty(*pModel);
     return true;
 }
 
@@ -5365,9 +5486,7 @@ bool Host::clearWindow(const QString& name)
     if (!pModel) {
         return false;
     }
-    pModel->buffer.clear();
-    // --mirror's pending line went with the buffer.
-    pModel->mMirrorPendingLine.clear();
+    pModel->clear();
     emit pModel->mNotifier.bufferCleared();
     return true;
 }

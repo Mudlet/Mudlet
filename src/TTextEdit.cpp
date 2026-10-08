@@ -1003,12 +1003,14 @@ void TTextEdit::resolveRunColors(GraphemeRun& run, const TChar& charStyle, const
             run.bgColor = (charStyle.background().lightness() < 128) ? Qt::white : Qt::black;
         } else {
             // A transparent cell (e.g. a system message) has no colour of its own
-            // to swap in as the text pen - painting with alpha 0 would make the
-            // glyph invisible - so fall back to the console's real background.
+            // to swap in as the text pen, so fall back to the console's real
+            // background. Opaque either way, as a script can make the console
+            // background, and with it game text's, translucent or invisible.
             QColor background = charStyle.background();
             if (background.alpha() == 0) {
                 background = mpConsole->getConsoleBgColor();
             }
+            background.setAlpha(255);
             run.fgColor = background;
             run.bgColor = charStyle.foreground();
         }
@@ -3992,14 +3994,13 @@ void TTextEdit::slot_mouseAction(const QString& uniqueName)
     event.mArgumentList.append(mpConsole->mConsoleName);
 
     event.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
-    event.mArgumentList.append(QString::number(mPA.x()));
-    event.mArgumentTypeList.append(ARGUMENT_TYPE_NUMBER);
-    event.mArgumentList.append(QString::number(mPA.y()));
-    event.mArgumentTypeList.append(ARGUMENT_TYPE_NUMBER);
-    event.mArgumentList.append(QString::number(mPB.x()));
-    event.mArgumentTypeList.append(ARGUMENT_TYPE_NUMBER);
-    event.mArgumentList.append(QString::number(mPB.y()));
-    event.mArgumentTypeList.append(ARGUMENT_TYPE_NUMBER);
+
+    // mPA and mPB outlive a dropped selection, so without one the handler gets nils rather than old coordinates
+    const bool selected = hasSelectedText();
+    for (const int coordinate : {mPA.x(), mPA.y(), mPB.x(), mPB.y()}) {
+        event.mArgumentList.append(selected ? QString::number(coordinate) : QString());
+        event.mArgumentTypeList.append(selected ? ARGUMENT_TYPE_NUMBER : ARGUMENT_TYPE_NIL);
+    }
     mpHost->raiseEvent(event);
 }
 
@@ -4087,7 +4088,8 @@ void TTextEdit::updateCaret()
         if (mCaretLine < lineOffset) {
             scrollTo(mCaretLine + 1);
         } else if (mCaretLine >= lineOffset + mScreenHeight) {
-            int emptyLastLine = mpBuffer->lineBuffer.last().isEmpty();
+            // Turning caret mode on calls this before moving a caret that deleteLine() may have left on an emptied buffer
+            const int emptyLastLine = !mpBuffer->lineBuffer.isEmpty() && mpBuffer->lineBuffer.last().isEmpty();
             if (mCaretLine == mpBuffer->lineBuffer.length() - 1 - emptyLastLine) {
                 scrollTo(mCaretLine + 2);
             } else {
@@ -4393,6 +4395,25 @@ void TTextEdit::keyPressEvent(QKeyEvent* event)
         // if not command line ignore
     }
 
+    // deleteLine() can empty the buffer, or shorten it past the caret, without moving the caret
+    if (mpBuffer->lineBuffer.isEmpty()) {
+        switch (event->key()) {
+        case Qt::Key_Up:
+        case Qt::Key_Down:
+        case Qt::Key_Left:
+        case Qt::Key_Right:
+        case Qt::Key_Home:
+        case Qt::Key_End:
+        case Qt::Key_PageUp:
+        case Qt::Key_PageDown:
+            return;
+        default:
+            break;
+        }
+    } else if (mCaretLine >= mpBuffer->lineBuffer.size()) {
+        initializeCaret();
+    }
+
     qsizetype newCaretLine = -1;
     qsizetype newCaretColumn = -1;
 
@@ -4595,7 +4616,8 @@ void TTextEdit::keyPressEvent(QKeyEvent* event)
     case Qt::Key_End:
         if (QGuiApplication::keyboardModifiers().testFlag(Qt::ControlModifier)) {
             const int emptyLastLine = mpBuffer->lineBuffer.last().isEmpty() ? 1 : 0;
-            newCaretLine = mpBuffer->lineBuffer.length() - 1 - emptyLastLine;
+            // A cleared buffer holds a single empty line, which is both the first and the trailing one
+            newCaretLine = std::max(0, static_cast<int>(mpBuffer->lineBuffer.length()) - 1 - emptyLastLine);
             newCaretColumn = std::max(0, static_cast<int>(mpBuffer->lineBuffer[newCaretLine].length()) - 1);
             if (auto* app = mudlet::self()) {
                 //: Screen-reader announcement when the user presses Ctrl+End in caret mode to jump to the latest (most recent) content in the buffer

@@ -25,6 +25,7 @@
 #include "MudletApp.h"
 #include "PortableModeTestHelper.h"
 #include "ProfileTestHelper.h"
+#include "EditorDeleteItemCommand.h"
 #include "EditorUndoStack.h"
 #include "Host.h"
 #include "HostDialogs.h"
@@ -645,6 +646,291 @@ private slots:
       cleanupAll(itemType);
     }
 
+    mpEditor->mpUndoStack->clear();
+  }
+
+  static int countDescendants(const QTreeWidgetItem *item) {
+    int count = item->childCount();
+    for (int i = 0; i < item->childCount(); ++i) {
+      count += countDescendants(item->child(i));
+    }
+    return count;
+  }
+
+  // Names the first restored descendant whose record the delete command lost track of
+  static QString staleRecord(const EditorDeleteItemCommand *command, const QTreeWidgetItem *item) {
+    const int parentID = item->data(0, Qt::UserRole).toInt();
+    for (int i = 0; i < item->childCount(); ++i) {
+      const QTreeWidgetItem *child = item->child(i);
+      const int childID = child->data(0, Qt::UserRole).toInt();
+      const auto *info = command->getDeletedItemInfo(childID);
+      if (!command->affectedItemIDs().contains(childID) || !info) {
+        return qsl("%1 (ID %2) has no record").arg(child->text(0)).arg(childID);
+      }
+      if (info->parentID != parentID || info->positionInParent != i) {
+        return qsl("%1 (ID %2) is recorded under %3 at %4, not %5 at %6")
+            .arg(child->text(0)).arg(childID).arg(info->parentID).arg(info->positionInParent).arg(parentID).arg(i);
+      }
+      const QString stale = staleRecord(command, child);
+      if (!stale.isEmpty()) {
+        return stale;
+      }
+    }
+    return QString();
+  }
+
+  void testRedoDeletesEverySameNamedItem_data() {
+    QTest::addColumn<int>("itemTypeIndex");
+    QTest::addColumn<QString>("itemTypeName");
+
+    QTest::newRow("Trigger") << 0 << "Trigger";
+    QTest::newRow("Timer") << 1 << "Timer";
+    QTest::newRow("Alias") << 2 << "Alias";
+    QTest::newRow("Script") << 3 << "Script";
+    QTest::newRow("Key") << 4 << "Key";
+    QTest::newRow("Action") << 5 << "Action";
+  }
+
+  // New items all share a default name, so names alone cannot tell them apart
+  void testRedoDeletesEverySameNamedItem() {
+    QFETCH(int, itemTypeIndex);
+    QFETCH(QString, itemTypeName);
+
+    const auto &itemType = mItemTypes[itemTypeIndex];
+    itemType.showView();
+    cleanupAll(itemType);
+
+    itemType.treeWidget()->setCurrentItem(itemType.baseItem());
+    itemType.addFolder();
+    QTreeWidgetItem *folder = itemType.baseItem()->child(0);
+    QVERIFY(folder);
+    for (int i = 0; i < 3; ++i) {
+      itemType.treeWidget()->setCurrentItem(folder);
+      itemType.addItem();
+    }
+    QList<QTreeWidgetItem *> leaves;
+    for (int i = 0; i < folder->childCount(); ++i) {
+      leaves.append(folder->child(i));
+    }
+    itemType.treeWidget()->setCurrentItem(folder);
+    itemType.addFolder();
+    QCOMPARE(folder->childCount(), 4);
+    QTreeWidgetItem *subFolder = nullptr;
+    for (int i = 0; i < folder->childCount(); ++i) {
+      if (!leaves.contains(folder->child(i))) {
+        subFolder = folder->child(i);
+      }
+    }
+    QVERIFY(subFolder);
+    for (int i = 0; i < 2; ++i) {
+      itemType.treeWidget()->setCurrentItem(subFolder);
+      itemType.addItem();
+    }
+    QCOMPARE(countDescendants(folder), 6);
+
+    // Same-named siblings deleted together
+    itemType.treeWidget()->clearSelection();
+    for (int i = 0; i < folder->childCount(); ++i) {
+      if (folder->child(i) != subFolder) {
+        folder->child(i)->setSelected(true);
+      }
+    }
+    mpEditor->slot_deleteItemOrGroup();
+    folder = itemType.baseItem()->child(0);
+    QCOMPARE(countDescendants(folder), 3);
+    mpEditor->mpUndoStack->undo();
+    folder = itemType.baseItem()->child(0);
+    QCOMPARE(countDescendants(folder), 6);
+    mpEditor->mpUndoStack->redo();
+    folder = itemType.baseItem()->child(0);
+    QVERIFY2(countDescendants(folder) == 3,
+             qPrintable(qsl("%1: redo left %2 items, expected 3")
+                            .arg(itemTypeName)
+                            .arg(countDescendants(folder))));
+    mpEditor->mpUndoStack->undo();
+    folder = itemType.baseItem()->child(0);
+    QCOMPARE(countDescendants(folder), 6);
+
+    // A folder whose same-named descendants come back from its snapshot
+    itemType.treeWidget()->clearSelection();
+    itemType.treeWidget()->setCurrentItem(folder);
+    mpEditor->slot_deleteItemOrGroup();
+    QCOMPARE(itemType.baseItem()->childCount(), 0);
+    for (int round = 0; round < 2; ++round) {
+      mpEditor->mpUndoStack->undo();
+      QCOMPARE(itemType.baseItem()->childCount(), 1);
+      QCOMPARE(countDescendants(itemType.baseItem()->child(0)), 6);
+      const auto *command = dynamic_cast<const EditorDeleteItemCommand *>(
+          mpEditor->mpUndoStack->getLastExecutedCommand());
+      QVERIFY(command);
+      const QString stale = staleRecord(command, itemType.baseItem()->child(0));
+      QVERIFY2(stale.isEmpty(), qPrintable(qsl("%1: %2").arg(itemTypeName, stale)));
+      mpEditor->mpUndoStack->redo();
+      QVERIFY2(itemType.baseItem()->childCount() == 0,
+               qPrintable(qsl("%1: redo of the folder delete left %2 items")
+                              .arg(itemTypeName)
+                              .arg(countDescendants(itemType.baseItem()))));
+    }
+
+    cleanupAll(itemType);
+    mpEditor->mpUndoStack->clear();
+  }
+
+  void testUndoDeleteWithTheBaseItemSelected_data() {
+    QTest::addColumn<int>("itemTypeIndex");
+    QTest::addColumn<QString>("itemTypeName");
+
+    QTest::newRow("Trigger") << 0 << "Trigger";
+    QTest::newRow("Timer") << 1 << "Timer";
+    QTest::newRow("Alias") << 2 << "Alias";
+    QTest::newRow("Script") << 3 << "Script";
+    QTest::newRow("Key") << 4 << "Key";
+    QTest::newRow("Action") << 5 << "Action";
+  }
+
+  // As Ctrl+A does, which also selects the base item every top-level item
+  // sits under
+  void testUndoDeleteWithTheBaseItemSelected() {
+    QFETCH(int, itemTypeIndex);
+    QFETCH(QString, itemTypeName);
+
+    const auto &itemType = mItemTypes[itemTypeIndex];
+    itemType.showView();
+    cleanupAll(itemType);
+
+    itemType.treeWidget()->setCurrentItem(itemType.baseItem());
+    itemType.addFolder();
+    QTreeWidgetItem *folder = itemType.baseItem()->child(0);
+    QVERIFY(folder != nullptr);
+    itemType.treeWidget()->setCurrentItem(folder);
+    itemType.addItem();
+    QCOMPARE(folder->childCount(), 1);
+
+    itemType.treeWidget()->clearSelection();
+    itemType.treeWidget()->setCurrentItem(folder, 0,
+                                          QItemSelectionModel::NoUpdate);
+    itemType.baseItem()->setSelected(true);
+    folder->setSelected(true);
+    folder->child(0)->setSelected(true);
+
+    mpEditor->slot_deleteItemOrGroup();
+    QVERIFY2(itemType.baseItem()->childCount() == 0,
+             qPrintable(itemTypeName + ": the folder should be deleted"));
+
+    mpEditor->mpUndoStack->undo();
+    QTreeWidgetItem *restored = itemType.baseItem()->child(0);
+    QVERIFY2(restored != nullptr && restored->childCount() == 1,
+             qPrintable(itemTypeName +
+                        ": undo should bring back the folder and its child"));
+
+    cleanupAll(itemType);
+  }
+
+  void testDeletingManySelectedItemsChangesSelectionOnce_data() {
+    QTest::addColumn<int>("itemTypeIndex");
+    QTest::addColumn<QString>("itemTypeName");
+
+    QTest::newRow("Trigger") << 0 << "Trigger";
+    QTest::newRow("Timer") << 1 << "Timer";
+    QTest::newRow("Alias") << 2 << "Alias";
+    QTest::newRow("Script") << 3 << "Script";
+    QTest::newRow("Key") << 4 << "Key";
+    QTest::newRow("Action") << 5 << "Action";
+  }
+
+  void testDeletingManySelectedItemsChangesSelectionOnce() {
+    QFETCH(int, itemTypeIndex);
+    QFETCH(QString, itemTypeName);
+
+    const auto &itemType = mItemTypes[itemTypeIndex];
+    itemType.showView();
+    cleanupAll(itemType);
+
+    constexpr int itemCount = 30;
+    itemType.treeWidget()->setCurrentItem(itemType.baseItem());
+    itemType.addFolder();
+    QTreeWidgetItem *folder = itemType.baseItem()->child(0);
+    QVERIFY(folder);
+    for (int i = 0; i < itemCount; ++i) {
+      itemType.treeWidget()->setCurrentItem(folder);
+      itemType.addItem();
+    }
+    QCOMPARE(folder->childCount(), itemCount);
+
+    itemType.treeWidget()->clearSelection();
+    for (int i = 0; i < itemCount; ++i) {
+      folder->child(i)->setSelected(true);
+    }
+    itemType.treeWidget()->setCurrentItem(folder->child(itemCount - 1), 0,
+                                          QItemSelectionModel::NoUpdate);
+
+    QSignalSpy selectionSpy(itemType.treeWidget(),
+                            &QTreeWidget::itemSelectionChanged);
+    mpEditor->slot_deleteItemOrGroup();
+
+    QCOMPARE(folder->childCount(), 0);
+    QVERIFY2(selectionSpy.count() <= 1,
+             qPrintable(qsl("%1: selection changed %2 times")
+                            .arg(itemTypeName)
+                            .arg(selectionSpy.count())));
+    QTreeWidgetItem *current = itemType.treeWidget()->currentItem();
+    QVERIFY(current);
+    QVERIFY(current->isSelected());
+    QCOMPARE(itemType.treeWidget()->selectedItems().size(), 1);
+
+    mpEditor->mpUndoStack->undo();
+    QCOMPARE(itemType.baseItem()->child(0)->childCount(), itemCount);
+
+    cleanupAll(itemType);
+    mpEditor->mpUndoStack->clear();
+  }
+
+  void testDeletingAnItemMovesTheCurrentItemToTheOneAbove_data() {
+    QTest::addColumn<int>("itemTypeIndex");
+    QTest::addColumn<QString>("itemTypeName");
+
+    QTest::newRow("Trigger") << 0 << "Trigger";
+    QTest::newRow("Timer") << 1 << "Timer";
+    QTest::newRow("Alias") << 2 << "Alias";
+    QTest::newRow("Script") << 3 << "Script";
+    QTest::newRow("Key") << 4 << "Key";
+    QTest::newRow("Action") << 5 << "Action";
+  }
+
+  // The view only scrolls to, and announces, a current item it is told about
+  void testDeletingAnItemMovesTheCurrentItemToTheOneAbove() {
+    QFETCH(int, itemTypeIndex);
+    QFETCH(QString, itemTypeName);
+
+    const auto &itemType = mItemTypes[itemTypeIndex];
+    itemType.showView();
+    cleanupAll(itemType);
+
+    itemType.treeWidget()->setCurrentItem(itemType.baseItem());
+    itemType.addFolder();
+    QTreeWidgetItem *folder = itemType.baseItem()->child(0);
+    QVERIFY(folder);
+    for (int i = 0; i < 4; ++i) {
+      itemType.treeWidget()->setCurrentItem(folder);
+      itemType.addItem();
+    }
+    QCOMPARE(folder->childCount(), 4);
+
+    QTreeWidgetItem *above = folder->child(1);
+    itemType.treeWidget()->setCurrentItem(folder->child(2));
+
+    QSignalSpy currentSpy(itemType.treeWidget(),
+                          &QTreeWidget::currentItemChanged);
+    mpEditor->slot_deleteItemOrGroup();
+
+    QCOMPARE(folder->childCount(), 3);
+    QCOMPARE(itemType.treeWidget()->currentItem(), above);
+    QVERIFY2(!currentSpy.isEmpty(),
+             qPrintable(itemTypeName + ": the view was never told the "
+                                       "current item changed"));
+    QCOMPARE(currentSpy.last().at(0).value<QTreeWidgetItem *>(), above);
+
+    cleanupAll(itemType);
     mpEditor->mpUndoStack->clear();
   }
 

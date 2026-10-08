@@ -185,6 +185,7 @@ private slots:
 private:
     void setupUI();
     void createMenus();
+    void showMuteState();
     void createToolBar();
     void connectToolBarActions();
     void updateTabIndicator(int tabIndex = -1);                            // -1 means current tab
@@ -261,6 +262,8 @@ private:
     QAction* mpMenuPreferencesAction{nullptr};
     QAction* mpMenuToggleTimeStampAction{nullptr};
     QAction* mpMenuMuteMediaAction{nullptr};
+    QAction* mpMenuMuteAPIAction{nullptr};
+    QAction* mpMenuMuteGameAction{nullptr};
     QAction* mpMenuMultiViewAction{nullptr};
 
     // Toolbar buttons
