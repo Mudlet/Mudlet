@@ -2172,6 +2172,20 @@ describe("Tests Other.lua functions", function()
       assert.same({ keep = "the previous save" }, loaded)
     end)
 
+    it("should leave the file as it was when joining what it serialised fails", function()
+      table.save(path, { keep = "the previous save" })
+      local realConcat = table.concat
+      finally(function() table.concat = realConcat end)
+      table.concat = function() error("not enough memory") end
+
+      assert.has_error(function() table.save(path, { keep = "never written" }) end)
+      table.concat = realConcat
+
+      local loaded = {}
+      table.load(path, loaded)
+      assert.same({ keep = "the previous save" }, loaded)
+    end)
+
     it("should bring back infinities and NaN", function()
       table.save(path, { inf = 1 / 0, neginf = -1 / 0, nan = 0 / 0, keep = 1 })
       local loaded = {}

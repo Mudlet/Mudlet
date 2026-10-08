@@ -364,9 +364,10 @@ function table.save( sfile, t )
     table.pickle( v, buffer, tables, lookup )
   end
   buffer:write( "}" )
+  local text = table.concat( chunks )
   local file, msg = io.open( sfile, "w" )
   if not file then return nil, msg end
-  local written, write_msg = file:write( table.concat( chunks ) )
+  local written, write_msg = file:write( text )
   local closed, close_msg = file:close()
   if not written then return nil, write_msg end
   if not closed then return nil, close_msg end
