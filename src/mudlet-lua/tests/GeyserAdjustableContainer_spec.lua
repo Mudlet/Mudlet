@@ -2415,7 +2415,7 @@ describe("Tests Adjustable.Container borders, persistence and menu items", funct
   describe("Adjustable.Container lock styles", function()
     it("locks with the style it is named", function()
       local container = make("gapLockNamed")
-      container:lockContainer("full")
+      assert.is_true(container:lockContainer("full"))
       assert.is_true(container.locked)
       assert.are.equal("full", container.lockStyle)
       -- the full style leaves no padding for the title bar
@@ -2431,9 +2431,37 @@ describe("Tests Adjustable.Container borders, persistence and menu items", funct
       assert.are.equal(container.padding, container.Inside:get_y() - container:get_y())
     end)
 
-    it("falls back to the standard style for one it does not know", function()
+    it("refuses a style name it does not know and stays unlocked", function()
       local container = make("gapLockUnknown")
-      container:lockContainer("nonsense")
+      local ok, message = container:lockContainer("nonsense")
+      assert.is_nil(ok)
+      assert.is_truthy(message:find('unknown lock style "nonsense"', 1, true))
+      assert.is_false(container.locked)
+    end)
+
+    it("refuses a style number it does not have and stays unlocked", function()
+      local container = make("gapLockBadNumber")
+      for _, lockNr in ipairs({99, 0, -1, 2.5}) do
+        local ok, message = container:lockContainer(lockNr)
+        assert.is_nil(ok)
+        assert.is_truthy(message:find("there is no lock style number", 1, true))
+      end
+      assert.is_false(container.locked)
+    end)
+
+    it("refuses a style that was added without a function", function()
+      local container = make("gapLockNoFunction")
+      container:newLockStyle("gapEmptyStyle")
+      local ok, message = container:lockContainer("gapEmptyStyle")
+      assert.is_nil(ok)
+      assert.is_truthy(message:find('unknown lock style "gapEmptyStyle"', 1, true))
+      assert.is_false(container.locked)
+    end)
+
+    it("falls back to the standard style when its remembered one no longer exists", function()
+      local container = make("gapLockStale")
+      container.lockStyle = "goneSinceSaved"
+      assert.is_true(container:lockContainer())
       assert.are.equal("standard", container.lockStyle)
       assert.is_true(container.locked)
     end)
@@ -2441,7 +2469,9 @@ describe("Tests Adjustable.Container borders, persistence and menu items", funct
     it("leaves a minimized container unlocked", function()
       local container = make("gapLockMinimized")
       container:minimize()
-      container:lockContainer()
+      local ok, message = container:lockContainer()
+      assert.is_nil(ok)
+      assert.is_truthy(message:find("a minimized container cannot be locked", 1, true))
       assert.is_false(container.locked)
     end)
 
