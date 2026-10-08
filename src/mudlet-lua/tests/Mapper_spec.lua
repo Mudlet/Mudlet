@@ -182,7 +182,8 @@ describe("Tests custom map event and menu functions", function()
 
 end)
 
--- What these specs create goes in an area of their own, which after_each deletes.
+-- What these specs create goes in an area of their own, plus map menus and
+-- events, which no area holds; after_each deletes all of it.
 describe("Tests map label and map menu refusals on a scratch area", function()
   local areaName = "MapperSpecLabelsAndMenus"
   local area
@@ -197,6 +198,9 @@ describe("Tests map label and map menu refusals on a scratch area", function()
 
   after_each(function()
     deleteArea(areaName)
+    removeMapEvent("MapperSpecOrphanEvent")
+    removeMapMenu("MapperSpecOrphanMenu")
+    removeMapMenu("MapperSpecNeverAdded")
   end)
 
   it("deleteMapLabel returns true, or nil and a message for an area or label it cannot find", function()
