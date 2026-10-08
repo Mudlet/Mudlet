@@ -3112,14 +3112,14 @@ tempTimer(0.05, resetOnceConnected)]], port))
       end)
 
       it("raises a Lua error for a first argument it cannot carry", function()
-        assertArgError(function() raiseGlobalEvent({}) end, "raiseGlobalEvent: bad argument type #1")
+        assertArgError(function() raiseGlobalEvent({}) end, "raiseGlobalEvent: bad argument #1 type")
       end)
 
       it("raises a Lua error for a later argument it cannot carry", function()
         -- the arguments are all vetted before the TEvent is built, so this raise
         -- has nothing to strand; the leak-checking CI job is what would notice
         -- if that changed
-        assertArgError(function() raiseGlobalEvent("mudletSpecGlobalEvent", {}) end, "raiseGlobalEvent: bad argument type #2")
+        assertArgError(function() raiseGlobalEvent("mudletSpecGlobalEvent", {}) end, "raiseGlobalEvent: bad argument #2 type")
       end)
 
       it("does not deliver the event back to the profile that sent it", function()
