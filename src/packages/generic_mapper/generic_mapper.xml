@@ -4263,9 +4263,8 @@ function map.eventHandler(event, ...)
         config()
         raiseEvent("mapperScriptLoaded", "generic_mapper")
     elseif event == "mapOpenEvent" then
+        -- nothing is sent: the map can open before login, and some games forbid unrequested commands
         if not help_shown and not map.save.prompt_pattern[map.character or ""] then
-            map.find_prompt()
-            send(map.configs.lang_dirs['look'], true)
             tempTimer(3, function() map.show_help("quick_start"); help_shown = true end)
         end
     elseif event == "mapStop" then

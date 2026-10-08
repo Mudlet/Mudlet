@@ -1,23 +1,23 @@
 -- The generic mapper runs on every move and every command sent, so neither
 -- should read the whole map or a whole area unless the answer depends on it.
-describe("Tests that the generic mapper does not read more of the map than a step needs", function()
-  local function upvalue(fn, name)
-    if type(fn) ~= "function" then
+local function upvalue(fn, name)
+  if type(fn) ~= "function" then
+    return nil
+  end
+  local index = 1
+  while true do
+    local upvalueName, value = debug.getupvalue(fn, index)
+    if not upvalueName then
       return nil
     end
-    local index = 1
-    while true do
-      local upvalueName, value = debug.getupvalue(fn, index)
-      if not upvalueName then
-        return nil
-      end
-      if upvalueName == name then
-        return value, index
-      end
-      index = index + 1
+    if upvalueName == name then
+      return value, index
     end
+    index = index + 1
   end
+end
 
+describe("Tests that the generic mapper does not read more of the map than a step needs", function()
   if type(map) ~= "table" or type(map.eventHandler) ~= "function" then
     it("needs the generic mapper installed", function()
       pending("the generic mapper is not installed in this profile")
@@ -127,5 +127,41 @@ describe("Tests that the generic mapper does not read more of the map than a ste
       assert.matches("/versions%.lua$", download.calls[1].vals[2])
       assert.is_true(map.update_waiting)
     end)
+  end)
+end)
+
+-- The map can open before the player has logged in - a game's own package may
+-- open it while it installs - and a game that asks for a name first takes
+-- whatever arrives then as the new character's name
+describe("Tests that the generic mapper sends nothing when the map opens", function()
+  if type(map) ~= "table" or type(map.eventHandler) ~= "function" then
+    it("needs the generic mapper installed", function()
+      pending("the generic mapper is not installed in this profile")
+    end)
+    return
+  end
+
+  it("offers the quick start guide rather than sending anything the first time the map opens", function()
+    local _, helpShownIndex = upvalue(map.eventHandler, "help_shown")
+    assert.is_number(helpShownIndex)
+    local savedHelpShown = select(2, debug.getupvalue(map.eventHandler, helpShownIndex))
+    local character = map.character or ""
+    local savedPattern = map.save.prompt_pattern[character]
+    local sent = stub(_G, "send")
+    -- the guide comes up on a timer, which would print it into a later spec's output
+    local timer = stub(_G, "tempTimer")
+    finally(function()
+      send:revert()
+      tempTimer:revert()
+      debug.setupvalue(map.eventHandler, helpShownIndex, savedHelpShown)
+      map.save.prompt_pattern[character] = savedPattern
+    end)
+    debug.setupvalue(map.eventHandler, helpShownIndex, false)
+    map.save.prompt_pattern[character] = nil
+
+    map.eventHandler("mapOpenEvent")
+
+    assert.stub(sent).was_not_called()
+    assert.stub(timer).was_called(1)
   end)
 end)
