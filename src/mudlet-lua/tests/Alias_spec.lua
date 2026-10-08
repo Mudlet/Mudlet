@@ -1,9 +1,9 @@
 describe("Alias processing", function()
 
-    -- TAlias's match-all loop is unconditional, and it steps one byte after an
-    -- empty match, so on a command holding a multi-byte character it can land
-    -- mid-character. pcre2 then rejects the offset and TAlias::match() ends the
-    -- loop, dropping every capture past that character.
+    -- TAlias's match-all loop is unconditional and steps on after an empty match,
+    -- so on a command holding a multi-byte character it must step past the whole
+    -- character: landing inside one has ended the loop, dropping every capture
+    -- past it, and has found an extra empty match there.
     describe("captures across a multi-byte character", function()
 
         it("keeps collecting captures past a multi-byte character", function()
@@ -27,6 +27,40 @@ describe("Alias processing", function()
                 end
             end
             assert.is_true(found, "the capture after the multi-byte character was dropped")
+        end)
+
+        -- One character, so one empty match before it: stepping a byte at a time
+        -- after an empty match gave one more inside the character as well
+        it("finds the same matches around a multi-byte character as around a plain one", function()
+            assert.are.equal("UTF-8", getServerEncoding(), "this spec needs a UTF-8 server encoding to send a multi-byte command")
+            local seen = {}
+            local id = tempAlias([[(\d*)]], function()
+                seen = {}
+                for i = 1, #matches do
+                    seen[i] = matches[i]
+                end
+            end)
+            expandAlias("cafe 9", false)
+            local plain = seen
+            expandAlias("caf\195\169 9", false)
+            assert.is_true(killAlias(id), "a temporary alias should be removable by id")
+            assert.are.same(plain, seen)
+        end)
+
+    end)
+
+    -- pcre2_jit_compile() reports success on a (*NO_JIT) pattern without making
+    -- any JIT code, and pcre2_jit_match() then fails every subject
+    describe("a pattern starting with (*NO_JIT)", function()
+
+        it("still matches", function()
+            local captured
+            local id = tempAlias([[(*NO_JIT)^nojit_alias_probe (\w+)$]], function()
+                captured = matches[2]
+            end)
+            expandAlias("nojit_alias_probe there", false)
+            killAlias(id)
+            assert.are.equal("there", captured)
         end)
 
     end)

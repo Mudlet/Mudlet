@@ -66,6 +66,7 @@ private slots:
     void testOldFormatMigration();
     void testCollidingFormatRecovery();
     void testALookupAnswersWhenItsFirstReadStalls();
+    void testALookupWhoseKeychainStallsStillReadsTheEncryptedFile();
     void testALookupAnswersWhicheverLaterReadStalls_data();
     void testALookupAnswersWhicheverLaterReadStalls();
     void testALookupReadsEachPlaceOnceInOrder_data();
@@ -98,6 +99,7 @@ private slots:
     void testALateAnswerFollowsALookupThatTimedOut();
     void testALateAnswerIsDroppedOnceWhatAskedForItHasGone();
     void testALateAnswerHandsOverThePassword();
+    void testALateAnswerFollowsTheFilesOlderCopy();
 
 private:
     QTemporaryDir mConfigDir;
@@ -891,6 +893,32 @@ void CredentialManagerKeychainTest::testALookupAnswersWhenItsFirstReadStalls()
     QCOMPARE(staller.answersToOtherReceivers(), released);
     QVERIFY2(keychainQueueRuns(), "QtKeychain's queue did not move on once the stalled read answered");
     QTRY_VERIFY2(!staller.firstStalledAlive(), "a read that answered after its lookup gave up was never deleted");
+    QCOMPARE(answer->count, 1);
+}
+
+// Reading the file needs nothing from the keychain, and the next lookup would stall at the same read,
+// so a password kept only there was never found while the keychain did not answer
+void CredentialManagerKeychainTest::testALookupWhoseKeychainStallsStillReadsTheEncryptedFile()
+{
+    const QString secret = QStringLiteral("file-secret-behind-a-stall");
+    QVERIFY(CredentialManager::storeCredential(mProfile, mKey, secret));
+    JobStaller staller;
+    staller.stallNth<QKeychain::ReadPasswordJob>(0);
+    CredentialManager manager;
+    manager.mJobStartHook = staller.hook();
+    manager.mOperationTimeoutMs = 300;
+
+    const auto answer = startRetrieval(manager, mProfile, mKey);
+    const bool answered = waitForAnswer(answer);
+    CredentialManager::removeCredential(mProfile, mKey);
+
+    QVERIFY2(answered, "a lookup whose keychain read never answers must still answer its caller");
+    QVERIFY2(staller.waitForAnyStalled(), "the read meant to stall was never started, so this run tested nothing");
+    QVERIFY2(answer->success, qPrintable(answer->error));
+    QCOMPARE(answer->password, secret);
+
+    staller.release();
+    QTRY_VERIFY2(!staller.firstStalledAlive(), "a read that answered after its lookup was answered was never deleted");
     QCOMPARE(answer->count, 1);
 }
 
@@ -1826,6 +1854,49 @@ void CredentialManagerKeychainTest::testALateAnswerHandsOverThePassword()
     QVERIFY(answers->late->success);
     QCOMPARE(answers->late->password, secret);
     QCOMPARE(answers->first->count, 1);
+}
+
+// A keychain write leaves the file as it was, so the copy read there at the deadline can be an
+// older password than the one the stalled read is about to hand over
+void CredentialManagerKeychainTest::testALateAnswerFollowsTheFilesOlderCopy()
+{
+    if (!mStoreAvailable) {
+        QSKIP("credential store unavailable in this environment");
+    }
+    const QString service = expectedServiceName(mProfile, mKey);
+    const QString older = QStringLiteral("older-file-secret");
+    const QString newer = QStringLiteral("newer-keychain-secret");
+    QVERIFY(CredentialManager::storeCredential(mProfile, mKey, older));
+    QVERIFY(writeEntry(service, service, newer));
+
+    JobStaller staller;
+    staller.stallNth<QKeychain::ReadPasswordJob>(0);
+    CredentialManager manager;
+    manager.mJobStartHook = staller.hook();
+    manager.mOperationTimeoutMs = 300;
+    QObject lateContext;
+
+    const auto answers = startTimedRetrieval(manager, mProfile, mKey, &lateContext);
+    const bool answered = waitForAnswer(answers->first);
+    QKeychain::Job* read = staller.waitForStalled();
+    bool lateAnswered = false;
+    if (read) {
+        staller.forget(read);
+        read->start();
+        lateAnswered = waitForAnswer(answers->late);
+    }
+    CredentialManager::removeCredential(mProfile, mKey);
+    deleteEntry(service, service);
+
+    QVERIFY(answered);
+    QVERIFY2(read, "the read meant to stall was never started, so this run tested nothing");
+    QVERIFY2(answers->first->success, qPrintable(answers->first->error));
+    QCOMPARE(answers->first->password, older);
+    QVERIFY2(lateAnswered, "the keychain's newer password never followed the file's older one");
+    QVERIFY(answers->late->success);
+    QCOMPARE(answers->late->password, newer);
+    QCOMPARE(answers->first->count, 1);
+    QCOMPARE(answers->late->count, 1);
 }
 
 QTEST_GUILESS_MAIN(CredentialManagerKeychainTest)
