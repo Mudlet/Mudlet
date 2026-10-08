@@ -118,7 +118,9 @@ private:
 
     // Reports rather than asserts: a QVERIFY2 in a helper returns from the
     // helper only, which would let a failing row carry on into its later checks
-    static RunOutcome runChild(const QStringList& arguments, const QString& platformPlugin, const QString& settingsLanguage)
+    // An unreadable settings file is a directory in its place, as a test run as
+    // root reads a file whatever its permissions say
+    static RunOutcome runChild(const QStringList& arguments, const QString& platformPlugin, const QString& settingsLanguage, const bool settingsUnreadable = false)
     {
         RunOutcome outcome;
 
@@ -131,6 +133,10 @@ private:
         // legacy ~/.config/mudlet, see MudletApp::xdgConfigDir()
         if (!QDir().mkpath(qsl("%1/config/mudlet/profiles").arg(sandbox.path()))) {
             outcome.processFailure = qsl("could not make a config root under %1").arg(sandbox.path());
+            return outcome;
+        }
+        if (settingsUnreadable && !QDir().mkpath(qsl("%1/config/mudlet/Mudlet.ini").arg(sandbox.path()))) {
+            outcome.processFailure = qsl("could not put a directory where the settings file goes under %1").arg(sandbox.path());
             return outcome;
         }
         if (!settingsLanguage.isEmpty()) {
@@ -256,6 +262,51 @@ private slots:
         }
         for (const QString& unwanted : mustNotContain) {
             QVERIFY2(!outcome.standardOutput.contains(unwanted), qPrintable(qsl("mudlet %1 answered with \"%2\" in it; %3").arg(where, unwanted, diagnostics)));
+        }
+    }
+
+    // A language asked for and not given has to say so, on standard error, or
+    // English help reads as though none had been set
+    void languageProblemsAreReported_data()
+    {
+        QTest::addColumn<QStringList>("arguments");
+        // Empty leaves the sandbox without a settings file at all
+        QTest::addColumn<QString>("settingsLanguage");
+        QTest::addColumn<bool>("settingsUnreadable");
+        QTest::addColumn<QStringList>("errorMustContain");
+        QTest::addColumn<QStringList>("errorMustNotContain");
+
+        QTest::newRow("--help, settings ask for a language with no translation") << QStringList{qsl("--help")} << qsl("sw_KE") << false << QStringList{qsl("\"sw_KE\"")} << QStringList();
+        QTest::newRow("--help, settings ask for no locale at all") << QStringList{qsl("--help")} << qsl("xx-not-a-locale") << false << QStringList{qsl("\"xx-not-a-locale\"")} << QStringList();
+        QTest::newRow("--help, settings file unreadable") << QStringList{qsl("--help")} << QString() << true << QStringList{qsl("Mudlet.ini\" is not readable")} << QStringList();
+        QTest::newRow("--help, settings ask for German") << QStringList{qsl("--help")} << qsl("de_DE") << false << QStringList() << QStringList{qsl("WARNING")};
+    }
+
+    void languageProblemsAreReported()
+    {
+        QFETCH(QStringList, arguments);
+        QFETCH(QString, settingsLanguage);
+        QFETCH(bool, settingsUnreadable);
+        QFETCH(QStringList, errorMustContain);
+        QFETCH(QStringList, errorMustNotContain);
+
+        QVERIFY2(QFileInfo::exists(appBinary()), qPrintable(qsl("no application binary at %1").arg(appBinary())));
+        if (portableMarkerWouldWin()) {
+            QSKIP("a portable.txt would send the child at the real config instead of the sandbox");
+        }
+
+        const RunOutcome outcome = runChild(arguments, bogusPlatformPlugin(), settingsLanguage, settingsUnreadable);
+        const QString where = arguments.join(QChar::Space);
+        QVERIFY2(outcome.processFailure.isEmpty(), qPrintable(qsl("mudlet %1: %2").arg(where, outcome.processFailure)));
+
+        const QString diagnostics = qsl("%1, stdout:\n%2\nstderr:\n%3").arg(where, outcome.standardOutput, outcome.standardError);
+        QVERIFY2(outcome.exitStatus == QProcess::NormalExit && outcome.exitCode == 0, qPrintable(qsl("mudlet %1 did not exit cleanly; %2").arg(where, diagnostics)));
+
+        for (const QString& expected : errorMustContain) {
+            QVERIFY2(outcome.standardError.contains(expected), qPrintable(qsl("mudlet %1 said nothing on standard error that says \"%2\"; %3").arg(where, expected, diagnostics)));
+        }
+        for (const QString& unwanted : errorMustNotContain) {
+            QVERIFY2(!outcome.standardError.contains(unwanted), qPrintable(qsl("mudlet %1 said \"%2\" on standard error; %3").arg(where, unwanted, diagnostics)));
         }
     }
 };

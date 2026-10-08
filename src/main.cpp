@@ -221,16 +221,25 @@ private:
 #endif
 };
 
-QTranslator* loadTranslationsForCommandLine()
+QTranslator* loadTranslationsForCommandLine(const bool printAndExitRun)
 {
     // Not MudletApp::getQSettings(): it stays null until setupConfig(), which a --help or --version run never
     // reaches. Same file and format as setupConfig() opens - keep the spellings in step.
     QSettings settings(qsl("%1/Mudlet.ini").arg(MudletApp::getMudletPath(enums::mainPath)), QSettings::IniFormat);
     MudletApp::noteEarlySettingsStatus(settings);
+    // Other runs have getQSettings() report this, which a print-and-exit run never calls
+    if (printAndExitRun && settings.status() != QSettings::NoError) {
+        qWarning().nospace().noquote() << "loadTranslationsForCommandLine() WARNING - \"" << settings.fileName() << "\" is "
+                                       << (settings.status() == QSettings::FormatError ? "not valid INI" : "not readable") << ", so any interface language set in it is not used for this text.";
+    }
     auto interfaceLanguage = settings.value(QLatin1String("interfaceLanguage")).toString();
     auto userLocale = interfaceLanguage.isEmpty() ? QLocale::system() : QLocale(interfaceLanguage);
     if (userLocale == QLocale::c()) {
-        // nothing found
+        // Other runs have mudlet::readEarlySettings() report a code that names no locale
+        if (printAndExitRun && !interfaceLanguage.isEmpty()) {
+            qWarning().nospace().noquote() << "loadTranslationsForCommandLine() WARNING - the interface language \"" << interfaceLanguage
+                                           << "\" is not a recognised locale, so the command line text is in English.";
+        }
         return nullptr;
     }
     // We only need the Mudlet translations for the Command Line texts, no need
@@ -242,6 +251,11 @@ QTranslator* loadTranslationsForCommandLine()
     // it:
     const bool isOk = pMudletTranslator->load(userLocale, qsl("mudlet"), QString("_"), qsl(":/lang"), qsl(".qm"));
     if (!isOk) {
+        if (!interfaceLanguage.isEmpty()) {
+            qWarning().nospace().noquote() << "loadTranslationsForCommandLine() WARNING - no translation could be loaded for the interface language \"" << interfaceLanguage
+                                           << "\", so the command line text is in English.";
+        }
+        delete pMudletTranslator;
         return nullptr;
     }
     QCoreApplication::installTranslator(pMudletTranslator);
@@ -512,7 +526,7 @@ int main(int argc, char* argv[])
 #endif
     }
 
-    QPointer<QTranslator> commandLineTranslator(loadTranslationsForCommandLine());
+    QPointer<QTranslator> commandLineTranslator(loadTranslationsForCommandLine(printAndExitOption));
 
     // A print-and-exit run keeps the verdict above: a second reading may differ, and such a run has no
     // QApplication for the rest of main() to dereference. Other runs are reparsed from the application's
