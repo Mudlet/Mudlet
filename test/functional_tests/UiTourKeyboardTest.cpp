@@ -30,6 +30,7 @@
  */
 
 #include "MudletApp.h"
+#include "MudletInstanceCoordinator.h"
 #include "PortableModeTestHelper.h"
 #include "TUiTour.h"
 #include "mudlet.h"
@@ -71,6 +72,24 @@ private:
         return pFocused && mpTour->isAncestorOf(pFocused);
     }
 
+    // A closed tour lingers until its deferred delete, so only a visible one counts as open
+    static TUiTour* openTour()
+    {
+        for (auto* pTour : mudlet::self()->findChildren<TUiTour*>()) {
+            if (pTour->isVisible()) {
+                return pTour;
+            }
+        }
+        return nullptr;
+    }
+
+    // The cases opening the tour as the Help menu does start without the one this test's init() opened
+    void closeTheTourInitOpened()
+    {
+        delete mpTour.data();
+        QVERIFY(!openTour());
+    }
+
 private slots:
     void initTestCase()
     {
@@ -90,6 +109,9 @@ private slots:
         mudlet::start();
         mudlet::self()->setupConfig();
         QVERIFY(MudletApp::getMudletPath(enums::profilesPath).startsWith(mXdgDir.path()));
+        // Builds the menus, and the parts of the window the tour's later steps point at
+        mudlet::self()->takeOwnershipOfInstanceCoordinator(std::make_unique<MudletInstanceCoordinator>("MudletInstanceCoordinator"));
+        mudlet::self()->init();
 
         mudlet::self()->show();
         QVERIFY(QTest::qWaitForWindowExposed(mudlet::self()));
@@ -271,6 +293,45 @@ private slots:
         QTest::keyClick(mpBehindOverlay, Qt::Key_X);
 
         QVERIFY2(mpBehindOverlay->toPlainText() == qsl("x"), "the overlay went on eating keys after the tour closed");
+    }
+
+    void test_theHelpMenuActionOpensATourEveryTime()
+    {
+        closeTheTourInitOpened();
+
+        mudlet::self()->dactionUiTour->trigger();
+        QTRY_VERIFY2(openTour(), "Help > Take a UI tour opened no tour");
+        QPointer<TUiTour> firstTour = openTour();
+        QTest::keyClick(firstTour, Qt::Key_Escape);
+        QVERIFY(!firstTour->isVisible());
+        QTRY_VERIFY2(firstTour.isNull(), "the closed tour was never deleted");
+
+        mudlet::self()->dactionUiTour->trigger();
+        QTRY_VERIFY2(openTour(), "Help > Take a UI tour opened nothing the second time");
+        mpTour = openTour();
+    }
+
+    // Through the window rather than straight to a widget, so the keys take the
+    // route a real key press does and the tour's application-wide filter has to
+    // pick them out
+    void test_theRightArrowAloneTakesTheTourToItsEnd()
+    {
+        closeTheTourInitOpened();
+        mudlet::self()->dactionUiTour->trigger();
+        QTRY_VERIFY2(openTour(), "Help > Take a UI tour opened no tour");
+        mpTour = openTour();
+        QSignalSpy finished(mpTour.data(), &TUiTour::signal_tourFinished);
+
+        int presses = 0;
+        while (mpTour && mpTour->isVisible() && presses < 100) {
+            QTest::keyClick(mudlet::self()->windowHandle(), Qt::Key_Right);
+            ++presses;
+        }
+
+        QVERIFY2(presses > 1, "the tour closed on the first key press rather than stepping through");
+        QVERIFY2(!mpTour || !mpTour->isVisible(), "the right arrow key did not take the tour to its end");
+        QCOMPARE(finished.count(), 1);
+        QTRY_VERIFY2(!openTour(), "a tour was still open after the last step");
     }
 };
 
