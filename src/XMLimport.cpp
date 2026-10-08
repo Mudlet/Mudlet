@@ -1417,6 +1417,7 @@ int XMLimport::readTrigger(TTrigger* pParent)
     pT->mSoundTrigger = attributes().value(qsl("isSoundTrigger")) == YES;
     pT->mColorTrigger = attributes().value(qsl("isColorTrigger")) == YES;
 
+    bool scriptFailedToCompile = false;
     // Is this a "TriggerGroup" or a "Trigger"
     const QString what = name().toString();
     while (!atEnd()) {
@@ -1434,6 +1435,7 @@ int XMLimport::readTrigger(TTrigger* pParent)
                     qDebug().nospace() << "XMLimport::readTrigger(...): ERROR: can not compile trigger's lua code for: " << pT->getName();
                     mItemsWithErrors.append(qsl("%1: %2").arg(pT->getName(), compileErrorAsPlainText(pT->getError())));
                     mItemsWithErrorNames.append(pT->getName());
+                    scriptFailedToCompile = true;
                 }
             } else if (name() == qsl("packageName")) {
                 pT->mPackageName = readElementText();
@@ -1488,10 +1490,18 @@ int XMLimport::readTrigger(TTrigger* pParent)
         }
     }
 
+    // A trigger with no patterns at all is a legitimate group, not a broken one
+    const bool hasPatterns = !pT->mPatterns.isEmpty();
     if (!pT->setRegexCodeList(pT->mPatterns, pT->mPatternKinds)) {
         qDebug().nospace() << "XMLimport::readTrigger(...): ERROR: can not "
                               "initialize pattern list for trigger: "
                            << pT->getName();
+        if (hasPatterns) {
+            mItemsWithErrors.append(qsl("%1: %2").arg(pT->getName(), compileErrorAsPlainText(pT->getError())));
+            if (!scriptFailedToCompile) {
+                mItemsWithErrorNames.append(pT->getName());
+            }
+        }
     }
 
     return pT->getID();
@@ -1609,6 +1619,7 @@ int XMLimport::readAlias(TAlias* pParent)
         pT->mModuleMember = true;
     }
 
+    bool scriptFailedToCompile = false;
     const QString what = name().toString();
     while (!atEnd()) {
         readNext();
@@ -1627,11 +1638,18 @@ int XMLimport::readAlias(TAlias* pParent)
                     qDebug().nospace() << "XMLimport::readAlias(...): ERROR: can not compile alias's lua code for: " << pT->getName();
                     mItemsWithErrors.append(qsl("%1: %2").arg(pT->getName(), compileErrorAsPlainText(pT->getError())));
                     mItemsWithErrorNames.append(pT->getName());
+                    scriptFailedToCompile = true;
                 }
             } else if (name() == qsl("command")) {
                 pT->mCommand = readElementText();
             } else if (name() == qsl("regex")) {
                 pT->setRegexCode(readElementText());
+                if (!pT->mOK_init) {
+                    mItemsWithErrors.append(qsl("%1: %2").arg(pT->getName(), compileErrorAsPlainText(pT->getError())));
+                    if (!scriptFailedToCompile) {
+                        mItemsWithErrorNames.append(pT->getName());
+                    }
+                }
             } else if (name() == qsl("AliasGroup") || name() == qsl("Alias")) {
                 readAlias(pT);
             } else {

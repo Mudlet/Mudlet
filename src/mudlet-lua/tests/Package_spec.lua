@@ -3285,6 +3285,78 @@ describe("Tests installing a package whose timer, alias, button and key do not c
   end)
 end)
 
+describe("Tests installing a package whose trigger pattern does not compile", function()
+  local name = "mudlet-spec-broken-pattern"
+  local xml = getMudletHomeDir() .. "/" .. name .. ".xml"
+
+  local function trigger(itemName, isFolder, patterns)
+    local strings, kinds = {}, {}
+    for _, pattern in ipairs(patterns) do
+      strings[#strings + 1] = '<string>' .. pattern .. '</string>'
+      kinds[#kinds + 1] = '<integer>1</integer>'
+    end
+    return table.concat({
+      '<' .. (isFolder and 'TriggerGroup' or 'Trigger') .. ' isActive="yes" isFolder="' .. (isFolder and 'yes' or 'no') .. '" isTempTrigger="no" isMultiline="no"',
+      '         isPerlSlashGOption="no" isColorizerTrigger="no" isFilterTrigger="no" isSoundTrigger="no" isColorTrigger="no">',
+      '<name>' .. itemName .. '</name><script></script>',
+      '<triggerType>0</triggerType><conditonLineDelta>0</conditonLineDelta><mStayOpen>0</mStayOpen>',
+      '<mCommand></mCommand><packageName></packageName>',
+      '<regexCodeList>' .. table.concat(strings) .. '</regexCodeList>',
+      '<regexCodePropertyList>' .. table.concat(kinds) .. '</regexCodePropertyList>',
+      '</' .. (isFolder and 'TriggerGroup' or 'Trigger') .. '>',
+    }, "\n")
+  end
+
+  it("installs it and names the trigger in the reason installPackage() hands back", function()
+    defer(function()
+      removeFixturePackage(name)
+      os.remove(xml)
+    end)
+    -- a trigger kept only for its script has no patterns either, and is just as legitimate
+    writePackageXml(xml, '<TriggerPackage>\n' .. trigger(name .. " group", true, {}) .. '\n' .. trigger(name .. " placeholder", false, {}) .. '\n'
+                         .. trigger(name .. " trigger", false, {"*(unclosed"}) .. '\n</TriggerPackage>')
+
+    local ok, reason = installUntilConfirmed(installPackage, xml, function() return packageInstalled(name) end, "the package " .. name)
+
+    assert.is_true(ok)
+    assert.equals(1, exists(name .. " trigger", "trigger"), "the broken trigger was not kept for fixing in the editor")
+    assert.is_true(contains(reason, name .. " trigger: "), "the broken pattern was not reported: " .. tostring(reason))
+    assert.is_true(contains(reason, "failed to compile"), tostring(reason))
+    assert.is_false(contains(reason, name .. " group"), "a group with no patterns was reported as broken: " .. tostring(reason))
+    assert.is_false(contains(reason, name .. " placeholder"), "a trigger with no patterns was reported as broken: " .. tostring(reason))
+  end)
+end)
+
+describe("Tests installing a package whose alias pattern does not compile", function()
+  it("installs it and names the alias in the reason installPackage() hands back", function()
+    local name = "mudlet-spec-broken-alias-pattern"
+    local xml = getMudletHomeDir() .. "/" .. name .. ".xml"
+    defer(function()
+      removeFixturePackage(name)
+      os.remove(xml)
+    end)
+    writePackageXml(xml, table.concat({
+      '<AliasPackage>',
+      '<Alias isActive="yes" isFolder="no">',
+      '<name>' .. name .. ' alias</name><packageName></packageName><script></script>',
+      '<command></command><regex>^(unclosed</regex>',
+      '</Alias>',
+      '<Alias isActive="yes" isFolder="no">',
+      '<name>' .. name .. ' working alias</name><packageName></packageName><script></script>',
+      '<command></command><regex>^' .. name .. '$</regex>',
+      '</Alias>',
+      '</AliasPackage>',
+    }, "\n"))
+
+    local ok, reason = installUntilConfirmed(installPackage, xml, function() return packageInstalled(name) end, "the package " .. name)
+
+    assert.is_true(ok)
+    assert.equals(1, exists(name .. " alias", "alias"), "the broken alias was not kept for fixing in the editor")
+    assert.is_true(contains(reason, name .. " alias: "), "the broken pattern was not reported: " .. tostring(reason))
+    assert.is_false(contains(reason, name .. " working alias"), "an alias whose pattern compiles was reported as broken: " .. tostring(reason))
+  end)
+end)
+
 -- A save file numbers the sixteen basic colours its own way and the reader maps
 -- them back to ANSI. Anything past sixteen has no old number, so it is taken as
 -- the 256-colour index it already is - which is what lets a colour trigger on an
