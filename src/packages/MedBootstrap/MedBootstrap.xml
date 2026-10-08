@@ -22,16 +22,26 @@ local function installServerPackage()
   end
 end
 
+-- mpkg.install() gives up without retrying while the package listing is still
+-- downloading. Not mpkg.ready(): that starts another download each time it is false
+local function installWhenMpkgReady(triesLeft)
+  if mpkg and mpkg.packages and mpkg.packages.packages then
+    installServerPackage()
+  elseif triesLeft &gt; 0 then
+    tempTimer(5, function() installWhenMpkgReady(triesLeft - 1) end)
+  else
+    cecho("\n&lt;orange&gt;MedBootstrap: the package listing did not arrive, so MedUI is not installed yet. It will be tried again the next time this profile is opened.&lt;reset&gt;\n")
+  end
+end
+
 -- install mpkg if not already
 local mpkgVersion = getPackageInfo("mpkg", "version")
 
 if mpkgVersion == "" then
   installPackage("https://github.com/Mudlet/mudlet-package-repository/raw/refs/heads/main/packages/mpkg.mpackage")
-  -- wait a few seconds until mpkg is installed then check MUD package
-  tempTimer(5, function() installServerPackage() end)
-else
-  installServerPackage()
-end</script>
+end
+
+installWhenMpkgReady(12)</script>
 			<eventHandlerList />
 		</Script>
 	</ScriptPackage>
