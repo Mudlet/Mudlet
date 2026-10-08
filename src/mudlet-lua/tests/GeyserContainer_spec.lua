@@ -2,13 +2,19 @@
 -- differs between machines, so expectations are computed from
 -- getMainWindowSize() at assert time rather than hardcoded. Geyser rounds each
 -- edge to a whole pixel before handing the geometry to moveWindow() and
--- resizeWindow(), so a position is math.floor(x + 0.5).
+-- resizeWindow(), so a position is math.floor(x + 0.5) and a size is the
+-- difference between its two rounded edges.
 --
 -- Containers themselves have no Mudlet widget, so geometry is read back from a
 -- child label - the widget Geyser actually moves and resizes.
 local function geometry(name)
   local x, y, width, height = getWindowGeometry(name)
   return {x = x, y = y, width = width, height = height}
+end
+
+local function pixelSpan(start, length)
+  local first = math.floor(start + 0.5)
+  return first, math.floor(start + length + 0.5) - first
 end
 
 describe("Tests functionality of Geyser.Container", function()
@@ -129,20 +135,18 @@ describe("Tests functionality of Geyser.Container", function()
     it("resolves percentages against the main window", function()
       local mainWidth, mainHeight = getMainWindowSize()
       track(Geyser.Label:new({name = "gcsPercent", x = "10%", y = "20%", width = "50%", height = "25%"}))
-      assert.are.same({
-        x = math.floor(0.1 * mainWidth),
-        y = math.floor(0.2 * mainHeight),
-        width = math.floor(0.5 * mainWidth),
-        height = math.floor(0.25 * mainHeight),
-      }, geometry("gcsPercent"))
+      local x, width = pixelSpan(0.1 * mainWidth, 0.5 * mainWidth)
+      local y, height = pixelSpan(0.2 * mainHeight, 0.25 * mainHeight)
+      assert.are.same({x = x, y = y, width = width, height = height}, geometry("gcsPercent"))
     end)
 
     it("adds a pixel offset to a percentage constraint", function()
       local mainWidth = getMainWindowSize()
       track(Geyser.Label:new({name = "gcsOffset", x = "50%+10", y = 0, width = "10%-5", height = 20}))
       local actual = geometry("gcsOffset")
-      assert.are.equal(math.floor(0.5 * mainWidth + 10), actual.x)
-      assert.are.equal(math.floor(0.1 * mainWidth - 5), actual.width)
+      local x, width = pixelSpan(0.5 * mainWidth + 10, 0.1 * mainWidth - 5)
+      assert.are.equal(x, actual.x)
+      assert.are.equal(width, actual.width)
     end)
 
     it("measures negative pixel constraints from the far edge", function()
