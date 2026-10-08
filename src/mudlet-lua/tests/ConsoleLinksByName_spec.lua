@@ -316,6 +316,25 @@ describe("Tests that the link and text functions find their console by name", fu
           end
           assertFreeListWhole()
         end)
+
+        it("refuses to link no selection or no text, keeping no function", function()
+          echo(window, "nothing selected\n")
+          moveCursor(window, 1, 0)
+          for _, entry in ipairs({
+            {"no text is selected - cannot create link", function(fn) return setLink(window, fn, "hint") end},
+            {"no text is selected - cannot create popup", function(fn) return setPopup(window, {fn}, {"hint"}) end},
+            {"text is empty - cannot create link", function(fn) return insertLink(window, "", fn, "hint") end},
+            {"text is empty - cannot create popup", function(fn) return insertPopup(window, "", {fn}, {"hint"}) end},
+          }) do
+            local refusal, call = entry[1], entry[2]
+            assert.are.same({nil, refusal}, {call(function() end)})
+            assert.is_false(keptAfter(call))
+            assert.are.equal(0, registryGrowthOver(function()
+              call(function() end)
+            end))
+          end
+          assertFreeListWhole()
+        end)
       end)
     end
   end)
@@ -354,6 +373,8 @@ describe("Tests that the link and text functions find their console by name", fu
       assert.are.same({true}, {echoLink(marker .. "-link", "cmd", "hint")})
       assert.are.same({true}, {echoPopup(marker .. "-popup", {"cmd"}, {"hint"})})
       assert.is_true(recentLinesHave(marker .. "-link" .. marker .. "-popup"))
+      moveCursorEnd("main")
+      assert.is_true(selectString(marker .. "-link", 1) > -1)
       assert.are.same({true}, {setLink("cmd", "hint")})
       assert.are.same({true}, {setPopup({"cmd"}, {"hint"})})
     end)
