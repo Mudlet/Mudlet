@@ -402,6 +402,8 @@ public:
     QString assembleLog(int fromLine, int toLine);
     inline int skipSpacesAtBeginOfLine(const int row, const int column);
     void addLink(bool, const QString& text, QStringList& command, QStringList& hint, const TChar& format, const QVector<int>& luaReference = QVector<int>());
+    // line is the first the link can land on, by default the last line
+    int addLinkToStore(const QStringList& links, const QStringList& hints, const QVector<int>& luaReference = QVector<int>(), const QString& expireName = QString(), int line = -1);
     QString bufferToHtml(const bool showTimeStamp = false, const int row = -1, const int endColumn = -1, const int startColumn = 0, int spacePadding = 0);
     int size() { return static_cast<int>(buffer.size()); }
     // Whether word wrapping split this line off the end of the one before it
@@ -527,13 +529,24 @@ public:
     bool mEchoingText = false;
 
 private:
+    // Reads which removed links are waiting for a sweep
+    friend class TrackedLinkTrimTest;
+    int mLinesUntilLinkSweep = 0;
+    QSet<int> mLinkIdsRemovedSinceSweep;
+    qint64 mLinesRemovedTotal = 0;
+    QHash<int, qint64> mLinkIdIssuedAtLine;
+    bool linkHoldsState(const int id) const;
+    QSet<int> collectLiveLinkIdsResettingIssueLines();
+    void dropStateOfRemovedLinks();
+    void noteRemovedLinkId(int id, qint64 lastLine);
+    void noteRemovedLinks(const std::vector<TChar>& line, qint64 lineNumber, int from = 0, int to = -1);
     THyperlinkVisibilityManager* hyperlinkVisibilityManagerOrNull();
     TChar currentFormat() const;
     inline QList<WrapInfo> getWrapInfo(const QString& lineText, bool isNewline, const int maxWidth, const int indent, const int hangingIndent);
     void shrinkBuffer();
     void syncPreTriggerPassLine(int y);
     void materialisePreTriggerPassLine(int y);
-    int remapLinkId(const TLinkStore& sourceLinkStore, int sourceLinkId, QHash<int, int>& remappedLinkIds);
+    int remapLinkId(const TLinkStore& sourceLinkStore, int sourceLinkId, QHash<int, int>& remappedLinkIds, int line = -1);
     int calculateWrapPosition(int lineNumber, int begin, int end);
     void handleNewLine();
     void translateToPlainTextInner(std::string& incoming, bool isFromServer);
