@@ -789,17 +789,27 @@ function db:create(db_name, sheets, force)
   local previous = db.__schema[db_name] or {}
   db.__schema[db_name] = schema
 
+  local conn = db.__conn[db_name]
   local migrated = {}
   for sheet_name, _ in pairs(sheets) do
+    -- a savepoint rather than a rollback of everything: after db:_begin() the caller's own writes are
+    -- pending on this connection too, and a refused migration must not take them with it
+    conn:execute("SAVEPOINT db_create_migrate")
     local ok, err = pcall(db._migrate, db, db_name, sheet_name, force)
     if not ok then
-      -- rolled back, or the next write commits what the refused migration left half done; the refused
+      -- undone, or the next write commits what the refused migration left half done; the refused
       -- sheet and the ones not reached yet keep their old entries, as db:fetch raises over any column
       -- the schema has stopped describing
-      db.__conn[db_name]:rollback()
+      if conn:execute("ROLLBACK TO db_create_migrate") then
+        conn:execute("RELEASE db_create_migrate")
+      else
+        -- _migrate commits before rebuilding a sheet, which releases the savepoint, so all that is
+        -- pending now is the migration's own
+        conn:rollback()
+      end
       for name in pairs(sheets) do
         if not migrated[name] then
-          schema[name] = previous[name] or with_columns_on_disk(db.__conn[db_name], name, schema[name])
+          schema[name] = previous[name] or with_columns_on_disk(conn, name, schema[name])
         end
       end
       for name, entry in pairs(previous) do

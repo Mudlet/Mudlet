@@ -4545,6 +4545,19 @@ describe("Tests db:create refusing a migration", function()
     assert.is_true(db:add(mydb.people, {name = "Nanny"}))
     assert.are.equal(2, #db:fetch(mydb.people))
   end)
+
+  it("keeps the writes a transaction has pending when it refuses a migration", function()
+    local mydb = db:create(dbName, {people = {name = "", city = ""}})
+    db:add(mydb.people, {name = "Bob", city = "Lancre"})
+    assert.is_true(mydb:_begin())
+    db:add(mydb.people, {name = "Nanny", city = "Lancre"})
+
+    assert.is_false(pcall(db.create, db, dbName, {people = {name = ""}}))
+
+    assert.is_true(mydb:_commit())
+    mydb:_end()
+    assert.are.equal(2, #db:fetch(mydb.people))
+  end)
 end)
 
 describe("luasql's __tostring", function()
