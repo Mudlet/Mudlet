@@ -2306,6 +2306,7 @@ void TDetachedWindow::switchToProfile(const QString& profileName)
             if (mpTabBar->currentIndex() != i) {
                 mpTabBar->setCurrentIndex(i);
             }
+            mpTabBar->clearActivity(i);
             break;
         }
     }
@@ -2347,6 +2348,14 @@ void TDetachedWindow::switchToProfile(const QString& profileName)
     raise();
     activateWindow();
     show();
+}
+
+void TDetachedWindow::markTabActivity(const QString& profileName, const bool isLowerPriorityChange)
+{
+    if (profileName == mCurrentProfileName) {
+        return;
+    }
+    mpTabBar->markActivity(profileName, isLowerPriorityChange);
 }
 
 void TDetachedWindow::slot_tabChanged(int index)

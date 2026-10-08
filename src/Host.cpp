@@ -1110,7 +1110,7 @@ bool Host::resetProfile_phase1()
     // Phase 2 lua_close()s the very state the pump is running Lua code on, so
     // refuse rather than reset into a use-after-free.
     if (mLuaInterpreter.pumpingEvents()) {
-        qWarning() << "Host::resetProfile_phase1() called while the test-mode event pump is running, ignoring";
+        qWarning() << "Host::resetProfile_phase1() called while a nested event loop is running, ignoring";
         return false;
     }
 
@@ -1128,6 +1128,18 @@ bool Host::resetProfile_phase1()
 
 void Host::resetProfile_phase2()
 {
+    // A Lua API that spins a nested event loop delivers this while the script
+    // that asked for the reset is still running on the state closed below.
+    // A close that has come in meanwhile makes the reset moot.
+    if (mLuaInterpreter.luaOnStack()) {
+        QTimer::singleShot(50ms, this, [this]() {
+            if (!mIsClosingDown) {
+                resetProfile_phase2();
+            }
+        });
+        return;
+    }
+
     // The Lua state goes with the reset, taking every id a package was holding
     // with it, so the commands those ids named have to go too - otherwise a
     // package that places its command from a script adds another on every
@@ -1650,6 +1662,16 @@ std::pair<QString, QFont::Weight> Host::parseFontNameAndStyle(const QString& fon
     return {fontName, QFont::Normal};
 }
 
+// setFamilies() rather than QFont(name), which reads the name as a comma separated,
+// quoted list: "No Such Font," or "'" then names no family at all and gets the
+// default font, which is not the stand-in platformResolvesFontFamily() compares against
+static QString familyDrawnFor(const QString& name)
+{
+    QFont font;
+    font.setFamilies({name});
+    return QFontInfo(font).family();
+}
+
 // Whether the platform makes a font of the name itself: the font database lists only installed families,
 // but fontconfig resolves "Helvetica", "Times" or "monospace" and Windows has a substitution table. Qt
 // answers a meaningless name with one fixed stand-in, so landing elsewhere means recognised; an alias
@@ -1662,7 +1684,7 @@ static bool platformResolvesFontFamily(const QString& requested)
 
     // A UUID so that no machine can have a font by that name and make every unknown family look resolved
     static const QString unrecognisedName = QUuid::createUuid().toString();
-    static const QString unrecognisedFamily = QFontInfo(QFont(unrecognisedName)).family();
+    static const QString unrecognisedFamily = familyDrawnFor(unrecognisedName);
 
     static const bool nameResolutionIsReadable = []() {
         if (unrecognisedFamily.compare(unrecognisedName, Qt::CaseInsensitive) == 0) {
@@ -1679,7 +1701,7 @@ static bool platformResolvesFontFamily(const QString& requested)
         return false;
     }
 
-    return QFontInfo(QFont(requested)).family() != unrecognisedFamily;
+    return familyDrawnFor(requested) != unrecognisedFamily;
 }
 
 // The font database's spelling, not the typed one: getFont() reports it and the Geyser wrappers remember it
@@ -1949,9 +1971,19 @@ QPair<int, QString> Host::createStopWatch(const QString& name)
             }
         }
     }
+    // Ids go to the lowest free one, so while they run 1..n without a gap that is n + 1
     int newWatchId = 1;
-    while (mStopWatchMap.count(newWatchId) > 0) {
-        ++newWatchId;
+    if (!mStopWatchMap.empty() && mStopWatchMap.cbegin()->first == 1 && mStopWatchMap.crbegin()->first == static_cast<int>(mStopWatchMap.size())) {
+        newWatchId = static_cast<int>(mStopWatchMap.size()) + 1;
+    } else {
+        for (const auto& [watchId, pWatch] : mStopWatchMap) {
+            if (watchId > newWatchId) {
+                break;
+            }
+            if (watchId == newWatchId) {
+                ++newWatchId;
+            }
+        }
     }
 
     auto pStopWatch = std::make_unique<stopWatch>();
@@ -2382,13 +2414,13 @@ bool Host::copyToClipboard(const QString& name)
     if (!pModel) {
         return false;
     }
-    *mpClipboard = pModel->buffer.copy(pModel->P_begin, pModel->P_end);
+    pModel->buffer.copyInto(pModel->P_begin, pModel->P_end, *mpClipboard);
     return true;
 }
 
 void Host::cutMainConsoleToClipboard()
 {
-    *mpClipboard = mpMainConsoleModel->buffer.cut(mpMainConsoleModel->P_begin, mpMainConsoleModel->P_end);
+    mpMainConsoleModel->buffer.cutInto(mpMainConsoleModel->P_begin, mpMainConsoleModel->P_end, *mpClipboard);
     markSelectionDirty(*mpMainConsoleModel);
 }
 
@@ -2431,12 +2463,14 @@ bool Host::appendClipboard(const QString& name)
 void Host::setMainConsoleBufferSize(int linesLimit, int batchDeleteSize, bool useMaximum)
 {
     TBuffer& buffer = mpMainConsoleModel->buffer;
+    mUseMaxConsoleBufferSize = useMaximum;
     if (useMaximum) {
-        linesLimit = buffer.getMaxBufferSize();
+        // Left as the size to return to once the maximum is no longer used
+        buffer.setBufferSize(buffer.getMaxBufferSize(), batchDeleteSize);
+        return;
     }
     buffer.setBufferSize(linesLimit, batchDeleteSize);
     mConsoleBufferSize = linesLimit;
-    mUseMaxConsoleBufferSize = useMaximum;
 }
 
 // Hot: the trigger engine reads the model for every character of a colour
@@ -2508,6 +2542,9 @@ void Host::printOnDisplay(std::string& data, const bool isFromServer)
     // The view only times the pass, flashes the taskbar and marks the profile's
     // tab; the text is processed whether or not there is one.
     const bool alertWanted = mpConsole && mpConsole->startIncomingText() && isFromServer;
+    // cTelnet::slot_timerPosting() posts a bare "\r" when nothing followed the
+    // game's last newline. Read before translateToPlainText() parses data away.
+    const bool carriesText = !(data.size() == 1 && data.front() == '\r');
     TConsoleModel& model = *mpMainConsoleModel;
     TBuffer& buffer = model.buffer;
 
@@ -2541,7 +2578,7 @@ void Host::printOnDisplay(std::string& data, const bool isFromServer)
     }
 
     if (mpConsole) {
-        mpConsole->finishIncomingText();
+        mpConsole->finishIncomingText(carriesText);
     }
 }
 
@@ -2710,9 +2747,10 @@ void Host::slot_purgeTemps()
 // event loop pass - see mDeferredSaveTimer.
 void Host::slot_saveProfileAfterPackageChange()
 {
-    if (currentlySavingProfile()) {
-        // saveProfile() would refuse outright, and this is the only save the
-        // package change has coming: ask again once the one in flight is out of
+    if (currentlySavingProfile() || mPackageInstallsInProgress > 0) {
+        // saveProfile() would refuse outright during a save, and one started
+        // under an install would hold up that install's scripts. This is the only
+        // save the package change has coming: ask again once either is out of
         // the way rather than leaving the change unwritten until something else
         // happens to save. The profile close stops this timer, so the retries
         // cannot outlive the profile.
@@ -2789,27 +2827,30 @@ void Host::raiseEvent(const TEvent& pE)
         mScriptUnit.doCleanup();
     });
 
-    if (mEventHandlerMap.contains(pE.mArgumentList.at(0))) {
-        QList<TScript*> scriptList = mEventHandlerMap.value(pE.mArgumentList.at(0));
-        for (auto& script : scriptList) {
+    // Each list is copied before it runs, as a handler can register or kill
+    // handlers and so change the map under it
+    const QString& name = pE.mArgumentList.at(0);
+    if (const auto it = mEventHandlerMap.constFind(name); it != mEventHandlerMap.cend()) {
+        const QList<TScript*> scriptList = it.value();
+        for (auto* script : scriptList) {
             script->callEventHandler(pE);
         }
     }
-    if (mEventHandlerMap.contains(star)) {
-        QList<TScript*> scriptList = mEventHandlerMap.value(star);
-        for (auto& script : scriptList) {
+    if (const auto it = mEventHandlerMap.constFind(star); it != mEventHandlerMap.cend()) {
+        const QList<TScript*> scriptList = it.value();
+        for (auto* script : scriptList) {
             script->callEventHandler(pE);
         }
     }
 
-    if (mAnonymousEventHandlerFunctions.contains(pE.mArgumentList.at(0))) {
-        const QStringList functionsList = mAnonymousEventHandlerFunctions.value(pE.mArgumentList.at(0));
+    if (const auto it = mAnonymousEventHandlerFunctions.constFind(name); it != mAnonymousEventHandlerFunctions.cend()) {
+        const QStringList functionsList = it.value();
         for (const QString& function : functionsList) {
             mLuaInterpreter.callEventHandler(function, pE);
         }
     }
-    if (mAnonymousEventHandlerFunctions.contains(star)) {
-        const QStringList functionsList = mAnonymousEventHandlerFunctions.value(star);
+    if (const auto it = mAnonymousEventHandlerFunctions.constFind(star); it != mAnonymousEventHandlerFunctions.cend()) {
+        const QStringList functionsList = it.value();
         for (const QString& function : functionsList) {
             mLuaInterpreter.callEventHandler(function, pE);
         }
@@ -2929,6 +2970,13 @@ std::pair<bool, QString> Host::installPackage(const QString& fileName, enums::Pa
         return {true, QString()};
     }
 
+    // The unpacking dialog pumps the event loop, where the save an earlier install
+    // owes would otherwise start and leave this one's scripts loading under it
+    ++mPackageInstallsInProgress;
+    const auto installsInProgressGuard = qScopeGuard([this] {
+        --mPackageInstallsInProgress;
+    });
+
     // Every failure below returns a reason, and most callers drop it: the package
     // manager logs it silently, the repository install names only which packages failed,
     // and default-package and module-sync installs ignore it. Say it once here instead. Script
@@ -2950,7 +2998,8 @@ std::pair<bool, QString> Host::installPackage(const QString& fileName, enums::Pa
     QString actualFileName = fileName;
     std::unique_ptr<QTemporaryFile> tempFile;
 
-    if ((fileName.startsWith(QStringLiteral(":/")) || fileName.startsWith(QStringLiteral("qrc:/"))) && packageUnpacksAFolder(fileName)) {
+    const bool bundledPackage = fileName.startsWith(QStringLiteral(":/")) || fileName.startsWith(QStringLiteral("qrc:/"));
+    if (bundledPackage && packageUnpacksAFolder(fileName)) {
         tempFile = std::make_unique<QTemporaryFile>();
         if (!tempFile->open()) {
             return fail(qsl("failed to create a temporary file for the resource package: %1").arg(tempFile->errorString()));
@@ -3170,8 +3219,9 @@ std::pair<bool, QString> Host::installPackage(const QString& fileName, enums::Pa
         // Skip the unpacking dialog for modules created from UI, and for
         // script-initiated installs (passed via quiet) to avoid stealing
         // window-manager focus from the user's other applications - see
-        // issue #9170.
-        if (thing != enums::PackageModuleType::ModuleFromUI && !quiet) {
+        // issue #9170. Bundled packages skip it too: they unzip in less time
+        // than the dialog takes to build and paint.
+        if (thing != enums::PackageModuleType::ModuleFromUI && !quiet && !bundledPackage) {
             const QString message =
                     (thing != enums::PackageModuleType::Package) ? tr("Unpacking module:\n\"%1\"\nplease wait...").arg(packageName) : tr("Unpacking package:\n\"%1\"\nplease wait...").arg(packageName);
             emit signal_showUnpackingProgress(message, tr("Unpacking"));
@@ -3433,9 +3483,6 @@ std::pair<bool, QString> Host::installPackage(const QString& fileName, enums::Pa
         }
     }
     emit signal_editorCleanResetRequested();
-    if (thing == enums::PackageModuleType::Package) {
-        saveProfile();
-    }
     // reorder permanent and temporary triggers: perm first, temp second
     mTriggerUnit.reorderTriggersAfterPackageImport();
 
@@ -3527,6 +3574,10 @@ std::pair<bool, QString> Host::installPackage(const QString& fileName, enums::Pa
     if (thing != enums::PackageModuleType::Package) {
         // Use a timer to save profile after module installation completes
         mDeferredSaveTimer.start(100ms);
+    } else if (!mIsProfileLoadingSequence) {
+        // Not saved on the spot: a save in flight puts the next install off until
+        // it finishes, so a batch of installs would queue behind one save each
+        mDeferredSaveTimer.start(0ms);
     }
 
     return {true, itemErrors};
@@ -3863,15 +3914,15 @@ void Host::runUninstallsDeferredByAnInstall(const QList<DeferredUninstall>& defe
         return packageNames;
     };
 
-    // uninstallPackage() refuses during a save, and a package install saves on its way out, so wait it out.
-    // A module install's save starts 100ms after this was queued, so this is a no-op for it. Not while
+    // uninstallPackage() refuses during a save, so wait out any that is running. An install's own save
+    // starts on a later event loop pass than this was queued for, so it is not one of them. Not while
     // closing: the wait pumps the event loop, and the close has its own save to finish.
     if (currentlySavingProfile() && !isClosingDown()) {
         waitForProfileSave();
     }
 
-    // Closing, already or via the pump above. The script was told these removals were happening and the
-    // install saved the packages, so name what is left behind rather than let it silently return next session.
+    // Closing, already or via the pump above. The script was told these removals were happening, so name
+    // what is left behind rather than let it silently return next session.
     if (isClosingDown()) {
         qWarning() << "Host::runUninstallsDeferredByAnInstall() WARNING - the profile is closing down, so" << names(deferred)
                    << "were left installed although their own install scripts asked for them to be removed.";
@@ -3993,10 +4044,24 @@ QString Host::getPackageConfig(const QString& luaConfig, bool isModule, QString*
     int error = luaL_loadstring(L, strings.join("\n").toUtf8().constData());
 
     if (!error) {
+        // This runs on the main thread, so a manifest that never ends would hang Mudlet for good. A real
+        // one is a few assignments, far inside this budget.
+        lua_sethook(
+                L,
+                [](lua_State* L, lua_Debug*) {
+                    // From then on every instruction raises, so a pcall() in the manifest cannot swallow it
+                    lua_sethook(L, lua_gethook(L), LUA_MASKCOUNT, 1);
+                    luaL_error(L, "it ran for too long and was stopped");
+                },
+                LUA_MASKCOUNT,
+                10'000'000);
         error = lua_pcall(L, 0, 0, 0);
     }
     if (!error) {
-        lua_getglobal(L, "mpackage");
+        // Raw access throughout: this runs outside lua_pcall, so a metamethod or a non-string key
+        // that config.lua left behind would raise an unprotected error and abort Mudlet
+        lua_pushstring(L, "mpackage");
+        lua_rawget(L, LUA_GLOBALSINDEX);
         QString theNameItAsksFor;
         if (lua_isstring(L, -1)) {
             theNameItAsksFor = QString(lua_tostring(L, -1));
@@ -4013,13 +4078,15 @@ QString Host::getPackageConfig(const QString& luaConfig, bool isModule, QString*
         }
         if (!packageName.isEmpty()) {
             //get rid of lua version
-            lua_getglobal(L, "_G");
+            lua_pushvalue(L, LUA_GLOBALSINDEX);
+            lua_pushstring(L, "_VERSION");
             lua_pushnil(L);
-            lua_setfield(L, -2, "_VERSION");
+            lua_rawset(L, -3);
             QMap<QString, QString> packageInfo;
             lua_pushnil(L);
             while (lua_next(L, -2) != 0) {
-                if (lua_isstring(L, -1) && lua_isstring(L, -2)) {
+                // lua_tostring() would turn a number key into a string in place, which lua_next() rejects
+                if (lua_isstring(L, -1) && lua_type(L, -2) == LUA_TSTRING) {
                     packageInfo[lua_tostring(L, -2)] = lua_tostring(L, -1);
                 }
                 lua_pop(L, 1);
@@ -4035,8 +4102,9 @@ QString Host::getPackageConfig(const QString& luaConfig, bool isModule, QString*
         return packageName;
     }
 
-    // error
-    std::string e = lua_tostring(L, -1);
+    // error() can raise any value or none, and for anything but a string or a number this is null
+    const char* errorText = lua_tostring(L, -1);
+    std::string e = errorText ? errorText : "";
     if (e.empty()) {
         e = "no error message available from Lua";
     }
@@ -4252,7 +4320,7 @@ void Host::setWideAmbiguousEAsianGlyphs(const Qt::CheckState state)
         // Set things automatically
         mAutoAmbigousWidthGlyphsSetting = true;
 
-        if (encoding == "GBK" || encoding == "GB18030" || encoding == "BIG5" || encoding == "BIG5-HKSCS" || encoding == "EUC-KR") {
+        if (encoding == "GBK" || encoding == "GB18030" || encoding == "BIG5" || encoding == "BIG5-HKSCS" || encoding == "EUC-KR" || encoding == "SHIFT_JIS" || encoding == "EUC-JP") {
             // Need to use wide width for ambiguous characters
             if (!mWideAmbigousWidthGlyphs) {
                 // But the last setting was narrow - so we need to change
@@ -4756,6 +4824,7 @@ void Host::setSpellDic(const QString& newDict)
     }
     mSpellDic = newDict;
     mSpellChecker.setSystemDictionary(newDict);
+    recheckCommandLineSpelling();
 }
 
 void Host::setEnableSpellCheck(const bool enable)
@@ -4768,6 +4837,15 @@ void Host::setEnableSpellCheck(const bool enable)
     // wanted. Not during a load: it is warmed once at the end, after the profile's own settings are read.
     if (enable && !mIsProfileLoadingSequence) {
         emit signal_spellCheckEnabled();
+    }
+    recheckCommandLineSpelling();
+}
+
+// Words already in the input line keep the marks they were given until checked again
+void Host::recheckCommandLineSpelling()
+{
+    if (mpConsole && !mIsProfileLoadingSequence) {
+        mpConsole->updateCommandLineSpellCheck(mEnableSpellCheck);
     }
 }
 
@@ -5207,6 +5285,7 @@ bool Host::replaceWindowText(const QString& name, const QString& text)
         return false;
     }
     pModel->replace(text);
+    markSelectionDirty(*pModel);
     return true;
 }
 
@@ -5533,11 +5612,7 @@ std::pair<bool, QString> Host::setWindow(const QString& windowname, const QStrin
         return {false, qsl("element '%1' not found").arg(name)};
     }
 
-    if (mpConsole->reparentWindow(windowname, name, x1, y1, show)) {
-        return {true, QString()};
-    }
-
-    return {false, qsl("element '%1' not found").arg(name)};
+    return mpConsole->reparentWindow(windowname, name, x1, y1, show);
 }
 
 std::pair<bool, QString> Host::openMapWidget(const QString& area, int x, int y, int width, int height)

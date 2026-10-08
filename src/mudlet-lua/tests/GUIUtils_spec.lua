@@ -104,6 +104,8 @@ describe("Tests the GUI utilities as far as possible without mudlet", function()
       local sequences = {
         {"\27[31m\27[1m", "<128,0,0><255,0,0>"},
         {"\27[1m\27[31m", "<255,0,0>"},
+        {"\27[1;31;22;32m", "<0,128,0>"},
+        {"\27[1m\27[22m\27[32m", "<0,128,0>"},
       }
       for _, seq in ipairs(sequences) do
           local actualResult = ansi2decho(seq[1])
@@ -131,6 +133,9 @@ describe("Tests the GUI utilities as far as possible without mudlet", function()
         { "\27[38;2m", "<0,0,0>"},
         { "\27[38;2;120m", "<120,0,0>"},
         { "\27[38;2;120;134m", "<120,134,0>"},
+        { "\27[38;2;m", "<0,0,0>"},
+        { "\27[38;2;10;20;m", "<10,20,0>"},
+        { "\27[38:2::10::30m", "<10,0,30>"},
         { "\27[38;5;4m", "<0,0,128>"},
         { "\27[48;5;3m", "<:128,128,0>"},
         { "\27[38;5;4;48;5;3m", "<0,0,128:128,128,0>"},
@@ -143,6 +148,33 @@ describe("Tests the GUI utilities as far as possible without mudlet", function()
         { "\27[38;5;240m", "<88,88,88>"},
         { "\27[48;5;245m", "<:138,138,138>"},
         { "\27[38;5;240;48;5;245m", "<88,88,88:138,138,138>"},
+      }
+      for _, seq in ipairs(sequences) do
+        local actualResult = ansi2decho(seq[1])
+        assert.are.same(seq[2], actualResult)
+      end
+    end)
+
+    it("Should skip an xterm256 colour cut short before its index", function()
+      local sequences = {
+        {"\27[38;5mfoo", "foo"},
+        {"\27[38;5;mfoo", "foo"},
+        {"\27[48;5mfoo", "foo"},
+        {"\27[31;38;5mX", "<128,0,0>X"},
+        {"\27[41;48;5mX", "<:128,0,0>X"},
+        {"\27[38;5;;31mX", "<128,0,0>X"},
+        {"\27[31m\27[38;5m\27[1mX", "<128,0,0><255,0,0>X"},
+      }
+      for _, seq in ipairs(sequences) do
+        local actualResult = ansi2decho(seq[1])
+        assert.are.same(seq[2], actualResult)
+      end
+    end)
+
+    it("Should keep an xterm256 or rgb foreground when bold follows it", function()
+      local sequences = {
+        {"\27[38;5;196;1mX", "<255,0,0>X"},
+        {"\27[38;2;10;20;30;1mX", "<10,20,30>X"},
       }
       for _, seq in ipairs(sequences) do
         local actualResult = ansi2decho(seq[1])
@@ -432,6 +464,54 @@ describe("Tests the GUI utilities as far as possible without mudlet", function()
       assert.equals(expected, actual)
       assert.spy(_G.getCurrentLine).was.called()
       _G.getCurrentLine = oldgcl
+    end)
+
+    describe("on a long line of many colours and multibyte characters", function()
+      local windowName = "guiUtilsCopyDechoLongLine"
+      local segments = {}
+
+      setup(function()
+        createBuffer(windowName)
+        setWindowWrap(windowName, 100000)
+        for i = 1, 200 do
+          segments[i] = { fg = string.format("%d,%d,%d", i, 100, 200), bg = string.format("0,0,%d", i), text = string.format("é×中%d ", i) }
+        end
+      end)
+
+      teardown(function()
+        deleteMiniConsole(windowName)
+      end)
+
+      before_each(function()
+        clearWindow(windowName)
+        local parts = {}
+        for i, segment in ipairs(segments) do
+          parts[i] = string.format("<%s:%s>%s", segment.fg, segment.bg, segment.text)
+        end
+        decho(windowName, table.concat(parts) .. "\n")
+        moveCursor(windowName, 0, 0)
+      end)
+
+      it("Should copy every character with its own colours", function()
+        local expected = {}
+        for i, segment in ipairs(segments) do
+          expected[i] = string.format("%s<%s:%s>%s", i > 1 and "<r>" or "", segment.fg, segment.bg, segment.text)
+        end
+        assert.equals(table.concat(expected) .. "<r>", copy2decho(windowName))
+      end)
+
+      it("Should copy every character as HTML, closing each colour's span and escaping as it goes", function()
+        local expected = {}
+        for i, segment in ipairs(segments) do
+          expected[i] = string.format("%s<span style='color: rgb(%s);background: rgb(%s);'>%s", i > 1 and "</span>" or "", segment.fg, segment.bg, (segment.text:gsub("×", "&times;")))
+        end
+        assert.equals(table.concat(expected) .. "</span>", copy2html(windowName))
+      end)
+
+      it("Should copy a substring from the far end of the line", function()
+        assert.equals("<198,100,200:0,0,198>中198 <r><199,100,200:0,0,199>é×<r>", copy2decho(windowName, "中198 é×"))
+        assert.equals("<span style='color: rgb(200,100,200);background: rgb(0,0,200);'>中200</span>", copy2html(windowName, "中200"))
+      end)
     end)
   end)
 
@@ -938,6 +1018,96 @@ describe("Tests the GUI utilities as far as possible without mudlet", function()
       local actual = getLabelFormat(labelName)
       assert.are.same(expected, actual)
     end)
+
+    it("Should read stylesheets with odd spacing, case, comments and quoting the way it always has", function()
+      -- each entry: stylesheet, then what differs from the default format
+      local cases = {
+        { "color: red", {} }, -- no semicolon, so nothing is read
+        { "color: red;", { foreground = "red" } },
+        { "  color :  rgb(1, 2, 3)  ;  ", { foreground = "rgb(1, 2, 3)" } },
+        { "COLOR: red; Font-Weight: bold;", {} },
+        { "color: blue !important; font-weight: bold !important;", { foreground = "blue !important", bold = true } },
+        { "/* comment */ color: green; font-style: italic;", { italic = true } },
+        { "color: green; /* trailing; comment */", { foreground = "green" } },
+        { "font-family: \"Foo: Bar\", 'Baz;Qux'; color: #00ff00;", { foreground = "#00ff00" } },
+        { "background-color: red; color: white;", { foreground = "white" } },
+        { "background-color: red;", {} },
+        { "color: red; color: blue;", { foreground = "blue" } },
+        { "QLabel { color: red; }", {} },
+        { "QLabel{ font: bold italic 12pt; color: #ff0000; text-decoration: underline line-through }", { foreground = "#ff0000", underline = true, strikeout = true } },
+        { "font-weight: 700;", {} },
+        { "font: normal; font-weight: bold;", { bold = true } },
+        { "font-weight: bold; font: normal;", { bold = true } },
+        { "font: italic bold 10pt \"Sans\"; text-decoration: overline;", { bold = true, italic = true, overline = true } },
+        { "color:\r\n  rgba(10, 20, 30, 40);\nfont-style:\titalic;", { foreground = "rgba(10, 20, 30, 40)", italic = true } },
+        { "color:;font-weight:;", {} },
+        { ";;;color: red;;;", { foreground = "red" } },
+        { "color: red: blue;", { foreground = "red: blue" } },
+        { "border-image: url(a:b.png); color: yellow;", { foreground = "yellow" } },
+        { "text-decoration: UNDERLINE; font-weight: BOLD;", {} },
+      }
+      for _, case in ipairs(cases) do
+        local want = table.deepcopy(expected)
+        for k, v in pairs(case[2]) do
+          want[k] = v
+        end
+        setLabelStyleSheet(labelName, case[1])
+        assert.are.same(want, getLabelFormat(labelName), case[1])
+      end
+    end)
+
+    it("Should return a fresh table each time, so changing one leaves the next call alone", function()
+      local first = getLabelFormat(labelName)
+      first.foreground[1] = 0
+      first.bold = true
+      assert.are.same(expected, getLabelFormat(labelName))
+
+      setLabelStyleSheet(labelName, "color: red; font-weight: bold;")
+      expected.foreground = "red"
+      expected.bold = true
+      local styled = getLabelFormat(labelName)
+      styled.foreground = { 1, 2, 3 }
+      styled.bold = false
+      styled.underline = nil
+      assert.are.same(expected, getLabelFormat(labelName))
+    end)
+
+    it("Should follow the stylesheet as it changes, and tell labels apart", function()
+      local otherLabel = "gldfTestLabel2"
+      createLabel(otherLabel, 0, 0, 0, 0, 0)
+      finally(function() deleteLabel(otherLabel) end)
+      hideWindow(otherLabel)
+      setLabelStyleSheet(labelName, "color: red;")
+      setLabelStyleSheet(otherLabel, "font-weight: bold;")
+      assert.are.equal("red", getLabelFormat(labelName).foreground)
+      assert.is_false(getLabelFormat(labelName).bold)
+      assert.are.same({ 192, 192, 192 }, getLabelFormat(otherLabel).foreground)
+      assert.is_true(getLabelFormat(otherLabel).bold)
+
+      setLabelStyleSheet(labelName, "color: blue;")
+      assert.are.equal("blue", getLabelFormat(labelName).foreground)
+      setLabelStyleSheet(labelName, "")
+      assert.are.same(expected, getLabelFormat(labelName))
+      setLabelStyleSheet(labelName, "color: red;")
+      assert.are.equal("red", getLabelFormat(labelName).foreground)
+    end)
+
+    it("Should error for a label that does not exist", function()
+      assert.has_error(function() getLabelFormat("gldfNoSuchLabel") end)
+    end)
+
+    it("Should start an echo to the label from its stylesheet, and pick up a new one", function()
+      local function span(fg)
+        return string.format('<span style="color: %s;background-color: rgba(0, 0, 0, 0); font-weight: bold; font-style: normal; text-decoration: underline;">', fg)
+      end
+      setLabelStyleSheet(labelName, "color: rgb(1, 2, 3); font-weight: bold; text-decoration: underline;")
+      cecho(labelName, "<red>HP\n<reset>ok")
+      assert.are.equal(span("rgb(1, 2, 3)") .. span("rgb(255, 0, 0)") .. "HP<br>" .. span("rgb(1, 2, 3)") .. "ok", getLabelText(labelName))
+
+      setLabelStyleSheet(labelName, "color: blue; font-weight: bold; text-decoration: underline;")
+      decho(labelName, "<0,255,0>HP<r>ok")
+      assert.are.equal(span("blue") .. span("rgb(0, 255, 0)") .. "HP" .. span("blue") .. "ok", getLabelText(labelName))
+    end)
   end)
 
   describe("Tests the error handling of setLabelStyleSheet", function()
@@ -1125,6 +1295,321 @@ describe("Tests the GUI utilities as far as possible without mudlet", function()
         local actual = hecho2html(hechoString)
         assert.equal(expected, actual)
       end)
+    end)
+
+    describe("Tests the html conversions with a resetFormat", function()
+      local function span(fg, bg, weight, style, decoration)
+        return string.format('<span style="color: %s;background-color: %s; font-weight: %s; font-style: %s; text-decoration: %s;">', fg, bg, weight, style, decoration)
+      end
+
+      it("starts from the resetFormat and goes back to it on a reset, in all three styles", function()
+        local function labelFormat()
+          return { foreground = "#ffffff", background = "rgba(0, 0, 0, 0)", bold = true, italic = false, overline = false, reverse = false, strikeout = false, underline = true }
+        end
+        local function L(fg)
+          return span(fg, "rgba(0, 0, 0, 0)", "bold", "normal", "underline")
+        end
+        local expected = L("#ffffff") .. L("rgb(255, 0, 0)") .. "HP " .. L("rgb(0, 255, 0)") .. "1234" .. L("#ffffff") .. "/200"
+        assert.are.equal(expected, cecho2html("<red>HP <green>1234<reset>/200", labelFormat()))
+        assert.are.equal(expected, decho2html("<255,0,0>HP <0,255,0>1234<r>/200", labelFormat()))
+        assert.are.equal(expected, hecho2html("#ff0000HP #00ff001234#r/200", labelFormat()))
+      end)
+
+      it("restores every attribute on each of several resets in a row", function()
+        local reset = { foreground = { 10, 20, 30 }, background = { 40, 50, 60 }, bold = false, italic = true, overline = true, reverse = false, strikeout = true, underline = false }
+        local function T(weight, decoration)
+          return span("rgb(10, 20, 30)", "rgba(40, 50, 60, 255)", weight, "italic", decoration)
+        end
+        local base = T("normal", "overline line-through")
+        local expected = base .. T("bold", "overline line-through") .. T("bold", "overline underline line-through") .. "x" .. base .. "y" .. base .. base
+        assert.are.equal(expected, cecho2html("<b><u>x<reset>y</u></b>", reset))
+
+        local blue = span("rgb(0, 0, 255)", "rgba(40, 50, 60, 255)", "normal", "italic", "overline line-through")
+        expected = base .. blue .. "a" .. base .. "b" .. base .. "c" .. base .. base .. "d"
+        assert.are.equal(expected, cecho2html("<blue>a<reset>b<r>c<reset><reset>d", reset))
+      end)
+
+      it("leaves the resetFormat it was given untouched", function()
+        -- reversing puts the background table in the foreground slot, where an alpha gets filled in
+        local reset = { foreground = { 10, 20, 30 }, background = { 40, 50, 60 }, bold = false, italic = false, overline = false, reverse = true, strikeout = false, underline = false }
+        local before = table.deepcopy(reset)
+        local R = span("rgb(40, 50, 60)", "rgba(10, 20, 30, 255)", "normal", "normal", "none")
+        local swapped = span("rgb(0, 0, 255)", "rgba(255, 0, 0, 255)", "normal", "normal", "none")
+        local expected = R .. swapped .. "a" .. R .. "b" .. R .. "c" .. R .. R .. "d"
+        assert.are.equal(expected, cecho2html("<red:blue>a<reset>b<r>c<reset><reset>d", reset))
+        assert.are.same(before, reset)
+      end)
+
+      it("keeps every piece of a long string, in order", function()
+        local reset = { foreground = "#ffffff", background = "rgba(0, 0, 0, 0)", bold = false, italic = false, overline = false, reverse = false, strikeout = false, underline = false }
+        local red = span("rgb(255, 0, 0)", "rgba(0, 0, 0, 0)", "normal", "normal", "none")
+        local green = span("rgb(0, 255, 0)", "rgba(0, 0, 0, 0)", "normal", "normal", "none")
+        local input, expected = {}, { span("#ffffff", "rgba(0, 0, 0, 0)", "normal", "normal", "none") }
+        for i = 1, 300 do
+          input[#input + 1] = (i % 2 == 0 and "<red>" or "<green>") .. "w" .. i .. " "
+          expected[#expected + 1] = (i % 2 == 0 and red or green) .. "w" .. i .. " "
+        end
+        assert.are.equal(table.concat(expected), cecho2html(table.concat(input), reset))
+      end)
+    end)
+  end)
+
+  describe("Tests the exact output of the colour string converters", function()
+    -- every converter, fed odd input as well as good: unknown names, malformed and
+    -- escaped tags, alpha components, out of range values and multibyte text
+    local raises = {}
+    local cechoCases = {
+      { "", string = "", ansi = "", decho = "", hecho = "" },
+      { "plain text", string = "plain text", ansi = "plain text", decho = "plain text", hecho = "plain text" },
+      { "héllo wörld ✓ 日本語", string = "héllo wörld ✓ 日本語", ansi = "héllo wörld ✓ 日本語", decho = "héllo wörld ✓ 日本語", hecho = "héllo wörld ✓ 日本語" },
+      { "<red>red<blue>blue<reset>plain", string = "redblueplain", ansi = "\27[38:5:1mred\27[38:5:4mblue\27[0mplain", decho = "<255,0,0>red<0,0,255>blue<r>plain", hecho = "#ff0000red#0000ffblue#rplain" },
+      { "<notacolour>text<r>", string = "<notacolour>text", ansi = "text\27[0m", decho = "<notacolour>text<r>", hecho = "<notacolour>text#r" },
+      { "<red", string = "<red", ansi = "<red", decho = "<red", hecho = "<red" },
+      { "red>", string = "red>", ansi = "red>", decho = "red>", hecho = "red>" },
+      { "<>", string = "<>", ansi = "<>", decho = "<>", hecho = "<>" },
+      { "<<red>>", string = "<>", ansi = "<\27[38:5:1m>", decho = "<<255,0,0>>", hecho = "<#ff0000>" },
+      { "</red>x", string = "</red>x", ansi = "x", decho = "</red>x", hecho = "</red>x" },
+      { "<red:blue>a<:blue>b<red:>c<red,blue>d", string = "abcd", ansi = "\27[38:5:1m\27[48:5:4ma\27[48:5:4mb\27[38:5:1mcd", decho = "<255,0,0:0,0,255>a<:0,0,255>b<255,0,0>c<255,0,0:0,0,255>d", hecho = "#ff0000,0000ffa#,0000ffb#ff0000c#ff0000,0000ffd" },
+      { "<reset><r><reset>x<r>", string = "x", ansi = "\27[0m\27[0m\27[0mx\27[0m", decho = "<r><r><r>x<r>", hecho = "#r#r#rx#r" },
+      { "<b>b</b><i>i</i><u>u</u><s>s</s><o>o</o>", string = "biuso", ansi = "\27[1mb\27[22m\27[3mi\27[23m\27[4mu\27[24m\27[9ms\27[29m\27[53mo\27[55m", decho = "<b>b</b><i>i</i><u>u</u><s>s</s><o>o</o>", hecho = "#bb#/b#ii#/i#uu#/u#ss#/s#oo#/o" },
+      { "<ansi_light_red:ansi_010>x<DodgerBlue>y<ansi_124>z<124>w<ansi_255:12>v", string = "xyz<124>wv", ansi = "\27[38:2::255:0:0m\27[48:2::0:255:0mx\27[38:2::30:144:255my\27[38:5:124mz\27[38:5:124mw\27[38:5:255m\27[48:5:12mv", decho = "<255,0,0:0,255,0>x<30,144,255>y<175,0,0>z<124>w<238,238,238>v", hecho = "#ff0000,00ff00x#1e90ffy#af0000z<124>w#eeeeeev" },
+      { "<light_red>a<lightRed>b<light_white:black>c<ansiBlack>d", string = "<light_red>a<lightRed>bcd", ansi = "\27[38:5:9ma\27[38:5:9mb\27[38:5:15m\27[48:5:0mc\27[38:2::0:0:0md", decho = "<light_red>a<lightRed>b<:0,0,0>c<0,0,0>d", hecho = "<light_red>a<lightRed>b#,000000c#000000d" },
+      { "<RED>upper<Red>mixed", string = "<RED>upper<Red>mixed", ansi = "uppermixed", decho = "<RED>upper<Red>mixed", hecho = "<RED>upper<Red>mixed" },
+      { "<red:notacolour>x<notacolour:red>y", string = "xy", ansi = "\27[38:5:1mx\27[48:5:1my", decho = "<255,0,0>x<:255,0,0>y", hecho = "#ff0000x#,ff0000y" },
+      { "<b><red>bold red</b> <i>it", string = "bold red it", ansi = "\27[1m\27[38:5:1mbold red\27[22m \27[3mit", decho = "<b><255,0,0>bold red</b> <i>it", hecho = "#b#ff0000bold red#/b #iit" },
+      { "\\<red>escaped", string = "\\escaped", ansi = "\\\27[38:5:1mescaped", decho = "\\<255,0,0>escaped", hecho = "\\#ff0000escaped" },
+      { "<red>日本<blue>語", string = "日本語", ansi = "\27[38:5:1m日本\27[38:5:4m語", decho = "<255,0,0>日本<0,0,255>語", hecho = "#ff0000日本#0000ff語" },
+      { "<0>zero<15>fifteen<256>over", string = "<0>zero<15>fifteen<256>over", ansi = "\27[38:5:0mzero\27[38:5:15mfifteenover", decho = "<0>zero<15>fifteen<256>over", hecho = "<0>zero<15>fifteen<256>over" },
+    }
+    local dechoCases = {
+      { "", string = "", ansi = "", cecho = "", hecho = "" },
+      { "plain", string = "plain", ansi = "plain", cecho = "plain", hecho = "plain" },
+      { "<255,0,0>red<0,255,0>green<r>plain", string = "redgreenplain", ansi = "\27[38:2::255:0:0mred\27[38:2::0:255:0mgreen\27[0mplain", cecho = "<ansi_light_red>red<ansi_010>green<reset>plain", hecho = "#ff0000red#00ff00green#rplain" },
+      { "<255,0,0:0,0,255>a<:0,0,255>b<0,0,255:>c", string = "abc", ansi = "\27[38:2::255:0:0m\27[48:2::0:0:255ma\27[48:2::0:0:255mb\27[38:2::0:0:255m\27[48:2:::0:0mc", cecho = "<ansi_light_red:ansi_012>a<:ansi_012>b<ansi_012>c", hecho = "#ff0000,0000ffa#,0000ffb#0000ffc" },
+      { "<1,2,3>near<127,0,0>dark<254,1,1>almost", string = "neardarkalmost", ansi = "\27[38:2::1:2:3mnear\27[38:2::127:0:0mdark\27[38:2::254:1:1malmost", cecho = "<ansi_black>near<ansi_001>dark<ansi_light_red>almost", hecho = "#010203near#7f0000dark#fe0101almost" },
+      { "<0,0,0:10,20,30,40>alpha", string = "alpha", ansi = "\27[38:2::0:0:0m\27[48:2::10:20:30malpha", cecho = "<ansi_black:ansi_233>alpha", hecho = "#000000,0a141ealpha" },
+      { "<10,20,30,40>fgalpha", string = "<10,20,30,40>fgalpha", ansi = "\27[38:2::10:20:30mfgalpha", cecho = "<10,20,30,40>fgalpha", hecho = "<10,20,30,40>fgalpha" },
+      { "<1,2>bad<1,2,3,4,5>bad2<>empty", string = "<1,2>bad<1,2,3,4,5>bad2<>empty", ansi = "\27[38:2::1:2:0mbad\27[38:2::1:2:3mbad2<>empty", cecho = "<1,2>bad<1,2,3,4,5>bad2<>empty", hecho = "<1,2>bad<1,2,3,4,5>bad2<>empty" },
+      { "<r><b>b</b><i>i</i><u>u</u><s>s</s><o>o</o><r>", string = "biuso", ansi = "\27[0m\27[1mb\27[22m\27[3mi\27[23m\27[4mu\27[24m\27[9ms\27[29m\27[53mo\27[55m\27[0m", cecho = "<reset><b>b</b><i>i</i><u>u</u><s>s</s><o>o</o><reset>", hecho = "#r#bb#/b#ii#/i#uu#/u#ss#/s#oo#/o#r" },
+      { "<255,0,0>a<255,0,0>b<255,0,0>c", string = "abc", ansi = "\27[38:2::255:0:0ma\27[38:2::255:0:0mb\27[38:2::255:0:0mc", cecho = "<ansi_light_red>a<ansi_light_red>b<ansi_light_red>c", hecho = "#ff0000a#ff0000b#ff0000c" },
+      { "<0,0,0>black<255,255,255>white<128,128,128>grey", string = "blackwhitegrey", ansi = "\27[38:2::0:0:0mblack\27[38:2::255:255:255mwhite\27[38:2::128:128:128mgrey", cecho = "<ansi_black>black<ansi_231>white<ansi_008>grey", hecho = "#000000black#ffffffwhite#808080grey" },
+      { "x<12,34,56>é✓<78,90,123>日本", string = "xé✓日本", ansi = "x\27[38:2::12:34:56mé✓\27[38:2::78:90:123m日本", cecho = "x<ansi_235>é✓<ansi_060>日本", hecho = "x#0c2238é✓#4e5a7b日本" },
+      { "<007,010,099>leading", string = "leading", ansi = "\27[38:2::007:010:099mleading", cecho = "<ansi_017>leading", hecho = "#070a63leading" },
+      { "<255,0,0:>trail", string = "trail", ansi = "\27[38:2::255:0:0m\27[48:2:::0:0mtrail", cecho = "<ansi_light_red>trail", hecho = "#ff0000trail" },
+      { "</b>x</i>y", string = "xy", ansi = "\27[22mx\27[23my", cecho = "</b>x</i>y", hecho = "#/bx#/iy" },
+      { "</r>x", string = "x", ansi = raises, cecho = "x", hecho = "x" },
+      { "<300,0,0>over", string = "over", ansi = "\27[38:2::300:0:0mover", cecho = raises, hecho = "#12c0000over" },
+      { "<0,0,0:300,0,0>bgover", string = "bgover", ansi = "\27[38:2::0:0:0m\27[48:2::300:0:0mbgover", cecho = raises, hecho = "#000000,12c0000bgover" },
+      { "a<0,0,0:1,2,3,4>b<9,9,9,999>c", string = "ab<9,9,9,999>c", ansi = "a\27[38:2::0:0:0m\27[48:2::1:2:3mb\27[38:2::9:9:9mc", cecho = "a<ansi_black:ansi_black>b<9,9,9,999>c", hecho = "a#000000,010203b<9,9,9,999>c" },
+    }
+    local hechoCases = {
+      { "", string = "", ansi = "", cecho = "", decho = "" },
+      { "plain", string = "plain", ansi = "plain", cecho = "plain", decho = "plain" },
+      { "#ff0000red#00ff00green#rplain", string = "redgreenplain", ansi = "\27[38:2::255:0:0mred\27[38:2::0:255:0mgreen\27[0mplain", cecho = "<ansi_light_red>red<ansi_010>green<reset>plain", decho = "<255,0,0>red<0,255,0>green<r>plain" },
+      { "|cff0000pipe|r", string = "pipe", ansi = "\27[38:2::255:0:0mpipe\27[0m", cecho = "<ansi_light_red>pipe<reset>", decho = "<255,0,0>pipe<r>" },
+      { "#ff0000,0000ffa#,0000ffb", string = "", ansi = "\27[38:2::255:0:0m\27[48:2::0:0:255m\27[48:2::0:0:255m", cecho = "<ansi_light_red:ansi_012><:ansi_012>", decho = "<255,0,0:0,0,255><:0,0,255>" },
+      { "#ff0000,800000ffalpha", string = "alpha", ansi = "\27[38:2::255:0:0m\27[48:2::128:0:0malpha", cecho = "<ansi_light_red:ansi_012>alpha", decho = "<255,0,0:0,0,255>alpha" },
+      { "#FF00AAupper", string = "upper", ansi = "\27[38:2::255:0:170mupper", cecho = "<ansi_199>upper", decho = "<255,0,170>upper" },
+      { "#zzzzzzbad#12345five", string = "#zzzzzzbadive", ansi = "#zzzzzzbad\27[38:2::18:52:95mive", cecho = "#zzzzzzbad<midnight_blue>ive", decho = "#zzzzzzbad<18,52,95>ive" },
+      { "\\#ff0000escaped", string = "#ff0000escaped", cecho = "#ff0000escaped", decho = "#ff0000escaped" },
+      { "#bb#/b#ii#/i#uu#/u#ss#/s#oo#/o", string = "biuso", ansi = "\27[1mb\27[22m\27[3mi\27[23m\27[4mu\27[24m\27[9ms\27[29m\27[53mo\27[55m", cecho = "<b>b</b><i>i</i><u>u</u><s>s</s><o>o</o>", decho = "<b>b</b><i>i</i><u>u</u><s>s</s><o>o</o>" },
+      { "|bb|/b|ii|/i", string = "bi", ansi = "\27[1mb\27[22m\27[3mi\27[23m", cecho = "<b>b</b><i>i</i>", decho = "<b>b</b><i>i</i>" },
+      { "#010203near#7f0000dark", string = "neardark", ansi = "\27[38:2::1:2:3mnear\27[38:2::127:0:0mdark", cecho = "<ansi_black>near<ansi_001>dark", decho = "<1,2,3>near<127,0,0>dark" },
+      { "x#123456é✓#abcdef日本", string = "xé✓日本", ansi = "x\27[38:2::18:52:86mé✓\27[38:2::171:205:239m日本", cecho = "x<midnight_blue>é✓<LightBlue>日本", decho = "x<18,52,86>é✓<171,205,239>日本" },
+      { "#ff0000#ff0000#ff0000x", string = "x", ansi = "\27[38:2::255:0:0m\27[38:2::255:0:0m\27[38:2::255:0:0mx", cecho = "<ansi_light_red><ansi_light_red><ansi_light_red>x", decho = "<255,0,0><255,0,0><255,0,0>x" },
+      { "#,ff00ff80bgalpha", string = "bgalpha", ansi = "\27[48:2::255:0:255mbgalpha", cecho = "<:spring_green>bgalpha", decho = "<:0,255,128>bgalpha" },
+      { "|c,0000ffbg", string = "g", ansi = "\27[48:2::0:0:255mg", cecho = "<:ansi_012>g", decho = "<:0,0,255>g" },
+      { "#/rx", string = "x", ansi = raises, cecho = "x", decho = "x" },
+    }
+    local ansiCases = {
+      { "", string = "", decho = "" },
+      { "plain", string = "plain", decho = "plain" },
+      { "\27[31mred\27[0m", string = "red", decho = "<128,0,0>red<r>" },
+      { "\27[1;31mbright\27[22mnormal", string = "brightnormal", decho = "<255,0,0>bright<128,0,0>normal", lastColour = 1 },
+      { "\27[38;5;179;48;5;230mx\27[0;37;40m", string = "x", decho = "<215,175,95:255,255,215>x<r><192,192,192:0,0,0>", lastColour = 7 },
+      { "\27[38;2;10;20;30mtc\27[48;2;1;2;3mbg", string = "tcbg", decho = "<10,20,30>tc<:1,2,3>bg" },
+      { "\27[38:2::10:20:30mcolon\27[48:5:12mbg", string = "colonbg", decho = "<10,20,30>colon<:0,0,255>bg" },
+      { "\27[91mlight\27[101mlightbg\27[m", string = "lightlightbg", decho = "<255,0,0>light<:255,0,0>lightbg<r>" },
+      { "\27[3mi\27[23m\27[4mu\27[24m\27[9ms\27[29m\27[53mo\27[55m", string = "iuso", decho = "<i>i</i><u>u</u><s>s</s><o>o</o>" },
+      { "\27[1mbold-only\27[32mgreen", string = "bold-onlygreen", decho = "bold-only<0,255,0>green", lastColour = 2 },
+      { "\27[00mzero\27[;31msemi", string = "zerosemi", decho = "<r>zero<r><128,0,0>semi", lastColour = 1 },
+      { "日本\27[34m語", string = "日本語", decho = "日本<0,0,128>語", lastColour = 4 },
+      { "\27[38;5mtrunc", string = "trunc", decho = "trunc" },
+      { "\27[38;2;1mtrunc2", string = "trunc2", decho = "<1,0,0>trunc2" },
+      { "\27[1;30mdark\27[0;30mblack", string = "darkblack", decho = "<128,128,128>dark<r><0,0,0>black", lastColour = 0 },
+    }
+
+    -- a case leaves out what it does not pin, such as output that comes from a known bug
+    local function check(fname, input, expected)
+      if expected == nil then
+        return
+      end
+      local results = { pcall(_G[fname], input) }
+      local label = string.format("%s(%q)", fname, input)
+      if expected == raises then
+        assert.is_false(results[1], label .. " should raise an error")
+      else
+        assert.is_true(results[1], label .. " raised " .. tostring(results[2]))
+        assert.are.equal(expected, results[2], label)
+      end
+      return results[3]
+    end
+
+    it("converts cecho strings", function()
+      for _, case in ipairs(cechoCases) do
+        check("cecho2string", case[1], case.string)
+        check("cecho2ansi", case[1], case.ansi)
+        check("cecho2decho", case[1], case.decho)
+        check("cecho2hecho", case[1], case.hecho)
+      end
+    end)
+
+    it("converts decho strings", function()
+      for _, case in ipairs(dechoCases) do
+        check("decho2string", case[1], case.string)
+        check("decho2ansi", case[1], case.ansi)
+        check("decho2cecho", case[1], case.cecho)
+        check("decho2hecho", case[1], case.hecho)
+      end
+    end)
+
+    it("converts hecho strings", function()
+      for _, case in ipairs(hechoCases) do
+        check("hecho2string", case[1], case.string)
+        check("hecho2ansi", case[1], case.ansi)
+        check("hecho2cecho", case[1], case.cecho)
+        check("hecho2decho", case[1], case.decho)
+      end
+    end)
+
+    it("converts ANSI strings", function()
+      for _, case in ipairs(ansiCases) do
+        check("ansi2string", case[1], case.string)
+        local lastColour = check("ansi2decho", case[1], case.decho)
+        if case.lastColour ~= nil then
+          assert.are.equal(case.lastColour, lastColour, string.format("last colour of ansi2decho(%q)", case[1]))
+        end
+      end
+    end)
+
+    it("raises the same error for a reset tag ANSI has no code for", function()
+      local ok, err = pcall(decho2ansi, "</r>x")
+      assert.is_false(ok)
+      assert.truthy(err:find("attempt to concatenate", 1, true), err)
+      ok, err = pcall(hecho2ansi, "#/rx")
+      assert.is_false(ok)
+      assert.truthy(err:find("attempt to concatenate", 1, true), err)
+    end)
+  end)
+
+  describe("Tests that closestColor follows changes to color_table", function()
+    -- what closestColor has always done: the first colour pairs() reaches among
+    -- the nearest ones
+    local function scanColorTable(r, g, b)
+      local least, found = math.huge, ""
+      for name, color in pairs(color_table) do
+        local distance = math.sqrt((color[1] - r) ^ 2 + (color[2] - g) ^ 2 + (color[3] - b) ^ 2)
+        if distance < least then
+          least, found = distance, name
+        end
+      end
+      return found
+    end
+
+    local levels = { 0, 1, 37, 95, 127, 128, 175, 215, 254, 255 }
+    local function assertMatchesScan(when)
+      local line, expected = {}, {}
+      for _, r in ipairs(levels) do
+        for _, g in ipairs(levels) do
+          for _, b in ipairs(levels) do
+            local answer = scanColorTable(r, g, b)
+            assert.are.equal(answer, closestColor(r, g, b), string.format("closestColor(%d, %d, %d) %s", r, g, b, when))
+            line[#line + 1] = string.format("<%d,%d,%d>x", r, g, b)
+            expected[#expected + 1] = "<" .. answer .. ">x"
+          end
+        end
+      end
+      assert.are.equal(table.concat(expected), decho2cecho(table.concat(line)), "decho2cecho " .. when)
+    end
+
+    -- each test changes a copy, so the real color_table keeps its pairs() order. The
+    -- copy goes through _G, as busted keeps a spec's own globals to itself
+    local originalColorTable
+    before_each(function()
+      originalColorTable = color_table
+      local copy = {}
+      for name, color in pairs(color_table) do
+        copy[name] = { color[1], color[2], color[3] }
+      end
+      _G.color_table = copy
+    end)
+
+    after_each(function()
+      _G.color_table = originalColorTable
+    end)
+
+    it("answers as a scan of color_table does, before and after it changes", function()
+      assertMatchesScan("at first")
+      assertMatchesScan("asked again")
+      color_table.spec_converter_red = { 255, 0, 0 }
+      color_table.spec_converter_grey = { 127, 127, 127 }
+      assertMatchesScan("after adding colours equal to existing ones")
+      color_table.red[2] = 1
+      color_table.ansi_001[1] = 120
+      assertMatchesScan("after changing colours in place")
+      color_table.blue = { 0, 0, 254 }
+      assertMatchesScan("after replacing a colour")
+      color_table.spec_converter_red = nil
+      color_table.white = nil
+      assertMatchesScan("after removing colours")
+      local another = {}
+      for name, color in pairs(color_table) do
+        another[name] = { color[1], color[2], color[3] }
+      end
+      _G.color_table = another
+      assertMatchesScan("after replacing color_table")
+    end)
+
+    it("finds a colour added, changed or removed between calls", function()
+      local nearest = scanColorTable(11, 22, 33)
+      assert.are.equal(nearest, closestColor(11, 22, 33))
+      assert.are.equal("<" .. nearest .. ">x", decho2cecho("<11,22,33>x"))
+      color_table.spec_converter_teal = { 11, 22, 33 }
+      assert.are.equal("spec_converter_teal", closestColor(11, 22, 33))
+      assert.are.equal("spec_converter_teal", closestColor({ 11, 22, 33 }))
+      assert.are.equal("<spec_converter_teal>x", decho2cecho("<11,22,33>x"))
+      assert.are.equal("<spec_converter_teal>x", hecho2cecho("#0b1621x"))
+      color_table.spec_converter_teal[3] = 250
+      assert.are.equal(nearest, closestColor(11, 22, 33))
+      assert.are.equal("<" .. nearest .. ">x", decho2cecho("<11,22,33>x"))
+      color_table.spec_converter_teal[3] = 33
+      assert.are.equal("<spec_converter_teal>x", decho2cecho("<11,22,33>x"))
+      color_table.spec_converter_teal = nil
+      assert.are.equal(nearest, closestColor(11, 22, 33))
+      assert.are.equal("<" .. nearest .. ">x", decho2cecho("<11,22,33>x"))
+    end)
+
+    it("still answers for fractional and string components", function()
+      -- 12.5 * 256 * 256 is also where 12, 128, 0 would be filed
+      assert.are.equal(scanColorTable(12, 128, 0), closestColor(12, 128, 0))
+      assert.are.equal(scanColorTable(12.5, 0, 0), closestColor(12.5, 0, 0))
+      assert.are.equal(scanColorTable(12.5, 0, 0), closestColor({ 12.5, 0, 0 }))
+      assert.are_not.equal(closestColor(12, 128, 0), closestColor(12.5, 0, 0))
+      assert.are.equal(scanColorTable(11, 22, 33), closestColor("11", "22", "33"))
+      assert.are.equal(scanColorTable(11, 22, 33), closestColor({ "11", "22", "33" }))
+    end)
+
+    it("raises an error for a table with a hole in it", function()
+      assert.is_false(pcall(closestColor, { 1, nil, 3 }))
+    end)
+
+    it("uses a closestColor that a script has replaced when converting to cecho", function()
+      local original = closestColor
+      _G.closestColor = function() return "spec_converter_picked" end
+      local ok, result = pcall(decho2cecho, "<1,2,3>x<4,5,6:7,8,9>y")
+      _G.closestColor = original
+      assert.is_true(ok, result)
+      assert.are.equal("<spec_converter_picked>x<spec_converter_picked:spec_converter_picked>y", result)
     end)
   end)
 

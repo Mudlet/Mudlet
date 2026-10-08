@@ -2894,6 +2894,10 @@ void mudlet::loadMaps()
             //: Keep the English translation intact, so if a user accidentally changes to a language they don't understand, they can change back e.g. ISO 8859-2 (Центральная Европа/Central European)
             {"EUC-KR", tr("EUC-KR (Korean)")},
             //: Keep the English translation intact, so if a user accidentally changes to a language they don't understand, they can change back e.g. ISO 8859-2 (Центральная Европа/Central European)
+            {"SHIFT_JIS", tr("Shift JIS (Japanese)")},
+            //: Keep the English translation intact, so if a user accidentally changes to a language they don't understand, they can change back e.g. ISO 8859-2 (Центральная Европа/Central European)
+            {"EUC-JP", tr("EUC-JP (Japanese)")},
+            //: Keep the English translation intact, so if a user accidentally changes to a language they don't understand, they can change back e.g. ISO 8859-2 (Центральная Европа/Central European)
             {"GBK", tr("GBK (Chinese)")},
             //: Keep the English translation intact, so if a user accidentally changes to a language they don't understand, they can change back e.g. ISO 8859-2 (Центральная Европа/Central European)
             {"GB18030", tr("GB18030 (Chinese)")},
@@ -3349,15 +3353,15 @@ void mudlet::slot_closeProfileRequested(int tab)
     });
 }
 
-// Closing a profile destroys the lua_State the pump is still executing on. The
-// application-wide close paths are deliberately not guarded like this: refusing
-// there would cancel a shutdown nobody would retry.
+// Closing a profile destroys the lua_State the pump is still executing on.
+// closeMudlet() waits for the pump instead, as refusing would cancel a shutdown
+// nobody would retry.
 bool mudlet::closeHeldOffByEventPump(Host* pHost) const
 {
     if (!pHost->getLuaInterpreter()->pumpingEvents()) {
         return false;
     }
-    qWarning() << "mudlet: asked to close profile" << pHost->getName() << "while the test-mode event pump is running on it, ignoring";
+    qWarning() << "mudlet: asked to close profile" << pHost->getName() << "while it is running a nested event loop, ignoring";
     return true;
 }
 
@@ -3665,18 +3669,25 @@ void mudlet::closeHost(const QString& name)
         return;
     }
 
-    if (pH->mpMap && pH->mpMap->mapOperationInProgress()) {
-        // A map import, export or download is on the stack, and it is that
-        // operation's own qApp->processEvents() that has delivered whatever
-        // asked for this close. Destroying the Host here would free the TMap
-        // under its running loop (#9520), so tell the operation to stop and try
-        // again once the stack has unwound. Retried on a timer rather than
-        // immediately: the retry would otherwise land back in the same pump,
-        // spinning until the operation ends instead of letting it get there.
-        if (!pH->mpMap->mapOperationAbortRequested()) {
-            qDebug().nospace().noquote() << "mudlet::closeHost(\"" << name << "\") INFO - a map operation is still running, so the profile will be closed once it has stopped.";
+    const bool mapOperationRunning = pH->mpMap && pH->mpMap->mapOperationInProgress();
+    // A map import, export or download is on the stack, and it is that
+    // operation's own qApp->processEvents() that has delivered whatever asked
+    // for this close. Destroying the Host here would free the TMap under its
+    // running loop (#9520), so tell the operation to stop and try again once
+    // the stack has unwound. The same goes for any Lua API that spins a nested
+    // event loop - loading or closing another profile, a modal dialog, a
+    // reconnect - after the profile's own script asked for the close: the
+    // script is still running, and destroying the Host would lua_close() the
+    // state under it. Retried on a timer rather than immediately: the retry
+    // would otherwise land back in the same pump, spinning until the operation
+    // ends instead of letting it get there.
+    if (mapOperationRunning || pH->getLuaInterpreter()->luaOnStack()) {
+        if (mapOperationRunning) {
+            if (!pH->mpMap->mapOperationAbortRequested()) {
+                qDebug().nospace().noquote() << "mudlet::closeHost(\"" << name << "\") INFO - a map operation is still running, so the profile will be closed once it has stopped.";
+            }
+            pH->mpMap->requestMapOperationAbort();
         }
-        pH->mpMap->requestMapOperationAbort();
         const QPointer<Host> pClosingHost(pH);
         QTimer::singleShot(50ms, this, [this, name, pClosingHost]() {
             if (mHostManager.getHost(name) != pClosingHost) {
@@ -3690,6 +3701,7 @@ void mudlet::closeHost(const QString& name)
             // nothing. Left out, closing the last profile mid-operation ends
             // with no profile and no connection dialog either.
             updateMainWindowToolbarState();
+            updateMainWindowTitle();
             if (!mHostManager.getHostCount() && !mIsGoingDown) {
                 disableToolbarButtons();
                 slot_showConnectionDialog();
@@ -4731,6 +4743,16 @@ void mudlet::closeEvent(QCloseEvent* event)
         return;
     }
 
+    for (auto pHost : mHostManager) {
+        // A profile already in its save question would be asked again, and
+        // closed under that question's loop; the tray's Quit stays usable then
+        if (pHost->getLuaInterpreter()->pumpingEvents()) {
+            qWarning().nospace().noquote() << "mudlet::closeEvent(...) WARNING - not closing, the profile \"" << pHost->getName() << "\" is still running a nested event loop.";
+            event->ignore();
+            return;
+        }
+    }
+
     QStringList hostsToDestroy;
     bool abortClose = false;
     // Due to the way that Hosts are stored we cannot do a closeHost(hostName)
@@ -4819,8 +4841,25 @@ void mudlet::endProfileLoad()
 
 void mudlet::forceClose()
 {
-    for (auto pHost : mHostManager) {
-        pHost->forceClose();
+    // Host::forceClose() pumps events, which may close a profile or load a new one
+    // (a pending telnet URI), so walk snapshots until a pass meets no host unvisited
+    QList<QPointer<Host>> visited;
+    bool metNewHost = true;
+    while (metNewHost) {
+        metNewHost = false;
+        QList<QPointer<Host>> hosts;
+        for (const auto& pHost : mHostManager.hostList()) {
+            if (!visited.contains(pHost.data())) {
+                hosts.append(pHost.data());
+            }
+        }
+        for (const auto& pHost : std::as_const(hosts)) {
+            if (pHost) {
+                visited.append(pHost);
+                metNewHost = true;
+                pHost->forceClose();
+            }
+        }
     }
 
     // This will fire the closeEvent(...)
@@ -5479,12 +5518,15 @@ void mudlet::setupEditorFocusRestoration(dlgTriggerEditor* pEditor, const QStrin
     // Disconnect any existing focus restoration connections for this editor
     disconnect(pEditor, &dlgTriggerEditor::editorClosing, nullptr, nullptr);
 
+    // Guarded: the detached window can be reattached or closed while the editor stays open
+    QPointer<QWidget> pTargetWindow = targetWindow;
     // Connect to our custom editorClosing signal which is emitted from closeEvent
-    connect(pEditor, &dlgTriggerEditor::editorClosing, [profileName, targetWindow]() {
+    connect(pEditor, &dlgTriggerEditor::editorClosing, pEditor, [profileName, pTargetWindow]() {
         // If a specific target window is provided (detached window), focus that
-        if (targetWindow) {
+        if (pTargetWindow) {
+            QWidget* targetWindow = pTargetWindow.data();
             // Small delay to ensure the editor window is fully processed
-            QTimer::singleShot(50ms, [profileName, targetWindow]() {
+            QTimer::singleShot(50ms, targetWindow, [profileName, targetWindow]() {
                 targetWindow->show();
                 targetWindow->raise();
                 targetWindow->activateWindow();
@@ -7052,6 +7094,11 @@ mudlet::~mudlet()
     // around as they go. QObject only drops these connections once every member
     // is gone, so the focus handler would otherwise walk a destroyed command list.
     disconnect(qGuiApp, nullptr, this, nullptr);
+    // Likewise the map docks: ~QWidget hides them as it closes the window, and
+    // their visibilityChanged handlers read members that are gone by then.
+    for (auto* pDockWidget : findChildren<QDockWidget*>()) {
+        disconnect(pDockWidget, &QDockWidget::visibilityChanged, this, nullptr);
+    }
     TSpellChecker::closeSharedDictionary();
     if (!mTranslatorsLoadedList.isEmpty()) {
         qDebug().nospace().noquote() << "mudlet::~mudlet() INFO - uninstalling translation...";
@@ -7668,26 +7715,19 @@ Host* mudlet::loadProfile(const QString& profile_name, const bool playOnline, co
 
 void mudlet::slot_newDataOnHost(const QString& hostName, const bool isLowerPriorityChange)
 {
+    // A detached profile's tab lives in its own window's tab bar, which shows
+    // one profile at a time regardless of multiview:
+    if (auto pDetachedWindow = mDetachedWindows.value(hostName)) {
+        pDetachedWindow->markTabActivity(hostName, isLowerPriorityChange);
+        return;
+    }
     if (mMultiView) {
         // We do not need to mark tabs with activity if they are all on show anyhow:
         return;
     }
     Host* pHost = mHostManager.getHost(hostName);
     if (pHost && pHost != mpCurrentActiveHost) {
-        if (mpTabBar->count() > 1) {
-            if (!isLowerPriorityChange) {
-                mpTabBar->setTabBold(hostName, true);
-                mpTabBar->setTabItalic(hostName, false);
-                mpTabBar->update();
-            } else if (isLowerPriorityChange && !mpTabBar->tabBold(hostName)) {
-                // Local, lower priority change so only change the
-                // styling if it is not already modified - so that the
-                // higher priority remote change indication will not
-                // get changed by a later local one:
-                mpTabBar->setTabItalic(hostName, true);
-                mpTabBar->update();
-            }
-        }
+        mpTabBar->markActivity(hostName, isLowerPriorityChange);
     }
 }
 
@@ -8189,9 +8229,7 @@ void mudlet::activateProfile(Host* pHost)
 
     // Reset the tab back to "normal" to undo the effect of it having its style
     // changed on new data:
-    mpTabBar->setTabBold(newActiveTabIndex, false);
-    mpTabBar->setTabItalic(newActiveTabIndex, false);
-    mpTabBar->setTabUnderline(newActiveTabIndex, false);
+    mpTabBar->clearActivity(newActiveTabIndex);
 
     mpCurrentActiveHost = pHost;
 
@@ -8564,20 +8602,31 @@ void mudlet::onlyShowProfiles(const QStringList& predefinedProfiles)
 // to be done on the next Qt event loop iteration:
 void mudlet::armForceClose()
 {
+    // A second close queued behind the first runs inside the first one's
+    // profile save, which pumps events, while that is still tearing Hosts down
+    if (mForceClosePending) {
+        return;
+    }
+    mForceClosePending = true;
     QTimer::singleShot(0ms, this, [this]() {
         // Deferring by one event loop iteration is meant to land outside Lua,
         // but the pump runs the event loop from inside Lua, so it can land
-        // right back in it. Retrying terminates: the pump is capped at 30s.
+        // right back in it. Retrying terminates: the pump is capped at 30s, and a
+        // profile's close ends once its save question is answered.
         for (auto pHost : mHostManager) {
             if (pHost->getLuaInterpreter()->pumpingEvents()) {
-                qWarning() << "mudlet::armForceClose() - the test-mode event pump is running, waiting for it to finish";
+                qWarning() << "mudlet::armForceClose() - a nested event loop is running, waiting for it to finish";
                 QTimer::singleShot(50ms, this, [this]() {
+                    mForceClosePending = false;
                     armForceClose();
                 });
                 return;
             }
         }
         forceClose();
+        // Not left set: closeEvent() can still refuse the close, and a later
+        // closeMudlet() must then be able to ask again
+        mForceClosePending = false;
     });
 }
 
@@ -8733,10 +8782,12 @@ void mudlet::changeEvent(QEvent* event)
         // prevents ALT+TAB system switching auto refocusing to command line
         // remember the widget that had focus before deactivation to resume later
         if (isActiveWindow()) {
-            if (mpFocusWidgetBeforeDeactivate) {
+            // A closed profile's widgets are hidden, and outlive its Host until
+            // their deferred deletion: focusing one then reaches the dead Host
+            if (mpFocusWidgetBeforeDeactivate && mpFocusWidgetBeforeDeactivate->isVisible()) {
                 mpFocusWidgetBeforeDeactivate->setFocus();
-                mpFocusWidgetBeforeDeactivate.clear();
             }
+            mpFocusWidgetBeforeDeactivate.clear();
         } else {
             mpFocusWidgetBeforeDeactivate = QApplication::focusWidget();
         }
@@ -9368,16 +9419,18 @@ void mudlet::moveProfileFromMainToDetachedWindow(const QString& profileName, int
     // Remove tab from main window tab bar
     mpTabBar->removeTab(tabIndex);
 
-    // Force tab bar repaint after removing tab
-    mpTabBar->repaint();
-    mpTabBar->update();
-    QCoreApplication::processEvents();
-
     // Add profile to target detached window
     targetWindow->addProfile(profileName, console);
 
     // Add profile to the detached windows map
     mDetachedWindows[profileName] = targetWindow;
+
+    // Only now that the profile has its new home: a timer delivered by
+    // processEvents() may run the orphan check, which reattaches any profile it
+    // finds in neither the main window nor a detached one
+    mpTabBar->repaint();
+    mpTabBar->update();
+    QCoreApplication::processEvents();
 
     // Update multi-view controls
     updateMultiViewControls();

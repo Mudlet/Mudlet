@@ -177,7 +177,7 @@ local function writePackageXml(path, body, version)
   file:close()
 end
 
--- Every install and uninstall here starts an asynchronous profile save, and
+-- Every install and uninstall here owes an asynchronous profile save, and
 -- while one is running the package API stops doing what it is told: an install
 -- is postponed and answered with a bare true (see the pending spec at the end
 -- of this file), an uninstall is refused, and a module reload is dropped. Lua
@@ -1990,6 +1990,44 @@ describe("Tests installing an archive whose config.lua will not run", function()
     assert.equals(1, exists(name .. " alias", "alias"), "the archive's contents were not installed")
   end)
 
+  -- error() can raise nil, a table or nothing at all, leaving no message to report
+  it("says the same of a config.lua that raises an error with no message", function()
+    local name = "mudlet-spec-silentconfig"
+    defer(function() removeFixturePackage(name) end)
+    defer(function() removeFixturePackage("mudlet-spec-silentconfig-renamed") end)
+
+    local mark = getLastLineNumber("main")
+    installUntilConfirmed(installPackage, fixtureDirectory .. "/" .. name .. ".mpackage",
+                          function() return packageInstalled(name) end, "the fixture whose config.lua raises nothing")
+    local text = textFrom(mark)
+
+    assert.is_true(containsWrapped(text, 'The config.lua of "' .. name .. '" could not be read'), text)
+    assert.is_false(packageInstalled("mudlet-spec-silentconfig-renamed"),
+                    "the package installed under the name of a manifest that never ran")
+    assert.same({}, getPackageInfo(name))
+    assert.equals(1, exists(name .. " alias", "alias"), "the archive's contents were not installed")
+  end)
+
+  -- The manifest is run on the main thread, so one that never finishes has to
+  -- be stopped rather than waited for
+  it("says the same of a config.lua that never finishes", function()
+    local name = "mudlet-spec-loopingconfig"
+    defer(function() removeFixturePackage(name) end)
+    defer(function() removeFixturePackage("mudlet-spec-loopingconfig-renamed") end)
+
+    local mark = getLastLineNumber("main")
+    installUntilConfirmed(installPackage, fixtureDirectory .. "/" .. name .. ".mpackage",
+                          function() return packageInstalled(name) end, "the fixture whose config.lua never finishes")
+    local text = textFrom(mark)
+
+    assert.is_true(containsWrapped(text, 'The config.lua of "' .. name .. '" could not be read'), text)
+    assert.is_true(containsWrapped(text, "it ran for too long and was stopped"), text)
+    assert.is_false(packageInstalled("mudlet-spec-loopingconfig-renamed"),
+                    "the package installed under the name of a manifest that never finished")
+    assert.same({}, getPackageInfo(name))
+    assert.equals(1, exists(name .. " alias", "alias"), "the archive's contents were not installed")
+  end)
+
   -- The same archive installed as a module is reinstalled on every profile save
   -- and on every reloadModule(), so saying it there is the same sentence over
   -- and over for a manifest the user was told about once already, on the
@@ -2062,6 +2100,22 @@ describe("Tests installing an archive whose config.lua will not run", function()
   end)
 end)
 
+describe("Tests installing an archive whose config.lua leaves its globals in an awkward state", function()
+  -- The manifest is read back from the globals the script left behind, outside the protected
+  -- call that ran it, where a Lua error cannot be caught
+  it("installs under the name its config.lua asks for and keeps its details", function()
+    local name = "mudlet-spec-trickyconfig"
+    defer(function() removeFixturePackage(name) end)
+
+    installUntilConfirmed(installPackage, fixtureDirectory .. "/" .. name .. ".mpackage",
+                          function() return packageInstalled(name) end, "the fixture with the awkward globals")
+
+    assert.equals("Mudlet test suite", getPackageInfo(name, "author"))
+    assert.is_nil(getPackageInfo(name)["1"], "a global with a number for its name was filed as a detail")
+    assert.equals(1, exists(name .. " alias", "alias"), "the archive's contents were not installed")
+  end)
+end)
+
 describe("Tests the functionality of verbosePackageInstall", function()
   it("installs the package and says so on the main console", function()
     defer(function() removeFixturePackage(minimalPackage) end)
@@ -2109,16 +2163,39 @@ describe("Tests the functionality of verbosePackageInstall", function()
     -- announcement's own name is checked for having been trimmed
     assert.is_false(containsWrapped(text, "Installing '" .. getMudletHomeDir()), text)
   end)
+  -- installPackage() asks for a quiet install, so nothing but this line tells
+  -- the player who dropped the file which parts of it are not working
+  it("says which parts of a package are not working", function()
+    local name = "mudlet-spec-brokenscripts"
+    defer(function()
+      removeFixturePackage(name)
+      _G.mudletSpecBrokenScriptsRuns = nil
+    end)
+    local path = fixtureDirectory .. "/" .. name .. ".mpackage"
+    assert.is_true(waitForProfileSaveToPass(), "a profile save was still running")
+    local mark = getLastLineNumber("main")
+
+    verbosePackageInstall(path)
+
+    local text = textFrom(mark)
+    assert.is_true(packageInstalled(name), "the package was not installed")
+    assert.is_true(containsWrapped(text, "Package '" .. path .. "' was installed, but not everything in it is working:"), text)
+    assert.is_true(containsWrapped(text, name .. " first"), text)
+    assert.is_true(containsWrapped(text, name .. " second"), text)
+    -- shown as the script wrote it, not taken as decho's formatting
+    assert.is_true(containsWrapped(text, "markup <b>bold</b> quote"), text)
+  end)
 end)
 
 describe("Tests the functionality of verboseModuleInstall", function()
   -- A module is installed from a copy inside the profile for the same reason
   -- installFixtureModule() does it: a save rewrites a synced module's own
   -- .mpackage, which must not be the committed fixture.
-  local function stageModule()
+  local function stageModule(name)
+    name = name or moduleName
     lfs.mkdir(scratchDirectory)
-    local path = scratchDirectory .. "/" .. moduleName .. ".mpackage"
-    copyFile(fixtureDirectory .. "/" .. moduleName .. ".mpackage", path)
+    local path = scratchDirectory .. "/" .. name .. ".mpackage"
+    copyFile(fixtureDirectory .. "/" .. name .. ".mpackage", path)
     return path
   end
 
@@ -2147,6 +2224,25 @@ describe("Tests the functionality of verboseModuleInstall", function()
     assert.is_true(containsWrapped(text, "Installing '" .. path .. "' failed:"), text)
     assert.is_true(containsWrapped(text, "could not open file"), text)
     assert.is_false(moduleInstalled("mudlet-spec-there-is-no-such-module"))
+  end)
+  it("says which parts of a module are not working", function()
+    local name = "mudlet-spec-brokenscripts"
+    defer(function()
+      removeFixtureModule(name)
+      _G.mudletSpecBrokenScriptsRuns = nil
+    end)
+    local path = stageModule(name)
+    assert.is_true(waitForProfileSaveToPass(), "a profile save was still running")
+    local mark = getLastLineNumber("main")
+
+    verboseModuleInstall(path)
+
+    local text = textFrom(mark)
+    assert.is_true(moduleInstalled(name), "the module was not installed")
+    assert.is_true(containsWrapped(text, "Module '" .. path .. "' was installed, but not everything in it is working:"), text)
+    assert.is_true(containsWrapped(text, name .. " first"), text)
+    assert.is_true(containsWrapped(text, name .. " second"), text)
+    assert.is_true(containsWrapped(text, "markup <b>bold</b> quote"), text)
   end)
 end)
 
@@ -2519,6 +2615,57 @@ describe("Tests installing a package file from a later Mudlet", function()
   end)
 end)
 
+-- A package XML can carry a profile's settings, read the same way a profile's
+-- own save file is when it opens. A module entry there can stop short of its
+-- file, sync flag and priority in a hand-edited or truncated file.
+describe("Tests installing a package XML whose profile settings list an incomplete module", function()
+  local name = "mudlet-spec-incomplete-module-entry"
+  local moduleName = "mudlet-spec-incomplete-module"
+  local xml = getMudletHomeDir() .. "/" .. name .. ".xml"
+
+  it("installs the package and leaves the incomplete module out", function()
+    defer(function()
+      removeFixturePackage(name)
+      os.remove(xml)
+    end)
+    -- Every setting a <Host> element's attributes leave out is turned off as it
+    -- is read, so carry over the ones this profile has rather than change them
+    -- for the specs that run after this one
+    assert.is_true(waitForProfileSaveToPass(), "a profile save was still running")
+    local saved, savedTo = saveProfile()
+    assert.is_true(saved, tostring(savedTo))
+    assert.is_true(waitForProfileSaveToPass(), "the profile save was still running")
+    local settings = readFile(savedTo)
+    local hostElement = settings:match("<Host%s[^>]*>")
+    assert.is_string(hostElement, "the profile's save has no Host element to copy the settings of")
+    local borders = {}
+    for _, border in ipairs({"borderTopHeight", "borderBottomHeight", "borderLeftWidth", "borderRightWidth"}) do
+      borders[#borders + 1] = settings:match("<" .. border .. ">[^<]*</" .. border .. ">") or ""
+    end
+
+    writePackageXml(xml, table.concat({
+      '<HostPackage>',
+      hostElement,
+      table.concat(borders),
+      '<mInstalledModules><key>' .. moduleName .. '</key><priority>0</priority></mInstalledModules>',
+      '</Host>',
+      '</HostPackage>',
+      '<AliasPackage>',
+      '<Alias isActive="yes" isFolder="no">',
+      '<name>' .. name .. ' alias</name><packageName></packageName><script></script>',
+      '<command></command><regex>^' .. name .. '$</regex>',
+      '</Alias>',
+      '</AliasPackage>',
+    }, "\n"))
+
+    installUntilConfirmed(installPackage, xml, function() return packageInstalled(name) end, "the package " .. name)
+
+    assert.equals(1, exists(name .. " alias", "alias"), "the package's alias was not installed")
+    assert.is_false(moduleInstalled(moduleName), "a module with no file to load was listed")
+    assert.is_nil(getModulePath(moduleName))
+  end)
+end)
+
 -- A package's Lua is compiled as the package is read in, and a script's body is
 -- run there and then. Whatever does not get through that is kept all the same,
 -- so that it can be opened in the editor and fixed - the rest of the package
@@ -2756,6 +2903,15 @@ describe("Tests exporting the profile to a file with saveProfile", function()
   local exportedPath = scratchDirectory .. "/mudlet-spec-exported.xml"
   -- U+FFFC U+241B, which is how an ESC is held in a save file
   local encodedEscape = "\239\191\188\226\144\155"
+  -- Every control character a save file has a control picture for, each one
+  -- twice in a row, as the import hands them back to the export raw
+  local controlCodes = {1, 2, 3, 4, 5, 6, 7, 8, 11, 12, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31}
+  local rawControls, encodedControls = {}, {}
+  for index, code in ipairs(controlCodes) do
+    rawControls[index] = string.char(code):rep(2)
+    encodedControls[index] = ("\239\191\188\226\144" .. string.char(128 + code)):rep(2)
+  end
+  rawControls, encodedControls = table.concat(rawControls), table.concat(encodedControls)
   -- The colour numbers a save file uses are not the ANSI ones Mudlet matches
   -- on, and the two tables that convert between them are meant to be each
   -- other's inverse - so a pattern that survives a trip through both unchanged
@@ -2791,6 +2947,11 @@ describe("Tests exporting the profile to a file with saveProfile", function()
       '<Script isActive="yes" isFolder="no">',
       '<name>' .. name .. ' escape script</name><packageName></packageName>',
       '<script>mudletSpecExportedEscape = "' .. encodedEscape .. '"</script>',
+      '<eventHandlerList/>',
+      '</Script>',
+      '<Script isActive="yes" isFolder="no">',
+      '<name>' .. name .. ' control script</name><packageName></packageName>',
+      '<script>-- ' .. encodedControls .. '</script>',
       '<eventHandlerList/>',
       '</Script>',
       '</ScriptPackage>',
@@ -2871,6 +3032,27 @@ describe("Tests exporting the profile to a file with saveProfile", function()
     assert.is_true(contains(exported, 'mudletSpecExportedEscape = "' .. encodedEscape .. '"'),
                    "the exported script does not hold the encoded escape")
     assert.is_false(contains(exported, "\27"), "the export wrote a raw control character, which XML cannot carry")
+  end)
+
+  it("writes every control character back as a placeholder and a control picture", function()
+    assert.equals("-- " .. rawControls, (getScript(name .. " control script")))
+    assert.is_true(contains(exported, "<script>-- " .. encodedControls .. "</script>"),
+                   "the exported script does not hold every control character encoded")
+  end)
+
+  it("writes a newline in an attribute as the reference XML reads back as one", function()
+    -- A stopwatch name is held in an attribute, which is only written on a full save
+    local watch = createStopWatch(name .. " stop\nwatch")
+    -- Kept until the file is read: the save the setup's install still owes can
+    -- run after this one and rewrite the same file within the same second
+    finally(function() deleteStopWatch(watch) end)
+    setStopWatchPersistence(watch, true)
+    assert.is_true(waitForProfileSaveToPass(), "a profile save was still running")
+    local ok, savedPath = saveProfile()
+    assert.is_true(ok, savedPath)
+    assert.is_true(waitForProfileSaveToPass(), "the profile save did not finish")
+    assert.is_true(contains(readFile(savedPath), 'name="' .. name .. ' stop&#10;watch"'),
+                   "the saved profile does not hold the stopwatch name's newline as a reference")
   end)
 
   it("writes a key's binding back", function()
