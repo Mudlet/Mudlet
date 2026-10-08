@@ -324,8 +324,19 @@ int TLuaInterpreter::calcFontSize(lua_State* L)
     QString windowName = qsl("main");
     QSize size;
 
+    // An opt-in trailing boolean asks for the width as the fractional average
+    // character width consoles lay text out on; scripts written for the
+    // whole-pixel width of a "W" in a window keep getting that by default
+    int argumentCount = lua_gettop(L);
+    bool averageWidth = false;
+    if (argumentCount >= 1 && lua_isboolean(L, argumentCount)) {
+        averageWidth = lua_toboolean(L, argumentCount);
+        // Popped so that calcFontSize(true) reads no window name, as calcFontSize() does
+        lua_settop(L, --argumentCount);
+    }
+
     // font name and size are passed in as arguments
-    if (lua_gettop(L) == 2) {
+    if (argumentCount == 2) {
         // hoisted because the order the two QFont arguments were evaluated in is
         // unspecified, so which failure got reported was up to the compiler
         if (!checkIntArg(L, __func__, 1, "font size") || !checkStringArg(L, __func__, 2, "font name")) {
@@ -335,21 +346,26 @@ int TLuaInterpreter::calcFontSize(lua_State* L)
         auto fontMetrics = QFontMetrics(font);
         size = QSize(fontMetrics.averageCharWidth(), fontMetrics.height());
 
-        lua_pushnumber(L, size.width());
+        lua_pushnumber(L, averageWidth ? QFontMetricsF(font).averageCharWidth() : size.width());
         lua_pushnumber(L, size.height());
         return 2;
     }
 
+    qreal layoutWidth = -1.0;
     // otherwise either window name or font size is passed in
-    if (lua_gettop(L) == 1 && lua_isnumber(L, 1)) {
+    if (argumentCount == 1 && lua_isnumber(L, 1)) {
         auto fontSize = lua_tonumber(L, 1);
         auto font = QFont(qsl("Bitstream Vera Sans Mono"), fontSize, QFont::Normal);
 
         auto fontMetrics = QFontMetrics(font);
         size = QSize(fontMetrics.averageCharWidth(), fontMetrics.height());
+        layoutWidth = QFontMetricsF(font).averageCharWidth();
     } else {
         windowName = WINDOW_NAME(L, 1);
         size = host.calcFontSize(windowName);
+        if (averageWidth) {
+            layoutWidth = host.calcAverageCharWidth(windowName);
+        }
     }
 
     if (size.width() <= -1) {
@@ -357,7 +373,7 @@ int TLuaInterpreter::calcFontSize(lua_State* L)
         return 1;
     }
 
-    lua_pushnumber(L, size.width());
+    lua_pushnumber(L, averageWidth ? layoutWidth : size.width());
     lua_pushnumber(L, size.height());
     return 2;
 }

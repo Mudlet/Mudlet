@@ -5839,6 +5839,15 @@ QSize Host::calcFontSize(const QString& windowName)
     return mpConsole->consoleFontSize(windowName).value_or(QSize(-1, -1));
 }
 
+qreal Host::calcAverageCharWidth(const QString& windowName)
+{
+    if (!mpConsole) {
+        return -1.0;
+    }
+
+    return mpConsole->consoleAverageCharWidth(windowName).value_or(-1.0);
+}
+
 bool Host::setProfileStyleSheet(const QString& styleSheet)
 {
     if (!mpConsole) {

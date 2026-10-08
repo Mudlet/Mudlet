@@ -2684,6 +2684,16 @@ std::optional<QSize> TMainConsole::consoleFontSize(const QString& name) const
     return {QSize(fontMetrics.horizontalAdvance(QChar('W')), fontMetrics.height())};
 }
 
+std::optional<qreal> TMainConsole::consoleAverageCharWidth(const QString& name) const
+{
+    const TConsole* pC = (name.isEmpty() || name == qsl("main")) ? this : mSubConsoleMap.value(name).data();
+    if (!pC) {
+        return {};
+    }
+
+    return {QFontMetricsF(pC->mUpperPane->font()).averageCharWidth()};
+}
+
 bool TMainConsole::setSubConsoleBackgroundColor(const QString& name, const QColor& color)
 {
     auto pC = mSubConsoleMap.value(name);

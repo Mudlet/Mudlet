@@ -112,8 +112,13 @@ function Geyser.MiniConsole:setTextFormat(r1, g1, b1, r2, g2, b2, bold, underlin
   setTextFormat(self.name, r1, g1, b1, r2, g2, b2, bold, underline, italics)
 end
 
-function Geyser.MiniConsole:calcFontSize()
-  return calcFontSize(self.name)
+--- Returns the width and height of a character in this miniconsole's font, in pixels.
+-- @param averageWidth Optional. True to have the width be the average character
+-- width the miniconsole lays its text out on, which can be fractional, rather than
+-- the width of a "W" in whole pixels. Only the former matches getColumnCount() for
+-- a proportional font.
+function Geyser.MiniConsole:calcFontSize(averageWidth)
+  return calcFontSize(self.name, averageWidth == true)
 end
 
 --- Enables the scroll bar for this window
@@ -435,7 +440,7 @@ function Geyser.MiniConsole:resetAutoWrap()
     return nil, "Autowrap is not enabled for " .. self.name
   end
 
-  local fontWidth, fontHeight = calcFontSize(self.name)
+  local fontWidth, fontHeight = calcFontSize(self.name, true)
   local consoleWidth = self.get_width()
 
   if self.scrollBar then

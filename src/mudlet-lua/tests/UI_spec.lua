@@ -4615,6 +4615,50 @@ describe("Window and label state", function()
     it("calcFontSize returns nil for an unknown window", function()
       assert.is_nil(calcFontSize(name("wlsNoSuchWindow")))
     end)
+
+    -- The default stays the whole-pixel width of a "W", which scripts already
+    -- compensate for, so the width the console lays its columns out on is opt-in
+    it("calcFontSize given true reports the width a window lays its columns out on (#10446)", function()
+      setMiniConsoleFontSize(console, 14)
+      local layoutWidth, layoutHeight = calcFontSize(console, true)
+      local defaultWidth, defaultHeight = calcFontSize(console)
+      assert.are.equal(defaultHeight, layoutHeight)
+      assert.are.same({defaultWidth, defaultHeight}, {calcFontSize(console, false)})
+      for _, columns in ipairs({40, 80, 200}) do
+        resizeWindow(console, math.floor(layoutWidth * columns + 0.5), 150)
+        assert.are.equal(columns, getColumnCount(console), ("sized for %d columns at %s pixels each"):format(columns, layoutWidth))
+      end
+      resizeWindow(console, 300, 150)
+    end)
+
+    it("calcFontSize given true keeps the font size forms working (#10446)", function()
+      -- only true gives the fractional width, the default stays whole pixels
+      local width, height = calcFontSize(12, true)
+      local defaultWidth, defaultHeight = calcFontSize(12)
+      assert.are.equal(defaultHeight, height)
+      assert.are.equal(math.floor(defaultWidth), defaultWidth)
+      assert.are_not.equal(math.floor(width), width)
+      assert.is_true(math.abs(width - defaultWidth) < 1)
+      local namedWidth, namedHeight = calcFontSize(12, "Bitstream Vera Sans", true)
+      local namedDefaultWidth, namedDefaultHeight = calcFontSize(12, "Bitstream Vera Sans")
+      assert.are.equal(namedDefaultHeight, namedHeight)
+      assert.are.equal(math.floor(namedDefaultWidth), namedDefaultWidth)
+      assert.are_not.equal(math.floor(namedWidth), namedWidth)
+      assert.is_true(math.abs(namedWidth - namedDefaultWidth) < 1)
+    end)
+
+    it("calcFontSize given only true reports the main window's layout width (#10446)", function()
+      assert.are.same({calcFontSize("main", true)}, {calcFontSize(true)})
+      assert.are.same({calcFontSize("main")}, {calcFontSize(false)})
+    end)
+
+    -- a nil in the font name's place is a mistake to report, not the flag left out
+    it("calcFontSize still rejects a nil font name (#10446)", function()
+      local missingFontName = nil
+      assert.has_error(function()
+        calcFontSize(12, missingFontName)
+      end)
+    end)
   end)
 
   describe("console metrics", function()
