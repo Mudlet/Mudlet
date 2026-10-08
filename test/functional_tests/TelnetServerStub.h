@@ -56,6 +56,13 @@ public:
     // bytes like IAC GA to be included:
     void sendRaw(const QByteArray& data);
     bool clientConnected() const { return !mpClient.isNull(); }
+    // Closes the connection gracefully, once everything sent has gone out
+    void closeClient()
+    {
+        if (mpClient) {
+            mpClient->disconnectFromHost();
+        }
+    }
 
     // Every NAWS subnegotiation the client has sent since the last
     // clearNawsUpdates(), in the order they arrived. Tests that care about what
