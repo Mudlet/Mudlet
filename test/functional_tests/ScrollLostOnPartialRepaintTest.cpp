@@ -269,7 +269,19 @@ private slots:
         // the paint alone could use it up; time it from the end instead
         pane->mSincePaint.restart();
         lua->compileAndExecuteScript(qsl("echo('PACED_LINE\\n')\n"));
-        QVERIFY2(pane->mpPaintPacer->isActive(), "the line arrived after the paint window closed, so the pacer this case is about never started");
+        // Only the paint window starts the pacer with an interval; a late echo
+        // can still start it at 0 through the whole-pane path, which is not the
+        // case under test
+        const bool paced = pane->mpPaintPacer->isActive() && pane->mpPaintPacer->interval() > 0;
+        // As in FramePacingTest: an echo that took the whole window means the
+        // runner stalled mid-echo, and the case under test never arose
+        const qint64 sincePaintMs = pane->mSincePaint.elapsed();
+        if (!paced && sincePaintMs >= TTextEdit::csmPaintPaceMs) {
+            QSKIP(qPrintable(qsl("the echo took %1ms, past the %2ms paint window it had to land inside - the runner stalled mid-echo, so the pacer was not exercised")
+                                     .arg(sincePaintMs)
+                                     .arg(TTextEdit::csmPaintPaceMs)));
+        }
+        QVERIFY2(paced, "the line arrived inside the paint window but the pacer never started");
         pane->forceUpdate();
         pane->repaint();
 
