@@ -822,6 +822,18 @@ describe("Tests functionality of Geyser.Label widget state", function()
       assert.is_nil(Geyser.windowList[second])
     end)
 
+    it("leaves a label reusing the name of a hidden menu item deleted on its own", function()
+      local label = track(Geyser.Label:new({name = "glsMenuReuseOwner", x = 0, y = 0, width = 40, height = 20}))
+      label:createRightClickMenu({MenuItems = {"First", "Second"}})
+      local item = label:findMenuElement("Second")
+      label:hideMenuLabel("Second")
+      item:delete()
+      local replacement = track(Geyser.Label:new({name = item.name, x = 0, y = 0, width = 40, height = 20}))
+      label:delete()
+      assert.is_not_nil(getWindowGeometry(replacement.name))
+      assert.are.equal(replacement, Geyser.windowList[replacement.name])
+    end)
+
     it("deletes the scroll labels of a nest too tall to show at once", function()
       local _, mainHeight = getMainWindowSize()
       -- three fit and the fourth does not, which makes room for the scroll labels by taking two off

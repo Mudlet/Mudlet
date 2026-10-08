@@ -1231,9 +1231,10 @@ function Geyser.Label:type_delete()
   if self.nestedLabels then
     local nested = self.nestedLabels
     self.nestedLabels = {}
-    -- a hidden menu item has left nestedLabels but is still a label of this menu
+    -- a hidden menu item has left nestedLabels but is still a label of this menu,
+    -- unless it was deleted on its own and its name may now be another label's
     for _, item in pairs(self.MenuLabels or {}) do
-      if item.ignore then
+      if item.ignore and item.container and item.container.windowList[item.name] == item then
         nested[#nested + 1] = item
       end
     end
