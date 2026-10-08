@@ -292,9 +292,9 @@ describe("Tests keybind-related functions", function()
     it("killKey returns false the second time, as the key is already dead", function()
       local id = tempKey(mudlet.key.F11, [[echo("x")]])
       assert.is_true(killKey(id), "killing a live temporary key should report success")
-      -- the key is still present here: only the deferred cleanup frees it, so the
-      -- second kill really is being told about a corpse it can find
-      assert.are.equal(1, exists(id, "keybind"), "the killed key is still present until cleanup runs")
+      -- only the deferred cleanup frees it, so the second kill is told about a
+      -- corpse it can still find, though exists() does not count it
+      assert.are.equal(0, exists(id, "keybind"), "a killed key waiting for cleanup should not be counted")
       assert.are.equal(0, isActive(id, "keybind"), "a killed key is no longer active")
       assert.is_false(killKey(id),
         "killing an already killed key achieves nothing and has to say so")

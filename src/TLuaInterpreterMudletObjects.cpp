@@ -488,37 +488,53 @@ int TLuaInterpreter::exists(lua_State* L)
     int count = 0;
     type = type.toLower();
     if (!type.compare(QLatin1String("timer"), Qt::CaseInsensitive)) {
+        auto* pUnit = host.getTimerUnit();
         if (isId) {
-            auto pT = host.getTimerUnit()->getTimer(id);
-            lua_pushnumber(L, static_cast<bool>(pT) ? 1 : 0);
+            auto pT = pUnit->getTimer(id);
+            lua_pushnumber(L, (pT && !pUnit->pendingDeletion(pT)) ? 1 : 0);
             return 1;
         }
 
-        count = host.getTimerUnit()->mLookupTable.count(nameOrId);
+        const auto [begin, end] = pUnit->mLookupTable.equal_range(nameOrId);
+        count = static_cast<int>(std::count_if(begin, end, [pUnit](TTimer* pItem) {
+            return !pUnit->pendingDeletion(pItem);
+        }));
     } else if (!type.compare(QLatin1String("trigger"), Qt::CaseInsensitive)) {
+        auto* pUnit = host.getTriggerUnit();
         if (isId) {
-            auto pT = host.getTriggerUnit()->getTrigger(id);
-            lua_pushnumber(L, static_cast<bool>(pT) ? 1 : 0);
+            auto pT = pUnit->getTrigger(id);
+            lua_pushnumber(L, (pT && !pUnit->pendingDeletion(pT)) ? 1 : 0);
             return 1;
         }
 
-        count = host.getTriggerUnit()->mLookupTable.count(nameOrId);
+        const auto [begin, end] = pUnit->mLookupTable.equal_range(nameOrId);
+        count = static_cast<int>(std::count_if(begin, end, [pUnit](TTrigger* pItem) {
+            return !pUnit->pendingDeletion(pItem);
+        }));
     } else if (!type.compare(QLatin1String("alias"), Qt::CaseInsensitive)) {
+        auto* pUnit = host.getAliasUnit();
         if (isId) {
-            auto pT = host.getAliasUnit()->getAlias(id);
-            lua_pushnumber(L, static_cast<bool>(pT) ? 1 : 0);
+            auto pT = pUnit->getAlias(id);
+            lua_pushnumber(L, (pT && !pUnit->pendingDeletion(pT)) ? 1 : 0);
             return 1;
         }
 
-        count = host.getAliasUnit()->mLookupTable.count(nameOrId);
+        const auto [begin, end] = pUnit->mLookupTable.equal_range(nameOrId);
+        count = static_cast<int>(std::count_if(begin, end, [pUnit](TAlias* pItem) {
+            return !pUnit->pendingDeletion(pItem);
+        }));
     } else if (!type.compare(QLatin1String("keybind"), Qt::CaseInsensitive)) {
+        auto* pUnit = host.getKeyUnit();
         if (isId) {
-            auto pT = host.getKeyUnit()->getKey(id);
-            lua_pushnumber(L, static_cast<bool>(pT) ? 1 : 0);
+            auto pT = pUnit->getKey(id);
+            lua_pushnumber(L, (pT && !pUnit->pendingDeletion(pT)) ? 1 : 0);
             return 1;
         }
 
-        count = host.getKeyUnit()->mLookupTable.count(nameOrId);
+        const auto [begin, end] = pUnit->mLookupTable.equal_range(nameOrId);
+        count = static_cast<int>(std::count_if(begin, end, [pUnit](TKey* pItem) {
+            return !pUnit->pendingDeletion(pItem);
+        }));
     } else if (!type.compare(QLatin1String("button"), Qt::CaseInsensitive)) {
         if (isId) {
             auto pT = host.getActionUnit()->getAction(id);

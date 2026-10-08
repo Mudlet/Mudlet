@@ -803,13 +803,13 @@ std::vector<int> TriggerUnit::findItems(const QString& name, const bool exactMat
     const auto searchCaseSensitivity = caseSensitive ? Qt::CaseSensitive : Qt::CaseInsensitive;
     if (exactMatch) {
         for (auto& item : std::as_const(mTriggerMap)) {
-            if (!item->getName().compare(name, searchCaseSensitivity)) {
+            if (!pendingDeletion(item) && !item->getName().compare(name, searchCaseSensitivity)) {
                 ids.push_back(item->getID());
             }
         }
     } else {
         for (auto& item : std::as_const(mTriggerMap)) {
-            if (item->getName().contains(name, searchCaseSensitivity)) {
+            if (!pendingDeletion(item) && item->getName().contains(name, searchCaseSensitivity)) {
                 ids.push_back(item->getID());
             }
         }

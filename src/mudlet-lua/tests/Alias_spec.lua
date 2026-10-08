@@ -954,9 +954,9 @@ describe("Alias processing", function()
         it("killAlias returns false the second time, as the alias is already dead", function()
             local id = tempAlias("^spec_double_kill_alias$", [[]])
             assert.is_true(killAlias(id), "killing a live temporary alias should report success")
-            -- the alias is still present here: only the deferred cleanup frees it, so
-            -- the second kill really is being told about a corpse it can find
-            assert.are.equal(1, exists(id, "alias"), "the killed alias is still present until cleanup runs")
+            -- only the deferred cleanup frees it, so the second kill is told about a
+            -- corpse it can still find, though exists() does not count it
+            assert.are.equal(0, exists(id, "alias"), "a killed alias waiting for cleanup should not be counted")
             assert.are.equal(0, isActive(id, "alias"), "a killed alias is no longer active")
             assert.is_false(killAlias(id),
                 "killing an already killed alias achieves nothing and has to say so")

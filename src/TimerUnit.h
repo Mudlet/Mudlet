@@ -98,6 +98,8 @@ public:
     QList<TTimer*> uninstallList;
     QSet<TTimer*> mCleanupSet;
     bool hasPendingDeletes() const { return !mCleanupSet.isEmpty() || !uninstallList.isEmpty(); }
+    // Still in the lookup tables until doCleanup() frees it, which cannot happen mid-pass
+    bool pendingDeletion(TTimer* pItem) const { return mCleanupSet.contains(pItem) || uninstallList.contains(pItem); }
 
 private:
     TimerUnit() = default;

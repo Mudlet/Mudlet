@@ -2243,9 +2243,9 @@ describe("Trigger processing", function()
         it("killTrigger returns false the second time, as the trigger is already dead", function()
             local id = tempRegexTrigger("^double_kill_probe$", [[]])
             assert.is_true(killTrigger(id), "killing a live temporary trigger should report success")
-            -- the trigger is still present here: only the deferred cleanup frees it,
-            -- so the second kill really is being told about a corpse it can find
-            assert.is_equal(1, exists(id, "trigger"), "the killed trigger is still present until cleanup runs")
+            -- only the deferred cleanup frees it, so the second kill is told about a
+            -- corpse it can still find, though exists() does not count it
+            assert.is_equal(0, exists(id, "trigger"), "a killed trigger waiting for cleanup should not be counted")
             assert.is_equal(0, isActive(id, "trigger"), "a killed trigger is no longer active")
             assert.is_false(killTrigger(id),
                 "killing an already killed trigger achieves nothing and has to say so")
@@ -2715,6 +2715,46 @@ describe("Trigger processing", function()
             assert.are.equal(permanents, exists(name, "trigger"), "only the temporary trigger should leave the lookup table")
             assert.is_true(_G.NameEvictionSpec >= 1, "the permanent trigger should still fire")
             assert.is_true(disableTrigger(name), "the permanent trigger must still be reachable by name")
+        end)
+
+        -- a killed item is only freed once the next line is processed, and
+        -- exists() and findItems() must not count it in the meantime
+        it("does not count a killed temporary item as existing while it waits to be freed", function()
+            local trigger = tempTrigger("killed_exists_spec", function() end)
+            local alias = tempAlias("^killed_exists_spec$", function() end)
+            local key = tempKey(mudlet.key.F9, function() end)
+            local timer = tempTimer(600, function() end)
+            assert.is_true(killTrigger(trigger))
+            assert.is_true(killAlias(alias))
+            assert.is_true(killKey(key))
+            assert.is_true(killTimer(timer))
+
+            assert.are.equal(0, exists(trigger, "trigger"), "by id")
+            assert.are.equal(0, exists(tostring(trigger), "trigger"), "by name")
+            assert.are.equal(0, #findItems(tostring(trigger), "trigger"))
+            assert.are.equal(0, exists(alias, "alias"))
+            assert.are.equal(0, exists(tostring(alias), "alias"))
+            assert.are.equal(0, #findItems(tostring(alias), "alias"))
+            assert.are.equal(0, exists(key, "keybind"))
+            assert.are.equal(0, exists(tostring(key), "keybind"))
+            assert.are.equal(0, #findItems(tostring(key), "keybind"))
+            assert.are.equal(0, exists(timer, "timer"))
+            assert.are.equal(0, exists(tostring(timer), "timer"))
+            assert.are.equal(0, #findItems(tostring(timer), "timer"))
+
+            -- other items' names can hold these ids too, so only the killed ones must be missing
+            local function lists(id, itemType)
+                for _, found in ipairs(findItems(tostring(id), itemType, false)) do
+                    if found == id then
+                        return true
+                    end
+                end
+                return false
+            end
+            assert.is_false(lists(trigger, "trigger"), "a substring search must skip the killed trigger too")
+            assert.is_false(lists(alias, "alias"), "a substring search must skip the killed alias too")
+            assert.is_false(lists(key, "keybind"), "a substring search must skip the killed key too")
+            assert.is_false(lists(timer, "timer"), "a substring search must skip the killed timer too")
         end)
 
     end)

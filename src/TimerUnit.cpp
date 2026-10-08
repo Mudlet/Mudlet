@@ -457,13 +457,13 @@ std::vector<int> TimerUnit::findItems(const QString& name, const bool exactMatch
     const auto searchCaseSensitivity = caseSensitive ? Qt::CaseSensitive : Qt::CaseInsensitive;
     if (exactMatch) {
         for (auto& item : std::as_const(mTimerMap)) {
-            if (!item->getName().compare(name, searchCaseSensitivity)) {
+            if (!pendingDeletion(item) && !item->getName().compare(name, searchCaseSensitivity)) {
                 ids.push_back(item->getID());
             }
         }
     } else {
         for (auto& item : std::as_const(mTimerMap)) {
-            if (item->getName().contains(name, searchCaseSensitivity)) {
+            if (!pendingDeletion(item) && item->getName().contains(name, searchCaseSensitivity)) {
                 ids.push_back(item->getID());
             }
         }
