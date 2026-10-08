@@ -57,11 +57,11 @@ public:
     int getViewCount() const;
 
     // Bulk operations
-    void updateAllViews();
+    void updateAllViews() override;
     // Moves every view still showing areaId to another area - used after
     // that area is deleted, so paintEvent() isn't left drawing one that no
     // longer exists.
-    void switchViewsShowingArea(int areaId);
+    void switchViewsShowingArea(int areaId) override;
 
 signals:
     void viewCreated(int viewId);

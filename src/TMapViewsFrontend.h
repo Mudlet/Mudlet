@@ -54,6 +54,9 @@ public:
     // Null for an id with no open view.
     virtual TSecondaryMapViewFrontend* view(int viewId) = 0;
     virtual QList<int> getViewIds() const = 0;
+    virtual void updateAllViews() = 0;
+    // Moves every view still showing areaId to another area, for after that area is deleted.
+    virtual void switchViewsShowingArea(int areaId) = 0;
 
 protected:
     // The manager is a child of its TMap, which deletes it, so nothing deletes it through this interface.
