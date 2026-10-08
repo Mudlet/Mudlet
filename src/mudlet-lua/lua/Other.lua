@@ -272,12 +272,14 @@ function xor(a, b)
 end
 
 
---- This function flags a variable to be saved by Mudlet's variable persistence system.
---- Variables are automatically unpacked into the global namespace when the profile is loaded.
---- They are saved to "SavedVariables.lua" when the profile is closed or saved.
+--- Flags a global variable to be written to "SavedVariables.lua" in the profile directory by saveVars().
+--- Nothing is saved or restored automatically: saveVars() and loadVars() have to be called by a script,
+--- for example from sysExitEvent and sysLoadEvent handlers. loadVars() does not flag the variables it
+--- restores, so call remember() again for each one in the new session.
 ---
 --- @usage remember("varName")
 ---
+--- @see saveVars
 --- @see loadVars
 function remember(varName)
   if not _saveTable then
@@ -288,10 +290,12 @@ end
 
 
 
---- This function should be primarily used by Mudlet. It loads saved settings in from the Mudlet home directory
---- and unpacks them into the global namespace.
+--- Reads the variables saveVars() wrote to "SavedVariables.lua" in the profile directory back into the
+--- global namespace. Mudlet does not call it, so call it when the variables are needed, for example
+--- from a sysLoadEvent handler.
 ---
 --- @see remember
+--- @see saveVars
 function loadVars()
   local _sep = ""
   if string.char(getMudletHomeDir():byte()) == "/" then
@@ -311,8 +315,13 @@ end
 
 
 
---- This function should primarily be used by Mudlet. It saves the contents of _saveTable into a file for persistence.
+--- Writes the current values of the variables flagged with remember() to "SavedVariables.lua" in the
+--- profile directory, replacing what the file held. Mudlet does not call it, so call it whenever the
+--- variables should be kept, for example from a sysExitEvent handler.
 ---
+--- @return true on success, or nil and a message when nothing was flagged (the file is then left as it
+---   was) or the file could not be written
+--- @see remember
 --- @see loadVars
 function saveVars()
   local _sep = ""
@@ -322,23 +331,27 @@ function saveVars()
     _sep = "\\"
   end
   local l_SettingsFile = getMudletHomeDir() .. _sep .. "SavedVariables.lua"
+  -- left alone rather than emptied: loadVars() does not flag what it restores, so a session that
+  -- only loaded would otherwise wipe the store
+  if not _saveTable then
+    return nil, "saveVars: no variable has been flagged with remember(), so "..l_SettingsFile.." is left as it was"
+  end
   for k, _ in pairs(_saveTable) do
     remember(k)
   end
-  table.save(l_SettingsFile, _saveTable)
+  return table.save(l_SettingsFile, _saveTable)
 end
 
 
 
 --- The below functions (table.save, table.load) can be used to save individual Lua tables to disc and load
 --- them again at a later time e.g. make a database, collect statistical information etc.
---- These functions are also used by Mudlet to load & save the entire Lua session variables. <br/><br/>
+--- saveVars() and loadVars() use them to keep the variables flagged with remember(). <br/><br/>
 ---
 --- Original code written by CHILLCODE™ on https://board.ptokax.ch, distributed under the same terms as Lua itself. <br/><br/>
 ---
 --- Notes: <br/>
----  Userdata and indices of these are not saved <br/>
----  Functions are saved via string.dump, so make sure it has no upvalues <br/>
+---  Functions, userdata and threads are not saved, as keys or as values <br/>
 ---  References are saved <br/>
 ---
 --- @usage Saves the given table into the given file.

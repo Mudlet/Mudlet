@@ -2268,11 +2268,62 @@ describe("Tests Other.lua functions", function()
     end)
   end)
 
+  describe("Tests remember, saveVars and loadVars", function()
+    local storePath = getMudletHomeDir() .. "/SavedVariables.lua"
+    local previousStore, previousSaveTable
+
+    before_each(function()
+      local file = io.open(storePath, "rb")
+      previousStore = file and file:read("*a")
+      if file then
+        file:close()
+      end
+      previousSaveTable = _G._saveTable
+    end)
+
+    after_each(function()
+      _G._saveTable = previousSaveTable
+      _G.saveVarsSpecValue = nil
+      if previousStore then
+        local file = io.open(storePath, "wb")
+        file:write(previousStore)
+        file:close()
+      else
+        os.remove(storePath)
+      end
+    end)
+
+    it("should leave the file as it was, and say so, when nothing was remembered", function()
+      _G._saveTable = nil
+      _G.saveVarsSpecValue = "kept"
+      remember("saveVarsSpecValue")
+      assert.is_true(saveVars())
+
+      _G._saveTable = nil
+      _G.saveVarsSpecValue = nil
+      local saved, msg = saveVars()
+      assert.is_nil(saved)
+      assert.is_truthy(msg:find("no variable has been flagged with remember()", 1, true))
+
+      loadVars()
+      assert.equals("kept", _G.saveVarsSpecValue)
+    end)
+
+    it("should save the remembered variable as it is at save time and load it back", function()
+      _G.saveVarsSpecValue = { a = 1 }
+      remember("saveVarsSpecValue")
+      _G.saveVarsSpecValue = { a = 1, b = 2 }
+
+      assert.is_true(saveVars())
+      _G.saveVarsSpecValue = nil
+      loadVars()
+
+      assert.same({ a = 1, b = 2 }, _G.saveVarsSpecValue)
+    end)
+  end)
+
     --[[
     TODO:
-      remember()
-      loadVars()
-      saveVars()
       getColorWildcard()
       lockExit()
       hasExitLock()
