@@ -561,6 +561,62 @@ describe("Alias processing", function()
             assert.are.equal("thing", seen.match, "an erroring nested alias left the caller its captures")
         end)
 
+        -- An alias's command is sent before its script runs, and when that
+        -- command matches another alias the pass it starts is just as nested
+        it("gives an alias whose command expands into another alias its own state back (#10797)", function()
+            if not os.getenv("MUDLET_TEST_MODE") then
+                pending("uninstalling the fixture needs pumpEvents(), which does nothing outside MUDLET_TEST_MODE")
+                return
+            end
+            local path = getMudletHomeDir() .. "/alias-command-nests.xml"
+            local seen = {}
+            local innerId = tempAlias([[^command_nests_inner (\w+)$]], function()
+                seen.innerMatch = matches[2]
+            end)
+            _G.AliasCommandNestsSpec = seen
+            finally(function()
+                killAlias(innerId)
+                _G.AliasCommandNestsSpec = nil
+                local removed = false
+                for _ = 1, 100 do
+                    if uninstallPackage("alias-command-nests") == true then
+                        removed = true
+                        break
+                    end
+                    pumpEvents(50)
+                end
+                os.remove(path)
+                pumpEvents(200)
+                assert.is_true(removed, "could not uninstall the alias package")
+            end)
+            local file = assert(io.open(path, "w"))
+            file:write([[<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE MudletPackage>
+<MudletPackage version="1.001">
+	<AliasPackage>
+		<Alias isActive="yes" isFolder="no">
+			<name>command_nests_outer</name>
+			<script>AliasCommandNestsSpec.command = command
+AliasCommandNestsSpec.fullMatch = matches[1]
+AliasCommandNestsSpec.match = matches[2]</script>
+			<command>command_nests_inner deeper</command>
+			<packageName></packageName>
+			<regex>^command_nests_outer (\w+)$</regex>
+		</Alias>
+	</AliasPackage>
+</MudletPackage>
+]])
+            file:close()
+            assert.is_true(installPackage(path))
+
+            expandAlias("command_nests_outer thing", false)
+
+            assert.are.equal("deeper", seen.innerMatch, "the alias's command should have reached the inner alias")
+            assert.are.equal("command_nests_outer thing", seen.command, "the alias's script was left holding its own command's expansion")
+            assert.are.equal("command_nests_outer thing", seen.fullMatch, "matches[1] was emptied by the alias's own command")
+            assert.are.equal("thing", seen.match, "the alias's capture was emptied by its own command")
+        end)
+
         -- multimatches goes the same way as matches, which only a multiline
         -- trigger ever reads
         it("gives a multiline trigger back its multimatches", function()
