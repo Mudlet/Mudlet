@@ -4743,7 +4743,7 @@ describe("Window and label state", function()
       -- the console takes opposite borders off its own size, which such values overflow
       setBorderSizes(6, 6, 6, 6)
       local function refusal(size)
-        return {nil, ("border size %d is out of range, it must be between 0 and 16777215"):format(size)}
+        return {nil, ("border size %.14g is out of range, it must be between 0 and 16777215"):format(size)}
       end
       assert.are.same(refusal(-10), {setBorderTop(-10)})
       assert.are.same(refusal(-2147483640), {setBorderLeft(-2147483640)})
@@ -4753,6 +4753,11 @@ describe("Window and label state", function()
       assert.are.same(refusal(-5), {setBorderSizes(4, -5)})
       assert.are.same(refusal(-3), {setBorderSizes(1, 2, -3)})
       assert.are.same(refusal(-4), {setBorderSizes(1, 2, 3, -4)})
+      -- beyond int too, which must not raise an error before the range is checked
+      assert.are.same(refusal(2^31), {setBorderBottom(2^31)})
+      assert.are.same(refusal(-2^31 - 1), {setBorderTop(-2^31 - 1)})
+      assert.are.same(refusal(2^32), {setBorderSizes(1, 2, 3, 2^32)})
+      assert.are.same(refusal(-2^31 - 1), {setBorderSizes(-2^31 - 1)})
       assert.are.same({top = 6, right = 6, bottom = 6, left = 6}, getBorderSizes())
       -- 0 is how a border is taken away again
       assert.are.same({true}, {setBorderLeft(0)})

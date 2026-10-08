@@ -92,14 +92,15 @@ static bool isMain(const QString& name)
 
 // The console subtracts opposite borders from its own size, so an unbounded one
 // overflows int; QWIDGETSIZE_MAX is already more than any widget can be.
-static bool validBorderSize(const int size)
+// Sizes are read as doubles because getVerifiedInt() raises on one beyond int.
+static bool validBorderSize(const double size)
 {
     return size >= 0 && size <= QWIDGETSIZE_MAX;
 }
 
-static QString badBorderSizeMessage(const int size)
+static QString badBorderSizeMessage(const double size)
 {
-    return qsl("border size %1 is out of range, it must be between 0 and %2").arg(size).arg(QWIDGETSIZE_MAX);
+    return qsl("border size %1 is out of range, it must be between 0 and %2").arg(size, 0, 'g', 14).arg(QWIDGETSIZE_MAX);
 }
 
 // Mudlet's own colour names live in the Lua "color_table" global as {r, g, b};
@@ -3065,13 +3066,13 @@ int TLuaInterpreter::setBold(lua_State* L)
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#setBorderBottom
 int TLuaInterpreter::setBorderBottom(lua_State* L)
 {
-    const int size = getVerifiedInt(L, __func__, 1, "new size");
+    const double size = getVerifiedDouble(L, __func__, 1, "new size");
     if (!validBorderSize(size)) {
         return warnArgumentValue(L, __func__, badBorderSizeMessage(size));
     }
     Host& host = getHostFromLua(L);
     auto sizes = host.userBorders();
-    sizes.setBottom(size);
+    sizes.setBottom(static_cast<int>(size));
     host.setUserBorders(sizes);
     lua_pushboolean(L, true);
     return 1;
@@ -3094,13 +3095,13 @@ int TLuaInterpreter::setBorderColor(lua_State* L)
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#setBorderLeft
 int TLuaInterpreter::setBorderLeft(lua_State* L)
 {
-    const int size = getVerifiedInt(L, __func__, 1, "new size");
+    const double size = getVerifiedDouble(L, __func__, 1, "new size");
     if (!validBorderSize(size)) {
         return warnArgumentValue(L, __func__, badBorderSizeMessage(size));
     }
     Host& host = getHostFromLua(L);
     auto sizes = host.userBorders();
-    sizes.setLeft(size);
+    sizes.setLeft(static_cast<int>(size));
     host.setUserBorders(sizes);
     lua_pushboolean(L, true);
     return 1;
@@ -3109,13 +3110,13 @@ int TLuaInterpreter::setBorderLeft(lua_State* L)
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#setBorderRight
 int TLuaInterpreter::setBorderRight(lua_State* L)
 {
-    const int size = getVerifiedInt(L, __func__, 1, "new size");
+    const double size = getVerifiedDouble(L, __func__, 1, "new size");
     if (!validBorderSize(size)) {
         return warnArgumentValue(L, __func__, badBorderSizeMessage(size));
     }
     Host& host = getHostFromLua(L);
     auto sizes = host.userBorders();
-    sizes.setRight(size);
+    sizes.setRight(static_cast<int>(size));
     host.setUserBorders(sizes);
     lua_pushboolean(L, true);
     return 1;
@@ -3126,44 +3127,44 @@ int TLuaInterpreter::setBorderSizes(lua_State* L)
 {
     Host& host = getHostFromLua(L);
     const int numberOfArguments = lua_gettop(L);
-    QMargins borders;
+    QMarginsF borders;
     switch (numberOfArguments) {
     case 0:
         lua_pushboolean(L, true);
         return 1;
     case 1: {
-        auto value = getVerifiedInt(L, __func__, 1, "new size");
+        auto value = getVerifiedDouble(L, __func__, 1, "new size");
         borders = {value, value, value, value};
         break;
     }
     case 2: {
-        auto height = getVerifiedInt(L, __func__, 1, "new height");
-        auto width = getVerifiedInt(L, __func__, 2, "new width");
+        auto height = getVerifiedDouble(L, __func__, 1, "new height");
+        auto width = getVerifiedDouble(L, __func__, 2, "new width");
         borders = {width, height, width, height};
         break;
     }
     case 3: {
-        auto top = getVerifiedInt(L, __func__, 1, "new top size");
-        auto width = getVerifiedInt(L, __func__, 2, "new width");
-        auto bottom = getVerifiedInt(L, __func__, 3, "new bottom size");
+        auto top = getVerifiedDouble(L, __func__, 1, "new top size");
+        auto width = getVerifiedDouble(L, __func__, 2, "new width");
+        auto bottom = getVerifiedDouble(L, __func__, 3, "new bottom size");
         borders = {width, top, width, bottom};
         break;
     }
     default: {
-        auto top = getVerifiedInt(L, __func__, 1, "new top size");
-        auto right = getVerifiedInt(L, __func__, 2, "new right size");
-        auto bottom = getVerifiedInt(L, __func__, 3, "new bottom size");
-        auto left = getVerifiedInt(L, __func__, 4, "new left size");
+        auto top = getVerifiedDouble(L, __func__, 1, "new top size");
+        auto right = getVerifiedDouble(L, __func__, 2, "new right size");
+        auto bottom = getVerifiedDouble(L, __func__, 3, "new bottom size");
+        auto left = getVerifiedDouble(L, __func__, 4, "new left size");
         borders = {left, top, right, bottom};
         break;
     }
     }
-    for (const int size : {borders.top(), borders.right(), borders.bottom(), borders.left()}) {
+    for (const double size : {borders.top(), borders.right(), borders.bottom(), borders.left()}) {
         if (!validBorderSize(size)) {
             return warnArgumentValue(L, __func__, badBorderSizeMessage(size));
         }
     }
-    host.setUserBorders(borders);
+    host.setUserBorders({static_cast<int>(borders.left()), static_cast<int>(borders.top()), static_cast<int>(borders.right()), static_cast<int>(borders.bottom())});
     lua_pushboolean(L, true);
     return 1;
 }
@@ -3171,13 +3172,13 @@ int TLuaInterpreter::setBorderSizes(lua_State* L)
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#setBorderTop
 int TLuaInterpreter::setBorderTop(lua_State* L)
 {
-    const int size = getVerifiedInt(L, __func__, 1, "new size");
+    const double size = getVerifiedDouble(L, __func__, 1, "new size");
     if (!validBorderSize(size)) {
         return warnArgumentValue(L, __func__, badBorderSizeMessage(size));
     }
     Host& host = getHostFromLua(L);
     auto sizes = host.userBorders();
-    sizes.setTop(size);
+    sizes.setTop(static_cast<int>(size));
     host.setUserBorders(sizes);
     lua_pushboolean(L, true);
     return 1;
