@@ -690,6 +690,134 @@ describe("Alias processing", function()
 
         end)
 
+        -- Only an alias script has a command of its own, and only while it runs.
+        -- Called from anywhere else, and once the alias pass is over,
+        -- expandAlias() leaves "command" holding what it expanded, as it always
+        -- has: packages such as Repeater read it later as the last command, to
+        -- send it again
+        describe("command for scripts other than the calling alias", function()
+
+            it("leaves command holding what an event handler expanded", function()
+                local seen = {}
+                local handlerId = registerAnonymousEventHandler("aliasSpecCommandFromHandler", function()
+                    expandAlias("command_from_handler", false)
+                    seen.inHandler = command
+                end)
+                finally(function()
+                    killAnonymousEventHandler(handlerId)
+                end)
+
+                raiseEvent("aliasSpecCommandFromHandler")
+
+                assert.are.equal("command_from_handler", seen.inHandler, "the handler got an older command back")
+                assert.are.equal("command_from_handler", command, "command did not keep what the handler expanded")
+            end)
+
+            it("leaves command holding what a timer expanded", function()
+                if not pumpEvents then
+                    pending("waiting for a timer needs pumpEvents(), which needs test mode")
+                    return
+                end
+                local fired = false
+                local timerId = tempTimer(0, function()
+                    expandAlias("command_from_timer", false)
+                    fired = true
+                end)
+                finally(function()
+                    killTimer(timerId)
+                end)
+
+                local waited = 0
+                while not fired and waited < 2000 do
+                    pumpEvents(50)
+                    waited = waited + 50
+                end
+
+                assert.is_true(fired, "the timer never ran")
+                assert.are.equal("command_from_timer", command, "command did not keep what the timer expanded")
+            end)
+
+            it("leaves command holding what a trigger expanded, and the trigger its matches", function()
+                local seen = {}
+                local triggerId = tempRegexTrigger([[^command_trigger (\w+)$]], function()
+                    expandAlias("command_from_trigger", false)
+                    seen.command = command
+                    seen.match = matches[2]
+                end)
+                finally(function()
+                    killTrigger(triggerId)
+                end)
+
+                feedTriggers("\ncommand_trigger thing\n")
+
+                assert.are.equal("command_from_trigger", seen.command, "the trigger got an older command back")
+                assert.are.equal("thing", seen.match, "the trigger's capture was emptied by the expansion")
+                assert.are.equal("command_from_trigger", command, "command did not keep what the trigger expanded")
+            end)
+
+            -- An alias keeps its own command across an expandAlias() it makes,
+            -- but once the whole pass is over "command" holds the last command
+            -- expanded, as it did before aliases got their command back
+            it("leaves command holding the last command expanded once the alias pass is over", function()
+                local seen = {}
+                local innerId = tempAlias([[^command_outer_inner$]], function() end)
+                local outerId = tempAlias([[^command_outer (\w+)$]], function()
+                    expandAlias("command_outer_inner", false)
+                    seen.inOuter = command
+                end)
+                local handlerId = registerAnonymousEventHandler("aliasSpecCommandThroughAlias", function()
+                    expandAlias("command_outer thing", false)
+                end)
+                finally(function()
+                    killAlias(innerId)
+                    killAlias(outerId)
+                    killAnonymousEventHandler(handlerId)
+                end)
+
+                raiseEvent("aliasSpecCommandThroughAlias")
+
+                assert.are.equal("command_outer thing", seen.inOuter, "the alias did not get its own command back")
+                assert.are.equal("command_outer_inner", command, "command did not end up holding the last command expanded")
+            end)
+
+            it("leaves command holding the last of several commands an alias expanded", function()
+                local firstId = tempAlias([[^command_several_first$]], function() end)
+                local secondId = tempAlias([[^command_several_second (\w+)$]], function()
+                    expandAlias("command_several_third", false)
+                end)
+                local outerId = tempAlias([[^command_several (\w+)$]], function()
+                    expandAlias("command_several_first", false)
+                    expandAlias("command_several_second deeper", false)
+                end)
+                finally(function()
+                    killAlias(firstId)
+                    killAlias(secondId)
+                    killAlias(outerId)
+                end)
+
+                expandAlias("command_several thing", false)
+
+                assert.are.equal("command_several_third", command)
+            end)
+
+            it("leaves command holding what an alias assigned to it after its expandAlias()", function()
+                local innerId = tempAlias([[^command_assigned_inner$]], function() end)
+                local outerId = tempAlias([[^command_assigned (\w+)$]], function()
+                    expandAlias("command_assigned_inner", false)
+                    -- _G, as busted runs this file's functions in a sandbox of their own
+                    _G.command = "assigned by the alias"
+                end)
+                finally(function()
+                    killAlias(innerId)
+                    killAlias(outerId)
+                end)
+
+                expandAlias("command_assigned thing", false)
+
+                assert.are.equal("assigned by the alias", rawget(_G, "command"), "the script's own assignment was overwritten")
+            end)
+        end)
+
     end)
 
     -- enableAlias()/disableAlias() must toggle EVERY alias sharing a name, not

@@ -43,8 +43,9 @@ if false then
 
 
   --- The <i>command variable</i> holds initial user command e.g. unchanged by any aliases or triggers.
-  --- This is typically used in alias scripts. It holds the command of the dispatch that ran your script, which an
-  --- expandAlias() call made from that script does not change - see expandAlias().
+  --- This is typically used in alias scripts. In an alias script it holds the command that ran your script, which an
+  --- expandAlias() call made from that script does not change while the script runs. Anywhere else it holds the last
+  --- command that went through the aliases, including one sent by expandAlias() - see expandAlias().
   ---
   --- @see line
   ---
@@ -244,11 +245,13 @@ if false then
   --- to use send( ) inside an alias script to prevent recursion. This will send the data directly and bypass
   --- the alias expansion.
   ---
-  --- Note: expandAlias() leaves the variables of the script that called it alone. The aliases it runs are given the
+  --- Note: expandAlias() leaves the captures of the script that called it alone. The aliases it runs are given the
   --- expanded command in "command" and their own captures in "matches", and once the call returns the calling script
-  --- has back the "command", "matches" and "multimatches" it had before it - so a capture read after an expandAlias()
-  --- call is still the caller's own. A command sent at the command line is unaffected: every alias it runs sees it
-  --- in "command" as before.
+  --- has back the "matches" and "multimatches" it had before it - so a capture read after an expandAlias() call is
+  --- still the caller's own. An alias script also gets its own "command" back for the rest of its run. Called from
+  --- anywhere else - a trigger, timer, key binding, button or event handler - and once the alias pass is over,
+  --- "command" holds the last command expanded, as it always has. A command sent at the command line is unaffected:
+  --- every alias it runs sees it in "command" as before.
   ---
   --- @see send
   function expandAlias(command, print=1)

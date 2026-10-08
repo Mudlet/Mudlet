@@ -147,7 +147,8 @@ public:
     void clearCaptureGroups();
     bool buildingCaptureTables();
     int pushNestedDispatchState();
-    void popNestedDispatchState(const int depth);
+    void popNestedDispatchState(const int depth, const bool restoreCommand);
+    void settleCommandAfterAliasPass();
     bool callEventHandler(const QString& function, const TEvent& pE);
     bool callCmdLineAction(const int func, QString);
     bool callAnonymousFunction(const int func, QString name);
@@ -1081,7 +1082,7 @@ private:
     int mIndexHandlerRef = LUA_NOREF;
     int mNewindexHandlerRef = LUA_NOREF;
     // expandAlias() overwrites "command" and the captures; the caller's are saved here (one entry per
-    // nesting level) and restored when the pass returns.
+    // nesting level) and restored when the pass returns - "command" only for a caller that is an alias.
     struct NestedDispatchState
     {
         std::vector<std::string> captureGroupList;
@@ -1097,6 +1098,10 @@ private:
         bool captureScopeOpen = false;
     };
     std::vector<NestedDispatchState> mNestedDispatchStates;
+    // While an alias pass runs: the "command" an alias script's restore replaced,
+    // and the value put back in its place, for settleCommandAfterAliasPass()
+    int mCommandBeforeRestoreRef = LUA_NOREF;
+    int mRestoredCommandRef = LUA_NOREF;
     void releaseNestedDispatchState(NestedDispatchState&);
     // Registry references to how callEventHandler() finds each handler, by
     // handler name: the name itself, read raw from the globals, or else the

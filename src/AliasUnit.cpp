@@ -343,6 +343,7 @@ bool AliasUnit::processDataStream(const QString& data)
             mRunawayExpansionStopped = false;
         }
         if (mProcessingDepth == 0) {
+            mpHost->getLuaInterpreter()->settleCommandAfterAliasPass();
             doCleanup();
         }
     });
