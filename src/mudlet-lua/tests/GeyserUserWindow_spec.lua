@@ -644,9 +644,8 @@ describe("Tests functionality of Geyser.UserWindow", function()
     -- console inside it. That the name can be used again is covered by
     -- "reopens a user window that was opened under the same name before"; what
     -- is read here is the dock itself. getUserWindowSize answers from the dock
-    -- registry, falling back to the main window size when the name is not in
-    -- it, so a dock left behind gives itself away by answering with its own
-    -- size instead.
+    -- registry, refusing a name that is not in it, so a dock left behind gives
+    -- itself away by answering with its own size instead.
     it("takes its dock widget with it, so nothing stale answers for the name", function()
       local mainWidth = getMainWindowSize()
       local userWindow = track(Geyser.UserWindow:new({name = "guwReopen", x = 10, y = 20, width = 200, height = 150}))
@@ -655,8 +654,8 @@ describe("Tests functionality of Geyser.UserWindow", function()
       userWindow:delete()
       assert.is_nil(windowType("guwReopen"))
       -- a dock left behind is still holding a live widget here, so it would
-      -- answer with its own size rather than the fallback
-      assert.are.same({getMainWindowSize()}, {getUserWindowSize("guwReopen")})
+      -- answer with its own size rather than refuse
+      assert.are.same({nil, "user window name 'guwReopen' not found"}, {getUserWindowSize("guwReopen")})
       pumpEvents(50)
 
       track(Geyser.UserWindow:new({name = "guwReopen", x = 10, y = 20, width = 200, height = 150}))
@@ -667,9 +666,7 @@ describe("Tests functionality of Geyser.UserWindow", function()
 
   -- Geyser.Container:new makes the "<name>Container" root container for a user
   -- window. An orphaned one is not inert: its get_width/get_height ask
-  -- getUserWindowSize for a window that is gone, which falls back to the main
-  -- window size, so every leftover claims the whole main window in every
-  -- layout pass.
+  -- getUserWindowSize for a window that is gone in every layout pass.
   describe("Geyser.UserWindow root container cleanup", function()
     it("removes the root container it created", function()
       local trackedWindows = #Geyser.windows
@@ -698,6 +695,10 @@ describe("Tests functionality of Geyser.UserWindow", function()
       userWindow:delete()
       assert.are.equal(root, Geyser.windowList.guwRootSharedContainer)
       assert.are.equal(lodger, root.windowList.guwRootLodger)
+      -- the window it measured is gone, so it has no size to lay anything out in
+      assert.are.equal(0, root:get_width())
+      assert.are.equal(0, root:get_height())
+      assert.has_no.errors(function() root:reposition() end)
       root:delete()
       assert.is_nil(Geyser.windowList.guwRootSharedContainer)
     end)
