@@ -20,6 +20,7 @@
 #include "EditorAddItemCommand.h"
 
 #include "EditorItemXMLHelpers.h"
+#include "EditorModifyPropertyCommand.h"
 #include "Host.h"
 #include "TAction.h"
 #include "TAlias.h"
@@ -633,5 +634,30 @@ QString EditorAddItemCommand::generateText(EditorViewType viewType, const QStrin
         }
         //: Undo/redo menu text for adding an unknown item type
         return QObject::tr("add item \"%1\"").arg(itemName);
+    }
+}
+
+int EditorAddItemCommand::id() const
+{
+    return EditorModifyPropertyCommand::CommandId;
+}
+
+// The editor only finishes a new item on its first save, so the edits up to and including that
+// save are part of adding it. Undo snapshots the item as it then stands, so absorbing them loses nothing.
+bool EditorAddItemCommand::mergeWith(const QUndoCommand* other)
+{
+    // Once taken, the snapshot is what redo restores, and it would not hold the edit
+    if (mAddFinished || !mItemSnapshot.isEmpty()) {
+        return false;
+    }
+
+    const auto* pModify = dynamic_cast<const EditorModifyPropertyCommand*>(other);
+    return pModify && pModify->mViewType == mViewType && pModify->mItemID == mItemID;
+}
+
+void EditorAddItemCommand::finishAdding(EditorViewType viewType, int itemID) const
+{
+    if (viewType == mViewType && itemID == mItemID) {
+        mAddFinished = true;
     }
 }

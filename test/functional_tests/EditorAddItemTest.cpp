@@ -29,6 +29,7 @@
 #include <QtTest/QtTest>
 #include <chrono>
 
+#include "EditorItemXMLHelpers.h"
 #include "Host.h"
 #include "HostDialogs.h"
 #include "KeyUnit.h"
@@ -36,11 +37,14 @@
 #include "MudletApp.h"
 #include "PortableModeTestHelper.h"
 #include "ProfileTestHelper.h"
+#include "ScriptUnit.h"
 #include "TKey.h"
+#include "TScript.h"
 #include "TriggerUnit.h"
 #include "TelnetServerStub.h"
 #include "ctelnet.h"
 #include "dlgKeysMainArea.h"
+#include "dlgScriptsMainArea.h"
 #include "dlgTriggerEditor.h"
 #include "mudlet.h"
 
@@ -141,6 +145,64 @@ private slots:
         QCOMPARE(countNamedInTree(mpEditor->treeWidget_triggers, newTrigger), 1);
         QCOMPARE(static_cast<int>(mpHost->getTriggerUnit()->findItems(newTrigger, true, true).size()), 1);
         QCOMPARE(mpEditor->mCurrentView, EditorViewType::cmTriggerView);
+    }
+
+    // The first save finishes a new item, switching it on even when nothing was
+    // typed, so it belongs to the add: one undo has to take the item away (#10774).
+    void test_oneUndoTakesBackAnItemAddedAndSaved()
+    {
+        const QString newTrigger = dlgTriggerEditor::tr("New trigger");
+        mpEditor->slot_showTriggers();
+        mpEditor->treeWidget_triggers->setCurrentItem(mpEditor->mpTriggerBaseItem);
+        const int before = static_cast<int>(mpHost->getTriggerUnit()->findItems(newTrigger, true, true).size());
+        const int commandsBefore = mpEditor->mpUndoStack->count();
+
+        mpEditor->slot_addNewItem();
+        mpEditor->slot_saveEdits();
+
+        QCOMPARE(static_cast<int>(mpHost->getTriggerUnit()->findItems(newTrigger, true, true).size()), before + 1);
+        QCOMPARE(mpEditor->mpUndoStack->count(), commandsBefore + 1);
+
+        mpEditor->mpUndoStack->undo();
+        QCOMPARE(static_cast<int>(mpHost->getTriggerUnit()->findItems(newTrigger, true, true).size()), before);
+
+        // redo brings back the item as it was saved, not as it was first made
+        mpEditor->mpUndoStack->redo();
+        const auto redone = mpHost->getTriggerUnit()->findItems(newTrigger, true, true);
+        QCOMPARE(static_cast<int>(redone.size()), before + 1);
+    }
+
+    // A new script's first save need not change it (the add already marked it
+    // to run), and then pushes nothing; an edit saved after that is still the
+    // player's own undo step, not part of the add
+    void test_anEditAfterAFirstSaveThatChangedNothingIsUndoneOnItsOwn()
+    {
+        const QString newScript = dlgTriggerEditor::tr("New script");
+        const QString renamed = qsl("qaRenamedNewScript");
+        mpEditor->slot_showScripts();
+        mpEditor->treeWidget_scripts->setCurrentItem(mpEditor->mpScriptsBaseItem);
+        const int before = static_cast<int>(mpHost->getScriptUnit()->findItems(newScript).size());
+
+        mpEditor->slot_addNewItem();
+        QTreeWidgetItem* pItem = mpEditor->treeWidget_scripts->currentItem();
+        QVERIFY2(pItem, "adding a script left nothing selected to save");
+        const int scriptID = pItem->data(0, Qt::UserRole).toInt();
+        TScript* pScript = mpHost->getScriptUnit()->getScript(scriptID);
+        QVERIFY(pScript);
+        const QString asAdded = exportScriptToXML(pScript, SnapshotScope::ItemOnly);
+        mpEditor->slot_saveEdits();
+        QVERIFY2(exportScriptToXML(pScript, SnapshotScope::ItemOnly) == asAdded, "the first save of an untouched script changed it, so this case cannot reach a save that pushes nothing");
+
+        mpEditor->mpScriptsMainArea->lineEdit_script_name->setText(renamed);
+        mpEditor->slot_saveEdits();
+        QCOMPARE(pScript->getName(), renamed);
+
+        mpEditor->mpUndoStack->undo();
+        QVERIFY2(static_cast<int>(mpHost->getScriptUnit()->findItems(newScript).size()) == before + 1, "one undo of a rename took away the whole script it was made to");
+        QCOMPARE(static_cast<int>(mpHost->getScriptUnit()->findItems(renamed).size()), 0);
+
+        mpEditor->mpUndoStack->undo();
+        QCOMPARE(static_cast<int>(mpHost->getScriptUnit()->findItems(newScript).size()), before);
     }
 
     // A key made in the editor is only switched on by its first save, and that
