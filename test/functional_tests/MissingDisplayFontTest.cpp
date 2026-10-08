@@ -46,6 +46,7 @@
 #include <QtTest/QtTest>
 
 #include <QFont>
+#include <QFontComboBox>
 #include <QFontDatabase>
 #include <QFontInfo>
 #include <QTemporaryDir>
@@ -61,6 +62,7 @@
 #include "TLuaInterpreter.h"
 #include "TMainConsole.h"
 #include "TTextBox.h"
+#include "dlgProfilePreferences.h"
 #include "mudlet.h"
 
 #include "GroupedTest.h"
@@ -746,6 +748,34 @@ private slots:
         const QString shown = consoleText(pHost);
         QVERIFY2(shown.contains(qsl("[ WARN ]")), qPrintable(qsl("no warning reached the main console; it holds: %1").arg(shown)));
         QVERIFY2(shown.contains(mPackageSuppliedFamily), qPrintable(qsl("the warning does not name the font that went missing; the console holds: %1").arg(shown)));
+    }
+
+    // Re-picking the family on show is how a player settles for the stand-in,
+    // and as nothing on screen changes, the combo box does not say its font
+    // changed (#10204)
+    void test_pickingTheStandInFamilyInThePreferencesSettlesForIt()
+    {
+        const QString profileName = qsl("MissingDisplayFont-Preferences-Test");
+        QVERIFY2(writeProfileSave(profileName, mMissingFamily), "could not write the test profile save");
+
+        Host* pHost = mudlet::self()->loadProfile(profileName, false);
+        QVERIFY(pHost);
+        QVERIFY2(pHost->mLoadedOk, "the test profile save could not be loaded");
+        mudlet::self()->slot_connectionDialogueFinished(profileName, false);
+        QVERIFY2(pHost->mpConsole, "the profile came up without a main console");
+        QCOMPARE(pHost->getDisplayFont().family(), Host::scmDefaultFontFamily);
+        QCOMPARE(pHost->getDisplayFontForSaving().family(), mMissingFamily);
+
+        auto* pPreferences = new dlgProfilePreferences(mudlet::self(), pHost);
+        QFontComboBox* pFamilies = pPreferences->fontComboBox_displayFont;
+        QCOMPARE(pFamilies->currentFont().family(), Host::scmDefaultFontFamily);
+
+        // What a click on the family already shown in the list amounts to
+        emit pFamilies->activated(pFamilies->currentIndex());
+
+        QCOMPARE(pHost->getDisplayFont().family(), Host::scmDefaultFontFamily);
+        QCOMPARE(pHost->getDisplayFontForSaving().family(), Host::scmDefaultFontFamily);
+        delete pPreferences;
     }
 };
 
