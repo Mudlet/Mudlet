@@ -545,6 +545,7 @@ private:
     inline QList<WrapInfo> getWrapInfo(const QString& lineText, bool isNewline, const int maxWidth, const int indent, const int hangingIndent);
     void shrinkBuffer();
     void syncPreTriggerPassLine(int y);
+    void noteFoundLines(int first, int last);
     void materialisePreTriggerPassLine(int y);
     int remapLinkId(const TLinkStore& sourceLinkStore, int sourceLinkId, QHash<int, int>& remappedLinkIds, int line = -1);
     int calculateWrapPosition(int lineNumber, int begin, int end);
@@ -813,6 +814,11 @@ private:
     int mCurrentActiveLinkIndex = 0;  // Which link is currently being clicked (0 = none)
     int mCurrentFocusedLinkIndex = 0; // Which link has keyboard focus (0 = none)
     int mLastClickedLinkIndex = 0;    // Last clicked link - suppresses hover until mouse leaves
+
+    // The lines that may hold a TChar::Found mark, so clearing them does not walk the
+    // whole buffer; a conservative range, kept in step as lines are removed and rewrapped
+    int mFirstFoundLine = -1;
+    int mLastFoundLine = -1;
 
     // Flag to skip trigger processing during documentation injection
     bool mSkipTriggerProcessing = false;

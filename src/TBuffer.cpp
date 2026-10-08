@@ -785,6 +785,8 @@ TBuffer::TBuffer(const TBuffer& other)
 , mCurrentHoveredLinkIndex(other.mCurrentHoveredLinkIndex)
 , mCurrentActiveLinkIndex(other.mCurrentActiveLinkIndex)
 , mCurrentFocusedLinkIndex(other.mCurrentFocusedLinkIndex)
+, mFirstFoundLine(other.mFirstFoundLine)
+, mLastFoundLine(other.mLastFoundLine)
 , mSelectionStylingFromLine(other.mSelectionStylingFromLine)
 {
     mTagWatchdog->setSingleShot(true);
@@ -889,6 +891,8 @@ TBuffer& TBuffer::operator=(const TBuffer& other)
         mCurrentHoveredLinkIndex = other.mCurrentHoveredLinkIndex;
         mCurrentActiveLinkIndex = other.mCurrentActiveLinkIndex;
         mCurrentFocusedLinkIndex = other.mCurrentFocusedLinkIndex;
+        mFirstFoundLine = other.mFirstFoundLine;
+        mLastFoundLine = other.mLastFoundLine;
 
         mTagWatchdog = std::make_unique<QTimer>();
         mTagWatchdog->setSingleShot(true);
@@ -5597,7 +5601,11 @@ void TBuffer::copyInto(const QPoint& P1, const QPoint& P2, TBuffer& slice) const
     int P2x_corrected = std::min(P2.x(), static_cast<int>(buffer.at(y).size())); // Correct P2.x() to prevent out-of-bounds
 
     if (x < P2x_corrected) {
-        const std::vector<TChar> formatting(buffer.at(y).cbegin() + x, buffer.at(y).cbegin() + P2x_corrected);
+        std::vector<TChar> formatting(buffer.at(y).cbegin() + x, buffer.at(y).cbegin() + P2x_corrected);
+        // A search mark belongs to the console that was searched, the only one that will ever clear it
+        for (TChar& character : formatting) {
+            character.mFlags &= ~TChar::AttributeFlag::Found;
+        }
         slice.appendFormatted(lineBuffer.at(y).mid(x, P2x_corrected - x), formatting, mLinkStore);
     }
 }
@@ -6133,6 +6141,11 @@ int TBuffer::wrapLine(int startLine, int maxWidth, int indentSize, int hangingIn
         }
     }
 
+    // A rewrapped line only ever lands at or below where it was
+    if (mLastFoundLine >= firstRewrappedLine) {
+        mLastFoundLine = getLastLineNumber();
+    }
+
     const int lastLineOffset = keptLines + rewrappedLines - 1;
     if (lastLineOffset > 0) {
         // log all lines but the last one (in case further text is appended later)
@@ -6659,6 +6672,13 @@ void TBuffer::shrinkBuffer()
         mpModel->mCurrentSearchResult = qMax(0, mpModel->mCurrentSearchResult - mBatchDeleteSize);
     }
     mPreTriggerPassLineNumber = -1;
+    if (mLastFoundLine >= mBatchDeleteSize) {
+        mFirstFoundLine = std::max(0, mFirstFoundLine - mBatchDeleteSize);
+        mLastFoundLine -= mBatchDeleteSize;
+    } else {
+        mFirstFoundLine = -1;
+        mLastFoundLine = -1;
+    }
 
     // The removed leading lines shift every remaining index down; keep the
     // deferred logging state pointing at the same lines
@@ -6746,6 +6766,18 @@ bool TBuffer::deleteLines(int from, int to)
         buffer.erase(buffer.begin() + from, buffer.begin() + to + 1);
         if (mPreTriggerPassLineNumber >= from) {
             mPreTriggerPassLineNumber = -1;
+        }
+        if (mLastFoundLine >= from) {
+            mLastFoundLine = (mLastFoundLine > to) ? mLastFoundLine - delta : from - 1;
+            if (mFirstFoundLine > to) {
+                mFirstFoundLine -= delta;
+            } else if (mFirstFoundLine > from) {
+                mFirstFoundLine = from;
+            }
+            if (mLastFoundLine < mFirstFoundLine) {
+                mFirstFoundLine = -1;
+                mLastFoundLine = -1;
+            }
         }
 
         // Keep the deferred logging state in step with the removed lines so
@@ -6864,6 +6896,9 @@ bool TBuffer::applyAttribute(const QPoint& P_begin, const QPoint& P_end, const T
          * && ( x2 < static_cast<int>(buffer.at(y2).size()) ) )
          */
 
+        if (state && (attributes & TChar::Found)) {
+            noteFoundLines(y1, y2);
+        }
         // No materialisePreTriggerPassLine(): color matching reads only foreground()/background(), and
         // snapshotting would copy every line for a script that styles all of them.
         for (int y = y1; y <= y2; ++y) {
@@ -8419,13 +8454,30 @@ const QList<QByteArray> TBuffer::getEncodingNames()
     return csmEncodingTable.getEncodingNames();
 }
 
+void TBuffer::noteFoundLines(const int first, const int last)
+{
+    if (mFirstFoundLine < 0) {
+        mFirstFoundLine = first;
+        mLastFoundLine = last;
+        return;
+    }
+    mFirstFoundLine = std::min(mFirstFoundLine, first);
+    mLastFoundLine = std::max(mLastFoundLine, last);
+}
+
 void TBuffer::clearSearchHighlights()
 {
-    for (auto& line : buffer) {
-        for (auto& character : line) {
+    if (mFirstFoundLine < 0) {
+        return;
+    }
+    const int lastLine = std::min(mLastFoundLine, static_cast<int>(buffer.size()) - 1);
+    for (int y = mFirstFoundLine; y <= lastLine; ++y) {
+        for (auto& character : buffer[y]) {
             character.mFlags &= ~TChar::AttributeFlag::Found;
         }
     }
+    mFirstFoundLine = -1;
+    mLastFoundLine = -1;
 }
 
 void TBuffer::injectOSC8DocumentationExamples()
