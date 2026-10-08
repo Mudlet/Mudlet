@@ -272,6 +272,17 @@ describe("Tests keybind-related functions", function()
         "disabling the outer group should not have touched the group inside it")
     end)
 
+    -- a group carries no key, so its key code reads back as Key_unknown rather
+    -- than a number outside Qt::Key's range
+    it("gives a group the unknown key code rather than an out-of-range one", function()
+      local groupName = freshNames("SpecPermKeyGroupCode", "")
+      finally(function() disableKey(groupName) end)
+
+      assert.is_true(permGroup(groupName, "key"), "could not create the key group")
+      local keyCode = getKeyCode(groupName)
+      assert.are.equal(mudlet.key.unknown, keyCode)
+    end)
+
   end)
 
   describe("enable, disable, kill, isActive and exists for keys", function()
