@@ -444,17 +444,9 @@ private slots:
         QVERIFY2(!subject()->hasExitWeight(qsl("n")), "the weight of the deleted exit outlived it");
     }
 
-    /*
-     * Known defect, kept as an expected failure so that fixing it is noticed:
-     * normalExitEdited() greys the "no route" box out when the roomID is
-     * emptied but, unlike the equivalent branch of normalStubExitChanged(),
-     * leaves it ticked, and save() writes every one of those boxes through
-     * unconditionally. The room is left claiming a speedwalk lock on a
-     * direction it has no exit in, which Lua's hasExitLock() reports and which
-     * silently applies to whatever exit is put there next by setExit().
-     * Clearing the box alongside disabling it turns the QVERIFY below green.
-     */
-    void deletingAnExitLeavesItsSpeedwalkLockBehind()
+    // A lock left on a direction with no exit would silently apply to
+    // whatever exit setExit() puts there next.
+    void deletingAnExitClearsItsSpeedwalkLock()
     {
         buildMap();
         auto* pDlg = openDialogOn(scmSubjectRoom);
@@ -465,8 +457,24 @@ private slots:
         pDlg->button_save->click();
 
         QCOMPARE(subject()->getExit(DIR_NORTH), -1);
-        QEXPECT_FAIL("", "issue #10422: the lock control is only greyed out, not cleared, so save() stores it on a direction with no exit", Continue);
         QVERIFY(!subject()->hasExitLock(DIR_NORTH));
+    }
+
+    // The roomID is checked on every keystroke, so retyping it passes through
+    // text that names no room on the way to the new one.
+    void retypingALockedExitKeepsItsSpeedwalkLock()
+    {
+        buildMap();
+        auto* pDlg = openDialogOn(scmSubjectRoom);
+        QVERIFY(pDlg->noroute_n->isChecked());
+
+        clearByTyping(pDlg->n);
+        QTest::keyClicks(pDlg->n, QString::number(scmSpareRoom));
+        QVERIFY(pDlg->button_save->isEnabled());
+        pDlg->button_save->click();
+
+        QCOMPARE(subject()->getExit(DIR_NORTH), scmSpareRoom);
+        QVERIFY2(subject()->hasExitLock(DIR_NORTH), "retyping the roomID dropped the exit's speedwalk lock");
     }
 
     void aStoredSpecialExitFillsItsRow()
