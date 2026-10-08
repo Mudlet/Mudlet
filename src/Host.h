@@ -166,6 +166,8 @@ class Host : public QObject
     friend class HostWidgetDecouplingTest;
     // Allows the functional test to answer the keychain lookup in place of a keychain:
     friend class TelnetLatePasswordTest;
+    // Allows the functional test to size its archives past the unpacking dialog's threshold:
+    friend class PackageRemovalSaveTeardownTest;
 
 public:
     Host(int port, const QString& mHostName, const QString& login, const QString& pass, int host_id);
@@ -1304,6 +1306,8 @@ private:
     // this length it is dropped, so one outsized line can't hold its allocation for the rest of the
     // session; no game line comes close to it.
     static constexpr qsizetype scmMaxRetainedHaystack = 8192;
+    // The unzip blocks the UI, but below this archive size it finishes too fast for the unpacking dialog to earn its cost
+    static constexpr qint64 scmArchiveSizeWorthAnUnpackingDialog = 25_MB;
     QString mTriggerHaystack;
     QString mLogin;
     QString mPass;
