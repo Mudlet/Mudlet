@@ -1873,14 +1873,16 @@ end
 function cecho2ansi(text)
   assert(type(text) == 'string', 'cecho2ansi: bad argument #1 type (expected string, got '..type(text)..'!)')
   local colorPattern = _Echos.Patterns.Color[1]
-  local result = ""
+  local parts, n = {}, 0
   for str, color in rex.split(text, colorPattern) do
-    result = result .. str
+    n = n + 1
+    parts[n] = str
     if color then
-      result = result .. colorToAnsi(color:match("<(.+)>"))
+      n = n + 1
+      parts[n] = colorToAnsi(color:match("<(.+)>"))
     end
   end
-  return result
+  return table.concat(parts, "", 1, n)
 end
 
 --- feedTriggers with cecho style color information.
@@ -1906,17 +1908,21 @@ end
 function decho2ansi(text)
   assert(type(text) == 'string', 'decho2ansi: bad argument #1 type (expected string, got '..type(text)..'!)')
   local colorPattern = _Echos.Patterns.Decimal[1]
-  local result = ""
+  local parts, n = {}, 0
   for str, color, res in rex.split(text, colorPattern) do
-    result = result .. str
+    n = n + 1
+    parts[n] = str
     if color then
-      result = result .. rgbToAnsi(color:match("<(.+)>"))
+      n = n + 1
+      parts[n] = rgbToAnsi(color:match("<(.+)>"))
     end
     if res then
-      result = result .. resets[res]
+      n = n + 1
+      -- concatenated so that a tag with no ANSI equivalent, like </r>, still errors here
+      parts[n] = resets[res] .. ""
     end
   end
-  return result
+  return table.concat(parts, "", 1, n)
 end
 
 --- feedTriggers with decho style color information.
@@ -1940,18 +1946,22 @@ end
 function hecho2ansi(text)
   assert(type(text) == 'string', 'hecho2ansi: bad argument #1 type (expected string, got '..type(text)..'!)')
   local colorPattern = _Echos.Patterns.Hex[1]
-  local result = ""
+  local parts, n = {}, 0
   for str, color, res in rex.split(text, colorPattern) do
-    result = result .. str
+    n = n + 1
+    parts[n] = str
     if color then
       if color:sub(1,1) == "|" then color = color:gsub("|c", "#") end
-      result = result .. hexToAnsi(color:sub(2,-1))
+      n = n + 1
+      parts[n] = hexToAnsi(color:sub(2,-1))
     end
     if res then
-      result = result .. resets[res]
+      n = n + 1
+      -- concatenated so that a tag with no ANSI equivalent, like </r>, still errors here
+      parts[n] = resets[res] .. ""
     end
   end
-  return result
+  return table.concat(parts, "", 1, n)
 end
 
 --- feedTriggers with hecho style color information.
@@ -2002,13 +2012,15 @@ end
 -- function for converting a color formatted string to 'plaintext' string
 local function x2string(text, style)
   local ttbl = _Echos.Process(text, style)
-  local result = ""
+  local parts, n = {}, 0
   for _, val in ipairs(ttbl) do
-    if type(val) == "string" and not val:starts("\27") then
-      result = result .. val
+    -- 27 is the "\27" that starts every control token
+    if type(val) == "string" and val:byte(1) ~= 27 then
+      n = n + 1
+      parts[n] = val
     end
   end
-  return result
+  return table.concat(parts, "", 1, n)
 end
 
 -- function to convert a cecho formatted string to a nonformatted string
@@ -2523,7 +2535,7 @@ local function copy2color(name,win,str,inst)
     -- happens when the text is not on the current line, which is all selectString() searches
     return ""
   end
-  local style, endspan, result, r, g, b, rb, gb, bb, cr, cg, cb, crb, cgb, cbb, char
+  local style, endspan, r, g, b, rb, gb, bb, cr, cg, cb, crb, cgb, cbb, char
   local selectSection, getFgColor, getBgColor = selectSection, getFgColor, getBgColor
   local conversions = {
     ["¦"] = "&brvbar;",
@@ -2543,7 +2555,17 @@ local function copy2color(name,win,str,inst)
     style = "%s<%d,%d,%d:%d,%d,%d>%s"
     endspan = "<r>"
   end
-  for index = start + 1, start + len do
+  -- utf8.sub() and growing the result a character at a time both rescan from the
+  -- start of the line, which made long lines quadratic
+  local lineChars, lastIndex = {}, start + len
+  for lineChar in line:gmatch("[%z\1-\127\194-\244][\128-\191]*") do
+    lineChars[#lineChars + 1] = lineChar
+    if #lineChars == lastIndex then
+      break
+    end
+  end
+  local pieces = {}
+  for index = start + 1, lastIndex do
     if win ~= "main" then
       selectSection(win, index - 1, 1)
       r,g,b = getFgColor(win)
@@ -2554,20 +2576,20 @@ local function copy2color(name,win,str,inst)
       rb,gb,bb = getBgColor()
     end
 
-    char = utf8.sub(line, index, index)
+    char = lineChars[index] or ""
     if name == "copy2html" then
       char = conversions[char] or char -- replace HTML entities (if they are in the table)
     end
 
     if r ~= cr or g ~= cg or b ~= cb or rb ~= crb or gb ~= cgb or bb ~= cbb then
       cr,cg,cb,crb,cgb,cbb = r,g,b,rb,gb,bb
-      result = string.format(style, result and (result..endspan) or "", r, g, b, rb, gb, bb, char)
+      pieces[#pieces + 1] = string.format(style, #pieces > 0 and endspan or "", r, g, b, rb, gb, bb, char)
     else
-      result = result .. char
+      pieces[#pieces + 1] = char
     end
   end
-  result = result .. endspan
-  return result
+  pieces[#pieces + 1] = endspan
+  return table.concat(pieces)
 end
 
 --- copies text with color information in decho format
@@ -2694,28 +2716,72 @@ function resetMapWindowTitle()
   return setMapWindowTitle("")
 end
 
---- This function takes in a color and returns the closest color from color_table. The following all return "ansi_001"
---- closestColor({127,0,0})
---- closestColor(127,0,0)
---- closestColor("#7f0000")
---- closestColor("|c7f0000")
---- closestColor("<127,0,0>")
-function closestColor(r,g,b)
+-- closestColor() answers for whole-number r, g, b, keyed by r * 65536 + g * 256 + b.
+-- Equidistant colours are decided by which one pairs() reaches first, so the answers are
+-- only reused while color_table still iterates as the same names holding the same
+-- values in the same order as the snapshot taken when they were cached.
+local closestColorCache, closestColorCacheSize = {}, 0
+-- flat list of name, colour, r, g, b per color_table entry in pairs() order; false while
+-- color_table holds anything other than tables
+local colorTableSnapshot = nil
+-- its length, as a missing colour component leaves a hole that # cannot see past
+local colorTableSnapshotLength = 0
+
+-- true when the cached answers can be used, retaking the snapshot if color_table changed
+local function closestColorCacheUsable()
+  local snapshot = colorTableSnapshot
+  if snapshot then
+    local i = 1
+    for name, color in pairs(color_table) do
+      if snapshot[i] ~= name or snapshot[i + 1] ~= color or snapshot[i + 2] ~= color[1]
+        or snapshot[i + 3] ~= color[2] or snapshot[i + 4] ~= color[3] then
+        snapshot = nil
+        break
+      end
+      i = i + 5
+    end
+    if snapshot and i - 1 == colorTableSnapshotLength then
+      return true
+    end
+  end
+  closestColorCache, closestColorCacheSize = {}, 0
+  snapshot = {}
+  local i = 1
+  for name, color in pairs(color_table) do
+    if type(color) ~= "table" then
+      colorTableSnapshot = false
+      return false
+    end
+    local r, g, b = color[1], color[2], color[3]
+    snapshot[i], snapshot[i + 1], snapshot[i + 2], snapshot[i + 3], snapshot[i + 4] = name, color, r, g, b
+    i = i + 5
+  end
+  colorTableSnapshot = snapshot
+  colorTableSnapshotLength = i - 1
+  return true
+end
+
+-- cacheChecked: the caller has already had closestColorCacheUsable() answer true, and
+-- nothing could have changed color_table since
+local function findClosestColor(cacheChecked, r, g, b)
   local rtype = type(r)
   local rgb
   if rtype == "table" then
-    rgb = {}
     local tmp = r
-    local err = f"Could not parse {table.concat(tmp, ',')} into RGB coordinates to look for.\n"
     if #tmp ~= 3 then
-      return nil, err
+      return nil, f"Could not parse {table.concat(tmp, ',')} into RGB coordinates to look for.\n"
     end
+    rgb = {}
     for index,coord in ipairs(tmp) do
       local num = tonumber(coord)
       if not num or num < 0 or num > 255 then
-        return nil, err
+        return nil, f"Could not parse {table.concat(tmp, ',')} into RGB coordinates to look for.\n"
       end
       rgb[index] = num
+    end
+    if not rgb[3] then
+      -- a hole in tmp, which table.concat() refuses just as it always has here
+      return nil, f"Could not parse {table.concat(tmp, ',')} into RGB coordinates to look for.\n"
     end
   elseif rtype == "string" and not tonumber(r) then
     if color_table[r] then
@@ -2736,10 +2802,35 @@ function closestColor(r,g,b)
   else
     return nil, f"Could not parse your parameters into RGB coordinates.\n"
   end
+  local sqrt = math.sqrt
   local least_distance = math.huge
   local cname = ""
+  local cr, cg, cb = rgb[1], rgb[2], rgb[3]
+  if type(cr) == "number" and type(cg) == "number" and type(cb) == "number"
+    and cr % 1 == 0 and cg % 1 == 0 and cb % 1 == 0 and cr >= 0 and cr <= 255 and cg >= 0 and cg <= 255
+    and cb >= 0 and cb <= 255 and (cacheChecked or closestColorCacheUsable()) then
+    local key = (cr * 256 + cg) * 256 + cb
+    local cached = closestColorCache[key]
+    if cached then
+      return cached
+    end
+    local snapshot = colorTableSnapshot
+    for i = 1, colorTableSnapshotLength, 5 do
+      local color_distance = sqrt((snapshot[i + 2] - cr) ^ 2 + (snapshot[i + 3] - cg) ^ 2 + (snapshot[i + 4] - cb) ^ 2)
+      if color_distance < least_distance then
+        least_distance = color_distance
+        cname = snapshot[i]
+      end
+    end
+    if closestColorCacheSize >= 4096 then
+      closestColorCache, closestColorCacheSize = {}, 0
+    end
+    closestColorCache[key] = cname
+    closestColorCacheSize = closestColorCacheSize + 1
+    return cname
+  end
   for name, color in pairs(color_table) do
-    local color_distance = math.sqrt((color[1] - rgb[1]) ^ 2 + (color[2] - rgb[2]) ^ 2 + (color[3] - rgb[3]) ^ 2)
+    local color_distance = sqrt((color[1] - cr) ^ 2 + (color[2] - cg) ^ 2 + (color[3] - cb) ^ 2)
     if color_distance < least_distance then
       least_distance = color_distance
       cname = name
@@ -2747,6 +2838,17 @@ function closestColor(r,g,b)
   end
   return cname
 end
+
+--- This function takes in a color and returns the closest color from color_table. The following all return "ansi_001"
+--- closestColor({127,0,0})
+--- closestColor(127,0,0)
+--- closestColor("#7f0000")
+--- closestColor("|c7f0000")
+--- closestColor("<127,0,0>")
+function closestColor(r,g,b)
+  return findClosestColor(false, r, g, b)
+end
+local builtinClosestColor = closestColor
 
 --- Scrolls the given window up a specified number of lines
 --- @param windowName Optional name of the window to use the function on
@@ -2832,7 +2934,8 @@ local echoProcess = _Echos.Process
 --- internal function responsible for taking the color information
 -- returned as part of the table by _Echos.Process and outputting
 -- it for a specific Xecho formatting type.
-local function processedColorsToEchoString(colorType, colors)
+-- cacheChecked: as for findClosestColor(), and closestColor() is still the one defined above
+local function processedColorsToEchoString(colorType, colors, cacheChecked)
   colorType = colorType:lower()
   local result
   if colorType == "hex" then
@@ -2847,11 +2950,19 @@ local function processedColorsToEchoString(colorType, colors)
   elseif colorType == "color" then
     local fg,bg = "",""
     if colors.fg then
-      fg = closestColor(colors.fg)
+      if cacheChecked then
+        fg = findClosestColor(true, colors.fg)
+      else
+        fg = closestColor(colors.fg)
+      end
     end
     if colors.bg then
       -- closestColor chokes if you provide an alpha channel for the background
-      bg = ":" .. closestColor(colors.bg[1], colors.bg[2], colors.bg[3])
+      if cacheChecked then
+        bg = ":" .. findClosestColor(true, colors.bg[1], colors.bg[2], colors.bg[3])
+      else
+        bg = ":" .. closestColor(colors.bg[1], colors.bg[2], colors.bg[3])
+      end
     end
     result = string.format("<%s%s>", fg, bg)
   elseif colorType == "decimal" then
@@ -2914,18 +3025,24 @@ local function echoConverter(str, from, to, resetFormat)
     local msg = "argument #3 (to) must be a valid echo type. Valid types are: " .. table.concat(table.keys(echoOutputs), ",")
     printError(msg, true, true)
   end
-  local result = ""
-  for _, token in ipairs(processed) do
+  local parts = {}
+  -- only checked once a colour turns up, and then once for the whole string
+  local cacheChecked
+  for i, token in ipairs(processed) do
+    -- every key of outputs is a "\27..." control token
     local formatter = outputs[token]
-    if formatter and token:find("\27") then
-      result = result .. formatter
+    if formatter then
+      parts[i] = formatter
     elseif type(token) == "table" then
-      result = result .. processedColorsToEchoString(to, token)
+      if cacheChecked == nil then
+        cacheChecked = to == "Color" and closestColor == builtinClosestColor and closestColorCacheUsable()
+      end
+      parts[i] = processedColorsToEchoString(to, token, cacheChecked)
     else
-      result = result .. token
+      parts[i] = token
     end
   end
-  return result
+  return table.concat(parts)
 end
 
 -- converts cecho formatted string to html

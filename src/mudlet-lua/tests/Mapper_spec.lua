@@ -680,6 +680,44 @@ describe("Tests mapper functions against a shared fixture", function()
       assert.is_nil(getAreaTable()["MapperSpecDeleteMe"])
     end)
 
+    it("removes every room of a large area and the exits other areas had into them", function()
+      local doomed = addAreaName("MapperSpecDeleteMany")
+      local survivor = addAreaName("MapperSpecDeleteManyNeighbour")
+      local base, count = 991000000, 2000
+      for i = 1, count do
+        addRoom(base + i)
+        setRoomArea(base + i, doomed)
+        setRoomCoordinates(base + i, i % 50, math.floor(i / 50), 0)
+        if i > 1 then
+          setExit(base + i, base + i - 1, "w")
+          setExit(base + i - 1, base + i, "e")
+        end
+        if i % 7 == 0 then
+          addSpecialExit(base + i, base + 1, "jump " .. i)
+        end
+      end
+      local outside = base + count + 1
+      addRoom(outside)
+      setRoomArea(outside, survivor)
+      setExit(outside, base + 1, "n")
+      setExit(outside, base + count, "s")
+      addSpecialExit(outside, base + 500, "climb")
+      finally(function()
+        deleteArea("MapperSpecDeleteManyNeighbour")
+        deleteArea("MapperSpecDeleteMany")
+      end)
+
+      assert.is_true(deleteArea(doomed))
+
+      for i = 1, count do
+        assert.is_false(roomExists(base + i))
+      end
+      assert.is_true(roomExists(outside))
+      assert.are.same({}, getRoomExits(outside))
+      assert.are.same({}, getSpecialExitsSwap(outside))
+      assert.is_nil(getAreaTable()["MapperSpecDeleteMany"])
+    end)
+
     it("returns nil and a message for an unknown areaID", function()
       local ok, err = deleteArea(missingAreaId)
       assert.is_nil(ok)
@@ -1998,6 +2036,25 @@ describe("Tests mapper functions against a shared fixture", function()
       assert.are.equal("MapperSpecShared", labels[first].Text)
       assert.are.same({1, 1, 0}, {labels[second].X, labels[second].Y, labels[second].Z})
       assert.is_nil(labels[other])
+    end)
+
+    it("createMapLabel takes the lowest label id that is free", function()
+      local area = addAreaName("MapperSpecLabelIds")
+      finally(function() deleteArea(area) end)
+      local function create()
+        return createMapLabel(area, "MapperSpecId", 0, 0, 0, 255, 255, 255, 0, 0, 0, 30, 10)
+      end
+
+      assert.are.same({0, 1, 2, 3}, {create(), create(), create(), create()})
+      deleteMapLabel(area, 1)
+      assert.are.equal(1, create())
+      assert.are.equal(4, create())
+      deleteMapLabel(area, 0)
+      deleteMapLabel(area, 2)
+      assert.are.same({0, 2, 5}, {create(), create(), create()})
+      deleteMapLabel(area, 5)
+      deleteMapLabel(area, 4)
+      assert.are.equal(4, create())
     end)
 
     it("getMapLabel hard-errors when the label is neither a number nor a string", function()

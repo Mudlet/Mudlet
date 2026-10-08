@@ -406,7 +406,9 @@ void XMLimport::readMap()
 
         mpHost->mpMap->mpRoomDB->setAreaRooms(areaId, areaRoomsSet);
         currentRoomCount += areaRoomsSet.count();
-        mpHost->mpMap->reportProgressToProgressDialog(currentRoomCount, roomTotal);
+        if (!itAreaWithRooms.hasNext() || mapProgressDue()) {
+            mpHost->mpMap->reportProgressToProgressDialog(currentRoomCount, roomTotal);
+        }
     }
 }
 
@@ -451,6 +453,17 @@ void XMLimport::readArea()
 
         mpHost->mpMap->mpRoomDB->addArea(id, name);
     }
+}
+
+// Each report repaints the map beneath its translucent progress overlay, which
+// costs more than parsing the rooms in between when the reports come too often
+bool XMLimport::mapProgressDue()
+{
+    if (mMapProgressTimer.isValid() && mMapProgressTimer.elapsed() < 30) {
+        return false;
+    }
+    mMapProgressTimer.start();
+    return true;
 }
 
 void XMLimport::readRooms(QMultiHash<int, int>& areaRoomsHash)
@@ -599,7 +612,7 @@ void XMLimport::readRoom(QMultiHash<int, int>& areamRoomMultiHash, unsigned int*
     }
 
     if (pT->id > 0) {
-        if (++(*roomCount) % 100 == 0) {
+        if (++(*roomCount) % 100 == 0 && mapProgressDue()) {
             mpHost->mpMap->reportStringToProgressDialog(tr("Parsing room data [count: %1]...").arg(*roomCount));
         }
         areamRoomMultiHash.insert(pT->area, pT->id);

@@ -38,6 +38,7 @@ public:
     void reset();
 
     bool isEntityResolved() const;
+    bool readingEntity() const { return !mCurrentEntity.isEmpty(); }
     QString getResultAndReset();
     inline TEntityType getEntityType(void) {return entityType;}
 
