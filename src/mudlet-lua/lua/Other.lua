@@ -341,10 +341,6 @@ end
 ---  Functions are saved via string.dump, so make sure it has no upvalues <br/>
 ---  References are saved <br/>
 ---
---- @usage Saves the globals table (minus some lua environment stuff) into a file (only Mudlet should use this).
----   <pre>
----   table.save(file)
----   </pre>
 --- @usage Saves the given table into the given file.
 ---   <pre>
 ---   table.save(file, table)
@@ -353,17 +349,67 @@ end
 --- @see table.load
 function table.save( sfile, t )
   assert(type(sfile) == "string", "table.save requires a file path to save to")
+  -- no default of _G: table.load(file) would then overwrite db, Geyser and the rest with copies
+  -- that lost their functions
+  assert(type(t) == "table", "table.save requires a table to save")
   local tables = {}
   table.insert( tables, t )
   local lookup = { [t] = 1 }
+  -- written to the file only once the whole table is serialised, so a failure part way through
+  -- cannot leave the previous contents truncated
+  local chunks = {}
+  local buffer = { write = function(_, text) chunks[#chunks + 1] = text end }
+  buffer:write( "return {" )
+  for i, v in ipairs( tables ) do
+    table.pickle( v, buffer, tables, lookup )
+  end
+  buffer:write( "}" )
+  local text = table.concat( chunks )
   local file, msg = io.open( sfile, "w" )
   if not file then return nil, msg end
-  file:write( "return {" )
-  for i, v in ipairs( tables ) do
-    table.pickle( v, file, tables, lookup )
+  local written, write_msg = file:write( text )
+  local closed, close_msg = file:close()
+  if not written then return nil, write_msg end
+  if not closed then return nil, close_msg end
+  return true
+end
+
+
+
+-- the standard library tables are left out when saving _G itself, not when a data table
+-- merely has a member of the same name
+local libraryNames = {
+  string = true, xpcall = true, package = true, os = true, io = true, math = true, debug = true,
+  coroutine = true, _G = true, _VERSION = true, table = true
+}
+
+-- tostring() gives inf, -inf and nan, which are not Lua literals, and only 14 significant digits
+local function numberLiteral(n)
+  if n ~= n then
+    return "(0/0)"
+  elseif n == math.huge then
+    return "(1/0)"
+  elseif n == -math.huge then
+    return "(-1/0)"
   end
-  file:write( "}" )
-  file:close()
+  local short = tostring( n )
+  if tonumber( short ) == n then
+    return short
+  end
+  return string.format( "%.17g", n )
+end
+
+-- %q rather than a long bracket, which drops a leading newline and turns a lone \r into \n
+local function literal(v)
+  local kind = type( v )
+  if kind == "string" then
+    return string.format( "%q", v )
+  elseif kind == "number" then
+    return numberLiteral( v )
+  elseif kind == "boolean" then
+    return tostring( v )
+  end
+  return nil
 end
 
 
@@ -372,8 +418,10 @@ end
 function table.pickle( t, file, tables, lookup )
   file:write( "{" )
   for i, v in pairs( t ) do
-    -- escape functions
-    if type( v ) ~= "function" and type( v ) ~= "userdata" and (i ~= "string" and i ~= "xpcall" and i ~= "package" and i ~= "os" and i ~= "io" and i ~= "math" and i ~= "debug" and i ~= "coroutine" and i ~= "_G" and i ~= "_VERSION" and i ~= "table") then
+    -- functions, userdata and threads have no literal to be written as, as a key or as a value
+    local index = type( i ) == "table" or literal( i )
+    local value = type( v ) == "table" or literal( v )
+    if index and value and not (rawequal( t, _G ) and libraryNames[i]) then
       -- handle index
       if type( i ) == "table" then
         if not lookup[i] then
@@ -383,8 +431,7 @@ function table.pickle( t, file, tables, lookup )
         end
         file:write( "[{" .. lookup[i] .. "}] = " )
       else
-        local index = ( type( i ) == "string" and "[ " .. string.enclose( i, 50 ) .. " ]" ) or string.format( "[%d]", i )
-        file:write( index .. " = " )
+        file:write( "[" .. index .. "] = " )
       end
       -- handle value
       if type( v ) == "table" then
@@ -394,7 +441,6 @@ function table.pickle( t, file, tables, lookup )
         end
         file:write( "{" .. lookup[v] .. "}," )
       else
-        local value = ( type( v ) == "string" and string.enclose( v, 50 ) ) or tostring( v )
         file:write( value .. "," )
       end
     end
