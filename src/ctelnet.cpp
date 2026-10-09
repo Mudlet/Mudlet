@@ -64,6 +64,7 @@
 #include <QSslError>
 #include <QtGlobal>
 
+#include <array>
 #include <memory>
 
 using namespace std::chrono_literals;
@@ -5802,11 +5803,10 @@ bool cTelnet::readSocketDataOnce()
         amount = static_cast<int>(deferred.size());
         processSocketData(deferred.data(), amount);
     } else if (mpSocket) {
-        // TODO: https://github.com/Mudlet/Mudlet/issues/5780 (2 of 7) - investigate switching from using `char[]` to `std::array<char>`
-        char in_buffer[BUFFER_SIZE + 10];
+        std::array<char, BUFFER_SIZE + 10> in_buffer;
 
-        amount = static_cast<int>(mpSocket->read(in_buffer, BUFFER_SIZE));
-        processSocketData(in_buffer, amount);
+        amount = static_cast<int>(mpSocket->read(in_buffer.data(), BUFFER_SIZE));
+        processSocketData(in_buffer.data(), amount);
     }
 
     // amount > 0 as well as bytesAvailable(): a read that yields nothing while the
