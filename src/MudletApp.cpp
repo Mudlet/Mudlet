@@ -569,20 +569,22 @@ QPair<bool, QString> MudletApp::writeProfileData(const QString& profile, const Q
     }
 
     QSaveFile file(MudletApp::getMudletPath(enums::profileDataItemPath, profile, item));
-    if (file.open(QIODevice::WriteOnly | QIODevice::Unbuffered)) {
-        QDataStream ofs(&file);
-        ofs.setVersion(QDataStream::Qt_5_12);
-        ofs << what;
-        if (!file.commit()) {
-            qDebug().noquote().nospace() << "MudletApp::writeProfileData(...) ERROR - writing profile: \"" << profile << "\", item: \"" << item << "\", reason: \"" << file.errorString() << "\".";
-        }
+    if (!file.open(QIODevice::WriteOnly | QIODevice::Unbuffered)) {
+        return qMakePair(false, file.errorString());
     }
 
-    if (file.error() == QFile::NoError) {
-        return qMakePair(true, QString());
+    QDataStream ofs(&file);
+    ofs.setVersion(QDataStream::Qt_5_12);
+    ofs << what;
+    // A short write - a full disk - leaves no error on the file, only on the stream; and commit() would
+    // rename the truncated file into place
+    if (ofs.status() != QDataStream::Ok || file.error() != QFileDevice::NoError || !file.commit()) {
+        const QString reason = file.error() == QFileDevice::NoError ? qsl("could not write all of the %1 data").arg(item) : file.errorString();
+        qWarning().noquote().nospace() << "MudletApp::writeProfileData(...) ERROR - writing profile: \"" << profile << "\", item: \"" << item << "\", reason: \"" << reason << "\".";
+        return qMakePair(false, reason);
     }
 
-    return qMakePair(false, file.errorString());
+    return qMakePair(true, QString());
 }
 
 QString MudletApp::getCanonicalProfileName(const QString& profileName)
