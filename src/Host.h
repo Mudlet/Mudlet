@@ -699,6 +699,10 @@ public:
     std::optional<QString> commandLineStyleSheet(const QString& name) const;
     // {} without a main console.
     std::optional<QColor> borderColor() const;
+    // The main console answers the profile's display font; {} for no such console.
+    std::optional<QFont> windowFont(const QString& name) const;
+    // The point size of a console's upper pane font; {} for no such console.
+    std::optional<int> windowFontSize(const QString& name) const;
     bool getEditorShowBidi() const { return mEditorShowBidi; }
     void setEditorShowBidi(const bool);
     bool caretEnabled() const;

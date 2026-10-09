@@ -3357,6 +3357,9 @@ void TTextEdit::reportGridSize()
 void TTextEdit::changeEvent(QEvent* event)
 {
     if (event->type() == QEvent::FontChange) {
+        if (!mIsLowerPane && mpConsole) {
+            mpConsole->model().mUpperPaneFont = font();
+        }
         reportGridSize();
     }
     QWidget::changeEvent(event);
