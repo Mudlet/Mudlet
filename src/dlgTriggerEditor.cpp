@@ -13322,8 +13322,8 @@ void dlgTriggerEditor::slot_profileSaveAction()
     auto [ok, filename, error] = mpHost->saveProfile(QString(), QString(), true);
 
     if (ok) {
-        // Mudlet.ini is otherwise only written at quit, so an unclean exit
-        // would lose the application-wide half of the settings saved here
+        // Most application-wide settings reach Mudlet.ini only at quit, so an
+        // unclean exit would lose the ones this save is meant to keep
         mudlet::self()->writeSettings();
     } else if (!error.isEmpty()) {
         QMessageBox::critical(this, tr("Couldn't save profile"), tr("Sorry, couldn't save your profile - got the following error: %1").arg(error));

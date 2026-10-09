@@ -1461,8 +1461,8 @@ int TLuaInterpreter::saveProfile(lua_State* L)
     auto [ok, filename, error] = saveAsFile.isNull() ? host.saveProfile(saveToDir) : host.saveProfileAs(saveAsPathFileName);
 
     if (ok) {
-        // Mudlet.ini is otherwise only written at quit, so an unclean exit
-        // would lose the application-wide half of the settings saved here
+        // Most application-wide settings reach Mudlet.ini only at quit, so an
+        // unclean exit would lose the ones this save is meant to keep
         if (mudlet* pMudlet = mudlet::self()) {
             pMudlet->writeSettings();
         }

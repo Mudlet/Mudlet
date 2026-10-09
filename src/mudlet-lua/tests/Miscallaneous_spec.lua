@@ -939,8 +939,8 @@ describe("Tests C++ functions in the Miscallaneous category", function()
         assert.is_false(fileExists(escapee), "the save landed at " .. escapee)
       end)
 
-      -- Mudlet.ini is otherwise only written at quit, so an unclean exit after
-      -- an explicit save would still lose the application-wide settings
+      -- most application-wide settings reach Mudlet.ini only at quit, so an
+      -- unclean exit after an explicit save would still lose them
       it("writes the application-wide settings to Mudlet.ini as well", function()
         local iniFile = getMudletHomeDir():match("^(.*)/profiles/[^/]+$") .. "/Mudlet.ini"
         local original = getConfig("showTabConnectionIndicators")
