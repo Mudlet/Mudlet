@@ -266,23 +266,29 @@ private slots:
     void diagnosticsStayOffStandardOutput_data()
     {
         QTest::addColumn<QStringList>("arguments");
+        // Text only the page asked for prints, so a run that printed nothing, or the other page, fails
+        QTest::addColumn<QString>("outputMarker");
         QTest::addColumn<QStringList>("errorMustContain");
         QTest::addColumn<QStringList>("errorMustNotContain");
 
-        QTest::newRow("--bogus --version") << QStringList{qsl("--bogus"), qsl("--version")} << QStringList{qsl("Unknown option 'bogus'")} << QStringList();
+        const QString versionMarker{qsl("GPLv3")};
+        const QString helpMarker{qsl("Report bugs to")};
+        QTest::newRow("--bogus --version") << QStringList{qsl("--bogus"), qsl("--version")} << versionMarker << QStringList{qsl("Unknown option 'bogus'")} << QStringList();
 
         // Qt's own options that the help text does not document are still
         // Qt's, and not unknown
         const QStringList notUnknown{qsl("Unknown option")};
-        QTest::newRow("-platform offscreen --version") << QStringList{qsl("-platform"), qsl("offscreen"), qsl("--version")} << QStringList() << notUnknown;
-        QTest::newRow("-session x --version") << QStringList{qsl("-session"), qsl("x"), qsl("--version")} << QStringList() << notUnknown;
-        QTest::newRow("-qwindowgeometry 100x100 --help") << QStringList{qsl("-qwindowgeometry"), qsl("100x100"), qsl("--help")} << QStringList() << notUnknown;
-        QTest::newRow("-qwindowtitle t -display :0 --version") << QStringList{qsl("-qwindowtitle"), qsl("t"), qsl("-display"), qsl(":0"), qsl("--version")} << QStringList() << notUnknown;
+        QTest::newRow("-platform offscreen --version") << QStringList{qsl("-platform"), qsl("offscreen"), qsl("--version")} << versionMarker << QStringList() << notUnknown;
+        QTest::newRow("-session x --version") << QStringList{qsl("-session"), qsl("x"), qsl("--version")} << versionMarker << QStringList() << notUnknown;
+        QTest::newRow("-qwindowgeometry 100x100 --help") << QStringList{qsl("-qwindowgeometry"), qsl("100x100"), qsl("--help")} << helpMarker << QStringList() << notUnknown;
+        QTest::newRow("-qwindowtitle t -display :0 --version") << QStringList{qsl("-qwindowtitle"), qsl("t"), qsl("-display"), qsl(":0"), qsl("--version")} << versionMarker << QStringList()
+                                                               << notUnknown;
     }
 
     void diagnosticsStayOffStandardOutput()
     {
         QFETCH(QStringList, arguments);
+        QFETCH(QString, outputMarker);
         QFETCH(QStringList, errorMustContain);
         QFETCH(QStringList, errorMustNotContain);
 
@@ -298,6 +304,7 @@ private slots:
         const QString diagnostics = qsl("%1, stdout:\n%2\nstderr:\n%3").arg(where, outcome.standardOutput, outcome.standardError);
         QVERIFY2(outcome.exitStatus == QProcess::NormalExit && outcome.exitCode == 0, qPrintable(qsl("mudlet %1 did not exit cleanly; %2").arg(where, diagnostics)));
         QVERIFY2(!outcome.standardOutput.contains(qsl("Warning")), qPrintable(qsl("mudlet %1 warned on standard output; %2").arg(where, diagnostics)));
+        QVERIFY2(outcome.standardOutput.contains(outputMarker), qPrintable(qsl("mudlet %1 printed nothing that says \"%2\"; %3").arg(where, outputMarker, diagnostics)));
 
         for (const QString& expected : errorMustContain) {
             QVERIFY2(outcome.standardError.contains(expected), qPrintable(qsl("mudlet %1 said nothing on standard error that says \"%2\"; %3").arg(where, expected, diagnostics)));
