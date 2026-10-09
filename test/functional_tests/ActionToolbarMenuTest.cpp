@@ -326,7 +326,7 @@ private slots:
         auto* group = buildNestedGroup(host, 0);
         host->getActionUnit()->updateAllToolbars();
 
-        auto* console = host->mpConsole.data();
+        auto* console = host->mainConsoleView();
         auto* bar = console->actionEasyButtonBar(actionNamed(host, qsl("menuTestToolbar")));
         QVERIFY(bar);
         QCOMPARE(console->actionEasyButtonBar(group), bar);
@@ -343,7 +343,7 @@ private slots:
         auto* group = buildNestedGroup(host, 4);
         host->getActionUnit()->updateAllToolbars();
 
-        auto* console = host->mpConsole.data();
+        auto* console = host->mainConsoleView();
         auto* toolBar = console->actionToolBar(actionNamed(host, qsl("menuTestToolbar")));
         QVERIFY(toolBar);
         QCOMPARE(console->actionToolBar(group), toolBar);
