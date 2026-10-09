@@ -1817,6 +1817,7 @@ void TTextEdit::unHighlight()
             }
         }
     }
+    mPBTakingNewline = QPoint(-1, -1);
     if (QAccessible::isActive()) {
         QAccessibleTextSelectionEvent event(this, -1, -1);
         QAccessible::updateAccessibility(&event);
@@ -4786,5 +4787,8 @@ int TTextEdit::selectionEndOffset() const
 {
     const int line = mPB.y();
     const int lineLength = (line >= 0 && line < static_cast<int>(mpBuffer->buffer.size())) ? static_cast<int>(mpBuffer->buffer.at(line).size()) : 0;
+    if (mPB == mPBTakingNewline) {
+        return offsetForPosition(line, lineLength) + 1;
+    }
     return offsetForPosition(line, std::min(mPB.x() + 1, lineLength));
 }

@@ -541,6 +541,30 @@ private slots:
         QCOMPARE(ti->text(reportedStart, reportedEnd), mSecondMarker);
     }
 
+    // A range that takes in a newline leaves mPB where a whole-line selection
+    // does, yet has to come back with the newline it asked for
+    void test_aSelectionTakingInANewlineRoundTrips()
+    {
+        QAccessibleTextInterface* ti = textInterface();
+        QVERIFY(ti);
+        const int line = lineOf(mSecondMarker);
+        QVERIFY2(lineIsOnScreen(line), "the line being selected is off screen, so no selection region could be built for it");
+        const int newline = offsetOfLine(line) + mSecondMarker.length();
+        int reportedStart = -1;
+        int reportedEnd = -1;
+
+        ti->removeSelection(0);
+        ti->addSelection(newline, newline + 1);
+        ti->selection(0, &reportedStart, &reportedEnd);
+        QCOMPARE(ti->text(reportedStart, reportedEnd), QString(QChar::LineFeed));
+
+        ti->removeSelection(0);
+        ti->addSelection(offsetOfLine(line), newline + 1);
+        ti->selection(0, &reportedStart, &reportedEnd);
+        QCOMPARE(ti->text(reportedStart, reportedEnd), mSecondMarker + QChar::LineFeed);
+        ti->removeSelection(0);
+    }
+
     // setSelection is addSelection under another name, and both refuse an index
     // other than the single selection the console supports.
     void test_setSelectionOnlySupportsTheFirstSelection()
