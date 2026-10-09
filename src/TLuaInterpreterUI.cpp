@@ -40,6 +40,7 @@
 #include "Host.h"
 #include "HostManager.h"
 #include "TAction.h"
+#include "TAppFrontend.h"
 #include "TArea.h"
 #include "TConsole.h"
 #include "TDebug.h"
@@ -4712,7 +4713,7 @@ int TLuaInterpreter::addCommand(lua_State* L)
         return warnArgumentValue(L, __func__, "addCommand needs a table, e.g. addCommand{name = 'Speech', menuPath = 'Speech'}");
     }
 
-    mudlet::CommandRequest request;
+    TAppFrontend::CommandRequest request;
     // Leaving a field out and giving it the wrong type are different mistakes:
     // the first asks for nothing, the second asks for something and is ignored.
     // menuPath is the one that bites, because the path is conceptually a list
@@ -4809,18 +4810,18 @@ int TLuaInterpreter::addCommand(lua_State* L)
     // Leaving surfaces out means "wherever this client puts commands", which is
     // both. Naming it and naming nothing in it is refused above.
     if (!named) {
-        request.surfaces = mudlet::CommandSurface::Both;
+        request.surfaces = TAppFrontend::CommandSurface::Both;
     } else if (wantsMenu && wantsToolbar) {
-        request.surfaces = mudlet::CommandSurface::Both;
+        request.surfaces = TAppFrontend::CommandSurface::Both;
     } else if (wantsToolbar) {
-        request.surfaces = mudlet::CommandSurface::Toolbar;
+        request.surfaces = TAppFrontend::CommandSurface::Toolbar;
     } else {
-        request.surfaces = mudlet::CommandSurface::Menu;
+        request.surfaces = TAppFrontend::CommandSurface::Menu;
     }
 
     auto& host = getHostFromLua(L);
-    mudlet* pMudlet = mudlet::self();
-    if (!pMudlet) {
+    auto pFrontend = TAppFrontend::instance();
+    if (!pFrontend) {
         return warnArgumentValue(L, __func__, "mudlet instance not available");
     }
 
@@ -4839,7 +4840,7 @@ int TLuaInterpreter::addCommand(lua_State* L)
     }
 
     QString error;
-    const int commandId = pMudlet->addAddonCommand(request, &host, package, error);
+    const int commandId = pFrontend->addAddonCommand(request, &host, package, error);
     if (commandId < 0) {
         return warnArgumentValue(L, __func__, error.isEmpty() ? qsl("the command could not be placed") : error);
     }
@@ -4854,12 +4855,12 @@ int TLuaInterpreter::removeCommand(lua_State* L)
     const int commandId = getVerifiedInt(L, __func__, 1, "commandId");
 
     auto& host = getHostFromLua(L);
-    mudlet* pMudlet = mudlet::self();
-    if (!pMudlet) {
+    auto pFrontend = TAppFrontend::instance();
+    if (!pFrontend) {
         return warnArgumentValue(L, __func__, "mudlet instance not available");
     }
 
-    lua_pushboolean(L, pMudlet->removeAddonCommand(commandId, &host));
+    lua_pushboolean(L, pFrontend->removeAddonCommand(commandId, &host));
     return 1;
 }
 
@@ -4869,12 +4870,12 @@ int TLuaInterpreter::enableCommand(lua_State* L)
     const int commandId = getVerifiedInt(L, __func__, 1, "commandId");
 
     auto& host = getHostFromLua(L);
-    mudlet* pMudlet = mudlet::self();
-    if (!pMudlet) {
+    auto pFrontend = TAppFrontend::instance();
+    if (!pFrontend) {
         return warnArgumentValue(L, __func__, "mudlet instance not available");
     }
 
-    lua_pushboolean(L, pMudlet->setAddonCommandEnabled(commandId, true, &host));
+    lua_pushboolean(L, pFrontend->setAddonCommandEnabled(commandId, true, &host));
     return 1;
 }
 
@@ -4884,12 +4885,12 @@ int TLuaInterpreter::disableCommand(lua_State* L)
     const int commandId = getVerifiedInt(L, __func__, 1, "commandId");
 
     auto& host = getHostFromLua(L);
-    mudlet* pMudlet = mudlet::self();
-    if (!pMudlet) {
+    auto pFrontend = TAppFrontend::instance();
+    if (!pFrontend) {
         return warnArgumentValue(L, __func__, "mudlet instance not available");
     }
 
-    lua_pushboolean(L, pMudlet->setAddonCommandEnabled(commandId, false, &host));
+    lua_pushboolean(L, pFrontend->setAddonCommandEnabled(commandId, false, &host));
     return 1;
 }
 
@@ -4900,12 +4901,12 @@ int TLuaInterpreter::setCommandChecked(lua_State* L)
     const bool checked = getVerifiedBool(L, __func__, 2, "checked");
 
     auto& host = getHostFromLua(L);
-    mudlet* pMudlet = mudlet::self();
-    if (!pMudlet) {
+    auto pFrontend = TAppFrontend::instance();
+    if (!pFrontend) {
         return warnArgumentValue(L, __func__, "mudlet instance not available");
     }
 
-    lua_pushboolean(L, pMudlet->setAddonCommandChecked(commandId, checked, &host));
+    lua_pushboolean(L, pFrontend->setAddonCommandChecked(commandId, checked, &host));
     return 1;
 }
 
@@ -4916,12 +4917,12 @@ int TLuaInterpreter::setCommandPinned(lua_State* L)
     const bool pinned = getVerifiedBool(L, __func__, 2, "pinned");
 
     auto& host = getHostFromLua(L);
-    mudlet* pMudlet = mudlet::self();
-    if (!pMudlet) {
+    auto pFrontend = TAppFrontend::instance();
+    if (!pFrontend) {
         return warnArgumentValue(L, __func__, "mudlet instance not available");
     }
 
-    lua_pushboolean(L, pMudlet->setAddonCommandPinned(commandId, pinned, &host));
+    lua_pushboolean(L, pFrontend->setAddonCommandPinned(commandId, pinned, &host));
     return 1;
 }
 
@@ -4932,12 +4933,12 @@ int TLuaInterpreter::setCommandIcon(lua_State* L)
     const QString icon = getVerifiedString(L, __func__, 2, "icon");
 
     auto& host = getHostFromLua(L);
-    mudlet* pMudlet = mudlet::self();
-    if (!pMudlet) {
+    auto pFrontend = TAppFrontend::instance();
+    if (!pFrontend) {
         return warnArgumentValue(L, __func__, "mudlet instance not available");
     }
 
-    lua_pushboolean(L, pMudlet->setAddonCommandIcon(commandId, icon, &host));
+    lua_pushboolean(L, pFrontend->setAddonCommandIcon(commandId, icon, &host));
     return 1;
 }
 
@@ -4948,12 +4949,12 @@ int TLuaInterpreter::setCommandTooltip(lua_State* L)
     const QString tooltip = getVerifiedString(L, __func__, 2, "tooltip");
 
     auto& host = getHostFromLua(L);
-    mudlet* pMudlet = mudlet::self();
-    if (!pMudlet) {
+    auto pFrontend = TAppFrontend::instance();
+    if (!pFrontend) {
         return warnArgumentValue(L, __func__, "mudlet instance not available");
     }
 
-    lua_pushboolean(L, pMudlet->setAddonCommandTooltip(commandId, tooltip, &host));
+    lua_pushboolean(L, pFrontend->setAddonCommandTooltip(commandId, tooltip, &host));
     return 1;
 }
 
@@ -4981,13 +4982,13 @@ int TLuaInterpreter::setCommandPulse(lua_State* L)
     }
 
     auto& host = getHostFromLua(L);
-    mudlet* pMudlet = mudlet::self();
-    if (!pMudlet) {
+    auto pFrontend = TAppFrontend::instance();
+    if (!pFrontend) {
         return warnArgumentValue(L, __func__, "mudlet instance not available");
     }
 
     QString error;
-    const bool success = pMudlet->setAddonCommandPulse(commandId, enabled, color1, color2, interval, &host, error);
+    const bool success = pFrontend->setAddonCommandPulse(commandId, enabled, color1, color2, interval, &host, error);
     if (!success && !error.isEmpty()) {
         return warnArgumentValue(L, __func__, error);
     }
