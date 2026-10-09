@@ -1093,8 +1093,26 @@ if(UNIX AND NOT APPLE)
     DESTINATION "share/mudlet/lua"
     FILES_MATCHING
     PATTERN "*.lua" PERMISSIONS OWNER_READ OWNER_WRITE GROUP_READ WORLD_READ
-    PATTERN "LICENSE" PERMISSIONS OWNER_READ OWNER_WRITE GROUP_READ WORLD_READ
-    PATTERN ".git" EXCLUDE)
+    PATTERN "LICENSE*" PERMISSIONS OWNER_READ OWNER_WRITE GROUP_READ WORLD_READ
+    PATTERN "COPYING*" PERMISSIONS OWNER_READ OWNER_WRITE GROUP_READ WORLD_READ
+    PATTERN ".*" EXCLUDE)
+  # FILES_MATCHING still creates every directory it walks, so a directory holding no Lua would ship
+  # empty; EXCLUDE_EMPTY_DIRECTORIES would do this but needs CMake 3.31
+  install(
+    CODE [[
+    file(GLOB_RECURSE lcfEntries LIST_DIRECTORIES true
+         "$ENV{DESTDIR}${CMAKE_INSTALL_PREFIX}/share/mudlet/lua/lcf/*")
+    # deepest first, so a parent left empty by removing its children goes too
+    list(SORT lcfEntries ORDER DESCENDING)
+    foreach(lcfEntry IN LISTS lcfEntries)
+      if(IS_DIRECTORY "${lcfEntry}")
+        file(GLOB lcfChildren "${lcfEntry}/*")
+        if(NOT lcfChildren)
+          file(REMOVE_RECURSE "${lcfEntry}")
+        endif()
+      endif()
+    endforeach()
+  ]])
 
   install(
     FILES "../mudlet.desktop"
