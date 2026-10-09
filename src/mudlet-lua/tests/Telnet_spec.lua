@@ -1273,6 +1273,42 @@ describe("Tests the payload sysTelnetEvent hands over", function()
     assert.equals(option, opt)
     assert.equals("AB\0\195\169\255", data)
   end)
+
+  it("hands a replayed subnegotiation over as the live one was", function()
+    if not os.getenv("MUDLET_TEST_MODE") then
+      pending("letting the replay timer run needs MUDLET_TEST_MODE")
+      return
+    end
+    local function bigEndian32(value)
+      return string.char(math.floor(value / 16777216) % 256, math.floor(value / 65536) % 256, math.floor(value / 256) % 256, value % 256)
+    end
+    local wire = "\255\250" .. string.char(option) .. "AB\0CD\255\255EF\255\240"
+    local replay = getMudletHomeDir() .. "/telnet-spec-subnegotiation-replay.dat"
+    local file = assert(io.open(replay, "wb"))
+    file:write(bigEndian32(0) .. bigEndian32(#wire) .. wire)
+    file:close()
+    local replayed
+    local handler = registerAnonymousEventHandler("sysTelnetEvent", function(_, kind, opt, payload)
+      if kind == 250 and opt == option then
+        replayed = payload
+      end
+    end)
+    finally(function()
+      killAnonymousEventHandler(handler)
+      os.remove(replay)
+    end)
+
+    assert.is_true(loadReplay(replay))
+    for _ = 1, 40 do
+      if replayed then
+        break
+      end
+      pumpEvents(50)
+    end
+    -- whether a replay is running is application-wide, so let this one run out
+    pumpEvents(200)
+    assert.equals("AB\0CD\255EF", replayed)
+  end)
 end)
 
 describe("Tests telnet option negotiation", function()

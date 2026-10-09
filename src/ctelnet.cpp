@@ -5716,6 +5716,9 @@ void cTelnet::slot_processReplayChunk()
                     insb = false;
                 }
                 if (iac) {
+                    if (ch == TN_IAC) { // escaped TN_IAC, as the socket path unescapes it
+                        command.pop_back();
+                    }
                     iac = false;
                 } else if (ch == TN_IAC) {
                     iac = true;
