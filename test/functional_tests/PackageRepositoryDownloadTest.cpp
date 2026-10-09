@@ -39,7 +39,7 @@
  * tests neither reach the network nor depend on a name resolving.
  *
  * A real profile rather than a bare Host, because the dialog connects to
- * mpHost->mpConsole in its constructor and installs into a profile directory.
+ * mpHost->mainConsoleView() in its constructor and installs into a profile directory.
  *
  * Run with: ctest -R PackageRepositoryDownloadTest -V
  */

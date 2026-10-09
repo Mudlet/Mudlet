@@ -169,9 +169,9 @@ private slots:
         QImage image(16, 16, QImage::Format_RGB32);
         image.fill(Qt::darkGreen);
         QVERIFY(image.save(imagePath));
-        QVERIFY(host->mpConsole->setConsoleBackgroundImage(imagePath, 1));
+        QVERIFY(host->mainConsoleView()->setConsoleBackgroundImage(imagePath, 1));
         const auto restore = qScopeGuard([host] {
-            host->mpConsole->resetConsoleBackgroundImage();
+            host->mainConsoleView()->resetConsoleBackgroundImage();
         });
         const qreal dpr = pane->devicePixelRatioF();
         const int tenCells = qRound(10 * pane->mFontWidth * pane->mFontHeight * dpr * dpr);
@@ -216,7 +216,7 @@ private slots:
                                          "for i = 1, 4 do echo(string.rep(' ', 10) .. '\\n') end\n"));
         settle(pane);
         QVERIFY(pane->testAttribute(Qt::WA_OpaquePaintEvent));
-        const int deepLine = host->mpConsole->buffer.lineBuffer.lastIndexOf(deep);
+        const int deepLine = host->mainConsoleView()->buffer.lineBuffer.lastIndexOf(deep);
         QVERIFY(deepLine >= 0);
         const int row = deepLine - pane->imageTopLine();
         QVERIFY2(row >= 0 && row + 2 < pane->mScreenHeight, qPrintable(qsl("the stacked line is on row %1 of %2").arg(row).arg(pane->mScreenHeight)));
@@ -364,12 +364,12 @@ private slots:
         QImage image(16, 16, QImage::Format_RGB32);
         image.fill(Qt::darkGreen);
         QVERIFY(image.save(imagePath));
-        QVERIFY(host->mpConsole->setConsoleBackgroundImage(imagePath, 1));
+        QVERIFY(host->mainConsoleView()->setConsoleBackgroundImage(imagePath, 1));
         settle(pane);
         QVERIFY2(!pane->testAttribute(Qt::WA_OpaquePaintEvent), "a background image was painted over");
         QVERIFY(unpaintedPixels(pane) > 0);
 
-        QVERIFY(host->mpConsole->resetConsoleBackgroundImage());
+        QVERIFY(host->mainConsoleView()->resetConsoleBackgroundImage());
         settle(pane);
         QVERIFY(pane->testAttribute(Qt::WA_OpaquePaintEvent));
     }
@@ -391,18 +391,18 @@ private slots:
         QVERIFY(pane->testAttribute(Qt::WA_OpaquePaintEvent));
 
         pane->forceUpdate();
-        const QImage painted = host->mpConsole->grab().toImage().convertToFormat(QImage::Format_RGB32);
+        const QImage painted = host->mainConsoleView()->grab().toImage().convertToFormat(QImage::Format_RGB32);
 
         pane->setAttribute(Qt::WA_OpaquePaintEvent, false);
         pane->forceUpdate();
-        const QImage blended = host->mpConsole->grab().toImage().convertToFormat(QImage::Format_RGB32);
+        const QImage blended = host->mainConsoleView()->grab().toImage().convertToFormat(QImage::Format_RGB32);
         QVERIFY2(pane->testAttribute(Qt::WA_OpaquePaintEvent), "the pane did not go back to opaque painting after one frame");
 
         QCOMPARE(painted.size(), blended.size());
         // Only the pane's own pixels: grab() leaves whatever no widget paints
         // uninitialised, and that differs from one grab to the next (macOS)
         const qreal dpr = painted.devicePixelRatio();
-        const QRect paneArea = QRect(pane->mapTo(host->mpConsole, QPoint()) * dpr, pane->size() * dpr).intersected(painted.rect());
+        const QRect paneArea = QRect(pane->mapTo(host->mainConsoleView(), QPoint()) * dpr, pane->size() * dpr).intersected(painted.rect());
         QVERIFY(!paneArea.isEmpty());
         int worst = 0;
         QPoint worstAt;
@@ -422,7 +422,7 @@ private slots:
                                     .arg(worst)
                                     .arg(worstAt.x())
                                     .arg(worstAt.y())
-                                    .arg(widgetAt(host->mpConsole, worstAt / dpr), painted.pixelColor(worstAt).name(), blended.pixelColor(worstAt).name())));
+                                    .arg(widgetAt(host->mainConsoleView(), worstAt / dpr), painted.pixelColor(worstAt).name(), blended.pixelColor(worstAt).name())));
     }
 
 private:
@@ -430,7 +430,7 @@ private:
     {
         startProfile(mpHostname, mpLocalhost, mpPort);
         Host* host = mudlet::self()->getActiveHost();
-        if (!host || !host->mpConsole) {
+        if (!host || !host->mainConsoleView()) {
             return nullptr;
         }
         mudlet::self()->resize(1200, 800);
@@ -438,7 +438,7 @@ private:
         // Short lines, so most of every row is background
         host->getLuaInterpreter()->compileAndExecuteScript(qsl("for i = 1, 60 do echo('LINE ' .. i .. '\\n') end\n"));
         qApp->processEvents();
-        return host->mpConsole->mUpperPane;
+        return host->mainConsoleView()->mUpperPane;
     }
 
     // Off the cell grid at the right, so there is a sliver past the last whole
