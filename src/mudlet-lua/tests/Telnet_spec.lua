@@ -2080,6 +2080,18 @@ describe("MXP auto-detection from the mode switch escape", function()
     assert.is_true(getConfig("promptForMXPProcessorOn"))
   end)
 
+  -- a read that is not scanned, here because MXP was negotiated, comes between
+  -- the two, so they are not the two halves of one switch
+  it("does not join a read to one from before MXP was negotiated and dropped", function()
+    feed("\27[1")
+    feed("<T_IAC><T_DO><O_MXP>")
+    feed("mMXPNEGOTIATEDREAD\r\n")
+    feed("<T_IAC><T_DONT><O_MXP>")
+    feed("z after it\r\n")
+    assert.is_false(getConfig("promptForMXPProcessorOn"))
+    assert.is_false(getConfig("specialForceMXPProcessorOn"))
+  end)
+
   -- the game pausing mid-switch for longer than the network packet timeout
   -- makes cTelnet flush what it holds, which must not lose the switch's start
   it("finds the switch when the posting timer flushes between its two reads", function()
@@ -2088,12 +2100,14 @@ describe("MXP auto-detection from the mode switch escape", function()
         assert.is_true(pumpEvents(50), "pumpEvents needs MUDLET_TEST_MODE set, see the tests README")
       end
     end
+    -- held until the timer flushes it, or the case would not reach the timer
     local mark = getLastLineNumber("main")
     feed("MXPTIMERCHECK")
+    local heldBack = not table.contains(getLines("main", mark, getLastLineNumber("main") + 1), "MXPTIMERCHECK")
     quietFor()
-    local flushed = getLines("main", mark, getLastLineNumber("main") + 1)
+    local flushed = table.contains(getLines("main", mark, getLastLineNumber("main") + 1), "MXPTIMERCHECK")
     feed("\r\n")
-    if not table.contains(flushed, "MXPTIMERCHECK") then
+    if not (heldBack and flushed) then
       -- an IAC GA from an earlier spec stops the posting timer for the session
       pending("cTelnet's posting timer is not running in this session")
       return

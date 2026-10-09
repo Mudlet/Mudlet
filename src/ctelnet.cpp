@@ -5271,6 +5271,9 @@ void cTelnet::gotRest(std::string& mud_data)
     // Otherwise, only scan if MXP hasn't been prompted for and isn't telnet-negotiated
     if (mpHost->getForceMXPProcessorOn() || (!mpHost->mPromptedForMXPProcessorOn && !isMXPEnabled())) {
         trackMXPElementDetection(mud_data);
+    } else {
+        // As in gotPrompt(): the next scanned read must not be joined to one from before this one
+        mMxpDetectionTail.clear();
     }
 
     if (!mGA_Driver) {
