@@ -122,7 +122,7 @@ void TAccessibleTextEdit::selection(int selectionIndex, int* startOffset, int* e
     }
 
     *startOffset = offsetForPosition(edit->mPA.y(), edit->mPA.x());
-    *endOffset = offsetForPosition(edit->mPB.y(), edit->mPB.x());
+    *endOffset = edit->selectionEndOffset();
 }
 
 /*
@@ -160,6 +160,9 @@ void TAccessibleTextEdit::addSelection(int startOffset, int endOffset)
     edit->mPB.setX(columnForOffset(endOffset - 1));
     edit->mPB.setY(lineForOffset(endOffset - 1));
     edit->mDragSelectionEnd = edit->mPB;
+    const QStringList& lineBuffer = edit->mpBuffer->lineBuffer;
+    const bool takesNewline = edit->mPB.y() < lineBuffer.size() && edit->mPB.x() == lineBuffer.at(edit->mPB.y()).size();
+    edit->mPBTakingNewline = takesNewline ? edit->mPB : QPoint(-1, -1);
 
     textEdit()->highlightSelection();
 }

@@ -225,6 +225,7 @@ private:
     inline void replaceControlCharacterWith_Picture(const uint, QStringView, const int, QStringView&, int&) const;
     inline void replaceControlCharacterWith_OEMFont(const uint, QStringView, const int, QStringView&, int&) const;
     int offsetForPosition(int line, int column) const;
+    int selectionEndOffset() const;
     bool hasBufferLine(int lineNumber) const;
     static int overflowRowsUsed(const QImage& image, const int fromRow, const QColor& background);
     TChar timeStampCharStyle() const;
@@ -298,6 +299,9 @@ private:
     QPoint mPA;
     // bottom-right point of the selection
     QPoint mPB;
+    // Where an accessibility client's range that took in a newline left mPB, which a
+    // whole-line selection, newline left out, leaves at the same place
+    QPoint mPBTakingNewline{-1, -1};
     TBuffer* mpBuffer;
     // Needs to be a QPointer as is used in a couple of lambda functions:
     QPointer<TConsole> mpConsole;
