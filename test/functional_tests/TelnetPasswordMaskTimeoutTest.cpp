@@ -112,7 +112,7 @@ private:
     }
 
     // The advisory's first line, which fits ahead of any wrap point.
-    int characterModeWarningLines() const { return mpHost->mpConsole->buffer.lineBuffer.filter(qsl("This game appears to use character-at-a-time mode")).size(); }
+    int characterModeWarningLines() const { return mpHost->mainConsoleView()->buffer.lineBuffer.filter(qsl("This game appears to use character-at-a-time mode")).size(); }
 
 private slots:
     void initTestCase()
