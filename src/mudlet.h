@@ -32,7 +32,6 @@
 #include "MudletMedia.h"
 #include "MudletReplay.h"
 #include "ShortcutsManager.h"
-#include "SpeechRecognizerFactory.h"
 #include "TAppFrontend.h"
 #include "utils.h"
 #include <memory>
@@ -92,7 +91,6 @@ class dlgTriggerEditor;
 class Host;
 class MudletInstanceCoordinator;
 class ShortcutManager;
-class SpeechRecognizer;
 class TConsole;
 class TDebugFilterBar;
 class TDetachedWindow;
@@ -101,6 +99,7 @@ class TEvent;
 class TLabel;
 class translation;
 class TScrollBox;
+class TSpeechBridge;
 class TTabBar;
 class TToolBar;
 class TUiTour;
@@ -173,45 +172,6 @@ public:
     QList<QString> getAvailableTranslationCodes() const { return mTranslationsMap.keys(); }
     const QMap<QByteArray, QString>& getEncodingNamesMap() const { return mEncodingNameMap; }
     ShortcutsManager* shortcutsManager() const { return mpShortcutsManager.data(); }
-    // Speech-to-text bridge: creates the single shared recognizer on first use
-    // and exposes it to the Lua stt.* API. Recognizer results surface as Lua
-    // events; all routing and UI policy lives in packages consuming them.
-    // One recognizer exists at a time (docs/stt-api.md's "one recognizer per
-    // client"), and backend decides what happens when one is already built:
-    // Auto, or the backend already in place, keeps it - the stt.* setters pass
-    // Auto on every call and must not tear down a working engine. An explicit
-    // request for a different backend replaces it, which is what lets
-    // stt.init() switch engines when it is handed another engine's model.
-    void initSpeechRecognition(SpeechRecognizerFactory::Backend backend = SpeechRecognizerFactory::Backend::Auto);
-    SpeechRecognizer* speechRecognizer() const;
-    // Raise one sysSTT* event on the profile holding the microphone, or on the
-    // active one when nobody holds it. Public because the stt.* bindings refuse
-    // before a recognizer exists - with no engine installed there is no object
-    // to emit through, and "refusals speak" has to hold there too or a consumer
-    // cannot tell "no engine" from "nothing said yet".
-    void raiseSpeechEvent(const QString& name, const QString& value);
-    // Take the microphone for this profile, stopping whoever held it. There is
-    // one recognizer for the whole application, so a second profile asking to
-    // listen is a handover rather than a second session - and the profile that
-    // loses it is told, since nothing else on its screen would say why its
-    // microphone went quiet. Call before startListening(); on a refusal call
-    // releaseMicrophone() so the claim does not outlive the session it was for.
-    bool claimMicrophoneFor(Host* pHost);
-    void releaseMicrophone();
-    // Raise one sysSTT* event on a named profile. A refusal belongs to the
-    // profile that asked for it, which is not the profile the microphone's own
-    // traffic goes to once somebody else is listening.
-    //
-    // A sysSTTError raised while one is already being delivered is dropped: a
-    // handler's own calls report their refusals through their return values, and
-    // raising them would run that handler again inside itself, making the same
-    // call, until Lua's C stack overflows.
-    void raiseSpeechEventOn(Host* pHost, const QString& name, const QString& value);
-    // Raises sysSTTCapabilitiesChanged when, and only when, what Lua reads from
-    // stt.getInfo().capabilities has actually moved since it was last told.
-    void announceSpeechCapabilitiesIfChanged();
-    // Which profile the microphone currently belongs to, or nullptr
-    Host* microphoneOwner() const;
     // Re-place and re-show add-on commands: called whenever the profile a window
     // is showing changes, or a profile moves between windows. Nothing to do with
     // the microphone; it sits here only because a detached window calls it.
@@ -219,10 +179,6 @@ public:
     // The " (listening)" a window's title carries while this profile holds the
     // microphone, or nothing. Public because a detached window builds its own title.
     QString microphoneMarkerFor(const QString& profileName) const;
-    // Whether a recognised phrase is being handed to Lua right now. A phrase
-    // that has reached its handler is not one the engine still owes anybody,
-    // however busy the engine looks while that handler runs.
-    bool deliveringSpeechResult() const { return mSpeechResultsBeingDelivered > 0; }
     // How many windows currently have add-on chrome recorded. Public only so a
     // test can see that a closed window's entry is dropped; nothing reads it.
     int addonChromeWindowCount() const { return mAddonChrome.size(); }
@@ -714,38 +670,7 @@ private:
     QPointer<QToolButton> mpButtonConnect;
     QPointer<QToolButton> mpButtonDiscord;
     QPointer<QToolButton> mpButtonMute;
-    // The single shared speech recognizer (one microphone, one decoder);
-    // created lazily by initSpeechRecognition()
-    QPointer<SpeechRecognizer> mpSpeechRecognizer;
-    // What Lua was last told stt.getInfo().capabilities are, as the event's own
-    // payload. The baseline lives here rather than in the recognizer because
-    // this is where Lua's view is assembled: every capability reads false while
-    // no recognizer exists, so one coming into existence - or being swapped for
-    // another engine - is itself a change to what getInfo() answers, and a
-    // recognizer cannot notice a transition that happened before it did. Seeded
-    // on first use with the all-false payload rather than left empty, so that
-    // first appearance registers as the change it is (#10760).
-    QString mAnnouncedSpeechCapabilities;
-    // The profile that asked for the microphone, for as long as the session it
-    // asked for lasts. Results belong to whoever started listening rather than
-    // to whoever happens to be in front when a phrase lands: those are the same
-    // profile in the ordinary case, and routing by the second one sends a
-    // phrase to the wrong game in every case where they differ.
-    QPointer<Host> mpMicrophoneOwner;
-    // The profile whose session has just ended, until the event loop turns
-    // again. An engine settles the state before it says what became of the
-    // phrase that was in flight, and the release rides on the state - so
-    // without this the sentence that matters most goes to whichever profile
-    // happens to be in front. See raiseSpeechEvent().
-    QPointer<Host> mpMicrophoneOwnerEnding;
-    // How deep the delivery of a recognised phrase is - see the finalResult
-    // connection in initSpeechRecognition(), and deliveringSpeechResult()
-    int mSpeechResultsBeingDelivered = 0;
-    // How many sysSTTError deliveries are in progress; see raiseSpeechEventOn()
-    int mSpeechErrorsBeingDelivered = 0;
-    // Raise one sysSTT* event on a named profile, which is what the handover
-    // notice needs - it goes to the profile losing the microphone, and by then
-    // the owner is already the profile that took it.
+    QPointer<TSpeechBridge> mpSpeechBridge;
     void refreshMicrophoneMarkers();
     QPointer<QToolButton> mpButtonPackageManagers;
     QHBoxLayout* mpHBoxLayout_profileContainer = nullptr;
