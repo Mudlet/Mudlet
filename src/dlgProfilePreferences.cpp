@@ -3912,8 +3912,8 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
     checkBox_useMaxBufferSize->setChecked(pHost->getUseMaxConsoleBufferSize());
 
     // Set maximum buffer size based on system capabilities and update tooltip
-    if (pHost->mpConsole) {
-        const int maxBufferSize = pHost->mpConsole->buffer.getMaxBufferSize();
+    if (pHost->mainConsoleView()) {
+        const int maxBufferSize = pHost->mainConsoleView()->buffer.getMaxBufferSize();
         console_buffer_size_spinBox->setMaximum(maxBufferSize);
         checkBox_useMaxBufferSize->setToolTip(tr("<p>Use the maximum buffer size your system can handle (%1 lines). This will be calculated based on available memory.</p>").arg(maxBufferSize));
 
@@ -5206,9 +5206,9 @@ void dlgProfilePreferences::slot_resetColors()
     pHost->mLightWhite = Qt::white;
 
     setColors();
-    if (pHost->mpConsole) {
-        pHost->mpConsole->resetConsoleBackgroundImage();
-        pHost->mpConsole->changeColors();
+    if (pHost->mainConsoleView()) {
+        pHost->mainConsoleView()->resetConsoleBackgroundImage();
+        pHost->mainConsoleView()->changeColors();
     }
 
     // Copy across the colors to the Lua "color_table"
@@ -5269,7 +5269,7 @@ void dlgProfilePreferences::setButtonAndProfileColor(QPushButton* button, QColor
     if (color.isValid()) {
         presentColor = color;
 
-        auto console = pHost->mpConsole;
+        QPointer<TMainConsole> console = pHost->mainConsoleView();
         if (console) {
             console->changeColors();
             // update the display properly when color selections change.
@@ -6116,7 +6116,7 @@ void dlgProfilePreferences::slot_copyMap()
     // Identify which, if any, of the toProfilesRoomIdMap is active and get the current room
     QMap<QString, QSharedPointer<Host>> activeOtherHostMap;
     for (auto pOtherHost : *HostManager::self()) {
-        if (pOtherHost->mpConsole && (pOtherHost != pHost)) {
+        if (pOtherHost->mainConsoleView() && (pOtherHost != pHost)) {
             const auto& otherHostName = pOtherHost->getName();
             if (toProfilesRoomIdMap.contains(otherHostName)) {
                 activeOtherHostMap.insert(otherHostName, pOtherHost);
@@ -6354,7 +6354,7 @@ void dlgProfilePreferences::applyAll()
     mudlet* pMudlet = mudlet::self();
     Host* pHost = mpHost;
     if (pHost) {
-        auto console = pHost->mpConsole;
+        QPointer<TMainConsole> console = pHost->mainConsoleView();
         if (mSnapshot.dirty(comboBox_dictionary) && comboBox_dictionary->isEnabled() && comboBox_dictionary->currentIndex() >= 0) {
             pHost->setSpellDic(comboBox_dictionary->currentData().toString());
         }
@@ -6409,11 +6409,11 @@ void dlgProfilePreferences::applyAll()
                 pHost->setConsoleBufferSize(chosenBufferSize);
                 pHost->setUseMaxConsoleBufferSize(useMaxBuffer);
 
-                if (pHost->mpConsole) {
-                    const int newBufferSize = useMaxBuffer ? pHost->mpConsole->buffer.getMaxBufferSize() : chosenBufferSize;
+                if (pHost->mainConsoleView()) {
+                    const int newBufferSize = useMaxBuffer ? pHost->mainConsoleView()->buffer.getMaxBufferSize() : chosenBufferSize;
                     // Calculate batch delete size as 5% of buffer size (minimum 100)
                     const int newBatchDeleteSize = std::max(100, newBufferSize / 5);
-                    pHost->mpConsole->buffer.setBufferSize(newBufferSize, newBatchDeleteSize);
+                    pHost->mainConsoleView()->buffer.setBufferSize(newBufferSize, newBatchDeleteSize);
                 }
             }
         }
@@ -8456,8 +8456,8 @@ void dlgProfilePreferences::slot_toggleUseMaxBufferSize(bool checked)
     if (checked) {
         // A size typed into the box may not have been applied yet
         mBufferSizeBeforeMax = console_buffer_size_spinBox->value();
-        if (pHost->mpConsole) {
-            const int maxBufferSize = pHost->mpConsole->buffer.getMaxBufferSize();
+        if (pHost->mainConsoleView()) {
+            const int maxBufferSize = pHost->mainConsoleView()->buffer.getMaxBufferSize();
             console_buffer_size_spinBox->setValue(maxBufferSize);
         }
         console_buffer_size_spinBox->setEnabled(false);
@@ -8589,7 +8589,7 @@ void dlgProfilePreferences::slot_caretModeKeyChanged(const int index)
 
 bool dlgProfilePreferences::updateDisplayFont(const Host::DisplayFontChange change)
 {
-    if (mpHost.isNull() || (mpHost.data()->mpConsole.isNull())) {
+    if (mpHost.isNull() || !mpHost->mainConsoleView()) {
         return false;
     }
 

@@ -2845,7 +2845,7 @@ void mudlet::slot_moduleManager()
     // Force reposition after showing, since module manager is a singleton per profile
     // that may restore its position after being shown
     Host* activeHost = getActiveHost();
-    QWidget* activeConsole = activeHost ? activeHost->mpConsole : nullptr;
+    QWidget* activeConsole = activeHost ? activeHost->mainConsoleView() : nullptr;
     QWidget* referenceWidget = activeConsole ? activeConsole : this;
     widgetutils::forceRepositionDialogOnParentScreen(moduleManager, referenceWidget);
 }
@@ -2885,7 +2885,7 @@ void mudlet::slot_packageManager()
     // Force reposition after showing, since package manager is a singleton per profile
     // that may restore its position after being shown
     Host* activeHost = getActiveHost();
-    QWidget* activeConsole = activeHost ? activeHost->mpConsole : nullptr;
+    QWidget* activeConsole = activeHost ? activeHost->mainConsoleView() : nullptr;
     QWidget* referenceWidget = activeConsole ? activeConsole : this;
     widgetutils::forceRepositionDialogOnParentScreen(packageManager, referenceWidget);
 }
@@ -2905,7 +2905,7 @@ void mudlet::slot_packageExporter()
 
     // Force reposition after showing to ensure correct screen placement
     Host* activeHost = getActiveHost();
-    QWidget* activeConsole = activeHost ? activeHost->mpConsole : nullptr;
+    QWidget* activeConsole = activeHost ? activeHost->mainConsoleView() : nullptr;
     QWidget* referenceWidget = activeConsole ? activeConsole : this;
     widgetutils::forceRepositionDialogOnParentScreen(d, referenceWidget);
 }
@@ -3128,7 +3128,7 @@ void mudlet::updateWindowMenu()
         QStringList mainWindowProfiles;
 
         for (const auto& host : mHostManager) {
-            if (host && host->mpConsole) {
+            if (host && host->mainConsoleView()) {
                 const QString profileName = host->getName();
                 // Only include profiles that are in the main window (not detached)
                 if (!mDetachedWindows.contains(profileName)) {
@@ -3414,12 +3414,12 @@ void mudlet::reshowRequiredMainConsoles()
 {
     if (mpTabBar->count() > 1 && mMultiView) {
         for (const auto& host : mHostManager) {
-            if (host->mpConsole) {
+            if (host->mainConsoleView()) {
                 // Only show consoles that are in the main window, not detached ones
                 const QString profileName = host->getName();
 
                 if (!mDetachedWindows.contains(profileName)) {
-                    host->mpConsole->show();
+                    host->mainConsoleView()->show();
                 }
             }
         }
@@ -3559,14 +3559,14 @@ static QString keySequenceForProse(const QKeySequence& sequence)
 
 void mudlet::addConsoleForNewHost(Host* pH)
 {
-    if (pH->mpConsole) {
+    if (pH->mainConsoleView()) {
         return;
     }
     auto pConsole = new (std::nothrow) TMainConsole(pH);
     if (!pConsole) {
         return;
     }
-    pH->mpConsole = pConsole;
+    pH->setMainConsoleView(pConsole);
     pConsole->setWindowTitle(pH->getName());
     pConsole->setObjectName(pH->getName());
 
@@ -3577,7 +3577,7 @@ void mudlet::addConsoleForNewHost(Host* pH)
 
     // Qt::UniqueConnection cannot dedupe the functor connections below (a documented
     // no-op that also prints a warning); duplicate wiring is instead prevented by
-    // the `if (pH->mpConsole) return;` early-return at the top of this function.
+    // the `if (pH->mainConsoleView()) return;` early-return at the top of this function.
     connect(&pH->mTelnet, &cTelnet::signal_bell, this, [this]() {
         QApplication::alert(this, 3000);
         if (!mMedia.gameMuted()) {
@@ -3760,7 +3760,7 @@ void mudlet::addConsoleForNewHost(Host* pH)
 
     mpSplitter_profileContainer->addWidget(pConsole);
     if (mpCurrentActiveHost && !mMultiView) {
-        mpCurrentActiveHost->mpConsole->hide();
+        mpCurrentActiveHost->mainConsoleView()->hide();
     }
 
     pConsole->show();
@@ -3774,24 +3774,24 @@ void mudlet::addConsoleForNewHost(Host* pH)
 
     pH->getActionUnit()->updateAllToolbars();
 
-    pH->mpConsole->show();
-    pH->mpConsole->repaint();
-    pH->mpConsole->refresh();
-    pH->mpConsole->mpCommandLine->repaint();
-    pH->mpConsole->mpCommandLine->setFocus();
-    pH->mpConsole->show();
+    pH->mainConsoleView()->show();
+    pH->mainConsoleView()->repaint();
+    pH->mainConsoleView()->refresh();
+    pH->mainConsoleView()->mpCommandLine->repaint();
+    pH->mainConsoleView()->mpCommandLine->setFocus();
+    pH->mainConsoleView()->show();
     // Setting mpCurrentActiveHost to pH is now done by the following
     slot_tabChanged(newTabID);
 
-    const int x = pH->mpConsole->width();
-    const int y = pH->mpConsole->height();
+    const int x = pH->mainConsoleView()->width();
+    const int y = pH->mainConsoleView()->height();
     const QSize s = QSize(x, y);
     QResizeEvent event(s, s);
     updateDiscordNamedIcon();
-    QApplication::sendEvent(pH->mpConsole, &event);
+    QApplication::sendEvent(pH->mainConsoleView(), &event);
     // This is needed to completely show the first autoloaded profile so that
     // it can be properly hidden by a second one (without it the:
-    // mpCurrentActiveHost->mpConsole->hide() does not work correctly and two
+    // mpCurrentActiveHost->mainConsoleView()->hide() does not work correctly and two
     // profiles get shown across a split screen - even though mMultiView is NOT
     // set)!
     qApp->processEvents();
@@ -4210,12 +4210,12 @@ bool mudlet::saveFloatingDockGeometries()
 
     QMap<QString, QByteArray> geometries;
     for (auto pHost : mHostManager) {
-        if (!pHost || !pHost->mpConsole) {
+        if (!pHost || !pHost->mainConsoleView()) {
             continue;
         }
         const auto hostName = pHost->getName();
-        for (const QString& name : pHost->mpConsole->dockWidgetNames()) {
-            auto pDockWidget = pHost->mpConsole->dockWidget(name);
+        for (const QString& name : pHost->mainConsoleView()->dockWidgetNames()) {
+            auto pDockWidget = pHost->mainConsoleView()->dockWidget(name);
             if (pDockWidget && pDockWidget->isFloating()) {
                 const QString key = qsl("%1/%2").arg(hostName, name);
                 geometries[key] = pDockWidget->saveGeometry();
@@ -4249,12 +4249,12 @@ void mudlet::restoreFloatingDockGeometries()
     geoFile.close();
 
     for (auto pHost : mHostManager) {
-        if (!pHost || !pHost->mpConsole) {
+        if (!pHost || !pHost->mainConsoleView()) {
             continue;
         }
         const auto hostName = pHost->getName();
-        for (const QString& name : pHost->mpConsole->dockWidgetNames()) {
-            auto pDockWidget = pHost->mpConsole->dockWidget(name);
+        for (const QString& name : pHost->mainConsoleView()->dockWidgetNames()) {
+            auto pDockWidget = pHost->mainConsoleView()->dockWidget(name);
             if (!pDockWidget || !pDockWidget->isFloating()) {
                 continue;
             }
@@ -4391,7 +4391,7 @@ std::optional<QSize> mudlet::getImageSize(const QString& imageLocation)
 
 Host* mudlet::getActiveHost()
 {
-    if (mpCurrentActiveHost && mpCurrentActiveHost->mpConsole) {
+    if (mpCurrentActiveHost && mpCurrentActiveHost->mainConsoleView()) {
         return mpCurrentActiveHost;
     }
 
@@ -5033,8 +5033,8 @@ void mudlet::slot_showEditorDialog()
             if (mpTabBar && mpTabBar->currentIndex() >= 0) {
                 // Get the current console and give it focus
                 Host* currentHost = getActiveHost();
-                if (currentHost && currentHost->mpConsole) {
-                    currentHost->mpConsole->setFocus();
+                if (currentHost && currentHost->mainConsoleView()) {
+                    currentHost->mainConsoleView()->setFocus();
                 }
             }
         });
@@ -5069,8 +5069,8 @@ void mudlet::slot_showTriggerDialog()
             if (mpTabBar && mpTabBar->currentIndex() >= 0) {
                 // Get the current console and give it focus
                 Host* currentHost = getActiveHost();
-                if (currentHost && currentHost->mpConsole) {
-                    currentHost->mpConsole->setFocus();
+                if (currentHost && currentHost->mainConsoleView()) {
+                    currentHost->mainConsoleView()->setFocus();
                 }
             }
         });
@@ -5105,8 +5105,8 @@ void mudlet::slot_showAliasDialog()
             if (mpTabBar && mpTabBar->currentIndex() >= 0) {
                 // Get the current console and give it focus
                 Host* currentHost = getActiveHost();
-                if (currentHost && currentHost->mpConsole) {
-                    currentHost->mpConsole->setFocus();
+                if (currentHost && currentHost->mainConsoleView()) {
+                    currentHost->mainConsoleView()->setFocus();
                 }
             }
         });
@@ -5141,8 +5141,8 @@ void mudlet::slot_showTimerDialog()
             if (mpTabBar && mpTabBar->currentIndex() >= 0) {
                 // Get the current console and give it focus
                 Host* currentHost = getActiveHost();
-                if (currentHost && currentHost->mpConsole) {
-                    currentHost->mpConsole->setFocus();
+                if (currentHost && currentHost->mainConsoleView()) {
+                    currentHost->mainConsoleView()->setFocus();
                 }
             }
         });
@@ -5357,8 +5357,8 @@ void mudlet::slot_showKeyDialog()
             if (mpTabBar && mpTabBar->currentIndex() >= 0) {
                 // Get the current console and give it focus
                 Host* currentHost = getActiveHost();
-                if (currentHost && currentHost->mpConsole) {
-                    currentHost->mpConsole->setFocus();
+                if (currentHost && currentHost->mainConsoleView()) {
+                    currentHost->mainConsoleView()->setFocus();
                 }
             }
         });
@@ -5393,8 +5393,8 @@ void mudlet::slot_showVariableDialog()
             if (mpTabBar && mpTabBar->currentIndex() >= 0) {
                 // Get the current console and give it focus
                 Host* currentHost = getActiveHost();
-                if (currentHost && currentHost->mpConsole) {
-                    currentHost->mpConsole->setFocus();
+                if (currentHost && currentHost->mainConsoleView()) {
+                    currentHost->mainConsoleView()->setFocus();
                 }
             }
         });
@@ -5429,8 +5429,8 @@ void mudlet::slot_showActionDialog()
             if (mpTabBar && mpTabBar->currentIndex() >= 0) {
                 // Get the current console and give it focus
                 Host* currentHost = getActiveHost();
-                if (currentHost && currentHost->mpConsole) {
-                    currentHost->mpConsole->setFocus();
+                if (currentHost && currentHost->mainConsoleView()) {
+                    currentHost->mainConsoleView()->setFocus();
                 }
             }
         });
@@ -5485,7 +5485,7 @@ void mudlet::showOptionsDialog(const QString& tab, Host* pHost)
 
     // Force reposition after showing, since preferences dialog may be a singleton
     // that restores its position after being shown
-    QWidget* hostConsole = pHost ? pHost->mpConsole : nullptr;
+    QWidget* hostConsole = pHost ? pHost->mainConsoleView() : nullptr;
     QWidget* referenceWidget = hostConsole ? hostConsole : this;
     widgetutils::forceRepositionDialogOnParentScreen(pPrefs, referenceWidget);
 }
@@ -5870,14 +5870,14 @@ void mudlet::slot_showMapperDialog()
     // TMap::mpMapper; creating a competing dock here would steal that pointer
     // and leave the embedded mapper stale. Toggle the embedded one instead,
     // matching what the "Show Map" menu entry does.
-    if (pHost->mpConsole && pHost->mpConsole->mpMapper) {
+    if (pHost->mainConsoleView() && pHost->mainConsoleView()->mpMapper) {
         pHost->showHideOrCreateMapper(true);
         return;
     }
 
     // If the host already has its default dock widget, hide it to avoid conflicts
-    if (pHost->mpConsole && pHost->mpConsole->mpDockableMapWidget) {
-        pHost->mpConsole->mpDockableMapWidget->setVisible(false);
+    if (pHost->mainConsoleView() && pHost->mainConsoleView()->mpDockableMapWidget) {
+        pHost->mainConsoleView()->mpDockableMapWidget->setVisible(false);
     }
 
     // Create a new docked mapper widget for this profile in the main window
@@ -6012,7 +6012,7 @@ void mudlet::slot_toggleTimeStamp()
     if (!pHost) {
         return;
     }
-    pHost->mpConsole->timeStampButton->click();
+    pHost->mainConsoleView()->timeStampButton->click();
 }
 
 void mudlet::slot_toggleReplay()
@@ -6021,7 +6021,7 @@ void mudlet::slot_toggleReplay()
     if (!pHost) {
         return;
     }
-    pHost->mpConsole->replayButton->click();
+    pHost->mainConsoleView()->replayButton->click();
 }
 
 void mudlet::slot_toggleLogging()
@@ -6030,7 +6030,7 @@ void mudlet::slot_toggleLogging()
     if (!pHost) {
         return;
     }
-    pHost->mpConsole->logButton->click();
+    pHost->mainConsoleView()->logButton->click();
 }
 
 void mudlet::slot_toggleEmergencyStop()
@@ -6039,7 +6039,7 @@ void mudlet::slot_toggleEmergencyStop()
     if (!pHost) {
         return;
     }
-    pHost->mpConsole->emergencyStop->click();
+    pHost->mainConsoleView()->emergencyStop->click();
 }
 
 void mudlet::slot_notes()
@@ -6071,7 +6071,7 @@ void mudlet::slot_notes()
     // Force reposition after showing, since notepad is a singleton per profile
     // that may restore its position after being shown
     Host* activeHost = getActiveHost();
-    QWidget* activeConsole = activeHost ? activeHost->mpConsole : nullptr;
+    QWidget* activeConsole = activeHost ? activeHost->mainConsoleView() : nullptr;
     QWidget* referenceWidget = activeConsole ? activeConsole : this;
     widgetutils::forceRepositionDialogOnParentScreen(pNotes, referenceWidget);
 }
@@ -6479,7 +6479,7 @@ void mudlet::slot_processEventLoopHackTimerRun()
     if (!pH) {
         return;
     }
-    pH->mpConsole->refresh();
+    pH->mainConsoleView()->refresh();
 }
 
 void mudlet::slot_connectionDialogueFinished(const QString& profile, bool connect)
@@ -6663,7 +6663,7 @@ void mudlet::slot_multiView(const bool state)
     mMultiView = state;
     bool foundActiveHost = false;
     for (const auto& pHost : mHostManager) {
-        auto console = pHost->mpConsole;
+        auto console = pHost->mainConsoleView();
         if (!console) {
             continue;
         }
@@ -7226,8 +7226,8 @@ void mudlet::slot_manualUpdateCheck()
 void mudlet::slot_updateCheckFailed(const QString& error)
 {
     auto* pHost = getActiveHost();
-    if (pHost && pHost->mpConsole) {
-        pHost->mpConsole->printSystemMessage(tr("Update check failed. Error: %1\n").arg(error));
+    if (pHost && pHost->mainConsoleView()) {
+        pHost->mainConsoleView()->printSystemMessage(tr("Update check failed. Error: %1\n").arg(error));
     }
 }
 
@@ -7868,7 +7868,7 @@ void mudlet::activateProfile(Host* pHost)
         oldActiveHostName = mpCurrentActiveHost->getName();
     }
 
-    if (!pHost || !pHost->mpConsole) {
+    if (!pHost || !pHost->mainConsoleView()) {
         // Ah, we do not seem to have a profile anymore:
         mpCurrentActiveHost = nullptr;
         // Nothing else to do if the host to activate doesn't exist
@@ -7884,7 +7884,7 @@ void mudlet::activateProfile(Host* pHost)
     const QString newActiveHostName{pHost->getName()};
     const int newActiveTabIndex = hostNameToTabMap.value(newActiveHostName, -1);
 
-    if (mpCurrentActiveHost && mpCurrentActiveHost->mpConsole) {
+    if (mpCurrentActiveHost && mpCurrentActiveHost->mainConsoleView()) {
         // Tell the old profile that it is losing focus:
         TEvent focusLostEvent{};
         focusLostEvent.mArgumentList << QLatin1String("sysProfileFocusChangeEvent");
@@ -7905,7 +7905,7 @@ void mudlet::activateProfile(Host* pHost)
 
             // Only hide the previous console if both are in the main window
             if (oldInMainWindow && newInMainWindow) {
-                mpCurrentActiveHost->mpConsole->hide();
+                mpCurrentActiveHost->mainConsoleView()->hide();
             }
         }
     }
@@ -7930,22 +7930,22 @@ void mudlet::activateProfile(Host* pHost)
 
     if (currentInMainWindow) {
         // Show the current console
-        mpCurrentActiveHost->mpConsole->show();
-        mpCurrentActiveHost->mpConsole->repaint();
-        mpCurrentActiveHost->mpConsole->refresh();
+        mpCurrentActiveHost->mainConsoleView()->show();
+        mpCurrentActiveHost->mainConsoleView()->repaint();
+        mpCurrentActiveHost->mainConsoleView()->refresh();
         // Defer subconsole refresh to allow Qt to fully process the show event
         // and update widget geometry before we try to recalculate screen dimensions
-        QTimer::singleShot(0ms, mpCurrentActiveHost->mpConsole, &TMainConsole::refreshSubconsoles);
-        mpCurrentActiveHost->mpConsole->mpCommandLine->repaint();
+        QTimer::singleShot(0ms, mpCurrentActiveHost->mainConsoleView(), &TMainConsole::refreshSubconsoles);
+        mpCurrentActiveHost->mainConsoleView()->mpCommandLine->repaint();
 
         // If NOT in multiview mode, hide all other consoles in the main window
         if (!mMultiView) {
             for (const auto& host : mHostManager) {
-                if (host && host->mpConsole && host.data() != mpCurrentActiveHost.data()) {
+                if (host && host->mainConsoleView() && host.data() != mpCurrentActiveHost.data()) {
                     const QString otherProfileName = host->getName();
                     // Only hide if this console is also in the main window (not detached)
                     if (!mDetachedWindows.contains(otherProfileName)) {
-                        host->mpConsole->hide();
+                        host->mainConsoleView()->hide();
                     }
                 }
             }
@@ -7968,17 +7968,17 @@ void mudlet::activateProfile(Host* pHost)
     mpCurrentActiveHost->raiseEvent(focusGainedEvent);
 
     // Tell the new profile's main window that it might be resize via a Qt event:
-    const int x = mpCurrentActiveHost->mpConsole->width();
-    const int y = mpCurrentActiveHost->mpConsole->height();
+    const int x = mpCurrentActiveHost->mainConsoleView()->width();
+    const int y = mpCurrentActiveHost->mainConsoleView()->height();
     const QSize s = QSize(x, y);
     QResizeEvent event(s, s);
-    QApplication::sendEvent(mpCurrentActiveHost->mpConsole, &event);
+    QApplication::sendEvent(mpCurrentActiveHost->mainConsoleView(), &event);
 
     // Defer command line height adjustment to ensure geometry is correct after profile switch.
     // When switching profiles, Qt widget geometry isn't updated until the event loop processes
     // show/hide events. Calling adjustHeight() immediately would use incorrect document width,
     // causing the input bar to have the wrong height.
-    QTimer::singleShot(0ms, mpCurrentActiveHost->mpConsole->mpCommandLine, &TCommandLine::adjustHeight);
+    QTimer::singleShot(0ms, mpCurrentActiveHost->mainConsoleView()->mpCommandLine, &TCommandLine::adjustHeight);
 
     // Update the main application window title based on active profiles in main window
     updateMainWindowTitle();
@@ -8576,7 +8576,7 @@ void mudlet::detachTab(int tabIndex, const QPoint& position)
     const QString profileName = mpTabBar->tabData(tabIndex).toString();
     Host* pHost = mHostManager.getHost(profileName);
 
-    if (!pHost || !pHost->mpConsole) {
+    if (!pHost || !pHost->mainConsoleView()) {
         return;
     }
 
@@ -8678,19 +8678,19 @@ void mudlet::detachTab(int tabIndex, const QPoint& position)
             if (currentHost) {
                 // Hide all other consoles in the main window (not detached)
                 for (const auto& host : mHostManager) {
-                    if (host && host->mpConsole && host.data() != currentHost) {
+                    if (host && host->mainConsoleView() && host.data() != currentHost) {
                         const QString otherProfileName = host->getName();
                         // Only hide consoles that are in the main window (not detached)
                         if (!mDetachedWindows.contains(otherProfileName)) {
-                            host->mpConsole->hide();
+                            host->mainConsoleView()->hide();
                         }
                     }
                 }
                 // Ensure the current console is visible
-                if (currentHost->mpConsole) {
-                    currentHost->mpConsole->show();
-                    currentHost->mpConsole->update();
-                    currentHost->mpConsole->repaint();
+                if (currentHost->mainConsoleView()) {
+                    currentHost->mainConsoleView()->show();
+                    currentHost->mainConsoleView()->update();
+                    currentHost->mainConsoleView()->repaint();
                 }
             }
         }
@@ -8827,16 +8827,16 @@ void mudlet::reattachTab(const QString& profileName, int insertIndex)
         mpTabBar->repaint();
 
         // Check if console is visible after activation
-        if (pHost->mpConsole) {
+        if (pHost->mainConsoleView()) {
             // Force visibility and repainting if needed
-            if (!pHost->mpConsole->isVisible()) {
-                pHost->mpConsole->setVisible(true);
-                pHost->mpConsole->show();
+            if (!pHost->mainConsoleView()->isVisible()) {
+                pHost->mainConsoleView()->setVisible(true);
+                pHost->mainConsoleView()->show();
             }
 
             // Always force console update and repaint to ensure it's properly displayed
-            pHost->mpConsole->update();
-            pHost->mpConsole->repaint();
+            pHost->mainConsoleView()->update();
+            pHost->mainConsoleView()->repaint();
         }
 
         // Force main window updates
@@ -8861,19 +8861,19 @@ void mudlet::reattachTab(const QString& profileName, int insertIndex)
     if (!mMultiView && pHost) {
         // If MultiView is disabled, ensure only the active console is visible
         for (const auto& host : mHostManager) {
-            if (host && host->mpConsole && host.data() != pHost) {
+            if (host && host->mainConsoleView() && host.data() != pHost) {
                 const QString otherProfileName = host->getName();
                 // Only hide consoles that are in the main window (not detached)
                 if (!mDetachedWindows.contains(otherProfileName)) {
-                    host->mpConsole->hide();
+                    host->mainConsoleView()->hide();
                 }
             }
         }
         // Ensure the current console is visible
-        if (pHost->mpConsole) {
-            pHost->mpConsole->show();
-            pHost->mpConsole->update();
-            pHost->mpConsole->repaint();
+        if (pHost->mainConsoleView()) {
+            pHost->mainConsoleView()->show();
+            pHost->mainConsoleView()->update();
+            pHost->mainConsoleView()->repaint();
         }
     }
 
@@ -8896,11 +8896,11 @@ TMainConsole* mudlet::removeConsoleFromSplitter(const QString& profileName)
 {
     Host* pHost = mHostManager.getHost(profileName);
 
-    if (!pHost || !pHost->mpConsole) {
+    if (!pHost || !pHost->mainConsoleView()) {
         return nullptr;
     }
 
-    TMainConsole* console = pHost->mpConsole;
+    TMainConsole* console = pHost->mainConsoleView();
 
     // Find the console in the splitter and remove it
     for (int i = 0; i < mpSplitter_profileContainer->count(); ++i) {
@@ -9070,7 +9070,7 @@ void mudlet::slot_profileDetachToWindow(const QString& profileName, TDetachedWin
     }
 
     Host* pHost = mHostManager.getHost(profileName);
-    if (!pHost || !pHost->mpConsole) {
+    if (!pHost || !pHost->mainConsoleView()) {
         return;
     }
 
@@ -9097,7 +9097,7 @@ void mudlet::moveProfileFromMainToDetachedWindow(const QString& profileName, int
     }
 
     Host* pHost = mHostManager.getHost(profileName);
-    if (!pHost || !pHost->mpConsole) {
+    if (!pHost || !pHost->mainConsoleView()) {
         return;
     }
 
@@ -9156,7 +9156,7 @@ void mudlet::moveProfileBetweenDetachedWindows(const QString& profileName, TDeta
     }
 
     Host* pHost = mHostManager.getHost(profileName);
-    if (!pHost || !pHost->mpConsole) {
+    if (!pHost || !pHost->mainConsoleView()) {
         return;
     }
 
@@ -9289,7 +9289,7 @@ void mudlet::moveProfileFromDetachedToMainWindow(const QString& profileName, TDe
     }
 
     Host* pHost = mHostManager.getHost(profileName);
-    if (!pHost || !pHost->mpConsole) {
+    if (!pHost || !pHost->mainConsoleView()) {
         qWarning() << "moveProfileFromDetachedToMainWindow: Invalid host or console for profile" << profileName;
         return;
     }
@@ -9313,28 +9313,28 @@ void mudlet::moveProfileFromDetachedToMainWindow(const QString& profileName, TDe
         return;
     }
 
-    if (console != pHost->mpConsole) {
-        qWarning() << "moveProfileFromDetachedToMainWindow: Console mismatch! Host console:" << pHost->mpConsole.data() << "Window console:" << console;
+    if (console != pHost->mainConsoleView()) {
+        qWarning() << "moveProfileFromDetachedToMainWindow: Console mismatch! Host console:" << pHost->mainConsoleView() << "Window console:" << console;
     }
 
     // CRITICAL: Remove profile from source window FIRST to avoid widget hierarchy conflicts
     sourceWindow->removeProfile(profileName);
 
     // Verify console is still valid
-    if (!pHost->mpConsole) {
+    if (!pHost->mainConsoleView()) {
         qCritical() << "moveProfileFromDetachedToMainWindow: Host console became null after removeProfile!";
         // Try to restore the relationship
-        pHost->mpConsole = console;
-        if (!pHost->mpConsole) {
+        pHost->setMainConsoleView(console);
+        if (!pHost->mainConsoleView()) {
             qCritical() << "moveProfileFromDetachedToMainWindow: Unable to restore Host->Console relationship!";
             return;
         }
     }
 
     // Double-check that we have the right console
-    if (pHost->mpConsole != console) {
+    if (pHost->mainConsoleView() != console) {
         qWarning() << "moveProfileFromDetachedToMainWindow: Host console changed! Fixing...";
-        pHost->mpConsole = console;
+        pHost->setMainConsoleView(console);
     }
 
     // Now add console to main window - it should have parent=nullptr now
@@ -9385,15 +9385,15 @@ void mudlet::moveProfileFromDetachedToMainWindow(const QString& profileName, TDe
         activateProfile(pHost);
 
         // Additional debugging - check if console is actually visible
-        if (pHost->mpConsole) {
+        if (pHost->mainConsoleView()) {
             // AGGRESSIVE FIX: Force console visibility in the splitter
-            if (!pHost->mpConsole->isVisible() || pHost->mpConsole->isHidden()) {
-                pHost->mpConsole->setVisible(true);
-                pHost->mpConsole->show();
-                pHost->mpConsole->raise();
-                pHost->mpConsole->activateWindow();
-                pHost->mpConsole->update();
-                pHost->mpConsole->repaint();
+            if (!pHost->mainConsoleView()->isVisible() || pHost->mainConsoleView()->isHidden()) {
+                pHost->mainConsoleView()->setVisible(true);
+                pHost->mainConsoleView()->show();
+                pHost->mainConsoleView()->raise();
+                pHost->mainConsoleView()->activateWindow();
+                pHost->mainConsoleView()->update();
+                pHost->mainConsoleView()->repaint();
             }
 
             // Also ensure the splitter itself is visible
@@ -9485,13 +9485,13 @@ void mudlet::moveProfileFromDetachedToMainWindow(const QString& profileName, TDe
     }
 
     // Verify Host->Console relationship is still intact
-    if (pHost && pHost->mpConsole != console) {
+    if (pHost && pHost->mainConsoleView() != console) {
         qWarning() << "moveProfileFromDetachedToMainWindow: Host->Console relationship broken, fixing...";
-        pHost->mpConsole = console;
+        pHost->setMainConsoleView(console);
     }
 
     // Final verification
-    if (!pHost || !pHost->mpConsole) {
+    if (!pHost || !pHost->mainConsoleView()) {
         qCritical() << "moveProfileFromDetachedToMainWindow: Final verification failed - Host or Console is invalid!";
     } else {
         qDebug() << "moveProfileFromDetachedToMainWindow: Move completed successfully for profile" << profileName;
@@ -9935,7 +9935,7 @@ bool mudlet::hasOrphanedProfiles()
 {
     // Check all loaded profiles to see if any are orphaned
     for (const auto& pHost : mHostManager) {
-        if (!pHost || !pHost->mpConsole) {
+        if (!pHost || !pHost->mainConsoleView()) {
             continue;
         }
 
@@ -9970,7 +9970,7 @@ QStringList mudlet::getOrphanedProfiles()
 
     // Find all loaded profiles that don't have visible windows
     for (const auto& pHost : mHostManager) {
-        if (!pHost || !pHost->mpConsole) {
+        if (!pHost || !pHost->mainConsoleView()) {
             continue;
         }
 
@@ -10016,7 +10016,7 @@ void mudlet::reattachOrphanedProfiles()
     for (const QString& profileName : std::as_const(orphanedProfiles)) {
         Host* pHost = mHostManager.getHost(profileName);
 
-        if (!pHost || !pHost->mpConsole) {
+        if (!pHost || !pHost->mainConsoleView()) {
             qWarning() << "reattachOrphanedProfiles: Invalid host for profile:" << profileName;
             continue;
         }
@@ -10027,7 +10027,7 @@ void mudlet::reattachOrphanedProfiles()
 
         // Add console back to main window
         const int insertIndex = mpTabBar->count(); // Insert at end
-        addConsoleToSplitter(pHost->mpConsole, insertIndex);
+        addConsoleToSplitter(pHost->mainConsoleView(), insertIndex);
 
         // Add tab back to tab bar
         const int newTabIndex = mpTabBar->insertTab(insertIndex, profileName);

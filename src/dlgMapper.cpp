@@ -493,7 +493,7 @@ void dlgMapper::loadMapFromFile()
         }
         const QString fileName = dialog->selectedFiles().constFirst();
         Host* pHost = mpHost;
-        if (!pHost || !pHost->mpConsole) {
+        if (!pHost || !pHost->mainConsoleView()) {
             return;
         }
         bool success = false;

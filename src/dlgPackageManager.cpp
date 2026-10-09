@@ -49,7 +49,7 @@ dlgPackageManager::dlgPackageManager(QWidget* parent, Host* pHost)
     setupUi(this);
     label_packageName->installEventFilter(this); // re-elides the package name on resize
     connect(lineEdit_searchBar, &QLineEdit::textChanged, this, &dlgPackageManager::slot_searchTextChanged);
-    connect(mpHost->mpConsole, &QWidget::destroyed, this, &dlgPackageManager::close);
+    connect(mpHost->mainConsoleView(), &QWidget::destroyed, this, &dlgPackageManager::close);
     connect(packageList, &QListWidget::currentItemChanged, this, &dlgPackageManager::slot_itemChanged);
     connect(packageList, &QListWidget::itemSelectionChanged, this, &dlgPackageManager::slot_toggleInstallRepoButton);
     connect(packageList, &QListWidget::itemSelectionChanged, this, &dlgPackageManager::slot_toggleRemoveButton);

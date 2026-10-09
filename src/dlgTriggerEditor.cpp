@@ -1888,7 +1888,7 @@ void dlgTriggerEditor::slot_toggleHiddenVariables(bool state)
 
 void dlgTriggerEditor::slot_viewStatsAction()
 {
-    mpHost->mpConsole->showStatistics();
+    mpHost->mainConsoleView()->showStatistics();
     mudlet::self()->raise();
     mudlet::self()->activateWindow();
     mudlet::self()->raise();
@@ -1955,7 +1955,7 @@ void dlgTriggerEditor::readSettings()
     if (savedPosition.isValid()) {
         move(savedPosition.toPoint());
     } else {
-        widgetutils::positionDialogOnActiveProfileScreen(this, nullptr, mpHost->mpConsole);
+        widgetutils::positionDialogOnActiveProfileScreen(this, nullptr, mpHost->mainConsoleView());
     }
 
     mAutosaveInterval = settings.value("autosaveIntervalMinutes", 2).toInt();
@@ -4814,8 +4814,8 @@ void dlgTriggerEditor::activeToggle_action()
     // Capture new state after toggle
     bool newState = pT->isActive();
 
-    if (mpHost->mpConsole) {
-        mpHost->mpConsole->setActionToolBarVisible(pT, pT->isActive());
+    if (mpHost->mainConsoleView()) {
+        mpHost->mainConsoleView()->setActionToolBarVisible(pT, pT->isActive());
     }
 
     const bool itemActive = pT->isActive();
@@ -6813,7 +6813,7 @@ void dlgTriggerEditor::saveAction()
             pA->setDataChanged();
         }
 
-        if (auto* pConsole = mpHost->mpConsole.data()) {
+        if (auto* pConsole = mpHost->mainConsoleView()) {
             // if the action has a TToolBar instance with a script error, hide that toolbar.
             if (!pA->state()) {
                 pConsole->setActionToolBarVisible(pA, false);
@@ -10602,7 +10602,7 @@ void dlgTriggerEditor::showEvent(QShowEvent* event)
     QMainWindow::showEvent(event);
 
     mHasBeenShown = true;
-    widgetutils::keepDialogOnAScreen(this, mpHost->mpConsole);
+    widgetutils::keepDialogOnAScreen(this, mpHost->mainConsoleView());
 
     // A Lua toggle that arrived while this editor was hidden stays queued
     // rather than being dropped (see flushPendingTriggerIconRefresh()) -
@@ -11865,7 +11865,7 @@ void dlgTriggerEditor::slot_previousSection()
 void dlgTriggerEditor::slot_activateMainWindow()
 {
     mudlet::self()->activateWindow();
-    mpHost->mpConsole->setFocus();
+    mpHost->mainConsoleView()->setFocus();
 }
 
 void dlgTriggerEditor::exportTrigger(const QString& fileName)
