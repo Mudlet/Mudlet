@@ -832,7 +832,9 @@ function Geyser.Label:displayNest()
   local flyMap = { R = { 1, 0 }, L = { -1, 0 }, T = { 0, -1 }, B = { 0, 1 } }
   if self.windowname ~= "main" then
     maxDim["H"], maxDim["V"] = getUserWindowSize(self.windowname)
-  else
+  end
+  -- inside a scroll box windowname is the scroll box's, which is no user window
+  if not maxDim["H"] then
     maxDim["H"], maxDim["V"] = getMainWindowSize()
   end
   local parent = self
@@ -1423,7 +1425,8 @@ end
 function Geyser.Label:onRightClick(event)
   closeAllLevels(self.rightClickMenu)
   if event.button == "RightButton" then
-    local winw = getUserWindowSize(self.windowname)
+    -- inside a scroll box windowname is the scroll box's, which is no user window
+    local winw = getUserWindowSize(self.windowname) or getMainWindowSize()
     local mousepos = self:get_x() + event.x
     local maxdiff = tonumber(self.rightClickMenu.MenuWidth)
     local diff = winw - mousepos

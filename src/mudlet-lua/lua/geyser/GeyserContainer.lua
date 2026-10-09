@@ -378,12 +378,14 @@ function Geyser.Container:new(cons, container)
         else
           container:add(me)
         end
+        -- a user window that is gone has no size, so whatever is left in its
+        -- container takes up none
         container.get_width = function()
-            return getUserWindowSize(me.windowname)
+            return getUserWindowSize(me.windowname) or 0
         end
         container.get_height = function()
             local w, h = getUserWindowSize(me.windowname)
-            return h
+            return w and h or 0
         end
         -- so the user window can take this container with it when it is deleted
         -- without having to guess at the container by its name

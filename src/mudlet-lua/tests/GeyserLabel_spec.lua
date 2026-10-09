@@ -2119,3 +2119,47 @@ describe("Tests Geyser.Label right click menus", function()
     end)
   end)
 end)
+
+-- a label inside a scroll box carries the scroll box's name as its windowname,
+-- which getUserWindowSize refuses as no user window
+describe("Tests Geyser.Label nests and menus inside a Geyser.ScrollBox", function()
+  local scrollBox
+  local topLevelBefore
+
+  before_each(function()
+    topLevelBefore = {}
+    for name in pairs(Geyser.windowList) do
+      topLevelBefore[name] = true
+    end
+    scrollBox = Geyser.ScrollBox:new({name = "glsbBox", x = 0, y = 0, width = 300, height = 300})
+  end)
+
+  after_each(function()
+    if Geyser.Label.closeAllTimer then
+      killTimer(Geyser.Label.closeAllTimer)
+      Geyser.Label.closeAllTimer = nil
+    end
+    scrollBox:delete()
+    for name, object in pairs(Geyser.windowList) do
+      if not topLevelBefore[name] then
+        Geyser.Label.scrollV[object] = nil
+        Geyser.Label.scrollH[object] = nil
+        object:delete()
+      end
+    end
+  end)
+
+  it("opens a right click menu", function()
+    local label = Geyser.Label:new({name = "glsbMenuHost", x = 10, y = 10, width = 100, height = 30}, scrollBox)
+    label:createRightClickMenu({MenuItems = {"First"}})
+    label:onRightClick({button = "RightButton", buttons = {"RightButton"}, x = 1, y = 1, globalX = 1, globalY = 1})
+    assert.is_true(windowVisible(label:findMenuElement("First").name))
+  end)
+
+  it("displays a nest", function()
+    local parent = Geyser.Label:new({name = "glsbNestParent", x = 10, y = 10, width = 50, height = 20}, scrollBox)
+    local child = parent:addChild({name = "glsbNestChild", width = 50, height = 20, layoutDir = "RV"}, scrollBox)
+    parent:displayNest()
+    assert.is_true(windowVisible(child.name))
+  end)
+end)
