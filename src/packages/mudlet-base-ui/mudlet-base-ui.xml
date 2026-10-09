@@ -1937,7 +1937,12 @@ function BaseUI.checkMapData(event)
   -- installed, and sysServerGuiInstalled only stands this UI aside once that
   -- install returns
   if event then
-    tempTimer(0, BaseUI.checkMapData)
+    -- BaseUI is gone by then if this package was uninstalled in the meantime
+    tempTimer(0, function()
+      if BaseUI then
+        BaseUI.checkMapData()
+      end
+    end)
     return
   end
   if BaseUI.mapPlaceholder then

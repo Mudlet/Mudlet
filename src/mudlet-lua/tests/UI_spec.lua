@@ -2493,6 +2493,19 @@ describe("Tests UI functions", function()
         end)
       end
 
+      it("should not look again once the starter UI has been uninstalled", function()
+        local timer = stub(_G, "tempTimer")
+        BaseUI.checkMapData("mapOpenEvent")
+        _G.tempTimer:revert()
+        assert.stub(timer).was_called(1)
+        local lookAgain = timer.calls[1].vals[2]
+        local ui = BaseUI
+        _G.BaseUI = nil
+        local ok, err = pcall(lookAgain)
+        _G.BaseUI = ui
+        assert.is_true(ok, tostring(err))
+      end)
+
       it("should still take the map when no game interface claims it", function()
         BaseUI.checkMapData("mapOpenEvent")
         pumpEvents(100)
