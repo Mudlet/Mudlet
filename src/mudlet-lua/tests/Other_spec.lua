@@ -3467,6 +3467,33 @@ describe("Tests how raiseEvent finds the Lua event dispatcher", function()
   end)
 end)
 
+describe("Tests that raiseEvent hands strings over unchanged", function()
+  local function roundTrip(value)
+    local received
+    local id = registerAnonymousEventHandler("otherSpecStringRoundTrip", function(_, text)
+      received = text
+    end)
+    raiseEvent("otherSpecStringRoundTrip", value)
+    killAnonymousEventHandler(id)
+    return received
+  end
+
+  it("keeps text, including what is not ASCII", function()
+    for _, value in ipairs({"", "plain", "caf\195\169", "\226\130\172 and \240\159\152\128"}) do
+      assert.are.equal(value, roundTrip(value))
+    end
+  end)
+
+  -- a sysTelnetEvent handler passing a binary payload on to its own handlers
+  it("keeps NULs and bytes that are not UTF-8", function()
+    for _, value in ipairs({"A\0\200B", "\0", "\255\250\140", "AB\0CD\195\169\255EF"}) do
+      local received = roundTrip(value)
+      assert.are.equal(#value, #received)
+      assert.are.equal(value, received)
+    end
+  end)
+end)
+
 describe("Tests that raiseEvent hands numbers over unchanged", function()
   local function roundTrip(value)
     local received
