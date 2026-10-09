@@ -1996,7 +1996,7 @@ void dlgConnectionProfiles::slot_setCustomIcon()
     lastDir = QFileInfo(imageLocation).absolutePath();
     settings.setValue("lastFileDialogLocation", lastDir);
 
-    const bool success = mudlet::self()->setProfileIcon(profileName, imageLocation).first;
+    const bool success = MudletApp::setProfileIcon(profileName, imageLocation).first;
     if (!success) {
         return;
     }
@@ -2034,7 +2034,7 @@ void dlgConnectionProfiles::slot_resetCustomIcon()
         return;
     }
 
-    const bool success = mudlet::self()->resetProfileIcon(profileName).first;
+    const bool success = MudletApp::resetProfileIcon(profileName).first;
     if (!success) {
         return;
     }

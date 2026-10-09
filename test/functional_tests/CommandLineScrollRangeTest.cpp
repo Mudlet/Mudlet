@@ -149,13 +149,13 @@ private slots:
     void init()
     {
         QVERIFY(mpHost);
-        QVERIFY(mpHost->mpConsole);
-        QVERIFY(mpHost->mpConsole->mpCommandLine);
+        QVERIFY(mpHost->mainConsoleView());
+        QVERIFY(mpHost->mainConsoleView()->mpCommandLine);
         mpHost->commandLineMinimumHeight = 30;
-        mpHost->mpConsole->setFontSize(12);
+        mpHost->mainConsoleView()->setFontSize(12);
     }
 
-    void cleanup() { fill(mpHost->mpConsole->mpCommandLine, QString()); }
+    void cleanup() { fill(mpHost->mainConsoleView()->mpCommandLine, QString()); }
 
     // Only the families Mudlet bundles, so the sweep is the same everywhere it runs.
     // Row counts are exhaustive, font sizes are a sample; the combinations that were
@@ -163,12 +163,12 @@ private slots:
     // commandLineMinimumHeight floor covers the shortfall on its own.
     void test_noScrollRangeWhileTheTextFits()
     {
-        TCommandLine* pCommandLine = mpHost->mpConsole->mpCommandLine;
+        TCommandLine* pCommandLine = mpHost->mainConsoleView()->mpCommandLine;
         QStringList scrollable;
 
         for (const QString& family : {qsl("Bitstream Vera Sans Mono"), qsl("Bitstream Vera Sans"), qsl("Ubuntu Mono"), qsl("Ubuntu")}) {
             for (const int fontSize : {8, 12, 14, 24, 30}) {
-                mpHost->mpConsole->setFont(QFont(family, fontSize), true);
+                mpHost->mainConsoleView()->setFont(QFont(family, fontSize), true);
                 for (int rows = 1; rows <= 10; ++rows) {
                     fill(pCommandLine, rowsOfText(rows));
                     if (pCommandLine->verticalScrollBar()->maximum() != 0) {
@@ -191,7 +191,7 @@ private slots:
     // above are being made against a widget that really was laid out.
     void test_scrollRangeOnceThereAreMoreRowsThanFit()
     {
-        TCommandLine* pCommandLine = mpHost->mpConsole->mpCommandLine;
+        TCommandLine* pCommandLine = mpHost->mainConsoleView()->mpCommandLine;
 
         fill(pCommandLine, rowsOfText(11));
 
@@ -203,8 +203,8 @@ private slots:
     // spanning several rows is the only thing that divides the row height out.
     void test_noScrollRangeWhenOneCommandWrapsOverSeveralRows()
     {
-        TCommandLine* pCommandLine = mpHost->mpConsole->mpCommandLine;
-        mpHost->mpConsole->setFontSize(24);
+        TCommandLine* pCommandLine = mpHost->mainConsoleView()->mpCommandLine;
+        mpHost->mainConsoleView()->setFontSize(24);
 
         QString command;
         do {
@@ -221,8 +221,8 @@ private slots:
     // setting may bring the range back.
     void test_noScrollRangeAtEitherEndOfTheMinimumHeightPreference()
     {
-        TCommandLine* pCommandLine = mpHost->mpConsole->mpCommandLine;
-        mpHost->mpConsole->setFontSize(24);
+        TCommandLine* pCommandLine = mpHost->mainConsoleView()->mpCommandLine;
+        mpHost->mainConsoleView()->setFontSize(24);
 
         for (const int minimumHeight : {10, 30, 200}) {
             mpHost->commandLineMinimumHeight = minimumHeight;
@@ -235,7 +235,7 @@ private slots:
     // into view again - text left sitting out of position is the damage being fixed.
     void test_shrinkingBackFromAScrolledStateShowsTheFirstRowAgain()
     {
-        TCommandLine* pCommandLine = mpHost->mpConsole->mpCommandLine;
+        TCommandLine* pCommandLine = mpHost->mainConsoleView()->mpCommandLine;
 
         fill(pCommandLine, rowsOfText(15));
         pCommandLine->verticalScrollBar()->triggerAction(QAbstractSlider::SliderToMaximum);
@@ -253,7 +253,7 @@ private slots:
     // QStyleSheetStyle, so its frameWidth() need not match the main one's.
     void test_noScrollRangeOnAConsoleCommandLine()
     {
-        TMainConsole* pConsole = mpHost->mpConsole;
+        TMainConsole* pConsole = mpHost->mainConsoleView();
         const QString name = qsl("scrollRangeMiniConsole");
 
         TConsole* pMiniConsole = pConsole->createMiniConsole(QString(), name, 0, 0, 300, 100);

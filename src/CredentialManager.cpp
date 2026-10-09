@@ -20,8 +20,8 @@
 
 #include "CredentialManager.h"
 #include "MudletApp.h"
-#include "mudlet.h"
 #include "SecureStringUtils.h"
+#include "TAppFrontend.h"
 #include "utils.h"
 
 #include <QCoreApplication>
@@ -49,9 +49,6 @@
 #else
 #include <qt6keychain/keychain.h>
 #endif
-
-// Forward declaration to avoid including mudlet.h
-class mudlet;
 
 namespace {
 // Whether a delete job's result means the credential is not left behind. EntryNotFound (nothing
@@ -324,7 +321,7 @@ bool CredentialManager::isOperationValid() const
     }
     // No instance in a unit test, and nothing to read the preference from - the caller's own default
     // stands, which keeps this the keychain as it was
-    if (!mudlet::self()) {
+    if (!TAppFrontend::instance()) {
         return std::nullopt;
     }
     return !MudletApp::storingPasswordsSecurely();

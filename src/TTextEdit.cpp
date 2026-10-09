@@ -40,6 +40,7 @@
 #include "THyperlinkVisibilityManager.h"
 #include "mudlet.h"
 #include "MudletApp.h"
+#include "TMainConsole.h"
 #include "utils.h"
 #include "widechar_width.h"
 #include "TTextProperties.h"
@@ -77,6 +78,7 @@ using namespace std::chrono_literals;
 // Text data stored separately in a TBuffer
 TTextEdit::TTextEdit(TConsole* pC, QWidget* pW, TBuffer* pB, Host* pH, bool isLowerPane)
 : QWidget(pW)
+, mCursorY(isLowerPane ? mLowerPaneCursorY : pC->model().mUpperPaneCursorY)
 , mIsLowerPane(isLowerPane)
 , mpBuffer(pB)
 , mpConsole(pC)
@@ -107,6 +109,7 @@ TTextEdit::TTextEdit(TConsole* pC, QWidget* pW, TBuffer* pB, Host* pH, bool isLo
         mBgColor = Qt::black;
     }
     mScreenHeight = height() / mFontHeight;
+    reportGridSize();
 
     setMouseTracking(true);
     QCursor cursor;
@@ -2478,9 +2481,9 @@ void TTextEdit::slot_copySelectionToClipboardHTML()
     if (mpConsole->getType() == TConsole::CentralDebugConsole) {
         title = tr("Mudlet, debug console extract");
     } else if (mpConsole->getType() == TConsole::SubConsole) {
-        title = tr("Mudlet, %1 mini-console extract from %2 profile").arg(mpHost->mpConsole->subConsoleName(mpConsole), mpHost->getName());
+        title = tr("Mudlet, %1 mini-console extract from %2 profile").arg(mpHost->mainConsoleView()->subConsoleName(mpConsole), mpHost->getName());
     } else if (mpConsole->getType() == TConsole::UserWindow) {
-        title = tr("Mudlet, %1 user window extract from %2 profile").arg(mpHost->mpConsole->subConsoleName(mpConsole), mpHost->getName());
+        title = tr("Mudlet, %1 user window extract from %2 profile").arg(mpHost->mainConsoleView()->subConsoleName(mpConsole), mpHost->getName());
     } else {
         title = tr("Mudlet, main console extract from %1 profile").arg(mpHost->getName());
     }
@@ -3214,6 +3217,7 @@ void TTextEdit::showEvent(QShowEvent* event)
 void TTextEdit::resizeEvent(QResizeEvent* event)
 {
     updateScreenView();
+    reportGridSize();
 
     // Safety check: during destruction, mpHost or mpConsole might be null
     if (mpHost && mpConsole) {
@@ -3342,6 +3346,24 @@ int TTextEdit::getColumnCount() const
 int TTextEdit::getRowCount() const
 {
     return qRound(height() / QFontMetricsF(font()).lineSpacing());
+}
+
+void TTextEdit::reportGridSize()
+{
+    if (!mIsLowerPane && mpConsole) {
+        mpConsole->model().mGridSize = QSize(getColumnCount(), getRowCount());
+    }
+}
+
+void TTextEdit::changeEvent(QEvent* event)
+{
+    if (event->type() == QEvent::FontChange) {
+        if (!mIsLowerPane && mpConsole) {
+            mpConsole->model().mUpperPaneFont = font();
+        }
+        reportGridSize();
+    }
+    QWidget::changeEvent(event);
 }
 
 QString TTextEdit::htmlCenter(const QString& text)
