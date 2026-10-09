@@ -8774,7 +8774,7 @@ void dlgProfilePreferences::closeEvent(QCloseEvent* event)
 
     // The profile XML is written once per close rather than on every apply
     if (Host* pHost = mpHost; pHost && pHost->mFORCE_SAVE_ON_EXIT) {
-        pHost->saveProfile();
+        pHost->saveProfileReportingFailure();
     }
 
     MudletApp::getQSettings()->setValue(qsl("profilePreferencesGeometry"), saveGeometry());

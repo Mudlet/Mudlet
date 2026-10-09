@@ -1229,6 +1229,17 @@ void Host::resetProfile_phase2()
     qDebug() << "resetProfile() DONE";
 }
 
+// The write runs on a pool thread after the caller has been answered, so a target it could not open would
+// only be found out there. Opened the way XMLexport opens it; the temporary file is discarded unwritten.
+static QString whyAFileCannotBeSavedTo(const QString& fileName)
+{
+    QSaveFile probe(fileName);
+    if (!probe.open(QIODevice::WriteOnly)) {
+        return probe.errorString();
+    }
+    return QString();
+}
+
 // Saves profile to disk - does not save items dirty in the editor, however.
 // Empty saveFolder/saveName mean the profile's save directory and a timestamped name (given without
 // ".xml"). Returns {ok, pathFileName, error}; a failure fills pathFileName too, unless another save is running.
@@ -1263,6 +1274,10 @@ std::tuple<bool, QString, QString> Host::saveProfile(const QString& saveFolder, 
 
     if (currentlySavingProfile()) {
         return {false, QString(), qsl("a save is already in progress")};
+    }
+
+    if (const QString reason = whyAFileCannotBeSavedTo(filename_xml); !reason.isEmpty()) {
+        return {false, filename_xml, reason};
     }
 
     if (saveFolder.isEmpty() && saveName.isEmpty()) {
@@ -1356,11 +1371,26 @@ std::tuple<bool, QString, QString> Host::saveProfile(const QString& saveFolder, 
     return {true, filename_xml, QString()};
 }
 
+// For callers with nowhere to show a failure, such as the editor's autosave and a forced close. Turning a
+// save away because one is already running, or because the profile never loaded, is not a failure to write.
+void Host::saveProfileReportingFailure(const QString& saveName)
+{
+    if (auto [ok, filename, error] = saveProfile(QString(), saveName); !ok && !filename.isEmpty() && mLoadedOk && !mIsProfileLoadingSequence) {
+        qWarning().noquote().nospace() << "Host::saveProfileReportingFailure() WARNING - could not save the profile to \"" << filename << "\": " << error;
+        //: %1 is the file the profile was being saved to, %2 is the reason it could not be
+        postMessage(tr("[ ERROR ] - The profile could not be saved to \"%1\": %2").arg(filename, error));
+    }
+}
+
 // exports without the host settings for some reason
 std::tuple<bool, QString, QString> Host::saveProfileAs(const QString& file)
 {
     if (currentlySavingProfile()) {
         return {false, QString(), qsl("a save is already in progress")};
+    }
+
+    if (const QString reason = whyAFileCannotBeSavedTo(file); !reason.isEmpty()) {
+        return {false, file, reason};
     }
 
     auto writer = std::make_shared<XMLexport>(this);

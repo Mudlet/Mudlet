@@ -1743,7 +1743,7 @@ void TDetachedWindow::slot_saveProfile()
     Host* pHost = pHostManager->getHost(mCurrentProfileName);
 
     if (pHost) {
-        pHost->saveProfile();
+        pHost->saveProfileReportingFailure();
     }
 }
 
