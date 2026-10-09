@@ -522,8 +522,8 @@ private slots:
     // has to outlive that for unticking it, then or on a later visit, to put it back
     void test_untickingAnAppliedMaximumBufferSizeBringsBackTheChosenSize()
     {
-        QVERIFY2(mpHost->mpConsole, "the profile has no console, so it has no maximum buffer size to offer");
-        TBuffer& buffer = mpHost->mpConsole->buffer;
+        QVERIFY2(mpHost->mainConsoleView(), "the profile has no console, so it has no maximum buffer size to offer");
+        TBuffer& buffer = mpHost->mainConsoleView()->buffer;
         const int priorBufferSize = mpHost->getConsoleBufferSize();
         const bool priorUseMax = mpHost->getUseMaxConsoleBufferSize();
         const int priorLinesLimit = buffer.mLinesLimit;
@@ -576,8 +576,8 @@ private slots:
     // not reached the profile yet when the tick overwrites the box with the maximum
     void test_aSizeEditedJustBeforeTickingTheMaximumIsKept()
     {
-        QVERIFY2(mpHost->mpConsole, "the profile has no console, so it has no maximum buffer size to offer");
-        TBuffer& buffer = mpHost->mpConsole->buffer;
+        QVERIFY2(mpHost->mainConsoleView(), "the profile has no console, so it has no maximum buffer size to offer");
+        TBuffer& buffer = mpHost->mainConsoleView()->buffer;
         const int priorBufferSize = mpHost->getConsoleBufferSize();
         const bool priorUseMax = mpHost->getUseMaxConsoleBufferSize();
         const int priorLinesLimit = buffer.mLinesLimit;

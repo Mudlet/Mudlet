@@ -295,7 +295,7 @@ private slots:
     {
         settle(800ms);
         const int wrapBefore = mpHost->mWrapAt;
-        mpHost->mpConsole->slot_toggleTimeStamps(true);
+        mpHost->mainConsoleView()->slot_toggleTimeStamps(true);
         settle(800ms);
 
         mpServer->clearNawsUpdates();
@@ -421,7 +421,7 @@ private slots:
         // Loading the second profile puts it in front
         showTab(mHostname);
         settle(1500ms);
-        QVERIFY2(!mpHost->mpConsole->isHidden(), "the first profile has to be on screen for the first reading");
+        QVERIFY2(!mpHost->mainConsoleView()->isHidden(), "the first profile has to be on screen for the first reading");
 
         runLua(mpHost, qsl("setBorderLeft(60) setBorderRight(40)"));
         settle(600ms);
@@ -431,7 +431,7 @@ private slots:
         runLua(mpHost, qsl("setBorderLeft(0) setBorderRight(0)"));
         showTab(mSecondHostname);
         settle(1500ms);
-        QVERIFY2(mpHost->mpConsole->isHidden(), "the first profile should be in a background tab by now");
+        QVERIFY2(mpHost->mainConsoleView()->isHidden(), "the first profile should be in a background tab by now");
 
         runLua(mpHost, qsl("resizeProbeWidth = nil setBorderLeft(60) setBorderRight(40)"));
         const int widthWhileHidden = luaGlobalNumber(mpHost, "resizeProbeWidth");

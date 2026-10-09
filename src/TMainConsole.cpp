@@ -437,14 +437,20 @@ void TMainConsole::toggleLogging(bool isMessageEnabled)
     model().toggleLogging(isMessageEnabled);
 }
 
-QString TMainConsole::loggingAnnouncementText(const bool isLogging, const QString& logFileName)
-{
-    return isLogging ? tr("Logging has started. Log file is %1").arg(logFileName) : tr("Logging has been stopped. Log file is %1").arg(logFileName);
-}
-
 void TMainConsole::slot_loggingAnnouncement(const bool isLogging, const QString& logFileName)
 {
-    printSystemMessage(qsl("%1\n").arg(loggingAnnouncementText(isLogging, logFileName)));
+    printSystemMessage(qsl("%1\n").arg(Host::loggingAnnouncementText(isLogging, logFileName)));
+}
+
+TMainConsole* Host::mainConsoleView() const
+{
+    return mpConsole.data();
+}
+
+void Host::setMainConsoleView(TMainConsole* view)
+{
+    mpConsole = view;
+    mpConsoleFrontend = view;
 }
 
 void TMainConsole::slot_loggingStateChanged(const bool isLogging)
@@ -830,6 +836,16 @@ TConsole* TMainConsole::createMiniConsole(const QString& windowname, const QStri
         return pC;
     }
     return nullptr;
+}
+
+TMxpFrameFrontend& TMainConsole::mxpFrames()
+{
+    return *mpMxpFrameWidgets;
+}
+
+const TMxpFrameFrontend& TMainConsole::mxpFrames() const
+{
+    return *mpMxpFrameWidgets;
 }
 
 TConsole* TMainConsole::createSubConsole(const QString& name, QWidget* parent)

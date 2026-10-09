@@ -32,7 +32,7 @@
 #include <optional>
 
 class Host;
-class TMxpFrameWidgets;
+class TMxpFrameFrontend;
 class TPrintSink;
 
 /**
@@ -169,8 +169,8 @@ private:
     std::optional<QRect> nestingArea(const TMxpFrame& frame) const;
     QSize calculateFrameSize(const QString& spec, const QSize& containerSize, bool isHeight);
     // Null while the profile has no main console
-    TMxpFrameWidgets* frameWidgets();
-    const TMxpFrameWidgets* frameWidgets() const;
+    TMxpFrameFrontend* frameWidgets();
+    const TMxpFrameFrontend* frameWidgets() const;
 
     // Validation
     bool validateFrameName(const QString& name) const;

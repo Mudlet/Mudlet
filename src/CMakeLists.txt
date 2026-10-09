@@ -479,6 +479,7 @@ set(mudlet_HDRS
     TMxpExpireTagHandler.h
     TMxpFontTagHandler.h
     TMxpFormattingTagsHandler.h
+    TMxpFrameFrontend.h
     TMxpFrameManager.h
     TMxpFrameTagHandler.h
     TMxpFrameWidgets.h

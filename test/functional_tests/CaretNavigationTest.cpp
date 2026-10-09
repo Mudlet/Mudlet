@@ -656,7 +656,7 @@ private slots:
     void test_caretKeysOnAConsoleEmptiedByDeleteLine()
     {
         QVERIFY(runLua(qsl("createMiniConsole('caretEmptied', 0, 0, 300, 100)\nclearWindow('caretEmptied')\ndeleteLine('caretEmptied')")));
-        TConsole* pMini = mpHost->mpConsole->subConsoleWidget(qsl("caretEmptied"));
+        TConsole* pMini = mpHost->mainConsoleView()->subConsoleWidget(qsl("caretEmptied"));
         QVERIFY(pMini);
         QVERIFY(pMini->buffer.lineBuffer.isEmpty());
         TTextEdit* pMiniPane = pMini->mUpperPane;
@@ -675,7 +675,7 @@ private slots:
     void test_caretKeysAfterDeleteLineShortensTheBufferPastTheCaret()
     {
         QVERIFY(runLua(qsl("createMiniConsole('caretShortened', 0, 0, 300, 100)\nfor i = 1, 10 do echo('caretShortened', 'line ' .. i .. '\\n') end")));
-        TConsole* pMini = mpHost->mpConsole->subConsoleWidget(qsl("caretShortened"));
+        TConsole* pMini = mpHost->mainConsoleView()->subConsoleWidget(qsl("caretShortened"));
         QVERIFY(pMini);
         TTextEdit* pMiniPane = pMini->mUpperPane;
         pMiniPane->setCaretPosition(9, 2);
@@ -698,7 +698,7 @@ private slots:
     void test_ctrlEndOnAConsoleLeftWithOnlyItsTrailingLine()
     {
         QVERIFY(runLua(qsl("createMiniConsole('caretTrailing', 0, 0, 300, 100)\necho('caretTrailing', 'only\\n')\nmoveCursor('caretTrailing', 0, 0)\ndeleteLine('caretTrailing')")));
-        TConsole* pMini = mpHost->mpConsole->subConsoleWidget(qsl("caretTrailing"));
+        TConsole* pMini = mpHost->mainConsoleView()->subConsoleWidget(qsl("caretTrailing"));
         QVERIFY(pMini);
         QCOMPARE(pMini->buffer.lineBuffer, QStringList({QString()}));
         TTextEdit* pMiniPane = pMini->mUpperPane;
@@ -738,7 +738,7 @@ private slots:
     void test_theCaretKeysStayInsideABufferClearedUnderTheCaret()
     {
         for (int line = 0; line < 5; ++line) {
-            mpHost->mpConsole->print(qsl("clear filler %1\n").arg(line));
+            mpHost->mainConsoleView()->print(qsl("clear filler %1\n").arg(line));
         }
         const int line = static_cast<int>(consoleBuffer().lineBuffer.length()) - 2;
         QVERIFY(line >= 2);

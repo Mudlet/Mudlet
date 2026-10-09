@@ -2746,7 +2746,7 @@ void TBuffer::processMxpWatchdogCallback()
     } else if (mWatchdogPhase == WatchdogPhase::Phase2_Unfreeze) {
         // The continuation commits into this buffer and finalizes the main
         // console's view, so it needs that view and this to be its buffer:
-        if (isMxpParserFrozen && !mpHost->mpConsole.isNull() && mpModel == &mpHost->mainConsoleModel()) {
+        if (isMxpParserFrozen && mpHost->consoleFrontend() && mpModel == &mpHost->mainConsoleModel()) {
             mpHost->mMxpProcessor.setLastEntityValue(QString::fromStdString('<' + currentTagContent));
             const TChar style(mForeGroundColor, mBackGroundColor, computeCurrentAttributeFlags());
             QPointer<Host> hostGuard = mpHost;
@@ -2760,7 +2760,7 @@ void TBuffer::processMxpWatchdogCallback()
                 // commitLine() and finalize() below both reach the main console
                 // through the host, and that pointer empties on its own when the
                 // profile's console goes:
-                if (!hostGuard || hostGuard->mpConsole.isNull()) {
+                if (!hostGuard || !hostGuard->consoleFrontend()) {
                     return;
                 }
                 QString lastEntityValue = hostGuard->mMxpProcessor.getEntityValue();
