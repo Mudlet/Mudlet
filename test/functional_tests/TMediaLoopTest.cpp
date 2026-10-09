@@ -764,6 +764,46 @@ private slots:
         QCOMPARE(data.mediaEnd(), TMediaData::MediaEndNotSet);
     }
 
+    // Only a volume of exactly 0 asks for a preload, so a fractional one has to be
+    // rounded into the 1 to 100 a player takes, not read as no volume at all (#10404)
+    void test_aFractionalGmcpVolumeIsRounded_data()
+    {
+        QTest::addColumn<QString>("volume");
+        QTest::addColumn<int>("expected");
+        QTest::newRow("50.6") << qsl("50.6") << 51;
+        QTest::newRow("0.4") << qsl("0.4") << 1;
+    }
+
+    void test_aFractionalGmcpVolumeIsRounded()
+    {
+        SKIP_OR_FAIL_WITHOUT(mCannotStartReason);
+        QFETCH(QString, volume);
+        QFETCH(int, expected);
+
+        auto* media = startProfileAndGetMedia();
+        QVERIFY(media);
+        const QString fileName = writeClip(qsl("fractionalvolume.wav"), wavBytes(longClipMs));
+        QVERIFY(!fileName.isEmpty());
+
+        QString package = qsl("Client.Media.Play");
+        QString message = qsl(R"({"name": "%1", "type": "sound", "key": "qaFractionalVolume", "volume": %2})").arg(fileName, volume);
+        media->parseGMCP(package, message);
+
+        TMediaData criteria;
+        criteria.setMediaProtocol(TMediaData::MediaProtocolGMCP);
+        criteria.setMediaType(TMediaData::MediaTypeSound);
+        criteria.setMediaKey(qsl("qaFractionalVolume"));
+        QList<TMediaData> started;
+        QVERIFY2(QTest::qWaitFor(
+                         [&]() {
+                             started = media->playingMedia(criteria);
+                             return !started.isEmpty();
+                         },
+                         QDeadlineTimer(10s)),
+                 "the Client.Media.Play request never started playing");
+        QCOMPARE(started.at(0).mediaVolume(), expected);
+    }
+
     void cleanup()
     {
         delete mpServer;
