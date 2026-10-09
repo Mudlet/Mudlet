@@ -27,6 +27,7 @@
 
 #include "MudletApp.h"
 
+#include "SecureStringUtils.h"
 #include "TGameDetails.h"
 #include "utils.h"
 
@@ -538,11 +539,22 @@ QString MudletApp::getMudletPath(const enums::mudletPathType mode, const QString
     return QString();
 }
 
+bool MudletApp::profileDataItemHoldsSecret(const QString& item)
+{
+    // "irc_password" is TIrcClient::PasswordCfgItem
+    return item == qsl("password") || item == qsl("irc_password");
+}
+
 QString MudletApp::readProfileData(const QString& profile, const QString& item)
 {
     QFile file(MudletApp::getMudletPath(enums::profileDataItemPath, profile, item));
     if (!file.exists()) {
         return QString();
+    }
+
+    // An earlier Mudlet wrote these with the umask
+    if (profileDataItemHoldsSecret(item)) {
+        SecureStringUtils::restrictFileToOwner(file.fileName());
     }
 
     if (!file.open(QIODevice::ReadOnly)) {
@@ -573,6 +585,12 @@ QPair<bool, QString> MudletApp::writeProfileData(const QString& profile, const Q
         return qMakePair(false, file.errorString());
     }
 
+    const bool holdsSecret = profileDataItemHoldsSecret(item);
+    if (holdsSecret) {
+        // On the temporary file, before the secret is in it: commit() renames it into place
+        file.setPermissions(QFileDevice::ReadOwner | QFileDevice::WriteOwner);
+    }
+
     QDataStream ofs(&file);
     ofs.setVersion(QDataStream::Qt_5_12);
     ofs << what;
@@ -582,6 +600,11 @@ QPair<bool, QString> MudletApp::writeProfileData(const QString& profile, const Q
         const QString reason = file.error() == QFileDevice::NoError ? qsl("could not write all of the %1 data").arg(item) : file.errorString();
         qWarning().noquote().nospace() << "MudletApp::writeProfileData(...) ERROR - writing profile: \"" << profile << "\", item: \"" << item << "\", reason: \"" << reason << "\".";
         return qMakePair(false, reason);
+    }
+
+    if (holdsSecret) {
+        // Reads the permissions back, and warns when the file system would not keep them
+        SecureStringUtils::restrictFileToOwner(file.fileName());
     }
 
     return qMakePair(true, QString());

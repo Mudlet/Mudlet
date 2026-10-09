@@ -2488,6 +2488,26 @@ describe("The IRC configuration functions round-trip through the profile", funct
       assert.equals("BustedKeptSecret", getConfig("ircPassword"))
     end)
 
+    it("keeps the stored password readable by its owner only", function()
+      -- Written with the usual umask of 022, every account on the machine
+      -- could read the password in it.
+      if getOS() == "windows" then
+        pending("there are no POSIX permission bits to narrow")
+        return
+      end
+      restoreIrcConfigurationWithPassword()
+      local path = getMudletHomeDir() .. "/irc_password"
+
+      assert.is_true(setIrcServer("irc.busted-owneronly.invalid", 6667, false, "BustedOwnerSecret"))
+      assert.equals("rw-------", lfs.attributes(path, "permissions"))
+
+      -- and one an earlier Mudlet left open is narrowed when it is read
+      os.execute("chmod 644 '" .. (path:gsub("'", "'\\''")) .. "'")
+      assert.equals("rw-r--r--", lfs.attributes(path, "permissions"), "could not stage a file open to everyone")
+      assert.equals("BustedOwnerSecret", getConfig("ircPassword"))
+      assert.equals("rw-------", lfs.attributes(path, "permissions"))
+    end)
+
     it("falls back to port 6667 and an insecure connection when only a hostname is given", function()
       restoreIrcConfiguration()
       assert.is_true(setIrcServer("irc.busted-secure.invalid", 6697, true))
