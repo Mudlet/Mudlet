@@ -1309,16 +1309,20 @@ function setConfig(...)
 
   -- every key is tried, so one refusal - or a raised bad-argument error - does
   -- not leave the rest unapplied
-  local failures, warnings = {}, {}
+  local failures, warnings, snapshotKeys = {}, {}, nil
   for k,v in pairs(args[1]) do
     local called, ok, message = pcall(oldsetConfig, k, v)
     if not called then
       ok, message = nil, ok
     end
-    -- a key already at the value asked for needs nothing doing, so the
-    -- getConfig()-only keys in a getConfig() snapshot can be handed back
-    if not ok and type(k) == "string" and sameConfigValue(getConfig(k), v) then
-      ok, message = true, nil
+    -- a snapshot key already at the value asked for needs nothing doing, so the
+    -- getConfig()-only keys in a getConfig() snapshot can be handed back; only
+    -- snapshot keys, as getConfig() also answers false for an unknown experiment
+    if not ok then
+      snapshotKeys = snapshotKeys or getConfig()
+      if snapshotKeys[k] ~= nil and sameConfigValue(getConfig(k), v) then
+        ok, message = true, nil
+      end
     end
     if not ok then
       failures[#failures + 1] = string.format("%s: %s", tostring(k), tostring(message))

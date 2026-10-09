@@ -1301,8 +1301,19 @@ describe("Tests Other.lua functions", function()
     end)
 
     it("answers true when handed back a getConfig() snapshot", function()
+      -- the snapshot holds showSentText as a boolean, which would turn "always" into "script"
+      local sentText = getConfig("showSentText", true)
+      finally(function()
+        setConfig("showSentText", sentText)
+      end)
       local ok, err = setConfig(getConfig())
       assert.is_true(ok, tostring(err))
+    end)
+
+    it("names an unknown experiment from the table form", function()
+      local ok, err = setConfig({["experiment.mudletspec.nosuchthing"] = false})
+      assert.is_nil(ok)
+      assert.is_truthy(tostring(err):find("^experiment%.mudletspec%.nosuchthing: "), tostring(err))
     end)
 
     it("round-trips every boolean configuration option", function()
