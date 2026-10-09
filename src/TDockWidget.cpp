@@ -21,6 +21,9 @@
 
 #include "TDockWidget.h"
 
+#include <QDebug>
+#include <QResizeEvent>
+
 #include "Host.h"
 #include "mudlet.h"
 #include "TConsole.h"
@@ -55,7 +58,8 @@ void TDockWidget::closeEvent(QCloseEvent* event)
 
 void TDockWidget::resizeEvent(QResizeEvent* event)
 {
-    Q_UNUSED(event)
+    qDebug().nospace() << "SHAREDBG dock resizeEvent " << objectName() << " " << event->oldSize() << " -> " << event->size() << " visible=" << isVisible()
+                       << " widget=" << (widget() ? widget()->size() : QSize());
     if (!mpHost) {
         return;
     }
@@ -87,6 +91,7 @@ void TDockWidget::setVisible(bool visible)
         }
         return;
     }
+    qDebug().nospace() << "SHAREDBG dock setVisible " << objectName() << " " << visible << " size=" << size() << " widget=" << (widget() ? widget()->size() : QSize());
     //do not change the ->show() order! Otherwise, it will automatically minimize the floating/dock window(!!)
     if (visible) {
         pC->show();
