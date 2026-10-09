@@ -82,6 +82,7 @@
 #include <QJsonArray>
 #include <QJsonDocument>
 #include <QJsonParseError>
+#include <QMenu>
 #include <QMessageBox>
 #include <QNetworkDiskCache>
 #include <QPainter>
@@ -239,6 +240,13 @@ dlgProfilePreferences::dlgProfilePreferences(QWidget* pParentWidget, Host* pHost
     connect(spinBox_mcpServerPort, qOverload<int>(&QSpinBox::valueChanged), this, &dlgProfilePreferences::slot_updateMCPServerEndpoint);
     connect(pushButton_connectClaudeDesktop, &QAbstractButton::clicked, this, &dlgProfilePreferences::slot_connectClaudeDesktop);
     connect(pushButton_connectChatGpt, &QAbstractButton::clicked, this, &dlgProfilePreferences::slot_connectChatGpt);
+    // With Mudlet registered a button opens this menu instead of emitting clicked()
+    auto* pMenu_claudeDesktop = new QMenu(pushButton_connectClaudeDesktop);
+    pMenu_claudeDesktop->setObjectName(qsl("menu_claudeDesktop"));
+    connect(pMenu_claudeDesktop->addAction(QString()), &QAction::triggered, this, &dlgProfilePreferences::slot_removeClaudeDesktop);
+    auto* pMenu_chatGpt = new QMenu(pushButton_connectChatGpt);
+    pMenu_chatGpt->setObjectName(qsl("menu_chatGpt"));
+    connect(pMenu_chatGpt->addAction(QString()), &QAction::triggered, this, &dlgProfilePreferences::slot_removeChatGpt);
     connect(pushButton_copyMCPServerAddress, &QAbstractButton::clicked, this, &dlgProfilePreferences::slot_copyMCPServerAddress);
     connect(pushButton_mcpConnectManually, &QAbstractButton::toggled, widget_mcpManualConnect, &QWidget::setVisible);
     connect(pushButton_mcpAdvanced, &QAbstractButton::toggled, this, [this](const bool revealed) {
@@ -3847,10 +3855,11 @@ void dlgProfilePreferences::populateApplicationSettings()
     if (label_mcpConnectResult->text().isEmpty()) {
         // A start refused at launch has no dialog open to report to, so the reason waits
         // here for the first one. Anything already written is a fresher answer than this.
-        mMCPReportedError = pMudlet->mcpLastError();
-        setMCPConnectResult(mMCPReportedError);
+        mMCPServerStateMessage = pMudlet->mcpLastError();
+        setMCPConnectResult(mMCPServerStateMessage);
     }
     slot_updateMCPServerEndpoint();
+    refreshMCPAppButtons();
 #endif
 }
 
@@ -6986,15 +6995,13 @@ void dlgProfilePreferences::applyAll()
         QString mcpError;
         const auto requestedMcpPort = static_cast<quint16>(spinBox_mcpServerPort->value());
         if (pMudlet->setMCPEnabled(checkBox_enableMCPServer->isChecked(), requestedMcpPort, mcpError)) {
-            if (!mMCPReportedError.isEmpty() && label_mcpConnectResult->text() == mMCPReportedError) {
-                // Only a reason of our own that is now out of date is ours to take back. The
-                // connect buttons write here too, and their message outlives the tick that
-                // their own text asks the user for.
+            if (!mMCPServerStateMessage.isEmpty() && label_mcpConnectResult->text() == mMCPServerStateMessage) {
+                // The buttons' own outcomes share this line and are not ours to take back
                 setMCPConnectResult(QString());
             }
-            mMCPReportedError.clear();
+            mMCPServerStateMessage.clear();
         } else {
-            mMCPReportedError = mcpError;
+            mMCPServerStateMessage = mcpError;
             setMCPConnectResult(mcpError);
         }
         // refreshFromSettings() is the usual way back to the widgets, but it stands down
@@ -8183,11 +8190,11 @@ void dlgProfilePreferences::slot_changeShowMapAuditErrors(const bool state)
 QString dlgProfilePreferences::mcpServerNotReadyHint() const
 {
     if (!checkBox_enableMCPServer->isChecked()) {
-        //: Appended to either connect button's success message when the server checkbox above it is not on yet.
+        //: Shown beneath the AI assistant settings, next to the restart notice, after Mudlet was added to an AI app while the server checkbox above is not on yet.
         return tr("Also tick the checkbox above, or it will find nobody to talk to.");
     }
     if (mudlet::self()->mcpEndpoint().isEmpty()) {
-        //: Appended to either connect button's success message when the server is switched on but could not start. "Advanced" is the label of the button that reveals the port.
+        //: Shown beneath the AI assistant settings, next to the restart notice, after Mudlet was added to an AI app while the server is switched on but could not start. "Advanced" is the label of the button that reveals the port.
         return tr("Mudlet is not serving yet though, so check the port under Advanced.");
     }
     return {};
@@ -8252,14 +8259,11 @@ void dlgProfilePreferences::slot_connectClaudeDesktop()
 {
     switch (TMCPBridge::connectClaudeDesktop()) {
     case TMCPBridge::ConnectOutcome::Written: {
-        //: Shown beneath the AI assistant settings after Mudlet was added to the Claude Desktop application's settings. Claude Desktop is a product name, leave it as-is.
-        QString message = tr("Done - restart Claude Desktop and Mudlet will appear among its connectors.");
-        const QString hint = mcpServerNotReadyHint();
-        if (!hint.isEmpty()) {
-            message.append(QChar::Space);
-            message.append(hint);
-        }
-        setMCPConnectResult(message);
+        mMCPRestartClaudeDesktop = true;
+        updateMCPRestartNotice();
+        refreshMCPAppButtons();
+        mMCPServerStateMessage = mcpServerNotReadyHint();
+        setMCPConnectResult(mMCPServerStateMessage);
         break;
     }
     case TMCPBridge::ConnectOutcome::NoClientApp: {
@@ -8293,14 +8297,11 @@ void dlgProfilePreferences::slot_connectChatGpt()
 {
     switch (TMCPBridge::connectCodex()) {
     case TMCPBridge::ConnectOutcome::Written: {
-        //: Shown beneath the AI assistant settings after Mudlet was added to the settings shared by the ChatGPT desktop app and Codex. ChatGPT and Codex are product names, leave them as-is.
-        QString message = tr("Done - restart ChatGPT (or Codex) and Mudlet will appear among its connectors.");
-        const QString hint = mcpServerNotReadyHint();
-        if (!hint.isEmpty()) {
-            message.append(QChar::Space);
-            message.append(hint);
-        }
-        setMCPConnectResult(message);
+        mMCPRestartChatGpt = true;
+        updateMCPRestartNotice();
+        refreshMCPAppButtons();
+        mMCPServerStateMessage = mcpServerNotReadyHint();
+        setMCPConnectResult(mMCPServerStateMessage);
         break;
     }
     case TMCPBridge::ConnectOutcome::NoClientApp:
@@ -8320,6 +8321,92 @@ void dlgProfilePreferences::slot_connectChatGpt()
         setMCPConnectResult(tr("Could not write to %1 - check its file permissions.").arg(TMCPBridge::codexConfigFilePath()));
         break;
     }
+}
+
+// Empty when Mudlet was taken out, which needs no line of its own beside the restart notice
+static QString mcpRemoveMessage(const TMCPBridge::RemoveOutcome outcome, const QString& appName, const QString& configFilePath)
+{
+    switch (outcome) {
+    case TMCPBridge::RemoveOutcome::Removed:
+        return {};
+    case TMCPBridge::RemoveOutcome::NotRegistered:
+        //: Shown beneath the AI assistant settings when Mudlet was asked to remove itself from an AI app's settings but was no longer there. %1 is the app's name.
+        return dlgProfilePreferences::tr("Mudlet was no longer in %1's settings, so there was nothing to remove.").arg(appName);
+    case TMCPBridge::RemoveOutcome::ConfigUnreadable:
+        //: Shown beneath the AI assistant settings when an AI app's settings file could not be read or understood while removing Mudlet from it. %1 is the app's name, %2 the file's location.
+        return dlgProfilePreferences::tr("%1's settings file could not be read or understood, so it was left untouched. Check %2 for problems and try again.").arg(appName, configFilePath);
+    case TMCPBridge::RemoveOutcome::WriteFailed:
+        //: Shown beneath the AI assistant settings when an AI app's settings file could not be written. %1 is the file's location.
+        return dlgProfilePreferences::tr("Could not write to %1 - check its file permissions.").arg(configFilePath);
+    }
+    return {};
+}
+
+void dlgProfilePreferences::slot_removeClaudeDesktop()
+{
+    const TMCPBridge::RemoveOutcome outcome = TMCPBridge::removeClaudeDesktop();
+    mMCPRestartClaudeDesktop |= outcome == TMCPBridge::RemoveOutcome::Removed;
+    //: Name of the Claude Desktop application, used in messages about removing Mudlet from its settings. Claude Desktop is a product name, leave it as-is.
+    setMCPConnectResult(mcpRemoveMessage(outcome, tr("Claude Desktop"), TMCPBridge::claudeDesktopConfigFilePath()));
+    updateMCPRestartNotice();
+    refreshMCPAppButtons();
+}
+
+void dlgProfilePreferences::slot_removeChatGpt()
+{
+    const TMCPBridge::RemoveOutcome outcome = TMCPBridge::removeCodex();
+    mMCPRestartChatGpt |= outcome == TMCPBridge::RemoveOutcome::Removed;
+    //: Name of the ChatGPT desktop app, used in messages about removing Mudlet from its settings. ChatGPT is a product name, leave it as-is.
+    setMCPConnectResult(mcpRemoveMessage(outcome, tr("ChatGPT"), TMCPBridge::codexConfigFilePath()));
+    updateMCPRestartNotice();
+    refreshMCPAppButtons();
+}
+
+void dlgProfilePreferences::refreshMCPAppButtons()
+{
+    const auto present = [](QPushButton* pButton, QMenu* pMenu, const bool registered, const QString& removeText, const QString& registeredDescription) {
+        pMenu->actions().constFirst()->setText(removeText);
+        pButton->setMenu(registered ? pMenu : nullptr);
+        pButton->setIcon(registered ? QIcon(qsl(":/icons/dialog-ok-apply.png")) : QIcon());
+        // The .ui texts describe adding; kept to put back once Mudlet is removed again
+        if (!pButton->property("mcpAddToolTip").isValid()) {
+            pButton->setProperty("mcpAddToolTip", pButton->toolTip());
+            pButton->setProperty("mcpAddDescription", pButton->accessibleDescription());
+        }
+        pButton->setToolTip(registered ? qsl("<p>%1</p>").arg(registeredDescription.toHtmlEscaped()) : pButton->property("mcpAddToolTip").toString());
+        pButton->setAccessibleDescription(registered ? registeredDescription : pButton->property("mcpAddDescription").toString());
+    };
+    //: Menu entry on the Claude Desktop button once Mudlet is in that app's settings. Claude Desktop is a product name, leave it as-is.
+    present(pushButton_connectClaudeDesktop,
+            findChild<QMenu*>(qsl("menu_claudeDesktop")),
+            TMCPBridge::claudeDesktopRegistered(),
+            tr("Remove from Claude Desktop"),
+            //: Tooltip and screen reader description of the Claude Desktop button once Mudlet is in that app's settings. Claude Desktop is a product name, leave it as-is.
+            tr("Mudlet is added to Claude Desktop. Opens a menu to remove it again."));
+    //: Menu entry on the ChatGPT button once Mudlet is in the settings shared by the ChatGPT desktop app and Codex. ChatGPT is a product name, leave it as-is.
+    present(pushButton_connectChatGpt,
+            findChild<QMenu*>(qsl("menu_chatGpt")),
+            TMCPBridge::codexRegistered(),
+            tr("Remove from ChatGPT"),
+            //: Tooltip and screen reader description of the ChatGPT button once Mudlet is in the settings shared by the ChatGPT desktop app and Codex. ChatGPT and Codex are product names, leave them as-is.
+            tr("Mudlet is added to ChatGPT and Codex. Opens a menu to remove it again."));
+}
+
+void dlgProfilePreferences::updateMCPRestartNotice()
+{
+    QString notice;
+    if (mMCPRestartClaudeDesktop && mMCPRestartChatGpt) {
+        //: Shown beneath the AI assistant settings after Mudlet was added to or removed from both AI apps' settings. Claude Desktop and ChatGPT are product names, leave them as-is.
+        notice = tr("Please restart Claude Desktop and ChatGPT for the change to take effect");
+    } else if (mMCPRestartClaudeDesktop) {
+        //: Shown beneath the AI assistant settings after Mudlet was added to or removed from the Claude Desktop application's settings. Claude Desktop is a product name, leave it as-is.
+        notice = tr("Please restart Claude Desktop for the change to take effect");
+    } else if (mMCPRestartChatGpt) {
+        //: Shown beneath the AI assistant settings after Mudlet was added to or removed from the settings shared by the ChatGPT desktop app and Codex. ChatGPT and Codex are product names, leave them as-is.
+        notice = tr("Please restart ChatGPT (or Codex) for the change to take effect");
+    }
+    need_restart_for_ai_assistant->setText(notice);
+    need_restart_for_ai_assistant->setVisible(!notice.isEmpty());
 }
 
 void dlgProfilePreferences::slot_copyMCPServerAddress()
@@ -8524,6 +8611,15 @@ void dlgProfilePreferences::slot_guiLanguageChanged(const QString& language)
     // retranslateUi() restored the .ui file's group box titles, and does not reach the shell
     retitleCards();
     retranslateShell();
+#ifdef INCLUDE_MCPSERVER
+    // retranslateUi() put back the adding texts, now in the new language
+    for (auto* pButton : {pushButton_connectClaudeDesktop, pushButton_connectChatGpt}) {
+        pButton->setProperty("mcpAddToolTip", QVariant());
+        pButton->setProperty("mcpAddDescription", QVariant());
+    }
+    refreshMCPAppButtons();
+    updateMCPRestartNotice();
+#endif
     // Every text the search index and column widths were measured from has been replaced, including
     // checkboxes fitted to the old language, which can also change the width the sidebar needs
     invalidateSearch();

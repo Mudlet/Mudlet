@@ -91,6 +91,17 @@ public:
     // present but not a JSON object, in which case nothing must be written over it.
     static QByteArray mergeClaudeDesktopConfig(const QByteArray& existingConfig, const QJsonObject& entry, bool& ok);
 
+    enum class RemoveOutcome { Removed, NotRegistered, ConfigUnreadable, WriteFailed };
+
+    // Claude Desktop has no way to remove a server its settings file declares, so
+    // Mudlet takes back what it added - only its own bridge entry, never a
+    // hand-rolled one under the same name.
+    static bool claudeDesktopRegistered();
+    static RemoveOutcome removeClaudeDesktop();
+    // Returns the file contents without Mudlet's entry, re-serialised like the merge;
+    // ok comes back false when existingConfig is not a JSON object.
+    static QByteArray removeFromClaudeDesktopConfig(const QByteArray& existingConfig, bool& ok);
+
     // The same registration for the ChatGPT desktop app, whose MCP settings live (as
     // of 2026-08) in Codex's config.toml - under ~/.codex, or $CODEX_HOME when set -
     // shared with the Codex CLI and IDE extension, so one write covers all three.
@@ -107,6 +118,12 @@ public:
     // outside the entry alone. ok comes back false when the file holds a shape this
     // cannot edit safely, in which case nothing must be written.
     static QByteArray mergeCodexConfig(const QByteArray& existingConfig, const QString& command, bool& ok);
+
+    static bool codexRegistered();
+    static RemoveOutcome removeCodex();
+    // Drops the whole [mcp_servers.mudlet] entry, sub-tables included, leaving every
+    // other byte alone; ok comes back false for the same shapes mergeCodexConfig refuses.
+    static QByteArray removeFromCodexConfig(const QByteArray& existingConfig, bool& ok);
 
 private:
     explicit TMCPBridge(const QString& configDir);

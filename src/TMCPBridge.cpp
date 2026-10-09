@@ -74,6 +74,24 @@ bool writeConfigFile(const QString& path, const QByteArray& contents)
 
 // Claude Desktop lists a local server under its mcpServers key verbatim
 const QString csmClaudeDesktopKey = qsl("Mudlet");
+
+bool claudeEntryRunsBridge(const QJsonObject& root)
+{
+    const QJsonObject entry = root.value(qsl("mcpServers")).toObject().value(csmClaudeDesktopKey).toObject();
+    return entry.value(qsl("args")).toArray().contains(QJsonValue(qsl("--mcp-bridge")));
+}
+
+// Read into memory and let go before any rewrite: Windows refuses the rename
+// QSaveFile::commit() makes while anything still holds the destination open.
+bool readConfigFile(const QString& path, QByteArray& contents)
+{
+    QFile file(path);
+    if (!file.open(QIODevice::ReadOnly)) {
+        return false;
+    }
+    contents = file.readAll();
+    return true;
+}
 } // namespace
 
 TMCPBridge::TMCPBridge(const QString& configDir)
@@ -591,6 +609,63 @@ void TMCPBridge::refreshClaudeDesktopEntry()
     }
 }
 
+bool TMCPBridge::claudeDesktopRegistered()
+{
+    QByteArray raw;
+    const QString path = claudeDesktopConfigFilePath();
+    if (path.isEmpty() || !QFileInfo::exists(path) || !readConfigFile(path, raw)) {
+        return false;
+    }
+    return claudeEntryRunsBridge(QJsonDocument::fromJson(raw).object());
+}
+
+QByteArray TMCPBridge::removeFromClaudeDesktopConfig(const QByteArray& existingConfig, bool& ok)
+{
+    ok = false;
+    QJsonParseError parseError{};
+    const QJsonDocument doc = QJsonDocument::fromJson(existingConfig, &parseError);
+    if (parseError.error != QJsonParseError::NoError || !doc.isObject()) {
+        return {};
+    }
+    QJsonObject root = doc.object();
+    const QJsonValue serversValue = root.value(qsl("mcpServers"));
+    if (!serversValue.isUndefined() && !serversValue.isObject()) {
+        return {};
+    }
+    QJsonObject servers = serversValue.toObject();
+    servers.remove(csmClaudeDesktopKey);
+    // The block only exists because Mudlet put it there when nothing else uses it
+    if (servers.isEmpty()) {
+        root.remove(qsl("mcpServers"));
+    } else {
+        root[qsl("mcpServers")] = servers;
+    }
+    ok = true;
+    return QJsonDocument(root).toJson(QJsonDocument::Indented);
+}
+
+TMCPBridge::RemoveOutcome TMCPBridge::removeClaudeDesktop()
+{
+    const QString path = claudeDesktopConfigFilePath();
+    QByteArray raw;
+    if (path.isEmpty() || !QFileInfo::exists(path)) {
+        return RemoveOutcome::NotRegistered;
+    }
+    if (!readConfigFile(path, raw)) {
+        return RemoveOutcome::ConfigUnreadable;
+    }
+    if (!claudeEntryRunsBridge(QJsonDocument::fromJson(raw).object())) {
+        // A hand-rolled entry under the same name is not Mudlet's to take out
+        return RemoveOutcome::NotRegistered;
+    }
+    bool ok = false;
+    const QByteArray remaining = removeFromClaudeDesktopConfig(raw, ok);
+    if (!ok) {
+        return RemoveOutcome::ConfigUnreadable;
+    }
+    return writeConfigFile(path, remaining) ? RemoveOutcome::Removed : RemoveOutcome::WriteFailed;
+}
+
 // Editing ~/.codex/config.toml without a TOML library (Qt has none, and a parse and
 // re-serialise would lose the user's comments and formatting anyway) rests on the
 // helpers below: enough of a scanner to tell which lines belong to which [section],
@@ -842,6 +917,49 @@ bool scanToml(const QByteArray& config, QList<TomlLine>& out)
     }
     return state.atLineStart();
 }
+
+// A mudlet entry spelled without its own [section] - dotted keys at the root
+// (mcp_servers.mudlet.command = ...), a whole inline mcp_servers table, or an inline
+// mudlet table under [mcp_servers] - cannot be edited line by line.
+bool mudletEntryOutsideItsSection(const TomlLine& line)
+{
+    if (line.continuation || line.header) {
+        return false;
+    }
+    const QString key = tomlAssignmentKey(line.code);
+    if (line.section.isEmpty() && (key == qsl("mcp_servers") || key == qsl("mcp_servers.mudlet") || key.startsWith(qsl("mcp_servers.mudlet.")))) {
+        return true;
+    }
+    return line.section == QStringList{qsl("mcp_servers")} && (key == qsl("mudlet") || key.startsWith(qsl("mudlet.")));
+}
+
+// Whether the [mcp_servers.mudlet] entry runs the bridge, rather than being absent or
+// repurposed for something hand-rolled
+bool codexEntryRunsBridge(const QList<TomlLine>& lines)
+{
+    bool collectingArgs = false;
+    QString argsValue;
+    for (const TomlLine& line : lines) {
+        if (!withinMudletSection(line.section)) {
+            collectingArgs = false;
+            continue;
+        }
+        if (line.continuation) {
+            if (collectingArgs) {
+                argsValue += line.code;
+            }
+            continue;
+        }
+        collectingArgs = false;
+        if (!line.header && line.section.size() == 2 && tomlAssignmentKey(line.code) == qsl("args")) {
+            argsValue += line.code;
+            collectingArgs = true;
+        }
+    }
+    // Only the exact quoted argument counts: a comment mentioning --mcp-bridge, or
+    // another flag it happens to prefix, is not the bridge's own entry.
+    return argsValue.contains(qsl("\"--mcp-bridge\"")) || argsValue.contains(qsl("'--mcp-bridge'"));
+}
 } // namespace
 
 QString TMCPBridge::codexConfigDir()
@@ -896,20 +1014,11 @@ QByteArray TMCPBridge::mergeCodexConfig(const QByteArray& existingConfig, const 
             family << line;
             continue;
         }
-        if (!line.continuation && !line.header) {
-            // A mudlet entry spelled without its own [section] - dotted keys at the
-            // root (mcp_servers.mudlet.command = ...), a whole inline mcp_servers
-            // table, or an inline mudlet table under [mcp_servers] - cannot be edited
-            // line by line, and leaving it while adding a [mcp_servers.mudlet] table
-            // would declare the entry twice, which Codex rejects wholesale. Refuse
-            // instead of writing a config that breaks every server.
-            const QString key = tomlAssignmentKey(line.code);
-            if (line.section.isEmpty() && (key == qsl("mcp_servers") || key == qsl("mcp_servers.mudlet") || key.startsWith(qsl("mcp_servers.mudlet.")))) {
-                return {};
-            }
-            if (line.section == QStringList{qsl("mcp_servers")} && (key == qsl("mudlet") || key.startsWith(qsl("mudlet.")))) {
-                return {};
-            }
+        if (mudletEntryOutsideItsSection(line)) {
+            // Leaving it while adding a [mcp_servers.mudlet] table would declare the
+            // entry twice, which Codex rejects wholesale. Refuse instead of writing a
+            // config that breaks every server.
+            return {};
         }
         kept << line.text;
     }
@@ -1080,36 +1189,9 @@ void TMCPBridge::refreshCodexEntry()
         qWarning() << "TMCPBridge::refreshCodexEntry() WARNING -" << path << "could not be understood, so its Mudlet entry cannot be checked";
         return;
     }
-    bool mudletSectionFound = false;
-    bool collectingArgs = false;
-    QString argsValue;
-    for (const TomlLine& line : lines) {
-        if (!withinMudletSection(line.section)) {
-            collectingArgs = false;
-            continue;
-        }
-        mudletSectionFound = true;
-        if (line.continuation) {
-            if (collectingArgs) {
-                argsValue += line.code;
-            }
-            continue;
-        }
-        collectingArgs = false;
-        if (!line.header && line.section.size() == 2 && tomlAssignmentKey(line.code) == qsl("args")) {
-            argsValue += line.code;
-            collectingArgs = true;
-        }
-    }
-    if (!mudletSectionFound) {
-        // The user never pressed the connect button, or took the entry out; either way
-        // registering Mudlet stays their call, not a startup side effect.
-        return;
-    }
-    // Only the exact quoted argument counts: a comment mentioning --mcp-bridge, or
-    // another flag it happens to prefix, is not the bridge's own entry.
-    if (!argsValue.contains(qsl("\"--mcp-bridge\"")) && !argsValue.contains(qsl("'--mcp-bridge'"))) {
-        // Repurposed for something hand-rolled; leave it be.
+    if (!codexEntryRunsBridge(lines)) {
+        // Never connected, taken out, or repurposed for something hand-rolled; either
+        // way registering Mudlet stays the user's call, not a startup side effect.
         return;
     }
     bool ok = false;
@@ -1131,4 +1213,96 @@ void TMCPBridge::refreshCodexEntry()
     if (!writeConfigFile(path, merged)) {
         qWarning() << "TMCPBridge::refreshCodexEntry() WARNING - could not bring the ChatGPT/Codex entry up to date, so `mudlet --mcp-bridge` may be registered under a stale path";
     }
+}
+
+bool TMCPBridge::codexRegistered()
+{
+    QByteArray raw;
+    const QString path = codexConfigFilePath();
+    if (!QFileInfo::exists(path) || !readConfigFile(path, raw)) {
+        return false;
+    }
+    QList<TomlLine> lines;
+    return scanToml(raw, lines) && codexEntryRunsBridge(lines);
+}
+
+QByteArray TMCPBridge::removeFromCodexConfig(const QByteArray& existingConfig, bool& ok)
+{
+    ok = false;
+    QList<TomlLine> lines;
+    if (!scanToml(existingConfig, lines)) {
+        return {};
+    }
+    QStringList kept;
+    // Comments ending the entry belong to whatever table follows, as in a
+    // "# work servers" line above [mcp_servers.other]
+    QStringList trailing;
+    bool trailingHasComment = false;
+    bool removed = false;
+    for (const TomlLine& line : lines) {
+        if (withinMudletSection(line.section)) {
+            removed = true;
+            if (!line.header && !line.continuation && line.code.trimmed().isEmpty()) {
+                trailing << line.text;
+                trailingHasComment |= !line.text.trimmed().isEmpty();
+            } else {
+                trailing.clear();
+                trailingHasComment = false;
+            }
+            continue;
+        }
+        if (mudletEntryOutsideItsSection(line)) {
+            // Taking out only the [section] would leave the other spelling behind
+            return {};
+        }
+        if (trailingHasComment) {
+            while (trailing.first().trimmed().isEmpty() && (kept.isEmpty() || kept.last().trimmed().isEmpty())) {
+                trailing.removeFirst();
+            }
+            kept << trailing;
+        }
+        trailing.clear();
+        trailingHasComment = false;
+        kept << line.text;
+    }
+    if (!removed) {
+        ok = true;
+        return existingConfig;
+    }
+    QString remaining = kept.join(QChar::LineFeed);
+    if (!remaining.trimmed().isEmpty() && !remaining.endsWith(QChar::LineFeed)) {
+        remaining += QChar::LineFeed;
+    }
+    ok = true;
+    QByteArray result = remaining.toUtf8();
+    if (existingConfig.startsWith("\xEF\xBB\xBF")) {
+        result.prepend("\xEF\xBB\xBF");
+    }
+    return result;
+}
+
+TMCPBridge::RemoveOutcome TMCPBridge::removeCodex()
+{
+    const QString path = codexConfigFilePath();
+    QByteArray raw;
+    if (!QFileInfo::exists(path)) {
+        return RemoveOutcome::NotRegistered;
+    }
+    if (!readConfigFile(path, raw)) {
+        return RemoveOutcome::ConfigUnreadable;
+    }
+    QList<TomlLine> lines;
+    if (!scanToml(raw, lines)) {
+        return RemoveOutcome::ConfigUnreadable;
+    }
+    if (!codexEntryRunsBridge(lines)) {
+        // A hand-rolled entry under the same name is not Mudlet's to take out
+        return RemoveOutcome::NotRegistered;
+    }
+    bool ok = false;
+    const QByteArray remaining = removeFromCodexConfig(raw, ok);
+    if (!ok) {
+        return RemoveOutcome::ConfigUnreadable;
+    }
+    return writeConfigFile(path, remaining) ? RemoveOutcome::Removed : RemoveOutcome::WriteFailed;
 }

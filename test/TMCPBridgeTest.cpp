@@ -112,6 +112,19 @@ private slots:
     void codexRefreshLeavesCommentedBridgeAlone();
     void codexRefreshLeavesCurrentEntryAlone();
 
+    void removeFromClaudeKeepsOtherServers();
+    void removeFromClaudeDropsEmptyBlock();
+    void removeFromClaudeRefusesGarbage();
+    void removeClaudeDesktopLeavesHandRolledEntry();
+    void removeClaudeDesktopUndoesConnect();
+    void codexRemoveUndoesMerge();
+    void codexRemoveFromMiddleKeepsNeighbours();
+    void codexRemoveKeepsCommentsIntroducingNextTable();
+    void codexRemoveRefusesDottedEntry();
+    void codexRemoveKeepsByteOrderMark();
+    void codexRemoveLeavesHandRolledEntry();
+    void codexRemoveUndoesConnect();
+
     void bridgeAnswersOverPipes();
     void bridgeReportsMudletGone();
     void wrongTokenSurfacesAsError();
@@ -1280,6 +1293,185 @@ void TMCPBridgeTest::wrongTokenSurfacesAsError()
     bridge.process.closeWriteChannel();
     QVERIFY(bridge.process.waitForFinished(10000));
     QCOMPARE(bridge.process.exitCode(), 0);
+}
+
+void TMCPBridgeTest::removeFromClaudeKeepsOtherServers()
+{
+    const QByteArray existing = R"({"globalShortcut":"Ctrl+Space","mcpServers":{"filesystem":{"command":"npx"},"Mudlet":{"command":"/opt/mudlet","args":["--mcp-bridge"]}}})";
+    bool ok = false;
+    const QJsonObject remaining = parse(TMCPBridge::removeFromClaudeDesktopConfig(existing, ok));
+    QVERIFY(ok);
+    QCOMPARE(remaining.value(qsl("globalShortcut")).toString(), qsl("Ctrl+Space"));
+    const QJsonObject servers = remaining.value(qsl("mcpServers")).toObject();
+    QVERIFY(!servers.contains(qsl("Mudlet")));
+    QCOMPARE(servers.value(qsl("filesystem")).toObject().value(qsl("command")).toString(), qsl("npx"));
+}
+
+void TMCPBridgeTest::removeFromClaudeDropsEmptyBlock()
+{
+    const QByteArray existing = R"({"preferences":{"sidebarMode":"chat"},"mcpServers":{"Mudlet":{"command":"/opt/mudlet","args":["--mcp-bridge"]}}})";
+    bool ok = false;
+    const QJsonObject remaining = parse(TMCPBridge::removeFromClaudeDesktopConfig(existing, ok));
+    QVERIFY(ok);
+    QVERIFY(!remaining.contains(qsl("mcpServers")));
+    QCOMPARE(remaining.value(qsl("preferences")).toObject().value(qsl("sidebarMode")).toString(), qsl("chat"));
+}
+
+void TMCPBridgeTest::removeFromClaudeRefusesGarbage()
+{
+    bool ok = true;
+    TMCPBridge::removeFromClaudeDesktopConfig(R"({"mcpServers": {"Mudlet": )", ok);
+    QVERIFY(!ok);
+    ok = true;
+    TMCPBridge::removeFromClaudeDesktopConfig(R"({"mcpServers":[]})", ok);
+    QVERIFY(!ok);
+}
+
+void TMCPBridgeTest::removeClaudeDesktopLeavesHandRolledEntry()
+{
+    ScopedClaudeConfigDirRedirect redirect;
+    QVERIFY(redirect.tempDir.isValid());
+    QVERIFY(redirect.createClaudeDir());
+    const QByteArray original = R"({"mcpServers":{"Mudlet":{"command":"/opt/something-else","args":["--other"]}}})";
+    QVERIFY(redirect.writeConfig(original));
+    QVERIFY(!TMCPBridge::claudeDesktopRegistered());
+    QCOMPARE(TMCPBridge::removeClaudeDesktop(), TMCPBridge::RemoveOutcome::NotRegistered);
+    QCOMPARE(redirect.readConfig(), original);
+}
+
+void TMCPBridgeTest::removeClaudeDesktopUndoesConnect()
+{
+    ScopedClaudeConfigDirRedirect redirect;
+    QVERIFY(redirect.tempDir.isValid());
+    QVERIFY(redirect.createClaudeDir());
+    const QByteArray original = R"({"globalShortcut":"Ctrl+Space","preferences":{"sidebarMode":"chat"}})";
+    QVERIFY(redirect.writeConfig(original));
+    QVERIFY(!TMCPBridge::claudeDesktopRegistered());
+    QCOMPARE(TMCPBridge::connectClaudeDesktop(), TMCPBridge::ConnectOutcome::Written);
+    QVERIFY(TMCPBridge::claudeDesktopRegistered());
+    QCOMPARE(TMCPBridge::removeClaudeDesktop(), TMCPBridge::RemoveOutcome::Removed);
+    QVERIFY(!TMCPBridge::claudeDesktopRegistered());
+    QCOMPARE(parse(redirect.readConfig()), parse(original));
+    QCOMPARE(TMCPBridge::removeClaudeDesktop(), TMCPBridge::RemoveOutcome::NotRegistered);
+}
+
+void TMCPBridgeTest::codexRemoveUndoesMerge()
+{
+    ScopedCodexRedirect redirect;
+    QVERIFY(redirect.tempDir.isValid());
+    const QByteArray original = "# my servers\n"
+                                "model = \"kept\"\n"
+                                "\n"
+                                "[mcp_servers.other]\n"
+                                "command = \"npx\"  # user's comment\n";
+    bool ok = false;
+    const QByteArray merged = TMCPBridge::mergeCodexConfig(original, qsl("/usr/bin/mudlet"), ok);
+    QVERIFY(ok);
+    QVERIFY(merged != original);
+    const QByteArray remaining = TMCPBridge::removeFromCodexConfig(merged, ok);
+    QVERIFY(ok);
+    QCOMPARE(remaining, original);
+
+    // A file that only ever held Mudlet's entry ends up empty, not as stray blank lines
+    const QByteArray onlyMudlet = TMCPBridge::mergeCodexConfig(QByteArray(), qsl("/usr/bin/mudlet"), ok);
+    QVERIFY(ok);
+    QCOMPARE(TMCPBridge::removeFromCodexConfig(onlyMudlet, ok), QByteArray());
+    QVERIFY(ok);
+}
+
+void TMCPBridgeTest::codexRemoveFromMiddleKeepsNeighbours()
+{
+    const QByteArray existing = "model = \"kept\"\n"
+                                "\n"
+                                "[mcp_servers.mudlet]\n"
+                                "command = \"/usr/bin/mudlet\"\n"
+                                "args = [\n"
+                                "  \"--mcp-bridge\",\n"
+                                "]\n"
+                                "\n"
+                                "[mcp_servers.mudlet.env]\n"
+                                "MY_VAR = \"gone with the entry\"\n"
+                                "\n"
+                                "[mcp_servers.other]\n"
+                                "command = \"npx\"\n";
+    bool ok = false;
+    const QByteArray remaining = TMCPBridge::removeFromCodexConfig(existing, ok);
+    QVERIFY(ok);
+    QCOMPARE(remaining,
+             QByteArray("model = \"kept\"\n"
+                        "\n"
+                        "[mcp_servers.other]\n"
+                        "command = \"npx\"\n"));
+}
+
+void TMCPBridgeTest::codexRemoveKeepsCommentsIntroducingNextTable()
+{
+    const QByteArray existing = "model = \"kept\"\n"
+                                "\n"
+                                "[mcp_servers.mudlet]\n"
+                                "# gone with the entry\n"
+                                "command = \"/usr/bin/mudlet\"\n"
+                                "args = [\"--mcp-bridge\"]\n"
+                                "\n"
+                                "# work servers\n"
+                                "# [mcp_servers.disabled]\n"
+                                "[mcp_servers.other]\n"
+                                "command = \"npx\"\n";
+    bool ok = false;
+    const QByteArray remaining = TMCPBridge::removeFromCodexConfig(existing, ok);
+    QVERIFY(ok);
+    QCOMPARE(remaining,
+             QByteArray("model = \"kept\"\n"
+                        "\n"
+                        "# work servers\n"
+                        "# [mcp_servers.disabled]\n"
+                        "[mcp_servers.other]\n"
+                        "command = \"npx\"\n"));
+}
+
+void TMCPBridgeTest::codexRemoveRefusesDottedEntry()
+{
+    bool ok = true;
+    TMCPBridge::removeFromCodexConfig("mcp_servers.mudlet.command = \"/usr/bin/mudlet\"\n", ok);
+    QVERIFY(!ok);
+    ok = true;
+    TMCPBridge::removeFromCodexConfig("[mcp_servers]\nmudlet = { command = \"/usr/bin/mudlet\" }\n", ok);
+    QVERIFY(!ok);
+}
+
+void TMCPBridgeTest::codexRemoveKeepsByteOrderMark()
+{
+    const QByteArray existing = "\xEF\xBB\xBFmodel = \"kept\"\n\n[mcp_servers.mudlet]\ncommand = \"/usr/bin/mudlet\"\nargs = [\"--mcp-bridge\"]\n";
+    bool ok = false;
+    QCOMPARE(TMCPBridge::removeFromCodexConfig(existing, ok), QByteArray("\xEF\xBB\xBFmodel = \"kept\"\n"));
+    QVERIFY(ok);
+}
+
+void TMCPBridgeTest::codexRemoveLeavesHandRolledEntry()
+{
+    ScopedCodexRedirect redirect;
+    QVERIFY(redirect.tempDir.isValid());
+    QVERIFY(redirect.createCodexDir());
+    const QByteArray original = "[mcp_servers.mudlet]\ncommand = \"/opt/something-else\"\nargs = [\"--other\"]  # not --mcp-bridge\n";
+    QVERIFY(redirect.writeConfig(original));
+    QVERIFY(!TMCPBridge::codexRegistered());
+    QCOMPARE(TMCPBridge::removeCodex(), TMCPBridge::RemoveOutcome::NotRegistered);
+    QCOMPARE(redirect.readConfig(), original);
+}
+
+void TMCPBridgeTest::codexRemoveUndoesConnect()
+{
+    ScopedCodexRedirect redirect;
+    QVERIFY(redirect.tempDir.isValid());
+    QVERIFY(redirect.createCodexDir());
+    const QByteArray original = "model = \"kept\"\n";
+    QVERIFY(redirect.writeConfig(original));
+    QVERIFY(!TMCPBridge::codexRegistered());
+    QCOMPARE(TMCPBridge::connectCodex(), TMCPBridge::ConnectOutcome::Written);
+    QVERIFY(TMCPBridge::codexRegistered());
+    QCOMPARE(TMCPBridge::removeCodex(), TMCPBridge::RemoveOutcome::Removed);
+    QVERIFY(!TMCPBridge::codexRegistered());
+    QCOMPARE(redirect.readConfig(), original);
 }
 
 QTEST_MAIN(TMCPBridgeTest) // NOLINT(misc-use-anonymous-namespace)

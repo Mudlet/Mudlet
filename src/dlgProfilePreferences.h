@@ -203,7 +203,9 @@ private slots:
 #ifdef INCLUDE_MCPSERVER
     void slot_updateMCPServerEndpoint();
     void slot_connectClaudeDesktop();
+    void slot_removeClaudeDesktop();
     void slot_connectChatGpt();
+    void slot_removeChatGpt();
     void slot_copyMCPServerAddress();
 #endif
     void slot_changeAutomaticUpdates(const bool);
@@ -505,10 +507,15 @@ private:
     QMap<QString, QString> mCategoryIconMarkup;
     QTimer* mpTimer_apply = nullptr;
 #ifdef INCLUDE_MCPSERVER
-    // What this dialog last put on the MCP result line about the server itself, so a
-    // later success takes back only that and not a connect button's message
-    QString mMCPReportedError;
+    // What this dialog last put on the MCP result line about the server's state - why it
+    // failed to start, or that it is not on yet - so a successful start takes back only that
+    QString mMCPServerStateMessage;
     void setMCPConnectResult(const QString& message);
+    void refreshMCPAppButtons();
+    void updateMCPRestartNotice();
+    // The AI apps whose settings this dialog changed; each reads them only at startup
+    bool mMCPRestartClaudeDesktop = false;
+    bool mMCPRestartChatGpt = false;
 #endif
     // The scrollback size the box showed when the maximum was ticked, to put back when it is unticked
     int mBufferSizeBeforeMax = 0;

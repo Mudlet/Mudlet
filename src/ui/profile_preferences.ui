@@ -5102,6 +5102,24 @@ you can use it but there could be issues with aligning columns of text</string>
            </widget>
           </item>
           <item row="7" column="0">
+           <widget class="QLabel" name="need_restart_for_ai_assistant">
+            <property name="visible">
+             <bool>false</bool>
+            </property>
+            <property name="font">
+             <font>
+              <pointsize>8</pointsize>
+             </font>
+            </property>
+            <property name="text">
+             <string notr="true"/>
+            </property>
+            <property name="wordWrap">
+             <bool>true</bool>
+            </property>
+           </widget>
+          </item>
+          <item row="8" column="0">
            <layout class="QHBoxLayout" name="hLayout_mcpAdvanced">
             <item>
              <widget class="QToolButton" name="pushButton_mcpAdvanced">
@@ -5143,7 +5161,7 @@ you can use it but there could be issues with aligning columns of text</string>
             </item>
            </layout>
           </item>
-          <item row="8" column="0">
+          <item row="9" column="0">
            <widget class="QWidget" name="widget_mcpAdvanced" native="true">
             <property name="visible">
              <bool>false</bool>
