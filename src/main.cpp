@@ -221,16 +221,22 @@ private:
 #endif
 };
 
+// Qt reports a format error in Mudlet.ini only to the first QSettings that parses it, which on most
+// platforms is applyHighDpiRoundingPolicyFromConfig()'s, so what that one heard is kept for the
+// command line text
+static QSettings::Status earlySettingsStatus = QSettings::NoError;
+
 QTranslator* loadTranslationsForCommandLine(const bool printAndExitRun)
 {
     // Not MudletApp::getQSettings(): it stays null until setupConfig(), which a --help or --version run never
     // reaches. Same file and format as setupConfig() opens - keep the spellings in step.
     QSettings settings(qsl("%1/Mudlet.ini").arg(MudletApp::getMudletPath(enums::mainPath)), QSettings::IniFormat);
     MudletApp::noteEarlySettingsStatus(settings);
+    const QSettings::Status settingsStatus = settings.status() != QSettings::NoError ? settings.status() : earlySettingsStatus;
     // Other runs have getQSettings() report this, which a print-and-exit run never calls
-    if (printAndExitRun && settings.status() != QSettings::NoError) {
+    if (printAndExitRun && settingsStatus != QSettings::NoError) {
         qWarning().nospace().noquote() << "loadTranslationsForCommandLine() WARNING - \"" << settings.fileName() << "\" is "
-                                       << (settings.status() == QSettings::FormatError ? "not valid INI" : "not readable") << ", so any interface language set in it is not used for this text.";
+                                       << (settingsStatus == QSettings::FormatError ? "not valid INI" : "not readable") << ", so any interface language set in it is not used for this text.";
     }
     auto interfaceLanguage = settings.value(QLatin1String("interfaceLanguage")).toString();
     auto userLocale = interfaceLanguage.isEmpty() ? QLocale::system() : QLocale(interfaceLanguage);
@@ -312,6 +318,7 @@ static void applyHighDpiRoundingPolicyFromConfig(int argc, char* argv[])
 
     const QSettings settings(iniPath, QSettings::IniFormat);
     MudletApp::noteEarlySettingsStatus(settings);
+    earlySettingsStatus = settings.status();
     const QString value = settings.value(qsl("highDpiScaleFactorRoundingPolicy")).toString();
     if (value.isEmpty()) {
         return;
