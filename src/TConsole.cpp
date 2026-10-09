@@ -741,6 +741,8 @@ TConsole::TConsole(Host* pH, const QString& name, const ConsoleType type, QWidge
     QList<int> sizeList;
     sizeList << 6 << 2;
     splitter->setSizes(sizeList);
+    // An unshown splitter resizes its panes with no Resize event, and a buffer is never shown.
+    mUpperPane->reportGridSize();
 
     mUpperPane->show();
     mLowerPane->hide();

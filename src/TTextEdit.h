@@ -82,6 +82,7 @@ public:
     void scrollDown(int lines);
     void wheelEvent(QWheelEvent* e) override;
     void resizeEvent(QResizeEvent* event) override;
+    void changeEvent(QEvent* event) override;
     void mousePressEvent(QMouseEvent*) override;
     void mouseReleaseEvent(QMouseEvent*) override;
     void mouseMoveEvent(QMouseEvent*) override;
@@ -107,6 +108,8 @@ public:
     void searchSelectionOnline();
     int getColumnCount() const;
     int getRowCount() const;
+    // Upper pane only: its grid is what Host::windowGridSize() answers for the console.
+    void reportGridSize();
     void toggleTimeStamps(const bool);
 
 #if defined(DEBUG_CODEPOINT_PROBLEMS)
