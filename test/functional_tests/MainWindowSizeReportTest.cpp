@@ -242,9 +242,10 @@ private slots:
 
         runLua(qsl("openUserWindow('%1', false)").arg(second));
         settle();
+        // The share is handed out from a posted call, and the resizeDocks() it makes
+        // only lands with the layout pass after that, so a fixed wait can end between the two
+        QTRY_VERIFY2(dockSize(second).height() > alone / 4, qPrintable(qsl("the second user window is %1 high beside the first's %2").arg(dockSize(second).height()).arg(dockSize(first).height())));
         const int firstHeight = dockSize(first).height();
-        const int secondHeight = dockSize(second).height();
-        QVERIFY2(secondHeight > alone / 4, qPrintable(qsl("the second user window is %1 high beside the first's %2").arg(secondHeight).arg(firstHeight)));
         QVERIFY2(firstHeight > alone / 4, qPrintable(qsl("the first user window was squeezed to %1").arg(firstHeight)));
         QCOMPARE(mpHost->mpConsole->getUserWindowSize(second), dockSize(second));
     }
@@ -268,9 +269,9 @@ private slots:
         settle();
         runLua(qsl("showWindow('%1')").arg(second));
         settle();
+        // as above, two event loop passes after the show
+        QTRY_VERIFY2(dockSize(second).height() > alone / 4, qPrintable(qsl("the second user window is %1 high beside the first's %2").arg(dockSize(second).height()).arg(dockSize(first).height())));
         const int firstHeight = dockSize(first).height();
-        const int secondHeight = dockSize(second).height();
-        QVERIFY2(secondHeight > alone / 4, qPrintable(qsl("the second user window is %1 high beside the first's %2").arg(secondHeight).arg(firstHeight)));
         QVERIFY2(firstHeight > alone / 4, qPrintable(qsl("the first user window was squeezed to %1").arg(firstHeight)));
     }
 

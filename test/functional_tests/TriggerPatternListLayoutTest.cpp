@@ -65,6 +65,7 @@ private:
     const QString mLocalhost = qsl("localhost");
     const QString mThreePatternTrigger = qsl("qaThreePatterns");
     const QString mNinePatternTrigger = qsl("qaNinePatterns");
+    const QString mNinthPattern = qsl("qaNinthPattern");
 
     void deleteProfileDirectory(const QString& profileName)
     {
@@ -85,7 +86,7 @@ private:
         QStringList patterns;
         QList<int> kinds;
         for (int i = 1; i <= 9; ++i) {
-            patterns << qsl("p%1").arg(i);
+            patterns << (i == 9 ? mNinthPattern : qsl("p%1").arg(i));
             kinds << REGEX_PERL;
         }
         auto* pNine = new TTrigger(nullptr, mpHost);
@@ -232,6 +233,51 @@ private slots:
         QCoreApplication::processEvents();
     }
 
+    // A search result for a pattern below the fold has to bring that pattern
+    // into view. First of the cases: a row that has never been laid out is the
+    // one the jump has no position for until the layout has run.
+    void test_aPatternSearchResultScrollsToThatPattern()
+    {
+        QVERIFY2(selectTrigger(mThreePatternTrigger), "could not select the three pattern trigger");
+        auto* pSearchTerms = mpEditor->comboBox_searchTerms;
+        pSearchTerms->clear();
+        // Matched past the pattern's start, where the caret would not be anyway
+        pSearchTerms->addItem(mNinthPattern.mid(2));
+        mpEditor->slot_searchMudletItems(0);
+
+        QTreeWidgetItem* pResult = nullptr;
+        auto* pResults = mpEditor->treeWidget_searchResults;
+        for (int i = 0; !pResult && i < pResults->topLevelItemCount(); ++i) {
+            QTreeWidgetItem* pTop = pResults->topLevelItem(i);
+            if (pTop->data(0, dlgTriggerEditor::TypeRole).toInt() == dlgTriggerEditor::SearchResultIsPattern) {
+                pResult = pTop;
+            }
+            for (int j = 0; !pResult && j < pTop->childCount(); ++j) {
+                if (pTop->child(j)->data(0, dlgTriggerEditor::TypeRole).toInt() == dlgTriggerEditor::SearchResultIsPattern) {
+                    pResult = pTop->child(j);
+                }
+            }
+        }
+        QVERIFY2(pResult, "searching for the ninth pattern found no pattern result");
+
+        mpEditor->slot_itemSelectedInSearchResults(pResult);
+        QCOMPARE(mpEditor->treeWidget_triggers->currentItem()->text(0), mNinePatternTrigger);
+        auto* pNinthRow = mpEditor->mTriggerPatternEdit.at(8);
+        // Until the layout has run the row still reports the place it had
+        // before it was shown, which can read as in view
+        QCoreApplication::processEvents();
+        QVERIFY2(QTest::qWaitFor(
+                         [this, pNinthRow]() {
+                             return rowIsFullyVisible(pNinthRow);
+                         },
+                         1s),
+                 qPrintable(qsl("the ninth pattern should be in view after its search result was chosen, but the list is scrolled to %1 of %2")
+                                    .arg(QString::number(mpEditor->mpScrollArea->verticalScrollBar()->value()), QString::number(mpEditor->mpScrollArea->verticalScrollBar()->maximum()))));
+        QCOMPARE(pNinthRow->singleLineTextEdit_pattern->textCursor().position(), 2);
+        mpEditor->treeWidget_searchResults->clear();
+        QVERIFY(selectTrigger(mThreePatternTrigger));
+    }
+
     // A three pattern trigger draws four rows: its patterns and the blank one
     // waiting for a fourth. All four have to be readable without scrolling.
     void test_collapsedAdvancedOptionsShowsAWholeSmallTrigger()
@@ -279,6 +325,7 @@ private slots:
         QCOMPARE(pScrollBar->value(), 0);
         QVERIFY2(rowIsFullyVisible(mpEditor->mTriggerPatternEdit.at(0)), "pattern 1 should be fully in view when a trigger is opened");
     }
+
     // A colour trigger's row carries two buttons captioned with the colours
     // they set, so it is far wider than a narrow editor and the list puts up a
     // horizontal scrollbar. That scrollbar is taken out of the viewport, so the
