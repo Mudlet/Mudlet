@@ -4374,10 +4374,15 @@ void cTelnet::processTelnetCommand(const std::string& telnetCommand)
             const auto type = static_cast<unsigned char>(data[1]);
             // Only access telnetCommand[2] if it exists
             const auto telnetOption = telnetCommand.size() > 2 ? static_cast<unsigned char>(data[2]) : 0;
-            // A script-handled option may carry any bytes at all, so they go to Lua as they came:
-            QByteArray payload{telnetCommand.data(), static_cast<qsizetype>(telnetCommand.size())};
-            if (telnetCommand.size() >= 6) {
-                payload = payload.mid(3, telnetCommand.size() - 5);
+            // A subnegotiation can carry any bytes at all, so its payload (unescaped, without the
+            // IAC SB <option> and IAC SE framing) goes over byte for byte; other commands go whole
+            QByteArray payload;
+            if (type == static_cast<unsigned char>(TN_SB)) {
+                if (telnetCommand.size() >= 5) {
+                    payload = QByteArray(data + 3, static_cast<qsizetype>(telnetCommand.size() - 5));
+                }
+            } else {
+                payload = QByteArray(data, static_cast<qsizetype>(telnetCommand.size()));
             }
 
             TEvent event{};

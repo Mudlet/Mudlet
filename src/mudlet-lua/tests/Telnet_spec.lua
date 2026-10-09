@@ -1223,27 +1223,55 @@ describe("Tests addSupportedTelnetOption", function()
   end)
 end)
 
-describe("Tests the sysTelnetEvent raised for an option scripts handle", function()
-  -- A script-handled option can carry binary data, so its payload has to reach
-  -- Lua byte for byte, NULs and bytes from 0x80 up included
-  it("hands the subnegotiation payload over byte for byte", function()
-    addSupportedTelnetOption(137)
-    local received = {}
-    local handler = registerAnonymousEventHandler("sysTelnetEvent", function(_, kind, option, data)
-      if option == 137 then
-        received[kind] = data
+describe("Tests the payload sysTelnetEvent hands over", function()
+  -- Options Mudlet has no handler of its own for can carry binary data, so the
+  -- payload has to reach Lua byte for byte, NULs and bytes from 0x80 up
+  -- included. 140 is never registered, so the WILL below is refused rather
+  -- than leaving an option negotiated for the specs that follow.
+  local option = 140
+
+  local function received(data)
+    local seen = {}
+    local handler = registerAnonymousEventHandler("sysTelnetEvent", function(_, kind, opt, payload)
+      if opt == option then
+        seen[kind] = payload
       end
     end)
-    finally(function() killAnonymousEventHandler(handler) end)
-
-    -- the IAC is doubled in the stream, as telnet escapes it
-    local ok, msg = feedTelnet("<T_IAC><T_SB>" .. string.char(137) .. "AB<00>CD\195\169<T_IAC><T_IAC>EF<T_IAC><T_SE>")
+    local ok, msg = feedTelnet(data)
+    killAnonymousEventHandler(handler)
     assert.is_true(ok, "start the suite with --offline, see the tests README - feedTelnet said: " .. tostring(msg))
-    assert.equals("AB\0CD\195\169\255EF", received[250])
+    return seen
+  end
 
-    -- a command too short to carry a payload hands over the whole command
-    assert.is_true(feedTelnet("<T_IAC><T_WILL>" .. string.char(137)))
-    assert.equals("\255\251\137", received[251])
+  it("hands the subnegotiation payload over byte for byte", function()
+    -- the IAC is doubled in the stream, as telnet escapes it
+    local seen = received("<T_IAC><T_SB>" .. string.char(option) .. "AB<00>CD\195\169<T_IAC><T_IAC>EF<T_IAC><T_SE>")
+    assert.equals("AB\0CD\195\169\255EF", seen[250])
+  end)
+
+  it("hands an empty subnegotiation over as an empty payload", function()
+    -- not as its framing, which an escaped payload of those same five bytes would also give
+    assert.equals("", received("<T_IAC><T_SB>" .. string.char(option) .. "<T_IAC><T_SE>")[250])
+    assert.equals("\255\250\140\255\240", received("<T_IAC><T_SB>" .. string.char(option) .. "<T_IAC><T_IAC>\250\140<T_IAC><T_IAC>\240<T_IAC><T_SE>")[250])
+  end)
+
+  it("hands a command that is not a subnegotiation over whole", function()
+    assert.equals("\255\251\140", received("<T_IAC><T_WILL>" .. string.char(option))[251])
+  end)
+
+  it("hands the payload over byte for byte to waitForEvent", function()
+    if not os.getenv("MUDLET_TEST_MODE") then
+      pending("waitForEvent needs MUDLET_TEST_MODE")
+      return
+    end
+    tempTimer(0, function()
+      feedTelnet("<T_IAC><T_SB>" .. string.char(option) .. "AB<00>\195\169<T_IAC><T_IAC><T_IAC><T_SE>")
+    end)
+    local name, kind, opt, data = waitForEvent("sysTelnetEvent", 2000)
+    assert.equals("sysTelnetEvent", name)
+    assert.equals(250, kind)
+    assert.equals(option, opt)
+    assert.equals("AB\0\195\169\255", data)
   end)
 end)
 
