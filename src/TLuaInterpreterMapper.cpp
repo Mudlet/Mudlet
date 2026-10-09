@@ -254,9 +254,17 @@ int TLuaInterpreter::deleteMapLabel(lua_State* L)
     const int area = getVerifiedInt(L, __func__, 1, "areaID");
     const int labelID = getVerifiedInt(L, __func__, 2, "labelID");
     Host& host = getHostFromLua(L);
+    const TArea* pA = host.mpMap->mpRoomDB->getArea(area);
+    if (!pA) {
+        return warnArgumentValue(L, __func__, qsl("areaID %1 does not exist").arg(area));
+    }
+    if (!pA->mMapLabels.contains(labelID)) {
+        return warnArgumentValue(L, __func__, qsl("labelID %1 does not exist in area with areaID %2").arg(QString::number(labelID), QString::number(area)));
+    }
     host.mpMap->deleteMapLabel(area, labelID);
     host.mpMap->updateArea(area);
-    return 0;
+    lua_pushboolean(L, true);
+    return 1;
 }
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#addAreaName
 int TLuaInterpreter::addAreaName(lua_State* L)
@@ -3001,7 +3009,9 @@ int TLuaInterpreter::removeMapEvent(lua_State* L)
     if (!host.mpMap) {
         return warnArgumentValue(L, __func__, "no map present or loaded");
     }
-    host.mpMap->mUserActions.remove(displayName);
+    if (!host.mpMap->mUserActions.remove(displayName)) {
+        return warnArgumentValue(L, __func__, qsl("map event '%1' does not exist").arg(displayName));
+    }
     lua_pushboolean(L, true);
     return 1;
 }
@@ -3017,7 +3027,8 @@ int TLuaInterpreter::removeMapMenu(lua_State* L)
     if (!host.mpMap) {
         return warnArgumentValue(L, __func__, "no map present or loaded");
     }
-    host.mpMap->mUserMenus.remove(uniqueName);
+    // addMapMenu() and addMapEvent() take a parent that was never added, so sweep its children regardless
+    bool removed = host.mpMap->mUserMenus.remove(uniqueName);
     //remove all entries with this as parent
     QStringList removeList;
     removeList.append(uniqueName);
@@ -3030,6 +3041,7 @@ int TLuaInterpreter::removeMapMenu(lua_State* L)
             QStringList menuInfo = it.value();
             const QString parent = menuInfo[0];
             if (removeList.contains(parent)) {
+                removed = true;
                 host.mpMap->mUserMenus.remove(it.key());
                 if (it.key() != "" && !removeList.contains(it.key())) {
                     host.mpMap->mUserMenus.remove(it.key());
@@ -3044,8 +3056,12 @@ int TLuaInterpreter::removeMapMenu(lua_State* L)
         it2.next();
         const QString actParent = it2.value()[1];
         if (removeList.contains(actParent)) {
+            removed = true;
             host.mpMap->mUserActions.remove(it2.key());
         }
+    }
+    if (!removed) {
+        return warnArgumentValue(L, __func__, qsl("map menu '%1' does not exist").arg(uniqueName));
     }
     lua_pushboolean(L, true);
     return 1;
