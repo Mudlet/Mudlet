@@ -9054,7 +9054,9 @@ int TLuaInterpreter::setConfig(lua_State* L)
         return 2;
     };
 
-    if (host.mpMap && host.mpMap->mpMapper) {
+    // These settings live on the Host or on mudlet and a mapper picks them up
+    // when it is made, so none of them needs one to exist already:
+    if (host.mpMap) {
         if (key == qsl("mapRoomSize")) {
             const int size = getVerifiedInt(L, __func__, 2, "value");
             if (size < 1) {
@@ -9103,7 +9105,12 @@ int TLuaInterpreter::setConfig(lua_State* L)
         }
 #if defined(INCLUDE_3DMAPPER)
         if (key == qsl("show3dMapView")) {
-            host.mpMap->mpMapper->slot_toggle3DView(getVerifiedBool(L, __func__, 2, "value"));
+            const bool show = getVerifiedBool(L, __func__, 2, "value");
+            if (!host.mpMap->mpMapper) {
+                host.mShow3DView = show;
+                return success();
+            }
+            host.mpMap->mpMapper->slot_toggle3DView(show);
             return success();
         }
 #endif
@@ -9336,8 +9343,7 @@ int TLuaInterpreter::setConfig(lua_State* L)
         return success();
     }
     // The 2D map room symbol settings live on the map rather than the profile,
-    // so unlike the map keys above they do not need an open mapper - a script
-    // can pick the font before the mapper is ever shown:
+    // so a script can pick the font before the mapper is ever shown:
     if (key == qsl("mapSymbolFont")) {
         const QString fontName = getVerifiedString(L, __func__, 2, "value");
         if (fontName.trimmed().isEmpty()) {
@@ -9680,8 +9686,10 @@ int TLuaInterpreter::getConfig(lua_State* L)
                      lua_pushboolean(L, (widget && widget->isVisible()));
                      return;
                  }
-#endif
+                 lua_pushboolean(L, host.mShow3DView);
+#else
                  lua_pushboolean(L, false);
+#endif
              }},
             {qsl("mapperPanelVisible"),
              [&]() {
