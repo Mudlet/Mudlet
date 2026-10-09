@@ -36,24 +36,22 @@
 #include "HostManager.h"
 #include "TAction.h"
 #include "TAlias.h"
+#include "TAppFrontend.h"
 #include "TArea.h"
-#include "TConsole.h"
+#include "TConsoleFrontend.h"
 #include "TConsoleModel.h"
 #include "TDebug.h"
 #include "TEvent.h"
 #include "TForkedProcess.h"
 #include "TKey.h"
-#include "TMainConsole.h"
 #include "TMap.h"
 #include "TMapLabel.h"
 #include "TMedia.h"
 #include "TRoomDB.h"
 #include "TScript.h"
-#include "TTabBar.h"
 #include "TTimer.h"
 #include "TriggerMatchPool.h"
 #include "mapInfoContributorManager.h"
-#include "mudlet.h"
 #include "TGameDetails.h"
 
 #include <QScopeGuard>
@@ -83,6 +81,7 @@
 #endif // MUDLET_MEMORY_TRACKING
 #include <QCollator>
 #include <QCoreApplication>
+#include <QDir>
 #include <QFileInfo>
 #include <QVector>
 #ifdef QT_TEXTTOSPEECH_LIB
@@ -179,7 +178,7 @@ int TLuaInterpreter::addCmdLineSuggestion(lua_State* L)
     const QString text = getVerifiedString(L, __func__, textIndex, "suggestion text");
     const QString commandLineName{name};
     const Host& host = getHostFromLua(L);
-    if (!host.mpConsole || !host.mpConsole->addCommandLineSuggestion(commandLineName, text)) {
+    if (!host.consoleFrontend() || !host.consoleFrontend()->addCommandLineSuggestion(commandLineName, text)) {
         return commandLineNotFound(L, commandLineName);
     }
     return 0;
@@ -232,7 +231,7 @@ int TLuaInterpreter::appendCmdLine(lua_State* L)
     const QString text = getVerifiedString(L, __func__, textIndex, "text to set on command line");
     const QString commandLineName{name};
     const Host& host = getHostFromLua(L);
-    if (!host.mpConsole || !host.mpConsole->appendCommandLineText(commandLineName, text)) {
+    if (!host.consoleFrontend() || !host.consoleFrontend()->appendCommandLineText(commandLineName, text)) {
         return commandLineNotFound(L, commandLineName);
     }
     return 0;
@@ -248,7 +247,7 @@ int TLuaInterpreter::clearCmdLine(lua_State* L)
     }
     const QString commandLineName{name};
     const Host& host = getHostFromLua(L);
-    if (!host.mpConsole || !host.mpConsole->clearCommandLine(commandLineName)) {
+    if (!host.consoleFrontend() || !host.consoleFrontend()->clearCommandLine(commandLineName)) {
         return commandLineNotFound(L, commandLineName);
     }
     return 0;
@@ -264,7 +263,7 @@ int TLuaInterpreter::clearCmdLineSuggestions(lua_State* L)
     }
     const QString commandLineName{name};
     const Host& host = getHostFromLua(L);
-    if (!host.mpConsole || !host.mpConsole->clearCommandLineSuggestions(commandLineName)) {
+    if (!host.consoleFrontend() || !host.consoleFrontend()->clearCommandLineSuggestions(commandLineName)) {
         return commandLineNotFound(L, commandLineName);
     }
     return 0;
@@ -349,7 +348,7 @@ int TLuaInterpreter::removeCmdLineSuggestion(lua_State* L)
     const QString text = getVerifiedString(L, __func__, textIndex, "suggestion text");
     const QString commandLineName{name};
     const Host& host = getHostFromLua(L);
-    if (!host.mpConsole || !host.mpConsole->removeCommandLineSuggestion(commandLineName, text)) {
+    if (!host.consoleFrontend() || !host.consoleFrontend()->removeCommandLineSuggestion(commandLineName, text)) {
         return commandLineNotFound(L, commandLineName);
     }
     return 0;
@@ -608,7 +607,7 @@ int TLuaInterpreter::getCmdLine(lua_State* L)
     }
     const QString commandLineName{name};
     const Host& host = getHostFromLua(L);
-    const auto text = host.mpConsole ? host.mpConsole->getCommandLineText(commandLineName) : std::nullopt;
+    const auto text = host.commandLineText(commandLineName);
     if (!text) {
         return commandLineNotFound(L, commandLineName);
     }
@@ -1488,7 +1487,7 @@ int TLuaInterpreter::printCmdLine(lua_State* L)
     const QString text = getVerifiedString(L, __func__, textIndex, "text to set on command line");
     const QString commandLineName{name};
     const Host& host = getHostFromLua(L);
-    if (!host.mpConsole || !host.mpConsole->replaceCommandLineText(commandLineName, text)) {
+    if (!host.consoleFrontend() || !host.consoleFrontend()->replaceCommandLineText(commandLineName, text)) {
         return commandLineNotFound(L, commandLineName);
     }
     return 0;
@@ -1568,8 +1567,8 @@ int TLuaInterpreter::raiseEvent(lua_State* L)
 // down too.
 static bool shuttingDown(const QPointer<Host>& pHost)
 {
-    mudlet* pMudlet = mudlet::self();
-    return !pHost || pHost->isClosingDown() || !pMudlet || pMudlet->isGoingDown();
+    auto pFrontend = TAppFrontend::instance();
+    return !pHost || pHost->isClosingDown() || !pFrontend || pFrontend->quitting();
 }
 
 // No documentation available in wiki - internal, test-only function
@@ -1829,7 +1828,7 @@ int TLuaInterpreter::resetProfileIcon(lua_State* L)
 {
     Host& host = getHostFromLua(L);
 
-    auto [success, message] = mudlet::self()->resetProfileIcon(host.getName());
+    auto [success, message] = MudletApp::resetProfileIcon(host.getName());
     if (!success) {
         return warnArgumentValue(L, __func__, message);
     }
@@ -1878,8 +1877,8 @@ int TLuaInterpreter::setButtonState(lua_State* L)
 
     if (pItem->mButtonState != checked) {
         pItem->mButtonState = checked;
-        if (auto* pConsole = getHostFromLua(L).mpConsole.data()) {
-            pConsole->setActionButtonChecked(pItem, checked);
+        if (auto* pFrontend = getHostFromLua(L).consoleFrontend()) {
+            pFrontend->setActionButtonChecked(pItem, checked);
         }
         lua_pushboolean(L, true);
         return 1;
@@ -1941,7 +1940,7 @@ int TLuaInterpreter::setProfileIcon(lua_State* L)
 
     Host& host = getHostFromLua(L);
 
-    auto [success, message] = mudlet::self()->setProfileIcon(host.getName(), iconPath);
+    auto [success, message] = MudletApp::setProfileIcon(host.getName(), iconPath);
     if (!success) {
         return warnArgumentValue(L, __func__, message);
     }
@@ -3163,11 +3162,7 @@ int TLuaInterpreter::loadProfile(lua_State* L)
         return 2;
     }
 
-    bool success = mudlet::self()->loadProfile(profileName, !offline);
-    mudlet::self()->slot_connectionDialogueFinished(profileName, !offline);
-    mudlet::self()->enableToolbarButtons();
-
-    if (!success) {
+    if (!TAppFrontend::instance()->openProfile(profileName, !offline)) {
         lua_pushnil(L);
         lua_pushfstring(L, "loadProfile: failed to load profile '%s'", profileName.toUtf8().constData());
         return 2;
@@ -3203,13 +3198,11 @@ int TLuaInterpreter::closeProfile(lua_State* L)
         return 2;
     }
 
-    auto profileIndex = mudlet::self()->mpTabBar->tabIndex(profileName);
-    if (profileIndex != -1) {
-        emit mudlet::self() -> mpTabBar->tabCloseRequested(profileIndex);
-        lua_pushboolean(L, true);
-        return 1;
+    if (!TAppFrontend::instance()->requestProfileTabClose(profileName)) {
+        return 0;
     }
-    return 0;
+    lua_pushboolean(L, true);
+    return 1;
 }
 
 #ifdef MUDLET_MEMORY_TRACKING

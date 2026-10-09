@@ -56,6 +56,7 @@
 #include "MudletApp.h"
 #include "TConsole.h"
 #include "TLuaInterpreter.h"
+#include "TMainConsole.h"
 #include "TMap.h"
 #include "TelnetServerStub.h"
 #include "TriggerMatchPool.h"
@@ -489,7 +490,7 @@ private slots:
     // can hold, and the spin box says which by being usable or not
     void test_theMaximumBufferSizeTakesOverTheBufferSizeSpinBox()
     {
-        QVERIFY2(mpHost->mpConsole, "the profile has no console, so it has no maximum buffer size to offer");
+        QVERIFY2(mpHost->mainConsoleView(), "the profile has no console, so it has no maximum buffer size to offer");
         const int priorBufferSize = mpHost->getConsoleBufferSize();
         const bool priorUseMax = mpHost->getUseMaxConsoleBufferSize();
         restoreLater([=, this]() {
@@ -502,7 +503,7 @@ private slots:
         mpHost->setConsoleBufferSize(chosenSize);
 
         openPreferences();
-        const int maximumSize = mpHost->mpConsole->buffer.getMaxBufferSize();
+        const int maximumSize = mpHost->mainConsoleView()->buffer.getMaxBufferSize();
         QVERIFY2(maximumSize != chosenSize, "the machine's maximum buffer size happens to be the size this case picked, so the two cannot be told apart");
         QCOMPARE(mpPreferences->console_buffer_size_spinBox->value(), chosenSize);
         QVERIFY(mpPreferences->console_buffer_size_spinBox->isEnabled());
@@ -524,8 +525,8 @@ private slots:
     // has to outlive that for unticking it, then or on a later visit, to put it back
     void test_untickingAnAppliedMaximumBufferSizeBringsBackTheChosenSize()
     {
-        QVERIFY2(mpHost->mpConsole, "the profile has no console, so it has no maximum buffer size to offer");
-        TBuffer& buffer = mpHost->mpConsole->buffer;
+        QVERIFY2(mpHost->mainConsoleView(), "the profile has no console, so it has no maximum buffer size to offer");
+        TBuffer& buffer = mpHost->mainConsoleView()->buffer;
         const int priorBufferSize = mpHost->getConsoleBufferSize();
         const bool priorUseMax = mpHost->getUseMaxConsoleBufferSize();
         const int priorLinesLimit = buffer.mLinesLimit;
@@ -578,8 +579,8 @@ private slots:
     // not reached the profile yet when the tick overwrites the box with the maximum
     void test_aSizeEditedJustBeforeTickingTheMaximumIsKept()
     {
-        QVERIFY2(mpHost->mpConsole, "the profile has no console, so it has no maximum buffer size to offer");
-        TBuffer& buffer = mpHost->mpConsole->buffer;
+        QVERIFY2(mpHost->mainConsoleView(), "the profile has no console, so it has no maximum buffer size to offer");
+        TBuffer& buffer = mpHost->mainConsoleView()->buffer;
         const int priorBufferSize = mpHost->getConsoleBufferSize();
         const bool priorUseMax = mpHost->getUseMaxConsoleBufferSize();
         const int priorLinesLimit = buffer.mLinesLimit;
