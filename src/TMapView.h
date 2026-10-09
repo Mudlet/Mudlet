@@ -25,6 +25,8 @@
 #include <QToolButton>
 #include <QWidget>
 
+#include "TMapViewsFrontend.h"
+
 class Host;
 class T2DMap;
 class TMap;
@@ -35,7 +37,7 @@ class TMap;
  * independent of the player's current room, but do allow navigation (area selection,
  * z-level changes, zoom).
  */
-class TMapView : public QWidget
+class TMapView : public QWidget, public TSecondaryMapViewFrontend
 {
     Q_OBJECT
 
@@ -48,13 +50,13 @@ public:
     T2DMap* get2DMap() { return mp2dMap; }
 
     void setArea(int areaId);
-    std::pair<bool, QString> centerOnRoom(int roomId);
-    std::pair<bool, QString> setZoom(qreal zoom);
+    std::pair<bool, QString> centerOnRoom(int roomId) override;
+    std::pair<bool, QString> setZoom(qreal zoom) override;
 
-    int getCurrentAreaId() const;
-    int getCenteredRoomId() const;
-    qreal getZoom() const;
-    int getZLevel() const;
+    int getCurrentAreaId() const override;
+    int getCenteredRoomId() const override;
+    qreal getZoom() const override;
+    int getZLevel() const override;
 
     void updateAreaComboBox();
     // Called via TMapViewManager::switchViewsShowingArea() when a Configure
