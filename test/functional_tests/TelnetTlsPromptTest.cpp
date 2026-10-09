@@ -497,9 +497,9 @@ private slots:
         startProfile(mHostname, mLocalhost, mPort);
         auto host = mudlet::self()->getActiveHost();
         QVERIFY2(host, "No active host available for the test.");
-        QVERIFY2(host->mpConsole, "The active host has no main console.");
+        QVERIFY2(host->mainConsoleView(), "The active host has no main console.");
 
-        auto console = host->mpConsole;
+        QPointer<TMainConsole> console = host->mainConsoleView();
         console->showPackageDownloadProgress("Downloading package 1", "Cancel");
         console->showPackageDownloadProgress("Downloading package 2", "Cancel");
 
@@ -523,8 +523,8 @@ private slots:
         startProfile(mHostname, mLocalhost, mPort);
         auto host = mudlet::self()->getActiveHost();
         QVERIFY2(host, "No active host available for the test.");
-        QVERIFY2(host->mpConsole, "The active host has no main console.");
-        auto console = host->mpConsole;
+        QVERIFY2(host->mainConsoleView(), "The active host has no main console.");
+        QPointer<TMainConsole> console = host->mainConsoleView();
 
         // A TCP server that accepts connections but never answers keeps the
         // package-download reply in flight (Running, NoError) for the whole
@@ -567,8 +567,8 @@ private slots:
         startProfile(mHostname, mLocalhost, mPort);
         auto host = mudlet::self()->getActiveHost();
         QVERIFY2(host, "No active host available for the test.");
-        QVERIFY2(host->mpConsole, "The active host has no main console.");
-        auto console = host->mpConsole;
+        QVERIFY2(host->mainConsoleView(), "The active host has no main console.");
+        QPointer<TMainConsole> console = host->mainConsoleView();
 
         const QString url = startPackageServer();
         QVERIFY2(!url.isEmpty(), "Could not start the stand-in package server.");
@@ -603,8 +603,8 @@ private slots:
         startProfile(mHostname, mLocalhost, mPort);
         auto host = mudlet::self()->getActiveHost();
         QVERIFY2(host, "No active host available for the test.");
-        QVERIFY2(host->mpConsole, "The active host has no main console.");
-        auto console = host->mpConsole;
+        QVERIFY2(host->mainConsoleView(), "The active host has no main console.");
+        QPointer<TMainConsole> console = host->mainConsoleView();
 
         const QString url = startPackageServer();
         QVERIFY2(!url.isEmpty(), "Could not start the stand-in package server.");

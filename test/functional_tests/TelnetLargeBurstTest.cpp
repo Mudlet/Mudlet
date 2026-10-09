@@ -79,7 +79,7 @@ private:
     // spends its wait scanning rather than letting the ingest catch up.
     bool tailContains(const QString& text, const int depth = 3) const
     {
-        TMainConsole* console = mpHost->mpConsole;
+        TMainConsole* console = mpHost->mainConsoleView();
         const int lastLine = console->buffer.getLastLineNumber();
         for (int i = lastLine; i >= std::max(0, lastLine - depth); --i) {
             if (console->buffer.line(i).contains(text)) {
@@ -93,7 +93,7 @@ private:
     // once all lineCount of them are in the buffer once each and in order
     int firstBurstLineOutOfPlace(const int lineCount) const
     {
-        TBuffer& buffer = mpHost->mpConsole->buffer;
+        TBuffer& buffer = mpHost->mainConsoleView()->buffer;
         const QString marker = qsl("BURSTLINE ");
         int expected = 0;
         for (int i = 0, last = buffer.getLastLineNumber(); i <= last; ++i) {
@@ -167,7 +167,7 @@ private slots:
         // even the unfixed code finishes, so there the test passes without
         // discriminating rather than failing spuriously.
         constexpr int lineCount = 12000;
-        mpHost->mpConsole->buffer.clear();
+        mpHost->mainConsoleView()->buffer.clear();
 
         const QByteArray payload = burstOf(lineCount);
         QVERIFY(payload.size() > 100000);
@@ -184,7 +184,7 @@ private slots:
                  qPrintable(qsl("the burst stopped part-way through: %1 of %2 lines arrived and no more were coming. "
                                 "slot_socketReadyToBeRead() read one BUFFER_SIZE chunk and left the rest unread, and "
                                 "readyRead() only fires on fresh bytes.")
-                                    .arg(mpHost->mpConsole->buffer.getLastLineNumber())
+                                    .arg(mpHost->mainConsoleView()->buffer.getLastLineNumber())
                                     .arg(lineCount)));
     }
 
@@ -195,7 +195,7 @@ private slots:
         // 1.3 MB of text from well under one read of compressed data, where
         // the drain stops at 8 output buffers of 100 KB each
         constexpr int lineCount = 20000;
-        mpHost->mpConsole->buffer.clear();
+        mpHost->mainConsoleView()->buffer.clear();
 
         const QByteArray text = burstOf(lineCount) + "MCCP BURST END\r\n";
         // qCompress() prefixes the zlib stream with the source length
@@ -209,7 +209,7 @@ private slots:
             QCoreApplication::processEvents(QEventLoop::AllEvents, 50);
         }
         QVERIFY2(tailContains(qsl("MCCP BURST END")),
-                 qPrintable(qsl("the compressed burst stopped part-way through, at buffer line %1 of %2.").arg(mpHost->mpConsole->buffer.getLastLineNumber()).arg(lineCount)));
+                 qPrintable(qsl("the compressed burst stopped part-way through, at buffer line %1 of %2.").arg(mpHost->mainConsoleView()->buffer.getLastLineNumber()).arg(lineCount)));
         const int outOfPlace = firstBurstLineOutOfPlace(lineCount);
         QVERIFY2(outOfPlace < 0, qPrintable(qsl("burst line %1 is missing, repeated or out of order.").arg(outOfPlace)));
     }
@@ -225,7 +225,7 @@ private slots:
         constexpr int compressedLineCount = 20000;
         constexpr int plainLineCount = 12000;
         constexpr int lineCount = compressedLineCount + plainLineCount;
-        mpHost->mpConsole->buffer.clear();
+        mpHost->mainConsoleView()->buffer.clear();
         QSignalSpy disconnected(&(mpHost->mTelnet), &cTelnet::signal_disconnected);
 
         // Agreed ahead of the burst, as a game does at login: an answer reaching
@@ -247,7 +247,7 @@ private slots:
 
         // the disconnect's own messages follow the game's text
         QVERIFY2(tailContains(qsl("GOODBYE FROM THE GAME"), 20),
-                 qPrintable(qsl("the text sent before the close was cut short, at buffer line %1 of %2.").arg(mpHost->mpConsole->buffer.getLastLineNumber()).arg(lineCount)));
+                 qPrintable(qsl("the text sent before the close was cut short, at buffer line %1 of %2.").arg(mpHost->mainConsoleView()->buffer.getLastLineNumber()).arg(lineCount)));
         const int outOfPlace = firstBurstLineOutOfPlace(lineCount);
         QVERIFY2(outOfPlace < 0, qPrintable(qsl("burst line %1 is missing, repeated or out of order.").arg(outOfPlace)));
     }
