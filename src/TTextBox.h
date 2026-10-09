@@ -33,6 +33,13 @@ public:
     Q_DISABLE_COPY(TTextBox)
     explicit TTextBox(Host* pHost, const QString& name, QWidget* parent = nullptr);
 
+signals:
+    // Any font change, a style sheet's or an inherited one included.
+    void fontChanged();
+
+protected:
+    void changeEvent(QEvent* event) override;
+
 private:
     QPointer<Host> mpHost;
 };
