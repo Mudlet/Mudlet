@@ -124,6 +124,23 @@ static std::pair<bool, qint64> stopWatchAdjustmentAsMilliSeconds(const double ad
     return {true, static_cast<qint64>(milliSeconds)};
 }
 
+// Compiled as TTrigger and TAlias compile it, so the creators can refuse a pattern that
+// would leave an item which never matches - a temporary one has no editor row to say why
+static QString perlRegexCompileError(const QString& pattern)
+{
+    int errorCode = 0;
+    PCRE2_SIZE errorOffset = 0;
+    const QByteArray utf8 = pattern.toUtf8();
+    pcre2_code* re = pcre2_compile(reinterpret_cast<PCRE2_SPTR>(utf8.constData()), PCRE2_ZERO_TERMINATED, PCRE2_UTF | PCRE2_UCP | PCRE2_MATCH_INVALID_UTF, &errorCode, &errorOffset, nullptr);
+    if (re) {
+        pcre2_code_free(re);
+        return QString();
+    }
+    PCRE2_UCHAR errorBuffer[256];
+    pcre2_get_error_message(errorCode, errorBuffer, sizeof(errorBuffer));
+    return qsl("regex pattern \"%1\" failed to compile at offset %2: %3").arg(pattern, QString::number(errorOffset), QString::fromUtf8(reinterpret_cast<const char*>(errorBuffer)));
+}
+
 #define WINDOW_NAME(ARG_L, ARG_pos)                                                                                                                                                                    \
     ({                                                                                                                                                                                                 \
         int pos_ = (ARG_pos);                                                                                                                                                                          \
@@ -1109,6 +1126,9 @@ int TLuaInterpreter::permAlias(lua_State* L)
         const QString name{lua_tostring(L, 1)};
         const QString parent{lua_tostring(L, 2)};
         const QString regex{lua_tostring(L, 3)};
+        if (const QString error = perlRegexCompileError(regex); !error.isEmpty()) {
+            return warnArgumentValue(L, __func__, error);
+        }
         const QString script{lua_tostring(L, 4)};
         auto [aliasId, message] = pLuaInterpreter->startPermAlias(name, parent, regex, script);
         id = aliasId;
@@ -1180,6 +1200,11 @@ int TLuaInterpreter::permRegexTrigger(lua_State* L)
             }
             // removes value, but keeps key for next iteration
             lua_pop(L, 1);
+        }
+        for (const QString& pattern : regList) {
+            if (const QString error = perlRegexCompileError(pattern); !error.isEmpty()) {
+                return warnArgumentValue(L, __func__, error);
+            }
         }
         const QString name{lua_tostring(L, 1)};
         const QString parent{lua_tostring(L, 2)};
@@ -2234,6 +2259,9 @@ int TLuaInterpreter::tempAlias(lua_State* L)
     }
 
     const QString regex{lua_tostring(L, 1)};
+    if (const QString error = perlRegexCompileError(regex); !error.isEmpty()) {
+        return warnArgumentValue(L, __func__, error);
+    }
     Host& host = getHostFromLua(L);
     TLuaInterpreter* pLuaInterpreter = host.getLuaInterpreter();
 
@@ -2597,6 +2625,12 @@ int TLuaInterpreter::tempComplexRegexTrigger(lua_State* L)
     } else {
         bgColor = lua_tostring(L, 6);
     }
+    // Before the trigger of that name is replaced, so a refusal costs it nothing
+    if (!colorTrigger) {
+        if (const QString error = perlRegexCompileError(pattern); !error.isEmpty()) {
+            return warnArgumentValue(L, __func__, error);
+        }
+    }
 
     bool highlight;
     QColor hlFgColor;
@@ -2890,6 +2924,9 @@ int TLuaInterpreter::tempRegexTrigger(lua_State* L)
     }
 
     const QString regexPattern{lua_tostring(L, 1)};
+    if (const QString error = perlRegexCompileError(regexPattern); !error.isEmpty()) {
+        return warnArgumentValue(L, __func__, error);
+    }
     if (lua_isstring(L, 2)) {
         triggerID = pLuaInterpreter->startTempRegexTrigger(regexPattern, lua_tostring(L, 2), expiryCount);
     } else {

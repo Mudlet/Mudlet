@@ -2020,22 +2020,127 @@ describe("Trigger processing", function()
 
     describe("patterns that fail to compile", function()
 
-        it("does not fire a trigger whose perl pattern failed to compile", function()
-            _G.TrigBadPattern = {good = 0, bad = 0}
+        -- an item that could never match is refused, and the refusal says why
+        it("refuses a perl pattern that fails to compile", function()
+            _G.TrigBadPattern = {good = 0}
             local goodId = tempRegexTrigger([[^bad_pattern_line$]], [==[_G.TrigBadPattern.good = _G.TrigBadPattern.good + 1]==])
-            local badId = tempRegexTrigger([[^bad_pattern_line($]], [==[_G.TrigBadPattern.bad = _G.TrigBadPattern.bad + 1]==])
-            -- busted keeps only the last finally(), so this undoes everything at once
             finally(function()
                 killTrigger(goodId)
-                killTrigger(badId)
                 _G.TrigBadPattern = nil
             end)
-            assert.is_true(badId > 0, "an uncompilable pattern still makes a trigger, so that it can be seen and repaired")
+
+            local badId, message = tempRegexTrigger([[^bad_pattern_line($]], [==[_G.TrigBadPattern.bad = true]==])
+            assert.is_nil(badId, "an uncompilable pattern should not make a trigger")
+            assert.is_truthy(tostring(message):find("failed to compile", 1, true), "the refusal should say why, got: " .. tostring(message))
 
             feedTriggers("bad_pattern_line\n")
 
             assert.are.equal(1, _G.TrigBadPattern.good, "the control trigger shows the line does reach the trigger engine")
+        end)
+
+        it("refuses a perl pattern that fails to compile from tempRegexTrigger given a function", function()
+            local badId, message = tempRegexTrigger([[(unclosed]], function() end)
+            assert.is_nil(badId)
+            assert.is_string(message)
+        end)
+
+        it("refuses a perl pattern that fails to compile from permRegexTrigger", function()
+            local name = "SpecBadPatternPermTrigger"
+            local before = exists(name, "trigger")
+            local badId, message = permRegexTrigger(name, "", {[[^fine$]], [[^bad_pattern_perm($]]}, [==[]==])
+            assert.is_nil(badId)
+            assert.is_truthy(tostring(message):find("bad_pattern_perm", 1, true), "the refusal should name the pattern, got: " .. tostring(message))
+            assert.are.equal(before, exists(name, "trigger"), "nothing should have been created")
+        end)
+
+        -- a package can still bring in an item like that, which must stay silent
+        it("does not fire a trigger from a package whose perl pattern failed to compile", function()
+            if not os.getenv("MUDLET_TEST_MODE") then
+                pending("uninstalling the fixture needs pumpEvents(), which does nothing outside MUDLET_TEST_MODE")
+                return
+            end
+            _G.TrigBadPattern = {good = 0, bad = 0}
+            local goodId = tempRegexTrigger([[^bad_pattern_package$]], [==[_G.TrigBadPattern.good = _G.TrigBadPattern.good + 1]==])
+            local path = getMudletHomeDir() .. "/trigger-bad-pattern.xml"
+            finally(function()
+                killTrigger(goodId)
+                _G.TrigBadPattern = nil
+                -- uninstallPackage() refuses while the profile save the install
+                -- started is still running
+                local removed = false
+                for _ = 1, 100 do
+                    if uninstallPackage("trigger-bad-pattern") == true then
+                        removed = true
+                        break
+                    end
+                    pumpEvents(50)
+                end
+                os.remove(path)
+                pumpEvents(200)
+                assert.is_true(removed, "could not uninstall the trigger-bad-pattern package")
+            end)
+            local file = assert(io.open(path, "w"))
+            file:write([[<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE MudletPackage>
+<MudletPackage version="1.001">
+	<TriggerPackage>
+		<Trigger isActive="yes" isFolder="no" isTempTrigger="no" isMultiline="no" isPerlSlashGOption="no" isColorizerTrigger="no" isFilterTrigger="no" isSoundTrigger="no" isColorTrigger="no" isColorTriggerFg="no" isColorTriggerBg="no">
+			<name>bad_pattern_package_trigger</name>
+			<script>_G.TrigBadPattern.bad = _G.TrigBadPattern.bad + 1</script>
+			<triggerType>0</triggerType>
+			<conditonLineDelta>0</conditonLineDelta>
+			<mStayOpen>0</mStayOpen>
+			<mCommand></mCommand>
+			<packageName></packageName>
+			<mFgColor>#ff0000</mFgColor>
+			<mBgColor>#ffff00</mBgColor>
+			<mSoundFile></mSoundFile>
+			<colorTriggerFgColor>#000000</colorTriggerFgColor>
+			<colorTriggerBgColor>#000000</colorTriggerBgColor>
+			<regexCodeList>
+				<string>^bad_pattern_package($</string>
+			</regexCodeList>
+			<regexCodePropertyList>
+				<integer>1</integer>
+			</regexCodePropertyList>
+		</Trigger>
+	</TriggerPackage>
+	<TimerPackage />
+	<AliasPackage />
+	<ActionPackage />
+	<ScriptPackage />
+	<KeyPackage />
+	<VariablePackage>
+		<HiddenVariables />
+	</VariablePackage>
+</MudletPackage>
+]])
+            file:close()
+            installPackage(path)
+            pumpEvents(100)
+
+            assert.is_true(exists("bad_pattern_package_trigger", "trigger") > 0, "the package should have brought the trigger in")
+            feedTriggers("bad_pattern_package\n")
+
+            assert.are.equal(1, _G.TrigBadPattern.good, "the control trigger shows the line does reach the trigger engine")
             assert.are.equal(0, _G.TrigBadPattern.bad, "a trigger whose regex did not compile must not fire")
+        end)
+
+        it("refuses a perl pattern that fails to compile from tempComplexRegexTrigger, keeping the patterns it had", function()
+            _G.TrigBadPattern = {fires = 0}
+            local code = [==[_G.TrigBadPattern.fires = _G.TrigBadPattern.fires + 1]==]
+            tempComplexRegexTrigger("SpecBadPatternComplex", [[^complex_good_line$]], code, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0)
+            finally(function()
+                killTrigger("SpecBadPatternComplex")
+                _G.TrigBadPattern = nil
+            end)
+
+            local badId, message = tempComplexRegexTrigger("SpecBadPatternComplex", [[^complex_bad($]], code, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0)
+            assert.is_nil(badId)
+            assert.is_string(message)
+
+            feedTriggers("complex_good_line\n")
+            assert.are.equal(1, _G.TrigBadPattern.fires, "a refused pattern must not cost the trigger the patterns it already had")
         end)
 
     end)

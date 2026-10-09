@@ -512,6 +512,26 @@ describe("Tests the functionality of IDMgr", function()
       assert.are.same({"regex_trig"}, getNamedTriggers(user))
     end)
 
+    it("Should refuse a regex named trigger whose pattern does not compile", function()
+      local register = function()
+        registerNamedRegexTrigger(user, "regex_bad", "^whatever_re($", function() end)
+      end
+      assert.error_matches(register, "failed to compile")
+      assert.are.same({}, getNamedTriggers(user))
+    end)
+
+    it("Should keep a working regex named trigger when a re-registration's pattern does not compile", function()
+      _G.NamedTrigFire = 0
+      registerNamedRegexTrigger(user, "regex_keep", "^named_trig_keep$", function() _G.NamedTrigFire = _G.NamedTrigFire + 1 end)
+      local register = function()
+        registerNamedRegexTrigger(user, "regex_keep", "^#1 named_trig_keep($", function() end)
+      end
+      assert.error_matches(register, "^#1 named_trig_keep($", nil, true)
+      feedTriggers("\nnamed_trig_keep\n")
+      assert.are.equal(1, _G.NamedTrigFire, "the working trigger should still fire")
+      assert.are.same({"regex_keep"}, getNamedTriggers(user))
+    end)
+
     it("Should list registered named triggers, mixing substring and regex types", function()
       -- https://github.com/Mudlet/Mudlet/issues/9542: substring and regex names
       -- live in separate 1..n arrays, so merging them by index collides entries
