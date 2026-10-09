@@ -80,12 +80,12 @@ private:
 
     TCommandLine* freshCommandLine(const QString& name)
     {
-        auto [created, message] = mpHost->mpConsole->createCommandLine(QString(), name, 0, 0, 300, 30);
+        auto [created, message] = mpHost->mainConsoleView()->createCommandLine(QString(), name, 0, 0, 300, 30);
         if (!created) {
             qWarning() << "CommandLineSpellCheckTest - could not create a command line:" << message;
             return nullptr;
         }
-        TCommandLine* pCommandLine = mpHost->mpConsole->subCommandLineWidget(name);
+        TCommandLine* pCommandLine = mpHost->mainConsoleView()->subCommandLineWidget(name);
         if (pCommandLine) {
             pCommandLine->mSaveCommands = false;
         }
@@ -308,7 +308,7 @@ private slots:
     // the main command line: on marks every word in it, off takes the marks away
     void test_switchingSpellCheckRechecksTheWholeMainCommandLine()
     {
-        TCommandLine* pCommandLine = mpHost->mpConsole->mpCommandLine;
+        TCommandLine* pCommandLine = mpHost->mainConsoleView()->mpCommandLine;
         QVERIFY(pCommandLine);
         const auto clearTheLine = qScopeGuard([pCommandLine]() {
             pCommandLine->clear();
@@ -347,7 +347,7 @@ private slots:
     void test_switchingSpellCheckOnChecksWordsNextToPunctuationAndSpaces()
     {
         QFETCH(QString, text);
-        TCommandLine* pCommandLine = mpHost->mpConsole->mpCommandLine;
+        TCommandLine* pCommandLine = mpHost->mainConsoleView()->mpCommandLine;
         QVERIFY(pCommandLine);
         const auto clearTheLine = qScopeGuard([pCommandLine]() {
             pCommandLine->clear();
