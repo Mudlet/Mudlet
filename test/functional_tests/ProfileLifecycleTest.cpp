@@ -376,7 +376,7 @@ private slots:
 
         Host* pSecondHost = hostFor(mSecondProfile);
         QVERIFY2(pSecondHost, "loadProfile() reported success but the profile is not in the host pool");
-        QVERIFY2(pSecondHost->mpConsole, "the loaded profile has no main console, so nothing of it is on screen");
+        QVERIFY2(pSecondHost->mainConsoleView(), "the loaded profile has no main console, so nothing of it is on screen");
         QVERIFY2(profileHasATab(mSecondProfile), "the loaded profile got no tab");
         QCOMPARE(HostManager::self()->getHostCount(), loadedBefore + 1);
 
@@ -575,7 +575,7 @@ private slots:
     {
         QPointer<Host> pSecondHost = loadProfileThroughLua(mSecondProfile);
         QVERIFY(pSecondHost);
-        QPointer<TMainConsole> pSecondConsole = pSecondHost->mpConsole;
+        QPointer<TMainConsole> pSecondConsole = pSecondHost->mainConsoleView();
         QVERIFY(pSecondConsole);
         const int loadedBefore = HostManager::self()->getHostCount();
 

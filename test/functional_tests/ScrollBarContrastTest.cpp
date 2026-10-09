@@ -105,14 +105,14 @@ private:
         return shot;
     }
 
-    QImage renderScrollBarOn(const QColor& background) { return renderWidget(mpHost->mpConsole->mpScrollBar, background); }
+    QImage renderScrollBarOn(const QColor& background) { return renderWidget(mpHost->mainConsoleView()->mpScrollBar, background); }
 
     // Sampled at the middle of the handle so a stray antialiased edge cannot stand
     // in for it.
     qreal handleContrastOn(const QColor& background)
     {
         runLua(qsl("setBackgroundColor(%1, %2, %3)").arg(background.red()).arg(background.green()).arg(background.blue()));
-        QScrollBar* pScrollBar = mpHost->mpConsole->mpScrollBar;
+        QScrollBar* pScrollBar = mpHost->mainConsoleView()->mpScrollBar;
         const QRect handle = handleRect(pScrollBar);
         if (handle.isEmpty()) {
             return 1.0;
@@ -155,7 +155,7 @@ private:
     void fillConsoleSoTheHandleHasSomewhereToSit()
     {
         runLua(qsl("for i = 1, 500 do echo('scroll bar contrast line ' .. i .. '\\n') end"));
-        QTRY_VERIFY(mpHost->mpConsole->mpScrollBar->maximum() > mpHost->mpConsole->mpScrollBar->minimum());
+        QTRY_VERIFY(mpHost->mainConsoleView()->mpScrollBar->maximum() > mpHost->mainConsoleView()->mpScrollBar->minimum());
     }
 
 private slots:
@@ -193,8 +193,8 @@ private slots:
 
         mudlet::self()->resize(1200, 800);
         QTest::qWait(100ms);
-        QVERIFY(mpHost->mpConsole);
-        QVERIFY(!mpHost->mpConsole->mpScrollBar->size().isEmpty());
+        QVERIFY(mpHost->mainConsoleView());
+        QVERIFY(!mpHost->mainConsoleView()->mpScrollBar->size().isEmpty());
         fillConsoleSoTheHandleHasSomewhereToSit();
 
         // The console keeps its own style, so this only reaches the scroll bar
@@ -282,7 +282,7 @@ private slots:
     // opposite arms - swapping them leaves a handle that fills the bar's width.
     void test_theHorizontalHandleIsInsetFromTheLongEdges()
     {
-        QScrollBar* pScrollBar = mpHost->mpConsole->mpHScrollBar;
+        QScrollBar* pScrollBar = mpHost->mainConsoleView()->mpHScrollBar;
         pScrollBar->show();
         QTest::qWait(50ms);
         pScrollBar->setRange(0, 100);
@@ -321,7 +321,7 @@ private slots:
         runLua(qsl("setBackgroundImage([[%1]], 1)").arg(imagePath));
         QTest::qWait(100ms);
 
-        QScrollBar* pScrollBar = mpHost->mpConsole->mpScrollBar;
+        QScrollBar* pScrollBar = mpHost->mainConsoleView()->mpScrollBar;
         QWidget* pDisplay = pScrollBar;
         for (QWidget* pW = pScrollBar; pW; pW = pW->parentWidget()) {
             if (pW->objectName() == qsl("MainDisplay")) {
@@ -407,7 +407,7 @@ private slots:
         qApp->setStyle(pOrdinaryStyle);
         QTest::qWait(50ms);
 
-        QScrollBar* pScrollBar = mpHost->mpConsole->mpScrollBar;
+        QScrollBar* pScrollBar = mpHost->mainConsoleView()->mpScrollBar;
         const QVariant handleColor = pScrollBar->property(csHandleColorProperty);
         QVERIFY2(handleColor.value<QColor>().isValid(), "the console stopped working out a handle colour at all");
 
