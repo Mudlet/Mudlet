@@ -39,7 +39,6 @@
 #include "TMapLabel.h"
 #include "TMedia.h"
 #include "TRoomDB.h"
-#include "TTabBar.h"
 #include "TTimer.h"
 #include "discord.h"
 #include "mapInfoContributorManager.h"
