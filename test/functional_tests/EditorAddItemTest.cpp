@@ -27,6 +27,7 @@
 #include <QTemporaryDir>
 #include <QTreeWidget>
 #include <QtTest/QtTest>
+#include <algorithm>
 #include <chrono>
 
 #include "EditorItemXMLHelpers.h"
@@ -40,11 +41,13 @@
 #include "ScriptUnit.h"
 #include "TKey.h"
 #include "TScript.h"
+#include "TTrigger.h"
 #include "TriggerUnit.h"
 #include "TelnetServerStub.h"
 #include "ctelnet.h"
 #include "dlgKeysMainArea.h"
 #include "dlgScriptsMainArea.h"
+#include "dlgTriggersMainArea.h"
 #include "dlgTriggerEditor.h"
 #include "mudlet.h"
 
@@ -154,11 +157,19 @@ private slots:
         const QString newTrigger = dlgTriggerEditor::tr("New trigger");
         mpEditor->slot_showTriggers();
         mpEditor->treeWidget_triggers->setCurrentItem(mpEditor->mpTriggerBaseItem);
-        const int before = static_cast<int>(mpHost->getTriggerUnit()->findItems(newTrigger, true, true).size());
+        const auto existing = mpHost->getTriggerUnit()->findItems(newTrigger, true, true);
+        const int before = static_cast<int>(existing.size());
         const int commandsBefore = mpEditor->mpUndoStack->count();
 
         mpEditor->slot_addNewItem();
+        QTreeWidgetItem* pItem = mpEditor->treeWidget_triggers->currentItem();
+        QVERIFY2(pItem, "adding a trigger left nothing selected to save");
+        TTrigger* pTrigger = mpHost->getTriggerUnit()->getTrigger(pItem->data(0, Qt::UserRole).toInt());
+        QVERIFY(pTrigger);
+        mpEditor->mpTriggersMainArea->lineEdit_trigger_command->setText(qsl("qaCommandSavedWithTheAdd"));
         mpEditor->slot_saveEdits();
+        QCOMPARE(pTrigger->getCommand(), qsl("qaCommandSavedWithTheAdd"));
+        const QString asSaved = exportTriggerToXML(pTrigger, SnapshotScope::ItemOnly);
 
         QCOMPARE(static_cast<int>(mpHost->getTriggerUnit()->findItems(newTrigger, true, true).size()), before + 1);
         QCOMPARE(mpEditor->mpUndoStack->count(), commandsBefore + 1);
@@ -168,8 +179,15 @@ private slots:
 
         // redo brings back the item as it was saved, not as it was first made
         mpEditor->mpUndoStack->redo();
-        const auto redone = mpHost->getTriggerUnit()->findItems(newTrigger, true, true);
-        QCOMPARE(static_cast<int>(redone.size()), before + 1);
+        TTrigger* pRedone = nullptr;
+        for (const int id : mpHost->getTriggerUnit()->findItems(newTrigger, true, true)) {
+            if (std::find(existing.cbegin(), existing.cend(), id) == existing.cend()) {
+                QVERIFY2(!pRedone, "redo brought back more than one trigger");
+                pRedone = mpHost->getTriggerUnit()->getTrigger(id);
+            }
+        }
+        QVERIFY2(pRedone, "redo did not bring the trigger back");
+        QCOMPARE(exportTriggerToXML(pRedone, SnapshotScope::ItemOnly), asSaved);
     }
 
     // A new script's first save need not change it (the add already marked it
