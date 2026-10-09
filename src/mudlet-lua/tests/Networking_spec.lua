@@ -869,16 +869,35 @@ describe("MMCP effects against a scripted chat peer", function()
   local commandCounter = 0
   local originalChatName
   local originalBorders
+  local dockWasShowing
   local originalRouteChatLine
 
-  -- The chat lines these specs display match the base UI's "someone chats"
-  -- trigger, which would dock its chat window on the right border and leave the
-  -- main console narrower for every later spec.
+  -- The chat lines these specs display ("<peer> chats to ...", "You chat to ...")
+  -- match the base UI's chat capture triggers, all of which go through
+  -- BaseUI.routeChatLine. That docks its chat window on the right border on first
+  -- use and keeps it there, leaving the main console narrower for every later spec.
   setup(function()
     originalBorders = getBorderSizes()
     if BaseUI then
+      dockWasShowing = BaseUI.container ~= nil and not BaseUI.container.hidden
       originalRouteChatLine = BaseUI.routeChatLine
       BaseUI.routeChatLine = function() end
+    end
+  end)
+
+  -- Its own teardown, so a failing one below cannot leave chat routing switched
+  -- off. A dock some other path brought up here is put away the way BaseUI.hide()
+  -- does, which gives the border back.
+  teardown(function()
+    if not BaseUI then
+      return
+    end
+    if originalRouteChatLine then
+      BaseUI.routeChatLine = originalRouteChatLine
+    end
+    if not dockWasShowing and BaseUI.container and not BaseUI.container.hidden then
+      BaseUI.container:hide()
+      BaseUI.container:adjustBorder()
     end
   end)
 
@@ -2288,6 +2307,11 @@ describe("MMCP effects against a scripted chat peer", function()
   end)
 
   it("leaves the main console's borders as it found them", function()
+    if peerUnavailable() then return end
+    if dockWasShowing then
+      pending("the base UI dock was already showing, so its border is not this block's to check")
+      return
+    end
     assert.are.same(originalBorders, getBorderSizes())
   end)
 
@@ -2296,9 +2320,6 @@ describe("MMCP effects against a scripted chat peer", function()
   teardown(function()
     if originalChatName then
       mmcp.chatName(originalChatName)
-    end
-    if BaseUI and originalRouteChatLine then
-      BaseUI.routeChatLine = originalRouteChatLine
     end
   end)
 end)
