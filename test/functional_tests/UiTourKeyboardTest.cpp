@@ -29,15 +29,19 @@
  * Run with: ctest -R UiTourKeyboardTest -V
  */
 
+#include "Host.h"
+#include "HostManager.h"
 #include "MudletApp.h"
 #include "MudletInstanceCoordinator.h"
 #include "PortableModeTestHelper.h"
+#include "TLuaInterpreter.h"
 #include "TUiTour.h"
 #include "mudlet.h"
 
 #include <QtTest/QtTest>
 
 #include <QInputMethodEvent>
+#include <QLabel>
 #include <QPlainTextEdit>
 #include <QPointer>
 #include <QPushButton>
@@ -83,11 +87,55 @@ private:
         return nullptr;
     }
 
-    // The cases opening the tour as the Help menu does start without the one this test's init() opened
-    void closeTheTourInitOpened()
+    static int openTourCount()
+    {
+        int count = 0;
+        for (auto* pTour : mudlet::self()->findChildren<TUiTour*>()) {
+            if (pTour->isVisible()) {
+                ++count;
+            }
+        }
+        return count;
+    }
+
+    // The card's "3 of 6" label, which says which step the tour is on
+    QString progress() const
+    {
+        static const QRegularExpression progressText(qsl("^\\d+ of \\d+$"));
+        for (auto* pLabel : mpTour->findChildren<QLabel*>()) {
+            if (progressText.match(pLabel->text()).hasMatch()) {
+                return pLabel->text();
+            }
+        }
+        return {};
+    }
+
+    // Closes init()'s tour first: openTour() would find it before the menu's
+    // one, and the menu tour's filter, installed later, would take the keys
+    // meant for it
+    bool openTheTourFromTheHelpMenu()
     {
         delete mpTour.data();
-        QVERIFY(!openTour());
+        if (openTour()) {
+            return false;
+        }
+        mudlet::self()->dactionUiTour->trigger();
+        mpTour = openTour();
+        return mpTour;
+    }
+
+    // Through the window rather than straight to a widget, and from a widget
+    // the overlay covers, so each key takes the route a real key press does
+    // and only the tour's application-wide filter can pick it out
+    QStringList stepsShownPressingOnlyTheRightArrow()
+    {
+        QStringList stepsShown;
+        while (mpTour && mpTour->isVisible() && stepsShown.size() < 100) {
+            stepsShown << progress();
+            mpBehindOverlay->setFocus();
+            QTest::keyClick(mudlet::self()->windowHandle(), Qt::Key_Right);
+        }
+        return stepsShown;
     }
 
 private slots:
@@ -109,8 +157,10 @@ private slots:
         mudlet::start();
         mudlet::self()->setupConfig();
         QVERIFY(MudletApp::getMudletPath(enums::profilesPath).startsWith(mXdgDir.path()));
-        // Builds the menus, and the parts of the window the tour's later steps point at
-        mudlet::self()->takeOwnershipOfInstanceCoordinator(std::make_unique<MudletInstanceCoordinator>("MudletInstanceCoordinator"));
+        // activateProfile() needs the coordinator, and the last case activates one
+        mudlet::self()->takeOwnershipOfInstanceCoordinator(std::make_unique<MudletInstanceCoordinator>(qsl("MudletInstanceCoordinator")));
+        // Builds the menu bar the tour's later steps point at, and connects
+        // Help > Take a UI tour
         mudlet::self()->init();
 
         mudlet::self()->show();
@@ -143,7 +193,10 @@ private slots:
 
     void cleanup()
     {
-        delete mpTour.data();
+        // Every tour, not just mpTour: a case that fails before taking hold of
+        // the tour the Help menu opened would otherwise leave it covering the
+        // window for the next case
+        qDeleteAll(mudlet::self()->findChildren<TUiTour*>(Qt::FindDirectChildrenOnly));
         delete mpBehindOverlay;
         mpBehindOverlay = nullptr;
     }
@@ -297,41 +350,60 @@ private slots:
 
     void test_theHelpMenuActionOpensATourEveryTime()
     {
-        closeTheTourInitOpened();
-
-        mudlet::self()->dactionUiTour->trigger();
-        QTRY_VERIFY2(openTour(), "Help > Take a UI tour opened no tour");
-        QPointer<TUiTour> firstTour = openTour();
+        QVERIFY2(openTheTourFromTheHelpMenu(), "Help > Take a UI tour opened no tour");
+        QVERIFY2(!backButton()->isEnabled(), "Help > Take a UI tour did not open on the welcome step");
+        QPointer<TUiTour> firstTour = mpTour;
         QTest::keyClick(firstTour, Qt::Key_Escape);
-        QVERIFY(!firstTour->isVisible());
+        QVERIFY2(!firstTour->isVisible(), "Escape did not close the tour the Help menu opened");
         QTRY_VERIFY2(firstTour.isNull(), "the closed tour was never deleted");
 
         mudlet::self()->dactionUiTour->trigger();
-        QTRY_VERIFY2(openTour(), "Help > Take a UI tour opened nothing the second time");
         mpTour = openTour();
+        QVERIFY2(mpTour, "Help > Take a UI tour opened nothing the second time");
     }
 
-    // Through the window rather than straight to a widget, so the keys take the
-    // route a real key press does and the tour's application-wide filter has to
-    // pick them out
+    void test_theHelpMenuActionBringsBackTheOpenTourRatherThanOpeningAnother()
+    {
+        QVERIFY2(openTheTourFromTheHelpMenu(), "Help > Take a UI tour opened no tour");
+        mpBehindOverlay->setFocus();
+        QCOMPARE(QApplication::focusWidget(), mpBehindOverlay);
+
+        mudlet::self()->dactionUiTour->trigger();
+
+        QCOMPARE(openTourCount(), 1);
+        QVERIFY2(tourHasTheFocus(), "Help > Take a UI tour left the focus on a widget the open tour covers");
+    }
+
     void test_theRightArrowAloneTakesTheTourToItsEnd()
     {
-        closeTheTourInitOpened();
-        mudlet::self()->dactionUiTour->trigger();
-        QTRY_VERIFY2(openTour(), "Help > Take a UI tour opened no tour");
-        mpTour = openTour();
+        QVERIFY2(openTheTourFromTheHelpMenu(), "Help > Take a UI tour opened no tour");
         QSignalSpy finished(mpTour.data(), &TUiTour::signal_tourFinished);
 
-        int presses = 0;
-        while (mpTour && mpTour->isVisible() && presses < 100) {
-            QTest::keyClick(mudlet::self()->windowHandle(), Qt::Key_Right);
-            ++presses;
-        }
-
-        QVERIFY2(presses > 1, "the tour closed on the first key press rather than stepping through");
-        QVERIFY2(!mpTour || !mpTour->isVisible(), "the right arrow key did not take the tour to its end");
+        // No profile is loaded yet, so the game window and input line steps
+        // have nothing to point at and are passed over
+        QCOMPARE(stepsShownPressingOnlyTheRightArrow(), (QStringList{qsl("1 of 6"), qsl("4 of 6"), qsl("5 of 6"), qsl("6 of 6")}));
         QCOMPARE(finished.count(), 1);
         QTRY_VERIFY2(!openTour(), "a tour was still open after the last step");
+    }
+
+    // Last, as the profile it loads stays for the rest of the run
+    void test_withAProfileTheTourVisitsEveryStepAndTellsTheProfileItFinished()
+    {
+        mudlet::self()->setStorePasswordsSecurely(false);
+        const QString profileName = qsl("UiTourKeyboard-Test");
+        QVERIFY2(HostManager::self()->addHost(profileName, QString(), QString(), QString()), "failed to put a profile in the pool");
+        Host* pHost = HostManager::self()->getHost(profileName);
+        QVERIFY(pHost);
+        mudlet::self()->addConsoleForNewHost(pHost);
+        mudlet::self()->activateProfile(pHost);
+        QCOMPARE(mudlet::self()->getActiveHost(), pHost);
+        auto* pLua = pHost->getLuaInterpreter();
+        QVERIFY(pLua->compileAndExecuteScript(qsl("mudlet = mudlet or {} mudlet.uiTourPending = true")));
+        QVERIFY2(openTheTourFromTheHelpMenu(), "Help > Take a UI tour opened no tour");
+
+        QCOMPARE(stepsShownPressingOnlyTheRightArrow(), (QStringList{qsl("1 of 6"), qsl("2 of 6"), qsl("3 of 6"), qsl("4 of 6"), qsl("5 of 6"), qsl("6 of 6")}));
+        QVERIFY2(!openTour(), "the right arrow key did not take the tour to its end");
+        QVERIFY2(pLua->compileAndExecuteScript(qsl("assert(mudlet.uiTourPending == false)")), "finishing the tour did not tell the profile");
     }
 };
 
