@@ -131,13 +131,9 @@ private:
 
     static QMap<QString, QString> expectedRoom1UserData() { return {{qsl("quest.stage 日本語"), qsl("величина <>&\"' ]]>")}, {qsl("plain"), qsl("value")}}; }
 
-    static QMap<QString, QString> expectedRoom2UserData()
-    {
-        // The border presentation properties travel inside userData (see
-        // TMap::serialize()/TRoom::restore()) so they are part of the
-        // expected representation on both sides of the round trip:
-        return {{qsl("note"), qsl("second <room> & 'data'")}, {ROOM_UI_BORDERCOLOR, scmBorderColor.name(QColor::HexArgb)}, {ROOM_UI_BORDERTHICKNESS, qsl("4")}};
-    }
+    // The border properties travel in the file's copy of the user data (see
+    // TMap::serialize()/TRoom::restore()), never in the live room's:
+    static QMap<QString, QString> expectedRoom2UserData() { return {{qsl("note"), qsl("second <room> & 'data'")}}; }
 
     static AreaBounds captureBounds(TArea* pArea)
     {
@@ -466,7 +462,9 @@ private:
         // a symbol color, room 3 is hidden:
         QCOMPARE(mpSource->mpMap->mUserData, expectedMapUserData());
         QCOMPARE(mpSource->mpMap->mpRoomDB->getRoom(scmRoom1)->userData, expectedRoom1UserData());
+        QCOMPARE(mpSource->mpMap->mpRoomDB->getRoom(scmRoom2)->userData, expectedRoom2UserData());
         QVERIFY(mpSource->mpMap->mpRoomDB->getRoom(scmRoom3)->userData.isEmpty());
+        QCOMPARE(mpSource->mpMap->mpRoomDB->getArea(mAreaA)->mUserData, expectedAreaAUserData());
 
         TMap* pTargetMap = mpTarget->mpMap.data();
         pTargetMap->mapClear();

@@ -861,6 +861,10 @@ std::pair<int, QString> TArea::readJsonArea(const QJsonArray& array, const int a
     const QString name{areaObj.value(QLatin1String("name")).toString()};
     gridMode = areaObj.value(QLatin1String("gridMode")).toBool();
     readJsonUserData(areaObj.value(QLatin1String("userData")).toObject());
+    // A file exported after a binary save can have the binary format's fallbacks in the user data
+    if (const QString zoom = mUserData.take(QLatin1String("system.fallback_map2DZoom")); !zoom.isEmpty()) {
+        set2DMapZoom(zoom.toDouble());
+    }
     int roomCount = 0;
     for (int roomIndex = 0, total = areaObj.value(QLatin1String("rooms")).toArray().count(); roomIndex < total; ++roomIndex) {
         TRoom* pR = new TRoom(mpRoomDB);
@@ -885,6 +889,23 @@ std::pair<int, QString> TArea::readJsonArea(const QJsonArray& array, const int a
     if (areaObj.contains(QLatin1String("labels")) && areaObj.value(QLatin1String("labels")).isArray()) {
         readJsonLabels(areaObj);
     }
+    // Those for a label the file does not have are left over from one since deleted,
+    // while for one it has they can be the only copy of its font or outline color
+    const QLatin1String fontPrefix{"system.labelFont_"};
+    const QLatin1String outlineColorPrefix{"system.labelOutlineColor_"};
+    mUserData.removeIf([this, fontPrefix, outlineColorPrefix](QMap<QString, QString>::iterator item) {
+        QStringView labelIdText{item.key()};
+        if (labelIdText.startsWith(fontPrefix)) {
+            labelIdText = labelIdText.sliced(fontPrefix.size());
+        } else if (labelIdText.startsWith(outlineColorPrefix)) {
+            labelIdText = labelIdText.sliced(outlineColorPrefix.size());
+        } else {
+            return false;
+        }
+        bool isNumber = false;
+        const int labelId = labelIdText.toInt(&isNumber);
+        return !isNumber || !mMapLabels.contains(labelId);
+    });
     return {id, name};
 }
 

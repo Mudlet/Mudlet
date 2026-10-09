@@ -1045,16 +1045,7 @@ void TRoom::restore(QDataStream& ifs, int roomID, int version)
         userData.remove(QLatin1String("system.fallback_symbol_color"));
     }
 
-    // Border properties are stored in userData (not binary stream) to avoid map bloat
-    if (userData.contains(ROOM_UI_BORDERCOLOR)) {
-        mBorderColor = QColor(userData.value(ROOM_UI_BORDERCOLOR));
-    }
-    if (userData.contains(ROOM_UI_BORDERTHICKNESS)) {
-        int thickness = userData.value(ROOM_UI_BORDERTHICKNESS).toInt();
-        if (thickness > 0 && thickness <= 10) {
-            mBorderThickness = thickness;
-        }
-    }
+    takeBorderFromUserData();
 
     if (version >= 11) {
         if (version >= 20) {
@@ -1982,6 +1973,14 @@ int TRoom::readJsonRoom(const QJsonArray& array, const int index, const int area
     name = roomObj.value(QLatin1String("name")).toString();
     area = areaId;
     readJsonUserData(roomObj.value(QLatin1String("userData")).toObject());
+    // A file exported after a binary save can have them there too, but where it
+    // has a "border" object, that alone says what the border is
+    if (roomObj.contains(QLatin1String("border"))) {
+        userData.remove(ROOM_UI_BORDERCOLOR);
+        userData.remove(ROOM_UI_BORDERTHICKNESS);
+    } else {
+        takeBorderFromUserData();
+    }
 
     const QJsonArray coordinatesArray = roomObj.value(QLatin1String("coordinates")).toArray();
     mX = coordinatesArray.at(0).toInt();
@@ -2643,6 +2642,20 @@ void TRoom::writeJsonBorder(QJsonObject& roomObj) const
     if (!borderObj.isEmpty()) {
         const QJsonValue borderValue{borderObj};
         roomObj.insert(QLatin1String("border"), borderValue);
+    }
+}
+
+// Border properties are stored in userData (not binary stream) to avoid map bloat
+void TRoom::takeBorderFromUserData()
+{
+    if (userData.contains(ROOM_UI_BORDERCOLOR)) {
+        mBorderColor = QColor(userData.take(ROOM_UI_BORDERCOLOR));
+    }
+    if (userData.contains(ROOM_UI_BORDERTHICKNESS)) {
+        int thickness = userData.take(ROOM_UI_BORDERTHICKNESS).toInt();
+        if (thickness > 0 && thickness <= 10) {
+            mBorderThickness = thickness;
+        }
     }
 }
 
