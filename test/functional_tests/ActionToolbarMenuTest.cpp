@@ -449,6 +449,33 @@ private slots:
         QVERIFY2(host->mLuaInterpreter.compileAndExecuteScript(qsl("assert(qaCommandSent == 0)")), "restoring the button on load sent its command");
     }
 
+    // The same for a push-down entry in a button's menu, which the button bar
+    // restores separately while it fills the menu
+    void test_aPushDownMenuEntryRestoredDownOnLoadRunsItsScriptWithoutSendingItsCommand()
+    {
+        startProfile(mpHostname, mpLocalhost, mpPort);
+        auto* host = mudlet::self()->getActiveHost();
+        QVERIFY2(host, "No active host available for the test.");
+
+        buildNestedGroup(host, 0);
+        auto* entry = actionNamed(host, qsl("menuTestEntry"));
+        QVERIFY(entry);
+        entry->setIsPushDownButton(true);
+        entry->mButtonState = true;
+        entry->setCommandButtonDown(qsl("QA_MENU_ENTRY_DOWN_COMMAND"));
+        QVERIFY(entry->setScript(qsl("qaMenuEntryRan = (qaMenuEntryRan or 0) + 1")));
+
+        QVERIFY(host->mLuaInterpreter.compileAndExecuteScript(qsl("qaMenuEntryRan = nil; qaMenuCommandSent = 0; "
+                                                                  "tempAlias([[^QA_MENU_ENTRY_DOWN_COMMAND$]], [[qaMenuCommandSent = qaMenuCommandSent + 1]])")));
+
+        host->mIsProfileLoadingSequence = true;
+        host->getActionUnit()->updateAllToolbars();
+        host->mIsProfileLoadingSequence = false;
+
+        QVERIFY2(host->mLuaInterpreter.compileAndExecuteScript(qsl("assert(qaMenuEntryRan == 1)")), "restoring the menu entry on load did not run its script once");
+        QVERIFY2(host->mLuaInterpreter.compileAndExecuteScript(qsl("assert(qaMenuCommandSent == 0)")), "restoring the menu entry on load sent its command");
+    }
+
     void cleanup()
     {
         if (auto* self = mudlet::self()) {
