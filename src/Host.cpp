@@ -5290,7 +5290,7 @@ bool Host::replaceWindowText(const QString& name, const QString& text)
 std::pair<bool, QString> Host::openWindow(const QString& name, bool loadLayout, bool autoDock, const QString& area)
 {
     if (!mpConsole) {
-        return {false, QString()};
+        return {false, qsl("the profile has no main window")};
     }
 
     if (name.isEmpty()) {
@@ -5329,7 +5329,7 @@ bool Host::parentWindowMissing(const QString& windowname) const
 std::pair<bool, QString> Host::createMiniConsole(const QString& windowname, const QString& name, int x, int y, int width, int height)
 {
     if (!mpConsole) {
-        return {false, QString()};
+        return {false, qsl("the profile has no main window")};
     }
 
     if (parentWindowMissing(windowname)) {
@@ -5355,7 +5355,7 @@ std::pair<bool, QString> Host::createMiniConsole(const QString& windowname, cons
 std::pair<bool, QString> Host::createScrollBox(const QString& windowname, const QString& name, int x, int y, int width, int height) const
 {
     if (!mpConsole) {
-        return {false, QString()};
+        return {false, qsl("the profile has no main window")};
     }
 
     if (parentWindowMissing(windowname)) {
@@ -5377,7 +5377,7 @@ std::pair<bool, QString> Host::createScrollBox(const QString& windowname, const 
 std::pair<bool, QString> Host::createLabel(const QString& windowname, const QString& name, int x, int y, int width, int height, bool fillBg, bool clickthrough)
 {
     if (!mpConsole) {
-        return {false, QString()};
+        return {false, qsl("the profile has no main window")};
     }
 
     if (parentWindowMissing(windowname)) {
@@ -5580,7 +5580,7 @@ bool Host::moveWindow(const QString& name, int x1, int y1)
 std::pair<bool, QString> Host::setWindow(const QString& windowname, const QString& name, int x1, int y1, bool show)
 {
     if (!mpConsole) {
-        return {false, QString()};
+        return {false, qsl("the profile has no main window")};
     }
     //checks - for reasons why the indicated thing might not be moved to the indicated destination
     if (mWindowRegistry.hasDockWidget(name)) {
@@ -5820,7 +5820,7 @@ bool Host::setLabelOnLeave(const QString& name, const int func)
 std::pair<bool, QString> Host::setMovie(const QString& name, const QString& moviePath)
 {
     if (!mpConsole) {
-        return {false, QString()};
+        return {false, qsl("the profile has no main window")};
     }
 
     if (!mWindowRegistry.hasLabel(name)) {
