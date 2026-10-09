@@ -198,6 +198,13 @@ private slots:
         }
         pool.recordLine(false, 10'000'000);
         QCOMPARE(pool.report().sampledNanoseconds, qint64{8 * 10'000 + 40'000});
+
+        // Before there is an average to compare with as well: the first few are capped by their median
+        pool.recordLine(true, 10'000'000);
+        for (int i = 0; i < 7; ++i) {
+            pool.recordLine(true, 10'000);
+        }
+        QCOMPARE(pool.report().pooledNanoseconds, qint64{40'000 + 7 * 10'000});
         pool.configure(original);
     }
 

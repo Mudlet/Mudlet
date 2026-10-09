@@ -529,7 +529,8 @@ describe("trigger matching under a flood", function()
         if os.getenv("MUDLET_MATCH_SAMPLE_EVERY") == "0" then
             assert.are.equal(before.sampledLines, after.sampledLines, "a line was sampled although sampling is off")
         elseif os.getenv("MUDLET_MATCH_SAMPLE_EVERY") == nil then
-            assert.is_true(after.sampledLines - before.sampledLines >= 2,
+            -- a gap between samples is at most twice the period of 32
+            assert.is_true(after.sampledLines - before.sampledLines >= 1,
                            "a burst of 100 lines should sample about one in 32, but sampled " .. (after.sampledLines - before.sampledLines))
             assert.is_true(after.sampledMicroseconds > 0)
         end

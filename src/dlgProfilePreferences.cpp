@@ -1290,28 +1290,24 @@ void dlgProfilePreferences::retranslateTriggerMatchPoolControls()
 // App-wide like the pool, so read from Mudlet.ini with or without a profile
 void dlgProfilePreferences::populateTriggerMatchPoolSettings()
 {
-    const QSettings* settings = MudletApp::getQSettings();
-    const TriggerMatchPool::Settings defaults;
-    const int threads = settings->value(qsl("triggerMatchThreads"), defaults.threads).toInt();
+    // Validated as the pool validates them, so a field shows the value the pool would use
+    const TriggerMatchPool::Settings saved = TriggerMatchPool::savedSettings();
+    const bool enabled = saved.threads >= 2;
     {
         const QSignalBlocker blocker(mpCheckBox_triggerMatchPool);
-        mpCheckBox_triggerMatchPool->setChecked(threads >= 2);
+        mpCheckBox_triggerMatchPool->setChecked(enabled);
     }
-    enableTriggerMatchPoolTuning(threads >= 2);
+    enableTriggerMatchPoolTuning(enabled);
     // One core leaves no other thread to share the matching with
-    mpCheckBox_triggerMatchPool->setEnabled(QThread::idealThreadCount() >= 2 || threads >= 2);
-    const auto load = [settings](QSpinBox* pSpinBox, const QString& key, const int fallback) {
+    mpCheckBox_triggerMatchPool->setEnabled(QThread::idealThreadCount() >= 2 || enabled);
+    for (const auto& [pSpinBox, value] : std::initializer_list<std::pair<QSpinBox*, int>>{{mpSpinBox_triggerMatchThreads, enabled ? saved.threads : TriggerMatchPool::automaticThreads()},
+                                                                                          {mpSpinBox_triggerMatchThreshold, saved.threshold},
+                                                                                          {mpSpinBox_triggerMatchMissesPerMatch, saved.missesPerMatch},
+                                                                                          {mpSpinBox_triggerMatchFloodLines, saved.floodChunkLines},
+                                                                                          {mpSpinBox_triggerMatchSpin, saved.spinMicroseconds}}) {
         const QSignalBlocker spinBlocker(pSpinBox);
-        pSpinBox->setValue(settings->value(key, fallback).toInt());
-    };
-    {
-        const QSignalBlocker spinBlocker(mpSpinBox_triggerMatchThreads);
-        mpSpinBox_triggerMatchThreads->setValue(threads >= 2 ? threads : TriggerMatchPool::automaticThreads());
+        pSpinBox->setValue(value);
     }
-    load(mpSpinBox_triggerMatchThreshold, qsl("triggerMatchThreshold"), defaults.threshold);
-    load(mpSpinBox_triggerMatchMissesPerMatch, qsl("triggerMatchMissesPerMatch"), defaults.missesPerMatch);
-    load(mpSpinBox_triggerMatchFloodLines, qsl("triggerMatchFloodLines"), defaults.floodChunkLines);
-    load(mpSpinBox_triggerMatchSpin, qsl("triggerMatchSpinMicroseconds"), defaults.spinMicroseconds);
 }
 
 void dlgProfilePreferences::applyTriggerMatchPoolSettings()

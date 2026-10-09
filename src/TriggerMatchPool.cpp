@@ -24,6 +24,7 @@
 #include "utils.h"
 
 #include <QDebug>
+#include <QRandomGenerator>
 #include <QSettings>
 #include <QThread>
 
@@ -105,7 +106,7 @@ int searchesOf(const uint64_t done)
 // is refused out loud: a typo that quietly measured the default is the worst outcome for a tuning knob.
 int knobOr(const char* envName, const QString& iniKey, const int fallback, const int minimum)
 {
-    if (qEnvironmentVariableIsSet(envName)) {
+    if (envName && qEnvironmentVariableIsSet(envName)) {
         bool parsed = false;
         const int value = qEnvironmentVariableIntValue(envName, &parsed);
         if (!parsed || value < minimum) {
@@ -144,22 +145,35 @@ void TriggerMatchPool::shutdown()
     }
 }
 
-TriggerMatchPool::Settings TriggerMatchPool::settingsFromConfig()
+TriggerMatchPool::Settings TriggerMatchPool::readSettings(const bool withEnvironment)
 {
+    const auto env = [withEnvironment](const char* name) {
+        return withEnvironment ? name : nullptr;
+    };
     const Settings defaults;
     Settings settings;
-    settings.threads = knobOr("MUDLET_MATCH_THREADS", qsl("triggerMatchThreads"), defaults.threads, 0);
+    settings.threads = knobOr(env("MUDLET_MATCH_THREADS"), qsl("triggerMatchThreads"), defaults.threads, 0);
     // Two-thread break-even on a Release build, measured on lines where every regex search failed: below it
     // the fork-join costs the main thread as much as it hands away, while the helper spins a core for nothing.
-    settings.threshold = knobOr("MUDLET_MATCH_THRESHOLD", qsl("triggerMatchThreshold"), defaults.threshold, 1);
-    settings.floodChunkLines = knobOr("MUDLET_MATCH_FLOOD_LINES", qsl("triggerMatchFloodLines"), defaults.floodChunkLines, 1);
+    settings.threshold = knobOr(env("MUDLET_MATCH_THRESHOLD"), qsl("triggerMatchThreshold"), defaults.threshold, 1);
+    settings.floodChunkLines = knobOr(env("MUDLET_MATCH_FLOOD_LINES"), qsl("triggerMatchFloodLines"), defaults.floodChunkLines, 1);
     // About 1.4 measured on a 4-core Linux machine, rounded up so a line near the break-even stays on the
     // main thread
-    settings.missesPerMatch = knobOr("MUDLET_MATCH_MISSES_PER_MATCH", qsl("triggerMatchMissesPerMatch"), defaults.missesPerMatch, 0);
+    settings.missesPerMatch = knobOr(env("MUDLET_MATCH_MISSES_PER_MATCH"), qsl("triggerMatchMissesPerMatch"), defaults.missesPerMatch, 0);
     // Zero parks a helper as soon as a batch is exhausted, putting a wake-up under every line of a burst
-    settings.spinMicroseconds = knobOr("MUDLET_MATCH_SPIN_US", qsl("triggerMatchSpinMicroseconds"), defaults.spinMicroseconds, 0);
-    settings.sampleEvery = knobOr("MUDLET_MATCH_SAMPLE_EVERY", qsl("triggerMatchSampleEvery"), defaults.sampleEvery, 0);
+    settings.spinMicroseconds = knobOr(env("MUDLET_MATCH_SPIN_US"), qsl("triggerMatchSpinMicroseconds"), defaults.spinMicroseconds, 0);
+    settings.sampleEvery = knobOr(env("MUDLET_MATCH_SAMPLE_EVERY"), qsl("triggerMatchSampleEvery"), defaults.sampleEvery, 0);
     return settings;
+}
+
+TriggerMatchPool::Settings TriggerMatchPool::settingsFromConfig()
+{
+    return readSettings(true);
+}
+
+TriggerMatchPool::Settings TriggerMatchPool::savedSettings()
+{
+    return readSettings(false);
 }
 
 int TriggerMatchPool::automaticThreads()
@@ -192,7 +206,7 @@ void TriggerMatchPool::configure(const Settings& settings)
     mMissesPerMatch = settings.missesPerMatch;
     mSpinBudget = std::chrono::microseconds(settings.spinMicroseconds);
     mReport = Report();
-    mLinesUntilSample = settings.sampleEvery;
+    mLinesUntilSample = nextSampleGap();
     startHelpers(std::min(settings.threads, std::max(1, QThread::idealThreadCount())));
 }
 
@@ -260,27 +274,47 @@ qint64 TriggerMatchPool::Report::savedNanoseconds() const
     return (averageSampledNanoseconds() - averagePooledNanoseconds()) * static_cast<qint64>(pooledLines);
 }
 
+// Between 1 and twice the period, averaging the period: output that repeats on a fixed cycle would
+// otherwise put the same kind of line in every sample
+int TriggerMatchPool::nextSampleGap() const
+{
+    return mSettings.sampleEvery ? static_cast<int>(QRandomGenerator::global()->bounded(1, 2 * mSettings.sampleEvery)) : 0;
+}
+
 bool TriggerMatchPool::takeSample()
 {
     if (mSettings.sampleEvery == 0 || --mLinesUntilSample > 0) {
         return false;
     }
-    mLinesUntilSample = mSettings.sampleEvery;
+    mLinesUntilSample = nextSampleGap();
     return true;
 }
 
+// The time includes the scripts the line fired, so one garbage collection or slow script would otherwise
+// decide the verdict on its own, above all on the few sampled lines. Each line counts for at most four times
+// the typical line of its kind: the median of the first few, then the running average.
 void TriggerMatchPool::recordLine(const bool pooled, const qint64 nanoseconds)
 {
     quint64& lines = pooled ? mReport.pooledLines : mReport.sampledLines;
     qint64& total = pooled ? mReport.pooledNanoseconds : mReport.sampledNanoseconds;
-    // The time includes the scripts the line fired, so a garbage collection or a slow script on one of
-    // the few sampled lines would otherwise decide the verdict on its own
-    qint64 counted = nanoseconds;
-    if (lines >= 8) {
-        counted = std::min(counted, 4 * (total / static_cast<qint64>(lines)));
+    std::array<qint64, scmWarmUpLines>& warmUp = pooled ? mPooledWarmUp : mSampledWarmUp;
+    if (lines < scmWarmUpLines) {
+        warmUp[lines] = nanoseconds;
+        ++lines;
+        total += nanoseconds;
+        if (lines == scmWarmUpLines) {
+            std::array<qint64, scmWarmUpLines> sorted = warmUp;
+            std::nth_element(sorted.begin(), sorted.begin() + scmWarmUpLines / 2, sorted.end());
+            const qint64 cap = 4 * sorted[scmWarmUpLines / 2];
+            total = 0;
+            for (const qint64 value : warmUp) {
+                total += std::min(value, cap);
+            }
+        }
+        return;
     }
+    total += std::min(nanoseconds, 4 * (total / static_cast<qint64>(lines)));
     ++lines;
-    total += counted;
 }
 
 TriggerMatchPool::~TriggerMatchPool()

@@ -20,6 +20,7 @@
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
 
+#include <array>
 #include <atomic>
 #include <chrono>
 #include <cstddef>
@@ -81,7 +82,10 @@ public:
     };
 
     static TriggerMatchPool& instance();
+    // What Mudlet.ini and the environment ask for; the environment beats the file
     static Settings settingsFromConfig();
+    // What Mudlet.ini asks for, as the settings dialog shows it
+    static Settings savedSettings();
     // The thread count offered when the pool is switched on: past four the fork-join tail grows faster
     // than each thread's share of work shrinks
     static int automaticThreads();
@@ -138,6 +142,8 @@ private:
     ~TriggerMatchPool();
 
     void publish(int chunkCount);
+    static Settings readSettings(bool withEnvironment);
+    int nextSampleGap() const;
     void startHelpers(int wanted);
     void stopHelpers();
     void workerLoop(int slot, uint32_t seen);
@@ -187,6 +193,9 @@ private:
     int mMissesPerMatch = 0;
     Settings mSettings;
     Report mReport;
+    static constexpr quint64 scmWarmUpLines = 8;
+    std::array<qint64, scmWarmUpLines> mPooledWarmUp{};
+    std::array<qint64, scmWarmUpLines> mSampledWarmUp{};
     int mLinesUntilSample = 0;
     bool mShutDown = false;
     bool mSettingsApplied = false;

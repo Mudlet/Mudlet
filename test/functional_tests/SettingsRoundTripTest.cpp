@@ -1071,6 +1071,8 @@ private slots:
         QVERIFY2(pool.workerCount() == 0, "the pool should be off until the player switches it on");
 
         settings->setValue(qsl("triggerMatchThreshold"), 77);
+        // Below its minimum, so the pool uses the default and the dialog has to show that
+        settings->setValue(qsl("triggerMatchFloodLines"), 0);
         openPreferences();
         auto* pEnable = mpPreferences->findChild<QCheckBox*>(qsl("checkBox_triggerMatchPool"));
         auto* pThreads = mpPreferences->findChild<QSpinBox*>(qsl("spinBox_triggerMatchThreads"));
@@ -1085,6 +1087,7 @@ private slots:
         QCOMPARE(pThreads->value(), TriggerMatchPool::automaticThreads());
         const TriggerMatchPool::Settings defaults;
         QCOMPARE(pMissesPerMatch->value(), defaults.missesPerMatch);
+        QCOMPARE(pFloodLines->value(), defaults.floodChunkLines);
 
         QSignalSpy applySpy(mpPreferences, &dlgProfilePreferences::signal_preferencesSaved);
         pEnable->setChecked(true);
@@ -1093,9 +1096,11 @@ private slots:
         QCOMPARE(settings->value(qsl("triggerMatchThreads")).toInt(), TriggerMatchPool::automaticThreads());
         QCOMPARE(pool.workerCount(), TriggerMatchPool::automaticThreads());
         QCOMPARE(pool.threshold(), 77);
-        for (const auto& key : {qsl("triggerMatchMissesPerMatch"), qsl("triggerMatchFloodLines"), qsl("triggerMatchSpinMicroseconds")}) {
+        for (const auto& key : {qsl("triggerMatchMissesPerMatch"), qsl("triggerMatchSpinMicroseconds")}) {
             QVERIFY2(!settings->contains(key), qPrintable(qsl("%1 was written although the player never changed it").arg(key)));
         }
+        QCOMPARE(settings->value(qsl("triggerMatchFloodLines")).toInt(), 0);
+        QCOMPARE(pool.floodChunkLines(), defaults.floodChunkLines);
 
         applySpy.clear();
         pThreshold->setValue(64);
