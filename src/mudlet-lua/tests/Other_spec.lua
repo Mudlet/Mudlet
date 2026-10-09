@@ -2329,6 +2329,138 @@ describe("Tests the timer API", function()
       assert.has_error(function() tempTimer(0.1, [[]], "w2aNotABoolean") end)
     end)
 
+    -- Nothing in Lua can turn on echoing Lua errors to the main console, so this
+    -- loads a profile that has it on and reads that profile's console back
+    it("runs nothing and reports nothing for a timer with no code", function()
+      if not os.getenv("MUDLET_TEST_MODE") then
+        pending("waiting for the other profile needs pumpEvents(), which is refused outside MUDLET_TEST_MODE")
+        return
+      end
+      local name = "mudlet-spec-empty-code-timer"
+      local directory = getMudletHomeDir():match("^(.*)[/\\]") .. "/" .. name
+      local marker = directory .. "/mudlet-spec-fixture"
+      local function removeTree(path)
+        if lfs.attributes(path, "mode") ~= "directory" then
+          os.remove(path)
+          return
+        end
+        for entry in lfs.dir(path) do
+          if entry ~= "." and entry ~= ".." then
+            removeTree(path .. "/" .. entry)
+          end
+        end
+        lfs.rmdir(path)
+      end
+      -- the marker goes last, so a fixture that could not be fully deleted is
+      -- still known to be this spec's and the next run can finish the job
+      local function removeFixture()
+        for entry in lfs.dir(directory) do
+          if entry ~= "." and entry ~= ".." and entry ~= "mudlet-spec-fixture" then
+            removeTree(directory .. "/" .. entry)
+          end
+        end
+        local remaining = 0
+        for _ in lfs.dir(directory) do
+          remaining = remaining + 1
+        end
+        if remaining == 3 then
+          os.remove(marker)
+          lfs.rmdir(directory)
+        end
+      end
+      local function loaded()
+        local entry = getProfiles()[name]
+        return entry ~= nil and entry.loaded
+      end
+      if lfs.attributes(marker) then
+        removeFixture()
+      end
+      assert.is_nil(lfs.attributes(marker), "could not delete this spec's leftover profile at " .. directory)
+      assert.is_nil(lfs.attributes(directory), "a profile named " .. name .. " already exists and is not this spec's to delete")
+      -- closing a profile saves the shared window layout beside the profiles
+      -- directory, which the next Mudlet start reads, so put it back afterwards
+      local configurationDirectory = directory:match("^(.*)[/\\]profiles[/\\]")
+      local layoutFiles = {
+        configurationDirectory .. "/windowLayout.dat",
+        configurationDirectory .. "/windowLayoutGeometry.dat",
+      }
+      local layoutBefore = {}
+      for _, path in ipairs(layoutFiles) do
+        local handle = io.open(path, "rb")
+        if handle then
+          layoutBefore[path] = handle:read("*a")
+          handle:close()
+        end
+      end
+      local consoleText
+      local handler = registerAnonymousEventHandler("mudletSpecEmptyTimerConsole", function(_, text)
+        consoleText = text
+      end)
+      finally(function()
+        killAnonymousEventHandler(handler)
+        if loaded() then
+          closeProfile(name)
+        end
+        for _ = 1, 100 do
+          if not loaded() then
+            break
+          end
+          pumpEvents(50)
+        end
+        if lfs.attributes(marker) then
+          removeFixture()
+        end
+        for _, path in ipairs(layoutFiles) do
+          if layoutBefore[path] then
+            local handle = assert(io.open(path, "wb"))
+            handle:write(layoutBefore[path])
+            handle:close()
+          else
+            os.remove(path)
+          end
+        end
+      end)
+      assert(lfs.mkdir(directory), "could not create " .. directory)
+      assert(io.open(marker, "w"), "could not create " .. marker):close()
+      assert(lfs.mkdir(directory .. "/current"), "could not create " .. directory .. "/current")
+      -- the raising timer shows that this profile does put Lua errors on its console
+      local script = [[
+tempTimer(0.05, "", true)
+tempTimer(0.05, "")
+tempTimer(0.1, function() error("mudletSpecEmptyTimer" .. "Control") end)
+tempTimer(0.5, function() raiseGlobalEvent("mudletSpecEmptyTimerConsole", table.concat(getLines("main", 0, getLastLineNumber("main") + 1), "\n")) end)]]
+      local file = assert(io.open(directory .. "/current/2026-01-01#00-00-00.xml", "w"))
+      file:write([[<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE MudletPackage>
+<MudletPackage version="1.001">
+  <HostPackage><Host mEchoLuaErrors="yes"></Host></HostPackage>
+  <ScriptPackage>
+    <Script isActive="yes" isFolder="no">
+      <name>mudlet-spec-empty-code-timer</name>
+      <packageName></packageName>
+      <script>]] .. script .. [[</script>
+      <eventHandlerList />
+    </Script>
+  </ScriptPackage>
+</MudletPackage>
+]])
+      file:close()
+
+      assert.is_true(loadProfile(name, true))
+      for _ = 1, 100 do
+        if consoleText then
+          break
+        end
+        pumpEvents(50)
+      end
+
+      assert.is_string(consoleText, "the other profile never reported its console")
+      assert.is_truthy(consoleText:find("mudletSpecEmptyTimerControl", 1, true), "the other profile did not show its Lua errors, so this spec cannot see one: " .. consoleText)
+      -- word wrap breaks a long error line across console lines
+      local unwrapped = consoleText:gsub("\n", "")
+      assert.is_falsy(unwrapped:find("func reference not found", 1, true), "a timer with no code tried to call a Lua function: " .. consoleText)
+    end)
+
     it("repeats until killed when the repeating argument is true", function()
       local id = trackTemp(tempTimer(0.02, [[
         _G.W2aTimerSpec.fired = _G.W2aTimerSpec.fired + 1
