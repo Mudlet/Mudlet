@@ -1004,17 +1004,98 @@ describe("Tests a character whose bytes are split by the posting timeout", funct
     assert.same({"", ":end"}, perLine)
   end)
 
+  -- The non-empty lines from mark on, read while the game may still be part
+  -- way through one
+  local function shownSince(mark)
+    local seen = {}
+    for _, line in ipairs(getLines("main", mark, getLastLineNumber("main") + 1)) do
+      if line ~= "" then
+        seen[#seen + 1] = line
+      end
+    end
+    return seen
+  end
+
   it("commits the text ahead of an operating system command the marker lands inside", function()
     if timerUnavailable() then return end
     using("UTF-8")
 
     -- A prompt followed by a title the game has not finished sending: the
-    -- marker has to show the prompt, as it does ahead of a split colour
-    -- sequence, rather than leave it waiting on the rest - see issue #10897
-    local text, lines, perLine = splitAcrossTimeout("HP:100 > \27]0;title", "\27\\")
-    assert.equals("HP:100 > :end", text)
-    assert.equals(2, lines)
-    assert.same({"HP:100 > ", ":end"}, perLine)
+    -- marker has to show the prompt during the pause, as it does ahead of a
+    -- split colour sequence - see issue #10897
+    local mark = getLastLineNumber("main")
+    feed("split:HP:100 > \27]0;title")
+    beQuiet()
+    -- read now, but asserted once the sequence is over, so a failure does not
+    -- leave it open for the cases after this one
+    local duringPause = shownSince(mark)
+    feed("\27\\:end\n")
+    beQuiet()
+    assert.same({"split:HP:100 > "}, duringPause, "the prompt was not shown during the pause")
+    assert.same({"split:HP:100 > ", ":end"}, shownSince(mark))
+  end)
+
+  it("commits the text ahead of an operating system command that reaches the length cap at the marker", function()
+    if timerUnavailable() then return end
+    using("UTF-8")
+
+    -- "0;", the filler and the marker come to MAX_OSC_SEQUENCE_LENGTH (4096)
+    -- bytes: the marker is not payload, so this one is under the cap
+    local mark = getLastLineNumber("main")
+    feed("split:HP:100 > \27]0;" .. string.rep("a", 4093))
+    beQuiet()
+    local duringPause = shownSince(mark)
+    feed("\27\\:end\n")
+    beQuiet()
+    assert.same({"split:HP:100 > "}, duringPause, "the prompt was not shown during the pause")
+    assert.same({"split:HP:100 > ", ":end"}, shownSince(mark))
+  end)
+
+  -- A link written concealed shows whether its settings were decoded: only a
+  -- whole OSC 8 payload carries them, and only a link that opens and closes on
+  -- one line is given them (TBuffer::finaliseActiveHyperlink())
+  local concealedLink = "\27]8;;send:look?config={\"visibility\":{\"action\":\"reveal\",\"delay\":3000}}"
+
+  it("keeps the rest of an operating system command it commits the text ahead of", function()
+    if timerUnavailable() then return end
+    using("UTF-8")
+
+    local mark = getLastLineNumber("main")
+    local opening = concealedLink .. "\27\\"
+    feed("split:" .. opening:sub(1, 30))
+    beQuiet()
+    feed(opening:sub(31) .. "LOOK\27]8;;\27\\\n")
+    beQuiet()
+    assert.same({"split:", "    "}, shownSince(mark))
+  end)
+
+  it("does not split a link at a marker that lands in its closing sequence", function()
+    if timerUnavailable() then return end
+    using("UTF-8")
+
+    local mark = getLastLineNumber("main")
+    feed("split:" .. concealedLink .. "\27\\LOOK\27]8;;")
+    beQuiet()
+    feed("\27\\\n")
+    beQuiet()
+    assert.same({"split:    "}, shownSince(mark))
+  end)
+
+  it("adds no blank line for a marker with no text ahead of a sequence", function()
+    if timerUnavailable() then return end
+    using("UTF-8")
+    local behaviour = getConfig("blankLinesBehaviour")
+    finally(function() setConfig("blankLinesBehaviour", behaviour) end)
+    setConfig("blankLinesBehaviour", "replacewithspace")
+
+    for _, pieces in ipairs({{"\27]0;ti", "tle\27\\"}, {"\27[3", "1m"}}) do
+      local mark = getLastLineNumber("main")
+      feed(pieces[1])
+      beQuiet()
+      feed(pieces[2] .. "Room\n")
+      beQuiet()
+      assert.equals("Room", getLines("main", mark, mark + 1)[1], "after " .. pieces[1]:sub(2))
+    end
   end)
 
   it("spends a held character set designation on the byte after the pause", function()

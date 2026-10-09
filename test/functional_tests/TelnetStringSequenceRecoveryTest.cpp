@@ -104,8 +104,8 @@ private:
     QString joinedBuffer() const
     {
         QStringList lines;
-        for (int i = 0; i <= mpHost->mpConsole->buffer.getLastLineNumber(); ++i) {
-            lines << mpHost->mpConsole->buffer.line(i);
+        for (int i = 0; i <= mpHost->mainConsoleView()->buffer.getLastLineNumber(); ++i) {
+            lines << mpHost->mainConsoleView()->buffer.line(i);
         }
         return lines.join(QChar::LineFeed);
     }
@@ -142,7 +142,7 @@ private:
                     return mpHost->mTelnet.getConnectionState() == QAbstractSocket::UnconnectedState;
                 },
                 5s);
-        mpHost->mpConsole->buffer.clear();
+        mpHost->mainConsoleView()->buffer.clear();
         QSignalSpy connectedSpy(&(mpHost->mTelnet), &cTelnet::signal_connected);
         mpHost->mTelnet.connectIt(mLocalhost, mPort.toInt());
         const bool reconnected = connectedSpy.wait(5s);
@@ -153,8 +153,8 @@ private:
 
     bool bufferHasLine(const QString& text) const
     {
-        for (int i = 0; i <= mpHost->mpConsole->buffer.getLastLineNumber(); ++i) {
-            if (mpHost->mpConsole->buffer.line(i) == text) {
+        for (int i = 0; i <= mpHost->mainConsoleView()->buffer.getLastLineNumber(); ++i) {
+            if (mpHost->mainConsoleView()->buffer.line(i) == text) {
                 return true;
             }
         }
@@ -210,9 +210,9 @@ private slots:
     void init()
     {
         QVERIFY(mpHost);
-        QVERIFY(mpHost->mpConsole);
-        mpHost->mpConsole->buffer.clear();
-        mpHost->mpConsole->buffer.resetSequenceParserState();
+        QVERIFY(mpHost->mainConsoleView());
+        mpHost->mainConsoleView()->buffer.clear();
+        mpHost->mainConsoleView()->buffer.resetSequenceParserState();
     }
 
     // A BEL ends the sequence: the payload is consumed and the text around it
@@ -292,7 +292,7 @@ private slots:
         // No line ending, so the parser is legitimately still inside the
         // sequence when the display is cleared:
         sendFromServerAndSettle(QByteArrayLiteral("BEFORE-CLEAR") + introducer + csPayload);
-        mpHost->mpConsole->buffer.clear();
+        mpHost->mainConsoleView()->buffer.clear();
 
         // clear() deliberately leaves the parser alone, so the sequence runs
         // on to the next line ending the game sends - which costs the first of
@@ -398,14 +398,20 @@ private slots:
     // one that arrives in several packets - including one that pauses for
     // longer than cTelnet's 300ms idle flush, which puts a carriage return
     // through the parser part way through the payload. That flush commits the
-    // text ahead of the sequence, as it does ahead of a split CSI (#10897).
+    // text ahead of the sequence, as it does ahead of a split CSI.
     void wellFormedSequenceSplitAcrossReads()
     {
-        sendFromServerAndSettle(QByteArrayLiteral("PRE-SPLIT") + QByteArrayLiteral("\x1b") + QByteArrayLiteral("P") + QByteArrayLiteral("SEQ"));
+        sendFromServer(QByteArrayLiteral("PRE-SPLIT") + QByteArrayLiteral("\x1b") + QByteArrayLiteral("P") + QByteArrayLiteral("SEQ"));
+        QVERIFY2(QTest::qWaitFor(
+                         [this]() {
+                             return bufferHasLine(qsl("PRE-SPLIT"));
+                         },
+                         5s),
+                 qPrintable(qsl("The idle flush did not commit the text ahead of the sequence it landed in: '%1'").arg(joinedBuffer())));
 
         sendFromServer(QByteArrayLiteral("PAYLOAD") + csStringTerminator + QByteArrayLiteral("POST-SPLIT") + csCrLf);
 
-        QVERIFY2(waitForBufferText(qsl("PRE-SPLIT\nPOST-SPLIT")), qPrintable(qsl("A sequence split across two reads lost the text around it: '%1'").arg(joinedBuffer())));
+        QVERIFY2(waitForBufferText(qsl("PRE-SPLIT\nPOST-SPLIT")), qPrintable(qsl("A sequence split across two reads lost the text after it: '%1'").arg(joinedBuffer())));
         QVERIFY2(!joinedBuffer().contains(qsl("SEQ")), qPrintable(qsl("Payload of the split sequence was displayed: '%1'").arg(joinedBuffer())));
     }
 
@@ -510,15 +516,15 @@ private slots:
         mpHost->mLogFileNameFormat.clear();
         mpHost->mLogFileName = qsl("string-sequence-recovery-test");
         mpHost->mIsNextLogFileInHtmlFormat = false;
-        mpHost->mpConsole->toggleLogging(false);
-        QVERIFY(mpHost->mpConsole->mLogToLogFile);
-        const QString logFileName = mpHost->mpConsole->mLogFileName;
+        mpHost->mainConsoleView()->toggleLogging(false);
+        QVERIFY(mpHost->mainConsoleView()->mLogToLogFile);
+        const QString logFileName = mpHost->mainConsoleView()->mLogFileName;
 
         sendFromServer(QByteArrayLiteral("PRE-LOG") + QByteArrayLiteral("\x1b") + QByteArrayLiteral("P") + csPayload + csCrLf + QByteArrayLiteral("LOGGED-AFTER-BLACKOUT") + csCrLf
                        + QByteArrayLiteral("LOGGED-LAST-LINE") + csCrLf);
         QVERIFY2(waitForBufferText(qsl("LOGGED-LAST-LINE")), qPrintable(qsl("Output stayed dark, buffer holds: '%1'").arg(joinedBuffer())));
 
-        mpHost->mpConsole->toggleLogging(false);
+        mpHost->mainConsoleView()->toggleLogging(false);
         QFile logFile(logFileName);
         QVERIFY2(logFile.open(QIODevice::ReadOnly | QIODevice::Text), qPrintable(qsl("Could not read back the log at %1").arg(logFileName)));
         const QString log = QString::fromUtf8(logFile.readAll());

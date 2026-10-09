@@ -25,6 +25,7 @@
 
 #include "Host.h"
 #include "LuaLiteral.h"
+#include "MudletApp.h"
 #include "TConsoleModel.h"
 #include "TEvent.h"
 #include "THyperlinkCompactManager.h"
@@ -37,7 +38,6 @@
 #include "widechar_width.h"
 #include "TEncodingHelper.h"
 #include "SentryWrapper.h"
-#include "mudlet.h"
 
 #include <QDateTime>
 #include <QHash>
@@ -1713,8 +1713,11 @@ void TBuffer::translateToPlainTextInner(std::string& incoming, const bool isFrom
             // the sequence started earlier in this buffer, so the byte behind
             // is its introducer (or, after a trip round the length cap below,
             // more of its payload), or spanStart is 0 and the spanEnd > 0
-            // guard keeps the read in bounds.
-            while (spanEnd < localBufferLength && (spanEnd - spanStart) < MAX_OSC_SEQUENCE_LENGTH && localBuffer[spanEnd] != '\x07' && !endsStringSequence(localBuffer[spanEnd])
+            // guard keeps the read in bounds. The scan stops short of a flush
+            // marker (decodableLength()): counted as payload, it would take a
+            // sequence one byte under the cap over it, and the line it came to
+            // flush would not be committed.
+            while (spanEnd < localBufferDecodableLength && (spanEnd - spanStart) < MAX_OSC_SEQUENCE_LENGTH && localBuffer[spanEnd] != '\x07' && !endsStringSequence(localBuffer[spanEnd])
                    && !((spanEnd > 0 && localBuffer[spanEnd - 1] == '\033') && localBuffer[spanEnd] == '\\')) {
                 ++spanEnd;
             }
@@ -1786,8 +1789,10 @@ void TBuffer::translateToPlainTextInner(std::string& incoming, const bool isFrom
             // backslash of a String Terminator would hide that terminator:
             mIncompleteSequenceBytes.clear();
             std::remove_copy(localBuffer.cbegin() + spanStart, localBuffer.cend(), std::back_inserter(mIncompleteSequenceBytes), CHAR_CARRIAGE_RETURN);
-            if (localBufferDecodableLength < localBufferLength) {
-                // As for a split CSI, the flush marker still has to commit the text ahead of the sequence:
+            // As for a split CSI, the flush marker still has to commit the text ahead of the sequence - but not
+            // inside an open link: this may be its closing OSC 8, and a link split across lines loses its
+            // visibility settings (finaliseActiveHyperlink()):
+            if (localBufferDecodableLength < localBufferLength && !mHyperlinkActive) {
                 size_t markerPosition = localBufferDecodableLength;
                 commitLine(CHAR_CARRIAGE_RETURN, markerPosition, isFromServer, false);
             }
@@ -2266,7 +2271,8 @@ void TBuffer::commitLineData(QString line, std::vector<TChar> chars, const char 
     // Qt struggles to report blank lines on Windows to screen readers, this is a workaround
     // https://bugreports.qt.io/browse/QTBUG-105035
     if (Q_UNLIKELY(line.isEmpty())) {
-        if (mpHost->mBlankLineBehaviour == Host::BlankLineBehaviour::Hide) {
+        // An empty timer posting is dropped below, so it must not become a blank line first:
+        if (ch == CHAR_CARRIAGE_RETURN || mpHost->mBlankLineBehaviour == Host::BlankLineBehaviour::Hide) {
             return;
         } else if (mpHost->mBlankLineBehaviour == Host::BlankLineBehaviour::ReplaceWithSpace) { // NOLINT(readability-else-after-return)
             // Note: we are using the background color for the
@@ -2326,7 +2332,7 @@ void TBuffer::commitLineData(QString line, std::vector<TChar> chars, const char 
     // keeps arrival order, so script output in response follows it, but lines that triggers gag or rewrite
     // are still mirrored as sent. Mirroring at log() below would trade the other way and copy wrapLine()'s
     // fragments instead of the line as sent.
-    if (Q_UNLIKELY(mudlet::smMirrorToStdOut)) {
+    if (Q_UNLIKELY(MudletApp::smMirrorToStdOut)) {
         if (Q_LIKELY(mpModel)) {
             // Read back out of the buffer rather than from line, which every
             // path above has moved from by now
@@ -2762,7 +2768,7 @@ void TBuffer::processMxpWatchdogCallback()
     } else if (mWatchdogPhase == WatchdogPhase::Phase2_Unfreeze) {
         // The continuation commits into this buffer and finalizes the main
         // console's view, so it needs that view and this to be its buffer:
-        if (isMxpParserFrozen && !mpHost->mpConsole.isNull() && mpModel == &mpHost->mainConsoleModel()) {
+        if (isMxpParserFrozen && mpHost->consoleFrontend() && mpModel == &mpHost->mainConsoleModel()) {
             mpHost->mMxpProcessor.setLastEntityValue(QString::fromStdString('<' + currentTagContent));
             const TChar style(mForeGroundColor, mBackGroundColor, computeCurrentAttributeFlags());
             QPointer<Host> hostGuard = mpHost;
@@ -2776,7 +2782,7 @@ void TBuffer::processMxpWatchdogCallback()
                 // commitLine() and finalize() below both reach the main console
                 // through the host, and that pointer empties on its own when the
                 // profile's console goes:
-                if (!hostGuard || hostGuard->mpConsole.isNull()) {
+                if (!hostGuard || !hostGuard->consoleFrontend()) {
                     return;
                 }
                 QString lastEntityValue = hostGuard->mMxpProcessor.getEntityValue();
