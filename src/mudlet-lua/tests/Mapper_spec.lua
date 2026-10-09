@@ -4725,10 +4725,42 @@ describe("Tests saveJsonMap and loadJsonMap", function()
     -- https://github.com/Mudlet/Mudlet/issues/10369
     pending("a stub exit's door is dropped on export in the eight compass directions")
 
-    -- TMap::readJsonUserData inserts each key it reads into the live map's user
-    -- data without emptying it first, and the JSON import never reaches the
-    -- clear a binary load gets, so keys the previous map had outlive it.
-    pending("map user data from the map being replaced survives a JSON import")
+    it("replaces the map user data of the map it replaces", function()
+      deleteMap()
+      local area = addAreaName("MapperSpecJsonMapDataReplacedArea")
+      roomA = createRoomID(); addRoom(roomA); setRoomArea(roomA, area)
+      clearMapUserData()
+      finally(clearMapUserData)
+      assert.is_true(setMapUserData("mapper.spec.exported", "A"))
+      assert.is_true(saveJsonMap(jsonPath))
+
+      deleteMap()
+      clearMapUserData()
+      assert.is_true(setMapUserData("mapper.spec.replaced", "B"))
+      assert.is_true(loadJsonMap(jsonPath))
+
+      assert.are.same({["mapper.spec.exported"] = "A"}, getAllMapUserData())
+    end)
+
+    it("empties the map user data when the file has none", function()
+      deleteMap()
+      local area = addAreaName("MapperSpecJsonNoMapDataArea")
+      roomA = createRoomID(); addRoom(roomA); setRoomArea(roomA, area)
+      clearMapUserData()
+      finally(clearMapUserData)
+      -- an export with no map user data leaves the field out altogether
+      assert.is_true(saveJsonMap(jsonPath))
+      local file = assert(io.open(jsonPath, "r"))
+      assert.is_nil(yajl.to_value(file:read("*a")).userData)
+      file:close()
+
+      deleteMap()
+      assert.is_true(setMapUserData("mapper.spec.replaced", "B"))
+      assert.is_true(loadJsonMap(jsonPath))
+
+      assert.are.same({}, getAllMapUserData())
+    end)
+
   end)
 
   describe("Tests the saveJsonMap and loadJsonMap argument contract", function()
