@@ -56,7 +56,7 @@
 
 #include "Host.h"
 #include "MudletInstanceCoordinator.h"
-#include "MudletPaths.h"
+#include "MudletApp.h"
 #include "PortableModeTestHelper.h"
 #include "ProfileTestHelper.h"
 #include "MiddleMousePanHandler.h"
@@ -65,6 +65,8 @@
 #include "TLuaInterpreter.h"
 #include "TMap.h"
 #include "TMapLabel.h"
+#include "TMapView.h"
+#include "TMapViewManager.h"
 #include "TRoom.h"
 #include "TRoomDB.h"
 #include "TelnetServerStub.h"
@@ -74,6 +76,8 @@
 #include "mudlet.h"
 
 #include "GroupedTest.h"
+
+using namespace std::chrono_literals;
 
 class MapMouseInteractionTest : public QObject
 {
@@ -124,7 +128,7 @@ private:
 
     void deleteProfileDirectory() const
     {
-        QDir dir(MudletPaths::getMudletPath(enums::profileHomePath, mProfileName));
+        QDir dir(MudletApp::getMudletPath(enums::profileHomePath, mProfileName));
         if (dir.exists()) {
             dir.removeRecursively();
         }
@@ -284,7 +288,7 @@ private:
     bool panning() const { return mp2dMap->testAttribute(Qt::WA_SetCursor) && mp2dMap->cursor().shape() == Qt::BlankCursor; }
 
     // Long enough for the pan's 16ms timer to tick a good few times.
-    void letThePanRun() const { QTest::qWait(150); }
+    void letThePanRun() const { QTest::qWait(150ms); }
 
     // How far east the view moves per tick of the pan's timer. The event loop
     // does not get round to the same number of ticks in every window, so the
@@ -316,7 +320,7 @@ private:
     }
 
     // Longer than the hold that makes a release end the pan rather than leave it running.
-    void holdTheButton() const { QTest::qWait(400); }
+    void holdTheButton() const { QTest::qWait(400ms); }
 
     // A custom line north out of the east room, to the two points the tests
     // click on and drag. Its first segment runs from the room itself up
@@ -415,7 +419,7 @@ private:
         mModalDialogAnswered = false;
         mModalAnswerAttemptsLeft = 100;
         mpModalAnswerTimer = new QTimer(this);
-        mpModalAnswerTimer->setInterval(20);
+        mpModalAnswerTimer->setInterval(20ms);
         connect(mpModalAnswerTimer, &QTimer::timeout, this, [this, answer]() {
             QWidget* pDialog = QApplication::activeModalWidget();
             if (!pDialog) {
@@ -446,13 +450,17 @@ private:
     }
 
     // Answers the factor dialog that Spread and Shrink put up; a factor of 0
-    // cancels it instead.
-    bool pickFactorItem(const QString& text, const int factor)
+    // cancels it instead. A script given here runs while the dialog is up,
+    // just before it is answered.
+    bool pickFactorItem(const QString& text, const int factor, const QString& scriptWhileUp = QString())
     {
-        answerNextModalDialog([factor](QWidget* pDialog) {
+        answerNextModalDialog([this, factor, scriptWhileUp](QWidget* pDialog) {
             auto* pInput = qobject_cast<QInputDialog*>(pDialog);
             if (!pInput) {
                 return false;
+            }
+            if (!scriptWhileUp.isEmpty()) {
+                runLua(scriptWhileUp);
             }
             if (factor) {
                 pInput->setIntValue(factor);
@@ -467,13 +475,16 @@ private:
 
     // Answers the coordinates dialog Move to position puts up. Its three
     // fields are the only line edits on it and are made in x, y, z order.
-    bool pickMoveToPosition(const int x, const int y, const int z)
+    bool pickMoveToPosition(const int x, const int y, const int z, const QString& scriptWhileUp = QString())
     {
-        answerNextModalDialog([x, y, z](QWidget* pDialog) {
+        answerNextModalDialog([this, x, y, z, scriptWhileUp](QWidget* pDialog) {
             auto* pMoveDialog = qobject_cast<QDialog*>(pDialog);
             const QList<QLineEdit*> fields = pDialog->findChildren<QLineEdit*>();
             if (!pMoveDialog || fields.size() != 3) {
                 return false;
+            }
+            if (!scriptWhileUp.isEmpty()) {
+                runLua(scriptWhileUp);
             }
             fields[0]->setText(QString::number(x));
             fields[1]->setText(QString::number(y));
@@ -489,10 +500,12 @@ private:
     QDialog* moveToAreaDialog() const { return mp2dMap->arealist_combobox ? qobject_cast<QDialog*>(mp2dMap->arealist_combobox->window()) : nullptr; }
 
     // The dialog Configure areas puts up. It is not modal either, and closing
-    // it deletes it, so it is looked up afresh each time.
-    QDialog* configureAreasDialog() const
+    // it deletes it, so it is looked up afresh each time. Defaults to the
+    // primary mapper's T2DMap; pass a secondary view's to reach its own
+    // dialog instead.
+    QDialog* configureAreasDialog(T2DMap* p2dMap = nullptr) const
     {
-        for (QDialog* pDialog : mp2dMap->findChildren<QDialog*>()) {
+        for (QDialog* pDialog : (p2dMap ? p2dMap : mp2dMap)->findChildren<QDialog*>()) {
             if (pDialog->isVisible() && pDialog->windowTitle() == qsl("Configure Areas")) {
                 return pDialog;
             }
@@ -506,16 +519,25 @@ private:
         return pickContextMenuItem(qsl("Configure areas...")) && configureAreasDialog();
     }
 
-    QListWidget* configuredAreaList() const
+    // Opens a secondary view's own Configure Areas dialog. There's no mouse
+    // fixture for a secondary view's widget, so this calls the slot the
+    // context menu action would trigger directly instead.
+    bool openConfigureAreasOn(T2DMap* p2dMap)
     {
-        QDialog* pDialog = configureAreasDialog();
+        p2dMap->slot_configureAreas();
+        return configureAreasDialog(p2dMap);
+    }
+
+    QListWidget* configuredAreaList(T2DMap* p2dMap = nullptr) const
+    {
+        QDialog* pDialog = configureAreasDialog(p2dMap);
         return pDialog ? pDialog->findChild<QListWidget*>() : nullptr;
     }
 
-    QStringList configuredAreas() const
+    QStringList configuredAreas(T2DMap* p2dMap = nullptr) const
     {
         QStringList rows;
-        if (QListWidget* pList = configuredAreaList()) {
+        if (QListWidget* pList = configuredAreaList(p2dMap)) {
             for (int row = 0; row < pList->count(); ++row) {
                 rows << pList->item(row)->text();
             }
@@ -523,15 +545,15 @@ private:
         return rows;
     }
 
-    QString configuredAreaSelected() const
+    QString configuredAreaSelected(T2DMap* p2dMap = nullptr) const
     {
-        QListWidget* pList = configuredAreaList();
+        QListWidget* pList = configuredAreaList(p2dMap);
         return pList && pList->currentItem() ? pList->currentItem()->text() : QString();
     }
 
-    bool selectConfiguredArea(const QString& rowText) const
+    bool selectConfiguredArea(const QString& rowText, T2DMap* p2dMap = nullptr) const
     {
-        QListWidget* pList = configuredAreaList();
+        QListWidget* pList = configuredAreaList(p2dMap);
         if (!pList) {
             return false;
         }
@@ -544,9 +566,9 @@ private:
         return false;
     }
 
-    QPushButton* configureAreasButton(const QString& text) const
+    QPushButton* configureAreasButton(const QString& text, T2DMap* p2dMap = nullptr) const
     {
-        QDialog* pDialog = configureAreasDialog();
+        QDialog* pDialog = configureAreasDialog(p2dMap);
         if (!pDialog) {
             return nullptr;
         }
@@ -558,15 +580,15 @@ private:
         return nullptr;
     }
 
-    bool configureAreasButtonEnabled(const QString& text) const
+    bool configureAreasButtonEnabled(const QString& text, T2DMap* p2dMap = nullptr) const
     {
-        QPushButton* pButton = configureAreasButton(text);
+        QPushButton* pButton = configureAreasButton(text, p2dMap);
         return pButton && pButton->isEnabled();
     }
 
-    bool pressConfigureAreasButton(const QString& text) const
+    bool pressConfigureAreasButton(const QString& text, T2DMap* p2dMap = nullptr) const
     {
-        QPushButton* pButton = configureAreasButton(text);
+        QPushButton* pButton = configureAreasButton(text, p2dMap);
         if (!pButton || !pButton->isEnabled()) {
             return false;
         }
@@ -578,9 +600,9 @@ private:
     // an empty name cancels the prompt instead. A name the map turns down is
     // followed by a warning box, which is dismissed with its text kept in
     // mLastWarningText. Reports whether the prompt came up at all.
-    bool pressAndName(const QString& buttonText, const QString& name)
+    bool pressAndName(const QString& buttonText, const QString& name, T2DMap* p2dMap = nullptr)
     {
-        QPushButton* pButton = configureAreasButton(buttonText);
+        QPushButton* pButton = configureAreasButton(buttonText, p2dMap);
         if (!pButton || !pButton->isEnabled()) {
             return false;
         }
@@ -733,7 +755,7 @@ private slots:
 
         mudlet::start();
         mudlet::self()->setupConfig();
-        QCOMPARE(MudletPaths::getMudletPath(enums::mainPath), qsl("%1/mudlet").arg(mConfigDir.path()));
+        QCOMPARE(MudletApp::getMudletPath(enums::mainPath), qsl("%1/mudlet").arg(mConfigDir.path()));
         mudlet::self()->takeOwnershipOfInstanceCoordinator(std::make_unique<MudletInstanceCoordinator>("MudletInstanceCoordinator"));
         mudlet::self()->init();
         // The context menu items are found by their text.
@@ -745,7 +767,7 @@ private slots:
         mpHost = TestProfile::create(mProfileName, mLocalhost, mPort);
         QVERIFY(mpHost);
         QSignalSpy connected(&(mpHost->mTelnet), &cTelnet::signal_connected);
-        QVERIFY2(connected.wait(3000), "could not connect to the telnet stub");
+        QVERIFY2(connected.wait(3s), "could not connect to the telnet stub");
     }
 
     void cleanupTestCase()
@@ -942,6 +964,55 @@ private slots:
         QCOMPARE(mp2dMap->mMultiSelectionSet, expected);
     }
 
+    // The list of selected rooms is rebuilt when the box takes in different
+    // rooms, not on every move of the mouse, which on a big selection costs
+    // more than the time between two moves.
+    void test_theListOfSelectedRoomsIsOnlyRebuiltWhenTheSelectionChanges()
+    {
+        buildMap();
+        showMapper(false);
+
+        const QPoint from = pointUnitsFromCentre(-1.5, 1.5);
+        pressAt(from);
+        moveTo(from);
+        moveTo(pointUnitsFromCentre(0.5, -0.5));
+        const QSet<int> quarter{kNorthWestRoomId, kNorthRoomId, kWestRoomId, kPlayerRoomId};
+        QCOMPARE(listedRoomIds(), quarter);
+
+        QSignalSpy rowsInserted(mp2dMap->mMultiSelectionListWidget.model(), &QAbstractItemModel::rowsInserted);
+        // Still short of the rooms to the east and south.
+        moveTo(pointUnitsFromCentre(0.6, -0.6));
+        QCOMPARE(mp2dMap->mMultiSelectionSet, quarter);
+        QCOMPARE(rowsInserted.count(), 0);
+        QCOMPARE(listedRoomIds(), quarter);
+
+        moveTo(pointUnitsFromCentre(1.5, -0.5));
+        const QSet<int> withTheEastColumn{kNorthWestRoomId, kNorthRoomId, kNorthEastRoomId, kWestRoomId, kPlayerRoomId, kEastRoomId};
+        QCOMPARE(listedRoomIds(), withTheEastColumn);
+        releaseAt(pointUnitsFromCentre(1.5, -0.5));
+        QCOMPARE(mp2dMap->mMultiSelectionSet, withTheEastColumn);
+    }
+
+    // A shift-press on a room adds it to the selection before the drag's first
+    // move, which does not change the selection again, so the list has to have
+    // taken the room in at the press.
+    void test_aShiftDragListsTheRoomItsPressAdded()
+    {
+        buildMap();
+        showMapper(false);
+        dragFromTo(pointUnitsFromCentre(-1.5, 1.5), pointUnitsFromCentre(0.5, -0.5));
+
+        const QPoint south = pointUnitsFromCentre(0, -1);
+        pressAt(south, Qt::ShiftModifier);
+        moveTo(south, Qt::ShiftModifier);
+        moveTo(south + QPoint(1, 1), Qt::ShiftModifier);
+
+        const QSet<int> expected{kNorthWestRoomId, kNorthRoomId, kWestRoomId, kPlayerRoomId, kSouthRoomId};
+        QCOMPARE(mp2dMap->mMultiSelectionSet, expected);
+        QCOMPARE(listedRoomIds(), expected);
+        releaseAt(south + QPoint(1, 1), Qt::ShiftModifier);
+    }
+
     // The same drag while viewing pans instead of drawing a box, which is what
     // the map being locked for viewing means.
     void test_draggingWhileViewingDrawsNoSelectionBox()
@@ -996,6 +1067,67 @@ private slots:
         QCOMPARE(movedLine.size(), 2);
         QCOMPARE(movedLine.constFirst(), QPointF(1.0, 5.0));
         QCOMPARE(movedLine.constLast(), QPointF(1.0, 6.0));
+    }
+
+    // The area files its rooms by position, by how far it reaches and by how
+    // long their exits are; a dragged room has to be refiled in all of them
+    // without the area rebuilding them from scratch.
+    void test_aDraggedRoomIsFiledWhereItLanded()
+    {
+        buildMap();
+        QVERIFY(map()->setExit(kPlayerRoomId, kEastRoomId, DIR_EAST));
+        QVERIFY(map()->setExit(kEastRoomId, kPlayerRoomId, DIR_WEST));
+        showMapper(false);
+        QVERIFY(!area()->lodVisibleExitRooms(0, 1).contains(kPlayerRoomId));
+        const quint32 lodRebuilds = area()->lodExitIndexRebuildCount();
+
+        dragFromTo(pointUnitsFromCentre(1, -0.2), pointUnitsFromCentre(1, 1.8));
+
+        QCOMPARE(area()->getRoomsByPosition(1, 2, 0), QList<int>{kEastRoomId});
+        QVERIFY(area()->getRoomsByPosition(1, 0, 0).isEmpty());
+        // The area's y extremes run the other way to the rooms' y:
+        QCOMPARE(area()->min_y, -2);
+        QCOMPARE(area()->yminForZ.value(0), -2);
+        // The exit between the two rooms now spans two units, at both ends:
+        const QList<int> lodRooms = area()->lodVisibleExitRooms(0, 1);
+        QVERIFY(lodRooms.contains(kPlayerRoomId));
+        QVERIFY(lodRooms.contains(kEastRoomId));
+        QCOMPARE(area()->lodExitIndexRebuildCount(), lodRebuilds);
+    }
+
+    // Which of the rooms in a drag moves first is down to how a QSet orders
+    // them, so one can briefly land on another that has yet to move away.
+    void test_roomsDraggedTogetherCanLandWhereEachOtherWere()
+    {
+        buildMap();
+        showMapper(false);
+        dragFromTo(pointUnitsFromCentre(-1.5, 0.5), pointUnitsFromCentre(1.5, -0.5));
+        QCOMPARE(mp2dMap->mMultiSelectionSet, (QSet<int>{kWestRoomId, kPlayerRoomId, kEastRoomId}));
+
+        dragFromTo(pointUnitsFromCentre(0, -0.2), pointUnitsFromCentre(1, -0.2));
+
+        QVERIFY(area()->getRoomsByPosition(-1, 0, 0).isEmpty());
+        QCOMPARE(area()->getRoomsByPosition(0, 0, 0), QList<int>{kWestRoomId});
+        QCOMPARE(area()->getRoomsByPosition(1, 0, 0), QList<int>{kPlayerRoomId});
+        QCOMPARE(area()->getRoomsByPosition(2, 0, 0), QList<int>{kEastRoomId});
+        QCOMPARE(area()->max_x, 2);
+        QCOMPARE(area()->xmaxForZ.value(0), 2);
+    }
+
+    void test_draggingEveryRoomInTheAreaRefilesThemAll()
+    {
+        buildMap();
+        showMapper(false);
+        dragFromTo(pointUnitsFromCentre(-1.5, 1.5), pointUnitsFromCentre(1.5, -1.5));
+        QCOMPARE(mp2dMap->mMultiSelectionSet, area()->getAreaRooms());
+
+        dragFromTo(pointUnitsFromCentre(0, -0.2), pointUnitsFromCentre(1, -0.2));
+
+        QVERIFY(area()->getRoomsByPosition(-1, 0, 0).isEmpty());
+        QCOMPARE(area()->getRoomsByPosition(0, 0, 0), QList<int>{kWestRoomId});
+        QCOMPARE(area()->getRoomsByPosition(2, 0, 0), QList<int>{kEastRoomId});
+        QCOMPARE(area()->min_x, 0);
+        QCOMPARE(area()->max_x, 2);
     }
 
     // Clicking a map label picks it up, and clicking it again puts it down.
@@ -1630,6 +1762,25 @@ private slots:
         QCOMPARE(linePoints(), lineAsDrawn());
     }
 
+    // A point stays selected once the left button is released, so that the
+    // context menu can act on it. Every later move over the map therefore has
+    // to be told apart from a drag of that point by which button is held down
+    // (#8397).
+    void test_aSelectedPointIsOnlyDraggedByTheLeftButton()
+    {
+        buildMap();
+        QVERIFY(addLineToTheEastRoom());
+        showMapper(false);
+        clickAt(pointUnitsFromCentre(1, 2));
+        clickAt(pointUnitsFromCentre(1, 4));
+        QCOMPARE(mp2dMap->mCustomLineSelectedPoint, 1);
+
+        // the right button held down on the way to the point's context menu
+        sendMouse(QEvent::MouseMove, pointUnitsFromCentre(2, 4), Qt::NoButton, Qt::RightButton, Qt::NoModifier);
+
+        QCOMPARE(linePoints(), lineAsDrawn());
+    }
+
     void test_theMenuOnASelectedLineCanDeleteIt()
     {
         buildMap();
@@ -2060,9 +2211,9 @@ private slots:
 
         rollWheelAt(viewCentre(), 100);
 
-        QCOMPARE(zoom(), T2DMap::csmMinXYZoom);
+        QCOMPARE(zoom(), TMap::scmMinXYZoom);
         rollWheelAt(viewCentre(), 1);
-        QCOMPARE(zoom(), T2DMap::csmMinXYZoom);
+        QCOMPARE(zoom(), TMap::scmMinXYZoom);
     }
 
     // "Move" from the context menu picks the selected rooms up without a
@@ -2699,6 +2850,55 @@ private slots:
         QVERIFY(map()->isUnsaved());
     }
 
+    // The factor and coordinates dialogs run their own event loop, in which a
+    // script can delete the room the selection is centred on.
+    void test_spreadingAroundARoomAScriptDeletedLeavesTheRestWhereTheyAre()
+    {
+        buildMap();
+        showMapper(false);
+        dragFromTo(pointUnitsFromCentre(-1.5, 0.5), pointUnitsFromCentre(1.5, -0.5));
+        QCOMPARE(mp2dMap->mMultiSelectionHighlightRoomId, kPlayerRoomId);
+        rightClickAt(pointUnitsFromCentre(1, 0));
+
+        QVERIFY(pickFactorItem(qsl("Spread..."), 3, qsl("deleteRoom(%1)").arg(kPlayerRoomId)));
+
+        QVERIFY(!map()->mpRoomDB->getRoom(kPlayerRoomId));
+        QCOMPARE(roomPosition(kWestRoomId), QVector3D(-1, 0, 0));
+        QCOMPARE(roomPosition(kEastRoomId), QVector3D(1, 0, 0));
+    }
+
+    void test_shrinkingAroundARoomAScriptDeletedLeavesTheRestWhereTheyAre()
+    {
+        buildMap();
+        QVERIFY(map()->setRoomCoordinates(kWestRoomId, -4, 0, 0));
+        QVERIFY(map()->setRoomCoordinates(kEastRoomId, 4, 0, 0));
+        showMapper(false);
+        dragFromTo(pointUnitsFromCentre(-4.5, 0.5), pointUnitsFromCentre(4.5, -0.5));
+        QCOMPARE(mp2dMap->mMultiSelectionHighlightRoomId, kPlayerRoomId);
+        rightClickAt(pointUnitsFromCentre(4, 0));
+
+        QVERIFY(pickFactorItem(qsl("Shrink..."), 2, qsl("deleteRoom(%1)").arg(kPlayerRoomId)));
+
+        QVERIFY(!map()->mpRoomDB->getRoom(kPlayerRoomId));
+        QCOMPARE(roomPosition(kWestRoomId), QVector3D(-4, 0, 0));
+        QCOMPARE(roomPosition(kEastRoomId), QVector3D(4, 0, 0));
+    }
+
+    void test_movingASelectionWhoseHighlightedRoomAScriptDeletedLeavesTheRestWhereTheyAre()
+    {
+        buildMap();
+        showMapper(false);
+        dragFromTo(pointUnitsFromCentre(-1.5, 0.5), pointUnitsFromCentre(1.5, -0.5));
+        QCOMPARE(mp2dMap->mMultiSelectionHighlightRoomId, kPlayerRoomId);
+        rightClickAt(pointUnitsFromCentre(1, 0));
+
+        QVERIFY(pickMoveToPosition(3, 2, 1, qsl("deleteRoom(%1)").arg(kPlayerRoomId)));
+
+        QVERIFY(!map()->mpRoomDB->getRoom(kPlayerRoomId));
+        QCOMPARE(roomPosition(kWestRoomId), QVector3D(-1, 0, 0));
+        QCOMPARE(roomPosition(kEastRoomId), QVector3D(1, 0, 0));
+    }
+
     void test_moveToPositionCarriesTheCustomLinesAlong()
     {
         buildMap();
@@ -2916,6 +3116,151 @@ private slots:
         QCOMPARE(map()->mpMapper->comboBox_showArea->findText(qsl("Other")), -1);
         QCOMPARE(map()->mpMapper->comboBox_showArea->currentText(), qsl("Mouse Area"));
         QCOMPARE(mp2dMap->mAreaID, mAreaId);
+    }
+
+    // Regression test: slot_configureAreas() used to preselect by index into
+    // the mapper's dropdown, which omits the default area when it's hidden,
+    // against a list that always includes it - misaligning the two whenever
+    // an area sorting after "Default Area" was shown.
+    void test_configureAreasPreselectsTheShownAreaWithTheDefaultAreaHidden()
+    {
+        showMapWithAnotherArea();
+        map()->setDefaultAreaShown(false);
+        map()->mpMapper->updateAreaComboBox();
+        QCOMPARE(map()->mpMapper->comboBox_showArea->currentText(), qsl("Mouse Area"));
+
+        QVERIFY(openConfigureAreas());
+
+        QCOMPARE(configuredAreaSelected(), mouseAreaRow());
+    }
+
+    void test_creatingRenamingAndDeletingAnAreaMarksTheMapUnsaved()
+    {
+        showMapWithAnotherArea();
+        QVERIFY(openConfigureAreas());
+
+        map()->resetUnsaved();
+        QVERIFY(pressAndName(qsl("Create"), qsl("Brand New")));
+        QVERIFY(map()->isUnsaved());
+
+        map()->resetUnsaved();
+        QVERIFY(selectConfiguredArea(otherAreaRow()));
+        QVERIFY(pressAndName(qsl("Rename"), qsl("Renamed Other")));
+        QVERIFY(map()->isUnsaved());
+
+        map()->resetUnsaved();
+        QVERIFY(pressConfigureAreasButton(qsl("Delete")));
+        QVERIFY(map()->isUnsaved());
+    }
+
+    void test_renamingAnAreaThatIsNotShownLeavesTheDropdownAlone()
+    {
+        showMapWithAnotherArea();
+        QVERIFY(openConfigureAreas());
+        QVERIFY(selectConfiguredArea(otherAreaRow()));
+
+        QVERIFY(pressAndName(qsl("Rename"), qsl("Renamed Area")));
+
+        QVERIFY(mLastWarningText.isEmpty());
+        QCOMPARE(map()->mpRoomDB->getAreaNamesMap().value(mOtherAreaId), qsl("Renamed Area"));
+        QCOMPARE(map()->mpMapper->comboBox_showArea->currentText(), qsl("Mouse Area"));
+        QCOMPARE(mp2dMap->mAreaID, mAreaId);
+    }
+
+    // Regression test: create/rename/delete used to only refresh the combo
+    // box of whichever view (primary or secondary) opened the dialog, so the
+    // other views' dropdowns went stale.
+    void test_creatingAndRenamingFromASecondaryViewUpdatesThePrimaryDropdownToo()
+    {
+        showMapWithAnotherArea();
+        const auto [viewId, error] = mpHost->createMapView();
+        QVERIFY2(viewId > 0, qPrintable(error));
+        TMapView* pView = map()->getViewManager()->getView(viewId);
+        QVERIFY(pView);
+
+        QVERIFY(openConfigureAreasOn(pView->get2DMap()));
+        QVERIFY(pressAndName(qsl("Create"), qsl("Brand New"), pView->get2DMap()));
+        QVERIFY(mLastWarningText.isEmpty());
+        QVERIFY2(map()->mpMapper->comboBox_showArea->findText(qsl("Brand New")) >= 0, "the primary dropdown was not refreshed after a secondary view's dialog created an area");
+
+        QVERIFY(selectConfiguredArea(otherAreaRow(), pView->get2DMap()));
+        QVERIFY(pressAndName(qsl("Rename"), qsl("Renamed Other"), pView->get2DMap()));
+        QVERIFY(mLastWarningText.isEmpty());
+        QCOMPARE(map()->mpMapper->comboBox_showArea->findText(qsl("Other")), -1);
+        QVERIFY2(map()->mpMapper->comboBox_showArea->findText(qsl("Renamed Other")) >= 0, "the primary dropdown was not refreshed after a secondary view's dialog renamed an area");
+
+        mpHost->closeMapView(viewId);
+    }
+
+    // Regression test: slot_switchArea() treated -1 as "area not found", but
+    // -1 is also the default area's real id, so falling back to it after a
+    // delete left the view blank instead of showing "Default Area".
+    void test_deletingTheShownAreaFromASecondaryViewMovesItToDefaultArea()
+    {
+        showMapWithAnotherArea();
+        const auto [viewId, error] = mpHost->createMapView(mOtherAreaId);
+        QVERIFY2(viewId > 0, qPrintable(error));
+        TMapView* pView = map()->getViewManager()->getView(viewId);
+        QVERIFY(pView);
+        QCOMPARE(pView->getCurrentAreaId(), mOtherAreaId);
+
+        QVERIFY(openConfigureAreasOn(pView->get2DMap()));
+        QCOMPARE(configuredAreaSelected(pView->get2DMap()), otherAreaRow());
+
+        QVERIFY(pressConfigureAreasButton(qsl("Delete"), pView->get2DMap()));
+
+        QVERIFY2(pView->getCurrentAreaId() != mOtherAreaId, "the secondary view is still showing the deleted area");
+        QCOMPARE(pView->getCurrentAreaId(), -1);
+        QCOMPARE(map()->mpMapper->comboBox_showArea->findText(qsl("Other")), -1);
+
+        mpHost->closeMapView(viewId);
+    }
+
+    void test_aMapViewClosedWithItsCloseButtonIsForgotten()
+    {
+        const auto [viewId, error] = mpHost->createMapView();
+        QVERIFY2(viewId > 0, qPrintable(error));
+        TMapViewManager* manager = map()->getViewManager();
+        QPointer<QDockWidget> dock = qobject_cast<QDockWidget*>(manager->getView(viewId)->parentWidget());
+        QVERIFY(dock);
+        QSignalSpy closed(manager, &TMapViewManager::viewClosed);
+
+        // what the window's X button does
+        dock->close();
+        QCoreApplication::sendPostedEvents(nullptr, QEvent::DeferredDelete);
+
+        QVERIFY2(!dock, "closing the window only hid it");
+        QVERIFY(!manager->getViewIds().contains(viewId));
+        QCOMPARE(closed.count(), 1);
+        QCOMPARE(closed.first().first().toInt(), viewId);
+        QVERIFY(!mpHost->closeMapView(viewId).first);
+    }
+
+    void test_aMapViewWhoseWindowIsDestroyedIsForgotten()
+    {
+        const auto [viewId, error] = mpHost->createMapView();
+        QVERIFY2(viewId > 0, qPrintable(error));
+        TMapViewManager* manager = map()->getViewManager();
+        QSignalSpy closed(manager, &TMapViewManager::viewClosed);
+
+        delete manager->getView(viewId)->parentWidget();
+
+        QVERIFY(!manager->getViewIds().contains(viewId));
+        QCOMPARE(manager->getView(viewId), nullptr);
+        QCOMPARE(closed.count(), 1);
+    }
+
+    void test_closingAMapViewReportsItOnce()
+    {
+        const auto [viewId, error] = mpHost->createMapView();
+        QVERIFY2(viewId > 0, qPrintable(error));
+        TMapViewManager* manager = map()->getViewManager();
+        QSignalSpy closed(manager, &TMapViewManager::viewClosed);
+
+        QVERIFY(mpHost->closeMapView(viewId).first);
+        QCoreApplication::sendPostedEvents(nullptr, QEvent::DeferredDelete);
+
+        QCOMPARE(closed.count(), 1);
     }
 };
 

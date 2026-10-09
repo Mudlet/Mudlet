@@ -39,7 +39,7 @@
 
 #include <functional>
 
-#include "MudletPaths.h"
+#include "MudletApp.h"
 #include "PortableModeTestHelper.h"
 #include "ProfileTestHelper.h"
 #include "AliasUnit.h"
@@ -62,6 +62,8 @@
 #include "mudlet.h"
 
 #include "GroupedTest.h"
+
+using namespace std::chrono_literals;
 
 namespace {
 template <typename T>
@@ -103,6 +105,10 @@ private:
     Host* mpSource = nullptr;
     Host* mpTarget = nullptr;
     Host* mpLegacyTarget = nullptr;
+    // Taken just before the running stopwatch is started, so the time it has
+    // on it once read back has an upper bound as well as a lower one. Wall
+    // clock, as the stopwatch itself is, so a clock change moves both alike.
+    qint64 mStopWatchStartedMSecs = 0;
     const QString mSourceName = qsl("ProfileRoundTrip-Test");
     const QString mTargetName = qsl("ProfileRoundTripTarget-Test");
     const QString mLegacyTargetName = qsl("ProfileRoundTripLegacyTarget-Test");
@@ -118,6 +124,19 @@ private:
     static const int scmTimerCount = 6;
     static const int scmKeyCount = 6;
     static const int scmScriptCount = 6;
+
+    // A map info contributor name no Mudlet default can collide with - a fresh
+    // profile is given "Short", and a legacy map "Full".
+    inline static const QString scmContributorName = qsl("ProfileRoundTripContributor");
+    inline static const QString scmExperiment = qsl("experiment.render-in-out-exits");
+    inline static const QString scmRunningStopWatch = qsl("ProfileRoundTrip running");
+    inline static const QString scmStoppedStopWatch = qsl("ProfileRoundTrip stopped");
+    static constexpr qint64 scmStopWatchMilliSeconds = 90'061'001;
+
+    // An address of the target profile's own, so that keeping it can be told
+    // apart from blanking it.
+    inline static const QString scmTargetUrl = qsl("target.example.org");
+    static const int scmTargetPort = 4321;
 
     // -----------------------------------------------------------------------
     // Tree builders - these mirror the construction order XMLimport uses
@@ -446,14 +465,14 @@ private:
         }
 
         QSignalSpy spy2(&(host->mTelnet), &cTelnet::signal_connected);
-        if (!spy2.wait(500)) {
+        if (host->mTelnet.getConnectionState() != QAbstractSocket::ConnectedState && !spy2.wait(8s)) {
             QFAIL("Could not connect with the host.");
         }
     }
 
     void deleteProfileDirectory(const QString& profileName)
     {
-        const QString path = MudletPaths::getMudletPath(enums::profileHomePath, profileName);
+        const QString path = MudletApp::getMudletPath(enums::profileHomePath, profileName);
         QDir dir(path);
         if (dir.exists()) {
             dir.removeRecursively();
@@ -483,7 +502,7 @@ private slots:
         mPort = QString::number(mpServer->serverPort());
         mudlet::start();
         mudlet::self()->setupConfig();
-        QCOMPARE(MudletPaths::getMudletPath(enums::mainPath), qsl("%1/mudlet").arg(mConfigDir.path()));
+        QCOMPARE(MudletApp::getMudletPath(enums::mainPath), qsl("%1/mudlet").arg(mConfigDir.path()));
         mudlet::self()->takeOwnershipOfInstanceCoordinator(std::make_unique<MudletInstanceCoordinator>("MudletInstanceCoordinator"));
         mudlet::self()->init();
         mudlet::self()->setStorePasswordsSecurely(false);
@@ -510,6 +529,26 @@ private slots:
         // an import that leaves them alone cannot pass.
         mpSource->setSearchOptions(enums::EditorSearchOptionCaseSensitive | enums::EditorSearchOptionWholeWord);
         mpSource->setShowIdsInEditor(true);
+        mpSource->mMapInfoContributors.insert(scmContributorName);
+        // Every one of these is off its default, and the legacy copy below
+        // moves each enumerated one to a second value, so both reads count.
+        mpSource->mCaretShortcut = Host::CaretShortcut::Tab;
+        mpSource->mBlankLineBehaviour = Host::BlankLineBehaviour::Hide;
+        mpSource->setControlCharacterMode(ControlCharacterMode::Picture);
+        mpSource->setWideAmbiguousEAsianGlyphs(Qt::Checked);
+        mpSource->setLargeAreaExitArrows(true);
+        const auto [experimentSet, experimentError] = mpSource->setExperimentEnabled(scmExperiment, true);
+        QVERIFY2(experimentSet, qPrintable(experimentError));
+
+        const int runningWatch = mpSource->createStopWatch(scmRunningStopWatch).first;
+        const int stoppedWatch = mpSource->createStopWatch(scmStoppedStopWatch).first;
+        QVERIFY(runningWatch > 0 && stoppedWatch > 0);
+        QVERIFY(mpSource->makeStopWatchPersistent(runningWatch, true));
+        QVERIFY(mpSource->makeStopWatchPersistent(stoppedWatch, true));
+        QVERIFY(mpSource->adjustStopWatch(runningWatch, scmStopWatchMilliSeconds));
+        mStopWatchStartedMSecs = QDateTime::currentMSecsSinceEpoch();
+        QVERIFY(mpSource->startStopWatch(runningWatch).first);
+        QVERIFY(mpSource->adjustStopWatch(stoppedWatch, scmStopWatchMilliSeconds));
 
         auto [saved, xmlPath, saveError] = mpSource->saveProfile(mSaveDir.path(), qsl("roundtrip"));
         QVERIFY2(saved, qPrintable(saveError));
@@ -522,6 +561,8 @@ private slots:
         QVERIFY2(hostManager->addHost(mTargetName, mPort, QString(), QString()), "failed to create the target Host");
         mpTarget = hostManager->getHost(mTargetName);
         QVERIFY(mpTarget);
+        mpTarget->setUrl(scmTargetUrl);
+        mpTarget->setPort(scmTargetPort);
 
         QFile file(xmlPath);
         QVERIFY2(file.open(QFile::ReadOnly | QFile::Text), qPrintable(file.errorString()));
@@ -544,6 +585,23 @@ private slots:
         QString legacyXml = mExportedXml;
         legacyXml.replace(QRegularExpression(qsl(R"((<m(?:Lower|Upper)LevelColor) alpha="\d+">)")), qsl("\\1>"));
         QVERIFY2(!legacyXml.contains(qsl("LevelColor alpha=")), "failed to strip the alpha attribute from the level color elements");
+
+        // The same copy also carries the map info contributors inside the one
+        // container they shared between #4718 and #5911 - the shape a profile
+        // last saved by a Mudlet of that vintage still has.
+        legacyXml.replace(QRegularExpression(qsl(R"(((?:\s*<mapInfoContributor>[^<]*</mapInfoContributor>)+))")), qsl("<mMapInfoContributors>\\1</mMapInfoContributors>"));
+        QCOMPARE(legacyXml.count(qsl("<mMapInfoContributors>")), 1);
+        const QString legacyContainer = QRegularExpression(qsl(R"(<mMapInfoContributors>[\s\S]*</mMapInfoContributors>)")).match(legacyXml).captured();
+        QVERIFY2(legacyContainer.contains(qsl("<mapInfoContributor>%1</mapInfoContributor>").arg(scmContributorName)), "failed to put this test's map info contributor back into the old container");
+
+        for (const auto& [from, to] : {std::pair{qsl("caretShortcut=\"Tab\""), qsl("caretShortcut=\"CtrlTab\"")},
+                                       std::pair{qsl("blankLineBehaviour=\"Hide\""), qsl("blankLineBehaviour=\"ReplaceWithSpace\"")},
+                                       std::pair{qsl("ControlCharacterHandling=\"1\""), qsl("ControlCharacterHandling=\"2\"")},
+                                       std::pair{qsl("AmbigousWidthGlyphsToBeWide=\"yes\""), qsl("AmbigousWidthGlyphsToBeWide=\"no\"")},
+                                       std::pair{qsl("Large2DMapAreaExitArrows=\"yes\""), qsl("Large2DMapAreaExitArrows=\"no\"")}}) {
+            QVERIFY2(legacyXml.count(from) == 1, qPrintable(qsl("the export does not hold %1 exactly once").arg(from)));
+            legacyXml.replace(from, to);
+        }
 
         QTemporaryDir legacyDir;
         QVERIFY(legacyDir.isValid());
@@ -703,6 +761,77 @@ private slots:
     {
         QCOMPARE(mpLegacyTarget->mLowerLevelColor, QColor(30, 60, 90, 255));
         QCOMPARE(mpLegacyTarget->mUpperLevelColor, QColor(200, 150, 100, 255));
+    }
+
+    // Map info contributors are written one per element straight into <Host>
+    // rather than wrapped in a container of their own (#5911). The container
+    // still has to be read on the way in, for profiles saved while it was in
+    // use.
+    void test_mapInfoContributorsRoundTripFlattenedAndFromTheOldContainer_5911()
+    {
+        QVERIFY2(mExportedXml.contains(qsl("<mapInfoContributor>%1</mapInfoContributor>").arg(scmContributorName)), "the contributor was not written as an element of its own");
+        QVERIFY2(!mExportedXml.contains(qsl("<mMapInfoContributors>")), "the contributors were written inside a container again");
+        QVERIFY2(mpTarget->mMapInfoContributors.contains(scmContributorName), "the contributor written straight into <Host> was not read back");
+        QVERIFY2(mpLegacyTarget->mMapInfoContributors.contains(scmContributorName), "the contributor in the old container was not read back");
+    }
+
+    // A game save is not where a profile's identity lives - the name, address
+    // and port are kept in the profile's base directory, and what the "Connect"
+    // dialog says there wins. A profile whose XML overwrote them connected to
+    // whatever game the save came from instead. The XML's own values are still
+    // read, into backup members.
+    void test_theProfileKeepsItsOwnNameAndAddressAfterImport_6709()
+    {
+        QCOMPARE(mpTarget->getName(), mTargetName);
+        QCOMPARE(mpTarget->getUrl(), scmTargetUrl);
+        QCOMPARE(mpTarget->getPort(), scmTargetPort);
+        QCOMPARE(mpTarget->mBackupHostName, mSourceName);
+        QCOMPARE(mpTarget->mBackupUrl, mpSource->getUrl());
+        QCOMPARE(mpTarget->mBackupPort, mpSource->getPort());
+    }
+
+    // Each enumerated setting is written as a name and read back by that name,
+    // so a renamed enumerator loses the setting silently:
+    void test_hostSettingsRoundTrip()
+    {
+        QCOMPARE(mpTarget->mCaretShortcut, Host::CaretShortcut::Tab);
+        QCOMPARE(mpTarget->mBlankLineBehaviour, Host::BlankLineBehaviour::Hide);
+        QCOMPARE(mpTarget->getControlCharacterMode(), ControlCharacterMode::Picture);
+        QCOMPARE(mpTarget->getWideAmbiguousEAsianGlyphsControlState(), Qt::Checked);
+        QVERIFY(mpTarget->getLargeAreaExitArrows());
+        QVERIFY(mpTarget->experimentEnabled(scmExperiment));
+
+        QCOMPARE(mpLegacyTarget->mCaretShortcut, Host::CaretShortcut::CtrlTab);
+        QCOMPARE(mpLegacyTarget->mBlankLineBehaviour, Host::BlankLineBehaviour::ReplaceWithSpace);
+        QCOMPARE(mpLegacyTarget->getControlCharacterMode(), ControlCharacterMode::OEM);
+        QCOMPARE(mpLegacyTarget->getWideAmbiguousEAsianGlyphsControlState(), Qt::Unchecked);
+        QVERIFY(!mpLegacyTarget->getLargeAreaExitArrows());
+    }
+
+    // A persistent stopwatch comes back under its own name, still running or
+    // still stopped, and without losing the time it had.
+    void test_persistentStopWatchesRoundTrip()
+    {
+        stopWatch* running = nullptr;
+        stopWatch* stopped = nullptr;
+        for (const int id : mpTarget->getStopWatchIds()) {
+            stopWatch* watch = mpTarget->getStopWatch(id);
+            if (watch->name() == scmRunningStopWatch) {
+                running = watch;
+            } else if (watch->name() == scmStoppedStopWatch) {
+                stopped = watch;
+            }
+        }
+        QVERIFY2(running, "the running stopwatch was not read back");
+        QVERIFY2(stopped, "the stopped stopwatch was not read back");
+        QVERIFY(running->persistent());
+        QVERIFY(running->running());
+        const qint64 elapsed = running->getElapsedMilliSeconds();
+        const qint64 sinceStarted = QDateTime::currentMSecsSinceEpoch() - mStopWatchStartedMSecs;
+        QVERIFY2(elapsed >= scmStopWatchMilliSeconds && elapsed <= scmStopWatchMilliSeconds + sinceStarted, qPrintable(qsl("%1 ms on the running stopwatch").arg(elapsed)));
+        QVERIFY(stopped->persistent());
+        QVERIFY(!stopped->running());
+        QCOMPARE(stopped->getElapsedMilliSeconds(), scmStopWatchMilliSeconds);
     }
 
     // The imported scripts registered their event handlers in the fresh Host:

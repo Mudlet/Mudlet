@@ -23,8 +23,9 @@
 
 #include "dlgNotepad.h"
 
-#include "MudletPaths.h"
+#include "MudletApp.h"
 #include "Host.h"
+#include "HostDialogs.h"
 #include "utils.h"
 
 #include <QApplication>
@@ -44,10 +45,12 @@
 #include <QPalette>
 #include <QPlainTextEdit>
 #include <QSaveFile>
+#include <QScrollBar>
 #include <QShortcut>
 #include <QTabBar>
 #include <QStringConverter>
 #include <QTabBar>
+#include <QTextBlock>
 #include <QTextDocument>
 #include <QTextStream>
 #include <QTimer>
@@ -199,9 +202,9 @@ void dlgNotepad::setTabsStyleSheet(const QString& styleSheet)
 
 dlgNotepad::~dlgNotepad()
 {
-    if (mpHost && mpHost->mpNotePad) {
+    if (auto* pDialogs = mpHost ? HostDialogs::find(mpHost) : nullptr; pDialogs && pDialogs->mpNotePad) {
         save();
-        mpHost->mpNotePad = nullptr;
+        pDialogs->mpNotePad = nullptr;
     }
 }
 
@@ -217,6 +220,15 @@ int dlgNotepad::addTab(const QString& name, const QString& content)
     }
 
     connect(textEdit, &QPlainTextEdit::textChanged, this, &dlgNotepad::slot_textChanged);
+    // Only the matches on screen are marked, so they are marked afresh whenever what is on screen changes
+    auto rehighlightIfShown = [this, textEdit]() {
+        if (textEdit == currentTextEdit()) {
+            scheduleRehighlight();
+        }
+    };
+    connect(textEdit->verticalScrollBar(), &QScrollBar::valueChanged, this, rehighlightIfShown);
+    connect(textEdit->verticalScrollBar(), &QScrollBar::rangeChanged, this, rehighlightIfShown);
+    textEdit->viewport()->installEventFilter(this);
 
     //: Default name for a new note tab
     const QString tabName = name.isEmpty() ? tr("New Note") : name;
@@ -327,8 +339,8 @@ QPlainTextEdit* dlgNotepad::currentTextEdit() const
 
 void dlgNotepad::save()
 {
-    const QString directoryPath = MudletPaths::getMudletPath(enums::profileHomePath, mpHost->getName());
-    const QString fileName = MudletPaths::getMudletPath(enums::profileDataItemPath, mpHost->getName(), jsonNotesFileName);
+    const QString directoryPath = MudletApp::getMudletPath(enums::profileHomePath, mpHost->getName());
+    const QString fileName = MudletApp::getMudletPath(enums::profileDataItemPath, mpHost->getName(), jsonNotesFileName);
 
     const QDir dir;
     if (!dir.exists(directoryPath)) {
@@ -369,11 +381,11 @@ void dlgNotepad::save()
 
 bool dlgNotepad::migrateOldNotesFile()
 {
-    QString oldFileName = MudletPaths::getMudletPath(enums::profileDataItemPath, mpHost->getName(), utf8EncodedNotesFileName);
+    QString oldFileName = MudletApp::getMudletPath(enums::profileDataItemPath, mpHost->getName(), utf8EncodedNotesFileName);
     bool useUtf8 = true;
 
     if (!QFile::exists(oldFileName)) {
-        oldFileName = MudletPaths::getMudletPath(enums::profileDataItemPath, mpHost->getName(), local8BitEncodedNotesFileName);
+        oldFileName = MudletApp::getMudletPath(enums::profileDataItemPath, mpHost->getName(), local8BitEncodedNotesFileName);
         useUtf8 = false;
 
         if (!QFile::exists(oldFileName)) {
@@ -403,7 +415,7 @@ bool dlgNotepad::migrateOldNotesFile()
 
 void dlgNotepad::restore()
 {
-    const QString fileName = MudletPaths::getMudletPath(enums::profileDataItemPath, mpHost->getName(), jsonNotesFileName);
+    const QString fileName = MudletApp::getMudletPath(enums::profileDataItemPath, mpHost->getName(), jsonNotesFileName);
 
     if (QFile::exists(fileName)) {
         QFile file(fileName);
@@ -618,7 +630,7 @@ void dlgNotepad::closeEvent(QCloseEvent* event)
 // The grey arrows the .ui file gives the send controls toggle are all but invisible
 // against a dark background, so use the brighter green ones (which the .ui file already
 // uses for the hovered-over state) there instead. The background colour is what matters,
-// so go by the palette rather than by mudlet::inDarkMode() - the latter is only set when
+// so go by the palette rather than by MudletApp::darkMode() - the latter is only set when
 // Mudlet itself applies its dark theme, yet a dark system theme darkens the notepad as well.
 // The application palette is the one to read: when this runs in response to a style change
 // the widgets have not had the new palette propagated down to them yet
@@ -651,6 +663,11 @@ void dlgNotepad::changeEvent(QEvent* event)
 
 bool dlgNotepad::eventFilter(QObject* obj, QEvent* event)
 {
+    if (event->type() == QEvent::Resize) {
+        if (auto* textEdit = currentTextEdit(); textEdit && obj == textEdit->viewport()) {
+            scheduleRehighlight();
+        }
+    }
     if (obj == mpFindLineEdit && event->type() == QEvent::KeyPress) {
         auto* keyEvent = static_cast<QKeyEvent*>(event);
         if (keyEvent->key() == Qt::Key_Return || keyEvent->key() == Qt::Key_Enter) {
@@ -717,8 +734,6 @@ void dlgNotepad::slot_findPrevious()
 void dlgNotepad::slot_findTextChanged(const QString& text)
 {
     Q_UNUSED(text)
-    highlightAllMatches();
-
     auto* textEdit = currentTextEdit();
     if (textEdit && !mpFindLineEdit->text().isEmpty()) {
         QTextCursor cursor = textEdit->textCursor();
@@ -726,6 +741,7 @@ void dlgNotepad::slot_findTextChanged(const QString& text)
         textEdit->setTextCursor(cursor);
         textEdit->find(mpFindLineEdit->text());
     }
+    highlightAllMatches();
 }
 
 void dlgNotepad::slot_currentTabChanged(int index)
@@ -751,22 +767,43 @@ void dlgNotepad::highlightAllMatches()
         return;
     }
 
-    QTextDocument* doc = textEdit->document();
-    QTextCursor cursor(doc);
-    QTextCursor currentCursor = textEdit->textCursor();
+    const QTextCursor currentCursor = textEdit->textCursor();
 
     QColor highlightColor(Qt::yellow);
     highlightColor.setAlpha(100);
     QColor currentMatchColor(255, 165, 0);
     currentMatchColor.setAlpha(150);
 
-    while (!cursor.isNull() && !cursor.atEnd()) {
-        cursor = doc->find(searchText, cursor);
-        if (!cursor.isNull()) {
-            QTextEdit::ExtraSelection selection;
-            selection.cursor = cursor;
+    // Laying out a mark costs about as much as drawing it, and a big note can hold tens of
+    // thousands of matches, so only those on screen are marked
+    const QRect viewportRect = textEdit->viewport()->rect();
+    QTextCursor firstShown = textEdit->cursorForPosition(viewportRect.topLeft());
+    firstShown.movePosition(QTextCursor::StartOfLine);
+    QTextCursor lastShown = textEdit->cursorForPosition(viewportRect.bottomRight());
+    lastShown.movePosition(QTextCursor::EndOfLine);
 
-            if (cursor.selectionStart() == currentCursor.selectionStart() && cursor.selectionEnd() == currentCursor.selectionEnd()) {
+    // The matching QTextDocument::find() does, so the marks agree with where Next and Previous land,
+    // but bounded by the screen where find() would run on to the next match however far away that is
+    const int firstShownPosition = firstShown.position();
+    const int lastShownPosition = lastShown.position();
+    for (QTextBlock block = firstShown.block(); block.isValid() && block.position() <= lastShownPosition; block = block.next()) {
+        QString text = block.text();
+        text.replace(QChar::Nbsp, QLatin1Char(' '));
+        for (qsizetype at = text.indexOf(searchText, 0, Qt::CaseInsensitive); at >= 0; at = text.indexOf(searchText, at + searchText.size(), Qt::CaseInsensitive)) {
+            const int start = block.position() + at;
+            const int end = start + searchText.size();
+            if (start > lastShownPosition) {
+                break;
+            }
+            if (end <= firstShownPosition) {
+                continue;
+            }
+
+            QTextEdit::ExtraSelection selection;
+            selection.cursor = QTextCursor(block);
+            selection.cursor.setPosition(start);
+            selection.cursor.setPosition(end, QTextCursor::KeepAnchor);
+            if (start == currentCursor.selectionStart() && end == currentCursor.selectionEnd()) {
                 selection.format.setBackground(currentMatchColor);
             } else {
                 selection.format.setBackground(highlightColor);
@@ -777,6 +814,24 @@ void dlgNotepad::highlightAllMatches()
     }
 
     textEdit->setExtraSelections(extraSelections);
+}
+
+// Queued, as what is on screen changes while the edit is still part way through laying itself out
+void dlgNotepad::scheduleRehighlight()
+{
+    if (mRehighlightPending) {
+        return;
+    }
+    mRehighlightPending = true;
+    QMetaObject::invokeMethod(
+            this,
+            [this]() {
+                mRehighlightPending = false;
+                if (mpFindBar && mpFindBar->isVisible()) {
+                    highlightAllMatches();
+                }
+            },
+            Qt::QueuedConnection);
 }
 
 void dlgNotepad::clearSearchHighlights()

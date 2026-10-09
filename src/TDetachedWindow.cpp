@@ -23,8 +23,11 @@
 #include "TTabBar.h"
 #include "TDebug.h"
 #include "Host.h"
+#include "HostDialogs.h"
 #include "HostManager.h"
 #include "mudlet.h"
+#include "MudletApp.h"
+#include "MudletMedia.h"
 #include "widgetutils.h"
 #include "utils.h"
 #include "dlgMapper.h"
@@ -83,6 +86,11 @@ TDetachedWindow::TDetachedWindow(const QString& profileName, TMainConsole* conso
     createToolBar();
     createMenus();
     restoreWindowGeometry();
+
+    if (auto* media = MudletMedia::self()) {
+        showMuteState();
+        connect(media, &MudletMedia::signal_muteSet, this, &TDetachedWindow::showMuteState);
+    }
 
     // Set initial toolbar visibility based on main window state
     if (mpToolBar) {
@@ -412,24 +420,27 @@ void TDetachedWindow::createMenus()
     //: This explains the "Mute all media" item in the "Options" menu in the menubar of a detached Mudlet window.
     mpMenuMuteMediaAction->setStatusTip(tr("Mutes all media played."));
     mpMenuMuteMediaAction->setCheckable(true);
+    mpMenuMuteMediaAction->setObjectName(qsl("menuMuteMedia"));
     connect(mpMenuMuteMediaAction, &QAction::triggered, this, &TDetachedWindow::slot_muteMedia);
     optionsMenu->addAction(mpMenuMuteMediaAction);
 
     //: This is an item in the "Options" menu in the menubar of a detached Mudlet window.
-    auto muteAPIAction = new QAction(tr("Mute sounds from Mudlet (triggers, scripts, etc.)"), this);
+    mpMenuMuteAPIAction = new QAction(tr("Mute sounds from Mudlet (triggers, scripts, etc.)"), this);
     //: This explains the "Mute sounds from Mudlet (triggers, scripts, etc.)" item in the "Options" menu in the menubar of a detached Mudlet window.
-    muteAPIAction->setStatusTip(tr("Mutes media played by the Lua API and scripts."));
-    muteAPIAction->setCheckable(true);
-    connect(muteAPIAction, &QAction::triggered, this, &TDetachedWindow::slot_muteAPI);
-    optionsMenu->addAction(muteAPIAction);
+    mpMenuMuteAPIAction->setStatusTip(tr("Mutes media played by the Lua API and scripts."));
+    mpMenuMuteAPIAction->setCheckable(true);
+    mpMenuMuteAPIAction->setObjectName(qsl("menuMuteAPI"));
+    connect(mpMenuMuteAPIAction, &QAction::triggered, this, &TDetachedWindow::slot_muteAPI);
+    optionsMenu->addAction(mpMenuMuteAPIAction);
 
     //: This is an item in the "Options" menu in the menubar of a detached Mudlet window.
-    auto muteGameAction = new QAction(tr("Mute sounds from the game (MCMP, MSP)"), this);
+    mpMenuMuteGameAction = new QAction(tr("Mute sounds from the game (MCMP, MSP)"), this);
     //: This explains the "Mute sounds from the game (MCMP, MSP)" item in the "Options" menu in the menubar of a detached Mudlet window.
-    muteGameAction->setStatusTip(tr("Mutes media played by the game (MCMP, MSP)."));
-    muteGameAction->setCheckable(true);
-    connect(muteGameAction, &QAction::triggered, this, &TDetachedWindow::slot_muteGame);
-    optionsMenu->addAction(muteGameAction);
+    mpMenuMuteGameAction->setStatusTip(tr("Mutes media played by the game (MCMP, MSP)."));
+    mpMenuMuteGameAction->setCheckable(true);
+    mpMenuMuteGameAction->setObjectName(qsl("menuMuteGame"));
+    connect(mpMenuMuteGameAction, &QAction::triggered, this, &TDetachedWindow::slot_muteGame);
+    optionsMenu->addAction(mpMenuMuteGameAction);
 
     // Window menu - matches main window order (except reattach vs detach)
     //: This is the name of a menu in the menubar of a detached Mudlet window. Please do not add an "&" to the translation: it would become a keyboard shortcut for the whole window and stop one of the window's other shortcuts from working.
@@ -794,7 +805,7 @@ void TDetachedWindow::showTabContextMenu(const QPoint& position)
 
 void TDetachedWindow::saveWindowGeometry()
 {
-    QSettings& settings = *mudlet::getQSettings();
+    QSettings& settings = *MudletApp::getQSettings();
     // Use current profile name for settings key
     const QString key = QString("DetachedWindow/%1").arg(mCurrentProfileName.isEmpty() ? "Unknown" : mCurrentProfileName);
     settings.setValue(key + "/geometry", saveGeometry());
@@ -803,7 +814,7 @@ void TDetachedWindow::saveWindowGeometry()
 
 void TDetachedWindow::restoreWindowGeometry()
 {
-    QSettings& settings = *mudlet::getQSettings();
+    QSettings& settings = *MudletApp::getQSettings();
     // Use current profile name for settings key
     const QString key = QString("DetachedWindow/%1").arg(mCurrentProfileName.isEmpty() ? "Unknown" : mCurrentProfileName);
 
@@ -2303,6 +2314,7 @@ void TDetachedWindow::switchToProfile(const QString& profileName)
             if (mpTabBar->currentIndex() != i) {
                 mpTabBar->setCurrentIndex(i);
             }
+            mpTabBar->clearActivity(i);
             break;
         }
     }
@@ -2344,6 +2356,14 @@ void TDetachedWindow::switchToProfile(const QString& profileName)
     raise();
     activateWindow();
     show();
+}
+
+void TDetachedWindow::markTabActivity(const QString& profileName, const bool isLowerPriorityChange)
+{
+    if (profileName == mCurrentProfileName) {
+        return;
+    }
+    mpTabBar->markActivity(profileName, isLowerPriorityChange);
 }
 
 void TDetachedWindow::slot_tabChanged(int index)
@@ -2617,14 +2637,15 @@ void TDetachedWindow::showScriptEditorDialog(std::function<void(dlgTriggerEditor
 
         // Create or get the editor directly, avoiding the main window's focus restoration logic
         dlgTriggerEditor* pEditor = nullptr;
-        if (pHost->mpEditorDialog != nullptr) {
-            pEditor = pHost->mpEditorDialog;
+        HostDialogs& dialogs = HostDialogs::of(pHost);
+        if (dialogs.mpEditorDialog != nullptr) {
+            pEditor = dialogs.mpEditorDialog;
         } else {
             // Create a new editor directly without using the main window's method
             pEditor = new dlgTriggerEditor(pHost);
-            pHost->mpEditorDialog = pEditor;
-            connect(pHost, &Host::profileSaveStarted, pHost->mpEditorDialog, &dlgTriggerEditor::slot_profileSaveStarted);
-            connect(pHost, &Host::profileSaveFinished, pHost->mpEditorDialog, &dlgTriggerEditor::slot_profileSaveFinished);
+            dialogs.mpEditorDialog = pEditor;
+            connect(pHost, &Host::profileSaveStarted, pEditor, &dlgTriggerEditor::slot_profileSaveStarted);
+            connect(pHost, &Host::profileSaveFinished, pEditor, &dlgTriggerEditor::slot_profileSaveFinished);
             pEditor->fillout_form();
         }
 
@@ -2950,7 +2971,7 @@ void TDetachedWindow::slot_showPreferencesDialog()
         mudletInstance->slot_showPreferencesDialog();
 
         // Position the preferences dialog on the same screen as this detached window
-        auto pPrefs = pHost ? pHost->mpDlgProfilePreferences : mudletInstance->mpDlgProfilePreferences;
+        auto pPrefs = pHost ? HostDialogs::of(pHost).mpDlgProfilePreferences : mudletInstance->mpDlgProfilePreferences;
         if (pPrefs) {
             widgetutils::positionDialogOnParentScreen(pPrefs, this);
 
@@ -2980,11 +3001,11 @@ void TDetachedWindow::slot_showNotesDialog()
         mudletInstance->slot_notes();
 
         // Position the notes dialog on the same screen as this detached window
-        if (pHost->mpNotePad) {
-            widgetutils::positionDialogOnParentScreen(pHost->mpNotePad, this);
+        if (auto* pDialog = HostDialogs::of(pHost).mpNotePad.data()) {
+            widgetutils::positionDialogOnParentScreen(pDialog, this);
 
             // Set up focus restoration for the notepad to return to this detached window
-            mudletInstance->setupNotepadFocusRestoration(pHost->mpNotePad);
+            mudletInstance->setupNotepadFocusRestoration(pDialog);
         }
     });
 }
@@ -3016,11 +3037,11 @@ void TDetachedWindow::slot_showPackageManagerDialog()
         mudletInstance->slot_packageManager();
 
         // Position the package manager dialog on the same screen as this detached window
-        if (pHost->mpPackageManager) {
-            widgetutils::positionDialogOnParentScreen(pHost->mpPackageManager, this);
+        if (auto* pDialog = HostDialogs::of(pHost).mpPackageManager.data()) {
+            widgetutils::positionDialogOnParentScreen(pDialog, this);
 
             // Set up focus restoration for the package manager to return to this detached window
-            mudletInstance->setupPackageManagerFocusRestoration(pHost->mpPackageManager);
+            mudletInstance->setupPackageManagerFocusRestoration(pDialog);
         }
     });
 }
@@ -3045,11 +3066,11 @@ void TDetachedWindow::slot_showModuleManagerDialog()
         mudletInstance->slot_moduleManager();
 
         // Position the module manager dialog on the same screen as this detached window
-        if (pHost->mpModuleManager) {
-            widgetutils::positionDialogOnParentScreen(pHost->mpModuleManager, this);
+        if (auto* pDialog = HostDialogs::of(pHost).mpModuleManager.data()) {
+            widgetutils::positionDialogOnParentScreen(pDialog, this);
 
             // Set up focus restoration for the module manager to return to this detached window
-            mudletInstance->setupModuleManagerFocusRestoration(pHost->mpModuleManager);
+            mudletInstance->setupModuleManagerFocusRestoration(pDialog);
         }
     });
 }
@@ -3118,28 +3139,42 @@ void TDetachedWindow::slot_mudletDiscord()
 }
 
 
+void TDetachedWindow::showMuteState()
+{
+    auto* media = MudletMedia::self();
+    if (!media) {
+        return;
+    }
+    const bool allMuted = media->allMuted();
+    for (QAction* pAction : {mpMenuMuteMediaAction, mpActionMuteMedia}) {
+        pAction->setChecked(allMuted);
+    }
+    for (QAction* pAction : {mpMenuMuteAPIAction, mpActionMuteAPI}) {
+        pAction->setChecked(media->apiMuted());
+    }
+    for (QAction* pAction : {mpMenuMuteGameAction, mpActionMuteGame}) {
+        pAction->setChecked(media->gameMuted());
+    }
+}
+
 void TDetachedWindow::slot_muteMedia()
 {
     withCurrentProfileActive([this]() {
-        mudlet::self()->slot_muteMedia();
+        MudletMedia::self()->toggleAllMuted();
     });
 }
 
 void TDetachedWindow::slot_muteAPI()
 {
     withCurrentProfileActive([this]() {
-        // Toggle the current API mute state
-        bool currentState = mudlet::self()->muteAPI();
-        mudlet::self()->slot_muteAPI(!currentState);
+        MudletMedia::self()->setApiMuted(!MudletMedia::self()->apiMuted());
     });
 }
 
 void TDetachedWindow::slot_muteGame()
 {
     withCurrentProfileActive([this]() {
-        // Toggle the current game mute state
-        bool currentState = mudlet::self()->muteGame();
-        mudlet::self()->slot_muteGame(!currentState);
+        MudletMedia::self()->setGameMuted(!MudletMedia::self()->gameMuted());
     });
 }
 

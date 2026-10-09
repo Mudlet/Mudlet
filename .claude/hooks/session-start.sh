@@ -3,9 +3,8 @@
 # compile Mudlet natively on the Ubuntu 24.04 session container.
 #
 # The container filesystem is cached after this hook completes, so the
-# expensive steps (apt, Qt download, luarocks) only run when the cache is
-# cold; on a warm container every step short-circuits and the hook finishes
-# in well under a minute.
+# expensive steps (apt, Qt download, luarocks) run only on a cold cache; every
+# step must short-circuit on a warm one.
 set -euo pipefail
 
 # Local checkouts (desktop/CLI) manage their own toolchain - do nothing there.
@@ -72,32 +71,54 @@ if [ ! -d "${QT_DIR}" ]; then
     linux_gcc_64 -O /opt/qt -m qt5compat qtmultimedia qtspeech)
 fi
 
+# rcc stamps every resource with its file's mtime, which differs between
+# checkouts; pinned, the font and image resources share ccache hits too. Not
+# SOURCE_DATE_EPOCH: GCC would apply that to __DATE__, and the updater reads the
+# real build time.
+if [ -n "${CLAUDE_ENV_FILE:-}" ]; then
+  echo "export QT_RCC_SOURCE_DATE_OVERRIDE=1" >> "${CLAUDE_ENV_FILE}"
+fi
+
 # Test-suite and UI-driving dependencies: xvfb and xcb libraries for the
 # busted run (the aqt Qt's xcb platform needs libxcb-cursor0 and
 # libxcb-shape0, which Ubuntu's own Qt would have pulled in), gstreamer for
 # Qt Multimedia, and the docs/demo-videos.md toolchain (openbox, xdotool,
 # imagemagick, ffmpeg) for driving and recording the real UI headlessly.
-if ! dpkg -s libxcb-shape0 >/dev/null 2>&1; then
+TEST_PACKAGES=(
+  xvfb
+  libgstreamer-plugins-base1.0-0
+  libxcb-cursor0
+  libxcb-icccm4
+  libxcb-image0
+  libxcb-keysyms1
+  libxcb-render-util0
+  libxcb-shape0
+  libxcb-xinerama0
+  xdotool
+  openbox
+  imagemagick
+  ffmpeg
+)
+# Every package is asked about, as some arrive with unrelated ones - ffmpeg
+# brings libxcb-shape0 - and by status, since dpkg -s also succeeds for one that
+# was removed but not purged. Not fatal: the steps after this need none of them.
+test_packages_missing() {
+  local package
+  for package in "${TEST_PACKAGES[@]}"; do
+    [ "$(dpkg-query -W -f='${db:Status-Status}' "${package}" 2>/dev/null)" = installed ] || return 0
+  done
+  return 1
+}
+if test_packages_missing; then
   echo "Installing test-suite apt dependencies..."
-  DEBIAN_FRONTEND=noninteractive ${SUDO} apt-get install -y --no-install-recommends \
-    xvfb \
-    libgstreamer-plugins-base1.0-0 \
-    libxcb-cursor0 \
-    libxcb-icccm4 \
-    libxcb-image0 \
-    libxcb-keysyms1 \
-    libxcb-render-util0 \
-    libxcb-shape0 \
-    libxcb-xinerama0 \
-    xdotool \
-    openbox \
-    imagemagick \
-    ffmpeg
+  # The lists already on disk may still serve, so a failed update is no reason not to try
+  ${SUDO} apt-get update -qq || echo "WARNING: could not update the apt package lists"
+  DEBIAN_FRONTEND=noninteractive ${SUDO} apt-get install -y --no-install-recommends "${TEST_PACKAGES[@]}" \
+    || echo "WARNING: could not install the test-suite apt dependencies"
 fi
 
-# Coverage tooling for the improve-test-coverage skill (gcovr for the report,
-# jq for its check-lines.sh helper). Separate guard: containers cached before
-# this block existed still pick it up.
+# gcovr and jq for the improve-test-coverage skill. Guarded separately so
+# containers cached before this block existed still get them.
 if ! command -v gcovr >/dev/null 2>&1 || ! command -v jq >/dev/null 2>&1; then
   echo "Installing coverage tooling..."
   ${SUDO} apt-get update -qq
@@ -153,6 +174,26 @@ if [ -n "${CLAUDE_ENV_FILE:-}" ]; then
   } >> "${CLAUDE_ENV_FILE}"
 fi
 
+# Let worktrees share ccache hits: base_dir makes paths below it relative, so
+# it is the main checkout's parent - never / or above /opt/qt and /usr, whose
+# include paths would then differ with worktree depth. hash_dir off keeps each
+# worktree's build directory out of the hash of a -g build, so a shared object's
+# debug info can name a sibling's; build with CCACHE_HASHDIR=1 to step through
+# one in a debugger. Both settings are global.
+CHECKOUT_ROOT=""
+if [ -n "${CLAUDE_PROJECT_DIR:-}" ]; then
+  CHECKOUT_ROOT="$(cd "${CLAUDE_PROJECT_DIR}" && cd "$(git rev-parse --git-common-dir)/.." && pwd)" || CHECKOUT_ROOT=""
+fi
+CCACHE_BASE_DIR=""
+if [ -n "${CHECKOUT_ROOT}" ]; then
+  CCACHE_BASE_DIR="$(dirname "${CHECKOUT_ROOT}")"
+fi
+if command -v ccache >/dev/null 2>&1 && [ -n "${CCACHE_BASE_DIR}" ] && [ "${CCACHE_BASE_DIR}" != "/" ]; then
+  ccache --set-config=base_dir="${CCACHE_BASE_DIR}" \
+    && ccache --set-config=hash_dir=false \
+    || echo "WARNING: could not configure ccache for sharing between worktrees"
+fi
+
 # PR-review tooling for the agent. Installed at user scope, so it lands in
 # the cached container state like everything else. Non-fatal: a marketplace
 # outage must not block the session.
@@ -169,10 +210,7 @@ if [ -n "${CLAUDE_PROJECT_DIR:-}" ]; then
   git -C "${CLAUDE_PROJECT_DIR}" submodule update --init --recursive
 
   # Configure the default tree every session (cheap) so it already exists
-  # with Qt and the mold linker wired in - linking dominates a rebuild, and
-  # mold cuts the link tail dramatically (see PR #9927; until its top-level
-  # set_alternate_linker() move merges, the flag only reaches the main mudlet
-  # binary, afterwards every target).
+  # with Qt and the mold linker wired in - linking dominates a rebuild.
   cd "${CLAUDE_PROJECT_DIR}"
   cmake --preset linux-debug-nosan -DCMAKE_PREFIX_PATH="${QT_DIR}" -DUSE_ALTERNATE_LINKER=mold
 fi

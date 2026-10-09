@@ -25,7 +25,7 @@
 #include "dlgMapper.h"
 
 #include "Host.h"
-#include "MudletPaths.h"
+#include "MudletApp.h"
 #include "TConsole.h"
 #include "TMainConsole.h"
 #include "TMap.h"
@@ -137,10 +137,146 @@ dlgMapper::dlgMapper(QWidget* parent, Host* pH, TMap* pM)
     setupEmptyStateOverlay();
     setupProgressOverlay();
     connect(mpMap, &TMap::signal_mmpMapLocationChanged, this, &dlgMapper::updateEmptyStateOverlay);
+    connectMapCues();
+    updateEmptyStateOverlay();
+}
+
+bool dlgMapper::drawsTheMap() const
+{
+    return mpMap && mpMap->mpMapper == this;
+}
+
+void dlgMapper::connectMapCues()
+{
     connect(mpMap, &TMap::signal_areaChanged, this, [this](int) {
+#if defined(INCLUDE_3DMAPPER)
+        if (glWidget && mpMap->mpM == glWidget) {
+            glWidget->update();
+        }
+#endif
+        if (drawsTheMap()) {
+            mp2dMap->mNewMoveAction = true;
+            mp2dMap->update();
+        }
         updateEmptyStateOverlay();
     });
-    updateEmptyStateOverlay();
+    connect(mpMap, &TMap::signal_mapperColoursChanged, this, [this]() {
+        if (drawsTheMap()) {
+            refreshColours();
+        }
+    });
+    connect(mpMap, &TMap::signal_mapCleared, this, [this]() {
+        if (!drawsTheMap()) {
+            return;
+        }
+        updateAreaComboBox();
+        mp2dMap->mMultiSelectionListWidget.clear();
+        mp2dMap->mMultiSelectionListWidget.hide();
+    });
+    connect(mpMap, &TMap::signal_mapLabelsChanged, this, [this]() {
+        if (drawsTheMap()) {
+            mp2dMap->update();
+        }
+    });
+    connect(mpMap, &TMap::signal_mapLoaded, this, [this](const bool showPlayerArea) {
+        if (!drawsTheMap()) {
+            return;
+        }
+        mp2dMap->init();
+        updateAreaComboBox();
+        if (showPlayerArea) {
+            resetAreaComboBoxToPlayerRoomArea();
+        }
+    });
+    connect(mpMap, &TMap::signal_mapperShowRequested, this, [this]() {
+        if (drawsTheMap()) {
+            show();
+        }
+    });
+    connect(mpMap, &TMap::signal_mapDownloadEnded, this, [this]() {
+        if (drawsTheMap()) {
+            updateEmptyStateOverlay();
+        }
+    });
+    connect(mpMap, &TMap::signal_symbolCachesStale, this, [this]() {
+        if (!drawsTheMap()) {
+            return;
+        }
+        mp2dMap->flushSymbolPixmapCache();
+        mp2dMap->update();
+        update();
+    });
+    connect(mpMap, &TMap::signal_playerRoomStyleChanged, this, [this]() {
+        if (drawsTheMap()) {
+            mp2dMap->setPlayerRoomStyle(mpMap->mPlayerRoomStyle);
+        }
+    });
+    connect(mpMap, &TMap::signal_areaListChanged, this, [this]() {
+        if (drawsTheMap()) {
+            updateAreaComboBox();
+        }
+    });
+    connect(mpMap, &TMap::signal_areaRenamed, this, [this](const QString& oldName, const QString& newName) {
+        if (!drawsTheMap()) {
+            return;
+        }
+        const bool wasShown = oldName == comboBox_showArea->currentText();
+        updateAreaComboBox();
+        if (wasShown) {
+            comboBox_showArea->setCurrentText(newName);
+        }
+    });
+    connect(mpMap, &TMap::signal_playerAreaShowRequested, this, [this]() {
+        if (drawsTheMap()) {
+            resetAreaComboBoxToPlayerRoomArea();
+        }
+    });
+    connect(mpMap, &TMap::signal_defaultAreaVisibilitySet, this, [this](const bool wasShown) {
+        if (!drawsTheMap()) {
+            return;
+        }
+        // The 2D map can be on the default area while the list leaves it out,
+        // and then relisting cannot keep the list on it:
+        if (!wasShown && mpMap->getDefaultAreaShown() && mp2dMap->mAreaID == -1) {
+            comboBox_showArea->setCurrentText(mpMap->getDefaultAreaName());
+        }
+        mp2dMap->repaint();
+        update();
+    });
+    connect(mpMap, &TMap::signal_mapInfoContributorsChanged, this, [this]() {
+        if (drawsTheMap()) {
+            slot_updateInfoContributors();
+        }
+    });
+    connect(mpMap, &TMap::signal_mapRepaintRequested, this, [this]() {
+        if (drawsTheMap()) {
+            mp2dMap->update();
+        }
+    });
+    connect(mpMap, &TMap::signal_mapperSettingChanged, this, [this](const TMap::MapperSetting setting) {
+        if (!drawsTheMap()) {
+            return;
+        }
+        switch (setting) {
+        case TMap::MapperSetting::RoomSize:
+            mp2dMap->setRoomSize(mpHost->mRoomSize);
+            mp2dMap->update();
+            break;
+        case TMap::MapperSetting::ExitSize:
+            mp2dMap->setExitSize(mpHost->mLineSize);
+            mp2dMap->update();
+            break;
+        case TMap::MapperSetting::RoundRooms:
+            slot_toggleRoundRooms(mpHost->mBubbleMode);
+            break;
+        case TMap::MapperSetting::ShowRoomIds:
+            slot_setShowRoomIds(mpHost->mShowRoomID);
+            break;
+        case TMap::MapperSetting::ShowGrid:
+            slot_setShowGrid(mpHost->mMapperShowGrid);
+            break;
+        }
+    });
 }
 
 static QFrame* createOverlayFrame(QWidget* parent, const QString& objectName)
@@ -170,8 +306,7 @@ static void centerOverlayIn(QFrame* overlay, QWidget* parent, int minWidth)
     overlay->setGeometry((parent->width() - w) / 2, (parent->height() - h) / 2, w, h);
 }
 
-// Taking the application palette explicitly is what stops the mapper inheriting
-// one from mpConsole->mpMainFrame.
+// Set explicitly, or the mapper inherits mpConsole->mpMainFrame's palette.
 void dlgMapper::refreshColours()
 {
     setPalette(QApplication::palette());
@@ -347,8 +482,8 @@ void dlgMapper::loadMapFromFile()
     auto* dialog = new QFileDialog(this);
     //: Title of the file dialog used to pick a map file to load.
     dialog->setWindowTitle(tr("Load Mudlet map"));
-    QSettings& settings = *mudlet::getQSettings();
-    const QString lastDir = settings.value(qsl("lastFileDialogLocation"), MudletPaths::getMudletPath(enums::profileHomePath, mpHost->getName())).toString();
+    QSettings& settings = *MudletApp::getQSettings();
+    const QString lastDir = settings.value(qsl("lastFileDialogLocation"), MudletApp::getMudletPath(enums::profileHomePath, mpHost->getName())).toString();
     dialog->setDirectory(lastDir);
     dialog->setNameFilter(filters.join(qsl(";;")));
     connect(dialog, &QDialog::finished, this, [this, dialog](int result) {
@@ -363,7 +498,7 @@ void dlgMapper::loadMapFromFile()
         }
         bool success = false;
         if (fileName.endsWith(qsl(".xml"), Qt::CaseInsensitive)) {
-            success = pHost->mpConsole->importMap(fileName);
+            success = pHost->importMapFile(fileName);
         } else if (fileName.endsWith(qsl(".json"), Qt::CaseInsensitive)) {
             auto [ok, errorMessage] = pHost->mpMap->readJsonMapFile(fileName);
             success = ok;
@@ -371,12 +506,12 @@ void dlgMapper::loadMapFromFile()
                 pHost->postMessage(tr("[ ERROR ] - Unable to load JSON map file: %1\nreason: %2.").arg(fileName, errorMessage));
             }
         } else {
-            success = pHost->mpConsole->loadMap(fileName);
+            success = pHost->loadMapFile(fileName);
         }
         if (success) {
             pHost->mpMap->audit();
             mEmptyStateDismissed = true;
-            mudlet::getQSettings()->setValue(qsl("lastFileDialogLocation"), QFileInfo(fileName).absolutePath());
+            MudletApp::getQSettings()->setValue(qsl("lastFileDialogLocation"), QFileInfo(fileName).absolutePath());
         }
         updateEmptyStateOverlay();
     });
@@ -616,12 +751,6 @@ void dlgMapper::slot_roomSize(int size)
     mp2dMap->update();
 }
 
-void dlgMapper::slot_exitSize(int size)
-{
-    mp2dMap->setExitSize(size);
-    mp2dMap->update();
-}
-
 
 void dlgMapper::slot_setShowRoomIds(bool showRoomIds)
 {
@@ -802,9 +931,17 @@ void dlgMapper::paintMapInfo(const QElapsedTimer& renderTimer,
     painter.save();
     painter.setFont(pHost->getDisplayFont());
 
-    for (const auto& key : pMap->mMapInfoContributorManager->getContributorKeys()) {
+    // The caller holds raw TRoom/TArea pointers across this, and a Lua contributor can
+    // register or kill contributors, so walk a copy and skip any that went away.
+    const TMap::ScriptCallbackScope callbackScope(pMap);
+    const QList<QString> keys = pMap->mMapInfoContributorManager->getContributorKeys();
+    for (const auto& key : keys) {
         if (pHost->mMapInfoContributors.contains(key)) {
-            auto properties = pMap->mMapInfoContributorManager->getContributor(key)(roomID, selectionSize, pRoom->getArea(), displayAreaId, infoColor);
+            const MapInfoCallback contributor = pMap->mMapInfoContributorManager->getContributor(key);
+            if (!contributor) {
+                continue;
+            }
+            auto properties = contributor(roomID, selectionSize, pRoom->getArea(), displayAreaId, infoColor);
             if (!properties.color.isValid()) {
                 properties.color = infoColor;
             }
@@ -1003,10 +1140,8 @@ void dlgMapper::slot_showSaveWarningMenu()
 
     auto* retryAction = new QAction(tr("Retry save"), this);
     connect(retryAction, &QAction::triggered, this, [this]() {
-        if (mpHost && mpHost->mpConsole) {
-            if (mpHost->mpConsole->saveMap(QString())) {
-                mpMap->setSaveError(false);
-            }
+        if (mpHost && mpHost->saveMapFile(QString())) {
+            mpMap->setSaveError(false);
         }
     });
     menu->addAction(retryAction);

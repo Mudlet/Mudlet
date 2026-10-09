@@ -95,9 +95,11 @@ describe("Tests the room and area database behind the map", function()
       assert.are.same({}, getAreaRooms1(area))
     end)
 
-    it("deleting an area hands its ID back to the next area created", function()
-      -- an area above the freed one, or handing out one past the highest ID in
-      -- use would answer this just as well as reusing the hole
+    it("deleting an area does not block the next one from getting a fresh ID", function()
+      -- Area IDs resume from just past the last one handed out rather than
+      -- reusing a hole left by a deleted area, since rescanning for the
+      -- lowest free ID from scratch on every creation made bulk area
+      -- creation quadratic in the area count.
       local recycled = addAreaName("RoomDBSpecRecycled")
       local above = addAreaName("RoomDBSpecAbove")
       finally(function()
@@ -108,7 +110,26 @@ describe("Tests the room and area database behind the map", function()
       assert.is_true(above > recycled)
 
       assert.is_true(deleteArea(recycled))
-      assert.are.equal(recycled, addAreaName("RoomDBSpecReused"))
+      local reused = addAreaName("RoomDBSpecReused")
+      assert.is_true(reused > above)
+    end)
+
+    it("deleting the area that was just handed the newest ID still gets a fresh one next time", function()
+      -- Creating "above" before deleting "recycled" in the case above moves
+      -- the hint past recycled's ID regardless of whether createNewAreaID()
+      -- advances the hint itself or only the while loop does - so it can't
+      -- tell the two apart. Deleting the just-made area before anything else
+      -- is created can: nothing else has moved the hint down, so the next ID
+      -- is only fresh if createNewAreaID() advanced past its own return value.
+      local first = addAreaName("RoomDBSpecJustMade")
+      finally(function()
+        deleteArea("RoomDBSpecJustMade")
+        deleteArea("RoomDBSpecMadeAfter")
+      end)
+
+      assert.is_true(deleteArea(first))
+      local second = addAreaName("RoomDBSpecMadeAfter")
+      assert.is_true(second > first)
     end)
   end)
 
@@ -158,6 +179,34 @@ describe("Tests the room and area database behind the map", function()
       assert.are.equal(middle, createRoomID(middle))
 
       assert.are.equal(missingRoomId, createRoomID(missingRoomId))
+    end)
+
+    it("createRoomID still hands back a hole after a call with a minimum above it", function()
+      local hole = createRoomID()
+      assert.is_true(addRoom(hole))
+      local above = createRoomID()
+      assert.is_true(addRoom(above))
+      finally(function() deleteRoom(hole); deleteRoom(above) end)
+
+      assert.is_true(deleteRoom(hole))
+      assert.are.equal(missingRoomId, createRoomID(missingRoomId))
+      assert.are.equal(hole, createRoomID())
+    end)
+
+    it("createRoomID hands back the numbers of rooms removed with their area", function()
+      local doomedArea = addAreaName("RoomDBSpecDoomed")
+      local first = makeRoom(doomedArea, 0, 0, 0)
+      local second = makeRoom(doomedArea, 1, 0, 0)
+      local survivor = createRoomID()
+      assert.is_true(addRoom(survivor))
+      finally(function()
+        deleteRoom(survivor); deleteRoom(first); deleteRoom(second)
+        deleteArea("RoomDBSpecDoomed")
+      end)
+      assert.is_true(first < second and second < survivor)
+
+      assert.is_true(deleteArea(doomedArea))
+      assert.are.equal(first, createRoomID())
     end)
 
     it("createRoomID rejects a minimum below one", function()
@@ -280,6 +329,49 @@ describe("Tests the room and area database behind the map", function()
       assert.are.same({}, getRoomsByPosition1(areaHome, 9, 9, 0))
       assert.are.same({mover}, getRoomsByPosition1(areaAway, 9, 9, 0))
     end)
+
+    it("finds the same rooms as a walk of the area's own room list", function()
+      -- getRoomsByPosition reads the per-cell index the 2D map draws from, so
+      -- shake that index with every kind of edit and hold it to the rooms
+      local area = addAreaName("RoomDBSpecGrid")
+      local made = {}
+      finally(function()
+        for _, id in ipairs(made) do
+          deleteRoom(id)
+        end
+        deleteArea("RoomDBSpecGrid")
+      end)
+      for i = 1, 24 do
+        made[#made + 1] = makeRoom(area, i % 3, i % 4, i % 2)
+      end
+      setRoomCoordinates(made[1], 2, 3, 1)
+      setRoomCoordinates(made[2], 5, 5, 5)
+      setRoomArea(made[3], areaAway)
+      deleteRoom(made[4])
+      -- the same id coming back somewhere else must not answer for where it was
+      local reused = made[5]
+      deleteRoom(reused)
+      assert.is_true(addRoom(reused))
+      assert.is_true(setRoomArea(reused, area))
+      setRoomCoordinates(reused, 7, 7, 0)
+
+      local expected = {}
+      for _, id in ipairs(getAreaRooms1(area)) do
+        local x, y, z = getRoomCoordinates(id)
+        local key = x .. "," .. y .. "," .. z
+        expected[key] = expected[key] or {}
+        table.insert(expected[key], id)
+      end
+      for z = 0, 5 do
+        for x = 0, 7 do
+          for y = 0, 7 do
+            local want = expected[x .. "," .. y .. "," .. z] or {}
+            table.sort(want)
+            assert.are.same(want, getRoomsByPosition1(area, x, y, z), string.format("at %d,%d,%d", x, y, z))
+          end
+        end
+      end
+    end)
   end)
 
   describe("Tests exits that are taken away again", function()
@@ -329,6 +421,61 @@ describe("Tests the room and area database behind the map", function()
 
       assert.is_false(setExit(a, missingRoomId, "east"))
       assert.is_nil(getRoomExits(a)["east"])
+    end)
+
+    local function dressExit(from, to, direction, short)
+      assert.is_true(setExit(from, to, direction))
+      assert.is_true(setExitWeight(from, direction, 5))
+      assert.is_true(setDoor(from, short, 2))
+      lockExit(from, direction, true)
+      assert.is_true(addCustomLine(from, {{0.5, 0.5, 0}}, short, "dot line", {1, 2, 3}, false))
+      assert.is_true(hasExitLock(from, direction))
+    end
+
+    local function assertUndressed(from, short, direction)
+      assert.is_nil(getExitWeights(from)[short])
+      assert.is_nil(getDoors(from)[short])
+      assert.is_false(hasExitLock(from, direction))
+      assert.is_nil((getCustomLines1(from) or {})[short])
+    end
+
+    it("setExit with a roomID below one takes the exit's weight, door, lock and custom line with it", function()
+      local a = makeRoom(areaHome, 10, 2, 0)
+      local b = makeRoom(areaHome, 11, 2, 0)
+      finally(function() deleteRoom(a); deleteRoom(b) end)
+      dressExit(a, b, "east", "e")
+      -- the control: an exit that stays
+      dressExit(a, b, "west", "w")
+
+      assert.is_true(setExit(a, -1, "east"))
+
+      assertUndressed(a, "e", "east")
+      assert.are.equal(5, getExitWeights(a)["w"])
+      assert.are.equal(2, getDoors(a)["w"])
+      assert.is_true(hasExitLock(a, "west"))
+      -- so an exit made there again starts out bare, and can be walked
+      assert.is_true(setExit(a, b, "east"))
+      assertUndressed(a, "e", "east")
+      assert.is_true(getPath(a, b))
+    end)
+
+    it("deleting the room an exit leads to takes the exit's weight, door, lock and custom line with it", function()
+      local a = makeRoom(areaHome, 12, 2, 0)
+      local gone = makeRoom(areaHome, 13, 2, 0)
+      local other = makeRoom(areaHome, 14, 2, 0)
+      finally(function()
+        deleteRoom(a); deleteRoom(other)
+        if roomExists(gone) then deleteRoom(gone) end
+      end)
+      dressExit(a, gone, "east", "e")
+      dressExit(a, other, "west", "w")
+
+      assert.is_true(deleteRoom(gone))
+
+      assert.is_nil(getRoomExits(a)["east"])
+      assertUndressed(a, "e", "east")
+      assert.are.equal(5, getExitWeights(a)["w"])
+      assert.is_true(hasExitLock(a, "west"))
     end)
   end)
 
@@ -386,6 +533,100 @@ describe("Tests the room and area database behind the map", function()
       assert.is_nil(getDoors(from)["one"])
       assert.is_true(addSpecialExit(from, to, "two"))
       assert.is_false(hasSpecialExitLock(from, to, "two"))
+    end)
+
+    it("clearSpecialExits takes every command's weight with it", function()
+      local from = makeRoom(areaHome, 22, 1, 0)
+      local to = makeRoom(areaHome, 23, 1, 0)
+      finally(function() deleteRoom(from); deleteRoom(to) end)
+
+      assert.is_true(addSpecialExit(from, to, "heave"))
+      assert.is_true(setExitWeight(from, "heave", 8))
+      assert.are.equal(8, getExitWeights(from)["heave"])
+      assert.is_true(addSpecialExit(from, to, "shove"))
+      assert.is_true(setExitWeight(from, "shove", 5))
+
+      clearSpecialExits(from)
+
+      assert.is_nil(getExitWeights(from)["heave"])
+      assert.is_nil(getExitWeights(from)["shove"])
+      -- a new exit that reuses the command starts out unweighted
+      assert.is_true(addSpecialExit(from, to, "heave"))
+      assert.is_nil(getExitWeights(from)["heave"])
+    end)
+
+    it("clearSpecialExits leaves the weight of a normal exit a special exit is named after", function()
+      local from = makeRoom(areaHome, 29, 1, 0)
+      local to = makeRoom(areaHome, 30, 1, 0)
+      finally(function() deleteRoom(from); deleteRoom(to) end)
+
+      assert.is_true(setExit(from, to, "n"))
+      assert.is_true(setExitWeight(from, "n", 7))
+      assert.is_true(addSpecialExit(from, to, "n"))
+
+      clearSpecialExits(from)
+
+      assert.are.equal(to, getRoomExits(from)["north"])
+      assert.are.equal(7, getExitWeights(from)["n"])
+    end)
+
+    it("deleting the room a special exit leads to leaves the weight of a normal exit it is named after", function()
+      local from = makeRoom(areaHome, 31, 1, 0)
+      local to = makeRoom(areaHome, 32, 1, 0)
+      local gone = makeRoom(areaHome, 33, 1, 0)
+      finally(function()
+        deleteRoom(from); deleteRoom(to)
+        if roomExists(gone) then deleteRoom(gone) end
+      end)
+
+      assert.is_true(setExit(from, to, "n"))
+      assert.is_true(setExitWeight(from, "n", 7))
+      assert.is_true(addSpecialExit(from, gone, "n"))
+
+      assert.is_true(deleteRoom(gone))
+
+      assert.is_nil(getSpecialExitsSwap(from)["n"])
+      assert.are.equal(7, getExitWeights(from)["n"])
+    end)
+
+    it("clearSpecialExits takes the room off its area's list of exits", function()
+      local from = makeRoom(areaHome, 27, 1, 0)
+      local stayer = makeRoom(areaHome, 28, 1, 0)
+      finally(function() deleteRoom(from); deleteRoom(stayer) end)
+
+      assert.is_true(addSpecialExit(from, rAway1, "heave"))
+      -- the control: a room whose special exit out of the area is left alone
+      assert.is_true(addSpecialExit(stayer, rAway1, "heave"))
+      assert.is_true(listHas(getAreaExits(areaHome), from))
+
+      clearSpecialExits(from)
+
+      assert.is_false(listHas(getAreaExits(areaHome), from))
+      assert.is_true(listHas(getAreaExits(areaHome), stayer))
+    end)
+
+    it("deleting the room a special exit leads to takes the exit's weight with it", function()
+      local from = makeRoom(areaHome, 24, 1, 0)
+      local gone = makeRoom(areaHome, 25, 1, 0)
+      local other = makeRoom(areaHome, 26, 1, 0)
+      finally(function()
+        deleteRoom(from); deleteRoom(other)
+        if roomExists(gone) then deleteRoom(gone) end
+      end)
+
+      assert.is_true(addSpecialExit(from, gone, "heave"))
+      assert.is_true(setExitWeight(from, "heave", 8))
+      -- the control: a weighted special exit to a room that stays
+      assert.is_true(addSpecialExit(from, other, "shove"))
+      assert.is_true(setExitWeight(from, "shove", 5))
+
+      assert.is_true(deleteRoom(gone))
+
+      assert.is_nil(getSpecialExitsSwap(from)["heave"])
+      assert.is_nil(getExitWeights(from)["heave"])
+      assert.are.equal(5, getExitWeights(from)["shove"])
+      assert.is_true(addSpecialExit(from, other, "heave"))
+      assert.is_nil(getExitWeights(from)["heave"])
     end)
   end)
 

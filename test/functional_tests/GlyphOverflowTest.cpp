@@ -24,7 +24,7 @@
 #include <QTemporaryDir>
 #include <QtTest/QtTest>
 
-#include "MudletPaths.h"
+#include "MudletApp.h"
 #include "PortableModeTestHelper.h"
 #include "ProfileTestHelper.h"
 #include "Host.h"
@@ -38,6 +38,8 @@
 #include "mudlet.h"
 
 #include "GroupedTest.h"
+
+using namespace std::chrono_literals;
 
 // TTextEdit lays text out in cells of QFontMetrics::height(), which is a
 // typographic measure rather than the glyph ink box. At a good number of font
@@ -147,7 +149,7 @@ private slots:
         mPort = QString::number(mpServer->serverPort());
         mudlet::start();
         mudlet::self()->setupConfig();
-        QCOMPARE(MudletPaths::getMudletPath(enums::mainPath), qsl("%1/mudlet").arg(mConfigDir.path()));
+        QCOMPARE(MudletApp::getMudletPath(enums::mainPath), qsl("%1/mudlet").arg(mConfigDir.path()));
         mudlet::self()->takeOwnershipOfInstanceCoordinator(std::make_unique<MudletInstanceCoordinator>("MudletInstanceCoordinator"));
         mudlet::self()->init();
         mudlet::self()->setStorePasswordsSecurely(false);
@@ -312,8 +314,8 @@ private slots:
         }
     }
 
-    // Scrolling reuses the cached screen by blitting it a whole number of cells
-    // up or down, which lands a complete line of text in the strip below the
+    // Scrolling reuses the cached screen shifted a whole number of cells up or
+    // down, which can leave a complete line of text in the strip below the
     // last one. Only the bottom line's own overflow belongs there.
     void test_scrollingLeavesNoGhostLineBelowTheBottomOne()
     {
@@ -341,7 +343,7 @@ private slots:
             runLua(host, qsl("cecho('<white>' .. string.rep('%1\\n', %2))").arg(line).arg(pane->getScreenHeight() * 4));
             pane->forceUpdate();
             QApplication::processEvents();
-            // primes the cached screen the scroll below is blitted from
+            // primes the cached screen the scroll below reuses
             renderPane(host);
 
             // drawForeground() ignores the cache entirely below ten scrolled-off
@@ -513,9 +515,40 @@ private slots:
         QVERIFY2(ink > 0, "a linked, underlined run of spaces rendered no ink, so its underline was lost");
     }
 
+    // A line's glyphs are queued and drawn together, so a decorated cell has to
+    // have its glyph drawn before its decoration or the glyph covers it. A link
+    // can give its strike-out a color of its own, which makes the order visible.
+    void test_linkDecorationsStayAboveTheirGlyphs()
+    {
+        Host* host = startOfflineProfile();
+        QVERIFY2(host, "Could not start an offline profile");
+        TTextEdit* pane = host->mpConsole->mUpperPane;
+        QVERIFY2(pane, "No upper pane available");
+        applyFont(host, kTestFamilies.first(), kDecorationSize);
+        const QColor glyph(90, 160, 230);
+        const QColor strikeOut(230, 40, 90);
+
+        runLua(host,
+               qsl(R"(clearWindow() feedTriggers('ab\27]8;;send:x?config={"style":{"color":"%1","strikethrough":true,"text-decoration-color":"%2"}}\27\\███\27]8;;\27\\cd\n'))")
+                       .arg(glyph.name(), strikeOut.name()));
+        const int line = findLine(host, qsl("ab███cd"));
+        QVERIFY2(line >= 0, "could not find the linked line in the buffer");
+        pane->forceUpdate();
+        QApplication::processEvents();
+
+        const QImage rendered = renderPane(host);
+        const int cellWidth = cellWidthOf(pane);
+        const int cellHeight = cellHeightOf(pane);
+        const int top = (line - pane->imageTopLine()) * cellHeight;
+        const int x = 3 * cellWidth + cellWidth / 2;
+        QVERIFY2(rendered.pixelColor(x, top + cellHeight / 4) == glyph, "the block glyph does not fill its cell, so nothing shows which was drawn last");
+        QVERIFY2(rendered.pixelColor(x, top + cellHeight / 2) == strikeOut,
+                 qPrintable(qsl("the strike-out is %1 rather than %2, so the glyph was drawn over it").arg(rendered.pixelColor(x, top + cellHeight / 2).name(), strikeOut.name())));
+    }
+
     void cleanup()
     {
-        const QString profilePath = MudletPaths::getMudletPath(enums::profileHomePath, mHostname);
+        const QString profilePath = MudletApp::getMudletPath(enums::profileHomePath, mHostname);
         delete mudlet::self();
         delete mpServer;
         mpServer = nullptr;
@@ -670,7 +703,7 @@ private:
                 pollsUnchanged = 0;
                 previousLastLine = lastLine;
             }
-            QTest::qWait(50);
+            QTest::qWait(50ms);
         }
     }
 
@@ -763,7 +796,7 @@ private:
                     [host]() {
                         return host->mTelnet.getConnectionState() == QAbstractSocket::UnconnectedState;
                     },
-                    5000)) {
+                    5s)) {
             qWarning() << "Profile did not go offline in time; stub traffic may interleave with the printed lines";
         }
         return host;
@@ -777,7 +810,7 @@ private:
         }
 
         QSignalSpy spy2(&(mudlet::self()->getActiveHost()->mTelnet), &cTelnet::signal_connected);
-        if (!spy2.wait(2000)) {
+        if (!spy2.wait(2s)) {
             QFAIL("Could not connect with the host.");
         }
     }
@@ -797,7 +830,7 @@ private:
         QApplication::processEvents();
     }
 
-    void deleteProfileDirectory(const QString& profileName) { deleteDirectory(MudletPaths::getMudletPath(enums::profileHomePath, profileName)); }
+    void deleteProfileDirectory(const QString& profileName) { deleteDirectory(MudletApp::getMudletPath(enums::profileHomePath, profileName)); }
 
     void deleteDirectory(const QString& path)
     {

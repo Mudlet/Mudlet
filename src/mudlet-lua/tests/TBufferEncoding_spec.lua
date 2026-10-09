@@ -43,12 +43,24 @@ end
 -- that never reaches the decoder, so a byte in that range only goes through the
 -- decoder when something breaks the run ahead of it. An SGR reset does that and
 -- contributes no text of its own.
-local function decodedByteByByte(data)
+local function brokenUp(data)
   local broken = {}
   for i = 1, #data do
     broken[#broken + 1] = "\27[m" .. data:sub(i, i)
   end
-  return decoded(table.concat(broken))
+  return table.concat(broken)
+end
+
+local function decodedByteByByte(data)
+  return decoded(brokenUp(data))
+end
+
+-- every line a feed left behind, for data that does not stay on one line
+local function decodedLines(data)
+  local mark = getLastLineNumber("main")
+  local ok, msg = feedTelnet(data .. "\r\n")
+  assert.is_true(ok, "start the suite with --offline, see the tests README - feedTelnet said: " .. tostring(msg))
+  return getLines("main", mark, getLastLineNumber("main") + 1), mark
 end
 
 -- Text comes back as UTF-8; code points spell out the expectations that have no
@@ -136,6 +148,94 @@ describe("Tests ISO 8859-1 decoding", function()
   end)
 end)
 
+describe("Tests UTF-8 decoding of malformed sequences", function()
+
+  -- Each form below is complete: every byte after its lead is a continuation
+  -- byte, so it is refused for its lead byte or its value, not for being cut
+  -- short. What must not happen is a character being let through, or the
+  -- refusal spilling onto the ASCII byte after it. How many replacement marks a
+  -- refused form earns is left open: decoders differ on it - Mudlet gives each
+  -- form one, where the WHATWG decoder gives one per byte for a lead byte UTF-8
+  -- no longer has. The caller selects UTF-8, and only once per case, as busted
+  -- keeps just the last finally() a case registers.
+  --
+  -- A sequence cut short by a byte that is not a continuation byte is not one
+  -- of these: Mudlet takes the cutting byte into the replacement mark too, so a
+  -- line ending, an escape or an ASCII character after a truncated sequence is
+  -- lost - see PR #11068, which fixes that.
+  local function assertRefused(data, what)
+    -- Under any decoder but UTF-8 these bytes would be refused, or mangled,
+    -- for other reasons:
+    assert.equals("é", decoded(bytes(0xC3, 0xA9)), "the precondition failed - UTF-8 is not the decoder in use")
+    local payload = decoded(data .. "Z")
+    local rest, marks = payload:gsub(replacement, "")
+    assert.is_true(marks > 0 and rest == "Z", what .. " decoded to " .. payload)
+  end
+
+  it("still decodes the well-formed sequences of every length", function()
+    using("UTF-8")
+
+    assert.equals("é日😀Z", decoded(bytes(0xC3, 0xA9, 0xE6, 0x97, 0xA5, 0xF0, 0x9F, 0x98, 0x80) .. "Z"))
+  end)
+
+  it("still decodes the smallest code point of every length", function()
+    using("UTF-8")
+
+    -- the first value each length may carry, just past the overlong forms below
+    assert.same({0x80, 0x800, 0x10000, 0x5A}, codePoints(decoded(bytes(0xC2, 0x80, 0xE0, 0xA0, 0x80, 0xF0, 0x90, 0x80, 0x80) .. "Z")))
+  end)
+
+  it("refuses an overlong encoding of an ASCII character", function()
+    using("UTF-8")
+
+    -- each of these spells '/' in more bytes than it needs, the classic way of
+    -- smuggling a character past a check made on the bytes
+    assertRefused(bytes(0xC0, 0xAF), "the two byte overlong form")
+    assertRefused(bytes(0xE0, 0x80, 0xAF), "the three byte overlong form")
+    assertRefused(bytes(0xF0, 0x80, 0x80, 0xAF), "the four byte overlong form")
+  end)
+
+  it("refuses a UTF-16 surrogate", function()
+    using("UTF-8")
+
+    assertRefused(bytes(0xED, 0xA0, 0x80), "a high surrogate")
+    assertRefused(bytes(0xED, 0xBF, 0xBF), "a low surrogate")
+  end)
+
+  it("accepts the code points either side of the surrogates", function()
+    using("UTF-8")
+
+    assert.same({0xD7FF, 0xE000, 0x5A}, codePoints(decoded(bytes(0xED, 0x9F, 0xBF, 0xEE, 0x80, 0x80) .. "Z")))
+  end)
+
+  it("refuses a code point past U+10FFFF", function()
+    using("UTF-8")
+
+    assertRefused(bytes(0xF4, 0x90, 0x80, 0x80), "U+110000")
+    assertRefused(bytes(0xF5, 0x80, 0x80, 0x80), "a lead byte that can only start such a code point")
+  end)
+
+  it("accepts U+10FFFF itself", function()
+    using("UTF-8")
+
+    assert.same({0x10FFFF, 0x5A}, codePoints(decoded(bytes(0xF4, 0x8F, 0xBF, 0xBF) .. "Z")))
+  end)
+
+  it("refuses the five and six byte forms UTF-8 no longer has", function()
+    using("UTF-8")
+
+    assertRefused(bytes(0xF8, 0x88, 0x80, 0x80, 0x80), "a five byte form")
+    assertRefused(bytes(0xFC, 0x84, 0x80, 0x80, 0x80, 0x80), "a six byte form")
+  end)
+
+  it("keeps a byte order mark as the character it encodes", function()
+    using("UTF-8")
+
+    -- inside a line it is a zero width no-break space, not a mark to drop
+    assert.same({0x41, 0xFEFF, 0x5A}, codePoints(decoded("A" .. bytes(0xEF, 0xBB, 0xBF) .. "Z")))
+  end)
+end)
+
 describe("Tests GBK decoding", function()
 
   it("decodes each of the areas the encoding is divided into", function()
@@ -167,21 +267,20 @@ describe("Tests GBK decoding", function()
     using("GBK")
     assert.equals("丂", decoded(bytes(0x81, 0x40)), "the precondition failed - 0x81 is meant to be a usable lead byte")
 
-    assert.equals(replacement, decoded(bytes(0x81, 0x7F)))
+    assert.equals(replacement .. bytes(0x7F), decoded(bytes(0x81, 0x7F)))
   end)
 
-  it("consumes both bytes of a pair whose second byte is out of range", function()
+  it("keeps an ASCII byte that cannot be the second byte of a pair", function()
     using("GBK")
 
-    -- the space is part of the rejected pair, so only the Z survives it
-    assert.equals(replacement .. "Z", decoded(bytes(0xC4, 0x20, 0x5A)))
+    assert.equals(replacement .. " Z", decoded(bytes(0xC4, 0x20, 0x5A)))
   end)
 
   it("refuses the four byte sequences that only GB18030 defines", function()
     using("GBK")
 
-    assert.equals(replacement, decoded(bytes(0x90, 0x30)), "the lead pair of a non-BMP sequence")
-    assert.equals(replacement, decoded(bytes(0xFD, 0x30)), "the lead pair of a private use sequence")
+    assert.equals(replacement .. "0", decoded(bytes(0x90, 0x30)), "the lead pair of a non-BMP sequence")
+    assert.equals(replacement .. "0", decoded(bytes(0xFD, 0x30)), "the lead pair of a private use sequence")
   end)
 end)
 
@@ -236,7 +335,7 @@ describe("Tests Big5 decoding", function()
   it("rejects a second byte below the lower range", function()
     using("BIG5")
 
-    assert.equals(replacement, decoded(bytes(0xA7, 0x20)))
+    assert.equals(replacement .. " ", decoded(bytes(0xA7, 0x20)))
   end)
 
   it("rejects a lead byte the encoding has no meaning for", function()
@@ -249,6 +348,37 @@ describe("Tests Big5 decoding", function()
     using("BIG5-HKSCS")
 
     assert.equals("你", decoded(bytes(0xA7, 0x41)))
+  end)
+
+  -- 0x8F 0xA2 is U+2863B, two UTF-16 units that each need their own format;
+  -- a line short of one aborted Mudlet as soon as it was drawn
+  it("keeps the format of the text after a character outside the BMP", function()
+    using("BIG5-HKSCS")
+
+    local lines, mark = decodedLines("enc:" .. bytes(0x8F, 0xA2) .. "\27[32mx\27[0m")
+    local fed, between
+    for i = #lines, 1, -1 do
+      if lines[i]:match("^enc:") then
+        fed = mark + i - 1
+        between = lines[i]:match("^enc:(.-)x")
+        break
+      end
+    end
+    assert.is_not_nil(fed, "no line carrying the fed bytes reached the buffer")
+    -- a replacement mark would leave nothing outside the BMP to misalign the format;
+    -- macOS's codec drops the character (#10408) or maps it into the Private Use Area,
+    -- which tests nothing but is no failure
+    if getOS() ~= "mac" then
+      assert.same({0x2863B}, codePoints(between))
+    end
+    moveCursor("main", 0, fed)
+    local found = selectString("main", "x", 1)
+    local color = {getFgColor("main")}
+    deselect("main")
+    moveCursorEnd("main")
+
+    assert.is_true(found > 0)
+    assert.same({0, 128, 0}, color)
   end)
 end)
 
@@ -276,7 +406,229 @@ describe("Tests EUC-KR decoding", function()
   it("rejects a pair whose second byte is out of range", function()
     using("EUC-KR")
 
-    assert.equals(replacement, decoded(bytes(0xC7, 0x20)))
+    assert.equals(replacement .. " ", decoded(bytes(0xC7, 0x20)))
+  end)
+end)
+
+describe("Tests changing from one double byte encoding to another", function()
+
+  it("decodes with the encoding most recently selected", function()
+    using("GBK")
+    assert.equals("你", decoded(bytes(0xC4, 0xE3)))
+
+    -- GBK would read this pair as a private use character
+    assert.is_true(setServerEncoding("BIG5"))
+    assert.equals("你", decoded(bytes(0xA7, 0x41)))
+
+    assert.is_true(setServerEncoding("EUC-KR"))
+    assert.equals("한", decoded(bytes(0xC7, 0xD1)))
+  end)
+end)
+
+describe("Tests a UTF-8 sequence cut short by a byte that cannot continue it", function()
+
+  -- Only a byte from 0x80 to 0xBF can continue a sequence, so any other byte
+  -- ends a sequence it arrives in: the bytes before it earn a replacement mark
+  -- and it is then read in its own right. Taken as part of the sequence it
+  -- would be lost, and with it whatever it meant.
+
+  it("keeps the ASCII byte that cuts a sequence short", function()
+    using("UTF-8")
+
+    assert.equals(replacement .. "AZ", decoded(bytes(0xC3) .. "AZ"), "after the lead of a two byte sequence")
+    assert.equals(replacement .. "AZ", decoded(bytes(0xE2, 0x82) .. "AZ"), "after two bytes of a three byte sequence")
+    assert.equals(replacement .. "AZ", decoded(bytes(0xF0, 0x9F, 0x98) .. "AZ"), "after three bytes of a four byte sequence")
+    assert.equals(replacement .. "ABCDZ", decoded(bytes(0xF8) .. "ABCDZ"), "after the lead of a five byte form")
+  end)
+
+  it("decodes a character whose lead byte cuts a sequence short", function()
+    using("UTF-8")
+
+    assert.equals(replacement .. "日Z", decoded(bytes(0xE2, 0xE6, 0x97, 0xA5) .. "Z"))
+  end)
+
+  it("keeps a line ending that cuts a sequence short", function()
+    using("UTF-8")
+    local mark = getLastLineNumber("main")
+
+    local ok, msg = feedTelnet("cut:one" .. bytes(0xE2) .. "\r\ncut:two\r\n")
+    assert.is_true(ok, "start the suite with --offline, see the tests README - feedTelnet said: " .. tostring(msg))
+
+    local shown = {}
+    for _, line in ipairs(getLines("main", mark, getLastLineNumber("main") + 1)) do
+      if line:find("^cut:") then
+        shown[#shown + 1] = line
+      end
+    end
+    assert.same({"cut:one" .. replacement, "cut:two"}, shown)
+  end)
+
+  it("still acts on an escape sequence that cuts a sequence short", function()
+    using("UTF-8")
+
+    assert.equals("A" .. replacement .. "REDZ", decoded("A" .. bytes(0xE2) .. "\27[31mRED\27[0mZ"))
+  end)
+
+  -- cTelnet ends a prompt with a byte of its own when the game sends IAC GA
+  -- (cTelnet::gotPrompt()), and that byte cannot continue a sequence either
+  it("still commits a prompt that a sequence is cut short by", function()
+    using("UTF-8")
+    local mark = getLastLineNumber("main")
+
+    local ok, msg = feedTelnet("gaprompt:" .. bytes(0xE2) .. "<T_IAC><T_GA>")
+    assert.is_true(ok, "start the suite with --offline, see the tests README - feedTelnet said: " .. tostring(msg))
+    feedTelnet("gaafter\r\n")
+
+    local shown = {}
+    for _, line in ipairs(getLines("main", mark, getLastLineNumber("main") + 1)) do
+      if line:find("^ga") then
+        shown[#shown + 1] = line
+      end
+    end
+    assert.same({"gaprompt:" .. replacement, "gaafter"}, shown)
+  end)
+end)
+
+describe("Tests a double byte character cut short by a byte that cannot be its second", function()
+
+  -- Games that cut text at a byte count end lines on a lone lead byte. The byte
+  -- after it - the game's line ending, or the escape of its next colour code -
+  -- belongs to the game, not to the broken character, so only the lead byte
+  -- earns a replacement mark (#11333).
+
+  local leadBytes = {
+    {"BIG5", bytes(0xA4)},
+    {"GBK", bytes(0xD6)},
+    {"GB18030", bytes(0xD6)},
+    {"EUC-KR", bytes(0xC7)},
+    {"GB18030", bytes(0x81, 0x30)},
+  }
+
+  local function shownLines(prefix, mark)
+    local shown = {}
+    for _, line in ipairs(getLines("main", mark, getLastLineNumber("main") + 1)) do
+      if line:find("^" .. prefix) then
+        shown[#shown + 1] = line
+      end
+    end
+    return shown
+  end
+
+  local function feed(data)
+    local ok, msg = feedTelnet(data)
+    assert.is_true(ok, "start the suite with --offline, see the tests README - feedTelnet said: " .. tostring(msg))
+  end
+
+  -- an unfinished four byte GB18030 sequence also loses only its lead byte, so
+  -- the digit that made it look like one is shown
+  local function kept(lead)
+    return replacement .. lead:sub(2)
+  end
+
+  it("keeps a line ending that arrives with the lead byte", function()
+    finally(restoreServerEncoding())
+    for _, case in ipairs(leadBytes) do
+      local encoding, lead = case[1], case[2]
+      assert.is_true(setServerEncoding(encoding), "setServerEncoding refused " .. encoding)
+      local mark = getLastLineNumber("main")
+
+      feed("dbcut:one" .. lead .. "\r\ndbcut:two\r\n")
+
+      assert.same({"dbcut:one" .. kept(lead), "dbcut:two"}, shownLines("dbcut:", mark), encoding)
+    end
+  end)
+
+  it("keeps a line ending that arrives in the next read", function()
+    finally(restoreServerEncoding())
+    for _, case in ipairs(leadBytes) do
+      local encoding, lead = case[1], case[2]
+      assert.is_true(setServerEncoding(encoding), "setServerEncoding refused " .. encoding)
+      local mark = getLastLineNumber("main")
+
+      feed("dbsplit:one" .. lead)
+      feed("\r\ndbsplit:two\r\n")
+
+      assert.same({"dbsplit:one" .. kept(lead), "dbsplit:two"}, shownLines("dbsplit:", mark), encoding)
+    end
+  end)
+
+  -- The foreground colour of text on the first line from fromLine on that starts with prefix
+  local function colourOf(text, prefix, fromLine)
+    for line = fromLine, getLastLineNumber("main") do
+      moveCursor("main", 0, line)
+      if getCurrentLine("main"):sub(1, #prefix) == prefix then
+        assert.is_true(selectString(text, 1) >= 0, "no '" .. text .. "' in " .. getCurrentLine("main"))
+        local colour = {getFgColor("main")}
+        deselect()
+        return colour
+      end
+    end
+    error("no line starting '" .. prefix .. "'")
+  end
+
+  it("still acts on a colour code that arrives in the next read", function()
+    finally(restoreServerEncoding())
+    local referenceMark = getLastLineNumber("main")
+    feed("dbref:\27[31mRED\27[0m\r\n")
+    local redReference = colourOf("RED", "dbref:", referenceMark)
+    for _, case in ipairs(leadBytes) do
+      local encoding, lead = case[1], case[2]
+      assert.is_true(setServerEncoding(encoding), "setServerEncoding refused " .. encoding)
+      local mark = getLastLineNumber("main")
+
+      feed("dbcolour:" .. lead)
+      -- a space can't be any encoding's second byte, so the lead byte can't join it as a split character
+      feed("\27[31m RED\27[0m\r\n")
+
+      assert.same({"dbcolour:" .. kept(lead) .. " RED"}, shownLines("dbcolour:", mark), encoding)
+      assert.same(redReference, colourOf("RED", "dbcolour:", mark), encoding)
+      assert.are_not.same(redReference, colourOf("dbcolour:", "dbcolour:", mark), encoding)
+    end
+  end)
+
+  it("keeps a line ending that cuts a GB18030 four byte sequence short at its last byte", function()
+    using("GB18030")
+    local mark = getLastLineNumber("main")
+
+    -- 0x81 0x30 0x81 is only missing its final digit; the "0" is shown and the
+    -- second 0x81 is then a lead byte the line ending cannot follow
+    feed("db4cut:one" .. bytes(0x81, 0x30, 0x81))
+    feed("\r\ndb4cut:two\r\n")
+
+    assert.same({"db4cut:one" .. replacement .. "0" .. replacement, "db4cut:two"}, shownLines("db4cut:", mark))
+  end)
+
+  it("commits a line that ends on the first two bytes of a GB18030 four byte sequence", function()
+    using("GB18030")
+    local mark = getLastLineNumber("main")
+
+    -- the line ending is the third byte, so there is no fourth to wait for
+    feed("db4end:one" .. bytes(0x81, 0x30) .. "\r\n")
+
+    assert.same({"db4end:one" .. replacement .. "0"}, shownLines("db4end:", mark))
+  end)
+end)
+
+describe("Tests UTF-8 locally fed text that ends part way through a sequence", function()
+
+  -- Game data that stops part way through a sequence is held for the next
+  -- packet to finish, but nothing continues text a script feeds in: the next
+  -- feedTriggers() call starts afresh, so the unfinished sequence is malformed
+  -- and earns a replacement mark rather than vanishing.
+  it("marks the unfinished sequence at the end of the text", function()
+    using("UTF-8")
+    local mark = getLastLineNumber("main")
+
+    feedTriggers("localtail:" .. bytes(0xE2, 0x82))
+    feedTriggers("\n")
+
+    local seen
+    for _, line in ipairs(getLines("main", mark, getLastLineNumber("main") + 1)) do
+      if line:find("^localtail:") then
+        seen = line
+      end
+    end
+    assert.equals("localtail:" .. replacement, seen)
   end)
 end)
 
@@ -669,23 +1021,26 @@ describe("Tests a character whose bytes are split by the posting timeout", funct
   end)
 
   it("takes a carriage return in locally fed text as data, not as a marker", function()
-    using("UTF-8")
+    using("GBK")
 
     -- Only cTelnet makes the marker, so a carriage return handed to
-    -- feedTriggers() is the caller's own byte and the decoder has to see it: the
-    -- truncated lead byte ahead of it is rejected together with it, in the one
-    -- replacement mark, and does not end the line.
+    -- feedTriggers() is the caller's own byte and the decoder has to see it: it
+    -- cannot be the second byte of a GBK pair, so the lead byte is refused on
+    -- its own and the carriage return is read as itself. Held back as a marker,
+    -- it would instead leave the lead byte waiting for the next text, to pair
+    -- with the "t" of "tail".
+    -- (false: these are the game's own bytes, not UTF-8 to be converted to it)
     local mark = getLastLineNumber("main")
-    feedTriggers("local:" .. bytes(0xC3, 0x0D))
-    feedTriggers("tail\n")
+    feedTriggers("local:" .. bytes(0xC4, 0x0D), false)
+    feedTriggers("tail\n", false)
 
-    local seen
+    local seen = {}
     for _, line in ipairs(getLines("main", mark, getLastLineNumber("main") + 1)) do
-      if line:find("^local:") then
-        seen = line
+      if line ~= "" then
+        seen[#seen + 1] = line
       end
     end
-    assert.equals("local:" .. replacement .. "tail", seen)
+    assert.same({"local:" .. replacement, "tail"}, seen)
   end)
 end)
 
@@ -716,5 +1071,201 @@ describe("Tests changing the encoding from a trigger", function()
     end)
 
     assert.equals("中", decoded("switch\r\nenc:" .. bytes(0xD6, 0xD0)))
+  end)
+end)
+
+describe("Tests the bulk copy of plain text runs", function()
+  -- The end of a run is looked for eight bytes at a time, so whatever ends one
+  -- is tried at every place within such a group it can fall on. The text that
+  -- follows it is long enough for the search to get going a second time.
+  local filler = "The quick brown fox jumps over the lazy dog"
+
+  local function atEveryOffset(check)
+    for lead = 0, 17 do
+      check(filler:sub(1, lead), filler, lead .. " characters into the run")
+    end
+  end
+
+  it("copies every printable character through unchanged", function()
+    -- in two halves, as a line holding all of them would be wrapped
+    for _, range in ipairs({{0x20, 0x4F}, {0x50, 0x7E}}) do
+      local printable = {}
+      for byte = range[1], range[2] do
+        printable[#printable + 1] = bytes(byte)
+      end
+      local text = "|" .. table.concat(printable) .. "|"
+
+      assert.equals(text, decoded(text))
+    end
+  end)
+
+  it("ends a run at a byte the code page has a character for", function()
+    using("CP437")
+
+    -- both ends of the part of the upper half that is text, 0xFF marking a prompt
+    local characters = {[0x80] = "Ç", [0x86] = "å", [0xFE] = "■"}
+    for byte, character in pairs(characters) do
+      atEveryOffset(function(before, after, where)
+        assert.equals(before .. character .. after, decoded(before .. bytes(byte) .. after), string.format("byte 0x%02X, %s", byte, where))
+      end)
+    end
+  end)
+
+  it("ends a run at the first byte of a UTF-8 sequence", function()
+    using("UTF-8")
+
+    for _, character in ipairs({"é", "€"}) do
+      atEveryOffset(function(before, after, where)
+        assert.equals(before .. character .. after, decoded(before .. character .. after), character .. ", " .. where)
+      end)
+    end
+  end)
+
+  it("ends a run at the one 7-bit byte EUC-KR rejects", function()
+    using("EUC-KR")
+
+    atEveryOffset(function(before, after, where)
+      assert.equals(before .. replacement .. after, decoded(before .. bytes(0x7F) .. after), where)
+    end)
+  end)
+
+  it("ends a run at a line feed", function()
+    atEveryOffset(function(before, after, where)
+      local lines = decodedLines("run:" .. before .. "\nrun:" .. after)
+
+      assert.equals("run:" .. before, lines[1], where)
+      assert.equals("run:" .. after, lines[2], where)
+    end)
+  end)
+
+  it("ends a run at the other bytes that end a line just as the byte by byte decoder does", function()
+    local endings = {
+      {name = "End of Transmission", fed = bytes(0x04)},
+      -- telnet's IAC as well, so it has to be doubled to arrive as data - and
+      -- a carry out of it is what a test of eight bytes at once would get wrong
+      {name = "the byte a prompt is marked with", fed = bytes(0xFF, 0xFF)},
+    }
+    for _, ending in ipairs(endings) do
+      atEveryOffset(function(before, after, where)
+        local expected = decodedLines(brokenUp("run:" .. before) .. ending.fed .. brokenUp("run:" .. after))
+
+        assert.same(expected, decodedLines("run:" .. before .. ending.fed .. "run:" .. after), ending.name .. ", " .. where)
+      end)
+    end
+  end)
+
+  it("ends a run at a carriage return just as the byte by byte decoder does", function()
+    atEveryOffset(function(before, after, where)
+      local expected = decodedLines(brokenUp("run:" .. before .. "\r" .. after))
+
+      assert.same(expected, decodedLines("run:" .. before .. "\r" .. after), where)
+    end)
+  end)
+
+  it("carries a control character that is plain text along with the run", function()
+    atEveryOffset(function(before, after, where)
+      assert.equals(before .. "\t" .. after, decoded(before .. "\t" .. after), where)
+    end)
+  end)
+
+  it("starts a format change on the character right after its sequence", function()
+    finally(function()
+      deselect("main")
+    end)
+
+    local function boldAt(line, column)
+      assert.is_true(moveCursor("main", 0, line))
+      assert.is_true(selectSection("main", column, 1))
+      return getTextFormat("main").bold
+    end
+
+    atEveryOffset(function(before, after, where)
+      local lines, line = decodedLines("\27[0mfmt:" .. before .. "\27[1m" .. after .. "\27[0m")
+
+      assert.equals("fmt:" .. before .. after, lines[1], where)
+      local changeAt = #"fmt:" + #before
+      assert.is_false(boldAt(line, changeAt - 1), "bold began a character early, " .. where)
+      assert.is_true(boldAt(line, changeAt), "bold began a character late, " .. where)
+      assert.is_true(boldAt(line, changeAt + #after - 1), "bold did not reach the end of the run, " .. where)
+    end)
+  end)
+end)
+
+-- A game may send an SGR sequence between the two bytes of a legacy double-byte
+-- character to give its right half a different rendition. The halves' colours
+-- are checked in SplitCharacterFormatTest, as only the left half is visible to Lua.
+describe("Tests a double-byte character restyled between its bytes", function()
+  local characters = {
+    {"BIG5", bytes(0xA4, 0xA4), "中"},
+    {"BIG5-HKSCS", bytes(0xA7, 0x41), "你"},
+    {"GBK", bytes(0xD6, 0xD0), "中"},
+    {"GB18030", bytes(0xD6, 0xD0), "中"},
+    {"EUC-KR", bytes(0xC7, 0xD1), "한"},
+    {"SHIFT_JIS", bytes(0x93, 0xFA), "日"},
+    {"EUC-JP", bytes(0xC6, 0xFC), "日"},
+  }
+
+  local function split(pair)
+    return "\27[31m" .. pair:sub(1, 1) .. "\27[32m" .. pair:sub(2, 2)
+  end
+
+  for _, character in ipairs(characters) do
+    local encoding, pair, text = unpack(character)
+
+    it("decodes it whole in " .. encoding, function()
+      using(encoding)
+      assert.equals(text .. "X", decoded(split(pair) .. "X\27[0m"))
+    end)
+  end
+
+  it("lets a trigger match the whole character", function()
+    -- busted keeps only the last finally(), so this one also restores the encoding
+    local restoreEncoding = restoreServerEncoding()
+    assert.is_true(setServerEncoding("BIG5"))
+    local matches = 0
+    local trigger = tempExactMatchTrigger("enc:中X", function()
+      matches = matches + 1
+    end)
+    finally(function()
+      killTrigger(trigger)
+      restoreEncoding()
+    end)
+    decoded(split(bytes(0xA4, 0xA4)) .. "X\27[0m")
+    assert.equals(1, matches)
+  end)
+
+  it("reports the left half's colour and gives what follows the right half's", function()
+    local restoreEncoding = restoreServerEncoding()
+    assert.is_true(setServerEncoding("BIG5"))
+    finally(function()
+      deselect("main")
+      restoreEncoding()
+    end)
+    local lines, line = decodedLines("\27[31mR" .. bytes(0xA4) .. "\27[32m" .. bytes(0xA4) .. "G\27[0m")
+    assert.equals("R中G", lines[1])
+    local function colourAt(column)
+      assert.is_true(moveCursor("main", 0, line))
+      assert.is_true(selectSection("main", column, 1))
+      return {getFgColor("main")}
+    end
+    assert.same(colourAt(0), colourAt(1))
+    assert.are_not.same(colourAt(2), colourAt(1))
+  end)
+
+  it("ends the character at a control sequence that is not SGR", function()
+    using("BIG5")
+    -- X is a valid trail byte, so this also shows the lead was not held for it
+    assert.equals(replacement .. "X", decoded(bytes(0xA4) .. "\27[31m\27[2KX\27[0m"))
+  end)
+
+  it("ends the character at the end of the line", function()
+    using("BIG5")
+    assert.equals(replacement, decoded(bytes(0xA4) .. "\27[31m"))
+    assert.equals("X", decoded("\27[0mX"))
+  end)
+
+  it("ends the character at a byte that cannot be its trail", function()
+    using("EUC-KR")
+    assert.equals(replacement .. "X", decoded(bytes(0xC7) .. "\27[31mX\27[0m"))
   end)
 end)

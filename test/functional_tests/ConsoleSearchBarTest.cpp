@@ -27,7 +27,8 @@
 #include "ProfileTestHelper.h"
 #include "Host.h"
 #include "MudletInstanceCoordinator.h"
-#include "MudletPaths.h"
+#include "MudletApp.h"
+#include "TLuaInterpreter.h"
 #include "TMainConsole.h"
 #include "TTextEdit.h"
 #include "TelnetServerStub.h"
@@ -101,6 +102,8 @@ private:
         return count;
     }
 
+    static bool runLua(TConsole* console, const QString& script) { return console->mpHost->getLuaInterpreter()->compileAndExecuteScript(script); }
+
     bool waitForTextInBuffer(TMainConsole* console, const QString& text, const int timeoutMs = 5000)
     {
         return QTest::qWaitFor(
@@ -132,7 +135,7 @@ private:
     // assertion ends the test instead of the null host doing it.
     Host* startProfile(const QString& hostname, const QString& address, const QString& port)
     {
-        QTimer::singleShot(0, qApp, [hostname, address, port]() {
+        QTimer::singleShot(0ms, qApp, [hostname, address, port]() {
             const auto dialog = []() {
                 return mudlet::self()->mpConnectionDialog.data();
             };
@@ -143,7 +146,7 @@ private:
                         [&dialog]() {
                             return dialog() && dialog()->isVisible();
                         },
-                        5000)) {
+                        5s)) {
                 qWarning() << "the connection dialog never appeared";
                 return;
             }
@@ -153,7 +156,7 @@ private:
                             [field]() {
                                 return QApplication::focusWidget() == field;
                             },
-                            5000)) {
+                            5s)) {
                     return true;
                 }
                 qWarning() << "focus never reached the" << name << "field";
@@ -181,7 +184,7 @@ private:
         });
 
         QSignalSpy spy(mudlet::self(), &mudlet::signal_profileLoaded);
-        if (!spy.wait(5000)) {
+        if (!spy.wait(5s)) {
             qWarning() << "Profile took too long to load.";
             return nullptr;
         }
@@ -192,14 +195,14 @@ private:
         }
 
         QSignalSpy spy2(&(host->mTelnet), &cTelnet::signal_connected);
-        if (!spy2.wait(2000)) {
+        if (!spy2.wait(2s)) {
             qWarning() << "Could not connect with the host.";
             return nullptr;
         }
         return host;
     }
 
-    void deleteProfileDirectory(const QString& profileName) { deleteDirectory(MudletPaths::getMudletPath(enums::profileHomePath, profileName)); }
+    void deleteProfileDirectory(const QString& profileName) { deleteDirectory(MudletApp::getMudletPath(enums::profileHomePath, profileName)); }
 
     void deleteDirectory(const QString& path)
     {
@@ -232,7 +235,7 @@ private slots:
         mPort = QString::number(mpServer->serverPort());
         mudlet::start();
         mudlet::self()->setupConfig();
-        QCOMPARE(MudletPaths::getMudletPath(enums::mainPath), qsl("%1/mudlet").arg(mConfigDir.path()));
+        QCOMPARE(MudletApp::getMudletPath(enums::mainPath), qsl("%1/mudlet").arg(mConfigDir.path()));
         mudlet::self()->takeOwnershipOfInstanceCoordinator(std::make_unique<MudletInstanceCoordinator>("MudletInstanceCoordinator"));
         mudlet::self()->init();
         mudlet::self()->setStorePasswordsSecurely(false);
@@ -241,7 +244,7 @@ private slots:
 
     void cleanup()
     {
-        const QString profilePath = MudletPaths::getMudletPath(enums::profileHomePath, mHostname);
+        const QString profilePath = MudletApp::getMudletPath(enums::profileHomePath, mHostname);
         delete mudlet::self();
         delete mpServer;
         mpServer = nullptr;
@@ -360,6 +363,96 @@ private slots:
         QCOMPARE(console->mCurrentSearchResult, dustyLine);
         QCOMPARE(markedCharactersOn(console, dustyLine), 5);
         QCOMPARE(markedCharactersOn(console, laterLine), 0);
+    }
+
+    // Trimming the oldest lines moves every line up, so the search has to move
+    // with them or the next step starts from a line it has not searched yet.
+    void test_aTrimMovesTheSearchWithTheLineItFound()
+    {
+        auto* console = startSearchableProfile();
+        QVERIFY2(console, "the profile never started, or the fixture text never reached its buffer - see the warning above");
+
+        const int laterLine = lineHolding(console, qsl("GORBASH stirs"));
+        console->mpBufferSearchBox->setText(qsl("gorbash"));
+        console->slot_searchBufferUp();
+        QCOMPARE(console->mCurrentSearchResult, laterLine);
+
+        QVERIFY2(console->buffer.size() < 100, "the buffer is already past the smallest limit, so the trim below would take the fixture with it");
+        console->buffer.setBufferSize(100, 1);
+        for (int i = 0; i < 200 && lineHolding(console, qsl("GORBASH stirs")) == laterLine; ++i) {
+            console->print(qsl("filler\n"));
+        }
+        const int movedTo = lineHolding(console, qsl("GORBASH stirs"));
+        QVERIFY2(movedTo >= 0 && movedTo < laterLine, "the buffer was never trimmed, so nothing here was exercised");
+
+        QCOMPARE(console->mCurrentSearchResult, movedTo);
+
+        console->mpBufferSearchBox->setText(qsl("nothing"));
+        console->slot_searchBufferUp();
+        QCOMPARE(markedCharactersOn(console, movedTo), 0);
+    }
+
+    // A new term clears only the lines the search has marked, so those have to
+    // be followed wherever the lines go, and wherever their characters are copied.
+    void test_aNewTermClearsMarksOnALineThatMovedUpWhenALineAboveWasDeleted()
+    {
+        auto* console = startSearchableProfile();
+        QVERIFY2(console, "the profile never started, or the fixture text never reached its buffer - see the warning above");
+
+        console->mpBufferSearchBox->setText(qsl("gorbash"));
+        console->slot_searchBufferUp();
+        QCOMPARE(markedLineCount(console), 1);
+
+        const int laterLine = lineHolding(console, qsl("GORBASH stirs"));
+        QVERIFY(runLua(console, qsl("moveCursor('main', 0, %1) deleteLine()").arg(lineHolding(console, qsl("a dusty road")))));
+        QCOMPARE(lineHolding(console, qsl("GORBASH stirs")), laterLine - 1);
+        QCOMPARE(markedCharactersOn(console, laterLine - 1), 14);
+
+        console->mpBufferSearchBox->setText(qsl("nothing"));
+        console->slot_searchBufferUp();
+
+        QCOMPARE(markedLineCount(console), 1);
+    }
+
+    // A mark is cleared only in the console that was searched, so a copy of the
+    // text taken anywhere else must not take the mark with it.
+    void test_aCopyOfAMarkedLineDoesNotCarryTheMark()
+    {
+        auto* console = startSearchableProfile();
+        QVERIFY2(console, "the profile never started, or the fixture text never reached its buffer - see the warning above");
+
+        const int laterLine = lineHolding(console, qsl("GORBASH stirs"));
+        const int dustyLine = lineHolding(console, qsl("a dusty road"));
+        console->mpBufferSearchBox->setText(qsl("gorbash"));
+        console->slot_searchBufferUp();
+        QCOMPARE(markedLineCount(console), 1);
+
+        QVERIFY(runLua(console, qsl("moveCursor('main', 0, %1) selectCurrentLine() copy() moveCursor('main', 0, %2) paste() moveCursorEnd() appendBuffer()").arg(laterLine).arg(dustyLine)));
+        QVERIFY2(console->buffer.lineBuffer.at(dustyLine).contains(qsl("GORBASH stirs")), "the paste never happened, so nothing here was exercised");
+        QCOMPARE(lineHolding(console, qsl("GORBASH stirs")), console->buffer.getLastLineNumber() - 1);
+
+        QCOMPARE(markedLineCount(console), 1);
+        QCOMPARE(markedCharactersOn(console, laterLine), 14);
+    }
+
+    void test_aNewTermClearsMarksThatARewrapMovedOntoLaterLines()
+    {
+        auto* console = startSearchableProfile();
+        QVERIFY2(console, "the profile never started, or the fixture text never reached its buffer - see the warning above");
+
+        const int laterLine = lineHolding(console, qsl("GORBASH stirs"));
+        console->mpBufferSearchBox->setText(qsl("gorbash"));
+        console->slot_searchBufferUp();
+
+        console->setWrapAt(12);
+        QVERIFY(runLua(console, qsl("wrapLine('main', %1)").arg(laterLine)));
+        QVERIFY2(markedCharactersOn(console, laterLine) < 14, "the rewrap left the whole match on one line, so nothing here was exercised");
+        QCOMPARE(markedLineCount(console), 2);
+
+        console->mpBufferSearchBox->setText(qsl("nothing"));
+        console->slot_searchBufferUp();
+
+        QCOMPARE(markedLineCount(console), 1);
     }
 
     void test_aTermThatIsNowhereInTheBufferSaysSo()

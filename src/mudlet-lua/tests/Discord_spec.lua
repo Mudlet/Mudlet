@@ -878,3 +878,44 @@ describe("an icon key that has to be truncated", function()
     assert.equals(0, undecodableFramesAfter(mark))
   end)
 end)
+
+-- The other way a presence gets set: the game sends it over GMCP rather than a
+-- script calling setDiscordLargeIcon() and the rest. Only "show game details"
+-- mode acts on these - readyForDiscord() also admits the Mudlet-only mode,
+-- which drops them in processGMCPDiscordStatus().
+describe("presence the game sends over GMCP", function()
+  -- setGMCPTable() files every message it routes, so the presence these feed
+  -- would sit in gmcp for the rest of the run and take GMCP_spec's
+  -- empty-table test out of the totals with it
+  teardown(function()
+    gmcp.External = nil
+  end)
+
+  local function feedDiscordStatus(json)
+    local ok, message = feedTelnet("<T_IAC><T_SB><O_GMCP>External.Discord.Status " .. json .. "<T_IAC><T_SE>")
+    assert.is_true(ok, "start the suite with --offline, see the tests README - feedTelnet said: " .. tostring(message))
+  end
+
+  it("puts the game's large icon and its tooltip on the large icon, not the small one (#2343)", function()
+    if not readyForDiscord() then
+      return
+    end
+    feedDiscordStatus('{"largeimage": ["spec-large-icon"], "largeimagetext": "spec large tooltip"}')
+
+    assert.equals("spec-large-icon", getDiscordLargeIcon(), "the large icon went to the small slot, or this profile is in 'show Mudlet only' mode, which drops GMCP presence")
+    assert.equals("spec large tooltip", getDiscordLargeIconText())
+    assert.equals("", getDiscordSmallIcon())
+    assert.equals("", getDiscordSmallIconText())
+  end)
+
+  it("reads an elapsed start time the game sent as a string (#9100)", function()
+    if not readyForDiscord() then
+      return
+    end
+    feedDiscordStatus('{"starttime": "1750000000"}')
+
+    local startTime, endTime = getDiscordTimeStamps()
+    assert.equals(1750000000, startTime)
+    assert.equals(0, endTime, "a start time that lands in the end timestamp as well turns the elapsed timer into a countdown")
+  end)
+end)

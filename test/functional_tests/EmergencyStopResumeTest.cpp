@@ -46,7 +46,7 @@
 #include "ProfileTestHelper.h"
 #include "Host.h"
 #include "MudletInstanceCoordinator.h"
-#include "MudletPaths.h"
+#include "MudletApp.h"
 #include "TLuaInterpreter.h"
 #include "TTimer.h"
 #include "TelnetServerStub.h"
@@ -56,6 +56,8 @@
 #include "mudlet.h"
 
 #include "GroupedTest.h"
+
+using namespace std::chrono_literals;
 
 class EmergencyStopResumeTest : public QObject
 {
@@ -108,7 +110,7 @@ private slots:
         mPort = QString::number(mpServer->serverPort());
         mudlet::start();
         mudlet::self()->setupConfig();
-        QCOMPARE(MudletPaths::getMudletPath(enums::mainPath), qsl("%1/mudlet").arg(mConfigDir.path()));
+        QCOMPARE(MudletApp::getMudletPath(enums::mainPath), qsl("%1/mudlet").arg(mConfigDir.path()));
         mudlet::self()->takeOwnershipOfInstanceCoordinator(std::make_unique<MudletInstanceCoordinator>("MudletInstanceCoordinator"));
         mudlet::self()->init();
         mudlet::self()->setStorePasswordsSecurely(false);
@@ -186,15 +188,15 @@ private slots:
         // readGlobalInt() cannot tell a missing global from a zero, and the
         // comparison after the stop would then hold as 0 == 0
         QVERIFY2(globalIsNumber(qsl("resumeTicks")), "the timer's callback should have left a number in resumeTicks");
-        QTRY_VERIFY_WITH_TIMEOUT(readGlobalInt(qsl("resumeTicks")) > 0, 5000);
+        QTRY_VERIFY_WITH_TIMEOUT(readGlobalInt(qsl("resumeTicks")) > 0, 5s);
 
         mpHost->stopAllTriggers();
         const int ticksAtStop = readGlobalInt(qsl("resumeTicks"));
-        QTest::qWait(500);
+        QTest::qWait(500ms);
         QCOMPARE(readGlobalInt(qsl("resumeTicks")), ticksAtStop);
 
         mpHost->reenableAllTriggers();
-        QTRY_VERIFY_WITH_TIMEOUT(readGlobalInt(qsl("resumeTicks")) > ticksAtStop, 5000);
+        QTRY_VERIFY_WITH_TIMEOUT(readGlobalInt(qsl("resumeTicks")) > ticksAtStop, 5s);
 
         // it would otherwise go on ticking through the cases below
         QVERIFY(unit->killTimer(QString::number(id)));
@@ -373,8 +375,8 @@ private slots:
 
         // and the half the widened guard is there for: once the parent does
         // fire, the command-only child has to arm and send
-        QTRY_VERIFY_WITH_TIMEOUT(readGlobalInt(qsl("offsetParentTicks")) > 0, 5000);
-        QTRY_VERIFY_WITH_TIMEOUT(readGlobalInt(qsl("offsetChildTicks")) > 0, 5000);
+        QTRY_VERIFY_WITH_TIMEOUT(readGlobalInt(qsl("offsetParentTicks")) > 0, 5s);
+        QTRY_VERIFY_WITH_TIMEOUT(readGlobalInt(qsl("offsetChildTicks")) > 0, 5s);
     }
 
     // The uninstallList half of the resume's skip: an uninstall with a timer
@@ -460,14 +462,14 @@ private:
         }
 
         QSignalSpy spy2(&(host->mTelnet), &cTelnet::signal_connected);
-        if (!spy2.wait(500)) {
+        if (host->mTelnet.getConnectionState() != QAbstractSocket::ConnectedState && !spy2.wait(8s)) {
             QFAIL("Could not connect with the host.");
         }
     }
 
     void deleteProfileDirectory(const QString& profileName)
     {
-        const QString path = MudletPaths::getMudletPath(enums::profileHomePath, profileName);
+        const QString path = MudletApp::getMudletPath(enums::profileHomePath, profileName);
         QDir dir(path);
 
         if (!dir.exists()) {

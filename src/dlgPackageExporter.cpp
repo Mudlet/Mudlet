@@ -25,8 +25,7 @@
 #include "ui_dlgPackageExporter.h"
 
 #include "Host.h"
-#include "MudletPaths.h"
-#include "mudlet.h"
+#include "MudletApp.h"
 #include "TAction.h"
 #include "TAlias.h"
 #include "TKey.h"
@@ -144,7 +143,7 @@ dlgPackageExporter::dlgPackageExporter(QWidget* parent, Host* pHost)
     setWindowTitle(tr("Package Exporter - %1").arg(mpHost->getName()));
 
     // Set the previous details if saved
-    QSettings& settings = *mudlet::getQSettings();
+    QSettings& settings = *MudletApp::getQSettings();
     auto packageAuthor = settings.value(qsl("packageAuthor"), QString()).toString();
     if (!packageAuthor.isEmpty()) {
         ui->lineEdit_author->setText(packageAuthor);
@@ -255,7 +254,7 @@ void dlgPackageExporter::preselectTrigger(QTreeWidgetItem* item)
 
     // Find the matching trigger in our trigger map by ID
     for (auto it = triggerMap.begin(); it != triggerMap.end(); ++it) {
-        if (it.value()->getID() == triggerId) {
+        if (it.value() == triggerId) {
             it.key()->setCheckState(0, Qt::Checked);
             break;
         }
@@ -278,7 +277,7 @@ void dlgPackageExporter::preselectTimer(QTreeWidgetItem* item)
 
     // Find the matching timer in our timer map by ID
     for (auto it = timerMap.begin(); it != timerMap.end(); ++it) {
-        if (it.value()->getID() == timerId) {
+        if (it.value() == timerId) {
             it.key()->setCheckState(0, Qt::Checked);
             break;
         }
@@ -301,7 +300,7 @@ void dlgPackageExporter::preselectAlias(QTreeWidgetItem* item)
 
     // Find the matching alias in our alias map by ID
     for (auto it = aliasMap.begin(); it != aliasMap.end(); ++it) {
-        if (it.value()->getID() == aliasId) {
+        if (it.value() == aliasId) {
             it.key()->setCheckState(0, Qt::Checked);
             break;
         }
@@ -324,7 +323,7 @@ void dlgPackageExporter::preselectScript(QTreeWidgetItem* item)
 
     // Find the matching script in our script map by ID
     for (auto it = scriptMap.begin(); it != scriptMap.end(); ++it) {
-        if (it.value()->getID() == scriptId) {
+        if (it.value() == scriptId) {
             it.key()->setCheckState(0, Qt::Checked);
             break;
         }
@@ -347,7 +346,7 @@ void dlgPackageExporter::preselectAction(QTreeWidgetItem* item)
 
     // Find the matching action in our action map by ID
     for (auto it = actionMap.begin(); it != actionMap.end(); ++it) {
-        if (it.value()->getID() == actionId) {
+        if (it.value() == actionId) {
             it.key()->setCheckState(0, Qt::Checked);
             break;
         }
@@ -370,7 +369,7 @@ void dlgPackageExporter::preselectKey(QTreeWidgetItem* item)
 
     // Find the matching key in our key map by ID
     for (auto it = keyMap.begin(); it != keyMap.end(); ++it) {
-        if (it.value()->getID() == keyId) {
+        if (it.value() == keyId) {
             it.key()->setCheckState(0, Qt::Checked);
             break;
         }
@@ -491,7 +490,7 @@ void dlgPackageExporter::slot_packageChanged(int index)
     QList<QTreeWidgetItem*> trigList;
     recurseTree(top, trigList);
     for (auto item : std::as_const(trigList)) {
-        if (triggerMap.contains(item) && triggerMap.value(item)->mPackageName == packageName) {
+        if (const auto* pTrigger = triggerOf(triggerMap, item); pTrigger && pTrigger->mPackageName == packageName) {
             item->setCheckState(0, Qt::Checked);
         }
     }
@@ -499,7 +498,7 @@ void dlgPackageExporter::slot_packageChanged(int index)
     QList<QTreeWidgetItem*> timerList;
     recurseTree(top, timerList);
     for (auto item : std::as_const(timerList)) {
-        if (timerMap.contains(item) && timerMap.value(item)->mPackageName == packageName) {
+        if (const auto* pTimer = timerOf(timerMap, item); pTimer && pTimer->mPackageName == packageName) {
             item->setCheckState(0, Qt::Checked);
         }
     }
@@ -507,7 +506,7 @@ void dlgPackageExporter::slot_packageChanged(int index)
     QList<QTreeWidgetItem*> aliasList;
     recurseTree(top, aliasList);
     for (auto item : std::as_const(aliasList)) {
-        if (aliasMap.contains(item) && aliasMap.value(item)->mPackageName == packageName) {
+        if (const auto* pAlias = aliasOf(aliasMap, item); pAlias && pAlias->mPackageName == packageName) {
             item->setCheckState(0, Qt::Checked);
         }
     }
@@ -515,7 +514,7 @@ void dlgPackageExporter::slot_packageChanged(int index)
     QList<QTreeWidgetItem*> actionList;
     recurseTree(top, actionList);
     for (auto item : std::as_const(actionList)) {
-        if (actionMap.contains(item) && actionMap.value(item)->mPackageName == packageName) {
+        if (const auto* pAction = actionOf(actionMap, item); pAction && pAction->mPackageName == packageName) {
             item->setCheckState(0, Qt::Checked);
         }
     }
@@ -523,7 +522,7 @@ void dlgPackageExporter::slot_packageChanged(int index)
     QList<QTreeWidgetItem*> scriptList;
     recurseTree(top, scriptList);
     for (auto item : std::as_const(scriptList)) {
-        if (scriptMap.contains(item) && scriptMap.value(item)->mPackageName == packageName) {
+        if (const auto* pScript = scriptOf(scriptMap, item); pScript && pScript->mPackageName == packageName) {
             item->setCheckState(0, Qt::Checked);
         }
     }
@@ -531,12 +530,12 @@ void dlgPackageExporter::slot_packageChanged(int index)
     QList<QTreeWidgetItem*> keyList;
     recurseTree(top, keyList);
     for (auto item : std::as_const(keyList)) {
-        if (keyMap.contains(item) && keyMap.value(item)->mPackageName == packageName) {
+        if (const auto* pKey = keyOf(keyMap, item); pKey && pKey->mPackageName == packageName) {
             item->setCheckState(0, Qt::Checked);
         }
     }
 
-    const QString packagePath{MudletPaths::getMudletPath(enums::profileHomePath, mpHost->getName())};
+    const QString packagePath{MudletApp::getMudletPath(enums::profileHomePath, mpHost->getName())};
     //fill package metadata
     mPackageIconPath.clear();
     QMap<QString, QString> const packageInfo = mpHost->mPackageInfo.value(packageName);
@@ -636,7 +635,7 @@ void dlgPackageExporter::checkToEnableExportButton()
 
 void dlgPackageExporter::slot_importIcon()
 {
-    QSettings& settings = *mudlet::getQSettings();
+    QSettings& settings = *MudletApp::getQSettings();
     QString lastDir = settings.value("lastFileDialogLocation", QDir::homePath()).toString();
 
     const QString fileName = QFileDialog::getOpenFileName(this, tr("Open Icon"), lastDir, tr("Image Files (*.png *.jpg *.jpeg *.bmp *.tif *.ico *.icns)"));
@@ -694,7 +693,7 @@ bool dlgPackageExporter::eventFilter(QObject* obj, QEvent* evt)
             //during package creation it uses the profile folder. But once the package is created it will use
             //profile folder/packagename
             QString plainText{mPlainDescription};
-            const QString profilePath{MudletPaths::getMudletPath(enums::profileHomePath, mpHost->getName())};
+            const QString profilePath{MudletApp::getMudletPath(enums::profileHomePath, mpHost->getName())};
             //$packagePath will be replaced by the resource path if an existing package is selected
             if (ui->packageList->currentIndex() != 0) {
                 const QString packageName = ui->packageList->currentText();
@@ -868,7 +867,7 @@ void dlgPackageExporter::slot_exportPackage()
     // if packageName changed allow to create a new package in the same path
     if (mIsModuleCreationMode) {
         // Modules default to the profile directory unless the user picked a save location
-        const QString moduleDir = mPackagePath.isEmpty() ? MudletPaths::getMudletPath(enums::profileHomePath, mpHost->getName()) : mPackagePath;
+        const QString moduleDir = mPackagePath.isEmpty() ? MudletApp::getMudletPath(enums::profileHomePath, mpHost->getName()) : mPackagePath;
         mPackagePathFileName = qsl("%1/%2.mpackage").arg(moduleDir, mPackageName);
     } else {
         mPackagePathFileName = qsl("%1/%2.mpackage").arg(getActualPath(), mPackageName);
@@ -1021,12 +1020,13 @@ void dlgPackageExporter::slot_exportPackage()
                                 return;
                             }
                         }
-                        // quiet: the failure branch below reports it with context the
-                        // console line cannot carry - that it was exported but not installed
+                        // Quiet: the failure branch below says it was exported but not installed, which the console line can't
                         auto [installSuccess, installMessage] = mpHost->installPackage(mPackagePathFileName, enums::PackageModuleType::ModuleFromUI, true);
                         if (installSuccess) {
                             const QString savedDir = QFileInfo(mPackagePathFileName).absolutePath();
                             const QString savedDirLink = qsl("<a href=\"%1\">%2</a>").arg(QUrl::fromLocalFile(savedDir).toString(QUrl::FullyEncoded).toHtmlEscaped(), savedDir.toHtmlEscaped());
+                            // Items with broken Lua are not reported here: the export worked, and the editor behind this
+                            // dialog already shows the errors against the items.
                             // Show embedded success message (better UX than popup)
                             //: %1 is the module name, %2 is a clickable link to the folder the module file was saved in
                             displayResultMessage(tr("Module \"%1\" created and installed successfully! Saved to: %2. You can now close this dialog.").arg(mPackageName.toHtmlEscaped(), savedDirLink),
@@ -1064,7 +1064,7 @@ void dlgPackageExporter::slot_exportPackage()
     }
 
     // save settings for future reuse
-    QSettings& settings = *mudlet::getQSettings();
+    QSettings& settings = *MudletApp::getQSettings();
     settings.setValue("packageAuthor", ui->lineEdit_author->text());
 }
 
@@ -1143,51 +1143,51 @@ void dlgPackageExporter::markExportItems(QList<QTreeWidgetItem*>& trigList,
 { //now fix all the stuff we weren't exporting
     //trigger, timer, alias, action, script, keys
     for (auto item : std::as_const(trigList)) {
-        if (triggerMap.contains(item)) {
-            triggerMap[item]->exportItem = true;
+        if (auto* pTrigger = triggerOf(triggerMap, item)) {
+            pTrigger->exportItem = true;
         }
-        if (modTriggerMap.contains(item)) {
-            modTriggerMap[item]->mModuleMasterFolder = true;
+        if (auto* pTrigger = triggerOf(modTriggerMap, item)) {
+            pTrigger->mModuleMasterFolder = true;
         }
     }
     for (auto item : std::as_const(timerList)) {
-        if (timerMap.contains(item)) {
-            timerMap[item]->exportItem = true;
+        if (auto* pTimer = timerOf(timerMap, item)) {
+            pTimer->exportItem = true;
         }
-        if (modTimerMap.contains(item)) {
-            modTimerMap[item]->mModuleMasterFolder = true;
+        if (auto* pTimer = timerOf(modTimerMap, item)) {
+            pTimer->mModuleMasterFolder = true;
         }
     }
     for (auto item : std::as_const(actionList)) {
-        if (actionMap.contains(item)) {
-            actionMap[item]->exportItem = true;
+        if (auto* pAction = actionOf(actionMap, item)) {
+            pAction->exportItem = true;
         }
-        if (modActionMap.contains(item)) {
-            modActionMap[item]->mModuleMasterFolder = true;
+        if (auto* pAction = actionOf(modActionMap, item)) {
+            pAction->mModuleMasterFolder = true;
         }
     }
     for (auto item : std::as_const(scriptList)) {
-        if (scriptMap.contains(item)) {
-            scriptMap[item]->exportItem = true;
+        if (auto* pScript = scriptOf(scriptMap, item)) {
+            pScript->exportItem = true;
         }
-        if (modScriptMap.contains(item)) {
-            modScriptMap[item]->mModuleMasterFolder = true;
+        if (auto* pScript = scriptOf(modScriptMap, item)) {
+            pScript->mModuleMasterFolder = true;
         }
     }
     for (auto item : std::as_const(keyList)) {
-        if (keyMap.contains(item)) {
-            keyMap[item]->exportItem = true;
+        if (auto* pKey = keyOf(keyMap, item)) {
+            pKey->exportItem = true;
         }
-        if (modKeyMap.contains(item)) {
-            modKeyMap[item]->mModuleMasterFolder = true;
+        if (auto* pKey = keyOf(modKeyMap, item)) {
+            pKey->mModuleMasterFolder = true;
         }
     }
     for (auto item : std::as_const(aliasList)) {
-        if (aliasMap.contains(item)) {
-            aliasMap[item]->exportItem = true;
+        if (auto* pAlias = aliasOf(aliasMap, item)) {
+            pAlias->exportItem = true;
         }
-        if (modAliasMap.contains(item)) {
-            modAliasMap[item]->mModuleMasterFolder = true;
+        if (auto* pAlias = aliasOf(modAliasMap, item)) {
+            pAlias->mModuleMasterFolder = true;
         }
     }
 }
@@ -1204,61 +1204,85 @@ void dlgPackageExporter::exportXml(bool& isOk,
     QTreeWidgetItem* top = mpTriggers;
     recurseTree(top, trigList);
     for (auto item : std::as_const(trigList)) {
-        if (item->checkState(0) == Qt::Unchecked && triggerMap.contains(item)) {
-            triggerMap[item]->exportItem = false;
-        } else if (item->checkState(0) == Qt::Checked && triggerMap.contains(item) && triggerMap[item]->mModuleMasterFolder) {
-            triggerMap[item]->mModuleMasterFolder = false;
-            modTriggerMap.insert(item, triggerMap[item]);
+        auto* pTrigger = triggerOf(triggerMap, item);
+        if (!pTrigger) {
+            continue;
+        }
+        if (item->checkState(0) == Qt::Unchecked) {
+            pTrigger->exportItem = false;
+        } else if (item->checkState(0) == Qt::Checked && pTrigger->mModuleMasterFolder) {
+            pTrigger->mModuleMasterFolder = false;
+            modTriggerMap.insert(item, pTrigger->getID());
         }
     }
     top = mpTimers;
     recurseTree(top, timerList);
     for (auto item : std::as_const(timerList)) {
-        if (item->checkState(0) == Qt::Unchecked && timerMap.contains(item)) {
-            timerMap[item]->exportItem = false;
-        } else if (item->checkState(0) == Qt::Checked && timerMap.contains(item) && timerMap[item]->mModuleMasterFolder) {
-            timerMap[item]->mModuleMasterFolder = false;
-            modTimerMap.insert(item, timerMap[item]);
+        auto* pTimer = timerOf(timerMap, item);
+        if (!pTimer) {
+            continue;
+        }
+        if (item->checkState(0) == Qt::Unchecked) {
+            pTimer->exportItem = false;
+        } else if (item->checkState(0) == Qt::Checked && pTimer->mModuleMasterFolder) {
+            pTimer->mModuleMasterFolder = false;
+            modTimerMap.insert(item, pTimer->getID());
         }
     }
     top = mpAliases;
     recurseTree(top, aliasList);
     for (auto item : std::as_const(aliasList)) {
-        if (item->checkState(0) == Qt::Unchecked && aliasMap.contains(item)) {
-            aliasMap[item]->exportItem = false;
-        } else if (item->checkState(0) == Qt::Checked && aliasMap.contains(item) && aliasMap[item]->mModuleMasterFolder) {
-            aliasMap[item]->mModuleMasterFolder = false;
-            modAliasMap.insert(item, aliasMap[item]);
+        auto* pAlias = aliasOf(aliasMap, item);
+        if (!pAlias) {
+            continue;
+        }
+        if (item->checkState(0) == Qt::Unchecked) {
+            pAlias->exportItem = false;
+        } else if (item->checkState(0) == Qt::Checked && pAlias->mModuleMasterFolder) {
+            pAlias->mModuleMasterFolder = false;
+            modAliasMap.insert(item, pAlias->getID());
         }
     }
     top = mpButtons;
     recurseTree(top, actionList);
     for (auto item : std::as_const(actionList)) {
-        if (item->checkState(0) == Qt::Unchecked && actionMap.contains(item)) {
-            actionMap[item]->exportItem = false;
-        } else if (item->checkState(0) == Qt::Checked && actionMap.contains(item) && actionMap[item]->mModuleMasterFolder) {
-            actionMap[item]->mModuleMasterFolder = false;
-            modActionMap.insert(item, actionMap[item]);
+        auto* pAction = actionOf(actionMap, item);
+        if (!pAction) {
+            continue;
+        }
+        if (item->checkState(0) == Qt::Unchecked) {
+            pAction->exportItem = false;
+        } else if (item->checkState(0) == Qt::Checked && pAction->mModuleMasterFolder) {
+            pAction->mModuleMasterFolder = false;
+            modActionMap.insert(item, pAction->getID());
         }
     }
     top = mpScripts;
     recurseTree(top, scriptList);
     for (auto item : std::as_const(scriptList)) {
-        if (item->checkState(0) == Qt::Unchecked && scriptMap.contains(item)) {
-            scriptMap[item]->exportItem = false;
-        } else if (item->checkState(0) == Qt::Checked && scriptMap.contains(item) && scriptMap[item]->mModuleMasterFolder) {
-            scriptMap[item]->mModuleMasterFolder = false;
-            modScriptMap.insert(item, scriptMap[item]);
+        auto* pScript = scriptOf(scriptMap, item);
+        if (!pScript) {
+            continue;
+        }
+        if (item->checkState(0) == Qt::Unchecked) {
+            pScript->exportItem = false;
+        } else if (item->checkState(0) == Qt::Checked && pScript->mModuleMasterFolder) {
+            pScript->mModuleMasterFolder = false;
+            modScriptMap.insert(item, pScript->getID());
         }
     }
     top = mpKeys;
     recurseTree(top, keyList);
     for (auto item : std::as_const(keyList)) {
-        if (item->checkState(0) == Qt::Unchecked && keyMap.contains(item)) {
-            keyMap[item]->exportItem = false;
-        } else if (item->checkState(0) == Qt::Checked && keyMap.contains(item) && keyMap[item]->mModuleMasterFolder) {
-            keyMap[item]->mModuleMasterFolder = false;
-            modKeyMap.insert(item, keyMap[item]);
+        auto* pKey = keyOf(keyMap, item);
+        if (!pKey) {
+            continue;
+        }
+        if (item->checkState(0) == Qt::Unchecked) {
+            pKey->exportItem = false;
+        } else if (item->checkState(0) == Qt::Checked && pKey->mModuleMasterFolder) {
+            pKey->mModuleMasterFolder = false;
+            modKeyMap.insert(item, pKey->getID());
         }
     }
 
@@ -1565,7 +1589,7 @@ void dlgPackageExporter::slot_addFiles()
     fDialog->setFileMode(QFileDialog::Directory);
     fDialog->setOption(QFileDialog::DontUseNativeDialog);
 
-    QSettings& settings = *mudlet::getQSettings();
+    QSettings& settings = *MudletApp::getQSettings();
     QString lastDir = settings.value("lastFileDialogLocation", QDir::homePath()).toString();
     fDialog->setDirectory(lastDir);
 
@@ -1612,7 +1636,7 @@ void dlgPackageExporter::slot_addFiles()
 
 void dlgPackageExporter::slot_openPackageLocation()
 {
-    QSettings& settings = *mudlet::getQSettings();
+    QSettings& settings = *MudletApp::getQSettings();
     QString lastDir = settings.value("lastFileDialogLocation", QDir::homePath()).toString();
 
     const QString chosenPath = QFileDialog::getExistingDirectory(nullptr, tr("Where do you want to save the package?"), lastDir, QFileDialog::DontUseNativeDialog | QFileDialog::ShowDirsOnly);
@@ -1685,6 +1709,38 @@ void dlgPackageExporter::checkChildren(QTreeWidgetItem* item) const
     }
 }
 
+// The editor and scripts can delete items while this dialog is open, so the
+// tree keeps their ids and each use looks the item up again
+TTrigger* dlgPackageExporter::triggerOf(const QMap<QTreeWidgetItem*, int>& map, QTreeWidgetItem* item) const
+{
+    return map.contains(item) ? mpHost->getTriggerUnit()->getTrigger(map.value(item)) : nullptr;
+}
+
+TTimer* dlgPackageExporter::timerOf(const QMap<QTreeWidgetItem*, int>& map, QTreeWidgetItem* item) const
+{
+    return map.contains(item) ? mpHost->getTimerUnit()->getTimer(map.value(item)) : nullptr;
+}
+
+TAlias* dlgPackageExporter::aliasOf(const QMap<QTreeWidgetItem*, int>& map, QTreeWidgetItem* item) const
+{
+    return map.contains(item) ? mpHost->getAliasUnit()->getAlias(map.value(item)) : nullptr;
+}
+
+TAction* dlgPackageExporter::actionOf(const QMap<QTreeWidgetItem*, int>& map, QTreeWidgetItem* item) const
+{
+    return map.contains(item) ? mpHost->getActionUnit()->getAction(map.value(item)) : nullptr;
+}
+
+TScript* dlgPackageExporter::scriptOf(const QMap<QTreeWidgetItem*, int>& map, QTreeWidgetItem* item) const
+{
+    return map.contains(item) ? mpHost->getScriptUnit()->getScript(map.value(item)) : nullptr;
+}
+
+TKey* dlgPackageExporter::keyOf(const QMap<QTreeWidgetItem*, int>& map, QTreeWidgetItem* item) const
+{
+    return map.contains(item) ? mpHost->getKeyUnit()->getKey(map.value(item)) : nullptr;
+}
+
 void dlgPackageExporter::recurseTriggers(TTrigger* trig, QTreeWidgetItem* qTrig)
 {
     std::list<Tree<TTrigger>*>* childList = trig->getChildrenList();
@@ -1700,7 +1756,7 @@ void dlgPackageExporter::recurseTriggers(TTrigger* trig, QTreeWidgetItem* qTrig)
         QStringList sl;
         sl << pChild->getName();
         auto pItem = new QTreeWidgetItem(sl);
-        triggerMap.insert(pItem, pChild);
+        triggerMap.insert(pItem, pChild->getID());
         pItem->setFlags(Qt::ItemIsUserCheckable | Qt::ItemIsEnabled | Qt::ItemIsSelectable);
         pItem->setCheckState(0, Qt::Unchecked);
         qTrig->addChild(pItem);
@@ -1728,7 +1784,7 @@ void dlgPackageExporter::listTriggers()
             pItem->setData(0, Qt::UserRole, isTopFolder);
         }
         top->addChild(pItem);
-        triggerMap.insert(pItem, pChild);
+        triggerMap.insert(pItem, pChild->getID());
         recurseTriggers(pChild, pItem);
     }
 }
@@ -1751,7 +1807,7 @@ void dlgPackageExporter::recurseAliases(TAlias* item, QTreeWidgetItem* qItem)
         pItem->setFlags(Qt::ItemIsUserCheckable | Qt::ItemIsEnabled | Qt::ItemIsSelectable);
         pItem->setCheckState(0, Qt::Unchecked);
         qItem->addChild(pItem);
-        aliasMap.insert(pItem, pChild);
+        aliasMap.insert(pItem, pChild->getID());
         recurseAliases(pChild, pItem);
     }
 }
@@ -1776,7 +1832,7 @@ void dlgPackageExporter::listAliases()
             pItem->setData(0, Qt::UserRole, isTopFolder);
         }
         top->addChild(pItem);
-        aliasMap.insert(pItem, pChild);
+        aliasMap.insert(pItem, pChild->getID());
         recurseAliases(pChild, pItem);
     }
 }
@@ -1795,7 +1851,7 @@ void dlgPackageExporter::recurseScripts(TScript* item, QTreeWidgetItem* qItem)
         auto pItem = new QTreeWidgetItem(sl);
         pItem->setFlags(Qt::ItemIsUserCheckable | Qt::ItemIsEnabled | Qt::ItemIsSelectable);
         pItem->setCheckState(0, Qt::Unchecked);
-        scriptMap.insert(pItem, pChild);
+        scriptMap.insert(pItem, pChild->getID());
         qItem->addChild(pItem);
         recurseScripts(pChild, pItem);
     }
@@ -1817,7 +1873,7 @@ void dlgPackageExporter::listScripts()
         if (pChild->isFolder() && pChild->getScript().isEmpty()) {
             pItem->setData(0, Qt::UserRole, isTopFolder);
         }
-        scriptMap.insert(pItem, pChild);
+        scriptMap.insert(pItem, pChild->getID());
         top->addChild(pItem);
         recurseScripts(pChild, pItem);
     }
@@ -1840,7 +1896,7 @@ void dlgPackageExporter::recurseKeys(TKey* item, QTreeWidgetItem* qItem)
         auto pItem = new QTreeWidgetItem(sl);
         pItem->setFlags(Qt::ItemIsUserCheckable | Qt::ItemIsEnabled | Qt::ItemIsSelectable);
         pItem->setCheckState(0, Qt::Unchecked);
-        keyMap.insert(pItem, pChild);
+        keyMap.insert(pItem, pChild->getID());
         qItem->addChild(pItem);
         recurseKeys(pChild, pItem);
     }
@@ -1865,7 +1921,7 @@ void dlgPackageExporter::listKeys()
         if (pChild->isFolder() && pChild->getScript().isEmpty()) {
             pItem->setData(0, Qt::UserRole, isTopFolder);
         }
-        keyMap.insert(pItem, pChild);
+        keyMap.insert(pItem, pChild->getID());
         top->addChild(pItem);
         recurseKeys(pChild, pItem);
     }
@@ -1885,7 +1941,7 @@ void dlgPackageExporter::recurseActions(TAction* item, QTreeWidgetItem* qItem)
         auto pItem = new QTreeWidgetItem(sl);
         pItem->setFlags(Qt::ItemIsUserCheckable | Qt::ItemIsEnabled | Qt::ItemIsSelectable);
         pItem->setCheckState(0, Qt::Unchecked);
-        actionMap.insert(pItem, pChild);
+        actionMap.insert(pItem, pChild->getID());
         qItem->addChild(pItem);
         recurseActions(pChild, pItem);
     }
@@ -1907,7 +1963,7 @@ void dlgPackageExporter::listActions()
         if (pChild->isFolder() && pChild->getScript().isEmpty()) {
             pItem->setData(0, Qt::UserRole, isTopFolder);
         }
-        actionMap.insert(pItem, pChild);
+        actionMap.insert(pItem, pChild->getID());
         top->addChild(pItem);
         recurseActions(pChild, pItem);
     }
@@ -1930,7 +1986,7 @@ void dlgPackageExporter::recurseTimers(TTimer* item, QTreeWidgetItem* qItem)
         auto pItem = new QTreeWidgetItem(sl);
         pItem->setFlags(Qt::ItemIsUserCheckable | Qt::ItemIsEnabled | Qt::ItemIsSelectable);
         pItem->setCheckState(0, Qt::Unchecked);
-        timerMap.insert(pItem, pChild);
+        timerMap.insert(pItem, pChild->getID());
         qItem->addChild(pItem);
         recurseTimers(pChild, pItem);
     }
@@ -1955,7 +2011,7 @@ void dlgPackageExporter::listTimers()
         if (pChild->isFolder() && pChild->getScript().isEmpty()) {
             pItem->setData(0, Qt::UserRole, isTopFolder);
         }
-        timerMap.insert(pItem, pChild);
+        timerMap.insert(pItem, pChild->getID());
         top->addChild(pItem);
         recurseTimers(pChild, pItem);
     }
@@ -2024,7 +2080,7 @@ void dlgPackageExporter::slot_rightClickOnItems(const QPoint& point)
 
 QString dlgPackageExporter::getActualPath() const
 {
-    QSettings& settings = *mudlet::getQSettings();
+    QSettings& settings = *MudletApp::getQSettings();
     QString lastDir = settings.value("lastFileDialogLocation", QDir::homePath()).toString();
 
     return mPackagePath.isEmpty() ? lastDir : mPackagePath;

@@ -44,13 +44,16 @@
 #include <QtTest/QtTest>
 #include <chrono>
 
-#include "MudletPaths.h"
+#include "MudletApp.h"
 #include "ProfileTestHelper.h"
 #include "Host.h"
+#include "HostDialogs.h"
+#include "HostManager.h"
 #include "MudletInstanceCoordinator.h"
 #include "TDetachedWindow.h"
 #include "TTabBar.h"
 #include "TelnetServerStub.h"
+#include "dlgTriggerEditor.h"
 #include "ctelnet.h"
 #include "mudlet.h"
 
@@ -101,7 +104,7 @@ private slots:
         mPort = QString::number(mpServer->serverPort());
         mudlet::start();
         mudlet::self()->setupConfig();
-        QCOMPARE(MudletPaths::getMudletPath(enums::mainPath), qsl("%1/mudlet").arg(mConfigDir.path()));
+        QCOMPARE(MudletApp::getMudletPath(enums::mainPath), qsl("%1/mudlet").arg(mConfigDir.path()));
         mudlet::self()->takeOwnershipOfInstanceCoordinator(std::make_unique<MudletInstanceCoordinator>("MudletInstanceCoordinator"));
         mudlet::self()->init();
         mudlet::self()->setStorePasswordsSecurely(false);
@@ -197,6 +200,32 @@ private slots:
                 2000ms));
     }
 
+    // The editor puts focus back on the window it was opened from once it closes,
+    // and that window can be gone by then
+    void test_closingAnEditorOpenedFromAGoneDetachedWindowIsSafe()
+    {
+        QPointer<TDetachedWindow> pWindow = mpDetachedWindow;
+        QVERIFY(pWindow);
+        Host* pHost = HostManager::self()->getHost(mSecondHostname);
+        QVERIFY(pHost);
+
+        QVERIFY(QMetaObject::invokeMethod(pWindow.data(), "slot_showTriggerDialog"));
+        QPointer<dlgTriggerEditor> pEditor = HostDialogs::of(pHost).mpEditorDialog.data();
+        QVERIFY2(pEditor, "the detached window opened no editor");
+
+        reattachAndWait(mSecondHostname);
+        QVERIFY(QTest::qWaitFor(
+                [&pWindow]() {
+                    return pWindow.isNull();
+                },
+                2000ms));
+
+        pEditor->close();
+        // Outlasts the 50ms the focus hand-back waits before it runs
+        QTest::qWait(300ms);
+        QVERIFY(mudlet::self());
+    }
+
     // Which tab is being dragged out has no say in whether it may be - only how
     // many tabs are left behind does. The left-most tab used to be refused
     // outright, however many tabs sat beside it, while the tab bar's context
@@ -289,14 +318,14 @@ private:
         }
 
         QSignalSpy connectionSpy(&(host->mTelnet), &cTelnet::signal_connected);
-        if (!connectionSpy.wait(2000)) {
+        if (!connectionSpy.wait(2s)) {
             QFAIL("Could not connect with the host.");
         }
     }
 
     void deleteProfileDirectory(const QString& profileName)
     {
-        QDir dir(MudletPaths::getMudletPath(enums::profileHomePath, profileName));
+        QDir dir(MudletApp::getMudletPath(enums::profileHomePath, profileName));
         if (dir.exists()) {
             dir.removeRecursively();
         }

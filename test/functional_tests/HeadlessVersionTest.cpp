@@ -78,7 +78,7 @@ private:
     };
 
     // A portable.txt beside the shipped binary, or in $HOME/.config/mudlet,
-    // outranks XDG_CONFIG_HOME (MudletPaths::resolveConfigRoot()), so the child
+    // outranks XDG_CONFIG_HOME (MudletApp::resolveConfigRoot()), so the child
     // would read the real install's Mudlet.ini for its interface language
     // instead of the sandbox's and answer in a language the rows below do not
     // expect. Note the directory checked is the application's, not this test
@@ -113,12 +113,6 @@ private:
         // Keeps a WITH_SENTRY build's crashpad database out of the real cache
         environment.insert(qsl("XDG_CACHE_HOME"), qsl("%1/cache").arg(sandbox.path()));
         environment.insert(qsl("MUDLET_TEST_MODE"), qsl("1"));
-        // The TLS warm-up main() starts leaves Qt's CA store loaded for the
-        // process lifetime, so a leak check here would only ever report that.
-        // Appended rather than replacing what ctest set, since the runtime takes
-        // the last setting of a flag and the earlier ones stay.
-        const QString inheritedSanitizerOptions = environment.value(qsl("ASAN_OPTIONS"));
-        environment.insert(qsl("ASAN_OPTIONS"), inheritedSanitizerOptions.isEmpty() ? qsl("detect_leaks=0") : qsl("%1:detect_leaks=0").arg(inheritedSanitizerOptions));
         return environment;
     }
 
@@ -134,7 +128,7 @@ private:
             return outcome;
         }
         // Creating mudlet/profiles is what makes XDG_CONFIG_HOME outrank the
-        // legacy ~/.config/mudlet, see MudletPaths::xdgConfigDir()
+        // legacy ~/.config/mudlet, see MudletApp::xdgConfigDir()
         if (!QDir().mkpath(qsl("%1/config/mudlet/profiles").arg(sandbox.path()))) {
             outcome.processFailure = qsl("could not make a config root under %1").arg(sandbox.path());
             return outcome;

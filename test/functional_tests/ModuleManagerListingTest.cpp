@@ -22,7 +22,8 @@
 
 #include "Host.h"
 #include "MudletInstanceCoordinator.h"
-#include "MudletPaths.h"
+#include "HostDialogs.h"
+#include "MudletApp.h"
 #include "PortableModeTestHelper.h"
 #include "ProfileTestHelper.h"
 #include "TMainConsole.h"
@@ -32,6 +33,8 @@
 #include "mudlet.h"
 
 #include "GroupedTest.h"
+
+using namespace std::chrono_literals;
 
 // The Module Manager's table is rebuilt in place, and installPackage() and
 // uninstallPackage() rebuild it behind the user's back whenever a module goes
@@ -60,7 +63,7 @@ private:
     void listModules(Host* host)
     {
         for (const QString& name : mModuleNames) {
-            host->mInstalledModules[name] = QStringList{qsl("%1/%2.xml").arg(MudletPaths::getMudletPath(enums::profileHomePath, mpHostname), name), qsl("0")};
+            host->mInstalledModules[name] = QStringList{qsl("%1/%2.xml").arg(MudletApp::getMudletPath(enums::profileHomePath, mpHostname), name), qsl("0")};
             host->mModulePriorities[name] = 0;
         }
     }
@@ -106,14 +109,14 @@ private slots:
     {
         if (auto* self = mudlet::self()) {
             if (auto* host = self->getActiveHost()) {
-                QTest::qWait(50);
+                QTest::qWait(50ms);
                 host->waitForProfileSave();
             }
         }
         delete mpServer;
         mpServer = nullptr;
-        deleteProfileDirectory(mpHostname);
         delete mudlet::self();
+        deleteProfileDirectory(mpHostname);
     }
 
     // Installing a module while the dialog is open rebuilds the table, and a
@@ -155,6 +158,96 @@ private slots:
         delete manager;
     }
 
+    // A script turning a module's sync on or off ticks or clears its box in
+    // the open dialog, which does not rebuild its listing for that.
+    void test_aScriptChangingAModulesSyncShowsInTheOpenDialog()
+    {
+        auto* host = startProfile();
+        QVERIFY2(host, "Could not start the profile");
+        listModules(host);
+
+        mudlet::self()->slot_moduleManager();
+        dlgModuleManager* manager = HostDialogs::of(host).mpModuleManager;
+        QVERIFY2(manager, "The module manager did not open for the profile");
+        const int row = rowNames(manager).indexOf(qsl("listing-c"));
+        QVERIFY2(row >= 0, "The seeded module is not listed");
+        QCOMPARE(manager->moduleTable->item(row, 2)->checkState(), Qt::Unchecked);
+
+        QVERIFY(host->getLuaInterpreter()->compileAndExecuteScript(qsl("enableModuleSync(\"listing-c\")")));
+        QCOMPARE(manager->moduleTable->item(row, 2)->checkState(), Qt::Checked);
+
+        QVERIFY(host->getLuaInterpreter()->compileAndExecuteScript(qsl("disableModuleSync(\"listing-c\")")));
+        QCOMPARE(manager->moduleTable->item(row, 2)->checkState(), Qt::Unchecked);
+
+        delete manager;
+    }
+
+    void test_aScriptChangingAModulesSyncKeepsThePriorityItSet()
+    {
+        auto* host = startProfile();
+        QVERIFY2(host, "Could not start the profile");
+        listModules(host);
+
+        mudlet::self()->slot_moduleManager();
+        dlgModuleManager* manager = HostDialogs::of(host).mpModuleManager;
+        QVERIFY2(manager, "The module manager did not open for the profile");
+        manager->show();
+        QVERIFY(QTest::qWaitForWindowExposed(manager));
+
+        QVERIFY(host->getLuaInterpreter()->compileAndExecuteScript(qsl("setModulePriority(\"listing-c\", 7) enableModuleSync(\"listing-c\")")));
+        QCOMPARE(host->mModulePriorities.value(qsl("listing-c")), 7);
+        int row = rowNames(manager).indexOf(qsl("listing-c"));
+        QVERIFY2(row >= 0, "The seeded module is not listed");
+        QCOMPARE(manager->moduleTable->item(row, 1)->text(), qsl("7"));
+
+        QVERIFY(host->getLuaInterpreter()->compileAndExecuteScript(qsl("setModulePriority(\"listing-c\", 9) disableModuleSync(\"listing-c\")")));
+        QCOMPARE(host->mModulePriorities.value(qsl("listing-c")), 9);
+        row = rowNames(manager).indexOf(qsl("listing-c"));
+        QCOMPARE(manager->moduleTable->item(row, 1)->text(), qsl("9"));
+
+        // The sync call alone must leave the priority be, even when the row is behind the host
+        host->mModulePriorities[qsl("listing-c")] = 11;
+        QVERIFY(host->getLuaInterpreter()->compileAndExecuteScript(qsl("enableModuleSync(\"listing-c\") disableModuleSync(\"listing-c\")")));
+        QCOMPARE(host->mModulePriorities.value(qsl("listing-c")), 11);
+        host->mModulePriorities[qsl("listing-c")] = 9;
+
+        // A box the user ticks after the script ran saves the row's priority, so the row must show the script's
+        manager->moduleTable->item(row, 2)->setCheckState(Qt::Checked);
+        QCOMPARE(host->mInstalledModules.value(qsl("listing-c")).at(1), qsl("1"));
+        QCOMPARE(host->mModulePriorities.value(qsl("listing-c")), 9);
+
+        delete manager;
+    }
+
+    // The box is found by the module's name alone: another row's location
+    // can read the same, and a module installed since the dialog listed its
+    // modules has no row to tick
+    void test_aScriptChangingAnUnlistedModulesSyncTicksNoOtherRow()
+    {
+        auto* host = startProfile();
+        QVERIFY2(host, "Could not start the profile");
+        listModules(host);
+
+        mudlet::self()->slot_moduleManager();
+        dlgModuleManager* manager = HostDialogs::of(host).mpModuleManager;
+        QVERIFY2(manager, "The module manager did not open for the profile");
+        const int row = rowNames(manager).indexOf(qsl("listing-c"));
+        QVERIFY2(row >= 0, "The seeded module is not listed");
+        const QString location = manager->moduleTable->item(row, 3)->text();
+        QVERIFY2(!location.isEmpty(), "SETUP: the seeded module shows no location");
+        host->mInstalledModules[location] = QStringList{location, qsl("0")};
+        host->mModulePriorities[location] = 0;
+        QVERIFY2(!rowNames(manager).contains(location), "SETUP: the dialog listed the new module, so it has a row of its own to tick");
+
+        QVERIFY(host->getLuaInterpreter()->compileAndExecuteScript(qsl("enableModuleSync([[%1]])").arg(location)));
+        QCOMPARE(host->mInstalledModules[location].at(1), qsl("1"));
+        QCOMPARE(manager->moduleTable->item(row, 2)->checkState(), Qt::Unchecked);
+
+        host->mInstalledModules.remove(location);
+        host->mModulePriorities.remove(location);
+        delete manager;
+    }
+
 private:
     Host* startProfile()
     {
@@ -163,7 +256,7 @@ private:
             return nullptr;
         }
         QSignalSpy connected(&(host->mTelnet), &cTelnet::signal_connected);
-        if (!connected.wait(2000)) {
+        if (!connected.wait(2s)) {
             return nullptr;
         }
         return mudlet::self()->getActiveHost();
@@ -171,10 +264,7 @@ private:
 
     void deleteProfileDirectory(const QString& profileName)
     {
-        QDir dir(MudletPaths::getMudletPath(enums::profileHomePath, profileName));
-        if (dir.exists()) {
-            dir.removeRecursively();
-        }
+        TestProfile::removeProfileDirectory(profileName);
     }
 };
 

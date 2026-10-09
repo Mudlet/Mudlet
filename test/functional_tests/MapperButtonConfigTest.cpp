@@ -25,8 +25,8 @@
  * behavior. The get/set round-trip itself is spec-tested in Other_spec.lua -
  * this needs C++ because pressing the buttons has no Lua entry point.
  *
- * Mapper creation cannot be undone for the life of a profile, so each test
- * method needs a mudlet of its own.
+ * Nothing in this file can undo mapper creation, so each test method needs a
+ * mudlet of its own.
  */
 
 #include <QDockWidget>
@@ -34,7 +34,7 @@
 #include <QTemporaryDir>
 #include <QtTest/QtTest>
 
-#include "MudletPaths.h"
+#include "MudletApp.h"
 #include "PortableModeTestHelper.h"
 #include "ProfileTestHelper.h"
 #include "Host.h"
@@ -47,6 +47,8 @@
 #include "mudlet.h"
 
 #include "GroupedTest.h"
+
+using namespace std::chrono_literals;
 
 class MapperButtonConfigTest : public QObject
 {
@@ -83,7 +85,7 @@ private slots:
         mPort = QString::number(mpServer->serverPort());
         mudlet::start();
         mudlet::self()->setupConfig();
-        QCOMPARE(MudletPaths::getMudletPath(enums::mainPath), qsl("%1/mudlet").arg(mConfigDir.path()));
+        QCOMPARE(MudletApp::getMudletPath(enums::mainPath), qsl("%1/mudlet").arg(mConfigDir.path()));
         mudlet::self()->takeOwnershipOfInstanceCoordinator(std::make_unique<MudletInstanceCoordinator>("MudletInstanceCoordinator"));
         mudlet::self()->init();
         mudlet::self()->setStorePasswordsSecurely(false);
@@ -95,7 +97,7 @@ private slots:
         }
 
         QSignalSpy connectionSpy(&(mpHost->mTelnet), &cTelnet::signal_connected);
-        if (!connectionSpy.wait(2000)) {
+        if (!connectionSpy.wait(2s)) {
             QFAIL("Could not connect with the host.");
         }
 
@@ -107,8 +109,8 @@ private slots:
         delete mpServer;
         mpServer = nullptr;
         mpHost = nullptr;
-        deleteProfileDirectory();
         delete mudlet::self();
+        deleteProfileDirectory();
     }
 
     void test_scriptedModeRoutesButtonToEvent()
@@ -152,10 +154,7 @@ private:
 
     void deleteProfileDirectory() const
     {
-        QDir dir(MudletPaths::getMudletPath(enums::profileHomePath, mHostname));
-        if (dir.exists()) {
-            dir.removeRecursively();
-        }
+        TestProfile::removeProfileDirectory(mHostname);
     }
 };
 

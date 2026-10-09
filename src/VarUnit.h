@@ -43,20 +43,16 @@ class VarUnit
 public:
     VarUnit();
     ~VarUnit();
-    QStringList varName(TVar*);
     QStringList shortVarName(TVar*);
+    QString shortVarPath(TVar*);
     bool varExists(TVar*);
     bool shouldSave(TVar*);
     void addVariable(TVar*);
-    void removeVariable(TVar*);
     void setBase(TVar*);
     TVar* getBase();
     void clear();
-    // Identifies the variable tree currently held. Anything holding TVar
-    // pointers can tell they are stale by comparing this against what it
-    // recorded when it took them. Unique across VarUnits as well as across
-    // clear()s, so a freshly made one cannot be mistaken for the tree a caller
-    // last saw - resetting a profile builds both a new VarUnit and a new tree.
+    // Holders of TVar pointers compare this with the value they recorded to detect stale pointers.
+    // Unique across VarUnits as well as clear()s: a profile reset makes a new VarUnit and a new tree.
     quint64 treeGeneration() const { return mTreeGeneration; }
     void addSavedVar(TVar*);
     void removeSavedVar(TVar*);
@@ -93,7 +89,7 @@ public:
 
 private:
     bool rootNameReadsAsAMemberPath(TVar*) const;
-    int countTableItems(TVar*);
+    int countTableItems(TVar*, int limit);
     void rememberHiddenTable(TVar*, const QString& fullName);
     void forgetHiddenTable(const QString& fullName);
     void forgetHiddenTableAddress(const void* table);
@@ -102,7 +98,6 @@ private:
     static quint64 nextTreeGeneration();
     quint64 mTreeGeneration = nextTreeGeneration();
     std::unique_ptr<TVar> base;
-    QSet<QString> variableSet;
     QSet<const void*> mPointers;
     // what un-hiding a name has to hand back to hiddenTables
     QHash<QString, const void*> mHiddenTableByName;

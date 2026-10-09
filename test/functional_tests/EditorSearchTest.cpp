@@ -27,12 +27,14 @@
 #include <QComboBox>
 #include <QTemporaryDir>
 #include <QTreeWidget>
+#include <QScopeGuard>
 #include <QtTest/QtTest>
 #include <chrono>
 
 #include "Host.h"
+#include "HostDialogs.h"
 #include "MudletInstanceCoordinator.h"
-#include "MudletPaths.h"
+#include "MudletApp.h"
 #include "PortableModeTestHelper.h"
 #include "ProfileTestHelper.h"
 #include "ActionUnit.h"
@@ -49,7 +51,12 @@
 #include "TTrigger.h"
 #include "TelnetServerStub.h"
 #include "ctelnet.h"
+#include "dlgSourceEditorFindArea.h"
 #include "dlgTriggerEditor.h"
+#include "edbee/models/textdocument.h"
+#include "edbee/models/textrange.h"
+#include "edbee/texteditorcontroller.h"
+#include "edbee/texteditorwidget.h"
 #include "mudlet.h"
 
 #include "GroupedTest.h"
@@ -73,7 +80,7 @@ private:
 
     void deleteProfileDirectory(const QString& profileName)
     {
-        QDir dir(MudletPaths::getMudletPath(enums::profileHomePath, profileName));
+        QDir dir(MudletApp::getMudletPath(enums::profileHomePath, profileName));
         if (dir.exists()) {
             dir.removeRecursively();
         }
@@ -166,6 +173,10 @@ private:
         pScript->setScript(qsl("-- %1 lives here too\n").arg(mNeedle));
         mpHost->getScriptUnit()->registerScript(pScript);
 
+        auto* pLongScript = new TScript(qsl("qaMultiLineScript"), mpHost);
+        pLongScript->setScript(qsl("local a = 1\n-- qaLater qaLaterWord\nlocal b = qaLater\n"));
+        mpHost->getScriptUnit()->registerScript(pLongScript);
+
         auto* pTimer = new TTimer(qsl("qaSearchTimer"), QTime(0, 0, 30), mpHost);
         pTimer->setCommand(qsl("%1 command").arg(mNeedle));
         mpHost->getTimerUnit()->registerTimer(pTimer);
@@ -209,11 +220,11 @@ private slots:
         mpHost = TestProfile::create(mProfileName, mLocalhost, QString::number(mpServer->serverPort()));
         QVERIFY2(mpHost, "No active host available for the test.");
         QSignalSpy connectedSpy(&(mpHost->mTelnet), &cTelnet::signal_connected);
-        QVERIFY2(connectedSpy.wait(1000), "Could not connect with the host.");
+        QVERIFY2(connectedSpy.wait(1s), "Could not connect with the host.");
 
         mudlet::self()->slot_showScriptDialog();
         QTest::qWait(100ms);
-        mpEditor = mpHost->mpEditorDialog;
+        mpEditor = HostDialogs::of(mpHost).mpEditorDialog;
         QVERIFY2(mpEditor, "the editor dialog was not created");
 
         populateProfile();
@@ -230,8 +241,8 @@ private slots:
         // ~Host would do this, but only if the host is ever destroyed - deleting
         // the editor here keeps the leak checker satisfied either way
         if (mpHost) {
-            if (auto* pEditor = mpHost->mpEditorDialog.data()) {
-                mpHost->mpEditorDialog = nullptr;
+            if (auto* pEditor = HostDialogs::of(mpHost).mpEditorDialog.data()) {
+                HostDialogs::of(mpHost).mpEditorDialog = nullptr;
                 delete pEditor;
             }
         }
@@ -322,6 +333,29 @@ private slots:
         QVERIFY2(totalResultRows() > 0, "a whole word was not matched in whole-word mode");
     }
 
+    // One search after another, with the needle or the case option changed in
+    // between, must each match on their own terms
+    void test_wholeWordSearchFollowsTheNeedleAndCaseOption()
+    {
+        mpEditor->setSearchOptions(enums::EditorSearchOptionWholeWord);
+        search(qsl("qalater"));
+        QCOMPARE(resultsFor(qsl("Script")), QStringList({qsl("Lua code (2:4)"), qsl("Lua code (3:11)")}));
+
+        search(qsl("QALATERWORD"));
+        QCOMPARE(resultsFor(qsl("Script")), QStringList({qsl("Lua code (2:12)")}));
+
+        mpEditor->setSearchOptions(enums::EditorSearchOptionWholeWord | enums::EditorSearchOptionCaseSensitive);
+        search(qsl("QALATERWORD"));
+        QCOMPARE(resultsFor(qsl("Script")), QStringList());
+
+        search(qsl("qaLater"));
+        QCOMPARE(resultsFor(qsl("Script")), QStringList({qsl("Lua code (2:4)"), qsl("Lua code (3:11)")}));
+
+        mpEditor->setSearchOptions(enums::EditorSearchOptionWholeWord);
+        search(qsl("QALATER"));
+        QCOMPARE(resultsFor(qsl("Script")), QStringList({qsl("Lua code (2:4)"), qsl("Lua code (3:11)")}));
+    }
+
     // Variables live in the Lua state rather than in a unit, so they are only
     // walked when the option asks for it
     void test_variablesAreOnlySearchedWhenAskedFor()
@@ -386,6 +420,72 @@ private slots:
         QTreeWidgetItem* selected = mpEditor->treeWidget_triggers->currentItem();
         QVERIFY2(selected, "no trigger became current after its search result was chosen");
         QCOMPARE(selected->text(0), qsl("qaNestedTrigger"));
+    }
+
+    // A script that adds an item marks every tree stale; showing the result's
+    // view then rebuilds them, which must not free the item about to be selected
+    void test_selectingAResultAfterAScriptAddedAnItemSelectsIt()
+    {
+        mpEditor->slot_showScripts();
+        search(qsl("qaNestedTrigger"));
+        QTreeWidgetItem* result = mpEditor->treeWidget_searchResults->topLevelItem(0);
+        QVERIFY(result);
+
+        QVERIFY(mpHost->getLuaInterpreter()->compileAndExecuteScript(qsl("permAlias('qaStaleAlias', '', '^qaStale$', '')")));
+        QVERIFY2(mpEditor->mNeedUpdateData, "the script did not mark the editor's trees as stale");
+
+        mpEditor->slot_itemSelectedInSearchResults(result);
+
+        QCOMPARE(mpEditor->mCurrentView, EditorViewType::cmTriggerView);
+        QTreeWidgetItem* selected = mpEditor->treeWidget_triggers->currentItem();
+        QVERIFY2(selected, "no trigger became current after its search result was chosen");
+        QCOMPARE(selected->text(0), qsl("qaNestedTrigger"));
+        QVERIFY(!mpEditor->treeWidget_aliases->findItems(qsl("qaStaleAlias"), Qt::MatchExactly | Qt::MatchRecursive).isEmpty());
+    }
+
+    void test_selectingAVariableResultAfterAScriptAddedAnItemSelectsIt()
+    {
+        mpEditor->setSearchOptions(enums::EditorSearchOptionIncludeVariables);
+        mpEditor->slot_showScripts();
+        search(qsl("qaSearchVariable"));
+        QTreeWidgetItem* result = topLevelResultFor(qsl("Variable"));
+        QVERIFY(result);
+
+        QVERIFY(mpHost->getLuaInterpreter()->compileAndExecuteScript(qsl("permAlias('qaStaleVarAlias', '', '^qaStaleVar$', '')")));
+        QVERIFY2(mpEditor->mNeedUpdateData, "the script did not mark the editor's trees as stale");
+
+        mpEditor->slot_itemSelectedInSearchResults(result);
+
+        QCOMPARE(mpEditor->mCurrentView, EditorViewType::cmVarsView);
+        QTreeWidgetItem* selected = mpEditor->treeWidget_variables->currentItem();
+        QVERIFY2(selected, "no variable became current after its search result was chosen");
+        QCOMPARE(selected->text(0), qsl("qaSearchVariable"));
+    }
+
+    // The find box inside the script pane marks every match as the term is
+    // typed, so it waits until enough has been typed to be worth a pass over
+    // the document - one or two characters match most of a script (#3847).
+    void test_theScriptFindBoxIgnoresTermsOfTwoCharactersOrFewer()
+    {
+        // whatever item is selected owns this pane, and the next save writes
+        // the pane back into it, so put the script back before leaving
+        const QString script = mpEditor->mpSourceEditorEdbeeDocument->text();
+        auto restore = qScopeGuard([this, script]() {
+            mpEditor->mpSourceEditorEdbeeDocument->setText(script);
+            mpEditor->mpSourceEditorFindArea->lineEdit_findText->clear();
+            mpEditor->mpSourceEditorEdbee->controller()->borderedTextRanges()->clear();
+        });
+
+        mpEditor->mpSourceEditorEdbeeDocument->setText(qsl("aaa bbb aaa\n"));
+        QCOMPARE(mpEditor->mpSourceEditorEdbeeDocument->text(), qsl("aaa bbb aaa\n"));
+        edbee::TextRangeSet* marked = mpEditor->mpSourceEditorEdbee->controller()->borderedTextRanges();
+        marked->clear();
+
+        mpEditor->mpSourceEditorFindArea->lineEdit_findText->setText(qsl("aa"));
+        QCOMPARE(marked->rangeCount(), size_t{0});
+
+        mpEditor->mpSourceEditorFindArea->lineEdit_findText->setText(qsl("aaa"));
+        QCOMPARE(marked->rangeCount(), size_t{2});
     }
 
     void test_anEmptyOrUnknownTermProducesNoResults()

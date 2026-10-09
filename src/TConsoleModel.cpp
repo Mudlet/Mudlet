@@ -22,7 +22,7 @@
 #include "TConsoleModel.h"
 
 #include "Host.h"
-#include "MudletPaths.h"
+#include "MudletApp.h"
 #include "TDebug.h"
 #include "mudlet.h"
 
@@ -31,22 +31,98 @@
 #include <QDir>
 #include <QFileInfo>
 #include <QFontInfo>
+#include <QTimer>
+
+#include <cerrno>
+#include <cstdio>
+#include <cstring>
+#include <cmath>
+
+namespace {
+double relativeLuminance(const QColor& color)
+{
+    const auto channel = [](const double value) {
+        return value <= 0.03928 ? value / 12.92 : std::pow((value + 0.055) / 1.055, 2.4);
+    };
+    return 0.2126 * channel(color.redF()) + 0.7152 * channel(color.greenF()) + 0.0722 * channel(color.blueF());
+}
+
+// Plain blue is barely legible against the dark background most profiles use,
+// so whichever of the two link blues stands out more against this console wins:
+TChar standardLinkFormat(const QColor& background)
+{
+    const QColor lightBlue(80, 160, 255);
+    const QColor linkColor = TConsoleModel::contrastRatio(QColor(Qt::blue), background) >= TConsoleModel::contrastRatio(lightBlue, background) ? QColor(Qt::blue) : lightBlue;
+    return TChar(linkColor, background, TChar::Underline);
+}
+} // namespace
 
 TConsoleModel::TConsoleModel(Host* pHost)
 : buffer(pHost)
 , mpHost(pHost)
+, mProfileName(pHost ? pHost->getName() : qsl("debug console"))
 , mHyperlinkVisibilityManager(*this)
 {
+    // Not in the buffer's constructor: the buffer is built before the managers
+    // it would then be pointed at, and reaches for them while it is.
+    buffer.mpModel = this;
 }
 
-QStringList TConsoleModel::lines(int from, int to)
+QStringList TConsoleModel::lines(int from, int to) const
 {
     QStringList ret;
-    const int delta = abs(from - to);
-    for (int i = 0; i < delta; i++) {
-        ret << buffer.line(from + i);
+    // 64-bit, as from - to overflows an int for a script's extreme arguments
+    const qint64 first = from;
+    const qint64 end = std::min(first + qAbs(first - to), static_cast<qint64>(buffer.lineBuffer.size()));
+    for (qint64 i = std::max<qint64>(first, 0); i < end; ++i) {
+        ret << buffer.lineBuffer.at(i);
     }
     return ret;
+}
+
+bool TConsoleModel::moveCursor(int x, int y)
+{
+    QPoint P(x, y);
+    if (buffer.moveCursor(P)) {
+        mUserCursor = P;
+        return true;
+    }
+    return false;
+}
+
+void TConsoleModel::moveCursorEnd()
+{
+    const int y = buffer.getLastLineNumber();
+    int x = buffer.line(y).size() - 1;
+    x = x >= 0 ? x : 0;
+    moveCursor(x, y);
+}
+
+void TConsoleModel::deleteLineAtCursor()
+{
+    const int deletedLine = mUserCursor.y();
+    if (!buffer.deleteLine(deletedLine)) {
+        return;
+    }
+    // The selection is held by line number, so it moves up with its line or goes with it
+    if (P_begin.y() == deletedLine) {
+        deselect();
+    } else if (P_begin.y() > deletedLine) {
+        P_begin.ry()--;
+        P_end.ry()--;
+    }
+}
+
+void TConsoleModel::clear()
+{
+    buffer.clear();
+    // --mirror's pending line went with the buffer.
+    mMirrorPendingLine.clear();
+    mUserCursor = QPoint();
+    // Past the line left, so isPrompt() sees that the line a trigger runs for went too, even when it was line 0
+    if (mTriggerEngineMode) {
+        mEngineCursor = buffer.size();
+    }
 }
 
 void TConsoleModel::deselect()
@@ -72,10 +148,7 @@ bool TConsoleModel::selectSection(int from, int to)
         return false;
     }
     const int s = buffer.buffer[mUserCursor.y()].size();
-    // the length is compared against what is left of the line rather than
-    // added to the start: `from + to` overflows for a large `to`, and signed
-    // overflow that wraps negative sails through a check written that way,
-    // handing back a selection whose end precedes its start
+    // Not `from + to > s`: that overflows for a large `to`, and a wrapped negative sum passes the check.
     if (from > s || to > s - from) {
         return false;
     }
@@ -88,6 +161,111 @@ bool TConsoleModel::selectSection(int from, int to)
                 >> mpHost;
     }
     return true;
+}
+
+void TConsoleModel::selectCurrentLine()
+{
+    selectSection(0, buffer.line(mUserCursor.y()).size());
+}
+
+int TConsoleModel::selectString(const QString& text, int numOfMatch)
+{
+    if (mUserCursor.y() < 0 || mUserCursor.y() >= buffer.size()) {
+        deselect();
+        return -1;
+    }
+
+    if (TDebug::wants(TDebug::Category::Selection)) {
+        TDebug(Qt::darkMagenta, Qt::black, TDebug::Category::Selection) << "line under current user cursor: " >> mpHost;
+        TDebug(Qt::red, Qt::black, TDebug::Category::Selection) << TDebug::csmContinue << mUserCursor.y() << "#:" >> mpHost;
+        TDebug(Qt::gray, Qt::black, TDebug::Category::Selection) << TDebug::csmContinue << buffer.line(mUserCursor.y()) << "\n" >> mpHost;
+    }
+
+    const QString li = buffer.line(mUserCursor.y());
+    if (li.isEmpty()) {
+        deselect();
+        return -1;
+    }
+
+    int begin = -1;
+    for (int i = 0; i < numOfMatch; i++) {
+        begin = li.indexOf(text, begin + 1);
+
+        if (begin == -1) {
+            deselect();
+            return -1;
+        }
+    }
+    if (begin < 0) {
+        deselect();
+        return -1;
+    }
+
+    const int end = begin + text.size();
+    P_begin = QPoint(begin, mUserCursor.y());
+    P_end = QPoint(end, mUserCursor.y());
+
+    if (TDebug::wants(TDebug::Category::Selection)) {
+        TDebug(Qt::darkRed, Qt::black, TDebug::Category::Selection) << "P_begin(" << P_begin.x() << "/" << P_begin.y() << "), P_end(" << P_end.x() << "/" << P_end.y()
+                                                                    << ") selectedText = " << buffer.line(mUserCursor.y()).mid(P_begin.x(), P_end.x() - P_begin.x()) << "\n"
+                >> mpHost;
+    }
+    return begin;
+}
+
+std::tuple<bool, QString, int, int> TConsoleModel::selection()
+{
+    if (P_begin.y() >= static_cast<int>(buffer.buffer.size())) {
+        return {false, qsl("the selection is no longer valid"), 0, 0};
+    }
+
+    const auto start = P_begin.x();
+    const auto length = P_end.x() - P_begin.x();
+    const auto line = buffer.line(P_begin.y());
+    if (line.size() < start) {
+        return {false, qsl("the selection is no longer valid"), 0, 0};
+    }
+
+    const auto text = line.mid(start, length);
+    return {true, text, start, length};
+}
+
+QPair<quint8, TChar> TConsoleModel::textAttributes() const
+{
+    int x = P_begin.x();
+    int y = P_begin.y();
+
+    // Fallback to cursor position if no selection is active
+    if (P_begin == P_end) {
+        x = mUserCursor.x();
+        y = mUserCursor.y();
+    }
+
+    if (y < 0 || x < 0 || y >= static_cast<int>(buffer.buffer.size())) {
+        return qMakePair(2, TChar());
+    }
+
+    const auto& line = buffer.buffer.at(y);
+    if (x >= static_cast<int>(line.size())) {
+        return qMakePair(2, TChar());
+    }
+
+    return qMakePair(0, line.at(x));
+}
+
+const TChar* TConsoleModel::selectionStartChar() const
+{
+    const int x = P_begin.x();
+    const int y = P_begin.y();
+    if (y < 0 || x < 0 || y >= static_cast<int>(buffer.buffer.size())) {
+        return nullptr;
+    }
+
+    const auto& line = buffer.buffer.at(y);
+    if (x >= static_cast<int>(line.size())) {
+        return nullptr;
+    }
+    return &line.at(x);
 }
 
 void TConsoleModel::resetFormat()
@@ -109,6 +287,248 @@ bool TConsoleModel::setSelectionFgColor(const QColor& newColor)
     return buffer.applyFgColor(P_begin, P_end, newColor);
 }
 
+void TConsoleModel::print(const QString& msg)
+{
+    buffer.append(msg, 0, msg.size(), mFormatCurrent.foreground(), mFormatCurrent.background(), mFormatCurrent.allDisplayAttributes());
+    mirrorToStdOut(msg);
+}
+
+void TConsoleModel::print(const QString& msg, const QColor& fgColor, const QColor& bgColor, const QString& timeStampOverride)
+{
+    buffer.append(msg, 0, msg.size(), fgColor, bgColor, TChar::None, 0, timeStampOverride);
+    mirrorToStdOut(msg);
+}
+
+void TConsoleModel::printSystemMessage(const QString& msg)
+{
+    // Kept in TConsole's context, where the translations already are.
+    const QString txt = QCoreApplication::translate("TConsole", "System Message: %1").arg(msg);
+    print(txt, mSystemMessageFgColor, mSystemMessageBgColor);
+}
+
+TConsoleModel::CommandEcho TConsoleModel::printCommand(QString& msg)
+{
+    // Skip printing if remote echo is active (e.g., password mode)
+    if (mpHost && mpHost->isRemoteEchoingActive()) {
+        return {};
+    }
+
+    if (mTriggerEngineMode) {
+        msg.append(QChar::LineFeed);
+        if (buffer.lineBuffer.isEmpty()) {
+            buffer.appendEmptyLine();
+        }
+        if (!buffer.lineBuffer.back().isEmpty()) {
+            msg.prepend(QChar::LineFeed);
+        }
+        buffer.appendLine(msg, 0, msg.size() - 1, mCommandFgColor, mCommandBgColor);
+        return {};
+    }
+
+    const int lineBeforeNewContent = buffer.size() - 2;
+    if (lineBeforeNewContent >= 0 && buffer.promptBuffer[lineBeforeNewContent]) {
+        QPoint P(buffer.buffer.at(lineBeforeNewContent).size(), lineBeforeNewContent);
+        const TChar format(mCommandFgColor, mCommandBgColor);
+        buffer.insertInLine(P, msg, format);
+        const int down = buffer.wrapLine(lineBeforeNewContent);
+        buffer.promptBuffer[lineBeforeNewContent] = false;
+        return {CommandEcho::Kind::PromptLine, lineBeforeNewContent, lineBeforeNewContent + 1 + down};
+    }
+    msg.append(QChar::LineFeed);
+    print(msg, mCommandFgColor, mCommandBgColor);
+    return {CommandEcho::Kind::NewLines};
+}
+
+namespace {
+// The first failure (reader gone, stream full) turns --mirror off and says so once, rather than
+// silently losing every line.
+void writeMirrorLine(const QString& line)
+{
+    QByteArray output = line.toUtf8();
+    output.append('\n');
+    const size_t length = static_cast<size_t>(output.size());
+    if (std::fwrite(output.constData(), 1, length, stdout) == length && std::fflush(stdout) == 0) {
+        return;
+    }
+
+    mudlet::smMirrorToStdOut = false;
+    qWarning().nospace() << "--mirror: could not write to standard output (" << std::strerror(errno) << "), nothing more will be copied to it";
+}
+
+// Every main console is "main", so the profile name is needed too. Both names come from Lua and may
+// hold control characters; a line feed would split the record for a line-based reader.
+QString mirrorPrefix(const QString& profileName, const QString& consoleName)
+{
+    QString prefix = qsl("%1.%2| ").arg(profileName, consoleName);
+    for (QChar& character : prefix) {
+        if (character.category() == QChar::Other_Control) {
+            character = QChar::ReplacementCharacter;
+        }
+    }
+    return prefix;
+}
+} // namespace
+
+void TConsoleModel::mirrorToStdOut(const QString& text)
+{
+    if (Q_LIKELY(!mudlet::smMirrorToStdOut)) {
+        return;
+    }
+
+    // Text may be a fragment (Lua's print() sends its newline separately, echo() need not end a line),
+    // so like TBuffer::appendLine(), write a line out only once a line feed ends it.
+    QStringList fragments = text.split(QChar::LineFeed);
+    const QString stillOpen = fragments.takeLast();
+    const QString prefix = mirrorPrefix(mProfileName, mConsoleName);
+    for (const QString& fragment : fragments) {
+        writeMirrorLine(prefix + mMirrorPendingLine + fragment);
+        mMirrorPendingLine.clear();
+    }
+    mMirrorPendingLine.append(stillOpen);
+}
+
+void TConsoleModel::mirrorLineToStdOut(const QString& line)
+{
+    if (Q_LIKELY(!mudlet::smMirrorToStdOut)) {
+        return;
+    }
+
+    const QString prefix = mirrorPrefix(mProfileName, mConsoleName);
+    // Like TBuffer::commitLineData(), put a committed line below a non-empty open line, not onto it.
+    if (!mMirrorPendingLine.isEmpty()) {
+        writeMirrorLine(prefix + mMirrorPendingLine);
+        mMirrorPendingLine.clear();
+    }
+    writeMirrorLine(prefix + line);
+}
+
+// Sets or resets all the given attributes, and no others.
+bool TConsoleModel::setSelectionDisplayAttributes(const TChar::AttributeFlags attributes, const bool enabled)
+{
+    mFormatCurrent.setAllDisplayAttributes((mFormatCurrent.allDisplayAttributes() & ~(attributes)) | (enabled ? attributes : TChar::None));
+    return buffer.applyAttribute(P_begin, P_end, attributes, enabled);
+}
+
+bool TConsoleModel::setLink(const QStringList& commands, const QStringList& hints, const QVector<int>& luaReferences)
+{
+    return buffer.applyLink(P_begin, P_end, commands, hints, luaReferences);
+}
+
+double TConsoleModel::contrastRatio(const QColor& first, const QColor& second)
+{
+    const double one = relativeLuminance(first);
+    const double other = relativeLuminance(second);
+    return (std::max(one, other) + 0.05) / (std::min(one, other) + 0.05);
+}
+
+void TConsoleModel::echoLink(const QString& text, QStringList& commands, QStringList& hints, const bool useCurrentFormat, const QVector<int>& luaReferences)
+{
+    if (useCurrentFormat) {
+        buffer.addLink(mTriggerEngineMode, text, commands, hints, mFormatCurrent, luaReferences);
+        return;
+    }
+    // the main console's links are coloured against the profile's own background
+    const QColor background = (mpHost && mpHost->mainConsoleModelOrNull() == this) ? mpHost->mBgColor : mBgColor;
+    buffer.addLink(mTriggerEngineMode, text, commands, hints, standardLinkFormat(background), luaReferences);
+}
+
+TConsoleModel::WriteResult TConsoleModel::insertLink(const QString& text, QStringList& commands, QStringList& hints, const bool useCurrentFormat, const QVector<int>& luaReferences)
+{
+    const QPoint start = mUserCursor;
+    const QPoint end(start.x() + text.size(), start.y());
+    const TChar format = useCurrentFormat ? mFormatCurrent : standardLinkFormat(mBgColor);
+    if (mTriggerEngineMode) {
+        mpHost->getLuaInterpreter()->adjustCaptureGroups(start.x(), text.size());
+        QPoint at = start;
+        buffer.insertInLine(at, text, format);
+        buffer.applyLink(start, end, commands, hints, luaReferences);
+        if (start.y() < mEngineCursor) {
+            return {false, mUserCursor.y(), mUserCursor.y()};
+        }
+        return {};
+    }
+    if (buffer.buffer.empty() || mUserCursor == buffer.getEndPos()) {
+        buffer.addLink(mTriggerEngineMode, text, commands, hints, format, luaReferences);
+        return {true};
+    }
+
+    buffer.insertInLine(mUserCursor, text, format);
+    buffer.applyLink(start, end, commands, hints, luaReferences);
+    const int line = mUserCursor.y();
+    int newX = mUserCursor.x() + text.size();
+    int down = 0;
+    if (text.indexOf(QChar::LineFeed) != -1) {
+        down = buffer.wrapLine(line);
+        newX = std::max(0, static_cast<int>(text.size() - text.lastIndexOf(QChar::LineFeed) - 1));
+    }
+    QPoint newCursor(newX, line + down);
+    if (buffer.moveCursor(newCursor)) {
+        mUserCursor = QPoint(newX, line + down);
+    }
+    return {false, line, line + down};
+}
+
+bool TConsoleModel::echo(QString& text)
+{
+    // A \r would be kept in the buffer and drawn as a glyph, so \r\n becomes \n and a lone \r goes.
+    text.remove(QChar::CarriageReturn);
+    buffer.mEchoingText = true;
+    bool appended = false;
+    if (mTriggerEngineMode) {
+        // Line feeds are embedded in the trigger's line rather than starting new lines, so that
+        // later echoes and cechoes still land on it; wrapping breaks it at them.
+        const int y = buffer.size() - 1;
+        if (y >= 0) {
+            QPoint insertPoint(buffer.lineBuffer.at(y).size(), y);
+            buffer.insertInLine(insertPoint, text, mFormatCurrent);
+        } else {
+            buffer.appendLine(text, 0, text.size() - 1, mFormatCurrent.foreground(), mFormatCurrent.background(), mFormatCurrent.allDisplayAttributes());
+        }
+    } else {
+        buffer.append(text, 0, text.size(), mFormatCurrent.foreground(), mFormatCurrent.background(), mFormatCurrent.allDisplayAttributes());
+        appended = true;
+    }
+    buffer.mEchoingText = false;
+    return appended;
+}
+
+TConsoleModel::WriteResult TConsoleModel::insertText(const QString& text)
+{
+    if (mTriggerEngineMode) {
+        mpHost->getLuaInterpreter()->adjustCaptureGroups(mUserCursor.x(), text.size());
+        QPoint at = mUserCursor;
+        buffer.insertInLine(at, text, mFormatCurrent);
+        if (at.y() < mEngineCursor) {
+            return {false, mUserCursor.y(), mUserCursor.y()};
+        }
+        return {};
+    }
+    if (buffer.buffer.empty() || mUserCursor == buffer.getEndPos()) {
+        buffer.append(text, 0, text.size(), mFormatCurrent);
+        return {true};
+    }
+
+    buffer.insertInLine(mUserCursor, text, mFormatCurrent);
+    const int line = mUserCursor.y();
+    int down = 0;
+    if (text.indexOf(QChar::LineFeed) != -1) {
+        down = buffer.wrapLine(line);
+    }
+    return {false, line, line + down};
+}
+
+void TConsoleModel::replace(const QString& text)
+{
+    if (mTriggerEngineMode) {
+        if (P_begin == P_end) {
+            mpHost->getLuaInterpreter()->adjustCaptureGroups(P_begin.x(), text.size());
+        } else {
+            mpHost->getLuaInterpreter()->adjustCaptureGroupsForReplace(P_begin.x(), P_end.x() - P_begin.x(), text);
+        }
+    }
+    buffer.replaceInLine(P_begin, P_end, text, mFormatCurrent);
+}
+
 // Two gotchas in here:
 //
 // - the strings destined for the log file itself are translated against the
@@ -120,11 +540,8 @@ bool TConsoleModel::setSelectionFgColor(const QColor& newColor)
 //   the main console, because Host::getDisplayFont() hands back that widget's
 //   own QFont - and unlike the widget call it still answers with no widget.
 namespace {
-// The sentinel's only job is to say that logging was on when the profile last
-// closed: Host reads its bare existence on the next load and clicks the log
-// button. One left behind by a start that never began makes that failure
-// repeat on every launch, and what blocks the sentinel can be a directory,
-// which QFile::remove() will not take.
+// The sentinel's existence makes Host resume logging on the next load, so a stale one repeats a failed
+// start on every launch. It may be a directory, which QFile::remove() won't take.
 void removeAutologSentinel(const QString& path)
 {
     const QFileInfo sentinel(path);
@@ -139,15 +556,30 @@ void removeAutologSentinel(const QString& path)
 }
 } // namespace
 
-// A clicked checkable button has already flipped itself, so a start that goes
-// nowhere still has to report the state it left behind - and say why, since
-// the autolog resume on profile load has no button to watch.
+// A clicked checkable button has already flipped itself, so a failed start must still report the state,
+// and why, since the autolog resume on profile load has no button to watch.
 void TConsoleModel::reportFailedLogStart(const QString& path, const QString& reason)
 {
     mLogStartFailure = qsl("%1: %2").arg(path, reason);
     //: Error shown on the main console when a log file could not be opened. %1 is the file, %2 is the reason
     mpHost->postMessage(QCoreApplication::translate("TConsoleModel", "[ ERROR ] - Could not start logging to \"%1\": %2").arg(path, reason));
     mpHost->raiseLoggingStateChanged(false);
+}
+
+void TConsoleModel::scheduleLogFlush()
+{
+    if (mLogFlushPending) {
+        return;
+    }
+    mLogFlushPending = true;
+    QTimer::singleShot(0, &mNotifier, [this]() {
+        mLogFlushPending = false;
+        // Closing the file flushed the stream already, and flushing a stream
+        // whose device is closed latches WriteFailed on it
+        if (mLogFile.isOpen()) {
+            mLogStream.flush();
+        }
+    });
 }
 
 void TConsoleModel::toggleLogging(bool isMessageEnabled)
@@ -161,7 +593,7 @@ void TConsoleModel::toggleLogging(bool isMessageEnabled)
         return;
     }
 
-    const auto loggingPath = MudletPaths::getMudletPath(enums::profileDataItemPath, mpHost->getName(), qsl("autolog"));
+    const auto loggingPath = MudletApp::getMudletPath(enums::profileDataItemPath, mpHost->getName(), qsl("autolog"));
     QFile file(loggingPath);
     const QDateTime logDateTime = QDateTime::currentDateTime();
     if (!mLogToLogFile) {
@@ -178,7 +610,7 @@ void TConsoleModel::toggleLogging(bool isMessageEnabled)
         QString logFileName;
         // If no log directory is set, default to Mudlet's replay and log files path
         if (mpHost->mLogDir == nullptr || mpHost->mLogDir.isEmpty()) {
-            directoryLogFile = MudletPaths::getMudletPath(enums::profileReplayAndLogFilesPath, mpHost->getName());
+            directoryLogFile = MudletApp::getMudletPath(enums::profileReplayAndLogFilesPath, mpHost->getName());
         } else {
             directoryLogFile = mpHost->mLogDir;
         }
@@ -270,7 +702,7 @@ void TConsoleModel::toggleLogging(bool isMessageEnabled)
             logStream << "  <meta http-equiv='content-type' content='text/html; charset=utf-8'>";
             // put the charset as early as possible as the parser MUST restart when it
             // switches away from the ASCII default
-            logStream << "  <meta name='generator' content='" << QCoreApplication::translate("TMainConsole", "Mudlet MUD Client version: %1%2").arg(APP_VERSION, mudlet::self()->mAppBuild) << "'>\n";
+            logStream << "  <meta name='generator' content='" << QCoreApplication::translate("TMainConsole", "Mudlet MUD Client version: %1%2").arg(APP_VERSION, MudletApp::buildSuffix()) << "'>\n";
             // Nice to identify what made the file!
             logStream << "  <title>" << QCoreApplication::translate("TMainConsole", "Mudlet, log from %1 profile").arg(mpHost->getName()) << "</title>\n";
             // Web-page title

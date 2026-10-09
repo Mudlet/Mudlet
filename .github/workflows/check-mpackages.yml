@@ -23,8 +23,6 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
-        with:
-          fetch-depth: 0
 
       - name: Install Lua 5.1.5
         uses: leafo/gh-actions-lua@v13
@@ -33,7 +31,7 @@ jobs:
 
       - name: Fetch base branch
         if: github.event_name == 'pull_request'
-        run: git fetch --no-tags origin ${{ github.base_ref }}
+        run: git fetch --no-tags --depth=1 origin +refs/heads/${{ github.base_ref }}:refs/remotes/origin/${{ github.base_ref }}
 
       - name: Check mpackage archives
         run: lua CI/check-mpackage-sync.lua ${{ github.event_name == 'pull_request' && format('--base-ref origin/{0}', github.base_ref) || '' }}

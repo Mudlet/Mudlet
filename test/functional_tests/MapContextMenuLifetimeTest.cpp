@@ -31,21 +31,25 @@
  */
 
 #include <QAction>
+#include <QCheckBox>
+#include <QDialog>
 #include <QMenu>
 #include <QMouseEvent>
 #include <QPixmap>
 #include <QPointer>
 #include <QSignalSpy>
 #include <QTemporaryDir>
+#include <QWindow>
 #include <QtTest/QtTest>
 
 #include "Host.h"
 #include "MudletInstanceCoordinator.h"
-#include "MudletPaths.h"
+#include "MudletApp.h"
 #include "PortableModeTestHelper.h"
 #include "ProfileTestHelper.h"
 #include "T2DMap.h"
 #include "TArea.h"
+#include "TLuaInterpreter.h"
 #include "TMap.h"
 #include "TRoom.h"
 #include "TRoomDB.h"
@@ -55,6 +59,8 @@
 #include "mudlet.h"
 
 #include "GroupedTest.h"
+
+using namespace std::chrono_literals;
 
 class MapContextMenuLifetimeTest : public QObject
 {
@@ -87,13 +93,15 @@ private:
 
     void deleteProfileDirectory() const
     {
-        QDir dir(MudletPaths::getMudletPath(enums::profileHomePath, mProfileName));
+        QDir dir(MudletApp::getMudletPath(enums::profileHomePath, mProfileName));
         if (dir.exists()) {
             dir.removeRecursively();
         }
     }
 
     TMap* map() const { return mpHost->mpMap.data(); }
+
+    bool lua(const QString& code) const { return mpHost->getLuaInterpreter()->compileAndExecuteScript(code); }
 
     TArea* area() const { return map()->mpRoomDB->getArea(mAreaId); }
 
@@ -248,7 +256,7 @@ private slots:
 
         mudlet::start();
         mudlet::self()->setupConfig();
-        QCOMPARE(MudletPaths::getMudletPath(enums::mainPath), qsl("%1/mudlet").arg(mConfigDir.path()));
+        QCOMPARE(MudletApp::getMudletPath(enums::mainPath), qsl("%1/mudlet").arg(mConfigDir.path()));
         mudlet::self()->takeOwnershipOfInstanceCoordinator(std::make_unique<MudletInstanceCoordinator>("MudletInstanceCoordinator"));
         mudlet::self()->init();
         // The context menu items are found by their text.
@@ -260,7 +268,7 @@ private slots:
         mpHost = TestProfile::create(mProfileName, mLocalhost, mPort);
         QVERIFY(mpHost);
         QSignalSpy connected(&(mpHost->mTelnet), &cTelnet::signal_connected);
-        QVERIFY2(connected.wait(3000), "could not connect to the telnet stub");
+        QVERIFY2(connected.wait(3s), "could not connect to the telnet stub");
     }
 
     void cleanupTestCase()
@@ -292,6 +300,88 @@ private slots:
         mp2dMap->mCustomLineSelectedRoom = 0;
         mp2dMap->mCustomLineSelectedExit.clear();
         mp2dMap->mCustomLineSelectedPoint = -1;
+    }
+
+    // The east room's line selected and its properties dialog opened, as its
+    // menu's "Properties" item does
+    QPointer<QDialog> openTheLinePropertiesDialog()
+    {
+        buildMap();
+        if (!addLineToTheEastRoom()) {
+            return nullptr;
+        }
+        showMapper();
+        // An accepted dialog is only deleted later, and findChild must not hand back the last case's
+        qDeleteAll(mp2dMap->findChildren<QDialog*>(qsl("custom_line_properties")));
+        mp2dMap->mCustomLineSelectedRoom = kEastRoomId;
+        mp2dMap->mCustomLineSelectedExit = kLineExit;
+        mp2dMap->slot_customLineProperties();
+        return mp2dMap->findChild<QDialog*>(qsl("custom_line_properties"));
+    }
+
+    void test_acceptingLinePropertiesAfterTheRoomIsDeletedDoesNothing()
+    {
+        QPointer<QDialog> dialog = openTheLinePropertiesDialog();
+        QVERIFY2(dialog, "no line properties dialog was opened");
+        auto* arrow = dialog->findChild<QCheckBox*>(qsl("arrow"));
+        QVERIFY(arrow);
+        arrow->setChecked(true);
+        QVERIFY(map()->mpRoomDB->removeRoom(kEastRoomId));
+
+        dialog->accept();
+
+        QVERIFY(!map()->mpRoomDB->getRoom(kEastRoomId));
+    }
+
+    void test_acceptingLinePropertiesAfterTheLineIsRemovedDoesNotBringItBack()
+    {
+        QPointer<QDialog> dialog = openTheLinePropertiesDialog();
+        QVERIFY2(dialog, "no line properties dialog was opened");
+        TRoom* pRoom = map()->mpRoomDB->getRoom(kEastRoomId);
+        QVERIFY(pRoom);
+        pRoom->customLines.remove(kLineExit);
+        pRoom->customLinesArrow.remove(kLineExit);
+        pRoom->customLinesStyle.remove(kLineExit);
+        pRoom->customLinesColor.remove(kLineExit);
+
+        dialog->accept();
+
+        QVERIFY(!pRoom->customLinesArrow.contains(kLineExit));
+        QVERIFY(!pRoom->customLinesStyle.contains(kLineExit));
+        QVERIFY(!pRoom->customLinesColor.contains(kLineExit));
+    }
+
+    void test_acceptingLinePropertiesAfterAnotherMapIsLoadedDoesNothing()
+    {
+        QPointer<QDialog> dialog = openTheLinePropertiesDialog();
+        QVERIFY2(dialog, "no line properties dialog was opened");
+        auto* arrow = dialog->findChild<QCheckBox*>(qsl("arrow"));
+        QVERIFY(arrow);
+        arrow->setChecked(true);
+        // The same room id with the same line, but in a map loaded since
+        buildMap();
+        QVERIFY(addLineToTheEastRoom());
+
+        dialog->accept();
+
+        const TRoom* pRoom = map()->mpRoomDB->getRoom(kEastRoomId);
+        QVERIFY(pRoom);
+        QVERIFY(!pRoom->customLinesArrow.value(kLineExit));
+    }
+
+    void test_acceptingLinePropertiesAppliesThem()
+    {
+        QPointer<QDialog> dialog = openTheLinePropertiesDialog();
+        QVERIFY2(dialog, "no line properties dialog was opened");
+        auto* arrow = dialog->findChild<QCheckBox*>(qsl("arrow"));
+        QVERIFY(arrow);
+        arrow->setChecked(true);
+
+        dialog->accept();
+
+        const TRoom* pRoom = map()->mpRoomDB->getRoom(kEastRoomId);
+        QVERIFY(pRoom);
+        QVERIFY(pRoom->customLinesArrow.value(kLineExit));
     }
 
     void test_theRoomMenusItemsGoAwayWithTheMenu()
@@ -387,6 +477,194 @@ private slots:
         QVERIFY2(menu.isNull(), "the menu did not delete itself on closing");
         QVERIFY2(item.isNull(), "the menu's item outlived the menu");
         QCOMPARE(actionsUnderTheMap(), before);
+    }
+
+    // The menu is not modal, so a timer or trigger can remove a map event
+    // while its item is still on screen to be picked
+    void test_pickingAnItemWhoseMapEventWasRemovedDoesNothing()
+    {
+        buildMap();
+        showMapper();
+        QVERIFY(lua(qsl("addMapEvent('specRemovedEvent', 'specRemovedEventRaised'); specRemovedEventSeen = 0; "
+                        "specRemovedEventHandler = registerAnonymousEventHandler('specRemovedEventRaised', function() specRemovedEventSeen = specRemovedEventSeen + 1 end)")));
+
+        rightClickAt(pointUnitsFromCentre(1, 0));
+        QPointer<QMenu> menu = mp2dMap->mActiveContextMenu;
+        QVERIFY2(menu, "the right click on a room put up no menu");
+        QAction* item = menuItem(menu, qsl("specRemovedEvent"));
+        QVERIFY2(item, "the menu has no item for the map event");
+        item->trigger();
+        QVERIFY2(lua(qsl("assert(specRemovedEventSeen == 1)")), "the item did not raise its event while the map event was there");
+
+        QVERIFY(lua(qsl("removeMapEvent('specRemovedEvent')")));
+        item->trigger();
+        QVERIFY2(lua(qsl("assert(specRemovedEventSeen == 1)")), "the item raised an event for a map event that was removed");
+        QVERIFY(lua(qsl("killAnonymousEventHandler(specRemovedEventHandler)")));
+    }
+
+    // Lua cannot pick a menu item, so this cannot be a busted spec. Without the
+    // fix only a sanitizer build sees the freed room being read.
+    void test_setPlayerLocationSurvivesAHandlerThatDeletesTheRoom()
+    {
+        buildMap();
+        showMapper();
+        QVERIFY(mpHost->getLuaInterpreter()->compileAndExecuteScript(
+                qsl("setLocationHandler = registerAnonymousEventHandler('sysManualLocationSetEvent', function(_, roomId) deleteRoom(roomId) end)")));
+
+        rightClickAt(pointUnitsFromCentre(1, 0));
+        QPointer<QMenu> menu = mp2dMap->mActiveContextMenu;
+        QVERIFY2(menu, "the right click on a room put up no menu");
+        QAction* item = menuItem(menu, qsl("Set player location"));
+        QVERIFY2(item, "the room menu has no set player location item");
+        item->trigger();
+
+        QVERIFY(mpHost->getLuaInterpreter()->compileAndExecuteScript(qsl("killAnonymousEventHandler(setLocationHandler)")));
+        QVERIFY2(!map()->mpRoomDB->getRoom(kEastRoomId), "the handler did not delete the room, so nothing was freed under the item");
+    }
+
+    // The line's second point, picked and right-clicked
+    QPointer<QMenu> openTheMenuOfAPickedPoint()
+    {
+        buildMap();
+        if (!addLineToTheEastRoom()) {
+            return nullptr;
+        }
+        showMapper();
+        // The first click picks the line, only then can one of its points be picked
+        clickAt(pointUnitsFromCentre(1, 2));
+        clickAt(pointUnitsFromCentre(1, 4));
+        rightClickAt(pointUnitsFromCentre(1, 4));
+        return mp2dMap->mActiveContextMenu;
+    }
+
+    // As above, with the line then taken away as removeCustomLine() does while
+    // the menu is still up
+    QPointer<QMenu> openTheMenuOfAPointWhoseLineIsThenRemoved()
+    {
+        QPointer<QMenu> menu = openTheMenuOfAPickedPoint();
+        TRoom* pRoom = map()->mpRoomDB->getRoom(kEastRoomId);
+        if (!pRoom) {
+            return nullptr;
+        }
+        pRoom->customLines.remove(kLineExit);
+        pRoom->customLinesArrow.remove(kLineExit);
+        pRoom->customLinesStyle.remove(kLineExit);
+        pRoom->customLinesColor.remove(kLineExit);
+        pRoom->calcRoomDimensions();
+        return menu;
+    }
+
+    void test_addingAPointToALineRemovedWhileItsMenuIsUpDoesNothing()
+    {
+        QPointer<QMenu> menu = openTheMenuOfAPointWhoseLineIsThenRemoved();
+        QCOMPARE(mp2dMap->mCustomLineSelectedPoint, 1);
+        QVERIFY2(menu, "the right click on the picked point put up no menu");
+        QAction* addPoint = menuItem(menu, qsl("Add point"));
+        QVERIFY2(addPoint && addPoint->isEnabled(), "the menu offers no Add point");
+
+        addPoint->trigger();
+
+        const TRoom* pRoom = map()->mpRoomDB->getRoom(kEastRoomId);
+        QVERIFY(pRoom);
+        QVERIFY2(!pRoom->customLines.contains(kLineExit), "the removed line was brought back");
+    }
+
+    void test_removingAPointFromALineRemovedWhileItsMenuIsUpDoesNothing()
+    {
+        QPointer<QMenu> menu = openTheMenuOfAPointWhoseLineIsThenRemoved();
+        QCOMPARE(mp2dMap->mCustomLineSelectedPoint, 1);
+        QVERIFY2(menu, "the right click on the picked point put up no menu");
+        QAction* removePoint = menuItem(menu, qsl("Remove point"));
+        QVERIFY2(removePoint && removePoint->isEnabled(), "the menu offers no Remove point");
+
+        removePoint->trigger();
+
+        const TRoom* pRoom = map()->mpRoomDB->getRoom(kEastRoomId);
+        QVERIFY(pRoom);
+        QVERIFY2(!pRoom->customLines.contains(kLineExit), "the removed line was brought back");
+    }
+
+    // A script can also put a different line in its place, as addCustomLine()
+    // does, long enough that the picked point's index still falls on it
+    void triggerOnALineReplacedWhileTheMenuIsUp(const QString& itemText)
+    {
+        QPointer<QMenu> menu = openTheMenuOfAPickedPoint();
+        QVERIFY2(menu, "the right click on the picked point put up no menu");
+        QCOMPARE(mp2dMap->mCustomLineSelectedPoint, 1);
+        QAction* item = menuItem(menu, itemText);
+        QVERIFY2(item && item->isEnabled(), qPrintable(qsl("the menu offers no %1").arg(itemText)));
+        TRoom* pRoom = map()->mpRoomDB->getRoom(kEastRoomId);
+        QVERIFY(pRoom);
+        const QList<QPointF> replacement{QPointF(2.0, 3.0), QPointF(2.0, 4.0), QPointF(2.0, 5.0)};
+        pRoom->customLines[kLineExit] = replacement;
+
+        item->trigger();
+
+        QCOMPARE(pRoom->customLines.value(kLineExit), replacement);
+    }
+
+    void test_addingAPointLeavesALineReplacedWhileTheMenuIsUpAlone() { triggerOnALineReplacedWhileTheMenuIsUp(qsl("Add point")); }
+
+    void test_removingAPointLeavesALineReplacedWhileTheMenuIsUpAlone() { triggerOnALineReplacedWhileTheMenuIsUp(qsl("Remove point")); }
+
+    void test_editingAPointPastTheEndOfAShortenedLineDoesNothing()
+    {
+        QPointer<QMenu> menu = openTheMenuOfAPickedPoint();
+        QVERIFY2(menu, "the right click on the picked point put up no menu");
+        QCOMPARE(mp2dMap->mCustomLineSelectedPoint, 1);
+        TRoom* pRoom = map()->mpRoomDB->getRoom(kEastRoomId);
+        QVERIFY(pRoom);
+        const QList<QPointF> shortened{QPointF(1.0, 3.0)};
+        pRoom->customLines[kLineExit] = shortened;
+
+        mp2dMap->slot_customLineAddPoint();
+        QCOMPARE(pRoom->customLines.value(kLineExit), shortened);
+        mp2dMap->slot_customLineRemovePoint();
+        QCOMPARE(pRoom->customLines.value(kLineExit), shortened);
+    }
+
+    // A menu put up over the map covers part of it, and the click that picks
+    // one of its items lands on both. It used to be read as a click on the map:
+    // the menu was closed and the click replayed underneath, so the item it was
+    // aimed at never fired (#8492)
+    void test_aClickOnTheMenuIsNotTakenForAClickOnTheMapBehindIt()
+    {
+        buildMap();
+        showMapper();
+
+        rightClickAt(pointUnitsFromCentre(1, 0));
+        QPointer<QMenu> menu = mp2dMap->mActiveContextMenu;
+        QVERIFY2(menu, "the right click on a room put up no menu");
+
+        // Right over the map, so that only the menu's own geometry can tell a
+        // click on the menu from a click on the map
+        menu->move(mp2dMap->mapToGlobal(viewCentre()));
+        menu->resize(200, 100);
+        const QRect menuGeometry(menu->mapToGlobal(QPoint(0, 0)), menu->size());
+        const QPoint insideTheMenu = menu->mapToGlobal(QPoint(10, 10));
+        QVERIFY2(mp2dMap->rect().contains(mp2dMap->mapFromGlobal(insideTheMenu)), "the click has to be over the map too, or there is nothing for the map to mistake it for");
+
+        // The filter sits on qApp, so a press meant for the menu arrives
+        // watched by the menu's own window - not the menu widget and not a
+        // child of it, so neither identity shortcut in the filter matches it
+        // and only the menu's geometry can say the click was not for the map.
+        QWindow* menuWindow = menu->windowHandle();
+        QVERIFY2(menuWindow, "the menu never got a window of its own for the press to arrive on");
+        QMouseEvent press(QEvent::MouseButtonPress, QPointF(10, 10), QPointF(insideTheMenu), Qt::LeftButton, Qt::LeftButton, Qt::NoModifier);
+        const bool filtered = mp2dMap->eventFilter(menuWindow, &press);
+
+        QVERIFY2(!filtered, "the click was taken over by the map, so the menu item it was aimed at never saw it");
+        QVERIFY2(mp2dMap->mActiveContextMenu == menu, "the map closed the menu out from under the click meant for it");
+
+        // The control: a click on the map that misses the menu still has to be
+        // taken over, or the two assertions above would also hold with the
+        // whole forwarding mechanism gone
+        const QPoint pastTheMenu(menuGeometry.right() + 20, menuGeometry.bottom() + 20);
+        QVERIFY2(!menuGeometry.contains(pastTheMenu), "the control click has to miss the menu");
+        QVERIFY2(mp2dMap->rect().contains(mp2dMap->mapFromGlobal(pastTheMenu)), "the control click has to land on the map");
+        QMouseEvent pressPastTheMenu(QEvent::MouseButtonPress, QPointF(10, 10), QPointF(pastTheMenu), Qt::LeftButton, Qt::LeftButton, Qt::NoModifier);
+        QVERIFY2(mp2dMap->eventFilter(menuWindow, &pressPastTheMenu), "a click that missed the menu was not forwarded to the map");
+        QVERIFY2(!mp2dMap->mActiveContextMenu, "the menu was left open by a click that was not meant for it");
     }
 };
 

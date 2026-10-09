@@ -55,15 +55,18 @@ public:
 
     // Bulk operations
     void updateAllViews();
+    // Moves every view still showing areaId to another area - used after
+    // that area is deleted, so paintEvent() isn't left drawing one that no
+    // longer exists.
+    void switchViewsShowingArea(int areaId);
 
 signals:
     void viewCreated(int viewId);
     void viewClosed(int viewId);
 
-private slots:
-    void slot_viewClosed();
-
 private:
+    void forgetView(int viewId);
+
     // View IDs start at 1; 0 is reserved as an error/invalid indicator in return values
     int mNextViewId = 1;
     QPointer<Host> mpHost;

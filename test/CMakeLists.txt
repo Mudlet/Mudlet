@@ -9,6 +9,10 @@ endif()
 
 find_package(Qt6 6.8.2 REQUIRED COMPONENTS Test Network Gui Widgets)
 
+# No test calls QFINDTESTDATA, and the checkout paths Qt Test would otherwise
+# define on every test compile keep ccache from sharing objects between worktrees
+set(QT_SKIP_DEFAULT_TESTCASE_DIRS ON)
+
 # On Windows Qt diverts QTest's stdout to OutputDebugString unless it believes
 # stderr has a console attached, which an MSYS2 shell or a CI runner does not give
 # it, so a failing test reports an exit code and nothing else (#9747). Deferred so
@@ -44,7 +48,7 @@ cmake_language(DEFER CALL restore_windows_test_output)
 # directory outlives the run, where a test's own QTemporaryDir does not - so a test
 # still has to redirect for itself to get a config root that is empty at the start
 # of every run. setupConfig() is unaffected either way: it takes $XDG_CONFIG_HOME/mudlet
-# only when that directory holds profiles/ (see MudletPaths::xdgConfigDir()), which this does
+# only when that directory holds profiles/ (see MudletApp::xdgConfigDir()), which this does
 # not create - deliberately, since seeding the opt-in here would give a test that
 # forgets a config root that accumulates profiles between runs, which is the
 # collision #9999 was about.
@@ -59,6 +63,12 @@ function(sandbox_test_config_dirs)
             # CoreFoundation is handed a home directory rather than a config root,
             # and one that has to exist - Qt creates a config root on the way to
             # writing into it, and no one creates a home
+            #
+            # The Security framework reads this home too, so a test run has no login
+            # keychain to reach: reads answer "not found", but a write asks the person
+            # who ran the suite whether to reset their keychain to defaults. A test that
+            # writes to the store has to leave that alone on macOS - see
+            # CredentialManagerKeychainTest::initTestCase().
             file(MAKE_DIRECTORY "${testConfigDir}")
             set_property(TEST ${testName} APPEND PROPERTY ENVIRONMENT "CFFIXED_USER_HOME=${testConfigDir}")
         endif()
@@ -101,8 +111,11 @@ set(UNIT_TESTS
     ProfileNameValidationTest
 )
 
+mudlet_add_test_pch_provider(mudlet_unit_test_pch)
+
 foreach(test_name ${UNIT_TESTS})
     add_executable(${test_name} ${test_name}.cpp)
+    mudlet_reuse_test_pch(${test_name} mudlet_unit_test_pch)
     add_dependencies(${test_name} ${LIB_MUDLET_TARGET})
     # mudlet_lsan_hooks has to be linked explicitly, see src/CMakeLists.txt
     target_link_libraries(${test_name} PRIVATE Qt6::Test ${LIB_MUDLET_TARGET} mudlet_lsan_hooks)
@@ -133,6 +146,17 @@ endif()
 # so a skipped traversal case there is a regression and not an environment. Only
 # somebody running the binary by hand on a bare X server is allowed the skip.
 set_property(TEST TKeySequenceEditTest APPEND PROPERTY ENVIRONMENT "MUDLET_REQUIRE_WINDOW_ACTIVATION=1")
+
+# The two macOS usage strings, read back out of the bundle that was built rather
+# than out of the template they come from. A build-system change that dropped
+# either would be found by a player, whose Mudlet is killed by macOS the moment
+# speech asks for the microphone - see test/check-macos-usage-strings.cmake.
+if(APPLE)
+    add_test(NAME MacOSUsageStringsTest
+        COMMAND ${CMAKE_COMMAND}
+            "-DBUNDLE_PLIST=$<TARGET_BUNDLE_DIR:mudlet_executable>/Contents/Info.plist"
+            -P "${CMAKE_CURRENT_SOURCE_DIR}/check-macos-usage-strings.cmake")
+endif()
 
 # Which releases' notes the update offer shows. Built from the updater sources
 # rather than linked against the Mudlet library, because the library only
@@ -173,6 +197,19 @@ add_test(NAME IrcMessageComposerTest COMMAND $<TARGET_FILE:IrcMessageComposerTes
 set_tests_properties(IrcMessageComposerTest PROPERTIES
     ENVIRONMENT "ASAN_OPTIONS=detect_leaks=0"
     TIMEOUT 60
+)
+
+# The application style's kept Fusion title bar icons. Built from the one source it
+# covers, which needs nothing but Qt Widgets.
+add_executable(AltFocusMenuBarDisableTest
+    AltFocusMenuBarDisableTest.cpp
+    ${CMAKE_SOURCE_DIR}/src/AltFocusMenuBarDisable.cpp
+)
+target_include_directories(AltFocusMenuBarDisableTest PRIVATE ${CMAKE_SOURCE_DIR}/src)
+target_link_libraries(AltFocusMenuBarDisableTest PRIVATE Qt6::Test Qt6::Widgets)
+add_test(NAME AltFocusMenuBarDisableTest COMMAND $<TARGET_FILE:AltFocusMenuBarDisableTest>)
+set_tests_properties(AltFocusMenuBarDisableTest PROPERTIES
+    ENVIRONMENT "ASAN_OPTIONS=detect_leaks=0;QT_QPA_PLATFORM=offscreen"
 )
 
 add_executable(CrashReportUploadTest
@@ -318,6 +355,18 @@ if(NOT WIN32)
     add_test(NAME MilestoneResolutionTest
         COMMAND bash ${CMAKE_CURRENT_SOURCE_DIR}/ci/milestone-resolution-test.sh
     )
+endif()
+
+# The key check in CI/linux-packages/publish is the only automated thing between
+# a wrong mudlet.asc and the package trust store of every Mudlet user on Linux,
+# and the publishing workflow runs it only when it publishes a release - so
+# without this nothing covers it before merge. Linux only, as publish needs a
+# newer bash than macOS ships. A skip is reported as one, not as a pass.
+if(UNIX AND NOT APPLE)
+    add_test(NAME LinuxPackagesKeyTest
+        COMMAND bash ${CMAKE_CURRENT_SOURCE_DIR}/ci/linux-packages-key-test.sh
+    )
+    set_tests_properties(LinuxPackagesKeyTest PROPERTIES SKIP_RETURN_CODE 77)
 endif()
 
 add_subdirectory(functional_tests)

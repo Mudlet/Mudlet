@@ -35,6 +35,7 @@
  */
 
 #include <QDataStream>
+#include <QElapsedTimer>
 #include <QFileInfo>
 #include <QSaveFile>
 #include <QTemporaryDir>
@@ -43,7 +44,7 @@
 #include "Host.h"
 #include "HostManager.h"
 #include "MudletInstanceCoordinator.h"
-#include "MudletPaths.h"
+#include "MudletApp.h"
 #include "TMap.h"
 #include "TRoomDB.h"
 #include "mudlet.h"
@@ -72,7 +73,7 @@ private:
 
     void deleteProfileDirectory(const QString& profileName) const
     {
-        QDir dir(MudletPaths::getMudletPath(enums::profileHomePath, profileName));
+        QDir dir(MudletApp::getMudletPath(enums::profileHomePath, profileName));
         if (dir.exists()) {
             dir.removeRecursively();
         }
@@ -80,7 +81,7 @@ private:
 
     TMap* map() const { return mpHost->mpMap.data(); }
 
-    QString otherProfileMapDir() const { return MudletPaths::getMudletPath(enums::profileMapsPath, mOtherProfileName); }
+    QString otherProfileMapDir() const { return MudletApp::getMudletPath(enums::profileMapsPath, mOtherProfileName); }
 
     // The player room has to be recorded against the profile the file will
     // claim to belong to, since that is the entry the read looks up.
@@ -106,7 +107,26 @@ private:
         map()->mRoomIdHash[mProfileName] = 1;
     }
 
-    // The same QDataStream setup TMainConsole::saveMap uses. saveVersion 0 means
+    // VmPeak and VmSize from /proc/self/status, in KiB
+    static std::pair<qint64, qint64> memoryKiB()
+    {
+        QFile status(qsl("/proc/self/status"));
+        if (!status.open(QIODevice::ReadOnly | QIODevice::Text)) {
+            return {0, 0};
+        }
+        qint64 peak = 0;
+        qint64 size = 0;
+        for (const QByteArray& line : status.readAll().split('\n')) {
+            if (line.startsWith("VmPeak:")) {
+                peak = line.mid(7).trimmed().split(' ').first().toLongLong();
+            } else if (line.startsWith("VmSize:")) {
+                size = line.mid(7).trimmed().split(' ').first().toLongLong();
+            }
+        }
+        return {peak, size};
+    }
+
+    // The same QDataStream setup Host::saveMapFile uses. saveVersion 0 means
     // the map's own; anything else has to be within mMinVersion..mMaxVersion.
     bool writeMapFile(const QString& pathFileName, const int saveVersion = 0) const
     {
@@ -139,7 +159,7 @@ private slots:
 
         mudlet::start();
         mudlet::self()->setupConfig();
-        QCOMPARE(MudletPaths::getMudletPath(enums::mainPath), qsl("%1/mudlet").arg(mConfigDir.path()));
+        QCOMPARE(MudletApp::getMudletPath(enums::mainPath), qsl("%1/mudlet").arg(mConfigDir.path()));
         mudlet::self()->takeOwnershipOfInstanceCoordinator(std::make_unique<MudletInstanceCoordinator>("MudletInstanceCoordinator"));
         mudlet::self()->init();
         mudlet::self()->setStorePasswordsSecurely(false);
@@ -227,6 +247,93 @@ private slots:
         QCOMPARE(map()->mRoomIdHash.value(mProfileName), 99);
         QCOMPARE(map()->mRoomIdHash.value(mOtherProfileName), 99);
         QCOMPARE(map()->mVersion, map()->mDefaultVersion);
+    }
+
+    // The area count drives the read's loop, which kept making areas after the
+    // file had run out: a count of 16 million was still going after 200 seconds (#10689)
+    void test_aCorruptAreaCountDoesNotKeepTheReadGoing()
+    {
+        buildMapToSave();
+        if (QTest::currentTestFailed()) {
+            return;
+        }
+        QVERIFY(QDir().mkpath(otherProfileMapDir()));
+        const QString pathFileName = qsl("%1/20260927-01-01-01map").arg(otherProfileMapDir());
+        QVERIFY(writeMapFile(pathFileName));
+
+        QFile file(pathFileName);
+        QVERIFY(file.open(QIODevice::ReadOnly));
+        QByteArray data = file.readAll();
+        file.close();
+        // The count of the three areas, then the default area's id and its empty room list
+        const QByteArray marker = QByteArray::fromHex("00000003ffffffff00000000");
+        const qsizetype at = data.indexOf(marker);
+        QVERIFY2(at >= 0, "the area count is not where this test expects it");
+        QCOMPARE(data.indexOf(marker, at + 1), -1);
+        data[at] = '\x01';
+        QVERIFY(file.open(QIODevice::WriteOnly | QIODevice::Truncate));
+        QCOMPARE(file.write(data), data.size());
+        file.close();
+
+        QElapsedTimer timer;
+        timer.start();
+        map()->retrieveMapFileStats(mOtherProfileName, nullptr, nullptr, nullptr, nullptr, nullptr);
+        const qint64 elapsedMs = timer.elapsed();
+        QVERIFY2(elapsedMs < 5000, qPrintable(qsl("reading the stats took %1 ms").arg(elapsedMs)));
+    }
+
+    // A z level list length the rest of the file could never hold used to go
+    // straight to QList::reserve(): 0x1b000001 of them asked for 1.7 GiB (#10689)
+    void test_aCorruptZLevelCountIsNotReserved()
+    {
+        buildMapToSave();
+        if (QTest::currentTestFailed()) {
+            return;
+        }
+        // Area B's rooms on one level of their own, at coordinates that keep a
+        // zero out of its per-level extents, which carry the level too
+        QVERIFY(map()->setRoomCoordinates(3, 3, 5, 7777));
+        QVERIFY(map()->setRoomCoordinates(4, 4, 6, 7777));
+        QVERIFY(QDir().mkpath(otherProfileMapDir()));
+        const QString pathFileName = qsl("%1/20260927-01-01-01map").arg(otherProfileMapDir());
+        QVERIFY(writeMapFile(pathFileName));
+        // loaded once intact, so memory the first read maps in is not counted
+        map()->retrieveMapFileStats(mOtherProfileName, nullptr, nullptr, nullptr, nullptr, nullptr);
+
+        QFile file(pathFileName);
+        QVERIFY(file.open(QIODevice::ReadOnly));
+        QByteArray data = file.readAll();
+        file.close();
+        const QByteArray marker = QByteArray::fromHex("0000000100001e6100000000");
+        const qsizetype at = data.indexOf(marker);
+        QVERIFY2(at >= 0, "the z level list is not where this test expects it");
+        QCOMPARE(data.indexOf(marker, at + 1), -1);
+        data[at] = '\x1b';
+        QVERIFY(file.open(QIODevice::WriteOnly | QIODevice::Truncate));
+        QCOMPARE(file.write(data), data.size());
+        file.close();
+
+        if (!QFile::exists(qsl("/proc/self/status"))) {
+            // What the read asked for cannot be seen here, only that it finishes
+            QElapsedTimer timer;
+            timer.start();
+            map()->retrieveMapFileStats(mOtherProfileName, nullptr, nullptr, nullptr, nullptr, nullptr);
+            const qint64 elapsedMs = timer.elapsed();
+            QVERIFY2(elapsedMs < 5000, qPrintable(qsl("reading the stats took %1 ms").arg(elapsedMs)));
+            return;
+        }
+
+        constexpr qint64 gibibyteKiB = 1024 * 1024;
+        constexpr qint64 allowedRiseKiB = gibibyteKiB / 4;
+        const auto [peakBefore, sizeBefore] = memoryKiB();
+        QVERIFY(peakBefore > 0 && sizeBefore > 0);
+        // VmPeak only records a new high, which a request could stay under
+        if (peakBefore - sizeBefore > gibibyteKiB) {
+            QSKIP("memory has already peaked too high to see a 1.7 GiB request");
+        }
+        map()->retrieveMapFileStats(mOtherProfileName, nullptr, nullptr, nullptr, nullptr, nullptr);
+        const qint64 riseKiB = memoryKiB().first - peakBefore;
+        QVERIFY2(riseKiB < allowedRiseKiB, qPrintable(qsl("reading the stats asked for %1 KiB more").arg(riseKiB)));
     }
 
     // The pick is by modification time. The names deliberately sort the other

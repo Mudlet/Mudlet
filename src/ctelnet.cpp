@@ -31,7 +31,7 @@
 
 
 #include "Host.h"
-#include "MudletPaths.h"
+#include "MudletApp.h"
 #include "TBuffer.h"
 #include "TMxpProcessor.h"
 #include "TConsoleModel.h"
@@ -44,14 +44,10 @@
 #include "TTextCodec.h"
 #include "TEncodingHelper.h"
 #include "utils.h"
-#include "TTextEdit.h"
 #include "discord.h"
 #include "dlgComposer.h"
-#include "dlgMapper.h"
 #include "mudlet.h"
-#if defined(INCLUDE_3DMAPPER)
-#include "glwidget_integration.h"
-#endif
+#include "MudletReplay.h"
 #include "MMCPServer.h"
 
 #include <QCoreApplication>
@@ -75,16 +71,31 @@ using namespace std::chrono_literals;
 constexpr int AUTO_LOGIN_USERNAME_DELAY_MS = 2000;
 constexpr int AUTO_LOGIN_PASSWORD_DELAY_MS = 1000;
 constexpr int AUTO_LOGIN_MAX_DELAY_MS = 60000;
+// The longest a password step reached with no password stays open to a password that turns up
+// afterwards, whatever else the connection looks like. An upper bound only: the password also
+// needs the game's mask still up, which the game can take down sooner, and so can the safety
+// timeout a line sent under the mask starts - see cTelnet::restartPasswordMaskTimeout():
+constexpr std::chrono::milliseconds AUTO_LOGIN_LATE_PASSWORD_WINDOW = 5min;
 
 // How long ECHO+SGA must survive a submitted input line before it counts as
 // character-at-a-time rather than a password mask - see
 // cTelnet::checkCharacterModePattern():
 constexpr auto CHARACTER_MODE_DETECT = 3s;
 
-// How long the console has to hold still before its size is reported to the
-// game - see cTelnet::checkNAWS(). Has to outlast the 0.2s timer an adjustable
-// Geyser container re-reserves its border on, which is the longest step of a
-// resize:
+// A line sent this soon after a connection is made is taken to belong to the
+// login, and starts a safety timeout that clears the masking if the game never
+// sends the WONT ECHO that should end it - see
+// cTelnet::restartPasswordMaskTimeout(). The timeout is started by each masked
+// line the player sends, and by the auto-login password, which on a slow
+// connection goes out before the prompt that masks it. Every further masked
+// line restarts the timeout, so it only ever measures from the last line that
+// went out. The phase restarts with every connection, so a reconnect gets one
+// as well:
+constexpr auto PASSWORD_MASK_LOGIN_PHASE = 5min;
+constexpr auto PASSWORD_MASK_TIMEOUT = 60s;
+
+// See cTelnet::checkNAWS(). Must outlast the 0.2s timer on which adjustable Geyser containers
+// re-reserve their borders, the longest step of a resize:
 constexpr auto NAWS_SETTLE_TIME = 300ms;
 
 // How long to leave a game alone after a connection attempt to it failed, before
@@ -117,13 +128,8 @@ constexpr auto NETWORK_LATENCY_TIMEOUT = 10s;
 
 constexpr size_t BUFFER_SIZE = 100000L;
 
-// Where the run of ordinary text starting at buffer[from] ends: the index of
-// the first byte after it that the state machine reading the run handles on its
-// own (the start of a telnet command, a carriage return, a NUL or a bell), or
-// `to` if the run reaches that far. buffer[from] must not be one of those
-// bytes, as the caller steps back one from the result before its loop steps
-// forward - both callers therefore need a branch for every one of them, even
-// where that branch only appends the byte.
+// buffer[from] must not be a byte this stops at: a zero-length run would leave the caller's loop on
+// the same byte forever, so both callers need a branch for each of them, even one that only appends it.
 static int textRunEnd(const char* buffer, const int from, const int to)
 {
     int i = from;
@@ -168,8 +174,8 @@ cTelnet::cTelnet(Host* pH, const QString& profileName)
     // to set up the initial encoder
     encodingChanged("UTF-8");
     termType = qsl("Mudlet " APP_VERSION);
-    if (!mudlet::self()->mAppBuild.trimmed().isEmpty()) {
-        termType.append(mudlet::self()->mAppBuild);
+    if (!MudletApp::buildSuffix().trimmed().isEmpty()) {
+        termType.append(MudletApp::buildSuffix());
     }
 
     command = "";
@@ -177,6 +183,8 @@ cTelnet::cTelnet(Host* pH, const QString& profileName)
     if (mAcceptableEncodings.isEmpty()) {
         mAcceptableEncodings << "UTF-8";
         mAcceptableEncodings << "EUC-KR";
+        mAcceptableEncodings << "SHIFT_JIS";
+        mAcceptableEncodings << "EUC-JP";
         mAcceptableEncodings << "GBK";
         mAcceptableEncodings << "GB18030";
         mAcceptableEncodings << "BIG5";
@@ -226,6 +234,11 @@ void cTelnet::reset()
     insb = false;
     mDiscardingOversizedSubnegotiation = false;
     mDeferredReconnect = false;
+    // Where the auto-login got to belongs to the connection being reset - a password arriving
+    // after this one ended has no prompt of this connection's left to answer:
+    mAutoLoginPasswordOutstanding = false;
+    mAutoLoginPasswordMaskWithdrawn = false;
+    mAutoLoginPasswordOutstandingSince.invalidate();
     // Stop any pending password mode timeout
     if (mTimerPasswordModeTimeout) {
         mTimerPasswordModeTimeout->stop();
@@ -234,8 +247,7 @@ void cTelnet::reset()
     if (mTimerCharacterModeDetect) {
         mTimerCharacterModeDetect->stop();
     }
-    // A window size waiting to be reported belongs to the connection being
-    // reset, and mNaws_x/mNaws_y are about to be zeroed for the next one
+    // a pending size belongs to the old connection; mNaws_x/mNaws_y are about to be zeroed
     if (mTimerNawsUpdate) {
         mTimerNawsUpdate->stop();
     }
@@ -301,9 +313,7 @@ void cTelnet::reset()
 
 cTelnet::~cTelnet()
 {
-    // A recording that is still running would otherwise be thrown away:
-    // ~QSaveFile() calls cancelWriting(), which deletes the temporary file
-    // without ever producing the .dat the user has been recording into.
+    // Otherwise ~QSaveFile() calls cancelWriting(), deleting the recording without producing the .dat.
     if (mRecordReplay) {
         stopReplayRecording();
     }
@@ -325,9 +335,7 @@ cTelnet::~cTelnet()
         mpPostingTimer->stop();
     }
 
-    // Unconditional: the end of a compressed stream re-initialises the stream
-    // for the next one while switching decompression off, so the state to free
-    // exists whether or not compression is active
+    // Unconditional: freeing a stream that never started or has already ended does nothing
     inflateEnd(&mZstream);
 
     // Aggressively disconnect the sockets to prevent signals during destruction
@@ -401,6 +409,11 @@ void cTelnet::cancelLoginTimers()
     if (mTimerPass) {
         mTimerPass->stop();
     }
+
+    // Something else has taken the login over - GMCP Char.Login does - so the auto-login has no
+    // prompt left to answer and a password arriving later must not be typed into that session
+    mAutoLoginPasswordOutstanding = false;
+    mAutoLoginPasswordOutstandingSince.invalidate();
 }
 
 // This configures the encoding for all outgoing data and incoming OutOfBand data
@@ -878,7 +891,7 @@ void cTelnet::slot_send_login()
         sendData(mpHost->getLogin());
     }
     if (mpHost->hasAutoLoginCredentials()) {
-        QSettings& settings = *mudlet::getQSettings();
+        QSettings& settings = *MudletApp::getQSettings();
         bool passwordDelayOk = false;
         const int passwordDelayRaw = settings.value(qsl("autoLoginPasswordDelay"), AUTO_LOGIN_PASSWORD_DELAY_MS).toInt(&passwordDelayOk);
         const auto passwordDelay = qBound(0, passwordDelayOk ? passwordDelayRaw : AUTO_LOGIN_PASSWORD_DELAY_MS, AUTO_LOGIN_MAX_DELAY_MS);
@@ -888,10 +901,76 @@ void cTelnet::slot_send_login()
 
 void cTelnet::slot_send_pass()
 {
-    // Auto-login: Send password if credentials are configured
-    if (mpHost->hasAutoLoginCredentials()) {
+    if (!mpHost->getPass().isEmpty()) {
         qDebug() << "Auto-login: Sending password (timer-based, independent of ECHO mode)";
-        sendData(mpHost->getPass(), false);
+        // Not a game command, so sendData() does not arm the timeout for this
+        // line, and on a slow connection it goes out ahead of the prompt that
+        // masks it - hence arming whether or not the game has masked anything
+        // yet. A game that never masks costs nothing: the timeout returns
+        // without doing anything.
+        if (sendData(mpHost->getPass(), false)) {
+            restartPasswordMaskTimeout();
+        }
+        return;
+    }
+
+    // The login step armed this one because a password was still on its way then (see
+    // Host::hasAutoLoginCredentials()), and none has arrived since
+    mAutoLoginPasswordOutstanding = true;
+    mAutoLoginPasswordMaskWithdrawn = false;
+    mAutoLoginPasswordOutstandingSince.start();
+    qDebug() << "Auto-login: reached the password step with no password yet - holding the place for one that arrives later";
+}
+
+// A password that turned up after the auto-login had already passed the password step, which is
+// what an unanswered keychain prompt produces. Typing it for the player is only safe while the
+// game is provably still waiting for it: sent a moment too late it is echoed on screen in clear
+// text and handed to the game as a command, so anything short of proof leaves it to the player.
+void cTelnet::sendOutstandingAutoLoginPassword()
+{
+    if (!mAutoLoginPasswordOutstanding) {
+        return;
+    }
+    // Spent either way: a password that is not safe to send now cannot become safe later, and one
+    // that goes out must not go out a second time.
+    mAutoLoginPasswordOutstanding = false;
+
+    if (!mpHost || getConnectionState() != QAbstractSocket::ConnectedState) {
+        qDebug() << "cTelnet::sendOutstandingAutoLoginPassword() - the connection is gone, so the late password is not sent";
+        return;
+    }
+
+    if (mpHost->getPass().isEmpty()) {
+        qDebug() << "cTelnet::sendOutstandingAutoLoginPassword() - called without a password, nothing to send";
+        return;
+    }
+
+    const bool withinWindow = mAutoLoginPasswordOutstandingSince.isValid() && mAutoLoginPasswordOutstandingSince.elapsed() < AUTO_LOGIN_LATE_PASSWORD_WINDOW.count();
+    // A server that masks input (its WILL ECHO not withdrawn) is the client's own record of a
+    // password prompt still being open, and the only proof there is. A server that never
+    // negotiates ECHO offers none: "it has printed nothing since" cannot tell a password prompt
+    // from any other question it asked before the mark, so those games get the notice instead.
+    // Nor does a mask the server has put up again: a WONT ECHO since the password step closed
+    // the prompt that was open then, and whatever it is masking now is a different question.
+    // A server already recognised as character-at-a-time keeps ECHO on for the whole session
+    // and echoes what it is sent, so its mask is no prompt either. One merely suspected is not
+    // held against the prompt: a line-mode game that masks its login prompt as well as its
+    // password prompt looks exactly like one until a game command has gone out, and refusing
+    // it would leave the player at a prompt the game is still holding open.
+    const bool stillAtPrompt = mpHost->isRemoteEchoingActive() && !mAutoLoginPasswordMaskWithdrawn && !mCharacterModeDetected;
+    if (!withinWindow || !stillAtPrompt) {
+        qDebug() << "cTelnet::sendOutstandingAutoLoginPassword() - not sending the late password. Within the window:" << withinWindow << "masking:" << mpHost->isRemoteEchoingActive()
+                 << "mask withdrawn since the password step:" << mAutoLoginPasswordMaskWithdrawn << "character-at-a-time detected:" << mCharacterModeDetected;
+        //: Shown in the game window when a password fetched from the system keychain arrived after the automatic login had reached its password step, and Mudlet could not be sure the game was still asking for it
+        postMessage(tr("[ INFO ]  - The saved password arrived too late for the automatic login, so it was not sent. Please type it in yourself."));
+        return;
+    }
+
+    qDebug() << "Auto-login: sending the password that arrived after the password step";
+    // Late or not, it is the auto-login password, so it starts the safety timeout as
+    // slot_send_pass() does, against a game that never releases the mask after it
+    if (sendData(mpHost->getPass(), false)) {
+        restartPasswordMaskTimeout();
     }
 }
 
@@ -979,7 +1058,7 @@ void cTelnet::slot_socketConnected()
 #endif
     mpHost->mLuaInterpreter.call(qsl("onConnect"), QString());
     mConnectionTimer.start();
-    QSettings& settings = *mudlet::getQSettings();
+    QSettings& settings = *MudletApp::getQSettings();
     bool usernameDelayOk = false;
     const int usernameDelayRaw = settings.value(qsl("autoLoginUsernameDelay"), AUTO_LOGIN_USERNAME_DELAY_MS).toInt(&usernameDelayOk);
     const auto usernameDelay = qBound(0, usernameDelayOk ? usernameDelayRaw : AUTO_LOGIN_USERNAME_DELAY_MS, AUTO_LOGIN_MAX_DELAY_MS);
@@ -1017,13 +1096,16 @@ void cTelnet::slot_socketDisconnected()
     postData();
     if (mpHost->mpConsole) {
         // A line held back for server-wrap undoing is complete now that the
-        // connection is gone - commit it before the disconnect messages:
-        mpHost->mainConsoleModel().buffer.flushPendingServerWrapJoin();
+        // connection is gone - commit it, in trigger context as for any other
+        // line from the game, before the disconnect messages:
+        TConsoleModel& model = mpHost->mainConsoleModel();
+        const bool wasInTriggerEngineMode = model.mTriggerEngineMode;
+        model.mTriggerEngineMode = true;
+        model.buffer.flushPendingServerWrapJoin();
+        model.mTriggerEngineMode = wasInTriggerEngineMode;
     }
 
-    // The session being recorded has ended, so commit what was captured rather
-    // than leave it to ~QSaveFile(), which cancels the save and deletes the
-    // temporary file:
+    // Commit now; ~QSaveFile() would cancel the save and delete the temporary file:
     if (mRecordReplay) {
         const QString recordedFileName = replayRecordingFileName();
         if (stopReplayRecording()) {
@@ -1652,6 +1734,14 @@ bool cTelnet::sendData(QString& data, const bool permitDataSendRequestEvent, con
         // 0xff (assuming that there are no Telnet protocol sequences in here):
         outData = escapeIac(outData);
 
+        if (isGameCommand) {
+            // Only here, where the command really goes to the game: one a package turned down with
+            // denyCurrentSend() never reached the prompt, so it did not take it over. One that did
+            // means whatever the game is now waiting for is the player's input and not a password
+            // Mudlet still owes it.
+            mAutoLoginPasswordOutstanding = false;
+        }
+
         // Character-at-a-time detection: a genuine character-at-a-time server keeps
         // ECHO (with SGA) active across every submitted line, whereas a server that
         // is only masking a password releases ECHO (WONT ECHO) right after this line.
@@ -1675,6 +1765,10 @@ bool cTelnet::sendData(QString& data, const bool permitDataSendRequestEvent, con
                 });
             }
             mTimerCharacterModeDetect->start(CHARACTER_MODE_DETECT);
+        }
+
+        if (sent && isGameCommand && mpHost->isRemoteEchoingActive()) {
+            restartPasswordMaskTimeout();
         }
 
         return sent;
@@ -1778,11 +1872,8 @@ void cTelnet::abandonNetworkLatencyMeasurement()
 
 void cTelnet::checkNAWS()
 {
-    // A window resize reaches the console as a burst rather than as one event:
-    // Qt lays it out, then any Geyser container attached to a border re-reserves
-    // that border from a timer of its own, which lays the console out again.
-    // Reporting each step would publish widths the window only ever had in
-    // passing - and the game wraps whatever it sends next to them - so wait for
+    // A resize arrives as a burst (Qt's layout, then Geyser containers re-reserving borders from
+    // a timer); the game would wrap its next output to each passing width, so wait for
     // the burst to finish and report the size once.
     if (!mTimerNawsUpdate) {
         mTimerNawsUpdate = new QTimer(this);
@@ -1795,12 +1886,15 @@ void cTelnet::checkNAWS()
 void cTelnet::sendCurrentNAWS()
 {
     Host* pHost = mpHost;
-    if (!pHost || !pHost->mpConsole) {
+    if (!pHost) {
         return;
     }
     // Use the smaller of the screen width or the wrapAt, then subtract the
-    // width of the time stamps if they are showing:
-    int naws_x = std::min(pHost->mScreenWidth, pHost->mWrapAt) - (pHost->mainConsoleShowsTimeStamps() ? TBuffer::smTimeStampFormat.size() : 0);
+    // width of the time stamps if they are drawn - with no view they are not.
+    // Never below 1: RFC 1073 reads 0 as unknown, and a negative width goes on
+    // the wire as a very wide one.
+    const bool gutterDrawn = pHost->mpConsole && pHost->mainConsoleShowsTimeStamps();
+    int naws_x = std::max(1, std::min(pHost->mScreenWidth, pHost->mWrapAt) - static_cast<int>(gutterDrawn ? TBuffer::smTimeStampFormat.size() : 0));
     int naws_y = pHost->mScreenHeight;
     if ((naws_y > 0) && (myOptionState.test(static_cast<size_t>(OPT_NAWS))) && ((mNaws_x != naws_x) || (mNaws_y != naws_y))) {
         sendNAWS(naws_x, naws_y);
@@ -2261,7 +2355,7 @@ QString cTelnet::getNewEnvironClientVersion()
     static const auto allInvalidCharacters = QRegularExpression(qsl("[^A-Z,0-9,-,\\/]"));
     static const auto multipleHyphens = QRegularExpression(qsl("-{2,}"));
 
-    if (auto build = mudlet::self()->mAppBuild; !build.trimmed().isEmpty()) {
+    if (const auto build = MudletApp::buildSuffix(); !build.trimmed().isEmpty()) {
         clientVersion.append(build);
     }
 
@@ -2435,7 +2529,7 @@ QString cTelnet::getNewEnvironTLS()
 
 QString cTelnet::getNewEnvironLanguage()
 {
-    return mudlet::self()->getInterfaceLanguage();
+    return MudletApp::getInterfaceLanguage();
 }
 
 QString cTelnet::getNewEnvironWordWrap()
@@ -2925,7 +3019,7 @@ void cTelnet::autoEnableTTYPEVersion()
     // encoding. Raise the flag before anything that could turn the event loop,
     // as that is all it takes for more of those bytes to arrive.
     mDeferredReconnect = true;
-    QTimer::singleShot(0, this, [this]() {
+    QTimer::singleShot(0ms, this, [this]() {
         mDeferredReconnect = false;
         if (!mpHost || mpHost->isClosingDown() || !mpSocket) {
             // Nothing to replace by the time this ran: the player may have
@@ -3180,7 +3274,7 @@ void cTelnet::processTelnetCommand(const std::string& telnetCommand)
             output += MSDP_VAR;
             output += "CLIENT_VERSION";
             output += MSDP_VAL;
-            output += encodeAndCookBytes(std::string(APP_VERSION) + mudlet::self()->mAppBuild.toUtf8().constData());
+            output += encodeAndCookBytes(std::string(APP_VERSION) + MudletApp::buildSuffix().toUtf8().constData());
             output += TN_IAC;
             output += TN_SE;
             socketOutRaw(output);
@@ -3212,7 +3306,7 @@ void cTelnet::processTelnetCommand(const std::string& telnetCommand)
             output += TN_IAC;
             output += TN_SB;
             output += OPT_ATCP;
-            std::string atcpOptions = std::string("hello Mudlet ") + std::string(APP_VERSION) + mudlet::self()->mAppBuild.toUtf8().constData()
+            std::string atcpOptions = std::string("hello Mudlet ") + std::string(APP_VERSION) + MudletApp::buildSuffix().toUtf8().constData()
                                       + "\ncomposer 1\nchar_vitals 1\nroom_brief 1\nroom_exits 1\nmap_display 1\n";
             output += encodeAndCookBytes(atcpOptions);
             output += TN_IAC;
@@ -3243,8 +3337,8 @@ void cTelnet::processTelnetCommand(const std::string& telnetCommand)
             output = TN_IAC;
             output += TN_SB;
             output += OPT_GMCP;
-            // mudlet::self()->mAppBuild could, conceivably contain a non-ASCII character:
-            output += encodeAndCookBytes(std::string(R"(Core.Hello { "client": "Mudlet", "version": ")") + APP_VERSION + mudlet::self()->mAppBuild.toUtf8().constData() + std::string(R"("})"));
+            // MudletApp::buildSuffix() could, conceivably contain a non-ASCII character:
+            output += encodeAndCookBytes(std::string(R"(Core.Hello { "client": "Mudlet", "version": ")") + APP_VERSION + MudletApp::buildSuffix().toUtf8().constData() + std::string(R"("})"));
             output += TN_IAC;
             output += TN_SE;
             socketOutRaw(output);
@@ -3383,27 +3477,9 @@ void cTelnet::processTelnetCommand(const std::string& telnetCommand)
                         mpHost->setRemoteEchoingActive(true);
                         qDebug() << "ECHO: Server requesting password mode - enabling content preservation";
 
-                        // Start a safety timeout for password mode, but only during
-                        // the first 5 minutes of a connection (login phase). This
-                        // protects against servers that fail to send WONT ECHO due
-                        // to network issues or bugs, while not affecting legitimate
-                        // password prompts later in the session (e.g., admin commands).
-                        // Skip this if the user has disabled password masking entirely.
-                        constexpr auto LOGIN_PHASE_MS = 5min;
-                        constexpr auto PASSWORD_TIMEOUT_MS = 60s;
-                        if (!mpHost->mDisablePasswordMasking && mConnectionTimer.isValid() && mConnectionTimer.elapsed() < LOGIN_PHASE_MS.count()) {
-                            if (!mTimerPasswordModeTimeout) {
-                                mTimerPasswordModeTimeout = new QTimer(this);
-                                mTimerPasswordModeTimeout->setSingleShot(true);
-                                connect(mTimerPasswordModeTimeout, &QTimer::timeout, this, [this]() {
-                                    if (mpHost && mpHost->isRemoteEchoingActive()) {
-                                        qWarning() << "ECHO: Password mode timeout - server never sent WONT ECHO, clearing masking";
-                                        mpHost->setRemoteEchoingActive(false);
-                                    }
-                                });
-                            }
-                            mTimerPasswordModeTimeout->start(std::chrono::duration_cast<std::chrono::milliseconds>(PASSWORD_TIMEOUT_MS).count());
-                        }
+                        // The safety timeout against a game that never sends WONT ECHO is
+                        // started by the masked line the player sends, not by this prompt -
+                        // see restartPasswordMaskTimeout().
                     }
                 } else if (option == OPT_STATUS || option == OPT_TERMINAL_TYPE) {
                     sendTelnetOption(TN_DO, option);
@@ -3536,6 +3612,10 @@ void cTelnet::processTelnetCommand(const std::string& telnetCommand)
                 hisOptionState.reset(idxOption);
 
                 if (option == OPT_ECHO) {
+                    // Whatever prompt the auto-login's password step found masked is over with
+                    // this, whether or not the release is honoured below - see
+                    // sendOutstandingAutoLoginPassword()
+                    mAutoLoginPasswordMaskWithdrawn = true;
                     if (mEchoAnomalyDetected) {
                         qDebug() << "ECHO: Ignoring WONT due to anomaly pattern";
                     } else {
@@ -4031,8 +4111,8 @@ void cTelnet::processTelnetCommand(const std::string& telnetCommand)
                 output += TN_IAC;
                 output += TN_SB;
                 output += OPT_ATCP;
-                // mudlet::self()->mAppBuild *could* be a non-ASCII UTF-8 string:
-                std::string atcpOptions = std::string("hello Mudlet ") + std::string(APP_VERSION) + mudlet::self()->mAppBuild.toUtf8().constData()
+                // MudletApp::buildSuffix() *could* be a non-ASCII UTF-8 string:
+                std::string atcpOptions = std::string("hello Mudlet ") + std::string(APP_VERSION) + MudletApp::buildSuffix().toUtf8().constData()
                                           + "\ncomposer 1\nchar_vitals 1\nroom_brief 1\nroom_exits 1\nmap_display 1\n";
                 output += encodeAndCookBytes(atcpOptions);
                 output += TN_IAC;
@@ -4077,10 +4157,9 @@ void cTelnet::processTelnetCommand(const std::string& telnetCommand)
                                    "(url='%3').")
                                         .arg(version, mpHost->mServerGUI_Package_version, url));
 
-                    // Uninstall the old version, and leave the installed one alone if that is
-                    // refused: installing over it fails as "already installed", so the upgrade
-                    // would go missing while the version recorded below claimed otherwise. A
-                    // name that is not installed has nothing to refuse and nothing to remove,
+                    // If uninstalling is refused, installing over it would fail as "already installed"
+                    // while the version recorded below claimed the upgrade. A name not installed
+                    // has nothing to remove,
                     // and must not hold the upgrade up.
                     const QString oldPackageName = mpHost->mServerGUI_Package_name != qsl("nothing") ? mpHost->mServerGUI_Package_name : packageName;
                     const bool clearedTheWay = !mpHost->mInstalledPackages.contains(oldPackageName) || mpHost->uninstallPackage(oldPackageName, enums::PackageModuleType::Package);
@@ -4439,7 +4518,7 @@ void cTelnet::downloadAndInstallGUIPackage(const QString& packageName, const QSt
                    "(url='%2').")
                         .arg(packageName, url));
 
-    mServerPackage = MudletPaths::getMudletPath(enums::profileDataItemPath, mProfileName, fileName);
+    mServerPackage = MudletApp::getMudletPath(enums::profileDataItemPath, mProfileName, fileName);
     mpHost->updateProxySettings(mpDownloader);
 
     // Abort any in-flight predecessor while mpPackageDownloadReply still points
@@ -4451,7 +4530,7 @@ void cTelnet::downloadAndInstallGUIPackage(const QString& packageName, const QSt
     }
 
     auto request = QNetworkRequest(QUrl(url));
-    mudlet::self()->setNetworkRequestDefaults(url, request);
+    MudletApp::setNetworkRequestDefaults(url, request);
     mpPackageDownloadReply = mpDownloader->get(request);
 
     connect(mpPackageDownloadReply, &QNetworkReply::downloadProgress, this, &cTelnet::slot_setDownloadProgress);
@@ -4502,10 +4581,9 @@ void cTelnet::handleGUIPackageInstallationAndUpgrade(QJsonDocument document)
                        "(url='%3').")
                             .arg(version, mpHost->mServerGUI_Package_version, url));
 
-        // Uninstall the old version, and leave the installed one alone if that is
-        // refused: installing over it fails as "already installed", so the upgrade
-        // would go missing while the version recorded below claimed otherwise. A
-        // name that is not installed has nothing to refuse and nothing to remove,
+        // If uninstalling is refused, installing over it would fail as "already installed"
+        // while the version recorded below claimed the upgrade. A name not installed
+        // has nothing to remove,
         // and must not hold the upgrade up.
         const QString oldPackageName = mpHost->mServerGUI_Package_name != qsl("nothing") ? mpHost->mServerGUI_Package_name : packageName;
         const bool clearedTheWay = !mpHost->mInstalledPackages.contains(oldPackageName) || mpHost->uninstallPackage(oldPackageName, enums::PackageModuleType::Package);
@@ -4964,17 +5042,19 @@ void cTelnet::postMessage(QString msg)
 
         QStringList body = messageStack.first().split(QChar('\n'));
 
-        qint8 openBraceIndex = body.at(0).indexOf(QLatin1String("["));
-        qint8 closeBraceIndex = body.at(0).indexOf(QLatin1String("]"));
-        qint8 hyphenIndex = body.at(0).indexOf(QLatin1String("- "));
+        const QString firstLine = body.at(0);
+        const qsizetype openBraceIndex = firstLine.indexOf(QLatin1String("["));
+        const qsizetype closeBraceIndex = firstLine.indexOf(QLatin1String("]"));
+        const qsizetype hyphenIndex = firstLine.indexOf(QLatin1String("- "));
         if (openBraceIndex >= 0 && closeBraceIndex > 0 && closeBraceIndex < hyphenIndex) {
-            quint8 prefixLength = hyphenIndex + 1;
-            while (body.at(0).at(prefixLength) == ' ') {
+            qsizetype prefixLength = hyphenIndex + 1;
+            // The first line can end in the separator, as when an MMCP peer's name starts with a newline
+            while (prefixLength < firstLine.size() && firstLine.at(prefixLength) == ' ') {
                 ++prefixLength;
             }
 
-            QString prefix = body.at(0).left(prefixLength).toUpper();
-            QString firstLineTail = body.at(0).mid(prefixLength);
+            QString prefix = firstLine.left(prefixLength).toUpper();
+            QString firstLineTail = firstLine.mid(prefixLength);
             body.removeFirst();
             //: Keep the capitalisation, the translated text at 7 letters max so it aligns nicely
             if (prefix.contains(tr("ERROR")) || prefix.contains(QLatin1String("ERROR"))) {
@@ -5120,23 +5200,21 @@ void cTelnet::gotPrompt(std::string& mud_data)
         }
     }
 
-    postData();
+    postData(true);
     mMudData = "";
     mIsTimerPosting = false;
 }
 
-// MXP escape sequences are the ONLY safe detection method.
-// Text-based tags like <version>, <send>, etc. can be faked by players
-// using illusions in games like IRE MUDs, which would cause false positives.
-// ESC sequences contain control character 0x1B which cannot be typed/illusioned.
-// Per MXP spec: "To ensure that tags are difficult to send by MUD players,
-// an escape sequence, similar to ANSI or VT100 is used: ESC[#z"
+// Only the ESC[#z mode switch is safe to detect MXP by: players can fake text tags like <version>
+// (e.g. IRE illusions) but cannot type ESC. The MXP spec uses it so "tags are difficult to send by MUD players".
 // Valid modes: 0=open, 1=secure, 2=locked, 3=reset, 4=temp secure,
 //              5=lock open, 6=lock secure, 7=lock locked
 static bool containsMxpModeSwitch(const std::string& data)
 {
-    for (size_t pos = data.find('\x1B'); pos != std::string::npos && pos + 3 < data.size(); pos = data.find('\x1B', pos + 1)) {
-        if (data[pos + 1] == '[' && data[pos + 2] >= '0' && data[pos + 2] <= '7' && data[pos + 3] == 'z') {
+    // Anchored on the closing 'z' rather than the ESC: every SGR colour code
+    // opens with an ESC, so a scan from those stops at each one of them.
+    for (size_t pos = data.find('z', 3); pos != std::string::npos; pos = data.find('z', pos + 1)) {
+        if (data[pos - 3] == '\x1B' && data[pos - 2] == '[' && data[pos - 1] >= '0' && data[pos - 1] <= '7') {
             return true;
         }
     }
@@ -5186,7 +5264,7 @@ void cTelnet::gotRest(std::string& mud_data)
         size_t i = mud_data.rfind('\n');
 
         if (i != std::string::npos) {
-            mMudData += mud_data.substr(0, i + 1);
+            mMudData.append(mud_data, 0, i + 1);
             postData();
 
             if (!mIsTimerPosting && (mpPostingTimer->interval() != mTimeOut)) {
@@ -5196,11 +5274,7 @@ void cTelnet::gotRest(std::string& mud_data)
             mpPostingTimer->start();
             mIsTimerPosting = true;
 
-            if (i + 1 < mud_data.size()) {
-                mMudData = mud_data.substr(i + 1, mud_data.size());
-            } else {
-                mMudData = "";
-            }
+            mMudData.assign(mud_data, i + 1, std::string::npos);
         } else {
             mMudData += mud_data;
 
@@ -5240,7 +5314,7 @@ void cTelnet::slot_timerPosting()
     }
 }
 
-void cTelnet::postData()
+void cTelnet::postData(const bool endsWithPromptMarker)
 {
     if (!mpHost || mpHost->isClosingDown() || !mpHost->mpConsole) {
         return;
@@ -5248,30 +5322,70 @@ void cTelnet::postData()
 
     // Detach the pending data first: a trigger fired inside printOnDisplay() can
     // call feedTelnet(), re-entering here - it must not post this data again.
-    std::string data{std::move(mMudData)};
-    mMudData.clear();
+    std::string data;
+    data.swap(mMudData);
+
+    // translateToPlainText() parses its argument in place, so anyone snooping
+    // the stream gets a copy of the original bytes:
+    std::string original;
+    const bool snooped = mpHost->mMMCPServer != nullptr;
+    if (snooped) {
+        original = data;
+    }
 
     // All data goes through main console's printOnDisplay which calls
     // translateToPlainText - MXP DEST routing happens inside that process
     mpHost->printOnDisplay(data, true);
     if (mpHost->mMMCPServer && !mpHost->mIsRemoteEchoingActive) {
-        mpHost->mMMCPServer->receiveFromPlayer(data);
+        mpHost->mMMCPServer->receiveFromPlayer(snooped ? original : data, endsWithPromptMarker);
+    }
+
+    // Hand the capacity back so the next packet appends without a malloc. A
+    // re-entrant feed may have left a tail of its own behind; that stays.
+    if (mMudData.empty()) {
+        data.clear();
+        mMudData.swap(data);
     }
 }
 
 void cTelnet::initStreamDecompressor()
 {
+    // A stream can still be allocated here - overwriting it would leak it
+    // (#10410). inflateEnd() leaves one never initialised (mZstream starts out
+    // zeroed) or already ended alone.
+    inflateEnd(&mZstream);
+
     mZstream.zalloc = Z_NULL;
     mZstream.zfree = Z_NULL;
     mZstream.opaque = Z_NULL;
     mZstream.avail_in = 0;
     mZstream.next_in = Z_NULL;
+    mUninflatedInput.clear();
+    mUninflatedInputComplete = true;
 
     inflateInit(&mZstream);
 }
 
+void cTelnet::refuseCompressedStream()
+{
+    sendTelnetOption(TN_DONT, mCompressionOption);
+    hisOptionState.reset(static_cast<size_t>(mCompressionOption));
+    if (mCompressionOption == OPT_COMPRESS) {
+        mMCCP_version_1 = false;
+    } else {
+        mMCCP_version_2 = false;
+    }
+    mNeedDecompression = false;
+    mUninflatedInput.clear();
+    // the next start sequence initialises a stream of its own
+    inflateEnd(&mZstream);
+}
+
 int cTelnet::decompressBuffer(char*& in_buffer, int& length, char* out_buffer)
 {
+    char* const inputStart = in_buffer;
+    const int inputLength = length;
+
     mZstream.avail_in = length;
     mZstream.next_in = (Bytef*)in_buffer;
 
@@ -5291,36 +5405,55 @@ int cTelnet::decompressBuffer(char*& in_buffer, int& length, char* out_buffer)
     mZstream.next_in = Z_NULL;
     mZstream.next_out = Z_NULL;
 
+    const auto consumed = static_cast<size_t>(inputLength - length);
+    // Nothing has come out of the stream yet and every byte inflate() took is
+    // still at hand - this read's, plus the few earlier ones kept for this.
+    // Not judged by total_in: zlib leaves it at 0 when it stops for a preset
+    // dictionary, six bytes in.
+    const bool allInputAtHand = mZstream.total_out == 0 && mUninflatedInputComplete;
+
     if (zval == Z_NEED_DICT || zval == Z_DATA_ERROR || zval == Z_STREAM_ERROR || zval == Z_MEM_ERROR) {
         // The compressed stream is broken (e.g. the server announced
         // compression but sent uncompressed data). Only Z_STREAM_END used to be
         // handled, so a failed inflate() silently ate all further input and the
         // connection looked dead. Warn, drop compression, and let the caller
         // reprocess the unconsumed input as plain data.
-        qWarning() << "cTelnet::decompressBuffer() ERROR - inflate() failed:" << zError(zval) << "- disabling compression";
+        qWarning() << "cTelnet::decompressBuffer() ERROR - inflate() failed:" << zError(zval) << (mZstream.msg ? mZstream.msg : "") << "- disabling compression";
         //: %1 is the decompression error description. Shown when the server sends a corrupt MCCP (compressed) data stream.
         postMessage(tr("[ WARN  ]  - MCCP decompression error (%1), compression disabled.\n"
                        "If the display looks garbled, please reconnect to the game.")
                             .arg(QString::fromUtf8(zError(zval))));
-        sendTelnetOption(TN_DONT, mMCCP_version_1 ? OPT_COMPRESS : OPT_COMPRESS2);
-        inflateEnd(&mZstream);
-        mNeedDecompression = false;
-        hisOptionState.reset(static_cast<size_t>(OPT_COMPRESS));
-        hisOptionState.reset(static_cast<size_t>(OPT_COMPRESS2));
-        initStreamDecompressor();
+        // Refuse the version the broken stream was using - with both negotiated,
+        // refusing the other one leaves the game compressing - and stop taking
+        // its start sequence as one until the game offers it again.
+        // A stream that breaks before producing any output was most likely
+        // never compressed at all (a game announcing compression and then not
+        // using it), so hand back the bytes inflate() took for its header too
+        // rather than cutting them off the text.
+        if (allInputAtHand) {
+            outSize = static_cast<int>(mUninflatedInput.copy(out_buffer, mUninflatedInput.size()));
+            in_buffer = inputStart;
+            length = inputLength;
+        }
+        refuseCompressedStream();
         return outSize;
     }
 
+    if (allInputAtHand && zval != Z_STREAM_END && mUninflatedInput.size() + consumed <= scmMaxUninflatedInput) {
+        mUninflatedInput.append(inputStart, consumed);
+    } else {
+        mUninflatedInput.clear();
+        mUninflatedInputComplete = false;
+    }
+
     if (zval == Z_STREAM_END) {
-        inflateEnd(&mZstream);
         qDebug() << "recv Z_STREAM_END, ending compression";
         this->mNeedDecompression = false;
 
         hisOptionState.reset(static_cast<size_t>(OPT_COMPRESS));
         hisOptionState.reset(static_cast<size_t>(OPT_COMPRESS2));
 
-        // zval should always be NULL on inflateEnd.  No need for an else block. MCCP Rev. 3 -MH //
-        initStreamDecompressor();
+        inflateEnd(&mZstream);
         qDebug() << "Listening for new compression sequences";
 
         // We shouldn't return -1 or an error here, as that prevents any text
@@ -5384,7 +5517,7 @@ bool cTelnet::loadReplay(const QString& name, QString* pErrMsg)
         mReplayPaused = false;
         mReplayChunkPending = false;
         mReplayChunkDelay = 0;
-        if (mudlet::self()->replayStart(mpHost)) {
+        if (auto* replay = MudletReplay::self(); replay && replay->start(mpHost)) {
             auto [ok, modifiedFormat] = testReadReplayFile();
             if (Q_LIKELY(ok)) {
                 mReplayHasFaultyFormat = modifiedFormat;
@@ -5429,6 +5562,8 @@ bool cTelnet::loadReplay(const QString& name, QString* pErrMsg)
 void cTelnet::loadReplayChunk()
 {
     if (!replayStream.atEnd()) {
+        // testReadReplayFile() can leave the status of a short final payload behind
+        replayStream.resetStatus();
         qint32 amount = 0;
         qint32 offset = 0;
         if (mReplayHasFaultyFormat) {
@@ -5444,12 +5579,21 @@ void cTelnet::loadReplayChunk()
 
         replayStream >> amount;
 
-        loadedBytes = replayStream.readRawData(loadBuffer, amount);
+        // testReadReplayFile() vetted the file before playback, but the file can
+        // still change or stop being readable while it plays
+        const bool headerUsable = replayStream.status() == QDataStream::Ok && offset >= 0 && amount >= 0 && amount <= static_cast<qint32>(BUFFER_SIZE);
+        loadedBytes = headerUsable ? replayStream.readRawData(loadBuffer, amount) : -1;
+        if (loadedBytes < 0) {
+            loadedBytes = 0;
+            //: Console message when a replay stops because its file could not be read. The [ WARN ] prefix is column padding shared with Mudlet's other console messages, keep it as it is
+            endReplay(tr("[ WARN ]  - The replay has been aborted as the file seems to be corrupt."));
+            return;
+        }
         // Previous use of loadedBytes + 1 caused a spurious character at end of
         // string display by a qDebug of the loadBuffer contents
         loadBuffer[loadedBytes] = '\0';
-        mudlet::self()->mReplayTime = mudlet::self()->mReplayTime.addMSecs(offset);
-        mReplayChunkDelay = offset / mudlet::self()->mReplaySpeed;
+        auto* replay = MudletReplay::self();
+        mReplayChunkDelay = replay ? replay->advance(offset) : offset;
         mReplayChunkPending = true;
         if (!mReplayPaused) {
             mpReplayChunkTimer->start(mReplayChunkDelay);
@@ -5482,10 +5626,8 @@ void cTelnet::resumeReplay()
     }
 
     mReplayPaused = false;
-    // loadReplayChunk() will not arm the timer while the replay is held, so the
-    // wait a pause interrupted has to be re-armed from here. When no chunk is
-    // waiting there is nothing to arm: the loadReplayChunk() still to come does
-    // it now that the replay is running again, and at the end of the file
+    // loadReplayChunk() won't arm the timer while paused, so re-arm here. With no chunk pending, the
+    // next loadReplayChunk() arms it, and at the end of the file
     // arming it would push the chunk just played through a second time.
     if (mReplayChunkPending) {
         mpReplayChunkTimer->start(mReplayChunkDelay);
@@ -5498,8 +5640,7 @@ void cTelnet::stopReplay()
         return;
     }
 
-    // Unlike the end of the file, this is something the user did, so say so
-    // even for a replay that lua started - they pressed the button:
+    // Reported even for a Lua-started replay, as the user pressed the button:
     //: Console message when the user ends a replay early with the replay toolbar's Stop button. The [  OK  ] prefix is column padding shared with Mudlet's other console messages, keep it as it is
     endReplay(tr("[  OK  ]  - The replay has been stopped."));
 }
@@ -5516,8 +5657,8 @@ void cTelnet::endReplay(const QString& message)
     if (!message.isEmpty()) {
         postMessage(message);
     }
-    if (auto pMudlet = mudlet::self()) {
-        pMudlet->replayOver();
+    if (auto* replay = MudletReplay::self()) {
+        replay->over();
     }
 }
 
@@ -5583,10 +5724,8 @@ void cTelnet::slot_processReplayChunk()
                 command = "";
             }
         } else if (ch == TN_BELL) {
-            // Not rung here, unlike the socket path: a replay has never rung
-            // the bell, it only shows it. It still needs a branch of its own,
-            // because textRunEnd() ends a run at a bell: reaching one through
-            // the run branch below would measure an empty run and put the loop
+            // Not rung, unlike the socket path, but needs its own branch: textRunEnd() stops at a
+            // bell, so the run branch would measure an empty run and put the loop
             // back on the same byte for ever.
             cleandata += ch;
         } else if (ch != '\r' && ch != '\0') {
@@ -5637,13 +5776,9 @@ void cTelnet::slot_socketReadyToBeRead()
     readPendingSocketData();
 }
 
-// Reads one BUFFER_SIZE chunk, and comes back through the event loop for
-// whatever is left. readyRead() is only emitted when fresh bytes reach the
-// socket, so a burst's remainder past one read would sit unseen until the
-// server happened to send again - a game that pushes 100 KB in one go and then
-// waits for input stops part-way through it. The leftovers are deliberately
-// drained from here rather than from slot_socketReadyToBeRead(): they were
-// already buffered before any command a trigger has since sent, so treating
+// Requeues itself for what is left after one BUFFER_SIZE read: readyRead() fires only on fresh bytes,
+// so the rest of a burst would sit unseen until the server sent again. Not drained via
+// slot_socketReadyToBeRead(): the leftovers predate any command a trigger has since sent, so treating
 // them as that command's reply would report a latency of nearly nothing.
 void cTelnet::readPendingSocketData()
 {
@@ -5667,9 +5802,8 @@ void cTelnet::readPendingSocketData()
 
 void cTelnet::processSocketData(char* in_buffer, int amount, const bool loopbackTesting)
 {
-    // The cap that bounds a decompression bomb (see scmMaxDecompressionRecursion)
-    // is per-connection - a member, not thread-wide - so one profile's drain, or
-    // a re-entrant feedTelnet(), cannot spend another connection's budget.
+    // The depth count (see scmMaxDecompressionRecursion) is per-connection, so one profile's drain or a
+    // re-entrant feedTelnet() can't spend another connection's budget.
     // Being a member, a level leaked by an early return would be permanent:
     // scmMaxDecompressionRecursion of them and the connection refuses all further
     // data, so the count comes off in a guard rather than at each return.
@@ -5683,6 +5817,17 @@ void cTelnet::processSocketData(char* in_buffer, int amount, const bool loopback
 
     if (mDecompressionRecursionDepth > scmMaxDecompressionRecursion) {
         qWarning() << "cTelnet::processSocketData(...) WARNING - recursion depth exceeded, dropping remaining data";
+        if (mNeedDecompression) {
+            // What is dropped here is the rest of the compressed stream, and
+            // zlib cannot pick a stream up again past a gap, so whatever the
+            // game compresses next would come out as garbage or not at all.
+            // Refuse the stream so the game falls back to plain text instead.
+            //: Shown when one read from the game inflates to more than can be processed safely (e.g. a decompression bomb) while MCCP compression is on.
+            postMessage(tr("[ WARN  ]  - Too much compressed data to process at once, some was lost - compression disabled.\n"
+                           "If the display looks garbled, please reconnect to the game."));
+            refuseCompressedStream();
+            return;
+        }
         //: Shown when too much data expands out of one compressed read (e.g. a decompression bomb) to process safely.
         postMessage(tr("[ WARN  ]  - Too much data to process at once, some may have been lost."));
         return;
@@ -5706,9 +5851,6 @@ void cTelnet::processSocketData(char* in_buffer, int amount, const bool loopback
     in_buffer[amount] = '\0';
 
     std::string cleandata;
-    // Pre-allocate for worst case: decompressed data can be much larger than input
-    // BUFFER_SIZE is 100000, so reserve enough for typical usage
-    cleandata.reserve(static_cast<size_t>(BUFFER_SIZE) * 4);
     qint32 datalen = 0;
     datalen = amount;
     char* buffer = in_buffer;
@@ -5731,6 +5873,10 @@ void cTelnet::processSocketData(char* in_buffer, int amount, const bool loopback
     }
     // TODO: https://github.com/Mudlet/Mudlet/issues/5780 (4 of 7) - investigate switching from using `char[]` to `std::array<char>`
     buffer[static_cast<size_t>(datalen)] = '\0';
+
+    // About what stripping telnet leaves of the read (decompression already
+    // went through out_buffer above):
+    cleandata.reserve(static_cast<size_t>(datalen));
 
     // A compressed read can inflate to nothing. Older Mudlets refuse a replay
     // holding an empty chunk, so its wait carries over to the next chunk.
@@ -5824,7 +5970,7 @@ void cTelnet::processSocketData(char* in_buffer, int amount, const bool loopback
                     // TODO this code looks ahead instead of using the state machine.
                     // This is not a good idea.
                     char _ch = buffer[i];
-                    if ((_ch == OPT_COMPRESS) || (_ch == OPT_COMPRESS2)) {
+                    if (((_ch == OPT_COMPRESS) && mMCCP_version_1) || ((_ch == OPT_COMPRESS2) && mMCCP_version_2)) {
                         bool _compress = false;
 
                         if ((i > 1) && (i + 2 < datalen)) {
@@ -5839,8 +5985,22 @@ void cTelnet::processSocketData(char* in_buffer, int amount, const bool loopback
                             }
                         }
 
+                        if (_compress && buffer == out_buffer.get()) {
+                            // Inflating the rest of out_buffer back into out_buffer overlaps source and
+                            // destination, and a server has no reason to nest a compressed stream in its own
+                            // decompressed output, so the start sequence is skipped whole: MCCP1's has no
+                            // IAC before its SE and would otherwise leave the parser inside a subnegotiation.
+                            qWarning() << "cTelnet::processSocketData(...) WARNING - ignoring an MCCP start sequence found inside decompressed data";
+                            i += 2;
+                            iac = false;
+                            insb = false;
+                            command = "";
+                            goto MAIN_LOOP_END;
+                        }
+
                         if (_compress) {
                             mNeedDecompression = true;
+                            mCompressionOption = _ch;
                             // from this position in stream onwards, data will be compressed by zlib
                             gotRest(cleandata);
                             cleandata = "";
@@ -6348,13 +6508,15 @@ void cTelnet::checkCharacterModePattern()
     raiseProtocolEvent("sysCharacterModeDetected", "");
     qDebug() << "Character-at-a-time mode pattern detected (ECHO + SGA persisted past a submitted line)";
 
-    if (mudlet::self()->showCharacterModeWarning()) {
-        mudlet::self()->showedCharacterModeWarning();
-        //: Warning shown when server uses character-at-a-time mode which Mudlet doesn't support
-        postMessage(tr("[ WARN ]  - This game appears to use character-at-a-time mode, "
-                       "which Mudlet does not support. Input may not work as expected. "
-                       "Consider using keybindings for immediate key response instead."));
-    }
+    emit signal_characterModeDetected();
+}
+
+void cTelnet::postCharacterModeWarning()
+{
+    //: Warning shown when server uses character-at-a-time mode which Mudlet doesn't support
+    postMessage(tr("[ WARN ]  - This game appears to use character-at-a-time mode, "
+                   "which Mudlet does not support. Input may not work as expected. "
+                   "Consider using keybindings for immediate key response instead."));
 }
 
 bool cTelnet::checkEchoAnomalyPattern()
@@ -6378,4 +6540,49 @@ bool cTelnet::checkEchoAnomalyPattern()
     }
     mEchoToggleTimer.restart();
     return false;
+}
+
+// Called for every line that goes out to the game while it has ECHO on, and for
+// the auto-login password whether or not it does, so that the masking a game
+// forgets to release is cleared a minute after the last such line was sent -
+// never while the player is still typing one, which arming at the prompt would
+// do. A character-at-a-time server holds ECHO across every line legitimately,
+// so it gets no timeout. Only during the login phase of a connection: a
+// password prompt an admin command raises later in the session is left to the
+// game.
+void cTelnet::restartPasswordMaskTimeout()
+{
+    // A line the guards below turn away must not leave an earlier deadline live,
+    // to fire while the player is typing the next one:
+    if (mTimerPasswordModeTimeout) {
+        mTimerPasswordModeTimeout->stop();
+    }
+    if (!mpHost || mpHost->mDisablePasswordMasking || mCharacterModeDetected) {
+        return;
+    }
+    if (!mConnectionTimer.isValid() || mConnectionTimer.durationElapsed() >= PASSWORD_MASK_LOGIN_PHASE) {
+        return;
+    }
+    if (!mTimerPasswordModeTimeout) {
+        mTimerPasswordModeTimeout = new QTimer(this);
+        mTimerPasswordModeTimeout->setSingleShot(true);
+        connect(mTimerPasswordModeTimeout, &QTimer::timeout, this, &cTelnet::slot_passwordMaskTimeout);
+    }
+    mTimerPasswordModeTimeout->start(PASSWORD_MASK_TIMEOUT);
+}
+
+void cTelnet::slot_passwordMaskTimeout()
+{
+    if (!mpHost || !mpHost->isRemoteEchoingActive() || mCharacterModeDetected) {
+        return;
+    }
+    qWarning() << "ECHO: Password mode timeout - server never sent WONT ECHO, clearing masking";
+    // Told to the game as well, so that its next WILL ECHO is a fresh request
+    // and not a repeat of one Mudlet still has on the books:
+    sendTelnetOption(TN_DONT, OPT_ECHO);
+    // sendTelnetOption() clears only hisOptionState; with the announced flag left
+    // set, the game's reply WONT would take the withdrawal branch again - a second
+    // DONT on the wire and one of the five ECHO anomaly toggles spent:
+    heAnnouncedState.reset(static_cast<size_t>(OPT_ECHO));
+    mpHost->setRemoteEchoingActive(false);
 }

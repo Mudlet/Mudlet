@@ -30,7 +30,9 @@ inline.
 
    Variant presets build into `build-<preset-name>/`, so the binary is
    `build-linux-debug-nosan/src/mudlet`,
-   `build-macos-debug-nosan/src/mudlet.app/Contents/MacOS/mudlet` or
+   `build-macos-debug-nosan/src/mudlet.app/Contents/MacOS/mudlet` (the binary, so the
+   measurement environment reaches the process; `--target run-mudlet` is for ordinary
+   launches) or
    `build/src/mudlet.exe`. Confirm rather than assume before quoting any number -
    `grep USE_SANITIZER <build>/CMakeCache.txt` must print an empty value on Linux and
    macOS and nothing at all on Windows. A whole A/B campaign has been published off two

@@ -147,6 +147,18 @@ describe("Tests functionality of Geyser.ScrollBox", function()
       assert.are.equal("gsbNestedBox", label.windowname)
       assert.are.same({x = 50, y = 0, width = 50, height = 75}, geometry("gsbNestedLabel"))
     end)
+
+    it("refuses to move into a container nested inside it", function()
+      local inner = track(Geyser.Container:new({name = "gsbCycleInner", x = 0, y = 0, width = "50%", height = "50%"}, scrollBox))
+      local innerBox = track(Geyser.ScrollBox:new({name = "gsbCycleBox", x = 0, y = 0, width = "50%", height = "50%"}, inner))
+      for _, destination in ipairs({inner, innerBox}) do
+        local result, message = scrollBox:changeContainer(destination)
+        assert.is_nil(result)
+        assert.are.equal("can't move gsbHolder into one of its own children", message)
+        assert.are.equal(Geyser, scrollBox.container)
+      end
+      assert.are.same({x = 10, y = 20, width = 200, height = 150}, geometry("gsbHolder"))
+    end)
   end)
 
   describe("Geyser.ScrollBox:hide/show", function()
@@ -233,8 +245,8 @@ describe("Tests functionality of Geyser.ScrollBox", function()
 
   describe("Geyser.ScrollBox scroll bars", function()
     -- A scroll box scrolls by being a QScrollArea (TScrollBox.h), not by being
-    -- a console, so Mudlet's scroll bar API cannot reach it: Host::findConsole
-    -- only looks through the sub-console map, and a scroll box is not in it.
+    -- a console, so Mudlet's scroll bar API cannot reach it: TMainConsole::consoleNamed
+    -- finds only the main console and the sub-console map, and a scroll box is in neither.
     -- Geyser.ScrollBox descends from Geyser.Window rather than
     -- Geyser.MiniConsole, so it offers no scroll bar method of its own either.
     -- Its scroll bars are Qt's, and appear on their own when a child overflows.

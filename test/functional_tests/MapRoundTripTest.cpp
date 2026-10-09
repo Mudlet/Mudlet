@@ -25,7 +25,7 @@
  * custom exit lines, doors, exit weights, room/area/map-level userData, room
  * environments, non-ASCII names/symbols, negative coordinates and z-levels
  * plus an area map label. It is saved with TMap::serialize (the same
- * QDataStream setup TMainConsole::saveMap uses), loaded into a fresh Host's
+ * QDataStream setup Host::saveMapFile uses), loaded into a fresh Host's
  * map via TMap::restore + audit (the production load path minus the mapper
  * UI) and compared field by field.
  *
@@ -44,7 +44,7 @@
 #include <QSaveFile>
 #include <QTemporaryDir>
 
-#include "MudletPaths.h"
+#include "MudletApp.h"
 #include "PortableModeTestHelper.h"
 #include "Host.h"
 #include "HostManager.h"
@@ -78,6 +78,15 @@ const QColor scmLabelOutline(1, 2, 3);
 const QColor scmSymbolColor(200, 100, 50);
 const QColor scmBorderColor(10, 200, 30, 128);
 const QColor scmCustomLineColor(10, 20, 30);
+
+// A version 7 room predates the '0'/'1' lock flag the special exit command
+// gained around version 11, and every field the reader added from version 9
+// onward, so its record is short enough to write by hand.
+const int scmPreLockPrefixFormatVersion = 7;
+const QString scmUnprefixedSpecialExit = qsl("open gate");
+
+const int scmNamedOnlyAreaId = 7777;
+const QString scmNamedOnlyAreaName = qsl("Named but absent");
 } // namespace
 
 class MapRoundTripTest : public QObject
@@ -197,6 +206,7 @@ private:
         pR1->customLinesColor.insert(qsl("n"), scmCustomLineColor);
         pR1->customLinesStyle.insert(qsl("n"), Qt::DashLine);
         pR1->customLinesArrow.insert(qsl("n"), true);
+        pR1->calcRoomDimensions();
 
         TRoom* pR2 = pDB->getRoom(scmRoom2);
         QVERIFY(pR2);
@@ -313,14 +323,14 @@ private:
         QCOMPARE(pAreaA->mUserData, expectedAreaAUserData());
 
         // Nothing on the load path sets out to build the per-area index of
-        // rooms holding custom lines. It falls out of three separate calls
-        // made for something else - TRoom::restore()'s room dimensions, the
-        // span recalculation at the end of TMap::restore(), and TArea::clean()
-        // during the audit - so cutting any one of them leaves it built by the
-        // other two and every other assertion here still passing. This is what
-        // is left to notice the day the last one goes: the mapper consults the
-        // index only for rooms that are off screen, so what silently stops
-        // being drawn is a custom line running into view from outside it.
+        // rooms holding custom lines. It falls out of two separate calls made
+        // for something else - the span recalculation at the end of
+        // TMap::restore(), and TArea::clean() during the audit - so cutting
+        // either one leaves it built by the other and every other assertion
+        // here still passing. This is what is left to notice the day the last
+        // one goes: the mapper consults the index only for rooms that are off
+        // screen, so what silently stops being drawn is a custom line running
+        // into view from outside it.
         QVERIFY2(
                 pAreaA->getCustomLineRoomsForZ(0).contains(scmRoom1),
                 qPrintable(qsl("room %1 holds a custom line but is missing from area A's index for z 0, loaded from format version %2").arg(QString::number(scmRoom1), QString::number(savedVersion))));
@@ -373,6 +383,11 @@ private:
         QCOMPARE(pR1->customLinesColor, (QMap<QString, QColor>{{qsl("n"), scmCustomLineColor}}));
         QCOMPARE(pR1->customLinesStyle, (QMap<QString, Qt::PenStyle>{{qsl("n"), Qt::DashLine}}));
         QCOMPARE(pR1->customLinesArrow, (QMap<QString, bool>{{qsl("n"), true}}));
+        // The mapper culls a room with custom lines by these, so wrong ones hide the lines.
+        QCOMPARE(pR1->min_x, 0.0);
+        QCOMPARE(pR1->max_x, 3.0);
+        QCOMPARE(pR1->min_y, -2.5);
+        QCOMPARE(pR1->max_y, 4.0);
         // The format 19 leg runs after the format 17/18 ones, so this also
         // guards against a < 19 save leaving a stray system.fallback_symbol
         // entry behind in the live source room's user data:
@@ -463,7 +478,7 @@ private:
 
     void deleteProfileDirectory(const QString& profileName)
     {
-        const QString path = MudletPaths::getMudletPath(enums::profileHomePath, profileName);
+        const QString path = MudletApp::getMudletPath(enums::profileHomePath, profileName);
         QDir dir(path);
         if (dir.exists()) {
             dir.removeRecursively();
@@ -490,7 +505,7 @@ private slots:
 
         mudlet::start();
         mudlet::self()->setupConfig();
-        QCOMPARE(MudletPaths::getMudletPath(enums::mainPath), qsl("%1/mudlet").arg(mConfigDir.path()));
+        QCOMPARE(MudletApp::getMudletPath(enums::mainPath), qsl("%1/mudlet").arg(mConfigDir.path()));
         mudlet::self()->takeOwnershipOfInstanceCoordinator(std::make_unique<MudletInstanceCoordinator>("MudletInstanceCoordinator"));
         mudlet::self()->init();
         mudlet::self()->setStorePasswordsSecurely(false);
@@ -628,6 +643,62 @@ private slots:
         QVERIFY2(pRoom1, "the room that was already there was evicted by the room refused for its id");
         QCOMPARE(pRoom1->mSymbol, qsl("⚔"));
         QCOMPARE(pRoom1->userData, expectedRoom1UserData());
+    }
+
+    // Maps written before the special exit command gained a '0'/'1' lock flag
+    // in front of it store the bare command, so nothing may be stripped off
+    // (#4574).
+    void test_aSpecialExitFromBeforeTheLockPrefixKeepsItsFirstCharacter()
+    {
+        QByteArray room;
+        QDataStream out(&room, QIODevice::WriteOnly);
+        out.setVersion(QDataStream::Qt_5_12);
+        out << 1 << 0 << 0 << 0; // area, then x, y and z
+        for (int i = 0; i < 12; ++i) {
+            out << -1; // the twelve compass, vertical and in/out exits
+        }
+        out << -1 << 1; // environment, then weight
+        // the rotations and the zoom that format version 8 dropped
+        out << 0.0f << 0.0f << 0.0f << 1.0f;
+        out << qsl("A room from 2010") << false;
+        QMultiMap<int, QString> oldSpecialExits;
+        oldSpecialExits.insert(scmRoom2, scmUnprefixedSpecialExit);
+        out << oldSpecialExits;
+
+        QDataStream in(&room, QIODevice::ReadOnly);
+        in.setVersion(QDataStream::Qt_5_12);
+        TRoom oldRoom(nullptr);
+        oldRoom.restore(in, scmRoom1, scmPreLockPrefixFormatVersion);
+
+        // a fixture that no longer matches the reader would leave the exit out
+        // and pass the comparison below for the wrong reason
+        QCOMPARE(in.status(), QDataStream::Ok);
+        QVERIFY2(in.atEnd(), "the version 7 fixture and TRoom::restore no longer agree on the layout");
+        QCOMPARE(oldRoom.getSpecialExits().value(scmUnprefixedSpecialExit, 0), scmRoom2);
+        QVERIFY2(oldRoom.getSpecialExitLocks().isEmpty(), "a command with no lock flag came back locked");
+    }
+
+    // An area id can reach the load as a name in the map's area table with no
+    // TArea of its own, and the audit is what makes one for it (#989). This
+    // slot wipes the shared target map, so it has to stay last.
+    void test_anAreaTheMapOnlyNamesIsCreatedByTheAudit()
+    {
+        QByteArray areaNames;
+        QDataStream out(&areaNames, QIODevice::WriteOnly);
+        out.setVersion(QDataStream::Qt_5_12);
+        out << QMap<int, QString>{{scmNamedOnlyAreaId, scmNamedOnlyAreaName}};
+
+        TMap* pTargetMap = mpTarget->mpMap.data();
+        pTargetMap->mapClear();
+        QDataStream in(&areaNames, QIODevice::ReadOnly);
+        in.setVersion(QDataStream::Qt_5_12);
+        pTargetMap->mpRoomDB->restoreAreaMap(in);
+        QVERIFY(!pTargetMap->mpRoomDB->getArea(scmNamedOnlyAreaId));
+
+        pTargetMap->audit();
+
+        QVERIFY2(pTargetMap->mpRoomDB->getArea(scmNamedOnlyAreaId), "the area the map named but did not carry was not created");
+        QCOMPARE(pTargetMap->mpRoomDB->getAreaNamesMap().value(scmNamedOnlyAreaId), scmNamedOnlyAreaName);
     }
 };
 

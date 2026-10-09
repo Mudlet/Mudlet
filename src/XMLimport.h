@@ -30,6 +30,7 @@
 #include "utils.h"
 
 #include <QCoreApplication>
+#include <QElapsedTimer>
 #include <QFile>
 #include <QMap>
 #include <QMargins>
@@ -56,6 +57,14 @@ public:
     virtual ~XMLimport() {}
     std::pair<bool, QString> importPackage(QFile*, QString packageName = QString(), int moduleFlag = 0, QString* pVersionString = nullptr);
     std::pair<EditorViewType, int> importFromClipboard();
+    // Items whose Lua body failed to compile or run, as "<item name>: <error>". They are still
+    // imported so they can be fixed, so importPackage()'s result says nothing about them.
+    const QStringList& itemsWithErrors() const { return mItemsWithErrors; }
+    // The same items by name only, for the console: the Lua error is for the item's author, not the installer.
+    const QStringList& itemsWithErrorNames() const { return mItemsWithErrorNames; }
+    // A save file numbers the sixteen basic colours of a colour pattern its own
+    // way (see XMLexport::remapAnsiToColorNumber()), this turns them back.
+    static void remapColorsToAnsiNumber(QStringList&, const QList<int>&);
 
 private:
     const QString YES = qsl("yes");
@@ -74,6 +83,7 @@ private:
     void readMap();
     void readRoom(QMultiHash<int, int>&, unsigned int*);
     void readRooms(QMultiHash<int, int>&);
+    bool mapProgressDue();
     void readRoomFeature(TRoom*);
     void readRoomFeatures(TRoom*);
     void readEnvColor();
@@ -107,12 +117,12 @@ private:
     void getVersionString(QString&);
     QString readScriptElement();
 
-    void remapColorsToAnsiNumber(QStringList&, const QList<int>&);
-
     bool readDefaultTrueBool(QString name);
 
     QPointer<Host> mpHost;
     QString mPackageName;
+    QStringList mItemsWithErrors;
+    QStringList mItemsWithErrorNames;
     TTrigger* mpTrigger = nullptr;
     TTimer* mpTimer = nullptr;
     TAlias* mpAlias = nullptr;
@@ -128,6 +138,7 @@ private:
     bool gotScript = false;
     int module = 0;
     int mMaxRoomId = 0;
+    QElapsedTimer mMapProgressTimer;
     quint8 mVersionMajor = 1;  // 0 to 255
     quint16 mVersionMinor = 0; // 0 to 999 for 3 digit decimal value. Cannot be a quint8 as that only allows x.255 for the decimal
 };

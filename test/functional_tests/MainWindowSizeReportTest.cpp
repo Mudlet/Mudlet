@@ -18,16 +18,18 @@
  ***************************************************************************/
 
 #include <QFileInfo>
+#include <QScopeGuard>
 #include <QSignalSpy>
 #include <QTemporaryDir>
 #include <QtTest/QtTest>
 #include <chrono>
 
-#include "MudletPaths.h"
+#include "MudletApp.h"
 #include "PortableModeTestHelper.h"
 #include "Host.h"
 #include "MudletInstanceCoordinator.h"
 #include "TLuaInterpreter.h"
+#include "TCommandLine.h"
 #include "TDockWidget.h"
 #include "TMainConsole.h"
 #include "TelnetServerStub.h"
@@ -85,6 +87,31 @@ private:
         return (pDock && pDock->widget()) ? pDock->widget()->size() : QSize();
     }
 
+    // What the share logic in TMainConsole reads, so a dock left squeezed says why
+    QString dockState(const QString& name) const
+    {
+        mudlet* window = mudlet::self();
+        TDockWidget* pDock = mpHost->mpConsole->dockWidget(name);
+        if (!pDock) {
+            return qsl("no dock named %1").arg(name);
+        }
+        const Qt::DockWidgetArea area = window->dockWidgetArea(pDock);
+        int docksInArea = 0;
+        for (auto* other : window->findChildren<QDockWidget*>()) {
+            if (other->isVisible() && !other->isFloating() && other->parentWidget() == window && window->dockWidgetArea(other) == area) {
+                ++docksInArea;
+            }
+        }
+        return qsl("dock visible %1, floating %2, area %3, dock height %4, console visible %5, font height %6, visible docks in its area %7")
+                .arg(pDock->isVisible())
+                .arg(pDock->isFloating())
+                .arg(static_cast<int>(area))
+                .arg(pDock->height())
+                .arg(pDock->widget() && pDock->widget()->isVisible())
+                .arg(pDock->fontMetrics().height())
+                .arg(docksInArea);
+    }
+
     int luaInt(const QString& global) const
     {
         lua_State* L = mpHost->mLuaInterpreter.getLuaGlobalState();
@@ -123,7 +150,7 @@ private slots:
         mPort = QString::number(mpServer->serverPort());
         mudlet::start();
         mudlet::self()->setupConfig();
-        QCOMPARE(MudletPaths::getMudletPath(enums::mainPath), qsl("%1/mudlet").arg(mConfigDir.path()));
+        QCOMPARE(MudletApp::getMudletPath(enums::mainPath), qsl("%1/mudlet").arg(mConfigDir.path()));
         mudlet::self()->takeOwnershipOfInstanceCoordinator(std::make_unique<MudletInstanceCoordinator>("MudletInstanceCoordinator"));
         mudlet::self()->init();
         mudlet::self()->setStorePasswordsSecurely(false);
@@ -132,7 +159,7 @@ private slots:
         // makes a main window nobody has sized
         mudlet::self()->resize(1200, 800);
 
-        QDir(MudletPaths::getMudletPath(enums::profileHomePath, mHostname)).removeRecursively();
+        QDir(MudletApp::getMudletPath(enums::profileHomePath, mHostname)).removeRecursively();
 
         QTimer::singleShot(0ms, qApp, [this]() {
             mudlet::self()->startAutoLogin({});
@@ -153,7 +180,7 @@ private slots:
         });
 
         QSignalSpy spy(mudlet::self(), &mudlet::signal_profileLoaded);
-        if (!spy.wait(5000)) {
+        if (!spy.wait(5s)) {
             QFAIL("Profile took too long to load.");
         }
         mpHost = mudlet::self()->getActiveHost();
@@ -162,7 +189,7 @@ private slots:
         }
 
         QSignalSpy spy2(&(mpHost->mTelnet), &cTelnet::signal_connected);
-        if (!spy2.wait(2000)) {
+        if (!spy2.wait(2s)) {
             QFAIL("Could not connect with the host.");
         }
         settle();
@@ -175,7 +202,7 @@ private slots:
         mpHost = nullptr;
         // Null when initTestCase skipped or failed ahead of mudlet::start()
         if (mudlet::self()) {
-            const QString path = MudletPaths::getMudletPath(enums::profileHomePath, mHostname);
+            const QString path = MudletApp::getMudletPath(enums::profileHomePath, mHostname);
             delete mudlet::self();
             QDir(path).removeRecursively();
         }
@@ -221,6 +248,55 @@ private slots:
             resizeWindow(size.width(), size.height());
             QVERIFY2(mpHost->mpConsole->getMainWindowSize() == measuredMainWindowSize(), qPrintable(mismatch(mpHost->mpConsole->getMainWindowSize(), measuredMainWindowSize())));
         }
+    }
+
+    // Qt gives a dock added beside visible ones nothing but its minimum height,
+    // and a user window's console has none
+    void test_aUserWindowDockedBesideAnotherGetsAShareOfTheArea()
+    {
+        const QString first = qsl("mwsrFirstDock");
+        const QString second = qsl("mwsrSecondDock");
+        const auto hideBoth = qScopeGuard([this, first, second]() {
+            runLua(qsl("hideWindow('%1') hideWindow('%2')").arg(first, second));
+            settle();
+        });
+        runLua(qsl("openUserWindow('%1', false)").arg(first));
+        settle();
+        const int alone = dockSize(first).height();
+        QVERIFY2(alone > 100, qPrintable(qsl("the first user window is only %1 high on its own").arg(alone)));
+
+        runLua(qsl("openUserWindow('%1', false)").arg(second));
+        settle();
+        const int firstHeight = dockSize(first).height();
+        const int secondHeight = dockSize(second).height();
+        QVERIFY2(secondHeight > alone / 4, qPrintable(qsl("the second user window is %1 high beside the first's %2 (%3)").arg(secondHeight).arg(firstHeight).arg(dockState(second))));
+        QVERIFY2(firstHeight > alone / 4, qPrintable(qsl("the first user window was squeezed to %1").arg(firstHeight)));
+        QCOMPARE(mpHost->mpConsole->getUserWindowSize(second), dockSize(second));
+    }
+
+    // Geyser hides a window created hidden in the same call that opens it, so the
+    // share has to be taken when it is first shown instead
+    void test_aUserWindowHiddenAsItOpensGetsAShareOfTheAreaWhenShown()
+    {
+        const QString first = qsl("mwsrShownFirstDock");
+        const QString second = qsl("mwsrHiddenSecondDock");
+        const auto hideBoth = qScopeGuard([this, first, second]() {
+            runLua(qsl("hideWindow('%1') hideWindow('%2')").arg(first, second));
+            settle();
+        });
+        runLua(qsl("openUserWindow('%1', false)").arg(first));
+        settle();
+        const int alone = dockSize(first).height();
+        QVERIFY2(alone > 100, qPrintable(qsl("the first user window is only %1 high on its own").arg(alone)));
+
+        runLua(qsl("openUserWindow('%1', false) hideWindow('%1')").arg(second));
+        settle();
+        runLua(qsl("showWindow('%1')").arg(second));
+        settle();
+        const int firstHeight = dockSize(first).height();
+        const int secondHeight = dockSize(second).height();
+        QVERIFY2(secondHeight > alone / 4, qPrintable(qsl("the second user window is %1 high beside the first's %2 (%3)").arg(secondHeight).arg(firstHeight).arg(dockState(second))));
+        QVERIFY2(firstHeight > alone / 4, qPrintable(qsl("the first user window was squeezed to %1").arg(firstHeight)));
     }
 
     // user windows are reported through a cache of their own, which used to keep

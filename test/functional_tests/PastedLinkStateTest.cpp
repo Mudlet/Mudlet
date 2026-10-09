@@ -37,7 +37,7 @@
 #include <QtTest/QtTest>
 #include <chrono>
 
-#include "MudletPaths.h"
+#include "MudletApp.h"
 #include "PortableModeTestHelper.h"
 #include "ProfileTestHelper.h"
 #include "Host.h"
@@ -94,7 +94,7 @@ private slots:
         auto host = TestProfile::create(mHostname, mLocalhost, mPort);
         QVERIFY2(host, "no active host available for the test");
         QSignalSpy connectionSpy(&(host->mTelnet), &cTelnet::signal_connected);
-        QVERIFY2(connectionSpy.wait(2000), "could not connect with the host");
+        QVERIFY2(connectionSpy.wait(2s), "could not connect with the host");
 
         mpHost = HostManager::self()->getHost(mHostname);
         QVERIFY(mpHost);
@@ -152,9 +152,9 @@ private slots:
         QVERIFY2(pTarget->getLinkStore().getLinksConst(ownId).join(QChar::Space).contains(qsl("send('MINE')")), "the target's own link is not the one we think it is");
 
         QVERIFY2(selectLinkRunInMainConsole(), "echoLink() put no link-bearing character in the main console");
-        mpHost->mpConsole->copy();
+        QVERIFY(mpHost->copyToClipboard(qsl("main")));
         QVERIFY(pTarget->moveCursor(0, 0));
-        pTarget->paste();
+        QVERIFY(mpHost->pasteClipboard(targetName));
         qApp->processEvents();
 
         const int pastedId = pastedLinkId(pTarget);
@@ -202,12 +202,12 @@ private slots:
 
         mpHost->mpConsole->P_begin = QPoint(splitColumn - 5, splitLine);
         mpHost->mpConsole->P_end = QPoint(splitColumn + 8, splitLine);
-        mpHost->mpConsole->copy();
+        QVERIFY(mpHost->copyToClipboard(qsl("main")));
 
         auto* pTarget = mpHost->mpConsole->subConsoleWidget(targetName);
         QVERIFY2(pTarget, "the target miniconsole was not created");
         QVERIFY(pTarget->moveCursor(0, 0));
-        pTarget->paste();
+        QVERIFY(mpHost->pasteClipboard(targetName));
         qApp->processEvents();
 
         const auto& pastedLine = pTarget->buffer.buffer.at(0);
@@ -245,7 +245,7 @@ private slots:
         QCOMPARE(miniBuffer.getHoveredLink(), pastedId);
 
         for (int i = 0; i < 200; ++i) {
-            pMini->echo(qsl("filler line %1\n").arg(i));
+            pMini->print(qsl("filler line %1\n").arg(i));
         }
         QVERIFY2(pastedLinkId(pMini) == 0, "the pasted line was not trimmed away, so no cleanup was due");
 
@@ -271,7 +271,7 @@ private slots:
         QVERIFY2(!pConsole->getLinkStore().getLinksConst(id).isEmpty(), "echoLink() did not register the link in the store");
 
         for (int i = 0; i < 200; ++i) {
-            pConsole->echo(qsl("filler line %1\n").arg(i));
+            pConsole->print(qsl("filler line %1\n").arg(i));
         }
 
         QVERIFY2(pConsole->getLinkStore().getLinksConst(id).isEmpty(), "an unreferenced link survived its line being trimmed away, so the store grows for the life of the profile");
@@ -298,9 +298,9 @@ private slots:
         const int sourceReference = mpHost->mpConsole->buffer.mLinkStore.getReference(sourceId).value(0);
         QVERIFY2(sourceReference > 0, "echoLink() given a function registered no Lua reference, so this test covers nothing");
 
-        mpHost->mpConsole->copy();
+        QVERIFY(mpHost->copyToClipboard(qsl("main")));
         QVERIFY(pTarget->moveCursor(0, 0));
-        pTarget->paste();
+        QVERIFY(mpHost->pasteClipboard(targetName));
         qApp->processEvents();
 
         const int pastedId = pastedLinkId(pTarget);
@@ -347,6 +347,54 @@ private slots:
         QVERIFY2(destinationId > 0, "the copied characters carry no link index, so this test covers nothing");
         QVERIFY2(destination.mLinkStore.hasStyling(destinationId), "the copied link lost the styling the source had");
         QVERIFY2(destination.mLinkStore.getStyling(destinationId).isBold, "the copied link's styling did not come across intact");
+    }
+
+    // Text that spans line feeds, with a negative link index and one character
+    // more than it has formatting for
+    void test_appendedLinesKeepEachCharactersFormatting()
+    {
+        TBuffer source(mpHost);
+        const int sourceId = source.mLinkStore.addLinks(QStringList{qsl("send('lines')")}, QStringList{qsl("hint")}, mpHost);
+        QVERIFY(sourceId > 0);
+
+        const TChar red(Qt::red, Qt::black);
+        const TChar green(Qt::green, Qt::black);
+        const TChar linked(Qt::white, Qt::black, TChar::None, sourceId);
+        const TChar unlinked(Qt::blue, Qt::black, TChar::None, -1);
+        const std::vector<TChar> formatting{red, unlinked, TChar(), linked, linked, TChar(), TChar(), green};
+
+        TBuffer destination(mpHost);
+        destination.appendFormatted(qsl("ab\nLK\n\ncd"), formatting, source.mLinkStore);
+
+        QCOMPARE(destination.lineBuffer.mid(0, 5), (QStringList{qsl("ab"), qsl("LK"), QString(), qsl("cd"), QString()}));
+        QCOMPARE(destination.buffer.at(0).size(), std::size_t(2));
+        QCOMPARE(destination.buffer.at(0).at(0).foreground(), QColor(Qt::red));
+        QCOMPARE(destination.buffer.at(0).at(1).foreground(), QColor(Qt::blue));
+        QCOMPARE(destination.buffer.at(0).at(1).linkIndex(), 0);
+        const int destinationId = destination.buffer.at(1).at(0).linkIndex();
+        QVERIFY2(destinationId > 0, "the copied characters carry no link index, so this test covers nothing");
+        QCOMPARE(destination.buffer.at(1).at(1).linkIndex(), destinationId);
+        QCOMPARE(destination.mLinkStore.getLinksConst(destinationId), QStringList{qsl("send('lines')")});
+        QVERIFY(destination.buffer.at(2).empty());
+        QCOMPARE(destination.buffer.at(3).size(), std::size_t(2));
+        QCOMPARE(destination.buffer.at(3).at(0).foreground(), QColor(Qt::green));
+        QCOMPARE(destination.buffer.at(3).at(1).foreground(), TChar().foreground());
+        QCOMPARE(destination.buffer.at(3).at(1).linkIndex(), 0);
+    }
+
+    // The formatting runs out before the second line even starts
+    void test_appendedLinesPastTheFormattingGetTheDefault()
+    {
+        TBuffer source(mpHost);
+        TBuffer destination(mpHost);
+        destination.appendFormatted(qsl("ab\ncd"), std::vector<TChar>{TChar(Qt::red, Qt::black)}, source.mLinkStore);
+
+        QCOMPARE(destination.lineBuffer.mid(0, 2), (QStringList{qsl("ab"), qsl("cd")}));
+        QCOMPARE(destination.buffer.at(0).at(0).foreground(), QColor(Qt::red));
+        QCOMPARE(destination.buffer.at(0).at(1).foreground(), TChar().foreground());
+        QCOMPARE(destination.buffer.at(1).size(), std::size_t(2));
+        QCOMPARE(destination.buffer.at(1).at(0).foreground(), TChar().foreground());
+        QCOMPARE(destination.buffer.at(1).at(1).foreground(), TChar().foreground());
     }
 
 private:
@@ -403,7 +451,7 @@ private:
         return false;
     }
 
-    // TConsole::paste() only takes TBuffer::paste()'s verbatim path when the
+    // Host::pasteClipboard() only takes TBuffer::paste()'s verbatim path when the
     // cursor is above the last line - an empty target goes through appendBuffer()
     // instead, which re-registers the id and so is not the path under test.
     void pasteLinkIntoMiniconsole() const
@@ -416,18 +464,18 @@ private:
         qApp->processEvents();
 
         QVERIFY2(selectLinkRunInMainConsole(), "echoLink() put no link-bearing character in the main console");
-        mpHost->mpConsole->copy();
+        QVERIFY(mpHost->copyToClipboard(qsl("main")));
 
         auto* pMini = miniconsole();
         QVERIFY(pMini);
         QVERIFY(pMini->moveCursor(0, 0));
-        pMini->paste();
+        QVERIFY(mpHost->pasteClipboard(mMiniName));
         qApp->processEvents();
     }
 
     void deleteProfileDirectory(const QString& profileName)
     {
-        QDir dir(MudletPaths::getMudletPath(enums::profileHomePath, profileName));
+        QDir dir(MudletApp::getMudletPath(enums::profileHomePath, profileName));
         if (dir.exists()) {
             dir.removeRecursively();
         }

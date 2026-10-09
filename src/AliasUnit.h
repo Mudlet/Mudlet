@@ -27,6 +27,7 @@
 #include "utils.h"
 
 #include <QCoreApplication>
+#include <QHash>
 #include <QList>
 #include <QMap>
 #include <QMultiMap>
@@ -43,7 +44,7 @@ class TAlias;
 
 class AliasUnit
 {
-    Q_DECLARE_TR_FUNCTIONS(AliasUnit) // Needed so we can use tr() even though AliasUnit is NOT derived from QObject
+    Q_DECLARE_TR_FUNCTIONS(AliasUnit)
 
     friend class XMLexport;
     friend class XMLimport;
@@ -94,11 +95,16 @@ private:
     void addAliasRootNode(TAlias* pT, int parentPosition = -1, int childPosition = -1, bool moveAlias = false);
     void addAlias(TAlias* pT);
     void removeAliasRootNode(TAlias* pT);
+    void listRootNode(TAlias* pT, std::list<TAlias*>::iterator before);
+    void unlistRootNode(TAlias* pT);
     void removeAlias(TAlias*);
 
     QPointer<Host> mpHost;
     QMap<int, TAlias*> mAliasMap;
     std::list<TAlias*> mAliasRootNodeList;
+    // Where each root node sits in mAliasRootNodeList: std::list::remove() walks the whole list,
+    // which made freeing a batch of temporary aliases quadratic
+    QHash<TAlias*, std::list<TAlias*>::iterator> mRootNodePositions;
     int mMaxID = 0;
     bool mModuleMember = false;
     int statsItemsTotal = 0;
@@ -106,6 +112,11 @@ private:
     int statsActiveItems = 0;
     // Counter for nested processing; cleanup deferred until 0
     int mProcessingDepth = 0;
+    // Set once scmMaxProcessingDepth is reached, cleared when the expansion that started the
+    // chain returns to the outermost pass, so other aliases on that command can still expand.
+    // An alias that expands into itself twice branches at every level, so refusing only the
+    // expansions at the limit still leaves 2^50 of them to run below it.
+    bool mRunawayExpansionStopped = false;
 };
 
 #endif // MUDLET_ALIASUNIT_H

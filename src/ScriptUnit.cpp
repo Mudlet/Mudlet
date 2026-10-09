@@ -27,11 +27,9 @@
 #include "Host.h"
 #include "TScript.h"
 #include "Tree.h"
-#include "dlgTriggerEditor.h"
 #include "utils.h"
 
 #include <QLatin1String>
-#include <QMapIterator>
 #include <QSet>
 #include <QStringList>
 
@@ -122,8 +120,6 @@ void ScriptUnit::doCleanup()
         return;
     }
 
-    // Called once per unit for every line of game text, and next to never has
-    // anything queued, so skip setting up the flush below.
     if (!hasPendingDeletes()) {
         return;
     }
@@ -274,10 +270,8 @@ void ScriptUnit::removeScript(TScript* pT)
     if (!pT) {
         return;
     }
-    QMapIterator<QString, QList<TScript*>> it(mpHost->mEventHandlerMap);
-    while (it.hasNext()) {
-        it.next();
-        mpHost->mEventHandlerMap[it.key()].removeAll(pT);
+    for (auto& handlers : mpHost->mEventHandlerMap) {
+        handlers.removeAll(pT);
     }
     mScriptMap.remove(pT->getID());
 }
@@ -295,9 +289,7 @@ bool ScriptUnit::enableScript(const QString& name)
         if (script->getName() == name) {
             script->setIsActive(true);
             found = true;
-            if (mpHost->mpEditorDialog) {
-                mpHost->mpEditorDialog->refreshScriptIcon(script->getID());
-            }
+            emit mpHost->signal_scriptToggled(script->getID());
         }
     }
     return found;
@@ -310,9 +302,7 @@ bool ScriptUnit::disableScript(const QString& name)
         if (script->getName() == name) {
             script->setIsActive(false);
             found = true;
-            if (mpHost->mpEditorDialog) {
-                mpHost->mpEditorDialog->refreshScriptIcon(script->getID());
-            }
+            emit mpHost->signal_scriptToggled(script->getID());
         }
     }
     return found;
@@ -336,9 +326,7 @@ void ScriptUnit::compileAll(bool saveLoadingError)
     // before returning to the event loop, where the 0ms save Host::uninstallPackage()
     // queues would otherwise serialize the still-live "uninstalled" scripts back in:
     doCleanup();
-    if (mpHost->mpEditorDialog) {
-        mpHost->mpEditorDialog->doCleanReset();
-    }
+    emit mpHost->signal_editorCleanResetRequested();
 }
 
 std::vector<int> ScriptUnit::findItems(const QString& name, const bool exactMatch, const bool caseSensitive)

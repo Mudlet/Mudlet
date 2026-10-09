@@ -30,7 +30,7 @@
 #include <QtNetwork/QTcpSocket>
 #include <limits>
 
-#include "MudletPaths.h"
+#include "MudletApp.h"
 #include "PortableModeTestHelper.h"
 #include "ProfileTestHelper.h"
 #include "Host.h"
@@ -41,6 +41,8 @@
 
 
 #include "GroupedTest.h"
+
+using namespace std::chrono_literals;
 
 // A game that says nothing and only counts who reaches it. Bound to 127.0.0.1 by name rather
 // than to every interface, so the test can name a loopback address that is not this one and know
@@ -125,7 +127,7 @@ private slots:
         mPort = mpServer->serverPort();
         mudlet::start();
         mudlet::self()->setupConfig();
-        QCOMPARE(MudletPaths::getMudletPath(enums::mainPath), qsl("%1/mudlet").arg(mConfigDir.path()));
+        QCOMPARE(MudletApp::getMudletPath(enums::mainPath), qsl("%1/mudlet").arg(mConfigDir.path()));
         mudlet::self()->takeOwnershipOfInstanceCoordinator(std::make_unique<MudletInstanceCoordinator>("MudletInstanceCoordinator"));
         mudlet::self()->init();
         mudlet::self()->setStorePasswordsSecurely(false);
@@ -136,8 +138,8 @@ private slots:
     {
         delete mpServer;
         mpServer = nullptr;
-        deleteProfileDirectory(mHostname);
         delete mudlet::self();
+        deleteProfileDirectory(mHostname);
     }
 
     // The event a superseded connect leaves behind: its lookup is answered after a later connect
@@ -172,7 +174,7 @@ private slots:
 
         const int before = mpServer->connectionCount();
         host->mTelnet.slot_socketHostFound(supersededLookup());
-        QTest::qWait(2000);
+        QTest::qWait(2s);
         QCOMPARE(mpServer->connectionCount(), before);
         QCOMPARE(host->mTelnet.getConnectionState(), QAbstractSocket::UnconnectedState);
     }
@@ -188,7 +190,7 @@ private slots:
         const int before = mpServer->connectionCount();
         host->mTelnet.connectIt(mLocalhost, mPort);
         host->mTelnet.disconnectIt();
-        QTest::qWait(2000);
+        QTest::qWait(2s);
         QCOMPARE(mpServer->connectionCount(), before);
     }
 
@@ -253,7 +255,7 @@ private:
                 [&]() {
                     return !disconnected.isEmpty();
                 },
-                8000);
+                8s);
         if (!done) {
             qWarning("the profile never disconnected from the stub");
         }
@@ -273,7 +275,7 @@ private:
                 [&]() {
                     return mpServer->connectionCount() > before && !connected.isEmpty();
                 },
-                15000);
+                15s);
         if (!made) {
             qWarning("the profile did not connect to the stub");
         }
@@ -290,7 +292,7 @@ private:
             return nullptr;
         }
         QSignalSpy connected(&(host->mTelnet), &cTelnet::signal_connected);
-        if (!connected.wait(5000)) {
+        if (!connected.wait(5s)) {
             qWarning("could not connect to the stub");
             return nullptr;
         }
@@ -300,10 +302,7 @@ private:
 
     void deleteProfileDirectory(const QString& profileName)
     {
-        QDir dir(MudletPaths::getMudletPath(enums::profileHomePath, profileName));
-        if (dir.exists()) {
-            dir.removeRecursively();
-        }
+        TestProfile::removeProfileDirectory(profileName);
     }
 };
 

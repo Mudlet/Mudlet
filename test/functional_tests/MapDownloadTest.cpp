@@ -44,9 +44,8 @@
  *
  * A real profile rather than a bare Host, because the interesting part of the
  * chain is what happens after the bytes land: the reply handler writes the file,
- * parses it, and reports every outcome to the console through Host::postMessage()
- * - and hands a non-XML file to TMainConsole::loadMap(). A Host with no console
- * would stack those messages up unread and crash on that last call. It is also
+ * parses it, and reports every outcome to the console through Host::postMessage().
+ * A Host with no console would stack those messages up unread. It is also
  * the only way to get the frontend wiring at all: those connects are made in
  * mudlet::addConsoleForNewHost(), so a profile built through HostManager::addHost
  * has none of them.
@@ -72,7 +71,7 @@
 
 #include "Host.h"
 #include "MudletInstanceCoordinator.h"
-#include "MudletPaths.h"
+#include "MudletApp.h"
 #include "ProfileTestHelper.h"
 #include "TMainConsole.h"
 #include "TMap.h"
@@ -86,6 +85,8 @@
 #include "GroupedTest.h"
 
 #include <chrono>
+
+using namespace std::chrono_literals;
 
 namespace {
 
@@ -281,7 +282,7 @@ private:
     // is 64 slices, well over a second of an answer that reports several times
     // a second.
     static constexpr qsizetype scmSliceSize = 4096;
-    static constexpr auto scmSliceInterval = std::chrono::milliseconds(20);
+    static constexpr std::chrono::milliseconds scmSliceInterval = 20ms;
 
     QTcpServer mServer;
     QHash<QTcpSocket*, QByteArray> mBuffers;
@@ -315,7 +316,7 @@ private:
 
     void deleteProfileDirectory() const
     {
-        QDir dir(MudletPaths::getMudletPath(enums::profileHomePath, mProfileName));
+        QDir dir(MudletApp::getMudletPath(enums::profileHomePath, mProfileName));
         if (dir.exists()) {
             dir.removeRecursively();
         }
@@ -349,7 +350,7 @@ private:
         TMap* pMap = mpHost->mpMap.data();
         QSignalSpy closeSpy(pMap, &TMap::signal_mapProgressClose);
         pMap->downloadMap(remoteUrl, localFileName);
-        return closeSpy.count() == 1 || closeSpy.wait(15000);
+        return closeSpy.count() == 1 || closeSpy.wait(15s);
     }
 
     void watchMapDownloadEvent() const
@@ -580,7 +581,7 @@ private slots:
 
         mudlet::start();
         mudlet::self()->setupConfig();
-        QCOMPARE(MudletPaths::getMudletPath(enums::mainPath), qsl("%1/mudlet").arg(mConfigDir.path()));
+        QCOMPARE(MudletApp::getMudletPath(enums::mainPath), qsl("%1/mudlet").arg(mConfigDir.path()));
         mudlet::self()->takeOwnershipOfInstanceCoordinator(std::make_unique<MudletInstanceCoordinator>("MudletInstanceCoordinator"));
         mudlet::self()->init();
         mudlet::self()->setStorePasswordsSecurely(false);
@@ -589,7 +590,7 @@ private slots:
         mpHost = TestProfile::create(mProfileName, mLocalhost, QString::number(mpTelnetServer->serverPort()));
         QVERIFY2(mpHost, "the test profile could not be created");
         QSignalSpy connectionSpy(&(mpHost->mTelnet), &cTelnet::signal_connected);
-        QVERIFY2(connectionSpy.count() == 1 || connectionSpy.wait(5000), "the test profile never connected to the stub game");
+        QVERIFY2(connectionSpy.count() == 1 || connectionSpy.wait(5s), "the test profile never connected to the stub game");
         QVERIFY(mpHost->mpConsole);
         // No mapper widget yet, so every download below takes the standalone
         // progress path the signals under test belong to, until the tests at the
@@ -672,7 +673,7 @@ private slots:
 
         // A download with no local name of its own and an URL ending in "xml"
         // lands on the profile's map.xml, inside this test's own config root:
-        const QString stored = MudletPaths::getMudletPath(enums::profileXmlMapPathFileName, mProfileName);
+        const QString stored = MudletApp::getMudletPath(enums::profileXmlMapPathFileName, mProfileName);
         QFile file(stored);
         QVERIFY2(file.open(QIODevice::ReadOnly), qPrintable(qsl("the downloaded map was not saved to %1").arg(stored)));
         QCOMPARE(file.readAll(), scmMapXml);
@@ -711,7 +712,7 @@ private slots:
         QVERIFY2(startSpy.at(0).at(1).toString().contains(mProfileName), "the progress label does not name the profile the map is for");
         QCOMPARE(disableCancelSpy.count(), 1);
 
-        const QString stored = MudletPaths::getMudletPath(enums::profileXmlMapPathFileName, mProfileName);
+        const QString stored = MudletApp::getMudletPath(enums::profileXmlMapPathFileName, mProfileName);
         QFile file(stored);
         QVERIFY2(file.open(QIODevice::ReadOnly), qPrintable(qsl("the downloaded map was not saved to %1").arg(stored)));
         QCOMPARE(file.readAll(), scmMapXml);
@@ -797,7 +798,7 @@ private slots:
     void test_httpErrorIsReportedAndLeavesNothingBehind()
     {
         TMap* pMap = mpHost->mpMap.data();
-        const QString stored = MudletPaths::getMudletPath(enums::profileXmlMapPathFileName, mProfileName);
+        const QString stored = MudletApp::getMudletPath(enums::profileXmlMapPathFileName, mProfileName);
         QFile::remove(stored);
 
         QVERIFY2(runDownload(mpMapServer->url(qsl("/nosuchmap.xml"))), "the failed map download never finished");
@@ -823,7 +824,7 @@ private slots:
                          [this]() {
                              return !mpMapServer->requestedPaths().isEmpty();
                          },
-                         10000),
+                         10s),
                  "the first download never reached the server");
 
         pMap->downloadMap(mpMapServer->url(qsl("/map.xml")));
@@ -908,7 +909,7 @@ private slots:
                          [this]() {
                              return !mpMapServer->requestedPaths().isEmpty();
                          },
-                         10000),
+                         10s),
                  "the download never reached the server");
 
         pMap->slot_downloadCancel();
@@ -928,7 +929,7 @@ private slots:
     void test_cancelLeavesTheLoadedMapAndItsFileAlone()
     {
         TMap* pMap = mpHost->mpMap.data();
-        const QString stored = MudletPaths::getMudletPath(enums::profileXmlMapPathFileName, mProfileName);
+        const QString stored = MudletApp::getMudletPath(enums::profileXmlMapPathFileName, mProfileName);
         QVERIFY2(runDownload(mpMapServer->url(qsl("/map.xml"))), "the download that gives this test a map to keep never finished");
         QCOMPARE(pMap->mpRoomDB->getRoomMap().size(), 2);
 
@@ -939,7 +940,7 @@ private slots:
                          [this]() {
                              return mpMapServer->requestedPaths().contains(qsl("/stalled.xml"));
                          },
-                         10000),
+                         10s),
                  "the download to be canceled never reached the server");
 
         pMap->slot_downloadCancel();
@@ -957,7 +958,7 @@ private slots:
         TMap* pMap = mpHost->mpMap.data();
         // Inside the profile's own directory but below a path component that is
         // not there, so QSaveFile cannot open it:
-        const QString unwritable = qsl("%1/no-such-directory/map.xml").arg(MudletPaths::getMudletPath(enums::profileHomePath, mProfileName));
+        const QString unwritable = qsl("%1/no-such-directory/map.xml").arg(MudletApp::getMudletPath(enums::profileHomePath, mProfileName));
 
         QVERIFY2(runDownload(mpMapServer->url(qsl("/map.xml")), unwritable), "the map download never finished");
 
@@ -1206,7 +1207,7 @@ private slots:
                          [this]() {
                              return !mpMapServer->requestedPaths().isEmpty();
                          },
-                         10000),
+                         10s),
                  "the download never reached the server");
 
         auto* dialog = consoleProgressDialog();
@@ -1224,12 +1225,12 @@ private slots:
 
     // A destination file name that does not end in "xml" - which an URL not
     // ending in "xml" is what gives it by default - is a binary map file, and
-    // goes to TMainConsole::loadMap() rather than the XML reader.
+    // goes to Host::loadMapFile() rather than the XML reader.
     //
     // After every standalone-progress test on purpose: loadMap() creates the
     // mapper widget, and from then on TMap puts its progress on that widget
-    // instead of emitting the signals those tests watch. A profile's mapper
-    // cannot be destroyed again, so this cannot be undone within the process -
+    // instead of emitting the signals those tests watch. Nothing in this file
+    // undoes mapper creation, so this cannot be undone within the process -
     // which is what the two mapper tests below rely on.
     void test_downloadedBinaryMapIsLoadedThroughTheConsole()
     {
@@ -1253,7 +1254,7 @@ private slots:
 
         // A non-XML download is stored under the profile's map directory, not as
         // its map.xml:
-        const QString stored = MudletPaths::getMudletPath(enums::profileMapPathFileName, mProfileName, qsl("map.dat"));
+        const QString stored = MudletApp::getMudletPath(enums::profileMapPathFileName, mProfileName, qsl("map.dat"));
         QVERIFY2(QFileInfo::exists(stored), qPrintable(qsl("the downloaded map was not saved to %1").arg(stored)));
 
         TRoom* pRoom = pMap->mpRoomDB->getRoom(7);
@@ -1280,8 +1281,8 @@ private slots:
         TMap* pMap = mpHost->mpMap.data();
         pMap->mapClear();
         mpMapServer->serve(qsl("/MAP.XML"), scmMapXml);
-        const QString xmlDestination = MudletPaths::getMudletPath(enums::profileXmlMapPathFileName, mProfileName);
-        const QString binaryDestination = MudletPaths::getMudletPath(enums::profileMapPathFileName, mProfileName, qsl("map.dat"));
+        const QString xmlDestination = MudletApp::getMudletPath(enums::profileXmlMapPathFileName, mProfileName);
+        const QString binaryDestination = MudletApp::getMudletPath(enums::profileMapPathFileName, mProfileName, qsl("map.dat"));
         QFile::remove(xmlDestination);
         QFile::remove(binaryDestination);
 
@@ -1293,7 +1294,7 @@ private slots:
                 [pMap]() {
                     return !pMap->hasActiveTransferProgress();
                 },
-                15000);
+                15s);
 
         // Which file it landed on first: naming the destination the download
         // was given says what went wrong, where a download that did not finish
@@ -1327,14 +1328,14 @@ private slots:
         const QString destination = qsl("%1/map.dat").arg(saveDir.path());
         // A format version this Mudlet cannot write, which is what Lua's
         // saveMap(fileName, version) hands straight through. A destination that
-        // cannot be opened is no use for this: TMainConsole::saveMap() returns
+        // cannot be opened is no use for this: Host::saveMapFile() returns
         // from that one before it ever reaches the flag.
-        QVERIFY2(!mpHost->mpConsole->saveMap(destination, 9999), "the map save was supposed to fail");
+        QVERIFY2(!mpHost->saveMapFile(destination, 9999), "the map save was supposed to fail");
         QVERIFY2(!QFileInfo::exists(destination), "the failed save wrote a map file anyway");
         QVERIFY(pMap->hasSaveError());
         QVERIFY2(!pMapper->toolButton_saveWarning->isHidden(), "a failed map save left the mapper's warning indicator down");
 
-        QVERIFY2(mpHost->mpConsole->saveMap(destination), "the map save with a supported format version failed");
+        QVERIFY2(mpHost->saveMapFile(destination), "the map save with a supported format version failed");
         QVERIFY(!pMap->hasSaveError());
         QVERIFY2(pMapper->toolButton_saveWarning->isHidden(), "a successful map save left the mapper's warning indicator up");
     }

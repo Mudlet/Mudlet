@@ -49,7 +49,7 @@
 #include <chrono>
 #include <zip.h>
 
-#include "MudletPaths.h"
+#include "MudletApp.h"
 #include "PortableModeTestHelper.h"
 #include "ProfileTestHelper.h"
 #include "Host.h"
@@ -81,7 +81,7 @@ private:
 
     static void deleteProfileDirectory(const QString& profileName)
     {
-        QDir dir(MudletPaths::getMudletPath(enums::profileHomePath, profileName));
+        QDir dir(MudletApp::getMudletPath(enums::profileHomePath, profileName));
         if (dir.exists()) {
             dir.removeRecursively();
         }
@@ -89,14 +89,14 @@ private:
 
     static QStringList savedProfileFiles(const QString& profileName)
     {
-        return QDir(MudletPaths::getMudletPath(enums::profileXmlFilesPath, profileName)).entryList(QStringList{qsl("*.xml")}, QDir::Files);
+        return QDir(MudletApp::getMudletPath(enums::profileXmlFilesPath, profileName)).entryList(QStringList{qsl("*.xml")}, QDir::Files);
     }
 
     // Whether needle appears in the profile that was saved last - what actually
     // landed on disk, rather than what a save signal says was attempted.
     static bool lastSavedProfileContains(const QString& profileName, const QString& needle)
     {
-        const QDir directory(MudletPaths::getMudletPath(enums::profileXmlFilesPath, profileName));
+        const QDir directory(MudletApp::getMudletPath(enums::profileXmlFilesPath, profileName));
         const QStringList saved = directory.entryList(QStringList{qsl("*.xml")}, QDir::Files, QDir::Name);
         if (saved.isEmpty()) {
             return false;
@@ -152,7 +152,8 @@ private:
 
     // ...and one that installs rather than being refused: an archive is only a
     // package if it holds a Mudlet package XML, empty though this one's units are.
-    static bool writeInstallableArchive(const QString& path, const QString& packageName)
+    // paddingBytes adds an uncompressed filler entry, to make the archive file at least that large.
+    static bool writeInstallableArchive(const QString& path, const QString& packageName, const qint64 paddingBytes = 0)
     {
         static const char packageXml[] = "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n"
                                          "<!DOCTYPE MudletPackage>\n"
@@ -160,7 +161,32 @@ private:
                                          "<TriggerPackage /><TimerPackage /><AliasPackage /><ActionPackage />\n"
                                          "<ScriptPackage /><KeyPackage /><VariablePackage><HiddenVariables /></VariablePackage>\n"
                                          "</MudletPackage>\n";
-        return writeArchive(path, qsl("%1.xml").arg(packageName), QByteArray(packageXml, sizeof(packageXml) - 1));
+        if (paddingBytes <= 0) {
+            return writeArchive(path, qsl("%1.xml").arg(packageName), QByteArray(packageXml, sizeof(packageXml) - 1));
+        }
+        int errorCode = 0;
+        zip* archive = zip_open(path.toUtf8().constData(), ZIP_CREATE | ZIP_TRUNCATE, &errorCode);
+        if (!archive) {
+            return false;
+        }
+        zip_source* xmlSource = zip_source_buffer(archive, packageXml, sizeof(packageXml) - 1, 0);
+        if (!xmlSource || zip_file_add(archive, qsl("%1.xml").arg(packageName).toUtf8().constData(), xmlSource, ZIP_FL_ENC_UTF_8) < 0) {
+            zip_source_free(xmlSource);
+            zip_discard(archive);
+            return false;
+        }
+        // zip_source_buffer() does not copy, so this must outlive zip_close()
+        const QByteArray padding(paddingBytes, '\0');
+        zip_source* paddingSource = zip_source_buffer(archive, padding.constData(), static_cast<zip_uint64_t>(padding.size()), 0);
+        const zip_int64_t index = paddingSource ? zip_file_add(archive, "padding.bin", paddingSource, ZIP_FL_ENC_UTF_8) : -1;
+        if (index < 0 || zip_set_file_compression(archive, static_cast<zip_uint64_t>(index), ZIP_CM_STORE, 0) < 0) {
+            if (index < 0) {
+                zip_source_free(paddingSource);
+            }
+            zip_discard(archive);
+            return false;
+        }
+        return zip_close(archive) == 0;
     }
 
     // ...and one that both installs and renames itself, which is what makes an
@@ -191,7 +217,7 @@ private:
         return zip_close(archive) == 0;
     }
 
-    QString profileFilePath(const QString& relativePath) const { return qsl("%1/%2").arg(MudletPaths::getMudletPath(enums::profileHomePath, mProfileName), relativePath); }
+    QString profileFilePath(const QString& relativePath) const { return qsl("%1/%2").arg(MudletApp::getMudletPath(enums::profileHomePath, mProfileName), relativePath); }
 
 private slots:
     void initTestCase()
@@ -244,7 +270,7 @@ private slots:
         uninstallPackageOwingASave(qsl("uninstall-save-deferred"));
         QCOMPARE(saveSpy.count(), 0); // the point of the deferral: not saved on the spot
 
-        QTRY_VERIFY_WITH_TIMEOUT(saveSpy.count() >= 1, 5000);
+        QTRY_VERIFY_WITH_TIMEOUT(saveSpy.count() >= 1, 5s);
         mpHost->waitForProfileSave();
     }
 
@@ -261,9 +287,60 @@ private slots:
         QVERIFY(mpHost->uninstallPackage(qsl("uninstall-save-batch-two"), enums::PackageModuleType::Package));
         QVERIFY(mpHost->uninstallPackage(qsl("uninstall-save-batch-three"), enums::PackageModuleType::Package));
 
-        QTRY_VERIFY_WITH_TIMEOUT(saveSpy.count() >= 1, 5000);
+        QTRY_VERIFY_WITH_TIMEOUT(saveSpy.count() >= 1, 5s);
         mpHost->waitForProfileSave();
         QCOMPARE(saveSpy.count(), 1);
+    }
+
+    // ...and so does a batch of installs. One that saved on the spot left that
+    // save in flight, which put the next install off until it had finished, so
+    // the Package Manager's multi-file install queued behind a save per package.
+    // Its installs are not quiet, and an archive large enough to show the
+    // unpacking dialog has it pump the event loop the save owed by the install
+    // before it is waiting in, so that case's archives are padded past the size.
+    void test_aBatchOfInstallsOwesOneSave_data()
+    {
+        QTest::addColumn<bool>("quiet");
+        QTest::newRow("from a script") << true;
+        QTest::newRow("from the Package Manager") << false;
+    }
+
+    void test_aBatchOfInstallsOwesOneSave()
+    {
+        QFETCH(bool, quiet);
+        QTemporaryDir archiveDir;
+        QVERIFY2(archiveDir.isValid(), "Could not create a temporary directory for the test archives");
+        const QStringList packageNames{qsl("install-save-batch-one"), qsl("install-save-batch-two"), qsl("install-save-batch-three")};
+        for (const auto& packageName : packageNames) {
+            QVERIFY2(writeInstallableArchive(archiveDir.filePath(qsl("%1.mpackage").arg(packageName)), packageName, quiet ? 0 : Host::scmArchiveSizeWorthAnUnpackingDialog),
+                     "Could not write a test archive");
+        }
+
+        mpHost->waitForProfileSave();
+        QSignalSpy saveSpy(mpHost, &Host::profileSaveStarted);
+        QSignalSpy dialogSpy(mpHost, &Host::signal_showUnpackingProgress);
+        // no pumping in between, as in the Package Manager's loop
+        for (const auto& packageName : packageNames) {
+            auto [ok, message] = mpHost->installPackage(archiveDir.filePath(qsl("%1.mpackage").arg(packageName)), enums::PackageModuleType::Package, quiet);
+            QVERIFY2(ok, qPrintable(message));
+            QVERIFY2(mpHost->mInstalledPackages.contains(packageName), qPrintable(qsl("%1 was put off behind a save rather than installed").arg(packageName)));
+        }
+        QCOMPARE(dialogSpy.count(), quiet ? 0 : packageNames.size());
+        QVERIFY2(mpHost->hasPendingProfileSave(), "The installs left the profile no save to do");
+        QVERIFY2(saveSpy.isEmpty(), "A save started partway through the batch");
+
+        QTRY_VERIFY_WITH_TIMEOUT(saveSpy.count() >= 1, 5s);
+        mpHost->waitForProfileSave();
+        QCOMPARE(saveSpy.count(), 1);
+        for (const auto& packageName : packageNames) {
+            QVERIFY2(lastSavedProfileContains(mProfileName, qsl("<string>%1</string>").arg(packageName)), qPrintable(qsl("The saved profile is missing %1").arg(packageName)));
+        }
+
+        for (const auto& packageName : packageNames) {
+            QVERIFY2(mpHost->uninstallPackage(packageName, enums::PackageModuleType::Package), "A package could not be uninstalled");
+        }
+        QTRY_VERIFY_WITH_TIMEOUT(!mpHost->hasPendingProfileSave(), 5s);
+        mpHost->waitForProfileSave();
     }
 
     // Refusing an archive that installed nothing takes the folder it unpacked
@@ -278,7 +355,7 @@ private slots:
         QVERIFY2(writeConfigOnlyArchive(archivePath, qsl("..")), "Could not write the test archive");
 
         mpHost->waitForProfileSave(); // an install during a save is postponed and answered with a bare true
-        const QString profileHome = MudletPaths::getMudletPath(enums::profileHomePath, mProfileName);
+        const QString profileHome = MudletApp::getMudletPath(enums::profileHomePath, mProfileName);
         const QString profilesDirectory = QFileInfo(profileHome).absolutePath();
 
         auto [ok, message] = mpHost->installPackage(archivePath, enums::PackageModuleType::Package, true);
@@ -325,7 +402,7 @@ private slots:
 
     // The Package Manager's repository install deletes each archive as soon as
     // installPackage() returns (dlgPackageManager::slot_installPackageFromRepository), and
-    // its first pass leaves a save in flight. During a save an uninstall is refused
+    // a save can be in flight between its passes. During a save an uninstall is refused
     // outright and an install is put off, so a second pass that updates an existing
     // package would keep the old copy and then wait on a file already deleted. This
     // replays the loop's order for two packages, the second of them an update.
@@ -352,7 +429,9 @@ private slots:
         auto [first, firstMessage] = mpHost->installPackage(firstPath, enums::PackageModuleType::Package, true);
         QVERIFY2(first, qPrintable(firstMessage));
         QVERIFY2(QFile::remove(firstPath), "Could not delete the first archive the way the loop does");
-        QVERIFY2(mpHost->currentlySavingProfile(), "SETUP: the first pass left no save for the second to run into");
+        // The first pass only owes a save, so stand in for one that is running anyway
+        mpHost->saveProfile();
+        QVERIFY2(mpHost->currentlySavingProfile(), "SETUP: there is no save in flight for the second pass to run into");
 
         // ...and its second pass, which is the one at risk.
         mpHost->waitForProfileSave();
@@ -362,7 +441,7 @@ private slots:
         QVERIFY2(QFile::remove(secondPath), "Could not delete the second archive the way the loop does");
 
         // Long enough that an install merely waiting its turn would have had it.
-        QTest::qWait(1000);
+        QTest::qWait(1s);
         QVERIFY2(mpHost->mInstalledPackages.contains(secondName), "The update was left waiting on an archive the repository loop had already deleted");
 
         mpHost->waitForProfileSave();
@@ -409,7 +488,7 @@ private slots:
             }
         });
 
-        QTRY_VERIFY_WITH_TIMEOUT(mpHost->mInstalledPackages.contains(packageName), 10000);
+        QTRY_VERIFY_WITH_TIMEOUT(mpHost->mInstalledPackages.contains(packageName), 10s);
         QVERIFY2(announcements > 0, "SETUP: no save was announced, so the observer never ran");
         QVERIFY2(!installedFromInsideTheAnnouncement, "The put-off install ran from inside the profileSaveFinished emission that released it");
 

@@ -71,7 +71,9 @@ MUDLET_FUZZ=1 MUDLET_FUZZ_SEED=7 .claude/scripts/run-lua-tests.sh build/src/mudl
 That runner is Linux-only (`xvfb-run`, GNU `timeout`). On macOS set the same environment
 by hand and launch the bundle's binary
 (`build-macos-debug-ubsan/src/mudlet.app/Contents/MacOS/mudlet`) windowed or with
-`-platform offscreen`; `src/mudlet-lua/tests/README.md` carries the per-platform busted
+`-platform offscreen` - the binary rather than `open build/src/mudlet.app`, because the
+sanitizer environment has to reach the process, and the speech backend that makes launching
+from a shell a problem elsewhere is not exercised here; `src/mudlet-lua/tests/README.md` carries the per-platform busted
 setup and the isolated-config-root invocation.
 
 Calibration: by 2026-08 the telnet generator had run ~48k feeds and ~19k compiled patterns

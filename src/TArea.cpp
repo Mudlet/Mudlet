@@ -26,7 +26,6 @@
 
 
 #include "Host.h"
-#include "T2DMap.h"
 #include "TRoomDB.h"
 
 #include <QBuffer>
@@ -54,7 +53,7 @@ static const int kPixmapDataLineSize = 64;
 TArea::TArea(TMap* pMap, TRoomDB* pRDB)
 : mpRoomDB(pRDB)
 , mpMap(pMap)
-, mLast2DMapZoom(T2DMap::csmDefaultXYZoom)
+, mLast2DMapZoom(TMap::scmDefaultXYZoom)
 {
 }
 
@@ -104,15 +103,16 @@ QMap<int, QMap<int, QMultiMap<int, int>>> TArea::koordinatenSystem()
 
 QList<int> TArea::getRoomsByPosition(int x, int y, int z)
 {
+    // The grid index already files this area's rooms by cell, so this reads one
+    // cell rather than every room in the area - scripts that build maps ask
+    // about the neighbouring cells of each new room. A room deleted out from
+    // under its area can leave an entry behind until the next calcSpan(), so
+    // each one is checked against the room itself:
     QList<int> dL;
-    QSetIterator<int> itAreaRoom(rooms);
-    while (itAreaRoom.hasNext()) {
-        const int roomId = itAreaRoom.next();
-        TRoom* pR = mpRoomDB->getRoom(roomId);
-        if (pR) {
-            if (pR->x() == x && pR->y() == y && pR->z() == z) {
-                dL.push_back(roomId);
-            }
+    for (const int roomId : mGridIndex.roomsAt(z, x, y)) {
+        const TRoom* pR = mpRoomDB->getRoom(roomId);
+        if (pR && rooms.contains(roomId) && pR->x() == x && pR->y() == y && pR->z() == z) {
+            dL.push_back(roomId);
         }
     }
     // Only used by TLuaInterpreter::getRoomsByPosition(), so might as well sort
@@ -365,8 +365,7 @@ void TArea::addRoom(int id)
             if (mSpanIndex.addRoom(pR->x(), -1 * pR->y(), pR->z())) {
                 publishSpanForZ(pR->z());
             }
-            // Rooms of this area with an exit leading to the new one were
-            // measuring that exit against another area until now:
+            // Rooms here with exits to the new room were treating it as another area's:
             updateLodExitRoomAndEntrances(id);
         } else {
             qDebug() << "TArea::addRoom(" << id << ") No creation! room already exists";
@@ -377,13 +376,31 @@ void TArea::addRoom(int id)
     }
 }
 
+void TArea::addRooms(const QSet<int>& ids)
+{
+    bool added = false;
+    for (const int id : ids) {
+        if (!mpRoomDB->getRoom(id)) {
+            const QString error = tr("roomID=%1 does not exist, can not set properties of a non-existent room!").arg(id);
+            mpMap->mpHost->printSystemMessage(error);
+        } else if (rooms.contains(id)) {
+            qDebug() << "TArea::addRooms(" << id << ") No creation! room already exists";
+        } else {
+            rooms.insert(id);
+            added = true;
+        }
+    }
+    if (added) {
+        bumpRoomsVersion();
+    }
+    calcSpan();
+}
+
 void TArea::addRoomWithCustomLines(int id, int z)
 {
     if (!rooms.contains(id)) {
-        // Rooms are read in before they are handed to an area, so this gets
-        // called for rooms this area does not hold yet. calcSpan() picks those
-        // up once it does; claiming one here would have this area's renderer
-        // paint a room belonging to another area.
+        // Rooms are read before being handed to an area; calcSpan() picks them up later.
+        // Claiming one now could paint another area's room.
         return;
     }
     mCustomLineIndex.addRoom(id, z);
@@ -405,8 +422,7 @@ void TArea::moveRoom(int id, int fromZ, int fromX, int fromY, int toZ, int toX, 
 
     mZLevelIndex.moveRoom(id, fromZ, toZ);
     mGridIndex.moveRoom(id, fromZ, fromX, fromY, toZ, toX, toY);
-    // moveRoom() adds to the destination unconditionally, so a room without
-    // custom lines has to be kept out of it by hand:
+    // moveRoom() adds to the destination unconditionally:
     if (mCustomLineIndex.roomsForZ(fromZ).contains(id)) {
         mCustomLineIndex.moveRoom(id, fromZ, toZ);
     }
@@ -418,8 +434,6 @@ void TArea::moveRoom(int id, int fromZ, int fromX, int fromY, int toZ, int toX, 
     if (toExtremesMoved) {
         publishSpanForZ(toZ);
     }
-    // The moved room's exit spans change, and so do those of any room with an
-    // exit leading to it:
     updateLodExitRoomAndEntrances(id);
 }
 
@@ -516,12 +530,8 @@ void TArea::calcSpan()
     mLodExitIndex.markDirty();
 }
 
-// The one place that decides how far a room's 2D-plane exits reach, and so
-// the one place that has to agree with what the renderer will actually drop.
-// Rooms with something that draws at any zoom - an exit into another area,
-// which paints a fixed-size marker, or a 2D-plane exit stub - come back as
-// cAlwaysVisibleSpan. positions, when given, answers the destination lookups
-// that this area's own rooms can answer: see rebuildLodExitIndex().
+// Must agree with what the renderer drops. An other-area exit (fixed-size marker) or a 2D exit stub
+// draws at any zoom, so gives cAlwaysVisibleSpan. positions, if given, answers lookups for this area's rooms.
 int TArea::lodExitSpanOfRoom(const TRoom* pR, const QList<LodRoomPos>* positions) const
 {
     for (const int direction : pR->exitStubs) {
@@ -545,10 +555,8 @@ int TArea::lodExitSpanOfRoom(const TRoom* pR, const QList<LodRoomPos>* positions
             exitX = pos.x;
             exitY = pos.y;
         } else {
-            // Either there is no table, or the destination is not one of this
-            // area's rooms - an exit leading out of it, or a dangling one, and
-            // only the room database can tell those apart. Rare enough on a
-            // real map to be worth the lookup.
+            // No table, or the destination is outside this area or dangling; only the room
+            // database can tell which. Rare enough on real maps to be worth the lookup.
             const TRoom* pE = mpRoomDB->getRoom(exitId);
             if (!pE) {
                 continue;
@@ -562,24 +570,17 @@ int TArea::lodExitSpanOfRoom(const TRoom* pR, const QList<LodRoomPos>* positions
         // qint64 so a delta between extreme coordinates cannot overflow:
         span = qMax(span, qMax(qAbs(exitX - pR->x()), qAbs(exitY - pR->y())));
     }
-    // Saturating: a span too large for an int cannot be skipped by any
-    // threshold either, so it may share the always-visible bucket.
+    // Saturate: a span too large for an int cannot be skipped by any threshold either.
     return int(qMin<qint64>(span, TAreaLodExitIndex::cAlwaysVisibleSpan));
 }
 
-// Recomputes every entry. Only the paths that change this area as a whole come
-// here - anything that knows which room changed re-files that one room - so in
-// practice this runs about once per map load.
+// Only whole-area changes come here, about once per map load; single-room changes re-file that room.
 void TArea::rebuildLodExitIndex() const
 {
     mLodExitIndex.beginRebuild();
 
-    // Destination coordinates come from a table indexed by room id rather than
-    // from the room database: there are up to eight of those lookups per room,
-    // and on a large area that hash is many times the size of any cache. An id
-    // above the area's highest cannot be one of its rooms, so the table stops
-    // there; very sparse ids would leave it mostly holes, and then the hash is
-    // the better bet after all.
+    // A table indexed by room id, not the room database hash: up to eight lookups per room, and on a
+    // large area that hash dwarfs any cache. Capped for very sparse ids, where the hash wins.
     int highestRoomId = 0;
     for (const int roomId : rooms) {
         highestRoomId = qMax(highestRoomId, roomId);
@@ -612,7 +613,6 @@ void TArea::rebuildLodExitIndex() const
 void TArea::updateLodExitRoom(const int roomId)
 {
     if (mLodExitIndex.needsRebuild()) {
-        // The pending rebuild will take this room's new state into account.
         return;
     }
     const TRoom* pR = rooms.contains(roomId) ? mpRoomDB->getRoom(roomId) : nullptr;
@@ -623,11 +623,8 @@ void TArea::updateLodExitRoom(const int roomId)
     mLodExitIndex.updateRoom(roomId, pR->z(), lodExitSpanOfRoom(pR, nullptr));
 }
 
-// A room's own span is not the only one its position decides: every room with
-// an exit leading to it measures that exit against where it now is. The
-// entrance map is the only way to find those rooms without a pass over the
-// area, and it is kept current by the same exit setters that come through
-// here.
+// Rooms with exits here measure them against this room's position. The entrance map finds them
+// without a pass over the area; the same exit setters that call this keep it current.
 void TArea::refreshLodExitEntrances(const int roomId)
 {
     const QMultiHash<int, int>& entrances = mpRoomDB->getEntranceHash();
@@ -692,11 +689,9 @@ void TArea::removeRoom(int room)
         bumpRoomsVersion();
     }
     mAreaExits.remove(room);
-    // Exits leading here from the area's remaining rooms are handled by
-    // whoever took the room away: TRoomDB::__removeRoom() clears them through
-    // the exit setters, and TRoom::setArea() asks for a refresh once the
-    // room's new area is in place. Doing it here would be too early - the
-    // room still claims to belong to this area.
+    // Exits here from remaining rooms are left to the remover: TRoomDB::__removeRoom() clears them via
+    // the exit setters, TRoom::setArea() refreshes once the new area is set. Here is too early: the
+    // room still claims this area.
     dropLodExitRoom(room);
 }
 
@@ -790,11 +785,17 @@ const QMultiMap<int, QPair<QString, int>> TArea::getAreaExitRoomData() const
 
 int TArea::createLabelId() const
 {
-    int labelId = -1;
-    do {
-    } while (mMapLabels.contains(++labelId));
-    if (labelId < 0) {
-        labelId = -1;
+    if (mMapLabels.isEmpty()) {
+        return 0;
+    }
+    // The keys are sorted: when they fill 0..n-1 the lowest free id is n,
+    // otherwise it is the first one out of step
+    if (mMapLabels.firstKey() >= 0 && mMapLabels.lastKey() == mMapLabels.size() - 1) {
+        return mMapLabels.lastKey() + 1;
+    }
+    int labelId = 0;
+    for (auto it = mMapLabels.lowerBound(0); it != mMapLabels.cend() && it.key() == labelId; ++it) {
+        ++labelId;
     }
     return labelId;
 }
@@ -838,7 +839,9 @@ void TArea::writeJsonArea(QJsonArray& array) const
     }
     if (currentRoomCount % 10 != 0) {
         // Must add on any remainder otherwise the total will be wrong:
-        mpMap->incrementJsonProgressDialog(true, true, currentRoomCount % 10);
+        if (mpMap->incrementJsonProgressDialog(true, true, currentRoomCount % 10)) {
+            return;
+        }
     }
     const QJsonValue roomsValue{roomsArray};
     areaObj.insert(QLatin1String("rooms"), roomsValue);
@@ -862,9 +865,11 @@ std::pair<int, QString> TArea::readJsonArea(const QJsonArray& array, const int a
     for (int roomIndex = 0, total = areaObj.value(QLatin1String("rooms")).toArray().count(); roomIndex < total; ++roomIndex) {
         TRoom* pR = new TRoom(mpRoomDB);
         const int roomId = pR->readJsonRoom(areaObj.value(QLatin1String("rooms")).toArray(), roomIndex, id);
-        rooms.insert(roomId);
-        // This also sets the room id for the TRoom:
-        mpRoomDB->addRoom(roomId, pR, true);
+        // This also sets the room id for the TRoom, keeps one whose id is below
+        // one for the audit to renumber and frees one whose id is taken:
+        if (mpRoomDB->restoreSingleRoom(roomId, pR)) {
+            rooms.insert(roomId);
+        }
         if (++roomCount % 10 == 0) {
             if (mpMap->incrementJsonProgressDialog(false, true, 10)) {
                 // Cancel has been hit - so give up straight away:
@@ -900,6 +905,26 @@ void TArea::writeJsonUserData(QJsonObject& obj) const
     obj.insert(QLatin1String("userData"), userDatasValue);
 }
 
+// The binary format keeps an area's zoom (below format 21) and its labels'
+// fonts and outline colors as user data under these keys. They mean nothing in
+// the live map, and a map file can hold them for labels that no longer exist.
+void TArea::dropFileOnlyUserData(QMap<QString, QString>& userData)
+{
+    // exactly the form a save writes, so "_007" or "_+5" stay a script's own
+    const auto labelKey = [](const QString& key, const QLatin1String prefix) {
+        if (!key.startsWith(prefix)) {
+            return false;
+        }
+        const QStringView suffix = QStringView(key).mid(prefix.size());
+        bool isNumber = false;
+        const int labelId = suffix.toInt(&isNumber);
+        return isNumber && suffix == QString::number(labelId);
+    };
+    userData.removeIf([&labelKey](const QMap<QString, QString>::iterator& it) {
+        return it.key() == QLatin1String("system.fallback_map2DZoom") || labelKey(it.key(), QLatin1String("system.labelFont_")) || labelKey(it.key(), QLatin1String("system.labelOutlineColor_"));
+    });
+}
+
 // Takes a userData object and parses all its elements
 void TArea::readJsonUserData(const QJsonObject& obj)
 {
@@ -913,6 +938,8 @@ void TArea::readJsonUserData(const QJsonObject& obj)
             mUserData.insert(key, obj.value(key).toString());
         }
     }
+    // a JSON label keeps its font in its own fields and nothing reads these
+    dropFileOnlyUserData(mUserData);
 }
 
 void TArea::writeJsonLabels(QJsonObject& obj) const
@@ -1210,7 +1237,7 @@ bool TArea::hasPermanentLabels() const
 
 void TArea::set2DMapZoom(const qreal zoom)
 {
-    if (zoom >= T2DMap::csmMinXYZoom) {
+    if (qIsFinite(zoom) && zoom >= TMap::scmMinXYZoom) {
         mLast2DMapZoom = zoom;
     }
 }

@@ -65,15 +65,15 @@ void SingleLineTextEdit::resizeEvent(QResizeEvent* event)
 void SingleLineTextEdit::insertFromMimeData(const QMimeData* source)
 {
     if (source->hasText()) {
-        QString text = source->text();
-        QString firstLine = text.split(QRegularExpression("[\r\n]"), Qt::SkipEmptyParts).first();
-        QPlainTextEdit::insertPlainText(firstLine);
+        const QStringList lines = source->text().split(QRegularExpression(qsl("[\r\n]")), Qt::SkipEmptyParts);
+        if (!lines.isEmpty()) {
+            QPlainTextEdit::insertPlainText(lines.first());
+        }
     }
 }
 
-// Like QLineEdit: deselect when focus moves to another widget, but not when a
-// popup or another window merely borrows it - the context menu's own Copy runs
-// after this FocusOut
+// Like QLineEdit: deselect when focus moves to another widget, not when a popup or window borrows it -
+// the context menu's Copy runs after this FocusOut.
 void SingleLineTextEdit::focusOutEvent(QFocusEvent* event)
 {
     QPlainTextEdit::focusOutEvent(event);
@@ -97,8 +97,7 @@ void SingleLineTextEdit::setTheme(const QString& themeName)
     auto themeManager = edbee::Edbee::instance()->themeManager();
     edbee::TextTheme* theme = themeManager->theme(themeName);
     if (!theme) {
-        // The profile names a theme whose file was never downloaded to this
-        // machine; use the fallback edbee's own editor paints with so the two agree
+        // Theme file not downloaded on this machine; use edbee's own fallback so the two editors agree.
         theme = themeManager->fallbackTheme();
     }
 

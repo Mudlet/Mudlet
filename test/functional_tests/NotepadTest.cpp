@@ -18,22 +18,29 @@
  ***************************************************************************/
 
 #include <QDir>
+#include <QAction>
+#include <QIcon>
 #include <QLineEdit>
+#include <QPalette>
 #include <QPlainTextEdit>
+#include <QScrollBar>
+#include <QScopeGuard>
 #include <QTabWidget>
 #include <QSignalSpy>
+#include <QTextBlock>
 #include <QTemporaryDir>
 #include <QTimer>
 #include <QToolButton>
 #include <QtTest/QtTest>
+#include <algorithm>
 #include <chrono>
 
 #include "PortableModeTestHelper.h"
 #include "ProfileTestHelper.h"
 #include "RecordingTelnetServer.h"
 #include "Host.h"
+#include "MudletApp.h"
 #include "MudletInstanceCoordinator.h"
-#include "MudletPaths.h"
 #include "dlgConnectionProfiles.h"
 #include "dlgNotepad.h"
 #include "ctelnet.h"
@@ -62,7 +69,7 @@ private:
 
     // The names the notepad writes and the ones it upgrades from, which the
     // tests below have to put in place or clear out before it starts up.
-    QString notesPath(const QString& fileName) const { return MudletPaths::getMudletPath(enums::profileDataItemPath, mHostname, fileName); }
+    QString notesPath(const QString& fileName) const { return MudletApp::getMudletPath(enums::profileDataItemPath, mHostname, fileName); }
 
     static QPlainTextEdit* editAt(dlgNotepad* notepad, const int index) { return qobject_cast<QPlainTextEdit*>(notepad->tabWidget->widget(index)); }
 
@@ -70,18 +77,59 @@ private:
 
     static QToolButton* findBarButton(dlgNotepad* notepad, const QString& name) { return notepad->findChild<QToolButton*>(name); }
 
+    // Only the matches on screen get marked, so a search needs the notepad up at a size that shows a few lines
+    static bool putOnScreen(dlgNotepad* notepad)
+    {
+        notepad->resize(640, 480);
+        notepad->show();
+        return QTest::qWaitForWindowExposed(notepad);
+    }
+
+    // Showing the find bar and typing queue a pass over the marks; letting it land first stops it
+    // from standing in for the pass the scroll or resize under test is meant to bring about
+    static void letQueuedMarkingLand()
+    {
+        for (int i = 0; i < 5; ++i) {
+            QCoreApplication::processEvents();
+        }
+    }
+
+    static int currentMatchMarks(const QPlainTextEdit* textEdit)
+    {
+        int marks = 0;
+        for (const auto& selection : textEdit->extraSelections()) {
+            if (selection.format.background().color() == QColor(255, 165, 0, 150)) {
+                ++marks;
+            }
+        }
+        return marks;
+    }
+
+    // A QIcon holds no record of which file it was built from, so the only way
+    // to name the arrow on screen is to render it and compare the pixels. The
+    // ratio is pinned to 1 because the resource it is compared against is not
+    // scaled, and a pixmap asked for without one comes back at the display's.
+    static bool iconIs(const QIcon& icon, const QString& resourcePath, const QIcon::State state = QIcon::Off)
+    {
+        const QPixmap expected(resourcePath);
+        if (expected.isNull()) {
+            return false;
+        }
+        return icon.pixmap(expected.size(), 1.0, QIcon::Normal, state).toImage() == expected.toImage();
+    }
+
     bool waitForServerToReceive(const QByteArray& text) const
     {
         return QTest::qWaitFor(
                 [this, &text]() {
                     return mpServer->received().contains(text);
                 },
-                5000);
+                5s);
     }
 
     void writeNotesFile(const QString& fileName, const QByteArray& content) const
     {
-        QDir().mkpath(MudletPaths::getMudletPath(enums::profileHomePath, mHostname));
+        QDir().mkpath(MudletApp::getMudletPath(enums::profileHomePath, mHostname));
         QFile file(notesPath(fileName));
         QVERIFY2(file.open(QIODevice::WriteOnly), "could not write the notes file the test needs in place");
         file.write(content);
@@ -90,7 +138,7 @@ private:
 
     void startProfile(const QString& hostname, const QString& address, const QString& port)
     {
-        QTimer::singleShot(0, qApp, [hostname, address, port]() {
+        QTimer::singleShot(0ms, qApp, [hostname, address, port]() {
             const auto dialog = []() {
                 return mudlet::self()->mpConnectionDialog.data();
             };
@@ -101,7 +149,7 @@ private:
                         [&dialog]() {
                             return dialog() && dialog()->isVisible();
                         },
-                        5000)) {
+                        5s)) {
                 qWarning() << "the connection dialog never appeared";
                 return;
             }
@@ -111,7 +159,7 @@ private:
                             [field]() {
                                 return QApplication::focusWidget() == field;
                             },
-                            5000)) {
+                            5s)) {
                     return true;
                 }
                 qWarning() << "focus never reached the" << name << "field";
@@ -139,7 +187,7 @@ private:
         });
 
         QSignalSpy spy(mudlet::self(), &mudlet::signal_profileLoaded);
-        if (!spy.wait(5000)) {
+        if (!spy.wait(5s)) {
             QFAIL("Profile took too long to load.");
         }
         auto* host = mudlet::self()->getActiveHost();
@@ -148,12 +196,12 @@ private:
         }
 
         QSignalSpy spy2(&(host->mTelnet), &cTelnet::signal_connected);
-        if (!spy2.wait(2000)) {
+        if (!spy2.wait(2s)) {
             QFAIL("Could not connect with the host.");
         }
     }
 
-    void deleteProfileDirectory(const QString& profileName) { deleteDirectory(MudletPaths::getMudletPath(enums::profileHomePath, profileName)); }
+    void deleteProfileDirectory(const QString& profileName) { deleteDirectory(MudletApp::getMudletPath(enums::profileHomePath, profileName)); }
 
     void deleteDirectory(const QString& path)
     {
@@ -185,7 +233,7 @@ private slots:
         mPort = QString::number(mpServer->serverPort());
         mudlet::start();
         mudlet::self()->setupConfig();
-        QCOMPARE(MudletPaths::getMudletPath(enums::mainPath), qsl("%1/mudlet").arg(mConfigDir.path()));
+        QCOMPARE(MudletApp::getMudletPath(enums::mainPath), qsl("%1/mudlet").arg(mConfigDir.path()));
         mudlet::self()->takeOwnershipOfInstanceCoordinator(std::make_unique<MudletInstanceCoordinator>("MudletInstanceCoordinator"));
         mudlet::self()->init();
         mudlet::self()->setStorePasswordsSecurely(false);
@@ -194,7 +242,7 @@ private slots:
 
     void cleanup()
     {
-        const QString profilePath = MudletPaths::getMudletPath(enums::profileHomePath, mHostname);
+        const QString profilePath = MudletApp::getMudletPath(enums::profileHomePath, mHostname);
         delete mudlet::self();
         delete mpServer;
         mpServer = nullptr;
@@ -323,7 +371,7 @@ private slots:
         auto* sendTimer = notepad->findChild<QTimer*>();
         QVERIFY2(sendTimer, "the notepad has no timer pacing the lines it sends");
         QSignalSpy firstLineSent(sendTimer, &QTimer::timeout);
-        QVERIFY2(firstLineSent.wait(5000), "the notepad never got round to sending the first line");
+        QVERIFY2(firstLineSent.wait(5s), "the notepad never got round to sending the first line");
         QVERIFY(QMetaObject::invokeMethod(notepad.data(), "slot_stopSending"));
 
         QVERIFY2(waitForServerToReceive("north"), "the line already on its way when sending was stopped never reached the game");
@@ -343,21 +391,83 @@ private slots:
         QScopedPointer<dlgNotepad> notepad(new dlgNotepad(mudlet::self()->getActiveHost()));
         editAt(notepad.data(), 0)->setPlainText(qsl("a herb here\nanother herb there\nand a herb everywhere"));
 
+        QVERIFY(putOnScreen(notepad.data()));
         QVERIFY(QMetaObject::invokeMethod(notepad.data(), "slot_showFindBar"));
         findBox(notepad.data())->setText(qsl("herb"));
         QCOMPARE(editAt(notepad.data(), 0)->extraSelections().size(), 3);
 
         findBarButton(notepad.data(), qsl("notepadFindNext"))->click();
 
-        const auto selections = editAt(notepad.data(), 0)->extraSelections();
-        QCOMPARE(selections.size(), 3);
-        int currentMatches = 0;
-        for (const auto& selection : selections) {
-            if (selection.format.background().color() == QColor(255, 165, 0, 150)) {
-                ++currentMatches;
-            }
+        QCOMPARE(editAt(notepad.data(), 0)->extraSelections().size(), 3);
+        QCOMPARE(currentMatchMarks(editAt(notepad.data(), 0)), 1);
+    }
+
+    // Typing a search jumps to the first match, so that is the one marked as being looked at.
+    void test_theFirstMatchIsMarkedAsBeingLookedAtAsSoonAsItIsTyped()
+    {
+        startProfile(mHostname, mLocalhost, mPort);
+        QScopedPointer<dlgNotepad> notepad(new dlgNotepad(mudlet::self()->getActiveHost()));
+        auto* textEdit = editAt(notepad.data(), 0);
+        textEdit->setPlainText(qsl("a herb here\nanother herb there"));
+
+        QVERIFY(putOnScreen(notepad.data()));
+        QVERIFY(QMetaObject::invokeMethod(notepad.data(), "slot_showFindBar"));
+        findBox(notepad.data())->setText(qsl("herb"));
+
+        QCOMPARE(textEdit->textCursor().selectionStart(), 2);
+        QCOMPARE(currentMatchMarks(textEdit), 1);
+    }
+
+    // A long note can hold more matches than can be marked without the notepad
+    // stalling, so the ones off screen get marked as they are scrolled into view.
+    void test_matchesScrolledIntoViewGetMarked()
+    {
+        startProfile(mHostname, mLocalhost, mPort);
+        QScopedPointer<dlgNotepad> notepad(new dlgNotepad(mudlet::self()->getActiveHost()));
+        auto* textEdit = editAt(notepad.data(), 0);
+        QStringList lines;
+        for (int i = 0; i < 2000; ++i) {
+            lines << qsl("line %1 has a herb").arg(i);
         }
-        QCOMPARE(currentMatches, 1);
+        textEdit->setPlainText(lines.join(QLatin1Char('\n')));
+        const int lastMatchStart = textEdit->document()->lastBlock().position() + lines.last().indexOf(qsl("herb"));
+        const auto lastMatchMarked = [textEdit, lastMatchStart]() {
+            const auto selections = textEdit->extraSelections();
+            return std::any_of(selections.cbegin(), selections.cend(), [lastMatchStart](const auto& selection) {
+                return selection.cursor.selectionStart() == lastMatchStart;
+            });
+        };
+
+        QVERIFY(putOnScreen(notepad.data()));
+        QVERIFY(QMetaObject::invokeMethod(notepad.data(), "slot_showFindBar"));
+        findBox(notepad.data())->setText(qsl("herb"));
+        letQueuedMarkingLand();
+        QVERIFY2(!textEdit->extraSelections().isEmpty(), "none of the matches on screen were marked");
+        QVERIFY2(!lastMatchMarked(), "a match far below what is on screen was marked");
+
+        textEdit->verticalScrollBar()->setValue(textEdit->verticalScrollBar()->maximum());
+        QTRY_VERIFY2(lastMatchMarked(), "the last match was not marked once it was scrolled into view");
+    }
+
+    void test_matchesBroughtOnScreenByGrowingTheNotepadGetMarked()
+    {
+        startProfile(mHostname, mLocalhost, mPort);
+        QScopedPointer<dlgNotepad> notepad(new dlgNotepad(mudlet::self()->getActiveHost()));
+        auto* textEdit = editAt(notepad.data(), 0);
+        QStringList lines;
+        for (int i = 0; i < 2000; ++i) {
+            lines << qsl("line %1 has a herb").arg(i);
+        }
+        textEdit->setPlainText(lines.join(QLatin1Char('\n')));
+
+        QVERIFY(putOnScreen(notepad.data()));
+        QVERIFY(QMetaObject::invokeMethod(notepad.data(), "slot_showFindBar"));
+        findBox(notepad.data())->setText(qsl("herb"));
+        letQueuedMarkingLand();
+        const qsizetype marksBefore = textEdit->extraSelections().size();
+
+        notepad->resize(640, 960);
+        QTRY_VERIFY2(textEdit->extraSelections().size() > marksBefore, "the matches brought on screen by growing the notepad were not marked");
     }
 
     // A search that has run out of note starts again at the top rather than
@@ -369,6 +479,7 @@ private slots:
         auto* textEdit = editAt(notepad.data(), 0);
         textEdit->setPlainText(qsl("one herb\ntwo herb"));
 
+        QVERIFY(putOnScreen(notepad.data()));
         QVERIFY(QMetaObject::invokeMethod(notepad.data(), "slot_showFindBar"));
         findBox(notepad.data())->setText(qsl("herb"));
         const int firstMatch = textEdit->textCursor().selectionStart();
@@ -389,6 +500,7 @@ private slots:
         QScopedPointer<dlgNotepad> notepad(new dlgNotepad(mudlet::self()->getActiveHost()));
         editAt(notepad.data(), 0)->setPlainText(qsl("a herb here\nanother herb there"));
 
+        QVERIFY(putOnScreen(notepad.data()));
         QVERIFY(QMetaObject::invokeMethod(notepad.data(), "slot_showFindBar"));
         findBox(notepad.data())->setText(qsl("herb"));
         QCOMPARE(editAt(notepad.data(), 0)->extraSelections().size(), 2);
@@ -408,12 +520,47 @@ private slots:
         QScopedPointer<dlgNotepad> notepad(new dlgNotepad(mudlet::self()->getActiveHost()));
         editAt(notepad.data(), 0)->setPlainText(qsl("a herb here\nanother herb there"));
 
+        QVERIFY(putOnScreen(notepad.data()));
         QVERIFY(QMetaObject::invokeMethod(notepad.data(), "slot_showFindBar"));
         findBox(notepad.data())->setText(qsl("herb"));
         QCOMPARE(editAt(notepad.data(), 0)->extraSelections().size(), 2);
 
         findBox(notepad.data())->setText(QString());
         QCOMPARE(editAt(notepad.data(), 0)->extraSelections().size(), 0);
+    }
+
+    // The send controls hide behind one small arrow, and the grey arrow the .ui
+    // file carries is invisible on a dark background, so the icon has to be
+    // picked from the palette - both as the notepad opens and again if the
+    // appearance is switched while it is up (#9488).
+    void test_theSendControlsArrowIsPickedForTheBackgroundItSitsOn()
+    {
+        startProfile(mHostname, mLocalhost, mPort);
+
+        const QPalette savedPalette = QApplication::palette();
+        const auto restorePalette = qScopeGuard([savedPalette]() {
+            QApplication::setPalette(savedPalette);
+        });
+
+        // Dark first, because the .ui file's own icon is the grey one: an arrow
+        // asserted to be grey says nothing about whether anything picked it.
+        QPalette darkPalette(savedPalette);
+        darkPalette.setColor(QPalette::Window, QColor(30, 30, 30));
+        QApplication::setPalette(darkPalette);
+        QApplication::processEvents();
+
+        QScopedPointer<dlgNotepad> notepad(new dlgNotepad(mudlet::self()->getActiveHost()));
+        QAction* pToggle = notepad->action_toggleSendControls;
+        QVERIFY2(iconIs(pToggle->icon(), qsl(":/icons/arrow-right-16x.png")), "the notepad came up with the arrow that disappears into a dark background");
+        QVERIFY2(iconIs(pToggle->icon(), qsl(":/icons/arrow-down-16x.png"), QIcon::On), "the notepad came up with an arrow that disappears into a dark background once the controls are open");
+
+        QPalette lightPalette(savedPalette);
+        lightPalette.setColor(QPalette::Window, QColor(240, 240, 240));
+        QApplication::setPalette(lightPalette);
+        QApplication::processEvents();
+
+        QVERIFY2(iconIs(pToggle->icon(), qsl(":/icons/arrow-right_grey-16x.png")), "switching to a light appearance left the arrow the one meant for a dark one");
+        QVERIFY2(iconIs(pToggle->icon(), qsl(":/icons/arrow-down_grey-16x.png"), QIcon::On), "switching to a light appearance left the opened-controls arrow the one meant for a dark one");
     }
 };
 

@@ -49,7 +49,7 @@
 #include "Host.h"
 #include "HostManager.h"
 #include "MudletInstanceCoordinator.h"
-#include "MudletPaths.h"
+#include "MudletApp.h"
 #include "TMap.h"
 #include "TRoom.h"
 #include "TRoomDB.h"
@@ -57,6 +57,8 @@
 #include "mudlet.h"
 
 #include "GroupedTest.h"
+
+using namespace std::chrono_literals;
 
 // ExitsTreeWidget keeps its column numbers in an enumeration only dlgRoomExits
 // and its delegate are friends of, so mirror them here; the columnCount() check
@@ -110,7 +112,7 @@ private:
 
     void deleteProfileDirectory() const
     {
-        QDir dir(MudletPaths::getMudletPath(enums::profileHomePath, mProfileName));
+        QDir dir(MudletApp::getMudletPath(enums::profileHomePath, mProfileName));
         if (dir.exists()) {
             dir.removeRecursively();
         }
@@ -207,7 +209,7 @@ private slots:
 
         mudlet::start();
         mudlet::self()->setupConfig();
-        QCOMPARE(MudletPaths::getMudletPath(enums::mainPath), qsl("%1/mudlet").arg(mConfigDir.path()));
+        QCOMPARE(MudletApp::getMudletPath(enums::mainPath), qsl("%1/mudlet").arg(mConfigDir.path()));
         mudlet::self()->takeOwnershipOfInstanceCoordinator(std::make_unique<MudletInstanceCoordinator>(qsl("MudletInstanceCoordinator")));
         mudlet::self()->init();
         mudlet::self()->setStorePasswordsSecurely(false);
@@ -644,6 +646,56 @@ private slots:
         QVERIFY2(subject()->getExit(DIR_NORTH) == scmNearRoom, "save() on a dialog with no room wrote over another room's exits");
     }
 
+    // The dialog is not modal, so a script can delete its room while it is open
+    void savingAfterTheRoomIsDeletedClosesWithoutWriting()
+    {
+        buildMap();
+        auto* pDlg = openDialogOn(scmSubjectRoom);
+        pDlg->show();
+        pDlg->weight_n->setValue(13);
+
+        QVERIFY(roomDB()->removeRoom(scmSubjectRoom));
+        pDlg->save();
+
+        QVERIFY(!subject());
+        QVERIFY2(!pDlg->isVisible(), "the dialog stayed open on a room that no longer exists");
+    }
+
+    // deleteMap() and loading another map free the room the dialog was opened on
+    void savingAfterTheMapIsClearedClosesWithoutWriting()
+    {
+        buildMap();
+        auto* pDlg = openDialogOn(scmSubjectRoom);
+        pDlg->show();
+        pDlg->weight_n->setValue(13);
+
+        map()->mapClear();
+        pDlg->save();
+
+        QVERIFY(!subject());
+        QVERIFY2(!pDlg->isVisible(), "the dialog stayed open on a room that no longer exists");
+    }
+
+    void savingAfterTheRoomIdIsReusedLeavesTheNewRoomAlone()
+    {
+        buildMap();
+        auto* pDlg = openDialogOn(scmSubjectRoom);
+        pDlg->show();
+        pDlg->weight_n->setValue(13);
+
+        QVERIFY(roomDB()->removeRoom(scmSubjectRoom));
+        QVERIFY(map()->addRoom(scmSubjectRoom));
+        QVERIFY(map()->setRoomArea(scmSubjectRoom, mAreaId));
+        pDlg->save();
+
+        QVERIFY(subject());
+        for (int direction = DIR_NORTH; direction <= DIR_OUT; ++direction) {
+            QVERIFY2(!subject()->hasExit(direction), "the old dialog wrote its exits onto a new room that reused the id");
+        }
+        QVERIFY2(subject()->getSpecialExits().isEmpty(), "the old dialog wrote its special exits onto a new room that reused the id");
+        QVERIFY2(!pDlg->isVisible(), "the dialog stayed open on a room that no longer exists");
+    }
+
     // Regression test for issue #10423: dlgRoomExits' constructor used to hand
     // specialExits two parentless delegates through setItemDelegateForColumn(),
     // which does not take ownership, so both outlived the dialog with nothing
@@ -692,7 +744,7 @@ private slots:
         QVERIFY2(map()->isUnsaved(), "editing exits did not mark the map unsaved");
         // updateArea() queues a throttled repaint that emits signal_areaChanged
         // for the subject's area - drain the queued call and check it arrived.
-        QVERIFY2(areaChangedSpy.wait(1000), "updateArea() did not repaint the map (signal_areaChanged never fired)");
+        QVERIFY2(areaChangedSpy.wait(1s), "updateArea() did not repaint the map (signal_areaChanged never fired)");
         QCOMPARE(areaChangedSpy.count(), 1);
         QCOMPARE(areaChangedSpy.takeFirst().at(0).toInt(), subject()->getArea());
     }

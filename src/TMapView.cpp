@@ -57,6 +57,10 @@ TMapView::TMapView(int viewId, Host* pHost, TMap* pMap, QWidget* parent)
             mp2dMap->update();
         }
     });
+    connect(mpMap, &TMap::signal_symbolCachesStale, this, [this]() {
+        mp2dMap->flushSymbolPixmapCache();
+        mp2dMap->update();
+    });
 
     setFont(qApp->font());
     setPalette(QApplication::palette());
@@ -137,7 +141,6 @@ void TMapView::updateAreaComboBox()
         return;
     }
 
-    const QString oldValue = mpAreaComboBox->currentText();
     const auto& areaNamesMap = mpMap->mpRoomDB->getAreaNamesMap();
 
     QMap<QString, QString> areaNames;
@@ -154,14 +157,28 @@ void TMapView::updateAreaComboBox()
         mpAreaComboBox->addItem(areaName);
     }
 
-    if (!oldValue.isEmpty()) {
-        const int index = mpAreaComboBox->findText(oldValue);
+    // Re-select whichever entry names the area this view is actually
+    // showing - not whatever text used to be selected, which goes stale
+    // across a rename of that same area.
+    const QString currentAreaName = mp2dMap ? areaNamesMap.value(mp2dMap->getAreaId()) : QString();
+    if (!currentAreaName.isEmpty()) {
+        const int index = mpAreaComboBox->findText(currentAreaName);
         if (index != -1) {
             mpAreaComboBox->setCurrentIndex(index);
         }
     }
 
     mpAreaComboBox->setEnabled(mpAreaComboBox->count() > 0);
+}
+
+void TMapView::switchToAnotherArea()
+{
+    updateAreaComboBox();
+    if (mpAreaComboBox->count() > 0) {
+        slot_switchArea(mpAreaComboBox->currentIndex());
+    } else if (mp2dMap && mpMap) {
+        mp2dMap->switchArea(mpMap->getDefaultAreaName());
+    }
 }
 
 void TMapView::slot_switchArea(int index)
@@ -172,9 +189,13 @@ void TMapView::slot_switchArea(int index)
     }
 
     const QString areaName = mpAreaComboBox->itemText(index);
-    const int areaId = mpMap->mpRoomDB->getAreaNamesMap().key(areaName, -1);
+    // 0 is never a valid area id (the default area is -1, every other area
+    // is >= 1), unlike -1, so it is safe to use as the "not found" sentinel
+    // here - the default area's own name must still resolve to switching.
+    constexpr int notFound = 0;
+    const int areaId = mpMap->mpRoomDB->getAreaNamesMap().key(areaName, notFound);
 
-    if (areaId != -1) {
+    if (areaId != notFound) {
         mp2dMap->switchArea(areaId);
     } else {
         qWarning() << "TMapView::slot_switchArea() - area" << areaName << "not found in area names map";

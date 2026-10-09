@@ -1744,6 +1744,9 @@ you can use it but there could be issues with aligning columns of text</string>
             <property name="text">
              <string>Updating themes from colorsublime.github.io...</string>
             </property>
+            <property name="wordWrap">
+             <bool>true</bool>
+            </property>
            </widget>
           </item>
          </layout>
@@ -4550,7 +4553,7 @@ you can use it but there could be issues with aligning columns of text</string>
           <item>
            <widget class="QLabel" name="label_shortcutsInstructions">
             <property name="text">
-             <string>To disable shortcut input 'Esc' key.</string>
+             <string>To clear a shortcut, press Backspace or Delete in its box.</string>
             </property>
             <property name="alignment">
              <set>Qt::AlignmentFlag::AlignLeading|Qt::AlignmentFlag::AlignLeft|Qt::AlignmentFlag::AlignTop</set>
@@ -5139,6 +5142,22 @@ you can use it but there could be issues with aligning columns of text</string>
               <string>Ask each time</string>
              </property>
             </item>
+           </widget>
+          </item>
+          <item row="7" column="0" colspan="2">
+           <widget class="QCheckBox" name="checkBox_lazyCaptureGlobals">
+            <property name="toolTip">
+             <string>&lt;p&gt;Makes triggers faster by preparing the &lt;tt&gt;matches&lt;/tt&gt;, &lt;tt&gt;multimatches&lt;/tt&gt; and &lt;tt&gt;line&lt;/tt&gt; variables only when a script reads them. Scripts see the same values either way.&lt;/p&gt;&lt;p&gt;Turn this off only if a script or package looks through Lua's global table directly (with &lt;tt&gt;rawget&lt;/tt&gt;, &lt;tt&gt;next&lt;/tt&gt; or &lt;tt&gt;pairs&lt;/tt&gt; on &lt;tt&gt;_G&lt;/tt&gt;) and misbehaves because it does not find them there.&lt;/p&gt;</string>
+            </property>
+            <property name="accessibleDescription">
+             <string>When checked, triggers run faster because the matches, multimatches and line variables are only prepared when a script reads them. Turn this off only if a script or package that looks through Lua's global table directly misbehaves.</string>
+            </property>
+            <property name="text">
+             <string>Prepare trigger variables only when a script reads them</string>
+            </property>
+            <property name="checked">
+             <bool>true</bool>
+            </property>
            </widget>
           </item>
          </layout>

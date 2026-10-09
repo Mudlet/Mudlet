@@ -27,7 +27,6 @@
 #include "Host.h"
 #include "Tree.h"
 #include "TTimer.h"
-#include "dlgTriggerEditor.h"
 #include "utils.h"
 
 #include <QDebug>
@@ -126,24 +125,21 @@ void TimerUnit::stopAllTriggers()
 
 void TimerUnit::compileAll()
 {
+    // Switched off ones as well: a reset has just closed the Lua state their
+    // compiled functions lived in, and switching one back on later does
+    // not compile it again
     for (auto timer : mTimerRootNodeList) {
-        if (timer->isActive()) {
-            timer->compileAll();
-        }
+        timer->compileAll();
     }
 }
 
 void TimerUnit::reenableAllTriggers()
 {
     for (auto timer : mTimerRootNodeList) {
-        // The same skip enableTimer(name) makes: a timer queued for deletion stays
-        // in this list until doCleanup() frees it, and killTimer() leaves it
-        // wanting to be active - as does a spent one-shot - so the resume would
-        // otherwise re-arm the corpse and it would fire again (#9887). The
-        // uninstallList half of the test is unreachable today, since uninstall()
-        // deactivates what it defers, and is kept in step with the by-name guard.
-        // Only temporary root timers are ever queued on their own and _uninstall()
-        // queues whole subtrees, so no child needs testing here.
+        // As in enableTimer(name): a killed timer stays in this list until doCleanup() and, like a spent
+        // one-shot, still wants to be active, so resuming would re-arm and fire it (#9887). The uninstallList
+        // test is unreachable today but mirrors the by-name guard. Only roots or whole subtrees are queued,
+        // so children need no test.
         if (mCleanupSet.contains(timer) || uninstallList.contains(timer)) {
             continue;
         }
@@ -162,13 +158,13 @@ void TimerUnit::addTimerRootNode(TTimer* pT, int parentPosition, int childPositi
     }
 
     if ((parentPosition == -1) || (childPosition >= static_cast<int>(mTimerRootNodeList.size()))) {
-        mTimerRootNodeList.push_back(pT);
+        listRootNode(pT, mTimerRootNodeList.end());
     } else {
         // insert item at proper position
         int cnt = 0;
         for (auto it = mTimerRootNodeList.begin(); it != mTimerRootNodeList.end(); it++) {
             if (cnt >= childPosition) {
-                mTimerRootNodeList.insert(it, pT);
+                listRootNode(pT, it);
                 break;
             }
             cnt++;
@@ -194,7 +190,7 @@ void TimerUnit::reParentTimer(int childID, int oldParentID, int newParentID, int
         pOldParent->popChild(pChild);
     }
     if (!pOldParent) {
-        mTimerRootNodeList.remove(pChild);
+        unlistRootNode(pChild);
     }
     if (pNewParent) {
         pNewParent->addChild(pChild, parentPosition, childPosition);
@@ -204,6 +200,9 @@ void TimerUnit::reParentTimer(int childID, int oldParentID, int newParentID, int
         addTimerRootNode(pChild, parentPosition, childPosition);
     }
 
+    // enableTimer() skips a timer that is switched off, and whether a zero time
+    // is allowed depends on the parent
+    pChild->validateTime();
     pChild->enableTimer(childID);
 }
 
@@ -242,7 +241,23 @@ void TimerUnit::_removeTimerRootNode(TTimer* pT)
     // the session
     mLookupTable.remove(pT->getName(), pT);
     mTimerMap.remove(pT->getID());
-    mTimerRootNodeList.remove(pT);
+    unlistRootNode(pT);
+}
+
+void TimerUnit::listRootNode(TTimer* pT, std::list<TTimer*>::iterator before)
+{
+    if (!mRootNodePositions.contains(pT)) {
+        mRootNodePositions.insert(pT, mTimerRootNodeList.insert(before, pT));
+    }
+}
+
+void TimerUnit::unlistRootNode(TTimer* pT)
+{
+    const auto position = mRootNodePositions.constFind(pT);
+    if (position != mRootNodePositions.cend()) {
+        mTimerRootNodeList.erase(position.value());
+        mRootNodePositions.erase(position);
+    }
 }
 
 TTimer* TimerUnit::getTimer(int id)
@@ -281,8 +296,7 @@ bool TimerUnit::registerTimer(TTimer* pT)
     return true;
 }
 
-// Resolves the TTimer by the id stored on the QTimer rather than a captured
-// pointer: it may have been deleted since the timeout was queued
+// By the id on the QTimer, not a captured pointer: the TTimer may be gone since the timeout was queued
 void TimerUnit::timerFired(QTimer* pQTimer)
 {
     const int id = pQTimer->property(TTimer::scmProperty_TTimerId).toInt();
@@ -294,24 +308,19 @@ void TimerUnit::timerFired(QTimer* pQTimer)
     TTimer* pTT = getTimer(id);
     if (Q_LIKELY(pTT)) {
         pTT->execute();
-        // Re-verify timer still exists after execute (script may have killed it)
+        // The script may have killed it
         pTT = getTimer(id);
         if (pTT && pTT->checkRestart()) {
             pTT->start();
         }
 
-        // Flush any deletes uninstall() deferred whilst execute() was on the
-        // stack (a timer script uninstalling its own package). Doing it here -
-        // after the last use of pTT - keeps the window in which the
-        // "uninstalled" timers linger down to this event loop iteration, before
-        // the profile save that Host::uninstallPackage() queues for the next
-        // event loop pass can serialize them back into the profile:
+        // Flush deletes deferred during execute() now, after the last use of pTT: the profile save
+        // Host::uninstallPackage() queues for the next pass would otherwise serialize them back.
         doCleanup();
         return;
     }
 
     qWarning().nospace().noquote() << "TimerUnit::timerFired() ERROR - Timer not registered, it seems to have been called: \"" << pQTimer->objectName() << "\" - automatically deleting it!";
-    // Clean up any bogus ones:
     pQTimer->stop();
     pQTimer->deleteLater();
 }
@@ -409,9 +418,7 @@ bool TimerUnit::enableTimer(const QString& name)
         }
 
         found = true;
-        if (mpHost->mpEditorDialog) {
-            mpHost->mpEditorDialog->refreshTimerIcon(pT->getID());
-        }
+        emit mpHost->signal_timerToggled(pT->getID());
     }
     return found;
 }
@@ -432,9 +439,7 @@ bool TimerUnit::disableTimer(const QString& name)
 
         pT->disableTimer();
         found = true;
-        if (mpHost->mpEditorDialog) {
-            mpHost->mpEditorDialog->refreshTimerIcon(pT->getID());
-        }
+        emit mpHost->signal_timerToggled(pT->getID());
     }
     return found;
 }
@@ -468,23 +473,30 @@ std::vector<int> TimerUnit::findItems(const QString& name, const bool exactMatch
 
 bool TimerUnit::killTimer(const QString& name)
 {
-    for (auto timer : mTimerRootNodeList) {
-        if (timer->getName() != name) {
+    // By the lookup table rather than a walk of every timer, as scripts kill and
+    // recreate temporary timers all the time. equal_range visits every
+    // same-named timer; constFind() + (++it) can start mid-run and skip
+    // duplicates on some QMultiMap implementations
+    const auto [begin, end] = mLookupTable.equal_range(name);
+    for (auto it = begin; it != end; ++it) {
+        TTimer* timer = it.value();
+        // Only a top level item was ever killable: one inside a group goes with
+        // its group, and freeing it separately as well would free it twice
+        if (timer->getParent()) {
             continue;
         }
         // Names are not unique, so keep looking rather than give up on the first
-        // same-named timer that cannot be killed - a permanent timer loaded from
-        // the profile precedes this session's temporaries in this list, and
-        // reporting a failure over it would strand a killable timer
+        // same-named timer that cannot be killed - a permanent one would strand
+        // a killable temporary
         if (!timer->isTemporary()) {
             // only temporary timers can be killed
             continue;
         }
-        // An already killed timer is only unlinked from this list once doCleanup()
+        // An already killed timer is only unlinked from the lookup table once doCleanup()
         // gets to free it, which cannot happen while a timer script is on the call
         // stack - so until then it is still findable by name. Killing it a second
         // time achieves nothing:
-        if (mCleanupSet.contains(timer)) {
+        if (mCleanupSet.contains(timer) || uninstallList.contains(timer)) {
             continue;
         }
         timer->killTimer();
@@ -525,8 +537,6 @@ void TimerUnit::doCleanup()
         return;
     }
 
-    // Called once per unit for every line of game text, and next to never has
-    // anything queued, so skip setting up the flush below.
     if (!hasPendingDeletes()) {
         return;
     }
@@ -541,9 +551,8 @@ void TimerUnit::doCleanup()
         deletedTimers.insert(pTimer);
         delete pTimer;
     }
-    // Not a no-op: the drain above frees no buckets, so without this every later
-    // flush re-scans an array sized for the largest batch the set has ever held.
-    // squeeze() keeps whatever the drain left behind; clear() would drop it.
+    // The drain frees no buckets, so later flushes would re-scan an array sized for the largest batch
+    // ever held. squeeze(), not clear(), keeps anything the drain left behind.
     mCleanupSet.squeeze();
     // Flush the deletes uninstall() deferred (#9337). uninstallList is ordered
     // children-before-parents and each ~Tree unlinks from its parent, so deleting

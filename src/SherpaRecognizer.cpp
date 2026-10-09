@@ -19,7 +19,7 @@
 
 #include "SherpaRecognizer.h"
 
-#include "MudletPaths.h"
+#include "MudletApp.h"
 #include "SpeechAudioCapture.h"
 
 #include <QCoreApplication>
@@ -326,6 +326,17 @@ bool SherpaRecognizer::sherpaAvailable()
     return sLibraryLoaded;
 }
 
+bool SherpaRecognizer::libraryPresent()
+{
+    if (sLibraryLoadAttempted) {
+        return sLibraryLoaded;
+    }
+    const QStringList paths = librarySearchPaths();
+    return std::any_of(paths.cbegin(), paths.cend(), [](const QString& path) {
+        return QFileInfo::exists(path);
+    });
+}
+
 bool SherpaRecognizer::resetLibraryLoadState()
 {
     // Whether the module actually went. QLibrary::unload() refuses while
@@ -357,7 +368,7 @@ bool SherpaRecognizer::resetLibraryLoadState()
 
 QString SherpaRecognizer::userLibraryPath()
 {
-    return MudletPaths::getMudletPath(enums::mainDataItemPath, qsl("sherpa-onnx-lib"));
+    return MudletApp::getMudletPath(enums::mainDataItemPath, qsl("sherpa-onnx-lib"));
 }
 
 QStringList SherpaRecognizer::librarySearchPaths()
@@ -464,6 +475,14 @@ QStringList SherpaRecognizer::usableHotwords(const QStringList& words, QStringLi
 
 bool SherpaRecognizer::loadModel(const QString& modelPath)
 {
+    const unsigned int loadGeneration = modelLoadGeneration();
+    // Read before mModelPath below is overwritten. setSensitivity() and
+    // setVocabulary() apply themselves by rebuilding the model already in place
+    // through this function, and such a rebuild replaces nothing - see
+    // noteModelLoaded(). mRecognizer rather than mModelPath alone, because
+    // mModelPath is set before the load can still fail, so it can name a model
+    // that is not in place.
+    const bool rebuildingTheModelInPlace = (mRecognizer != nullptr) && (mModelPath == modelPath);
     if (!loadSherpaLibrary()) {
         setState(State::Error);
         //: Shown when speech recognition is asked to load a model but the recognition library itself is not installed
@@ -532,6 +551,16 @@ bool SherpaRecognizer::loadModel(const QString& modelPath)
     // The caller asked to load a model, not to stop listening; the utterance in
     // flight goes with the decoder released below, and the player is told so.
     endSessionForModelLoad();
+
+    // A handler reached from the report above loaded a model of its own, and was
+    // told it succeeded - it did. Carrying on here would free that model and put
+    // this call's own in its place, leaving both callers told they had won. So
+    // this load stands down and leaves the handler's model standing; sttInit()
+    // sees a model other than the one it asked for and refuses with the same
+    // words sttInit() uses for the same standing-down anywhere else.
+    if (modelLoadGeneration() != loadGeneration) {
+        return true;
+    }
 
     releaseSherpaResources();
 
@@ -682,6 +711,9 @@ bool SherpaRecognizer::loadModel(const QString& modelPath)
         emit errorOccurred(tr("Failed to load sherpa-onnx model from: %1").arg(modelPath));
         return false;
     }
+    // The commit: mModelPath is set earlier, but the load can still fail until
+    // the recognizer exists, and a load that fails has installed nothing.
+    noteModelLoaded(!rebuildingTheModelInPlace);
 
     // Try to determine language from model path (convention: sherpa-onnx-nemotron-speech-streaming-en-0.6b-...)
     const QString dirName = modelDir.dirName();
@@ -1227,7 +1259,7 @@ QString SherpaRecognizer::findModelPathForLanguage(const QString& languageCode) 
 
 QString SherpaRecognizer::modelsDirectoryPath()
 {
-    return MudletPaths::getMudletPath(enums::mainDataItemPath, qsl("sherpa-models"));
+    return MudletApp::getMudletPath(enums::mainDataItemPath, qsl("sherpa-models"));
 }
 
 QStringList SherpaRecognizer::getInstalledModels()

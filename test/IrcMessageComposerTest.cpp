@@ -24,6 +24,8 @@
 #include <QtNetwork/QTcpSocket>
 #include <QtTest/QtTest>
 
+using namespace std::chrono_literals;
+
 /*
  * The multi-line numerics communi assembles into one message - the MOTD, the
  * names list, a WHOIS - are built up on a stack inside IrcMessageComposer, and
@@ -136,7 +138,7 @@ private:
         const QString expected = QStringLiteral("marker %1").arg(QString::fromUtf8(marker));
         // Anywhere in what has been seen, not only last: a case that composes a
         // message would otherwise spend the whole timeout and report nothing.
-        QTRY_VERIFY_WITH_TIMEOUT(markerIndex(expected) != -1, 5000);
+        QTRY_VERIFY_WITH_TIMEOUT(markerIndex(expected) != -1, 5s);
         mSeen.removeAt(markerIndex(expected));
     }
 
@@ -185,7 +187,7 @@ private slots:
         });
 
         mpConnection->open();
-        QTRY_VERIFY_WITH_TIMEOUT(mpConnection->isConnected(), 5000);
+        QTRY_VERIFY_WITH_TIMEOUT(mpConnection->isConnected(), 5s);
         // isConnected() goes true on the 001, so the rest of the registration burst
         // may still be in flight. A marker round trip puts it all behind us.
         say({});

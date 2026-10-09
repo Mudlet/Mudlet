@@ -58,12 +58,12 @@ public:
     explicit XMLexport(TKey*);
 
     void writeHost(Host*, pugi::xml_node hostPackage);
-    void writeTrigger(TTrigger*, pugi::xml_node xmlParent);
-    void writeTimer(TTimer*, pugi::xml_node xmlParent);
-    void writeAlias(TAlias*, pugi::xml_node xmlParent);
-    void writeAction(TAction*, pugi::xml_node xmlParent);
-    void writeScript(TScript*, pugi::xml_node xmlParent);
-    void writeKey(TKey*, pugi::xml_node xmlParent);
+    void writeTrigger(TTrigger*, pugi::xml_node xmlParent, bool withChildren = true);
+    void writeTimer(TTimer*, pugi::xml_node xmlParent, bool withChildren = true);
+    void writeAlias(TAlias*, pugi::xml_node xmlParent, bool withChildren = true);
+    void writeAction(TAction*, pugi::xml_node xmlParent, bool withChildren = true);
+    void writeScript(TScript*, pugi::xml_node xmlParent, bool withChildren = true);
+    void writeKey(TKey*, pugi::xml_node xmlParent, bool withChildren = true);
     void writeVariable(TVar*, VarUnit*, pugi::xml_node xmlParent, bool insideSavedTable = false, bool rideAlongAllowed = true);
     void writeModuleXML(const QString& moduleName);
     std::shared_ptr<pugi::xml_document> takeExportDocument();
@@ -108,11 +108,11 @@ private:
     void writeScriptPackage(const Host* pHost, pugi::xml_node& mMudletPackage, bool skipModuleMembers);
     void writeKeyPackage(const Host* pHost, pugi::xml_node& mMudletPackage, bool skipModuleMembers);
     void writeVariablePackage(Host* pHost, pugi::xml_node& mMudletPackage);
-    static inline void replaceAll(std::string& source, const std::string& from, const std::string& to);
     bool saveXmlFile(QSaveFile& file);
     bool saveXml(const QString&);
     pugi::xml_node writeXmlHeader();
     static void sanitizeForQxml(std::string& output);
+    static std::string serializeForQxml(const pugi::xml_document& doc);
     void runAsyncSave(const QString& fileName, const QString& xmlSavedKey);
     QString saveXml();
     QStringList remapAnsiToColorNumber(const QStringList&, const QList<int>&);

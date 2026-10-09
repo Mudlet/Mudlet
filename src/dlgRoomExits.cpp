@@ -303,9 +303,7 @@ void dlgRoomExits::slot_endEditSpecialExits()
     specialExits->clearSelection();
 }
 
-// The Delete key removes the selected special exits (see
-// ExitsTreeWidget::keyPressEvent()), and one of them may be the item being
-// edited.
+// Delete (ExitsTreeWidget::keyPressEvent()) can remove the item being edited.
 void dlgRoomExits::slot_specialExitRowsAboutToBeRemoved(const QModelIndex& parent, const int first, const int last)
 {
     if (!mpEditItem || parent.isValid()) {
@@ -496,7 +494,12 @@ void dlgRoomExits::slot_addSpecialExit()
 void dlgRoomExits::save()
 {
     mpHost->mpMap->mMapGraphNeedsUpdate = true;
-    if (!pR) {
+    // The dialog is not modal, so since init() a script may have deleted the
+    // room, or replaced it with a new one under the same id
+    pR = mpHost->mpMap->mpRoomDB->getRoom(mRoomID);
+    if (!pR || pR->serial() != mRoomSerial) {
+        pR = nullptr;
+        close();
         return;
     }
 
@@ -1668,6 +1671,7 @@ void dlgRoomExits::init()
     if (!pR) {
         return;
     }
+    mRoomSerial = pR->serial();
 
     roomID->setText(QString::number(mRoomID));
     if (pR->isLocked) {

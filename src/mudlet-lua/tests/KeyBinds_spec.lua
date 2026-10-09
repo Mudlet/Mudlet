@@ -377,9 +377,8 @@ describe("Tests keybind-related functions", function()
     end)
 
     it("killKey finds a temporary key behind a same-named permanent one", function()
-      -- killKey walks the root node list in creation order, so a permanent key
-      -- restored from the profile sits in front of this session's temporaries: it
-      -- must be scanned past, not reported as a failure
+      -- a permanent key can share a temporary's name (its id), and must be
+      -- passed over rather than reported as a failure
       local seed = tempKey(mudlet.key.F9, [[echo("x")]])
       killKey(seed)
       -- permKey itself takes seed + 1, so the next temporary takes seed + 2
@@ -392,6 +391,28 @@ describe("Tests keybind-related functions", function()
       assert.is_true(killKey(tempId), "killKey must scan past the permanent key")
     end)
 
+  end)
+
+end)
+
+-- A binding on one of Mudlet's own keys never fires. It is warned about in the
+-- editor, not on the main console, where a script making its bindings at
+-- profile load would repeat the warning at every startup. AddonControlsTest
+-- covers the editor warning, which Lua cannot open.
+describe("a key binding on a key Mudlet itself uses", function()
+
+  it("is still made, and says nothing on the main console", function()
+    local mark = getLastLineNumber("main")
+
+    -- Ctrl+Alt+T is Mudlet's "Toggle Time Stamps" on every platform
+    local key = tempKey(mudlet.keymodifier.Control + mudlet.keymodifier.Alt, mudlet.key.T, [[echo("mine")]])
+    local text = table.concat(getLines("main", mark, getLastLineNumber("main") + 1), "")
+    killKey(key)
+
+    assert.is_number(key, "the binding should still be made")
+    assert.is_nil(text:find("WARN", 1, true), "the clash was posted to the main console: " .. text)
+    -- the console wraps long lines, so the action's name is looked for without spaces
+    assert.is_nil(text:gsub("%s", ""):find("ToggleTimeStamps", 1, true), "the clash was posted to the main console: " .. text)
   end)
 
 end)

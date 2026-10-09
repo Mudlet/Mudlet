@@ -1,8 +1,11 @@
 # DUPLICATE WORKFLOW: This file is paired with build-mudlet-pr.yml
 # Changes here likely need to be mirrored there as well, apart from the
-# ccache/Lua/xcb-util-cursor save steps below: only builds of
-# development write these shared caches, every other build restores
-# read-only, so build-mudlet-pr.yml has no equivalent save steps at all.
+# ccache/Lua/Lua rocks/xcb-util-cursor save steps below and the ccache trim
+# and prune that go with them: only builds of development write these shared
+# caches, every other build restores read-only, so build-mudlet-pr.yml has no
+# equivalent steps at all.
+# build-mudlet-pr.yml also runs its macOS C++ tests after packaging, alongside
+# the Lua tests; here they stay ahead of a package step that can publish.
 name: 🔨 Build Mudlet
 on:
   push:
@@ -27,6 +30,8 @@ jobs:
     if: ${{ github.repository_owner == 'Mudlet' }}
     env:
       LUA_VERSION: '5.1.5'
+      CCACHE_MAXSIZE: ${{ matrix.ccache_maxsize || '500M' }}
+      CCACHE_COMPRESSLEVEL: ${{ (github.ref_name == 'development' && github.event_name != 'schedule' && github.event.inputs.scheduled != 'true') && '19' || '1' }}
     strategy:
       fail-fast: false
       matrix:
@@ -41,6 +46,10 @@ jobs:
             gcc_compiler_version: 12
             qt: '6.11.1'
             ccache_id: ubuntu-gcc-asan
+            # 22.04's ccache 4.5 cleans each sixteenth of the cache on its own, and at
+            # 500M that is smaller than the 35-50MB precompiled header - which GCC does
+            # not build reproducibly, so a rebuilt one misses every file using it
+            ccache_maxsize: 2G
             deploy: 'deploy'
             run_tests: 'true'
             # Enable AddressSanitizer for PTB and testing builds, but not release
@@ -53,15 +62,14 @@ jobs:
             gcc_compiler_version: 12
             qt: '6.11.1'
             ccache_id: ubuntu-gcc
-          - os: ubuntu-latest
+            ccache_maxsize: 2G
+          - os: ubuntu-26.04
             buildname: 'ubuntu / clang'
             compiler: clang_64
             gcc_compiler_version: 14
             qt: '6.11.1'
             ccache_id: ubuntu-clang
-          # Ships the Intel binary only: no test here branches on the host
-          # architecture, so the arm64 job below is the same coverage, and this
-          # is the slower pool.
+          # No tests: none branch on host architecture, so the arm64 job covers them on a faster pool.
           - os: macos-15-intel
             buildname: 'macos (x86_64)'
             compiler: clang_64
@@ -82,7 +90,9 @@ jobs:
       uses: actions/checkout@v7
       with:
         submodules: recursive
-        fetch-depth: 0
+        # Enough for CI/generate-changelog.lua.
+        # MAX_COMMITS_PER_CHANGELOG (100) commits
+        fetch-depth: 100
 
     - name: Install Qt
       uses: jurplel/install-qt-action@v4
@@ -121,6 +131,25 @@ jobs:
       if: runner.os == 'macOS'
       uses: leafo/gh-actions-luarocks@v6
 
+    # Keyed on the runner image, as the rocks link against its Homebrew libraries, and on
+    # the script that installs them. A tagged release installs its rocks afresh, since the
+    # app bundles them. As with ccache, saves are keyed per run and restores prefix-match
+    # the newest, so a set that fails its check is replaced rather than restored for good.
+    - name: (macOS) Work out the Lua rocks cache key
+      if: runner.os == 'macOS'
+      id: rocks
+      run: |
+        echo "prefix=luarocks-${{ matrix.os }}-${{ runner.arch }}-${ImageVersion:?is not set}-${{ hashFiles('CI/install-lua-rocks.sh') }}-" >> "$GITHUB_OUTPUT"
+
+    - name: (macOS) Restore Lua rocks cache
+      if: runner.os == 'macOS' && !startsWith(github.ref, 'refs/tags/')
+      id: cache-luarocks
+      uses: actions/cache/restore@v6
+      with:
+        path: ~/.luarocks
+        key: ${{ steps.rocks.outputs.prefix }}
+        restore-keys: ${{ steps.rocks.outputs.prefix }}
+
     - name: (macOS) Install dependencies
       if: runner.os == 'macOS'
       env:
@@ -151,7 +180,6 @@ jobs:
         done
 
         echo "CCACHE_DIR=${{runner.workspace}}/ccache" >> $GITHUB_ENV
-        echo "CCACHE_MAXSIZE=500M" >> $GITHUB_ENV
 
         # Use latest available XCode
         echo "DEVELOPER_DIR=$(xcode-select --print-path)" >> $GITHUB_ENV
@@ -177,8 +205,14 @@ jobs:
         # Help CMake find keg-only Homebrew packages (PCRE2 is keg-only on macOS)
         echo "PKG_CONFIG_PATH=${HOMEBREW_PREFIX}/opt/pcre2/lib/pkgconfig:$PKG_CONFIG_PATH" >> $GITHUB_ENV
 
-        # Install lua-yajl early to generate translation statistics
-        luarocks --lua-version 5.1 install --local lua-yajl YAJL_DIR=${HOMEBREW_PREFIX}/opt/yajl
+        # Install lua-yajl early to generate translation statistics - unless the cache held
+        # every rock, and they all still load against this runner's Homebrew libraries
+        if [ -n "${{ steps.cache-luarocks.outputs.cache-matched-key }}" ] \
+          && ${{github.workspace}}/CI/install-lua-rocks.sh --check; then
+          echo "LUA_ROCKS_CACHED=true" >> $GITHUB_ENV
+        else
+          HOMEBREW_PREFIX="${HOMEBREW_PREFIX}" ${{github.workspace}}/CI/install-lua-rocks.sh lua-yajl
+        fi
 
         # Allow stats generation script to see location of lua-yajl
         eval "$(luarocks path --local --lua-version "5.1")"
@@ -246,10 +280,9 @@ jobs:
         sudo update-alternatives --set g++ /usr/bin/g++-${{matrix.gcc_compiler_version}}
 
         echo "CCACHE_DIR=${{runner.workspace}}/ccache" >> $GITHUB_ENV
-        echo "CCACHE_MAXSIZE=500M" >> $GITHUB_ENV
 
         # Install lua-yajl early to generate translation statistics
-        luarocks --lua-version 5.1 install --local lua-yajl
+        ${{github.workspace}}/CI/install-lua-rocks.sh lua-yajl
 
         # Allow stats generation script to see location of lua-yajl
         eval "$(luarocks path --local --lua-version "5.1")"
@@ -343,6 +376,8 @@ jobs:
          echo "WITH_UPDATER=no" >> $GITHUB_ENV
          echo "WITH_3DMAPPER=no" >> $GITHUB_ENV
          echo "WITH_FONTS=no" >> $GITHUB_ENV
+         # The one job that builds without precompiled headers, so a missing #include still fails somewhere
+         echo "CMAKE_DISABLE_PRECOMPILE_HEADERS=ON" >> $GITHUB_ENV
 
     # Saves are keyed per commit, so the primary key deliberately matches no entry
     # and every restore prefix-matches the newest. On a tagged release the
@@ -374,7 +409,18 @@ jobs:
         echo "CC=clang" >> $GITHUB_ENV
 
     - name: check ccache stats prior to build
-      run: ccache --zero-stats --show-stats
+      run: |
+        ccache --zero-stats --show-stats -v
+        ccache --show-compression
+
+    - name: recompress the restored ccache
+      if: >-
+        github.ref_name == 'development'
+        && github.event_name != 'schedule' && github.event.inputs.scheduled != 'true'
+      run: |
+        ccache --recompress 19
+        ccache --show-compression
+        echo "CCACHE_BUILD_START=$(date +%s)" >> "$GITHUB_ENV"
 
     - name: Build Mudlet
       uses: lukka/run-cmake@v10.9
@@ -393,6 +439,14 @@ jobs:
         MUDLET_SANITIZERS: ${{ github.event_name == 'pull_request' && 'address' || '' }}
         SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
 
+    # A hit refreshes an entry's timestamp, so whatever this build left untouched
+    # is an object it no longer compiles. Dropping it saves one build's working
+    # set - under half of the 500M cap it would otherwise fill. Skipped after a
+    # failed build, which stops early and would leave most of that looking stale.
+    - name: Trim the ccache to what this build used
+      if: success() && env.CCACHE_BUILD_START
+      run: ccache --evict-older-than "$(( $(date +%s) - CCACHE_BUILD_START + 60 ))s"
+
     - name: Save ccache
       if: >-
         always() && github.ref_name == 'development'
@@ -403,32 +457,15 @@ jobs:
         key: ccache-${{matrix.ccache_id}}-sha-${{ github.sha }}
 
     - name: check ccache stats post build
-      run: ccache --show-stats
+      run: |
+        ccache --show-stats -v
+        ccache --show-compression
 
     - name: install dependencies for packaging/tests
       run: |
-        LUAROCKS="luarocks --lua-version 5.1 install --local"
-
-        $LUAROCKS LuaFileSystem
-        $LUAROCKS luautf8
-        $LUAROCKS lpeg
-
-        if [ "$RUNNER_OS" = "macOS" ]; then
-          $LUAROCKS lua-zip ZIP_DIR=${HOMEBREW_PREFIX}/opt/libzip
-          $LUAROCKS LuaSQL-SQLite3 2.6.1 SQLITE_DIR=${HOMEBREW_PREFIX}/opt/sqlite
-          $LUAROCKS lrexlib-pcre2 PCRE2_DIR=${HOMEBREW_PREFIX}/opt/pcre2
-        else
-          $LUAROCKS lua-zip
-          $LUAROCKS LuaSQL-SQLite3 2.6.1
-          $LUAROCKS lrexlib-pcre2
+        if [ "${LUA_ROCKS_CACHED}" != "true" ]; then
+          ${{github.workspace}}/CI/install-lua-rocks.sh
         fi
-
-        # CI changelog generation dependencies
-        $LUAROCKS argparse
-        $LUAROCKS lunajson
-
-        # Lua-based tests
-        $LUAROCKS busted
 
         # necessary for Qt multimedia and modern Qt
         # libfuse2 could be needed for linuxdeployqt on Ubuntu 22.04:
@@ -439,6 +476,15 @@ jobs:
         BUILD_FOLDER: ${{runner.workspace}}/b/ninja
         RUNNER_OS: ${{runner.os}}
         DEPLOY: ${{matrix.deploy}}
+
+    - name: (macOS) Save Lua rocks cache
+      if: >-
+        runner.os == 'macOS' && github.ref_name == 'development'
+        && env.LUA_ROCKS_CACHED != 'true'
+      uses: actions/cache/save@v6
+      with:
+        path: ~/.luarocks
+        key: ${{ steps.rocks.outputs.prefix }}${{ github.run_id }}-${{ github.run_attempt }}
 
     - name: (Linux) Run C++ tests
       if: runner.os == 'Linux' && matrix.run_tests == 'true'
@@ -455,10 +501,11 @@ jobs:
     - name: (macOS) Run C++ tests
       if: runner.os == 'macOS' && matrix.run_tests == 'true'
       working-directory: '${{runner.workspace}}/b/ninja'
-      run: ctest --output-on-failure -j $(sysctl -n hw.ncpu)
+      # Twice the cores: most of these tests wait on timers and sockets rather than compute.
+      # On the 3-core arm64 runner -j6 took the run from 330s to 213s, and -j9 was slower (245s).
+      run: ctest --output-on-failure -j $(( 2 * $(sysctl -n hw.ncpu) ))
 
-    # the full ctest run above already covers every functional-labelled test,
-    # and a BUILD_TESTING=OFF tree has no tests to find - bare ctest exits 8 there
+    # Skipped after the full ctest run, which covers these, and with BUILD_TESTING=OFF (bare ctest exits 8)
     - name: Run QTest
       if: matrix.run_tests != 'true' && matrix.build_tests != 'false'
       run: ctest --test-dir ${{runner.workspace}}/b/ninja -L functional --output-on-failure -j $(nproc)
@@ -668,8 +715,8 @@ jobs:
       if: matrix.run_tests == 'true' && runner.os == 'Linux'
       # This leg drives the real discord-rpc library, whose reconnects happen in
       # wall-clock time, so the suite needs a budget of its own: the run itself
-      # takes ~75s, and the rest is headroom for a slow runner stretching those.
-      timeout-minutes: 6
+      # takes 300-340s under ASan, and the rest is headroom for a slow runner.
+      timeout-minutes: 12
       run: xvfb-run --auto-servernum ${{github.workspace}}/src/mudlet --profile "Mudlet self-test" --mirror --offline
       env:
         AUTORUN_BUSTED_TESTS: 'true'
@@ -716,9 +763,9 @@ jobs:
 
     - name: (macOS) Run Lua tests
       if: matrix.run_tests == 'true' && runner.os == 'macOS'
-      # ~100s on a healthy Intel runner and measured at 172s on a slow one, so a
-      # tighter limit fails on runner speed rather than on anything the suite did
-      timeout-minutes: 6
+      # 200-245s on arm64; a tighter limit fails on runner speed rather than on
+      # anything the suite did
+      timeout-minutes: 12
       run: ~/Desktop/Mudlet.app/Contents/MacOS/mudlet --profile "Mudlet self-test" --mirror --offline
       env:
         AUTORUN_BUSTED_TESTS: 'true'
@@ -759,3 +806,50 @@ jobs:
           echo "Lua tests failed - see the action called 'Run Lua tests' above for detailed output."
           exit 1
         fi
+
+  # Every development build saves its ccache under a new per-commit key and only
+  # the newest is ever restored, so the older ones would sit in the 10GB quota
+  # until GitHub's least-recently-used eviction, which is as likely to drop a
+  # current entry that only development builds restore. The Windows workflow
+  # saves under the same scheme and is swept here too.
+  # Deliberately not `needs: compile-mudlet`: that would queue it for a runner only
+  # once the slowest leg ends, often long after later pushes have built. Started
+  # alongside the builds, it keeps the previous push's entries, which they restore.
+  prune-superseded-ccache:
+    name: Delete superseded ccache entries
+    # Skipped on PTBs, which save no ccache. A failed sweep must not fail the run:
+    # releases from development are built from whichever platforms' runs succeeded.
+    if: >-
+      github.repository_owner == 'Mudlet' && github.ref == 'refs/heads/development'
+      && github.event_name != 'schedule' && github.event.inputs.scheduled != 'true'
+    continue-on-error: true
+    runs-on: ubuntu-latest
+    permissions:
+      actions: write
+    steps:
+    - name: Delete all but the newest ccache entry per build
+      # explicitly bash for pipefail, so a failed listing fails the step
+      shell: bash
+      env:
+        GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        CACHE_REF: ${{ github.ref }}
+      run: |
+        # Overlapping builds can save out of order, so keep the newest commit's
+        # entry rather than the newest save; older commits fall back to save order
+        recent="$(gh api "repos/${GITHUB_REPOSITORY}/commits?sha=${CACHE_REF}&per_page=100" --jq '[.[].sha]')"
+        # jq -s rather than gh's --slurp: --paginate applies --jq per page, and
+        # the grouping has to see every page at once
+        gh api --paginate "repos/${GITHUB_REPOSITORY}/actions/caches?per_page=100&ref=${CACHE_REF}&key=ccache-" \
+          --jq '.actions_caches[]' \
+          | jq -rs --argjson recent "${recent}" '
+              map(select(.key | test("^ccache-.+-sha-[0-9a-f]{40}$")))
+              | group_by(.key | sub("-sha-[0-9a-f]{40}$"; ""))
+              | map(sort_by([-(. as $c | $recent | index($c.key[-40:]) // 100), .created_at]) | .[:-1][])
+              | .[] | "\(.id) \(.key)"' \
+          | while read -r id key; do
+              echo "deleting ${key}"
+              # a 404 means it is already gone, which is the wanted end state
+              response="$(gh api --method DELETE "repos/${GITHUB_REPOSITORY}/actions/caches/${id}" 2>&1)" \
+                || [[ "${response}" == *"HTTP 404"* ]] \
+                || echo "::warning::could not delete ${key}: ${response}"
+            done

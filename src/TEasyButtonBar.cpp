@@ -27,6 +27,7 @@
 #include "TAction.h"
 #include "TConsole.h"
 #include "TFlipButton.h"
+#include "TMainConsole.h"
 
 #include <QGridLayout>
 #include <QIcon>
@@ -176,10 +177,7 @@ void TEasyButtonBar::addActionButtons(TAction* pAction)
             pTFlipButton->setMenu(pNewMenu);
         }
 
-        if (pTAction->mpFButton) {
-            pTAction->mpFButton->deleteLater();
-        }
-        pTAction->mpFButton = pTFlipButton;
+        pAction->mpHost->mpConsole->replaceActionButton(pTAction, pTFlipButton);
 
         // Moved to be AFTER the pTAction->mIsFolder test as I think we ought to
         // add the button to the toolbar AFTER any menu (children) items have
@@ -198,7 +196,7 @@ void TEasyButtonBar::fillMenu(TAction* pAction, QMenu* pMenu)
         if (!pTAction->isActive()) {
             continue;
         }
-        pAction->mpEasyButtonBar = this;
+        mpTAction->mpHost->mpConsole->setActionEasyButtonBar(pAction, this);
         auto pEAction = new EAction(pAction->mpHost, QIcon(pAction->getIcon()), pTAction->getName(), pTAction->mID);
         pEAction->setStatusTip(pTAction->getName());
         pEAction->setCheckable(pTAction->isPushDownButton());
@@ -208,10 +206,7 @@ void TEasyButtonBar::fillMenu(TAction* pAction, QMenu* pMenu)
             pEAction->setChecked(false);
         }
 
-        if (pTAction->mpEAction) {
-            pTAction->mpEAction->deleteLater();
-        }
-        pTAction->mpEAction = pEAction;
+        mpTAction->mpHost->mpConsole->replaceActionMenuEntry(pTAction, pEAction);
 
         //FIXME: Heiko April 2012 -> addActionButtons()
         if (pTAction->isPushDownButton() && pAction->mpHost->mIsProfileLoadingSequence) {
@@ -219,9 +214,7 @@ void TEasyButtonBar::fillMenu(TAction* pAction, QMenu* pMenu)
         }
 
         if (pTAction->isFolder()) {
-            // Adding a QWidget derived pointer to new QMenu() means the menu
-            // will be destroyed when the pointed to item is, we just need to
-            // find the item that it is attached to - ah ha, try the toolbar...
+            // Deleted along with its entry, see deleteMenuEntryLater() in TMainConsole.cpp
             auto pNewMenu = new QMenu(this);
             pEAction->setMenu(pNewMenu);
 
@@ -316,6 +309,11 @@ void TEasyButtonBar::clear()
     // Transfer the object name to the new instance:
     auto widgetObjectName(mpWidget->objectName());
     mpWidget->setObjectName(QString());
+    // deleteLater() waits for a return to the event loop it was called from, which
+    // a nested processEvents() never is, so until then the old buttons would still
+    // be laid out above the new ones
+    layout()->removeWidget(mpWidget);
+    mpWidget->hide();
     mpWidget->deleteLater();
     mpWidget = pW;
     mpWidget->setObjectName(widgetObjectName);

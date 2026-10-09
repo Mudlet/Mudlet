@@ -223,8 +223,6 @@ function appendScript(name, luaCode, pos)
   assert(type(name) == "string", "appendScript: bad argument #1 type (script name as string expected, got "..type(name).."!)")
   assert(type(luaCode) == "string", "appendScript: bad argument #2 type (lua code as string expected, got "..type(luaCode).."!)")
   assert(type(pos) == "number", "appendScript: bad argument #3 type (script position as number expected, got "..type(pos).."!)")
-  -- getScript reports a missing script as the number -1 plus a message; concatenating
-  -- that into the new body would have setScript complain about "-1" as invalid Lua
   local existingCode, message = getScript(name, pos)
   if existingCode == -1 then
     error("appendScript: cannot append to script ("..message..")", 0)
@@ -380,7 +378,8 @@ function table.pickle( t, file, tables, lookup )
       if type( i ) == "table" then
         if not lookup[i] then
           table.insert( tables, i )
-          lookup[i] = table.maxn( tables )
+          -- not table.maxn(), which walks every entry: once per table saved, that is quadratic
+          lookup[i] = #tables
         end
         file:write( "[{" .. lookup[i] .. "}] = " )
       else
@@ -391,7 +390,7 @@ function table.pickle( t, file, tables, lookup )
       if type( v ) == "table" then
         if not lookup[v] then
           table.insert( tables, v )
-          lookup[v] = table.maxn( tables )
+          lookup[v] = #tables
         end
         file:write( "{" .. lookup[v] .. "}," )
       else
@@ -744,9 +743,17 @@ if not _TEST then
   end
 end
 
+-- One function shared by every deleteFull() call: a string script would be
+-- compiled into a new Lua chunk each time a line is gagged.
+local function deletePromptLine()
+  if isPrompt() then
+    deleteLine()
+  end
+end
+
 function deleteFull()
   deleteLine()
-  tempLineTrigger(1, 1, [[if isPrompt() then deleteLine() end]])
+  tempLineTrigger(1, 1, deletePromptLine)
 end
 
 function deleteMultiline(maxLines)
@@ -1133,7 +1140,7 @@ end
 local acceptableSuffix = {"xml", "mpackage", "zip", "trigger"}
 
 function verbosePackageInstall(fileName)
-  local ok, err = installPackage(fileName)
+  local ok, reason = installPackage(fileName)
   -- this has to stay a literal prefix strip: as a Lua pattern the profile path's
   -- magic characters bite, and a "-" (as in "Mudlet self-test") stops it
   -- matching at all
@@ -1141,7 +1148,17 @@ function verbosePackageInstall(fileName)
   local packageName = fileName:starts(profileFolder) and fileName:sub(#profileFolder + 1) or fileName
   -- That is all for installing, now to announce the result to the user:
   mudlet.Locale = mudlet.Locale or loadTranslations("Mudlet")
-  if ok then
+  if ok and reason and reason ~= "" then
+    -- installPackage() asks for a quiet install, so nothing else puts the reason on the console
+    local partialText = mudlet.Locale.packageInstallPartial.message
+    partialText = string.format(partialText, packageName, reason)
+    local warnPrefix = mudlet.Locale.prefixWarn.message
+    decho('<0,150,190>' .. warnPrefix)
+    -- echo, as decho would take a tag such as <b> in an error message as formatting
+    setFgColor(190, 150, 0)
+    echo(partialText .. '\n')
+    resetFormat()
+  elseif ok then
     local successText = mudlet.Locale.packageInstallSuccess.message
     successText = string.format(successText, packageName)
     local okPrefix = mudlet.Locale.prefixOk.message
@@ -1149,7 +1166,7 @@ function verbosePackageInstall(fileName)
     -- Light Green and Orange-ish; see cTelnet::postMessage for color comparison
   else
     local failureText = mudlet.Locale.packageInstallFail.message
-    failureText = string.format(failureText, packageName, err)
+    failureText = string.format(failureText, packageName, reason)
     local warnPrefix = mudlet.Locale.prefixWarn.message
     decho('<0,150,190>' .. warnPrefix .. '<190,150,0>' .. failureText .. '\n')
     -- Cyan and Orange; see cTelnet::postMessage for color comparison
@@ -1157,11 +1174,19 @@ function verbosePackageInstall(fileName)
 end
 
 function verboseModuleInstall(fileName)
-  local ok, err = installModule(fileName)
+  local ok, reason = installModule(fileName)
   local moduleName = fileName
   -- That is all for installing, now to announce the result to the user:
   mudlet.Locale = mudlet.Locale or loadTranslations("Mudlet")
-  if ok then
+  if ok and reason and reason ~= "" then
+    local partialText = mudlet.Locale.moduleInstallPartial.message
+    partialText = string.format(partialText, moduleName, reason)
+    local warnPrefix = mudlet.Locale.prefixWarn.message
+    decho('<0,150,190>' .. warnPrefix)
+    setFgColor(190, 150, 0)
+    echo(partialText .. '\n')
+    resetFormat()
+  elseif ok then
     local successText = mudlet.Locale.moduleInstallSuccess.message
     successText = string.format(successText, moduleName)
     local okPrefix = mudlet.Locale.prefixOk.message
@@ -1169,7 +1194,7 @@ function verboseModuleInstall(fileName)
     -- Light Green and Orange-ish; see cTelnet::postMessage for color comparison
   else
     local failureText = mudlet.Locale.moduleInstallFail.message
-    failureText = string.format(failureText, moduleName, err)
+    failureText = string.format(failureText, moduleName, reason)
     local warnPrefix = mudlet.Locale.prefixWarn.message
     decho('<0,150,190>' .. warnPrefix .. '<190,150,0>' .. failureText .. '\n')
     -- Cyan and Orange; see cTelnet::postMessage for color comparison
@@ -1305,6 +1330,7 @@ function getConfig(...)
       "fixUnnecessaryLinebreaks",
       "forceNewEnvironNegotiationOff",
       "inputLineStrictUnixEndings",
+      "lazyCaptureGlobals",
       "logDirectory",                    -- read-only in getConfig
       "logInHTML",
       "mapExitSize",
