@@ -126,7 +126,7 @@ private slots:
     void init()
     {
         QVERIFY(mpHost);
-        QVERIFY(mpHost->mpConsole);
+        QVERIFY(mpHost->mainConsoleView());
         // The games this matters for do not negotiate MXP, they assume it, so
         // this is how the processor is turned on for them - secure mode included
         mpHost->setForceMXPProcessorOn(true);

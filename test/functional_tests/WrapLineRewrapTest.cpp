@@ -370,7 +370,7 @@ private slots:
         startProfile();
         auto* host = mudlet::self()->getActiveHost();
         QVERIFY(host);
-        TMainConsole* console = host->mpConsole;
+        TMainConsole* console = host->mainConsoleView();
         QVERIFY(console);
 
         const QString token = qsl("abcdefghijklmnopqrstuvwxyz0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ");
@@ -459,7 +459,7 @@ private slots:
     {
         auto* host = startLoggingProfile();
         QVERIFY(host);
-        host->mpConsole->setWrapAt(20);
+        host->mainConsoleView()->setWrapAt(20);
 
         // one unbroken token, so no wrap point can swallow a space, and long
         // enough to be split into more than two lines
@@ -487,7 +487,7 @@ private slots:
         QVERIFY(host);
         host->mUndoServerWrap = true;
         host->mUndoServerWrapWidth = 80;
-        TMainConsole* console = host->mpConsole;
+        TMainConsole* console = host->mainConsoleView();
         // keep Mudlet's own display wrap out of the way, so the held line is
         // one buffer line to look for
         console->setWrapAt(500);
@@ -682,7 +682,7 @@ private:
     {
         startProfile();
         runLua(qsl("createMiniConsole('%1', 0, 0, 600, 600)").arg(mMiniConsole));
-        auto* console = mudlet::self()->getActiveHost()->mpConsole->subConsoleWidget(mMiniConsole);
+        auto* console = mudlet::self()->getActiveHost()->mainConsoleView()->subConsoleWidget(mMiniConsole);
         if (console) {
             console->setWrapAt(width);
         }
@@ -774,14 +774,14 @@ private:
         host->mLogFileName = qsl("wrapline-rewrap-test");
         host->mIsNextLogFileInHtmlFormat = false;
         host->mIsLoggingTimestamps = false;
-        host->mpConsole->toggleLogging(false);
+        host->mainConsoleView()->toggleLogging(false);
         return host;
     }
 
     QString stopLoggingAndReadLog(Host* host)
     {
-        const QString logFileName = host->mpConsole->mLogFileName;
-        host->mpConsole->toggleLogging(false);
+        const QString logFileName = host->mainConsoleView()->mLogFileName;
+        host->mainConsoleView()->toggleLogging(false);
 
         QFile logFile(logFileName);
         if (!logFile.open(QIODevice::ReadOnly | QIODevice::Text)) {

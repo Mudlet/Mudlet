@@ -133,6 +133,8 @@ public:
 
     // Creates the profile's directory if missing, so writing for a nonexistent profile brings it into being
     static QPair<bool, QString> writeProfileData(const QString& profile, const QString& item, const QString& what);
+    static QPair<bool, QString> setProfileIcon(const QString& profile, const QString& newIconPath);
+    static QPair<bool, QString> resetProfileIcon(const QString& profile);
 
     // The on-disk spelling of a profile named in any case, or an empty string if
     // neither an existing profile nor a predefined game goes by that name
@@ -173,6 +175,10 @@ public:
     static bool firstLaunch();
     // The interface is drawn dark, whether chosen or by following a dark system theme
     static bool darkMode();
+    // --mirror: copy each shown console line to stdout, for CI. Main console game text is copied on
+    // arrival, before a trigger can gag or rewrite it; print()/echo() output from any console too.
+    // Read for every line, so a plain flag rather than a call.
+    inline static bool smMirrorToStdOut = false;
 
     // Which build of Mudlet this is, and how it names itself to the outside world.
 
