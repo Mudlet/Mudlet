@@ -85,9 +85,9 @@ private:
         return QFileInfo::exists(qsl("%1/portable.txt").arg(QCoreApplication::applicationDirPath())) || QFileInfo::exists(qsl("%1/.config/mudlet/portable.txt").arg(QDir::homePath()));
     }
 
-    TTextEdit* pane() const { return mpHost->mpConsole->mUpperPane; }
+    TTextEdit* pane() const { return mpHost->mainConsoleView()->mUpperPane; }
 
-    const QStringList& lines() const { return mpHost->mpConsole->buffer.lineBuffer; }
+    const QStringList& lines() const { return mpHost->mainConsoleView()->buffer.lineBuffer; }
 
     QString wholeText() const { return lines().join(QChar::LineFeed); }
 
@@ -240,9 +240,9 @@ private slots:
         // what the visibility cases need, followed by the three named ones so
         // they are on screen at the end.
         for (int line = 0; line < 200; ++line) {
-            mpHost->mpConsole->print(qsl("filler %1\n").arg(line));
+            mpHost->mainConsoleView()->print(qsl("filler %1\n").arg(line));
         }
-        mpHost->mpConsole->print(qsl("%1\n%2\n%3\n").arg(mFirstMarker, mSecondMarker, mThirdMarker));
+        mpHost->mainConsoleView()->print(qsl("%1\n%2\n%3\n").arg(mFirstMarker, mSecondMarker, mThirdMarker));
         QTest::qWait(100ms);
 
         QVERIFY2(textInterface(), "no QAccessibleTextInterface for the console - the factory never took");
@@ -271,7 +271,7 @@ private slots:
         // Every case but one needs the marker lines on screen, and the one that
         // scrolls away from them leaves the view up in the buffer if it fails
         // part way through.
-        pane()->scrollTo(mpHost->mpConsole->buffer.getLastLineNumber() + 1);
+        pane()->scrollTo(mpHost->mainConsoleView()->buffer.getLastLineNumber() + 1);
     }
 
     // The flat string every other case indexes into: the buffer's lines with a

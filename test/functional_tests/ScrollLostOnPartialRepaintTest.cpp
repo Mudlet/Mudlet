@@ -91,8 +91,8 @@ private slots:
     {
         startProfile(mpHostname, mpLocalhost, mpPort);
         auto host = mudlet::self()->getActiveHost();
-        QVERIFY2(host && host->mpConsole, "no main console");
-        TTextEdit* pane = host->mpConsole->mUpperPane;
+        QVERIFY2(host && host->mainConsoleView(), "no main console");
+        TTextEdit* pane = host->mainConsoleView()->mUpperPane;
         QVERIFY(pane);
         auto* lua = host->getLuaInterpreter();
 
@@ -107,7 +107,7 @@ private slots:
         // Measured against what the buffer already holds - a profile arrives with
         // a few lines of its own, and connect-time output would otherwise push the
         // view off the top and leave nothing for this case to exercise.
-        const int room = screenHeight - 2 - static_cast<int>(host->mpConsole->buffer.lineBuffer.size());
+        const int room = screenHeight - 2 - static_cast<int>(host->mainConsoleView()->buffer.lineBuffer.size());
         QVERIFY2(room > 0, "the profile filled the pane before the case could");
         lua->compileAndExecuteScript(qsl("for i = 1, %1 do echo('FILLER ' .. i .. '\\n') end\n").arg(room));
         qApp->processEvents();
@@ -145,8 +145,8 @@ private slots:
     {
         startProfile(mpHostname, mpLocalhost, mpPort);
         auto host = mudlet::self()->getActiveHost();
-        QVERIFY2(host && host->mpConsole, "no main console");
-        TTextEdit* pane = host->mpConsole->mUpperPane;
+        QVERIFY2(host && host->mainConsoleView(), "no main console");
+        TTextEdit* pane = host->mainConsoleView()->mUpperPane;
         QVERIFY(pane);
         auto* lua = host->getLuaInterpreter();
 
@@ -203,8 +203,8 @@ private slots:
         QFETCH(bool, opaque);
         startProfile(mpHostname, mpLocalhost, mpPort);
         auto host = mudlet::self()->getActiveHost();
-        QVERIFY2(host && host->mpConsole, "no main console");
-        TTextEdit* pane = host->mpConsole->mUpperPane;
+        QVERIFY2(host && host->mainConsoleView(), "no main console");
+        TTextEdit* pane = host->mainConsoleView()->mUpperPane;
         QVERIFY(pane);
         auto* lua = host->getLuaInterpreter();
         if (!background.isEmpty()) {
@@ -255,10 +255,10 @@ private slots:
         mpServer->setSendsWelcome(false);
         startProfile(mpHostname, mpLocalhost, mpPort);
         auto host = mudlet::self()->getActiveHost();
-        QVERIFY2(host && host->mpConsole, "no main console");
-        TTextEdit* pane = host->mpConsole->mUpperPane;
+        QVERIFY2(host && host->mainConsoleView(), "no main console");
+        TTextEdit* pane = host->mainConsoleView()->mUpperPane;
         QVERIFY(pane);
-        QScrollBar* scrollBar = host->mpConsole->mpScrollBar;
+        QScrollBar* scrollBar = host->mainConsoleView()->mpScrollBar;
         QVERIFY(scrollBar);
         auto* lua = host->getLuaInterpreter();
 
@@ -288,7 +288,7 @@ private slots:
         // not QTRY: a refresh from anywhere within its retry window would hide
         // the loss
         QTest::qWait(100ms);
-        QCOMPARE(scrollBar->maximum(), host->mpConsole->buffer.getLastLineNumber() + 1);
+        QCOMPARE(scrollBar->maximum(), host->mainConsoleView()->buffer.getLastLineNumber() + 1);
     }
 
     // A hover or selection repaint draws into a scratch buffer seeded only with
@@ -298,8 +298,8 @@ private slots:
     {
         startProfile(mpHostname, mpLocalhost, mpPort);
         auto host = mudlet::self()->getActiveHost();
-        QVERIFY2(host && host->mpConsole, "no main console");
-        TTextEdit* pane = host->mpConsole->mUpperPane;
+        QVERIFY2(host && host->mainConsoleView(), "no main console");
+        TTextEdit* pane = host->mainConsoleView()->mUpperPane;
         QVERIFY(pane);
         auto* lua = host->getLuaInterpreter();
         mudlet::self()->resize(1200, 800);

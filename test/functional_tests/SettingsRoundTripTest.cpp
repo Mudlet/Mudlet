@@ -486,7 +486,7 @@ private slots:
     // can hold, and the spin box says which by being usable or not
     void test_theMaximumBufferSizeTakesOverTheBufferSizeSpinBox()
     {
-        QVERIFY2(mpHost->mpConsole, "the profile has no console, so it has no maximum buffer size to offer");
+        QVERIFY2(mpHost->mainConsoleView(), "the profile has no console, so it has no maximum buffer size to offer");
         const int priorBufferSize = mpHost->getConsoleBufferSize();
         const bool priorUseMax = mpHost->getUseMaxConsoleBufferSize();
         restoreLater([=, this]() {
@@ -499,7 +499,7 @@ private slots:
         mpHost->setConsoleBufferSize(chosenSize);
 
         openPreferences();
-        const int maximumSize = mpHost->mpConsole->buffer.getMaxBufferSize();
+        const int maximumSize = mpHost->mainConsoleView()->buffer.getMaxBufferSize();
         QVERIFY2(maximumSize != chosenSize, "the machine's maximum buffer size happens to be the size this case picked, so the two cannot be told apart");
         QCOMPARE(mpPreferences->console_buffer_size_spinBox->value(), chosenSize);
         QVERIFY(mpPreferences->console_buffer_size_spinBox->isEnabled());

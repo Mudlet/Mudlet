@@ -105,7 +105,7 @@ private slots:
         }
         mpBackgroundHost = HostManager::self()->getHost(mBackgroundHostname);
         QVERIFY(mpBackgroundHost);
-        QVERIFY(mpBackgroundHost->mpConsole);
+        QVERIFY(mpBackgroundHost->mainConsoleView());
 
         startProfile(mFrontHostname);
         if (QTest::currentTestFailed()) {
@@ -113,9 +113,9 @@ private slots:
         }
         mpFrontHost = HostManager::self()->getHost(mFrontHostname);
         QVERIFY(mpFrontHost);
-        QVERIFY(mpFrontHost->mpConsole);
+        QVERIFY(mpFrontHost->mainConsoleView());
 
-        QVERIFY2(mpBackgroundHost->mpConsole->isHidden(), "opening a second profile did not background the first one, so there is nothing to test here");
+        QVERIFY2(mpBackgroundHost->mainConsoleView()->isHidden(), "opening a second profile did not background the first one, so there is nothing to test here");
     }
 
     void cleanupTestCase()
@@ -170,7 +170,7 @@ private slots:
             const auto geometry = mpFrontHost->windowGeometry(name);
             QVERIFY2(geometry.has_value(), qPrintable(qsl("getWindowGeometry(\"%1\") did not recognise the main window").arg(name)));
             QCOMPARE(geometry->topLeft(), QPoint(0, 0));
-            QCOMPARE(geometry->size(), mpFrontHost->mpConsole->getMainWindowSize());
+            QCOMPARE(geometry->size(), mpFrontHost->mainConsoleView()->getMainWindowSize());
             QVERIFY2(geometry->width() > 0 && geometry->height() > 0, qPrintable(qsl("the main window reported an empty geometry: %1x%2").arg(geometry->width()).arg(geometry->height())));
 
             assertVisibility(mpFrontHost, name, true, qsl("the front profile's main window"));

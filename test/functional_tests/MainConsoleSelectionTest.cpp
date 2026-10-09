@@ -79,10 +79,10 @@ private:
     TTextEdit* upperPane() const
     {
         auto host = mudlet::self()->getActiveHost();
-        if (!host || !host->mpConsole) {
+        if (!host || !host->mainConsoleView()) {
             return nullptr;
         }
-        return host->mpConsole->mUpperPane;
+        return host->mainConsoleView()->mUpperPane;
     }
 
     void sendMouse(QWidget* w, QEvent::Type type, Qt::MouseButton button, Qt::MouseButtons buttons, const QPointF& localPos, Qt::KeyboardModifiers modifiers = Qt::NoModifier)
@@ -201,7 +201,7 @@ private:
 
     int printedLineNumber(const QString& text)
     {
-        auto console = mudlet::self()->getActiveHost()->mpConsole;
+        QPointer<TMainConsole> console = mudlet::self()->getActiveHost()->mainConsoleView();
         console->print(text + QChar::LineFeed);
         for (int i = console->buffer.getLastLineNumber(); i >= 0; --i) {
             if (console->buffer.line(i) == text) {
@@ -219,7 +219,7 @@ private:
 
     QString lineUnder(TTextEdit* pane, const QPointF& pos) const
     {
-        return mudlet::self()->getActiveHost()->mpConsole->buffer.line(static_cast<int>(pos.y()) / pane->mFontHeight + pane->imageTopLine());
+        return mudlet::self()->getActiveHost()->mainConsoleView()->buffer.line(static_cast<int>(pos.y()) / pane->mFontHeight + pane->imageTopLine());
     }
 
     // Leaves the button held on the last press, which is where a word (2) or
@@ -243,7 +243,7 @@ private:
     // does not depend on the selection endpoints that a copy works from.
     QString highlightedText() const
     {
-        TBuffer& buffer = mudlet::self()->getActiveHost()->mpConsole->buffer;
+        TBuffer& buffer = mudlet::self()->getActiveHost()->mainConsoleView()->buffer;
         QStringList lines;
         for (int y = 0; y <= buffer.getLastLineNumber(); ++y) {
             QString selected;
@@ -468,7 +468,7 @@ private slots:
         sendMouse(pane, QEvent::MouseButtonPress, Qt::LeftButton, Qt::LeftButton, pressPos, Qt::ControlModifier);
         QVERIFY2(pane->mDragStart.y() > 0, "the press did not start the drag below the first line");
         QVERIFY2(host->getLuaInterpreter()->compileAndExecuteScript(qsl("for i = 1, 25 do moveCursor(0, 0) deleteLine() end")), "the deleteLine() calls failed");
-        QVERIFY(host->mpConsole->buffer.getLastLineNumber() < pane->mDragStart.y());
+        QVERIFY(host->mainConsoleView()->buffer.getLastLineNumber() < pane->mDragStart.y());
         const QString highlightedByThePress = highlightedText();
 
         moveAndReleaseLeftButton(pane, QPointF(pressPos.x(), pane->mFontHeight / 2.0), Qt::ControlModifier);
@@ -488,7 +488,7 @@ private slots:
         sendMouse(pane, QEvent::MouseButtonPress, Qt::LeftButton, Qt::LeftButton, pressPos, Qt::ControlModifier);
         QVERIFY2(pane->mDragStart.y() > 0, "the press did not start the drag below the first line");
         QVERIFY2(host->getLuaInterpreter()->compileAndExecuteScript(qsl("clearWindow()\nfor i = 1, 200 do echo('refill ' .. i .. '\\n') end")), "the clearWindow() and echo calls failed");
-        QVERIFY(host->mpConsole->buffer.getLastLineNumber() > pane->mDragStart.y());
+        QVERIFY(host->mainConsoleView()->buffer.getLastLineNumber() > pane->mDragStart.y());
 
         moveAndReleaseLeftButton(pane, QPointF(pressPos.x(), pane->mFontHeight / 2.0), Qt::ControlModifier);
 
@@ -661,7 +661,7 @@ private slots:
 
         const QPointF belowTheText = cellInMiddleRow(pane, 2);
         const int lineBelowTheText = static_cast<int>(belowTheText.y()) / pane->mFontHeight + pane->imageTopLine();
-        QVERIFY2(lineBelowTheText >= static_cast<int>(host->mpConsole->buffer.lineBuffer.size()), "the middle of the pane is not below the text");
+        QVERIFY2(lineBelowTheText >= static_cast<int>(host->mainConsoleView()->buffer.lineBuffer.size()), "the middle of the pane is not below the text");
         sendMouse(pane, QEvent::MouseButtonPress, Qt::LeftButton, Qt::LeftButton, belowTheText, Qt::ControlModifier);
         sendMouse(pane, QEvent::MouseButtonRelease, Qt::LeftButton, Qt::NoButton, belowTheText, Qt::ControlModifier);
 
@@ -970,7 +970,7 @@ private slots:
         TTextEdit* pane = upperPane();
         QVERIFY2(pane, "No upper pane available");
 
-        TMainConsole* console = mudlet::self()->getActiveHost()->mpConsole;
+        TMainConsole* console = mudlet::self()->getActiveHost()->mainConsoleView();
         console->print(qsl("\nselected"));
         const int y = console->buffer.getLastLineNumber();
         QCOMPARE(console->buffer.line(y), qsl("selected"));
@@ -1133,7 +1133,7 @@ private slots:
     {
         TTextEdit* pane = paneShowingProse();
         QVERIFY2(pane, "No upper pane showing the prose");
-        TMainConsole* console = mudlet::self()->getActiveHost()->mpConsole;
+        TMainConsole* console = mudlet::self()->getActiveHost()->mainConsoleView();
         console->slot_toggleTimeStamps(true);
         QVERIFY2(console->showTimeStamps(), "the timestamp gutter never came on, so the click has nothing to land in");
 
@@ -1338,7 +1338,7 @@ private slots:
         startProfile(mpHostname, mpLocalhost, mpPort);
         QVERIFY2(waitForTextInBuffer(qsl("selection test")), "the welcome text never reached the buffer");
 
-        TMainConsole* console = mudlet::self()->getActiveHost()->mpConsole;
+        TMainConsole* console = mudlet::self()->getActiveHost()->mainConsoleView();
         console->print(qsl("\nbackwards selection"));
         const int y = console->buffer.getLastLineNumber();
         QCOMPARE(console->buffer.line(y), qsl("backwards selection"));
@@ -1363,7 +1363,7 @@ private slots:
         startProfile(mpHostname, mpLocalhost, mpPort);
         QVERIFY2(waitForTextInBuffer(qsl("selection test")), "the welcome text never reached the buffer");
 
-        TMainConsole* console = mudlet::self()->getActiveHost()->mpConsole;
+        TMainConsole* console = mudlet::self()->getActiveHost()->mainConsoleView();
         console->print(qsl("\nfirst\nsecond"));
         const int lastLine = console->buffer.getLastLineNumber();
         const int firstLine = lastLine - 1;
@@ -1420,7 +1420,7 @@ private:
 
     bool waitForTextInBuffer(const QString& text, int timeoutMs = 5000)
     {
-        auto console = mudlet::self()->getActiveHost()->mpConsole;
+        QPointer<TMainConsole> console = mudlet::self()->getActiveHost()->mainConsoleView();
         return QTest::qWaitFor(
                 [&]() {
                     for (int i = 0; i <= console->buffer.getLastLineNumber(); ++i) {

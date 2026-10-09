@@ -74,7 +74,7 @@ private:
     // from the reporting path under test.
     QSize measuredMainWindowSize() const
     {
-        TMainConsole* pConsole = mpHost->mpConsole;
+        TMainConsole* pConsole = mpHost->mainConsoleView();
         return {pConsole->width() - (pConsole->mpLeftToolBar->width() + pConsole->mpRightToolBar->width()),
                 pConsole->height() - (pConsole->mpCommandLine->height() + pConsole->mpTopToolBar->height())};
     }
@@ -83,7 +83,7 @@ private:
 
     QSize dockSize(const QString& name) const
     {
-        TDockWidget* pDock = mpHost->mpConsole->dockWidget(name);
+        TDockWidget* pDock = mpHost->mainConsoleView()->dockWidget(name);
         return (pDock && pDock->widget()) ? pDock->widget()->size() : QSize();
     }
 
@@ -220,7 +220,7 @@ private slots:
 
         for (int width = 1150; width >= 900; width -= 50) {
             resizeWindow(width, 800);
-            QVERIFY2(mpHost->mpConsole->getMainWindowSize() == measuredMainWindowSize(), qPrintable(mismatch(mpHost->mpConsole->getMainWindowSize(), measuredMainWindowSize())));
+            QVERIFY2(mpHost->mainConsoleView()->getMainWindowSize() == measuredMainWindowSize(), qPrintable(mismatch(mpHost->mainConsoleView()->getMainWindowSize(), measuredMainWindowSize())));
         }
     }
 
@@ -229,11 +229,11 @@ private slots:
     void test_aShrinkOfMoreThanHalfIsReported()
     {
         resizeWindow(2000, 1200);
-        QCOMPARE(mpHost->mpConsole->getMainWindowSize(), measuredMainWindowSize());
+        QCOMPARE(mpHost->mainConsoleView()->getMainWindowSize(), measuredMainWindowSize());
 
         resizeWindow(800, 600);
 
-        QVERIFY2(mpHost->mpConsole->getMainWindowSize() == measuredMainWindowSize(), qPrintable(mismatch(mpHost->mpConsole->getMainWindowSize(), measuredMainWindowSize())));
+        QVERIFY2(mpHost->mainConsoleView()->getMainWindowSize() == measuredMainWindowSize(), qPrintable(mismatch(mpHost->mainConsoleView()->getMainWindowSize(), measuredMainWindowSize())));
     }
 
     // a report that declined once must not go on measuring every later size
@@ -246,7 +246,7 @@ private slots:
 
         for (const QSize& size : {QSize(900, 650), QSize(1100, 700), QSize(1200, 800)}) {
             resizeWindow(size.width(), size.height());
-            QVERIFY2(mpHost->mpConsole->getMainWindowSize() == measuredMainWindowSize(), qPrintable(mismatch(mpHost->mpConsole->getMainWindowSize(), measuredMainWindowSize())));
+            QVERIFY2(mpHost->mainConsoleView()->getMainWindowSize() == measuredMainWindowSize(), qPrintable(mismatch(mpHost->mainConsoleView()->getMainWindowSize(), measuredMainWindowSize())));
         }
     }
 
@@ -310,11 +310,11 @@ private slots:
 
         runLua(qsl("resizeWindow('%1', 600, 400)").arg(userWindow));
         settle();
-        QCOMPARE(mpHost->mpConsole->getUserWindowSize(userWindow), dockSize(userWindow));
+        QCOMPARE(mpHost->mainConsoleView()->getUserWindowSize(userWindow), dockSize(userWindow));
 
         runLua(qsl("resizeWindow('%1', 200, 150)").arg(userWindow));
         settle();
-        QVERIFY2(mpHost->mpConsole->getUserWindowSize(userWindow) == dockSize(userWindow), qPrintable(mismatch(mpHost->mpConsole->getUserWindowSize(userWindow), dockSize(userWindow))));
+        QVERIFY2(mpHost->mainConsoleView()->getUserWindowSize(userWindow) == dockSize(userWindow), qPrintable(mismatch(mpHost->mainConsoleView()->getUserWindowSize(userWindow), dockSize(userWindow))));
 
         // a script may ask for a user window this short and Mudlet gives it one,
         // so a size below any "too small to be real" bar is still the size to
@@ -325,7 +325,7 @@ private slots:
         // that it ended up under the bar is pinned, not the exact height
         const QSize shortDock = dockSize(userWindow);
         QVERIFY2(shortDock.height() > 0 && shortDock.height() < 50, qPrintable(qsl("expected a positive height under 50 to test with, got %1").arg(shortDock.height())));
-        QVERIFY2(mpHost->mpConsole->getUserWindowSize(userWindow) == shortDock, qPrintable(mismatch(mpHost->mpConsole->getUserWindowSize(userWindow), shortDock)));
+        QVERIFY2(mpHost->mainConsoleView()->getUserWindowSize(userWindow) == shortDock, qPrintable(mismatch(mpHost->mainConsoleView()->getUserWindowSize(userWindow), shortDock)));
 
         runLua(qsl("hideWindow('%1')").arg(userWindow));
     }
@@ -347,7 +347,7 @@ private slots:
         if (measured.height() <= 0 || measured.height() >= 50) {
             QSKIP(qPrintable(qsl("the window would not go short enough to test with - %1 pixels inside").arg(measured.height())));
         }
-        QVERIFY2(mpHost->mpConsole->getMainWindowSize() == measured, qPrintable(mismatch(mpHost->mpConsole->getMainWindowSize(), measured)));
+        QVERIFY2(mpHost->mainConsoleView()->getMainWindowSize() == measured, qPrintable(mismatch(mpHost->mainConsoleView()->getMainWindowSize(), measured)));
     }
 
     // the shrink a player performs rather than one the test dials in: restoring a
@@ -357,15 +357,15 @@ private slots:
         resizeWindow(800, 600);
         mudlet::self()->showMaximized();
         QTest::qWait(200ms);
-        const int maximisedWidth = mpHost->mpConsole->width();
+        const int maximisedWidth = mpHost->mainConsoleView()->width();
 
         mudlet::self()->showNormal();
         resizeWindow(800, 600);
 
-        if (maximisedWidth < 2 * mpHost->mpConsole->width()) {
+        if (maximisedWidth < 2 * mpHost->mainConsoleView()->width()) {
             QSKIP("no window manager here to maximise against, so this is not the shrink under test");
         }
-        QVERIFY2(mpHost->mpConsole->getMainWindowSize() == measuredMainWindowSize(), qPrintable(mismatch(mpHost->mpConsole->getMainWindowSize(), measuredMainWindowSize())));
+        QVERIFY2(mpHost->mainConsoleView()->getMainWindowSize() == measuredMainWindowSize(), qPrintable(mismatch(mpHost->mainConsoleView()->getMainWindowSize(), measuredMainWindowSize())));
     }
 
     // the number Lua hands scripts is the same one, so a stale report is what
