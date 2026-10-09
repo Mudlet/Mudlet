@@ -1462,6 +1462,26 @@ describe("MMCP effects against a scripted chat peer", function()
       assert.is_true(contains(received[2][2], "second of two"), tostring(received[2][2]))
     end)
 
+    it("handles a command and the start of the next one in a single write", function()
+      if peerUnavailable() then return end
+      ensurePeer()
+      -- The complete command must not wait for the next one to finish, and the
+      -- start of the next one must be kept for when the rest of it arrives.
+      local received = collectEvents("sysMMCPChatMessage", function()
+        peerSendsRaw(string.char(7) .. "<CHAT> whole one" .. string.char(255)
+                     .. string.char(7) .. "<CHAT> started ")
+        pump(500)
+      end)
+      assert.equals(1, #received)
+      assert.is_true(contains(received[1][2], "whole one"), tostring(received[1][2]))
+      received = collectEvents("sysMMCPChatMessage", function()
+        peerSendsRaw("and finished" .. string.char(255))
+        pump(500)
+      end)
+      assert.equals(1, #received)
+      assert.is_true(contains(received[1][2], "started and finished"), tostring(received[1][2]))
+    end)
+
     it("skips a command it does not know without losing the next one", function()
       if peerUnavailable() then return end
       ensurePeer()
@@ -1833,6 +1853,19 @@ describe("MMCP effects against a scripted chat peer", function()
       local _, _, message = waitForEvent("sysMMCPIncomingSnoopMessage", 2000)
       assert.is_true(contains(message, "\27[1;32ma green snooped line"), tostring(message))
     end)
+
+    it("keeps all of a snooped frame longer than 64 KiB", function()
+      if peerUnavailable() then return end
+      ensurePeer()
+      -- A frame's length was once carried in 16 bits, so one 10 bytes past
+      -- 65536 was shown as just its last 10.
+      local length = 65536 + 10
+      peerSendsRaw(string.char(31) .. string.rep("x", length) .. string.char(255))
+      local _, _, message = waitForEvent("sysMMCPIncomingSnoopMessage", 5000)
+      assert.is_string(message)
+      local _, count = message:gsub("x", "")
+      assert.equals(length, count)
+    end)
   end)
 
   describe("mmcp.ping", function()
@@ -2188,6 +2221,49 @@ describe("MMCP effects against a scripted chat peer", function()
   end)
 
   describe("disconnection", function()
+    it("drops a peer that sends more than 1 MiB without ending a command", function()
+      if peerUnavailable() then return end
+      ensurePeer()
+      local mark = captureSeq()
+      local line = getLastLineNumber("main")
+      -- a snoop frame that never gets its 0xff terminator
+      tellPeer({action = "send_hex", hex = "1f" .. string.rep("78", 1024 * 1024 + 1)})
+      assert.is_table(waitForPeerEvent(mark, function(event)
+        return event.type == "disconnect"
+      end, 5000))
+      assert.is_nil(peerClient())
+      local shown = table.concat(getLines("main", line, getLastLineNumber("main") + 1), " ")
+      assert.is_true(contains(shown, PEER_NAME .. " sent more than 1048576 bytes without ending a command"), shown)
+    end)
+
+    it("keeps a peer whose command is only just within that limit", function()
+      if peerUnavailable() then return end
+      ensurePeer()
+      local mark = captureSeq()
+      -- 1 MiB exactly: the code byte and the payload, with the 0xff after them.
+      -- A side channel frame, as snoop data is drawn on the console as one line,
+      -- which takes many minutes to lay out under a sanitizer
+      local payloadLength = 1024 * 1024 - 1 - #"Big,"
+      tellPeer({action = "send_hex", hex = "28" .. "4269672c" .. string.rep("78", payloadLength)})
+      pump(500)
+      local name, from, channel, message = nil, nil, nil, nil
+      local handlerId = registerAnonymousEventHandler("sysMMCPSideChannelMessage", function(_, ...)
+        name = "sysMMCPSideChannelMessage"
+        from, channel, message = ...
+      end)
+      finally(function() killAnonymousEventHandler(handlerId) end)
+      peerSendsRaw(string.char(255))
+      assert.is_true(waitUntil(function() return name ~= nil end, 5000))
+      assert.equals(PEER_NAME, from)
+      assert.equals("Big", channel)
+      assert.is_string(message)
+      assert.equals(payloadLength, #message)
+      assert.is_table(peerClient())
+      assert.is_nil(waitForPeerEvent(mark, function(event)
+        return event.type == "disconnect"
+      end, 0))
+    end)
+
     it("notices when the peer closes the connection", function()
       if peerUnavailable() then return end
       ensurePeer()
