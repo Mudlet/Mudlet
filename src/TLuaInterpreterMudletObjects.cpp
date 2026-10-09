@@ -36,6 +36,7 @@
 #include "HostManager.h"
 #include "TAction.h"
 #include "TAlias.h"
+#include "TAppFrontend.h"
 #include "TArea.h"
 #include "TConsole.h"
 #include "TConsoleModel.h"
@@ -49,11 +50,9 @@
 #include "TMedia.h"
 #include "TRoomDB.h"
 #include "TScript.h"
-#include "TTabBar.h"
 #include "TTimer.h"
 #include "TriggerMatchPool.h"
 #include "mapInfoContributorManager.h"
-#include "mudlet.h"
 #include "TGameDetails.h"
 
 #include <QScopeGuard>
@@ -83,6 +82,7 @@
 #endif // MUDLET_MEMORY_TRACKING
 #include <QCollator>
 #include <QCoreApplication>
+#include <QDir>
 #include <QFileInfo>
 #include <QVector>
 #ifdef QT_TEXTTOSPEECH_LIB
@@ -1526,8 +1526,8 @@ int TLuaInterpreter::raiseEvent(lua_State* L)
 // down too.
 static bool shuttingDown(const QPointer<Host>& pHost)
 {
-    mudlet* pMudlet = mudlet::self();
-    return !pHost || pHost->isClosingDown() || !pMudlet || pMudlet->isGoingDown();
+    auto pFrontend = TAppFrontend::instance();
+    return !pHost || pHost->isClosingDown() || !pFrontend || pFrontend->quitting();
 }
 
 // No documentation available in wiki - internal, test-only function
@@ -1787,7 +1787,7 @@ int TLuaInterpreter::resetProfileIcon(lua_State* L)
 {
     Host& host = getHostFromLua(L);
 
-    auto [success, message] = mudlet::self()->resetProfileIcon(host.getName());
+    auto [success, message] = MudletApp::resetProfileIcon(host.getName());
     if (!success) {
         return warnArgumentValue(L, __func__, message);
     }
@@ -1899,7 +1899,7 @@ int TLuaInterpreter::setProfileIcon(lua_State* L)
 
     Host& host = getHostFromLua(L);
 
-    auto [success, message] = mudlet::self()->setProfileIcon(host.getName(), iconPath);
+    auto [success, message] = MudletApp::setProfileIcon(host.getName(), iconPath);
     if (!success) {
         return warnArgumentValue(L, __func__, message);
     }
@@ -3121,11 +3121,7 @@ int TLuaInterpreter::loadProfile(lua_State* L)
         return 2;
     }
 
-    bool success = mudlet::self()->loadProfile(profileName, !offline);
-    mudlet::self()->slot_connectionDialogueFinished(profileName, !offline);
-    mudlet::self()->enableToolbarButtons();
-
-    if (!success) {
+    if (!TAppFrontend::instance()->openProfile(profileName, !offline)) {
         lua_pushnil(L);
         lua_pushfstring(L, "loadProfile: failed to load profile '%s'", profileName.toUtf8().constData());
         return 2;
@@ -3161,13 +3157,11 @@ int TLuaInterpreter::closeProfile(lua_State* L)
         return 2;
     }
 
-    auto profileIndex = mudlet::self()->mpTabBar->tabIndex(profileName);
-    if (profileIndex != -1) {
-        emit mudlet::self() -> mpTabBar->tabCloseRequested(profileIndex);
-        lua_pushboolean(L, true);
-        return 1;
+    if (!TAppFrontend::instance()->requestProfileTabClose(profileName)) {
+        return 0;
     }
-    return 0;
+    lua_pushboolean(L, true);
+    return 1;
 }
 
 #ifdef MUDLET_MEMORY_TRACKING

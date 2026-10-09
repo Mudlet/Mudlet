@@ -4728,6 +4728,24 @@ bool mudlet::saveWindowLayoutForScript()
     return saved;
 }
 
+bool mudlet::openProfile(const QString& profileName, bool connect)
+{
+    const bool loaded = loadProfile(profileName, connect);
+    slot_connectionDialogueFinished(profileName, connect);
+    enableToolbarButtons();
+    return loaded;
+}
+
+bool mudlet::requestProfileTabClose(const QString& profileName)
+{
+    const int index = mpTabBar->tabIndex(profileName);
+    if (index == -1) {
+        return false;
+    }
+    emit mpTabBar->tabCloseRequested(index);
+    return true;
+}
+
 int mudlet::profileTabIndex(const QString& profileName) const
 {
     return mpTabBar->tabIndex(profileName);
@@ -8225,35 +8243,6 @@ QString mudlet::autodetectPreferredLanguage()
     }
 
     return qsl("en_US");
-}
-
-std::pair<bool, QString> mudlet::setProfileIcon(const QString& profile, const QString& newIconPath)
-{
-    QDir dir;
-    auto profileIconPath = MudletApp::getMudletPath(enums::profileDataItemPath, profile, qsl("profileicon"));
-    if (QFileInfo::exists(profileIconPath) && !dir.remove(profileIconPath)) {
-        qWarning() << "mudlet::setProfileIcon() ERROR: couldn't remove existing icon" << profileIconPath;
-        return {false, qsl("couldn't remove existing icon file")};
-    }
-
-    if (!QFile::copy(newIconPath, profileIconPath)) {
-        qWarning() << "mudlet::setProfileIcon() ERROR: couldn't copy new icon" << newIconPath << " to" << profileIconPath;
-        return {false, qsl("couldn't copy icon file into new location")};
-    }
-
-    return {true, QString()};
-}
-
-std::pair<bool, QString> mudlet::resetProfileIcon(const QString& profile)
-{
-    QDir dir;
-    auto profileIconPath = MudletApp::getMudletPath(enums::profileDataItemPath, profile, qsl("profileicon"));
-    if (QFileInfo::exists(profileIconPath) && !dir.remove(profileIconPath)) {
-        qWarning() << "mudlet::resetProfileIcon() ERROR: couldn't remove existing icon" << profileIconPath;
-        return {false, qsl("couldn't remove existing icon file")};
-    }
-
-    return {true, QString()};
 }
 
 void mudlet::activateProfile(Host* pHost)

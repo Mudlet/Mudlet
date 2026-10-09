@@ -63,6 +63,11 @@ public:
     virtual bool loadWindowLayout() = 0;
     // Saves even if quitting already saved the layout; if this save fails, quitting saves it again.
     virtual bool saveWindowLayoutForScript() = 0;
+    virtual bool quitting() const = 0;
+    // Loads the profile into a new tab and, if connect, connects it; false if it could not be loaded.
+    virtual bool openProfile(const QString& profileName, bool connect) = 0;
+    // Asks the profile's tab to close, as its close button does; false if it has no tab.
+    virtual bool requestProfileTabClose(const QString& profileName) = 0;
 
     // Surfaces a command can be placed on. A client with different chrome maps
     // these onto whatever it has; one that has only a menu honours Menu alone.
