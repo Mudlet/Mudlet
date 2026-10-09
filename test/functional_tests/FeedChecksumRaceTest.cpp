@@ -1153,10 +1153,13 @@ void FeedChecksumRaceTest::anInstallWhoseDownloadFailedIsNotStartedByTheNextDown
     harness.dialog().onButtonInstall();
     QTRY_VERIFY2_WITH_TIMEOUT(!mModalBoxes.texts().isEmpty(), "the download the user asked for failed verification and nobody was told", waitMs);
 
-    // The next twice-daily check downloads the release by itself, cleanly
+    // Updater's next twice-daily check downloads the release itself, cleanly.
+    // Straight to the Feed: a check reaching the dialog first would clear the
+    // install by itself and hide whether the failed download did
     harness.server().setChecksum(QCryptographicHash::hash(payload, QCryptographicHash::Sha256).toHex());
-    dblsqd::UpdateDialog::enableAutoDownload(true, &harness.settings());
-    harness.feed().load();
+    const QList<dblsqd::Release> updates = harness.feed().getUpdates(dblsqd::Release::getCurrentRelease());
+    QVERIFY2(!updates.isEmpty(), "the stub feed offered no update to download");
+    harness.feed().downloadRelease(updates.first(), /*requireChecksums=*/true);
     QTRY_VERIFY2_WITH_TIMEOUT(!harness.settings().value(qsl("DBLSQD/updateFilePath")).toString().isEmpty(),
                               qPrintable(qsl("the automatic download never finished. The dialog reported: %1").arg(whatTheDialogWasTold())),
                               waitMs);
