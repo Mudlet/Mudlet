@@ -180,6 +180,8 @@ public:
 
 /*static*/ void mudlet::start()
 {
+    // Before any widget exists, so every rich tooltip is seen as it is set
+    widgetutils::syncAccessibleDescriptionsWithToolTips();
     smpSelf = new mudlet;
     TAppFrontend::setInstance(smpSelf.data());
 }
