@@ -476,6 +476,16 @@ describe("Tests TBuffer OSC sequence handling", function()
       assert.are.same(foregroundOf("CSICAP3", "green"), foregroundOf("CSICAP4", "green"))
     end)
 
+    -- the discard keeps the line ending that cut the sequence short, whether
+    -- the scan stopped in the parameters or in the intermediate bytes
+    it("should keep the line ending after a sequence it discards for its length", function()
+      for i, filler in ipairs({"1", " "}) do
+        local before, after = ("CSICAPCUT%dA"):format(i), ("CSICAPCUT%dB"):format(i)
+        assert.is_true(feedTriggers(before .. "(\027[" .. string.rep(filler, lengthCap) .. "\n" .. after .. ")\n"))
+        assert.equals(after .. ")", findRecentLine(after))
+      end
+    end)
+
   end)
 
   -- CUF (cursor forward) is emulated by writing spaces, as one game uses it

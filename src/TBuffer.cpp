@@ -1492,7 +1492,8 @@ void TBuffer::translateToPlainTextInner(std::string& incoming, const bool isFrom
                 // server may never send.
                 qWarning().noquote().nospace() << "TBuffer::translateToPlainText(...) WARNING - CSI sequence exceeded " << MAX_CSI_SEQUENCE_LENGTH
                                                << " bytes without a final byte, discarding it to recover.";
-                localBufferPosition += 1 + spanEnd - spanStart;
+                // As below, the byte that stopped the scan is only the sequence's own when it is a final byte
+                localBufferPosition += spanEnd - spanStart + (spanEnd < localBufferLength && csiFinalByte(localBuffer[spanEnd]) ? 1 : 0);
                 mGotCSI = false;
                 if (Q_UNLIKELY(mPendingLead)) {
                     flushPendingLead();
