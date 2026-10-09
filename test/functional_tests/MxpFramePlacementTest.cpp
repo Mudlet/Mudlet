@@ -72,11 +72,11 @@ private:
     // package has reserved for itself. This repeats TMxpFrameManager's own
     // formula, so tests that need an anchor independent of it assert against a
     // literal or against another widget's geometry instead.
-    QRect area() const { return QRect(QPoint(0, 0), mpHost->mpConsole->getMainWindowSize()).marginsRemoved(mpHost->userBorders()); }
+    QRect area() const { return QRect(QPoint(0, 0), mpHost->mainConsoleView()->getMainWindowSize()).marginsRemoved(mpHost->userBorders()); }
 
-    QWidget* frameWidget(const QString& name) const { return mpHost->mpConsole->mxpFrameWidgets().frameWidget(name); }
-    TConsole* frameConsole(const QString& name) const { return mpHost->mpConsole->mxpFrameWidgets().frameConsole(name); }
-    QTabWidget* frameTabs(const QString& name) const { return mpHost->mpConsole->mxpFrameWidgets().frameTabs(name); }
+    QWidget* frameWidget(const QString& name) const { return mpHost->mainConsoleView()->mxpFrameWidgets().frameWidget(name); }
+    TConsole* frameConsole(const QString& name) const { return mpHost->mainConsoleView()->mxpFrameWidgets().frameConsole(name); }
+    QTabWidget* frameTabs(const QString& name) const { return mpHost->mainConsoleView()->mxpFrameWidgets().frameTabs(name); }
 
     QRect frameGeometry(const QString& name) const
     {
@@ -186,8 +186,8 @@ private slots:
         // numbers that say nothing about frame placement. It only ever subtracts
         // from the console's own size, so anything bigger means it is reporting a
         // size the window no longer has - say so here instead.
-        const QSize reported = mpHost->mpConsole->getMainWindowSize();
-        const QSize consoleSize = mpHost->mpConsole->size();
+        const QSize reported = mpHost->mainConsoleView()->getMainWindowSize();
+        const QSize consoleSize = mpHost->mainConsoleView()->size();
         QVERIFY2(reported.width() <= consoleSize.width() && reported.height() <= consoleSize.height(),
                  qPrintable(qsl("getMainWindowSize() reports %1x%2 inside a console that is only %3x%4")
                                     .arg(QString::number(reported.width()), QString::number(reported.height()), QString::number(consoleSize.width()), QString::number(consoleSize.height()))));
@@ -210,7 +210,7 @@ private slots:
     void init()
     {
         QVERIFY(mpHost);
-        QVERIFY(mpHost->mpConsole);
+        QVERIFY(mpHost->mainConsoleView());
         mpHost->mMxpProcessor.enable();
         mudlet::self()->resize(1200, 800);
         settle();
@@ -241,7 +241,7 @@ private slots:
         QCOMPARE(frame.width(), 200);
         QCOMPARE(frame.x(), reservedArea.right() + 1 - 200);
         // the console and the frame have to tile the unreserved space between them
-        QCOMPARE(mpHost->mpConsole->mpMainDisplay->geometry().right() + 1, frame.x());
+        QCOMPARE(mpHost->mainConsoleView()->mpMainDisplay->geometry().right() + 1, frame.x());
     }
 
     // the console has to give up room for the frame on top of what the package took
@@ -254,7 +254,7 @@ private slots:
 
         QCOMPARE(mpHost->userBorders().right(), 300);
         QCOMPARE(mpHost->borders().right(), 500);
-        QVERIFY2(mpHost->mpConsole->mpMainDisplay->geometry().right() < frameGeometry(qsl("status")).left(), "the main display overlaps the frame");
+        QVERIFY2(mpHost->mainConsoleView()->mpMainDisplay->geometry().right() < frameGeometry(qsl("status")).left(), "the main display overlaps the frame");
     }
 
     // with nothing reserved a right frame still goes right up to the edge
@@ -263,7 +263,7 @@ private slots:
         QVERIFY(createFrame(qsl("status"), qsl("right"), qsl("200px"), qsl("100%")));
 
         QCOMPARE(frameGeometry(qsl("status")).right() + 1, area().width());
-        QCOMPARE(mpHost->mpConsole->mpMainDisplay->geometry().right() + 1, frameGeometry(qsl("status")).x());
+        QCOMPARE(mpHost->mainConsoleView()->mpMainDisplay->geometry().right() + 1, frameGeometry(qsl("status")).x());
     }
 
     void test_frameFollowsABorderThatChangesAfterwards()
@@ -294,12 +294,12 @@ private slots:
         settle();
 
         QVERIFY(createFrame(qsl("status"), qsl("right"), qsl("200px"), qsl("100%")));
-        const int widthBefore = mpHost->mpConsole->mpMainFrame->width();
+        const int widthBefore = mpHost->mainConsoleView()->mpMainFrame->width();
 
         mudlet::self()->resize(1000, 700);
         settle();
 
-        QVERIFY2(mpHost->mpConsole->mpMainFrame->width() != widthBefore, "the window did not actually resize");
+        QVERIFY2(mpHost->mainConsoleView()->mpMainFrame->width() != widthBefore, "the window did not actually resize");
         QCOMPARE(frameGeometry(qsl("status")).x(), area().right() + 1 - 200);
         // a container that moves without its text area following it would look
         // to the player like the frame did not move at all
@@ -345,7 +345,7 @@ private slots:
         QCOMPARE(mpHost->borders().bottom(), 200);
         // an anchor that does not go through the same formula: the frame has to
         // clear the command line as well as the reserved strip
-        QCOMPARE(frame.bottom() + 1, mpHost->mpConsole->height() - mpHost->mpConsole->mpCommandLine->height() - 120);
+        QCOMPARE(frame.bottom() + 1, mpHost->mainConsoleView()->height() - mpHost->mainConsoleView()->mpCommandLine->height() - 120);
     }
 
     // WIDTH defaults to a percentage, which now resolves against the space the
@@ -450,7 +450,7 @@ private slots:
         QVERIFY(createFrame(qsl("tab"), qsl("client"), qsl("100%"), qsl("100%"), {{qsl("DOCK"), qsl("titled")}}));
         QVERIFY2(frameTabs(qsl("titled")), "A titled frame should have taken the tabbed layout");
 
-        QWidget* commandLine = mpHost->mpConsole->mpCommandLine;
+        QWidget* commandLine = mpHost->mainConsoleView()->mpCommandLine;
         QVERIFY(commandLine);
         for (const QString& name : {qsl("titled"), qsl("plain"), qsl("tab")}) {
             QWidget* widget = frameWidget(name);
@@ -472,7 +472,7 @@ private slots:
     {
         // Colours and a font size a fresh console would not have by itself,
         // and not black, which lighter() leaves as it is
-        TMainConsole* mainConsole = mpHost->mpConsole;
+        TMainConsole* mainConsole = mpHost->mainConsoleView();
         const QColor savedFgColor = mainConsole->mFgColor;
         const QColor savedBgColor = mainConsole->mBgColor;
         const int savedFontSize = mpHost->getDisplayFont().pointSize();
@@ -503,12 +503,12 @@ private slots:
             QVERIFY(console);
             QVERIFY2(!console->isHidden(), qPrintable(qsl("The console of %1 should be shown").arg(name)));
             QVERIFY2(!frameWidget(name)->isHidden(), qPrintable(qsl("Frame %1 should be shown").arg(name)));
-            QCOMPARE(mpHost->mpConsole->subConsoleWidget(name), console);
+            QCOMPARE(mpHost->mainConsoleView()->subConsoleWidget(name), console);
             QCOMPARE(console->mDisplayFontDetails.mPointSize, profileFontSize);
             // what the frame's text is printed in, until the game says otherwise
             QCOMPARE(console->model().mFormatCurrent.foreground(), QColor(200, 180, 160));
             QCOMPARE(console->model().mFormatCurrent.background(), QColor(40, 60, 80).lighter(115));
-            QVERIFY(console->getScrolling());
+            QVERIFY(console->model().mScrollingEnabled);
         }
     }
 
@@ -522,7 +522,7 @@ private slots:
         for (const QString& name : {qsl("titled"), qsl("plain"), qsl("tab"), qsl("popup")}) {
             TConsole* console = frameConsole(name);
             QVERIFY2(console, qPrintable(qsl("Frame %1 should have a console").arg(name)));
-            QVERIFY2(!console->getScrolling(), qPrintable(qsl("Frame %1 should not scroll").arg(name)));
+            QVERIFY2(!console->model().mScrollingEnabled, qPrintable(qsl("Frame %1 should not scroll").arg(name)));
         }
     }
 
@@ -540,7 +540,7 @@ private slots:
         QCOMPARE(tabs->currentIndex(), 1);
         QCOMPARE(tabs->widget(1), frameWidget(qsl("chat")));
         QVERIFY(frameConsole(qsl("chat")));
-        QCOMPARE(mpHost->mpConsole->subConsoleWidget(qsl("chat")), frameConsole(qsl("chat")));
+        QCOMPARE(mpHost->mainConsoleView()->subConsoleWidget(qsl("chat")), frameConsole(qsl("chat")));
         QVERIFY2(!frameConsole(qsl("chat"))->isHidden(), "The tab's console should be shown");
 
         QVERIFY(createFrame(qsl("log"), qsl("client"), qsl("100%"), qsl("100%"), {{qsl("DOCK"), qsl("titled")}}));
@@ -562,7 +562,7 @@ private slots:
 
         QVERIFY(!mpHost->mMxpFrameManager.frameExists(qsl("chat")));
         QVERIFY2(chatPage.isNull(), "The closed tab's page should have been deleted");
-        QVERIFY(!mpHost->mpConsole->subConsoleWidget(qsl("chat")));
+        QVERIFY(!mpHost->mainConsoleView()->subConsoleWidget(qsl("chat")));
         QVERIFY(!mpHost->windowRegistry().hasSubConsole(qsl("chat")));
         QCOMPARE(frameTabs(qsl("titled"))->count(), 1);
         QVERIFY(frameConsole(qsl("titled")));
@@ -580,7 +580,7 @@ private slots:
         QVERIFY(!frameTabs(qsl("plain")));
         for (const QString& name : {qsl("orphan"), qsl("lost")}) {
             QVERIFY2(frameWidget(name), qPrintable(qsl("Frame %1 should have a widget").arg(name)));
-            QCOMPARE(frameWidget(name)->parentWidget(), mpHost->mpConsole->mpMainFrame);
+            QCOMPARE(frameWidget(name)->parentWidget(), mpHost->mainConsoleView()->mpMainFrame);
             QCOMPARE(frameWidget(name)->width(), 200);
             QVERIFY(frameConsole(name));
         }
@@ -602,8 +602,8 @@ private slots:
         QCOMPARE(mpHost->mMxpFrameManager.frameCount(), 0);
         QVERIFY(outer.isNull());
         QVERIFY(nested.isNull());
-        QVERIFY(!mpHost->mpConsole->subConsoleWidget(qsl("outer")));
-        QVERIFY(!mpHost->mpConsole->subConsoleWidget(qsl("nested")));
+        QVERIFY(!mpHost->mainConsoleView()->subConsoleWidget(qsl("outer")));
+        QVERIFY(!mpHost->mainConsoleView()->subConsoleWidget(qsl("nested")));
         QCOMPARE(mpHost->borders(), QMargins());
     }
 
@@ -615,7 +615,7 @@ private slots:
         QVERIFY(createFrame(qsl("second"), qsl("right"), qsl("200px"), qsl("100%")));
         QWidget* first = frameWidget(qsl("first"));
         QWidget* second = frameWidget(qsl("second"));
-        const QObjectList& siblings = mpHost->mpConsole->mpMainFrame->children();
+        const QObjectList& siblings = mpHost->mainConsoleView()->mpMainFrame->children();
         QVERIFY(siblings.indexOf(first) < siblings.indexOf(second));
         first->hide();
 
@@ -632,7 +632,7 @@ private slots:
     // track of them.
     void test_rebuildingAFramesWidgetsReplacesTheOldOnes()
     {
-        TMxpFrameWidgets& widgets = mpHost->mpConsole->mxpFrameWidgets();
+        TMxpFrameWidgets& widgets = mpHost->mainConsoleView()->mxpFrameWidgets();
         auto teardown = qScopeGuard([&widgets]() {
             widgets.destroyFrame(qsl("twice"));
         });
@@ -651,7 +651,7 @@ private slots:
         QVERIFY(createFrame(qsl("second"), qsl("right"), qsl("200px"), qsl("100%")));
         QWidget* first = frameWidget(qsl("first"));
         QWidget* second = frameWidget(qsl("second"));
-        const QObjectList& siblings = mpHost->mpConsole->mpMainFrame->children();
+        const QObjectList& siblings = mpHost->mainConsoleView()->mpMainFrame->children();
 
         QVERIFY(createFrame(qsl("first"), QString(), QString(), QString(), {{qsl("ACTION"), qsl("focus")}}));
         QVERIFY2(siblings.indexOf(first) > siblings.indexOf(second), "The focused frame should have been raised");
@@ -663,7 +663,7 @@ private slots:
     // an EXTERNAL frame is a titled window of its own, sized against the main console
     void test_externalFrameIsATitledWindowOfItsOwn()
     {
-        const QSize consoleSize = mpHost->mpConsole->size();
+        const QSize consoleSize = mpHost->mainConsoleView()->size();
         QVERIFY(createFrame(qsl("popup"), qsl("left"), qsl("50%"), qsl("25%"), {{qsl("EXTERNAL"), qsl("true")}, {qsl("TITLE"), qsl("Popup")}}));
 
         QWidget* popup = frameWidget(qsl("popup"));
@@ -673,7 +673,7 @@ private slots:
         QCOMPARE(popup->windowTitle(), qsl("Popup"));
         QCOMPARE(popup->size(), QSize(consoleSize.width() * 50 / 100, consoleSize.height() * 25 / 100));
         QCOMPARE(frameConsole(qsl("popup")), popup);
-        QCOMPARE(mpHost->mpConsole->subConsoleWidget(qsl("popup")), frameConsole(qsl("popup")));
+        QCOMPARE(mpHost->mainConsoleView()->subConsoleWidget(qsl("popup")), frameConsole(qsl("popup")));
     }
 
     // DEST prints into the frame's own console, whatever the layout, and into
@@ -721,7 +721,7 @@ private slots:
             QVERIFY(widget.isNull());
         }
         for (const QString& name : names) {
-            QVERIFY2(!mpHost->mpConsole->subConsoleWidget(name), qPrintable(qsl("%1 should no longer be registered").arg(name)));
+            QVERIFY2(!mpHost->mainConsoleView()->subConsoleWidget(name), qPrintable(qsl("%1 should no longer be registered").arg(name)));
             QVERIFY2(!mpHost->windowRegistry().hasSubConsole(name), qPrintable(qsl("%1 should no longer be in the window registry").arg(name)));
         }
     }
@@ -905,7 +905,7 @@ private slots:
 
         QVERIFY(!mpHost->mMxpFrameManager.frameExists(qsl("intab")));
         QVERIFY(intab.isNull());
-        QVERIFY(!mpHost->mpConsole->subConsoleWidget(qsl("intab")));
+        QVERIFY(!mpHost->mainConsoleView()->subConsoleWidget(qsl("intab")));
         QVERIFY(!mpHost->windowRegistry().hasSubConsole(qsl("intab")));
         QCOMPARE(frameTabs(qsl("titled"))->count(), 1);
     }
@@ -956,7 +956,7 @@ private slots:
             QTest::qWait(1000ms);
         });
         showTab(mSecondHostname);
-        QVERIFY2(mpHost->mpConsole->isHidden(), "the profile should be in a background tab by now");
+        QVERIFY2(mpHost->mainConsoleView()->isHidden(), "the profile should be in a background tab by now");
 
         mudlet::self()->resize(1000, 700);
         settle();
@@ -973,7 +973,7 @@ private slots:
     // An EXTERNAL frame is sized against the console, which a background tab leaves 0 wide
     void test_externalFrameOpenedInABackgroundTabIsSizedAgainstTheConsole()
     {
-        const QSize consoleSize = mpHost->mpConsole->size();
+        const QSize consoleSize = mpHost->mainConsoleView()->size();
         QVERIFY2(ensureSecondProfile(), "the second profile did not load");
         // closed again here, as its tab bar would change the window every later case lays out in
         const auto closeSecondProfile = qScopeGuard([this]() {
@@ -982,7 +982,7 @@ private slots:
             QTest::qWait(1000ms);
         });
         showTab(mSecondHostname);
-        QVERIFY2(mpHost->mpConsole->isHidden(), "the profile should be in a background tab by now");
+        QVERIFY2(mpHost->mainConsoleView()->isHidden(), "the profile should be in a background tab by now");
 
         QVERIFY(createFrame(qsl("popup"), qsl("left"), qsl("50%"), qsl("25%"), {{qsl("EXTERNAL"), qsl("true")}}));
 
@@ -1006,7 +1006,7 @@ private slots:
             QTest::qWait(1000ms);
         });
         showTab(mSecondHostname);
-        QVERIFY2(mpHost->mpConsole->isHidden(), "the profile should be in a background tab by now");
+        QVERIFY2(mpHost->mainConsoleView()->isHidden(), "the profile should be in a background tab by now");
 
         QVERIFY(createFrame(qsl("titled"), qsl("right"), qsl("300px"), qsl("100%"), {{qsl("TITLE"), qsl("Main")}}));
         QVERIFY(createFrame(qsl("tab"), qsl("client"), qsl("100%"), qsl("100%"), {{qsl("DOCK"), qsl("titled")}}));
@@ -1028,10 +1028,10 @@ private slots:
     // nothing else moves it afterwards.
     void test_frameOpenedStraightAfterAResizeIsPlacedInTheNewSize()
     {
-        const QSize sizeBefore = mpHost->mpConsole->getMainWindowSize();
+        const QSize sizeBefore = mpHost->mainConsoleView()->getMainWindowSize();
         mudlet::self()->resize(1000, 700);
         QCoreApplication::sendPostedEvents(nullptr, QEvent::LayoutRequest);
-        QVERIFY2(mpHost->mpConsole->getMainWindowSize() != sizeBefore, "the console did not see the resize");
+        QVERIFY2(mpHost->mainConsoleView()->getMainWindowSize() != sizeBefore, "the console did not see the resize");
 
         QVERIFY(createFrame(qsl("status"), qsl("left"), qsl("200px"), qsl("100px"), {{qsl("LEFT"), qsl("50%")}, {qsl("TOP"), qsl("50%")}}));
 
@@ -1043,10 +1043,10 @@ private slots:
     // one it keeps
     void test_externalFrameOpenedStraightAfterAResizeTakesTheNewSize()
     {
-        const QSize sizeBefore = mpHost->mpConsole->size();
+        const QSize sizeBefore = mpHost->mainConsoleView()->size();
         mudlet::self()->resize(1000, 700);
         QCoreApplication::sendPostedEvents(nullptr, QEvent::LayoutRequest);
-        const QSize consoleSize = mpHost->mpConsole->size();
+        const QSize consoleSize = mpHost->mainConsoleView()->size();
         QVERIFY2(consoleSize != sizeBefore, "the console did not see the resize");
 
         QVERIFY(createFrame(qsl("popup"), qsl("left"), qsl("50%"), qsl("25%"), {{qsl("EXTERNAL"), qsl("true")}}));

@@ -240,7 +240,7 @@ private slots:
         QVERIFY(mpHost->getActionUnit()->registerAction(pAction));
         // The toolbar widgets still write the console's copy, which has to be
         // the model's field
-        QCOMPARE(&mpHost->mpConsole->mButtonState, &mpHost->mainConsoleModel().mButtonState);
+        QCOMPARE(&mpHost->mainConsoleView()->mButtonState, &mpHost->mainConsoleModel().mButtonState);
 
         pAction->mButtonState = true;
         pAction->execute();

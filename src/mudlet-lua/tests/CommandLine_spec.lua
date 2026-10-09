@@ -264,6 +264,13 @@ describe("Tests that the command line functions find their command line by name"
     ok, err = removeCommandLineMenuEvent(cmdLine, menuLabel)
     assert.is_false(ok)
     assert.are.equal(("removeCommandLineMenuEvent: cannot remove '%s', menu item does not exist"):format(menuLabel), err)
+
+    local mainSaves = getSaveCommandHistory("main")
+    assert.is_true(setSaveCommandHistory(cmdLine, false))
+    assert.is_false((getSaveCommandHistory(cmdLine)))
+    assert.are.equal(mainSaves, (getSaveCommandHistory("main")))
+    assert.is_true(setSaveCommandHistory(cmdLine, true))
+    assert.is_true((getSaveCommandHistory(cmdLine)))
   end)
 
   -- the arguments are all checked before the command line is looked for, so a
