@@ -52,9 +52,13 @@ function Geyser.ScrollBox:new (cons, container)
     self.__index = self
     
     local ok, err = createScrollBox(me.windowname, me.name, me:get_x(), me:get_y(), me:get_width(), me:get_height())
-    -- the object is returned and registered as a parent window either way, so report a failed creation
+    -- the object is returned and registered as a parent window unless another kind of element holds the name, so report a failed creation
     if not mudlet.elementCreated(me.windowname, me.name, ok, err) then
         printError(string.format("Geyser.ScrollBox '%s' was not created: %s", me.name, err or "unknown error"), false, false)
+        if mudlet.elementNameTaken(me.name, err) then
+            me.container:remove(me)
+            return nil, err
+        end
     end
 
     -- Geyser.Container:new() settles the hidden constraint before there is a widget to hide, so the hide is made good here

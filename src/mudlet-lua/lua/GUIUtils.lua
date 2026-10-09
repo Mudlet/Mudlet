@@ -597,9 +597,9 @@ end
 --- Answers whether a create...() call left the element the caller asked for in place.
 -- The native creators refuse a parent window they cannot resolve before they ever look at the
 -- element's name, so an element that already exists under that name is no proof that the call
--- did what was asked - the parent window's own refusal is what tells the two apart. Any other
--- refusal on a parent window that does resolve is the "call it again to move or resize it"
--- idiom, which is not worth a word.
+-- did what was asked - the parent window's own refusal is what tells the two apart, as does the
+-- refusal of a name that another kind of element holds. Any other refusal on a parent window that
+-- does resolve is the "call it again to move or resize it" idiom, which is not worth a word.
 -- @param windowName the parent window name given to the creator
 -- @param name the element's name
 -- @param ok the creator's first return value
@@ -611,7 +611,28 @@ function mudlet.elementCreated(windowName, name, ok, err)
   if err == string.format("window '%s' not found", windowName) then
     return false
   end
+  if mudlet.elementNameTaken(name, err) then
+    return false
+  end
   return windowType(name) ~= nil
+end
+
+--- Answers whether a create...() call was refused because another kind of element holds the name.
+-- Whatever the caller goes on to do with that name - hide it, echo into it, style it - lands on
+-- that other element, so a caller that gets this refusal has to stop there.
+-- @param name the element's name
+-- @param err the creator's second return value
+function mudlet.elementNameTaken(name, err)
+  for _, taken in ipairs({
+    "label with the name '%s' already exists",
+    "a miniconsole/userwindow with the name '%s' already exists",
+    "a scroll box, command line or text edit with the name '%s' already exists",
+  }) do
+    if err == string.format(taken, name) then
+      return true
+    end
+  end
+  return false
 end
 
 

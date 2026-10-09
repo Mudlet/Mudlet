@@ -1511,6 +1511,10 @@ std::pair<bool, QString> TMainConsole::createCommandLine(const QString& windowna
         return {false, qsl("window '%1' not found").arg(windowname)};
     }
 
+    if (mpHost->windowRegistry().hasLabel(name)) {
+        return {false, qsl("label with the name '%1' already exists").arg(name)};
+    }
+
     auto pN = mSubCommandLineMap.value(name);
 
     if (!pN) {
@@ -2055,6 +2059,10 @@ std::pair<bool, QString> TMainConsole::createTextBox(const QString& windowname, 
     // No Host::createTextEdit() wrapper makes this check, unlike the other creators.
     if (mpHost->parentWindowMissing(windowname)) {
         return {false, qsl("window '%1' not found").arg(windowname)};
+    }
+
+    if (mpHost->windowRegistry().hasLabel(name)) {
+        return {false, qsl("label with the name '%1' already exists").arg(name)};
     }
 
     auto pT = mTextBoxMap.value(name);
