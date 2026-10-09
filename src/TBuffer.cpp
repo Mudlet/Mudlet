@@ -2409,7 +2409,7 @@ void TBuffer::commitLineData(QString line, std::vector<TChar> chars, const char 
     }
 
     // After shrinkBuffer(), whose sysBufferShrinkEvent handlers also run in trigger mode
-    if (Q_UNLIKELY(mudlet::smMirrorToStdOut) && Q_LIKELY(mpModel)) {
+    if (Q_UNLIKELY(MudletApp::smMirrorToStdOut) && Q_LIKELY(mpModel)) {
         mpModel->flushMirroredTriggerText();
     }
 

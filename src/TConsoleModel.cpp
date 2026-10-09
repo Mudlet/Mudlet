@@ -332,7 +332,7 @@ TConsoleModel::CommandEcho TConsoleModel::printCommand(QString& msg)
         const TChar format(mCommandFgColor, mCommandBgColor);
         buffer.insertInLine(P, msg, format);
         // the prompt was mirrored when it arrived, so the command gets a line of its own
-        if (Q_UNLIKELY(mudlet::smMirrorToStdOut) && !msg.isEmpty()) {
+        if (Q_UNLIKELY(MudletApp::smMirrorToStdOut) && !msg.isEmpty()) {
             for (const QString& line : msg.split(QChar::LineFeed)) {
                 mirrorLineToStdOut(line);
             }
@@ -352,7 +352,7 @@ namespace {
 void writeMirrorLine(const QString& line)
 {
     // A caller part way through several lines when an earlier one failed
-    if (!mudlet::smMirrorToStdOut) {
+    if (!MudletApp::smMirrorToStdOut) {
         return;
     }
     QByteArray output = line.toUtf8();
@@ -417,7 +417,7 @@ void TConsoleModel::mirrorLineToStdOut(const QString& line)
 
 void TConsoleModel::mirrorTriggerTextToStdOut(const QString& text)
 {
-    if (Q_LIKELY(!mudlet::smMirrorToStdOut)) {
+    if (Q_LIKELY(!MudletApp::smMirrorToStdOut)) {
         return;
     }
     mMirrorTriggerText.append(text);

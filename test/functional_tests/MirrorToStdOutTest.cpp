@@ -579,7 +579,7 @@ private slots:
     // pass, so what it echoes must not wait for more game text to be copied.
     void test_textEchoedAfterTheTriggerPassIsMirroredWithoutMoreOutput()
     {
-        TBuffer& buffer = mpHost->mpConsole->buffer;
+        TBuffer& buffer = mpHost->mainConsoleView()->buffer;
         const int savedLinesLimit = buffer.mLinesLimit;
         const int savedBatchDeleteSize = buffer.mBatchDeleteSize;
         auto restore = qScopeGuard([&buffer, savedLinesLimit, savedBatchDeleteSize]() {
@@ -636,7 +636,7 @@ private slots:
         clearerr(stdout);
         qInstallMessageHandler(previousHandler);
         QVERIFY(succeeded);
-        QVERIFY(!mudlet::smMirrorToStdOut);
+        QVERIFY(!MudletApp::smMirrorToStdOut);
         QCOMPARE(failedWriteWarnings, 1);
     }
 
@@ -670,7 +670,7 @@ private slots:
         prompt.append(static_cast<char>(0xFF)); // TN_IAC
         prompt.append(static_cast<char>(0xF9)); // TN_GA
         feedFromServer(prompt, 50);
-        QVERIFY(mpHost->mpConsole->buffer.promptBuffer.at(mpHost->mpConsole->buffer.size() - 2));
+        QVERIFY(mpHost->mainConsoleView()->buffer.promptBuffer.at(mpHost->mainConsoleView()->buffer.size() - 2));
 
         startCapture();
         mpHost->send(qsl("look at the prompt"), true, true);
@@ -688,7 +688,7 @@ private slots:
         prompt.append(static_cast<char>(0xFF)); // TN_IAC
         prompt.append(static_cast<char>(0xF9)); // TN_GA
         feedFromServer(prompt, 50);
-        QVERIFY(mpHost->mpConsole->buffer.promptBuffer.at(mpHost->mpConsole->buffer.size() - 2));
+        QVERIFY(mpHost->mainConsoleView()->buffer.promptBuffer.at(mpHost->mainConsoleView()->buffer.size() - 2));
 
         startCapture();
         mpHost->send(QString(), true, true);
