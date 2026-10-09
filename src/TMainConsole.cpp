@@ -1645,11 +1645,14 @@ TCommandLine* TMainConsole::activeCommandLine()
     return pCommandLine;
 }
 
-void TMainConsole::focusActiveCommandLine()
+void TMainConsole::focusActiveCommandLine(const QWidget* pWindow)
 {
     using namespace std::chrono_literals;
 
     TCommandLine* pCommandLine = activeCommandLine();
+    if (pCommandLine && pWindow && pCommandLine->window() != pWindow) {
+        pCommandLine = nullptr;
+    }
     TCommandLine* targetCommandLine = pCommandLine ? pCommandLine : mpCommandLine.data();
     if (!targetCommandLine) {
         return;
