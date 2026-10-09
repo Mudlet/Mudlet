@@ -156,7 +156,7 @@ private slots:
         QVERIFY(mpHost);
         QVERIFY(mpHost->mLoadedOk);
         mudlet::self()->slot_connectionDialogueFinished(mProfileName, false);
-        QVERIFY(mpHost->mpConsole);
+        QVERIFY(mpHost->mainConsoleView());
     }
 
     void cleanupTestCase()
