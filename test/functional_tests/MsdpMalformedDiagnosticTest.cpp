@@ -35,6 +35,8 @@
 
 #include "GroupedTest.h"
 
+using namespace std::chrono_literals;
+
 /*
  * Dropping a variable whose structure markers do not balance is only worth
  * anything for the diagnostic it leaves: from Lua the drop and a failed yajl
@@ -177,7 +179,7 @@ private:
             return nullptr;
         }
         QSignalSpy spy(&(host->mTelnet), &cTelnet::signal_connected);
-        if (!spy.wait(2000)) {
+        if (!spy.wait(2s)) {
             QTest::qFail("Could not connect with the host.", __FILE__, __LINE__);
             return nullptr;
         }
@@ -185,14 +187,14 @@ private:
         host->mEchoLuaErrors = true;
         // wider than any message asserted below, so none of them wrap: a wrapped one
         // arrives as several lineBuffer entries and a phrase can straddle two of them
-        host->mpConsole->setWrapAt(1000);
+        host->mainConsoleView()->setWrapAt(1000);
         return host;
     }
 
     // Everything the main console gained while the payload was parsed.
     QString feedAndReadDiagnostic(Host* host, const QByteArray& payload)
     {
-        TBuffer& buffer = host->mpConsole->buffer;
+        TBuffer& buffer = host->mainConsoleView()->buffer;
         const int before = buffer.lineBuffer.size();
         host->getLuaInterpreter()->msdp2Lua(payload.constData());
         qApp->processEvents();

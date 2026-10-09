@@ -36,6 +36,8 @@
 
 #include "GroupedTest.h"
 
+using namespace std::chrono_literals;
+
 // A multiline trigger's completed TMatchState used to stay in mConditionMap
 // while its script ran. Feeding text from that script re-enters trigger
 // processing on the same trigger, which found the state still complete, fired it
@@ -175,7 +177,7 @@ private:
         }
 
         QSignalSpy spy2(&(host->mTelnet), &cTelnet::signal_connected);
-        if (!spy2.wait(2000)) {
+        if (!spy2.wait(2s)) {
             QFAIL("Could not connect with the host.");
         }
     }
@@ -184,7 +186,7 @@ private:
     // matching, so a needle the console word-wraps across lines is still found.
     QString joinedBuffer()
     {
-        auto console = mudlet::self()->getActiveHost()->mpConsole;
+        QPointer<TMainConsole> console = mudlet::self()->getActiveHost()->mainConsoleView();
         QString allText;
         for (int i = 0; i <= console->buffer.getLastLineNumber(); ++i) {
             allText.append(console->buffer.line(i)).append(QChar::Space);

@@ -65,6 +65,8 @@
 
 #include "GroupedTest.h"
 
+using namespace std::chrono_literals;
+
 class MapperPanelTest : public QObject
 {
     Q_OBJECT
@@ -145,10 +147,10 @@ private:
     {
         mpHost->mMapViewOnly = false;
         mpHost->mRoomSize = kRoomSize;
-        if (!map()->mpMapper) {
+        if (!map()->mapper()) {
             mpHost->showHideOrCreateMapper(false);
         }
-        mpMapper = map()->mpMapper;
+        mpMapper = map()->mapper();
         QVERIFY(mpMapper);
         mp2dMap = mpMapper->mp2dMap;
         QVERIFY(mp2dMap);
@@ -213,7 +215,7 @@ private:
         mMenuWorked = false;
         int attemptsLeft = 100;
         mpMenuTimer = new QTimer(this);
-        mpMenuTimer->setInterval(20);
+        mpMenuTimer->setInterval(20ms);
         connect(mpMenuTimer, &QTimer::timeout, this, [this, work, attemptsLeft]() mutable {
             QWidget* pPopup = QApplication::activePopupWidget();
             auto* pMenu = qobject_cast<QMenu*>(pPopup);
@@ -390,7 +392,7 @@ private slots:
         mpHost = TestProfile::create(mProfileName, mLocalhost, mPort);
         QVERIFY(mpHost);
         QSignalSpy connected(&(mpHost->mTelnet), &cTelnet::signal_connected);
-        QVERIFY2(connected.wait(3000), "could not connect to the telnet stub");
+        QVERIFY2(connected.wait(3s), "could not connect to the telnet stub");
     }
 
     void cleanupTestCase()

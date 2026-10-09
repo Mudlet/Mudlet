@@ -85,6 +85,7 @@ set(mudlet_SRCS
     EditorItemXMLHelpers.cpp
     EditorModifyPropertyCommand.cpp
     EditorMoveItemCommand.cpp
+    EditorAutoCompleteFocusHandler.cpp
     EditorToggleActiveCommand.cpp
     EditorUndoStack.cpp
     EventLoopPump.cpp
@@ -219,6 +220,7 @@ set(mudlet_SRCS
     TRoomDB.cpp
     TScript.cpp
     TScrollBox.cpp
+    TSpeechBridge.cpp
     TSpellChecker.cpp
     TSplitter.cpp
     TSplitterHandle.cpp
@@ -363,6 +365,7 @@ set(mudlet_HDRS
     EditorItemXMLHelpers.h
     EditorModifyPropertyCommand.h
     EditorMoveItemCommand.h
+    EditorAutoCompleteFocusHandler.h
     EditorToggleActiveCommand.h
     EditorUndoStack.h
     enums.h
@@ -414,6 +417,7 @@ set(mudlet_HDRS
     TAccessibleTextEdit.h
     TAction.h
     TAlias.h
+    TAppFrontend.h
     TArea.h
     TAreaGridIndex.h
     TAreaLodExitIndex.h
@@ -423,6 +427,7 @@ set(mudlet_HDRS
     TBuffer.h
     TCommandLine.h
     TConsole.h
+    TConsoleFrontend.h
     TConsoleModel.h
     TConsoleModelNotifier.h
     TDebug.h
@@ -456,7 +461,9 @@ set(mudlet_HDRS
     TMap.h
     TMapLabel.h
     TMapView.h
+    TMapViewFrontend.h
     TMapViewManager.h
+    TMapViewsFrontend.h
     TMatchState.h
     TMedia.h
     TMediaData.h
@@ -474,6 +481,7 @@ set(mudlet_HDRS
     TMxpExpireTagHandler.h
     TMxpFontTagHandler.h
     TMxpFormattingTagsHandler.h
+    TMxpFrameFrontend.h
     TMxpFrameManager.h
     TMxpFrameTagHandler.h
     TMxpFrameWidgets.h
@@ -505,6 +513,7 @@ set(mudlet_HDRS
     TRoomDB.h
     TScript.h
     TScrollBox.h
+    TSpeechBridge.h
     TSpellChecker.h
     TSplitter.h
     TSplitterHandle.h
@@ -678,6 +687,20 @@ add_library(${LIB_MUDLET_TARGET} STATIC
     ${mudlet_UIS}
 )
 
+mudlet_precompile_headers(${LIB_MUDLET_TARGET})
+# Objective-C++ would need a precompiled header of its own for three files
+set_source_files_properties(AppleSpeechRecognizer.mm MacMicrophonePermission.mm sparkleupdater.mm
+  PROPERTIES SKIP_PRECOMPILE_HEADERS ON)
+if(USE_UPDATER)
+  # Its own target, so it keeps plain ccache: the precompiled-header launcher
+  # tells ccache to ignore __DATE__ and __TIME__, which this file embeds to order
+  # test builds
+  add_library(mudlet_build_time OBJECT updater/ReleaseBuildTime.cpp)
+  set_target_properties(mudlet_build_time PROPERTIES AUTOMOC OFF)
+  target_link_libraries(mudlet_build_time PRIVATE Qt6::Gui)
+  target_sources(${LIB_MUDLET_TARGET} PRIVATE $<TARGET_OBJECTS:mudlet_build_time>)
+endif()
+
 ########################### Debugging code inclusions ##########################
 # Controls the include/selection of extra code to aide developers debug various
 # features of Mudlet, generally speaking they will not be '#define'd in
@@ -798,8 +821,11 @@ target_compile_definitions(${LIB_MUDLET_TARGET} PUBLIC APP_VERSION="${APP_VERSIO
 target_compile_definitions(${LIB_MUDLET_TARGET}
   PRIVATE
     APP_TARGET="${APP_TARGET}"
-    LUA_DEFAULT_PATH="${LUA_DEFAULT_DIR}"
-    LUA_SOURCE_PATH="${CMAKE_CURRENT_SOURCE_DIR}/mudlet-lua/lua")
+    LUA_DEFAULT_PATH="${LUA_DEFAULT_DIR}")
+# Only on the file that reads it: ccache's base_dir cannot rewrite a path in a
+# definition, so on every file it would stop worktrees sharing any cache hits.
+set_property(SOURCE TLuaInterpreter.cpp APPEND PROPERTY
+  COMPILE_DEFINITIONS LUA_SOURCE_PATH="${CMAKE_CURRENT_SOURCE_DIR}/mudlet-lua/lua")
 
 if(USE_OWN_QTKEYCHAIN)
     target_compile_definitions(${LIB_MUDLET_TARGET} PUBLIC INCLUDE_OWN_QT6_KEYCHAIN QTKEYCHAIN_NO_EXPORT)
@@ -946,6 +972,13 @@ endif()
 if(WIN32)
   target_link_libraries(${EXE_MUDLET_TARGET} ws2_32)
   set_target_properties(${EXE_MUDLET_TARGET} PROPERTIES WIN32_EXECUTABLE ON)
+  # Windows reserves only 1 MiB of stack by default, and Qt recurses once per overlapping sibling widget
+  # when repainting, so a few thousand labels overflowed it; 8 MiB matches the Linux and macOS main thread
+  if(MSVC)
+    target_link_options(${EXE_MUDLET_TARGET} PRIVATE "/STACK:8388608")
+  else()
+    target_link_options(${EXE_MUDLET_TARGET} PRIVATE "LINKER:--stack,8388608")
+  endif()
   # The UNICODE and _UNICODE definitions are needed to make
   # (QString) mudlet::getShortPathName(const QString& name) work in Windows:
   target_compile_definitions(${EXE_MUDLET_TARGET} PRIVATE UNICODE _UNICODE)
@@ -1066,6 +1099,11 @@ if(UNIX AND NOT APPLE)
   # CMAKE_INSTALL_PREFIX is automagically set on Unix to DESTDIR environment
   # variable and is prefixed onto relative DESTINATION values
   install(
+	DIRECTORY "../translations/lua/"
+	DESTINATION "share/mudlet/lua/translations"
+	FILES_MATCHING PATTERN "*.json"
+	PERMISSIONS OWNER_READ OWNER_WRITE GROUP_READ WORLD_READ)
+  install(
     DIRECTORY "mudlet-lua/lua"
     DESTINATION "share/mudlet"
     FILES_MATCHING
@@ -1081,7 +1119,9 @@ if(UNIX AND NOT APPLE)
     PATTERN "*.xml" PERMISSIONS OWNER_READ OWNER_WRITE GROUP_READ WORLD_READ
     PATTERN "*.txt" PERMISSIONS OWNER_READ OWNER_WRITE GROUP_READ WORLD_READ
     # the pathfinding specs' map fixture, zipped because unpacked it adds ~5MiB to every package
-    PATTERN "*.zip" PERMISSIONS OWNER_READ OWNER_WRITE GROUP_READ WORLD_READ)
+    PATTERN "*.zip" PERMISSIONS OWNER_READ OWNER_WRITE GROUP_READ WORLD_READ
+    # binary map fixtures
+    PATTERN "*.dat" PERMISSIONS OWNER_READ OWNER_WRITE GROUP_READ WORLD_READ)
   install(
     DIRECTORY "../3rdparty/lcf"
     DESTINATION "share/mudlet/lua"

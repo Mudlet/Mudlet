@@ -29,6 +29,8 @@
 
 #include "GroupedTest.h"
 
+using namespace std::chrono_literals;
+
 /*
  * A feature callout is a Qt::ToolTip window, which the platforms Mudlet ships
  * on keep above ordinary windows - including the windows of whatever
@@ -138,7 +140,7 @@ private slots:
                          [callout]() {
                              return callout->isVisible();
                          },
-                         3000),
+                         3s),
                  "the callout never appeared, so it is waiting for an activation that this platform does not report");
     }
 
@@ -161,7 +163,7 @@ private slots:
 
         callout->slot_applicationStateChanged(Qt::ApplicationInactive);
         mpWindow->move(mpWindow->x() + 120, mpWindow->y() + 60);
-        QTest::qWait(50);
+        QTest::qWait(50ms);
         callout->slot_applicationStateChanged(Qt::ApplicationActive);
 
         QVERIFY2(anchorCentre() != centreBefore, "the window did not actually move, so nothing was re-anchored");
@@ -205,7 +207,7 @@ private slots:
             callout->slot_applicationStateChanged(Qt::ApplicationActive);
         }
         // the balloon closes itself, which is a deferred delete
-        QTest::qWait(50);
+        QTest::qWait(50ms);
 
         QVERIFY2(!callout || !callout->isVisible(), "the callout came back pointing at an anchor that is no longer on screen");
         QVERIFY2(!dismissed(), "the anchor going away was recorded as the player having dealt with the callout");
