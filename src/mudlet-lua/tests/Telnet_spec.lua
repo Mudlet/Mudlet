@@ -1711,6 +1711,228 @@ describe("Tests MCCP compressed streams", function()
   end)
 end)
 
+describe("Tests MCCP4 compressed streams", function()
+
+  local function escaped(bytes)
+    return (bytes:gsub("[%z<>]", {["\0"] = "<00>", ["<"] = "<<", [">"] = ">>"}))
+  end
+
+  local function feed(data)
+    local ok, msg = feedTelnet(data)
+    assert.is_true(ok, "start the suite with --offline, see the tests README - feedTelnet said: " .. tostring(msg))
+  end
+
+  local function linesSince(mark)
+    return table.concat(getLines("main", mark, getLastLineNumber("main") + 1), "\n")
+  end
+
+  local function begin(encoding)
+    return "<T_IAC><T_SB><O_MCCP4><02>" .. encoding .. "<T_IAC><T_SE>"
+  end
+
+  -- zstd --no-check -3 of "MCCP4ZSTDOK MCCP4ZSTDOK MCCP4ZSTDOK\r\n"
+  local ZSTD = "\40\181\47\253\0\88\165\0\0\112\77\67\67\80\52\90\83\84\68\79\75\32\13\10\1\0\175\75\18"
+  -- zstd --no-check -3 of "MCCP4SECONDFRAMEOK\r\n"
+  local ZSTD_SECOND = "\40\181\47\253\0\88\161\0\0\77\67\67\80\52\83\69\67\79\78\68\70\82\65\77\69\79\75\13\10"
+  -- zlib.compress("MCCP4DEFLATEOK MCCP4DEFLATEOK\r\n")
+  local DEFLATE = "\120\156\243\117\118\14\48\113\113\117\243\113\12\113\245\247\86\240\69\225\242\114\1\0\133\253\8\4"
+  -- zlib.compress("MCCP4SECONDDEFLATEOK\r\n")
+  local DEFLATE_SECOND = "\120\156\243\117\118\14\48\9\118\117\246\247\115\113\113\117\243\113\12\113\245\247\230\229\2\0\70\12\5\186"
+  -- zstd --no-check -3 of "MCCP4BEFORENESTED" .. IAC SB COMPRESS4 BEGIN_ENCODING "zstd" IAC SE .. "MCCP4INSIDENESTED\r\n"
+  local ZSTD_NESTED = "\40\181\47\253\0\88\113\1\0\77\67\67\80\52\66\69\70\79\82\69\78\69\83\84\69\68\255\250\88\2\122\115\116\100\255\240\77\67\67\80\52\73\78\83\73\68\69\78\69\83\84\69\68\13\10"
+  -- zlib.compress() of the same text as ZSTD_NESTED
+  local DEFLATE_NESTED = "\120\156\243\117\118\14\48\113\114\117\243\15\114\245\115\13\14\113\117\249\255\43\130\169\170\184\36\229\255\7\95\144\148\167\95\176\167\11\84\138\151\11\0\125\253\15\194"
+
+  after_each(function()
+    feed("<T_IAC><T_WONT><O_MCCP4>")
+    feed("<T_IAC><T_WONT><O_MCCP2>")
+  end)
+
+  it("shows the text of a zstd frame and the plain text after it", function()
+    local mark = getLastLineNumber("main")
+    feed("<T_IAC><T_WILL><O_MCCP4>")
+    feed(begin("zstd") .. escaped(ZSTD) .. "MCCP4PLAINAFTERFRAME\r\n")
+    local shown = linesSince(mark)
+    assert.is_truthy(shown:find("MCCP4ZSTDOK MCCP4ZSTDOK MCCP4ZSTDOK", 1, true), shown)
+    assert.is_truthy(shown:find("MCCP4PLAINAFTERFRAME", 1, true), shown)
+  end)
+
+  -- the end of a run leaves MCCP4 negotiated, so the game can begin another
+  -- without offering it again
+  it("decompresses a second run of either encoding once the first has ended", function()
+    local mark = getLastLineNumber("main")
+    feed("<T_IAC><T_WILL><O_MCCP4>")
+    feed(begin("deflate") .. escaped(DEFLATE))
+    feed("MCCP4BETWEENRUNS\r\n" .. begin("deflate"))
+    feed(escaped(DEFLATE_SECOND))
+    feed(begin("zstd") .. escaped(ZSTD_SECOND))
+    local shown = linesSince(mark)
+    local first = shown:find("MCCP4DEFLATEOK MCCP4DEFLATEOK", 1, true)
+    local between = shown:find("MCCP4BETWEENRUNS", 1, true)
+    local second = shown:find("MCCP4SECONDDEFLATEOK", 1, true)
+    local third = shown:find("MCCP4SECONDFRAMEOK", 1, true)
+    assert.is_truthy(first and between and second and third and first < between and between < second and second < third, shown)
+  end)
+
+  it("warns and shows all of a text sent instead of a zstd frame", function()
+    local mark = getLastLineNumber("main")
+    feed("<T_IAC><T_WILL><O_MCCP4>")
+    feed(begin("zstd") .. "MCCP4NOTCOMPRESSED\r\n")
+    local shown = linesSince(mark)
+    assert.is_truthy(shown:find("MCCP decompression error", 1, true), shown)
+    assert.is_truthy(shown:find("MCCP4NOTCOMPRESSED", 1, true), shown)
+  end)
+
+  it("warns and shows all of a text sent instead of a deflate stream", function()
+    local mark = getLastLineNumber("main")
+    feed("<T_IAC><T_WILL><O_MCCP4>")
+    feed(begin("deflate") .. "MCCP4NOTDEFLATED\r\n")
+    local shown = linesSince(mark)
+    assert.is_truthy(shown:find("MCCP decompression error", 1, true), shown)
+    assert.is_truthy(shown:find("MCCP4NOTDEFLATED", 1, true), shown)
+  end)
+
+  -- zstd rejects "M" as soon as it sees it but counts it as read, and takes
+  -- "(" as the first byte of its magic number and waits for more
+  it("shows all of a text sent instead of a zstd frame split across reads", function()
+    for _, text in ipairs({"MCCP4SPLITM", "(MCCP4SPLITPAREN)"}) do
+      local mark = getLastLineNumber("main")
+      feed("<T_IAC><T_WILL><O_MCCP4>")
+      feed(begin("zstd") .. text:sub(1, 1))
+      feed(text:sub(2) .. "\r\n")
+      local shown = linesSince(mark)
+      assert.is_truthy(shown:find("MCCP decompression error", 1, true), shown)
+      local _, occurrences = shown:gsub(text:gsub("%p", "%%%0"), "")
+      assert.equals(1, occurrences, shown)
+    end
+  end)
+
+  it("stops decompressing after a broken run until the game offers MCCP4 again", function()
+    feed("<T_IAC><T_WILL><O_MCCP4>")
+    feed(begin("zstd") .. "MCCP4NOTCOMPRESSED\r\n")
+
+    local mark = getLastLineNumber("main")
+    feed(begin("zstd") .. escaped(ZSTD) .. "\r\n")
+    local shown = linesSince(mark)
+    -- zstd keeps the first "MCCP4ZSTDOK " as a literal, so only the repeats show it was decoded
+    assert.is_falsy(shown:find("MCCP4ZSTDOK MCCP4ZSTDOK MCCP4ZSTDOK", 1, true), "a refused run was decompressed: " .. shown)
+
+    mark = getLastLineNumber("main")
+    feed("<T_IAC><T_WILL><O_MCCP4>")
+    feed(begin("zstd") .. escaped(ZSTD))
+    shown = linesSince(mark)
+    assert.is_truthy(shown:find("MCCP4ZSTDOK MCCP4ZSTDOK MCCP4ZSTDOK", 1, true), "offering MCCP4 again did not bring it back: " .. shown)
+  end)
+
+  it("refuses a zstd frame that inflates past the cap in one read", function()
+    -- zstd --no-check -19 of string.rep("\0", 1000000) .. "MCCP4TAILOFBOMB\r\n": like the MCCP2
+    -- bomb above, it must inflate to more than scmMaxDecompressionRecursion * BUFFER_SIZE
+    local bomb = "\40\181\47\253\0\104\76\0\0\8\0\1\0\252\255\57\16\2\2\0\16\0\2\0\16\0\2\0\16\0\2\0\16\0\2\0\16\0\2\0\16\0\205\0\0\136\77\67\67\80\52\84\65\73\76\79\70\66\79\77\66\13\10\1\0\61\66\57\0\2"
+    local mark = getLastLineNumber("main")
+    feed("<T_IAC><T_WILL><O_MCCP4>")
+    feed(begin("zstd") .. escaped(bomb))
+    feed("MCCP4PLAINAFTERCAP\r\n")
+    local shown = linesSince(mark)
+    assert.is_truthy(shown:find("Too much compressed data to process at once", 1, true), shown)
+    assert.is_falsy(shown:find("MCCP decompression error", 1, true), "the plain text was fed to the dropped frame: " .. shown)
+    assert.is_truthy(shown:find("MCCP4PLAINAFTERCAP", 1, true), shown)
+
+    -- refused as MCCP4, so a run it begins without offering MCCP4 again is not decoded
+    feed(begin("zstd") .. escaped(ZSTD) .. "\r\n")
+    shown = linesSince(mark)
+    assert.is_falsy(shown:find("MCCP4ZSTDOK MCCP4ZSTDOK MCCP4ZSTDOK", 1, true), "the cap refused some other option than MCCP4: " .. shown)
+
+    feed("<T_IAC><T_WILL><O_MCCP4>")
+    feed(begin("zstd") .. escaped(ZSTD))
+    shown = linesSince(mark)
+    assert.is_truthy(shown:find("MCCP4ZSTDOK MCCP4ZSTDOK MCCP4ZSTDOK", 1, true), "offering MCCP4 again did not bring it back: " .. shown)
+  end)
+
+  -- like MCCP2's, a WONT inside a run turns the option off but lets the run finish
+  it("decodes the rest of a zstd frame that turned MCCP4 off", function()
+    -- zstd --no-check: "MCCP4BEFOREWONT\r\n" .. IAC WONT COMPRESS4 .. "MCCP4AFTERWONT\r\n" flushed,
+    -- then "MCCP4TAILOK MCCP4TAILOK MCCP4TAILOK\r\n" ending the same frame
+    local flushed = "\40\181\47\253\0\88\32\1\0\77\67\67\80\52\66\69\70\79\82\69\87\79\78\84\13\10\255\252\88\77\67\67\80\52\65\70\84\69\82\87\79\78\84\13\10"
+    local frameEnd = "\141\0\0\72\84\65\73\76\79\75\32\13\10\2\0\47\213\70\152\64"
+    local mark = getLastLineNumber("main")
+    feed("<T_IAC><T_WILL><O_MCCP4>")
+    feed(begin("zstd") .. escaped(flushed))
+    feed(escaped(frameEnd) .. "MCCP4PLAINAFTERWONT\r\n")
+    local shown = linesSince(mark)
+    assert.is_falsy(shown:find("MCCP decompression error", 1, true), shown)
+    assert.is_truthy(shown:find("MCCP4AFTERWONT", 1, true), shown)
+    assert.is_truthy(shown:find("MCCP4TAILOK MCCP4TAILOK MCCP4TAILOK", 1, true), shown)
+    assert.is_truthy(shown:find("MCCP4PLAINAFTERWONT", 1, true), shown)
+
+    feed(begin("zstd") .. escaped(ZSTD) .. "\r\n")
+    shown = linesSince(mark)
+    assert.is_falsy(shown:find("MCCP4ZSTDOK MCCP4ZSTDOK MCCP4ZSTDOK", 1, true), "a run began after the game turned MCCP4 off: " .. shown)
+  end)
+
+  -- a start found in decompressed output is the game's text, not a new run: acting on it
+  -- swaps decoders and feeds what follows the run to the new one
+  local function feedNested(payload, encoding)
+    local mark = getLastLineNumber("main")
+    feed("<T_IAC><T_WILL><O_MCCP4>")
+    feed(begin(encoding) .. escaped(payload) .. "MCCP4AFTERNESTED\r\n")
+    local shown = linesSince(mark)
+    assert.is_falsy(shown:find("MCCP decompression error", 1, true), shown)
+    assert.is_truthy(shown:find("MCCP4BEFORENESTED", 1, true), shown)
+    assert.is_truthy(shown:find("MCCP4INSIDENESTED", 1, true), shown)
+    assert.is_truthy(shown:find("MCCP4AFTERNESTED", 1, true), shown)
+  end
+
+  it("does not begin a new run from inside a zstd frame", function()
+    feedNested(ZSTD_NESTED, "zstd")
+  end)
+
+  it("does not begin a new run from inside a deflate stream", function()
+    feedNested(DEFLATE_NESTED, "deflate")
+  end)
+
+  -- an IAC that is not SE closes a subnegotiation too, and must not get past the check
+  it("does not begin a new run from an unterminated start inside a zstd frame", function()
+    -- zstd --no-check -3 of "MCCP4BEFORENESTED" .. IAC SB COMPRESS4 BEGIN_ENCODING "zstd" IAC NOP .. "MCCP4INSIDENESTED\r\n"
+    feedNested("\40\181\47\253\0\88\113\1\0\77\67\67\80\52\66\69\70\79\82\69\78\69\83\84\69\68\255\250\88\2\122\115\116\100\255\241\77\67\67\80\52\73\78\83\73\68\69\78\69\83\84\69\68\13\10", "zstd")
+  end)
+
+  it("does not begin a new run from an unterminated start inside a deflate stream", function()
+    -- zlib.compress("MCCP4BEFORENESTED" .. IAC SB COMPRESS4 BEGIN_ENCODING "deflate" IAC NOP .. "MCCP4INSIDENESTED\r\n")
+    feedNested("\120\156\243\117\118\14\48\113\114\117\243\15\114\245\115\13\14\113\117\249\255\43\130\41\37\53\45\39\177\36\245\255\71\95\144\172\167\95\176\167\11\84\150\151\11\0\176\111\16\211", "deflate")
+  end)
+
+  -- each run costs a level of the recursion cap, as an MCCP2 stream does, so a read can hold up to 7
+  it("shows the text after several runs begun in one read", function()
+    local mark = getLastLineNumber("main")
+    feed("<T_IAC><T_WILL><O_MCCP4>")
+    local runs = {}
+    for _ = 1, 3 do
+      runs[#runs + 1] = begin("zstd") .. escaped(ZSTD) .. begin("deflate") .. escaped(DEFLATE_SECOND)
+    end
+    feed(table.concat(runs) .. "MCCP4AFTERBURST\r\n")
+    local shown = linesSince(mark)
+    assert.is_falsy(shown:find("MCCP decompression error", 1, true), shown)
+    assert.is_falsy(shown:find("Too much compressed data", 1, true), shown)
+    local _, frames = shown:gsub("MCCP4ZSTDOK MCCP4ZSTDOK MCCP4ZSTDOK", "")
+    local _, streams = shown:gsub("MCCP4SECONDDEFLATEOK", "")
+    assert.are.equal(3, frames, shown)
+    assert.are.equal(3, streams, shown)
+    assert.is_truthy(shown:find("MCCP4AFTERBURST", 1, true), shown)
+  end)
+
+  it("does not begin an MCCP4 run from inside an MCCP2 stream", function()
+    local mark = getLastLineNumber("main")
+    -- MCCP2 first, or it is refused in favour of MCCP4
+    feed("<T_IAC><T_WILL><O_MCCP2>")
+    feed("<T_IAC><T_WILL><O_MCCP4>")
+    feed("<T_IAC><T_SB><O_MCCP2><T_IAC><T_SE>" .. escaped(DEFLATE_NESTED) .. "MCCP4AFTERNESTED\r\n")
+    local shown = linesSince(mark)
+    assert.is_falsy(shown:find("MCCP decompression error", 1, true), shown)
+    assert.is_truthy(shown:find("MCCP4INSIDENESTED", 1, true), shown)
+    assert.is_truthy(shown:find("MCCP4AFTERNESTED", 1, true), shown)
+  end)
+end)
+
 describe("Tests CHARSET negotiation", function()
 
   local encodingFile = getMudletHomeDir() .. "/encoding"

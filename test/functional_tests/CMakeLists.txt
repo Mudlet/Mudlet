@@ -155,6 +155,7 @@ set(TELNET_GROUP_TEST_SOURCES
     TelnetReconnectStateTest.cpp
     TelnetStringSequenceRecoveryTest.cpp
     TelnetTlsPromptTest.cpp
+    TelnetMccp4Test.cpp
     TOscTest.cpp
     MirrorToStdOutTest.cpp
     MsdpMalformedDiagnosticTest.cpp
@@ -707,6 +708,9 @@ set_tests_properties(HostWidgetDecouplingTest PROPERTIES TIMEOUT 300)
 
 # ConsoleModelExtractionTest creates a fresh profile per test method, so it needs a longer timeout
 set_tests_properties(ConsoleModelExtractionTest PROPERTIES TIMEOUT 600)
+
+# TelnetMccp4Test creates a fresh profile per test method, so it needs a longer timeout
+set_tests_properties(TelnetMccp4Test PROPERTIES TIMEOUT 300)
 
 # ConnectionDialogOpenProfileTest waits out a real reconnect (15s budget) on top
 # of two profile loads and a full mudlet start under ASan, so the 60s default is

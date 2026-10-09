@@ -129,7 +129,7 @@ local ESC, BEL, CR, LF = 27, 7, 13, 10
 local OPT = {
     BINARY = 0, ECHO = 1, SGA = 3, STATUS = 5, TTYPE = 24, EOR = 25, NAWS = 31,
     NEW_ENVIRON = 39, CHARSET = 42, MSDP = 69, MSSP = 70, MCCP1 = 85,
-    MCCP2 = 86, MSP = 90, MXP = 91, AARD102 = 102, ATCP = 200, GMCP = 201,
+    MCCP2 = 86, MCCP4 = 88, MSP = 90, MXP = 91, AARD102 = 102, ATCP = 200, GMCP = 201,
 }
 local OPTION_VALUES = {}
 for _, v in pairs(OPT) do
@@ -302,6 +302,14 @@ local telnetChunks = {
         insert(b, IAC); insert(b, SB); insert(b, OPT.MCCP2); insert(b, IAC); insert(b, SE)
         fillBytes(b, rrange(1, 30), false)
     end,
+    function(b)                                              -- MCCP4: negotiate, begin a zstd or deflate run, then feed garbage
+        insert(b, IAC); insert(b, WILL); insert(b, OPT.MCCP4)
+        insert(b, IAC); insert(b, SB); insert(b, OPT.MCCP4); insert(b, 2)
+        appendStr(b, pick({"zstd", "deflate"}))
+        insert(b, IAC); insert(b, SE)
+        if chance(50) then appendStr(b, "\40\181\47\253") end    -- zstd magic, so the frame header parser runs
+        fillBytes(b, rrange(1, 30), false)
+    end,
     function(b)                                              -- ANSI SGR: 16/256/truecolor and malformed parameters
         insert(b, ESC); insert(b, 0x5B)                     -- ESC [
         appendStr(b, pick({"0", "1;31", "38;5;255", "48;5;16", "38;2;10;20;30", "48;2;1;2;3",
@@ -456,7 +464,7 @@ local function resetTelnetState()
     pcall(feedTelnet, "\r\n")
     -- Reset the negotiated MCCP state the fuzz may have set, so it does not leak
     -- past this spec if the suite is ever run un-isolated.
-    pcall(feedTelnet, "<T_IAC><T_WONT><O_MCCP2><T_IAC><T_WONT><O_MCCP>")
+    pcall(feedTelnet, "<T_IAC><T_WONT><O_MCCP4><T_IAC><T_WONT><O_MCCP2><T_IAC><T_WONT><O_MCCP>")
     pcall(setConfig, "specialForceGAOff", false)
 end
 

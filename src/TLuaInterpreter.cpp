@@ -1032,6 +1032,8 @@ QByteArray TLuaInterpreter::parseTelnetCodes(const QByteArray& input)
 
                                                           {QByteArray("<O_MCCP2>"), '\x56'}, // 86 dec
 
+                                                          {QByteArray("<O_MCCP4>"), '\x58'}, // 88 dec
+
                                                           {QByteArray("<O_MSP>"), '\x5a'}, // 90 dec
 
                                                           {QByteArray("<O_MXP>"), '\x5b'}, // 91 dec
