@@ -340,6 +340,12 @@ private:
     // Search synonyms not in a setting's own words; here rather than in the .ui file so they can carry
     // a translator note.
     void setSearchKeywords();
+    // Matching triggers on several threads during floods: app-wide, in Mudlet.ini, built in code
+    void createTriggerMatchPoolControls(QGroupBox* pCard);
+    void retranslateTriggerMatchPoolControls();
+    void populateTriggerMatchPoolSettings();
+    void applyTriggerMatchPoolSettings();
+    void enableTriggerMatchPoolTuning(bool enabled);
     void moveIntoCard(QGroupBox* pCard, const QList<QWidget*>& controls);
     void addCardRow(QGroupBox* pCard, QWidget* pLabel, QWidget* pControl);
     void retitleCards();
@@ -429,6 +435,17 @@ private:
     QWidget* mpWidget_sidebar = nullptr;
     QWidget* mpWidget_titleRow = nullptr;
     QLabel* mpLabel_wordmark = nullptr;
+    QCheckBox* mpCheckBox_triggerMatchPool = nullptr;
+    QLabel* mpLabel_triggerMatchThreads = nullptr;
+    QSpinBox* mpSpinBox_triggerMatchThreads = nullptr;
+    QLabel* mpLabel_triggerMatchThreshold = nullptr;
+    QSpinBox* mpSpinBox_triggerMatchThreshold = nullptr;
+    QLabel* mpLabel_triggerMatchMissesPerMatch = nullptr;
+    QSpinBox* mpSpinBox_triggerMatchMissesPerMatch = nullptr;
+    QLabel* mpLabel_triggerMatchFloodLines = nullptr;
+    QSpinBox* mpSpinBox_triggerMatchFloodLines = nullptr;
+    QLabel* mpLabel_triggerMatchSpin = nullptr;
+    QSpinBox* mpSpinBox_triggerMatchSpin = nullptr;
     QListWidget* mpListWidget_categories = nullptr;
     // The sidebar row that is a link rather than a category
     QListWidgetItem* mpItem_support = nullptr;

@@ -32,6 +32,7 @@
 #include <QScopeGuard>
 
 #include <algorithm>
+#include <chrono>
 #include <functional>
 #include <limits>
 #include <vector>
@@ -654,7 +655,24 @@ void TriggerUnit::processDataStream(const QString& data, int line)
     const quint64 regexMatchesBefore = TTrigger::regexMatches();
     int prescanRegexSearches = 0;
     int prescanRegexMatches = 0;
-    if (inFlood && prescanPays()) {
+    // Lines the pool takes are timed, and a few it would have taken are matched without it for comparison,
+    // so the statistics can say whether it pays on this profile. Top-level lines only: a nested pass's time
+    // is already inside the line that fed it.
+    const bool poolWouldTake = inFlood && !mSamplingLine && prescanPays();
+    const bool timed = poolWouldTake && mProcessingDepth == 1;
+    const bool sampled = timed && pool.takeSample();
+    const auto lineStart = timed ? std::chrono::steady_clock::now() : std::chrono::steady_clock::time_point{};
+    bool pooled = false;
+    mSamplingLine = mSamplingLine || sampled;
+    const auto timingGuard = qScopeGuard([this, &pool, timed, sampled, lineStart, &pooled] {
+        if (sampled) {
+            mSamplingLine = false;
+        }
+        if (timed && (pooled || sampled)) {
+            pool.recordLine(pooled, std::chrono::duration_cast<std::chrono::nanoseconds>(std::chrono::steady_clock::now() - lineStart).count());
+        }
+    });
+    if (poolWouldTake && !sampled) {
         rebuildPrescanTasksIfStale();
         const quint32 passId = TTrigger::nextPrescanPassId();
         // The helper threads run perl patterns of their own, so the line is
@@ -664,6 +682,7 @@ void TriggerUnit::processDataStream(const QString& data, int line)
             TTrigger::setPrescanPass(passId, subject.data(), subject.length());
             prescanRegexSearches = pool.regexSearchesInLastBatch();
             prescanRegexMatches = pool.regexMatchesInLastBatch();
+            pooled = true;
         }
     }
 

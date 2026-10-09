@@ -39,10 +39,12 @@
 #include <QLineEdit>
 #include <QPointer>
 #include <QPushButton>
+#include <QSettings>
 #include <QSignalSpy>
 #include <QSpinBox>
 #include <QStandardItemModel>
 #include <QTimeEdit>
+#include <QThread>
 #include <QTimer>
 
 #include "PortableModeTestHelper.h"
@@ -56,6 +58,7 @@
 #include "TLuaInterpreter.h"
 #include "TMap.h"
 #include "TelnetServerStub.h"
+#include "TriggerMatchPool.h"
 #include "dlgProfilePreferences.h"
 #include "mudlet.h"
 
@@ -1032,6 +1035,97 @@ private slots:
         QCOMPARE(settingChangedValue("announceIncomingText"), priorAnnounce ? qsl("boolean:false") : qsl("boolean:true"));
         QVERIFY2(settingChangedCount("enableClosedCaption") == 1, "the apply raised enableClosedCaption again for a value the live slot had already stored");
         QVERIFY2(settingChangedCount("advertiseScreenReader") == 1, "the apply raised advertiseScreenReader again for a value the live slot had already stored");
+    }
+
+    // App-wide rather than the profile's: read from and written to Mudlet.ini, and the running pool is
+    // reconfigured at once rather than at the next start
+    void test_theTriggerMatchPoolSettingsAreReadFromMudletIniAndAppliedAtOnce()
+    {
+        if (QThread::idealThreadCount() < 2) {
+            QSKIP("the pool needs a second core before it starts a helper");
+        }
+        for (const char* name : {"MUDLET_MATCH_THREADS", "MUDLET_MATCH_THRESHOLD", "MUDLET_MATCH_MISSES_PER_MATCH", "MUDLET_MATCH_FLOOD_LINES", "MUDLET_MATCH_SPIN_US"}) {
+            if (qEnvironmentVariableIsSet(name)) {
+                QSKIP("a MUDLET_MATCH_* environment variable overrides the setting under test");
+            }
+        }
+        QSettings* settings = MudletApp::getQSettings();
+        QVERIFY(settings);
+        const QStringList keys{qsl("triggerMatchThreads"), qsl("triggerMatchThreshold"), qsl("triggerMatchMissesPerMatch"), qsl("triggerMatchFloodLines"), qsl("triggerMatchSpinMicroseconds")};
+        QMap<QString, QVariant> prior;
+        for (const auto& key : keys) {
+            prior.insert(key, settings->value(key));
+        }
+        restoreLater([settings, prior]() {
+            qunsetenv("MUDLET_MATCH_THRESHOLD");
+            for (auto it = prior.cbegin(); it != prior.cend(); ++it) {
+                it.value().isValid() ? settings->setValue(it.key(), it.value()) : settings->remove(it.key());
+            }
+            TriggerMatchPool::instance().configure(TriggerMatchPool::settingsFromConfig());
+        });
+        TriggerMatchPool& pool = TriggerMatchPool::instance();
+        for (const auto& key : keys) {
+            settings->remove(key);
+        }
+        pool.configure(TriggerMatchPool::settingsFromConfig());
+        QVERIFY2(pool.workerCount() == 0, "the pool should be off until the player switches it on");
+
+        settings->setValue(qsl("triggerMatchThreshold"), 77);
+        openPreferences();
+        auto* pEnable = mpPreferences->findChild<QCheckBox*>(qsl("checkBox_triggerMatchPool"));
+        auto* pThreads = mpPreferences->findChild<QSpinBox*>(qsl("spinBox_triggerMatchThreads"));
+        auto* pThreshold = mpPreferences->findChild<QSpinBox*>(qsl("spinBox_triggerMatchThreshold"));
+        auto* pMissesPerMatch = mpPreferences->findChild<QSpinBox*>(qsl("spinBox_triggerMatchMissesPerMatch"));
+        auto* pFloodLines = mpPreferences->findChild<QSpinBox*>(qsl("spinBox_triggerMatchFloodLines"));
+        auto* pSpin = mpPreferences->findChild<QSpinBox*>(qsl("spinBox_triggerMatchSpinMicroseconds"));
+        QVERIFY(pEnable && pThreads && pThreshold && pMissesPerMatch && pFloodLines && pSpin);
+        QVERIFY(!pEnable->isChecked());
+        QVERIFY2(!pThreshold->isEnabled(), "tuning a pool that is off should not be offered");
+        QCOMPARE(pThreshold->value(), 77);
+        QCOMPARE(pThreads->value(), TriggerMatchPool::automaticThreads());
+        const TriggerMatchPool::Settings defaults;
+        QCOMPARE(pMissesPerMatch->value(), defaults.missesPerMatch);
+
+        QSignalSpy applySpy(mpPreferences, &dlgProfilePreferences::signal_preferencesSaved);
+        pEnable->setChecked(true);
+        QVERIFY(pThreshold->isEnabled());
+        QVERIFY(applyAndWait(applySpy));
+        QCOMPARE(settings->value(qsl("triggerMatchThreads")).toInt(), TriggerMatchPool::automaticThreads());
+        QCOMPARE(pool.workerCount(), TriggerMatchPool::automaticThreads());
+        QCOMPARE(pool.threshold(), 77);
+        for (const auto& key : {qsl("triggerMatchMissesPerMatch"), qsl("triggerMatchFloodLines"), qsl("triggerMatchSpinMicroseconds")}) {
+            QVERIFY2(!settings->contains(key), qPrintable(qsl("%1 was written although the player never changed it").arg(key)));
+        }
+
+        applySpy.clear();
+        pThreshold->setValue(64);
+        pMissesPerMatch->setValue(5);
+        pFloodLines->setValue(9);
+        pSpin->setValue(33);
+        QVERIFY(applyAndWait(applySpy));
+        QCOMPARE(settings->value(qsl("triggerMatchThreshold")).toInt(), 64);
+        QCOMPARE(settings->value(qsl("triggerMatchMissesPerMatch")).toInt(), 5);
+        QCOMPARE(settings->value(qsl("triggerMatchFloodLines")).toInt(), 9);
+        QCOMPARE(settings->value(qsl("triggerMatchSpinMicroseconds")).toInt(), 33);
+        QCOMPARE(pool.threshold(), 64);
+        QCOMPARE(pool.missesPerMatch(), 5);
+        QCOMPARE(pool.floodChunkLines(), 9);
+        QCOMPARE(pool.settings().spinMicroseconds, 33);
+
+        // An environment variable still beats what the dialog wrote
+        qputenv("MUDLET_MATCH_THRESHOLD", "200");
+        applySpy.clear();
+        pThreshold->setValue(65);
+        QVERIFY(applyAndWait(applySpy));
+        QCOMPARE(settings->value(qsl("triggerMatchThreshold")).toInt(), 65);
+        QCOMPARE(pool.threshold(), 200);
+        qunsetenv("MUDLET_MATCH_THRESHOLD");
+
+        applySpy.clear();
+        pEnable->setChecked(false);
+        QVERIFY(applyAndWait(applySpy));
+        QCOMPARE(settings->value(qsl("triggerMatchThreads")).toInt(), 0);
+        QCOMPARE(pool.workerCount(), 0);
     }
 
     // The box is tri-state, and what the apply has to write is the box's own

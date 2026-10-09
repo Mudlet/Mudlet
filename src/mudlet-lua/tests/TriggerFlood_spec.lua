@@ -11,12 +11,12 @@
 -- drifts from the first, triggers stop firing and nothing says so. These specs
 -- feed the same lines both ways and require the same firings.
 --
--- The pool needs two threads to share a batch between (MUDLET_MATCH_THREADS,
--- default min(4, cores / 2)) and turns itself off below that, so by default a
--- machine with fewer than four cores never runs it. The counter that proves a
--- burst reached the pool is reported under MUDLET_TEST_MODE only. Without
--- either there is nothing here worth running, and these report as pending
--- rather than passing on a comparison that never happened.
+-- The pool is off unless switched on, in the settings or with
+-- MUDLET_MATCH_THREADS=2 or more, as CI and .claude/scripts/run-lua-tests.sh do.
+-- The counter that proves a burst reached the pool is reported under
+-- MUDLET_TEST_MODE only. Without either there is nothing here worth running,
+-- and these report as pending rather than passing on a comparison that never
+-- happened.
 --
 -- Worth running under more than the defaults - see "Runtime tuning" in
 -- docs/platform-builds.md. MUDLET_MATCH_SPIN_US=0 matters most here: the lines
@@ -68,7 +68,7 @@ describe("trigger matching under a flood", function()
             -- pool declined to start, so this asks whether the parallel path
             -- exists at all rather than how wide it is
             if workers < 2 then
-                pending("this machine has too few cores to run the parallel prescan")
+                pending("the parallel prescan is off - switch it on with MUDLET_MATCH_THREADS=2")
             end
             body()
         end)
@@ -293,11 +293,14 @@ describe("trigger matching under a flood", function()
             track(tempRegexTrigger("^(?:flood_hit|flood_also_hit_" .. index .. ") (\\d+)", function() note("hit") end))
         end
 
+        local sampledBefore = getProfileStats().triggers.matchPool.sampledLines
         local prescans = prescansDuring(hitLines())
+        -- A line the statistics sample is one the pool would have taken
+        local sampled = getProfileStats().triggers.matchPool.sampledLines - sampledBefore
 
         assert.are.equal(12 * 2 * paddingTriggers, fired.hit, "every trigger should fire on every line")
         if os.getenv("MUDLET_MATCH_MISSES_PER_MATCH") == "0" then
-            assert.is_true(prescans >= 11, "counting every search should open the pool, but it opened " .. prescans .. " times")
+            assert.is_true(prescans + sampled >= 11, "counting every search should open the pool, but it opened " .. prescans .. " times")
         elseif os.getenv("MUDLET_MATCH_MISSES_PER_MATCH") then
             pending("MUDLET_MATCH_MISSES_PER_MATCH changes how many matches keep a burst off the pool")
         else
@@ -498,6 +501,38 @@ describe("trigger matching under a flood", function()
             assert.truthy(trickle[2]:find("2=second 3=2", 1, true), trickle[2])
             assert.are.same(trickle, log)
         end)
+    end)
+
+    it("reports on the pool in the profile statistics whether it is on or off", function()
+        local report = getProfileStats().triggers.matchPool
+        assert.is_table(report)
+        assert.is_number(report.threads)
+        assert.is_number(report.pooledLines)
+        assert.is_number(report.sampledLines)
+        assert.is_number(report.savedMilliseconds)
+        assert.truthy(({["not enough data"] = true, ["worth it"] = true, ["about even"] = true, ["not worth it"] = true})[report.verdict],
+                      tostring(report.verdict))
+    end)
+
+    itFlood("reports lines matched with the pool and a sample matched without it", function()
+        -- Fires on every line, so a sampled one has to fire as well
+        track(tempRegexTrigger([[^flood quiet filler \d+$]], function() note("filler") end))
+        local before = getProfileStats().triggers.matchPool
+        -- Comfortably more than one sampling period, 32 by default, of lines the pool would take
+        feedAsBurst(filler(100))
+
+        local after = getProfileStats().triggers.matchPool
+        assert.are.equal(100, fired.filler, "every line should fire its trigger, sampled or not")
+        assert.is_true(after.pooledLines > before.pooledLines, "no line of the burst was counted as matched with the pool")
+        assert.is_true(after.pooledMicroseconds > 0)
+        assert.is_true(after.threads >= 2)
+        if os.getenv("MUDLET_MATCH_SAMPLE_EVERY") == "0" then
+            assert.are.equal(before.sampledLines, after.sampledLines, "a line was sampled although sampling is off")
+        elseif os.getenv("MUDLET_MATCH_SAMPLE_EVERY") == nil then
+            assert.is_true(after.sampledLines - before.sampledLines >= 2,
+                           "a burst of 100 lines should sample about one in 32, but sampled " .. (after.sampledLines - before.sampledLines))
+            assert.is_true(after.sampledMicroseconds > 0)
+        end
     end)
 
     -- Only a trigger with a regex among its patterns is prescanned, so the

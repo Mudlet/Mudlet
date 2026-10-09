@@ -47,7 +47,44 @@ struct pcre2_real_match_data_8;
 class TriggerMatchPool
 {
 public:
+    // The tuning knobs, each with a Mudlet.ini key in [General] and an environment variable that beats it
+    // for one run - see "Runtime tuning" in docs/platform-builds.md.
+    struct Settings
+    {
+        // Helpers plus the calling thread; below 2 the pool is off
+        int threads = 0;
+        int threshold = 128;
+        int floodChunkLines = 8;
+        int missesPerMatch = 2;
+        int spinMicroseconds = 100;
+        // A line the pool would take is matched without it once in this many, for the report; 0 never
+        int sampleEvery = 32;
+        bool operator==(const Settings&) const = default;
+    };
+    // Whether, and how much, the pool has paid on this machine's own workload since it was last
+    // (re)configured: a sample of the lines it would have taken is matched without it, for comparison.
+    struct Report
+    {
+        quint64 pooledLines = 0;
+        quint64 sampledLines = 0;
+        qint64 pooledNanoseconds = 0;
+        qint64 sampledNanoseconds = 0;
+        // Fewer sampled lines than this and the comparison is mostly noise
+        static constexpr quint64 scmSampledLinesForVerdict = 100;
+        enum class Verdict { NotEnoughData, WorthIt, AboutEven, NotWorthIt };
+        Verdict verdict() const;
+        qint64 averagePooledNanoseconds() const { return pooledLines ? pooledNanoseconds / static_cast<qint64>(pooledLines) : 0; }
+        qint64 averageSampledNanoseconds() const { return sampledLines ? sampledNanoseconds / static_cast<qint64>(sampledLines) : 0; }
+        // What matching the pooled lines without the pool would have cost, less what it did cost; negative
+        // when the pool lost time
+        qint64 savedNanoseconds() const;
+    };
+
     static TriggerMatchPool& instance();
+    static Settings settingsFromConfig();
+    // The thread count offered when the pool is switched on: past four the fork-join tail grows faster
+    // than each thread's share of work shrinks
+    static int automaticThreads();
 
     // Stops the helpers for good; every later batch is declined. main() calls it after the event loop
     // returns and before deleting the application, so the threads end while Qt is intact, not in a
@@ -57,6 +94,19 @@ public:
 
     TriggerMatchPool(const TriggerMatchPool&) = delete;
     TriggerMatchPool& operator=(const TriggerMatchPool&) = delete;
+
+    // Restarts the helpers on new settings and starts the report afresh. Main thread only, no prescan
+    // in flight; does nothing once shutdown() has run, or when the settings are unchanged.
+    void configure(const Settings& settings);
+    const Settings& settings() const { return mSettings; }
+
+    // Whether this line, one the pool would take, should be matched without it as a sample instead
+    bool takeSample();
+    // Records how long a line the pool would have taken spent being matched, with it or as a sample
+    void recordLine(bool pooled, qint64 nanoseconds);
+    // Helpers started and not yet returned, so a test can tell a restarted pool from one whose helpers quit
+    int runningHelperCount() const { return static_cast<int>(mThreads.size()) - mHelpersReturned.load(std::memory_order_acquire); }
+    const Report& report() const { return mReport; }
 
     // Records on each trigger, under passId, whether it may fire on this line. Returns false, having
     // written nothing, when declined (empty batch or no helpers); the caller then runs its sequential
@@ -88,8 +138,9 @@ private:
     ~TriggerMatchPool();
 
     void publish(int chunkCount);
+    void startHelpers(int wanted);
     void stopHelpers();
-    void workerLoop(int slot);
+    void workerLoop(int slot, uint32_t seen);
     uint32_t runChunks(int slot);
 
     static TriggerMatchPool* smpInstance;
@@ -115,8 +166,8 @@ private:
     static constexpr std::size_t scmCacheLine = 128;
     static constexpr uint32_t scmScratchOvectorPairs = 32;
 
-    // Read by every helper on every spin, written only at construction or shutdown, so this line stays
-    // valid in every cache while the pool works.
+    // Read by every helper on every spin, written only while no helper runs, so this line stays valid in
+    // every cache while the pool works.
     int mThreshold = 0;
     int mFloodChunkLines = 0;
     std::chrono::steady_clock::duration mSpinBudget{};
@@ -134,13 +185,18 @@ private:
     // Main thread only, on mJob's line; mEpoch reaches the helpers inside mCursor.
     quint64 mPrescanCount = 0;
     int mMissesPerMatch = 0;
+    Settings mSettings;
+    Report mReport;
+    int mLinesUntilSample = 0;
+    bool mShutDown = false;
+    bool mSettingsApplied = false;
     int mRegexSearchesInLastBatch = 0;
     int mRegexMatchesInLastBatch = 0;
     uint32_t mEpoch = 0;
 
     // One word, so a single fetch_add claims a chunk and says which batch, and how large, it belongs to;
     // a late claim gets an index past the count and touches nothing. Epoch 0 means no batch yet, hence
-    // helpers start with seen == 0 and publish() pre-increments.
+    // publish() pre-increments; a helper starts having seen whichever epoch is current when it is made.
     alignas(scmCacheLine) std::atomic<uint64_t> mCursor{0};
     // Chunks finished:32 | regex searches run:32, so a chunk reports both in the fetch_add the join waits on
     alignas(scmCacheLine) std::atomic<uint64_t> mDone{0};

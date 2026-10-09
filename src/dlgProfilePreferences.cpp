@@ -44,6 +44,7 @@
 #include "TScript.h"
 #include "TTextEdit.h"
 #include "TTimer.h"
+#include "TriggerMatchPool.h"
 #include "TTrigger.h"
 #include "ctelnet.h"
 #include "discord.h"
@@ -86,6 +87,7 @@
 #include <QTableWidget>
 #include <QTemporaryDir>
 #include <QTemporaryFile>
+#include <QThread>
 #include <QToolBar>
 #include <QtMath>
 #include <QUiLoader>
@@ -845,6 +847,7 @@ void dlgProfilePreferences::buildShell()
 
     auto* pCard_performance = createCard(qsl("card_performance"));
     moveIntoCard(pCard_performance, {checkBox_lazyCaptureGlobals});
+    createTriggerMatchPoolControls(pCard_performance);
     buildCategoryPage(scmCategory_advanced, {pCard_performance, groupBox_debug});
 
     buildSearchResultsPage();
@@ -1201,6 +1204,7 @@ void dlgProfilePreferences::retranslateShell()
                                         "To change those, including the accessibility options, open Settings from a loaded profile."));
     updateNoProfileNotice();
 
+    retranslateTriggerMatchPoolControls();
     setSearchKeywords();
 
     // Nothing is current while the shell is being built, and search sets its own title on the next query
@@ -1210,6 +1214,127 @@ void dlgProfilePreferences::retranslateShell()
         } else {
             mpLabel_pageTitle->setText(tr("%1 › %2").arg(pCurrent->text(), mSubpageTitles.value(mCurrentSubpage)));
         }
+    }
+}
+
+void dlgProfilePreferences::createTriggerMatchPoolControls(QGroupBox* pCard)
+{
+    mpCheckBox_triggerMatchPool = new QCheckBox(pCard);
+    mpCheckBox_triggerMatchPool->setObjectName(qsl("checkBox_triggerMatchPool"));
+    moveIntoCard(pCard, {mpCheckBox_triggerMatchPool});
+    const auto addRow = [this, pCard](QLabel*& pLabel, QSpinBox*& pSpinBox, const QString& name, const int minimum, const int maximum) {
+        pLabel = new QLabel(pCard);
+        pSpinBox = new QSpinBox(pCard);
+        pSpinBox->setObjectName(qsl("spinBox_%1").arg(name));
+        pSpinBox->setRange(minimum, maximum);
+        pLabel->setBuddy(pSpinBox);
+        addCardRow(pCard, pLabel, pSpinBox);
+    };
+    addRow(mpLabel_triggerMatchThreads, mpSpinBox_triggerMatchThreads, qsl("triggerMatchThreads"), 2, std::max(2, QThread::idealThreadCount()));
+    addRow(mpLabel_triggerMatchThreshold, mpSpinBox_triggerMatchThreshold, qsl("triggerMatchThreshold"), 1, 100000);
+    addRow(mpLabel_triggerMatchMissesPerMatch, mpSpinBox_triggerMatchMissesPerMatch, qsl("triggerMatchMissesPerMatch"), 0, 1000);
+    addRow(mpLabel_triggerMatchFloodLines, mpSpinBox_triggerMatchFloodLines, qsl("triggerMatchFloodLines"), 1, 100000);
+    addRow(mpLabel_triggerMatchSpin, mpSpinBox_triggerMatchSpin, qsl("triggerMatchSpinMicroseconds"), 0, 100000);
+    connect(mpCheckBox_triggerMatchPool, &QCheckBox::toggled, this, &dlgProfilePreferences::enableTriggerMatchPoolTuning);
+}
+
+void dlgProfilePreferences::enableTriggerMatchPoolTuning(const bool enabled)
+{
+    for (auto* pControl : std::initializer_list<QWidget*>{mpLabel_triggerMatchThreads,
+                                                          mpSpinBox_triggerMatchThreads,
+                                                          mpLabel_triggerMatchThreshold,
+                                                          mpSpinBox_triggerMatchThreshold,
+                                                          mpLabel_triggerMatchMissesPerMatch,
+                                                          mpSpinBox_triggerMatchMissesPerMatch,
+                                                          mpLabel_triggerMatchFloodLines,
+                                                          mpSpinBox_triggerMatchFloodLines,
+                                                          mpLabel_triggerMatchSpin,
+                                                          mpSpinBox_triggerMatchSpin}) {
+        pControl->setEnabled(enabled);
+    }
+}
+
+void dlgProfilePreferences::retranslateTriggerMatchPoolControls()
+{
+    //: Check box in the Performance settings; the triggers' regular expressions are then searched on several CPU cores while game text floods in
+    mpCheckBox_triggerMatchPool->setText(tr("Match triggers on several threads during floods of text (experimental)"));
+    //: Tooltip of the check box that matches triggers on several threads
+    mpCheckBox_triggerMatchPool->setToolTip(tr("<p>While a flood of game text arrives, other CPU cores rule out the regex triggers that cannot match each line, so this one has fewer to try.</p>"
+                                               "<p>It helps profiles where many regex triggers are searched on every line and few of them match. On most profiles it makes no difference and uses more "
+                                               "CPU, so it is off unless you switch it on. Once it is on, the Statistics report in the trigger editor (Ctrl+9) says whether it has been worth it "
+                                               "on your own profile.</p><p>The <tt>MUDLET_MATCH_*</tt> environment variables, if set, override these settings.</p>"));
+    //: Label of a number field in the Performance settings: how many threads match triggers, the main one included
+    mpLabel_triggerMatchThreads->setText(tr("Threads, the main one included:"));
+    //: Tooltip of the number of threads that match triggers
+    mpSpinBox_triggerMatchThreads->setToolTip(tr("<p>More than four rarely helps: the threads then spend longer waiting for each other than matching.</p>"));
+    //: Label of a number field in the Performance settings: how many regex searches that find nothing a line needs before other threads help with it
+    mpLabel_triggerMatchThreshold->setText(tr("Failed regex searches a line needs before the threads help:"));
+    //: Tooltip of the threshold of failed regex searches per line
+    mpSpinBox_triggerMatchThreshold->setToolTip(tr("<p>Judged on the line before. Only a search that finds nothing is work the other threads can take away, and below this "
+                                                   "many, sharing it out costs more than it saves.</p>"));
+    //: Label of a number field in the Performance settings: how many failed regex searches a line needs for every one that matched
+    mpLabel_triggerMatchMissesPerMatch->setText(tr("Failed searches needed for each one that matched:"));
+    //: Tooltip of the failed searches per match ratio
+    mpSpinBox_triggerMatchMissesPerMatch->setToolTip(tr("<p>A regex that matches still costs more with the threads than without, so a line where many match is quicker on "
+                                                        "one thread. 0 counts every search towards the threshold, matched or not.</p>"));
+    //: Label of a number field in the Performance settings: how many lines must arrive at once to count as a flood
+    mpLabel_triggerMatchFloodLines->setText(tr("Lines arriving at once that make a flood:"));
+    //: Tooltip of the lines that make a flood
+    mpSpinBox_triggerMatchFloodLines->setToolTip(tr("<p>The threads only help while text arrives faster than it can be matched; at normal game speed they would use CPU for nothing.</p>"));
+    //: Label of a number field in the Performance settings: how long, in microseconds, the helper threads stay awake waiting for the next line
+    mpLabel_triggerMatchSpin->setText(tr("Microseconds the threads stay awake for the next line:"));
+    //: Tooltip of the helper threads' spin time
+    mpSpinBox_triggerMatchSpin->setToolTip(tr("<p>Waking a thread costs more than the work it is handed, so between lines of a flood they wait awake this long before sleeping.</p>"));
+}
+
+// App-wide like the pool, so read from Mudlet.ini with or without a profile
+void dlgProfilePreferences::populateTriggerMatchPoolSettings()
+{
+    const QSettings* settings = MudletApp::getQSettings();
+    const TriggerMatchPool::Settings defaults;
+    const int threads = settings->value(qsl("triggerMatchThreads"), defaults.threads).toInt();
+    {
+        const QSignalBlocker blocker(mpCheckBox_triggerMatchPool);
+        mpCheckBox_triggerMatchPool->setChecked(threads >= 2);
+    }
+    enableTriggerMatchPoolTuning(threads >= 2);
+    // One core leaves no other thread to share the matching with
+    mpCheckBox_triggerMatchPool->setEnabled(QThread::idealThreadCount() >= 2 || threads >= 2);
+    const auto load = [settings](QSpinBox* pSpinBox, const QString& key, const int fallback) {
+        const QSignalBlocker spinBlocker(pSpinBox);
+        pSpinBox->setValue(settings->value(key, fallback).toInt());
+    };
+    {
+        const QSignalBlocker spinBlocker(mpSpinBox_triggerMatchThreads);
+        mpSpinBox_triggerMatchThreads->setValue(threads >= 2 ? threads : TriggerMatchPool::automaticThreads());
+    }
+    load(mpSpinBox_triggerMatchThreshold, qsl("triggerMatchThreshold"), defaults.threshold);
+    load(mpSpinBox_triggerMatchMissesPerMatch, qsl("triggerMatchMissesPerMatch"), defaults.missesPerMatch);
+    load(mpSpinBox_triggerMatchFloodLines, qsl("triggerMatchFloodLines"), defaults.floodChunkLines);
+    load(mpSpinBox_triggerMatchSpin, qsl("triggerMatchSpinMicroseconds"), defaults.spinMicroseconds);
+}
+
+void dlgProfilePreferences::applyTriggerMatchPoolSettings()
+{
+    // Only what the player changed: a key left unwritten keeps following the defaults of later releases
+    QSettings* settings = MudletApp::getQSettings();
+    bool changed = false;
+    if (mSnapshot.anyDirty({mpCheckBox_triggerMatchPool, mpSpinBox_triggerMatchThreads})) {
+        settings->setValue(qsl("triggerMatchThreads"), mpCheckBox_triggerMatchPool->isChecked() ? mpSpinBox_triggerMatchThreads->value() : 0);
+        changed = true;
+    }
+    for (const auto& [pSpinBox, key] : std::initializer_list<std::pair<QSpinBox*, QString>>{{mpSpinBox_triggerMatchThreshold, qsl("triggerMatchThreshold")},
+                                                                                            {mpSpinBox_triggerMatchMissesPerMatch, qsl("triggerMatchMissesPerMatch")},
+                                                                                            {mpSpinBox_triggerMatchFloodLines, qsl("triggerMatchFloodLines")},
+                                                                                            {mpSpinBox_triggerMatchSpin, qsl("triggerMatchSpinMicroseconds")}}) {
+        if (mSnapshot.anyDirty({pSpinBox})) {
+            settings->setValue(key, pSpinBox->value());
+            changed = true;
+        }
+    }
+    if (changed) {
+        // Through settingsFromConfig() rather than from the controls, so an environment override still wins
+        TriggerMatchPool::instance().configure(TriggerMatchPool::settingsFromConfig());
     }
 }
 
@@ -1227,6 +1352,8 @@ void dlgProfilePreferences::setSearchKeywords()
     synonyms.append({checkBox_askTlsAvailable, tr("TLS, SSL, secure connection, reminder")});
     //: Comma-separated synonyms for the settings search - translate to what a player would type, do not transliterate. This one is for preparing the matches, multimatches and line trigger variables only when a script reads them.
     synonyms.append({checkBox_lazyCaptureGlobals, tr("performance, speed, fast, slow, lag, lazy, matches, multimatches, line, _G, global variables")});
+    //: Comma-separated synonyms for the settings search - translate to what a player would type, do not transliterate. This one is for matching triggers on several threads (CPU cores) during floods of game text.
+    synonyms.append({mpCheckBox_triggerMatchPool, tr("performance, speed, fast, slow, lag, threads, cores, CPU, multithreading, parallel, triggers, regex, flood, spam")});
     //: Comma-separated synonyms for the settings search - translate to what a player would type, do not transliterate. This one is for the proxy server settings.
     synonyms.append({groupBox_proxy, tr("proxy, SOCKS, tunnel, firewall")});
     //: Comma-separated synonyms for the settings search - translate to what a player would type, do not transliterate. This one is for where game passwords are kept.
@@ -1620,7 +1747,8 @@ void dlgProfilePreferences::setCardDescriptions()
     setCardDescription(findChild<QGroupBox*>(qsl("card_crashReports")),
                        tr("If Mudlet stops unexpectedly it can tell the developers what went wrong. A report says where Mudlet was in its own code - never what you typed or what the game sent."));
     //: Description line under the "Performance" card title on the Advanced settings page
-    setCardDescription(findChild<QGroupBox*>(qsl("card_performance")), tr("Ways Mudlet speeds up your scripts. Leave these on unless a script or package misbehaves."));
+    setCardDescription(findChild<QGroupBox*>(qsl("card_performance")),
+                       tr("Ways Mudlet speeds up your scripts. Leave the first on unless a script or package misbehaves; matching on several threads is off unless you switch it on."));
     //: Description line under the "Developer" card title on the Advanced settings page
     setCardDescription(groupBox_debug, tr("How much Mudlet's debugging tools report while you work on scripts."));
 }
@@ -3721,6 +3849,7 @@ void dlgProfilePreferences::populateApplicationSettings()
         const QSignalBlocker blocker(telnetHandlerEnabled);
         telnetHandlerEnabled->setChecked(MudletApp::getQSettings()->value("telnetHandlerEnabled", false).toBool());
     }
+    populateTriggerMatchPoolSettings();
     {
         // The one setting here that lives in its own QSettings group rather than
         // in the mudlet instance, so the only one with no change to announce
@@ -6879,6 +7008,7 @@ void dlgProfilePreferences::applyAll()
             settings->setValue("telnetHandlerEnabled", telnetHandlerEnabled->isChecked());
         }
     }
+    applyTriggerMatchPoolSettings();
 
     Discord::self()->UpdatePresence();
 

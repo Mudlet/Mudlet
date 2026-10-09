@@ -231,6 +231,8 @@ private:
     int statsPatternsActive = 0;
     // Counter for nested processing; cleanup deferred until 0
     int mProcessingDepth = 0;
+    // Set while a top-level line is matched without the pool as a sample, so the lines it feeds are too
+    bool mSamplingLine = false;
     bool mRunawayFeedStopped = false;
     // Decides whether summarising the next line is worth it; see TBigramFilter
     int mSubstringQuestionsOnTheLastLine = 0;

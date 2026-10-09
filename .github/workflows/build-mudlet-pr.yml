@@ -610,6 +610,10 @@ jobs:
       run: xvfb-run --auto-servernum ${{github.workspace}}/src/mudlet --profile "Mudlet self-test" --mirror --offline
       env:
         AUTORUN_BUSTED_TESTS: 'true'
+        # Off by default; the flood specs pend without it
+        MUDLET_MATCH_THREADS: 2
+        # Its statistics sample would take lines the flood specs compare off the pool
+        MUDLET_MATCH_SAMPLE_EVERY: 0
         MUDLET_TEST_MODE: 1
         MUDLET_TEST_REQUIRE_TTS_MOCK: 1
         MUDLET_TEST_REQUIRE_HTTP_FIXTURE: 1
@@ -669,6 +673,10 @@ jobs:
         # their own environment on to the app they launch
         lua_tests_env=(
           AUTORUN_BUSTED_TESTS=true
+          # Off by default; the flood specs pend without it
+          MUDLET_MATCH_THREADS=2
+          # Its statistics sample would take lines the flood specs compare off the pool
+          MUDLET_MATCH_SAMPLE_EVERY=0
           MUDLET_TEST_MODE=1
           MUDLET_TEST_REQUIRE_TTS_MOCK=1
           MUDLET_TEST_REQUIRE_HTTP_FIXTURE=1
