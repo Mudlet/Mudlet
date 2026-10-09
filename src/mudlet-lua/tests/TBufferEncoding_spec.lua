@@ -1020,6 +1020,23 @@ describe("Tests a character whose bytes are split by the posting timeout", funct
     assert.same({"split:HP:100 > ", ":end"}, shownSince(mark))
   end)
 
+  -- A link written concealed shows whether its settings were decoded: only a
+  -- whole OSC 8 payload carries them, and only a link that opens and closes on
+  -- one line is given them (TBuffer::finaliseActiveHyperlink())
+  local concealedLink = "\27]8;;send:look?config={\"visibility\":{\"action\":\"reveal\",\"delay\":3000}}"
+
+  it("does not split a link at a marker that lands in its closing sequence", function()
+    if timerUnavailable() then return end
+    using("UTF-8")
+
+    local mark = getLastLineNumber("main")
+    feed("split:" .. concealedLink .. "\27\\LOOK\27]8;;")
+    beQuiet()
+    feed("\27\\\n")
+    beQuiet()
+    assert.same({"split:    "}, shownSince(mark))
+  end)
+
   it("adds no blank line for a marker with no text ahead of a sequence", function()
     if timerUnavailable() then return end
     using("UTF-8")
