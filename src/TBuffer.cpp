@@ -1702,8 +1702,11 @@ void TBuffer::translateToPlainTextInner(std::string& incoming, const bool isFrom
             // the sequence started earlier in this buffer, so the byte behind
             // is its introducer (or, after a trip round the length cap below,
             // more of its payload), or spanStart is 0 and the spanEnd > 0
-            // guard keeps the read in bounds.
-            while (spanEnd < localBufferLength && (spanEnd - spanStart) < MAX_OSC_SEQUENCE_LENGTH && localBuffer[spanEnd] != '\x07' && !endsStringSequence(localBuffer[spanEnd])
+            // guard keeps the read in bounds. The scan stops short of a flush
+            // marker (decodableLength()): counted as payload, it would take a
+            // sequence one byte under the cap over it, and the line it came to
+            // flush would not be committed.
+            while (spanEnd < localBufferDecodableLength && (spanEnd - spanStart) < MAX_OSC_SEQUENCE_LENGTH && localBuffer[spanEnd] != '\x07' && !endsStringSequence(localBuffer[spanEnd])
                    && !((spanEnd > 0 && localBuffer[spanEnd - 1] == '\033') && localBuffer[spanEnd] == '\\')) {
                 ++spanEnd;
             }

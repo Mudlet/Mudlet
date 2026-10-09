@@ -979,6 +979,18 @@ describe("Tests a character whose bytes are split by the posting timeout", funct
     assert.same({"", ":end"}, perLine)
   end)
 
+  -- The non-empty lines from mark on, read while the game may still be part
+  -- way through one
+  local function shownSince(mark)
+    local seen = {}
+    for _, line in ipairs(getLines("main", mark, getLastLineNumber("main") + 1)) do
+      if line ~= "" then
+        seen[#seen + 1] = line
+      end
+    end
+    return seen
+  end
+
   it("commits the text ahead of an operating system command the marker lands inside", function()
     if timerUnavailable() then return end
     using("UTF-8")
@@ -990,6 +1002,22 @@ describe("Tests a character whose bytes are split by the posting timeout", funct
     assert.equals("HP:100 > :end", text)
     assert.equals(2, lines)
     assert.same({"HP:100 > ", ":end"}, perLine)
+  end)
+
+  it("commits the text ahead of an operating system command that reaches the length cap at the marker", function()
+    if timerUnavailable() then return end
+    using("UTF-8")
+
+    -- "0;", the filler and the marker come to MAX_OSC_SEQUENCE_LENGTH (4096)
+    -- bytes: the marker is not payload, so this one is under the cap
+    local mark = getLastLineNumber("main")
+    feed("split:HP:100 > \27]0;" .. string.rep("a", 4093))
+    beQuiet()
+    local duringPause = shownSince(mark)
+    feed("\27\\:end\n")
+    beQuiet()
+    assert.same({"split:HP:100 > "}, duringPause, "the prompt was not shown during the pause")
+    assert.same({"split:HP:100 > ", ":end"}, shownSince(mark))
   end)
 
   it("spends a held character set designation on the byte after the pause", function()
