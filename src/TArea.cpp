@@ -905,6 +905,26 @@ void TArea::writeJsonUserData(QJsonObject& obj) const
     obj.insert(QLatin1String("userData"), userDatasValue);
 }
 
+// The binary format keeps an area's zoom (below format 21) and its labels'
+// fonts and outline colors as user data under these keys. They mean nothing in
+// the live map, and a map file can hold them for labels that no longer exist.
+void TArea::dropFileOnlyUserData(QMap<QString, QString>& userData)
+{
+    // exactly the form a save writes, so "_007" or "_+5" stay a script's own
+    const auto labelKey = [](const QString& key, const QLatin1String prefix) {
+        if (!key.startsWith(prefix)) {
+            return false;
+        }
+        const QStringView suffix = QStringView(key).mid(prefix.size());
+        bool isNumber = false;
+        const int labelId = suffix.toInt(&isNumber);
+        return isNumber && suffix == QString::number(labelId);
+    };
+    userData.removeIf([&labelKey](const QMap<QString, QString>::iterator& it) {
+        return it.key() == QLatin1String("system.fallback_map2DZoom") || labelKey(it.key(), QLatin1String("system.labelFont_")) || labelKey(it.key(), QLatin1String("system.labelOutlineColor_"));
+    });
+}
+
 // Takes a userData object and parses all its elements
 void TArea::readJsonUserData(const QJsonObject& obj)
 {
@@ -918,6 +938,8 @@ void TArea::readJsonUserData(const QJsonObject& obj)
             mUserData.insert(key, obj.value(key).toString());
         }
     }
+    // a JSON label keeps its font in its own fields and nothing reads these
+    dropFileOnlyUserData(mUserData);
 }
 
 void TArea::writeJsonLabels(QJsonObject& obj) const
