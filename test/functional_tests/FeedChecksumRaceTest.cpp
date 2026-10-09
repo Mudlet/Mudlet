@@ -1081,6 +1081,9 @@ void FeedChecksumRaceTest::aCheckDuringADownloadLeavesTheVersionItIsSavedAs()
     harness.server().setFeedBody(stubReleasesJson(harness.assetBaseUrl(), payload.size()));
     harness.server().setChecksum(QCryptographicHash::hash(payload, QCryptographicHash::Sha256).toHex());
     harness.server().setDownloadPayload(payload);
+    // Held at half, so the second check cannot lose a race against the rest of
+    // the body on a slow runner
+    harness.server().holdDownloadAfter(static_cast<int>(payload.size() / 2));
     dblsqd::UpdateDialog::enableAutoDownload(true, &harness.settings());
 
     QSignalSpy progressSpy(&harness.feed(), &dblsqd::Feed::downloadProgress);
@@ -1092,6 +1095,7 @@ void FeedChecksumRaceTest::aCheckDuringADownloadLeavesTheVersionItIsSavedAs()
     harness.feed().load();
     QVERIFY2(feedReadySpy.wait(waitMs), qPrintable(qsl("the second update check never finished. The dialog reported: %1").arg(whatTheDialogWasTold())));
     QVERIFY2(harness.feed().isDownloading(), "the download finished before the second check did, so the check did not land during it");
+    harness.server().releaseDownload();
 
     QTRY_VERIFY2_WITH_TIMEOUT(
             !harness.settings().value(qsl("DBLSQD/updateFilePath")).toString().isEmpty(), qPrintable(qsl("the download never finished. The dialog reported: %1").arg(whatTheDialogWasTold())), waitMs);
@@ -1185,6 +1189,7 @@ void FeedChecksumRaceTest::anInstallAskedForSurvivesACheckDuringItsDownload()
     QVERIFY2(readySpy.wait(waitMs), qPrintable(qsl("the update dialog never became ready. It reported: %1").arg(whatTheDialogWasTold())));
 
     QSignalSpy progressSpy(&harness.feed(), &dblsqd::Feed::downloadProgress);
+    harness.server().holdDownloadAfter(static_cast<int>(payload.size() / 2));
     harness.dialog().onButtonInstall();
     QVERIFY2(progressSpy.wait(waitMs), qPrintable(qsl("the download the user asked for never started. The dialog reported: %1").arg(whatTheDialogWasTold())));
 
@@ -1192,6 +1197,7 @@ void FeedChecksumRaceTest::anInstallAskedForSurvivesACheckDuringItsDownload()
     harness.feed().load();
     QVERIFY2(feedReadySpy.wait(waitMs), qPrintable(qsl("the second update check never finished. The dialog reported: %1").arg(whatTheDialogWasTold())));
     QVERIFY2(harness.feed().isDownloading(), "the download finished before the second check did, so the check did not land during it");
+    harness.server().releaseDownload();
 
     QTRY_COMPARE_WITH_TIMEOUT(installer.urls().size(), 1, waitMs);
 }
