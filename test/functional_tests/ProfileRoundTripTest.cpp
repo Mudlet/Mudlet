@@ -50,6 +50,7 @@
 #include "ScriptUnit.h"
 #include "TAlias.h"
 #include "TKey.h"
+#include "TMap.h"
 #include "TScript.h"
 #include "TTimer.h"
 #include "TTrigger.h"
@@ -137,6 +138,27 @@ private:
     // apart from blanking it.
     inline static const QString scmTargetUrl = qsl("target.example.org");
     static const int scmTargetPort = 4321;
+
+    // In the order TMap::restore16ColorSet() files them as environments 257 to 272
+    inline static const QList<QColor Host::*> scmMapAnsiColors{&Host::mRed_2,
+                                                               &Host::mGreen_2,
+                                                               &Host::mYellow_2,
+                                                               &Host::mBlue_2,
+                                                               &Host::mMagenta_2,
+                                                               &Host::mCyan_2,
+                                                               &Host::mWhite_2,
+                                                               &Host::mBlack_2,
+                                                               &Host::mLightRed_2,
+                                                               &Host::mLightGreen_2,
+                                                               &Host::mLightYellow_2,
+                                                               &Host::mLightBlue_2,
+                                                               &Host::mLightMagenta_2,
+                                                               &Host::mLightCyan_2,
+                                                               &Host::mLightWhite_2,
+                                                               &Host::mLightBlack_2};
+
+    // Off every default and unlike each other, so a map left with the constructor's palette cannot pass
+    static QColor mapAnsiColor(int index) { return QColor(16 * index + 3, 200 - 9 * index, 40 + 11 * index); }
 
     // -----------------------------------------------------------------------
     // Tree builders - these mirror the construction order XMLimport uses
@@ -539,6 +561,9 @@ private slots:
         mpSource->setLargeAreaExitArrows(true);
         const auto [experimentSet, experimentError] = mpSource->setExperimentEnabled(scmExperiment, true);
         QVERIFY2(experimentSet, qPrintable(experimentError));
+        for (int i = 0; i < scmMapAnsiColors.size(); ++i) {
+            mpSource->*scmMapAnsiColors.at(i) = mapAnsiColor(i);
+        }
 
         const int runningWatch = mpSource->createStopWatch(scmRunningStopWatch).first;
         const int stoppedWatch = mpSource->createStopWatch(scmStoppedStopWatch).first;
@@ -761,6 +786,19 @@ private slots:
     {
         QCOMPARE(mpLegacyTarget->mLowerLevelColor, QColor(30, 60, 90, 255));
         QCOMPARE(mpLegacyTarget->mUpperLevelColor, QColor(200, 150, 100, 255));
+    }
+
+    // The map's environments 257 to 272 are its own copy of the profile's ANSI colours, so they must be
+    // refreshed from the ones the import read, not left as the defaults the Host was built with
+    void test_mapAnsiColorsReachTheMapOnImport_10679()
+    {
+        QCOMPARE(scmMapAnsiColors.size(), qsizetype{16});
+        for (int i = 0; i < scmMapAnsiColors.size(); ++i) {
+            const int env = 257 + i;
+            QCOMPARE(mpTarget->*scmMapAnsiColors.at(i), mapAnsiColor(i));
+            QVERIFY2(mpTarget->mpMap->mCustomEnvColors.value(env) == mapAnsiColor(i),
+                     qPrintable(qsl("environment %1 is %2, not the imported %3").arg(QString::number(env), mpTarget->mpMap->mCustomEnvColors.value(env).name(), mapAnsiColor(i).name())));
+        }
     }
 
     // Map info contributors are written one per element straight into <Host>
