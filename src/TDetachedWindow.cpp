@@ -1581,7 +1581,7 @@ void TDetachedWindow::updateDockWidgetVisibilityForProfile(const QString& profil
                             if (auto detachedMapper = qobject_cast<dlgMapper*>(mapWidget)) {
                                 // Only set as active mapper if the dock widget should be visible
                                 if (shouldBeVisible) {
-                                    pMap->mpMapper = detachedMapper;
+                                    pMap->setMapper(detachedMapper);
 #if defined(DEBUG_WINDOW_HANDLING)
                                     qDebug() << "TDetachedWindow: Set active mapper for profile" << profileName;
 #endif
@@ -2828,7 +2828,7 @@ void TDetachedWindow::slot_showMapperDialog()
             // Ensure the map's active mapper points to our detached instance
             auto mapWidget = existingMapDock->widget();
             if (auto detachedMapper = qobject_cast<dlgMapper*>(mapWidget)) {
-                pMap->mpMapper = detachedMapper;
+                pMap->setMapper(detachedMapper);
             }
         } else if (mpMapDockWidget == existingMapDock) {
             // If we're hiding the current map, clear the global reference and restore main mapper
@@ -2846,7 +2846,7 @@ void TDetachedWindow::slot_showMapperDialog()
     newMapDockWidget->setObjectName(qsl("dockMap_%1_detached").arg(mCurrentProfileName));
 
     // Store the main window's mapper temporarily so we can restore it later
-    QPointer<dlgMapper> mainMapper = pMap->mpMapper;
+    QPointer<dlgMapper> mainMapper = pMap->mapper();
     QPointer<QDockWidget> mainDockWidget = (pHost->mainConsoleView() ? pHost->mainConsoleView()->mpDockableMapWidget : nullptr);
 
     // Create a new mapper instance for the detached window
@@ -2861,7 +2861,7 @@ void TDetachedWindow::slot_showMapperDialog()
 
     // CRITICAL: Set the map's active mapper to our detached instance
     // This ensures map updates go to our detached window instead of the main window
-    pMap->mpMapper = detachedMapper;
+    pMap->setMapper(detachedMapper);
 
     // Initialize the mapper
     if (pMap->mpRoomDB && !pMap->mpRoomDB->isEmpty()) {
@@ -2934,7 +2934,7 @@ void TDetachedWindow::slot_showMapperDialog()
             // Ensure the map's active mapper points to our detached instance
             auto mapWidget = mapDockWidget->widget();
             if (auto detachedMapper = qobject_cast<dlgMapper*>(mapWidget)) {
-                pMap->mpMapper = detachedMapper;
+                pMap->setMapper(detachedMapper);
             }
         }
 
@@ -3321,7 +3321,7 @@ void TDetachedWindow::addTransferredDockWidget(const QString& mapKey, QDockWidge
             auto mapWidget = mapDockWidget->widget();
 
             if (auto detachedMapper = qobject_cast<dlgMapper*>(mapWidget)) {
-                pMap->mpMapper = detachedMapper;
+                pMap->setMapper(detachedMapper);
             }
         }
 

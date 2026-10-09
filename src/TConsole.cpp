@@ -151,11 +151,7 @@ QStyle* consoleScrollBarStyle()
     static auto* pStyle = new ConsoleScrollBarStyle;
     return pStyle;
 }
-} // namespace
 
-const QString TConsole::cmLuaLineVariable("line");
-
-namespace {
 // The main console co-owns Host's model so the trigger pipeline outlives the
 // view; every other console owns its own model.
 std::shared_ptr<TConsoleModel> resolveConsoleModel(Host* pHost, const QString& name, const TConsole::ConsoleType type)

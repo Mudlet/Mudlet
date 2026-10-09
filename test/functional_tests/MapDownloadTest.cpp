@@ -146,6 +146,15 @@ public:
         connect(&mSliceTimer, &QTimer::timeout, this, &StubMapServer::writeSlice);
     }
 
+    ~StubMapServer() override
+    {
+        // A connection still open here is a child of mServer, destroyed after the members below it -
+        // and its disconnected() would run a handler that uses them.
+        for (auto* socket : mServer.findChildren<QTcpSocket*>()) {
+            socket->disconnect(this);
+        }
+    }
+
     // Port 0: the OS picks a free one, so concurrent runs of this test cannot
     // collide on it. Read it back with url().
     bool listen() { return mServer.listen(QHostAddress::LocalHost, 0); }
@@ -524,10 +533,10 @@ private:
     // mapper that already exists rather than leaving it alone.
     dlgMapper* ensureMapper() const
     {
-        if (mpHost->mpMap->mpMapper.isNull()) {
+        if (!mpHost->mpMap->mapper()) {
             mpHost->showHideOrCreateMapper(false);
         }
-        return mpHost->mpMap->mpMapper;
+        return mpHost->mpMap->mapper();
     }
 
     // A reply reports its progress no more often than an interval of Qt's own,
@@ -595,7 +604,7 @@ private slots:
         // No mapper widget yet, so every download below takes the standalone
         // progress path the signals under test belong to, until the tests at the
         // end of this file that deliberately create one.
-        QVERIFY2(mpHost->mpMap->mpMapper.isNull(), "a mapper widget already exists, so the standalone progress path will not be taken");
+        QVERIFY2(!mpHost->mpMap->mapper(), "a mapper widget already exists, so the standalone progress path will not be taken");
 
         watchMapDownloadEvent();
 
@@ -1372,6 +1381,45 @@ private slots:
 
         pMap->setMmpMapLocation(QString());
         QVERIFY2(downloadButton->isHidden(), "withdrawing the MMP map location never reached the mapper's empty state");
+    }
+
+    // With the mapper on screen a download shows its progress on the mapper's own overlay instead
+    // of the console's dialog, and that overlay's Abort button has to reach the same cancel.
+    void test_theMappersAbortButtonCancelsAMapDownload()
+    {
+        dlgMapper* pMapper = ensureMapper();
+        QVERIFY2(pMapper, "the profile has no mapper widget to show the progress on");
+        QVERIFY2(pMapper->isVisible(), "the mapper is not on screen, so the download would not show its progress there");
+        TMap* pMap = mpHost->mpMap.data();
+
+        pMap->downloadMap(mpMapServer->url(qsl("/stalled.xml")));
+        QVERIFY2(QTest::qWaitFor(
+                         [this]() {
+                             return !mpMapServer->requestedPaths().isEmpty();
+                         },
+                         10s),
+                 "the download never reached the server");
+
+        auto* overlay = pMapper->findChild<QFrame*>(qsl("mapProgressOverlay"));
+        QVERIFY2(overlay && overlay->isVisible(), "the map download put no progress overlay on the mapper");
+        auto* cancelButton = overlay->findChild<QPushButton*>();
+        QVERIFY2(cancelButton && cancelButton->isVisible(), "the mapper's progress overlay offered no Abort button to press");
+        cancelButton->click();
+
+        QVERIFY2(consoleShows(qsl("canceled, on user's request")), qPrintable(consoleTextSinceMark()));
+        QVERIFY(!pMap->hasActiveTransferProgress());
+        QVERIFY2(!overlay->isVisible(), "the mapper's progress overlay stayed up after the download was aborted");
+        QVERIFY2(mapDownloadEventCountIs(0), "a download aborted from the mapper raised sysMapDownloadEvent");
+
+        // Not runDownload(), for the reason given in test_anUppercaseXmlUrlIsSavedAndParsedAsXml
+        pMap->downloadMap(mpMapServer->url(qsl("/map.xml")));
+        QVERIFY2(QTest::qWaitFor(
+                         [pMap]() {
+                             return !pMap->hasActiveTransferProgress();
+                         },
+                         15s),
+                 "the download after an aborted one never finished");
+        QVERIFY2(consoleShows(qsl("map downloaded and stored")), "the download after an aborted one was refused, so the import flag was left set");
     }
 };
 

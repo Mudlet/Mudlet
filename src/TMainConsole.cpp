@@ -1649,8 +1649,8 @@ std::pair<bool, QString> TMainConsole::createMapper(const QString& windowname, i
         // The dock parents the dlgMapper, so both go. deleteLater() leaves QPointers set until the event
         // loop runs, which the calling script prevents, so drop ours now - unless a main window or detached
         // window dock is drawing the map instead.
-        if (mpHost->mpMap->mpMapper.data() == mpDockableMapWidget->widget()) {
-            mpHost->mpMap->mpMapper = nullptr;
+        if (mpHost->mpMap->mapper() == mpDockableMapWidget->widget()) {
+            mpHost->mpMap->setMapper(nullptr);
         }
         qDebug() << "TMainConsole::createMapper() INFO - removing the closed map widget so an embedded mapper can take the map over.";
         mpDockableMapWidget->deleteLater();
@@ -1670,7 +1670,7 @@ std::pair<bool, QString> TMainConsole::createMapper(const QString& windowname, i
             mpMapper = new dlgMapper(pW->widget(), mpHost, mpHost->mpMap.data());
         }
         mpHost->mpMap->mpHost = mpHost;
-        mpHost->mpMap->mpMapper = mpMapper;
+        mpHost->mpMap->setMapper(mpMapper);
 
         if (mpHost->mpMap->mpRoomDB->isEmpty()) {
             // Don't load a map if we already have one around!
@@ -1696,7 +1696,7 @@ std::pair<bool, QString> TMainConsole::createMapper(const QString& windowname, i
         mapOpenEvent.mArgumentList.append(QLatin1String("mapOpenEvent"));
         mapOpenEvent.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
         mpHost->raiseEvent(mapOpenEvent);
-    } else if (!mpHost->mpMap->mpMapper) {
+    } else if (!mpHost->mpMap->mapper()) {
         // Nothing draws the map: the widget removed above did, or a borrower of TMap::mpMapper never gave it back.
         mpHost->restoreOwnMapper();
     }
@@ -3408,9 +3408,9 @@ void TMainConsole::createMapperDock(const QString& title, const QString& objectN
                                       mpHost->mpMap->mPlayerRoomInnerDiameterPercentage,
                                       mpHost->mpMap->mPlayerRoomOuterColor,
                                       mpHost->mpMap->mPlayerRoomInnerColor);
-    mpHost->mpMap->mpMapper = new dlgMapper(mpDockableMapWidget, mpHost, mpHost->mpMap.data());
-    mpHost->mpMap->mpMapper->setStyleSheet(mpHost->mProfileStyleSheet);
-    mpDockableMapWidget->setWidget(mpHost->mpMap->mpMapper);
+    mpHost->mpMap->setMapper(new dlgMapper(mpDockableMapWidget, mpHost, mpHost->mpMap.data()));
+    mpHost->mpMap->mapper()->setStyleSheet(mpHost->mProfileStyleSheet);
+    mpDockableMapWidget->setWidget(mpHost->mpMap->mapper());
 }
 
 QDockWidget* TMainConsole::mapWidget() const
@@ -3481,14 +3481,14 @@ void TMainConsole::showNewMapperDock()
 
     // loadWindowLayout() may have restored a previous hidden state, but a
     // mapper that has just been made is always shown.
-    mpHost->mpMap->mpMapper->show();
+    mpHost->mpMap->mapper()->show();
     mpDockableMapWidget->show();
-    mpHost->mpMap->mpMapper->updateEmptyStateOverlay();
+    mpHost->mpMap->mapper()->updateEmptyStateOverlay();
 }
 
 void TMainConsole::showLoadedMap()
 {
-    auto* mapper = mpHost->mpMap->mpMapper.data();
+    auto* mapper = mpHost->mpMap->mapper();
     if (!mapper) {
         return;
     }
@@ -3501,7 +3501,7 @@ void TMainConsole::showLoadedMap()
 
 void TMainConsole::showMapAfterFailedLoad()
 {
-    auto* mapper = mpHost->mpMap->mpMapper.data();
+    auto* mapper = mpHost->mpMap->mapper();
     if (!mapper) {
         return;
     }
@@ -3513,7 +3513,7 @@ void TMainConsole::showMapAfterFailedLoad()
 
 void TMainConsole::showMapAtPlayerArea()
 {
-    auto* mapper = mpHost->mpMap->mpMapper.data();
+    auto* mapper = mpHost->mpMap->mapper();
     if (!mapper) {
         return;
     }
@@ -3525,7 +3525,7 @@ void TMainConsole::showMapAtPlayerArea()
 
 bool TMainConsole::mapperShown() const
 {
-    auto* mapper = mpHost->mpMap->mpMapper.data();
+    auto* mapper = mpHost->mpMap->mapper();
     if (!mapper) {
         return false;
     }
@@ -3539,7 +3539,7 @@ bool TMainConsole::mapperShown() const
 
 void TMainConsole::setMapperShown(const bool shown)
 {
-    auto* mapper = mpHost->mpMap->mpMapper.data();
+    auto* mapper = mpHost->mpMap->mapper();
     if (!mapper) {
         return;
     }
@@ -3560,14 +3560,14 @@ void TMainConsole::setMapperShown(const bool shown)
 
 void TMainConsole::setMapperPanelVisible(const bool visible)
 {
-    if (auto* mapper = mpHost->mpMap->mpMapper.data()) {
+    if (auto* mapper = mpHost->mpMap->mapper()) {
         mapper->slot_setMapperPanelVisible(visible);
     }
 }
 
 void TMainConsole::setMapLargeAreaExitArrows(const bool enabled)
 {
-    auto* mapper = mpHost->mpMap->mpMapper.data();
+    auto* mapper = mpHost->mpMap->mapper();
     if (!mapper || !mapper->mp2dMap) {
         return;
     }
@@ -3578,7 +3578,7 @@ void TMainConsole::setMapLargeAreaExitArrows(const bool enabled)
 
 void TMainConsole::requestMapRepaint()
 {
-    auto* mapper = mpHost->mpMap->mpMapper.data();
+    auto* mapper = mpHost->mpMap->mapper();
     if (mapper && mapper->mp2dMap) {
         mapper->mp2dMap->update();
     }
@@ -3591,7 +3591,7 @@ void TMainConsole::requestMapRepaint()
 
 void TMainConsole::requestRepaintAfterCommand()
 {
-    auto* mapper = mpHost->mpMap->mpMapper.data();
+    auto* mapper = mpHost->mpMap->mapper();
 #if defined(INCLUDE_3DMAPPER)
     // With a 3D mapper this repaint is superfluous and causes problems on macOS
     if (!mapper || !mapper->glWidget) {
@@ -3635,12 +3635,12 @@ void TMainConsole::applyBorders()
 void TMainConsole::restoreOwnMapper()
 {
     if (mpMapper) {
-        mpHost->mpMap->mpMapper = mpMapper;
+        mpHost->mpMap->setMapper(mpMapper);
     } else if (auto* hostMapper = dockedMapper()) {
-        mpHost->mpMap->mpMapper = hostMapper;
+        mpHost->mpMap->setMapper(hostMapper);
     }
 #if defined(DEBUG_WINDOW_HANDLING)
-    qDebug() << "TMainConsole::restoreOwnMapper:" << mpHost->getName() << "- map is now drawn by" << mpHost->mpMap->mpMapper.data();
+    qDebug() << "TMainConsole::restoreOwnMapper:" << mpHost->getName() << "- map is now drawn by" << mpHost->mpMap->mapper();
 #endif
 }
 

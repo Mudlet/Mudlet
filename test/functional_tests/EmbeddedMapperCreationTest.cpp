@@ -70,6 +70,14 @@ private:
     const QString mFirstAreaName = qsl("AAArea");
     const QString mPlayerAreaName = qsl("QAArea");
 
+    // Core code reaches the mapper through TMap::mapViewFrontend(), which TMap keeps
+    // beside mapper() rather than deriving from it, so it has to follow every handoff.
+    bool frontendFollowsMapper() const
+    {
+        dlgMapper* pMapper = mpHost->mpMap->mapper();
+        return mpHost->mpMap->mapViewFrontend() == (pMapper ? static_cast<TMapViewFrontend*>(pMapper) : nullptr);
+    }
+
 private slots:
     void initTestCase()
     {
@@ -198,7 +206,7 @@ private slots:
         QVERIFY2(created, qPrintable(message));
         dlgMapper* pEmbedded = mpHost->mainConsoleView()->mpMapper.data();
         QVERIFY2(pEmbedded, "createMapper() left no embedded mapper to lose");
-        QCOMPARE(mpHost->mpMap->mpMapper.data(), pEmbedded);
+        QCOMPARE(mpHost->mpMap->mapper(), pEmbedded);
 
         // Toggle the dock off and on again through the toolbar entry point:
         // showing it is what takes TMap::mpMapper over.
@@ -206,13 +214,15 @@ private slots:
         qApp->processEvents();
         mudlet::self()->slot_showMapperDialog();
         qApp->processEvents();
-        QVERIFY2(mpHost->mpMap->mpMapper.data() != pEmbedded, "the dock did not take the map over, so restoring it below would prove nothing");
+        QVERIFY2(mpHost->mpMap->mapper() != pEmbedded, "the dock did not take the map over, so restoring it below would prove nothing");
+        QVERIFY2(frontendFollowsMapper(), "the dock took the map over but core code still drives the embedded mapper");
 
         mudlet::self()->slot_showMapperDialog();
         qApp->processEvents();
 
-        QVERIFY2(mpHost->mpMap->mpMapper, "closing the toolbar map dock left the map with no mapper at all, so nothing redraws it");
-        QCOMPARE(mpHost->mpMap->mpMapper.data(), pEmbedded);
+        QVERIFY2(mpHost->mpMap->mapper(), "closing the toolbar map dock left the map with no mapper at all, so nothing redraws it");
+        QCOMPARE(mpHost->mpMap->mapper(), pEmbedded);
+        QVERIFY2(frontendFollowsMapper(), "the map went back to the embedded mapper but core code still drives the dock's");
     }
 
     // A map widget that was opened and closed again used to refuse createMapper()
@@ -238,7 +248,7 @@ private slots:
         QVERIFY2(created, qPrintable(message));
         QVERIFY(mpHost->mainConsoleView()->mpMapper);
         // the embedded mapper is what draws the map now, not the dock's own one
-        QCOMPARE(mpHost->mpMap->mpMapper.data(), mpHost->mainConsoleView()->mpMapper.data());
+        QCOMPARE(mpHost->mpMap->mapper(), mpHost->mainConsoleView()->mpMapper.data());
 
         // gone rather than merely hidden behind the embedded mapper - only the raw
         // pointer tells those two apart, the getter below reads the same "not on
@@ -251,7 +261,7 @@ private slots:
         auto [closedAgain, closeAgainMessage] = mpHost->closeMapWidget();
         QVERIFY(!closedAgain);
         QCOMPARE(closeAgainMessage, qsl("no map widget found to close"));
-        QCOMPARE(mpHost->mpMap->mpMapper.data(), mpHost->mainConsoleView()->mpMapper.data());
+        QCOMPARE(mpHost->mpMap->mapper(), mpHost->mainConsoleView()->mpMapper.data());
 
         // openMapWidget() raised one and the mapper that replaced its widget raises
         // another, which is what tells a mapper package to set itself up again
@@ -263,8 +273,9 @@ private slots:
         QCoreApplication::sendPostedEvents(nullptr, QEvent::DeferredDelete);
         QVERIFY2(pDock.isNull(), "the map widget was forgotten rather than destroyed, so it is still parented on the main window");
         QVERIFY2(pDockMapper.isNull(), "the map widget's own mapper outlived the dock that owned it");
-        QVERIFY2(mpHost->mpMap->mpMapper, "the map widget's death took the map's mapper with it");
-        QCOMPARE(mpHost->mpMap->mpMapper.data(), mpHost->mainConsoleView()->mpMapper.data());
+        QVERIFY2(mpHost->mpMap->mapper(), "the map widget's death took the map's mapper with it");
+        QCOMPARE(mpHost->mpMap->mapper(), mpHost->mainConsoleView()->mpMapper.data());
+        QVERIFY2(frontendFollowsMapper(), "core code still drives the dead map widget's mapper");
     }
 
     // The profile's own map dock is hidden rather than destroyed when the main
@@ -279,7 +290,7 @@ private slots:
     {
         auto [opened, openMessage] = mpHost->openMapWidget(QString(), -1, -1, -1, -1);
         QVERIFY2(opened, qPrintable(openMessage));
-        dlgMapper* pOwnDockMapper = mpHost->mpMap->mpMapper.data();
+        dlgMapper* pOwnDockMapper = mpHost->mpMap->mapper();
         QVERIFY(pOwnDockMapper);
 
         mudlet::self()->slot_showMapperDialog();
@@ -287,20 +298,20 @@ private slots:
         QVERIFY2(mudlet::self()->findChild<QDockWidget*>(qsl("dockMap_%1_main").arg(mHostname)), "the toolbar action built no main window map dock, so this covers nothing");
         QVERIFY2(mpHost->mainConsoleView()->mpDockableMapWidget, "the toolbar action destroyed the profile's own map dock rather than hiding it");
         QVERIFY2(!mpHost->mapWidgetGeometry().has_value(), "the toolbar action left the profile's own map dock on screen");
-        QVERIFY2(mpHost->mpMap->mpMapper.data() != pOwnDockMapper, "the main window dock did not take the map over, so this covers nothing");
+        QVERIFY2(mpHost->mpMap->mapper() != pOwnDockMapper, "the main window dock did not take the map over, so this covers nothing");
 
         auto [created, message] = mpHost->mainConsoleView()->createMapper(QString(), 0, 0, 300, 300);
         QVERIFY2(created, qPrintable(message));
         QVERIFY(!mpHost->mainConsoleView()->mpDockableMapWidget);
         QVERIFY(mpHost->mainConsoleView()->mpMapper);
-        QCOMPARE(mpHost->mpMap->mpMapper.data(), mpHost->mainConsoleView()->mpMapper.data());
+        QCOMPARE(mpHost->mpMap->mapper(), mpHost->mainConsoleView()->mpMapper.data());
 
         // and closing the main window dock hands the map to the embedded mapper
         // rather than to the dock that is now gone
         mudlet::self()->slot_showMapperDialog();
         qApp->processEvents();
-        QVERIFY2(mpHost->mpMap->mpMapper, "closing the main window map dock left the map with no mapper at all");
-        QCOMPARE(mpHost->mpMap->mpMapper.data(), mpHost->mainConsoleView()->mpMapper.data());
+        QVERIFY2(mpHost->mpMap->mapper(), "closing the main window map dock left the map with no mapper at all");
+        QCOMPARE(mpHost->mpMap->mapper(), mpHost->mainConsoleView()->mpMapper.data());
     }
 
     // Companion guard to the above rather than a guard for the bug: a fix that
@@ -311,7 +322,7 @@ private slots:
         auto [opened, openMessage] = mpHost->openMapWidget(QString(), -1, -1, -1, -1);
         QVERIFY2(opened, qPrintable(openMessage));
         QVERIFY2(mpHost->mapWidgetGeometry().has_value(), "the map widget did not come up, so this covers nothing");
-        dlgMapper* pDockMapper = mpHost->mpMap->mpMapper.data();
+        dlgMapper* pDockMapper = mpHost->mpMap->mapper();
         QVERIFY(pDockMapper);
 
         auto [created, message] = mpHost->mainConsoleView()->createMapper(QString(), 0, 0, 300, 300);
@@ -319,7 +330,7 @@ private slots:
         QCOMPARE(message, qsl("cannot create mapper. Do you already use a map window?"));
         QVERIFY2(!mpHost->mainConsoleView()->mpMapper, "the refused call left an embedded mapper behind");
         QVERIFY(mpHost->mainConsoleView()->mpDockableMapWidget);
-        QCOMPARE(mpHost->mpMap->mpMapper.data(), pDockMapper);
+        QCOMPARE(mpHost->mpMap->mapper(), pDockMapper);
         QVERIFY2(mapOpenEventCountIs(1), "the refused createMapper() raised a mapOpenEvent of its own");
     }
 
@@ -358,13 +369,31 @@ private slots:
         dlgMapper* pEmbedded = mpHost->mainConsoleView()->mpMapper.data();
         QVERIFY(pEmbedded);
 
-        mpHost->mpMap->mpMapper = nullptr;
+        mpHost->mpMap->setMapper(nullptr);
+        QVERIFY2(!mpHost->mpMap->mapViewFrontend(), "clearing the map's mapper left core code a mapper to drive");
 
         auto [again, againMessage] = mpHost->mainConsoleView()->createMapper(QString(), 0, 0, 300, 300);
         QVERIFY2(again, qPrintable(againMessage));
-        QVERIFY2(mpHost->mpMap->mpMapper, "a repeat createMapper() left the map with no mapper at all");
-        QCOMPARE(mpHost->mpMap->mpMapper.data(), pEmbedded);
+        QVERIFY2(mpHost->mpMap->mapper(), "a repeat createMapper() left the map with no mapper at all");
+        QCOMPARE(mpHost->mpMap->mapper(), pEmbedded);
+        QVERIFY2(frontendFollowsMapper(), "the embedded mapper took the map back but core code was not given it");
         QVERIFY2(mapOpenEventCountIs(1), "taking the map back raised a second mapOpenEvent");
+    }
+
+    // The frontend pointer is a plain pointer beside the QPointer, so it is only
+    // safe while TMap answers null for it once the mapper it names is gone.
+    void test_mapViewFrontendIsNullOnceTheMapperIsDestroyed()
+    {
+        auto [created, message] = mpHost->mainConsoleView()->createMapper(QString(), 0, 0, 300, 300);
+        QVERIFY2(created, qPrintable(message));
+        dlgMapper* pEmbedded = mpHost->mainConsoleView()->mpMapper.data();
+        QVERIFY(pEmbedded);
+        QCOMPARE(mpHost->mpMap->mapViewFrontend(), static_cast<TMapViewFrontend*>(pEmbedded));
+
+        delete pEmbedded;
+
+        QVERIFY(!mpHost->mpMap->mapper());
+        QVERIFY2(!mpHost->mpMap->mapViewFrontend(), "TMap still hands core code the mapper that was just destroyed");
     }
 
     // The two halves of the takeover only meet when the profile holds an embedded
@@ -382,21 +411,21 @@ private slots:
         dlgMapper* pEmbedded = mpHost->mainConsoleView()->mpMapper.data();
         QVERIFY(pEmbedded);
 
-        mpHost->mpMap->mpMapper = nullptr;
+        mpHost->mpMap->setMapper(nullptr);
         mudlet::self()->slot_showMapperDialog();
         QVERIFY2(mpHost->mainConsoleView()->mpDockableMapWidget, "no map widget was built, so this covers nothing");
         QPointer<QWidget> pDockMapper = mpHost->mainConsoleView()->mpDockableMapWidget->widget();
-        QCOMPARE(mpHost->mpMap->mpMapper.data(), qobject_cast<dlgMapper*>(pDockMapper.data()));
+        QCOMPARE(mpHost->mpMap->mapper(), qobject_cast<dlgMapper*>(pDockMapper.data()));
         mpHost->mainConsoleView()->mpDockableMapWidget->hide();
 
         auto [again, againMessage] = mpHost->mainConsoleView()->createMapper(QString(), 0, 0, 300, 300);
         QVERIFY2(again, qPrintable(againMessage));
-        QCOMPARE(mpHost->mpMap->mpMapper.data(), pEmbedded);
+        QCOMPARE(mpHost->mpMap->mapper(), pEmbedded);
 
         QCoreApplication::sendPostedEvents(nullptr, QEvent::DeferredDelete);
         QVERIFY2(pDockMapper.isNull(), "the map widget was forgotten rather than destroyed");
-        QVERIFY2(mpHost->mpMap->mpMapper, "the map widget's death took the map's mapper with it");
-        QCOMPARE(mpHost->mpMap->mpMapper.data(), pEmbedded);
+        QVERIFY2(mpHost->mpMap->mapper(), "the map widget's death took the map's mapper with it");
+        QCOMPARE(mpHost->mpMap->mapper(), pEmbedded);
     }
 
     void test_createMapperWithNoMapToLoad()
@@ -420,12 +449,12 @@ private slots:
         auto [created, message] = mpHost->mainConsoleView()->createMapper(QString(), 0, 0, 300, 300);
         QVERIFY2(created, qPrintable(message));
         QVERIFY(mpHost->mainConsoleView()->mpMapper);
-        QCOMPARE(mpHost->mpMap->mpMapper.data(), mpHost->mainConsoleView()->mpMapper.data());
+        QCOMPARE(mpHost->mpMap->mapper(), mpHost->mainConsoleView()->mpMapper.data());
 
         mudlet::self()->slot_showMapperDialog();
 
         QVERIFY2(!mudlet::self()->findChild<QDockWidget*>(qsl("dockMap_%1_main").arg(mHostname)), "the toolbar map action built a competing main window map dock over an embedded mapper");
-        QCOMPARE(mpHost->mpMap->mpMapper.data(), mpHost->mainConsoleView()->mpMapper.data());
+        QCOMPARE(mpHost->mpMap->mapper(), mpHost->mainConsoleView()->mpMapper.data());
         QVERIFY2(mapOpenEventCountIs(1), "the toolbar map action raised mapOpenEvent over an existing embedded mapper");
     }
 

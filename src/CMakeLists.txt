@@ -461,7 +461,9 @@ set(mudlet_HDRS
     TMap.h
     TMapLabel.h
     TMapView.h
+    TMapViewFrontend.h
     TMapViewManager.h
+    TMapViewsFrontend.h
     TMatchState.h
     TMedia.h
     TMediaData.h

@@ -36,14 +36,12 @@
 
 #include <iterator>
 
-#include "EAction.h"
 #include "FontManager.h"
 #include "Host.h"
 #include "HostManager.h"
 #include "TAction.h"
 #include "TAppFrontend.h"
 #include "TArea.h"
-#include "TConsole.h"
 #include "TConsoleFrontend.h"
 #include "TDebug.h"
 #include "TEvent.h"
@@ -63,6 +61,8 @@
 #include <QCoreApplication>
 #include <QDir>
 #include <QFileInfo>
+#include <QFontInfo>
+#include <QFontMetrics>
 #include <QVector>
 #ifdef QT_TEXTTOSPEECH_LIB
 #include <QTextToSpeech>
