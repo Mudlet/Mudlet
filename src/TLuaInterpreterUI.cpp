@@ -738,7 +738,7 @@ int TLuaInterpreter::getTextEditText(lua_State* L)
     const QString textEditName = getVerifiedString(L, __func__, 1, "text edit name");
 
     const Host& host = getHostFromLua(L);
-    const auto text = host.mpConsole ? host.mpConsole->getTextBoxText(textEditName) : std::nullopt;
+    const auto text = host.textBoxText(textEditName);
     if (!text) {
         return warnArgumentValue(L, __func__, qsl("text edit name '%1' not found").arg(textEditName));
     }
@@ -843,7 +843,7 @@ int TLuaInterpreter::setTextEditFont(lua_State* L)
     const QString textEditName{lua_tostring(L, 1)};
 
     const Host& host = getHostFromLua(L);
-    auto font = host.mpConsole ? host.mpConsole->getTextBoxFont(textEditName) : std::nullopt;
+    auto font = host.textBoxFont(textEditName);
     if (!font) {
         return warnArgumentValue(L, __func__, qsl("text edit name '%1' not found").arg(textEditName));
     }
@@ -871,7 +871,7 @@ int TLuaInterpreter::setTextEditFontSize(lua_State* L)
     const QString textEditName{lua_tostring(L, 1)};
 
     const Host& host = getHostFromLua(L);
-    auto font = host.mpConsole ? host.mpConsole->getTextBoxFont(textEditName) : std::nullopt;
+    auto font = host.textBoxFont(textEditName);
     if (!font) {
         return warnArgumentValue(L, __func__, qsl("text edit name '%1' not found").arg(textEditName));
     }
@@ -1279,7 +1279,7 @@ int TLuaInterpreter::getScrollBarVisible(lua_State* L)
 {
     const QString windowName{WINDOW_NAME(L, 1)};
     const Host& host = getHostFromLua(L);
-    const auto visible = host.mpConsole ? host.mpConsole->getWindowScrollBarVisible(windowName) : std::nullopt;
+    const auto visible = host.windowScrollBarVisible(windowName);
     if (!visible) {
         return windowNotFound(L, windowName);
     }
@@ -1764,7 +1764,7 @@ int TLuaInterpreter::getSaveCommandHistory(lua_State* L)
         name = CMDLINE_NAME(L, 1);
     }
     const QString commandLineName{name};
-    const auto savesHistory = host.mpConsole ? host.mpConsole->getCommandLineSavesHistory(commandLineName) : std::nullopt;
+    const auto savesHistory = host.commandLineSavesHistory(commandLineName);
     if (!savesHistory) {
         return commandLineNotFound(L, commandLineName);
     }

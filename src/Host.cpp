@@ -6413,6 +6413,18 @@ std::optional<bool> Host::windowScrolling(const QString& name) const
     return {pModel->mScrollingEnabled};
 }
 
+std::optional<bool> Host::windowScrollBarVisible(const QString& name) const
+{
+    if (!mpConsole) {
+        return {};
+    }
+    const TConsoleModel* pModel = consoleModelNamed(name);
+    if (!pModel) {
+        return {};
+    }
+    return {pModel->mScrollBarEnabled};
+}
+
 std::optional<QFont> Host::windowFont(const QString& name) const
 {
     if (!mpConsole) {
@@ -6454,6 +6466,30 @@ std::optional<QString> Host::commandLineStyleSheet(const QString& name) const
         return {};
     }
     return mWindowRegistry.commandLineStyleSheet(name);
+}
+
+std::optional<bool> Host::commandLineSavesHistory(const QString& name) const
+{
+    if (!mpConsole) {
+        return {};
+    }
+    return mWindowRegistry.commandLineSavesHistory(name);
+}
+
+std::optional<QString> Host::textBoxText(const QString& name) const
+{
+    if (!mpConsole) {
+        return {};
+    }
+    return mWindowRegistry.textBoxText(name);
+}
+
+std::optional<QFont> Host::textBoxFont(const QString& name) const
+{
+    if (!mpConsole) {
+        return {};
+    }
+    return mWindowRegistry.textBoxFont(name);
 }
 
 std::optional<QColor> Host::borderColor() const

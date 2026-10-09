@@ -4204,6 +4204,46 @@ noViewSelectionReport = table.concat(noViewSelectionProblems, '; ')
         QCOMPARE(host->commandLineText(name), std::optional<QString>(qsl("mini console text")));
     }
 
+    void test_aCommandLineStartsWithItsSavedHistorySetting()
+    {
+        startProfile();
+        auto host = mudlet::self()->getActiveHost();
+        QVERIFY2(host, "No active host available for the test.");
+        QVERIFY2(host->mainConsoleView(), "The active host has no main console.");
+
+        const QString name = qsl("historylessCommandLine");
+        host->setCmdLineSettings(enums::SubCommandLine, false, name);
+        const auto [commandLine, commandLineMessage] = host->mainConsoleView()->createCommandLine(QString(), name, 0, 50, 40, 20);
+        QVERIFY2(commandLine, qPrintable(commandLineMessage));
+        QVERIFY2(!host->mainConsoleView()->subCommandLineWidget(name)->mSaveCommands, "The command line did not take its saved setting, so nothing below tests reading it.");
+
+        QCOMPARE(host->commandLineSavesHistory(name), std::optional<bool>(false));
+    }
+
+    // setTextEditFont() and setTextEditFontSize() change one part of the font the
+    // registry holds, so it must follow every font the widget takes.
+    void test_aTextBoxsFontFollowsTheWidget()
+    {
+        startProfile();
+        auto host = mudlet::self()->getActiveHost();
+        QVERIFY2(host, "No active host available for the test.");
+        QVERIFY2(host->mainConsoleView(), "The active host has no main console.");
+
+        const QString name = qsl("fontFollowingTextBox");
+        runLua(host, qsl("createTextEdit('main', '%1', 0, 0, 100, 50)\n").arg(name));
+        TTextBox* textBox = host->mainConsoleView()->textBoxWidget(name);
+        QVERIFY2(textBox, "createTextEdit() made no widget.");
+        QCOMPARE(host->textBoxFont(name), std::optional<QFont>(textBox->font()));
+
+        runLua(host, qsl("setTextEditStyleSheet('%1', 'QPlainTextEdit { font-size: 23pt; }')\n").arg(name));
+        QVERIFY2(textBox->font().pointSize() == 23, "The style sheet did not change the widget's font, so nothing below tests following it.");
+        QCOMPARE(host->textBoxFont(name), std::optional<QFont>(textBox->font()));
+
+        runLua(host, qsl("setTextEditStyleSheet('%1', '')\nsetTextEditFontSize('%1', 9)\n").arg(name));
+        QCOMPARE(textBox->font().pointSize(), 9);
+        QCOMPARE(host->textBoxFont(name), std::optional<QFont>(textBox->font()));
+    }
+
     // The label getters read the model, so whatever restyles, retips or refonts the
     // widget - a script, the label itself or an application stylesheet - must reach it.
     void test_aLabelsStyleSheetToolTipAndFontFollowTheWidget()

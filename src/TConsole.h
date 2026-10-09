@@ -117,7 +117,6 @@ public:
     void setCommandFgColor(const QColor&);
     void setCommandFgColor(int, int, int, int);
     void setScrollBarVisible(bool);
-    bool getScrollBarVisible() const;
     void setHorizontalScrollBar(bool);
     void setScrolling(const bool state);
 
@@ -294,7 +293,7 @@ public:
     QString mWindowBgImagePath;
     QPixmap mWindowBgSourcePixmap;
     bool mHScrollBarEnabled = false;
-    bool mScrollBarEnabled = true;
+    bool& mScrollBarEnabled;
     ControlCharacterMode mControlCharacter = ControlCharacterMode::AsIs;
     QVideoWidget* mpVideoWidget = nullptr;
     QSplitter* commandSplitter = nullptr;

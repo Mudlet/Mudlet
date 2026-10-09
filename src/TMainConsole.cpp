@@ -262,6 +262,7 @@ TMainConsole::TMainConsole(Host* pH, QWidget* parent)
     connect(mpCommandLine, &QPlainTextEdit::textChanged, this, [this]() {
         mpHost->windowRegistry().setMainCommandLineText(mpCommandLine->toPlainText());
     });
+    mpHost->windowRegistry().setMainCommandLineSavesHistory(mpCommandLine->mSaveCommands);
 
     // During first use where mIsDebugConsole IS true mudlet::self() is null
     // then - but we rely on that flag to avoid having to also test for a
@@ -710,9 +711,21 @@ void TMainConsole::registerTextBox(const QString& name, TTextBox* pTextBox)
 {
     mTextBoxMap[name] = pTextBox;
     mpHost->windowRegistry().registerTextBox(name);
+    mpHost->windowRegistry().setTextBoxFont(name, pTextBox->font());
     watchWindowState(name, pTextBox);
+    // A text box that lost its name must not write that name's state.
+    connect(pTextBox, &QPlainTextEdit::textChanged, this, [this, name, pTextBox]() {
+        if (mTextBoxMap.value(name) == pTextBox) {
+            mpHost->windowRegistry().setTextBoxText(name, pTextBox->toPlainText());
+        }
+    });
+    connect(pTextBox, &TTextBox::fontChanged, this, [this, name, pTextBox]() {
+        if (mTextBoxMap.value(name) == pTextBox) {
+            mpHost->windowRegistry().setTextBoxFont(name, pTextBox->font());
+        }
+    });
 
-    // As for a scroll box, and every by-name getter reads this map straight through
+    // As for a scroll box, and every by-name setter reads this map straight through
     connect(pTextBox, &QObject::destroyed, this, [this, pTextBox]() {
         deregisterTextBox(pTextBox);
     });
@@ -1727,6 +1740,7 @@ void TMainConsole::registerSubCommandLine(const QString& name, TCommandLine* pCo
     mpHost->windowRegistry().registerCommandLine(name);
     // The constructor styles a sub command line before it can be registered
     mpHost->windowRegistry().setCommandLineStyleSheet(name, pCommandLine->styleSheet());
+    mpHost->windowRegistry().setCommandLineSavesHistory(name, pCommandLine->mSaveCommands);
     watchWindowState(name, pCommandLine);
     connect(pCommandLine, &QPlainTextEdit::textChanged, this, [this, name, pCommandLine]() {
         // A displaced or deleted command line can still be typed in, and must not write its name's text.
@@ -2028,15 +2042,6 @@ std::optional<bool> TMainConsole::removeCommandLineMenuItem(const QString& name,
     return {pN->contextMenuItems.remove(label) != 0};
 }
 
-std::optional<bool> TMainConsole::getCommandLineSavesHistory(const QString& name) const
-{
-    auto pN = commandLineNamed(name);
-    if (!pN) {
-        return {};
-    }
-    return {pN->mSaveCommands};
-}
-
 bool TMainConsole::setCommandLineSavesHistory(const QString& name, bool savesHistory)
 {
     auto pN = commandLineNamed(name);
@@ -2044,6 +2049,11 @@ bool TMainConsole::setCommandLineSavesHistory(const QString& name, bool savesHis
         return false;
     }
     pN->mSaveCommands = savesHistory;
+    if (pN == mpCommandLine) {
+        mpHost->windowRegistry().setMainCommandLineSavesHistory(savesHistory);
+    } else {
+        mpHost->windowRegistry().setCommandLineSavesHistory(name, savesHistory);
+    }
     return true;
 }
 
@@ -2083,15 +2093,6 @@ bool TMainConsole::setWindowHorizontalScrollBarVisible(const QString& name, bool
     }
     pC->setHorizontalScrollBar(visible);
     return true;
-}
-
-std::optional<bool> TMainConsole::getWindowScrollBarVisible(const QString& name)
-{
-    auto pC = consoleNamed(name);
-    if (!pC) {
-        return {};
-    }
-    return {pC->getScrollBarVisible()};
 }
 
 bool TMainConsole::setWindowScrolling(const QString& name, bool enabled)
@@ -2211,15 +2212,6 @@ std::pair<bool, QString> TMainConsole::createTextBox(const QString& windowname, 
     return {false, QLatin1String("couldn't create text edit")};
 }
 
-std::optional<QString> TMainConsole::getTextBoxText(const QString& name) const
-{
-    auto pT = mTextBoxMap.value(name);
-    if (!pT) {
-        return {};
-    }
-    return {pT->toPlainText()};
-}
-
 bool TMainConsole::setTextBoxText(const QString& name, const QString& text)
 {
     auto pT = mTextBoxMap.value(name);
@@ -2268,15 +2260,6 @@ bool TMainConsole::setTextBoxStyleSheet(const QString& name, const QString& styl
     }
     pT->setStyleSheet(styleSheet);
     return true;
-}
-
-std::optional<QFont> TMainConsole::getTextBoxFont(const QString& name) const
-{
-    auto pT = mTextBoxMap.value(name);
-    if (!pT) {
-        return {};
-    }
-    return {pT->font()};
 }
 
 bool TMainConsole::setTextBoxFont(const QString& name, const QFont& font)

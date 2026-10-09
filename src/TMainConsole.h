@@ -214,7 +214,6 @@ public:
     // No value for a name that is not a command line's, false for a command line
     // with no such item.
     std::optional<bool> removeCommandLineMenuItem(const QString& name, const QString& label);
-    std::optional<bool> getCommandLineSavesHistory(const QString& name) const;
     bool setCommandLineSavesHistory(const QString& name, bool savesHistory);
     bool setCommandLineVisible(const QString& name, bool visible);
     // Also used by Host to announce a log change for a view not yet built
@@ -225,7 +224,6 @@ public:
     // that is none of those.
     bool setWindowScrollBarVisible(const QString& name, bool visible);
     bool setWindowHorizontalScrollBarVisible(const QString& name, bool visible);
-    std::optional<bool> getWindowScrollBarVisible(const QString& name);
     bool setWindowScrolling(const QString& name, bool enabled);
     // A negative line counts back from the end. One at or past the end, or
     // toEnd, puts the console back to following new lines.
@@ -242,13 +240,11 @@ public:
     TTextBox* textBoxWidget(const QString& name) const { return mTextBoxMap.value(name); }
     // The text box operations the core forwards to this view by name, never by
     // widget; each reports failure for a name that is not a text box's.
-    std::optional<QString> getTextBoxText(const QString& name) const;
     bool setTextBoxText(const QString& name, const QString& text);
     bool clearTextBox(const QString& name);
     bool setTextBoxReadOnly(const QString& name, bool readOnly);
     bool setTextBoxPlaceholder(const QString& name, const QString& text);
     bool setTextBoxStyleSheet(const QString& name, const QString& styleSheet);
-    std::optional<QFont> getTextBoxFont(const QString& name) const;
     bool setTextBoxFont(const QString& name, const QFont& font);
     bool setTextBoxTabMovesFocus(const QString& name, bool tabMovesFocus);
     // QWidget state the core asks about, answered here so that it need not

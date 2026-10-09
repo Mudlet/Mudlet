@@ -338,6 +338,10 @@ struct TConsoleModel
     // The upper pane's font, which TTextEdit copies out as it changes, a style sheet's included.
     QFont mUpperPaneFont;
     bool mScrollingEnabled = true;
+    // What enableScrollBar()/disableScrollBar() last asked for rather than QWidget::isVisible(): a profile
+    // that is not the front tab has its whole console hidden, which would make every background profile
+    // report its scroll bar as gone.
+    bool mScrollBarEnabled = true;
     QColor mBorderColor = QColorConstants::Black;
     void wrapLine(int line) { buffer.wrapLine(line, mWrapAt, mIndentCount, mHangingIndentCount); }
 
