@@ -1787,6 +1787,9 @@ describe("Trigger processing", function()
                 -- divide by. Feeding until the run is clear of that floor and
                 -- dividing by the number of feeds keeps both measurements
                 -- per-feed and comparable.
+                -- It is wall time there too, so a run also carries any 15.6 ms
+                -- scheduler tick taken from it: enough to double the 64 kB
+                -- line's cost over a 0.02s run, a sixth of it over 0.1s.
                 local feeds, taken = 0, 0
                 local started = os.clock()
                 repeat
@@ -1794,10 +1797,10 @@ describe("Trigger processing", function()
                     feeds = feeds + 1
                     taken = os.clock() - started
                 -- a clock that never advances would spin here forever and hang
-                -- CI with no diagnostic. 100 feeds is far more than any platform
+                -- CI with no diagnostic. 1000 feeds is far more than any platform
                 -- needs, so giving up past it leaves the short > 0 assertion
                 -- below to report the dead clock.
-                until taken >= 0.02 or feeds >= 100
+                until taken >= 0.1 or feeds >= 1000
                 return taken / feeds
             end
             _G.TrigSpec = {captures = 0}
