@@ -1848,6 +1848,27 @@ describe("Tests MCCP4 compressed streams", function()
     assert.is_truthy(shown:find("MCCP4ZSTDOK MCCP4ZSTDOK MCCP4ZSTDOK", 1, true), "offering MCCP4 again did not bring it back: " .. shown)
   end)
 
+  -- like MCCP2's, a WONT inside a run turns the option off but lets the run finish
+  it("decodes the rest of a zstd frame that turned MCCP4 off", function()
+    -- zstd --no-check: "MCCP4BEFOREWONT\r\n" .. IAC WONT COMPRESS4 .. "MCCP4AFTERWONT\r\n" flushed,
+    -- then "MCCP4TAILOK MCCP4TAILOK MCCP4TAILOK\r\n" ending the same frame
+    local flushed = "\40\181\47\253\0\88\32\1\0\77\67\67\80\52\66\69\70\79\82\69\87\79\78\84\13\10\255\252\88\77\67\67\80\52\65\70\84\69\82\87\79\78\84\13\10"
+    local frameEnd = "\141\0\0\72\84\65\73\76\79\75\32\13\10\2\0\47\213\70\152\64"
+    local mark = getLastLineNumber("main")
+    feed("<T_IAC><T_WILL><O_MCCP4>")
+    feed(begin("zstd") .. escaped(flushed))
+    feed(escaped(frameEnd) .. "MCCP4PLAINAFTERWONT\r\n")
+    local shown = linesSince(mark)
+    assert.is_falsy(shown:find("MCCP decompression error", 1, true), shown)
+    assert.is_truthy(shown:find("MCCP4AFTERWONT", 1, true), shown)
+    assert.is_truthy(shown:find("MCCP4TAILOK MCCP4TAILOK MCCP4TAILOK", 1, true), shown)
+    assert.is_truthy(shown:find("MCCP4PLAINAFTERWONT", 1, true), shown)
+
+    feed(begin("zstd") .. escaped(ZSTD) .. "\r\n")
+    shown = linesSince(mark)
+    assert.is_falsy(shown:find("MCCP4ZSTDOK MCCP4ZSTDOK MCCP4ZSTDOK", 1, true), "a run began after the game turned MCCP4 off: " .. shown)
+  end)
+
   -- a start found in decompressed output is the game's text, not a new run: acting on it
   -- swaps decoders and feeds what follows the run to the new one
   local function feedNested(payload, encoding)
@@ -1867,6 +1888,36 @@ describe("Tests MCCP4 compressed streams", function()
 
   it("does not begin a new run from inside a deflate stream", function()
     feedNested(DEFLATE_NESTED, "deflate")
+  end)
+
+  -- an IAC that is not SE closes a subnegotiation too, and must not get past the check
+  it("does not begin a new run from an unterminated start inside a zstd frame", function()
+    -- zstd --no-check -3 of "MCCP4BEFORENESTED" .. IAC SB COMPRESS4 BEGIN_ENCODING "zstd" IAC NOP .. "MCCP4INSIDENESTED\r\n"
+    feedNested("\40\181\47\253\0\88\113\1\0\77\67\67\80\52\66\69\70\79\82\69\78\69\83\84\69\68\255\250\88\2\122\115\116\100\255\241\77\67\67\80\52\73\78\83\73\68\69\78\69\83\84\69\68\13\10", "zstd")
+  end)
+
+  it("does not begin a new run from an unterminated start inside a deflate stream", function()
+    -- zlib.compress("MCCP4BEFORENESTED" .. IAC SB COMPRESS4 BEGIN_ENCODING "deflate" IAC NOP .. "MCCP4INSIDENESTED\r\n")
+    feedNested("\120\156\243\117\118\14\48\113\114\117\243\15\114\245\115\13\14\113\117\249\255\43\130\41\37\53\45\39\177\36\245\255\71\95\144\172\167\95\176\167\11\84\150\151\11\0\176\111\16\211", "deflate")
+  end)
+
+  -- each run costs a level of the recursion cap, as an MCCP2 stream does, so a read can hold up to 7
+  it("shows the text after several runs begun in one read", function()
+    local mark = getLastLineNumber("main")
+    feed("<T_IAC><T_WILL><O_MCCP4>")
+    local runs = {}
+    for _ = 1, 3 do
+      runs[#runs + 1] = begin("zstd") .. escaped(ZSTD) .. begin("deflate") .. escaped(DEFLATE_SECOND)
+    end
+    feed(table.concat(runs) .. "MCCP4AFTERBURST\r\n")
+    local shown = linesSince(mark)
+    assert.is_falsy(shown:find("MCCP decompression error", 1, true), shown)
+    assert.is_falsy(shown:find("Too much compressed data", 1, true), shown)
+    local _, frames = shown:gsub("MCCP4ZSTDOK MCCP4ZSTDOK MCCP4ZSTDOK", "")
+    local _, streams = shown:gsub("MCCP4SECONDDEFLATEOK", "")
+    assert.are.equal(3, frames, shown)
+    assert.are.equal(3, streams, shown)
+    assert.is_truthy(shown:find("MCCP4AFTERBURST", 1, true), shown)
   end)
 
   it("does not begin an MCCP4 run from inside an MCCP2 stream", function()

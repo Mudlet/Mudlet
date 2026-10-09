@@ -415,7 +415,7 @@ private:
     // the decoder it describes - a disconnect clears mNeedDecompression without
     // going through endMCCP4Compression() - and processSocketData() would then
     // keep re-entering itself for a flush nothing can deliver.
-    bool zstdFlushPending() const { return mZstdFlushPending && mNeedDecompression && mMCCP_version_4 && mMCCP4_encoding == MCCP4_ENCODING_ZSTD && mZstdDstream != nullptr; }
+    bool zstdFlushPending() const { return mZstdFlushPending && mNeedDecompression && mMCCP4_encoding == MCCP4_ENCODING_ZSTD && mZstdDstream != nullptr; }
     // Sends DONT for the running MCCP stream and stops decompressing it, for a
     // stream that can no longer be followed.
     void refuseCompressedStream();

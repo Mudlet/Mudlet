@@ -3668,7 +3668,9 @@ void cTelnet::processTelnetCommand(const std::string& telnetCommand)
                     qDebug() << "MCCP v2 disabled !";
                     break;
                 case OPT_COMPRESS4:
-                    cleanupMCCP4();
+                    // Like MCCP2's, a run already begun goes on to its own end: the rest of it is
+                    // still compressed, and freeing its decoder here would show those bytes raw.
+                    mMCCP_version_4 = false;
                     qDebug() << "MCCP v4 disabled !";
                     break;
                 default:
@@ -6164,16 +6166,23 @@ void cTelnet::processSocketData(char* in_buffer, int amount, const bool loopback
     char* remainingData = nullptr;
     int remainingAmount = 0;
 
-    if (mNeedDecompression) {
-        if (mMCCP_version_4 && mMCCP4_encoding == MCCP4_ENCODING_ZSTD) {
-            datalen = decompressMCCP4Buffer(in_buffer, amount, out_buffer.get());
-        } else {
-            // Everything else is zlib: MCCP1, MCCP2, and MCCP4's deflate
-            // encoding all share mZstream. MCCP4 sitting at
-            // MCCP4_ENCODING_NONE lands here too, which only happens while
-            // MCCP1/2 is the one driving decompression.
-            datalen = decompressBuffer(in_buffer, amount, out_buffer.get());
+    // Everything but zstd is zlib: MCCP1, MCCP2, and MCCP4's deflate encoding all
+    // share mZstream. MCCP4 sitting at MCCP4_ENCODING_NONE lands there too, which
+    // only happens while MCCP1/2 is the one driving decompression.
+    const auto decompress = [this, &out_buffer](char*& compressed, int& length) {
+        if (mMCCP4_encoding == MCCP4_ENCODING_ZSTD) {
+            return decompressMCCP4Buffer(compressed, length, out_buffer.get());
         }
+        return decompressBuffer(compressed, length, out_buffer.get());
+    };
+    // Like the MCCP1/2 start sequence: a game has no reason to nest a stream in its own
+    // decompressed output, and acting on it would swap decoders mid-stream.
+    const auto nestedMccp4Start = [&buffer, &out_buffer](const std::string& subnegotiation) {
+        return buffer == out_buffer.get() && subnegotiation.size() > 3 && subnegotiation[2] == OPT_COMPRESS4 && subnegotiation[3] == MCCP4_BEGIN_ENCODING;
+    };
+
+    if (mNeedDecompression) {
+        datalen = decompress(in_buffer, amount);
         buffer = out_buffer.get();
         // The decompressors only fill one output buffer per call and drop
         // out of compression on stream/frame end or a broken stream. Anything
@@ -6364,9 +6373,7 @@ void cTelnet::processSocketData(char* in_buffer, int amount, const bool loopback
                 }
 
                 if (iac && (ch == TN_SE)) { //IAC SE - end of subcommand
-                    if (buffer == out_buffer.get() && command.size() > 3 && command[2] == OPT_COMPRESS4 && command[3] == MCCP4_BEGIN_ENCODING) {
-                        // Like the MCCP1/2 start sequence above: a game has no reason to nest a stream in its
-                        // own decompressed output, and acting on it would swap decoders mid-stream.
+                    if (nestedMccp4Start(command)) {
                         qWarning() << "cTelnet::processSocketData(...) WARNING - ignoring an MCCP4 start found inside decompressed data";
                         command = "";
                         iac = false;
@@ -6381,20 +6388,29 @@ void cTelnet::processSocketData(char* in_buffer, int amount, const bool loopback
                     // MCCP4 turns compression on with an ordinary IAC SB ...
                     // IAC SE subnegotiation rather than the malformed start
                     // sequence MCCP1/2 use, so the look-ahead above never sees
-                    // it. Servers put the first compressed bytes in the same
-                    // segment, so everything past this IAC SE is compressed:
-                    // queue it for the re-entry at the end of this function,
-                    // which starts a fresh pass with the decompressor selected.
+                    // it. Everything past this IAC SE is compressed, and is
+                    // inflated here like MCCP1/2's rest is: queueing it for the
+                    // re-entry instead would spend a level of the recursion cap
+                    // on every run, and a read holding many runs would hit it.
                     // buffer == in_buffer means this pass began uncompressed,
-                    // so the remainder is untouched input and nothing else is
-                    // queued yet.
+                    // so nothing else is queued yet.
                     if (mMCCP_version_4 && mNeedDecompression && buffer == in_buffer) {
-                        const int restLength = datalen - i - 1;
+                        gotRest(cleandata);
+                        cleandata = "";
+                        buffer += i + 1;
+                        int restLength = datalen - i - 1;
                         if (restLength > 0) {
-                            remainingData = buffer + i + 1;
-                            remainingAmount = restLength;
+                            datalen = decompress(buffer, restLength);
+                            if (restLength > 0) {
+                                remainingData = buffer;
+                                remainingAmount = restLength;
+                            }
+                            buffer = out_buffer.get();
+                        } else {
+                            datalen = 0;
                         }
-                        break;
+                        i = -1;
+                        continue;
                     }
                 } else if (iac && (ch == TN_IAC)) { // escaped TN_IAC
                     command.pop_back();
@@ -6406,7 +6422,11 @@ void cTelnet::processSocketData(char* in_buffer, int amount, const bool loopback
                     // Cf. https://github.com/Mudlet/Mudlet/issues/4385
                     command.pop_back();
                     command += TN_SE;
-                    processTelnetCommand(command);
+                    if (nestedMccp4Start(command)) {
+                        qWarning() << "cTelnet::processSocketData(...) WARNING - ignoring an MCCP4 start found inside decompressed data";
+                    } else {
+                        processTelnetCommand(command);
+                    }
 
                     if (!mIncompleteSB) {
                         mIncompleteSB = true;
