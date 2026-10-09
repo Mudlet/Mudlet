@@ -77,6 +77,7 @@ class GMCPAuthenticator;
 class CredentialManager;
 class TRoom;
 class TConsole;
+class TConsoleFrontend;
 class TMainConsole;
 struct TConsoleModel;
 class TMap;
@@ -309,6 +310,8 @@ public:
     // Widget-side code uses these rather than mpConsole, so that mpConsole's type
     // can change without touching widget code.
     TMainConsole* mainConsoleView() const;
+    // mainConsoleView() as core code calls it, by window name rather than widget; null when that is.
+    TConsoleFrontend* consoleFrontend() const;
     void setMainConsoleView(TMainConsole* view);
     std::shared_ptr<TConsoleModel> sharedMainConsoleModel();
     // Colorizer triggers: select a run of the current line, paint it, restore the format. Model state

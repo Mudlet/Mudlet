@@ -44,6 +44,7 @@
 #include "TAppFrontend.h"
 #include "TArea.h"
 #include "TConsole.h"
+#include "TConsoleFrontend.h"
 #include "TDebug.h"
 #include "TEvent.h"
 #include "TMainConsole.h"
@@ -603,10 +604,10 @@ int TLuaInterpreter::deleteLabel(lua_State* L)
 {
     const QString labelName = getVerifiedString(L, __func__, 1, "label name");
     const Host& host = getHostFromLua(L);
-    if (!host.mpConsole) {
+    if (!host.consoleFrontend()) {
         return warnArgumentValue(L, __func__, no_main_window_value, true);
     }
-    if (auto [success, message] = host.mpConsole->deleteLabel(labelName); !success) {
+    if (auto [success, message] = host.consoleFrontend()->deleteLabel(labelName); !success) {
         lua_pushboolean(L, false);
         lua_pushstring(L, message.toUtf8().constData());
         return 2;
@@ -1566,7 +1567,8 @@ int TLuaInterpreter::getLabelSizeHint(lua_State* L)
         return warnArgumentValue(L, __func__, "label name cannot be an empty string");
     }
 
-    auto size = host.mpConsole ? host.mpConsole->getLabelSizeHint(labelName) : std::nullopt;
+    const auto frontend = host.consoleFrontend();
+    auto size = frontend ? frontend->getLabelSizeHint(labelName) : std::nullopt;
     if (!size) {
         return warnArgumentValue(L, __func__, qsl("label '%1' does not exist").arg(labelName));
     }
@@ -3341,7 +3343,7 @@ int TLuaInterpreter::setFont(lua_State* L)
     if (fontWeight != QFont::Normal) {
         labelFont.setWeight(fontWeight);
     }
-    host.mpConsole->setLabelFont(targetName, labelFont);
+    host.consoleFrontend()->setLabelFont(targetName, labelFont);
     lua_pushboolean(L, true);
     return 1;
 }
@@ -3402,10 +3404,10 @@ int TLuaInterpreter::setLabelToolTip(lua_State* L)
 
     const Host& host = getHostFromLua(L);
 
-    if (!host.mpConsole) {
+    if (!host.consoleFrontend()) {
         return warnArgumentValue(L, __func__, no_main_window_value);
     }
-    if (auto [success, message] = host.mpConsole->setLabelToolTip(labelName, labelToolTip, duration); !success) {
+    if (auto [success, message] = host.consoleFrontend()->setLabelToolTip(labelName, labelToolTip, duration); !success) {
         return warnArgumentValue(L, __func__, message);
     }
 
@@ -3476,10 +3478,10 @@ int TLuaInterpreter::setLabelStyleSheet(lua_State* L)
     const QString stylesheet{lua_tostring(L, 2)};
     const Host& host = getHostFromLua(L);
 
-    if (!host.mpConsole) {
+    if (!host.consoleFrontend()) {
         return warnArgumentValue(L, __func__, no_main_window_value);
     }
-    if (auto [success, message] = host.mpConsole->setLabelStyleSheet(labelName, stylesheet); !success) {
+    if (auto [success, message] = host.consoleFrontend()->setLabelStyleSheet(labelName, stylesheet); !success) {
         return warnArgumentValue(L, __func__, message);
     }
 
@@ -3653,10 +3655,10 @@ int TLuaInterpreter::setLabelCursor(lua_State* L)
     const QString labelName{lua_tostring(L, 1)};
     const Host& host = getHostFromLua(L);
 
-    if (!host.mpConsole) {
+    if (!host.consoleFrontend()) {
         return warnArgumentValue(L, __func__, no_main_window_value);
     }
-    if (auto [success, message] = host.mpConsole->setLabelCursor(labelName, labelCursor); !success) {
+    if (auto [success, message] = host.consoleFrontend()->setLabelCursor(labelName, labelCursor); !success) {
         return warnArgumentValue(L, __func__, message);
     }
 
@@ -3683,10 +3685,10 @@ int TLuaInterpreter::setLabelCustomCursor(lua_State* L)
 
     const Host& host = getHostFromLua(L);
 
-    if (!host.mpConsole) {
+    if (!host.consoleFrontend()) {
         return warnArgumentValue(L, __func__, no_main_window_value);
     }
-    if (auto [success, message] = host.mpConsole->setLabelCustomCursor(labelName, pixmapLocation, hotX, hotY); !success) {
+    if (auto [success, message] = host.consoleFrontend()->setLabelCustomCursor(labelName, pixmapLocation, hotX, hotY); !success) {
         return warnArgumentValue(L, __func__, message);
     }
 
@@ -4604,7 +4606,7 @@ int TLuaInterpreter::movieFunc(lua_State* L, const char* funcName)
     }
     const QLatin1StringView func{funcName};
 
-    TMainConsole* console = getHostFromLua(L).mpConsole;
+    TConsoleFrontend* console = getHostFromLua(L).consoleFrontend();
     {
         const QString labelName{lua_tostring(L, 1)};
         if (labelName.isEmpty()) {
