@@ -28,7 +28,12 @@ local function installWhenMpkgReady(triesLeft)
   if mpkg and mpkg.packages and mpkg.packages.packages then
     installServerPackage()
   elseif triesLeft &gt; 0 then
-    tempTimer(5, function() installWhenMpkgReady(triesLeft - 1) end)
+    tempTimer(5, function()
+      -- the timer outlives an uninstall of this package
+      if table.contains(getPackages(), "MedBootstrap") then
+        installWhenMpkgReady(triesLeft - 1)
+      end
+    end)
   else
     cecho("\n&lt;orange&gt;MedBootstrap: the package listing did not arrive, so MedUI is not installed yet. It will be tried again the next time this profile is opened.&lt;reset&gt;\n")
   end

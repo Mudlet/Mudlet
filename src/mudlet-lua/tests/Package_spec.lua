@@ -3662,6 +3662,22 @@ describe("Tests the MedBootstrap package", function()
     assert.are.equal(0, mpkg.listingDownloads, "waiting for the listing started downloads of its own")
   end)
 
+  it("does not install MedUI once it has been uninstalled", function()
+    local installs = {}
+    local mpkg = fakeMpkg(installs)
+    override("mpkg", mpkg)
+    stubMpkgVersion("1")
+
+    install()
+    pumpEvents(200)
+    removeFixturePackage(name)
+    mpkg.packages = { packages = {} }
+    -- past the next look, made 5s after the install
+    waitUntil(function() return #installs > 0 end, 6000)
+
+    assert.are.same({}, installs, "MedUI was installed after MedBootstrap was uninstalled")
+  end)
+
   it("installs mpkg and then MedUI when the profile has no mpkg", function()
     local installs = {}
     local mpkg = fakeMpkg(installs)
