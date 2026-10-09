@@ -74,6 +74,7 @@ private slots:
     void mergeIntoEmptyConfig();
     void mergeKeepsOtherServersAndKeys();
     void mergeReplacesOwnEntry();
+    void mergeLeavesSomeoneElsesLowercaseEntry();
     void mergeKeepsUserEnvVars();
     void mergeRefusesGarbage();
     void mergeRefusesNonObjectServers();
@@ -376,7 +377,7 @@ void TMCPBridgeTest::mergeIntoEmptyConfig()
     bool ok = false;
     const QByteArray merged = TMCPBridge::mergeClaudeDesktopConfig(QByteArray(), TMCPBridge::claudeDesktopEntry(qsl("/opt/mudlet")), ok);
     QVERIFY(ok);
-    const QJsonObject entry = parse(merged).value(qsl("mcpServers")).toObject().value(qsl("mudlet")).toObject();
+    const QJsonObject entry = parse(merged).value(qsl("mcpServers")).toObject().value(qsl("Mudlet")).toObject();
     QCOMPARE(entry.value(qsl("command")).toString(), qsl("/opt/mudlet"));
 }
 
@@ -389,7 +390,7 @@ void TMCPBridgeTest::mergeKeepsOtherServersAndKeys()
     QCOMPARE(merged.value(qsl("globalShortcut")).toString(), qsl("Ctrl+Space"));
     const QJsonObject servers = merged.value(qsl("mcpServers")).toObject();
     QCOMPARE(servers.value(qsl("filesystem")).toObject().value(qsl("command")).toString(), qsl("npx"));
-    QVERIFY(servers.contains(qsl("mudlet")));
+    QVERIFY(servers.contains(qsl("Mudlet")));
 }
 
 void TMCPBridgeTest::mergeReplacesOwnEntry()
@@ -398,7 +399,23 @@ void TMCPBridgeTest::mergeReplacesOwnEntry()
     bool ok = false;
     const QJsonObject merged = parse(TMCPBridge::mergeClaudeDesktopConfig(existing, TMCPBridge::claudeDesktopEntry(qsl("/new/mudlet")), ok));
     QVERIFY(ok);
-    QCOMPARE(merged.value(qsl("mcpServers")).toObject().value(qsl("mudlet")).toObject().value(qsl("command")).toString(), qsl("/new/mudlet"));
+    QCOMPARE(merged.value(qsl("mcpServers")).toObject().value(qsl("Mudlet")).toObject().value(qsl("command")).toString(), qsl("/new/mudlet"));
+    // Earlier builds registered under the lowercase key; leaving it would list Mudlet twice
+    QVERIFY(!merged.value(qsl("mcpServers")).toObject().contains(qsl("mudlet")));
+}
+
+void TMCPBridgeTest::mergeLeavesSomeoneElsesLowercaseEntry()
+{
+    const QByteArray existing = R"({"mcpServers":{"mudlet":{"command":"/opt/something-else","args":["--other"],"env":{"THEIRS":"1"}}}})";
+    QJsonObject fresh;
+    fresh[qsl("command")] = qsl("/new/mudlet");
+    fresh[qsl("args")] = QJsonArray{qsl("--mcp-bridge")};
+    bool ok = false;
+    const QJsonObject servers = parse(TMCPBridge::mergeClaudeDesktopConfig(existing, fresh, ok)).value(qsl("mcpServers")).toObject();
+    QVERIFY(ok);
+    QCOMPARE(servers.value(qsl("mudlet")).toObject().value(qsl("command")).toString(), qsl("/opt/something-else"));
+    QCOMPARE(servers.value(qsl("Mudlet")).toObject().value(qsl("command")).toString(), qsl("/new/mudlet"));
+    QVERIFY(!servers.value(qsl("Mudlet")).toObject().contains(qsl("env")));
 }
 
 void TMCPBridgeTest::mergeKeepsUserEnvVars()
@@ -415,7 +432,7 @@ void TMCPBridgeTest::mergeKeepsUserEnvVars()
     fresh[qsl("env")] = freshEnv;
 
     bool ok = false;
-    const QJsonObject entry = parse(TMCPBridge::mergeClaudeDesktopConfig(existing, fresh, ok)).value(qsl("mcpServers")).toObject().value(qsl("mudlet")).toObject();
+    const QJsonObject entry = parse(TMCPBridge::mergeClaudeDesktopConfig(existing, fresh, ok)).value(qsl("mcpServers")).toObject().value(qsl("Mudlet")).toObject();
     QVERIFY(ok);
     // The user's own variable survives, Mudlet's is refreshed, and the stray key
     // Claude Desktop would choke on is gone.
@@ -425,7 +442,7 @@ void TMCPBridgeTest::mergeKeepsUserEnvVars()
 
     // A fresh entry without env clears Mudlet's variable but not the user's.
     fresh.remove(qsl("env"));
-    const QJsonObject cleared = parse(TMCPBridge::mergeClaudeDesktopConfig(existing, fresh, ok)).value(qsl("mcpServers")).toObject().value(qsl("mudlet")).toObject();
+    const QJsonObject cleared = parse(TMCPBridge::mergeClaudeDesktopConfig(existing, fresh, ok)).value(qsl("mcpServers")).toObject().value(qsl("Mudlet")).toObject();
     QVERIFY(ok);
     QCOMPARE(cleared.value(qsl("env")).toObject().value(qsl("MY_VAR")).toString(), qsl("kept"));
     QVERIFY(!cleared.value(qsl("env")).toObject().contains(qsl("XDG_CONFIG_HOME")));
@@ -618,8 +635,9 @@ void TMCPBridgeTest::refreshRepointsStaleEntry()
     QVERIFY(redirect.writeConfig(R"({"mcpServers":{"filesystem":{"command":"npx"},"mudlet":{"command":"/old/gone/mudlet","args":["--mcp-bridge"],"env":{"MY_VAR":"kept"}}}})"));
     TMCPBridge::refreshClaudeDesktopEntry();
     const QJsonObject servers = parse(redirect.readConfig()).value(qsl("mcpServers")).toObject();
-    QCOMPARE(servers.value(qsl("mudlet")).toObject().value(qsl("command")).toString(), TMCPBridge::mudletBinaryPath());
-    QCOMPARE(servers.value(qsl("mudlet")).toObject().value(qsl("env")).toObject().value(qsl("MY_VAR")).toString(), qsl("kept"));
+    QCOMPARE(servers.value(qsl("Mudlet")).toObject().value(qsl("command")).toString(), TMCPBridge::mudletBinaryPath());
+    QCOMPARE(servers.value(qsl("Mudlet")).toObject().value(qsl("env")).toObject().value(qsl("MY_VAR")).toString(), qsl("kept"));
+    QVERIFY(!servers.contains(qsl("mudlet")));
     QCOMPARE(servers.value(qsl("filesystem")).toObject().value(qsl("command")).toString(), qsl("npx"));
 }
 
