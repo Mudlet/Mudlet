@@ -228,9 +228,19 @@ private slots:
         mpHost->mpConsole->buffer.clear();
         QSignalSpy disconnected(&(mpHost->mTelnet), &cTelnet::signal_disconnected);
 
+        // Agreed ahead of the burst, as a game does at login: an answer reaching
+        // the socket once the game has closed it is met with a reset, which
+        // throws away whatever of the burst the client has yet to receive. The
+        // LINEMODE refusal answers the request sent last, so once it is in, so
+        // is everything the client had still to send.
+        const QByteArray lineModeRefused("\xFF\xFC\x22", 3);
+        const qsizetype refusalsBefore = mpServer->receivedSoFar().count(lineModeRefused);
+        mpServer->sendRaw(QByteArray("\xFF\xFB\x56\xFF\xFD\x22", 6));
+        QTRY_VERIFY2_WITH_TIMEOUT(mpServer->receivedSoFar().count(lineModeRefused) > refusalsBefore, "the client never answered the negotiation", 15000);
+
         // qCompress() prefixes the zlib stream with the source length
         const QByteArray compressed = qCompress(burstOf(compressedLineCount), 9).mid(4);
-        mpServer->sendRaw(QByteArray("\xFF\xFB\x56\xFF\xFA\x56\xFF\xF0", 8) + compressed + burstOf(plainLineCount, compressedLineCount) + "GOODBYE FROM THE GAME\r\n");
+        mpServer->sendRaw(QByteArray("\xFF\xFA\x56\xFF\xF0", 5) + compressed + burstOf(plainLineCount, compressedLineCount) + "GOODBYE FROM THE GAME\r\n");
         mpServer->closeClient();
         QVERIFY2(disconnected.wait(15s), "the game closing the connection was never noticed");
         QCoreApplication::processEvents(QEventLoop::AllEvents, 50);
