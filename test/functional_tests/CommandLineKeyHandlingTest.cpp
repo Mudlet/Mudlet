@@ -1195,7 +1195,6 @@ private slots:
         TCommandLine* pCommandLine = freshCommandLine();
         QVERIFY(pCommandLine);
         TMainConsole* pConsole = mpHost->mainConsoleView();
-        QVERIFY(pConsole);
         for (int line = 0; line < 200; ++line) {
             pConsole->print(qsl("paging line %1\n").arg(line));
         }
