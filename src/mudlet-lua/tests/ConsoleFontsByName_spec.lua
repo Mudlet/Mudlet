@@ -1,8 +1,8 @@
 -- Every one of these finds its console by name: an empty name or "main" is the
 -- main console, and any other is a mini console, user window or buffer. Every
 -- kind of window shares the one name space, so a name that belongs to some
--- other kind must not be taken for a console. getFont and setFont also reach a
--- label, but only once no console answers to the name.
+-- other kind must not be taken for a console. They also reach a label, but
+-- only once no console answers to the name.
 describe("Tests that the font functions find their console by name", function()
   local suffix = ("-%d-%d"):format(os.time(), math.random(100000))
   local unknown = "specFontsByNameNoSuchWindow" .. suffix
@@ -33,11 +33,11 @@ describe("Tests that the font functions find their console by name", function()
 
   -- an array rather than a keyed table so the specs are always generated in
   -- the same order
-  local consoleOnly = {
+  local sizeCalls = {
     {"getFontSize", function(n) return getFontSize(n) end},
     {"setFontSize", function(n) return setFontSize(n, 10) end},
   }
-  local labelsToo = {
+  local familyCalls = {
     {"getFont", function(n) return getFont(n) end},
     {"setFont", function(n) return setFont(n, families[1]) end},
   }
@@ -69,8 +69,8 @@ describe("Tests that the font functions find their console by name", function()
   end
 
   it("refuses a name that is no window at all", function()
-    assertRefuses(unknown, consoleOnly)
-    assertRefuses(unknown, labelsToo)
+    assertRefuses(unknown, sizeCalls)
+    assertRefuses(unknown, familyCalls)
   end)
 
   describe("with the name of another kind of window", function()
@@ -92,17 +92,51 @@ describe("Tests that the font functions find their console by name", function()
     for _, kind in ipairs(kinds) do
       it("refuses every font function for a " .. kind[1], function()
         assert.is_true(kind[2]())
-        assertRefuses(otherName, consoleOnly)
-        assertRefuses(otherName, labelsToo)
+        assertRefuses(otherName, sizeCalls)
+        assertRefuses(otherName, familyCalls)
       end)
     end
 
-    it("refuses the size of a label, but reaches its font", function()
+    it("reaches the font and the font size of a label", function()
       assert.is_true(createLabel(otherName, 0, 0, 50, 20, 1))
-      assertRefuses(otherName, consoleOnly)
+      assert.are.same({true}, {setFontSize(otherName, 17)})
+      assert.are.same({17}, {getFontSize(otherName)})
       assert.is_true(setFont(otherName, families[1]))
       assert.are.equal(families[1], getFont(otherName))
+      assert.are.same({17}, {getFontSize(otherName)})
     end)
+
+    it("reaches the font size of a label sized in pixels by its style sheet", function()
+      assert.is_true(createLabel(otherName, 0, 0, 50, 20, 1))
+      setLabelStyleSheet(otherName, "font-size: 12px;")
+      local small = getFontSize(otherName)
+      setLabelStyleSheet(otherName, "font-size: 48px;")
+      local large = getFontSize(otherName)
+      local answered = ("getFontSize answered %s for 12px and %s for 48px"):format(tostring(small), tostring(large))
+      assert.is_true(type(small) == "number" and small > 0, answered)
+      -- points per pixel depend on the display, but four times the pixels is
+      -- about four times the points on any of them
+      assert.is_true(type(large) == "number" and large >= 3 * small and large <= 5 * small, answered)
+    end)
+  end)
+
+  it("lets a console win a name a label also carries", function()
+    local shared = "specFontsByNameShared" .. suffix
+    assert.is_true(createLabel(shared, 0, 0, 50, 20, 1))
+    finally(function()
+      deleteMiniConsole(shared)
+      deleteLabel(shared)
+    end)
+    assert.are.same({true}, {setFontSize(shared, 17)})
+    -- a new mini console starts at 12
+    assert.is_true(createMiniConsole(shared, 0, 0, 300, 200))
+    assert.are.same({12}, {getFontSize(shared)})
+
+    assert.are.same({true}, {setFontSize(shared, 21)})
+    assert.are.same({21}, {getFontSize(shared)})
+    -- with the console gone the name reaches the label again, at its own size
+    assert.is_true(deleteMiniConsole(shared))
+    assert.are.same({17}, {getFontSize(shared)})
   end)
 
   it("checks the arguments before it looks for the console", function()

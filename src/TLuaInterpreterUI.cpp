@@ -1532,7 +1532,14 @@ int TLuaInterpreter::getFontSize(lua_State* L)
 {
     const QString windowName{WINDOW_NAME(L, 1)};
     const Host& host = getHostFromLua(L);
-    const auto size = host.mpConsole ? host.mpConsole->getWindowFontSize(windowName) : std::nullopt;
+    auto size = host.mpConsole ? host.mpConsole->getWindowFontSize(windowName) : std::nullopt;
+    // a console wins a name a label also carries, as in getFont()
+    if (!size && host.mpConsole) {
+        if (const auto labelFont = host.mpConsole->getLabelFont(windowName)) {
+            // a style sheet's font-size in px leaves pointSize() at -1
+            size = QFontInfo(*labelFont).pointSize();
+        }
+    }
     if (!size) {
         return windowNotFound(L, windowName);
     }
@@ -3377,8 +3384,17 @@ int TLuaInterpreter::setFontSize(lua_State* L)
 
     const QString consoleName{windowName};
     const Host& host = getHostFromLua(L);
-    if (!host.mpConsole || !host.mpConsole->setWindowFontSize(consoleName, size)) {
+    if (!host.mpConsole) {
         return windowNotFound(L, consoleName);
+    }
+    // a console wins a name a label also carries, as in setFont()
+    if (!host.mpConsole->setWindowFontSize(consoleName, size)) {
+        auto labelFont = host.mpConsole->getLabelFont(consoleName);
+        if (!labelFont) {
+            return windowNotFound(L, consoleName);
+        }
+        labelFont->setPointSize(size);
+        host.mpConsole->setLabelFont(consoleName, *labelFont);
     }
     lua_pushboolean(L, true);
     return 1;
