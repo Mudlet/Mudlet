@@ -4849,7 +4849,7 @@ describe("Tests saveJsonMap and loadJsonMap", function()
       end)
 
       assert.are.same({40, 50, 60, 255}, {getRoomBorderColor(roomA)})
-      assert.are.equal(0, getRoomBorderThickness(roomA))
+      assert.is_nil(getRoomBorderThickness(roomA))
       assert.is_nil(getAllRoomUserData(roomA)["room.ui_borderThickness"])
     end)
 
