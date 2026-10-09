@@ -5919,7 +5919,10 @@ void T2DMap::wheelEvent(QWheelEvent* e)
         return;
     }
 
-    if (!(mpMap->mpRoomDB->getRoom(mRoomID) && mpMap->mpRoomDB->getArea(mAreaID))) {
+    // A secondary view never centred on a room has no mRoomID but must still zoom
+    TArea* pArea = mpMap->mpRoomDB->getArea(mAreaID);
+    if (!pArea) {
+        e->ignore();
         return;
     }
 
@@ -5936,7 +5939,7 @@ void T2DMap::wheelEvent(QWheelEvent* e)
         // Otherwise, use modern behavior (non-inverted)
         const int adjustedYDelta = mudlet::self()->invertMapZoom() ? yDelta : -yDelta;
         xyzoom = qMax(TMap::scmMinXYZoom, xyzoom * pow(1.07, adjustedYDelta));
-        mpMap->mpRoomDB->getArea(mAreaID)->set2DMapZoom(xyzoom);
+        pArea->set2DMapZoom(xyzoom);
 
         if (!qFuzzyCompare(1.0 + oldZoom, 1.0 + xyzoom)) {
             const float widgetWidth = width();
