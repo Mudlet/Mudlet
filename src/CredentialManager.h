@@ -154,7 +154,7 @@ private:
     // Static utility methods for fallback storage
     static QString generateFilePath(const QString& profileName, const QString& key);
     static QString generateLegacyFilePath(const QString& profileName, const QString& key);
-    static QString readLegacyFileCredential(const QString& profileName, const QString& key);
+    static QString readLegacyFileCredential(const QString& profileName, const QString& key, bool* usedDerivableKey = nullptr);
     static QString ourLegacyFilePath(const QString& profileName, const QString& key);
     static void refreshLegacyFileCredential(const QString& profileName, const QString& key, const QString& credential);
     static void removeLegacyFileCredential(const QString& profileName, const QString& key);

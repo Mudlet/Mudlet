@@ -18,6 +18,7 @@
  ***************************************************************************/
 
 #include <CredentialManager.h>
+#include <MudletApp.h>
 #include <SecureStringUtils.h>
 #include <utils.h>
 #include <QCryptographicHash>
@@ -52,6 +53,9 @@ private slots:
     void testUnstorableKeyRefusesToEncrypt();
     void testDerivableKeyStillDecryptsOldFiles();
     void testReadingAnOldFileReencryptsIt();
+    void testAnOldFileIsLeftAsItIsWhileNoKeyCanBeStored();
+    void testAFileUnderTheProfilesOwnKeyIsNotRewrittenOnRead();
+    void testReadingAnOldLegacyCopyReencryptsItToo();
     void cleanupTestCase();
 
 private:
@@ -439,7 +443,7 @@ static bool removeTestProfile(const QString& profile)
     return QDir(QStandardPaths::writableLocation(QStandardPaths::AppConfigLocation) + qsl("/profiles/%1").arg(profile)).removeRecursively();
 }
 
-// #10926: with nowhere to keep a random key, encrypting with the key anyone can derive from
+// With nowhere to keep a random key, encrypting with the key anyone can derive from
 // the profile name would only look like protection
 void SecureStringUtilsTest::testUnstorableKeyRefusesToEncrypt()
 {
@@ -488,6 +492,64 @@ static QString encryptWithDerivableKey(const QString& plaintext, const QString& 
     result.append(hmac);
     result.append(encrypted);
     return QString::fromLatin1(result.toBase64());
+}
+
+// Whether only the profile's own key, not the derivable one, opens the ciphertext to give expected
+static bool openedByTheProfilesOwnKey(const QString& ciphertext, const QString& profile, const QString& expected)
+{
+    bool usedDerivableKey = true;
+    return SecureStringUtils::decryptStringForProfile(ciphertext, profile, &usedDerivableKey) == expected && !usedDerivableKey;
+}
+
+static QString profileFilePath(const QString& profileDirectory, const QString& item)
+{
+    return QStandardPaths::writableLocation(QStandardPaths::AppConfigLocation) + qsl("/profiles/%1/%2").arg(profileDirectory, item);
+}
+
+static QByteArray rawFileBytes(const QString& path)
+{
+    QFile file(path);
+    return file.open(QIODevice::ReadOnly) ? file.readAll() : QByteArray();
+}
+
+// SecureStringUtils' own files hold a QDataStream string, CredentialManager's the bare text
+static bool writeDatFile(const QString& path, const QString& ciphertext)
+{
+    QDir().mkpath(QFileInfo(path).absolutePath());
+    QFile file(path);
+    if (!file.open(QIODevice::WriteOnly)) {
+        return false;
+    }
+    QDataStream ofs(&file);
+    ofs.setVersion(QDataStream::Qt_5_12);
+    ofs << ciphertext;
+    return ofs.status() == QDataStream::Ok;
+}
+
+static QString readDatFile(const QString& path)
+{
+    QFile file(path);
+    if (!file.open(QIODevice::ReadOnly)) {
+        return QString();
+    }
+    QDataStream ifs(&file);
+    ifs.setVersion(QDataStream::Qt_5_12);
+    QString ciphertext;
+    ifs >> ciphertext;
+    return ciphertext;
+}
+
+static bool writeTextFile(const QString& path, const QString& ciphertext)
+{
+    QDir().mkpath(QFileInfo(path).absolutePath());
+    QFile file(path);
+    return file.open(QIODevice::WriteOnly | QIODevice::Text) && file.write(ciphertext.toUtf8()) == ciphertext.toUtf8().size();
+}
+
+static QString readTextFile(const QString& path)
+{
+    QFile file(path);
+    return file.open(QIODevice::ReadOnly | QIODevice::Text) ? QString::fromUtf8(file.readAll()) : QString();
 }
 
 void SecureStringUtilsTest::testDerivableKeyStillDecryptsOldFiles()
@@ -566,6 +628,102 @@ void SecureStringUtilsTest::testReadingAnOldFileReencryptsIt()
         QVERIFY2(SecureStringUtils::decryptStringForProfile(stored, profile) == qsl("proxy_long_ago"), "the rewritten credential no longer decrypts");
         QVERIFY2(stored != encryptWithDerivableKey(qsl("proxy_long_ago"), profile), "the credential is still encrypted with the key anyone can derive from the profile name");
     }
+
+    // Different bytes only show a new salt: the derivable key must not be what opens either file now
+    QVERIFY2(openedByTheProfilesOwnKey(rewritten, profile, qsl("saved_long_ago")), "the rewritten password file still opens with the key anyone can derive from the profile name");
+    QVERIFY2(openedByTheProfilesOwnKey(readTextFile(credentialFile), profile, qsl("proxy_long_ago")), "the rewritten credential still opens with the key anyone can derive from the profile name");
+}
+
+void SecureStringUtilsTest::testAnOldFileIsLeftAsItIsWhileNoKeyCanBeStored()
+{
+    const QString profile = qsl("ReadAnOldFileWithNowhereToKeepTheKey");
+    QVERIFY(removeTestProfile(profile));
+    auto cleanup = qScopeGuard([&profile] {
+        removeTestProfile(profile);
+    });
+    const QString passwordFile = profileFilePath(profile, qsl("passwords/character.dat"));
+    const QString credentialFile = profileFilePath(profile, qsl("passwords/proxy"));
+    QVERIFY(writeDatFile(passwordFile, encryptWithDerivableKey(qsl("saved_long_ago"), profile)));
+    QVERIFY(writeTextFile(credentialFile, encryptWithDerivableKey(qsl("proxy_long_ago"), profile)));
+    const QByteArray passwordBytes = rawFileBytes(passwordFile);
+    const QByteArray credentialBytes = rawFileBytes(credentialFile);
+    // A directory where the key file belongs makes it impossible to write
+    QVERIFY(QDir().mkpath(profileKeyFilePath(profile)));
+
+    QCOMPARE(SecureStringUtils::retrievePassword(profile, qsl("character")), qsl("saved_long_ago"));
+    QCOMPARE(CredentialManager::retrieveCredential(profile, qsl("proxy")), qsl("proxy_long_ago"));
+    QVERIFY2(rawFileBytes(passwordFile) == passwordBytes, "a re-encryption that could not happen changed the password file");
+    QVERIFY2(rawFileBytes(credentialFile) == credentialBytes, "a re-encryption that could not happen changed the credential file");
+}
+
+// Rewriting on every read would also move the file's time, which decides whether the legacy copy is newer
+void SecureStringUtilsTest::testAFileUnderTheProfilesOwnKeyIsNotRewrittenOnRead()
+{
+    const QString profile = qsl("ReadAFileUnderItsOwnKey");
+    QVERIFY(removeTestProfile(profile));
+    auto cleanup = qScopeGuard([&profile] {
+        removeTestProfile(profile);
+    });
+    QVERIFY(SecureStringUtils::storePassword(profile, qsl("character"), qsl("saved_today")));
+    QVERIFY(CredentialManager::storeCredential(profile, qsl("proxy"), qsl("proxy_today")));
+    const QString passwordFile = profileFilePath(profile, qsl("passwords/character.dat"));
+    const QString credentialFile = profileFilePath(profile, qsl("passwords/proxy"));
+    const QDateTime anHourAgo = QDateTime::currentDateTime().addSecs(-3600);
+    for (const QString& path : {passwordFile, credentialFile}) {
+        QFile file(path);
+        QVERIFY(file.open(QIODevice::ReadWrite));
+        QVERIFY(file.setFileTime(anHourAgo, QFileDevice::FileModificationTime));
+    }
+    const QByteArray passwordBytes = rawFileBytes(passwordFile);
+    const QByteArray credentialBytes = rawFileBytes(credentialFile);
+    const QDateTime passwordTime = QFileInfo(passwordFile).lastModified();
+    const QDateTime credentialTime = QFileInfo(credentialFile).lastModified();
+
+    QVERIFY(openedByTheProfilesOwnKey(readDatFile(passwordFile), profile, qsl("saved_today")));
+    QCOMPARE(SecureStringUtils::retrievePassword(profile, qsl("character")), qsl("saved_today"));
+    QCOMPARE(CredentialManager::retrieveCredential(profile, qsl("proxy")), qsl("proxy_today"));
+    QVERIFY2(rawFileBytes(passwordFile) == passwordBytes && QFileInfo(passwordFile).lastModified() == passwordTime, "reading rewrote a password file that needed no re-encrypting");
+    QVERIFY2(rawFileBytes(credentialFile) == credentialBytes && QFileInfo(credentialFile).lastModified() == credentialTime, "reading rewrote a credential file that needed no re-encrypting");
+}
+
+// A profile name longer than the 50 characters the earlier naming scheme cut to also has a copy at
+// the cut-down path, which an older Mudlet reads, and that copy was written under the same key
+void SecureStringUtilsTest::testReadingAnOldLegacyCopyReencryptsItToo()
+{
+    const QString profile = qsl("ReadAnOldLegacyCopyOfAPasswordWithANameTooLongForTheOlderScheme");
+    QVERIFY(profile.size() > 50);
+    const QString legacyProfile = profile.left(50);
+    const QString currentProfileDir = MudletApp::sanitizeForPath(profile);
+    QVERIFY(removeTestProfile(profile));
+    QVERIFY(removeTestProfile(legacyProfile));
+    QVERIFY(removeTestProfile(currentProfileDir));
+    auto cleanup = qScopeGuard([&] {
+        removeTestProfile(profile);
+        removeTestProfile(legacyProfile);
+        removeTestProfile(currentProfileDir);
+    });
+    const QString legacyFile = profileFilePath(legacyProfile, qsl("passwords/proxy"));
+    const QString currentFile = profileFilePath(currentProfileDir, qsl("passwords/proxy"));
+
+    // Only the legacy copy, as an older Mudlet leaves it
+    QVERIFY(writeTextFile(legacyFile, encryptWithDerivableKey(qsl("proxy_long_ago"), profile)));
+    QCOMPARE(CredentialManager::retrieveCredential(profile, qsl("proxy")), qsl("proxy_long_ago"));
+    QVERIFY2(openedByTheProfilesOwnKey(readTextFile(currentFile), profile, qsl("proxy_long_ago")), "the copy brought across is not under the profile's own key");
+    QVERIFY2(openedByTheProfilesOwnKey(readTextFile(legacyFile), profile, qsl("proxy_long_ago")), "the legacy copy still opens with the key anyone can derive from the profile name");
+    QVERIFY2(QFileInfo(legacyFile).lastModified() <= QFileInfo(currentFile).lastModified(), "the legacy copy was left the newer one, so every read copies it across again");
+
+    // Both copies, the current one newer, as a Mudlet that wrote both leaves them
+    QVERIFY(QFile::remove(profileKeyFilePath(profile)));
+    QVERIFY(writeTextFile(legacyFile, encryptWithDerivableKey(qsl("proxy_long_ago"), profile)));
+    {
+        QFile file(legacyFile);
+        QVERIFY(file.open(QIODevice::ReadWrite));
+        QVERIFY(file.setFileTime(QDateTime::currentDateTime().addSecs(-3600), QFileDevice::FileModificationTime));
+    }
+    QVERIFY(writeTextFile(currentFile, encryptWithDerivableKey(qsl("proxy_long_ago"), profile)));
+    QCOMPARE(CredentialManager::retrieveCredential(profile, qsl("proxy")), qsl("proxy_long_ago"));
+    QVERIFY2(openedByTheProfilesOwnKey(readTextFile(currentFile), profile, qsl("proxy_long_ago")), "the current copy is not under the profile's own key");
+    QVERIFY2(openedByTheProfilesOwnKey(readTextFile(legacyFile), profile, qsl("proxy_long_ago")), "the legacy copy still opens with the key anyone can derive from the profile name");
 }
 
 void SecureStringUtilsTest::cleanupTestCase()
