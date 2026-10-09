@@ -175,6 +175,10 @@ public:
     static bool firstLaunch();
     // The interface is drawn dark, whether chosen or by following a dark system theme
     static bool darkMode();
+    // --mirror: copy each shown console line to stdout, for CI. Main console game text is copied on
+    // arrival, before a trigger can gag or rewrite it; print()/echo() output from any console too.
+    // Read for every line, so a plain flag rather than a call.
+    inline static bool smMirrorToStdOut = false;
 
     // Which build of Mudlet this is, and how it names itself to the outside world.
 

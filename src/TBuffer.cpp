@@ -25,6 +25,7 @@
 
 #include "Host.h"
 #include "LuaLiteral.h"
+#include "MudletApp.h"
 #include "TConsoleModel.h"
 #include "TEvent.h"
 #include "THyperlinkCompactManager.h"
@@ -37,7 +38,6 @@
 #include "widechar_width.h"
 #include "TEncodingHelper.h"
 #include "SentryWrapper.h"
-#include "mudlet.h"
 
 #include <QDateTime>
 #include <QHash>
@@ -2310,7 +2310,7 @@ void TBuffer::commitLineData(QString line, std::vector<TChar> chars, const char 
     // keeps arrival order, so script output in response follows it, but lines that triggers gag or rewrite
     // are still mirrored as sent. Mirroring at log() below would trade the other way and copy wrapLine()'s
     // fragments instead of the line as sent.
-    if (Q_UNLIKELY(mudlet::smMirrorToStdOut)) {
+    if (Q_UNLIKELY(MudletApp::smMirrorToStdOut)) {
         if (Q_LIKELY(mpModel)) {
             // Read back out of the buffer rather than from line, which every
             // path above has moved from by now

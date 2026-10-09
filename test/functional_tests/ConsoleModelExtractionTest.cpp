@@ -525,11 +525,11 @@ private slots:
         QVERIFY2(host->mpConsole, "The active host has no main console.");
         destroyTheView(host);
 
-        const bool savedMirrorToStdOut = mudlet::smMirrorToStdOut;
+        const bool savedMirrorToStdOut = MudletApp::smMirrorToStdOut;
         auto restoreMirrorToStdOut = qScopeGuard([savedMirrorToStdOut]() {
-            mudlet::smMirrorToStdOut = savedMirrorToStdOut;
+            MudletApp::smMirrorToStdOut = savedMirrorToStdOut;
         });
-        mudlet::smMirrorToStdOut = true;
+        MudletApp::smMirrorToStdOut = true;
         startStdOutCapture();
         host->printToMainConsole(qsl("ViewlessOpen"));
         std::string gameLines{"ViewlessGame one\nViewlessGame two\n"};
@@ -537,7 +537,7 @@ private slots:
         std::string prompt{"ViewlessPrompt> \xff"};
         host->printOnDisplay(prompt, true);
         host->printSystemMessage(qsl("ViewlessAfter\n"));
-        mudlet::smMirrorToStdOut = false;
+        MudletApp::smMirrorToStdOut = false;
         const QStringList captured = stopStdOutCapture();
 
         const QString prefix = qsl("%1.main| ").arg(mHostname);
