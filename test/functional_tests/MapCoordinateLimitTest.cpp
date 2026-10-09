@@ -53,6 +53,8 @@
 
 #include "GroupedTest.h"
 
+using namespace std::chrono_literals;
+
 class MapCoordinateLimitTest : public QObject
 {
     Q_OBJECT
@@ -119,13 +121,13 @@ private:
     T2DMap* preparedWidget() const
     {
         TMap* pMap = map();
-        if (!pMap->mpMapper) {
+        if (!pMap->mapper()) {
             mpHost->showHideOrCreateMapper(false);
         }
-        if (!pMap->mpMapper || !pMap->mpMapper->mp2dMap) {
+        if (!pMap->mapper() || !pMap->mapper()->mp2dMap) {
             return nullptr;
         }
-        T2DMap* p2dMap = pMap->mpMapper->mp2dMap;
+        T2DMap* p2dMap = pMap->mapper()->mp2dMap;
         p2dMap->init();
         p2dMap->resize(kWidgetWidth, kWidgetHeight);
         // Both false is what makes paintEvent() centre on the player room and
@@ -172,7 +174,7 @@ private slots:
         mpHost = TestProfile::create(mProfileName, mLocalhost, mPort);
         QVERIFY(mpHost);
         QSignalSpy connected(&(mpHost->mTelnet), &cTelnet::signal_connected);
-        QVERIFY2(connected.wait(3000), "could not connect to the telnet stub");
+        QVERIFY2(connected.wait(3s), "could not connect to the telnet stub");
     }
 
     void cleanupTestCase()

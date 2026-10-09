@@ -160,7 +160,7 @@ private:
                          [this, &marker]() {
                              return mpServer->received().contains(marker);
                          },
-                         10000),
+                         10s),
                  "the telnet marker never came back");
     }
     void feedMsp(const QByteArray& message) { feedSubnegotiation(OPT_MSP, message); }
@@ -207,7 +207,7 @@ private:
                 [this, expected]() {
                     return mpMediaServer->requestedPaths().size() >= expected;
                 },
-                15000);
+                15s);
     }
 
     // The well-formed message that follows a malformed one is issued second, so
@@ -331,7 +331,7 @@ private slots:
                          [this]() {
                              return !subnegotiationsFor(mpServer->received(), OPT_ATCP).isEmpty();
                          },
-                         10000),
+                         10s),
                  "Mudlet never answered Auth.Request");
 
         const QList<Subnegotiation> replies = subnegotiationsFor(mpServer->received(), OPT_ATCP);
@@ -367,13 +367,13 @@ private slots:
                          []() {
                              return openComposers().isEmpty();
                          },
-                         5000),
+                         5s),
                  "cancelling the composer left its window behind");
         QVERIFY2(QTest::qWaitFor(
                          [this]() {
                              return mpServer->received().contains("*q\nno\n");
                          },
-                         10000),
+                         10s),
                  "cancelling the composer did not tell the game the buffer was abandoned");
     }
 
@@ -404,7 +404,7 @@ private slots:
                          [this]() {
                              return !subnegotiationsFor(mpServer->received(), OPT_GMCP).isEmpty();
                          },
-                         10000),
+                         10s),
                  "saving the composer sent no GMCP message");
         const QList<Subnegotiation> sent = subnegotiationsFor(mpServer->received(), OPT_GMCP);
         QCOMPARE(sent.size(), 1);
@@ -417,7 +417,7 @@ private slots:
                          []() {
                              return openComposers().isEmpty();
                          },
-                         5000),
+                         5s),
                  "saving the composer left its window behind");
     }
 
@@ -440,7 +440,7 @@ private slots:
                          [this]() {
                              return !subnegotiationsFor(mpServer->received(), OPT_ATCP).isEmpty();
                          },
-                         10000),
+                         10s),
                  "saving the composer sent no ATCP message");
         const QList<Subnegotiation> sent = subnegotiationsFor(mpServer->received(), OPT_ATCP);
         QCOMPARE(sent.size(), 1);
@@ -451,8 +451,39 @@ private slots:
                          []() {
                              return openComposers().isEmpty();
                          },
-                         5000),
+                         5s),
                  "saving the composer left its window behind");
+    }
+
+    // IRE's GMCP form of Client.Compose, which the Lua interpreter's GMCP
+    // handling opens rather than cTelnet's ATCP parser.
+    void test_gmcpComposerEditOpensOneEditor()
+    {
+        announce(TN_WILL, static_cast<char>(OPT_GMCP));
+        QVERIFY2(mpHost->mTelnet.isGMCPEnabled(), "GMCP did not turn on, so IRE.Composer.Edit had nothing to arrive over");
+        QCOMPARE(openComposers().size(), 0);
+
+        const QByteArray edit("IRE.Composer.Edit {\"title\": \"Letter\", \"text\": \"Dear friend\"}");
+        feedSubnegotiation(static_cast<char>(OPT_GMCP), edit);
+        QVERIFY2(QTest::qWaitFor(
+                         []() {
+                             return !openComposers().isEmpty();
+                         },
+                         5s),
+                 "IRE.Composer.Edit did not open the composer");
+        QCOMPARE(openComposers().first()->title->text(), qsl("Letter"));
+        QCOMPARE(openComposers().first()->edit->toPlainText(), qsl("Dear friend"));
+
+        feedSubnegotiation(static_cast<char>(OPT_GMCP), edit);
+        QCOMPARE(openComposers().size(), 1);
+
+        mpHost->mTelnet.atcpComposerCancel();
+        QVERIFY2(QTest::qWaitFor(
+                         []() {
+                             return openComposers().isEmpty();
+                         },
+                         5s),
+                 "cancelling the composer left its window behind");
     }
 
     // MSP names a file without an extension and leaves the client to pick one

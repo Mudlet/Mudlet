@@ -97,9 +97,9 @@ public:
     void retrievePassword(const QString& profileName, const QString& key, CredentialRetrievalCallback callback);
     // For a caller that can still use a password the keychain hands over after the lookup gave up
     // on it, as it does when the user answers an access or unlock prompt late. callback is answered
-    // exactly once, as above. When that answer is the deadline's, lateCallback is answered once
-    // more with what the read the lookup was left waiting on finds, as long as lateContext still
-    // exists by then. That read only: the places the lookup had not reached yet stay unread.
+    // exactly once, as above. When that answer is the deadline's - a timeout, or the encrypted
+    // file's copy read then - lateCallback is answered once more with what the read the lookup was
+    // left waiting on finds, as long as lateContext still exists by then. That read only: the places the lookup had not reached yet stay unread.
     // scope EveryStore reads the keychain even when the preference files the credential in the
     // profile, for a copy stored there before the player chose it.
     void retrievePassword(const QString& profileName,

@@ -48,6 +48,8 @@
 
 #include "GroupedTest.h"
 
+using namespace std::chrono_literals;
+
 class MapperButtonConfigTest : public QObject
 {
     Q_OBJECT
@@ -95,11 +97,11 @@ private slots:
         }
 
         QSignalSpy connectionSpy(&(mpHost->mTelnet), &cTelnet::signal_connected);
-        if (!connectionSpy.wait(2000)) {
+        if (!connectionSpy.wait(2s)) {
             QFAIL("Could not connect with the host.");
         }
 
-        QVERIFY(mpHost->mpConsole);
+        QVERIFY(mpHost->mainConsoleView());
     }
 
     void cleanup()
@@ -121,8 +123,8 @@ private slots:
         mudlet::self()->slot_showMapperDialog();
 
         QVERIFY2(runLua(qsl("assert(buttonEvents == 2)")), "expected each map button entry point to raise sysMapperButtonAction exactly once");
-        QVERIFY2(!mpHost->mpConsole->mpDockableMapWidget, "scripted mode still created the default map dock");
-        QVERIFY2(!mpHost->mpMap->mpMapper, "scripted mode still created a mapper");
+        QVERIFY2(!mpHost->mainConsoleView()->mpDockableMapWidget, "scripted mode still created the default map dock");
+        QVERIFY2(!mpHost->mpMap->mapper(), "scripted mode still created a mapper");
         QVERIFY2(!mudlet::self()->findChild<QDockWidget*>(qsl("dockMap_%1_main").arg(mHostname)), "scripted mode still created a main window map dock");
     }
 
@@ -137,14 +139,14 @@ private slots:
         // actions are greyed, so the interception has to hold there too
         mudlet::self()->slot_mapper();
         mudlet::self()->slot_showMapperDialog();
-        QVERIFY2(!mpHost->mpMap->mpMapper, "disabled mode still created a mapper");
+        QVERIFY2(!mpHost->mpMap->mapper(), "disabled mode still created a mapper");
         QVERIFY2(!mudlet::self()->findChild<QDockWidget*>(qsl("dockMap_%1_main").arg(mHostname)), "disabled mode still created a main window map dock");
 
         QVERIFY(runLua(qsl("assert(setConfig('mapperButton', 'default'))")));
         QVERIFY2(mudlet::self()->dactionShowMap->isEnabled(), "returning to default mode did not re-enable the Show Map action");
 
         mudlet::self()->slot_mapper();
-        QVERIFY2(mpHost->mpMap->mpMapper, "default mode no longer lets the map button create the mapper");
+        QVERIFY2(mpHost->mpMap->mapper(), "default mode no longer lets the map button create the mapper");
     }
 
 private:

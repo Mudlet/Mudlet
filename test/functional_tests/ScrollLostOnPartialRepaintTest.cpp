@@ -17,6 +17,7 @@
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
 
+#include <QPainter>
 #include <QScrollBar>
 #include <QTemporaryDir>
 #include <QtTest/QtTest>
@@ -33,6 +34,8 @@
 #include "mudlet.h"
 
 #include "GroupedTest.h"
+
+using namespace std::chrono_literals;
 
 /*
  * A screen cache owes one property: an incremental paint draws what a forced
@@ -88,8 +91,8 @@ private slots:
     {
         startProfile(mpHostname, mpLocalhost, mpPort);
         auto host = mudlet::self()->getActiveHost();
-        QVERIFY2(host && host->mpConsole, "no main console");
-        TTextEdit* pane = host->mpConsole->mUpperPane;
+        QVERIFY2(host && host->mainConsoleView(), "no main console");
+        TTextEdit* pane = host->mainConsoleView()->mUpperPane;
         QVERIFY(pane);
         auto* lua = host->getLuaInterpreter();
 
@@ -97,14 +100,14 @@ private slots:
         // and a smaller default window would skip the case while ctest still
         // reported a pass
         mudlet::self()->resize(1200, 800);
-        QTest::qWait(100);
+        QTest::qWait(100ms);
         const int screenHeight = pane->mScreenHeight;
         QVERIFY2(screenHeight >= 20, "the pane is too short to leave the top of the buffer by more than the ten-line shortcut");
 
         // Measured against what the buffer already holds - a profile arrives with
         // a few lines of its own, and connect-time output would otherwise push the
         // view off the top and leave nothing for this case to exercise.
-        const int room = screenHeight - 2 - static_cast<int>(host->mpConsole->buffer.lineBuffer.size());
+        const int room = screenHeight - 2 - static_cast<int>(host->mainConsoleView()->buffer.lineBuffer.size());
         QVERIFY2(room > 0, "the profile filled the pane before the case could");
         lua->compileAndExecuteScript(qsl("for i = 1, %1 do echo('FILLER ' .. i .. '\\n') end\n").arg(room));
         qApp->processEvents();
@@ -125,11 +128,11 @@ private slots:
 
         // A shallow region, which is what the fallback measured unpatched.
         pane->repaint(QRect(0, 0, pane->width(), 3 * pane->mFontHeight));
-        const QImage afterIncremental = pane->mScreenMap.toImage();
+        const QImage afterIncremental = pane->cachedScreen().copy();
 
         pane->forceUpdate();
         pane->repaint();
-        const QImage authoritative = pane->mScreenMap.toImage();
+        const QImage authoritative = pane->cachedScreen().copy();
 
         QVERIFY2(!afterIncremental.isNull() && !authoritative.isNull(), "no cached screen to compare");
         QCOMPARE(afterIncremental.size(), authoritative.size());
@@ -142,8 +145,8 @@ private slots:
     {
         startProfile(mpHostname, mpLocalhost, mpPort);
         auto host = mudlet::self()->getActiveHost();
-        QVERIFY2(host && host->mpConsole, "no main console");
-        TTextEdit* pane = host->mpConsole->mUpperPane;
+        QVERIFY2(host && host->mainConsoleView(), "no main console");
+        TTextEdit* pane = host->mainConsoleView()->mUpperPane;
         QVERIFY(pane);
         auto* lua = host->getLuaInterpreter();
 
@@ -165,12 +168,12 @@ private slots:
         QVERIFY2(partial.height() < pane->rect().height(), "the repaint has to be partial to exercise the path");
         pane->repaint(partial);
 
-        const QImage afterIncremental = pane->mScreenMap.toImage();
+        const QImage afterIncremental = pane->cachedScreen().copy();
 
         // What the same buffer looks like when every row is re-rendered.
         pane->forceUpdate();
         pane->repaint();
-        const QImage authoritative = pane->mScreenMap.toImage();
+        const QImage authoritative = pane->cachedScreen().copy();
 
         QVERIFY2(!afterIncremental.isNull() && !authoritative.isNull(), "no cached screen to compare");
         QCOMPARE(afterIncremental.size(), authoritative.size());
@@ -179,31 +182,169 @@ private slots:
                  "is missing from the pane until something unrelated forces a full repaint");
     }
 
+    // The cached screen slides over a buffer twice its height and moves the rows
+    // it keeps back to the far end whenever it reaches an end, so each direction
+    // scrolls more than a screen's worth to cross both ends at least once.
+    void test_scrollingBothWaysAcrossTheCachedScreensEnds_data()
+    {
+        QTest::addColumn<QString>("background");
+        QTest::addColumn<bool>("opaque");
+        // The cached screen is cleared to the background when the pane can paint
+        // it itself, so a color other than the default black shows a row cleared
+        // to the wrong one; translucent keeps the cleared-to-transparent kind
+        QTest::newRow("default") << QString() << true;
+        QTest::newRow("opaque") << qsl("20, 40, 90") << true;
+        QTest::newRow("translucent") << qsl("20, 40, 90, 128") << false;
+    }
+
+    void test_scrollingBothWaysAcrossTheCachedScreensEnds()
+    {
+        QFETCH(QString, background);
+        QFETCH(bool, opaque);
+        startProfile(mpHostname, mpLocalhost, mpPort);
+        auto host = mudlet::self()->getActiveHost();
+        QVERIFY2(host && host->mainConsoleView(), "no main console");
+        TTextEdit* pane = host->mainConsoleView()->mUpperPane;
+        QVERIFY(pane);
+        auto* lua = host->getLuaInterpreter();
+        if (!background.isEmpty()) {
+            lua->compileAndExecuteScript(qsl("setBackgroundColor(%1)\n").arg(background));
+        }
+
+        // Each line a different length, so that a row kept from the wrong place
+        // cannot pass for the right one
+        lua->compileAndExecuteScript(qsl("for i = 1, 400 do echo(string.format('LINE %03d %s\\n', i, string.rep('#', i % 37))) end\n"));
+        qApp->processEvents();
+        // Leaving the bottom opens the split screen and resizes the pane, so do
+        // that before the steps under test
+        pane->scrollUp(100);
+        qApp->processEvents();
+        // Twice, as a change of background takes effect from the next frame
+        for (int frame = 0; frame < 2; ++frame) {
+            pane->forceUpdate();
+            pane->repaint();
+        }
+        QCOMPARE(pane->testAttribute(Qt::WA_OpaquePaintEvent), opaque);
+        const int screenHeight = pane->mScreenHeight;
+        QVERIFY2(screenHeight > 4, "the pane is too short for this test to mean anything");
+        QVERIFY2(pane->imageTopLine() > 2 * screenHeight + 10, "too little buffer above the view to scroll up through both ends");
+
+        int step = 0;
+        for (const bool up : {true, false}) {
+            for (int scrolled = 0; scrolled <= 2 * screenHeight;) {
+                const int lines = 1 + step++ % 3;
+                up ? pane->scrollUp(lines) : pane->scrollDown(lines);
+                scrolled += lines;
+                pane->repaint();
+                const QImage afterIncremental = pane->cachedScreen().copy();
+                pane->forceUpdate();
+                pane->repaint();
+                const QImage authoritative = pane->cachedScreen().copy();
+                QVERIFY2(!afterIncremental.isNull() && afterIncremental == authoritative,
+                         qPrintable(qsl("scrolling %1 by %2 line(s), %3 lines in, left the cached screen different from a full redraw").arg(up ? qsl("up") : qsl("down")).arg(lines).arg(scrolled)));
+            }
+        }
+    }
+
     // Output that arrives soon after a paint leaves the scrollbar to the paint
     // pacer, and a full repaint landing first must not take that with it
     void test_aRepaintBeforeThePacerFiresLeavesTheScrollBarCurrent()
     {
+        // the welcome lands 100ms after connecting, and output arriving during
+        // the wait below refreshes the scrollbar and hides the loss
+        mpServer->setSendsWelcome(false);
         startProfile(mpHostname, mpLocalhost, mpPort);
         auto host = mudlet::self()->getActiveHost();
-        QVERIFY2(host && host->mpConsole, "no main console");
-        TTextEdit* pane = host->mpConsole->mUpperPane;
+        QVERIFY2(host && host->mainConsoleView(), "no main console");
+        TTextEdit* pane = host->mainConsoleView()->mUpperPane;
         QVERIFY(pane);
-        QScrollBar* scrollBar = host->mpConsole->mpScrollBar;
+        QScrollBar* scrollBar = host->mainConsoleView()->mpScrollBar;
         QVERIFY(scrollBar);
         auto* lua = host->getLuaInterpreter();
 
         lua->compileAndExecuteScript(qsl("for i = 1, 200 do echo('FILLER ' .. i .. '\\n') end\n"));
         qApp->processEvents();
         pane->repaint();
+        // The paint window runs from the start of a paint, so on a loaded runner
+        // the paint alone could use it up; time it from the end instead
+        pane->mSincePaint.restart();
         lua->compileAndExecuteScript(qsl("echo('PACED_LINE\\n')\n"));
-        QVERIFY2(pane->mpPaintPacer->isActive(), "the line arrived after the paint window closed, so the pacer this case is about never started");
+        // Only the paint window starts the pacer with an interval; a late echo
+        // can still start it at 0 through the whole-pane path, which is not the
+        // case under test
+        const bool paced = pane->mpPaintPacer->isActive() && pane->mpPaintPacer->interval() > 0;
+        // As in FramePacingTest: an echo that took the whole window means the
+        // runner stalled mid-echo, and the case under test never arose
+        const qint64 sincePaintMs = pane->mSincePaint.elapsed();
+        if (!paced && sincePaintMs >= TTextEdit::csmPaintPaceMs) {
+            QSKIP(qPrintable(qsl("the echo took %1ms, past the %2ms paint window it had to land inside - the runner stalled mid-echo, so the pacer was not exercised")
+                                     .arg(sincePaintMs)
+                                     .arg(TTextEdit::csmPaintPaceMs)));
+        }
+        QVERIFY2(paced, "the line arrived inside the paint window but the pacer never started");
         pane->forceUpdate();
         pane->repaint();
 
-        // not QTRY: later output from the connection refreshes the scrollbar
-        // within its retry window and would hide the loss
-        QTest::qWait(100);
-        QCOMPARE(scrollBar->maximum(), host->mpConsole->buffer.getLastLineNumber() + 1);
+        // not QTRY: a refresh from anywhere within its retry window would hide
+        // the loss
+        QTest::qWait(100ms);
+        QCOMPARE(scrollBar->maximum(), host->mainConsoleView()->buffer.getLastLineNumber() + 1);
+    }
+
+    // A hover or selection repaint draws into a scratch buffer seeded only with
+    // the rows it repaints, so what it shows has to match a full repaint while
+    // the rest of the scratch is left as it was.
+    void test_aHoverRepaintCopiesAndShowsOnlyItsOwnRows()
+    {
+        startProfile(mpHostname, mpLocalhost, mpPort);
+        auto host = mudlet::self()->getActiveHost();
+        QVERIFY2(host && host->mainConsoleView(), "no main console");
+        TTextEdit* pane = host->mainConsoleView()->mUpperPane;
+        QVERIFY(pane);
+        auto* lua = host->getLuaInterpreter();
+        mudlet::self()->resize(1200, 800);
+        lua->compileAndExecuteScript(qsl("for i = 1, 200 do echo(string.format('FILLER %03d %s\\n', i, string.rep('_', i % 23))) end\n"));
+        QTest::qWait(100ms);
+        const int rows = pane->mScreenHeight;
+        const int fontHeight = pane->mFontHeight;
+        QVERIFY2(rows > 12, "the pane is too short to hold a band away from both of its edges");
+
+        // Cell-aligned at both edges of the pane, as hover and selection repaints
+        // are, and once off the cell grid so the rows it names round outwards
+        const QList<QRect> bands{QRect(0, 0, pane->width(), fontHeight),
+                                 QRect(0, 3 * fontHeight + fontHeight / 2, pane->width(), 2 * fontHeight),
+                                 QRect(0, (rows - 1) * fontHeight, pane->width(), pane->height() - (rows - 1) * fontHeight)};
+        for (const QRect& band : bands) {
+            pane->forceUpdate();
+            QPixmap reference(pane->size());
+            pane->render(&reference);
+            QVERIFY2(pane->imageTopLine() > 0, "the pane must be scrolled for a band repaint to reuse the cached screen");
+
+            const QColor stale(Qt::magenta);
+            const QImage cached = pane->cachedScreen();
+            const qreal dpr = cached.devicePixelRatio();
+            pane->mRenderBuffer = QImage(cached.size(), cached.format());
+            pane->mRenderBuffer.setDevicePixelRatio(dpr);
+            pane->mRenderBuffer.fill(stale);
+
+            QPixmap shown = reference.copy();
+            {
+                QPainter eraser(&shown);
+                eraser.fillRect(band, stale);
+            }
+            QVERIFY2(!pane->mMouseTracking && pane->mDirtyFirstLine < 0, "a drag or a pending dirty line would repaint the cache itself rather than the scratch buffer");
+            pane->render(&shown, band.topLeft(), QRegion(band));
+            QVERIFY2(pane->mRenderBuffer.pixelColor(0, qRound((band.top() + band.height() / 2) * dpr)) != stale,
+                     qPrintable(qsl("repainting rows %1 to %2 did not draw into the scratch buffer, so nothing here tests it").arg(band.top()).arg(band.bottom())));
+
+            // Mid-cell on a text row the band cannot reach, which also keeps it
+            // clear of the spare row below the last line that every paint redraws
+            const int farRow = qRound(((band.top() > pane->height() / 2 ? 1 : rows - 3) + 0.5) * fontHeight * dpr);
+            QVERIFY2(pane->mRenderBuffer.pixelColor(0, farRow) == stale,
+                     qPrintable(qsl("repainting rows %1 to %2 copied device row %3 of the cached screen, which it cannot show").arg(band.top()).arg(band.bottom()).arg(farRow)));
+            QVERIFY2(shown.toImage() == reference.toImage(),
+                     qPrintable(qsl("repainting rows %1 to %2 over a stale scratch buffer showed something other than a full repaint").arg(band.top()).arg(band.bottom())));
+        }
     }
 
 private:
@@ -214,7 +355,7 @@ private:
             QFAIL("No active host available for the test.");
         }
         QSignalSpy spy(&(host->mTelnet), &cTelnet::signal_connected);
-        if (!spy.wait(2000)) {
+        if (!spy.wait(2s)) {
             QFAIL("Could not connect with the host.");
         }
     }

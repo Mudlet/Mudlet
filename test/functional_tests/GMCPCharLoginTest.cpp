@@ -55,6 +55,7 @@
 #include "dlgConnectionProfiles.h"
 #include "dlgProfilePreferences.h"
 #include "mudlet.h"
+#include "TMainConsole.h"
 #include "utils.h"
 
 #include "GroupedTest.h"
@@ -717,14 +718,14 @@ private slots:
                 [this]() {
                     return mpServer->countReceived(qsl("Char.Login.Credentials")) > 0 || mpServer->receivedText().contains("player\r\n");
                 },
-                8000);
+                8s);
         QCOMPARE(mpServer->countReceived(qsl("Char.Login.Credentials")), 0);
         QVERIFY2(typedName, "the timer auto-login did not send the character name");
         QVERIFY2(QTest::qWaitFor(
                          [this]() {
                              return mpServer->receivedText().contains("secret\r\n");
                          },
-                         4000),
+                         4s),
                  "the timer auto-login did not send the password");
         const QByteArray typed = mpServer->receivedText();
         QVERIFY2(typed.indexOf("player\r\n") < typed.indexOf("secret\r\n"), "the password was typed before the character name");
@@ -819,7 +820,7 @@ private slots:
                          [&]() {
                              return CredentialManager::retrieveCredential(host->getName(), qsl("reconnect-token")) == qsl("opaque-token");
                          },
-                         4000),
+                         4s),
                  "the token should be stored under its own key, verbatim");
         const QJsonObject metadata = readStoredReconnect(host);
         QCOMPARE(metadata.value(qsl("account")).toString(), qsl("acct:char"));
@@ -1058,7 +1059,7 @@ private slots:
                                  entry = readStoredReconnect(host);
                                  return entry.value(qsl("account")).toString() == account && CredentialManager::retrieveCredential(host->getName(), qsl("reconnect-token")) == token;
                              },
-                             4000),
+                             4s),
                      qPrintable(qsl("%1: the token was never saved; the store holds %2").arg(QLatin1String(form.name), describe(entry))));
             QVERIFY2(entry.value(qsl("secure_only")) == QJsonValue(form.secureOnly),
                      qPrintable(qsl("%1: secure_only %2 should have been stored as %3, got %4")
@@ -1248,7 +1249,7 @@ private slots:
         QVERIFY(host);
         host->setLogin(QString());
         host->setPass(QString());
-        host->mpAuth->mReconnectResultTimeout = std::chrono::milliseconds(250);
+        host->mpAuth->mReconnectResultTimeout = 250ms;
         QVERIFY(seedSplitSignIn(host->getName(), qsl("{\"account\": \"acct:char\", \"secure_only\": false}"), qsl("ignored-token")));
 
         mpServer->clearReceived();
@@ -1445,7 +1446,7 @@ private slots:
                          [&]() {
                              return mpServer->connectionCount() > firstConnection && mpServer->gmcpEnabled();
                          },
-                         8000),
+                         8s),
                  "client did not reconnect and renegotiate GMCP after the rejection");
         QVERIFY2(waitForStoredReconnect(host,
                                         [](const QJsonObject& entry) {
@@ -1571,7 +1572,7 @@ private slots:
                          [&]() {
                              return CredentialManager::retrieveCredential(host->getName(), qsl("reconnect-token")).isEmpty();
                          },
-                         4000),
+                         4s),
                  "a dead token must not survive under its own key");
         QVERIFY2(waitForStoredReconnect(host,
                                         [](const QJsonObject& entry) {
@@ -1597,7 +1598,7 @@ private slots:
                          [&]() {
                              return reported;
                          },
-                         4000),
+                         4s),
                  "forgetSavedSignIn never reported an outcome");
         QVERIFY2(removed, "forgetting a saved sign-in should report success");
         QVERIFY2(CredentialManager::retrieveCredential(host->getName(), qsl("reconnect-token")).isEmpty(), "the token key should be gone");
@@ -1627,7 +1628,7 @@ private slots:
                          [&]() {
                              return reported;
                          },
-                         4000),
+                         4s),
                  "forgetSavedSignIn never reported an outcome");
         QVERIFY2(removed, "forgetting a saved sign-in should report success");
         QVERIFY2(CredentialManager::retrieveCredential(host->getName(), qsl("reconnect")).isEmpty(), "the record the store held was left behind");
@@ -1661,7 +1662,7 @@ private slots:
                          [&]() {
                              return reported;
                          },
-                         4000),
+                         4s),
                  "forgetSavedSignIn never reported an outcome");
         QVERIFY2(!removed, "a forget that left the store's copy behind was reported as done, and the next connect would offer the sign-in again");
     }
@@ -1688,14 +1689,14 @@ private slots:
                          [&]() {
                              return !MudletApp::readProfileData(host->getName(), qsl("reconnect")).isEmpty();
                          },
-                         4000),
+                         4s),
                  "the record was read from the store but never written to the profile");
         QCOMPARE(QJsonDocument::fromJson(MudletApp::readProfileData(host->getName(), qsl("reconnect")).toUtf8()).object().value(qsl("provider")).toString(), qsl("discord"));
         QVERIFY2(QTest::qWaitFor(
                          [&]() {
                              return CredentialManager::retrieveCredential(host->getName(), qsl("reconnect")).isEmpty();
                          },
-                         4000),
+                         4s),
                  "the store's copy was left behind, so every later read still asks the store for it");
     }
 
@@ -1723,7 +1724,7 @@ private slots:
                              const QJsonObject record = QJsonDocument::fromJson(CredentialManager::retrieveCredential(host->getName(), qsl("reconnect")).toUtf8()).object();
                              return record.value(qsl("provider")).toString() == qsl("discord") && !record.contains(qsl("token"));
                          },
-                         4000),
+                         4s),
                  qPrintable(qsl("the dead token is still in the store's record: %1").arg(CredentialManager::retrieveCredential(host->getName(), qsl("reconnect")))));
         QVERIFY2(!MudletApp::readProfileData(host->getName(), qsl("reconnect")).contains(qsl("token")), "a token was written into the profile");
     }
@@ -1767,7 +1768,7 @@ private slots:
         QVERIFY2(waitForClientGmcp(qsl("Char.Login.Credentials"), sent), "the record in the store was not read at all");
 
         // Long enough for the store's copy to be removed, were it going to be
-        QTest::qWait(1000);
+        QTest::qWait(1s);
         QCOMPARE(CredentialManager::retrieveCredential(host->getName(), qsl("reconnect")), record);
     }
 
@@ -1794,7 +1795,7 @@ private slots:
                          [&]() {
                              return reported;
                          },
-                         4000),
+                         4s),
                  "forgetSavedSignIn never reported an outcome");
         QVERIFY2(removed, "forgetting a saved sign-in should report success");
 
@@ -1831,7 +1832,7 @@ private slots:
                          [&]() {
                              return reported;
                          },
-                         4000),
+                         4s),
                  "forgetSavedSignIn never reported an outcome");
         QVERIFY2(removed, "forgetting a saved sign-in should report success");
 
@@ -1869,7 +1870,7 @@ private slots:
                          [&]() {
                              return reported;
                          },
-                         4000),
+                         4s),
                  "forgetSavedSignIn never reported an outcome");
         QVERIFY2(removed, "forgetting a saved sign-in should report success");
 
@@ -1910,7 +1911,7 @@ private slots:
                          [&]() {
                              return reported;
                          },
-                         4000),
+                         4s),
                  "forgetSavedSignIn never reported an outcome");
         QVERIFY2(!removed, "a failed token removal must not be reported as a success");
         QVERIFY2(!MudletApp::readProfileData(host->getName(), qsl("reconnect")).isEmpty(),
@@ -2264,7 +2265,7 @@ private slots:
                          [&]() {
                              return mpServer->connectionCount() > firstConnection && mpServer->gmcpEnabled();
                          },
-                         8000),
+                         8s),
                  "client did not reconnect and renegotiate GMCP after the rejection");
 
         mpServer->clearReceived();
@@ -2503,7 +2504,7 @@ private slots:
                          [&]() {
                              return !preferences->pushButton_forgetSavedSignIn->isHidden();
                          },
-                         4000),
+                         4s),
                  "a token stored without its metadata should still be offered for removal");
         delete preferences;
     }
@@ -2715,7 +2716,7 @@ private slots:
                 [&]() {
                     return reported;
                 },
-                4000));
+                4s));
 
         // Saved after that forget, so a rotation of it has nothing to do with what was forgotten.
         QVERIFY(seedSplitSignIn(host->getName(), qsl("{\"account\": \"acct:char\", \"provider\": \"discord\", \"secure_only\": false}"), qsl("saved-after-forget")));
@@ -2821,7 +2822,7 @@ private:
                 [&]() {
                     return mHeldStoreReads.size() >= count;
                 },
-                4000);
+                4s);
     }
 
     void releaseAllHeldStoreReads(Host* host)
@@ -2839,7 +2840,7 @@ private:
                 [&]() {
                     return mHeldStoreOperations.size() >= count;
                 },
-                4000);
+                4s);
     }
 
     // Completes the oldest held operation: against the real store, or as a failure without touching it.
@@ -2871,7 +2872,7 @@ private:
                 [&]() {
                     return consoleOccurrences(host, qsl("To sign in, open this link")) > linksBefore;
                 },
-                4000);
+                4s);
     }
 
     // The reconciler reports a request's outcome in the same call that leaves it idle, and a read lease
@@ -2885,7 +2886,7 @@ private:
                 [host]() {
                     return !host->mpAuth->mpStoreReconciler->inFlight();
                 },
-                4000);
+                4s);
     }
 
     void startDiscoveryServer()
@@ -2957,7 +2958,7 @@ private:
                 [this, afterConnectionCount]() {
                     return mpServer->connectionCount() > afterConnectionCount && mpServer->gmcpEnabled();
                 },
-                15000);
+                15s);
         if (!connected) {
             qWarning("Could not connect to the stub, or GMCP was not negotiated");
         }
@@ -2991,10 +2992,10 @@ private:
 
     static int consoleOccurrences(Host* host, const QString& substring)
     {
-        if (!host || !host->mpConsole) {
+        if (!host || !host->mainConsoleView()) {
             return 0;
         }
-        auto& buffer = host->mpConsole->buffer;
+        auto& buffer = host->mainConsoleView()->buffer;
         int seen = 0;
         for (int i = 0; i <= buffer.getLastLineNumber(); ++i) {
             if (buffer.line(i).contains(substring)) {
@@ -3006,10 +3007,10 @@ private:
 
     static bool consoleContains(Host* host, const QString& substring)
     {
-        if (!host || !host->mpConsole) {
+        if (!host || !host->mainConsoleView()) {
             return false;
         }
-        auto& buffer = host->mpConsole->buffer;
+        auto& buffer = host->mainConsoleView()->buffer;
         QString all;
         for (int i = 0; i <= buffer.getLastLineNumber(); ++i) {
             all.append(buffer.line(i));
@@ -3027,10 +3028,10 @@ private:
         const QString needle = QString(sentence).remove(whitespace);
         return QTest::qWaitFor(
                 [&]() {
-                    if (!host || !host->mpConsole) {
+                    if (!host || !host->mainConsoleView()) {
                         return false;
                     }
-                    auto& buffer = host->mpConsole->buffer;
+                    auto& buffer = host->mainConsoleView()->buffer;
                     QString all;
                     for (int i = 0; i <= buffer.getLastLineNumber(); ++i) {
                         all.append(buffer.line(i));

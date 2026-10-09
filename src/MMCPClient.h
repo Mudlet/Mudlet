@@ -46,6 +46,7 @@ class MMCPClient : public QObject
 
 public:
     MMCPClient(Host*, MMCPServer*);
+    ~MMCPClient() override;
 
     bool incoming(qintptr);
     void tryConnect(const QString&, quint16);
@@ -162,7 +163,7 @@ private:
     void handleIncomingPingRequest(const QString&);
     void handleIncomingPingResponse(const QString&);
     void handleIncomingSnoop();
-    void handleIncomingSnoopData(const char*, quint16);
+    void handleIncomingSnoopData(const char*, qsizetype);
     void handleIncomingSideChannelData(const QString&);
 
     void updateSgrState(const std::string&);

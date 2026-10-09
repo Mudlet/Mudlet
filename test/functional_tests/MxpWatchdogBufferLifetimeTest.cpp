@@ -104,7 +104,7 @@ private slots:
         }
 
         QSignalSpy spy2(&(mpHost->mTelnet), &cTelnet::signal_connected);
-        if (!spy2.wait(2000)) {
+        if (!spy2.wait(2s)) {
             QFAIL("Could not connect with the host.");
         }
     }
@@ -126,7 +126,7 @@ private slots:
     void init()
     {
         QVERIFY(mpHost);
-        QVERIFY(mpHost->mpConsole);
+        QVERIFY(mpHost->mainConsoleView());
         // The games this matters for do not negotiate MXP, they assume it, so
         // this is how the processor is turned on for them - secure mode included
         mpHost->setForceMXPProcessorOn(true);
@@ -169,9 +169,9 @@ private slots:
         // signal that the continuation is pending but has not run yet.
         QElapsedTimer elapsed;
         elapsed.start();
-        while (elapsed.elapsed() < 8000 && mpHost->mMxpProcessor.getEntityValue().isEmpty()) {
+        while (elapsed.durationElapsed() < 8s && mpHost->mMxpProcessor.getEntityValue().isEmpty()) {
             pumpOnce();
-            QThread::usleep(200);
+            QThread::sleep(200us);
         }
         QVERIFY2(!mpHost->mMxpProcessor.getEntityValue().isEmpty(), "the watchdog never reached its unfreeze phase, so nothing was queued to test");
 

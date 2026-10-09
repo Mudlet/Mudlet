@@ -108,7 +108,7 @@ private:
         return value;
     }
 
-    int stackIndex(const QWidget* widget) const { return mpHost->mpConsole->mpMainFrame->children().indexOf(widget); }
+    int stackIndex(const QWidget* widget) const { return mpHost->mainConsoleView()->mpMainFrame->children().indexOf(widget); }
 
     void verifyStackedBelow(const QWidget* lower, const QWidget* upper, const char* message)
     {
@@ -120,7 +120,7 @@ private:
         QVERIFY2(lowerIndex < upperIndex, message);
     }
 
-    QPixmap installedBackgroundBrush() const { return mpHost->mpConsole->mpWindowBackground->palette().brush(QPalette::Window).texture(); }
+    QPixmap installedBackgroundBrush() const { return mpHost->mainConsoleView()->mpWindowBackground->palette().brush(QPalette::Window).texture(); }
 
 private slots:
     void initTestCase()
@@ -160,7 +160,7 @@ private slots:
         }
 
         QSignalSpy spy2(&(mpHost->mTelnet), &cTelnet::signal_connected);
-        if (!spy2.wait(2000)) {
+        if (!spy2.wait(2s)) {
             QFAIL("Could not connect with the host.");
         }
 
@@ -185,18 +185,18 @@ private slots:
     void init()
     {
         QVERIFY(mpHost);
-        QVERIFY(mpHost->mpConsole);
-        QVERIFY(mpHost->mpConsole->mpWindowBackground);
+        QVERIFY(mpHost->mainConsoleView());
+        QVERIFY(mpHost->mainConsoleView()->mpWindowBackground);
         runLua(qsl("resetBackgroundImage('main', true)"));
-        QCOMPARE(mpHost->mpConsole->mWindowBgImageMode, 0);
+        QCOMPARE(mpHost->mainConsoleView()->mWindowBgImageMode, 0);
         runLua(qsl("setBorderColor(0, 0, 0)"));
     }
 
     // runs even when a QVERIFY aborts a test body, so nothing leaks into the next one
     void cleanup()
     {
-        mpHost->mpConsole->deleteLabel(qsl("lowerTarget"));
-        mpHost->mpConsole->deleteMiniConsole(qsl("lowerConsole"));
+        mpHost->mainConsoleView()->deleteLabel(qsl("lowerTarget"));
+        mpHost->mainConsoleView()->deleteMiniConsole(qsl("lowerConsole"));
     }
 
     // lowerWindow() drops mpMainDisplay to the bottom of mpMainFrame's stack so a
@@ -207,15 +207,15 @@ private slots:
         QVERIFY(!imagePath.isEmpty());
 
         runLua(qsl("setBackgroundImage('main', [[%1]], 'cover', true)").arg(imagePath));
-        QCOMPARE(mpHost->mpConsole->mWindowBgImageMode, 5);
+        QCOMPARE(mpHost->mainConsoleView()->mWindowBgImageMode, 5);
 
         runLua(qsl("createLabel('lowerTarget', 10, 10, 100, 100, 1)"));
-        QVERIFY(mpHost->mpConsole->labelWidget(qsl("lowerTarget")));
+        QVERIFY(mpHost->mainConsoleView()->labelWidget(qsl("lowerTarget")));
 
         runLua(qsl("lowerWindow('lowerTarget')"));
 
-        verifyStackedBelow(mpHost->mpConsole->mpWindowBackground, mpHost->mpConsole->mpMainDisplay, "lowerWindow() left the full-window background painting on top of the main display");
-        verifyStackedBelow(mpHost->mpConsole->mpMainDisplay, mpHost->mpConsole->labelWidget(qsl("lowerTarget")), "lowerWindow() left the lowered label hidden behind the main display");
+        verifyStackedBelow(mpHost->mainConsoleView()->mpWindowBackground, mpHost->mainConsoleView()->mpMainDisplay, "lowerWindow() left the full-window background painting on top of the main display");
+        verifyStackedBelow(mpHost->mainConsoleView()->mpMainDisplay, mpHost->mainConsoleView()->labelWidget(qsl("lowerTarget")), "lowerWindow() left the lowered label hidden behind the main display");
     }
 
     // The six branches of lowerWindow() are copy-pasted, so cover a second one.
@@ -230,7 +230,7 @@ private slots:
 
         runLua(qsl("lowerWindow('lowerConsole')"));
 
-        verifyStackedBelow(mpHost->mpConsole->mpWindowBackground, mpHost->mpConsole->mpMainDisplay, "lowerWindow() left the full-window background painting on top of the main display");
+        verifyStackedBelow(mpHost->mainConsoleView()->mpWindowBackground, mpHost->mainConsoleView()->mpMainDisplay, "lowerWindow() left the full-window background painting on top of the main display");
     }
 
     void test_lowerWindowOrderingHoldsWithoutABackgroundImage()
@@ -238,20 +238,20 @@ private slots:
         runLua(qsl("createLabel('lowerTarget', 10, 10, 100, 100, 1)"));
         runLua(qsl("lowerWindow('lowerTarget')"));
 
-        verifyStackedBelow(mpHost->mpConsole->mpWindowBackground, mpHost->mpConsole->mpMainDisplay, "lowerWindow() put the main display below the full-window background widget");
-        verifyStackedBelow(mpHost->mpConsole->mpMainDisplay, mpHost->mpConsole->labelWidget(qsl("lowerTarget")), "lowerWindow() left the lowered label hidden behind the main display");
+        verifyStackedBelow(mpHost->mainConsoleView()->mpWindowBackground, mpHost->mainConsoleView()->mpMainDisplay, "lowerWindow() put the main display below the full-window background widget");
+        verifyStackedBelow(mpHost->mainConsoleView()->mpMainDisplay, mpHost->mainConsoleView()->labelWidget(qsl("lowerTarget")), "lowerWindow() left the lowered label hidden behind the main display");
     }
 
     // a game can reach changeColors() with no user action, through an OSC palette change
     void test_borderColorSurvivesChangeColors()
     {
         runLua(qsl("setBorderColor(10, 20, 30)"));
-        QCOMPARE(mpHost->mpConsole->mpMainFrame->palette().color(QPalette::Window), QColor(10, 20, 30));
+        QCOMPARE(mpHost->mainConsoleView()->mpMainFrame->palette().color(QPalette::Window), QColor(10, 20, 30));
 
-        mpHost->mpConsole->changeColors();
+        mpHost->mainConsoleView()->changeColors();
 
-        QCOMPARE(mpHost->mpConsole->mpMainFrame->palette().color(QPalette::Window), QColor(10, 20, 30));
-        QCOMPARE(mpHost->mpConsole->borderColor(), QColor(10, 20, 30));
+        QCOMPARE(mpHost->mainConsoleView()->mpMainFrame->palette().color(QPalette::Window), QColor(10, 20, 30));
+        QCOMPARE(mpHost->mainConsoleView()->borderColor(), QColor(10, 20, 30));
     }
 
     void test_borderColorSurvivesSetBackgroundColor()
@@ -259,7 +259,7 @@ private slots:
         runLua(qsl("setBorderColor(40, 50, 60)"));
         runLua(qsl("setBackgroundColor('main', 1, 2, 3, 255)"));
 
-        QCOMPARE(mpHost->mpConsole->mpMainFrame->palette().color(QPalette::Window), QColor(40, 50, 60));
+        QCOMPARE(mpHost->mainConsoleView()->mpMainFrame->palette().color(QPalette::Window), QColor(40, 50, 60));
     }
 
     void test_borderColorReturnsAfterResettingTheBackground()
@@ -269,11 +269,11 @@ private slots:
 
         runLua(qsl("setBorderColor(255, 0, 0)"));
         runLua(qsl("setBackgroundImage('main', [[%1]], 'cover', true)").arg(imagePath));
-        QCOMPARE(mpHost->mpConsole->mpMainFrame->palette().color(QPalette::Window).alpha(), 0);
+        QCOMPARE(mpHost->mainConsoleView()->mpMainFrame->palette().color(QPalette::Window).alpha(), 0);
 
         runLua(qsl("resetBackgroundImage('main', true)"));
 
-        QCOMPARE(mpHost->mpConsole->mpMainFrame->palette().color(QPalette::Window), QColor(255, 0, 0));
+        QCOMPARE(mpHost->mainConsoleView()->mpMainFrame->palette().color(QPalette::Window), QColor(255, 0, 0));
     }
 
     void test_setBorderColorUnderAFullWindowBackgroundKeepsTheFrameTransparent()
@@ -284,8 +284,8 @@ private slots:
         runLua(qsl("setBackgroundImage('main', [[%1]], 'cover', true)").arg(imagePath));
         runLua(qsl("setBorderColor(11, 22, 33)"));
 
-        QCOMPARE(mpHost->mpConsole->mpMainFrame->palette().color(QPalette::Window).alpha(), 0);
-        QCOMPARE(mpHost->mpConsole->borderColor(), QColor(11, 22, 33));
+        QCOMPARE(mpHost->mainConsoleView()->mpMainFrame->palette().color(QPalette::Window).alpha(), 0);
+        QCOMPARE(mpHost->mainConsoleView()->borderColor(), QColor(11, 22, 33));
     }
 
     // the frame is transparent under a full-window background, so the palette cannot be the source
@@ -302,7 +302,7 @@ private slots:
         QCOMPARE(luaInt(qsl("borderG")), 80);
         QCOMPARE(luaInt(qsl("borderB")), 90);
 
-        QCOMPARE(mpHost->mpConsole->mpMainFrame->palette().color(QPalette::Window).alpha(), 0);
+        QCOMPARE(mpHost->mainConsoleView()->mpMainFrame->palette().color(QPalette::Window).alpha(), 0);
     }
 
     void test_coverSourceRectNeverExceedsTheSourceImage()
@@ -340,7 +340,7 @@ private slots:
 
         runLua(qsl("setBackgroundImage('main', [[%1]], 'cover', true)").arg(imagePath));
 
-        const QSize widgetSize = mpHost->mpConsole->mpWindowBackground->size();
+        const QSize widgetSize = mpHost->mainConsoleView()->mpWindowBackground->size();
         QVERIFY(!widgetSize.isEmpty());
         QCOMPARE(installedBackgroundBrush().size(), widgetSize);
     }
@@ -354,7 +354,7 @@ private slots:
 
         runLua(qsl("setBackgroundImage('main', [[%1]], 'cover', true)").arg(imagePath));
 
-        const QSize widgetSize = mpHost->mpConsole->mpWindowBackground->size();
+        const QSize widgetSize = mpHost->mainConsoleView()->mpWindowBackground->size();
         const QPixmap source(imagePath);
         QCOMPARE(source.size(), sourceSize);
         const QPixmap expected = source.copy(TConsole::coverSourceRect(sourceSize, widgetSize)).scaled(widgetSize, Qt::IgnoreAspectRatio, Qt::SmoothTransformation);
@@ -375,7 +375,7 @@ private slots:
 
         QVERIFY(luaNil(qsl("bgOk")));
         QVERIFY2(luaString(qsl("bgError")).contains(qsl("full window background image")), qPrintable(luaString(qsl("bgError"))));
-        QCOMPARE(mpHost->mpConsole->mWindowBgImagePath, goodPath);
+        QCOMPARE(mpHost->mainConsoleView()->mWindowBgImagePath, goodPath);
         QCOMPARE(installedBackgroundBrush().toImage(), installed);
     }
 
@@ -385,12 +385,12 @@ private slots:
         QVERIFY(!imagePath.isEmpty());
 
         runLua(qsl("setBackgroundImage('main', [[%1]], 'cover', true)").arg(imagePath));
-        const QSize sizeBefore = mpHost->mpConsole->mpWindowBackground->size();
+        const QSize sizeBefore = mpHost->mainConsoleView()->mpWindowBackground->size();
 
         mudlet::self()->resize(900, 640);
         QTest::qWait(200ms);
 
-        const QSize sizeAfter = mpHost->mpConsole->mpWindowBackground->size();
+        const QSize sizeAfter = mpHost->mainConsoleView()->mpWindowBackground->size();
         QVERIFY2(sizeAfter != sizeBefore, "the window did not actually resize");
         QCOMPARE(installedBackgroundBrush().size(), sizeAfter);
 
@@ -405,12 +405,12 @@ private slots:
         QVERIFY(!imagePath.isEmpty());
 
         runLua(qsl("setBackgroundImage('main', [[%1]], 'border', true)").arg(imagePath));
-        QVERIFY(!mpHost->mpConsole->mpWindowBackground->styleSheet().isEmpty());
+        QVERIFY(!mpHost->mainConsoleView()->mpWindowBackground->styleSheet().isEmpty());
 
         runLua(qsl("setBackgroundImage('main', [[%1]], 'cover', true)").arg(imagePath));
 
-        QVERIFY(mpHost->mpConsole->mpWindowBackground->styleSheet().isEmpty());
-        QCOMPARE(mpHost->mpConsole->mpWindowBackground->palette().brush(QPalette::Window).texture().size(), mpHost->mpConsole->mpWindowBackground->size());
+        QVERIFY(mpHost->mainConsoleView()->mpWindowBackground->styleSheet().isEmpty());
+        QCOMPARE(mpHost->mainConsoleView()->mpWindowBackground->palette().brush(QPalette::Window).texture().size(), mpHost->mainConsoleView()->mpWindowBackground->size());
     }
 };
 

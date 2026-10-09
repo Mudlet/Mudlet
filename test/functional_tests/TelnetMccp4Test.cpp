@@ -29,9 +29,11 @@
 #include <zstd.h>
 
 #include "GroupedTest.h"
+#include "Host.h"
 #include "MudletApp.h"
 #include "MudletInstanceCoordinator.h"
 #include "PortableModeTestHelper.h"
+#include "TMainConsole.h"
 #include "TelnetServerStub.h"
 #include "ctelnet.h"
 #include "dlgConnectionProfiles.h"
@@ -510,10 +512,10 @@ private:
     QString bufferContents() const
     {
         auto* host = mudlet::self()->getActiveHost();
-        if (!host || !host->mpConsole) {
+        if (!host || !host->mainConsoleView()) {
             return {};
         }
-        auto& buffer = host->mpConsole->buffer;
+        auto& buffer = host->mainConsoleView()->buffer;
         QStringList lines;
         for (int i = 0; i <= buffer.getLastLineNumber(); ++i) {
             lines << buffer.line(i);

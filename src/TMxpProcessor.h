@@ -78,6 +78,10 @@ public:
 
     TMxpProcessingResult processMxpInput(char& ch, bool resolveCustomEntities);
     void processRawInput(char ch);
+    void processRawInput(QByteArrayView bytes);
+    // True when no tag or entity is being read, so that a byte which can start
+    // neither ('<' and '&' can) would only be handed on as content
+    bool readingText() const { return !mMxpTagBuilder.isInsideTag() && !mMxpTagBuilder.hasTag() && !mEntityHandler.readingEntity(); }
     QString getEntityValue() { return lastEntityValue; }
     void setLastEntityValue(const QString& value) { lastEntityValue = value; }
     TMxpTagProcessor& getMxpTagProcessor() { return mMxpTagProcessor; }

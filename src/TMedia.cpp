@@ -28,7 +28,6 @@
 #include "MudletApp.h"
 #include "MudletMedia.h"
 #include "TDebug.h"
-#include "mudlet.h"
 
 #include <QDir>
 #include <QFileInfo>
@@ -41,6 +40,10 @@
 #include <QSaveFile>
 #include <QStandardPaths>
 #include <QTimer>
+
+#include <algorithm>
+
+using namespace std::chrono_literals;
 
 namespace {
 // Holds TMediaPlayer::reservedForPlay() for as long as a play() call is setting that player up,
@@ -84,6 +87,9 @@ bool mediaTypeNamed(const QJsonObject& json)
 
     return !mediaTypeJSON.isString() || !mediaTypeJSON.toString().isEmpty();
 }
+
+// Every pass is a playlist entry built up front, so a huge count from a game would hang Mudlet
+constexpr int maxQueuedLoops = 10000;
 } // namespace
 
 // Public
@@ -1363,7 +1369,7 @@ void TMedia::connectMediaPlayer(std::shared_ptr<TMediaPlayer>& player)
         qWarning().noquote() << qsl("TMedia::connectMediaPlayer() WARNING - media player error %1 on \"%2\": %3")
                                         .arg(QString::number(static_cast<int>(error)), lockedPlayer->mediaPlayer()->source().toString(), errorString);
 
-        if (TDebug::smDebugMode && mpHost && mpHost->mpConsole) {
+        if (TDebug::smDebugMode && mpHost && mpHost->consoleFrontend()) {
             //: %1 is the media backend's own description of what went wrong, e.g. "Failed to load media".
             mpHost->printSystemMessage(qsl("%1\n").arg(tr("Media error: %1").arg(errorString)));
         }
@@ -1394,7 +1400,7 @@ void TMedia::connectMediaPlayer(std::shared_ptr<TMediaPlayer>& player)
         // by the time the turn comes: a track that took the player over in between owns it now.
         const quint64 claimedAt = lockedPlayer->claimGeneration();
 
-        QTimer::singleShot(0, this, [this, weakPlayer, claimedAt] {
+        QTimer::singleShot(0ms, this, [this, weakPlayer, claimedAt] {
             const auto endingPlayer = weakPlayer.lock();
 
             if (!endingPlayer || !endingPlayer->mediaPlayer() || endingPlayer->claimGeneration() != claimedAt) {
@@ -1502,7 +1508,7 @@ void TMedia::updateList(QList<std::shared_ptr<T>>& list, int index, std::shared_
         qDebug() << "TMedia::updateList() - List exceeded max allowed size (" << mediaInstance->getMaxUnprunedPlayers() << "). Purging stopped players.";
         TMedia::purgeStoppedMediaPlayers(list);
 
-        if (TDebug::smDebugMode && mediaInstance && mediaInstance->mpHost && mediaInstance->mpHost->mpConsole) {
+        if (TDebug::smDebugMode && mediaInstance && mediaInstance->mpHost && mediaInstance->mpHost->consoleFrontend()) {
             mediaInstance->mpHost->printSystemMessage(qsl("%1\n").arg(tr("Too many stopped media players. Purging stopped players.")));
         }
 
@@ -1510,7 +1516,7 @@ void TMedia::updateList(QList<std::shared_ptr<T>>& list, int index, std::shared_
             qWarning() << "TMedia::updateList() - List still exceeds max size after purging. Removing oldest active player.";
             list.removeFirst(); // Evict the oldest player to enforce cap
 
-            if (TDebug::smDebugMode && mediaInstance && mediaInstance->mpHost && mediaInstance->mpHost->mpConsole) {
+            if (TDebug::smDebugMode && mediaInstance && mediaInstance->mpHost && mediaInstance->mpHost->consoleFrontend()) {
                 mediaInstance->mpHost->printSystemMessage(qsl("%1\n").arg(tr("Too many stopped media players. Removed oldest active player.")));
             }
         }
@@ -1605,7 +1611,7 @@ std::shared_ptr<TMediaPlayer> TMedia::getMediaPlayer(TMediaData& mediaData)
     if (mediaPlayerList.size() >= maxAllowed) {
         qWarning() << "TMedia::getMediaPlayer() - Too many active players for media type. Skipping creation.";
 
-        if (TDebug::smDebugMode && mpHost && mpHost->mpConsole) {
+        if (TDebug::smDebugMode && mpHost && mpHost->consoleFrontend()) {
             mpHost->printSystemMessage(qsl("%1\n").arg(tr("Maximum allowed active media players reached for media type. Cannot play additional media.")));
         }
 
@@ -1743,7 +1749,7 @@ void TMedia::releaseMediaSourceAfterEvents(const std::shared_ptr<TMediaPlayer>& 
     const quint64 claimedAt = player->claimGeneration();
     const quint64 continuedAt = player->continuationGeneration();
 
-    QTimer::singleShot(0, this, [this, weakPlayer, endedData, claimedAt, continuedAt, playbackStateDecides] {
+    QTimer::singleShot(0ms, this, [this, weakPlayer, endedData, claimedAt, continuedAt, playbackStateDecides] {
         const auto lockedPlayer = weakPlayer.lock();
         const bool stillOurs = lockedPlayer && lockedPlayer->claimGeneration() == claimedAt;
         // Two ways the same playback can have carried on during the deferred turn. On a
@@ -2078,7 +2084,7 @@ void TMedia::play(TMediaData& mediaData)
                 playlist->clear();
             } else {
                 if (!playlist->isEmpty() && playlist->mediaCount() > 1) { // Purge media from the previous playlist
-                    playlist->removeMedia(playlist->nextIndex(), playlist->mediaCount());
+                    playlist->removeMedia(playlist->nextIndex(), playlist->mediaCount() - 1);
                 }
 
                 return; // No action required. Continue playing the same media.
@@ -2133,14 +2139,14 @@ void TMedia::play(TMediaData& mediaData)
                     playlist->clear();
                 } else {
                     if (!playlist->isEmpty() && playlist->mediaCount() > 1) { // Purge media from the previous playlist
-                        playlist->removeMedia(playlist->nextIndex(), playlist->mediaCount());
+                        playlist->removeMedia(playlist->nextIndex(), playlist->mediaCount() - 1);
                     }
 
                     mediaData.setMediaLoops(mediaData.mediaLoops() - 1); // Subtract the currently playing media from the total
                 }
             }
 
-            for (int k = 0; k < mediaData.mediaLoops(); k++) {
+            for (int k = 0, loops = std::min(mediaData.mediaLoops(), maxQueuedLoops); k < loops; k++) {
                 absolutePathFileName = fileNameList.size() > 1 ? fileNameList.at(QRandomGenerator::global()->bounded(fileNameList.size()))
                                                                : (mediaData.mediaInput() == TMediaData::MediaInputStream ? TMedia::getStreamUrl(mediaData) : fileNameList.at(0));
 
@@ -2614,7 +2620,7 @@ void TMedia::parseJSONForMediaStop(QJsonObject& json)
 
 void TMedia::printClosedCaption(const TMediaData& mediaData, const QString& action) const
 {
-    if (!mpHost || !mpHost->mEnableClosedCaption || !mpHost->mpConsole)
+    if (!mpHost || !mpHost->mEnableClosedCaption || !mpHost->consoleFrontend())
         return;
 
     QString message;

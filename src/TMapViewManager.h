@@ -25,6 +25,8 @@
 #include <QObject>
 #include <QPointer>
 
+#include "TMapViewsFrontend.h"
+
 class Host;
 class TMap;
 class TMapView;
@@ -34,7 +36,7 @@ class TMapView;
  * Secondary views are view-only map displays that can show different
  * areas/z-levels independently from the main mapper window.
  */
-class TMapViewManager : public QObject
+class TMapViewManager final : public QObject, public TMapViewsFrontend
 {
     Q_OBJECT
 
@@ -44,30 +46,30 @@ public:
     ~TMapViewManager() override;
 
     // View lifecycle
-    std::pair<int, QString> createView(int initialAreaId = 0);
-    std::pair<bool, QString> closeView(int viewId);
-    int closeAllViews();
+    std::pair<int, QString> createView(int initialAreaId = 0) override;
+    std::pair<bool, QString> closeView(int viewId) override;
+    int closeAllViews() override;
 
     // View access
     TMapView* getView(int viewId);
-    QList<int> getViewIds() const;
+    TSecondaryMapViewFrontend* view(int viewId) override;
+    QList<int> getViewIds() const override;
     int getViewCount() const;
 
     // Bulk operations
-    void updateAllViews();
+    void updateAllViews() override;
     // Moves every view still showing areaId to another area - used after
     // that area is deleted, so paintEvent() isn't left drawing one that no
     // longer exists.
-    void switchViewsShowingArea(int areaId);
+    void switchViewsShowingArea(int areaId) override;
 
 signals:
     void viewCreated(int viewId);
     void viewClosed(int viewId);
 
-private slots:
-    void slot_viewClosed();
-
 private:
+    void forgetView(int viewId);
+
     // View IDs start at 1; 0 is reserved as an error/invalid indicator in return values
     int mNextViewId = 1;
     QPointer<Host> mpHost;

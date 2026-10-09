@@ -26,38 +26,42 @@ function Geyser.Label:echo(message, color, format)
   if format then self:processFormatString(format) end
 
   local ft = self.formatTable
-  local fs = ft.fontSize
-  local alignment = ft.alignment
-  if alignment ~= "" then
-    alignment = string.format([[align="%s" ]], alignment)
+  local fs = ft.fontSize or tostring(self.fontSize)
+  local hex = color ~= "nocolor" and Geyser.Color.hex(color) or nil
+  -- the markup around the message is built from exactly these fields, so a
+  -- label echoed on every prompt builds it once rather than once per line
+  local wrap = self.echoWrap
+  if not (wrap and wrap.alignment == ft.alignment and wrap.bold == ft.bold and wrap.italics == ft.italics
+      and wrap.underline == ft.underline and wrap.strikethrough == ft.strikethrough
+      and wrap.font == self.font and wrap.fontSize == fs and wrap.hex == hex) then
+    wrap = {alignment = ft.alignment, bold = ft.bold, italics = ft.italics, underline = ft.underline,
+            strikethrough = ft.strikethrough, font = self.font, fontSize = fs, hex = hex}
+    local open, close = "", ""
+    if ft.bold then
+      open, close = "<b>", "</b>"
+    end
+    if ft.italics then
+      open, close = "<i>" .. open, close .. "</i>"
+    end
+    if ft.underline then
+      open, close = "<u>" .. open, close .. "</u>"
+    end
+    if ft.strikethrough then
+      open, close = "<s>" .. open, close .. "</s>"
+    end
+    if self.font and self.font ~= "" then
+      open, close = string.format('<font face ="%s">', self.font) .. open, close .. "</font>"
+    end
+    local alignment = ft.alignment
+    if alignment ~= "" then
+      alignment = string.format([[align="%s" ]], alignment)
+    end
+    local style = hex and [[ style="color: ]] .. hex .. [[; ]] or [[ style=" ]]
+    wrap.open = [[<div ]] .. alignment .. style .. "font-size: " .. fs .. [[pt; ">]] .. open
+    wrap.close = close .. [[</div>]]
+    self.echoWrap = wrap
   end
-  if ft.bold then
-    message = "<b>" .. message .. "</b>"
-  end
-  if ft.italics then
-    message = "<i>" .. message .. "</i>"
-  end
-  if ft.underline then
-    message = "<u>" .. message .. "</u>"
-  end
-  if ft.strikethrough then
-    message = "<s>" .. message .. "</s>"
-  end
-  if self.font and self.font ~= "" then
-    message = string.format('<font face ="%s">%s</font>', self.font, message)
-  end
-  if not fs then
-    fs = tostring(self.fontSize)
-  end
-  if color == "nocolor" then
-    color = [[ style=" ]]
-  else
-    color = [[ style="color: ]] .. Geyser.Color.hex(self.fgColor) .. [[; ]]
-  end
-  fs = "font-size: " .. fs .. "pt; "
-  message = [[<div ]] .. alignment .. color .. fs ..
-  [[">]] .. message .. [[</div>]]
-  echo(self.name, message)
+  echo(self.name, wrap.open .. message .. wrap.close)
   self:autoAdjustSize()
 end
 
@@ -1367,10 +1371,14 @@ if restyle then
   myMenu.MenuLabels[name].stylesheet = nil
 end
 
-local Style = configLabel["Style"..depth] or configLabel["Style"]
-local MenuStyle = myMenu.MenuLabels[name].stylesheet or configLabel["MenuStyle"..depth] or configLabel["MenuStyle"]
-MenuStyle = MenuStyle or configLabel.MenuStyleMode[string.lower(Style)]
-myMenu.MenuLabels[name]:setStyleSheet(MenuStyle)
+-- every addMenuLabel walks the whole menu again, and Qt restyles a label even
+-- when it is handed the sheet it already has, so only unstyled items get one
+if not myMenu.MenuLabels[name].stylesheet then
+  local Style = configLabel["Style"..depth] or configLabel["Style"]
+  local MenuStyle = configLabel["MenuStyle"..depth] or configLabel["MenuStyle"]
+  MenuStyle = MenuStyle or configLabel.MenuStyleMode[string.lower(Style)]
+  myMenu.MenuLabels[name]:setStyleSheet(MenuStyle)
+end
 end
 
 -- internal function to create the right click Menu Labels

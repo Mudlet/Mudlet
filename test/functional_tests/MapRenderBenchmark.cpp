@@ -102,6 +102,8 @@
 #define BENCH_BUILD_ASAN 0
 #endif
 
+using namespace std::chrono_literals;
+
 extern void qInitResources_mudlet();
 extern void qInitResources_qm();
 extern void qInitResources_additional_splash_screens();
@@ -273,13 +275,13 @@ private slots:
         Host* host = TestProfile::create(mHostname, mLocalhost, QString::number(mPort));
         QVERIFY(host);
         QSignalSpy connected(&(host->mTelnet), &cTelnet::signal_connected);
-        QVERIFY2(connected.wait(3000), "could not connect to the stub");
+        QVERIFY2(connected.wait(3s), "could not connect to the stub");
 
         // The mapper has to exist before the map is restored into it, exactly
         // as Host::loadMapFile() arranges it.
         host->showHideOrCreateMapper(false);
         QVERIFY(host->mpMap);
-        QVERIFY(host->mpMap->mpMapper);
+        QVERIFY(host->mpMap->mapper());
         TMap* pMap = host->mpMap.data();
 
         QElapsedTimer loadTimer;
@@ -290,7 +292,7 @@ private slots:
         pMap->audit();
         const double auditSeconds = loadTimer.nsecsElapsed() / 1.0e9;
 
-        T2DMap* p2dMap = host->mpMap->mpMapper->mp2dMap;
+        T2DMap* p2dMap = host->mpMap->mapper()->mp2dMap;
         QVERIFY(p2dMap);
         p2dMap->init();
 

@@ -42,6 +42,8 @@
 
 #include "GroupedTest.h"
 
+using namespace std::chrono_literals;
+
 // Regression tests for the self-uninstall use-after-free: a package toolbar
 // button whose Lua script calls uninstallPackage() on its own package used to
 // free the very TAction that TAction::execute() was running on, which then read
@@ -97,7 +99,7 @@ private:
     {
         // TFlipButton has no Q_OBJECT, so findChildren<> it as its QPushButton base
         // and downcast.
-        for (auto* pushButton : host->mpConsole->findChildren<QPushButton*>()) {
+        for (auto* pushButton : host->mainConsoleView()->findChildren<QPushButton*>()) {
             auto* pB = dynamic_cast<TFlipButton*>(pushButton);
             if (pB && pB->mpTAction == action) {
                 return pB;
@@ -186,7 +188,7 @@ private slots:
         // block until the save has fully finished, so no background save thread is
         // still running when cleanup() destroys the host: tearing the host down
         // underneath an in-flight save corrupted the heap and crashed on Windows.
-        QTest::qWait(50);
+        QTest::qWait(50ms);
         host->waitForProfileSave();
     }
 
@@ -198,7 +200,7 @@ private slots:
         // destruction never races a background save thread (a Windows crash).
         if (auto* self = mudlet::self()) {
             if (auto* host = self->getActiveHost()) {
-                QTest::qWait(50);
+                QTest::qWait(50ms);
                 host->waitForProfileSave();
             }
         }
@@ -267,7 +269,7 @@ private slots:
 
         actionUnit->updateAllToolbars();
 
-        TMainConsole* console = host->mpConsole;
+        TMainConsole* console = host->mainConsoleView();
         QVERIFY2(console->actionEasyButtonBar(topBar), "The top-bar action should have been given a TEasyButtonBar");
         QCOMPARE(console->actionEasyButtonBar(topBar)->parentWidget(), console->mpTopToolBar);
         QVERIFY2(console->actionEasyButtonBar(leftBar), "The left-bar action should have been given a TEasyButtonBar");
@@ -299,15 +301,15 @@ private slots:
         floatingBar->setIsActive(true);
         actionUnit->registerAction(floatingBar);
 
-        QPointer<TMainConsole> console = host->mpConsole;
-        host->mpConsole = nullptr;
+        QPointer<TMainConsole> console = host->mainConsoleView();
+        host->setMainConsoleView(nullptr);
         actionUnit->updateAllToolbars();
-        host->mpConsole = console;
+        host->setMainConsoleView(console);
 
-        QVERIFY2(!host->mpConsole->actionToolBar(floatingBar), "No bar should have been built while the console was away");
+        QVERIFY2(!host->mainConsoleView()->actionToolBar(floatingBar), "No bar should have been built while the console was away");
 
         actionUnit->updateAllToolbars();
-        QVERIFY2(host->mpConsole->actionToolBar(floatingBar), "The bar should be built once the console is back");
+        QVERIFY2(host->mainConsoleView()->actionToolBar(floatingBar), "The bar should be built once the console is back");
     }
 
     // Removing a docked bar's action reaches the console to take the bar down.
@@ -327,13 +329,13 @@ private slots:
         leftBar->setIsActive(true);
         actionUnit->registerAction(leftBar);
         actionUnit->updateAllToolbars();
-        QVERIFY2(host->mpConsole->actionEasyButtonBar(leftBar), "The left-bar action should have been given a TEasyButtonBar");
-        QPointer<TEasyButtonBar> bar = host->mpConsole->actionEasyButtonBar(leftBar);
+        QVERIFY2(host->mainConsoleView()->actionEasyButtonBar(leftBar), "The left-bar action should have been given a TEasyButtonBar");
+        QPointer<TEasyButtonBar> bar = host->mainConsoleView()->actionEasyButtonBar(leftBar);
 
-        QPointer<TMainConsole> console = host->mpConsole;
-        host->mpConsole = nullptr;
+        QPointer<TMainConsole> console = host->mainConsoleView();
+        host->setMainConsoleView(nullptr);
         delete leftBar;
-        host->mpConsole = console;
+        host->setMainConsoleView(console);
 
         QVERIFY2(bar, "The bar belongs to the console and has to outlive its action");
         QVERIFY2(bar->isHidden(), "The action hides its bar on the way out");
@@ -361,13 +363,13 @@ private slots:
         folder->setIsActive(true);
         actionUnit->registerAction(folder);
         actionUnit->updateAllToolbars();
-        QVERIFY2(host->mpConsole->actionEasyButtonBar(leftBar), "The left-bar action should have been given a TEasyButtonBar");
-        QPointer<TEasyButtonBar> bar = host->mpConsole->actionEasyButtonBar(leftBar);
+        QVERIFY2(host->mainConsoleView()->actionEasyButtonBar(leftBar), "The left-bar action should have been given a TEasyButtonBar");
+        QPointer<TEasyButtonBar> bar = host->mainConsoleView()->actionEasyButtonBar(leftBar);
 
-        QPointer<TMainConsole> console = host->mpConsole;
-        host->mpConsole = nullptr;
+        QPointer<TMainConsole> console = host->mainConsoleView();
+        host->setMainConsoleView(nullptr);
         actionUnit->reParentAction(leftBar->getID(), 0, folder->getID());
-        host->mpConsole = console;
+        host->setMainConsoleView(console);
 
         QCOMPARE(leftBar->getParent(), folder);
         QVERIFY2(bar, "The bar belongs to the console and has to outlive the move");
@@ -397,7 +399,7 @@ private slots:
         auto* floatingBar = makeRoot(qsl("floatingBar"), 4);
         actionUnit->updateAllToolbars();
 
-        TMainConsole* console = host->mpConsole;
+        TMainConsole* console = host->mainConsoleView();
         QPointer<TEasyButtonBar> bar = console->actionEasyButtonBar(leftBar);
         QVERIFY2(bar, "The left-bar action should have been given a TEasyButtonBar");
         QVERIFY2(console->mpLeftToolBar->layout()->indexOf(bar) != -1, "SETUP: the bar is not on the left toolbar to begin with");
@@ -425,14 +427,14 @@ private slots:
         }
 
         QSignalSpy spy2(&(host->mTelnet), &cTelnet::signal_connected);
-        if (!spy2.wait(2000)) {
+        if (!spy2.wait(2s)) {
             QFAIL("Could not connect with the host.");
         }
     }
 
     QString joinedBuffer()
     {
-        auto console = mudlet::self()->getActiveHost()->mpConsole;
+        QPointer<TMainConsole> console = mudlet::self()->getActiveHost()->mainConsoleView();
         QString allText;
         for (int i = 0; i <= console->buffer.getLastLineNumber(); ++i) {
             allText.append(console->buffer.line(i)).append(QChar::Space);

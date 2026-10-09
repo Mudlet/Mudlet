@@ -23,9 +23,11 @@
 
 
 #include "TLabel.h"
+#include "TCommandLine.h"
 #include "TConsole.h"
 #include "TDockWidget.h"
 #include "mudlet.h"
+#include "TMainConsole.h"
 
 #include <QDesktopServices>
 #include <QFile>
@@ -101,6 +103,9 @@ TLabel::TLabel(Host* pH, const QString& name, QWidget* pW)
     setOpenExternalLinks(false);
 
     connect(this, &QLabel::linkActivated, this, &TLabel::slot_linkActivated);
+
+    // QLabel's constructor already took the parent's font, before changeEvent() could see it
+    mpModel->mFont = font();
 }
 
 TLabel::~TLabel()
@@ -195,6 +200,7 @@ void TLabel::setText(const QString& text)
         stopMovie();
         QLabel::setText(text);
     }
+    mpModel->mText = QLabel::text();
 }
 
 bool TLabel::carriesLink() const
@@ -422,6 +428,8 @@ bool TLabel::setBackgroundImage(const QString& path)
     clearSvgImage();
     stopMovie();
     setPixmap(raster);
+    // setPixmap() empties the text
+    mpModel->mText = text();
     return true;
 }
 
@@ -601,7 +609,23 @@ void TLabel::setBackgroundColor(const QColor& color)
         }
         sheet.append(newColor);
     }
+    if (!restyle(sheet)) {
+        applyBackgroundColor();
+    }
+}
+
+// QWidget::setStyleSheet() repolishes and repaints even when handed the sheet it
+// already has. Re-applying one still matters when it names a file, as that is what
+// makes Qt reload an image rewritten on disk, and after the link styling replaced the
+// palette, as that is what restores the colours the sheet sets.
+bool TLabel::restyle(const QString& sheet)
+{
+    if (sheet == styleSheet() && !mPaletteSetSinceStyled && !sheet.contains(qsl("url("), Qt::CaseInsensitive)) {
+        return false;
+    }
+    mPaletteSetSinceStyled = false;
     setStyleSheet(sheet);
+    return true;
 }
 
 // Qt hands a widget back the palette it saved when it first styled it, so every
@@ -614,6 +638,25 @@ void TLabel::changeEvent(QEvent* event)
     if (event->type() == QEvent::StyleChange || event->type() == QEvent::PaletteChange) {
         applyBackgroundColor();
     }
+    if (event->type() == QEvent::StyleChange) {
+        mpModel->mStyleSheet = styleSheet();
+    } else if (event->type() == QEvent::FontChange) {
+        mpModel->mFont = font();
+    }
+}
+
+// QWidget::event() doesn't pass ToolTipChange on to changeEvent()
+bool TLabel::event(QEvent* event)
+{
+    if (event->type() == QEvent::ToolTipChange) {
+        mpModel->mToolTip = toolTip();
+    }
+    const bool handled = QLabel::event(event);
+    // A qproperty-text in a style sheet reaches QLabel::setText() directly, as the style is applied
+    if (event->type() == QEvent::Polish || event->type() == QEvent::StyleChange) {
+        mpModel->mText = text();
+    }
+    return handled;
 }
 
 void TLabel::applyBackgroundColor()
@@ -651,6 +694,7 @@ void TLabel::setLinkStyle(const QString& linkColor, const QString& linkVisitedCo
     }
 
     setPalette(palette);
+    mPaletteSetSinceStyled = true;
 
     // Note: Widget stylesheets don't affect QTextDocument rendering
     // Link colors are applied via inline styles in setText()
@@ -667,6 +711,7 @@ void TLabel::resetLinkStyle()
         palette.setColor(QPalette::Window, mBackgroundColor);
     }
     setPalette(palette);
+    mPaletteSetSinceStyled = true;
 
     mLinkColor.clear();
     mLinkVisitedColor.clear();
@@ -719,8 +764,8 @@ void TLabel::slot_linkActivated(const QString& link)
 
         if (scheme == qsl("prompt")) {
             // prompt: scheme - put text in command line and wait for user to press enter
-            if (mpHost->mpConsole && mpHost->mpConsole->mpCommandLine) {
-                QPointer<TCommandLine> commandLine = mpHost->mpConsole->mpCommandLine;
+            if (mpHost->mainConsoleView() && mpHost->mainConsoleView()->mpCommandLine) {
+                QPointer<TCommandLine> commandLine = mpHost->mainConsoleView()->mpCommandLine;
                 commandLine->setPlainText(payload);
                 QTextCursor cursor = commandLine->textCursor();
                 cursor.movePosition(QTextCursor::End);
