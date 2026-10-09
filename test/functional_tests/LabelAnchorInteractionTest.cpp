@@ -63,7 +63,7 @@ private:
     QTemporaryDir mConfigDir;
     QByteArray mSavedXdgConfigHome;
 
-    TLabel* label() const { return mpHost->mpConsole->labelWidget(mLabelName); }
+    TLabel* label() const { return mpHost->mainConsoleView()->labelWidget(mLabelName); }
 
     // Read back through the return value rather than getLuaString(), which reports
     // an absolute stack slot and so only answers correctly for the first call in a
@@ -148,8 +148,8 @@ private slots:
 
     void cleanupTestCase()
     {
-        if (mpHost && mpHost->mpConsole) {
-            mpHost->mpConsole->deleteLabel(mLabelName);
+        if (mpHost && mpHost->mainConsoleView()) {
+            mpHost->mainConsoleView()->deleteLabel(mLabelName);
         }
         delete mpServer;
         mpServer = nullptr;
