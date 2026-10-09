@@ -2351,13 +2351,31 @@ describe("Tests the timer API", function()
         end
         lfs.rmdir(path)
       end
+      -- the marker goes last, so a fixture that could not be fully deleted is
+      -- still known to be this spec's and the next run can finish the job
+      local function removeFixture()
+        for entry in lfs.dir(directory) do
+          if entry ~= "." and entry ~= ".." and entry ~= "mudlet-spec-fixture" then
+            removeTree(directory .. "/" .. entry)
+          end
+        end
+        local remaining = 0
+        for _ in lfs.dir(directory) do
+          remaining = remaining + 1
+        end
+        if remaining == 3 then
+          os.remove(marker)
+          lfs.rmdir(directory)
+        end
+      end
       local function loaded()
         local entry = getProfiles()[name]
         return entry ~= nil and entry.loaded
       end
       if lfs.attributes(marker) then
-        removeTree(directory)
+        removeFixture()
       end
+      assert.is_nil(lfs.attributes(marker), "could not delete this spec's leftover profile at " .. directory)
       assert.is_nil(lfs.attributes(directory), "a profile named " .. name .. " already exists and is not this spec's to delete")
       -- closing a profile saves the shared window layout beside the profiles
       -- directory, which the next Mudlet start reads, so put it back afterwards
@@ -2390,7 +2408,7 @@ describe("Tests the timer API", function()
           pumpEvents(50)
         end
         if lfs.attributes(marker) then
-          removeTree(directory)
+          removeFixture()
         end
         for _, path in ipairs(layoutFiles) do
           if layoutBefore[path] then
@@ -2402,9 +2420,9 @@ describe("Tests the timer API", function()
           end
         end
       end)
-      lfs.mkdir(directory)
-      io.open(marker, "w"):close()
-      lfs.mkdir(directory .. "/current")
+      assert(lfs.mkdir(directory), "could not create " .. directory)
+      assert(io.open(marker, "w"), "could not create " .. marker):close()
+      assert(lfs.mkdir(directory .. "/current"), "could not create " .. directory .. "/current")
       -- the raising timer shows that this profile does put Lua errors on its console
       local script = [[
 tempTimer(0.05, "", true)
