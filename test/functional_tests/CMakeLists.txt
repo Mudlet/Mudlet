@@ -126,6 +126,7 @@ set(PROFILE_GROUP_TEST_SOURCES
     SavedVariableFenceTest.cpp
     SelfTestProfileIconTest.cpp
     SpellDictionaryFailureTest.cpp
+    TestProfileFirstRunTourTest.cpp
     XMLexportVariablesTest.cpp
 )
 
