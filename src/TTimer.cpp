@@ -313,7 +313,7 @@ void TTimer::enableTimer(int id)
 {
     if (mID == id) {
         if (canBeUnlocked()) {
-            if (activate()) {
+            if (activate() || keepArmedWithBrokenScript()) {
                 // Not just script timers: Lua-function tempTimers and command-only timers must also
                 // restart after the emergency stop (#10751)
                 if (hasPayload()) {
@@ -336,6 +336,25 @@ void TTimer::enableTimer(int id)
     }
 }
 
+// For a timer that is switched on but whose script did not compile: it stays armed, as it
+// would be had nothing switched it off (the emergency stop does), so that fixing the script
+// brings it back
+bool TTimer::keepArmedWithBrokenScript()
+{
+    if (!mOK_init || mOK_code) {
+        return false;
+    }
+    // Tree keeps mActive to itself and only sets it for a script that compiled
+    mOK_code = true;
+    Tree<TTimer>::activate();
+    mOK_code = false;
+    if (TDebug::wants(TDebug::Category::Error)) {
+        TDebug(Qt::white, Qt::red, TDebug::Category::Error, mName) << "ERROR: timer" << mName << "cannot run until its script compiles:" << TLuaInterpreter::compileErrorAsPlainText(getError()) << "\n"
+                >> mpHost;
+    }
+    return true;
+}
+
 void TTimer::disableTimer(int id)
 {
     if (mID == id) {
@@ -354,7 +373,7 @@ void TTimer::disableTimer(int id)
 void TTimer::enableTimer()
 {
     if (canBeUnlocked()) {
-        if (activate()) {
+        if (activate() || keepArmedWithBrokenScript()) {
             // An offset timer is armed by its parent firing, via enableTimer(int); starting a
             // command-only one here would give it a schedule of its own, so it keeps the script-only test
             const bool startable = isOffsetTimer() ? (!mScript.isEmpty() || mRegisteredAnonymousLuaFunction) : hasPayload();
