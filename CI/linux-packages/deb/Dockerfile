@@ -13,7 +13,7 @@ RUN apt-get update \
     liblua5.1-0-dev lua5.1 lua-filesystem lua-lpeg luarocks \
     libassimp-dev libboost-dev libglu1-mesa-dev libhunspell-dev libpcre2-dev \
     libpugixml-dev libsqlite3-dev libyajl-dev libzip-dev libzzip-dev \
-    mesa-common-dev zlib1g-dev \
+    mesa-common-dev libzstd-dev zlib1g-dev \
     libqt6core5compat6-dev libqt6opengl6-dev qt6-base-dev qt6-l10n-tools \
     qt6-multimedia-dev qt6-speech-dev qt6-svg-dev qt6-tools-dev \
     qt6-tools-dev-tools qtkeychain-qt6-dev \

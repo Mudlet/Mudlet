@@ -12,7 +12,7 @@ RUN dnf install -y --setopt=install_weak_deps=False \
     compat-lua compat-lua-devel lua5.1-filesystem lua5.1-lpeg luarocks \
     assimp-devel boost-devel hunspell-devel libzip-devel mesa-libGL-devel \
     mesa-libGLU-devel pcre2-devel pugixml-devel sqlite-devel yajl-devel \
-    zlib-ng-compat-devel zziplib-devel \
+    libzstd-devel zlib-ng-compat-devel zziplib-devel \
     qt6-qt5compat-devel qt6-qtbase-devel qt6-qtmultimedia-devel qt6-qtspeech-devel \
     qt6-qtsvg-devel qt6-qttools-devel qtkeychain-qt6-devel \
  && dnf clean all
