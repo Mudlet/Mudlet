@@ -300,4 +300,100 @@ end]])
 
   end)
 
+  -- Nothing on the suite's own profile shows where a Lua error is reported, and
+  -- nothing in Lua can turn on echoing them to the main console, so this loads
+  -- a profile that has it on and reads that profile's console back (#11015)
+  describe("a callback that raises", function()
+    local name = "mudlet-spec-spawn-callback-error"
+    local directory = getMudletHomeDir():match("^(.*)[/\\]") .. "/" .. name
+    local marker = directory .. "/mudlet-spec-fixture"
+
+    local function removeTree(path)
+      if lfs.attributes(path, "mode") ~= "directory" then
+        os.remove(path)
+        return
+      end
+      for entry in lfs.dir(path) do
+        if entry ~= "." and entry ~= ".." then
+          removeTree(path .. "/" .. entry)
+        end
+      end
+      lfs.rmdir(path)
+    end
+
+    local function loaded()
+      local entry = getProfiles()[name]
+      return entry ~= nil and entry.loaded
+    end
+
+    it("should have its error reported like any other script's", function()
+      if getOS() == "windows" then
+        pending("no /bin/echo for the child")
+        return
+      end
+      if not os.getenv("MUDLET_TEST_MODE") then
+        pending("waiting for the other profile needs pumpEvents(), which is refused outside MUDLET_TEST_MODE")
+        return
+      end
+      if lfs.attributes(marker) then
+        removeTree(directory)
+      end
+      assert.is_nil(lfs.attributes(directory), "a profile named " .. name .. " already exists and is not this spec's to delete")
+      local consoleText
+      local handler = registerAnonymousEventHandler("mudletSpecSpawnErrorConsole", function(_, text)
+        consoleText = text
+      end)
+      finally(function()
+        killAnonymousEventHandler(handler)
+        if loaded() then
+          closeProfile(name)
+        end
+        for _ = 1, 100 do
+          if not loaded() then
+            break
+          end
+          pumpEvents(50)
+        end
+        if lfs.attributes(marker) then
+          removeTree(directory)
+        end
+      end)
+      lfs.mkdir(directory)
+      io.open(marker, "w"):close()
+      lfs.mkdir(directory .. "/current")
+      local script = [[
+spawn(function() error("mudletSpecSpawnCallback" .. "Boom") end, "/bin/echo", "hello")
+tempTimer(1, function() raiseGlobalEvent("mudletSpecSpawnErrorConsole", table.concat(getLines("main", 0, getLastLineNumber("main") + 1), "\n")) end)]]
+      local file = assert(io.open(directory .. "/current/2026-01-01#00-00-00.xml", "w"))
+      file:write([[<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE MudletPackage>
+<MudletPackage version="1.001">
+  <HostPackage><Host mEchoLuaErrors="yes"></Host></HostPackage>
+  <ScriptPackage>
+    <Script isActive="yes" isFolder="no">
+      <name>mudlet-spec-spawn-callback-error</name>
+      <packageName></packageName>
+      <script>]] .. script .. [[</script>
+      <eventHandlerList />
+    </Script>
+  </ScriptPackage>
+</MudletPackage>
+]])
+      file:close()
+
+      assert.is_true(loadProfile(name, true))
+      for _ = 1, 100 do
+        if consoleText then
+          break
+        end
+        pumpEvents(50)
+      end
+
+      assert.is_string(consoleText, "the other profile never reported its console")
+      -- the message is assembled as it runs, so only the raised error can contain it whole
+      assert.is_truthy(consoleText:find("mudletSpecSpawnCallbackBoom", 1, true), consoleText)
+      assert.is_truthy(consoleText:find("spawn() callback", 1, true), consoleText)
+    end)
+  end)
+
 end)
