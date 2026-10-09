@@ -21,7 +21,9 @@
  ***************************************************************************/
 
 #include <QColor>
+#include <QFont>
 #include <QPointer>
+#include <QRect>
 #include <QSet>
 #include <QString>
 
@@ -75,6 +77,16 @@ struct TLabelModel
     double mSvgRotation = 0.0;
     double mSvgShearX = 0.0;
     double mSvgShearY = 0.0;
+    // The widget's pos() and size(), kept current by the view as Qt moves or resizes it.
+    QRect mGeometry;
+    // QWidget::isVisibleTo() the main console, kept current by the view.
+    bool mVisible = false;
+    // The widget's own styleSheet(), toolTip() and font(), kept current by the view.
+    QString mStyleSheet;
+    QString mToolTip;
+    QFont mFont;
+    // QLabel::text(), which a pixmap or movie empties, written by the view after each change.
+    QString mText;
 
 private:
     void releaseFunc(const int existingFunction, const int newFunction);

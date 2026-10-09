@@ -27,6 +27,7 @@
 #include "TConsole.h"
 #include "TDockWidget.h"
 #include "mudlet.h"
+#include "TMainConsole.h"
 
 #include <QDesktopServices>
 #include <QFile>
@@ -102,6 +103,9 @@ TLabel::TLabel(Host* pH, const QString& name, QWidget* pW)
     setOpenExternalLinks(false);
 
     connect(this, &QLabel::linkActivated, this, &TLabel::slot_linkActivated);
+
+    // QLabel's constructor already took the parent's font, before changeEvent() could see it
+    mpModel->mFont = font();
 }
 
 TLabel::~TLabel()
@@ -196,6 +200,7 @@ void TLabel::setText(const QString& text)
         stopMovie();
         QLabel::setText(text);
     }
+    mpModel->mText = QLabel::text();
 }
 
 bool TLabel::carriesLink() const
@@ -423,6 +428,8 @@ bool TLabel::setBackgroundImage(const QString& path)
     clearSvgImage();
     stopMovie();
     setPixmap(raster);
+    // setPixmap() empties the text
+    mpModel->mText = text();
     return true;
 }
 
@@ -631,6 +638,25 @@ void TLabel::changeEvent(QEvent* event)
     if (event->type() == QEvent::StyleChange || event->type() == QEvent::PaletteChange) {
         applyBackgroundColor();
     }
+    if (event->type() == QEvent::StyleChange) {
+        mpModel->mStyleSheet = styleSheet();
+    } else if (event->type() == QEvent::FontChange) {
+        mpModel->mFont = font();
+    }
+}
+
+// QWidget::event() doesn't pass ToolTipChange on to changeEvent()
+bool TLabel::event(QEvent* event)
+{
+    if (event->type() == QEvent::ToolTipChange) {
+        mpModel->mToolTip = toolTip();
+    }
+    const bool handled = QLabel::event(event);
+    // A qproperty-text in a style sheet reaches QLabel::setText() directly, as the style is applied
+    if (event->type() == QEvent::Polish || event->type() == QEvent::StyleChange) {
+        mpModel->mText = text();
+    }
+    return handled;
 }
 
 void TLabel::applyBackgroundColor()
@@ -738,8 +764,8 @@ void TLabel::slot_linkActivated(const QString& link)
 
         if (scheme == qsl("prompt")) {
             // prompt: scheme - put text in command line and wait for user to press enter
-            if (mpHost->mpConsole && mpHost->mpConsole->mpCommandLine) {
-                QPointer<TCommandLine> commandLine = mpHost->mpConsole->mpCommandLine;
+            if (mpHost->mainConsoleView() && mpHost->mainConsoleView()->mpCommandLine) {
+                QPointer<TCommandLine> commandLine = mpHost->mainConsoleView()->mpCommandLine;
                 commandLine->setPlainText(payload);
                 QTextCursor cursor = commandLine->textCursor();
                 cursor.movePosition(QTextCursor::End);
