@@ -1273,8 +1273,9 @@ describe("Tests Other.lua functions", function()
       assert.is_true(setConfig("ircHostName", "irc.example.org"))
       assert.is_true(setConfig("ircHostPort", saved.ircHostPort == 5499 and 5498 or 5499))
       assert.is_true(setConfig("ircChannels", "#mudletspec"))
-      for k, v in pairs(saved) do
-        setConfig(k, v)
+      -- only these: the snapshot's boolean showSentText would turn "always" into "script"
+      for _, key in ipairs({"ircHostName", "ircHostPort", "ircChannels"}) do
+        assert.is_true(setConfig(key, saved[key]))
       end
       assert.equals(saved.ircHostName, getConfig("ircHostName"))
       assert.equals(saved.ircHostPort, getConfig("ircHostPort"))
