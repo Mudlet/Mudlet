@@ -152,7 +152,7 @@ jobs:
       env:
         DUPLICATE_COUNT: ${{ steps.update.outputs.duplicate_count }}
         DUPLICATES: ${{ steps.update.outputs.duplicates }}
-        # with no data change there is no pull request, so the check stays on the commit that was scraped
+        # a check shows only on the commit it is attached to: the PR head, or this run's checkout if it sent no PR
         HEAD_SHA: ${{ steps.cpr.outputs.pull-request-head-sha || github.sha }}
       with:
         script: |
