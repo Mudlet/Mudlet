@@ -1062,7 +1062,7 @@ if(APPLE)
     "${CMAKE_CURRENT_SOURCE_DIR}/sparkleupdater.h"
     "${CMAKE_CURRENT_SOURCE_DIR}/sparkleupdater.mm")
     find_package(Sparkle)
-    target_link_libraries(${LIB_MUDLET_APP_TARGET} "-framework AppKit" Sparkle::Sparkle)
+    target_link_libraries(${LIB_MUDLET_APP_TARGET} PUBLIC "-framework AppKit" Sparkle::Sparkle)
   endif(USE_UPDATER)
 
   set_target_properties(${EXE_MUDLET_TARGET} PROPERTIES
