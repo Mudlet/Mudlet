@@ -16,9 +16,8 @@ jobs:
     if: >
       github.repository_owner == 'Mudlet' &&
       github.event.workflow_run.conclusion == 'success'
-    # Both build workflows trigger this; don't cancel the first - the second trigger completes the release.
-    # Held by this job rather than the whole run: the Linux package build's attach job takes the same
-    # group, and linux-packages below waits for that build to finish.
+    # Both build workflows trigger this; don't cancel the first - the second completes the release. Held by this
+    # job, not the run: the package build's attach job takes this group while linux-packages waits on that build.
     concurrency:
       group: create-github-release-${{ github.event.workflow_run.head_sha }}
       cancel-in-progress: false
@@ -602,7 +601,7 @@ jobs:
       needs.create-release.outputs.type == 'release' &&
       vars.LINUX_PACKAGES_BASE_URL != ''
     runs-on: ubuntu-latest
-    # the package build's matrix jobs may take 120 minutes each, then it attaches and publishes
+    # room for the package build's queueing, its 120-minute matrix jobs, and its attach and publish jobs
     timeout-minutes: 240
     steps:
       - name: Start the Linux package build and wait for it
@@ -610,52 +609,31 @@ jobs:
           RELEASE_TAG: ${{ needs.create-release.outputs.tag }}
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          # build-linux-packages.yml's run-name for a publishing dispatch
-          export RUN_TITLE="Build Linux packages for ${RELEASE_TAG} (publish)"
-          list_runs() {
-            gh run list --repo "${GITHUB_REPOSITORY}" --workflow build-linux-packages.yml \
-              --event workflow_dispatch --limit 50 --json databaseId,displayTitle "$@"
-          }
-          # gh workflow run does not say which run it started; run ids only grow, so ours is the
-          # first above the newest from before the dispatch whose run-name names this tag
-          previous=""
-          for _ in 1 2 3 4 5; do
-            previous=$(list_runs --jq '[.[].databaseId] | max // 0') && break
-            previous=""
-            sleep 10
-          done
-          if [[ -z "${previous}" ]]; then
-            echo "::error::Could not list the Linux package builds, so did not start one for ${RELEASE_TAG}"
+          runs_url="${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/workflows/build-linux-packages.yml"
+          # not retried: a request that failed may still have started a build
+          if ! started=$(gh workflow run build-linux-packages.yml --repo "${GITHUB_REPOSITORY}" -f tag="${RELEASE_TAG}" -f publish=true); then
+            echo "::error::Could not start the Linux package build for ${RELEASE_TAG}, check ${runs_url} before starting one by hand"
             exit 1
           fi
-          gh workflow run build-linux-packages.yml --repo "${GITHUB_REPOSITORY}" -f tag="${RELEASE_TAG}" -f publish=true
-
-          run_id=""
-          for _ in $(seq 1 30); do
-            run_id=$(list_runs --jq "[.[] | select(.databaseId > ${previous} and .displayTitle == \$ENV.RUN_TITLE) | .databaseId] | min // empty") || run_id=""
-            if [[ -n "${run_id}" ]]; then
-              break
-            fi
-            sleep 10
-          done
+          run_id=$(grep -oE '/actions/runs/[0-9]+' <<< "${started}" | grep -oE '[0-9]+$' || true)
           if [[ -z "${run_id}" ]]; then
-            echo "::error::Started the Linux package build for ${RELEASE_TAG} but could not find its run"
+            echo "::error::Started the Linux package build for ${RELEASE_TAG} but GitHub did not say which run it is, check ${runs_url}"
             exit 1
           fi
 
           url="${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${run_id}"
           echo "Linux package build for ${RELEASE_TAG}: ${url}" >> "$GITHUB_STEP_SUMMARY"
           echo "Waiting for the Linux package build at ${url}"
-          # gh run watch also exits non-zero when it loses the API, so the run's own result decides
+          # polled rather than gh run watch, which spends several requests a minute and gives up on one failed
+          # request; 46 polls 5 minutes apart end before timeout-minutes, so the error below still names the build
           result=""
-          for _ in 1 2 3; do
-            gh run watch "${run_id}" --repo "${GITHUB_REPOSITORY}" --exit-status --interval 60 > /dev/null || true
+          for _ in $(seq 1 46); do
+            sleep 300
             result=$(gh run view "${run_id}" --repo "${GITHUB_REPOSITORY}" --json status,conclusion \
               --jq '.status + " " + .conclusion') || result=""
             if [[ "${result}" == completed* ]]; then
               break
             fi
-            sleep 30
           done
           case "${result}" in
             "completed success")
@@ -665,7 +643,7 @@ jobs:
               exit 1
               ;;
             *)
-              echo "::error::Lost track of the Linux package build for ${RELEASE_TAG} (last status: '${result:-unknown}'), check it at ${url}"
+              echo "::error::The Linux package build for ${RELEASE_TAG} had not finished after 230 minutes (last status: '${result:-unknown}'), it may still be running: ${url}"
               exit 1
               ;;
           esac
