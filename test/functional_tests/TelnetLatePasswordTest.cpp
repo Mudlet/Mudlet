@@ -51,6 +51,7 @@
 #include "Host.h"
 #include "MudletInstanceCoordinator.h"
 #include "MudletApp.h"
+#include "TMainConsole.h"
 #include "ctelnet.h"
 #include "mudlet.h"
 

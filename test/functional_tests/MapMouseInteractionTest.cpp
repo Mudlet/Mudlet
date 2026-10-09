@@ -63,6 +63,7 @@
 #include "T2DMap.h"
 #include "TArea.h"
 #include "TLuaInterpreter.h"
+#include "TMainConsole.h"
 #include "TMap.h"
 #include "TMapLabel.h"
 #include "TMapView.h"

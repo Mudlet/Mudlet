@@ -55,6 +55,7 @@
 #include "dlgConnectionProfiles.h"
 #include "dlgProfilePreferences.h"
 #include "mudlet.h"
+#include "TMainConsole.h"
 #include "utils.h"
 
 #include "GroupedTest.h"

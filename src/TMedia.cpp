@@ -1369,7 +1369,7 @@ void TMedia::connectMediaPlayer(std::shared_ptr<TMediaPlayer>& player)
         qWarning().noquote() << qsl("TMedia::connectMediaPlayer() WARNING - media player error %1 on \"%2\": %3")
                                         .arg(QString::number(static_cast<int>(error)), lockedPlayer->mediaPlayer()->source().toString(), errorString);
 
-        if (TDebug::smDebugMode && mpHost && mpHost->mpConsole) {
+        if (TDebug::smDebugMode && mpHost && mpHost->mainConsoleView()) {
             //: %1 is the media backend's own description of what went wrong, e.g. "Failed to load media".
             mpHost->printSystemMessage(qsl("%1\n").arg(tr("Media error: %1").arg(errorString)));
         }
@@ -1508,7 +1508,7 @@ void TMedia::updateList(QList<std::shared_ptr<T>>& list, int index, std::shared_
         qDebug() << "TMedia::updateList() - List exceeded max allowed size (" << mediaInstance->getMaxUnprunedPlayers() << "). Purging stopped players.";
         TMedia::purgeStoppedMediaPlayers(list);
 
-        if (TDebug::smDebugMode && mediaInstance && mediaInstance->mpHost && mediaInstance->mpHost->mpConsole) {
+        if (TDebug::smDebugMode && mediaInstance && mediaInstance->mpHost && mediaInstance->mpHost->mainConsoleView()) {
             mediaInstance->mpHost->printSystemMessage(qsl("%1\n").arg(tr("Too many stopped media players. Purging stopped players.")));
         }
 
@@ -1516,7 +1516,7 @@ void TMedia::updateList(QList<std::shared_ptr<T>>& list, int index, std::shared_
             qWarning() << "TMedia::updateList() - List still exceeds max size after purging. Removing oldest active player.";
             list.removeFirst(); // Evict the oldest player to enforce cap
 
-            if (TDebug::smDebugMode && mediaInstance && mediaInstance->mpHost && mediaInstance->mpHost->mpConsole) {
+            if (TDebug::smDebugMode && mediaInstance && mediaInstance->mpHost && mediaInstance->mpHost->mainConsoleView()) {
                 mediaInstance->mpHost->printSystemMessage(qsl("%1\n").arg(tr("Too many stopped media players. Removed oldest active player.")));
             }
         }
@@ -1611,7 +1611,7 @@ std::shared_ptr<TMediaPlayer> TMedia::getMediaPlayer(TMediaData& mediaData)
     if (mediaPlayerList.size() >= maxAllowed) {
         qWarning() << "TMedia::getMediaPlayer() - Too many active players for media type. Skipping creation.";
 
-        if (TDebug::smDebugMode && mpHost && mpHost->mpConsole) {
+        if (TDebug::smDebugMode && mpHost && mpHost->mainConsoleView()) {
             mpHost->printSystemMessage(qsl("%1\n").arg(tr("Maximum allowed active media players reached for media type. Cannot play additional media.")));
         }
 
@@ -2620,7 +2620,7 @@ void TMedia::parseJSONForMediaStop(QJsonObject& json)
 
 void TMedia::printClosedCaption(const TMediaData& mediaData, const QString& action) const
 {
-    if (!mpHost || !mpHost->mEnableClosedCaption || !mpHost->mpConsole)
+    if (!mpHost || !mpHost->mEnableClosedCaption || !mpHost->mainConsoleView())
         return;
 
     QString message;

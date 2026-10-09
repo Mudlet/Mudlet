@@ -1093,7 +1093,7 @@ void cTelnet::slot_socketDisconnected()
     }
 
     postData();
-    if (mpHost->mpConsole) {
+    if (mpHost->mainConsoleView()) {
         // A line held back for server-wrap undoing is complete now that the
         // connection is gone - commit it, in trigger context as for any other
         // line from the game, before the disconnect messages:
@@ -1892,7 +1892,7 @@ void cTelnet::sendCurrentNAWS()
     // width of the time stamps if they are drawn - with no view they are not.
     // Never below 1: RFC 1073 reads 0 as unknown, and a negative width goes on
     // the wire as a very wide one.
-    const bool gutterDrawn = pHost->mpConsole && pHost->mainConsoleShowsTimeStamps();
+    const bool gutterDrawn = pHost->mainConsoleView() && pHost->mainConsoleShowsTimeStamps();
     int naws_x = std::max(1, std::min(pHost->mScreenWidth, pHost->mWrapAt) - static_cast<int>(gutterDrawn ? TBuffer::smTimeStampFormat.size() : 0));
     int naws_y = pHost->mScreenHeight;
     if ((naws_y > 0) && (myOptionState.test(static_cast<size_t>(OPT_NAWS))) && ((mNaws_x != naws_x) || (mNaws_y != naws_y))) {
@@ -5031,7 +5031,7 @@ void cTelnet::postMessage(QString msg)
 {
     messageStack.append(msg);
 
-    if (!mpHost || mpHost->isClosingDown() || !mpHost->mpConsole) {
+    if (!mpHost || mpHost->isClosingDown() || !mpHost->mainConsoleView()) {
         // Console doesn't exist (yet), or Host is shutting down; stack up
         // messages until it does (or they are dumped out by the destructor)...
         return;
@@ -5311,14 +5311,14 @@ void cTelnet::slot_timerPosting()
     postData();
     mMudData = "";
     mIsTimerPosting = false;
-    if (mpHost && mpHost->mpConsole) {
+    if (mpHost && mpHost->mainConsoleView()) {
         mpHost->finalizeMainConsole();
     }
 }
 
 void cTelnet::postData(const bool endsWithPromptMarker)
 {
-    if (!mpHost || mpHost->isClosingDown() || !mpHost->mpConsole) {
+    if (!mpHost || mpHost->isClosingDown() || !mpHost->mainConsoleView()) {
         return;
     }
 
@@ -5751,7 +5751,7 @@ void cTelnet::slot_processReplayChunk()
         gotRest(cleandata);
     }
 
-    if (mpHost && mpHost->mpConsole) {
+    if (mpHost && mpHost->mainConsoleView()) {
         mpHost->finalizeMainConsole();
     }
     if (loadingReplay) {
@@ -6137,7 +6137,7 @@ Some data loss is likely - please mention this problem to the game admins.)",
         return;
     }
 
-    if (mpHost && mpHost->mpConsole) {
+    if (mpHost && mpHost->mainConsoleView()) {
         mpHost->finalizeMainConsole();
     }
 
