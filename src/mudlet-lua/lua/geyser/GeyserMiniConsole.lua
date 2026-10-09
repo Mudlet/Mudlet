@@ -113,10 +113,9 @@ function Geyser.MiniConsole:setTextFormat(r1, g1, b1, r2, g2, b2, bold, underlin
 end
 
 --- Returns the width and height of a character in this miniconsole's font, in pixels.
--- @param averageWidth Optional. True to have the width be the average character
--- width the miniconsole lays its text out on, which can be fractional, rather than
--- the width of a "W" in whole pixels. Only the former matches getColumnCount() for
--- a proportional font.
+-- @param averageWidth Optional. True to have the width be the one the miniconsole
+-- draws each column in, the font's average character width in whole pixels, rather
+-- than the width of a "W". Only the former fits its columns on a proportional font.
 function Geyser.MiniConsole:calcFontSize(averageWidth)
   return calcFontSize(self.name, averageWidth == true)
 end

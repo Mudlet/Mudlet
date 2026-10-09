@@ -4616,35 +4616,25 @@ describe("Window and label state", function()
       assert.is_nil(calcFontSize(name("wlsNoSuchWindow")))
     end)
 
-    -- The default stays the whole-pixel width of a "W", which scripts already
-    -- compensate for, so the width the console lays its columns out on is opt-in
-    it("calcFontSize given true reports the width a window lays its columns out on (#10446)", function()
+    -- The default stays the width of a "W", which scripts already compensate
+    -- for, so the width the console draws each column in is opt-in
+    it("calcFontSize given true reports the width a window draws each column in (#10446)", function()
+      local original = getFont(console)
       setMiniConsoleFontSize(console, 14)
-      local layoutWidth, layoutHeight = calcFontSize(console, true)
+      assert.is_true(setFont(console, "Bitstream Vera Sans"))
+      local columnWidth, columnHeight = calcFontSize(console, true)
       local defaultWidth, defaultHeight = calcFontSize(console)
-      assert.are.equal(defaultHeight, layoutHeight)
-      assert.are.same({defaultWidth, defaultHeight}, {calcFontSize(console, false)})
-      for _, columns in ipairs({40, 80, 200}) do
-        resizeWindow(console, math.floor(layoutWidth * columns + 0.5), 150)
-        assert.are.equal(columns, getColumnCount(console), ("sized for %d columns at %s pixels each"):format(columns, layoutWidth))
-      end
-      resizeWindow(console, 300, 150)
+      assert.is_true(setFont(console, original))
+      assert.are.equal(defaultHeight, columnHeight)
+      -- the cells are the font's average width in whole pixels, which the font size form gives
+      assert.are.equal((calcFontSize(14, "Bitstream Vera Sans")), columnWidth)
+      assert.is_true(columnWidth < defaultWidth, ("a column is %s pixels and a \"W\" %s on a proportional font"):format(columnWidth, defaultWidth))
+      assert.are.same({calcFontSize(console)}, {calcFontSize(console, false)})
     end)
 
-    it("calcFontSize given true keeps the font size forms working (#10446)", function()
-      -- only true gives the fractional width, the default stays whole pixels
-      local width, height = calcFontSize(12, true)
-      local defaultWidth, defaultHeight = calcFontSize(12)
-      assert.are.equal(defaultHeight, height)
-      assert.are.equal(math.floor(defaultWidth), defaultWidth)
-      assert.are_not.equal(math.floor(width), width)
-      assert.is_true(math.abs(width - defaultWidth) < 1)
-      local namedWidth, namedHeight = calcFontSize(12, "Bitstream Vera Sans", true)
-      local namedDefaultWidth, namedDefaultHeight = calcFontSize(12, "Bitstream Vera Sans")
-      assert.are.equal(namedDefaultHeight, namedHeight)
-      assert.are.equal(math.floor(namedDefaultWidth), namedDefaultWidth)
-      assert.are_not.equal(math.floor(namedWidth), namedWidth)
-      assert.is_true(math.abs(namedWidth - namedDefaultWidth) < 1)
+    it("calcFontSize given true leaves the font size forms as they were (#10446)", function()
+      assert.are.same({calcFontSize(12)}, {calcFontSize(12, true)})
+      assert.are.same({calcFontSize(12, "Bitstream Vera Sans")}, {calcFontSize(12, "Bitstream Vera Sans", true)})
     end)
 
     it("calcFontSize given only true reports the main window's layout width (#10446)", function()

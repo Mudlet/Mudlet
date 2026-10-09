@@ -324,9 +324,9 @@ int TLuaInterpreter::calcFontSize(lua_State* L)
     QString windowName = qsl("main");
     QSize size;
 
-    // An opt-in trailing boolean asks for the width as the fractional average
-    // character width consoles lay text out on; scripts written for the
-    // whole-pixel width of a "W" in a window keep getting that by default
+    // An opt-in trailing boolean asks a window for the width each column is drawn
+    // in, as the font size forms already give; scripts written for the width of
+    // a "W" in a window keep getting that by default
     int argumentCount = lua_gettop(L);
     bool averageWidth = false;
     if (argumentCount >= 1 && lua_isboolean(L, argumentCount)) {
@@ -346,12 +346,11 @@ int TLuaInterpreter::calcFontSize(lua_State* L)
         auto fontMetrics = QFontMetrics(font);
         size = QSize(fontMetrics.averageCharWidth(), fontMetrics.height());
 
-        lua_pushnumber(L, averageWidth ? QFontMetricsF(font).averageCharWidth() : size.width());
+        lua_pushnumber(L, size.width());
         lua_pushnumber(L, size.height());
         return 2;
     }
 
-    qreal layoutWidth = -1.0;
     // otherwise either window name or font size is passed in
     if (argumentCount == 1 && lua_isnumber(L, 1)) {
         auto fontSize = lua_tonumber(L, 1);
@@ -359,12 +358,11 @@ int TLuaInterpreter::calcFontSize(lua_State* L)
 
         auto fontMetrics = QFontMetrics(font);
         size = QSize(fontMetrics.averageCharWidth(), fontMetrics.height());
-        layoutWidth = QFontMetricsF(font).averageCharWidth();
     } else {
         windowName = WINDOW_NAME(L, 1);
         size = host.calcFontSize(windowName);
-        if (averageWidth) {
-            layoutWidth = host.calcAverageCharWidth(windowName);
+        if (averageWidth && size.width() > -1) {
+            size.setWidth(host.calcColumnWidth(windowName));
         }
     }
 
@@ -373,7 +371,7 @@ int TLuaInterpreter::calcFontSize(lua_State* L)
         return 1;
     }
 
-    lua_pushnumber(L, averageWidth ? layoutWidth : size.width());
+    lua_pushnumber(L, size.width());
     lua_pushnumber(L, size.height());
     return 2;
 }

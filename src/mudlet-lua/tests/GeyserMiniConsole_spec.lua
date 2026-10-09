@@ -160,14 +160,14 @@ describe("Tests functionality of Geyser.MiniConsole", function()
     end)
 
     -- the width of a "W" is twice the average on a proportional font, which wrapped
-    -- the text at half the columns the console has (#10446)
-    it("wraps at the columns the console has on a proportional font", function()
+    -- the text at half the columns the console draws (#10446)
+    it("wraps at the columns the console draws on a proportional font", function()
       local console = track(Geyser.MiniConsole:new({name = "gmcProportionalWrap", x = 0, y = 0, width = 800, height = 100, autoWrap = true}))
       assert.is_true(console:setFont("Bitstream Vera Sans"))
       console:resetAutoWrap()
-      local columns = getColumnCount("gmcProportionalWrap")
-      assert.is_true(console.wrapAt <= columns and console.wrapAt >= columns - 2,
-        ("wraps at %d of %d columns"):format(console.wrapAt, columns))
+      local columnWidth = calcFontSize("gmcProportionalWrap", true)
+      assert.are.equal((calcFontSize(getFontSize("gmcProportionalWrap"), "Bitstream Vera Sans")), columnWidth)
+      assert.are.equal(math.floor(800 / columnWidth), console.wrapAt)
     end)
 
     it("reports that resetAutoWrap has nothing to do when auto wrap is off", function()
