@@ -238,6 +238,9 @@ struct TConsoleModel
     int mHangingIndentCount = 0;
     // The upper pane's columns and rows, kept current by TTextEdit::reportGridSize().
     QSize mGridSize;
+    // The upper pane's TTextEdit::mCursorY, which it copies out of the buffer as it repaints.
+    int mUpperPaneCursorY = 0;
+    bool mScrollingEnabled = true;
     void wrapLine(int line) { buffer.wrapLine(line, mWrapAt, mIndentCount, mHangingIndentCount); }
 
     // The name scripts know this console by. Only the main console, user

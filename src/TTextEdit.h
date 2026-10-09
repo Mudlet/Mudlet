@@ -124,8 +124,9 @@ public:
     void applyHyperlinkSelectionGroupState(int linkIndex, QString& uri, const Mudlet::HyperlinkStyling::SelectionSettings& selection, const char* callerContext);
 
     QColor mBgColor;
-    // position of cursor, in characters, across the entire buffer
-    int mCursorY = 0;
+    // position of cursor, in characters, across the entire buffer. The upper
+    // pane's lives in its console's model, where getScroll() reads it.
+    int& mCursorY;
     int mCursorX = 0;
 
     // Position of "caret", the cursor used for accessibility purposes.
@@ -286,6 +287,7 @@ private:
     // or reset on creation and is used to adjust the behaviour depending on
     // which one this instance is:
     const bool mIsLowerPane;
+    int mLowerPaneCursorY = 0;
     // last line offset rendered
     int mLastRenderedOffset = 0;
     bool mMouseTracking = false;

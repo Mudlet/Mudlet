@@ -77,6 +77,7 @@ using namespace std::chrono_literals;
 // Text data stored separately in a TBuffer
 TTextEdit::TTextEdit(TConsole* pC, QWidget* pW, TBuffer* pB, Host* pH, bool isLowerPane)
 : QWidget(pW)
+, mCursorY(isLowerPane ? mLowerPaneCursorY : pC->model().mUpperPaneCursorY)
 , mIsLowerPane(isLowerPane)
 , mpBuffer(pB)
 , mpConsole(pC)
