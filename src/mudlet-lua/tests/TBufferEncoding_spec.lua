@@ -996,12 +996,18 @@ describe("Tests a character whose bytes are split by the posting timeout", funct
     using("UTF-8")
 
     -- A prompt followed by a title the game has not finished sending: the
-    -- marker has to show the prompt, as it does ahead of a split colour
-    -- sequence, rather than leave it waiting on the rest - see issue #10897
-    local text, lines, perLine = splitAcrossTimeout("HP:100 > \27]0;title", "\27\\")
-    assert.equals("HP:100 > :end", text)
-    assert.equals(2, lines)
-    assert.same({"HP:100 > ", ":end"}, perLine)
+    -- marker has to show the prompt during the pause, as it does ahead of a
+    -- split colour sequence - see issue #10897
+    local mark = getLastLineNumber("main")
+    feed("split:HP:100 > \27]0;title")
+    beQuiet()
+    -- read now, but asserted once the sequence is over, so a failure does not
+    -- leave it open for the cases after this one
+    local duringPause = shownSince(mark)
+    feed("\27\\:end\n")
+    beQuiet()
+    assert.same({"split:HP:100 > "}, duringPause, "the prompt was not shown during the pause")
+    assert.same({"split:HP:100 > ", ":end"}, shownSince(mark))
   end)
 
   it("commits the text ahead of an operating system command that reaches the length cap at the marker", function()
@@ -1024,6 +1030,19 @@ describe("Tests a character whose bytes are split by the posting timeout", funct
   -- whole OSC 8 payload carries them, and only a link that opens and closes on
   -- one line is given them (TBuffer::finaliseActiveHyperlink())
   local concealedLink = "\27]8;;send:look?config={\"visibility\":{\"action\":\"reveal\",\"delay\":3000}}"
+
+  it("keeps the rest of an operating system command it commits the text ahead of", function()
+    if timerUnavailable() then return end
+    using("UTF-8")
+
+    local mark = getLastLineNumber("main")
+    local opening = concealedLink .. "\27\\"
+    feed("split:" .. opening:sub(1, 30))
+    beQuiet()
+    feed(opening:sub(31) .. "LOOK\27]8;;\27\\\n")
+    beQuiet()
+    assert.same({"split:", "    "}, shownSince(mark))
+  end)
 
   it("does not split a link at a marker that lands in its closing sequence", function()
     if timerUnavailable() then return end
