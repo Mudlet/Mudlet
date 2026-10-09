@@ -1230,6 +1230,19 @@ int TLuaInterpreter::feedTriggers(lua_State* L)
         dataIsUtf8Encoded = getVerifiedBool(L, __func__, 2, "Utf8Encoded", true);
     }
     const QByteArray data{lua_tostring(L, 1)};
+    // Fed from a trigger or alias, the text runs a whole trigger pass inside
+    // that script; park its matches and command so they are still there when
+    // the pass returns. Fed from anywhere else there is nothing to park, and
+    // the captures a pass leaves behind are what the next script is handed.
+    TLuaInterpreter* pL = host.getLuaInterpreter();
+    const bool nested = triggerUnit->processingDepth() > 0 || host.getAliasUnit()->processingDepth() > 0;
+    auto feed = [&host, pL, nested](std::string& text, const bool isFromServer) {
+        const int dispatchDepth = nested ? pL->pushNestedDispatchState() : -1;
+        host.printOnDisplay(text, isFromServer);
+        if (dispatchDepth >= 0) {
+            pL->popNestedDispatchState(dispatchDepth);
+        }
+    };
 
     const QByteArray currentEncoding = host.mTelnet.getEncoding();
     if (dataIsUtf8Encoded) {
@@ -1237,7 +1250,7 @@ int TLuaInterpreter::feedTriggers(lua_State* L)
         if (currentEncoding == "UTF-8") {
             // Simple case: the encoding is already what we are using:
             std::string dataStdString{data.toStdString()};
-            host.printOnDisplay(dataStdString, false);
+            feed(dataStdString, false);
             lua_pushboolean(L, true);
             return 1;
         }
@@ -1255,7 +1268,7 @@ int TLuaInterpreter::feedTriggers(lua_State* L)
             }
 
             std::string encodedText{TEncodingHelper::encode(dataQString, currentEncoding).toStdString()};
-            host.printOnDisplay(encodedText, false);
+            feed(encodedText, false);
             lua_pushboolean(L, true);
             return 1;
         }
@@ -1271,7 +1284,7 @@ int TLuaInterpreter::feedTriggers(lua_State* L)
         // It is safe to use the data directly now as we have already proved it
         // to be plain ASCII
         std::string dataStdString{dataQString.toStdString()};
-        host.printOnDisplay(dataStdString, false);
+        feed(dataStdString, false);
         lua_pushboolean(L, true);
         return 1;
     }
@@ -1279,7 +1292,7 @@ int TLuaInterpreter::feedTriggers(lua_State* L)
     // else the user is assumed to have coded it themselves into the Game
     // Server's current encoding - the backwards "compatible" form:
     std::string dataStdString{data.toStdString()};
-    host.printOnDisplay(dataStdString, false);
+    feed(dataStdString, false);
     lua_pushboolean(L, true);
     return 1;
 }
