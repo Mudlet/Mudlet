@@ -395,8 +395,8 @@ private slots:
         // of the dock where the section is
         QVERIFY(runLua(host, qsl("addRoom(1)\nBaseUI.checkMapData()")));
         QVERIFY2(luaTrue(host, qsl("BaseUI.map ~= nil and BaseUI.map.container == BaseUI.sections.map.Inside")), "the mapper was not created inside the floating map section");
-        QVERIFY(host->mpConsole);
-        QVERIFY2(host->mpConsole->mpMapper, "no mapper widget was created at all");
+        QVERIFY(host->mainConsoleView());
+        QVERIFY2(host->mainConsoleView()->mpMapper, "no mapper widget was created at all");
         QVERIFY(runLua(host,
                        qsl("__ui.mapperX = math.abs(BaseUI.map:get_x() - BaseUI.sections.map:get_x())\n"
                            "__ui.mapperY = math.abs(BaseUI.map:get_y() - (BaseUI.sections.map:get_y() + 20))")));
@@ -413,13 +413,13 @@ private slots:
         // Geyser.Mapper re-runs createMapper() on every reposition, so the widget
         // has to still be there after the section has been moved about
         QVERIFY(runLua(host, qsl("BaseUI.sections.map:move('30%', '30%')")));
-        QVERIFY2(host->mpConsole->mpMapper, "moving the floating map section destroyed the mapper widget");
-        QVERIFY2(host->mpConsole->mpMapper->width() > 0 && host->mpConsole->mpMapper->height() > 0, "moving the floating map section shrank the mapper widget to nothing");
+        QVERIFY2(host->mainConsoleView()->mpMapper, "moving the floating map section destroyed the mapper widget");
+        QVERIFY2(host->mainConsoleView()->mpMapper->width() > 0 && host->mainConsoleView()->mpMapper->height() > 0, "moving the floating map section shrank the mapper widget to nothing");
 
         QVERIFY(runLua(host, qsl("BaseUI.alias('dock')")));
         QVERIFY2(luaTrue(host, qsl("not BaseUI.sectionFloating('map')")), "the map section did not go back into the dock");
-        QVERIFY2(host->mpConsole->mpMapper, "putting the map section back destroyed the mapper widget");
-        QVERIFY2(host->mpConsole->mpMapper->width() > 0 && host->mpConsole->mpMapper->height() > 0, "the mapper widget shrank to nothing when the map section came back to the dock");
+        QVERIFY2(host->mainConsoleView()->mpMapper, "putting the map section back destroyed the mapper widget");
+        QVERIFY2(host->mainConsoleView()->mpMapper->width() > 0 && host->mainConsoleView()->mpMapper->height() > 0, "the mapper widget shrank to nothing when the map section came back to the dock");
         QVERIFY(runLua(host,
                        qsl("__ui.backX = math.abs(BaseUI.map:get_x() - BaseUI.container.Inside:get_x())\n"
                            "__ui.backY = math.abs(BaseUI.map:get_y() - (BaseUI.container.Inside:get_y() + 20))\n"
@@ -452,8 +452,8 @@ private slots:
                  "\"baseui show\" did not bring the floating sections back");
         QVERIFY2(luaTrue(host, qsl("BaseUI.sectionFloating('map') and BaseUI.sectionFloating('chat') and BaseUI.sectionFloating('vitals')")),
                  "showing the interface again put the floating sections back in the dock");
-        QVERIFY(host->mpConsole->mpMapper);
-        QVERIFY2(host->mpConsole->mpMapper->width() > 0 && host->mpConsole->mpMapper->height() > 0, "hiding and showing the interface left the mapper widget with no size");
+        QVERIFY(host->mainConsoleView()->mpMapper);
+        QVERIFY2(host->mainConsoleView()->mpMapper->width() > 0 && host->mainConsoleView()->mpMapper->height() > 0, "hiding and showing the interface left the mapper widget with no size");
 
         QVERIFY(runLua(host, qsl("BaseUI.standAside(nil, 'some-game-gui')")));
         QVERIFY2(luaTrue(host, qsl("BaseUI.sections.map.hidden and BaseUI.sections.chat.hidden and BaseUI.sections.vitals.hidden")),

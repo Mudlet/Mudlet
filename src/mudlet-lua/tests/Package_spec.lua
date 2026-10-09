@@ -177,7 +177,7 @@ local function writePackageXml(path, body, version)
   file:close()
 end
 
--- Every install and uninstall here starts an asynchronous profile save, and
+-- Every install and uninstall here owes an asynchronous profile save, and
 -- while one is running the package API stops doing what it is told: an install
 -- is postponed and answered with a bare true (see the pending spec at the end
 -- of this file), an uninstall is refused, and a module reload is dropped. Lua
@@ -1990,6 +1990,44 @@ describe("Tests installing an archive whose config.lua will not run", function()
     assert.equals(1, exists(name .. " alias", "alias"), "the archive's contents were not installed")
   end)
 
+  -- error() can raise nil, a table or nothing at all, leaving no message to report
+  it("says the same of a config.lua that raises an error with no message", function()
+    local name = "mudlet-spec-silentconfig"
+    defer(function() removeFixturePackage(name) end)
+    defer(function() removeFixturePackage("mudlet-spec-silentconfig-renamed") end)
+
+    local mark = getLastLineNumber("main")
+    installUntilConfirmed(installPackage, fixtureDirectory .. "/" .. name .. ".mpackage",
+                          function() return packageInstalled(name) end, "the fixture whose config.lua raises nothing")
+    local text = textFrom(mark)
+
+    assert.is_true(containsWrapped(text, 'The config.lua of "' .. name .. '" could not be read'), text)
+    assert.is_false(packageInstalled("mudlet-spec-silentconfig-renamed"),
+                    "the package installed under the name of a manifest that never ran")
+    assert.same({}, getPackageInfo(name))
+    assert.equals(1, exists(name .. " alias", "alias"), "the archive's contents were not installed")
+  end)
+
+  -- The manifest is run on the main thread, so one that never finishes has to
+  -- be stopped rather than waited for
+  it("says the same of a config.lua that never finishes", function()
+    local name = "mudlet-spec-loopingconfig"
+    defer(function() removeFixturePackage(name) end)
+    defer(function() removeFixturePackage("mudlet-spec-loopingconfig-renamed") end)
+
+    local mark = getLastLineNumber("main")
+    installUntilConfirmed(installPackage, fixtureDirectory .. "/" .. name .. ".mpackage",
+                          function() return packageInstalled(name) end, "the fixture whose config.lua never finishes")
+    local text = textFrom(mark)
+
+    assert.is_true(containsWrapped(text, 'The config.lua of "' .. name .. '" could not be read'), text)
+    assert.is_true(containsWrapped(text, "it ran for too long and was stopped"), text)
+    assert.is_false(packageInstalled("mudlet-spec-loopingconfig-renamed"),
+                    "the package installed under the name of a manifest that never finished")
+    assert.same({}, getPackageInfo(name))
+    assert.equals(1, exists(name .. " alias", "alias"), "the archive's contents were not installed")
+  end)
+
   -- The same archive installed as a module is reinstalled on every profile save
   -- and on every reloadModule(), so saying it there is the same sentence over
   -- and over for a manifest the user was told about once already, on the
@@ -2125,16 +2163,39 @@ describe("Tests the functionality of verbosePackageInstall", function()
     -- announcement's own name is checked for having been trimmed
     assert.is_false(containsWrapped(text, "Installing '" .. getMudletHomeDir()), text)
   end)
+  -- installPackage() asks for a quiet install, so nothing but this line tells
+  -- the player who dropped the file which parts of it are not working
+  it("says which parts of a package are not working", function()
+    local name = "mudlet-spec-brokenscripts"
+    defer(function()
+      removeFixturePackage(name)
+      _G.mudletSpecBrokenScriptsRuns = nil
+    end)
+    local path = fixtureDirectory .. "/" .. name .. ".mpackage"
+    assert.is_true(waitForProfileSaveToPass(), "a profile save was still running")
+    local mark = getLastLineNumber("main")
+
+    verbosePackageInstall(path)
+
+    local text = textFrom(mark)
+    assert.is_true(packageInstalled(name), "the package was not installed")
+    assert.is_true(containsWrapped(text, "Package '" .. path .. "' was installed, but not everything in it is working:"), text)
+    assert.is_true(containsWrapped(text, name .. " first"), text)
+    assert.is_true(containsWrapped(text, name .. " second"), text)
+    -- shown as the script wrote it, not taken as decho's formatting
+    assert.is_true(containsWrapped(text, "markup <b>bold</b> quote"), text)
+  end)
 end)
 
 describe("Tests the functionality of verboseModuleInstall", function()
   -- A module is installed from a copy inside the profile for the same reason
   -- installFixtureModule() does it: a save rewrites a synced module's own
   -- .mpackage, which must not be the committed fixture.
-  local function stageModule()
+  local function stageModule(name)
+    name = name or moduleName
     lfs.mkdir(scratchDirectory)
-    local path = scratchDirectory .. "/" .. moduleName .. ".mpackage"
-    copyFile(fixtureDirectory .. "/" .. moduleName .. ".mpackage", path)
+    local path = scratchDirectory .. "/" .. name .. ".mpackage"
+    copyFile(fixtureDirectory .. "/" .. name .. ".mpackage", path)
     return path
   end
 
@@ -2163,6 +2224,25 @@ describe("Tests the functionality of verboseModuleInstall", function()
     assert.is_true(containsWrapped(text, "Installing '" .. path .. "' failed:"), text)
     assert.is_true(containsWrapped(text, "could not open file"), text)
     assert.is_false(moduleInstalled("mudlet-spec-there-is-no-such-module"))
+  end)
+  it("says which parts of a module are not working", function()
+    local name = "mudlet-spec-brokenscripts"
+    defer(function()
+      removeFixtureModule(name)
+      _G.mudletSpecBrokenScriptsRuns = nil
+    end)
+    local path = stageModule(name)
+    assert.is_true(waitForProfileSaveToPass(), "a profile save was still running")
+    local mark = getLastLineNumber("main")
+
+    verboseModuleInstall(path)
+
+    local text = textFrom(mark)
+    assert.is_true(moduleInstalled(name), "the module was not installed")
+    assert.is_true(containsWrapped(text, "Module '" .. path .. "' was installed, but not everything in it is working:"), text)
+    assert.is_true(containsWrapped(text, name .. " first"), text)
+    assert.is_true(containsWrapped(text, name .. " second"), text)
+    assert.is_true(containsWrapped(text, "markup <b>bold</b> quote"), text)
   end)
 end)
 
@@ -2823,6 +2903,15 @@ describe("Tests exporting the profile to a file with saveProfile", function()
   local exportedPath = scratchDirectory .. "/mudlet-spec-exported.xml"
   -- U+FFFC U+241B, which is how an ESC is held in a save file
   local encodedEscape = "\239\191\188\226\144\155"
+  -- Every control character a save file has a control picture for, each one
+  -- twice in a row, as the import hands them back to the export raw
+  local controlCodes = {1, 2, 3, 4, 5, 6, 7, 8, 11, 12, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31}
+  local rawControls, encodedControls = {}, {}
+  for index, code in ipairs(controlCodes) do
+    rawControls[index] = string.char(code):rep(2)
+    encodedControls[index] = ("\239\191\188\226\144" .. string.char(128 + code)):rep(2)
+  end
+  rawControls, encodedControls = table.concat(rawControls), table.concat(encodedControls)
   -- The colour numbers a save file uses are not the ANSI ones Mudlet matches
   -- on, and the two tables that convert between them are meant to be each
   -- other's inverse - so a pattern that survives a trip through both unchanged
@@ -2858,6 +2947,11 @@ describe("Tests exporting the profile to a file with saveProfile", function()
       '<Script isActive="yes" isFolder="no">',
       '<name>' .. name .. ' escape script</name><packageName></packageName>',
       '<script>mudletSpecExportedEscape = "' .. encodedEscape .. '"</script>',
+      '<eventHandlerList/>',
+      '</Script>',
+      '<Script isActive="yes" isFolder="no">',
+      '<name>' .. name .. ' control script</name><packageName></packageName>',
+      '<script>-- ' .. encodedControls .. '</script>',
       '<eventHandlerList/>',
       '</Script>',
       '</ScriptPackage>',
@@ -2938,6 +3032,27 @@ describe("Tests exporting the profile to a file with saveProfile", function()
     assert.is_true(contains(exported, 'mudletSpecExportedEscape = "' .. encodedEscape .. '"'),
                    "the exported script does not hold the encoded escape")
     assert.is_false(contains(exported, "\27"), "the export wrote a raw control character, which XML cannot carry")
+  end)
+
+  it("writes every control character back as a placeholder and a control picture", function()
+    assert.equals("-- " .. rawControls, (getScript(name .. " control script")))
+    assert.is_true(contains(exported, "<script>-- " .. encodedControls .. "</script>"),
+                   "the exported script does not hold every control character encoded")
+  end)
+
+  it("writes a newline in an attribute as the reference XML reads back as one", function()
+    -- A stopwatch name is held in an attribute, which is only written on a full save
+    local watch = createStopWatch(name .. " stop\nwatch")
+    -- Kept until the file is read: the save the setup's install still owes can
+    -- run after this one and rewrite the same file within the same second
+    finally(function() deleteStopWatch(watch) end)
+    setStopWatchPersistence(watch, true)
+    assert.is_true(waitForProfileSaveToPass(), "a profile save was still running")
+    local ok, savedPath = saveProfile()
+    assert.is_true(ok, savedPath)
+    assert.is_true(waitForProfileSaveToPass(), "the profile save did not finish")
+    assert.is_true(contains(readFile(savedPath), 'name="' .. name .. ' stop&#10;watch"'),
+                   "the saved profile does not hold the stopwatch name's newline as a reference")
   end)
 
   it("writes a key's binding back", function()
@@ -3251,6 +3366,223 @@ describe("Tests installing a module whose XML cannot be read", function()
     installUntilConfirmed(installModule, path, function() return moduleInstalled(name) end, "the truncated bare XML module")
 
     assert.is_true(containsWrapped(textFrom(mark), 'Failed to load module "' .. name .. '"'), textFrom(mark))
+  end)
+end)
+
+-- Once a package is gone nothing knows its commands' ids, so whatever its Lua
+-- placed has to go with it: left behind, a command stays on screen, keeps
+-- raising sysCommandClicked, and holds its shortcut against the same package's
+-- command when it is installed again.
+describe("Tests that uninstalling takes the addon commands it made", function()
+  local shortcut = "Ctrl+Alt+Shift+F11"
+
+  local function scriptXml(scriptName, code)
+    return '<Script isActive="yes" isFolder="no"><name>' .. scriptName .. '</name><packageName></packageName>'
+      .. "<script>" .. code .. "</script><eventHandlerList/></Script>"
+  end
+
+  local function scratchXml(name, body)
+    lfs.mkdir(scratchDirectory)
+    local path = scratchDirectory .. "/" .. name .. ".xml"
+    writePackageXml(path, body)
+    return path
+  end
+
+  -- Removed whatever happens, so a regression does not leave the key taken for
+  -- every spec after this one
+  local function forgetCommand(id)
+    if type(id) == "number" then
+      removeCommand(id)
+    end
+  end
+
+  local function placeCommand(globalName, label, withShortcut)
+    return globalName .. ' = addCommand{name = "' .. label .. '", menuPath = "MudletSpec"'
+      .. (withShortcut and (', shortcut = "' .. shortcut .. '"') or "") .. "}"
+  end
+
+  local function withScratchPackage(name, path, globals)
+    defer(function()
+      for _, global in ipairs(globals) do
+        forgetCommand(_G[global])
+        _G[global] = nil
+      end
+      removeFixturePackage(name)
+      os.remove(path)
+      lfs.rmdir(scratchDirectory)
+    end)
+    installUntilConfirmed(installPackage, path, function() return packageInstalled(name) end, "the package " .. name)
+  end
+
+  it("removes a package's command, and lets the package have it back when reinstalled", function()
+    local name = "mudlet-spec-command"
+    local path = scratchXml(name, "<ScriptPackage>" .. scriptXml(name .. " script", placeCommand("mudletSpecPackageCommand", "mudlet-spec command", true)) .. "</ScriptPackage>")
+    local first
+    defer(function() forgetCommand(first) end)
+    withScratchPackage(name, path, {"mudletSpecPackageCommand"})
+    first = mudletSpecPackageCommand
+    assert.is_number(first, "the package's script could not place its command")
+
+    _G.mudletSpecPackageCommand = nil
+    removeFixturePackage(name)
+    assert.is_false(removeCommand(first), "the command outlived the package that made it")
+
+    installUntilConfirmed(installPackage, path, function() return packageInstalled(name) end, "the command package, again")
+    assert.is_number(mudletSpecPackageCommand, "the reinstalled package could not place its command - the old one still holds the shortcut")
+  end)
+
+  -- Each of these is a different way for a package's code to be the caller:
+  -- a closure its script left behind, an alias, a trigger, a call through a C
+  -- function, and a file in the package's folder. Code a package merely runs
+  -- for someone else - here, Lua typed at a prompt the package provides - is
+  -- that someone's, which is why only the nearest Lua frame is asked.
+  it("removes the commands each kind of the package's code made, and only those", function()
+    local name = "mudlet-spec-command-kinds"
+    local trigger = "mudlet spec command kinds trigger"
+    local path = scratchXml(name, table.concat({
+      "<TriggerPackage>",
+      '<Trigger isActive="yes" isFolder="no" isTempTrigger="no" isMultiline="no" isPerlSlashGOption="no"',
+      '         isColorizerTrigger="no" isFilterTrigger="no" isSoundTrigger="no" isColorTrigger="no">',
+      "<name>" .. name .. " trigger</name>",
+      "<script>" .. placeCommand("mudletSpecTriggerCommand", "mudlet-spec trigger command") .. "</script>",
+      "<triggerType>0</triggerType><conditonLineDelta>0</conditonLineDelta><mStayOpen>0</mStayOpen>",
+      "<mCommand></mCommand><packageName></packageName>",
+      "<regexCodeList><string>" .. trigger .. "</string></regexCodeList>",
+      "<regexCodePropertyList><integer>0</integer></regexCodePropertyList>",
+      "</Trigger>",
+      "</TriggerPackage>",
+      "<AliasPackage>",
+      '<Alias isActive="yes" isFolder="no">',
+      "<name>" .. name .. " alias</name><packageName></packageName>",
+      "<script>" .. placeCommand("mudletSpecAliasCommand", "mudlet-spec alias command") .. "</script>",
+      "<command></command><regex>^" .. name .. "$</regex>",
+      "</Alias>",
+      "</AliasPackage>",
+      "<ScriptPackage>",
+      scriptXml(name .. " script", table.concat({
+        'mudletSpecHandler = registerAnonymousEventHandler("mudletSpecMakeCommand", function() '
+          .. placeCommand("mudletSpecHandlerCommand", "mudlet-spec handler command") .. " end)",
+        'mudletSpecPcallCommand = select(2, pcall(addCommand, {name = "mudlet-spec pcall command", menuPath = "MudletSpec"}))',
+        -- not a tail call, which would take this function's own frame off the stack
+        "function mudletSpecRunTyped(code) local typed = assert(loadstring(code)) typed() end",
+        -- a tail call into a C function leaves the caller's frame where it was
+        'function mudletSpecTail() return addCommand{name = "mudlet-spec tail command", menuPath = "MudletSpec"} end',
+      }, "\n")),
+      "</ScriptPackage>",
+    }, "\n"))
+    local globals = {"mudletSpecTriggerCommand", "mudletSpecAliasCommand", "mudletSpecHandlerCommand",
+                     "mudletSpecPcallCommand", "mudletSpecFileCommand", "mudletSpecTypedCommand",
+                     "mudletSpecTailCommand"}
+    defer(function()
+      if mudletSpecHandler then
+        killAnonymousEventHandler(mudletSpecHandler)
+      end
+      _G.mudletSpecHandler, _G.mudletSpecRunTyped, _G.mudletSpecTail = nil, nil, nil
+    end)
+    withScratchPackage(name, path, globals)
+
+    raiseEvent("mudletSpecMakeCommand")
+    expandAlias(name, false)
+    feedTriggers("\n" .. trigger .. "\n")
+    pumpEvents(50)
+    local folder = getMudletHomeDir() .. "/" .. name
+    lfs.mkdir(folder)
+    local file = io.open(folder .. "/command.lua", "wb")
+    assert.is_not_nil(file, "could not write into the package's folder")
+    file:write(placeCommand("mudletSpecFileCommand", "mudlet-spec file command"))
+    file:close()
+    dofile(folder .. "/command.lua")
+    mudletSpecRunTyped(placeCommand("mudletSpecTypedCommand", "mudlet-spec typed command"))
+    _G.mudletSpecTailCommand = mudletSpecTail()
+
+    local ids = {}
+    for _, global in ipairs(globals) do
+      assert.is_number(_G[global], global .. " was never placed")
+      ids[global] = _G[global]
+    end
+
+    removeFixturePackage(name)
+
+    for _, global in ipairs(globals) do
+      if global ~= "mudletSpecTypedCommand" then
+        assert.is_false(removeCommand(ids[global]), global .. " outlived the package whose code made it")
+      end
+    end
+    assert.is_true(removeCommand(ids.mudletSpecTypedCommand), "a command typed through the package's prompt was taken as the package's")
+  end)
+
+  -- Packages name scripts after their files, so "init" in one package and in
+  -- the profile is ordinary - and must neither cost the package its cleanup
+  -- nor take the profile's command with it.
+  it("tells a package's script from a profile script of the same name", function()
+    local name = "mudlet-spec-command-collide"
+    local scriptName = name .. " script"
+    -- The profile's handler is reached from the package's body through
+    -- raiseEvent(), so it runs while a script of its own name is being compiled
+    permScript(scriptName, "", placeCommand("mudletSpecProfileCommand", "mudlet-spec profile command") .. "\n"
+      .. 'mudletSpecProfileHandler = registerAnonymousEventHandler("mudletSpecCollideEvent", function() '
+      .. placeCommand("mudletSpecProfileHandlerCommand", "mudlet-spec profile handler command") .. " end)")
+    defer(function()
+      forgetCommand(mudletSpecProfileCommand)
+      forgetCommand(mudletSpecProfileHandlerCommand)
+      if mudletSpecProfileHandler then
+        killAnonymousEventHandler(mudletSpecProfileHandler)
+      end
+      _G.mudletSpecProfileCommand, _G.mudletSpecProfileHandlerCommand, _G.mudletSpecProfileHandler = nil, nil, nil
+      disableScript(scriptName)
+    end)
+    assert.is_number(mudletSpecProfileCommand, "the profile's script could not place its command")
+    local path = scratchXml(name, "<ScriptPackage>" .. scriptXml(scriptName, table.concat({
+      placeCommand("mudletSpecCollideCommand", "mudlet-spec collide command"),
+      "local function place() " .. placeCommand("mudletSpecCollideLocalCommand", "mudlet-spec collide local command") .. " end",
+      "place()",
+      'raiseEvent("mudletSpecCollideEvent")',
+    }, "\n")) .. "</ScriptPackage>")
+    withScratchPackage(name, path, {"mudletSpecCollideCommand", "mudletSpecCollideLocalCommand"})
+    local packageCommand = mudletSpecCollideCommand
+    local localCommand = mudletSpecCollideLocalCommand
+    local handlerCommand = mudletSpecProfileHandlerCommand
+    assert.is_number(packageCommand, "the package's script could not place its command")
+    assert.is_number(localCommand, "the package's local function could not place its command")
+    assert.is_number(handlerCommand, "the profile's handler never placed its command")
+
+    removeFixturePackage(name)
+
+    assert.is_false(removeCommand(packageCommand), "the package's command outlived it because a profile script shares its script's name")
+    assert.is_false(removeCommand(localCommand), "a command from a function the package's body called outlived the package")
+    assert.is_true(removeCommand(mudletSpecProfileCommand), "uninstalling the package removed the profile's command")
+    assert.is_true(removeCommand(handlerCommand), "uninstalling the package removed a command the profile's handler made during the package's install")
+  end)
+
+  -- A reload brings the module straight back with its Lua state, so a command
+  -- it made once and kept the id of is not made again and has to survive
+  it("keeps a module's command through a reload, and removes it with the module", function()
+    local name = "mudlet-spec-command-module"
+    local path = scratchXml(name, "<ScriptPackage>" .. scriptXml(name .. " script",
+      "mudletSpecModuleLoads = (mudletSpecModuleLoads or 0) + 1 "
+      .. 'mudletSpecModuleCommand = mudletSpecModuleCommand or addCommand{name = "mudlet-spec module command", menuPath = "MudletSpec", shortcut = "' .. shortcut .. '"}')
+      .. "</ScriptPackage>")
+    defer(function()
+      forgetCommand(mudletSpecModuleCommand)
+      _G.mudletSpecModuleCommand, _G.mudletSpecModuleLoads = nil, nil
+      removeFixtureModule(name)
+      os.remove(path)
+      lfs.rmdir(scratchDirectory)
+    end)
+
+    installUntilConfirmed(installModule, path, function() return moduleInstalled(name) end, "the command module")
+    local id = mudletSpecModuleCommand
+    assert.is_number(id, "the module's script could not place its command")
+
+    local loads = mudletSpecModuleLoads
+    reloadModuleUntil(name, function() return mudletSpecModuleLoads > loads end)
+    assert.is_true(enableCommand(id), "reloading the module removed the command it keeps the id of")
+
+    loads = mudletSpecModuleLoads
+    removeFixtureModule(name)
+    -- a reload postponed by a profile save could otherwise be what removed it
+    assert.equals(loads, mudletSpecModuleLoads, "the module was reloaded while being removed")
+    assert.is_false(enableCommand(id), "the command outlived the module that made it")
   end)
 end)
 

@@ -43,6 +43,7 @@
 #include "RoomMoveActivationHandler.h"
 #include "RoomMoveDragHandler.h"
 #include "SelectionRectangleHandler.h"
+#include "TMainConsole.h"
 #include "TMapViewManager.h"
 #include "TRoom.h" // For DIR_XXX defines
 #include "TRoomDB.h"
@@ -1209,7 +1210,7 @@ void T2DMap::initiateSpeedWalk(const int speedWalkStartRoomId, const int speedWa
         } else if (mpMap->findPath(speedWalkStartRoomId, speedWalkTargetRoomId)) {
             mpHost->startSpeedWalk();
         } else {
-            mpHost->mpConsole->printSystemMessage(
+            mpHost->mainConsoleView()->printSystemMessage(
                     qsl("%1\n").arg(tr("Mapper: Cannot find a path from %1 to %2 using known exits.").arg(QString::number(speedWalkStartRoomId), QString::number(speedWalkTargetRoomId))));
         }
     }
@@ -2644,7 +2645,7 @@ void T2DMap::paintEvent(QPaintEvent* e)
 
     // try and set the player to a room if we don't have a known location
     if (!pPlayerRoom && !mpMap->mpRoomDB->isEmpty()) {
-        int randomRoom = mpMap->mpRoomDB->getRoomIDList().constFirst();
+        const int randomRoom = mpMap->mpRoomDB->getRoomMap().constBegin().key();
         pPlayerRoom = mpMap->mpRoomDB->getRoom(randomRoom);
         playerRoomId = pPlayerRoom->getId();
     }
@@ -2893,9 +2894,19 @@ void T2DMap::paintEvent(QPaintEvent* e)
     QSet<QPair<int, int>> usedRoomPositions;
 
     if (mudlet::self()->mDrawUpperLowerLevels) {
-        // draw rooms on lower z-level - iterate only the rooms actually on that
-        // level instead of scanning every room in the area
-        const QSet<int>& lowerLevelRooms = pDrawnArea->getRoomsForZ(zLevel - 1);
+        const TAreaGridIndex& gridIndex = pDrawnArea->getGridIndex();
+        // Zoomed out over the whole area, walking the index costs more than the flat room set.
+        // The area keeps its y extremes negated, unlike roomBounds.
+        const bool viewportHoldsArea =
+                roomBounds.left() <= pDrawnArea->min_x && roomBounds.right() >= pDrawnArea->max_x && roomBounds.top() <= -pDrawnArea->max_y && roomBounds.bottom() >= -pDrawnArea->min_y;
+        auto neighbouringLevelRooms = [&](const int z) {
+            if (viewportHoldsArea) {
+                const QSet<int>& rooms = pDrawnArea->getRoomsForZ(z);
+                return QList<int>(rooms.cbegin(), rooms.cend());
+            }
+            return gridIndex.roomsInViewport(z, roomBounds.left(), roomBounds.right(), roomBounds.top(), roomBounds.bottom());
+        };
+        const QList<int> lowerLevelRooms = neighbouringLevelRooms(zLevel - 1);
         for (const int currentAreaRoom : lowerLevelRooms) {
             TRoom* room = mpMap->mpRoomDB->getRoom(currentAreaRoom);
             if (!room) {
@@ -2921,8 +2932,7 @@ void T2DMap::paintEvent(QPaintEvent* e)
             }
         }
 
-        // draw rooms on upper z-level
-        const QSet<int>& upperLevelRooms = pDrawnArea->getRoomsForZ(zLevel + 1);
+        const QList<int> upperLevelRooms = neighbouringLevelRooms(zLevel + 1);
         for (const int currentAreaRoom : upperLevelRooms) {
             TRoom* room = mpMap->mpRoomDB->getRoom(currentAreaRoom);
             if (!room) {
@@ -3256,9 +3266,9 @@ void T2DMap::paintEvent(QPaintEvent* e)
     dlgMapper::paintMapInfo(renderTimer, painter, mpHost, mpMap, roomID, mAreaID, mMultiSelectionSet.size(), infoColor, xOffset, 20, width(), mFontHeight);
 
     // The area combobox belongs to the main mapper, which a secondary view may exist without
-    if (!mIsSecondaryView && mpMap->mpMapper) {
+    if (!mIsSecondaryView && mpMap->mapper()) {
         static bool isAreaWidgetValid = true; // Remember between uses
-        QFont _f = mpMap->mpMapper->comboBox_showArea->font();
+        QFont _f = mpMap->mapper()->comboBox_showArea->font();
         if (isAreaWidgetValid) {
             if (mAreaID == -1                       // the map being shown is the "default" area
                 && !mpMap->getDefaultAreaShown()) { // the area widget is not showing the "default" area
@@ -3282,7 +3292,7 @@ void T2DMap::paintEvent(QPaintEvent* e)
             }
         }
 
-        mpMap->mpMapper->comboBox_showArea->setFont(_f);
+        mpMap->mapper()->comboBox_showArea->setFont(_f);
     }
 
     if (!mHelpMsg.isEmpty()) {
@@ -4803,6 +4813,8 @@ void T2DMap::slot_setPlayerLocation()
 
     const int _newRoomId = *(mMultiSelectionSet.constBegin());
     if (auto* pR = mpMap->mpRoomDB->getRoom(_newRoomId)) {
+        // Read before the event: its Lua handlers can delete the room (or the whole map)
+        const int areaId = pR->getArea();
         // No need to check it is a DIFFERENT room - that is taken care of by en/dis-abling the control
         mpMap->mRoomIdHash[mpMap->mProfileName] = _newRoomId;
         mpMap->mNewMove = true;
@@ -4812,7 +4824,7 @@ void T2DMap::slot_setPlayerLocation()
         manualSetEvent.mArgumentList.append(QString::number(_newRoomId));
         manualSetEvent.mArgumentTypeList.append(ARGUMENT_TYPE_NUMBER);
         mpHost->raiseEvent(manualSetEvent);
-        mpMap->updateArea(pR->getArea());
+        mpMap->updateArea(areaId);
     }
 }
 
@@ -4897,8 +4909,12 @@ void T2DMap::slot_userAction(QString uniqueName)
     if (!mpMap) {
         return;
     }
-    TEvent event{};
+    // The menu stays open while scripts run, so removeMapEvent() may have taken the item away since
     const QStringList userEvent = mpMap->mUserActions.value(uniqueName);
+    if (userEvent.isEmpty()) {
+        return;
+    }
+    TEvent event{};
     event.mArgumentList.append(userEvent[0]);
     event.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
     event.mArgumentList.append(uniqueName);
@@ -4927,7 +4943,8 @@ void T2DMap::slot_movePosition()
         return;
     }
 
-    TRoom* pR_start = mpMap->mpRoomDB->getRoom(mMultiSelectionHighlightRoomId);
+    const int startRoomId = mMultiSelectionHighlightRoomId;
+    TRoom* pR_start = mpMap->mpRoomDB->getRoom(startRoomId);
     // pR has already been validated by getCenterSelection() but add explicit check
     if (!pR_start) {
         return;
@@ -4990,7 +5007,10 @@ void T2DMap::slot_movePosition()
         pB_abort->setIcon(QIcon::fromTheme(key_dialog_cancel, QIcon(key_icon_dialog_cancel)));
     }
 
-    if (dialog->exec() == QDialog::Accepted) {
+    const bool accepted = dialog->exec() == QDialog::Accepted;
+    // The dialog's event loop runs scripts, which may delete the room
+    pR_start = mpMap->mpRoomDB->getRoom(startRoomId);
+    if (accepted && pR_start) {
         const int dx = pLEx->text().toInt() - pR_start->x();
         const int dy = pLEy->text().toInt() - pR_start->y();
         const int dz = pLEz->text().toInt() - pR_start->z();
@@ -5051,7 +5071,7 @@ void T2DMap::slot_showPropertiesDialog()
 
     bool isAtLeastOneRoom = false;
     QSetIterator<int> itRoom = mMultiSelectionSet;
-    QSet<TRoom*> roomPtrsSet;
+    QSet<int> roomIdsSet;
 
     QHash<QString, int> usedNames;
     QHash<int, int> usedColors;
@@ -5061,11 +5081,12 @@ void T2DMap::slot_showPropertiesDialog()
     int hiddenRoomCount = 0;
 
     while (itRoom.hasNext()) {
-        TRoom* room = mpMap->mpRoomDB->getRoom(itRoom.next());
+        const int roomId = itRoom.next();
+        TRoom* room = mpMap->mpRoomDB->getRoom(roomId);
         if (!room) {
             continue;
         }
-        roomPtrsSet.insert(room);
+        roomIdsSet.insert(roomId);
         isAtLeastOneRoom = true;
 
         // Scan and count all the different names used
@@ -5126,7 +5147,7 @@ void T2DMap::slot_showPropertiesDialog()
     }
 
     mpDlgRoomProperties = new dlgRoomProperties(mpHost, this);
-    mpDlgRoomProperties->init(usedNames, usedColors, usedSymbols, usedWeights, usedLockStatus, hiddenRoomCount, roomPtrsSet);
+    mpDlgRoomProperties->init(usedNames, usedColors, usedSymbols, usedWeights, usedLockStatus, hiddenRoomCount, roomIdsSet);
     mpDlgRoomProperties->show();
     mpDlgRoomProperties->raise();
     connect(mpDlgRoomProperties, &dlgRoomProperties::signal_save_symbol, this, &T2DMap::slot_setRoomProperties);
@@ -5155,7 +5176,7 @@ void T2DMap::slot_setRoomProperties(bool changeName,
                                     QColor newBorderColor,
                                     bool changeBorderThickness,
                                     int newBorderThickness,
-                                    QSet<TRoom*> rooms)
+                                    QSet<int> roomIds)
 {
     if (newName.isEmpty()) {
         newName = QString();
@@ -5177,11 +5198,9 @@ void T2DMap::slot_setRoomProperties(bool changeName,
         newSymbol = newSymbol.normalized(QString::NormalizationForm_C, QChar::Unicode_10_0);
     }
 
-    QSetIterator<TRoom*> itpRoom(rooms);
-    TRoom* room = nullptr;
-
-    while (itpRoom.hasNext()) {
-        room = itpRoom.next();
+    for (const int roomId : std::as_const(roomIds)) {
+        // The dialog is not modal, so rooms may have gone while it was open
+        TRoom* room = mpMap->mpRoomDB->getRoom(roomId);
         if (!room) {
             continue;
         }
@@ -5220,9 +5239,9 @@ void T2DMap::slot_setRoomProperties(bool changeName,
     mpMap->setUnsaved(__func__);
 }
 
-void T2DMap::slot_previewBorderProperties(QSet<TRoom*> rooms)
+void T2DMap::slot_previewBorderProperties(QSet<int> roomIds)
 {
-    Q_UNUSED(rooms)
+    Q_UNUSED(roomIds)
     repaint();
     update();
 }
@@ -5247,7 +5266,8 @@ void T2DMap::slot_spread()
         return;
     }
 
-    TRoom* pR_centerRoom = mpMap->mpRoomDB->getRoom(mMultiSelectionHighlightRoomId);
+    const int centerRoomId = mMultiSelectionHighlightRoomId;
+    TRoom* pR_centerRoom = mpMap->mpRoomDB->getRoom(centerRoomId);
     if (!pR_centerRoom) {
         return;
     }
@@ -5268,6 +5288,12 @@ void T2DMap::slot_spread()
                                             1,    // Step
                                             &isOk);
     if (spread == 1 || !isOk) {
+        return;
+    }
+
+    // The dialog's event loop runs scripts, which may delete the room
+    pR_centerRoom = mpMap->mpRoomDB->getRoom(centerRoomId);
+    if (!pR_centerRoom) {
         return;
     }
 
@@ -5317,7 +5343,8 @@ void T2DMap::slot_shrink()
         return;
     }
 
-    TRoom* pR_centerRoom = mpMap->mpRoomDB->getRoom(mMultiSelectionHighlightRoomId);
+    const int centerRoomId = mMultiSelectionHighlightRoomId;
+    TRoom* pR_centerRoom = mpMap->mpRoomDB->getRoom(centerRoomId);
     if (!pR_centerRoom) {
         return;
     }
@@ -5338,6 +5365,12 @@ void T2DMap::slot_shrink()
                                             1,    // Step
                                             &isOk);
     if (spread == 1 || !isOk) {
+        return;
+    }
+
+    // The dialog's event loop runs scripts, which may delete the room
+    pR_centerRoom = mpMap->mpRoomDB->getRoom(centerRoomId);
+    if (!pR_centerRoom) {
         return;
     }
 
@@ -5453,8 +5486,8 @@ void T2DMap::slot_newMap()
     mpMap->updateArea(-1);
     isCenterViewCall = false;
     mpMap->setUnsaved(__func__);
-    if (mpMap->mpMapper) {
-        mpMap->mpMapper->resetAreaComboBoxToPlayerRoomArea();
+    if (mpMap->mapper()) {
+        mpMap->mapper()->resetAreaComboBoxToPlayerRoomArea();
     }
 }
 
@@ -5522,8 +5555,8 @@ void T2DMap::slot_setArea()
             mpMap->postMessage(tr("[  OK  ]  - Added \"%1\" (%2) area to map.").arg(newAreaName, QString::number(newAreaId)));
             mpMap->setUnsaved(__func__);
 
-            if (mpMap->mpMapper) {
-                mpMap->mpMapper->updateAreaComboBox();
+            if (mpMap->mapper()) {
+                mpMap->mapper()->updateAreaComboBox();
             }
         }
         mMultiRect = QRect(0, 0, 0, 0);
@@ -5533,8 +5566,8 @@ void T2DMap::slot_setArea()
         }
         if (!mMultiSelectionSet.isEmpty()) {
             const auto& targetAreaName = mpMap->mpRoomDB->getAreaNamesMap().value(newAreaId);
-            if (!mIsSecondaryView && mpMap->mpMapper) {
-                mpMap->mpMapper->comboBox_showArea->setCurrentText(targetAreaName);
+            if (!mIsSecondaryView && mpMap->mapper()) {
+                mpMap->mapper()->comboBox_showArea->setCurrentText(targetAreaName);
             }
             switchArea(targetAreaName);
             // The rooms are still selected, so land on them rather than on
@@ -5553,8 +5586,8 @@ void T2DMap::slot_setArea()
     set_room_area_dialog->show();
     set_room_area_dialog->raise();
 
-    if (!mIsSecondaryView && mpMap->mpMapper) {
-        arealist_combobox->setCurrentIndex(mpMap->mpMapper->getCurrentShownAreaIndex());
+    if (!mIsSecondaryView && mpMap->mapper()) {
+        arealist_combobox->setCurrentIndex(mpMap->mapper()->getCurrentShownAreaIndex());
     } else {
         arealist_combobox->setCurrentIndex(arealist_combobox->findData(QString::number(mAreaID)));
     }
@@ -5685,13 +5718,13 @@ void T2DMap::slot_configureAreas()
         // Refresh every dropdown that lists area names - the primary
         // mapper's and every secondary view's, not just whichever one
         // opened this dialog.
-        if (mpMap && mpMap->mpMapper) {
-            mpMap->mpMapper->updateAreaComboBox();
+        if (mpMap && mpMap->mapper()) {
+            mpMap->mapper()->updateAreaComboBox();
             // Only follow the rename into the dropdown if it's the area the
             // primary mapper is actually showing - otherwise this would
             // move the dropdown to an area the map isn't displaying.
-            if (mpMap->mpMapper->mp2dMap && areaId == mpMap->mpMapper->mp2dMap->getAreaId() && mpMap->mpMapper->comboBox_showArea) {
-                mpMap->mpMapper->comboBox_showArea->setCurrentText(newName);
+            if (mpMap->mapper()->mp2dMap && areaId == mpMap->mapper()->mp2dMap->getAreaId() && mpMap->mapper()->comboBox_showArea) {
+                mpMap->mapper()->comboBox_showArea->setCurrentText(newName);
             }
         }
         if (mpMap && mpMap->getViewManager()) {
@@ -5729,8 +5762,8 @@ void T2DMap::slot_configureAreas()
             }
         }
 
-        if (mpMap && mpMap->mpMapper) {
-            mpMap->mpMapper->updateAreaComboBox();
+        if (mpMap && mpMap->mapper()) {
+            mpMap->mapper()->updateAreaComboBox();
         }
         if (mpMap && mpMap->getViewManager()) {
             mpMap->getViewManager()->updateAllViews();
@@ -5768,8 +5801,8 @@ void T2DMap::slot_configureAreas()
         // Refresh every dropdown that lists area names - the primary
         // mapper's and every secondary view's, not just whichever one
         // opened this dialog.
-        if (mpMap->mpMapper) {
-            mpMap->mpMapper->updateAreaComboBox();
+        if (mpMap->mapper()) {
+            mpMap->mapper()->updateAreaComboBox();
         }
         if (mpMap->getViewManager()) {
             mpMap->getViewManager()->updateAllViews();
@@ -5778,12 +5811,12 @@ void T2DMap::slot_configureAreas()
         // Every map that was showing the deleted area needs to move off it -
         // paintEvent() can't draw an area that no longer exists - not just
         // whichever view opened this dialog.
-        if (mpMap->mpMapper && mpMap->mpMapper->mp2dMap && mpMap->mpMapper->mp2dMap->getAreaId() == areaId) {
-            auto* comboBox = mpMap->mpMapper->comboBox_showArea;
+        if (mpMap->mapper() && mpMap->mapper()->mp2dMap && mpMap->mapper()->mp2dMap->getAreaId() == areaId) {
+            auto* comboBox = mpMap->mapper()->comboBox_showArea;
             if (comboBox && comboBox->count() > 0) {
-                mpMap->mpMapper->slot_switchArea(comboBox->currentIndex());
+                mpMap->mapper()->slot_switchArea(comboBox->currentIndex());
             } else {
-                mpMap->mpMapper->mp2dMap->switchArea(mpMap->getDefaultAreaName());
+                mpMap->mapper()->mp2dMap->switchArea(mpMap->getDefaultAreaName());
             }
         }
         if (mpMap->getViewManager()) {

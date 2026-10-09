@@ -267,21 +267,20 @@ describe("Tests GBK decoding", function()
     using("GBK")
     assert.equals("丂", decoded(bytes(0x81, 0x40)), "the precondition failed - 0x81 is meant to be a usable lead byte")
 
-    assert.equals(replacement, decoded(bytes(0x81, 0x7F)))
+    assert.equals(replacement .. bytes(0x7F), decoded(bytes(0x81, 0x7F)))
   end)
 
-  it("consumes both bytes of a pair whose second byte is out of range", function()
+  it("keeps an ASCII byte that cannot be the second byte of a pair", function()
     using("GBK")
 
-    -- the space is part of the rejected pair, so only the Z survives it
-    assert.equals(replacement .. "Z", decoded(bytes(0xC4, 0x20, 0x5A)))
+    assert.equals(replacement .. " Z", decoded(bytes(0xC4, 0x20, 0x5A)))
   end)
 
   it("refuses the four byte sequences that only GB18030 defines", function()
     using("GBK")
 
-    assert.equals(replacement, decoded(bytes(0x90, 0x30)), "the lead pair of a non-BMP sequence")
-    assert.equals(replacement, decoded(bytes(0xFD, 0x30)), "the lead pair of a private use sequence")
+    assert.equals(replacement .. "0", decoded(bytes(0x90, 0x30)), "the lead pair of a non-BMP sequence")
+    assert.equals(replacement .. "0", decoded(bytes(0xFD, 0x30)), "the lead pair of a private use sequence")
   end)
 end)
 
@@ -336,7 +335,7 @@ describe("Tests Big5 decoding", function()
   it("rejects a second byte below the lower range", function()
     using("BIG5")
 
-    assert.equals(replacement, decoded(bytes(0xA7, 0x20)))
+    assert.equals(replacement .. " ", decoded(bytes(0xA7, 0x20)))
   end)
 
   it("rejects a lead byte the encoding has no meaning for", function()
@@ -407,7 +406,22 @@ describe("Tests EUC-KR decoding", function()
   it("rejects a pair whose second byte is out of range", function()
     using("EUC-KR")
 
-    assert.equals(replacement, decoded(bytes(0xC7, 0x20)))
+    assert.equals(replacement .. " ", decoded(bytes(0xC7, 0x20)))
+  end)
+end)
+
+describe("Tests changing from one double byte encoding to another", function()
+
+  it("decodes with the encoding most recently selected", function()
+    using("GBK")
+    assert.equals("你", decoded(bytes(0xC4, 0xE3)))
+
+    -- GBK would read this pair as a private use character
+    assert.is_true(setServerEncoding("BIG5"))
+    assert.equals("你", decoded(bytes(0xA7, 0x41)))
+
+    assert.is_true(setServerEncoding("EUC-KR"))
+    assert.equals("한", decoded(bytes(0xC7, 0xD1)))
   end)
 end)
 
@@ -472,6 +486,126 @@ describe("Tests a UTF-8 sequence cut short by a byte that cannot continue it", f
       end
     end
     assert.same({"gaprompt:" .. replacement, "gaafter"}, shown)
+  end)
+end)
+
+describe("Tests a double byte character cut short by a byte that cannot be its second", function()
+
+  -- Games that cut text at a byte count end lines on a lone lead byte. The byte
+  -- after it - the game's line ending, or the escape of its next colour code -
+  -- belongs to the game, not to the broken character, so only the lead byte
+  -- earns a replacement mark (#11333).
+
+  local leadBytes = {
+    {"BIG5", bytes(0xA4)},
+    {"GBK", bytes(0xD6)},
+    {"GB18030", bytes(0xD6)},
+    {"EUC-KR", bytes(0xC7)},
+    {"GB18030", bytes(0x81, 0x30)},
+  }
+
+  local function shownLines(prefix, mark)
+    local shown = {}
+    for _, line in ipairs(getLines("main", mark, getLastLineNumber("main") + 1)) do
+      if line:find("^" .. prefix) then
+        shown[#shown + 1] = line
+      end
+    end
+    return shown
+  end
+
+  local function feed(data)
+    local ok, msg = feedTelnet(data)
+    assert.is_true(ok, "start the suite with --offline, see the tests README - feedTelnet said: " .. tostring(msg))
+  end
+
+  -- an unfinished four byte GB18030 sequence also loses only its lead byte, so
+  -- the digit that made it look like one is shown
+  local function kept(lead)
+    return replacement .. lead:sub(2)
+  end
+
+  it("keeps a line ending that arrives with the lead byte", function()
+    finally(restoreServerEncoding())
+    for _, case in ipairs(leadBytes) do
+      local encoding, lead = case[1], case[2]
+      assert.is_true(setServerEncoding(encoding), "setServerEncoding refused " .. encoding)
+      local mark = getLastLineNumber("main")
+
+      feed("dbcut:one" .. lead .. "\r\ndbcut:two\r\n")
+
+      assert.same({"dbcut:one" .. kept(lead), "dbcut:two"}, shownLines("dbcut:", mark), encoding)
+    end
+  end)
+
+  it("keeps a line ending that arrives in the next read", function()
+    finally(restoreServerEncoding())
+    for _, case in ipairs(leadBytes) do
+      local encoding, lead = case[1], case[2]
+      assert.is_true(setServerEncoding(encoding), "setServerEncoding refused " .. encoding)
+      local mark = getLastLineNumber("main")
+
+      feed("dbsplit:one" .. lead)
+      feed("\r\ndbsplit:two\r\n")
+
+      assert.same({"dbsplit:one" .. kept(lead), "dbsplit:two"}, shownLines("dbsplit:", mark), encoding)
+    end
+  end)
+
+  -- The foreground colour of text on the first line from fromLine on that starts with prefix
+  local function colourOf(text, prefix, fromLine)
+    for line = fromLine, getLastLineNumber("main") do
+      moveCursor("main", 0, line)
+      if getCurrentLine("main"):sub(1, #prefix) == prefix then
+        assert.is_true(selectString(text, 1) >= 0, "no '" .. text .. "' in " .. getCurrentLine("main"))
+        local colour = {getFgColor("main")}
+        deselect()
+        return colour
+      end
+    end
+    error("no line starting '" .. prefix .. "'")
+  end
+
+  it("still acts on a colour code that arrives in the next read", function()
+    finally(restoreServerEncoding())
+    local referenceMark = getLastLineNumber("main")
+    feed("dbref:\27[31mRED\27[0m\r\n")
+    local redReference = colourOf("RED", "dbref:", referenceMark)
+    for _, case in ipairs(leadBytes) do
+      local encoding, lead = case[1], case[2]
+      assert.is_true(setServerEncoding(encoding), "setServerEncoding refused " .. encoding)
+      local mark = getLastLineNumber("main")
+
+      feed("dbcolour:" .. lead)
+      -- a space can't be any encoding's second byte, so the lead byte can't join it as a split character
+      feed("\27[31m RED\27[0m\r\n")
+
+      assert.same({"dbcolour:" .. kept(lead) .. " RED"}, shownLines("dbcolour:", mark), encoding)
+      assert.same(redReference, colourOf("RED", "dbcolour:", mark), encoding)
+      assert.are_not.same(redReference, colourOf("dbcolour:", "dbcolour:", mark), encoding)
+    end
+  end)
+
+  it("keeps a line ending that cuts a GB18030 four byte sequence short at its last byte", function()
+    using("GB18030")
+    local mark = getLastLineNumber("main")
+
+    -- 0x81 0x30 0x81 is only missing its final digit; the "0" is shown and the
+    -- second 0x81 is then a lead byte the line ending cannot follow
+    feed("db4cut:one" .. bytes(0x81, 0x30, 0x81))
+    feed("\r\ndb4cut:two\r\n")
+
+    assert.same({"db4cut:one" .. replacement .. "0" .. replacement, "db4cut:two"}, shownLines("db4cut:", mark))
+  end)
+
+  it("commits a line that ends on the first two bytes of a GB18030 four byte sequence", function()
+    using("GB18030")
+    local mark = getLastLineNumber("main")
+
+    -- the line ending is the third byte, so there is no fourth to wait for
+    feed("db4end:one" .. bytes(0x81, 0x30) .. "\r\n")
+
+    assert.same({"db4end:one" .. replacement .. "0"}, shownLines("db4end:", mark))
   end)
 end)
 
@@ -890,23 +1024,23 @@ describe("Tests a character whose bytes are split by the posting timeout", funct
     using("GBK")
 
     -- Only cTelnet makes the marker, so a carriage return handed to
-    -- feedTriggers() is the caller's own byte and the decoder has to see it: as
-    -- the second byte of a GBK pair it is out of range, and the pair is refused
-    -- whole, in one replacement mark, so it does not end the line. Held back as
-    -- a marker, it would instead leave the lead byte unfinished at the end of the
-    -- text, and end the line.
+    -- feedTriggers() is the caller's own byte and the decoder has to see it: it
+    -- cannot be the second byte of a GBK pair, so the lead byte is refused on
+    -- its own and the carriage return is read as itself. Held back as a marker,
+    -- it would instead leave the lead byte waiting for the next text, to pair
+    -- with the "t" of "tail".
     -- (false: these are the game's own bytes, not UTF-8 to be converted to it)
     local mark = getLastLineNumber("main")
     feedTriggers("local:" .. bytes(0xC4, 0x0D), false)
     feedTriggers("tail\n", false)
 
-    local seen
+    local seen = {}
     for _, line in ipairs(getLines("main", mark, getLastLineNumber("main") + 1)) do
-      if line:find("^local:") then
-        seen = line
+      if line ~= "" then
+        seen[#seen + 1] = line
       end
     end
-    assert.equals("local:" .. replacement .. "tail", seen)
+    assert.same({"local:" .. replacement, "tail"}, seen)
   end)
 end)
 
@@ -1054,5 +1188,84 @@ describe("Tests the bulk copy of plain text runs", function()
       assert.is_true(boldAt(line, changeAt), "bold began a character late, " .. where)
       assert.is_true(boldAt(line, changeAt + #after - 1), "bold did not reach the end of the run, " .. where)
     end)
+  end)
+end)
+
+-- A game may send an SGR sequence between the two bytes of a legacy double-byte
+-- character to give its right half a different rendition. The halves' colours
+-- are checked in SplitCharacterFormatTest, as only the left half is visible to Lua.
+describe("Tests a double-byte character restyled between its bytes", function()
+  local characters = {
+    {"BIG5", bytes(0xA4, 0xA4), "中"},
+    {"BIG5-HKSCS", bytes(0xA7, 0x41), "你"},
+    {"GBK", bytes(0xD6, 0xD0), "中"},
+    {"GB18030", bytes(0xD6, 0xD0), "中"},
+    {"EUC-KR", bytes(0xC7, 0xD1), "한"},
+    {"SHIFT_JIS", bytes(0x93, 0xFA), "日"},
+    {"EUC-JP", bytes(0xC6, 0xFC), "日"},
+  }
+
+  local function split(pair)
+    return "\27[31m" .. pair:sub(1, 1) .. "\27[32m" .. pair:sub(2, 2)
+  end
+
+  for _, character in ipairs(characters) do
+    local encoding, pair, text = unpack(character)
+
+    it("decodes it whole in " .. encoding, function()
+      using(encoding)
+      assert.equals(text .. "X", decoded(split(pair) .. "X\27[0m"))
+    end)
+  end
+
+  it("lets a trigger match the whole character", function()
+    -- busted keeps only the last finally(), so this one also restores the encoding
+    local restoreEncoding = restoreServerEncoding()
+    assert.is_true(setServerEncoding("BIG5"))
+    local matches = 0
+    local trigger = tempExactMatchTrigger("enc:中X", function()
+      matches = matches + 1
+    end)
+    finally(function()
+      killTrigger(trigger)
+      restoreEncoding()
+    end)
+    decoded(split(bytes(0xA4, 0xA4)) .. "X\27[0m")
+    assert.equals(1, matches)
+  end)
+
+  it("reports the left half's colour and gives what follows the right half's", function()
+    local restoreEncoding = restoreServerEncoding()
+    assert.is_true(setServerEncoding("BIG5"))
+    finally(function()
+      deselect("main")
+      restoreEncoding()
+    end)
+    local lines, line = decodedLines("\27[31mR" .. bytes(0xA4) .. "\27[32m" .. bytes(0xA4) .. "G\27[0m")
+    assert.equals("R中G", lines[1])
+    local function colourAt(column)
+      assert.is_true(moveCursor("main", 0, line))
+      assert.is_true(selectSection("main", column, 1))
+      return {getFgColor("main")}
+    end
+    assert.same(colourAt(0), colourAt(1))
+    assert.are_not.same(colourAt(2), colourAt(1))
+  end)
+
+  it("ends the character at a control sequence that is not SGR", function()
+    using("BIG5")
+    -- X is a valid trail byte, so this also shows the lead was not held for it
+    assert.equals(replacement .. "X", decoded(bytes(0xA4) .. "\27[31m\27[2KX\27[0m"))
+  end)
+
+  it("ends the character at the end of the line", function()
+    using("BIG5")
+    assert.equals(replacement, decoded(bytes(0xA4) .. "\27[31m"))
+    assert.equals("X", decoded("\27[0mX"))
+  end)
+
+  it("ends the character at a byte that cannot be its trail", function()
+    using("EUC-KR")
+    assert.equals(replacement .. "X", decoded(bytes(0xC7) .. "\27[31mX\27[0m"))
   end)
 end)

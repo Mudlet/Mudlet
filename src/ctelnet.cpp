@@ -45,8 +45,7 @@
 #include "TEncodingHelper.h"
 #include "utils.h"
 #include "discord.h"
-#include "dlgComposer.h"
-#include "mudlet.h"
+#include "TAppFrontend.h"
 #include "MudletReplay.h"
 #include "MMCPServer.h"
 
@@ -183,6 +182,8 @@ cTelnet::cTelnet(Host* pH, const QString& profileName)
     if (mAcceptableEncodings.isEmpty()) {
         mAcceptableEncodings << "UTF-8";
         mAcceptableEncodings << "EUC-KR";
+        mAcceptableEncodings << "SHIFT_JIS";
+        mAcceptableEncodings << "EUC-JP";
         mAcceptableEncodings << "GBK";
         mAcceptableEncodings << "GB18030";
         mAcceptableEncodings << "BIG5";
@@ -1092,10 +1093,15 @@ void cTelnet::slot_socketDisconnected()
     }
 
     postData();
-    if (mpHost->mpConsole) {
+    if (mpHost->consoleFrontend()) {
         // A line held back for server-wrap undoing is complete now that the
-        // connection is gone - commit it before the disconnect messages:
-        mpHost->mainConsoleModel().buffer.flushPendingServerWrapJoin();
+        // connection is gone - commit it, in trigger context as for any other
+        // line from the game, before the disconnect messages:
+        TConsoleModel& model = mpHost->mainConsoleModel();
+        const bool wasInTriggerEngineMode = model.mTriggerEngineMode;
+        model.mTriggerEngineMode = true;
+        model.buffer.flushPendingServerWrapJoin();
+        model.mTriggerEngineMode = wasInTriggerEngineMode;
     }
 
     // Commit now; ~QSaveFile() would cancel the save and delete the temporary file:
@@ -1253,7 +1259,7 @@ void cTelnet::slot_socketDisconnected()
     if (sslerr) {
         // Got a secure connection error that should be shown in the preferences
         // of the profile that raised it, not whichever profile is active
-        mudlet::self()->showOptionsDialog(qsl("tab_connection"), mpHost);
+        TAppFrontend::instance()->showOptionsDialog(qsl("tab_connection"), mpHost);
     }
 #endif
 
@@ -1883,9 +1889,11 @@ void cTelnet::sendCurrentNAWS()
         return;
     }
     // Use the smaller of the screen width or the wrapAt, then subtract the
-    // width of the time stamps if they are drawn - with no view they are not:
-    const bool gutterDrawn = pHost->mpConsole && pHost->mainConsoleShowsTimeStamps();
-    int naws_x = std::min(pHost->mScreenWidth, pHost->mWrapAt) - (gutterDrawn ? TBuffer::smTimeStampFormat.size() : 0);
+    // width of the time stamps if they are drawn - with no view they are not.
+    // Never below 1: RFC 1073 reads 0 as unknown, and a negative width goes on
+    // the wire as a very wide one.
+    const bool gutterDrawn = pHost->consoleFrontend() && pHost->mainConsoleShowsTimeStamps();
+    int naws_x = std::max(1, std::min(pHost->mScreenWidth, pHost->mWrapAt) - static_cast<int>(gutterDrawn ? TBuffer::smTimeStampFormat.size() : 0));
     int naws_y = pHost->mScreenHeight;
     if ((naws_y > 0) && (myOptionState.test(static_cast<size_t>(OPT_NAWS))) && ((mNaws_x != naws_x) || (mNaws_y != naws_y))) {
         sendNAWS(naws_x, naws_y);
@@ -4422,15 +4430,14 @@ void cTelnet::setATCPVariables(const QByteArray& msg)
             return;
         }
 
-        mpComposer = new dlgComposer(mpHost);
         //FIXME
         if (arg.startsWith(QChar::Space)) {
             arg.remove(0, 1);
         }
 
-        mpComposer->init(title, arg);
-        mpComposer->raise();
-        mpComposer->show();
+        if (auto* frontend = TAppFrontend::instance()) {
+            mpComposer = frontend->openComposer(mpHost, title, arg);
+        }
         return;
     }
 
@@ -4953,7 +4960,9 @@ void cTelnet::atcpComposerCancel()
     if (!mpComposer) {
         return;
     }
-    mpComposer->close();
+    if (auto* frontend = TAppFrontend::instance()) {
+        frontend->closeComposer(mpComposer);
+    }
     mpComposer = nullptr;
     // This will be unaffected by Mud Server encoding:
     std::string output = "*q\nno\n";
@@ -5005,7 +5014,9 @@ void cTelnet::atcpComposerSave(QString txt)
         return;
     }
 
-    mpComposer->close();
+    if (auto* frontend = TAppFrontend::instance()) {
+        frontend->closeComposer(mpComposer);
+    }
     mpComposer = nullptr;
 }
 
@@ -5020,7 +5031,7 @@ void cTelnet::postMessage(QString msg)
 {
     messageStack.append(msg);
 
-    if (!mpHost || mpHost->isClosingDown() || !mpHost->mpConsole) {
+    if (!mpHost || mpHost->isClosingDown() || !mpHost->consoleFrontend()) {
         // Console doesn't exist (yet), or Host is shutting down; stack up
         // messages until it does (or they are dumped out by the destructor)...
         return;
@@ -5191,7 +5202,7 @@ void cTelnet::gotPrompt(std::string& mud_data)
         }
     }
 
-    postData();
+    postData(true);
     mMudData = "";
     mIsTimerPosting = false;
 }
@@ -5300,14 +5311,14 @@ void cTelnet::slot_timerPosting()
     postData();
     mMudData = "";
     mIsTimerPosting = false;
-    if (mpHost && mpHost->mpConsole) {
+    if (mpHost && mpHost->consoleFrontend()) {
         mpHost->finalizeMainConsole();
     }
 }
 
-void cTelnet::postData()
+void cTelnet::postData(const bool endsWithPromptMarker)
 {
-    if (!mpHost || mpHost->isClosingDown() || !mpHost->mpConsole) {
+    if (!mpHost || mpHost->isClosingDown() || !mpHost->consoleFrontend()) {
         return;
     }
 
@@ -5328,7 +5339,7 @@ void cTelnet::postData()
     // translateToPlainText - MXP DEST routing happens inside that process
     mpHost->printOnDisplay(data, true);
     if (mpHost->mMMCPServer && !mpHost->mIsRemoteEchoingActive) {
-        mpHost->mMMCPServer->receiveFromPlayer(snooped ? original : data);
+        mpHost->mMMCPServer->receiveFromPlayer(snooped ? original : data, endsWithPromptMarker);
     }
 
     // Hand the capacity back so the next packet appends without a malloc. A
@@ -5740,7 +5751,7 @@ void cTelnet::slot_processReplayChunk()
         gotRest(cleandata);
     }
 
-    if (mpHost && mpHost->mpConsole) {
+    if (mpHost && mpHost->consoleFrontend()) {
         mpHost->finalizeMainConsole();
     }
     if (loadingReplay) {
@@ -6126,7 +6137,7 @@ Some data loss is likely - please mention this problem to the game admins.)",
         return;
     }
 
-    if (mpHost && mpHost->mpConsole) {
+    if (mpHost && mpHost->consoleFrontend()) {
         mpHost->finalizeMainConsole();
     }
 
