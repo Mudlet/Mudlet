@@ -565,7 +565,7 @@ private:
     bool mNeedDecompression = false;
     // The MCCP version whose start sequence began the stream being inflated
     char mCompressionOption = OPT_COMPRESS2;
-    // Input of earlier reads inflate() took without producing any output yet -
+    // Input of earlier reads inflate() or zstd took without producing any output yet -
     // a stream header, or the first bytes of text a game sent instead of the
     // stream it announced, to give back if it turns out to be the latter.
     std::string mUninflatedInput;

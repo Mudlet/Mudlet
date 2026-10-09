@@ -4400,6 +4400,8 @@ void cTelnet::processTelnetCommand(const std::string& telnetCommand)
 #if defined(DEBUG_TELNET) && (DEBUG_TELNET & 1)
                     qDebug() << "MCCP4: ZSTD decompression context created and initialized";
 #endif
+                    mUninflatedInput.clear();
+                    mUninflatedInputComplete = true;
                 } else {
                     initStreamDecompressor();
                 }
@@ -5685,15 +5687,18 @@ int cTelnet::decompressMCCP4Buffer(char*& in_buffer, int& length, char* out_buff
                            "If the display looks garbled, please reconnect to the game.")
                                 .arg(QString::fromUtf8(ZSTD_getErrorName(result))));
 
-            // Copy any partial decompressed data before cleanup frees the buffer
-            memcpy(out_buffer + totalOutput, mZstdOutBuffer.data(), output.pos);
-            totalOutput += output.pos;
-            // Leave whatever was not consumed for the caller, the way the zlib
-            // path does: a server that announces compression and then sends
-            // plain text is the usual cause here, and that text still has to
-            // reach the player once compression is turned back off.
-            in_buffer += input.pos;
-            length -= static_cast<int>(input.pos);
+            if (totalOutput + output.pos == 0 && mUninflatedInputComplete) {
+                // As in decompressBuffer(): a run that breaks before producing
+                // anything was most likely plain text, and zstd may already have
+                // taken its first bytes as part of a frame header.
+                totalOutput = mUninflatedInput.copy(out_buffer, mUninflatedInput.size());
+            } else {
+                // Copy any partial decompressed data before cleanup frees the buffer
+                memcpy(out_buffer + totalOutput, mZstdOutBuffer.data(), output.pos);
+                totalOutput += output.pos;
+                in_buffer += input.pos;
+                length -= static_cast<int>(input.pos);
+            }
 
             refuseCompressedStream();
             return static_cast<int>(totalOutput);
@@ -5748,6 +5753,13 @@ int cTelnet::decompressMCCP4Buffer(char*& in_buffer, int& length, char* out_buff
             }
             break;
         }
+    }
+
+    if (mUninflatedInputComplete && totalOutput == 0 && mUninflatedInput.size() + input.pos <= scmMaxUninflatedInput) {
+        mUninflatedInput.append(in_buffer, input.pos);
+    } else {
+        mUninflatedInput.clear();
+        mUninflatedInputComplete = false;
     }
 
     in_buffer += input.pos;
@@ -6352,6 +6364,15 @@ void cTelnet::processSocketData(char* in_buffer, int amount, const bool loopback
                 }
 
                 if (iac && (ch == TN_SE)) { //IAC SE - end of subcommand
+                    if (buffer == out_buffer.get() && command.size() > 3 && command[2] == OPT_COMPRESS4 && command[3] == MCCP4_BEGIN_ENCODING) {
+                        // Like the MCCP1/2 start sequence above: a game has no reason to nest a stream in its
+                        // own decompressed output, and acting on it would swap decoders mid-stream.
+                        qWarning() << "cTelnet::processSocketData(...) WARNING - ignoring an MCCP4 start found inside decompressed data";
+                        command = "";
+                        iac = false;
+                        insb = false;
+                        continue;
+                    }
                     processTelnetCommand(command);
                     command = "";
                     iac = false;

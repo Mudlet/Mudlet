@@ -275,6 +275,42 @@ private slots:
         QVERIFY2(!mpServer->receivedData().contains(refuseCompress2), "Client dropped MCCP2 over a zlib error that plain telnet after a finished zstd frame should never have caused.");
     }
 
+    // A broken run is refused as the option that began it. With MCCP2 negotiated
+    // too, refusing MCCP2 instead would leave the game compressing.
+    void test_brokenRunIsRefusedAsMccp4WhenMccp2CameFirst_data()
+    {
+        QTest::addColumn<QByteArray>("encoding");
+        QTest::newRow("zstd") << QByteArray("zstd");
+        QTest::newRow("deflate") << QByteArray("deflate");
+    }
+
+    void test_brokenRunIsRefusedAsMccp4WhenMccp2CameFirst()
+    {
+        QFETCH(QByteArray, encoding);
+        auto* host = connectedHost();
+        QVERIFY2(host, "No active host available for the test.");
+
+        offerCompress2(host);
+        offerCompress4(host);
+
+        mpServer->clearReceivedData();
+        QByteArray data = beginEncoding(encoding);
+        data.append("MCCP4_NOT_COMPRESSED\r\n");
+        feed(host, data);
+
+        QByteArray refuseCompress4;
+        refuseCompress4.append(TN_IAC);
+        refuseCompress4.append(TN_DONT);
+        refuseCompress4.append(OPT_COMPRESS4);
+        QByteArray refuseCompress2;
+        refuseCompress2.append(TN_IAC);
+        refuseCompress2.append(TN_DONT);
+        refuseCompress2.append(OPT_COMPRESS2);
+        QVERIFY2(waitForServerToReceive(refuseCompress4), qPrintable(qsl("A broken MCCP4 run was not refused with DONT COMPRESS4. Client sent: %1").arg(QString(mpServer->receivedData().toHex(' ')))));
+        QVERIFY2(!mpServer->receivedData().contains(refuseCompress2), "A broken MCCP4 run refused MCCP2, which was not the one compressing.");
+        QVERIFY2(bufferContents().contains(qsl("MCCP4_NOT_COMPRESSED")), qPrintable(qsl("Text sent instead of the run was lost. Buffer holds:\n%1").arg(bufferContents())));
+    }
+
     // BEGIN_ENCODING for an option that was never agreed must be refused, not
     // obeyed: otherwise one unsolicited subnegotiation switches compression on,
     // including when the user has forced compression off.
