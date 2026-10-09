@@ -6282,7 +6282,8 @@ std::optional<QRect> Host::windowGeometry(const QString& name) const
 // dispatch of hideWindow()/showWindow() - user windows report their dock's
 // visibility, which is what those toggle. Answered relative to the profile's
 // own console: a child of a hidden user window still reads hidden, but a
-// profile that is merely not the front tab does not.
+// profile that is merely not the front tab does not. Read from what the view
+// last reported (see TMainConsole::reportVisibility()), so this needs no widget.
 std::optional<bool> Host::windowVisible(const QString& name) const
 {
     if (!mpConsole) {
@@ -6294,14 +6295,14 @@ std::optional<bool> Host::windowVisible(const QString& name) const
         // this function looks past
         return {true};
     }
-    if (mWindowRegistry.hasLabel(name)) {
-        return mpConsole->getLabelVisible(name);
+    if (const TLabelModel* pLabel = mWindowRegistry.labelModel(name)) {
+        return pLabel->mVisible;
     }
     if (mWindowRegistry.hasSubConsole(name)) {
-        return mpConsole->getSubConsoleVisible(name);
+        return mWindowRegistry.subConsoleVisible(name);
     }
     if (mWindowRegistry.hasPlainWindow(name)) {
-        return mpConsole->getPlainWindowVisible(name);
+        return mWindowRegistry.plainWindowVisible(name);
     }
 
     return {};
