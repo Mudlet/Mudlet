@@ -207,7 +207,6 @@ public:
     // by widget. An empty name or "main" is this console's own command line, any
     // other one made by createCommandLine() or a mini console's; each reports
     // failure for a name that is none of those.
-    std::optional<QString> getCommandLineText(const QString& name) const;
     bool replaceCommandLineText(const QString& name, const QString& text);
     bool appendCommandLineText(const QString& name, const QString& text);
     bool clearCommandLine(const QString& name);

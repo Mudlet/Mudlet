@@ -6323,6 +6323,14 @@ std::optional<bool> Host::windowScrolling(const QString& name) const
     return {pModel->mScrollingEnabled};
 }
 
+std::optional<QString> Host::commandLineText(const QString& name) const
+{
+    if (!mpConsole) {
+        return {};
+    }
+    return mWindowRegistry.commandLineText(name);
+}
+
 std::optional<QSize> Host::userWindowSize(const QString& name) const
 {
     if (!mpConsole) {

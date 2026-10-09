@@ -4162,6 +4162,31 @@ noViewSelectionReport = table.concat(noViewSelectionProblems, '; ')
         QVERIFY2(host->mainConsoleView()->subCommandLineWidget(commandLineName) == replacement, "The old command line's deferred delete took its replacement out of the console's own map.");
     }
 
+    // A mini console's command line takes the name of a standalone one, which stays on screen and can
+    // still be typed in; what is typed there must not become the name's text.
+    void test_aDisplacedCommandLineLeavesItsNamesTextAlone()
+    {
+        startProfile();
+        auto host = mudlet::self()->getActiveHost();
+        QVERIFY2(host, "No active host available for the test.");
+        QVERIFY2(host->mainConsoleView(), "The active host has no main console.");
+
+        const QString name = qsl("displacedCommandLine");
+        const auto [commandLine, commandLineMessage] = host->mainConsoleView()->createCommandLine(QString(), name, 0, 50, 40, 20);
+        QVERIFY2(commandLine, qPrintable(commandLineMessage));
+        const QPointer<TCommandLine> displaced = host->mainConsoleView()->subCommandLineWidget(name);
+        QVERIFY2(displaced, "Creating a command line left no widget in the console's own map.");
+
+        runLua(host, qsl("createMiniConsole('%1', 0, 100, 200, 100)\nenableCommandLine('%1')\nprintCmdLine('%1', 'mini console text')\n").arg(name));
+        TCommandLine* replacement = host->mainConsoleView()->subCommandLineWidget(name);
+        QVERIFY2(replacement && replacement != displaced, "The mini console's command line did not take the name, so nothing below tests a displaced one.");
+        QCOMPARE(host->commandLineText(name), std::optional<QString>(qsl("mini console text")));
+
+        displaced->setPlainText(qsl("typed into the displaced one"));
+
+        QCOMPARE(host->commandLineText(name), std::optional<QString>(qsl("mini console text")));
+    }
+
     // A scroll box, a command line and a text box are the three kinds nothing
     // deregisters from its own destructor, so closing the profile is the moment
     // their registry entries can outlive the widgets they name.
