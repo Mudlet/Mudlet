@@ -508,6 +508,7 @@ private:
     // What this dialog last put on the MCP result line about the server itself, so a
     // later success takes back only that and not a connect button's message
     QString mMCPReportedError;
+    void setMCPConnectResult(const QString& message);
 #endif
     // The scrollback size the box showed when the maximum was ticked, to put back when it is unticked
     int mBufferSizeBeforeMax = 0;

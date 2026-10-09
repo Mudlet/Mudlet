@@ -3848,7 +3848,7 @@ void dlgProfilePreferences::populateApplicationSettings()
         // A start refused at launch has no dialog open to report to, so the reason waits
         // here for the first one. Anything already written is a fresher answer than this.
         mMCPReportedError = pMudlet->mcpLastError();
-        label_mcpConnectResult->setText(mMCPReportedError);
+        setMCPConnectResult(mMCPReportedError);
     }
     slot_updateMCPServerEndpoint();
 #endif
@@ -6990,12 +6990,12 @@ void dlgProfilePreferences::applyAll()
                 // Only a reason of our own that is now out of date is ours to take back. The
                 // connect buttons write here too, and their message outlives the tick that
                 // their own text asks the user for.
-                label_mcpConnectResult->clear();
+                setMCPConnectResult(QString());
             }
             mMCPReportedError.clear();
         } else {
             mMCPReportedError = mcpError;
-            label_mcpConnectResult->setText(mcpError);
+            setMCPConnectResult(mcpError);
         }
         // refreshFromSettings() is the usual way back to the widgets, but it stands down
         // while the search is open or the port box is still being typed into - both of
@@ -8241,6 +8241,13 @@ void dlgProfilePreferences::slot_updateMCPServerEndpoint()
     label_mcpServerEndpoint->setText(tr("Starting on port %1...").arg(port));
 }
 
+// An empty line would still hold its row open beneath the buttons
+void dlgProfilePreferences::setMCPConnectResult(const QString& message)
+{
+    label_mcpConnectResult->setText(message);
+    label_mcpConnectResult->setVisible(!message.isEmpty());
+}
+
 void dlgProfilePreferences::slot_connectClaudeDesktop()
 {
     switch (TMCPBridge::connectClaudeDesktop()) {
@@ -8252,32 +8259,32 @@ void dlgProfilePreferences::slot_connectClaudeDesktop()
             message.append(QChar::Space);
             message.append(hint);
         }
-        label_mcpConnectResult->setText(message);
+        setMCPConnectResult(message);
         break;
     }
     case TMCPBridge::ConnectOutcome::NoClientApp: {
         const QString dir = TMCPBridge::claudeDesktopConfigDir();
         if (dir.isEmpty()) {
             //: Shown beneath the AI assistant settings when the location Claude Desktop keeps its settings in could not be worked out at all. Claude Desktop is a product name, leave it as-is.
-            label_mcpConnectResult->setText(tr("Could not work out where Claude Desktop keeps its settings on this system."));
+            setMCPConnectResult(tr("Could not work out where Claude Desktop keeps its settings on this system."));
             break;
         }
         //: Shown beneath the AI assistant settings when the Claude Desktop application's settings folder does not exist. %1 is the folder Mudlet looked for, claude.com/download is a URL - leave it as-is.
-        label_mcpConnectResult->setText(tr("Claude Desktop does not look installed - there is no %1. Install it from claude.com/download and open it once, then try again.").arg(dir));
+        setMCPConnectResult(tr("Claude Desktop does not look installed - there is no %1. Install it from claude.com/download and open it once, then try again.").arg(dir));
         break;
     }
     case TMCPBridge::ConnectOutcome::NoBinaryPath:
         //: Shown beneath the AI assistant settings when Mudlet could not work out its own location on disk. Claude Desktop is a product name, leave it as-is.
-        label_mcpConnectResult->setText(tr("Could not work out where this Mudlet is installed, so Claude Desktop was not told how to launch it."));
+        setMCPConnectResult(tr("Could not work out where this Mudlet is installed, so Claude Desktop was not told how to launch it."));
         break;
     case TMCPBridge::ConnectOutcome::ConfigUnreadable:
         //: Shown beneath the AI assistant settings when the Claude Desktop application's settings file could not be read or understood. %1 is the file's location.
-        label_mcpConnectResult->setText(tr("Claude Desktop's settings file could not be read or understood, so it was left untouched. Check %1 for problems - a stray comma is enough - and try again.")
-                                                .arg(TMCPBridge::claudeDesktopConfigFilePath()));
+        setMCPConnectResult(tr("Claude Desktop's settings file could not be read or understood, so it was left untouched. Check %1 for problems - a stray comma is enough - and try again.")
+                                    .arg(TMCPBridge::claudeDesktopConfigFilePath()));
         break;
     case TMCPBridge::ConnectOutcome::WriteFailed:
         //: Shown beneath the AI assistant settings when an AI app's settings file could not be written. %1 is the file's location.
-        label_mcpConnectResult->setText(tr("Could not write to %1 - check its file permissions.").arg(TMCPBridge::claudeDesktopConfigFilePath()));
+        setMCPConnectResult(tr("Could not write to %1 - check its file permissions.").arg(TMCPBridge::claudeDesktopConfigFilePath()));
         break;
     }
 }
@@ -8293,26 +8300,24 @@ void dlgProfilePreferences::slot_connectChatGpt()
             message.append(QChar::Space);
             message.append(hint);
         }
-        label_mcpConnectResult->setText(message);
+        setMCPConnectResult(message);
         break;
     }
     case TMCPBridge::ConnectOutcome::NoClientApp:
         //: Shown beneath the AI assistant settings when the folder the ChatGPT desktop app and Codex keep their settings in does not exist. %1 is the folder Mudlet looked for, ChatGPT and Codex are product names - leave them as-is.
-        label_mcpConnectResult->setText(
-                tr("ChatGPT does not look installed - there is no %1. Install the ChatGPT desktop app or Codex and use it once, then try again.").arg(TMCPBridge::codexConfigDir()));
+        setMCPConnectResult(tr("ChatGPT does not look installed - there is no %1. Install the ChatGPT desktop app or Codex and use it once, then try again.").arg(TMCPBridge::codexConfigDir()));
         break;
     case TMCPBridge::ConnectOutcome::NoBinaryPath:
         //: Shown beneath the AI assistant settings when Mudlet could not work out its own location on disk. ChatGPT is a product name, leave it as-is.
-        label_mcpConnectResult->setText(tr("Could not work out where this Mudlet is installed, so ChatGPT was not told how to launch it."));
+        setMCPConnectResult(tr("Could not work out where this Mudlet is installed, so ChatGPT was not told how to launch it."));
         break;
     case TMCPBridge::ConnectOutcome::ConfigUnreadable:
         //: Shown beneath the AI assistant settings when the settings file shared by the ChatGPT desktop app and Codex could not be read or understood. %1 is the file's location.
-        label_mcpConnectResult->setText(
-                tr("ChatGPT's settings file could not be read or understood, so it was left untouched. Check %1 for problems and try again.").arg(TMCPBridge::codexConfigFilePath()));
+        setMCPConnectResult(tr("ChatGPT's settings file could not be read or understood, so it was left untouched. Check %1 for problems and try again.").arg(TMCPBridge::codexConfigFilePath()));
         break;
     case TMCPBridge::ConnectOutcome::WriteFailed:
         //: Shown beneath the AI assistant settings when an AI app's settings file could not be written. %1 is the file's location.
-        label_mcpConnectResult->setText(tr("Could not write to %1 - check its file permissions.").arg(TMCPBridge::codexConfigFilePath()));
+        setMCPConnectResult(tr("Could not write to %1 - check its file permissions.").arg(TMCPBridge::codexConfigFilePath()));
         break;
     }
 }
@@ -8323,12 +8328,12 @@ void dlgProfilePreferences::slot_copyMCPServerAddress()
     if (endpoint.isEmpty()) {
         // The button disables itself while the server is down, but a stop can race the click.
         //: Shown beneath the AI assistant settings when the Copy address button is pressed while the server is not running.
-        label_mcpConnectResult->setText(tr("There is no address to copy while the server is off."));
+        setMCPConnectResult(tr("There is no address to copy while the server is off."));
         return;
     }
     QGuiApplication::clipboard()->setText(endpoint);
     //: Shown beneath the AI assistant settings after the Copy address button is pressed.
-    label_mcpConnectResult->setText(tr("Address copied - paste it into your AI assistant."));
+    setMCPConnectResult(tr("Address copied - paste it into your AI assistant."));
 }
 #endif
 

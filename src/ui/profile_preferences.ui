@@ -4916,6 +4916,9 @@ you can use it but there could be issues with aligning columns of text</string>
           <string extracomment="Title of the Preferences group of settings for letting an AI assistant control Mudlet. MCP is the name of the Model Context Protocol standard, leave it as-is.">AI assistant access (MCP)</string>
          </property>
          <layout class="QGridLayout" name="gridLayout_groupBox_mcpServer">
+          <property name="verticalSpacing">
+           <number>10</number>
+          </property>
           <item row="0" column="0">
            <widget class="QCheckBox" name="checkBox_enableMCPServer">
             <property name="toolTip">
@@ -4961,6 +4964,9 @@ you can use it but there could be issues with aligning columns of text</string>
           </item>
           <item row="4" column="0">
            <layout class="QHBoxLayout" name="hLayout_mcpServerButtons">
+            <property name="spacing">
+             <number>8</number>
+            </property>
             <item>
              <widget class="QPushButton" name="pushButton_connectClaudeDesktop">
               <property name="toolTip">
@@ -5024,6 +5030,9 @@ you can use it but there could be issues with aligning columns of text</string>
              <bool>false</bool>
             </property>
             <layout class="QVBoxLayout" name="vLayout_mcpManualConnect">
+             <property name="spacing">
+              <number>8</number>
+             </property>
              <property name="leftMargin">
               <number>0</number>
              </property>
@@ -5048,6 +5057,9 @@ you can use it but there could be issues with aligning columns of text</string>
              </item>
              <item>
               <layout class="QHBoxLayout" name="hLayout_mcpManualConnect">
+               <property name="spacing">
+                <number>8</number>
+               </property>
                <item>
                 <widget class="QLineEdit" name="lineEdit_mcpServerAddress">
                  <property name="readOnly">
@@ -5078,6 +5090,9 @@ you can use it but there could be issues with aligning columns of text</string>
           </item>
           <item row="6" column="0">
            <widget class="QLabel" name="label_mcpConnectResult">
+            <property name="visible">
+             <bool>false</bool>
+            </property>
             <property name="text">
              <string notr="true"/>
             </property>
