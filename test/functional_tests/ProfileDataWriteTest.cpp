@@ -54,7 +54,6 @@ private:
     const QString mItem = qsl("description");
     QTemporaryDir mConfigDir;
     QByteArray mSavedXdgConfigHome;
-    bool mInitialised = false;
 
     QStringList filesForTheItem() const { return QDir(MudletApp::getMudletPath(enums::profileHomePath, mProfile)).entryList({qsl("%1*").arg(mItem)}, QDir::Files | QDir::Hidden); }
 
@@ -66,18 +65,17 @@ private slots:
         }
 
         QVERIFY(mConfigDir.isValid());
+        // An XDG_CONFIG_HOME/mudlet without profiles/ loses to a ~/.config/mudlet that has some, which
+        // would put this test's writes among the real profiles
+        QVERIFY(QDir().mkpath(qsl("%1/mudlet/profiles").arg(mConfigDir.path())));
         mSavedXdgConfigHome = qgetenv("XDG_CONFIG_HOME");
         qputenv("XDG_CONFIG_HOME", mConfigDir.path().toUtf8());
-        mInitialised = true;
+        const QString profileHome = MudletApp::getMudletPath(enums::profileHomePath, mProfile);
+        QVERIFY2(profileHome.startsWith(qsl("%1/mudlet/").arg(mConfigDir.path())), qPrintable(qsl("the profile would be written under %1").arg(profileHome)));
     }
 
-    void cleanupTestCase()
-    {
-        if (mInitialised) {
-            QDir(MudletApp::getMudletPath(enums::profileHomePath, mProfile)).removeRecursively();
-        }
-        mSavedXdgConfigHome.isNull() ? qunsetenv("XDG_CONFIG_HOME") : qputenv("XDG_CONFIG_HOME", mSavedXdgConfigHome);
-    }
+    // The profile is removed with mConfigDir, never through a resolved path that might be a real one
+    void cleanupTestCase() { mSavedXdgConfigHome.isNull() ? qunsetenv("XDG_CONFIG_HOME") : qputenv("XDG_CONFIG_HOME", mSavedXdgConfigHome); }
 
     void test_aWriteThatCannotLandIsReportedAndKeepsTheOldValue()
     {
