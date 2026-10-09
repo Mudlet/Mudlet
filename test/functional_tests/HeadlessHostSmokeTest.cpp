@@ -20,6 +20,11 @@
 #include <QApplication>
 #include <QDir>
 #include <QTemporaryDir>
+#include <QtNetwork/QSslKey>
+#include <QtNetwork/QSslServer>
+#include <QtNetwork/QSslSocket>
+#include <QtNetwork/QTcpServer>
+#include <QtNetwork/QTcpSocket>
 #include <QtTest/QtTest>
 
 #include <memory>
@@ -45,6 +50,9 @@ private:
     // The main window owns the profile pool in the app; here nothing else would.
     std::unique_ptr<HostManager> mpHostManager;
     const QString mHostname = qsl("Test-Headless-Host-Smoke");
+    const QString mConnectingHostname = qsl("Test-Headless-Host-Connect");
+    const QString mSecureHostname = qsl("Test-Headless-Host-Secure");
+    const QString mHeldLineHostname = qsl("Test-Headless-Host-Held-Line");
 
     static QString luaGlobalString(Host* host, const char* name)
     {
@@ -112,6 +120,122 @@ headlessResult = ok and 'ok' or tostring(err)
         QVERIFY2(mainBufferHolds(host, qsl("headless trigger echo")), "The trigger's echo never reached the main console model.");
         QVERIFY2(QApplication::topLevelWidgets().isEmpty(), "Making and running the profile created a widget.");
     }
+
+    void test_profileConnectsAndLogsInWithNoMainWindow()
+    {
+        QVERIFY2(!TAppFrontend::instance(), "A main window exists, so this run is not headless.");
+
+        QTcpServer server;
+        QVERIFY2(server.listen(QHostAddress::LocalHost), "Could not start the local test server.");
+        QByteArray received;
+        QTcpSocket* client = nullptr;
+        connect(&server, &QTcpServer::newConnection, this, [&]() {
+            client = server.nextPendingConnection();
+            connect(client, &QTcpSocket::readyRead, this, [&]() {
+                received.append(client->readAll());
+            });
+            client->write("Welcome to the headless test server.\r\n");
+        });
+
+        QVERIFY2(HostManager::self()->addHost(mConnectingHostname, QString(), QString(), QString()), "Could not create a profile with no main window.");
+        Host* host = HostManager::self()->getHost(mConnectingHostname);
+        QVERIFY2(host, "The profile is not in the pool.");
+        QVERIFY(!host->hasConsoleView());
+        host->setLogin(qsl("headlesshero"));
+        host->setPass(qsl("headlesssecret"));
+        QVERIFY(host->getLuaInterpreter()->compileAndExecuteScript(qsl(R"lua(headlessGreeting = 'none'; tempTrigger("headless test server", [[headlessGreeting = line]]))lua")));
+
+        host->mTelnet.connectIt(qsl("127.0.0.1"), server.serverPort());
+
+        QTRY_COMPARE_WITH_TIMEOUT(luaGlobalString(host, "headlessGreeting"), qsl("Welcome to the headless test server."), 10000);
+        QVERIFY2(mainBufferHolds(host, qsl("Welcome to the headless test server.")), "The game's line never reached the main console model.");
+        // The login and password go out on timers, 2s and then 1s by default
+        QTRY_VERIFY_WITH_TIMEOUT(received.contains("headlesshero") && received.contains("headlesssecret"), 10000);
+
+        host->mTelnet.disconnectIt();
+        QTRY_COMPARE_WITH_TIMEOUT(host->mTelnet.getConnectionState(), QAbstractSocket::UnconnectedState, 10000);
+        QVERIFY2(QApplication::topLevelWidgets().isEmpty(), "Connecting the profile created a widget.");
+    }
+
+    void test_heldLineCommitsBeforeDisconnectWithNoMainWindow()
+    {
+        QVERIFY2(!TAppFrontend::instance(), "A main window exists, so this run is not headless.");
+
+        // Prose that runs right up to the wrap column, so undoing server wrap holds it back
+        const QByteArray heldLine = "Welcome traveller, the gate stands open and";
+        QTcpServer server;
+        QVERIFY2(server.listen(QHostAddress::LocalHost), "Could not start the local test server.");
+        connect(&server, &QTcpServer::newConnection, this, [&]() {
+            QTcpSocket* client = server.nextPendingConnection();
+            client->write(heldLine + "\r\n");
+            client->disconnectFromHost();
+        });
+
+        QVERIFY2(HostManager::self()->addHost(mHeldLineHostname, QString(), QString(), QString()), "Could not create a profile with no main window.");
+        Host* host = HostManager::self()->getHost(mHeldLineHostname);
+        QVERIFY2(host, "The profile is not in the pool.");
+        host->mUndoServerWrap = true;
+        host->mUndoServerWrapWidth = heldLine.size();
+        QVERIFY(host->getLuaInterpreter()->compileAndExecuteScript(qsl(R"lua(headlessHeldLine = 'none'; tempTrigger("the gate stands open", [[headlessHeldLine = line]]))lua")));
+        QString heldLineAtDisconnect;
+        // Scoped to this test, as the profile outlives the locals the slot writes to
+        QObject receiver;
+        connect(&host->mTelnet, &cTelnet::signal_disconnected, &receiver, [&]() {
+            heldLineAtDisconnect = luaGlobalString(host, "headlessHeldLine");
+        });
+
+        host->mTelnet.connectIt(qsl("127.0.0.1"), server.serverPort());
+
+        QTRY_VERIFY_WITH_TIMEOUT(!heldLineAtDisconnect.isEmpty(), 10000);
+        QCOMPARE(heldLineAtDisconnect, QString::fromUtf8(heldLine));
+    }
+
+#if !defined(QT_NO_SSL)
+    void test_untrustedCertificateWithNoMainWindow()
+    {
+        QVERIFY2(!TAppFrontend::instance(), "A main window exists, so this run is not headless.");
+        if (QSslSocket::activeBackend() != QLatin1String("openssl")) {
+            QSKIP("Serving a certificate from an in-memory PEM key is only relied on with the OpenSSL backend.");
+        }
+
+        // Self-signed, so the profile refuses it; valid until 2126 so it never fails as expired instead
+        static constexpr char certificatePem[] = R"(-----BEGIN CERTIFICATE-----
+MIIBfzCCASWgAwIBAgIUNVnXBt8EptvmkFkhxe/ibqLOLRIwCgYIKoZIzj0EAwIw
+FDESMBAGA1UEAwwJbG9jYWxob3N0MCAXDTI2MTAwOTIxNTA1OFoYDzIxMjYwOTE1
+MjE1MDU4WjAUMRIwEAYDVQQDDAlsb2NhbGhvc3QwWTATBgcqhkjOPQIBBggqhkjO
+PQMBBwNCAASh4Kz7zVzveu+VpaQSoceVFsH6I6qOfbYT0tapBHTFGBkf6NgxBGen
+wL5TDeL9g3w57+FWiHtIKUylQhCoNb20o1MwUTAdBgNVHQ4EFgQUdeivXGb0CJyG
+TeJIhMFeiKCyPV0wHwYDVR0jBBgwFoAUdeivXGb0CJyGTeJIhMFeiKCyPV0wDwYD
+VR0TAQH/BAUwAwEB/zAKBggqhkjOPQQDAgNIADBFAiEA4ktl+ztKx3yhNaOQRVvo
+t7BeROX3QMOcjmtFD1z7gMMCIBCdl4RZ9RpZqyngwieUaEVXNou189dJOrb5/4Iu
+62HC
+-----END CERTIFICATE-----)";
+        static constexpr char keyPem[] = R"(-----BEGIN PRIVATE KEY-----
+MIGHAgEAMBMGByqGSM49AgEGCCqGSM49AwEHBG0wawIBAQQgrC6UFloRMFbttYkA
+mx8Y3UWOzQ/JtyVfFEEK23/u4iGhRANCAASh4Kz7zVzveu+VpaQSoceVFsH6I6qO
+fbYT0tapBHTFGBkf6NgxBGenwL5TDeL9g3w57+FWiHtIKUylQhCoNb20
+-----END PRIVATE KEY-----)";
+        QSslConfiguration configuration = QSslConfiguration::defaultConfiguration();
+        configuration.setLocalCertificate(QSslCertificate(QByteArray(certificatePem)));
+        configuration.setPrivateKey(QSslKey(QByteArray(keyPem), QSsl::Ec));
+        QSslServer server;
+        server.setSslConfiguration(configuration);
+        QVERIFY2(server.listen(QHostAddress::LocalHost), "Could not start the local test server.");
+
+        QVERIFY2(HostManager::self()->addHost(mSecureHostname, QString(), QString(), QString()), "Could not create a profile with no main window.");
+        Host* host = HostManager::self()->getHost(mSecureHostname);
+        QVERIFY2(host, "The profile is not in the pool.");
+        host->mSslTsl = true;
+        QSignalSpy disconnected(&host->mTelnet, &cTelnet::signal_disconnected);
+
+        host->mTelnet.connectIt(qsl("127.0.0.1"), server.serverPort());
+
+        // The app opens the profile's connection preferences here, which needs a main window
+        QTRY_VERIFY_WITH_TIMEOUT(!disconnected.isEmpty(), 10000);
+        QVERIFY2(!host->mTelnet.getSslErrors().isEmpty(), "The connection did not fail on the certificate.");
+        QVERIFY2(QApplication::topLevelWidgets().isEmpty(), "The refused connection created a widget.");
+    }
+#endif
 };
 
 #include "HeadlessHostSmokeTest.moc"
