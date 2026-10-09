@@ -384,16 +384,6 @@ std::pair<bool, QString> TMainConsole::setLabelStyleSheet(const QString& name, c
     return {false, qsl("label name '%1' not found").arg(name)};
 }
 
-std::optional<QString> TMainConsole::getLabelStyleSheet(const QString& name) const
-{
-    QMap<QString, TLabel*>::const_iterator const it = mLabelMap.constFind(name);
-    if (it != mLabelMap.cend() && it.key() == name) {
-        return it.value()->styleSheet();
-    }
-
-    return {};
-}
-
 std::optional<QSize> TMainConsole::getLabelSizeHint(const QString& name) const
 {
     QMap<QString, TLabel*>::const_iterator const it = mLabelMap.constFind(name);
@@ -402,16 +392,6 @@ std::optional<QSize> TMainConsole::getLabelSizeHint(const QString& name) const
     }
 
     return {};
-}
-
-std::optional<QString> TMainConsole::getLabelToolTip(const QString& name) const
-{
-    auto pL = mLabelMap.value(name);
-    if (!pL) {
-        return {};
-    }
-
-    return {pL->toolTip()};
 }
 
 // NOLINTNEXTLINE(readability-make-member-function-const)
@@ -2627,15 +2607,6 @@ bool TMainConsole::resetLabelSvgTransform(const QString& name)
     }
     pL->resetSvgTransform();
     return true;
-}
-
-std::optional<QFont> TMainConsole::getLabelFont(const QString& name) const
-{
-    auto pL = mLabelMap.value(name);
-    if (!pL) {
-        return {};
-    }
-    return {pL->font()};
 }
 
 bool TMainConsole::setLabelFont(const QString& name, const QFont& font)

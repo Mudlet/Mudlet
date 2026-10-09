@@ -102,6 +102,9 @@ TLabel::TLabel(Host* pH, const QString& name, QWidget* pW)
     setOpenExternalLinks(false);
 
     connect(this, &QLabel::linkActivated, this, &TLabel::slot_linkActivated);
+
+    // QLabel's constructor already took the parent's font, before changeEvent() could see it
+    mpModel->mFont = font();
 }
 
 TLabel::~TLabel()
@@ -631,6 +634,20 @@ void TLabel::changeEvent(QEvent* event)
     if (event->type() == QEvent::StyleChange || event->type() == QEvent::PaletteChange) {
         applyBackgroundColor();
     }
+    if (event->type() == QEvent::StyleChange) {
+        mpModel->mStyleSheet = styleSheet();
+    } else if (event->type() == QEvent::FontChange) {
+        mpModel->mFont = font();
+    }
+}
+
+// QWidget::event() doesn't pass ToolTipChange on to changeEvent()
+bool TLabel::event(QEvent* event)
+{
+    if (event->type() == QEvent::ToolTipChange) {
+        mpModel->mToolTip = toolTip();
+    }
+    return QLabel::event(event);
 }
 
 void TLabel::applyBackgroundColor()

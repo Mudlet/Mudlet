@@ -6251,6 +6251,39 @@ std::optional<QString> Host::windowType(const QString& name) const
     return {};
 }
 
+std::optional<QString> Host::labelStyleSheet(const QString& name) const
+{
+    if (!mpConsole) {
+        return {};
+    }
+    if (const TLabelModel* pLabel = mWindowRegistry.labelModel(name)) {
+        return pLabel->mStyleSheet;
+    }
+    return {};
+}
+
+std::optional<QString> Host::labelToolTip(const QString& name) const
+{
+    if (!mpConsole) {
+        return {};
+    }
+    if (const TLabelModel* pLabel = mWindowRegistry.labelModel(name)) {
+        return pLabel->mToolTip;
+    }
+    return {};
+}
+
+std::optional<QFont> Host::labelFont(const QString& name) const
+{
+    if (!mpConsole) {
+        return {};
+    }
+    if (const TLabelModel* pLabel = mWindowRegistry.labelModel(name)) {
+        return pLabel->mFont;
+    }
+    return {};
+}
+
 // Returns the position and size of a window element as the view last reported it
 // (see TMainConsole::reportGeometry()), so this needs no widget.
 std::optional<QRect> Host::windowGeometry(const QString& name) const
