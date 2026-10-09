@@ -679,6 +679,11 @@ public:
     std::optional<QString> labelStyleSheet(const QString& name) const;
     std::optional<QString> labelToolTip(const QString& name) const;
     std::optional<QFont> labelFont(const QString& name) const;
+    std::optional<QString> labelText(const QString& name) const;
+    // The title in .second when .first is true, otherwise why there is none, in setUserWindowTitle()'s words.
+    std::pair<bool, QString> userWindowTitle(const QString& name) const;
+    // {} for no such user window.
+    std::optional<QString> userWindowStyleSheet(const QString& name) const;
     std::optional<bool> windowVisible(const QString& name) const;
     std::optional<QSize> mainWindowSize() const;
     // A name with no user window answers the main window's size.
@@ -691,6 +696,9 @@ public:
     std::optional<bool> windowScrolling(const QString& name) const;
     // {} for no such command line.
     std::optional<QString> commandLineText(const QString& name) const;
+    std::optional<QString> commandLineStyleSheet(const QString& name) const;
+    // {} without a main console.
+    std::optional<QColor> borderColor() const;
     bool getEditorShowBidi() const { return mEditorShowBidi; }
     void setEditorShowBidi(const bool);
     bool caretEnabled() const;

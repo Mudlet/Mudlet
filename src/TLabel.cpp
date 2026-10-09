@@ -199,6 +199,7 @@ void TLabel::setText(const QString& text)
         stopMovie();
         QLabel::setText(text);
     }
+    mpModel->mText = QLabel::text();
 }
 
 bool TLabel::carriesLink() const
@@ -426,6 +427,8 @@ bool TLabel::setBackgroundImage(const QString& path)
     clearSvgImage();
     stopMovie();
     setPixmap(raster);
+    // setPixmap() empties the text
+    mpModel->mText = text();
     return true;
 }
 
@@ -647,7 +650,12 @@ bool TLabel::event(QEvent* event)
     if (event->type() == QEvent::ToolTipChange) {
         mpModel->mToolTip = toolTip();
     }
-    return QLabel::event(event);
+    const bool handled = QLabel::event(event);
+    // A qproperty-text in a style sheet reaches QLabel::setText() directly, as the style is applied
+    if (event->type() == QEvent::Polish || event->type() == QEvent::StyleChange) {
+        mpModel->mText = text();
+    }
+    return handled;
 }
 
 void TLabel::applyBackgroundColor()

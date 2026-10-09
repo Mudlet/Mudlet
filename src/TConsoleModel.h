@@ -241,6 +241,7 @@ struct TConsoleModel
     // The upper pane's TTextEdit::mCursorY, which it copies out of the buffer as it repaints.
     int mUpperPaneCursorY = 0;
     bool mScrollingEnabled = true;
+    QColor mBorderColor = QColorConstants::Black;
     void wrapLine(int line) { buffer.wrapLine(line, mWrapAt, mIndentCount, mHangingIndentCount); }
 
     // The name scripts know this console by. Only the main console, user

@@ -404,51 +404,27 @@ std::pair<bool, QString> TMainConsole::setUserWindowStyleSheet(const QString& na
     auto pW = mDockWidgetMap.value(name);
     if (pW) {
         pW->setStyleSheet(userWindowStyleSheet);
+        mpHost->windowRegistry().setUserWindowStyleSheet(name, pW->styleSheet());
         return {true, QString()};
     }
     return {false, qsl("userwindow name '%1' not found").arg(name)};
-}
-
-std::optional<QString> TMainConsole::getUserWindowStyleSheet(const QString& name) const
-{
-    auto pW = mDockWidgetMap.value(name);
-    if (!pW) {
-        return {};
-    }
-
-    return {pW->styleSheet()};
 }
 
 std::pair<bool, QString> TMainConsole::setCmdLineStyleSheet(const QString& name, const QString& styleSheet)
 {
     if (name.isEmpty() || !name.compare(qsl("main"))) {
         mpHost->mainConsoleView()->mpCommandLine->setStyleSheet(styleSheet);
+        mpHost->windowRegistry().setMainCommandLineStyleSheet(mpHost->mainConsoleView()->mpCommandLine->styleSheet());
         return {true, QString()};
     }
 
     auto pN = mSubCommandLineMap.value(name);
     if (pN) {
         pN->setStyleSheet(styleSheet);
+        mpHost->windowRegistry().setCommandLineStyleSheet(name, pN->styleSheet());
         return {true, QString()};
     }
     return {false, qsl("command-line name '%1' not found").arg(name)};
-}
-
-std::optional<QString> TMainConsole::getCmdLineStyleSheet(const QString& name) const
-{
-    if (name.isEmpty() || !name.compare(qsl("main"))) {
-        if (auto pMain = mpHost->mainConsoleView()->mpCommandLine) {
-            return {pMain->styleSheet()};
-        }
-        return {};
-    }
-
-    auto pN = mSubCommandLineMap.value(name);
-    if (!pN) {
-        return {};
-    }
-
-    return {pN->styleSheet()};
 }
 
 // The lifecycle itself is core (TConsoleModel::toggleLogging): this keeps the
@@ -602,6 +578,8 @@ void TMainConsole::registerDockWidget(const QString& name, TDockWidget* pDockWid
 {
     mDockWidgetMap[name] = pDockWidget;
     mpHost->windowRegistry().registerDockWidget(name);
+    mpHost->windowRegistry().setUserWindowTitle(name, pDockWidget->windowTitle());
+    mpHost->windowRegistry().setUserWindowStyleSheet(name, pDockWidget->styleSheet());
     watchWindowState(name, pDockWidget);
 }
 
@@ -628,6 +606,7 @@ TDockWidget* TMainConsole::createUserWindow(const QString& name)
     console->setScrollBarVisible(false);
     registerSubConsole(name, console);
     dockwidget->setStyleSheet(mpHost->mProfileStyleSheet);
+    mpHost->windowRegistry().setUserWindowStyleSheet(name, dockwidget->styleSheet());
     mudlet::self()->addDockWidget(Qt::RightDockWidgetArea, dockwidget);
     console->setFontSize(10);
     return dockwidget;
@@ -1744,6 +1723,8 @@ void TMainConsole::registerSubCommandLine(const QString& name, TCommandLine* pCo
     }
     mSubCommandLineMap[name] = pCommandLine;
     mpHost->windowRegistry().registerCommandLine(name);
+    // The constructor styles a sub command line before it can be registered
+    mpHost->windowRegistry().setCommandLineStyleSheet(name, pCommandLine->styleSheet());
     watchWindowState(name, pCommandLine);
     connect(pCommandLine, &QPlainTextEdit::textChanged, this, [this, name, pCommandLine]() {
         // A displaced or deleted command line can still be typed in, and must not write its name's text.
@@ -2495,6 +2476,7 @@ std::pair<bool, QString> TMainConsole::setLabelMovie(const QString& name, const 
     myMovie->setFileName(moviePath);
     myMovie->stop();
     pL->setMovie(myMovie);
+    pL->model().mText = pL->text();
     myMovie->start();
     return {true, QString()};
 }
@@ -2617,15 +2599,6 @@ bool TMainConsole::setLabelFont(const QString& name, const QFont& font)
     }
     pL->setFont(font);
     return true;
-}
-
-std::optional<QString> TMainConsole::getLabelText(const QString& name) const
-{
-    auto pL = mLabelMap.value(name);
-    if (!pL) {
-        return {};
-    }
-    return {pL->text()};
 }
 
 // QLabel's movie rather than TLabel::mpMovie: setting a label's text drops the
@@ -2973,8 +2946,9 @@ bool TMainConsole::resetCommandLineAction(const QString& name)
 void TMainConsole::setProfileStyleSheet(const QString& styleSheet)
 {
     setStyleSheet(styleSheet);
-    for (auto& pDockWidget : mDockWidgetMap) {
+    for (const auto& [name, pDockWidget] : mDockWidgetMap.asKeyValueRange()) {
         pDockWidget->setStyleSheet(styleSheet);
+        mpHost->windowRegistry().setUserWindowStyleSheet(name, pDockWidget->styleSheet());
     }
     if (mpDockableMapWidget) {
         mpDockableMapWidget->setStyleSheet(styleSheet);
@@ -3202,32 +3176,6 @@ std::pair<bool, QString> TMainConsole::setUserWindowTitle(const QString& name, c
     // as it means that the TConsole is flagged as being a user window yet
     // it does not have a TDockWidget to hold it...
     return {false, qsl("internal error: TConsole \"%1\" is marked as a user window but does not have a TDockWidget to contain it").arg(name)};
-}
-
-// The title is in .second when .first is true, otherwise .second is why there
-// is none. Mirrors setUserWindowTitle's checks in the same order and words, so
-// that a miniconsole sharing the name is not reported as a missing window.
-std::pair<bool, QString> TMainConsole::getUserWindowTitle(const QString& name) const
-{
-    if (name.isEmpty()) {
-        return {false, qsl("a user window cannot have an empty string as its name")};
-    }
-
-    auto pC = mSubConsoleMap.value(name);
-    if (!pC) {
-        return {false, qsl("user window name '%1' not found").arg(name)};
-    }
-
-    if (pC->getType() != UserWindow) {
-        return {false, qsl("\"%1\" is not a user window").arg(name)};
-    }
-
-    auto pD = mDockWidgetMap.value(name);
-    if (!pD) {
-        return {false, qsl("internal error: TConsole \"%1\" is marked as a user window but does not have a TDockWidget to contain it").arg(name)};
-    }
-
-    return {true, pD->windowTitle()};
 }
 
 bool TMainConsole::startIncomingText()

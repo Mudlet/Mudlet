@@ -6284,6 +6284,45 @@ std::optional<QFont> Host::labelFont(const QString& name) const
     return {};
 }
 
+std::optional<QString> Host::labelText(const QString& name) const
+{
+    if (!mpConsole) {
+        return {};
+    }
+    if (const TLabelModel* pLabel = mWindowRegistry.labelModel(name)) {
+        return pLabel->mText;
+    }
+    return {};
+}
+
+// Checks in the order setUserWindowTitle() does, so a miniconsole of that name is not reported as missing.
+std::pair<bool, QString> Host::userWindowTitle(const QString& name) const
+{
+    if (name.isEmpty()) {
+        return {false, qsl("a user window cannot have an empty string as its name")};
+    }
+    const auto kind = mWindowRegistry.subConsoleKind(name);
+    if (!kind) {
+        return {false, qsl("user window name '%1' not found").arg(name)};
+    }
+    if (*kind != TWindowRegistry::SubConsoleKind::UserWindow) {
+        return {false, qsl("\"%1\" is not a user window").arg(name)};
+    }
+    const auto title = mWindowRegistry.userWindowTitle(name);
+    if (!title) {
+        return {false, qsl("internal error: TConsole \"%1\" is marked as a user window but does not have a TDockWidget to contain it").arg(name)};
+    }
+    return {true, *title};
+}
+
+std::optional<QString> Host::userWindowStyleSheet(const QString& name) const
+{
+    if (!mpConsole) {
+        return {};
+    }
+    return mWindowRegistry.userWindowStyleSheet(name);
+}
+
 // Returns the position and size of a window element as the view last reported it
 // (see TMainConsole::reportGeometry()), so this needs no widget.
 std::optional<QRect> Host::windowGeometry(const QString& name) const
@@ -6362,6 +6401,22 @@ std::optional<QString> Host::commandLineText(const QString& name) const
         return {};
     }
     return mWindowRegistry.commandLineText(name);
+}
+
+std::optional<QString> Host::commandLineStyleSheet(const QString& name) const
+{
+    if (!mpConsole) {
+        return {};
+    }
+    return mWindowRegistry.commandLineStyleSheet(name);
+}
+
+std::optional<QColor> Host::borderColor() const
+{
+    if (!mpConsole) {
+        return {};
+    }
+    return {mpMainConsoleModel->mBorderColor};
 }
 
 std::optional<QSize> Host::userWindowSize(const QString& name) const

@@ -232,6 +232,7 @@ TConsole::TConsole(Host* pH, const QString& name, const ConsoleType type, QWidge
 , mControlCharacter(pH->getControlCharacterMode())
 , mType(type)
 , mScrollingEnabled(mpModel->mScrollingEnabled)
+, mBorderColor(mpModel->mBorderColor)
 {
     // The model is built without a view (Host creates the main console's one
     // before any widget exists), so this view subscribes to it now.

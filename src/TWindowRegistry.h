@@ -117,8 +117,9 @@ public:
     // A copy, so callers such as Host::closeChildren() can remove entries while walking it.
     QStringList subConsoleNames() const { return QStringList(mSubConsoles.keys()); }
 
-    // Core asks whether a name has a dock (a user window, not a miniconsole) and how big its console is.
-    void registerDockWidget(const QString& name) { mDockWidgets.insert(name, QSize()); }
+    // Core asks whether a name has a dock (a user window, not a miniconsole), how big its console is, and
+    // the dock's title and style sheet.
+    void registerDockWidget(const QString& name) { mDockWidgets.insert(name, DockEntry()); }
 
     // Not identity-checked: nothing deregisters a dock from its destructor, so removal happens as the view
     // drops it from its own map and a stale deregistration can't evict a replacement.
@@ -130,7 +131,7 @@ public:
     void setUserWindowSize(const QString& name, const QSize& size)
     {
         if (auto it = mDockWidgets.find(name); it != mDockWidgets.end()) {
-            *it = size;
+            it->consoleSize = size;
         }
     }
 
@@ -144,11 +145,44 @@ public:
             return {};
         }
         const int minValidWidth = 50;
-        if (it->width() < minValidWidth) {
-            return {mAnsweredUserWindowSizes.value(name, *it)};
+        if (it->consoleSize.width() < minValidWidth) {
+            return {mAnsweredUserWindowSizes.value(name, it->consoleSize)};
         }
-        mAnsweredUserWindowSizes[name] = *it;
-        return {*it};
+        mAnsweredUserWindowSizes[name] = it->consoleSize;
+        return {it->consoleSize};
+    }
+
+    // Written by the view each time it sets them.
+    void setUserWindowTitle(const QString& name, const QString& title)
+    {
+        if (auto it = mDockWidgets.find(name); it != mDockWidgets.end()) {
+            it->title = title;
+        }
+    }
+
+    std::optional<QString> userWindowTitle(const QString& name) const
+    {
+        const auto it = mDockWidgets.constFind(name);
+        if (it == mDockWidgets.constEnd()) {
+            return {};
+        }
+        return {it->title};
+    }
+
+    void setUserWindowStyleSheet(const QString& name, const QString& styleSheet)
+    {
+        if (auto it = mDockWidgets.find(name); it != mDockWidgets.end()) {
+            it->styleSheet = styleSheet;
+        }
+    }
+
+    std::optional<QString> userWindowStyleSheet(const QString& name) const
+    {
+        const auto it = mDockWidgets.constFind(name);
+        if (it == mDockWidgets.constEnd()) {
+            return {};
+        }
+        return {it->styleSheet};
     }
 
     // Apart from deregisterDockWidget(): a profile reset drops the docks but keeps what was answered for them.
@@ -158,7 +192,7 @@ public:
     void setMainWindowSize(const QSize& size) { mMainWindowSize = size; }
     QSize mainWindowSize() const { return mMainWindowSize; }
 
-    // Name only, bar a command line's text: core asks just whether a name exists and its kind.
+    // Name only, bar a command line's text and style sheet: core asks just whether a name exists and its kind.
     // Three containers as the name spaces are independent; a name in several resolves in declaration order.
     void registerScrollBox(const QString& name) { mScrollBoxes.insert(name); }
     void deregisterScrollBox(const QString& name)
@@ -168,7 +202,7 @@ public:
     }
     bool hasScrollBox(const QString& name) const { return mScrollBoxes.contains(name); }
 
-    void registerCommandLine(const QString& name) { mCommandLines.insert(name, QString()); }
+    void registerCommandLine(const QString& name) { mCommandLines.insert(name, CommandLineEntry()); }
 
     // Not identity-checked, like docks. The view's destroyed() handlers drop these by widget identity,
     // so they only name a name the dying widget still holds.
@@ -182,18 +216,31 @@ public:
     void setCommandLineText(const QString& name, const QString& text)
     {
         if (auto it = mCommandLines.find(name); it != mCommandLines.end()) {
-            it.value() = text;
+            it->text = text;
         }
     }
-    void setMainCommandLineText(const QString& text) { mMainCommandLineText = text; }
+    void setMainCommandLineText(const QString& text) { mMainCommandLine.text = text; }
     // An empty name or "main" is the main command line, as getCmdLine() resolves them.
     std::optional<QString> commandLineText(const QString& name) const
     {
-        if (name.isEmpty() || name == QLatin1String("main")) {
-            return mMainCommandLineText;
+        if (const CommandLineEntry* pEntry = commandLine(name)) {
+            return pEntry->text;
         }
-        if (auto it = mCommandLines.constFind(name); it != mCommandLines.cend()) {
-            return it.value();
+        return {};
+    }
+    // Written by the view each time it sets one.
+    void setCommandLineStyleSheet(const QString& name, const QString& styleSheet)
+    {
+        if (auto it = mCommandLines.find(name); it != mCommandLines.end()) {
+            it->styleSheet = styleSheet;
+        }
+    }
+    void setMainCommandLineStyleSheet(const QString& styleSheet) { mMainCommandLine.styleSheet = styleSheet; }
+    // Names resolve as for commandLineText().
+    std::optional<QString> commandLineStyleSheet(const QString& name) const
+    {
+        if (const CommandLineEntry* pEntry = commandLine(name)) {
+            return pEntry->styleSheet;
         }
         return {};
     }
@@ -261,15 +308,39 @@ private:
         }
     }
 
+    struct DockEntry
+    {
+        QSize consoleSize;
+        QString title;
+        QString styleSheet;
+    };
+
+    struct CommandLineEntry
+    {
+        QString text;
+        QString styleSheet;
+    };
+
+    const CommandLineEntry* commandLine(const QString& name) const
+    {
+        if (name.isEmpty() || name == QLatin1String("main")) {
+            return &mMainCommandLine;
+        }
+        if (auto it = mCommandLines.constFind(name); it != mCommandLines.cend()) {
+            return &it.value();
+        }
+        return nullptr;
+    }
+
     QMap<QString, TLabelModel*> mLabels;
     QMap<QString, SubConsoleEntry> mSubConsoles;
-    QMap<QString, QSize> mDockWidgets;
+    QMap<QString, DockEntry> mDockWidgets;
     mutable QMap<QString, QSize> mAnsweredUserWindowSizes;
     QSet<QString> mScrollBoxes;
-    QMap<QString, QString> mCommandLines;
+    QMap<QString, CommandLineEntry> mCommandLines;
     QSet<QString> mTextBoxes;
     QSize mMainWindowSize;
-    QString mMainCommandLineText;
+    CommandLineEntry mMainCommandLine;
     QMap<QString, PlainWindowState> mPlainWindowStates;
 };
 
