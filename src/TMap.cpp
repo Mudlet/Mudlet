@@ -1377,11 +1377,15 @@ bool TMap::serialize(QDataStream& ofs, int saveVersion)
         ofs << pA->pos;
         ofs << pA->isZone;
         ofs << pA->zoneAreaRef;
+        // A local copy so that saving does not modify the live area's user data,
+        // holding only the file-only keys for what this save writes:
+        QMap<QString, QString> userData{pA->mUserData};
+        TArea::dropFileOnlyUserData(userData);
         if (mSaveVersion >= 21) {
             // Revised in version 21 to store the value directly:
             ofs << pA->mLast2DMapZoom;
         } else {
-            pA->mUserData.insert(QLatin1String("system.fallback_map2DZoom"), QString::number(pA->get2DMapZoom()));
+            userData.insert(QLatin1String("system.fallback_map2DZoom"), QString::number(pA->get2DMapZoom()));
         }
         // Store font and outline color info for labels in userData (avoids binary format version change)
         const auto permanentLabelsList{pA->getPermanentLabelIds()};
@@ -1393,13 +1397,13 @@ bool TMap::serialize(QDataStream& ofs, int saveVersion)
                 }
                 const QString fontKey = qsl("system.labelFont_%1").arg(labelID);
                 const QString fontValue = qsl("%1|%2|%3|%4").arg(label.font.family()).arg(label.font.pointSize()).arg(label.font.weight()).arg(label.font.italic() ? 1 : 0);
-                pA->mUserData.insert(fontKey, fontValue);
+                userData.insert(fontKey, fontValue);
             }
             const QString outlineColorKey = qsl("system.labelOutlineColor_%1").arg(labelID);
             const QString outlineColorValue = qsl("%1|%2|%3|%4").arg(label.outlineColor.red()).arg(label.outlineColor.green()).arg(label.outlineColor.blue()).arg(label.outlineColor.alpha());
-            pA->mUserData.insert(outlineColorKey, outlineColorValue);
+            userData.insert(outlineColorKey, outlineColorValue);
         }
-        ofs << pA->mUserData;
+        ofs << userData;
         if (mSaveVersion >= 21) {
             // Revised in version 21 to store labels within the TArea class:
             // Also we now have temporary labels, so we need to count the
@@ -2097,6 +2101,11 @@ bool TMap::restore(QString location)
                 }
                 ++areasWithLabelsCounter;
             }
+        }
+
+        // whatever the labels did not take is for labels that no longer exist
+        for (auto* pA : mpRoomDB->getAreaMap()) {
+            TArea::dropFileOnlyUserData(pA->mUserData);
         }
 
         // A corrupt stream carries on reading, out of step with the records,
