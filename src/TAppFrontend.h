@@ -25,6 +25,7 @@
 #include <optional>
 
 class Host;
+class QSize;
 
 // The application shell as core code sees it. The mudlet main window implements it;
 // core code reaches it through instance() instead of naming the window class.
@@ -52,6 +53,16 @@ public:
     virtual void updateMapActionAvailability() = 0;
     virtual bool showTabConnectionIndicators() const = 0;
     virtual void setShowTabConnectionIndicators(bool show) = 0;
+    virtual void alertUser(int milliseconds) = 0;
+    virtual std::optional<QSize> getImageSize(const QString& imageLocation) = 0;
+    // -1 for a profile with no tab
+    virtual int profileTabIndex(const QString& profileName) const = 0;
+    virtual void setActiveProfileTab(const QString& profileName) = 0;
+    virtual void refreshTabBarsAfterStyleChange() = 0;
+    virtual void resizeMainWindow(int width, int height) = 0;
+    virtual bool loadWindowLayout() = 0;
+    // Saves even if quitting already saved the layout; if this save fails, quitting saves it again.
+    virtual bool saveWindowLayoutForScript() = 0;
 
     // Surfaces a command can be placed on. A client with different chrome maps
     // these onto whatever it has; one that has only a menu honours Menu alone.

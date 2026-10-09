@@ -49,11 +49,9 @@
 #include "TMapLabel.h"
 #include "TMedia.h"
 #include "TRoomDB.h"
-#include "TTabBar.h"
 #include "TTimer.h"
 #include "dlgIRC.h"
 #include "mapInfoContributorManager.h"
-#include "mudlet.h"
 
 #include <array>
 #include <cstring>
@@ -300,7 +298,7 @@ int TLuaInterpreter::alert(lua_State* L)
         }
     }
 
-    if (auto* application = mudlet::self()) {
+    if (auto* application = TAppFrontend::instance()) {
         application->alertUser(qRound(luaAlertDuration * 1000.0));
     }
 
@@ -1554,7 +1552,7 @@ int TLuaInterpreter::getImageSize(lua_State* L)
         return warnArgumentValue(L, __func__, "image location cannot be an empty string");
     }
 
-    auto size = mudlet::self()->getImageSize(imageLocation);
+    auto size = TAppFrontend::instance()->getImageSize(imageLocation);
     if (!size) {
         return warnArgumentValue(L, __func__, qsl("couldn't retrieve image size, is the location '%1' correct?").arg(imageLocation));
     }
@@ -1716,7 +1714,7 @@ int TLuaInterpreter::getMousePosition(lua_State* L)
 int TLuaInterpreter::getProfileTabNumber(lua_State* L)
 {
     Host& host = getHostFromLua(L);
-    auto profileIndex = mudlet::self()->mpTabBar->tabIndex(host.getName());
+    auto profileIndex = TAppFrontend::instance()->profileTabIndex(host.getName());
     if (profileIndex != -1) {
         lua_pushnumber(L, profileIndex + 1);
         return 1;
@@ -2355,7 +2353,7 @@ int TLuaInterpreter::isAnsiFgColor(lua_State* L)
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#loadWindowLayout
 int TLuaInterpreter::loadWindowLayout(lua_State* L)
 {
-    lua_pushboolean(L, mudlet::self()->loadWindowLayout());
+    lua_pushboolean(L, TAppFrontend::instance()->loadWindowLayout());
     return 1;
 }
 
@@ -2647,15 +2645,7 @@ int TLuaInterpreter::resizeWindow(lua_State* L)
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#saveWindowLayout
 int TLuaInterpreter::saveWindowLayout(lua_State* L)
 {
-    mudlet* pMudlet = mudlet::self();
-    // the flag is what makes the save on the way out a no-op, and a save asked
-    // for from a script is no substitute for that one, so it goes back up only
-    // if this call really saved
-    const bool hadSavedLayout = pMudlet->mHasSavedLayout;
-    pMudlet->mHasSavedLayout = false;
-    const bool saved = pMudlet->saveWindowLayout();
-    pMudlet->mHasSavedLayout = hadSavedLayout && saved;
-    lua_pushboolean(L, saved);
+    lua_pushboolean(L, TAppFrontend::instance()->saveWindowLayoutForScript());
     return 1;
 }
 
@@ -2818,7 +2808,7 @@ int TLuaInterpreter::setActiveProfile(lua_State* L)
         return 2;
     }
 
-    mudlet::self()->mpTabBar->setCurrentIndex(mudlet::self()->mpTabBar->tabIndex(profileName));
+    TAppFrontend::instance()->setActiveProfileTab(profileName);
     lua_pushboolean(L, true);
     return 1;
 }
@@ -2849,7 +2839,7 @@ int TLuaInterpreter::setAppStyleSheet(lua_State* L)
     event.mArgumentList.append(host.getName());
     event.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
     qApp->setStyleSheet(styleSheet);
-    mudlet::self()->refreshTabBarsAfterStyleChange();
+    TAppFrontend::instance()->refreshTabBarsAfterStyleChange();
     HostManager::self()->postInterHostEvent(nullptr, event, true);
     lua_pushboolean(L, true);
     return 1;
@@ -3763,7 +3753,7 @@ int TLuaInterpreter::setMainWindowSize(lua_State* L)
 {
     const int x1 = getVerifiedInt(L, __func__, 1, "mainWidth");
     const int y1 = getVerifiedInt(L, __func__, 2, "mainHeight");
-    mudlet::self()->resize(x1, y1);
+    TAppFrontend::instance()->resizeMainWindow(x1, y1);
     return 0;
 }
 
