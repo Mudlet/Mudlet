@@ -2502,7 +2502,7 @@ describe("The IRC configuration functions round-trip through the profile", funct
       assert.equals("rw-------", lfs.attributes(path, "permissions"))
 
       -- and one an earlier Mudlet left open is narrowed when it is read
-      os.execute("chmod 644 '" .. path .. "'")
+      os.execute("chmod 644 '" .. (path:gsub("'", "'\\''")) .. "'")
       assert.equals("rw-r--r--", lfs.attributes(path, "permissions"), "could not stage a file open to everyone")
       assert.equals("BustedOwnerSecret", getConfig("ircPassword"))
       assert.equals("rw-------", lfs.attributes(path, "permissions"))
