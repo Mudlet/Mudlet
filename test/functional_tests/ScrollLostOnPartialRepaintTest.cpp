@@ -261,8 +261,16 @@ private slots:
 
         lua->compileAndExecuteScript(qsl("for i = 1, 200 do echo('FILLER ' .. i .. '\\n') end\n"));
         qApp->processEvents();
-        pane->repaint();
-        lua->compileAndExecuteScript(qsl("echo('PACED_LINE\\n')\n"));
+        // The line has to land within csmPaintPaceMs of the paint, which a loaded
+        // runner can miss. One that misses brings the scrollbar up to date at
+        // once, so trying again leaves nothing pending to hide the loss below.
+        for (int attempt = 0; attempt < 50; ++attempt) {
+            pane->repaint();
+            lua->compileAndExecuteScript(qsl("echo('PACED_LINE\\n')\n"));
+            if (pane->mpPaintPacer->isActive()) {
+                break;
+            }
+        }
         QVERIFY2(pane->mpPaintPacer->isActive(), "the line arrived after the paint window closed, so the pacer this case is about never started");
         pane->forceUpdate();
         pane->repaint();
