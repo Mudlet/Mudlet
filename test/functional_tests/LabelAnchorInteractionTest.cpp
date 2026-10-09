@@ -380,6 +380,32 @@ private slots:
         QVERIFY2(menuParent == pMini->mUpperPane && consoleMenu, "a right-click on a label over a miniconsole did not open that miniconsole's menu");
     }
 
+    // Labels stacked over the output, none with callbacks, still leave the menu
+    // to the console under all of them
+    void test_aRightClickOnLabelsStackedWithoutCallbacksOpensTheConsoleMenu()
+    {
+        const QString lower = qsl("rightClickStackedLowerLabel");
+        const QString upper = qsl("rightClickStackedUpperLabel");
+        auto [lowerCreated, lowerMessage] = mpHost->createLabel(qsl("main"), lower, 40, 90, 220, 70, true, false);
+        QVERIFY2(lowerCreated, qPrintable(lowerMessage));
+        auto [upperCreated, upperMessage] = mpHost->createLabel(qsl("main"), upper, 50, 100, 200, 50, true, false);
+        QVERIFY2(upperCreated, qPrintable(upperMessage));
+        TLabel* pLower = mpHost->mpConsole->labelWidget(lower);
+        TLabel* pUpper = mpHost->mpConsole->labelWidget(upper);
+        QVERIFY(pLower && pUpper);
+        pLower->show();
+        pUpper->show();
+        pUpper->raise();
+        TTextEdit* pPane = mpHost->mpConsole->mUpperPane;
+        QVERIFY2(pLower->geometry().contains(pUpper->geometry().center()), "the labels do not overlap, so the lower one is never what the upper one covers");
+
+        const auto [menuParent, consoleMenu] = rightClickLabel(pUpper);
+        mpHost->mpConsole->deleteLabel(upper);
+        mpHost->mpConsole->deleteLabel(lower);
+
+        QVERIFY2(menuParent == pPane && consoleMenu, "a right-click on a label stacked over another without callbacks did not open the console's context menu");
+    }
+
     // The player cannot see a link the label hides, so a right-click there must
     // not reveal it or offer its commands, only the console's own menu
     void test_aRightClickOnALabelOverALinkOpensTheConsoleMenuNotTheLinks()

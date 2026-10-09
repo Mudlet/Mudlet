@@ -267,10 +267,23 @@ bool TLabel::forwardRightClickToConsole(QMouseEvent* event)
     if (!pParent) {
         return false;
     }
-    // Left out of the hit test for a moment, so that it finds what the label covers
-    setAttribute(Qt::WA_TransparentForMouseEvents, true);
-    auto* pPane = qobject_cast<TTextEdit*>(pParent->childAt(pParent->mapFromGlobal(event->globalPosition().toPoint())));
-    setAttribute(Qt::WA_TransparentForMouseEvents, false);
+    // This label, and any other without callbacks stacked under it, is left out of the hit
+    // test for a moment, so that it finds what they cover
+    const QPoint where = pParent->mapFromGlobal(event->globalPosition().toPoint());
+    QList<TLabel*> skipped;
+    QWidget* pHit = nullptr;
+    for (TLabel* pLabel = this; pLabel; pLabel = qobject_cast<TLabel*>(pHit)) {
+        if (pLabel->mClickFunction || pLabel->mReleaseFunction) {
+            break;
+        }
+        pLabel->setAttribute(Qt::WA_TransparentForMouseEvents, true);
+        skipped.append(pLabel);
+        pHit = pParent->childAt(where);
+    }
+    for (auto* pLabel : skipped) {
+        pLabel->setAttribute(Qt::WA_TransparentForMouseEvents, false);
+    }
+    auto* pPane = qobject_cast<TTextEdit*>(pHit);
     if (!pPane) {
         return false;
     }
