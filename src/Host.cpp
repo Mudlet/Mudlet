@@ -4332,13 +4332,19 @@ bool Host::restoreMissingDisplayFont()
     if (resolved.family.compare(mMissingDisplayFontFamily, Qt::CaseInsensitive) != 0) {
         font.setWeight(resolved.weight);
     }
-    if (const auto [applied, error] = setDisplayFont(font); !applied) {
-        qWarning().nospace().noquote() << "Host::restoreMissingDisplayFont() WARNING - the font \"" << mMissingDisplayFontFamily << "\" is installed again but was refused: " << error;
-        return false;
-    }
-
+    // Retired first: the change runs the sysSettingChanged handlers, and one that takes
+    // the package away again leaves the family missing anew rather than forgotten
     const QString family = mMissingDisplayFontFamily;
     mMissingDisplayFontFamily.clear();
+    if (const auto [applied, error] = setDisplayFont(font); !applied) {
+        mMissingDisplayFontFamily = family;
+        qWarning().nospace().noquote() << "Host::restoreMissingDisplayFont() WARNING - the font \"" << family << "\" is installed again but was refused: " << error;
+        return false;
+    }
+    if (!mMissingDisplayFontFamily.isEmpty()) {
+        return true;
+    }
+
     mTelnet.sendInfoNewEnvironValue(qsl("FONT"));
     //: %1 is the font family the profile asked for, which had been missing and has just been installed by a package
     postMessage(tr("[ INFO ]  - The font \"%1\" that this profile uses is installed again, so it is being used instead of the default.").arg(family));
