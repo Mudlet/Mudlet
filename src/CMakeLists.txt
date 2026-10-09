@@ -220,6 +220,7 @@ set(mudlet_SRCS
     TRoomDB.cpp
     TScript.cpp
     TScrollBox.cpp
+    TSpeechBridge.cpp
     TSpellChecker.cpp
     TSplitter.cpp
     TSplitterHandle.cpp
@@ -416,6 +417,7 @@ set(mudlet_HDRS
     TAccessibleTextEdit.h
     TAction.h
     TAlias.h
+    TAppFrontend.h
     TArea.h
     TAreaGridIndex.h
     TAreaLodExitIndex.h
@@ -425,6 +427,7 @@ set(mudlet_HDRS
     TBuffer.h
     TCommandLine.h
     TConsole.h
+    TConsoleFrontend.h
     TConsoleModel.h
     TConsoleModelNotifier.h
     TDebug.h
@@ -458,7 +461,9 @@ set(mudlet_HDRS
     TMap.h
     TMapLabel.h
     TMapView.h
+    TMapViewFrontend.h
     TMapViewManager.h
+    TMapViewsFrontend.h
     TMatchState.h
     TMedia.h
     TMediaData.h
@@ -476,6 +481,7 @@ set(mudlet_HDRS
     TMxpExpireTagHandler.h
     TMxpFontTagHandler.h
     TMxpFormattingTagsHandler.h
+    TMxpFrameFrontend.h
     TMxpFrameManager.h
     TMxpFrameTagHandler.h
     TMxpFrameWidgets.h
@@ -507,6 +513,7 @@ set(mudlet_HDRS
     TRoomDB.h
     TScript.h
     TScrollBox.h
+    TSpeechBridge.h
     TSpellChecker.h
     TSplitter.h
     TSplitterHandle.h
@@ -1072,6 +1079,11 @@ if(UNIX AND NOT APPLE)
   # CMAKE_INSTALL_PREFIX is automagically set on Unix to DESTDIR environment
   # variable and is prefixed onto relative DESTINATION values
   install(
+	DIRECTORY "../translations/lua/"
+	DESTINATION "share/mudlet/lua/translations"
+	FILES_MATCHING PATTERN "*.json"
+	PERMISSIONS OWNER_READ OWNER_WRITE GROUP_READ WORLD_READ)
+  install(
     DIRECTORY "mudlet-lua/lua"
     DESTINATION "share/mudlet"
     FILES_MATCHING
@@ -1087,7 +1099,9 @@ if(UNIX AND NOT APPLE)
     PATTERN "*.xml" PERMISSIONS OWNER_READ OWNER_WRITE GROUP_READ WORLD_READ
     PATTERN "*.txt" PERMISSIONS OWNER_READ OWNER_WRITE GROUP_READ WORLD_READ
     # the pathfinding specs' map fixture, zipped because unpacked it adds ~5MiB to every package
-    PATTERN "*.zip" PERMISSIONS OWNER_READ OWNER_WRITE GROUP_READ WORLD_READ)
+    PATTERN "*.zip" PERMISSIONS OWNER_READ OWNER_WRITE GROUP_READ WORLD_READ
+    # binary map fixtures
+    PATTERN "*.dat" PERMISSIONS OWNER_READ OWNER_WRITE GROUP_READ WORLD_READ)
   install(
     DIRECTORY "../3rdparty/lcf"
     DESTINATION "share/mudlet/lua"
