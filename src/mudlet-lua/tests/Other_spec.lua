@@ -2329,10 +2329,8 @@ describe("Tests the timer API", function()
       assert.has_error(function() tempTimer(0.1, [[]], "w2aNotABoolean") end)
     end)
 
-    -- An empty code string is no payload, yet each tick used to call a Lua function
-    -- that was never registered and report that it was missing (#10795). Nothing in
-    -- Lua can turn on echoing Lua errors to the main console, so this loads a profile
-    -- that has it on and reads that profile's console back
+    -- Nothing in Lua can turn on echoing Lua errors to the main console, so this
+    -- loads a profile that has it on and reads that profile's console back
     it("runs nothing and reports nothing for a timer with no code", function()
       if not os.getenv("MUDLET_TEST_MODE") then
         pending("waiting for the other profile needs pumpEvents(), which is refused outside MUDLET_TEST_MODE")
@@ -2361,6 +2359,21 @@ describe("Tests the timer API", function()
         removeTree(directory)
       end
       assert.is_nil(lfs.attributes(directory), "a profile named " .. name .. " already exists and is not this spec's to delete")
+      -- closing a profile saves the shared window layout beside the profiles
+      -- directory, which the next Mudlet start reads, so put it back afterwards
+      local configurationDirectory = directory:match("^(.*)[/\\]profiles[/\\]")
+      local layoutFiles = {
+        configurationDirectory .. "/windowLayout.dat",
+        configurationDirectory .. "/windowLayoutGeometry.dat",
+      }
+      local layoutBefore = {}
+      for _, path in ipairs(layoutFiles) do
+        local handle = io.open(path, "rb")
+        if handle then
+          layoutBefore[path] = handle:read("*a")
+          handle:close()
+        end
+      end
       local consoleText
       local handler = registerAnonymousEventHandler("mudletSpecEmptyTimerConsole", function(_, text)
         consoleText = text
@@ -2378,6 +2391,15 @@ describe("Tests the timer API", function()
         end
         if lfs.attributes(marker) then
           removeTree(directory)
+        end
+        for _, path in ipairs(layoutFiles) do
+          if layoutBefore[path] then
+            local handle = assert(io.open(path, "wb"))
+            handle:write(layoutBefore[path])
+            handle:close()
+          else
+            os.remove(path)
+          end
         end
       end)
       lfs.mkdir(directory)
@@ -2416,7 +2438,9 @@ tempTimer(0.5, function() raiseGlobalEvent("mudletSpecEmptyTimerConsole", table.
 
       assert.is_string(consoleText, "the other profile never reported its console")
       assert.is_truthy(consoleText:find("mudletSpecEmptyTimerControl", 1, true), "the other profile did not show its Lua errors, so this spec cannot see one: " .. consoleText)
-      assert.is_falsy(consoleText:find("func reference not found", 1, true), "a timer with no code tried to call a Lua function: " .. consoleText)
+      -- word wrap breaks a long error line across console lines
+      local unwrapped = consoleText:gsub("\n", "")
+      assert.is_falsy(unwrapped:find("func reference not found", 1, true), "a timer with no code tried to call a Lua function: " .. consoleText)
     end)
 
     it("repeats until killed when the repeating argument is true", function()
