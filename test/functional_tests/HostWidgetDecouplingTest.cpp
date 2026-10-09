@@ -304,6 +304,51 @@ private slots:
         QVERIFY(host->hasConsoleView());
     }
 
+    // These calls reach the null view unguarded once the console is detached; each must still answer
+    // as it did when it returned early, including for a label the registry still holds.
+    void test_callsWithoutConsoleAnswerAsMissing()
+    {
+        startProfile(mHostname, mLocalhost, mPort);
+        auto host = mudlet::self()->getActiveHost();
+        QVERIFY2(host, "No active host available for the test.");
+
+        QPointer<TMainConsole> console = host->mainConsoleView();
+        QVERIFY2(console, "The active host has no main console.");
+        const QString label = qsl("nullViewProbe");
+        QVERIFY(host->createLabel(qsl("main"), label, 0, 0, 10, 10, true, false).first);
+
+        host->setMainConsoleView(nullptr);
+        const bool labelStillRegistered = host->windowRegistry().hasLabel(label);
+        const bool shown = host->showWindow(label);
+        const bool hidden = host->hideWindow(label);
+        const bool styled = host->setLabelStyleSheet(label, qsl("color: red;"));
+        const bool tinted = host->setSvgTint(label, QColor(Qt::red));
+        const bool echoed = host->echoWindow(label, qsl("text"));
+        const QSize fontSize = host->calcFontSize(qsl("main"));
+        const auto mapperTitleSet = host->setMapperTitle(qsl("title"));
+        const auto mapperTitle = host->getMapperTitle();
+        const bool layoutCommitted = host->commitLayoutUpdates();
+        host->printToMainConsole(qsl("null view probe line\n"));
+        const bool printed = host->mainConsoleModel().buffer.lineBuffer.join(QChar::LineFeed).contains(qsl("null view probe line"));
+        const bool luaAnswered = host->getLuaInterpreter()->compileAndExecuteScript(
+                qsl("local ok, msg = clearCmdLine('main') assert(ok == nil and msg) assert(raiseWindow('nullViewProbe') == false)"));
+        host->setMainConsoleView(console);
+
+        QVERIFY(labelStillRegistered);
+        QVERIFY(!shown);
+        QVERIFY(!hidden);
+        QVERIFY(!styled);
+        QVERIFY(!tinted);
+        QVERIFY(!echoed);
+        QCOMPARE(fontSize, QSize(-1, -1));
+        QCOMPARE(mapperTitleSet.first, false);
+        QCOMPARE(mapperTitleSet.second, qsl("no floating/dockable type map window found"));
+        QVERIFY(!mapperTitle.has_value());
+        QVERIFY(!layoutCommitted);
+        QVERIFY(printed);
+        QVERIFY(luaAnswered);
+    }
+
     // The mapping-script reminder used to be a QDialog built inside Host; it is
     // now shown by the frontend in response to signal_showMapperScriptReminder().
     // Verify the frontend handler actually raises a dialog parented on the main
