@@ -6251,11 +6251,8 @@ std::optional<QString> Host::windowType(const QString& name) const
     return {};
 }
 
-// Returns the position and size of a window element, matching what
-// moveWindow()/resizeWindow() set and mirroring their widget dispatch, so user
-// windows are read from their dock widget rather than their console.
-// pos()/size() rather than geometry(): for a floating dock move() targets the
-// frame origin while geometry() would report the client area.
+// Returns the position and size of a window element as the view last reported it
+// (see TMainConsole::reportGeometry()), so this needs no widget.
 std::optional<QRect> Host::windowGeometry(const QString& name) const
 {
     if (!mpConsole) {
@@ -6268,14 +6265,14 @@ std::optional<QRect> Host::windowGeometry(const QString& name) const
         // functions cannot disagree.
         return {QRect(QPoint(0, 0), mpConsole->getMainWindowSize())};
     }
-    if (mWindowRegistry.hasLabel(name)) {
-        return mpConsole->getLabelGeometry(name);
+    if (const TLabelModel* pLabel = mWindowRegistry.labelModel(name)) {
+        return pLabel->mGeometry;
     }
     if (mWindowRegistry.hasSubConsole(name)) {
-        return mpConsole->getSubConsoleGeometry(name);
+        return mWindowRegistry.subConsoleGeometry(name);
     }
     if (mWindowRegistry.hasPlainWindow(name)) {
-        return mpConsole->getPlainWindowGeometry(name);
+        return mWindowRegistry.plainWindowGeometry(name);
     }
 
     return {};

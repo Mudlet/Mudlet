@@ -3605,7 +3605,7 @@ noViewSelectionReport = table.concat(noViewSelectionProblems, '; ')
         QVERIFY2(!host->mainConsoleView()->subConsoleWidget(nestedName), "The console's own map still hands out a miniconsole destroyed with the user window it was in.");
         QVERIFY2(!host->mainConsoleView()->moveSubConsole(nestedName, 5, 6), "Moving a destroyed miniconsole by name reported success.");
         QVERIFY2(!host->mainConsoleView()->showSubConsole(nestedName), "Showing a destroyed miniconsole by name reported success.");
-        QVERIFY2(!host->mainConsoleView()->getSubConsoleGeometry(nestedName).has_value(), "A destroyed miniconsole still reported a geometry.");
+        QVERIFY2(!host->windowGeometry(nestedName).has_value(), "A destroyed miniconsole still reported a geometry.");
 
         const auto [recreated, recreateMessage] = host->createMiniConsole(QString(), nestedName, 0, 0, 40, 40);
         QVERIFY2(recreated, qPrintable(qsl("The name of a miniconsole destroyed with its user window could not be used again: %1").arg(recreateMessage)));

@@ -4177,6 +4177,11 @@ bool mudlet::loadWindowLayout()
             if (rv) {
                 restoreFloatingDockGeometries();
                 commitLayoutUpdates(true);
+                for (auto pHost : mHostManager) {
+                    if (pHost && pHost->mainConsoleView()) {
+                        pHost->mainConsoleView()->reportDockGeometry();
+                    }
+                }
             }
             mIsLoadingLayout = false;
 

@@ -21,6 +21,7 @@
  ***************************************************************************/
 
 #include <QMap>
+#include <QRect>
 #include <QSet>
 #include <QString>
 #include <QStringList>
@@ -69,6 +70,23 @@ public:
     bool hasSubConsole(const QString& name) const { return mSubConsoles.contains(name); }
     TConsoleModel* subConsoleModel(const QString& name) const { return mSubConsoles.value(name).pModel; }
 
+    // A user window's is its dock's. Written by the view as Qt moves or resizes the widget.
+    void setSubConsoleGeometry(const QString& name, const QRect& geometry)
+    {
+        if (auto it = mSubConsoles.find(name); it != mSubConsoles.end()) {
+            it->geometry = geometry;
+        }
+    }
+
+    std::optional<QRect> subConsoleGeometry(const QString& name) const
+    {
+        const auto it = mSubConsoles.constFind(name);
+        if (it == mSubConsoles.constEnd()) {
+            return {};
+        }
+        return {it->geometry};
+    }
+
     std::optional<SubConsoleKind> subConsoleKind(const QString& name) const
     {
         const auto it = mSubConsoles.constFind(name);
@@ -93,28 +111,64 @@ public:
     // Name only, like docks: core asks just whether a name exists and its kind.
     // Three sets as the name spaces are independent; a name in several resolves in declaration order.
     void registerScrollBox(const QString& name) { mScrollBoxes.insert(name); }
-    void deregisterScrollBox(const QString& name) { mScrollBoxes.remove(name); }
+    void deregisterScrollBox(const QString& name)
+    {
+        mScrollBoxes.remove(name);
+        forgetPlainWindowGeometry(name);
+    }
     bool hasScrollBox(const QString& name) const { return mScrollBoxes.contains(name); }
 
     void registerCommandLine(const QString& name) { mCommandLines.insert(name); }
 
     // Not identity-checked, like docks. The view's destroyed() handlers drop these by widget identity,
     // so they only name a name the dying widget still holds.
-    void deregisterCommandLine(const QString& name) { mCommandLines.remove(name); }
+    void deregisterCommandLine(const QString& name)
+    {
+        mCommandLines.remove(name);
+        forgetPlainWindowGeometry(name);
+    }
     bool hasCommandLine(const QString& name) const { return mCommandLines.contains(name); }
 
     void registerTextBox(const QString& name) { mTextBoxes.insert(name); }
-    void deregisterTextBox(const QString& name) { mTextBoxes.remove(name); }
+    void deregisterTextBox(const QString& name)
+    {
+        mTextBoxes.remove(name);
+        forgetPlainWindowGeometry(name);
+    }
     bool hasTextBox(const QString& name) const { return mTextBoxes.contains(name); }
 
     bool hasPlainWindow(const QString& name) const { return hasScrollBox(name) || hasCommandLine(name) || hasTextBox(name); }
+
+    // The geometry of whichever plain window the name resolves to, written by the view like a sub-console's.
+    void setPlainWindowGeometry(const QString& name, const QRect& geometry)
+    {
+        if (hasPlainWindow(name)) {
+            mPlainWindowGeometry.insert(name, geometry);
+        }
+    }
+
+    std::optional<QRect> plainWindowGeometry(const QString& name) const
+    {
+        if (!hasPlainWindow(name)) {
+            return {};
+        }
+        return {mPlainWindowGeometry.value(name)};
+    }
 
 private:
     struct SubConsoleEntry
     {
         TConsoleModel* pModel = nullptr;
         SubConsoleKind kind = SubConsoleKind::Other;
+        QRect geometry;
     };
+
+    void forgetPlainWindowGeometry(const QString& name)
+    {
+        if (!hasPlainWindow(name)) {
+            mPlainWindowGeometry.remove(name);
+        }
+    }
 
     QMap<QString, TLabelModel*> mLabels;
     QMap<QString, SubConsoleEntry> mSubConsoles;
@@ -122,6 +176,7 @@ private:
     QSet<QString> mScrollBoxes;
     QSet<QString> mCommandLines;
     QSet<QString> mTextBoxes;
+    QMap<QString, QRect> mPlainWindowGeometry;
 };
 
 #endif // MUDLET_TWINDOWREGISTRY_H
