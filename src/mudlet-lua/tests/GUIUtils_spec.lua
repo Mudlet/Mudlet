@@ -1445,6 +1445,8 @@ describe("Tests the GUI utilities as far as possible without mudlet", function()
       { "\27[3\nB\27[1\27[32mC", string = "\nBC", decho = "\nB<0,128,0>C", lastColour = 2 },
       { "X\27]8;;http://a", string = "X", decho = "X" },
       { "\27]0;title\nline\7", string = "\nline\7", decho = "\nline\7" },
+      { "A\27]title\4B\27]x\255C", string = "A\4B\255C", decho = "A\4B\255C" },
+      { "A\27(\nB\27)", string = "A\nB", decho = "A\nB" },
       { "X\27]8;;http://a\27\\L\27]8;;\27\\Y", string = "XLY", decho = "XLY" },
       { "\27]0;title\7\27[31mred", string = "red", decho = "<128,0,0>red", lastColour = 1 },
       { "\27[1 qA\27[38;5;-1mB\27(BC\27cD\27E", string = "ABCDE", decho = "ABCDE" },
