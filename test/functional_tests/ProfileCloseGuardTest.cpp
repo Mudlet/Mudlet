@@ -283,6 +283,29 @@ private slots:
         QVERIFY(profileIsStillOpen());
     }
 
+    // A reset asked for before the wait began has its second phase delivered by the wait's pump
+    void test_aResetQueuedBeforeASaveWaitRunsOnceTheWaitIsOver()
+    {
+        QSignalSpy resetting(mpHost, &Host::signal_profileResetting);
+        QVERIFY(mpHost->resetProfile_phase1());
+        mpHost->mWritingHostAndModules = true;
+        QTimer::singleShot(300ms, this, [host = QPointer<Host>(mpHost)]() {
+            if (host) {
+                host->mWritingHostAndModules = false;
+            }
+        });
+        mpHost->waitForProfileSave();
+
+        QVERIFY2(resetting.isEmpty(), "the reset ran while a save was being waited for");
+        QVERIFY2(QTest::qWaitFor(
+                         [&resetting]() {
+                             return !resetting.isEmpty();
+                         },
+                         10s),
+                 "the reset never ran once the wait was over");
+        QVERIFY(profileIsStillOpen());
+    }
+
     // PR #7461: the close used to run inside the keystroke that asked for it, so
     // a held-down shortcut stacked one close on top of the last. Runs last: it
     // is the one that takes the profile away.
