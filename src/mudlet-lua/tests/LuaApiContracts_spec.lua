@@ -312,16 +312,30 @@ describe("Tests what feedTriggers will and will not carry", function()
     assert.is_true(contains(textFrom(mark), "FeedEncUtf8 \195\169 \226\130\172"), "the UTF-8 text did not arrive unchanged")
   end)
 
-  -- A Lua string can hold a NUL, and the text after it is still the caller's -
-  -- see issue #10397. The NUL itself is dropped, as it is from a game.
+  -- A Lua string can hold a NUL and the text after it is still the caller's;
+  -- the NUL itself is dropped, as it is from a game
   it("carries the text after an embedded NUL", function()
     assert.is_true(setServerEncoding("UTF-8"))
+    -- end whatever line an earlier spec left open
+    assert.is_true(feedTriggers("\n"))
     local mark = getLastLineNumber("main")
 
     assert.is_true(feedTriggers("FeedNulHead\0FeedNulTail\n"))
     assert.is_true(feedTriggers("FeedNulNext\n"))
     local lines = getLines("main", mark, getLastLineNumber("main") + 1)
     assert.same({"FeedNulHeadFeedNulTail", "FeedNulNext", ""}, lines)
+  end)
+
+  -- the transcoding and pre-encoded branches see the text after the NUL is dropped too
+  it("drops an embedded NUL from text it transcodes or takes pre-encoded", function()
+    assert.is_true(setServerEncoding("ISO 8859-1"))
+    assert.is_true(feedTriggers("\n"))
+    local mark = getLastLineNumber("main")
+
+    assert.is_true(feedTriggers("FeedNulLatin \195\169\0Tail\n"))
+    assert.is_true(feedTriggers("FeedNulRaw \233\0Tail\n", false))
+    local lines = getLines("main", mark, getLastLineNumber("main") + 1)
+    assert.same({"FeedNulLatin \195\169Tail", "FeedNulRaw \195\169Tail", ""}, lines)
   end)
 
   it("raises on arguments it cannot make sense of", function()
@@ -438,13 +452,20 @@ describe("Tests feedTelnet's marker escapes", function()
     assert.equals("FeedTelnetAfterVersion", line, "asking for the version fed something to the screen")
   end)
 
-  -- A raw NUL reaches the telnet parser, which drops it as it does from a game,
-  -- rather than ending the data there - see issue #10397
+  -- A raw NUL in text reaches the telnet parser, which drops it as it does in a game's text
   it("feeds the data after an embedded NUL", function()
+    assert.is_true(feedTelnet("\n"))
     local mark = getLastLineNumber("main")
     local ok, msg = feedTelnet("FeedTelnetNulHead\0FeedTelnetNulTail\r\n")
     assert.is_true(ok, "start the suite with --offline, see the tests README - feedTelnet said: " .. tostring(msg))
-    assert.is_true(contains(textFrom(mark), "FeedTelnetNulHeadFeedTelnetNulTail"), textFrom(mark))
+    assert.same({"FeedTelnetNulHeadFeedTelnetNulTail", ""}, getLines("main", mark, getLastLineNumber("main") + 1))
+  end)
+
+  -- only the empty string asks for the version: a lone NUL is data
+  it("feeds a lone NUL rather than answering the table version", function()
+    local ok, msg = feedTelnet("\0")
+    assert.is_true(ok)
+    assert.is_nil(msg, "a NUL was read as the empty string")
   end)
 
   it("reads doubled angle brackets as literal ones rather than as a marker", function()
