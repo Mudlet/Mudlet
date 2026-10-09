@@ -1306,7 +1306,11 @@ describe("Tests Other.lua functions", function()
       finally(function()
         setConfig("showSentText", sentText)
       end)
-      local ok, err = setConfig(getConfig())
+      local config = getConfig()
+      -- with a mapper open, setting show3dMapView to either value builds the
+      -- OpenGL view, after which a headless run never exits
+      config.show3dMapView = nil
+      local ok, err = setConfig(config)
       assert.is_true(ok, tostring(err))
     end)
 
