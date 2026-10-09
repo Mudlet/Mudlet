@@ -3362,6 +3362,10 @@ describe("Tests uninstalling the Mudlet Tutorial", function()
     end)
     local mapInfoChanges = { count = 0 }
     override("clearWindow", function() end)
+    -- a profile has one map widget and an embedded one cannot be undone, so the lesson's mapper would break later specs
+    for _, call in ipairs({ "createMapper", "openMapWidget", "closeMapWidget" }) do
+      override(call, function() return true end)
+    end
     for _, call in ipairs({ "enableMapInfo", "disableMapInfo" }) do
       override(call, function()
         mapInfoChanges.count = mapInfoChanges.count + 1
