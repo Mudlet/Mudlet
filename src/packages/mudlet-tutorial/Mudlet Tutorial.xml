@@ -989,13 +989,18 @@ end</script>
                    ["u"] = "d",
                    ["d"] = "u" }
 
-hq.savedDoSpeedWalk = hq.savedDoSpeedWalk or doSpeedWalk
+-- a flag rather than the value, as a profile with no mapping script has no doSpeedWalk
+if not hq.doSpeedWalkSaved then
+  hq.doSpeedWalkSaved = true
+  hq.savedDoSpeedWalk = doSpeedWalk
+end
 
 function doSpeedWalk()
 
   echo("You point to your map but it fails to magically transport you anywhere.\n")
   
 end
+hq.doSpeedWalk = doSpeedWalk
 
 function hq.initMapperWindow()
 
@@ -1242,6 +1247,9 @@ end
 
 -- when Mudlet's UI tour is about to run, hold the lesson until it finishes
 if mudlet and mudlet.uiTourPending then
+  if hq.tourHandler then
+    killAnonymousEventHandler(hq.tourHandler)
+  end
   hq.tourHandler = registerAnonymousEventHandler("sysUiTourFinished", beginTutorial, true)
 else
   hq.tempTimer(0, beginTutorial)
@@ -1262,7 +1270,10 @@ hq.uninstallHandler = registerAnonymousEventHandler("sysUninstallPackage", funct
     killTimer(id)
   end
   deleteNamedEventHandler("mudlet-tutorial", "parser")
-  doSpeedWalk = hq.savedDoSpeedWalk
+  -- a mapping script installed since has a doSpeedWalk of its own
+  if doSpeedWalk == hq.doSpeedWalk then
+    doSpeedWalk = hq.savedDoSpeedWalk
+  end
   for _, value in pairs(hq) do
     if type(value) == "table" and value.windowname and type(value.hide) == "function" then
       value:hide()

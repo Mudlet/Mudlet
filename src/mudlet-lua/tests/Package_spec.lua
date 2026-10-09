@@ -3443,6 +3443,52 @@ describe("Tests uninstalling the Mudlet Tutorial", function()
     -- each lesson start turns the map's short and full info off and the empty one on
     assert.are.equal(3, mapInfoChanges.count)
   end)
+
+  -- saving a script in the editor runs it again
+  local function runAgain(script)
+    assert.is_true(setScript(script, (getScript(script))) ~= -1, "could not run " .. script .. " again")
+  end
+
+  it("does not start the lesson when the UI tour ends after its Init script was run again and it was uninstalled", function()
+    local mapInfoChanges = keepTheProfile()
+    mudlet.uiTourPending = true
+
+    install()
+    pumpEvents(100)
+    runAgain("Init")
+    removeFixturePackage(name)
+    install()
+    pumpEvents(100)
+    raiseEvent("sysUiTourFinished")
+    pumpEvents(100)
+
+    assert.are.equal(3, mapInfoChanges.count)
+  end)
+
+  it("leaves no doSpeedWalk behind in a profile that had none, even after its map script was run again", function()
+    override("doSpeedWalk", nil)
+    keepTheProfile()
+
+    install()
+    assert.is_true(waitUntil(function() return type(_G.hq) == "table" and _G.hq.mainMenuContainer ~= nil end, 2000), "the lesson never started")
+    runAgain("Set up Map")
+    removeFixturePackage(name)
+
+    assert.is_nil(_G.doSpeedWalk)
+  end)
+
+  it("leaves alone a doSpeedWalk that a mapping script installed after it set", function()
+    override("doSpeedWalk", _G.doSpeedWalk)
+    keepTheProfile()
+    local mappersSpeedWalk = function() end
+
+    install()
+    assert.is_true(waitUntil(function() return type(_G.hq) == "table" and _G.hq.mainMenuContainer ~= nil end, 2000), "the lesson never started")
+    _G.doSpeedWalk = mappersSpeedWalk
+    removeFixturePackage(name)
+
+    assert.are.equal(mappersSpeedWalk, _G.doSpeedWalk)
+  end)
 end)
 
 describe("Tests installing a module whose XML cannot be read", function()
