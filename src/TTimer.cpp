@@ -182,9 +182,9 @@ bool TTimer::setScript(const QString& script)
 {
     // Switching from a registered anonymous Lua function (set up by tempTimer with a
     // function argument) to a script string: release the old function from the Lua
-    // registry and leave callback mode. TTimer::execute() picks the payload by the flag,
-    // so it has to be cleared for the new script to run at all, and the destructor's
-    // mScript-based branch would otherwise leak the registry entry.
+    // registry and leave callback mode. TTimer::execute() picks a temporary timer's
+    // payload by the flag, so it has to be cleared for the new script to run at all,
+    // and the destructor's mScript-based branch would otherwise leak the registry entry.
     if (mRegisteredAnonymousLuaFunction) {
         if (mpHost) {
             mpHost->mLuaInterpreter.delete_luafunction(this);
