@@ -61,6 +61,8 @@
 #include <QCoreApplication>
 #include <QDir>
 #include <QFileInfo>
+#include <QFontInfo>
+#include <QFontMetrics>
 #include <QVector>
 #ifdef QT_TEXTTOSPEECH_LIB
 #include <QTextToSpeech>
