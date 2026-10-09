@@ -232,6 +232,7 @@ private slots:
     void slot_borderSizeChanged(int size);
     void slot_gridSizeChanged(double size);
     void slot_displayFontChanged();
+    void slot_dictionaryPicked();
     void slot_displayFontSizeChanged();
     void slot_displayFontAliasingChanged();
     void slot_changeShowTabConnectionIndicators(bool state);

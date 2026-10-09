@@ -33,12 +33,14 @@
 #include <QtTest/QtTest>
 
 #include <QCheckBox>
+#include <QComboBox>
 #include <QSignalSpy>
 
 #include "PortableModeTestHelper.h"
 #include "ProfileTestHelper.h"
 #include "SettingsTestHelper.h"
 #include "Host.h"
+#include "MudletApp.h"
 #include "TCommandLine.h"
 #include "TMainConsole.h"
 #include "MudletInstanceCoordinator.h"
@@ -62,7 +64,8 @@ static int dictionaryReads = 0;
 
 static void countDictionaryReads(QtMsgType type, const QMessageLogContext& context, const QString& message)
 {
-    if (message.contains(qsl("System Hunspell dictionary \"%1\" loaded").arg(scmDictionary))) {
+    // A dictionary that is not on this machine is still looked for, which is the read asked for
+    if (message.contains(qsl("System Hunspell dictionary \"%1\" loaded").arg(scmDictionary)) || message.contains(qsl("the Hunspell dictionary \"%1\" is not available").arg(scmDictionary))) {
         ++dictionaryReads;
     }
     if (previousMessageHandler) {
@@ -215,7 +218,46 @@ private slots:
         QVERIFY2(rechecked, "picking another dictionary did not check the input line again");
     }
 
+    // Until its files are all there the preferences show the dictionary as not available, and
+    // picking it there again once they are retries it, as nothing else would (#10153)
+    void test_aMissingDictionaryIsShownAsSuchAndRetriedWhenPickedAgain()
+    {
+        const QString dictionary = qsl("mudlet_retried_dictionary");
+        // Found nowhere, the name falls back to a folder of Mudlet's own, which takes the files below
+        const QString folder = MudletApp::getMudletPath(enums::hunspellDictionaryPath, dictionary);
+        QVERIFY(QDir().mkpath(folder));
+        const QString affixPath = qsl("%1%2.aff").arg(folder, dictionary);
+        const QString wordsPath = qsl("%1%2.dic").arg(folder, dictionary);
+        const auto cleanup = qScopeGuard([this, affixPath, wordsPath]() {
+            QFile::remove(affixPath);
+            QFile::remove(wordsPath);
+            mpHost->setSpellDic(scmDictionary);
+        });
+        QVERIFY(writeFile(affixPath, "SET UTF-8\n"));
+
+        mpHost->setSpellDic(dictionary);
+        QVERIFY2(!mpHost->spellChecker().systemHandle(), "a dictionary with no word list was loaded, and would mark every word as misspelt");
+        const QString shown = mpHost->mpConsole->buffer.lineBuffer.join(QChar::Space).simplified();
+        QVERIFY2(shown.contains(qsl("[ WARN ]")) && shown.contains(dictionary), qPrintable(qsl("the player was not told the dictionary is missing; the console holds: %1").arg(shown)));
+
+        delete mpPreferences;
+        mpPreferences = new dlgProfilePreferences(mudlet::self(), mpHost);
+        QComboBox* pDictionaries = mpPreferences->comboBox_dictionary;
+        QCOMPARE(pDictionaries->currentData().toString(), dictionary);
+        QCOMPARE(pDictionaries->currentText(), qsl("%1 - not available").arg(dictionary));
+
+        QVERIFY(writeFile(wordsPath, "1\nkalamazoo\n"));
+        emit pDictionaries->activated(pDictionaries->currentIndex());
+        QVERIFY2(mpHost->spellChecker().systemHandle(), "picking the dictionary again once its files were there did not retry it");
+    }
+
 private:
+    static bool writeFile(const QString& path, const QByteArray& contents)
+    {
+        QFile file(path);
+        return file.open(QIODevice::WriteOnly) && file.write(contents) == contents.size();
+    }
+
     static bool marked(TCommandLine* pCommandLine, const QString& word)
     {
         const QTextCursor found = pCommandLine->document()->find(word);
