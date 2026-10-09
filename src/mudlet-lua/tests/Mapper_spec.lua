@@ -4414,9 +4414,7 @@ describe("Tests saveJsonMap and loadJsonMap", function()
       assert.is_true(roomLocked(roomA))
       assert.are.equal("J", getRoomChar(roomA))
       assert.are.same({11, 22, 33}, {getRoomCharColor(roomA)})
-      -- the alpha is the default 255 because an imported map cannot carry any
-      -- other, so this pins the three channels only:
-      -- https://github.com/Mudlet/Mudlet/issues/10368
+      -- opaque here; the translucent case has a test of its own
       assert.are.same({44, 55, 66, 255}, {getRoomBorderColor(roomA)})
       assert.are.equal(3, getRoomBorderThickness(roomA))
       assert.are.equal(roomA, getRoomIDbyHash("mapperSpecJsonHash"))
@@ -4711,13 +4709,49 @@ describe("Tests saveJsonMap and loadJsonMap", function()
       assert.are.same({climate = "temperate", ruler = "nobody"}, getAllAreaUserData(area))
     end)
 
-    -- TMap::readJsonColor returns QColor(red, green, blue) for a colour array of
-    -- either three or four values, so the alpha the exporter wrote as
-    -- "color32RGBA" never reaches the QColor and comes back as 255. Every colour
-    -- read through that function flattens the same way, custom environment
-    -- colours included, so the test above can only use an opaque one.
-    -- https://github.com/Mudlet/Mudlet/issues/10368
-    pending("a translucent room border colour loses its alpha on import")
+    it("puts a translucent room border and environment colour back with their alpha", function()
+      deleteMap()
+      local area = addAreaName("MapperSpecJsonAlphaArea")
+      roomA = createRoomID(); addRoom(roomA); setRoomArea(roomA, area)
+      assert.is_true(setRoomBorderColor(roomA, 44, 55, 66, 128))
+      setRoomEnv(roomA, 502)
+      -- outside 257-272, for the same reason as the opaque one above
+      setCustomEnvColor(502, 11, 22, 33, 44)
+
+      roundTrip()
+
+      assert.are.same({44, 55, 66, 128}, {getRoomBorderColor(roomA)})
+      assert.are.same({11, 22, 33, 44}, getCustomEnvColorTable()[502])
+    end)
+
+    it("keeps a colour whose alpha in the file is out of range, as opaque", function()
+      -- 1e20 and -1e20 are beyond the range of an int as well as of an alpha
+      for _, outOfRange in ipairs({256, -1, 1e20, -1e20}) do
+        deleteMap()
+        local area = addAreaName("MapperSpecJsonAlphaOutOfRangeArea")
+        roomA = createRoomID(); addRoom(roomA); setRoomArea(roomA, area)
+        assert.is_true(setRoomBorderColor(roomA, 44, 55, 66, 128))
+        assert.is_true(saveJsonMap(jsonPath))
+        local file = assert(io.open(jsonPath, "r"))
+        local document = yajl.to_value(file:read("*a"))
+        file:close()
+        for _, exportedArea in ipairs(document.areas) do
+          for _, room in ipairs(exportedArea.rooms or {}) do
+            if room.id == roomA then
+              room.border.color32RGBA = {44, 55, 66, outOfRange}
+            end
+          end
+        end
+        file = assert(io.open(jsonPath, "w"))
+        file:write(yajl.to_string(document))
+        file:close()
+        deleteMap()
+
+        assert.is_true(loadJsonMap(jsonPath))
+
+        assert.are.same({44, 55, 66, 255}, {getRoomBorderColor(roomA)}, "alpha " .. outOfRange)
+      end
+    end)
 
     -- TRoom::writeJsonExitStubs looks the stub's door up under the long
     -- direction name while TRoom::doors is keyed by the short one, so a door on
