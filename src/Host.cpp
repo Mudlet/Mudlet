@@ -6261,9 +6261,9 @@ std::optional<QRect> Host::windowGeometry(const QString& name) const
 
     if (name.isEmpty() || name == QLatin1String("main")) {
         // 0,0 rather than the console's pos(), which under multi-view is an
-        // offset within the split; the size is getMainWindowSize()'s so the two
+        // offset within the split; the size is mainWindowSize()'s so the two
         // functions cannot disagree.
-        return {QRect(QPoint(0, 0), mpConsole->getMainWindowSize())};
+        return {QRect(QPoint(0, 0), mWindowRegistry.mainWindowSize())};
     }
     if (const TLabelModel* pLabel = mWindowRegistry.labelModel(name)) {
         return pLabel->mGeometry;
@@ -6276,6 +6276,26 @@ std::optional<QRect> Host::windowGeometry(const QString& name) const
     }
 
     return {};
+}
+
+// As the view last reported it (see TMainConsole::reportMainWindowSize()).
+std::optional<QSize> Host::mainWindowSize() const
+{
+    if (!mpConsole) {
+        return {};
+    }
+    return {mWindowRegistry.mainWindowSize()};
+}
+
+std::optional<QSize> Host::userWindowSize(const QString& name) const
+{
+    if (!mpConsole) {
+        return {};
+    }
+    if (auto size = mWindowRegistry.userWindowSize(name)) {
+        return size;
+    }
+    return {mWindowRegistry.mainWindowSize()};
 }
 
 // Returns whether a window element is currently visible, mirroring the widget

@@ -23,6 +23,7 @@
 #include <QMap>
 #include <QRect>
 #include <QSet>
+#include <QSize>
 #include <QString>
 #include <QStringList>
 
@@ -116,8 +117,8 @@ public:
     // A copy, so callers such as Host::closeChildren() can remove entries while walking it.
     QStringList subConsoleNames() const { return QStringList(mSubConsoles.keys()); }
 
-    // Name only: core just asks whether a name has a dock (a user window, not a miniconsole).
-    void registerDockWidget(const QString& name) { mDockWidgets.insert(name); }
+    // Core asks whether a name has a dock (a user window, not a miniconsole) and how big its console is.
+    void registerDockWidget(const QString& name) { mDockWidgets.insert(name, QSize()); }
 
     // Not identity-checked: nothing deregisters a dock from its destructor, so removal happens as the view
     // drops it from its own map and a stale deregistration can't evict a replacement.
@@ -125,7 +126,39 @@ public:
 
     bool hasDockWidget(const QString& name) const { return mDockWidgets.contains(name); }
 
-    // Name only, like docks: core asks just whether a name exists and its kind.
+    // Written by the view as Qt resizes the dock's console.
+    void setUserWindowSize(const QString& name, const QSize& size)
+    {
+        if (auto it = mDockWidgets.find(name); it != mDockWidgets.end()) {
+            *it = size;
+        }
+    }
+
+    // Mid-switch the dock can be a few pixels wide, which nothing can be laid out in - answer the last
+    // size a caller was given instead. Cached as it is asked rather than as the view writes it, as the
+    // view also writes the sizes the dock passes through while it is laid out.
+    std::optional<QSize> userWindowSize(const QString& name) const
+    {
+        const auto it = mDockWidgets.constFind(name);
+        if (it == mDockWidgets.constEnd()) {
+            return {};
+        }
+        const int minValidWidth = 50;
+        if (it->width() < minValidWidth) {
+            return {mAnsweredUserWindowSizes.value(name, *it)};
+        }
+        mAnsweredUserWindowSizes[name] = *it;
+        return {*it};
+    }
+
+    // Apart from deregisterDockWidget(): a profile reset drops the docks but keeps what was answered for them.
+    void forgetUserWindowSize(const QString& name) { mAnsweredUserWindowSizes.remove(name); }
+
+    // TConsole::getMainWindowSize()'s answer, written by the view as anything it depends on changes.
+    void setMainWindowSize(const QSize& size) { mMainWindowSize = size; }
+    QSize mainWindowSize() const { return mMainWindowSize; }
+
+    // Name only: core asks just whether a name exists and its kind.
     // Three sets as the name spaces are independent; a name in several resolves in declaration order.
     void registerScrollBox(const QString& name) { mScrollBoxes.insert(name); }
     void deregisterScrollBox(const QString& name)
@@ -211,10 +244,12 @@ private:
 
     QMap<QString, TLabelModel*> mLabels;
     QMap<QString, SubConsoleEntry> mSubConsoles;
-    QSet<QString> mDockWidgets;
+    QMap<QString, QSize> mDockWidgets;
+    mutable QMap<QString, QSize> mAnsweredUserWindowSizes;
     QSet<QString> mScrollBoxes;
     QSet<QString> mCommandLines;
     QSet<QString> mTextBoxes;
+    QSize mMainWindowSize;
     QMap<QString, PlainWindowState> mPlainWindowStates;
 };
 

@@ -676,6 +676,9 @@ public:
     std::optional<QString> windowType(const QString& name) const;
     std::optional<QRect> windowGeometry(const QString& name) const;
     std::optional<bool> windowVisible(const QString& name) const;
+    std::optional<QSize> mainWindowSize() const;
+    // A name with no user window answers the main window's size.
+    std::optional<QSize> userWindowSize(const QString& name) const;
     bool getEditorShowBidi() const { return mEditorShowBidi; }
     void setEditorShowBidi(const bool);
     bool caretEnabled() const;

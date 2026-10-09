@@ -1726,13 +1726,13 @@ int TLuaInterpreter::getProfileTabNumber(lua_State* L)
 int TLuaInterpreter::getMainWindowSize(lua_State* L)
 {
     const Host& host = getHostFromLua(L);
-    if (!host.mpConsole) {
+    const auto mainWindowSize = host.mainWindowSize();
+    if (!mainWindowSize) {
         return warnArgumentValue(L, __func__, no_main_window_value);
     }
-    const QSize mainWindowSize = host.mpConsole->getMainWindowSize();
 
-    lua_pushnumber(L, mainWindowSize.width());
-    lua_pushnumber(L, mainWindowSize.height());
+    lua_pushnumber(L, mainWindowSize->width());
+    lua_pushnumber(L, mainWindowSize->height());
 
     return 2;
 }
@@ -1953,12 +1953,12 @@ int TLuaInterpreter::getUserWindowSize(lua_State* L)
     const QString windowName{WINDOW_NAME(L, 1)};
 
     const Host& host = getHostFromLua(L);
-    if (!host.mpConsole) {
+    const auto userWindowSize = host.userWindowSize(windowName);
+    if (!userWindowSize) {
         return warnArgumentValue(L, __func__, no_main_window_value);
     }
-    const QSize userWindowSize = host.mpConsole->getUserWindowSize(windowName);
-    lua_pushnumber(L, userWindowSize.width());
-    lua_pushnumber(L, userWindowSize.height());
+    lua_pushnumber(L, userWindowSize->width());
+    lua_pushnumber(L, userWindowSize->height());
 
     return 2;
 }
