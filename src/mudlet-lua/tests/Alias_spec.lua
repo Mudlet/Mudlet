@@ -608,6 +608,14 @@ AliasCommandNestsSpec.match = matches[2]</script>
 ]])
             file:close()
             assert.is_true(installPackage(path))
+            -- installPackage() only queues the install while a profile save is running
+            for _ = 1, 100 do
+                if exists("command_nests_outer", "alias") > 0 then
+                    break
+                end
+                pumpEvents(50)
+            end
+            assert.are.equal(1, exists("command_nests_outer", "alias"), "the alias package was not installed")
 
             expandAlias("command_nests_outer thing", false)
 
