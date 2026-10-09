@@ -4199,31 +4199,38 @@ std::tuple<QString, bool> Host::getCmdLineSettings(const enums::CommandLineType 
         return {fileName, saveCommands};
     }
 
-    // Else the name is not in the settings so we will have to create one:
+    // Else the name is not in the settings so we will have to create one, from an index that
+    // no history file already handed out has, as a new command line must not share one:
+    QSet<int> mappedIndexes;
+    int highestMappedIndex = 0;
+    QSettings& settings = profileIni();
+    settings.beginGroup(qsl("CommandLines/NameMapping"));
+    for (const auto& key : settings.childKeys()) {
+        const QString mappedFile = settings.value(key).toString();
+        if (!mappedFile.startsWith(qsl("command_history_"))) {
+            continue;
+        }
+        bool parsed = false;
+        const int mappedIndex = mappedFile.mid(qsl("command_history_").size()).toInt(&parsed);
+        if (parsed && mappedIndex > 0) {
+            mappedIndexes.insert(mappedIndex);
+            highestMappedIndex = std::max(highestMappedIndex, mappedIndex);
+        }
+    }
+    settings.endGroup();
     // Get the highest number used so far:
     bool isOk = false;
     auto usedIndex = readProfileIniData(qsl("CommandLines/UsedIndexes")).toInt(&isOk);
     if (!isOk || usedIndex <= 0 || usedIndex == std::numeric_limits<int>::max()) {
         // The value was not found / is null / cannot be incremented - so rebuild it from the
-        // history files already handed out, which a new command line must not share:
-        usedIndex = 0;
-        QSettings& settings = profileIni();
-        settings.beginGroup(qsl("CommandLines/NameMapping"));
-        for (const auto& key : settings.childKeys()) {
-            const QString mappedFile = settings.value(key).toString();
-            if (!mappedFile.startsWith(qsl("command_history_"))) {
-                continue;
-            }
-            bool parsed = false;
-            const int mappedIndex = mappedFile.mid(qsl("command_history_").size()).toInt(&parsed);
-            if (parsed && mappedIndex > usedIndex && mappedIndex < std::numeric_limits<int>::max()) {
-                usedIndex = mappedIndex;
-            }
-        }
-        settings.endGroup();
+        // history files already handed out:
+        usedIndex = highestMappedIndex;
     }
-    // Increment it and save the new value
-    writeProfileIniData(qsl("CommandLines/UsedIndexes"), QString::number(++usedIndex));
+    // Past the largest index the only free ones are back at the start
+    do {
+        usedIndex = usedIndex < std::numeric_limits<int>::max() ? usedIndex + 1 : 1;
+    } while (mappedIndexes.contains(usedIndex));
+    writeProfileIniData(qsl("CommandLines/UsedIndexes"), QString::number(usedIndex));
     // Generate the name
     fileName = qsl("command_history_%1").arg(usedIndex, 2, 10, QLatin1Char('0'));
     // Save it:
