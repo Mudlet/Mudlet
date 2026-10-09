@@ -112,6 +112,7 @@ private:
     const QString mSourceName = qsl("ProfileRoundTrip-Test");
     const QString mTargetName = qsl("ProfileRoundTripTarget-Test");
     const QString mLegacyTargetName = qsl("ProfileRoundTripLegacyTarget-Test");
+    const QString mOversizeTargetName = qsl("ProfileRoundTripOversizeTarget-Test");
     QString mPort; // assigned the stub's actual ephemeral port in initTestCase()
     const QString mLocalhost = qsl("localhost");
     QTemporaryDir mSaveDir;
@@ -634,6 +635,7 @@ private slots:
             deleteProfileDirectory(mSourceName);
             deleteProfileDirectory(mTargetName);
             deleteProfileDirectory(mLegacyTargetName);
+            deleteProfileDirectory(mOversizeTargetName);
             delete mudlet::self();
         }
         mSavedXdg.isNull() ? qunsetenv("XDG_CONFIG_HOME") : qputenv("XDG_CONFIG_HOME", mSavedXdg);
@@ -811,6 +813,34 @@ private slots:
         QCOMPARE(mpLegacyTarget->getWideAmbiguousEAsianGlyphsControlState(), Qt::Unchecked);
         QVERIFY(!mpLegacyTarget->getLargeAreaExitArrows());
         QCOMPARE(mpLegacyTarget->getCommandLineHistorySaveSize(), 0);
+    }
+
+    // Before setConfig() range-checked it a profile could store INT_MAX, which
+    // would overflow the "+ 1" when the command history is saved
+    void test_oversizedCommandLineHistorySaveSizeIsClampedOnImport()
+    {
+        QString xml = mExportedXml;
+        QCOMPARE(xml.count(qsl("CommandLineHistorySaveSize=\"500\"")), 1);
+        xml.replace(qsl("CommandLineHistorySaveSize=\"500\""), qsl("CommandLineHistorySaveSize=\"2147483647\""));
+
+        deleteProfileDirectory(mOversizeTargetName);
+        auto* hostManager = HostManager::self();
+        QVERIFY2(hostManager->addHost(mOversizeTargetName, mPort, QString(), QString()), "failed to create the oversize target Host");
+        Host* target = hostManager->getHost(mOversizeTargetName);
+        QVERIFY(target);
+
+        QTemporaryDir dir;
+        QVERIFY(dir.isValid());
+        QFile file(qsl("%1/oversize.xml").arg(dir.path()));
+        QVERIFY2(file.open(QFile::WriteOnly | QFile::Text), qPrintable(file.errorString()));
+        QVERIFY(file.write(xml.toUtf8()) != -1);
+        file.close();
+        QVERIFY2(file.open(QFile::ReadOnly | QFile::Text), qPrintable(file.errorString()));
+        XMLimport importer(target);
+        auto [imported, importError] = importer.importPackage(&file);
+        QVERIFY2(imported, qPrintable(importError));
+
+        QCOMPARE(target->getCommandLineHistorySaveSize(), 1000000);
     }
 
     // A persistent stopwatch comes back under its own name, still running or
