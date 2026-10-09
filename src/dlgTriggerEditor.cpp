@@ -7462,9 +7462,10 @@ void dlgTriggerEditor::moveVariableRowToSortedPlace(QTreeWidgetItem* pItem, TVar
         return;
     }
 
-    // The view forgets the expanded state of every row taken out of it, and
-    // moves the current row off one it loses
+    // The view forgets the expanded and selected state of every row taken out
+    // of it, and moves the current row off one it loses
     QTreeWidgetItem* pCurrentItem = treeWidget_variables->currentItem();
+    const QList<QTreeWidgetItem*> selectedItems = treeWidget_variables->selectedItems();
     QList<QTreeWidgetItem*> expandedItems;
     QList<QTreeWidgetItem*> pendingItems{pItem};
     while (!pendingItems.isEmpty()) {
@@ -7484,8 +7485,13 @@ void dlgTriggerEditor::moveVariableRowToSortedPlace(QTreeWidgetItem* pItem, TVar
     for (QTreeWidgetItem* pExpandedItem : std::as_const(expandedItems)) {
         pExpandedItem->setExpanded(true);
     }
+    // NoUpdate: a plain setCurrentItem() would also select only that row
     if (pCurrentItem && treeWidget_variables->currentItem() != pCurrentItem) {
-        treeWidget_variables->setCurrentItem(pCurrentItem);
+        treeWidget_variables->setCurrentItem(pCurrentItem, 0, QItemSelectionModel::NoUpdate);
+    }
+    treeWidget_variables->clearSelection();
+    for (QTreeWidgetItem* pSelectedItem : selectedItems) {
+        pSelectedItem->setSelected(true);
     }
 }
 

@@ -772,6 +772,42 @@ private slots:
         mpEditor->repopulateVars();
     }
 
+    // Ctrl+clicking a second row saves a renamed table, whose move takes it
+    // and its rows out of the view's selection
+    void test_ctrlClickingPastARenamedTableKeepsItsRowsSelected()
+    {
+        execLua(qsl("multiHolder = {alpha = {inner = 'i'}, mid = 'm'}"));
+        mpEditor->repopulateVars();
+
+        QTreeWidgetItem* pHolder = findVariableItem({qsl("multiHolder")});
+        QVERIFY2(pHolder, "the Variables view did not show the table holding the table to rename");
+        pHolder->setExpanded(true);
+        QTreeWidgetItem* pAlpha = findVariableItem({qsl("multiHolder"), qsl("alpha")});
+        QVERIFY(pAlpha);
+        pAlpha->setExpanded(true);
+        QTreeWidgetItem* pInner = findVariableItem({qsl("multiHolder"), qsl("alpha"), qsl("inner")});
+        QVERIFY(pInner);
+        QTreeWidgetItem* pMid = findVariableItem({qsl("multiHolder"), qsl("mid")});
+        QVERIFY(pMid);
+
+        selectVariable(pAlpha);
+        pInner->setSelected(true);
+        // Named after the selection, which fills the form in again as it changes
+        mpEditor->mpVarsMainArea->lineEdit_var_name->setText(qsl("zeta"));
+        mpVariablesTree->setCurrentItem(pMid, 0, QItemSelectionModel::Select | QItemSelectionModel::Rows);
+        mpEditor->slot_variableSelected(pMid);
+
+        QCOMPARE(rowNames(pHolder), QStringList({qsl("mid"), qsl("zeta")}));
+        QCOMPARE(mpVariablesTree->currentItem(), pMid);
+        QVERIFY2(pAlpha->isSelected(), "the renamed table dropped out of the selection when it moved");
+        QVERIFY2(pInner->isSelected(), "the row inside the renamed table dropped out of the selection when it moved");
+        QVERIFY2(pMid->isSelected(), "the row ctrl+clicked to is not selected");
+
+        mpEditor->mpCurrentVarItem = nullptr;
+        execLua(qsl("multiHolder = nil"));
+        mpEditor->repopulateVars();
+    }
+
 private:
     static QStringList rowNames(const QTreeWidgetItem* pParent)
     {
