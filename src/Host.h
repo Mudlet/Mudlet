@@ -78,6 +78,7 @@ class CredentialManager;
 class TRoom;
 class TConsole;
 class TConsoleFrontend;
+class TNullConsoleFrontend;
 class TMainConsole;
 struct TConsoleModel;
 class TMap;
@@ -310,8 +311,10 @@ public:
     // For widget-side code: this and setMainConsoleView() are defined in
     // TMainConsole.cpp, so that Host.cpp never needs the widget's definition.
     TMainConsole* mainConsoleView() const;
-    // mainConsoleView() as core code calls it, by window name rather than widget; null when that is.
+    // mainConsoleView() as core code calls it, by window name rather than widget. Never null: while
+    // there is no view it is a null one, on which every window is missing.
     TConsoleFrontend* consoleFrontend() const;
+    bool hasConsoleView() const;
     void setMainConsoleView(TMainConsole* view);
     // Keeps TMainConsole's translation context, so the existing translations still apply.
     static QString loggingAnnouncementText(const bool isLogging, const QString& logFileName);
@@ -790,6 +793,8 @@ private:
     QPointer<TMainConsole> mpConsole;
     // The same object, as core code drives it; read only while mpConsole is set.
     TConsoleFrontend* mpConsoleFrontend = nullptr;
+    // What consoleFrontend() hands out while mpConsole is not set.
+    std::unique_ptr<TNullConsoleFrontend> mpNullConsoleFrontend;
 
 public:
     cTelnet mTelnet;

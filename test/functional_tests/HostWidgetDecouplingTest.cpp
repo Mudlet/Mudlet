@@ -29,6 +29,7 @@
 #include "HostDialogs.h"
 #include "MudletInstanceCoordinator.h"
 #include "TCommandLine.h"
+#include "TConsoleFrontend.h"
 #include "TMainConsole.h"
 #include "T2DMap.h"
 #include "TMap.h"
@@ -273,6 +274,34 @@ private slots:
         host->setMainConsoleView(console);
 
         QVERIFY2(host->mainConsoleView(), "The console must be back before the fixture tears down.");
+    }
+
+    void test_consoleFrontendIsNullViewWhileNoConsole()
+    {
+        startProfile(mHostname, mLocalhost, mPort);
+        auto host = mudlet::self()->getActiveHost();
+        QVERIFY2(host, "No active host available for the test.");
+
+        QPointer<TMainConsole> console = host->mainConsoleView();
+        QVERIFY2(console, "The active host has no main console.");
+        TConsoleFrontend* attached = host->consoleFrontend();
+        QVERIFY(host->hasConsoleView());
+
+        // Checked only once the console is back, so a failure cannot leave the fixture without one.
+        host->setMainConsoleView(nullptr);
+        TConsoleFrontend* fallback = host->consoleFrontend();
+        const bool hasViewWhileDetached = host->hasConsoleView();
+        const bool labelMade = fallback && fallback->createLabel(qsl("main"), qsl("nullViewLabel"), 0, 0, 10, 10, true, false);
+        const bool closeAllowed = fallback && fallback->requestClose();
+        host->setMainConsoleView(console);
+
+        QVERIFY2(fallback, "consoleFrontend() must never be null.");
+        QVERIFY(fallback != attached);
+        QVERIFY(!hasViewWhileDetached);
+        QVERIFY(!labelMade);
+        QVERIFY(closeAllowed);
+        QCOMPARE(host->consoleFrontend(), attached);
+        QVERIFY(host->hasConsoleView());
     }
 
     // The mapping-script reminder used to be a QDialog built inside Host; it is
