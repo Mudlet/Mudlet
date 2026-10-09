@@ -905,10 +905,10 @@ int TLuaInterpreter::loadReplay(lua_State* L)
     return warnArgumentValue(L, __func__, qsl("unable to start replay, reason: '%1'").arg(errMsg));
 }
 
-// Internal helper for feedTelnet(...) and socketRaw(...) that enables the
-// construction of data with bytes that cannot be prepared by normal means
-// - including embedded nulls - for testing off-line and for writing protocol
-// handlers for those that Mudlet does not provide itself respectively:
+// Internal helper for feedTelnet(...) and sendSocket(...) that turns "<..>" codes
+// into the telnet and control bytes they name, so that such data can be written
+// readably - for testing off-line and for writing protocol handlers for those
+// that Mudlet does not provide itself respectively:
 // Note: although "<<" and ">>" are extra codes that convert to '<' and '>'
 // respectively this looks as though singular instances of either - or
 // unrecognised "tags" with unknown other characters between them will still be
@@ -1168,7 +1168,9 @@ int TLuaInterpreter::feedTelnet(lua_State* L)
         return lua_error(L);
     }
 
-    const QByteArray rawData{lua_tostring(L, 1)};
+    size_t rawLength = 0;
+    const char* rawBytes = lua_tolstring(L, 1, &rawLength);
+    const QByteArray rawData{rawBytes, static_cast<qsizetype>(rawLength)};
     // We need to convert any "<*>" codes to their raw byte forms:
     QByteArray cookedData{parseTelnetCodes(rawData)};
     if (rawData.isEmpty()) {
@@ -1223,7 +1225,11 @@ int TLuaInterpreter::feedTriggers(lua_State* L)
     if (lua_gettop(L) > 1) {
         dataIsUtf8Encoded = getVerifiedBool(L, __func__, 2, "Utf8Encoded", true);
     }
-    const QByteArray data{lua_tostring(L, 1)};
+    size_t length = 0;
+    const char* bytes = lua_tolstring(L, 1, &length);
+    QByteArray data{bytes, static_cast<qsizetype>(length)};
+    // cTelnet::processSocketData() drops a NUL from a game's text, so drop it here too
+    data.replace('\0', QByteArray());
 
     const QByteArray currentEncoding = host.mTelnet.getEncoding();
     if (dataIsUtf8Encoded) {
@@ -3142,10 +3148,6 @@ int TLuaInterpreter::sendRaw(lua_State* L)
 }
 
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#sendSocket
-// The data can, theoretically, contain embedded ASCII NUL characters, but they
-// cannot be entered directly as they immediately terminate the string. Instead
-// provide a true as a second argument and use the appropriate "code" value
-// defined in the parseTelnetCodes() function:
 int TLuaInterpreter::sendSocket(lua_State* L)
 {
     if (!lua_isstring(L, 1)) {
@@ -3156,7 +3158,9 @@ int TLuaInterpreter::sendSocket(lua_State* L)
     if (lua_gettop(L) > 1) {
         parseCodes = getVerifiedBool(L, __func__, 2, "parse telnet codes {default = false}", true);
     }
-    const QByteArray data{lua_tostring(L, 1)};
+    size_t length = 0;
+    const char* bytes = lua_tolstring(L, 1, &length);
+    const QByteArray data{bytes, static_cast<qsizetype>(length)};
     std::string dataStdString{parseCodes ? parseTelnetCodes(data).toStdString() : data.toStdString()};
 
     Host& host = getHostFromLua(L);

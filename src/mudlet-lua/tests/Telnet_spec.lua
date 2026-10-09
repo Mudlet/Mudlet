@@ -1548,11 +1548,10 @@ end)
 
 describe("Tests MCCP compressed streams", function()
 
-  -- feedTelnet() reads its argument as a C string and turns "<..>" tokens into
-  -- bytes, so a compressed stream has to reach it with its NULs written as the
-  -- token and its angle brackets doubled
+  -- feedTelnet() turns "<..>" tokens into bytes, so a compressed stream has to
+  -- reach it with its angle brackets doubled; its NULs go through as they are
   local function escaped(bytes)
-    return (bytes:gsub("[%z<>]", {["\0"] = "<00>", ["<"] = "<<", [">"] = ">>"}))
+    return (bytes:gsub("[<>]", {["<"] = "<<", [">"] = ">>"}))
   end
 
   local function feed(data)

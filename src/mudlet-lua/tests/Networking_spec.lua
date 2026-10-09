@@ -2908,6 +2908,21 @@ describe("sending protocol data to a game server that has not negotiated", funct
     assert.is_false(msdpNegotiated, "the fixture negotiated MSDP, so this no longer covers the unnegotiated state")
   end)
 
+  it("puts the bytes after a NUL given to sendSocket on the wire", function()
+    if serverUnavailable() then return end
+    local before = connectionCount()
+    connectToServer("127.0.0.1", serverPort())
+    assert.is_true(waitUntil(connected, 5000), "never connected to the telnet fixture")
+
+    local ok, err = sendSocket("SendSocketNul\0Tail|")
+    assert.is_true(ok, "sendSocket refused a connected socket: " .. tostring(err))
+    local wanted = ("SendSocketNul\0Tail|"):gsub(".", function(c) return string.format("%02x", c:byte()) end)
+    assert.is_true(waitUntil(function()
+      local seen = capture()
+      return seen ~= nil and seen.connections > before and contains(seen.received, wanted)
+    end, 2000), "the bytes after the NUL never reached the wire, saw: " .. tostring(wireHex()))
+  end)
+
   -- sendGMCP and sendATCP keep the check sendMSDP does without: theirs has been
   -- there since 2018 and packages are written around it.
   it("still refuses sendGMCP and sendATCP, whose enabled-checks are wanted", function()
