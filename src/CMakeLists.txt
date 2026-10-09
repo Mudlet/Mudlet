@@ -416,6 +416,7 @@ set(mudlet_HDRS
     TAccessibleTextEdit.h
     TAction.h
     TAlias.h
+    TAppFrontend.h
     TArea.h
     TAreaGridIndex.h
     TAreaLodExitIndex.h

@@ -46,7 +46,7 @@
 #include "utils.h"
 #include "discord.h"
 #include "dlgComposer.h"
-#include "mudlet.h"
+#include "TAppFrontend.h"
 #include "MudletReplay.h"
 #include "MMCPServer.h"
 
@@ -1260,7 +1260,7 @@ void cTelnet::slot_socketDisconnected()
     if (sslerr) {
         // Got a secure connection error that should be shown in the preferences
         // of the profile that raised it, not whichever profile is active
-        mudlet::self()->showOptionsDialog(qsl("tab_connection"), mpHost);
+        TAppFrontend::instance()->showOptionsDialog(qsl("tab_connection"), mpHost);
     }
 #endif
 
