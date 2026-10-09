@@ -922,8 +922,8 @@ private slots:
 
     // Loading a map redraws the mapper from the profile's settings, shows it
     // and moves it to the player's area; a load that fails leaves the mapper
-    // showing what is left, which is an empty map. loadMapFile() makes the
-    // mapper itself when there is none.
+    // showing the map that was already loaded. loadMapFile() makes the mapper
+    // itself when there is none.
     void test_loadingAMapRedrawsAndShowsTheMapper()
     {
         startProfile(mHostname, mLocalhost, mPort);
@@ -957,14 +957,15 @@ private slots:
         host->mRoomSize = 5.5;
         mapper->hide();
         QVERIFY2(!host->loadMapFile(qsl("noSuchMap.dat")), "Loading a map that does not exist succeeded.");
-        QVERIFY(host->mpMap->mpRoomDB->isEmpty());
+        QVERIFY2(!host->mpMap->mpRoomDB->isEmpty(), "A failed load lost the map that was loaded.");
         QCOMPARE(mapper->mp2dMap->rSize, 5.5);
         QVERIFY2(!mapper->isHidden(), "A failed load left the mapper hidden.");
-        QCOMPARE(mapper->comboBox_showArea->findText(mPlayerAreaName), -1);
+        QVERIFY(mapper->comboBox_showArea->findText(mPlayerAreaName) != -1);
 
         // Host::loadMap() is what a profile runs as it starts
         host->mRoomSize = 6.5;
         mapper->hide();
+        host->mpMap->mapClear();
         host->loadMap();
         QVERIFY2(!host->mpMap->mpRoomDB->isEmpty(), "loadMap() did not restore the profile's latest map.");
         QCOMPARE(mapper->comboBox_showArea->currentText(), mPlayerAreaName);
