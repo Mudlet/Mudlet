@@ -65,7 +65,7 @@ public:
     void resetMainConsole() override;
     void closeEvent(QCloseEvent*) override;
     TConsole* createMiniConsole(const QString& windowname, const QString& name, int x, int y, int width, int height);
-    bool addMiniConsole(const QString& windowname, const QString& name, int x, int y, int width, int height) override { return createMiniConsole(windowname, name, x, y, width, height) != nullptr; }
+    void addMiniConsole(const QString& windowname, const QString& name, int x, int y, int width, int height) override { createMiniConsole(windowname, name, x, y, width, height); }
     TConsole* createSubConsole(const QString& name, QWidget* parent);
     TMxpFrameWidgets& mxpFrameWidgets() { return *mpMxpFrameWidgets; }
     const TMxpFrameWidgets& mxpFrameWidgets() const { return *mpMxpFrameWidgets; }
@@ -103,10 +103,10 @@ public:
     void markSelectionDirty() override { TConsole::markSelectionDirty(); }
     void refreshView() const override { TConsole::refreshView(); }
     void restoreOwnMapper() override;
-    bool createBuffer(const QString& name) override;
+    void createBuffer(const QString& name) override;
     std::pair<bool, QString> setUserWindowStyleSheet(const QString& name, const QString& userWindowStyleSheet) override;
     std::pair<bool, QString> setUserWindowTitle(const QString& name, const QString& text) override;
-    bool createLabel(const QString& windowname, const QString& name, int x, int y, int width, int height, bool fillBackground, bool clickThrough) override;
+    void createLabel(const QString& windowname, const QString& name, int x, int y, int width, int height, bool fillBackground, bool clickThrough) override;
     std::pair<bool, QString> createMapper(const QString& windowname, int, int, int, int) override;
     std::pair<bool, QString> createCommandLine(const QString& windowname, const QString& name, int, int, int, int) override;
     void registerSubCommandLine(const QString& name, TCommandLine* pCommandLine);
@@ -115,8 +115,8 @@ public:
     std::pair<bool, QString> setCmdLineStyleSheet(const QString& name, const QString& styleSheet) override;
     std::pair<bool, QString> setLabelStyleSheet(const QString& name, const QString& stylesheet) override;
     std::optional<QSize> getLabelSizeHint(const QString& name) const override;
-    std::pair<bool, QString> deleteLabel(const QString& name) override;
-    std::pair<bool, QString> deleteMiniConsole(const QString&) override;
+    void deleteLabel(const QString& name) override;
+    void deleteMiniConsole(const QString&) override;
     std::pair<bool, QString> deleteCommandLine(const QString&) override;
     std::pair<bool, QString> deleteTextBox(const QString&) override;
     std::pair<bool, QString> deleteScrollBox(const QString&) override;
@@ -173,7 +173,7 @@ public:
     TConsole* deregisterSubConsole(const QString& name);
     void registerDockWidget(const QString& name, TDockWidget* pDockWidget);
     TDockWidget* deregisterDockWidget(const QString& name);
-    std::pair<bool, QString> openUserWindow(const QString& name, bool loadLayout, bool autoDock, const QString& area) override;
+    void openUserWindow(const QString& name, bool loadLayout, bool autoDock, const QString& area) override;
     TConsole* subConsoleWidget(const QString& name) const { return mSubConsoleMap.value(name); }
     QString subConsoleName(TConsole* pConsole) const { return mSubConsoleMap.key(pConsole); }
     TDockWidget* dockWidget(const QString& name) const { return mDockWidgetMap.value(name); }
@@ -394,7 +394,7 @@ private:
     QWidget* plainWindowWidget(const QString& name) const;
     void watchWindowState(const QString& name, QWidget* pWidget);
     void reportWindowState(const QStringList& names);
-    std::pair<bool, QString> placeUserWindow(const QString& name, bool loadLayout, bool autoDock, const QString& area);
+    void placeUserWindow(const QString& name, bool loadLayout, bool autoDock, const QString& area);
     TCommandLine* commandLineNamed(const QString& name) const;
     TConsole* consoleNamed(const QString& name);
     // The single answer to "does this profile have a map widget on screen right

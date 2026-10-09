@@ -617,6 +617,9 @@ public:
     std::pair<bool, QString> createMiniConsole(const QString& windowname, const QString& name, int x, int y, int width, int height);
     std::pair<bool, QString> createScrollBox(const QString& windowname, const QString& name, int x, int y, int width, int height) const;
     std::pair<bool, QString> createLabel(const QString& windowname, const QString& name, int x, int y, int width, int height, bool fillBg, bool clickthrough);
+    // Each raises its sys*Deleted event; deleteMiniConsole() takes any sub-console, a user window's dock with it.
+    std::pair<bool, QString> deleteLabel(const QString& name);
+    std::pair<bool, QString> deleteMiniConsole(const QString& name);
     bool setClickthrough(const QString& name, bool clickthrough);
     bool setLabelStyleSheet(const QString& name, const QString& styleSheet);
     bool setLinkStyle(const QString& name, const QString& linkColor, const QString& linkVisitedColor, bool underline);

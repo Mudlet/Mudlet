@@ -291,14 +291,23 @@ private slots:
         host->setMainConsoleView(nullptr);
         TConsoleFrontend* fallback = host->consoleFrontend();
         const bool hasViewWhileDetached = host->hasConsoleView();
-        const bool labelMade = fallback && fallback->createLabel(qsl("main"), qsl("nullViewLabel"), 0, 0, 10, 10, true, false);
+        // Taken out again before the console is back, as the real view knows nothing of it.
+        bool labelRegistered = false;
+        bool labelDropped = false;
+        if (fallback) {
+            fallback->createLabel(qsl("main"), qsl("nullViewLabel"), 0, 0, 10, 10, true, false);
+            labelRegistered = host->windowRegistry().hasLabel(qsl("nullViewLabel"));
+            fallback->deleteLabel(qsl("nullViewLabel"));
+            labelDropped = !host->windowRegistry().hasLabel(qsl("nullViewLabel"));
+        }
         const bool closeAllowed = fallback && fallback->requestClose();
         host->setMainConsoleView(console);
 
         QVERIFY2(fallback, "consoleFrontend() must never be null.");
         QVERIFY(fallback != attached);
         QVERIFY(!hasViewWhileDetached);
-        QVERIFY(!labelMade);
+        QVERIFY(labelRegistered);
+        QVERIFY(labelDropped);
         QVERIFY(closeAllowed);
         QCOMPARE(host->consoleFrontend(), attached);
         QVERIFY(host->hasConsoleView());

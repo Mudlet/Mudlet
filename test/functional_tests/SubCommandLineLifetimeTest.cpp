@@ -169,7 +169,7 @@ private slots:
         miniConsole->setCmdVisible(true); // what Lua enableCommandLine(name) does
         QVERIFY2(console->subCommandLineWidget(name), "command line not registered after enabling it");
 
-        auto [deleted, deleteMsg] = console->deleteMiniConsole(name);
+        auto [deleted, deleteMsg] = mpHost->deleteMiniConsole(name);
         QVERIFY2(deleted, qPrintable(deleteMsg));
         runDeferredDeletes();
 
@@ -222,7 +222,7 @@ private slots:
         QVERIFY2(created, qPrintable(createMsg));
         QVERIFY(console->subCommandLineWidget(cmdLineName));
 
-        auto [deleted, deleteMsg] = console->deleteMiniConsole(windowName);
+        auto [deleted, deleteMsg] = mpHost->deleteMiniConsole(windowName);
         QVERIFY2(deleted, qPrintable(deleteMsg));
         runDeferredDeletes();
 
@@ -250,7 +250,7 @@ private slots:
         QVERIFY2(mudlet::self()->layout()->indexOf(dock) != -1, "the user window was never docked, so it leaving the dock layout proves nothing");
         QVERIFY2(!dock->isHidden(), "the user window was never shown, so it being hidden proves nothing");
 
-        auto [deleted, deleteMsg] = console->deleteMiniConsole(windowName);
+        auto [deleted, deleteMsg] = mpHost->deleteMiniConsole(windowName);
         QVERIFY2(deleted, qPrintable(deleteMsg));
         // Deliberately no event loop turn here - the dock is still alive.
         QVERIFY(dock);
@@ -299,7 +299,7 @@ private slots:
         miniConsole->setCmdVisible(true);
         QVERIFY(console->subCommandLineWidget(name));
 
-        auto [deleted, deleteMsg] = console->deleteMiniConsole(name);
+        auto [deleted, deleteMsg] = mpHost->deleteMiniConsole(name);
         QVERIFY2(deleted, qPrintable(deleteMsg));
         runDeferredDeletes();
 

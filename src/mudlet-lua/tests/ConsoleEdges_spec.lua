@@ -309,6 +309,36 @@ describe("Console edges", function()
       assert.is_false(ok)
       assert.are.equal("a label cannot have an empty string as its name", err)
     end)
+
+    it("a missing name to delete, and raises an event for each it deletes", function()
+      local label, mini, window = name("DeletedLabel"), name("DeletedMini"), name("DeletedWindow")
+      local deleted = {}
+      local handlers = {
+        registerAnonymousEventHandler("sysLabelDeleted", function(_, which) deleted[#deleted + 1] = which end),
+        registerAnonymousEventHandler("sysMiniConsoleDeleted", function(_, which) deleted[#deleted + 1] = which end),
+      }
+      finally(function()
+        for _, id in ipairs(handlers) do
+          killAnonymousEventHandler(id)
+        end
+      end)
+
+      assert.is_true(createLabel(label, 0, 0, 10, 10, 1))
+      assert.is_true(createMiniConsole(mini, 0, 0, 10, 10))
+      assert.is_true(openUserWindow(window))
+      assert.is_true(deleteLabel(label))
+      assert.is_true(deleteMiniConsole(mini))
+      assert.is_true(deleteMiniConsole(window))
+      assert.are.same({label, mini, window}, deleted)
+
+      local ok, err = deleteLabel(label)
+      assert.is_false(ok)
+      assert.are.equal(string.format("label name '%s' not found", label), err)
+      ok, err = deleteMiniConsole(mini)
+      assert.is_false(ok)
+      assert.are.equal(string.format("miniconsole name '%s' not found", mini), err)
+      assert.are.same({label, mini, window}, deleted)
+    end)
   end)
 
   -- A range spanning most of the int range must not build a table entry per

@@ -158,7 +158,7 @@ private slots:
         runLua(qsl("setProfileStyleSheet('')"));
         runLua(qsl("setAppStyleSheet('')"));
         for (const auto& name : {qsl("lbpTarget"), qsl("lbpGauge_back"), qsl("lbpGauge_front"), qsl("lbpGauge_text"), qsl("lbpBackdrop")}) {
-            mpHost->mainConsoleView()->deleteLabel(name);
+            mpHost->deleteLabel(name);
         }
     }
 

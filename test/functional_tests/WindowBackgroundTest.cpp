@@ -195,8 +195,8 @@ private slots:
     // runs even when a QVERIFY aborts a test body, so nothing leaks into the next one
     void cleanup()
     {
-        mpHost->mainConsoleView()->deleteLabel(qsl("lowerTarget"));
-        mpHost->mainConsoleView()->deleteMiniConsole(qsl("lowerConsole"));
+        mpHost->deleteLabel(qsl("lowerTarget"));
+        mpHost->deleteMiniConsole(qsl("lowerConsole"));
     }
 
     // lowerWindow() drops mpMainDisplay to the bottom of mpMainFrame's stack so a

@@ -3066,7 +3066,7 @@ noViewSelectionReport = table.concat(noViewSelectionProblems, '; ')
         QPointer<TLabel> firstWidget = host->mainConsoleView()->labelWidget(labelName);
         QVERIFY2(firstWidget, "Creating a label left the console's own widget map empty.");
 
-        const auto [deleted, deleteMessage] = host->mainConsoleView()->deleteLabel(labelName);
+        const auto [deleted, deleteMessage] = host->deleteLabel(labelName);
         QVERIFY2(deleted, qPrintable(deleteMessage));
 
         QVERIFY2(!host->windowRegistry().hasLabel(labelName), "Deleting a label left its model in the profile's window registry.");
@@ -3154,7 +3154,7 @@ noViewSelectionReport = table.concat(noViewSelectionProblems, '; ')
         QPointer<TLabel> widget = host->mainConsoleView()->labelWidget(labelName);
         QVERIFY2(widget, "Creating a label into a user window left the console's own widget map empty.");
 
-        const auto [deleted, deleteMessage] = host->mainConsoleView()->deleteMiniConsole(windowName);
+        const auto [deleted, deleteMessage] = host->deleteMiniConsole(windowName);
         QVERIFY2(deleted, qPrintable(deleteMessage));
         QCoreApplication::sendPostedEvents(nullptr, QEvent::DeferredDelete);
         QVERIFY2(widget.isNull(), "Deleting the user window did not destroy the label it contained, so the checks below prove nothing.");
@@ -3512,7 +3512,7 @@ noViewSelectionReport = table.concat(noViewSelectionProblems, '; ')
         const QPointer<TConsole> firstWidget = host->mainConsoleView()->subConsoleWidget(miniName);
         QVERIFY2(firstWidget, "Creating a miniconsole left no widget in the console's own map.");
 
-        const auto [deleted, deleteMessage] = host->mainConsoleView()->deleteMiniConsole(miniName);
+        const auto [deleted, deleteMessage] = host->deleteMiniConsole(miniName);
         QVERIFY2(deleted, qPrintable(deleteMessage));
         QVERIFY2(!host->windowRegistry().hasSubConsole(miniName), "Deleting a miniconsole left its model in the profile's window registry.");
         QVERIFY2(!host->windowRegistry().subConsoleModel(miniName), "Deleting a miniconsole left a stale model handle in the profile's window registry.");
@@ -3547,7 +3547,7 @@ noViewSelectionReport = table.concat(noViewSelectionProblems, '; ')
         QVERIFY2(userWindow, qPrintable(userWindowMessage));
         QVERIFY2(host->windowRegistry().hasDockWidget(userWindowName), "Creating a user window registered no dock widget.");
 
-        const auto [windowDeleted, windowDeleteMessage] = host->mainConsoleView()->deleteMiniConsole(userWindowName);
+        const auto [windowDeleted, windowDeleteMessage] = host->deleteMiniConsole(userWindowName);
         QVERIFY2(windowDeleted, qPrintable(windowDeleteMessage));
         QVERIFY2(!host->windowRegistry().hasSubConsole(userWindowName), "Deleting a user window left its model in the profile's window registry.");
         QVERIFY2(!host->windowRegistry().hasDockWidget(userWindowName), "Deleting a user window left its dock in the profile's window registry.");
@@ -3578,7 +3578,7 @@ noViewSelectionReport = table.concat(noViewSelectionProblems, '; ')
         QCOMPARE(host->windowType(nestedName), std::optional<QString>(qsl("miniconsole")));
         QVERIFY2(!host->windowRegistry().hasDockWidget(nestedName), "A miniconsole inside a user window was registered as having a dock of its own.");
 
-        const auto [windowDeleted, windowDeleteMessage] = host->mainConsoleView()->deleteMiniConsole(userWindowName);
+        const auto [windowDeleted, windowDeleteMessage] = host->deleteMiniConsole(userWindowName);
         QVERIFY2(windowDeleted, qPrintable(windowDeleteMessage));
         QVERIFY2(!host->windowRegistry().hasSubConsole(userWindowName), "Deleting a user window left its own model in the profile's window registry.");
 
@@ -3614,7 +3614,7 @@ noViewSelectionReport = table.concat(noViewSelectionProblems, '; ')
         const QPointer<TConsole> nestedWidget = host->mainConsoleView()->subConsoleWidget(nestedName);
         QVERIFY2(nestedWidget, "Creating a miniconsole inside a user window left no widget in the console's own map.");
 
-        const auto [windowDeleted, windowDeleteMessage] = host->mainConsoleView()->deleteMiniConsole(userWindowName);
+        const auto [windowDeleted, windowDeleteMessage] = host->deleteMiniConsole(userWindowName);
         QVERIFY2(windowDeleted, qPrintable(windowDeleteMessage));
         QTRY_VERIFY_WITH_TIMEOUT(nestedWidget.isNull(), 5s);
 
@@ -3712,7 +3712,7 @@ noViewSelectionReport = table.concat(noViewSelectionProblems, '; ')
         const QStringList names = host->windowRegistry().subConsoleNames();
         QVERIFY2(names.contains(firstName) && names.contains(secondName), qPrintable(qsl("Not every sub-console reached the snapshot: %1").arg(names.join(QChar::Space))));
 
-        const auto [deleted, deleteMessage] = host->mainConsoleView()->deleteMiniConsole(secondName);
+        const auto [deleted, deleteMessage] = host->deleteMiniConsole(secondName);
         QVERIFY2(deleted, qPrintable(deleteMessage));
         QVERIFY2(!host->windowRegistry().hasSubConsole(secondName), "Deleting the user window left it in the registry, so the snapshot is not being tested against a real removal.");
         QVERIFY2(names.contains(firstName) && names.contains(secondName), "Removing a sub-console changed a snapshot of the names that had already been taken.");
@@ -3995,7 +3995,7 @@ noViewSelectionReport = table.concat(noViewSelectionProblems, '; ')
         const QString childName = qsl("openWindowChildConsole");
         QVERIFY2(host->createMiniConsole(name, childName, 0, 0, 50, 50).first, "The miniconsole inside the user window was not created.");
         const QPointer<TConsole> child = host->mainConsoleView()->subConsoleWidget(childName);
-        QVERIFY2(host->mainConsoleView()->deleteMiniConsole(name).first, "The user window was not deleted.");
+        QVERIFY2(host->deleteMiniConsole(name).first, "The user window was not deleted.");
         QCOMPARE(host->openWindow(childName, false, true, QString()), std::make_pair(false, qsl("userwindow '%1' already exists").arg(childName)));
         QCoreApplication::sendPostedEvents(nullptr, QEvent::DeferredDelete);
         QVERIFY2(child.isNull(), "The miniconsole inside the deleted user window was never destroyed.");
@@ -4538,7 +4538,7 @@ noViewSelectionReport = table.concat(noViewSelectionProblems, '; ')
         QMovie* movie = label->movie();
         QVERIFY2(movie, "setMovie() gave the label no movie, so the checks below prove nothing.");
         const auto deleteTheLabel = qScopeGuard([host, labelName]() {
-            host->mainConsoleView()->deleteLabel(labelName);
+            host->deleteLabel(labelName);
         });
 
         runLua(host, qsl("setMovieSpeed('%1', 250)\n").arg(labelName));

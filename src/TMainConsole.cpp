@@ -461,18 +461,13 @@ void TMainConsole::slot_loggingStateChanged(const bool isLogging)
 }
 
 
-bool TMainConsole::createBuffer(const QString& name)
+void TMainConsole::createBuffer(const QString& name)
 {
-    if (!subConsoleWidget(name)) {
-        auto pC = new TConsole(mpHost, name, Buffer);
-        registerSubConsole(name, pC);
-        pC->setContentsMargins(0, 0, 0, 0);
-        pC->hide();
-        pC->layerCommandLine->hide();
-        return true;
-    }
-
-    return false;
+    auto pC = new TConsole(mpHost, name, Buffer);
+    registerSubConsole(name, pC);
+    pC->setContentsMargins(0, 0, 0, 0);
+    pC->hide();
+    pC->layerCommandLine->hide();
 }
 
 void TMainConsole::watchWindowState(const QString& name, QWidget* pWidget)
@@ -621,14 +616,13 @@ TDockWidget* TMainConsole::createUserWindow(const QString& name)
     return dockwidget;
 }
 
-std::pair<bool, QString> TMainConsole::openUserWindow(const QString& name, bool loadLayout, bool autoDock, const QString& area)
+void TMainConsole::openUserWindow(const QString& name, bool loadLayout, bool autoDock, const QString& area)
 {
-    auto result = placeUserWindow(name, loadLayout, autoDock, area);
+    placeUserWindow(name, loadLayout, autoDock, area);
     reportGeometry(name);
-    return result;
 }
 
-std::pair<bool, QString> TMainConsole::placeUserWindow(const QString& name, bool loadLayout, bool autoDock, const QString& area)
+void TMainConsole::placeUserWindow(const QString& name, bool loadLayout, bool autoDock, const QString& area)
 {
     // Host::openWindow() has refused a name holding a console or a dock but not both
     auto dockwidget = dockWidget(name);
@@ -645,37 +639,31 @@ std::pair<bool, QString> TMainConsole::placeUserWindow(const QString& name, bool
     dockwidget->show();
     dockwidget->setAllowedAreas(autoDock ? Qt::AllDockWidgetAreas : Qt::NoDockWidgetArea);
 
-    if (area.isEmpty()) {
-        return {true, QString()};
-    }
-
     if (area == QLatin1String("f") || area == QLatin1String("floating")) {
         if (!dockwidget->isFloating()) {
             dockwidget->setFloating(true);
         }
-        return {true, QString()};
+        return;
     }
     if (area == QLatin1String("r") || area == QLatin1String("right")) {
         dockwidget->setFloating(false);
         mudlet::self()->addDockWidget(Qt::RightDockWidgetArea, dockwidget);
-        return {true, QString()};
+        return;
     }
     if (area == QLatin1String("l") || area == QLatin1String("left")) {
         dockwidget->setFloating(false);
         mudlet::self()->addDockWidget(Qt::LeftDockWidgetArea, dockwidget);
-        return {true, QString()};
+        return;
     }
     if (area == QLatin1String("t") || area == QLatin1String("top")) {
         dockwidget->setFloating(false);
         mudlet::self()->addDockWidget(Qt::TopDockWidgetArea, dockwidget);
-        return {true, QString()};
+        return;
     }
     if (area == QLatin1String("b") || area == QLatin1String("bottom")) {
         dockwidget->setFloating(false);
         mudlet::self()->addDockWidget(Qt::BottomDockWidgetArea, dockwidget);
-        return {true, QString()};
     }
-    return {false, qsl(R"(docking option "%1" not available. available docking options are "t" top, "b" bottom, "r" right, "l" left and "f" floating)").arg(area)};
 }
 
 void TMainConsole::registerScrollBox(const QString& name, TScrollBox* pScrollBox)
@@ -1360,47 +1348,38 @@ bool TMainConsole::createScrollBox(const QString& windowname, const QString& nam
     return false;
 }
 
-bool TMainConsole::createLabel(const QString& windowname, const QString& name, int x, int y, int width, int height, bool fillBackground, bool clickThrough)
+void TMainConsole::createLabel(const QString& windowname, const QString& name, int x, int y, int width, int height, bool fillBackground, bool clickThrough)
 {
     //if pW put Label in Userwindow
-    auto pL = mLabelMap.value(name);
     auto pW = mDockWidgetMap.value(windowname);
     auto pS = mScrollBoxMap.value(windowname);
-    if (!pL) {
-        if (pW) {
-            pL = new TLabel(mpHost, name, pW->widget());
-        } else if (pS) {
-            pL = new TLabel(mpHost, name, pS->widget());
-        } else {
-            pL = new TLabel(mpHost, name, mpMainFrame);
-        }
-        registerLabelWidget(name, pL);
-        pL->setAutoFillBackground(fillBackground);
-        pL->setClickThrough(clickThrough);
-        pL->resize(width, height);
-        pL->setContentsMargins(0, 0, 0, 0);
-        pL->move(x, y);
-        pL->show();
-        reportGeometry(name);
-        // fillBackground = 0 gets this grey too, which is not what the argument reads
-        // like: honouring it would turn every such label in an installed script
-        // transparent. What the argument does decide is what survives a later
-        // stylesheet - setAutoFillBackground(false) above means the colour is dropped
-        // rather than kept. A script wanting a transparent label has to say so with
-        // setBackgroundColor(name, 0, 0, 0, 0).
-        mpHost->setBackgroundColor(name, 32, 32, 32, 255);
-        return true;
+    TLabel* pL = nullptr;
+    if (pW) {
+        pL = new TLabel(mpHost, name, pW->widget());
+    } else if (pS) {
+        pL = new TLabel(mpHost, name, pS->widget());
+    } else {
+        pL = new TLabel(mpHost, name, mpMainFrame);
     }
-
-    return false;
+    registerLabelWidget(name, pL);
+    pL->setAutoFillBackground(fillBackground);
+    pL->setClickThrough(clickThrough);
+    pL->resize(width, height);
+    pL->setContentsMargins(0, 0, 0, 0);
+    pL->move(x, y);
+    pL->show();
+    reportGeometry(name);
+    // fillBackground = 0 gets this grey too, which is not what the argument reads
+    // like: honouring it would turn every such label in an installed script
+    // transparent. What the argument does decide is what survives a later
+    // stylesheet - setAutoFillBackground(false) above means the colour is dropped
+    // rather than kept. A script wanting a transparent label has to say so with
+    // setBackgroundColor(name, 0, 0, 0, 0).
+    mpHost->setBackgroundColor(name, 32, 32, 32, 255);
 }
 
-std::pair<bool, QString> TMainConsole::deleteLabel(const QString& name)
+void TMainConsole::deleteLabel(const QString& name)
 {
-    if (name.isEmpty()) {
-        return {false, QLatin1String("a label cannot have an empty string as its name")};
-    }
-
     auto pL = mLabelMap.value(name);
     if (pL) {
         mpHost->windowRegistry().deregisterLabel(name, &pL->model());
@@ -1413,28 +1392,11 @@ std::pair<bool, QString> TMainConsole::deleteLabel(const QString& name)
         // given that this item is likely to be linked to some events and
         // suchlike:
         pL->deleteLater();
-
-        // It remains to be seen if the label has "gone" as a result of the
-        // above by the time the Lua subsystem processes the following:
-        TEvent mudletEvent{};
-        mudletEvent.mArgumentList.append(QLatin1String("sysLabelDeleted"));
-        mudletEvent.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
-        mudletEvent.mArgumentList.append(name);
-        mudletEvent.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
-        mpHost->raiseEvent(mudletEvent);
-        return {true, QString()};
     }
-
-    // Message is of the form needed for a Lua API function call run-time error
-    return {false, qsl("label name '%1' not found").arg(name)};
 }
 
-std::pair<bool, QString> TMainConsole::deleteMiniConsole(const QString& name)
+void TMainConsole::deleteMiniConsole(const QString& name)
 {
-    if (name.isEmpty()) {
-        return {false, QLatin1String("a miniconsole cannot have an empty string as its name")};
-    }
-
     auto pConsole = deregisterSubConsole(name);
     if (pConsole) {
         mpHost->windowRegistry().forgetUserWindowSize(name);
@@ -1466,20 +1428,7 @@ std::pair<bool, QString> TMainConsole::deleteMiniConsole(const QString& name)
             // suchlike:
             pConsole->deleteLater();
         }
-
-        // It remains to be seen if the miniconsole has "gone" as a result of the
-        // above by the time the Lua subsystem processes the following:
-        TEvent mudletEvent{};
-        mudletEvent.mArgumentList.append(QLatin1String("sysMiniConsoleDeleted"));
-        mudletEvent.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
-        mudletEvent.mArgumentList.append(name);
-        mudletEvent.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
-        mpHost->raiseEvent(mudletEvent);
-        return {true, QString()};
     }
-
-    // Message is of the form needed for a Lua API function call run-time error
-    return {false, qsl("miniconsole name '%1' not found").arg(name)};
 }
 
 std::pair<bool, QString> TMainConsole::deleteCommandLine(const QString& name)
