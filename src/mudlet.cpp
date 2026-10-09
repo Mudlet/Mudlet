@@ -2599,13 +2599,7 @@ void mudlet::initEdbee()
     // We only need the single Lua lexer, probably ever
     grammarManager->readGrammarFile(QLatin1String(":/edbee_defaults/Lua.tmLanguage"));
 
-    //Open and parse the luaFunctionList document into a stringlist for use with autocomplete
-    if (!loadLuaFunctionList()) {
-        qWarning() << "mudlet: the Lua function list could not be loaded, so the script editors will offer no API autocompletion";
-    }
-
-    //QFile file(fileName);
-    //if( file.exists() && file.open(QIODevice::ReadOnly) ) {
+    loadLuaFunctionList();
 
     loadEdbeeTheme(qsl("Mudlet"), qsl("Mudlet.tmTheme"));
 }
@@ -7489,36 +7483,58 @@ void mudlet::requestProfilesToReloadMaps(QList<QString> affectedProfiles)
 }
 
 //loads the luaFunctionList for use by the edbee Autocompleter
-bool mudlet::loadLuaFunctionList()
+bool mudlet::loadLuaFunctionList(const QString& fileName)
 {
-    auto jsonFile = QFile(qsl(":/lua-function-list.json"));
+    auto warn = [&fileName](const QString& reason) {
+        qWarning().nospace().noquote() << "mudlet::loadLuaFunctionList() WARNING - \"" << fileName << "\" " << reason << ", so the script editors will offer no API autocompletion";
+    };
+
+    // A directory opens and reads as empty, which would otherwise be reported as an empty file
+    if (QFileInfo(fileName).isDir()) {
+        warn(qsl("is a directory, not a file"));
+        return false;
+    }
+
+    auto jsonFile = QFile(fileName);
     if (!jsonFile.open(QFile::ReadOnly)) {
-        qWarning().nospace().noquote() << "mudlet::loadLuaFunctionList() WARNING - could not open \"" << jsonFile.fileName() << "\": " << jsonFile.errorString();
+        warn(qsl("could not be opened (%1)").arg(jsonFile.errorString()));
         return false;
     }
 
     const QByteArray data = jsonFile.readAll();
     jsonFile.close();
 
+    if (data.isEmpty()) {
+        warn(qsl("is empty"));
+        return false;
+    }
+
     QJsonParseError parseError;
     auto json_doc = QJsonDocument::fromJson(data, &parseError);
 
+    // Qt rejects a top-level scalar such as 42 here too, so this is not only malformed syntax
     if (json_doc.isNull()) {
-        qWarning().nospace().noquote() << "mudlet::loadLuaFunctionList() WARNING - \"" << jsonFile.fileName() << "\" is not valid JSON: " << parseError.errorString() << " at offset "
-                                       << parseError.offset;
+        warn(qsl("could not be parsed as a JSON object: %1 at offset %2").arg(parseError.errorString(), QString::number(parseError.offset)));
         return false;
     }
 
     if (!json_doc.isObject()) {
-        qWarning().nospace().noquote() << "mudlet::loadLuaFunctionList() WARNING - \"" << jsonFile.fileName() << "\" does not hold a JSON object";
+        warn(qsl("holds a JSON array, not an object"));
         return false;
     }
 
     const QJsonObject json_obj = json_doc.object();
 
     if (json_obj.isEmpty()) {
-        qWarning().nospace().noquote() << "mudlet::loadLuaFunctionList() WARNING - \"" << jsonFile.fileName() << "\" lists no functions";
+        warn(qsl("lists no functions"));
         return false;
+    }
+
+    for (auto it = json_obj.constBegin(); it != json_obj.constEnd(); ++it) {
+        if (!it.value().isString()) {
+            warn(qsl("gives \"%1\" a description that is not a string").arg(it.key()));
+            return false;
+        }
     }
 
     mudlet::smLuaFunctionNames = json_obj.toVariantHash();
