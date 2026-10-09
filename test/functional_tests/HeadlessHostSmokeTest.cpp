@@ -228,7 +228,9 @@ fbYT0tapBHTFGBkf6NgxBGenwL5TDeL9g3w57+FWiHtIKUylQhCoNb20
         host->mSslTsl = true;
         QSignalSpy disconnected(&host->mTelnet, &cTelnet::signal_disconnected);
 
-        host->mTelnet.connectIt(qsl("127.0.0.1"), server.serverPort());
+        // Not 127.0.0.1: a secure connect dials the name the lookup returns, and Windows
+        // reverse-resolves 127.0.0.1 to the machine's own name, whose addresses this server is not on
+        host->mTelnet.connectIt(qsl("localhost"), server.serverPort());
 
         // The app opens the profile's connection preferences here, which needs a main window
         QTRY_VERIFY_WITH_TIMEOUT(!disconnected.isEmpty(), 10000);
