@@ -91,7 +91,7 @@ private:
     QString dockState(const QString& name) const
     {
         mudlet* window = mudlet::self();
-        TDockWidget* pDock = mpHost->mpConsole->dockWidget(name);
+        TDockWidget* pDock = mpHost->mainConsoleView()->dockWidget(name);
         if (!pDock) {
             return qsl("no dock named %1").arg(name);
         }
