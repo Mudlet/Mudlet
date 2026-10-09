@@ -3216,12 +3216,10 @@ std::pair<bool, QString> Host::installPackage(const QString& fileName, enums::Pa
             return true;
         };
 
-        // Skip the unpacking dialog for modules created from UI, and for
-        // script-initiated installs (passed via quiet) to avoid stealing
-        // window-manager focus from the user's other applications - see
-        // issue #9170. Bundled packages skip it too: they unzip in less time
-        // than the dialog takes to build and paint.
-        if (thing != enums::PackageModuleType::ModuleFromUI && !quiet && !bundledPackage) {
+        // Not for script installs (quiet): the dialog steals window-manager focus from the
+        // user's other applications (#9170). Nor for bundled or small archives, which
+        // unzip in less time than the dialog takes to build and paint.
+        if (thing != enums::PackageModuleType::ModuleFromUI && !quiet && !bundledPackage && QFileInfo(actualFileName).size() >= scmArchiveSizeWorthAnUnpackingDialog) {
             const QString message =
                     (thing != enums::PackageModuleType::Package) ? tr("Unpacking module:\n\"%1\"\nplease wait...").arg(packageName) : tr("Unpacking package:\n\"%1\"\nplease wait...").arg(packageName);
             emit signal_showUnpackingProgress(message, tr("Unpacking"));

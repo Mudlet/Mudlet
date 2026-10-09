@@ -417,7 +417,7 @@ private slots:
         QVERIFY2(packageDir.isValid(), "Could not create a temporary directory for the test package.");
         const QString packageName = qsl("HostWidgetDecouplingPackage");
         const QString packagePath = packageDir.filePath(qsl("%1.zip").arg(packageName));
-        QVERIFY2(writePackageArchive(packagePath, packageName), "Could not write the test package archive.");
+        QVERIFY2(writePackageArchive(packagePath, packageName, Host::scmArchiveSizeWorthAnUnpackingDialog), "Could not write the test package archive.");
 
         // installPackage() postpones the whole install (and so emits nothing) if a
         // profile save is still in flight from loading the profile.
@@ -445,6 +445,33 @@ private slots:
         QVERIFY2(!console->mpUnpackingDialog, "Finishing the install must take the unpacking dialog down again.");
         QTest::qWait(50ms); // let the dialog's queued deleteLater() run
         QVERIFY2(dialogWhileUnpacking.isNull(), "The unpacking dialog was taken down but never disposed of.");
+    }
+
+    // A new profile installs its default packages through this path, so a dialog
+    // per archive that unzips in milliseconds is pure cost.
+    void test_smallPackageInstallsWithoutUnpackingDialog()
+    {
+        startProfile(mHostname, mLocalhost, mPort);
+        auto host = mudlet::self()->getActiveHost();
+        QVERIFY2(host, "No active host available for the test.");
+        QVERIFY2(host->mpConsole, "The active host has no main console.");
+
+        QTemporaryDir packageDir;
+        QVERIFY2(packageDir.isValid(), "Could not create a temporary directory for the test package.");
+        const QString packageName = qsl("HostWidgetDecouplingSmallPackage");
+        const QString packagePath = packageDir.filePath(qsl("%1.zip").arg(packageName));
+        QVERIFY2(writePackageArchive(packagePath, packageName), "Could not write the test package archive.");
+        QTRY_VERIFY(!host->currentlySavingProfile());
+
+        QSignalSpy showSpy(host, &Host::signal_showUnpackingProgress);
+        QSignalSpy hideSpy(host, &Host::signal_hideUnpackingProgress);
+
+        auto [ok, message] = host->installPackage(packagePath, enums::PackageModuleType::Package, false);
+        QVERIFY2(ok, qPrintable(message));
+
+        QCOMPARE(showSpy.count(), 0);
+        QCOMPARE(hideSpy.count(), 0);
+        QVERIFY2(!host->mpConsole->mpUnpackingDialog, "A small package must install without the unpacking dialog.");
     }
 
     // A new profile installs the bundled default packages as it loads, and a
@@ -1002,7 +1029,8 @@ private slots:
     // zip holding one Mudlet package XML with nothing in it. An archive with no
     // package XML at all is refused (it would install nowhere and could never be
     // uninstalled), so the dialog wiring this test is about needs a real one.
-    bool writePackageArchive(const QString& path, const QString& packageName)
+    // paddingBytes adds an uncompressed filler entry, to make the archive file at least that large.
+    bool writePackageArchive(const QString& path, const QString& packageName, const qint64 paddingBytes = 0)
     {
         static const char packageXml[] = "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n"
                                          "<!DOCTYPE MudletPackage>\n"
@@ -1022,6 +1050,19 @@ private slots:
             zip_source_free(source);
             zip_discard(archive);
             return false;
+        }
+        // zip_source_buffer() does not copy, so this must outlive zip_close()
+        const QByteArray padding(paddingBytes, '\0');
+        if (paddingBytes > 0) {
+            zip_source* paddingSource = zip_source_buffer(archive, padding.constData(), static_cast<zip_uint64_t>(padding.size()), 0);
+            const zip_int64_t index = paddingSource ? zip_file_add(archive, "padding.bin", paddingSource, ZIP_FL_ENC_UTF_8) : -1;
+            if (index < 0 || zip_set_file_compression(archive, static_cast<zip_uint64_t>(index), ZIP_CM_STORE, 0) < 0) {
+                if (index < 0) {
+                    zip_source_free(paddingSource);
+                }
+                zip_discard(archive);
+                return false;
+            }
         }
         return zip_close(archive) == 0;
     }
