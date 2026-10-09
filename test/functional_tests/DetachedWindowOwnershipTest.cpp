@@ -204,6 +204,34 @@ private slots:
         QCOMPARE(QApplication::focusWidget(), static_cast<QWidget*>(pHost->mpConsole->mpCommandLine.data()));
     }
 
+    // A user window stays docked in the main window when its profile is detached,
+    // so the command line last used in one cannot be the one given the keyboard
+    void test_theDetachedProfilesCommandLineHasTheKeyboardAfterAUserWindowsWasUsed()
+    {
+        QVERIFY(mpDetachedWindow);
+        Host* pHost = HostManager::self()->getHost(mSecondHostname);
+        QVERIFY(pHost && pHost->mpConsole);
+        reattachAndWait(mSecondHostname);
+        QTest::qWait(200ms);
+        QVERIFY(pHost->getLuaInterpreter()->compileAndExecuteScript(qsl("openUserWindow('qaKeyboardWindow') enableCommandLine('qaKeyboardWindow')")));
+        TConsole* pUserWindow = pHost->mpConsole->subConsoleWidget(qsl("qaKeyboardWindow"));
+        QVERIFY(pUserWindow && pUserWindow->mpCommandLine);
+        pHost->mpConsole->recordActiveCommandLine(pUserWindow->mpCommandLine);
+        mudlet::self()->mpTabBar->setFocus(Qt::MouseFocusReason);
+
+        mpDetachedWindow = detachSecondProfile();
+        QVERIFY(mpDetachedWindow);
+        QVERIFY2(pUserWindow->mpCommandLine->window() != mpDetachedWindow.data(), "the user window moved with its profile, so this case no longer covers a command line left behind");
+        QTest::qWait(200ms);
+        const bool userWindowHadTheKeyboard = QApplication::focusWidget() == pUserWindow->mpCommandLine.data();
+        QWidget* pActiveWindow = QApplication::activeWindow();
+        pHost->mpConsole->recordActiveCommandLine(pHost->mpConsole->mpCommandLine);
+        QVERIFY(pHost->getLuaInterpreter()->compileAndExecuteScript(qsl("hideWindow('qaKeyboardWindow')")));
+        QVERIFY2(!userWindowHadTheKeyboard, "the keyboard went to the user window's command line, left behind in the main window");
+        QCOMPARE(pActiveWindow, mpDetachedWindow.data());
+        QCOMPARE(QApplication::focusWidget(), static_cast<QWidget*>(pHost->mpConsole->mpCommandLine.data()));
+    }
+
     void test_reattachingDestroysTheDetachedWindow()
     {
         QPointer<TDetachedWindow> pWindow = mpDetachedWindow;

@@ -192,8 +192,9 @@ public:
     // go back to it on returning to the profile.
     void recordActiveCommandLine(TCommandLine*);
     void forgetCommandLine(TCommandLine*);
-    // Raises and focuses that command line, or this console's own when none is on record.
-    void focusActiveCommandLine();
+    // Raises and focuses that command line, or this console's own when none is on record
+    // or, given pWindow, when the one on record is outside it.
+    void focusActiveCommandLine(const QWidget* pWindow = nullptr);
     // The command line operations the core forwards to this view by name, never
     // by widget. An empty name or "main" is this console's own command line, any
     // other one made by createCommandLine() or a mini console's; each reports

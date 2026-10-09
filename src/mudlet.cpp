@@ -9019,7 +9019,8 @@ void mudlet::detachTab(int tabIndex, const QPoint& position)
         detachedWindow->raise();
         detachedWindow->activateWindow();
         if (pDetachedHost && pDetachedHost->mpConsole) {
-            pDetachedHost->mpConsole->focusActiveCommandLine();
+            // A user window stays docked in the main window, and activating its command line would take the keyboard back there
+            pDetachedHost->mpConsole->focusActiveCommandLine(detachedWindow);
         }
     });
 
