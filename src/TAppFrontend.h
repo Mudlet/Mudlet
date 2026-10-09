@@ -25,6 +25,7 @@
 #include <optional>
 
 class Host;
+class QObject;
 class QSize;
 
 // The application shell as core code sees it. The mudlet main window implements it;
@@ -70,6 +71,12 @@ public:
     virtual bool requestProfileTabClose(const QString& profileName) = 0;
     // Re-lays out the active profile's console from a short timer, e.g. after a toolbar is shown or hidden.
     virtual void processEventLoopHack() = 0;
+    // Puts up the profile's composer showing title and text; the window deletes itself once closed.
+    virtual QObject* openComposer(Host* pHost, const QString& title, const QString& text) = 0;
+    virtual void closeComposer(QObject* composer) = 0;
+    // Each returns an empty string if the player cancels.
+    virtual QString getOpenFileName(const QString& title, const QString& location) = 0;
+    virtual QString getExistingDirectory(const QString& title, const QString& location) = 0;
 
     // Surfaces a command can be placed on. A client with different chrome maps
     // these onto whatever it has; one that has only a menu honours Menu alone.

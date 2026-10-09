@@ -57,6 +57,7 @@
 #include "XMLimport.h"
 
 #include "dlgAboutDialog.h"
+#include "dlgComposer.h"
 #include "dlgConnectionProfiles.h"
 #include "dlgIRC.h"
 #include "dlgMapper.h"
@@ -4339,6 +4340,32 @@ int mudlet::profileTabIndex(const QString& profileName) const
 void mudlet::setActiveProfileTab(const QString& profileName)
 {
     mpTabBar->setCurrentIndex(mpTabBar->tabIndex(profileName));
+}
+
+QObject* mudlet::openComposer(Host* pHost, const QString& title, const QString& text)
+{
+    auto* composer = new dlgComposer(pHost);
+    composer->init(title, text);
+    composer->raise();
+    composer->show();
+    return composer;
+}
+
+void mudlet::closeComposer(QObject* composer)
+{
+    if (auto* window = qobject_cast<QWidget*>(composer)) {
+        window->close();
+    }
+}
+
+QString mudlet::getOpenFileName(const QString& title, const QString& location)
+{
+    return QFileDialog::getOpenFileName(nullptr, title, location);
+}
+
+QString mudlet::getExistingDirectory(const QString& title, const QString& location)
+{
+    return QFileDialog::getExistingDirectory(nullptr, title, location);
 }
 
 std::optional<QSize> mudlet::getImageSize(const QString& imageLocation)

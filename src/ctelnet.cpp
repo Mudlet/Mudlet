@@ -45,7 +45,6 @@
 #include "TEncodingHelper.h"
 #include "utils.h"
 #include "discord.h"
-#include "dlgComposer.h"
 #include "TAppFrontend.h"
 #include "MudletReplay.h"
 #include "MMCPServer.h"
@@ -4431,15 +4430,14 @@ void cTelnet::setATCPVariables(const QByteArray& msg)
             return;
         }
 
-        mpComposer = new dlgComposer(mpHost);
         //FIXME
         if (arg.startsWith(QChar::Space)) {
             arg.remove(0, 1);
         }
 
-        mpComposer->init(title, arg);
-        mpComposer->raise();
-        mpComposer->show();
+        if (auto* frontend = TAppFrontend::instance()) {
+            mpComposer = frontend->openComposer(mpHost, title, arg);
+        }
         return;
     }
 
@@ -4962,7 +4960,9 @@ void cTelnet::atcpComposerCancel()
     if (!mpComposer) {
         return;
     }
-    mpComposer->close();
+    if (auto* frontend = TAppFrontend::instance()) {
+        frontend->closeComposer(mpComposer);
+    }
     mpComposer = nullptr;
     // This will be unaffected by Mud Server encoding:
     std::string output = "*q\nno\n";
@@ -5014,7 +5014,9 @@ void cTelnet::atcpComposerSave(QString txt)
         return;
     }
 
-    mpComposer->close();
+    if (auto* frontend = TAppFrontend::instance()) {
+        frontend->closeComposer(mpComposer);
+    }
     mpComposer = nullptr;
 }
 

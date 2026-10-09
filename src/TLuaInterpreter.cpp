@@ -53,7 +53,6 @@
 #include "TEncodingHelper.h"
 #include "TIrcClient.h"
 #include "TTimer.h"
-#include "dlgComposer.h"
 #include "dlgMapper.h"
 #include "TAppFrontend.h"
 #include "utils.h"
@@ -4217,10 +4216,9 @@ void TLuaInterpreter::handleIreComposerEdit(const QString& jsonData)
         return;
     }
 
-    host.mTelnet.mpComposer = new dlgComposer(&host);
-    host.mTelnet.mpComposer->init(title, initialText);
-    host.mTelnet.mpComposer->raise();
-    host.mTelnet.mpComposer->show();
+    if (auto* frontend = TAppFrontend::instance()) {
+        host.mTelnet.mpComposer = frontend->openComposer(&host, title, initialText);
+    }
 }
 
 // No documentation available in wiki - internal function

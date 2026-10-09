@@ -92,6 +92,7 @@ set(WINDOW_GROUP_TEST_SOURCES
     WrapLineRewrapTest.cpp
     ScrollLostOnPartialRepaintTest.cpp
     ScrollBarContrastTest.cpp
+    ScriptFileDialogTest.cpp
     OpaqueConsolePaintTest.cpp
 )
 
