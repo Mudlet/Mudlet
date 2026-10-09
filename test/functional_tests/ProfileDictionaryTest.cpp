@@ -77,6 +77,7 @@ private:
     const QString mAffixProfile = qsl("dictionary affix");
     const QString mCountlessProfile = qsl("dictionary countless");
     const QString mVanishedProfile = qsl("dictionary vanished");
+    const QString mUncountedSaveProfile = qsl("dictionary uncounted save");
 
     QString dictionaryPath(const QString& profileName) const { return MudletApp::getMudletPath(enums::profileDataItemPath, profileName, qsl("profile.dic")); }
 
@@ -138,6 +139,7 @@ private slots:
         makeProfileFolder(mAffixProfile);
         makeProfileFolder(mCountlessProfile);
         makeProfileFolder(mVanishedProfile);
+        makeProfileFolder(mUncountedSaveProfile);
     }
 
     void cleanupTestCase()
@@ -302,6 +304,17 @@ private slots:
         QVERIFY2(TSpellChecker::saveDictionary(MudletApp::getMudletPath(enums::profileDataItemPath, mVanishedProfile, qsl("profile")), wordSet),
                  "saveDictionary() gave up on the words because the file it was saving them to had gone");
         QCOMPARE(dictionaryLines(mVanishedProfile), QStringList({qsl("2"), qsl("frotz"), qsl("zorkmid")}));
+    }
+
+    // Nor a file that lost its count since it was read, which no load has put right yet
+    void test_savingOverADictionaryWithNoCountKeepsTheWords()
+    {
+        writeDictionary(mUncountedSaveProfile, qsl("zorkmid\n"));
+        QSet<QString> wordSet{qsl("zorkmid"), qsl("frotz")};
+
+        QVERIFY2(TSpellChecker::saveDictionary(MudletApp::getMudletPath(enums::profileDataItemPath, mUncountedSaveProfile, qsl("profile")), wordSet),
+                 "saveDictionary() gave up on the words because the file it was saving them to had no count");
+        QCOMPARE(dictionaryLines(mUncountedSaveProfile), QStringList({qsl("2"), qsl("frotz"), qsl("zorkmid")}));
     }
 };
 
