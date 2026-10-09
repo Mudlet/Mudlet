@@ -93,7 +93,7 @@ private:
     // once all lineCount of them are in the buffer once each and in order
     int firstBurstLineOutOfPlace(const int lineCount) const
     {
-        TBuffer& buffer = mpHost->mpConsole->buffer;
+        TBuffer& buffer = mpHost->mainConsoleView()->buffer;
         const QString marker = qsl("BURSTLINE ");
         int expected = 0;
         for (int i = 0, last = buffer.getLastLineNumber(); i <= last; ++i) {
@@ -195,7 +195,7 @@ private slots:
         // 1.3 MB of text from well under one read of compressed data, where
         // the drain stops at 8 output buffers of 100 KB each
         constexpr int lineCount = 20000;
-        mpHost->mpConsole->buffer.clear();
+        mpHost->mainConsoleView()->buffer.clear();
 
         const QByteArray text = burstOf(lineCount) + "MCCP BURST END\r\n";
         // qCompress() prefixes the zlib stream with the source length
@@ -209,7 +209,7 @@ private slots:
             QCoreApplication::processEvents(QEventLoop::AllEvents, 50);
         }
         QVERIFY2(tailContains(qsl("MCCP BURST END")),
-                 qPrintable(qsl("the compressed burst stopped part-way through, at buffer line %1 of %2.").arg(mpHost->mpConsole->buffer.getLastLineNumber()).arg(lineCount)));
+                 qPrintable(qsl("the compressed burst stopped part-way through, at buffer line %1 of %2.").arg(mpHost->mainConsoleView()->buffer.getLastLineNumber()).arg(lineCount)));
         const int outOfPlace = firstBurstLineOutOfPlace(lineCount);
         QVERIFY2(outOfPlace < 0, qPrintable(qsl("burst line %1 is missing, repeated or out of order.").arg(outOfPlace)));
     }
