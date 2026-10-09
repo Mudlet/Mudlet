@@ -6795,9 +6795,8 @@ bool TBuffer::deleteLines(int from, int to)
             noteRemovedLinks(buffer[i], mLinesRemovedTotal + i);
         }
 
-        // What was wrapped off a line that goes starts a line of its own now,
-        // rather than following on from whichever line is left above it - and
-        // the line it was wrapped off is the last one in the range to start one
+        // A line continuing a logical line that starts in the range takes the stamp of the last
+        // line there to start one; below a range of continuations alone it still continues the line above
         if (wrapsFromPreviousLine(to + 1)) {
             for (int i = to; i >= from; --i) {
                 if (!wrapsFromPreviousLine(i)) {
