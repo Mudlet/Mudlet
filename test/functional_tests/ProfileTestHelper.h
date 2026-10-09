@@ -97,9 +97,12 @@ inline Host* create(const QString& profileName,
                     const QString& port,
                     const std::chrono::milliseconds timeout = std::chrono::seconds(15))
 {
-    // A test's own config dir reads as a new installation, so the first-run tour would open a second
-    // after the profile loads and take the keyboard from the test. The tour is decided while this
-    // connects, so a test wanting it has to open its profile without create().
+    if (!MudletApp::getQSettings()) {
+        qWarning() << "TestProfile::create() - called before mudlet::setupConfig(), so there are no settings to open a profile with";
+        return nullptr;
+    }
+    // A fresh config dir reads as a first run, whose tour opens a second after the profile loads and takes the
+    // keyboard. This stops only the tour: the rest of the first-run guidance needs a setting written before init().
     TUiTour::rememberShown();
     mudlet::self()->startAutoLogin({});
 
