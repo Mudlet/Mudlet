@@ -1020,6 +1020,23 @@ describe("Tests a character whose bytes are split by the posting timeout", funct
     assert.same({"split:HP:100 > ", ":end"}, shownSince(mark))
   end)
 
+  it("adds no blank line for a marker with no text ahead of a sequence", function()
+    if timerUnavailable() then return end
+    using("UTF-8")
+    local behaviour = getConfig("blankLinesBehaviour")
+    finally(function() setConfig("blankLinesBehaviour", behaviour) end)
+    setConfig("blankLinesBehaviour", "replacewithspace")
+
+    for _, pieces in ipairs({{"\27]0;ti", "tle\27\\"}, {"\27[3", "1m"}}) do
+      local mark = getLastLineNumber("main")
+      feed(pieces[1])
+      beQuiet()
+      feed(pieces[2] .. "Room\n")
+      beQuiet()
+      assert.equals("Room", getLines("main", mark, mark + 1)[1], "after " .. pieces[1]:sub(2))
+    end
+  end)
+
   it("spends a held character set designation on the byte after the pause", function()
     if timerUnavailable() then return end
     using("UTF-8")

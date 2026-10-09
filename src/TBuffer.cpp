@@ -2258,7 +2258,8 @@ void TBuffer::commitLineData(QString line, std::vector<TChar> chars, const char 
     // Qt struggles to report blank lines on Windows to screen readers, this is a workaround
     // https://bugreports.qt.io/browse/QTBUG-105035
     if (Q_UNLIKELY(line.isEmpty())) {
-        if (mpHost->mBlankLineBehaviour == Host::BlankLineBehaviour::Hide) {
+        // An empty timer posting is dropped below, so it must not become a blank line first:
+        if (ch == CHAR_CARRIAGE_RETURN || mpHost->mBlankLineBehaviour == Host::BlankLineBehaviour::Hide) {
             return;
         } else if (mpHost->mBlankLineBehaviour == Host::BlankLineBehaviour::ReplaceWithSpace) { // NOLINT(readability-else-after-return)
             // Note: we are using the background color for the
