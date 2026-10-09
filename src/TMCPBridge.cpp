@@ -74,23 +74,6 @@ bool writeConfigFile(const QString& path, const QByteArray& contents)
 
 // Claude Desktop lists a local server under its mcpServers key verbatim
 const QString csmClaudeDesktopKey = qsl("Mudlet");
-// What earlier builds registered under; only an entry that runs the bridge is ours to move
-const QString csmLegacyClaudeDesktopKey = qsl("mudlet");
-
-bool runsTheBridge(const QJsonObject& entry)
-{
-    return entry.value(qsl("args")).toArray().contains(QJsonValue(qsl("--mcp-bridge")));
-}
-
-QJsonObject existingClaudeDesktopEntry(const QJsonObject& servers)
-{
-    const QJsonObject current = servers.value(csmClaudeDesktopKey).toObject();
-    if (!current.isEmpty()) {
-        return current;
-    }
-    const QJsonObject legacy = servers.value(csmLegacyClaudeDesktopKey).toObject();
-    return runsTheBridge(legacy) ? legacy : QJsonObject();
-}
 } // namespace
 
 TMCPBridge::TMCPBridge(const QString& configDir)
@@ -498,7 +481,7 @@ QByteArray TMCPBridge::mergeClaudeDesktopConfig(const QByteArray& existingConfig
     // The one exception is env, where the user's own variables survive - only
     // XDG_CONFIG_HOME is Mudlet's to set or clear.
     QJsonObject merged = entry;
-    QJsonObject env = existingClaudeDesktopEntry(servers).value(qsl("env")).toObject();
+    QJsonObject env = servers.value(csmClaudeDesktopKey).toObject().value(qsl("env")).toObject();
     const QJsonObject freshEnv = entry.value(qsl("env")).toObject();
     if (freshEnv.contains(qsl("XDG_CONFIG_HOME"))) {
         env[qsl("XDG_CONFIG_HOME")] = freshEnv.value(qsl("XDG_CONFIG_HOME"));
@@ -509,9 +492,6 @@ QByteArray TMCPBridge::mergeClaudeDesktopConfig(const QByteArray& existingConfig
         merged.remove(qsl("env"));
     } else {
         merged[qsl("env")] = env;
-    }
-    if (runsTheBridge(servers.value(csmLegacyClaudeDesktopKey).toObject())) {
-        servers.remove(csmLegacyClaudeDesktopKey);
     }
     servers[csmClaudeDesktopKey] = merged;
     root[qsl("mcpServers")] = servers;
@@ -579,14 +559,14 @@ void TMCPBridge::refreshClaudeDesktopEntry()
         qWarning() << "TMCPBridge::refreshClaudeDesktopEntry() WARNING -" << path << "does not hold a JSON object, so its Mudlet entry cannot be checked";
         return;
     }
-    const QJsonObject entry = existingClaudeDesktopEntry(doc.object().value(qsl("mcpServers")).toObject());
+    const QJsonObject entry = doc.object().value(qsl("mcpServers")).toObject().value(csmClaudeDesktopKey).toObject();
     if (entry.isEmpty()) {
         // The user never pressed the connect button, or took the entry out; either way
         // registering Mudlet with Claude Desktop stays their call, not a startup side
         // effect.
         return;
     }
-    if (!runsTheBridge(entry)) {
+    if (!entry.value(qsl("args")).toArray().contains(QJsonValue(qsl("--mcp-bridge")))) {
         // Repurposed for something hand-rolled; leave it be.
         return;
     }

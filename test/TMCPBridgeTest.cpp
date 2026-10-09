@@ -74,7 +74,6 @@ private slots:
     void mergeIntoEmptyConfig();
     void mergeKeepsOtherServersAndKeys();
     void mergeReplacesOwnEntry();
-    void mergeLeavesSomeoneElsesLowercaseEntry();
     void mergeKeepsUserEnvVars();
     void mergeRefusesGarbage();
     void mergeRefusesNonObjectServers();
@@ -395,32 +394,16 @@ void TMCPBridgeTest::mergeKeepsOtherServersAndKeys()
 
 void TMCPBridgeTest::mergeReplacesOwnEntry()
 {
-    const QByteArray existing = R"({"mcpServers":{"mudlet":{"command":"/old/gone/mudlet","args":["--mcp-bridge"]}}})";
+    const QByteArray existing = R"({"mcpServers":{"Mudlet":{"command":"/old/gone/mudlet","args":["--mcp-bridge"]}}})";
     bool ok = false;
     const QJsonObject merged = parse(TMCPBridge::mergeClaudeDesktopConfig(existing, TMCPBridge::claudeDesktopEntry(qsl("/new/mudlet")), ok));
     QVERIFY(ok);
     QCOMPARE(merged.value(qsl("mcpServers")).toObject().value(qsl("Mudlet")).toObject().value(qsl("command")).toString(), qsl("/new/mudlet"));
-    // Earlier builds registered under the lowercase key; leaving it would list Mudlet twice
-    QVERIFY(!merged.value(qsl("mcpServers")).toObject().contains(qsl("mudlet")));
-}
-
-void TMCPBridgeTest::mergeLeavesSomeoneElsesLowercaseEntry()
-{
-    const QByteArray existing = R"({"mcpServers":{"mudlet":{"command":"/opt/something-else","args":["--other"],"env":{"THEIRS":"1"}}}})";
-    QJsonObject fresh;
-    fresh[qsl("command")] = qsl("/new/mudlet");
-    fresh[qsl("args")] = QJsonArray{qsl("--mcp-bridge")};
-    bool ok = false;
-    const QJsonObject servers = parse(TMCPBridge::mergeClaudeDesktopConfig(existing, fresh, ok)).value(qsl("mcpServers")).toObject();
-    QVERIFY(ok);
-    QCOMPARE(servers.value(qsl("mudlet")).toObject().value(qsl("command")).toString(), qsl("/opt/something-else"));
-    QCOMPARE(servers.value(qsl("Mudlet")).toObject().value(qsl("command")).toString(), qsl("/new/mudlet"));
-    QVERIFY(!servers.value(qsl("Mudlet")).toObject().contains(qsl("env")));
 }
 
 void TMCPBridgeTest::mergeKeepsUserEnvVars()
 {
-    const QByteArray existing = R"({"mcpServers":{"mudlet":{"command":"/old/mudlet","args":["--mcp-bridge"],"env":{"MY_VAR":"kept","XDG_CONFIG_HOME":"/stale"},"type":"stdio"}}})";
+    const QByteArray existing = R"({"mcpServers":{"Mudlet":{"command":"/old/mudlet","args":["--mcp-bridge"],"env":{"MY_VAR":"kept","XDG_CONFIG_HOME":"/stale"},"type":"stdio"}}})";
 
     // Built by hand rather than through claudeDesktopEntry, so the case does not
     // depend on what XDG_CONFIG_HOME holds in the environment running the tests.
@@ -621,7 +604,7 @@ void TMCPBridgeTest::refreshLeavesRepurposedEntry()
     ScopedClaudeConfigDirRedirect redirect;
     QVERIFY(redirect.tempDir.isValid());
     QVERIFY(redirect.createClaudeDir());
-    const QByteArray original = R"({"mcpServers":{"mudlet":{"command":"/opt/something-else","args":["--other"]}}})";
+    const QByteArray original = R"({"mcpServers":{"Mudlet":{"command":"/opt/something-else","args":["--other"]}}})";
     QVERIFY(redirect.writeConfig(original));
     TMCPBridge::refreshClaudeDesktopEntry();
     QCOMPARE(redirect.readConfig(), original);
@@ -632,12 +615,11 @@ void TMCPBridgeTest::refreshRepointsStaleEntry()
     ScopedClaudeConfigDirRedirect redirect;
     QVERIFY(redirect.tempDir.isValid());
     QVERIFY(redirect.createClaudeDir());
-    QVERIFY(redirect.writeConfig(R"({"mcpServers":{"filesystem":{"command":"npx"},"mudlet":{"command":"/old/gone/mudlet","args":["--mcp-bridge"],"env":{"MY_VAR":"kept"}}}})"));
+    QVERIFY(redirect.writeConfig(R"({"mcpServers":{"filesystem":{"command":"npx"},"Mudlet":{"command":"/old/gone/mudlet","args":["--mcp-bridge"],"env":{"MY_VAR":"kept"}}}})"));
     TMCPBridge::refreshClaudeDesktopEntry();
     const QJsonObject servers = parse(redirect.readConfig()).value(qsl("mcpServers")).toObject();
     QCOMPARE(servers.value(qsl("Mudlet")).toObject().value(qsl("command")).toString(), TMCPBridge::mudletBinaryPath());
     QCOMPARE(servers.value(qsl("Mudlet")).toObject().value(qsl("env")).toObject().value(qsl("MY_VAR")).toString(), qsl("kept"));
-    QVERIFY(!servers.contains(qsl("mudlet")));
     QCOMPARE(servers.value(qsl("filesystem")).toObject().value(qsl("command")).toString(), qsl("npx"));
 }
 
