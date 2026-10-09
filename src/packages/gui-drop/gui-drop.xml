@@ -51,9 +51,10 @@ function GUIDropManager.createDropManager()
             if v.windowname ~= "main" then
                 container = v.containervar or GUIDropManager.getKeyFrom(v.container, ".container")
                 if not container then
-                    container = "Geyser.windowList."..v.windowname.."Container.windowList."..v.windowname
+                    -- a user window's name can hold spaces, so it is quoted
+                    container = string.format("Geyser.windowList[%q].windowList[%q]", v.windowname.."Container", v.windowname)
                 end
-                containervar = [[, containervar = "]]..container..[["]]
+                containervar = ", containervar = "..string.format("%q", container)
                 v.containervar = container
                 container = ", "..container
             end
@@ -98,8 +99,12 @@ end</script>
     end
     -- the key found is written into the GUIDropManager script, so only keys that
     -- make a valid Lua path are followed
+    local keywords = {["and"] = true, ["break"] = true, ["do"] = true, ["else"] = true, ["elseif"] = true,
+        ["end"] = true, ["false"] = true, ["for"] = true, ["function"] = true, ["if"] = true, ["in"] = true,
+        ["local"] = true, ["nil"] = true, ["not"] = true, ["or"] = true, ["repeat"] = true, ["return"] = true,
+        ["then"] = true, ["true"] = true, ["until"] = true, ["while"] = true}
     local function validName(key)
-        return type(key) == "string" and key:match("^[%a_][%w_]*$") ~= nil
+        return type(key) == "string" and key:match("^[%a_][%w_]*$") ~= nil and not keywords[key]
     end
     for k,v in pairs(table) do
         if type(k) == "string" and (iteration &gt; 1 or validName(k)) then

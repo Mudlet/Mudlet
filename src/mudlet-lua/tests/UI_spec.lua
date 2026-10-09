@@ -8377,11 +8377,18 @@ describe("Tests the gui-drop package's image drops", function()
 
   it("keeps an image dropped into a user window that a script holds under any key", function()
     userWindow = Geyser.UserWindow:new({name = "guiDropSpecWindow", x = 10, y = 10, width = 200, height = 150})
-    _G.guiDropSpecWindows = {["chat window"] = userWindow, [true] = {}}
+    _G.guiDropSpecWindows = {["chat window"] = userWindow, ["end"] = userWindow, [true] = {}}
     finally(function() _G.guiDropSpecWindows = nil end)
     local ok, err = pcall(GUIDropManager.ImageDrop, "sysDropEvent", imageAt("plain", "guiDropSpecHeldPic.png"), "png", 10, 10, "guiDropSpecWindow")
     assert.is_true(ok, tostring(err))
     assert.is_truthy(storedScript():find("GUIDropImages.guiDropSpecHeldPic = ", 1, true))
+  end)
+
+  it("keeps an image dropped into a user window whose name has a space in it", function()
+    userWindow = Geyser.UserWindow:new({name = "guiDrop spec window", x = 10, y = 10, width = 200, height = 150})
+    local ok, err = pcall(GUIDropManager.ImageDrop, "sysDropEvent", imageAt("plain", "guiDropSpecSpacedPic.png"), "png", 10, 10, "guiDrop spec window")
+    assert.is_true(ok, tostring(err))
+    assert.is_truthy(storedScript():find("GUIDropImages.guiDropSpecSpacedPic = ", 1, true))
   end)
 
   it("converts a dropped image to a label without it coming back as a container", function()
