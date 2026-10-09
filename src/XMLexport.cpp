@@ -525,8 +525,9 @@ void XMLexport::writeHost(Host* pHost, pugi::xml_node mudletPackage)
 
     if (useSecureStorage) {
         // Modern versions: store in secure storage, clear from XML
-        if (!pHost->mProxyPassword.isEmpty()) {
-            CredentialManager::storeCredential(pHost->getName(), "proxy", pHost->mProxyPassword);
+        if (!pHost->mProxyPassword.isEmpty() && !CredentialManager::storeCredential(pHost->getName(), "proxy", pHost->mProxyPassword)) {
+            //: Shown in the profile's main window when it is saved but its proxy password could not be, for example because there is nowhere to keep the key that encrypts it
+            pHost->postMessage(tr("[ WARN ]  - The proxy password could not be saved, so the next time this profile is loaded it will have whichever one was saved before, if any."));
         }
         host.append_attribute("mProxyPassword") = "";
     } else {
