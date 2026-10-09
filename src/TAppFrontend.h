@@ -20,6 +20,8 @@
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
 
+#include <optional>
+
 class Host;
 class QString;
 
@@ -40,6 +42,15 @@ public:
     virtual void handleTelnetUri(const QString& uri) = 0;
     // Only the profile in the active tab drives the menu's checkbox.
     virtual void setCompactInputLineChecked(Host* pHost, bool checked) = 0;
+    virtual void armForceClose() = 0;
+    virtual bool openWebPage(const QString& url) = 0;
+    // Without msecs, the frontend picks how long the notification stays up.
+    virtual void showNotification(const QString& title, const QString& text, std::optional<int> msecs) = 0;
+    virtual bool drawUpperLowerLevels() const = 0;
+    virtual void setDrawUpperLowerLevels(bool draw) = 0;
+    virtual void updateMapActionAvailability() = 0;
+    virtual bool showTabConnectionIndicators() const = 0;
+    virtual void setShowTabConnectionIndicators(bool show) = 0;
 
 protected:
     // The main window owns itself, so nothing deletes it through this interface.

@@ -5209,6 +5209,24 @@ describe("Tests the profile colour set behind setCustomEnvColor", function()
   end)
 end)
 
+describe("Tests the app-wide mapper options in getConfig and setConfig", function()
+  setup(function()
+    openMapWidget()
+  end)
+
+  -- setConfig takes map options only while a mapper exists, so the generic
+  -- round-trip in Other_spec never reaches this one
+  it("round-trips showUpperLowerLevels", function()
+    local original = getConfig("showUpperLowerLevels")
+    finally(function() setConfig("showUpperLowerLevels", original) end)
+
+    assert.is_true(setConfig("showUpperLowerLevels", not original))
+    assert.are.equal(not original, getConfig("showUpperLowerLevels"))
+    assert.is_true(setConfig("showUpperLowerLevels", original))
+    assert.are.equal(original, getConfig("showUpperLowerLevels"))
+  end)
+end)
+
 describe("Tests closing another profile that opened a map widget", function()
   local profilesDirectory = getMudletHomeDir():match("^(.*)[/\\]")
   local name = "mudlet-spec-map-widget-close"
