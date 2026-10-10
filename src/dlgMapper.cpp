@@ -825,10 +825,11 @@ void dlgMapper::sync2DViewFrom3D()
     if (!mpMap->mpRoomDB->getArea(areaId)) {
         return;
     }
+    // Read first: switchArea() recenters the 3D view as well
+    const QVector3D center = modernWidget->viewCenter();
     if (areaId != mp2dMap->mAreaID) {
         mp2dMap->switchArea(areaId);
     }
-    const QVector3D center = modernWidget->viewCenter();
     mp2dMap->mMapCenterX = center.x();
     mp2dMap->mMapCenterY = -center.y();
     mp2dMap->mMapCenterZ = qRound(center.z());
