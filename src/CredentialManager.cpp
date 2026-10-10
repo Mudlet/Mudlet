@@ -274,7 +274,16 @@ void CredentialManager::cleanupCurrentOperation()
             disconnect(mCurrentJob, nullptr, this, nullptr);
         }
 
-        detachJob(mCurrentJob);
+        if (mCurrentJobFinished) {
+            // The keychain has answered, so QtKeychain is done with the job and deleting it is both
+            // safe and necessary: its queued result handler will not arrive, this manager may be going
+            // away with it, and Job::emitFinished() read autoDelete as the job answered - too early for
+            // detachJob() to make it delete itself now. Detached it would keep the password it carries.
+            mCurrentJob->setParent(nullptr);
+            mCurrentJob->deleteLater();
+        } else {
+            detachJob(mCurrentJob);
+        }
         mCurrentJob = nullptr;
     }
 
@@ -638,6 +647,24 @@ void CredentialManager::credentialExists(const QString& profileName, const QStri
         }
     }
     retrievePassword(profileName, key, std::move(answer), nullptr, nullptr, scope);
+}
+
+// Takes over a job's lifetime for one operation: its result handler deletes it, so QtKeychain must
+// not, which leaves cleanupCurrentOperation() needing to know whether the keychain has answered yet.
+void CredentialManager::trackCurrentJob(QKeychain::Job* job)
+{
+    job->setAutoDelete(false);
+    mCurrentJob = job;
+    mCurrentJobFinished = false;
+    // Direct, unlike the result handlers, so this is set while the job is still emitting finished()
+    connect(
+            job,
+            &QKeychain::Job::finished,
+            this,
+            [this]() {
+                mCurrentJobFinished = true;
+            },
+            Qt::DirectConnection);
 }
 
 void CredentialManager::startJob(QKeychain::Job* job)
@@ -1163,9 +1190,8 @@ void CredentialManager::storeCredential(const QString& service, const QString& a
 
     // Store password directly in keychain (keychain handles encryption)
     writeJob->setTextData(password);
-    writeJob->setAutoDelete(false);
 
-    mCurrentJob = writeJob;
+    trackCurrentJob(writeJob);
     mCurrentCallback = callback;
     mCurrentOperationDescription = qsl("keychain write for profile \"%1\", key \"%2\" (entry \"%3\")").arg(profileName, account, service);
 
@@ -1257,9 +1283,8 @@ void CredentialManager::removeCredential(const QString& service, const QString& 
     // Use service as the key - on Windows, only setKey() value is used as the credential target,
     // so using account ("character") would cause all profiles to share the same credential
     deleteJob->setKey(service);
-    deleteJob->setAutoDelete(false);
 
-    mCurrentJob = deleteJob;
+    trackCurrentJob(deleteJob);
     mCurrentCallback = callback;
     mCurrentOperationDescription = qsl("keychain removal for profile \"%1\", key \"%2\" (entry \"%3\")").arg(profileName, account, service);
 
@@ -1296,8 +1321,7 @@ void CredentialManager::removeCredential(const QString& service, const QString& 
                 mCurrentJob = nullptr;
                 auto* bareJob = new QKeychain::DeletePasswordJob(QString(), this);
                 bareJob->setKey(service);
-                bareJob->setAutoDelete(false);
-                mCurrentJob = bareJob;
+                trackCurrentJob(bareJob);
                 // Abandoning this one can leave a pre-0.17 bare entry behind, and a later read's compat
                 // migration would restore the credential from it.
                 mCurrentOperationDescription = qsl("bare-name keychain sweep for profile \"%1\", key \"%2\"").arg(profileName, account);
@@ -1388,9 +1412,8 @@ void CredentialManager::isKeychainAvailable(AvailabilityCallback callback)
     // Test keychain availability by trying to read a non-existent key
     auto* testJob = new QKeychain::ReadPasswordJob(qsl("MudletKeychainTest"), this);
     testJob->setKey(qsl("availability_test"));
-    testJob->setAutoDelete(false);
 
-    mCurrentJob = testJob;
+    trackCurrentJob(testJob);
     mCurrentAvailabilityCallback = callback;
     mCurrentOperationDescription = qsl("keychain availability probe");
 
