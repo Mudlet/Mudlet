@@ -1498,12 +1498,13 @@ map.help.start_mapping = [[
         syntax: &lt;yellow&gt;start mapping [area name]&lt;reset&gt;
 
         This command instructs the script to add new content to the map when it
-        is seen. When first used, an area name is mandatory, so that an area is
-        created for new rooms to be placed in. If used with an area name while
-        the map shows the character within a room on the map, that room will be
-        moved to be in the named area, if it is not already in it. If used
-        without an area name, the room is not moved, and mapping begins in the
-        area the character is currently located in.
+        is seen. When first used without an area name, new rooms are placed in an
+        area called "New area", which you can rename later with area rename.
+        If used with an area name while the map shows the character within a
+        room on the map, that room will be moved to be in the named area, if it
+        is not already in it. If used without an area name, the room is not
+        moved, and mapping begins in the area the character is currently
+        located in.
 ]]
 map.help.stop_mapping = [[
     &lt;cyan&gt;Stop Mapping&lt;reset&gt;
@@ -1910,7 +1911,7 @@ map.help.quick_start = [[
 
     1. &lt;link: start mapping&gt;start mapping &lt;optional area name&gt;&lt;/link&gt;
        If both room name and exits are good, you can start mapping! Give it the
-       area name you're currently in, usually optional but required for the first one.
+       area name you're currently in, or leave it out to start with "New area".
     2. &lt;link: find prompt&gt;find prompt&lt;/link&gt;
        Room name or exits aren't recognised? Try this command then. It will make
        the script start looking for a prompt using several standard prompt
@@ -3386,9 +3387,11 @@ function map.start_mapping(area_name)
         area_name = areas[map.currentArea]
     end
     if not area_name then
-        show_err("You haven't started mapping yet, how should the first area be called? Set it with: &lt;yellow&gt;start mapping &lt;area name&gt;&lt;reset&gt;")
+        area_name = "New area"
+        map.echo("Now mapping in area: " .. area_name .. ". Rename it any time with: &lt;yellow&gt;area rename &lt;new name&gt;&lt;reset&gt;")
+    else
+        map.echo("Now mapping in area: " .. area_name)
     end
-    map.echo("Now mapping in area: " .. area_name)
     map.set("mapping", true)
     find_area(area_name)
     rooms = find_room(map.currentName, map.currentArea)
