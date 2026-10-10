@@ -446,6 +446,37 @@ headlessAppResult = ok and 'ok' or tostring(err)
         QCOMPARE(luaGlobalString(host, "headlessAppResult"), qsl("ok"));
     }
 
+    void test_scriptsSeeNoMainWindowAsTheyDidBeforeTheNullAppView()
+    {
+        QVERIFY2(!TAppFrontend::hasView(), "A main window exists, so this run is not headless.");
+
+        const QString hostname = qsl("Test-Headless-Host-App-Answers");
+        QVERIFY2(HostManager::self()->addHost(hostname, QString(), QString(), QString()), "Could not create a profile with no main window.");
+        Host* host = HostManager::self()->getHost(hostname);
+        QVERIFY2(host, "The profile is not in the pool.");
+
+        // addCommand and setCommandPulse take this answer from the null view, removeCommand from its own check
+        const bool ran = host->getLuaInterpreter()->compileAndExecuteScript(qsl(R"lua(
+headlessAnswersResult = 'not run'
+local ok, err = pcall(function()
+  local missing = "mudlet instance not available"
+  local id, idMsg = addCommand({name = "Headless", menuPath = "Headless"})
+  assert(id == nil and idMsg == missing, "addCommand answered " .. tostring(id) .. ", " .. tostring(idMsg))
+  local pulse, pulseMsg = setCommandPulse(1, true)
+  assert(pulse == nil and pulseMsg == missing, "setCommandPulse answered " .. tostring(pulse) .. ", " .. tostring(pulseMsg))
+  local removed, removedMsg = removeCommand(1)
+  assert(removed == nil and removedMsg == missing, "removeCommand answered " .. tostring(removed) .. ", " .. tostring(removedMsg))
+  assert(invokeFileDialog(true, "headless") == "", "invokeFileDialog did not answer an empty string")
+  alert(0)
+  local shown, shownMsg = showToolBar("headless missing toolbar")
+  assert(shown == nil and type(shownMsg) == "string", "showToolBar did not answer nil and a message")
+end)
+headlessAnswersResult = ok and 'ok' or tostring(err)
+)lua"));
+        QVERIFY2(ran, "The Lua chunk did not run.");
+        QCOMPARE(luaGlobalString(host, "headlessAnswersResult"), qsl("ok"));
+    }
+
     void test_profileWithNoSettingsStoreTakesTheDefaults()
     {
         if (MudletApp::getQSettings()) {

@@ -4279,9 +4279,7 @@ void TLuaInterpreter::handleIreComposerEdit(const QString& jsonData)
         return;
     }
 
-    if (TAppFrontend::hasView()) {
-        host.mTelnet.mpComposer = TAppFrontend::instance()->openComposer(&host, title, initialText);
-    }
+    host.mTelnet.mpComposer = TAppFrontend::instance()->openComposer(&host, title, initialText);
 }
 
 // No documentation available in wiki - internal function

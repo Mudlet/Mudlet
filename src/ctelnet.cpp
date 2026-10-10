@@ -1255,7 +1255,7 @@ void cTelnet::slot_socketDisconnected()
     postMessage(msg);
 
 #if !defined(QT_NO_SSL)
-    if (sslerr && TAppFrontend::hasView()) {
+    if (sslerr) {
         // Got a secure connection error that should be shown in the preferences
         // of the profile that raised it, not whichever profile is active
         TAppFrontend::instance()->showOptionsDialog(qsl("tab_connection"), mpHost);
@@ -4434,9 +4434,7 @@ void cTelnet::setATCPVariables(const QByteArray& msg)
             arg.remove(0, 1);
         }
 
-        if (TAppFrontend::hasView()) {
-            mpComposer = TAppFrontend::instance()->openComposer(mpHost, title, arg);
-        }
+        mpComposer = TAppFrontend::instance()->openComposer(mpHost, title, arg);
         return;
     }
 
@@ -4959,9 +4957,7 @@ void cTelnet::atcpComposerCancel()
     if (!mpComposer) {
         return;
     }
-    if (TAppFrontend::hasView()) {
-        TAppFrontend::instance()->closeComposer(mpComposer);
-    }
+    TAppFrontend::instance()->closeComposer(mpComposer);
     mpComposer = nullptr;
     // This will be unaffected by Mud Server encoding:
     std::string output = "*q\nno\n";
@@ -5013,9 +5009,7 @@ void cTelnet::atcpComposerSave(QString txt)
         return;
     }
 
-    if (TAppFrontend::hasView()) {
-        TAppFrontend::instance()->closeComposer(mpComposer);
-    }
+    TAppFrontend::instance()->closeComposer(mpComposer);
     mpComposer = nullptr;
 }
 
