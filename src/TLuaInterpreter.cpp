@@ -6210,6 +6210,9 @@ int TLuaInterpreter::performHttpRequest(lua_State* L, const char* functionName, 
     if (!url.isValid()) {
         return warnArgumentValue(L, functionName, qsl("url is invalid, reason: %1.").arg(url.errorString()));
     }
+    if (!httpSchemeAllowed(url)) {
+        return warnArgumentValue(L, functionName, qsl("url is invalid, reason: unsupported scheme '%1', only http and https are allowed.").arg(url.scheme()));
+    }
 
     QNetworkRequest request = QNetworkRequest(url);
     MudletApp::setNetworkRequestDefaults(url, request);
