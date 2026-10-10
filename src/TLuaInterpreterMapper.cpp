@@ -743,7 +743,7 @@ int TLuaInterpreter::centerview(lua_State* L)
     }
 
     // Primary mapper behavior (original code)
-    if (!host.mpMap->mapViewFrontend()) {
+    if (!host.mapOpen()) {
         return warnArgumentValue(L, __func__, "you haven't opened a map yet");
     }
 
@@ -2088,7 +2088,7 @@ int TLuaInterpreter::getPlayerRoom(lua_State* L)
 {
     Host& host = getHostFromLua(L);
 
-    if (!host.mpMap || !host.mpMap->mpRoomDB || !host.mpMap->mapViewFrontend()) {
+    if (!host.mapOpen() || !host.mpMap->mpRoomDB) {
         return warnArgumentValue(L, __func__, "you haven't opened a map yet");
     }
 
@@ -2707,7 +2707,7 @@ int TLuaInterpreter::killMapInfo(lua_State* L)
 int TLuaInterpreter::loadJsonMap(lua_State* L)
 {
     Host* pHost = &getHostFromLua(L);
-    if (!pHost || !pHost->mpMap || !pHost->mpMap->mapViewFrontend()) {
+    if (!pHost || !pHost->mapOpen()) {
         return warnArgumentValue(L, __func__, "no map present or loaded");
     }
     if (pHost->mpMap->scriptCallbackInProgress()) {
@@ -3121,7 +3121,7 @@ int TLuaInterpreter::roomLocked(lua_State* L)
 int TLuaInterpreter::saveJsonMap(lua_State* L)
 {
     Host* pHost = &getHostFromLua(L);
-    if (!pHost || !pHost->mpMap || !pHost->mpMap->mapViewFrontend()) {
+    if (!pHost || !pHost->mapOpen()) {
         return warnArgumentValue(L, __func__, "no map present or loaded");
     }
 

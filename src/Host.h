@@ -318,6 +318,9 @@ public:
     // through it and has no other windows.
     TConsoleFrontend* consoleFrontend() const;
     bool hasConsoleView() const;
+    // Whether scripts see the map as open: once a mapper shows it, or always with no console view,
+    // where no mapper can be made and the model is the whole map.
+    bool mapOpen() const;
     void setMainConsoleView(TMainConsole* view);
     // Keeps TMainConsole's translation context, so the existing translations still apply.
     static QString loggingAnnouncementText(const bool isLogging, const QString& logFileName);
