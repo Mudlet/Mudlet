@@ -337,10 +337,13 @@ end
 
 describe("Tests the functionality of installPackage", function()
   it("raises a Lua error when called with no arguments", function()
-    -- the Lua wrapper that lets installPackage() take a URL indexes its
-    -- argument before the C++ side gets to report a "bad argument #1", so the
-    -- call fails less clearly than its siblings do
-    assert.has_error(function() installPackage() end)
+    assertArgError(function() installPackage() end, "installPackage: bad argument #1 type")
+  end)
+
+  it("raises the same argument error for a table as its siblings do", function()
+    -- the Lua wrapper that lets installPackage() take a URL must not try to
+    -- read a URL out of something that is not a string
+    assertArgError(function() installPackage({}) end, "installPackage: bad argument #1 type")
   end)
 
   it("returns nil+msg when given an empty path", function()
