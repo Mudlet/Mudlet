@@ -4501,7 +4501,10 @@ void Host::processGMCPDiscordStatus(const QJsonObject& discordInfo)
     if (gameName != QJsonValue::Undefined) {
         setDiscordGameName(gameName.toString());
         emit signal_discordGameChanged();
-        QPair<bool, QString> const richPresenceSupported = Discord::self()->gameIntegrationSupported(getUrl());
+        // A script's connectToServer() without saving leaves mUrl stale or empty
+        const auto [serverUrl, serverPort, connected] = mTelnet.getConnectionInfo();
+        Q_UNUSED(connected)
+        QPair<bool, QString> const richPresenceSupported = Discord::self()->gameIntegrationSupported(serverUrl);
         if (richPresenceSupported.first && Discord::self()->usingMudletsDiscordID(this)) {
             Discord::self()->setServerOrigin(this, DiscordSetDetail);
             Discord::self()->setDetailText(this, tr("Playing %1").arg(richPresenceSupported.second));
@@ -4509,7 +4512,7 @@ void Host::processGMCPDiscordStatus(const QJsonObject& discordInfo)
             Discord::self()->setLargeImage(this, richPresenceSupported.second);
             Discord::self()->setServerOrigin(this, DiscordSetLargeIconText);
             //: %1 is the game name and %2:%3 is game server address like: mudlet.org:23
-            Discord::self()->setLargeImageText(this, tr("%1 at %2:%3").arg(gameName.toString(), getUrl(), QString::number(getPort())));
+            Discord::self()->setLargeImageText(this, tr("%1 at %2:%3").arg(gameName.toString(), serverUrl, QString::number(serverPort)));
         } else {
             // We are using a custom application id, so the top line is
             // likely to be saying "Playing MudName"
@@ -4518,7 +4521,7 @@ void Host::processGMCPDiscordStatus(const QJsonObject& discordInfo)
                 Discord::self()->setDetailText(this, QString());
                 Discord::self()->setServerOrigin(this, DiscordSetLargeIconText);
                 //: %1 is the game name and %2:%3 is game server address like: mudlet.org:23
-                Discord::self()->setLargeImageText(this, tr("%1 at %2:%3").arg(gameName.toString(), getUrl(), QString::number(getPort())));
+                Discord::self()->setLargeImageText(this, tr("%1 at %2:%3").arg(gameName.toString(), serverUrl, QString::number(serverPort)));
                 Discord::self()->setServerOrigin(this, DiscordSetLargeIcon);
                 Discord::self()->setLargeImage(this, qsl("server-icon"));
             }
