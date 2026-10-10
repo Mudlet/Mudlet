@@ -369,7 +369,7 @@ private slots:
 
     QString joinedBuffer()
     {
-        auto console = mudlet::self()->getActiveHost()->mpConsole;
+        QPointer<TMainConsole> console = mudlet::self()->getActiveHost()->mainConsoleView();
         QString allText;
         for (int i = 0; i <= console->buffer.getLastLineNumber(); ++i) {
             allText.append(console->buffer.line(i)).append(QChar::Space);
