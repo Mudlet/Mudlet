@@ -20,9 +20,8 @@
 // The hidden-input box as a player drives it; the policy behind it is in
 // PasswordEntryPolicyTest.
 //
-// Budget: 5 WILL/WONT ECHO toggles inside 5 seconds latch an anomaly that
-// refuses ECHO for good (cTelnet::checkEchoAnomalyPattern()). init() clears
-// the window, so each case may make at most 4 toggles of its own.
+// init() clears cTelnet's ECHO anomaly count, so no case's toggles raise
+// sysEchoAnomalyDetected in the next (cTelnet::checkEchoAnomalyPattern()).
 
 #include <QClipboard>
 #include <QContextMenuEvent>

@@ -3498,20 +3498,16 @@ void cTelnet::processTelnetCommand(const std::string& telnetCommand)
                 //unless explicitly requested)
 
                 if (option == OPT_ECHO) {
-                    if (checkEchoAnomalyPattern()) {
-                        sendTelnetOption(TN_DONT, option);
-                        hisOptionState[idxOption] = false;
-                        qDebug() << "ECHO: Rejecting due to anomaly pattern detection";
-                    } else {
-                        sendTelnetOption(TN_DO, option);
-                        hisOptionState[idxOption] = true;
-                        mpHost->setRemoteEchoingActive(true);
-                        qDebug() << "ECHO: Server requesting password mode - enabling content preservation";
+                    // Counted, never refused: refusing ECHO is what keeps the password box shut
+                    checkEchoAnomalyPattern();
+                    sendTelnetOption(TN_DO, option);
+                    hisOptionState[idxOption] = true;
+                    mpHost->setRemoteEchoingActive(true);
+                    qDebug() << "ECHO: Server requesting password mode - enabling content preservation";
 
-                        // The safety timeout against a game that never sends WONT ECHO is
-                        // started by the masked line the player sends, not by this prompt -
-                        // see restartPasswordMaskTimeout().
-                    }
+                    // The safety timeout against a game that never sends WONT ECHO is
+                    // started by the masked line the player sends, not by this prompt -
+                    // see restartPasswordMaskTimeout().
                 } else if (option == OPT_STATUS || option == OPT_TERMINAL_TYPE) {
                     sendTelnetOption(TN_DO, option);
                     hisOptionState.set(idxOption);
@@ -3647,22 +3643,18 @@ void cTelnet::processTelnetCommand(const std::string& telnetCommand)
                     // this, whether or not the release is honoured below - see
                     // sendOutstandingAutoLoginPassword()
                     mAutoLoginPasswordMaskWithdrawn = true;
-                    if (mEchoAnomalyDetected) {
-                        qDebug() << "ECHO: Ignoring WONT due to anomaly pattern";
-                    } else {
-                        checkEchoAnomalyPattern();
-                        // Cancel any pending password mode timeout since we got the proper WONT ECHO
-                        if (mTimerPasswordModeTimeout) {
-                            mTimerPasswordModeTimeout->stop();
-                        }
-                        // The server released ECHO right after the masked line, so this was a
-                        // transient password prompt, not character-at-a-time mode: cancel detection.
-                        if (mTimerCharacterModeDetect) {
-                            mTimerCharacterModeDetect->stop();
-                        }
-                        mpHost->setRemoteEchoingActive(false);
-                        qDebug() << "ECHO: Server ending password mode - restoring normal operation and preserved content";
+                    checkEchoAnomalyPattern();
+                    // Cancel any pending password mode timeout since we got the proper WONT ECHO
+                    if (mTimerPasswordModeTimeout) {
+                        mTimerPasswordModeTimeout->stop();
                     }
+                    // The server released ECHO right after the masked line, so this was a
+                    // transient password prompt, not character-at-a-time mode: cancel detection.
+                    if (mTimerCharacterModeDetect) {
+                        mTimerCharacterModeDetect->stop();
+                    }
+                    mpHost->setRemoteEchoingActive(false);
+                    qDebug() << "ECHO: Server ending password mode - restoring normal operation and preserved content";
                 }
 
                 if (option == OPT_COMPRESS) {
@@ -6577,7 +6569,7 @@ bool cTelnet::checkEchoAnomalyPattern()
             mEchoAnomalyDetected = true;
 
             raiseProtocolEvent("sysEchoAnomalyDetected", "");
-            qWarning() << "ECHO anomaly pattern detected - disabling ECHO response to protect TCommandLine";
+            qWarning() << "ECHO anomaly pattern detected - the game is toggling ECHO rapidly; still honoring it so passwords stay hidden";
             return true;
         }
     } else {
