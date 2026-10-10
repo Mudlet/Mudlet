@@ -265,6 +265,28 @@ local function db_no_connection_message(action, db_name, expected)
 end
 
 
+-- string.format's %s stops at a NUL, and so does sqlite reading a statement, so a value holding
+-- one cuts the statement short and leaves it to fail on whatever was left of it. tostring, as a
+-- db:exp() is a table whose text goes into the statement as it is
+local function nul_byte_message(action, values, query)
+  local holding
+  for key, value in pairs(values) do
+    if tostring(value):find("\0", 1, true) then
+      holding = "the value for \""..tostring(key).."\""
+      break
+    end
+  end
+  if not holding and query and tostring(query):find("\0", 1, true) then
+    holding = "the query"
+  end
+
+  if holding then
+    return "can not "..action..": "..holding.." holds a NUL byte (\\0), which sqlite can not be given "..
+      "in a statement."
+  end
+end
+
+
 local VALIDATION_OPTIONS = {
   "ABORT",
   "FAIL",
@@ -1606,8 +1628,18 @@ function db:add(sheet, ...)
   end
 
   local sql_insert = "INSERT INTO %s %s VALUES %s"
+  local rows = { ... }
 
-  for _, t in ipairs({ ... }) do
+  -- every row before any is sent, or the ones ahead of the refused row would be committed later
+  for _, t in ipairs(rows) do
+    local nul_msg = nul_byte_message("add to "..s_name, t)
+    if nul_msg then
+      printError(nul_msg, true, false)
+      return nil, nul_msg
+    end
+  end
+
+  for _, t in ipairs(rows) do
     if t._row_id then
       -- You are not permitted to change a _row_id
       t._row_id = nil
@@ -2015,11 +2047,13 @@ function db:update(sheet, tbl)
 
   local set_chunks = {}
   local set_block = [["%s" = %s]]
+  local written = {}
 
   for k, v in pairs(db.__schema[db_name][s_name]['columns']) do
     if tbl[k] then
       local field = sheet[k]
       set_chunks[#set_chunks + 1] = set_block:format(k, db:_coerce(field, tbl[k]))
+      written[k] = tbl[k]
     end
   end
 
@@ -2028,6 +2062,9 @@ function db:update(sheet, tbl)
 
   local sql = table.concat(sql_chunks, " ")
   db:echo_sql(sql)
+  -- only the columns written: a fetched row may carry fields of the script's own
+  local nul_msg = nul_byte_message("update "..s_name, written)
+  if nul_msg then error(nul_msg, 2) end
   assert(conn:execute(sql))
   if db.__autocommit[db_name] then
     conn:commit()
@@ -2098,6 +2135,8 @@ function db:set(field, value, query)
   )
 
   db:echo_sql(sql)
+  local nul_msg = nul_byte_message("set a field in "..s_name, {[field.name] = value}, query)
+  if nul_msg then error(nul_msg, 2) end
   assert(conn:execute(sql))
   if db.__autocommit[db_name] then
     conn:commit()
