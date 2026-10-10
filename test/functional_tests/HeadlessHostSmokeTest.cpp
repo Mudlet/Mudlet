@@ -20,17 +20,21 @@
 #include <QApplication>
 #include <QDir>
 #include <QTemporaryDir>
+#include <QtNetwork/QTcpServer>
+#include <QtNetwork/QTcpSocket>
+// After a QtNetwork header, which is what defines QT_NO_SSL
+#if !defined(QT_NO_SSL)
 #include <QtNetwork/QSslKey>
 #include <QtNetwork/QSslServer>
 #include <QtNetwork/QSslSocket>
-#include <QtNetwork/QTcpServer>
-#include <QtNetwork/QTcpSocket>
+#endif
 #include <QtTest/QtTest>
 
 #include <memory>
 
 #include "Host.h"
 #include "HostManager.h"
+#include "MudletApp.h"
 #include "PortableModeTestHelper.h"
 #include "TAppFrontend.h"
 #include "TConsoleModel.h"
@@ -78,6 +82,7 @@ private slots:
         QVERIFY(QDir().mkpath(qsl("%1/mudlet/profiles").arg(mConfigDir.path())));
         mSavedXdg = qgetenv("XDG_CONFIG_HOME");
         qputenv("XDG_CONFIG_HOME", mConfigDir.path().toUtf8());
+        QCOMPARE(MudletApp::getMudletPath(enums::mainPath), qsl("%1/mudlet").arg(mConfigDir.path()));
 
         QVERIFY2(!HostManager::self(), "A profile pool already exists, so this run is not headless.");
         mpHostManager = std::make_unique<HostManager>();
@@ -120,6 +125,8 @@ headlessResult = ok and 'ok' or tostring(err)
         QVERIFY2(mainBufferHolds(host, qsl("headless echo line")), "echo() to main never reached the main console model.");
         QVERIFY2(mainBufferHolds(host, qsl("headless fed line")), "feedTriggers() never reached the main console model.");
         QVERIFY2(mainBufferHolds(host, qsl("headless trigger echo")), "The trigger's echo never reached the main console model.");
+        // Lets work the profile deferred, such as its first-launch timer, run before looking
+        QCoreApplication::processEvents();
         QVERIFY2(QApplication::topLevelWidgets().isEmpty(), "Making and running the profile created a widget.");
     }
 
@@ -279,6 +286,7 @@ headlessShrinkLeft = table.concat({tostring(windowType("headlessShrinkBuffer")),
 
         QTRY_COMPARE_WITH_TIMEOUT(luaGlobalString(host, "headlessGreeting"), qsl("Welcome to the headless test server."), 10000);
         QVERIFY2(mainBufferHolds(host, qsl("Welcome to the headless test server.")), "The game's line never reached the main console model.");
+        QVERIFY2(mainBufferHolds(host, qsl("Open connection made")), "The connection's own messages never reached the main console model.");
         // The login and password go out on timers, 2s and then 1s by default
         QTRY_VERIFY_WITH_TIMEOUT(received.contains("headlesshero") && received.contains("headlesssecret"), 10000);
 
@@ -305,7 +313,11 @@ headlessShrinkLeft = table.concat({tostring(windowType("headlessShrinkBuffer")),
         Host* host = HostManager::self()->getHost(mHeldLineHostname);
         QVERIFY2(host, "The profile is not in the pool.");
         host->mUndoServerWrap = true;
-        host->mUndoServerWrapWidth = heldLine.size();
+        host->mUndoServerWrapWidth = static_cast<int>(heldLine.size());
+        // Long enough that only the disconnect, not either timer, can commit the held line
+        host->mTelnet.setPostingTimeout(60000);
+        host->mServerWrapFlushTimer.setInterval(60000);
+        QSignalSpy held(&host->mainConsoleModel().mNotifier, &TConsoleModelNotifier::serverWrapLineHeld);
         QVERIFY(host->getLuaInterpreter()->compileAndExecuteScript(qsl(R"lua(headlessHeldLine = 'none'; tempTrigger("the gate stands open", [[headlessHeldLine = line]]))lua")));
         QString heldLineAtDisconnect;
         // Scoped to this test, as the profile outlives the locals the slot writes to
@@ -317,6 +329,7 @@ headlessShrinkLeft = table.concat({tostring(windowType("headlessShrinkBuffer")),
         host->mTelnet.connectIt(qsl("127.0.0.1"), server.serverPort());
 
         QTRY_VERIFY_WITH_TIMEOUT(!heldLineAtDisconnect.isEmpty(), 10000);
+        QCOMPARE(held.count(), 1);
         QCOMPARE(heldLineAtDisconnect, QString::fromUtf8(heldLine));
     }
 
@@ -365,9 +378,23 @@ fbYT0tapBHTFGBkf6NgxBGenwL5TDeL9g3w57+FWiHtIKUylQhCoNb20
         // The app opens the profile's connection preferences here, which needs a main window
         QTRY_VERIFY_WITH_TIMEOUT(!disconnected.isEmpty(), 10000);
         QVERIFY2(!host->mTelnet.getSslErrors().isEmpty(), "The connection did not fail on the certificate.");
+        QVERIFY2(mainBufferHolds(host, qsl("self-signed")), "Why the connection was refused never reached the main console model.");
         QVERIFY2(QApplication::topLevelWidgets().isEmpty(), "The refused connection created a widget.");
     }
 #endif
+
+    void test_profileWithNoSettingsStoreTakesTheDefaults()
+    {
+        if (MudletApp::getQSettings()) {
+            QSKIP("A settings store exists with no main window, so there are no defaults for having none to check.");
+        }
+
+        const QString hostname = qsl("Test-Headless-Host-Defaults");
+        QVERIFY2(HostManager::self()->addHost(hostname, QString(), QString(), QString()), "Could not create a profile with no settings store.");
+        Host* host = HostManager::self()->getHost(hostname);
+        QVERIFY2(host, "The profile is not in the pool.");
+        QVERIFY(!host->mMapperCenterSmallAreas);
+    }
 };
 
 #include "HeadlessHostSmokeTest.moc"

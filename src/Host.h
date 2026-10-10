@@ -785,10 +785,10 @@ private:
     // isClosingDown() whether to flush what it has stacked up. Declaration order is
     // what decides initialisation order, the access specifier between them is not.
     //
-    // mpConsole's position carries the same weight: it is null for the whole of
-    // construction, so that guard returns before reaching the rest of the function,
-    // which reads members declared much later - mBgColor among them. Same class of
-    // bug as #10229, which had to move a call rather than a declaration.
+    // mpMainConsoleModel's position, above, carries the same weight: it is null until
+    // the end of construction, so that guard returns before reaching the rest of the
+    // function, which reads members declared much later - mBgColor among them. Same
+    // class of bug as #10229, which had to move a call rather than a declaration.
     bool mIsClosingDown = false;
     // Its font is the "reference" or "master" font for the whole profile.
     // Clears itself when the view is destroyed, which is what makes handing

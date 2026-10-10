@@ -61,6 +61,14 @@
 
 #include <zip.h>
 
+extern "C" {
+#if defined(INCLUDE_VERSIONED_LUA_HEADERS)
+#include <lua5.1/lua.h>
+#else
+#include <lua.h>
+#endif
+}
+
 #include "GroupedTest.h"
 
 using namespace std::chrono_literals;
@@ -258,8 +266,7 @@ private slots:
     }
 
     // changeAllHostColour() walks the whole pool, so a profile whose console
-    // has gone must not take the appearance switch down with it. Without the
-    // guard in Host::refreshColours() this case dies rather than fails.
+    // has gone must not take the appearance switch down with it.
     void test_appearanceChangeSkipsAProfileWithNoConsole()
     {
         startProfile(mHostname, mLocalhost, mPort);
@@ -313,8 +320,8 @@ private slots:
         QVERIFY(host->hasConsoleView());
     }
 
-    // These calls reach the null view unguarded once the console is detached; each must still answer
-    // as it did when it returned early, including for a label the registry still holds.
+    // With the console detached, each call answers as for a missing window, even for a label and a user
+    // window the registry still holds.
     void test_callsWithoutConsoleAnswerAsMissing()
     {
         startProfile(mHostname, mLocalhost, mPort);
@@ -325,9 +332,14 @@ private slots:
         QVERIFY2(console, "The active host has no main console.");
         const QString label = qsl("nullViewProbe");
         QVERIFY(host->createLabel(qsl("main"), label, 0, 0, 10, 10, true, false).first);
+        const QString userWindow = qsl("nullViewDock");
+        QVERIFY(host->openWindow(userWindow, false, false, qsl("right")).first);
+        host->setDockLayoutUpdated(userWindow);
 
         host->setMainConsoleView(nullptr);
         const bool labelStillRegistered = host->windowRegistry().hasLabel(label);
+        const bool dockStillRegistered = host->windowRegistry().hasDockWidget(userWindow);
+        const bool dockHidden = host->hideWindow(userWindow);
         const bool shown = host->showWindow(label);
         const bool hidden = host->hideWindow(label);
         const bool styled = host->setLabelStyleSheet(label, qsl("color: red;"));
@@ -339,11 +351,13 @@ private slots:
         const bool layoutCommitted = host->commitLayoutUpdates();
         host->printToMainConsole(qsl("null view probe line\n"));
         const bool printed = host->mainConsoleModel().buffer.lineBuffer.join(QChar::LineFeed).contains(qsl("null view probe line"));
-        const bool luaAnswered = host->getLuaInterpreter()->compileAndExecuteScript(
-                qsl("local ok, msg = clearCmdLine('main') assert(ok == nil and msg) assert(raiseWindow('nullViewProbe') == false)"));
+        const bool luaAnswered =
+                host->getLuaInterpreter()->compileAndExecuteScript(qsl("local ok, msg = clearCmdLine('main') assert(ok == nil and msg) assert(raiseWindow('nullViewProbe') == false)"));
         host->setMainConsoleView(console);
 
         QVERIFY(labelStillRegistered);
+        QVERIFY(dockStillRegistered);
+        QVERIFY(!dockHidden);
         QVERIFY(!shown);
         QVERIFY(!hidden);
         QVERIFY(!styled);
@@ -356,6 +370,64 @@ private slots:
         QVERIFY(!layoutCommitted);
         QVERIFY(printed);
         QVERIFY(luaAnswered);
+    }
+
+    // What scripts are told while the profile has no view. The label is made first, so that its answers
+    // come from the missing view rather than a missing label.
+    void test_luaCallsWithNoConsoleSayWhy()
+    {
+        startProfile(mHostname, mLocalhost, mPort);
+        auto host = mudlet::self()->getActiveHost();
+        QVERIFY2(host, "No active host available for the test.");
+
+        QPointer<TMainConsole> console = host->mainConsoleView();
+        QVERIFY2(console, "The active host has no main console.");
+        QVERIFY(host->getLuaInterpreter()->compileAndExecuteScript(qsl("assert(createLabel('nullViewLabel', 0, 0, 10, 10, 1))")));
+
+        host->setMainConsoleView(nullptr);
+        const bool ran = host->getLuaInterpreter()->compileAndExecuteScript(qsl(R"lua(
+            local results = {}
+            for _, call in ipairs({
+                function() return createMapper(0, 0, 100, 100) end,
+                function() return getLabelSizeHint("nullViewLabel") end,
+                function() return startMovie("nullViewLabel") end,
+                function() return clearCmdLine("main") end,
+                function() return removeCommandLineMenuEvent("main", "nullViewItem") end,
+                function() return disableCommandLine("nullViewCommandLine") end,
+                function() return setTextEditText("nullViewTextEdit", "text") end,
+                function() return openUserWindow("nullViewWindow") end,
+                function() return createMiniConsole("nullViewMini", 0, 0, 10, 10) end,
+                function() return createScrollBox("nullViewScrollBox", 0, 0, 10, 10) end,
+                function() return createLabel("nullViewLabel2", 0, 0, 10, 10, 1) end,
+                function() return setWindow("main", "nullViewLabel", 0, 0, true) end,
+                function() return setMovie("nullViewLabel", "nullViewMovie.gif") end,
+            }) do
+                local ran, value, message = pcall(call)
+                results[#results + 1] = ran and (tostring(value) .. ":" .. tostring(message)) or ("raised:" .. tostring(value))
+            end
+            nullViewResults = table.concat(results, "|")
+        )lua"));
+        host->setMainConsoleView(console);
+
+        QVERIFY(ran);
+        lua_State* L = host->getLuaInterpreter()->getLuaGlobalState();
+        lua_getglobal(L, "nullViewResults");
+        const QString results = QString::fromUtf8(lua_tostring(L, -1));
+        lua_pop(L, 1);
+        QCOMPARE(results,
+                 qsl("nil:the profile has no main window"
+                     "|nil:label 'nullViewLabel' does not exist"
+                     "|nil:label \"nullViewLabel\" not found"
+                     "|nil:command line \"main\" not found"
+                     "|nil:command line \"main\" not found"
+                     "|nil:command line \"nullViewCommandLine\" not found"
+                     "|nil:text edit name 'nullViewTextEdit' not found"
+                     "|true:nil"
+                     "|true:nil"
+                     "|false:the profile has no main window"
+                     "|true:nil"
+                     "|nil:the profile has no main window"
+                     "|nil:the profile has no main window"));
     }
 
     // The mapping-script reminder used to be a QDialog built inside Host; it is

@@ -5336,7 +5336,7 @@ std::pair<bool, QString> Host::createMiniConsole(const QString& windowname, cons
 std::pair<bool, QString> Host::createScrollBox(const QString& windowname, const QString& name, int x, int y, int width, int height) const
 {
     if (!hasConsoleView()) {
-        return {false, QString()};
+        return TNullConsoleFrontend::noView();
     }
 
     if (parentWindowMissing(windowname)) {
@@ -5556,7 +5556,7 @@ bool Host::moveWindow(const QString& name, int x1, int y1)
 std::pair<bool, QString> Host::setWindow(const QString& windowname, const QString& name, int x1, int y1, bool show)
 {
     if (!hasConsoleView()) {
-        return {false, QString()};
+        return TNullConsoleFrontend::noView();
     }
     //checks - for reasons why the indicated thing might not be moved to the indicated destination
     if (mWindowRegistry.hasDockWidget(name)) {
@@ -5782,7 +5782,7 @@ bool Host::setLabelOnLeave(const QString& name, const int func)
 std::pair<bool, QString> Host::setMovie(const QString& name, const QString& moviePath)
 {
     if (!hasConsoleView()) {
-        return {false, QString()};
+        return TNullConsoleFrontend::noView();
     }
 
     if (!mWindowRegistry.hasLabel(name)) {
