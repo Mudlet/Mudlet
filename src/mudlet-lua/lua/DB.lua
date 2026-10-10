@@ -459,6 +459,8 @@ local lua_reserved_words = {
 ---   _violations among them, until the entry is spelled right. A db:create that
 ---   loses the sheet nothing is applied as usual, and one that also drops a column
 ---   does lose the rule, since removing a column is a rebuild in its own right.
+---   A key starting with an underscore that is not _index, _unique or _violations
+---   is warned about and ignored, so a typo such as _indexes is not taken silently.
 ---   Naming _row_id in a _unique entry written as a list is warned about but kept,
 ---   since a sheet's _row_id is unique on its own and the constraint is therefore
 ---   one that can never refuse a row.
@@ -568,6 +570,19 @@ function db:create(db_name, sheets, force)
           columns[key] = value
         end
       end
+    end
+
+    -- a typo such as _indexes would otherwise leave the sheet without what it asked for, silently
+    local unknown_options = {}
+    for key in pairs(options) do
+      if key ~= "_index" and key ~= "_unique" and key ~= "_violations" then
+        unknown_options[#unknown_options + 1] = key
+      end
+    end
+    table.sort(unknown_options)
+    for _, key in ipairs(unknown_options) do
+      table.insert(warnings, "db:create - "..sheet_name.." - \""..key.."\" is not a sheet option "..
+        "(those are _index, _unique and _violations): it is ignored.")
     end
 
     if options._violations then

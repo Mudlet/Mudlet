@@ -3647,6 +3647,53 @@ describe("Tests db's internals against a real database", function()
   end)
 end)
 
+describe("Tests db:create on underscored keys that are not sheet options", function()
+  local dbName = "sheetoptionstestingonly"
+  local dbFile = getMudletHomeDir() .. "/Database_" .. dbName .. ".db"
+
+  local function collectingWarnings(fn)
+    local collected = {}
+    -- through _G: a spec file's globals are its own
+    local originalPrintError = _G.printError
+    _G.printError = function(msg) collected[#collected + 1] = msg end
+    finally(function() _G.printError = originalPrintError end)
+
+    local result = fn()
+    _G.printError = originalPrintError
+    return result, table.concat(collected, "\n")
+  end
+
+  local function createCollectingWarnings(sheets)
+    return collectingWarnings(function() return db:create(dbName, sheets) end)
+  end
+
+  after_each(function()
+    if not pcall(function() db:close(dbName) end) then
+      db.__conn[dbName] = nil
+    end
+    os.remove(dbFile)
+  end)
+
+  it("warns about an underscored key that is not a sheet option, in either form of sheet", function()
+    local mydb, warnings = createCollectingWarnings({
+      people = {name = "", _indexes = {"name"}},
+      places = {"name", _uniqe = {"name"}},
+    })
+    assert.is_table(mydb)
+    assert.is_truthy(string.find(warnings, 'db:create - people - "_indexes" is not a sheet option', 1, true))
+    assert.is_truthy(string.find(warnings, 'db:create - places - "_uniqe" is not a sheet option', 1, true))
+    assert.is_true(db:add(mydb.people, {name = "Bob"}))
+    assert.is_true(db:add(mydb.places, {name = "Lancre"}))
+  end)
+
+  it("says nothing about the sheet options it knows", function()
+    local _, warnings = createCollectingWarnings({
+      people = {name = "", city = "", _index = {"city"}, _unique = {"name"}, _violations = "IGNORE"},
+    })
+    assert.are.equal("", warnings)
+  end)
+end)
+
 -- _index takes a single column name as well as a list of them, exactly as
 -- _unique does. db:_index_name, db:_index_valid and db.Database:_drop each take
 -- either shape, but db:_drop_orphaned_indexes walks _index with ipairs, so what
