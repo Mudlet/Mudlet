@@ -656,17 +656,23 @@ bool Host::saveMapFile(const QString& location, int saveVersion)
     return saved;
 }
 
-bool Host::loadMapFile(const QString& location)
+bool Host::prepareMapperForMapLoad()
 {
-    if (!mpMap || !mpMap->mapViewFrontend()) {
-        // No map or map currently loaded - so try and created mapper
-        // but don't load a map here by default, we do that below and it may not
-        // be the default map anyhow
-        showHideOrCreateMapper(false);
+    // The console owns the mapper dock, so without one the map loads into the model alone
+    if (mpMap && !hasConsoleView()) {
+        return true;
     }
 
     if (!mpMap || !mpMap->mapViewFrontend()) {
-        // And that failed so give up
+        // Not the default map: the caller loads the one it was asked for
+        showHideOrCreateMapper(false);
+    }
+    return mpMap && mpMap->mapViewFrontend();
+}
+
+bool Host::loadMapFile(const QString& location)
+{
+    if (!prepareMapperForMapLoad()) {
         return false;
     }
 
@@ -712,13 +718,7 @@ bool Host::loadMapFile(const QString& location)
 // console - if possible!
 bool Host::importMapFile(const QString& location, QString* errMsg)
 {
-    if (!mpMap || !mpMap->mapViewFrontend()) {
-        // No map or mapper currently loaded/present - so try and create mapper
-        showHideOrCreateMapper(false);
-    }
-
-    if (!mpMap || !mpMap->mapViewFrontend()) {
-        // And that failed so give up
+    if (!prepareMapperForMapLoad()) {
         if (errMsg) {
             *errMsg = qsl("loadMap: unable to initialise mapper {in Host::importMapFile(...)} - something is wrong!");
         }

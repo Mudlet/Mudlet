@@ -18,6 +18,7 @@
  ***************************************************************************/
 
 #include <QApplication>
+#include <QDataStream>
 #include <QDir>
 #include <QTemporaryDir>
 #include <QtNetwork/QTcpServer>
@@ -40,6 +41,8 @@
 #include "TConsoleModel.h"
 #include "TLabelModel.h"
 #include "TLuaInterpreter.h"
+#include "TMap.h"
+#include "TRoomDB.h"
 
 #include "GroupedTest.h"
 
@@ -70,6 +73,39 @@ private:
     }
 
     static bool mainBufferHolds(Host* host, const QString& text) { return host->mainConsoleModel().buffer.lineBuffer.join(QChar::LineFeed).contains(text); }
+
+    // The shape a game serves for an MMP map download
+    static QByteArray xmlMap()
+    {
+        return QByteArrayLiteral(R"(<?xml version="1.0" encoding="UTF-8"?>
+<map>
+ <areas>
+  <area id="1" name="Headless Xml Area"/>
+ </areas>
+ <rooms>
+  <room id="3" area="1" title="Headless Xml Room" environment="2">
+   <coord x="0" y="0" z="0"/>
+  </room>
+ </rooms>
+</map>
+)");
+    }
+
+    // A binary map of the profile's own, holding just room roomId; the profile's map is left empty
+    static QByteArray binaryMapOf(Host* host, const int roomId)
+    {
+        TMap* map = host->mpMap.data();
+        map->mapClear();
+        const int areaId = map->mpRoomDB->addArea(qsl("Headless Binary Area"));
+        map->addRoom(roomId);
+        map->setRoomArea(roomId, areaId);
+        QByteArray serialized;
+        QDataStream out(&serialized, QIODevice::WriteOnly);
+        out.setVersion(QDataStream::Qt_5_12);
+        map->serialize(out);
+        map->mapClear();
+        return serialized;
+    }
 
 private slots:
     void initTestCase()
@@ -525,6 +561,100 @@ headlessAnswersResult = ok and 'ok' or tostring(err)
         Host* host = HostManager::self()->getHost(hostname);
         QVERIFY2(host, "The profile is not in the pool.");
         QVERIFY(!host->mMapperCenterSmallAreas);
+    }
+
+    // As MapDownloadTest's checks of the same downloads in the GUI: the map is stored and loaded,
+    // and scripts get sysMapDownloadEvent, whichever kind of map the game serves
+    void test_mapDownloadLoadsTheMapWithNoMainWindow()
+    {
+        QVERIFY2(!TAppFrontend::hasView(), "A main window exists, so this run is not headless.");
+        // Nothing renders map progress with no main window, so a warning about it would be a false alarm
+        QTest::failOnWarning(QRegularExpression(qsl("no frontend is connected to show the map progress dialog")));
+
+        const QString hostname = qsl("Test-Headless-Host-Map-Download");
+        QVERIFY2(HostManager::self()->addHost(hostname, QString(), QString(), QString()), "Could not create a profile with no main window.");
+        Host* host = HostManager::self()->getHost(hostname);
+        QVERIFY2(host, "The profile is not in the pool.");
+        TMap* map = host->mpMap.data();
+        const QByteArray binaryMap = binaryMapOf(host, 7);
+        QVERIFY(!binaryMap.isEmpty());
+
+        QTcpServer server;
+        QVERIFY2(server.listen(QHostAddress::LocalHost), "Could not start the local test server.");
+        connect(&server, &QTcpServer::newConnection, this, [&]() {
+            QTcpSocket* client = server.nextPendingConnection();
+            // The request line names the map, and it comes first
+            connect(
+                    client,
+                    &QTcpSocket::readyRead,
+                    client,
+                    [client, &binaryMap]() {
+                        const QByteArray body = client->readAll().startsWith("GET /map.xml ") ? xmlMap() : binaryMap;
+                        client->write("HTTP/1.1 200 OK\r\nContent-Length: " + QByteArray::number(body.size()) + "\r\nConnection: close\r\n\r\n" + body);
+                        client->disconnectFromHost();
+                    },
+                    Qt::SingleShotConnection);
+        });
+        host->registerAnonymousEventHandler(qsl("sysMapDownloadEvent"), qsl("onHeadlessMapDownload"));
+        QVERIFY(host->getLuaInterpreter()->compileAndExecuteScript(qsl("headlessMapDownloads = 0; function onHeadlessMapDownload() headlessMapDownloads = headlessMapDownloads + 1 end")));
+
+        map->downloadMap(qsl("http://127.0.0.1:%1/map.xml").arg(server.serverPort()));
+        QVERIFY2(map->hasActiveTransferProgress(), "The download did not start.");
+        QTRY_VERIFY_WITH_TIMEOUT(!map->hasActiveTransferProgress(), 10000);
+        QVERIFY2(map->mpRoomDB->getRoom(3), "The downloaded XML map was not loaded.");
+        QCOMPARE(luaGlobalString(host, "headlessMapDownloads"), qsl("1"));
+
+        map->downloadMap(qsl("http://127.0.0.1:%1/map.dat").arg(server.serverPort()));
+        QVERIFY2(map->hasActiveTransferProgress(), "The second download did not start, so the first one never finished.");
+        QTRY_VERIFY_WITH_TIMEOUT(!map->hasActiveTransferProgress(), 10000);
+        QVERIFY2(!mainBufferHolds(host, qsl("failure in parsing")), "The downloaded binary map was reported as unreadable.");
+        QVERIFY2(map->mpRoomDB->getRoom(7), "The downloaded binary map was not loaded.");
+        QVERIFY2(!map->mpRoomDB->getRoom(3), "The binary map was loaded over the XML one rather than in its place.");
+        QCOMPARE(luaGlobalString(host, "headlessMapDownloads"), qsl("2"));
+        QVERIFY2(QApplication::topLevelWidgets().isEmpty(), "Downloading a map created a widget.");
+    }
+
+    // As Mapper_spec.lua's checks of saveMap and loadMap in the GUI
+    void test_loadMapReadsTheMapWithNoMainWindow()
+    {
+        QVERIFY2(!TAppFrontend::hasView(), "A main window exists, so this run is not headless.");
+        QTest::failOnWarning(QRegularExpression(qsl("no frontend is connected to show the map progress dialog")));
+
+        const QString hostname = qsl("Test-Headless-Host-Map-Load");
+        QVERIFY2(HostManager::self()->addHost(hostname, QString(), QString(), QString()), "Could not create a profile with no main window.");
+        Host* host = HostManager::self()->getHost(hostname);
+        QVERIFY2(host, "The profile is not in the pool.");
+        QTemporaryDir mapDir;
+        QVERIFY(mapDir.isValid());
+        QFile xmlFile(mapDir.filePath(qsl("headless.xml")));
+        QVERIFY(xmlFile.open(QIODevice::WriteOnly));
+        xmlFile.write(xmlMap());
+        xmlFile.close();
+        QFile binaryFile(mapDir.filePath(qsl("headless.dat")));
+        QVERIFY(binaryFile.open(QIODevice::WriteOnly));
+        binaryFile.write(binaryMapOf(host, 7));
+        binaryFile.close();
+
+        const QString script = qsl("headlessMapDir = [[%1]]\n").arg(mapDir.path()) + qsl(R"lua(
+headlessMapLoad = 'not run'
+local ok, err = pcall(function()
+  local loaded, loadedMsg = loadMap(headlessMapDir .. "/headless.dat")
+  assert(loaded == true, "loadMap of a binary map answered " .. tostring(loaded) .. ", " .. tostring(loadedMsg))
+  assert(roomExists(7), "loadMap did not load the binary map")
+  local imported, importedMsg = loadMap(headlessMapDir .. "/headless.xml")
+  assert(imported == true, "loadMap of an XML map answered " .. tostring(imported) .. ", " .. tostring(importedMsg))
+  assert(roomExists(3) and not roomExists(7), "loadMap did not replace the map with the XML one")
+  assert(loadMap(headlessMapDir .. "/nosuchmap.dat") == false, "loadMap of a missing binary map did not answer false")
+  local missing, missingMsg = loadMap(headlessMapDir .. "/nosuchmap.xml")
+  assert(missing == nil and missingMsg:find("was not found"), "loadMap of a missing XML map answered " .. tostring(missing) .. ", " .. tostring(missingMsg))
+end)
+headlessMapLoad = ok and 'ok' or tostring(err)
+)lua");
+        const bool ran = host->getLuaInterpreter()->compileAndExecuteScript(script);
+
+        QVERIFY2(ran, "The Lua chunk did not run.");
+        QCOMPARE(luaGlobalString(host, "headlessMapLoad"), qsl("ok"));
+        QVERIFY2(QApplication::topLevelWidgets().isEmpty(), "Loading a map created a widget.");
     }
 };
 
