@@ -26,11 +26,91 @@
 #include <QCoreApplication>
 #include <QFontMetrics>
 #include <QFontMetricsF>
+#include <QGuiApplication>
 #include <QImage>
 #include <QObject>
 #include <QStringList>
+#include <QTextCharFormat>
+#include <QTextCursor>
+#include <QTextDocument>
+#include <QTextFrame>
+#include <QtMath>
 
 #include <algorithm>
+
+namespace {
+
+// The font properties a sheet's declarations set, read by the CSS value extractor a widget's sheet goes through
+std::optional<QFont> styleSheetFont(const QString& sheet)
+{
+    QTextDocument document;
+    document.setHtml(qsl("<span style=\"%1\">x</span>").arg(sheet.toHtmlEscaped()));
+    QTextCursor cursor(&document);
+    cursor.setPosition(1);
+    const QTextCharFormat format = cursor.charFormat();
+    static const int fontProperties[] = {QTextFormat::FontFamilies,
+                                         QTextFormat::FontStyleName,
+                                         QTextFormat::FontPointSize,
+                                         QTextFormat::FontPixelSize,
+                                         QTextFormat::FontWeight,
+                                         QTextFormat::FontItalic,
+                                         QTextFormat::FontUnderline,
+                                         QTextFormat::FontOverline,
+                                         QTextFormat::FontStrikeOut,
+                                         QTextFormat::FontCapitalization,
+                                         QTextFormat::FontLetterSpacing,
+                                         QTextFormat::FontLetterSpacingType,
+                                         QTextFormat::FontWordSpacing,
+                                         QTextFormat::FontKerning,
+                                         QTextFormat::TextUnderlineStyle};
+    for (const int property : fontProperties) {
+        if (format.hasProperty(property)) {
+            return format.font();
+        }
+    }
+    return std::nullopt;
+}
+
+// QStyleSheetStyle::updateStyleSheetFont()
+void applySheetFont(QFont& font, uint& mask, const std::optional<QFont>& sheetFont)
+{
+    if (!sheetFont) {
+        return;
+    }
+    QFont local = font;
+    local.setResolveMask(mask);
+    QFont styled = sheetFont->resolve(local);
+    styled.setResolveMask(local.resolveMask() | sheetFont->resolveMask());
+    if (local.resolveMask() == styled.resolveMask() && local == styled) {
+        return;
+    }
+    font = styled;
+    mask = styled.resolveMask();
+}
+
+// QLabel::sizeHint() for a label with no margin, frame, indent or word wrap, as TLabel's are
+QSize labelSizeHint(const QFont& font, const QString& text, const bool textLabel)
+{
+    if (!textLabel) {
+        const QFontMetrics metrics(font);
+        return {metrics.averageCharWidth(), metrics.lineSpacing()};
+    }
+    QTextDocument document;
+    document.setDefaultFont(font);
+    document.setHtml(text);
+    QTextOption option = document.defaultTextOption();
+    option.setAlignment(Qt::AlignLeft | Qt::AlignVCenter);
+    option.setWrapMode(QTextOption::ManualWrap);
+    document.setDefaultTextOption(option);
+    QTextFrameFormat frameFormat = document.rootFrame()->frameFormat();
+    frameFormat.setMargin(0);
+    document.rootFrame()->setFrameFormat(frameFormat);
+    document.setTextWidth(-1);
+    const QSizeF size = document.size();
+    return {qCeil(size.width()), qCeil(size.height())};
+}
+
+} // namespace
 
 TNullConsoleFrontend::TNullConsoleFrontend(Host* pHost)
 : mpHost(pHost)
@@ -115,8 +195,92 @@ bool TNullConsoleFrontend::setLabelText(const QString& name, const QString& text
     if (it == mLabels.end()) {
         return false;
     }
-    it->second.pModel->mText = text;
+    Label& label = it->second;
+    const QString shown = label.pModel->linkStyledText(text);
+    // QLabel::setText() ignores the text it already has, and a fresh label's null text equals ""
+    if (shown != label.pModel->mText) {
+        label.textLabel = true;
+        label.sizeHint.reset();
+    }
+    label.pModel->mText = shown;
     return true;
+}
+
+std::optional<QSize> TNullConsoleFrontend::getLabelSizeHint(const QString& name) const
+{
+    const auto it = mLabels.find(name);
+    if (it == mLabels.end()) {
+        return std::nullopt;
+    }
+    const Label& label = it->second;
+    if (!label.sizeHint) {
+        label.sizeHint = labelSizeHint(label.pModel->mFont, label.pModel->mText, label.textLabel);
+    }
+    return label.sizeHint;
+}
+
+// A styled widget's font resolves against the application's, not its parent's
+QFont TNullConsoleFrontend::naturalLabelFont(const Label& label) const
+{
+    return label.styled ? QGuiApplication::font() : consoleFont(label.userWindow).value_or(displayFont());
+}
+
+// QWidget::setFont(), which under a sheet also saves the font for each restyle to start from
+void TNullConsoleFrontend::setLabelWidgetFont(Label& label, const QFont& font, const bool applySheet)
+{
+    if (label.styled) {
+        label.savedFont = font;
+    }
+    label.pModel->mFont = font.resolve(naturalLabelFont(label));
+    label.fontMask = font.resolveMask();
+    if (applySheet) {
+        applySheetFont(label.pModel->mFont, label.fontMask, label.sheetFont);
+    }
+}
+
+// QStyleSheetStyle::polish(): the first saves the font, every later one starts again from it
+void TNullConsoleFrontend::polishLabel(Label& label)
+{
+    if (label.savedFont) {
+        setLabelWidgetFont(label, *label.savedFont, true);
+    } else {
+        QFont local = label.pModel->mFont;
+        local.setResolveMask(label.fontMask);
+        label.savedFont = local;
+        applySheetFont(label.pModel->mFont, label.fontMask, label.sheetFont);
+    }
+    label.sizeHint.reset();
+}
+
+// TLabel::restyle()
+void TNullConsoleFrontend::restyleLabel(Label& label, const QString& sheet)
+{
+    TLabelModel& model = *label.pModel;
+    if (sheet == model.mStyleSheet && !label.restyleDue && !sheet.contains(qsl("url("), Qt::CaseInsensitive)) {
+        return;
+    }
+    label.restyleDue = false;
+    const QFont before = model.mFont;
+    model.mStyleSheet = sheet;
+    if (sheet.isEmpty()) {
+        label.sheetFont.reset();
+        // Clearing a sheet hands back the saved font and forgets it
+        if (label.styled) {
+            if (label.savedFont) {
+                setLabelWidgetFont(label, *label.savedFont, false);
+            }
+            label.savedFont.reset();
+            label.styled = false;
+            label.sizeHint.reset();
+        }
+    } else {
+        label.sheetFont = styleSheetFont(sheet);
+        label.styled = true;
+        polishLabel(label);
+    }
+    if (label.textLabel && model.mFont != before) {
+        label.sizeHint.reset();
+    }
 }
 
 TConsoleModel& TNullConsoleFrontend::addSubConsole(const QString& name, const TWindowRegistry::SubConsoleKind kind, const QString& windowname)
@@ -301,11 +465,11 @@ std::pair<bool, QString> TNullConsoleFrontend::setLabelStyleSheet(const QString&
     if (name.isEmpty()) {
         return {false, qsl("a label cannot have an empty string as its name")};
     }
-    TLabelModel* pLabel = labelModel(name);
-    if (!pLabel) {
+    const auto it = mLabels.find(name);
+    if (it == mLabels.end()) {
         return {false, qsl("label name '%1' not found").arg(name)};
     }
-    pLabel->mStyleSheet = stylesheet;
+    restyleLabel(it->second, stylesheet);
     return {true, QString()};
 }
 
@@ -357,10 +521,13 @@ std::pair<bool, QString> TNullConsoleFrontend::setLabelCustomCursor(const QStrin
 
 bool TNullConsoleFrontend::setLabelLinkStyle(const QString& name, const QString& linkColor, const QString& linkVisitedColor, const bool underline)
 {
-    TLabelModel* pLabel = labelModel(name);
-    if (!pLabel) {
+    const auto it = mLabels.find(name);
+    if (it == mLabels.end()) {
         return false;
     }
+    // TLabel sets the link colours in its palette, which the next restyle has to override
+    it->second.restyleDue = true;
+    TLabelModel* pLabel = it->second.pModel.get();
     pLabel->mLinkColor = linkColor;
     pLabel->mLinkVisitedColor = linkVisitedColor;
     pLabel->mLinkUnderline = underline;
@@ -379,6 +546,10 @@ bool TNullConsoleFrontend::clearLabelVisitedLinks(const QString& name)
         return false;
     }
     pLabel->mVisitedLinks.clear();
+    // TLabel::clearVisitedLinks() sets the text again, which picks up the current link style
+    if (!pLabel->mText.isEmpty() && TLabelModel::containsAnchorTag(pLabel->mText)) {
+        setLabelText(name, pLabel->mText);
+    }
     return true;
 }
 
@@ -411,11 +582,21 @@ bool TNullConsoleFrontend::reparentLabel(const QString& windowname, const QStrin
         return false;
     }
     const QString userWindow = userWindowOrMain(windowname);
-    // A real label with no font of its own takes the application's, not its new parent's, as it moves
-    if (userWindow != it->second.userWindow && !it->second.ownFont) {
-        it->second.pModel->mFont = QFont();
+    // QWidget::setParent() restyles a label it moves, and leaves one it doesn't alone
+    if (Label& label = it->second; userWindow != label.userWindow) {
+        const QFont before = label.pModel->mFont;
+        label.userWindow = userWindow;
+        if (label.styled) {
+            polishLabel(label);
+        } else {
+            QFont local = label.pModel->mFont;
+            local.setResolveMask(label.fontMask);
+            label.pModel->mFont = local.resolve(naturalLabelFont(label));
+        }
+        if (label.textLabel && label.pModel->mFont != before) {
+            label.sizeHint.reset();
+        }
     }
-    it->second.userWindow = userWindow;
     it->second.pModel->mGeometry.moveTo(x, y);
     it->second.shown = show;
     reportVisibility(name);
@@ -424,12 +605,13 @@ bool TNullConsoleFrontend::reparentLabel(const QString& windowname, const QStrin
 
 bool TNullConsoleFrontend::setLabelBackgroundColor(const QString& name, const QColor& color)
 {
-    TLabelModel* pLabel = labelModel(name);
-    if (!pLabel) {
+    const auto it = mLabels.find(name);
+    if (it == mLabels.end()) {
         return false;
     }
-    pLabel->mBackgroundColor = color;
-    pLabel->mStyleSheet = TLabelModel::styleSheetWithBackgroundColor(pLabel->mStyleSheet, color);
+    TLabelModel& model = *it->second.pModel;
+    model.mBackgroundColor = color;
+    restyleLabel(it->second, TLabelModel::styleSheetWithBackgroundColor(model.mStyleSheet, color));
     return true;
 }
 
@@ -480,8 +662,12 @@ bool TNullConsoleFrontend::setLabelFont(const QString& name, const QFont& font)
     if (it == mLabels.end()) {
         return false;
     }
-    it->second.pModel->mFont = font;
-    it->second.ownFont = true;
+    Label& label = it->second;
+    const QFont before = label.pModel->mFont;
+    setLabelWidgetFont(label, font, label.styled);
+    if (label.textLabel && label.pModel->mFont != before) {
+        label.sizeHint.reset();
+    }
     return true;
 }
 
