@@ -324,7 +324,12 @@ std::array<int, 4> sheetFrame(const QString& declarations, const QFont& font)
             continue;
         }
         const QStringList name = declaration.left(colon).trimmed().toLower().split(u'-');
-        const QStringList values = declaration.mid(colon + 1).simplified().split(u' ', Qt::SkipEmptyParts);
+        QString value = declaration.mid(colon + 1);
+        // QCss::Parser::testPrio(): a trailing "! important", in any case, marks the declaration and is no value
+        if (const qsizetype bang = value.lastIndexOf(u'!'); bang >= 0 && !QStringView(value).sliced(bang + 1).trimmed().compare(u"important", Qt::CaseInsensitive)) {
+            value.truncate(bang);
+        }
+        const QStringList values = value.simplified().split(u' ', Qt::SkipEmptyParts);
         const qsizetype edge = name.size() > 1 ? edges.indexOf(name.at(1)) : -1;
         const bool padding = name.first() == qsl("padding");
         if (padding || name.first() == qsl("margin")) {
