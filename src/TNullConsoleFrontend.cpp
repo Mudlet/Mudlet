@@ -196,12 +196,13 @@ bool TNullConsoleFrontend::setLabelText(const QString& name, const QString& text
         return false;
     }
     Label& label = it->second;
+    const QString shown = label.pModel->linkStyledText(text);
     // QLabel::setText() ignores the text it already has, and a fresh label's null text equals ""
-    if (text != label.pModel->mText) {
+    if (shown != label.pModel->mText) {
         label.textLabel = true;
         label.sizeHint.reset();
     }
-    label.pModel->mText = text;
+    label.pModel->mText = shown;
     return true;
 }
 
@@ -545,6 +546,10 @@ bool TNullConsoleFrontend::clearLabelVisitedLinks(const QString& name)
         return false;
     }
     pLabel->mVisitedLinks.clear();
+    // TLabel::clearVisitedLinks() sets the text again, which picks up the current link style
+    if (!pLabel->mText.isEmpty() && TLabelModel::containsAnchorTag(pLabel->mText)) {
+        setLabelText(name, pLabel->mText);
+    }
     return true;
 }
 

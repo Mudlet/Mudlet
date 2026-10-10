@@ -1118,6 +1118,9 @@ createLabel("lsC", 0, 0, 100, 20, 1)
                 if (font.key() != pReference->font().key()) {
                     mismatches << qsl("%1: font %2, a real label's %3").arg(step, font.toString(), pReference->font().toString());
                 }
+                if (const QString labelText = host->labelText(name).value_or(QString()); labelText != pReference->text()) {
+                    mismatches << qsl("%1: text '%2', a real label's '%3'").arg(step, labelText, pReference->text());
+                }
             };
             const auto step = [&](const QString& name, const QString& call, const QString& expected) {
                 host->getLuaInterpreter()->compileAndExecuteScript(qsl("lsLast = lsAnswer(function() return %1 end)").arg(call));
@@ -1156,6 +1159,13 @@ createLabel("lsC", 0, 0, 100, 20, 1)
             sheet(qsl("lsA"), pRefA, qsl("font-size: 16pt; font-style: italic;"));
             sheet(qsl("lsA"), pRefA, qsl("color: red;"));
             text(qsl("lsA"), pRefA, qsl("<b>bold</b> text<br>second line"));
+            // The link style replaces an anchor's own inline style, font size and all
+            text(qsl("lsA"), pRefA, qsl("<a href=\"x\" style=\"font-size: 40pt\">WWW</a> and <a href=\"y\">y</a>"));
+            step(qsl("lsA"), qsl("setLinkStyle('lsA', 'green', 'blue', true)"), qsl("[1]true"));
+            pRefA->setLinkStyle(qsl("green"), qsl("blue"), true);
+            step(qsl("lsA"), qsl("clearVisitedLinks('lsA')"), qsl("[1]true"));
+            pRefA->clearVisitedLinks();
+            compare(qsl("lsA visited links cleared"), qsl("lsA"), pRefA);
             sheet(qsl("lsA"), pRefA, QString());
             step(qsl("lsA"), qsl("setBackgroundColor('lsA', 10, 20, 30)"), qsl("[1]true"));
             pRefA->setBackgroundColor(QColor(10, 20, 30));

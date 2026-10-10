@@ -112,3 +112,102 @@ QString TLabelModel::styleSheetWithBackgroundColor(const QString& styleSheet, co
     }
     return sheet;
 }
+
+// Not a case-insensitive contains("<a "): that can't tell a tag from prose and case-folds every character.
+// Any whitespace separates, as in HTML; setText()'s styling pass knows only ASCII whitespace, so an
+// anchor split by a non-breaking space is clickable but unstyled.
+bool TLabelModel::containsAnchorTag(const QString& text)
+{
+    qsizetype close = -1;
+    // Later '<'s are nearer the end still, so one too close to it for a tag name and separator ends the walk.
+    for (qsizetype at = text.indexOf(QLatin1Char('<')); at >= 0 && at + 2 < text.size(); at = text.indexOf(QLatin1Char('<'), at + 1)) {
+        const char16_t tagName = text.at(at + 1).unicode();
+        if ((tagName != u'a' && tagName != u'A') || !text.at(at + 2).isSpace()) {
+            continue;
+        }
+        // Only a tag if its closing '>' comes before any other '<'. That also rejects a '<' inside an
+        // attribute value, which HTML wants written &lt; anyway.
+        if (close < at) {
+            // Re-searched only once the walk passes the last '>' found, keeping the scans linear.
+            close = text.indexOf(QLatin1Char('>'), at + 3);
+            if (close < 0) {
+                // no tag anywhere past here can be closed either
+                return false;
+            }
+        }
+        const qsizetype nextOpen = text.indexOf(QLatin1Char('<'), at + 3);
+        if (nextOpen < 0 || close < nextOpen) {
+            return true;
+        }
+    }
+    return false;
+}
+
+// If we have link styling configured and the text contains HTML links,
+// we need to inject inline styles because QTextDocument doesn't use
+// widget stylesheets or QPalette for link colors when a stylesheet exists
+QString TLabelModel::linkStyledText(const QString& text) const
+{
+    if ((mLinkColor.isEmpty() && mLinkVisitedColor.isEmpty()) || !containsAnchorTag(text)) {
+        return text;
+    }
+    QString styledText = text;
+
+    // Replace all <a href="..."> tags with <a href="..." style="...">
+    // Note: This regex is intentionally strict (lowercase, href first, no spacing around =)
+    // because Mudlet's HTML generation (via echo(), setLabelText(), etc.) consistently
+    // uses this format. User-provided HTML outside this pattern will still render as
+    // clickable links (Qt handles that), but won't receive custom styling.
+    static const QRegularExpression anchorRegex(qsl("<a\\s+href=([\"'][^\"']*[\"'])([^>]*)>"));
+    QRegularExpressionMatchIterator it = anchorRegex.globalMatch(styledText);
+
+    // Process matches in reverse order to avoid offset issues
+    QList<QRegularExpressionMatch> matches;
+    while (it.hasNext()) {
+        matches.prepend(it.next());
+    }
+
+    for (const auto& match : matches) {
+        QString fullMatch = match.captured(0);
+        QString hrefPart = match.captured(1);   // The href="..." part
+        QString otherAttrs = match.captured(2); // Other attributes
+
+        // Extract the actual URL from hrefPart (remove quotes)
+        QString url = hrefPart;
+        url.remove(0, 1); // Remove opening quote
+        url.chop(1);      // Remove closing quote
+
+        const bool isVisited = mVisitedLinks.contains(url);
+
+        QString linkStyle;
+        if (isVisited && !mLinkVisitedColor.isEmpty()) {
+            linkStyle += qsl("color: %1; ").arg(mLinkVisitedColor);
+        } else if (!mLinkColor.isEmpty()) {
+            linkStyle += qsl("color: %1; ").arg(mLinkColor);
+        }
+
+        if (!mLinkUnderline) {
+            linkStyle += qsl("text-decoration: none; ");
+        }
+
+        if (!linkStyle.isEmpty()) {
+            linkStyle = linkStyle.trimmed();
+
+            QString replacement;
+            if (otherAttrs.contains(qsl("style="))) {
+                // Already has a style attribute - merge our styles
+                // This is complex, so for now just prepend our styles
+                replacement = qsl("<a href=%1 style=\"%2\"").arg(hrefPart, linkStyle);
+                // Intentionally overwrites any existing style attribute rather than merging
+                // to keep implementation simple for the common case (labels without pre-existing inline styles)
+                otherAttrs.remove(QRegularExpression(qsl("style=([\"'][^\"']*[\"'])")));
+                replacement += otherAttrs + qsl(">");
+            } else {
+                replacement = qsl("<a href=%1 style=\"%2\"%3>").arg(hrefPart, linkStyle, otherAttrs);
+            }
+
+            styledText.replace(match.capturedStart(), match.capturedLength(), replacement);
+        }
+    }
+    return styledText;
+}
