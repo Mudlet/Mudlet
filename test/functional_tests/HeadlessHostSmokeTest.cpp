@@ -84,7 +84,6 @@ private slots:
     void test_profileRunsLuaAndTriggersWithNoMainWindow()
     {
         QVERIFY2(!TAppFrontend::instance(), "A main window exists, so this run is not headless.");
-        QVERIFY2(!MudletApp::getQSettings(), "A settings store exists, so Host's defaults for having none go untested.");
 
         QVERIFY2(HostManager::self()->addHost(mHostname, QString(), QString(), QString()), "Could not create a profile with no main window.");
         Host* host = HostManager::self()->getHost(mHostname);
@@ -113,7 +112,22 @@ headlessResult = ok and 'ok' or tostring(err)
         QVERIFY2(mainBufferHolds(host, qsl("headless echo line")), "echo() to main never reached the main console model.");
         QVERIFY2(mainBufferHolds(host, qsl("headless fed line")), "feedTriggers() never reached the main console model.");
         QVERIFY2(mainBufferHolds(host, qsl("headless trigger echo")), "The trigger's echo never reached the main console model.");
+        // Lets work the profile deferred, such as its first-launch timer, run before looking
+        QCoreApplication::processEvents();
         QVERIFY2(QApplication::topLevelWidgets().isEmpty(), "Making and running the profile created a widget.");
+    }
+
+    void test_profileWithNoSettingsStoreTakesTheDefaults()
+    {
+        if (MudletApp::getQSettings()) {
+            QSKIP("A settings store exists with no main window, so there are no defaults for having none to check.");
+        }
+
+        const QString hostname = qsl("Test-Headless-Host-Defaults");
+        QVERIFY2(HostManager::self()->addHost(hostname, QString(), QString(), QString()), "Could not create a profile with no settings store.");
+        Host* host = HostManager::self()->getHost(hostname);
+        QVERIFY2(host, "The profile is not in the pool.");
+        QVERIFY(!host->mMapperCenterSmallAreas);
     }
 };
 
