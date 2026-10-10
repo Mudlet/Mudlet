@@ -241,6 +241,7 @@ describe("Packaged toolbar layouts", function()
     assert.equals(0, isActive(buttonId, "button", true), "asked by id, the switched-off toolbar silences its button")
     local liveId = findItems(item("FloatingSubMenuItem"), "button")[1]
     assert.is_true(isAncestorsActive(liveId, "button"))
+    assert.equals(1, isActive(liveId, "button", true), "asked by id, a button under switched-on menus is active")
   end)
 
   it("lists a nested menu item's ancestors up to the package", function()
