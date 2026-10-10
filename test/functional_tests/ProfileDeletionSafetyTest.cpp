@@ -428,6 +428,31 @@ private slots:
         QTRY_VERIFY2(CredentialManager::retrieveCredential(signedIn, qsl("reconnect-token")).isEmpty(), "the removed profile's sign-in token is still stored");
         QTRY_VERIFY2(CredentialManager::retrieveCredential(signedIn, qsl("reconnect")).isEmpty(), "the removed profile's sign-in record, with its token, is still stored");
         QCOMPARE(CredentialManager::retrieveCredential(mKeeper, qsl("reconnect-token")), qsl("keeper-token"));
+        QVERIFY2(!dlgConnectionProfiles::namesWithSignInBeingRemoved().contains(signedIn), "the name stayed refused after its sign-in was removed");
+        closeDialog(dlg);
+    }
+
+    // The removal waits on the keychain, and a profile made or connected under the name meanwhile would
+    // read the sign-in it has not reached yet
+    void test_aNameIsRefusedWhileItsSignInIsStillBeingRemoved()
+    {
+        const QString reused = qsl("QA Reused Name");
+        makeProfileWithSavedGame(reused);
+        auto stopRefusing = qScopeGuard([reused] {
+            dlgConnectionProfiles::namesWithSignInBeingRemoved().remove(reused);
+        });
+
+        auto* dlg = openDialog();
+        selectProfile(dlg, reused);
+        QVERIFY2(dlg->offline_button->isEnabled(), "the profile could not be opened even before its name was refused, so this case proves nothing");
+
+        dlgConnectionProfiles::namesWithSignInBeingRemoved().insert(reused);
+        dlg->validateProfile();
+        QVERIFY2(!dlg->offline_button->isEnabled() && !dlg->connect_button->isEnabled(), "a name whose sign-in is still being removed could be opened");
+
+        dlgConnectionProfiles::namesWithSignInBeingRemoved().remove(reused);
+        dlg->validateProfile();
+        QVERIFY2(dlg->offline_button->isEnabled(), "the name stayed refused once its sign-in was gone");
         closeDialog(dlg);
     }
 

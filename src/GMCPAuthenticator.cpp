@@ -1373,7 +1373,7 @@ void GMCPAuthenticator::attemptReconnect()
     return metadataPathInProfile(profileName);
 }
 
-/*static*/ void GMCPAuthenticator::forgetSavedSignInOfRemovedProfile(const QString& profileName)
+/*static*/ void GMCPAuthenticator::forgetSavedSignInOfRemovedProfile(const QString& profileName, std::function<void()> done)
 {
     // The preferred store only, so a player who keeps passwords in the profile is not asked for the keychain;
     // a copy left there from before a preference change survives. The store's older record goes even if the
@@ -1382,19 +1382,22 @@ void GMCPAuthenticator::attemptReconnect()
     remover->removePassword(
             profileName,
             tokenKey(),
-            [remover, profileName](bool tokenRemoved, const QString& tokenError) {
+            [remover, profileName, done = std::move(done)](bool tokenRemoved, const QString& tokenError) mutable {
                 if (!tokenRemoved) {
                     qWarning().noquote() << "GMCP Char.Login - the saved sign-in token of removed profile" << profileName << "was not removed:" << tokenError;
                 }
                 remover->removePassword(
                         profileName,
                         metadataKey(),
-                        [remover, profileName](bool recordRemoved, const QString& recordError) {
+                        [remover, profileName, done = std::move(done)](bool recordRemoved, const QString& recordError) {
                             if (!recordRemoved) {
                                 qWarning().noquote() << "GMCP Char.Login - the saved sign-in record of removed profile" << profileName << "was not removed:" << recordError;
                             }
                             if (remover) {
                                 remover->deleteLater();
+                            }
+                            if (done) {
+                                done();
                             }
                         },
                         CredentialManager::StoreScope::PreferredStore);

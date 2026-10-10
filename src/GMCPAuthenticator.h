@@ -118,7 +118,8 @@ public:
     static QString savedSignInRecordPath(const QString& profileName);
     // The credential store is keyed by name and outlives the profile's folder, so a new profile of the
     // same name would otherwise find this sign-in and send its token to whatever game it connects to.
-    static void forgetSavedSignInOfRemovedProfile(const QString& profileName);
+    // done runs once both removals have answered, whether or not they succeeded.
+    static void forgetSavedSignInOfRemovedProfile(const QString& profileName, std::function<void()> done = {});
 
 private:
     // Reads the stored sign-in - the {account, provider?, secure_only} metadata plus the token from
