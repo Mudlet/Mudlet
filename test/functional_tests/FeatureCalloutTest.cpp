@@ -110,6 +110,7 @@ private slots:
     {
         MudletApp::getQSettings()->remove(dismissedKey());
         MudletApp::getQSettings()->remove(shownCountKey());
+        TFeatureCallout::smSessionShown.clear();
         mpWindow = new QWidget;
         mpWindow->resize(400, 300);
         mpWindow->move(80, 80);
@@ -278,8 +279,27 @@ private slots:
         QCOMPARE(shownCount(), 0);
     }
 
-    // Each balloon maybeShow() puts up spends one of the two per-session slots,
-    // which this whole class shares, so there is room for two such cases
+    void test_retiresWhenItsMenuFoldsAwayAfterAppearing()
+    {
+        auto* menuBar = new QMenuBar(mpWindow);
+        menuBar->addMenu(qsl("Games"));
+        menuBar->addMenu(qsl("Toolbox"));
+        QAction* optionsMenu = menuBar->addMenu(qsl("Options"))->menuAction();
+        menuBar->resize(mpWindow->width(), menuBar->sizeHint().height());
+        menuBar->show();
+
+        auto* callout = new TFeatureCallout(mFeatureId, menuBar, qsl("Title"), qsl("Body"), optionsMenu);
+        callout->showAnchored();
+        callout->slot_applicationStateChanged(Qt::ApplicationActive);
+        QVERIFY(callout->isVisible());
+
+        menuBar->resize(menuBar->actionGeometry(menuBar->actions().constFirst()).width() + 30, menuBar->sizeHint().height());
+        QVERIFY2(!menuBar->rect().contains(menuBar->actionGeometry(optionsMenu)), "the menu bar is not narrow enough to fold the menu away");
+
+        QVERIFY2(visibleCallouts().isEmpty(), "the callout kept pointing at a menu folded out of sight");
+        QVERIFY(!dismissed());
+    }
+
     void test_offeredAtTwoAnchorsShowsOneBalloon()
     {
         const bool firstLaunch = MudletApp::firstLaunch();

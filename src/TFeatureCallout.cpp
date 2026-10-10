@@ -249,7 +249,10 @@ bool TFeatureCallout::anchorOnScreen() const
 
 void TFeatureCallout::reposition()
 {
+    // e.g. a narrowed window folded the menu into the bar's overflow; not a
+    // dismissal, the player never engaged with the balloon
     if (!anchorOnScreen()) {
+        close();
         return;
     }
     const QRect target = anchorRect();

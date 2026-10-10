@@ -90,6 +90,9 @@ private:
     // Features already pointed out this session, also used to keep several
     // freshly shipped features from ganging up on the player at once
     inline static QSet<QString> smSessionShown;
+
+    // Its cases each need a fresh session budget
+    friend class FeatureCalloutTest;
 };
 
 #endif // MUDLET_TFEATURECALLOUT_H
