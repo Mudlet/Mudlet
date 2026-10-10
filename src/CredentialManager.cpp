@@ -1573,7 +1573,7 @@ QString CredentialManager::retrieveCredentialFromFile(const QString& profileName
     // An older Mudlet uses only the truncated path, so a newer copy there is the latest password
     const QString legacyPath = generateLegacyFilePath(profileName, key);
 
-    // A newer older-named copy that cannot be opened may hold the latest password
+    // A copy under the old name that is newer but cannot be opened may hold the latest password
     bool legacyUnreadable = false;
     if (!legacyPath.isEmpty() && fileWrittenAfter(legacyPath, filePath)) {
         const QString migrated = readLegacyFileCredential(profileName, key, &legacyUnreadable);
@@ -1606,9 +1606,13 @@ QString CredentialManager::retrieveCredentialFromFile(const QString& profileName
                 *unreadable = true;
             }
         } else if (unreadable) {
-            // A folder that cannot be searched hides its files, so "not there" is not proof of absence
+            *unreadable = legacyUnreadable;
+#if !defined(Q_OS_WIN)
+            // A folder that cannot be searched hides its files, so "not there" is not proof of absence.
+            // Not on Windows, which has no search permission on a folder.
             const QFileInfo folder(QFileInfo(filePath).absolutePath());
-            *unreadable = legacyUnreadable || (folder.exists() && !(folder.isReadable() && folder.isExecutable()));
+            *unreadable = *unreadable || (folder.exists() && !(folder.isReadable() && folder.isExecutable()));
+#endif
         }
 
         return QString();

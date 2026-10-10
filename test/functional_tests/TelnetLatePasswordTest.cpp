@@ -493,7 +493,7 @@ private slots:
     {
         Host* host = TestProfile::create(mHostname, qsl("localhost"), mPort, 20s);
         QVERIFY(host);
-        const QString warning = qsl("Could not read your saved password");
+        const QString warning = qsl("Could not check for a saved password");
 
         host->lookUpSecuredPassword(new CredentialManager(host));
         QVERIFY2(!waitForConsoleContains(host, warning, 500), "a profile with no saved password was told its password could not be read");
@@ -545,6 +545,7 @@ private slots:
                          5s),
                  "the lookup never answered at its deadline");
         QVERIFY2(host->hasAutoLoginCredentials(), "a lookup that timed out stopped the password step waiting for the answer it still owes");
+        QVERIFY2(!waitForConsoleContains(host, qsl("Could not check for a saved password"), 500), "a lookup still waiting on the keychain told the player it could not check");
 
         QPointer<QKeychain::Job> read = reads->constFirst();
         QVERIFY2(read, "the read the lookup gave up on was deleted before the keychain answered it");

@@ -4973,11 +4973,12 @@ void Host::lookUpSecuredPassword(CredentialManager* credManager)
             "character",
             [this, credManager](bool success, const QString& password, const QString& errorMessage, CredentialManager::ReadOutcome outcome) {
                 securedPasswordAnswered(success, password, errorMessage, outcome == CredentialManager::ReadOutcome::TimedOut);
-                // Only a store that would not answer: a timed-out read can still be answered late
+                // Only a refusal: a timed-out read can still be answered late. A refusal does not say a
+                // password is there, so the message doesn't either.
                 if (outcome == CredentialManager::ReadOutcome::Unreadable) {
-                    //: Shown in the profile's console when the saved character password could not be read from the system's password store, so auto-login won't send it
-                    postMessage(tr("[ WARN ]  - Could not read your saved password from the password store, so it won't be sent automatically. "
-                                   "Unlock the password store, or type the password when the game asks for it."));
+                    //: Shown in the profile's console when Mudlet could not check for a saved character password, e.g. because the computer's password manager is locked, so auto-login won't send one
+                    postMessage(tr("[ WARN ]  - Could not check for a saved password, so none will be sent automatically. "
+                                   "If your computer's password manager is locked, unlock it; otherwise type your password when the game asks for it."));
                 }
 
                 // Clean up the credential manager

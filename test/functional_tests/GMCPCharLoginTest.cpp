@@ -2792,6 +2792,17 @@ private slots:
         QVERIFY2(signIn(qsl("Char.Login.Credentials")), "the sign-in right after the reconnect did not resume the provider");
         QVERIFY2(signIn(qsl("Char.Login.Credentials")), "the token the game already rejected was replayed again");
         QCOMPARE(mpServer->countReceived(qsl("Char.Login.Reconnect")), 0);
+
+        // A token the game hands out again after a sign-in is replayed, even the same string: saving it
+        // is what lifts the fingerprint
+        mpServer->sendGmcp(qsl("Char.Login.Token {\"account\": \"acct:char\", \"token\": \"dead-token\", \"secure_only\": false}"));
+        QVERIFY2(QTest::qWaitFor(
+                         [&host]() {
+                             return MudletApp::readProfileData(host->getName(), qsl("reconnect-rejected")).isEmpty();
+                         },
+                         4s),
+                 "saving the token again did not lift its fingerprint");
+        QVERIFY2(signIn(qsl("Char.Login.Reconnect")), "a token the game handed out again was not replayed");
     }
 
     // The same when the record is what cannot be read: one saved before the token had a key of its own
