@@ -128,7 +128,8 @@ bool readStoredTransportRequirement(const QJsonObject& entry)
 // removes the token then rewrites the metadata, and a forget removes token then metadata - and every
 // step is conditional on the one before. Whichever sequence
 // fails part way, what survives is the harmless half without the secret, never the secret without the
-// metadata, which is the half the preferences "Forget saved sign-in" control keys off.
+// metadata, which is the half the preferences "Forget saved sign-in" control keys off. Removing a whole
+// profile is the exception - see forgetSavedSignInOfRemovedProfile().
 //
 // Functions rather than repeated literals: a typo in one copy of a key would silently write where
 // nothing ever reads, and neither key is spelled anywhere else.
@@ -1370,6 +1371,38 @@ void GMCPAuthenticator::attemptReconnect()
 /*static*/ QString GMCPAuthenticator::savedSignInRecordPath(const QString& profileName)
 {
     return metadataPathInProfile(profileName);
+}
+
+/*static*/ void GMCPAuthenticator::forgetSavedSignInOfRemovedProfile(const QString& profileName, std::function<void()> done)
+{
+    // The preferred store only, so a player who keeps passwords in the profile is not asked for the keychain;
+    // a copy left there from before a preference change survives. The store's older record goes even if the
+    // token stays (the profile's own went with its folder): a token with no record is never replayed.
+    QPointer<CredentialManager> remover = new CredentialManager();
+    remover->removePassword(
+            profileName,
+            tokenKey(),
+            [remover, profileName, done = std::move(done)](bool tokenRemoved, const QString& tokenError) mutable {
+                if (!tokenRemoved) {
+                    qWarning().noquote() << "GMCP Char.Login - the saved sign-in token of removed profile" << profileName << "was not removed:" << tokenError;
+                }
+                remover->removePassword(
+                        profileName,
+                        metadataKey(),
+                        [remover, profileName, done = std::move(done)](bool recordRemoved, const QString& recordError) {
+                            if (!recordRemoved) {
+                                qWarning().noquote() << "GMCP Char.Login - the saved sign-in record of removed profile" << profileName << "was not removed:" << recordError;
+                            }
+                            if (remover) {
+                                remover->deleteLater();
+                            }
+                            if (done) {
+                                done();
+                            }
+                        },
+                        CredentialManager::StoreScope::PreferredStore);
+            },
+            CredentialManager::StoreScope::PreferredStore);
 }
 
 void GMCPAuthenticator::readStoreKey(const QString& key, StoreReadDone done)

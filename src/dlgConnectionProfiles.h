@@ -25,7 +25,9 @@
 
 #include "ui_connection_profiles.h"
 #include <optional>
+#include <QPointer>
 #include <QRegularExpression>
+#include <QSet>
 #include <QTimer>
 #include <QKeyEvent>
 
@@ -43,6 +45,7 @@ class dlgConnectionProfiles : public QDialog, public Ui::connection_profiles
     friend class ConnectionDialogKeychainWaitTest;
     friend class ConnectionDialogOfflineProfileTest;
     friend class SelfTestProfileIconTest;
+    friend class ProfileDeletionSafetyTest;
 
 public:
     Q_DISABLE_COPY(dlgConnectionProfiles)
@@ -142,6 +145,12 @@ private:
     void deleteSecurePassword(const QString& profile);
     void setupMudProfile(QListWidgetItem*, const QString& mudServer, const QString& serverDescription, const QString& iconFileName);
     void reallyDeleteProfile(const QString& profile);
+    // A removed profile's name is refused until the removal of its saved sign-in has answered, since a
+    // profile made or connected under it meanwhile would read it. Process-wide: the removal outlives the
+    // dialog. Held as removalKey()s, because a case-insensitive disk files a variant in the same place.
+    static QSet<QString>& namesWithSignInBeingRemoved();
+    static QString removalKey(const QString& name);
+    static void forgetSignInOfRemovedProfile(const QString& profile, QPointer<dlgConnectionProfiles> dialog);
     bool profileRemovable(const QString& profile) const;
     void updateRemoveButtonState(const QString& profile);
     void showRemovalProblem(const QString& message);
