@@ -43,6 +43,7 @@ public:
     bool hasLayoutAlready = false;
 
 protected:
+    bool event(QEvent *) override;
     void closeEvent(QCloseEvent *) override;
     void resizeEvent(QResizeEvent *) override;
     void moveEvent(QMoveEvent *) override;
