@@ -2757,6 +2757,43 @@ private slots:
         QVERIFY2(mHeldStoreOperations.empty(), "a token that could not be read back was removed anyway");
     }
 
+    // Left stored because it could not be read back, the rejected token must not be replayed again once
+    // the store answers - not just on the sign-in right after the reconnect, which the latch covers
+    void testARejectedTokenLeftInPlaceIsNotReplayedAgain()
+    {
+        Host* host = connectAndNegotiate();
+        QVERIFY(host);
+        host->setLogin(QString());
+        host->setPass(QString());
+        QVERIFY(seedSplitSignIn(host->getName(), qsl("{\"account\": \"acct:char\", \"provider\": \"discord\", \"secure_only\": false}"), qsl("dead-token")));
+        const auto signIn = [this](const QString& expected) {
+            mpServer->clearReceived();
+            mpServer->sendGmcp(qsl("Char.Login.Default {\"version\": 2, \"type\": [\"oauth\"]}"));
+            QJsonObject sent;
+            return waitForClientGmcp(expected, sent);
+        };
+        QVERIFY2(signIn(qsl("Char.Login.Reconnect")), "client did not replay the saved token");
+
+        const QString tokenPath = reconnectCredentialPath(host->getName(), qsl("reconnect-token"));
+        QVERIFY(CredentialManager::removeCredential(host->getName(), qsl("reconnect-token")));
+        QVERIFY(QDir().mkpath(tokenPath));
+        const int firstConnection = mpServer->connectionCount();
+        QTest::ignoreMessage(QtWarningMsg, QRegularExpression(qsl("could not read the saved token back after a rejected reconnect")));
+        mpServer->sendGmcp(qsl("Char.Login.Result {\"success\": false, \"message\": \"Reconnect token expired\"}"));
+        QVERIFY2(QTest::qWaitFor(
+                         [&]() {
+                             return mpServer->connectionCount() > firstConnection && mpServer->gmcpEnabled();
+                         },
+                         8s),
+                 "client did not reconnect and renegotiate GMCP after the rejection");
+
+        QVERIFY(QDir(tokenPath).removeRecursively());
+        QVERIFY(CredentialManager::storeCredential(host->getName(), qsl("reconnect-token"), qsl("dead-token")));
+        QVERIFY2(signIn(qsl("Char.Login.Credentials")), "the sign-in right after the reconnect did not resume the provider");
+        QVERIFY2(signIn(qsl("Char.Login.Credentials")), "the token the game already rejected was replayed again");
+        QCOMPARE(mpServer->countReceived(qsl("Char.Login.Reconnect")), 0);
+    }
+
     // The same when the record is what cannot be read: one saved before the token had a key of its own
     // is read from the store, with the token inside it
     void testARecoveryThatCannotReadTheRecordLeavesItInPlace()

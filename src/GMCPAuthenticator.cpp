@@ -221,6 +221,28 @@ QString tokenKey()
     return qsl("reconnect-token");
 }
 
+// The fingerprint of a token the game rejected that could not be read back to remove, so a later
+// session does not replay it again. A hash is no secret, so it is the profile's own data.
+QString rejectedTokenKey()
+{
+    return qsl("reconnect-rejected");
+}
+
+QByteArray rejectedTokenHash(const QString& profileName)
+{
+    return QByteArray::fromHex(MudletApp::readProfileData(profileName, rejectedTokenKey()).toLatin1());
+}
+
+void rememberRejectedToken(const QString& profileName, const QByteArray& hash)
+{
+    MudletApp::writeProfileData(profileName, rejectedTokenKey(), QString::fromLatin1(hash.toHex()));
+}
+
+void forgetRejectedToken(const QString& profileName)
+{
+    QFile::remove(MudletApp::getMudletPath(enums::profileDataItemPath, profileName, rejectedTokenKey()));
+}
+
 } // namespace
 
 GMCPAuthenticator::GMCPAuthenticator(Host* pHost)
@@ -752,6 +774,7 @@ void GMCPAuthenticator::forgetSavedSignIn(std::function<void(bool success)> call
     // awaiting the result of a token it replayed - can see that the player has since asked for all of
     // it to go, and stops short of putting any of it back.
     ++mForgetGeneration;
+    forgetRejectedToken(mpHost->getName());
     discardReconnectToken(std::move(callback), SignInStoreReconciler::Intent::forgotten());
 }
 
@@ -1147,7 +1170,11 @@ void GMCPAuthenticator::retryOrDropRejectedToken()
             if (!success || entry.tokenUnreadable) {
                 qWarning().noquote() << "GMCP Char.Login - could not read the saved token back after a rejected reconnect, so it is left in place: another Mudlet instance may have "
                                         "replaced it.";
+                if (!sentTokenHash.isEmpty()) {
+                    rememberRejectedToken(mpHost->getName(), sentTokenHash);
+                }
             } else {
+                forgetRejectedToken(mpHost->getName());
                 dropTokenKeepResumeHint(reconnectAccount, accountProvider);
             }
         }
@@ -1572,8 +1599,14 @@ void GMCPAuthenticator::readStoredSignIn(bool allowToken)
             QByteArray tokenBytes = entry.token.toUtf8();
             const QByteArray sentHash = QCryptographicHash::hash(tokenBytes, QCryptographicHash::Sha256);
             SecureStringUtils::secureByteArrayClear(tokenBytes);
+            // A token the game already rejected, left stored because it could not be read back then
+            const QByteArray rejectedHash = rejectedTokenHash(mpHost->getName());
+            const bool alreadyRejected = !rejectedHash.isEmpty() && rejectedHash == sentHash;
+            if (!rejectedHash.isEmpty() && !alreadyRejected) {
+                forgetRejectedToken(mpHost->getName());
+            }
             // Move the token in so sendReconnect owns the sole copy and can scrub it either way.
-            if (sendReconnect(entry.account, std::move(entry.token), entry.secureOnly)) {
+            if (!alreadyRejected && sendReconnect(entry.account, std::move(entry.token), entry.secureOnly)) {
                 // This connection is logging in by replaying a saved token, so a Char.Login.Token that
                 // comes back is a silent rotation rather than a first-time save to announce.
                 mConn.reconnectingWithToken = true;
