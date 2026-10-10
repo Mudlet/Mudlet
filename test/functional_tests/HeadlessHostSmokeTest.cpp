@@ -676,6 +676,36 @@ headlessCaptions = ok and 'ok' or tostring(err)
         QTRY_VERIFY2(mainBufferHolds(host, qsl("[headless caption stops]")), "The stopped sound was not captioned in the main console.");
     }
 
+    // Nothing copies the bundled fonts into the config directory here, as the executable does for the GUI
+    void test_bundledFontsAreAvailableWithNoMainWindow()
+    {
+#ifndef INCLUDE_FONTS
+        QSKIP("Built with WITH_FONTS=NO, so there are no bundled fonts to list");
+#else
+        QVERIFY2(!TAppFrontend::hasView(), "A main window exists, so this run is not headless.");
+        QVERIFY2(!QDir(MudletApp::getMudletPath(enums::mainFontsPath)).exists(), "The bundled fonts were copied out, so this cannot tell whether they load without that.");
+
+        const QString hostname = qsl("Test-Headless-Host-Fonts");
+        QVERIFY2(HostManager::self()->addHost(hostname, QString(), QString(), QString()), "Could not create a profile with no main window.");
+        Host* host = HostManager::self()->getHost(hostname);
+        QVERIFY2(host, "The profile is not in the pool.");
+
+        const bool ran = host->getLuaInterpreter()->compileAndExecuteScript(qsl(R"lua(
+local ok, err = pcall(function()
+  local fonts = getAvailableFonts()
+  assert(fonts["Bitstream Vera Sans Mono"], "the bundled default font is not listed")
+  assert(fonts["Ubuntu Mono"], "the bundled Ubuntu Mono is not listed")
+  local set, why = setConfig("mapSymbolFont", "Bitstream Vera Sans Mono")
+  assert(set, "the bundled default was refused as the map symbol font: " .. tostring(why))
+  assert(getConfig("mapSymbolFont") == "Bitstream Vera Sans Mono", "the map symbol font reads back as " .. tostring(getConfig("mapSymbolFont")))
+end)
+headlessFonts = ok and 'ok' or tostring(err)
+)lua"));
+        QVERIFY2(ran, "The Lua chunk did not run.");
+        QCOMPARE(luaGlobalString(host, "headlessFonts"), qsl("ok"));
+#endif
+    }
+
     // As the GUI answers the same files
     void test_imageSizeWithNoMainWindow()
     {

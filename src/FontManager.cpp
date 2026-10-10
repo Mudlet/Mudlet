@@ -47,11 +47,15 @@ FontManager::~FontManager()
 
 QStringList FontManager::availableFonts()
 {
+    if (!smFontsAdded && smpSelf) {
+        smpSelf->addFontsWithNoMainWindow();
+    }
     return QFontDatabase::families(QFontDatabase::Any);
 }
 
 void FontManager::addFonts()
 {
+    smFontsAdded = true;
     const QDir dir(MudletApp::getMudletPath(enums::mainFontsPath));
 
     if (!dir.exists()) {
@@ -65,6 +69,24 @@ void FontManager::addFonts()
     for (auto fontfolder : dir.entryList(QDir::Dirs | QDir::Readable | QDir::NoDotAndDotDot)) {
         loadFonts(qsl("%1/%2").arg(dir.absolutePath(), fontfolder));
     }
+}
+
+// The executable copies the bundled fonts out of the resources into the fonts
+// folder before its main window loads that (main.cpp); nothing does so without
+// one, so a bundle missing from the folder is loaded from the resources instead.
+void FontManager::addFontsWithNoMainWindow()
+{
+    addFonts();
+
+    const QDir folder(MudletApp::getMudletPath(enums::mainFontsPath));
+    const QDir resources(qsl(":/fonts"));
+    for (const QString& bundle : resources.entryList(QDir::Dirs | QDir::NoDotAndDotDot)) {
+        if (!folder.exists(bundle)) {
+            loadFonts(resources.filePath(bundle));
+        }
+    }
+
+    addEmojiFont();
 }
 
 // loads all of the fonts in the given folder

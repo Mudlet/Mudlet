@@ -33,6 +33,7 @@
 #include "AltFocusMenuBarDisable.h"
 #include "CredentialManager.h"
 #include "DarkTheme.h"
+#include "FontManager.h"
 #include "HostDialogs.h"
 #include "LuaInterface.h"
 #include "TBuffer.h"
@@ -2053,9 +2054,9 @@ void mudlet::init()
     initEdbee();
 
     // load bundled fonts
-    mFontManager.addFonts();
+    mHostManager.fonts().addFonts();
     // Configure emoji font support
-    mFontManager.addEmojiFont();
+    mHostManager.fonts().addEmojiFont();
 
     // Initialise a couple of QMaps and some other elements that must be
     // translated into the current GUI Language
