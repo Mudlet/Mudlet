@@ -94,6 +94,32 @@ local function using(encoding)
   assert.is_true(setServerEncoding(encoding), "setServerEncoding refused " .. encoding)
 end
 
+-- The foreground colour of text on the first line from fromLine on that starts with prefix
+local function colourOf(text, prefix, fromLine)
+  for line = fromLine, getLastLineNumber("main") do
+    moveCursor("main", 0, line)
+    if getCurrentLine("main"):sub(1, #prefix) == prefix then
+      assert.is_true(selectString(text, 1) >= 0, "no '" .. text .. "' in " .. getCurrentLine("main"))
+      local colour = {getFgColor("main")}
+      deselect()
+      return colour
+    end
+  end
+  error("no line starting '" .. prefix .. "'")
+end
+
+-- The one line from mark on that starts with prefix
+local function lineStarting(prefix, mark)
+  local found = {}
+  for _, line in ipairs(getLines("main", mark, getLastLineNumber("main") + 1)) do
+    if line:sub(1, #prefix) == prefix then
+      found[#found + 1] = line
+    end
+  end
+  assert.equals(1, #found, "lines starting '" .. prefix .. "': " .. table.concat(found, "|"))
+  return found[1]
+end
+
 describe("Tests the single byte encoding tables", function()
 
   it("gives byte 0x86 the character its own code page assigns to it", function()
@@ -423,6 +449,109 @@ describe("Tests changing from one double byte encoding to another", function()
     assert.is_true(setServerEncoding("EUC-KR"))
     assert.equals("한", decoded(bytes(0xC7, 0xD1)))
   end)
+
+  -- A CHARSET request only ever arrives with DO CHARSET in force, and busted
+  -- keeps one finally() per test, so both go back from the same one
+  local function charsetRequestsFrom(encoding)
+    local restoreEncoding = restoreServerEncoding()
+    assert.is_true(setServerEncoding(encoding))
+    assert.is_true(feedTelnet("<T_IAC><T_DO><O_CHARS>"))
+    return function()
+      feedTelnet("<T_IAC><T_DONT><O_CHARS>")
+      restoreEncoding()
+    end
+  end
+
+  -- in Big5 0xC4 0x5A is a character of its own; the lead byte sent under GBK can only be marked
+  it("does not pair a byte from the old encoding with one in the new when the game changes it", function()
+    finally(charsetRequestsFrom("GBK"))
+    local mark = getLastLineNumber("main")
+    -- the request comes in the same read as the text ahead of it
+    assert.is_true(feedTelnet("inband:" .. bytes(0xC4) .. "<T_IAC><T_SB><O_CHARS><01>;BIG5<T_IAC><T_SE>"))
+    assert.equals("BIG5", getServerEncoding())
+    assert.is_true(feedTelnet(bytes(0x5A) .. "\r\n"))
+
+    assert.equals("inband:" .. replacement .. "Z", lineStarting("inband:", mark))
+  end)
+
+  it("does not pair a byte from the old encoding with one in the new when the request has no IAC SE", function()
+    finally(charsetRequestsFrom("GBK"))
+    local mark = getLastLineNumber("main")
+    -- the IAC NOP is what tells cTelnet the IAC SE went missing
+    assert.is_true(feedTelnet("noSE:" .. bytes(0xC4) .. "<T_IAC><T_SB><O_CHARS><01>;BIG5<T_IAC><T_NOP>"))
+    assert.equals("BIG5", getServerEncoding())
+    assert.is_true(feedTelnet(bytes(0x5A) .. "\r\n"))
+
+    assert.equals("noSE:" .. replacement .. "Z", lineStarting("noSE:", mark))
+  end)
+
+  it("acts on a CHARSET request after a trigger on the text ahead of it feeds more", function()
+    local restore = charsetRequestsFrom("GBK")
+    local trigger = tempRegexTrigger("^reenter:hello$", function()
+      feedTelnet("reenter:fed\r\n")
+    end)
+    finally(function()
+      killTrigger(trigger)
+      restore()
+    end)
+    local mark = getLastLineNumber("main")
+    assert.is_true(feedTelnet("reenter:hello\r\n<T_IAC><T_SB><O_CHARS><01>;BIG5<T_IAC><T_SE>"))
+    assert.equals("BIG5", getServerEncoding())
+
+    assert.equals("reenter:fed", lineStarting("reenter:f", mark))
+  end)
+
+  it("does not pair a byte from the old encoding with one in the new when a script's protocol handler changes it", function()
+    local restoreEncoding = restoreServerEncoding()
+    assert.is_true(setServerEncoding("GBK"))
+    assert.is_true(feedTelnet("<T_IAC><T_WILL><O_GMCP>"))
+    local handler = registerAnonymousEventHandler("gmcp.Encoding.Probe", function()
+      setServerEncoding("BIG5")
+    end)
+    finally(function()
+      killAnonymousEventHandler(handler)
+      feedTelnet("<T_IAC><T_WONT><O_GMCP>")
+      restoreEncoding()
+    end)
+    local mark = getLastLineNumber("main")
+    assert.is_true(feedTelnet("gmcp:" .. bytes(0xC4) .. "<T_IAC><T_SB><O_GMCP>Encoding.Probe {}<T_IAC><T_SE>"))
+    assert.equals("BIG5", getServerEncoding())
+    assert.is_true(feedTelnet(bytes(0x5A) .. "\r\n"))
+
+    assert.equals("gmcp:" .. replacement .. "Z", lineStarting("gmcp:", mark))
+  end)
+
+  it("does not pair a byte from the old encoding with one in the new when a replay changes it", function()
+    if not os.getenv("MUDLET_TEST_MODE") then
+      pending("letting the replay timer run needs MUDLET_TEST_MODE")
+      return
+    end
+    local restore = charsetRequestsFrom("GBK")
+    local replay = getMudletHomeDir() .. "/mudlet-spec-charset-replay.dat"
+    finally(function()
+      os.remove(replay)
+      restore()
+    end)
+    -- QDataStream records, big-endian: the delay before each, its length, its bytes
+    local function chunk(payload)
+      local n = #payload
+      return bytes(0, 0, 0, 0, math.floor(n / 16777216) % 256, math.floor(n / 65536) % 256, math.floor(n / 256) % 256, n % 256) .. payload
+    end
+    local file = assert(io.open(replay, "wb"))
+    file:write(chunk("replayed:" .. bytes(0xC4, 0xFF, 0xFA, 0x2A, 0x01) .. ";BIG5" .. bytes(0xFF, 0xF0)) .. chunk(bytes(0x5A) .. "\r\nreplay:end\r\n"))
+    file:close()
+    local mark = getLastLineNumber("main")
+    assert.is_true(loadReplay(replay))
+    for _ = 1, 40 do
+      if table.concat(getLines("main", mark, getLastLineNumber("main") + 1), "|"):find("replay:end", 1, true) then
+        break
+      end
+      pumpEvents(50)
+    end
+    assert.equals("BIG5", getServerEncoding())
+
+    assert.equals("replayed:" .. replacement .. "Z", lineStarting("replayed:", mark))
+  end)
 end)
 
 describe("Tests a UTF-8 sequence cut short by a byte that cannot continue it", function()
@@ -551,20 +680,6 @@ describe("Tests a double byte character cut short by a byte that cannot be its s
       assert.same({"dbsplit:one" .. kept(lead), "dbsplit:two"}, shownLines("dbsplit:", mark), encoding)
     end
   end)
-
-  -- The foreground colour of text on the first line from fromLine on that starts with prefix
-  local function colourOf(text, prefix, fromLine)
-    for line = fromLine, getLastLineNumber("main") do
-      moveCursor("main", 0, line)
-      if getCurrentLine("main"):sub(1, #prefix) == prefix then
-        assert.is_true(selectString(text, 1) >= 0, "no '" .. text .. "' in " .. getCurrentLine("main"))
-        local colour = {getFgColor("main")}
-        deselect()
-        return colour
-      end
-    end
-    error("no line starting '" .. prefix .. "'")
-  end
 
   it("still acts on a colour code that arrives in the next read", function()
     finally(restoreServerEncoding())
@@ -828,6 +943,83 @@ describe("Tests a character whose bytes are split by the posting timeout", funct
     assert.same(redForegroundFrom(wholeMark), splitColour)
     assert.are_not.same(redForegroundFrom(plainMark), splitColour)
   end
+
+  -- A game that ends its lines with IAC GA has cTelnet post each read at once;
+  -- these cases are about the tail of a line it holds back otherwise
+  it("does not pair a byte held over from the old encoding with one in the new", function()
+    if timerUnavailable() then return end
+    using("GBK")
+    local mark = getLastLineNumber("main")
+    feed("heldlead:" .. bytes(0xC4))
+    -- in Big5 0xC4 0x5A is a character of its own
+    assert.is_true(setServerEncoding("BIG5"))
+    feed(bytes(0x5A) .. "\r\n")
+
+    assert.equals("heldlead:" .. replacement .. "Z", lineStarting("heldlead:", mark))
+  end)
+
+  it("decodes characters held over from the old encoding in that encoding", function()
+    if timerUnavailable() then return end
+    using("GBK")
+    local mark = getLastLineNumber("main")
+    feed("heldchar:" .. bytes(0xC4, 0xE3))
+    assert.is_true(setServerEncoding("BIG5"))
+    feed("\r\n")
+
+    assert.equals("heldchar:你", lineStarting("heldchar:", mark))
+  end)
+
+  it("decodes characters held over from the old encoding when the encoding is turned off", function()
+    if timerUnavailable() then return end
+    using("GBK")
+    local mark = getLastLineNumber("main")
+    feed("heldascii:" .. bytes(0xC4, 0xE3))
+    assert.is_true(setServerEncoding("ASCII"))
+    feed("\r\n")
+
+    assert.equals("heldascii:你", lineStarting("heldascii:", mark))
+  end)
+
+  -- The bytes of a CSI, and of an OSC payload (always read as UTF-8), do not depend on the encoding
+  it("keeps a colour code split across an encoding change", function()
+    if timerUnavailable() then return end
+    using("GBK")
+    local mark = getLastLineNumber("main")
+    feed("encref:\27[31mRED\27[0m\r\n")
+    local red = colourOf("RED", "encref:", mark)
+
+    mark = getLastLineNumber("main")
+    feed("encsgr:\27[3")
+    assert.is_true(setServerEncoding("BIG5"))
+    feed("1mRED\27[0m\r\n")
+    assert.same(red, colourOf("RED", "encsgr:", mark))
+  end)
+
+  it("keeps a colour code split across an encoding change that local text notices first", function()
+    if timerUnavailable() then return end
+    using("GBK")
+    local mark = getLastLineNumber("main")
+    feed("encref:\27[31mRED\27[0m\r\n")
+    local red = colourOf("RED", "encref:", mark)
+
+    mark = getLastLineNumber("main")
+    feed("\27[3")
+    assert.is_true(setServerEncoding("BIG5"))
+    feedTriggers("enclocal\n")
+    feed("1mencsgr2:RED\27[0m\r\n")
+    assert.same(red, colourOf("RED", "encsgr2:", mark))
+  end)
+
+  it("keeps a hyperlink split across an encoding change", function()
+    if timerUnavailable() then return end
+    using("GBK")
+    local mark = getLastLineNumber("main")
+    feed("enclink:\27]8;;send:" .. bytes(0xC4, 0xE3))
+    assert.is_true(setServerEncoding("BIG5"))
+    feed("\27\\link\27]8;;\27\\\r\n")
+
+    assert.equals("enclink:link", lineStarting("enclink:", mark))
+  end)
 
   it("breaks an ASCII line at the flush marker", function()
     if timerUnavailable() then return end
@@ -1267,5 +1459,53 @@ describe("Tests a double-byte character restyled between its bytes", function()
   it("ends the character at a byte that cannot be its trail", function()
     using("EUC-KR")
     assert.equals(replacement .. "X", decoded(bytes(0xC7) .. "\27[31mX\27[0m"))
+  end)
+end)
+
+describe("Tests a subnegotiation in a game that ends prompts with IAC GA", function()
+  -- The leading line feed of a prompt is dropped (fixUnnecessaryLinebreaks), and
+  -- a subnegotiation must not move where the prompt starts
+  local function withPromptFixup()
+    local fixLineBreaks = getConfig("fixUnnecessaryLinebreaks")
+    local restoreEncoding = restoreServerEncoding()
+    setConfig("fixUnnecessaryLinebreaks", true)
+    assert.is_true(feedTelnet("<T_IAC><T_DO><O_CHARS>"))
+    finally(function()
+      setConfig("fixUnnecessaryLinebreaks", fixLineBreaks)
+      feedTelnet("<T_IAC><T_DONT><O_CHARS>")
+      restoreEncoding()
+    end)
+    assert.is_true(feedTelnet("gaprompt:0><T_IAC><T_GA>"))
+  end
+
+  it("keeps the line ahead of a prompt the subnegotiation precedes", function()
+    withPromptFixup()
+    local mark = getLastLineNumber("main")
+    -- 03 is REJECTED, which leaves the encoding alone
+    assert.is_true(feedTelnet("gatext<T_IAC><T_SB><O_CHARS><03><T_IAC><T_SE>\ngaprompt:1><T_IAC><T_GA>"))
+    assert.is_true(feedTelnet("gaprompt:end\r\n"))
+
+    assert.equals("gatext|gaprompt:1>|gaprompt:end", table.concat(getLines("main", mark, getLastLineNumber("main")), "|"))
+  end)
+
+  it("drops the line feed that opens a prompt the subnegotiation splits", function()
+    withPromptFixup()
+    local mark = getLastLineNumber("main")
+    assert.is_true(feedTelnet("\ngaprompt:HP<T_IAC><T_SB><O_CHARS><03><T_IAC><T_SE>><T_IAC><T_GA>"))
+    assert.is_true(feedTelnet("gaprompt:end\r\n"))
+
+    assert.equals("gaprompt:HP>|gaprompt:end", table.concat(getLines("main", mark, getLastLineNumber("main")), "|"))
+  end)
+
+  it("keeps the lines around a prompt an encoding change splits", function()
+    withPromptFixup()
+    local mark = getLastLineNumber("main")
+    assert.is_true(feedTelnet("gatext<T_IAC><T_SB><O_CHARS><01>;BIG5<T_IAC><T_SE>\ngaprompt:1><T_IAC><T_GA>"))
+    assert.equals("BIG5", getServerEncoding())
+    assert.is_true(feedTelnet("\ngaprompt:HP<T_IAC><T_SB><O_CHARS><01>;GBK<T_IAC><T_SE>><T_IAC><T_GA>"))
+    assert.equals("GBK", getServerEncoding())
+    assert.is_true(feedTelnet("gaprompt:end\r\n"))
+
+    assert.equals("gatext|gaprompt:1>|gaprompt:HP>|gaprompt:end", table.concat(getLines("main", mark, getLastLineNumber("main")), "|"))
   end)
 end)

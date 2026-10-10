@@ -64,6 +64,7 @@
 #include <QtGlobal>
 
 #include <memory>
+#include <utility>
 
 using namespace std::chrono_literals;
 
@@ -489,6 +490,60 @@ QString cTelnet::errorString()
     return mpSocket->errorString();
 }
 
+// search for leading <LF> but skip leading ANSI control sequences
+static void removeLeadingLineFeed(std::string& data)
+{
+    int j = 0;
+    int s = data.size();
+
+    while (j < s) {
+        if (data[j] == 0x1B) {
+            while (j < s) {
+                if (data[j] == 'm') {
+                    goto NEXT;
+                }
+                ++j;
+            }
+        }
+
+        if (data[j] == '\n') {
+            data.erase(j, 1);
+            break;
+        }
+        break;
+    NEXT:
+        ++j;
+    }
+}
+
+// Text not yet handed to TBuffer is in the encoding being replaced, and only
+// TBuffer can drop a character the change leaves incomplete
+void cTelnet::postHeldDataBeforeEncodingChange()
+{
+    if (mpTextAheadOfSubnegotiation && !mpTextAheadOfSubnegotiation->empty()) {
+        std::string textAhead;
+        textAhead.swap(*mpTextAheadOfSubnegotiation);
+        // It may open a prompt, whose leading <LF> gotPrompt() can then no longer see
+        if (mUSE_IRE_DRIVER_BUGFIX && mGA_Driver) {
+            removeLeadingLineFeed(textAhead);
+            mPromptStartPosted = true;
+        }
+        gotRest(textAhead);
+    }
+    if (!mMudData.empty()) {
+        postData();
+    }
+}
+
+// Its handler (a CHARSET request, or a script's for another protocol) can change
+// the encoding, which has to post the text ahead of it in the same read first
+void cTelnet::processSubnegotiation(const std::string& subnegotiation, std::string& textAhead)
+{
+    std::string* const outerTextAhead = std::exchange(mpTextAheadOfSubnegotiation, &textAhead);
+    processTelnetCommand(subnegotiation);
+    mpTextAheadOfSubnegotiation = outerTextAhead;
+}
+
 // newEncoding must be EITHER: one of the FIXED non-translatable values in
 // cTelnet::csmAcceptableEncodings
 // OR "ASCII"
@@ -504,6 +559,7 @@ QPair<bool, QString> cTelnet::setEncoding(const QByteArray& newEncoding, const b
     if (newEncoding.isEmpty() || newEncoding == "ASCII") {
         reportedEncoding = "ASCII";
         if (!mEncoding.isEmpty()) {
+            postHeldDataBeforeEncodingChange();
             // This will disable transcoding on:
             // input in TBuffer::translateToPlainText(...)
             // incoming OOB in TLuaInterpreter::encodeBytes(...)
@@ -538,6 +594,7 @@ QPair<bool, QString> cTelnet::setEncoding(const QByteArray& newEncoding, const b
                          QLatin1String(R"(Encoding ")") % newEncoding % QLatin1String("\" does not exist;\nuse one of the following:\n\"ASCII\", \"") % QLatin1String(fixedUpEncodings.join(R"(", ")"))
                                  % QLatin1String(R"(".)"));
     } else if (mEncoding != newEncoding && ("M_" + mEncoding) != newEncoding) {
+        postHeldDataBeforeEncodingChange();
         encodingChanged(newEncoding);
 
         if (saveValue) {
@@ -5176,30 +5233,10 @@ void cTelnet::gotPrompt(std::string& mud_data)
     }
 
     // Patch for servers that need GA/EOR for prompt fixups
-    if (mUSE_IRE_DRIVER_BUGFIX && mGA_Driver) {
-        int j = 0;
-        int s = mMudData.size();
-
-        while (j < s) {
-            // search for leading <LF> but skip leading ANSI control sequences
-            if (mMudData[j] == 0x1B) {
-                while (j < s) {
-                    if (mMudData[j] == 'm') {
-                        goto NEXT;
-                    }
-                    ++j;
-                }
-            }
-
-            if (mMudData[j] == '\n') {
-                mMudData.erase(j, 1);
-                break;
-            }
-            break;
-        NEXT:
-            ++j;
-        }
+    if (mUSE_IRE_DRIVER_BUGFIX && mGA_Driver && !mPromptStartPosted) {
+        removeLeadingLineFeed(mMudData);
     }
+    mPromptStartPosted = false;
 
     postData(true);
     mMudData = "";
@@ -5703,14 +5740,13 @@ void cTelnet::slot_processReplayChunk()
             } else if (insb) {
                 //7. inside IAC SB
                 command += ch;
-                if (iac && (ch == TN_SE)) //IAC SE - end of subcommand
-                {
-                    processTelnetCommand(command);
-                    command = "";
+                if (iac && (ch == TN_SE)) { //IAC SE - end of subcommand
+                    std::string subnegotiation;
+                    subnegotiation.swap(command);
                     iac = false;
                     insb = false;
-                }
-                if (iac) {
+                    processSubnegotiation(subnegotiation, cleandata);
+                } else if (iac) {
                     iac = false;
                 } else if (ch == TN_IAC) {
                     iac = true;
@@ -5749,6 +5785,7 @@ void cTelnet::slot_processReplayChunk()
     if (!cleandata.empty()) {
         gotRest(cleandata);
     }
+    mPromptStartPosted = false;
 
     if (mpHost) {
         mpHost->finalizeMainConsole();
@@ -6051,10 +6088,13 @@ void cTelnet::processSocketData(char* in_buffer, int amount, const bool loopback
                 }
 
                 if (iac && (ch == TN_SE)) { //IAC SE - end of subcommand
-                    processTelnetCommand(command);
-                    command = "";
+                    // The parser is reset first: what the handler posts can run
+                    // triggers that feedTelnet() back in here
+                    std::string subnegotiation;
+                    subnegotiation.swap(command);
                     iac = false;
                     insb = false;
+                    processSubnegotiation(subnegotiation, cleandata);
                 } else if (iac && (ch == TN_IAC)) { // escaped TN_IAC
                     command.pop_back();
                     iac = false;
@@ -6065,13 +6105,17 @@ void cTelnet::processSocketData(char* in_buffer, int amount, const bool loopback
                     // Cf. https://github.com/Mudlet/Mudlet/issues/4385
                     command.pop_back();
                     command += TN_SE;
-                    processTelnetCommand(command);
+                    std::string subnegotiation;
+                    subnegotiation.swap(command);
+                    iac = false;
+                    insb = false;
+                    processSubnegotiation(subnegotiation, cleandata);
 
                     if (!mIncompleteSB) {
                         mIncompleteSB = true;
                         qWarning(R"("TELNET: the server did not properly complete a subnegotiation (code %02x).
 Some data loss is likely - please mention this problem to the game admins.)",
-                                 command[2]);
+                                 subnegotiation[2]);
                     }
 
                     // Re-enter the state machine.
@@ -6121,6 +6165,7 @@ Some data loss is likely - please mention this problem to the game admins.)",
     if (!cleandata.empty()) {
         gotRest(cleandata);
     }
+    mPromptStartPosted = false;
 
     // Reprocess data left over after this decompression pass (more compressed
     // data than fit in one output buffer, or plain data past the end of the

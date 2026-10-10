@@ -1297,20 +1297,19 @@ void TBuffer::translateToPlainTextInner(std::string& incoming, const bool isFrom
     const QByteArray usedEncoding = mpHost->mTelnet.getEncoding();
     if (mEncoding != usedEncoding) {
         encodingChanged(usedEncoding);
-        // Will have to dump any stored bytes as they will be in the old
-        // encoding and the following code block to prepend them is used for
-        // both bytes that are held over as part of a multi-byte encoding that
-        // was incomplete at the end of the last packet AND ALSO for ANSI code
-        // sequences that were not complete at the end of the last packet:
-        if (!mIncompleteSequenceBytes.empty()) {
+        // A held character is in the old encoding but a held CSI or OSC (payload read as UTF-8) is not;
+        // only the game's bytes are carried across feeds, and a local feed has the channels swapped
+        std::string& serverHeldBytes = isFromServer ? mIncompleteSequenceBytes : mLocalIncompleteSequenceBytes;
+        const bool serverHoldsSequence = isFromServer ? (mGotCSI || mGotOSC) : (mLocalGotCSI || mLocalGotOSC);
+        if (!serverHeldBytes.empty() && !serverHoldsSequence) {
 #if defined(DEBUG_SGR_PROCESSING) || defined(DEBUG_OSC_PROCESSING) || defined(DEBUG_UTF8_PROCESSING) || defined(DEBUG_GB_PROCESSING) || defined(DEBUG_BIG5_PROCESSING)
             qDebug() << "TBuffer::translateToPlainText(...) WARNING - Dumping residual bytes that were carried over from previous packet onto incoming data - the encoding has changed and they may no "
                         "longer be usable!";
 #endif
-            mIncompleteSequenceBytes.clear();
+            serverHeldBytes.clear();
+            appendReplacementCharacter(TChar((!mIsDefaultColor && mBold) ? mForeGroundColorLight : mForeGroundColor, mBackGroundColor, computeCurrentAttributeFlags()));
         }
-        // The other channel's held-over bytes are equally stale:
-        mLocalIncompleteSequenceBytes.clear();
+        (isFromServer ? mLocalIncompleteSequenceBytes : mIncompleteSequenceBytes).clear();
         mPendingLead = 0;
         mLocalPendingLead = 0;
     }
@@ -8390,8 +8389,12 @@ void TBuffer::flushPendingLead()
 {
     // What came after the lead byte was not its trail byte:
     mPendingLead = 0;
+    appendReplacementCharacter(mPendingLeadFormat);
+}
+
+void TBuffer::appendReplacementCharacter(TChar c)
+{
     mMudLine.append(QChar::ReplacementCharacter);
-    TChar c(mPendingLeadFormat);
     styleForCurrentLink(c);
     mMudBuffer.push_back(c);
     if (mHyperlinkActive) {

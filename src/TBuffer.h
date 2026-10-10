@@ -565,6 +565,7 @@ private:
     static bool doubleByteTrail(Decoder, quint8);
     void styleForCurrentLink(TChar&);
     void flushPendingLead();
+    void appendReplacementCharacter(TChar);
     static QStringDecoder multibyteDecoderFor(Decoder, const QByteArray&);
     bool decodeMultibyteSequence(QByteArrayView, QString&);
     // Views into the string decodeSGR() was handed, so none may outlive that call.
