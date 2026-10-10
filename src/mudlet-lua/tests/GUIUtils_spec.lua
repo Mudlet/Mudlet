@@ -1437,7 +1437,7 @@ describe("Tests the GUI utilities as far as possible without mudlet", function()
       { "\27[38;5mtrunc", string = "trunc", decho = "trunc" },
       { "\27[38;2;1mtrunc2", string = "trunc2", decho = "<1,0,0>trunc2" },
       { "\27[1;30mdark\27[0;30mblack", string = "darkblack", decho = "<128,128,128>dark<r><0,0,0>black", lastColour = 0 },
-      -- escape sequences other than SGR are dropped rather than passed through (#10647)
+      -- other escape sequences go as the console drops them; a cursor forward becomes spaces
       { "\27[?25hVISIBLE", string = "VISIBLE", decho = "VISIBLE" },
       { "A\27[5CB", string = "A     B", decho = "A     B" },
       { "A\27[CB\27[0CC\27[2;3CD", string = "ABCD", decho = "ABCD" },
@@ -1456,6 +1456,10 @@ describe("Tests the GUI utilities as far as possible without mudlet", function()
       { "a\27[99999999999999999999Cb", string = "ab", decho = "ab" },
       { "\27[1zHello\27[zA\27[1;2zB", string = "HelloAB", decho = "\27[1zHello\27[zA\27[1;2zB" },
       { "\27[4mA\27[3CB\27[9mC\27[2CD\27[24;29mE\27[1CF", string = "A   BC  DE F", decho = "<u>A</u>   <u>B<s>C</u></s>  <u><s>D</u></s>E F" },
+      { "\27Pdata\27\\X\27Xs\27\\Y\27^p\27\\Z\27_a\27\\W", string = "XYZW", decho = "XYZW" },
+      { "A\27]a\27[31mb\7X", string = "AX", decho = "AX" },
+      { "A\0277B\0278C\27\\D", string = "ABCD", decho = "ABCD" },
+      { "\27é", string = "é", decho = "é" },
     }
 
     -- a case leaves out what it does not pin, such as output that comes from a known bug
