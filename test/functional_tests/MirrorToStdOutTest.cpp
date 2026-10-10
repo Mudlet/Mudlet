@@ -550,6 +550,8 @@ private slots:
 
     // Every way a trigger writes into its line is held and follows the line as
     // sent, in the order written and ahead of the next line of the same packet.
+    // The inserts go in at the start of the line and the link at its end, so
+    // each is a record of its own rather than run onto the others.
     void test_everyTriggerWriteIsMirroredInOrderBeforeTheNextLine()
     {
         QVERIFY(runLua(qsl("tempRegexTrigger([[^write into this line$]], "
@@ -558,8 +560,109 @@ private slots:
 
         feedLineFromServer("write into this line\r\nthe next line");
 
-        QCOMPARE(mirroredLines(), QStringList({qsl("write into this line"), qsl(" [link] [inserted link] [inserted]"), qsl("a command"), qsl("the next line")}));
+        QCOMPARE(mirroredLines(), QStringList({qsl("write into this line"), qsl(" [link]"), qsl(" [inserted link]"), qsl(" [inserted]"), qsl("a command"), qsl("the next line")}));
     }
+
+    // Text put in ahead of the line and text added after it are apart on
+    // screen, so they are not one record.
+    void test_textATriggerPutsAtBothEndsOfItsLineIsMirroredApart()
+    {
+        QVERIFY(runLua(qsl("mirrorTrigger = tempRegexTrigger([[^A goblin is here$]], [[insertText(\"[!] \") echo(\" (hostile)\")]])")));
+
+        feedLineFromServer("A goblin is here");
+        QVERIFY(runLua(qsl("killTrigger(mirrorTrigger)")));
+
+        QCOMPARE(mirroredLines(), QStringList({qsl("A goblin is here"), qsl("[!] "), qsl(" (hostile)")}));
+        QCOMPARE(shownLines(), QStringList{qsl("[!] A goblin is here (hostile)")});
+    }
+
+    // The line is gone from the screen, so what the trigger wrote into it is
+    // not copied, though the line itself was copied when it arrived.
+    void test_textATriggerEchoesIntoALineItGagsIsNotMirrored()
+    {
+        QVERIFY(runLua(qsl("mirrorTrigger = tempRegexTrigger([[^echo into then gag$]], [[echo(\" [echoed]\") deleteLine()]])")));
+
+        feedLineFromServer("before the gag\r\necho into then gag\r\nafter the gag");
+        QVERIFY(runLua(qsl("killTrigger(mirrorTrigger)")));
+
+        QCOMPARE(mirroredLines(), QStringList({qsl("before the gag"), qsl("echo into then gag"), qsl("after the gag")}));
+        QCOMPARE(shownLines(), QStringList({qsl("before the gag"), qsl("after the gag")}));
+    }
+
+    // The held text goes out ahead of the sub-console's line in two parts, and
+    // the blank row between them is still a row of the stream.
+    void test_aBlankRowATriggerEchoesIsMirroredAcrossASubConsoleWrite()
+    {
+        QVERIFY(runLua(qsl("createMiniConsole(\"mirrorChat\", 0, 0, 200, 100) "
+                           "mirrorTrigger = tempRegexTrigger([[^blank row around a write$]], [[echo(\"a\\n\") echo(\"mirrorChat\", \"elsewhere\\n\") echo(\"\\nb\")]])")));
+
+        feedLineFromServer("blank row around a write");
+        QVERIFY(runLua(qsl("killTrigger(mirrorTrigger)")));
+
+        QCOMPARE(mirroredLines(), QStringList({qsl("blank row around a write"), qsl("a"), QString(), qsl("b")}));
+        QCOMPARE(shownLines(), QStringList({qsl("blank row around a writea"), QString(), qsl("b")}));
+    }
+
+    void test_aBlankRowATriggerInsertsIsMirrored()
+    {
+        QVERIFY(runLua(qsl("mirrorTrigger = tempRegexTrigger([[^insert a row above$]], [[insertText(\"\\n\")]])")));
+
+        feedLineFromServer("insert a row above");
+        QVERIFY(runLua(qsl("killTrigger(mirrorTrigger)")));
+
+        QCOMPARE(mirroredLines(), QStringList({qsl("insert a row above"), QString()}));
+        QCOMPARE(shownLines(), QStringList({QString(), qsl("insert a row above")}));
+    }
+
+    // The console caps one write and drops a command it handles itself, and
+    // the copy is of what it kept.
+    void test_onlyWhatTheConsoleKeepsOfATriggerWriteIsMirrored()
+    {
+        QVERIFY(runLua(qsl("mirrorTrigger = tempRegexTrigger([[^echo too much$]], [[echo(string.rep(\"x\", 1000010))]])")));
+        feedLineFromServer("echo too much");
+        QVERIFY(runLua(qsl("killTrigger(mirrorTrigger)")));
+
+        QCOMPARE(mirroredLines().size(), 2);
+        QCOMPARE(mirroredLines().at(1), QString(1000000, QChar('x')));
+
+        QVERIFY(runLua(qsl("mirrorTrigger = tempRegexTrigger([[^ask for the docs$]], [[send(\"!osc8-docs\", true)]])")));
+        feedLineFromServer("ask for the docs");
+        QVERIFY(runLua(qsl("killTrigger(mirrorTrigger)")));
+
+        QVERIFY(!shownLines().contains(qsl("!osc8-docs")));
+        QCOMPARE(timesMirrored(qsl("!osc8-docs")), 0);
+    }
+
+    void test_textATriggerReplacesOrCopiesIntoItsLineIsMirrored()
+    {
+        QVERIFY(runLua(qsl("mirrorTrigger = tempRegexTrigger([[^replace the end$]], [[selectSection(15, 0) replace(\" [tag]\")]])")));
+        feedLineFromServer("replace the end");
+        QVERIFY(runLua(qsl("killTrigger(mirrorTrigger)")));
+
+        QCOMPARE(mirroredLines(), QStringList({qsl("replace the end"), qsl(" [tag]")}));
+        QCOMPARE(shownLines(), QStringList{qsl("replace the end [tag]")});
+
+        mpHost->mainConsoleView()->buffer.clear();
+        mCapturedOutput.clear();
+        QVERIFY(runLua(qsl("mirrorTrigger = tempRegexTrigger([[^append a copy$]], [[selectCurrentLine() copy() appendBuffer()]])")));
+        feedLineFromServer("append a copy");
+        QVERIFY(runLua(qsl("killTrigger(mirrorTrigger)")));
+
+        QCOMPARE(mirroredLines(), QStringList({qsl("append a copy"), qsl("append a copy")}));
+        QCOMPARE(shownLines(), QStringList{qsl("append a copyappend a copy")});
+
+        mpHost->mainConsoleView()->buffer.clear();
+        mCapturedOutput.clear();
+        QVERIFY(runLua(qsl("mirrorTrigger = tempRegexTrigger([[^paste a copy above$]], [[selectCurrentLine() copy() moveCursor(0, getLineNumber() - 1) paste()]])")));
+        feedLineFromServer("the line above\r\npaste a copy above");
+        QVERIFY(runLua(qsl("killTrigger(mirrorTrigger)")));
+
+        QCOMPARE(mirroredLines(), QStringList({qsl("the line above"), qsl("paste a copy above"), qsl("paste a copy above")}));
+        QCOMPARE(shownLines(), QStringList({qsl("paste a copy abovethe line above"), qsl("paste a copy above")}));
+    }
+
+
+
 
     // A sub-console is not in trigger mode, so what a trigger writes to it is
     // copied at once; the main console's held text has to go out ahead of it.
@@ -648,6 +751,59 @@ private slots:
         QCOMPARE(mirroredLines(), shownLines());
     }
 
+
+    // Outside a trigger these append to the buffer just as echo() and echoLink() do
+    void test_textInsertedAtTheEndOfTheBufferIsMirrored()
+    {
+        QVERIFY(runLua(qsl("moveCursorEnd(\"main\") insertText(\"inserted\") echo(\" and after\\n\") "
+                           "moveCursorEnd(\"main\") insertLink(\"an inserted link\", \"\", \"\") echo(\" and after\\n\")")));
+
+        QCOMPARE(mirroredLines(), QStringList({qsl("inserted and after"), qsl("an inserted link and after")}));
+        QCOMPARE(mirroredLines(), shownLines());
+    }
+
+    void test_textAppendedFromTheClipboardIsMirrored()
+    {
+        QVERIFY(runLua(qsl("echo(\"copied line\\n\") moveCursor(0, getLineNumber() - 1) selectCurrentLine() copy() moveCursorEnd() appendBuffer()")));
+
+        QCOMPARE(mirroredLines(), QStringList({qsl("copied line"), qsl("copied line")}));
+        QCOMPARE(mirroredLines(), shownLines());
+    }
+
+    // The buffer is trimmed while print() appends, so what the shrink handler
+    // echoes is on screen below the line print() ended and goes out after it.
+    void test_textEchoedWhilePrintTrimsTheBufferIsMirroredAfterIt()
+    {
+        TBuffer& buffer = mpHost->mainConsoleView()->buffer;
+        const int savedLinesLimit = buffer.mLinesLimit;
+        const int savedBatchDeleteSize = buffer.mBatchDeleteSize;
+        const bool savedEchoLuaErrors = mpHost->mEchoLuaErrors;
+        auto restore = qScopeGuard([this, &buffer, savedLinesLimit, savedBatchDeleteSize, savedEchoLuaErrors]() {
+            buffer.setBufferSize(savedLinesLimit, savedBatchDeleteSize);
+            mpHost->mEchoLuaErrors = savedEchoLuaErrors;
+        });
+        mpHost->mEchoLuaErrors = true;
+        buffer.setBufferSize(100, 10);
+        for (int i = 0; i < 400 && static_cast<int>(buffer.size()) != buffer.mLinesLimit; ++i) {
+            feedLineFromServer(qsl("filler %1").arg(i).toLatin1());
+        }
+        QCOMPARE(static_cast<int>(buffer.size()), buffer.mLinesLimit);
+        QVERIFY(runLua(qsl("mirrorShrinkHandler = registerAnonymousEventHandler(\"sysBufferShrinkEvent\", function() echo(\"buffer trimmed\") end, true) "
+                           "mirrorTrigger = tempRegexTrigger([[^print an error$]], [[printError(\"printed error\")]])")));
+        mCapturedOutput.clear();
+
+        feedLineFromServer("print an error");
+        QVERIFY(runLua(qsl("killAnonymousEventHandler(mirrorShrinkHandler) killTrigger(mirrorTrigger)")));
+
+        const QStringList mirrored = mirroredLines();
+        const qsizetype trimmed = mirrored.indexOf(qsl("buffer trimmed"));
+        QVERIFY2(trimmed > 1, qPrintable(mirrored.join(QChar::LineFeed)));
+        QCOMPARE(mirrored.at(0), qsl("print an error"));
+        // the line feed printError() writes first, which ends the line the handler then echoes onto
+        QCOMPARE(mirrored.at(trimmed - 1), QString());
+        QVERIFY(shownLines().filter(qsl("buffer trimmed")).constFirst().startsWith(qsl("buffer trimmed")));
+    }
+
     // A prompt is ended by IAC GA rather than by a newline, which is a line
     // boundary of its own in the commit path. Last, because the first GA seen
     // switches cTelnet over to posting on every read.
@@ -695,6 +851,25 @@ private slots:
         stopCapture();
 
         QCOMPARE(mirroredLines(), QStringList{qsl("HP:80 MP:30 > ")});
+    }
+
+    // Script text still open below the prompt stays below the command in the
+    // stream, as it does on screen, and is copied once something ends it.
+    void test_aCommandAtAPromptIsMirroredAheadOfOpenScriptText()
+    {
+        QByteArray prompt("HP:70 MP:20 > ");
+        prompt.append(static_cast<char>(0xFF)); // TN_IAC
+        prompt.append(static_cast<char>(0xF9)); // TN_GA
+        feedFromServer(prompt, 50);
+        QVERIFY(runLua(qsl("echo(\"still open\")")));
+
+        startCapture();
+        mpHost->send(qsl("look below"), true, true);
+        stopCapture();
+        QVERIFY(runLua(qsl("echo(\"\\n\")")));
+
+        QCOMPARE(mirroredLines(), QStringList({qsl("HP:70 MP:20 > "), qsl("look below"), qsl("still open")}));
+        QCOMPARE(shownLines(), QStringList({qsl("HP:70 MP:20 > look below"), qsl("still open")}));
     }
 };
 

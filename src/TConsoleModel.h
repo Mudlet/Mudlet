@@ -240,14 +240,31 @@ struct TConsoleModel
     // For --mirror: copies text to stdout prefixed with the profile and console names. Text may be a
     // line fragment, so what follows the last line feed is held until one arrives.
     void mirrorToStdOut(const QString& text);
+    // mirrorToStdOut() without first writing out what triggers wrote and is still held
+    void writeMirrorFragments(const QString& text);
     // For a complete line: TBuffer::commitLineData() passes it as sent, before triggers can gag or rewrite it.
     void mirrorLineToStdOut(const QString& line);
     // For text written while triggers run: it lands in a line already mirrored as sent, so it is held
-    // until flushMirroredTriggerText() writes it out as lines of its own.
-    void mirrorTriggerTextToStdOut(const QString& text);
+    // and goes out after that line as lines of its own, ahead of any later output. Take a mark just
+    // before the write and hand it to holdTriggerWriteForMirror() after; what the write put into the
+    // buffer is read back out of it, so text the console capped or dropped is not copied.
+    struct MirrorMark
+    {
+        QPoint start{-1, -1};
+        // The line's length before a write into it, or -1 for a write appended to the buffer
+        int lineLength = -1;
+        int linesCommitted = 0;
+    };
+    MirrorMark markTriggerWriteForMirror(const QPoint& at) const;
+    MirrorMark markTriggerAppendForMirror() const;
+    void holdTriggerWriteForMirror(const MirrorMark& mark);
+    // Drops what was held for a line a trigger deleted, which the console no longer shows
+    void forgetHeldMirrorTextOnLine(int line);
+    // At the end of a trigger pass
     void flushMirroredTriggerText();
     // This console's held text and, for a sub-console, the main console's
     void flushHeldMirrorText();
+    void writeHeldMirrorRuns();
     // What a write at mUserCursor leaves the view to do: show the lines it
     // appended, or repaint firstLine..lastLine, which it changed in place.
     struct WriteResult
@@ -359,8 +376,22 @@ struct TConsoleModel
     QString mProfileName;
     // --mirror text not yet ended by a line feed.
     QString mMirrorPendingLine;
-    // --mirror text written while triggers run, not yet flushed.
-    QString mMirrorTriggerText;
+    // --mirror text written while triggers run, not yet flushed: a run for each stretch of it that
+    // sits together on screen, in the order written.
+    struct MirrorRun
+    {
+        QString text;
+        int firstLine = 0;
+        int lastLine = 0;
+        // What precedes its first line feed is a line of its own rather than the end of one
+        bool startsLine = false;
+    };
+    QList<MirrorRun> mMirrorTriggerRuns;
+    // Where the last held write ended, so that one carrying straight on from it joins its run
+    QPoint mMirrorTriggerWriteEnd{-1, -1};
+    bool mMirrorTriggerWriteEndedLine = false;
+    // Lines mirrored as committed, so a write that committed some (the OSC 8 documentation) is known
+    int mMirrorLinesCommitted = 0;
     bool mScriptAddressable = false;
     // The line on which the current search result has been found, or the next
     // one is to start (currently only for the main console). An index into the

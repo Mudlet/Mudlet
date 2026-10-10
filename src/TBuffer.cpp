@@ -2308,8 +2308,8 @@ void TBuffer::commitLineData(QString line, std::vector<TChar> chars, const char 
     }
     // Every game line passes here (TConsoleModel::print() sees only client output). Mirroring before runTriggers()
     // keeps arrival order, so script output in response follows it, but lines that triggers gag or rewrite
-    // are still mirrored as sent, and what triggers write into them follows as lines of its own once the
-    // pass is over. Mirroring at log() below would trade the other way and copy wrapLine()'s
+    // are still mirrored as sent; what triggers write into them is held and follows as lines of its own,
+    // ahead of any later output. Mirroring at log() below would trade the other way and copy wrapLine()'s
     // fragments instead of the line as sent.
     if (Q_UNLIKELY(MudletApp::smMirrorToStdOut)) {
         if (Q_LIKELY(mpModel)) {

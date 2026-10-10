@@ -2436,6 +2436,28 @@ void Host::cutMainConsoleToClipboard()
     markSelectionDirty(*mpMainConsoleModel);
 }
 
+namespace {
+// paste() and appendBuffer() reach --mirror the way the console's other writes do
+void writeClipboardInto(TConsoleModel& model, const TBuffer& clipboard, const bool inPlace)
+{
+    TConsoleModel::MirrorMark mirrorMark;
+    if (model.mTriggerEngineMode) {
+        mirrorMark = inPlace ? model.markTriggerWriteForMirror(model.mUserCursor) : model.markTriggerAppendForMirror();
+    }
+    if (inPlace) {
+        model.buffer.paste(model.mUserCursor, clipboard);
+    } else {
+        model.buffer.appendBuffer(clipboard);
+    }
+    if (model.mTriggerEngineMode) {
+        model.holdTriggerWriteForMirror(mirrorMark);
+    } else if (!inPlace && !clipboard.buffer.empty() && !clipboard.lineBuffer.isEmpty()) {
+        // TBuffer::appendBuffer() ends the line it writes
+        model.mirrorToStdOut(clipboard.lineBuffer.constFirst() + QChar::LineFeed);
+    }
+}
+} // namespace
+
 bool Host::pasteClipboard(const QString& name)
 {
     auto pModel = consoleModelNamed(name);
@@ -2450,11 +2472,7 @@ void Host::pasteClipboardInto(TConsoleModel& model)
 {
     const int line = model.mUserCursor.y();
     const bool inPlace = model.buffer.size() - 1 > line;
-    if (inPlace) {
-        model.buffer.paste(model.mUserCursor, *mpClipboard);
-    } else {
-        model.buffer.appendBuffer(*mpClipboard);
-    }
+    writeClipboardInto(model, *mpClipboard, inPlace);
     if (inPlace) {
         emit model.mNotifier.linesChanged(line, line);
     }
@@ -2467,7 +2485,7 @@ bool Host::appendClipboard(const QString& name)
     if (!pModel) {
         return false;
     }
-    pModel->buffer.appendBuffer(*mpClipboard);
+    writeClipboardInto(*pModel, *mpClipboard, false);
     emit pModel->mNotifier.newLinesWritten();
     return true;
 }
