@@ -3875,6 +3875,7 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
     checkBox_antiAlias->setChecked(pHost->fontsAntiAlias());
 
     connect(fontComboBox_displayFont, &QFontComboBox::currentFontChanged, this, &dlgProfilePreferences::slot_displayFontChanged, Qt::UniqueConnection);
+    connect(comboBox_dictionary, &QComboBox::activated, this, &dlgProfilePreferences::slot_dictionaryPicked, Qt::UniqueConnection);
     connect(spinBox_displayFontSize, qOverload<int>(&QSpinBox::valueChanged), this, &dlgProfilePreferences::slot_displayFontSizeChanged, Qt::UniqueConnection);
     connect(checkBox_antiAlias, &QCheckBox::clicked, this, &dlgProfilePreferences::slot_displayFontAliasingChanged, Qt::UniqueConnection);
 
@@ -3953,6 +3954,10 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
             if (entries.at(i).endsWith(qsl("med"), Qt::CaseInsensitive)) {
                 continue;
             }
+            // Listed by the affix file, but a dictionary is only loaded with the word list beside it
+            if (!dir.exists(qsl("%1.dic").arg(entries.at(i)))) {
+                continue;
+            }
 
             auto key = entries.at(i).toLower();
             key.replace(QLatin1String("-"), QLatin1String("_"));
@@ -3981,6 +3986,14 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
             if (entries.at(i) == currentDictionary) {
                 currentIndex = comboBox_dictionary->count() - 1;
             }
+        }
+
+        // Shown rather than left to fall back to the first entry, which reads as
+        // the profile's choice and would be saved as it
+        if (currentIndex < 0 && !currentDictionary.isEmpty()) {
+            //: %1 is the code of the spell-check dictionary the profile uses, such as "de_DE", when no dictionary file of that name is on this computer
+            comboBox_dictionary->addItem(tr("%1 - not available").arg(currentDictionary), currentDictionary);
+            currentIndex = comboBox_dictionary->count() - 1;
         }
 
         if (currentIndex >= 0) {
@@ -4837,6 +4850,7 @@ void dlgProfilePreferences::disconnectHostRelatedControls()
     // arguments to get the wanted wild-card behaviour for them:
 
     disconnect(fontComboBox_displayFont, &QFontComboBox::currentFontChanged, nullptr, nullptr);
+    disconnect(comboBox_dictionary, &QComboBox::activated, nullptr, nullptr);
     disconnect(spinBox_displayFontSize, qOverload<int>(&QSpinBox::valueChanged), nullptr, nullptr);
     disconnect(checkBox_antiAlias, &QCheckBox::clicked, nullptr, nullptr);
 
@@ -9051,6 +9065,15 @@ void dlgProfilePreferences::cancelShortcutCaptures()
         }
 
         sequenceEdit->releaseKeyboard();
+    }
+}
+
+// The apply only sees a change of index, so this is how the dictionary on show, one that
+// could not be found, is retried once its files are there
+void dlgProfilePreferences::slot_dictionaryPicked()
+{
+    if (mpHost && comboBox_dictionary->currentIndex() >= 0) {
+        mpHost->setSpellDic(comboBox_dictionary->currentData().toString());
     }
 }
 
