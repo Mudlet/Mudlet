@@ -2147,6 +2147,125 @@ describe("Tests Other.lua functions", function()
 
       assert.same(rooms, loaded)
     end)
+
+    it("should bring back boolean keys and leave out keys and values it cannot write", function()
+      local original = { flags = { [true] = "on", [false] = "off" }, [print] = "a function key", fn = print, keep = 1 }
+
+      assert.is_true(table.save(path, original))
+      local loaded = {}
+      table.load(path, loaded)
+
+      assert.same({ flags = { [true] = "on", [false] = "off" }, keep = 1 }, loaded)
+    end)
+
+    it("should leave the file as it was when saving fails part way through", function()
+      table.save(path, { keep = "the previous save" })
+      local realPickle = table.pickle
+      finally(function() table.pickle = realPickle end)
+      table.pickle = function() error("pickling failed") end
+
+      assert.has_error(function() table.save(path, { keep = "never written" }) end)
+      table.pickle = realPickle
+
+      local loaded = {}
+      table.load(path, loaded)
+      assert.same({ keep = "the previous save" }, loaded)
+    end)
+
+    it("should leave the file as it was when joining what it serialised fails", function()
+      table.save(path, { keep = "the previous save" })
+      local realConcat = table.concat
+      finally(function() table.concat = realConcat end)
+      table.concat = function() error("not enough memory") end
+
+      assert.has_error(function() table.save(path, { keep = "never written" }) end)
+      table.concat = realConcat
+
+      local loaded = {}
+      table.load(path, loaded)
+      assert.same({ keep = "the previous save" }, loaded)
+    end)
+
+    it("should bring back infinities and NaN", function()
+      table.save(path, { inf = 1 / 0, neginf = -1 / 0, nan = 0 / 0, keep = 1 })
+      local loaded = {}
+      table.load(path, loaded)
+
+      assert.equals(math.huge, loaded.inf)
+      assert.equals(-math.huge, loaded.neginf)
+      assert.is_true(loaded.nan ~= loaded.nan)
+      assert.equals(1, loaded.keep)
+    end)
+
+    it("should keep members named after a Lua library, at any depth", function()
+      local original = { math = 1, os = 2, io = 3, string = 4, table = 5, debug = 6, coroutine = 7,
+        package = 8, _G = 9, _VERSION = 10, xpcall = 11, keep = 12, inner = { string = 3, math = 4 } }
+
+      table.save(path, original)
+      local loaded = {}
+      table.load(path, loaded)
+
+      assert.same(original, loaded)
+    end)
+
+    it("should save the globals table without the Lua libraries", function()
+      _G.tableSaveSpecMarker = "saved from _G"
+      finally(function() _G.tableSaveSpecMarker = nil end)
+
+      assert.is_true(table.save(path, _G))
+      local loaded = {}
+      table.load(path, loaded)
+
+      assert.equals("saved from _G", loaded.tableSaveSpecMarker)
+      assert.is_nil(loaded.string)
+      assert.is_nil(loaded.math)
+    end)
+
+    it("should refuse to save without a table, and write nothing", function()
+      assert.has_error(function() table.save(path) end, "table.save requires a table to save")
+      assert.is_false(io.exists(path))
+    end)
+
+    it("should report a write that fails", function()
+      if not io.exists("/dev/full") then
+        return
+      end
+      local ok, msg = table.save("/dev/full", { keep = string.rep("x", 10000) })
+      assert.is_nil(ok)
+      assert.is_string(msg)
+    end)
+
+    it("should keep fractional numeric keys apart from the integer ones and keep every digit", function()
+      local original = { [1] = "one", [1.5] = "float", [2.5] = "only", [-3.25] = "negative", precise = 0.1 + 0.2 }
+
+      table.save(path, original)
+      local loaded = {}
+      table.load(path, loaded)
+
+      assert.same(original, loaded)
+      assert.equals(0.1 + 0.2, loaded.precise)
+    end)
+
+    it("should bring back every byte of a string key or value", function()
+      local original = {
+        leadingNewline = "\nleading newline",
+        leadingCrlf = "\r\nleading crlf",
+        loneReturn = "x\ry",
+        nul = "a\0b",
+        brackets = "]] and ]=] and [[",
+        quote = 'say "hi"',
+        backslash = "C:\\path\\",
+        ["\nkey"] = 1,
+        ["]]"] = 2,
+        ['a "quoted" key'] = 3,
+      }
+
+      table.save(path, original)
+      local loaded = {}
+      table.load(path, loaded)
+
+      assert.same(original, loaded)
+    end)
   end)
 
     --[[
