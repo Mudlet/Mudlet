@@ -565,6 +565,8 @@ private:
     static bool doubleByteTrail(Decoder, quint8);
     void styleForCurrentLink(TChar&);
     void flushPendingLead();
+    void clearSequenceLatches();
+    void endLocalFeedSequences();
     static QStringDecoder multibyteDecoderFor(Decoder, const QByteArray&);
     bool decodeMultibyteSequence(QByteArrayView, QString&);
     // Views into the string decodeSGR() was handed, so none may outlive that call.
@@ -726,12 +728,11 @@ private:
     char mPendingLead = 0;
     TChar mPendingLeadFormat;
 
-    // The parser sequence state (the mGot... latches and
-    // mIncompleteSequenceBytes) for whichever of the two data channels - Game
-    // Server stream or locally generated text - is not currently being
-    // processed; translateToPlainText() swaps it in around a local feed so
-    // that such text cannot consume or clear a latch belonging to a sequence
-    // split across Game Server packets (and vice versa):
+    // The Game Server stream's parser sequence state (the mGot... latches,
+    // mIncompleteSequenceBytes and the pending lead byte), parked here while
+    // translateToPlainText() runs a locally generated feed, which starts clean
+    // and ends whatever it left open, so that such text cannot consume or clear
+    // a latch belonging to a sequence split across Game Server packets:
     bool mLocalGotESC = false;
     bool mLocalGotEscCharset = false;
     bool mLocalGotCSI = false;
