@@ -3851,6 +3851,69 @@ describe("Tests db:create with a single column name as _index", function()
   end)
 end)
 
+describe("Tests db:create keeping indexes on underscored column names", function()
+  local dbName = "underscoreindextestingonly"
+  local dbFile = getMudletHomeDir() .. "/Database_" .. dbName .. ".db"
+
+  local function collectingWarnings(fn)
+    local collected = {}
+    -- through _G: a spec file's globals are its own
+    local originalPrintError = _G.printError
+    _G.printError = function(msg) collected[#collected + 1] = msg end
+    finally(function() _G.printError = originalPrintError end)
+
+    local result = fn()
+    _G.printError = originalPrintError
+    return result, table.concat(collected, "\n")
+  end
+
+  local function createCollectingWarnings(sheets)
+    return collectingWarnings(function() return db:create(dbName, sheets) end)
+  end
+
+  after_each(function()
+    if not pcall(function() db:close(dbName) end) then
+      db.__conn[dbName] = nil
+    end
+    os.remove(dbFile)
+  end)
+
+  local function indexNames(sheetName)
+    local cursor = db.__conn[dbName]:execute(
+      "SELECT name FROM sqlite_master WHERE type = 'index' AND tbl_name = '" .. sheetName .. "' AND sql IS NOT NULL"
+    )
+    local names = {}
+    local row = cursor:fetch({}, "a")
+    while row do
+      names[#names + 1] = row.name
+      row = cursor:fetch({}, "a")
+    end
+    cursor:close()
+    table.sort(names)
+    return names
+  end
+
+  it("leaves an index on a column with an underscore in its name alone on the next create", function()
+    local sheets = {people = {home_city = "", name = "", _index = {"home_city", {"name", "home_city"}}}}
+    local expected = {"idx_people_c_home_city", "idx_people_c_name_home_city"}
+    createCollectingWarnings(sheets)
+    assert.are.same(expected, indexNames("people"))
+
+    local statements = {}
+    local originalEchoSql = db.echo_sql
+    db.echo_sql = function(_, sql) statements[#statements + 1] = sql end
+    -- busted keeps only the last finally, so this create must not register one of its own
+    finally(function() db.echo_sql = originalEchoSql end)
+    db:create(dbName, sheets)
+    db.echo_sql = originalEchoSql
+
+    for _, sql in ipairs(statements) do
+      assert.is_falsy(string.find(sql, "DROP INDEX", 1, true), sql)
+    end
+    assert.are.same(expected, indexNames("people"))
+  end)
+end)
+
 describe("Tests db:create with _unique naming unknown columns", function()
   local dbName = "uniqueskipstestingonly"
   local dbFile = getMudletHomeDir() .. "/Database_" .. dbName .. ".db"
