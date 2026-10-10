@@ -2086,7 +2086,7 @@ local ansiPattern = rex.new("\\e\\[([0-9:;]*?)m")
 -- byte or the byte that cuts it short, a character set designation (with or without the byte naming
 -- the set), the short escapes, a stray ESC;
 -- first, a cursor forward, which TBuffer writes as spaces
-local ansiNonSgrPattern = rex.new("\\e\\[([0-9]+)C|\\e[\\]PX^_](?:[^\\a\\e\\n\\r\\x04\\xff]|\\e(?!\\\\))*(?:\\a|\\e\\\\)?|\\e\\[(?![0-9:;]*m|[0-9]*z)[\\x20-\\x3F]*[\\x40-\\x7E]?|\\e[()*+][\\x30-\\x7E]?|\\e[78c\\\\]|\\e(?!\\[[0-9:;]*m|\\[[0-9]*z)")
+local ansiNonSgrPattern = rex.new("\\e\\[([0-9]+)C|\\e[\\]PX^_](?:[^\\a\\e\\n\\x04\\xff]++|\\e(?!\\\\))*+(?:\\a|\\e\\\\)?|\\e\\[(?![0-9:;]*m|[0-9]*z)[\\x20-\\x3F]*[\\x40-\\x7E]?|\\e[()*+][\\x30-\\x7E]?|\\e[78c\\\\]|\\e(?!\\[[0-9:;]*m|\\[[0-9]*z)")
 
 local function replaceNonSgrEscape(cursorForward)
   -- the cap is TBuffer's widest line, as a count from the game is unbounded

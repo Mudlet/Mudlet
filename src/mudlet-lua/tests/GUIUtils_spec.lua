@@ -1450,6 +1450,7 @@ describe("Tests the GUI utilities as far as possible without mudlet", function()
       { "X\27]8;;http://a\27\\L\27]8;;\27\\Y", string = "XLY", decho = "XLY" },
       { "\27]0;title\7\27[31mred", string = "red", decho = "<128,0,0>red", lastColour = 1 },
       { "\27[1 qA\27[38;5;-1mB\27(BC\27cD\27E", string = "ABCDE", decho = "ABCDE" },
+      { "\27]0;t\rmore\7text", string = "text", decho = "text" },
     }
 
     -- a case leaves out what it does not pin, such as output that comes from a known bug
@@ -1503,6 +1504,12 @@ describe("Tests the GUI utilities as far as possible without mudlet", function()
           assert.are.equal(case.lastColour, lastColour, string.format("last colour of ansi2decho(%q)", case[1]))
         end
       end
+    end)
+
+    it("drops a string sequence too long to match by backtracking", function()
+      local long = "A\27P" .. string.rep("a", 5000000) .. "\27\\B"
+      assert.are.equal("AB", ansi2string(long))
+      assert.are.equal("AB", ansi2decho(long))
     end)
 
     it("raises the same error for a reset tag ANSI has no code for", function()
