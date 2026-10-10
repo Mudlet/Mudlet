@@ -258,6 +258,7 @@ void cTelnet::reset()
     abandonNetworkLatencyMeasurement();
     command = "";
     mMudData = "";
+    mMxpDetectionTail.clear();
 
     mServerRequestedSGA = false;
     mCharacterModeDetected = false;
@@ -5172,8 +5173,12 @@ void cTelnet::gotPrompt(std::string& mud_data)
 
     mMudData += mud_data;
 
-    if (!mpHost->mPromptedForMXPProcessorOn && !mpHost->getForceMXPProcessorOn() && !isMXPEnabled()) {
+    // Scanned as gotRest() scans, or a forced processor misses a re-initialisation that arrives with a prompt
+    if (mpHost->getForceMXPProcessorOn() || (!mpHost->mPromptedForMXPProcessorOn && !isMXPEnabled())) {
         trackMXPElementDetection(mud_data);
+    } else {
+        // gotRest() may scan again once that changes, and must not join its next read to one this read came between
+        mMxpDetectionTail.clear();
     }
 
     // Patch for servers that need GA/EOR for prompt fixups
@@ -5235,7 +5240,16 @@ void cTelnet::trackMXPElementDetection(const std::string& line)
         return;
     }
 
-    if (!containsMxpModeSwitch(line)) {
+    // ESC[#z is four bytes, so three carried over from the last read are enough to complete one
+    constexpr size_t tailLength = 3;
+    const bool found = containsMxpModeSwitch(line) || (!mMxpDetectionTail.empty() && containsMxpModeSwitch(mMxpDetectionTail + line.substr(0, tailLength)));
+    if (line.size() >= tailLength) {
+        mMxpDetectionTail.assign(line, line.size() - tailLength, tailLength);
+    } else {
+        mMxpDetectionTail += line;
+        mMxpDetectionTail.erase(0, mMxpDetectionTail.size() > tailLength ? mMxpDetectionTail.size() - tailLength : 0);
+    }
+    if (!found) {
         return;
     }
 
@@ -5251,6 +5265,14 @@ void cTelnet::trackMXPElementDetection(const std::string& line)
 
 void cTelnet::gotRest(std::string& mud_data)
 {
+    // TBuffer joins an escape this read leaves unfinished to the next read, not to what a trigger
+    // feedTelnet()s while this read is posted, so that must neither be joined to this read's tail nor replace it
+    const auto postKeepingDetectionTail = [this]() {
+        const std::string tail = std::exchange(mMxpDetectionTail, std::string());
+        postData();
+        mMxpDetectionTail = tail;
+    };
+
     if (mud_data.empty()) {
         return;
     }
@@ -5260,6 +5282,9 @@ void cTelnet::gotRest(std::string& mud_data)
     // Otherwise, only scan if MXP hasn't been prompted for and isn't telnet-negotiated
     if (mpHost->getForceMXPProcessorOn() || (!mpHost->mPromptedForMXPProcessorOn && !isMXPEnabled())) {
         trackMXPElementDetection(mud_data);
+    } else {
+        // As in gotPrompt(): the next scanned read must not be joined to one from before this one
+        mMxpDetectionTail.clear();
     }
 
     if (!mGA_Driver) {
@@ -5267,7 +5292,7 @@ void cTelnet::gotRest(std::string& mud_data)
 
         if (i != std::string::npos) {
             mMudData.append(mud_data, 0, i + 1);
-            postData();
+            postKeepingDetectionTail();
 
             if (!mIsTimerPosting && (mpPostingTimer->interval() != mTimeOut)) {
                 mpPostingTimer->setInterval(mTimeOut);
@@ -5291,7 +5316,7 @@ void cTelnet::gotRest(std::string& mud_data)
         }
     } else {
         mMudData += mud_data;
-        postData();
+        postKeepingDetectionTail();
         mMudData = "";
     }
 }
@@ -5302,11 +5327,9 @@ void cTelnet::slot_timerPosting()
         return;
     }
 
+    // Not scanned for MXP: gotRest() saw these bytes as they came in, and scanning them again with the
+    // flush marker would put that, not the read's last bytes, in the tail the next read is joined to
     mMudData += "\r";
-
-    if (!mpHost->mPromptedForMXPProcessorOn && !mpHost->getForceMXPProcessorOn() && !isMXPEnabled()) {
-        trackMXPElementDetection(mMudData);
-    }
 
     postData();
     mMudData = "";

@@ -2058,6 +2058,115 @@ describe("MXP auto-detection from the mode switch escape", function()
     feed("\r\n")
   end)
 
+  -- each feedTelnet() is a read of its own, as two packets from the game are
+  for cut = 1, 3 do
+    it(("finds the switch when it is split between two reads after byte %d"):format(cut), function()
+      local mark = getLastLineNumber("main")
+      local switch = "\27[1z"
+      feed(switch:sub(1, cut))
+      feed(switch:sub(cut + 1) .. "<send>MXPSPLITLOOK</send>\r\n")
+      assert.is_true(getConfig("promptForMXPProcessorOn"))
+      -- and in time for the line it opens to be read as MXP
+      local lines = getLines("main", mark, getLastLineNumber("main"))
+      assert.equals("MXPSPLITLOOK", lines[#lines])
+    end)
+  end
+
+  it("finds the switch when each of its bytes is a read of its own", function()
+    for byte in ("\27[1z"):gmatch(".") do
+      feed(byte)
+    end
+    feed("<send>MXPSPLITBYTES</send>\r\n")
+    assert.is_true(getConfig("promptForMXPProcessorOn"))
+  end)
+
+  -- a read that is not scanned, here because MXP was negotiated, comes between
+  -- the two, so they are not the two halves of one switch
+  it("does not join a read to one from before MXP was negotiated and dropped", function()
+    -- a profile with MXP off refuses the DO, and the middle read is then
+    -- scanned like the other two, so nothing unscanned comes between them
+    local enabledBefore = getConfig("enableMXP")
+    setConfig("enableMXP", true)
+    finally(function() setConfig("enableMXP", enabledBefore) end)
+    local negotiated = false
+    local handler = registerAnonymousEventHandler("sysProtocolEnabled", function(_, protocol)
+      negotiated = negotiated or protocol == "MXP"
+    end)
+    feed("\27[1")
+    feed("<T_IAC><T_DO><O_MXP>")
+    killAnonymousEventHandler(handler)
+    assert.is_true(negotiated, "the game's DO MXP was not taken up")
+    feed("mMXPNEGOTIATEDREAD\r\n")
+    feed("<T_IAC><T_DONT><O_MXP>")
+    feed("z after it\r\n")
+    assert.is_false(getConfig("promptForMXPProcessorOn"))
+    assert.is_false(getConfig("specialForceMXPProcessorOn"))
+  end)
+
+  -- the game pausing mid-switch for longer than the network packet timeout
+  -- makes cTelnet flush what it holds, which must not lose the switch's start
+  it("finds the switch when the posting timer flushes between its two reads", function()
+    if not os.getenv("MUDLET_TEST_MODE") then
+      pending("waiting out the posting timeout needs MUDLET_TEST_MODE (pumpEvents() does nothing without it)")
+      return
+    end
+    local quietFor = function()
+      for _ = 1, 10 do
+        assert.is_true(pumpEvents(50), "pumpEvents needs MUDLET_TEST_MODE set, see the tests README")
+      end
+    end
+    -- held until the timer flushes it, or the case would not reach the timer
+    local mark = getLastLineNumber("main")
+    feed("MXPTIMERCHECK")
+    local heldBack = not table.contains(getLines("main", mark, getLastLineNumber("main") + 1), "MXPTIMERCHECK")
+    quietFor()
+    local flushed = table.contains(getLines("main", mark, getLastLineNumber("main") + 1), "MXPTIMERCHECK")
+    feed("\r\n")
+    if not (heldBack and flushed) then
+      -- an IAC GA from an earlier spec stops the posting timer for the session
+      pending("cTelnet's posting timer is not running in this session")
+      return
+    end
+    feed("\27[1")
+    quietFor()
+    feed("z<send>MXPTIMERSPLIT</send>\r\n")
+    assert.is_true(getConfig("promptForMXPProcessorOn"))
+  end)
+
+  -- the console joins an escape a read leaves unfinished to the next read, not
+  -- to what a trigger the read fired feeds in the meantime
+  it("finds the switch split around a read whose trigger feeds more data", function()
+    local id = tempExactMatchTrigger("MXPFEEDINGLINE", [[feedTelnet("fed by a trigger\r\n")]])
+    finally(function() killTrigger(id) end)
+    feed("MXPFEEDINGLINE\r\n\27[1")
+    feed("z<send>MXPAFTERFEED</send>\r\n")
+    assert.is_true(getConfig("promptForMXPProcessorOn"))
+  end)
+
+  it("does not join what a trigger feeds to the end of the read that fired it", function()
+    local id = tempExactMatchTrigger("MXPFEEDINGLINE", [[feedTelnet("z fed by a trigger\r\n")]])
+    finally(function() killTrigger(id) end)
+    feed("MXPFEEDINGLINE\r\n\27[1")
+    feed("m after it\27[0m\r\n")
+    assert.is_false(getConfig("promptForMXPProcessorOn"))
+    assert.is_false(getConfig("specialForceMXPProcessorOn"))
+  end)
+
+  -- a GA prompt that came while MXP was negotiated is not scanned, so it too
+  -- comes between the reads either side of it
+  it("does not join a read to one from before a prompt sent while MXP was negotiated", function()
+    local enabledBefore = getConfig("enableMXP")
+    setConfig("enableMXP", true)
+    finally(function() setConfig("enableMXP", enabledBefore) end)
+    feed("x\27[1")
+    feed("<T_IAC><T_DO><O_MXP>")
+    feed("HP> <T_IAC><T_GA>")
+    feed("<T_IAC><T_DONT><O_MXP>")
+    feed("z after it\r\n")
+    assert.is_false(getConfig("promptForMXPProcessorOn"))
+    assert.is_false(getConfig("specialForceMXPProcessorOn"))
+  end)
+
   it("ignores a mode number MXP does not define", function()
     feed("\27[8z<send>look</send>\r\n")
     assert.is_false(getConfig("promptForMXPProcessorOn"))
@@ -2075,5 +2184,118 @@ describe("MXP auto-detection from the mode switch escape", function()
   it("ignores SGR sequences and a bracket that is not part of an escape", function()
     feed("\27[1mBold\27[0m and [1z in plain text\r\n")
     assert.is_false(getConfig("promptForMXPProcessorOn"))
+  end)
+
+  -- connecting and disconnecting both reset cTelnet, so the reads either side
+  -- of a connection are not the two halves of one switch
+  it("does not join a read to one from before a connection", function()
+    if not os.getenv("MUDLET_TEST_MODE") then
+      pending("waiting for the connection to come and go needs MUDLET_TEST_MODE (pumpEvents() does nothing without it)")
+      return
+    end
+    local telnetDirectory = os.getenv("MUDLET_TEST_TELNET_DIR")
+    local handle = telnetDirectory and io.open(telnetDirectory .. "/port", "r")
+    local port = handle and tonumber((handle:read("*a") or ""):match("%d+") or "")
+    if handle then
+      handle:close()
+    end
+    if not port then
+      local reason = "needs the telnet fixture (run CI/telnet-fixture-server.py with MUDLET_TEST_TELNET_DIR set)"
+      assert.is_nil(os.getenv("MUDLET_TEST_REQUIRE_TELNET_FIXTURE"), "MUDLET_TEST_REQUIRE_TELNET_FIXTURE is set but this " .. reason)
+      pending(reason)
+      return
+    end
+    local function connected()
+      local _, _, isConnected = getConnectionInfo()
+      return isConnected
+    end
+    local function waitFor(predicate)
+      for _ = 1, 100 do
+        if predicate() then
+          return true
+        end
+        pumpEvents(50)
+      end
+      return predicate()
+    end
+
+    feed("\27[1")
+    connectToServer("127.0.0.1", port)
+    assert.is_true(waitFor(connected), "never connected to the telnet fixture on port " .. port)
+    disconnect()
+    assert.is_true(waitFor(function() return not connected() end), "the telnet fixture connection outlived the disconnect")
+    feed("z after it\r\n")
+    assert.is_false(getConfig("promptForMXPProcessorOn"))
+    assert.is_false(getConfig("specialForceMXPProcessorOn"))
+  end)
+end)
+
+-- A forced processor goes on scanning what the game sends, so that a game
+-- turning MXP back on re-locks it secure
+describe("MXP re-initialisation of a forced processor", function()
+
+  local function feed(data)
+    local ok, msg = feedTelnet(data)
+    assert.is_true(ok, "start the suite with --offline, see the tests README - feedTelnet said: " .. tostring(msg))
+  end
+
+  local function displayed(data)
+    local mark = getLastLineNumber("main")
+    feed(data)
+    return table.concat(getLines("main", mark, getLastLineNumber("main")), "|")
+  end
+
+  local stillOpen = "<SEND href=\"x\">MXPSTILLOPEN</SEND>"
+  local promptedBefore, forcedBefore
+
+  -- forcing a processor the game already had on and locked open leaves it open,
+  -- so only a re-initialisation makes a secure tag act
+  before_each(function()
+    promptedBefore = getConfig("promptForMXPProcessorOn")
+    forcedBefore = getConfig("specialForceMXPProcessorOn")
+    setConfig("specialForceMXPProcessorOn", false)
+    setConfig("promptForMXPProcessorOn", false)
+    feed("<T_IAC><T_DO><O_MXP>")
+    feed("\27[5z\r\n")
+    setConfig("specialForceMXPProcessorOn", true)
+    setConfig("promptForMXPProcessorOn", true)
+    feed("<T_IAC><T_DONT><O_MXP>")
+    assert.equals(stillOpen, displayed(stillOpen .. "\r\n"))
+  end)
+
+  -- a forced processor refuses to unlock a secure default, so unlock it unforced
+  after_each(function()
+    setConfig("specialForceMXPProcessorOn", false)
+    feed("<T_IAC><T_DO><O_MXP>")
+    feed("\27[5z\r\n")
+    feed("<T_IAC><T_DONT><O_MXP>")
+    setConfig("specialForceMXPProcessorOn", forcedBefore)
+    setConfig("promptForMXPProcessorOn", promptedBefore)
+  end)
+
+  it("re-locks it secure from a switch split between two reads", function()
+    feed("\27[1")
+    feed("z<B>MXPREINIT</B>\r\n")
+    assert.equals("MXPRELOCKED", displayed("<SEND href=\"x\">MXPRELOCKED</SEND>\r\n"))
+  end)
+
+  it("re-locks it secure from a switch in a prompt", function()
+    feed("\27[1z<B>MXPREINIT</B> <T_IAC><T_GA>")
+    feed("\r\n")
+    assert.equals("MXPRELOCKED", displayed("<SEND href=\"x\">MXPRELOCKED</SEND>\r\n"))
+  end)
+
+  it("re-locks it secure from a switch split between a read and a prompt", function()
+    feed("\27[1")
+    feed("z<B>MXPREINIT</B> <T_IAC><T_GA>")
+    feed("\r\n")
+    assert.equals("MXPRELOCKED", displayed("<SEND href=\"x\">MXPRELOCKED</SEND>\r\n"))
+  end)
+
+  it("does not re-lock it from two reads a prompt came between", function()
+    feed("x\27[1")
+    feed("HP> <T_IAC><T_GA>")
+    feed("z after it\r\n")
+    assert.equals(stillOpen, displayed(stillOpen .. "\r\n"))
   end)
 end)
