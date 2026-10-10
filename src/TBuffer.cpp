@@ -6046,8 +6046,10 @@ int TBuffer::wrapLine(int startLine, int maxWidth, int indentSize, int hangingIn
     }
 
     // The Lua wrapLine() reaches here from inside a trigger pass, and rebuilding
-    // the line replaces the characters the pass is matching against:
-    materialisePreTriggerPassLine(startLine);
+    // the line, or one above it, replaces the characters the pass is matching against:
+    if (mPreTriggerPassLineNumber >= startLine) {
+        materialisePreTriggerPassLine(mPreTriggerPassLineNumber);
+    }
 
     // Checked here, not in the setters, as the wrap width can change after them.
     // Each wrapped line pads indent columns per (maxWidth - indent) of text, so an
@@ -6089,6 +6091,23 @@ int TBuffer::wrapLine(int startLine, int maxWidth, int indentSize, int hangingIn
         return 0;
     }
 
+    // Each trigger pass line rewrapped here moves down to where its first part lands.
+    // Matched against the indices they started at, as a line moved onto a later
+    // line's old index must not be moved again
+    QVarLengthArray<int*, 2> passLines;
+    if (mPreTriggerPassLineNumber >= firstRewrappedLine) {
+        passLines.append(&mPreTriggerPassLineNumber);
+    }
+    for (EnclosingTriggerPass& enclosing : mEnclosingTriggerPasses) {
+        if (enclosing.lineNumber >= firstRewrappedLine) {
+            passLines.append(&enclosing.lineNumber);
+        }
+    }
+    QVarLengthArray<int, 2> passLinesFrom;
+    for (const int* pPassLine : std::as_const(passLines)) {
+        passLinesFrom.append(*pPassLine);
+    }
+
     std::queue<std::vector<TChar>> queue;
     QStringList tempList;
     QStringList timeList;
@@ -6097,6 +6116,11 @@ int TBuffer::wrapLine(int startLine, int maxWidth, int indentSize, int hangingIn
     int lineCount = 0;
     for (int i = firstRewrappedLine; i < total; ++i) {
         lineCount++;
+        for (qsizetype k = 0; k < passLines.size(); ++k) {
+            if (passLinesFrom.at(k) == i) {
+                *passLines[k] = firstRewrappedLine + static_cast<int>(tempList.size());
+            }
+        }
         std::vector<TChar> newBufferLine;
         QString newLineText;
         const QString time = timeBuffer[i];

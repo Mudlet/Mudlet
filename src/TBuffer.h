@@ -421,7 +421,7 @@ public:
     // nullptr when its colors vary or there is no snapshot for it:
     const TChar* preTriggerPassLineUniformColors(int lineNumber);
     // Where the line a trigger pass was handed is now, after triggers earlier in the
-    // pass, or a nested pass, deleted lines above it or the buffer trimmed
+    // pass, or a nested pass, deleted or rewrapped lines above it or the buffer trimmed
     // its oldest; csmDetachedTriggerPassLine once the line itself has been deleted.
     // Any other line number is handed back as it is.
     int triggerPassLineNow(int lineNumber) const;
@@ -716,8 +716,8 @@ private:
         QString detachedText;
     };
     // The passes a trigger calling feedTriggers() has paused. A member, not saved in
-    // commitLineData()'s frame, as their lines move with deleted and trimmed
-    // lines just as the current one does
+    // commitLineData()'s frame, as their lines move with deleted, rewrapped and
+    // trimmed lines just as the current one does
     QList<EnclosingTriggerPass> mEnclosingTriggerPasses;
     // Meaningful only inside a trigger pass: false until something overwrites
     // the committed line, while the game's colors are still readable from it:

@@ -935,6 +935,31 @@ describe("Trigger processing", function()
             assert.are.same({"red part"}, fired)
         end)
 
+        it("should match after a trigger rewraps a line above into more lines", function()
+            local fired = {}
+            local countBefore, countAfter
+            feedTriggers("line above that a trigger splits in two\n")
+            local splitter = tempTrigger("RewrapAboveMarker", function()
+                local above = getLineNumber() - 1
+                moveCursor(0, above)
+                moveCursor(utf8.len(getCurrentLine()), above)
+                insertText("\nsplit off")
+                countBefore = getLineCount()
+                wrapLine("main", above)
+                countAfter = getLineCount()
+            end)
+            local colorTrigger = tempAnsiColorTrigger(1, -1, function() fired[#fired + 1] = matches[1] end)
+            finally(function()
+                killTrigger(splitter)
+                killTrigger(colorTrigger)
+            end)
+
+            feedTriggers("\27[31mRewrapAboveMarker red\27[0m\n")
+
+            assert.are.equal(countBefore + 1, countAfter)
+            assert.are.same({"RewrapAboveMarker red"}, fired)
+        end)
+
         local function lastLineReading(text)
             for lineNumber = getLineCount(), 0, -1 do
                 moveCursor(0, lineNumber)
