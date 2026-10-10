@@ -22,6 +22,7 @@
 
 #include "TConsoleFrontend.h"
 #include "TMxpFrameFrontend.h"
+#include "utils.h"
 
 #include <QColor>
 #include <QPoint>
@@ -52,12 +53,12 @@ class TNullConsoleFrontend final : public TConsoleFrontend
 {
 public:
     bool createLabel(const QString&, const QString&, int, int, int, int, bool, bool) override { return false; }
-    std::pair<bool, QString> deleteLabel(const QString&) override { return {false, QString()}; }
-    std::pair<bool, QString> setLabelStyleSheet(const QString&, const QString&) override { return {false, QString()}; }
+    std::pair<bool, QString> deleteLabel(const QString&) override { return noView(); }
+    std::pair<bool, QString> setLabelStyleSheet(const QString&, const QString&) override { return noView(); }
     std::optional<QSize> getLabelSizeHint(const QString&) const override { return std::nullopt; }
-    std::pair<bool, QString> setLabelToolTip(const QString&, const QString&, double) override { return {false, QString()}; }
-    std::pair<bool, QString> setLabelCursor(const QString&, int) override { return {false, QString()}; }
-    std::pair<bool, QString> setLabelCustomCursor(const QString&, const QString&, int, int) override { return {false, QString()}; }
+    std::pair<bool, QString> setLabelToolTip(const QString&, const QString&, double) override { return noView(); }
+    std::pair<bool, QString> setLabelCursor(const QString&, int) override { return noView(); }
+    std::pair<bool, QString> setLabelCustomCursor(const QString&, const QString&, int, int) override { return noView(); }
     bool setLabelClickThrough(const QString&, bool) override { return false; }
     bool setLabelLinkStyle(const QString&, const QString&, const QString&, bool) override { return false; }
     bool resetLabelLinkStyle(const QString&) override { return false; }
@@ -68,7 +69,7 @@ public:
     bool moveLabel(const QString&, int, int) override { return false; }
     bool reparentLabel(const QString&, const QString&, int, int, bool) override { return false; }
     bool setLabelText(const QString&, const QString&) override { return false; }
-    std::pair<bool, QString> setLabelMovie(const QString&, const QString&) override { return {false, QString()}; }
+    std::pair<bool, QString> setLabelMovie(const QString&, const QString&) override { return noView(); }
     bool setLabelBackgroundColor(const QString&, const QColor&) override { return false; }
     std::optional<QColor> getLabelBackgroundColor(const QString&) const override { return std::nullopt; }
     bool setLabelBackgroundImage(const QString&, const QString&) override { return false; }
@@ -87,11 +88,11 @@ public:
     bool setLabelMovieFrame(const QString&, int) override { return false; }
     bool setLabelMovieSpeed(const QString&, int) override { return false; }
     bool scaleLabelMovie(const QString&, bool) override { return false; }
-    std::pair<bool, QString> createCommandLine(const QString&, const QString&, int, int, int, int) override { return {false, QString()}; }
-    std::pair<bool, QString> deleteCommandLine(const QString&) override { return {false, QString()}; }
+    std::pair<bool, QString> createCommandLine(const QString&, const QString&, int, int, int, int) override { return noView(); }
+    std::pair<bool, QString> deleteCommandLine(const QString&) override { return noView(); }
     bool setCommandLineAction(const QString&, int) override { return false; }
     bool resetCommandLineAction(const QString&) override { return false; }
-    std::pair<bool, QString> setCmdLineStyleSheet(const QString&, const QString&) override { return {false, QString()}; }
+    std::pair<bool, QString> setCmdLineStyleSheet(const QString&, const QString&) override { return noView(); }
     bool replaceCommandLineText(const QString&, const QString&) override { return false; }
     bool appendCommandLineText(const QString&, const QString&) override { return false; }
     bool clearCommandLine(const QString&) override { return false; }
@@ -111,8 +112,8 @@ public:
     void updateCommandLineSpellCheck(bool) override {}
     void setCommandLineText(const QString&) override {}
     void focusActiveCommandLine() override {}
-    std::pair<bool, QString> createTextBox(const QString&, const QString&, int, int, int, int) override { return {false, QString()}; }
-    std::pair<bool, QString> deleteTextBox(const QString&) override { return {false, QString()}; }
+    std::pair<bool, QString> createTextBox(const QString&, const QString&, int, int, int, int) override { return noView(); }
+    std::pair<bool, QString> deleteTextBox(const QString&) override { return noView(); }
     bool setTextBoxText(const QString&, const QString&) override { return false; }
     bool clearTextBox(const QString&) override { return false; }
     bool setTextBoxReadOnly(const QString&, bool) override { return false; }
@@ -122,24 +123,24 @@ public:
     bool setTextBoxTabMovesFocus(const QString&, bool) override { return false; }
     bool createBuffer(const QString&) override { return false; }
     bool addMiniConsole(const QString&, const QString&, int, int, int, int) override { return false; }
-    std::pair<bool, QString> deleteMiniConsole(const QString&) override { return {false, QString()}; }
+    std::pair<bool, QString> deleteMiniConsole(const QString&) override { return noView(); }
     bool showSubConsole(const QString&) override { return false; }
     bool hideSubConsole(const QString&) override { return false; }
     bool resizeSubConsole(const QString&, int, int) override { return false; }
     bool moveSubConsole(const QString&, int, int) override { return false; }
     void closeSubConsole(const QString&) override {}
-    std::pair<bool, QString> openUserWindow(const QString&, bool, bool, const QString&) override { return {false, QString()}; }
-    std::pair<bool, QString> setUserWindowStyleSheet(const QString&, const QString&) override { return {false, QString()}; }
-    std::pair<bool, QString> setUserWindowTitle(const QString&, const QString&) override { return {false, QString()}; }
+    std::pair<bool, QString> openUserWindow(const QString&, bool, bool, const QString&) override { return noView(); }
+    std::pair<bool, QString> setUserWindowStyleSheet(const QString&, const QString&) override { return noView(); }
+    std::pair<bool, QString> setUserWindowTitle(const QString&, const QString&) override { return noView(); }
     bool createScrollBox(const QString&, const QString&, int, int, int, int) override { return false; }
-    std::pair<bool, QString> deleteScrollBox(const QString&) override { return {false, QString()}; }
+    std::pair<bool, QString> deleteScrollBox(const QString&) override { return noView(); }
     bool showPlainWindow(const QString&) override { return false; }
     bool hidePlainWindow(const QString&) override { return false; }
     bool resizePlainWindow(const QString&, int, int) override { return false; }
     bool movePlainWindow(const QString&, int, int) override { return false; }
     bool raiseWindow(const QString&) override { return false; }
     bool lowerWindow(const QString&) override { return false; }
-    std::pair<bool, QString> reparentWindow(const QString&, const QString&, int, int, bool) override { return {false, QString()}; }
+    std::pair<bool, QString> reparentWindow(const QString&, const QString&, int, int, bool) override { return noView(); }
     bool setWindowScrollBarVisible(const QString&, bool) override { return false; }
     bool setWindowHorizontalScrollBarVisible(const QString&, bool) override { return false; }
     bool setWindowScrolling(const QString&, bool) override { return false; }
@@ -165,10 +166,10 @@ public:
     bool setSubConsoleCommandBackgroundColor(const QString&, const QColor&) override { return false; }
     bool setSubConsoleCommandForegroundColor(const QString&, const QColor&) override { return false; }
     void changeSubConsoleColors(const QString&) override {}
-    std::pair<bool, QString> createMapper(const QString&, int, int, int, int) override { return {false, QString()}; }
+    std::pair<bool, QString> createMapper(const QString&, int, int, int, int) override { return noView(); }
     void createMapperDock(const QString&, const QString&) override {}
     void showNewMapperDock() override {}
-    std::pair<bool, QString> placeMapWidget(const QString&, int, int, int, int) override { return {false, QString()}; }
+    std::pair<bool, QString> placeMapWidget(const QString&, int, int, int, int) override { return noView(); }
     bool mapWidgetCreated() const override { return false; }
     bool setMapWidgetTitle(const QString&) override { return false; }
     std::optional<QString> mapWidgetTitle() const override { return std::nullopt; }
@@ -218,6 +219,9 @@ public:
     const TMxpFrameFrontend& mxpFrames() const override { return mMxpFrames; }
 
 private:
+    // Some callers hand a failure's message straight to Lua, so it has to say why.
+    static std::pair<bool, QString> noView() { return {false, qsl("the profile has no main window")}; }
+
     TNullMxpFrameFrontend mMxpFrames;
 };
 

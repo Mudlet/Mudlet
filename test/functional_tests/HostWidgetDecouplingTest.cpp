@@ -61,6 +61,14 @@
 
 #include <zip.h>
 
+extern "C" {
+#if defined(INCLUDE_VERSIONED_LUA_HEADERS)
+#include <lua5.1/lua.h>
+#else
+#include <lua.h>
+#endif
+}
+
 #include "GroupedTest.h"
 
 using namespace std::chrono_literals;
@@ -258,8 +266,7 @@ private slots:
     }
 
     // changeAllHostColour() walks the whole pool, so a profile whose console
-    // has gone must not take the appearance switch down with it. Without the
-    // guard in Host::refreshColours() this case dies rather than fails.
+    // has gone must not take the appearance switch down with it.
     void test_appearanceChangeSkipsAProfileWithNoConsole()
     {
         startProfile(mHostname, mLocalhost, mPort);
@@ -347,6 +354,44 @@ private slots:
         QVERIFY(!layoutCommitted);
         QVERIFY(printed);
         QVERIFY(luaAnswered);
+    }
+
+    // These Lua calls have no guard of their own, so what they answer with no view is whatever the null view
+    // returns. The label is made first so that its answers come from the missing view, not a missing label.
+    void test_unguardedLuaCallsWithNoConsole()
+    {
+        startProfile(mHostname, mLocalhost, mPort);
+        auto host = mudlet::self()->getActiveHost();
+        QVERIFY2(host, "No active host available for the test.");
+
+        QPointer<TMainConsole> console = host->mainConsoleView();
+        QVERIFY2(console, "The active host has no main console.");
+        QVERIFY(host->getLuaInterpreter()->compileAndExecuteScript(qsl("assert(createLabel('nullViewLabel', 0, 0, 10, 10, 1))")));
+
+        host->setMainConsoleView(nullptr);
+        const bool ran = host->getLuaInterpreter()->compileAndExecuteScript(qsl(R"lua(
+            local results = {}
+            for _, call in ipairs({
+                function() return createMapper(0, 0, 100, 100) end,
+                function() return getLabelSizeHint("nullViewLabel") end,
+                function() return startMovie("nullViewLabel") end,
+            }) do
+                local ran, value, message = pcall(call)
+                results[#results + 1] = ran and (tostring(value) .. ":" .. tostring(message)) or ("raised:" .. tostring(value))
+            end
+            nullViewResults = table.concat(results, "|")
+        )lua"));
+        host->setMainConsoleView(console);
+
+        QVERIFY(ran);
+        lua_State* L = host->getLuaInterpreter()->getLuaGlobalState();
+        lua_getglobal(L, "nullViewResults");
+        const QString results = QString::fromUtf8(lua_tostring(L, -1));
+        lua_pop(L, 1);
+        QCOMPARE(results,
+                 qsl("nil:the profile has no main window"
+                     "|nil:label 'nullViewLabel' does not exist"
+                     "|nil:label \"nullViewLabel\" not found"));
     }
 
     // The mapping-script reminder used to be a QDialog built inside Host; it is
