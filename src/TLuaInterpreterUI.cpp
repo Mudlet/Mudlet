@@ -323,14 +323,15 @@ int TLuaInterpreter::calcFontSize(lua_State* L)
     QString windowName = qsl("main");
     QSize size;
 
-    // An opt-in trailing boolean asks a window for the width each column is drawn
-    // in, as the font size forms already give; scripts written for the width of
-    // a "W" in a window keep getting that by default
+    // Opt-in, as scripts already compensate for a window's default width of a "W"
     int argumentCount = lua_gettop(L);
     bool averageWidth = false;
     if (argumentCount >= 1 && lua_isboolean(L, argumentCount)) {
         averageWidth = lua_toboolean(L, argumentCount);
         // Popped so that calcFontSize(true) reads no window name, as calcFontSize() does
+        lua_settop(L, --argumentCount);
+    } else if (argumentCount == 2 && lua_type(L, 1) == LUA_TSTRING && lua_isnil(L, 2)) {
+        // A flag passed on as nil after a window name; after a font size, nil is a missing font name
         lua_settop(L, --argumentCount);
     }
 

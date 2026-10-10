@@ -4674,6 +4674,11 @@ describe("Window and label state", function()
         calcFontSize(12, missingFontName)
       end)
     end)
+
+    it("calcFontSize takes a nil flag after a window name as the flag left out", function()
+      local omittedFlag = nil
+      assert.are.same({calcFontSize(console)}, {calcFontSize(console, omittedFlag)})
+    end)
   end)
 
   describe("console metrics", function()
