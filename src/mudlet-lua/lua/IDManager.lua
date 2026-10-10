@@ -16,27 +16,35 @@ function IDMgr:register(name, typ, object)
     triggers = tempTrigger,
     regexTriggers = tempRegexTrigger
   }
-  local trigger, func, oneShot = object.trigger, object.func, object.oneShot
   local register = reg[typ]
-  local ok, id, refusal = pcall(register, trigger, func, oneShot)
+  local previous = self[typ][name]
+  -- an event handler is killed before its replacement is made: one given as a function name would
+  -- otherwise get the old handler's id back, and one made mid-dispatch would run in that dispatch
+  local restore = false
+  if typ == "events" and previous then
+    restore = previous.handlerID ~= -1 and killAnonymousEventHandler(previous.handlerID) == true
+    previous.handlerID = -1
+  end
+  local ok, id, refusal = pcall(register, object.trigger, object.func, object.oneShot)
+  local err, refused
   if not ok then
-    return nil, id
+    err = id
+  elseif type(id) ~= "number" or id == -1 then
+    -- refusals are answered, not raised: -1 from tempTimer for code that does not compile,
+    -- nil from tempTrigger for an expiry below 1
+    err, refused = refusal or "it could not be created", true
   end
-  -- a creator that refuses, such as tempTimer given code that does not compile, answers -1 and why
-  if id == -1 then
-    return nil, refusal
-  end
-  -- registerAnonymousEventHandler answers with the existing id for a function name already on the
-  -- event, and that handler keeps its own one-shot setting, so a change of it needs a fresh handler
-  local current = self[typ][name]
-  if not current or current.handlerID ~= id then
-    self:stop(name, typ)
-  elseif not current.oneShot ~= not oneShot then
-    self:stop(name, typ)
-    ok, id = pcall(register, trigger, func, oneShot)
-    if not ok then
-      return nil, id
+  if err then
+    if restore then
+      local restored, oldID = pcall(register, previous.trigger, previous.func, previous.oneShot)
+      if restored and type(oldID) == "number" and oldID ~= -1 then
+        previous.handlerID = oldID
+      end
     end
+    return nil, err, refused
+  end
+  if typ ~= "events" then
+    self:stop(name, typ)
   end
   object.handlerID = id
   self[typ][name] = object
@@ -268,11 +276,14 @@ local function getManager(user)
 end
 
 -- internal only, used to format error messages
-local function extractUpstreamError(funcName, err)
+local function extractUpstreamError(funcName, err, refused)
+  -- a refusal can quote the user's own code, so it is passed on as it is
+  if refused then
+    return err
+  end
   local splitPattern = string.format("%s: ", funcName)
   local errMsg = err:split(splitPattern)[2]
-  -- a refusal rather than a bad argument: it has no argument number to shift, and
-  -- may quote the user's own code or pattern
+  -- raised without the creator's name, e.g. a function name that does not compile: nothing to renumber
   if not errMsg then
     return err
   end
@@ -305,13 +316,13 @@ function registerNamedEventHandler(user, name, eventName, handler, oneShot)
     printError(nameErrorMsg(funcName, nameType), true, true)
   end
   local mgr = getManager(user)
-  local ok, err = mgr:registerEvent(name, eventName, handler, oneShot)
+  local ok, err, refused = mgr:registerEvent(name, eventName, handler, oneShot)
   if ok then
     return true
   end
   -- extract the error info from registerAnonymousEventHandler's error, increment argument number by 2
   -- to account for the user and name arguments, and then display it as our own error
-  local errMsg = extractUpstreamError("registerAnonymousEventHandler", err)
+  local errMsg = extractUpstreamError("registerAnonymousEventHandler", err, refused)
   printError("registerNamedEventHandler: " .. errMsg, true, true)
 end
 
@@ -405,14 +416,14 @@ function registerNamedTimer(user,name, time, handler, oneShot)
     printError(nameErrorMsg(funcName, nameType), true, true)
   end
   local mgr = getManager(user)
-  local ok, err = mgr:registerTimer(name, time, handler, oneShot)
+  local ok, err, refused = mgr:registerTimer(name, time, handler, oneShot)
   if ok then
     return true
   end
   -- extract the error info from tempTimer's error
   -- increment argument number by 1 (to account for the leading 'name' parameter)
   -- and then display it as our own error
-  local errMsg = extractUpstreamError("tempTimer", err)
+  local errMsg = extractUpstreamError("tempTimer", err, refused)
   printError("registerNamedTimer: " .. errMsg, true, true)
 end
 
@@ -527,11 +538,11 @@ function registerNamedTrigger(user, name, substring, handler, expireAfter)
     printError(funcName .. ": bad argument #4 type (function expected, got " .. type(handler) .. "!)", true, true)
   end
   local mgr = getManager(user)
-  local ok, err = mgr:registerTrigger(name, substring, handler, expireAfter)
+  local ok, err, refused = mgr:registerTrigger(name, substring, handler, expireAfter)
   if ok then
     return true
   end
-  local errMsg = extractUpstreamError("tempTrigger", err)
+  local errMsg = extractUpstreamError("tempTrigger", err, refused)
   printError("registerNamedTrigger: " .. errMsg, true, true)
 end
 
@@ -553,11 +564,11 @@ function registerNamedRegexTrigger(user, name, substring, handler, expireAfter)
     printError(funcName .. ": bad argument #4 type (function expected, got " .. type(handler) .. "!)", true, true)
   end
   local mgr = getManager(user)
-  local ok, err = mgr:registerRegexTrigger(name, substring, handler, expireAfter)
+  local ok, err, refused = mgr:registerRegexTrigger(name, substring, handler, expireAfter)
   if ok then
     return true
   end
-  local errMsg = extractUpstreamError("tempRegexTrigger", err)
+  local errMsg = extractUpstreamError("tempRegexTrigger", err, refused)
   printError("registerNamedRegexTrigger: " .. errMsg, true, true)
 end
 

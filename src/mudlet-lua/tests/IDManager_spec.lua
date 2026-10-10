@@ -102,6 +102,20 @@ describe("Tests the functionality of IDMgr", function()
         raiseEvent(eventName)
         assert.spy(handlerSpy).was_called(1)
       end)
+
+      it("Should not run a replacement the handler registers for itself in the same dispatch", function()
+        local calls = {}
+        local second = function() calls[#calls + 1] = "second" end
+        local first = function()
+          calls[#calls + 1] = "first"
+          registerNamedEventHandler(user, handlerName, eventName, second)
+        end
+        assert.is_true(registerNamedEventHandler(user, handlerName, eventName, first))
+        raiseEvent(eventName)
+        assert.are.same({"first"}, calls)
+        raiseEvent(eventName)
+        assert.are.same({"first", "second"}, calls)
+      end)
     end)
 
     describe("Tests the functionality of stopNamedEventHandler", function()
@@ -252,6 +266,15 @@ describe("Tests the functionality of IDMgr", function()
         assert.error_matches(register, "echo('#1 unclosed", nil, true)
         local remaining = remainingNamedTimer(user, timerName)
         assert.is_true(type(remaining) == "number" and remaining > 0, "the running timer should be left alone, got " .. tostring(remaining))
+      end)
+
+      it("Should report code that does not compile as it is, even when it quotes tempTimer", function()
+        local code = "echo('tempTimer: #1 unclosed"
+        local register = function()
+          registerNamedTimer(user, timerName, time, code)
+        end
+        assert.error_matches(register, 'registerNamedTimer: unable to compile "' .. code .. '"', nil, true)
+        assert.are.same({}, getNamedTimers(user))
       end)
 
       it("Should register a named timer and list it as active", function()
@@ -506,6 +529,30 @@ describe("Tests the functionality of IDMgr", function()
       feedTriggers("\nnamed_trig_resume\n")
       assert.is_true(_G.NamedTrigFire > before, "a resumed named trigger should fire again")
     end)
+
+    for _, registration in ipairs({
+      {"registerNamedTrigger", "named_trig_refused", "named_trig_refused"},
+      {"registerNamedRegexTrigger", "^named_trig_refused_re$", "named_trig_refused_re"},
+    }) do
+      local funcName, pattern, line = unpack(registration)
+      it("Should keep the working trigger when " .. funcName .. " refuses the new expiry", function()
+        -- a user of its own, so a regression cannot break the after_each cleanup of the others
+        local user = "refused trig user"
+        finally(function() pcall(deleteAllNamedTriggers, user) end)
+        _G.NamedTrigFire = 0
+        local register = _G[funcName]
+        local handler = function() _G.NamedTrigFire = _G.NamedTrigFire + 1 end
+        assert.is_true(register(user, tName, pattern, handler))
+        assert.error_matches(function() register(user, tName, pattern, handler, 0) end,
+          funcName .. ": trigger expiration count must be nil or greater than zero, got 0", nil, true)
+        -- a killed trigger is only removed at the end of the next feed
+        feedTriggers("\n" .. line .. "\n")
+        local before = _G.NamedTrigFire
+        feedTriggers("\n" .. line .. "\n")
+        assert.are.equal(before + 1, _G.NamedTrigFire, "the working trigger should still fire")
+        assert.are.same({tName}, getNamedTriggers(user))
+      end)
+    end
 
     it("Should register a regex named trigger and list it", function()
       registerNamedRegexTrigger(user, "regex_trig", "^whatever_re$", function() end)
@@ -873,6 +920,18 @@ describe("Tests the functionality of IDMgr", function()
         assert.are.equal(firstID, mgr.timers["timer"].handlerID)
         assert.is_number(remainingTime(firstID), "the failed re-registration must not kill the working timer")
         assert.are.same({"timer"}, mgr:getTimers())
+      end)
+
+      it("Should give a reason when tempTimer answers -1 without one", function()
+        local realTempTimer = tempTimer
+        finally(function() _G.tempTimer = realTempTimer end)
+        _G.tempTimer = function() return -1 end
+
+        local ok, err = mgr:registerTimer("timer", 5, function() end)
+
+        assert.is_nil(ok)
+        assert.is_string(err)
+        assert.is_nil(mgr.timers["timer"])
       end)
     end)
 
