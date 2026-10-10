@@ -5090,12 +5090,7 @@ std::pair<int, QString> Host::createMapView(int areaId)
         return {0, qsl("no map present or loaded")};
     }
 
-    auto* viewManager = mpMap->mapViewsFrontend();
-    if (!viewManager) {
-        return {0, qsl("no view manager available")};
-    }
-
-    return viewManager->createView(areaId);
+    return mpMap->mapViewsFrontend()->createView(areaId);
 }
 
 std::pair<bool, QString> Host::closeMapView(int viewId)
@@ -5104,12 +5099,7 @@ std::pair<bool, QString> Host::closeMapView(int viewId)
         return {false, qsl("no map present or loaded")};
     }
 
-    auto* viewManager = mpMap->mapViewsFrontend();
-    if (!viewManager) {
-        return {false, qsl("no view manager available")};
-    }
-
-    return viewManager->closeView(viewId);
+    return mpMap->mapViewsFrontend()->closeView(viewId);
 }
 
 std::pair<int, QString> Host::closeAllMapViews()
@@ -5118,12 +5108,7 @@ std::pair<int, QString> Host::closeAllMapViews()
         return {0, qsl("no map present or loaded")};
     }
 
-    auto* viewManager = mpMap->mapViewsFrontend();
-    if (!viewManager) {
-        return {0, qsl("no view manager available")};
-    }
-
-    return {viewManager->closeAllViews(), QString()};
+    return {mpMap->mapViewsFrontend()->closeAllViews(), QString()};
 }
 
 QList<int> Host::getMapViewIds() const
@@ -5133,13 +5118,7 @@ QList<int> Host::getMapViewIds() const
         return {};
     }
 
-    auto* viewManager = mpMap->mapViewsFrontend();
-    if (!viewManager) {
-        qWarning() << "Host::getMapViewIds() - no view manager available";
-        return {};
-    }
-
-    return viewManager->getViewIds();
+    return mpMap->mapViewsFrontend()->getViewIds();
 }
 
 void Host::setDebugShowAllProblemCodepoints(const bool state)
