@@ -7926,6 +7926,12 @@ void mudlet::setAppearance(const enums::Appearance state, const bool& loading)
     emit signal_appearanceChanged(state);
 }
 
+void mudlet::setAppStyleSheet(const QString& styleSheet)
+{
+    qApp->setStyleSheet(styleSheet);
+    refreshTabBarsAfterStyleChange();
+}
+
 // The application style object is replaced in two places - setAppearance()
 // and Lua's setAppStyleSheet() - and the tab bars miss the StyleChange
 // broadcast both times (see TTabBar::refreshAfterApplicationStyleChange()).

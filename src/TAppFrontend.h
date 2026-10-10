@@ -59,7 +59,7 @@ public:
     // -1 for a profile with no tab
     virtual int profileTabIndex(const QString& profileName) const = 0;
     virtual void setActiveProfileTab(const QString& profileName) = 0;
-    virtual void refreshTabBarsAfterStyleChange() = 0;
+    virtual void setAppStyleSheet(const QString& styleSheet) = 0;
     virtual void resizeMainWindow(int width, int height) = 0;
     virtual bool loadWindowLayout() = 0;
     // Saves even if quitting already saved the layout; if this save fails, quitting saves it again.

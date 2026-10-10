@@ -30,7 +30,6 @@
 #include "MudletApp.h"
 #include "TLuaInterpreter.h"
 
-#include <QApplication>
 #include <QClipboard>
 #include <QGuiApplication>
 
@@ -2841,8 +2840,7 @@ int TLuaInterpreter::setAppStyleSheet(lua_State* L)
     event.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
     event.mArgumentList.append(host.getName());
     event.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
-    qApp->setStyleSheet(styleSheet);
-    TAppFrontend::instance()->refreshTabBarsAfterStyleChange();
+    TAppFrontend::instance()->setAppStyleSheet(styleSheet);
     HostManager::self()->postInterHostEvent(nullptr, event, true);
     lua_pushboolean(L, true);
     return 1;
