@@ -1154,6 +1154,7 @@ describe("Tests the bulk copy of plain text runs", function()
   it("ends a run at the other bytes that end a line just as the byte by byte decoder does", function()
     local endings = {
       {name = "End of Transmission", fed = bytes(0x04)},
+      {name = "prompt (IAC GA)", fed = bytes(0xFF, 0xF9)},
     }
     for _, ending in ipairs(endings) do
       atEveryOffset(function(before, after, where)
