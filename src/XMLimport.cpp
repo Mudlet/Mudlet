@@ -1076,7 +1076,14 @@ void XMLimport::readHost(Host* pHost)
     TAppFrontend::instance()->setCompactInputLineChecked(pHost, compactInputLine);
 
     if (attributes().hasAttribute(QLatin1String("CommandLineHistorySaveSize"))) {
-        pHost->setCommandLineHistorySaveSize(attributes().value(QLatin1String("CommandLineHistorySaveSize")).toInt());
+        bool sizeRead = false;
+        const int lines = attributes().value(QLatin1String("CommandLineHistorySaveSize")).toInt(&sizeRead);
+        if (!sizeRead) {
+            // toInt() gives 0 for a size it cannot read, which would turn saving the history off:
+            qWarning().nospace().noquote() << "XMLimport::readHost(...) WARNING - unreadable CommandLineHistorySaveSize \"" << attributes().value(QLatin1String("CommandLineHistorySaveSize"))
+                                           << "\", using 500 instead.";
+        }
+        pHost->setCommandLineHistorySaveSize(sizeRead ? lines : 500);
     } else {
         // This is the default value, though prior to the introduction of this
         // it would have effectively been zero:

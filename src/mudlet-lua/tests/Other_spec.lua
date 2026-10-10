@@ -1558,13 +1558,14 @@ describe("Tests Other.lua functions", function()
       restore("commandLineHistorySaveSize")
     end)
 
-    -- the save adds one to the size, so INT_MAX would overflow every time the
-    -- profile closes; 0 is how saving the history is turned off
+    -- 1000000 is Host::scmMaxCommandLineHistorySaveSize: the save adds one to the
+    -- size, so INT_MAX would overflow every time the profile closes; 0 is how
+    -- saving the history is turned off
     it("refuses a commandLineHistorySaveSize below 0 or above 1000000", function()
       snapshot("commandLineHistorySaveSize")
       finally(function() restore("commandLineHistorySaveSize") end)
       assert.is_true(setConfig("commandLineHistorySaveSize", 42))
-      for _, size in ipairs({-5, 1000001, 2147483647}) do
+      for _, size in ipairs({-5, -1, 1000001, 2147483647}) do
         local ok, err = setConfig("commandLineHistorySaveSize", size)
         assert.is_nil(ok, "a size of " .. size .. " was taken")
         assert.equals("commandLineHistorySaveSize " .. size .. " is outside of the supported range of 0 to 1000000", err)
