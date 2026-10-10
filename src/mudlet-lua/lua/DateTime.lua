@@ -159,9 +159,11 @@ function shms(seconds, bool)
   assert(type(seconds) == "number", "Assertion failed for function 'shms' - Please supply a valid number.")
 
   local s = seconds
-  local ss = string.format("%02d", math.fmod(s, 60))
-  local mm = string.format("%02d", math.fmod((s / 60 ), 60))
-  local hh = string.format("%02d", (s / (60 * 60)))
+  local magnitude = math.floor(math.abs(s))
+  local sign = (s < 0 and magnitude > 0) and "-" or ""
+  local ss = string.format("%02d", magnitude % 60)
+  local mm = string.format("%02d", math.floor(magnitude / 60) % 60)
+  local hh = sign .. string.format("%02d", math.floor(magnitude / (60 * 60)))
 
   if bool then
     cecho("<green>" .. s .. " <grey>seconds converts to: <green>" .. hh .. "<white>h,<green> " .. mm .. "<white>m <grey>and<green> " .. ss .. "<white>s.")

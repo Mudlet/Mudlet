@@ -43,6 +43,12 @@ describe("Tests DateTime.lua functions", function()
     it("should truncate a fractional second rather than rounding it up", function()
       assert.are.same({'00', '01', '01'}, {shms(61.9)})
     end)
+
+    it("should sign a negative count once, on the hours, keeping every magnitude", function()
+      assert.are.same({'-00', '00', '01'}, {shms(-1)})
+      assert.are.same({'-00', '01', '01'}, {shms(-61)})
+      assert.are.same({'-01', '01', '01'}, {shms(-3661)})
+    end)
   end)
 
   describe("Tests datetime:parse", function()
