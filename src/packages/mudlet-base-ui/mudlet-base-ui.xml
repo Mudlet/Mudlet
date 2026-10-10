@@ -668,19 +668,23 @@ local function rebuildCss()
   end
 end
 
--- GMCP vitals arrive in several dialects: lowercase namespaces, maxima inside
--- the vitals message or in a separate Maxstats one, and varying key names.
--- Every node listed here is scanned on each update (the gmcp table keeps the
--- latest message per node, so currents and maxima merge naturally even when
--- they arrive separately) - supporting another dialect is one more line
+-- GMCP vitals arrive in several dialects: maxima inside the vitals message or
+-- in a separate Maxstats one, and varying key names. GMCP names are
+-- case-insensitive, so each node here (written in lowercase) is matched in any
+-- casing, and so is the message that triggers an update. Every node listed is
+-- scanned on each update (the gmcp table keeps the latest message per node, so
+-- currents and maxima merge naturally even when they arrive separately) -
+-- supporting another dialect is one more line
 local vitalsNodes = {
-  { "Char", "Vitals" },
   { "char", "vitals" },
-  { "Char", "Maxstats" },
   { "char", "maxstats" },
-  { "Char", "Status" },
   { "char", "status" },
 }
+
+local vitalsEvents = {}
+for _, path in ipairs(vitalsNodes) do
+  vitalsEvents["gmcp." .. table.concat(path, ".")] = true
+end
 
 -- one row per gauge; current/max/percent list every key spelling observed in
 -- the wild. A percent key is a ready 0-100 value and needs no max: nl (IRE
@@ -725,16 +729,32 @@ local msdpStats = {
   { key = "enemy", current = "OPPONENT_HEALTH", max = "OPPONENT_HEALTH_MAX", transient = true },
 }
 
-local function gmcpNode(path)
-  local node = gmcp
+-- appends every table found at path in any casing; sorted, so a game sending
+-- two casings of one node has them read in the same order every time
+local function addGmcpNodes(path, found)
+  local level = { gmcp }
   for _, key in ipairs(path) do
-    if type(node) ~= "table" then
-      return nil
+    local nextLevel = {}
+    for _, node in ipairs(level) do
+      if type(node) == "table" then
+        local names = {}
+        for name in pairs(node) do
+          if type(name) == "string" and name:lower() == key then
+            names[#names + 1] = name
+          end
+        end
+        table.sort(names)
+        for _, name in ipairs(names) do
+          nextLevel[#nextLevel + 1] = node[name]
+        end
+      end
     end
-    node = node[key]
+    level = nextLevel
   end
-  if type(node) == "table" then
-    return node
+  for _, node in ipairs(level) do
+    if type(node) == "table" then
+      found[#found + 1] = node
+    end
   end
 end
 
@@ -2546,13 +2566,17 @@ function BaseUI.renderVitals()
   end
 end
 
+-- registered on "*": GMCP names are case-insensitive, so no list of event names is complete
+function BaseUI.routeGmcpVitals(event)
+  if type(event) == "string" and event:find("^gmcp%.") and vitalsEvents[event:lower()] then
+    BaseUI.updateVitals()
+  end
+end
+
 function BaseUI.updateVitals()
   local sources = {}
   for _, path in ipairs(vitalsNodes) do
-    local node = gmcpNode(path)
-    if node then
-      sources[#sources + 1] = node
-    end
+    addGmcpNodes(path, sources)
   end
   if not sources[1] then
     return
@@ -2835,12 +2859,7 @@ if not BaseUI.settings.msdpSeeded then
   setConfig("enableMSDP", true)
 end
 
-onEvent("gmcp.Char.Vitals", "BaseUI.updateVitals")
-onEvent("gmcp.char.vitals", "BaseUI.updateVitals")
-onEvent("gmcp.Char.Maxstats", "BaseUI.updateVitals")
-onEvent("gmcp.char.maxstats", "BaseUI.updateVitals")
-onEvent("gmcp.Char.Status", "BaseUI.updateVitals")
-onEvent("gmcp.char.status", "BaseUI.updateVitals")
+onEvent("*", "BaseUI.routeGmcpVitals")
 onEvent("gmcp.Comm.Channel.Text", "BaseUI.addChatMessage")
 onEvent("sysProtocolEnabled", "BaseUI.enableChannelCapture")
 onEvent("sysProtocolEnabled", "BaseUI.enableMsdpVitals")

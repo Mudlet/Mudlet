@@ -2315,6 +2315,74 @@ describe("Tests UI functions", function()
     end)
   end)
 
+  -- raised rather than called, so the handler registration is tested as well
+  describe("Test BaseUI.updateVitals", function()
+    if not (type(BaseUI) == "table" and type(BaseUI.updateVitals) == "function") then
+      it("needs the base UI package installed", function()
+        pending("BaseUI.updateVitals is unavailable in this profile")
+      end)
+      return
+    end
+
+    local saved, applied
+
+    before_each(function()
+      saved = {
+        applyVitals = BaseUI.applyVitals,
+        build = BaseUI.build,
+        checkMapData = BaseUI.checkMapData,
+        dormant = BaseUI.dormant,
+        sawGmcpVitals = BaseUI.sawGmcpVitals,
+        gmcp = _G.gmcp,
+      }
+      applied = {}
+      BaseUI.applyVitals = function(_, readings)
+        applied[#applied + 1] = readings
+      end
+      BaseUI.build = function() end
+      BaseUI.checkMapData = function() end
+      BaseUI.dormant = function() return false end
+    end)
+
+    after_each(function()
+      BaseUI.applyVitals = saved.applyVitals
+      BaseUI.build = saved.build
+      BaseUI.checkMapData = saved.checkMapData
+      BaseUI.dormant = saved.dormant
+      BaseUI.sawGmcpVitals = saved.sawGmcpVitals
+      _G.gmcp = saved.gmcp
+    end)
+
+    it("should merge the currents from Char.Vitals with the maxima from Char.MaxStats", function()
+      _G.gmcp = { Char = { Vitals = { hp = 50, mp = 20, mv = 30 }, MaxStats = { maxhp = 100, maxmp = 40, maxmv = 60 } } }
+      raiseEvent("gmcp.Char.MaxStats")
+      assert.are.equal(1, #applied)
+      assert.are.same({ current = 50, max = 100 }, applied[1].hp)
+      assert.are.same({ current = 20, max = 40 }, applied[1].mp)
+      assert.are.same({ current = 30, max = 60 }, applied[1].mv)
+    end)
+
+    -- GMCP package and message names are case-insensitive
+    it("should read a vitals node sent in any casing", function()
+      for _, spelling in ipairs({ { "char", "MaxStats" }, { "Char", "maxStats" }, { "CHAR", "MAXSTATS" }, { "Char", "vitals" } }) do
+        applied = {}
+        local namespace, message = spelling[1], spelling[2]
+        _G.gmcp = { [namespace] = { [message] = { hp = 50, maxhp = 100 } } }
+        raiseEvent("gmcp." .. namespace .. "." .. message)
+        assert.are.equal(1, #applied, namespace .. "." .. message)
+        assert.are.same({ current = 50, max = 100 }, applied[1].hp, namespace .. "." .. message)
+      end
+    end)
+
+    it("should only update for a vitals message", function()
+      _G.gmcp = { Char = { Vitals = { hp = 50, maxhp = 100 }, Items = { List = {} } } }
+      raiseEvent("gmcp.Char")
+      raiseEvent("gmcp.Char.Items.List")
+      raiseEvent("Char.Vitals")
+      assert.are.equal(0, #applied)
+    end)
+  end)
+
   -- when a game installs its own interface (a Client.GUI package), the
   -- starter UI stands aside rather than fight it for screen space
   describe("Test the starter UI standing aside for a game's own interface", function()
