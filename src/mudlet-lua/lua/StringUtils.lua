@@ -248,8 +248,6 @@ local function fstring_global(outer_env, k)
   return rawget(outer_env, k)
 end
 
-local fstring_self
-
 local function fstring_parse(template)
   local parts, count, position = { names = {}, nameCount = 0, onlyNames = true }, 0, 1
   while true do
@@ -334,11 +332,13 @@ function f(supersecretstringvariablenocollision)
       lookup = lookup or function(_, k)
         -- An expression can read from inside functions of its own, so f's frame is
         -- found rather than counted to, and its caller's locals are the ones searched.
-        local level = 2
-        local info = getinfo(level, "f")
-        while info and info.func ~= fstring_self do
+        -- Level 3 is whatever called the reading function, which is usually f.
+        local level = 3
+        while getlocal(level, 1) ~= fstring_param do
           level = level + 1
-          info = getinfo(level, "f")
+          if not getinfo(level, "") then
+            break
+          end
         end
         local found, value = fstring_local(k, level + 2)
         if found then
@@ -373,6 +373,3 @@ function f(supersecretstringvariablenocollision)
   end
   return concat(out)
 end
-
--- Set after f exists; lookup finds f's frame by comparing against it.
-fstring_self = f

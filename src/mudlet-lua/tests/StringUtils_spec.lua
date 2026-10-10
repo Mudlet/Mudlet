@@ -697,6 +697,24 @@ describe("Tests StringUtils.lua functions", function()
       assert.equals("o1", result)
     end)
 
+    it("should read the caller's locals from a callback that other functions call", function()
+      local function each(t, fn)
+        local r = {}
+        for i, v in ipairs(t) do
+          r[i] = fn(v)
+        end
+        return r
+      end
+      local function helper(t, fn)
+        local factor = "helper's"
+        local r = each(t, fn)
+        return r
+      end
+      local factor = 3
+      local result = f("{table.concat(helper({1, 2}, function(x) return x * factor end), ',')}")
+      assert.equals("3,6", result)
+    end)
+
     it("should take each name from the innermost frame that has it", function()
       local function outer()
         local x, y = "outer-x", "outer-y"
