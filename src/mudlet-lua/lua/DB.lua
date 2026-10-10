@@ -1736,17 +1736,15 @@ function db:fetch(sheet, query, order_by, descending)
   end
 
   if order_by then
+    -- built here rather than by db:_sql_columns, which reads a column called desc or asc
+    -- as the sort direction of the one before it
     local o = {}
     for _, v in ipairs(order_by) do
       assert(v.name, "You must pass field instances (as obtained from yourdb.yoursheet.yourfield) to sort.")
-      o[#o + 1] = v.name
-
-      if descending then
-        o[#o + 1] = "DESC"
-      end
+      o[#o + 1] = '"' .. v.name:lower() .. '"' .. (descending and " DESC" or "")
     end
 
-    sql = sql .. " ORDER BY " .. db:_sql_columns(o)
+    sql = sql .. " ORDER BY " .. table.concat(o, ",")
   end
 
   -- the closed database is checked here rather than left to db:fetch_sql, whose own

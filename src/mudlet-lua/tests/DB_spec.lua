@@ -2804,6 +2804,50 @@ describe("Tests db:echo_sql", function()
   end)
 end)
 
+describe("Tests db:fetch sorting by a column called desc", function()
+  local dbName = "sortdesctestingonly"
+  local dbFile = getMudletHomeDir() .. "/Database_" .. dbName .. ".db"
+
+  local function collectingWarnings(fn)
+    local collected = {}
+    -- through _G: a spec file's globals are its own
+    local originalPrintError = _G.printError
+    _G.printError = function(msg) collected[#collected + 1] = msg end
+    finally(function() _G.printError = originalPrintError end)
+
+    local result = fn()
+    _G.printError = originalPrintError
+    return result, table.concat(collected, "\n")
+  end
+
+  local function createCollectingWarnings(sheets)
+    return collectingWarnings(function() return db:create(dbName, sheets) end)
+  end
+
+  after_each(function()
+    if not pcall(function() db:close(dbName) end) then
+      db.__conn[dbName] = nil
+    end
+    os.remove(dbFile)
+  end)
+
+  it("sorts by a column called desc rather than reading it as a sort direction", function()
+    local mydb = createCollectingWarnings({notes = {name = "", desc = ""}})
+    db:add(mydb.notes, {name = "a", desc = "2"}, {name = "a", desc = "1"}, {name = "b", desc = "0"})
+
+    local function order(rows)
+      local seen = {}
+      for _, row in ipairs(rows) do
+        seen[#seen + 1] = row.name .. "/" .. row.desc
+      end
+      return table.concat(seen, ",")
+    end
+
+    assert.are.equal("a/1,a/2,b/0", order(db:fetch(mydb.notes, nil, {mydb.notes.name, mydb.notes.desc})))
+    assert.are.equal("b/0,a/2,a/1", order(db:fetch(mydb.notes, nil, {mydb.notes.name, mydb.notes.desc}, true)))
+  end)
+end)
+
 -- The helpers below all begin with an underscore: they are db's internals, not
 -- its public API. They are specced directly because every public db function is
 -- built out of them, so a change to one of them moves behaviour everywhere at
