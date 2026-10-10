@@ -338,7 +338,21 @@ std::string XMLexport::serializeForQxml(const pugi::xml_document& doc)
     StringXmlWriter writer(output);
     doc.save(writer);
     sanitizeForQxml(output);
-    return output;
+    // pugixml writes a carriage return in text raw, which a reader normalises
+    // away as a line ending; its own markup never holds one, so each is data
+    if (output.find('\r') == std::string::npos) {
+        return output;
+    }
+    std::string encoded;
+    encoded.reserve(output.size() + output.size() / 64);
+    for (const char character : output) {
+        if (character == '\r') {
+            encoded.append("&#13;");
+        } else {
+            encoded.push_back(character);
+        }
+    }
+    return encoded;
 }
 
 bool XMLexport::saveXml(const QString& fileName)

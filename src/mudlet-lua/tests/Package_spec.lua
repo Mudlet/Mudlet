@@ -3224,6 +3224,58 @@ describe("Tests a module round trip through the XML writer and reader", function
   end)
 end)
 
+-- Installing a package with a VariablePackage marks what it holds as saved, so
+-- a profile save sends a string out through the writer, and installing what was
+-- written brings it back in through the reader, as the next profile load would.
+describe("Tests a carriage return in a saved string through a profile save", function()
+  local name = "mudlet-spec-saved-carriage-return"
+  local reloadedName = name .. "-reloaded"
+  local xml = getMudletHomeDir() .. "/" .. name .. ".xml"
+  local reloadedXml = getMudletHomeDir() .. "/" .. reloadedName .. ".xml"
+  local written, reloaded
+
+  setup(function()
+    writePackageXml(xml, table.concat({
+      '<VariablePackage>',
+      '<VariableGroup><name>mudletSpecSavedText</name><keyType>4</keyType><value></value><valueType>5</valueType>',
+      '</VariableGroup>',
+      '</VariablePackage>',
+    }, "\n"))
+    installUntilConfirmed(installPackage, xml, function() return packageInstalled(name) end, "the package " .. name)
+    assert.is_table(mudletSpecSavedText, "the package did not create mudletSpecSavedText")
+    mudletSpecSavedText.loneCarriageReturn = "a\rb"
+    mudletSpecSavedText.carriageReturnLineFeed = "a\r\nb"
+
+    assert.is_true(waitForProfileSaveToPass(), "a profile save was still running")
+    local ok, savedPath = saveProfile()
+    assert.is_true(ok, savedPath)
+    assert.is_true(waitForProfileSaveToPass(), "the profile save did not finish")
+    -- the group holds no nested groups, so its first closing tag is its own
+    written = readFile(savedPath):match("<VariableGroup>%s*<name>mudletSpecSavedText</name>.-</VariableGroup>")
+    assert.is_string(written, "the profile save does not hold mudletSpecSavedText")
+
+    _G.mudletSpecSavedText = nil
+    writePackageXml(reloadedXml, "<VariablePackage>\n" .. written .. "\n</VariablePackage>")
+    installUntilConfirmed(installPackage, reloadedXml, function() return packageInstalled(reloadedName) end, "the package " .. reloadedName)
+    reloaded = _G.mudletSpecSavedText
+    assert.is_table(reloaded, "the written group did not create mudletSpecSavedText again")
+  end)
+
+  teardown(function()
+    _G.mudletSpecSavedText = nil
+    removeFixturePackage(reloadedName)
+    removeFixturePackage(name)
+    os.remove(xml)
+    os.remove(reloadedXml)
+  end)
+
+  it("keeps a carriage return in a saved string", function()
+    assert.equals("a\rb", reloaded.loneCarriageReturn)
+    assert.equals("a\r\nb", reloaded.carriageReturnLineFeed)
+    assert.is_false(contains(written, "\r"), "the save wrote a raw carriage return, which reads back as a line ending")
+  end)
+end)
+
 -- Every kind of item compiles its Lua as it is read in, and each kind has its
 -- own copy of the code that files a failure away for the install to own up to.
 -- The script and trigger copies are pinned above; these are the other four.
