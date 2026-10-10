@@ -482,7 +482,6 @@ Host::Host(int port, const QString& hostname, const QString& login, const QStrin
             return;
         }
         if (mServerWrapFlushPaused) {
-            mServerWrapFlushDue = true;
             return;
         }
         // Mimic Host::printOnDisplay() so that trigger-context
@@ -578,18 +577,20 @@ bool Host::requestClose()
 void Host::pauseServerWrapFlush()
 {
     mServerWrapFlushPaused = true;
-    if (mServerWrapFlushTimer.isActive()) {
-        mServerWrapFlushTimer.stop();
-        mServerWrapFlushDue = true;
-    }
+    mServerWrapFlushTimer.stop();
 }
 
 void Host::resumeServerWrapFlush()
 {
     mServerWrapFlushPaused = false;
-    if (std::exchange(mServerWrapFlushDue, false)) {
+    if (mpMainConsoleModel->buffer.holdsServerWrapLine()) {
         mServerWrapFlushTimer.start();
     }
+}
+
+bool Host::serverWrapLineHeldForClose() const
+{
+    return mServerWrapFlushPaused && mpMainConsoleModel->buffer.holdsServerWrapLine();
 }
 
 void Host::closeChildren()

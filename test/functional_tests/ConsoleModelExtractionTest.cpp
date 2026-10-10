@@ -946,11 +946,8 @@ private slots:
     {
         // The close saves the profile before it drops anything, and
         // Host::waitForProfileSave() runs the event loop with the profile still
-        // live - so text from the game arriving meanwhile commits the held line,
-        // as does the posting timer any text from it starts, and so does the
-        // flush timer if the save outlasts it, as it can on a slow disk. None of
-        // those is the close dropping the line, so this game says nothing and
-        // the timer is given longer than any save takes.
+        // live - so text from the game arriving meanwhile commits the held line.
+        // That is not the close dropping it, so this game says nothing.
         mpServer->setSendsWelcome(false);
         startProfile();
         auto host = mudlet::self()->getActiveHost();
@@ -958,7 +955,6 @@ private slots:
         QVERIFY2(host->mpConsole, "The active host has no main console.");
         host->mUndoServerWrap = true;
         host->mUndoServerWrapWidth = 80;
-        host->mServerWrapFlushTimer.setInterval(1min);
 
         const QString heldLine = QString(64, QChar('y')) + qsl(" omega");
         std::string data = heldLine.toStdString() + "\n";
@@ -975,7 +971,7 @@ private slots:
     // The close asks whether to save, and its box runs an event loop of its
     // own: the held line must not be committed, running its triggers, while
     // the player has yet to decide - and once they cancel, it is committed as
-    // any other is. See issue #11234.
+    // any other is.
     void test_aHeldServerWrappedLineStaysHeldWhileTheSaveQuestionIsUp()
     {
         mpServer->setSendsWelcome(false);
@@ -1020,7 +1016,11 @@ private slots:
             }
             heldDuringQuestion = model->buffer.mServerWrapPendingLine == heldLine && lastLineHolding(model->buffer, heldLine) < 0;
             answer.stop();
-            box->button(QMessageBox::Cancel)->click();
+            if (auto* cancel = box->button(QMessageBox::Cancel)) {
+                cancel->click();
+            } else {
+                box->reject();
+            }
         });
         answer.start();
 
@@ -1073,7 +1073,11 @@ private slots:
             }
             heldDuringQuestion = sinceHeld.isValid() && model->buffer.mServerWrapPendingLine == heldLine && lastLineHolding(model->buffer, heldLine) < 0;
             answer.stop();
-            box->button(QMessageBox::Cancel)->click();
+            if (auto* cancel = box->button(QMessageBox::Cancel)) {
+                cancel->click();
+            } else {
+                box->reject();
+            }
         });
         answer.start();
 
@@ -1089,6 +1093,205 @@ private slots:
                  "The held line was never committed after the close was cancelled.");
         destroyTheView(host);
     }
+
+    // The close going ahead drops the held line, and its triggers do not run
+    // while the player is still being asked.
+    void test_aHeldServerWrappedLineIsDroppedWhenTheSaveQuestionIsAnsweredNo()
+    {
+        mpServer->setSendsWelcome(false);
+        startProfile();
+        auto host = mudlet::self()->getActiveHost();
+        QVERIFY2(host, "No active host available for the test.");
+        QVERIFY2(host->mpConsole, "The active host has no main console.");
+        host->mUndoServerWrap = true;
+        host->mUndoServerWrapWidth = 80;
+        host->mFORCE_SAVE_ON_EXIT = false;
+        runLua(host, qsl("heldTriggerRan = 'no'\ntempRegexTrigger('^t+ theta$', [[heldTriggerRan = 'yes']])\n"));
+
+        const QString heldLine = QString(64, QChar('t')) + qsl(" theta");
+        std::shared_ptr<TConsoleModel> model = host->sharedMainConsoleModel();
+        mpServer->sendRaw(heldLine.toUtf8() + "\n");
+        QVERIFY2(QTest::qWaitFor(
+                         [&]() {
+                             return model->buffer.mServerWrapPendingLine == heldLine;
+                         },
+                         3s),
+                 "The full-width line was not held back for a continuation.");
+
+        bool heldDuringQuestion = false;
+        QString triggerDuringQuestion;
+        QElapsedTimer sinceShown;
+        QTimer answer;
+        answer.setInterval(20ms);
+        connect(&answer, &QTimer::timeout, this, [&]() {
+            auto* box = qobject_cast<QMessageBox*>(QApplication::activeModalWidget());
+            if (!box) {
+                return;
+            }
+            if (!sinceShown.isValid()) {
+                sinceShown.start();
+                return;
+            }
+            if (sinceShown.elapsed() < TBuffer::csmServerWrapFlushDelayMs * 3) {
+                return;
+            }
+            heldDuringQuestion = model->buffer.mServerWrapPendingLine == heldLine && lastLineHolding(model->buffer, heldLine) < 0;
+            triggerDuringQuestion = luaGlobalString(host, "heldTriggerRan");
+            answer.stop();
+            if (auto* no = box->button(QMessageBox::No)) {
+                no->click();
+            } else {
+                box->reject();
+            }
+        });
+        answer.start();
+
+        QVERIFY2(host->requestClose(), "Answering No to the save question did not close the profile.");
+        QVERIFY2(sinceShown.isValid(), "The close did not ask whether to save the profile.");
+        QVERIFY2(heldDuringQuestion, "The held line was committed while the save question was up.");
+        QCOMPARE(triggerDuringQuestion, qsl("no"));
+        QTest::qWait(TBuffer::csmServerWrapFlushDelayMs * 3);
+        QVERIFY2(lastLineHolding(model->buffer, heldLine) < 0, "The held line was committed although the close went ahead.");
+    }
+
+    // A line held by something other than the game has no posting timer behind
+    // it, so only the flush timer coming back after Cancel commits it.
+    void test_aHeldPrintedLineIsCommittedOnceTheSaveQuestionIsCancelled()
+    {
+        mpServer->setSendsWelcome(false);
+        startProfile();
+        auto host = mudlet::self()->getActiveHost();
+        QVERIFY2(host, "No active host available for the test.");
+        QVERIFY2(host->mpConsole, "The active host has no main console.");
+        host->mUndoServerWrap = true;
+        host->mUndoServerWrapWidth = 80;
+        host->mFORCE_SAVE_ON_EXIT = false;
+        QTest::qWait(500ms);
+
+        const QString heldLine = QString(64, QChar('p')) + qsl(" iota");
+        std::shared_ptr<TConsoleModel> model = host->sharedMainConsoleModel();
+        std::string data = heldLine.toStdString() + "\n";
+        host->printOnDisplay(data, true);
+        QCOMPARE(model->buffer.mServerWrapPendingLine, heldLine);
+
+        bool heldDuringQuestion = false;
+        QElapsedTimer sinceShown;
+        QTimer answer;
+        answer.setInterval(20ms);
+        connect(&answer, &QTimer::timeout, this, [&]() {
+            auto* box = qobject_cast<QMessageBox*>(QApplication::activeModalWidget());
+            if (!box) {
+                return;
+            }
+            if (!sinceShown.isValid()) {
+                sinceShown.start();
+                return;
+            }
+            if (sinceShown.elapsed() < TBuffer::csmServerWrapFlushDelayMs * 3) {
+                return;
+            }
+            heldDuringQuestion = model->buffer.mServerWrapPendingLine == heldLine && lastLineHolding(model->buffer, heldLine) < 0;
+            answer.stop();
+            if (auto* cancel = box->button(QMessageBox::Cancel)) {
+                cancel->click();
+            } else {
+                box->reject();
+            }
+        });
+        answer.start();
+
+        QVERIFY2(!host->requestClose(), "Cancelling the save question did not keep the profile open.");
+        QVERIFY2(sinceShown.isValid(), "The close did not ask whether to save the profile.");
+        QVERIFY2(heldDuringQuestion, "The held line was committed while the save question was up.");
+        QVERIFY2(QTest::qWaitFor(
+                         [&]() {
+                             return lastLineHolding(model->buffer, heldLine) >= 0;
+                         },
+                         TBuffer::csmServerWrapFlushDelayMs * 3),
+                 "The held line was not committed once the close was cancelled.");
+        destroyTheView(host);
+    }
+
+    // With no line held, a prompt the game sends while the question is up is
+    // shown, and its triggers run, as at any other time.
+    void test_aPromptSentWhileTheSaveQuestionIsUpIsShown()
+    {
+        mpServer->setSendsWelcome(false);
+        startProfile();
+        auto host = mudlet::self()->getActiveHost();
+        QVERIFY2(host, "No active host available for the test.");
+        QVERIFY2(host->mpConsole, "The active host has no main console.");
+        host->mFORCE_SAVE_ON_EXIT = false;
+        runLua(host, qsl("questionPrompt = 'no'\ntempRegexTrigger('^HP:100>', [[questionPrompt = 'yes']])\n"));
+        QTest::qWait(500ms);
+
+        bool shownDuringQuestion = false;
+        QElapsedTimer sinceShown;
+        QTimer answer;
+        answer.setInterval(20ms);
+        connect(&answer, &QTimer::timeout, this, [&]() {
+            auto* box = qobject_cast<QMessageBox*>(QApplication::activeModalWidget());
+            if (!box) {
+                return;
+            }
+            if (!sinceShown.isValid()) {
+                sinceShown.start();
+                mpServer->sendRaw("HP:100> ");
+                return;
+            }
+            shownDuringQuestion = luaGlobalString(host, "questionPrompt") == qsl("yes");
+            if (!shownDuringQuestion && sinceShown.elapsed() < 3000) {
+                return;
+            }
+            answer.stop();
+            if (auto* cancel = box->button(QMessageBox::Cancel)) {
+                cancel->click();
+            } else {
+                box->reject();
+            }
+        });
+        answer.start();
+
+        QVERIFY2(!host->requestClose(), "Cancelling the save question did not keep the profile open.");
+        QVERIFY2(sinceShown.isValid(), "The close did not ask whether to save the profile.");
+        QVERIFY2(shownDuringQuestion, "A prompt sent while the save question was up was not shown until it went away.");
+        destroyTheView(host);
+    }
+
+    // A forced close asks nothing but waits for the save, running the event
+    // loop meanwhile; the flush timer must not commit the held line then.
+    void test_aHeldServerWrappedLineIsDroppedByAForcedClose()
+    {
+        mpServer->setSendsWelcome(false);
+        startProfile();
+        auto host = mudlet::self()->getActiveHost();
+        QVERIFY2(host, "No active host available for the test.");
+        QVERIFY2(host->mpConsole, "The active host has no main console.");
+        host->mUndoServerWrap = true;
+        host->mUndoServerWrapWidth = 80;
+        QPointer<TMainConsole> console = host->mpConsole;
+        // Before the line is held: this runs the event loop
+        host->forceClose();
+
+        const QString heldLine = QString(64, QChar('f')) + qsl(" kappa");
+        std::shared_ptr<TConsoleModel> model = host->sharedMainConsoleModel();
+        std::string data = heldLine.toStdString() + "\n";
+        model->buffer.translateToPlainText(data, true);
+        QCOMPARE(model->buffer.mServerWrapPendingLine, heldLine);
+        // Due by the first pass of the save wait's event loop
+        host->mServerWrapFlushTimer.setInterval(1ms);
+
+        QVERIFY2(host->requestClose(), "The forced close was refused.");
+        QVERIFY2(QTest::qWaitFor(
+                         [&console]() {
+                             return console.isNull();
+                         },
+                         5s),
+                 "The main console view was not destroyed by closing the profile.");
+        QTest::qWait(TBuffer::csmServerWrapFlushDelayMs * 3);
+        QVERIFY2(lastLineHolding(model->buffer, heldLine) < 0, "The held line was committed while the forced close waited for the save.");
+    }
+
 
     // A line held after the close starts the flush timer again, and is
     // dropped all the same.

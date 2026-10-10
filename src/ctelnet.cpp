@@ -5301,7 +5301,7 @@ void cTelnet::slot_timerPosting()
     }
     // The flush marker would commit a line held for server-wrap joining just as
     // the flush itself does, so it waits out the pause too:
-    if (mpHost->serverWrapFlushPaused()) {
+    if (mpHost && mpHost->serverWrapLineHeldForClose()) {
         mpPostingTimer->start();
         return;
     }
