@@ -68,6 +68,12 @@ public:
 
     void wheelEvent(QWheelEvent* e) override;
     void setViewCenter(int, int, int, int);
+    // Takes over another view's area and center; roomId is the player room that view last followed
+    void syncView(int areaId, int x, int y, int z, int roomId);
+    void followPlayer();
+    bool followingPlayer() const;
+    int shownAreaId() const { return mAID; }
+    QVector3D viewCenter() const { return QVector3D(mMapCenterX, mMapCenterY, mMapCenterZ); }
     void shiftCamera(float, float, float);
     void setCameraPosition(float, float, float);
 
@@ -107,6 +113,8 @@ public slots:
 
 signals:
     void resetPlayerIconSliders(int height, int rotX, int rotY, int rotZ, int scale);
+    // Slider positions for the camera as it now is, in the ranges of the mapper's 3D controls
+    void cameraControlsChanged(int scale, int tilt, int roll, int azimuth);
 
 private slots:
     void onCameraAnimationTick();
@@ -207,8 +215,8 @@ private:
     int mAnimationDuration = 100; // 100ms animation duration for smooth movement
     QEasingCurve mEasingCurve;
     bool mCameraSmoothAnimating = false; // Dedicated flag for smooth camera animation
-    int mPreviousRID = 0; // Track previous room ID to detect changes
-    int mPreviousAID = 0; // Track previous area ID to detect area changes
+    int mPreviousRID = 0;                // Track previous room ID to detect changes
+    bool mFramePending = true;
 
     // Private methods for modern OpenGL
     void updateMatrices();
@@ -228,6 +236,11 @@ private:
     QColor getPlaneColor(int zLevel, bool belowOrAtLevel);
     QColor getEnvironmentColor(TRoom* pRoom);
     void startSmoothTransition(int targetAID, int targetX, int targetY, int targetZ);
+    void stopSmoothTransition();
+    void jumpTo(int areaId, int x, int y, int z);
+    void frameArea();
+    void emitCameraControls();
+    void setOrientationKeepingRoll(float theta, float phi);
 };
 
 #endif // MUDLET_MODERN_GLWIDGET_H

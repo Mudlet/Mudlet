@@ -47,6 +47,7 @@
 #include "mapInfoContributorManager.h"
 
 #include <algorithm>
+#include <cmath>
 #include <limits>
 #include <math.h>
 
@@ -671,32 +672,41 @@ int TLuaInterpreter::auditAreas(lua_State* L)
 int TLuaInterpreter::shiftMapPerspective(lua_State* L)
 {
     Host& host = getHostFromLua(L);
-
-    if (!host.mpMap || !host.mpMap->mpRoomDB || !host.mpMap->mapViewFrontend()) {
-        return warnArgumentValue(L, __func__, "you haven't opened a map yet");
-    }
-
     const float verticalAngle = getVerifiedFloat(L, __func__, 1, "verticalAngle");
     const float horizontalAngle = getVerifiedFloat(L, __func__, 2, "horizontalAngle");
     const float rotationAngle = getVerifiedFloat(L, __func__, 3, "rotationAngle");
-
-    host.mpMap->mapViewFrontend()->shift3DViewCamera(verticalAngle, horizontalAngle, rotationAngle);
-    return 0;
-}
-int TLuaInterpreter::setMapPerspective(lua_State* L)
-{
-    Host& host = getHostFromLua(L);
+    if (!std::isfinite(verticalAngle) || !std::isfinite(horizontalAngle) || !std::isfinite(rotationAngle)) {
+        return warnArgumentValue(L, __func__, "the angles must be finite numbers");
+    }
 
     if (!host.mpMap || !host.mpMap->mpRoomDB || !host.mpMap->mapViewFrontend()) {
         return warnArgumentValue(L, __func__, "you haven't opened a map yet");
     }
+    if (!host.mpMap->mapViewFrontend()->shift3DViewCamera(verticalAngle, horizontalAngle, rotationAngle)) {
+        return warnArgumentValue(L, __func__, "the modern 3D map view is not showing");
+    }
+    lua_pushboolean(L, true);
+    return 1;
+}
 
+int TLuaInterpreter::setMapPerspective(lua_State* L)
+{
+    Host& host = getHostFromLua(L);
     const float r = getVerifiedFloat(L, __func__, 1, "r");
     const float theta = getVerifiedFloat(L, __func__, 2, "theta");
     const float phi = getVerifiedFloat(L, __func__, 3, "phi");
+    if (!std::isfinite(r) || !std::isfinite(theta) || !std::isfinite(phi)) {
+        return warnArgumentValue(L, __func__, "r, theta and phi must be finite numbers");
+    }
 
-    host.mpMap->mapViewFrontend()->set3DViewCameraPosition(r, theta, phi);
-    return 0;
+    if (!host.mpMap || !host.mpMap->mpRoomDB || !host.mpMap->mapViewFrontend()) {
+        return warnArgumentValue(L, __func__, "you haven't opened a map yet");
+    }
+    if (!host.mpMap->mapViewFrontend()->set3DViewCameraPosition(r, theta, phi)) {
+        return warnArgumentValue(L, __func__, "the modern 3D map view is not showing");
+    }
+    lua_pushboolean(L, true);
+    return 1;
 }
 #endif
 

@@ -2809,6 +2809,80 @@ describe("Tests mapper functions against a shared fixture", function()
     end)
   end)
 
+  describe("Tests the 3D map perspective functions", function()
+    -- Only a build with the 3D mapper has them; the spec run keeps to the 2D
+    -- map, as the leak job cannot have the GL context a 3D view brings up
+    if not setMapPerspective then
+      pending("setMapPerspective and shiftMapPerspective need a Mudlet built with the 3D mapper")
+      return
+    end
+
+    it("setMapPerspective returns nil and a message while the 2D map is showing", function()
+      local ok, err = setMapPerspective(2, 45, 270)
+      assert.is_nil(ok)
+      assert.are.equal("the modern 3D map view is not showing", err)
+    end)
+
+    it("shiftMapPerspective returns nil and a message while the 2D map is showing", function()
+      local ok, err = shiftMapPerspective(10, 10, 0)
+      assert.is_nil(ok)
+      assert.are.equal("the modern 3D map view is not showing", err)
+    end)
+
+    it("both refuse numbers that are not finite", function()
+      for _, bad in ipairs({0 / 0, math.huge, -math.huge}) do
+        local ok, err = setMapPerspective(2, bad, 270)
+        assert.is_nil(ok)
+        assert.is_truthy(err:find("finite", 1, true), err)
+        ok, err = shiftMapPerspective(0, 0, bad)
+        assert.is_nil(ok)
+        assert.is_truthy(err:find("finite", 1, true), err)
+      end
+    end)
+
+    it("both raise an error for an argument that is not a number", function()
+      assert.has_error(function() setMapPerspective("far", 45, 270) end)
+      assert.has_error(function() shiftMapPerspective(1, nil, 0) end)
+    end)
+
+    it("neither moves nor zooms the 2D map", function()
+      assert.is_true(centerview(rA1))
+      local zoom = getMapZoom(areaAlpha)
+      setMapPerspective(0.5, 10, 0)
+      shiftMapPerspective(30, 30, 30)
+      assert.are.equal(zoom, getMapZoom(areaAlpha))
+      assert.are.equal(rA1, getPlayerRoom())
+      assert.is_false(getConfig("show3dMapView"))
+    end)
+
+    it("both move the modern 3D view's camera while it shows, but not the classic view's", function()
+      -- a GL context leaks in the leak-checking job's GL driver, as Media_spec explains
+      if (os.getenv("ASAN_OPTIONS") or ""):find("detect_leaks=1", 1, true) then
+        pending("a 3D view's GL context leaks in this job's GL driver")
+        return
+      end
+      local wasModern = getConfig("experiment.3dmap.modernmapper")
+      finally(function()
+        setConfig("show3dMapView", false)
+        setConfig("experiment.3dmap.modernmapper", wasModern == true)
+      end)
+      assert.is_true(setConfig("experiment.3dmap.modernmapper", true))
+      assert.is_true(setConfig("show3dMapView", true))
+      assert.is_true(getConfig("show3dMapView"))
+      assert.is_true(setMapPerspective(2, 45, 270))
+      assert.is_true(shiftMapPerspective(0, 30, 0))
+
+      assert.is_true(setConfig("experiment.3dmap.modernmapper", false))
+      assert.is_true(getConfig("show3dMapView"))
+      local ok, err = setMapPerspective(2, 45, 270)
+      assert.is_nil(ok)
+      assert.are.equal("the modern 3D map view is not showing", err)
+      ok, err = shiftMapPerspective(0, 30, 0)
+      assert.is_nil(ok)
+      assert.are.equal("the modern 3D map view is not showing", err)
+    end)
+  end)
+
   describe("Tests map zoom", function()
     it("setMapZoom is read back by getMapZoom for a given area", function()
       assert.is_true(setMapZoom(15, areaAlpha))
@@ -4338,12 +4412,6 @@ describe("Tests saveMap and loadMap", function()
     -- breadth-first search, so a fix leaves them green.
     pending("routes can come back a step longer than the shortest one - issue #10180")
   end)
-
-  -- setMapPerspective/shiftMapPerspective only exist in a build made with 3D
-  -- mapper support (USE_3DMAPPER), which only the Linux clang CI job leaves out
-  pending("setMapPerspective needs a Mudlet built with the 3D mapper")
-
-  pending("shiftMapPerspective needs a Mudlet built with the 3D mapper")
 end)
 
 -- Floating and redocking the map gives the modern 3D view a new GL context, and
