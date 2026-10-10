@@ -1613,9 +1613,8 @@ QString CredentialManager::retrieveCredentialFromFile(const QString& profileName
             if (unreadable) {
                 *unreadable = true;
             }
-        }
+        } else if (unreadable) {
 #if !defined(Q_OS_WIN)
-        else if (unreadable) {
             // A folder without search permission hides everything below it, so "not there" is not proof of
             // absence: check the nearest folder that does show. Not on Windows, which has no search permission.
             QString folderPath = QFileInfo(filePath).absolutePath();
@@ -1624,8 +1623,8 @@ QString CredentialManager::retrieveCredentialFromFile(const QString& profileName
             }
             const QFileInfo folder(folderPath);
             *unreadable = folder.exists() && !folder.isExecutable();
-        }
 #endif
+        }
 
         return QString();
     }
