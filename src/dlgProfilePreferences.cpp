@@ -3912,8 +3912,8 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
     checkBox_useMaxBufferSize->setChecked(pHost->getUseMaxConsoleBufferSize());
 
     // Set maximum buffer size based on system capabilities and update tooltip
-    if (pHost->mpConsole) {
-        const int maxBufferSize = pHost->mpConsole->buffer.getMaxBufferSize();
+    if (pHost->mainConsoleView()) {
+        const int maxBufferSize = pHost->mainConsoleView()->buffer.getMaxBufferSize();
         console_buffer_size_spinBox->setMaximum(maxBufferSize);
         checkBox_useMaxBufferSize->setToolTip(tr("<p>Use the maximum buffer size your system can handle (%1 lines). This will be calculated based on available memory.</p>").arg(maxBufferSize));
 
@@ -5206,9 +5206,9 @@ void dlgProfilePreferences::slot_resetColors()
     pHost->mLightWhite = Qt::white;
 
     setColors();
-    if (pHost->mpConsole) {
-        pHost->mpConsole->resetConsoleBackgroundImage();
-        pHost->mpConsole->changeColors();
+    if (pHost->mainConsoleView()) {
+        pHost->mainConsoleView()->resetConsoleBackgroundImage();
+        pHost->mainConsoleView()->changeColors();
     }
 
     // Copy across the colors to the Lua "color_table"
@@ -5269,7 +5269,7 @@ void dlgProfilePreferences::setButtonAndProfileColor(QPushButton* button, QColor
     if (color.isValid()) {
         presentColor = color;
 
-        auto console = pHost->mpConsole;
+        QPointer<TMainConsole> console = pHost->mainConsoleView();
         if (console) {
             console->changeColors();
             // update the display properly when color selections change.
@@ -5505,8 +5505,8 @@ void dlgProfilePreferences::slot_setMapBgColor()
         setButtonAndProfileColor(pushButton_background_color_2, pHost->mBgColor_2, true);
 // if 3D map, update transparency flags
 #if defined(INCLUDE_3DMAPPER)
-        if (pHost->mpMap->mpMapper->glWidget) {
-            QOpenGLWidget* map = pHost->mpMap->mpMapper->glWidget;
+        if (pHost->mpMap->mapper()->glWidget) {
+            QOpenGLWidget* map = pHost->mpMap->mapper()->glWidget;
             if (pHost->mBgColor_2.alpha() < 255) {
                 map->setAttribute(Qt::WA_OpaquePaintEvent, false);
                 map->setAttribute(Qt::WA_AlwaysStackOnTop, true);
@@ -5765,7 +5765,7 @@ void dlgProfilePreferences::slot_downloadMap()
     if (!pHost) {
         return;
     }
-    if (!pHost->mpMap->mpMapper) {
+    if (!pHost->mpMap->mapper()) {
         // CHECK: What happens if we are NOT the current profile anymore?
         pHost->showHideOrCreateMapper(false);
     }
@@ -6116,7 +6116,7 @@ void dlgProfilePreferences::slot_copyMap()
     // Identify which, if any, of the toProfilesRoomIdMap is active and get the current room
     QMap<QString, QSharedPointer<Host>> activeOtherHostMap;
     for (auto pOtherHost : *HostManager::self()) {
-        if (pOtherHost->mpConsole && (pOtherHost != pHost)) {
+        if (pOtherHost->mainConsoleView() && (pOtherHost != pHost)) {
             const auto& otherHostName = pOtherHost->getName();
             if (toProfilesRoomIdMap.contains(otherHostName)) {
                 activeOtherHostMap.insert(otherHostName, pOtherHost);
@@ -6354,7 +6354,7 @@ void dlgProfilePreferences::applyAll()
     mudlet* pMudlet = mudlet::self();
     Host* pHost = mpHost;
     if (pHost) {
-        auto console = pHost->mpConsole;
+        QPointer<TMainConsole> console = pHost->mainConsoleView();
         if (mSnapshot.dirty(comboBox_dictionary) && comboBox_dictionary->isEnabled() && comboBox_dictionary->currentIndex() >= 0) {
             pHost->setSpellDic(comboBox_dictionary->currentData().toString());
         }
@@ -6409,11 +6409,11 @@ void dlgProfilePreferences::applyAll()
                 pHost->setConsoleBufferSize(chosenBufferSize);
                 pHost->setUseMaxConsoleBufferSize(useMaxBuffer);
 
-                if (pHost->mpConsole) {
-                    const int newBufferSize = useMaxBuffer ? pHost->mpConsole->buffer.getMaxBufferSize() : chosenBufferSize;
+                if (pHost->mainConsoleView()) {
+                    const int newBufferSize = useMaxBuffer ? pHost->mainConsoleView()->buffer.getMaxBufferSize() : chosenBufferSize;
                     // Calculate batch delete size as 5% of buffer size (minimum 100)
                     const int newBatchDeleteSize = std::max(100, newBufferSize / 5);
-                    pHost->mpConsole->buffer.setBufferSize(newBufferSize, newBatchDeleteSize);
+                    pHost->mainConsoleView()->buffer.setBufferSize(newBufferSize, newBatchDeleteSize);
                 }
             }
         }
@@ -6508,14 +6508,14 @@ void dlgProfilePreferences::applyAll()
                 // following this one:
                 const bool defaultAreaWasNotShown = pHost->mpMap->getDefaultAreaShown();
                 pHost->mpMap->setDefaultAreaShown(checkBox_showDefaultArea->isChecked());
-                if (pHost->mpMap->mpMapper && !defaultAreaWasNotShown && checkBox_showDefaultArea->isChecked() && pHost->mpMap->mpMapper->mp2dMap->mAreaID == -1) {
+                if (pHost->mpMap->mapper() && !defaultAreaWasNotShown && checkBox_showDefaultArea->isChecked() && pHost->mpMap->mapper()->mp2dMap->mAreaID == -1) {
                     // Corner case fixup, user has asked for the default area
                     // to be shown and it wasn't - so it can now be:
-                    pHost->mpMap->mpMapper->comboBox_showArea->setCurrentText(pHost->mpMap->getDefaultAreaName());
+                    pHost->mpMap->mapper()->comboBox_showArea->setCurrentText(pHost->mpMap->getDefaultAreaName());
                 }
             }
-            if (mSnapshot.dirty(mMapperUseAntiAlias) && pHost->mpMap->mpMapper) {
-                pHost->mpMap->mpMapper->mp2dMap->mMapperUseAntiAlias = mMapperUseAntiAlias->isChecked();
+            if (mSnapshot.dirty(mMapperUseAntiAlias) && pHost->mpMap->mapper()) {
+                pHost->mpMap->mapper()->mp2dMap->mMapperUseAntiAlias = mMapperUseAntiAlias->isChecked();
             }
 
             // Only when the spin-box is what holds the newer value. It carries
@@ -6526,9 +6526,9 @@ void dlgProfilePreferences::applyAll()
                 pHost->mpMap->setSymbolFontFudgeFactor(mpDoubleSpinBox_mapSymbolFontFudge->value());
             }
 
-            if (pHost->mpMap->mpMapper) {
-                pHost->mpMap->mpMapper->mp2dMap->repaint(); // Forceably redraw it as we ARE currently showing default area
-                pHost->mpMap->mpMapper->update();
+            if (pHost->mpMap->mapper()) {
+                pHost->mpMap->mapper()->mp2dMap->repaint(); // Forceably redraw it as we ARE currently showing default area
+                pHost->mpMap->mapper()->update();
             }
         }
         if (mSnapshot.anyDirty({leftBorderWidth, topBorderHeight, rightBorderWidth, bottomBorderHeight})) {
@@ -8282,12 +8282,12 @@ void dlgProfilePreferences::slot_changePlayerRoomStyle(const int index)
     setButtonColor(pushButton_playerRoomSecondaryColor, pHost->mpMap->mPlayerRoomInnerColor, true);
     pHost->mpMap->mPlayerRoomStyle = static_cast<quint8>(style);
     pHost->setPlayerRoomStyle(static_cast<quint8>(style));
-    if (!pHost->mpMap->mpMapper || !pHost->mpMap->mpMapper->mp2dMap) {
+    if (!pHost->mpMap->mapper() || !pHost->mpMap->mapper()->mp2dMap) {
         return;
     }
-    pHost->mpMap->mpMapper->mp2dMap->setPlayerRoomStyle(style);
+    pHost->mpMap->mapper()->mp2dMap->setPlayerRoomStyle(style);
     // And update the displayed map:
-    pHost->mpMap->mpMapper->mp2dMap->update();
+    pHost->mpMap->mapper()->mp2dMap->update();
 }
 
 void dlgProfilePreferences::slot_setPlayerRoomPrimaryColor()
@@ -8303,11 +8303,11 @@ void dlgProfilePreferences::slot_setPlayerRoomPrimaryColor()
         return;
     }
 
-    if (mpHost->mpMap->mpMapper && mpHost->mpMap->mpMapper->mp2dMap) {
+    if (mpHost->mpMap->mapper() && mpHost->mpMap->mapper()->mp2dMap) {
         // The current setting IS for the custom color - so use it straight away:
-        mpHost->mpMap->mpMapper->mp2dMap->setPlayerRoomStyle(3);
+        mpHost->mpMap->mapper()->mp2dMap->setPlayerRoomStyle(3);
         // And update the displayed map:
-        mpHost->mpMap->mpMapper->mp2dMap->update();
+        mpHost->mpMap->mapper()->mp2dMap->update();
     }
 }
 
@@ -8324,11 +8324,11 @@ void dlgProfilePreferences::slot_setPlayerRoomSecondaryColor()
         return;
     }
 
-    if (mpHost->mpMap->mpMapper && mpHost->mpMap->mpMapper->mp2dMap) {
+    if (mpHost->mpMap->mapper() && mpHost->mpMap->mapper()->mp2dMap) {
         // The current setting IS for the custom color - so use it straight away:
-        mpHost->mpMap->mpMapper->mp2dMap->setPlayerRoomStyle(3);
+        mpHost->mpMap->mapper()->mp2dMap->setPlayerRoomStyle(3);
         // And update the displayed map:
-        mpHost->mpMap->mpMapper->mp2dMap->update();
+        mpHost->mpMap->mapper()->mp2dMap->update();
     }
 }
 
@@ -8342,9 +8342,9 @@ void dlgProfilePreferences::slot_setPlayerRoomOuterDiameter(const int value)
     if (value < 256 && pHost->mpMap->mPlayerRoomOuterDiameterPercentage != value) {
         pHost->mpMap->mPlayerRoomOuterDiameterPercentage = static_cast<quint8>(value);
         pHost->setPlayerRoomOuterDiameter(static_cast<quint8>(value));
-        if (pHost->mpMap->mpMapper && pHost->mpMap->mpMapper->mp2dMap) {
+        if (pHost->mpMap->mapper() && pHost->mpMap->mapper()->mp2dMap) {
             // And update the displayed map:
-            pHost->mpMap->mpMapper->mp2dMap->update();
+            pHost->mpMap->mapper()->mp2dMap->update();
         }
     }
 }
@@ -8359,11 +8359,11 @@ void dlgProfilePreferences::slot_setPlayerRoomInnerDiameter(const int value)
     if (value < 256 && pHost->mpMap->mPlayerRoomInnerDiameterPercentage != value) {
         pHost->mpMap->mPlayerRoomInnerDiameterPercentage = static_cast<quint8>(value);
         pHost->setPlayerRoomInnerDiameter(static_cast<quint8>(value));
-        if (pHost->mpMap->mpMapper && pHost->mpMap->mpMapper->mp2dMap) {
+        if (pHost->mpMap->mapper() && pHost->mpMap->mapper()->mp2dMap) {
             // Redefine the QGradientStops
-            pHost->mpMap->mpMapper->mp2dMap->setPlayerRoomStyle(qBound(0, comboBox_playerRoomStyle->currentIndex(), 3));
+            pHost->mpMap->mapper()->mp2dMap->setPlayerRoomStyle(qBound(0, comboBox_playerRoomStyle->currentIndex(), 3));
             // And update the displayed map:
-            pHost->mpMap->mpMapper->mp2dMap->update();
+            pHost->mpMap->mapper()->mp2dMap->update();
         }
     }
 }
@@ -8456,8 +8456,8 @@ void dlgProfilePreferences::slot_toggleUseMaxBufferSize(bool checked)
     if (checked) {
         // A size typed into the box may not have been applied yet
         mBufferSizeBeforeMax = console_buffer_size_spinBox->value();
-        if (pHost->mpConsole) {
-            const int maxBufferSize = pHost->mpConsole->buffer.getMaxBufferSize();
+        if (pHost->mainConsoleView()) {
+            const int maxBufferSize = pHost->mainConsoleView()->buffer.getMaxBufferSize();
             console_buffer_size_spinBox->setValue(maxBufferSize);
         }
         console_buffer_size_spinBox->setEnabled(false);
@@ -8532,8 +8532,8 @@ void dlgProfilePreferences::slot_changeMapperShowRoomBorders(const bool state)
     }
 
     pHost->mMapperShowRoomBorders = state;
-    if (pHost->mpMap && pHost->mpMap->mpMapper && pHost->mpMap->mpMapper->mp2dMap) {
-        pHost->mpMap->mpMapper->mp2dMap->update();
+    if (pHost->mpMap && pHost->mpMap->mapper() && pHost->mpMap->mapper()->mp2dMap) {
+        pHost->mpMap->mapper()->mp2dMap->update();
     }
 }
 
@@ -8541,8 +8541,8 @@ void dlgProfilePreferences::slot_changeDrawUpperLowerLevels(const bool state)
 {
     mudlet::self()->mDrawUpperLowerLevels = state;
     Host* pHost = mpHost;
-    if (pHost && pHost->mpMap && pHost->mpMap->mpMapper && pHost->mpMap->mpMapper->mp2dMap) {
-        pHost->mpMap->mpMapper->mp2dMap->update();
+    if (pHost && pHost->mpMap && pHost->mpMap->mapper() && pHost->mpMap->mapper()->mp2dMap) {
+        pHost->mpMap->mapper()->mp2dMap->update();
     }
 }
 
@@ -8554,9 +8554,9 @@ void dlgProfilePreferences::slot_changeMapperUseAntiAlias(const bool state)
     }
 
     pHost->mMapperUseAntiAlias = state;
-    if (pHost->mpMap && pHost->mpMap->mpMapper && pHost->mpMap->mpMapper->mp2dMap) {
-        pHost->mpMap->mpMapper->mp2dMap->mMapperUseAntiAlias = state;
-        pHost->mpMap->mpMapper->mp2dMap->update();
+    if (pHost->mpMap && pHost->mpMap->mapper() && pHost->mpMap->mapper()->mp2dMap) {
+        pHost->mpMap->mapper()->mp2dMap->mMapperUseAntiAlias = state;
+        pHost->mpMap->mapper()->mp2dMap->update();
     }
 }
 
@@ -8589,7 +8589,7 @@ void dlgProfilePreferences::slot_caretModeKeyChanged(const int index)
 
 bool dlgProfilePreferences::updateDisplayFont(const Host::DisplayFontChange change)
 {
-    if (mpHost.isNull() || (mpHost.data()->mpConsole.isNull())) {
+    if (mpHost.isNull() || !mpHost->mainConsoleView()) {
         return false;
     }
 
@@ -8686,9 +8686,9 @@ void dlgProfilePreferences::slot_roomSizeChanged(int size)
 {
     if (mpHost) {
         mpHost->mRoomSize = size / 10.0;
-        if (mpHost->mpMap && mpHost->mpMap->mpMapper && mpHost->mpMap->mpMapper->mp2dMap) {
-            mpHost->mpMap->mpMapper->mp2dMap->setRoomSize(mpHost->mRoomSize);
-            mpHost->mpMap->mpMapper->mp2dMap->update();
+        if (mpHost->mpMap && mpHost->mpMap->mapper() && mpHost->mpMap->mapper()->mp2dMap) {
+            mpHost->mpMap->mapper()->mp2dMap->setRoomSize(mpHost->mRoomSize);
+            mpHost->mpMap->mapper()->mp2dMap->update();
         }
     }
 }
@@ -8704,8 +8704,8 @@ void dlgProfilePreferences::slot_exitSizeChanged(int size)
     if (mpHost) {
         const double internalSize = 50.0 / size;
         mpHost->mLineSize = internalSize;
-        if (mpHost->mpMap && mpHost->mpMap->mpMapper && mpHost->mpMap->mpMapper->mp2dMap) {
-            mpHost->mpMap->mpMapper->mp2dMap->setExitSize(internalSize);
+        if (mpHost->mpMap && mpHost->mpMap->mapper() && mpHost->mpMap->mapper()->mp2dMap) {
+            mpHost->mpMap->mapper()->mp2dMap->setExitSize(internalSize);
         }
     }
 }
@@ -8715,8 +8715,8 @@ void dlgProfilePreferences::slot_borderSizeChanged(int size)
     if (mpHost) {
         const double internalSize = 50.0 / size;
         mpHost->mRoomBorderSize = internalSize;
-        if (mpHost->mpMap && mpHost->mpMap->mpMapper && mpHost->mpMap->mpMapper->mp2dMap) {
-            mpHost->mpMap->mpMapper->mp2dMap->setBorderSize(internalSize);
+        if (mpHost->mpMap && mpHost->mpMap->mapper() && mpHost->mpMap->mapper()->mp2dMap) {
+            mpHost->mpMap->mapper()->mp2dMap->setBorderSize(internalSize);
         }
     }
 }
@@ -8725,8 +8725,8 @@ void dlgProfilePreferences::slot_gridSizeChanged(double size)
 {
     if (mpHost) {
         mpHost->mMapGridLineSize = size;
-        if (mpHost->mpMap && mpHost->mpMap->mpMapper && mpHost->mpMap->mpMapper->mp2dMap) {
-            mpHost->mpMap->mpMapper->mp2dMap->update();
+        if (mpHost->mpMap && mpHost->mpMap->mapper() && mpHost->mpMap->mapper()->mp2dMap) {
+            mpHost->mpMap->mapper()->mp2dMap->update();
         }
     }
 }
