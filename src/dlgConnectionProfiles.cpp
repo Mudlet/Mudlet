@@ -1303,9 +1303,9 @@ void dlgConnectionProfiles::reallyDeleteProfile(const QString& profile)
             // its own notice, which would otherwise replace this one
             QTimer::singleShot(0, dialog.data(), [dialog, profile]() {
                 if (dialog) {
-                    //: %1 is a profile name. Shown when the profile was removed but the system's password store refused to delete its saved password or sign-in. The entries' names in the password store start with Mudlet-%1
-                    dialog->showRemovalProblem(tr("'%1' was removed, but its saved password or sign-in could not be deleted from the password store. "
-                                                  "Unlock the password store and remove the entries whose names start with \"Mudlet-%1\" by hand.")
+                    //: %1 is a profile name. Shown when the profile was removed but its saved password or sign-in could not be deleted from where it is kept, e.g. the computer's password manager was locked
+                    dialog->showRemovalProblem(tr("'%1' was removed, but its saved password or sign-in could not be deleted, so it is still stored on this computer. "
+                                                  "Don't make a new profile called '%1' until it has been removed.")
                                                        .arg(profile));
                 }
             });

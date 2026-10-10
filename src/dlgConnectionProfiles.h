@@ -62,7 +62,7 @@ public:
     static QChar firstInvalidProfileNameChar(const QString& name);
     static bool profileNameUsableAsIs(const QString& name);
     // Whether a removed profile's saved sign-in is still being deleted under this name; see
-    // namesWithSignInBeingRemoved(). For anything else that names and connects a profile.
+    // namesWithSignInBeingRemoved(). For anything that creates a profile outside this dialog, such as a telnet:// link.
     static bool signInRemovalPending(const QString& name);
     static QString profileFolderPath(const QString& profilesPath, const QString& profile);
     static const QString scmAllowedProfileNameChars;
@@ -153,7 +153,7 @@ private:
     // dialog. Held as removalKey()s, because a case-insensitive disk files a variant in the same place.
     static QSet<QString>& namesWithSignInBeingRemoved();
     static QString removalKey(const QString& name);
-    // passwordsRemoved says whether the saved passwords removed before it were; a failure of either is reported
+    // passwordsRemoved: whether the profile's saved passwords were deleted; the player is told if they or the sign-in were not
     static void forgetSignInOfRemovedProfile(const QString& profile, QPointer<dlgConnectionProfiles> dialog, bool passwordsRemoved);
     bool profileRemovable(const QString& profile) const;
     void updateRemoveButtonState(const QString& profile);

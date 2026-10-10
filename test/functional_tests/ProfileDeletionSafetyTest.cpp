@@ -40,6 +40,7 @@
 #include "mudlet.h"
 
 #include "GroupedTest.h"
+#include "HostManager.h"
 
 using namespace std::chrono_literals;
 
@@ -430,6 +431,9 @@ private slots:
         QTRY_VERIFY2(CredentialManager::retrieveCredential(signedIn, qsl("reconnect")).isEmpty(), "the removed profile's sign-in record, with its token, is still stored");
         QCOMPARE(CredentialManager::retrieveCredential(mKeeper, qsl("reconnect-token")), qsl("keeper-token"));
         QVERIFY2(!dlgConnectionProfiles::namesWithSignInBeingRemoved().contains(dlgConnectionProfiles::removalKey(signedIn)), "the name stayed refused after its sign-in was removed");
+        // Nothing failed, so nothing is reported: it would otherwise follow every removal
+        QTest::qWait(50);
+        QVERIFY2(!dlg->notificationAreaMessageBox->text().contains(qsl("could not be deleted")), "a removal that went through was reported as leaving something behind");
         closeDialog(dlg);
     }
 
@@ -468,13 +472,27 @@ private slots:
         });
         dlgConnectionProfiles::namesWithSignInBeingRemoved().insert(dlgConnectionProfiles::removalKey(pending));
 
+        const QString created = qsl("%1-2").arg(pending);
+        // The link loads and dials the profile it makes, which would otherwise outlive this case
+        auto closeCreated = qScopeGuard([this, created] {
+            if (Host* host = HostManager::self()->getHost(created)) {
+                host->forceClose();
+                mudlet::self()->slot_closeProfileByName(created);
+                QTest::qWaitFor(
+                        [&created]() {
+                            return !HostManager::self()->getHost(created);
+                        },
+                        10s);
+            }
+            QDir(profilePath(created)).removeRecursively();
+        });
         mudlet::self()->handleTelnetUri(qsl("telnet://qalinkpending.invalid:23"));
         QVERIFY2(!QDir(profilePath(pending)).exists(), "the link reused a name whose old sign-in was still being deleted");
-        QVERIFY2(QDir(profilePath(qsl("%1-2").arg(pending))).exists(), "the link did not move on to the next free name");
+        QVERIFY2(QDir(profilePath(created)).exists(), "the link did not move on to the next free name");
     }
 
-    // The keychain can refuse to delete what a removed profile saved, and the profile is gone by then, so
-    // the dialog is the only place left to say so
+    // The password store can refuse to delete what a removed profile saved, and the profile is gone by
+    // then, so the dialog is the only place left to say so
     void test_aSignInTheStoreWontDeleteIsReported()
     {
 #if defined(Q_OS_WIN)
@@ -494,12 +512,15 @@ private slots:
         }
 
         auto* dlg = openDialog();
+        auto close = qScopeGuard([this, dlg] {
+            closeDialog(dlg);
+        });
         selectProfile(dlg, stuck);
         removeProfileAndConfirm(dlg, stuck);
         QVERIFY2(!QDir(profilePath(stuck)).exists(), "the confirmed profile was not removed");
-        QTRY_VERIFY2(dlg->notificationAreaMessageBox->text().contains(qsl("could not be deleted from the password store")),
+        QTRY_VERIFY2(dlg->notificationAreaMessageBox->text().contains(qsl("could not be deleted")),
                      qPrintable(qsl("a sign-in left behind was not reported - the dialog says: %1").arg(dlg->notificationAreaMessageBox->text())));
-        closeDialog(dlg);
+
 #endif
     }
 
