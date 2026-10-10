@@ -5,6 +5,24 @@
 Hand-written. The smallest document that reaches every Lua-observable branch of
 `XMLimport::readMap()` - see the comment at the top of the file itself.
 
+## `stale-label-keys.dat`
+
+A format 20 binary map from a build whose save wrote its file-only keys into the
+live area user data, so the file carries them for a label that no longer exists.
+Its one area, `StaleLabelKeysArea`, holds one room, a label `Kept Label` (id 0)
+with a red outline, and this user data:
+
+| Key | Value |
+| --- | --- |
+| `climate` | `temperate` |
+| `system.labelFont_99` | `Sans\|10\|50\|0` |
+| `system.labelOutlineColor_99` | `1\|2\|3\|255` |
+| `system.labelOutlineColor_0` | `200\|10\|10\|255` |
+| `system.fallback_map2DZoom` | the area's zoom |
+
+Label 0 claims its outline key and the zoom key is read as the zoom, so loading
+it should leave only `climate` behind.
+
 ## `achaea-map.zip`
 
 A verbatim snapshot of the MMP map Iron Realms publishes for Achaea, used by

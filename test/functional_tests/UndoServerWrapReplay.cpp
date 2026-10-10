@@ -41,6 +41,7 @@
 #include "ProfileTestHelper.h"
 #include "Host.h"
 #include "MudletInstanceCoordinator.h"
+#include "TMainConsole.h"
 #include "TelnetServerStub.h"
 #include "ctelnet.h"
 #include "dlgConnectionProfiles.h"
@@ -142,7 +143,7 @@ private slots:
         // Keep display wrapping out of the comparison - only logical lines
         // are of interest:
         host->mWrapAt = 1000;
-        host->mpConsole->buffer.mWrapAt = 1000;
+        host->mainConsoleView()->buffer.mWrapAt = 1000;
         QVERIFY(QTest::qWaitFor(
                 [&]() {
                     return mpServer->clientConnected();
@@ -163,7 +164,7 @@ private slots:
 
         QFile out(outPath);
         QVERIFY2(out.open(QIODevice::WriteOnly | QIODevice::Truncate), "cannot open output file");
-        auto console = host->mpConsole;
+        QPointer<TMainConsole> console = host->mainConsoleView();
         for (int i = 0; i <= console->buffer.getLastLineNumber(); ++i) {
             const bool prompt = (i < console->buffer.promptBuffer.size()) && console->buffer.promptBuffer.at(i);
             out.write(prompt ? "P\t" : ".\t");
