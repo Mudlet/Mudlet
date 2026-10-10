@@ -4420,10 +4420,8 @@ describe("Tests saveMap and loadMap", function()
   end)
 end)
 
--- Floating and redocking the map gives the modern 3D view a new GL context, and
--- switching back to the classic view deletes the widget while its context may
--- still be alive, so a context signal must not reach it once its destructor
--- has run
+-- Floating and redocking give the modern 3D view a new GL context, and switching
+-- renderers replaces the widget; neither may crash or leave the 3D view hidden
 describe("Tests the modern 3D mapper surviving context rebuilds", function()
   it("floats, redocks and switches back to the classic view", function()
     if type(setMapPerspective) ~= "function" then
