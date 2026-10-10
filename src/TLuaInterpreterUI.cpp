@@ -3305,6 +3305,11 @@ int TLuaInterpreter::setFont(lua_State* L)
     }
 
     const QString fontName = getVerifiedString(L, __func__, s, "name");
+    size_t fontNameLength = 0;
+    // lua_tostring() stops at an embedded NUL, so only the family named before it would be set
+    if (const char* rawFontName = lua_tolstring(L, s, &fontNameLength); qstrlen(rawFontName) != fontNameLength) {
+        return warnArgumentValue(L, __func__, "font name must not contain a NUL character");
+    }
 
     if (fontName.trimmed().isEmpty()) {
         return warnArgumentValue(L, __func__, "font must not be empty");

@@ -126,6 +126,8 @@ describe("Tests that the font functions find their console by name", function()
       assert.are.same({nil, ("font '%s' is not available"):format(name)}, {setFont(unknown, name)})
     end
     assert.are.same({nil, "size cannot be 0 or negative"}, {setFontSize(unknown, 0)})
+    -- the family before the NUL would otherwise be set, and reported as done
+    assert.are.same({nil, "font name must not contain a NUL character"}, {setFont(unknown, families[1] .. "\0Garbage")})
   end)
 
   describe("with a sub-console's name", function()
