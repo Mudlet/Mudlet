@@ -33,6 +33,7 @@
 
 #include <QPointer>
 #include <QTemporaryDir>
+#include <QScopeGuard>
 #include <QtTest/QtTest>
 #include <QtNetwork/QTcpServer>
 #include <QtNetwork/QTcpSocket>
@@ -484,6 +485,26 @@ private slots:
 
         mudlet::self()->setStorePasswordsSecurely(true);
         QCOMPARE(CredentialManager::profileStoragePreferred(), std::optional<bool>(false));
+    }
+
+    // A saved password the store will not hand over leaves auto-login sending nothing, which the
+    // player can only make sense of if told; a profile with no saved password is not
+    void testAPasswordTheStoreWontReadIsReported()
+    {
+        Host* host = TestProfile::create(mHostname, qsl("localhost"), mPort, 20s);
+        QVERIFY(host);
+        const QString warning = qsl("Could not read your saved password");
+
+        host->lookUpSecuredPassword(new CredentialManager(host));
+        QVERIFY2(!waitForConsoleContains(host, warning, 500), "a profile with no saved password was told its password could not be read");
+
+        const QString passwordFile = CredentialManager::generateFilePath(mHostname, qsl("character"));
+        const auto unblock = qScopeGuard([&passwordFile] {
+            QDir(passwordFile).removeRecursively();
+        });
+        QVERIFY(QDir().mkpath(passwordFile));
+        host->lookUpSecuredPassword(new CredentialManager(host));
+        QVERIFY2(waitForConsoleContains(host, warning), "a saved password the store would not hand over was not reported");
     }
 
     void testTheProfilesLookupKeepsAPasswordOnItsWayUntilTheKeychainAnswers()

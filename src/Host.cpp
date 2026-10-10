@@ -4973,6 +4973,12 @@ void Host::lookUpSecuredPassword(CredentialManager* credManager)
             "character",
             [this, credManager](bool success, const QString& password, const QString& errorMessage, CredentialManager::ReadOutcome outcome) {
                 securedPasswordAnswered(success, password, errorMessage, outcome == CredentialManager::ReadOutcome::TimedOut);
+                // Only a store that would not answer: a timed-out read can still be answered late
+                if (outcome == CredentialManager::ReadOutcome::Unreadable) {
+                    //: Shown in the profile's console when the saved character password could not be read from the system's password store, so auto-login won't send it
+                    postMessage(tr("[ WARN ]  - Could not read your saved password from the password store, so it won't be sent automatically. "
+                                   "Unlock the password store, or type the password when the game asks for it."));
+                }
 
                 // Clean up the credential manager
                 credManager->deleteLater();
