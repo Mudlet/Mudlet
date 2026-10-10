@@ -68,6 +68,7 @@ class ProfileDictionaryTest : public QObject
 private:
     QTemporaryDir mXdgDir;
     QByteArray mSavedXdg;
+    QtMessageHandler mPreviousHandler = nullptr;
 
     const QString mEmptyProfile = qsl("dictionary empty");
     const QString mSingleWordProfile = qsl("dictionary single");
@@ -78,6 +79,8 @@ private:
     const QString mCountlessProfile = qsl("dictionary countless");
     const QString mVanishedProfile = qsl("dictionary vanished");
     const QString mUncountedSaveProfile = qsl("dictionary uncounted save");
+    const QString mHandEditedSaveProfile = qsl("dictionary hand edited save");
+    const QString mLeadingBlankProfile = qsl("dictionary leading blank");
 
     QString dictionaryPath(const QString& profileName) const { return MudletApp::getMudletPath(enums::profileDataItemPath, profileName, qsl("profile.dic")); }
 
@@ -112,6 +115,41 @@ private:
         return QString::fromUtf8(aff.readAll()).split(QChar::LineFeed, Qt::SkipEmptyParts);
     }
 
+    QString sortedTryGraphemes(const QString& profileName) const
+    {
+        const QStringList lines = affixLines(profileName);
+        if (lines.size() != 2 || !lines.at(1).startsWith(qsl("TRY "))) {
+            return {};
+        }
+        // The graphemes are ordered by frequency, which can tie, so compare the
+        // set of them rather than the order:
+        QString graphemes = lines.at(1).mid(4);
+        std::sort(graphemes.begin(), graphemes.end());
+        return graphemes;
+    }
+
+    bool captured(const QString& text) const
+    {
+        return std::any_of(sCapturedMessages.cbegin(), sCapturedMessages.cend(), [&text](const QString& message) {
+            return message.contains(text);
+        });
+    }
+
+    // The diagnostics are qDebug() lines, which some distributions - Fedora
+    // among them - turn off by default in their shipped qtlogging.ini:
+    void startCapture()
+    {
+        sCapturedMessages.clear();
+        QLoggingCategory::setFilterRules(qsl("default.debug=true"));
+        mPreviousHandler = qInstallMessageHandler(captureMessage);
+    }
+
+    void stopCapture()
+    {
+        qInstallMessageHandler(mPreviousHandler);
+        QLoggingCategory::setFilterRules(QString());
+    }
+
 private slots:
     void initTestCase()
     {
@@ -140,6 +178,8 @@ private slots:
         makeProfileFolder(mCountlessProfile);
         makeProfileFolder(mVanishedProfile);
         makeProfileFolder(mUncountedSaveProfile);
+        makeProfileFolder(mHandEditedSaveProfile);
+        makeProfileFolder(mLeadingBlankProfile);
     }
 
     void cleanupTestCase()
@@ -280,30 +320,61 @@ private slots:
     }
 
     // The wiki tells players the file is theirs to edit, and a word list typed in
-    // by hand has no count on top, so its first line is a word to keep (#10863)
+    // by hand has no count on top, so its first line is a word to keep
     void test_aDictionaryWithNoCountKeepsItsFirstWord()
     {
         writeDictionary(mCountlessProfile, qsl("zorkmid\nfrotz\n"));
 
         QSet<QString> wordSet;
+        startCapture();
         Hunhandle* handle = TSpellChecker::prepareProfileDictionary(mCountlessProfile, wordSet);
+        stopCapture();
         QVERIFY2(handle, "prepareProfileDictionary() gave up before reaching hunspell");
         Hunspell_destroy(handle);
 
         QCOMPARE(wordSet, QSet<QString>({qsl("frotz"), qsl("zorkmid")}));
         QCOMPARE(dictionaryLines(mCountlessProfile), QStringList({qsl("2"), qsl("frotz"), qsl("zorkmid")}));
+        QCOMPARE(sortedTryGraphemes(mCountlessProfile), qsl("dfikmortz"));
+        QVERIFY2(captured(qsl("the first line is not a word count")), "a dictionary with no count was read without a warning");
+        QVERIFY2(!captured(qsl("Previously, there were")), "a dictionary with no count was reported as having had one");
+
+        // A single word with no line feed after it ends the file on the first read:
+        writeDictionary(mCountlessProfile, qsl("zorkmid"));
+        handle = TSpellChecker::prepareProfileDictionary(mCountlessProfile, wordSet);
+        QVERIFY2(handle, "prepareProfileDictionary() gave up before reaching hunspell");
+        Hunspell_destroy(handle);
+
+        QCOMPARE(wordSet, QSet<QString>({qsl("zorkmid")}));
+        QCOMPARE(dictionaryLines(mCountlessProfile), QStringList({qsl("1"), qsl("zorkmid")}));
+    }
+
+    // Taking a blank first line for the count would make the real count a word
+    void test_aBlankLineAboveTheCountIsNotTakenForTheCount()
+    {
+        writeDictionary(mLeadingBlankProfile, qsl("\n2\nzorkmid\n"));
+
+        QSet<QString> wordSet;
+        Hunhandle* handle = TSpellChecker::prepareProfileDictionary(mLeadingBlankProfile, wordSet);
+        QVERIFY2(handle, "prepareProfileDictionary() gave up before reaching hunspell");
+        Hunspell_destroy(handle);
+
+        QCOMPARE(wordSet, QSet<QString>({qsl("zorkmid")}));
+        QCOMPARE(dictionaryLines(mLeadingBlankProfile), QStringList({qsl("1"), qsl("zorkmid")}));
     }
 
     // The count of the words already on disk is only reported on, so a file that
-    // went away during the session must not cost the words added in it (#10863)
+    // went away during the session must not cost the words added in it
     void test_savingWhenTheDictionaryFileHasGoneKeepsTheWords()
     {
         QVERIFY(!QFileInfo::exists(dictionaryPath(mVanishedProfile)));
         QSet<QString> wordSet{qsl("zorkmid"), qsl("frotz")};
 
-        QVERIFY2(TSpellChecker::saveDictionary(MudletApp::getMudletPath(enums::profileDataItemPath, mVanishedProfile, qsl("profile")), wordSet),
-                 "saveDictionary() gave up on the words because the file it was saving them to had gone");
+        startCapture();
+        const bool saved = TSpellChecker::saveDictionary(MudletApp::getMudletPath(enums::profileDataItemPath, mVanishedProfile, qsl("profile")), wordSet);
+        stopCapture();
+        QVERIFY2(saved, "saveDictionary() gave up on the words because the file it was saving them to had gone");
         QCOMPARE(dictionaryLines(mVanishedProfile), QStringList({qsl("2"), qsl("frotz"), qsl("zorkmid")}));
+        QVERIFY2(!captured(qsl("ERROR")), "a save that succeeded logged an error for the file it replaced having gone");
     }
 
     // Nor a file that lost its count since it was read, which no load has put right yet
@@ -312,9 +383,23 @@ private slots:
         writeDictionary(mUncountedSaveProfile, qsl("zorkmid\n"));
         QSet<QString> wordSet{qsl("zorkmid"), qsl("frotz")};
 
-        QVERIFY2(TSpellChecker::saveDictionary(MudletApp::getMudletPath(enums::profileDataItemPath, mUncountedSaveProfile, qsl("profile")), wordSet),
-                 "saveDictionary() gave up on the words because the file it was saving them to had no count");
+        startCapture();
+        const bool saved = TSpellChecker::saveDictionary(MudletApp::getMudletPath(enums::profileDataItemPath, mUncountedSaveProfile, qsl("profile")), wordSet);
+        stopCapture();
+        QVERIFY2(saved, "saveDictionary() gave up on the words because the file it was saving them to had no count");
         QCOMPARE(dictionaryLines(mUncountedSaveProfile), QStringList({qsl("2"), qsl("frotz"), qsl("zorkmid")}));
+        QVERIFY2(captured(qsl("Saved an extra 1 words")), "the word already on disk was not counted as one");
+    }
+
+    // Every load writes a count, so a file without one at save time was edited by
+    // hand while the profile was open, and those words are the user's too
+    void test_savingOverAHandEditedDictionaryKeepsItsWords()
+    {
+        writeDictionary(mHandEditedSaveProfile, qsl("xyzzy\nplugh\n"));
+        QSet<QString> wordSet{qsl("zorkmid")};
+
+        QVERIFY(TSpellChecker::saveDictionary(MudletApp::getMudletPath(enums::profileDataItemPath, mHandEditedSaveProfile, qsl("profile")), wordSet));
+        QCOMPARE(dictionaryLines(mHandEditedSaveProfile), QStringList({qsl("3"), qsl("plugh"), qsl("xyzzy"), qsl("zorkmid")}));
     }
 };
 
