@@ -5023,16 +5023,15 @@ void cTelnet::atcpComposerSave(QString txt)
 // additional lines (ending with '\n') to last space character after "-"
 // following prefix.
 // Prefixes are made uppercase.
-// Will store messages if the TConsole on which they are to be placed is not yet
-// in existence as happens during startup, then pumps them out in order of
-// arrival once a message arrives when the TConsole DOES exist.
+// Stores messages posted while the Host is still being built, then pumps them out
+// in order of arrival with the first message posted after that. They go to the
+// main console's model, so a profile with no view keeps them too.
 void cTelnet::postMessage(QString msg)
 {
     messageStack.append(msg);
 
-    if (!mpHost || mpHost->isClosingDown() || !mpHost->hasConsoleView()) {
-        // Console doesn't exist (yet), or Host is shutting down; stack up
-        // messages until it does (or they are dumped out by the destructor)...
+    // The main console's model is the last thing Host's constructor makes
+    if (!mpHost || mpHost->isClosingDown() || !mpHost->mainConsoleModelOrNull()) {
         return;
     }
 
