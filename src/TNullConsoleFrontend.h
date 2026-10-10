@@ -169,10 +169,10 @@ public:
     bool setWindowHorizontalScrollBarVisible(const QString&, bool) override { return false; }
     bool setWindowScrolling(const QString&, bool) override { return false; }
     bool scrollWindowTo(const QString&, int, bool) override { return false; }
-    std::optional<std::pair<bool, QString>> setWindowFontFamily(const QString&, const QString&, QFont::Weight) override { return std::nullopt; }
-    bool setWindowFontSize(const QString&, int) override { return false; }
-    std::optional<QSize> consoleFontSize(const QString&) const override { return std::nullopt; }
-    std::optional<int> consoleColumnWidth(const QString&) const override { return std::nullopt; }
+    std::optional<std::pair<bool, QString>> setWindowFontFamily(const QString& name, const QString& family, QFont::Weight weight) override;
+    bool setWindowFontSize(const QString& name, int size) override;
+    std::optional<QSize> consoleFontSize(const QString& name) const override;
+    std::optional<int> consoleColumnWidth(const QString& name) const override;
     void setConsoleBgColor(int, int, int, int) override {}
     bool setConsoleBackgroundImage(const QString&, int) override { return false; }
     bool resetConsoleBackgroundImage() override { return false; }
@@ -182,7 +182,7 @@ public:
     void changeColors() override {}
     void setProfileStyleSheet(const QString&) override {}
     void applyBorders() override {}
-    QFont displayFont() const override { return QFont(); }
+    QFont displayFont() const override;
     void setFont(const QFont&) override {}
     void setFontSize(int) override {}
     bool setSubConsoleBackgroundColor(const QString& name, const QColor& color) override;
@@ -271,6 +271,11 @@ private:
     bool setLabelShown(const QString& name, bool shown);
     bool setSubConsoleShown(const QString& name, bool shown);
     void reportVisibility(const QString& name);
+    std::optional<QFont> consoleFont(const QString& name) const;
+    void setSubConsoleFont(const QString& name, const QFont& font);
+    void reportDisplayFontChange(const QFont& before);
+    void raiseFontEvent(const QString& eventName, const QString& subject, const QFont& font);
+    void reportGridSize(const QString& name);
 
     Host* mpHost = nullptr;
     TNullMxpFrameFrontend mMxpFrames;
