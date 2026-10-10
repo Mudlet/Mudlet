@@ -713,6 +713,9 @@ public:
     static int addMapMenu(lua_State*);
     static int removeMapMenu(lua_State*);
     static int getMapMenus(lua_State*);
+    static int hideMapMenuItem(lua_State*);
+    static int showMapMenuItem(lua_State*);
+    static int getHiddenMapMenuItems(lua_State*);
     static int getMudletVersion(lua_State*);
     static int openWebPage(lua_State*);
     static int getAllRoomEntrances(lua_State*);
@@ -936,6 +939,7 @@ private:
     static int warnArgumentChoice(lua_State*, const char* functionName, const QString& argumentName, const QStringList& accepted, const QString& value);
     static int setLabelCallback(lua_State*, const char* funcName);
     static int movieFunc(lua_State*, const char* funcName);
+    static int setMapMenuItemHidden(lua_State*, const char* functionName, const bool hidden);
     static std::pair<bool, QString> discordApiEnabled(lua_State*, bool writeAccess = false);
     static void setRequestDefaults(const QUrl& url, QNetworkRequest& request);
     static int performHttpRequest(lua_State*, const char* functionName, const int pos, QNetworkAccessManager::Operation operation, const char* verb);

@@ -35,6 +35,7 @@ public:
 private:
     void populateEditModeActions(QMenu* menu, int selectionSize, TArea* area) const;
     void populateViewModeActions(QMenu* menu, int selectionSize) const;
+    void showPopup(QMenu* popup, const T2DMap::MapInteractionContext& context) const;
     bool hasCustomLineSelection(const T2DMap::MapInteractionContext& context) const;
 
     T2DMap& mMapWidget;

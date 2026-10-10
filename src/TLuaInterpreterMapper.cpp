@@ -1946,6 +1946,56 @@ int TLuaInterpreter::getMapMenus(lua_State* L)
     return 1;
 }
 
+int TLuaInterpreter::setMapMenuItemHidden(lua_State* L, const char* functionName, const bool hidden)
+{
+    const QString itemName = getVerifiedString(L, functionName, 1, "item name");
+    const QStringList& itemNames = TMap::builtInMenuItemNames();
+    if (!itemNames.contains(itemName)) {
+        return warnArgumentChoice(L, functionName, qsl("item name"), itemNames, itemName);
+    }
+    const Host& host = getHostFromLua(L);
+    if (!host.mpMap) {
+        return warnArgumentValue(L, functionName, "no map present or loaded");
+    }
+    if (hidden) {
+        host.mpMap->mHiddenMenuItems.insert(itemName);
+    } else {
+        host.mpMap->mHiddenMenuItems.remove(itemName);
+    }
+    lua_pushboolean(L, true);
+    return 1;
+}
+
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#hideMapMenuItem
+int TLuaInterpreter::hideMapMenuItem(lua_State* L)
+{
+    return setMapMenuItemHidden(L, __func__, true);
+}
+
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#showMapMenuItem
+int TLuaInterpreter::showMapMenuItem(lua_State* L)
+{
+    return setMapMenuItemHidden(L, __func__, false);
+}
+
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#getHiddenMapMenuItems
+int TLuaInterpreter::getHiddenMapMenuItems(lua_State* L)
+{
+    const Host& host = getHostFromLua(L);
+    if (!host.mpMap) {
+        return warnArgumentValue(L, __func__, "no map present or loaded");
+    }
+    QStringList hiddenItems{host.mpMap->mHiddenMenuItems.cbegin(), host.mpMap->mHiddenMenuItems.cend()};
+    hiddenItems.sort();
+    lua_createtable(L, hiddenItems.size(), 0);
+    int index = 0;
+    for (const QString& itemName : std::as_const(hiddenItems)) {
+        lua_pushstring(L, itemName.toUtf8().constData());
+        lua_rawseti(L, -2, ++index);
+    }
+    return 1;
+}
+
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#getMapSelection
 int TLuaInterpreter::getMapSelection(lua_State* L)
 {

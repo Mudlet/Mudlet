@@ -379,6 +379,10 @@ public:
     QMap<QString, QStringList> mUserActions;
     // unique name, List:parent name ("" if null), display name
     QMap<QString, QStringList> mUserMenus;
+    // Built-in context menu items hidden with hideMapMenuItem(); session-only like the above.
+    QSet<QString> mHiddenMenuItems;
+    static const QStringList& builtInMenuItemNames();
+    bool menuItemShown(const QString& itemName) const;
 
     typedef boost::adjacency_list<boost::listS, boost::vecS, boost::directedS, boost::no_property, boost::property<boost::edge_weight_t, cost>> mygraph_t;
     typedef boost::property_map<mygraph_t, boost::edge_weight_t>::type WeightMap;

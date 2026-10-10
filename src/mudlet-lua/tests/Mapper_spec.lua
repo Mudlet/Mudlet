@@ -45,6 +45,15 @@ describe("Tests map events and menus before the map widget is opened", function(
     assert.are.equal("no floating/dockable type map window found", err)
   end)
 
+  it("should hide and show a built-in map menu item before the widget is opened", function()
+    finally(function() showMapMenuItem("setPlayerLocation") end)
+    assert.is_true(hideMapMenuItem("setPlayerLocation"))
+    assert.are.same({"setPlayerLocation"}, getHiddenMapMenuItems())
+
+    assert.is_true(showMapMenuItem("setPlayerLocation"))
+    assert.are.same({}, getHiddenMapMenuItems())
+  end)
+
   it("should retain a registration for when the widget opens later", function()
     assert.is_true(addMapEvent("preWidgetKeptEvent", "myEvent", "", "Kept Event"))
   end)
@@ -5351,5 +5360,66 @@ describe("Tests closing another profile that opened a map widget", function()
     assert.is_true(closeProfile(name))
     assert.is_true(waitUntil(function() return not loaded() end), "the other profile did not close")
     pumpEvents(500)
+  end)
+end)
+
+describe("Tests hiding the mapper's built-in context menu items", function()
+  after_each(function()
+    for _, itemName in ipairs(getHiddenMapMenuItems()) do
+      showMapMenuItem(itemName)
+    end
+  end)
+
+  it("should list nothing as hidden to begin with", function()
+    assert.are.same({}, getHiddenMapMenuItems())
+  end)
+
+  it("should list hidden items in alphabetical order", function()
+    assert.is_true(hideMapMenuItem("switchMapMode"))
+    assert.is_true(hideMapMenuItem("createLabel"))
+    assert.is_true(hideMapMenuItem("setPlayerLocation"))
+    assert.are.same({"createLabel", "setPlayerLocation", "switchMapMode"}, getHiddenMapMenuItems())
+  end)
+
+  it("should list an item hidden twice only once", function()
+    hideMapMenuItem("deleteRoom")
+    hideMapMenuItem("deleteRoom")
+    assert.are.same({"deleteRoom"}, getHiddenMapMenuItems())
+  end)
+
+  it("should show a hidden item again and leave the others hidden", function()
+    hideMapMenuItem("deleteRoom")
+    hideMapMenuItem("moveRoom")
+    assert.is_true(showMapMenuItem("deleteRoom"))
+    assert.are.same({"moveRoom"}, getHiddenMapMenuItems())
+  end)
+
+  it("should accept showing an item that was never hidden", function()
+    assert.is_true(showMapMenuItem("createRoom"))
+    assert.are.same({}, getHiddenMapMenuItems())
+  end)
+
+  it("should refuse a name that is not a built-in item and say which are", function()
+    local ok, err = hideMapMenuItem("noSuchItem")
+    assert.is_nil(ok)
+    assert.truthy(err:find('"setPlayerLocation"', 1, true))
+    assert.truthy(err:find('got "noSuchItem"', 1, true))
+
+    ok, err = showMapMenuItem("noSuchItem")
+    assert.is_nil(ok)
+    assert.truthy(err:find('got "noSuchItem"', 1, true))
+    assert.are.same({}, getHiddenMapMenuItems())
+  end)
+
+  it("should not take the name of a script's own map event", function()
+    addMapEvent("hideTestEvent", "myEvent", "", "Hide Test Event")
+    local ok = hideMapMenuItem("hideTestEvent")
+    removeMapEvent("hideTestEvent")
+    assert.is_nil(ok)
+  end)
+
+  it("should raise an error when the item name is not a string", function()
+    assert.has_error(function() hideMapMenuItem({}) end)
+    assert.has_error(function() showMapMenuItem() end)
   end)
 end)
