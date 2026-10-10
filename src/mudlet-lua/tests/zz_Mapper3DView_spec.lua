@@ -1,7 +1,6 @@
--- Busted runs spec files in byte order, so this lowercase name runs last. Parenting
--- a GL view into the main window switches that window to GL composition for the rest
--- of the run, which on the macOS runner's software renderer more than doubled the
--- time of every spec after it. Specs that create a 3D view belong here.
+-- Busted sorts spec files by name, so the zz_ prefix runs this last. Docking a GL view
+-- switches the main window to GL composition for the rest of the run, which is slow on
+-- software GL; specs that create a 3D view belong here.
 
 -- Floating and redocking give the modern 3D view a new GL context, and switching
 -- renderers replaces the widget; neither may crash or leave the 3D view hidden

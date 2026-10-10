@@ -121,6 +121,38 @@ void ModernGLWidget::showEvent(QShowEvent* event)
     });
 }
 
+// QOpenGLWidget retries a context it could not create on every show, resize and paint, and each retry
+// leaks the context that failed (QOpenGLWidgetPrivate::initialize() overwrites it), so ask only once
+bool ModernGLWidget::contextCreationFailed() const
+{
+    return context() && !isValid();
+}
+
+bool ModernGLWidget::event(QEvent* event)
+{
+    if (contextCreationFailed() && (event->type() == QEvent::Show || event->type() == QEvent::WindowChangeInternal)) {
+        return QWidget::event(event);
+    }
+    return QOpenGLWidget::event(event);
+}
+
+void ModernGLWidget::resizeEvent(QResizeEvent* event)
+{
+    if (contextCreationFailed()) {
+        QWidget::resizeEvent(event);
+        return;
+    }
+    QOpenGLWidget::resizeEvent(event);
+}
+
+void ModernGLWidget::paintEvent(QPaintEvent* event)
+{
+    if (contextCreationFailed()) {
+        return;
+    }
+    QOpenGLWidget::paintEvent(event);
+}
+
 void ModernGLWidget::showFailure(const QString& message)
 {
     mFailureMessage = message;
