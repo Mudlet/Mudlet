@@ -181,7 +181,7 @@ public:
     bool resetWindowBackgroundImage() override { return false; }
     void setBorderColor(const QColor& color) override;
     void changeColors() override {}
-    void setProfileStyleSheet(const QString&) override {}
+    void setProfileStyleSheet(const QString& styleSheet) override;
     void applyBorders() override {}
     QFont displayFont() const override;
     void setFont(const QFont&) override {}

@@ -691,6 +691,16 @@ void TNullConsoleFrontend::openUserWindow(const QString& name, bool, bool, const
     setSubConsoleShown(name, true);
 }
 
+void TNullConsoleFrontend::setProfileStyleSheet(const QString& styleSheet)
+{
+    TWindowRegistry& registry = mpHost->windowRegistry();
+    // As TMainConsole::setProfileStyleSheet() restyles every dock, a closed one too. The registry
+    // ignores a name with no dock, so mini consoles and buffers keep theirs.
+    for (const auto& [name, subConsole] : mSubConsoles) {
+        registry.setUserWindowStyleSheet(name, styleSheet);
+    }
+}
+
 TLabelModel* TNullConsoleFrontend::labelModel(const QString& name) const
 {
     const auto it = mLabels.find(name);
