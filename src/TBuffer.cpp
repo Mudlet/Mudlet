@@ -2802,17 +2802,18 @@ void TBuffer::decodeSGR38(const SgrParameters& parameters, bool isColonSeparated
         if (parameters.count() > 2) {
             bool isOk = false;
             tag = parameters.at(2).toInt(&isOk);
-            if (!isOk) {
+            if (!isOk || tag < 0 || tag > 255) {
 #if defined(DEBUG_SGR_PROCESSING)
                 if (isColonSeparated) {
                     qDebug().noquote().nospace() << "TBuffer::decodeSGR38(...) ERROR - failed to parse color index parameter element (the third part) in a SGR...;38:5:" << parameters.at(2)
-                                                 << ":...;...m sequence, leaving the colour as it was!";
+                                                 << ":...;...m sequence, or it is out of range, leaving the colour as it was!";
                 } else {
                     qDebug().noquote().nospace() << "TBuffer::decodeSGR38(...) ERROR - failed to parse color index parameter string (the third part) in a SGR...;38;5;" << parameters.at(2)
-                                                 << ";...m sequence, leaving the colour as it was!";
+                                                 << ";...m sequence, or it is out of range, leaving the colour as it was!";
                 }
 #endif
-                // An index we cannot read is not a request for colour zero:
+                // An index we cannot read is not a request for colour zero, and
+                // xterm ignores one past the end of the 256-colour palette:
                 return;
             }
         } else {
@@ -2962,17 +2963,18 @@ void TBuffer::decodeSGR48(const SgrParameters& parameters, bool isColonSeparated
         if (parameters.count() > 2) {
             bool isOk = false;
             tag = parameters.at(2).toInt(&isOk);
-            if (!isOk) {
+            if (!isOk || tag < 0 || tag > 255) {
 #if defined(DEBUG_SGR_PROCESSING)
                 if (isColonSeparated) {
                     qDebug().noquote().nospace() << "TBuffer::decodeSGR48(...) ERROR - failed to parse color index parameter element (the third part) in a SGR...;48:5:" << parameters.at(2)
-                                                 << ":...;...m sequence, leaving the colour as it was!";
+                                                 << ":...;...m sequence, or it is out of range, leaving the colour as it was!";
                 } else {
                     qDebug().noquote().nospace() << "TBuffer::decodeSGR48(...) ERROR - failed to parse color index parameter string (the third part) in a SGR...;48;5;" << parameters.at(2)
-                                                 << ";...m sequence, leaving the colour as it was!";
+                                                 << ";...m sequence, or it is out of range, leaving the colour as it was!";
                 }
 #endif
-                // An index we cannot read is not a request for colour zero:
+                // An index we cannot read is not a request for colour zero, and
+                // xterm ignores one past the end of the 256-colour palette:
                 return;
             }
         } else {
