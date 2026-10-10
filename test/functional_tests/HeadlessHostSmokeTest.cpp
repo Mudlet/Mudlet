@@ -416,6 +416,15 @@ fbYT0tapBHTFGBkf6NgxBGenwL5TDeL9g3w57+FWiHtIKUylQhCoNb20
         QVERIFY(app->getOpenFileName(qsl("title"), QDir::tempPath()).isEmpty());
         QVERIFY(!app->quitting());
 
+        // Scripts get this text once the command bindings stop checking for a main window themselves
+        const TAppFrontend::CommandRequest request{.name = qsl("headless command")};
+        QString error = qsl("left over from an earlier call");
+        QCOMPARE(app->addAddonCommand(request, nullptr, QString(), error), -1);
+        QCOMPARE(error, qsl("mudlet instance not available"));
+        error = qsl("left over from an earlier call");
+        QCOMPARE(app->setAddonCommandPulse(1, true, qsl("red"), qsl("blue"), 500, nullptr, error), false);
+        QCOMPARE(error, qsl("mudlet instance not available"));
+
         const QString hostname = qsl("Test-Headless-Host-App-View");
         QVERIFY2(HostManager::self()->addHost(hostname, QString(), QString(), QString()), "Could not create a profile with no main window.");
         Host* host = HostManager::self()->getHost(hostname);
