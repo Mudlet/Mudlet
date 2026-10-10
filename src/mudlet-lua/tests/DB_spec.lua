@@ -4463,6 +4463,103 @@ describe("Tests db:_closeAll", function()
   end)
 end)
 
+describe("Tests db:create refusing a migration", function()
+  local dbName = "refusedmigrationtestingonly"
+  local dbFile = getMudletHomeDir() .. "/Database_" .. dbName .. ".db"
+
+  local function collectingWarnings(fn)
+    local collected = {}
+    -- through _G: a spec file's globals are its own
+    local originalPrintError = _G.printError
+    _G.printError = function(msg) collected[#collected + 1] = msg end
+    finally(function() _G.printError = originalPrintError end)
+
+    local result = fn()
+    _G.printError = originalPrintError
+    return result, table.concat(collected, "\n")
+  end
+
+  local function createCollectingWarnings(sheets)
+    return collectingWarnings(function() return db:create(dbName, sheets) end)
+  end
+
+  after_each(function()
+    if not pcall(function() db:close(dbName) end) then
+      db.__conn[dbName] = nil
+    end
+    os.remove(dbFile)
+  end)
+
+  it("keeps reading a sheet after refusing to migrate it", function()
+    local mydb = createCollectingWarnings({people = {name = "", city = ""}, places = {name = ""}})
+    db:add(mydb.people, {name = "Bob", city = "Lancre"})
+
+    local ok, err = pcall(db.create, db, dbName, {people = {name = ""}, places = {name = "", region = ""}})
+    assert.is_false(ok)
+    assert.is_truthy(string.find(err, "data present in undefined columns: city", 1, true))
+
+    local rows = db:fetch(mydb.people)
+    assert.are.equal(1, #rows)
+    assert.are.equal("Lancre", rows[1].city)
+    assert.is_true(db:add(mydb.people, {name = "Nanny", city = "Lancre"}))
+    assert.are.equal(2, #db:fetch(mydb.people))
+    -- a sheet migrated before the refusal keeps what it gained, whichever order they ran in
+    if db.__schema[dbName].places.columns.region then
+      assert.is_true(db:add(mydb.places, {name = "Lancre", region = "Ramtops"}))
+      assert.are.equal("Ramtops", db:fetch(mydb.places)[1].region)
+    else
+      assert.is_true(db:add(mydb.places, {name = "Lancre"}))
+      assert.are.equal(1, #db:fetch(mydb.places))
+    end
+  end)
+
+  it("keeps reading a sheet after refusing to migrate it in the session's first create", function()
+    local mydb = createCollectingWarnings({people = {name = "", city = ""}, places = {name = ""}})
+    db:add(mydb.people, {name = "Bob", city = "Lancre"})
+    db:add(mydb.places, {name = "Lancre"})
+    db:close(dbName)
+    db.__schema[dbName] = nil
+
+    local ok, err = pcall(db.create, db, dbName, {people = {name = ""}, places = {name = ""}})
+    assert.is_false(ok)
+    assert.is_truthy(string.find(err, "data present in undefined columns: city", 1, true))
+
+    mydb = db:get_database(dbName)
+    local rows = db:fetch(mydb.people)
+    assert.are.equal(1, #rows)
+    assert.are.equal("Lancre", rows[1].city)
+    assert.is_true(db:add(mydb.people, {name = "Nanny", city = "Lancre"}))
+    assert.are.equal(1, #db:fetch(mydb.places))
+  end)
+
+  it("does not leave a refused migration's statements for the next write to commit", function()
+    local mydb = createCollectingWarnings({people = {name = ""}})
+    db:add(mydb.people, {name = "Bob"})
+    -- a name db:create would never make, so pruning it fails after the new column was added
+    local conn = db.__conn[dbName]
+    assert.is_truthy(conn:execute('CREATE INDEX "odd index" ON people(name)'))
+    conn:commit()
+
+    assert.is_false(pcall(db.create, db, dbName, {people = {name = "", city = ""}}))
+
+    assert.is_true(db:add(mydb.people, {name = "Nanny"}))
+    assert.are.equal(2, #db:fetch(mydb.people))
+  end)
+
+  it("keeps the writes a transaction has pending when it refuses a migration", function()
+    local mydb = db:create(dbName, {people = {name = "", city = ""}})
+    db:add(mydb.people, {name = "Bob", city = "Lancre"})
+    assert.is_true(mydb:_begin())
+    db:add(mydb.people, {name = "Nanny", city = "Lancre"})
+
+    assert.is_false(pcall(db.create, db, dbName, {people = {name = ""}}))
+
+    assert.is_true(mydb:_commit())
+    mydb:_end()
+    assert.are.equal(2, #db:fetch(mydb.people))
+  end)
+end)
+
 describe("luasql's __tostring", function()
   local env, conn, cursor
 

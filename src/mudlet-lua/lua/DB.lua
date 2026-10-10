@@ -376,6 +376,27 @@ local lua_reserved_words = {
 }
 
 
+-- NOT LUADOC
+-- A sheet first met in a db:create whose migration was refused has no older entry to go back to,
+-- so it keeps the new one with the columns the table still has added back as text, which is all
+-- db:fetch needs to read them
+local function with_columns_on_disk(conn, s_name, entry)
+  local cur = conn:execute("SELECT * FROM " .. s_name .. " LIMIT 0")
+  if type(cur) ~= "userdata" then
+    return entry
+  end
+
+  for _, column in ipairs(cur:getcolnames() or {}) do
+    if column ~= "_row_id" and entry.columns[column] == nil then
+      entry.columns[column] = ""
+    end
+  end
+  cur:close()
+
+  return entry
+end
+
+
 --- Creates and/or modifies an existing database. This function is safe to define at a top-level of a Mudlet
 --- script: in fact it is recommended you run this function at a top-level without any kind of guards.
 --- If the named database does not exist it will create it. If the database does exist then it will add
@@ -765,10 +786,40 @@ function db:create(db_name, sheets, force)
     db.__autocommit[db_name] = true
   end
 
+  local previous = db.__schema[db_name] or {}
   db.__schema[db_name] = schema
 
+  local conn = db.__conn[db_name]
+  local migrated = {}
   for sheet_name, _ in pairs(sheets) do
-    db:_migrate(db_name, sheet_name, force)
+    -- a savepoint rather than a rollback of everything: after db:_begin() the caller's own writes are
+    -- pending on this connection too, and a refused migration must not take them with it
+    conn:execute("SAVEPOINT db_create_migrate")
+    local ok, err = pcall(db._migrate, db, db_name, sheet_name, force)
+    if not ok then
+      -- undone, or the next write commits what the refused migration left half done; the refused
+      -- sheet and the ones not reached yet keep their old entries, as db:fetch raises over any column
+      -- the schema has stopped describing
+      if conn:execute("ROLLBACK TO db_create_migrate") then
+        conn:execute("RELEASE db_create_migrate")
+      else
+        -- _migrate commits before rebuilding a sheet, which releases the savepoint, so all that is
+        -- pending now is the migration's own
+        conn:rollback()
+      end
+      for name in pairs(sheets) do
+        if not migrated[name] then
+          schema[name] = previous[name] or with_columns_on_disk(conn, name, schema[name])
+        end
+      end
+      for name, entry in pairs(previous) do
+        if sheets[name] == nil then
+          schema[name] = entry
+        end
+      end
+      error(err, 0)
+    end
+    migrated[sheet_name] = true
   end
   return db:get_database(db_name)
 end
