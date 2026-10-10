@@ -790,36 +790,79 @@ describe("Trigger processing", function()
             assert.are.same({"RecolorThenDeleteAbove red"}, fired)
         end)
 
+        -- What the profile keeps for the main console's buffer: the limit it goes back
+        -- to once "use the maximum" is off, and whether that is on. A plain
+        -- setConsoleBufferSize() overwrites both and only a saved profile shows them,
+        -- which takes test mode to wait for.
+        local function savedMainBufferSettings()
+            local folder = getMudletHomeDir() .. "/trigger-spec-buffer-settings"
+            lfs.mkdir(folder)
+            local saved, file
+            for _ = 1, 100 do
+                saved, file = saveProfile(folder)
+                if saved then
+                    break
+                end
+                pumpEvents(50)
+            end
+            waitForProfileSaveToPass()
+            local xml = ""
+            local handle = saved and io.open(file)
+            if handle then
+                xml = handle:read("*a")
+                handle:close()
+                os.remove(file)
+            end
+            lfs.rmdir(folder)
+            return tonumber(xml:match("<consoleBufferSize>(%d+)</consoleBufferSize>")),
+                xml:match("<useMaxConsoleBufferSize>(%a+)</useMaxConsoleBufferSize>") == "yes"
+        end
+
         it("should still match after the buffer trims its oldest lines during the pass", function()
-            local lines, batch = getConsoleBufferSize("main")
+            if not os.getenv("MUDLET_TEST_MODE") then
+                pending("restoring the buffer limits this changes needs MUDLET_TEST_MODE (pumpEvents() does nothing without it)")
+                return
+            end
+            local _, batch = getConsoleBufferSize("main")
+            local remembered, useMaximum = savedMainBufferSettings()
+            assert.is_not_nil(remembered, "the main console's buffer settings could not be read back from a saved profile")
             local fired = {}
             local echoer, colorTrigger
+            local linesTrimmed = 0
+            local trimHandler = registerAnonymousEventHandler("sysBufferShrinkEvent", function(_, _, removed)
+                linesTrimmed = linesTrimmed + removed
+            end)
             finally(function()
                 if echoer then killTrigger(echoer) end
                 if colorTrigger then killTrigger(colorTrigger) end
-                -- a plain set clears "use the maximum", which asking for it again
-                -- gives back the old limit if it was on
-                setConsoleBufferSize("main", lines, batch, true)
-                if getConsoleBufferSize("main") ~= lines then
-                    setConsoleBufferSize("main", lines, batch)
+                killAnonymousEventHandler(trimHandler)
+                setConsoleBufferSize("main", remembered, batch)
+                if useMaximum then
+                    setConsoleBufferSize("main", remembered, batch, true)
                 end
             end)
             setConsoleBufferSize("main", 100, 10)
             for i = 1, 110 do
                 feedTriggers("trim filler " .. i .. "\n")
             end
-            -- echo() output waits for the pass to end, but lines fed from a trigger
-            -- are committed at once: enough of them take the buffer past its limit
+            -- lines fed from a trigger are committed at once, so enough of
+            -- them take the buffer past its limit while the pass is still running
             echoer = tempTrigger("TrimDuringPassMarker", function()
+                linesTrimmed = 0
                 for i = 1, 30 do
                     feedTriggers("trim nested " .. i .. "\n")
                 end
             end)
-            colorTrigger = tempAnsiColorTrigger(1, -1, function() fired[#fired + 1] = matches[1] end)
+            local trimmedBeforeColorTrigger
+            colorTrigger = tempAnsiColorTrigger(1, -1, function()
+                fired[#fired + 1] = matches[1]
+                trimmedBeforeColorTrigger = linesTrimmed
+            end)
 
             feedTriggers("\27[31mTrimDuringPassMarker red\27[0m\n")
 
             assert.are.same({"TrimDuringPassMarker red"}, fired)
+            assert.is_true(trimmedBeforeColorTrigger > 0, "the buffer should have trimmed lines before the colour trigger ran")
         end)
 
         it("should still match after a trigger in a nested pass deletes a line above", function()
