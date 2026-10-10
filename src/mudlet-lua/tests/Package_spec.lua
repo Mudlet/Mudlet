@@ -2521,6 +2521,58 @@ describe("Tests importing a package XML holding elements this Mudlet does not kn
   end)
 end)
 
+-- A package's VariablePackage is read the way a profile load reads its saved
+-- variables, so it can hand the reader what saves from earlier builds hold.
+describe("Tests reading a saved number that an earlier save wrote", function()
+  local name = "mudlet-spec-saved-number"
+  local xml = getMudletHomeDir() .. "/" .. name .. ".xml"
+  local function variable(variableName, value)
+    return '<Variable><name>' .. variableName .. '</name><keyType>4</keyType><value>' .. value .. '</value><valueType>3</valueType></Variable>'
+  end
+
+  setup(function()
+    writePackageXml(xml, table.concat({
+      '<VariablePackage>',
+      '<VariableGroup><name>mudletSpecSavedNumber</name><keyType>4</keyType><value></value><valueType>5</valueType>',
+      -- 0/0 as glibc, MSVC and msvcrt write it, and msvcrt's infinities
+      variable("glibcNan", "-nan"),
+      variable("msvcNan", "-nan(ind)"),
+      variable("msvcrtNan", "-1.#IND"),
+      variable("msvcrtQuietNan", "1.#QNAN"),
+      variable("msvcrtInfinity", "1.#INF"),
+      variable("msvcrtNegativeInfinity", "-1.#INF"),
+      variable("notANumber", "banana"),
+      '</VariableGroup>',
+      '</VariablePackage>',
+    }, "\n"))
+    installUntilConfirmed(installPackage, xml, function() return packageInstalled(name) end, "the package " .. name)
+    assert.is_table(mudletSpecSavedNumber, "the package did not create mudletSpecSavedNumber")
+  end)
+
+  teardown(function()
+    _G.mudletSpecSavedNumber = nil
+    removeFixturePackage(name)
+    os.remove(xml)
+  end)
+
+  it("reads each way a save has written NaN back as NaN", function()
+    for _, variableName in ipairs({"glibcNan", "msvcNan", "msvcrtNan", "msvcrtQuietNan"}) do
+      local value = mudletSpecSavedNumber[variableName]
+      assert.is_number(value, variableName)
+      assert.are_not.equal(value, value, variableName .. " did not come back as NaN")
+    end
+  end)
+
+  it("reads msvcrt's infinities back as infinities", function()
+    assert.equals(math.huge, mudletSpecSavedNumber.msvcrtInfinity)
+    assert.equals(-math.huge, mudletSpecSavedNumber.msvcrtNegativeInfinity)
+  end)
+
+  it("does not take other text that holds nan for a NaN", function()
+    assert.equals(0, mudletSpecSavedNumber.notANumber)
+  end)
+end)
+
 -- A pattern type is stored as a bare number, so a file from a later Mudlet can
 -- name a type this one has no code for. Rather than drop the pattern - which
 -- would silently shift every later pattern's type by one, since the two lists

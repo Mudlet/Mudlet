@@ -27,6 +27,7 @@
 #include "utils.h"
 
 #include <csetjmp>
+#include <limits>
 
 extern "C" {
 #if defined(INCLUDE_VERSIONED_LUA_HEADERS)
@@ -388,6 +389,29 @@ bool LuaInterface::pushOwningTable(const QList<TVar*>& vars)
     return lua_istable(mL, -1);
 }
 
+// toDouble() reads "nan", "inf" and "-inf", but not the "-nan" glibc's printf
+// gives 0/0, MSVC's "-nan(ind)" or the "1.#INF" family of msvcrt, all of which
+// earlier saves hold (#10722).
+static lua_Number numberFromText(const QString& text)
+{
+    bool ok = false;
+    const double number = text.toDouble(&ok);
+    if (ok) {
+        return number;
+    }
+    static const QStringList nanSpellings{qsl("-nan"), qsl("nan(ind)"), qsl("-nan(ind)"), qsl("1.#QNAN"), qsl("-1.#QNAN"), qsl("1.#IND"), qsl("-1.#IND")};
+    if (nanSpellings.contains(text, Qt::CaseInsensitive)) {
+        return std::numeric_limits<lua_Number>::quiet_NaN();
+    }
+    if (text.compare(qsl("1.#INF"), Qt::CaseInsensitive) == 0) {
+        return std::numeric_limits<lua_Number>::infinity();
+    }
+    if (text.compare(qsl("-1.#INF"), Qt::CaseInsensitive) == 0) {
+        return -std::numeric_limits<lua_Number>::infinity();
+    }
+    return number;
+}
+
 // Writes a variable's value into Lua. Through the C API, because generating Lua
 // source to do it put the value and the keys into that source as text, which a
 // value holding "]]" or a key holding a quote does not survive: the chunk failed
@@ -416,7 +440,7 @@ bool LuaInterface::setValue(TVar* var)
             break;
         }
         case LUA_TNUMBER:
-            lua_pushnumber(mL, var->getValue().toDouble());
+            lua_pushnumber(mL, numberFromText(var->getValue()));
             break;
         case LUA_TBOOLEAN:
             lua_pushboolean(mL, var->getValue().toLower() == QLatin1String("true") ? 1 : 0);
