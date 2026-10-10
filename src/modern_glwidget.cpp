@@ -24,9 +24,12 @@
 
 #include "modern_glwidget.h"
 
+#include "ExitAppearance.h"
+#include "ExitScene.h"
 #include "Host.h"
 #include "RoomAppearance.h"
 #include "TArea.h"
+#include "TMap.h"
 #include "TRoom.h"
 #include "TRoomDB.h"
 #include "dlgMapper.h"
@@ -34,6 +37,7 @@
 
 #include <QtEvents>
 #include <QDebug>
+#include <QFontMetricsF>
 #include <QLabel>
 #include <QPainter>
 #include <QKeyEvent>
@@ -360,15 +364,11 @@ void ModernGLWidget::paintGL()
     // Enable room flattening
     zFlattening = 8.0f;
 
-    // Build up render commands in correct order:
-    // 1. Connections (bottom layer)
-    // 2. Background labels (showOnTop=false)
-    // 3. Rooms
-    // 4. Foreground labels (showOnTop=true)
+    // Labels beneath the rooms come after them, so that the depth test keeps what stands on them over them
     renderConnections();
-    renderBackgroundLabels();
     renderRooms();
-    renderForegroundLabels();
+    renderLabels(false);
+    renderLabels(true);
 
     // Execute all queued commands
     mRenderCommandQueue.executeAll(shaderProgram, &mGeometryManager, &mResourceManager, mVAO, mVertexBuffer, mColorBuffer, mNormalBuffer, mIndexBuffer, mTexCoordBuffer);
@@ -416,12 +416,41 @@ QVector4D levelFaded(const QColor& color, const int levelDistance, const bool ab
 }
 
 // An image whose clear texels keep edgeColor's hue, so that filtering does not fringe what is drawn on it with black
-QImage clearRoomTextureImage(QColor edgeColor)
+QImage clearImage(const QSize& size, QColor edgeColor)
 {
-    QImage image(scmRoomTextureSize, scmRoomTextureSize, QImage::Format_ARGB32);
+    QImage image(size, QImage::Format_ARGB32);
     edgeColor.setAlpha(0);
     image.fill(edgeColor);
     return image;
+}
+
+QImage clearRoomTextureImage(const QColor& edgeColor)
+{
+    return clearImage(QSize(scmRoomTextureSize, scmRoomTextureSize), edgeColor);
+}
+
+// Texels across a room, for the text drawn beside or on it at the 2D map's proportions
+constexpr int scmTextTexelsPerRoom = 48;
+
+// Measured as the image text is drawn on will lay it out, whatever the screen's resolution
+QFontMetricsF imageFontMetrics(const QFont& font)
+{
+    static const QImage metricsDevice(1, 1, QImage::Format_ARGB32);
+    return QFontMetricsF(font, &metricsDevice);
+}
+
+// What sets a room's up/down/in/out markers apart: for each, none, a stub or an exit, and its door
+QString exitMarkerKey(const TRoom& room)
+{
+    QString key;
+    for (const int direction : {DIR_UP, DIR_DOWN, DIR_IN, DIR_OUT}) {
+        const int state = room.getExit(direction) > 0 ? 2 : (room.exitStubs.contains(direction) ? 1 : 0);
+        key.append(QString::number(state));
+        if (state) {
+            key.append(QString::number(room.doors.value(TRoom::dirCodeToShortString(direction))));
+        }
+    }
+    return key;
 }
 } // namespace
 
@@ -464,6 +493,48 @@ GLuint ModernGLWidget::discTexture(const QString& key, const QGradientStops& sto
     return mLabelTextureCache.addImageTexture(key, image);
 }
 
+GLuint ModernGLWidget::exitMarkerTexture(const TRoom& room, const QColor& roomColor)
+{
+    const QString markers = exitMarkerKey(room);
+    if (markers.count(QLatin1Char('0')) == markers.size()) {
+        return 0;
+    }
+    const QColor markerColor = ExitAppearance::contrastColor(roomColor);
+    const QString key = qsl("markers|%1|%2").arg(markerColor.name(), markers);
+    mRoomTexturesInUse.insert(key);
+    if (const GLuint texture = mLabelTextureCache.imageTexture(key)) {
+        return texture;
+    }
+
+    QImage image = clearRoomTextureImage(markerColor);
+    QPainter painter(&image);
+    painter.setRenderHint(QPainter::Antialiasing);
+    QPen pen;
+    const qreal center = scmRoomTextureSize / 2.0;
+    ExitAppearance::paintExitMarkers(painter, pen, room, center, center, scmRoomTextureSize, scmRoomTextureSize, roomColor, false);
+    painter.end();
+    return mLabelTextureCache.addImageTexture(key, image);
+}
+
+GLuint ModernGLWidget::textTexture(const QString& key, const QString& text, const QFont& font, const QColor& color, QSize& size)
+{
+    const QFontMetricsF metrics = imageFontMetrics(font);
+    size = QSize(qMax(1, qCeil(metrics.horizontalAdvance(text))), qMax(1, qCeil(metrics.height())));
+    mRoomTexturesInUse.insert(key);
+    if (const GLuint texture = mLabelTextureCache.imageTexture(key)) {
+        return texture;
+    }
+
+    QImage image = clearImage(size, color);
+    QPainter painter(&image);
+    painter.setRenderHint(QPainter::TextAntialiasing);
+    painter.setFont(font);
+    painter.setPen(color);
+    painter.drawText(image.rect(), Qt::AlignCenter, text);
+    painter.end();
+    return mLabelTextureCache.addImageTexture(key, image);
+}
+
 void ModernGLWidget::renderRooms()
 {
     if (!mpMap || !mpMap->mpRoomDB) {
@@ -484,7 +555,6 @@ void ModernGLWidget::renderRooms()
 
     const bool moreTransparent = mpHost->experimentEnabled(qsl("experiment.rendering.more-transparent"));
     const bool playerIcon = mpHost->experimentEnabled(qsl("experiment.3d-player-icon"));
-    const bool inOutExits = mpHost->experimentEnabled(qsl("experiment.render-in-out-exits"));
 
     const float roomSize = 2.0f / scale;
     const float roomHeight = 2.0f / scale / zFlattening;
@@ -492,17 +562,51 @@ void ModernGLWidget::renderRooms()
     const float borderUnit = mpHost->mRoomBorderSize > 0.0 ? roomSize / static_cast<float>(mpHost->mRoomBorderSize) : 0.0f;
     const QVector3D screenRight = mCameraController.screenRight();
     const QVector3D screenUp = mCameraController.screenUp();
+    const auto [groundRight, groundUp] = GeometryManager::groundAxes(screenRight, screenUp);
+
+    // As on the 2D map: room IDs in place of symbols, bold, sized so that the area's longest fits
+    const bool showRoomIds = mpHost->mShowRoomID;
+    QFont idFont = mpMap->mMapSymbolFont;
+    float idTexel = 0.0f;
+    if (showRoomIds) {
+        int maxRoomId = 0;
+        for (const int roomId : pArea->getAreaRooms()) {
+            maxRoomId = qMax(maxRoomId, roomId);
+        }
+        idFont.setBold(true);
+        idFont.setStyleStrategy(QFont::StyleStrategy(QFont::PreferNoShaping | QFont::PreferAntialias | QFont::PreferOutline));
+        idFont.setPixelSize(scmTextTexelsPerRoom);
+        const QFontMetricsF metrics = imageFontMetrics(idFont);
+        const qreal widest = metrics.horizontalAdvance(QString(QString::number(maxRoomId).size(), QLatin1Char('8')));
+        idTexel = 0.9f * roomSize / static_cast<float>(qMax(widest, metrics.height()));
+    }
+
+    const bool showRoomNames = mpMap->getRoomNamesShown() && !pArea->gridMode;
+    QFont nameFont = mpMap->mMapSymbolFont;
+    if (showRoomNames) {
+        if (QFont font; font.fromString(mpMap->mUserData.value(ROOM_UI_NAMEFONT))) {
+            nameFont = font;
+        }
+        nameFont.setItalic(false);
+        nameFont.setUnderline(false);
+        nameFont.setOverline(false);
+        nameFont.setStrikeOut(false);
+        nameFont.setBold(true);
+        nameFont.setStyleStrategy(QFont::StyleStrategy(QFont::PreferNoShaping | QFont::PreferAntialias | QFont::PreferOutline));
+        nameFont.setPointSizeF(scmTextTexelsPerRoom / 2.0);
+    }
+    const float textTexel = roomSize / scmTextTexelsPerRoom;
 
     mLabelTextureCache.limitImageTextures(scmMaxRoomTextures, mRoomTexturesInUse);
     mRoomTexturesInUse.clear();
 
     QVector<CubeInstanceData> roomInstances;
     QVector<CubeInstanceData> borderInstances;
-    QVector<float> indicatorVertices;
-    QVector<float> indicatorColors;
     // Keyed by texture, so each is one draw call however many rooms share it
     QHash<GLuint, GeometryData> symbolDecals;
     QHash<GLuint, GeometryData> highlightDecals;
+    QHash<GLuint, GeometryData> textDecals;
+    QHash<GLuint, GeometryData> markerDecals;
     GeometryData playerRoomDecal;
 
     QSetIterator<int> itRoom(pArea->getAreaRooms());
@@ -559,7 +663,7 @@ void ModernGLWidget::renderRooms()
         const QVector3D roomTop(rx, ry, rz + roomHeight / 2.0f);
         const QVector4D decalTint = levelFaded(QColor(Qt::white), levelDistance, aboveLevel, moreTransparent);
 
-        if (!pR->mSymbol.isEmpty()) {
+        if (!showRoomIds && !pR->mSymbol.isEmpty()) {
             const QColor symbolColor = RoomAppearance::symbolColor(pR->mSymbolColor, roomColor);
             if (const GLuint texture = symbolTexture(pR->mSymbol, symbolColor)) {
                 GeometryData& batch = symbolDecals[texture];
@@ -576,6 +680,53 @@ void ModernGLWidget::renderRooms()
                 // highlightRadius is in rooms' spacing, which is one unit here
                 GeometryManager::appendGroundQuad(batch, roomTop, pR->highlightRadius, screenRight, screenUp, decalTint);
             }
+        }
+
+        if (showRoomIds) {
+            const QColor idColor = ExitAppearance::contrastColor(roomColor);
+            const QString number = QString::number(currentRoomId);
+            QList<std::pair<GLuint, QSize>> digits;
+            int numberWidth = 0;
+            for (const QChar digit : number) {
+                QSize size;
+                const GLuint texture = textTexture(qsl("digit|%1|%2|%3").arg(idColor.name(), idFont.key(), digit), digit, idFont, idColor, size);
+                digits.append({texture, size});
+                numberWidth += size.width();
+            }
+            QVector3D corner = roomTop - groundRight * (numberWidth * idTexel / 2.0f);
+            for (const auto& [texture, size] : digits) {
+                const QVector3D across = groundRight * (size.width() * idTexel);
+                const QVector3D upward = groundUp * (size.height() * idTexel);
+                if (texture) {
+                    GeometryData& batch = textDecals[texture];
+                    batch.textureId = texture;
+                    GeometryManager::appendQuad(batch, corner - upward / 2.0f, across, upward, decalTint);
+                }
+                corner += across;
+            }
+        }
+
+        // Only the viewed level's, as only the 2D map's are
+        if (showRoomNames && rz == pz && !pR->name.isEmpty()) {
+            const QColor nameColor = RoomAppearance::nameColor(pR->userData.value(ROOM_UI_NAMECOLOR), mpHost->mBgColor_2);
+            QSize size;
+            const QString key = qsl("name|%1|%2|%3").arg(nameColor.name(QColor::HexArgb), nameFont.key(), pR->name);
+            if (const GLuint texture = textTexture(key, pR->name, nameFont, nameColor, size)) {
+                // One room's size below the room, then moved by its offset in rooms' spacing, y downward
+                const QPointF offset = RoomAppearance::nameOffset(pR->userData.value(ROOM_UI_NAMEPOS));
+                const QVector3D center = roomTop + groundRight * static_cast<float>(offset.x()) - groundUp * (roomSize + static_cast<float>(offset.y()));
+                const QVector3D across = groundRight * (size.width() * textTexel);
+                const QVector3D upward = groundUp * (size.height() * textTexel);
+                GeometryData& batch = textDecals[texture];
+                batch.textureId = texture;
+                GeometryManager::appendQuad(batch, center - across / 2.0f - upward / 2.0f, across, upward, decalTint);
+            }
+        }
+
+        if (const GLuint texture = exitMarkerTexture(*pR, roomColor)) {
+            GeometryData& batch = markerDecals[texture];
+            batch.textureId = texture;
+            GeometryManager::appendGroundQuad(batch, roomTop, roomSize, screenRight, screenUp, decalTint);
         }
 
         if (isCurrentRoom) {
@@ -614,13 +765,6 @@ void ModernGLWidget::renderRooms()
                 }
             }
         }
-
-        // Up/down and in/out exit indicators just above the room, batched into one draw for the area
-        const float indicatorZ = roomTop.z() + 0.1f / zFlattening;
-        addUpDownIndicators(pR, rx, ry, indicatorZ, indicatorVertices, indicatorColors);
-        if (inOutExits) {
-            addInOutIndicators(pR, rx, ry, indicatorZ, indicatorVertices, indicatorColors);
-        }
     }
 
     if (!borderInstances.isEmpty()) {
@@ -632,23 +776,21 @@ void ModernGLWidget::renderRooms()
                 std::make_unique<RenderInstancedCubesCommand>(roomInstances, mCameraController.getProjectionMatrix(), mCameraController.getViewMatrix(), mCameraController.getModelMatrix()));
     }
 
-    renderTriangles(indicatorVertices, indicatorColors);
-
-    if (symbolDecals.isEmpty() && highlightDecals.isEmpty() && playerRoomDecal.isEmpty()) {
+    if (symbolDecals.isEmpty() && highlightDecals.isEmpty() && textDecals.isEmpty() && markerDecals.isEmpty() && playerRoomDecal.isEmpty()) {
         return;
     }
-    // Drawn on the room tops in the 2D map's order: symbol, then highlight, then the player's ring
+    // Drawn on the room tops in the 2D map's order: symbol, highlight, ID and name, exit markers, then the player's ring
     mRenderCommandQueue.addCommand(std::make_unique<GLStateCommand>(GLStateCommand::DISABLE_DEPTH_WRITE));
     mRenderCommandQueue.addCommand(std::make_unique<GLStateCommand>(GLStateCommand::ENABLE_POLYGON_OFFSET));
-    for (const QHash<GLuint, GeometryData>* decals : {&symbolDecals, &highlightDecals}) {
+    for (const QHash<GLuint, GeometryData>* decals : {&symbolDecals, &highlightDecals, &textDecals, &markerDecals}) {
         for (const GeometryData& batch : *decals) {
             mRenderCommandQueue.addCommand(std::make_unique<RenderTexturedTrianglesCommand>(
-                    batch, mCameraController.getProjectionMatrix(), mCameraController.getViewMatrix(), mCameraController.getModelMatrix(), RenderTexturedTrianglesCommand::Shading::Unlit));
+                    batch, mCameraController.getProjectionMatrix(), mCameraController.getViewMatrix(), mCameraController.getModelMatrix(), RenderCommand::Shading::Unlit));
         }
     }
     if (!playerRoomDecal.isEmpty()) {
         mRenderCommandQueue.addCommand(std::make_unique<RenderTexturedTrianglesCommand>(
-                playerRoomDecal, mCameraController.getProjectionMatrix(), mCameraController.getViewMatrix(), mCameraController.getModelMatrix(), RenderTexturedTrianglesCommand::Shading::Unlit));
+                playerRoomDecal, mCameraController.getProjectionMatrix(), mCameraController.getViewMatrix(), mCameraController.getModelMatrix(), RenderCommand::Shading::Unlit));
     }
     mRenderCommandQueue.addCommand(std::make_unique<GLStateCommand>(GLStateCommand::DISABLE_POLYGON_OFFSET));
     mRenderCommandQueue.addCommand(std::make_unique<GLStateCommand>(GLStateCommand::ENABLE_DEPTH_WRITE));
@@ -656,269 +798,64 @@ void ModernGLWidget::renderRooms()
 
 void ModernGLWidget::renderConnections()
 {
-    if (!mpMap || !mpMap->mpRoomDB) {
+    if (!mpMap || !mpMap->mpRoomDB || !mpHost) {
         return;
     }
 
-    TArea* pArea = mpMap->mpRoomDB->getArea(mAID);
-    if (!pArea) {
+    const float roomSize = 2.0f / scale;
+    const float roomHeight = roomSize / zFlattening;
+    ExitScene::Options options;
+    options.areaId = mAID;
+    options.centerZ = mMapCenterZ;
+    options.levelsAbove = mShowTopLevels;
+    options.levelsBelow = mShowBottomLevels;
+    // As on the 2D map, the exit size setting is how many line widths make a room's width
+    options.lineWidth = roomSize / static_cast<float>(qMax(0.1, mpHost->mLineSize));
+    options.lineHeight = qMin(options.lineWidth, 0.8f * roomHeight);
+    options.inOutStubs = mpHost->experimentEnabled(qsl("experiment.render-in-out-exits"));
+    options.largeAreaExitArrows = mpHost->getLargeAreaExitArrows();
+    options.exitColor = mpHost->mFgColor_2;
+    options.background = mpHost->mBgColor_2;
+    const ExitScene::Scene scene = ExitScene::build(*mpMap, *mpHost, options);
+    if (scene.segments.isEmpty() && scene.triangles.isEmpty()) {
         return;
     }
 
-    QVector<CubeInstanceData> roomConnectionInstances;
-    const QVector3D zVector = QVector3D(0, 0, 1);
+    const bool moreTransparent = mpHost->experimentEnabled(qsl("experiment.rendering.more-transparent"));
+    const auto faded = [&](const QColor& color, const int level) {
+        return levelFaded(color, std::abs(level - mMapCenterZ), level > mMapCenterZ, moreTransparent);
+    };
 
-    float pz = static_cast<float>(mMapCenterZ);
-    const bool inOutExits = mpHost->experimentEnabled(qsl("experiment.render-in-out-exits"));
-    const QColor exitColor = mpHost->mFgColor_2;
+    mRenderCommandQueue.addCommand(std::make_unique<GLStateCommand>(GLStateCommand::ENABLE_DEPTH_TEST));
 
-    // Initialize instance queue
-    QVector<CubeInstanceData> areaExitInstances;
-
-    // Collect all lines to draw
-    QVector<float> lineVertices;
-    QVector<float> lineColors;
-
-    QSetIterator<int> itRoom(pArea->getAreaRooms());
-    while (itRoom.hasNext()) {
-        const int roomId = itRoom.next();
-        TRoom* pR = mpMap->mpRoomDB->getRoom(roomId);
-        if (!pR) {
-            continue;
-        }
-
-        if (pR->isHidden()) {
-            continue;
-        }
-
-        auto rx = static_cast<float>(pR->x());
-        auto ry = static_cast<float>(pR->y());
-        auto rz = static_cast<float>(pR->z());
-
-        // Level filtering logic (same as rooms)
-        if (rz > pz) {
-            if (abs(rz - pz) > mShowTopLevels) {
-                continue;
-            }
-        }
-        if (rz < pz) {
-            if (abs(rz - pz) > mShowBottomLevels) {
-                continue;
-            }
-        }
-
-        // Get all exits for this room
-        QList<int> exitList;
-        exitList.push_back(pR->getNorth());
-        exitList.push_back(pR->getNortheast());
-        exitList.push_back(pR->getEast());
-        exitList.push_back(pR->getSoutheast());
-        exitList.push_back(pR->getSouth());
-        exitList.push_back(pR->getSouthwest());
-        exitList.push_back(pR->getWest());
-        exitList.push_back(pR->getNorthwest());
-        exitList.push_back(pR->getUp());
-        exitList.push_back(pR->getDown());
-        exitList.push_back(pR->getIn());
-        exitList.push_back(pR->getOut());
-
-        // The 2D map's exit colour
-        const auto r = static_cast<float>(exitColor.redF());
-        const auto g = static_cast<float>(exitColor.greenF());
-        const auto b = static_cast<float>(exitColor.blueF());
-
-        for (int i = 0; i < exitList.size(); ++i) {
-            int k = exitList[i];
-            if (k == -1) {
-                continue;
-            }
-
-            TRoom* pExit = mpMap->mpRoomDB->getRoom(k);
-            if (!pExit) {
-                continue;
-            }
-
-            if (pExit->isHidden()) {
-                continue;
-            }
-
-            bool areaExit = (pExit->getArea() != mAID);
-            bool inOut = ((i == 10 || i == 11) && inOutExits);
-
-            if (!areaExit) {
-                // Normal connection within same area
-                auto ex = static_cast<float>(pExit->x());
-                auto ey = static_cast<float>(pExit->y());
-                auto ez = static_cast<float>(pExit->z());
-
-                // Add line from current room to exit room
-                lineVertices << rx << ry << rz; // Start point
-                lineVertices << ex << ey << ez; // End point
-
-                // Determine translucency based on destination room level
-                bool exitAboveCurrentLevel = (ez > pz);
-                float connectionAlpha = exitAboveCurrentLevel ? 0.2f : 1.0f;
-
-                // Add colors for both vertices with appropriate alpha
-                lineColors << r << g << b << connectionAlpha; // Start color
-                lineColors << r << g << b << connectionAlpha; // End color
-
-                // for volume exits we calculate the cube transformation we need
-                const QVector3D exitVector = QVector3D(ex - rx, ey - ry, ez - rz);
-                const QQuaternion alignmentQuat = QQuaternion::rotationTo(zVector, exitVector);
-                QMatrix4x4 transform = QMatrix4x4();
-                if (inOut) {
-                    transform.translate(3.0f * exitVector / 8.0f);
-                    transform.translate(rx, ry, rz);
-                    transform.rotate(alignmentQuat);
-                    transform.scale(0.02f, 0.02f, exitVector.length() / 16.0f);
-                    roomConnectionInstances.append(CubeInstanceData(transform, r, g, b, connectionAlpha));
-                } else {
-                    transform.translate(exitVector / 4.0f);
-                    transform.translate(rx, ry, rz);
-                    transform.rotate(alignmentQuat);
-                    transform.scale(0.02f, 0.02f, exitVector.length() / 4.0f);
-                    roomConnectionInstances.append(CubeInstanceData(transform, r, g, b, connectionAlpha));
-                }
-            } else {
-                // Area exit - draw directional stub
-                float dx = rx, dy = ry, dz = rz;
-
-                // Calculate direction offset based on exit type
-                if (i == 0) { // North
-                    dy += 1.0f;
-                } else if (i == 1) { // Northeast
-                    dx += 1.0f;
-                    dy += 1.0f;
-                } else if (i == 2) { // East
-                    dx += 1.0f;
-                } else if (i == 3) { // Southeast
-                    dx += 1.0f;
-                    dy -= 1.0f;
-                } else if (i == 4) { // South
-                    dy -= 1.0f;
-                } else if (i == 5) { // Southwest
-                    dx -= 1.0f;
-                    dy -= 1.0f;
-                } else if (i == 6) { // West
-                    dx -= 1.0f;
-                } else if (i == 7) { // Northwest
-                    dx -= 1.0f;
-                    dy += 1.0f;
-                } else if (i == 8) { // Up
-                    dz += 1.0f;
-                } else if (i == 9) { // Down
-                    dz -= 1.0f;
-                } else if (i == 10) { // In
-                    dx -= 1.0f;
-                    dy += 0.5f;
-                } else if (i == 11) { // Out
-                    dx += 1.0f;
-                    dy -= 0.5f;
-                }
-
-                // Add line from current room to direction offset
-                lineVertices << rx << ry << rz; // Start point
-                lineVertices << dx << dy << dz; // End point (offset)
-
-                // Determine translucency for area exits based on destination level
-                bool exitAboveCurrentLevel = (dz > pz);
-                float exitAlpha = exitAboveCurrentLevel ? 0.2f : 1.0f;
-
-                // Darken area exit colors if above current level
-                float exitRed = 85.0f / 255.0f;
-                float exitGreen = 170.0f / 255.0f;
-                float exitBlue = 0.0f;
-
-                if (exitAboveCurrentLevel) {
-                    // Drastically darken area exits above current level
-                    const float darkenFactor = 0.25f; // Keep only 25% of original brightness
-                    exitRed *= darkenFactor;
-                    exitGreen *= darkenFactor;
-                    exitBlue *= darkenFactor;
-                }
-
-                // Use different color for area exits (greenish) with appropriate alpha and darkening
-                lineColors << exitRed << exitGreen << exitBlue << exitAlpha; // Start color
-                lineColors << exitRed << exitGreen << exitBlue << exitAlpha; // End color
-
-                // for volume exits we calculate the cube transformation we need
-                const QVector3D exitVector = QVector3D(dx - rx, dy - ry, dz - rz);
-                const QQuaternion alignmentQuat = QQuaternion::rotationTo(zVector, exitVector);
-                // double length of normal exits since this exit is one sided
-                QMatrix4x4 transform = QMatrix4x4();
-                if (inOut) {
-                    transform.translate(3.0f * exitVector / 8.0f);
-                    transform.translate(rx, ry, rz);
-                    transform.rotate(alignmentQuat);
-                    transform.scale(0.02f, 0.02f, exitVector.length() / 16.0f);
-                    roomConnectionInstances.append(CubeInstanceData(transform, exitRed, exitGreen, exitBlue, exitAlpha));
-                    transform.setToIdentity();
-                    transform.translate(5.0f * exitVector / 8.0f);
-                    transform.translate(rx, ry, rz);
-                    transform.rotate(alignmentQuat);
-                    transform.scale(0.02f, 0.02f, exitVector.length() / 16.0f);
-                    roomConnectionInstances.append(CubeInstanceData(transform, exitRed, exitGreen, exitBlue, exitAlpha));
-                } else {
-                    transform.translate(exitVector / 2.0f);
-                    transform.translate(rx, ry, rz);
-                    transform.rotate(alignmentQuat);
-                    transform.scale(0.02f, 0.02f, exitVector.length() / 2.0f);
-                    roomConnectionInstances.append(CubeInstanceData(transform, exitRed, exitGreen, exitBlue, exitAlpha));
-                }
-
-                // Render green area exit cube at the destination position with translucency and darkening
-                transform.setToIdentity();
-                transform.translate(dx, dy, dz);
-                transform.scale(1.0f / scale, 1.0f / scale, 1.0f / scale / zFlattening);
-                areaExitInstances.append(CubeInstanceData(transform, exitRed, exitGreen, exitBlue, exitAlpha));
-
-                // Render smaller environment overlay rectangle on top with translucency and darkening
-                const QColor envColor = RoomAppearance::environmentColor(*mpMap, *mpHost, pExit->environment);
-                float overlayZ = dz + 0.25f / zFlattening;
-                float overlayAlpha = exitAboveCurrentLevel ? 0.16f : 0.8f; // 0.2 * 0.8 for above level
-
-                // Darken area exit environment overlay if above current level
-                float exitEnvRed = envColor.redF();
-                float exitEnvGreen = envColor.greenF();
-                float exitEnvBlue = envColor.blueF();
-
-                if (exitAboveCurrentLevel) {
-                    // Drastically darken area exit environment overlays above current level
-                    const float darkenFactor = 0.25f; // Keep only 25% of original brightness
-                    exitEnvRed *= darkenFactor;
-                    exitEnvGreen *= darkenFactor;
-                    exitEnvBlue *= darkenFactor;
-                }
-
-                transform.setToIdentity();
-                transform.translate(dx, dy, overlayZ);
-                transform.scale(0.5f / scale, 0.5f / scale, 1.0f / scale / zFlattening);
-                areaExitInstances.append(CubeInstanceData(transform, exitEnvRed, exitEnvGreen, exitEnvBlue, overlayAlpha));
-            }
-        }
+    QVector<CubeInstanceData> bars;
+    bars.reserve(scene.segments.size());
+    for (const ExitScene::Segment& segment : scene.segments) {
+        const QVector4D tint = faded(segment.color, segment.level);
+        bars.append(CubeInstanceData(GeometryManager::barTransform(segment.from, segment.to, segment.width, segment.height), tint.x(), tint.y(), tint.z(), tint.w()));
+    }
+    if (!bars.isEmpty()) {
+        mRenderCommandQueue.addCommand(std::make_unique<RenderInstancedCubesCommand>(
+                bars, mCameraController.getProjectionMatrix(), mCameraController.getViewMatrix(), mCameraController.getModelMatrix(), RenderCommand::Shading::Unlit));
     }
 
-    // Always enable depth testing
-    auto enableDepthCommand = std::make_unique<GLStateCommand>(GLStateCommand::ENABLE_DEPTH_TEST);
-    mRenderCommandQueue.addCommand(std::move(enableDepthCommand));
-
-    // Always render room connection volumes
-    if (!roomConnectionInstances.isEmpty()) {
-        auto command =
-                std::make_unique<RenderInstancedCubesCommand>(roomConnectionInstances, mCameraController.getProjectionMatrix(), mCameraController.getViewMatrix(), mCameraController.getModelMatrix());
-        mRenderCommandQueue.addCommand(std::move(command));
-
-    } else {
-        // Render all collected lines
-        if (!lineVertices.isEmpty()) {
-            renderLines(lineVertices, lineColors);
+    QVector<float> vertices;
+    QVector<float> colors;
+    vertices.reserve(scene.triangles.size() * 9);
+    colors.reserve(scene.triangles.size() * 12);
+    for (const ExitScene::Triangle& triangle : scene.triangles) {
+        const QVector4D tint = faded(triangle.color, triangle.level);
+        for (const QVector3D& corner : {triangle.a, triangle.b, triangle.c}) {
+            vertices << corner.x() << corner.y() << corner.z();
+            colors << tint.x() << tint.y() << tint.z() << tint.w();
         }
     }
-
-    if (!areaExitInstances.isEmpty()) {
-        auto command = std::make_unique<RenderInstancedCubesCommand>(areaExitInstances, mCameraController.getProjectionMatrix(), mCameraController.getViewMatrix(), mCameraController.getModelMatrix());
-        mRenderCommandQueue.addCommand(std::move(command));
+    if (!vertices.isEmpty()) {
+        // Arrowheads and dots lie on the lines' tops
+        mRenderCommandQueue.addCommand(std::make_unique<GLStateCommand>(GLStateCommand::ENABLE_POLYGON_OFFSET));
+        mRenderCommandQueue.addCommand(std::make_unique<RenderTrianglesCommand>(
+                vertices, colors, mCameraController.getProjectionMatrix(), mCameraController.getViewMatrix(), mCameraController.getModelMatrix(), RenderCommand::Shading::Unlit));
+        mRenderCommandQueue.addCommand(std::make_unique<GLStateCommand>(GLStateCommand::DISABLE_POLYGON_OFFSET));
     }
 }
 
@@ -1402,117 +1339,7 @@ void ModernGLWidget::slot_resetPlayerIcon()
     update();
 }
 
-void ModernGLWidget::renderLines(const QVector<float>& vertices, const QVector<float>& colors)
-{
-    if (vertices.isEmpty() || colors.isEmpty()) {
-        return;
-    }
-
-    // Create render command and queue it
-    auto command = std::make_unique<RenderLinesCommand>(vertices, colors, mCameraController.getProjectionMatrix(), mCameraController.getViewMatrix(), mCameraController.getModelMatrix());
-    mRenderCommandQueue.addCommand(std::move(command));
-}
-
-void ModernGLWidget::renderTriangles(const QVector<float>& vertices, const QVector<float>& colors)
-{
-    if (vertices.isEmpty() || colors.isEmpty()) {
-        return;
-    }
-
-    // Create render command and queue it
-    auto command = std::make_unique<RenderTrianglesCommand>(vertices, colors, mCameraController.getProjectionMatrix(), mCameraController.getViewMatrix(), mCameraController.getModelMatrix());
-    mRenderCommandQueue.addCommand(std::move(command));
-}
-
-void ModernGLWidget::addUpDownIndicators(TRoom* pRoom, float x, float y, float z, QVector<float>& triangleVertices, QVector<float>& triangleColors) const
-{
-    if (!pRoom) {
-        return;
-    }
-
-    // Gray color for indicators (same as original)
-    float gray[] = {128.0f / 255.0f, 128.0f / 255.0f, 128.0f / 255.0f, 1.0f};
-
-    // Triangle size (from original: ±0.95/scale for points, ±0.25/scale for base)
-    float pointSize = 0.95f / scale;
-    float baseSize = 0.25f / scale;
-
-    // Down arrow (if room has down exit)
-    if (pRoom->getDown() > -1) {
-        // Triangle pointing down: top-left, top-right, bottom-center
-        triangleVertices << (x - pointSize) << (y - baseSize) << z; // Top-left
-        triangleVertices << (x + pointSize) << (y - baseSize) << z; // Top-right
-        triangleVertices << x << (y - pointSize) << z;              // Bottom-center
-
-        // Add gray color for all three vertices
-        for (int i = 0; i < 3; ++i) {
-            triangleColors << gray[0] << gray[1] << gray[2] << gray[3];
-        }
-    }
-
-    // Up arrow (if room has up exit)
-    if (pRoom->getUp() > -1) {
-        // Triangle pointing up: bottom-left, bottom-right, top-center
-        triangleVertices << (x - pointSize) << (y + baseSize) << z; // Bottom-left
-        triangleVertices << (x + pointSize) << (y + baseSize) << z; // Bottom-right
-        triangleVertices << x << (y + pointSize) << z;              // Top-center
-
-        // Add gray color for all three vertices
-        for (int i = 0; i < 3; ++i) {
-            triangleColors << gray[0] << gray[1] << gray[2] << gray[3];
-        }
-    }
-}
-
-void ModernGLWidget::addInOutIndicators(TRoom* pRoom, float x, float y, float z, QVector<float>& triangleVertices, QVector<float>& triangleColors) const
-{
-    if (!pRoom) {
-        return;
-    }
-
-    // Gray color for indicators (same as original)
-    float gray[] = {128.0f / 255.0f, 128.0f / 255.0f, 128.0f / 255.0f, 1.0f};
-
-    // Triangle size
-    float halfHeight = 0.25f / scale;
-    float width = 0.5f / scale;
-
-    // In arrows (if room has in exit)
-    if (pRoom->getIn() > -1) {
-        // triangle pointing inwards: top-left, bottom-left, mid-center
-        triangleVertices << (x - width) << (y + halfHeight) << z; // Top-left
-        triangleVertices << (x - width) << (y - halfHeight) << z; // Bottom-left
-        triangleVertices << x << y << z;                          // Mid-center
-        // triangle pointing inwards: top-right, bottom-right, mid-center
-        triangleVertices << (x + width) << (y + halfHeight) << z; // Top-right
-        triangleVertices << (x + width) << (y - halfHeight) << z; // Bottom-right
-        triangleVertices << x << y << z;                          // Mid-center
-
-        // Add gray color for all six vertices
-        for (int i = 0; i < 6; ++i) {
-            triangleColors << gray[0] << gray[1] << gray[2] << gray[3];
-        }
-    }
-
-    // Out arrows (if room has out exit)
-    if (pRoom->getOut() > -1) {
-        // triangle pointing outwards: top-left, bottom-left, out-center
-        triangleVertices << (x - width) << (y + halfHeight) << z; // Top-left
-        triangleVertices << (x - width) << (y - halfHeight) << z; // Bottom-left
-        triangleVertices << x - 1.0f / scale << y << z;           // Outside-center
-        // triangle pointing outwards: top-right, bottom-right, out-center
-        triangleVertices << (x + width) << (y + halfHeight) << z; // Top-right
-        triangleVertices << (x + width) << (y - halfHeight) << z; // Bottom-right
-        triangleVertices << x + 1.0f / scale << y << z;           // Outside-center
-
-        // Add gray color for all six vertices
-        for (int i = 0; i < 6; ++i) {
-            triangleColors << gray[0] << gray[1] << gray[2] << gray[3];
-        }
-    }
-}
-
-void ModernGLWidget::renderBackgroundLabels()
+void ModernGLWidget::renderLabels(const bool onTop)
 {
     if (!mpMap || !mpMap->mpRoomDB) {
         return;
@@ -1523,153 +1350,84 @@ void ModernGLWidget::renderBackgroundLabels()
         return;
     }
 
-    // Disable depth writing for transparent labels
-    mRenderCommandQueue.addCommand(std::make_unique<GLStateCommand>(GLStateCommand::DISABLE_DEPTH_WRITE));
+    const float roomHeight = 2.0f / scale / zFlattening;
+    const bool moreTransparent = mpHost->experimentEnabled(qsl("experiment.rendering.more-transparent"));
+    const QVector3D screenRight = mCameraController.screenRight();
+    const QVector3D screenUp = mCameraController.screenUp();
+    // Turned around while the top of the screen faces south, so that it never reads upside down
+    const bool turned = GeometryManager::groundAxes(screenRight, screenUp).second.y() < 0.0f;
 
-    float pz = static_cast<float>(mMapCenterZ);
+    mRenderCommandQueue.addCommand(std::make_unique<GLStateCommand>(GLStateCommand::DISABLE_DEPTH_WRITE));
+    if (onTop) {
+        mRenderCommandQueue.addCommand(std::make_unique<GLStateCommand>(GLStateCommand::ENABLE_POLYGON_OFFSET));
+    }
 
     for (auto it = pArea->mMapLabels.constBegin(); it != pArea->mMapLabels.constEnd(); ++it) {
         const TMapLabel& label = it.value();
-        int labelId = it.key();
-
-        // Only render labels with showOnTop=false in this pass
-        if (label.showOnTop) {
+        if (label.showOnTop != onTop || label.pix.isNull()) {
             continue;
         }
 
-        // Z-level filtering - same logic as rooms
-        float labelZ = label.pos.z();
-        if (labelZ > pz) {
-            if (std::abs(labelZ - pz) > mShowTopLevels) {
-                continue;
-            }
+        const int labelZ = static_cast<int>(label.pos.z());
+        if (labelZ > mMapCenterZ && labelZ - mMapCenterZ > mShowTopLevels) {
+            continue;
         }
-        if (labelZ < pz) {
-            if (std::abs(labelZ - pz) > mShowBottomLevels) {
-                continue;
-            }
-        }
-
-        // Skip labels without a pixmap
-        if (label.pix.isNull()) {
+        if (labelZ < mMapCenterZ && mMapCenterZ - labelZ > mShowBottomLevels) {
             continue;
         }
 
-        // Get or create texture for this label
-        GLuint textureId = mLabelTextureCache.getTexture(mAID, labelId, label.pix);
+        const GLuint textureId = mLabelTextureCache.getTexture(mAID, it.key(), label.pix);
         if (textureId == 0) {
             continue;
         }
 
-        // Calculate label dimensions - size is in map coordinates
-        float labelWidth = static_cast<float>(label.size.width());
-        float labelHeight = static_cast<float>(label.size.height());
-
-        // In 2D, label.pos is the top-left corner and extends right and down
-        // (with Y inverted). For 3D billboard, we need the center position.
-        // Offset: center = pos + (width/2, -height/2, 0)
-        float centerX = label.pos.x() + labelWidth / 2.0f;
-        float centerY = label.pos.y() - labelHeight / 2.0f;
-        float centerZ = label.pos.z();
-
-        // Create render command for this label
-        auto command = std::make_unique<RenderLabelCommand>(centerX,
-                                                            centerY,
-                                                            centerZ,
-                                                            labelWidth,
-                                                            labelHeight,
-                                                            textureId,
-                                                            mCameraController.screenRight(),
-                                                            mCameraController.screenUp(),
-                                                            label.highlight,
-                                                            mCameraController.getProjectionMatrix(),
-                                                            mCameraController.getViewMatrix(),
-                                                            mCameraController.getModelMatrix());
-
-        mRenderCommandQueue.addCommand(std::move(command));
-    }
-
-    // Re-enable depth writing for subsequent geometry
-    mRenderCommandQueue.addCommand(std::make_unique<GLStateCommand>(GLStateCommand::ENABLE_DEPTH_WRITE));
-}
-
-void ModernGLWidget::renderForegroundLabels()
-{
-    if (!mpMap || !mpMap->mpRoomDB) {
-        return;
-    }
-
-    TArea* pArea = mpMap->mpRoomDB->getArea(mAID);
-    if (!pArea || pArea->mMapLabels.isEmpty()) {
-        return;
-    }
-
-    // Disable depth writing for transparent labels
-    mRenderCommandQueue.addCommand(std::make_unique<GLStateCommand>(GLStateCommand::DISABLE_DEPTH_WRITE));
-
-    float pz = static_cast<float>(mMapCenterZ);
-
-    for (auto it = pArea->mMapLabels.constBegin(); it != pArea->mMapLabels.constEnd(); ++it) {
-        const TMapLabel& label = it.value();
-        int labelId = it.key();
-
-        // Only render labels with showOnTop=true in this pass
-        if (!label.showOnTop) {
+        const auto x = static_cast<float>(label.pos.x());
+        const auto y = static_cast<float>(label.pos.y());
+        if (label.noScaling) {
+            // Its own size in pixels whatever the zoom, as on the 2D map, so it faces the screen
+            const QVector3D corner(x, y, static_cast<float>(labelZ));
+            const float worldPerPixel = mCameraController.worldUnitsPerPixel(corner);
+            const QSizeF pixels = label.pix.deviceIndependentSize();
+            const auto width = static_cast<float>(pixels.width()) * worldPerPixel;
+            const auto height = static_cast<float>(pixels.height()) * worldPerPixel;
+            const QVector3D center = corner + screenRight * (width / 2.0f) - screenUp * (height / 2.0f);
+            mRenderCommandQueue.addCommand(std::make_unique<RenderLabelCommand>(center.x(),
+                                                                                center.y(),
+                                                                                center.z(),
+                                                                                width,
+                                                                                height,
+                                                                                textureId,
+                                                                                screenRight,
+                                                                                screenUp,
+                                                                                label.highlight,
+                                                                                mCameraController.getProjectionMatrix(),
+                                                                                mCameraController.getViewMatrix(),
+                                                                                mCameraController.getModelMatrix()));
             continue;
         }
 
-        // Z-level filtering - same logic as rooms
-        float labelZ = label.pos.z();
-        if (labelZ > pz) {
-            if (std::abs(labelZ - pz) > mShowTopLevels) {
-                continue;
-            }
+        // pos is the top-left corner, on the map's plane: on the rooms' tops if shown on top of them, else beneath them
+        const float width = std::abs(static_cast<float>(label.size.width()));
+        const float height = std::abs(static_cast<float>(label.size.height()));
+        const float z = static_cast<float>(labelZ) + (onTop ? roomHeight / 2.0f : -roomHeight / 2.0f);
+        QVector4D tint = levelFaded(QColor(Qt::white), std::abs(labelZ - mMapCenterZ), labelZ > mMapCenterZ, moreTransparent);
+        if (label.highlight) {
+            tint = QVector4D(1.0f, 0.65f, 0.0f, tint.w());
         }
-        if (labelZ < pz) {
-            if (std::abs(labelZ - pz) > mShowBottomLevels) {
-                continue;
-            }
+        GeometryData geometry;
+        geometry.textureId = textureId;
+        if (turned) {
+            GeometryManager::appendQuad(geometry, QVector3D(x + width, y, z), QVector3D(-width, 0.0f, 0.0f), QVector3D(0.0f, -height, 0.0f), tint);
+        } else {
+            GeometryManager::appendQuad(geometry, QVector3D(x, y - height, z), QVector3D(width, 0.0f, 0.0f), QVector3D(0.0f, height, 0.0f), tint);
         }
-
-        // Skip labels without a pixmap
-        if (label.pix.isNull()) {
-            continue;
-        }
-
-        // Get or create texture for this label
-        GLuint textureId = mLabelTextureCache.getTexture(mAID, labelId, label.pix);
-        if (textureId == 0) {
-            continue;
-        }
-
-        // Calculate label dimensions
-        float labelWidth = static_cast<float>(label.size.width());
-        float labelHeight = static_cast<float>(label.size.height());
-
-        // In 2D, label.pos is the top-left corner and extends right and down
-        // (with Y inverted). For 3D billboard, we need the center position.
-        float centerX = label.pos.x() + labelWidth / 2.0f;
-        float centerY = label.pos.y() - labelHeight / 2.0f;
-        float centerZ = label.pos.z();
-
-        // Create render command for this label
-        auto command = std::make_unique<RenderLabelCommand>(centerX,
-                                                            centerY,
-                                                            centerZ,
-                                                            labelWidth,
-                                                            labelHeight,
-                                                            textureId,
-                                                            mCameraController.screenRight(),
-                                                            mCameraController.screenUp(),
-                                                            label.highlight,
-                                                            mCameraController.getProjectionMatrix(),
-                                                            mCameraController.getViewMatrix(),
-                                                            mCameraController.getModelMatrix());
-
-        mRenderCommandQueue.addCommand(std::move(command));
+        mRenderCommandQueue.addCommand(std::make_unique<RenderTexturedTrianglesCommand>(
+                geometry, mCameraController.getProjectionMatrix(), mCameraController.getViewMatrix(), mCameraController.getModelMatrix(), RenderCommand::Shading::Unlit));
     }
 
-    // Re-enable depth writing
+    if (onTop) {
+        mRenderCommandQueue.addCommand(std::make_unique<GLStateCommand>(GLStateCommand::DISABLE_POLYGON_OFFSET));
+    }
     mRenderCommandQueue.addCommand(std::make_unique<GLStateCommand>(GLStateCommand::ENABLE_DEPTH_WRITE));
 }
 

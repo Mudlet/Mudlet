@@ -233,8 +233,18 @@ void CameraController::calculateProjectionMatrix()
     // Set up projection matrix with fixed FOV
     mProjectionMatrix.setToIdentity();
     const float aspectRatio = static_cast<float>(mViewportWidth) / static_cast<float>(mViewportHeight);
-    // Keep the field of view constant, adjust camera distance with scale instead
-    mProjectionMatrix.perspective(scmFieldOfView, aspectRatio, 0.0001f, 10000.0f);
+    // Keep the field of view constant, adjust camera distance with scale instead. The near plane
+    // follows the distance: much nearer leaves too little depth precision to layer what is drawn
+    // flat on a room's top or an exit line
+    mProjectionMatrix.perspective(scmFieldOfView, aspectRatio, qMax(0.0001f, mDistance / 100.0f), 10000.0f);
+}
+
+float CameraController::worldUnitsPerPixel(const QVector3D& point) const
+{
+    const float depth = qMax(1e-6f, -mViewMatrix.map(point).z());
+    const float viewUnitsPerPixel = 2.0f * depth * std::tan(qDegreesToRadians(scmFieldOfView / 2.0f)) / static_cast<float>(qMax(1, mViewportHeight));
+    // The view matrix shrinks the map tenfold
+    return viewUnitsPerPixel * 10.0f;
 }
 
 void CameraController::calculateViewMatrix()

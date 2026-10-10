@@ -112,12 +112,13 @@ void RenderLinesCommand::execute(QOpenGLFunctions* gl,
 }
 
 RenderTrianglesCommand::RenderTrianglesCommand(
-        const QVector<float>& vertices, const QVector<float>& colors, const QMatrix4x4& projectionMatrix, const QMatrix4x4& viewMatrix, const QMatrix4x4& modelMatrix)
+        const QVector<float>& vertices, const QVector<float>& colors, const QMatrix4x4& projectionMatrix, const QMatrix4x4& viewMatrix, const QMatrix4x4& modelMatrix, const Shading shading)
 : mVertices(vertices)
 , mColors(colors)
 , mProjectionMatrix(projectionMatrix)
 , mViewMatrix(viewMatrix)
 , mModelMatrix(modelMatrix)
+, mShading(shading)
 {
 }
 
@@ -152,7 +153,16 @@ void RenderTrianglesCommand::execute(QOpenGLFunctions* gl,
     QMatrix3x3 normalMatrix = mModelMatrix.normalMatrix();
     shader->setUniformValue("uNormalMatrix", normalMatrix);
 
+    const bool unlit = mShading == Shading::Unlit;
+    if (unlit) {
+        shader->setUniformValue("uDisableLighting", true);
+    }
+
     geometryManager->renderGeometry(triangleGeometry, vao, vertexBuffer, colorBuffer, normalBuffer, indexBuffer, resourceManager, GL_TRIANGLES);
+
+    if (unlit) {
+        shader->setUniformValue("uDisableLighting", false);
+    }
 }
 
 RenderTexturedTrianglesCommand::RenderTexturedTrianglesCommand(
@@ -223,11 +233,13 @@ void RenderTexturedTrianglesCommand::execute(QOpenGLFunctions* gl,
     }
 }
 
-RenderInstancedCubesCommand::RenderInstancedCubesCommand(const QVector<CubeInstanceData>& instances, const QMatrix4x4& projectionMatrix, const QMatrix4x4& viewMatrix, const QMatrix4x4& modelMatrix)
+RenderInstancedCubesCommand::RenderInstancedCubesCommand(
+        const QVector<CubeInstanceData>& instances, const QMatrix4x4& projectionMatrix, const QMatrix4x4& viewMatrix, const QMatrix4x4& modelMatrix, const Shading shading)
 : mInstances(instances)
 , mProjectionMatrix(projectionMatrix)
 , mViewMatrix(viewMatrix)
 , mModelMatrix(modelMatrix)
+, mShading(shading)
 {
 }
 
@@ -260,7 +272,16 @@ void RenderInstancedCubesCommand::execute(QOpenGLFunctions* gl,
     QMatrix3x3 normalMatrix = mModelMatrix.normalMatrix();
     shader->setUniformValue("uNormalMatrix", normalMatrix);
 
+    const bool unlit = mShading == Shading::Unlit;
+    if (unlit) {
+        shader->setUniformValue("uDisableLighting", true);
+    }
+
     geometryManager->renderInstancedCubes(mInstances, vao, vertexBuffer, colorBuffer, normalBuffer, indexBuffer, resourceManager, GL_TRIANGLES);
+
+    if (unlit) {
+        shader->setUniformValue("uDisableLighting", false);
+    }
 }
 
 GLStateCommand::GLStateCommand(StateType stateType)

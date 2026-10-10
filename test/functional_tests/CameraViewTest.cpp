@@ -256,6 +256,40 @@ private slots:
         QVERIFY2(target.y() > 5.0f, "panning up the screen in the top view did not move north");
     }
 
+    void test_worldUnitsPerPixelMatchesTheScreen()
+    {
+        CameraController camera = cameraLookingAt(QVector3D(2.0f, 3.0f, 0.0f));
+        camera.setViewportSize(800, 600);
+        for (const bool top : {true, false}) {
+            top ? camera.setTopView() : camera.setDefaultView();
+            camera.updateMatrices();
+            const QVector3D target = camera.getTarget();
+            const float perPixel = camera.worldUnitsPerPixel(target);
+            const QPointF center = toScreen(camera, target);
+            const QPointF hundredPixels = toScreen(camera, target + camera.screenRight() * (perPixel * 100.0f));
+            const qreal pixels = (hundredPixels.x() - center.x()) * 800.0 / 2.0;
+            QVERIFY2(qAbs(pixels - 100.0) < 1.0, qPrintable(qsl("%1 pixels rather than 100 in the %2 view").arg(pixels).arg(top ? qsl("top") : qsl("default"))));
+        }
+    }
+
+    // What the 3D view stacks on a room's top, such as an arrowhead on its line,
+    // is lifted by as little as half a hundredth of a room
+    void test_depthSeparatesWhatIsStackedOnARoom()
+    {
+        CameraController camera = cameraLookingAt(QVector3D(0.0f, 0.0f, 0.0f));
+        constexpr double depthStep = 1.0 / (1 << 24);
+        for (const float distance : {1.0f, 2.0f, 10.0f}) {
+            camera.setDefaultView();
+            camera.setScale(distance);
+            camera.updateMatrices();
+            const QMatrix4x4 transform = camera.getProjectionMatrix() * camera.getViewMatrix();
+            const QVector3D lower = transform.map(QVector3D(0.0f, 0.0f, 0.0f));
+            const QVector3D upper = transform.map(QVector3D(0.0f, 0.0f, 0.005f));
+            const double steps = (lower.z() - upper.z()) / 2.0 / depthStep;
+            QVERIFY2(steps > 4.0, qPrintable(qsl("only %1 steps of a 24-bit depth buffer apart at distance %2").arg(steps).arg(distance)));
+        }
+    }
+
     void test_distanceToShowFitsThatManyRooms()
     {
         CameraController camera = cameraLookingAt(QVector3D(0.0f, 0.0f, 0.0f));

@@ -228,13 +228,9 @@ private:
     void updateMatrices();
     void renderRooms();
     void renderConnections();
-    void renderBackgroundLabels();
-    void renderForegroundLabels();
+    // Map labels lie flat at their place on the map; those shown on top over the rooms, the others under the exits
+    void renderLabels(bool onTop);
     void renderCube(float x, float y, float z, float size, float r, float g, float b, float a);
-    void renderLines(const QVector<float>& vertices, const QVector<float>& colors);
-    void renderTriangles(const QVector<float>& vertices, const QVector<float>& colors);
-    void addUpDownIndicators(TRoom* pRoom, float x, float y, float z, QVector<float>& vertices, QVector<float>& colors) const;
-    void addInOutIndicators(TRoom* pRoom, float x, float y, float z, QVector<float>& vertices, QVector<float>& colors) const;
     void renderText(const QString& text, float x, float y);
     void setupBuffers();
     void cleanup();
@@ -242,6 +238,10 @@ private:
     GLuint symbolTexture(const QString& symbol, const QColor& color);
     // A disc filling the texture, shaded by a radial gradient over its radius
     GLuint discTexture(const QString& key, const QGradientStops& stops);
+    // The 2D map's up/down/in/out markers for the room, or 0 when it has none
+    GLuint exitMarkerTexture(const TRoom& room, const QColor& roomColor);
+    // Text on a clear background; size is set to the texture's size in pixels
+    GLuint textTexture(const QString& key, const QString& text, const QFont& font, const QColor& color, QSize& size);
     void startSmoothTransition(int targetAID, int targetX, int targetY, int targetZ);
     void stopSmoothTransition();
     void jumpTo(int areaId, int x, int y, int z);

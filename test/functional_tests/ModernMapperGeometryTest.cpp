@@ -102,6 +102,60 @@ private slots:
         verifyTightlyPacked(geometry, positions);
     }
 
+    // The instanced cube spans -1 to 1 on each axis
+    void test_barTransformStretchesTheCubeAlongTheLine_data()
+    {
+        QTest::addColumn<QVector3D>("from");
+        QTest::addColumn<QVector3D>("to");
+        QTest::newRow("east") << QVector3D(1.0f, 2.0f, 0.0f) << QVector3D(3.0f, 2.0f, 0.0f);
+        QTest::newRow("northwest") << QVector3D(0.0f, 0.0f, 1.0f) << QVector3D(-1.0f, 1.0f, 1.0f);
+        QTest::newRow("up a level") << QVector3D(4.0f, 4.0f, 0.0f) << QVector3D(4.0f, 4.0f, 1.0f);
+        QTest::newRow("down and away") << QVector3D(0.0f, 0.0f, 2.0f) << QVector3D(1.0f, 0.0f, 0.0f);
+    }
+
+    void test_barTransformStretchesTheCubeAlongTheLine()
+    {
+        QFETCH(QVector3D, from);
+        QFETCH(QVector3D, to);
+        const float width = 0.1f;
+        const float height = 0.04f;
+        const QMatrix4x4 transform = GeometryManager::barTransform(from, to, width, height);
+        QVERIFY((transform.map(QVector3D(-1.0f, 0.0f, 0.0f)) - from).length() < 1e-5f);
+        QVERIFY((transform.map(QVector3D(1.0f, 0.0f, 0.0f)) - to).length() < 1e-5f);
+
+        const QVector3D center = (from + to) / 2.0f;
+        const QVector3D across = transform.map(QVector3D(0.0f, 1.0f, 0.0f)) - center;
+        const QVector3D upward = transform.map(QVector3D(0.0f, 0.0f, 1.0f)) - center;
+        QVERIFY(qAbs(across.length() - width / 2.0f) < 1e-5f);
+        QVERIFY(qAbs(upward.length() - height / 2.0f) < 1e-5f);
+        const QVector3D along = (to - from).normalized();
+        QVERIFY(qAbs(QVector3D::dotProduct(across, along)) < 1e-5f);
+        QVERIFY(qAbs(QVector3D::dotProduct(upward, along)) < 1e-5f);
+        QVERIFY(qAbs(QVector3D::dotProduct(across, upward)) < 1e-5f);
+        if (qAbs(along.z()) < 1e-5f) {
+            QVERIFY2(qAbs(across.z()) < 1e-5f, "a level line is not level across");
+            QVERIFY2(upward.z() > 0.0f, "a level line's height is not upward");
+        }
+    }
+
+    void test_quadTexturesFromItsOrigin()
+    {
+        GeometryData quad;
+        const QVector3D origin(1.0f, 2.0f, 3.0f);
+        const QVector3D across(2.0f, 0.0f, 0.0f);
+        const QVector3D upward(0.0f, 1.0f, 0.0f);
+        GeometryManager::appendQuad(quad, origin, across, upward, QVector4D(1.0f, 0.5f, 0.25f, 1.0f));
+        QCOMPARE(quad.vertexCount(), 6);
+        QCOMPARE(quad.textureCoords.size(), 12);
+        QCOMPARE(quad.colors.size(), 24);
+        for (int vertex = 0; vertex < 6; ++vertex) {
+            const QVector3D position(quad.vertices[vertex * 3], quad.vertices[vertex * 3 + 1], quad.vertices[vertex * 3 + 2]);
+            const float u = quad.textureCoords[vertex * 2];
+            const float v = quad.textureCoords[vertex * 2 + 1];
+            QCOMPARE(position, origin + across * u + upward * v);
+        }
+    }
+
     void test_vertexShaderAttributeLocationsDoNotOverlap()
     {
         const QList<ShaderAttribute> attributes = vertexShaderAttributes();

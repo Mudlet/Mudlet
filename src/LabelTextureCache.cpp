@@ -151,7 +151,8 @@ GLuint LabelTextureCache::createTextureFromPixmap(const QPixmap& pixmap)
     if (pixmap.isNull()) {
         return 0;
     }
-    return createTextureFromImage(pixmap.toImage(), false);
+    // Mipmapped, as labels lie on the map and so are seen at a slant and from afar
+    return createTextureFromImage(pixmap.toImage(), true);
 }
 
 GLuint LabelTextureCache::createTextureFromImage(const QImage& image, const bool mipmapped)

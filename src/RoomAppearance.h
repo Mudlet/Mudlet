@@ -21,6 +21,7 @@
 
 #include <QBrush>
 #include <QColor>
+#include <QPointF>
 
 class Host;
 class QFont;
@@ -46,6 +47,13 @@ QGradientStops playerRoomStops(int style, quint8 innerDiameterPercentage, const 
 
 // At 100% the ring passes through the corners of a room roomVisualSize across
 qreal playerRoomRadius(quint8 outerDiameterPercentage, qreal roomVisualSize);
+
+// A room name's offset, in rooms' spacing with y increasing down the map, from
+// the room's ROOM_UI_NAMEPOS: "x y", or just "y"
+QPointF nameOffset(const QString& positionData);
+
+// From the room's ROOM_UI_NAMECOLOR, else whichever of black or white stands out on background
+QColor nameColor(const QString& colorData, const QColor& background);
 
 // Draws text centered in rect at the largest size that fits, or nothing if
 // even the smallest is too big. fontSize is where the search for that size

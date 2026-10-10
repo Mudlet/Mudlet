@@ -111,6 +111,23 @@ private slots:
         QCOMPARE(RoomAppearance::playerRoomRadius(50, 2.0), M_SQRT2 / 2.0);
     }
 
+    void test_nameOffsetTakesYAloneOrXAndY()
+    {
+        QCOMPARE(RoomAppearance::nameOffset(QString()), QPointF(0.0, 0.0));
+        QCOMPARE(RoomAppearance::nameOffset(qsl("0.5")), QPointF(0.0, 0.5));
+        QCOMPARE(RoomAppearance::nameOffset(qsl("-1 0.25")), QPointF(-1.0, 0.25));
+        QCOMPARE(RoomAppearance::nameOffset(qsl("left 1")), QPointF(0.0, 0.0));
+        QCOMPARE(RoomAppearance::nameOffset(qsl("1 2 3")), QPointF(0.0, 0.0));
+    }
+
+    void test_nameColorContrastsWithTheMapUnlessSet()
+    {
+        QCOMPARE(RoomAppearance::nameColor(QString(), QColor(Qt::black)), QColor(Qt::white));
+        QCOMPARE(RoomAppearance::nameColor(QString(), QColor(230, 230, 230)), QColor(Qt::black));
+        QCOMPARE(RoomAppearance::nameColor(qsl("#ff8000"), QColor(Qt::black)), QColor(255, 128, 0));
+        QCOMPARE(RoomAppearance::nameColor(qsl("not a color"), QColor(Qt::black)), QColor(Qt::white));
+    }
+
     void test_symbolIsDrawnLargeAndCentered_data()
     {
         QTest::addColumn<QString>("symbol");

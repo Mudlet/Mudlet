@@ -37,6 +37,9 @@ class ResourceManager;
 class RenderCommand
 {
 public:
+    // Unlit draws its colors as given, as the 2D map does; lit shades them by the light
+    enum class Shading { Lit, Unlit };
+
     virtual ~RenderCommand() = default;
     virtual void execute(QOpenGLFunctions* gl,
                         QOpenGLShaderProgram* shader,
@@ -112,8 +115,12 @@ private:
 class RenderTrianglesCommand : public RenderCommand
 {
 public:
-    RenderTrianglesCommand(const QVector<float>& vertices, const QVector<float>& colors,
-                          const QMatrix4x4& projectionMatrix, const QMatrix4x4& viewMatrix, const QMatrix4x4& modelMatrix);
+    RenderTrianglesCommand(const QVector<float>& vertices,
+                           const QVector<float>& colors,
+                           const QMatrix4x4& projectionMatrix,
+                           const QMatrix4x4& viewMatrix,
+                           const QMatrix4x4& modelMatrix,
+                           Shading shading = Shading::Lit);
 
     void execute(QOpenGLFunctions* gl,
                 QOpenGLShaderProgram* shader,
@@ -134,13 +141,12 @@ private:
     QMatrix4x4 mProjectionMatrix;
     QMatrix4x4 mViewMatrix;
     QMatrix4x4 mModelMatrix;
+    Shading mShading;
 };
 
 class RenderTexturedTrianglesCommand : public RenderCommand
 {
 public:
-    enum class Shading { Lit, Unlit };
-
     RenderTexturedTrianglesCommand(const GeometryData& geometry,
                                   const QMatrix4x4& projectionMatrix, const QMatrix4x4& viewMatrix, const QMatrix4x4& modelMatrix,
                                   Shading shading = Shading::Lit);
@@ -170,8 +176,8 @@ private:
 class RenderInstancedCubesCommand : public RenderCommand
 {
 public:
-    RenderInstancedCubesCommand(const QVector<CubeInstanceData>& instances,
-                               const QMatrix4x4& projectionMatrix, const QMatrix4x4& viewMatrix, const QMatrix4x4& modelMatrix);
+    RenderInstancedCubesCommand(
+            const QVector<CubeInstanceData>& instances, const QMatrix4x4& projectionMatrix, const QMatrix4x4& viewMatrix, const QMatrix4x4& modelMatrix, Shading shading = Shading::Lit);
 
     void execute(QOpenGLFunctions* gl,
                 QOpenGLShaderProgram* shader,
@@ -191,6 +197,7 @@ private:
     QMatrix4x4 mProjectionMatrix;
     QMatrix4x4 mViewMatrix;
     QMatrix4x4 mModelMatrix;
+    Shading mShading;
 };
 
 // Command to change OpenGL state

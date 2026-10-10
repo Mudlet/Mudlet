@@ -24,6 +24,7 @@
 
 #include <QFontMetrics>
 #include <QPainter>
+#include <QStringList>
 
 #include <cmath>
 
@@ -145,6 +146,47 @@ QGradientStops playerRoomStops(const int style, const quint8 innerDiameterPercen
 qreal playerRoomRadius(const quint8 outerDiameterPercentage, const qreal roomVisualSize)
 {
     return (outerDiameterPercentage / 200.0) * roomVisualSize * M_SQRT2;
+}
+
+QPointF nameOffset(const QString& positionData)
+{
+    QPointF offset{0, 0};
+    if (positionData.isEmpty()) {
+        return offset;
+    }
+    const QStringList posXY = positionData.split(" ");
+    bool ok1, ok2;
+    double posX, posY;
+
+    switch (posXY.count()) {
+    case 1:
+        // one value: treat as Y offset
+        posY = posXY[0].toDouble(&ok1);
+        if (ok1) {
+            offset.setY(posY);
+        }
+        break;
+    case 2:
+        posX = posXY[0].toDouble(&ok1);
+        posY = posXY[1].toDouble(&ok2);
+        if (ok1 && ok2) {
+            offset.setX(posX);
+            offset.setY(posY);
+        }
+        break;
+    }
+    return offset;
+}
+
+QColor nameColor(const QString& colorData, const QColor& background)
+{
+    if (!colorData.isEmpty()) {
+        const QColor userColor(colorData);
+        if (userColor.isValid()) {
+            return userColor;
+        }
+    }
+    return QColor((background.lightness() > 127) ? Qt::black : Qt::white);
 }
 
 void paintSymbol(QPainter& painter, const QRect& rect, const QString& text, const QColor& color, const QFont& font, const qreal fontFudgeFactor, ushort& fontSize)
