@@ -1787,8 +1787,8 @@ describe("Tests the GUI utilities as far as possible without mudlet", function()
       assert.has_error(function() getRGB(42) end)
     end)
 
-    it("Should error for a colour name that does not exist", function()
-      assert.has_error(function() getRGB("definitelyNotAColour") end)
+    it("Should error for a colour name that does not exist, naming the colour", function()
+      assert.error_matches(function() getRGB("definitelyNotAColour") end, 'unknown color name "definitelyNotAColour"', 1, true)
     end)
   end)
 
