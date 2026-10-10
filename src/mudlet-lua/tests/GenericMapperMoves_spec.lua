@@ -218,6 +218,9 @@ describe("Tests that the generic mapper sends nothing when the map opens", funct
       local file = io.open(saveFile, "wb")
       file:write(saved.saveFile)
       file:close()
+    else
+      -- the mapper reloads this file on any package install, learned prompt and all
+      os.remove(saveFile)
     end
     for key in pairs(map.prompt) do
       map.prompt[key] = nil
