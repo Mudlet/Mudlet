@@ -760,6 +760,11 @@ function Adjustable.Container:createContainers()
     },self)
 end
 
+local function usableLockStyle(self, name)
+    local style = type(name) == "string" and self.lockStyles[name]
+    return style and type(style[2]) == "function"
+end
+
 --- locks your adjustable container
 --lock means that your container is no longer moveable/resizable by mouse. 
 --You can also choose different lockStyles which changes the border or container style. 
@@ -772,18 +777,27 @@ end
 -- light:       Only hides the min/restore and close labels. Borders and margin are not affected.
 -- full:        The container gets fully locked without any margin left for the right click menu.
 -- border:      Keeps the borders of the container visible while locked.
+-- @return true once locked, or nil and an error message for a lock style that does not exist or a minimized container
 
 function Adjustable.Container:lockContainer(lockNr, lockStyle)
     closeAllLevels(self.rCLabel)
 
-    if type(lockNr) == "string" then
-      lockStyle = lockNr
-    elseif type(lockNr) == "number" then
+    if type(lockNr) == "number" then
+      if not self.lockStyles[lockNr] then
+        return nil, string.format("lockContainer: there is no lock style number %s", lockNr)
+      end
       lockStyle = self.lockStyles[lockNr][1]
+    elseif lockNr ~= nil then
+      lockStyle = lockNr
     end
 
+    if lockStyle ~= nil and not usableLockStyle(self, lockStyle) then
+      return nil, string.format("lockContainer: unknown lock style \"%s\"", tostring(lockStyle))
+    end
+
+    -- only an explicit style is refused: a saved layout may name a style this session never defined
     lockStyle = lockStyle or self.lockStyle
-    if not self.lockStyles[lockStyle] then
+    if not usableLockStyle(self, lockStyle) then
       lockStyle = "standard"
     end
 
@@ -795,7 +809,9 @@ function Adjustable.Container:lockContainer(lockNr, lockStyle)
         self.minimizeLabel:hide()
         self.locked = true
         self:adjustBorder()
+        return true
     end
+    return nil, "lockContainer: a minimized container cannot be locked"
 end
 
 -- internal function to handle the custom Items onClick event
