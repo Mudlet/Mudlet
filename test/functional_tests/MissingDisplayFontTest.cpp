@@ -762,7 +762,7 @@ private slots:
         QVERIFY(pHost);
         QVERIFY2(pHost->mLoadedOk, "the test profile save could not be loaded");
         mudlet::self()->slot_connectionDialogueFinished(profileName, false);
-        QVERIFY2(pHost->mpConsole, "the profile came up without a main console");
+        QVERIFY2(pHost->mainConsoleView(), "the profile came up without a main console");
         QCOMPARE(pHost->getDisplayFont().family(), Host::scmDefaultFontFamily);
         QCOMPARE(pHost->getDisplayFontForSaving().family(), mMissingFamily);
 
