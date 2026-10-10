@@ -109,6 +109,8 @@ private:
     using StoreReadDone = std::function<void(bool success, QString value, const QString& errorMessage)>;
     // Reads one credential key; what mStoreReader does unless a test replaces it.
     void readStoreKey(const QString& key, StoreReadDone done);
+    // Warns the first time per session, then logs at debug level; see mWarnedStoreUnreadable.
+    void reportStoreUnreadable(const QString& what, const QString& error);
 
 public:
     // Where a profile's saved sign-in record is filed, for the preferences deciding whether there is

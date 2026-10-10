@@ -1444,6 +1444,15 @@ void GMCPAuthenticator::readStoreKey(const QString& key, StoreReadDone done)
             nullptr);
 }
 
+void GMCPAuthenticator::reportStoreUnreadable(const QString& what, const QString& error)
+{
+    if (!std::exchange(mWarnedStoreUnreadable, true)) {
+        qWarning().noquote() << "GMCP Char.Login -" << what << error;
+    } else {
+        qDebug().noquote() << "GMCP Char.Login -" << what << error;
+    }
+}
+
 void GMCPAuthenticator::readStoredSignInEntry(std::function<void(bool success, StoredSignIn entry, unsigned int attemptGeneration, bool storeChangeRequested)> callback)
 {
     QPointer<Host> safeHost = mpHost;
@@ -1465,11 +1474,7 @@ void GMCPAuthenticator::readStoredSignInEntry(std::function<void(bool success, S
             };
             // A locked, denied or timed-out store: a sign-in never saved reads as an empty success
             if (!success) {
-                if (!std::exchange(mWarnedStoreUnreadable, true)) {
-                    qWarning().noquote() << "GMCP Char.Login - could not read the stored sign-in; falling back to interactive sign-in:" << errorMessage;
-                } else {
-                    qDebug().noquote() << "GMCP Char.Login - could not read the stored sign-in; falling back to interactive sign-in:" << errorMessage;
-                }
+                reportStoreUnreadable(qsl("could not read the stored sign-in; falling back to interactive sign-in:"), errorMessage);
                 callback(false, StoredSignIn{}, attemptGeneration, endRead());
                 return;
             }
@@ -1507,7 +1512,7 @@ void GMCPAuthenticator::readStoredSignInEntry(std::function<void(bool success, S
                 return;
             }
             mStoreReader(tokenKey(),
-                         [safeHost, lease = std::move(lease), entry = std::move(entry), attemptGeneration, callback = std::move(callback)](
+                         [this, safeHost, lease = std::move(lease), entry = std::move(entry), attemptGeneration, callback = std::move(callback)](
                                  bool tokenSuccess, QString tokenValue, const QString& tokenError) mutable {
                              if (!safeHost) {
                                  SecureStringUtils::secureStringClear(tokenValue);
@@ -1517,7 +1522,7 @@ void GMCPAuthenticator::readStoredSignInEntry(std::function<void(bool success, S
                                  entry.token = std::move(tokenValue);
                              } else {
                                  entry.tokenUnreadable = true;
-                                 qWarning().noquote() << "GMCP Char.Login - could not read the saved token; using the stored sign-in as a resume hint only:" << tokenError;
+                                 reportStoreUnreadable(qsl("could not read the saved token; using the stored sign-in as a resume hint only:"), tokenError);
                              }
                              const bool changeRequested = lease->storeChangeRequested();
                              lease.reset();

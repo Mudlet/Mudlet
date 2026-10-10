@@ -2784,6 +2784,30 @@ private slots:
         QVERIFY2(mHeldStoreOperations.empty(), "a sign-in whose record could not be read back was removed anyway");
     }
 
+    // A store that can't be asked fails every read, and the record of a current sign-in is read from the
+    // profile, so the token's read is the one that fails on each connect
+    void testAStoreThatCannotBeReadWarnsOncePerSession()
+    {
+        Host* host = connectAndNegotiate();
+        QVERIFY(host);
+        host->setLogin(QString());
+        host->setPass(QString());
+        QVERIFY(seedSplitSignIn(host->getName(), qsl("{\"account\": \"acct:char\", \"provider\": \"discord\", \"secure_only\": false}"), qsl("locked-away")));
+        const QString tokenPath = reconnectCredentialPath(host->getName(), qsl("reconnect-token"));
+        QVERIFY(CredentialManager::removeCredential(host->getName(), qsl("reconnect-token")));
+        QVERIFY(QDir().mkpath(tokenPath));
+
+        const QRegularExpression warning(qsl("could not read the saved token"));
+        QTest::ignoreMessage(QtWarningMsg, warning);
+        QTest::failOnWarning(warning);
+        for (int connect = 0; connect < 2; ++connect) {
+            mpServer->clearReceived();
+            mpServer->sendGmcp(qsl("Char.Login.Default {\"version\": 2, \"type\": [\"oauth\"]}"));
+            QJsonObject sent;
+            QVERIFY2(waitForClientGmcp(qsl("Char.Login.Credentials"), sent), "client did not resume the saved provider");
+        }
+    }
+
     void testASignInWithNothingStoredDoesNotWarn_data()
     {
         QTest::addColumn<QString>("record");
