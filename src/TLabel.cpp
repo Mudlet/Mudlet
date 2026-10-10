@@ -263,6 +263,12 @@ void TLabel::mouseReleaseEvent(QMouseEvent* event)
 
 void TLabel::mouseMoveEvent(QMouseEvent* event)
 {
+    // QLabel is what switches to the pointing hand over a link. Whether the move then goes on to the
+    // widget underneath is left as it was, so a label over the map still passes the move through.
+    if (carriesLink()) {
+        QLabel::mouseMoveEvent(event);
+    }
+
     if (mpHost && mMoveFunction) {
         mpHost->getLuaInterpreter()->callLabelCallbackEvent(mMoveFunction, event);
         event->accept();
