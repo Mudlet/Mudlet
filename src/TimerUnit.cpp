@@ -471,6 +471,19 @@ std::vector<int> TimerUnit::findItems(const QString& name, const bool exactMatch
     return ids;
 }
 
+bool TimerUnit::pendingDeletion(TTimer* pItem) const
+{
+    if (!hasPendingDeletes()) {
+        return false;
+    }
+    for (auto* pAncestor = pItem; pAncestor; pAncestor = pAncestor->getParent()) {
+        if (mCleanupSet.contains(pAncestor) || uninstallList.contains(pAncestor)) {
+            return true;
+        }
+    }
+    return false;
+}
+
 bool TimerUnit::killTimer(const QString& name)
 {
     // By the lookup table rather than a walk of every timer, as scripts kill and

@@ -817,6 +817,19 @@ std::vector<int> TriggerUnit::findItems(const QString& name, const bool exactMat
     return ids;
 }
 
+bool TriggerUnit::pendingDeletion(TTrigger* pItem) const
+{
+    if (!hasPendingDeletes()) {
+        return false;
+    }
+    for (auto* pAncestor = pItem; pAncestor; pAncestor = pAncestor->getParent()) {
+        if (mCleanupSet.contains(pAncestor) || uninstallList.contains(pAncestor)) {
+            return true;
+        }
+    }
+    return false;
+}
+
 bool TriggerUnit::enableTrigger(const QString& name)
 {
     bool found = false;

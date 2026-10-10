@@ -1905,32 +1905,56 @@ int TLuaInterpreter::findItems(lua_State* L)
         }
     };
     if (!type.compare(QLatin1String("timer"), Qt::CaseInsensitive)) {
-        const auto itemList = host.getTimerUnit()->findItems(name, exactMatch, caseSensitive);
+        auto* pUnit = host.getTimerUnit();
+        auto itemList = pUnit->findItems(name, exactMatch, caseSensitive);
+        std::erase_if(itemList, [pUnit](const int id) {
+            return pUnit->pendingDeletion(pUnit->getTimer(id));
+        });
         generateList(itemList, L);
         return 1;
     }
     if (!type.compare(QLatin1String("trigger"), Qt::CaseInsensitive)) {
-        const auto itemList = host.getTriggerUnit()->findItems(name, exactMatch, caseSensitive);
+        auto* pUnit = host.getTriggerUnit();
+        auto itemList = pUnit->findItems(name, exactMatch, caseSensitive);
+        std::erase_if(itemList, [pUnit](const int id) {
+            return pUnit->pendingDeletion(pUnit->getTrigger(id));
+        });
         generateList(itemList, L);
         return 1;
     }
     if (!type.compare(QLatin1String("alias"), Qt::CaseInsensitive)) {
-        const auto itemList = host.getAliasUnit()->findItems(name, exactMatch, caseSensitive);
+        auto* pUnit = host.getAliasUnit();
+        auto itemList = pUnit->findItems(name, exactMatch, caseSensitive);
+        std::erase_if(itemList, [pUnit](const int id) {
+            return pUnit->pendingDeletion(pUnit->getAlias(id));
+        });
         generateList(itemList, L);
         return 1;
     }
     if (!type.compare(QLatin1String("keybind"), Qt::CaseInsensitive)) {
-        const auto itemList = host.getKeyUnit()->findItems(name, exactMatch, caseSensitive);
+        auto* pUnit = host.getKeyUnit();
+        auto itemList = pUnit->findItems(name, exactMatch, caseSensitive);
+        std::erase_if(itemList, [pUnit](const int id) {
+            return pUnit->pendingDeletion(pUnit->getKey(id));
+        });
         generateList(itemList, L);
         return 1;
     }
     if (!type.compare(QLatin1String("button"), Qt::CaseInsensitive)) {
-        const auto itemList = host.getActionUnit()->findItems(name, exactMatch, caseSensitive);
+        auto* pUnit = host.getActionUnit();
+        auto itemList = pUnit->findItems(name, exactMatch, caseSensitive);
+        std::erase_if(itemList, [pUnit](const int id) {
+            return pUnit->pendingDeletion(pUnit->getAction(id));
+        });
         generateList(itemList, L);
         return 1;
     }
     if (!type.compare(QLatin1String("script"), Qt::CaseInsensitive)) {
-        const auto itemList = host.getScriptUnit()->findItems(name, exactMatch, caseSensitive);
+        auto* pUnit = host.getScriptUnit();
+        auto itemList = pUnit->findItems(name, exactMatch, caseSensitive);
+        std::erase_if(itemList, [pUnit](const int id) {
+            return pUnit->pendingDeletion(pUnit->getScript(id));
+        });
         generateList(itemList, L);
         return 1;
     }

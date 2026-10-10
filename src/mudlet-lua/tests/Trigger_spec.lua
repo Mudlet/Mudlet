@@ -2234,11 +2234,15 @@ describe("Trigger processing", function()
         end)
 
         it("exists round-trips a temporary trigger by ID", function()
+            -- earlier specs' killed items would be freed by the flush below too, so free them first
+            feedTriggers("\nexists_probe_settle\n")
             local id = tempRegexTrigger("^exists_probe$", [[]])
             assert.is_equal(1, exists(id, "trigger"), "the trigger should exist after creation")
             assert.is_true(killTrigger(id), "killTrigger should report success for a temporary trigger")
+            local held = getProfileStats().triggers.temp
             -- feed a line to let the trigger unit run its deferred cleanup
             feedTriggers("\nflush\n")
+            assert.is_equal(held - 1, getProfileStats().triggers.temp, "the cleanup should have freed the killed trigger")
             assert.is_equal(0, exists(id, "trigger"), "the trigger should be gone after kill and cleanup")
         end)
 
@@ -2247,16 +2251,20 @@ describe("Trigger processing", function()
         end)
 
         it("killTrigger returns false the second time, as the trigger is already dead", function()
+            -- earlier specs' killed items would be freed by the flush below too, so free them first
+            feedTriggers("\ndouble_kill_settle\n")
             local id = tempRegexTrigger("^double_kill_probe$", [[]])
             assert.is_true(killTrigger(id), "killing a live temporary trigger should report success")
-            -- the trigger is still present here: only the deferred cleanup frees it,
-            -- so the second kill really is being told about a corpse it can find
-            assert.is_equal(1, exists(id, "trigger"), "the killed trigger is still present until cleanup runs")
+            -- only the deferred cleanup frees it, so the second kill is told about a
+            -- corpse it can still find: exists() does not count it, but the profile still holds it
+            local held = getProfileStats().triggers.temp
+            assert.is_equal(0, exists(id, "trigger"), "a killed trigger waiting for cleanup should not be counted")
             assert.is_equal(0, isActive(id, "trigger"), "a killed trigger is no longer active")
             assert.is_false(killTrigger(id),
                 "killing an already killed trigger achieves nothing and has to say so")
             -- a fed line runs that cleanup, and the answer has to be the same after it
             feedTriggers("\ndouble_kill_flush\n")
+            assert.is_equal(held - 1, getProfileStats().triggers.temp, "the cleanup should have freed the killed trigger")
             assert.is_equal(0, exists(id, "trigger"), "the trigger should be gone after kill and cleanup")
             assert.is_false(killTrigger(id), "a freed trigger cannot be killed either")
         end)
@@ -2721,6 +2729,170 @@ describe("Trigger processing", function()
             assert.are.equal(permanents, exists(name, "trigger"), "only the temporary trigger should leave the lookup table")
             assert.is_true(_G.NameEvictionSpec >= 1, "the permanent trigger should still fire")
             assert.is_true(disableTrigger(name), "the permanent trigger must still be reachable by name")
+        end)
+
+        -- a killed item lingers until the next line, a timer flush or the periodic
+        -- purge frees it, and exists() and findItems() must not count it meanwhile
+        it("does not count a killed temporary item as existing while it waits to be freed", function()
+            local trigger = tempTrigger("killed_exists_spec", function() end)
+            local alias = tempAlias("^killed_exists_spec$", function() end)
+            local key = tempKey(mudlet.key.F9, function() end)
+            local timer = tempTimer(600, function() end)
+            assert.is_true(killTrigger(trigger))
+            assert.is_true(killAlias(alias))
+            assert.is_true(killKey(key))
+            assert.is_true(killTimer(timer))
+
+            assert.are.equal(0, exists(trigger, "trigger"), "by id")
+            assert.are.equal(0, exists(tostring(trigger), "trigger"), "by name")
+            assert.are.equal(0, #findItems(tostring(trigger), "trigger"))
+            assert.are.equal(0, exists(alias, "alias"))
+            assert.are.equal(0, exists(tostring(alias), "alias"))
+            assert.are.equal(0, #findItems(tostring(alias), "alias"))
+            assert.are.equal(0, exists(key, "keybind"))
+            assert.are.equal(0, exists(tostring(key), "keybind"))
+            assert.are.equal(0, #findItems(tostring(key), "keybind"))
+            assert.are.equal(0, exists(timer, "timer"))
+            assert.are.equal(0, exists(tostring(timer), "timer"))
+            assert.are.equal(0, #findItems(tostring(timer), "timer"))
+
+            -- other items' names can hold these ids too, so only the killed ones must be missing
+            local function lists(id, itemType)
+                for _, found in ipairs(findItems(tostring(id), itemType, false)) do
+                    if found == id then
+                        return true
+                    end
+                end
+                return false
+            end
+            assert.is_false(lists(trigger, "trigger"), "a substring search must skip the killed trigger too")
+            assert.is_false(lists(alias, "alias"), "a substring search must skip the killed alias too")
+            assert.is_false(lists(key, "keybind"), "a substring search must skip the killed key too")
+            assert.is_false(lists(timer, "timer"), "a substring search must skip the killed timer too")
+        end)
+
+        local function listed(id, name, itemType, exactMatch)
+            for _, found in ipairs(findItems(name, itemType, exactMatch)) do
+                if found == id then
+                    return true
+                end
+            end
+            return false
+        end
+
+        it("still counts the live items alongside a killed one waiting to be freed", function()
+            local made = {
+                trigger = {tempTrigger("pending_live_spec", function() end), tempTrigger("pending_live_spec", function() end)},
+                alias = {tempAlias("^pending_live_spec$", function() end), tempAlias("^pending_live_spec$", function() end)},
+                keybind = {tempKey(mudlet.key.F8, function() end), tempKey(mudlet.key.F8, function() end)},
+                timer = {tempTimer(600, function() end), tempTimer(600, function() end)},
+            }
+            local kill = {trigger = killTrigger, alias = killAlias, keybind = killKey, timer = killTimer}
+            finally(function()
+                for itemType, ids in pairs(made) do
+                    kill[itemType](ids[2])
+                end
+            end)
+            for itemType, ids in pairs(made) do
+                local killed, live = ids[1], ids[2]
+                assert.is_true(kill[itemType](killed))
+                assert.are.equal(1, exists(live, itemType), "the live " .. itemType .. " is still there")
+                assert.is_true(exists(tostring(live), itemType) >= 1, "the live " .. itemType .. " is still found by name")
+                assert.are.equal(1, isActive(live, itemType), "the live " .. itemType .. " is still active")
+                assert.is_true(listed(live, tostring(live), itemType, true), "findItems still lists the live " .. itemType)
+                assert.is_true(listed(live, tostring(live), itemType, false), "a substring search still lists the live " .. itemType)
+                assert.is_false(listed(killed, tostring(killed), itemType, true), "findItems skips the killed " .. itemType)
+            end
+        end)
+
+        it("still counts a live trigger that shares its name with a killed one", function()
+            local name = "Spec Pending Shared Name"
+            finally(function() disableTrigger(name) end)
+            -- permanent triggers cannot be deleted from Lua, so earlier local runs
+            -- leave same-named ones behind: work from a relative baseline
+            local permId = permRegexTrigger(name, "", {"^pending_shared_perm$"}, [[ ]])
+            assert.is_true(permId > 0)
+            local permanents = exists(name, "trigger")
+            local tempId = tempComplexRegexTrigger(name, "^pending_shared_temp$", [[ ]], 0, 0, 0, 0, 0, 0, 0, 0, 0, 0)
+            assert.are.equal(permanents + 1, exists(name, "trigger"))
+
+            killTrigger(name) -- only the temporary one can be killed
+            assert.are.equal(permanents, exists(name, "trigger"), "only the killed temporary trigger stops counting")
+            assert.are.equal(permanents, #findItems(name, "trigger"))
+            assert.is_true(listed(permId, name, "trigger", true), "the permanent trigger is still listed")
+            assert.is_true(listed(permId, "Spec Pending Shared", "trigger", false), "a substring search still lists it")
+            assert.is_false(listed(tempId, name, "trigger", true), "the killed temporary trigger is not listed")
+            assert.is_false(listed(tempId, "Spec Pending Shared", "trigger", false))
+        end)
+
+        it("does not count the children of a killed temporary item either", function()
+            local triggerName, timerName = "Spec Pending Child Trigger", "Spec Pending Child Timer"
+            local triggersBefore, timersBefore = exists(triggerName, "trigger"), exists(timerName, "timer")
+            local parentTrigger = tempRegexTrigger("^pending_child_parent$", [[ ]])
+            local childTrigger = permRegexTrigger(triggerName, tostring(parentTrigger), {"^pending_child_child$"}, [[ ]])
+            local parentTimer = tempTimer(600, [[ ]])
+            local childTimer = permTimer(timerName, tostring(parentTimer), 600, [[ ]])
+            assert.are.equal(1, exists(childTrigger, "trigger"))
+            assert.are.equal(1, exists(childTimer, "timer"))
+
+            assert.is_true(killTrigger(parentTrigger))
+            assert.is_true(killTimer(parentTimer))
+            -- the cleanup that frees a parent frees its children with it
+            assert.are.equal(0, exists(childTrigger, "trigger"), "the child of a killed trigger by id")
+            assert.are.equal(triggersBefore, exists(triggerName, "trigger"), "the child of a killed trigger by name")
+            assert.is_false(listed(childTrigger, triggerName, "trigger", true))
+            assert.are.equal(0, isActive(childTrigger, "trigger"))
+            assert.are.equal(0, exists(childTimer, "timer"), "the child of a killed timer by id")
+            assert.are.equal(timersBefore, exists(timerName, "timer"), "the child of a killed timer by name")
+            assert.is_false(listed(childTimer, timerName, "timer", true))
+            assert.are.equal(0, isActive(childTimer, "timer"))
+
+            feedTriggers("\npending_child_flush\n")
+            assert.are.equal(0, exists(childTrigger, "trigger"), "the child trigger is freed with its parent")
+        end)
+
+        it("does not count a trigger its own script has just killed", function()
+            _G.SelfKillExistsSpec = nil
+            finally(function() _G.SelfKillExistsSpec = nil end)
+            local id
+            id = tempRegexTrigger("^self_kill_exists_spec$", function()
+                killTrigger(id)
+                _G.SelfKillExistsSpec = {exists(id, "trigger"), isActive(id, "trigger"), #findItems(tostring(id), "trigger")}
+            end)
+            feedTriggers("\nself_kill_exists_spec\n")
+            assert.are.same({0, 0, 0}, _G.SelfKillExistsSpec, "exists, isActive and findItems inside the trigger's own pass")
+        end)
+
+        it("agrees with isActive() about a one-shot timer that has fired", function()
+            _G.SpentTimerSpec = false
+            finally(function() _G.SpentTimerSpec = nil end)
+            local id = tempTimer(0.01, function() _G.SpentTimerSpec = true end)
+            local waited = 0
+            while not _G.SpentTimerSpec and waited < 2000 do
+                pumpEvents(10)
+                waited = waited + 10
+            end
+            assert.is_true(_G.SpentTimerSpec, "the timer never fired")
+            -- whether it is freed straight away or held until a later cleanup, the two must agree
+            assert.are.equal(exists(id, "timer"), isActive(id, "timer"))
+            assert.are.equal(0, isActive(id, "timer"), "a spent one-shot timer is not active")
+        end)
+
+        it("does not let a new trigger inherit the patterns of a killed one with the same name", function()
+            local name = "Spec Pending Reused Name"
+            _G.ReusedNameSpec = 0
+            finally(function()
+                killTrigger(name)
+                _G.ReusedNameSpec = nil
+            end)
+            tempComplexRegexTrigger(name, "^reused_name_old$", [[_G.ReusedNameSpec = _G.ReusedNameSpec + 1]], 0, 0, 0, 0, 0, 0, 0, 0, 0, 0)
+            assert.is_true(killTrigger(name))
+            assert.are.equal(0, exists(name, "trigger"))
+            tempComplexRegexTrigger(name, "^reused_name_new$", [[_G.ReusedNameSpec = _G.ReusedNameSpec + 1]], 0, 0, 0, 0, 0, 0, 0, 0, 0, 0)
+            feedTriggers("\nreused_name_new\n")
+            assert.are.equal(1, _G.ReusedNameSpec, "the new trigger fires on its own pattern")
+            feedTriggers("\nreused_name_old\n")
+            assert.are.equal(1, _G.ReusedNameSpec, "the new trigger must not fire on the killed one's pattern")
         end)
 
     end)

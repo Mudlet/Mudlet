@@ -290,11 +290,14 @@ describe("Tests keybind-related functions", function()
     end)
 
     it("killKey returns false the second time, as the key is already dead", function()
+      -- earlier specs' killed items would be freed by the flush below too, so free them first
+      feedTriggers("\nspec_key_kill_settle\n")
       local id = tempKey(mudlet.key.F11, [[echo("x")]])
       assert.is_true(killKey(id), "killing a live temporary key should report success")
-      -- the key is still present here: only the deferred cleanup frees it, so the
-      -- second kill really is being told about a corpse it can find
-      assert.are.equal(1, exists(id, "keybind"), "the killed key is still present until cleanup runs")
+      -- only the deferred cleanup frees it, so the second kill is told about a
+      -- corpse it can still find: exists() does not count it, but the profile still holds it
+      local held = getProfileStats().keys.temp
+      assert.are.equal(0, exists(id, "keybind"), "a killed key waiting for cleanup should not be counted")
       assert.are.equal(0, isActive(id, "keybind"), "a killed key is no longer active")
       assert.is_false(killKey(id),
         "killing an already killed key achieves nothing and has to say so")
@@ -303,8 +306,18 @@ describe("Tests keybind-related functions", function()
       -- synthesised headlessly, so there is no in-callback double kill to pin here -
       -- KeyUnit's depth and cleanup machinery matches AliasUnit's, whose spec has one
       feedTriggers("\nspec_key_kill_flush\n")
+      assert.are.equal(held - 1, getProfileStats().keys.temp, "the cleanup should have freed the killed key")
       assert.are.equal(0, exists(id, "keybind"), "the key should be gone after kill and cleanup")
       assert.is_false(killKey(id), "a freed key cannot be killed either")
+    end)
+
+    it("getKeyCode does not report a killed key waiting to be freed", function()
+      local id = tempKey(mudlet.key.F10, [[ ]])
+      assert.is_not_nil(getKeyCode(id))
+      assert.is_true(killKey(id))
+      local code, err = getKeyCode(id)
+      assert.is_nil(code, "a killed key has no key code to report")
+      assert.is_string(err)
     end)
 
     it("killKey returns false for a permanent key (they cannot be killed)", function()

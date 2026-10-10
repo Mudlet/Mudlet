@@ -98,6 +98,9 @@ public:
     QList<TTimer*> uninstallList;
     QSet<TTimer*> mCleanupSet;
     bool hasPendingDeletes() const { return !mCleanupSet.isEmpty() || !uninstallList.isEmpty(); }
+    // Killed or uninstalled, itself or through an ancestor, but still in the lookup tables: doCleanup() runs only
+    // on the next line, timer flush or temp purge, so on an idle profile that can be a minute away
+    bool pendingDeletion(TTimer* pItem) const;
 
 private:
     TimerUnit() = default;

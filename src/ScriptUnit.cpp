@@ -349,6 +349,19 @@ std::vector<int> ScriptUnit::findItems(const QString& name, const bool exactMatc
     return ids;
 }
 
+bool ScriptUnit::pendingDeletion(TScript* pItem) const
+{
+    if (!hasPendingDeletes()) {
+        return false;
+    }
+    for (auto* pAncestor = pItem; pAncestor; pAncestor = pAncestor->getParent()) {
+        if (uninstallList.contains(pAncestor)) {
+            return true;
+        }
+    }
+    return false;
+}
+
 void ScriptUnit::assembleReport(TScript* pItem)
 {
     std::list<Tree<TScript>*>* childrenList = pItem->mpMyChildrenList;

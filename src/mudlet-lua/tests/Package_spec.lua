@@ -1126,6 +1126,107 @@ describe("Tests a package that uninstalls itself", function()
   end)
 end)
 
+-- Regression #10739: what a package uninstalls mid-pass is only queued, and
+-- exists()/findItems() must not count it - nor must that hide which package the
+-- code still running belongs to.
+describe("Tests what a package that uninstalls itself mid-pass can still see", function()
+  local function triggerXml(name, pattern, code)
+    return table.concat({
+      '<Trigger isActive="yes" isFolder="no" isTempTrigger="no" isMultiline="no" isPerlSlashGOption="no"',
+      '         isColorizerTrigger="no" isFilterTrigger="no" isSoundTrigger="no" isColorTrigger="no">',
+      "<name>" .. name .. "</name>",
+      "<script>" .. code .. "</script>",
+      "<triggerType>0</triggerType><conditonLineDelta>0</conditonLineDelta><mStayOpen>0</mStayOpen>",
+      "<mCommand></mCommand><packageName></packageName>",
+      "<regexCodeList><string>" .. pattern .. "</string></regexCodeList>",
+      "<regexCodePropertyList><integer>0</integer></regexCodePropertyList>",
+      "</Trigger>"}, "\n")
+  end
+
+  local function scriptXml(name, code, eventName)
+    return '<Script isActive="yes" isFolder="no"><name>' .. name .. '</name><packageName></packageName>'
+      .. "<script>" .. code .. "</script><eventHandlerList>"
+      .. (eventName and ("<string>" .. eventName .. "</string>") or "") .. "</eventHandlerList></Script>"
+  end
+
+  local function withScratchPackage(name, body)
+    lfs.mkdir(scratchDirectory)
+    local path = scratchDirectory .. "/" .. name .. ".xml"
+    writePackageXml(path, body)
+    defer(function()
+      removeFixturePackage(name)
+      os.remove(path)
+      lfs.rmdir(scratchDirectory)
+    end)
+    installUntilConfirmed(installPackage, path, function() return packageInstalled(name) end, "the package " .. name)
+    return path
+  end
+
+  it("stops counting its own trigger once its trigger has asked for the uninstall", function()
+    local name = "mudlet-spec-midpass-trigger"
+    local trigger = name .. " trigger"
+    local path = withScratchPackage(name, table.concat({
+      "<TriggerPackage>",
+      triggerXml(trigger, "mudlet_spec_midpass_fire", table.concat({
+        -- not the trigger's main chunk, so addCommand() has to look the chunk's owner up
+        'local function late() return addCommand{name = "mudlet-spec midpass command", menuPath = "MudletSpec"} end',
+        'mudletSpecMidpassRemoved = uninstallPackage("' .. name .. '")',
+        'if mudletSpecMidpassRemoved then',
+        '  mudletSpecMidpassSeen = {exists("' .. trigger .. '", "trigger"), #findItems("' .. trigger .. '", "trigger"), isActive("' .. trigger .. '", "trigger")}',
+        '  mudletSpecMidpassCommand = late()',
+        'end'}, "\n")),
+      "</TriggerPackage>",
+    }, "\n"))
+    defer(function()
+      if type(_G.mudletSpecMidpassCommand) == "number" then
+        removeCommand(_G.mudletSpecMidpassCommand)
+      end
+      _G.mudletSpecMidpassRemoved, _G.mudletSpecMidpassSeen, _G.mudletSpecMidpassCommand = nil, nil, nil
+    end)
+
+    -- the uninstall is refused while the install's profile save runs, so fire until it takes
+    assert.is_true(waitUntil(function()
+      assert.is_true(waitForProfileSaveToPass(), "a profile save was still running after 5s")
+      feedTriggers("\nmudlet_spec_midpass_fire\n")
+      return _G.mudletSpecMidpassRemoved == true
+    end, 8000), "the package's trigger could not uninstall it")
+    assert.are.same({0, 0, 0}, _G.mudletSpecMidpassSeen, "exists, findItems and isActive for the trigger queued for removal")
+    assert.is_number(_G.mudletSpecMidpassCommand, "the package's code could not place its command")
+
+    -- the command still belongs to the package, so the package's next uninstall takes it
+    installUntilConfirmed(installPackage, path, function() return packageInstalled(name) end, "the package " .. name .. ", again")
+    removeFixturePackage(name)
+    assert.is_false(removeCommand(_G.mudletSpecMidpassCommand), "the command was not filed under the package whose code placed it")
+  end)
+
+  it("stops counting its own script once its event handler has asked for the uninstall", function()
+    local name = "mudlet-spec-midpass-script"
+    local handler = "mudletSpecMidpassHandler"
+    withScratchPackage(name, table.concat({
+      "<ScriptPackage>",
+      scriptXml(handler, table.concat({
+        "function " .. handler .. "()",
+        '  mudletSpecMidpassRemoved = uninstallPackage("' .. name .. '")',
+        '  if mudletSpecMidpassRemoved then',
+        '    mudletSpecMidpassSeen = {exists("' .. handler .. '", "script"), #findItems("' .. handler .. '", "script"), isActive("' .. handler .. '", "script")}',
+        '  end',
+        "end"}, "\n"), "mudletSpecMidpassEvent"),
+      "</ScriptPackage>",
+    }, "\n"))
+    defer(function()
+      _G.mudletSpecMidpassRemoved, _G.mudletSpecMidpassSeen = nil, nil
+      _G[handler] = nil
+    end)
+
+    assert.is_true(waitUntil(function()
+      assert.is_true(waitForProfileSaveToPass(), "a profile save was still running after 5s")
+      raiseEvent("mudletSpecMidpassEvent")
+      return _G.mudletSpecMidpassRemoved == true
+    end, 8000), "the package's handler could not uninstall it")
+    assert.are.same({0, 0, 0}, _G.mudletSpecMidpassSeen, "exists, findItems and isActive for the script queued for removal")
+  end)
+end)
+
 describe("Tests a package that uninstalls itself while it is being installed", function()
   -- Regression #10867: a package's own scripts run while the install is still
   -- reading the package in, so an uninstallPackage() from one of them took away

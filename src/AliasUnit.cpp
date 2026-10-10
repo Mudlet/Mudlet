@@ -409,6 +409,19 @@ std::vector<int> AliasUnit::findItems(const QString& name, const bool exactMatch
     return ids;
 }
 
+bool AliasUnit::pendingDeletion(TAlias* pItem) const
+{
+    if (!hasPendingDeletes()) {
+        return false;
+    }
+    for (auto* pAncestor = pItem; pAncestor; pAncestor = pAncestor->getParent()) {
+        if (mCleanupSet.contains(pAncestor) || uninstallList.contains(pAncestor)) {
+            return true;
+        }
+    }
+    return false;
+}
+
 bool AliasUnit::enableAlias(const QString& name)
 {
     bool found = false;
