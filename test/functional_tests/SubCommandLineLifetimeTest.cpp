@@ -153,7 +153,7 @@ private slots:
     void init()
     {
         QVERIFY(mpHost);
-        QVERIFY(mpHost->mpConsole);
+        QVERIFY(mpHost->mainConsoleView());
     }
 
     // Route 1: enableCommandLine() on a miniconsole, then deleteMiniConsole().
@@ -161,7 +161,7 @@ private slots:
     // destruction frees it.
     void test_miniConsoleCommandLineDeregistersWhenConsoleDeleted()
     {
-        TMainConsole* console = mpHost->mpConsole;
+        TMainConsole* console = mpHost->mainConsoleView();
         const QString name = qsl("doomedMiniConsole");
 
         TConsole* miniConsole = console->createMiniConsole(QString(), name, 0, 0, 300, 100);
@@ -186,7 +186,7 @@ private slots:
     // Route 2: createCommandLine() into a scroll box, then deleteScrollBox().
     void test_scrollBoxCommandLineDeregistersWhenScrollBoxDeleted()
     {
-        TMainConsole* console = mpHost->mpConsole;
+        TMainConsole* console = mpHost->mainConsoleView();
         const QString scrollBoxName = qsl("doomedScrollBox");
         const QString cmdLineName = qsl("scrollBoxCmdLine");
 
@@ -212,7 +212,7 @@ private slots:
     // on that user window - the dock owns the command line's parent widget.
     void test_userWindowCommandLineDeregistersWhenWindowDeleted()
     {
-        TMainConsole* console = mpHost->mpConsole;
+        TMainConsole* console = mpHost->mainConsoleView();
         const QString windowName = qsl("doomedUserWindow");
         const QString cmdLineName = qsl("userWindowCmdLine");
 
@@ -240,7 +240,7 @@ private slots:
     // is drawn over the main window.
     void test_aDeletedUserWindowLeavesTheMainWindowAtOnce()
     {
-        TMainConsole* console = mpHost->mpConsole;
+        TMainConsole* console = mpHost->mainConsoleView();
         const QString windowName = qsl("undockedUserWindow");
 
         auto [opened, openMsg] = mpHost->openWindow(windowName, /*loadLayout=*/false, /*autoDock=*/true, QString());
@@ -266,7 +266,7 @@ private slots:
     // entry itself, so the destructor has to cope with the name already gone.
     void test_deleteCommandLineDeregisters()
     {
-        TMainConsole* console = mpHost->mpConsole;
+        TMainConsole* console = mpHost->mainConsoleView();
         const QString name = qsl("explicitlyDeletedCmdLine");
 
         auto [created, createMsg] = console->createCommandLine(QString(), name, 0, 0, 100, 30);
@@ -291,7 +291,7 @@ private slots:
     // AddressSanitizer). Kept last so the cheaper assertions above report first.
     void test_changingDisplayFontAfterDeletedWindowIsSafe()
     {
-        TMainConsole* console = mpHost->mpConsole;
+        TMainConsole* console = mpHost->mainConsoleView();
         const QString name = qsl("fontWalkMiniConsole");
 
         TConsole* miniConsole = console->createMiniConsole(QString(), name, 0, 0, 300, 100);
@@ -320,7 +320,7 @@ private slots:
     // same name before the old widget's deferred delete has run must survive it.
     void test_recreatingBeforeTheDeferredDeleteKeepsTheNewCommandLine()
     {
-        TMainConsole* console = mpHost->mpConsole;
+        TMainConsole* console = mpHost->mainConsoleView();
         const QString name = qsl("reusedCmdLineName");
 
         auto [created, createMsg] = console->createCommandLine(QString(), name, 0, 0, 100, 30);
@@ -345,7 +345,7 @@ private slots:
     // line the player used last, even when another one holds it now
     void test_hostFocusGoesToTheLastUsedCommandLine()
     {
-        TMainConsole* console = mpHost->mpConsole;
+        TMainConsole* console = mpHost->mainConsoleView();
         const QString name = qsl("lastUsedCmdLine");
 
         auto [created, createMsg] = console->createCommandLine(QString(), name, 0, 0, 100, 30);
@@ -377,7 +377,7 @@ private slots:
     // With no command line on record the main console's own one takes the focus
     void test_hostFocusFallsBackToTheMainCommandLine()
     {
-        TMainConsole* console = mpHost->mpConsole;
+        TMainConsole* console = mpHost->mainConsoleView();
         const QString name = qsl("focusedAwayCmdLine");
 
         auto [created, createMsg] = console->createCommandLine(QString(), name, 0, 0, 100, 30);
@@ -411,7 +411,7 @@ private slots:
     // the one used before it, rather than ending the search at the main one
     void test_hostFocusSkipsADestroyedCommandLine()
     {
-        TMainConsole* console = mpHost->mpConsole;
+        TMainConsole* console = mpHost->mainConsoleView();
         const QString survivorName = qsl("usedBeforeCmdLine");
         const QString doomedName = qsl("destroyedCmdLine");
 
@@ -454,7 +454,7 @@ private slots:
     // longer reaches a command line at all (#8499)
     void test_hidingAFocusedSubCommandLineHandsFocusToTheMainOne()
     {
-        TMainConsole* console = mpHost->mpConsole;
+        TMainConsole* console = mpHost->mainConsoleView();
         const QString name = qsl("hiddenWhileFocusedCmdLine");
 
         auto [created, createMsg] = console->createCommandLine(QString(), name, 0, 0, 100, 30);
@@ -491,7 +491,7 @@ private slots:
     // mSubCommandLineMap included, have already been destroyed.
     void test_destroyingTheConsoleWithALiveCommandLineIsSafe()
     {
-        TMainConsole* console = mpHost->mpConsole;
+        TMainConsole* console = mpHost->mainConsoleView();
         const QString name = qsl("outlivesTheConsole");
 
         auto [created, createMsg] = console->createCommandLine(QString(), name, 0, 0, 100, 30);

@@ -42,6 +42,7 @@
 #include "ProfileTestHelper.h"
 #include "Host.h"
 #include "MudletInstanceCoordinator.h"
+#include "TMainConsole.h"
 #include "ctelnet.h"
 #include "dlgConnectionProfiles.h"
 #include "mudlet.h"
@@ -492,8 +493,8 @@ private:
     {
         return QTest::qWaitFor(
                 [host, &text]() {
-                    for (int i = 0; i <= host->mpConsole->buffer.getLastLineNumber(); ++i) {
-                        if (host->mpConsole->buffer.line(i).contains(text)) {
+                    for (int i = 0; i <= host->mainConsoleView()->buffer.getLastLineNumber(); ++i) {
+                        if (host->mainConsoleView()->buffer.line(i).contains(text)) {
                             return true;
                         }
                     }
