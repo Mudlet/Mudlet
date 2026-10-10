@@ -232,13 +232,15 @@ describe("Tests that the scroll bar and scrolling functions find their console b
       assert.is_true(scrollingActive("main"))
     end)
 
-    -- the main console is always scrolling, and an empty name is let through
-    -- to it and answered by it, rather than turned away as "main" is
-    it("leaves the main console scrolling when given an empty name", function()
-      assert.is_true(disableScrolling(""))
+    -- the main console is always scrolling, so an empty name or none at all
+    -- is turned away the same as "main" rather than answered with a no-op
+    it("will not turn scrolling off or on with an empty name or none", function()
+      assert.are.same({nil, mainOnly}, {disableScrolling("")})
+      assert.are.same({nil, mainOnly}, {enableScrolling("")})
+      assert.are.same({nil, mainOnly}, {disableScrolling()})
+      assert.are.same({nil, mainOnly}, {enableScrolling()})
       assert.is_true(scrollingActive(""))
-      assert.is_true(enableScrolling(""))
-      assert.is_true(scrollingActive(""))
+      assert.is_true(scrollingActive())
     end)
   end)
 end)

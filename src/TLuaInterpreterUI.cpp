@@ -4553,7 +4553,7 @@ int TLuaInterpreter::pasteWindow(lua_State* L)
 int TLuaInterpreter::enableScrolling(lua_State* L)
 {
     const QString windowName{WINDOW_NAME(L, 1)};
-    if (windowName.compare(qsl("main"), Qt::CaseSensitive) == 0) {
+    if (isMain(windowName)) {
         return warnArgumentValue(L, __func__, "scrolling cannot be enabled/disabled for the 'main' window");
     }
 
@@ -4569,7 +4569,7 @@ int TLuaInterpreter::enableScrolling(lua_State* L)
 int TLuaInterpreter::disableScrolling(lua_State* L)
 {
     const QString windowName{WINDOW_NAME(L, 1)};
-    if (windowName.compare(qsl("main"), Qt::CaseSensitive) == 0) {
+    if (isMain(windowName)) {
         return warnArgumentValue(L, __func__, "scrolling cannot be enabled/disabled for the 'main' window");
     }
 
@@ -4585,7 +4585,7 @@ int TLuaInterpreter::disableScrolling(lua_State* L)
 int TLuaInterpreter::scrollingActive(lua_State* L)
 {
     const QString windowName{WINDOW_NAME(L, 1)};
-    if (windowName.compare(qsl("main"), Qt::CaseSensitive) == 0) {
+    if (isMain(windowName)) {
         // Handle the main console case:
         lua_pushboolean(L, true);
         return 1;
