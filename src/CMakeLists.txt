@@ -210,7 +210,6 @@ set(mudlet_app_SRCS
     FileOpenHandler.cpp
     HostDialogs.cpp
     LabelInteractionHandler.cpp
-    main.cpp
     MiddleMousePanHandler.cpp
     mudlet.cpp
     PackageItemDelegate.cpp
@@ -984,7 +983,6 @@ if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
   set_property(SOURCE "${CMAKE_CURRENT_BINARY_DIR}/${LIB_MUDLET_APP_TARGET}_autogen/mocs_compilation.cpp"
                APPEND PROPERTY COMPILE_OPTIONS -Wno-sfinae-incomplete)
 endif()
-target_compile_definitions(${LIB_MUDLET_APP_TARGET} PRIVATE APP_TARGET="${APP_TARGET}")
 # The ui_*.h headers, for the tests that reach into a dialog's widgets
 target_include_directories(${LIB_MUDLET_APP_TARGET} INTERFACE
     ${CMAKE_CURRENT_BINARY_DIR}/${LIB_MUDLET_APP_TARGET}_autogen/include
@@ -998,7 +996,10 @@ target_link_libraries(${LIB_MUDLET_APP_TARGET} PUBLIC
     ${QT_APP_LIBS}
     ${LIB_MUDLET_TARGET})
 
-add_executable(${EXE_MUDLET_TARGET} emptyFile.cpp)
+# main() stays out of the libraries: a test that links them brings its own, and
+# the linker can pull main.cpp's object in for any inline function it defines.
+add_executable(${EXE_MUDLET_TARGET} main.cpp)
+target_compile_definitions(${EXE_MUDLET_TARGET} PRIVATE APP_TARGET="${APP_TARGET}")
 set_target_properties(${EXE_MUDLET_TARGET} PROPERTIES OUTPUT_NAME ${EXE_MUDLET_NAME})
 target_link_libraries(${EXE_MUDLET_TARGET} ${LIB_MUDLET_APP_TARGET} mudlet_lsan_hooks)
 

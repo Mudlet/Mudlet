@@ -58,7 +58,7 @@ local subsystems = {
     "^FileOpenHandler", "^DarkTheme", "^AltFocusMenuBarDisable", "^TForkedProcess",
     "^TUiTour", "^TFeatureCallout", "^TTabBar", "^TToolBar", "^TDockWidget",
     "^TDetachedWindow", "^TEasyButtonBar", "^TFlipButton", "^TLabel", "^TTreeWidget",
-    "^WideComboBox", "^PackageItemDelegate", "^GifTracker", "^LsanHooks", "^emptyFile",
+    "^WideComboBox", "^PackageItemDelegate", "^GifTracker", "^LsanHooks",
     "^enums%.h", "^utils%.h", "^TGameDetails", "^TMapView",
   }},
 }
