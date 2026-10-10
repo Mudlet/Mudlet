@@ -125,7 +125,7 @@ private:
     void makeTheMapper()
     {
         mpHost->showHideOrCreateMapper(false);
-        mpMapper = map()->mpMapper;
+        mpMapper = map()->mapper();
         QVERIFY2(mpMapper, "the profile has no mapper to take the cues");
         mp2dMap = mpMapper->mp2dMap;
         QVERIFY(mp2dMap);
@@ -214,7 +214,7 @@ private slots:
                 return;
             }
         }
-        QVERIFY2(map()->mpMapper == mpMapper, "the mapper made for this test is no longer the one drawing the map");
+        QVERIFY2(map()->mapper() == mpMapper, "the mapper made for this test is no longer the one drawing the map");
         mpMapper->show();
         mpMapper->updateAreaComboBox();
         mpMapper->comboBox_showArea->setCurrentText(qsl("Ground"));
@@ -225,7 +225,7 @@ private slots:
     // Needs a profile with no mapper yet, so it must stay the first test.
     void test_withoutAMapperTheDefaultAreaIsLeftAloneAndAreasStillWork()
     {
-        QVERIFY2(map()->mpMapper.isNull(), "the profile already has a mapper");
+        QVERIFY2(!map()->mapper(), "the profile already has a mapper");
 
         QVERIFY(lua(qsl("assert(setDefaultAreaVisible(true) == false)")));
         QVERIFY2(!map()->getDefaultAreaShown(), "setDefaultAreaVisible changed the map with no mapper open");
@@ -424,7 +424,7 @@ private slots:
     void test_onlyTheMapperDrawingTheMapFollowsTheLuaFunctions()
     {
         auto other = std::make_unique<dlgMapper>(nullptr, mpHost, map());
-        QVERIFY2(map()->mpMapper == mpMapper, "making a second mapper took the map over");
+        QVERIFY2(map()->mapper() == mpMapper, "making a second mapper took the map over");
         other->updateAreaComboBox();
         other->comboBox_showArea->setCurrentText(qsl("Ground"));
         const QStringList otherAreasBefore = areaListOf(other.get());

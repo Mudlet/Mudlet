@@ -121,13 +121,13 @@ private:
     T2DMap* preparedWidget() const
     {
         TMap* pMap = map();
-        if (!pMap->mpMapper) {
+        if (!pMap->mapper()) {
             mpHost->showHideOrCreateMapper(false);
         }
-        if (!pMap->mpMapper || !pMap->mpMapper->mp2dMap) {
+        if (!pMap->mapper() || !pMap->mapper()->mp2dMap) {
             return nullptr;
         }
-        T2DMap* p2dMap = pMap->mpMapper->mp2dMap;
+        T2DMap* p2dMap = pMap->mapper()->mp2dMap;
         p2dMap->init();
         p2dMap->resize(kWidgetWidth, kWidgetHeight);
         // Both false is what makes paintEvent() centre on the player room and
