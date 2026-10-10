@@ -5785,10 +5785,6 @@ int Host::calcColumnWidth(const QString& windowName)
 
 bool Host::setProfileStyleSheet(const QString& styleSheet)
 {
-    if (!hasConsoleView()) {
-        return false;
-    }
-
     mProfileStyleSheet = styleSheet;
     consoleFrontend()->setProfileStyleSheet(styleSheet);
     emit signal_profileStyleSheetChanged(styleSheet);

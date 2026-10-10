@@ -566,6 +566,104 @@ headlessContract = ok and "ok" or tostring(err)
         QVERIFY2(QApplication::topLevelWidgets().isEmpty(), "Keeping the contract created a widget.");
     }
 
+    // The answers are those of the same Lua run in the GUI self-test profile.
+    void test_headlessProfileStyleSheetContract()
+    {
+        const QString hostname = qsl("Test-Headless-Host-Profile-Sheet");
+        QVERIFY2(HostManager::self()->addHost(hostname, QString(), QString(), QString()), "Could not create a profile with no main window.");
+        Host* host = HostManager::self()->getHost(hostname);
+        QVERIFY2(host, "The profile is not in the pool.");
+        QVERIFY(!host->hasConsoleView());
+
+        const bool ran = host->getLuaInterpreter()->compileAndExecuteScript(qsl(R"lua(
+headlessProfileSheet = "not run"
+local ok, err = pcall(function()
+  local function described(called, ...)
+    if not called then
+      return "raised"
+    end
+    local count = select("#", ...)
+    local values = {}
+    for i = 1, count do
+      local value = select(i, ...)
+      values[i] = (i > 1 and type(value) == "string") and "msg" or tostring(value)
+    end
+    return "[" .. count .. "]" .. table.concat(values, ":")
+  end
+  local answers = {}
+  local function step(label, f, ...)
+    answers[#answers + 1] = label .. "=" .. described(pcall(f, ...))
+  end
+  step("openA", openUserWindow, "psA", false, false, "f")
+  step("openB", openUserWindow, "psB", true)
+  step("ownB", setUserWindowStyleSheet, "psB", "color: blue;")
+  step("sheetA", getUserWindowStyleSheet, "psA")
+  step("sheetB", getUserWindowStyleSheet, "psB")
+  step("set", setProfileStyleSheet, "QWidget { color: rgb(1,2,3); }")
+  step("sheetA", getUserWindowStyleSheet, "psA")
+  step("sheetB", getUserWindowStyleSheet, "psB")
+  step("openC", openUserWindow, "psC", false, false, "f")
+  step("sheetC", getUserWindowStyleSheet, "psC")
+  step("ownA", setUserWindowStyleSheet, "psA", "color: green;")
+  step("sheetA", getUserWindowStyleSheet, "psA")
+  step("closeB", closeUserWindow, "psB")
+  step("set", setProfileStyleSheet, "QWidget { color: red; }")
+  step("sheetB", getUserWindowStyleSheet, "psB")
+  step("reopenB", openUserWindow, "psB", true)
+  step("sheetB", getUserWindowStyleSheet, "psB")
+  step("sheetA", getUserWindowStyleSheet, "psA")
+  step("mini", createMiniConsole, "psMini", 0, 0, 10, 10)
+  step("sheetMini", getUserWindowStyleSheet, "psMini")
+  step("same", setProfileStyleSheet, "QWidget { color: red; }")
+  step("unclosed", setProfileStyleSheet, "QWidget { color: ")
+  step("sheetA", getUserWindowStyleSheet, "psA")
+  step("number", setProfileStyleSheet, 5)
+  step("sheetA", getUserWindowStyleSheet, "psA")
+  step("none", setProfileStyleSheet)
+  step("empty", setProfileStyleSheet, "")
+  step("sheetA", getUserWindowStyleSheet, "psA")
+  step("sheetC", getUserWindowStyleSheet, "psC")
+  headlessProfileSheetAnswers = table.concat(answers, "\n")
+end)
+headlessProfileSheet = ok and "ok" or tostring(err)
+)lua"));
+
+        QVERIFY2(ran, "The Lua chunk did not run.");
+        QCOMPARE(luaGlobalString(host, "headlessProfileSheet"), qsl("ok"));
+        // Every user window takes the profile sheet, a closed one too, until one sets its own; a mini console has none to read
+        const QStringList answers{qsl("openA=[1]true"),
+                                  qsl("openB=[1]true"),
+                                  qsl("ownB=[1]true"),
+                                  qsl("sheetA=[1]"),
+                                  qsl("sheetB=[1]color: blue;"),
+                                  qsl("set=[1]true"),
+                                  qsl("sheetA=[1]QWidget { color: rgb(1,2,3); }"),
+                                  qsl("sheetB=[1]QWidget { color: rgb(1,2,3); }"),
+                                  qsl("openC=[1]true"),
+                                  qsl("sheetC=[1]QWidget { color: rgb(1,2,3); }"),
+                                  qsl("ownA=[1]true"),
+                                  qsl("sheetA=[1]color: green;"),
+                                  qsl("closeB=[0]"),
+                                  qsl("set=[1]true"),
+                                  qsl("sheetB=[1]QWidget { color: red; }"),
+                                  qsl("reopenB=[1]true"),
+                                  qsl("sheetB=[1]QWidget { color: red; }"),
+                                  qsl("sheetA=[1]QWidget { color: red; }"),
+                                  qsl("mini=[1]true"),
+                                  qsl("sheetMini=[2]nil:msg"),
+                                  qsl("same=[1]true"),
+                                  qsl("unclosed=[1]true"),
+                                  qsl("sheetA=[1]QWidget { color: "),
+                                  qsl("number=[1]true"),
+                                  qsl("sheetA=[1]5"),
+                                  qsl("none=raised"),
+                                  qsl("empty=[1]true"),
+                                  qsl("sheetA=[1]"),
+                                  qsl("sheetC=[1]")};
+        QCOMPARE(luaGlobalString(host, "headlessProfileSheetAnswers"), answers.join(QLatin1Char('\n')));
+        QVERIFY2(QApplication::topLevelWidgets().isEmpty(), "Setting the profile sheet created a widget.");
+    }
+
     // What a profile with no view answers the scroll calls, taken from the same Lua run in the GUI self-test
     // profile, which lets each real pane repaint before it is read and re-issues each scroll until it holds.
     void test_headlessScrollContract()
