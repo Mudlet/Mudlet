@@ -19,8 +19,9 @@
 
 /*
  * GeometryManager hands its arrays to the GPU as tightly packed attributes:
- * three floats of position per vertex in one buffer and three floats of normal
- * in another, so anything else in the position array is drawn as a vertex.
+ * three floats of position per vertex, with normals in an array of their own
+ * rather than interleaved, so anything else in the position array is drawn as
+ * a vertex.
  * A mat4 vertex attribute takes four consecutive locations, so an attribute
  * declared inside that span aliases one of its columns.
  */

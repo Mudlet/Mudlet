@@ -135,7 +135,7 @@ void ModernGLWidget::showFailure(const QString& message)
         layout->setContentsMargins(0, 0, 0, 0);
         layout->addWidget(mpFailureLabel);
     }
-    //: Second paragraph of the message shown in place of the 3D map when the modern 3D mapper cannot run
+    //: Second paragraph of the message shown in place of the 3D map when the modern 3D mapper cannot run; keep setConfig("experiment.3dmap.modernmapper", false) exactly as written, it is Lua code the user types
     mpFailureLabel->setText(qsl("%1\n\n%2").arg(message, tr("Use setConfig(\"experiment.3dmap.modernmapper\", false) to switch back to the classic 3D view.")));
     mpFailureLabel->show();
 }
@@ -159,6 +159,8 @@ void ModernGLWidget::initializeGL()
         showFailure(tr("The modern 3D mapper needs OpenGL 3.3, but this system only provides OpenGL %1.%2.").arg(actualFormat.majorVersion()).arg(actualFormat.minorVersion()));
         return;
     }
+    qDebug().nospace() << "ModernGLWidget: OpenGL " << actualFormat.majorVersion() << "." << actualFormat.minorVersion()
+                       << (actualFormat.profile() == QSurfaceFormat::CoreProfile ? " core" : " compatibility") << " on " << reinterpret_cast<const char*>(glGetString(GL_RENDERER));
 
     const QColor color(mpHost->mBgColor_2);
     glClearColor(color.redF(), color.greenF(), color.blueF(), color.alphaF());
@@ -182,6 +184,9 @@ void ModernGLWidget::initializeGL()
 
     connect(&mShaderManager, &ShaderManager::shadersReloaded, this, QOverload<>::of(&QWidget::update), Qt::UniqueConnection);
 
+    // setupBuffers() checks for GL errors through it, which it skips until initialized
+    mResourceManager.initialize();
+
     setupBuffers();
 
     // Initialize geometry manager
@@ -189,9 +194,6 @@ void ModernGLWidget::initializeGL()
 
     // Initialize render command queue
     mRenderCommandQueue.initialize();
-
-    // Initialize resource manager
-    mResourceManager.initialize();
 
     // Initialize label texture cache
     mLabelTextureCache.initialize();
