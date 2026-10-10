@@ -42,6 +42,8 @@
 #include <QTimer>
 #include <QtTest/QtTest>
 
+#include <algorithm>
+
 #include "Host.h"
 #include "MudletInstanceCoordinator.h"
 #include "MudletApp.h"
@@ -92,6 +94,8 @@ private:
 
     static QColor lineColour() { return QColor(0, 255, 128); }
 
+    static bool customLineColoured(const QColor& pixel) { return pixel.green() > 60 && pixel.green() > pixel.blue() + 20 && pixel.blue() > pixel.red() + 20; }
+
     void deleteProfileDirectory() const
     {
         QDir dir(MudletApp::getMudletPath(enums::profileHomePath, mProfileName));
@@ -114,13 +118,64 @@ private:
         int count = 0;
         for (int y = 0; y < image.height(); ++y) {
             for (int x = 0; x < image.width(); ++x) {
-                const QColor pixel = image.pixelColor(x, y);
-                if (pixel.green() > 60 && pixel.green() > pixel.blue() + 20 && pixel.blue() > pixel.red() + 20) {
+                if (customLineColoured(image.pixelColor(x, y))) {
                     ++count;
                 }
             }
         }
         return count;
+    }
+
+    // The mapper showing areaId at kZoom, centred on the origin with the player there.
+    T2DMap* showAreaAtTheOrigin(const int areaId) const
+    {
+        TMap* pMap = map();
+        pMap->mRoomIdHash[pMap->mProfileName] = kPlayerRoomId;
+        pMap->mNewMove = false;
+        pMap->setDefaultAreaShown(false);
+        mpHost->showHideOrCreateMapper(false);
+        if (!pMap->mpMapper || !pMap->mpMapper->mp2dMap) {
+            return nullptr;
+        }
+        T2DMap* p2dMap = pMap->mpMapper->mp2dMap;
+        p2dMap->init();
+        p2dMap->resize(kWidgetWidth, kWidgetHeight);
+        p2dMap->mRoomID = kPlayerRoomId;
+        p2dMap->mShiftMode = true;
+        p2dMap->mPick = false;
+        p2dMap->mAreaID = areaId;
+        p2dMap->mMapCenterZ = 0;
+        p2dMap->mMapCenterX = 0;
+        p2dMap->mMapCenterY = 0;
+        TArea* pArea = pMap->mpRoomDB->getArea(areaId);
+        if (!pArea) {
+            return nullptr;
+        }
+        pArea->set2DMapZoom(kZoom);
+        return p2dMap;
+    }
+
+    static QImage renderMapFrame(T2DMap* p2dMap)
+    {
+        QPixmap target(kWidgetWidth, kWidgetHeight);
+        target.fill(Qt::black);
+        p2dMap->render(&target, QPoint(), QRegion(), QWidget::DrawWindowBackground);
+        return target.toImage();
+    }
+
+    static void setCustomLine(TRoom* pRoom, const QString& exitKey, const QList<QPointF>& points)
+    {
+        pRoom->customLines[exitKey] = points;
+        pRoom->customLinesColor[exitKey] = lineColour();
+        pRoom->customLinesStyle[exitKey] = Qt::SolidLine;
+        pRoom->customLinesArrow[exitKey] = false;
+        pRoom->calcRoomDimensions();
+    }
+
+    static void removeCustomLine(TRoom* pRoom, const QString& exitKey)
+    {
+        pRoom->customLines.remove(exitKey);
+        pRoom->calcRoomDimensions();
     }
 
 private slots:
@@ -257,6 +312,344 @@ private slots:
             frame.save(framePath);
             QFAIL(qPrintable(qsl("the custom line of the room at y=%1 never reached the viewport - only %2 pixels of its colour were drawn. The frame is at %3")
                                      .arg(QString::number(kFarRoomY), QString::number(linePixels), framePath)));
+        }
+    }
+
+    // A custom line on one end of a two-way exit stands for both directions, so
+    // the plain line from the other end must not be drawn over it. Which of
+    // the two rooms paints last follows hash order, which Qt seeds per process,
+    // so one pair could pass by luck where seventy cannot.
+    void test_aPlainReturnExitDoesNotOverdrawACustomLine()
+    {
+        TMap* pMap = map();
+        TRoomDB* pRoomDB = pMap->mpRoomDB.get();
+        pMap->mapClear();
+
+        const int areaId = pRoomDB->addArea(qsl("Overdraw Area"));
+        QVERIFY(areaId > 0);
+        QVERIFY(addRoomAt(kPlayerRoomId, areaId, 0, 0));
+
+        QList<QPoint> westEnds;
+        int nextId = 1000;
+        for (int y = -9; y <= 9; y += 2) {
+            for (int x = -14; x <= 10; x += 4) {
+                const int westId = nextId++;
+                const int eastId = nextId++;
+                QVERIFY(addRoomAt(westId, areaId, x, y));
+                QVERIFY(addRoomAt(eastId, areaId, x + 2, y));
+                TRoom* pWest = pRoomDB->getRoom(westId);
+                TRoom* pEast = pRoomDB->getRoom(eastId);
+                QVERIFY(pWest && pEast);
+                pWest->setEast(eastId);
+                pEast->setWest(westId);
+                pWest->customLines[qsl("e")] = QList<QPointF>{QPointF(x + 2, y)};
+                pWest->customLinesColor[qsl("e")] = lineColour();
+                pWest->customLinesStyle[qsl("e")] = Qt::SolidLine;
+                pWest->customLinesArrow[qsl("e")] = false;
+                pWest->calcRoomDimensions();
+                westEnds << QPoint(x, y);
+            }
+        }
+
+        pMap->mRoomIdHash[pMap->mProfileName] = kPlayerRoomId;
+        pMap->mNewMove = false;
+        pMap->setDefaultAreaShown(false);
+
+        mpHost->showHideOrCreateMapper(false);
+        QVERIFY(pMap->mpMapper);
+        T2DMap* p2dMap = pMap->mpMapper->mp2dMap;
+        QVERIFY(p2dMap);
+        p2dMap->init();
+        p2dMap->resize(kWidgetWidth, kWidgetHeight);
+        p2dMap->mRoomID = kPlayerRoomId;
+        p2dMap->mShiftMode = true;
+        p2dMap->mPick = false;
+        p2dMap->mAreaID = areaId;
+        p2dMap->mMapCenterZ = 0;
+        p2dMap->mMapCenterX = 0;
+        p2dMap->mMapCenterY = 0;
+        TArea* pArea = pRoomDB->getArea(areaId);
+        QVERIFY(pArea);
+        pArea->set2DMapZoom(kZoom);
+
+        QPixmap target(kWidgetWidth, kWidgetHeight);
+        target.fill(Qt::black);
+        p2dMap->render(&target, QPoint(), QRegion(), QWidget::DrawWindowBackground);
+        const QImage frame = target.toImage();
+        QCOMPARE(p2dMap->getAreaId(), areaId);
+
+        const double pixelsPerUnit = static_cast<double>(p2dMap->mRoomWidth);
+        QVERIFY(pixelsPerUnit > 10.0);
+        const auto colouredPixelsBetween = [&](const double fromX, const double toX, const int mapY) {
+            int count = 0;
+            const int screenY = qRound(p2dMap->mRY - mapY * pixelsPerUnit);
+            for (int screenX = qRound(p2dMap->mRX + fromX * pixelsPerUnit); screenX <= qRound(p2dMap->mRX + toX * pixelsPerUnit); ++screenX) {
+                for (int dy = -3; dy <= 3; ++dy) {
+                    if (customLineColoured(frame.pixelColor(screenX, screenY + dy))) {
+                        ++count;
+                    }
+                }
+            }
+            return count;
+        };
+
+        // Both ends draw a two-way exit's plain line the whole way across, so a
+        // pair the plain line won shows next to none of the custom colour.
+        QList<int> counts;
+        for (const QPoint& westEnd : std::as_const(westEnds)) {
+            counts << colouredPixelsBetween(westEnd.x() + 0.4, westEnd.x() + 1.6, westEnd.y());
+        }
+        const int most = *std::max_element(counts.cbegin(), counts.cend());
+        QVERIFY2(most > 10, "no custom line was drawn at all");
+        const int overdrawn = static_cast<int>(std::count_if(counts.cbegin(), counts.cend(), [most](const int count) {
+            return count * 2 < most;
+        }));
+        if (overdrawn) {
+            const QString framePath = qsl("%1/MapOffscreenCustomLineTest-overdraw.png").arg(QDir::tempPath());
+            frame.save(framePath);
+            QFAIL(qPrintable(qsl("%1 of %2 custom lines were drawn over by the plain exit back. The frame is at %3").arg(overdrawn).arg(westEnds.size()).arg(framePath)));
+        }
+    }
+
+    // Only a custom line this view paints stands in for the plain exit back:
+    // one from a room in another area or on another level is not painted
+    // here, nor is one with no points, and an area exit's arrow is also its
+    // speed-walk click target.
+    void test_aPlainExitStaysWhereTheCustomLineBackIsNotPainted()
+    {
+        TMap* pMap = map();
+        TRoomDB* pRoomDB = pMap->mpRoomDB.get();
+        pMap->mapClear();
+
+        const int areaId = pRoomDB->addArea(qsl("Shown Area"));
+        const int otherAreaId = pRoomDB->addArea(qsl("Other Area"));
+        QVERIFY(areaId > 0 && otherAreaId > 0);
+        QVERIFY(addRoomAt(kPlayerRoomId, areaId, 0, 0));
+
+        struct Pair
+        {
+            int plainId;
+            int customId;
+            int y;
+        };
+        const QList<Pair> pairs{{2001, 2002, 3}, {2003, 2004, 0}, {2005, 2006, -3}};
+        constexpr int plainX = -8;
+        QVERIFY(addRoomAt(pairs[0].plainId, areaId, plainX, pairs[0].y));
+        QVERIFY(addRoomAt(pairs[0].customId, otherAreaId, plainX + 2, pairs[0].y));
+        QVERIFY(addRoomAt(pairs[1].plainId, areaId, plainX, pairs[1].y));
+        QVERIFY(addRoomAt(pairs[1].customId, areaId, plainX + 2, pairs[1].y));
+        QVERIFY(pMap->setRoomCoordinates(pairs[1].customId, plainX + 2, pairs[1].y, 1));
+        QVERIFY(addRoomAt(pairs[2].plainId, areaId, plainX, pairs[2].y));
+        QVERIFY(addRoomAt(pairs[2].customId, areaId, plainX + 2, pairs[2].y));
+        for (const Pair& pair : pairs) {
+            TRoom* pPlain = pRoomDB->getRoom(pair.plainId);
+            TRoom* pCustom = pRoomDB->getRoom(pair.customId);
+            QVERIFY(pPlain && pCustom);
+            pPlain->setEast(pair.customId);
+            pCustom->setWest(pair.plainId);
+        }
+        const auto setCustomLinesBack = [&](const bool present) {
+            for (const Pair& pair : pairs) {
+                TRoom* pCustom = pRoomDB->getRoom(pair.customId);
+                if (present) {
+                    pCustom->customLines[qsl("w")] = (pair.customId == pairs[2].customId) ? QList<QPointF>{} : QList<QPointF>{QPointF(plainX, pair.y)};
+                    pCustom->customLinesColor[qsl("w")] = lineColour();
+                    pCustom->customLinesStyle[qsl("w")] = Qt::SolidLine;
+                    pCustom->customLinesArrow[qsl("w")] = false;
+                } else {
+                    pCustom->customLines.remove(qsl("w"));
+                }
+                pCustom->calcRoomDimensions();
+            }
+        };
+
+        pMap->mRoomIdHash[pMap->mProfileName] = kPlayerRoomId;
+        pMap->mNewMove = false;
+        pMap->setDefaultAreaShown(false);
+
+        mpHost->showHideOrCreateMapper(false);
+        QVERIFY(pMap->mpMapper);
+        T2DMap* p2dMap = pMap->mpMapper->mp2dMap;
+        QVERIFY(p2dMap);
+        p2dMap->init();
+        p2dMap->resize(kWidgetWidth, kWidgetHeight);
+        p2dMap->mRoomID = kPlayerRoomId;
+        p2dMap->mShiftMode = true;
+        p2dMap->mPick = false;
+        p2dMap->mAreaID = areaId;
+        p2dMap->mMapCenterZ = 0;
+        p2dMap->mMapCenterX = 0;
+        p2dMap->mMapCenterY = 0;
+        TArea* pArea = pRoomDB->getArea(areaId);
+        QVERIFY(pArea);
+        pArea->set2DMapZoom(kZoom);
+
+        const auto renderFrame = [&]() {
+            QPixmap target(kWidgetWidth, kWidgetHeight);
+            target.fill(Qt::black);
+            p2dMap->render(&target, QPoint(), QRegion(), QWidget::DrawWindowBackground);
+            return target.toImage();
+        };
+        setCustomLinesBack(false);
+        const QImage withoutLines = renderFrame();
+        setCustomLinesBack(true);
+        const QImage withLines = renderFrame();
+        QCOMPARE(p2dMap->getAreaId(), areaId);
+
+        const double pixelsPerUnit = static_cast<double>(p2dMap->mRoomWidth);
+        QVERIFY(pixelsPerUnit > 10.0);
+        for (const Pair& pair : pairs) {
+            const int screenY = qRound(p2dMap->mRY - pair.y * pixelsPerUnit);
+            // Counted, not compared: where both ends draw the plain line its antialiased edges are darker
+            int drawnWithout = 0;
+            int drawnWith = 0;
+            for (int screenX = qRound(p2dMap->mRX + (plainX + 0.6) * pixelsPerUnit); screenX <= qRound(p2dMap->mRX + (plainX + 1.0) * pixelsPerUnit); ++screenX) {
+                for (int dy = -3; dy <= 3; ++dy) {
+                    if (withoutLines.pixelColor(screenX, screenY + dy) != QColor(Qt::black)) {
+                        ++drawnWithout;
+                    }
+                    if (withLines.pixelColor(screenX, screenY + dy) != QColor(Qt::black)) {
+                        ++drawnWith;
+                    }
+                }
+            }
+            QVERIFY2(drawnWithout > 0, qPrintable(qsl("room %1 drew no exit east even with no custom line back").arg(pair.plainId)));
+            QVERIFY2(drawnWith * 2 >= drawnWithout,
+                     qPrintable(qsl("room %1 lost its exit east to a custom line this view does not paint (%2 pixels drawn, %3 without it)").arg(pair.plainId).arg(drawnWith).arg(drawnWithout)));
+        }
+    }
+
+    // The custom line back stands in for the plain line, not for the door on
+    // it: that line draws only its own room's door, so this end's door must
+    // still be drawn by this end.
+    void test_aDoorStaysWhereTheCustomLineBackReplacesThePlainExit()
+    {
+        TMap* pMap = map();
+        TRoomDB* pRoomDB = pMap->mpRoomDB.get();
+        pMap->mapClear();
+
+        const int areaId = pRoomDB->addArea(qsl("Door Area"));
+        QVERIFY(areaId > 0);
+        QVERIFY(addRoomAt(kPlayerRoomId, areaId, 0, 0));
+        constexpr int doorRoomId = 3001;
+        constexpr int customRoomId = 3002;
+        constexpr int doorX = -8;
+        constexpr int rowY = 3;
+        QVERIFY(addRoomAt(doorRoomId, areaId, doorX, rowY));
+        QVERIFY(addRoomAt(customRoomId, areaId, doorX + 2, rowY));
+        TRoom* pDoorRoom = pRoomDB->getRoom(doorRoomId);
+        TRoom* pCustomRoom = pRoomDB->getRoom(customRoomId);
+        QVERIFY(pDoorRoom && pCustomRoom);
+        pDoorRoom->setEast(customRoomId);
+        pCustomRoom->setWest(doorRoomId);
+        QVERIFY(pDoorRoom->setDoor(qsl("e"), 3));
+
+        T2DMap* p2dMap = showAreaAtTheOrigin(areaId);
+        QVERIFY(p2dMap);
+        // Nothing else in the frame is magenta, nor is the custom line.
+        p2dMap->mLockedDoorColor = QColor(255, 0, 255);
+        const auto doorColoured = [](const QColor& pixel) {
+            return pixel.red() > 60 && pixel.blue() > 60 && qAbs(pixel.red() - pixel.blue()) < 40 && pixel.green() * 2 < pixel.red();
+        };
+
+        removeCustomLine(pCustomRoom, qsl("w"));
+        const QImage withoutLine = renderMapFrame(p2dMap);
+        setCustomLine(pCustomRoom, qsl("w"), {QPointF(doorX, rowY)});
+        const QImage withLine = renderMapFrame(p2dMap);
+        QCOMPARE(p2dMap->getAreaId(), areaId);
+
+        const double pixelsPerUnit = static_cast<double>(p2dMap->mRoomWidth);
+        QVERIFY(pixelsPerUnit > 10.0);
+        // The door sits most of the way along the near half of the exit, clear of both room squares.
+        const int screenY = qRound(p2dMap->mRY - rowY * pixelsPerUnit);
+        const int reach = qRound(0.6 * pixelsPerUnit);
+        int doorWithout = 0;
+        int doorWith = 0;
+        for (int screenX = qRound(p2dMap->mRX + (doorX + 0.5) * pixelsPerUnit); screenX <= qRound(p2dMap->mRX + (doorX + 1.2) * pixelsPerUnit); ++screenX) {
+            for (int dy = -reach; dy <= reach; ++dy) {
+                if (doorColoured(withoutLine.pixelColor(screenX, screenY + dy))) {
+                    ++doorWithout;
+                }
+                if (doorColoured(withLine.pixelColor(screenX, screenY + dy))) {
+                    ++doorWith;
+                }
+            }
+        }
+        QVERIFY2(doorWithout > 10, qPrintable(qsl("room %1 drew no door east even with no custom line back (%2 pixels)").arg(doorRoomId).arg(doorWithout)));
+        if (doorWith * 2 < doorWithout) {
+            const QString framePath = qsl("%1/MapOffscreenCustomLineTest-door.png").arg(QDir::tempPath());
+            withLine.save(framePath);
+            QFAIL(qPrintable(qsl("room %1 lost its locked door east to the custom line back (%2 pixels drawn, %3 without it). The frame is at %4")
+                                     .arg(doorRoomId)
+                                     .arg(doorWith)
+                                     .arg(doorWithout)
+                                     .arg(framePath)));
+        }
+    }
+
+    // The room at the other end is culled when its custom line never comes
+    // near the widget, so that line is not painted and cannot stand in for
+    // the plain exit from a room that is on screen.
+    void test_aPlainExitStaysWhereTheCustomLineBackIsOffTheWidget()
+    {
+        TMap* pMap = map();
+        TRoomDB* pRoomDB = pMap->mpRoomDB.get();
+        pMap->mapClear();
+
+        const int areaId = pRoomDB->addArea(qsl("Off Widget Area"));
+        QVERIFY(areaId > 0);
+        QVERIFY(addRoomAt(kPlayerRoomId, areaId, 0, 0));
+        constexpr int plainRoomId = 3101;
+        constexpr int customRoomId = 3102;
+        constexpr int plainX = 8;
+        constexpr int customX = 20;
+        constexpr int lineEndX = 18;
+        constexpr int rowY = 4;
+        QVERIFY(addRoomAt(plainRoomId, areaId, plainX, rowY));
+        QVERIFY(addRoomAt(customRoomId, areaId, customX, rowY));
+        TRoom* pPlainRoom = pRoomDB->getRoom(plainRoomId);
+        TRoom* pCustomRoom = pRoomDB->getRoom(customRoomId);
+        QVERIFY(pPlainRoom && pCustomRoom);
+        pPlainRoom->setEast(customRoomId);
+        pCustomRoom->setWest(plainRoomId);
+
+        T2DMap* p2dMap = showAreaAtTheOrigin(areaId);
+        QVERIFY(p2dMap);
+
+        removeCustomLine(pCustomRoom, qsl("w"));
+        const QImage withoutLine = renderMapFrame(p2dMap);
+        setCustomLine(pCustomRoom, qsl("w"), {QPointF(lineEndX, rowY)});
+        const QImage withLine = renderMapFrame(p2dMap);
+        QCOMPARE(p2dMap->getAreaId(), areaId);
+
+        const double pixelsPerUnit = static_cast<double>(p2dMap->mRoomWidth);
+        QVERIFY(pixelsPerUnit > 10.0);
+        // The premise: the whole custom line, and so its room, is right of the widget.
+        QVERIFY2(p2dMap->mRX + lineEndX * pixelsPerUnit > kWidgetWidth, "the custom line back reaches the widget, so it would rightly stand in for the plain exit");
+        QVERIFY2(p2dMap->mRX + (plainX + 5) * pixelsPerUnit < kWidgetWidth, "the stretch of plain exit this counts is not on the widget");
+
+        const int screenY = qRound(p2dMap->mRY - rowY * pixelsPerUnit);
+        int drawnWithout = 0;
+        int drawnWith = 0;
+        for (int screenX = qRound(p2dMap->mRX + (plainX + 1) * pixelsPerUnit); screenX <= qRound(p2dMap->mRX + (plainX + 5) * pixelsPerUnit); ++screenX) {
+            for (int dy = -3; dy <= 3; ++dy) {
+                if (withoutLine.pixelColor(screenX, screenY + dy) != QColor(Qt::black)) {
+                    ++drawnWithout;
+                }
+                if (withLine.pixelColor(screenX, screenY + dy) != QColor(Qt::black)) {
+                    ++drawnWith;
+                }
+            }
+        }
+        QVERIFY2(drawnWithout > 0, qPrintable(qsl("room %1 drew no exit east even with no custom line back").arg(plainRoomId)));
+        if (drawnWith * 2 < drawnWithout) {
+            const QString framePath = qsl("%1/MapOffscreenCustomLineTest-offwidget.png").arg(QDir::tempPath());
+            withLine.save(framePath);
+            QFAIL(qPrintable(qsl("room %1 lost its exit east to a custom line drawn nowhere on the widget (%2 pixels drawn, %3 without it). The frame is at %4")
+                                     .arg(plainRoomId)
+                                     .arg(drawnWith)
+                                     .arg(drawnWithout)
+                                     .arg(framePath)));
         }
     }
 

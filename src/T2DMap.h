@@ -469,6 +469,8 @@ private:
         // The destination's reverse exit doesn't lead back. Not the sole arrow test: an exit also gets
         // an arrow when a sibling exit to the same room is one-way.
         bool oneWay = false;
+        // The other end's custom line stands in for this exit's line, but not for this room's door on it.
+        bool lineDrawnFromOtherEnd = false;
     };
     void paintRoomExits(QPainter&, QPen&, QList<ExitToPaint>& exitList, const TArea*, int zLevel, const QRect& roomBounds, const QList<int>& viewportRooms, float exitWidth, QMap<int, QPointF>&);
     void resolveAreaExitClick(QPainter&, const QMap<int, QPointF>& areaExitsMap, const int speedWalkStartRoomId);

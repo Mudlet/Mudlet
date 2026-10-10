@@ -3500,6 +3500,20 @@ void T2DMap::paintRoomExits(QPainter& painter,
         }
     }
 
+    const auto exitsReachWidget = [&](const TRoom* pRoom) {
+        if (pRoom->customLines.empty()) {
+            const float roomX = pRoom->x() * mRoomWidth + mRX;
+            const float roomY = pRoom->y() * -1 * mRoomHeight + mRY;
+            return !(roomX < 0 || roomY < 0 || roomX > widgetWidth || roomY > widgetHeight);
+        }
+        const float miny = pRoom->min_y * -1 * mRoomHeight + static_cast<float>(mRY);
+        const float maxy = pRoom->max_y * -1 * mRoomHeight + static_cast<float>(mRY);
+        const float minx = pRoom->min_x * mRoomWidth + static_cast<float>(mRX);
+        const float maxx = pRoom->max_x * mRoomWidth + static_cast<float>(mRX);
+        return (minx > 0.0 || maxx > 0.0) && (static_cast<float>(widgetWidth) > minx || static_cast<float>(widgetWidth) > maxx) && (miny > 0.0 || maxy > 0.0)
+               && (static_cast<float>(widgetHeight) > miny || static_cast<float>(widgetHeight) > maxy);
+    };
+
     for (const int _id : std::as_const(roomsToPaint)) {
         TRoom* room = mpMap->mpRoomDB->getRoom(_id);
         if (!room) {
@@ -3510,24 +3524,8 @@ void T2DMap::paintRoomExits(QPainter& painter,
         }
         const float rx = room->x() * mRoomWidth + mRX;
         const float ry = room->y() * -1 * mRoomHeight + mRY;
-
-        if (room->customLines.empty()) {
-            if (rx < 0 || ry < 0 || rx > widgetWidth || ry > widgetHeight) {
-                continue;
-            }
-        } else {
-            const float miny = room->min_y * -1 * mRoomHeight + static_cast<float>(mRY);
-            const float maxy = room->max_y * -1 * mRoomHeight + static_cast<float>(mRY);
-            const float minx = room->min_x * mRoomWidth + static_cast<float>(mRX);
-            const float maxx = room->max_x * mRoomWidth + static_cast<float>(mRX);
-
-            if (!((minx > 0.0 || maxx > 0.0) && (static_cast<float>(widgetWidth) > minx || static_cast<float>(widgetWidth) > maxx))) {
-                continue;
-            }
-
-            if (!((miny > 0.0 || maxy > 0.0) && (static_cast<float>(widgetHeight) > miny || static_cast<float>(widgetHeight) > maxy))) {
-                continue;
-            }
+        if (!exitsReachWidget(room)) {
+            continue;
         }
 
         room->rendered = true;
@@ -3545,6 +3543,15 @@ void T2DMap::paintRoomExits(QPainter& painter,
             return xReach > lodBlobSize.width() || yReach > lodBlobSize.height();
         };
 
+        // A two-way exit whose other end has a custom line for it is drawn by that line alone; a plain
+        // line from this end would land on top of it, or under it, depending on which room paints last.
+        // Only where this view paints that line: other areas and levels don't, nor does an empty one or
+        // one whose room is culled below, and an area exit's arrow is also its speed-walk click target.
+        const auto drawnAsCustomLineFrom = [&](const TRoom* pDestination, const int reciprocalExitId, const QString& reciprocalKey) {
+            return reciprocalExitId == _id && pDestination->getArea() == mAreaID && pDestination->z() == zLevel && !pDestination->customLines.value(reciprocalKey).isEmpty()
+                   && exitsReachWidget(pDestination);
+        };
+
         // exitList is a list of the destination rooms reached by exit lines
         // that are NOT custom exit lines from this room so are places to
         // which a straight line is to be drawn from the centre of this room
@@ -3558,49 +3565,49 @@ void T2DMap::paintRoomExits(QPainter& painter,
             if (!room->customLines.contains(key_n)) {
                 TRoom* pER = mpMap->mpRoomDB->getRoom(room->getNorth());
                 if (pER && !pER->isHidden() && keepExit(pER)) {
-                    exitList.push_back({pER, room->getNorth(), pER->getSouth() != _id});
+                    exitList.push_back({pER, room->getNorth(), pER->getSouth() != _id, drawnAsCustomLineFrom(pER, pER->getSouth(), key_s)});
                 }
             }
             if (!room->customLines.contains(key_ne)) {
                 TRoom* pER = mpMap->mpRoomDB->getRoom(room->getNortheast());
                 if (pER && !pER->isHidden() && keepExit(pER)) {
-                    exitList.push_back({pER, room->getNortheast(), pER->getSouthwest() != _id});
+                    exitList.push_back({pER, room->getNortheast(), pER->getSouthwest() != _id, drawnAsCustomLineFrom(pER, pER->getSouthwest(), key_sw)});
                 }
             }
             if (!room->customLines.contains(key_e)) {
                 TRoom* pER = mpMap->mpRoomDB->getRoom(room->getEast());
                 if (pER && !pER->isHidden() && keepExit(pER)) {
-                    exitList.push_back({pER, room->getEast(), pER->getWest() != _id});
+                    exitList.push_back({pER, room->getEast(), pER->getWest() != _id, drawnAsCustomLineFrom(pER, pER->getWest(), key_w)});
                 }
             }
             if (!room->customLines.contains(key_se)) {
                 TRoom* pER = mpMap->mpRoomDB->getRoom(room->getSoutheast());
                 if (pER && !pER->isHidden() && keepExit(pER)) {
-                    exitList.push_back({pER, room->getSoutheast(), pER->getNorthwest() != _id});
+                    exitList.push_back({pER, room->getSoutheast(), pER->getNorthwest() != _id, drawnAsCustomLineFrom(pER, pER->getNorthwest(), key_nw)});
                 }
             }
             if (!room->customLines.contains(key_s)) {
                 TRoom* pER = mpMap->mpRoomDB->getRoom(room->getSouth());
                 if (pER && !pER->isHidden() && keepExit(pER)) {
-                    exitList.push_back({pER, room->getSouth(), pER->getNorth() != _id});
+                    exitList.push_back({pER, room->getSouth(), pER->getNorth() != _id, drawnAsCustomLineFrom(pER, pER->getNorth(), key_n)});
                 }
             }
             if (!room->customLines.contains(key_sw)) {
                 TRoom* pER = mpMap->mpRoomDB->getRoom(room->getSouthwest());
                 if (pER && !pER->isHidden() && keepExit(pER)) {
-                    exitList.push_back({pER, room->getSouthwest(), pER->getNortheast() != _id});
+                    exitList.push_back({pER, room->getSouthwest(), pER->getNortheast() != _id, drawnAsCustomLineFrom(pER, pER->getNortheast(), key_ne)});
                 }
             }
             if (!room->customLines.contains(key_w)) {
                 TRoom* pER = mpMap->mpRoomDB->getRoom(room->getWest());
                 if (pER && !pER->isHidden() && keepExit(pER)) {
-                    exitList.push_back({pER, room->getWest(), pER->getEast() != _id});
+                    exitList.push_back({pER, room->getWest(), pER->getEast() != _id, drawnAsCustomLineFrom(pER, pER->getEast(), key_e)});
                 }
             }
             if (!room->customLines.contains(key_nw)) {
                 TRoom* pER = mpMap->mpRoomDB->getRoom(room->getNorthwest());
                 if (pER && !pER->isHidden() && keepExit(pER)) {
-                    exitList.push_back({pER, room->getNorthwest(), pER->getSoutheast() != _id});
+                    exitList.push_back({pER, room->getNorthwest(), pER->getSoutheast() != _id, drawnAsCustomLineFrom(pER, pER->getSoutheast(), key_se)});
                 }
             }
         } else {
@@ -3608,56 +3615,56 @@ void T2DMap::paintRoomExits(QPainter& painter,
             if (exitRoomId > 0) {
                 TRoom* pER = mpMap->mpRoomDB->getRoom(exitRoomId);
                 if (pER && !pER->isHidden() && keepExit(pER)) {
-                    exitList.push_back({pER, exitRoomId, pER->getSouth() != _id});
+                    exitList.push_back({pER, exitRoomId, pER->getSouth() != _id, drawnAsCustomLineFrom(pER, pER->getSouth(), key_s)});
                 }
             }
             exitRoomId = room->getNortheast();
             if (exitRoomId > 0) {
                 TRoom* pER = mpMap->mpRoomDB->getRoom(exitRoomId);
                 if (pER && !pER->isHidden() && keepExit(pER)) {
-                    exitList.push_back({pER, exitRoomId, pER->getSouthwest() != _id});
+                    exitList.push_back({pER, exitRoomId, pER->getSouthwest() != _id, drawnAsCustomLineFrom(pER, pER->getSouthwest(), key_sw)});
                 }
             }
             exitRoomId = room->getEast();
             if (exitRoomId > 0) {
                 TRoom* pER = mpMap->mpRoomDB->getRoom(exitRoomId);
                 if (pER && !pER->isHidden() && keepExit(pER)) {
-                    exitList.push_back({pER, exitRoomId, pER->getWest() != _id});
+                    exitList.push_back({pER, exitRoomId, pER->getWest() != _id, drawnAsCustomLineFrom(pER, pER->getWest(), key_w)});
                 }
             }
             exitRoomId = room->getSoutheast();
             if (exitRoomId > 0) {
                 TRoom* pER = mpMap->mpRoomDB->getRoom(exitRoomId);
                 if (pER && !pER->isHidden() && keepExit(pER)) {
-                    exitList.push_back({pER, exitRoomId, pER->getNorthwest() != _id});
+                    exitList.push_back({pER, exitRoomId, pER->getNorthwest() != _id, drawnAsCustomLineFrom(pER, pER->getNorthwest(), key_nw)});
                 }
             }
             exitRoomId = room->getSouth();
             if (exitRoomId > 0) {
                 TRoom* pER = mpMap->mpRoomDB->getRoom(exitRoomId);
                 if (pER && !pER->isHidden() && keepExit(pER)) {
-                    exitList.push_back({pER, exitRoomId, pER->getNorth() != _id});
+                    exitList.push_back({pER, exitRoomId, pER->getNorth() != _id, drawnAsCustomLineFrom(pER, pER->getNorth(), key_n)});
                 }
             }
             exitRoomId = room->getSouthwest();
             if (exitRoomId > 0) {
                 TRoom* pER = mpMap->mpRoomDB->getRoom(exitRoomId);
                 if (pER && !pER->isHidden() && keepExit(pER)) {
-                    exitList.push_back({pER, exitRoomId, pER->getNortheast() != _id});
+                    exitList.push_back({pER, exitRoomId, pER->getNortheast() != _id, drawnAsCustomLineFrom(pER, pER->getNortheast(), key_ne)});
                 }
             }
             exitRoomId = room->getWest();
             if (exitRoomId > 0) {
                 TRoom* pER = mpMap->mpRoomDB->getRoom(exitRoomId);
                 if (pER && !pER->isHidden() && keepExit(pER)) {
-                    exitList.push_back({pER, exitRoomId, pER->getEast() != _id});
+                    exitList.push_back({pER, exitRoomId, pER->getEast() != _id, drawnAsCustomLineFrom(pER, pER->getEast(), key_e)});
                 }
             }
             exitRoomId = room->getNorthwest();
             if (exitRoomId > 0) {
                 TRoom* pER = mpMap->mpRoomDB->getRoom(exitRoomId);
                 if (pER && !pER->isHidden() && keepExit(pER)) {
-                    exitList.push_back({pER, exitRoomId, pER->getSoutheast() != _id});
+                    exitList.push_back({pER, exitRoomId, pER->getSoutheast() != _id, drawnAsCustomLineFrom(pER, pER->getSoutheast(), key_se)});
                 }
             }
         }
@@ -3851,7 +3858,7 @@ void T2DMap::paintRoomExits(QPainter& painter,
             // This was a QLine (so used integer coordinates), but lets
             // try with a QLineF as we are using floating point numbers:
             QLineF line;
-            if (!areaExit) {
+            if (!areaExit && !exit.lineDrawnFromOtherEnd) {
                 // Non-area exit:
                 // Exits to the same room overlap, so one being one-way arrows them all.
                 bool oneWayToDestination = false;
@@ -3915,7 +3922,7 @@ void T2DMap::paintRoomExits(QPainter& painter,
                     painter.restore();
                 }
 
-            } else {
+            } else if (areaExit) {
                 // Area exit:
                 painter.save();
                 QPointF clickPoint;
