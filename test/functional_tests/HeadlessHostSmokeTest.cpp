@@ -754,6 +754,9 @@ local ok, err = pcall(function()
   step("speedText", setMovieSpeed, "mvA", "x")
   step("scale", scaleMovie, "mvA")
   state("scaled", "mvA")
+  step("setScaled", setMovie, "mvA", gif)
+  state("setScaled", "mvA")
+  step("pauseScaled", pauseMovie, "mvA")
   step("frame1", setMovieFrame, "mvA", 1)
   state("scaledFrame", "mvA")
   step("resize", resizeWindow, "mvA", 200, 40)
@@ -792,6 +795,13 @@ local ok, err = pcall(function()
   step("hide", hideWindow, "mvA")
   step("pauseHidden", pauseMovie, "mvA")
   state("hidden", "mvA")
+  step("scaleHidden", scaleMovie, "mvA")
+  step("resizeHidden", resizeWindow, "mvA", 120, 30)
+  step("setHidden", setMovie, "mvA", gif)
+  state("resizedHidden", "mvA")
+  step("show", showWindow, "mvA")
+  step("setShown", setMovie, "mvA", gif)
+  state("resizedShown", "mvA")
   step("delete", deleteLabel, "mvA")
   step("startDeleted", startMovie, "mvA")
   state("deleted", "mvB")
@@ -837,11 +847,14 @@ headlessMovie = ok and "ok" or tostring(err)
                                   qsl("speedText=raised"),
                                   qsl("scale=[1]true"),
                                   qsl("scaled:hint=40x16,text=,gifs=1/0"),
+                                  qsl("setScaled=[1]true"),
+                                  qsl("setScaled:hint=100x20,text=,gifs=1/1"),
+                                  qsl("pauseScaled=[1]true"),
                                   qsl("frame1=[1]true"),
-                                  qsl("scaledFrame:hint=40x16,text=,gifs=1/0"),
+                                  qsl("scaledFrame:hint=100x20,text=,gifs=1/0"),
                                   qsl("resize=[0]"),
                                   qsl("frame2=[1]true"),
-                                  qsl("resizedFrame:hint=40x16,text=,gifs=1/0"),
+                                  qsl("resizedFrame:hint=200x40,text=,gifs=1/0"),
                                   qsl("setFollowed=[1]true"),
                                   qsl("followed:hint=200x40,text=,gifs=1/1"),
                                   qsl("unscale=[1]true"),
@@ -871,6 +884,13 @@ headlessMovie = ok and "ok" or tostring(err)
                                   qsl("hide=[0]"),
                                   qsl("pauseHidden=[1]true"),
                                   qsl("hidden:hint=210x50,text=,gifs=2/1"),
+                                  qsl("scaleHidden=[1]true"),
+                                  qsl("resizeHidden=[0]"),
+                                  qsl("setHidden=[1]true"),
+                                  qsl("resizedHidden:hint=60x20,text=,gifs=2/2"),
+                                  qsl("show=[1]true"),
+                                  qsl("setShown=[1]true"),
+                                  qsl("resizedShown:hint=130x40,text=,gifs=2/2"),
                                   qsl("delete=[1]true"),
                                   qsl("startDeleted=[2]nil:label \"mvA\" not found"),
                                   qsl("deleted:hint=40x16,text=,gifs=1/1"),

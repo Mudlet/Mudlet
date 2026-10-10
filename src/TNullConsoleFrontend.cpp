@@ -518,7 +518,7 @@ std::optional<QSize> TNullConsoleFrontend::getLabelSizeHint(const QString& name)
         return std::nullopt;
     }
     const Label& label = it->second;
-    // QLabelPrivate::sizeForWidth() measures the frame on show, which QLabel only re-reads as the movie resizes
+    // QLabel measures the movie's current image, re-reading it only as the movie resizes
     if (label.showsMovie && !label.movie->currentPixmap().isNull()) {
         return label.movie->currentPixmap().deviceIndependentSize().toSize() + QSize(label.frame[1] + label.frame[3], label.frame[0] + label.frame[2]);
     }
@@ -760,7 +760,7 @@ void TNullConsoleFrontend::reportVisibility(const QString& name)
         return it != mSubConsoles.end() && it->second.shown;
     };
     if (const auto it = mLabels.find(name); it != mLabels.end()) {
-        it->second.pModel->mVisible = it->second.shown && shownWithin(it->second.userWindow);
+        setLabelVisible(it->second, it->second.shown && shownWithin(it->second.userWindow));
     }
     const auto it = mSubConsoles.find(name);
     if (it == mSubConsoles.end()) {
@@ -776,9 +776,9 @@ void TNullConsoleFrontend::reportVisibility(const QString& name)
             registry.setSubConsoleVisible(childName, child.shown && it->second.shown);
         }
     }
-    for (const auto& [childName, child] : mLabels) {
+    for (auto& [childName, child] : mLabels) {
         if (child.userWindow == name) {
-            child.pModel->mVisible = child.shown && it->second.shown;
+            setLabelVisible(child, child.shown && it->second.shown);
         }
     }
 }
@@ -884,18 +884,37 @@ bool TNullConsoleFrontend::resizeLabel(const QString& name, const int width, con
         return false;
     }
     Label& label = it->second;
-    label.pModel->mGeometry.setSize(QSize(width, height).expandedTo(QSize(0, 0)));
-    if (label.movieFollowsSize) {
-        label.movie->setScaledSize(label.pModel->mGeometry.size());
+    const QSize size = QSize(width, height).expandedTo(QSize(0, 0));
+    if (size == label.pModel->mGeometry.size()) {
+        return true;
+    }
+    label.pModel->mGeometry.setSize(size);
+    // QWidget holds a hidden widget's resize event, and so TLabel::resized, back until it shows
+    if (!label.pModel->mVisible) {
+        label.resizePending = true;
+    } else if (label.movieFollowsSize) {
+        label.movie->setScaledSize(size);
     }
     return true;
+}
+
+void TNullConsoleFrontend::setLabelVisible(Label& label, const bool visible)
+{
+    label.pModel->mVisible = visible;
+    if (visible && label.resizePending) {
+        label.resizePending = false;
+        if (label.movieFollowsSize) {
+            label.movie->setScaledSize(label.pModel->mGeometry.size());
+        }
+    }
 }
 
 std::pair<bool, QString> TNullConsoleFrontend::setLabelMovie(const QString& name, const QString& moviePath)
 {
     const auto it = mLabels.find(name);
+    // Host::setMovie() found the name registered, so the label belongs to a detached view
     if (it == mLabels.end()) {
-        return {false, qsl("label '%1' does not exist").arg(name)};
+        return noView();
     }
     if (const QMovie candidate(moviePath); !candidate.isValid()) {
         return {false, qsl("no valid movie found at '%1'").arg(moviePath)};

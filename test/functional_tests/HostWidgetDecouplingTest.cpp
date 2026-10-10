@@ -509,7 +509,7 @@ createBuffer("nullViewBuffer")
                      "|false:the profile has no main window"
                      "|true:nil"
                      "|nil:the profile has no main window"
-                     "|nil:label 'nullViewLabel' does not exist"));
+                     "|nil:the profile has no main window"));
     }
 
     // The mapping-script reminder used to be a QDialog built inside Host; it is

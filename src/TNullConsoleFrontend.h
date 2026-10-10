@@ -282,8 +282,11 @@ private:
         bool showsMovie = false;
         // TMainConsole::scaleLabelMovie()'s connection to TLabel::resized
         bool movieFollowsSize = false;
+        // Qt::WA_PendingResizeEvent
+        bool resizePending = false;
     };
     QMovie* shownMovie(const QString& name) const;
+    void setLabelVisible(Label& label, bool visible);
 
     TConsoleModel& addSubConsole(const QString& name, TWindowRegistry::SubConsoleKind kind, const QString& windowname);
     void removeSubConsole(const QString& name);
