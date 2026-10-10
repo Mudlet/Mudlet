@@ -131,4 +131,42 @@ describe("Tests the 3D map perspective functions with the modern 3D view showing
     assert.is_truthy(err:find("it must be a finite number", 1, true), err)
     assert.are.equal(15, getMapZoom(areaId))
   end)
+
+  -- Nothing here can read the pixels back, but painting runs the room drawing code under the
+  -- sanitizers and the leak check, which no other test reaches with a GL context
+  it("paints rooms with a symbol, a highlight and a border, in and out of grid mode", function()
+    if (os.getenv("ASAN_OPTIONS") or ""):find("detect_leaks=1", 1, true) then
+      pending("a 3D view's GL context leaks in this job's GL driver")
+      return
+    end
+    local wasModern = getConfig("experiment.3dmap.modernmapper")
+    local wasGrid = getGridMode(areaId)
+    local neighbour = createRoomID()
+    finally(function()
+      setConfig("show3dMapView", false)
+      setConfig("experiment.3dmap.modernmapper", wasModern == true)
+      setGridMode(areaId, wasGrid)
+      unHighlightRoom(rA1)
+      setRoomChar(rA1, "")
+      deleteRoom(neighbour)
+    end)
+    assert.is_true(addRoom(neighbour))
+    setRoomArea(neighbour, areaId)
+    setRoomCoordinates(neighbour, 1, 0, 0)
+    assert.is_true(setRoomChar(neighbour, "$"))
+    assert.is_true(setRoomChar(rA1, "@"))
+    assert.is_true(highlightRoom(rA1, 255, 0, 0, 0, 0, 255, 1.5, 200, 100))
+    assert.is_true(setRoomBorderColor(neighbour, 0, 255, 0))
+    assert.is_true(setRoomBorderThickness(neighbour, 3))
+    assert.is_true(centerview(rA1))
+    assert.is_true(setGridMode(areaId, false))
+    assert.is_true(setConfig("experiment.3dmap.modernmapper", true))
+    assert.is_true(setConfig("show3dMapView", true))
+    pumpEvents(200)
+    assert.is_true(getConfig("show3dMapView"))
+
+    assert.is_true(setGridMode(areaId, true))
+    pumpEvents(200)
+    assert.is_true(getConfig("show3dMapView"))
+  end)
 end)

@@ -116,6 +116,9 @@ private:
         pMapper->show3DView(false);
         pDock->resize(300, 900);
         QTRY_VERIFY(pMapper->height() > pMapper->width());
+        // As when a player switches back later: with the controls gone, showing the view lays it out
+        // once without them, then again, smaller, once they reappear
+        QTRY_VERIFY(pMapper->widget_3DControls->isHidden());
     }
 
 private slots:
@@ -353,7 +356,7 @@ private slots:
         QVERIFY(!pMapper->setMapZoom(qQNaN(), 0).first);
         QVERIFY2(cameraControls.isEmpty(), "a zoom the 2D map refused still moved the 3D camera");
 
-        // Asking again for the zoom the area already has must still undo a zoom made with the mouse wheel
+        // Asking again for the zoom the area already has must still undo a zoom the player made with the scale slider
         pModern->slot_setScale(fewRooms);
         cameraControls.clear();
         QVERIFY(pMapper->setMapZoom(20.0, 0).first);
@@ -421,13 +424,13 @@ private slots:
         QVERIFY(pMapper->setMapZoom(20.0, 0).first);
         const int framedWhileHidden = lastScale();
 
-        // As a script would in one go: show the 3D view, then set its camera before anything repaints
+        // As a script would in one go: show3DView lays the view out at once, so the camera is set before any paint
         pMapper->show3DView(true);
-        QTRY_VERIFY(pModern->isVisible() && pModern->height() > pModern->width());
+        QVERIFY(pModern->isVisible() && pModern->height() > pModern->width());
         QVERIFY(pMapper->set3DViewCameraPosition(2.0f, 45.0f, 270.0f).first);
         const int requested = lastScale();
         QVERIFY(requested != framedWhileHidden);
-        // The window settling on its size can resize the view again before its first paint
+        // Neither a later resize nor a paint may reframe it
         pDock->resize(320, 950);
         QTRY_COMPARE(pDock->height(), 950);
         QCoreApplication::processEvents();

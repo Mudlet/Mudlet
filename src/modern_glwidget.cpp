@@ -139,14 +139,18 @@ bool ModernGLWidget::event(QEvent* event)
 
 void ModernGLWidget::resizeEvent(QResizeEvent* event)
 {
+    // Framed before the base class, whose resize paints at once; with no context nothing paints,
+    // so a visible resize settles the zoom here
+    if (mPendingFrameZoom) {
+        frameRooms(*mPendingFrameZoom);
+        if (isVisible()) {
+            mPendingFrameZoom.reset();
+        }
+    }
     if (contextCreationFailed()) {
         QWidget::resizeEvent(event);
     } else {
         QOpenGLWidget::resizeEvent(event);
-    }
-    if (mFrameOnResize) {
-        mFrameOnResize = false;
-        frameArea();
     }
 }
 
@@ -378,9 +382,11 @@ void ModernGLWidget::paintGL()
         frameArea();
     }
     mFramePending = false;
-    // A hidden view can still be painted, at its old size, so only a frame that is seen counts
-    if (isVisible()) {
-        mFrameOnResize = false;
+    // QOpenGLWidget paints inside a resize sent before the view is marked visible, at a size the
+    // layout may change again once the 3D controls appear, so only a visible paint settles the zoom
+    if (mPendingFrameZoom && isVisible()) {
+        frameRooms(*mPendingFrameZoom);
+        mPendingFrameZoom.reset();
     }
     mDistanceRequested = false;
 
@@ -1073,7 +1079,7 @@ void ModernGLWidget::setCameraPosition(float r, float theta, float phi)
 {
     mCameraController.setPosition(r, theta, phi);
     mDistanceRequested = true;
-    mFrameOnResize = false;
+    mPendingFrameZoom.reset();
     emitCameraControls();
     update();
 }
@@ -1150,7 +1156,11 @@ void ModernGLWidget::applyMapZoom(const qreal zoom, const int areaId)
         return;
     }
     frameRooms(zoom);
-    mFrameOnResize = !isVisible();
+    if (isVisible()) {
+        mPendingFrameZoom.reset();
+    } else {
+        mPendingFrameZoom = zoom;
+    }
     mDistanceRequested = false;
     update();
 }
@@ -1271,7 +1281,7 @@ void ModernGLWidget::slot_topView()
 void ModernGLWidget::slot_setScale(int value)
 {
     mCameraController.setScale(distanceForScaleSlider(value));
-    mFrameOnResize = false;
+    mPendingFrameZoom.reset();
     update();
 }
 
@@ -1388,7 +1398,7 @@ void ModernGLWidget::wheelEvent(QWheelEvent* e)
         return;
     }
     mCameraController.zoomBy(steps);
-    mFrameOnResize = false;
+    mPendingFrameZoom.reset();
     emitCameraControls();
     update();
 }

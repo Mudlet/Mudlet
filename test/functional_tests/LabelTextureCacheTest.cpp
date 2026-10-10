@@ -18,8 +18,9 @@
  ***************************************************************************/
 
 /*
- * Needs a real OpenGL context, so it skips under the offscreen platform CI uses;
- * run it with QT_QPA_PLATFORM=xcb on a display to exercise it.
+ * Needs a real OpenGL context, so it skips under the offscreen platform ctest sets,
+ * and ctest lists it as not run. Run the group binary directly to exercise it:
+ * QT_QPA_PLATFORM=xcb functional_map_tests LabelTextureCacheTest, on a display.
  */
 
 #include <QtTest/QtTest>
@@ -103,6 +104,10 @@ private slots:
         QCOMPARE(mpCache->addImageTexture(qsl("too wide"), tooWideImage()), GLuint(0));
         QCOMPARE(mpCache->imageTexture(qsl("too wide")), GLuint(0));
         QCOMPARE(smUploadWarnings, 1);
+
+        // Clearing the cache, as a new GL context does, is a new attempt
+        mpCache->clearAll();
+        QVERIFY(mpCache->addImageTexture(qsl("too wide"), smallImage()) != 0);
     }
 
     void test_aLabelThatFailsIsNotRetried()
@@ -127,6 +132,9 @@ private slots:
 
         const GLuint other = mpCache->addImageTexture(qsl("made after the failure"), smallImage());
         QVERIFY(other != 0);
+        if (other != before) {
+            QSKIP("the driver did not hand the freed name out again, so deleting it twice cannot be seen");
+        }
         mpCache->getTexture(1, 2, tooWide);
         QVERIFY2(mContext.functions()->glIsTexture(other), "a label deleted a texture that was not its own");
         QCOMPARE(mpCache->imageTexture(qsl("made after the failure")), other);
@@ -135,26 +143,34 @@ private slots:
     void test_makingRoomKeepsTheTexturesInUse()
     {
         mpCache->clearAll();
-        for (const QString& key : {qsl("a"), qsl("b"), qsl("c")}) {
-            QVERIFY(mpCache->addImageTexture(key, smallImage()) != 0);
-        }
-        const GLuint kept = mpCache->imageTexture(qsl("a"));
-
-        QVERIFY(mpCache->makeRoomForImageTexture(3, {qsl("a")}));
-        QCOMPARE(mpCache->imageTexture(qsl("a")), kept);
-        QVERIFY(mContext.functions()->glIsTexture(kept));
-
-        QVERIFY(mpCache->addImageTexture(qsl("d"), smallImage()) != 0);
-        const QSet<QString> all{qsl("a"), qsl("b"), qsl("c"), qsl("d")};
-        QSet<QString> cached;
-        for (const QString& key : all) {
-            if (mpCache->imageTexture(key)) {
-                cached.insert(key);
+        QSet<QString> inUse;
+        QHash<QString, GLuint> made;
+        for (int i = 0; i < 10; ++i) {
+            const QString key = qsl("key %1").arg(i);
+            made.insert(key, mpCache->addImageTexture(key, smallImage()));
+            QVERIFY(made.value(key) != 0);
+            if (i < 5) {
+                inUse.insert(key);
             }
         }
-        QCOMPARE(cached.size(), 3);
-        QVERIFY2(!mpCache->makeRoomForImageTexture(3, cached), "a texture in use was dropped to make room");
-        for (const QString& key : cached) {
+
+        // Exactly the five not in use must go; ignoring the ones in use would pick those five from
+        // the cache's hash order only one time in 252
+        QVERIFY(mpCache->makeRoomForImageTexture(6, inUse));
+        for (auto it = made.cbegin(); it != made.cend(); ++it) {
+            if (inUse.contains(it.key())) {
+                QCOMPARE(mpCache->imageTexture(it.key()), it.value());
+                QVERIFY(mContext.functions()->glIsTexture(it.value()));
+            } else {
+                QCOMPARE(mpCache->imageTexture(it.key()), GLuint(0));
+                QVERIFY2(!mContext.functions()->glIsTexture(it.value()), "a texture dropped to make room was not deleted");
+            }
+        }
+
+        QVERIFY(mpCache->addImageTexture(qsl("one more"), smallImage()) != 0);
+        inUse.insert(qsl("one more"));
+        QVERIFY2(!mpCache->makeRoomForImageTexture(6, inUse), "a texture in use was dropped to make room");
+        for (const QString& key : std::as_const(inUse)) {
             QVERIFY(mpCache->imageTexture(key) != 0);
         }
     }

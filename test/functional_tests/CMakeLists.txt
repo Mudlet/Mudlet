@@ -556,6 +556,11 @@ foreach(test_name ${allFunctionalTestNames})
     )
 endforeach()
 
+# Offscreen has no GL context, so this skips; listed as not run rather than as passed
+if(TEST LabelTextureCacheTest)
+    set_tests_properties(LabelTextureCacheTest PROPERTIES SKIP_REGULAR_EXPRESSION "SKIP   : LabelTextureCacheTest::initTestCase")
+endif()
+
 # A buffer's default font gives the same row count for its pane's stale and laid-out
 # heights at 96 DPI; 72 DPI tells them apart
 set_property(TEST WindowStateGettersTest APPEND PROPERTY ENVIRONMENT "QT_FONT_DPI=72")
