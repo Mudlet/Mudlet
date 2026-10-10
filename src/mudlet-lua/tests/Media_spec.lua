@@ -2615,11 +2615,67 @@ describe("Media playback effects with a generated sound file", function()
   it("a Client.Media.Pause message with no fields pauses everything the server started", function()
     -- #10043. Every field parseJSONForMediaPause() reads is optional, and a
     -- request with none of them set pauses all of the server's media - which is
-    -- what Client.Media.Stop with no fields does for stopping. It never gets
-    -- there: parseGMCP() answers "client.media.stop" above its empty-object
-    -- guard and everything else below it, so an empty Client.Media.Pause is
-    -- dropped without being read at all.
-    pending("#10043: Client.Media.Pause {} is discarded by the empty-object guard in TMedia::parseGMCP()")
+    -- what Client.Media.Stop with no fields does for stopping.
+    if mediaPlaybackUnavailable() then
+      return
+    end
+    writeSoundFiles()
+    stopGmcpMediaAfterwards()
+
+    local started, paused = {}, {}
+    collect("sysMediaStarted", started)
+    collect("sysMediaPaused", paused)
+
+    feedGmcp('Client.Media.Play {"name": "' .. longSoundFile .. '", "key": "busted-gmcp-pause-all-sound"}')
+    feedGmcp('Client.Media.Play {"name": "' .. otherLongSoundFile .. '", "type": "music", "key": "busted-gmcp-pause-all-music"}')
+    waitForCount("sysMediaStarted", started, 2)
+    assert.equals(2, #started, gmcpRefused)
+
+    feedGmcp("Client.Media.Pause {}")
+    waitForCount("sysMediaPaused", paused, 2)
+    assert.equals(2, #paused, "an empty Client.Media.Pause did not pause every playback the server started")
+  end)
+
+  -- #10808. An absent type is the wildcard; a type that names nothing Mudlet
+  -- knows is a server mistake, and taking it as the wildcard would let a typo
+  -- stop or pause every kind of media at once.
+  local function unknownTypeActsOnNothing(command, eventName)
+    writeSoundFiles()
+    stopGmcpMediaAfterwards()
+
+    local started, acted = {}, {}
+    collect("sysMediaStarted", started)
+    collect(eventName, acted)
+
+    feedGmcp('Client.Media.Play {"name": "' .. longSoundFile .. '", "key": "busted-gmcp-typo-sound"}')
+    feedGmcp('Client.Media.Play {"name": "' .. otherLongSoundFile .. '", "type": "music", "key": "busted-gmcp-typo-music"}')
+    waitForCount("sysMediaStarted", started, 2)
+    assert.equals(2, #started, gmcpRefused)
+
+    feedGmcp('Client.Media.' .. command .. ' {"type": "musci"}')
+    pumpEvents(500)
+    assert.equals(0, #acted, "a Client.Media." .. command .. " naming an unknown type acted on the media anyway")
+
+    -- the same message naming the type properly reaches only the music
+    feedGmcp('Client.Media.' .. command .. ' {"type": "music"}')
+    waitForCount(eventName, acted, 1)
+    pumpEvents(250)
+    assert.equals(1, #acted)
+    assert.equals("busted-gmcp-typo-music", acted[1].key)
+  end
+
+  it("a Client.Media.Stop message naming an unknown type stops nothing", function()
+    if mediaPlaybackUnavailable() then
+      return
+    end
+    unknownTypeActsOnNothing("Stop", "sysMediaFinished")
+  end)
+
+  it("a Client.Media.Pause message naming an unknown type pauses nothing", function()
+    if mediaPlaybackUnavailable() then
+      return
+    end
+    unknownTypeActsOnNothing("Pause", "sysMediaPaused")
   end)
 
   it("a Client.Media.Load message fetches the file without playing it", function()
@@ -2813,11 +2869,41 @@ describe("Media playback effects with a generated sound file", function()
 
   it("a Client.Media.Play message with a numeric volume of zero preloads the file too", function()
     -- #10404. The media protocol allows a field either way round, and the
-    -- string form above preloads. The number form does not:
-    -- parseJSONByMediaVolume() uses the value itself as the test for whether
-    -- the field was given, so a volume of 0 reads as absent and the request is
-    -- played at the default volume instead of being readied silently.
-    pending("#10404: Client.Media.Play with a numeric volume of 0 plays at the default volume instead of preloading")
+    -- string form above preloads, so a number 0 must not read as an absent
+    -- volume and be played at the default one.
+    if mediaPlaybackUnavailable() then
+      return
+    end
+    writeSoundFiles()
+    stopGmcpMediaAfterwards()
+
+    local started = {}
+    collect("sysMediaStarted", started)
+
+    feedGmcp('Client.Media.Play {"name": "' .. longSoundFile .. '", "key": "busted-gmcp-preload-number", "volume": 0}')
+    pumpEvents(1000)
+    assert.equals(0, #started, "a request made at a numeric volume of 0 was played")
+
+    feedGmcp('Client.Media.Play {"name": "' .. longSoundFile .. '", "key": "busted-gmcp-preload-number", "volume": 60}')
+    waitForCount("sysMediaStarted", started, 1)
+    assert.equals(1, #started, gmcpRefused)
+  end)
+
+  it("a Client.Media.Play message with a fractional numeric volume plays the file", function()
+    -- only a volume of 0 asks for a preload, so one that is not a whole number
+    -- must not be read as 0
+    if mediaPlaybackUnavailable() then
+      return
+    end
+    writeSoundFiles()
+    stopGmcpMediaAfterwards()
+
+    local started = {}
+    collect("sysMediaStarted", started)
+
+    feedGmcp('Client.Media.Play {"name": "' .. longSoundFile .. '", "key": "busted-gmcp-fractional-volume", "volume": 50.6}')
+    waitForCount("sysMediaStarted", started, 1)
+    assert.equals(1, #started, "a request made at a numeric volume of 50.6 was not played")
   end)
 
   it("a Client.Media.Default message sets the url the messages after it fetch from", function()

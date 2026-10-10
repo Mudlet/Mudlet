@@ -469,8 +469,14 @@ void TMedia::parseGMCP(QString& packageMessage, QString& gmcp)
 
     const QString package = packageMessage.toLower(); // Don't change original variable
 
+    // Every field of a stop or pause is optional: an empty one means all of the server's media
     if (package == "client.media.stop") {
         TMedia::parseJSONForMediaStop(json);
+        return;
+    }
+
+    if (package == "client.media.pause") {
+        TMedia::parseJSONForMediaPause(json);
         return;
     }
 
@@ -484,8 +490,6 @@ void TMedia::parseGMCP(QString& packageMessage, QString& gmcp)
         TMedia::parseJSONForMediaLoad(json);
     } else if (package == "client.media.play") {
         TMedia::parseJSONForMediaPlay(json);
-    } else if (package == "client.media.pause") {
-        TMedia::parseJSONForMediaPause(json);
     }
 }
 
@@ -2284,8 +2288,10 @@ int TMedia::parseJSONByMediaVolume(QJsonObject& json)
 
     if (mediaVolumeJSON != QJsonValue::Undefined && mediaVolumeJSON.isString() && !mediaVolumeJSON.toString().isEmpty()) {
         mediaVolume = mediaVolumeJSON.toString().toInt();
-    } else if (mediaVolumeJSON != QJsonValue::Undefined && mediaVolumeJSON.toInt()) {
-        mediaVolume = mediaVolumeJSON.toInt();
+    } else if (mediaVolumeJSON.isDouble()) {
+        // Not toInt(), which gives 0 - the preload volume - for any number that is not whole
+        const double volume = mediaVolumeJSON.toDouble();
+        mediaVolume = volume == 0.0 ? TMediaData::MediaVolumePreload : qRound(qBound(static_cast<double>(TMediaData::MediaVolumeMin), volume, static_cast<double>(TMediaData::MediaVolumeMax)));
     }
 
     return mediaVolume;
@@ -2593,6 +2599,13 @@ void TMedia::parseJSONForMediaPause(QJsonObject& json)
 
     mediaData.setMediaProtocol(TMediaData::MediaProtocolGMCP);
     mediaData.setMediaType(TMedia::parseJSONByMediaType(json));
+
+    if (mediaData.mediaType() == TMediaData::MediaTypeNotSet && mediaTypeNamed(json)) {
+        // An unknown type is not the wildcard an absent one is: a typo must not pause every type
+        qWarning() << qsl("TMedia::parseJSONForMediaPause() WARNING - ignored a Client.Media.Pause naming an unknown media type: %1.").arg(json.value(qsl("type")).toVariant().toString());
+        return;
+    }
+
     mediaData.setMediaFileName(TMedia::parseJSONByMediaFileName(json));
     mediaData.setMediaKey(TMedia::parseJSONByMediaKey(json));
     mediaData.setMediaTag(TMedia::parseJSONByMediaTag(json));
@@ -2608,6 +2621,13 @@ void TMedia::parseJSONForMediaStop(QJsonObject& json)
 
     mediaData.setMediaProtocol(TMediaData::MediaProtocolGMCP);
     mediaData.setMediaType(TMedia::parseJSONByMediaType(json));
+
+    if (mediaData.mediaType() == TMediaData::MediaTypeNotSet && mediaTypeNamed(json)) {
+        // An unknown type is not the wildcard an absent one is: a typo must not stop every type
+        qWarning() << qsl("TMedia::parseJSONForMediaStop() WARNING - ignored a Client.Media.Stop naming an unknown media type: %1.").arg(json.value(qsl("type")).toVariant().toString());
+        return;
+    }
+
     mediaData.setMediaFileName(TMedia::parseJSONByMediaFileName(json));
     mediaData.setMediaKey(TMedia::parseJSONByMediaKey(json));
     mediaData.setMediaTag(TMedia::parseJSONByMediaTag(json));
