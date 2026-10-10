@@ -340,6 +340,18 @@ describe("Tests the MXP line modes a game switches between", function()
     assert.equals("MXPFORCEDAFTER", displayed('<SEND href="x">MXPFORCEDAFTER</SEND>\r\n'))
   end)
 
+  it("goes back to the line's own mode after a temp secure tag", function()
+    finally(function() feed("\27[5z\r\n") end)
+    feed("\27[6z\r\n")
+    assert.equals('MXPTEMPRESET <SEND href="y">MXPTEMPRESETSEND</SEND>',
+      displayed('\27[3z\27[4z<B>MXPTEMPRESET</B> <SEND href="y">MXPTEMPRESETSEND</SEND>\r\n'))
+    assert.equals('MXPTEMPOPEN <SEND href="y">MXPTEMPOPENSEND</SEND>',
+      displayed('\27[0z\27[4z<B>MXPTEMPOPEN</B> <SEND href="y">MXPTEMPOPENSEND</SEND>\r\n'))
+    feed("\27[5z\r\n")
+    assert.equals("MXPTEMPSECURE MXPTEMPSECURESEND",
+      displayed('\27[1z\27[4z<B>MXPTEMPSECURE</B> <SEND href="y">MXPTEMPSECURESEND</SEND>\r\n'))
+  end)
+
   it("ignores a mode switch that carries no number", function()
     -- the line stays open: B is taken out and SEND is not, which neither a
     -- secure nor a locked reading of the switch would do
