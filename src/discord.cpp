@@ -501,24 +501,23 @@ void Discord::UpdatePresence()
 
 QString Discord::deduceGameName(const QString& address)
 {
-    if (address.isEmpty()) {
-        return QString();
-    }
+    // Host names are case-insensitive and every known game key and URL is lower case
+    const QString host = address.toLower();
 
     // Handle using localhost as an off-line testing case
-    if (address == QLatin1String("localhost") || address == QLatin1String("127.0.0.1") || address == QLatin1String("::1")) {
+    if (host == QLatin1String("localhost") || host == QLatin1String("127.0.0.1") || host == QLatin1String("::1")) {
         return qsl("localhost");
     }
 
     // Handle the cases where the server url contains the "well-known" Server
     // name - that being the key of the QHash mKnownGames:
-    if (mKnownGames.contains(address)) {
-        return address;
+    if (mKnownGames.contains(host)) {
+        return host;
     }
 
     // Do a bit of URL processing on the (potentially) host url:
     QString otherName;
-    switch (address.count(QChar('.'))) {
+    switch (host.count(QChar('.'))) {
     default:
         // Too complex - abandon
         qDebug().noquote().noquote() << "Discord::deduceGameName(\"" << address << "\") WARN - Unable to deduce MUD name from given address.";
@@ -526,7 +525,7 @@ QString Discord::deduceGameName(const QString& address)
     case 2: {
         // three terms - assume last is a TLD so remove it but the first may be significant
 
-        QStringList fragments = address.split(QChar('.'));
+        QStringList fragments = host.split(QChar('.'));
         fragments.removeLast();
         otherName = fragments.join(QLatin1String("."));
         if (otherName.startsWith(QLatin1String("game."))) {
@@ -544,32 +543,27 @@ QString Discord::deduceGameName(const QString& address)
         break;
     case 1:
         // two terms - assume last is a TLD so remove it
-        otherName = address.split(QChar('.')).first();
+        otherName = host.split(QChar('.')).first();
         break;
     case 0:
         // single term no need to split it
-        otherName = address;
+        otherName = host;
         break;
     }
 
-    if (address.endsWith(qsl(".com"))) {
-        otherName = address.left(address.length() - 4);
-    } else if (address.endsWith(qsl(".de"))) {
+    if (host.endsWith(qsl(".com"))) {
+        otherName = host.left(host.length() - 4);
+    } else if (host.endsWith(qsl(".de"))) {
         // Handle avalon.de case
-        otherName = address.left(address.length() - 4);
+        otherName = host.left(host.length() - 4);
     }
 
     // Handle the remaining cases where the known URL is something else - like
     // say a fixed IP address stored as a member of the value for the QHash
     // mKnownGames:
-    QHashIterator<QString, QVector<QString>> itServer(mKnownGames);
-    while (itServer.hasNext()) {
-        itServer.next();
-        QVectorIterator<QString> itUrl(itServer.value());
-        while (itUrl.hasNext()) {
-            if (itUrl.next().compare(address, Qt::CaseInsensitive) == 0) {
-                return itServer.key();
-            }
+    for (const auto& [game, urls] : mKnownGames.asKeyValueRange()) {
+        if (urls.contains(host)) {
+            return game;
         }
     }
 
