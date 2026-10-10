@@ -1030,14 +1030,17 @@ describe("Tests the functionality of reloadModule", function()
     assertArgError(function() reloadModule() end, "reloadModule: bad argument #1 type")
   end)
 
-  it("returns no values and does nothing for a module that is not installed", function()
-    assert.equals(0, select('#', reloadModule("mudlet-spec-never-installed")))
+  it("returns nil and a message, and does nothing, for a module that is not installed", function()
+    local ok, err = reloadModule("mudlet-spec-never-installed")
+    assert.is_nil(ok)
+    assert.equals("module doesn't exist", err)
     assert.is_false(moduleInstalled("mudlet-spec-never-installed"))
   end)
 
   describe("with the fixture module installed", function()
+    local modulePath
     setup(function()
-      installFixtureModule(moduleName)
+      modulePath = installFixtureModule(moduleName)
     end)
     teardown(function()
       removeFixtureModule(moduleName)
@@ -1050,6 +1053,105 @@ describe("Tests the functionality of reloadModule", function()
 
       assert.is_true(moduleInstalled(moduleName))
       assert.equals(1, exists(moduleName .. " alias", "alias"))
+    end)
+
+    it("returns true for a reload it carries out", function()
+      assert.is_true(waitForProfileSaveToPass(), "a profile save was still running, so the reload would be postponed")
+      assert.is_true(reloadModule(moduleName))
+    end)
+
+    -- The reload takes the module apart before reading its file back in, so a
+    -- file that has gone would leave the module listed with nothing in it. The
+    -- reason goes back to the script rather than onto the console.
+    it("keeps the module's items and returns why when its file cannot be read", function()
+      local awayPath = modulePath .. ".away"
+      assert.is_true(os.rename(modulePath, awayPath))
+      defer(function() os.rename(awayPath, modulePath) end)
+      assert.is_true(waitForProfileSaveToPass(), "a profile save was still running, so the reload would be postponed")
+      local mark = getLastLineNumber("main")
+
+      local ok, err = reloadModule(moduleName)
+
+      assert.is_nil(ok)
+      assert.is_true(contains(err, "cannot be read"), tostring(err))
+      assert.is_true(moduleInstalled(moduleName))
+      assert.equals(1, exists(moduleName .. " alias", "alias"), "the module was emptied by a reload that could not read its file")
+      assert.is_false(containsWrapped(textFrom(mark), 'Module "' .. moduleName .. '" was not reloaded'), textFrom(mark))
+    end)
+
+    -- A reload asked for during a save is put off until it has finished, and the
+    -- answer given now is all the script will ever hear.
+    it("returns why straight away when its file cannot be read while a save is running", function()
+      local awayPath = modulePath .. ".away"
+      assert.is_true(os.rename(modulePath, awayPath))
+      defer(function() os.rename(awayPath, modulePath) end)
+      assert.is_true(waitForProfileSaveToPass(), "a profile save was still running")
+      assert.is_true(saveProfile())
+
+      local ok, err = reloadModule(moduleName)
+
+      assert.is_nil(ok)
+      assert.is_true(contains(err, "cannot be read"), tostring(err))
+      assert.is_true(waitForProfileSaveToPass(), "the profile save never finished")
+      assert.equals(1, exists(moduleName .. " alias", "alias"), "the module was emptied by a reload that could not read its file")
+    end)
+
+    -- Puts the module's own archive back and reloads it, for the specs that
+    -- follow, which share it.
+    local function restoreTheModule(backupPath)
+      copyFile(backupPath, modulePath)
+      os.remove(backupPath)
+      reloadModuleUntil(moduleName, function() return exists(moduleName .. " alias", "alias") == 1 and getModuleInfo(moduleName, "title") == "Module fixture for Package_spec.lua" end)
+    end
+
+    it("returns why when the module could not be read back in after it was taken apart", function()
+      local backupPath = modulePath .. ".backup"
+      copyFile(modulePath, backupPath)
+      defer(function() restoreTheModule(backupPath) end)
+      copyFile(fixtureDirectory .. "/mudlet-spec-notazip.mpackage", modulePath)
+      assert.is_true(waitForProfileSaveToPass(), "a profile save was still running, so the reload would be postponed")
+
+      local ok, err = reloadModule(moduleName)
+
+      assert.is_nil(ok)
+      assert.is_true(contains(err, "could not unzip package"), tostring(err))
+    end)
+
+    -- A reload asked for during a save is carried out once the save is done, and
+    -- by then the script has its answer, so a failure is only reported on the
+    -- console. A module whose XML stopped part-way is not counted as loaded but
+    -- still has the items read before that, which the failed reload takes away.
+    it("says so on the console when a reload put off by a save fails afterwards", function()
+      local backupPath = modulePath .. ".backup"
+      copyFile(modulePath, backupPath)
+      defer(function() restoreTheModule(backupPath) end)
+      copyFile(fixtureDirectory .. "/mudlet-spec-badmodule.mpackage", modulePath)
+      assert.is_true(waitForProfileSaveToPass(), "a profile save was still running, so the reload would be postponed")
+      assert.is_nil(reloadModule(moduleName), "SETUP: the module's XML was read in after all")
+      assert.equals(1, exists(moduleName .. " alias", "alias"), "SETUP: the module did not load part-way")
+      copyFile(fixtureDirectory .. "/mudlet-spec-notazip.mpackage", modulePath)
+      assert.is_true(waitForProfileSaveToPass(), "a profile save was still running")
+      local mark = getLastLineNumber("main")
+      assert.is_true(saveProfile())
+
+      assert.is_true(reloadModule(moduleName), "the reload was not put off until the save had finished")
+
+      assert.is_true(waitForProfileSaveToPass(), "the profile save never finished")
+      pumpEvents(200)
+      assert.is_true(containsWrapped(textFrom(mark), 'Module "' .. moduleName .. '" could not be reloaded'), textFrom(mark))
+    end)
+
+    it("returns why when the module's XML could not be imported", function()
+      local backupPath = modulePath .. ".backup"
+      copyFile(modulePath, backupPath)
+      defer(function() restoreTheModule(backupPath) end)
+      copyFile(fixtureDirectory .. "/mudlet-spec-badmodule.mpackage", modulePath)
+      assert.is_true(waitForProfileSaveToPass(), "a profile save was still running, so the reload would be postponed")
+
+      local ok, err = reloadModule(moduleName)
+
+      assert.is_nil(ok)
+      assert.is_true(contains(err, "could not be loaded"), tostring(err))
     end)
 
     it("re-reads the module's info from its config.lua", function()
