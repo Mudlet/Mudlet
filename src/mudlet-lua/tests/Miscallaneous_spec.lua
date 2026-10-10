@@ -939,17 +939,31 @@ describe("Tests C++ functions in the Miscallaneous category", function()
         assert.is_false(fileExists(escapee), "the save landed at " .. escapee)
       end)
 
-      -- most application-wide settings reach Mudlet.ini only at quit, so an
-      -- unclean exit after an explicit save would still lose them
+      -- changing most application-wide settings does not write Mudlet.ini, so a
+      -- save has to, or a crash after it loses the change
       it("writes the application-wide settings to Mudlet.ini as well", function()
         local iniFile = getMudletHomeDir():match("^(.*)/profiles/[^/]+$") .. "/Mudlet.ini"
+        local function onDisk()
+          local file = io.open(iniFile, "r")
+          if not file then
+            return nil
+          end
+          local value
+          for line in file:lines() do
+            value = line:match("^showTabConnectionIndicators=(.*)$") or value
+          end
+          file:close()
+          return value
+        end
         local original = getConfig("showTabConnectionIndicators")
+        -- the opposite of what the file holds, so only this save can put it there
+        local wanted = onDisk() ~= "true"
         finally(function()
           setConfig("showTabConnectionIndicators", original)
-          -- and on disk too, or Mudlet.ini keeps the flipped value until the next save
-          saveWaitingOutAnyOtherSave()
+          local restored, why = saveWaitingOutAnyOtherSave()
+          assert.is_true(restored, "Mudlet.ini keeps the test's value: " .. tostring(why))
         end)
-        assert.is_true(setConfig("showTabConnectionIndicators", not original))
+        assert.is_true(setConfig("showTabConnectionIndicators", wanted))
 
         local saved, message = saveWaitingOutAnyOtherSave()
         if not saved and not testMode then
@@ -958,17 +972,7 @@ describe("Tests C++ functions in the Miscallaneous category", function()
         end
         assert.is_true(saved, tostring(message))
 
-        local wanted = "showTabConnectionIndicators=" .. tostring(not original)
-        local found = false
-        local file = io.open(iniFile, "r")
-        assert.is_not_nil(file, "no Mudlet.ini at " .. iniFile)
-        for line in file:lines() do
-          if line == wanted then
-            found = true
-          end
-        end
-        file:close()
-        assert.is_true(found, "Mudlet.ini did not get " .. wanted)
+        assert.are.equal(tostring(wanted), onDisk(), "Mudlet.ini at " .. iniFile .. " did not get the new value")
       end)
     end)
 
