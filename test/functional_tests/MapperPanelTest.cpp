@@ -147,10 +147,10 @@ private:
     {
         mpHost->mMapViewOnly = false;
         mpHost->mRoomSize = kRoomSize;
-        if (!map()->mpMapper) {
+        if (!map()->mapper()) {
             mpHost->showHideOrCreateMapper(false);
         }
-        mpMapper = map()->mpMapper;
+        mpMapper = map()->mapper();
         QVERIFY(mpMapper);
         mp2dMap = mpMapper->mp2dMap;
         QVERIFY(mp2dMap);
