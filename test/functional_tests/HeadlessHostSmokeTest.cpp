@@ -31,6 +31,7 @@
 
 #include "Host.h"
 #include "HostManager.h"
+#include "MudletApp.h"
 #include "PortableModeTestHelper.h"
 #include "TAppFrontend.h"
 #include "TConsoleModel.h"
@@ -76,6 +77,7 @@ private slots:
         QVERIFY(QDir().mkpath(qsl("%1/mudlet/profiles").arg(mConfigDir.path())));
         mSavedXdg = qgetenv("XDG_CONFIG_HOME");
         qputenv("XDG_CONFIG_HOME", mConfigDir.path().toUtf8());
+        QCOMPARE(MudletApp::getMudletPath(enums::mainPath), qsl("%1/mudlet").arg(mConfigDir.path()));
 
         QVERIFY2(!HostManager::self(), "A profile pool already exists, so this run is not headless.");
         mpHostManager = std::make_unique<HostManager>();
@@ -118,6 +120,8 @@ headlessResult = ok and 'ok' or tostring(err)
         QVERIFY2(mainBufferHolds(host, qsl("headless echo line")), "echo() to main never reached the main console model.");
         QVERIFY2(mainBufferHolds(host, qsl("headless fed line")), "feedTriggers() never reached the main console model.");
         QVERIFY2(mainBufferHolds(host, qsl("headless trigger echo")), "The trigger's echo never reached the main console model.");
+        // Lets work the profile deferred, such as its first-launch timer, run before looking
+        QCoreApplication::processEvents();
         QVERIFY2(QApplication::topLevelWidgets().isEmpty(), "Making and running the profile created a widget.");
     }
 
@@ -238,6 +242,19 @@ fbYT0tapBHTFGBkf6NgxBGenwL5TDeL9g3w57+FWiHtIKUylQhCoNb20
         QVERIFY2(QApplication::topLevelWidgets().isEmpty(), "The refused connection created a widget.");
     }
 #endif
+
+    void test_profileWithNoSettingsStoreTakesTheDefaults()
+    {
+        if (MudletApp::getQSettings()) {
+            QSKIP("A settings store exists with no main window, so there are no defaults for having none to check.");
+        }
+
+        const QString hostname = qsl("Test-Headless-Host-Defaults");
+        QVERIFY2(HostManager::self()->addHost(hostname, QString(), QString(), QString()), "Could not create a profile with no settings store.");
+        Host* host = HostManager::self()->getHost(hostname);
+        QVERIFY2(host, "The profile is not in the pool.");
+        QVERIFY(!host->mMapperCenterSmallAreas);
+    }
 };
 
 #include "HeadlessHostSmokeTest.moc"
