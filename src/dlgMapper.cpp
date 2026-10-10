@@ -895,6 +895,8 @@ void dlgMapper::recreate3DWidget()
 
     bool was3DMode = glWidget->isVisible();
 
+    // Detached while still shown, Qt queues a show that brings it back as a top-level window
+    glWidget->hide();
     glWidget->setParent(nullptr);
     glWidget->deleteLater();
     glWidget = nullptr;

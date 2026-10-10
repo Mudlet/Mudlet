@@ -4339,17 +4339,15 @@ describe("Tests saveMap and loadMap", function()
     pending("routes can come back a step longer than the shortest one - issue #10180")
   end)
 
-  -- setMapPerspective/shiftMapPerspective only exist in a build made with 3D
-  -- mapper support (USE_3DMAPPER), which only the Linux clang CI job leaves out
+  -- setMapPerspective/shiftMapPerspective only exist with USE_3DMAPPER, and only
+  -- move a camera nothing here can read back, so there is nothing to assert yet
   pending("setMapPerspective needs a Mudlet built with the 3D mapper")
 
   pending("shiftMapPerspective needs a Mudlet built with the 3D mapper")
 end)
 
--- Floating and redocking the map gives the modern 3D view a new GL context, and
--- switching back to the classic view deletes the widget while its context may
--- still be alive, so a context signal must not reach it once its destructor
--- has run
+-- Floating and redocking give the modern 3D view a new GL context, and switching
+-- renderers replaces the widget; neither may crash or leave the 3D view hidden
 describe("Tests the modern 3D mapper surviving context rebuilds", function()
   it("floats, redocks and switches back to the classic view", function()
     if type(setMapPerspective) ~= "function" then
