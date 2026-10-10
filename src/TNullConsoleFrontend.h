@@ -59,14 +59,15 @@ public:
 // get a model of their own, registered as a real view registers its widgets', so scripts can find
 // them, echo to them and delete them. Every other operation, on these or any other window, fails,
 // has no value or does nothing; a close has nothing to refuse it.
-class TNullConsoleFrontend final : public TConsoleFrontend
+class TNullConsoleFrontend : public TConsoleFrontend
 {
 public:
     // Some callers hand a failure's message straight to Lua, so it has to say why.
     static std::pair<bool, QString> noView() { return {false, qsl("the profile has no main window")}; }
 
     explicit TNullConsoleFrontend(Host* pHost);
-    ~TNullConsoleFrontend();
+    // Virtual, as Host deletes whichever view it holds as this type
+    virtual ~TNullConsoleFrontend();
 
     void dropWindows();
     // A deleted window's model can still be in use, as a sysBufferShrinkEvent handler runs inside its

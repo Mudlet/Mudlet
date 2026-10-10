@@ -170,6 +170,8 @@ class Host : public QObject
     friend class TelnetLatePasswordTest;
     // Allows the functional test to size its archives past the unpacking dialog's threshold:
     friend class PackageRemovalSaveTeardownTest;
+    // Allows the functional test to put a recording view in place of the null one:
+    friend class FrontendRoutingContractTest;
 
 public:
     Host(int port, const QString& mHostName, const QString& login, const QString& pass, int host_id);

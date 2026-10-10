@@ -28,7 +28,7 @@
 // The application shell core code sees while there is no main window: before it is made, after it
 // has gone, and in a run with no GUI. Queries have no value, actions fail or do nothing, and a
 // file or folder dialog answers as if the player cancelled it.
-class TNullAppFrontend final : public TAppFrontend
+class TNullAppFrontend : public TAppFrontend
 {
 public:
     Host* getActiveHost() override { return nullptr; }
