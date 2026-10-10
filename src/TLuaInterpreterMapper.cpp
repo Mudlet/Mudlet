@@ -277,9 +277,7 @@ int TLuaInterpreter::addAreaName(lua_State* L)
     lua_pushnumber(L, areaId);
 
     host.mpMap->announceAreaListChanged();
-    if (auto* viewManager = host.mpMap->mapViewsFrontend()) {
-        viewManager->updateAllViews();
-    }
+    host.mpMap->mapViewsFrontend()->updateAllViews();
 
     host.mpMap->setUnsaved(__func__);
     host.mpMap->updateArea(areaId);
@@ -725,10 +723,6 @@ int TLuaInterpreter::centerview(lua_State* L)
     // If viewId is specified, center that specific view
     if (viewId > 0) {
         auto* viewManager = host.mpMap->mapViewsFrontend();
-        if (!viewManager) {
-            return warnArgumentValue(L, __func__, "no view manager available");
-        }
-
         auto* view = viewManager->view(viewId);
         if (!view) {
             return warnArgumentValue(L, __func__, qsl("view %1 not found").arg(viewId));
@@ -1279,10 +1273,9 @@ int TLuaInterpreter::deleteArea(lua_State* L)
 
     if (result) {
         host.mpMap->announceAreaListChanged();
-        if (auto* viewManager = host.mpMap->mapViewsFrontend()) {
-            viewManager->updateAllViews();
-            viewManager->switchViewsShowingArea(deletedAreaId);
-        }
+        auto* viewManager = host.mpMap->mapViewsFrontend();
+        viewManager->updateAllViews();
+        viewManager->switchViewsShowingArea(deletedAreaId);
         host.mpMap->setUnsaved(__func__);
         host.mpMap->updateArea(id);
         host.mpMap->mMapGraphNeedsUpdate = true;
@@ -2018,10 +2011,6 @@ int TLuaInterpreter::getMapZoom(lua_State* L)
     // If viewId is specified, get zoom from that specific view
     if (viewId > 0) {
         auto* viewManager = host.mpMap->mapViewsFrontend();
-        if (!viewManager) {
-            return warnArgumentValue(L, __func__, "no view manager available");
-        }
-
         auto* view = viewManager->view(viewId);
         if (!view) {
             return warnArgumentValue(L, __func__, qsl("view %1 not found").arg(viewId));
@@ -2031,9 +2020,7 @@ int TLuaInterpreter::getMapZoom(lua_State* L)
         return 1;
     }
 
-    // Primary mapper behavior
-    auto* mapper = host.mpMap->mapViewFrontend();
-    if (!mapper) {
+    if (!host.mapOpen()) {
         return warnArgumentValue(L, __func__, "no active mapper");
     }
 
@@ -2045,6 +2032,11 @@ int TLuaInterpreter::getMapZoom(lua_State* L)
         return 1;
     }
 
+    // Only a mapper on screen has an area it is showing
+    auto* mapper = host.mpMap->mapViewFrontend();
+    if (!mapper) {
+        return warnArgumentValue(L, __func__, "no active mapper");
+    }
     areaID = mapper->shownAreaId();
     lua_pushnumber(L, host.mpMap->mpRoomDB->get2DMapZoom(areaID.value()));
     return 1;
@@ -3532,9 +3524,7 @@ int TLuaInterpreter::setAreaName(lua_State* L)
         host.mpMap->setUnsaved(__func__);
         host.mpMap->updateArea(id);
         host.mpMap->announceAreaRenamed(oldName, newName);
-        if (auto* viewManager = host.mpMap->mapViewsFrontend()) {
-            viewManager->updateAllViews();
-        }
+        host.mpMap->mapViewsFrontend()->updateAllViews();
     }
     lua_pushboolean(L, result);
     return 1;
@@ -4002,10 +3992,6 @@ int TLuaInterpreter::setMapZoom(lua_State* L)
     // If viewId is specified, set zoom for that specific view
     if (viewId > 0) {
         auto* viewManager = host.mpMap->mapViewsFrontend();
-        if (!viewManager) {
-            return warnArgumentValue(L, __func__, "no view manager available");
-        }
-
         auto* view = viewManager->view(viewId);
         if (!view) {
             return warnArgumentValue(L, __func__, qsl("view %1 not found").arg(viewId));
@@ -4724,10 +4710,6 @@ int TLuaInterpreter::getMapViewIds(lua_State* L)
     }
 
     auto* viewManager = host.mpMap->mapViewsFrontend();
-    if (!viewManager) {
-        return warnArgumentValue(L, __func__, "no view manager available");
-    }
-
     const QList<int> viewIds = viewManager->getViewIds();
 
     lua_newtable(L);
@@ -4751,10 +4733,6 @@ int TLuaInterpreter::getMapViewInfo(lua_State* L)
     }
 
     auto* viewManager = host.mpMap->mapViewsFrontend();
-    if (!viewManager) {
-        return warnArgumentValue(L, __func__, "no view manager available");
-    }
-
     auto* view = viewManager->view(viewId);
     if (!view) {
         return warnArgumentValue(L, __func__, qsl("view %1 not found").arg(viewId));

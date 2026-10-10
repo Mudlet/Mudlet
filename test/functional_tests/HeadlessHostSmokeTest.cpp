@@ -708,6 +708,80 @@ headlessMapLua = ok and 'ok' or tostring(err)
         QCOMPARE(luaGlobalString(host, "headlessMapLua"), qsl("ok"));
         QVERIFY2(QApplication::topLevelWidgets().isEmpty(), "The map functions created a widget.");
     }
+
+    // As the GUI answers with its mapper up and no secondary map view open
+    void test_mapperSettingsAndViewsWithNoMainWindow()
+    {
+        QVERIFY2(!TAppFrontend::hasView(), "A main window exists, so this run is not headless.");
+
+        const QString hostname = qsl("Test-Headless-Host-Map-Config");
+        QVERIFY2(HostManager::self()->addHost(hostname, QString(), QString(), QString()), "Could not create a profile with no main window.");
+        Host* host = HostManager::self()->getHost(hostname);
+        QVERIFY2(host, "The profile is not in the pool.");
+        const int area = host->mpMap->mpRoomDB->addArea(qsl("Headless Config Area"));
+        QVERIFY(host->mpMap->mpRoomDB->set2DMapZoom(area, 7.5));
+
+        const QString script = qsl("headlessArea = %1\n").arg(area) + qsl(R"lua(
+headlessMapConfig = 'not run'
+local ok, err = pcall(function()
+  local function check(label, want, ...)
+    local got = {n = select("#", ...), ...}
+    local same = got.n == want.n
+    for i = 1, math.max(got.n, want.n) do
+      same = same and got[i] == want[i]
+    end
+    assert(same, label .. " answered " .. got.n .. " values: " .. tostring(got[1]) .. ", " .. tostring(got[2]))
+  end
+  local function refused(message) return {n = 2, nil, message} end
+  local function answered(value) return {n = 1, value} end
+
+  local room = createRoomID()
+  addRoom(room); setRoomArea(room, headlessArea)
+  local ids = getMapViewIds()
+  assert(type(ids) == "table" and next(ids) == nil, "getMapViewIds answered " .. tostring(ids))
+  check("closeAllMapViews", answered(0), closeAllMapViews())
+  check("closeMapView", refused("view 99 not found"), closeMapView(99))
+  check("getMapViewInfo", refused("view 99 not found"), getMapViewInfo(99))
+  check("centerview in a view", refused("view 99 not found"), centerview(room, 99))
+  check("getMapZoom in a view", refused("view 99 not found"), getMapZoom(headlessArea, 99))
+  check("setMapZoom in a view", refused("view 99 not found"), setMapZoom(5, headlessArea, 99))
+  check("createMapView", refused("no view manager available"), createMapView(headlessArea))
+
+  check("getMapZoom of an area", answered(7.5), getMapZoom(headlessArea))
+  check("getMapZoom of no such area", refused("number 9999 is not a valid areaID"), getMapZoom(9999))
+  check("getMapZoom of the shown area", refused("no active mapper"), getMapZoom())
+  check("setDefaultAreaVisible", answered(true), setDefaultAreaVisible(false))
+
+  check("setConfig mapRoomSize", answered(true), setConfig("mapRoomSize", 6))
+  check("getConfig mapRoomSize", answered(6), getConfig("mapRoomSize"))
+  check("setConfig mapRoomSize 0", refused("mapRoomSize must be at least 1, got 0"), setConfig("mapRoomSize", 0))
+  check("setConfig mapExitSize", answered(true), setConfig("mapExitSize", 3.5))
+  check("getConfig mapExitSize", answered(3.5), getConfig("mapExitSize"))
+  for _, key in ipairs({"mapRoundRooms", "showRoomIdsOnMap", "mapShowGrid"}) do
+    check("setConfig " .. key, answered(true), setConfig(key, true))
+    check("getConfig " .. key, answered(true), getConfig(key))
+  end
+  check("setConfig mapShowRoomBorders", answered(true), setConfig("mapShowRoomBorders", false))
+  check("getConfig mapShowRoomBorders", answered(false), getConfig("mapShowRoomBorders"))
+  check("setConfig showMapInfo", answered(true), setConfig("showMapInfo", "Headless"))
+  check("setConfig mapInfoColor", answered(true), setConfig("mapInfoColor", {1, 2, 3}))
+  local color = getConfig("mapInfoColor")
+  assert(color[1] == 1 and color[2] == 2 and color[3] == 3 and color[4] == 255, "getConfig mapInfoColor did not read back the color set")
+  check("setConfig mapInfoColor 'x'", refused("mapInfoColor requires a table {r, g, b} or {r, g, b, a}"), setConfig("mapInfoColor", "x"))
+  -- These two drive the mapper widget or the main window, as in the GUI before its mapper exists
+  check("setConfig show3dMapView", refused("'show3dMapView' isn't a valid configuration option"), setConfig("show3dMapView", false))
+  check("setConfig showUpperLowerLevels", refused("'showUpperLowerLevels' isn't a valid configuration option"), setConfig("showUpperLowerLevels", false))
+end)
+headlessMapConfig = ok and 'ok' or tostring(err)
+)lua");
+        const bool ran = host->getLuaInterpreter()->compileAndExecuteScript(script);
+
+        QVERIFY2(ran, "The Lua chunk did not run.");
+        QCOMPARE(luaGlobalString(host, "headlessMapConfig"), qsl("ok"));
+        QVERIFY2(!host->mpMap->getDefaultAreaShown(), "setDefaultAreaVisible(false) did not hide the default area.");
+        QVERIFY2(host->mMapInfoContributors.contains(qsl("Headless")), "setConfig showMapInfo did not add the contributor.");
+        QVERIFY2(QApplication::topLevelWidgets().isEmpty(), "The map functions created a widget.");
+    }
 };
 
 #include "HeadlessHostSmokeTest.moc"

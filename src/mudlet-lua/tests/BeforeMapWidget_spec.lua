@@ -66,4 +66,16 @@ describe("Tests the map functions that wait for a mapper in a profile without on
     assert.are.same({nil, "no map present or loaded"}, {saveJsonMap(jsonPath)})
     assert.are.same({nil, "no map present or loaded"}, {loadJsonMap(jsonPath)})
   end)
+
+  it("refuses the mapper settings and an area's zoom", function()
+    assert.are.same({false}, {setDefaultAreaVisible(true)})
+    assert.are.same({nil, "no active mapper"}, {getMapZoom(areaId)})
+    assert.are.same({nil, "'mapRoomSize' isn't a valid configuration option"}, {setConfig("mapRoomSize", getConfig("mapRoomSize"))})
+    assert.are.same({nil, "'mapExitSize' isn't a valid configuration option"}, {setConfig("mapExitSize", getConfig("mapExitSize"))})
+  end)
+
+  it("lists no secondary map views", function()
+    assert.are.same({{}}, {getMapViewIds()})
+    assert.are.same({0}, {closeAllMapViews()})
+  end)
 end)
