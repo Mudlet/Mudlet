@@ -49,6 +49,7 @@ class TTreeWidget : public QTreeWidget
 public:
     Q_DISABLE_COPY(TTreeWidget)
     explicit TTreeWidget(QWidget* pW);
+    ~TTreeWidget() override;
     Qt::DropActions supportedDropActions() const override;
     void dragEnterEvent(QDragEnterEvent* event) override;
     void dragLeaveEvent(QDragLeaveEvent* event) override;
@@ -73,6 +74,7 @@ public:
     void setVariableForRow(VarUnit* pVarUnit, QTreeWidgetItem* pItem, TVar* pVariable);
     void setNewVariableForRow(VarUnit* pVarUnit, QTreeWidgetItem* pItem, TVar* pVariable);
     void forgetRow(QTreeWidgetItem* pItem);
+    // Hands the row's unsaved variable over without deleting it, for when the variable tree adopts it
     void forgetNewVariableForRow(QTreeWidgetItem* pItem);
     bool rowCanBeSaved(VarUnit* pVarUnit, QTreeWidgetItem* pItem) const;
 

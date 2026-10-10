@@ -7344,6 +7344,7 @@ void dlgTriggerEditor::saveVar()
             luaInterface->createVar(var);
             varUnit->addVariable(var);
             treeWidget_variables->setVariableForRow(varUnit, pItem, var);
+            treeWidget_variables->forgetNewVariableForRow(pItem);
             pItem->setText(0, newName);
             mpCurrentVarItem = nullptr;
         } else if (var) {
