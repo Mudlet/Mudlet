@@ -1015,6 +1015,56 @@ describe("Trigger processing", function()
             assert.is_true(reached, "the other trigger's feed should still be processed")
         end)
 
+        describe("scrolls the main console to the lines it feeds", function()
+            local savedEncoding
+
+            before_each(function()
+                savedEncoding = getServerEncoding()
+                -- A console scrolled back up stays put, so start from the bottom
+                scrollTo()
+            end)
+
+            after_each(function()
+                setServerEncoding(savedEncoding)
+            end)
+
+            local function assertScrolledToTheEnd(how)
+                assert.are.equal(getLastLineNumber("main"), getScroll(), how .. " left the main console short of the lines it fed")
+            end
+
+            it("from text the game's UTF-8 encoding can carry", function()
+                setServerEncoding("UTF-8")
+                feedTriggers("feed_scroll utf8 one\nfeed_scroll utf8 two\n")
+                assertScrolledToTheEnd("a UTF-8 feed")
+            end)
+
+            it("from text transcoded to the game's encoding", function()
+                setServerEncoding("ISO 8859-1")
+                feedTriggers("feed_scroll latin one\nfeed_scroll latin two\n")
+                assertScrolledToTheEnd("a transcoded feed")
+            end)
+
+            it("from text for an ASCII game", function()
+                setServerEncoding("ASCII")
+                feedTriggers("feed_scroll ascii one\nfeed_scroll ascii two\n")
+                assertScrolledToTheEnd("an ASCII feed")
+            end)
+
+            it("from text already in the game's encoding", function()
+                feedTriggers("feed_scroll raw one\nfeed_scroll raw two\n", false)
+                assertScrolledToTheEnd("a feed not marked as UTF-8")
+            end)
+
+            it("from text a trigger feeds", function()
+                local id = tempRegexTrigger("^feed_scroll_outer$", function()
+                    feedTriggers("feed_scroll inner one\nfeed_scroll inner two\n")
+                end)
+                feedTriggers("feed_scroll_outer\n")
+                killTrigger(id)
+                assertScrolledToTheEnd("a feed from inside a trigger")
+            end)
+        end)
+
     end)
 
     describe("temporary trigger creation and firing", function()

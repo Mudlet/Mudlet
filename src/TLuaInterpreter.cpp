@@ -1224,13 +1224,16 @@ int TLuaInterpreter::feedTriggers(lua_State* L)
         dataIsUtf8Encoded = getVerifiedBool(L, __func__, 2, "Utf8Encoded", true);
     }
     const QByteArray data{lua_tostring(L, 1)};
-    // Whatever starts a trigger pass scrolls the pane to its new lines once the
-    // pass ends, as cTelnet does per read, so only a top-level feed has to.
-    auto feed = [&host, triggerUnit](std::string& text) {
+    // Inside a trigger, the pane catches up when the pass that fired it ends:
+    // scrolling mid-pass would announce lines to screen readers before the
+    // rest of the triggers have gagged or rewritten them.
+    auto feed = [L, &host, triggerUnit](std::string& text) {
         host.printOnDisplay(text, false);
         if (!triggerUnit->processingDepth()) {
             host.finalizeMainConsole();
         }
+        lua_pushboolean(L, true);
+        return 1;
     };
 
     const QByteArray currentEncoding = host.mTelnet.getEncoding();
@@ -1239,9 +1242,7 @@ int TLuaInterpreter::feedTriggers(lua_State* L)
         if (currentEncoding == "UTF-8") {
             // Simple case: the encoding is already what we are using:
             std::string dataStdString{data.toStdString()};
-            feed(dataStdString);
-            lua_pushboolean(L, true);
-            return 1;
+            return feed(dataStdString);
         }
         const QString dataQString{data};
         // else
@@ -1257,9 +1258,7 @@ int TLuaInterpreter::feedTriggers(lua_State* L)
             }
 
             std::string encodedText{TEncodingHelper::encode(dataQString, currentEncoding).toStdString()};
-            feed(encodedText);
-            lua_pushboolean(L, true);
-            return 1;
+            return feed(encodedText);
         }
 
         // else plain, raw ASCII, we hope!
@@ -1273,17 +1272,13 @@ int TLuaInterpreter::feedTriggers(lua_State* L)
         // It is safe to use the data directly now as we have already proved it
         // to be plain ASCII
         std::string dataStdString{dataQString.toStdString()};
-        feed(dataStdString);
-        lua_pushboolean(L, true);
-        return 1;
+        return feed(dataStdString);
     }
 
     // else the user is assumed to have coded it themselves into the Game
     // Server's current encoding - the backwards "compatible" form:
     std::string dataStdString{data.toStdString()};
-    feed(dataStdString);
-    lua_pushboolean(L, true);
-    return 1;
+    return feed(dataStdString);
 }
 
 // No documentation available in wiki - internal helper

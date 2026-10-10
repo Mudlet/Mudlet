@@ -182,8 +182,9 @@ private slots:
                  "recolouring a line left no trace in the pane's cached screen, so the next paint served the old colour back - the dirty-line range was not honoured");
     }
 
-    // Fed text has to scroll the pane to itself, as a read from the game does;
-    // a recolour repaints only its own row, so it cannot stand in for that.
+    // The marker line lands below the bottom row of a full pane, so it is only
+    // drawn if the feed scrolls the pane to it - whether it arrives coloured or
+    // a trigger recolours it on the way in.
     void test_fedLinesAreScrolledIntoView_data()
     {
         QTest::addColumn<QString>("script");
@@ -210,7 +211,7 @@ private slots:
         QVERIFY(console);
         TTextEdit* pane = console->mUpperPane;
         QVERIFY(pane);
-        // A pane that has not scrolled yet would show the fed lines without being scrolled to them.
+        // A pane with room left would draw the fed lines without any scroll.
         QVERIFY2(pane->imageTopLine() > 0, "the filler did not fill the pane");
 
         QPixmap before(pane->size());
