@@ -28,6 +28,7 @@
 #include <QFontMetricsF>
 #include <QGuiApplication>
 #include <QImage>
+#include <QMovie>
 #include <QObject>
 #include <QStringList>
 #include <QTextCharFormat>
@@ -501,6 +502,9 @@ void TNullConsoleFrontend::removeLabel(const QString& name)
         return;
     }
     mpHost->windowRegistry().deregisterLabel(name, it->second.pModel.get());
+    if (it->second.movie) {
+        mpHost->getGifTracker()->unregisterGif(it->second.movie.get());
+    }
     mRetiredLabels.push_back(std::move(it->second.pModel));
     mLabels.erase(it);
     queueRelease();
@@ -535,9 +539,14 @@ bool TNullConsoleFrontend::setLabelText(const QString& name, const QString& text
     }
     Label& label = it->second;
     const QString shown = label.pModel->linkStyledText(text);
+    // TLabel::setText() stops the movie even when QLabel::setText() keeps it for being given the same text
+    if (label.showsMovie) {
+        label.movie->stop();
+    }
     // QLabel::setText() ignores the text it already has, and a fresh label's null text equals ""
     if (shown != label.pModel->mText) {
         label.textLabel = true;
+        label.showsMovie = false;
         label.sizeHint.reset();
     }
     label.pModel->mText = shown;
@@ -551,6 +560,10 @@ std::optional<QSize> TNullConsoleFrontend::getLabelSizeHint(const QString& name)
         return std::nullopt;
     }
     const Label& label = it->second;
+    // QLabelPrivate::sizeForWidth() measures the frame on show, which QLabel only re-reads as the movie resizes
+    if (label.showsMovie && !label.movie->currentPixmap().isNull()) {
+        return label.movie->currentPixmap().deviceIndependentSize().toSize() + QSize(label.frame[1] + label.frame[3], label.frame[0] + label.frame[2]);
+    }
     if (!label.sizeHint) {
         label.sizeHint = labelSizeHint(label.pModel->mFont, label.pModel->mText, label.textLabel, label.frame);
     }
@@ -929,11 +942,104 @@ bool TNullConsoleFrontend::clearLabelVisitedLinks(const QString& name)
 // QWidget::resize() takes a negative size as nothing
 bool TNullConsoleFrontend::resizeLabel(const QString& name, const int width, const int height)
 {
-    TLabelModel* pLabel = labelModel(name);
-    if (!pLabel) {
+    const auto it = mLabels.find(name);
+    if (it == mLabels.end()) {
         return false;
     }
-    pLabel->mGeometry.setSize(QSize(width, height).expandedTo(QSize(0, 0)));
+    Label& label = it->second;
+    label.pModel->mGeometry.setSize(QSize(width, height).expandedTo(QSize(0, 0)));
+    if (label.movieFollowsSize) {
+        label.movie->setScaledSize(label.pModel->mGeometry.size());
+    }
+    return true;
+}
+
+std::pair<bool, QString> TNullConsoleFrontend::setLabelMovie(const QString& name, const QString& moviePath)
+{
+    const auto it = mLabels.find(name);
+    if (it == mLabels.end()) {
+        return {false, qsl("label '%1' does not exist").arg(name)};
+    }
+    if (const QMovie candidate(moviePath); !candidate.isValid()) {
+        return {false, qsl("no valid movie found at '%1'").arg(moviePath)};
+    }
+    Label& label = it->second;
+    if (!label.movie) {
+        label.movie = std::make_unique<QMovie>();
+        mpHost->getGifTracker()->registerGif(label.movie.get());
+        label.movie->setCacheMode(QMovie::CacheAll);
+    }
+    label.movie->setFileName(moviePath);
+    label.movie->stop();
+    // QLabel::setMovie() clears the text and leaves the label measuring the movie
+    label.showsMovie = true;
+    label.textLabel = false;
+    label.sizeHint.reset();
+    label.pModel->mText.clear();
+    label.movie->start();
+    return {true, QString()};
+}
+
+QMovie* TNullConsoleFrontend::shownMovie(const QString& name) const
+{
+    const auto it = mLabels.find(name);
+    return it != mLabels.end() && it->second.showsMovie ? it->second.movie.get() : nullptr;
+}
+
+std::optional<bool> TNullConsoleFrontend::labelShowsMovie(const QString& name) const
+{
+    const auto it = mLabels.find(name);
+    if (it == mLabels.end()) {
+        return std::nullopt;
+    }
+    return {it->second.showsMovie};
+}
+
+bool TNullConsoleFrontend::startLabelMovie(const QString& name)
+{
+    QMovie* pMovie = shownMovie(name);
+    if (!pMovie) {
+        return false;
+    }
+    pMovie->start();
+    return true;
+}
+
+bool TNullConsoleFrontend::pauseLabelMovie(const QString& name)
+{
+    QMovie* pMovie = shownMovie(name);
+    if (!pMovie) {
+        return false;
+    }
+    pMovie->setPaused(true);
+    return true;
+}
+
+bool TNullConsoleFrontend::setLabelMovieFrame(const QString& name, const int frame)
+{
+    QMovie* pMovie = shownMovie(name);
+    return pMovie && pMovie->jumpToFrame(frame);
+}
+
+bool TNullConsoleFrontend::setLabelMovieSpeed(const QString& name, const int percent)
+{
+    QMovie* pMovie = shownMovie(name);
+    if (!pMovie) {
+        return false;
+    }
+    pMovie->setSpeed(percent);
+    return true;
+}
+
+bool TNullConsoleFrontend::scaleLabelMovie(const QString& name, const bool followLabelSize)
+{
+    QMovie* pMovie = shownMovie(name);
+    if (!pMovie) {
+        return false;
+    }
+    Label& label = mLabels.at(name);
+    pMovie->setScaledSize(label.pModel->mGeometry.size());
+    label.movieFollowsSize = followLabelSize;
     return true;
 }
 
