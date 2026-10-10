@@ -1,6 +1,6 @@
 -- Triggers, aliases, timers, keys and scripts are all nodes in a tree: each one
 -- holds a list of its children and a pointer back to its parent. isActive(name,
--- type, true) is the only Lua reading of the parent chain, and the timer block
+-- type, true) reads the parent chain, by name or by ID, and the timer block
 -- below is the only enable/disable that descends the children list - the other
 -- four types are switched through their unit's name lookup table - so between
 -- them both links are covered.
@@ -47,36 +47,44 @@ describe("tree linkage", function()
   --  |   `- leaf
   --  `- sibling
 
+  -- Asked by ID, isActive() must give the same answer as asked by name.
+  local function askBoth(itemType, names, ids, key, checkAncestors)
+    local byName = isActive(names[key], itemType, checkAncestors)
+    assert.are.equal(byName, isActive(ids[key], itemType, checkAncestors),
+      "asked by id, the " .. key .. " " .. itemType .. " should get the same answer as asked by name")
+    return byName == 1
+  end
+
   -- Turning a group off silences what hangs below it without touching those
   -- items' own switches, and reaches only its own branch.
-  local function silencesOnlyItsOwnBranch(itemType, names, enable, disable)
-    local function effective(name)
-      return isActive(name, itemType, true) == 1
+  local function silencesOnlyItsOwnBranch(itemType, names, ids, enable, disable)
+    local function effective(key)
+      return askBoth(itemType, names, ids, key, true)
     end
-    local function switchedOn(name)
-      return isActive(name, itemType) == 1
+    local function switchedOn(key)
+      return askBoth(itemType, names, ids, key, false)
     end
 
     enable(names.top)
     enable(names.mid)
     enable(names.leaf)
     enable(names.sibling)
-    assert.is_true(effective(names.leaf), "the leaf should be effective with both groups above it on")
-    assert.is_true(effective(names.sibling), "the sibling should be effective with its group on")
+    assert.is_true(effective("leaf"), "the leaf should be effective with both groups above it on")
+    assert.is_true(effective("sibling"), "the sibling should be effective with its group on")
 
     disable(names.top)
-    assert.is_false(effective(names.leaf), "the leaf should be silenced by the group two levels above it")
-    assert.is_false(effective(names.sibling), "the sibling should be silenced by the group above it")
-    assert.is_true(switchedOn(names.leaf), "the leaf's own switch must survive an ancestor being turned off")
-    assert.is_true(switchedOn(names.sibling), "the sibling's own switch must survive an ancestor being turned off")
+    assert.is_false(effective("leaf"), "the leaf should be silenced by the group two levels above it")
+    assert.is_false(effective("sibling"), "the sibling should be silenced by the group above it")
+    assert.is_true(switchedOn("leaf"), "the leaf's own switch must survive an ancestor being turned off")
+    assert.is_true(switchedOn("sibling"), "the sibling's own switch must survive an ancestor being turned off")
 
     enable(names.top)
-    assert.is_true(effective(names.leaf), "the leaf should come back when the group above it does")
-    assert.is_true(effective(names.sibling), "the sibling should come back when its group does")
+    assert.is_true(effective("leaf"), "the leaf should come back when the group above it does")
+    assert.is_true(effective("sibling"), "the sibling should come back when its group does")
 
     disable(names.mid)
-    assert.is_false(effective(names.leaf), "the leaf should be silenced by its immediate group")
-    assert.is_true(effective(names.sibling), "the sibling hangs off top, not mid, so it must be untouched")
+    assert.is_false(effective("leaf"), "the leaf should be silenced by its immediate group")
+    assert.is_true(effective("sibling"), "the sibling hangs off top, not mid, so it must be untouched")
   end
 
   it("links triggers to the groups above them", function()
@@ -94,7 +102,7 @@ describe("tree linkage", function()
     }
     assertCreated(ids, "trigger")
 
-    silencesOnlyItsOwnBranch("trigger", names, enableTrigger, disableTrigger)
+    silencesOnlyItsOwnBranch("trigger", names, ids, enableTrigger, disableTrigger)
   end)
 
   it("links aliases to the groups above them", function()
@@ -112,7 +120,7 @@ describe("tree linkage", function()
     }
     assertCreated(ids, "alias")
 
-    silencesOnlyItsOwnBranch("alias", names, enableAlias, disableAlias)
+    silencesOnlyItsOwnBranch("alias", names, ids, enableAlias, disableAlias)
   end)
 
   it("links keys to the groups above them", function()
@@ -130,7 +138,7 @@ describe("tree linkage", function()
     }
     assertCreated(ids, "keybind")
 
-    silencesOnlyItsOwnBranch("keybind", names, enableKey, disableKey)
+    silencesOnlyItsOwnBranch("keybind", names, ids, enableKey, disableKey)
   end)
 
   it("links scripts to the groups above them", function()
@@ -151,7 +159,7 @@ describe("tree linkage", function()
     }
     assertCreated(ids, "script")
 
-    silencesOnlyItsOwnBranch("script", names, enableScript, disableScript)
+    silencesOnlyItsOwnBranch("script", names, ids, enableScript, disableScript)
   end)
 
   -- Timers are the one type that cannot merely be masked by an ancestor: a timer
@@ -174,28 +182,33 @@ describe("tree linkage", function()
     }
     assertCreated(ids, "timer")
 
-    local function running(name)
-      return isActive(name, "timer", true) == 1
+    local function running(key)
+      return askBoth("timer", names, ids, key, true)
     end
-    local function switchedOn(name)
-      return isActive(name, "timer") == 1
+    local function switchedOn(key)
+      return askBoth("timer", names, ids, key, false)
     end
 
     enableTimer(names.top)
     enableTimer(names.mid)
     enableTimer(names.leaf)
     enableTimer(names.sibling)
-    assert.is_true(running(names.leaf), "the leaf timer should be running with both groups above it on")
-    assert.is_true(running(names.sibling), "the sibling timer should be running with its group on")
+    assert.is_true(running("leaf"), "the leaf timer should be running with both groups above it on")
+    assert.is_true(running("sibling"), "the sibling timer should be running with its group on")
 
     disableTimer(names.top)
-    assert.is_false(running(names.leaf), "the leaf timer should stop when a group above it is turned off")
-    assert.is_false(running(names.sibling), "the sibling timer should stop when its group is turned off")
-    assert.is_false(switchedOn(names.leaf), "the leaf timer's own switch goes down too - its QTimer really has to stop")
-    assert.is_false(switchedOn(names.sibling), "the sibling timer's own switch goes down too")
+    assert.is_false(running("leaf"), "the leaf timer should stop when a group above it is turned off")
+    assert.is_false(running("sibling"), "the sibling timer should stop when its group is turned off")
+    assert.is_false(switchedOn("leaf"), "the leaf timer's own switch goes down too - its QTimer really has to stop")
+    assert.is_false(switchedOn("sibling"), "the sibling timer's own switch goes down too")
 
     enableTimer(names.top)
-    assert.is_true(running(names.leaf), "the leaf timer should start again with the group above it")
-    assert.is_true(running(names.sibling), "the sibling timer should start again with its group")
+    assert.is_true(running("leaf"), "the leaf timer should start again with the group above it")
+    assert.is_true(running("sibling"), "the sibling timer should start again with its group")
+
+    disableTimer(names.mid)
+    enableTimer(names.leaf)
+    assert.is_true(switchedOn("leaf"), "the leaf timer's own switch can go up again under a group that is off")
+    assert.is_false(running("leaf"), "a leaf timer switched on under a group that is off must not count as running")
   end)
 end)
