@@ -1220,22 +1220,34 @@ end
 -- @param url
 function installPackageFromUrl(file, url)
   local destination = string.format("%s/%s", getMudletHomeDir(), file)
+  mudlet.Locale = mudlet.Locale or loadTranslations("Mudlet")
 
-  registerAnonymousEventHandler("sysDownloadDone", function(_, saveTo)
-    if saveTo ~= destination then return end
+  -- queued first: a download that never starts would leave the handlers below armed for good,
+  -- and its events only arrive once this script has returned
+  local queued, refusal = downloadFile(destination, url)
+  if not queued then
+    local warnPrefix = mudlet.Locale.prefixWarn.message
+    decho('<0,150,190>' .. warnPrefix .. '<190,150,0>' .. tostring(refusal) .. '\n')
+    return
+  end
+
+  local doneHandler, errorHandler
+
+  -- both are one-shot handlers, which a true return keeps armed through other downloads
+  doneHandler = registerAnonymousEventHandler("sysDownloadDone", function(_, saveTo)
+    if saveTo ~= destination then return true end
+    killAnonymousEventHandler(errorHandler)
     verbosePackageInstall(destination)
     os.remove(destination)
   end, true)
 
-  mudlet.Locale = mudlet.Locale or loadTranslations("Mudlet")
-
-  registerAnonymousEventHandler("sysDownloadError", function(_, errorFound, saveTo)
-    if saveTo ~= destination then return end
+  errorHandler = registerAnonymousEventHandler("sysDownloadError", function(_, errorFound, saveTo)
+    if saveTo ~= destination then return true end
+    killAnonymousEventHandler(doneHandler)
     local warnPrefix = mudlet.Locale.prefixWarn.message
     decho('<0,150,190>' .. warnPrefix .. '<190,150,0>' .. errorFound .. '\n')
   end, true)
 
-  downloadFile(destination, url)
   local infoMessage = mudlet.Locale.packageDownloading.message
   local infoPrefix = mudlet.Locale.prefixInfo.message
     decho('<0,150,190>' ..infoPrefix .. '<190,100,50>' .. string.format(infoMessage, url) .. '\n')
