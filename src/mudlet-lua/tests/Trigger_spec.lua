@@ -1031,11 +1031,18 @@ describe("Trigger processing", function()
                         os.remove(encodingFile)
                     end
                 end
+                -- A line an earlier spec left open would absorb the first fed line
+                if getLines("main", getLastLineNumber("main"), getLastLineNumber("main") + 1)[1] ~= "" then
+                    echo("main", "\n")
+                end
                 scrollTo()
             end)
 
             after_each(function()
-                restoreEncoding()
+                if restoreEncoding then
+                    restoreEncoding()
+                    restoreEncoding = nil
+                end
                 if triggerId then
                     killTrigger(triggerId)
                     triggerId = nil
@@ -1086,13 +1093,30 @@ describe("Trigger processing", function()
                 assert.is_false(scrolledMidPass, "the feed inside the trigger scrolled the console before the pass that fired it had ended")
             end)
 
+            it("from text a trigger feeds, once the game data that fired the trigger is handled", function()
+                local scrolledMidPass
+                triggerId = tempRegexTrigger("^feed_scroll_telnet_outer$", function()
+                    feedTriggers("feed_scroll telnet inner one\nfeed_scroll telnet inner two\n")
+                    scrolledMidPass = getScroll() == getLastLineNumber("main")
+                end)
+                local before = getLastLineNumber("main")
+                local ok, msg = feedTelnet("feed_scroll_telnet_outer\r\n")
+                assert.is_true(ok, "start the suite with --offline, see the tests README - feedTelnet said: " .. tostring(msg))
+                assert.are.equal(before + 3, getLastLineNumber("main"), "the game line and the trigger's feed did not add their lines")
+                assert.are.equal(getLastLineNumber("main"), getScroll(), "the main console was left short of the lines the trigger fed")
+                assert.is_false(scrolledMidPass, "the feed inside the trigger scrolled the console before the game data that fired it was handled")
+            end)
+
             if not os.getenv("MUDLET_TEST_MODE") then
                 -- Scrolling back up waits a turn of the event loop, which
                 -- waitForEvent only pumps in test mode
                 pending("unless it has been scrolled back up - needs MUDLET_TEST_MODE for waitForEvent")
             else
                 it("unless it has been scrolled back up", function()
-                    local parked = getLastLineNumber("main") - 5
+                    for i = 1, 200 do
+                        echo("main", "feed_scroll filler " .. i .. "\n")
+                    end
+                    local parked = getLastLineNumber("main") - 100
                     for _ = 1, 20 do
                         scrollTo(parked)
                         if getScroll() == parked then
