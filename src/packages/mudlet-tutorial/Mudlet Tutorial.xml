@@ -395,7 +395,8 @@ end</script>
 				<script>hq.help("Thank you for playing.  You are now ready to step into a real MUD to expand on this knowledge further.  Mudlet provides a collection of high quality games for you to try out and plenty more can be found through an internet search.")
 hq.help("While this tutorial was quite basic, Mudlet can be very powerful and has some advanced features.  We recommend reading the introduction on our wiki - it is designed for players new to Mudlet and introduces some more advanced topics.\n")
 cechoLink("&lt;deep_sky_blue&gt;&lt;u&gt;http://wiki.mudlet.org/Introduction&lt;r&gt;\n", function() openWebPage("https://wiki.mudlet.org/w/Manual:Introduction") end, "Click to open link.", true)
-hq.help("Using the toolbar above, go to Games -&gt; Close Profile (Alt+W) to return to the Mudlet start screen.\n")</script>
+hq.help("Using the toolbar above, go to Games -&gt; Close Profile (Alt+W) to return to the Mudlet start screen.\n")
+hq.showPlayersWindows()</script>
 				<command></command>
 				<packageName></packageName>
 				<regex>^quit$</regex>
@@ -407,16 +408,56 @@ hq.help("Using the toolbar above, go to Games -&gt; Close Profile (Alt+W) to ret
 		<ScriptGroup isActive="yes" isFolder="yes">
 			<name>Mini Quest</name>
 			<packageName></packageName>
-			<script>uninstallPackage("generic_mapper")
+			<script>-- a player's script can have a global hq of its own, which the lesson adds to
+-- and uninstalling puts back as it was
+if not (hq and hq.timers) then
+  local before = hq and {}
+  for key, value in pairs(hq or {}) do
+    before[key] = value
+  end
+  hq = hq or {}
+  hq.before = before or false
+  hq.timers = {}
+  hq.playersWindows = {}
+end
 
-hq = hq or {}
-hq.timers = hq.timers or {}
+if table.contains(getPackages(), "generic_mapper") and uninstallPackage("generic_mapper") then
+  hq.removedGenericMapper = true
+end
 
--- the lesson's timers index hq when they fire, so uninstalling has to kill them
-function hq.tempTimer(seconds, code)
-  local id = tempTimer(seconds, code)
+-- the lesson's timers go on telling its story and index hq, so uninstalling has to kill them
+function hq.tempTimer(...)
+  local id = tempTimer(...)
   hq.timers[#hq.timers + 1] = id
   return id
+end
+
+-- Geyser.hideAll() hides the player's own windows as well as the lesson's
+function hq.hideAll()
+  for name, window in pairs(Geyser.windowList) do
+    if not window.hidden and not name:find("^hq%.") then
+      hq.playersWindows[window] = true
+    end
+  end
+  Geyser.hideAll()
+end
+
+function hq.showPlayersWindows()
+  for window in pairs(hq.playersWindows) do
+    -- one the player deleted, or made again under the same name, is not this one any more
+    if Geyser.windowList[window.name] == window then
+      window:show()
+    end
+  end
+  hq.playersWindows = {}
+end
+
+-- the lesson replaces the map with its village
+function hq.savePlayersMap()
+  if hq.playersMap == nil then
+    local path = getMudletHomeDir() .. "/mudlet-tutorial-players-map.dat"
+    hq.playersMap = saveMap(path) and path or false
+  end
 end
 
 clearWindow()
@@ -762,7 +803,7 @@ end
 
 function hq.guiTutorialStart()
 
-  Geyser.hideAll()  
+  hq.hideAll()  
 
   hq.mainMenuContainer = Geyser.Container:new({
     name = "hq.mainMenuContainer",
@@ -793,7 +834,7 @@ end
 
 function hq.guiTutorialStep1()
   
-  Geyser.hideAll()
+  hq.hideAll()
     
   hq.guiStep1Container = Geyser.Container:new({
     name = "hq.guiStep1Container",
@@ -831,7 +872,7 @@ end
 
 function hq.guiTutorialStep2()
 
-  Geyser.hideAll()
+  hq.hideAll()
     
   hq.guiStep2Container = Geyser.Container:new({
     name = "hq.guiStep2Container",
@@ -854,6 +895,9 @@ function hq.guiTutorialStep2()
   hq.guiStep2Label:setStyleSheet(hq.labelCSS)
   hq.addNextButton(hq.guiStep2Label, hq.guiTutorialStep3)
   
+  if hq.cmdLineStyleSheet == nil then
+    hq.cmdLineStyleSheet = getCmdLineStyleSheet("main") or ""
+  end
   hq.tempTimer(1, function() setCmdLineStyleSheet("main", [[ QPlainTextEdit { background-color: grey; }]]) end)
   hq.tempTimer(1.2, function() setCmdLineStyleSheet("main", [[ QPlainTextEdit { background-color: black; }]]) end)
   hq.tempTimer(1.5, function() setCmdLineStyleSheet("main", [[ QPlainTextEdit { background-color: grey; }]]) end)
@@ -865,7 +909,7 @@ end
 
 function hq.guiTutorialStep3()
 
-  Geyser.hideAll()  
+  hq.hideAll()  
   
   hq.guiStep3Container = Geyser.Container:new({
     name = "hq.guiStep3Container",
@@ -892,7 +936,7 @@ end
 
 function hq.guiTutorialStep4()
 
-  Geyser.hideAll()
+  hq.hideAll()
     
   hq.guiStep4Container = Geyser.Container:new({
     name = "hq.guiStep4Container",
@@ -919,7 +963,7 @@ end
 
 function hq.guiTutorialStepFinal()
 
-  Geyser.hideAll()
+  hq.hideAll()
   clearWindow()
     
   hq.guiStepFinalContainer = Geyser.Container:new({
@@ -960,9 +1004,10 @@ end
 
 function hq.newGameScreen()
 
-  Geyser.hideAll()  
+  hq.hideAll()  
   clearWindow()
   closeMapWidget()
+  hq.savePlayersMap()
   deleteMap()
   
   hq.state = "GET_CHAR_NAME"
@@ -989,9 +1034,8 @@ end</script>
                    ["u"] = "d",
                    ["d"] = "u" }
 
--- a flag rather than the value, as a profile with no mapping script has no doSpeedWalk
-if not hq.doSpeedWalkSaved then
-  hq.doSpeedWalkSaved = true
+-- run again, keep the one saved first, unless a mapping script has installed a doSpeedWalk since
+if doSpeedWalk ~= hq.doSpeedWalk then
   hq.savedDoSpeedWalk = doSpeedWalk
 end
 
@@ -1021,6 +1065,9 @@ function hq.initMapperWindow()
     width = "100%", height = "100%"
   }, hq.mapperWindow)
 
+  if not hq.mapInfoBefore then
+    hq.mapInfoBefore = getMapInfo() or {}
+  end
   disableMapInfo("Short")
   disableMapInfo("Full")
   enableMapInfo("None")
@@ -1073,6 +1120,7 @@ end
 
 function hq.initVillage()
 
+  hq.savePlayersMap()
   deleteMap()
 
   local hamletAreaID = addAreaName("Whitehaven Hamlet") or 1
@@ -1229,16 +1277,6 @@ function hq.showLayout()
 end 
 
 local function beginTutorial()
-  -- the lesson's Geyser.hideAll() calls hide the player's own windows too
-  -- a lesson started again (its script saved, say) finds them hidden by the first
-  if not hq.windowsShownBefore then
-    hq.windowsShownBefore = {}
-    for _, window in pairs(Geyser.windowList) do
-      if not window.hidden then
-        hq.windowsShownBefore[#hq.windowsShownBefore + 1] = window
-      end
-    end
-  end
   hq.initMapperWindow()
   hq.guiTutorialStart()
   hq.hideLayout()
@@ -1255,14 +1293,13 @@ else
   hq.tempTimer(0, beginTutorial)
 end
 
-if hq.uninstallHandler then
-  killAnonymousEventHandler(hq.uninstallHandler)
-end
-hq.uninstallHandler = registerAnonymousEventHandler("sysUninstallPackage", function(_, packageName)
+local function uninstall(_, packageName)
   if packageName ~= "Mudlet Tutorial" then
     return
   end
-  killAnonymousEventHandler(hq.uninstallHandler)
+  for _, id in ipairs(hq.uninstallHandlers) do
+    killAnonymousEventHandler(id)
+  end
   if hq.tourHandler then
     killAnonymousEventHandler(hq.tourHandler)
   end
@@ -1274,16 +1311,59 @@ hq.uninstallHandler = registerAnonymousEventHandler("sysUninstallPackage", funct
   if doSpeedWalk == hq.doSpeedWalk then
     doSpeedWalk = hq.savedDoSpeedWalk
   end
-  for _, value in pairs(hq) do
-    if type(value) == "table" and value.windowname and type(value.hide) == "function" then
-      value:hide()
+  if hq.cmdLineStyleSheet then
+    setCmdLineStyleSheet("main", hq.cmdLineStyleSheet)
+  end
+  for name, enabled in pairs(hq.mapInfoBefore or {}) do
+    if enabled then
+      enableMapInfo(name)
+    else
+      disableMapInfo(name)
     end
   end
-  for _, window in ipairs(hq.windowsShownBefore or {}) do
-    window:show()
+  if hq.playersMap then
+    loadMap(hq.playersMap)
+    os.remove(hq.playersMap)
   end
-  hq = nil
-end)</script>
+  -- deleted, not hidden: Geyser.showAll() would bring a hidden panel back, Next button and all
+  local lessonWindows = {}
+  for name, window in pairs(Geyser.windowList) do
+    if name:find("^hq%.") then
+      lessonWindows[#lessonWindows + 1] = window
+    end
+  end
+  for _, window in ipairs(lessonWindows) do
+    -- an adjustable container deleted before this takes its menu labels with it
+    if Geyser.windowList[window.name] == window then
+      window:delete()
+    end
+  end
+  hq.showPlayersWindows()
+  if hq.removedGenericMapper and not table.contains(getPackages(), "generic_mapper") then
+    installPackage(":/packages/generic_mapper/generic_mapper.mpackage")
+  end
+  local before = hq.before
+  if before then
+    for key in pairs(hq) do
+      hq[key] = nil
+    end
+    for key, value in pairs(before) do
+      hq[key] = value
+    end
+  else
+    hq = nil
+  end
+end
+
+for _, id in ipairs(hq.uninstallHandlers or {}) do
+  killAnonymousEventHandler(id)
+end
+-- the same archive can be installed as a module
+hq.uninstallHandlers = {
+  registerAnonymousEventHandler("sysUninstallPackage", uninstall),
+  registerAnonymousEventHandler("sysUninstallModule", uninstall),
+  registerAnonymousEventHandler("sysLuaUninstallModule", uninstall),
+}</script>
 				<eventHandlerList />
 			</Script>
 		</ScriptGroup>
