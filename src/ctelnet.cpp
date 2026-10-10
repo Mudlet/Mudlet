@@ -5518,8 +5518,9 @@ bool cTelnet::loadReplay(const QString& name, QString* pErrMsg)
         loadingReplay = true;
         mReplayPaused = false;
         mReplayChunkPending = false;
-        mReplayChunkDelay = 0;
+        mReplayChunkOwedMsec = 0;
         if (auto* replay = MudletReplay::self(); replay && replay->start(mpHost)) {
+            connect(replay, &MudletReplay::signal_replaySpeedChanged, this, &cTelnet::slot_replaySpeedChanged, Qt::UniqueConnection);
             auto [ok, modifiedFormat] = testReadReplayFile();
             if (Q_LIKELY(ok)) {
                 mReplayHasFaultyFormat = modifiedFormat;
@@ -5594,11 +5595,13 @@ void cTelnet::loadReplayChunk()
         // Previous use of loadedBytes + 1 caused a spurious character at end of
         // string display by a qDebug of the loadBuffer contents
         loadBuffer[loadedBytes] = '\0';
-        auto* replay = MudletReplay::self();
-        mReplayChunkDelay = replay ? replay->advance(offset) : offset;
+        if (auto* replay = MudletReplay::self()) {
+            replay->advance(offset);
+        }
+        mReplayChunkOwedMsec = offset;
         mReplayChunkPending = true;
         if (!mReplayPaused) {
-            mpReplayChunkTimer->start(mReplayChunkDelay);
+            armReplayChunkTimer();
         }
     } else {
         endReplay(mIsReplayRunFromLua ? QString() : tr("[  OK  ]  - The replay has ended."));
@@ -5612,13 +5615,9 @@ void cTelnet::pauseReplay()
     }
 
     mReplayPaused = true;
-    if (mpReplayChunkTimer->isActive()) {
-        // Bank what is left of the wait rather than the whole gap, so that
-        // resuming does not serve the part of it that had already elapsed all
-        // over again. remainingTime() is -1 on a timer that is not running:
-        mReplayChunkDelay = qMax(0, mpReplayChunkTimer->remainingTime());
-        mpReplayChunkTimer->stop();
-    }
+    // Banks what is left of the wait rather than the whole gap, so that resuming
+    // does not serve the part of it that had already elapsed all over again
+    stopReplayChunkTimer();
 }
 
 void cTelnet::resumeReplay()
@@ -5632,8 +5631,39 @@ void cTelnet::resumeReplay()
     // next loadReplayChunk() arms it, and at the end of the file
     // arming it would push the chunk just played through a second time.
     if (mReplayChunkPending) {
-        mpReplayChunkTimer->start(mReplayChunkDelay);
+        armReplayChunkTimer();
     }
+}
+
+// A paused wait is rescaled when it resumes, so only a running one needs re-arming here
+void cTelnet::slot_replaySpeedChanged()
+{
+    if (!loadingReplay || !mReplayChunkPending || mReplayPaused || !mpReplayChunkTimer->isActive()) {
+        return;
+    }
+
+    stopReplayChunkTimer();
+    armReplayChunkTimer();
+}
+
+void cTelnet::armReplayChunkTimer()
+{
+    auto* replay = MudletReplay::self();
+    mReplayChunkSpeed = replay ? replay->speed() : 1;
+    mpReplayChunkTimer->start(static_cast<int>(mReplayChunkOwedMsec / mReplayChunkSpeed));
+    mReplayChunkArmedAt.start();
+}
+
+void cTelnet::stopReplayChunkTimer()
+{
+    if (!mpReplayChunkTimer->isActive()) {
+        return;
+    }
+
+    mpReplayChunkTimer->stop();
+    // Nanoseconds, as at 1024x every real millisecond is a second of the recording
+    const qint64 playedMsec = mReplayChunkArmedAt.nsecsElapsed() * mReplayChunkSpeed / 1'000'000;
+    mReplayChunkOwedMsec = qMax(qint64{0}, mReplayChunkOwedMsec - playedMsec);
 }
 
 void cTelnet::stopReplay()
