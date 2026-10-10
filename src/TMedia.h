@@ -190,6 +190,9 @@ public:
         auto* newOutput = new QAudioOutput(mMediaPlayer.get());
         newOutput->setVolume(volume);
         newOutput->setMuted(muted);
+        // Detach first: displacing an installed output runs its disconnect function, which
+        // would null the player's pointer to the replacement installed in the same call
+        mMediaPlayer->setAudioOutput(nullptr);
         mMediaPlayer->setAudioOutput(newOutput);
         if (oldOutput) {
             oldOutput->setParent(nullptr);
