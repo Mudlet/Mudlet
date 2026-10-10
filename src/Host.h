@@ -1230,6 +1230,8 @@ private:
     void pasteClipboardInto(TConsoleModel& model);
     // Repaints the lines holding the console's selection, when it is on screen.
     void markSelectionDirty(TConsoleModel& model);
+    // False if the map cannot be loaded; true with no console view, which has no mapper to show it in.
+    bool prepareMapperForMapLoad();
     // Stores a boolean setting and tells scripts about it.
     void changeSetting(bool& setting, const bool state, const QString& settingName);
     void setBorders(const QMargins);

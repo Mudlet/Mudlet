@@ -3221,6 +3221,10 @@ void TMap::slot_mapProgressDialogCancelled()
 
 void TMap::warnIfMapProgressUnwired(const char* context, const bool transferPath)
 {
+    // The console view is what shows the dialog, so without one there is nothing to wire
+    if (!mpHost || !mpHost->hasConsoleView()) {
+        return;
+    }
     static const QMetaMethod transferStart = QMetaMethod::fromSignal(&TMap::signal_mapTransferProgressStart);
     static const QMetaMethod jsonStart = QMetaMethod::fromSignal(&TMap::signal_mapJsonProgressStart);
     static const QMetaMethod progressClose = QMetaMethod::fromSignal(&TMap::signal_mapProgressClose);
