@@ -393,7 +393,7 @@ void TAlias::execute()
     }
 
     if (mRegisteredAnonymousLuaFunction) {
-        mpHost->mLuaInterpreter.call_luafunction(this, mName);
+        mpHost->mLuaInterpreter.call_luafunction(this, mName, true);
         return;
     }
 
@@ -401,7 +401,7 @@ void TAlias::execute()
         return;
     }
 
-    mpHost->mLuaInterpreter.call(mFuncName, mName);
+    mpHost->mLuaInterpreter.call(mFuncName, mName, false, true);
 }
 
 QString TAlias::packageName(TAlias* pAlias)
