@@ -1457,8 +1457,8 @@ int TLuaInterpreter::saveProfile(lua_State* L)
     if (ok) {
         // Most application-wide settings reach Mudlet.ini only at quit, so an
         // unclean exit would lose the ones this save is meant to keep
-        if (mudlet* pMudlet = mudlet::self()) {
-            pMudlet->writeSettings();
+        if (auto* frontend = TAppFrontend::instance()) {
+            frontend->writeSettings();
         }
         lua_pushboolean(L, true);
         lua_pushstring(L, (filename.toUtf8().constData()));

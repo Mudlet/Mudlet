@@ -46,6 +46,8 @@ public:
     // Only the profile in the active tab drives the menu's checkbox.
     virtual void setCompactInputLineChecked(Host* pHost, bool checked) = 0;
     virtual void armForceClose() = 0;
+    // Writes the application-wide settings to Mudlet.ini now rather than at quit.
+    virtual void writeSettings() = 0;
     virtual bool openWebPage(const QString& url) = 0;
     // Without msecs, the frontend picks how long the notification stays up.
     virtual void showNotification(const QString& title, const QString& text, std::optional<int> msecs) = 0;
