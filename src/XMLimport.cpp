@@ -1260,6 +1260,10 @@ void XMLimport::readHost(Host* pHost)
 
     pHost->setUserBorders(borders);
     pHost->loadPackageInfo();
+    // The map holds its own copy of the ANSI colours just read, for environments 257 to 272
+    if (pHost->mpMap) {
+        pHost->mpMap->restore16ColorSet();
+    }
     // A package import comes through here too, into a profile that does have a
     // console - and that one needs the whole restyle, not just the model:
     pHost->applyMainConsoleColors();
