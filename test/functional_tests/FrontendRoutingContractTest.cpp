@@ -144,8 +144,8 @@ public:
     }
 };
 
-// The mapper's place, which no view has filled on a profile with no main window. Its answers are
-// ones the mapper would not give unprompted, so a script that sees them got them from here.
+// In the mapper's place, which nothing fills on a profile with no main window. Its answers are
+// ones no mapper gives on its own, so a script that sees them got them from here.
 class RecordingMapView final : public QObject, public TMapViewFrontend
 {
 public:
@@ -277,7 +277,7 @@ public:
     }
 };
 
-// The secondary map views' manager, with one view open, numbered 7
+// The secondary map views' manager. Of the views it lists, it hands out only 7.
 class RecordingMapViews final : public TMapViewsFrontend
 {
 public:
@@ -409,6 +409,8 @@ private slots:
             mpRecorder->mCalls.clear();
         }
         mMapView.mCalls.clear();
+        mMapView.mSelection.clear();
+        mMapView.mSelecting = false;
         mMapViews.mCalls.clear();
     }
 
@@ -567,7 +569,6 @@ local cleared, why = clearMapSelection()
 assert(cleared == nil and why ~= nil, "clearMapSelection cleared a selection still being made")
 )lua")),
                  qsl("ok"));
-        mMapView.mSelecting = false;
 
         const QStringList expected{
                 call("selectedRooms"),
@@ -622,7 +623,7 @@ assert(exportAreaImage(AREA, "/routed/all.png", true) == true, "exportAreaImage 
 )lua"));
         QCOMPARE(result, qsl("ok"));
 
-        // The zoom is fixed at 2 for now; a script cannot choose it
+        // exportAreaImage always exports at zoom 2; a script cannot choose it
         const QStringList expected{
                 qsl("exportAreaToImage(%1, /routed/level.png, 2, 2, false)").arg(mAreaId),
                 qsl("exportAreaToImage(%1, /routed/all.png, none, 2, true)").arg(mAreaId),
