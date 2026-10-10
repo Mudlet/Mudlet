@@ -749,8 +749,8 @@ void UpdateDialog::handleDownloadFinished()
     mIsDownloadFinished = true;
     mUpdateFilePath = filePath;
     setSettingsValue(qsl("updateFilePath"), mUpdateFilePath, mSettings);
-    // Asked of the Feed: a check that answered during the download may have changed
-    // mLatestRelease, and Updater's twice-daily check downloads without the dialog
+    // Asked of the Feed: a check that answered during the download has replaced
+    // mLatestRelease with whatever it offers
     setSettingsValue(qsl("updateFileVersion"), mFeed->getCurrentDownload().getVersion(), mSettings);
 
     if (mAccepted) {
