@@ -2026,6 +2026,15 @@ void cTelnet::slot_replyFinished(QNetworkReply* reply)
             return;
         }
 
+        const QByteArray packageData = reply->readAll();
+        if (packageData.isEmpty()) {
+            //: %1 is the URL the game offered its package from
+            postMessage(tr("[ WARN ]  - Package download from '%1' was empty, so there is nothing to install.").arg(reply->url().toString()));
+            reply->deleteLater();
+            mpPackageDownloadReply = nullptr;
+            return;
+        }
+
         QSaveFile file(mServerPackage);
 
         if (!file.open(QFile::WriteOnly)) {
@@ -2037,7 +2046,7 @@ void cTelnet::slot_replyFinished(QNetworkReply* reply)
             return;
         }
 
-        file.write(reply->readAll());
+        file.write(packageData);
 
         if (!file.commit()) {
             //: %1 is the error message
