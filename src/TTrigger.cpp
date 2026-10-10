@@ -480,6 +480,14 @@ const TChar* uniformWindowColors(TBuffer& buffer, const std::vector<TChar>* pPas
     }
     return buffer.preTriggerPassLineUniformColors(line);
 }
+
+// A highlight goes on the line the pass was handed, wherever triggers earlier in the
+// pass moved it, not on the cursor's line, which they may have moved elsewhere
+bool selectOnTriggerPassLine(Host* pHost, const int lineNumber, const int from, const int length)
+{
+    TConsoleModel& model = pHost->mainConsoleModel();
+    return model.selectSectionOnLine(model.buffer.triggerPassLineNow(lineNumber), from, length);
+}
 } // namespace
 
 // Some extraordinary numbers outside of the range (0-255) used for ANSI colors:
@@ -1105,7 +1113,7 @@ END: {
                 // to enable people to highlight capture groups if there are any
                 // otherwise highlight complete expression match
                 if (position % numberOfCaptureGroups != 1) {
-                    mpHost->selectMainConsoleSection(begin, length);
+                    selectOnTriggerPassLine(mpHost, lineNumber, begin, length);
                     if (mBgColor != QColorConstants::Transparent) {
                         mpHost->setMainConsoleBgColor(QColor(r1, g1, b1));
                     }
@@ -1114,7 +1122,7 @@ END: {
                     }
                 }
             } else {
-                mpHost->selectMainConsoleSection(begin, length);
+                selectOnTriggerPassLine(mpHost, lineNumber, begin, length);
                 if (mBgColor != QColorConstants::Transparent) {
                     mpHost->setMainConsoleBgColor(QColor(r1, g1, b1));
                 }
@@ -1196,7 +1204,7 @@ void TTrigger::processBeginOfLine(int patternNumber, int posOffset, int lineNumb
             const int begin = *iti;
             const std::string& s = *its;
             const int length = QString::fromStdString(s).size();
-            mpHost->selectMainConsoleSection(begin, length);
+            selectOnTriggerPassLine(mpHost, lineNumber, begin, length);
             if (mBgColor != QColorConstants::Transparent) {
                 mpHost->setMainConsoleBgColor(QColor(r1, g1, b1));
             }
@@ -1328,7 +1336,7 @@ void TTrigger::processSubstringMatch(const QString& haystack, const QString& nee
             const int begin = *iti;
             const std::string& s = *its;
             const int length = QString::fromStdString(s).size();
-            mpHost->selectMainConsoleSection(begin, length);
+            selectOnTriggerPassLine(mpHost, lineNumber, begin, length);
             if (mBgColor != QColorConstants::Transparent) {
                 mpHost->setMainConsoleBgColor(QColor(r1, g1, b1));
             }
@@ -1472,7 +1480,7 @@ void TTrigger::processColorPattern(int patternNumber, std::list<std::string>& ca
             //                qDebug() << "TTrigger::match_color_pattern(" << line << "," << patternNumber << ") INFO - match found: " << (*its).c_str() << " size is:" << (*its).size();
             const std::string& s = *its;
             const int length = QString::fromStdString(s).size();
-            mpHost->selectMainConsoleSection(begin, length);
+            selectOnTriggerPassLine(mpHost, lineNumber, begin, length);
             if (mBgColor != QColorConstants::Transparent) {
                 mpHost->setMainConsoleBgColor(QColor(r1, g1, b1));
             }
@@ -1611,7 +1619,7 @@ void TTrigger::processExactMatch(int patternNumber, int posOffset, int lineNumbe
             const int begin = *iti;
             const std::string& s = *its;
             const int length = QString::fromStdString(s).size();
-            mpHost->selectMainConsoleSection(begin, length);
+            selectOnTriggerPassLine(mpHost, lineNumber, begin, length);
             if (mBgColor != QColorConstants::Transparent) {
                 mpHost->setMainConsoleBgColor(QColor(r1, g1, b1));
             }

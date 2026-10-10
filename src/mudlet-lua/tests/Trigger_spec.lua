@@ -935,6 +935,55 @@ describe("Trigger processing", function()
             assert.are.same({"red part"}, fired)
         end)
 
+        local function lastLineReading(text)
+            for lineNumber = getLineCount(), 0, -1 do
+                moveCursor(0, lineNumber)
+                if getCurrentLine() == text then
+                    moveCursorEnd()
+                    return lineNumber
+                end
+            end
+            moveCursorEnd()
+        end
+
+        local function foregroundAt(lineNumber)
+            moveCursor(0, lineNumber)
+            selectSection(0, 1)
+            local r, g, b = getFgColor()
+            deselect()
+            moveCursorEnd()
+            return {r, g, b}
+        end
+
+        for _, kind in ipairs({"colour", "regex"}) do
+            it("should highlight the line being processed after a line above it is deleted, by a " .. kind .. " trigger", function()
+                feedTriggers("line above that is deleted before the highlight\n")
+                local doomed = getLineNumber()
+                feedTriggers("a line the deletion leaves the cursor on, longer than the highlighted one\n")
+                local deleter = tempTrigger("HighlightAfterDeleteMarker", function()
+                    moveCursor(0, doomed)
+                    deleteLine()
+                end)
+                local pattern = (kind == "colour") and "ANSI_COLORS_F{001}_B{IGNORE}" or "HighlightAfterDeleteMarker red"
+                local colorArgument = (kind == "colour") and "" or 0
+                -- tempComplexRegexTrigger() triggers are killed by the name they are given
+                local highlighter = "HighlightAfterDelete" .. kind
+                tempComplexRegexTrigger(highlighter, pattern, [[]], 0, colorArgument, colorArgument, 0, 0, "blue", "transparent", 0, 0, 0)
+                finally(function()
+                    killTrigger(deleter)
+                    killTrigger(highlighter)
+                end)
+
+                feedTriggers("\27[31mHighlightAfterDeleteMarker red\27[0m\n")
+
+                -- the deleter left the cursor on the long line, which moved up into the deleted one's place
+                local cursorLine = lastLineReading("a line the deletion leaves the cursor on, longer than the highlighted one")
+                assert.are.equal(doomed, cursorLine)
+                assert.are.same({0, 0, 255}, foregroundAt(lastLineReading("HighlightAfterDeleteMarker red")))
+                assert.are_not.same({0, 0, 255}, foregroundAt(cursorLine))
+            end)
+        end
+
     end)
 
     describe("tempAnsiColorTrigger callbacks", function()
