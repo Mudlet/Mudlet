@@ -152,9 +152,11 @@ int TForkedProcess::startProcess(TLuaInterpreter* pInterpreter, lua_State* L)
         return lua_error(L);
     }
     for (int i = 2; i <= n; ++i) {
-        // the same raise these used to make from inside the constructor, but
-        // while nothing of ours is alive for the longjmp to strand
-        static_cast<void>(luaL_checkstring(L, i));
+        // raised while nothing of ours is alive for the longjmp to strand
+        if (!lua_isstring(L, i)) {
+            lua_pushfstring(L, "spawn: bad argument #%d type (%s as string expected, got %s!)", i, i == 2 ? "process name" : "process argument", luaL_typename(L, i));
+            return lua_error(L);
+        }
     }
 
     TForkedProcess* process = nullptr;
@@ -170,7 +172,7 @@ int TForkedProcess::startProcess(TLuaInterpreter* pInterpreter, lua_State* L)
         process = new TForkedProcess(pInterpreter, program, arguments, callBackReference);
         if (!process->running) {
             lua_pushstring(L,
-                           qsl("Failed to start process '%1': %2. Working directory: '%3'. PATH: '%4'")
+                           qsl("spawn: Failed to start process '%1': %2. Working directory: '%3'. PATH: '%4'")
                                    .arg(program, process->errorString(), QDir::currentPath(), qEnvironmentVariable("PATH"))
                                    .toUtf8()
                                    .constData());
