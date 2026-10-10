@@ -972,6 +972,13 @@ headlessFontWrap = ok and "ok" or tostring(err)
             attributes.mPointSize = pointSize;
             return attributes.makeFont();
         };
+        // A sub-console's font is built as the TConsole constructor builds one, not copied from main's, and the
+        // two differ in pitch, kerning and antialiasing, so where the default family is missing they fall back apart
+        const auto subConsoleFont = [host](const int pointSize) {
+            TFontAttributes attributes(host->fontsAntiAlias());
+            attributes.mPointSize = pointSize;
+            return attributes.makeFont();
+        };
         const auto measured = [](const QFont& font) {
             const QFontMetrics metrics(font);
             return qsl("[2]%1:%2").arg(metrics.horizontalAdvance(QChar('W'))).arg(metrics.height());
@@ -1026,12 +1033,17 @@ headlessFontWrap = ok and "ok" or tostring(err)
         QCOMPARE(luaGlobalString(host, "fwEmpty"), consoleSteps(startFont, 100));
         QCOMPARE(luaGlobalString(host, "fwMain"), consoleSteps(familyFont, 100));
         // Unlike main, a miniconsole or user window starts with no wrap at all
-        QCOMPARE(luaGlobalString(host, "fwMiniSteps"), consoleSteps(sized(startFont, 12), 99999999));
-        QCOMPARE(luaGlobalString(host, "fwWindowSteps"), consoleSteps(sized(startFont, 10), 99999999));
-        QCOMPARE(luaGlobalString(host, "fwBufferSteps"), consoleSteps(startFont, 100));
+        QCOMPARE(luaGlobalString(host, "fwMiniSteps"), consoleSteps(subConsoleFont(12), 99999999));
+        // Attribute by attribute too, as here the fallbacks of the two constructions measure alike
+        QVERIFY(host->getLuaInterpreter()->compileAndExecuteScript(qsl("createMiniConsole('fwFreshMini', 0, 0, 300, 200)")));
+        const TConsoleModel* pFreshMini = host->consoleModelNamed(qsl("fwFreshMini"));
+        QVERIFY(pFreshMini);
+        QVERIFY(TFontAttributes(pFreshMini->mUpperPaneFont) == TFontAttributes(subConsoleFont(12)));
+        QCOMPARE(luaGlobalString(host, "fwWindowSteps"), consoleSteps(subConsoleFont(10), 99999999));
+        QCOMPARE(luaGlobalString(host, "fwBufferSteps"), consoleSteps(subConsoleFont(14), 100));
         QCOMPARE(luaGlobalString(host, "fwLabelSteps"), otherSteps(qsl("[1]%1").arg(family(startFont)), qsl("[1]%1").arg(family(familyFont))));
         QCOMPARE(luaGlobalString(host, "fwMissing"), otherSteps(qsl("[2]nil:msg"), QString()));
-        QCOMPARE(luaGlobalString(host, "fwLabelFonts"), qsl("%1;%2;%2").arg(family(sized(startFont, 10)), family(familyFont)));
+        QCOMPARE(luaGlobalString(host, "fwLabelFonts"), qsl("%1;%2;%2").arg(family(subConsoleFont(10)), family(familyFont)));
         // Moved to another window, one given no font by setFont() takes the application's
         QCOMPARE(luaGlobalString(host, "fwMovedFonts"), qsl("%1;%1;%2;%2;%2").arg(family(QFont()), family(familyFont)));
         QVERIFY2(QApplication::topLevelWidgets().isEmpty(), "The font and wrap calls created a widget.");
