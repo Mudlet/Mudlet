@@ -11,8 +11,8 @@ prettywrite = inspect
 function showCaptureGroups()
   -- named groups are also listed under their number, so skip the name keys
   for k, v in pairs( matches ) do
-    if type(k) == "number" then
-      selectCaptureGroup( k )
+    -- a group that captured nothing leaves the previous group selected
+    if type(k) == "number" and selectCaptureGroup( k ) ~= -1 then
       setFgColor( math.random(0, 255), math.random(0, 255), math.random(0, 255) )
       setBgColor( math.random(0, 255), math.random(0, 255), math.random(0, 255) )
     end
