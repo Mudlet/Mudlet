@@ -78,48 +78,52 @@ void IrcMessageComposer::composeMessage(IrcNumericMessage* message)
 {
     switch (message->code()) {
     case Irc::RPL_MOTDSTART:
-        d.messages.push(new IrcMotdMessage(d.connection));
+        startCompose(new IrcMotdMessage(d.connection), message);
         d.messages.top()->setPrefix(message->prefix());
         d.messages.top()->setParameters(QStringList(message->parameters().value(0)));
         break;
-    case Irc::RPL_MOTD:
-        // A server is free to send an RPL_MOTD outside an RPL_MOTDSTART...RPL_ENDOFMOTD
-        // block, or to repeat one after that block has closed, and then there is no
-        // IrcMotdMessage under construction to add the line to. top() on an empty stack
-        // is undefined behaviour, and adding the line to whatever else happens to be
-        // being composed would corrupt that message.
+    case Irc::RPL_MOTD: {
+        // The line belongs to the open MOTD even when another block has been opened
+        // above it. A server is also free to send an RPL_MOTD with no MOTD open at all,
+        // and adding it to whatever else is being composed would corrupt that message.
         //
         // Dropping the line instead would lose it for good: IrcNumericMessage::isComposed()
         // answers per code rather than per message, so RPL_MOTD is suppressed wherever a
         // client shows numerics, on the understanding that it will arrive as part of an
         // IrcMotdMessage. Give it one of its own, finished immediately, so the line is
-        // shown and nothing is left on the stack for an unrelated "end of" numeric to pop.
-        if (!d.messages.isEmpty() && d.messages.top()->type() == IrcMessage::Motd) {
-            d.messages.top()->setParameters(d.messages.top()->parameters() << message->parameters().value(1));
+        // shown and a later RPL_ENDOFMOTD cannot close it in place of a real MOTD.
+        const qsizetype index = indexOf(IrcMessage::Motd);
+        if (index != -1) {
+            d.messages.at(index)->setParameters(d.messages.at(index)->parameters() << message->parameters().value(1));
         } else {
             d.messages.push(new IrcMotdMessage(d.connection));
             d.messages.top()->setPrefix(message->prefix());
             d.messages.top()->setParameters(QStringList() << message->parameters().value(0) << message->parameters().value(1));
-            finishCompose(message);
+            finishCompose(message, IrcMessage::Motd);
         }
         break;
+    }
     case Irc::RPL_ENDOFMOTD:
-        finishCompose(message);
+        finishCompose(message, IrcMessage::Motd);
         break;
 
     case Irc::RPL_NAMREPLY: {
-        if (d.messages.empty() || d.messages.top()->type() != IrcMessage::Names)
-            d.messages.push(new IrcNamesMessage(d.connection));
-        d.messages.top()->setPrefix(message->prefix());
         int count = message->parameters().count();
         QString channel = message->parameters().value(count - 2);
-        QStringList names = d.messages.top()->parameters().mid(1);
+        qsizetype index = indexOf(IrcMessage::Names);
+        if (index == -1 || d.messages.at(index)->parameters().value(0).compare(channel, Qt::CaseInsensitive)) {
+            startCompose(new IrcNamesMessage(d.connection), message);
+            index = d.messages.count() - 1;
+        }
+        IrcMessage* composed = d.messages.at(index);
+        composed->setPrefix(message->prefix());
+        QStringList names = composed->parameters().mid(1);
         names += message->parameters().value(count - 1).split(QLatin1Char(' '), Qt::SkipEmptyParts);
-        d.messages.top()->setParameters(QStringList() << channel << names);
+        composed->setParameters(QStringList() << channel << names);
         break;
     }
     case Irc::RPL_ENDOFNAMES:
-        finishCompose(message);
+        finishCompose(message, IrcMessage::Names, message->parameters().value(1));
         break;
 
     case Irc::RPL_TOPIC:
@@ -128,7 +132,7 @@ void IrcMessageComposer::composeMessage(IrcNumericMessage* message)
         d.messages.top()->setPrefix(message->prefix());
         d.messages.top()->setCommand(QString::number(message->code()));
         d.messages.top()->setParameters(QStringList() << message->parameters().value(1) << message->parameters().value(2));
-        finishCompose(message);
+        finishCompose(message, IrcMessage::Topic);
         break;
 
     case Irc::RPL_INVITING:
@@ -137,7 +141,7 @@ void IrcMessageComposer::composeMessage(IrcNumericMessage* message)
         d.messages.top()->setPrefix(message->prefix());
         d.messages.top()->setCommand(QString::number(message->code()));
         d.messages.top()->setParameters(QStringList() << message->parameters().value(1) << message->parameters().value(2));
-        finishCompose(message);
+        finishCompose(message, IrcMessage::Invite);
         break;
 
     case Irc::RPL_WHOREPLY: {
@@ -153,7 +157,7 @@ void IrcMessageComposer::composeMessage(IrcNumericMessage* message)
         int index = last.indexOf(QLatin1Char(' ')); // ignore hopcount
         if (index != -1)
             d.messages.top()->setParameters(d.messages.top()->parameters() << last.mid(index + 1)); // real name
-        finishCompose(message);
+        finishCompose(message, IrcMessage::WhoReply);
         break;
     }
 
@@ -162,12 +166,16 @@ void IrcMessageComposer::composeMessage(IrcNumericMessage* message)
         d.messages.top()->setPrefix(message->prefix());
         d.messages.top()->setCommand(QString::number(message->code()));
         d.messages.top()->setParameters(message->parameters().mid(1));
-        finishCompose(message);
+        finishCompose(message, IrcMessage::Mode);
         break;
 
     case Irc::RPL_AWAY:
-        if (!d.messages.isEmpty() && d.messages.top()->type() == IrcMessage::Whois) {
-            replaceParam(9, message->parameters().value(2)); // away reason
+        // IRC nicks are case-insensitive, and a server may echo the one the user typed
+        if (const qsizetype index = indexOf(IrcMessage::Whois); index != -1 && !d.messages.at(index)->nick().compare(message->parameters().value(1), Qt::CaseInsensitive)) {
+            QStringList params = d.messages.at(index)->parameters();
+            if (params.count() > 9)
+                params.replace(9, message->parameters().value(2)); // away reason
+            d.messages.at(index)->setParameters(params);
             break;
         }
         Q_FALLTHROUGH();
@@ -183,11 +191,11 @@ void IrcMessageComposer::composeMessage(IrcNumericMessage* message)
             d.messages.top()->setPrefix(message->parameters().value(0));
             d.messages.top()->setParameters(message->parameters().mid(1));
         }
-        finishCompose(message);
+        finishCompose(message, IrcMessage::Away);
         break;
 
     case Irc::RPL_WHOISUSER:
-        d.messages.push(new IrcWhoisMessage(d.connection));
+        startCompose(new IrcWhoisMessage(d.connection), message);
         d.messages.top()->setPrefix(message->parameters().value(1)
                                     + "!" + message->parameters().value(2)
                                     + "@" + message->parameters().value(3));
@@ -204,7 +212,7 @@ void IrcMessageComposer::composeMessage(IrcNumericMessage* message)
         break;
 
     case Irc::RPL_WHOWASUSER:
-        d.messages.push(new IrcWhowasMessage(d.connection));
+        startCompose(new IrcWhowasMessage(d.connection), message);
         d.messages.top()->setPrefix(message->parameters().value(1)
                                     + "!" + message->parameters().value(2)
                                     + "@" + message->parameters().value(3));
@@ -246,40 +254,109 @@ void IrcMessageComposer::composeMessage(IrcNumericMessage* message)
         break;
 
     case Irc::RPL_ENDOFWHOIS:
+        finishCompose(message, IrcMessage::Whois, message->parameters().value(1));
+        break;
     case Irc::RPL_ENDOFWHOWAS:
-        finishCompose(message);
+        finishCompose(message, IrcMessage::Whowas);
         break;
     }
 }
 
-void IrcMessageComposer::finishCompose(IrcMessage* message)
+// Mudlet changes to the vendored communi, as are the helpers below: a server may open a block
+// inside another or send an "end of" numeric for a block that is not open, so each numeric
+// finds the block it belongs to by type, wherever that sits on the stack.
+
+// A NAMES or WHOIS of several targets ends with one reply naming them all, and NAMES of every
+// channel ends with "*"
+static bool endNumericCovers(const QString& targets, const QString& target)
 {
-    if (!d.messages.isEmpty()) {
-        IrcMessage* composed = d.messages.pop();
-        composed->setTimeStamp(message->timeStamp());
-        if (message->testFlag(IrcMessage::Implicit))
-            composed->setFlag(IrcMessage::Implicit);
-        emit messageComposed(composed);
+    if (targets.isEmpty())
+        return true;
+    for (const QString& entry : targets.split(QLatin1Char(','), Qt::SkipEmptyParts)) {
+        if (!entry.compare(target, Qt::CaseInsensitive))
+            return true;
+        if (!entry.contains(QLatin1Char('*')) && !entry.contains(QLatin1Char('?')))
+            continue;
+        QString pattern;
+        for (const QChar character : entry) {
+            if (character == QLatin1Char('*'))
+                pattern += QLatin1String(".*");
+            else if (character == QLatin1Char('?'))
+                pattern += QLatin1Char('.');
+            else
+                pattern += QRegularExpression::escape(QString(character));
+        }
+        if (QRegularExpression(QRegularExpression::anchoredPattern(pattern), QRegularExpression::CaseInsensitiveOption).match(target).hasMatch())
+            return true;
     }
+    return false;
+}
+
+qsizetype IrcMessageComposer::indexOf(IrcMessage::Type type) const
+{
+    for (qsizetype index = d.messages.count() - 1; index >= 0; --index) {
+        if (d.messages.at(index)->type() == type)
+            return index;
+    }
+    return -1;
+}
+
+void IrcMessageComposer::deliver(qsizetype index, IrcMessage* message)
+{
+    IrcMessage* composed = d.messages.takeAt(index);
+    composed->setTimeStamp(message->timeStamp());
+    if (message->testFlag(IrcMessage::Implicit))
+        composed->setFlag(IrcMessage::Implicit);
+    emit messageComposed(composed);
+}
+
+// Every continuation finds the newest block of its type, so an older one would collect the
+// next block's lines; it is delivered as it stands instead
+void IrcMessageComposer::startCompose(IrcMessage* composed, IrcMessage* message)
+{
+    const qsizetype index = indexOf(composed->type());
+    if (index != -1) {
+        ircDebug(d.connection, IrcDebug::Status) << "delivering unfinished composed message" << composed->type();
+        deliver(index, message);
+    }
+    d.messages.push(composed);
+}
+
+// targets, when given, is what the "end of" numeric names, and the block closes only if it is
+// among them, so a stray one cannot emit a block half-built
+void IrcMessageComposer::finishCompose(IrcMessage* message, IrcMessage::Type type, const QString& targets)
+{
+    const qsizetype index = indexOf(type);
+    if (index != -1) {
+        IrcMessage* composed = d.messages.at(index);
+        const QString target = type == IrcMessage::Names ? composed->parameters().value(0) : composed->nick();
+        if (targets.isNull() || endNumericCovers(targets, target)) {
+            deliver(index, message);
+            return;
+        }
+    }
+    ircDebug(d.connection, IrcDebug::Status) << "dropping orphaned end of composed message" << type << targets;
 }
 
 void IrcMessageComposer::replaceParam(int index, const QString& param)
 {
     // Every caller is a WHOIS or WHOWAS numeric, and the indexes are the slots
-    // IrcMessageComposer::composeMessage() lays those two out in. Sent by a server
-    // while something else is being composed - a MOTD, a names list - they would
-    // otherwise overwrite a line of it. There is no message of their own to fall back
-    // to, since a single WHOIS field is not one, so an orphaned one is dropped; the
-    // debug channel says so, as it is not visible anywhere else.
-    if (d.messages.isEmpty() || (d.messages.top()->type() != IrcMessage::Whois && d.messages.top()->type() != IrcMessage::Whowas)) {
+    // IrcMessageComposer::composeMessage() lays those two out in, so they go to the
+    // newest of those two even when another block has been opened above it. With
+    // neither open there is no message of their own to fall back to, since a single
+    // WHOIS field is not one, so an orphaned one is dropped; the debug channel says
+    // so, as it is not visible anywhere else.
+    const qsizetype block = qMax(indexOf(IrcMessage::Whois), indexOf(IrcMessage::Whowas));
+    if (block == -1) {
         ircDebug(d.connection, IrcDebug::Status) << "dropping orphaned WHOIS/WHOWAS parameter" << index << param;
         return;
     }
 
-    QStringList params = d.messages.top()->parameters();
+    IrcMessage* composed = d.messages.at(block);
+    QStringList params = composed->parameters();
     if (index < params.count())
         params.replace(index, param);
-    d.messages.top()->setParameters(params);
+    composed->setParameters(params);
 }
 #endif // IRC_DOXYGEN
 
