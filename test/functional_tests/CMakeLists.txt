@@ -33,6 +33,7 @@ endif()
 
 # Windows, consoles and the text they draw
 set(WINDOW_GROUP_TEST_SOURCES
+    AccessibleToolTipTest.cpp
     AddonControlsTest.cpp
     AsciiLineBreakTest.cpp
     ConsoleModelExtractionTest.cpp
@@ -55,6 +56,7 @@ set(WINDOW_GROUP_TEST_SOURCES
     MainWindowTitleTest.cpp
     LabelMovieRefusalTest.cpp
     TabBarStyleTest.cpp
+    CommandLineSpellCheckTest.cpp
     LabelSvgBackgroundTest.cpp
     CaretNavigationTest.cpp
     MainConsoleSelectionTest.cpp
@@ -91,6 +93,7 @@ set(WINDOW_GROUP_TEST_SOURCES
     WrapLineRewrapTest.cpp
     ScrollLostOnPartialRepaintTest.cpp
     ScrollBarContrastTest.cpp
+    ScriptFileDialogTest.cpp
     OpaqueConsolePaintTest.cpp
 )
 
@@ -159,6 +162,7 @@ set(TELNET_GROUP_TEST_SOURCES
     MudletAppVersionTest.cpp
     IrcKickDisplayTest.cpp
     IrcMessageGuardTest.cpp
+    IrcWindowMarkupTest.cpp
     IrcLuaClientTest.cpp
 )
 
@@ -429,6 +433,13 @@ add_grouped_test_binary(functional_starterui_tests ${STARTERUI_GROUP_TEST_SOURCE
 add_grouped_test_binary(functional_teardown_tests ${TEARDOWN_GROUP_TEST_SOURCES})
 add_grouped_test_binary(functional_media_tests ${MEDIA_GROUP_TEST_SOURCES})
 
+# On macOS the app reads its dictionaries from the bundle's Resources folder,
+# which a test binary only has if it is put next to it by hand
+if(APPLE)
+    file(COPY ${CMAKE_SOURCE_DIR}/src/en_US.dic ${CMAKE_SOURCE_DIR}/src/en_US.aff
+         DESTINATION ${CMAKE_CURRENT_BINARY_DIR}/../Resources)
+endif()
+
 # A stand-in libvosk, so SpeechRecognizerContractTest and SpeechBridgeLuaTest can
 # reach the code below VoskRecognizer's library guard on a machine with no speech
 # engine - which is every CI runner. Named exactly as the real library is on each platform,
@@ -540,6 +551,10 @@ foreach(test_name ${allFunctionalTestNames})
         TIMEOUT 60  # seconds
     )
 endforeach()
+
+# A buffer's default font gives the same row count for its pane's stale and laid-out
+# heights at 96 DPI; 72 DPI tells them apart
+set_property(TEST WindowStateGettersTest APPEND PROPERTY ENVIRONMENT "QT_FONT_DPI=72")
 
 # ResetProfileTest creates a full profile per test method, so it needs a longer
 # timeout than the default 60s

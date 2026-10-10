@@ -439,7 +439,7 @@ private:
     // connection made" or "Connection made" depending on whether the build can do TLS.
     bool bufferContains(Host* host, const QString& text)
     {
-        TBuffer& buffer = host->mpConsole->buffer;
+        TBuffer& buffer = host->mainConsoleView()->buffer;
         for (int i = 0; i <= buffer.getLastLineNumber(); ++i) {
             if (buffer.line(i).contains(text, Qt::CaseInsensitive)) {
                 return true;
@@ -451,7 +451,7 @@ private:
     int countLines(Host* host, const QString& text)
     {
         int found = 0;
-        TBuffer& buffer = host->mpConsole->buffer;
+        TBuffer& buffer = host->mainConsoleView()->buffer;
         for (int i = 0; i <= buffer.getLastLineNumber(); ++i) {
             if (buffer.line(i).contains(text, Qt::CaseInsensitive)) {
                 ++found;
@@ -462,7 +462,7 @@ private:
 
     QString lineContaining(Host* host, const QString& text)
     {
-        TBuffer& buffer = host->mpConsole->buffer;
+        TBuffer& buffer = host->mainConsoleView()->buffer;
         for (int i = 0; i <= buffer.getLastLineNumber(); ++i) {
             if (buffer.line(i).contains(text, Qt::CaseInsensitive)) {
                 return buffer.line(i);

@@ -37,29 +37,22 @@
 #include "TAction.h"
 #include "TAlias.h"
 #include "TBuffer.h"
-#include "TConsole.h"
 #include "TConsoleModel.h"
 #include "TDebug.h"
 #include "TEvent.h"
 #include "TForkedProcess.h"
 #include "TGameDetails.h"
 #include "TKey.h"
-#include "TLabel.h"
 #include "TMap.h"
 #include "TMapLabel.h"
+#include "TMapViewFrontend.h"
 #include "TRoomDB.h"
 #include "TScript.h"
-#include "TTextEdit.h"
 #include "TEncodingHelper.h"
 #include "TIrcClient.h"
 #include "TTimer.h"
-#include "dlgComposer.h"
-#include "dlgMapper.h"
-#include "mudlet.h"
+#include "TAppFrontend.h"
 #include "utils.h"
-#if defined(INCLUDE_3DMAPPER)
-#include "glwidget_integration.h"
-#endif
 
 #include <hunspell/hunspell.h>
 
@@ -159,6 +152,7 @@ const QString TLuaInterpreter::csmInvalidItemID{qsl("item ID as %1 does not seem
 const QString TLuaInterpreter::csmInvalidAreaID{qsl("number %1 is not a valid area id")};
 const QString TLuaInterpreter::csmInvalidAreaName{qsl("string '%1' is not a valid area name")};
 const QStringList TLuaInterpreter::csmItemTypes{qsl("alias"), qsl("button"), qsl("script"), qsl("keybind"), qsl("timer"), qsl("trigger")};
+static const QString csmLuaLineVariable{qsl("line")};
 
 
 TLuaInterpreter::TLuaInterpreter(Host* pH, const QString& hostName, int id)
@@ -1419,7 +1413,7 @@ int TLuaInterpreter::setModulePriority(lua_State* L)
 int TLuaInterpreter::closeMudlet(lua_State* L)
 {
     Q_UNUSED(L)
-    mudlet::self()->armForceClose();
+    TAppFrontend::instance()->armForceClose();
     return 0;
 }
 
@@ -2750,7 +2744,7 @@ int TLuaInterpreter::getMudletVersion(lua_State* L)
 int TLuaInterpreter::openWebPage(lua_State* L)
 {
     const QString url = getVerifiedString(L, __func__, 1, "URL");
-    lua_pushboolean(L, mudlet::self()->openWebPage(url));
+    lua_pushboolean(L, TAppFrontend::instance()->openWebPage(url));
     return 1;
 }
 
@@ -3056,7 +3050,7 @@ int TLuaInterpreter::setDefaultAreaVisible(lua_State* L)
     }
 
     const bool isToShowDefaultArea = getVerifiedBool(L, __func__, 1, "isToShowDefaultArea");
-    if (host.mpMap->mpMapper) {
+    if (host.mpMap->mapViewFrontend()) {
         const bool wasShown = host.mpMap->getDefaultAreaShown();
         host.mpMap->setDefaultAreaShown(isToShowDefaultArea);
         host.mpMap->announceDefaultAreaVisibilitySet(wasShown);
@@ -4220,10 +4214,9 @@ void TLuaInterpreter::handleIreComposerEdit(const QString& jsonData)
         return;
     }
 
-    host.mTelnet.mpComposer = new dlgComposer(&host);
-    host.mTelnet.mpComposer->init(title, initialText);
-    host.mTelnet.mpComposer->raise();
-    host.mTelnet.mpComposer->show();
+    if (auto* frontend = TAppFrontend::instance()) {
+        host.mTelnet.mpComposer = frontend->openComposer(&host, title, initialText);
+    }
 }
 
 // No documentation available in wiki - internal function
@@ -6333,7 +6326,7 @@ void TLuaInterpreter::setLineGlobal(const QString& line)
 {
     lua_State* L = pGlobalLua;
     if (!lazyGlobalsUsable(L)) {
-        set_lua_string(TConsole::cmLuaLineVariable, line);
+        set_lua_string(csmLuaLineVariable, line);
         return;
     }
 
@@ -8978,13 +8971,7 @@ int TLuaInterpreter::showNotification(lua_State* L)
     const QString title{lua_tostring(L, 1)};
     const QString text = (n >= 2) ? QString{lua_tostring(L, 2)} : title;
 
-    mudlet::self()->mTrayIcon.show();
-    if (notificationExpirationTime.has_value()) {
-        mudlet::self()->mTrayIcon.showMessage(title, text, mudlet::self()->mTrayIcon.icon(), notificationExpirationTime.value());
-    } else {
-        mudlet::self()->mTrayIcon.showMessage(title, text, mudlet::self()->mTrayIcon.icon());
-    }
-    mudlet::self()->mTrayIcon.hide();
+    TAppFrontend::instance()->showNotification(title, text, notificationExpirationTime);
     lua_pushboolean(L, true);
     return 1;
 }
@@ -9021,7 +9008,6 @@ int TLuaInterpreter::removeFileWatch(lua_State* L)
 int TLuaInterpreter::setConfig(lua_State* L)
 {
     auto& host = getHostFromLua(L);
-    const bool currentHost = (mudlet::self()->mpCurrentActiveHost == &host);
     if (!checkStringArg(L, __func__, 1, "key")) {
         return lua_error(L);
     }
@@ -9057,7 +9043,7 @@ int TLuaInterpreter::setConfig(lua_State* L)
         return 2;
     };
 
-    if (host.mpMap && host.mpMap->mpMapper) {
+    if (host.mpMap && host.mpMap->mapViewFrontend()) {
         if (key == qsl("mapRoomSize")) {
             const int size = getVerifiedInt(L, __func__, 2, "value");
             if (size < 1) {
@@ -9106,7 +9092,7 @@ int TLuaInterpreter::setConfig(lua_State* L)
         }
 #if defined(INCLUDE_3DMAPPER)
         if (key == qsl("show3dMapView")) {
-            host.mpMap->mpMapper->slot_toggle3DView(getVerifiedBool(L, __func__, 2, "value"));
+            host.mpMap->mapViewFrontend()->show3DView(getVerifiedBool(L, __func__, 2, "value"));
             return success();
         }
 #endif
@@ -9120,7 +9106,7 @@ int TLuaInterpreter::setConfig(lua_State* L)
             return success();
         }
         if (key == qsl("showUpperLowerLevels")) {
-            mudlet::self()->mDrawUpperLowerLevels = getVerifiedBool(L, __func__, 2, "value");
+            TAppFrontend::instance()->setDrawUpperLowerLevels(getVerifiedBool(L, __func__, 2, "value"));
             host.mpMap->requestMapRepaint();
             return success();
         }
@@ -9194,7 +9180,7 @@ int TLuaInterpreter::setConfig(lua_State* L)
         } else {
             return warnArgumentChoice(L, __func__, qsl("mapperButton"), {qsl("default"), qsl("scripted"), qsl("disabled")}, value);
         }
-        mudlet::self()->updateMapActionAvailability();
+        TAppFrontend::instance()->updateMapActionAvailability();
         return success();
     }
     if (key == qsl("enableGMCP")) {
@@ -9400,11 +9386,9 @@ int TLuaInterpreter::setConfig(lua_State* L)
 
     if (key == qsl("compactInputLine")) {
         host.setCompactInputLine(getVerifiedBool(L, __func__, 2, "value"));
-        if (currentHost) {
-            // A handler of the event the setter raised may have written the
-            // opposite value back, so the menu item follows what is held now:
-            mudlet::self()->dactionInputLine->setChecked(host.getCompactInputLine());
-        }
+        // A handler of the event the setter raised may have written the
+        // opposite value back, so the menu item follows what is held now:
+        TAppFrontend::instance()->setCompactInputLineChecked(&host, host.getCompactInputLine());
 
         return success();
     }
@@ -9496,7 +9480,7 @@ int TLuaInterpreter::setConfig(lua_State* L)
         return success();
     }
     if (key == qsl("showTabConnectionIndicators")) {
-        mudlet::self()->setShowTabConnectionIndicators(getVerifiedBool(L, __func__, 2, "value"));
+        TAppFrontend::instance()->setShowTabConnectionIndicators(getVerifiedBool(L, __func__, 2, "value"));
         return success();
     }
     if (key == qsl("ambiguousEAsianWidthCharacters")) {
@@ -9540,8 +9524,8 @@ int TLuaInterpreter::setConfig(lua_State* L)
         // Special handling for 3D mapper experiment
         if (key == qsl("experiment.3dmap.modernmapper")) {
 #if defined(INCLUDE_3DMAPPER)
-            if (host.mpMap && host.mpMap->mpMapper) {
-                host.mpMap->mpMapper->recreate3DWidget();
+            if (auto* mapper = host.mpMap ? host.mpMap->mapViewFrontend() : nullptr) {
+                mapper->recreate3DView();
             }
 #endif
         }
@@ -9608,7 +9592,7 @@ int TLuaInterpreter::announce(lua_State* L)
         return lua_error(L);
     }
 
-    mudlet::self()->announce(QString{lua_tostring(L, 1)}, (n > 1) ? QString{lua_tostring(L, 2)} : QString(), true);
+    TAppFrontend::instance()->announce(QString{lua_tostring(L, 1)}, (n > 1) ? QString{lua_tostring(L, 2)} : QString(), true);
     return 0;
 }
 
@@ -9678,9 +9662,8 @@ int TLuaInterpreter::getConfig(lua_State* L)
             {qsl("show3dMapView"),
              [&]() {
 #if defined(INCLUDE_3DMAPPER)
-                 if (host.mpMap && host.mpMap->mpMapper) {
-                     auto widget = host.mpMap->mpMapper->glWidget;
-                     lua_pushboolean(L, (widget && widget->isVisible()));
+                 if (auto* mapper = host.mpMap ? host.mpMap->mapViewFrontend() : nullptr) {
+                     lua_pushboolean(L, mapper->showing3DView());
                      return;
                  }
 #endif
@@ -9923,7 +9906,7 @@ int TLuaInterpreter::getConfig(lua_State* L)
              }},
             {qsl("showTabConnectionIndicators"),
              [&]() {
-                 lua_pushboolean(L, mudlet::self()->mShowTabConnectionIndicators);
+                 lua_pushboolean(L, TAppFrontend::instance()->showTabConnectionIndicators());
              }},
             {qsl("advertiseScreenReader"),
              [&]() {
@@ -9953,7 +9936,7 @@ int TLuaInterpreter::getConfig(lua_State* L)
              }},
             {qsl("showUpperLowerLevels"),
              [&]() {
-                 lua_pushboolean(L, mudlet::self()->mDrawUpperLowerLevels);
+                 lua_pushboolean(L, TAppFrontend::instance()->drawUpperLowerLevels());
              }},
             {qsl("muteMediaAPI"),
              [&]() {
