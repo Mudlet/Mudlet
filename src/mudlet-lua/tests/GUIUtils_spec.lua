@@ -3478,6 +3478,16 @@ describe("Tests the GUI utilities as far as possible without mudlet", function()
         assert.is_nil(ok)
         assert.are.equal("command line name 'guiUtilsNoSuchCommandLine' not found", err)
       end)
+
+      it("Should say the main command line's action cannot be changed, rather than that it is not there", function()
+        local refusal = "the main command line's action cannot be changed, it always sends its text to the game"
+        local ok, err = setCmdLineAction("main", function() end)
+        assert.is_nil(ok)
+        assert.are.equal(refusal, err)
+        ok, err = resetCmdLineAction("main")
+        assert.is_nil(ok)
+        assert.are.equal(refusal, err)
+      end)
     end)
   end)
 
