@@ -2729,7 +2729,9 @@ private slots:
         QVERIFY2(waitForStoredToken(host, qsl("rotated-after-replay")), "a rotation of a token saved after the last forget should be stored");
     }
 
-    void testARecoveryThatCannotReadTheTokenWarnsBeforeRemovingIt()
+    // The token another instance rotated in meanwhile may be the one stored, live, and removing it would
+    // cost a browser sign-in; only a read that answers decides
+    void testARecoveryThatCannotReadTheTokenLeavesItInPlace()
     {
         Host* host = connectAndNegotiate();
         QVERIFY(host);
@@ -2748,9 +2750,64 @@ private slots:
         QVERIFY(CredentialManager::removeCredential(host->getName(), qsl("reconnect-token")));
         QVERIFY(QDir().mkpath(tokenPath));
 
+        holdStoreOperations(host);
         QTest::ignoreMessage(QtWarningMsg, QRegularExpression(qsl("could not read the saved token back after a rejected reconnect")));
         mpServer->sendGmcp(qsl("Char.Login.Result {\"success\": false, \"message\": \"Reconnect token expired\"}"));
         QVERIFY(waitForConsoleContains(host, qsl("saved sign-in has expired")));
+        QVERIFY2(mHeldStoreOperations.empty(), "a token that could not be read back was removed anyway");
+    }
+
+    // The same when the record is what cannot be read: one saved before the token had a key of its own
+    // is read from the store, with the token inside it
+    void testARecoveryThatCannotReadTheRecordLeavesItInPlace()
+    {
+        Host* host = connectAndNegotiate(true);
+        QVERIFY(host);
+        host->setLogin(QString());
+        host->setPass(QString());
+        QVERIFY(CredentialManager::storeCredential(host->getName(), qsl("reconnect"), qsl("{\"account\": \"acct:char\", \"provider\": \"discord\", \"token\": \"dead-token\"}")));
+
+        mpServer->clearReceived();
+        mpServer->sendGmcp(qsl("Char.Login.Default {\"version\": 2, \"type\": [\"oauth\"]}"));
+        QJsonObject sent;
+        QVERIFY2(waitForClientGmcp(qsl("Char.Login.Reconnect"), sent), "client did not replay the saved token");
+
+        const QString recordPath = reconnectCredentialPath(host->getName(), qsl("reconnect"));
+        QVERIFY2(QFileInfo::exists(recordPath), qPrintable(qsl("the credential store no longer files entries at %1").arg(recordPath)));
+        QVERIFY(CredentialManager::removeCredential(host->getName(), qsl("reconnect")));
+        QVERIFY(QDir().mkpath(recordPath));
+
+        holdStoreOperations(host);
+        QTest::ignoreMessage(QtWarningMsg, QRegularExpression(qsl("could not read the saved token back after a rejected reconnect")));
+        mpServer->sendGmcp(qsl("Char.Login.Result {\"success\": false, \"message\": \"Reconnect token expired\"}"));
+        QVERIFY(waitForConsoleContains(host, qsl("saved sign-in has expired")));
+        QVERIFY2(mHeldStoreOperations.empty(), "a sign-in whose record could not be read back was removed anyway");
+    }
+
+    void testASignInWithNothingStoredDoesNotWarn_data()
+    {
+        QTest::addColumn<QString>("record");
+        QTest::newRow("no sign-in saved") << QString();
+        QTest::newRow("a resume hint with no token") << qsl("{\"account\": \"acct:char\", \"provider\": \"discord\", \"secure_only\": false}");
+    }
+
+    // Nothing stored is an answer, not a failure, so it must not warn on every connect
+    void testASignInWithNothingStoredDoesNotWarn()
+    {
+        QFETCH(QString, record);
+        QTest::failOnWarning(QRegularExpression(qsl("could not read the (stored sign-in|saved token)")));
+        Host* host = connectAndNegotiate();
+        QVERIFY(host);
+        host->setLogin(QString());
+        host->setPass(QString());
+        if (!record.isEmpty()) {
+            QVERIFY(MudletApp::writeProfileData(host->getName(), qsl("reconnect"), record).first);
+        }
+
+        mpServer->clearReceived();
+        mpServer->sendGmcp(qsl("Char.Login.Default {\"version\": 2, \"type\": [\"oauth\"]}"));
+        QJsonObject sent;
+        QVERIFY2(waitForClientGmcp(qsl("Char.Login.Credentials"), sent), "client did not hand off or resume with Char.Login.Credentials");
     }
 
     void testASignInReadWhileASaveIsPartWayThroughReplaysTheNewToken()

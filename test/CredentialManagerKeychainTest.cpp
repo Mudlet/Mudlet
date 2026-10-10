@@ -18,6 +18,7 @@
  ***************************************************************************/
 
 #include <CredentialManager.h>
+#include <QScopeGuard>
 #include <QtTest/QtTest>
 #include <QCryptographicHash>
 #include <QRegularExpression>
@@ -95,6 +96,8 @@ private slots:
     void testOneUnreadableEntryDoesNotHideAnOlderLayout();
     void testASignInKeyIsNotLookedForInLayoutsOlderThanItself();
     void testALookupThatAnswersInTimeOwesNoLateAnswer();
+    void testALookupThatFindsNothingSaysWhetherTheStoreAnswered_data();
+    void testALookupThatFindsNothingSaysWhetherTheStoreAnswered();
     void testALateAnswerFollowsALookupThatTimedOut_data();
     void testALateAnswerFollowsALookupThatTimedOut();
     void testALateAnswerIsDroppedOnceWhatAskedForItHasGone();
@@ -599,6 +602,7 @@ struct TimedAnswers
 {
     std::shared_ptr<Answer> first = std::make_shared<Answer>();
     bool timedOut = false;
+    CredentialManager::ReadOutcome outcome = CredentialManager::ReadOutcome::Found;
     std::shared_ptr<Answer> late = std::make_shared<Answer>();
 };
 
@@ -609,12 +613,13 @@ std::shared_ptr<TimedAnswers> startTimedRetrieval(CredentialManager& manager, co
     manager.retrievePassword(
             profile,
             key,
-            [answers](bool success, QString password, const QString& error, bool timedOut) {
+            [answers](bool success, QString password, const QString& error, CredentialManager::ReadOutcome outcome) {
                 ++answers->first->count;
                 answers->first->success = success;
                 answers->first->password = password;
                 answers->first->error = error;
-                answers->timedOut = timedOut;
+                answers->outcome = outcome;
+                answers->timedOut = outcome == CredentialManager::ReadOutcome::TimedOut;
             },
             lateContext,
             [answers](bool success, QString password, const QString& error) {
@@ -629,6 +634,7 @@ std::shared_ptr<TimedAnswers> startTimedRetrieval(CredentialManager& manager, co
 } // namespace
 
 Q_DECLARE_METATYPE(QKeychain::Error)
+Q_DECLARE_METATYPE(CredentialManager::ReadOutcome)
 
 void CredentialManagerKeychainTest::initTestCase()
 {
@@ -1736,6 +1742,53 @@ void CredentialManagerKeychainTest::testASignInKeyIsNotLookedForInLayoutsOlderTh
     expected.append({QString(), service});
 #endif
     QCOMPARE(staller.reads(), expected);
+}
+
+// A caller that would remove what it cannot read back - the sign-in's rotated-token check - has to
+// tell "the store has nothing" from "the store would not say"
+void CredentialManagerKeychainTest::testALookupThatFindsNothingSaysWhetherTheStoreAnswered_data()
+{
+    QTest::addColumn<bool>("refused");
+    QTest::addColumn<bool>("garbledFile");
+    QTest::addColumn<CredentialManager::ReadOutcome>("expected");
+    QTest::newRow("nothing stored anywhere") << false << false << CredentialManager::ReadOutcome::NothingStored;
+    QTest::newRow("the first read refused") << true << false << CredentialManager::ReadOutcome::Unreadable;
+    QTest::newRow("the encrypted file garbled") << false << true << CredentialManager::ReadOutcome::Unreadable;
+}
+
+void CredentialManagerKeychainTest::testALookupThatFindsNothingSaysWhetherTheStoreAnswered()
+{
+    QFETCH(bool, refused);
+    QFETCH(bool, garbledFile);
+    QFETCH(CredentialManager::ReadOutcome, expected);
+    const QString filePath = CredentialManager::generateFilePath(mProfile, mKey);
+    const auto removeFile = qScopeGuard([&filePath] {
+        QFile::remove(filePath);
+    });
+    if (garbledFile) {
+        QVERIFY(QDir().mkpath(QFileInfo(filePath).absolutePath()));
+        QFile file(filePath);
+        QVERIFY(file.open(QIODevice::WriteOnly | QIODevice::Truncate));
+        file.write("not an encrypted credential");
+    }
+    JobStaller staller;
+    if (refused) {
+        staller.stallNth<QKeychain::ReadPasswordJob>(0);
+    }
+    staller.answerOtherReadsNotFound();
+    CredentialManager manager;
+    manager.mJobStartHook = staller.hook();
+    QObject lateContext;
+
+    const auto answers = startTimedRetrieval(manager, mProfile, mKey, &lateContext);
+    if (refused) {
+        QKeychain::Job* firstRead = staller.waitForStalled();
+        QVERIFY(firstRead);
+        JobStaller::answer(firstRead, QKeychain::AccessDenied, QStringLiteral("synthetic: access refused"));
+    }
+    QVERIFY(waitForAnswer(answers->first));
+    QVERIFY(!answers->first->success);
+    QCOMPARE(answers->outcome, expected);
 }
 
 void CredentialManagerKeychainTest::testALookupThatAnswersInTimeOwesNoLateAnswer()

@@ -135,6 +135,7 @@ private slots:
     void testConcurrentAccess();
     void testAsyncStoreAndRetrieve();
     void testAsyncApiSharesTheStoreWithTheStaticOne();
+    void testAnUndecryptableFileIsNotReportedAsNothingStored();
     void testAsyncRemovePassword();
     void testCredentialExistsWithoutHandingOverTheSecret();
     void testAsyncEmptyArgumentsAreReportedThroughTheCallback();
@@ -754,6 +755,39 @@ void CredentialManagerTest::testAsyncStoreAndRetrieve()
     QVERIFY2(retrieved, qPrintable(retrieveError));
     QCOMPARE(password, QString("async_secret"));
     QVERIFY(retrieveError.isEmpty());
+}
+
+// A caller that would remove what it cannot read back - the sign-in's rotated-token check - has to
+// tell a file that is not there from one that is there but cannot be read
+void CredentialManagerTest::testAnUndecryptableFileIsNotReportedAsNothingStored()
+{
+    CredentialManager manager;
+    const QString profile = "UndecryptableFileProfile";
+    const QString key = "password";
+    const auto outcome = [&manager, &profile, &key]() {
+        std::optional<CredentialManager::ReadOutcome> answer;
+        manager.retrievePassword(
+                profile,
+                key,
+                [&answer](bool, QString, const QString&, CredentialManager::ReadOutcome readOutcome) {
+                    answer = readOutcome;
+                },
+                nullptr,
+                nullptr);
+        return answer;
+    };
+
+    CredentialManager::removeCredential(profile, key);
+    QCOMPARE(outcome(), std::optional(CredentialManager::ReadOutcome::NothingStored));
+
+    QVERIFY(CredentialManager::storeCredential(profile, key, "soon_garbled"));
+    QFile file(credentialPath(profile, key));
+    QVERIFY(file.open(QIODevice::WriteOnly | QIODevice::Truncate));
+    file.write("not an encrypted credential");
+    file.close();
+    QCOMPARE(outcome(), std::optional(CredentialManager::ReadOutcome::Unreadable));
+
+    QVERIFY(CredentialManager::removeCredential(profile, key));
 }
 
 // The static API is the migration and cleanup path for credentials the async API
