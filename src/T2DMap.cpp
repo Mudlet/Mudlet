@@ -6614,6 +6614,30 @@ void T2DMap::clearSelection()
     }
 }
 
+void T2DMap::forgetDeletedRoom(const int roomId)
+{
+    // A drag still in progress rebuilds the selection from these on its next move
+    mMultiSelectionBaseSet.remove(roomId);
+    mMultiSelectionAnchorSet.remove(roomId);
+    if (!mMultiSelectionSet.remove(roomId)) {
+        return;
+    }
+    if (mMultiSelectionHighlightRoomId == roomId) {
+        switch (mMultiSelectionSet.size()) {
+        case 0:
+            mMultiSelectionHighlightRoomId = 0;
+            break;
+        case 1:
+            mMultiSelectionHighlightRoomId = *(mMultiSelectionSet.constBegin());
+            break;
+        default:
+            getCenterSelection();
+        }
+    }
+    hideSelectionWidget();
+    update();
+}
+
 void T2DMap::hideSelectionWidget()
 {
     mMultiSelectionListWidget.hide();

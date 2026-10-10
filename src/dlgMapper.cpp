@@ -176,6 +176,7 @@ void dlgMapper::connectMapCues()
             refreshColours();
         }
     });
+    connect(mpMap, &TMap::signal_roomDeleted, mp2dMap, &T2DMap::forgetDeletedRoom);
     connect(mpMap, &TMap::signal_mapCleared, this, [this]() {
         if (!drawsTheMap()) {
             return;
