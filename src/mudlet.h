@@ -573,6 +573,8 @@ private:
     void moveProfileFromDetachedToMainWindow(const QString& profileName, TDetachedWindow* sourceWindow);
     int findTabIndex(const QString& profileName) const;
     void cleanupDetachedWindowsMap(); // Remove null pointers from the map
+    void syncMainTabOrder();
+    int mainTabSlotFor(const QString& profileName);
 
 
     inline static QPointer<mudlet> smpSelf = nullptr;
@@ -857,9 +859,9 @@ private:
 
     // Detached windows for profiles
     QMap<QString, QPointer<TDetachedWindow>> mDetachedWindows;
-    // The main tab bar slot each profile was detached from, for its window's
-    // reattach action to put it back there
-    QHash<QString, int> mDetachedFromTabIndex;
+    // Every profile in main tab bar order, with each detached one kept behind
+    // the tab it followed, so that a reattach can put it back there
+    QStringList mMainTabOrder;
 
     // The map actions' enabled state before the active profile's
     // "mapperButton" setConfig mode is applied on top - the last baseline the
