@@ -3049,7 +3049,7 @@ int TLuaInterpreter::setDefaultAreaVisible(lua_State* L)
     }
 
     const bool isToShowDefaultArea = getVerifiedBool(L, __func__, 1, "isToShowDefaultArea");
-    if (host.mpMap->mapViewFrontend()) {
+    if (host.mapOpen()) {
         const bool wasShown = host.mpMap->getDefaultAreaShown();
         host.mpMap->setDefaultAreaShown(isToShowDefaultArea);
         host.mpMap->announceDefaultAreaVisibilitySet(wasShown);
@@ -9117,7 +9117,7 @@ int TLuaInterpreter::setConfig(lua_State* L)
         return 2;
     };
 
-    if (host.mpMap && host.mpMap->mapViewFrontend()) {
+    if (host.mapOpen()) {
         if (key == qsl("mapRoomSize")) {
             const int size = getVerifiedInt(L, __func__, 2, "value");
             if (size < 1) {
@@ -9165,7 +9165,7 @@ int TLuaInterpreter::setConfig(lua_State* L)
             return success();
         }
 #if defined(INCLUDE_3DMAPPER)
-        if (key == qsl("show3dMapView")) {
+        if (key == qsl("show3dMapView") && host.mpMap->mapViewFrontend()) {
             host.mpMap->mapViewFrontend()->show3DView(getVerifiedBool(L, __func__, 2, "value"));
             return success();
         }
@@ -9179,7 +9179,8 @@ int TLuaInterpreter::setConfig(lua_State* L)
             host.mpMap->announceMapperSettingChanged(TMap::MapperSetting::ShowGrid);
             return success();
         }
-        if (key == qsl("showUpperLowerLevels")) {
+        // Kept on the mapper: the main window holds this, so with none getConfig() could not read it back
+        if (key == qsl("showUpperLowerLevels") && host.mpMap->mapViewFrontend()) {
             TAppFrontend::instance()->setDrawUpperLowerLevels(getVerifiedBool(L, __func__, 2, "value"));
             host.mpMap->requestMapRepaint();
             return success();
