@@ -182,16 +182,15 @@ private slots:
                  "recolouring a line left no trace in the pane's cached screen, so the next paint served the old colour back - the dirty-line range was not honoured");
     }
 
-    // Only cTelnet scrolls the pane to text it has just added, after each read.
-    // The whole-screen repaint a trigger's recolour used to force hid that fed
-    // text was never scrolled to; marking just the recoloured row does not.
+    // Fed text has to scroll the pane to itself, as a read from the game does;
+    // a recolour repaints only its own row, so it cannot stand in for that.
     void test_fedLinesAreScrolledIntoView_data()
     {
         QTest::addColumn<QString>("script");
 
-        QTest::newRow("coloured by the fed text") << qsl(R"(feedTriggers("FED 1\nFED 2\nFED 3\n\27[48;2;255;0;255mFED MARKER\27[0m\n"))");
-        QTest::newRow("recoloured by a trigger") << qsl(R"(tempRegexTrigger("^FED MARKER", function() selectString(line, 1) setBgColor(255, 0, 255) resetFormat() end)
-feedTriggers("FED 1\nFED 2\nFED 3\nFED MARKER\n"))");
+        QTest::newRow("coloured by the fed text") << qsl("feedTriggers('FED 1\\nFED 2\\nFED 3\\n\\27[48;2;255;0;255mFED MARKER\\27[0m\\n')");
+        QTest::newRow("recoloured by a trigger") << qsl("tempRegexTrigger('^FED MARKER', function() selectString(line, 1) setBgColor(255, 0, 255) resetFormat() end) "
+                                                        "feedTriggers('FED 1\\nFED 2\\nFED 3\\nFED MARKER\\n')");
     }
 
     void test_fedLinesAreScrolledIntoView()

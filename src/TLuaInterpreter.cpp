@@ -1224,11 +1224,13 @@ int TLuaInterpreter::feedTriggers(lua_State* L)
         dataIsUtf8Encoded = getVerifiedBool(L, __func__, 2, "Utf8Encoded", true);
     }
     const QByteArray data{lua_tostring(L, 1)};
-    // cTelnet finalizes the console once per read, but nothing does that for
-    // fed text, so its lines would stay unpainted until some other repaint.
-    auto feed = [&host](std::string& text) {
+    // Whatever starts a trigger pass scrolls the pane to its new lines once the
+    // pass ends, as cTelnet does per read, so only a top-level feed has to.
+    auto feed = [&host, triggerUnit](std::string& text) {
         host.printOnDisplay(text, false);
-        host.finalizeMainConsole();
+        if (!triggerUnit->processingDepth()) {
+            host.finalizeMainConsole();
+        }
     };
 
     const QByteArray currentEncoding = host.mTelnet.getEncoding();
