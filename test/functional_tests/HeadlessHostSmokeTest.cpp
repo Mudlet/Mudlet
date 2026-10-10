@@ -1084,6 +1084,7 @@ openUserWindow("lsWin")
 createLabel("lsWin", "lsB", 0, 0, 100, 20, 1)
 createLabel("lsC", 0, 0, 100, 20, 1)
 createLabel("lsD", 0, 0, 100, 20, 1)
+createLabel("lsE", 0, 0, 100, 20, 1)
 )lua"));
         QVERIFY2(ran, "The Lua chunk did not run.");
         QCOMPARE(luaGlobalString(host, "lsMissing"), qsl("[2]nil:msg"));
@@ -1237,6 +1238,42 @@ createLabel("lsD", 0, 0, 100, 20, 1)
             };
             for (const QString& ruleSheet : ruleSheets) {
                 sheet(qsl("lsD"), pRefD, ruleSheet);
+            }
+
+            // A sheet's margin, border and padding frame the label, which QLabel then indents by an x
+            const QStringList boxSheets{
+                    qsl("padding: 4px;"),
+                    qsl("padding: 1px 2px; border: 3px solid red;"),
+                    qsl("padding: 1px 2px 5px; margin: 2px 3px 4px 6px;"),
+                    qsl("padding-left: 7px; padding-top: 3; margin-right: 2px; margin-bottom: 1PX;"),
+                    qsl("border-width: 4px;"),
+                    qsl("border-width: 4px 2px; border-style: solid none;"),
+                    qsl("border: 2px red;"),
+                    qsl("border: solid 2px;"),
+                    qsl("border: 2px solid; border-style: wavy;"),
+                    qsl("border-left: 5px dashed; border-top-width: 3px; border-top-style: solid; border-bottom: 2px none;"),
+                    qsl("padding: 2pt; margin: 1em; border: 0.5ex solid;"),
+                    qsl("font-size: 20px; padding: 1em 1ex;"),
+                    qsl("padding: 10%;"),
+                    qsl("margin: 0;"),
+                    qsl("margin: -2px;"),
+                    qsl("color: red;"),
+                    qsl("QLabel { padding: 6px; } QLabel#%1 { padding-left: 1px; } QPushButton { margin: 9px; }").arg(objectName),
+                    qsl("QLabel:hover { padding: 9px; } * { border: 1px solid; } QLabel { border-right-width: 4px; }"),
+                    // QCss::Parser reads a priority marker and nothing weighs it, so a later rule still wins
+                    qsl("padding: 4px !important;"),
+                    qsl("border-top-style: solid !important; border-top-width: 3px;"),
+                    qsl("QLabel { padding: 6px !important; font-size: 30px !important; } QLabel { padding: 2px ! IMPORTANT; font-size: 18px; }"),
+                    qsl("QLabel { padding: 2px; } QLabel { padding: 1px 5px!important; }"),
+                    QString(),
+            };
+            for (const QString& boxSheet : boxSheets) {
+                sheet(qsl("lsD"), pRefD, boxSheet);
+            }
+            TLabel* pRefE = makeReference(qsl("lsRefE"), &mainParent);
+            compare(qsl("lsE made"), qsl("lsE"), pRefE);
+            for (const QString& boxSheet : {qsl("padding: 3px 4px;"), qsl("border: 2px solid; margin: 1px 2px 3px;"), QString()}) {
+                sheet(qsl("lsE"), pRefE, boxSheet);
             }
 
             text(qsl("lsB"), pRefB, qsl("WWWWWWWWWW"));

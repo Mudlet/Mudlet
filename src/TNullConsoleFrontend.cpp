@@ -250,6 +250,120 @@ QString labelSheetDeclarations(const QString& sheet, const QString& objectName)
     return declarations.join(u';');
 }
 
+// A box length as QCss::ValueExtractor reads one: px, em, ex or a bare number, and any other unit as 0
+int sheetLength(const QString& value, const QFont& font)
+{
+    QStringView number(value);
+    std::optional<int> scale;
+    if (number.endsWith(u"px", Qt::CaseInsensitive)) {
+        scale = 1;
+    } else if (number.endsWith(u"em", Qt::CaseInsensitive)) {
+        scale = QFontMetrics(font).height();
+    } else if (number.endsWith(u"ex", Qt::CaseInsensitive)) {
+        scale = QFontMetrics(font).xHeight();
+    }
+    if (scale) {
+        number.chop(2);
+    } else if (number.endsWith(u'%')) {
+        number.chop(1);
+    }
+    return qRound(scale.value_or(1) * number.toDouble());
+}
+
+// The widths QStyleSheetStyle's SE_ShapedFrameContents takes off each side of a label, as top, right, bottom
+// and left: its margin, border and padding. A border whose style is none has no width.
+std::array<int, 4> sheetFrame(const QString& declarations, const QFont& font)
+{
+    static const QStringList edges{qsl("top"), qsl("right"), qsl("bottom"), qsl("left")};
+    static const QStringList borderStyles = qsl("dotted dashed solid double dot-dash dot-dot-dash groove ridge inset outset").split(u' ');
+    std::array<int, 4> margins{};
+    std::array<int, 4> paddings{};
+    std::array<int, 4> borders{};
+    std::array<bool, 4> borderless{true, true, true, true};
+    // QCss::ValueExtractor::lengthValues() and Declaration::styleValues(): one to four values, which CSS repeats
+    const auto spread = [](const QStringList& values, auto&& read, auto& sides) {
+        static constexpr int source[4][4] = {{0, 0, 0, 0}, {0, 1, 0, 1}, {0, 1, 2, 1}, {0, 1, 2, 3}};
+        const qsizetype count = std::min<qsizetype>(values.size(), 4);
+        for (int i = 0; i < 4; ++i) {
+            sides[i] = read(count ? values.at(source[count - 1][i]) : QString());
+        }
+    };
+    const auto length = [&font](const QString& value) {
+        return sheetLength(value, font);
+    };
+    // An unknown style keeps the width, as only none takes it away
+    const auto none = [](const QString& value) {
+        return value.isEmpty() || !value.compare(qsl("none"), Qt::CaseInsensitive);
+    };
+    const auto numeric = [](const QString& value) {
+        const QStringView digits = QStringView(value).sliced(value.startsWith(u'-') || value.startsWith(u'+') ? 1 : 0);
+        return !digits.isEmpty() && (digits.front().isDigit() || digits.front() == u'.') && !value.endsWith(u'%');
+    };
+    // QCss::ValueExtractor::borderValue(): a width, then a style, and the style only where it is one
+    const auto shorthand = [&](const QStringList& values, const int edge) {
+        qsizetype at = 0;
+        borders[edge] = 0;
+        borderless[edge] = true;
+        if (at < values.size() && numeric(values.at(at))) {
+            borders[edge] = length(values.at(at++));
+        }
+        if (at < values.size() && (none(values.at(at)) || borderStyles.contains(values.at(at), Qt::CaseInsensitive))) {
+            borderless[edge] = none(values.at(at));
+        }
+    };
+    qsizetype at = 0;
+    while (at < declarations.size()) {
+        qsizetype end = indexOutsideQuotes(declarations, u';', at);
+        if (end < 0) {
+            end = declarations.size();
+        }
+        const QString declaration = declarations.mid(at, end - at);
+        at = end + 1;
+        const qsizetype colon = declaration.indexOf(u':');
+        if (colon < 0) {
+            continue;
+        }
+        const QStringList name = declaration.left(colon).trimmed().toLower().split(u'-');
+        QString value = declaration.mid(colon + 1);
+        // QCss::Parser::testPrio(): a trailing "! important", in any case, marks the declaration and is no value
+        if (const qsizetype bang = value.lastIndexOf(u'!'); bang >= 0 && !QStringView(value).sliced(bang + 1).trimmed().compare(u"important", Qt::CaseInsensitive)) {
+            value.truncate(bang);
+        }
+        const QStringList values = value.simplified().split(u' ', Qt::SkipEmptyParts);
+        const qsizetype edge = name.size() > 1 ? edges.indexOf(name.at(1)) : -1;
+        const bool padding = name.first() == qsl("padding");
+        if (padding || name.first() == qsl("margin")) {
+            auto& sides = padding ? paddings : margins;
+            if (name.size() == 1) {
+                spread(values, length, sides);
+            } else if (name.size() == 2 && edge >= 0) {
+                sides[edge] = values.isEmpty() ? 0 : length(values.first());
+            }
+        } else if (name.first() == qsl("border")) {
+            if (name.size() == 1) {
+                shorthand(values, 0);
+                borders.fill(borders[0]);
+                borderless.fill(borderless[0]);
+            } else if (name.size() == 2 && name.at(1) == qsl("width")) {
+                spread(values, length, borders);
+            } else if (name.size() == 2 && name.at(1) == qsl("style")) {
+                spread(values, none, borderless);
+            } else if (name.size() == 2 && edge >= 0) {
+                shorthand(values, edge);
+            } else if (name.size() == 3 && edge >= 0 && name.at(2) == qsl("width")) {
+                borders[edge] = values.isEmpty() ? 0 : length(values.first());
+            } else if (name.size() == 3 && edge >= 0 && name.at(2) == qsl("style")) {
+                borderless[edge] = values.size() != 1 || none(values.first());
+            }
+        }
+    }
+    std::array<int, 4> frame{};
+    for (int i = 0; i < 4; ++i) {
+        frame[i] = margins[i] + (borderless[i] ? 0 : borders[i]) + paddings[i];
+    }
+    return frame;
+}
+
 // QStyleSheetStyle::updateStyleSheetFont()
 void applySheetFont(QFont& font, uint& mask, const std::optional<QFont>& sheetFont)
 {
@@ -267,13 +381,16 @@ void applySheetFont(QFont& font, uint& mask, const std::optional<QFont>& sheetFo
     mask = styled.resolveMask();
 }
 
-// QLabel::sizeHint() for a label with no margin, frame, indent or word wrap, as TLabel's are
-QSize labelSizeHint(const QFont& font, const QString& text, const bool textLabel)
+// QLabel::sizeHint() for a label with no margin, indent or word wrap, as TLabel's are, inside the frame its sheet gives it
+QSize labelSizeHint(const QFont& font, const QString& text, const bool textLabel, const std::array<int, 4>& frame)
 {
+    const QSize frameSize(frame[1] + frame[3], frame[0] + frame[2]);
+    const QFontMetrics metrics(font);
     if (!textLabel) {
-        const QFontMetrics metrics(font);
-        return {metrics.averageCharWidth(), metrics.lineSpacing()};
+        return QSize(metrics.averageCharWidth(), metrics.lineSpacing()) + frameSize;
     }
+    // QLabelPrivate::sizeForWidth(): a framed label with no indent of its own is indented by an x
+    const int indent = *std::max_element(frame.begin(), frame.end()) ? std::max(metrics.horizontalAdvance(u'x'), 0) : 0;
     QTextDocument document;
     document.setDefaultFont(font);
     document.setHtml(text);
@@ -286,7 +403,7 @@ QSize labelSizeHint(const QFont& font, const QString& text, const bool textLabel
     document.rootFrame()->setFrameFormat(frameFormat);
     document.setTextWidth(-1);
     const QSizeF size = document.size();
-    return {qCeil(size.width()), qCeil(size.height())};
+    return QSize(qCeil(size.width()) + indent, qCeil(size.height())) + frameSize;
 }
 
 } // namespace
@@ -393,7 +510,7 @@ std::optional<QSize> TNullConsoleFrontend::getLabelSizeHint(const QString& name)
     }
     const Label& label = it->second;
     if (!label.sizeHint) {
-        label.sizeHint = labelSizeHint(label.pModel->mFont, label.pModel->mText, label.textLabel);
+        label.sizeHint = labelSizeHint(label.pModel->mFont, label.pModel->mText, label.textLabel, label.frame);
     }
     return label.sizeHint;
 }
@@ -443,6 +560,7 @@ void TNullConsoleFrontend::restyleLabel(Label& label, const QString& sheet)
     model.mStyleSheet = sheet;
     if (sheet.isEmpty()) {
         label.sheetFont.reset();
+        label.frame.fill(0);
         // Clearing a sheet hands back the saved font and forgets it
         if (label.styled) {
             if (label.savedFont) {
@@ -453,7 +571,10 @@ void TNullConsoleFrontend::restyleLabel(Label& label, const QString& sheet)
             label.sizeHint.reset();
         }
     } else {
-        label.sheetFont = styleSheetFont(labelSheetDeclarations(sheet, qsl("label_%1_%2").arg(mpHost->getName(), model.mName)));
+        const QString declarations = labelSheetDeclarations(sheet, qsl("label_%1_%2").arg(mpHost->getName(), model.mName));
+        label.sheetFont = styleSheetFont(declarations);
+        // QCss::ValueExtractor measures em and ex in the application's font as the sheet sets it
+        label.frame = sheetFrame(declarations, label.sheetFont ? label.sheetFont->resolve(QFont()) : QFont());
         label.styled = true;
         polishLabel(label);
     }
