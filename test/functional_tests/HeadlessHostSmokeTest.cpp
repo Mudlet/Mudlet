@@ -828,6 +828,196 @@ headlessTrim = ok and "ok" or tostring(err)
         QCOMPARE(luaGlobalString(host, "trimWindow"), steps);
     }
 
+    // The font and wrap calls answer every kind of window as the GUI self-test profile does, with the pixel
+    // sizes those fonts measure; a label takes the font of the console it is made on, and keeps it.
+    void test_headlessFontAndWrapContract()
+    {
+        const QString hostname = qsl("Test-Headless-Host-Font-Wrap");
+        QVERIFY2(HostManager::self()->addHost(hostname, QString(), QString(), QString()), "Could not create a profile with no main window.");
+        Host* host = HostManager::self()->getHost(hostname);
+        QVERIFY2(host, "The profile is not in the pool.");
+        QVERIFY(!host->hasConsoleView());
+        const QFont startFont = host->getDisplayFont();
+
+        const bool ran = host->getLuaInterpreter()->compileAndExecuteScript(qsl(R"lua(
+headlessFontWrap = "not run"
+local ok, err = pcall(function()
+  local function described(called, ...)
+    if not called then
+      return "raised"
+    end
+    local count = select("#", ...)
+    local values = {}
+    for i = 1, count do
+      local value = select(i, ...)
+      values[i] = (i > 1 and type(value) == "string") and "msg" or tostring(value)
+    end
+    return "[" .. count .. "]" .. table.concat(values, ":")
+  end
+  local function answer(f, ...)
+    return described(pcall(f, ...))
+  end
+  local startFamily = getFont("main")
+  local fonts = getAvailableFonts()
+  for _, candidate in ipairs({"DejaVu Sans", "Ubuntu Mono", "Liberation Mono", "Noto Sans Mono"}) do
+    if fonts[candidate] then
+      fwFamily = candidate
+      break
+    end
+  end
+  if not fwFamily then
+    for name in pairs(fonts) do
+      if name ~= getFont("main") and name ~= "Bitstream Vera Sans Mono" then
+        fwFamily = name
+        break
+      end
+    end
+  end
+  fwGlobal = table.concat({answer(calcFontSize), answer(calcFontSize, true), answer(getFont), answer(getFontSize), answer(getWindowWrap)}, ";")
+
+  assert(createMiniConsole("fwMini", 0, 0, 300, 200) == true, "createMiniConsole did not answer true")
+  assert(openUserWindow("fwWindow") == true, "openUserWindow did not answer true")
+  createBuffer("fwBuffer")
+  assert(createLabel("fwLabel", 0, 0, 100, 20, 1) == true, "createLabel did not answer true")
+  assert(createLabel("fwWindow", "fwWindowLabel", 0, 0, 100, 20, 1) == true, "createLabel did not answer true in a user window")
+  local long = string.rep("word ", 14) .. "end"
+  local function walk(name)
+    local steps = {}
+    local function note(label, ...)
+      steps[#steps + 1] = label .. "=" .. answer(...)
+    end
+    note("size", calcFontSize, name)
+    note("avg", calcFontSize, name, true)
+    note("font", getFont, name)
+    note("pt", getFontSize, name)
+    note("wrap", getWindowWrap, name)
+    note("wrap0", setWindowWrap, name, 0)
+    note("wrap30", setWindowWrap, name, 30)
+    note("wrapNow", getWindowWrap, name)
+    note("indent", setWindowWrapIndent, name, 2)
+    note("indentNeg", setWindowWrapIndent, name, -1)
+    note("hanging", setWindowWrapHangingIndent, name, 3)
+    if getLineCount(name) then
+      echo(name, "\n" .. long .. "\n")
+      local last = getLastLineNumber(name)
+      local lengths = {}
+      for i = last - 4, last do
+        lengths[#lengths + 1] = #(getLines(name, i, i + 1)[1] or "")
+      end
+      steps[#steps + 1] = "lengths=" .. table.concat(lengths, ",")
+    end
+    note("wrapLine", wrapLine, name, 0)
+    note("wrapBack", setWindowWrap, name, 100)
+    note("pt0", setFontSize, name, 0)
+    note("pt13", setFontSize, name, 13)
+    note("size13", calcFontSize, name)
+    note("avg13", calcFontSize, name, true)
+    note("fontEmpty", setFont, name, "")
+    note("fontMissing", setFont, name, "No Such Font Family Zz")
+    note("fontFamily", setFont, name, fwFamily)
+    note("familyFont", getFont, name)
+    note("familyPt", getFontSize, name)
+    note("familySize", calcFontSize, name)
+    note("familyAvg", calcFontSize, name, true)
+    return table.concat(steps, ";")
+  end
+  fwEmpty = walk("")
+  fwMain = walk("main")
+  fwMiniSteps = walk("fwMini")
+  fwWindowSteps = walk("fwWindow")
+  fwBufferSteps = walk("fwBuffer")
+  fwLabelSteps = walk("fwLabel")
+  fwMissing = walk("noSuchFontWindow")
+
+  assert(createLabel("fwLateLabel", 0, 0, 100, 20, 1) == true, "createLabel did not answer true")
+  assert(setFont("main", startFamily) == true, "setFont did not answer true for main")
+  assert(createLabel("fwWindow", "fwWindowLateLabel", 0, 0, 100, 20, 1) == true, "createLabel did not answer true in a user window")
+  fwLabelFonts = table.concat({getFont("fwWindowLabel"), getFont("fwLateLabel"), getFont("fwWindowLateLabel")}, ";")
+
+  assert(createLabel("fwMovedLabel", 0, 0, 100, 20, 1) == true, "createLabel did not answer true")
+  assert(setWindow("fwWindow", "fwMovedLabel", 0, 0, false) == true, "setWindow did not answer true for a label")
+  assert(setWindow("main", "fwWindowLabel", 0, 0, true) == true, "setWindow did not answer true for a label")
+  assert(setWindow("fwWindow", "fwLabel", 0, 0, true) == true, "setWindow did not answer true for a label")
+  assert(setWindow("main", "fwLateLabel", 0, 0, true) == true, "setWindow did not answer true for a label")
+  assert(setWindow("fwWindow", "fwWindowLateLabel", 0, 0, true) == true, "setWindow did not answer true for a label")
+  fwMovedFonts = table.concat({getFont("fwMovedLabel"), getFont("fwWindowLabel"), getFont("fwLabel"), getFont("fwLateLabel"), getFont("fwWindowLateLabel")}, ";")
+end)
+headlessFontWrap = ok and "ok" or tostring(err)
+)lua"));
+
+        QVERIFY2(ran, "The Lua chunk did not run.");
+        QCOMPARE(luaGlobalString(host, "headlessFontWrap"), qsl("ok"));
+
+        const auto sized = [](const QFont& font, const int pointSize) {
+            TFontAttributes attributes(font);
+            attributes.mPointSize = pointSize;
+            return attributes.makeFont();
+        };
+        const auto measured = [](const QFont& font) {
+            const QFontMetrics metrics(font);
+            return qsl("[2]%1:%2").arg(metrics.horizontalAdvance(QChar('W'))).arg(metrics.height());
+        };
+        const auto averaged = [](const QFont& font) {
+            const QFontMetrics metrics(font);
+            return qsl("[2]%1:%2").arg(metrics.averageCharWidth()).arg(metrics.height());
+        };
+        const auto family = [](const QFont& font) {
+            return QFontInfo(font).family();
+        };
+        const QFont familyFont = host->createFontWithSettings(luaGlobalString(host, "fwFamily"), 13);
+        // What the same steps read in the GUI self-test profile, its sizes measured here in the fonts it had
+        const auto consoleSteps = [&](const QFont& font, const int wrap) {
+            return QStringList{qsl("size=%1").arg(measured(font)),
+                               qsl("avg=%1").arg(averaged(font)),
+                               qsl("font=[1]%1").arg(family(font)),
+                               qsl("pt=[1]%1").arg(font.pointSize()),
+                               qsl("wrap=[1]%1").arg(wrap),
+                               qsl("wrap0=[2]nil:msg"),
+                               qsl("wrap30=[1]true"),
+                               qsl("wrapNow=[1]30"),
+                               qsl("indent=[1]true"),
+                               qsl("indentNeg=[2]nil:msg"),
+                               qsl("hanging=[1]true"),
+                               qsl("lengths=0,27,28,26,0"),
+                               qsl("wrapLine=[0]"),
+                               qsl("wrapBack=[1]true"),
+                               qsl("pt0=[2]nil:msg"),
+                               qsl("pt13=[1]true"),
+                               qsl("size13=%1").arg(measured(sized(font, 13))),
+                               qsl("avg13=%1").arg(averaged(sized(font, 13))),
+                               qsl("fontEmpty=[2]nil:msg"),
+                               qsl("fontMissing=[2]nil:msg"),
+                               qsl("fontFamily=[1]true"),
+                               qsl("familyFont=[1]%1").arg(family(familyFont)),
+                               qsl("familyPt=[1]13"),
+                               qsl("familySize=%1").arg(measured(familyFont)),
+                               qsl("familyAvg=%1").arg(averaged(familyFont))}
+                    .join(QLatin1Char(';'));
+        };
+        // A label has a font but no size, wrap or text of its own; a missing name has none of them
+        const auto otherSteps = [&](const QString& font, const QString& familyAnswer) {
+            return qsl("size=[1]nil;avg=[1]nil;font=%1;pt=[2]nil:msg;wrap=[2]nil:msg;wrap0=[2]nil:msg;wrap30=[2]nil:msg;wrapNow=[2]nil:msg;"
+                       "indent=[2]nil:msg;indentNeg=[2]nil:msg;hanging=[2]nil:msg;wrapLine=[0];wrapBack=[2]nil:msg;pt0=[2]nil:msg;pt13=[2]nil:msg;"
+                       "size13=[1]nil;avg13=[1]nil;fontEmpty=[2]nil:msg;fontMissing=[2]nil:msg;fontFamily=%2;familyFont=%3;familyPt=[2]nil:msg;"
+                       "familySize=[1]nil;familyAvg=[1]nil")
+                    .arg(font, familyAnswer.isEmpty() ? qsl("[2]nil:msg") : qsl("[1]true"), familyAnswer.isEmpty() ? qsl("[2]nil:msg") : familyAnswer);
+        };
+
+        QCOMPARE(luaGlobalString(host, "fwGlobal"), qsl("%1;%2;[1]%3;[1]%4;[1]100").arg(measured(startFont), averaged(startFont), family(startFont)).arg(startFont.pointSize()));
+        QCOMPARE(luaGlobalString(host, "fwEmpty"), consoleSteps(startFont, 100));
+        QCOMPARE(luaGlobalString(host, "fwMain"), consoleSteps(familyFont, 100));
+        // Unlike main, a miniconsole or user window starts with no wrap at all
+        QCOMPARE(luaGlobalString(host, "fwMiniSteps"), consoleSteps(sized(startFont, 12), 99999999));
+        QCOMPARE(luaGlobalString(host, "fwWindowSteps"), consoleSteps(sized(startFont, 10), 99999999));
+        QCOMPARE(luaGlobalString(host, "fwBufferSteps"), consoleSteps(startFont, 100));
+        QCOMPARE(luaGlobalString(host, "fwLabelSteps"), otherSteps(qsl("[1]%1").arg(family(startFont)), qsl("[1]%1").arg(family(familyFont))));
+        QCOMPARE(luaGlobalString(host, "fwMissing"), otherSteps(qsl("[2]nil:msg"), QString()));
+        QCOMPARE(luaGlobalString(host, "fwLabelFonts"), qsl("%1;%2;%2").arg(family(sized(startFont, 10)), family(familyFont)));
+        // Moved to another window, one given no font by setFont() takes the application's
+        QCOMPARE(luaGlobalString(host, "fwMovedFonts"), qsl("%1;%1;%2;%2;%2").arg(family(QFont()), family(familyFont)));
+        QVERIFY2(QApplication::topLevelWidgets().isEmpty(), "The font and wrap calls created a widget.");
+    }
+
     // The trim that raises sysBufferShrinkEvent runs inside TBuffer::append(), and echo goes on using the
     // console's model after that returns, so a handler deleting the console must not free it there and then.
     void test_consoleDeletedByItsOwnShrinkEventWithNoMainWindow()
