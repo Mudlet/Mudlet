@@ -534,6 +534,13 @@ public:
     // alone even when that is not registered, there being nothing better to move
     // it to. Returns true when the display font was changed.
     bool substituteMissingDisplayFont();
+    // The way back from substituteMissingDisplayFont() once a package brings the
+    // family it stood in for. Returns true when the display font was changed.
+    bool restoreMissingDisplayFont();
+    // Fonts are registered for the whole application, so one profile's package can
+    // take away or bring back the family any open profile uses or stood in for
+    static void substituteMissingDisplayFonts();
+    static void restoreMissingDisplayFonts();
     // Every package or module that could own the code a Lua chunk came from, by
     // the "Script: name" style item names or a file's package folder; "" is the profile
     QSet<QString> packagesOwningChunk(const QString& chunkName);
@@ -762,6 +769,9 @@ private:
     // the console, so that saving cannot replace the player's choice with the
     // stand-in; empty whenever the console shows the family that was asked for.
     QString mMissingDisplayFontFamily;
+    // The missing family whose return the player has already been told could not be
+    // used, so that every later install does not say it again
+    QString mRefusedDisplayFontFamily;
     // Co-owned with the main-console view rather than owned outright: mudlet
     // destroys the Host before the lingering console widget, so a Host-owned
     // model would leave the view's aliasing references dangling. Reached
