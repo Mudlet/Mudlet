@@ -54,6 +54,7 @@
 #include <QApplication>
 #include <QDialog>
 #include <QDockWidget>
+#include <QFontMetrics>
 #include <QLabel>
 #include <QMenuBar>
 #include <QToolBar>
@@ -346,6 +347,7 @@ private slots:
         const bool tinted = host->setSvgTint(label, QColor(Qt::red));
         const bool echoed = host->echoWindow(label, qsl("text"));
         const QSize fontSize = host->calcFontSize(qsl("main"));
+        const QFontMetrics displayMetrics(host->getDisplayFont());
         const auto mapperTitleSet = host->setMapperTitle(qsl("title"));
         const auto mapperTitle = host->getMapperTitle();
         const bool layoutCommitted = host->commitLayoutUpdates();
@@ -363,7 +365,7 @@ private slots:
         QVERIFY(!styled);
         QVERIFY(!tinted);
         QVERIFY(!echoed);
-        QCOMPARE(fontSize, QSize(-1, -1));
+        QCOMPARE(fontSize, QSize(displayMetrics.horizontalAdvance(QChar('W')), displayMetrics.height()));
         QCOMPARE(mapperTitleSet.first, false);
         QCOMPARE(mapperTitleSet.second, qsl("no floating/dockable type map window found"));
         QVERIFY(!mapperTitle.has_value());

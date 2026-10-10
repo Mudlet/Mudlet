@@ -19,6 +19,9 @@
 
 #include <QApplication>
 #include <QDir>
+#include <QFontInfo>
+#include <QFontMetrics>
+#include <QFontMetricsF>
 #include <QTemporaryDir>
 #include <QtNetwork/QTcpServer>
 #include <QtNetwork/QTcpSocket>
@@ -299,6 +302,148 @@ headlessState = ok and 'ok' or tostring(err)
         QCOMPARE(host->windowRegistry().labelModel(qsl("stateInner"))->mGeometry.topLeft(), QPoint(3, 4));
         QCOMPARE(host->windowRegistry().userWindowSize(qsl("stateWindow")), std::optional<QSize>(QSize(120, 130)));
         QVERIFY2(QApplication::topLevelWidgets().isEmpty(), "Working the windows created a widget.");
+    }
+
+    // With nothing to lay the windows out, the main console is the character grid NAWS reports and every
+    // other window's grid is its size in its own font, counted as TTextEdit counts a real one's.
+    void test_windowsHaveCharacterGridGeometryWithNoMainWindow()
+    {
+        Host* host = HostManager::self()->getHost(mWindowsHostname);
+        QVERIFY2(host, "test_windowsMadeWithNoMainWindowHaveModels() did not leave its profile.");
+
+        const bool ran = host->getLuaInterpreter()->compileAndExecuteScript(qsl(R"lua(
+headlessGrid = 'not run'
+local ok, err = pcall(function()
+  local function joined(...)
+    return table.concat({...}, ",")
+  end
+  gridMainSize = joined(getMainWindowSize())
+  gridMainGeometry = joined(getWindowGeometry("main"))
+  gridMainCells = joined(getColumnCount("main"), getRowCount("main"))
+  gridMainFont = joined(getFont("main"), getFontSize("main"))
+  gridMainCharSize = joined(calcFontSize("main"))
+  assert(joined(getUserWindowSize("main")) == gridMainSize, "the main window has a user window size of its own")
+
+  gridFontEvents = {}
+  function gridFontChanged(_, window, family, size)
+    gridFontEvents[#gridFontEvents + 1] = joined(window, size)
+  end
+  registerAnonymousEventHandler("sysFontChangeEvent", "gridFontChanged")
+  assert(createMiniConsole("gridMini", 0, 0, 300, 200) == true, "createMiniConsole did not answer true")
+  gridMiniCells = joined(getColumnCount("gridMini"), getRowCount("gridMini"), getFontSize("gridMini"))
+  gridMiniCharSize = joined(calcFontSize("gridMini"))
+  assert(setFontSize("gridMini", 15) == true, "setFontSize did not answer true for the miniconsole")
+  assert(setFontSize("gridMini", 15) == true, "setFontSize did not answer true for an unchanged size")
+  gridMiniBiggerCells = joined(getColumnCount("gridMini"), getRowCount("gridMini"), getFontSize("gridMini"))
+  resizeWindow("gridMini", 600, 400)
+  gridMiniResizedCells = joined(getColumnCount("gridMini"), getRowCount("gridMini"))
+  gridMiniColumnSize = joined(calcFontSize("gridMini", true))
+  local family
+  for name in pairs(getAvailableFonts()) do
+    if name ~= getFont("gridMini") and name ~= "Bitstream Vera Sans Mono" then
+      family = name
+      break
+    end
+  end
+  assert(setFont("gridMini", family) == true, "setFont did not answer true for the miniconsole")
+  assert(setFont("gridMini", family) == true, "setFont did not answer true for an unchanged family")
+  assert(joined(getUserWindowSize("gridMini")) == gridMainSize, "a miniconsole has a user window size of its own")
+  local missing, missingMsg = setFontSize("noSuchGridWindow", 10)
+  assert(missing == nil and type(missingMsg) == "string", "setFontSize on a missing window did not answer nil and a message")
+
+  assert(openUserWindow("gridWindow") == true, "openUserWindow did not answer true")
+  gridWindowGeometry = joined(getWindowGeometry("gridWindow"))
+  gridWindowSize = joined(getUserWindowSize("gridWindow"))
+  gridWindowCells = joined(getColumnCount("gridWindow"), getRowCount("gridWindow"), getFontSize("gridWindow"))
+
+  createBuffer("gridBuffer")
+  gridBufferCells = joined(getColumnCount("gridBuffer"), getRowCount("gridBuffer"), getFontSize("gridBuffer"))
+  assert(setFontSize("gridBuffer", 9) == true, "setFontSize did not answer true for the buffer")
+  gridFontEvents = table.concat(gridFontEvents, ";")
+end)
+headlessGrid = ok and 'ok' or tostring(err)
+)lua"));
+
+        QVERIFY2(ran, "The Lua chunk did not run.");
+        QCOMPARE(luaGlobalString(host, "headlessGrid"), qsl("ok"));
+
+        const auto joined = [](const QList<int>& values) {
+            QStringList parts;
+            for (const int value : values) {
+                parts << QString::number(value);
+            }
+            return parts.join(QLatin1Char(','));
+        };
+        // What TTextEdit::getColumnCount() and getRowCount() would count in that font
+        const auto cells = [](const QSize& size, const QFont& font) {
+            const QFontMetricsF metrics(font);
+            return QList<int>{qRound(size.width() / metrics.averageCharWidth()), qRound(size.height() / metrics.lineSpacing())};
+        };
+        const auto subConsoleFont = [host](const int pointSize) {
+            TFontAttributes attributes(host->fontsAntiAlias());
+            attributes.mPointSize = pointSize;
+            return attributes.makeFont();
+        };
+
+        const QFont displayFont = host->getDisplayFont();
+        const QFontMetrics displayMetrics(displayFont);
+        const QSize mainSize(host->mScreenWidth * displayMetrics.averageCharWidth(), host->mScreenHeight * displayMetrics.height());
+        QCOMPARE(luaGlobalString(host, "gridMainSize"), joined({mainSize.width(), mainSize.height()}));
+        QCOMPARE(luaGlobalString(host, "gridMainGeometry"), joined({0, 0, mainSize.width(), mainSize.height()}));
+        QCOMPARE(luaGlobalString(host, "gridMainCells"), joined({host->mScreenWidth, host->mScreenHeight}));
+        QCOMPARE(luaGlobalString(host, "gridMainFont"), qsl("%1,%2").arg(QFontInfo(displayFont).family()).arg(displayFont.pointSize()));
+        QCOMPARE(luaGlobalString(host, "gridMainCharSize"), joined({displayMetrics.horizontalAdvance(QChar('W')), displayMetrics.height()}));
+
+        const QFont miniFont = subConsoleFont(12);
+        const QFontMetrics miniMetrics(miniFont);
+        QCOMPARE(luaGlobalString(host, "gridMiniCells"), joined(cells(QSize(300, 200), miniFont) << 12));
+        QCOMPARE(luaGlobalString(host, "gridMiniCharSize"), joined({miniMetrics.horizontalAdvance(QChar('W')), miniMetrics.height()}));
+        QCOMPARE(luaGlobalString(host, "gridMiniBiggerCells"), joined(cells(QSize(300, 200), subConsoleFont(15)) << 15));
+        QCOMPARE(luaGlobalString(host, "gridMiniResizedCells"), joined(cells(QSize(600, 400), subConsoleFont(15))));
+        const QFontMetrics biggerMiniMetrics(subConsoleFont(15));
+        QCOMPARE(luaGlobalString(host, "gridMiniColumnSize"), joined({biggerMiniMetrics.averageCharWidth(), biggerMiniMetrics.height()}));
+
+        QCOMPARE(luaGlobalString(host, "gridWindowGeometry"), joined({0, 0, mainSize.width(), mainSize.height()}));
+        QCOMPARE(luaGlobalString(host, "gridWindowSize"), joined({mainSize.width(), mainSize.height()}));
+        QCOMPARE(luaGlobalString(host, "gridWindowCells"), joined(cells(mainSize, subConsoleFont(10)) << 10));
+
+        QCOMPARE(luaGlobalString(host, "gridBufferCells"), joined({0, 0, 14}));
+        // As a real view tells scripts of each, and of none for a buffer
+        QCOMPARE(luaGlobalString(host, "gridFontEvents"), qsl("gridMini,12;gridMini,15;gridMini,15;gridWindow,10"));
+
+        QVERIFY(host->getLuaInterpreter()->compileAndExecuteScript(qsl(R"lua(
+gridFontEvents = {}
+function gridSettingChanged(_, setting, family, size)
+  gridFontEvents[#gridFontEvents + 1] = table.concat({setting, size}, ",")
+end
+registerAnonymousEventHandler("sysSettingChanged", "gridSettingChanged")
+assert(setFontSize("main", 20) == true, "setFontSize did not answer true for main")
+assert(setFontSize("main", 20) == true, "setFontSize did not answer true for an unchanged main size")
+gridMainFontEvents = table.concat(gridFontEvents, ";")
+gridMainBiggerSize = table.concat({getMainWindowSize()}, ",")
+gridMainBiggerCells = table.concat({getColumnCount("main"), getRowCount("main"), getFontSize("main")}, ",")
+)lua")));
+        const QFontMetrics biggerMetrics(host->getDisplayFont());
+        QCOMPARE(luaGlobalString(host, "gridMainBiggerSize"), joined({host->mScreenWidth * biggerMetrics.averageCharWidth(), host->mScreenHeight * biggerMetrics.height()}));
+        QCOMPARE(luaGlobalString(host, "gridMainBiggerCells"), joined({host->mScreenWidth, host->mScreenHeight, 20}));
+        QCOMPARE(luaGlobalString(host, "gridMainFontEvents"), qsl("main,20;main window font,20"));
+
+        QVERIFY(host->getLuaInterpreter()->compileAndExecuteScript(qsl(R"lua(
+gridFontEvents = {}
+gridBumped = false
+function gridBumpMainFont(_, window)
+  if window == "main" and not gridBumped then
+    gridBumped = true
+    setFontSize("main", 22)
+  end
+end
+registerAnonymousEventHandler("sysFontChangeEvent", "gridBumpMainFont")
+assert(setFontSize("main", 21) == true, "setFontSize did not answer true for main")
+gridReentrantFontEvents = table.concat(gridFontEvents, ";")
+)lua")));
+        // As Host::updateConsolesFont() does, the outer change reports the font a handler left, not the one it set
+        QCOMPARE(luaGlobalString(host, "gridReentrantFontEvents"), qsl("main,21;main,22;main window font,22;main window font,22"));
+        QVERIFY2(QApplication::topLevelWidgets().isEmpty(), "Asking for the geometry created a widget.");
     }
 
     // The trim that raises sysBufferShrinkEvent runs inside TBuffer::append(), and echo goes on using the

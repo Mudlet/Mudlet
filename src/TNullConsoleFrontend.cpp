@@ -20,9 +20,12 @@
 #include "TNullConsoleFrontend.h"
 
 #include "Host.h"
+#include "TEvent.h"
 #include "TLabelModel.h"
 
 #include <QCoreApplication>
+#include <QFontMetrics>
+#include <QFontMetricsF>
 #include <QImage>
 #include <QObject>
 #include <QStringList>
@@ -118,6 +121,7 @@ TConsoleModel& TNullConsoleFrontend::addSubConsole(const QString& name, const TW
     pModel->mConsoleName = name;
     pModel->mScriptAddressable = true;
     pModel->mScrollBarEnabled = false;
+    pModel->mUpperPaneFont = TFontAttributes(mpHost->fontsAntiAlias()).makeFont();
     TConsoleModel& model = *pModel;
     mpHost->windowRegistry().registerSubConsole(name, &model, kind);
     mSubConsoles[name] = {std::move(pModel), userWindowOrMain(windowname)};
@@ -164,12 +168,15 @@ void TNullConsoleFrontend::createBuffer(const QString& name)
     model.setWrapAt(mpHost->mWrapAt);
     model.setIndentCount(mpHost->mWrapIndentCount);
     model.setHangingIndentCount(mpHost->mWrapHangingIndentCount);
+    reportGridSize(name);
 }
 
 void TNullConsoleFrontend::addMiniConsole(const QString& windowname, const QString& name, int x, int y, int width, int height)
 {
     addSubConsole(name, TWindowRegistry::SubConsoleKind::MiniConsole, windowname);
     mpHost->windowRegistry().setSubConsoleGeometry(name, QRect(x, y, width, height));
+    // As TMainConsole::createMiniConsole() sizes its font, which raises sysFontChangeEvent
+    setWindowFontSize(name, 12);
     setSubConsoleShown(name, true);
 }
 
@@ -205,6 +212,12 @@ void TNullConsoleFrontend::openUserWindow(const QString& name, bool, bool, const
         registry.registerDockWidget(name);
         registry.setUserWindowTitle(name, name);
         registry.setUserWindowStyleSheet(name, mpHost->mProfileStyleSheet);
+        // There is no layout to dock it into, so it takes the main window's size
+        const QSize size = mpHost->mainWindowSize().value_or(QSize());
+        registry.setSubConsoleGeometry(name, QRect(QPoint(0, 0), size));
+        registry.setUserWindowSize(name, size);
+        // As TMainConsole::createUserWindow() sizes its font, which raises sysFontChangeEvent
+        setWindowFontSize(name, 10);
     }
     setSubConsoleShown(name, true);
 }
@@ -472,6 +485,7 @@ bool TNullConsoleFrontend::resizeSubConsole(const QString& name, const int width
     geometry.setSize(QSize(width, height).expandedTo(QSize(0, 0)));
     registry.setSubConsoleGeometry(name, geometry);
     registry.setUserWindowSize(name, geometry.size());
+    reportGridSize(name);
     return true;
 }
 
@@ -552,5 +566,139 @@ bool TNullConsoleFrontend::setSubConsoleCommandForegroundColor(const QString& na
         return false;
     }
     pModel->mCommandFgColor = color;
+    return true;
+}
+
+// As TTextEdit::getColumnCount() and getRowCount() count it
+void TNullConsoleFrontend::reportGridSize(const QString& name)
+{
+    TConsoleModel* pModel = subConsoleModel(name);
+    if (!pModel) {
+        return;
+    }
+    const QSize size = mpHost->windowRegistry().subConsoleGeometry(name).value_or(QRect()).size();
+    const QFontMetricsF metrics(pModel->mUpperPaneFont);
+    pModel->mGridSize = QSize(qRound(size.width() / metrics.averageCharWidth()), qRound(size.height() / metrics.lineSpacing()));
+}
+
+QFont TNullConsoleFrontend::displayFont() const
+{
+    return mpHost->getDisplayFont();
+}
+
+std::optional<QFont> TNullConsoleFrontend::consoleFont(const QString& name) const
+{
+    if (name.isEmpty() || name == qsl("main")) {
+        return {displayFont()};
+    }
+    if (const TConsoleModel* pModel = subConsoleModel(name)) {
+        return {pModel->mUpperPaneFont};
+    }
+    return {};
+}
+
+std::optional<QSize> TNullConsoleFrontend::consoleFontSize(const QString& name) const
+{
+    const auto font = consoleFont(name);
+    if (!font) {
+        return {};
+    }
+    const QFontMetrics metrics(*font);
+    return {QSize(metrics.horizontalAdvance(QChar('W')), metrics.height())};
+}
+
+std::optional<int> TNullConsoleFrontend::consoleColumnWidth(const QString& name) const
+{
+    const auto font = consoleFont(name);
+    if (!font) {
+        return {};
+    }
+    return {QFontMetrics(*font).averageCharWidth()};
+}
+
+// As TConsole::setFont() changes a sub-console's, and tells scripts of it
+void TNullConsoleFrontend::setSubConsoleFont(const QString& name, const QFont& font)
+{
+    TConsoleModel* pModel = subConsoleModel(name);
+    if (!pModel) {
+        return;
+    }
+    pModel->mUpperPaneFont = font;
+    reportGridSize(name);
+    if (mpHost->windowRegistry().subConsoleKind(name) == TWindowRegistry::SubConsoleKind::Buffer) {
+        return;
+    }
+    raiseFontEvent(qsl("sysFontChangeEvent"), name, font);
+}
+
+// As TConsole::setFont() and Host::updateConsolesFont() tell scripts of a new main console font
+void TNullConsoleFrontend::reportDisplayFontChange(const QFont& before)
+{
+    const QFont font = displayFont();
+    if (TFontAttributes(font) == TFontAttributes(before)) {
+        return;
+    }
+    raiseFontEvent(qsl("sysFontChangeEvent"), qsl("main"), font);
+    // Read afresh, as Host::updateConsolesFont() does: a sysFontChangeEvent handler may have changed it again
+    raiseFontEvent(qsl("sysSettingChanged"), qsl("main window font"), displayFont());
+}
+
+void TNullConsoleFrontend::raiseFontEvent(const QString& eventName, const QString& subject, const QFont& font)
+{
+    TEvent event{};
+    event.mArgumentList.append(eventName);
+    event.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
+    event.mArgumentList.append(subject);
+    event.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
+    event.mArgumentList.append(font.family());
+    event.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
+    event.mArgumentList.append(QString::number(font.pointSize()));
+    event.mArgumentTypeList.append(ARGUMENT_TYPE_NUMBER);
+    mpHost->raiseEvent(event);
+}
+
+std::optional<std::pair<bool, QString>> TNullConsoleFrontend::setWindowFontFamily(const QString& name, const QString& family, const QFont::Weight weight)
+{
+    if (name.isEmpty() || name == qsl("main")) {
+        QFont font = mpHost->createFontWithSettings(family, mpHost->getDisplayFont().pointSize());
+        if (weight != QFont::Normal) {
+            font.setWeight(weight);
+        }
+        const QFont before = displayFont();
+        const auto result = mpHost->setDisplayFont(font, Host::DisplayFontChange::UserChoice);
+        reportDisplayFontChange(before);
+        return {result};
+    }
+    TConsoleModel* pModel = subConsoleModel(name);
+    if (!pModel) {
+        return {};
+    }
+    QFont font = mpHost->createFontWithSettings(family, pModel->mUpperPaneFont.pointSize());
+    if (weight != QFont::Normal) {
+        font.setWeight(weight);
+    }
+    if (TFontAttributes(font) != TFontAttributes(pModel->mUpperPaneFont)) {
+        setSubConsoleFont(name, font);
+    }
+    return {{true, QString()}};
+}
+
+bool TNullConsoleFrontend::setWindowFontSize(const QString& name, const int size)
+{
+    if (name.isEmpty() || name == qsl("main")) {
+        const QFont before = displayFont();
+        mpHost->setDisplayFontSize(size);
+        reportDisplayFontChange(before);
+        return true;
+    }
+    TConsoleModel* pModel = subConsoleModel(name);
+    if (!pModel) {
+        return false;
+    }
+    if (pModel->mUpperPaneFont.pointSize() != size) {
+        TFontAttributes font(pModel->mUpperPaneFont);
+        font.mPointSize = size;
+        setSubConsoleFont(name, font.makeFont());
+    }
     return true;
 }
