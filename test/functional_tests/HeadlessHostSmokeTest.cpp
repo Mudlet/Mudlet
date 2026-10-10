@@ -260,6 +260,43 @@ headlessShrinkLeft = table.concat({tostring(windowType("headlessShrinkBuffer")),
         QVERIFY(remade->buffer.lineBuffer.join(QChar::LineFeed).contains(qsl("made again")));
     }
 
+    // As MXP_spec.lua's checks of the same tags in the GUI: a frame is a miniconsole under its name, and
+    // what the game sends between <DEST> and </DEST> goes there and not into the main window.
+    void test_mxpFrameTakesDestTextWithNoMainWindow()
+    {
+        Host* host = HostManager::self()->getHost(mWindowsHostname);
+        QVERIFY2(host, "test_windowsMadeWithNoMainWindowHaveModels() did not leave its profile.");
+
+        const bool ran = host->getLuaInterpreter()->compileAndExecuteScript(qsl(R"lua(
+headlessFrames = 'not run'
+local ok, err = pcall(function()
+  setConfig("specialForceMXPProcessorOn", true)
+  headlessDestTriggered = "no"
+  local id = tempTrigger("MXPDEST", [[headlessDestTriggered = "yes"]])
+  feedTriggers([[<FRAME Name="headlessFrame" Align="right" Width="20%" Height="30%">]] .. "\n")
+  assert(windowType("headlessFrame") == "miniconsole", "the frame has no console")
+  feedTriggers([[<DEST headlessFrame>MXPDEST first</DEST>]] .. "\n")
+  feedTriggers([[<DEST headlessFrame>MXPDEST second</DEST>]] .. "\n")
+  headlessFrameLines = table.concat(getLines("headlessFrame", 0, getLineCount("headlessFrame") + 1), "|")
+  feedTriggers([[<DEST headlessFrame EOF>MXPDEST after clear</DEST>]] .. "\n")
+  headlessClearedLines = table.concat(getLines("headlessFrame", 0, getLineCount("headlessFrame") + 1), "|")
+  killTrigger(id)
+  feedTriggers([[<FRAME headlessFrame ACTION="close">]] .. "\n")
+  assert(windowType("headlessFrame") == nil, "the closed frame still has a console")
+  setConfig("specialForceMXPProcessorOn", false)
+end)
+headlessFrames = ok and 'ok' or tostring(err)
+)lua"));
+
+        QVERIFY2(ran, "The Lua chunk did not run.");
+        QCOMPARE(luaGlobalString(host, "headlessFrames"), qsl("ok"));
+        QCOMPARE(luaGlobalString(host, "headlessFrameLines"), qsl("MXPDEST first|MXPDEST second|"));
+        QCOMPARE(luaGlobalString(host, "headlessClearedLines"), qsl("MXPDEST after clear|"));
+        QVERIFY2(!mainBufferHolds(host, qsl("MXPDEST")), "Text sent to the frame reached the main console.");
+        QCOMPARE(luaGlobalString(host, "headlessDestTriggered"), qsl("no"));
+        QVERIFY2(QApplication::topLevelWidgets().isEmpty(), "The frame created a widget.");
+    }
+
     void test_profileConnectsAndLogsInWithNoMainWindow()
     {
         QVERIFY2(!TAppFrontend::hasView(), "A main window exists, so this run is not headless.");
