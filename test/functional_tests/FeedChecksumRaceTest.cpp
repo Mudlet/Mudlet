@@ -41,6 +41,7 @@
 #include <QNetworkProxy>
 #include <QPointer>
 #include <QProgressBar>
+#include <QPushButton>
 #include <QScopeGuard>
 #include <QSettings>
 #include <QSslCertificate>
@@ -542,6 +543,7 @@ private slots:
     void aDownloadedInstallerSurvivesACheckThatFindsNothing();
     void aCheckDuringADownloadLeavesTheVersionItIsSavedAs();
     void aDownloadStartedOutsideTheDialogIsSavedUnderItsRelease();
+    void anUpdateButtonClickIsAnsweredByOneDownload();
     // These two can hand the installer over and ask Qt to quit, so they run last
     void anInstallWhoseDownloadFailedIsNotStartedByTheNextDownload();
     void anInstallAskedForSurvivesACheckDuringItsDownload();
@@ -1203,6 +1205,40 @@ void FeedChecksumRaceTest::anInstallAskedForSurvivesACheckDuringItsDownload()
     harness.server().releaseDownload();
 
     QTRY_COMPARE_WITH_TIMEOUT(installer.urls().size(), 1, waitMs);
+}
+
+// Updater's own Update button goes through installButtonClicked rather than
+// startUpdate(), and a second download of the release must not click it again
+void FeedChecksumRaceTest::anUpdateButtonClickIsAnsweredByOneDownload()
+{
+    const QByteArray payload = stubDownloadPayload();
+
+    UpdateHarness harness;
+    QVERIFY2(harness.start(), "the stub update server needs TLS support and a free loopback port");
+    harness.server().setFeedBody(stubReleasesJson(harness.assetBaseUrl(), payload.size()));
+    harness.server().setChecksum(QCryptographicHash::hash(payload, QCryptographicHash::Sha256).toHex());
+    harness.server().setDownloadPayload(payload);
+    dblsqd::UpdateDialog::enableAutoDownload(false, &harness.settings());
+
+    harness.openDialog(dblsqd::UpdateDialog::Manual);
+    // Owned by the dialog's layout once added, as Updater's is
+    auto* updateButton = new QPushButton(qsl("Update"));
+    harness.dialog().addInstallButton(updateButton);
+    QSignalSpy clickedSpy(&harness.dialog(), &dblsqd::UpdateDialog::installButtonClicked);
+    QSignalSpy readySpy(&harness.dialog(), &dblsqd::UpdateDialog::ready);
+    QVERIFY2(readySpy.wait(waitMs), qPrintable(qsl("the update dialog never became ready. It reported: %1").arg(whatTheDialogWasTold())));
+
+    updateButton->click();
+    QTRY_VERIFY2_WITH_TIMEOUT(clickedSpy.count() == 1, qPrintable(qsl("the download the Update button asked for never finished. The dialog reported: %1").arg(whatTheDialogWasTold())), waitMs);
+
+    QSignalSpy finishedSpy(&harness.feed(), &dblsqd::Feed::downloadFinished);
+    const QList<dblsqd::Release> updates = harness.feed().getUpdates(dblsqd::Release::getCurrentRelease());
+    QVERIFY2(!updates.isEmpty(), "the stub feed offered no update to download");
+    harness.feed().downloadRelease(updates.first(), /*requireChecksums=*/true);
+    QVERIFY2(finishedSpy.wait(waitMs), qPrintable(qsl("the second download never finished. The dialog reported: %1").arg(whatTheDialogWasTold())));
+    QCoreApplication::processEvents();
+
+    QVERIFY2(clickedSpy.count() == 1, qPrintable(qsl("one click on Update was answered %1 times").arg(clickedSpy.count())));
 }
 
 QTEST_MAIN(FeedChecksumRaceTest)

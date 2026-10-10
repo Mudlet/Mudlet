@@ -739,10 +739,14 @@ void UpdateDialog::handleDownloadFinished()
     setSettingsValue(qsl("updateFileVersion"), mFeed->getCurrentDownload().getVersion(), mSettings);
 
     if (mAccepted) {
-        if (mAcceptedInstallButton == nullptr) {
+        // Answered by this download, so no later one may act on it again
+        QAbstractButton* const acceptedButton = mAcceptedInstallButton;
+        mAccepted = false;
+        mAcceptedInstallButton = nullptr;
+        if (acceptedButton == nullptr) {
             startUpdate();
         } else {
-            emit installButtonClicked(mAcceptedInstallButton, mUpdateFilePath);
+            emit installButtonClicked(acceptedButton, mUpdateFilePath);
         }
 
     } else {
