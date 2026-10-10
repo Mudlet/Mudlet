@@ -3051,7 +3051,7 @@ void mudlet::slot_reattachAllDetachedWindows()
             qDebug() << "slot_reattachAllDetachedWindows: Reattaching profile" << profileName;
 #endif
             // Use the existing reattach mechanism
-            reattachTab(profileName, -1); // Use default insert index
+            reattachTab(profileName, mainTabSlotFor(profileName));
         }
     }
 
@@ -8620,6 +8620,7 @@ void mudlet::detachTab(int tabIndex, const QPoint& position)
         }
     }
 
+    syncMainTabOrder();
     // Remove tab from main window tab bar since it will be in the detached window
     mpTabBar->removeTab(tabIndex);
 
@@ -8645,7 +8646,7 @@ void mudlet::detachTab(int tabIndex, const QPoint& position)
 
     // Connect signals
     connect(detachedWindow, &TDetachedWindow::reattachRequested, this, [this](const QString& profileName) {
-        slot_tabReattachRequested(profileName, -1); // Use default insert index
+        slot_tabReattachRequested(profileName, mainTabSlotFor(profileName));
     });
     connect(detachedWindow, &TDetachedWindow::windowClosed, this, &mudlet::slot_detachedWindowClosed);
     connect(detachedWindow, &TDetachedWindow::profileDetachToWindowRequested, this, &mudlet::slot_profileDetachToWindow);
@@ -9116,6 +9117,7 @@ void mudlet::moveProfileFromMainToDetachedWindow(const QString& profileName, int
         return;
     }
 
+    syncMainTabOrder();
     // Remove tab from main window tab bar
     mpTabBar->removeTab(tabIndex);
 
@@ -9280,6 +9282,48 @@ void mudlet::cleanupDetachedWindowsMap()
     }
 }
 
+void mudlet::syncMainTabOrder()
+{
+    const QStringList barOrder = mpTabBar->tabNames();
+    // Keyed by the attached tab each detached profile follows; an empty key is
+    // the front of the bar
+    QHash<QString, QStringList> detachedBehind;
+    QString lastAttached;
+    for (const QString& name : std::as_const(mMainTabOrder)) {
+        if (barOrder.contains(name)) {
+            lastAttached = name;
+        } else if (mDetachedWindows.contains(name)) {
+            detachedBehind[lastAttached].append(name);
+        }
+    }
+
+    QStringList order = detachedBehind.value(QString());
+    for (const QString& name : barOrder) {
+        order.append(name);
+        order.append(detachedBehind.value(name));
+    }
+    mMainTabOrder = order;
+}
+
+// The main tab bar index that puts a detached profile back where it was, or
+// -1 when it has no recorded place
+int mudlet::mainTabSlotFor(const QString& profileName)
+{
+    syncMainTabOrder();
+    const qsizetype position = mMainTabOrder.indexOf(profileName);
+    if (position < 0) {
+        return -1;
+    }
+
+    int slot = 0;
+    for (qsizetype i = 0; i < position; ++i) {
+        if (findTabIndex(mMainTabOrder.at(i)) >= 0) {
+            ++slot;
+        }
+    }
+    return slot;
+}
+
 int mudlet::findTabIndex(const QString& profileName) const
 {
     for (int i = 0; i < mpTabBar->count(); ++i) {
@@ -9347,7 +9391,10 @@ void mudlet::moveProfileFromDetachedToMainWindow(const QString& profileName, TDe
     }
 
     // Now add console to main window - it should have parent=nullptr now
-    const int insertIndex = mpTabBar->count(); // Insert at end
+    int insertIndex = mainTabSlotFor(profileName);
+    if (insertIndex < 0) {
+        insertIndex = mpTabBar->count();
+    }
 
     // CRITICAL DEBUG: Check if main window splitter already contains a console for this profile
     for (int i = 0; i < mpSplitter_profileContainer->count(); ++i) {
