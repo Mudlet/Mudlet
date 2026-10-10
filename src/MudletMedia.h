@@ -25,9 +25,9 @@
 class QMediaDevices;
 
 // The application-wide side of media playback: the two mute switches every
-// profile's TMedia obeys, and the watch on the system's audio outputs. A member
-// of the application object like HostManager, so a profile reaches it through
-// self() rather than through the main window.
+// profile's TMedia obeys, and the watch on the system's audio outputs. Owned by
+// HostManager, so a profile reaches it through self() rather than through the
+// main window, and has it with no main window at all.
 class MudletMedia : public QObject
 {
     Q_OBJECT
