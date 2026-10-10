@@ -78,6 +78,8 @@ public:
     void setCameraPosition(float, float, float);
     // Frames as many rooms as the 2D map shows at this zoom, when areaId is the area on view
     void applyMapZoom(qreal zoom, int areaId);
+    // A grid-mode area is always drawn looking straight down with north up
+    bool cameraFixedByGridMode() const;
 
     QSize minimumSizeHint() const override;
     QSize sizeHint() const override;
@@ -130,7 +132,9 @@ protected:
     void mouseReleaseEvent(QMouseEvent* event) override;
     void keyPressEvent(QKeyEvent* event) override;
     void showEvent(QShowEvent* event) override;
+    bool event(QEvent* event) override;
     void resizeEvent(QResizeEvent* event) override;
+    void paintEvent(QPaintEvent* event) override;
 
 public:
     TMap* mpMap = nullptr;
@@ -250,6 +254,7 @@ private:
     GLuint cachedRoomTexture(const QString& key);
     bool roomForAnotherTexture();
     GLuint addRoomTexture(const QString& key, const QImage& image);
+    bool contextCreationFailed() const;
     void startSmoothTransition(int targetAID, int targetX, int targetY, int targetZ);
     void stopSmoothTransition();
     void jumpTo(int areaId, int x, int y, int z);

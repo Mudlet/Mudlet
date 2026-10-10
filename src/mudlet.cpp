@@ -112,6 +112,7 @@
 #include <QToolTip>
 #include <QTranslator>
 #include <QVariantHash>
+#include <QWindow>
 
 #include <QRandomGenerator>
 
@@ -8606,6 +8607,22 @@ dlgTriggerEditor* mudlet::createMudletEditor()
     pEditor->fillout_form();
 
     return pEditor;
+}
+
+bool mudlet::event(QEvent* event)
+{
+    // Qt recreates this window when a 3D map view is first docked in it, and only hands
+    // native children to the new one; a dialog left open would lose its transient parent
+    // and, counting as a window of its own, keep Mudlet from quitting once this one closes
+    if (event->type() == QEvent::WinIdChange && internalWinId() && windowHandle()) {
+        const auto children = findChildren<QWidget*>();
+        for (QWidget* pChild : children) {
+            if (pChild->isWindow() && pChild->windowHandle() && !pChild->windowHandle()->transientParent()) {
+                pChild->windowHandle()->setTransientParent(windowHandle());
+            }
+        }
+    }
+    return QMainWindow::event(event);
 }
 
 // Getting a QWidget to emit a signal that normally comes from a QWindow;

@@ -682,8 +682,8 @@ int TLuaInterpreter::shiftMapPerspective(lua_State* L)
     if (!host.mpMap || !host.mpMap->mpRoomDB || !host.mpMap->mapViewFrontend()) {
         return warnArgumentValue(L, __func__, "you haven't opened a map yet");
     }
-    if (!host.mpMap->mapViewFrontend()->shift3DViewCamera(verticalAngle, horizontalAngle, rotationAngle)) {
-        return warnArgumentValue(L, __func__, "the modern 3D map view is not showing");
+    if (auto [moved, refusal] = host.mpMap->mapViewFrontend()->shift3DViewCamera(verticalAngle, horizontalAngle, rotationAngle); !moved) {
+        return warnArgumentValue(L, __func__, refusal);
     }
     lua_pushboolean(L, true);
     return 1;
@@ -702,8 +702,8 @@ int TLuaInterpreter::setMapPerspective(lua_State* L)
     if (!host.mpMap || !host.mpMap->mpRoomDB || !host.mpMap->mapViewFrontend()) {
         return warnArgumentValue(L, __func__, "you haven't opened a map yet");
     }
-    if (!host.mpMap->mapViewFrontend()->set3DViewCameraPosition(r, theta, phi)) {
-        return warnArgumentValue(L, __func__, "the modern 3D map view is not showing");
+    if (auto [moved, refusal] = host.mpMap->mapViewFrontend()->set3DViewCameraPosition(r, theta, phi); !moved) {
+        return warnArgumentValue(L, __func__, refusal);
     }
     lua_pushboolean(L, true);
     return 1;

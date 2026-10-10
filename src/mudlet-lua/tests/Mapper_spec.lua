@@ -2810,8 +2810,8 @@ describe("Tests mapper functions against a shared fixture", function()
   end)
 
   describe("Tests the 3D map perspective functions", function()
-    -- Only a build with the 3D mapper has them. These run with the 2D map
-    -- showing, but for the one test below that opens the modern 3D view
+    -- Only a build with the 3D mapper has them. These run with the 2D map showing;
+    -- zz_Mapper3DView_spec.lua tries them with the modern 3D view open
     if not setMapPerspective then
       pending("setMapPerspective and shiftMapPerspective need a Mudlet built with the 3D mapper")
       return
@@ -2860,33 +2860,6 @@ describe("Tests mapper functions against a shared fixture", function()
       assert.are.equal(rA1, getPlayerRoom())
       assert.is_false(getConfig("show3dMapView"))
     end)
-
-    it("both are accepted while the modern 3D view shows, and refused for the classic view", function()
-      -- a GL context leaks in the leak-checking job's GL driver, as Media_spec explains
-      if (os.getenv("ASAN_OPTIONS") or ""):find("detect_leaks=1", 1, true) then
-        pending("a 3D view's GL context leaks in this job's GL driver")
-        return
-      end
-      local wasModern = getConfig("experiment.3dmap.modernmapper")
-      finally(function()
-        setConfig("show3dMapView", false)
-        setConfig("experiment.3dmap.modernmapper", wasModern == true)
-      end)
-      assert.is_true(setConfig("experiment.3dmap.modernmapper", true))
-      assert.is_true(setConfig("show3dMapView", true))
-      assert.is_true(getConfig("show3dMapView"))
-      assert.is_true(setMapPerspective(2, 45, 270))
-      assert.is_true(shiftMapPerspective(0, 30, 0))
-
-      assert.is_true(setConfig("experiment.3dmap.modernmapper", false))
-      assert.is_true(getConfig("show3dMapView"))
-      local ok, err = setMapPerspective(2, 45, 270)
-      assert.is_nil(ok)
-      assert.are.equal("the modern 3D map view is not showing", err)
-      ok, err = shiftMapPerspective(0, 30, 0)
-      assert.is_nil(ok)
-      assert.are.equal("the modern 3D map view is not showing", err)
-    end)
   end)
 
   describe("Tests map zoom", function()
@@ -2918,34 +2891,6 @@ describe("Tests mapper functions against a shared fixture", function()
 
       assert.is_true(setMapZoom(3, areaAlpha))
       assert.are.equal(3, getMapZoom(areaAlpha))
-    end)
-
-    it("setMapZoom keeps its contract while the modern 3D view shows", function()
-      -- a GL context leaks in the leak-checking job's GL driver, as Media_spec explains
-      if (os.getenv("ASAN_OPTIONS") or ""):find("detect_leaks=1", 1, true) then
-        pending("a 3D view's GL context leaks in this job's GL driver")
-        return
-      end
-      local wasModern = getConfig("experiment.3dmap.modernmapper")
-      local before = getMapZoom(areaAlpha)
-      finally(function()
-        setConfig("show3dMapView", false)
-        setConfig("experiment.3dmap.modernmapper", wasModern == true)
-        setMapZoom(before, areaAlpha)
-      end)
-      assert.is_true(setConfig("experiment.3dmap.modernmapper", true))
-      assert.is_true(setConfig("show3dMapView", true))
-      assert.is_true(getConfig("show3dMapView"))
-
-      assert.is_true(setMapZoom(15, areaAlpha))
-      assert.are.equal(15, getMapZoom(areaAlpha))
-      local ok, err = setMapZoom(2.9, areaAlpha)
-      assert.is_nil(ok)
-      assert.is_truthy(err:find("it must be at least 3", 1, true), err)
-      ok, err = setMapZoom(0 / 0, areaAlpha)
-      assert.is_nil(ok)
-      assert.is_truthy(err:find("it must be a finite number", 1, true), err)
-      assert.are.equal(15, getMapZoom(areaAlpha))
     end)
 
     it("setMapZoom refuses a zoom that is not a finite number", function()
@@ -4477,40 +4422,6 @@ describe("Tests saveMap and loadMap", function()
     -- route this block does pin is the true optimum, checked against a
     -- breadth-first search, so a fix leaves them green.
     pending("routes can come back a step longer than the shortest one - issue #10180")
-  end)
-end)
-
--- Floating and redocking give the modern 3D view a new GL context, and switching
--- renderers replaces the widget; neither may crash or leave the 3D view hidden
-describe("Tests the modern 3D mapper surviving context rebuilds", function()
-  it("floats, redocks and switches back to the classic view", function()
-    if type(setMapPerspective) ~= "function" then
-      pending("needs a Mudlet built with the 3D mapper")
-      return
-    end
-    -- a GL context leaks in the leak-checking job's GL driver, as Media_spec explains
-    if (os.getenv("ASAN_OPTIONS") or ""):find("detect_leaks=1", 1, true) then
-      pending("a 3D view's GL context leaks in this job's GL driver")
-      return
-    end
-    local wasModern = getConfig("experiment.3dmap.modernmapper")
-    local was3d = getConfig("show3dMapView")
-    finally(function()
-      setConfig("experiment.3dmap.modernmapper", wasModern == true)
-      setConfig("show3dMapView", was3d == true)
-    end)
-    assert.is_true(openMapWidget())
-    -- with the experiment on, the mapper builds its 3D view as the modern widget
-    assert.is_true(setConfig("experiment.3dmap.modernmapper", true))
-    assert.is_true(getConfig("experiment.3dmap.modernmapper"))
-    assert.is_true(setConfig("show3dMapView", true))
-    assert.is_true(getConfig("show3dMapView"))
-    assert.is_true(openMapWidget("f"))
-    assert.is_true(getConfig("show3dMapView"))
-    assert.is_true(openMapWidget("r"))
-    assert.is_true(getConfig("show3dMapView"))
-    assert.is_true(setConfig("experiment.3dmap.modernmapper", false))
-    assert.is_false(getConfig("experiment.3dmap.modernmapper"))
   end)
 end)
 

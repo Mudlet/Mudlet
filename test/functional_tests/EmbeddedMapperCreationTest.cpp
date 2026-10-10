@@ -29,8 +29,10 @@
  * and each test method needs a mudlet of its own.
  */
 
+#include <QApplication>
 #include <QDockWidget>
 #include <QFileInfo>
+#include <QOpenGLWidget>
 #include <QPointer>
 #include <QSignalSpy>
 #include <QTemporaryDir>
@@ -182,6 +184,26 @@ private slots:
         delete mudlet::self();
         QVERIFY2(!hiddenSpy.isEmpty() && !hiddenSpy.last().at(0).toBool(), "the dock was not hidden as the window went, so this case covers nothing");
     }
+
+#if defined(INCLUDE_3DMAPPER)
+    // Replacing a 3D view the event loop hasn't shown yet must not leave the old
+    // widget mapped as a window of its own
+    void test_replacingThe3DViewLeavesNoStrayWindow()
+    {
+        mudlet::self()->slot_showMapperDialog();
+        qApp->processEvents();
+        QVERIFY(mpHost->getLuaInterpreter()->compileAndExecuteScript(qsl("assert(setConfig('experiment.3dmap.modernmapper', true))\n"
+                                                                         "assert(setConfig('show3dMapView', true))\n"
+                                                                         "assert(getConfig('show3dMapView'))\n"
+                                                                         "assert(setConfig('experiment.3dmap.modernmapper', false))\n"
+                                                                         "assert(getConfig('show3dMapView'))")));
+        qApp->processEvents();
+        const auto topLevelWidgets = QApplication::topLevelWidgets();
+        for (QWidget* pWidget : topLevelWidgets) {
+            QVERIFY2(!(pWidget->isVisible() && qobject_cast<QOpenGLWidget*>(pWidget)), "a replaced 3D view came back as a window of its own");
+        }
+    }
+#endif
 
     // An embedded mapper stops redrawing once the toolbar's own map dock has
     // been opened and closed again. slot_showMapperDialog() repoints

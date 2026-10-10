@@ -77,8 +77,8 @@ public:
     void show3DView(bool shown) override { slot_toggle3DView(shown); }
     bool showing3DView() const override;
     void recreate3DView() override { recreate3DWidget(); }
-    bool shift3DViewCamera(float verticalAngle, float horizontalAngle, float rotationAngle) override;
-    bool set3DViewCameraPosition(float r, float theta, float phi) override;
+    std::pair<bool, QString> shift3DViewCamera(float verticalAngle, float horizontalAngle, float rotationAngle) override;
+    std::pair<bool, QString> set3DViewCameraPosition(float r, float theta, float phi) override;
     bool selectingRooms() const override { return mp2dMap->mMultiSelection; }
     QSet<int> selectedRooms() const override { return mp2dMap->mMultiSelectionSet; }
     int centerSelectedRoom() const override { return mp2dMap->getCenterSelectedRoomId(); }
