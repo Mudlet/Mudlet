@@ -71,6 +71,182 @@ std::optional<QFont> styleSheetFont(const QString& sheet)
     return std::nullopt;
 }
 
+// Qt's known pseudo-states (qcssparser.cpp); any other name makes a rule style a sub-control instead
+bool knownPseudoState(const QString& name)
+{
+    static const QStringList known = qsl("active adjoins-item alternate bottom checked closable closed default disabled edit-focus "
+                                         "editable enabled exclusive first flat floatable focus has-children has-siblings horizontal "
+                                         "hover indeterminate last left maximized middle minimized movable next-selected no-frame "
+                                         "non-exclusive off on only-one open pressed previous-selected read-only right selected top "
+                                         "unchecked vertical window")
+                                             .split(u' ');
+    return known.contains(name, Qt::CaseInsensitive);
+}
+
+// The specificity QCss::StyleSelector::matchRule() weighs a selector by that matches a TLabel at rest - enabled and
+// active, as QStyleSheetStyle::updateStyleSheetFont() asks - or nothing. A combinator or an attribute
+// selector other than a class is not matched.
+std::optional<uint> labelSelectorSpecificity(const QStringView selector, const QString& objectName)
+{
+    static const QStringList classNames{qsl("TLabel"), qsl("QLabel"), qsl("QFrame"), qsl("QWidget"), qsl("QObject")};
+    qsizetype at = 0;
+    const auto ident = [&selector, &at]() {
+        const qsizetype start = at;
+        while (at < selector.size() && (selector.at(at).isLetterOrNumber() || selector.at(at) == u'_' || selector.at(at) == u'-' || selector.at(at).unicode() >= 0x80)) {
+            ++at;
+        }
+        return selector.mid(start, at - start).toString();
+    };
+    QString element;
+    if (at < selector.size() && selector.at(at) == u'*') {
+        ++at;
+    } else {
+        element = ident();
+    }
+    QStringList ids;
+    QStringList classes;
+    QList<std::pair<QString, bool>> pseudos;
+    while (at < selector.size()) {
+        const QChar marker = selector.at(at++);
+        if (marker == u'#' || marker == u'.') {
+            const QString name = ident();
+            if (name.isEmpty()) {
+                return std::nullopt;
+            }
+            (marker == u'#' ? ids : classes) << name;
+        } else if (marker == u':') {
+            if (at < selector.size() && selector.at(at) == u':') {
+                ++at;
+            }
+            const bool negated = at < selector.size() && selector.at(at) == u'!';
+            if (negated) {
+                ++at;
+            }
+            const QString name = ident();
+            if (name.isEmpty() || (at < selector.size() && selector.at(at) == u'(')) {
+                return std::nullopt;
+            }
+            pseudos.append({name, negated});
+        } else {
+            return std::nullopt;
+        }
+    }
+    if (element.isEmpty() && ids.isEmpty() && classes.isEmpty() && pseudos.isEmpty() && !selector.startsWith(u'*')) {
+        return std::nullopt;
+    }
+    if ((!element.isEmpty() && !classNames.contains(element)) || (!ids.isEmpty() && ids != QStringList{objectName})) {
+        return std::nullopt;
+    }
+    for (const QString& name : std::as_const(classes)) {
+        if (name != classNames.first()) {
+            return std::nullopt;
+        }
+    }
+    if (!pseudos.isEmpty() && !knownPseudoState(pseudos.first().first)) {
+        return std::nullopt;
+    }
+    // Selector::pseudoClass(): an unknown state past the first drops the states before it, but not the negated ones
+    bool statesHold = true;
+    for (const auto& [name, negated] : std::as_const(pseudos)) {
+        if (!knownPseudoState(name)) {
+            statesHold = true;
+            break;
+        }
+        const bool atRest = !name.compare(qsl("enabled"), Qt::CaseInsensitive) || !name.compare(qsl("active"), Qt::CaseInsensitive);
+        if (negated && atRest) {
+            return std::nullopt;
+        }
+        if (!negated && !atRest) {
+            statesHold = false;
+        }
+    }
+    if (!statesHold) {
+        return std::nullopt;
+    }
+    return (element.isEmpty() ? 0 : 1) + uint(classes.size() + pseudos.size()) * 0x10 + uint(ids.size()) * 0x100;
+}
+
+qsizetype indexOutsideQuotes(const QString& text, const QChar wanted, qsizetype from)
+{
+    QChar quote;
+    for (; from < text.size(); ++from) {
+        const QChar c = text.at(from);
+        if (!quote.isNull()) {
+            if (c == quote) {
+                quote = QChar();
+            }
+        } else if (c == u'"' || c == u'\'') {
+            quote = c;
+        } else if (c == wanted) {
+            return from;
+        }
+    }
+    return -1;
+}
+
+// The declarations of a label's own sheet that reach the label at rest, in the order QStyleSheetStyle
+// applies them. A sheet that is not a list of rules is QStyleSheetStyle's "* { sheet }"; @-rules apply
+// to no widget.
+QString labelSheetDeclarations(const QString& sheet, const QString& objectName)
+{
+    QString text = sheet;
+    for (qsizetype open = indexOutsideQuotes(text, u'/', 0); open >= 0; open = indexOutsideQuotes(text, u'/', open + 1)) {
+        if (open + 1 < text.size() && text.at(open + 1) == u'*') {
+            const qsizetype close = text.indexOf(qsl("*/"), open + 2);
+            text.replace(open, close < 0 ? text.size() - open : close + 2 - open, u' ');
+        }
+    }
+    if (indexOutsideQuotes(text, u'{', 0) < 0) {
+        return text;
+    }
+    QList<std::pair<uint, QString>> weighted;
+    uint order = 0;
+    qsizetype at = 0;
+    while (true) {
+        while (at < text.size() && text.at(at).isSpace()) {
+            ++at;
+        }
+        if (at >= text.size()) {
+            break;
+        }
+        const qsizetype open = indexOutsideQuotes(text, u'{', at);
+        if (open < 0) {
+            break;
+        }
+        qsizetype close = indexOutsideQuotes(text, u'}', open + 1);
+        if (text.at(at) == u'@') {
+            for (qsizetype inner = indexOutsideQuotes(text, u'{', open + 1); close >= 0 && inner >= 0 && inner < close; inner = indexOutsideQuotes(text, u'{', inner + 1)) {
+                close = indexOutsideQuotes(text, u'}', close + 1);
+            }
+            if (close < 0) {
+                break;
+            }
+            at = close + 1;
+            continue;
+        }
+        // The parser stops at the first rule it cannot read, keeping the rules before it
+        if (close < 0 || indexOutsideQuotes(text.left(close), u'{', open + 1) >= 0) {
+            break;
+        }
+        const QString declarations = text.mid(open + 1, close - open - 1);
+        for (const QString& selector : text.mid(at, open - at).split(u',')) {
+            if (const auto specificity = labelSelectorSpecificity(QStringView(selector).trimmed(), objectName)) {
+                weighted.append({order + *specificity * 0x100, declarations});
+            }
+        }
+        ++order;
+        at = close + 1;
+    }
+    std::stable_sort(weighted.begin(), weighted.end(), [](const auto& a, const auto& b) {
+        return a.first < b.first;
+    });
+    QStringList declarations;
+    for (const auto& [weight, block] : std::as_const(weighted)) {
+        declarations << block;
+    }
+    return declarations.join(u';');
+}
+
 // QStyleSheetStyle::updateStyleSheetFont()
 void applySheetFont(QFont& font, uint& mask, const std::optional<QFont>& sheetFont)
 {
@@ -274,7 +450,7 @@ void TNullConsoleFrontend::restyleLabel(Label& label, const QString& sheet)
             label.sizeHint.reset();
         }
     } else {
-        label.sheetFont = styleSheetFont(sheet);
+        label.sheetFont = styleSheetFont(labelSheetDeclarations(sheet, qsl("label_%1_%2").arg(mpHost->getName(), model.mName)));
         label.styled = true;
         polishLabel(label);
     }

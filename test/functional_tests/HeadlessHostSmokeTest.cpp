@@ -1083,6 +1083,7 @@ createLabel("lsA", 0, 0, 100, 20, 1)
 openUserWindow("lsWin")
 createLabel("lsWin", "lsB", 0, 0, 100, 20, 1)
 createLabel("lsC", 0, 0, 100, 20, 1)
+createLabel("lsD", 0, 0, 100, 20, 1)
 )lua"));
         QVERIFY2(ran, "The Lua chunk did not run.");
         QCOMPARE(luaGlobalString(host, "lsMissing"), qsl("[2]nil:msg"));
@@ -1210,6 +1211,32 @@ createLabel("lsC", 0, 0, 100, 20, 1)
             step(qsl("lsC"), qsl("setLinkStyle('lsC', 'red', 'blue', false)"), qsl("[1]true"));
             pRefC->setLinkStyle(qsl("red"), qsl("blue"), false);
             sheet(qsl("lsC"), pRefC, pRefC->styleSheet());
+
+            // Rules match a label by its class names and its object name, and apply in specificity and then sheet order
+            TLabel* pRefD = makeReference(qsl("lsRefD"), &mainParent);
+            const QString objectName = qsl("label_%1_lsD").arg(hostname);
+            pRefD->setObjectName(objectName);
+            text(qsl("lsD"), pRefD, qsl("WWWWWWWWWW"));
+            const QStringList ruleSheets{
+                    qsl("QLabel { font-size: 20px; }"),
+                    qsl("QLabel#%1 { font-family: '%2'; } QLabel { font-size: 18px; font-family: '%3'; }").arg(objectName, sheetFamily, shorthandFamily),
+                    qsl("QLabel#lsD { font-size: 40px; } TLabel { font-weight: bold; }"),
+                    qsl("* { font-size: 11pt; } QLabel { font-style: italic; } * { font-size: 30px; }"),
+                    qsl("QLabel:hover { font-size: 30px; } QLabel:!hover { font-size: 13pt; } QLabel::hover { font-weight: bold; }"),
+                    qsl("QLabel:enabled:active { font-size: 21px; } QLabel:!enabled { font-size: 40px; } QLabel:hover:no-such-state { font-style: italic; }"),
+                    qsl("QLabel::item { font-size: 40px; } QLabel:no-such-state { font-size: 40px; } QLabel:!focus { font-weight: bold; }"),
+                    qsl(".TLabel { font-size: 15px; } .QLabel { font-size: 40px; } QPushButton, QFrame { font-style: italic; }"),
+                    qsl("QLabel, TLabel#%1 { font-size: 14px; } QLabel { font-size: 24px; }").arg(objectName),
+                    qsl("/* { */ QLabel { font: bold 16px '%1'; } QLabel { color: red; font-size: 19px; }").arg(shorthandFamily),
+                    qsl("@media screen { QLabel { font-size: 40px; } } QLabel { font-size: 17px; }"),
+                    qsl("QLabel { font-size: 22px; } QLabel { font-size: 40px; "),
+                    qsl("QLabel { font-size: 25px; } QLabel"),
+                    qsl("QLabel { font-size: 26px; } QLabel { font-weight: bold; { font-size: 40px; } }"),
+                    qsl("font-size: 23px;"),
+            };
+            for (const QString& ruleSheet : ruleSheets) {
+                sheet(qsl("lsD"), pRefD, ruleSheet);
+            }
 
             text(qsl("lsB"), pRefB, qsl("WWWWWWWWWW"));
             sheet(qsl("lsB"), pRefB, qsl("font-size: 20px;"));
