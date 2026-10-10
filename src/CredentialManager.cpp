@@ -1573,8 +1573,10 @@ QString CredentialManager::retrieveCredentialFromFile(const QString& profileName
     // An older Mudlet uses only the truncated path, so a newer copy there is the latest password
     const QString legacyPath = generateLegacyFilePath(profileName, key);
 
+    // A newer older-named copy that cannot be opened may hold the latest password
+    bool legacyUnreadable = false;
     if (!legacyPath.isEmpty() && fileWrittenAfter(legacyPath, filePath)) {
-        const QString migrated = readLegacyFileCredential(profileName, key);
+        const QString migrated = readLegacyFileCredential(profileName, key, &legacyUnreadable);
 
         if (!migrated.isEmpty()) {
             // Copied, not moved: an older Mudlet sharing this config directory looks only there
@@ -1603,6 +1605,10 @@ QString CredentialManager::retrieveCredentialFromFile(const QString& profileName
             if (unreadable) {
                 *unreadable = true;
             }
+        } else if (unreadable) {
+            // A folder that cannot be searched hides its files, so "not there" is not proof of absence
+            const QFileInfo folder(QFileInfo(filePath).absolutePath());
+            *unreadable = legacyUnreadable || (folder.exists() && !(folder.isReadable() && folder.isExecutable()));
         }
 
         return QString();
@@ -1774,7 +1780,7 @@ QString CredentialManager::generateLegacyFilePath(const QString& profileName, co
 
 // Empty when nothing there is this profile's. Decrypts rather than just reading: a file this profile
 // can't decrypt belongs to a profile it used to collide with.
-QString CredentialManager::readLegacyFileCredential(const QString& profileName, const QString& key)
+QString CredentialManager::readLegacyFileCredential(const QString& profileName, const QString& key, bool* unreadable)
 {
     const QString legacyPath = generateLegacyFilePath(profileName, key);
 
@@ -1787,6 +1793,9 @@ QString CredentialManager::readLegacyFileCredential(const QString& profileName, 
     if (!file.open(QIODevice::ReadOnly | QIODevice::Text)) {
         if (file.exists()) {
             qWarning() << "CredentialManager: Failed to open credential file left by the earlier naming scheme:" << legacyPath << "Error:" << file.errorString();
+            if (unreadable) {
+                *unreadable = true;
+            }
         }
 
         return QString();

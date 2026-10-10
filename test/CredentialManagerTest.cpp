@@ -29,6 +29,7 @@
 #include <QFile>
 #include <QFileInfo>
 #include <QStandardPaths>
+#include <QScopeGuard>
 #include <QTemporaryDir>
 
 #include <optional>
@@ -138,6 +139,8 @@ private slots:
     void testAsyncStoreAndRetrieve();
     void testAsyncApiSharesTheStoreWithTheStaticOne();
     void testAnUndecryptableFileIsNotReportedAsNothingStored();
+    void testAFileHiddenByItsFolderIsNotReportedAsNothingStored();
+    void testANewerOlderNamedFileThatWontOpenIsNotReportedAsNothingStored();
     void testAsyncRemovePassword();
     void testCredentialExistsWithoutHandingOverTheSecret();
     void testAsyncEmptyArgumentsAreReportedThroughTheCallback();
@@ -790,6 +793,82 @@ void CredentialManagerTest::testAnUndecryptableFileIsNotReportedAsNothingStored(
     QCOMPARE(outcome(), std::optional(CredentialManager::ReadOutcome::Unreadable));
 
     QVERIFY(CredentialManager::removeCredential(profile, key));
+}
+
+namespace {
+std::optional<CredentialManager::ReadOutcome> readOutcome(CredentialManager& manager, const QString& profile, const QString& key)
+{
+    std::optional<CredentialManager::ReadOutcome> answer;
+    manager.retrievePassword(
+            profile,
+            key,
+            [&answer](bool, QString, const QString&, CredentialManager::ReadOutcome outcome) {
+                answer = outcome;
+            },
+            nullptr,
+            nullptr);
+    return answer;
+}
+
+// Permissions do not stop root, and Windows has no search bit on a folder
+bool permissionsCanHideAFile()
+{
+#if defined(Q_OS_WIN)
+    return false;
+#else
+    QTemporaryDir probe;
+    if (!probe.isValid() || !QFile::setPermissions(probe.path(), QFileDevice::Permissions())) {
+        return false;
+    }
+    const bool hidden = !QFileInfo(qsl("%1/x").arg(probe.path())).isReadable() && !QDir(probe.path()).isReadable();
+    QFile::setPermissions(probe.path(), QFileDevice::ReadOwner | QFileDevice::WriteOwner | QFileDevice::ExeOwner);
+    return hidden;
+#endif
+}
+} // namespace
+
+void CredentialManagerTest::testAFileHiddenByItsFolderIsNotReportedAsNothingStored()
+{
+    if (!permissionsCanHideAFile()) {
+        QSKIP("folder permissions cannot hide a file here (Windows, or running as root)");
+    }
+    CredentialManager manager;
+    const QString profile = "HiddenByItsFolderProfile";
+    const QString key = "password";
+    QVERIFY(CredentialManager::storeCredential(profile, key, "behind_a_locked_folder"));
+    const QString folder = QFileInfo(credentialPath(profile, key)).absolutePath();
+    const auto unlock = qScopeGuard([&folder, &profile, &key] {
+        QFile::setPermissions(folder, QFileDevice::ReadOwner | QFileDevice::WriteOwner | QFileDevice::ExeOwner);
+        CredentialManager::removeCredential(profile, key);
+    });
+
+    QVERIFY(QFile::setPermissions(folder, QFileDevice::Permissions()));
+    QCOMPARE(readOutcome(manager, profile, key), std::optional(CredentialManager::ReadOutcome::Unreadable));
+}
+
+void CredentialManagerTest::testANewerOlderNamedFileThatWontOpenIsNotReportedAsNothingStored()
+{
+    if (!permissionsCanHideAFile()) {
+        QSKIP("file permissions cannot stop a read here (Windows, or running as root)");
+    }
+    CredentialManager manager;
+    const QString sharedPrefix(50, QChar('u'));
+    const QString profile = sharedPrefix + "OlderCopyLockedAway";
+    const QString key = "character";
+    const QString legacyDir = qsl("%1/profiles/%2/passwords").arg(QStandardPaths::writableLocation(QStandardPaths::AppConfigLocation), sharedPrefix);
+    QVERIFY(QDir().mkpath(legacyDir));
+    QFile legacyFile(qsl("%1/%2").arg(legacyDir, key));
+    const auto cleanUp = qScopeGuard([&legacyFile, &profile, &key] {
+        legacyFile.setPermissions(QFileDevice::ReadOwner | QFileDevice::WriteOwner);
+        legacyFile.remove();
+        CredentialManager::removeCredential(profile, key);
+    });
+    QVERIFY(legacyFile.open(QIODevice::WriteOnly | QIODevice::Text));
+    QVERIFY(legacyFile.write(SecureStringUtils::encryptStringForProfile("saved_long_ago", profile).toUtf8()) != -1);
+    legacyFile.close();
+
+    QVERIFY(legacyFile.setPermissions(QFileDevice::Permissions()));
+    QCOMPARE(readOutcome(manager, profile, key), std::optional(CredentialManager::ReadOutcome::Unreadable));
 }
 
 // The static API is the migration and cleanup path for credentials the async API
