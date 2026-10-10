@@ -259,14 +259,7 @@ public:
     std::tuple<QString, int, bool> getConnectionInfo() const;
     void setPostingTimeout(const int);
     int getPostingTimeout() const { return mTimeOut; }
-    void loopbackTest(QByteArray& data)
-    {
-        ++mLoopbackProcessingDepth;
-        const auto loopbackGuard = qScopeGuard([this] {
-            --mLoopbackProcessingDepth;
-        });
-        processSocketData(data.data(), data.size(), true);
-    }
+    void loopbackTest(QByteArray& data);
     int loopbackProcessingDepth() const { return mLoopbackProcessingDepth; }
     // Every feedTelnet() level nests inside processSocketData(), so it also
     // counts against scmMaxDecompressionRecursion; keep this below it, or a
@@ -275,9 +268,9 @@ public:
     // How deep processSocketData() may nest (the outermost call counts as one)
     // while draining data left over after a decompression pass (compressed input that did not fit in one
     // output buffer, or plain data following the compressed stream). Each level
-    // inflates at most one output buffer, so this caps decompressed output at
-    // ~scmMaxDecompressionRecursion * BUFFER_SIZE per socket read, which bounds
-    // a decompression bomb.
+    // inflates at most one output buffer; what is left at the deepest level waits
+    // in mDeferredInput, so a decompression bomb is worked through
+    // ~scmMaxDecompressionRecursion * BUFFER_SIZE at a time.
     inline static const int scmMaxDecompressionRecursion = 8;
     void cancelLoginTimers();
     // Called when a password turns up after the auto-login already reached the password step -
@@ -468,6 +461,7 @@ private:
     void sendNAWS(int width, int height);
     void sendCurrentNAWS();
     void readPendingSocketData();
+    bool readSocketDataOnce();
     QString parseGUIVersionFromJSON(const QJsonObject& json);
     QString parseGUIUrlFromJSON(const QJsonObject& json);
     bool parseGUIBaseUiDeclinedFromJSON(const QJsonObject& json);
@@ -549,6 +543,9 @@ private:
     // Re-entry depth of processSocketData() while draining leftover
     // (de)compressed data; bounds stack use and decompression-bomb output.
     int mDecompressionRecursionDepth = 0;
+    // Input left over once a drain reached scmMaxDecompressionRecursion, processed
+    // ahead of anything read after it
+    QByteArray mDeferredInput;
     std::string command;
     bool iac = false;
     bool iac2 = false;

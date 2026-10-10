@@ -89,6 +89,26 @@ private:
         return false;
     }
 
+    // The first burst line that is missing, repeated or out of order, or -1
+    // once all lineCount of them are in the buffer once each and in order
+    int firstBurstLineOutOfPlace(const int lineCount) const
+    {
+        TBuffer& buffer = mpHost->mainConsoleView()->buffer;
+        const QString marker = qsl("BURSTLINE ");
+        int expected = 0;
+        for (int i = 0, last = buffer.getLastLineNumber(); i <= last; ++i) {
+            const QString& line = buffer.line(i);
+            if (!line.startsWith(marker)) {
+                continue;
+            }
+            if (line.mid(marker.size(), 6).toInt() != expected) {
+                return expected;
+            }
+            ++expected;
+        }
+        return expected == lineCount ? -1 : expected;
+    }
+
 private slots:
     void initTestCase()
     {
@@ -166,6 +186,32 @@ private slots:
                                 "readyRead() only fires on fresh bytes.")
                                     .arg(mpHost->mainConsoleView()->buffer.getLastLineNumber())
                                     .arg(lineCount)));
+    }
+
+    // One compressed read that inflates to more than the drain goes deep in one
+    // go: every line of it has to arrive, once each and in order
+    void aCompressedReadInflatingPastTheDrainDepthIsShownInFull()
+    {
+        // 1.3 MB of text from well under one read of compressed data, where
+        // the drain stops at 8 output buffers of 100 KB each
+        constexpr int lineCount = 20000;
+        mpHost->mainConsoleView()->buffer.clear();
+
+        const QByteArray text = burstOf(lineCount) + "MCCP BURST END\r\n";
+        // qCompress() prefixes the zlib stream with the source length
+        const QByteArray compressed = qCompress(text, 9).mid(4);
+        QVERIFY(compressed.size() < 100000);
+        mpServer->sendRaw(QByteArray("\xFF\xFB\x56\xFF\xFA\x56\xFF\xF0", 8) + compressed);
+
+        QElapsedTimer timer;
+        timer.start();
+        while (timer.durationElapsed() < 15s && !tailContains(qsl("MCCP BURST END"))) {
+            QCoreApplication::processEvents(QEventLoop::AllEvents, 50);
+        }
+        QVERIFY2(tailContains(qsl("MCCP BURST END")),
+                 qPrintable(qsl("the compressed burst stopped part-way through, at buffer line %1 of %2.").arg(mpHost->mainConsoleView()->buffer.getLastLineNumber()).arg(lineCount)));
+        const int outOfPlace = firstBurstLineOutOfPlace(lineCount);
+        QVERIFY2(outOfPlace < 0, qPrintable(qsl("burst line %1 is missing, repeated or out of order.").arg(outOfPlace)));
     }
 };
 
