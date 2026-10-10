@@ -453,30 +453,25 @@ void TTabBar::mousePressEvent(QMouseEvent* event)
 {
     if (event->button() == Qt::LeftButton) {
         mDragStartPos = event->pos();
-        mDragIndex = tabAt(event->pos());
+        mDragTabName = tabData(tabAt(event->pos())).toString();
         mDragStartTime = QDateTime::currentMSecsSinceEpoch();
         mPendingDetach = false;
     }
     QTabBar::mousePressEvent(event);
 }
 
-// Qt moves the pressed tab past its neighbours as it is dragged, so the index
-// taken at the press would otherwise name whichever tab now sits there
-void TTabBar::slot_tabMoved(int from, int to)
+void TTabBar::mouseReleaseEvent(QMouseEvent* event)
 {
-    if (mDragIndex == from) {
-        mDragIndex = to;
-    } else if (from < mDragIndex && to >= mDragIndex) {
-        --mDragIndex;
-    } else if (from > mDragIndex && to <= mDragIndex) {
-        ++mDragIndex;
+    if (event->button() == Qt::LeftButton) {
+        mDragTabName.clear();
     }
+    QTabBar::mouseReleaseEvent(event);
 }
 
 void TTabBar::mouseMoveEvent(QMouseEvent* event)
 {
     // Check if we should start a drag operation
-    if (!(event->buttons() & Qt::LeftButton) || mDragIndex == -1) {
+    if (!(event->buttons() & Qt::LeftButton) || mDragTabName.isEmpty()) {
         QTabBar::mouseMoveEvent(event);
         return;
     }
@@ -513,8 +508,11 @@ void TTabBar::mouseMoveEvent(QMouseEvent* event)
             // totalDistance is from the press point, not the bar's centre, so the tear-off threshold doesn't
             // depend on where the tab sits or was grabbed. It is Manhattan: horizontal travel counts too.
             if (!tabBarGlobalRect.contains(globalPos) && isVerticalMovement && totalDistance > DETACH_DISTANCE_THRESHOLD) {
-                emit tabDetachRequested(mDragIndex, globalPos);
-                mDragIndex = -1; // Reset drag state
+                const int dragIndex = tabIndex(mDragTabName);
+                mDragTabName.clear();
+                if (dragIndex > -1) {
+                    emit tabDetachRequested(dragIndex, globalPos);
+                }
                 return;
             }
         }
