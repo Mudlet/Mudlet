@@ -948,6 +948,12 @@ describe("Tests C++ functions in the Miscallaneous category", function()
         assert.is_false(ok, "saveProfile() took a table as its folder")
         assert.is_true(contains(tostring(err), "saveProfile: bad argument #1 type"), "saveProfile() raised " .. tostring(err))
       end)
+
+      it("reports a folder that is not a string ahead of a file name that is not one either", function()
+        local ok, err = pcall(saveProfile, {}, {})
+        assert.is_false(ok, "saveProfile() took two tables")
+        assert.is_true(contains(tostring(err), "saveProfile: bad argument #1 type"), "saveProfile() raised " .. tostring(err))
+      end)
     end)
 
     describe("Tests the logging functions", function()
