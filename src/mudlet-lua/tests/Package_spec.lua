@@ -177,6 +177,33 @@ local function writePackageXml(path, body, version)
   file:close()
 end
 
+-- Writes a zip archive of empty, stored files under the given names. Empty entries need no
+-- checksum, so this can be done here, and it can store names that no zip tool would - one
+-- that climbs out of the folder it is unpacked into, say.
+local function writeArchiveOfEmptyFiles(path, entries)
+  local function le(value, bytes)
+    local out = {}
+    for i = 1, bytes do
+      out[i] = string.char(value % 256)
+      value = math.floor(value / 256)
+    end
+    return table.concat(out)
+  end
+  local localHeaders, centralDirectory, offset = {}, {}, 0
+  for i, entry in ipairs(entries) do
+    local common = le(20, 2) .. le(0, 2) .. le(0, 2) .. le(0, 2) .. le(0x21, 2) .. le(0, 4) .. le(0, 4) .. le(0, 4) .. le(#entry, 2) .. le(0, 2)
+    local header = le(0x04034b50, 4) .. common .. entry
+    localHeaders[i] = header
+    centralDirectory[i] = le(0x02014b50, 4) .. le(20, 2) .. common .. le(0, 2) .. le(0, 2) .. le(0, 2) .. le(0, 4) .. le(offset, 4) .. entry
+    offset = offset + #header
+  end
+  local directory = table.concat(centralDirectory)
+  local file = io.open(path, "wb")
+  assert.is_not_nil(file, "could not write " .. path)
+  file:write(table.concat(localHeaders) .. directory .. le(0x06054b50, 4) .. le(0, 2) .. le(0, 2) .. le(#entries, 2) .. le(#entries, 2) .. le(#directory, 4) .. le(offset, 4) .. le(0, 2))
+  file:close()
+end
+
 -- Every install and uninstall here owes an asynchronous profile save, and
 -- while one is running the package API stops doing what it is told: an install
 -- is postponed and answered with a bare true (see the pending spec at the end
@@ -387,6 +414,31 @@ describe("Tests the functionality of installPackage", function()
     local err = installUntilRefused(installPackage, fixtureDirectory .. "/mudlet-spec-notazip.mpackage")
     assert.is_true(contains(err, "could not unzip package"), tostring(err))
     assert.is_true(fileExists(occupant), "the failed install deleted a folder that was in the profile before it ran")
+  end)
+
+  it("refuses an archive whose entries would be written outside its own folder", function()
+    local name = "mudlet-spec-zipslip"
+    local archive = getMudletHomeDir() .. "/" .. name .. ".mpackage"
+    local outside = {
+      getMudletHomeDir() .. "/mudlet-spec-escaped.txt",
+      getMudletHomeDir() .. "/mudlet-spec-escaped-too.txt",
+    }
+    defer(function()
+      for _, path in ipairs(outside) do
+        os.remove(path)
+      end
+      os.remove(archive)
+    end)
+    writeArchiveOfEmptyFiles(archive, {"readme.txt", "../mudlet-spec-escaped.txt", "sub/../../mudlet-spec-escaped-too.txt"})
+
+    local err = installUntilRefused(installPackage, archive)
+
+    assert.is_true(contains(err, "could not unzip package"), tostring(err))
+    assert.is_false(packageInstalled(name))
+    for _, path in ipairs(outside) do
+      assert.is_false(fileExists(path), path .. " was written outside the package's folder")
+    end
+    assert.is_false(fileExists(getMudletHomeDir() .. "/" .. name), "the refused install stranded the folder it had made in the profile")
   end)
 
   it("hands a script the reason instead of announcing it on the main console", function()
