@@ -721,7 +721,8 @@ headlessMapLua = ok and 'ok' or tostring(err)
         const int area = host->mpMap->mpRoomDB->addArea(qsl("Headless Config Area"));
         QVERIFY(host->mpMap->mpRoomDB->set2DMapZoom(area, 7.5));
 
-        const QString script = qsl("headlessArea = %1\n").arg(area) + qsl(R"lua(
+        // The refusal is outside the raw string: moc pairs up the apostrophes in one, and an odd count breaks it
+        const QString script = qsl("headlessArea = %1\nnotAnOption = \"'show3dMapView' isn't a valid configuration option\"\n").arg(area) + qsl(R"lua(
 headlessMapConfig = 'not run'
 local ok, err = pcall(function()
   local function check(label, want, ...)
@@ -750,6 +751,13 @@ local ok, err = pcall(function()
   check("getMapZoom of an area", answered(7.5), getMapZoom(headlessArea))
   check("getMapZoom of no such area", refused("number 9999 is not a valid areaID"), getMapZoom(9999))
   check("getMapZoom of the shown area", refused("no active mapper"), getMapZoom())
+  check("setMapZoom of an area", answered(true), setMapZoom(12.25, headlessArea))
+  check("getMapZoom after setMapZoom", answered(12.25), getMapZoom(headlessArea))
+  check("setMapZoom too small", refused("zoom 2 is invalid, it must be at least 3"), setMapZoom(2, headlessArea))
+  check("setMapZoom not finite", refused("zoom nan is invalid, it must be a finite number"), setMapZoom(0/0))
+  check("setMapZoom of no such area", refused("number 9999 is not a valid areaID"), setMapZoom(5, 9999))
+  check("setMapZoom of the shown area", refused("no active mapper"), setMapZoom(5))
+  check("getMapZoom after refusals", answered(12.25), getMapZoom(headlessArea))
   check("setDefaultAreaVisible", answered(true), setDefaultAreaVisible(false))
 
   check("setConfig mapRoomSize", answered(true), setConfig("mapRoomSize", 6))
@@ -768,9 +776,11 @@ local ok, err = pcall(function()
   local color = getConfig("mapInfoColor")
   assert(color[1] == 1 and color[2] == 2 and color[3] == 3 and color[4] == 255, "getConfig mapInfoColor did not read back the color set")
   check("setConfig mapInfoColor 'x'", refused("mapInfoColor requires a table {r, g, b} or {r, g, b, a}"), setConfig("mapInfoColor", "x"))
-  -- These two drive the mapper widget or the main window, as in the GUI before its mapper exists
-  check("setConfig show3dMapView", refused("'show3dMapView' isn't a valid configuration option"), setConfig("show3dMapView", false))
-  check("setConfig showUpperLowerLevels", refused("'showUpperLowerLevels' isn't a valid configuration option"), setConfig("showUpperLowerLevels", false))
+  check("getConfig showUpperLowerLevels default", answered(true), getConfig("showUpperLowerLevels"))
+  check("setConfig showUpperLowerLevels", answered(true), setConfig("showUpperLowerLevels", false))
+  check("getConfig showUpperLowerLevels", answered(false), getConfig("showUpperLowerLevels"))
+  -- This drives the mapper widget, as in the GUI before its mapper exists
+  check("setConfig show3dMapView", refused(notAnOption), setConfig("show3dMapView", false))
 end)
 headlessMapConfig = ok and 'ok' or tostring(err)
 )lua");
