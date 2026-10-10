@@ -457,17 +457,28 @@ QStringList TIrcClient::readIrcChannels(Host* pH)
     if (channelstr.isEmpty()) {
         channels << TIrcClient::DefaultChannels;
     } else {
-        channels = channelstr.split(qsl(" "), Qt::SkipEmptyParts);
+        // a profile saved before writeIrcChannels() refused them can still hold unusable names
+        for (const QString& channel : channelstr.split(qsl(" "), Qt::SkipEmptyParts)) {
+            if (validIrcChannelName(channel)) {
+                channels << channel;
+            }
+        }
+        if (channels.isEmpty()) {
+            channels << TIrcClient::DefaultChannels;
+        }
     }
     return channels;
 }
 
-// The readers put a default in place of an empty or out of range value, so the
-// writers refuse one rather than report a setting that will never be used.
+// The readers put a default in place of an empty, out of range or unusable value, so
+// the writers below refuse one rather than report a setting that will never be used.
 QPair<bool, QString> TIrcClient::writeIrcHostName(Host* pH, const QString& hostname)
 {
     if (hostname.isEmpty()) {
         return {false, qsl("hostname must not be empty")};
+    }
+    if (textHasSpace(hostname) || textBreaksIrcLine(hostname)) {
+        return {false, qsl("hostname \"%1\" must not hold a space or a line break").arg(escapedForError(hostname))};
     }
 
     return pH->writeProfileData(TIrcClient::HostNameCfgItem, hostname);
@@ -489,11 +500,11 @@ QPair<bool, QString> TIrcClient::writeIrcHostSecure(Host* pH, bool secure)
 
 QPair<bool, QString> TIrcClient::writeIrcNickName(Host* pH, const QString& nickname)
 {
-    // Sent as "NICK <nickname>" at registration, bypassing validateMsgArguments(); IrcConnection
-    // takes only the first word, but a line break within it would start an injected command.
     if (nickname.isEmpty()) {
         return {false, qsl("nick must not be empty")};
     }
+    // Sent as "NICK <nickname>" at registration, bypassing validateMsgArguments(); IrcConnection
+    // takes only the first word, but a line break within it would start an injected command.
     if (textBreaksIrcLine(nickname) || textHasSpace(nickname)) {
         return {false, qsl("nick name \"%1\" must be a single word, without a line break or a null character").arg(escapedForError(nickname))};
     }
@@ -525,19 +536,14 @@ QPair<bool, QString> TIrcClient::writeIrcPassword(Host* pH, const QString& passw
     return pH->writeProfileData(TIrcClient::PasswordCfgItem, password);
 }
 
-// An IRC channel name holds neither of the two characters its list is taken apart
-// on: the stored list is space-joined (writeIrcChannels) and the JOIN command is
-// comma-joined, so a name carrying either would come back as two channels. Every
-// kind of whitespace is refused rather than only the space it is joined on,
-// because an IRC channel name may hold none of it.
+// The stored list is space-joined and the JOIN command comma-joined, so a name holding
+// either would come back as two channels.
 bool TIrcClient::validIrcChannelName(const QString& channel)
 {
     if (!channel.startsWith(QLatin1Char('#')) && !channel.startsWith(QLatin1Char('&')) && !channel.startsWith(QLatin1Char('+'))) {
         return false;
     }
-    return std::none_of(channel.cbegin(), channel.cend(), [](const QChar character) {
-        return character.isSpace() || character == QLatin1Char(',');
-    });
+    return !textHasSpace(channel) && !textBreaksIrcLine(channel) && !channel.contains(QLatin1Char(','));
 }
 
 QPair<bool, QString> TIrcClient::writeIrcChannels(Host* pH, const QStringList& channels)
