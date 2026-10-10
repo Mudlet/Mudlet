@@ -30,6 +30,13 @@ end
 
 
 function unzip( what, dest )
+  -- an empty dest would gain the separator added below and become the root folder
+  if type( dest ) ~= "string" or dest == "" then
+    local message = "unzip: a destination folder is needed, got " .. ( dest == "" and "an empty string" or type( dest ) )
+    cecho( "<red>ERROR: " .. message .. "\n" )
+    return nil, message
+  end
+
   local z, err = zip.open( what )
 
   if not z then
@@ -73,10 +80,10 @@ function unzip( what, dest )
   end
 
   -- brimworks rejects io.read's "*a" and wants a byte count, which Kepler also
-  -- understands. Neither library tells a failed read apart from the end of the
-  -- entry (brimworks signals EOF with "", Kepler with nil, and both use nil for
-  -- an error), so the length is checked against the archive's own record.
-  -- brimworks can also raise from close(), where libzip does its CRC check.
+  -- understands. Kepler returns nil both at the end of an entry and for a failed
+  -- read, and never checks the CRC, so the length is checked against the archive's
+  -- own record. brimworks reports a CRC mismatch from read() and raises any error
+  -- libzip recorded again from close(), where Kepler returns nil and the error.
   local function readEntry( file )
     local handle, openErr = z:open( file.index or file.filename )
     if not handle then
@@ -95,11 +102,14 @@ function unzip( what, dest )
         chunks[#chunks + 1] = chunk
       end
     end )
-    local closed, closeErr = pcall( handle.close, handle )
+    local closed, closeResult, closeErr = pcall( handle.close, handle )
     if not ok then
       return nil, readErr
     end
     if not closed then
+      return nil, closeResult
+    end
+    if closeErr then
       return nil, closeErr
     end
     local data = table.concat( chunks )
@@ -151,13 +161,25 @@ function unzip( what, dest )
     return madeDirs[path]
   end
 
+  -- A name beside path for a temporary file. One left by an interrupted run is
+  -- cleared, but never one this archive has just extracted.
+  local extracted = {}
+  local function temporaryName( path, suffix )
+    local candidate, attempt = path .. suffix, 1
+    while extracted[candidate] do
+      attempt = attempt + 1
+      candidate = path .. suffix .. attempt
+    end
+    os.remove( candidate )
+    return candidate
+  end
+
   -- Written beside its target and renamed over it, so a failed write leaves a
   -- file already there untouched, and a symlink already there is replaced rather
   -- than written through to wherever it points. Lua buffers writes, so a full
   -- disk usually only shows up at close().
   local function writeFile( path, data )
-    local partial = path .. ".unzip-partial"
-    os.remove( partial )
+    local partial = temporaryName( path, ".unzip-partial" )
     local out, openErr = io.open( partial, "wb" )
     if not out then
       return nil, openErr
@@ -169,16 +191,28 @@ function unzip( what, dest )
       return nil, writeErr or closeErr
     end
     local renamed, renameErr = os.rename( partial, path )
-    -- Windows will not rename over an existing file
     local existing = lfs.symlinkattributes( path, "mode" )
     if not renamed and existing and existing ~= "directory" then
-      os.remove( path )
+      -- Windows will not rename over an existing file, so it is moved aside and
+      -- only deleted once the new one has taken its place
+      local backup = temporaryName( path, ".unzip-old" )
+      local movedAside, moveErr = os.rename( path, backup )
+      if not movedAside then
+        os.remove( partial )
+        return nil, moveErr
+      end
       renamed, renameErr = os.rename( partial, path )
+      if renamed then
+        os.remove( backup )
+      elseif not os.rename( backup, path ) then
+        renameErr = tostring( renameErr ) .. ", the file it would have replaced is kept as " .. backup
+      end
     end
     if not renamed then
       os.remove( partial )
       return nil, renameErr
     end
+    extracted[path] = true
     return true
   end
 

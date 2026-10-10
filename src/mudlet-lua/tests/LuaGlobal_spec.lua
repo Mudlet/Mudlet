@@ -63,9 +63,8 @@ describe("Tests LuaGlobal.lua functions", function()
     -- nested two deep so that an entry escaping it still lands inside root,
     -- where the teardown finds it
     local dest = root .. "/dest/a/"
-    -- where unzip() used to put a folder for the archive's top-level empty file
-    -- (#10382); every spec extracting unzip-empty.zip can make it on a regression.
-    -- It is outside root, so it is only removed when a spec made it.
+    -- an archive's top-level empty file must not become a folder in the working
+    -- directory. It is outside root, so it is only removed when a spec made it.
     local strayFolder = lfs.currentdir() .. "/unzip-spec-empty-top.txt"
     local strayFolderExisted
     local echoed
@@ -168,7 +167,9 @@ describe("Tests LuaGlobal.lua functions", function()
       assert.is_nil(lfs.attributes(dest .. "escaped-absolute.txt"))
       assert.is_nil(lfs.attributes(root .. "/dest/escaped-backslash.txt"))
       assert.is_nil(lfs.attributes(dest .. "..\\escaped-backslash.txt"))
-      assert.equals(4, echoedCount("refusing to extract"))
+      assert.is_nil(lfs.attributes(dest .. "C:"))
+      assert.is_nil(lfs.attributes(dest .. "C:escaped-drive-relative.txt"))
+      assert.equals(6, echoedCount("refusing to extract"))
       -- names that resolve to somewhere inside dest are still extracted
       assert.equals("stays inside\n", contents(dest .. "kept.txt"))
       assert.equals("fine\n", contents(dest .. "ok.txt"))
@@ -209,13 +210,15 @@ describe("Tests LuaGlobal.lua functions", function()
       local original = io.open(dest .. "config.lua", "wb")
       original:write("original\n")
       original:close()
-      -- Lua buffers the write, so a full disk only shows up when the file is closed
+      -- the file really is opened and written, as a full disk would leave it, and
+      -- only fails at close() where Lua's buffered write reaches the disk
       local realOpen = io.open
       io.open = function(path, mode)
         if mode == "wb" and path:find(dest .. "config.lua", 1, true) == 1 then
+          local handle = realOpen(path, mode)
           return {
-            write = function(self) return self end,
-            close = function() return nil, "No space left on device" end,
+            write = function(self, data) handle:write(data) return self end,
+            close = function() handle:close() return nil, "No space left on device" end,
           }
         end
         return realOpen(path, mode)
@@ -235,6 +238,192 @@ describe("Tests LuaGlobal.lua functions", function()
       assert.same({ "config.lua", "resources", "unzip-spec-empty-top.txt" }, names)
       assert.is_nil(result)
       assert.is_truthy(err:find("can't write file:" .. dest .. "config.lua", 1, true), err)
+    end)
+
+    it("Should refuse a missing or empty destination rather than extract to the root folder", function()
+      -- the archive is never really opened, so a regression cannot write to the root folder
+      local realOpen = zip.open
+      local opened = 0
+      zip.open = function()
+        opened = opened + 1
+        return nil, "stub archive"
+      end
+      local results = {}
+      for _, badDest in ipairs({ "", false }) do
+        results[#results + 1] = { pcall(unzip, root .. "/stub.zip", badDest or nil) }
+      end
+      zip.open = realOpen
+      for _, outcome in ipairs(results) do
+        assert.is_true(outcome[1], tostring(outcome[2]))
+        assert.is_nil(outcome[2])
+        assert.is_truthy(outcome[3]:find("destination folder", 1, true), outcome[3])
+      end
+      assert.equals(0, opened)
+      assert.equals(2, echoedCount("destination folder"))
+    end)
+
+    it("Should clear a temporary file an interrupted extraction left behind", function()
+      local leftover = io.open(dest .. "config.lua.unzip-partial", "wb")
+      leftover:write("half written\n")
+      leftover:close()
+      local result = unzip(archiveDirectory .. "/unzip-empty.zip", dest)
+      assert.is_nil(lfs.attributes(dest .. "config.lua.unzip-partial"))
+      assert.equals("x\n", contents(dest .. "config.lua"))
+      assert.is_true(result, table.concat(echoed))
+    end)
+
+    it("Should replace files from an earlier extraction", function()
+      assert.is_true(unzip(archiveDirectory .. "/unzip-empty.zip", dest))
+      local changed = io.open(dest .. "config.lua", "wb")
+      changed:write("changed since\n")
+      changed:close()
+      local result = unzip(archiveDirectory .. "/unzip-empty.zip", dest)
+      assert.equals("x\n", contents(dest .. "config.lua"))
+      assert.equals("note\n", contents(dest .. "resources/note.txt"))
+      assert.is_true(result, table.concat(echoed))
+    end)
+
+    describe("where a file cannot be renamed over another, as on Windows", function()
+      local realRename
+      local blockReplacement
+      local blockRestore
+
+      before_each(function()
+        local original = io.open(dest .. "config.lua", "wb")
+        original:write("original\n")
+        original:close()
+        realRename = os.rename
+        blockReplacement = false
+        blockRestore = false
+        os.rename = function(from, to)
+          if lfs.attributes(to) then
+            return nil, to .. ": File exists"
+          end
+          if to == dest .. "config.lua" then
+            if blockReplacement and from:find(".unzip-partial", 1, true) then
+              return nil, to .. ": Permission denied"
+            end
+            if blockRestore and from:find(".unzip-old", 1, true) then
+              return nil, to .. ": Permission denied"
+            end
+          end
+          return realRename(from, to)
+        end
+      end)
+
+      after_each(function()
+        os.rename = realRename
+      end)
+
+      local function names()
+        local found = {}
+        for name in lfs.dir(dest) do
+          if name ~= "." and name ~= ".." then
+            found[#found + 1] = name
+          end
+        end
+        table.sort(found)
+        return found
+      end
+
+      it("Should still replace the file and leave nothing else behind", function()
+        local ok, result = pcall(unzip, archiveDirectory .. "/unzip-empty.zip", dest)
+        os.rename = realRename
+        assert.is_true(ok, tostring(result))
+        assert.equals("x\n", contents(dest .. "config.lua"))
+        assert.same({ "config.lua", "resources", "unzip-spec-empty-top.txt" }, names())
+        assert.is_true(result, table.concat(echoed))
+      end)
+
+      it("Should keep the file it could not replace", function()
+        blockReplacement = true
+        local ok, result, err = pcall(unzip, archiveDirectory .. "/unzip-empty.zip", dest)
+        os.rename = realRename
+        assert.is_true(ok, tostring(result))
+        assert.equals("original\n", contents(dest .. "config.lua"))
+        assert.same({ "config.lua", "resources", "unzip-spec-empty-top.txt" }, names())
+        assert.equals(1, echoedCount("can't write file:" .. dest .. "config.lua (" .. dest .. "config.lua: Permission denied)"))
+        assert.is_nil(result)
+        assert.is_string(err)
+      end)
+
+      it("Should say where the file it could not replace or put back was kept", function()
+        blockReplacement = true
+        blockRestore = true
+        local ok, result, err = pcall(unzip, archiveDirectory .. "/unzip-empty.zip", dest)
+        os.rename = realRename
+        assert.is_true(ok, tostring(result))
+        assert.equals("original\n", contents(dest .. "config.lua.unzip-old"))
+        assert.is_nil(lfs.attributes(dest .. "config.lua"))
+        assert.is_nil(lfs.attributes(dest .. "config.lua.unzip-partial"))
+        assert.equals(1, echoedCount("kept as " .. dest .. "config.lua.unzip-old"))
+        assert.is_nil(result)
+        assert.is_string(err)
+      end)
+    end)
+
+    it("Should not let the temporary file of one entry replace another entry", function()
+      local result = unzip(archiveDirectory .. "/unzip-collide.zip", dest)
+      assert.equals("an entry of its own\n", contents(dest .. "data.bin.unzip-partial"))
+      assert.equals("data\n", contents(dest .. "data.bin"))
+      assert.is_true(result, table.concat(echoed))
+    end)
+
+    it("Should report an entry whose data does not match its CRC and not write it", function()
+      local probe = zip.open(archiveDirectory .. "/unzip-corrupt.zip")
+      local checksCrc = type(probe.get_num_files) == "function"
+      probe:close()
+      if not checksCrc then
+        pending("luazip does not check CRCs")
+        return
+      end
+      local ok, result, err = pcall(unzip, archiveDirectory .. "/unzip-corrupt.zip", dest)
+      assert.is_true(ok, tostring(result))
+      assert.equals(1, echoedCount("can't read archived file:broken.txt ("))
+      assert.is_nil(lfs.attributes(dest .. "broken.txt"))
+      assert.equals("x\n", contents(dest .. "config.lua"))
+      assert.is_nil(result)
+      assert.is_string(err)
+    end)
+
+    it("Should report an entry that luazip fails to close", function()
+      local realOpen = zip.open
+      zip.open = function()
+        local listed = false
+        return {
+          files = function()
+            return function()
+              if listed then
+                return nil
+              end
+              listed = true
+              return { filename = "config.lua", uncompressed_size = 2 }
+            end
+          end,
+          open = function()
+            local served = false
+            return {
+              read = function()
+                if served then
+                  return nil
+                end
+                served = true
+                return "x\n"
+              end,
+              -- luazip returns its errors rather than raising them
+              close = function() return nil, "close failed" end,
+            }
+          end,
+          close = function() end,
+        }
+      end
+      local ok, result, err = pcall(unzip, root .. "/stub.zip", dest)
+      zip.open = realOpen
+      assert.is_true(ok, tostring(result))
+      assert.equals(1, echoedCount("can't read archived file:config.lua (close failed)"))
+      assert.is_nil(lfs.attributes(dest .. "config.lua"))
+      assert.is_nil(result)
+      assert.is_string(err)
     end)
 
     it("Should report an entry the archive cannot describe and carry on", function()
