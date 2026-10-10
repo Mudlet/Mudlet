@@ -704,7 +704,7 @@ std::pair<bool, QString> dlgMapper::setMapZoom(qreal zoom, int areaId)
     auto result = mp2dMap->setMapZoom(zoom, areaId);
 #if defined(INCLUDE_3DMAPPER)
     auto* modernWidget = qobject_cast<ModernGLWidget*>(glWidget);
-    if (result.first && modernWidget && showing3DView()) {
+    if (result.first && modernWidget) {
         modernWidget->applyMapZoom(zoom, areaId ? areaId : mp2dMap->getAreaId());
     }
 #endif

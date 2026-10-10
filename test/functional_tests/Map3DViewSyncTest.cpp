@@ -220,6 +220,35 @@ private slots:
 
         QVERIFY2(!pMapper->mp2dMap->mShiftMode, "the 2D map kept a view the player has since moved away from");
     }
+
+    void test_setMapZoomFramesThatManyRoomsIn3D()
+    {
+        dlgMapper* pMapper = mapperShowing2DAtThePlayer();
+        QVERIFY(pMapper);
+        pMapper->show3DView(true);
+        auto* pModern = qobject_cast<ModernGLWidget*>(pMapper->glWidget);
+        QVERIFY(pModern);
+        QSignalSpy cameraControls(pModern, &ModernGLWidget::cameraControlsChanged);
+        const auto lastScale = [&cameraControls]() {
+            return cameraControls.isEmpty() ? -1 : cameraControls.last().at(0).toInt();
+        };
+
+        QVERIFY(pMapper->setMapZoom(5.0, 0).first);
+        const int fewRooms = lastScale();
+        QVERIFY(pMapper->setMapZoom(20.0, 0).first);
+        const int manyRooms = lastScale();
+        QVERIFY2(fewRooms != -1 && manyRooms != fewRooms, "the 3D view did not zoom with setMapZoom");
+
+        // Asking again for the zoom the area already has must still undo a zoom made with the mouse wheel
+        pModern->slot_setScale(fewRooms);
+        cameraControls.clear();
+        QVERIFY(pMapper->setMapZoom(20.0, 0).first);
+        QCOMPARE(lastScale(), manyRooms);
+
+        const qsizetype emitted = cameraControls.size();
+        QVERIFY(pMapper->setMapZoom(9.0, mOtherAreaId).first);
+        QCOMPARE(cameraControls.size(), emitted);
+    }
 };
 
 #include "Map3DViewSyncTest.moc"
