@@ -18,6 +18,9 @@
  ***************************************************************************/
 
 #include <CredentialManager.h>
+#include <QDir>
+#include <QFile>
+#include <QFileInfo>
 #include <QScopeGuard>
 #include <QtTest/QtTest>
 #include <QCryptographicHash>

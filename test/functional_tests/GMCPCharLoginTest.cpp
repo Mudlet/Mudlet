@@ -2824,6 +2824,37 @@ private slots:
         QVERIFY2(waitForClientGmcp(qsl("Char.Login.Credentials"), resumed), "client did not resume the saved provider after the store failed again");
     }
 
+    // A sign-in saved before the record moved into the profile is read from the store itself, so that
+    // read working also makes the next failure news again
+    void testAStoreRecordReadThatWorksEndsTheQuiet()
+    {
+        Host* host = connectAndNegotiate(true);
+        QVERIFY(host);
+        host->setLogin(QString());
+        host->setPass(QString());
+        const QString recordPath = reconnectCredentialPath(host->getName(), qsl("reconnect"));
+        const QRegularExpression warning(qsl("could not read the stored sign-in"));
+        const auto connectExpecting = [this](const QString& message) {
+            mpServer->clearReceived();
+            mpServer->sendGmcp(qsl("Char.Login.Default {\"version\": 2, \"type\": [\"oauth\"]}"));
+            QJsonObject sent;
+            return waitForClientGmcp(message, sent);
+        };
+
+        QVERIFY(QDir().mkpath(recordPath));
+        QTest::ignoreMessage(QtWarningMsg, warning);
+        QVERIFY2(connectExpecting(qsl("Char.Login.Credentials")), "client did not hand off when the store could not be read");
+
+        QVERIFY(QDir(recordPath).removeRecursively());
+        QVERIFY(CredentialManager::storeCredential(host->getName(), qsl("reconnect"), qsl("{\"account\": \"acct:char\", \"provider\": \"discord\", \"token\": \"inline-token\"}")));
+        QVERIFY2(connectExpecting(qsl("Char.Login.Reconnect")), "client did not replay the record once the store could be read");
+
+        QVERIFY(CredentialManager::removeCredential(host->getName(), qsl("reconnect")));
+        QVERIFY(QDir().mkpath(recordPath));
+        QTest::ignoreMessage(QtWarningMsg, warning);
+        QVERIFY2(connectExpecting(qsl("Char.Login.Credentials")), "client did not hand off when the store failed again");
+    }
+
     void testASignInWithNothingStoredDoesNotWarn_data()
     {
         QTest::addColumn<QString>("record");

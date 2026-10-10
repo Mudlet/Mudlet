@@ -44,6 +44,7 @@
 #include <QUrl>
 #include <chrono>
 #include <optional>
+#include <utility>
 
 using namespace std::chrono_literals;
 
@@ -1389,7 +1390,7 @@ void GMCPAuthenticator::readStoreKey(const QString& key, StoreReadDone done)
         // store's prompt for that one read rather than for every sign-in from here on.
         QPointer<CredentialManager> reader = new CredentialManager();
         QPointer<Host> safeHost = mpHost;
-        auto onRead = [reader, safeHost, profileName, done = std::move(done)](bool success, QString value, const QString& errorMessage, CredentialManager::ReadOutcome outcome) mutable {
+        auto onRead = [this, reader, safeHost, profileName, done = std::move(done)](bool success, QString value, const QString& errorMessage, CredentialManager::ReadOutcome outcome) mutable {
             if (reader) {
                 reader->deleteLater();
             }
@@ -1422,7 +1423,12 @@ void GMCPAuthenticator::readStoreKey(const QString& key, StoreReadDone done)
                     }
                 }
             }
-            done(outcome == CredentialManager::ReadOutcome::Found || outcome == CredentialManager::ReadOutcome::NothingStored, std::move(value), errorMessage);
+            const bool storeAnswered = outcome == CredentialManager::ReadOutcome::Found || outcome == CredentialManager::ReadOutcome::NothingStored;
+            // This read reached the store, unlike the profile's copy above, so a failure after it is news again
+            if (storeAnswered && safeHost) {
+                mWarnedStoreUnreadable = false;
+            }
+            done(storeAnswered, std::move(value), errorMessage);
         };
         reader->retrievePassword(profileName, key, std::move(onRead), nullptr, nullptr);
         return;

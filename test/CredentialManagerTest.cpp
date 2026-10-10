@@ -31,6 +31,8 @@
 #include <QStandardPaths>
 #include <QTemporaryDir>
 
+#include <optional>
+
 // Hermetic unit tests: MUDLET_TEST_MODE forces encrypted file storage so these run
 // deterministically on every platform without touching a system keychain. The real
 // keychain paths - including the qtkeychain 0.17 Windows naming migrations - are covered
