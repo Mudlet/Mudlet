@@ -4639,15 +4639,17 @@ describe("Window and label state", function()
       assert.is_nil(calcFontSize(name("wlsNoSuchWindow")))
     end)
 
-    -- The default stays the width of a "W", which scripts already compensate
-    -- for, so the width the console draws each column in is opt-in
-    it("calcFontSize given true reports the width a window draws each column in (#10446)", function()
-      local original = getFont(console)
+    -- Scripts compensate for the width of a "W" by hand, so the cell width is opt-in
+    it("calcFontSize given true reports the width a window draws each column in", function()
+      local original, originalSize = getFont(console), getFontSize(console)
+      finally(function()
+        setFont(console, original)
+        setMiniConsoleFontSize(console, originalSize)
+      end)
       setMiniConsoleFontSize(console, 14)
       assert.is_true(setFont(console, "Bitstream Vera Sans"))
       local columnWidth, columnHeight = calcFontSize(console, true)
       local defaultWidth, defaultHeight = calcFontSize(console)
-      assert.is_true(setFont(console, original))
       assert.are.equal(defaultHeight, columnHeight)
       -- the cells are the font's average width in whole pixels, which the font size form gives
       assert.are.equal((calcFontSize(14, "Bitstream Vera Sans")), columnWidth)
@@ -4655,18 +4657,18 @@ describe("Window and label state", function()
       assert.are.same({calcFontSize(console)}, {calcFontSize(console, false)})
     end)
 
-    it("calcFontSize given true leaves the font size forms as they were (#10446)", function()
+    it("calcFontSize given true leaves the font size forms as they were", function()
       assert.are.same({calcFontSize(12)}, {calcFontSize(12, true)})
       assert.are.same({calcFontSize(12, "Bitstream Vera Sans")}, {calcFontSize(12, "Bitstream Vera Sans", true)})
     end)
 
-    it("calcFontSize given only true reports the main window's layout width (#10446)", function()
+    it("calcFontSize given only true reports the main window's layout width", function()
       assert.are.same({calcFontSize("main", true)}, {calcFontSize(true)})
       assert.are.same({calcFontSize("main")}, {calcFontSize(false)})
     end)
 
     -- a nil in the font name's place is a mistake to report, not the flag left out
-    it("calcFontSize still rejects a nil font name (#10446)", function()
+    it("calcFontSize still rejects a nil font name", function()
       local missingFontName = nil
       assert.has_error(function()
         calcFontSize(12, missingFontName)

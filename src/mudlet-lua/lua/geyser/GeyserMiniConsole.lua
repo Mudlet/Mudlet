@@ -67,6 +67,9 @@ function Geyser.MiniConsole:setFont (font)
     return nil, err
   end
   self.font = font
+  if self.autoWrap then
+    self:resetAutoWrap()
+  end
   return true
 end
 

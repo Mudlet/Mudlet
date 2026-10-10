@@ -159,15 +159,21 @@ describe("Tests functionality of Geyser.MiniConsole", function()
       assert.are.equal(30, getWindowWrap("gmcZeroWrap"))
     end)
 
-    -- the width of a "W" is twice the average on a proportional font, which wrapped
-    -- the text at half the columns the console draws (#10446)
+    -- a "W" is far wider than the cells a proportional font is drawn in
     it("wraps at the columns the console draws on a proportional font", function()
       local console = track(Geyser.MiniConsole:new({name = "gmcProportionalWrap", x = 0, y = 0, width = 800, height = 100, autoWrap = true}))
       assert.is_true(console:setFont("Bitstream Vera Sans"))
-      console:resetAutoWrap()
       local columnWidth = calcFontSize("gmcProportionalWrap", true)
       assert.are.equal((calcFontSize(getFontSize("gmcProportionalWrap"), "Bitstream Vera Sans")), columnWidth)
+      assert.are.same({calcFontSize("gmcProportionalWrap", true)}, {console:calcFontSize(true)})
       assert.are.equal(math.floor(800 / columnWidth), console.wrapAt)
+      assert.are.equal(math.floor(800 / columnWidth), getWindowWrap("gmcProportionalWrap"))
+    end)
+
+    it("re-derives the auto wrap when the font changes", function()
+      local console = track(Geyser.MiniConsole:new({name = "gmcFontFamilyWrap", x = 0, y = 0, width = 800, height = 100, autoWrap = true, font = "Bitstream Vera Sans"}))
+      assert.is_true(console:setFont("Bitstream Vera Sans Mono"))
+      assert.are.equal(math.floor(800 / calcFontSize("gmcFontFamilyWrap", true)), getWindowWrap("gmcFontFamilyWrap"))
     end)
 
     it("reports that resetAutoWrap has nothing to do when auto wrap is off", function()
