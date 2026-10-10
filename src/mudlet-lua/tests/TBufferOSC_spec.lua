@@ -398,24 +398,52 @@ describe("Tests TBuffer OSC sequence handling", function()
     end)
 
     -- A CSI carrying an "intermediate" byte (space, or one of "!\"#$%&'()*+,-./")
-    -- is one Mudlet does not act on: it consumes the parameters and the
-    -- intermediate byte and gives up, so the final byte after them is left over
-    -- and shows as text, which TBuffer.cpp calls a limitation rather than intent.
-    it("should consume the parameters of a sequence with an intermediate byte", function()
+    -- is one Mudlet does not act on, so all of it goes up to and including its
+    -- final byte.
+    it("should consume a sequence with an intermediate byte", function()
       assert.is_true(feedTriggers("CSIINT1(\027[1 pX)CSIINT1\n"))
-      local payload = findRecentLine("CSIINT1"):match("^CSIINT1%((.*)%)CSIINT1$")
-      -- the parameters and the intermediate byte going is what this holds. The
-      -- leftover final byte is the limitation, not the intent, so both readings
-      -- pass and swallowing it one day does not have to come with a red spec.
-      assert.is_truthy(payload == "pX" or payload == "X", tostring(payload))
+      assert.equals("CSIINT1(X)CSIINT1", findRecentLine("CSIINT1"))
     end)
 
-    -- The only case where the intermediate byte is also the last byte, so the
-    -- only one holding the bounds check on the look ahead for the final byte.
+    -- The intermediate byte is the last byte of the data, so the final byte
+    -- arrives with the next feed and is the "Y" - as two feedTriggers() calls
+    -- cannot carry the bytes, the latch alone has to swallow it, see CSISPLIT1.
     it("should consume an intermediate byte that is the last byte of the data", function()
       assert.is_true(feedTriggers("CSIINT2(\027[1 "))
       assert.is_true(feedTriggers("Y)CSIINT2\n"))
-      assert.equals("CSIINT2(Y)CSIINT2", findRecentLine("CSIINT2"))
+      assert.equals("CSIINT2()CSIINT2", findRecentLine("CSIINT2"))
+    end)
+
+    -- A malformed sequence can carry parameter bytes after an intermediate one,
+    -- as a negative number does; those belong to the sequence too.
+    it("should consume a sequence with parameter bytes after its intermediate byte", function()
+      local cases = {
+        {"CSIINT3(\027[1 mAB)CSIINT3", "CSIINT3(AB)CSIINT3"},
+        {"CSIINT4(\027[1+mAB)CSIINT4", "CSIINT4(AB)CSIINT4"},
+        {"CSIINT5(AB\027[-5CCD)CSIINT5", "CSIINT5(ABCD)CSIINT5"},
+        {"CSIINT6(\027[38;5;-1mAB)CSIINT6", "CSIINT6(AB)CSIINT6"},
+        {"CSIINT7(\027[38;2;300;-1;0mAB)CSIINT7", "CSIINT7(AB)CSIINT7"},
+      }
+      for _, case in ipairs(cases) do
+        assert.is_true(feedTriggers(case[1] .. "\n"))
+        assert.equals(case[2], findRecentLine(case[2]:match("^(CSIINT%d)")))
+      end
+    end)
+
+    -- Only a final byte belongs to the sequence: the line ending or character
+    -- that cuts one short is still read as text.
+    it("should leave the byte that cuts a sequence with an intermediate byte short", function()
+      assert.is_true(feedTriggers("CSIINT8(\027[1 \nCSIINT9)\n"))
+      assert.equals("CSIINT8(", findRecentLine("CSIINT8"))
+      assert.equals("CSIINT9)", findRecentLine("CSIINT9"))
+      assert.is_true(feedTriggers("CSIINTA(\027[1 \195\169)CSIINTA\n"))
+      assert.equals("CSIINTA(\195\169)CSIINTA", findRecentLine("CSIINTA"))
+      -- and the same for a private sequence, which is skipped on a path of its own
+      assert.is_true(feedTriggers("CSIINTB(\027[?1 \nCSIINTC)\n"))
+      assert.equals("CSIINTB(", findRecentLine("CSIINTB"))
+      assert.equals("CSIINTC)", findRecentLine("CSIINTC"))
+      assert.is_true(feedTriggers("CSIINTD(\027[?1 \195\169)CSIINTD\n"))
+      assert.equals("CSIINTD(\195\169)CSIINTD", findRecentLine("CSIINTD"))
     end)
 
     -- MAX_CSI_SEQUENCE_LENGTH in TBuffer.cpp: past it the parameter string is
@@ -446,6 +474,16 @@ describe("Tests TBuffer OSC sequence handling", function()
       assert.equals("CSICAP3(green)CSICAP3", findRecentLine("CSICAP3"))
       assert.is_true(feedTriggers("\027[0mCSICAP4(green)CSICAP4\n"))
       assert.are.same(foregroundOf("CSICAP3", "green"), foregroundOf("CSICAP4", "green"))
+    end)
+
+    -- the discard keeps the line ending that cut the sequence short, whether
+    -- the scan stopped in the parameters or in the intermediate bytes
+    it("should keep the line ending after a sequence it discards for its length", function()
+      for i, filler in ipairs({"1", " "}) do
+        local before, after = ("CSICAPCUT%dA"):format(i), ("CSICAPCUT%dB"):format(i)
+        assert.is_true(feedTriggers(before .. "(\027[" .. string.rep(filler, lengthCap) .. "\n" .. after .. ")\n"))
+        assert.equals(after .. ")", findRecentLine(after))
+      end
     end)
 
   end)
