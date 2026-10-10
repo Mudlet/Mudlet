@@ -30,6 +30,22 @@ local function unchanged(window, cons, container)
     and window.get_width == last.get_width and window.get_height == last.get_height
 end
 
+-- Internal function: whether the parser below can read a constraint; tonumber()
+-- follows the numeric locale, so this must run under the "C" one
+local function parseable(value)
+  local kind = type(value)
+  if kind == "number" or kind == "function" then
+    return true
+  end
+  if kind ~= "string" then
+    return false
+  end
+  if string.find(value, "%%") then
+    return tonumber((string.match(value, "([%+%-%d%p]+)%%%s*([%+%-%d%p]*)"))) ~= nil
+  end
+  return tonumber((string.gsub(value, "%a", ""))) ~= nil
+end
+
 function Geyser.calc_constraints (window, cons, container)
   -- If container is nil then by default it is the dimensions of the main window
   container = container or Geyser
@@ -43,6 +59,13 @@ function Geyser.calc_constraints (window, cons, container)
   -- a character constraint reads the font size as it is parsed, so its getters
   -- are not kept for next time
   local readsFontSize = false
+  -- all four are checked before any getter is replaced, so a refused set leaves the window as it was
+  for _, v in ipairs { "x", "y", "width", "height" } do
+    if not parseable(cons[v]) then
+      os.setlocale(oldlocale, "numeric")
+      error(string.format("Geyser: element '%s' has an invalid %s constraint %q", tostring(window.name), v, tostring(cons[v])), 0)
+    end
+  end
   
   -- GENERATE CONSTRAINT AWARE POSITIONING FUNCTIONS
   -- Parse the position constraints to generate functions that will get

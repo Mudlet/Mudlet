@@ -224,8 +224,65 @@ describe("Tests functionality of Geyser.Container", function()
         return Geyser.Label:new({name = "gcsBadConstraint", x = 0, y = 0, width = true, height = 20})
       end)
       assert.is_false(ok)
-      assert.is_truthy(tostring(message):find("GeyserSetConstraints.lua", 1, true))
+      assert.is_truthy(tostring(message):find("element 'gcsBadConstraint' has an invalid width constraint", 1, true))
       assert.is_nil(getWindowGeometry("gcsBadConstraint"))
+    end)
+
+    it("names the element, dimension and value of every constraint it cannot parse", function()
+      for index, value in ipairs({"nonsense", "", "50 %", "50%%", {}}) do
+        local name = "gcsBadConstraint" .. index
+        local ok, message = pcall(function()
+          return Geyser.Container:new({name = name, x = 0, y = 0, width = 20, height = value})
+        end)
+        assert.is_false(ok)
+        local expected = string.format("element '%s' has an invalid height constraint %q", name, tostring(value))
+        assert.is_truthy(tostring(message):find(expected, 1, true), tostring(message))
+        assert.is_nil(Geyser.windowList[name], "the element it refused is still registered")
+      end
+    end)
+
+    it("leaves a box it refused an element for to its other children", function()
+      local box = track(Geyser.HBox:new({name = "gcsBadConstraintBox", x = 0, y = 0, width = 300, height = 50}))
+      local ok = pcall(function()
+        return Geyser.Label:new({name = "gcsBadConstraintChild", height = "50 %"}, box)
+      end)
+      assert.is_false(ok)
+      assert.is_nil(box.windowList.gcsBadConstraintChild)
+      assert.is_nil(table.index_of(box.windows, "gcsBadConstraintChild"))
+      track(Geyser.Label:new({name = "gcsBadConstraintSibling"}, box))
+      assert.are.equal(300, box.windowList.gcsBadConstraintSibling:get_width())
+    end)
+
+    it("leaves an element in its old container when a new one refuses its constraints", function()
+      local source = track(Geyser.Container:new({name = "gcsRefusedAddSource", x = 10, y = 10, width = 200, height = 100}))
+      local destination = track(Geyser.Container:new({name = "gcsRefusedAddDestination", x = 300, y = 200, width = 200, height = 100}))
+      local label = track(Geyser.Label:new({name = "gcsRefusedAddLabel", x = 0, y = 0, width = "100%", height = "100%"}, source))
+      local ok = pcall(function()
+        destination:add(label, {x = 0, y = 0, width = "nonsense", height = 20})
+      end)
+      assert.is_false(ok)
+      assert.are.equal(source, label.container)
+      assert.are.equal(label, source.windowList.gcsRefusedAddLabel)
+      assert.is_truthy(table.index_of(source.windows, "gcsRefusedAddLabel"))
+      assert.is_nil(destination.windowList.gcsRefusedAddLabel)
+      assert.are.same({x = 10, y = 10, width = 200, height = 100}, geometry("gcsRefusedAddLabel"))
+      source:resize(150, nil)
+      assert.are.equal(150, label:get_width())
+    end)
+
+    it("puts the numeric locale back when it raises on a constraint", function()
+      local before = os.setlocale(nil, "numeric")
+      finally(function() os.setlocale(before, "numeric") end)
+      -- any locale but "C" will do, as the parser switches to "C" while it works
+      local other = os.setlocale("C.UTF-8", "numeric") or os.setlocale("C.utf8", "numeric") or before
+      if other == "C" then
+        pending("no numeric locale other than C to switch from on this platform")
+        return
+      end
+      pcall(function()
+        return Geyser.Container:new({name = "gcsBadConstraintLocale", x = 0, y = 0, width = "nonsense", height = 20})
+      end)
+      assert.are.equal(other, os.setlocale(nil, "numeric"))
     end)
 
     it("leaves the widget where it was when a move is given a bad constraint", function()

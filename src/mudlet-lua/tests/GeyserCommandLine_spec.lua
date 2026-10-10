@@ -238,7 +238,7 @@ describe("Tests functionality of Geyser.CommandLine", function()
         return Geyser.CommandLine:new({name = "gclBadConstraint", x = 0, y = 0, width = true, height = 20})
       end)
       assert.is_false(ok)
-      assert.is_truthy(tostring(message):find("GeyserSetConstraints.lua", 1, true))
+      assert.is_truthy(tostring(message):find("element 'gclBadConstraint' has an invalid width constraint", 1, true))
       assert.is_nil(windowType("gclBadConstraint"))
     end)
 
