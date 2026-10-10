@@ -503,6 +503,12 @@ private slots:
             QDir(passwordFile).removeRecursively();
         });
         QVERIFY(QDir().mkpath(passwordFile));
+        // The connection dialog may already have put a password in, which is still sent
+        host->setPass(qsl("typed-in-the-dialog"));
+        host->lookUpSecuredPassword(new CredentialManager(host));
+        QVERIFY2(!waitForConsoleContains(host, warning, 500), "the player was told no password would be sent while one was set");
+
+        host->setPass(QString());
         host->lookUpSecuredPassword(new CredentialManager(host));
         QVERIFY2(waitForConsoleContains(host, warning), "a saved password the store would not hand over was not reported");
     }

@@ -1589,6 +1589,14 @@ QString CredentialManager::retrieveCredentialFromFile(const QString& profileName
             return migrated;
         }
 
+        // The newer copy is the latest password, so the older one below would be stale
+        if (legacyUnreadable) {
+            if (unreadable) {
+                *unreadable = true;
+            }
+            return QString();
+        }
+
         // Undecryptable: a profile this one used to collide with wrote it, or it is damaged
         if (QFile::exists(filePath)) {
             qWarning() << "CredentialManager: the credential file" << legacyPath << "is newer than" << filePath << "but holds nothing profile" << profileName
@@ -1605,15 +1613,19 @@ QString CredentialManager::retrieveCredentialFromFile(const QString& profileName
             if (unreadable) {
                 *unreadable = true;
             }
-        } else if (unreadable) {
-            *unreadable = legacyUnreadable;
-#if !defined(Q_OS_WIN)
-            // A folder that cannot be searched hides its files, so "not there" is not proof of absence.
-            // Not on Windows, which has no search permission on a folder.
-            const QFileInfo folder(QFileInfo(filePath).absolutePath());
-            *unreadable = *unreadable || (folder.exists() && !(folder.isReadable() && folder.isExecutable()));
-#endif
         }
+#if !defined(Q_OS_WIN)
+        else if (unreadable) {
+            // A folder without search permission hides everything below it, so "not there" is not proof of
+            // absence: check the nearest folder that does show. Not on Windows, which has no search permission.
+            QString folderPath = QFileInfo(filePath).absolutePath();
+            while (!QFileInfo::exists(folderPath) && QFileInfo(folderPath).absolutePath() != folderPath) {
+                folderPath = QFileInfo(folderPath).absolutePath();
+            }
+            const QFileInfo folder(folderPath);
+            *unreadable = folder.exists() && !folder.isExecutable();
+        }
+#endif
 
         return QString();
     }

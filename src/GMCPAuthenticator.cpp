@@ -1159,6 +1159,11 @@ void GMCPAuthenticator::retryOrDropRejectedToken()
             // superseded this recovery already consumed it, so without this the next one would be free
             // to replay a token the server has already rejected.
             mReconnectRejected = true;
+            // The latch only lasts this session. The fingerprint matches no token but the rejected one, so a
+            // newer attempt's own token is safe from it.
+            if (!forgotten && (!success || entry.tokenUnreadable) && !sentTokenHash.isEmpty()) {
+                rememberRejectedToken(mpHost->getName(), sentTokenHash);
+            }
             return;
         }
         // The token really is dead. Keep the account+provider resume hint (dropping only the token) so

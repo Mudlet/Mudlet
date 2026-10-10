@@ -837,12 +837,20 @@ void CredentialManagerTest::testAFileHiddenByItsFolderIsNotReportedAsNothingStor
     const QString key = "password";
     QVERIFY(CredentialManager::storeCredential(profile, key, "behind_a_locked_folder"));
     const QString folder = QFileInfo(credentialPath(profile, key)).absolutePath();
-    const auto unlock = qScopeGuard([&folder, &profile, &key] {
-        QFile::setPermissions(folder, QFileDevice::ReadOwner | QFileDevice::WriteOwner | QFileDevice::ExeOwner);
+    const QString profileFolder = QFileInfo(folder).absolutePath();
+    const auto unlock = qScopeGuard([&folder, &profileFolder, &profile, &key] {
+        const auto open = QFileDevice::ReadOwner | QFileDevice::WriteOwner | QFileDevice::ExeOwner;
+        QFile::setPermissions(profileFolder, open);
+        QFile::setPermissions(folder, open);
         CredentialManager::removeCredential(profile, key);
     });
 
     QVERIFY(QFile::setPermissions(folder, QFileDevice::Permissions()));
+    QCOMPARE(readOutcome(manager, profile, key), std::optional(CredentialManager::ReadOutcome::Unreadable));
+
+    // A folder further up hides it just the same
+    QVERIFY(QFile::setPermissions(folder, QFileDevice::ReadOwner | QFileDevice::WriteOwner | QFileDevice::ExeOwner));
+    QVERIFY(QFile::setPermissions(profileFolder, QFileDevice::Permissions()));
     QCOMPARE(readOutcome(manager, profile, key), std::optional(CredentialManager::ReadOutcome::Unreadable));
 }
 
@@ -863,8 +871,11 @@ void CredentialManagerTest::testANewerOlderNamedFileThatWontOpenIsNotReportedAsN
         legacyFile.remove();
         CredentialManager::removeCredential(profile, key);
     });
-    QVERIFY(legacyFile.open(QIODevice::WriteOnly | QIODevice::Text));
+    // An older copy under the current name that can be read: it is stale, so it must not be handed back
+    QVERIFY(CredentialManager::storeCredential(profile, key, "stale_current_copy"));
+    QVERIFY(legacyFile.open(QIODevice::WriteOnly | QIODevice::Text | QIODevice::Truncate));
     QVERIFY(legacyFile.write(SecureStringUtils::encryptStringForProfile("saved_long_ago", profile).toUtf8()) != -1);
+    QVERIFY(legacyFile.setFileTime(QDateTime::currentDateTime().addSecs(60), QFileDevice::FileModificationTime));
     legacyFile.close();
 
     QVERIFY(legacyFile.setPermissions(QFileDevice::Permissions()));
