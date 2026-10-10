@@ -4009,7 +4009,22 @@ int TLuaInterpreter::setMapZoom(lua_State* L)
     // Primary mapper behavior
     auto* mapper = host.mpMap->mapViewFrontend();
     if (!mapper) {
-        return warnArgumentValue(L, __func__, "no active mapper");
+        if (!host.mapOpen()) {
+            return warnArgumentValue(L, __func__, "no active mapper");
+        }
+        if (const QString error = TMap::zoomError(zoom); !error.isEmpty()) {
+            return warnArgumentValue(L, __func__, error);
+        }
+        // Only a mapper on screen has an area it is showing
+        if (!areaID) {
+            return warnArgumentValue(L, __func__, "no active mapper");
+        }
+        if (!host.mpMap->mpRoomDB->set2DMapZoom(areaID, zoom)) {
+            return warnArgumentValue(L, __func__, qsl("number %1 is not a valid areaID").arg(areaID));
+        }
+        lua_pushboolean(L, true);
+        host.mpMap->updateArea(-1);
+        return 1;
     }
 
     auto [success, errMsg] = mapper->setMapZoom(zoom, areaID);

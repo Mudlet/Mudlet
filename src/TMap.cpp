@@ -4000,6 +4000,19 @@ void TMap::announceMapInfoContributorsChanged()
     emit signal_mapInfoContributorsChanged();
 }
 
+QString TMap::zoomError(const qreal zoom)
+{
+    if (!qIsFinite(zoom)) {
+        return qsl("zoom %1 is invalid, it must be a finite number").arg(QString::number(zoom));
+    }
+    if (zoom < scmMinXYZoom) {
+        // 16 digits, as the default precision shows 2.999999 as 3 and the
+        // message would read "zoom 3 is invalid, it must be at least 3"
+        return qsl("zoom %1 is invalid, it must be at least %2").arg(QString::number(zoom, 'g', 16), QString::number(scmMinXYZoom, 'g', 16));
+    }
+    return QString();
+}
+
 void TMap::requestMapRepaint()
 {
     emit signal_mapRepaintRequested();

@@ -40,8 +40,8 @@ public:
     void armForceClose() override {}
     bool openWebPage(const QString&) override { return false; }
     void showNotification(const QString&, const QString&, std::optional<int>) override {}
-    bool drawUpperLowerLevels() const override { return false; }
-    void setDrawUpperLowerLevels(bool) override {}
+    bool drawUpperLowerLevels() const override { return mDrawUpperLowerLevels; }
+    void setDrawUpperLowerLevels(bool draw) override { mDrawUpperLowerLevels = draw; }
     void updateMapActionAvailability() override {}
     bool showTabConnectionIndicators() const override { return false; }
     void setShowTabConnectionIndicators(bool) override {}
@@ -80,6 +80,10 @@ public:
 
 private:
     static QString noViewError() { return qsl("mudlet instance not available"); }
+
+    // Held, unlike the rest: with no main window the model is the mapper, and getConfig() reads this
+    // back. Starts at the main window's default; nothing saves it.
+    bool mDrawUpperLowerLevels = true;
 };
 
 #endif // MUDLET_TNULLAPPFRONTEND_H

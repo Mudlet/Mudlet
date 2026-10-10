@@ -9179,8 +9179,7 @@ int TLuaInterpreter::setConfig(lua_State* L)
             host.mpMap->announceMapperSettingChanged(TMap::MapperSetting::ShowGrid);
             return success();
         }
-        // Kept on the mapper: the main window holds this, so with none getConfig() could not read it back
-        if (key == qsl("showUpperLowerLevels") && host.mpMap->mapViewFrontend()) {
+        if (key == qsl("showUpperLowerLevels")) {
             TAppFrontend::instance()->setDrawUpperLowerLevels(getVerifiedBool(L, __func__, 2, "value"));
             host.mpMap->requestMapRepaint();
             return success();
