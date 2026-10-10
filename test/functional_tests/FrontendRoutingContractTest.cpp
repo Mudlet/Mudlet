@@ -617,7 +617,7 @@ setConfig("experiment.3dmap.modernmapper", false)
     void test_areaImageExportReachesTheMapView()
     {
         const QString result = runMapLua(qsl(R"lua(
-local exported, why = exportAreaImage(AREA, "/routed/level.png", 2)
+local exported, why = exportAreaImage(AREA, "/routed/level.png", 3)
 assert(exported == false and why == "routed export refusal", "exportAreaImage did not pass on the view refusing it")
 assert(exportAreaImage(AREA, "/routed/all.png", true) == true, "exportAreaImage did not pass on the view exporting")
 )lua"));
@@ -625,7 +625,7 @@ assert(exportAreaImage(AREA, "/routed/all.png", true) == true, "exportAreaImage 
 
         // exportAreaImage always exports at zoom 2; a script cannot choose it
         const QStringList expected{
-                qsl("exportAreaToImage(%1, /routed/level.png, 2, 2, false)").arg(mAreaId),
+                qsl("exportAreaToImage(%1, /routed/level.png, 3, 2, false)").arg(mAreaId),
                 qsl("exportAreaToImage(%1, /routed/all.png, none, 2, true)").arg(mAreaId),
         };
         QCOMPARE(mMapView.mCalls.join(qsl("; ")), expected.join(qsl("; ")));
