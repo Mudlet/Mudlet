@@ -2337,6 +2337,10 @@ int TLuaInterpreter::tempButton(lua_State* L)
     if (!pP) {
         return warnArgumentValue(L, __func__, qsl("toolbar '%1' not found").arg(toolbar));
     }
+    // a button under a plain button is never put on any toolbar
+    if (!pP->isFolder()) {
+        return warnArgumentValue(L, __func__, qsl("'%1' is a button, not a toolbar or menu").arg(toolbar));
+    }
     TAction* pT = host.getActionUnit()->findAction(name);
     if (pT) {
         return warnArgumentValue(L, __func__, qsl("a button or toolbar named '%1' already exists").arg(name));
