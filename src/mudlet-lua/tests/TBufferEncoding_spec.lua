@@ -96,6 +96,17 @@ end
 
 describe("Tests the single byte encoding tables", function()
 
+  it("decodes a doubled IAC as ya in Windows-1251 instead of a newline", function()
+    using("WINDOWS-1251")
+
+    -- я is byte 0xFF. The server sends it as IAC IAC, and that one data byte
+    -- stays in the word: связаться is св + я + затьс + я.
+    local ya = bytes(0xFF, 0xFF)
+    local word = bytes(0xF1, 0xE2) .. ya .. bytes(0xE7, 0xE0, 0xF2, 0xFC, 0xF1) .. ya
+
+    assert.equals("связаться", decoded(word))
+  end)
+
   it("gives byte 0x86 the character its own code page assigns to it", function()
     local expected = {
       ["CP437"] = "å",
@@ -1102,7 +1113,9 @@ describe("Tests the bulk copy of plain text runs", function()
   it("ends a run at a byte the code page has a character for", function()
     using("CP437")
 
-    -- both ends of the part of the upper half that is text, 0xFF marking a prompt
+    -- both ends of the part of the upper half that is text. 0xFF is a character
+    -- too, but it is telnet IAC, so a single byte here would be read as a
+    -- command; the Windows-1251 spec sends it doubled.
     local characters = {[0x80] = "Ç", [0x86] = "å", [0xFE] = "■"}
     for byte, character in pairs(characters) do
       atEveryOffset(function(before, after, where)
@@ -1141,9 +1154,7 @@ describe("Tests the bulk copy of plain text runs", function()
   it("ends a run at the other bytes that end a line just as the byte by byte decoder does", function()
     local endings = {
       {name = "End of Transmission", fed = bytes(0x04)},
-      -- telnet's IAC as well, so it has to be doubled to arrive as data - and
-      -- a carry out of it is what a test of eight bytes at once would get wrong
-      {name = "the byte a prompt is marked with", fed = bytes(0xFF, 0xFF)},
+      {name = "prompt (IAC GA)", fed = bytes(0xFF, 0xF9)},
     }
     for _, ending in ipairs(endings) do
       atEveryOffset(function(before, after, where)

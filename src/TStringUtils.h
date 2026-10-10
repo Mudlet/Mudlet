@@ -29,12 +29,16 @@
 
 #define CHAR_NEW_LINE '\n'
 #define CHAR_CARRIAGE_RETURN '\r'
-#define CHAR_END_OF_FILE '\xff'
+// cTelnet appends this after IAC GA / IAC EOR. It is not 0xFF: that byte is
+// telnet IAC, and in Windows-1251 it is also the letter "я", so a data 0xFF
+// (delivered as IAC IAC) must be decoded rather than end the line. The parser
+// drops a NUL the server itself sends, so only this injected marker is one.
+#define CHAR_PROMPT '\0'
 #define CHAR_END_OF_TEXT '\003'
 #define CHAR_END_OF_TRANSMISSION '\004'
 #define CHAR_ESC '\033'
 
-#define CHAR_IS_COMMIT_CHAR(ch) ((ch) == CHAR_NEW_LINE || (ch) == CHAR_CARRIAGE_RETURN || (ch) == CHAR_END_OF_FILE || (ch) == CHAR_END_OF_TRANSMISSION)
+#define CHAR_IS_COMMIT_CHAR(ch) ((ch) == CHAR_NEW_LINE || (ch) == CHAR_CARRIAGE_RETURN || (ch) == CHAR_PROMPT || (ch) == CHAR_END_OF_TRANSMISSION)
 
 
 class TStringUtils

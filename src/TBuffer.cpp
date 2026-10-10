@@ -272,11 +272,12 @@ size_t decodableLength(const std::string& data, const size_t length, const bool 
 }
 
 // Decodes to one QChar of the same value in every encoding, so runs can be bulk-copied: every 7-bit byte
-// but the line endings, EOT and ESC, which the loop acts on. Other C0 controls decode to themselves.
-// Not DEL: EUC-KR renders it as the replacement character.
+// but the line endings, the prompt marker, EOT and ESC, which the loop acts on. Other C0 controls decode
+// to themselves. Not DEL: EUC-KR renders it as the replacement character. The prompt marker is a NUL,
+// which would otherwise copy as a character and never commit the line.
 bool bulkCopyableTextByte(const char byte)
 {
-    return static_cast<unsigned char>(byte) < 0x7F && byte != CHAR_NEW_LINE && byte != CHAR_CARRIAGE_RETURN && byte != CHAR_END_OF_TRANSMISSION && byte != CHAR_ESC;
+    return static_cast<unsigned char>(byte) < 0x7F && byte != CHAR_NEW_LINE && byte != CHAR_CARRIAGE_RETURN && byte != CHAR_PROMPT && byte != CHAR_END_OF_TRANSMISSION && byte != CHAR_ESC;
 }
 
 // True when all eight bytes are printable ASCII (space to '~'), every one of
@@ -2163,7 +2164,7 @@ bool TBuffer::commitLine(char ch, size_t& localBufferPosition, const bool isFrom
         // it: a segment that runs right up to the game's wrap column is
         // probably not a whole line, so hold it back and join its
         // continuation on instead of committing it. Everything else -
-        // prompts ('\xff' from GA/EOR), timer-flushed fragments ('\r'),
+        // prompts (the marker cTelnet appends for GA/EOR), timer-flushed fragments ('\r'),
         // MXP <br> breaks and blank lines - is a real line boundary.
         const bool proseSegment = looksLikeWrappedProse(mMudLine);
         if (!mServerWrapPendingLine.isEmpty()) {
@@ -2279,7 +2280,7 @@ void TBuffer::commitLineData(QString line, std::vector<TChar> chars, const char 
         }
         buffer.push_back(std::move(chars));
         timeBuffer << currentTimeStamp();
-        if (ch == '\xff') {
+        if (ch == CHAR_PROMPT) {
             promptBuffer.append(true);
         } else {
             promptBuffer.append(false);
@@ -2300,7 +2301,7 @@ void TBuffer::commitLineData(QString line, std::vector<TChar> chars, const char 
         materialisePreTriggerPassLine(static_cast<int>(buffer.size()) - 1);
         buffer.back() = std::move(chars);
         timeBuffer.back() = currentTimeStamp();
-        if (ch == '\xff') {
+        if (ch == CHAR_PROMPT) {
             promptBuffer.back() = true;
         } else {
             promptBuffer.back() = false;
