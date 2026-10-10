@@ -8478,6 +8478,7 @@ int TLuaInterpreter::getProfileInformation(lua_State* L)
     Host& host = getHostFromLua(L);
     const int params = lua_gettop(L);
 
+    QString profileName = host.getName();
     switch (params) {
     case 0: {
         info = host.readProfileData(qsl("description"));
@@ -8490,7 +8491,7 @@ int TLuaInterpreter::getProfileInformation(lua_State* L)
             lua_pushstring(L, "getProfileInformation: profile name cannot be empty");
             return 2;
         }
-        const QString profileName = MudletApp::getCanonicalProfileName(requestedName);
+        profileName = MudletApp::getCanonicalProfileName(requestedName);
         if (profileName.isEmpty()) {
             lua_pushnil(L);
             lua_pushfstring(L, "getProfileInformation: profile '%s' does not exist", requestedName.toUtf8().constData());
@@ -8499,6 +8500,13 @@ int TLuaInterpreter::getProfileInformation(lua_State* L)
         info = MudletApp::readProfileData(profileName, qsl("description"));
         break;
     }
+    }
+
+    // A game from the catalog has a description file only once one has been set for it
+    if (info.isEmpty()) {
+        if (auto it = TGameDetails::findGame(profileName); it != TGameDetails::scmDefaultGames.constEnd()) {
+            info = (*it).description;
+        }
     }
 
     lua_pushstring(L, info.toUtf8().constData());

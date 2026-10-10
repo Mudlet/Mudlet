@@ -456,6 +456,18 @@ describe("Tests C++ functions in the Miscallaneous category", function()
           assert.is_string(getProfileInformation())
           assert.equals(getProfileInformation(), getProfileInformation(getProfileName()))
         end)
+
+        -- the connection dialog shows a bundled game's blurb without saving it, so
+        -- its folder has no description file until the player sets one
+        it("gives the description a bundled game ships with when none is saved", function()
+          finally(restoreDescription())
+          os.remove(descriptionFile)
+
+          local shipped = getProfileInformation()
+          assert.is_true(contains(shipped, "Busted"), shipped)
+          assert.equals(shipped, getProfileInformation(getProfileName()))
+          assert.equals(shipped, getProfiles()[getProfileName()].description)
+        end)
       end)
 
       describe("Tests the functionality of setProfileInformation", function()

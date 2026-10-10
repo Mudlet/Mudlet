@@ -3036,8 +3036,8 @@ int TLuaInterpreter::getProfiles(lua_State* L)
         QString port = MudletApp::readProfileData(profile, qsl("port"));
         QString description = MudletApp::readProfileData(profile, qsl("description"));
 
-        // if url/port haven't been written to disk yet (which is what happens
-        // when a default profile is opened for the first time), fetch this data from game details
+        // a game from the catalog keeps only the details the player changed on disk, so fetch the
+        // rest from the catalog
         if (url.isEmpty()) {
             auto it = TGameDetails::findGame(profile);
             if (it != TGameDetails::scmDefaultGames.end()) {
@@ -3048,6 +3048,12 @@ int TLuaInterpreter::getProfiles(lua_State* L)
             auto it = TGameDetails::findGame(profile);
             if (it != TGameDetails::scmDefaultGames.end()) {
                 port = QString::number((*it).port);
+            }
+        }
+        if (description.isEmpty()) {
+            auto it = TGameDetails::findGame(profile);
+            if (it != TGameDetails::scmDefaultGames.end()) {
+                description = (*it).description;
             }
         }
 
