@@ -560,7 +560,7 @@ private:
 
     bool bufferContains(Host* host, const QString& text)
     {
-        TBuffer& buffer = host->mpConsole->buffer;
+        TBuffer& buffer = host->mainConsoleView()->buffer;
         for (int i = 0; i <= buffer.getLastLineNumber(); ++i) {
             if (buffer.line(i).contains(text)) {
                 return true;

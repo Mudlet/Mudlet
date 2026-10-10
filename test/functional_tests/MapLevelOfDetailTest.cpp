@@ -313,13 +313,13 @@ private:
         mpHost->mMapInfoContributors.clear();
 
         TMap* pMap = map();
-        if (!pMap->mpMapper) {
+        if (!pMap->mapper()) {
             mpHost->showHideOrCreateMapper(false);
         }
-        if (!pMap->mpMapper) {
+        if (!pMap->mapper()) {
             return nullptr;
         }
-        T2DMap* p2dMap = pMap->mpMapper->mp2dMap;
+        T2DMap* p2dMap = pMap->mapper()->mp2dMap;
         if (!p2dMap) {
             return nullptr;
         }
