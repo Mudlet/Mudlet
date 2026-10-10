@@ -619,9 +619,12 @@ private slots:
     // the copy is of what it kept.
     void test_onlyWhatTheConsoleKeepsOfATriggerWriteIsMirrored()
     {
-        QVERIFY(runLua(qsl("mirrorTrigger = tempRegexTrigger([[^echo too much$]], [[echo(string.rep(\"x\", 1000010))]])")));
+        // Wrapping a line with no break in it rescans back to its start for every row,
+        // which takes most of a minute for a million characters
+        QVERIFY(runLua(qsl("mirrorWrapAt = getWindowWrap(\"main\") setWindowWrap(\"main\", 1000010) "
+                           "mirrorTrigger = tempRegexTrigger([[^echo too much$]], [[echo(string.rep(\"x\", 1000010))]])")));
         feedLineFromServer("echo too much");
-        QVERIFY(runLua(qsl("killTrigger(mirrorTrigger)")));
+        QVERIFY(runLua(qsl("killTrigger(mirrorTrigger) setWindowWrap(\"main\", mirrorWrapAt)")));
 
         QCOMPARE(mirroredLines().size(), 2);
         QCOMPARE(mirroredLines().at(1), QString(1000000, QChar('x')));
@@ -830,7 +833,7 @@ private slots:
         mpHost->mEchoLuaErrors = true;
         buffer.setBufferSize(100, 10);
         for (int i = 0; i < 400 && static_cast<int>(buffer.size()) != buffer.mLinesLimit; ++i) {
-            feedLineFromServer(qsl("filler %1").arg(i).toLatin1());
+            feedFromServer(qsl("filler %1\r\n").arg(i).toLatin1(), 0);
         }
         QCOMPARE(static_cast<int>(buffer.size()), buffer.mLinesLimit);
         QVERIFY(runLua(qsl("mirrorShrinkHandler = registerAnonymousEventHandler(\"sysBufferShrinkEvent\", function() echo(\"buffer trimmed\") end, true) "
