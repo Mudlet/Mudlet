@@ -112,6 +112,7 @@ private:
     const QString mSourceName = qsl("ProfileRoundTrip-Test");
     const QString mTargetName = qsl("ProfileRoundTripTarget-Test");
     const QString mLegacyTargetName = qsl("ProfileRoundTripLegacyTarget-Test");
+    const QString mHistorySizeTargetName = qsl("ProfileRoundTripHistorySizeTarget-Test");
     QString mPort; // assigned the stub's actual ephemeral port in initTestCase()
     const QString mLocalhost = qsl("localhost");
     QTemporaryDir mSaveDir;
@@ -630,6 +631,7 @@ private slots:
             deleteProfileDirectory(mSourceName);
             deleteProfileDirectory(mTargetName);
             deleteProfileDirectory(mLegacyTargetName);
+            deleteProfileDirectory(mHistorySizeTargetName);
             delete mudlet::self();
         }
         mSavedXdg.isNull() ? qunsetenv("XDG_CONFIG_HOME") : qputenv("XDG_CONFIG_HOME", mSavedXdg);
@@ -806,6 +808,54 @@ private slots:
         QCOMPARE(mpLegacyTarget->getControlCharacterMode(), ControlCharacterMode::OEM);
         QCOMPARE(mpLegacyTarget->getWideAmbiguousEAsianGlyphsControlState(), Qt::Unchecked);
         QVERIFY(!mpLegacyTarget->getLargeAreaExitArrows());
+    }
+
+    void test_commandLineHistorySaveSizeOnImport_data()
+    {
+        QTest::addColumn<QString>("stored");
+        QTest::addColumn<int>("expected");
+        QTest::newRow("in range") << qsl("500") << 500;
+        QTest::newRow("off") << qsl("0") << 0;
+        QTest::newRow("largest") << qsl("1000000") << Host::scmMaxCommandLineHistorySaveSize;
+        QTest::newRow("INT_MAX") << qsl("2147483647") << Host::scmMaxCommandLineHistorySaveSize;
+        // 0 would turn saving off for a profile that holds a negative size
+        QTest::newRow("negative") << qsl("-5") << Host::scmMaxCommandLineHistorySaveSize;
+        QTest::newRow("minus one") << qsl("-1") << Host::scmMaxCommandLineHistorySaveSize;
+        QTest::newRow("beyond int") << qsl("99999999999") << 500;
+        QTest::newRow("not a number") << qsl("abc") << 500;
+    }
+
+    // A profile file can hold a size setConfig() refuses, or no number at all
+    void test_commandLineHistorySaveSizeOnImport()
+    {
+        QFETCH(QString, stored);
+        QFETCH(int, expected);
+        QString xml = mExportedXml;
+        QCOMPARE(xml.count(qsl("CommandLineHistorySaveSize=\"500\"")), 1);
+        xml.replace(qsl("CommandLineHistorySaveSize=\"500\""), qsl("CommandLineHistorySaveSize=\"%1\"").arg(stored));
+
+        auto* hostManager = HostManager::self();
+        Host* target = hostManager->getHost(mHistorySizeTargetName);
+        if (!target) {
+            deleteProfileDirectory(mHistorySizeTargetName);
+            QVERIFY2(hostManager->addHost(mHistorySizeTargetName, mPort, QString(), QString()), "failed to create the history size target Host");
+            target = hostManager->getHost(mHistorySizeTargetName);
+            QVERIFY(target);
+        }
+        target->setCommandLineHistorySaveSize(42);
+
+        QTemporaryDir dir;
+        QVERIFY(dir.isValid());
+        QFile file(qsl("%1/history-size.xml").arg(dir.path()));
+        QVERIFY2(file.open(QFile::WriteOnly | QFile::Text), qPrintable(file.errorString()));
+        QVERIFY(file.write(xml.toUtf8()) != -1);
+        file.close();
+        QVERIFY2(file.open(QFile::ReadOnly | QFile::Text), qPrintable(file.errorString()));
+        XMLimport importer(target);
+        auto [imported, importError] = importer.importPackage(&file);
+        QVERIFY2(imported, qPrintable(importError));
+
+        QCOMPARE(target->getCommandLineHistorySaveSize(), expected);
     }
 
     // A persistent stopwatch comes back under its own name, still running or
