@@ -8478,9 +8478,10 @@ int TLuaInterpreter::getProfileInformation(lua_State* L)
     Host& host = getHostFromLua(L);
     const int params = lua_gettop(L);
 
-    QString profileName = host.getName();
+    QString profileName;
     switch (params) {
     case 0: {
+        profileName = host.getName();
         info = host.readProfileData(qsl("description"));
         break;
     }
