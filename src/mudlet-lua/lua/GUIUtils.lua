@@ -2081,7 +2081,7 @@ function hecho2string(text)
 end
 
 -- captures an SGR, an MXP line mode, a cursor forward, a line ending or a run of text; the uncaptured
--- alternatives are what the console drops: a string sequence, other CSI, a charset, ESC 7/8/c/\, a stray ESC
+-- alternatives are dropped: a string sequence, any other CSI, a charset, ESC 7/8/c/\, a stray ESC
 local ansiTokenPattern = rex.new("\\e\\[([0-9:;]*)m|(\\e\\[[0-9:;]*z)|\\e\\[([0-9]+)C"
   .. "|\\e[\\]PX^_](?:[^\\a\\e\\n\\x04\\xff]++|\\e(?!\\\\))*+(?:\\a|\\e\\\\)?|\\e\\[[\\x20-\\x3F]*[\\x40-\\x7E]?|\\e[()*+][\\x30-\\x7E]?|\\e[78c\\\\]|\\e"
   .. "|([\\n\\r\\x04\\xff])|([^\\e\\n\\r\\x04\\xff]+)")
