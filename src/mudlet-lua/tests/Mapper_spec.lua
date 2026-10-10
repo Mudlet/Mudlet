@@ -2810,8 +2810,8 @@ describe("Tests mapper functions against a shared fixture", function()
   end)
 
   describe("Tests the 3D map perspective functions", function()
-    -- Only a build with the 3D mapper has them. These run with the 2D map
-    -- showing, but for the one test below that opens the modern 3D view
+    -- Only a build with the 3D mapper has them. These run with the 2D map showing;
+    -- zz_Mapper3DView_spec.lua tries them with the modern 3D view open
     if not setMapPerspective then
       pending("setMapPerspective and shiftMapPerspective need a Mudlet built with the 3D mapper")
       return
@@ -2859,48 +2859,6 @@ describe("Tests mapper functions against a shared fixture", function()
       assert.are.equal(zoom, getMapZoom(areaAlpha))
       assert.are.equal(rA1, getPlayerRoom())
       assert.is_false(getConfig("show3dMapView"))
-    end)
-
-    it("both are accepted while the modern 3D view shows, and refused for the classic view", function()
-      -- a GL context leaks in the leak-checking job's GL driver, as Media_spec explains
-      if (os.getenv("ASAN_OPTIONS") or ""):find("detect_leaks=1", 1, true) then
-        pending("a 3D view's GL context leaks in this job's GL driver")
-        return
-      end
-      local wasModern = getConfig("experiment.3dmap.modernmapper")
-      local shownArea = getRoomArea(rA1)
-      local wasGrid = getGridMode(shownArea)
-      finally(function()
-        setGridMode(shownArea, wasGrid)
-        setConfig("show3dMapView", false)
-        setConfig("experiment.3dmap.modernmapper", wasModern == true)
-      end)
-      assert.is_true(centerview(rA1))
-      assert.is_true(setGridMode(shownArea, false))
-      assert.is_true(setConfig("experiment.3dmap.modernmapper", true))
-      assert.is_true(setConfig("show3dMapView", true))
-      assert.is_true(getConfig("show3dMapView"))
-      assert.is_true(setMapPerspective(2, 45, 270))
-      assert.is_true(shiftMapPerspective(0, 30, 0))
-
-      -- the 3D view draws a grid-mode area looking straight down, whatever a script asks
-      assert.is_true(setGridMode(shownArea, true))
-      local ok, err = setMapPerspective(2, 45, 270)
-      assert.is_nil(ok)
-      assert.are.equal("the area shown in the 3D view is in grid mode, which always looks straight down", err)
-      ok, err = shiftMapPerspective(0, 30, 0)
-      assert.is_nil(ok)
-      assert.are.equal("the area shown in the 3D view is in grid mode, which always looks straight down", err)
-      assert.is_true(setGridMode(shownArea, false))
-
-      assert.is_true(setConfig("experiment.3dmap.modernmapper", false))
-      assert.is_true(getConfig("show3dMapView"))
-      ok, err = setMapPerspective(2, 45, 270)
-      assert.is_nil(ok)
-      assert.are.equal("the modern 3D map view is not showing", err)
-      ok, err = shiftMapPerspective(0, 30, 0)
-      assert.is_nil(ok)
-      assert.are.equal("the modern 3D map view is not showing", err)
     end)
   end)
 
