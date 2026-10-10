@@ -919,6 +919,14 @@ describe("presence the game sends over GMCP", function()
     assert.equals(0, endTime, "a start time that lands in the end timestamp as well turns the elapsed timer into a countdown")
   end)
 
+  -- A presence update a script makes after the feed carries the whole presence,
+  -- so it shows whether the party survived on the wire, not only in the getter.
+  local function partyOnTheWire()
+    local activity = activityFrom(function() setDiscordDetail("party check") end,
+                                  function(seen) return seen.details == "party check" end)
+    return activity.party and activity.party.size
+  end
+
   it("leaves the party alone when the payload says nothing about one (#10724)", function()
     if not readyForDiscord() then
       return
@@ -926,10 +934,11 @@ describe("presence the game sends over GMCP", function()
     assert.is_true(setDiscordParty(4, 12))
     feedDiscordStatus('{"state": "only a state"}')
 
-    assert.equals("only a state", getDiscordState())
+    assert.equals("only a state", getDiscordState(), "the payload was dropped, so this spec proves nothing - is this profile in 'show Mudlet only' mode?")
     local size, maximum = getDiscordParty()
-    assert.equals(4, size)
+    assert.equals(4, size, "a payload without a party cleared the party")
     assert.equals(12, maximum)
+    assert.same({4, 12}, partyOnTheWire())
   end)
 
   it("leaves the party alone when the payload's party values are not numbers (#10724)", function()
@@ -937,14 +946,46 @@ describe("presence the game sends over GMCP", function()
       return
     end
     assert.is_true(setDiscordParty(4, 12))
-    feedDiscordStatus('{"partysize": "four", "partymax": "twelve"}')
+    feedDiscordStatus('{"state": "words for numbers", "partysize": "four", "partymax": "twelve"}')
+
+    assert.equals("words for numbers", getDiscordState(), "the payload was dropped, so this spec proves nothing - is this profile in 'show Mudlet only' mode?")
+    local size, maximum = getDiscordParty()
+    assert.equals(4, size, "party values that are not numbers cleared the party")
+    assert.equals(12, maximum)
+    assert.same({4, 12}, partyOnTheWire())
+  end)
+
+  it("keeps the party size when only the maximum is a number (#10724)", function()
+    if not readyForDiscord() then
+      return
+    end
+    assert.is_true(setDiscordParty(4, 12))
+    feedDiscordStatus('{"state": "bigger party", "partysize": "four", "partymax": 20}')
+
+    assert.equals("bigger party", getDiscordState())
+    local size, maximum = getDiscordParty()
+    assert.equals(4, size, "a maximum without a usable size cleared the party")
+    assert.equals(20, maximum)
+
+    feedDiscordStatus('{"partymax": 30}')
+    size, maximum = getDiscordParty()
+    assert.equals(4, size, "a maximum on its own cleared the party")
+    assert.equals(30, maximum)
+  end)
+
+  it("updates the party size alone and keeps the maximum", function()
+    if not readyForDiscord() then
+      return
+    end
+    assert.is_true(setDiscordParty(4, 12))
+    feedDiscordStatus('{"partysize": 5}')
 
     local size, maximum = getDiscordParty()
-    assert.equals(4, size)
+    assert.equals(5, size)
     assert.equals(12, maximum)
   end)
 
-  it("still sets the party from a payload that carries one", function()
+  it("sets the party from a payload that carries one", function()
     if not readyForDiscord() then
       return
     end
@@ -954,5 +995,31 @@ describe("presence the game sends over GMCP", function()
     local size, maximum = getDiscordParty()
     assert.equals(2, size)
     assert.equals(6, maximum)
+  end)
+
+  it("clears the party when the game sends a maximum of 0", function()
+    if not readyForDiscord() then
+      return
+    end
+    assert.is_true(setDiscordParty(4, 12))
+    feedDiscordStatus('{"partymax": 0}')
+
+    local size, maximum = getDiscordParty()
+    assert.equals(0, size)
+    assert.equals(0, maximum)
+    assert.is_nil(partyOnTheWire())
+  end)
+
+  it("clears the party when the game sends null for it", function()
+    if not readyForDiscord() then
+      return
+    end
+    feedDiscordStatus('{"partysize": 3, "partymax": 6}')
+    feedDiscordStatus('{"state": "party over", "partysize": null, "partymax": null}')
+
+    assert.equals("party over", getDiscordState())
+    local size, maximum = getDiscordParty()
+    assert.equals(0, size, "null party values left the old party showing")
+    assert.equals(0, maximum)
   end)
 end)

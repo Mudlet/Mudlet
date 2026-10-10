@@ -4572,29 +4572,20 @@ void Host::processGMCPDiscordStatus(const QJsonObject& discordInfo)
         }
     }
 
-    int partySizeValue = -1;
-    int partyMaxValue = -1;
     auto partyMax = discordInfo.value(qsl("partymax"));
     auto partySize = discordInfo.value(qsl("partysize"));
-    if (!partyMax.isDouble() && !partySize.isDouble()) {
-        return;
-    }
-    Discord::self()->setServerOrigin(this, DiscordSetPartyInfo);
+    // Only a number changes the party, so a payload about something else, or a party value that
+    // is not a number, cannot wipe a party a script set; null with no number beside it clears it
     if (partyMax.isDouble()) {
-        partyMaxValue = static_cast<int>(partyMax.toDouble());
-        if (partyMaxValue > 0 && partySize.isDouble()) {
-            partySizeValue = static_cast<int>(partySize.toDouble());
-            Discord::self()->setParty(this, partySizeValue, partyMaxValue);
-        } else {
-            Discord::self()->setParty(this, 0, 0);
-        }
-    } else {
-        if (partySize.isDouble()) {
-            partySizeValue = static_cast<int>(partySize.toDouble());
-            Discord::self()->setParty(this, partySizeValue);
-        } else {
-            Discord::self()->setParty(this, 0, 0);
-        }
+        Discord::self()->setServerOrigin(this, DiscordSetPartyInfo);
+        const int partySizeValue = partySize.isDouble() ? static_cast<int>(partySize.toDouble()) : Discord::self()->getParty(this).first;
+        Discord::self()->setParty(this, partySizeValue, static_cast<int>(partyMax.toDouble()));
+    } else if (partySize.isDouble()) {
+        Discord::self()->setServerOrigin(this, DiscordSetPartyInfo);
+        Discord::self()->setParty(this, static_cast<int>(partySize.toDouble()));
+    } else if (partyMax.isNull() || partySize.isNull()) {
+        Discord::self()->setServerOrigin(this, DiscordSetPartyInfo);
+        Discord::self()->setParty(this, 0, 0);
     }
 }
 
