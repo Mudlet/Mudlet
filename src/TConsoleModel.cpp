@@ -118,6 +118,7 @@ void TConsoleModel::clear()
     // --mirror's pending line went with the buffer.
     mMirrorPendingLine.clear();
     mUserCursor = QPoint();
+    mScrolledBackTo.reset();
     // Past the line left, so isPrompt() sees that the line a trigger runs for went too, even when it was line 0
     if (mTriggerEngineMode) {
         mEngineCursor = buffer.size();

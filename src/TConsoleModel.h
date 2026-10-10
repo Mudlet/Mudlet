@@ -38,6 +38,7 @@
 #include <QStringList>
 #include <QTextStream>
 
+#include <optional>
 #include <tuple>
 
 class Host;
@@ -335,6 +336,9 @@ struct TConsoleModel
     QSize mGridSize;
     // The upper pane's TTextEdit::mCursorY, which it copies out of the buffer as it repaints.
     int mUpperPaneCursorY = 0;
+    // The line the null view has this console scrolled back to, none while it follows new lines; a real
+    // view keeps that in its upper pane. clear() follows again, as TConsole::clearSplit() does.
+    std::optional<int> mScrolledBackTo;
     // The upper pane's font, which TTextEdit copies out as it changes, a style sheet's included.
     QFont mUpperPaneFont;
     bool mScrollingEnabled = true;

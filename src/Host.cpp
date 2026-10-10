@@ -6253,21 +6253,17 @@ std::optional<QSize> Host::windowGridSize(const QString& name) const
 
 std::optional<int> Host::windowScroll(const QString& name) const
 {
-    if (!hasConsoleView()) {
-        return {};
-    }
     TConsoleModel* pModel = consoleModelNamed(name);
     if (!pModel) {
         return {};
     }
-    return {std::max(std::min(pModel->mUpperPaneCursorY, pModel->buffer.getLastLineNumber()), 0)};
+    const int lastLine = pModel->buffer.getLastLineNumber();
+    const int line = hasConsoleView() ? pModel->mUpperPaneCursorY : pModel->mScrolledBackTo.value_or(lastLine);
+    return {std::max(std::min(line, lastLine), 0)};
 }
 
 std::optional<bool> Host::windowScrolling(const QString& name) const
 {
-    if (!hasConsoleView()) {
-        return {};
-    }
     const TConsoleModel* pModel = consoleModelNamed(name);
     if (!pModel) {
         return {};
@@ -6277,9 +6273,6 @@ std::optional<bool> Host::windowScrolling(const QString& name) const
 
 std::optional<bool> Host::windowScrollBarVisible(const QString& name) const
 {
-    if (!hasConsoleView()) {
-        return {};
-    }
     const TConsoleModel* pModel = consoleModelNamed(name);
     if (!pModel) {
         return {};
