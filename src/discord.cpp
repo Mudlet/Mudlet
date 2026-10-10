@@ -20,12 +20,14 @@
  ***************************************************************************/
 
 #include "discord.h"
-#include "mudlet.h"
+#include "TAppFrontend.h"
 #include "utils.h"
 
+#include <QCoreApplication>
 #include <QtDebug>
 #include <QHash>
 #include <chrono>
+#include <cstring>
 
 using namespace std::chrono_literals;
 
@@ -115,12 +117,8 @@ Discord::Discord(QObject* parent)
     // Don't initialize RPC until a profile is loaded - UpdatePresence will
     // call initializeRpc() on demand when there's an active host.
 
-    // mudlet instance is not available in this constructor as it's still being initialised, so postpone the connection
+    // Process Discord callbacks every 50ms once the event loop is running
     QTimer::singleShot(0ms, this, [this]() {
-        Q_ASSERT(mudlet::self());
-        connect(mudlet::self(), &mudlet::signal_tabChanged, this, &Discord::UpdatePresence);
-
-        // process Discord callbacks every 50ms once we are all set up:
         startTimer(50ms);
     });
 }
@@ -336,7 +334,8 @@ void Discord::UpdatePresence()
         return;
     }
 
-    auto pHost = mudlet::self()->getActiveHost();
+    auto* pFrontend = TAppFrontend::instance();
+    Host* pHost = pFrontend ? pFrontend->getActiveHost() : nullptr;
 
     // Don't send any presence when no profile is active or Discord is
     // disabled - showing "Playing Mudlet" would leak information when the

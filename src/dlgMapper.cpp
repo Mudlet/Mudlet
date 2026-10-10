@@ -53,6 +53,17 @@
 
 using namespace std::chrono_literals;
 
+dlgMapper* TMap::mapper() const
+{
+    return mpMapper.data();
+}
+
+void TMap::setMapper(dlgMapper* pMapper)
+{
+    mpMapper = pMapper;
+    mpMapViewFrontend = pMapper;
+}
+
 dlgMapper::dlgMapper(QWidget* parent, Host* pH, TMap* pM)
 : QWidget(parent)
 , mpMap(pM)
@@ -143,7 +154,7 @@ dlgMapper::dlgMapper(QWidget* parent, Host* pH, TMap* pM)
 
 bool dlgMapper::drawsTheMap() const
 {
-    return mpMap && mpMap->mpMapper == this;
+    return mpMap && mpMap->mapper() == this;
 }
 
 void dlgMapper::connectMapCues()
@@ -419,6 +430,9 @@ void dlgMapper::showMapProgress(const QString& label, bool cancelable)
     mpProgressOverlay->show();
     repositionProgressOverlay();
     mpProgressOverlay->raise();
+    if (mpMap) {
+        connect(this, &dlgMapper::signal_mapProgressCanceled, mpMap, &TMap::slot_downloadCancel, Qt::UniqueConnection);
+    }
 }
 
 void dlgMapper::setMapProgressLabel(const QString& text)
@@ -460,6 +474,9 @@ void dlgMapper::setMapProgressCancelable(bool cancelable)
 
 void dlgMapper::hideMapProgress()
 {
+    if (mpMap) {
+        disconnect(this, &dlgMapper::signal_mapProgressCanceled, mpMap, &TMap::slot_downloadCancel);
+    }
     if (mpProgressOverlay) {
         mpProgressOverlay->hide();
     }
@@ -493,7 +510,7 @@ void dlgMapper::loadMapFromFile()
         }
         const QString fileName = dialog->selectedFiles().constFirst();
         Host* pHost = mpHost;
-        if (!pHost || !pHost->mpConsole) {
+        if (!pHost || !pHost->mainConsoleView()) {
             return;
         }
         bool success = false;
@@ -652,7 +669,7 @@ void dlgMapper::slot_togglePanel()
     // The host holds the setting; widget_panel->isVisible() is also false while
     // the whole map dock is hidden, which would make this a no-op:
     const bool show = !mpHost->mShowPanel;
-    // This widget is not necessarily the one the host knows as mpMap->mpMapper,
+    // This widget is not necessarily the one the host knows as mpMap->mapper(),
     // which is all the setter pushes the change to:
     slot_setMapperPanelVisible(show);
     mpHost->setMapperPanelVisible(show);
@@ -661,6 +678,41 @@ void dlgMapper::slot_togglePanel()
 void dlgMapper::slot_setMapperPanelVisible(bool panelVisible)
 {
     widget_panel->setVisible(panelVisible);
+}
+
+bool dlgMapper::showing3DView() const
+{
+#if defined(INCLUDE_3DMAPPER)
+    return glWidget && glWidget->isVisible();
+#else
+    return false;
+#endif
+}
+
+void dlgMapper::shift3DViewCamera(float verticalAngle, float horizontalAngle, float rotationAngle)
+{
+#if defined(INCLUDE_3DMAPPER)
+    if (auto* modernWidget = dynamic_cast<ModernGLWidget*>(mpMap->mpM.data())) {
+        modernWidget->shiftCamera(verticalAngle, horizontalAngle, rotationAngle);
+    }
+#else
+    Q_UNUSED(verticalAngle)
+    Q_UNUSED(horizontalAngle)
+    Q_UNUSED(rotationAngle)
+#endif
+}
+
+void dlgMapper::set3DViewCameraPosition(float r, float theta, float phi)
+{
+#if defined(INCLUDE_3DMAPPER)
+    if (auto* modernWidget = dynamic_cast<ModernGLWidget*>(mpMap->mpM.data())) {
+        modernWidget->setCameraPosition(r, theta, phi);
+    }
+#else
+    Q_UNUSED(r)
+    Q_UNUSED(theta)
+    Q_UNUSED(phi)
+#endif
 }
 
 void dlgMapper::slot_toggle3DView(const bool is3DMode)

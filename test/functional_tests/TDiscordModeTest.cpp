@@ -560,6 +560,29 @@ private slots:
         QTRY_COMPARE_WITH_TIMEOUT(lastSetActivity().value(qsl("state")).toString(), qsl("end-to-end"), 10s);
     }
 
+    void testTabChangeRefreshesPresenceEndToEnd()
+    {
+        auto& discord = *Discord::self();
+        if (!discord.libraryLoaded()) {
+            QSKIP("Discord RPC library not available - cannot test presence delivery");
+        }
+        if (!mpDiscordIpcStub->listening()) {
+            QSKIP("Discord IPC stub is not listening - cannot test presence delivery");
+        }
+        QCOMPARE(mudlet::self()->getActiveHost(), mpHost);
+        QVERIFY2(establishDiscordLogin(), "the discord-rpc handshake did not complete in time");
+
+        discord.setDetailText(mpHost, qsl("Back on this tab"));
+        QTRY_COMPARE_WITH_TIMEOUT(lastSetActivity().value(qsl("details")).toString(), qsl("Back on this tab"), 10s);
+        mpDiscordIpcStub->clearRecordedFrames();
+
+        // Nothing else sends presence now, so a SET_ACTIVITY can only come from the tab change
+        auto* pMudlet = mudlet::self();
+        emit pMudlet->signal_tabChanged(mpHost->getName());
+
+        QTRY_COMPARE_WITH_TIMEOUT(lastSetActivity().value(qsl("details")).toString(), qsl("Back on this tab"), 10s);
+    }
+
     void cleanupTestCase()
     {
         delete mpServer;
