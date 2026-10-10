@@ -680,6 +680,44 @@ describe("Tests mapper functions against a shared fixture", function()
       assert.is_nil(getAreaTable()["MapperSpecDeleteMe"])
     end)
 
+    it("removes every room of a large area and the exits other areas had into them", function()
+      local doomed = addAreaName("MapperSpecDeleteMany")
+      local survivor = addAreaName("MapperSpecDeleteManyNeighbour")
+      local base, count = 991000000, 2000
+      for i = 1, count do
+        addRoom(base + i)
+        setRoomArea(base + i, doomed)
+        setRoomCoordinates(base + i, i % 50, math.floor(i / 50), 0)
+        if i > 1 then
+          setExit(base + i, base + i - 1, "w")
+          setExit(base + i - 1, base + i, "e")
+        end
+        if i % 7 == 0 then
+          addSpecialExit(base + i, base + 1, "jump " .. i)
+        end
+      end
+      local outside = base + count + 1
+      addRoom(outside)
+      setRoomArea(outside, survivor)
+      setExit(outside, base + 1, "n")
+      setExit(outside, base + count, "s")
+      addSpecialExit(outside, base + 500, "climb")
+      finally(function()
+        deleteArea("MapperSpecDeleteManyNeighbour")
+        deleteArea("MapperSpecDeleteMany")
+      end)
+
+      assert.is_true(deleteArea(doomed))
+
+      for i = 1, count do
+        assert.is_false(roomExists(base + i))
+      end
+      assert.is_true(roomExists(outside))
+      assert.are.same({}, getRoomExits(outside))
+      assert.are.same({}, getSpecialExitsSwap(outside))
+      assert.is_nil(getAreaTable()["MapperSpecDeleteMany"])
+    end)
+
     it("returns nil and a message for an unknown areaID", function()
       local ok, err = deleteArea(missingAreaId)
       assert.is_nil(ok)
@@ -1191,6 +1229,24 @@ describe("Tests mapper functions against a shared fixture", function()
       -- rA1 (east) and rA3 (west) both lead into rA2
       assert.is_true(set[rA1])
       assert.is_true(set[rA3])
+    end)
+
+    it("getAllRoomEntrances lists a room once however many of its exits lead in", function()
+      local from = createRoomID(); addRoom(from); setRoomArea(from, areaAlpha)
+      local viaSpecial = createRoomID(); addRoom(viaSpecial); setRoomArea(viaSpecial, areaAlpha)
+      local to = createRoomID(); addRoom(to); setRoomArea(to, areaAlpha)
+      finally(function()
+        deleteRoom(from); deleteRoom(viaSpecial); deleteRoom(to)
+      end)
+
+      assert.is_true(setExit(from, to, "north"))
+      assert.is_true(setExit(from, to, "up"))
+      assert.is_true(addSpecialExit(from, to, "climb"))
+      assert.is_true(addSpecialExit(viaSpecial, to, "crawl"))
+
+      local entrances = getAllRoomEntrances(to)
+      table.sort(entrances)
+      assert.are.same({from, viaSpecial}, entrances)
     end)
 
     it("getAllRoomEntrances returns nil and a message for an unknown room", function()
@@ -1740,6 +1796,21 @@ describe("Tests mapper functions against a shared fixture", function()
       assert.is_string(err)
     end)
 
+    it("addCustomLine rejects a coordinate outside the range of room coordinates", function()
+      for _, point in ipairs({{math.huge, 2, 0}, {2, -math.huge, 0}, {2, 2, 0 / 0}, {1e308, 2, 0}, {2, -2147483649, 0}, {2, 2, 2147483648}}) do
+        local ok, err = addCustomLine(rSandA, {{2, 2, 0}, point}, "e", "solid line", {0, 0, 0}, false)
+        assert.is_nil(ok)
+        assert.is_truthy(err:find("is outside the range of room coordinates", 1, true), err)
+        assert.is_nil(getCustomLines1(rSandA)["e"])
+      end
+    end)
+
+    it("addCustomLine accepts a point at either end of the range of room coordinates", function()
+      assert.is_true(addCustomLine(rSandA, {{-2147483648, 2147483647, 0}, {2147483647, -2147483648, 0}}, "e", "solid line", {0, 0, 0}, false))
+      assert.are.equal(2, #getCustomLines1(rSandA)["e"].points)
+      assert.is_true(removeCustomLine(rSandA, "e"))
+    end)
+
     it("addCustomLine rejects a target room in a different area", function()
       local ok, err = addCustomLine(rSandA, rB1, "e", "solid line", {0, 0, 0}, false)
       assert.is_nil(ok)
@@ -1965,6 +2036,25 @@ describe("Tests mapper functions against a shared fixture", function()
       assert.are.equal("MapperSpecShared", labels[first].Text)
       assert.are.same({1, 1, 0}, {labels[second].X, labels[second].Y, labels[second].Z})
       assert.is_nil(labels[other])
+    end)
+
+    it("createMapLabel takes the lowest label id that is free", function()
+      local area = addAreaName("MapperSpecLabelIds")
+      finally(function() deleteArea(area) end)
+      local function create()
+        return createMapLabel(area, "MapperSpecId", 0, 0, 0, 255, 255, 255, 0, 0, 0, 30, 10)
+      end
+
+      assert.are.same({0, 1, 2, 3}, {create(), create(), create(), create()})
+      deleteMapLabel(area, 1)
+      assert.are.equal(1, create())
+      assert.are.equal(4, create())
+      deleteMapLabel(area, 0)
+      deleteMapLabel(area, 2)
+      assert.are.same({0, 2, 5}, {create(), create(), create()})
+      deleteMapLabel(area, 5)
+      deleteMapLabel(area, 4)
+      assert.are.equal(4, create())
     end)
 
     it("getMapLabel hard-errors when the label is neither a number nor a string", function()
@@ -2708,6 +2798,14 @@ describe("Tests mapper functions against a shared fixture", function()
       local ok, err = centerview(missingRoomId)
       assert.is_nil(ok)
       assert.is_string(err)
+    end)
+  end)
+
+  describe("Tests the 3D map view setting", function()
+    -- Read only: showing the 3D view brings up a GL context, which the leak job
+    -- cannot have - see Other_spec's getConfig and setConfig round-trips
+    it("getConfig reports the 3D view hidden while the mapper shows its 2D map", function()
+      assert.is_false(getConfig("show3dMapView"))
     end)
   end)
 
@@ -3679,6 +3777,40 @@ describe("Tests saveMap and loadMap", function()
       assertMapRestored()
     end)
 
+    it("lists each entrance into a room once after a reload", function()
+      buildMap()
+      assert.are.same({roomA}, getAllRoomEntrances(roomB))
+
+      assert.is_true(saveMap(savePath))
+      deleteMap()
+      assert.is_true(loadMap(savePath))
+      assert.are.same({roomA}, getAllRoomEntrances(roomB))
+    end)
+
+    -- a save carries its labels' fonts and outline colours, and below format
+    -- 21 the area's zoom, as extra area user data that only the file should see
+    it("leaves the live area user data alone when it saves", function()
+      local area = buildMap()
+      assert.is_true(setAreaUserData(area, "climate", "temperate"))
+      local labelId = createMapLabel(area, "Saved Label", 0, 0, 0, 255, 255, 255, 0, 0, 0,
+                                     30.0, 50, true, true, "", 255, 50, false)
+      assert.is_true(labelId >= 0, "the label whose keys this checks was never made")
+
+      -- pinned below 21 so the zoom key stays covered whatever the default is
+      assert.is_true(saveMap(savePath, 20))
+      assert.are.same({climate = "temperate"}, getAllAreaUserData(area))
+    end)
+
+    it("drops label keys a map file holds for labels that no longer exist", function()
+      -- see fixtures/maps/README.md for what the file holds
+      assert.is_true(loadMap(specDirectory .. "/fixtures/maps/stale-label-keys.dat"))
+      local area = getAreaTable()["StaleLabelKeysArea"]
+      assert.is_number(area)
+
+      assert.are.same({climate = "temperate"}, getAllAreaUserData(area))
+      assert.are.equal("Kept Label", getMapLabels(area)[0])
+    end)
+
     it("replaces what is on the map rather than merging into it", function()
       buildMap()
       saveMap(savePath)
@@ -3742,6 +3874,171 @@ describe("Tests saveMap and loadMap", function()
     end)
   end)
 
+  -- QDataStream hands a list's length prefix straight to QList::reserve(), so
+  -- one flipped byte in a binary map asked for gigabytes (#10689). The memory
+  -- is never touched, so it never becomes resident: VmPeak is where it shows.
+  describe("Tests loadMap on a binary map with a corrupt list length", function()
+    local corruptPath = getMudletHomeDir() .. "/mapper_spec_corrupt_length.dat"
+    -- /proc/self/status counts in KiB
+    local gibibyteKiB = 1024 * 1024
+    local allowedRise = gibibyteKiB / 4
+
+    local function memoryKiB()
+      local status = io.open("/proc/self/status", "r")
+      if not status then
+        return nil
+      end
+      local text = status:read("*a")
+      status:close()
+      return tonumber(text:match("VmPeak:%s*(%d+)")), tonumber(text:match("VmSize:%s*(%d+)"))
+    end
+
+    -- big endian, as QDataStream writes it
+    local function int32(n)
+      return string.char(math.floor(n / 16777216) % 256, math.floor(n / 65536) % 256, math.floor(n / 256) % 256, n % 256)
+    end
+
+    -- Saves the map and writes a copy with the top byte of the length the
+    -- marker starts with set to `highByte`; the marker has to occur exactly once
+    local function writeCorruptCopy(marker, highByte, version)
+      if version then
+        assert.is_true(saveMap(savePath, version))
+      else
+        assert.is_true(saveMap(savePath))
+      end
+      local file = assert(io.open(savePath, "rb"))
+      local data = file:read("*a")
+      file:close()
+      local at = data:find(marker, 1, true)
+      assert.is_truthy(at, "the marker is not in the saved map")
+      assert.is_nil(data:find(marker, at + 1, true), "the marker is in the saved map more than once")
+      file = assert(io.open(corruptPath, "wb"))
+      file:write(data:sub(1, at - 1) .. string.char(highByte) .. data:sub(at + 1))
+      file:close()
+    end
+
+    -- Loads the corrupt copy, asserting that VmPeak did not rise by anything
+    -- like the `requestKiB` its length asks for
+    local function assertCorruptLengthIsNotReserved(marker, highByte, requestKiB, version)
+      if not memoryKiB() then
+        pending("needs VmPeak from /proc/self/status")
+        return
+      end
+      writeCorruptCopy(marker, highByte, version)
+      -- the intact file first: whatever a first load maps in for good is then
+      -- already counted, and it has to load for the corrupt one to mean anything
+      assert.is_true(loadMap(savePath), "the uncorrupted map did not load")
+
+      local peakBefore, sizeBefore = memoryKiB()
+      -- VmPeak only rises once VmSize passes the old peak, so a request that
+      -- would not get there cannot be seen
+      if peakBefore - sizeBefore + allowedRise >= requestKiB then
+        pending("VmPeak is already too far above VmSize to show the request")
+        return
+      end
+      loadMap(corruptPath)
+      local rise = memoryKiB() - peakBefore
+      assert.is_true(rise < allowedRise, "loading asked for " .. rise .. " KiB more")
+    end
+
+    local function assertCorruptCopyLoadsQuickly()
+      local started = os.clock()
+      loadMap(corruptPath)
+      local took = os.clock() - started
+      assert.is_true(took < 5, "loading took " .. took .. " seconds of CPU")
+    end
+
+    local function oneRoomMap(z)
+      deleteMap()
+      local area = addAreaName("MapperSpecCorruptLengthArea")
+      local room = createRoomID()
+      addRoom(room)
+      setRoomArea(room, area)
+      setRoomCoordinates(room, 3, 5, z)
+      return room, area
+    end
+
+    local function roomWithExitNorth()
+      local room, area = oneRoomMap(0)
+      local exitRoom = createRoomID()
+      addRoom(exitRoom)
+      setRoomArea(exitRoom, area)
+      setRoomCoordinates(exitRoom, 3, 6, 0)
+      setExit(room, exitRoom, "n")
+      return room
+    end
+
+    after_each(function()
+      os.remove(corruptPath)
+    end)
+
+    it("does not reserve memory for an area's z level list on a length alone", function()
+      oneRoomMap(7777)
+      -- the level list, then the area exits, of which there are none: the
+      -- per-level extents that come later carry the level too, but no zero
+      local marker = int32(1) .. int32(7777) .. int32(0)
+      -- 0x1b000001 levels of four bytes each
+      assertCorruptLengthIsNotReserved(marker, 0x1b, 1.6 * gibibyteKiB)
+    end)
+
+    -- the length, then the codes for out, in and down
+    local threeDirections = int32(3) .. int32(12) .. int32(11) .. int32(10)
+
+    it("does not reserve memory for a room's exit lock list on a length alone", function()
+      local room = oneRoomMap(0)
+      lockExit(room, "out", true)
+      lockExit(room, "in", true)
+      lockExit(room, "down", true)
+      assertCorruptLengthIsNotReserved(threeDirections, 0x1b, 1.6 * gibibyteKiB)
+    end)
+
+    it("does not reserve memory for a room's exit stub list on a length alone", function()
+      local room = oneRoomMap(0)
+      setExitStub(room, "out", true)
+      setExitStub(room, "in", true)
+      setExitStub(room, "down", true)
+      assertCorruptLengthIsNotReserved(threeDirections, 0x1b, 1.6 * gibibyteKiB)
+    end)
+
+    -- before format 18 an area's rooms were a list, which reserves, not a set
+    it("does not reserve memory for an older format's area room list on a length alone", function()
+      local room = oneRoomMap(7777)
+      assertCorruptLengthIsNotReserved(int32(1) .. int32(room) .. int32(1) .. int32(7777), 0x1b, 1.6 * gibibyteKiB, 17)
+    end)
+
+    -- the points of a custom line are a list inside a map, which QDataStream
+    -- reads without giving the caller a look at the inner length
+    it("does not reserve memory for a custom line's points on a length alone", function()
+      local room = roomWithExitNorth()
+      assert.is_true(addCustomLine(room, {{4321.25, 7, 0}}, "n", "solid line", {255, 0, 0}, false))
+      -- one point, whose x is the double 4321.25; 0x07000001 points of sixteen bytes each
+      assertCorruptLengthIsNotReserved(int32(1) .. "\64\176\225\64\0\0\0\0", 0x07, 1.6 * gibibyteKiB)
+    end)
+
+    it("does not reserve memory for a custom line's points in an older format", function()
+      local room = roomWithExitNorth()
+      assert.is_true(addCustomLine(room, {{4321.25, 7, 0}}, "n", "solid line", {255, 0, 0}, false))
+      assertCorruptLengthIsNotReserved(int32(1) .. "\64\176\225\64\0\0\0\0", 0x07, 1.6 * gibibyteKiB, 19)
+    end)
+
+    it("does not reserve memory for a custom line's colour in an older format on a length alone", function()
+      local room = roomWithExitNorth()
+      assert.is_true(addCustomLine(room, {{0, 7, 0}}, "n", "solid line", {201, 202, 203}, false))
+      -- before format 20 a line's colour was a list of its three components
+      assertCorruptLengthIsNotReserved(int32(3) .. int32(201) .. int32(202) .. int32(203), 0x1b, 1.6 * gibibyteKiB, 19)
+    end)
+
+    -- Without a status check the area count alone drives the loop, which
+    -- keeps making areas after the file has run out: 16 million of them took
+    -- longer than ten minutes
+    it("stops reading areas once the file has run out", function()
+      oneRoomMap(0)
+      -- the count of two areas, the default area's id and its empty room list
+      writeCorruptCopy(int32(2) .. "\255\255\255\255" .. int32(0), 0x01)
+      assertCorruptCopyLoadsQuickly()
+    end)
+  end)
+
   describe("Tests loadMap importing an XML map", function()
     -- the fixture's own IDs, so that a load which quietly did nothing cannot
     -- be mistaken for a successful import
@@ -3797,6 +4094,30 @@ describe("Tests saveMap and loadMap", function()
     -- mCustomEnvColors, a different map, so there is nothing to read this back
     -- with from Lua
     pending("the environment colours an XML map declares have no Lua getter")
+
+    it("keeps the entrances of a room whose ID a later room in the file reuses", function()
+      local duplicatePath = getMudletHomeDir() .. "/mapper_spec_duplicate.xml"
+      finally(function() os.remove(duplicatePath) end)
+      local file = assert(io.open(duplicatePath, "w"))
+      file:write([[<?xml version="1.0" encoding="UTF-8"?>
+<map>
+  <areas><area id="4001" name="Mapper Spec Duplicate Area"/></areas>
+  <rooms>
+    <room id="4001" area="4001"><coord x="0" y="0" z="0"/><exit direction="north" target="4002"/></room>
+    <room id="4002" area="4001"><coord x="0" y="1" z="0"/></room>
+    <room id="4003" area="4001"><coord x="1" y="0" z="0"/></room>
+    <room id="4001" area="4001"><coord x="0" y="0" z="0"/><exit special="1" command="jump" target="4003"/></room>
+  </rooms>
+</map>
+]])
+      file:close()
+
+      -- the second 4001 is refused, but reading its special exit must not
+      -- have dropped the entrance the first one recorded
+      assert.is_true(loadMap(duplicatePath))
+      assert.are.equal(4002, getRoomExits(4001)["north"])
+      assert.are.same({4001}, getAllRoomEntrances(4002))
+    end)
 
     it("throws away the map that was there before the import", function()
       local stray = createRoomID()
@@ -4422,6 +4743,29 @@ describe("Tests saveJsonMap and loadJsonMap", function()
       assert.are.same({climate = "temperate", ruler = "nobody"}, getAllAreaUserData(area))
     end)
 
+    it("leaves out the label keys a binary save keeps as area user data", function()
+      deleteMap()
+      local area = addAreaName("MapperSpecJsonLabelKeysArea")
+      roomA = createRoomID(); addRoom(roomA); setRoomArea(roomA, area)
+      assert.is_true(setAreaUserData(area, "climate", "temperate"))
+      -- what a JSON file exported from a map those keys had got into holds
+      assert.is_true(setAreaUserData(area, "system.labelFont_99", "Sans|10|50|0"))
+      assert.is_true(setAreaUserData(area, "system.labelOutlineColor_99", "1|2|3|255"))
+      assert.is_true(setAreaUserData(area, "system.fallback_map2DZoom", "20"))
+      -- a label read from a file can have a negative id
+      assert.is_true(setAreaUserData(area, "system.labelOutlineColor_-1", "4|5|6|255"))
+      -- not the label ids a save writes, so a script's own keys
+      assert.is_true(setAreaUserData(area, "system.labelFont_default", "kept"))
+      assert.is_true(setAreaUserData(area, "system.labelFont_007", "kept"))
+      assert.is_true(setAreaUserData(area, "system.labelOutlineColor_+5", "kept"))
+
+      roundTrip()
+
+      assert.are.same({climate = "temperate", ["system.labelFont_default"] = "kept", ["system.labelFont_007"] = "kept",
+                       ["system.labelOutlineColor_+5"] = "kept"},
+                      getAllAreaUserData(area))
+    end)
+
     -- TMap::readJsonColor returns QColor(red, green, blue) for a colour array of
     -- either three or four values, so the alpha the exporter wrote as
     -- "color32RGBA" never reaches the QColor and comes back as 255. Every colour
@@ -4870,6 +5214,24 @@ describe("Tests the profile colour set behind setCustomEnvColor", function()
       assert.are.same({id - 257, 100 + (id - 257), 200, 254}, after[id],
                       ("environment colour %d did not come back from the profile"):format(id))
     end
+  end)
+end)
+
+describe("Tests the app-wide mapper options in getConfig and setConfig", function()
+  setup(function()
+    openMapWidget()
+  end)
+
+  -- setConfig takes map options only while a mapper exists, so the generic
+  -- round-trip in Other_spec never reaches this one
+  it("round-trips showUpperLowerLevels", function()
+    local original = getConfig("showUpperLowerLevels")
+    finally(function() setConfig("showUpperLowerLevels", original) end)
+
+    assert.is_true(setConfig("showUpperLowerLevels", not original))
+    assert.are.equal(not original, getConfig("showUpperLowerLevels"))
+    assert.is_true(setConfig("showUpperLowerLevels", original))
+    assert.are.equal(original, getConfig("showUpperLowerLevels"))
   end)
 end)
 

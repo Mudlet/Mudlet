@@ -55,6 +55,8 @@
 #define DIR_OTHER 13
 
 class dlgMapper;
+class TMapViewFrontend;
+class TMapViewsFrontend;
 class Host;
 #if defined(INCLUDE_3DMAPPER)
 class QOpenGLWidget;
@@ -166,6 +168,7 @@ public:
     bool gotoRoom(int);
     bool gotoRoom(int, int);
     bool serialize(QDataStream&, int saveVersion = 0);
+    static bool listLengthFits(QDataStream&, qint64 minBytesPerElement);
     bool restore(QString location);
     bool retrieveMapFileStats(QString, QString*, int*, int*, qsizetype*, qsizetype*);
     void initGraph();
@@ -318,7 +321,10 @@ public:
     QString mProfileName;
 
     TMapViewManager* getViewManager() { return mpViewManager; }
-    void setViewManager(TMapViewManager* pViewManager) { mpViewManager = pViewManager; }
+    // Defined in TMapViewManager.cpp, which can see that TMapViewManager is a TMapViewsFrontend.
+    void setViewManager(TMapViewManager* pViewManager);
+    // mpViewManager as core code drives it.
+    TMapViewsFrontend* mapViewsFrontend() const { return mpViewsFrontend; }
 
     // Was a single int mRoomId but that breaks things when maps are
     // copied/shared between profiles - so now we track the profile name
@@ -360,8 +366,12 @@ public:
 #if defined(INCLUDE_3DMAPPER)
     QPointer<QOpenGLWidget> mpM;
 #endif
-    QPointer<dlgMapper> mpMapper;
-    QMap<int, int> roomidToIndex;
+    // Defined in dlgMapper.cpp: both need dlgMapper complete, setMapper() to see it is a TMapViewFrontend.
+    dlgMapper* mapper() const;
+    void setMapper(dlgMapper* pMapper);
+    // mapper() as core code drives it; null when that is.
+    TMapViewFrontend* mapViewFrontend() const { return mpMapper.isNull() ? nullptr : mpMapViewFrontend; }
+    QHash<int, int> roomidToIndex;
 
     // User-registered mapper context menu entries (addMapEvent()/addMapMenu());
     // session-only state, never saved with the map.
@@ -473,6 +483,12 @@ public slots:
 private:
     void resetSearchState(const std::size_t roomCount);
 
+    // The same object as mpViewManager, set with it by setViewManager().
+    TMapViewsFrontend* mpViewsFrontend = nullptr;
+    QPointer<dlgMapper> mpMapper;
+    // The same object as mpMapper, set with it by setMapper(); read only while mpMapper is set.
+    TMapViewFrontend* mpMapViewFrontend = nullptr;
+
     // A* leaving the route in mSearchPredecessor; see the definition for why not boost::astar_search().
     bool searchGraph(const vertex start, const vertex goal);
 
@@ -513,7 +529,7 @@ private:
     int mScriptCallbackDepth = 0;
     bool mGraphBuildInProgress = false;
 
-    void addDirectionalRoute(QHash<unsigned int, route>& bestRoutes,
+    void addDirectionalRoute(std::vector<std::pair<unsigned int, route>>& bestRoutes,
                              const QMap<QString, int>& exitWeights,
                              unsigned int source,
                              TRoom* pSourceR,

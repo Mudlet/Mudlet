@@ -355,8 +355,8 @@ public slots:
                                 QColor newBorderColor,
                                 bool changeBorderThickness,
                                 int newBorderThickness,
-                                QSet<TRoom*> rooms);
-    void slot_previewBorderProperties(QSet<TRoom*> rooms);
+                                QSet<int> roomIds);
+    void slot_previewBorderProperties(QSet<int> roomIds);
     void slot_setImage();
     void slot_movePosition();
     void slot_moveRoom();

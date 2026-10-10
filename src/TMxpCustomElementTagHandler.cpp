@@ -196,9 +196,9 @@ const QMap<QString, QString>& TMxpCustomElementTagHandler::parseFlagAttributes(c
     return values;
 }
 
-void TMxpCustomElementTagHandler::handleContent(char ch)
+void TMxpCustomElementTagHandler::handleContentBytes(QByteArrayView bytes)
 {
     if (!mCurrentFlagName.isEmpty()) {
-        mCurrentFlagContent.append(ch);
+        mCurrentFlagContent.append(QLatin1StringView(bytes));
     }
 }

@@ -211,6 +211,7 @@ private:
     QTreeWidgetItem* mpEditItem = nullptr;
     TRoom* pR = nullptr;
     int mRoomID = 0;
+    quint64 mRoomSerial = 0;
     int mAreaID = 0;
     int mEditColumn = -1;
 

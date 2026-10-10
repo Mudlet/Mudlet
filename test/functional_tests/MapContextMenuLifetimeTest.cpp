@@ -49,6 +49,7 @@
 #include "ProfileTestHelper.h"
 #include "T2DMap.h"
 #include "TArea.h"
+#include "TLuaInterpreter.h"
 #include "TMap.h"
 #include "TRoom.h"
 #include "TRoomDB.h"
@@ -100,6 +101,8 @@ private:
 
     TMap* map() const { return mpHost->mpMap.data(); }
 
+    bool lua(const QString& code) const { return mpHost->getLuaInterpreter()->compileAndExecuteScript(code); }
+
     TArea* area() const { return map()->mpRoomDB->getArea(mAreaId); }
 
     bool addRoomAt(const int id, const int x, const int y) const { return map()->addRoom(id) && map()->setRoomArea(id, mAreaId) && map()->setRoomCoordinates(id, x, y, 0); }
@@ -132,11 +135,11 @@ private:
         // refuses to select a custom line.
         mpHost->mMapViewOnly = false;
         mpHost->mRoomSize = kRoomSize;
-        if (!map()->mpMapper) {
+        if (!map()->mapper()) {
             mpHost->showHideOrCreateMapper(false);
         }
-        QVERIFY(map()->mpMapper);
-        mp2dMap = map()->mpMapper->mp2dMap;
+        QVERIFY(map()->mapper());
+        mp2dMap = map()->mapper()->mp2dMap;
         QVERIFY(mp2dMap);
         mp2dMap->init();
         mp2dMap->resize(kWidgetWidth, kWidgetHeight);
@@ -474,6 +477,49 @@ private slots:
         QVERIFY2(menu.isNull(), "the menu did not delete itself on closing");
         QVERIFY2(item.isNull(), "the menu's item outlived the menu");
         QCOMPARE(actionsUnderTheMap(), before);
+    }
+
+    // The menu is not modal, so a timer or trigger can remove a map event
+    // while its item is still on screen to be picked
+    void test_pickingAnItemWhoseMapEventWasRemovedDoesNothing()
+    {
+        buildMap();
+        showMapper();
+        QVERIFY(lua(qsl("addMapEvent('specRemovedEvent', 'specRemovedEventRaised'); specRemovedEventSeen = 0; "
+                        "specRemovedEventHandler = registerAnonymousEventHandler('specRemovedEventRaised', function() specRemovedEventSeen = specRemovedEventSeen + 1 end)")));
+
+        rightClickAt(pointUnitsFromCentre(1, 0));
+        QPointer<QMenu> menu = mp2dMap->mActiveContextMenu;
+        QVERIFY2(menu, "the right click on a room put up no menu");
+        QAction* item = menuItem(menu, qsl("specRemovedEvent"));
+        QVERIFY2(item, "the menu has no item for the map event");
+        item->trigger();
+        QVERIFY2(lua(qsl("assert(specRemovedEventSeen == 1)")), "the item did not raise its event while the map event was there");
+
+        QVERIFY(lua(qsl("removeMapEvent('specRemovedEvent')")));
+        item->trigger();
+        QVERIFY2(lua(qsl("assert(specRemovedEventSeen == 1)")), "the item raised an event for a map event that was removed");
+        QVERIFY(lua(qsl("killAnonymousEventHandler(specRemovedEventHandler)")));
+    }
+
+    // Lua cannot pick a menu item, so this cannot be a busted spec. Without the
+    // fix only a sanitizer build sees the freed room being read.
+    void test_setPlayerLocationSurvivesAHandlerThatDeletesTheRoom()
+    {
+        buildMap();
+        showMapper();
+        QVERIFY(mpHost->getLuaInterpreter()->compileAndExecuteScript(
+                qsl("setLocationHandler = registerAnonymousEventHandler('sysManualLocationSetEvent', function(_, roomId) deleteRoom(roomId) end)")));
+
+        rightClickAt(pointUnitsFromCentre(1, 0));
+        QPointer<QMenu> menu = mp2dMap->mActiveContextMenu;
+        QVERIFY2(menu, "the right click on a room put up no menu");
+        QAction* item = menuItem(menu, qsl("Set player location"));
+        QVERIFY2(item, "the room menu has no set player location item");
+        item->trigger();
+
+        QVERIFY(mpHost->getLuaInterpreter()->compileAndExecuteScript(qsl("killAnonymousEventHandler(setLocationHandler)")));
+        QVERIFY2(!map()->mpRoomDB->getRoom(kEastRoomId), "the handler did not delete the room, so nothing was freed under the item");
     }
 
     // The line's second point, picked and right-clicked

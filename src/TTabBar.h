@@ -158,6 +158,8 @@ public:
     int tabIndex(const QString& tabName) const;
     void removeTab(const QString& tabName);
     void removeTab(int);
+    void markActivity(const QString& tabName, bool isLowerPriorityChange);
+    void clearActivity(int index);
     QStringList tabNames() const;
     void refreshAfterApplicationStyleChange();
 
@@ -166,6 +168,8 @@ signals:
     void tabReattachRequested(const QString& tabName, int index);
 
 private:
+    void relayoutTab(int index);
+
     // This instance of TStyle needs a pointer to a QTabBar on instantiation:
     TStyle mStyle;
 

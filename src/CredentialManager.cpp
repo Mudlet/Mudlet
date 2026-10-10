@@ -20,8 +20,8 @@
 
 #include "CredentialManager.h"
 #include "MudletApp.h"
-#include "mudlet.h"
 #include "SecureStringUtils.h"
+#include "TAppFrontend.h"
 #include "utils.h"
 
 #include <QCoreApplication>
@@ -49,9 +49,6 @@
 #else
 #include <qt6keychain/keychain.h>
 #endif
-
-// Forward declaration to avoid including mudlet.h
-class mudlet;
 
 namespace {
 // Whether a delete job's result means the credential is not left behind. EntryNotFound (nothing
@@ -324,7 +321,7 @@ bool CredentialManager::isOperationValid() const
     }
     // No instance in a unit test, and nothing to read the preference from - the caller's own default
     // stands, which keeps this the keychain as it was
-    if (!mudlet::self()) {
+    if (!TAppFrontend::instance()) {
         return std::nullopt;
     }
     return !MudletApp::storingPasswordsSecurely();
@@ -585,8 +582,21 @@ void CredentialManager::retrievePassword(
             qWarning().noquote().nospace() << "CredentialManager: gave up looking up the saved password for profile \"" << lookup->profileName << "\", key \"" << lookup->key << "\" after "
                                            << mOperationTimeoutMs << "ms, waiting on the read of the " << lookup->stages[lookup->currentStage].description
                                            << " (or on another keychain job ahead of it in the queue)";
-            // Before finishLookup() lets go of the read that is still out
+            // Before finishLookup() lets go of the read that is still out, even when the file answers:
+            // a keychain write leaves an older copy in the file, which the keychain's answer replaces
             awaitLateAnswer(lookup);
+            // The file needs nothing from the keychain, so a read stalled ahead of it is no reason
+            // to leave it unread - and the next lookup would stall at the same read
+            for (std::size_t index = lookup->currentStage + 1; index < lookup->stages.size(); ++index) {
+                if (!lookup->stages[index].fromFile) {
+                    continue;
+                }
+                if (QString password = retrieveCredentialFromFile(lookup->profileName, lookup->key); !password.isEmpty()) {
+                    finishLookup(lookup, true, std::move(password), QString());
+                    return;
+                }
+                break;
+            }
             finishLookup(lookup, false, QString(), qsl("Operation timed out"), true);
         });
         deadline->start(mOperationTimeoutMs);

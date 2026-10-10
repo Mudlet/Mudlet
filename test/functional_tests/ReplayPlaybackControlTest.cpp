@@ -50,6 +50,7 @@
 #include <QElapsedTimer>
 #include <QFile>
 #include <QLabel>
+#include <QScopeGuard>
 #include <QTemporaryDir>
 #include <QToolBar>
 #include <QtTest/QtTest>
@@ -143,7 +144,7 @@ private:
     QStringList linesContaining(const QString& text, const Host* pHost = nullptr) const
     {
         QStringList lines;
-        TMainConsole* console = (pHost ? pHost : mpHost)->mpConsole;
+        TMainConsole* console = (pHost ? pHost : mpHost)->mainConsoleView();
         for (int i = 0; i <= console->buffer.getLastLineNumber(); ++i) {
             if (console->buffer.line(i).contains(text)) {
                 lines << console->buffer.line(i);
@@ -230,8 +231,8 @@ private slots:
     void init()
     {
         QVERIFY(mpHost);
-        QVERIFY(mpHost->mpConsole);
-        mpHost->mpConsole->buffer.clear();
+        QVERIFY(mpHost->mainConsoleView());
+        mpHost->mainConsoleView()->buffer.clear();
         // The replay file and the toolbar are one per application, so a test
         // that left one running would decide the next one's result.
         QVERIFY(!mpHost->mTelnet.isReplaying());
@@ -311,6 +312,62 @@ private slots:
         // it and play it again.
         QCOMPARE(linesContaining(qsl("REPLAY_TWO")).size(), 1);
         QTRY_VERIFY(bufferContains(qsl("REPLAY_THREE")));
+    }
+
+    // The readout gains "(paused)" while held, and a button that moved along
+    // for it would leave a second click meant for Resume on the label
+    void pausingLeavesTheButtonsWhereTheyAre()
+    {
+        const QString file = writeThreeChunkReplay(qsl("buttonsstay.dat"));
+        QVERIFY(!file.isEmpty());
+        QVERIFY(MudletReplay::self()->load(mpHost, file));
+
+        QAction* pause = replayAction(qsl("replay_pause_action"));
+        QToolBar* toolBar = replayToolBar();
+        QVERIFY(pause && toolBar);
+        QWidget* pauseButton = toolBar->widgetForAction(pause);
+        QWidget* stopButton = toolBar->widgetForAction(replayAction(qsl("replay_stop_action")));
+        QVERIFY(pauseButton && stopButton);
+        QTRY_VERIFY(pauseButton->isVisible() && pauseButton->x() > 0);
+        const int pauseBefore = pauseButton->x();
+        const int stopBefore = stopButton->x();
+
+        pause->trigger();
+        QVERIFY(replayTimeLabel() && replayTimeLabel()->text().contains(qsl("(paused)")));
+        QCoreApplication::sendPostedEvents(nullptr, QEvent::LayoutRequest);
+        QCoreApplication::processEvents();
+
+        QCOMPARE(pauseButton->x(), pauseBefore);
+        QCOMPARE(stopButton->x(), stopBefore);
+    }
+
+    // Icon-only buttons all measure the same, so a replay started like that and
+    // then given text labels must widen Pause for its longer Resume text too
+    void pausingAfterAnIconSizeChangeLeavesTheButtonsWhereTheyAre()
+    {
+        const auto restoreIconSize = qScopeGuard([originalIconSize = mudlet::self()->mToolbarIconSize]() {
+            mudlet::self()->setToolBarIconSize(originalIconSize);
+        });
+        mudlet::self()->setToolBarIconSize(1);
+        const QString file = writeThreeChunkReplay(qsl("iconsize.dat"));
+        QVERIFY(!file.isEmpty());
+        QVERIFY(MudletReplay::self()->load(mpHost, file));
+        mudlet::self()->setToolBarIconSize(4);
+
+        QAction* pause = replayAction(qsl("replay_pause_action"));
+        QToolBar* toolBar = replayToolBar();
+        QVERIFY(pause && toolBar);
+        QWidget* pauseButton = toolBar->widgetForAction(pause);
+        QWidget* stopButton = toolBar->widgetForAction(replayAction(qsl("replay_stop_action")));
+        QVERIFY(pauseButton && stopButton);
+        QCoreApplication::sendPostedEvents(nullptr, QEvent::LayoutRequest);
+        QTRY_VERIFY(pauseButton->isVisible() && pauseButton->x() > 0);
+        const int stopBefore = stopButton->x();
+
+        pause->trigger();
+        QCoreApplication::sendPostedEvents(nullptr, QEvent::LayoutRequest);
+        QCoreApplication::processEvents();
+        QCOMPARE(stopButton->x(), stopBefore);
     }
 
     // Resuming waits out what was left of the interrupted gap, not the whole of
@@ -408,7 +465,7 @@ private slots:
         QVERIFY(!mpHost->mTelnet.replayPaused());
         QTRY_VERIFY(!replayAction(qsl("replay_pause_action")));
 
-        mpHost->mpConsole->buffer.clear();
+        mpHost->mainConsoleView()->buffer.clear();
         const QString second = writeReplay(qsl("second.dat"), {{20, QByteArrayLiteral("REPLAY_AGAIN\r\n")}});
         QVERIFY(!second.isEmpty());
         QVERIFY(MudletReplay::self()->load(mpHost, second));

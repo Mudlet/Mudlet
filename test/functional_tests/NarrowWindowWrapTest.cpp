@@ -162,10 +162,12 @@ private slots:
         startProfile();
         auto* console = createTestMiniConsole();
         QVERIFY(console);
-        runLua(qsl("setWindowWrap('%1', 5)").arg(mMiniConsole));
+        // wrapLine() holds an indent to half the width, which leaves this pair
+        // as the one that still has less room than a wide glyph needs
+        runLua(qsl("setWindowWrap('%1', 2)").arg(mMiniConsole));
         // both, so that whichever of the two a line uses leaves a single column
-        runLua(qsl("setWindowWrapIndent('%1', 4)").arg(mMiniConsole));
-        runLua(qsl("setWindowWrapHangingIndent('%1', 4)").arg(mMiniConsole));
+        runLua(qsl("setWindowWrapIndent('%1', 1)").arg(mMiniConsole));
+        runLua(qsl("setWindowWrapHangingIndent('%1', 1)").arg(mMiniConsole));
 
         runWithWatchdog("echo of a wide glyph with the indent using up the wrap width", [this]() {
             runLua(qsl("echo('%1', '%2\\n')").arg(mMiniConsole, mWideText));
@@ -216,11 +218,11 @@ private slots:
         // append path the cursor at the end of the buffer would take
         const int welcomeLine = mainConsoleLineOf(qsl("HELLO"));
         QVERIFY2(welcomeLine >= 0, "the welcome line went missing from the buffer");
-        QVERIFY2(host->mpConsole->moveCursor(2, welcomeLine), "could not position the user cursor mid-line");
+        QVERIFY2(host->mainConsoleView()->moveCursor(2, welcomeLine), "could not position the user cursor mid-line");
 
         runWithWatchdog("insertText of a wide glyph with the indent using up the screen width", [this, host]() {
             // the newline is what makes the insert re-wrap the line it landed in
-            host->mpConsole->insertText(mWideText + QChar::LineFeed + mWideText);
+            host->mainConsoleView()->insertText(mWideText + QChar::LineFeed + mWideText);
         });
 
         QVERIFY2(mainConsoleContains(mWideText), "the inserted text did not survive wrapping");
@@ -278,7 +280,7 @@ private slots:
         });
 
         QCOMPARE(host->mWrapAt, 80);
-        QCOMPARE(host->mpConsole->getWrapAt(), 80);
+        QCOMPARE(host->mainConsoleView()->getWrapAt(), 80);
     }
 
     void cleanup()
@@ -326,7 +328,7 @@ private:
     TConsole* createTestMiniConsole()
     {
         runLua(qsl("createMiniConsole('%1', 0, 0, 300, 300)").arg(mMiniConsole));
-        return mudlet::self()->getActiveHost()->mpConsole->subConsoleWidget(mMiniConsole);
+        return mudlet::self()->getActiveHost()->mainConsoleView()->subConsoleWidget(mMiniConsole);
     }
 
     void startProfile()
@@ -373,7 +375,7 @@ private:
 
     static int mainConsoleLineOf(const QString& text)
     {
-        auto console = mudlet::self()->getActiveHost()->mpConsole;
+        QPointer<TMainConsole> console = mudlet::self()->getActiveHost()->mainConsoleView();
         for (int i = 0, total = console->buffer.getLastLineNumber(); i <= total; ++i) {
             if (console->buffer.line(i).contains(text)) {
                 return i;

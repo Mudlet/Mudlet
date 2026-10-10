@@ -143,6 +143,7 @@ public:
     void setMultiCaptureGroups(std::list<std::list<std::string>>&& captureList, std::list<std::list<int>>&& posList, QVector<NameGroupMatches>&& nameMatches);
     void takeBackMultiCaptureGroups(std::list<std::list<std::string>>& captureList, std::list<std::list<int>>& posList);
     void adjustCaptureGroups(int x, int a);
+    void adjustCaptureGroupsForReplace(int x, int replacedLength, const QString& replacement);
     void clearCaptureGroups();
     bool buildingCaptureTables();
     int pushNestedDispatchState();
@@ -1097,9 +1098,10 @@ private:
     };
     std::vector<NestedDispatchState> mNestedDispatchStates;
     void releaseNestedDispatchState(NestedDispatchState&);
-    // Registry references to the compiled "return <name>" chunk that
-    // callEventHandler() runs to find each handler, by handler name. They
-    // belong to pGlobalLua, so are dropped whenever it is replaced.
+    // Registry references to how callEventHandler() finds each handler, by
+    // handler name: the name itself, read raw from the globals, or else the
+    // compiled "return <name>" chunk. They belong to pGlobalLua, so are
+    // dropped whenever it is replaced.
     QHash<QString, int> mEventHandlerLookupRefs;
     QMap<QNetworkReply*, QString> downloadMap;
 
