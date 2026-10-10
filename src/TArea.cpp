@@ -35,6 +35,7 @@
 #include <QJsonArray>
 #include <QJsonObject>
 #include <QJsonValue>
+#include <vector>
 
 // Previous direction #defines here did not match the DIR_ defines in TRoom.h,
 // but as they are stored in the map file they ought not to be redefined without
@@ -76,31 +77,6 @@ int TArea::getAreaID()
     return -1;
 }
 
-QMap<int, QMap<int, QMultiMap<int, int>>> TArea::koordinatenSystem()
-{
-    QMap<int, QMap<int, QMultiMap<int, int>>> kS;
-    for (const auto id : std::as_const(rooms)) {
-        const auto room = mpRoomDB->getRoom(id);
-        if (!room) {
-            continue;
-        }
-
-        const int x = room->x();
-        const int y = room->y();
-        const int z = room->z();
-        if (!kS.contains(z)) {
-            const QMap<int, QMultiMap<int, int>> yMap;
-            kS[z] = yMap;
-        }
-        if (!kS.value(z).contains(y)) {
-            const QMultiMap<int, int> xMap;
-            kS[z][y] = xMap;
-        }
-        kS[z][y].insert(x, id);
-    }
-    return kS;
-}
-
 QList<int> TArea::getRoomsByPosition(int x, int y, int z)
 {
     // The grid index already files this area's rooms by cell, so this reads one
@@ -125,30 +101,23 @@ QList<int> TArea::getRoomsByPosition(int x, int y, int z)
 
 QList<std::tuple<int, int, int>> TArea::getCollisionNodes()
 {
-    // Coordinates (x,y,z) where there are multiple rooms
+    std::vector<std::tuple<int, int, int>> locations;
+    locations.reserve(rooms.size());
+    for (const auto id : std::as_const(rooms)) {
+        if (const auto room = mpRoomDB->getRoom(id)) {
+            locations.emplace_back(room->z(), room->y(), room->x());
+        }
+    }
+    std::sort(locations.begin(), locations.end());
+
     QList<std::tuple<int, int, int>> problems;
-    const auto& zyx_map = koordinatenSystem();
-    QMapIterator<int, QMap<int, QMultiMap<int, int>>> itZ(zyx_map);
-    while (itZ.hasNext()) {
-        itZ.next();
-        const auto& yx_map = itZ.value();
-        QMapIterator<int, QMultiMap<int, int>> itY(yx_map);
-        while (itY.hasNext()) {
-            itY.next();
-            const QMultiMap<int, int>& x_map = itY.value();
-            const auto x_keysList = x_map.keys();
-            QSet<int> x_keys(x_keysList.constBegin(), x_keysList.constEnd());
-            QSetIterator<int> itX(x_keys);
-            while (itX.hasNext()) {
-                const auto x = itX.next();
-                const auto roomsHere = x_map.values(x);
-                if (roomsHere.count() > 1) {
-                    const auto y = itY.key();
-                    const auto z = itZ.key();
-                    const auto location = std::make_tuple(x, y, z);
-                    problems << location;
-                }
-            }
+    for (std::size_t i = 1; i < locations.size(); ++i) {
+        if (locations[i] != locations[i - 1]) {
+            continue;
+        }
+        const auto& [z, y, x] = locations[i];
+        if (problems.isEmpty() || problems.constLast() != std::make_tuple(x, y, z)) {
+            problems << std::make_tuple(x, y, z);
         }
     }
     return problems;

@@ -3454,6 +3454,43 @@ describe("Tests deleteMap", function()
   end)
 end)
 
+-- What these specs create goes in an area of their own, which after_each deletes.
+describe("Tests getCollisionLocationsInArea on a scratch area", function()
+  local areaName = "MapperSpecCollisions"
+  local area
+
+  local function room(x, y, z)
+    local id = createRoomID()
+    addRoom(id)
+    setRoomArea(id, area)
+    setRoomCoordinates(id, x, y, z or 0)
+    return id
+  end
+
+  setup(function()
+    assert.is_true(openMapWidget())
+  end)
+
+  before_each(function()
+    area = addAreaName(areaName)
+  end)
+
+  after_each(function()
+    deleteArea(areaName)
+  end)
+
+  it("getCollisionLocationsInArea lists each shared location once, ordered by z, y and x", function()
+    room(5, 1, 0); room(5, 1, 0); room(5, 1, 0)
+    room(-2, 1, 0); room(-2, 1, 0)
+    room(0, 0, 3); room(0, 0, 3)
+    room(1, 1, 0)
+    room(5, 2, 0)
+    -- y comes before -2,1 and 5,1 but x comes after, so sorting by x before y would fail
+    room(9, 0, 0); room(9, 0, 0)
+    assert.are.same({{9, 0, 0}, {-2, 1, 0}, {5, 1, 0}, {0, 0, 3}}, getCollisionLocationsInArea(area))
+  end)
+end)
+
 -- saveMap/loadMap replace the whole map, so this block runs last, after
 -- deleteMap has already emptied it, and puts back whatever it found: the map is
 -- shared with everything that runs after this file.
