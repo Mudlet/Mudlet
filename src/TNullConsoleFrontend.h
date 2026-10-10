@@ -32,6 +32,7 @@
 
 #include <map>
 #include <memory>
+#include <vector>
 
 class Host;
 struct TLabelModel;
@@ -63,9 +64,12 @@ public:
     explicit TNullConsoleFrontend(Host* pHost);
     ~TNullConsoleFrontend();
 
-    // Host calls this while its Lua interpreter is still alive, as a label's model frees its callbacks'
-    // Lua references when it goes and Host destroys the interpreter before this.
     void dropWindows();
+    // A deleted window's model can still be in use, as a sysBufferShrinkEvent handler runs inside its
+    // buffer's append(), so models are kept until deferred deletes next run, as a real view's widgets are
+    // by deleteLater(). Host calls this itself as it goes, while its Lua interpreter is still alive, since
+    // a label's model frees its callbacks' Lua references when it goes.
+    void releaseRetired();
 
     void createLabel(const QString& windowname, const QString& name, int x, int y, int width, int height, bool fillBackground, bool clickThrough) override;
     void deleteLabel(const QString& name) override;
@@ -249,12 +253,16 @@ private:
     TConsoleModel& addSubConsole(const QString& name, TWindowRegistry::SubConsoleKind kind, const QString& windowname);
     void removeSubConsole(const QString& name);
     void removeLabel(const QString& name);
+    void queueRelease();
     QString userWindowOrMain(const QString& windowname) const;
 
     Host* mpHost = nullptr;
     TNullMxpFrameFrontend mMxpFrames;
     std::map<QString, SubConsole> mSubConsoles;
     std::map<QString, Label> mLabels;
+    std::vector<std::unique_ptr<TConsoleModel>> mRetiredConsoles;
+    std::vector<std::unique_ptr<TLabelModel>> mRetiredLabels;
+    bool mReleaseQueued = false;
 };
 
 #endif // MUDLET_TNULLCONSOLEFRONTEND_H

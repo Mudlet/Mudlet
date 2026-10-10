@@ -512,6 +512,7 @@ Host::~Host()
 
     consoleFrontend()->deleteActionToolBars();
     mpNullConsoleFrontend->dropWindows();
+    mpNullConsoleFrontend->releaseRetired();
 
     mStopWatchMap.clear();
 

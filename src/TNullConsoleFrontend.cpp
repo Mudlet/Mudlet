@@ -22,6 +22,7 @@
 #include "Host.h"
 #include "TLabelModel.h"
 
+#include <QObject>
 #include <QStringList>
 
 TNullConsoleFrontend::TNullConsoleFrontend(Host* pHost)
@@ -67,7 +68,30 @@ void TNullConsoleFrontend::removeLabel(const QString& name)
         return;
     }
     mpHost->windowRegistry().deregisterLabel(name, it->second.pModel.get());
+    mRetiredLabels.push_back(std::move(it->second.pModel));
     mLabels.erase(it);
+    queueRelease();
+}
+
+void TNullConsoleFrontend::queueRelease()
+{
+    if (mReleaseQueued) {
+        return;
+    }
+    mReleaseQueued = true;
+    // Host's reset drains deferred deletes before it swaps the Lua state, which a timer would miss
+    auto pRelease = new QObject();
+    QObject::connect(pRelease, &QObject::destroyed, mpHost, [this]() {
+        releaseRetired();
+    });
+    pRelease->deleteLater();
+}
+
+void TNullConsoleFrontend::releaseRetired()
+{
+    mReleaseQueued = false;
+    mRetiredConsoles.clear();
+    mRetiredLabels.clear();
 }
 
 bool TNullConsoleFrontend::setLabelText(const QString& name, const QString& text)
@@ -122,7 +146,9 @@ void TNullConsoleFrontend::removeSubConsole(const QString& name)
         registry.deregisterDockWidget(name);
     }
     registry.deregisterSubConsole(name, it->second.pModel.get());
+    mRetiredConsoles.push_back(std::move(it->second.pModel));
     mSubConsoles.erase(it);
+    queueRelease();
 }
 
 void TNullConsoleFrontend::createBuffer(const QString& name)

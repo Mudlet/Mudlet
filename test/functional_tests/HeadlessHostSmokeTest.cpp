@@ -210,6 +210,47 @@ headlessDeletedNames = table.concat(headlessDeleted, ",")
         QCOMPARE(label->mGeometry, QRect(5, 6, 70, 80));
     }
 
+    // The trim that raises sysBufferShrinkEvent runs inside TBuffer::append(), and echo goes on using the
+    // console's model after that returns, so a handler deleting the console must not free it there and then.
+    void test_consoleDeletedByItsOwnShrinkEventWithNoMainWindow()
+    {
+        Host* host = HostManager::self()->getHost(mWindowsHostname);
+        QVERIFY2(host, "test_windowsMadeWithNoMainWindowHaveModels() did not leave its profile.");
+        host->registerAnonymousEventHandler(qsl("sysBufferShrinkEvent"), qsl("onHeadlessShrink"));
+
+        QVERIFY(host->getLuaInterpreter()->compileAndExecuteScript(qsl(R"lua(
+headlessShrinks = 0
+function onHeadlessShrink(_, name)
+  if name == "headlessShrinkBuffer" then
+    headlessShrinks = headlessShrinks + 1
+    deleteMiniConsole("headlessShrinkBuffer")
+  elseif name == "headlessShrinkNested" then
+    headlessShrinks = headlessShrinks + 1
+    deleteMiniConsole("headlessShrinkWindow")
+  end
+end
+local lines = string.rep("shrink line\n", 150)
+createBuffer("headlessShrinkBuffer")
+setConsoleBufferSize("headlessShrinkBuffer", 100, 10)
+headlessShrinkEcho = tostring(echo("headlessShrinkBuffer", lines))
+openUserWindow("headlessShrinkWindow")
+createMiniConsole("headlessShrinkWindow", "headlessShrinkNested", 0, 0, 50, 50)
+setConsoleBufferSize("headlessShrinkNested", 100, 10)
+headlessShrinkNestedEcho = tostring(echo("headlessShrinkNested", lines))
+headlessShrinkLeft = table.concat({tostring(windowType("headlessShrinkBuffer")), tostring(windowType("headlessShrinkWindow")), tostring(windowType("headlessShrinkNested"))}, ",")
+)lua")));
+        QCoreApplication::sendPostedEvents(nullptr, QEvent::DeferredDelete);
+
+        QVERIFY2(luaGlobalString(host, "headlessShrinks").toInt() >= 2, "A shrink event never reached the handler, so nothing was deleted mid-echo.");
+        QCOMPARE(luaGlobalString(host, "headlessShrinkEcho"), qsl("true"));
+        QCOMPARE(luaGlobalString(host, "headlessShrinkNestedEcho"), qsl("true"));
+        QCOMPARE(luaGlobalString(host, "headlessShrinkLeft"), qsl("nil,nil,nil"));
+        QVERIFY(host->getLuaInterpreter()->compileAndExecuteScript(qsl(R"lua(createBuffer("headlessShrinkBuffer"); echo("headlessShrinkBuffer", "made again\n"))lua")));
+        const TConsoleModel* remade = host->windowRegistry().subConsoleModel(qsl("headlessShrinkBuffer"));
+        QVERIFY2(remade, "A buffer of the deleted one's name could not be made again.");
+        QVERIFY(remade->buffer.lineBuffer.join(QChar::LineFeed).contains(qsl("made again")));
+    }
+
     void test_profileConnectsAndLogsInWithNoMainWindow()
     {
         QVERIFY2(!TAppFrontend::instance(), "A main window exists, so this run is not headless.");
