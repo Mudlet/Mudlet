@@ -36,3 +36,34 @@ describe("Tests secondary map views in a profile without a mapper", function()
     assert.are.equal(areaId, getMapViewInfo(viewId).areaId)
   end)
 end)
+
+-- A profile with no console view answers these from the model instead (HeadlessHostSmokeTest)
+describe("Tests the map functions that wait for a mapper in a profile without one", function()
+  local jsonPath = getMudletHomeDir() .. "/before_map_widget.json"
+  local areaId, roomId
+
+  setup(function()
+    local _, message = getMapZoom()
+    assert.are.equal("no active mapper", message, "this profile already has a mapper, so this file can no longer test a profile without one")
+
+    areaId = addAreaName("BeforeMapWidgetSpecRefusals")
+    roomId = createRoomID()
+    assert.is_true(addRoom(roomId))
+    assert.is_true(setRoomArea(roomId, areaId))
+  end)
+
+  teardown(function()
+    os.remove(jsonPath)
+    if roomId then
+      deleteRoom(roomId)
+      deleteArea(areaId)
+    end
+  end)
+
+  it("refuses them although the map holds a room", function()
+    assert.are.same({nil, "you haven't opened a map yet"}, {getPlayerRoom()})
+    assert.are.same({nil, "you haven't opened a map yet"}, {centerview(roomId)})
+    assert.are.same({nil, "no map present or loaded"}, {saveJsonMap(jsonPath)})
+    assert.are.same({nil, "no map present or loaded"}, {loadJsonMap(jsonPath)})
+  end)
+end)
