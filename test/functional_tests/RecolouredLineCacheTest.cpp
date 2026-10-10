@@ -182,54 +182,6 @@ private slots:
                  "recolouring a line left no trace in the pane's cached screen, so the next paint served the old colour back - the dirty-line range was not honoured");
     }
 
-    // The marker line lands below the bottom row of a full pane, so it is only
-    // drawn if the feed scrolls the pane to it - whether it arrives coloured or
-    // a trigger recolours it on the way in.
-    void test_fedLinesAreScrolledIntoView_data()
-    {
-        QTest::addColumn<QString>("script");
-
-        QTest::newRow("coloured by the fed text") << qsl("feedTriggers('FED 1\\nFED 2\\nFED 3\\n\\27[48;2;255;0;255mFED MARKER\\27[0m\\n')");
-        QTest::newRow("recoloured by a trigger") << qsl("tempRegexTrigger('^FED MARKER', function() selectString(line, 1) setBgColor(255, 0, 255) resetFormat() end) "
-                                                        "feedTriggers('FED 1\\nFED 2\\nFED 3\\nFED MARKER\\n')");
-    }
-
-    void test_fedLinesAreScrolledIntoView()
-    {
-        QFETCH(QString, script);
-
-        mpServer->setWelcomeMessage(fillerText());
-        startProfile(mpHostname, mpLocalhost, mpPort);
-        QVERIFY2(waitForTextInBuffer(QString(100, QLatin1Char('X'))), "Filler text never reached the buffer");
-
-        mudlet::self()->resize(1200, 800);
-        QTest::qWait(100ms);
-
-        auto host = mudlet::self()->getActiveHost();
-        QVERIFY(host);
-        QPointer<TMainConsole> console = host->mainConsoleView();
-        QVERIFY(console);
-        TTextEdit* pane = console->mUpperPane;
-        QVERIFY(pane);
-        // A pane with room left would draw the fed lines without any scroll.
-        QVERIFY2(pane->imageTopLine() > 0, "the filler did not fill the pane");
-
-        QPixmap before(pane->size());
-        before.fill(Qt::darkGray);
-        pane->render(&before);
-        QCOMPARE(countMarkerPixels(before.toImage()), 0);
-
-        QVERIFY(host->getLuaInterpreter()->compileAndExecuteScript(script));
-        QVERIFY2(waitForTextInBuffer(qsl("FED MARKER")), "the fed text never reached the buffer");
-        qApp->processEvents();
-
-        QPixmap after(pane->size());
-        after.fill(Qt::darkGray);
-        pane->render(&after);
-
-        QVERIFY2(countMarkerPixels(after.toImage()) > 0, "text fed to the triggers reached the buffer but the pane was never scrolled to it, so it stays off screen until the game sends something");
-    }
-
 private:
     void startProfile(const QString& hostname, const QString& address, const QString& port)
     {

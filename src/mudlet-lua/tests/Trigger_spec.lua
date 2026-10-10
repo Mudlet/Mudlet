@@ -1017,6 +1017,7 @@ describe("Trigger processing", function()
 
         describe("scrolls the main console to the lines it feeds", function()
             local savedEncoding
+            local triggerId
 
             before_each(function()
                 savedEncoding = getServerEncoding()
@@ -1026,42 +1027,46 @@ describe("Trigger processing", function()
 
             after_each(function()
                 setServerEncoding(savedEncoding)
+                if triggerId then
+                    killTrigger(triggerId)
+                    triggerId = nil
+                end
             end)
 
-            local function assertScrolledToTheEnd(how)
+            local function assertFedAndScrolled(how, lineCount, ...)
+                local before = getLastLineNumber("main")
+                assert.is_true(feedTriggers(...), how .. " was refused")
+                assert.are.equal(before + lineCount, getLastLineNumber("main"), how .. " did not add its lines")
                 assert.are.equal(getLastLineNumber("main"), getScroll(), how .. " left the main console short of the lines it fed")
             end
 
             it("from text the game's UTF-8 encoding can carry", function()
                 setServerEncoding("UTF-8")
-                feedTriggers("feed_scroll utf8 one\nfeed_scroll utf8 two\n")
-                assertScrolledToTheEnd("a UTF-8 feed")
+                assertFedAndScrolled("a UTF-8 feed", 2, "feed_scroll utf8 one\nfeed_scroll utf8 two\n")
             end)
 
             it("from text transcoded to the game's encoding", function()
                 setServerEncoding("ISO 8859-1")
-                feedTriggers("feed_scroll latin one\nfeed_scroll latin two\n")
-                assertScrolledToTheEnd("a transcoded feed")
+                assertFedAndScrolled("a transcoded feed", 2, "feed_scroll latin one\nfeed_scroll latin two\n")
             end)
 
             it("from text for an ASCII game", function()
                 setServerEncoding("ASCII")
-                feedTriggers("feed_scroll ascii one\nfeed_scroll ascii two\n")
-                assertScrolledToTheEnd("an ASCII feed")
+                assertFedAndScrolled("an ASCII feed", 2, "feed_scroll ascii one\nfeed_scroll ascii two\n")
             end)
 
             it("from text already in the game's encoding", function()
-                feedTriggers("feed_scroll raw one\nfeed_scroll raw two\n", false)
-                assertScrolledToTheEnd("a feed not marked as UTF-8")
+                assertFedAndScrolled("a feed not marked as UTF-8", 2, "feed_scroll raw one\nfeed_scroll raw two\n", false)
             end)
 
-            it("from text a trigger feeds", function()
-                local id = tempRegexTrigger("^feed_scroll_outer$", function()
+            it("from text a trigger feeds, once the pass that fired the trigger ends", function()
+                local scrolledMidPass
+                triggerId = tempRegexTrigger("^feed_scroll_outer$", function()
                     feedTriggers("feed_scroll inner one\nfeed_scroll inner two\n")
+                    scrolledMidPass = getScroll() == getLastLineNumber("main")
                 end)
-                feedTriggers("feed_scroll_outer\n")
-                killTrigger(id)
-                assertScrolledToTheEnd("a feed from inside a trigger")
+                assertFedAndScrolled("a feed that sets off a trigger's", 3, "feed_scroll_outer\n")
+                assert.is_false(scrolledMidPass, "the feed inside the trigger scrolled the console before the pass that fired it had ended")
             end)
         end)
 
