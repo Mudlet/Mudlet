@@ -49,6 +49,7 @@
 #include <chrono>
 #include <cmath>
 #include <cstring>
+#include <QResizeEvent>
 #include <QtEvents>
 #include <QtGlobal>
 #include <QtMath>

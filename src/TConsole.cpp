@@ -59,12 +59,14 @@
 #include <QMimeData>
 #include <QPainter>
 #include <QProxyStyle>
+#include <QResizeEvent>
 #include <QScrollBar>
 #include <QSettings>
 #include <QShortcut>
 #include <QSplitter>
 #include <QStyleOptionSlider>
 #include <QTextBoundaryFinder>
+#include <QToolButton>
 #include <QVideoWidget>
 #include <chrono>
 #include <cmath>
@@ -2637,7 +2639,9 @@ void TConsole::setProxyForFocus(TCommandLine* pCommandLine)
         setFocusProxy(pCommandLine);
         mUpperPane->setFocusProxy(pCommandLine);
         mLowerPane->setFocusProxy(pCommandLine);
-        QAccessibleEvent event(pCommandLine, QAccessible::Focus);
+        // The hidden-input box when it stands in, or a screen reader may speak typed characters
+        QWidget* pFocusTarget = (pCommandLine && pCommandLine->focusProxy()) ? pCommandLine->focusProxy() : pCommandLine;
+        QAccessibleEvent event(pFocusTarget, QAccessible::Focus);
         QAccessible::updateAccessibility(&event);
     } else if (mType == UserWindow) {
         if (pCommandLine && pCommandLine->isVisible()) {

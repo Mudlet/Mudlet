@@ -355,7 +355,7 @@ private slots:
         const bool priorIreBugfix = mpHost->mUSE_IRE_DRIVER_BUGFIX;
         const bool priorColorSpaceId = mpHost->getHaveColorSpaceId();
         const bool priorAutoClear = mpHost->mAutoClearCommandLineAfterSend;
-        const bool priorPasswordMasking = mpHost->mDisablePasswordMasking;
+        const bool priorPasswordMasking = mpHost->disablePasswordMasking();
         const bool priorRunAllKeys = mpHost->getKeyUnit()->mRunAllKeyMatches;
         const bool priorTimestamps = mpHost->mIsLoggingTimestamps;
         const bool priorAntiAlias = mpHost->fontsAntiAlias();
@@ -383,7 +383,7 @@ private slots:
             mpHost->set_USE_IRE_DRIVER_BUGFIX(priorIreBugfix);
             mpHost->setHaveColorSpaceId(priorColorSpaceId);
             mpHost->mAutoClearCommandLineAfterSend = priorAutoClear;
-            mpHost->mDisablePasswordMasking = priorPasswordMasking;
+            mpHost->setDisablePasswordMasking(priorPasswordMasking);
             mpHost->getKeyUnit()->mRunAllKeyMatches = priorRunAllKeys;
             mpHost->mIsLoggingTimestamps = priorTimestamps;
             mpHost->setFontsAntiAlias(priorAntiAlias);
@@ -464,7 +464,7 @@ private slots:
         QCOMPARE(mpHost->mUSE_IRE_DRIVER_BUGFIX, !priorIreBugfix);
         QCOMPARE(mpHost->getHaveColorSpaceId(), !priorColorSpaceId);
         QCOMPARE(mpHost->mAutoClearCommandLineAfterSend, !priorAutoClear);
-        QCOMPARE(mpHost->mDisablePasswordMasking, !priorPasswordMasking);
+        QCOMPARE(mpHost->disablePasswordMasking(), !priorPasswordMasking);
         QCOMPARE(mpHost->getKeyUnit()->mRunAllKeyMatches, !priorRunAllKeys);
         QCOMPARE(mpHost->mIsLoggingTimestamps, !priorTimestamps);
         QCOMPARE(mpHost->fontsAntiAlias(), !priorAntiAlias);

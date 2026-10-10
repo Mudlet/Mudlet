@@ -28,6 +28,7 @@
 #include <QApplication>
 #include <QHBoxLayout>
 #include <QLabel>
+#include <QToolButton>
 #include <QVBoxLayout>
 
 TMapView::TMapView(int viewId, Host* pHost, TMap* pMap, QWidget* parent)
