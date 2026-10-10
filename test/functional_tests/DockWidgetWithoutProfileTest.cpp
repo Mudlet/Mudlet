@@ -133,7 +133,7 @@ private slots:
         QVERIFY(pHost);
         // A profile only gets its main console from the frontend, so one that
         // has not been given one stands in for one whose console has gone.
-        QVERIFY2(!pHost->mpConsole, "the profile already has a main console, so the hide never reaches the guard");
+        QVERIFY2(!pHost->mainConsoleView(), "the profile already has a main console, so the hide never reaches the guard");
 
         QWidget parent;
         TDockWidget dock(pHost, qsl("userwindow"));

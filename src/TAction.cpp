@@ -26,10 +26,10 @@
 
 #include "ActionUnit.h"
 #include "Host.h"
+#include "TConsoleFrontend.h"
 #include "TConsoleModel.h"
 #include "TDebug.h"
 #include "TLuaInterpreter.h"
-#include "TMainConsole.h"
 #include "utils.h"
 
 #include <QColor>
@@ -191,8 +191,8 @@ void TAction::setName(const QString& name)
     if (name != mName) {
         setDataChanged();
         mName = name;
-        if (mpHost && mpHost->mpConsole) {
-            mpHost->mpConsole->renameActionToolBar(this, name);
+        if (mpHost) {
+            mpHost->consoleFrontend()->renameActionToolBar(this, name);
         }
     }
 }

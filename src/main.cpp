@@ -85,6 +85,10 @@
 #include <QGuiApplication>
 #include <QProcessEnvironment>
 #include <QTextStream>
+#ifdef INCLUDE_MCPSERVER
+#include "TMCPBridge.h"
+#include <QCoreApplication>
+#endif
 
 #if defined(Q_OS_WINDOWS) && defined(INCLUDE_UPDATER)
 #include <windows.h>
@@ -226,6 +230,7 @@ QTranslator* loadTranslationsForCommandLine()
     // Not MudletApp::getQSettings(): it stays null until setupConfig(), which a --help or --version run never
     // reaches. Same file and format as setupConfig() opens - keep the spellings in step.
     QSettings settings(qsl("%1/Mudlet.ini").arg(MudletApp::getMudletPath(enums::mainPath)), QSettings::IniFormat);
+    MudletApp::noteEarlySettingsStatus(settings);
     auto interfaceLanguage = settings.value(QLatin1String("interfaceLanguage")).toString();
     auto userLocale = interfaceLanguage.isEmpty() ? QLocale::system() : QLocale(interfaceLanguage);
     if (userLocale == QLocale::c()) {
@@ -264,28 +269,37 @@ void msys2QtMessageHandler(QtMsgType type, const QMessageLogContext& context, co
 }
 #endif
 
+// The config root for callers that run before mudlet exists. argv[0] is the last resort:
+// a plain command name found via PATH resolves relative to the current directory instead
+// of the binary's, so applicationDirPath() is preferred whenever a QCoreApplication is up
+// to provide it.
+static QString earlyConfigPath(int argc, char* argv[])
+{
+    QString execDir;
+    const QProcessEnvironment sysEnv = QProcessEnvironment::systemEnvironment();
+    if (sysEnv.contains(qsl("APPIMAGE"))) {
+        execDir = QFileInfo(sysEnv.value(qsl("APPIMAGE"))).absolutePath();
+    } else if (QCoreApplication::instance()) {
+        execDir = QCoreApplication::applicationDirPath();
+    } else if (argc > 0) {
+        execDir = QFileInfo(QString::fromLocal8Bit(argv[0])).absolutePath();
+    } else {
+        return {};
+    }
+
+    return MudletApp::resolveConfigRoot(execDir).path;
+}
+
 #if !defined(Q_OS_MACOS)
 // Reads highDpiScaleFactorRoundingPolicy from Mudlet.ini before QApplication
 // creation, since Qt requires this to be set before the application is constructed.
-// Resolves the config root from argv[0] because
-// QCoreApplication::applicationDirPath() isn't available yet.
 static void applyHighDpiRoundingPolicyFromConfig(int argc, char* argv[])
 {
     if (!qEnvironmentVariableIsEmpty("QT_SCALE_FACTOR_ROUNDING_POLICY")) {
         return;
     }
 
-    QString execDir;
-    const QProcessEnvironment sysEnv = QProcessEnvironment::systemEnvironment();
-    if (sysEnv.contains(qsl("APPIMAGE"))) {
-        execDir = QFileInfo(sysEnv.value(qsl("APPIMAGE"))).absolutePath();
-    } else if (argc > 0) {
-        execDir = QFileInfo(QString::fromLocal8Bit(argv[0])).absolutePath();
-    } else {
-        return;
-    }
-
-    const QString confPath = MudletApp::resolveConfigRoot(execDir).path;
+    const QString confPath = earlyConfigPath(argc, argv);
     if (confPath.isEmpty()) {
         return;
     }
@@ -296,6 +310,7 @@ static void applyHighDpiRoundingPolicyFromConfig(int argc, char* argv[])
     }
 
     const QSettings settings(iniPath, QSettings::IniFormat);
+    MudletApp::noteEarlySettingsStatus(settings);
     const QString value = settings.value(qsl("highDpiScaleFactorRoundingPolicy")).toString();
     if (value.isEmpty()) {
         return;
@@ -343,6 +358,22 @@ int main(int argc, char* argv[])
         }
     }
 #endif
+
+    // Claude Desktop and other stdio MCP clients launch `mudlet --mcp-bridge` and talk
+    // JSON-RPC over its stdin/stdout; none of the GUI may come up in that mode. Handled
+    // in every build - a build without the server must still exit rather than open a
+    // Mudlet window each time an AI assistant tries to connect.
+    for (int i = 1; i < argc; ++i) {
+        if (qstrcmp(argv[i], "--mcp-bridge") == 0) {
+#ifdef INCLUDE_MCPSERVER
+            const QCoreApplication app(argc, argv);
+            return TMCPBridge::exec(earlyConfigPath(argc, argv));
+#else
+            std::cerr << "This Mudlet was built without MCP support, so --mcp-bridge is not available." << std::endl;
+            return 1;
+#endif
+        }
+    }
 
 #ifdef WITH_SENTRY
     initSentry();
@@ -563,6 +594,12 @@ int main(int argc, char* argv[])
         texts << appendLF.arg(QCoreApplication::translate("main",
                                                           "       --steammode                  adjusts Mudlet settings to match\n"
                                                           "                                    Steam's requirements."));
+#ifdef INCLUDE_MCPSERVER
+        texts << appendLF.arg(QCoreApplication::translate("main",
+                                                          "       --mcp-bridge                 relay MCP requests between an AI\n"
+                                                          "                                    assistant on stdin/stdout, such as\n"
+                                                          "                                    Claude Desktop, and a running Mudlet."));
+#endif
         texts << appendLF.arg(QCoreApplication::translate("main",
                                                           "There are other inherited options that arise from the Qt Libraries which are\n"
                                                           "less likely to be useful for normal use of this application:"));
@@ -1186,9 +1223,9 @@ int main(int argc, char* argv[])
         splash.finish(mudlet::self());
     }
 
-    mudlet::smMirrorToStdOut = parser.isSet(mirrorToStdout);
+    MudletApp::smMirrorToStdOut = parser.isSet(mirrorToStdout);
 #ifndef Q_OS_WINDOWS
-    if (mudlet::smMirrorToStdOut) {
+    if (MudletApp::smMirrorToStdOut) {
         // Without this a reader that exits first - `mudlet --mirror | head` -
         // kills Mudlet mid-session on the next line it copies; TConsole::
         // mirrorToStdOut() turns the write failure into a warning instead.

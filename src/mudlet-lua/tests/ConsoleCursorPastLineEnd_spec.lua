@@ -85,6 +85,15 @@ describe("Tests that writing past the end of a line pads it in the console's cur
     assert.are.same(pasted, coloursAt(window, 6, 0))
   end)
 
+  -- A write there would pad a line with millions of spaces at a time, until memory runs out
+  it("refuses a column farther past the end than one echo may write", function()
+    local echoLimit = 1000000
+    assert.is_false(moveCursor(window, 2147483647, 0))
+    assert.is_false(moveCursor(window, 2 + echoLimit + 1, 0))
+    assert.are.equal(6, getColumnNumber(window))
+    assert.is_true(moveCursor(window, 2 + echoLimit, 0))
+  end)
+
   it("leaves the rest of the main console's line as it was on cut()", function()
     local marker = "specPastLineEndCut" .. suffix
     deselect("main")

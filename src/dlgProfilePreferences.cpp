@@ -54,6 +54,13 @@
 #include "widgetutils.h"
 #include "utils.h"
 
+#ifdef INCLUDE_MCPSERVER
+#include "TMCPBridge.h"
+#include "TMCPServer.h"
+#include <QClipboard>
+#include <QGuiApplication>
+#endif
+
 #include <chrono>
 #include <vector>
 #include <QtConcurrentRun>
@@ -75,6 +82,7 @@
 #include <QJsonArray>
 #include <QJsonDocument>
 #include <QJsonParseError>
+#include <QMenu>
 #include <QMessageBox>
 #include <QNetworkDiskCache>
 #include <QPainter>
@@ -226,6 +234,28 @@ dlgProfilePreferences::dlgProfilePreferences(QWidget* pParentWidget, Host* pHost
     connect(radioButton_discordGameDetails, &QRadioButton::toggled, this, updateDiscordPrivacyControls);
     connect(radioButton_discordMudletOnly, &QRadioButton::toggled, this, updateDiscordPrivacyControls);
     connect(radioButton_discordDisabled, &QRadioButton::toggled, this, updateDiscordPrivacyControls);
+
+#ifdef INCLUDE_MCPSERVER
+    connect(checkBox_enableMCPServer, &QCheckBox::toggled, this, &dlgProfilePreferences::slot_updateMCPServerEndpoint);
+    connect(spinBox_mcpServerPort, qOverload<int>(&QSpinBox::valueChanged), this, &dlgProfilePreferences::slot_updateMCPServerEndpoint);
+    connect(pushButton_connectClaudeDesktop, &QAbstractButton::clicked, this, &dlgProfilePreferences::slot_connectClaudeDesktop);
+    connect(pushButton_connectChatGpt, &QAbstractButton::clicked, this, &dlgProfilePreferences::slot_connectChatGpt);
+    // With Mudlet registered a button opens this menu instead of emitting clicked()
+    auto* pMenu_claudeDesktop = new QMenu(pushButton_connectClaudeDesktop);
+    pMenu_claudeDesktop->setObjectName(qsl("menu_claudeDesktop"));
+    connect(pMenu_claudeDesktop->addAction(QString()), &QAction::triggered, this, &dlgProfilePreferences::slot_removeClaudeDesktop);
+    auto* pMenu_chatGpt = new QMenu(pushButton_connectChatGpt);
+    pMenu_chatGpt->setObjectName(qsl("menu_chatGpt"));
+    connect(pMenu_chatGpt->addAction(QString()), &QAction::triggered, this, &dlgProfilePreferences::slot_removeChatGpt);
+    connect(pushButton_copyMCPServerAddress, &QAbstractButton::clicked, this, &dlgProfilePreferences::slot_copyMCPServerAddress);
+    connect(pushButton_mcpConnectManually, &QAbstractButton::toggled, widget_mcpManualConnect, &QWidget::setVisible);
+    connect(pushButton_mcpAdvanced, &QAbstractButton::toggled, this, [this](const bool revealed) {
+        widget_mcpAdvanced->setVisible(revealed);
+        pushButton_mcpAdvanced->setArrowType(revealed ? Qt::DownArrow : Qt::RightArrow);
+    });
+#else
+    groupBox_mcpServer->hide();
+#endif
 
     // As we demonstrate the options that these next two checkboxes control in
     // the editor "preview" widget (on another tab) we will need to track
@@ -782,7 +812,15 @@ void dlgProfilePreferences::buildShell()
     auto* pCard_systemIntegration = createCard(qsl("card_systemIntegration"));
     moveIntoCard(pCard_systemIntegration, {telnetHandlerEnabled, checkBox_showIconsOnMenus});
     buildMigrationBanner();
-    buildCategoryPage(scmCategory_general, {groupBox_miscellaneous, groupBox_encoding, groupBox_logOptions, groupbox_searchEngineSelection, groupBox_updates, pCard_systemIntegration});
+    QList<QWidget*> generalCards{groupBox_miscellaneous, groupBox_encoding, groupBox_logOptions, groupbox_searchEngineSelection, groupBox_updates, pCard_systemIntegration};
+#ifdef INCLUDE_MCPSERVER
+    buildMcpSummaryCard();
+    generalCards.insert(generalCards.indexOf(pCard_systemIntegration), mpCard_mcpAssistant);
+#endif
+    buildCategoryPage(scmCategory_general, generalCards);
+#ifdef INCLUDE_MCPSERVER
+    addSubpage(scmCategory_general, qsl("mcp"), mpCard_mcpAssistant, {groupBox_mcpServer});
+#endif
 
     auto* pCard_theme = createCard(qsl("card_theme"));
     addCardRow(pCard_theme, label_appearance, comboBox_appearance);
@@ -1130,6 +1168,10 @@ void dlgProfilePreferences::retranslateShell()
     cardTitles.append({qsl("card_accessibilityText"), tr("Text and media")});
     //: Card title on the Accessibility settings page, above the options for moving around Mudlet from the keyboard
     cardTitles.append({qsl("card_accessibilityKeyboard"), tr("Keyboard")});
+#ifdef INCLUDE_MCPSERVER
+    //: Card title on the General settings page, above the row leading to the AI assistant settings. MCP is the name of the Model Context Protocol standard, leave it as-is.
+    cardTitles.append({qsl("card_mcpAssistant"), tr("AI assistant access (MCP)")});
+#endif
     for (const auto& [objectName, title] : cardTitles) {
         if (auto* pCard = findChild<QGroupBox*>(objectName); pCard) {
             pCard->setTitle(title);
@@ -1140,6 +1182,10 @@ void dlgProfilePreferences::retranslateShell()
     mSubpageTitles.insert(qsl("connection/protocols"), tr("Game protocols"));
     //: Breadcrumb name of the subpage holding the Discord Rich Presence settings, reached from the Chat and sharing settings page
     mSubpageTitles.insert(qsl("chat/discord"), tr("Discord Rich Presence"));
+#ifdef INCLUDE_MCPSERVER
+    //: Breadcrumb name of the subpage holding the AI assistant settings, reached from the General settings page. MCP is the name of the Model Context Protocol standard, leave it as-is.
+    mSubpageTitles.insert(qsl("general/mcp"), tr("AI assistant access (MCP)"));
+#endif
 
     QList<std::tuple<QCheckBox*, QString, QString>> protocols;
     //: A telnet protocol on the game protocols subpage: its name, then one line of what it does for the player
@@ -1183,6 +1229,9 @@ void dlgProfilePreferences::retranslateShell()
             tr("NEW-ENVIRON uses the same telnet option as MNES, so only one can be active. NEW-ENVIRON sends extended variables including OSC link support, while MNES sends a minimal set."));
     updateProtocolSummary();
     updateDiscordSummary();
+#ifdef INCLUDE_MCPSERVER
+    updateMcpSummary();
+#endif
     updateSecurityStatus();
     setCardDescriptions();
 
@@ -1277,10 +1326,18 @@ void dlgProfilePreferences::setSearchKeywords()
     synonyms.append({groupBox_main_window_shortcuts, tr("keyboard shortcuts, hotkeys, key bindings, accelerators")});
     //: Comma-separated synonyms for the settings search - translate to what a player would type, do not transliterate. This one is for saving the profile when Mudlet is closed.
     synonyms.append({mFORCE_SAVE_ON_EXIT, tr("autosave, save on exit, backup")});
+    //: Comma-separated synonyms for the settings search - translate to what a player would type, do not transliterate. This one is for the colours the game's text and background are drawn in.
+    synonyms.append({groupBox_displayColors, tr("colour, colours, palette, ANSI colours, background")});
+    //: Comma-separated synonyms for the settings search - translate to what a player would type, do not transliterate. This one is for the colours the map is drawn in.
+    synonyms.append({groupBox_mapperColors, tr("colour, colours, map colours, palette, background")});
     //: Comma-separated synonyms for the settings search - translate to what a player would type, do not transliterate. This one is for the font the game's text is drawn in.
     synonyms.append({groupBox_font, tr("font, typeface, size, monospace, antialiasing")});
     //: Comma-separated synonyms for the settings search - translate to what a player would type, do not transliterate. This one is for how long Mudlet waits for the game to answer.
     synonyms.append({label_networkPacketTimeout, tr("timeout, lag, latency, slow connection")});
+#ifdef INCLUDE_MCPSERVER
+    //: Comma-separated synonyms for the settings search - translate to what a player would type, do not transliterate. This one is for letting an AI assistant control Mudlet. Claude, ChatGPT and Codex are product names, leave them as-is.
+    synonyms.append({groupBox_mcpServer, tr("AI, assistant, MCP, Claude, ChatGPT, Codex, LLM, chatbot")});
+#endif
     //: Comma-separated synonyms for the settings search - translate to what a player would type, do not transliterate. This one is for workarounds needed by some games, which used to be on a tab called "Special options".
     synonyms.append({groupBox_specialOptions, tr("special options, workaround, old game, compatibility")});
     //: Comma-separated synonyms for the settings search - translate to what a player would type, do not transliterate. This one is for script debugging options, which used to be on a tab called "Special options".
@@ -1576,6 +1633,12 @@ void dlgProfilePreferences::setCardDescriptions()
     setCardDescription(findChild<QGroupBox*>(qsl("card_systemIntegration")), tr("How Mudlet fits in with the rest of your desktop."));
     //: Description line under the "Web search" card title on the General settings page
     setCardDescription(groupbox_searchEngineSelection, tr("The site Mudlet opens when you pick \"search on the web\" after selecting some text in the game."));
+#ifdef INCLUDE_MCPSERVER
+    //: Description line under the "AI assistant access (MCP)" card title on the General settings page, and again at the top of the subpage it leads to
+    const QString mcpDescription = tr("Lets an AI assistant run Lua inside Mudlet for you. Lua can reach the rest of this computer, so only connect an assistant you trust.");
+    setCardDescription(mpCard_mcpAssistant, mcpDescription);
+    setCardDescription(groupBox_mcpServer, mcpDescription);
+#endif
     //: Description line under the "Scrollback" card title on the Main display settings page
     setCardDescription(groupBox_consoleBuffer, tr("How much of what the game has already sent stays available to scroll back through."));
     //: Description line under the "Scripting" card title on the Editor settings page
@@ -1746,6 +1809,51 @@ void dlgProfilePreferences::updateDiscordSummary()
     mpButton_discordSubpage->setText(state);
 }
 
+#ifdef INCLUDE_MCPSERVER
+void dlgProfilePreferences::buildMcpSummaryCard()
+{
+    mpCard_mcpAssistant = createCard(qsl("card_mcpAssistant"));
+    mpButton_mcpSubpage = new QPushButton(mpCard_mcpAssistant);
+    mpButton_mcpSubpage->setObjectName(qsl("pushButton_mcpSettings"));
+    // The words on the row are a status, so the things a user would look for by
+    // name are only on the page it leads to
+    mpButton_mcpSubpage->setProperty(scmProp_searchKeywords, qsl("MCP AI assistant Claude ChatGPT Codex Lua port token"));
+    makeChevronRow(mpButton_mcpSubpage);
+    qobject_cast<QVBoxLayout*>(mpCard_mcpAssistant->layout())->addWidget(mpButton_mcpSubpage);
+    connect(mpButton_mcpSubpage, &QAbstractButton::clicked, this, [this]() {
+        showSubpage(scmCategory_general, qsl("mcp"));
+    });
+}
+
+// The same four states as the status line on the subpage, said in one line: the
+// checkbox rather than mcpEnabled(), so the row moves with the tick rather than
+// with the apply that follows it 400ms later
+void dlgProfilePreferences::updateMcpSummary()
+{
+    if (!mpButton_mcpSubpage) {
+        return;
+    }
+    mudlet* pMudlet = mudlet::self();
+    if (!checkBox_enableMCPServer->isChecked()) {
+        //: Summary on the General page's AI assistant card, on the row that opens the assistant settings
+        mpButton_mcpSubpage->setText(tr("Off - no assistant can reach Mudlet"));
+        return;
+    }
+    if (!pMudlet->mcpEndpoint().isEmpty()) {
+        //: Summary on the General page's AI assistant card while the server is running. %1 is a TCP port number.
+        mpButton_mcpSubpage->setText(tr("On - listening on port %1").arg(pMudlet->mcpServerPort()));
+        return;
+    }
+    if (!pMudlet->mcpLastError().isEmpty()) {
+        //: Summary on the General page's AI assistant card when the server was switched on but could not start
+        mpButton_mcpSubpage->setText(tr("On, but not running - open to see why"));
+        return;
+    }
+    //: Summary on the General page's AI assistant card in the moment between the server being switched on and it answering
+    mpButton_mcpSubpage->setText(tr("Starting..."));
+}
+#endif
+
 void dlgProfilePreferences::buildSecurityStatusCard()
 {
     mpCard_securityStatus = createCard(qsl("card_securityStatus"));
@@ -1847,6 +1955,11 @@ void dlgProfilePreferences::retitleCards()
     groupBox_debug->setTitle(tr("Developer"));
     //: Card title on the Accessibility settings page, above the two options about what the system screen reader is told
     groupBox_accessibility->setTitle(tr("Screen reader"));
+#ifdef INCLUDE_MCPSERVER
+    // The only card on its subpage, whose breadcrumb already names it
+    groupBox_mcpServer->setTitle(QString());
+    groupBox_mcpServer->setProperty("settingsCardPlain", true);
+#endif
 }
 
 // A grid cell takes one widget, so a card is emptied before it is refilled
@@ -2691,6 +2804,13 @@ void dlgProfilePreferences::highlightMatches(QWidget* pCard, const QStringList& 
         }
         setSearchMatch(pWidget, true);
         mHighlightedWidgets.append(pWidget);
+#ifdef INCLUDE_MCPSERVER
+        // The MCP port is the one setting this dialog folds out of sight, and a
+        // search result nobody can see answers nothing
+        if (pWidget == label_mcpServerPort) {
+            pushButton_mcpAdvanced->setChecked(true);
+        }
+#endif
     }
 }
 
@@ -2793,8 +2913,17 @@ void dlgProfilePreferences::slot_sidebarItemClicked(QListWidgetItem* pItem)
         QDesktopServices::openUrl(QUrl(url));
         return;
     }
+    const QString key = pItem->data(scmRole_categoryKey).toString();
+    if (key.isEmpty()) {
+        return;
+    }
+    // A search keeps the sidebar's current row, so choosing that category again is no row change either
+    if (mSearchActive) {
+        slot_categorySelected(mpListWidget_categories->row(pItem));
+        return;
+    }
     // Choosing a subpage's own category is no row change, so the row-changed slot would not leave the subpage
-    if (const QString key = pItem->data(scmRole_categoryKey).toString(); !key.isEmpty() && mCurrentSubpage.startsWith(key + QLatin1Char('/'))) {
+    if (mCurrentSubpage.startsWith(key + QLatin1Char('/'))) {
         leaveSubpage();
     }
 }
@@ -3716,6 +3845,22 @@ void dlgProfilePreferences::populateApplicationSettings()
         const QVariant storedOption = settings.value("autoSendCrashReports", QVariant());
         comboBox_crashReportPolicy->setCurrentIndex(storedOption.isValid() ? storedOption.toInt() - 1 : 2);
     }
+#ifdef INCLUDE_MCPSERVER
+    {
+        const QSignalBlocker enableBlocker(checkBox_enableMCPServer);
+        checkBox_enableMCPServer->setChecked(pMudlet->mcpEnabled());
+        const QSignalBlocker portBlocker(spinBox_mcpServerPort);
+        spinBox_mcpServerPort->setValue(pMudlet->mcpServerPort());
+    }
+    if (label_mcpConnectResult->text().isEmpty()) {
+        // A start refused at launch has no dialog open to report to, so the reason waits
+        // here for the first one. Anything already written is a fresher answer than this.
+        mMCPServerStateMessage = pMudlet->mcpLastError();
+        setMCPConnectResult(mMCPServerStateMessage);
+    }
+    slot_updateMCPServerEndpoint();
+    refreshMCPAppButtons();
+#endif
 }
 
 void dlgProfilePreferences::initWithHost(Host* pHost)
@@ -3895,11 +4040,12 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
     connect(checkBox_undoServerWrap, &QCheckBox::toggled, label_undo_server_wrap_experimental, &QWidget::setVisible, Qt::UniqueConnection);
 
     console_buffer_size_spinBox->setValue(pHost->getConsoleBufferSize());
+    mBufferSizeBeforeMax = pHost->getConsoleBufferSize();
     checkBox_useMaxBufferSize->setChecked(pHost->getUseMaxConsoleBufferSize());
 
     // Set maximum buffer size based on system capabilities and update tooltip
-    if (pHost->mpConsole) {
-        const int maxBufferSize = pHost->mpConsole->buffer.getMaxBufferSize();
+    if (pHost->mainConsoleView()) {
+        const int maxBufferSize = pHost->mainConsoleView()->buffer.getMaxBufferSize();
         console_buffer_size_spinBox->setMaximum(maxBufferSize);
         checkBox_useMaxBufferSize->setToolTip(tr("<p>Use the maximum buffer size your system can handle (%1 lines). This will be calculated based on available memory.</p>").arg(maxBufferSize));
 
@@ -4216,7 +4362,7 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
         connect(spinBox_playerRoomInnerDiameter, qOverload<int>(&QSpinBox::valueChanged), this, &dlgProfilePreferences::slot_setPlayerRoomInnerDiameter, Qt::UniqueConnection);
 
         // Initialize room, exit, and border size controls
-        spinBox_roomSize->setValue(pHost->mRoomSize * 10);
+        spinBox_roomSize->setValue(qRound(pHost->mRoomSize * 10));
         // mLineSize/mRoomBorderSize are inversely proportional to thickness
         // (exitWidth = 1/eSize * ...), convert to a direct 1-11 scale
         // using a simple reciprocal: mLineSize = 50 / spinner, spinner = 50 / mLineSize
@@ -4592,12 +4738,7 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
         mSnapshot.addEditor(key, sequenceEdit);
         shortcutsRow++;
         connect(sequenceEdit, &QKeySequenceEdit::editingFinished, this, [=]() {
-            QKeySequence newSequence;
-            if (!sequenceEdit->keySequence().isEmpty() && !sequenceEdit->keySequence().matches(QKeySequence(Qt::Key_Escape))) {
-                newSequence = sequenceEdit->keySequence();
-            }
-            sequenceEdit->setKeySequence(newSequence);
-            currentShortcuts[key] = newSequence;
+            currentShortcuts[key] = sequenceEdit->keySequence();
             updateShortcutConflictWarning();
             slot_scheduleApply();
         });
@@ -4642,19 +4783,25 @@ void dlgProfilePreferences::updateShortcutConflictWarning()
                 reported.append(j);
             }
         }
-        if (labels.size() < 2) {
+        // addCommand() refuses a key Mudlet holds, but nothing stops a Mudlet shortcut moving onto a command's key
+        const QStringList holders = mudlet::self()->addonCommandsUsingShortcut(sequence, mpHost, true);
+        if (labels.size() + holders.size() < 2) {
             continue;
         }
         const QString sequenceText = sequence.toString(QKeySequence::NativeText);
-        if (labels.size() == 2) {
+        if (labels.size() == 2 && holders.isEmpty()) {
             //: Inline warning on the shortcuts preferences page when exactly two actions have been given the same shortcut. %1 and %2 are the action names, %3 is the shortcut itself.
             warnings.append(tr("Warning: '%1' and '%2' now share the shortcut %3 - neither will work until one of them is changed.").arg(labels.at(0), labels.at(1), sequenceText));
+        } else if (labels.size() == 1 && holders.size() == 1) {
+            //: Inline warning on the shortcuts preferences page when one of Mudlet's actions has been given a shortcut an add-on command already holds. %1 is the action name, %2 the shortcut itself, %3 a comma separated list of the commands holding it: each command's name in quotes, or "a command from another profile".
+            warnings.append(tr("Warning: '%1' now shares the shortcut %2 with %3 - neither will work until one of them is changed.").arg(labels.at(0), sequenceText, holders.join(qsl(", "))));
         } else {
             QStringList quotedLabels;
             for (const auto& label : labels) {
                 quotedLabels.append(qsl("'%1'").arg(label));
             }
-            //: Inline warning on the shortcuts preferences page when three or more actions have been given the same shortcut. %1 is the list of action names (each already quoted), %2 is the shortcut itself.
+            quotedLabels.append(holders);
+            //: Inline warning on the shortcuts preferences page when three or more actions or add-on commands have been given the same shortcut. %1 is the list of them, each already quoted (an add-on command from another profile appears as "a command from another profile"), %2 is the shortcut itself.
             warnings.append(tr("Warning: %1 now share the shortcut %2 - none of them will work until they are changed.").arg(quotedLabels.join(qsl(", ")), sequenceText));
         }
     }
@@ -5191,9 +5338,9 @@ void dlgProfilePreferences::slot_resetColors()
     pHost->mLightWhite = Qt::white;
 
     setColors();
-    if (pHost->mpConsole) {
-        pHost->mpConsole->resetConsoleBackgroundImage();
-        pHost->mpConsole->changeColors();
+    if (pHost->mainConsoleView()) {
+        pHost->mainConsoleView()->resetConsoleBackgroundImage();
+        pHost->mainConsoleView()->changeColors();
     }
 
     // Copy across the colors to the Lua "color_table"
@@ -5254,7 +5401,7 @@ void dlgProfilePreferences::setButtonAndProfileColor(QPushButton* button, QColor
     if (color.isValid()) {
         presentColor = color;
 
-        auto console = pHost->mpConsole;
+        QPointer<TMainConsole> console = pHost->mainConsoleView();
         if (console) {
             console->changeColors();
             // update the display properly when color selections change.
@@ -5490,8 +5637,8 @@ void dlgProfilePreferences::slot_setMapBgColor()
         setButtonAndProfileColor(pushButton_background_color_2, pHost->mBgColor_2, true);
 // if 3D map, update transparency flags
 #if defined(INCLUDE_3DMAPPER)
-        if (pHost->mpMap->mpMapper->glWidget) {
-            QOpenGLWidget* map = pHost->mpMap->mpMapper->glWidget;
+        if (pHost->mpMap->mapper()->glWidget) {
+            QOpenGLWidget* map = pHost->mpMap->mapper()->glWidget;
             if (pHost->mBgColor_2.alpha() < 255) {
                 map->setAttribute(Qt::WA_OpaquePaintEvent, false);
                 map->setAttribute(Qt::WA_AlwaysStackOnTop, true);
@@ -5750,7 +5897,7 @@ void dlgProfilePreferences::slot_downloadMap()
     if (!pHost) {
         return;
     }
-    if (!pHost->mpMap->mpMapper) {
+    if (!pHost->mpMap->mapper()) {
         // CHECK: What happens if we are NOT the current profile anymore?
         pHost->showHideOrCreateMapper(false);
     }
@@ -6101,7 +6248,7 @@ void dlgProfilePreferences::slot_copyMap()
     // Identify which, if any, of the toProfilesRoomIdMap is active and get the current room
     QMap<QString, QSharedPointer<Host>> activeOtherHostMap;
     for (auto pOtherHost : *HostManager::self()) {
-        if (pOtherHost->mpConsole && (pOtherHost != pHost)) {
+        if (pOtherHost->mainConsoleView() && (pOtherHost != pHost)) {
             const auto& otherHostName = pOtherHost->getName();
             if (toProfilesRoomIdMap.contains(otherHostName)) {
                 activeOtherHostMap.insert(otherHostName, pOtherHost);
@@ -6339,7 +6486,7 @@ void dlgProfilePreferences::applyAll()
     mudlet* pMudlet = mudlet::self();
     Host* pHost = mpHost;
     if (pHost) {
-        auto console = pHost->mpConsole;
+        QPointer<TMainConsole> console = pHost->mainConsoleView();
         if (mSnapshot.dirty(comboBox_dictionary) && comboBox_dictionary->isEnabled() && comboBox_dictionary->currentIndex() >= 0) {
             pHost->setSpellDic(comboBox_dictionary->currentData().toString());
         }
@@ -6381,24 +6528,24 @@ void dlgProfilePreferences::applyAll()
         // Save console buffer settings and apply them
         if (mSnapshot.anyDirty({checkBox_useMaxBufferSize, console_buffer_size_spinBox})) {
             const bool useMaxBuffer = mSnapshot.dirty(checkBox_useMaxBufferSize) ? checkBox_useMaxBufferSize->isChecked() : pHost->getUseMaxConsoleBufferSize();
-            int newBufferSize;
-
-            if (useMaxBuffer && pHost->mpConsole) {
-                newBufferSize = pHost->mpConsole->buffer.getMaxBufferSize();
-            } else {
-                newBufferSize = mSnapshot.dirty(console_buffer_size_spinBox) ? console_buffer_size_spinBox->value() : pHost->getConsoleBufferSize();
+            // The profile keeps the size the user chose while the maximum is in
+            // charge, so unticking the maximum has a size to go back to
+            int chosenBufferSize = pHost->getConsoleBufferSize();
+            if (useMaxBuffer) {
+                chosenBufferSize = mBufferSizeBeforeMax;
+            } else if (mSnapshot.dirty(console_buffer_size_spinBox)) {
+                chosenBufferSize = console_buffer_size_spinBox->value();
             }
 
-            // Calculate batch delete size as 5% of buffer size (minimum 100)
-            const int newBatchDeleteSize = std::max(100, newBufferSize / 5);
-
-            if (pHost->getConsoleBufferSize() != newBufferSize || pHost->getUseMaxConsoleBufferSize() != useMaxBuffer) {
-                pHost->setConsoleBufferSize(newBufferSize);
+            if (pHost->getConsoleBufferSize() != chosenBufferSize || pHost->getUseMaxConsoleBufferSize() != useMaxBuffer) {
+                pHost->setConsoleBufferSize(chosenBufferSize);
                 pHost->setUseMaxConsoleBufferSize(useMaxBuffer);
 
-                // Apply the new buffer size to the main console
-                if (pHost->mpConsole) {
-                    pHost->mpConsole->buffer.setBufferSize(newBufferSize, newBatchDeleteSize);
+                if (pHost->mainConsoleView()) {
+                    const int newBufferSize = useMaxBuffer ? pHost->mainConsoleView()->buffer.getMaxBufferSize() : chosenBufferSize;
+                    // Calculate batch delete size as 5% of buffer size (minimum 100)
+                    const int newBatchDeleteSize = std::max(100, newBufferSize / 5);
+                    pHost->mainConsoleView()->buffer.setBufferSize(newBufferSize, newBatchDeleteSize);
                 }
             }
         }
@@ -6493,14 +6640,14 @@ void dlgProfilePreferences::applyAll()
                 // following this one:
                 const bool defaultAreaWasNotShown = pHost->mpMap->getDefaultAreaShown();
                 pHost->mpMap->setDefaultAreaShown(checkBox_showDefaultArea->isChecked());
-                if (pHost->mpMap->mpMapper && !defaultAreaWasNotShown && checkBox_showDefaultArea->isChecked() && pHost->mpMap->mpMapper->mp2dMap->mAreaID == -1) {
+                if (pHost->mpMap->mapper() && !defaultAreaWasNotShown && checkBox_showDefaultArea->isChecked() && pHost->mpMap->mapper()->mp2dMap->mAreaID == -1) {
                     // Corner case fixup, user has asked for the default area
                     // to be shown and it wasn't - so it can now be:
-                    pHost->mpMap->mpMapper->comboBox_showArea->setCurrentText(pHost->mpMap->getDefaultAreaName());
+                    pHost->mpMap->mapper()->comboBox_showArea->setCurrentText(pHost->mpMap->getDefaultAreaName());
                 }
             }
-            if (mSnapshot.dirty(mMapperUseAntiAlias) && pHost->mpMap->mpMapper) {
-                pHost->mpMap->mpMapper->mp2dMap->mMapperUseAntiAlias = mMapperUseAntiAlias->isChecked();
+            if (mSnapshot.dirty(mMapperUseAntiAlias) && pHost->mpMap->mapper()) {
+                pHost->mpMap->mapper()->mp2dMap->mMapperUseAntiAlias = mMapperUseAntiAlias->isChecked();
             }
 
             // Only when the spin-box is what holds the newer value. It carries
@@ -6511,9 +6658,9 @@ void dlgProfilePreferences::applyAll()
                 pHost->mpMap->setSymbolFontFudgeFactor(mpDoubleSpinBox_mapSymbolFontFudge->value());
             }
 
-            if (pHost->mpMap->mpMapper) {
-                pHost->mpMap->mpMapper->mp2dMap->repaint(); // Forceably redraw it as we ARE currently showing default area
-                pHost->mpMap->mpMapper->update();
+            if (pHost->mpMap->mapper()) {
+                pHost->mpMap->mapper()->mp2dMap->repaint(); // Forceably redraw it as we ARE currently showing default area
+                pHost->mpMap->mapper()->update();
             }
         }
         if (mSnapshot.anyDirty({leftBorderWidth, topBorderHeight, rightBorderWidth, bottomBorderHeight})) {
@@ -6842,6 +6989,27 @@ void dlgProfilePreferences::applyAll()
     if (mSnapshot.dirty(comboBox_toolBarVisibility)) {
         pMudlet->setToolBarVisibility(visibilityFromComboIndex(comboBox_toolBarVisibility->currentIndex()));
     }
+
+#ifdef INCLUDE_MCPSERVER
+    if (mSnapshot.anyDirty({checkBox_enableMCPServer, spinBox_mcpServerPort})) {
+        QString mcpError;
+        const auto requestedMcpPort = static_cast<quint16>(spinBox_mcpServerPort->value());
+        if (pMudlet->setMCPEnabled(checkBox_enableMCPServer->isChecked(), requestedMcpPort, mcpError)) {
+            if (!mMCPServerStateMessage.isEmpty() && label_mcpConnectResult->text() == mMCPServerStateMessage) {
+                // The buttons' own outcomes share this line and are not ours to take back
+                setMCPConnectResult(QString());
+            }
+            mMCPServerStateMessage.clear();
+        } else {
+            mMCPServerStateMessage = mcpError;
+            setMCPConnectResult(mcpError);
+        }
+        // refreshFromSettings() is the usual way back to the widgets, but it stands down
+        // while the search is open or the port box is still being typed into - both of
+        // which are exactly when this runs.
+        slot_updateMCPServerEndpoint();
+    }
+#endif
 
     if (mSnapshot.anyDirty({checkBox_showSpacesAndTabs, checkBox_showLineFeedsAndParagraphs})) {
         const QTextOption::Flags liveOptions = pMudlet->mEditorTextOptions;
@@ -8018,6 +8186,244 @@ void dlgProfilePreferences::slot_changeShowMapAuditErrors(const bool state)
     }
 }
 
+#ifdef INCLUDE_MCPSERVER
+QString dlgProfilePreferences::mcpServerNotReadyHint() const
+{
+    if (!checkBox_enableMCPServer->isChecked()) {
+        //: Shown beneath the AI assistant settings, next to the restart notice, after Mudlet was added to an AI app while the server checkbox above is not on yet.
+        return tr("Also tick the checkbox above, or it will find nobody to talk to.");
+    }
+    if (mudlet::self()->mcpEndpoint().isEmpty()) {
+        //: Shown beneath the AI assistant settings, next to the restart notice, after Mudlet was added to an AI app while the server is switched on but could not start. "Advanced" is the label of the button that reveals the port.
+        return tr("Mudlet is not serving yet though, so check the port under Advanced.");
+    }
+    return {};
+}
+
+void dlgProfilePreferences::slot_updateMCPServerEndpoint()
+{
+    updateMcpSummary();
+    mudlet* pMudlet = mudlet::self();
+    const quint16 port = static_cast<quint16>(spinBox_mcpServerPort->value());
+    // The address carries the access token, which only exists once the server is up, so it
+    // is shown verbatim rather than rebuilt from the port box.
+    const QString liveEndpoint = pMudlet->mcpEndpoint();
+
+    lineEdit_mcpServerAddress->setText(liveEndpoint);
+    pushButton_copyMCPServerAddress->setEnabled(!liveEndpoint.isEmpty());
+    pushButton_mcpConnectManually->setEnabled(!liveEndpoint.isEmpty());
+    if (liveEndpoint.isEmpty()) {
+        const QSignalBlocker blocker(pushButton_mcpConnectManually);
+        pushButton_mcpConnectManually->setChecked(false);
+        widget_mcpManualConnect->hide();
+    }
+
+    if (!liveEndpoint.isEmpty()) {
+        // The port it answers on, not the one in the box: a failed move leaves the two
+        // disagreeing, and the box is the request while this line is the outcome.
+        //: Shown beneath the AI assistant settings while the MCP server is running. %1 is a TCP port number.
+        label_mcpServerEndpoint->setText(tr("Listening on port %1.").arg(pMudlet->mcpServerPort()));
+        return;
+    }
+
+    if (!checkBox_enableMCPServer->isChecked()) {
+        //: Shown beneath the AI assistant settings while the MCP server is switched off.
+        label_mcpServerEndpoint->setText(tr("The server is off, so nothing can reach Mudlet."));
+        return;
+    }
+
+    if (!pMudlet->mcpLastError().isEmpty()) {
+        // Every reason the server can refuse to start is answered by the port box, so fold
+        // it out - the message telling the user to change it would otherwise point at
+        // something they cannot see. Never folded back in: that is theirs to close.
+        pushButton_mcpAdvanced->setChecked(true);
+        // The reason is on the result line below the buttons, which this must not contradict
+        //: Shown beneath the AI assistant settings when the MCP server could not open its port. The reason appears below the buttons.
+        label_mcpServerEndpoint->setText(tr("The server is not running."));
+        return;
+    }
+
+    // The moment between the box being ticked and the change being applied
+    //: Shown beneath the AI assistant settings in the moment between the server being switched on and it answering. %1 is a TCP port number.
+    label_mcpServerEndpoint->setText(tr("Starting on port %1...").arg(port));
+}
+
+// An empty line would still hold its row open beneath the buttons
+void dlgProfilePreferences::setMCPConnectResult(const QString& message)
+{
+    label_mcpConnectResult->setText(message);
+    label_mcpConnectResult->setVisible(!message.isEmpty());
+}
+
+void dlgProfilePreferences::slot_connectClaudeDesktop()
+{
+    switch (TMCPBridge::connectClaudeDesktop()) {
+    case TMCPBridge::ConnectOutcome::Written: {
+        mMCPRestartClaudeDesktop = true;
+        updateMCPRestartNotice();
+        refreshMCPAppButtons();
+        mMCPServerStateMessage = mcpServerNotReadyHint();
+        setMCPConnectResult(mMCPServerStateMessage);
+        break;
+    }
+    case TMCPBridge::ConnectOutcome::NoClientApp: {
+        const QString dir = TMCPBridge::claudeDesktopConfigDir();
+        if (dir.isEmpty()) {
+            //: Shown beneath the AI assistant settings when the location Claude Desktop keeps its settings in could not be worked out at all. Claude Desktop is a product name, leave it as-is.
+            setMCPConnectResult(tr("Could not work out where Claude Desktop keeps its settings on this system."));
+            break;
+        }
+        //: Shown beneath the AI assistant settings when the Claude Desktop application's settings folder does not exist. %1 is the folder Mudlet looked for, claude.com/download is a URL - leave it as-is.
+        setMCPConnectResult(tr("Claude Desktop does not look installed - there is no %1. Install it from claude.com/download and open it once, then try again.").arg(dir));
+        break;
+    }
+    case TMCPBridge::ConnectOutcome::NoBinaryPath:
+        //: Shown beneath the AI assistant settings when Mudlet could not work out its own location on disk. Claude Desktop is a product name, leave it as-is.
+        setMCPConnectResult(tr("Could not work out where this Mudlet is installed, so Claude Desktop was not told how to launch it."));
+        break;
+    case TMCPBridge::ConnectOutcome::ConfigUnreadable:
+        //: Shown beneath the AI assistant settings when the Claude Desktop application's settings file could not be read or understood. %1 is the file's location.
+        setMCPConnectResult(tr("Claude Desktop's settings file could not be read or understood, so it was left untouched. Check %1 for problems - a stray comma is enough - and try again.")
+                                    .arg(TMCPBridge::claudeDesktopConfigFilePath()));
+        break;
+    case TMCPBridge::ConnectOutcome::WriteFailed:
+        //: Shown beneath the AI assistant settings when an AI app's settings file could not be written. %1 is the file's location.
+        setMCPConnectResult(tr("Could not write to %1 - check its file permissions.").arg(TMCPBridge::claudeDesktopConfigFilePath()));
+        break;
+    }
+}
+
+void dlgProfilePreferences::slot_connectChatGpt()
+{
+    switch (TMCPBridge::connectCodex()) {
+    case TMCPBridge::ConnectOutcome::Written: {
+        mMCPRestartChatGpt = true;
+        updateMCPRestartNotice();
+        refreshMCPAppButtons();
+        mMCPServerStateMessage = mcpServerNotReadyHint();
+        setMCPConnectResult(mMCPServerStateMessage);
+        break;
+    }
+    case TMCPBridge::ConnectOutcome::NoClientApp:
+        //: Shown beneath the AI assistant settings when the folder the ChatGPT desktop app and Codex keep their settings in does not exist. %1 is the folder Mudlet looked for, ChatGPT and Codex are product names - leave them as-is.
+        setMCPConnectResult(tr("ChatGPT does not look installed - there is no %1. Install the ChatGPT desktop app or Codex and use it once, then try again.").arg(TMCPBridge::codexConfigDir()));
+        break;
+    case TMCPBridge::ConnectOutcome::NoBinaryPath:
+        //: Shown beneath the AI assistant settings when Mudlet could not work out its own location on disk. ChatGPT is a product name, leave it as-is.
+        setMCPConnectResult(tr("Could not work out where this Mudlet is installed, so ChatGPT was not told how to launch it."));
+        break;
+    case TMCPBridge::ConnectOutcome::ConfigUnreadable:
+        //: Shown beneath the AI assistant settings when the settings file shared by the ChatGPT desktop app and Codex could not be read or understood. %1 is the file's location.
+        setMCPConnectResult(tr("ChatGPT's settings file could not be read or understood, so it was left untouched. Check %1 for problems and try again.").arg(TMCPBridge::codexConfigFilePath()));
+        break;
+    case TMCPBridge::ConnectOutcome::WriteFailed:
+        //: Shown beneath the AI assistant settings when an AI app's settings file could not be written. %1 is the file's location.
+        setMCPConnectResult(tr("Could not write to %1 - check its file permissions.").arg(TMCPBridge::codexConfigFilePath()));
+        break;
+    }
+}
+
+// Empty when Mudlet was taken out, which needs no line of its own beside the restart notice
+static QString mcpRemoveMessage(const TMCPBridge::RemoveOutcome outcome, const QString& appName, const QString& configFilePath)
+{
+    switch (outcome) {
+    case TMCPBridge::RemoveOutcome::Removed:
+        return {};
+    case TMCPBridge::RemoveOutcome::NotRegistered:
+        //: Shown beneath the AI assistant settings when Mudlet was asked to remove itself from an AI app's settings but was no longer there. %1 is the app's name.
+        return dlgProfilePreferences::tr("Mudlet was no longer in %1's settings, so there was nothing to remove.").arg(appName);
+    case TMCPBridge::RemoveOutcome::ConfigUnreadable:
+        //: Shown beneath the AI assistant settings when an AI app's settings file could not be read or understood while removing Mudlet from it. %1 is the app's name, %2 the file's location.
+        return dlgProfilePreferences::tr("%1's settings file could not be read or understood, so it was left untouched. Check %2 for problems and try again.").arg(appName, configFilePath);
+    case TMCPBridge::RemoveOutcome::WriteFailed:
+        //: Shown beneath the AI assistant settings when an AI app's settings file could not be written. %1 is the file's location.
+        return dlgProfilePreferences::tr("Could not write to %1 - check its file permissions.").arg(configFilePath);
+    }
+    return {};
+}
+
+void dlgProfilePreferences::slot_removeClaudeDesktop()
+{
+    const TMCPBridge::RemoveOutcome outcome = TMCPBridge::removeClaudeDesktop();
+    mMCPRestartClaudeDesktop |= outcome == TMCPBridge::RemoveOutcome::Removed;
+    //: Name of the Claude Desktop application, used in messages about removing Mudlet from its settings. Claude Desktop is a product name, leave it as-is.
+    setMCPConnectResult(mcpRemoveMessage(outcome, tr("Claude Desktop"), TMCPBridge::claudeDesktopConfigFilePath()));
+    updateMCPRestartNotice();
+    refreshMCPAppButtons();
+}
+
+void dlgProfilePreferences::slot_removeChatGpt()
+{
+    const TMCPBridge::RemoveOutcome outcome = TMCPBridge::removeCodex();
+    mMCPRestartChatGpt |= outcome == TMCPBridge::RemoveOutcome::Removed;
+    //: Name of the ChatGPT desktop app, used in messages about removing Mudlet from its settings. ChatGPT is a product name, leave it as-is.
+    setMCPConnectResult(mcpRemoveMessage(outcome, tr("ChatGPT"), TMCPBridge::codexConfigFilePath()));
+    updateMCPRestartNotice();
+    refreshMCPAppButtons();
+}
+
+void dlgProfilePreferences::refreshMCPAppButtons()
+{
+    const auto present = [](QPushButton* pButton, QMenu* pMenu, const bool registered, const QString& removeText, const QString& registeredDescription) {
+        pMenu->actions().constFirst()->setText(removeText);
+        pButton->setMenu(registered ? pMenu : nullptr);
+        pButton->setIcon(registered ? QIcon(qsl(":/icons/dialog-ok-apply.png")) : QIcon());
+        // The .ui texts describe adding; kept to put back once Mudlet is removed again
+        if (!pButton->property("mcpAddToolTip").isValid()) {
+            pButton->setProperty("mcpAddToolTip", pButton->toolTip());
+            pButton->setProperty("mcpAddDescription", pButton->accessibleDescription());
+        }
+        pButton->setToolTip(registered ? qsl("<p>%1</p>").arg(registeredDescription.toHtmlEscaped()) : pButton->property("mcpAddToolTip").toString());
+        pButton->setAccessibleDescription(registered ? registeredDescription : pButton->property("mcpAddDescription").toString());
+    };
+    //: Menu entry on the Claude Desktop button once Mudlet is in that app's settings. Claude Desktop is a product name, leave it as-is.
+    present(pushButton_connectClaudeDesktop,
+            findChild<QMenu*>(qsl("menu_claudeDesktop")),
+            TMCPBridge::claudeDesktopRegistered(),
+            tr("Remove from Claude Desktop"),
+            //: Tooltip and screen reader description of the Claude Desktop button once Mudlet is in that app's settings. Claude Desktop is a product name, leave it as-is.
+            tr("Mudlet is added to Claude Desktop. Opens a menu to remove it again."));
+    //: Menu entry on the ChatGPT button once Mudlet is in the settings shared by the ChatGPT desktop app and Codex. ChatGPT is a product name, leave it as-is.
+    present(pushButton_connectChatGpt,
+            findChild<QMenu*>(qsl("menu_chatGpt")),
+            TMCPBridge::codexRegistered(),
+            tr("Remove from ChatGPT"),
+            //: Tooltip and screen reader description of the ChatGPT button once Mudlet is in the settings shared by the ChatGPT desktop app and Codex. ChatGPT and Codex are product names, leave them as-is.
+            tr("Mudlet is added to ChatGPT and Codex. Opens a menu to remove it again."));
+}
+
+void dlgProfilePreferences::updateMCPRestartNotice()
+{
+    QString notice;
+    if (mMCPRestartClaudeDesktop && mMCPRestartChatGpt) {
+        //: Shown beneath the AI assistant settings after Mudlet was added to or removed from both AI apps' settings. Claude Desktop and ChatGPT are product names, leave them as-is.
+        notice = tr("Please restart Claude Desktop and ChatGPT for the change to take effect");
+    } else if (mMCPRestartClaudeDesktop) {
+        //: Shown beneath the AI assistant settings after Mudlet was added to or removed from the Claude Desktop application's settings. Claude Desktop is a product name, leave it as-is.
+        notice = tr("Please restart Claude Desktop for the change to take effect");
+    } else if (mMCPRestartChatGpt) {
+        //: Shown beneath the AI assistant settings after Mudlet was added to or removed from the settings shared by the ChatGPT desktop app and Codex. ChatGPT and Codex are product names, leave them as-is.
+        notice = tr("Please restart ChatGPT (or Codex) for the change to take effect");
+    }
+    need_restart_for_ai_assistant->setText(notice);
+    need_restart_for_ai_assistant->setVisible(!notice.isEmpty());
+}
+
+void dlgProfilePreferences::slot_copyMCPServerAddress()
+{
+    const QString endpoint = mudlet::self()->mcpEndpoint();
+    if (endpoint.isEmpty()) {
+        // The button disables itself while the server is down, but a stop can race the click.
+        //: Shown beneath the AI assistant settings when the Copy address button is pressed while the server is not running.
+        setMCPConnectResult(tr("There is no address to copy while the server is off."));
+        return;
+    }
+    QGuiApplication::clipboard()->setText(endpoint);
+    //: Shown beneath the AI assistant settings after the Copy address button is pressed.
+    setMCPConnectResult(tr("Address copied - paste it into your AI assistant."));
+}
+#endif
+
 // We do not use the QSpinBox::valueChanged() signal and it is only emitted if
 // the new value is different - so there is no need to worry about if we are or
 // are not changing the value in the next two methods:
@@ -8205,6 +8611,15 @@ void dlgProfilePreferences::slot_guiLanguageChanged(const QString& language)
     // retranslateUi() restored the .ui file's group box titles, and does not reach the shell
     retitleCards();
     retranslateShell();
+#ifdef INCLUDE_MCPSERVER
+    // retranslateUi() put back the adding texts, now in the new language
+    for (auto* pButton : {pushButton_connectClaudeDesktop, pushButton_connectChatGpt}) {
+        pButton->setProperty("mcpAddToolTip", QVariant());
+        pButton->setProperty("mcpAddDescription", QVariant());
+    }
+    refreshMCPAppButtons();
+    updateMCPRestartNotice();
+#endif
     // Every text the search index and column widths were measured from has been replaced, including
     // checkboxes fitted to the old language, which can also change the width the sidebar needs
     invalidateSearch();
@@ -8267,12 +8682,12 @@ void dlgProfilePreferences::slot_changePlayerRoomStyle(const int index)
     setButtonColor(pushButton_playerRoomSecondaryColor, pHost->mpMap->mPlayerRoomInnerColor, true);
     pHost->mpMap->mPlayerRoomStyle = static_cast<quint8>(style);
     pHost->setPlayerRoomStyle(static_cast<quint8>(style));
-    if (!pHost->mpMap->mpMapper || !pHost->mpMap->mpMapper->mp2dMap) {
+    if (!pHost->mpMap->mapper() || !pHost->mpMap->mapper()->mp2dMap) {
         return;
     }
-    pHost->mpMap->mpMapper->mp2dMap->setPlayerRoomStyle(style);
+    pHost->mpMap->mapper()->mp2dMap->setPlayerRoomStyle(style);
     // And update the displayed map:
-    pHost->mpMap->mpMapper->mp2dMap->update();
+    pHost->mpMap->mapper()->mp2dMap->update();
 }
 
 void dlgProfilePreferences::slot_setPlayerRoomPrimaryColor()
@@ -8288,11 +8703,11 @@ void dlgProfilePreferences::slot_setPlayerRoomPrimaryColor()
         return;
     }
 
-    if (mpHost->mpMap->mpMapper && mpHost->mpMap->mpMapper->mp2dMap) {
+    if (mpHost->mpMap->mapper() && mpHost->mpMap->mapper()->mp2dMap) {
         // The current setting IS for the custom color - so use it straight away:
-        mpHost->mpMap->mpMapper->mp2dMap->setPlayerRoomStyle(3);
+        mpHost->mpMap->mapper()->mp2dMap->setPlayerRoomStyle(3);
         // And update the displayed map:
-        mpHost->mpMap->mpMapper->mp2dMap->update();
+        mpHost->mpMap->mapper()->mp2dMap->update();
     }
 }
 
@@ -8309,11 +8724,11 @@ void dlgProfilePreferences::slot_setPlayerRoomSecondaryColor()
         return;
     }
 
-    if (mpHost->mpMap->mpMapper && mpHost->mpMap->mpMapper->mp2dMap) {
+    if (mpHost->mpMap->mapper() && mpHost->mpMap->mapper()->mp2dMap) {
         // The current setting IS for the custom color - so use it straight away:
-        mpHost->mpMap->mpMapper->mp2dMap->setPlayerRoomStyle(3);
+        mpHost->mpMap->mapper()->mp2dMap->setPlayerRoomStyle(3);
         // And update the displayed map:
-        mpHost->mpMap->mpMapper->mp2dMap->update();
+        mpHost->mpMap->mapper()->mp2dMap->update();
     }
 }
 
@@ -8327,9 +8742,9 @@ void dlgProfilePreferences::slot_setPlayerRoomOuterDiameter(const int value)
     if (value < 256 && pHost->mpMap->mPlayerRoomOuterDiameterPercentage != value) {
         pHost->mpMap->mPlayerRoomOuterDiameterPercentage = static_cast<quint8>(value);
         pHost->setPlayerRoomOuterDiameter(static_cast<quint8>(value));
-        if (pHost->mpMap->mpMapper && pHost->mpMap->mpMapper->mp2dMap) {
+        if (pHost->mpMap->mapper() && pHost->mpMap->mapper()->mp2dMap) {
             // And update the displayed map:
-            pHost->mpMap->mpMapper->mp2dMap->update();
+            pHost->mpMap->mapper()->mp2dMap->update();
         }
     }
 }
@@ -8344,11 +8759,11 @@ void dlgProfilePreferences::slot_setPlayerRoomInnerDiameter(const int value)
     if (value < 256 && pHost->mpMap->mPlayerRoomInnerDiameterPercentage != value) {
         pHost->mpMap->mPlayerRoomInnerDiameterPercentage = static_cast<quint8>(value);
         pHost->setPlayerRoomInnerDiameter(static_cast<quint8>(value));
-        if (pHost->mpMap->mpMapper && pHost->mpMap->mpMapper->mp2dMap) {
+        if (pHost->mpMap->mapper() && pHost->mpMap->mapper()->mp2dMap) {
             // Redefine the QGradientStops
-            pHost->mpMap->mpMapper->mp2dMap->setPlayerRoomStyle(qBound(0, comboBox_playerRoomStyle->currentIndex(), 3));
+            pHost->mpMap->mapper()->mp2dMap->setPlayerRoomStyle(qBound(0, comboBox_playerRoomStyle->currentIndex(), 3));
             // And update the displayed map:
-            pHost->mpMap->mpMapper->mp2dMap->update();
+            pHost->mpMap->mapper()->mp2dMap->update();
         }
     }
 }
@@ -8439,16 +8854,16 @@ void dlgProfilePreferences::slot_toggleUseMaxBufferSize(bool checked)
     }
 
     if (checked) {
-        // When max is enabled, set spinbox to max value and disable it
-        if (pHost->mpConsole) {
-            const int maxBufferSize = pHost->mpConsole->buffer.getMaxBufferSize();
+        // A size typed into the box may not have been applied yet
+        mBufferSizeBeforeMax = console_buffer_size_spinBox->value();
+        if (pHost->mainConsoleView()) {
+            const int maxBufferSize = pHost->mainConsoleView()->buffer.getMaxBufferSize();
             console_buffer_size_spinBox->setValue(maxBufferSize);
         }
         console_buffer_size_spinBox->setEnabled(false);
     } else {
-        // When max is disabled, enable the spinbox and set to stored value
         console_buffer_size_spinBox->setEnabled(true);
-        console_buffer_size_spinBox->setValue(pHost->getConsoleBufferSize());
+        console_buffer_size_spinBox->setValue(mBufferSizeBeforeMax);
     }
 }
 
@@ -8517,8 +8932,8 @@ void dlgProfilePreferences::slot_changeMapperShowRoomBorders(const bool state)
     }
 
     pHost->mMapperShowRoomBorders = state;
-    if (pHost->mpMap && pHost->mpMap->mpMapper && pHost->mpMap->mpMapper->mp2dMap) {
-        pHost->mpMap->mpMapper->mp2dMap->update();
+    if (pHost->mpMap && pHost->mpMap->mapper() && pHost->mpMap->mapper()->mp2dMap) {
+        pHost->mpMap->mapper()->mp2dMap->update();
     }
 }
 
@@ -8526,8 +8941,8 @@ void dlgProfilePreferences::slot_changeDrawUpperLowerLevels(const bool state)
 {
     mudlet::self()->mDrawUpperLowerLevels = state;
     Host* pHost = mpHost;
-    if (pHost && pHost->mpMap && pHost->mpMap->mpMapper && pHost->mpMap->mpMapper->mp2dMap) {
-        pHost->mpMap->mpMapper->mp2dMap->update();
+    if (pHost && pHost->mpMap && pHost->mpMap->mapper() && pHost->mpMap->mapper()->mp2dMap) {
+        pHost->mpMap->mapper()->mp2dMap->update();
     }
 }
 
@@ -8539,9 +8954,9 @@ void dlgProfilePreferences::slot_changeMapperUseAntiAlias(const bool state)
     }
 
     pHost->mMapperUseAntiAlias = state;
-    if (pHost->mpMap && pHost->mpMap->mpMapper && pHost->mpMap->mpMapper->mp2dMap) {
-        pHost->mpMap->mpMapper->mp2dMap->mMapperUseAntiAlias = state;
-        pHost->mpMap->mpMapper->mp2dMap->update();
+    if (pHost->mpMap && pHost->mpMap->mapper() && pHost->mpMap->mapper()->mp2dMap) {
+        pHost->mpMap->mapper()->mp2dMap->mMapperUseAntiAlias = state;
+        pHost->mpMap->mapper()->mp2dMap->update();
     }
 }
 
@@ -8574,7 +8989,7 @@ void dlgProfilePreferences::slot_caretModeKeyChanged(const int index)
 
 bool dlgProfilePreferences::updateDisplayFont(const Host::DisplayFontChange change)
 {
-    if (mpHost.isNull() || (mpHost.data()->mpConsole.isNull())) {
+    if (mpHost.isNull() || !mpHost->mainConsoleView()) {
         return false;
     }
 
@@ -8670,10 +9085,10 @@ void dlgProfilePreferences::slot_changeShowTabConnectionIndicators(bool state)
 void dlgProfilePreferences::slot_roomSizeChanged(int size)
 {
     if (mpHost) {
-        mpHost->mRoomSize = static_cast<float>(size) / 10.0f;
-        if (mpHost->mpMap && mpHost->mpMap->mpMapper && mpHost->mpMap->mpMapper->mp2dMap) {
-            mpHost->mpMap->mpMapper->mp2dMap->setRoomSize(static_cast<float>(size) / 10.0f);
-            mpHost->mpMap->mpMapper->mp2dMap->update();
+        mpHost->mRoomSize = size / 10.0;
+        if (mpHost->mpMap && mpHost->mpMap->mapper() && mpHost->mpMap->mapper()->mp2dMap) {
+            mpHost->mpMap->mapper()->mp2dMap->setRoomSize(mpHost->mRoomSize);
+            mpHost->mpMap->mapper()->mp2dMap->update();
         }
     }
 }
@@ -8689,8 +9104,8 @@ void dlgProfilePreferences::slot_exitSizeChanged(int size)
     if (mpHost) {
         const double internalSize = 50.0 / size;
         mpHost->mLineSize = internalSize;
-        if (mpHost->mpMap && mpHost->mpMap->mpMapper && mpHost->mpMap->mpMapper->mp2dMap) {
-            mpHost->mpMap->mpMapper->mp2dMap->setExitSize(internalSize);
+        if (mpHost->mpMap && mpHost->mpMap->mapper() && mpHost->mpMap->mapper()->mp2dMap) {
+            mpHost->mpMap->mapper()->mp2dMap->setExitSize(internalSize);
         }
     }
 }
@@ -8700,8 +9115,8 @@ void dlgProfilePreferences::slot_borderSizeChanged(int size)
     if (mpHost) {
         const double internalSize = 50.0 / size;
         mpHost->mRoomBorderSize = internalSize;
-        if (mpHost->mpMap && mpHost->mpMap->mpMapper && mpHost->mpMap->mpMapper->mp2dMap) {
-            mpHost->mpMap->mpMapper->mp2dMap->setBorderSize(internalSize);
+        if (mpHost->mpMap && mpHost->mpMap->mapper() && mpHost->mpMap->mapper()->mp2dMap) {
+            mpHost->mpMap->mapper()->mp2dMap->setBorderSize(internalSize);
         }
     }
 }
@@ -8710,8 +9125,8 @@ void dlgProfilePreferences::slot_gridSizeChanged(double size)
 {
     if (mpHost) {
         mpHost->mMapGridLineSize = size;
-        if (mpHost->mpMap && mpHost->mpMap->mpMapper && mpHost->mpMap->mpMapper->mp2dMap) {
-            mpHost->mpMap->mpMapper->mp2dMap->update();
+        if (mpHost->mpMap && mpHost->mpMap->mapper() && mpHost->mpMap->mapper()->mp2dMap) {
+            mpHost->mpMap->mapper()->mp2dMap->update();
         }
     }
 }

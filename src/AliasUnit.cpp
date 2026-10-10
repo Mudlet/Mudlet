@@ -135,13 +135,13 @@ void AliasUnit::addAliasRootNode(TAlias* pT, int parentPosition, int childPositi
         pT->setID(getNewID());
     }
     if ((parentPosition == -1) || (childPosition >= static_cast<int>(mAliasRootNodeList.size()))) {
-        mAliasRootNodeList.push_back(pT);
+        listRootNode(pT, mAliasRootNodeList.end());
     } else {
         // insert item at proper position
         int cnt = 0;
         for (auto it = mAliasRootNodeList.begin(); it != mAliasRootNodeList.end(); it++) {
             if (cnt >= childPosition) {
-                mAliasRootNodeList.insert(it, pT);
+                listRootNode(pT, it);
                 break;
             }
             cnt++;
@@ -166,7 +166,7 @@ void AliasUnit::reParentAlias(int childID, int oldParentID, int newParentID, int
     if (pOldParent) {
         pOldParent->popChild(pChild);
     } else {
-        mAliasRootNodeList.remove(pChild);
+        unlistRootNode(pChild);
     }
 
     if (pNewParent) {
@@ -200,7 +200,23 @@ void AliasUnit::removeAliasRootNode(TAlias* pT)
     // rest of the session
     mLookupTable.remove(pT->getName(), pT);
     mAliasMap.remove(pT->getID());
-    mAliasRootNodeList.remove(pT);
+    unlistRootNode(pT);
+}
+
+void AliasUnit::listRootNode(TAlias* pT, std::list<TAlias*>::iterator before)
+{
+    if (!mRootNodePositions.contains(pT)) {
+        mRootNodePositions.insert(pT, mAliasRootNodeList.insert(before, pT));
+    }
+}
+
+void AliasUnit::unlistRootNode(TAlias* pT)
+{
+    const auto position = mRootNodePositions.constFind(pT);
+    if (position != mRootNodePositions.cend()) {
+        mAliasRootNodeList.erase(position.value());
+        mRootNodePositions.erase(position);
+    }
 }
 
 void AliasUnit::removeAllTempAliases()
@@ -311,7 +327,7 @@ bool AliasUnit::processDataStream(const QString& data)
                              << " as a garbage collection finaliser sent it while the capture tables were being built; it goes to the game unexpanded.";
         return false;
     }
-    Lua->set_lua_string(qsl("command"), data);
+    Lua->setExpandedCommand(data);
     bool state = false;
     //Using copy fixes https://github.com/Mudlet/Mudlet/issues/4297
     const std::vector<TAlias*> copyOfNodeList(mAliasRootNodeList.cbegin(), mAliasRootNodeList.cend());
@@ -320,12 +336,13 @@ bool AliasUnit::processDataStream(const QString& data)
     haystack.truncate(qstrlen(haystack.constData()));
 
     mProcessingDepth++;
-    const auto processingGuard = qScopeGuard([this] {
+    const auto processingGuard = qScopeGuard([this, Lua] {
         mProcessingDepth--;
         Q_ASSERT(mProcessingDepth >= 0);
         if (mProcessingDepth <= 1) {
             mRunawayExpansionStopped = false;
         }
+        Lua->settleCommandAfterAliasPass();
         if (mProcessingDepth == 0) {
             doCleanup();
         }

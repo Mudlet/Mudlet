@@ -111,6 +111,13 @@ set(UNIT_TESTS
     ProfileNameValidationTest
 )
 
+# The MCP server only lands in the Mudlet library when configured with USE_MCPSERVER, so
+# its test is gated the same way. Qt6::HttpServer reaches it through that library.
+if(USE_MCPSERVER)
+    list(APPEND UNIT_TESTS TMCPServerTest)
+    list(APPEND UNIT_TESTS TMCPBridgeTest)
+endif()
+
 mudlet_add_test_pch_provider(mudlet_unit_test_pch)
 
 foreach(test_name ${UNIT_TESTS})
@@ -130,6 +137,13 @@ endforeach()
 # limit cases in TAreaGridIndexTest, which never return once a viewport scan
 # stops terminating.
 set_tests_properties(EventLoopPumpTest TAreaGridIndexTest PROPERTIES TIMEOUT 60)
+
+if(USE_MCPSERVER)
+    # The end-to-end cases pipe JSON-RPC through a real `mudlet --mcp-bridge` process,
+    # so the test needs the application binary itself, not just the library.
+    target_compile_definitions(TMCPBridgeTest PRIVATE MUDLET_BINARY_PATH="$<TARGET_FILE:mudlet_executable>")
+    add_dependencies(TMCPBridgeTest mudlet_executable)
+endif()
 
 # TKeySequenceEditTest's focus traversal cases need an active window, which an X
 # server with no window manager never gives them, so a plain `xvfb-run ctest`
@@ -197,6 +211,19 @@ add_test(NAME IrcMessageComposerTest COMMAND $<TARGET_FILE:IrcMessageComposerTes
 set_tests_properties(IrcMessageComposerTest PROPERTIES
     ENVIRONMENT "ASAN_OPTIONS=detect_leaks=0"
     TIMEOUT 60
+)
+
+# The application style's kept Fusion title bar icons. Built from the one source it
+# covers, which needs nothing but Qt Widgets.
+add_executable(AltFocusMenuBarDisableTest
+    AltFocusMenuBarDisableTest.cpp
+    ${CMAKE_SOURCE_DIR}/src/AltFocusMenuBarDisable.cpp
+)
+target_include_directories(AltFocusMenuBarDisableTest PRIVATE ${CMAKE_SOURCE_DIR}/src)
+target_link_libraries(AltFocusMenuBarDisableTest PRIVATE Qt6::Test Qt6::Widgets)
+add_test(NAME AltFocusMenuBarDisableTest COMMAND $<TARGET_FILE:AltFocusMenuBarDisableTest>)
+set_tests_properties(AltFocusMenuBarDisableTest PROPERTIES
+    ENVIRONMENT "ASAN_OPTIONS=detect_leaks=0;QT_QPA_PLATFORM=offscreen"
 )
 
 add_executable(CrashReportUploadTest

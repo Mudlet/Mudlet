@@ -162,7 +162,7 @@ private slots:
         auto [loaded, loadMessage] = mpHost->setMovie(mLabelName, mGifPath);
         QVERIFY2(loaded, qPrintable(loadMessage));
 
-        TLabel* pLabel = mpHost->mpConsole->labelWidget(mLabelName);
+        TLabel* pLabel = mpHost->mainConsoleView()->labelWidget(mLabelName);
         QVERIFY(pLabel);
         QVERIFY(pLabel->mpMovie);
         QVERIFY2(pLabel->mpMovie->isValid(), "the label did not end up with a movie it can play");
@@ -184,7 +184,7 @@ private slots:
         // is not one also reports, so this only holds the line
         QCOMPARE(pLabel->mpMovie->state(), QMovie::Running);
 
-        mpHost->mpConsole->deleteLabel(mLabelName);
+        mpHost->deleteLabel(mLabelName);
     }
 };
 

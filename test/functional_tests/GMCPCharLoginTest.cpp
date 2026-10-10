@@ -55,6 +55,7 @@
 #include "dlgConnectionProfiles.h"
 #include "dlgProfilePreferences.h"
 #include "mudlet.h"
+#include "TMainConsole.h"
 #include "utils.h"
 
 #include "GroupedTest.h"
@@ -3088,10 +3089,10 @@ private:
 
     static int consoleOccurrences(Host* host, const QString& substring)
     {
-        if (!host || !host->mpConsole) {
+        if (!host || !host->mainConsoleView()) {
             return 0;
         }
-        auto& buffer = host->mpConsole->buffer;
+        auto& buffer = host->mainConsoleView()->buffer;
         int seen = 0;
         for (int i = 0; i <= buffer.getLastLineNumber(); ++i) {
             if (buffer.line(i).contains(substring)) {
@@ -3103,10 +3104,10 @@ private:
 
     static bool consoleContains(Host* host, const QString& substring)
     {
-        if (!host || !host->mpConsole) {
+        if (!host || !host->mainConsoleView()) {
             return false;
         }
-        auto& buffer = host->mpConsole->buffer;
+        auto& buffer = host->mainConsoleView()->buffer;
         QString all;
         for (int i = 0; i <= buffer.getLastLineNumber(); ++i) {
             all.append(buffer.line(i));
@@ -3124,10 +3125,10 @@ private:
         const QString needle = QString(sentence).remove(whitespace);
         return QTest::qWaitFor(
                 [&]() {
-                    if (!host || !host->mpConsole) {
+                    if (!host || !host->mainConsoleView()) {
                         return false;
                     }
-                    auto& buffer = host->mpConsole->buffer;
+                    auto& buffer = host->mainConsoleView()->buffer;
                     QString all;
                     for (int i = 0; i <= buffer.getLastLineNumber(); ++i) {
                         all.append(buffer.line(i));

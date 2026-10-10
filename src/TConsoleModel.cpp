@@ -24,7 +24,6 @@
 #include "Host.h"
 #include "MudletApp.h"
 #include "TDebug.h"
-#include "mudlet.h"
 
 #include <QCoreApplication>
 #include <QDateTime>
@@ -100,7 +99,29 @@ void TConsoleModel::moveCursorEnd()
 
 void TConsoleModel::deleteLineAtCursor()
 {
-    buffer.deleteLine(mUserCursor.y());
+    const int deletedLine = mUserCursor.y();
+    if (!buffer.deleteLine(deletedLine)) {
+        return;
+    }
+    // The selection is held by line number, so it moves up with its line or goes with it
+    if (P_begin.y() == deletedLine) {
+        deselect();
+    } else if (P_begin.y() > deletedLine) {
+        P_begin.ry()--;
+        P_end.ry()--;
+    }
+}
+
+void TConsoleModel::clear()
+{
+    buffer.clear();
+    // --mirror's pending line went with the buffer.
+    mMirrorPendingLine.clear();
+    mUserCursor = QPoint();
+    // Past the line left, so isPrompt() sees that the line a trigger runs for went too, even when it was line 0
+    if (mTriggerEngineMode) {
+        mEngineCursor = buffer.size();
+    }
 }
 
 void TConsoleModel::deselect()
@@ -193,13 +214,13 @@ int TConsoleModel::selectString(const QString& text, int numOfMatch)
 
 std::tuple<bool, QString, int, int> TConsoleModel::selection()
 {
-    if (mUserCursor.y() >= static_cast<int>(buffer.buffer.size())) {
+    if (P_begin.y() >= static_cast<int>(buffer.buffer.size())) {
         return {false, qsl("the selection is no longer valid"), 0, 0};
     }
 
     const auto start = P_begin.x();
     const auto length = P_end.x() - P_begin.x();
-    const auto line = buffer.line(mUserCursor.y());
+    const auto line = buffer.line(P_begin.y());
     if (line.size() < start) {
         return {false, qsl("the selection is no longer valid"), 0, 0};
     }
@@ -308,7 +329,7 @@ TConsoleModel::CommandEcho TConsoleModel::printCommand(QString& msg)
         QPoint P(buffer.buffer.at(lineBeforeNewContent).size(), lineBeforeNewContent);
         const TChar format(mCommandFgColor, mCommandBgColor);
         buffer.insertInLine(P, msg, format);
-        const int down = buffer.wrapLine(lineBeforeNewContent, mpHost->mScreenWidth, mpHost->mWrapIndentCount, mpHost->mWrapHangingIndentCount);
+        const int down = buffer.wrapLine(lineBeforeNewContent);
         buffer.promptBuffer[lineBeforeNewContent] = false;
         return {CommandEcho::Kind::PromptLine, lineBeforeNewContent, lineBeforeNewContent + 1 + down};
     }
@@ -329,7 +350,7 @@ void writeMirrorLine(const QString& line)
         return;
     }
 
-    mudlet::smMirrorToStdOut = false;
+    MudletApp::smMirrorToStdOut = false;
     qWarning().nospace() << "--mirror: could not write to standard output (" << std::strerror(errno) << "), nothing more will be copied to it";
 }
 
@@ -349,7 +370,7 @@ QString mirrorPrefix(const QString& profileName, const QString& consoleName)
 
 void TConsoleModel::mirrorToStdOut(const QString& text)
 {
-    if (Q_LIKELY(!mudlet::smMirrorToStdOut)) {
+    if (Q_LIKELY(!MudletApp::smMirrorToStdOut)) {
         return;
     }
 
@@ -367,7 +388,7 @@ void TConsoleModel::mirrorToStdOut(const QString& text)
 
 void TConsoleModel::mirrorLineToStdOut(const QString& line)
 {
-    if (Q_LIKELY(!mudlet::smMirrorToStdOut)) {
+    if (Q_LIKELY(!MudletApp::smMirrorToStdOut)) {
         return;
     }
 
@@ -436,7 +457,7 @@ TConsoleModel::WriteResult TConsoleModel::insertLink(const QString& text, QStrin
     int newX = mUserCursor.x() + text.size();
     int down = 0;
     if (text.indexOf(QChar::LineFeed) != -1) {
-        down = buffer.wrapLine(line, mpHost->mScreenWidth, mpHost->mWrapIndentCount, mpHost->mWrapHangingIndentCount);
+        down = buffer.wrapLine(line);
         newX = std::max(0, static_cast<int>(text.size() - text.lastIndexOf(QChar::LineFeed) - 1));
     }
     QPoint newCursor(newX, line + down);
@@ -490,7 +511,7 @@ TConsoleModel::WriteResult TConsoleModel::insertText(const QString& text)
     const int line = mUserCursor.y();
     int down = 0;
     if (text.indexOf(QChar::LineFeed) != -1) {
-        down = buffer.wrapLine(line, mpHost->mScreenWidth, mpHost->mWrapIndentCount, mpHost->mWrapHangingIndentCount);
+        down = buffer.wrapLine(line);
     }
     return {false, line, line + down};
 }
@@ -498,11 +519,10 @@ TConsoleModel::WriteResult TConsoleModel::insertText(const QString& text)
 void TConsoleModel::replace(const QString& text)
 {
     if (mTriggerEngineMode) {
-        const int selected = P_end.x() - P_begin.x();
         if (P_begin == P_end) {
             mpHost->getLuaInterpreter()->adjustCaptureGroups(P_begin.x(), text.size());
-        } else if (text.size() != selected) {
-            mpHost->getLuaInterpreter()->adjustCaptureGroups(P_begin.x(), text.size() - selected);
+        } else {
+            mpHost->getLuaInterpreter()->adjustCaptureGroupsForReplace(P_begin.x(), P_end.x() - P_begin.x(), text);
         }
     }
     buffer.replaceInLine(P_begin, P_end, text, mFormatCurrent);

@@ -28,9 +28,9 @@
 #include "TArea.h"
 #include "TEvent.h"
 #include "TMapLabel.h"
+#include "TMapViewFrontend.h"
 #include "TRoomDB.h"
 #include "XMLimport.h"
-#include "dlgMapper.h"
 #include "TLuaInterpreter.h"
 #include "mapInfoContributorManager.h"
 
@@ -698,6 +698,13 @@ void TMap::audit()
     }
 
     mpRoomDB->auditRooms(roomRemapping, areaRemapping);
+    // The player's room was read from the file under the id the audit just replaced;
+    // 0 is no room at all, not a room 0 the file may also hold
+    for (int& playerRoomId : mRoomIdHash) {
+        if (playerRoomId) {
+            playerRoomId = roomRemapping.value(playerRoomId, playerRoomId);
+        }
+    }
 
     // The second half of old mpRoomDB->initAreasForOldMaps() - needed to fixup
     // all the (TArea *)->areaExits() that were built wrongly previously,
@@ -1370,11 +1377,15 @@ bool TMap::serialize(QDataStream& ofs, int saveVersion)
         ofs << pA->pos;
         ofs << pA->isZone;
         ofs << pA->zoneAreaRef;
+        // A local copy so that saving does not modify the live area's user data,
+        // holding only the file-only keys for what this save writes:
+        QMap<QString, QString> userData{pA->mUserData};
+        TArea::dropFileOnlyUserData(userData);
         if (mSaveVersion >= 21) {
             // Revised in version 21 to store the value directly:
             ofs << pA->mLast2DMapZoom;
         } else {
-            pA->mUserData.insert(QLatin1String("system.fallback_map2DZoom"), QString::number(pA->get2DMapZoom()));
+            userData.insert(QLatin1String("system.fallback_map2DZoom"), QString::number(pA->get2DMapZoom()));
         }
         // Store font and outline color info for labels in userData (avoids binary format version change)
         const auto permanentLabelsList{pA->getPermanentLabelIds()};
@@ -1386,13 +1397,13 @@ bool TMap::serialize(QDataStream& ofs, int saveVersion)
                 }
                 const QString fontKey = qsl("system.labelFont_%1").arg(labelID);
                 const QString fontValue = qsl("%1|%2|%3|%4").arg(label.font.family()).arg(label.font.pointSize()).arg(label.font.weight()).arg(label.font.italic() ? 1 : 0);
-                pA->mUserData.insert(fontKey, fontValue);
+                userData.insert(fontKey, fontValue);
             }
             const QString outlineColorKey = qsl("system.labelOutlineColor_%1").arg(labelID);
             const QString outlineColorValue = qsl("%1|%2|%3|%4").arg(label.outlineColor.red()).arg(label.outlineColor.green()).arg(label.outlineColor.blue()).arg(label.outlineColor.alpha());
-            pA->mUserData.insert(outlineColorKey, outlineColorValue);
+            userData.insert(outlineColorKey, outlineColorValue);
         }
-        ofs << pA->mUserData;
+        ofs << userData;
         if (mSaveVersion >= 21) {
             // Revised in version 21 to store labels within the TArea class:
             // Also we now have temporary labels, so we need to count the
@@ -1768,12 +1779,16 @@ bool TMap::listLengthFits(QDataStream& ifs, const qint64 minBytesPerElement)
     // from Qt_6_7 a larger one can follow it
     Q_ASSERT(ifs.version() < QDataStream::Qt_6_7);
     constexpr qint64 lengthSize = sizeof(quint32);
-    const QByteArray lengthBytes = pDevice->peek(lengthSize);
-    if (lengthBytes.size() != lengthSize) {
+    quint32 rawLength = 0;
+    if (pDevice->peek(reinterpret_cast<char*>(&rawLength), lengthSize) != lengthSize) {
         ifs.setStatus(QDataStream::ReadPastEnd);
         return false;
     }
-    const quint32 length = qFromBigEndian<quint32>(lengthBytes.constData());
+    const quint32 length = qFromBigEndian<quint32>(&rawLength);
+    // Most lists in a map are empty, and bytesAvailable() asks the OS for the file size
+    if (!length) {
+        return true;
+    }
     const qint64 bytesLeft = pDevice->bytesAvailable() - lengthSize;
     if (length > bytesLeft / minBytesPerElement) {
         qWarning().nospace() << "TMap::listLengthFits() WARNING - the list at byte " << pDevice->pos() << " of the map file claims " << length << " entries, more than the " << bytesLeft
@@ -2086,6 +2101,11 @@ bool TMap::restore(QString location)
                 }
                 ++areasWithLabelsCounter;
             }
+        }
+
+        // whatever the labels did not take is for labels that no longer exist
+        for (auto* pA : mpRoomDB->getAreaMap()) {
+            TArea::dropFileOnlyUserData(pA->mUserData);
         }
 
         // A corrupt stream carries on reading, out of step with the records,
@@ -2427,36 +2447,57 @@ int TMap::createMapLabel(int area,
     label.noScaling = noScaling;
     label.temporary = temporary;
 
-    const QRectF lr = QRectF(0, 0, 2000, 2000);
-    QPixmap pix(lr.size().toSize());
-    pix.fill(Qt::transparent);
-
-    QPainter lp(&pix);
-    lp.fillRect(lr, label.bgColor);
-    lp.setRenderHint(QPainter::Antialiasing);
+    const QRect canvas(0, 0, 2000, 2000);
+    const QRectF textRect(20, 70, 2000, 2000);
+    const int textFlags = Qt::AlignLeft | Qt::AlignTop;
 
     QFont font(fontName.has_value() ? fontName.value() : QString(), fontSize);
     label.font = font;
+
+    // Lays the text out without drawing it, the same way drawText() does, so
+    // only the part of the canvas the label keeps needs allocating and filling
+    QRectF br;
+    {
+        QPixmap probe(1, 1);
+        QPainter probePainter(&probe);
+        probePainter.setFont(font);
+        br = probePainter.boundingRect(textRect, textFlags, label.text);
+    }
+    const QRect brRect = br.normalized().toRect();
+    // QPixmap::copy() clips to the pixmap and copies all of it for an empty rectangle
+    QRect kept = brRect.intersected(canvas);
+    if (kept.isEmpty()) {
+        kept = canvas;
+    }
+
+    QPixmap pix(kept.size());
+    pix.fill(Qt::transparent);
+
+    QPainter lp(&pix);
+    lp.translate(-kept.topLeft());
+    lp.fillRect(canvas, label.bgColor);
+    lp.setRenderHint(QPainter::Antialiasing);
     lp.setFont(font);
 
     QPen outlinePen(label.outlineColor);
     outlinePen.setWidth(1);
     lp.setPen(outlinePen);
 
-    QRectF br;
-
+    // Asking for the bounding rectangle makes Qt lay out every line; without it,
+    // text exactly as tall as textRect is laid out short and left unclipped
+    QRectF drawnBr;
     if (label.fgColor != label.outlineColor) {
-        lp.drawText(QRect(19, 70, 2000, 2000), Qt::AlignLeft | Qt::AlignTop, label.text, &br);
-        lp.drawText(QRect(21, 70, 2000, 2000), Qt::AlignLeft | Qt::AlignTop, label.text, &br);
-        lp.drawText(QRect(20, 69, 2000, 2000), Qt::AlignLeft | Qt::AlignTop, label.text, &br);
-        lp.drawText(QRect(20, 71, 2000, 2000), Qt::AlignLeft | Qt::AlignTop, label.text, &br);
+        lp.drawText(textRect.translated(-1, 0), textFlags, label.text, &drawnBr);
+        lp.drawText(textRect.translated(1, 0), textFlags, label.text, &drawnBr);
+        lp.drawText(textRect.translated(0, -1), textFlags, label.text, &drawnBr);
+        lp.drawText(textRect.translated(0, 1), textFlags, label.text, &drawnBr);
     }
     lp.setPen(label.fgColor);
-    lp.drawText(QRect(20, 70, 2000, 2000), Qt::AlignLeft | Qt::AlignTop, label.text, &br);
+    lp.drawText(textRect, textFlags, label.text, &drawnBr);
+    lp.end();
 
     label.size = br.normalized().size();
-    const QRect brRect = br.normalized().toRect();
-    label.pix = pix.copy(brRect.topLeft().x(), brRect.topLeft().y(), brRect.width(), brRect.height());
+    label.pix = pix;
     const QSizeF s = QSizeF(label.size.width() / zoom, label.size.height() / zoom);
     label.size = s;
     label.clickSize = s;
@@ -3070,9 +3111,8 @@ void TMap::reportProgressToProgressDialog(const int current, const int maximum)
 
 void TMap::createTransferProgress(const QString& title, const QString& label, bool cancelable)
 {
-    if (mpMapper && mpMapper->isVisible()) {
-        mpMapper->showMapProgress(label, cancelable);
-        connect(mpMapper, &dlgMapper::signal_mapProgressCanceled, this, &TMap::slot_downloadCancel, Qt::UniqueConnection);
+    if (auto* mapper = mapViewFrontend(); mapper && mapper->onScreen()) {
+        mapper->showMapProgress(label, cancelable);
         return;
     }
 
@@ -3088,8 +3128,8 @@ void TMap::updateTransferProgressLabel(const QString& text)
 {
     if (mMapProgressStandalone) {
         emit signal_mapProgressSetLabel(text);
-    } else if (mpMapper) {
-        mpMapper->setMapProgressLabel(text);
+    } else if (auto* mapper = mapViewFrontend()) {
+        mapper->setMapProgressLabel(text);
     }
 }
 
@@ -3098,8 +3138,8 @@ void TMap::updateTransferProgressRange(int minimum, int maximum)
     if (mMapProgressStandalone) {
         mMapProgressStandaloneMaximum = maximum;
         emit signal_mapProgressSetRange(minimum, maximum);
-    } else if (mpMapper) {
-        mpMapper->setMapProgressRange(minimum, maximum);
+    } else if (auto* mapper = mapViewFrontend()) {
+        mapper->setMapProgressRange(minimum, maximum);
     }
 }
 
@@ -3107,8 +3147,8 @@ void TMap::updateTransferProgressValue(int value)
 {
     if (mMapProgressStandalone) {
         emit signal_mapProgressSetValue(value);
-    } else if (mpMapper) {
-        mpMapper->setMapProgressValue(value);
+    } else if (auto* mapper = mapViewFrontend()) {
+        mapper->setMapProgressValue(value);
     }
 }
 
@@ -3117,23 +3157,23 @@ int TMap::transferProgressMaximum() const
     if (mMapProgressStandalone) {
         return mMapProgressStandaloneMaximum;
     }
-    if (mpMapper) {
-        return mpMapper->mapProgressMaximum();
+    if (auto* mapper = mapViewFrontend()) {
+        return mapper->mapProgressMaximum();
     }
     return 0;
 }
 
 bool TMap::hasActiveTransferProgress() const
 {
-    return mMapProgressStandalone || (mpMapper && mpMapper->isMapProgressVisible());
+    return mMapProgressStandalone || (mapViewFrontend() && mapViewFrontend()->isMapProgressVisible());
 }
 
 void TMap::disableTransferProgressCancel()
 {
     if (mMapProgressStandalone) {
         emit signal_mapProgressDisableCancel();
-    } else if (mpMapper) {
-        mpMapper->setMapProgressCancelable(false);
+    } else if (auto* mapper = mapViewFrontend()) {
+        mapper->setMapProgressCancelable(false);
     }
 }
 
@@ -3147,9 +3187,8 @@ void TMap::clearTransferProgress()
         emit signal_mapProgressClose();
         return;
     }
-    if (mpMapper) {
-        disconnect(mpMapper, &dlgMapper::signal_mapProgressCanceled, this, &TMap::slot_downloadCancel);
-        mpMapper->hideMapProgress();
+    if (auto* mapper = mapViewFrontend()) {
+        mapper->hideMapProgress();
     }
 }
 

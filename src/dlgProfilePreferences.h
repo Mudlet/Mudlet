@@ -200,6 +200,14 @@ private slots:
     void slot_changeEditorTextOptions(const QTextOption::Flags);
     void slot_setAppearance(const enums::Appearance);
     void slot_changeShowMapAuditErrors(const bool);
+#ifdef INCLUDE_MCPSERVER
+    void slot_updateMCPServerEndpoint();
+    void slot_connectClaudeDesktop();
+    void slot_removeClaudeDesktop();
+    void slot_connectChatGpt();
+    void slot_removeChatGpt();
+    void slot_copyMCPServerAddress();
+#endif
     void slot_changeAutomaticUpdates(const bool);
     void slot_setToolBarIconSize(const int);
     void slot_setTreeWidgetIconSize(const int);
@@ -271,6 +279,11 @@ private:
     void addActionsToPreview(TAction* pActionParent, std::vector<std::tuple<QString, QString, int>>& items);
     void addScriptsToPreview(TScript* pScriptParent, std::vector<std::tuple<QString, QString, int>>& items);
     void addKeysToPreview(TKey* pKeyParent, std::vector<std::tuple<QString, QString, int>>& items);
+#ifdef INCLUDE_MCPSERVER
+    // What still stands between a registered assistant and a reachable Mudlet,
+    // or an empty string when nothing does
+    QString mcpServerNotReadyHint() const;
+#endif
     // Must stay re-runnable for refreshFromSettings(): build once, empty every list before filling it,
     // and make every connection Qt::UniqueConnection or build-once.
     void initWithHost(Host*);
@@ -332,6 +345,11 @@ private:
     void updateProtocolSummary();
     void buildDiscordSummaryCard();
     void updateDiscordSummary();
+#ifdef INCLUDE_MCPSERVER
+    // The AI assistant settings, reached from the General page's summary card
+    void buildMcpSummaryCard();
+    void updateMcpSummary();
+#endif
     // Shows the current connection's actual security, not what the settings ask for
     void buildSecurityStatusCard();
     void updateSecurityStatus();
@@ -470,6 +488,10 @@ private:
     QPointer<QGroupBox> mpCard_discord;
     QPointer<QPushButton> mpButton_discordSubpage;
     QPointer<QGroupBox> mpCard_securityStatus;
+#ifdef INCLUDE_MCPSERVER
+    QPointer<QGroupBox> mpCard_mcpAssistant;
+    QPointer<QPushButton> mpButton_mcpSubpage;
+#endif
     QPointer<QLabel> mpLabel_securityHeadline;
     QPointer<QLabel> mpLabel_securityDetail;
     QPointer<QLabel> mpLabel_securityLink;
@@ -484,6 +506,19 @@ private:
     // Each category's icon as rich text for search headers, recoloured by restyleSidebarIcons()
     QMap<QString, QString> mCategoryIconMarkup;
     QTimer* mpTimer_apply = nullptr;
+#ifdef INCLUDE_MCPSERVER
+    // What this dialog last put on the MCP result line about the server's state - why it
+    // failed to start, or that it is not on yet - so a successful start takes back only that
+    QString mMCPServerStateMessage;
+    void setMCPConnectResult(const QString& message);
+    void refreshMCPAppButtons();
+    void updateMCPRestartNotice();
+    // The AI apps whose settings this dialog changed; each reads them only at startup
+    bool mMCPRestartClaudeDesktop = false;
+    bool mMCPRestartChatGpt = false;
+#endif
+    // The scrollback size the box showed when the maximum was ticked, to put back when it is unticked
+    int mBufferSizeBeforeMax = 0;
     // Debounces typing so a part-typed query does not move most cards onto the results page and back
     QTimer* mpTimer_search = nullptr;
     QString mPendingSearch;
