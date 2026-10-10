@@ -178,20 +178,12 @@ local function writePackageXml(path, body, version)
 end
 
 -- Every install and uninstall here owes an asynchronous profile save, and
--- while one is running the package API stops doing what it is told: an install
--- is postponed and answered with a bare true (see the pending spec at the end
--- of this file), an uninstall is refused, and a module reload is dropped. Lua
--- cannot ask whether a save is running, so each of the helpers below asks again
--- until what it wanted has actually happened. They wait longer between tries
--- than they need to on a fast machine on purpose: each postponed call queues
--- another attempt for whenever the save does finish, and a pile of those all
--- arriving at once starts a pile of saves.
--- Lua has no direct way to ask whether a profile save is running, but
--- installPackage() gives it away: while one is in progress it postpones
--- whatever it was asked to do and answers true, even for an empty path it would
--- otherwise refuse outright. Waiting for the refusal to come back is what keeps
--- the installs below from being postponed - a postponed install is carried out
--- later, and can put a package back after a spec has taken it away again.
+-- while one is running the package API stops doing what it is told: an
+-- uninstall is refused and a module reload is dropped. Lua cannot ask whether a
+-- save is running, so each of the helpers below asks again until what it wanted
+-- has actually happened.
+-- installPackage() from a script waits for a running save to finish before it
+-- answers, so asking it for an empty path is a way to wait one out.
 local function waitForProfileSaveToPass()
   return waitUntil(function() return installPackage("") == nil end, 5000)
 end
@@ -199,22 +191,17 @@ end
 -- Hands back what the install that took answered, for the specs that are about
 -- the answer itself: true, and - when the package has something to own up to -
 -- the reason with it. An install that was already there before the first
--- attempt, or one that landed from an earlier postponement while this pumped,
--- has no answer of its own to give and comes back with nothing.
+-- attempt has no answer of its own to give and comes back with nothing.
 local function installUntilConfirmed(install, path, isInstalled, what)
   for attempt = 1, 3 do
     if isInstalled() then
       return
     end
-    assert.is_true(waitForProfileSaveToPass(), "a profile save was still running after 5s, so this install would be postponed")
+    assert.is_true(waitForProfileSaveToPass(), "a profile save was still running after 5s")
     local ok, err = install(path)
-    -- a postponed install can still be carried out while the pump below runs
-    -- the event loop, so a repeat may legitimately come back "already installed"
     if ok ~= true and not contains(err, "already installed") then
       assert.is_true(false, tostring(err))
     end
-    -- an install that is carried out is carried out there and then, so if it is
-    -- not listed by the time the call returns it was postponed
     if isInstalled() then
       return ok, err
     end
@@ -223,21 +210,20 @@ local function installUntilConfirmed(install, path, isInstalled, what)
   assert.is_true(false, "could not install " .. what)
 end
 
--- The same postponement answers a bad install path with true as well, so a spec
--- about the refusal waits for the save to pass and asks again.
+-- Hands back the reason a refused install gave.
 local function installUntilRefused(install, path)
   for attempt = 1, 3 do
-    assert.is_true(waitForProfileSaveToPass(), "a profile save was still running after 5s, so this install would be postponed")
+    assert.is_true(waitForProfileSaveToPass(), "a profile save was still running after 5s")
     local ok, err = install(path)
     if ok == nil then
       return err
     end
     pumpEvents(400 * attempt)
   end
-  assert.is_true(false, "the install was never refused - it was carried out, or postponed three times over")
+  assert.is_true(false, "the install was never refused")
 end
 
--- reloadModule() is postponed the same way and then quietly dropped, so ask
+-- reloadModule() during a profile save is postponed and then quietly dropped, so ask
 -- until the reload is observable.
 local function reloadModuleUntil(name, reloaded)
   for attempt = 1, 3 do
@@ -404,30 +390,29 @@ describe("Tests the functionality of installPackage", function()
     assert.is_false(containsWrapped(text, "Package install failed"), text)
   end)
 
-  it("tells a script its postponed install failed", function()
-    -- The same install asked for while the profile is being saved is put off and
-    -- answers true there and then, so when the second attempt fails there is no
-    -- return value left for the reason to travel back on. Saying it on the main
-    -- console is all that is left, quiet caller or not.
-    local archive = fixtureDirectory .. "/mudlet-spec-notazip.mpackage"
-    local mark, postponed
-    for _ = 1, 5 do
-      assert.is_true(waitForProfileSaveToPass(), "a profile save was still running")
-      mark = getLastLineNumber("main")
-      assert.is_true(saveProfile())
-      -- true means it was put off: the archive is not a zip, so an install that is
-      -- carried out there and then answers nil and a reason instead
-      if installPackage(archive) == true then
-        postponed = true
-        break
-      end
-      pumpEvents(200)
-    end
-    assert.is_true(postponed, "the install was never put off, so there is no postponed failure to report")
+  it("waits out a profile save and hands a script the real answer", function()
+    assert.is_true(waitForProfileSaveToPass(), "a profile save was still running")
+    local mark = getLastLineNumber("main")
+    assert.is_true(saveProfile())
 
-    assert.is_true(waitUntil(function() return containsWrapped(textFrom(mark), "Package install failed") end, 5000),
-                   textFrom(mark))
-    assert.is_true(containsWrapped(textFrom(mark), "could not unzip package"), textFrom(mark))
+    local ok, err = installPackage(fixtureDirectory .. "/mudlet-spec-notazip.mpackage")
+
+    assert.is_nil(ok, "a failing install asked for during a profile save answered " .. tostring(ok))
+    assert.is_true(contains(err, "could not unzip package"), tostring(err))
+    pumpEvents(200)
+    assert.is_false(containsWrapped(textFrom(mark), "Package install failed"), textFrom(mark))
+  end)
+
+  it("does not announce an install asked for during a profile save as a success", function()
+    assert.is_true(waitForProfileSaveToPass(), "a profile save was still running")
+    local mark = getLastLineNumber("main")
+    assert.is_true(saveProfile())
+
+    verbosePackageInstall(fixtureDirectory .. "/mudlet-spec-notazip.mpackage")
+
+    local text = textFrom(mark)
+    assert.is_false(containsWrapped(text, "installed successfully"), text)
+    assert.is_true(containsWrapped(text, "could not unzip package"), text)
   end)
 
   describe("with the fixture package installed", function()
@@ -483,8 +468,6 @@ describe("Tests the functionality of installPackage", function()
     defer(function() removeFixturePackage(minimalPackage) end)
     assert.is_true(waitForProfileSaveToPass(), "a profile save was still running")
     local answer = {installPackage(fixtureDirectory .. "/" .. minimalPackage .. ".mpackage")}
-    -- a postponed install answers a bare true as well, so the answer only says
-    -- anything about this package once the package really is installed
     assert.is_true(packageInstalled(minimalPackage), "the install was postponed, so its answer is not this package's")
     assert.is_true(answer[1])
     assert.equals(1, #answer, "a healthy install handed back " .. tostring(answer[2]))
@@ -682,6 +665,16 @@ describe("Tests the functionality of installModule", function()
   it("returns nil+msg for a file that is not there", function()
     local err = installUntilRefused(installModule, fixtureDirectory .. "/mudlet-spec-there-is-no-such-module.mpackage")
     assert.is_true(contains(err, "could not open file"), tostring(err))
+  end)
+
+  it("waits out a profile save and hands a script the real answer", function()
+    assert.is_true(waitForProfileSaveToPass(), "a profile save was still running")
+    assert.is_true(saveProfile())
+
+    local ok, err = installModule(fixtureDirectory .. "/mudlet-spec-notazip.mpackage")
+
+    assert.is_nil(ok, "a failing install asked for during a profile save answered " .. tostring(ok))
+    assert.is_true(contains(err, "could not unzip package"), tostring(err))
   end)
 
   describe("with the fixture module installed", function()
@@ -1828,15 +1821,10 @@ describe("Tests installing a package while the profile is being saved", function
     end)
     installFixturePackage(minimalPackage)
     saveProfile()
-    -- SETUP: installPackage() answers an empty path true only from the
-    -- postponement at its head, so this says a save really is running. Without
-    -- it a drained save turns this spec into a plain install test that passes
-    -- whether the postponement works or not.
-    assert.is_true(installPackage(""), "SETUP: no profile save was running, so nothing below was postponed")
 
+    -- the install waits for the save to finish, so it is in place by the time it answers
     assert.is_true(installPackage(fixtureDirectory .. "/mudlet-spec-noconfig.mpackage"))
-    assert.is_false(packageInstalled("mudlet-spec-noconfig"), "the install was carried out there and then rather than postponed")
-    assert.is_true(waitUntil(function() return packageInstalled("mudlet-spec-noconfig") end, 5000))
+    assert.is_true(packageInstalled("mudlet-spec-noconfig"), "the install answered true before it had installed anything")
   end)
 end)
 
@@ -1853,8 +1841,6 @@ describe("Tests installing an archive with nothing in it for Mudlet", function()
       end
     end)
 
-    -- an install asked for while a save is running is postponed and answered
-    -- with a bare true, which would read here as the refusal not happening
     assert.is_true(waitForProfileSaveToPass(), "a profile save was still running")
 
     local ok, err = installPackage(fixtureDirectory .. "/mudlet-spec-emptyarchive.mpackage")
@@ -1971,8 +1957,7 @@ describe("Tests installing an archive whose config.lua will not run", function()
     defer(function() removeFixturePackage("mudlet-spec-badconfig-renamed") end)
 
     -- marked before the first attempt so that the announcement is caught whichever
-    -- attempt goes through: an install asked for while the profile is being saved
-    -- is put off, answers true and says nothing
+    -- attempt goes through
     local mark = getLastLineNumber("main")
     -- the manifest names the package, and it is read by running it: one line
     -- that raises throws away the name, author, version and description above
@@ -2120,8 +2105,6 @@ describe("Tests the functionality of verbosePackageInstall", function()
   it("installs the package and says so on the main console", function()
     defer(function() removeFixturePackage(minimalPackage) end)
     local path = fixtureDirectory .. "/" .. minimalPackage .. ".mpackage"
-    -- an install asked for while a save is running is postponed, and would be
-    -- announced as a success without anything being installed
     assert.is_true(waitForProfileSaveToPass(), "a profile save was still running")
     local mark = getLastLineNumber("main")
 
@@ -2150,8 +2133,6 @@ describe("Tests the functionality of verbosePackageInstall", function()
     -- the announcement is trimmed on both branches, and only the success one is
     -- reached from installPackageFromUrl's spec
     local name = "mudlet-spec-there-is-no-such-package.mpackage"
-    -- an install asked for while a save is running is postponed and answered
-    -- with a bare true, so the failure under test would be announced a success
     assert.is_true(waitForProfileSaveToPass(), "a profile save was still running")
     local mark = getLastLineNumber("main")
 
@@ -2289,6 +2270,35 @@ describe("Tests the functionality of installPackageFromUrl", function()
     assert.is_true(containsWrapped(textFrom(mark), "Package '" .. downloadedName .. "' installed successfully."), textFrom(mark))
   end)
 
+  it("installs a download that finishes while the profile is being saved", function()
+    local originalVerbosePackageInstall = _G.verbosePackageInstall
+    defer(function()
+      _G.verbosePackageInstall = originalVerbosePackageInstall
+      removeFixturePackage(minimalPackage)
+      os.remove(getMudletHomeDir() .. "/" .. downloadedName)
+    end)
+    assert.is_true(waitForProfileSaveToPass(), "a profile save was still running")
+    local destination = getMudletHomeDir() .. "/" .. downloadedName
+    -- The save starts inside the download handler's own call to install, so it is certainly running
+    -- when the install is asked for: anonymous handlers run in no set order, so a sysDownloadDone
+    -- handler of this spec's own could just as well run after the install
+    local savedFirst = false
+    _G.verbosePackageInstall = function(path, ...)
+      if path == destination then
+        savedFirst = saveProfile() and true or false
+      end
+      return originalVerbosePackageInstall(path, ...)
+    end
+
+    installPackageFromUrl(downloadedName, fileUrl(fixtureDirectory .. "/" .. downloadedName))
+
+    local event = waitForEvent("sysInstallPackage", 10000)
+    assert.is_true(savedFirst, "SETUP: no profile save was started before the install")
+    assert.equals("sysInstallPackage", event)
+    assert.is_true(packageInstalled(minimalPackage))
+    assert.is_false(fileExists(destination), "the downloaded copy was left in the profile")
+  end)
+
   it("reports a download that failed and installs nothing", function()
     local missingName = "mudlet-spec-never-downloadable.mpackage"
     defer(function() os.remove(getMudletHomeDir() .. "/" .. missingName) end)
@@ -2343,8 +2353,6 @@ describe("Tests the functionality of packageDrop", function()
   end)
 
   it("ignores a file whose type Mudlet does not install", function()
-    -- an install that arrives while a save is running is postponed and would
-    -- land after this spec rather than in it
     assert.is_true(waitForProfileSaveToPass(), "a profile save was still running")
     local mark = getLastLineNumber("main")
 
