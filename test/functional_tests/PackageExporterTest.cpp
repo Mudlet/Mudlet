@@ -396,6 +396,7 @@ private slots:
         const auto cleanup = qScopeGuard([this, exporter, moduleName]() {
             delete exporter;
             if (mpHost->mInstalledModules.contains(moduleName)) {
+                mpHost->waitForProfileSave();
                 mpHost->uninstallPackage(moduleName, enums::PackageModuleType::ModuleFromUI);
             }
         });
@@ -416,6 +417,9 @@ private slots:
         QVERIFY2(QFileInfo::exists(moduleFile), "module mode did not write the package into the profile directory");
         QVERIFY2(mpHost->mInstalledModules.contains(moduleName), "module mode exported the file but never installed it");
 
+        // the install schedules a profile save 100ms out, which the export wait
+        // above can let start, and uninstallPackage() refuses while one runs
+        mpHost->waitForProfileSave();
         QVERIFY2(mpHost->uninstallPackage(moduleName, enums::PackageModuleType::ModuleFromUI), "the module it installed could not be uninstalled again");
     }
 

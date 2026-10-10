@@ -2801,6 +2801,14 @@ describe("Tests mapper functions against a shared fixture", function()
     end)
   end)
 
+  describe("Tests the 3D map view setting", function()
+    -- Read only: showing the 3D view brings up a GL context, which the leak job
+    -- cannot have - see Other_spec's getConfig and setConfig round-trips
+    it("getConfig reports the 3D view hidden while the mapper shows its 2D map", function()
+      assert.is_false(getConfig("show3dMapView"))
+    end)
+  end)
+
   describe("Tests map zoom", function()
     it("setMapZoom is read back by getMapZoom for a given area", function()
       assert.is_true(setMapZoom(15, areaAlpha))
@@ -3779,6 +3787,30 @@ describe("Tests saveMap and loadMap", function()
       assert.are.same({roomA}, getAllRoomEntrances(roomB))
     end)
 
+    -- a save carries its labels' fonts and outline colours, and below format
+    -- 21 the area's zoom, as extra area user data that only the file should see
+    it("leaves the live area user data alone when it saves", function()
+      local area = buildMap()
+      assert.is_true(setAreaUserData(area, "climate", "temperate"))
+      local labelId = createMapLabel(area, "Saved Label", 0, 0, 0, 255, 255, 255, 0, 0, 0,
+                                     30.0, 50, true, true, "", 255, 50, false)
+      assert.is_true(labelId >= 0, "the label whose keys this checks was never made")
+
+      -- pinned below 21 so the zoom key stays covered whatever the default is
+      assert.is_true(saveMap(savePath, 20))
+      assert.are.same({climate = "temperate"}, getAllAreaUserData(area))
+    end)
+
+    it("drops label keys a map file holds for labels that no longer exist", function()
+      -- see fixtures/maps/README.md for what the file holds
+      assert.is_true(loadMap(specDirectory .. "/fixtures/maps/stale-label-keys.dat"))
+      local area = getAreaTable()["StaleLabelKeysArea"]
+      assert.is_number(area)
+
+      assert.are.same({climate = "temperate"}, getAllAreaUserData(area))
+      assert.are.equal("Kept Label", getMapLabels(area)[0])
+    end)
+
     it("replaces what is on the map rather than merging into it", function()
       buildMap()
       saveMap(savePath)
@@ -4711,6 +4743,29 @@ describe("Tests saveJsonMap and loadJsonMap", function()
       assert.are.same({climate = "temperate", ruler = "nobody"}, getAllAreaUserData(area))
     end)
 
+    it("leaves out the label keys a binary save keeps as area user data", function()
+      deleteMap()
+      local area = addAreaName("MapperSpecJsonLabelKeysArea")
+      roomA = createRoomID(); addRoom(roomA); setRoomArea(roomA, area)
+      assert.is_true(setAreaUserData(area, "climate", "temperate"))
+      -- what a JSON file exported from a map those keys had got into holds
+      assert.is_true(setAreaUserData(area, "system.labelFont_99", "Sans|10|50|0"))
+      assert.is_true(setAreaUserData(area, "system.labelOutlineColor_99", "1|2|3|255"))
+      assert.is_true(setAreaUserData(area, "system.fallback_map2DZoom", "20"))
+      -- a label read from a file can have a negative id
+      assert.is_true(setAreaUserData(area, "system.labelOutlineColor_-1", "4|5|6|255"))
+      -- not the label ids a save writes, so a script's own keys
+      assert.is_true(setAreaUserData(area, "system.labelFont_default", "kept"))
+      assert.is_true(setAreaUserData(area, "system.labelFont_007", "kept"))
+      assert.is_true(setAreaUserData(area, "system.labelOutlineColor_+5", "kept"))
+
+      roundTrip()
+
+      assert.are.same({climate = "temperate", ["system.labelFont_default"] = "kept", ["system.labelFont_007"] = "kept",
+                       ["system.labelOutlineColor_+5"] = "kept"},
+                      getAllAreaUserData(area))
+    end)
+
     -- TMap::readJsonColor returns QColor(red, green, blue) for a colour array of
     -- either three or four values, so the alpha the exporter wrote as
     -- "color32RGBA" never reaches the QColor and comes back as 255. Every colour
@@ -5159,6 +5214,24 @@ describe("Tests the profile colour set behind setCustomEnvColor", function()
       assert.are.same({id - 257, 100 + (id - 257), 200, 254}, after[id],
                       ("environment colour %d did not come back from the profile"):format(id))
     end
+  end)
+end)
+
+describe("Tests the app-wide mapper options in getConfig and setConfig", function()
+  setup(function()
+    openMapWidget()
+  end)
+
+  -- setConfig takes map options only while a mapper exists, so the generic
+  -- round-trip in Other_spec never reaches this one
+  it("round-trips showUpperLowerLevels", function()
+    local original = getConfig("showUpperLowerLevels")
+    finally(function() setConfig("showUpperLowerLevels", original) end)
+
+    assert.is_true(setConfig("showUpperLowerLevels", not original))
+    assert.are.equal(not original, getConfig("showUpperLowerLevels"))
+    assert.is_true(setConfig("showUpperLowerLevels", original))
+    assert.are.equal(original, getConfig("showUpperLowerLevels"))
   end)
 end)
 

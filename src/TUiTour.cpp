@@ -157,7 +157,7 @@ void TUiTour::buildSteps()
 {
     auto activeConsole = []() -> TMainConsole* {
         Host* pHost = mudlet::self()->getActiveHost();
-        return pHost ? pHost->mpConsole.data() : nullptr;
+        return pHost ? pHost->mainConsoleView() : nullptr;
     };
     auto widgetRect = [this](QWidget* widget) -> QRect {
         if (!widget || !widget->isVisible()) {
