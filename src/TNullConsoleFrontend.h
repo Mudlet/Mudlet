@@ -22,6 +22,7 @@
 
 #include "TConsoleFrontend.h"
 #include "TMxpFrameFrontend.h"
+#include "TWindowRegistry.h"
 #include "utils.h"
 
 #include <QColor>
@@ -29,6 +30,13 @@
 #include <QRect>
 #include <QSize>
 #include <QString>
+
+#include <map>
+#include <memory>
+#include <vector>
+
+class Host;
+struct TLabelModel;
 
 class TNullMxpFrameFrontend final : public TMxpFrameFrontend
 {
@@ -47,16 +55,28 @@ public:
 };
 
 // The view a Host has while no real one is attached: before its console is made, after that has
-// gone, and in a run with no GUI. Every window is missing, so each call fails, has no value or
-// does nothing; a close has nothing to refuse it.
+// gone, and in a run with no GUI. Labels, mini consoles, buffers and user windows made through it
+// get a model of their own, registered as a real view registers its widgets', so scripts can find
+// them, echo to them and delete them. Every other operation, on these or any other window, fails,
+// has no value or does nothing; a close has nothing to refuse it.
 class TNullConsoleFrontend final : public TConsoleFrontend
 {
 public:
     // Some callers hand a failure's message straight to Lua, so it has to say why.
     static std::pair<bool, QString> noView() { return {false, qsl("the profile has no main window")}; }
 
-    bool createLabel(const QString&, const QString&, int, int, int, int, bool, bool) override { return false; }
-    std::pair<bool, QString> deleteLabel(const QString&) override { return noView(); }
+    explicit TNullConsoleFrontend(Host* pHost);
+    ~TNullConsoleFrontend();
+
+    void dropWindows();
+    // A deleted window's model can still be in use, as a sysBufferShrinkEvent handler runs inside its
+    // buffer's append(), so models are kept until deferred deletes next run, as a real view's widgets are
+    // by deleteLater(). Host calls this itself as it goes, while its Lua interpreter is still alive, since
+    // a label's model frees its callbacks' Lua references when it goes.
+    void releaseRetired();
+
+    void createLabel(const QString& windowname, const QString& name, int x, int y, int width, int height, bool fillBackground, bool clickThrough) override;
+    void deleteLabel(const QString& name) override;
     std::pair<bool, QString> setLabelStyleSheet(const QString&, const QString&) override { return noView(); }
     std::optional<QSize> getLabelSizeHint(const QString&) const override { return std::nullopt; }
     std::pair<bool, QString> setLabelToolTip(const QString&, const QString&, double) override { return noView(); }
@@ -71,7 +91,7 @@ public:
     bool resizeLabel(const QString&, int, int) override { return false; }
     bool moveLabel(const QString&, int, int) override { return false; }
     bool reparentLabel(const QString&, const QString&, int, int, bool) override { return false; }
-    bool setLabelText(const QString&, const QString&) override { return false; }
+    bool setLabelText(const QString& name, const QString& text) override;
     std::pair<bool, QString> setLabelMovie(const QString&, const QString&) override { return noView(); }
     bool setLabelBackgroundColor(const QString&, const QColor&) override { return false; }
     std::optional<QColor> getLabelBackgroundColor(const QString&) const override { return std::nullopt; }
@@ -124,15 +144,15 @@ public:
     bool setTextBoxStyleSheet(const QString&, const QString&) override { return false; }
     bool setTextBoxFont(const QString&, const QFont&) override { return false; }
     bool setTextBoxTabMovesFocus(const QString&, bool) override { return false; }
-    bool createBuffer(const QString&) override { return false; }
-    bool addMiniConsole(const QString&, const QString&, int, int, int, int) override { return false; }
-    std::pair<bool, QString> deleteMiniConsole(const QString&) override { return noView(); }
+    void createBuffer(const QString& name) override;
+    void addMiniConsole(const QString& windowname, const QString& name, int x, int y, int width, int height) override;
+    void deleteMiniConsole(const QString& name) override;
     bool showSubConsole(const QString&) override { return false; }
     bool hideSubConsole(const QString&) override { return false; }
     bool resizeSubConsole(const QString&, int, int) override { return false; }
     bool moveSubConsole(const QString&, int, int) override { return false; }
-    void closeSubConsole(const QString&) override {}
-    std::pair<bool, QString> openUserWindow(const QString&, bool, bool, const QString&) override { return noView(); }
+    void closeSubConsole(const QString& name) override;
+    void openUserWindow(const QString& name, bool loadLayout, bool autoDock, const QString& area) override;
     std::pair<bool, QString> setUserWindowStyleSheet(const QString&, const QString&) override { return noView(); }
     std::pair<bool, QString> setUserWindowTitle(const QString&, const QString&) override { return noView(); }
     bool createScrollBox(const QString&, const QString&, int, int, int, int) override { return false; }
@@ -211,7 +231,7 @@ public:
     void refreshView() const override {}
     void requestRepaintAfterCommand() override {}
     bool requestClose() override { return true; }
-    void resetMainConsole() override {}
+    void resetMainConsole() override { dropWindows(); }
     void setProfileName(const QString&) override {}
     void setF3SearchEnabled(bool) override {}
     void setCompactInputLine(bool) override {}
@@ -222,7 +242,32 @@ public:
     const TMxpFrameFrontend& mxpFrames() const override { return mMxpFrames; }
 
 private:
+    // A window made inside a user window goes with it, as a real one is its dock's child widget, though
+    // out of the registry at once rather than when deferred deletes run.
+    struct SubConsole
+    {
+        std::unique_ptr<TConsoleModel> pModel;
+        QString userWindow;
+    };
+    struct Label
+    {
+        std::unique_ptr<TLabelModel> pModel;
+        QString userWindow;
+    };
+
+    TConsoleModel& addSubConsole(const QString& name, TWindowRegistry::SubConsoleKind kind, const QString& windowname);
+    void removeSubConsole(const QString& name);
+    void removeLabel(const QString& name);
+    void queueRelease();
+    QString userWindowOrMain(const QString& windowname) const;
+
+    Host* mpHost = nullptr;
     TNullMxpFrameFrontend mMxpFrames;
+    std::map<QString, SubConsole> mSubConsoles;
+    std::map<QString, Label> mLabels;
+    std::vector<std::unique_ptr<TConsoleModel>> mRetiredConsoles;
+    std::vector<std::unique_ptr<TLabelModel>> mRetiredLabels;
+    bool mReleaseQueued = false;
 };
 
 #endif // MUDLET_TNULLCONSOLEFRONTEND_H

@@ -211,6 +211,7 @@ set(mudlet_SRCS
     TMxpTagProcessor.cpp
     TMxpVarTagHandler.cpp
     TMxpVersionTagHandler.cpp
+    TNullConsoleFrontend.cpp
     TrailingWhitespaceMarker.cpp
     TriggerHighlighter.cpp
     TriggerMatchPool.cpp

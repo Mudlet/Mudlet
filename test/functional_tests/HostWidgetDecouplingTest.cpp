@@ -298,14 +298,23 @@ private slots:
         host->setMainConsoleView(nullptr);
         TConsoleFrontend* fallback = host->consoleFrontend();
         const bool hasViewWhileDetached = host->hasConsoleView();
-        const bool labelMade = fallback && fallback->createLabel(qsl("main"), qsl("nullViewLabel"), 0, 0, 10, 10, true, false);
+        // Taken out again before the console is back, as the real view knows nothing of it.
+        bool labelRegistered = false;
+        bool labelDropped = false;
+        if (fallback) {
+            fallback->createLabel(qsl("main"), qsl("nullViewLabel"), 0, 0, 10, 10, true, false);
+            labelRegistered = host->windowRegistry().hasLabel(qsl("nullViewLabel"));
+            fallback->deleteLabel(qsl("nullViewLabel"));
+            labelDropped = !host->windowRegistry().hasLabel(qsl("nullViewLabel"));
+        }
         const bool closeAllowed = fallback && fallback->requestClose();
         host->setMainConsoleView(console);
 
         QVERIFY2(fallback, "consoleFrontend() must never be null.");
         QVERIFY(fallback != attached);
         QVERIFY(!hasViewWhileDetached);
-        QVERIFY(!labelMade);
+        QVERIFY(labelRegistered);
+        QVERIFY(labelDropped);
         QVERIFY(closeAllowed);
         QCOMPARE(host->consoleFrontend(), attached);
         QVERIFY(host->hasConsoleView());
@@ -363,6 +372,44 @@ private slots:
         QVERIFY(luaAnswered);
     }
 
+    // Each view keeps only the windows it made: the null view leaves a detached view's windows alone, and
+    // the ones it made go when a real view attaches, which knows nothing of them.
+    void test_windowsStayWithTheViewThatMadeThem()
+    {
+        startProfile(mHostname, mLocalhost, mPort);
+        auto host = mudlet::self()->getActiveHost();
+        QVERIFY2(host, "No active host available for the test.");
+
+        QPointer<TMainConsole> console = host->mainConsoleView();
+        QVERIFY2(console, "The active host has no main console.");
+        const QString realWindow = qsl("realViewDock");
+        QVERIFY(host->openWindow(realWindow, false, false, qsl("right")).first);
+        const TConsoleModel* realModel = host->windowRegistry().subConsoleModel(realWindow);
+        QVERIFY(realModel);
+
+        host->setMainConsoleView(nullptr);
+        const bool ran = host->getLuaInterpreter()->compileAndExecuteScript(
+                qsl("openUserWindow('realViewDock') nullViewMade = tostring(createLabel('nullViewMade', 0, 0, 10, 10, 1))"));
+        const TConsoleModel* realModelWhileDetached = host->windowRegistry().subConsoleModel(realWindow);
+        const auto [realDeletedWhileDetached, realDeleteMessage] = host->deleteMiniConsole(realWindow);
+        host->setMainConsoleView(console);
+        const bool nullLabelRegistered = host->windowRegistry().hasLabel(qsl("nullViewMade"));
+        const bool realStillRegistered = host->windowRegistry().hasSubConsole(realWindow);
+        host->deleteMiniConsole(realWindow);
+
+        QVERIFY(ran);
+        lua_State* L = host->getLuaInterpreter()->getLuaGlobalState();
+        lua_getglobal(L, "nullViewMade");
+        const QString nullViewMade = QString::fromUtf8(lua_tostring(L, -1));
+        lua_pop(L, 1);
+        QCOMPARE(nullViewMade, qsl("true"));
+        QCOMPARE(realModelWhileDetached, realModel);
+        QVERIFY2(!nullLabelRegistered, "A label the null view made is still registered once a real view has attached.");
+        QVERIFY2(!realDeletedWhileDetached, "The null view reported deleting a window it has no record of.");
+        QVERIFY(!realDeleteMessage.isEmpty());
+        QVERIFY(realStillRegistered);
+    }
+
     // What scripts are told while the profile has no view. The label is made first, so that its answers
     // come from the missing view rather than a missing label.
     void test_luaCallsWithNoConsoleSayWhy()
@@ -413,10 +460,10 @@ private slots:
                      "|nil:command line \"main\" not found"
                      "|nil:command line \"nullViewCommandLine\" not found"
                      "|nil:text edit name 'nullViewTextEdit' not found"
-                     "|nil:the profile has no main window"
+                     "|true:nil"
+                     "|true:nil"
                      "|false:the profile has no main window"
-                     "|false:the profile has no main window"
-                     "|false:the profile has no main window"
+                     "|true:nil"
                      "|nil:the profile has no main window"
                      "|nil:the profile has no main window"));
     }

@@ -38,6 +38,7 @@
 #include "PortableModeTestHelper.h"
 #include "TAppFrontend.h"
 #include "TConsoleModel.h"
+#include "TLabelModel.h"
 #include "TLuaInterpreter.h"
 
 #include "GroupedTest.h"
@@ -57,6 +58,7 @@ private:
     const QString mConnectingHostname = qsl("Test-Headless-Host-Connect");
     const QString mSecureHostname = qsl("Test-Headless-Host-Secure");
     const QString mHeldLineHostname = qsl("Test-Headless-Host-Held-Line");
+    const QString mWindowsHostname = qsl("Test-Headless-Host-Windows");
 
     static QString luaGlobalString(Host* host, const char* name)
     {
@@ -126,6 +128,136 @@ headlessResult = ok and 'ok' or tostring(err)
         // Lets work the profile deferred, such as its first-launch timer, run before looking
         QCoreApplication::processEvents();
         QVERIFY2(QApplication::topLevelWidgets().isEmpty(), "Making and running the profile created a widget.");
+    }
+
+    void test_windowsMadeWithNoMainWindowHaveModels()
+    {
+        QVERIFY2(!TAppFrontend::instance(), "A main window exists, so this run is not headless.");
+
+        QVERIFY2(HostManager::self()->addHost(mWindowsHostname, QString(), QString(), QString()), "Could not create a profile with no main window.");
+        Host* host = HostManager::self()->getHost(mWindowsHostname);
+        QVERIFY2(host, "The profile is not in the pool.");
+        QVERIFY(!host->hasConsoleView());
+
+        // registerAnonymousEventHandler() is Lua from LuaGlobal, which these tests do not load
+        host->registerAnonymousEventHandler(qsl("sysLabelDeleted"), qsl("onHeadlessDeleted"));
+        host->registerAnonymousEventHandler(qsl("sysMiniConsoleDeleted"), qsl("onHeadlessDeleted"));
+        const bool ran = host->getLuaInterpreter()->compileAndExecuteScript(qsl(R"lua(
+headlessWindows = 'not run'
+headlessDeleted = {}
+function onHeadlessDeleted(_, name) headlessDeleted[#headlessDeleted + 1] = name end
+local ok, err = pcall(function()
+  assert(createMiniConsole("headlessMini", 10, 20, 300, 200) == true, "createMiniConsole did not answer true")
+  assert(windowType("headlessMini") == "miniconsole", "the miniconsole has no type")
+  assert(echo("headlessMini", "mini line\n") == true, "echo to the miniconsole did not answer true")
+  local again, againMsg = createMiniConsole("headlessMini", 0, 0, 10, 10)
+  assert(again == false and againMsg:find("already exists"), "a second miniconsole of that name was not refused")
+
+  assert(openUserWindow("headlessWindow") == true, "openUserWindow did not answer true")
+  assert(windowType("headlessWindow") == "userwindow", "the user window has no type")
+  assert(echo("headlessWindow", "window line\n") == true, "echo to the user window did not answer true")
+  local placed, placedMsg = openUserWindow("headlessWindow", false, false, "sideways")
+  assert(placed == nil and placedMsg:find("docking option"), "an unknown docking area was not refused")
+  assert(windowType("headlessWindow") == "userwindow", "refusing the area took the user window away")
+  assert(createMiniConsole("headlessWindow", "headlessNested", 0, 0, 50, 50) == true, "a miniconsole could not go in the user window")
+  assert(createLabel("headlessWindow", "headlessNestedLabel", 0, 0, 50, 50, 1) == true, "a label could not go in the user window")
+  local orphan, orphanMsg = createMiniConsole("noSuchHeadlessWindow", "headlessOrphan", 0, 0, 50, 50)
+  assert(orphan == false and orphanMsg:find("not found"), "a miniconsole went into a window that does not exist")
+
+  assert(createLabel("headlessLabel", 0, 0, 100, 20, 1) == true, "createLabel did not answer true")
+  assert(windowType("headlessLabel") == "label", "the label has no type")
+  assert(echo("headlessLabel", "label text") == true, "echo to the label did not answer true")
+  local clash, clashMsg = createLabel("headlessMini", 0, 0, 10, 10, 1)
+  assert(clash == false and clashMsg:find("already exists"), "a label took the name of a miniconsole")
+
+  createBuffer("headlessBuffer")
+  assert(windowType("headlessBuffer") == "buffer", "the buffer has no type")
+  assert(echo("headlessBuffer", "buffer line\n") == true, "echo to the buffer did not answer true")
+
+  assert(deleteLabel("headlessLabel") == true, "deleteLabel did not answer true")
+  assert(windowType("headlessLabel") == nil, "the deleted label still has a type")
+  assert(echo("headlessLabel", "text") == nil, "echo to the deleted label did not fail")
+  local gone, goneMsg = deleteLabel("headlessLabel")
+  assert(gone == false and goneMsg:find("not found"), "deleting a missing label did not fail")
+
+  assert(deleteMiniConsole("headlessMini") == true, "deleteMiniConsole did not answer true")
+  assert(windowType("headlessMini") == nil, "the deleted miniconsole still has a type")
+  assert(echo("headlessMini", "text") == nil, "echo to the deleted miniconsole did not fail")
+
+  assert(deleteMiniConsole("headlessWindow") == true, "deleting the user window did not answer true")
+  assert(windowType("headlessWindow") == nil, "the deleted user window still has a type")
+  assert(windowType("headlessNested") == nil, "a miniconsole in the user window outlived it")
+  assert(windowType("headlessNestedLabel") == nil, "a label in the user window outlived it")
+end)
+headlessWindows = ok and 'ok' or tostring(err)
+headlessDeletedNames = table.concat(headlessDeleted, ",")
+)lua"));
+
+        QVERIFY2(ran, "The Lua chunk did not run.");
+        QCOMPARE(luaGlobalString(host, "headlessWindows"), qsl("ok"));
+        // Only what a script deleted, as the GUI raises nothing for what goes with a user window
+        QCOMPARE(luaGlobalString(host, "headlessDeletedNames"), qsl("headlessLabel,headlessMini,headlessWindow"));
+
+        const TConsoleModel* buffer = host->windowRegistry().subConsoleModel(qsl("headlessBuffer"));
+        QVERIFY2(buffer, "The buffer has no model.");
+        QVERIFY(buffer->buffer.lineBuffer.join(QChar::LineFeed).contains(qsl("buffer line")));
+        QVERIFY2(!mainBufferHolds(host, qsl("buffer line")), "Text echoed to the buffer reached the main console.");
+        QVERIFY2(QApplication::topLevelWidgets().isEmpty(), "Making the windows created a widget.");
+    }
+
+    void test_labelTextReachesModelWithNoMainWindow()
+    {
+        Host* host = HostManager::self()->getHost(mWindowsHostname);
+        QVERIFY2(host, "test_windowsMadeWithNoMainWindowHaveModels() did not leave its profile.");
+
+        QVERIFY(host->getLuaInterpreter()->compileAndExecuteScript(qsl(R"lua(createLabel("headlessTextLabel", 5, 6, 70, 80, 1); echo("headlessTextLabel", "label words"))lua")));
+        const TLabelModel* label = host->windowRegistry().labelModel(qsl("headlessTextLabel"));
+        QVERIFY2(label, "The label has no model.");
+        QCOMPARE(label->mText, qsl("label words"));
+        QCOMPARE(label->mGeometry, QRect(5, 6, 70, 80));
+        QVERIFY(host->getLuaInterpreter()->compileAndExecuteScript(qsl(R"lua(headlessLabelText = getLabelText("headlessTextLabel"))lua")));
+        QCOMPARE(luaGlobalString(host, "headlessLabelText"), qsl("label words"));
+    }
+
+    // The trim that raises sysBufferShrinkEvent runs inside TBuffer::append(), and echo goes on using the
+    // console's model after that returns, so a handler deleting the console must not free it there and then.
+    void test_consoleDeletedByItsOwnShrinkEventWithNoMainWindow()
+    {
+        Host* host = HostManager::self()->getHost(mWindowsHostname);
+        QVERIFY2(host, "test_windowsMadeWithNoMainWindowHaveModels() did not leave its profile.");
+        host->registerAnonymousEventHandler(qsl("sysBufferShrinkEvent"), qsl("onHeadlessShrink"));
+
+        QVERIFY(host->getLuaInterpreter()->compileAndExecuteScript(qsl(R"lua(
+headlessShrinks = 0
+function onHeadlessShrink(_, name)
+  if name == "headlessShrinkBuffer" then
+    headlessShrinks = headlessShrinks + 1
+    deleteMiniConsole("headlessShrinkBuffer")
+  elseif name == "headlessShrinkNested" then
+    headlessShrinks = headlessShrinks + 1
+    deleteMiniConsole("headlessShrinkWindow")
+  end
+end
+local lines = string.rep("shrink line\n", 150)
+createBuffer("headlessShrinkBuffer")
+setConsoleBufferSize("headlessShrinkBuffer", 100, 10)
+headlessShrinkEcho = tostring(echo("headlessShrinkBuffer", lines))
+openUserWindow("headlessShrinkWindow")
+createMiniConsole("headlessShrinkWindow", "headlessShrinkNested", 0, 0, 50, 50)
+setConsoleBufferSize("headlessShrinkNested", 100, 10)
+headlessShrinkNestedEcho = tostring(echo("headlessShrinkNested", lines))
+headlessShrinkLeft = table.concat({tostring(windowType("headlessShrinkBuffer")), tostring(windowType("headlessShrinkWindow")), tostring(windowType("headlessShrinkNested"))}, ",")
+)lua")));
+        QCoreApplication::sendPostedEvents(nullptr, QEvent::DeferredDelete);
+
+        QVERIFY2(luaGlobalString(host, "headlessShrinks").toInt() >= 2, "A shrink event never reached the handler, so nothing was deleted mid-echo.");
+        QCOMPARE(luaGlobalString(host, "headlessShrinkEcho"), qsl("true"));
+        QCOMPARE(luaGlobalString(host, "headlessShrinkNestedEcho"), qsl("true"));
+        QCOMPARE(luaGlobalString(host, "headlessShrinkLeft"), qsl("nil,nil,nil"));
+        QVERIFY(host->getLuaInterpreter()->compileAndExecuteScript(qsl(R"lua(createBuffer("headlessShrinkBuffer"); echo("headlessShrinkBuffer", "made again\n"))lua")));
+        const TConsoleModel* remade = host->windowRegistry().subConsoleModel(qsl("headlessShrinkBuffer"));
+        QVERIFY2(remade, "A buffer of the deleted one's name could not be made again.");
+        QVERIFY(remade->buffer.lineBuffer.join(QChar::LineFeed).contains(qsl("made again")));
     }
 
     void test_profileConnectsAndLogsInWithNoMainWindow()
@@ -252,6 +384,27 @@ fbYT0tapBHTFGBkf6NgxBGenwL5TDeL9g3w57+FWiHtIKUylQhCoNb20
         QVERIFY2(QApplication::topLevelWidgets().isEmpty(), "The refused connection created a widget.");
     }
 #endif
+
+    // A deleted window's model outlives the call that deleted it, as a real view's widget does, and goes
+    // when deferred deletes run; twice, as each release has to queue the next.
+    void test_deletedWindowModelGoesWithDeferredDeletes()
+    {
+        const QString hostname = qsl("Test-Headless-Host-Release");
+        QVERIFY2(HostManager::self()->addHost(hostname, QString(), QString(), QString()), "Could not create a profile with no main window.");
+        Host* host = HostManager::self()->getHost(hostname);
+        QVERIFY2(host, "The profile is not in the pool.");
+
+        for (int round = 0; round < 2; ++round) {
+            QVERIFY(host->getLuaInterpreter()->compileAndExecuteScript(qsl("assert(createMiniConsole('releasedMini', 0, 0, 10, 10))")));
+            TConsoleModel* model = host->windowRegistry().subConsoleModel(qsl("releasedMini"));
+            QVERIFY2(model, "The mini console has no model.");
+            const QPointer<TConsoleModelNotifier> notifier = &model->mNotifier;
+            QVERIFY(host->getLuaInterpreter()->compileAndExecuteScript(qsl("assert(deleteMiniConsole('releasedMini'))")));
+            QVERIFY2(notifier, "The model went before deferred deletes ran.");
+            QCoreApplication::sendPostedEvents(nullptr, QEvent::DeferredDelete);
+            QVERIFY2(!notifier, "The model outlived deferred deletes.");
+        }
+    }
 
     void test_profileWithNoSettingsStoreTakesTheDefaults()
     {

@@ -257,7 +257,7 @@ QString stopWatch::getElapsedDayTimeString() const
 }
 
 Host::Host(int port, const QString& hostname, const QString& login, const QString& pass, int id)
-: mpNullConsoleFrontend(std::make_unique<TNullConsoleFrontend>())
+: mpNullConsoleFrontend(std::make_unique<TNullConsoleFrontend>(this))
 , mTelnet(this, hostname)
 , mLuaInterpreter(this, hostname, id)
 , mMxpClient(this)
@@ -511,6 +511,8 @@ Host::~Host()
     emit signal_destroyProfileDialogs();
 
     consoleFrontend()->deleteActionToolBars();
+    mpNullConsoleFrontend->dropWindows();
+    mpNullConsoleFrontend->releaseRetired();
 
     mStopWatchMap.clear();
 
@@ -5270,10 +5272,6 @@ bool Host::replaceWindowText(const QString& name, const QString& text)
 
 std::pair<bool, QString> Host::openWindow(const QString& name, bool loadLayout, bool autoDock, const QString& area)
 {
-    if (!hasConsoleView()) {
-        return TNullConsoleFrontend::noView();
-    }
-
     if (name.isEmpty()) {
         return {false, QLatin1String("an userwindow cannot have an empty string as its name")};
     }
@@ -5293,11 +5291,17 @@ std::pair<bool, QString> Host::openWindow(const QString& name, bool loadLayout, 
                "Host::openWindow(...)",
                "An existing console with a dock was expected to be a User Window but it isn't");
 
-    return consoleFrontend()->openUserWindow(name, loadLayout, autoDock, area);
+    // An unknown area still opens the window, just where it already was
+    consoleFrontend()->openUserWindow(name, loadLayout, autoDock, area);
+    static const QStringList knownAreas{qsl("f"), qsl("floating"), qsl("r"), qsl("right"), qsl("l"), qsl("left"), qsl("t"), qsl("top"), qsl("b"), qsl("bottom")};
+    if (!area.isEmpty() && !knownAreas.contains(area)) {
+        return {false, qsl(R"(docking option "%1" not available. available docking options are "t" top, "b" bottom, "r" right, "l" left and "f" floating)").arg(area)};
+    }
+    return {true, QString()};
 }
 
-// Must refuse up front: TMainConsole::createMiniConsole(), createScrollBox() and createLabel() put an
-// element with an unresolvable parent into the main console, over the game text, and report success.
+// Must refuse up front: the views put an element with an unresolvable parent into the main console,
+// over the game text.
 // "main" is matched case-insensitively, as Host::setWindow() does.
 bool Host::parentWindowMissing(const QString& windowname) const
 {
@@ -5309,19 +5313,15 @@ bool Host::parentWindowMissing(const QString& windowname) const
 
 std::pair<bool, QString> Host::createMiniConsole(const QString& windowname, const QString& name, int x, int y, int width, int height)
 {
-    if (!hasConsoleView()) {
-        return TNullConsoleFrontend::noView();
-    }
-
     if (parentWindowMissing(windowname)) {
         return {false, qsl("window '%1' not found").arg(windowname)};
     }
 
     if (!mWindowRegistry.hasSubConsole(name)) {
-        if (consoleFrontend()->addMiniConsole(windowname, name, x, y, width, height)) {
-            return {true, QString()};
-        }
-    } else if (!mWindowRegistry.hasDockWidget(name)) {
+        consoleFrontend()->addMiniConsole(windowname, name, x, y, width, height);
+        return {true, QString()};
+    }
+    if (!mWindowRegistry.hasDockWidget(name)) {
         // CHECK: The absence of an explicit return statement in this block means that
         // reusing an existing mini console causes the lua function to seem to
         // fail - is this as per Wiki?
@@ -5357,26 +5357,68 @@ std::pair<bool, QString> Host::createScrollBox(const QString& windowname, const 
 
 std::pair<bool, QString> Host::createLabel(const QString& windowname, const QString& name, int x, int y, int width, int height, bool fillBg, bool clickthrough)
 {
-    if (!hasConsoleView()) {
-        return TNullConsoleFrontend::noView();
-    }
-
     if (parentWindowMissing(windowname)) {
         return {false, qsl("window '%1' not found").arg(windowname)};
     }
 
-    const bool labelExists = mWindowRegistry.hasLabel(name);
-    const bool subConsoleExists = mWindowRegistry.hasSubConsole(name);
-    if (!labelExists && !subConsoleExists) {
-        if (consoleFrontend()->createLabel(windowname, name, x, y, width, height, fillBg, clickthrough)) {
-            return {true, QString()};
-        }
-    } else if (labelExists) {
+    if (mWindowRegistry.hasLabel(name)) {
         return {false, qsl("label '%1' already exists").arg(name)};
-    } else if (subConsoleExists) {
+    }
+    if (mWindowRegistry.hasSubConsole(name)) {
         return {false, qsl("a miniconsole/userwindow with the name '%1' already exists").arg(name)};
     }
-    return {false, qsl("could not create label '%1'").arg(name)};
+    consoleFrontend()->createLabel(windowname, name, x, y, width, height, fillBg, clickthrough);
+    return {true, QString()};
+}
+
+std::pair<bool, QString> Host::deleteLabel(const QString& name)
+{
+    if (name.isEmpty()) {
+        return {false, QLatin1String("a label cannot have an empty string as its name")};
+    }
+    if (!mWindowRegistry.hasLabel(name)) {
+        // Message is of the form needed for a Lua API function call run-time error
+        return {false, qsl("label name '%1' not found").arg(name)};
+    }
+
+    consoleFrontend()->deleteLabel(name);
+    if (mWindowRegistry.hasLabel(name)) {
+        // One the current view has no record of, such as a detached view's
+        return {false, qsl("label name '%1' could not be deleted").arg(name)};
+    }
+    // The view may only have scheduled the label's deletion by now
+    TEvent mudletEvent{};
+    mudletEvent.mArgumentList.append(QLatin1String("sysLabelDeleted"));
+    mudletEvent.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
+    mudletEvent.mArgumentList.append(name);
+    mudletEvent.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
+    raiseEvent(mudletEvent);
+    return {true, QString()};
+}
+
+std::pair<bool, QString> Host::deleteMiniConsole(const QString& name)
+{
+    if (name.isEmpty()) {
+        return {false, QLatin1String("a miniconsole cannot have an empty string as its name")};
+    }
+    if (!mWindowRegistry.hasSubConsole(name)) {
+        // Message is of the form needed for a Lua API function call run-time error
+        return {false, qsl("miniconsole name '%1' not found").arg(name)};
+    }
+
+    consoleFrontend()->deleteMiniConsole(name);
+    if (mWindowRegistry.hasSubConsole(name)) {
+        // One the current view has no record of, such as a detached view's
+        return {false, qsl("miniconsole name '%1' could not be deleted").arg(name)};
+    }
+    // The view may only have scheduled the console's deletion by now
+    TEvent mudletEvent{};
+    mudletEvent.mArgumentList.append(QLatin1String("sysMiniConsoleDeleted"));
+    mudletEvent.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
+    mudletEvent.mArgumentList.append(name);
+    mudletEvent.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
+    raiseEvent(mudletEvent);
+    return {true, QString()};
 }
 
 bool Host::setClickthrough(const QString& name, bool clickthrough)
@@ -5430,10 +5472,11 @@ void Host::hideMudletsVariables()
 
 bool Host::createBuffer(const QString& name)
 {
-    if (!mWindowRegistry.hasSubConsole(name)) {
-        return consoleFrontend()->createBuffer(name);
+    if (mWindowRegistry.hasSubConsole(name)) {
+        return false;
     }
-    return false;
+    consoleFrontend()->createBuffer(name);
+    return true;
 }
 
 // Doesn't work on the errors or central debug consoles:
@@ -6175,9 +6218,6 @@ std::optional<QFont> Host::labelFont(const QString& name) const
 
 std::optional<QString> Host::labelText(const QString& name) const
 {
-    if (!hasConsoleView()) {
-        return {};
-    }
     if (const TLabelModel* pLabel = mWindowRegistry.labelModel(name)) {
         return pLabel->mText;
     }

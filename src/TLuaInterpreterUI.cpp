@@ -617,11 +617,8 @@ int TLuaInterpreter::createScrollBox(lua_State* L)
 int TLuaInterpreter::deleteLabel(lua_State* L)
 {
     const QString labelName = getVerifiedString(L, __func__, 1, "label name");
-    const Host& host = getHostFromLua(L);
-    if (!host.hasConsoleView()) {
-        return warnArgumentValue(L, __func__, no_main_window_value, true);
-    }
-    if (auto [success, message] = host.consoleFrontend()->deleteLabel(labelName); !success) {
+    Host& host = getHostFromLua(L);
+    if (auto [success, message] = host.deleteLabel(labelName); !success) {
         lua_pushboolean(L, false);
         lua_pushstring(L, message.toUtf8().constData());
         return 2;
@@ -635,12 +632,8 @@ int TLuaInterpreter::deleteLabel(lua_State* L)
 int TLuaInterpreter::deleteMiniConsole(lua_State* L)
 {
     const QString miniConsoleName = getVerifiedString(L, __func__, 1, "miniconsole name");
-    const Host& host = getHostFromLua(L);
-
-    if (!host.hasConsoleView()) {
-        return warnArgumentValue(L, __func__, no_main_window_value, true);
-    }
-    if (auto [success, message] = host.consoleFrontend()->deleteMiniConsole(miniConsoleName); !success) {
+    Host& host = getHostFromLua(L);
+    if (auto [success, message] = host.deleteMiniConsole(miniConsoleName); !success) {
         lua_pushboolean(L, false);
         lua_pushstring(L, message.toUtf8().constData());
         return 2;
@@ -4531,12 +4524,10 @@ int TLuaInterpreter::wrapLine(lua_State* L)
     const QString windowName = hasWindowName ? QString{lua_tostring(L, 1)} : qsl("main");
 
     Host& host = getHostFromLua(L);
-    if (!host.hasConsoleView()) {
-        // Sub-windows die with the view, but the main buffer is the model's and keeps the view's wrap settings.
-        if (isMain(windowName)) {
-            TBuffer& buffer = host.mainConsoleModel().buffer;
-            buffer.wrapLine(lineNumber, buffer.mWrapAt, buffer.mWrapIndent, buffer.mWrapHangingIndent);
-        }
+    if (!host.hasConsoleView() && isMain(windowName)) {
+        // The main buffer is the model's and keeps the view's wrap settings.
+        TBuffer& buffer = host.mainConsoleModel().buffer;
+        buffer.wrapLine(lineNumber, buffer.mWrapAt, buffer.mWrapIndent, buffer.mWrapHangingIndent);
         return 0;
     }
     if (auto pModel = host.consoleModelNamed(windowName)) {
