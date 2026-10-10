@@ -2706,9 +2706,7 @@ int TLuaInterpreter::getMudletVersion(lua_State* L)
                 }
                 return 4;
             } else { // NOLINT(readability-else-after-return)
-                lua_pushstring(L,
-                               "getMudletVersion: takes one (optional) argument:\n"
-                               "   \"major\", \"minor\", \"revision\", \"build\", \"string\" or \"table\".");
+                lua_pushstring(L, "getMudletVersion: takes one (optional) argument: \"major\", \"minor\", \"revision\", \"build\", \"string\" or \"table\".");
                 return csmErrorAlreadyPushed;
             }
         } else if (n == 0) { // NOLINT(readability-else-after-return)
@@ -2726,9 +2724,7 @@ int TLuaInterpreter::getMudletVersion(lua_State* L)
             lua_pushstring(L, MudletApp::buildSuffix().trimmed().toUtf8().constData());
             lua_settable(L, -3);
         } else { // NOLINT(readability-else-after-return)
-            lua_pushstring(L,
-                           "getMudletVersion: only takes one (optional) argument:\n"
-                           "   \"major\", \"minor\", \"revision\", \"build\", \"string\" or \"table\".");
+            lua_pushstring(L, "getMudletVersion: only takes one (optional) argument: \"major\", \"minor\", \"revision\", \"build\", \"string\" or \"table\".");
             return csmErrorAlreadyPushed;
         }
         return 1;
