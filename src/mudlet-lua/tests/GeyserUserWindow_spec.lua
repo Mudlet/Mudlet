@@ -291,11 +291,11 @@ describe("Tests functionality of Geyser.UserWindow", function()
       assert.are.equal("guwScrollBox", scrollBox.windowname)
       assert.are.equal("guwHolder", scrollBox.parentWindowName)
       local usableWidth, usableHeight = getUserWindowSize("guwHolder")
-      assert.are.same({x = 0, y = 0, width = usableWidth, height = math.floor(usableHeight / 2)}, geometry("guwScrollBox"))
+      assert.are.same({x = 0, y = 0, width = usableWidth, height = math.floor(usableHeight / 2 + 0.5)}, geometry("guwScrollBox"))
       -- and a child of the scroll box is placed in the scroll box's own space
       local label = track(Geyser.Label:new({name = "guwScrollBoxLabel", x = 0, y = 0, width = "50%", height = "100%"}, scrollBox))
       assert.are.equal("guwScrollBox", label.windowname)
-      assert.are.equal(math.floor(usableWidth / 2), geometry("guwScrollBoxLabel").width)
+      assert.are.equal(math.floor(usableWidth / 2 + 0.5), geometry("guwScrollBoxLabel").width)
     end)
 
     it("deletes its children with itself", function()

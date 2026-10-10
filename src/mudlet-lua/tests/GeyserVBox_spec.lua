@@ -92,12 +92,15 @@ describe("Tests functionality of Geyser.VBox", function()
       track(Geyser.Label:new({name = "gvbThreeB"}, box))
       assert.are.equal(50, geometry("gvbThreeA").height)
       track(Geyser.Label:new({name = "gvbThreeC"}, box))
-      -- a third of the box does not divide into whole pixels, and Mudlet
-      -- truncates the pixel values it is handed
+      -- a third of the box does not divide into whole pixels, so each edge is
+      -- rounded and the children still tile the box from top to bottom
+      local expectedY = 60
       for index, name in ipairs({"gvbThreeA", "gvbThreeB", "gvbThreeC"}) do
-        local expectedY = math.floor(60 + (index - 1) * 100 / 3)
-        assert.are.same({x = 50, y = expectedY, width = 100, height = 33}, geometry(name))
+        local expectedBottom = math.floor(60 + index * 100 / 3 + 0.5)
+        assert.are.same({x = 50, y = expectedY, width = 100, height = expectedBottom - expectedY}, geometry(name))
+        expectedY = expectedBottom
       end
+      assert.are.equal(160, expectedY)
     end)
 
     it("stretches children over the full width of the box", function()
