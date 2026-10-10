@@ -2810,8 +2810,8 @@ describe("Tests mapper functions against a shared fixture", function()
   end)
 
   describe("Tests the 3D map perspective functions", function()
-    -- Only a build with the 3D mapper has them; the spec run keeps to the 2D
-    -- map, as the leak job cannot have the GL context a 3D view brings up
+    -- Only a build with the 3D mapper has them. These run with the 2D map
+    -- showing, but for the one test below that opens the modern 3D view
     if not setMapPerspective then
       pending("setMapPerspective and shiftMapPerspective need a Mudlet built with the 3D mapper")
       return
@@ -2829,14 +2829,20 @@ describe("Tests mapper functions against a shared fixture", function()
       assert.are.equal("the modern 3D map view is not showing", err)
     end)
 
-    it("both refuse numbers that are not finite", function()
+    it("both refuse numbers that are not finite, in any argument", function()
       for _, bad in ipairs({0 / 0, math.huge, -math.huge}) do
-        local ok, err = setMapPerspective(2, bad, 270)
-        assert.is_nil(ok)
-        assert.is_truthy(err:find("finite", 1, true), err)
-        ok, err = shiftMapPerspective(0, 0, bad)
-        assert.is_nil(ok)
-        assert.is_truthy(err:find("finite", 1, true), err)
+        for position = 1, 3 do
+          local args = {2, 45, 270}
+          args[position] = bad
+          local ok, err = setMapPerspective(unpack(args))
+          assert.is_nil(ok)
+          assert.is_truthy(err:find("finite", 1, true), err)
+          args = {0, 0, 0}
+          args[position] = bad
+          ok, err = shiftMapPerspective(unpack(args))
+          assert.is_nil(ok)
+          assert.is_truthy(err:find("finite", 1, true), err)
+        end
       end
     end)
 
@@ -2855,7 +2861,7 @@ describe("Tests mapper functions against a shared fixture", function()
       assert.is_false(getConfig("show3dMapView"))
     end)
 
-    it("both move the modern 3D view's camera while it shows, but not the classic view's", function()
+    it("both are accepted while the modern 3D view shows, and refused for the classic view", function()
       -- a GL context leaks in the leak-checking job's GL driver, as Media_spec explains
       if (os.getenv("ASAN_OPTIONS") or ""):find("detect_leaks=1", 1, true) then
         pending("a 3D view's GL context leaks in this job's GL driver")
@@ -4414,10 +4420,8 @@ describe("Tests saveMap and loadMap", function()
   end)
 end)
 
--- Floating and redocking the map gives the modern 3D view a new GL context, and
--- switching back to the classic view deletes the widget while its context may
--- still be alive, so a context signal must not reach it once its destructor
--- has run
+-- Floating and redocking give the modern 3D view a new GL context, and switching
+-- renderers replaces the widget; neither may crash or leave the 3D view hidden
 describe("Tests the modern 3D mapper surviving context rebuilds", function()
   it("floats, redocks and switches back to the classic view", function()
     if type(setMapPerspective) ~= "function" then
