@@ -1449,6 +1449,26 @@ describe("MMCP effects against a scripted chat peer", function()
       assert.is_true(contains(received[2][2], "second of two"), tostring(received[2][2]))
     end)
 
+    it("handles a command and the start of the next one in a single write", function()
+      if peerUnavailable() then return end
+      ensurePeer()
+      -- The complete command must not wait for the next one to finish, and the
+      -- start of the next one must be kept for when the rest of it arrives.
+      local received = collectEvents("sysMMCPChatMessage", function()
+        peerSendsRaw(string.char(7) .. "<CHAT> whole one" .. string.char(255)
+                     .. string.char(7) .. "<CHAT> started ")
+        pump(500)
+      end)
+      assert.equals(1, #received)
+      assert.is_true(contains(received[1][2], "whole one"), tostring(received[1][2]))
+      received = collectEvents("sysMMCPChatMessage", function()
+        peerSendsRaw("and finished" .. string.char(255))
+        pump(500)
+      end)
+      assert.equals(1, #received)
+      assert.is_true(contains(received[1][2], "started and finished"), tostring(received[1][2]))
+    end)
+
     it("skips a command it does not know without losing the next one", function()
       if peerUnavailable() then return end
       ensurePeer()
@@ -1590,6 +1610,19 @@ describe("MMCP effects against a scripted chat peer", function()
       local shown = waitForText(mark, "trying to peek your connections")
       assert.is_true(contains(shown, PEER_NAME .. " is trying to peek your connections!"), shown)
       assert.is_true(mmcp.ignore(PEER_NAME))
+    end)
+
+    -- The peek notice's first line then ends right after its "[ CHAT ]  - " prefix
+    it("survives a peer whose name starts with a newline", function()
+      if peerUnavailable() then return end
+      ensurePeer()
+      local mark = getLastLineNumber("main")
+      peerSends(1, "\nNewlinePeer")
+      peerSends(28, "")
+      local shown = waitForText(mark, "trying to peek your connections")
+      assert.is_true(contains(shown, "NewlinePeer is trying to peek your connections"), shown)
+      peerSends(1, PEER_NAME)
+      assert.is_true(waitUntil(function() return peerClient() ~= nil end, 2000))
     end)
   end)
 
@@ -1738,6 +1771,55 @@ describe("MMCP effects against a scripted chat peer", function()
       assert.equals("after the gap", after.text, "payload bytes: " .. after.hex)
     end)
 
+    it("sends a snooper a prompt without the marker Mudlet ends it with", function()
+      if peerUnavailable() then return end
+      ensurePeer()
+      assert.is_true(mmcp.allowSnoop(PEER_NAME))
+      finally(function()
+        if mmcp.getClientFlags(PEER_NAME) == "      N " then
+          peerSends(30, "")
+          waitUntil(function() return mmcp.getClientFlags(PEER_NAME) == "      n " end, 2000)
+        end
+        mmcp.allowSnoop(PEER_NAME)
+      end)
+      peerSends(30, "")
+      assert.is_true(waitUntil(function()
+        return mmcp.getClientFlags(PEER_NAME) == "      N "
+      end, 2000))
+
+      -- IAC GA, then IAC EOR
+      for _, ending in ipairs({"\255\249", "\255\239"}) do
+        local mark = captureSeq()
+        feedTelnet("a normal line\r\n<100hp 50mp> " .. ending)
+        local prompt = waitForPeerEvent(mark, function(event)
+          return event.type == "command" and event.name == "SnoopData" and contains(event.text, "100hp")
+        end, 2000)
+        assert.is_table(prompt)
+        assert.equals("<100hp 50mp> ", prompt.text, "payload bytes: " .. prompt.hex)
+      end
+
+      -- and a GA straight after a line ending sends no blank line of its own
+      local mark = captureSeq()
+      feedTelnet("a line before a bare GA\r\n\255\249")
+      feedTelnet("the next line\r\n")
+      assert.is_table(waitForPeerEvent(mark, function(event)
+        return event.type == "command" and event.name == "SnoopData" and contains(event.text, "the next line")
+      end, 2000))
+      local blank = waitForPeerEvent(mark, function(event)
+        return event.type == "command" and event.name == "SnoopData" and (event.text == "" or event.text == "?")
+      end, 0)
+      assert.is_nil(blank, "a bare GA reached the snooper as a line of its own")
+
+      -- a literal 0xff (IAC IAC) that ends a read is game text, not the marker
+      mark = captureSeq()
+      feedTelnet("a read that ends in \255\255")
+      local literal = waitForPeerEvent(mark, function(event)
+        return event.type == "command" and event.name == "SnoopData" and contains(event.text, "a read that ends in")
+      end, 2000)
+      assert.is_table(literal, "a literal 0xff ending a read lost the snooper the frame")
+      assert.equals("a read that ends in ?", literal.text, "payload bytes: " .. literal.hex)
+    end)
+
     it("raises sysMMCPIncomingSnoopMessage for snooped output", function()
       if peerUnavailable() then return end
       ensurePeer()
@@ -1757,6 +1839,19 @@ describe("MMCP effects against a scripted chat peer", function()
       peerSendsRaw(string.char(31) .. "\27[1;32ma green snooped line\27[0m" .. string.char(255))
       local _, _, message = waitForEvent("sysMMCPIncomingSnoopMessage", 2000)
       assert.is_true(contains(message, "\27[1;32ma green snooped line"), tostring(message))
+    end)
+
+    it("keeps all of a snooped frame longer than 64 KiB", function()
+      if peerUnavailable() then return end
+      ensurePeer()
+      -- A frame's length was once carried in 16 bits, so one 10 bytes past
+      -- 65536 was shown as just its last 10.
+      local length = 65536 + 10
+      peerSendsRaw(string.char(31) .. string.rep("x", length) .. string.char(255))
+      local _, _, message = waitForEvent("sysMMCPIncomingSnoopMessage", 5000)
+      assert.is_string(message)
+      local _, count = message:gsub("x", "")
+      assert.equals(length, count)
     end)
   end)
 
@@ -1849,7 +1944,10 @@ describe("MMCP effects against a scripted chat peer", function()
         return type(clients) == "table" and clients[1] ~= nil and clients[1].name == "RenamedPeer"
       end, 2000))
       -- and the new name is what addresses it from then on
+      local mark = captureSeq()
       assert.is_true(mmcp.chatTo("RenamedPeer", "hello again"))
+      -- waited for, or it can land after the next test's mark and be taken for that test's message
+      assert.is_table(waitForCommand("TextPersonal", mark))
 
       peerSends(1, PEER_NAME)
       assert.is_true(waitUntil(function() return peerClient() ~= nil end, 2000))
@@ -2110,6 +2208,49 @@ describe("MMCP effects against a scripted chat peer", function()
   end)
 
   describe("disconnection", function()
+    it("drops a peer that sends more than 1 MiB without ending a command", function()
+      if peerUnavailable() then return end
+      ensurePeer()
+      local mark = captureSeq()
+      local line = getLastLineNumber("main")
+      -- a snoop frame that never gets its 0xff terminator
+      tellPeer({action = "send_hex", hex = "1f" .. string.rep("78", 1024 * 1024 + 1)})
+      assert.is_table(waitForPeerEvent(mark, function(event)
+        return event.type == "disconnect"
+      end, 5000))
+      assert.is_nil(peerClient())
+      local shown = table.concat(getLines("main", line, getLastLineNumber("main") + 1), " ")
+      assert.is_true(contains(shown, PEER_NAME .. " sent more than 1048576 bytes without ending a command"), shown)
+    end)
+
+    it("keeps a peer whose command is only just within that limit", function()
+      if peerUnavailable() then return end
+      ensurePeer()
+      local mark = captureSeq()
+      -- 1 MiB exactly: the code byte and the payload, with the 0xff after them.
+      -- A side channel frame, as snoop data is drawn on the console as one line,
+      -- which takes many minutes to lay out under a sanitizer
+      local payloadLength = 1024 * 1024 - 1 - #"Big,"
+      tellPeer({action = "send_hex", hex = "28" .. "4269672c" .. string.rep("78", payloadLength)})
+      pump(500)
+      local name, from, channel, message = nil, nil, nil, nil
+      local handlerId = registerAnonymousEventHandler("sysMMCPSideChannelMessage", function(_, ...)
+        name = "sysMMCPSideChannelMessage"
+        from, channel, message = ...
+      end)
+      finally(function() killAnonymousEventHandler(handlerId) end)
+      peerSendsRaw(string.char(255))
+      assert.is_true(waitUntil(function() return name ~= nil end, 5000))
+      assert.equals(PEER_NAME, from)
+      assert.equals("Big", channel)
+      assert.is_string(message)
+      assert.equals(payloadLength, #message)
+      assert.is_table(peerClient())
+      assert.is_nil(waitForPeerEvent(mark, function(event)
+        return event.type == "disconnect"
+      end, 0))
+    end)
+
     it("notices when the peer closes the connection", function()
       if peerUnavailable() then return end
       ensurePeer()
@@ -2781,5 +2922,110 @@ describe("sending protocol data to a game server that has not negotiated", funct
     local atcp, atcpErr = sendATCP("Core.Hello")
     assert.is_nil(atcp)
     assert.is_true(contains(atcpErr, "ATCP is not currently enabled"), tostring(atcpErr))
+  end)
+end)
+
+-- A chat connection belongs to the profile whose server made it and must close
+-- with that profile, or it reads the far end's next message into a profile
+-- that is gone. Lua cannot start a chat server (mmcp.startServer is not
+-- registered), so a second profile auto-starts one from its saved settings and
+-- this one calls it.
+describe("MMCP chat with a profile that closes", function()
+  local name = "mudlet-spec-mmcp-closing"
+  local peerName = "SpecClosingPeer"
+  local profileDirectory = getMudletHomeDir():match("^(.*)[/\\]") .. "/" .. name
+  -- written into the profile this spec makes, so a profile of the same name
+  -- that it did not make is never deleted
+  local fixtureMarker = profileDirectory .. "/mudlet-spec-fixture"
+
+  local function removeTree(path)
+    if lfs.attributes(path, "mode") ~= "directory" then
+      os.remove(path)
+      return
+    end
+    for entry in lfs.dir(path) do
+      if entry ~= "." and entry ~= ".." then
+        removeTree(path .. "/" .. entry)
+      end
+    end
+    lfs.rmdir(path)
+  end
+
+  local function loaded()
+    local entry = getProfiles()[name]
+    return entry ~= nil and entry.loaded
+  end
+
+  local function waitUntil(predicate)
+    for _ = 1, 100 do
+      if predicate() then
+        return true
+      end
+      pumpEvents(50)
+    end
+    return predicate()
+  end
+
+  local function peerConnected()
+    for _, client in ipairs(mmcp.getClientList() or {}) do
+      if client.name == peerName then
+        return true
+      end
+    end
+    return false
+  end
+
+  it("should hang up its calls when the profile running the server closes", function()
+    if not os.getenv("MUDLET_TEST_MODE") then
+      pending("waiting for the chat traffic needs pumpEvents(), which is refused outside MUDLET_TEST_MODE")
+      return
+    end
+    if lfs.attributes(fixtureMarker) then
+      removeTree(profileDirectory)
+    end
+    assert.is_nil(lfs.attributes(profileDirectory), "a profile named " .. name .. " already exists and is not this spec's to delete")
+    finally(function()
+      if peerConnected() then
+        mmcp.disconnect(peerName)
+        waitUntil(function() return not peerConnected() end)
+      end
+      if loaded() then
+        closeProfile(name)
+        waitUntil(function() return not loaded() end)
+      end
+      if lfs.attributes(fixtureMarker) then
+        removeTree(profileDirectory)
+      end
+    end)
+
+    -- a port of its own, so a server left over from another run is not called;
+    -- math.random is unseeded here and would give every run the same one
+    local port = 20000 + os.time() % 40000
+    lfs.mkdir(profileDirectory)
+    io.open(fixtureMarker, "w"):close()
+    lfs.mkdir(profileDirectory .. "/current")
+    local file = io.open(profileDirectory .. "/current/2026-01-01#00-00-00.xml", "w")
+    file:write(string.format([[<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE MudletPackage>
+<MudletPackage version="1.001">
+  <HostPackage>
+    <Host>
+      <name>%s</name>
+      <MMCP chatName="%s" chatPort="%d" chatPrefix="" autostartServer="yes" allowPeekRequests="no" prefixEmotes="no" chatMessageNewline="no" autoAcceptCalls="yes" snoopInMain="no"/>
+    </Host>
+  </HostPackage>
+</MudletPackage>
+]], name, peerName, port))
+    file:close()
+
+    assert.is_true(loadProfile(name, true))
+    assert.is_true(mmcp.call("127.0.0.1", port))
+    assert.is_true(waitUntil(peerConnected), "the other profile's chat server did not accept the call")
+
+    assert.is_true(closeProfile(name))
+    assert.is_true(waitUntil(function() return not loaded() end))
+    -- an end left open by the closed profile would read this into freed memory
+    mmcp.chatAll("are you still there?")
+    assert.is_true(waitUntil(function() return not peerConnected() end), "the closed profile's end of the call was left open")
   end)
 end)

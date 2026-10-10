@@ -39,7 +39,7 @@
  * tests neither reach the network nor depend on a name resolving.
  *
  * A real profile rather than a bare Host, because the dialog connects to
- * mpHost->mpConsole in its constructor and installs into a profile directory.
+ * mpHost->mainConsoleView() in its constructor and installs into a profile directory.
  *
  * Run with: ctest -R PackageRepositoryDownloadTest -V
  */
@@ -574,6 +574,45 @@ private slots:
 
         QVERIFY2(dismisser.sawStacking(), "No two warnings were ever open at once, so nothing finished inside the refusal and the case under test never happened");
         QVERIFY2(!dismisser.progressGoneWhileBoxUp(), "The batch was wound up while the loop was still stopped inside the refusal's warning");
+
+        QTRY_VERIFY_WITH_TIMEOUT(settle() && !downloadDialogStillUp(manager), 15s);
+
+        manager->close();
+        QTRY_VERIFY_WITH_TIMEOUT(settle() && manager.isNull(), 15s);
+    }
+
+    // A refusal's warning box runs an event loop, and a script installing or
+    // removing a package inside it rebuilds the list the selection was taken
+    // from, freeing its items. The selections after the box still have to be
+    // the packages the user picked.
+    void test_aListRebuiltInsideARefusalStillDownloadsTheRestOfTheSelection()
+    {
+        mpProxy->setAnswer(StubProxy::Answer::Refuse);
+        MessageBoxDismisser dismisser;
+        // Holds the lone refusal box up long enough for the rebuild below to
+        // happen inside it; nothing stacks on it, so the cap is what ends it
+        dismisser.setWaitForStacking(1s);
+
+        QPointer<dlgPackageManager> manager =
+                openManagerListing({repositoryEntry(qsl("a-nameless-refusal"), QString()), repositoryEntry(qsl("b-after-the-rebuild"), qsl("b-after-the-rebuild.mpackage"))});
+        QVERIFY2(selectPackages(manager, {qsl("a-nameless-refusal"), qsl("b-after-the-rebuild")}), "The packages under test were not listed in the Explore view");
+
+        bool rebuiltInsideTheBox = false;
+        QTimer rebuilder;
+        connect(&rebuilder, &QTimer::timeout, this, [this, &rebuiltInsideTheBox]() {
+            auto* box = qobject_cast<QMessageBox*>(QApplication::activeModalWidget());
+            if (!rebuiltInsideTheBox && box && box->text().contains(qsl("a-nameless-refusal"))) {
+                rebuiltInsideTheBox = true;
+                emit mpHost->signal_packageListChanged();
+            }
+        });
+        rebuilder.start(5ms);
+
+        QVERIFY(QMetaObject::invokeMethod(manager, "slot_installPackageFromRepository"));
+
+        QTRY_VERIFY_WITH_TIMEOUT(settle() && dismisser.seen().size() == 2, 30s);
+        QVERIFY2(rebuiltInsideTheBox, "The package list was never rebuilt while the refusal was up, so the case under test never happened");
+        QVERIFY2(dismisser.seen().at(1).contains(qsl("b-after-the-rebuild")), "The selection after the rebuild was not the package that was picked");
 
         QTRY_VERIFY_WITH_TIMEOUT(settle() && !downloadDialogStillUp(manager), 15s);
 

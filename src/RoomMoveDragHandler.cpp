@@ -80,7 +80,8 @@ bool RoomMoveDragHandler::handle(T2DMap::MapInteractionContext& context)
         return false;
     }
 
-    if (!roomDb->getArea(mMapWidget.mAreaID)) {
+    const TArea* shownArea = roomDb->getArea(mMapWidget.mAreaID);
+    if (!shownArea) {
         return false;
     }
 
@@ -102,16 +103,24 @@ bool RoomMoveDragHandler::handle(T2DMap::MapInteractionContext& context)
     mMapWidget.mRoomMoveLastMapPoint.setX(mMapWidget.mRoomMoveLastMapPoint.x() + dx);
     mMapWidget.mRoomMoveLastMapPoint.setY(mMapWidget.mRoomMoveLastMapPoint.y() + dy);
 
+    // Rebuilding an area's indexes costs a mouse move's interval on a big map, so it only
+    // beats updating them room by room once nearly every room in the area is moving
+    const bool rebuildIndexes = mMapWidget.mMultiSelectionSet.size() * 4 > shownArea->getAreaRooms().size() * 3;
     QSet<int> dirtyAreas;
-    QSetIterator<int> roomIterator = mMapWidget.mMultiSelectionSet;
-    while (roomIterator.hasNext()) {
-        TRoom* room = roomDb->getRoom(roomIterator.next());
+    for (const int roomId : std::as_const(mMapWidget.mMultiSelectionSet)) {
+        TRoom* room = roomDb->getRoom(roomId);
         if (!room) {
             continue;
         }
 
+        const int oldX = room->x();
+        const int oldY = room->y();
         room->offset(dx, dy, 0);
-        dirtyAreas.insert(room->getArea());
+        if (rebuildIndexes) {
+            dirtyAreas.insert(room->getArea());
+        } else if (auto* area = roomDb->getArea(room->getArea())) {
+            area->moveRoom(roomId, room->z(), oldX, oldY, room->z(), room->x(), room->y());
+        }
     }
 
     QSetIterator<int> areaIterator(dirtyAreas);

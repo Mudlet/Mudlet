@@ -26,9 +26,9 @@
 
 #include "Host.h"
 #include "TAction.h"
+#include "TAppFrontend.h"
+#include "TConsoleFrontend.h"
 #include "Tree.h"
-#include "mudlet.h"
-#include "TMainConsole.h"
 #include "utils.h"
 
 #include <QDebug>
@@ -210,8 +210,8 @@ void ActionUnit::reParentAction(int childID, int oldParentID, int newParentID, i
         pOldParent->popChild(pChild);
         pOldParent->setDataChanged();
 
-        if (mpHost->mpConsole) {
-            mpHost->mpConsole->releaseParentActionBars(pOldParent, pChild);
+        if (mpHost->consoleFrontend()) {
+            mpHost->consoleFrontend()->releaseParentActionBars(pOldParent, pChild);
         }
     }
     if (!pOldParent) {
@@ -235,8 +235,8 @@ void ActionUnit::reParentAction(int childID, int oldParentID, int newParentID, i
 
     if ((!pOldParent) && (pNewParent)) {
         // A profile with no view has no console, so no bars to take down
-        if (mpHost->mpConsole) {
-            mpHost->mpConsole->detachActionBars(pChild);
+        if (mpHost->consoleFrontend()) {
+            mpHost->consoleFrontend()->detachActionBars(pChild);
         }
     }
 }
@@ -294,13 +294,18 @@ void ActionUnit::unregisterAction(TAction* pT)
     if (!pT) {
         return;
     }
+    // The bars are redrawn from the tree below, and the undo stack clears this
+    // action's host before deleting it, so they must no longer reach it
+    if (pT->getParent()) {
+        pT->getParent()->popChild(pT);
+    }
     if (pT->getParent() && pT->getParent()->mPackageName.isEmpty()) {
         removeAction(pT);
         updateAllToolbars();
         return;
     }
-    if (mpHost->mpConsole && mpHost->mpConsole->hasEasyButtonBar(pT) && pT->mPackageName.isEmpty()) {
-        mpHost->mpConsole->detachActionBars(pT);
+    if (mpHost->consoleFrontend() && mpHost->consoleFrontend()->hasEasyButtonBar(pT) && pT->mPackageName.isEmpty()) {
+        mpHost->consoleFrontend()->detachActionBars(pT);
     }
     removeAction(pT);
     if (!pT->getParent()) {
@@ -409,7 +414,9 @@ std::pair<bool, QString> ActionUnit::setToolBarActive(const QString& name, const
     if (found) {
         updateAllToolbars();
     }
-    mudlet::self()->processEventLoopHack();
+    if (auto* pFrontend = TAppFrontend::instance()) {
+        pFrontend->processEventLoopHack();
+    }
     if (found) {
         return {true, QString()};
     }
@@ -433,9 +440,9 @@ void ActionUnit::updateAllToolbars()
 {
     // The bars are the console's widgets, so a profile with no view has nothing
     // to build
-    if (!mpHost->mpConsole) {
+    if (!mpHost->consoleFrontend()) {
         return;
     }
-    mpHost->mpConsole->regenerateToolBars(mActionRootNodeList);
-    mpHost->mpConsole->regenerateEasyButtonBars(mActionRootNodeList);
+    mpHost->consoleFrontend()->regenerateToolBars(mActionRootNodeList);
+    mpHost->consoleFrontend()->regenerateEasyButtonBars(mActionRootNodeList);
 }

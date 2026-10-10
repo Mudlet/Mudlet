@@ -34,6 +34,7 @@
 #include "TMap.h"
 #include "TRoomDB.h"
 #include "HostManager.h"
+#include "TTabBar.h"
 #include "TTrigger.h"
 #include "TriggerUnit.h"
 #include "TelnetServerStub.h"
@@ -54,6 +55,7 @@
 #include <QDockWidget>
 #include <QLabel>
 #include <QMenuBar>
+#include <QToolBar>
 #include <QTemporaryDir>
 
 #include <zip.h>
@@ -61,6 +63,22 @@
 #include "GroupedTest.h"
 
 using namespace std::chrono_literals;
+
+// The unpacking dialog is parentless, so only an application-wide filter sees it shown.
+class UnpackingDialogShowCounter : public QObject
+{
+public:
+    int mShown = 0;
+
+protected:
+    bool eventFilter(QObject* watched, QEvent* event) override
+    {
+        if (event->type() == QEvent::Show && watched->objectName() == QLatin1String("package_manager_unpack")) {
+            ++mShown;
+        }
+        return false;
+    }
+};
 
 // Exercises the widget-free seams introduced when Host was de-widgeted: the
 // dockable map widget is now created and owned by the profile's main console
@@ -77,6 +95,7 @@ private:
     QByteArray mSavedXdg;
     TelnetServerStub* mpServer = nullptr;
     const QString mHostname = "Test-Host-Widget-Decoupling";
+    const QString mSecondHostname = "Test-Host-Widget-Decoupling-Second";
     const QString mLocalhost = "localhost";
     QString mPort;
     const QString mFirstAreaName = qsl("AAArea");
@@ -117,6 +136,7 @@ private slots:
         mudlet::self()->init();
         mudlet::self()->setStorePasswordsSecurely(false);
         deleteProfileDirectory(mHostname);
+        deleteProfileDirectory(mSecondHostname);
     }
 
     // The dockable map widget used to be a QDockWidget member of Host; it now
@@ -127,14 +147,14 @@ private slots:
         startProfile(mHostname, mLocalhost, mPort);
         auto host = mudlet::self()->getActiveHost();
         QVERIFY2(host, "No active host available for the test.");
-        QVERIFY2(host->mpConsole, "The active host has no main console.");
+        QVERIFY2(host->mainConsoleView(), "The active host has no main console.");
 
-        QVERIFY2(!host->mpConsole->mpDockableMapWidget, "A fresh profile must not have a dockable map widget yet.");
+        QVERIFY2(!host->mainConsoleView()->mpDockableMapWidget, "A fresh profile must not have a dockable map widget yet.");
 
         host->showHideOrCreateMapper(true);
 
-        QVERIFY2(host->mpConsole->mpDockableMapWidget, "Creating the mapper must give the console a dockable map widget it owns.");
-        QCOMPARE(host->mpConsole->mpDockableMapWidget->objectName(), qsl("dockMap_%1").arg(host->getName()));
+        QVERIFY2(host->mainConsoleView()->mpDockableMapWidget, "Creating the mapper must give the console a dockable map widget it owns.");
+        QCOMPARE(host->mainConsoleView()->mpDockableMapWidget->objectName(), qsl("dockMap_%1").arg(host->getName()));
     }
 
     // setMapperTitle is still a Host-facing (Lua) call, but it now drives the
@@ -145,17 +165,17 @@ private slots:
         startProfile(mHostname, mLocalhost, mPort);
         auto host = mudlet::self()->getActiveHost();
         QVERIFY2(host, "No active host available for the test.");
-        QVERIFY2(host->mpConsole, "The active host has no main console.");
+        QVERIFY2(host->mainConsoleView(), "The active host has no main console.");
 
         auto [okWithoutDock, messageWithoutDock] = host->setMapperTitle(qsl("anything"));
         QVERIFY2(!okWithoutDock, "setMapperTitle must fail when there is no dockable map widget.");
 
         host->showHideOrCreateMapper(true);
-        QVERIFY2(host->mpConsole->mpDockableMapWidget, "The mapper dock was not created.");
+        QVERIFY2(host->mainConsoleView()->mpDockableMapWidget, "The mapper dock was not created.");
 
         auto [okWithDock, messageWithDock] = host->setMapperTitle(qsl("Custom map title"));
         QVERIFY2(okWithDock, qPrintable(messageWithDock));
-        QCOMPARE(host->mpConsole->mpDockableMapWidget->windowTitle(), qsl("Custom map title"));
+        QCOMPARE(host->mainConsoleView()->mpDockableMapWidget->windowTitle(), qsl("Custom map title"));
     }
 
     // closeMapWidget tells three states apart and Lua reads the difference from
@@ -166,14 +186,14 @@ private slots:
         startProfile(mHostname, mLocalhost, mPort);
         auto host = mudlet::self()->getActiveHost();
         QVERIFY2(host, "No active host available for the test.");
-        QVERIFY2(host->mpConsole, "The active host has no main console.");
+        QVERIFY2(host->mainConsoleView(), "The active host has no main console.");
 
         auto [neverMade, neverMadeMessage] = host->closeMapWidget();
         QVERIFY2(!neverMade, "closeMapWidget must fail on a profile that never made a map widget.");
         QCOMPARE(neverMadeMessage, qsl("no map widget found to close"));
 
         host->showHideOrCreateMapper(true);
-        QVERIFY2(host->mpConsole->mpDockableMapWidget, "The mapper dock was not created.");
+        QVERIFY2(host->mainConsoleView()->mpDockableMapWidget, "The mapper dock was not created.");
 
         auto [closed, closedMessage] = host->closeMapWidget();
         QVERIFY2(closed, qPrintable(closedMessage));
@@ -193,19 +213,19 @@ private slots:
         startProfile(mHostname, mLocalhost, mPort);
         auto host = mudlet::self()->getActiveHost();
         QVERIFY2(host, "No active host available for the test.");
-        QVERIFY2(host->mpConsole, "The active host has no main console.");
+        QVERIFY2(host->mainConsoleView(), "The active host has no main console.");
 
         host->showHideOrCreateMapper(true);
-        auto mapper = host->mpMap->mpMapper;
+        auto mapper = host->mpMap->mapper();
         QVERIFY2(mapper, "The mapper was not created.");
 
         const QString miniName = qsl("colourRefreshMini");
         auto [miniMade, miniMessage] = host->createMiniConsole(QString(), miniName, 0, 0, 100, 100);
         QVERIFY2(miniMade, qPrintable(miniMessage));
-        auto mini = host->mpConsole->subConsoleWidget(miniName);
+        auto mini = host->mainConsoleView()->subConsoleWidget(miniName);
         QVERIFY2(mini, "The mini console was not created.");
 
-        auto commandLine = host->mpConsole->mpCommandLine;
+        auto commandLine = host->mainConsoleView()->mpCommandLine;
         QVERIFY2(commandLine, "The main console has no command line.");
 
         const QColor wrongColour(1, 2, 3);
@@ -245,14 +265,14 @@ private slots:
         auto host = mudlet::self()->getActiveHost();
         QVERIFY2(host, "No active host available for the test.");
 
-        auto console = host->mpConsole;
+        QPointer<TMainConsole> console = host->mainConsoleView();
         QVERIFY2(console, "The active host has no main console.");
 
-        host->mpConsole = nullptr;
+        host->setMainConsoleView(nullptr);
         HostManager::self()->changeAllHostColour(host);
-        host->mpConsole = console;
+        host->setMainConsoleView(console);
 
-        QVERIFY2(host->mpConsole, "The console must be back before the fixture tears down.");
+        QVERIFY2(host->mainConsoleView(), "The console must be back before the fixture tears down.");
     }
 
     // The mapping-script reminder used to be a QDialog built inside Host; it is
@@ -265,10 +285,10 @@ private slots:
         startProfile(mHostname, mLocalhost, mPort);
         auto host = mudlet::self()->getActiveHost();
         QVERIFY2(host, "No active host available for the test.");
-        QVERIFY2(host->mpConsole, "The active host has no main console.");
+        QVERIFY2(host->mainConsoleView(), "The active host has no main console.");
 
         const int dialogsBefore = mudlet::self()->findChildren<QDialog*>().count();
-        host->mpConsole->showMapperScriptReminder();
+        host->mainConsoleView()->showMapperScriptReminder();
         const int dialogsAfter = mudlet::self()->findChildren<QDialog*>().count();
         QVERIFY2(dialogsAfter > dialogsBefore, "showMapperScriptReminder must raise a reminder dialog owned by the main window.");
     }
@@ -284,7 +304,7 @@ private slots:
         startProfile(mHostname, mLocalhost, mPort);
         auto host = mudlet::self()->getActiveHost();
         QVERIFY2(host, "No active host available for the test.");
-        QVERIFY2(host->mpConsole, "The active host has no main console.");
+        QVERIFY2(host->mainConsoleView(), "The active host has no main console.");
 
         QVERIFY2(!mudlet::self()->findChild<QDialog*>(qsl("lacking_mapper_script")), "A reminder dialog was up before the profile had been asked for one.");
 
@@ -321,9 +341,9 @@ private slots:
         startProfile(mHostname, mLocalhost, mPort);
         auto host = mudlet::self()->getActiveHost();
         QVERIFY2(host, "No active host available for the test.");
-        QVERIFY2(host->mpConsole, "The active host has no main console.");
+        QVERIFY2(host->mainConsoleView(), "The active host has no main console.");
 
-        auto console = host->mpConsole;
+        QPointer<TMainConsole> console = host->mainConsoleView();
         QVERIFY2(!console->mpUnpackingDialog, "There must be no unpacking dialog before one is requested.");
 
         console->showUnpackingProgress(qsl("Unpacking package:\n\"first\"\nplease wait..."), qsl("Unpacking"));
@@ -362,8 +382,8 @@ private slots:
         startProfile(mHostname, mLocalhost, mPort);
         auto host = mudlet::self()->getActiveHost();
         QVERIFY2(host, "No active host available for the test.");
-        QVERIFY2(host->mpConsole, "The active host has no main console.");
-        auto console = host->mpConsole;
+        QVERIFY2(host->mainConsoleView(), "The active host has no main console.");
+        QPointer<TMainConsole> console = host->mainConsoleView();
 
         // Queue a re-entrant close to fire while showUnpackingProgress() is inside
         // its first processEvents(), mimicking a deferred install completion.
@@ -390,14 +410,14 @@ private slots:
         startProfile(mHostname, mLocalhost, mPort);
         auto host = mudlet::self()->getActiveHost();
         QVERIFY2(host, "No active host available for the test.");
-        QVERIFY2(host->mpConsole, "The active host has no main console.");
-        auto console = host->mpConsole;
+        QVERIFY2(host->mainConsoleView(), "The active host has no main console.");
+        QPointer<TMainConsole> console = host->mainConsoleView();
 
         QTemporaryDir packageDir;
         QVERIFY2(packageDir.isValid(), "Could not create a temporary directory for the test package.");
         const QString packageName = qsl("HostWidgetDecouplingPackage");
         const QString packagePath = packageDir.filePath(qsl("%1.zip").arg(packageName));
-        QVERIFY2(writePackageArchive(packagePath, packageName), "Could not write the test package archive.");
+        QVERIFY2(writePackageArchive(packagePath, packageName, Host::scmArchiveSizeWorthAnUnpackingDialog), "Could not write the test package archive.");
 
         // installPackage() postpones the whole install (and so emits nothing) if a
         // profile save is still in flight from loading the profile.
@@ -427,6 +447,56 @@ private slots:
         QVERIFY2(dialogWhileUnpacking.isNull(), "The unpacking dialog was taken down but never disposed of.");
     }
 
+    // A new profile installs its default packages through this path, so a dialog
+    // per archive that unzips in milliseconds is pure cost.
+    void test_smallPackageInstallsWithoutUnpackingDialog()
+    {
+        startProfile(mHostname, mLocalhost, mPort);
+        auto host = mudlet::self()->getActiveHost();
+        QVERIFY2(host, "No active host available for the test.");
+        QVERIFY2(host->mpConsole, "The active host has no main console.");
+
+        QTemporaryDir packageDir;
+        QVERIFY2(packageDir.isValid(), "Could not create a temporary directory for the test package.");
+        const QString packageName = qsl("HostWidgetDecouplingSmallPackage");
+        const QString packagePath = packageDir.filePath(qsl("%1.zip").arg(packageName));
+        QVERIFY2(writePackageArchive(packagePath, packageName), "Could not write the test package archive.");
+        QTRY_VERIFY(!host->currentlySavingProfile());
+
+        QSignalSpy showSpy(host, &Host::signal_showUnpackingProgress);
+        QSignalSpy hideSpy(host, &Host::signal_hideUnpackingProgress);
+
+        auto [ok, message] = host->installPackage(packagePath, enums::PackageModuleType::Package, false);
+        QVERIFY2(ok, qPrintable(message));
+
+        QCOMPARE(showSpy.count(), 0);
+        QCOMPARE(hideSpy.count(), 0);
+        QVERIFY2(!host->mpConsole->mpUnpackingDialog, "A small package must install without the unpacking dialog.");
+    }
+
+    // A new profile installs the bundled default packages as it loads, and a
+    // dialog per package cost more than the unzips it covered.
+    void test_noUnpackingDialogForABundledPackage()
+    {
+        UnpackingDialogShowCounter dialogShows;
+        qApp->installEventFilter(&dialogShows);
+        startProfile(mHostname, mLocalhost, mPort);
+        auto host = mudlet::self()->getActiveHost();
+        QVERIFY2(host, "No active host available for the test.");
+
+        const QString packageName = qsl("echo");
+        QTRY_VERIFY(!host->currentlySavingProfile());
+        QVERIFY2(host->mInstalledPackages.contains(packageName), "The new profile did not install the bundled package as it loaded.");
+        QCOMPARE(dialogShows.mShown, 0);
+
+        QVERIFY2(host->uninstallPackage(packageName, enums::PackageModuleType::Package), "Could not uninstall the bundled package to reinstall it.");
+        QTRY_VERIFY(!host->currentlySavingProfile());
+        auto [ok, message] = host->installPackage(qsl(":/packages/echo/echo.mpackage"), enums::PackageModuleType::Package, false);
+        QVERIFY2(ok, qPrintable(message));
+        QVERIFY2(host->mInstalledPackages.contains(packageName), "The bundled package was not reinstalled.");
+        QCOMPARE(dialogShows.mShown, 0);
+    }
+
     // The map dock moved from Host to TMainConsole, so disposing of it is now the
     // console destructor's job. addDockWidget() reparents the dock onto the main
     // window, which outlives the profile, so nothing else would clean it up.
@@ -435,10 +505,10 @@ private slots:
         startProfile(mHostname, mLocalhost, mPort);
         auto host = mudlet::self()->getActiveHost();
         QVERIFY2(host, "No active host available for the test.");
-        QVERIFY2(host->mpConsole, "The active host has no main console.");
+        QVERIFY2(host->mainConsoleView(), "The active host has no main console.");
 
         host->showHideOrCreateMapper(true);
-        QPointer<QDockWidget> dock = host->mpConsole->mpDockableMapWidget;
+        QPointer<QDockWidget> dock = host->mainConsoleView()->mpDockableMapWidget;
         QVERIFY2(dock, "The mapper dock was not created.");
 
         // Forcing the close stops TMainConsole::closeEvent() asking whether the
@@ -495,12 +565,55 @@ private slots:
         auto host = mudlet::self()->getActiveHost();
         QVERIFY2(host, "No active host available for the test.");
 
-        const QString styleSheet = qsl("QMenuBar { color: #123456; }");
-        QVERIFY2(mudlet::self()->menuBar()->styleSheet() != styleSheet, "SETUP: the menu bar already carries the style sheet, so the assertion below cannot fail.");
+        QMenuBar* menuBar = mudlet::self()->menuBar();
+        QToolBar* toolBar = mudlet::self()->mpMainToolBar;
+        TTabBar* tabBar = mudlet::self()->mpTabBar;
+        QVERIFY2(toolBar && tabBar, "The main window has no toolbar or tab bar.");
+
+        const QString styleSheet = qsl("QWidget { color: #123456; }");
+        QVERIFY2(menuBar->styleSheet() != styleSheet && toolBar->styleSheet() != styleSheet && tabBar->styleSheet() != styleSheet,
+                 "SETUP: a bar already carries the style sheet, so the assertions below cannot fail.");
 
         QVERIFY(host->setProfileStyleSheet(styleSheet));
 
-        QCOMPARE(mudlet::self()->menuBar()->styleSheet(), styleSheet);
+        QCOMPARE(menuBar->styleSheet(), styleSheet);
+        QCOMPARE(toolBar->styleSheet(), styleSheet);
+        QCOMPARE(tabBar->styleSheet(), styleSheet);
+    }
+
+    // The main window's bars are shared by every profile, so only the active
+    // one may restyle them.
+    void test_onlyTheActiveProfileStyleSheetReachesTheMainWindow()
+    {
+        startProfile(mHostname, mLocalhost, mPort);
+        Host* first = mudlet::self()->getActiveHost();
+        QVERIFY2(first, "No active host after starting the first profile.");
+        startProfile(mSecondHostname, mLocalhost, mPort);
+        Host* second = mudlet::self()->getActiveHost();
+        QVERIFY2(second && second != first, "Starting the second profile did not make it the active one.");
+        QMenuBar* menuBar = mudlet::self()->menuBar();
+        QToolBar* toolBar = mudlet::self()->mpMainToolBar;
+        TTabBar* tabBar = mudlet::self()->mpTabBar;
+        QVERIFY2(toolBar && tabBar, "The main window has no toolbar or tab bar.");
+
+        const QString firstStyleSheet = qsl("QWidget { color: #111111; }");
+        QVERIFY(first->setProfileStyleSheet(firstStyleSheet));
+        QVERIFY2(menuBar->styleSheet() != firstStyleSheet && toolBar->styleSheet() != firstStyleSheet && tabBar->styleSheet() != firstStyleSheet,
+                 "A profile that is not the active one restyled the main window.");
+
+        const QString secondStyleSheet = qsl("QWidget { color: #222222; }");
+        QVERIFY(second->setProfileStyleSheet(secondStyleSheet));
+        QCOMPARE(menuBar->styleSheet(), secondStyleSheet);
+        QCOMPARE(toolBar->styleSheet(), secondStyleSheet);
+        QCOMPARE(tabBar->styleSheet(), secondStyleSheet);
+
+        tabBar->setCurrentIndex(tabBar->tabIndex(first->getName()));
+        QCOMPARE(mudlet::self()->getActiveHost(), first);
+
+        QVERIFY(second->setProfileStyleSheet(qsl("QWidget { color: #333333; }")));
+        QCOMPARE(menuBar->styleSheet(), firstStyleSheet);
+        QCOMPARE(toolBar->styleSheet(), firstStyleSheet);
+        QCOMPARE(tabBar->styleSheet(), firstStyleSheet);
     }
 
     // The central debug console follows the display font of a profile that
@@ -556,7 +669,7 @@ private slots:
 
         const auto [applied, error] = host->setDisplayFont(font);
         QVERIFY2(applied, qPrintable(error));
-        QCOMPARE(host->mpConsole->font().pointSize(), font.pointSize());
+        QCOMPARE(host->mainConsoleView()->font().pointSize(), font.pointSize());
 
         QCOMPARE(sourceEditor->config()->font().pointSize(), font.pointSize());
         QCOMPARE(note->font().pointSize(), font.pointSize());
@@ -707,9 +820,9 @@ private slots:
 
         host->showHideOrCreateMapper(true);
 
-        QDockWidget* dock = host->mpConsole->mpDockableMapWidget;
+        QDockWidget* dock = host->mainConsoleView()->mpDockableMapWidget;
         QVERIFY2(dock, "The mapper dock was not created.");
-        dlgMapper* mapper = host->mpMap->mpMapper.data();
+        dlgMapper* mapper = host->mpMap->mapper();
         QVERIFY2(mapper, "The map was left with no mapper.");
         QCOMPARE(dock->widget(), mapper);
         QVERIFY2(!host->mpMap->mpRoomDB->isEmpty(), "Making the mapper did not restore the saved map.");
@@ -735,7 +848,7 @@ private slots:
 
         host->showHideOrCreateMapper(true);
 
-        dlgMapper* mapper = host->mpMap->mpMapper.data();
+        dlgMapper* mapper = host->mpMap->mapper();
         QVERIFY2(mapper, "The mapper was not created.");
         QCOMPARE(mapper->comboBox_showArea->currentText(), mPlayerAreaName);
     }
@@ -753,9 +866,9 @@ private slots:
         QVERIFY2(!host->mapperShown(), "A profile with no mapper counted its mapper as shown.");
 
         host->showHideOrCreateMapper(true);
-        QPointer<QDockWidget> dock = host->mpConsole->mpDockableMapWidget;
+        QPointer<QDockWidget> dock = host->mainConsoleView()->mpDockableMapWidget;
         QVERIFY2(dock, "The mapper dock was not created.");
-        dlgMapper* mapper = host->mpMap->mpMapper.data();
+        dlgMapper* mapper = host->mpMap->mapper();
         QVERIFY(host->mapperShown());
 
         host->showHideOrCreateMapper(true);
@@ -778,7 +891,7 @@ private slots:
         dock->close();
         QVERIFY2(!host->mapperShown(), "A map dock closed by its own button counted as shown.");
         host->showHideOrCreateMapper(true);
-        QCOMPARE(host->mpConsole->mpDockableMapWidget.data(), dock.data());
+        QCOMPARE(host->mainConsoleView()->mpDockableMapWidget.data(), dock.data());
         QVERIFY2(!dock->isHidden(), "Toggling did not bring back a map dock closed by its own button.");
         QVERIFY(host->mapperShown());
     }
@@ -791,16 +904,16 @@ private slots:
         auto host = mudlet::self()->getActiveHost();
         QVERIFY2(host, "No active host available for the test.");
         mudlet::self()->show();
-        auto [created, message] = host->mpConsole->createMapper(QString(), 0, 0, 300, 300);
+        auto [created, message] = host->mainConsoleView()->createMapper(QString(), 0, 0, 300, 300);
         QVERIFY2(created, qPrintable(message));
-        dlgMapper* mapper = host->mpMap->mpMapper.data();
+        dlgMapper* mapper = host->mpMap->mapper();
         QVERIFY2(mapper, "The embedded mapper was not made the map's mapper.");
         QVERIFY(host->mapperShown());
 
         host->showHideOrCreateMapper(true);
         QVERIFY2(mapper->isHidden(), "Toggling a shown embedded mapper did not hide it.");
         QVERIFY(!host->mapperShown());
-        QVERIFY2(!host->mpConsole->mpDockableMapWidget, "Toggling an embedded mapper made a map dock.");
+        QVERIFY2(!host->mainConsoleView()->mpDockableMapWidget, "Toggling an embedded mapper made a map dock.");
 
         host->showHideOrCreateMapper(true);
         QVERIFY2(!mapper->isHidden(), "Toggling a hidden embedded mapper did not show it.");
@@ -824,11 +937,11 @@ private slots:
         QVERIFY2(host->saveMapFile(mapFileName), "The map could not be saved under a name.");
         QVERIFY2(host->saveMapFile(QString()), "The map could not be saved as the profile's latest.");
         host->mpMap->mapClear();
-        QVERIFY2(host->mpMap->mpMapper.isNull(), "SETUP: the profile already has a mapper.");
+        QVERIFY2(!host->mpMap->mapper(), "SETUP: the profile already has a mapper.");
 
         QVERIFY2(host->loadMapFile(mapFileName), "Loading the saved map failed.");
-        QVERIFY2(host->mpConsole->mpDockableMapWidget, "Loading a map with no mapper did not make one.");
-        dlgMapper* mapper = host->mpMap->mpMapper.data();
+        QVERIFY2(host->mainConsoleView()->mpDockableMapWidget, "Loading a map with no mapper did not make one.");
+        dlgMapper* mapper = host->mpMap->mapper();
         QVERIFY2(mapper, "Loading a map left the map with no mapper.");
         QCOMPARE(mapper->comboBox_showArea->currentText(), mPlayerAreaName);
 
@@ -871,10 +984,10 @@ private slots:
         host->setMapperPanelVisible(false);
         QVERIFY(host->getLargeAreaExitArrows());
 
-        auto [created, message] = host->mpConsole->createMapper(QString(), 0, 0, 300, 300);
+        auto [created, message] = host->mainConsoleView()->createMapper(QString(), 0, 0, 300, 300);
         QVERIFY2(created, qPrintable(message));
-        QVERIFY2(!host->mpConsole->mpDockableMapWidget, "SETUP: the profile has a map dock, so its mapper could be reached without going through the map.");
-        dlgMapper* mapper = host->mpMap->mpMapper.data();
+        QVERIFY2(!host->mainConsoleView()->mpDockableMapWidget, "SETUP: the profile has a map dock, so its mapper could be reached without going through the map.");
+        dlgMapper* mapper = host->mpMap->mapper();
         QVERIFY2(mapper, "The embedded mapper was not made the map's mapper.");
         QVERIFY(mapper->mp2dMap->mLargeAreaExitArrows);
 
@@ -894,6 +1007,7 @@ private slots:
         mpServer = nullptr;
         delete mudlet::self();
         deleteProfileDirectory(mHostname);
+        deleteProfileDirectory(mSecondHostname);
     }
 
     // Utility function to manually start a profile like a user would do via the
@@ -915,7 +1029,8 @@ private slots:
     // zip holding one Mudlet package XML with nothing in it. An archive with no
     // package XML at all is refused (it would install nowhere and could never be
     // uninstalled), so the dialog wiring this test is about needs a real one.
-    bool writePackageArchive(const QString& path, const QString& packageName)
+    // paddingBytes adds an uncompressed filler entry, to make the archive file at least that large.
+    bool writePackageArchive(const QString& path, const QString& packageName, const qint64 paddingBytes = 0)
     {
         static const char packageXml[] = "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n"
                                          "<!DOCTYPE MudletPackage>\n"
@@ -935,6 +1050,19 @@ private slots:
             zip_source_free(source);
             zip_discard(archive);
             return false;
+        }
+        // zip_source_buffer() does not copy, so this must outlive zip_close()
+        const QByteArray padding(paddingBytes, '\0');
+        if (paddingBytes > 0) {
+            zip_source* paddingSource = zip_source_buffer(archive, padding.constData(), static_cast<zip_uint64_t>(padding.size()), 0);
+            const zip_int64_t index = paddingSource ? zip_file_add(archive, "padding.bin", paddingSource, ZIP_FL_ENC_UTF_8) : -1;
+            if (index < 0 || zip_set_file_compression(archive, static_cast<zip_uint64_t>(index), ZIP_CM_STORE, 0) < 0) {
+                if (index < 0) {
+                    zip_source_free(paddingSource);
+                }
+                zip_discard(archive);
+                return false;
+            }
         }
         return zip_close(archive) == 0;
     }

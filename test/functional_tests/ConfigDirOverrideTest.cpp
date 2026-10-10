@@ -690,6 +690,40 @@ private slots:
         QCOMPARE(settingsFileName(), QString());
     }
 
+    // main() reads Mudlet.ini before the settings store exists, and Qt hands that
+    // parse to the store without parsing again - so only the early reader is told
+    // the file is broken, and the store has to hear it from there
+    // A broken section header is caught as the file is opened, a broken line in
+    // a section only once that section is read
+    void test_aFormatErrorOnlyAnEarlyReaderSawIsStillReported_data()
+    {
+        QTest::addColumn<QByteArray>("contents");
+        QTest::newRow("broken section header") << QByteArray("[General]\nkey=1\n[Broken\n");
+        QTest::newRow("broken line in a section") << QByteArray("[General]\nkey=1\ntruncated mid-write\nother=2\n");
+    }
+
+    void test_aFormatErrorOnlyAnEarlyReaderSawIsStillReported()
+    {
+        QFETCH(QByteArray, contents);
+        QTemporaryDir root;
+        QVERIFY(root.isValid());
+        const QString iniPath = qsl("%1/Mudlet.ini").arg(root.path());
+        QFile ini(iniPath);
+        QVERIFY(ini.open(QIODevice::WriteOnly));
+        ini.write(contents);
+        ini.close();
+        {
+            const QSettings early(iniPath, QSettings::IniFormat);
+            MudletApp::noteEarlySettingsStatus(early);
+            QCOMPARE(early.status(), QSettings::FormatError);
+        }
+
+        MudletApp::setConfigPath(root.path());
+        QTest::ignoreMessage(QtWarningMsg, QRegularExpression(qsl("^MudletApp::getQSettings\\(\\) ERROR - \"[^\"]+Mudlet\\.ini\" is not valid INI")));
+        QVERIFY(MudletApp::getQSettings());
+        MudletApp::setConfigPath(QString());
+    }
+
     // The preferences dialog can change the language at any time, so an accessor
     // handing back a reference into the static would change under whoever held it
     void test_getInterfaceLanguageHandsBackASnapshot()
@@ -806,7 +840,7 @@ private slots:
         const QByteArray savedHome = qgetenv("HOME");
         qputenv("HOME", home.path().toUtf8());
         QTest::ignoreMessage(QtWarningMsg, QRegularExpression(qsl("portable.txt names no data directory")));
-        QTest::ignoreMessage(QtWarningMsg, QRegularExpression(qsl("which Mudlet cannot use")));
+        QTest::ignoreMessage(QtWarningMsg, QRegularExpression(qsl("names no data directory, so")));
         mudlet::self()->setupConfig();
         savedHome.isNull() ? qunsetenv("HOME") : qputenv("HOME", savedHome);
 
