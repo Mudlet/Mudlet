@@ -2536,6 +2536,9 @@ int TMap::createMapImageLabel(int area, QString imagePath, float x, float y, flo
         pixSize *= std::sqrt(cMaxImageLabelPixels / pixels);
     }
     const QPixmap imagePixmap = QPixmap(imagePath);
+    if (imagePixmap.isNull()) {
+        return scmUnreadableImageLabel;
+    }
     QPixmap pix = QPixmap(pixSize.toSize());
     pix.fill(Qt::transparent);
     QPainter lp(&pix);

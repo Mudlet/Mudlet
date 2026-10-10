@@ -1944,14 +1944,23 @@ describe("Tests mapper functions against a shared fixture", function()
       assert.is_string(err)
     end)
 
-    it("createMapImageLabel creates a label (ID >= 0) even when the image is missing", function()
-      -- A missing image still creates a real (image-less) label; only an invalid
-      -- area returns -1, so pin ID >= 0 and its presence in the area.
-      local id = createMapImageLabel(areaAlpha, getMudletHomeDir() .. "/nonexistent.png", 0, 0, 0, 10, 10, 30.0, true)
-      assert.is_number(id)
-      assert.is_true(id >= 0)
-      assert.is_not_nil(getMapLabels(areaAlpha)[id])
-      deleteMapLabel(areaAlpha, id)
+    -- An XPM can be written from a spec as text; a "None" colour makes it a
+    -- transparent one, the same picture an empty label would have.
+    local function writeXpm(path, transparent)
+      local image = assert(io.open(path, "w"))
+      local colours = transparent and '"a c None",\n"b c None",\n' or '"a c #ff0000",\n"b c #0000ff",\n'
+      image:write('/* XPM */\nstatic char * spec_xpm[] = {\n"2 2 2 1",\n' .. colours .. '"ab",\n"ba"};\n')
+      image:close()
+    end
+
+    it("createMapImageLabel returns nil and a message for an image it cannot read", function()
+      local path = getMudletHomeDir() .. "/nonexistent.png"
+      os.remove(path)
+      local labelsBefore = getMapLabels(areaAlpha)
+      local id, err = createMapImageLabel(areaAlpha, path, 0, 0, 0, 10, 10, 30.0, true)
+      assert.is_nil(id)
+      assert.are.equal(("image file '%s' could not be read"):format(path), err)
+      assert.are.same(labelsBefore, getMapLabels(areaAlpha))
     end)
 
     -- Reads the width and height from the IHDR chunk of a base64-encoded PNG
@@ -1975,17 +1984,17 @@ describe("Tests mapper functions against a shared fixture", function()
 
     it("createMapImageLabel keeps the image of a huge label to a bounded size", function()
       local imagePath = getMudletHomeDir() .. "/mapper_spec_huge_label.xpm"
-      local image = assert(io.open(imagePath, "w"))
-      image:write('/* XPM */\nstatic char * spec_xpm[] = {\n"2 2 2 1",\n' ..
-                  '"a c #ff0000",\n"b c #0000ff",\n"ab",\n"ba"};\n')
-      image:close()
+      local blankPath = getMudletHomeDir() .. "/mapper_spec_huge_blank_label.xpm"
+      writeXpm(imagePath)
+      writeXpm(blankPath, true)
       -- 10000 by 2000 pixels at this zoom, over the 4096 x 4096 pixel budget
       local id = createMapImageLabel(areaAlpha, imagePath, 0, 0, 0, 1000, 200, 10.0, true)
-      local blankId = createMapImageLabel(areaAlpha, getMudletHomeDir() .. "/nonexistent.png", 0, 0, 0, 1000, 200, 10.0, true)
+      local blankId = createMapImageLabel(areaAlpha, blankPath, 0, 0, 0, 1000, 200, 10.0, true)
       finally(function()
         deleteMapLabel(areaAlpha, id)
         deleteMapLabel(areaAlpha, blankId)
         os.remove(imagePath)
+        os.remove(blankPath)
       end)
       local label = getMapLabel(areaAlpha, id)
       assert.are_not.equal(getMapLabel(areaAlpha, blankId).Pixmap, label.Pixmap)
@@ -1997,8 +2006,13 @@ describe("Tests mapper functions against a shared fixture", function()
     end)
 
     it("createMapImageLabel draws an ordinary label at its full size", function()
-      local id = createMapImageLabel(areaAlpha, getMudletHomeDir() .. "/nonexistent.png", 0, 0, 0, 10, 4, 30.0, true)
-      finally(function() deleteMapLabel(areaAlpha, id) end)
+      local imagePath = getMudletHomeDir() .. "/mapper_spec_ordinary_label.xpm"
+      writeXpm(imagePath)
+      local id = createMapImageLabel(areaAlpha, imagePath, 0, 0, 0, 10, 4, 30.0, true)
+      finally(function()
+        deleteMapLabel(areaAlpha, id)
+        os.remove(imagePath)
+      end)
       assert.are.same({300, 120}, {pngSize(getMapLabel(areaAlpha, id).Pixmap)})
     end)
 
@@ -4677,11 +4691,16 @@ describe("Tests saveJsonMap and loadJsonMap", function()
       deleteMap()
       local area = addAreaName("MapperSpecJsonImageLabelArea")
       roomA = createRoomID(); addRoom(roomA); setRoomArea(roomA, area)
-      -- a label made from a file that is not there is a transparent rectangle of
-      -- the same size, so it is the yardstick for "the picture actually came back":
+      -- a label made from a transparent image is a transparent rectangle of the
+      -- same size, so it is the yardstick for "the picture actually came back":
       -- the encoded PNG drops its unused alpha channel on the way back in, so the
       -- two encodings of the same picture are not comparable byte for byte
-      local blankId = createMapImageLabel(area, absentPath, 0, 0, 3, 4, 5, 10.0, true)
+      local blankPath = getMudletHomeDir() .. "/mapper_spec_blank_label.xpm"
+      local blank = assert(io.open(blankPath, "w"))
+      blank:write('/* XPM */\nstatic char * spec_xpm[] = {\n"2 2 1 1",\n"a c None",\n"aa",\n"aa"};\n')
+      blank:close()
+      finally(function() os.remove(blankPath) end)
+      local blankId = createMapImageLabel(area, blankPath, 0, 0, 3, 4, 5, 10.0, true)
       local labelId = createMapImageLabel(area, imagePath, 1, 2, 3, 4, 5, 10.0, true)
       assert.is_true(labelId >= 0)
       local before = getMapLabel(area, labelId)
