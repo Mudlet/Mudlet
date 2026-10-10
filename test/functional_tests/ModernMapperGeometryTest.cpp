@@ -18,15 +18,11 @@
  ***************************************************************************/
 
 /*
- * The modern 3D mapper hands GeometryManager's buffers to the GPU as tightly
- * packed attributes: three floats of position per vertex in one buffer, three
- * floats of normal in another. Interleaving normals into the position buffer
- * made every third vertex read a normal as a position, which drew grey wedges
- * from every up/down marker to the map origin.
- *
- * The vertex shader's attribute locations are checked here as well: a mat4
- * takes four consecutive locations, and an attribute declared inside that span
- * aliases one of its columns.
+ * GeometryManager hands its arrays to the GPU as tightly packed attributes:
+ * three floats of position per vertex in one buffer and three floats of normal
+ * in another, so anything else in the position array is drawn as a vertex.
+ * A mat4 vertex attribute takes four consecutive locations, so an attribute
+ * declared inside that span aliases one of its columns.
  */
 
 #include <QtTest/QtTest>

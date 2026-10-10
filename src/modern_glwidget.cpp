@@ -57,9 +57,6 @@ ModernGLWidget::ModernGLWidget(TMap* pMap, Host* pHost, QWidget* parent)
     format.setVersion(3, 3);
     format.setProfile(QSurfaceFormat::CoreProfile);
     format.setSamples(4);
-#ifndef NDEBUG
-    format.setOption(QSurfaceFormat::DebugContext);
-#endif
     setFormat(format);
 
     if (mpHost->mBgColor_2.alpha() < 255) {

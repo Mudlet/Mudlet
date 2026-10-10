@@ -623,7 +623,7 @@ void GeometryManager::renderGeometry(
     glVertexAttribPointer(2, 4, GL_FLOAT, GL_FALSE, 0, nullptr);
     glEnableVertexAttribArray(2);
 
-    // Left enabled by a textured draw it would read past the end of the texture coordinate buffer
+    // A textured draw may have left this enabled, and this geometry has no texture coordinates to read
     glDisableVertexAttribArray(aTexCoordLocation);
 
     // Draw the geometry - use indexed rendering if indices are available
