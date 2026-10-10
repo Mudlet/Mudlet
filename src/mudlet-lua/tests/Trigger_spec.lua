@@ -1023,7 +1023,7 @@ describe("Trigger processing", function()
                 -- setServerEncoding() also writes the profile's "encoding"
                 -- file, and a profile that never had one must not keep one
                 local encodingFile = getMudletHomeDir() .. "/encoding"
-                local hadFile = fileExists(encodingFile)
+                local hadFile = io.exists(encodingFile)
                 local original = getServerEncoding()
                 restoreEncoding = function()
                     setServerEncoding(original)
