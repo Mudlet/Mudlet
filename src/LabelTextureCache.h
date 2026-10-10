@@ -22,6 +22,7 @@
 
 #include <QHash>
 #include <QSet>
+#include <QStringList>
 #include <QImage>
 #include <QPixmap>
 #include <QOpenGLFunctions>
@@ -56,9 +57,10 @@ public:
     // Mipmapped, as they are drawn far smaller than they are made.
     GLuint imageTexture(const QString& key) const { return mImageCache.value(key); }
     GLuint addImageTexture(const QString& key, const QImage& image);
-    // Only between frames: a texture already queued for drawing must outlive the frame.
-    // Keeps those in inUse, so a scene needing more than maximum is not redrawn every frame.
-    void limitImageTextures(qsizetype maximum, const QSet<QString>& inUse);
+    // Drops image textures not in keep until one more fits under maximum, and says whether it does.
+    // keep must hold every image texture queued for drawing, as a dropped one is gone at once.
+    bool makeRoomForImageTexture(qsizetype maximum, const QSet<QString>& keep);
+    static QStringList keysToEvict(const QStringList& cached, qsizetype maximum, const QSet<QString>& keep);
 
     // Clear entire cache
     void clearAll();

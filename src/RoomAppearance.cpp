@@ -143,6 +143,11 @@ QGradientStops playerRoomStops(const int style, const quint8 innerDiameterPercen
     }
 }
 
+QColor strongHighlightFillColor()
+{
+    return QColor(255, 0, 0, 150);
+}
+
 qreal playerRoomRadius(const quint8 outerDiameterPercentage, const qreal roomVisualSize)
 {
     return (outerDiameterPercentage / 200.0) * roomVisualSize * M_SQRT2;
