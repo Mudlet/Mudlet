@@ -1845,6 +1845,11 @@ function BaseUI.standAside(_, packageName)
   end
   -- a section dragged out of the dock is no longer its child to hide
   BaseUI.layoutDock()
+  -- hiding an embedded mapper shrinks the profile's one map widget to 0x0, and
+  -- the game's interface may have put a mapper of its own on that widget already
+  if BaseUI.map then
+    Geyser:reposition()
+  end
 end
 
 -- An uninstall of this package and one of the game's own interface arrive on the
@@ -1952,9 +1957,8 @@ function BaseUI.checkMapData(event)
   if not BaseUI.mapHasData() then
     return
   end
-  -- a game's Client.GUI package opens the map, or loads one, while it is being
-  -- installed, and sysServerGuiInstalled only stands this UI aside once that
-  -- install returns
+  -- a game's Client.GUI package opens or loads the map while it is being installed,
+  -- and sysServerGuiInstalled only stands this UI aside once that install returns
   if event then
     -- BaseUI is gone by then if this package was uninstalled in the meantime
     tempTimer(0, function()
