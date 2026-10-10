@@ -36,6 +36,7 @@
 
 #include <memory>
 
+#include "FontManager.h"
 #include "Host.h"
 #include "HostManager.h"
 #include "MudletApp.h"
@@ -1086,6 +1087,36 @@ createLabel("lsC", 0, 0, 100, 20, 1)
         QVERIFY2(ran, "The Lua chunk did not run.");
         QCOMPARE(luaGlobalString(host, "lsMissing"), qsl("[2]nil:msg"));
 
+        // setFont() refuses a family this machine does not have, so each role takes one it does
+        const QStringList installed = FontManager::availableFonts();
+        QStringList chosen{host->getDisplayFont().family()};
+        const auto pick = [&installed, &chosen](const QStringList& candidates) {
+            const auto usable = [&chosen](const QString& family) {
+                return !chosen.contains(family) && !family.startsWith(QLatin1Char('.')) && !family.contains(QLatin1Char('\''));
+            };
+            QString family;
+            for (const QString& candidate : candidates) {
+                if (installed.contains(candidate) && usable(candidate)) {
+                    family = candidate;
+                    break;
+                }
+            }
+            for (const QString& any : installed) {
+                if (!family.isEmpty()) {
+                    break;
+                }
+                if (usable(any)) {
+                    family = any;
+                }
+            }
+            chosen << family;
+            return family;
+        };
+        const QString setFamily = pick({qsl("Liberation Serif"), qsl("Times New Roman"), qsl("Georgia")});
+        const QString sheetFamily = pick({qsl("DejaVu Sans"), qsl("Helvetica"), qsl("Arial")});
+        const QString shorthandFamily = pick({qsl("Liberation Mono"), qsl("Courier New"), qsl("Menlo")});
+        QVERIFY2(!setFamily.isEmpty() && !sheetFamily.isEmpty() && !shorthandFamily.isEmpty(), "This machine has too few fonts to tell the steps apart.");
+
         QStringList mismatches;
         {
             QWidget mainParent;
@@ -1147,13 +1178,13 @@ createLabel("lsC", 0, 0, 100, 20, 1)
 
             compare(qsl("lsA made"), qsl("lsA"), pRefA);
             // QLabel keeps the hint it gave before any text, through a font change
-            family(qsl("lsA"), pRefA, qsl("Liberation Serif"));
+            family(qsl("lsA"), pRefA, setFamily);
             text(qsl("lsA"), pRefA, qsl("WWWWWWWWWW"));
-            sheet(qsl("lsA"), pRefA, qsl("font-family: 'DejaVu Sans';"));
+            sheet(qsl("lsA"), pRefA, qsl("font-family: '%1';").arg(sheetFamily));
             sheet(qsl("lsA"), pRefA, qsl("font-size: 20px;"));
-            sheet(qsl("lsA"), pRefA, qsl("font: bold 18px 'Liberation Mono';"));
+            sheet(qsl("lsA"), pRefA, qsl("font: bold 18px '%1';").arg(shorthandFamily));
             sheet(qsl("lsA"), pRefA, qsl("font-size: 16pt; font-style: italic;"));
-            family(qsl("lsA"), pRefA, qsl("Liberation Serif"));
+            family(qsl("lsA"), pRefA, setFamily);
             step(qsl("lsA"), qsl("setLinkStyle('lsA', 'red', 'blue', false)"), qsl("[1]true"));
             pRefA->setLinkStyle(qsl("red"), qsl("blue"), false);
             sheet(qsl("lsA"), pRefA, qsl("font-size: 16pt; font-style: italic;"));
@@ -1174,7 +1205,7 @@ createLabel("lsC", 0, 0, 100, 20, 1)
             // A sheet handed back unchanged is skipped, so the cached hint stays, unless link colours were set since
             TLabel* pRefC = makeReference(qsl("lsRefC"), &mainParent);
             compare(qsl("lsC made"), qsl("lsC"), pRefC);
-            family(qsl("lsC"), pRefC, qsl("Liberation Serif"));
+            family(qsl("lsC"), pRefC, setFamily);
             sheet(qsl("lsC"), pRefC, pRefC->styleSheet());
             step(qsl("lsC"), qsl("setLinkStyle('lsC', 'red', 'blue', false)"), qsl("[1]true"));
             pRefC->setLinkStyle(qsl("red"), qsl("blue"), false);
