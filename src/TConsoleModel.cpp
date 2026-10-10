@@ -132,9 +132,13 @@ void TConsoleModel::deselect()
 
 bool TConsoleModel::selectSection(int from, int to)
 {
+    return selectSectionOnLine(mUserCursor.y(), from, to);
+}
+
+bool TConsoleModel::selectSectionOnLine(int line, int from, int to)
+{
     if (TDebug::wants(TDebug::Category::Selection)) {
-        TDebug(Qt::darkMagenta, Qt::black, TDebug::Category::Selection) << "selectSection(" << from << "," << to << "): line under current user cursor: " << buffer.line(mUserCursor.y()) << "\n"
-                >> mpHost;
+        TDebug(Qt::darkMagenta, Qt::black, TDebug::Category::Selection) << "selectSection(" << from << "," << to << "): line " << line << ": " << buffer.line(line) << "\n" >> mpHost;
     }
     if (from < 0) {
         return false;
@@ -143,20 +147,20 @@ bool TConsoleModel::selectSection(int from, int to)
     if (to < 0) {
         return false;
     }
-    if (mUserCursor.y() >= static_cast<int>(buffer.buffer.size())) {
+    if (line < 0 || line >= static_cast<int>(buffer.buffer.size())) {
         return false;
     }
-    const int s = buffer.buffer[mUserCursor.y()].size();
+    const int s = buffer.buffer[line].size();
     // Not `from + to > s`: that overflows for a large `to`, and a wrapped negative sum passes the check.
     if (from > s || to > s - from) {
         return false;
     }
-    P_begin = QPoint(from, mUserCursor.y());
-    P_end = QPoint(from + to, mUserCursor.y());
+    P_begin = QPoint(from, line);
+    P_end = QPoint(from + to, line);
 
     if (TDebug::wants(TDebug::Category::Selection)) {
         TDebug(Qt::darkMagenta, Qt::black, TDebug::Category::Selection) << "P_begin(" << P_begin.x() << "/" << P_begin.y() << "), P_end(" << P_end.x() << "/" << P_end.y() << ") selectedText:\n\""
-                                                                        << buffer.line(mUserCursor.y()).mid(P_begin.x(), P_end.x() - P_begin.x()) << "\"\n"
+                                                                        << buffer.line(line).mid(P_begin.x(), P_end.x() - P_begin.x()) << "\"\n"
                 >> mpHost;
     }
     return true;

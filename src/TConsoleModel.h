@@ -192,6 +192,7 @@ struct TConsoleModel
     // below (the profile's colours).
     void deselect();
     bool selectSection(int from, int to);
+    bool selectSectionOnLine(int line, int from, int to);
     void selectCurrentLine();
     // Selects the numOfMatch-th match of text on the cursor's line and returns where it starts, or
     // deselects and returns -1 when there is none.
