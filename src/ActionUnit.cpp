@@ -210,7 +210,7 @@ void ActionUnit::reParentAction(int childID, int oldParentID, int newParentID, i
         pOldParent->popChild(pChild);
         pOldParent->setDataChanged();
 
-        if (mpHost->consoleFrontend()) {
+        if (mpHost->hasConsoleView()) {
             mpHost->consoleFrontend()->releaseParentActionBars(pOldParent, pChild);
         }
     }
@@ -235,7 +235,7 @@ void ActionUnit::reParentAction(int childID, int oldParentID, int newParentID, i
 
     if ((!pOldParent) && (pNewParent)) {
         // A profile with no view has no console, so no bars to take down
-        if (mpHost->consoleFrontend()) {
+        if (mpHost->hasConsoleView()) {
             mpHost->consoleFrontend()->detachActionBars(pChild);
         }
     }
@@ -304,7 +304,7 @@ void ActionUnit::unregisterAction(TAction* pT)
         updateAllToolbars();
         return;
     }
-    if (mpHost->consoleFrontend() && mpHost->consoleFrontend()->hasEasyButtonBar(pT) && pT->mPackageName.isEmpty()) {
+    if (mpHost->hasConsoleView() && mpHost->consoleFrontend()->hasEasyButtonBar(pT) && pT->mPackageName.isEmpty()) {
         mpHost->consoleFrontend()->detachActionBars(pT);
     }
     removeAction(pT);
@@ -440,7 +440,7 @@ void ActionUnit::updateAllToolbars()
 {
     // The bars are the console's widgets, so a profile with no view has nothing
     // to build
-    if (!mpHost->consoleFrontend()) {
+    if (!mpHost->hasConsoleView()) {
         return;
     }
     mpHost->consoleFrontend()->regenerateToolBars(mActionRootNodeList);

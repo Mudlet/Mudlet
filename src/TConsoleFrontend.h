@@ -36,8 +36,9 @@ class QString;
 class TAction;
 class TMxpFrameFrontend;
 
-// A profile's main console as core code sees it. TMainConsole implements it; core code
-// reaches it through Host::consoleFrontend() and names windows, never widgets.
+// A profile's main console as core code sees it. TMainConsole implements it, and TNullConsoleFrontend
+// stands in while there is none; core code reaches it through Host::consoleFrontend() and names
+// windows, never widgets.
 class TConsoleFrontend
 {
 public:
