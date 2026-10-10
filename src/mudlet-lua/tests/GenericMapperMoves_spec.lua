@@ -141,27 +141,139 @@ describe("Tests that the generic mapper sends nothing when the map opens", funct
     return
   end
 
-  it("offers the quick start guide rather than sending anything the first time the map opens", function()
-    local _, helpShownIndex = upvalue(map.eventHandler, "help_shown")
-    assert.is_number(helpShownIndex)
-    local savedHelpShown = select(2, debug.getupvalue(map.eventHandler, helpShownIndex))
-    local character = map.character or ""
-    local savedPattern = map.save.prompt_pattern[character]
-    local sent = stub(_G, "send")
-    -- the guide comes up on a timer, which would print it into a later spec's output
-    local timer = stub(_G, "tempTimer")
-    finally(function()
-      send:revert()
-      tempTimer:revert()
-      debug.setupvalue(map.eventHandler, helpShownIndex, savedHelpShown)
-      map.save.prompt_pattern[character] = savedPattern
-    end)
+  local grabLine = upvalue(map.eventHandler, "grab_line")
+  local _, helpShownIndex = upvalue(map.eventHandler, "help_shown")
+  local _, linesIndex = upvalue(grabLine, "lines")
+  local _, awaitPromptIndex = upvalue(grabLine, "await_prompt")
+  local mapperState = {"mapping", "currentRoom", "currentArea", "currentName", "currentExits", "prevRoom", "prevName", "prevExits"}
+  local saveFile = getMudletHomeDir() .. "/map downloads/map_save.dat"
+  local character, saved, sent, sendHandler
+
+  local function readFile(path)
+    local file = io.open(path, "rb")
+    if not file then
+      return nil
+    end
+    local content = file:read("*a")
+    file:close()
+    return content
+  end
+
+  -- the game's own output, each block ended as a prompt with telnet GA
+  local function gameSends(text)
+    local ok, message = feedTelnet(text .. "<T_IAC><T_GA>")
+    assert.is_true(ok, "start the suite with --offline, see the tests README - feedTelnet said: " .. tostring(message))
+  end
+
+  local function guideTimers()
+    local calls = {}
+    for _, call in ipairs(tempTimer.calls) do
+      if call.vals[1] == 3 then
+        calls[#calls + 1] = call
+      end
+    end
+    return calls
+  end
+
+  before_each(function()
+    character = map.character or ""
+    saved = {
+      helpShown = select(2, debug.getupvalue(map.eventHandler, helpShownIndex)),
+      lines = select(2, debug.getupvalue(grabLine, linesIndex)),
+      pattern = map.save.prompt_pattern[character],
+      saveFile = readFile(saveFile),
+      prompt = table.deepcopy(map.prompt),
+      state = {},
+    }
+    for _, key in ipairs(mapperState) do
+      saved.state[key] = map[key]
+    end
     debug.setupvalue(map.eventHandler, helpShownIndex, false)
+    debug.setupvalue(grabLine, linesIndex, {})
     map.save.prompt_pattern[character] = nil
+    map.set("currentName", nil)
+    map.set("currentExits", nil)
+    sent = {}
+    -- anything that reaches the game passes through here, whichever function sent it
+    sendHandler = registerAnonymousEventHandler("sysDataSendRequest", function(_, command)
+      sent[#sent + 1] = command
+      denyCurrentSend()
+    end)
+    stub(_G, "sendSocket")
+    -- the guide comes up on a timer, which would print it into a later spec's output
+    stub(_G, "tempTimer")
+  end)
+
+  after_each(function()
+    killAnonymousEventHandler(sendHandler)
+    sendSocket:revert()
+    tempTimer:revert()
+    debug.setupvalue(map.eventHandler, helpShownIndex, saved.helpShown)
+    debug.setupvalue(grabLine, linesIndex, saved.lines)
+    if awaitPromptIndex then
+      debug.setupvalue(grabLine, awaitPromptIndex, false)
+    end
+    map.save.prompt_pattern[character] = saved.pattern
+    if saved.saveFile then
+      local file = io.open(saveFile, "wb")
+      file:write(saved.saveFile)
+      file:close()
+    end
+    for key in pairs(map.prompt) do
+      map.prompt[key] = nil
+    end
+    for key, value in pairs(saved.prompt) do
+      map.prompt[key] = value
+    end
+    for _, key in ipairs(mapperState) do
+      map.set(key, saved.state[key])
+    end
+  end)
+
+  it("can reach the mapper's state", function()
+    assert.is_function(grabLine)
+    assert.is_number(helpShownIndex)
+    assert.is_number(linesIndex)
+  end)
+
+  it("sends nothing to the game", function()
+    map.eventHandler("mapOpenEvent")
+    assert.same({}, sent)
+    assert.stub(sendSocket).was_not_called()
+  end)
+
+  it("offers the quick start guide once, a moment after the map first opens", function()
+    map.eventHandler("mapOpenEvent")
+    local timers = guideTimers()
+    assert.equals(1, #timers)
+    local showHelp = stub(map, "show_help")
+    finally(function() showHelp:revert() end)
+    timers[1].vals[2]()
+    assert.stub(showHelp).was_called_with("quick_start")
+    assert.is_true(select(2, debug.getupvalue(map.eventHandler, helpShownIndex)))
 
     map.eventHandler("mapOpenEvent")
+    assert.equals(1, #guideTimers())
+  end)
 
-    assert.stub(sent).was_not_called()
-    assert.stub(timer).was_called(1)
+  it("offers no guide once the character has a prompt pattern", function()
+    map.save.prompt_pattern[character] = "^>"
+    map.eventHandler("mapOpenEvent")
+    assert.equals(0, #guideTimers())
+  end)
+
+  it("learns the prompt from the game's own output, and maps the next room", function()
+    map.eventHandler("mapOpenEvent")
+    gameSends("Where The Spec Starts\r\nA quiet corner.\r\n[ Exits: north ]\r\n<100hp 50mp> ")
+    assert.equals("^%[?%a*%]?<.*>", map.save.prompt_pattern[character])
+    gameSends("Where The Spec Goes Next\r\nA busier corner.\r\n[ Exits: south ]\r\n<100hp 50mp> ")
+    assert.equals("Where The Spec Goes Next", map.currentName)
+  end)
+
+  it("does not take an exits line for the prompt", function()
+    map.eventHandler("mapOpenEvent")
+    local ok, message = feedTelnet("Where The Spec Starts\r\n[ Exits: north ]\r\n")
+    assert.is_true(ok, "start the suite with --offline, see the tests README - feedTelnet said: " .. tostring(message))
+    assert.is_nil(map.save.prompt_pattern[character])
   end)
 end)
