@@ -1016,6 +1016,11 @@ endif()
 if(WIN32)
   target_link_libraries(${EXE_MUDLET_TARGET} ws2_32)
   set_target_properties(${EXE_MUDLET_TARGET} PROPERTIES WIN32_EXECUTABLE ON)
+  if(MINGW)
+    # Qt's entry point renames main() to qMain(), but its WinMain library drops off the link line
+    # because Qt6::Core sits in Sentry's LINK_GROUP; MinGW's own startup code calls main() fine
+    set_target_properties(${EXE_MUDLET_TARGET} PROPERTIES qt_no_entrypoint ON)
+  endif()
   # Windows reserves only 1 MiB of stack by default, and Qt recurses once per overlapping sibling widget
   # when repainting, so a few thousand labels overflowed it; 8 MiB matches the Linux and macOS main thread
   if(MSVC)
