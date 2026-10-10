@@ -26,6 +26,7 @@
 
 #include "mudlet.h"
 #include "TArea.h"
+#include "TMainConsole.h"
 #include "TRoomDB.h"
 #include "dlgMapper.h"
 
@@ -2115,7 +2116,7 @@ void GLWidget::mousePressEvent(QMouseEvent* event)
             } else if (mpMap->findPath(mpMap->mRoomIdHash.value(mpMap->mProfileName), mpMap->mTargetID)) {
                 mpMap->mpHost->startSpeedWalk();
             } else {
-                mpMap->mpHost->mpConsole->printSystemMessage(qsl("%1\n").arg(
+                mpMap->mpHost->mainConsoleView()->printSystemMessage(qsl("%1\n").arg(
                         tr("Mapper: Cannot find a path from %1 to %2 using known exits.").arg(QString::number(mpMap->mRoomIdHash.value(mpMap->mProfileName)), QString::number(mpMap->mTargetID))));
             }
             //            else

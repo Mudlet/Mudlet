@@ -20,8 +20,9 @@
 
 #include "TMxpFrameManager.h"
 #include "Host.h"
-#include "TMainConsole.h"
-#include "TMxpFrameWidgets.h"
+#include "TConsoleFrontend.h"
+#include "TMxpFrameFrontend.h"
+#include "TPrintSink.h"
 
 #include <QDebug>
 #include <QFontMetrics>
@@ -177,7 +178,7 @@ bool TMxpFrameManager::closeFrame(const QString& name)
 
     // Special handling for frames that are tabs in a parent frame
     if (frame->parentFrame) {
-        TMxpFrameWidgets* widgets = frameWidgets();
+        TMxpFrameFrontend* widgets = frameWidgets();
         if (widgets && widgets->removeFromParentTabs(name, frame->parentFrame->name)) {
             // Remove from hierarchy
             removeFrameFromHierarchy(frame);
@@ -830,7 +831,7 @@ std::optional<QRect> TMxpFrameManager::nestingArea(const TMxpFrame& frame) const
     case TMxpFrame::Shown::Window: {
         // deleteMiniConsole() can take the window away without the frame closing
         const auto* widgets = frameWidgets();
-        if (!widgets || !widgets->frameWidget(frame.name)) {
+        if (!widgets || !widgets->hasFrameWidget(frame.name)) {
             return std::nullopt;
         }
         return frame.geometry;
@@ -846,19 +847,14 @@ std::optional<QRect> TMxpFrameManager::nestingArea(const TMxpFrame& frame) const
     return std::nullopt;
 }
 
-TMxpFrameWidgets* TMxpFrameManager::frameWidgets()
+TMxpFrameFrontend* TMxpFrameManager::frameWidgets()
 {
-    if (!mpHost || !mpHost->mpConsole) {
-        return nullptr;
-    }
-    return &mpHost->mpConsole->mxpFrameWidgets();
+    TConsoleFrontend* frontend = mpHost ? mpHost->consoleFrontend() : nullptr;
+    return frontend ? &frontend->mxpFrames() : nullptr;
 }
 
-const TMxpFrameWidgets* TMxpFrameManager::frameWidgets() const
+const TMxpFrameFrontend* TMxpFrameManager::frameWidgets() const
 {
-    if (!mpHost || !mpHost->mpConsole) {
-        return nullptr;
-    }
-    const TMainConsole* console = mpHost->mpConsole;
-    return &console->mxpFrameWidgets();
+    const TConsoleFrontend* frontend = mpHost ? mpHost->consoleFrontend() : nullptr;
+    return frontend ? &frontend->mxpFrames() : nullptr;
 }
