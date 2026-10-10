@@ -2812,8 +2812,8 @@ void TBuffer::decodeSGR38(const SgrParameters& parameters, bool isColonSeparated
                                                  << ";...m sequence, or it is out of range, leaving the colour as it was!";
                 }
 #endif
-                // An index we cannot read, or one outside the 256-colour
-                // palette, is ignored (as xterm does) rather than taken as zero:
+                // An index we cannot read is not a request for colour zero, and
+                // xterm ignores one past the end of the 256-colour palette:
                 return;
             }
         } else {
@@ -2973,8 +2973,8 @@ void TBuffer::decodeSGR48(const SgrParameters& parameters, bool isColonSeparated
                                                  << ";...m sequence, or it is out of range, leaving the colour as it was!";
                 }
 #endif
-                // An index we cannot read, or one outside the 256-colour
-                // palette, is ignored (as xterm does) rather than taken as zero:
+                // An index we cannot read is not a request for colour zero, and
+                // xterm ignores one past the end of the 256-colour palette:
                 return;
             }
         } else {

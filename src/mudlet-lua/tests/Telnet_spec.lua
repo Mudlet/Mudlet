@@ -321,6 +321,7 @@ describe("Tests the rest of the SGR decoder", function()
       local value = (index - 232) * 10 + 8
       checkRgb("38;5;" .. index, ("SgrGrey%d"):format(index), {value, value, value}, "foreground")
     end
+    checkRgb("48;5;255", "SgrGreyBg255", {238, 238, 238}, "background")
   end)
 
   it("maps the indexed colour cube onto a background colour", function()
@@ -375,20 +376,33 @@ describe("Tests the rest of the SGR decoder", function()
   -- nothing, rather than reading as black or overflowing the greyscale ramp
   it("leaves the colour alone when an indexed colour's index is out of range", function()
     for i, index in ipairs({"256", "999", "2147483647"}) do
-      local before, after = ("SgrBigIdxFgA%d"):format(i), ("SgrBigIdxFgB%d"):format(i)
-      feed("\27[31m" .. before .. " \27[38;5;" .. index .. "m" .. after)
-      selectMarker(before)
-      assert.is_true(isAnsiFgColor(4), "the precondition colour did not take")
-      selectMarker(after)
-      assert.is_true(isAnsiFgColor(4), "colour index " .. index .. " changed the foreground")
+      for form, separator in ipairs({";", ":"}) do
+        local fg = ("38%s5%s%s"):format(separator, separator, index)
+        local before, after = ("SgrBigIdxFgA%d%d"):format(form, i), ("SgrBigIdxFgB%d%d"):format(form, i)
+        feed("\27[31m" .. before .. " \27[" .. fg .. "m" .. after)
+        selectMarker(before)
+        assert.is_true(isAnsiFgColor(4), "the precondition colour did not take")
+        selectMarker(after)
+        assert.is_true(isAnsiFgColor(4), "SGR " .. fg .. " changed the foreground")
 
-      before, after = ("SgrBigIdxBgA%d"):format(i), ("SgrBigIdxBgB%d"):format(i)
-      feed("\27[41m" .. before .. " \27[48;5;" .. index .. "m" .. after)
-      selectMarker(before)
-      assert.is_true(isAnsiBgColor(4), "the precondition background did not take")
-      selectMarker(after)
-      assert.is_true(isAnsiBgColor(4), "colour index " .. index .. " changed the background")
+        local bg = ("48%s5%s%s"):format(separator, separator, index)
+        before, after = ("SgrBigIdxBgA%d%d"):format(form, i), ("SgrBigIdxBgB%d%d"):format(form, i)
+        feed("\27[41m" .. before .. " \27[" .. bg .. "m" .. after)
+        selectMarker(before)
+        assert.is_true(isAnsiBgColor(4), "the precondition background did not take")
+        selectMarker(after)
+        assert.is_true(isAnsiBgColor(4), "SGR " .. bg .. " changed the background")
+      end
     end
+  end)
+
+  it("still applies the codes after an out-of-range indexed colour", function()
+    feed("\27[31mSgrBigIdxThenA \27[38;5;999;32;48;5;999;42mSgrBigIdxThenB")
+    selectMarker("SgrBigIdxThenA")
+    assert.is_true(isAnsiFgColor(4), "the precondition colour did not take")
+    selectMarker("SgrBigIdxThenB")
+    assert.is_true(isAnsiFgColor(6), "the code after an out-of-range foreground index was not applied")
+    assert.is_true(isAnsiBgColor(6), "the code after an out-of-range background index was not applied")
   end)
 
   -- types 3 (direct CMY) and 4 (direct CMYK) are not rendered, but their
