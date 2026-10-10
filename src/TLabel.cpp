@@ -786,11 +786,15 @@ void TLabel::slot_linkActivated(const QString& link)
             return;
         }
 
-        // Unknown scheme - ignore safely to prevent unintended Lua execution
-        // Only links without a scheme should be treated as Lua code
-        return;
+        // A URL of a scheme Mudlet does not handle is ignored rather than run as Lua. Anything else with
+        // a colon in it - obj:method(), send("at 12:00") - is Lua, which has no "//" after a name and colon.
+        // These schemes take no "//", and are not names a script gives its objects.
+        static const QRegularExpression schemeName(qsl("^[A-Za-z][A-Za-z0-9+.-]*$"));
+        static const QSet<QString> schemesWithoutAuthority{qsl("mailto"), qsl("tel"), qsl("sms"), qsl("javascript")};
+        if ((payload.startsWith(qsl("//")) && schemeName.match(scheme).hasMatch()) || schemesWithoutAuthority.contains(scheme)) {
+            return;
+        }
     }
 
-    // No scheme - treat as Lua code to execute
     mpHost->mLuaInterpreter.compileAndExecuteScript(link);
 }
