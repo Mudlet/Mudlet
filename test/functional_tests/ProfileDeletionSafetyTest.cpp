@@ -29,6 +29,7 @@
  */
 
 #include <QScopeGuard>
+#include <QStandardPaths>
 #include <QtTest/QtTest>
 
 #include "CredentialManager.h"
@@ -455,6 +456,51 @@ private slots:
         dlg->validateProfile();
         QVERIFY2(dlg->offline_button->isEnabled(), "the name stayed refused once its sign-in was gone");
         closeDialog(dlg);
+    }
+
+    // A telnet:// link names and connects a profile without the dialog, so it must treat a name still
+    // being cleaned up as taken too
+    void test_aLinkDoesNotReuseANameStillBeingCleanedUp()
+    {
+        const QString pending = qsl("Qalinkpending");
+        auto stopRefusing = qScopeGuard([pending] {
+            dlgConnectionProfiles::namesWithSignInBeingRemoved().remove(dlgConnectionProfiles::removalKey(pending));
+        });
+        dlgConnectionProfiles::namesWithSignInBeingRemoved().insert(dlgConnectionProfiles::removalKey(pending));
+
+        mudlet::self()->handleTelnetUri(qsl("telnet://qalinkpending.invalid:23"));
+        QVERIFY2(!QDir(profilePath(pending)).exists(), "the link reused a name whose old sign-in was still being deleted");
+        QVERIFY2(QDir(profilePath(qsl("%1-2").arg(pending))).exists(), "the link did not move on to the next free name");
+    }
+
+    // The keychain can refuse to delete what a removed profile saved, and the profile is gone by then, so
+    // the dialog is the only place left to say so
+    void test_aSignInTheStoreWontDeleteIsReported()
+    {
+#if defined(Q_OS_WIN)
+        QSKIP("a read-only folder does not stop a file being deleted on Windows");
+#else
+        const QString stuck = qsl("QA Stuck Sign In");
+        makeProfileWithSavedGame(stuck);
+        QVERIFY(CredentialManager::storeCredential(stuck, qsl("reconnect-token"), qsl("cannot-go")));
+        const QString passwordsFolder = qsl("%1/profiles/%2/passwords").arg(QStandardPaths::writableLocation(QStandardPaths::AppConfigLocation), MudletApp::sanitizeForPath(stuck));
+        const auto unlock = qScopeGuard([&passwordsFolder, &stuck] {
+            QFile::setPermissions(passwordsFolder, QFileDevice::ReadOwner | QFileDevice::WriteOwner | QFileDevice::ExeOwner);
+            CredentialManager::removeCredential(stuck, qsl("reconnect-token"));
+        });
+        QVERIFY(QFile::setPermissions(passwordsFolder, QFileDevice::ReadOwner | QFileDevice::ExeOwner));
+        if (QFileInfo(passwordsFolder).isWritable()) {
+            QSKIP("folder permissions do not stop a deletion here (running as root)");
+        }
+
+        auto* dlg = openDialog();
+        selectProfile(dlg, stuck);
+        removeProfileAndConfirm(dlg, stuck);
+        QVERIFY2(!QDir(profilePath(stuck)).exists(), "the confirmed profile was not removed");
+        QTRY_VERIFY2(dlg->notificationAreaMessageBox->text().contains(qsl("could not be deleted from the password store")),
+                     qPrintable(qsl("a sign-in left behind was not reported - the dialog says: %1").arg(dlg->notificationAreaMessageBox->text())));
+        closeDialog(dlg);
+#endif
     }
 
     // A name Mudlet would turn down as a new profile is still a profile on disk

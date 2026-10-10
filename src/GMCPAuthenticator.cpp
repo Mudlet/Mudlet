@@ -1373,7 +1373,7 @@ void GMCPAuthenticator::attemptReconnect()
     return metadataPathInProfile(profileName);
 }
 
-/*static*/ void GMCPAuthenticator::forgetSavedSignInOfRemovedProfile(const QString& profileName, std::function<void()> done)
+/*static*/ void GMCPAuthenticator::forgetSavedSignInOfRemovedProfile(const QString& profileName, std::function<void(bool removed)> done)
 {
     // The preferred store only, so a player who keeps passwords in the profile is not asked for the keychain;
     // a copy left there from before a preference change survives. The store's older record goes even if the
@@ -1389,7 +1389,7 @@ void GMCPAuthenticator::attemptReconnect()
                 remover->removePassword(
                         profileName,
                         metadataKey(),
-                        [remover, profileName, done = std::move(done)](bool recordRemoved, const QString& recordError) {
+                        [remover, profileName, tokenRemoved, done = std::move(done)](bool recordRemoved, const QString& recordError) {
                             if (!recordRemoved) {
                                 qWarning().noquote() << "GMCP Char.Login - the saved sign-in record of removed profile" << profileName << "was not removed:" << recordError;
                             }
@@ -1397,7 +1397,7 @@ void GMCPAuthenticator::attemptReconnect()
                                 remover->deleteLater();
                             }
                             if (done) {
-                                done();
+                                done(tokenRemoved && recordRemoved);
                             }
                         },
                         CredentialManager::StoreScope::PreferredStore);

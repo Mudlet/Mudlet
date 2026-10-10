@@ -1219,12 +1219,12 @@ void dlgConnectionProfiles::reallyDeleteProfile(const QString& profile)
             // Check if credManager was destroyed before chaining next operation
             if (!safeCredManager) {
                 qWarning() << "dlgConnectionProfiles: CredentialManager destroyed, cannot clean up proxy password";
-                forgetSignInOfRemovedProfile(profile, safeThis);
+                forgetSignInOfRemovedProfile(profile, safeThis, false);
                 return;
             }
 
             // Now clean up proxy password entry (chained after character password removal completes)
-            safeCredManager->removePassword(profile, "proxy", [safeCredManager, profile, safeThis](bool proxySuccess, const QString& proxyErrorMessage) {
+            safeCredManager->removePassword(profile, "proxy", [safeCredManager, profile, safeThis, characterRemoved = success](bool proxySuccess, const QString& proxyErrorMessage) {
                 if (!proxySuccess) {
                     qWarning() << "dlgConnectionProfiles: Failed to clean up proxy password for deleted profile" << profile << ":" << proxyErrorMessage;
                 }
@@ -1235,12 +1235,12 @@ void dlgConnectionProfiles::reallyDeleteProfile(const QString& profile)
                 }
 
                 // Only now: keychain jobs run one at a time, and each times out while it waits its turn
-                forgetSignInOfRemovedProfile(profile, safeThis);
+                forgetSignInOfRemovedProfile(profile, safeThis, characterRemoved && proxySuccess);
             });
         });
     } else {
         // Passwords stored with the profile went with its folder; the sign-in never lives there
-        forgetSignInOfRemovedProfile(profile, safeThis);
+        forgetSignInOfRemovedProfile(profile, safeThis, true);
     }
 
     // only the self-test entry needs its removal recorded: fillout_form() lists
@@ -1279,19 +1279,36 @@ void dlgConnectionProfiles::reallyDeleteProfile(const QString& profile)
     return names;
 }
 
+/*static*/ bool dlgConnectionProfiles::signInRemovalPending(const QString& name)
+{
+    return namesWithSignInBeingRemoved().contains(removalKey(name));
+}
+
 /*static*/ QString dlgConnectionProfiles::removalKey(const QString& name)
 {
     return name.trimmed().toCaseFolded();
 }
 
-/*static*/ void dlgConnectionProfiles::forgetSignInOfRemovedProfile(const QString& profile, QPointer<dlgConnectionProfiles> dialog)
+/*static*/ void dlgConnectionProfiles::forgetSignInOfRemovedProfile(const QString& profile, QPointer<dlgConnectionProfiles> dialog, bool passwordsRemoved)
 {
-    GMCPAuthenticator::forgetSavedSignInOfRemovedProfile(profile, [profile, dialog]() {
+    GMCPAuthenticator::forgetSavedSignInOfRemovedProfile(profile, [profile, dialog, passwordsRemoved](bool signInRemoved) {
         namesWithSignInBeingRemoved().remove(removalKey(profile));
         // Only when it is the form being refused: revalidating clears the notification area, which may
         // be saying that the removal itself went through
         if (dialog && removalKey(dialog->profile_name_entry->text()) == removalKey(profile)) {
             dialog->validateProfile();
+        }
+        if (dialog && !(passwordsRemoved && signInRemoved)) {
+            // Next turn of the event loop: without a keychain this answers before the removal has put up
+            // its own notice, which would otherwise replace this one
+            QTimer::singleShot(0, dialog.data(), [dialog, profile]() {
+                if (dialog) {
+                    //: %1 is a profile name. Shown when the profile was removed but the system's password store refused to delete its saved password or sign-in. The entries' names in the password store start with Mudlet-%1
+                    dialog->showRemovalProblem(tr("'%1' was removed, but its saved password or sign-in could not be deleted from the password store. "
+                                                  "Unlock the password store and remove the entries whose names start with \"Mudlet-%1\" by hand.")
+                                                       .arg(profile));
+                }
+            });
         }
     });
 }
@@ -2547,7 +2564,7 @@ bool dlgConnectionProfiles::validateProfile()
             valid = false;
         }
 
-        if (namesWithSignInBeingRemoved().contains(removalKey(name))) {
+        if (signInRemovalPending(name)) {
             notificationAreaIconLabelError->show();
             notificationAreaMessageBox->setText(
                     qsl("%1\n%2").arg(notificationAreaMessageBox->text(),

@@ -6527,11 +6527,16 @@ QString mudlet::createProfileForUri(const TelnetUriData& uriData)
 
     // Bounded loop to avoid hanging on unexpected collisions
     QString originalName = profileName;
-    for (int suffix = 2; suffix < 100 && profileExists(profileName); ++suffix) {
+    // A name whose removed profile's sign-in is still being deleted counts as taken: the new profile
+    // would read that sign-in and send its token to whatever server this link names
+    const auto taken = [this](const QString& name) {
+        return profileExists(name) || dlgConnectionProfiles::signInRemovalPending(name);
+    };
+    for (int suffix = 2; suffix < 100 && taken(profileName); ++suffix) {
         profileName = qsl("%1-%2").arg(originalName).arg(suffix);
     }
 
-    if (profileExists(profileName)) {
+    if (taken(profileName)) {
         qWarning() << "mudlet::createProfileForUri() - Could not find unique name for profile";
         return QString();
     }
