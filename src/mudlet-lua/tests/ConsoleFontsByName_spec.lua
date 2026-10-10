@@ -126,6 +126,9 @@ describe("Tests that the font functions find their console by name", function()
       assert.are.same({nil, ("font '%s' is not available"):format(name)}, {setFont(unknown, name)})
     end
     assert.are.same({nil, "size cannot be 0 or negative"}, {setFontSize(unknown, 0)})
+    -- far enough up, Qt gives up on the font and getFont() reports no family
+    assert.are.same({nil, "size 999999 is too large, it cannot be more than 1000"}, {setFontSize(unknown, 999999)})
+    assert.are.same({nil, "size 1001 is too large, it cannot be more than 1000"}, {setFontSize(unknown, 1001)})
   end)
 
   describe("with a sub-console's name", function()
@@ -165,6 +168,16 @@ describe("Tests that the font functions find their console by name", function()
           assert.are.equal(size, getFontSize(window))
           assert.are.same({}, events)
           assert.are.equal(mainSize, getFontSize("main"))
+        end)
+
+        it("takes the largest size it allows and refuses one past it", function()
+          local family = getFont(window)
+          assert.are.same({true}, {setFontSize(window, 1000)})
+          assert.are.equal(1000, getFontSize(window))
+          assert.are.equal(family, getFont(window))
+          assert.are.same({nil, "size 1001 is too large, it cannot be more than 1000"}, {setFontSize(window, 1001)})
+          assert.are.equal(1000, getFontSize(window))
+          setFontSize(window, 13)
         end)
 
         it("sets and reads that console's font, keeping its size", function()
