@@ -804,7 +804,9 @@ void dlgConnectionProfiles::slot_updateSslTslPort(int state)
         if (!pItem) {
             return;
         }
-        writeProfileData(pItem->data(csmNameRole).toString(), qsl("ssl_tsl"), QString::number(state));
+        if (writeProfileData(pItem->data(csmNameRole).toString(), qsl("ssl_tsl"), QString::number(state)).first) {
+            mSslTslSeen = QString::number(state);
+        }
     }
 }
 
@@ -1443,6 +1445,7 @@ void dlgConnectionProfiles::slot_itemClicked(QListWidgetItem* pItem)
 
     QString host_port = readProfileData(profile_name, qsl("port"));
     QString val = readProfileData(profile_name, qsl("ssl_tsl"));
+    mSslTslSeen = val;
     if (val.toInt() == Qt::Checked) {
         port_ssl_tsl->setChecked(true);
     } else {
@@ -1453,7 +1456,10 @@ void dlgConnectionProfiles::slot_itemClicked(QListWidgetItem* pItem)
         auto it = TGameDetails::findGame(profile_name);
         if (it != TGameDetails::scmDefaultGames.end()) {
             host_port = QString::number((*it).port);
-            port_ssl_tsl->setChecked((*it).tlsEnabled);
+            // the game's default must not override a choice already saved, e.g. from Preferences
+            if (val.isEmpty()) {
+                port_ssl_tsl->setChecked((*it).tlsEnabled);
+            }
         }
     }
 
@@ -2410,6 +2416,10 @@ void dlgConnectionProfiles::loadProfile(bool alsoConnect)
             slot_updatePort(QString::number(pHost->getPort()));
         }
 
+        if (const QString saved = readProfileData(profile_name, qsl("ssl_tsl")); saved != mSslTslSeen) {
+            port_ssl_tsl->setChecked(saved.toInt() == Qt::Checked);
+            mSslTslSeen = saved;
+        }
         pHost->mSslTsl = port_ssl_tsl->isChecked();
 
         if (!character_password_entry->text().trimmed().isEmpty()) {

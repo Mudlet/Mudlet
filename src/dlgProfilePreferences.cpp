@@ -6590,6 +6590,14 @@ void dlgProfilePreferences::applyAll()
         //tab security
         if (mSnapshot.dirty(groupBox_ssl)) {
             pHost->mSslTsl = groupBox_ssl->isChecked();
+            // The connection dialog seeds its Secure checkbox from this file, and hands that back
+            // to the profile on connect
+            if (const auto [written, error] = pHost->writeProfileData(qsl("ssl_tsl"), QString::number(groupBox_ssl->isChecked() ? Qt::Checked : Qt::Unchecked)); !written) {
+                //: %1 is the reason the file could not be written, from the operating system
+                pHost->postMessage(tr("[ WARN ]  - Could not save the secure connection setting for the Connect dialog: %1. "
+                                      "Connecting from that dialog may change the setting back.")
+                                           .arg(error));
+            }
         }
         if (mSnapshot.dirty(checkBox_expired)) {
             pHost->mSslIgnoreExpired = checkBox_expired->isChecked();
