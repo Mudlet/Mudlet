@@ -4340,7 +4340,7 @@ describe("Tests saveMap and loadMap", function()
   end)
 
   -- setMapPerspective/shiftMapPerspective only exist in a build made with 3D
-  -- mapper support, which the CI and release builds are not
+  -- mapper support (USE_3DMAPPER), which only the Linux clang CI job leaves out
   pending("setMapPerspective needs a Mudlet built with the 3D mapper")
 
   pending("shiftMapPerspective needs a Mudlet built with the 3D mapper")
@@ -4363,15 +4363,22 @@ describe("Tests the modern 3D mapper surviving context rebuilds", function()
     end
     local wasModern = getConfig("experiment.3dmap.modernmapper")
     local was3d = getConfig("show3dMapView")
+    finally(function()
+      setConfig("experiment.3dmap.modernmapper", wasModern == true)
+      setConfig("show3dMapView", was3d == true)
+    end)
     assert.is_true(openMapWidget())
-    setConfig("experiment.3dmap.modernmapper", true)
-    setConfig("show3dMapView", true)
+    -- with the experiment on, the mapper builds its 3D view as the modern widget
+    assert.is_true(setConfig("experiment.3dmap.modernmapper", true))
+    assert.is_true(getConfig("experiment.3dmap.modernmapper"))
+    assert.is_true(setConfig("show3dMapView", true))
     assert.is_true(getConfig("show3dMapView"))
-    openMapWidget("f")
-    openMapWidget("r")
-    setConfig("experiment.3dmap.modernmapper", wasModern == true)
-    setConfig("show3dMapView", was3d == true)
-    assert.are.equal(was3d == true, getConfig("show3dMapView"))
+    assert.is_true(openMapWidget("f"))
+    assert.is_true(getConfig("show3dMapView"))
+    assert.is_true(openMapWidget("r"))
+    assert.is_true(getConfig("show3dMapView"))
+    assert.is_true(setConfig("experiment.3dmap.modernmapper", false))
+    assert.is_false(getConfig("experiment.3dmap.modernmapper"))
   end)
 end)
 
