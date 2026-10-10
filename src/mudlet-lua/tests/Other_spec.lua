@@ -2258,6 +2258,10 @@ describe("Tests the timer API", function()
         "the reason should be the Lua error, got: " .. tostring(message))
       assert.is_falsy(message:find("0.125", 1, true),
         "the delay must not be reported as the Lua error, got: " .. tostring(message))
+      -- plain text for Lua, not the editor's rich text (#10931)
+      assert.is_truthy(message:find([[[string "Timer:]], 1, true), "the chunk name should be quoted as Lua quotes it, got: " .. message)
+      assert.is_falsy(message:find("&quot;", 1, true), "the reason was HTML escaped: " .. message)
+      assert.is_falsy(message:find("<b>", 1, true), "the reason was wrapped in rich text markup: " .. message)
     end)
 
     it("errors for a negative delay", function()
@@ -2904,6 +2908,18 @@ describe("Tests the script API", function()
         "permScript should report the Lua error, got: " .. tostring(err))
     end)
 
+    -- the reason goes to Lua, so it is the plain text and not the editor's rich
+    -- text, and a body that raises as it runs has not got a syntax error (#10930, #10931)
+    it("reports a body that raises as plain text, and not as a syntax error", function()
+      local ok, err = pcall(makeScript, "W2aScriptRaisesPlain", "", [[error("w2a \"quoted\" <b>boom</b>")]])
+      assert.is_false(ok, "a body that raises must not create a script")
+      err = tostring(err)
+      assert.is_truthy(err:find([[w2a "quoted" <b>boom</b>]], 1, true), "the reason should be the Lua error as Lua raised it, got: " .. err)
+      assert.is_falsy(err:find("&quot;", 1, true), "the reason was HTML escaped: " .. err)
+      assert.is_falsy(err:find("reason: <b>", 1, true), "the reason was wrapped in rich text markup: " .. err)
+      assert.is_falsy(err:find("syntax error", 1, true), "a body that parsed was reported as a syntax error: " .. err)
+    end)
+
     it("reports the type when the body raises something other than a string", function()
       -- the error object is not a string, so there is no message to quote - the
       -- reason still has to say what came back rather than name the script
@@ -3048,6 +3064,17 @@ describe("Tests the script API", function()
       assert.equals(body, (getScript("W2aScriptRollback", position)))
       assert.is_truthy(tostring(err):find("w2a setScript boom", 1, true),
         "setScript should report the Lua error, got: " .. tostring(err))
+    end)
+
+    it("reports a body that raises as plain text (#10931)", function()
+      local body = [[local w2aPlain = 1]]
+      local _, position = makeScript("W2aScriptSetPlain", "", body)
+      local ok, err = pcall(setScript, "W2aScriptSetPlain", [[error("w2a \"set\" boom")]], position)
+      assert.is_false(ok)
+      err = tostring(err)
+      assert.is_truthy(err:find([[w2a "set" boom]], 1, true), "the reason should be the Lua error as Lua raised it, got: " .. err)
+      assert.is_falsy(err:find("&quot;", 1, true), "the reason was HTML escaped: " .. err)
+      assert.is_falsy(err:find("<b>", 1, true), "the reason was wrapped in rich text markup: " .. err)
     end)
 
     it("sets the script at the requested position when several share a name", function()

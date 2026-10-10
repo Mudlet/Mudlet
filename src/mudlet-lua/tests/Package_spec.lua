@@ -2761,6 +2761,23 @@ describe("Tests installing a package whose Lua does not work", function()
     assert.is_true(contains(installReason, '[string "Script: ' .. name .. ' script"]'), tostring(installReason))
   end)
 
+  -- the trigger's body does not parse, the script's parses and then raises (#10930)
+  it("tells a syntax error from an error raised as the body ran", function()
+    local function reasonFor(item)
+      local label = name .. " " .. item .. ": "
+      local first = installReason:find(label, 1, true)
+      assert.is_truthy(first, "no reason given for the " .. item .. ": " .. tostring(installReason))
+      local start = first + #label
+      local stop = installReason:find("; ", start, true)
+      return installReason:sub(start, stop and stop - 1 or -1)
+    end
+    local triggerReason = reasonFor("trigger")
+    local scriptReason = reasonFor("script")
+    assert.is_truthy(triggerReason:find("Lua syntax error:", 1, true), triggerReason)
+    assert.is_truthy(scriptReason:find("Lua error:", 1, true), scriptReason)
+    assert.is_falsy(scriptReason:find("syntax", 1, true), "a body that parsed was reported as a syntax error: " .. scriptReason)
+  end)
+
   it("carries the reason on sysInstall and sysInstallPackage", function()
     assert.equals(1, #installEvents)
     assert.equals(name, installEvents[1][1])
