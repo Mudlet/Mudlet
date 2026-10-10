@@ -251,6 +251,7 @@ void GMCPAuthenticator::resetForNewConnection()
     mSignInAttemptPending = false;
     mLastSignInAttempt.invalidate();
     mUnpromptedBrowserOpenAvailable = true;
+    mSignInOffered = false;
 }
 
 void GMCPAuthenticator::resetPerConnectionState()
@@ -411,6 +412,11 @@ void GMCPAuthenticator::addCommonFields(QJsonObject& payload) const
     // answered true and then could not save - only on one that answered false, which must then discard a
     // token that arrives. Qt serialises a real JSON boolean, the form the standard prefers.
     payload[qsl("token_storage")] = true;
+}
+
+bool GMCPAuthenticator::savedCredentialsOutrankToken() const
+{
+    return mSupportedAuthTypes.contains(qsl("password-credentials")) && !mpHost->getLogin().isEmpty() && !mpHost->getPass().isEmpty();
 }
 
 bool GMCPAuthenticator::clientDrivenOAuthAvailable() const
@@ -665,7 +671,10 @@ void GMCPAuthenticator::storeReconnectToken(const QString& account, QString toke
     // save is still in flight. A rotation is not a new opt-in; and a token this connection could not
     // replay - scoped to an encrypted transport this connection is not - would make the promise
     // knowably false as it was written.
-    const bool worthAnnouncing = !mConn.reconnectingWithToken && !(secureOnly && !mpHost->mTelnet.currentlySecure());
+    // Nor while a saved name and password sign the player in ahead of it: the token is kept, for when
+    // they are removed, but the player is already signed in automatically and the promise would be
+    // repeated on every connection.
+    const bool worthAnnouncing = !mConn.reconnectingWithToken && !(secureOnly && !mpHost->mTelnet.currentlySecure()) && !savedCredentialsOutrankToken();
     // Which sign-in attempt this save belongs to, so its announcement is deduplicated against that
     // attempt rather than whichever is live when the write lands; see mAnnouncedSaveForAttempt.
     const auto attemptGeneration = mAuthAttemptGeneration;
@@ -1204,11 +1213,13 @@ void GMCPAuthenticator::handleAuthGMCP(const QString& packageMessage, const QStr
             // and cancel the auto-login timers a second later, so drop it.
             ++mSignInScheduleGeneration;
             mSignInAttemptPending = false;
+            mSignInOffered = false;
 #if defined(DEBUG_GMCP_AUTHENTICATION)
             qDebug() << "GMCP Char.Login.Default named no auth type; leaving the sign-in to the standard auto-login";
 #endif
             return;
         }
+        mSignInOffered = true;
 
         // A fresh Char.Login.Default starts a new sign-in; reset the per-connection token state before
         // deciding how to authenticate.
@@ -1240,6 +1251,13 @@ void GMCPAuthenticator::handleAuthGMCP(const QString& packageMessage, const QStr
 
 void GMCPAuthenticator::handleAuthToken(const QString& packageMessage, const QString& data)
 {
+    // Ignored before it is parsed, so no copy of the token is made. The standard bounds what a server
+    // can make a client do by what the client took part in, and this connection never offered Char.Login.
+    if (!mSignInOffered) {
+        qWarning().noquote() << "GMCP" << packageMessage << "- ignored: this connection's Char.Login.Default named no way to sign in, so no saved token could be replayed";
+        return;
+    }
+
     QJsonParseError parseError;
     // The payload carries a bearer token; parse from an owned buffer and scrub it once parsed so the
     // token does not linger in an unscrubbed temporary.
@@ -1348,7 +1366,7 @@ void GMCPAuthenticator::attemptReconnect()
     // so it outranks a saved reconnect token: typed credentials name the exact character the player
     // wants to play, whereas the token names whatever account last signed in. selectAuthMethod() sends
     // them as its first rung.
-    if (mSupportedAuthTypes.contains(qsl("password-credentials")) && !mpHost->getLogin().isEmpty() && !mpHost->getPass().isEmpty()) {
+    if (savedCredentialsOutrankToken()) {
         selectAuthMethod();
         return;
     }
