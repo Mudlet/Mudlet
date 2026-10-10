@@ -44,6 +44,7 @@
 #include <QCommandLineOption>
 #include <QPainter>
 #include <QTextLayout>
+#include <algorithm>
 #include <iostream>
 #include <memory>
 #include <vector>
@@ -463,10 +464,36 @@ int main(int argc, char* argv[])
 
     // Decides the kind of application object before there is one: --help and --version must work with no
     // display. Single-dash words are read whole, as Qt's own options are still in the list and compacting
-    // would find an 'h' in -stylesheet or a 'v' in -reverse. Known gap: -h/-v in a compacted group (-qv,
-    // -fh) isn't seen here, so such a run builds a QApplication and still needs a display.
+    // would find an 'h' in -stylesheet or a 'v' in -reverse.
     parser.setSingleDashWordOptionMode(QCommandLineParser::ParseAsLongOptions);
-    const bool commandLineReadOk = parser.parse(commandLineArguments);
+    bool commandLineReadOk = parser.parse(commandLineArguments);
+    // An unknown word spelled only with Mudlet's no-value short flags is a group of them (-qv, -fh): no Qt
+    // option is spelled with those letters alone, so it is split up and the list read again.
+    const auto spelledWithGroupableFlags = [](const QString& name) {
+        return name.size() > 1 && std::all_of(name.cbegin(), name.cend(), [](const QChar flag) {
+                   return qsl("hvsfmq").contains(flag);
+               });
+    };
+    QStringList flagGroups;
+    for (const QString& unknownName : parser.unknownOptionNames()) {
+        const QString word = qsl("-%1").arg(unknownName);
+        if (spelledWithGroupableFlags(unknownName) && commandLineArguments.contains(word)) {
+            flagGroups << word;
+        }
+    }
+    if (!flagGroups.isEmpty()) {
+        QStringList splitArguments;
+        for (const QString& argument : std::as_const(commandLineArguments)) {
+            if (!flagGroups.contains(argument)) {
+                splitArguments << argument;
+                continue;
+            }
+            for (const QChar flag : QStringView(argument).mid(1)) {
+                splitArguments << qsl("-%1").arg(flag);
+            }
+        }
+        commandLineReadOk = parser.parse(splitArguments);
+    }
     const bool printAndExitOption = parser.isSet(showHelp) || parser.isSet(showVersion);
 
 #if !defined(Q_OS_MACOS)
