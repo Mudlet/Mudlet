@@ -960,6 +960,33 @@ describe("Trigger processing", function()
             assert.are.same({"RewrapAboveMarker red"}, fired)
         end)
 
+        it("should wrap the line being processed after a trigger feeds a line and deletes one above", function()
+            local wrapAt = getWindowWrap("main")
+            local deleter
+            finally(function()
+                if deleter then killTrigger(deleter) end
+                setWindowWrap("main", wrapAt)
+            end)
+            setWindowWrap("main", 40)
+            feedTriggers("line above that is deleted before the wrap\n")
+            local doomed = getLineNumber()
+            deleter = tempTrigger("WrapAfterDeleteMarker", function()
+                feedTriggers("line fed before the wrap\n")
+                moveCursor(0, doomed)
+                deleteLine()
+            end)
+
+            feedTriggers("WrapAfterDeleteMarker" .. string.rep(" wrapped words", 6) .. "\n")
+
+            local longest = 0
+            for lineNumber = math.max(0, getLineCount() - 8), getLineCount() do
+                moveCursor(0, lineNumber)
+                longest = math.max(longest, utf8.len(getCurrentLine()))
+            end
+            moveCursorEnd()
+            assert.is_true(longest <= 40, "no line should be left longer than the wrap width, the longest is " .. longest)
+        end)
+
         local function lastLineReading(text)
             for lineNumber = getLineCount(), 0, -1 do
                 moveCursor(0, lineNumber)
