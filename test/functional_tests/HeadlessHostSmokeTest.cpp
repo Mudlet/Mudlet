@@ -1237,6 +1237,131 @@ headlessBackground = ok and "ok" or tostring(err)
         QVERIFY2(QApplication::topLevelWidgets().isEmpty(), "Setting the background images created a widget.");
     }
 
+    // The answers are those of the same Lua run in the GUI self-test profile
+    void test_headlessRaiseLowerContract()
+    {
+        const QString hostname = qsl("Test-Headless-Host-Raise-Lower");
+        QVERIFY2(HostManager::self()->addHost(hostname, QString(), QString(), QString()), "Could not create a profile with no main window.");
+        Host* host = HostManager::self()->getHost(hostname);
+        QVERIFY2(host, "The profile is not in the pool.");
+        QVERIFY(!host->hasConsoleView());
+
+        const bool ran = host->getLuaInterpreter()->compileAndExecuteScript(qsl(R"lua(
+headlessRaise = "not run"
+local ok, err = pcall(function()
+  local function described(called, ...)
+    if not called then
+      return "raised:" .. tostring((...))
+    end
+    local count = select("#", ...)
+    local values = {}
+    for i = 1, count do
+      values[i] = tostring((select(i, ...)))
+    end
+    return "[" .. count .. "]" .. table.concat(values, ":")
+  end
+  local answers = {}
+  local function step(label, f, ...)
+    answers[#answers + 1] = label .. "=" .. described(pcall(f, ...))
+  end
+  local function both(label, name)
+    step(label .. "Raise", raiseWindow, name)
+    step(label .. "Lower", lowerWindow, name)
+  end
+  assert(createLabel("rlLabel", 0, 0, 50, 20, 1) == true, "createLabel did not answer true")
+  assert(createMiniConsole("rlMini", 0, 0, 100, 100) == true, "createMiniConsole did not answer true")
+  assert(openUserWindow("rlWindow", false, false, "f") == true, "openUserWindow did not answer true")
+  createBuffer("rlBuffer")
+  assert(createLabel("rlWindow", "rlInner", 0, 0, 50, 20, 1) == true, "createLabel in a user window did not answer true")
+  assert(createMiniConsole("rlWindow", "rlInnerMini", 0, 0, 50, 50) == true, "createMiniConsole in a user window did not answer true")
+  both("label", "rlLabel")
+  both("mini", "rlMini")
+  both("window", "rlWindow")
+  both("buffer", "rlBuffer")
+  both("innerLabel", "rlInner")
+  both("innerMini", "rlInnerMini")
+  both("main", "main")
+  both("empty", "")
+  both("missing", "rlNoSuch")
+  both("case", "RLLABEL")
+  both("mapper", "mapper")
+  both("number", 5)
+  step("nilRaise", raiseWindow, nil)
+  step("noArgsRaise", raiseWindow)
+  step("noArgsLower", lowerWindow)
+  step("tableRaise", raiseWindow, {})
+  step("tableLower", lowerWindow, {})
+  step("hide", hideWindow, "rlLabel")
+  both("hiddenLabel", "rlLabel")
+  step("hideMini", hideWindow, "rlMini")
+  both("hiddenMini", "rlMini")
+  step("closeWindow", closeUserWindow, "rlWindow")
+  both("closedWindow", "rlWindow")
+  both("closedInner", "rlInner")
+  step("deleteLabel", deleteLabel, "rlLabel")
+  both("deletedLabel", "rlLabel")
+  step("deleteMini", deleteMiniConsole, "rlMini")
+  both("deletedMini", "rlMini")
+  step("deleteInner", deleteLabel, "rlInner")
+  step("deleteInnerMini", deleteMiniConsole, "rlInnerMini")
+  headlessRaiseAnswers = table.concat(answers, "\n")
+end)
+headlessRaise = ok and "ok" or tostring(err)
+)lua"));
+        QVERIFY2(ran, "The Lua chunk did not run.");
+        QCOMPARE(luaGlobalString(host, "headlessRaise"), qsl("ok"));
+        const QStringList answers{qsl("labelRaise=[1]true"),
+                                  qsl("labelLower=[1]true"),
+                                  qsl("miniRaise=[1]true"),
+                                  qsl("miniLower=[1]true"),
+                                  qsl("windowRaise=[1]true"),
+                                  qsl("windowLower=[1]true"),
+                                  qsl("bufferRaise=[1]true"),
+                                  qsl("bufferLower=[1]true"),
+                                  qsl("innerLabelRaise=[1]true"),
+                                  qsl("innerLabelLower=[1]true"),
+                                  qsl("innerMiniRaise=[1]true"),
+                                  qsl("innerMiniLower=[1]true"),
+                                  qsl("mainRaise=[1]false"),
+                                  qsl("mainLower=[1]false"),
+                                  qsl("emptyRaise=[1]false"),
+                                  qsl("emptyLower=[1]false"),
+                                  qsl("missingRaise=[1]false"),
+                                  qsl("missingLower=[1]false"),
+                                  qsl("caseRaise=[1]false"),
+                                  qsl("caseLower=[1]false"),
+                                  qsl("mapperRaise=[1]false"),
+                                  qsl("mapperLower=[1]false"),
+                                  qsl("numberRaise=[1]false"),
+                                  qsl("numberLower=[1]false"),
+                                  qsl("nilRaise=[1]false"),
+                                  qsl("noArgsRaise=[1]false"),
+                                  qsl("noArgsLower=[1]false"),
+                                  qsl("tableRaise=raised:raiseWindow: bad argument #1 type (window name as string expected, got table)!"),
+                                  qsl("tableLower=raised:lowerWindow: bad argument #1 type (window name as string expected, got table)!"),
+                                  qsl("hide=[0]"),
+                                  qsl("hiddenLabelRaise=[1]true"),
+                                  qsl("hiddenLabelLower=[1]true"),
+                                  qsl("hideMini=[0]"),
+                                  qsl("hiddenMiniRaise=[1]true"),
+                                  qsl("hiddenMiniLower=[1]true"),
+                                  qsl("closeWindow=[0]"),
+                                  qsl("closedWindowRaise=[1]true"),
+                                  qsl("closedWindowLower=[1]true"),
+                                  qsl("closedInnerRaise=[1]true"),
+                                  qsl("closedInnerLower=[1]true"),
+                                  qsl("deleteLabel=[1]true"),
+                                  qsl("deletedLabelRaise=[1]false"),
+                                  qsl("deletedLabelLower=[1]false"),
+                                  qsl("deleteMini=[1]true"),
+                                  qsl("deletedMiniRaise=[1]false"),
+                                  qsl("deletedMiniLower=[1]false"),
+                                  qsl("deleteInner=[1]true"),
+                                  qsl("deleteInnerMini=[1]true")};
+        QCOMPARE(luaGlobalString(host, "headlessRaiseAnswers"), answers.join(QLatin1Char('\n')));
+        QVERIFY2(QApplication::topLevelWidgets().isEmpty(), "Raising and lowering the windows created a widget.");
+    }
+
     // What a profile with no view answers the scroll calls, taken from the same Lua run in the GUI self-test
     // profile, which lets each real pane repaint before it is read and re-issues each scroll until it holds.
     void test_headlessScrollContract()
