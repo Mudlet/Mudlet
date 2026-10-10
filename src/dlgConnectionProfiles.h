@@ -200,6 +200,9 @@ private:
     // true while a profile is selected or refreshed programmatically, so that
     // it is not mistaken for the user picking a game from the list
     bool mProgrammaticProfileSelection = false;
+    // the selected profile's ssl_tsl as this dialog last read or wrote it; Preferences and the
+    // server can change that file while the dialog stays open
+    QString mSslTslSeen;
     // dialog height before it was shrunk to fit the welcome message
     int mDialogHeightBeforeShrink = 0;
     QString mDateTimeFormat;
