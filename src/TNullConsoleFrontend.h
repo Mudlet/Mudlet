@@ -79,7 +79,7 @@ public:
     void createLabel(const QString& windowname, const QString& name, int x, int y, int width, int height, bool fillBackground, bool clickThrough) override;
     void deleteLabel(const QString& name) override;
     std::pair<bool, QString> setLabelStyleSheet(const QString& name, const QString& stylesheet) override;
-    std::optional<QSize> getLabelSizeHint(const QString&) const override { return std::nullopt; }
+    std::optional<QSize> getLabelSizeHint(const QString& name) const override;
     std::pair<bool, QString> setLabelToolTip(const QString& name, const QString& text, double duration) override;
     std::pair<bool, QString> setLabelCursor(const QString& name, int shape) override;
     std::pair<bool, QString> setLabelCustomCursor(const QString& name, const QString& pixMapLocation, int hotX, int hotY) override;
@@ -259,8 +259,19 @@ private:
         std::unique_ptr<TLabelModel> pModel;
         QString userWindow;
         bool shown = true;
-        // Set by setFont(), as QWidget::setFont() sets Qt::WA_SetFont on a real label
-        bool ownFont = false;
+        // What a real label's QWidget and QStyleSheetStyle keep beside its font: which of its
+        // attributes were set on it, and the font each restyle starts again from
+        uint fontMask = 0;
+        std::optional<QFont> savedFont;
+        // The font properties the label's own sheet declares, if it declares any
+        std::optional<QFont> sheetFont;
+        // Qt::WA_StyleSheet
+        bool styled = false;
+        // TLabel::mPaletteSetSinceStyled
+        bool restyleDue = false;
+        // QLabel only measures its text once it has been given some, and caches the answer
+        bool textLabel = false;
+        mutable std::optional<QSize> sizeHint;
     };
 
     TConsoleModel& addSubConsole(const QString& name, TWindowRegistry::SubConsoleKind kind, const QString& windowname);
@@ -271,6 +282,10 @@ private:
     TLabelModel* labelModel(const QString& name) const;
     TConsoleModel* subConsoleModel(const QString& name) const;
     bool setLabelShown(const QString& name, bool shown);
+    QFont naturalLabelFont(const Label& label) const;
+    void setLabelWidgetFont(Label& label, const QFont& font, bool applySheet);
+    void polishLabel(Label& label);
+    void restyleLabel(Label& label, const QString& sheet);
     bool setSubConsoleShown(const QString& name, bool shown);
     void reportVisibility(const QString& name);
     std::optional<QFont> consoleFont(const QString& name) const;

@@ -23,6 +23,7 @@
 #include <QFontMetrics>
 #include <QFontMetricsF>
 #include <QTemporaryDir>
+#include <QWidget>
 #include <QtNetwork/QTcpServer>
 #include <QtNetwork/QTcpSocket>
 // After a QtNetwork header, which is what defines QT_NO_SSL
@@ -41,6 +42,7 @@
 #include "PortableModeTestHelper.h"
 #include "TAppFrontend.h"
 #include "TConsoleModel.h"
+#include "TLabel.h"
 #include "TLabelModel.h"
 #include "TLuaInterpreter.h"
 
@@ -1047,6 +1049,141 @@ headlessFontWrap = ok and "ok" or tostring(err)
         // Moved to another window, one given no font by setFont() takes the application's
         QCOMPARE(luaGlobalString(host, "fwMovedFonts"), qsl("%1;%1;%2;%2;%2").arg(family(QFont()), family(familyFont)));
         QVERIFY2(QApplication::topLevelWidgets().isEmpty(), "The font and wrap calls created a widget.");
+    }
+
+    // A label's sheet sets its font as Qt resolves one, and getLabelSizeHint() measures it, so each
+    // step is taken by a real TLabel too, made as TMainConsole makes one, and the answers compared
+    void test_headlessLabelStyleSheetFontContract()
+    {
+        const QString hostname = qsl("Test-Headless-Host-Label-Sheet-Font");
+        QVERIFY2(HostManager::self()->addHost(hostname, QString(), QString(), QString()), "Could not create a profile with no main window.");
+        Host* host = HostManager::self()->getHost(hostname);
+        QVERIFY2(host, "The profile is not in the pool.");
+        QVERIFY(!host->hasConsoleView());
+
+        const bool ran = host->getLuaInterpreter()->compileAndExecuteScript(qsl(R"lua(
+function lsAnswer(f, ...)
+  local function described(called, ...)
+    if not called then
+      return "raised"
+    end
+    local count = select("#", ...)
+    local values = {}
+    for i = 1, count do
+      local value = select(i, ...)
+      values[i] = (i > 1 and type(value) == "string") and "msg" or tostring(value)
+    end
+    return "[" .. count .. "]" .. table.concat(values, ":")
+  end
+  return described(pcall(f, ...))
+end
+lsMissing = lsAnswer(getLabelSizeHint, "lsNoSuchLabel")
+createLabel("lsA", 0, 0, 100, 20, 1)
+openUserWindow("lsWin")
+createLabel("lsWin", "lsB", 0, 0, 100, 20, 1)
+createLabel("lsC", 0, 0, 100, 20, 1)
+)lua"));
+        QVERIFY2(ran, "The Lua chunk did not run.");
+        QCOMPARE(luaGlobalString(host, "lsMissing"), qsl("[2]nil:msg"));
+
+        QStringList mismatches;
+        {
+            QWidget mainParent;
+            mainParent.setFont(host->getDisplayFont());
+            mainParent.show();
+            QWidget windowParent;
+            // The user window's console font, which a label made in it starts with
+            windowParent.setFont(host->labelFont(qsl("lsB")).value_or(QFont()));
+            windowParent.show();
+            const auto makeReference = [host](const QString& name, QWidget* pParent) {
+                auto pLabel = new TLabel(host, name, pParent);
+                pLabel->setAutoFillBackground(true);
+                pLabel->resize(100, 20);
+                pLabel->setContentsMargins(0, 0, 0, 0);
+                pLabel->show();
+                pLabel->setBackgroundColor(QColor(32, 32, 32, 255));
+                return pLabel;
+            };
+            TLabel* pRefA = makeReference(qsl("lsRefA"), &mainParent);
+            TLabel* pRefB = makeReference(qsl("lsRefB"), &windowParent);
+
+            const auto compare = [&](const QString& step, const QString& name, const TLabel* pReference) {
+                host->getLuaInterpreter()->compileAndExecuteScript(qsl("lsLast = lsAnswer(getLabelSizeHint, '%1')").arg(name));
+                const QSize hint = pReference->sizeHint();
+                const QString expected = qsl("[2]%1:%2").arg(hint.width()).arg(hint.height());
+                if (const QString answer = luaGlobalString(host, "lsLast"); answer != expected) {
+                    mismatches << qsl("%1: hint %2, a real label's %3").arg(step, answer, expected);
+                }
+                const QFont font = host->labelFont(name).value_or(QFont());
+                if (font.key() != pReference->font().key()) {
+                    mismatches << qsl("%1: font %2, a real label's %3").arg(step, font.toString(), pReference->font().toString());
+                }
+            };
+            const auto step = [&](const QString& name, const QString& call, const QString& expected) {
+                host->getLuaInterpreter()->compileAndExecuteScript(qsl("lsLast = lsAnswer(function() return %1 end)").arg(call));
+                if (const QString answer = luaGlobalString(host, "lsLast"); answer != expected) {
+                    mismatches << qsl("%1: %2 answered %3, not %4").arg(name, call, answer, expected);
+                }
+            };
+            const auto sheet = [&](const QString& name, TLabel* pReference, const QString& styleSheet) {
+                step(name, qsl("setLabelStyleSheet('%1', [[%2]])").arg(name, styleSheet), qsl("[1]true"));
+                pReference->restyle(styleSheet);
+                compare(qsl("%1 sheet '%2'").arg(name, styleSheet), name, pReference);
+            };
+            const auto text = [&](const QString& name, TLabel* pReference, const QString& labelText) {
+                step(name, qsl("echo('%1', [[%2]])").arg(name, labelText), qsl("[1]true"));
+                pReference->setText(labelText);
+                compare(qsl("%1 text '%2'").arg(name, labelText), name, pReference);
+            };
+            const auto family = [&](const QString& name, TLabel* pReference, const QString& fontFamily) {
+                step(name, qsl("setFont('%1', '%2')").arg(name, fontFamily), qsl("[1]true"));
+                // TLuaInterpreter::setFont()'s font for a label
+                pReference->setFont(host->createFontWithSettings(fontFamily, pReference->font().pointSize()));
+                compare(qsl("%1 font %2").arg(name, fontFamily), name, pReference);
+            };
+
+            compare(qsl("lsA made"), qsl("lsA"), pRefA);
+            // QLabel keeps the hint it gave before any text, through a font change
+            family(qsl("lsA"), pRefA, qsl("Liberation Serif"));
+            text(qsl("lsA"), pRefA, qsl("WWWWWWWWWW"));
+            sheet(qsl("lsA"), pRefA, qsl("font-family: 'DejaVu Sans';"));
+            sheet(qsl("lsA"), pRefA, qsl("font-size: 20px;"));
+            sheet(qsl("lsA"), pRefA, qsl("font: bold 18px 'Liberation Mono';"));
+            sheet(qsl("lsA"), pRefA, qsl("font-size: 16pt; font-style: italic;"));
+            family(qsl("lsA"), pRefA, qsl("Liberation Serif"));
+            step(qsl("lsA"), qsl("setLinkStyle('lsA', 'red', 'blue', false)"), qsl("[1]true"));
+            pRefA->setLinkStyle(qsl("red"), qsl("blue"), false);
+            sheet(qsl("lsA"), pRefA, qsl("font-size: 16pt; font-style: italic;"));
+            sheet(qsl("lsA"), pRefA, qsl("color: red;"));
+            text(qsl("lsA"), pRefA, qsl("<b>bold</b> text<br>second line"));
+            sheet(qsl("lsA"), pRefA, QString());
+            step(qsl("lsA"), qsl("setBackgroundColor('lsA', 10, 20, 30)"), qsl("[1]true"));
+            pRefA->setBackgroundColor(QColor(10, 20, 30));
+            compare(qsl("lsA background"), qsl("lsA"), pRefA);
+
+            // A sheet handed back unchanged is skipped, so the cached hint stays, unless link colours were set since
+            TLabel* pRefC = makeReference(qsl("lsRefC"), &mainParent);
+            compare(qsl("lsC made"), qsl("lsC"), pRefC);
+            family(qsl("lsC"), pRefC, qsl("Liberation Serif"));
+            sheet(qsl("lsC"), pRefC, pRefC->styleSheet());
+            step(qsl("lsC"), qsl("setLinkStyle('lsC', 'red', 'blue', false)"), qsl("[1]true"));
+            pRefC->setLinkStyle(qsl("red"), qsl("blue"), false);
+            sheet(qsl("lsC"), pRefC, pRefC->styleSheet());
+
+            text(qsl("lsB"), pRefB, qsl("WWWWWWWWWW"));
+            sheet(qsl("lsB"), pRefB, qsl("font-size: 20px;"));
+            step(qsl("lsB"), qsl("setWindow('main', 'lsB', 0, 0, true)"), qsl("[1]true"));
+            pRefB->setParent(&mainParent);
+            pRefB->show();
+            compare(qsl("lsB moved to main"), qsl("lsB"), pRefB);
+            sheet(qsl("lsB"), pRefB, QString());
+            step(qsl("lsB"), qsl("setWindow('lsWin', 'lsB', 0, 0, true)"), qsl("[1]true"));
+            pRefB->setParent(&windowParent);
+            pRefB->show();
+            compare(qsl("lsB moved back unstyled"), qsl("lsB"), pRefB);
+        }
+        QVERIFY2(mismatches.isEmpty(), qPrintable(mismatches.join(QChar::LineFeed)));
+        QVERIFY2(QApplication::topLevelWidgets().isEmpty(), "The reference labels outlived the test.");
     }
 
     // The trim that raises sysBufferShrinkEvent runs inside TBuffer::append(), and echo goes on using the
