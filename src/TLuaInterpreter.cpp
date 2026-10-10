@@ -1224,9 +1224,10 @@ int TLuaInterpreter::feedTriggers(lua_State* L)
         dataIsUtf8Encoded = getVerifiedBool(L, __func__, 2, "Utf8Encoded", true);
     }
     const QByteArray data{lua_tostring(L, 1)};
-    // Inside a trigger, the pane catches up when the pass that fired it ends:
-    // scrolling mid-pass would announce lines to screen readers before the
-    // rest of the triggers have gagged or rewritten them.
+    // Inside a trigger, leave this to whatever started the pass - cTelnet and
+    // the other callers of printOnDisplay() finalize once it returns. Doing it
+    // mid-pass would announce the line that trigger is handling to screen
+    // readers before the pass's remaining triggers can gag or rewrite it.
     auto feed = [L, &host, triggerUnit](std::string& text) {
         host.printOnDisplay(text, false);
         if (!triggerUnit->processingDepth()) {
