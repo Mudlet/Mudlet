@@ -330,6 +330,7 @@ private slots:
         host->setMainConsoleView(nullptr);
         const bool labelStillRegistered = host->windowRegistry().hasLabel(label);
         const bool dockStillRegistered = host->windowRegistry().hasDockWidget(userWindow);
+        const bool dockHidden = host->hideWindow(userWindow);
         const bool shown = host->showWindow(label);
         const bool hidden = host->hideWindow(label);
         const bool styled = host->setLabelStyleSheet(label, qsl("color: red;"));
@@ -347,6 +348,7 @@ private slots:
 
         QVERIFY(labelStillRegistered);
         QVERIFY(dockStillRegistered);
+        QVERIFY(!dockHidden);
         QVERIFY(!shown);
         QVERIFY(!hidden);
         QVERIFY(!styled);
