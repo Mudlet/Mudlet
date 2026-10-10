@@ -2842,10 +2842,11 @@ describe("Tests db's internal SQL helpers", function()
   end)
 
   describe("Tests db:_sql_convert", function()
-    it("double quotes a string default and doubles up single quotes in it", function()
-      assert.are.equal('""', db:_sql_convert(""))
-      assert.are.equal('"plain"', db:_sql_convert("plain"))
-      assert.are.equal([["it''s"]], db:_sql_convert("it's"))
+    it("single quotes a string default and doubles up single quotes in it", function()
+      assert.are.equal("''", db:_sql_convert(""))
+      assert.are.equal("'plain'", db:_sql_convert("plain"))
+      assert.are.equal([['it''s']], db:_sql_convert("it's"))
+      assert.are.equal([['say "hi"']], db:_sql_convert('say "hi"'))
     end)
 
     it("renders nil and db:Null as the NULL keyword", function()
@@ -3224,7 +3225,7 @@ describe("Tests db's internal SQL helpers", function()
   describe("Tests db:_build_create_table_sql", function()
     it("always gives the sheet an autoincrementing _row_id", function()
       local sql = db:_build_create_table_sql({columns = {name = ""}, options = {}}, "people")
-      assert.are.equal('CREATE TABLE people ("_row_id" INTEGER PRIMARY KEY AUTOINCREMENT, "name" TEXT NULL DEFAULT "")', sql)
+      assert.are.equal([[CREATE TABLE people ("_row_id" INTEGER PRIMARY KEY AUTOINCREMENT, "name" TEXT NULL DEFAULT '')]], sql)
     end)
 
     it("types a column from its default value", function()
@@ -3234,7 +3235,7 @@ describe("Tests db's internal SQL helpers", function()
 
     it("adds a column level unique constraint for a single unique column", function()
       local sql = db:_build_create_table_sql({columns = {name = ""}, options = {_unique = "name"}}, "people")
-      assert.is_truthy(string.find(sql, '"name" TEXT NULL DEFAULT "" UNIQUE ON CONFLICT FAIL', 1, true))
+      assert.is_truthy(string.find(sql, [["name" TEXT NULL DEFAULT '' UNIQUE ON CONFLICT FAIL]], 1, true))
     end)
 
     it("accepts the unique column as a one entry list too", function()
@@ -3527,7 +3528,7 @@ describe("Tests db's internals against a real database", function()
 
       schema.options._unique = {"name"}
       local legacy = db:_build_create_table_sql(schema, "people"):gsub(" ON CONFLICT %u+", "")
-      assert.is_truthy(string.find(legacy, '"name" TEXT NULL DEFAULT "" UNIQUE', 1, true))
+      assert.is_truthy(string.find(legacy, [["name" TEXT NULL DEFAULT '' UNIQUE]], 1, true))
       conn:execute("DROP TABLE people")
       conn:execute(legacy)
       conn:commit()
@@ -4391,6 +4392,85 @@ describe("Tests db:create with a sheet given as a list of column names", functio
     end)
     assert.is_false(ok)
     assert.is_truthy(string.find(err, "column name #2 is a boolean", 1, true))
+  end)
+end)
+
+describe("Tests db:create on schemas sqlite refuses or reads differently", function()
+  local dbName = "schemareportstestingonly"
+  local dbFile = getMudletHomeDir() .. "/Database_" .. dbName .. ".db"
+
+  local function collectingWarnings(fn)
+    local collected = {}
+    -- through _G: a spec file's globals are its own
+    local originalPrintError = _G.printError
+    _G.printError = function(msg) collected[#collected + 1] = msg end
+    finally(function() _G.printError = originalPrintError end)
+
+    local result = fn()
+    _G.printError = originalPrintError
+    return result, table.concat(collected, "\n")
+  end
+
+  local function createCollectingWarnings(sheets)
+    return collectingWarnings(function() return db:create(dbName, sheets) end)
+  end
+
+  after_each(function()
+    if not pcall(function() db:close(dbName) end) then
+      db.__conn[dbName] = nil
+    end
+    os.remove(dbFile)
+  end)
+
+  it("builds a sheet whose text defaults hold quotes, and stores them as given", function()
+    local mydb, warnings = createCollectingWarnings({people = {tag = "", name = 'say "hi"', city = "it's"}})
+    assert.are.equal("", warnings)
+    assert.is_true(db:add(mydb.people, {tag = "defaults"}))
+    local rows = db:fetch(mydb.people)
+    assert.are.equal(1, #rows)
+    assert.are.equal('say "hi"', rows[1].name)
+    assert.are.equal("it's", rows[1].city)
+  end)
+
+  it("reports a sheet it could not create rather than returning as if it had", function()
+    local mydb, warnings = createCollectingWarnings({["my sheet"] = {name = ""}})
+    assert.is_table(mydb)
+    assert.is_truthy(string.find(warnings, "db:create - my sheet - could not create the sheet", 1, true))
+  end)
+
+  it("reports a column it could not add rather than returning as if it had", function()
+    local mydb = createCollectingWarnings({people = {name = ""}})
+    assert.is_true(db:add(mydb.people, {name = "Bob"}))
+
+    local _, warnings = createCollectingWarnings({people = {name = "", added = db:Timestamp("CURRENT_TIMESTAMP")}})
+    assert.is_truthy(string.find(warnings, 'db:create - people - could not add the column "added"', 1, true))
+  end)
+
+  it("reports an index it could not create rather than returning as if it had", function()
+    local mydb = createCollectingWarnings({people = {name = ""}})
+    -- a table already holding the name db:_index_name gives the index makes sqlite refuse it
+    local conn = db.__conn[dbName]
+    assert.is_truthy(conn:execute("CREATE TABLE idx_people_c_name (x)"))
+    conn:commit()
+
+    local ok, result, warnings = pcall(createCollectingWarnings, {people = {name = "", _index = {"name"}}})
+    assert.is_true(ok, result)
+    assert.is_truthy(string.find(warnings, "db:create - people - could not create an index: ", 1, true))
+    assert.is_truthy(string.find(warnings, "there is already a table named idx_people_c_name", 1, true))
+    assert.is_truthy(string.find(warnings, "CREATE INDEX IF NOT EXISTS idx_people_c_name ON people", 1, true))
+    assert.is_true(db:add(mydb.people, {name = "Bob"}))
+  end)
+
+  it("reads the uniqueness that follows a text default holding a double quote", function()
+    local sql = [[CREATE TABLE people ("_row_id" INTEGER PRIMARY KEY AUTOINCREMENT, "note" TEXT NULL DEFAULT '5" ruler', ]] ..
+      [["name" TEXT NULL DEFAULT '' UNIQUE ON CONFLICT FAIL, "city" TEXT NULL DEFAULT 'it''s')]]
+    assert.are.equal("unique on conflict fail", db:_extract_table_constraints(sql))
+
+    local mydb = createCollectingWarnings({people = {note = '5" ruler', name = "", city = "", _unique = "name"}})
+    assert.is_true(db:add(mydb.people, {name = "Bob"}))
+    mydb = createCollectingWarnings({people = {note = '5" ruler', name = "", city = ""}})
+    local added = collectingWarnings(function() return db:add(mydb.people, {name = "Bob"}) end)
+    assert.is_true(added)
   end)
 end)
 
