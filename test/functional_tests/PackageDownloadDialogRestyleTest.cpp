@@ -80,7 +80,7 @@ private slots:
         mpHost = hostManager->getHost(mProfileName);
         QVERIFY(mpHost);
         mudlet::self()->addConsoleForNewHost(mpHost);
-        QVERIFY(mpHost->mpConsole);
+        QVERIFY(mpHost->mainConsoleView());
     }
 
     void cleanupTestCase()
@@ -102,7 +102,7 @@ private slots:
         });
         QTest::failOnWarning(QRegularExpression(qsl("wildcard call disconnects from destroyed signal")));
 
-        TMainConsole* console = mpHost->mpConsole;
+        TMainConsole* console = mpHost->mainConsoleView();
         console->showPackageDownloadProgress(qsl("Downloading the game's UI"), qsl("Cancel"));
         QCOMPARE(console->findChildren<QProgressDialog*>().size(), 1);
         QPointer<QProgressDialog> first = console->findChild<QProgressDialog*>();
