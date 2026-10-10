@@ -730,7 +730,7 @@ void THyperlinkVisibilityManager::queueHiddenAnnouncement()
 
 void THyperlinkVisibilityManager::slot_announceHiddenLinks()
 {
-    if (mPendingHiddenCount <= 0 || !QAccessible::isActive() || !TAppFrontend::hasView()) {
+    if (mPendingHiddenCount <= 0 || !QAccessible::isActive()) {
         mPendingHiddenCount = 0;
         return;
     }
@@ -767,7 +767,7 @@ void THyperlinkVisibilityManager::performReveal(TrackedHyperlink& link)
             buffer.restoreLinkIndices(link.lineNumber, link.startColumn, link.length, link.linkId);
             link.isConcealed = false;
 
-            if (QAccessible::isActive() && TAppFrontend::hasView()) {
+            if (QAccessible::isActive()) {
                 //: Screen-reader announcement when a previously hidden OSC 8 link is revealed; %1 is the original link text
                 TAppFrontend::instance()->announce(tr("Link revealed: %1").arg(link.originalText), QString(), true);
             }
