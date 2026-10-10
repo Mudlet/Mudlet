@@ -159,6 +159,11 @@ void TAction::execute()
         }
     }
 
+    runScript();
+}
+
+void TAction::runScript()
+{
     // Recorded before the compile step below, which returns early on failure
     mpHost->mainConsoleModel().mButtonState = (mButtonState ? 2 : 1);
 
