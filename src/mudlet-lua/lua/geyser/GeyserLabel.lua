@@ -776,10 +776,8 @@ function closeNestChildren(label)
   local nLabels = label.nestedLabels
   if nLabels then
     for i, v in pairs(nLabels) do
+      -- a Geyser.Label's hide() closes its own nest
       v:hide()
-      if v.nestedLabels then
-        closeNestChildren(v)
-      end
       if Geyser.Label.scrollV[v.nestParent] then
         Geyser.Label.scrollV[v.nestParent][1]:hide()
         Geyser.Label.scrollV[v.nestParent][2]:hide()
@@ -1212,14 +1210,44 @@ function Geyser.Label:new (cons, container)
   return me
 end
 
---- Deletes the label using the C++ deleteLabel function
--- Note: Nested labels (in nestedLabels array) have their own containers
--- and will be deleted through their container's cascading delete mechanism.
--- The nestedLabels array is for organizational purposes only.
-function Geyser.Label:type_delete()
-  -- Clean up nested label references to avoid dangling references
+--- Hides the label, along with any of its nested labels that are flown out
+function Geyser.Label:hide(auto)
   if self.nestedLabels then
+    closeNestChildren(self)
+  end
+  Geyser.Container.hide(self, auto)
+end
+
+--- Deletes the label using the C++ deleteLabel function, along with its nested
+-- labels and their "More..." scroll labels
+-- Nested labels live in the parent's container rather than in this label, so the
+-- container's cascading delete does not reach them.
+function Geyser.Label:type_delete()
+  local siblings = self.nestParent and self.nestParent.nestedLabels
+  local index = siblings and table.index_of(siblings, self)
+  if index then
+    table.remove(siblings, index)
+  end
+  if self.nestedLabels then
+    local nested = self.nestedLabels
     self.nestedLabels = {}
+    -- a hidden menu item has left nestedLabels but is still a label of this menu,
+    -- unless it was deleted on its own and its name may now be another label's
+    for _, item in pairs(self.MenuLabels or {}) do
+      if item.ignore and item.container and item.container.windowList[item.name] == item then
+        nested[#nested + 1] = item
+      end
+    end
+    for _, child in pairs(nested) do
+      child:delete()
+    end
+  end
+  for _, scrolls in ipairs({Geyser.Label.scrollV, Geyser.Label.scrollH}) do
+    if scrolls[self] then
+      scrolls[self][1]:delete()
+      scrolls[self][2]:delete()
+      scrolls[self] = nil
+    end
   end
   deleteLabel(self.name)
 end
