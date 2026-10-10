@@ -147,6 +147,7 @@ set(mudlet_SRCS
     TMxpTagProcessor.cpp
     TMxpVarTagHandler.cpp
     TMxpVersionTagHandler.cpp
+    TNullAppFrontend.cpp
     TNullConsoleFrontend.cpp
     TriggerMatchPool.cpp
     TriggerUnit.cpp
@@ -445,6 +446,7 @@ set(mudlet_HDRS
     TMxpTagProcessor.h
     TMxpVarTagHandler.h
     TMxpVersionTagHandler.h
+    TNullAppFrontend.h
     TNullConsoleFrontend.h
     TPrintSink.h
     Tree.h

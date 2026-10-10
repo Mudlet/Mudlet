@@ -321,7 +321,7 @@ bool CredentialManager::isOperationValid() const
     }
     // No instance in a unit test, and nothing to read the preference from - the caller's own default
     // stands, which keeps this the keychain as it was
-    if (!TAppFrontend::instance()) {
+    if (!TAppFrontend::hasView()) {
         return std::nullopt;
     }
     return !MudletApp::storingPasswordsSecurely();
