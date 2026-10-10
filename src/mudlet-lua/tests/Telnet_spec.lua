@@ -2133,6 +2133,21 @@ describe("MXP auto-detection from the mode switch escape", function()
     assert.is_true(getConfig("promptForMXPProcessorOn"))
   end)
 
+  -- a GA prompt that came while MXP was negotiated is not scanned, so it too
+  -- comes between the reads either side of it
+  it("does not join a read to one from before a prompt sent while MXP was negotiated", function()
+    local enabledBefore = getConfig("enableMXP")
+    setConfig("enableMXP", true)
+    finally(function() setConfig("enableMXP", enabledBefore) end)
+    feed("x\27[1")
+    feed("<T_IAC><T_DO><O_MXP>")
+    feed("HP> <T_IAC><T_GA>")
+    feed("<T_IAC><T_DONT><O_MXP>")
+    feed("z after it\r\n")
+    assert.is_false(getConfig("promptForMXPProcessorOn"))
+    assert.is_false(getConfig("specialForceMXPProcessorOn"))
+  end)
+
   it("ignores a mode number MXP does not define", function()
     feed("\27[8z<send>look</send>\r\n")
     assert.is_false(getConfig("promptForMXPProcessorOn"))
@@ -2196,8 +2211,8 @@ describe("MXP auto-detection from the mode switch escape", function()
   end)
 end)
 
--- A forced processor goes on scanning gotRest() reads, so that a game turning
--- MXP back on re-locks it secure, but not gotPrompt() ones
+-- A forced processor goes on scanning what the game sends, so that a game
+-- turning MXP back on re-locks it secure
 describe("MXP re-initialisation of a forced processor", function()
 
   local function feed(data)
@@ -2242,6 +2257,19 @@ describe("MXP re-initialisation of a forced processor", function()
   it("re-locks it secure from a switch split between two reads", function()
     feed("\27[1")
     feed("z<B>MXPREINIT</B>\r\n")
+    assert.equals("MXPRELOCKED", displayed("<SEND href=\"x\">MXPRELOCKED</SEND>\r\n"))
+  end)
+
+  it("re-locks it secure from a switch in a prompt", function()
+    feed("\27[1z<B>MXPREINIT</B> <T_IAC><T_GA>")
+    feed("\r\n")
+    assert.equals("MXPRELOCKED", displayed("<SEND href=\"x\">MXPRELOCKED</SEND>\r\n"))
+  end)
+
+  it("re-locks it secure from a switch split between a read and a prompt", function()
+    feed("\27[1")
+    feed("z<B>MXPREINIT</B> <T_IAC><T_GA>")
+    feed("\r\n")
     assert.equals("MXPRELOCKED", displayed("<SEND href=\"x\">MXPRELOCKED</SEND>\r\n"))
   end)
 

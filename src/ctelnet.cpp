@@ -5173,10 +5173,11 @@ void cTelnet::gotPrompt(std::string& mud_data)
 
     mMudData += mud_data;
 
-    if (!mpHost->mPromptedForMXPProcessorOn && !mpHost->getForceMXPProcessorOn() && !isMXPEnabled()) {
+    // Scanned as gotRest() scans, or a forced processor misses a re-initialisation that arrives with a prompt
+    if (mpHost->getForceMXPProcessorOn() || (!mpHost->mPromptedForMXPProcessorOn && !isMXPEnabled())) {
         trackMXPElementDetection(mud_data);
     } else {
-        // gotRest() may still scan, and must not join its next read to one this read came between
+        // gotRest() may scan again once that changes, and must not join its next read to one this read came between
         mMxpDetectionTail.clear();
     }
 
