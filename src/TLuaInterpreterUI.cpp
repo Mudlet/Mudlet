@@ -3350,25 +3350,8 @@ int TLuaInterpreter::setFont(lua_State* L)
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#setFontSize
 int TLuaInterpreter::setFontSize(lua_State* L)
 {
-    const char* windowName = "";
-    int s = 1;
-    if (lua_gettop(L) > 1) { // Have more than one argument so first must be a console name
-        windowName = WINDOW_NAME(L, s++);
-    }
-
-    const int size = getVerifiedInt(L, __func__, s, "size");
-    if (size <= 0) {
-        // just throw an error, no default needed.
-        return warnArgumentValue(L, __func__, "size cannot be 0 or negative");
-    }
-
-    const QString consoleName{windowName};
-    const Host& host = getHostFromLua(L);
-    if (!host.consoleFrontend() || !host.consoleFrontend()->setWindowFontSize(consoleName, size)) {
-        return windowNotFound(L, consoleName);
-    }
-    lua_pushboolean(L, true);
-    return 1;
+    // Have more than one argument so first must be a console name
+    return setConsoleFontSize(L, __func__, lua_gettop(L) > 1);
 }
 
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#setItalics
@@ -3786,16 +3769,30 @@ int TLuaInterpreter::getMapWindowTitle(lua_State* L)
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#setMiniConsoleFontSize
 int TLuaInterpreter::setMiniConsoleFontSize(lua_State* L)
 {
+    // A size alone sets the main window's, as setFontSize() does
+    return setConsoleFontSize(L, __func__, lua_gettop(L) != 1);
+}
+
+// No documentation available in wiki - internal function
+int TLuaInterpreter::setConsoleFontSize(lua_State* L, const char* functionName, const bool windowNamed)
+{
     const char* windowName = "";
     int s = 1;
-    // A size alone sets the main window's, as setFontSize() does
-    if (lua_gettop(L) != 1) {
-        windowName = WINDOW_NAME(L, s++);
+    if (windowNamed) {
+        // Not WINDOW_NAME(), whose error would name this helper
+        if (!lua_isnoneornil(L, s)) {
+            if (!lua_isstring(L, s)) {
+                lua_pushfstring(L, bad_window_type, functionName, s, luaL_typename(L, s));
+                return lua_error(L);
+            }
+            windowName = lua_tostring(L, s);
+        }
+        ++s;
     }
 
-    const int size = getVerifiedInt(L, __func__, s, "size");
+    const int size = getVerifiedInt(L, functionName, s, "size");
     if (size <= 0) {
-        return warnArgumentValue(L, __func__, "size cannot be 0 or negative");
+        return warnArgumentValue(L, functionName, "size cannot be 0 or negative");
     }
 
     const QString consoleName{windowName};

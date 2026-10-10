@@ -890,6 +890,7 @@ public slots:
 
 private:
     static int loadReplayFile(lua_State*, const char* functionName);
+    static int setConsoleFontSize(lua_State*, const char* functionName, const bool windowNamed);
     static bool getVerifiedBool(lua_State*, const char* functionName, const int pos, const char* publicName, const bool isOptional = false);
     static QString getVerifiedString(lua_State*, const char* functionName, const int pos, const char* publicName, const bool isOptional = false);
     static bool checkStringArg(lua_State*, const char* functionName, const int pos, const char* publicName, const bool isOptional = false);
