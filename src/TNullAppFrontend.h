@@ -46,7 +46,7 @@ public:
     bool showTabConnectionIndicators() const override { return mShowTabConnectionIndicators; }
     void setShowTabConnectionIndicators(bool show) override { mShowTabConnectionIndicators = show; }
     void alertUser(int) override {}
-    std::optional<QSize> getImageSize(const QString&) override { return std::nullopt; }
+    std::optional<QSize> getImageSize(const QString& imageLocation) override;
     int profileTabIndex(const QString&) const override { return -1; }
     void setActiveProfileTab(const QString&) override {}
     void refreshTabBarsAfterStyleChange() override {}

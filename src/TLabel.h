@@ -80,8 +80,6 @@ public:
     void resetBackgroundImage();
     bool setSvgImage(const QString& path);
     void clearSvgImage();
-    static bool svgCandidate(const QString& path);
-    static bool loadSvg(QSvgRenderer& renderer, const QString& path);
     void setSvgTint(const QColor& color);
     void clearSvgTint();
     void setSvgRotation(double angle);
