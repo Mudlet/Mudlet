@@ -139,9 +139,45 @@ describe("Tests DateTime.lua functions", function()
       assert.are.equal(45, back.sec)
     end)
 
-    -- the isdst lookup calls os.time() on the half built date table before
-    -- anything has checked that the format supplied a day
-    pending("datetime:parse handles a format with no date part - '05:06:07' with '^%H:%M:%S$' raises \"field 'day' missing in date table\" - issue #10415")
+    it("parses a format with no date part into a time table", function()
+      local dt = datetime:parse("05:06:07", "^%H:%M:%S$")
+      assert.are.same({hour = 5, min = 6, sec = 7}, dt)
+    end)
+
+    it("places a time-only parse on today's date when as_epoch is true", function()
+      local today = os.date("*t")
+      local epoch = datetime:parse("05:06:07", "^%H:%M:%S$", true)
+      assert.are.equal("number", type(epoch))
+      local back = os.date("*t", epoch)
+      assert.are.equal(today.year, back.year)
+      assert.are.equal(today.month, back.month)
+      assert.are.equal(today.day, back.day)
+      assert.are.equal(5, back.hour)
+      assert.are.equal(6, back.min)
+      assert.are.equal(7, back.sec)
+    end)
+
+    it("starts a partial date with as_epoch at the first of the month, not today's day", function()
+      local realDate = os.date
+      finally(function() os.date = realDate end)
+      -- on the 31st, today's day put into February rolls over into March
+      os.date = function(format, time)
+        if format == "*t" and time == nil then
+          local today = realDate("*t")
+          today.month, today.day = 3, 31
+          return today
+        end
+        return realDate(format, time)
+      end
+      local epoch = datetime:parse("2024-02", "^%Y-%m$", true)
+      local yearOnly = datetime:parse("2024", "^%Y$", true)
+      os.date = realDate
+
+      local back = os.date("*t", epoch)
+      assert.are.same({2024, 2, 1}, {back.year, back.month, back.day})
+      back = os.date("*t", yearOnly)
+      assert.are.same({2024, 1, 1}, {back.year, back.month, back.day})
+    end)
   end)
 
   describe("Tests datetime:parse round-trips with string formatting", function()
