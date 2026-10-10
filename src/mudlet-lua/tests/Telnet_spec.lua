@@ -1429,20 +1429,20 @@ describe("Tests telnet option negotiation", function()
     assert.same({"sysProtocolDisabled:MXP"}, protocolEventsFrom("<T_IAC><T_DONT><O_MXP>"))
   end)
 
-  it("switches the MXP processor on from a subnegotiation, in locked mode", function()
+  it("switches the MXP processor on from a subnegotiation, in open mode", function()
     -- some games negotiate nothing and just send IAC SB MXP IAC SE. That starts
-    -- the processor in locked mode, where nothing is a tag until the game sends
-    -- a mode switch of its own
+    -- the processor in open mode, the initial default in the MXP spec, so the
+    -- open tags are read without a mode switch and the rest wait for one
     finally(restoreMxpDefaultMode)
     assert.same({"sysProtocolEnabled:MXP"}, protocolEventsFrom("<T_IAC><T_SB><O_MXP><T_IAC><T_SE>"))
 
     local mark = getLastLineNumber("main")
-    feed("<B>MXPSUBNEGLOCKED</B>\r\n")
-    assert.same({"<B>MXPSUBNEGLOCKED</B>"}, getLines("main", mark, getLastLineNumber("main")))
+    feed("<B>MXPSUBNEGDEFAULT</B><SEND href=\"x\">N</SEND>\r\n")
+    assert.same({"MXPSUBNEGDEFAULT<SEND href=\"x\">N</SEND>"}, getLines("main", mark, getLastLineNumber("main")))
 
     mark = getLastLineNumber("main")
-    feed("\27[1z<B>MXPSUBNEGOPEN</B>\r\n")
-    assert.same({"MXPSUBNEGOPEN"}, getLines("main", mark, getLastLineNumber("main")))
+    feed("\27[1z<SEND href=\"x\">MXPSUBNEGSECURE</SEND>\r\n")
+    assert.same({"MXPSUBNEGSECURE"}, getLines("main", mark, getLastLineNumber("main")))
 
     assert.same({"sysProtocolDisabled:MXP"}, protocolEventsFrom("<T_IAC><T_DONT><O_MXP>"))
   end)

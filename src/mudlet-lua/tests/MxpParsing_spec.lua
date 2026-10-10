@@ -290,6 +290,16 @@ describe("Tests the MXP line modes a game switches between", function()
     assert.is_false(boldAt("MXPPARSERESETPLAIN"))
   end)
 
+  -- open is the default mode the MXP spec starts on, and the subnegotiation
+  -- some games send to turn MXP on must not lock every line against tags. The
+  -- second line is the game #8915 was for, which locks lines itself.
+  it("leaves the default mode open after the MXP subnegotiation", function()
+    finally(function() feed("\27[5z\r\n") end)
+    feed("<T_IAC><T_SB><O_MXP><T_IAC><T_SE>")
+    assert.equals("MXPSUBNEGOPEN <lt>", displayed("<B>MXPSUBNEGOPEN</B> &lt;lt&gt;\r\n"))
+    assert.equals("Type MXPSUBNEGSEND to start", displayed("Type \27[4z<SEND HREF=\"x\">\27[7zMXPSUBNEGSEND\27[4z</SEND>\27[7z to start\r\n"))
+  end)
+
   it("ignores a mode switch that carries no number", function()
     -- the line stays open: B is taken out and SEND is not, which neither a
     -- secure nor a locked reading of the switch would do
