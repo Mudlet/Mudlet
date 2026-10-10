@@ -7,6 +7,15 @@
 
 --- Documentation: https://wiki.mudlet.org/w/Manual:String_Functions#string.cut
 function string:cut(maxLen)
+  -- generate-changelog.lua loads this file in plain Lua with an empty utf8 table
+  local characters = utf8.len and utf8.sub and utf8.len(self)
+  if characters then
+    if characters > maxLen then
+      return utf8.sub(self, 1, maxLen)
+    end
+    return self
+  end
+
   if string.len(self) > maxLen then
     return string.sub(self, 1, maxLen)
   else
