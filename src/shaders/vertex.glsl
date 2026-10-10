@@ -5,10 +5,10 @@ layout (location = 2) in vec4 aColor;
 
 // Per-instance attributes (for instanced rendering)
 layout (location = 3) in vec4 aInstanceColor; // Per-instance color
-layout (location = 4) in mat4 aInstanceTransform;   // Per-instance transformation matrix (scale -> rotate -> translate)
+layout (location = 4) in mat4 aInstanceTransform;   // Per-instance transformation matrix (scale -> rotate -> translate), takes locations 4-7
 
 // Texture coordinates (for textured rendering)
-layout (location = 6) in vec2 aTexCoord;
+layout (location = 8) in vec2 aTexCoord;
 
 uniform mat4 uMVP;
 uniform mat4 uModel;
@@ -35,8 +35,8 @@ void main()
     vec4 finalColor = aColor;
     if (uUseInstancing) {
         finalPos = aInstanceTransform * finalPos;
-        // rotation without translation, since cube normals on perpendicular or parallel to stretches, we don't need to worry about that
-        finalNormal = normalize(aInstanceTransform * finalNormal); 
+        // Normals need the inverse transpose: the instance transform scales unevenly
+        finalNormal = vec4(normalize(transpose(inverse(mat3(aInstanceTransform))) * aNormal), 0.0);
         finalColor = aInstanceColor;
     }
 

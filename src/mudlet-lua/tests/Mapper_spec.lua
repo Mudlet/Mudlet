@@ -4339,11 +4339,45 @@ describe("Tests saveMap and loadMap", function()
     pending("routes can come back a step longer than the shortest one - issue #10180")
   end)
 
-  -- setMapPerspective/shiftMapPerspective only exist in a build made with 3D
-  -- mapper support, which the CI and release builds are not
+  -- setMapPerspective/shiftMapPerspective only exist with USE_3DMAPPER, and only
+  -- move a camera nothing here can read back, so there is nothing to assert yet
   pending("setMapPerspective needs a Mudlet built with the 3D mapper")
 
   pending("shiftMapPerspective needs a Mudlet built with the 3D mapper")
+end)
+
+-- Floating and redocking give the modern 3D view a new GL context, and switching
+-- renderers replaces the widget; neither may crash or leave the 3D view hidden
+describe("Tests the modern 3D mapper surviving context rebuilds", function()
+  it("floats, redocks and switches back to the classic view", function()
+    if type(setMapPerspective) ~= "function" then
+      pending("needs a Mudlet built with the 3D mapper")
+      return
+    end
+    -- a GL context leaks in the leak-checking job's GL driver, as Media_spec explains
+    if (os.getenv("ASAN_OPTIONS") or ""):find("detect_leaks=1", 1, true) then
+      pending("a 3D view's GL context leaks in this job's GL driver")
+      return
+    end
+    local wasModern = getConfig("experiment.3dmap.modernmapper")
+    local was3d = getConfig("show3dMapView")
+    finally(function()
+      setConfig("experiment.3dmap.modernmapper", wasModern == true)
+      setConfig("show3dMapView", was3d == true)
+    end)
+    assert.is_true(openMapWidget())
+    -- with the experiment on, the mapper builds its 3D view as the modern widget
+    assert.is_true(setConfig("experiment.3dmap.modernmapper", true))
+    assert.is_true(getConfig("experiment.3dmap.modernmapper"))
+    assert.is_true(setConfig("show3dMapView", true))
+    assert.is_true(getConfig("show3dMapView"))
+    assert.is_true(openMapWidget("f"))
+    assert.is_true(getConfig("show3dMapView"))
+    assert.is_true(openMapWidget("r"))
+    assert.is_true(getConfig("show3dMapView"))
+    assert.is_true(setConfig("experiment.3dmap.modernmapper", false))
+    assert.is_false(getConfig("experiment.3dmap.modernmapper"))
+  end)
 end)
 
 -- The JSON map format has a writer and a reader of its own, entirely separate
