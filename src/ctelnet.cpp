@@ -76,6 +76,15 @@ constexpr int AUTO_LOGIN_MAX_DELAY_MS = 60000;
 // timeout a line sent under the mask starts - see cTelnet::restartPasswordMaskTimeout():
 constexpr std::chrono::milliseconds AUTO_LOGIN_LATE_PASSWORD_WINDOW = 5min;
 
+static std::chrono::milliseconds autoLoginDelay(const QString& iniKey, const int fallback)
+{
+    // Null until mudlet::setupConfig() runs, which a profile made with no main window never waits for
+    const QSettings* settings = MudletApp::getQSettings();
+    bool parsed = false;
+    const int raw = settings ? settings->value(iniKey, fallback).toInt(&parsed) : fallback;
+    return std::chrono::milliseconds(qBound(0, parsed ? raw : fallback, AUTO_LOGIN_MAX_DELAY_MS));
+}
+
 // How long ECHO+SGA must survive a submitted input line before it counts as
 // character-at-a-time rather than a password mask - see
 // cTelnet::checkCharacterModePattern():
@@ -890,11 +899,7 @@ void cTelnet::slot_send_login()
         sendData(mpHost->getLogin());
     }
     if (mpHost->hasAutoLoginCredentials()) {
-        QSettings& settings = *MudletApp::getQSettings();
-        bool passwordDelayOk = false;
-        const int passwordDelayRaw = settings.value(qsl("autoLoginPasswordDelay"), AUTO_LOGIN_PASSWORD_DELAY_MS).toInt(&passwordDelayOk);
-        const auto passwordDelay = qBound(0, passwordDelayOk ? passwordDelayRaw : AUTO_LOGIN_PASSWORD_DELAY_MS, AUTO_LOGIN_MAX_DELAY_MS);
-        mTimerPass->start(std::chrono::milliseconds(passwordDelay));
+        mTimerPass->start(autoLoginDelay(qsl("autoLoginPasswordDelay"), AUTO_LOGIN_PASSWORD_DELAY_MS));
     }
 }
 
@@ -1057,11 +1062,7 @@ void cTelnet::slot_socketConnected()
 #endif
     mpHost->mLuaInterpreter.call(qsl("onConnect"), QString());
     mConnectionTimer.start();
-    QSettings& settings = *MudletApp::getQSettings();
-    bool usernameDelayOk = false;
-    const int usernameDelayRaw = settings.value(qsl("autoLoginUsernameDelay"), AUTO_LOGIN_USERNAME_DELAY_MS).toInt(&usernameDelayOk);
-    const auto usernameDelay = qBound(0, usernameDelayOk ? usernameDelayRaw : AUTO_LOGIN_USERNAME_DELAY_MS, AUTO_LOGIN_MAX_DELAY_MS);
-    mTimerLogin->start(std::chrono::milliseconds(usernameDelay));
+    mTimerLogin->start(autoLoginDelay(qsl("autoLoginUsernameDelay"), AUTO_LOGIN_USERNAME_DELAY_MS));
 
     emit signal_connected(mpHost);
 
@@ -1093,16 +1094,14 @@ void cTelnet::slot_socketDisconnected()
     }
 
     postData();
-    if (mpHost->hasConsoleView()) {
-        // A line held back for server-wrap undoing is complete now that the
-        // connection is gone - commit it, in trigger context as for any other
-        // line from the game, before the disconnect messages:
-        TConsoleModel& model = mpHost->mainConsoleModel();
-        const bool wasInTriggerEngineMode = model.mTriggerEngineMode;
-        model.mTriggerEngineMode = true;
-        model.buffer.flushPendingServerWrapJoin();
-        model.mTriggerEngineMode = wasInTriggerEngineMode;
-    }
+    // A line held back for server-wrap undoing is complete now that the
+    // connection is gone - commit it, in trigger context as for any other
+    // line from the game, before the disconnect messages:
+    TConsoleModel& model = mpHost->mainConsoleModel();
+    const bool wasInTriggerEngineMode = model.mTriggerEngineMode;
+    model.mTriggerEngineMode = true;
+    model.buffer.flushPendingServerWrapJoin();
+    model.mTriggerEngineMode = wasInTriggerEngineMode;
 
     // Commit now; ~QSaveFile() would cancel the save and delete the temporary file:
     if (mRecordReplay) {
@@ -1256,10 +1255,10 @@ void cTelnet::slot_socketDisconnected()
     postMessage(msg);
 
 #if !defined(QT_NO_SSL)
-    if (sslerr) {
+    if (auto* frontend = TAppFrontend::instance(); sslerr && frontend) {
         // Got a secure connection error that should be shown in the preferences
         // of the profile that raised it, not whichever profile is active
-        TAppFrontend::instance()->showOptionsDialog(qsl("tab_connection"), mpHost);
+        frontend->showOptionsDialog(qsl("tab_connection"), mpHost);
     }
 #endif
 
@@ -5024,16 +5023,16 @@ void cTelnet::atcpComposerSave(QString txt)
 // additional lines (ending with '\n') to last space character after "-"
 // following prefix.
 // Prefixes are made uppercase.
-// Will store messages if the TConsole on which they are to be placed is not yet
-// in existence as happens during startup, then pumps them out in order of
-// arrival once a message arrives when the TConsole DOES exist.
+// Stores messages posted while the Host is still being built, and in the app
+// until its TConsole exists, then pumps them out in order of arrival with the
+// next message posted after that. A profile with no main window never gets a
+// TConsole, so it prints them to the main console's model instead.
 void cTelnet::postMessage(QString msg)
 {
     messageStack.append(msg);
 
-    if (!mpHost || mpHost->isClosingDown() || !mpHost->hasConsoleView()) {
-        // Console doesn't exist (yet), or Host is shutting down; stack up
-        // messages until it does (or they are dumped out by the destructor)...
+    // The main console's model is made at the end of Host's constructor
+    if (!mpHost || mpHost->isClosingDown() || !mpHost->mainConsoleModelOrNull() || (!mpHost->hasConsoleView() && TAppFrontend::instance())) {
         return;
     }
 
@@ -5318,7 +5317,7 @@ void cTelnet::slot_timerPosting()
 
 void cTelnet::postData(const bool endsWithPromptMarker)
 {
-    if (!mpHost || mpHost->isClosingDown() || !mpHost->hasConsoleView()) {
+    if (!mpHost || mpHost->isClosingDown()) {
         return;
     }
 
