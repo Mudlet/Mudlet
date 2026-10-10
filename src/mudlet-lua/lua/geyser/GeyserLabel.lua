@@ -1578,6 +1578,9 @@ function Geyser.Label:changeMenuIndex(name, index)
   end
 
   local nestTable = menuElement.nestParent.nestedLabels
+  if type(index) ~= "number" or not nestTable[index] then
+    error(string.format("changeMenuIndex: index %s out of range (1-%d)", tostring(index), #nestTable))
+  end
   local newindex = nestTable[index].tblIndex
 
   -- table index is not the same as index
