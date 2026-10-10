@@ -211,6 +211,7 @@ set(mudlet_SRCS
     TMxpTagProcessor.cpp
     TMxpVarTagHandler.cpp
     TMxpVersionTagHandler.cpp
+    TNullConsoleFrontend.cpp
     TrailingWhitespaceMarker.cpp
     TriggerHighlighter.cpp
     TriggerMatchPool.cpp
@@ -240,6 +241,7 @@ set(mudlet_SRCS
     VarUnit.cpp
     VoskRecognizer.cpp
     WideComboBox.cpp
+    widgetutils.cpp
     XMLexport.cpp
     XMLimport.cpp)
 
@@ -502,6 +504,7 @@ set(mudlet_HDRS
     TMxpTagProcessor.h
     TMxpVarTagHandler.h
     TMxpVersionTagHandler.h
+    TNullConsoleFrontend.h
     TPrintSink.h
     TrailingWhitespaceMarker.h
     Tree.h
@@ -585,6 +588,15 @@ if(USE_3DMAPPER)
   list(APPEND mudlet_SRCS glwidget_integration.cpp)
 endif(USE_3DMAPPER)
 
+if(USE_MCPSERVER)
+  list(APPEND mudlet_SRCS TMCPBridge.cpp)
+  list(APPEND mudlet_SRCS TMCPServer.cpp)
+  list(APPEND mudlet_SRCS TMCPLuaBridge.cpp)
+  list(APPEND mudlet_HDRS TMCPBridge.h)
+  list(APPEND mudlet_HDRS TMCPServer.h)
+  list(APPEND mudlet_HDRS TMCPLuaBridge.h)
+endif(USE_MCPSERVER)
+
 if(NOT WIN32)
   include(cmake/EnableSanitizers.cmake)
 else()
@@ -603,6 +615,10 @@ find_package(Qt6 6.8.2 REQUIRED
                Widgets
                Concurrent)
 
+if(USE_MCPSERVER)
+  find_package(Qt6 COMPONENTS HttpServer REQUIRED)
+endif()
+
 find_package(Qt6 COMPONENTS TextToSpeech QUIET)
 
 message(STATUS "Qt version: ${Qt6Core_VERSION}")
@@ -619,6 +635,10 @@ set(QT_LIBS Qt6::Concurrent
               Qt6::UiTools
               Qt6::Widgets
               qt6keychain)
+
+if(USE_MCPSERVER)
+  list(APPEND QT_LIBS Qt6::HttpServer)
+endif()
 
 if(Qt6TextToSpeech_FOUND)
   list(APPEND QT_LIBS Qt6::TextToSpeech)
@@ -928,6 +948,9 @@ if(USE_3DMAPPER)
   target_compile_definitions(${LIB_MUDLET_TARGET} PUBLIC INCLUDE_3DMAPPER)
 endif()
 
+if(USE_MCPSERVER)
+  target_compile_definitions(${LIB_MUDLET_TARGET} PUBLIC INCLUDE_MCPSERVER)
+endif()
 
 if(USE_VARIABLE_SPLASH_SCREEN)
   target_compile_definitions(${LIB_MUDLET_TARGET} PUBLIC INCLUDE_VARIABLE_SPLASH_SCREEN)

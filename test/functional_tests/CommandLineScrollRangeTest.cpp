@@ -267,7 +267,7 @@ private slots:
 
         QCOMPARE(pMiniConsole->mpCommandLine->verticalScrollBar()->maximum(), 0);
 
-        auto [deleted, deleteMsg] = pConsole->deleteMiniConsole(name);
+        auto [deleted, deleteMsg] = mpHost->deleteMiniConsole(name);
         QVERIFY2(deleted, qPrintable(deleteMsg));
     }
 };

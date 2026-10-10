@@ -178,7 +178,7 @@ int TLuaInterpreter::addCmdLineSuggestion(lua_State* L)
     const QString text = getVerifiedString(L, __func__, textIndex, "suggestion text");
     const QString commandLineName{name};
     const Host& host = getHostFromLua(L);
-    if (!host.consoleFrontend() || !host.consoleFrontend()->addCommandLineSuggestion(commandLineName, text)) {
+    if (!host.consoleFrontend()->addCommandLineSuggestion(commandLineName, text)) {
         return commandLineNotFound(L, commandLineName);
     }
     return 0;
@@ -231,7 +231,7 @@ int TLuaInterpreter::appendCmdLine(lua_State* L)
     const QString text = getVerifiedString(L, __func__, textIndex, "text to set on command line");
     const QString commandLineName{name};
     const Host& host = getHostFromLua(L);
-    if (!host.consoleFrontend() || !host.consoleFrontend()->appendCommandLineText(commandLineName, text)) {
+    if (!host.consoleFrontend()->appendCommandLineText(commandLineName, text)) {
         return commandLineNotFound(L, commandLineName);
     }
     return 0;
@@ -247,7 +247,7 @@ int TLuaInterpreter::clearCmdLine(lua_State* L)
     }
     const QString commandLineName{name};
     const Host& host = getHostFromLua(L);
-    if (!host.consoleFrontend() || !host.consoleFrontend()->clearCommandLine(commandLineName)) {
+    if (!host.consoleFrontend()->clearCommandLine(commandLineName)) {
         return commandLineNotFound(L, commandLineName);
     }
     return 0;
@@ -263,7 +263,7 @@ int TLuaInterpreter::clearCmdLineSuggestions(lua_State* L)
     }
     const QString commandLineName{name};
     const Host& host = getHostFromLua(L);
-    if (!host.consoleFrontend() || !host.consoleFrontend()->clearCommandLineSuggestions(commandLineName)) {
+    if (!host.consoleFrontend()->clearCommandLineSuggestions(commandLineName)) {
         return commandLineNotFound(L, commandLineName);
     }
     return 0;
@@ -348,7 +348,7 @@ int TLuaInterpreter::removeCmdLineSuggestion(lua_State* L)
     const QString text = getVerifiedString(L, __func__, textIndex, "suggestion text");
     const QString commandLineName{name};
     const Host& host = getHostFromLua(L);
-    if (!host.consoleFrontend() || !host.consoleFrontend()->removeCommandLineSuggestion(commandLineName, text)) {
+    if (!host.consoleFrontend()->removeCommandLineSuggestion(commandLineName, text)) {
         return commandLineNotFound(L, commandLineName);
     }
     return 0;
@@ -1445,7 +1445,7 @@ int TLuaInterpreter::printCmdLine(lua_State* L)
     const QString text = getVerifiedString(L, __func__, textIndex, "text to set on command line");
     const QString commandLineName{name};
     const Host& host = getHostFromLua(L);
-    if (!host.consoleFrontend() || !host.consoleFrontend()->replaceCommandLineText(commandLineName, text)) {
+    if (!host.consoleFrontend()->replaceCommandLineText(commandLineName, text)) {
         return commandLineNotFound(L, commandLineName);
     }
     return 0;
@@ -1835,9 +1835,7 @@ int TLuaInterpreter::setButtonState(lua_State* L)
 
     if (pItem->mButtonState != checked) {
         pItem->mButtonState = checked;
-        if (auto* pFrontend = getHostFromLua(L).consoleFrontend()) {
-            pFrontend->setActionButtonChecked(pItem, checked);
-        }
+        getHostFromLua(L).consoleFrontend()->setActionButtonChecked(pItem, checked);
         lua_pushboolean(L, true);
         return 1;
     }

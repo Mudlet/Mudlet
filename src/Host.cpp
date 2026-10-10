@@ -47,6 +47,7 @@
 #include "TMap.h"
 #include "TMapViewsFrontend.h"
 #include "TMedia.h"
+#include "TNullConsoleFrontend.h"
 #include "TRoomDB.h"
 #include "TScript.h"
 #include "TTimer.h"
@@ -256,7 +257,8 @@ QString stopWatch::getElapsedDayTimeString() const
 }
 
 Host::Host(int port, const QString& hostname, const QString& login, const QString& pass, int id)
-: mTelnet(this, hostname)
+: mpNullConsoleFrontend(std::make_unique<TNullConsoleFrontend>(this))
+, mTelnet(this, hostname)
 , mLuaInterpreter(this, hostname, id)
 , mMxpClient(this)
 , mMxpProcessor(&mMxpClient)
@@ -396,9 +398,7 @@ Host::Host(int port, const QString& hostname, const QString& login, const QStrin
 
     if (MudletApp::firstLaunch()) {
         QTimer::singleShot(0ms, this, [this]() {
-            if (consoleFrontend()) {
-                consoleFrontend()->setCommandLinePlaceholderText(tr("Text to send to the game"));
-            }
+            consoleFrontend()->setCommandLinePlaceholderText(tr("Text to send to the game"));
         });
     }
 
@@ -454,11 +454,12 @@ Host::Host(int port, const QString& hostname, const QString& login, const QStrin
         }
     }
 
-    auto settings = MudletApp::getQSettings();
-    const auto interval = settings->value("autosaveIntervalMinutes", 2).toInt();
+    // Null until mudlet::setupConfig() settles the config root, which a profile made with no main window never waits for
+    const QSettings* settings = MudletApp::getQSettings();
+    const auto interval = settings ? settings->value("autosaveIntervalMinutes", 2).toInt() : 2;
     startMapAutosave(interval);
 
-    mMapperCenterSmallAreas = settings->value("mapCenterSmallAreas", false).toBool();
+    mMapperCenterSmallAreas = settings && settings->value("mapCenterSmallAreas", false).toBool();
 
     // Built here, at the end of the constructor, rather than on first use: the
     // model's buffer snapshots this Host's colours, so every one of them has to
@@ -509,9 +510,9 @@ Host::~Host()
 
     emit signal_destroyProfileDialogs();
 
-    if (consoleFrontend()) {
-        consoleFrontend()->deleteActionToolBars();
-    }
+    consoleFrontend()->deleteActionToolBars();
+    mpNullConsoleFrontend->dropWindows();
+    mpNullConsoleFrontend->releaseRetired();
 
     mStopWatchMap.clear();
 
@@ -528,7 +529,7 @@ Host::~Host()
 
 void Host::forceClose()
 {
-    if (!consoleFrontend()) {
+    if (!hasConsoleView()) {
         // The main console has gone away so we must already be dying
         return;
     }
@@ -545,7 +546,7 @@ void Host::forceClose()
 // Returns true if we are closing down
 bool Host::requestClose()
 {
-    if (!consoleFrontend()) {
+    if (!hasConsoleView()) {
         // The main console has gone away so we must already be dying
         return true;
     }
@@ -596,9 +597,7 @@ void Host::closeChildren()
         consoleFrontend()->closeSubConsole(consoleName);
     }
 
-    if (consoleFrontend()) {
-        consoleFrontend()->deleteActionToolBarsLater();
-    }
+    consoleFrontend()->deleteActionToolBarsLater();
 }
 
 void Host::loadMap()
@@ -606,9 +605,7 @@ void Host::loadMap()
     qDebug() << "Host::loadMap() - restore map case 4.";
     if (mpMap->restore(QString())) {
         mpMap->audit();
-        if (consoleFrontend()) {
-            consoleFrontend()->showLoadedMap();
-        }
+        consoleFrontend()->showLoadedMap();
     }
 }
 
@@ -689,11 +686,9 @@ bool Host::loadMapFile(const QString& location)
     bool result = false;
     if (mpMap->restore(filePathName)) {
         mpMap->audit();
-        if (consoleFrontend()) {
-            consoleFrontend()->showLoadedMap();
-        }
+        consoleFrontend()->showLoadedMap();
         result = true;
-    } else if (consoleFrontend()) {
+    } else {
         consoleFrontend()->showMapAfterFailedLoad();
     }
 
@@ -944,7 +939,7 @@ void Host::reloadModules()
 {
     //synchronize modules across sessions
     for (auto otherHost : *HostManager::self()) {
-        if (otherHost == this || !otherHost->consoleFrontend()) {
+        if (otherHost == this || !otherHost->hasConsoleView()) {
             continue;
         }
         const QMap<QString, int>& modulePri = otherHost->mModulePriorities;
@@ -1467,7 +1462,7 @@ QString Host::getMmpMapLocation() const
 // error and debug consoles inherit font of the main console
 void Host::updateConsolesFont()
 {
-    if (!consoleFrontend()) {
+    if (!hasConsoleView()) {
         qWarning().nospace().noquote() << "Host::updateConsolesFont() WARNING - no TMainConsole to deal with font related operations.";
         return;
     }
@@ -1546,7 +1541,7 @@ std::pair<bool, QString> Host::setDisplayFont(const QFont& font, const DisplayFo
         mMissingDisplayFontFamily.clear();
     }
 
-    if (consoleFrontend()) {
+    if (hasConsoleView()) {
         if (consoleFrontend()->displayFont() != font) {
             consoleFrontend()->setFont(font);
 
@@ -1591,7 +1586,7 @@ void Host::setDisplayFontFromString(const QString& fontData)
 
 void Host::setDisplayFontSize(int size)
 {
-    if (consoleFrontend()) {
+    if (hasConsoleView()) {
         if (consoleFrontend()->displayFont().pointSize() != size) {
             consoleFrontend()->setFontSize(size);
             updateConsolesFont();
@@ -1914,14 +1909,10 @@ void Host::send(QString cmd, bool wantPrint, bool dontExpandAliases)
             // used to print the terminal <LF> that terminates a telnet command
             // this is important to get the cursor position right
             const TConsoleModel::CommandEcho echo = mpMainConsoleModel->printCommand(cmd);
-            if (consoleFrontend()) {
-                consoleFrontend()->showCommandEcho(echo);
-            }
+            consoleFrontend()->showCommandEcho(echo);
         }
 
-        if (consoleFrontend()) {
-            consoleFrontend()->requestRepaintAfterCommand();
-        }
+        consoleFrontend()->requestRepaintAfterCommand();
     }
 
     QStringList commandList;
@@ -2281,15 +2272,18 @@ QList<int> Host::getStopWatchIds() const
 
 TConsoleFrontend* Host::consoleFrontend() const
 {
-    return mpConsole.isNull() ? nullptr : mpConsoleFrontend;
+    return mpConsole.isNull() ? mpNullConsoleFrontend.get() : mpConsoleFrontend;
+}
+
+bool Host::hasConsoleView() const
+{
+    return !mpConsole.isNull();
 }
 
 void Host::setF3SearchEnabled(const bool enabled)
 {
     mF3SearchEnabled = enabled;
-    if (consoleFrontend()) {
-        consoleFrontend()->setF3SearchEnabled(enabled);
-    }
+    consoleFrontend()->setF3SearchEnabled(enabled);
 }
 
 std::shared_ptr<TConsoleModel> Host::sharedMainConsoleModel()
@@ -2309,14 +2303,14 @@ bool Host::selectMainConsoleSection(int from, int length)
 
 void Host::setMainConsoleFgColor(const QColor& color)
 {
-    if (mpMainConsoleModel->setSelectionFgColor(color) && consoleFrontend()) {
+    if (mpMainConsoleModel->setSelectionFgColor(color)) {
         consoleFrontend()->markSelectionDirty();
     }
 }
 
 void Host::setMainConsoleBgColor(const QColor& color)
 {
-    if (mpMainConsoleModel->setSelectionBgColor(color) && consoleFrontend()) {
+    if (mpMainConsoleModel->setSelectionBgColor(color)) {
         consoleFrontend()->markSelectionDirty();
     }
 }
@@ -2509,7 +2503,7 @@ void Host::refreshMainConsoleColors()
 
 void Host::applyMainConsoleColors()
 {
-    if (consoleFrontend()) {
+    if (hasConsoleView()) {
         consoleFrontend()->changeColors();
     } else {
         refreshMainConsoleColors();
@@ -2519,25 +2513,19 @@ void Host::applyMainConsoleColors()
 void Host::printToMainConsole(const QString& msg)
 {
     mpMainConsoleModel->print(msg);
-    if (consoleFrontend()) {
-        consoleFrontend()->showNewLines();
-    }
+    consoleFrontend()->showNewLines();
 }
 
 void Host::printToMainConsole(const QString& msg, QColor fgColor, QColor bgColor)
 {
     mpMainConsoleModel->print(msg, fgColor, bgColor);
-    if (consoleFrontend()) {
-        consoleFrontend()->showNewLines();
-    }
+    consoleFrontend()->showNewLines();
 }
 
 void Host::printSystemMessage(const QString& msg)
 {
     mpMainConsoleModel->printSystemMessage(msg);
-    if (consoleFrontend()) {
-        consoleFrontend()->showNewLines();
-    }
+    consoleFrontend()->showNewLines();
 }
 
 void Host::echoMainConsole(QString text)
@@ -2553,7 +2541,7 @@ void Host::printOnDisplay(std::string& data, const bool isFromServer)
 {
     // The view only times the pass, flashes the taskbar and marks the profile's
     // tab; the text is processed whether or not there is one.
-    const bool alertWanted = consoleFrontend() && consoleFrontend()->startIncomingText() && isFromServer;
+    const bool alertWanted = consoleFrontend()->startIncomingText() && isFromServer;
     // cTelnet::slot_timerPosting() posts a bare "\r" when nothing followed the
     // game's last newline. Read before translateToPlainText() parses data away.
     const bool carriesText = !(data.size() == 1 && data.front() == '\r');
@@ -2575,7 +2563,7 @@ void Host::printOnDisplay(std::string& data, const bool isFromServer)
     buffer.translateToPlainText(data, isFromServer);
     model.mTriggerEngineMode = wasInTriggerEngineMode;
 
-    if (alertWanted && consoleFrontend()) {
+    if (alertWanted) {
         const int lastLineNumber = buffer.getLastLineNumber();
         if (lastLineNumber != beforeTranslateLastLineNumber || buffer.line(lastLineNumber - 1) != beforeTranslateLastLine) {
             consoleFrontend()->alertNewData();
@@ -2589,16 +2577,12 @@ void Host::printOnDisplay(std::string& data, const bool isFromServer)
         mLuaInterpreter.signalMXPEvent(event.name, event.attrs, event.actions, event.caption);
     }
 
-    if (consoleFrontend()) {
-        consoleFrontend()->finishIncomingText(carriesText);
-    }
+    consoleFrontend()->finishIncomingText(carriesText);
 }
 
 void Host::finalizeMainConsole()
 {
-    if (consoleFrontend()) {
-        consoleFrontend()->finalize();
-    }
+    consoleFrontend()->finalize();
 }
 
 bool Host::mainConsoleShowsTimeStamps() const
@@ -2614,7 +2598,7 @@ QString Host::loggingAnnouncementText(const bool isLogging, const QString& logFi
 
 void Host::raiseLoggingAnnouncement(const bool isLogging, const QString& logFileName)
 {
-    if (!consoleFrontend()) {
+    if (!hasConsoleView()) {
         // Written where TMainConsole::slot_loggingAnnouncement() would print it,
         // so that a view built later shows it
         const QString text = QCoreApplication::translate("TConsole", "System Message: %1").arg(qsl("%1\n").arg(loggingAnnouncementText(isLogging, logFileName)));
@@ -4860,7 +4844,7 @@ void Host::setEnableSpellCheck(const bool enable)
 // Words already in the input line keep the marks they were given until checked again
 void Host::recheckCommandLineSpelling()
 {
-    if (consoleFrontend() && !mIsProfileLoadingSequence) {
+    if (!mIsProfileLoadingSequence) {
         consoleFrontend()->updateCommandLineSpellCheck(mEnableSpellCheck);
     }
 }
@@ -4887,10 +4871,6 @@ void Host::setUserDictionaryOptions(const bool _useDictionary, const bool useSha
 
     if (dictionaryChanged) {
         mSpellChecker.applyUserDictionaryOptions();
-    }
-
-    if (!consoleFrontend()) {
-        return;
     }
 
     // This also needs to handle the spell checking against the system/mudlet
@@ -4933,10 +4913,7 @@ void Host::setName(const QString& name)
         }
     }
 
-    if (consoleFrontend()) {
-        // If skipped it will be taken care of in the TMainConsole constructor:
-        consoleFrontend()->setProfileName(name);
-    }
+    consoleFrontend()->setProfileName(name);
 }
 
 void Host::removeAllNonPersistentStopWatches()
@@ -5082,15 +5059,13 @@ void Host::restoreOwnMapper()
         return;
     }
 
-    if (consoleFrontend()) {
-        consoleFrontend()->restoreOwnMapper();
-    }
+    consoleFrontend()->restoreOwnMapper();
 }
 
 std::pair<bool, QString> Host::setMapperTitle(const QString& title)
 {
     const QString newTitle = title.isEmpty() ? tr("Map - %1").arg(mHostName) : title;
-    if (!consoleFrontend() || !consoleFrontend()->setMapWidgetTitle(newTitle)) {
+    if (!consoleFrontend()->setMapWidgetTitle(newTitle)) {
         return {false, qsl("no floating/dockable type map window found")};
     }
 
@@ -5099,10 +5074,6 @@ std::pair<bool, QString> Host::setMapperTitle(const QString& title)
 
 std::optional<QString> Host::getMapperTitle() const
 {
-    if (!consoleFrontend()) {
-        return {};
-    }
-
     return consoleFrontend()->mapWidgetTitle();
 }
 
@@ -5175,7 +5146,7 @@ void Host::setDebugShowAllProblemCodepoints(const bool state)
 void Host::raiseSettingChangedEvent(const QString& settingName, const bool value)
 {
     // The profile's own file is read before the console exists, so a value arriving from it is not a change to report:
-    if (!consoleFrontend()) {
+    if (!hasConsoleView()) {
         return;
     }
 
@@ -5224,9 +5195,7 @@ void Host::setAnnounceIncomingText(const bool state)
 
 void Host::setMapperPanelVisible(const bool state)
 {
-    if (consoleFrontend()) {
-        consoleFrontend()->setMapperPanelVisible(state);
-    }
+    consoleFrontend()->setMapperPanelVisible(state);
     changeSetting(mShowPanel, state, qsl("mapperPanelVisible"));
 }
 
@@ -5234,13 +5203,9 @@ void Host::setCompactInputLine(const bool state)
 {
     if (mCompactInputLine != state) {
         mCompactInputLine = state;
-        // When the profile is being loaded and the previously saved data is
-        // read from the XML file the main TConsole has not been instatiated
-        // yet - so must check for it existing first - and ensure the read
-        // setting is applied in the constructor for it:
-        if (consoleFrontend()) {
-            consoleFrontend()->setCompactInputLine(state);
-        }
+        // While the profile's XML is read there is no console view yet, so the
+        // console's constructor applies the setting read:
+        consoleFrontend()->setCompactInputLine(state);
         raiseSettingChangedEvent(qsl("compactInputLine"), state);
     }
 }
@@ -5307,10 +5272,6 @@ bool Host::replaceWindowText(const QString& name, const QString& text)
 
 std::pair<bool, QString> Host::openWindow(const QString& name, bool loadLayout, bool autoDock, const QString& area)
 {
-    if (!consoleFrontend()) {
-        return {false, QString()};
-    }
-
     if (name.isEmpty()) {
         return {false, QLatin1String("an userwindow cannot have an empty string as its name")};
     }
@@ -5330,11 +5291,17 @@ std::pair<bool, QString> Host::openWindow(const QString& name, bool loadLayout, 
                "Host::openWindow(...)",
                "An existing console with a dock was expected to be a User Window but it isn't");
 
-    return consoleFrontend()->openUserWindow(name, loadLayout, autoDock, area);
+    // An unknown area still opens the window, just where it already was
+    consoleFrontend()->openUserWindow(name, loadLayout, autoDock, area);
+    static const QStringList knownAreas{qsl("f"), qsl("floating"), qsl("r"), qsl("right"), qsl("l"), qsl("left"), qsl("t"), qsl("top"), qsl("b"), qsl("bottom")};
+    if (!area.isEmpty() && !knownAreas.contains(area)) {
+        return {false, qsl(R"(docking option "%1" not available. available docking options are "t" top, "b" bottom, "r" right, "l" left and "f" floating)").arg(area)};
+    }
+    return {true, QString()};
 }
 
-// Must refuse up front: TMainConsole::createMiniConsole(), createScrollBox() and createLabel() put an
-// element with an unresolvable parent into the main console, over the game text, and report success.
+// Must refuse up front: the views put an element with an unresolvable parent into the main console,
+// over the game text.
 // "main" is matched case-insensitively, as Host::setWindow() does.
 bool Host::parentWindowMissing(const QString& windowname) const
 {
@@ -5346,19 +5313,15 @@ bool Host::parentWindowMissing(const QString& windowname) const
 
 std::pair<bool, QString> Host::createMiniConsole(const QString& windowname, const QString& name, int x, int y, int width, int height)
 {
-    if (!consoleFrontend()) {
-        return {false, QString()};
-    }
-
     if (parentWindowMissing(windowname)) {
         return {false, qsl("window '%1' not found").arg(windowname)};
     }
 
     if (!mWindowRegistry.hasSubConsole(name)) {
-        if (consoleFrontend()->addMiniConsole(windowname, name, x, y, width, height)) {
-            return {true, QString()};
-        }
-    } else if (!mWindowRegistry.hasDockWidget(name)) {
+        consoleFrontend()->addMiniConsole(windowname, name, x, y, width, height);
+        return {true, QString()};
+    }
+    if (!mWindowRegistry.hasDockWidget(name)) {
         // CHECK: The absence of an explicit return statement in this block means that
         // reusing an existing mini console causes the lua function to seem to
         // fail - is this as per Wiki?
@@ -5372,8 +5335,8 @@ std::pair<bool, QString> Host::createMiniConsole(const QString& windowname, cons
 
 std::pair<bool, QString> Host::createScrollBox(const QString& windowname, const QString& name, int x, int y, int width, int height) const
 {
-    if (!consoleFrontend()) {
-        return {false, QString()};
+    if (!hasConsoleView()) {
+        return TNullConsoleFrontend::noView();
     }
 
     if (parentWindowMissing(windowname)) {
@@ -5394,70 +5357,92 @@ std::pair<bool, QString> Host::createScrollBox(const QString& windowname, const 
 
 std::pair<bool, QString> Host::createLabel(const QString& windowname, const QString& name, int x, int y, int width, int height, bool fillBg, bool clickthrough)
 {
-    if (!consoleFrontend()) {
-        return {false, QString()};
-    }
-
     if (parentWindowMissing(windowname)) {
         return {false, qsl("window '%1' not found").arg(windowname)};
     }
 
-    const bool labelExists = mWindowRegistry.hasLabel(name);
-    const bool subConsoleExists = mWindowRegistry.hasSubConsole(name);
-    if (!labelExists && !subConsoleExists) {
-        if (consoleFrontend()->createLabel(windowname, name, x, y, width, height, fillBg, clickthrough)) {
-            return {true, QString()};
-        }
-    } else if (labelExists) {
+    if (mWindowRegistry.hasLabel(name)) {
         return {false, qsl("label '%1' already exists").arg(name)};
-    } else if (subConsoleExists) {
+    }
+    if (mWindowRegistry.hasSubConsole(name)) {
         return {false, qsl("a miniconsole/userwindow with the name '%1' already exists").arg(name)};
     }
-    return {false, qsl("could not create label '%1'").arg(name)};
+    consoleFrontend()->createLabel(windowname, name, x, y, width, height, fillBg, clickthrough);
+    return {true, QString()};
+}
+
+std::pair<bool, QString> Host::deleteLabel(const QString& name)
+{
+    if (name.isEmpty()) {
+        return {false, QLatin1String("a label cannot have an empty string as its name")};
+    }
+    if (!mWindowRegistry.hasLabel(name)) {
+        // Message is of the form needed for a Lua API function call run-time error
+        return {false, qsl("label name '%1' not found").arg(name)};
+    }
+
+    consoleFrontend()->deleteLabel(name);
+    if (mWindowRegistry.hasLabel(name)) {
+        // One the current view has no record of, such as a detached view's
+        return {false, qsl("label name '%1' could not be deleted").arg(name)};
+    }
+    // The view may only have scheduled the label's deletion by now
+    TEvent mudletEvent{};
+    mudletEvent.mArgumentList.append(QLatin1String("sysLabelDeleted"));
+    mudletEvent.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
+    mudletEvent.mArgumentList.append(name);
+    mudletEvent.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
+    raiseEvent(mudletEvent);
+    return {true, QString()};
+}
+
+std::pair<bool, QString> Host::deleteMiniConsole(const QString& name)
+{
+    if (name.isEmpty()) {
+        return {false, QLatin1String("a miniconsole cannot have an empty string as its name")};
+    }
+    if (!mWindowRegistry.hasSubConsole(name)) {
+        // Message is of the form needed for a Lua API function call run-time error
+        return {false, qsl("miniconsole name '%1' not found").arg(name)};
+    }
+
+    consoleFrontend()->deleteMiniConsole(name);
+    if (mWindowRegistry.hasSubConsole(name)) {
+        // One the current view has no record of, such as a detached view's
+        return {false, qsl("miniconsole name '%1' could not be deleted").arg(name)};
+    }
+    // The view may only have scheduled the console's deletion by now
+    TEvent mudletEvent{};
+    mudletEvent.mArgumentList.append(QLatin1String("sysMiniConsoleDeleted"));
+    mudletEvent.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
+    mudletEvent.mArgumentList.append(name);
+    mudletEvent.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
+    raiseEvent(mudletEvent);
+    return {true, QString()};
 }
 
 bool Host::setClickthrough(const QString& name, bool clickthrough)
 {
-    if (!consoleFrontend()) {
-        return false;
-    }
-
     return consoleFrontend()->setLabelClickThrough(name, clickthrough);
 }
 
 bool Host::setLabelStyleSheet(const QString& name, const QString& styleSheet)
 {
-    if (!consoleFrontend()) {
-        return false;
-    }
-
     return consoleFrontend()->setLabelStyleSheet(name, styleSheet).first;
 }
 
 bool Host::setLinkStyle(const QString& name, const QString& linkColor, const QString& linkVisitedColor, bool underline)
 {
-    if (!consoleFrontend()) {
-        return false;
-    }
-
     return consoleFrontend()->setLabelLinkStyle(name, linkColor, linkVisitedColor, underline);
 }
 
 bool Host::resetLinkStyle(const QString& name)
 {
-    if (!consoleFrontend()) {
-        return false;
-    }
-
     return consoleFrontend()->resetLabelLinkStyle(name);
 }
 
 bool Host::clearVisitedLinks(const QString& name)
 {
-    if (!consoleFrontend()) {
-        return false;
-    }
-
     return consoleFrontend()->clearLabelVisitedLinks(name);
 }
 
@@ -5487,14 +5472,11 @@ void Host::hideMudletsVariables()
 
 bool Host::createBuffer(const QString& name)
 {
-    if (!consoleFrontend()) {
+    if (mWindowRegistry.hasSubConsole(name)) {
         return false;
     }
-
-    if (!mWindowRegistry.hasSubConsole(name)) {
-        return consoleFrontend()->createBuffer(name);
-    }
-    return false;
+    consoleFrontend()->createBuffer(name);
+    return true;
 }
 
 // Doesn't work on the errors or central debug consoles:
@@ -5511,10 +5493,6 @@ bool Host::clearWindow(const QString& name)
 
 bool Host::showWindow(const QString& name)
 {
-    if (!consoleFrontend()) {
-        return false;
-    }
-
     // check labels first as they are shown/hidden more often
     if (mWindowRegistry.hasLabel(name)) {
         return consoleFrontend()->showLabel(name);
@@ -5533,10 +5511,6 @@ bool Host::showWindow(const QString& name)
 
 bool Host::hideWindow(const QString& name)
 {
-    if (!consoleFrontend()) {
-        return false;
-    }
-
     // check labels first as they are shown/hidden more often
     if (mWindowRegistry.hasLabel(name)) {
         return consoleFrontend()->hideLabel(name);
@@ -5555,10 +5529,6 @@ bool Host::hideWindow(const QString& name)
 
 bool Host::resizeWindow(const QString& name, int x1, int y1)
 {
-    if (!consoleFrontend()) {
-        return false;
-    }
-
     if (mWindowRegistry.hasLabel(name)) {
         return consoleFrontend()->resizeLabel(name, x1, y1);
     }
@@ -5576,10 +5546,6 @@ bool Host::resizeWindow(const QString& name, int x1, int y1)
 
 bool Host::moveWindow(const QString& name, int x1, int y1)
 {
-    if (!consoleFrontend()) {
-        return false;
-    }
-
     if (mWindowRegistry.hasLabel(name)) {
         return consoleFrontend()->moveLabel(name, x1, y1);
     }
@@ -5597,8 +5563,8 @@ bool Host::moveWindow(const QString& name, int x1, int y1)
 
 std::pair<bool, QString> Host::setWindow(const QString& windowname, const QString& name, int x1, int y1, bool show)
 {
-    if (!consoleFrontend()) {
-        return {false, QString()};
+    if (!hasConsoleView()) {
+        return TNullConsoleFrontend::noView();
     }
     //checks - for reasons why the indicated thing might not be moved to the indicated destination
     if (mWindowRegistry.hasDockWidget(name)) {
@@ -5631,7 +5597,7 @@ std::pair<bool, QString> Host::setWindow(const QString& windowname, const QStrin
 
 std::pair<bool, QString> Host::openMapWidget(const QString& area, int x, int y, int width, int height)
 {
-    if (!consoleFrontend()) {
+    if (!hasConsoleView()) {
         return {false, qsl("no console for this profile - it may be closing")};
     }
 
@@ -5646,16 +5612,12 @@ std::pair<bool, QString> Host::openMapWidget(const QString& area, int x, int y, 
 // through openMapWidget().
 std::optional<QRect> Host::mapWidgetGeometry() const
 {
-    if (!consoleFrontend()) {
-        return {};
-    }
-
     return consoleFrontend()->mapWidgetGeometry();
 }
 
 void Host::refreshColours()
 {
-    if (!consoleFrontend()) {
+    if (!hasConsoleView()) {
         return;
     }
 
@@ -5668,7 +5630,7 @@ void Host::refreshColours()
 
 std::pair<bool, QString> Host::closeMapWidget()
 {
-    if (!consoleFrontend()) {
+    if (!hasConsoleView()) {
         return {false, qsl("no console for this profile - it may be closing")};
     }
 
@@ -5685,10 +5647,6 @@ std::pair<bool, QString> Host::closeMapWidget()
 
 bool Host::closeWindow(const QString& name)
 {
-    if (!consoleFrontend()) {
-        return false;
-    }
-
     // Unlike hideWindow() this one is deaf to labels, scroll boxes, command
     // lines and text boxes - only a sub-console can be closed by name
     if (mWindowRegistry.hasSubConsole(name)) {
@@ -5707,7 +5665,7 @@ bool Host::echoWindow(const QString& name, const QString& text)
         pModel->mirrorToStdOut(text);
         return true;
     }
-    return consoleFrontend() && consoleFrontend()->setLabelText(name, text);
+    return consoleFrontend()->setLabelText(name, text);
 }
 
 bool Host::pasteWindow(const QString& name)
@@ -5723,23 +5681,17 @@ bool Host::pasteWindow(const QString& name)
 
 bool Host::setCmdLineAction(const QString& name, const int func)
 {
-    if (!consoleFrontend()) {
-        return false;
-    }
     return consoleFrontend()->setCommandLineAction(name, func);
 }
 
 bool Host::resetCmdLineAction(const QString& name)
 {
-    if (!consoleFrontend()) {
-        return false;
-    }
     return consoleFrontend()->resetCommandLineAction(name);
 }
 
 bool Host::setLabelClickCallback(const QString& name, const int func)
 {
-    if (!consoleFrontend()) {
+    if (!hasConsoleView()) {
         return false;
     }
 
@@ -5753,7 +5705,7 @@ bool Host::setLabelClickCallback(const QString& name, const int func)
 
 bool Host::setLabelDoubleClickCallback(const QString& name, const int func)
 {
-    if (!consoleFrontend()) {
+    if (!hasConsoleView()) {
         return false;
     }
 
@@ -5767,7 +5719,7 @@ bool Host::setLabelDoubleClickCallback(const QString& name, const int func)
 
 bool Host::setLabelReleaseCallback(const QString& name, const int func)
 {
-    if (!consoleFrontend()) {
+    if (!hasConsoleView()) {
         return false;
     }
 
@@ -5781,7 +5733,7 @@ bool Host::setLabelReleaseCallback(const QString& name, const int func)
 
 bool Host::setLabelMoveCallback(const QString& name, const int func)
 {
-    if (!consoleFrontend()) {
+    if (!hasConsoleView()) {
         return false;
     }
 
@@ -5795,7 +5747,7 @@ bool Host::setLabelMoveCallback(const QString& name, const int func)
 
 bool Host::setLabelWheelCallback(const QString& name, const int func)
 {
-    if (!consoleFrontend()) {
+    if (!hasConsoleView()) {
         return false;
     }
 
@@ -5809,7 +5761,7 @@ bool Host::setLabelWheelCallback(const QString& name, const int func)
 
 bool Host::setLabelOnEnter(const QString& name, const int func)
 {
-    if (!consoleFrontend()) {
+    if (!hasConsoleView()) {
         return false;
     }
 
@@ -5823,7 +5775,7 @@ bool Host::setLabelOnEnter(const QString& name, const int func)
 
 bool Host::setLabelOnLeave(const QString& name, const int func)
 {
-    if (!consoleFrontend()) {
+    if (!hasConsoleView()) {
         return false;
     }
 
@@ -5837,8 +5789,8 @@ bool Host::setLabelOnLeave(const QString& name, const int func)
 
 std::pair<bool, QString> Host::setMovie(const QString& name, const QString& moviePath)
 {
-    if (!consoleFrontend()) {
-        return {false, QString()};
+    if (!hasConsoleView()) {
+        return TNullConsoleFrontend::noView();
     }
 
     if (!mWindowRegistry.hasLabel(name)) {
@@ -5850,16 +5802,21 @@ std::pair<bool, QString> Host::setMovie(const QString& name, const QString& movi
 
 QSize Host::calcFontSize(const QString& windowName)
 {
+    return consoleFrontend()->consoleFontSize(windowName).value_or(QSize(-1, -1));
+}
+
+int Host::calcColumnWidth(const QString& windowName)
+{
     if (!consoleFrontend()) {
-        return QSize(-1, -1);
+        return -1;
     }
 
-    return consoleFrontend()->consoleFontSize(windowName).value_or(QSize(-1, -1));
+    return consoleFrontend()->consoleColumnWidth(windowName).value_or(-1);
 }
 
 bool Host::setProfileStyleSheet(const QString& styleSheet)
 {
-    if (!consoleFrontend()) {
+    if (!hasConsoleView()) {
         return false;
     }
 
@@ -5872,10 +5829,6 @@ bool Host::setProfileStyleSheet(const QString& styleSheet)
 
 bool Host::setBackgroundColor(const QString& name, int r, int g, int b, int alpha)
 {
-    if (!consoleFrontend()) {
-        return false;
-    }
-
     if (consoleFrontend()->setSubConsoleBackgroundColor(name, QColor(r, g, b, alpha))) {
         return true;
     }
@@ -5885,7 +5838,7 @@ bool Host::setBackgroundColor(const QString& name, int r, int g, int b, int alph
 
 std::optional<QColor> Host::getBackgroundColor(const QString& name) const
 {
-    if (!consoleFrontend()) {
+    if (!hasConsoleView()) {
         return {};
     }
 
@@ -5898,7 +5851,7 @@ std::optional<QColor> Host::getBackgroundColor(const QString& name) const
 
 bool Host::setBackgroundImage(const QString& name, QString& imgPath, int mode, bool fullWindow)
 {
-    if (!consoleFrontend()) {
+    if (!hasConsoleView()) {
         return false;
     }
 
@@ -5930,7 +5883,7 @@ bool Host::setBackgroundImage(const QString& name, QString& imgPath, int mode, b
 
 bool Host::resetBackgroundImage(const QString& name, bool fullWindow)
 {
-    if (!consoleFrontend()) {
+    if (!hasConsoleView()) {
         return false;
     }
 
@@ -5952,10 +5905,6 @@ bool Host::resetBackgroundImage(const QString& name, bool fullWindow)
 
 bool Host::setSvgTint(const QString& name, const QColor& color)
 {
-    if (!consoleFrontend()) {
-        return false;
-    }
-
     if (!mWindowRegistry.hasLabel(name)) {
         return false;
     }
@@ -5965,10 +5914,6 @@ bool Host::setSvgTint(const QString& name, const QColor& color)
 
 bool Host::resetSvgTint(const QString& name)
 {
-    if (!consoleFrontend()) {
-        return false;
-    }
-
     if (!mWindowRegistry.hasLabel(name)) {
         return false;
     }
@@ -5978,10 +5923,6 @@ bool Host::resetSvgTint(const QString& name)
 
 bool Host::setSvgRotation(const QString& name, double angle)
 {
-    if (!consoleFrontend()) {
-        return false;
-    }
-
     if (!mWindowRegistry.hasLabel(name)) {
         return false;
     }
@@ -5991,10 +5932,6 @@ bool Host::setSvgRotation(const QString& name, double angle)
 
 bool Host::resetSvgRotation(const QString& name)
 {
-    if (!consoleFrontend()) {
-        return false;
-    }
-
     if (!mWindowRegistry.hasLabel(name)) {
         return false;
     }
@@ -6004,10 +5941,6 @@ bool Host::resetSvgRotation(const QString& name)
 
 bool Host::setSvgShear(const QString& name, double shearX, double shearY)
 {
-    if (!consoleFrontend()) {
-        return false;
-    }
-
     if (!mWindowRegistry.hasLabel(name)) {
         return false;
     }
@@ -6017,10 +5950,6 @@ bool Host::setSvgShear(const QString& name, double shearX, double shearY)
 
 bool Host::resetSvgShear(const QString& name)
 {
-    if (!consoleFrontend()) {
-        return false;
-    }
-
     if (!mWindowRegistry.hasLabel(name)) {
         return false;
     }
@@ -6030,10 +5959,6 @@ bool Host::resetSvgShear(const QString& name)
 
 bool Host::resetSvgTransform(const QString& name)
 {
-    if (!consoleFrontend()) {
-        return false;
-    }
-
     if (!mWindowRegistry.hasLabel(name)) {
         return false;
     }
@@ -6043,19 +5968,11 @@ bool Host::resetSvgTransform(const QString& name)
 
 bool Host::setCommandBackgroundColor(const QString& name, int r, int g, int b, int alpha)
 {
-    if (!consoleFrontend()) {
-        return false;
-    }
-
     return consoleFrontend()->setSubConsoleCommandBackgroundColor(name, QColor(r, g, b, alpha));
 }
 
 bool Host::setCommandForegroundColor(const QString& name, int r, int g, int b, int alpha)
 {
-    if (!consoleFrontend()) {
-        return false;
-    }
-
     return consoleFrontend()->setSubConsoleCommandForegroundColor(name, QColor(r, g, b, alpha));
 }
 
@@ -6063,7 +5980,7 @@ void Host::setProfileBackgroundColor(const QColor& color)
 {
     mBgColor = color;
     // Host outlives its main console; with no view, the buffer's colours must still follow:
-    if (consoleFrontend()) {
+    if (hasConsoleView()) {
         consoleFrontend()->setConsoleBgColor(color.red(), color.green(), color.blue(), color.alpha());
     } else {
         refreshMainConsoleColors();
@@ -6122,7 +6039,7 @@ void Host::showHideOrCreateMapper(const bool loadDefaultMap)
 // menu label saying what the next activation will do cannot disagree with it.
 bool Host::mapperShown() const
 {
-    if (!mpMap || !consoleFrontend()) {
+    if (!mpMap) {
         return false;
     }
     return consoleFrontend()->mapperShown();
@@ -6130,16 +6047,14 @@ bool Host::mapperShown() const
 
 void Host::toggleMapperVisibility()
 {
-    if (consoleFrontend()) {
-        consoleFrontend()->setMapperShown(!mapperShown());
-    }
+    consoleFrontend()->setMapperShown(!mapperShown());
 }
 
 void Host::createMapper(const bool loadDefaultMap)
 {
     // The console owns the map dock; bail if the profile has no console yet or is
     // already being torn down.
-    if (!consoleFrontend()) {
+    if (!hasConsoleView()) {
         return;
     }
     auto pMap = mpMap.data();
@@ -6173,7 +6088,7 @@ void Host::createMapper(const bool loadDefaultMap)
 
 void Host::setDockLayoutUpdated(const QString& name)
 {
-    if (!consoleFrontend()) {
+    if (!hasConsoleView()) {
         return;
     }
 
@@ -6186,7 +6101,7 @@ void Host::setDockLayoutUpdated(const QString& name)
 bool Host::commitLayoutUpdates(bool flush)
 {
     bool updated = false;
-    if (consoleFrontend() && !flush) {
+    if (!flush) {
         // commit changes (or rather clear the layout changed flags) for dockwidget
         // consoles (user windows)
         for (const auto& dockedConsoleName : std::as_const(mDockLayoutChanges)) {
@@ -6197,12 +6112,10 @@ bool Host::commitLayoutUpdates(bool flush)
     }
     mDockLayoutChanges.clear();
 
-    if (consoleFrontend()) {
-        if (flush) {
-            consoleFrontend()->discardToolBarLayoutChanges();
-        } else if (consoleFrontend()->commitToolBarLayoutChanges()) {
-            updated = true;
-        }
+    if (flush) {
+        consoleFrontend()->discardToolBarLayoutChanges();
+    } else if (consoleFrontend()->commitToolBarLayoutChanges()) {
+        updated = true;
     }
     return updated;
 }
@@ -6272,7 +6185,7 @@ std::optional<QString> Host::windowType(const QString& name) const
 
 std::optional<QString> Host::labelStyleSheet(const QString& name) const
 {
-    if (!consoleFrontend()) {
+    if (!hasConsoleView()) {
         return {};
     }
     if (const TLabelModel* pLabel = mWindowRegistry.labelModel(name)) {
@@ -6283,7 +6196,7 @@ std::optional<QString> Host::labelStyleSheet(const QString& name) const
 
 std::optional<QString> Host::labelToolTip(const QString& name) const
 {
-    if (!consoleFrontend()) {
+    if (!hasConsoleView()) {
         return {};
     }
     if (const TLabelModel* pLabel = mWindowRegistry.labelModel(name)) {
@@ -6294,7 +6207,7 @@ std::optional<QString> Host::labelToolTip(const QString& name) const
 
 std::optional<QFont> Host::labelFont(const QString& name) const
 {
-    if (!consoleFrontend()) {
+    if (!hasConsoleView()) {
         return {};
     }
     if (const TLabelModel* pLabel = mWindowRegistry.labelModel(name)) {
@@ -6305,9 +6218,6 @@ std::optional<QFont> Host::labelFont(const QString& name) const
 
 std::optional<QString> Host::labelText(const QString& name) const
 {
-    if (!consoleFrontend()) {
-        return {};
-    }
     if (const TLabelModel* pLabel = mWindowRegistry.labelModel(name)) {
         return pLabel->mText;
     }
@@ -6336,7 +6246,7 @@ std::pair<bool, QString> Host::userWindowTitle(const QString& name) const
 
 std::optional<QString> Host::userWindowStyleSheet(const QString& name) const
 {
-    if (!consoleFrontend()) {
+    if (!hasConsoleView()) {
         return {};
     }
     return mWindowRegistry.userWindowStyleSheet(name);
@@ -6346,7 +6256,7 @@ std::optional<QString> Host::userWindowStyleSheet(const QString& name) const
 // (see TMainConsole::reportGeometry()), so this needs no widget.
 std::optional<QRect> Host::windowGeometry(const QString& name) const
 {
-    if (!consoleFrontend()) {
+    if (!hasConsoleView()) {
         return {};
     }
 
@@ -6372,7 +6282,7 @@ std::optional<QRect> Host::windowGeometry(const QString& name) const
 // As the view last reported it (see TMainConsole::reportMainWindowSize()).
 std::optional<QSize> Host::mainWindowSize() const
 {
-    if (!consoleFrontend()) {
+    if (!hasConsoleView()) {
         return {};
     }
     return {mWindowRegistry.mainWindowSize()};
@@ -6380,7 +6290,7 @@ std::optional<QSize> Host::mainWindowSize() const
 
 std::optional<QSize> Host::windowGridSize(const QString& name) const
 {
-    if (!consoleFrontend()) {
+    if (!hasConsoleView()) {
         return {};
     }
     const TConsoleModel* pModel = consoleModelNamed(name);
@@ -6392,7 +6302,7 @@ std::optional<QSize> Host::windowGridSize(const QString& name) const
 
 std::optional<int> Host::windowScroll(const QString& name) const
 {
-    if (!consoleFrontend()) {
+    if (!hasConsoleView()) {
         return {};
     }
     TConsoleModel* pModel = consoleModelNamed(name);
@@ -6404,7 +6314,7 @@ std::optional<int> Host::windowScroll(const QString& name) const
 
 std::optional<bool> Host::windowScrolling(const QString& name) const
 {
-    if (!consoleFrontend()) {
+    if (!hasConsoleView()) {
         return {};
     }
     const TConsoleModel* pModel = consoleModelNamed(name);
@@ -6416,7 +6326,7 @@ std::optional<bool> Host::windowScrolling(const QString& name) const
 
 std::optional<bool> Host::windowScrollBarVisible(const QString& name) const
 {
-    if (!consoleFrontend()) {
+    if (!hasConsoleView()) {
         return {};
     }
     const TConsoleModel* pModel = consoleModelNamed(name);
@@ -6428,7 +6338,7 @@ std::optional<bool> Host::windowScrollBarVisible(const QString& name) const
 
 std::optional<QFont> Host::windowFont(const QString& name) const
 {
-    if (!consoleFrontend()) {
+    if (!hasConsoleView()) {
         return {};
     }
     const TConsoleModel* pModel = consoleModelNamed(name);
@@ -6443,7 +6353,7 @@ std::optional<QFont> Host::windowFont(const QString& name) const
 
 std::optional<int> Host::windowFontSize(const QString& name) const
 {
-    if (!consoleFrontend()) {
+    if (!hasConsoleView()) {
         return {};
     }
     const TConsoleModel* pModel = consoleModelNamed(name);
@@ -6455,7 +6365,7 @@ std::optional<int> Host::windowFontSize(const QString& name) const
 
 std::optional<QString> Host::commandLineText(const QString& name) const
 {
-    if (!consoleFrontend()) {
+    if (!hasConsoleView()) {
         return {};
     }
     return mWindowRegistry.commandLineText(name);
@@ -6463,7 +6373,7 @@ std::optional<QString> Host::commandLineText(const QString& name) const
 
 std::optional<QString> Host::commandLineStyleSheet(const QString& name) const
 {
-    if (!consoleFrontend()) {
+    if (!hasConsoleView()) {
         return {};
     }
     return mWindowRegistry.commandLineStyleSheet(name);
@@ -6471,7 +6381,7 @@ std::optional<QString> Host::commandLineStyleSheet(const QString& name) const
 
 std::optional<bool> Host::commandLineSavesHistory(const QString& name) const
 {
-    if (!consoleFrontend()) {
+    if (!hasConsoleView()) {
         return {};
     }
     return mWindowRegistry.commandLineSavesHistory(name);
@@ -6479,7 +6389,7 @@ std::optional<bool> Host::commandLineSavesHistory(const QString& name) const
 
 std::optional<QString> Host::textBoxText(const QString& name) const
 {
-    if (!consoleFrontend()) {
+    if (!hasConsoleView()) {
         return {};
     }
     return mWindowRegistry.textBoxText(name);
@@ -6487,7 +6397,7 @@ std::optional<QString> Host::textBoxText(const QString& name) const
 
 std::optional<QFont> Host::textBoxFont(const QString& name) const
 {
-    if (!consoleFrontend()) {
+    if (!hasConsoleView()) {
         return {};
     }
     return mWindowRegistry.textBoxFont(name);
@@ -6495,7 +6405,7 @@ std::optional<QFont> Host::textBoxFont(const QString& name) const
 
 std::optional<QColor> Host::borderColor() const
 {
-    if (!consoleFrontend()) {
+    if (!hasConsoleView()) {
         return {};
     }
     return {mpMainConsoleModel->mBorderColor};
@@ -6503,7 +6413,7 @@ std::optional<QColor> Host::borderColor() const
 
 std::optional<QSize> Host::userWindowSize(const QString& name) const
 {
-    if (!consoleFrontend()) {
+    if (!hasConsoleView()) {
         return {};
     }
     if (auto size = mWindowRegistry.userWindowSize(name)) {
@@ -6520,7 +6430,7 @@ std::optional<QSize> Host::userWindowSize(const QString& name) const
 // last reported (see TMainConsole::reportVisibility()), so this needs no widget.
 std::optional<bool> Host::windowVisible(const QString& name) const
 {
-    if (!consoleFrontend()) {
+    if (!hasConsoleView()) {
         return {};
     }
 
@@ -6546,7 +6456,7 @@ void Host::setLargeAreaExitArrows(const bool state)
 {
     if (mLargeAreaExitArrows != state) {
         mLargeAreaExitArrows = state;
-        if (mpMap && consoleFrontend()) {
+        if (mpMap) {
             consoleFrontend()->setMapLargeAreaExitArrows(state);
         }
     }
@@ -6601,12 +6511,6 @@ void Host::setFocusOnHostActiveCommandLine()
 
     // Lambda to set focus on command line
     auto setCommandLineFocus = [this]() {
-        // The view can be gone by the time this runs while the Host lives on
-        if (!consoleFrontend()) {
-            mFocusTimerRunning = false;
-            return;
-        }
-
         consoleFrontend()->focusActiveCommandLine();
 
         mFocusTimerRunning = false;
@@ -6622,9 +6526,6 @@ void Host::setBorders(QMargins borders)
         return;
     }
     mBorders = borders;
-    if (!consoleFrontend()) {
-        return;
-    }
     consoleFrontend()->applyBorders();
 }
 
@@ -6670,7 +6571,7 @@ void Host::editorThemeChanged()
 
 void Host::sendCmdLine(const QString& cmd)
 {
-    if (!consoleFrontend()) {
+    if (!hasConsoleView()) {
         qWarning() << "Host::sendCmdLine(...) ERROR - No active command line available.";
         return;
     }
@@ -6688,7 +6589,7 @@ void Host::setRemoteEchoingActive(bool active)
 
 QFont Host::getDisplayFont()
 {
-    if (consoleFrontend()) {
+    if (hasConsoleView()) {
         return consoleFrontend()->displayFont();
     }
 
@@ -6764,7 +6665,7 @@ std::pair<bool, QString> Host::setExperimentEnabled(const QString& experimentKey
 
 #if defined(INCLUDE_3DMAPPER)
     // Refresh maps if any experiments changed the 3D map
-    if (mpMap && consoleFrontend()) {
+    if (mpMap) {
         consoleFrontend()->requestMapRepaint();
     }
 #endif

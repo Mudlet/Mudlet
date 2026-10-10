@@ -395,7 +395,8 @@ end</script>
 				<script>hq.help("Thank you for playing.  You are now ready to step into a real MUD to expand on this knowledge further.  Mudlet provides a collection of high quality games for you to try out and plenty more can be found through an internet search.")
 hq.help("While this tutorial was quite basic, Mudlet can be very powerful and has some advanced features.  We recommend reading the introduction on our wiki - it is designed for players new to Mudlet and introduces some more advanced topics.\n")
 cechoLink("&lt;deep_sky_blue&gt;&lt;u&gt;http://wiki.mudlet.org/Introduction&lt;r&gt;\n", function() openWebPage("https://wiki.mudlet.org/w/Manual:Introduction") end, "Click to open link.", true)
-hq.help("Using the toolbar above, go to Games -&gt; Close Profile (Alt+W) to return to the Mudlet start screen.\n")</script>
+hq.help("Using the toolbar above, go to Games -&gt; Close Profile (Alt+W) to return to the Mudlet start screen.\n")
+hq.showPlayersWindows()</script>
 				<command></command>
 				<packageName></packageName>
 				<regex>^quit$</regex>
@@ -407,9 +408,57 @@ hq.help("Using the toolbar above, go to Games -&gt; Close Profile (Alt+W) to ret
 		<ScriptGroup isActive="yes" isFolder="yes">
 			<name>Mini Quest</name>
 			<packageName></packageName>
-			<script>uninstallPackage("generic_mapper")
+			<script>-- a player's script can have a global hq of its own, which the lesson adds to
+-- and uninstalling puts back as it was
+if not (hq and hq.timers) then
+  local before = hq and {}
+  for key, value in pairs(hq or {}) do
+    before[key] = value
+  end
+  hq = hq or {}
+  hq.before = before or false
+  hq.timers = {}
+  hq.playersWindows = {}
+end
 
-hq = hq or {}
+if table.contains(getPackages(), "generic_mapper") and uninstallPackage("generic_mapper") then
+  hq.removedGenericMapper = true
+end
+
+-- the lesson's timers go on telling its story and index hq, so uninstalling has to kill them
+function hq.tempTimer(...)
+  local id = tempTimer(...)
+  hq.timers[#hq.timers + 1] = id
+  return id
+end
+
+-- Geyser.hideAll() hides the player's own windows as well as the lesson's
+function hq.hideAll()
+  for name, window in pairs(Geyser.windowList) do
+    if not window.hidden and not name:find("^hq%.") then
+      hq.playersWindows[window] = true
+    end
+  end
+  Geyser.hideAll()
+end
+
+function hq.showPlayersWindows()
+  for window in pairs(hq.playersWindows) do
+    -- one the player deleted, or made again under the same name, is not this one any more
+    if Geyser.windowList[window.name] == window then
+      window:show()
+    end
+  end
+  hq.playersWindows = {}
+end
+
+-- the lesson replaces the map with its village
+function hq.savePlayersMap()
+  if hq.playersMap == nil then
+    local path = getMudletHomeDir() .. "/mudlet-tutorial-players-map.dat"
+    hq.playersMap = saveMap(path) and path or false
+  end
+end
 
 clearWindow()
 closeMapWidget()</script>
@@ -437,28 +486,28 @@ function hq.parser(event, command)
     hq.state = "INTRODUCTION"
   
     echo(f"\nWelcome {hq.char.name}.  You have passed the Adventurer's Guild test and set out to stake your claim as a hero.\n")
-    tempTimer(2, function() echo("\nYou pass through mountain high and valley low, braving rain and the bitter, cold snow.\n") end)
-    tempTimer(4, function() echo("\nAs you wander into a small village you notice a sign tacked to the gates.\n") end)
-    tempTimer(6, function() echo("\n\"Assistant Wanted for the Hamlet of Whitehaven.  Apply to Sheriff.\"\n") end)
-    tempTimer(8, function() echo("\nAh, your first true test as a new adventurer! You step through the gates to seek out the sheriff.\n") end)
-    tempTimer(12, function() echo("\nAs luck would have it you find him immediately and introduce yourself.\n") end)
-    tempTimer(14, function() echo(f("\nThe Sheriff says, 'Well met {hq.char.name}.  I'm looking for an assistant.  Think you can handle the job?'\n")) end)
-    tempTimer(16, function() echo("\nBefore you can respond he shoves a map into your hands.\n") end)
-    tempTimer(20, function() echo("\nThe Sheriff says, 'Here is a map of the village to help you get aquainted.  Welcome aboard!'\n") end)
+    hq.tempTimer(2, function() echo("\nYou pass through mountain high and valley low, braving rain and the bitter, cold snow.\n") end)
+    hq.tempTimer(4, function() echo("\nAs you wander into a small village you notice a sign tacked to the gates.\n") end)
+    hq.tempTimer(6, function() echo("\n\"Assistant Wanted for the Hamlet of Whitehaven.  Apply to Sheriff.\"\n") end)
+    hq.tempTimer(8, function() echo("\nAh, your first true test as a new adventurer! You step through the gates to seek out the sheriff.\n") end)
+    hq.tempTimer(12, function() echo("\nAs luck would have it you find him immediately and introduce yourself.\n") end)
+    hq.tempTimer(14, function() echo(f("\nThe Sheriff says, 'Well met {hq.char.name}.  I'm looking for an assistant.  Think you can handle the job?'\n")) end)
+    hq.tempTimer(16, function() echo("\nBefore you can respond he shoves a map into your hands.\n") end)
+    hq.tempTimer(20, function() echo("\nThe Sheriff says, 'Here is a map of the village to help you get aquainted.  Welcome aboard!'\n") end)
  
-    tempTimer(22, hq.initMap)
-    tempTimer(22, hq.showLayout)
-    tempTimer(22, function() hq.state = "PLAYING" end)
+    hq.tempTimer(22, hq.initMap)
+    hq.tempTimer(22, hq.showLayout)
+    hq.tempTimer(22, function() hq.state = "PLAYING" end)
     
-    tempTimer(24, function() hq.help("Mudlet provides a built-in map to help you explore.  Some games provide maps to help you learn, some don't to encourage exploration but you can always make your own.\n") end)
-    tempTimer(25, function() echo("The Sheriff says, 'As your first task I need you to go buy me some lunch from the fruit vendor to the north.  It is marked with a 'F' on your map.'\n") end)
-    tempTimer(25, function() 
+    hq.tempTimer(24, function() hq.help("Mudlet provides a built-in map to help you explore.  Some games provide maps to help you learn, some don't to encourage exploration but you can always make your own.\n") end)
+    hq.tempTimer(25, function() echo("The Sheriff says, 'As your first task I need you to go buy me some lunch from the fruit vendor to the north.  It is marked with a 'F' on your map.'\n") end)
+    hq.tempTimer(25, function() 
       echo("The Sheriff gives you some coins.\n")
       hq.char.inv = {}
       table.insert(hq.char.inv, "some silver coins")
     end)
     
-    tempTimer(26, function() 
+    hq.tempTimer(26, function() 
       hq.help("MUDs are divided into different 'rooms' where each represents a location on the map (the red squares).  It could be a house, a section of road, or part of a forest.  MUDs allow movement betweens these rooms by typing commands like; &lt;r&gt;&lt;b&gt;north&lt;r&gt;&lt;dark_sea_green&gt; or &lt;r&gt;&lt;b&gt;west&lt;r&gt;&lt;dark_sea_green&gt;, &lt;r&gt;&lt;b&gt;in&lt;r&gt;&lt;dark_sea_green&gt; or &lt;r&gt;&lt;b&gt;out&lt;r&gt;&lt;dark_sea_green&gt;.  See if you can navigate to the fruit vendor ('F') using the commands and following the map.\n\nHINT: it is two rooms north of your current location which is marked with the red circle.")
       cecho(hq.prompt)
     end)
@@ -754,7 +803,7 @@ end
 
 function hq.guiTutorialStart()
 
-  Geyser.hideAll()  
+  hq.hideAll()  
 
   hq.mainMenuContainer = Geyser.Container:new({
     name = "hq.mainMenuContainer",
@@ -779,13 +828,13 @@ function hq.guiTutorialStart()
   hq.mainMenuLabel:setStyleSheet(hq.labelCSS)
   hq.addNextButton(hq.mainMenuLabel, hq.guiTutorialStep1)
   
-  tempTimer(0.2, function() clearWindow() end)
+  hq.tempTimer(0.2, function() clearWindow() end)
 
 end
 
 function hq.guiTutorialStep1()
   
-  Geyser.hideAll()
+  hq.hideAll()
     
   hq.guiStep1Container = Geyser.Container:new({
     name = "hq.guiStep1Container",
@@ -811,19 +860,19 @@ function hq.guiTutorialStep1()
   hq.guiStep1Label:setStyleSheet(hq.labelCSS)
   hq.addNextButton(hq.guiStep1Label, hq.guiTutorialStep2)
   
-  tempTimer(1, function() hq.guiStep1Container:flash(0.2) end)
-  tempTimer(1.5, function() hq.guiStep1Container:flash(0.2) end)
-  tempTimer(2, function() hq.guiStep1Container:flash(0.2) end)
+  hq.tempTimer(1, function() hq.guiStep1Container:flash(0.2) end)
+  hq.tempTimer(1.5, function() hq.guiStep1Container:flash(0.2) end)
+  hq.tempTimer(2, function() hq.guiStep1Container:flash(0.2) end)
   
-  tempTimer(3, function() echo("This is the main window text.\n") end)
-  tempTimer(4, function() echo("Anything coming from the game will show up here.\n") end)
-  tempTimer(5, function() cecho("&lt;cyan&gt;It may also show in colour if your game supports this :)&lt;r&gt;\n") end)
+  hq.tempTimer(3, function() echo("This is the main window text.\n") end)
+  hq.tempTimer(4, function() echo("Anything coming from the game will show up here.\n") end)
+  hq.tempTimer(5, function() cecho("&lt;cyan&gt;It may also show in colour if your game supports this :)&lt;r&gt;\n") end)
 
 end
 
 function hq.guiTutorialStep2()
 
-  Geyser.hideAll()
+  hq.hideAll()
     
   hq.guiStep2Container = Geyser.Container:new({
     name = "hq.guiStep2Container",
@@ -846,18 +895,21 @@ function hq.guiTutorialStep2()
   hq.guiStep2Label:setStyleSheet(hq.labelCSS)
   hq.addNextButton(hq.guiStep2Label, hq.guiTutorialStep3)
   
-  tempTimer(1, function() setCmdLineStyleSheet("main", [[ QPlainTextEdit { background-color: grey; }]]) end)
-  tempTimer(1.2, function() setCmdLineStyleSheet("main", [[ QPlainTextEdit { background-color: black; }]]) end)
-  tempTimer(1.5, function() setCmdLineStyleSheet("main", [[ QPlainTextEdit { background-color: grey; }]]) end)
-  tempTimer(1.7, function() setCmdLineStyleSheet("main", [[ QPlainTextEdit { background-color: black; }]]) end)
-  tempTimer(2, function() setCmdLineStyleSheet("main", [[ QPlainTextEdit { background-color: grey; }]]) end)
-  tempTimer(2.2, function() setCmdLineStyleSheet("main", [[ QPlainTextEdit { background-color: black; }]]) end)
+  if hq.cmdLineStyleSheet == nil then
+    hq.cmdLineStyleSheet = getCmdLineStyleSheet("main") or ""
+  end
+  hq.tempTimer(1, function() setCmdLineStyleSheet("main", [[ QPlainTextEdit { background-color: grey; }]]) end)
+  hq.tempTimer(1.2, function() setCmdLineStyleSheet("main", [[ QPlainTextEdit { background-color: black; }]]) end)
+  hq.tempTimer(1.5, function() setCmdLineStyleSheet("main", [[ QPlainTextEdit { background-color: grey; }]]) end)
+  hq.tempTimer(1.7, function() setCmdLineStyleSheet("main", [[ QPlainTextEdit { background-color: black; }]]) end)
+  hq.tempTimer(2, function() setCmdLineStyleSheet("main", [[ QPlainTextEdit { background-color: grey; }]]) end)
+  hq.tempTimer(2.2, function() setCmdLineStyleSheet("main", [[ QPlainTextEdit { background-color: black; }]]) end)
 
 end
 
 function hq.guiTutorialStep3()
 
-  Geyser.hideAll()  
+  hq.hideAll()  
   
   hq.guiStep3Container = Geyser.Container:new({
     name = "hq.guiStep3Container",
@@ -884,7 +936,7 @@ end
 
 function hq.guiTutorialStep4()
 
-  Geyser.hideAll()
+  hq.hideAll()
     
   hq.guiStep4Container = Geyser.Container:new({
     name = "hq.guiStep4Container",
@@ -911,7 +963,7 @@ end
 
 function hq.guiTutorialStepFinal()
 
-  Geyser.hideAll()
+  hq.hideAll()
   clearWindow()
     
   hq.guiStepFinalContainer = Geyser.Container:new({
@@ -952,9 +1004,10 @@ end
 
 function hq.newGameScreen()
 
-  Geyser.hideAll()  
+  hq.hideAll()  
   clearWindow()
   closeMapWidget()
+  hq.savePlayersMap()
   deleteMap()
   
   hq.state = "GET_CHAR_NAME"
@@ -981,11 +1034,17 @@ end</script>
                    ["u"] = "d",
                    ["d"] = "u" }
 
+-- run again, keep the one saved first, unless a mapping script has installed a doSpeedWalk since
+if doSpeedWalk ~= hq.doSpeedWalk then
+  hq.savedDoSpeedWalk = doSpeedWalk
+end
+
 function doSpeedWalk()
 
   echo("You point to your map but it fails to magically transport you anywhere.\n")
   
 end
+hq.doSpeedWalk = doSpeedWalk
 
 function hq.initMapperWindow()
 
@@ -1006,6 +1065,9 @@ function hq.initMapperWindow()
     width = "100%", height = "100%"
   }, hq.mapperWindow)
 
+  if not hq.mapInfoBefore then
+    hq.mapInfoBefore = getMapInfo() or {}
+  end
   disableMapInfo("Short")
   disableMapInfo("Full")
   enableMapInfo("None")
@@ -1050,14 +1112,15 @@ function hq.drawMapHint()
   local dismissMapHint = function() hq.mapHintContainer:hide() end
   hq.mapHintLabel:setStyleSheet(hq.labelCSS)
   hq.addNextButton(hq.mapHintLabel, dismissMapHint)
-  tempTimer(1, function() hq.mapperWindow:flash(0.2) end)
-  tempTimer(1.5, function() hq.mapperWindow:flash(0.2) end)
-  tempTimer(2, function() hq.mapperWindow:flash(0.2) end)
+  hq.tempTimer(1, function() hq.mapperWindow:flash(0.2) end)
+  hq.tempTimer(1.5, function() hq.mapperWindow:flash(0.2) end)
+  hq.tempTimer(2, function() hq.mapperWindow:flash(0.2) end)
 
 end
 
 function hq.initVillage()
 
+  hq.savePlayersMap()
   deleteMap()
 
   local hamletAreaID = addAreaName("Whitehaven Hamlet") or 1
@@ -1222,10 +1285,85 @@ end
 
 -- when Mudlet's UI tour is about to run, hold the lesson until it finishes
 if mudlet and mudlet.uiTourPending then
-  registerAnonymousEventHandler("sysUiTourFinished", beginTutorial, true)
+  if hq.tourHandler then
+    killAnonymousEventHandler(hq.tourHandler)
+  end
+  hq.tourHandler = registerAnonymousEventHandler("sysUiTourFinished", beginTutorial, true)
 else
-  tempTimer(0, beginTutorial)
-end</script>
+  hq.tempTimer(0, beginTutorial)
+end
+
+local function uninstall(_, packageName)
+  if packageName ~= "Mudlet Tutorial" then
+    return
+  end
+  for _, id in ipairs(hq.uninstallHandlers) do
+    killAnonymousEventHandler(id)
+  end
+  if hq.tourHandler then
+    killAnonymousEventHandler(hq.tourHandler)
+  end
+  for _, id in ipairs(hq.timers) do
+    killTimer(id)
+  end
+  deleteNamedEventHandler("mudlet-tutorial", "parser")
+  -- a mapping script installed since has a doSpeedWalk of its own
+  if doSpeedWalk == hq.doSpeedWalk then
+    doSpeedWalk = hq.savedDoSpeedWalk
+  end
+  if hq.cmdLineStyleSheet then
+    setCmdLineStyleSheet("main", hq.cmdLineStyleSheet)
+  end
+  for name, enabled in pairs(hq.mapInfoBefore or {}) do
+    if enabled then
+      enableMapInfo(name)
+    else
+      disableMapInfo(name)
+    end
+  end
+  if hq.playersMap then
+    loadMap(hq.playersMap)
+    os.remove(hq.playersMap)
+  end
+  -- deleted, not hidden: Geyser.showAll() would bring a hidden panel back, Next button and all
+  local lessonWindows = {}
+  for name, window in pairs(Geyser.windowList) do
+    if name:find("^hq%.") then
+      lessonWindows[#lessonWindows + 1] = window
+    end
+  end
+  for _, window in ipairs(lessonWindows) do
+    -- an adjustable container deleted before this takes its menu labels with it
+    if Geyser.windowList[window.name] == window then
+      window:delete()
+    end
+  end
+  hq.showPlayersWindows()
+  if hq.removedGenericMapper and not table.contains(getPackages(), "generic_mapper") then
+    installPackage(":/packages/generic_mapper/generic_mapper.mpackage")
+  end
+  local before = hq.before
+  if before then
+    for key in pairs(hq) do
+      hq[key] = nil
+    end
+    for key, value in pairs(before) do
+      hq[key] = value
+    end
+  else
+    hq = nil
+  end
+end
+
+for _, id in ipairs(hq.uninstallHandlers or {}) do
+  killAnonymousEventHandler(id)
+end
+-- the same archive can be installed as a module
+hq.uninstallHandlers = {
+  registerAnonymousEventHandler("sysUninstallPackage", uninstall),
+  registerAnonymousEventHandler("sysUninstallModule", uninstall),
+  registerAnonymousEventHandler("sysLuaUninstallModule", uninstall),
+}</script>
 				<eventHandlerList />
 			</Script>
 		</ScriptGroup>

@@ -690,10 +690,12 @@ private:
 
     // Rolls the wheel that many notches forward (away from the user), or back
     // for a negative count.
-    void rollWheelAt(const QPoint& position, const int notches, const Qt::KeyboardModifiers modifiers = Qt::NoModifier) const
+    bool rollWheelAt(const QPoint& position, const int notches, const Qt::KeyboardModifiers modifiers = Qt::NoModifier, T2DMap* pTarget = nullptr) const
     {
-        QWheelEvent event(QPointF(position), mp2dMap->mapToGlobal(QPointF(position)), QPoint(), QPoint(0, notches * 120), Qt::NoButton, modifiers, Qt::NoScrollPhase, false);
-        QApplication::sendEvent(mp2dMap, &event);
+        T2DMap* pMap = pTarget ? pTarget : mp2dMap;
+        QWheelEvent event(QPointF(position), pMap->mapToGlobal(QPointF(position)), QPoint(), QPoint(0, notches * 120), Qt::NoButton, modifiers, Qt::NoScrollPhase, false);
+        QApplication::sendEvent(pMap, &event);
+        return event.isAccepted();
     }
 
     // How many pixels across a map unit is drawn at, for a zoom of that many
@@ -2158,6 +2160,38 @@ private slots:
         QCOMPARE(zoom(), expectedZoom);
         renderFrame();
         QCOMPARE(mp2dMap->mRoomWidth, pixelsPerMapUnitAtZoom(expectedZoom));
+    }
+
+    // A secondary view never centred on a room has no room id but must still zoom.
+    void test_rollingTheWheelOverASecondaryViewZoomsIt()
+    {
+        buildMap();
+        showMapper(true);
+        const auto [viewId, error] = mpHost->createMapView(mAreaId);
+        QVERIFY2(viewId > 0, qPrintable(error));
+        TMapView* pView = map()->getViewManager()->getView(viewId);
+        QVERIFY(pView);
+        T2DMap* pViewMap = pView->get2DMap();
+        const double before = zoom();
+
+        const bool accepted = rollWheelAt(QPoint(pViewMap->width() / 2, pViewMap->height() / 2), 1, Qt::NoModifier, pViewMap);
+
+        mpHost->closeMapView(viewId);
+        QVERIFY(accepted);
+        QCOMPARE(zoom(), before / 1.07);
+    }
+
+    void test_rollingTheWheelOverAnUnknownAreaIsIgnored()
+    {
+        buildMap();
+        showMapper(true);
+        const double before = zoom();
+        mp2dMap->mAreaID = 12345;
+
+        QVERIFY(!rollWheelAt(viewCentre(), 1));
+
+        mp2dMap->mAreaID = mAreaId;
+        QCOMPARE(zoom(), before);
     }
 
     // The preference for the older way round: forward zooms out.

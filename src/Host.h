@@ -78,6 +78,7 @@ class CredentialManager;
 class TRoom;
 class TConsole;
 class TConsoleFrontend;
+class TNullConsoleFrontend;
 class TMainConsole;
 struct TConsoleModel;
 class TMap;
@@ -310,8 +311,11 @@ public:
     // For widget-side code: this and setMainConsoleView() are defined in
     // TMainConsole.cpp, so that Host.cpp never needs the widget's definition.
     TMainConsole* mainConsoleView() const;
-    // mainConsoleView() as core code calls it, by window name rather than widget; null when that is.
+    // mainConsoleView() as core code calls it, by window name rather than widget. Never null: while
+    // there is no view it is a null one, which keeps models for the labels and sub-consoles made
+    // through it and has no other windows.
     TConsoleFrontend* consoleFrontend() const;
+    bool hasConsoleView() const;
     void setMainConsoleView(TMainConsole* view);
     // Keeps TMainConsole's translation context, so the existing translations still apply.
     static QString loggingAnnouncementText(const bool isLogging, const QString& logFileName);
@@ -614,6 +618,9 @@ public:
     std::pair<bool, QString> createMiniConsole(const QString& windowname, const QString& name, int x, int y, int width, int height);
     std::pair<bool, QString> createScrollBox(const QString& windowname, const QString& name, int x, int y, int width, int height) const;
     std::pair<bool, QString> createLabel(const QString& windowname, const QString& name, int x, int y, int width, int height, bool fillBg, bool clickthrough);
+    // Each raises its sys*Deleted event; deleteMiniConsole() takes any sub-console, a user window's dock with it.
+    std::pair<bool, QString> deleteLabel(const QString& name);
+    std::pair<bool, QString> deleteMiniConsole(const QString& name);
     bool setClickthrough(const QString& name, bool clickthrough);
     bool setLabelStyleSheet(const QString& name, const QString& styleSheet);
     bool setLinkStyle(const QString& name, const QString& linkColor, const QString& linkVisitedColor, bool underline);
@@ -622,6 +629,8 @@ public:
     void hideMudletsVariables();
     bool createBuffer(const QString& name);
     QSize calcFontSize(const QString& windowName);
+    // The width TTextEdit draws each column in, unlike the width of a "W" calcFontSize() gives
+    int calcColumnWidth(const QString& windowName);
     bool clearWindow(const QString&);
     bool showWindow(const QString&);
     bool hideWindow(const QString&);
@@ -779,10 +788,10 @@ private:
     // isClosingDown() whether to flush what it has stacked up. Declaration order is
     // what decides initialisation order, the access specifier between them is not.
     //
-    // mpConsole's position carries the same weight: it is null for the whole of
-    // construction, so that guard returns before reaching the rest of the function,
-    // which reads members declared much later - mBgColor among them. Same class of
-    // bug as #10229, which had to move a call rather than a declaration.
+    // mpMainConsoleModel's position, above, carries the same weight: it is null until
+    // the end of construction, so that guard returns before reaching the rest of the
+    // function, which reads members declared much later - mBgColor among them. Same
+    // class of bug as #10229, which had to move a call rather than a declaration.
     bool mIsClosingDown = false;
     // Its font is the "reference" or "master" font for the whole profile.
     // Clears itself when the view is destroyed, which is what makes handing
@@ -790,6 +799,8 @@ private:
     QPointer<TMainConsole> mpConsole;
     // The same object, as core code drives it; read only while mpConsole is set.
     TConsoleFrontend* mpConsoleFrontend = nullptr;
+    // What consoleFrontend() hands out while mpConsole is not set.
+    std::unique_ptr<TNullConsoleFrontend> mpNullConsoleFrontend;
 
 public:
     cTelnet mTelnet;

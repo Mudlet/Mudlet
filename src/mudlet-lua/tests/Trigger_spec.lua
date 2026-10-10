@@ -1015,6 +1015,124 @@ describe("Trigger processing", function()
             assert.is_true(reached, "the other trigger's feed should still be processed")
         end)
 
+        describe("scrolls the main console to the lines it feeds", function()
+            local restoreEncoding
+            local triggerId
+
+            before_each(function()
+                -- setServerEncoding() also writes the profile's "encoding"
+                -- file, and a profile that never had one must not keep one
+                local encodingFile = getMudletHomeDir() .. "/encoding"
+                local hadFile = io.exists(encodingFile)
+                local original = getServerEncoding()
+                restoreEncoding = function()
+                    setServerEncoding(original)
+                    if not hadFile then
+                        os.remove(encodingFile)
+                    end
+                end
+                -- A line an earlier spec left open would absorb the first fed line
+                if getLines("main", getLastLineNumber("main"), getLastLineNumber("main") + 1)[1] ~= "" then
+                    echo("main", "\n")
+                end
+                scrollTo()
+            end)
+
+            after_each(function()
+                if restoreEncoding then
+                    restoreEncoding()
+                    restoreEncoding = nil
+                end
+                if triggerId then
+                    killTrigger(triggerId)
+                    triggerId = nil
+                end
+                scrollTo()
+            end)
+
+            local function assertFed(how, lineCount, ...)
+                local before = getLastLineNumber("main")
+                assert.is_true(feedTriggers(...), how .. " was refused")
+                assert.are.equal(before + lineCount, getLastLineNumber("main"), how .. " did not add its lines")
+            end
+
+            -- Every case feeds at least two lines: getScroll() caps the pane's
+            -- position at the last line, so it cannot tell a pane one line
+            -- behind from one that has caught up
+            local function assertFedAndScrolled(how, lineCount, ...)
+                assertFed(how, lineCount, ...)
+                assert.are.equal(getLastLineNumber("main"), getScroll(), how .. " left the main console short of the lines it fed")
+            end
+
+            it("from text the game's UTF-8 encoding can carry", function()
+                assert.is_true(setServerEncoding("UTF-8"))
+                assertFedAndScrolled("a UTF-8 feed", 2, "feed_scroll utf8 one\nfeed_scroll utf8 two\n")
+            end)
+
+            it("from text transcoded to the game's encoding", function()
+                assert.is_true(setServerEncoding("ISO 8859-1"))
+                assertFedAndScrolled("a transcoded feed", 2, "feed_scroll latin one\nfeed_scroll latin two\n")
+            end)
+
+            it("from text for an ASCII game", function()
+                assert.is_true(setServerEncoding("ASCII"))
+                assertFedAndScrolled("an ASCII feed", 2, "feed_scroll ascii one\nfeed_scroll ascii two\n")
+            end)
+
+            it("from text already in the game's encoding", function()
+                assertFedAndScrolled("a feed not marked as UTF-8", 2, "feed_scroll raw one\nfeed_scroll raw two\n", false)
+            end)
+
+            it("from text a trigger feeds, once the pass that fired the trigger ends", function()
+                local scrolledMidPass
+                triggerId = tempRegexTrigger("^feed_scroll_outer$", function()
+                    feedTriggers("feed_scroll inner one\nfeed_scroll inner two\n")
+                    scrolledMidPass = getScroll() == getLastLineNumber("main")
+                end)
+                assertFedAndScrolled("a feed that sets off a trigger's", 3, "feed_scroll_outer\n")
+                assert.is_false(scrolledMidPass, "the feed inside the trigger scrolled the console before the pass that fired it had ended")
+            end)
+
+            it("from text a trigger feeds, once the game data that fired the trigger is handled", function()
+                local scrolledMidPass
+                triggerId = tempRegexTrigger("^feed_scroll_telnet_outer$", function()
+                    feedTriggers("feed_scroll telnet inner one\nfeed_scroll telnet inner two\n")
+                    scrolledMidPass = getScroll() == getLastLineNumber("main")
+                end)
+                local before = getLastLineNumber("main")
+                local ok, msg = feedTelnet("feed_scroll_telnet_outer\r\n")
+                assert.is_true(ok, "start the suite with --offline, see the tests README - feedTelnet said: " .. tostring(msg))
+                assert.are.equal(before + 3, getLastLineNumber("main"), "the game line and the trigger's feed did not add their lines")
+                assert.are.equal(getLastLineNumber("main"), getScroll(), "the main console was left short of the lines the trigger fed")
+                assert.is_false(scrolledMidPass, "the feed inside the trigger scrolled the console before the game data that fired it was handled")
+            end)
+
+            if not os.getenv("MUDLET_TEST_MODE") then
+                -- Scrolling back up waits a turn of the event loop, which
+                -- waitForEvent only pumps in test mode
+                pending("unless it has been scrolled back up - needs MUDLET_TEST_MODE for waitForEvent")
+            else
+                it("unless it has been scrolled back up", function()
+                    for i = 1, 200 do
+                        echo("main", "feed_scroll filler " .. i .. "\n")
+                    end
+                    local parked = getLastLineNumber("main") - 100
+                    for _ = 1, 20 do
+                        scrollTo(parked)
+                        if getScroll() == parked then
+                            break
+                        end
+                        tempTimer(0, function() raiseEvent("specFeedScrollPump") end)
+                        waitForEvent("specFeedScrollPump", 2000)
+                    end
+                    assert.are.equal(parked, getScroll(), "could not scroll the main console back up")
+
+                    assertFed("a feed", 2, "feed_scroll parked one\nfeed_scroll parked two\n")
+                    assert.are.equal(parked, getScroll(), "a feed pulled a console scrolled back up down to its end")
+                end)
+            end
+        end)
+
     end)
 
     describe("temporary trigger creation and firing", function()
