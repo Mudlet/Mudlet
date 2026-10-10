@@ -868,6 +868,38 @@ describe("MMCP effects against a scripted chat peer", function()
   local peerRequired = os.getenv("MUDLET_TEST_REQUIRE_MMCP_PEER")
   local commandCounter = 0
   local originalChatName
+  local originalBorders
+  local dockWasShowing
+  local originalRouteChatLine
+
+  -- The chat lines these specs display ("<peer> chats to ...", "You chat to ...")
+  -- match the base UI's chat capture triggers, all of which go through
+  -- BaseUI.routeChatLine. That docks its chat window on the right border on first
+  -- use and keeps it there, leaving the main console narrower for every later spec.
+  setup(function()
+    originalBorders = getBorderSizes()
+    if BaseUI then
+      dockWasShowing = BaseUI.container ~= nil and not BaseUI.container.hidden
+      originalRouteChatLine = BaseUI.routeChatLine
+      BaseUI.routeChatLine = function() end
+    end
+  end)
+
+  -- Its own teardown, so a failing one below cannot leave chat routing switched
+  -- off. A dock some other path brought up here is put away the way BaseUI.hide()
+  -- does, which gives the border back.
+  teardown(function()
+    if not BaseUI then
+      return
+    end
+    if originalRouteChatLine then
+      BaseUI.routeChatLine = originalRouteChatLine
+    end
+    if not dockWasShowing and BaseUI.container and not BaseUI.container.hidden then
+      BaseUI.container:hide()
+      BaseUI.container:adjustBorder()
+    end
+  end)
 
   local function readFile(path)
     local handle = io.open(path, "r")
@@ -2272,6 +2304,15 @@ describe("MMCP effects against a scripted chat peer", function()
       assert.is_false(capture().connected)
     end)
 
+  end)
+
+  it("leaves the main console's borders as it found them", function()
+    if peerUnavailable() then return end
+    if dockWasShowing then
+      pending("the base UI dock was already showing, so its border is not this block's to check")
+      return
+    end
+    assert.are.same(originalBorders, getBorderSizes())
   end)
 
   -- Restores whatever chat name the profile was carrying before these specs

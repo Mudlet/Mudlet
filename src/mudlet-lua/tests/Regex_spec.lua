@@ -1,7 +1,25 @@
 describe("PCRE regex cases with tempRegexTrigger", function()
+    local dockWasShowing
+    local originalBorders
+
+    setup(function()
+        dockWasShowing = BaseUI ~= nil and BaseUI.container ~= nil and not BaseUI.container.hidden
+        originalBorders = getBorderSizes()
+    end)
 
     before_each(function()
     _G.matches = nil
+    end)
+
+    -- Lines such as "Bob tells you 'hi'" match the base UI's chat capture
+    -- triggers, which dock its chat window on the right border and keep it there,
+    -- leaving the main console narrower for every later spec; BaseUI.hide() is
+    -- how the base UI itself gives that border back
+    after_each(function()
+        if not dockWasShowing and BaseUI and BaseUI.container and not BaseUI.container.hidden then
+            BaseUI.container:hide()
+            BaseUI.container:adjustBorder()
+        end
     end)
 
     -- start/end anchors (^ and $)
@@ -846,6 +864,15 @@ describe("PCRE regex cases with tempRegexTrigger", function()
 
             assert.are.same({"1", "2"}, seen)
         end)
+    end)
+
+    -- runs after the after_each of every spec above it
+    it("leaves the main console's borders as it found them", function()
+        if dockWasShowing then
+            pending("the base UI dock was already showing, so its border is not this block's to check")
+            return
+        end
+        assert.are.same(originalBorders, getBorderSizes())
     end)
 end)
 
