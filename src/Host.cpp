@@ -3502,10 +3502,6 @@ std::pair<bool, QString> Host::installPackage(const QString& fileName, enums::Pa
     // reorder permanent and temporary triggers: perm first, temp second
     mTriggerUnit.reorderTriggersAfterPackageImport();
 
-    // Not straight after installPackageFonts(): a refused install takes the fonts out
-    // again, and changing the font runs the profile's sysSettingChanged handlers.
-    restoreMissingDisplayFonts();
-
     // Defer raising install events until the next event loop iteration
     // This ensures all package installation is complete (including variable loading)
     // before event handlers execute, preventing Lua state corruption. Kept queued
@@ -3570,6 +3566,15 @@ std::pair<bool, QString> Host::installPackage(const QString& fileName, enums::Pa
         }
         raiseEvent(detailedInstallEvent);
     });
+
+    // Queued behind the install events: putting a font back runs the sysSettingChanged handlers
+    // of every open profile, and one that removes this package must not be heard before its
+    // sysInstall. A sync brings no fonts.
+    if (thing != enums::PackageModuleType::ModuleSync) {
+        QTimer::singleShot(0ms, this, []() {
+            restoreMissingDisplayFonts();
+        });
+    }
 
     // An install's script asked to remove the package being read in. Queued after the install events so
     // handlers hear sysInstall before sysUninstall: zero timers fire in registration order, which Qt does
@@ -3900,13 +3905,14 @@ bool Host::uninstallPackage(const QString& packageName, enums::PackageModuleType
     removeDir(dest, dest);
 
     // The fonts this package brought went out with it, so a display font that
-    // came from it is now missing and Qt would quietly render some other family
+    // came from it is now missing - in any open profile, as fonts are registered
+    // for the whole application - and Qt would quietly render some other family
     // instead. It has to sit past the reinstall above: uninstalling a module
     // that shares a package's name puts that package and its fonts straight
-    // back, and moving the profile off the font in between would stick, since
-    // nothing moves it back on again. Past removeDir() too, because changing the
-    // font runs the profile's sysSettingChanged handlers.
-    substituteMissingDisplayFont();
+    // back, and moving off the font in between would warn about a font that
+    // is not gone. Past removeDir() too, because changing the font runs the
+    // profiles' sysSettingChanged handlers.
+    substituteMissingDisplayFonts();
 
     // save the profile on the next Qt main loop cycle in order for the asyncronous save mechanism
     // not to try to write to disk a package/module that just got uninstalled and removed from memory
@@ -4322,11 +4328,22 @@ void Host::refreshPackageFonts()
     }
 }
 
-void Host::restoreMissingDisplayFonts(const Host* except)
+void Host::substituteMissingDisplayFonts()
 {
     if (auto* hosts = HostManager::self()) {
         for (const auto& pHost : hosts->hostList()) {
-            if (pHost.data() != except) {
+            if (pHost && !pHost->isClosingDown()) {
+                pHost->substituteMissingDisplayFont();
+            }
+        }
+    }
+}
+
+void Host::restoreMissingDisplayFonts()
+{
+    if (auto* hosts = HostManager::self()) {
+        for (const auto& pHost : hosts->hostList()) {
+            if (pHost && !pHost->isClosingDown()) {
                 pHost->restoreMissingDisplayFont();
             }
         }
@@ -4356,16 +4373,24 @@ bool Host::restoreMissingDisplayFont()
     mMissingDisplayFontFamily.clear();
     if (const auto [applied, error] = setDisplayFont(font); !applied) {
         mMissingDisplayFontFamily = family;
-        qWarning().nospace().noquote() << "Host::restoreMissingDisplayFont() WARNING - the font \"" << family << "\" is installed again but was refused: " << error;
+        if (mRefusedDisplayFontFamily != family) {
+            mRefusedDisplayFontFamily = family;
+            qWarning().nospace().noquote() << "Host::restoreMissingDisplayFont() WARNING - the font \"" << family << "\" is available now but was refused: " << error;
+            //: %1 is the font family the profile asked for, which had been missing and has now been made available but cannot be drawn; %2 is the font Mudlet ships with and is still using instead
+            postMessage(tr("[ WARN ]  - The font \"%1\" that this profile uses is available now, but it cannot be used, so the default \"%2\" is still being used instead.")
+                                .arg(family, scmDefaultFontFamily));
+        }
         return false;
     }
-    if (!mMissingDisplayFontFamily.isEmpty()) {
+    mRefusedDisplayFontFamily.clear();
+    // A handler may have taken the font away again, or chosen another one
+    if (getDisplayFont().family() != resolved.family) {
         return true;
     }
 
     mTelnet.sendInfoNewEnvironValue(qsl("FONT"));
-    //: %1 is the font family the profile asked for, which had been missing and has just been installed by a package
-    postMessage(tr("[ INFO ]  - The font \"%1\" that this profile uses is installed again, so it is being used instead of the default.").arg(family));
+    //: %1 is the font family the profile asked for, which had been missing and has now been made available, by a package or module that this or another profile installed or opened
+    postMessage(tr("[ INFO ]  - The font \"%1\" that this profile uses is now available, so it is being used instead of the default.").arg(family));
     return true;
 }
 
