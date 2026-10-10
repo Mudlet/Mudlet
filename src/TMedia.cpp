@@ -2620,8 +2620,9 @@ void TMedia::parseJSONForMediaStop(QJsonObject& json)
 
 void TMedia::printClosedCaption(const TMediaData& mediaData, const QString& action) const
 {
-    if (!mpHost || !mpHost->mEnableClosedCaption || !mpHost->hasConsoleView())
+    if (!mpHost || !mpHost->mEnableClosedCaption) {
         return;
+    }
 
     QString message;
 

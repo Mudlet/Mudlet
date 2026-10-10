@@ -94,6 +94,25 @@ private:
 )");
     }
 
+    // A second of silence, for media that only has to be played and stopped
+    static QByteArray silentWav()
+    {
+        constexpr quint32 sampleRate = 8000;
+        constexpr quint32 dataBytes = sampleRate * 2;
+        QByteArray wav;
+        QDataStream out(&wav, QIODevice::WriteOnly);
+        out.setVersion(QDataStream::Qt_5_12);
+        out.setByteOrder(QDataStream::LittleEndian);
+        out.writeRawData("RIFF", 4);
+        out << static_cast<quint32>(36 + dataBytes);
+        out.writeRawData("WAVEfmt ", 8);
+        out << static_cast<quint32>(16) << static_cast<quint16>(1) << static_cast<quint16>(1) << sampleRate << sampleRate * 2 << static_cast<quint16>(2) << static_cast<quint16>(16);
+        out.writeRawData("data", 4);
+        out << dataBytes;
+        wav.append(QByteArray(dataBytes, '\0'));
+        return wav;
+    }
+
     // A binary map of the profile's own, holding just room roomId; the profile's map is left empty
     static QByteArray binaryMapOf(Host* host, const int roomId)
     {
@@ -624,6 +643,37 @@ headlessSettingEvents = ok and 'ok' or tostring(err)
 )lua"));
         QVERIFY2(ran, "The Lua chunk did not run.");
         QCOMPARE(luaGlobalString(host, "headlessSettingEvents"), qsl("ok"));
+    }
+
+    // As Media_spec.lua pins for the GUI: with closed captions on, an ended playback is captioned in the main console
+    void test_closedCaptionsReachTheMainConsoleWithNoMainWindow()
+    {
+        QVERIFY2(!TAppFrontend::hasView(), "A main window exists, so this run is not headless.");
+
+        const QString hostname = qsl("Test-Headless-Host-Captions");
+        QVERIFY2(HostManager::self()->addHost(hostname, QString(), QString(), QString()), "Could not create a profile with no main window.");
+        Host* host = HostManager::self()->getHost(hostname);
+        QVERIFY2(host, "The profile is not in the pool.");
+
+        const QString soundFile = qsl("%1/headless-caption.wav").arg(mConfigDir.path());
+        QFile file(soundFile);
+        QVERIFY(file.open(QIODevice::WriteOnly));
+        file.write(silentWav());
+        file.close();
+
+        // Stopped at once, so the backend need not be able to play it: a stop is captioned whether or not the sound had started
+        const QString script = qsl(R"lua(
+local ok, err = pcall(function()
+  assert(setConfig("enableClosedCaption", true), "captions refused")
+  assert(playSoundFile({name = [[%1]], key = "headlessCaption", caption = "headless caption"}), "playSoundFile refused")
+  assert(stopSounds(), "stopSounds refused")
+end)
+headlessCaptions = ok and 'ok' or tostring(err)
+)lua")
+                                       .arg(soundFile);
+        QVERIFY2(host->getLuaInterpreter()->compileAndExecuteScript(script), "The Lua chunk did not run.");
+        QCOMPARE(luaGlobalString(host, "headlessCaptions"), qsl("ok"));
+        QTRY_VERIFY2(mainBufferHolds(host, qsl("[headless caption stops]")), "The stopped sound was not captioned in the main console.");
     }
 
     // As the GUI answers the same files
