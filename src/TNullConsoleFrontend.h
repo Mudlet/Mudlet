@@ -172,6 +172,7 @@ public:
     std::optional<std::pair<bool, QString>> setWindowFontFamily(const QString&, const QString&, QFont::Weight) override { return std::nullopt; }
     bool setWindowFontSize(const QString&, int) override { return false; }
     std::optional<QSize> consoleFontSize(const QString&) const override { return std::nullopt; }
+    std::optional<int> consoleColumnWidth(const QString&) const override { return std::nullopt; }
     void setConsoleBgColor(int, int, int, int) override {}
     bool setConsoleBackgroundImage(const QString&, int) override { return false; }
     bool resetConsoleBackgroundImage() override { return false; }
