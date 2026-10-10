@@ -454,11 +454,12 @@ Host::Host(int port, const QString& hostname, const QString& login, const QStrin
         }
     }
 
-    auto settings = MudletApp::getQSettings();
-    const auto interval = settings->value("autosaveIntervalMinutes", 2).toInt();
+    // Null until mudlet::setupConfig() settles the config root, which a profile made with no main window never waits for
+    const QSettings* settings = MudletApp::getQSettings();
+    const auto interval = settings ? settings->value("autosaveIntervalMinutes", 2).toInt() : 2;
     startMapAutosave(interval);
 
-    mMapperCenterSmallAreas = settings->value("mapCenterSmallAreas", false).toBool();
+    mMapperCenterSmallAreas = settings && settings->value("mapCenterSmallAreas", false).toBool();
 
     // Built here, at the end of the constructor, rather than on first use: the
     // model's buffer snapshots this Host's colours, so every one of them has to

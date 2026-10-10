@@ -302,6 +302,7 @@ set(SETTINGS_GROUP_TEST_SOURCES
 set(TEARDOWN_GROUP_TEST_SOURCES
     AppStartupTeardownTest.cpp
     DialogTeardownTest.cpp
+    HeadlessHostSmokeTest.cpp
     HeadlessVersionTest.cpp
     HostChildTeardownTest.cpp
     HostManagerAccessorTest.cpp
