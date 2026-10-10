@@ -2280,6 +2280,11 @@ bool Host::hasConsoleView() const
     return !mpConsole.isNull();
 }
 
+bool Host::mapOpen() const
+{
+    return mpMap && (mpMap->mapViewFrontend() || !hasConsoleView());
+}
+
 void Host::setF3SearchEnabled(const bool enabled)
 {
     mF3SearchEnabled = enabled;
