@@ -846,7 +846,7 @@ private slots:
         // A silently-disconnected pipeline would report absurdly good numbers, so
         // prove data flowed: the console must hold thousands of lines rather than
         // just a login banner.
-        const int bufferedLines = host->mpConsole->buffer.getLastLineNumber();
+        const int bufferedLines = host->mainConsoleView()->buffer.getLastLineNumber();
         QVERIFY2(bufferedLines > 1000, qPrintable(qsl("console buffer only holds %1 lines - the pipeline did not process the corpus").arg(bufferedLines)));
 
         emitMetric("text_corpus_lines", static_cast<qint64>(mCorpusLines));
@@ -870,7 +870,7 @@ private slots:
         QVERIFY2(result.first, qPrintable(result.second));
 
         const double seconds = feedCorpusBestPass(host, kFeedPasses);
-        const int bufferedLines = host->mpConsole->buffer.getLastLineNumber();
+        const int bufferedLines = host->mainConsoleView()->buffer.getLastLineNumber();
         QVERIFY2(bufferedLines > 1000, qPrintable(qsl("console buffer only holds %1 lines - the pipeline did not process the corpus").arg(bufferedLines)));
 
         emitMetric("latin1_lines_per_sec", mCorpusLines / seconds);
@@ -897,7 +897,7 @@ private slots:
         const quint64 prescansBefore = TriggerMatchPool::instance().prescanCount();
         const double seconds = feedCorpusBestPass(host, kFeedPasses);
         const quint64 prescans = TriggerMatchPool::instance().prescanCount() - prescansBefore;
-        const int bufferedLines = host->mpConsole->buffer.getLastLineNumber();
+        const int bufferedLines = host->mainConsoleView()->buffer.getLastLineNumber();
         QVERIFY2(bufferedLines > 1000, qPrintable(qsl("console buffer only holds %1 lines - the pipeline did not process the corpus").arg(bufferedLines)));
 
         // Untimed sentinel proving TriggerUnit consumes what the loopback path
@@ -975,7 +975,7 @@ private slots:
                  "would describe something else entirely.");
 
         const double seconds = feedCorpusBestPass(host, kFeedPasses);
-        const int bufferedLines = host->mpConsole->buffer.getLastLineNumber();
+        const int bufferedLines = host->mainConsoleView()->buffer.getLastLineNumber();
         QVERIFY2(bufferedLines > 1000, qPrintable(qsl("console buffer only holds %1 lines - the pipeline did not process the corpus").arg(bufferedLines)));
 
         emitMetric("defaults_root_triggers", static_cast<qint64>(rootTriggers));
@@ -1003,7 +1003,7 @@ private slots:
 
         // Real coloured, wide-glyph text to draw rather than blank rows.
         host->mTelnet.loopbackTest(mCorpus);
-        const int bufferedLines = host->mpConsole->buffer.getLastLineNumber();
+        const int bufferedLines = host->mainConsoleView()->buffer.getLastLineNumber();
         QVERIFY2(bufferedLines > 1000, qPrintable(qsl("console buffer only holds %1 lines - the pipeline did not process the corpus").arg(bufferedLines)));
 
         // Sized through the main window rather than the pane: TTextEdit takes its
@@ -1012,7 +1012,7 @@ private slots:
         // itself at a flattering speed.
         mudlet::self()->resize(kDisplayWindowWidth, kDisplayWindowHeight);
 
-        TTextEdit* pane = host->mpConsole->mUpperPane;
+        TTextEdit* pane = host->mainConsoleView()->mUpperPane;
         QVERIFY(pane);
         QVERIFY2(pane->visibleRegion().boundingRect().height() >= pane->height(),
                  qPrintable(qsl("the display pane is %1px tall but only %2px of it are unclipped, so this would time a partial redraw")
@@ -1093,10 +1093,10 @@ private slots:
         QVERIFY(noTriggersAreRunningYet(host));
 
         host->mTelnet.loopbackTest(mCorpus);
-        const int bufferedLines = host->mpConsole->buffer.getLastLineNumber();
+        const int bufferedLines = host->mainConsoleView()->buffer.getLastLineNumber();
         QVERIFY2(bufferedLines > 1000, qPrintable(qsl("console buffer only holds %1 lines - the pipeline did not process the corpus").arg(bufferedLines)));
 
-        TTextEdit* pane = host->mpConsole->mUpperPane;
+        TTextEdit* pane = host->mainConsoleView()->mUpperPane;
         QVERIFY(pane);
 
         TailResult small;
@@ -1148,10 +1148,10 @@ private slots:
         QVERIFY(noTriggersAreRunningYet(host));
 
         host->mTelnet.loopbackTest(mCorpus);
-        const int bufferedLines = host->mpConsole->buffer.getLastLineNumber();
+        const int bufferedLines = host->mainConsoleView()->buffer.getLastLineNumber();
         QVERIFY2(bufferedLines > 1000, qPrintable(qsl("console buffer only holds %1 lines - the pipeline did not process the corpus").arg(bufferedLines)));
 
-        TTextEdit* pane = host->mpConsole->mUpperPane;
+        TTextEdit* pane = host->mainConsoleView()->mUpperPane;
         QVERIFY(pane);
 
         OverlayResult small;
