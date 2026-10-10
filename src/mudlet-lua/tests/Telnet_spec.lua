@@ -2095,6 +2095,10 @@ describe("MXP auto-detection from the mode switch escape", function()
   -- the game pausing mid-switch for longer than the network packet timeout
   -- makes cTelnet flush what it holds, which must not lose the switch's start
   it("finds the switch when the posting timer flushes between its two reads", function()
+    if not os.getenv("MUDLET_TEST_MODE") then
+      pending("waiting out the posting timeout needs MUDLET_TEST_MODE (pumpEvents() does nothing without it)")
+      return
+    end
     local quietFor = function()
       for _ = 1, 10 do
         assert.is_true(pumpEvents(50), "pumpEvents needs MUDLET_TEST_MODE set, see the tests README")
