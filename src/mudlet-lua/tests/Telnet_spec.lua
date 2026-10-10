@@ -2083,8 +2083,19 @@ describe("MXP auto-detection from the mode switch escape", function()
   -- a read that is not scanned, here because MXP was negotiated, comes between
   -- the two, so they are not the two halves of one switch
   it("does not join a read to one from before MXP was negotiated and dropped", function()
+    -- a profile with MXP off refuses the DO, and the middle read is then
+    -- scanned like the other two, so nothing unscanned comes between them
+    local enabledBefore = getConfig("enableMXP")
+    setConfig("enableMXP", true)
+    finally(function() setConfig("enableMXP", enabledBefore) end)
+    local negotiated = false
+    local handler = registerAnonymousEventHandler("sysProtocolEnabled", function(_, protocol)
+      negotiated = negotiated or protocol == "MXP"
+    end)
     feed("\27[1")
     feed("<T_IAC><T_DO><O_MXP>")
+    killAnonymousEventHandler(handler)
+    assert.is_true(negotiated, "the game's DO MXP was not taken up")
     feed("mMXPNEGOTIATEDREAD\r\n")
     feed("<T_IAC><T_DONT><O_MXP>")
     feed("z after it\r\n")
