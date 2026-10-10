@@ -253,7 +253,7 @@ public:
     std::pair<bool, QString> setZoom(qreal zoom) override
     {
         mCalls << call("setZoom", {number(zoom)});
-        return {true, QString()};
+        return zoom < 1.0 ? std::pair{false, qsl("routed view zoom refusal")} : std::pair{true, QString()};
     }
     int getCurrentAreaId() const override
     {
@@ -665,6 +665,8 @@ assert(refused == nil and whyRefused == "routed centring refusal", "centerview d
 local missing, whyMissing = centerview(1, 8)
 assert(missing == nil and whyMissing == "view 8 not found", "centerview did not report a view that is not open")
 assert(setMapZoom(1.5, AREA, 7) == true, "setMapZoom did not pass on the view zooming")
+local unzoomed, whyUnzoomed = setMapZoom(0.5, AREA, 7)
+assert(unzoomed == nil and whyUnzoomed == "routed view zoom refusal", "setMapZoom did not pass on the view refusing it")
 assert(getMapZoom(AREA, 7) == 2.75, "getMapZoom did not pass on the zoom the view has")
 local info = getMapViewInfo(7)
 assert(info.areaId == 21 and info.centeredRoomId == 31 and info.zoom == 2.75 and info.zLevel == -2, "getMapViewInfo did not pass on what the view answered")
@@ -680,6 +682,8 @@ assert(info.areaId == 21 and info.centeredRoomId == 31 and info.zoom == 2.75 and
                 qsl("view(8)"),
                 qsl("view(7)"),
                 qsl("setZoom(1.5)"),
+                qsl("view(7)"),
+                qsl("setZoom(0.5)"),
                 qsl("view(7)"),
                 call("getZoom"),
                 qsl("view(7)"),
