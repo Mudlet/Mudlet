@@ -21,11 +21,14 @@
 #include "TMxpFrameManager.h"
 #include "Host.h"
 #include "TConsoleFrontend.h"
+#include "TConsoleModel.h"
 #include "TMxpFrameFrontend.h"
 #include "TPrintSink.h"
 
 #include <QDebug>
 #include <QFontMetrics>
+#include <algorithm>
+#include <cmath>
 #include <optional>
 
 namespace {
@@ -703,8 +706,12 @@ QSize TMxpFrameManager::calculateFrameSize(const QString& spec, const QSize& con
             return QSize(0, 0);
         }
 
-        // Get font metrics from main console
-        QFont font = mpHost->getDisplayFont();
+        // A frame draws in the consoles' default family at the main font's size
+        // (TMxpFrameWidgets), not in the main font, which may be proportional
+        TFontAttributes frameFont(mpHost->fontsAntiAlias());
+        const int pointSize = mpHost->getDisplayFont().pointSize();
+        frameFont.mPointSize = pointSize > 0 ? pointSize : 12;
+        const QFont font = frameFont.makeFont();
         QFontMetrics fm(font);
 
         if (isHeight) {
@@ -713,8 +720,10 @@ QSize TMxpFrameManager::calculateFrameSize(const QString& spec, const QSize& con
             int result = chars * fm.height();
             return QSize(0, result);
         }
-        // The cell TTextEdit draws each column in; a "W" is about twice that on a proportional font
-        int result = chars * fm.averageCharWidth();
+        // TTextEdit draws whole-pixel cells but getColumnCount() divides by the
+        // fractional average, so the wider of the two holds that many of either
+        const qreal cellWidth = std::max<qreal>(fm.averageCharWidth(), QFontMetricsF(font).averageCharWidth());
+        const int result = static_cast<int>(std::ceil(chars * cellWidth));
         return QSize(result, 0);
     }
 
