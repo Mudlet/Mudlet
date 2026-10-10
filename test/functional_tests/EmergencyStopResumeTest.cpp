@@ -379,6 +379,81 @@ private slots:
         QTRY_VERIFY_WITH_TIMEOUT(readGlobalInt(qsl("offsetChildTicks")) > 0, 5s);
     }
 
+    // An offset timer its parent has already armed must not run its script after
+    // the stop. Counted from the script body, not a sysDataSendRequest handler:
+    // the stop mutes events, so a sent command would go uncounted. The script is
+    // set after switching the child on, because switching on an offset timer with
+    // a script by name gives it a schedule of its own - see the case above.
+    void test_armedOffsetTimerStoppedByEmergencyStop()
+    {
+        auto* unit = mpHost->getTimerUnit();
+        QVERIFY(mpHost->mLuaInterpreter.compileAndExecuteScript(qsl("stopOffsetParentTicks = 0\nstopOffsetChildTicks = 0")));
+
+        const QString parentName = qsl("emergency stop armed offset parent");
+        auto [parentId, parentMessage] = mpHost->mLuaInterpreter.startPermTimer(parentName, QString(), scmOffsetParentSeconds, qsl("stopOffsetParentTicks = stopOffsetParentTicks + 1"));
+        QVERIFY2(parentId > 0, qPrintable(parentMessage));
+        const QString childName = qsl("emergency stop armed offset child");
+        // most of the parent's interval, so the case can catch the child armed but not yet fired
+        auto [childId, childMessage] = mpHost->mLuaInterpreter.startPermTimer(childName, parentName, scmOffsetParentSeconds * 0.7, QString());
+        QVERIFY2(childId > 0, qPrintable(childMessage));
+        auto* pChild = unit->getTimer(childId);
+        QVERIFY(pChild->isOffsetTimer());
+
+        mRunningTimerNames << parentName << childName;
+        QVERIFY(unit->enableTimer(parentName));
+        QVERIFY(unit->enableTimer(childName));
+        pChild->setScript(qsl("stopOffsetChildTicks = stopOffsetChildTicks + 1"));
+        QCOMPARE(unit->remainingTime(childId), -1);
+        QTRY_VERIFY_WITH_TIMEOUT(readGlobalInt(qsl("stopOffsetParentTicks")) > 0, 5s);
+        QVERIFY2(unit->remainingTime(childId) > 0, "the parent firing should have armed its offset child");
+        QCOMPARE(readGlobalInt(qsl("stopOffsetChildTicks")), 0);
+
+        mpHost->stopAllTriggers();
+        QCOMPARE(unit->remainingTime(childId), -1);
+        // past the 0.7s the armed child had left
+        QTest::qWait(static_cast<int>(scmOffsetParentSeconds * 1000));
+        QVERIFY2(readGlobalInt(qsl("stopOffsetChildTicks")) == 0, "an offset timer armed before the emergency stop must not run its script after it");
+
+        // and the resume still gets the pair going: the parent re-arms the child
+        mpHost->reenableAllTriggers();
+        QTRY_VERIFY_WITH_TIMEOUT(readGlobalInt(qsl("stopOffsetChildTicks")) > 0, 5s);
+    }
+
+    // An offset timer that fires arms its own offset children, and stopping just
+    // itself afterwards must leave those running. No emergency stop involved.
+    void test_offsetTimerArmsItsOwnOffsetChild()
+    {
+        auto* unit = mpHost->getTimerUnit();
+        QVERIFY(mpHost->mLuaInterpreter.compileAndExecuteScript(qsl("chainChildTicks = 0\nchainGrandchildTicks = 0\n"
+                                                                    "function onOffsetChainSend(_, what)\n"
+                                                                    "  if what == 'chainChildCommand' then chainChildTicks = chainChildTicks + 1 end\n"
+                                                                    "  if what == 'chainGrandchildCommand' then chainGrandchildTicks = chainGrandchildTicks + 1 end\n"
+                                                                    "end\n"
+                                                                    "registerAnonymousEventHandler('sysDataSendRequest', 'onOffsetChainSend')")));
+
+        const QString parentName = qsl("offset chain parent");
+        auto [parentId, parentMessage] = mpHost->mLuaInterpreter.startPermTimer(parentName, QString(), scmOffsetParentSeconds, QString());
+        QVERIFY2(parentId > 0, qPrintable(parentMessage));
+        unit->getTimer(parentId)->setCommand(qsl("chainParentCommand"));
+        const QString childName = qsl("offset chain child");
+        auto [childId, childMessage] = mpHost->mLuaInterpreter.startPermTimer(childName, parentName, scmOffsetChildSeconds, QString());
+        QVERIFY2(childId > 0, qPrintable(childMessage));
+        unit->getTimer(childId)->setCommand(qsl("chainChildCommand"));
+        const QString grandchildName = qsl("offset chain grandchild");
+        auto [grandchildId, grandchildMessage] = mpHost->mLuaInterpreter.startPermTimer(grandchildName, childName, scmOffsetChildSeconds, QString());
+        QVERIFY2(grandchildId > 0, qPrintable(grandchildMessage));
+        auto* pGrandchild = unit->getTimer(grandchildId);
+        pGrandchild->setCommand(qsl("chainGrandchildCommand"));
+        QVERIFY(pGrandchild->isOffsetTimer());
+
+        mRunningTimerNames << parentName << childName << grandchildName;
+        QVERIFY(unit->enableTimer(parentName));
+        QVERIFY(unit->enableTimer(childName));
+        QVERIFY(unit->enableTimer(grandchildName));
+        QTRY_VERIFY_WITH_TIMEOUT(readGlobalInt(qsl("chainChildTicks")) > 0, 5s);
+        QTRY_VERIFY2_WITH_TIMEOUT(readGlobalInt(qsl("chainGrandchildTicks")) > 0, "the offset child that fired should have left the grandchild it armed running", 5s);
+    }
+
     // The uninstallList half of the resume's skip: an uninstall with a timer
     // script on the call stack - a package auto-updater removing its own package
     // - cannot free that package's timers yet, and the resume walks the very list
