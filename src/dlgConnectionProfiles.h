@@ -166,6 +166,7 @@ private:
     void abandonPendingProfileLoad();
     // What a keychain read answers with
     void passwordRetrieved(const QString& profileName, bool success, const QString& password, const QString& errorMessage);
+    void schedulePasswordLoad(const QString& profile_name);
     // What a read that had timed out answers with afterwards, while the dialog is still open - a
     // load that ran closed it - so all it may do is fill a password field the user has not typed in.
     void passwordArrivedLate(const QString& profileName, bool success, const QString& password, const QString& errorMessage);
@@ -217,6 +218,8 @@ private:
     bool mPendingConnect = false;      // Whether to connect (true) or just load (false)
     QString mKeychainOperationProfile; // Whose password a keychain read is fetching, if any
     bool mKeychainWaitShown = false;   // Whether the dialog is showing the keychain wait
+    // Whose password load arrived while that read was in flight, to run once it answers
+    QString mDeferredPasswordLoadProfile;
 
 
 private slots:
