@@ -212,9 +212,9 @@ git_submodule_init(
   CHECK_FILE "3rdparty/edbee-lib/CMakeLists.txt" SUBMODULE_PATH
   "3rdparty/edbee-lib" READABLE_NAME "edbee-lib editor widget")
 
-  git_submodule_init(
-    CHECK_FILE "3rdparty/qt-tags-widget/CMakeLists.txt" SUBMODULE_PATH
-    "3rdparty/qt-tags-widget" READABLE_NAME "qt-tags-widget widget")
+git_submodule_init(
+  CHECK_FILE "3rdparty/qt-tags-widget/src/qtagedit.cpp" SUBMODULE_PATH
+  "3rdparty/qt-tags-widget" READABLE_NAME "qt-tags-widget widget")
 
 # TODO: On macOS, we need to build qtkeychain from source because Homebrew's
 # qtkeychain package is built against Homebrew's Qt, which is incompatible with
@@ -327,10 +327,6 @@ if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
   target_compile_options(edbee-lib PRIVATE -Wno-sfinae-incomplete)
 endif()
 add_subdirectory(3rdparty/communi)
-# Upstream ships a standalone library, so add_subdirectory() would adopt its install() rules and
-# put its dev files into every package. EXCLUDE_FROM_ALL keeps them out (observed, not documented
-# CMake behaviour, so the packaging scripts check the staged tree); mudlet_core still links it.
-add_subdirectory(3rdparty/qt-tags-widget EXCLUDE_FROM_ALL)
 add_subdirectory(translations/translated)
 add_subdirectory(src)
 
