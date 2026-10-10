@@ -79,7 +79,7 @@ private:
     // spends its wait scanning rather than letting the ingest catch up.
     bool tailContains(const QString& text) const
     {
-        TMainConsole* console = mpHost->mpConsole;
+        TMainConsole* console = mpHost->mainConsoleView();
         const int lastLine = console->buffer.getLastLineNumber();
         for (int i = lastLine; i >= std::max(0, lastLine - 3); --i) {
             if (console->buffer.line(i).contains(text)) {
@@ -147,7 +147,7 @@ private slots:
         // even the unfixed code finishes, so there the test passes without
         // discriminating rather than failing spuriously.
         constexpr int lineCount = 12000;
-        mpHost->mpConsole->buffer.clear();
+        mpHost->mainConsoleView()->buffer.clear();
 
         const QByteArray payload = burstOf(lineCount);
         QVERIFY(payload.size() > 100000);
@@ -164,7 +164,7 @@ private slots:
                  qPrintable(qsl("the burst stopped part-way through: %1 of %2 lines arrived and no more were coming. "
                                 "slot_socketReadyToBeRead() read one BUFFER_SIZE chunk and left the rest unread, and "
                                 "readyRead() only fires on fresh bytes.")
-                                    .arg(mpHost->mpConsole->buffer.getLastLineNumber())
+                                    .arg(mpHost->mainConsoleView()->buffer.getLastLineNumber())
                                     .arg(lineCount)));
     }
 };
