@@ -38,9 +38,7 @@ public:
 
     // Null outside HostManager's lifetime
     static FontManager* self() { return smpSelf; }
-    // Every family the font database knows, including those added here. With no
-    // main window to have loaded the fonts folder, the first call loads it, and
-    // the fonts Mudlet bundles, itself.
+    // Every family the font database knows, including those added here
     static QStringList availableFonts();
 
     void addFonts();
@@ -55,7 +53,7 @@ private:
     // process's, and outlives every FontManager that adds to it
     inline static bool smFontsAdded = false;
 
-    void addFontsWithNoMainWindow();
+    void addFontsOnFirstUse();
 
     void loadFonts(const QString& folder);
     void rememberFont(const QString& filePath, int fontID, const QString& profileName, const QString& belongsTo);
