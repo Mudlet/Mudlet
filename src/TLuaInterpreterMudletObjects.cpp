@@ -1525,8 +1525,7 @@ int TLuaInterpreter::raiseEvent(lua_State* L)
 // down too.
 static bool shuttingDown(const QPointer<Host>& pHost)
 {
-    auto pFrontend = TAppFrontend::instance();
-    return !pHost || pHost->isClosingDown() || !pFrontend || pFrontend->quitting();
+    return !pHost || pHost->isClosingDown() || !TAppFrontend::hasView() || TAppFrontend::instance()->quitting();
 }
 
 // No documentation available in wiki - internal, test-only function

@@ -4279,8 +4279,8 @@ void TLuaInterpreter::handleIreComposerEdit(const QString& jsonData)
         return;
     }
 
-    if (auto* frontend = TAppFrontend::instance()) {
-        host.mTelnet.mpComposer = frontend->openComposer(&host, title, initialText);
+    if (TAppFrontend::hasView()) {
+        host.mTelnet.mpComposer = TAppFrontend::instance()->openComposer(&host, title, initialText);
     }
 }
 

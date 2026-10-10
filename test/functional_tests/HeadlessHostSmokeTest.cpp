@@ -96,7 +96,7 @@ private slots:
 
     void test_profileRunsLuaAndTriggersWithNoMainWindow()
     {
-        QVERIFY2(!TAppFrontend::instance(), "A main window exists, so this run is not headless.");
+        QVERIFY2(!TAppFrontend::hasView(), "A main window exists, so this run is not headless.");
 
         QVERIFY2(HostManager::self()->addHost(mHostname, QString(), QString(), QString()), "Could not create a profile with no main window.");
         Host* host = HostManager::self()->getHost(mHostname);
@@ -132,7 +132,7 @@ headlessResult = ok and 'ok' or tostring(err)
 
     void test_windowsMadeWithNoMainWindowHaveModels()
     {
-        QVERIFY2(!TAppFrontend::instance(), "A main window exists, so this run is not headless.");
+        QVERIFY2(!TAppFrontend::hasView(), "A main window exists, so this run is not headless.");
 
         QVERIFY2(HostManager::self()->addHost(mWindowsHostname, QString(), QString(), QString()), "Could not create a profile with no main window.");
         Host* host = HostManager::self()->getHost(mWindowsHostname);
@@ -262,7 +262,7 @@ headlessShrinkLeft = table.concat({tostring(windowType("headlessShrinkBuffer")),
 
     void test_profileConnectsAndLogsInWithNoMainWindow()
     {
-        QVERIFY2(!TAppFrontend::instance(), "A main window exists, so this run is not headless.");
+        QVERIFY2(!TAppFrontend::hasView(), "A main window exists, so this run is not headless.");
 
         QTcpServer server;
         QVERIFY2(server.listen(QHostAddress::LocalHost), "Could not start the local test server.");
@@ -299,7 +299,7 @@ headlessShrinkLeft = table.concat({tostring(windowType("headlessShrinkBuffer")),
 
     void test_heldLineCommitsBeforeDisconnectWithNoMainWindow()
     {
-        QVERIFY2(!TAppFrontend::instance(), "A main window exists, so this run is not headless.");
+        QVERIFY2(!TAppFrontend::hasView(), "A main window exists, so this run is not headless.");
 
         // Prose that runs right up to the wrap column, so undoing server wrap holds it back
         const QByteArray heldLine = "Welcome traveller, the gate stands open and";
@@ -338,7 +338,7 @@ headlessShrinkLeft = table.concat({tostring(windowType("headlessShrinkBuffer")),
 #if !defined(QT_NO_SSL)
     void test_untrustedCertificateWithNoMainWindow()
     {
-        QVERIFY2(!TAppFrontend::instance(), "A main window exists, so this run is not headless.");
+        QVERIFY2(!TAppFrontend::hasView(), "A main window exists, so this run is not headless.");
         if (QSslSocket::activeBackend() != QLatin1String("openssl")) {
             QSKIP("Serving a certificate from an in-memory PEM key is only relied on with the OpenSSL backend.");
         }
@@ -404,6 +404,37 @@ fbYT0tapBHTFGBkf6NgxBGenwL5TDeL9g3w57+FWiHtIKUylQhCoNb20
             QCoreApplication::sendPostedEvents(nullptr, QEvent::DeferredDelete);
             QVERIFY2(!notifier, "The model outlived deferred deletes.");
         }
+    }
+
+    void test_profileGetsNullAppViewWithNoMainWindow()
+    {
+        QVERIFY2(!TAppFrontend::hasView(), "A main window exists, so this run is not headless.");
+        TAppFrontend* app = TAppFrontend::instance();
+        QVERIFY2(app, "TAppFrontend::instance() must never be null.");
+        QVERIFY(!app->getActiveHost());
+        QCOMPARE(app->profileTabIndex(mHostname), -1);
+        QVERIFY(app->getOpenFileName(qsl("title"), QDir::tempPath()).isEmpty());
+        QVERIFY(!app->quitting());
+
+        const QString hostname = qsl("Test-Headless-Host-App-View");
+        QVERIFY2(HostManager::self()->addHost(hostname, QString(), QString(), QString()), "Could not create a profile with no main window.");
+        Host* host = HostManager::self()->getHost(hostname);
+        QVERIFY2(host, "The profile is not in the pool.");
+
+        // Each of these calls the app view without asking whether there is one
+        const bool ran = host->getLuaInterpreter()->compileAndExecuteScript(qsl(R"lua(
+headlessAppResult = 'not run'
+local ok, err = pcall(function()
+  local tab, tabMsg = getProfileTabNumber()
+  assert(tab == nil and type(tabMsg) == "string", "getProfileTabNumber did not answer nil and a message")
+  assert(openWebPage("about:blank") == false, "openWebPage did not answer false")
+  assert(loadWindowLayout() == false, "loadWindowLayout did not answer false")
+  assert(showNotification("headless title", "headless text") == true, "showNotification did not answer true")
+end)
+headlessAppResult = ok and 'ok' or tostring(err)
+)lua"));
+        QVERIFY2(ran, "The Lua chunk did not run.");
+        QCOMPARE(luaGlobalString(host, "headlessAppResult"), qsl("ok"));
     }
 
     void test_profileWithNoSettingsStoreTakesTheDefaults()

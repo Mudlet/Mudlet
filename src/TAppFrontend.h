@@ -33,8 +33,10 @@ class QSize;
 class TAppFrontend
 {
 public:
-    // nullptr until the main window exists, and again from the end of its destructor.
-    static TAppFrontend* instance() { return smpInstance; }
+    // Never null: while there is no main window, before it is made and from the end of its
+    // destructor, this is a null view whose answers are all "not there".
+    static TAppFrontend* instance() { return smpInstance ? smpInstance : nullView(); }
+    static bool hasView() { return smpInstance != nullptr; }
     static void setInstance(TAppFrontend* frontend) { smpInstance = frontend; }
 
     // The profile in the active tab, or nullptr if there is none or it has no console yet.
@@ -108,6 +110,8 @@ protected:
     ~TAppFrontend() = default;
 
 private:
+    static TAppFrontend* nullView();
+
     inline static TAppFrontend* smpInstance = nullptr;
 };
 

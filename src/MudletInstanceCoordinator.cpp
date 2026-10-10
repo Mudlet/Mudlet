@@ -117,8 +117,8 @@ void MudletInstanceCoordinator::handleReadyRead()
             const QString uri = message.mid(11);
 
             QTimer::singleShot(0ms, this, [uri]() {
-                if (auto* app = TAppFrontend::instance()) {
-                    app->handleTelnetUri(uri);
+                if (TAppFrontend::hasView()) {
+                    TAppFrontend::instance()->handleTelnetUri(uri);
                 }
             });
         } else {
@@ -137,8 +137,8 @@ void MudletInstanceCoordinator::handleReadyRead()
 void MudletInstanceCoordinator::installPackagesLocally()
 {
     QTimer::singleShot(0ms, this, [this]() {
+        Q_ASSERT(TAppFrontend::hasView());
         TAppFrontend* app = TAppFrontend::instance();
-        Q_ASSERT(app);
         Host* activeHost = app->getActiveHost();
         if (activeHost) {
             installPackagesToHost(activeHost);

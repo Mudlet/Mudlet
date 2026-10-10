@@ -1255,10 +1255,10 @@ void cTelnet::slot_socketDisconnected()
     postMessage(msg);
 
 #if !defined(QT_NO_SSL)
-    if (auto* frontend = TAppFrontend::instance(); sslerr && frontend) {
+    if (sslerr && TAppFrontend::hasView()) {
         // Got a secure connection error that should be shown in the preferences
         // of the profile that raised it, not whichever profile is active
-        frontend->showOptionsDialog(qsl("tab_connection"), mpHost);
+        TAppFrontend::instance()->showOptionsDialog(qsl("tab_connection"), mpHost);
     }
 #endif
 
@@ -4434,8 +4434,8 @@ void cTelnet::setATCPVariables(const QByteArray& msg)
             arg.remove(0, 1);
         }
 
-        if (auto* frontend = TAppFrontend::instance()) {
-            mpComposer = frontend->openComposer(mpHost, title, arg);
+        if (TAppFrontend::hasView()) {
+            mpComposer = TAppFrontend::instance()->openComposer(mpHost, title, arg);
         }
         return;
     }
@@ -4959,8 +4959,8 @@ void cTelnet::atcpComposerCancel()
     if (!mpComposer) {
         return;
     }
-    if (auto* frontend = TAppFrontend::instance()) {
-        frontend->closeComposer(mpComposer);
+    if (TAppFrontend::hasView()) {
+        TAppFrontend::instance()->closeComposer(mpComposer);
     }
     mpComposer = nullptr;
     // This will be unaffected by Mud Server encoding:
@@ -5013,8 +5013,8 @@ void cTelnet::atcpComposerSave(QString txt)
         return;
     }
 
-    if (auto* frontend = TAppFrontend::instance()) {
-        frontend->closeComposer(mpComposer);
+    if (TAppFrontend::hasView()) {
+        TAppFrontend::instance()->closeComposer(mpComposer);
     }
     mpComposer = nullptr;
 }
@@ -5032,7 +5032,7 @@ void cTelnet::postMessage(QString msg)
     messageStack.append(msg);
 
     // The main console's model is made at the end of Host's constructor
-    if (!mpHost || mpHost->isClosingDown() || !mpHost->mainConsoleModelOrNull() || (!mpHost->hasConsoleView() && TAppFrontend::instance())) {
+    if (!mpHost || mpHost->isClosingDown() || !mpHost->mainConsoleModelOrNull() || (!mpHost->hasConsoleView() && TAppFrontend::hasView())) {
         return;
     }
 
