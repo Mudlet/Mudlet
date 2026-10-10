@@ -8603,8 +8603,9 @@ bool dlgProfilePreferences::updateDisplayFont(const Host::DisplayFontChange chan
                                                              : static_cast<QFont::StyleStrategy>(QFont::NoAntialias | QFont::PreferQuality));
 
     if (TFontAttributes(mpHost->getDisplayFont()) == TFontAttributes(displayFont)) {
-        // Nothing changes on screen, but re-picking the family that stands in for a
-        // missing font settles for it, so the profile stops asking for the missing one
+        // Nothing changes on screen, but a pick still has to reach the Host: re-picking
+        // the family standing in for a missing font settles for it. Every pick of a new
+        // family lands here as well, as activated follows currentFontChanged
         if (change == Host::DisplayFontChange::UserChoice) {
             mpHost->setDisplayFont(displayFont, change);
         }
@@ -8664,7 +8665,8 @@ void dlgProfilePreferences::cancelShortcutCaptures()
 void dlgProfilePreferences::slot_displayFontChanged()
 {
     // Only fires from QFontComboBox::currentFontChanged and QComboBox::activated,
-    // so the family really is one the user just picked out of the list
+    // so the family really is one the user just picked out of the list. Picking a
+    // new family fires both, so a second run for the same font must change nothing
     if (!mpHost.isNull() && updateDisplayFont(Host::DisplayFontChange::UserChoice)) {
         mpHost->mTelnet.sendInfoNewEnvironValue(qsl("FONT"));
     }
