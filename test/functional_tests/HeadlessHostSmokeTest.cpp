@@ -1260,6 +1260,11 @@ createLabel("lsE", 0, 0, 100, 20, 1)
                     qsl("color: red;"),
                     qsl("QLabel { padding: 6px; } QLabel#%1 { padding-left: 1px; } QPushButton { margin: 9px; }").arg(objectName),
                     qsl("QLabel:hover { padding: 9px; } * { border: 1px solid; } QLabel { border-right-width: 4px; }"),
+                    // QCss::Parser reads a priority marker and nothing weighs it, so a later rule still wins
+                    qsl("padding: 4px !important;"),
+                    qsl("border-top-style: solid !important; border-top-width: 3px;"),
+                    qsl("QLabel { padding: 6px !important; font-size: 30px !important; } QLabel { padding: 2px ! IMPORTANT; font-size: 18px; }"),
+                    qsl("QLabel { padding: 2px; } QLabel { padding: 1px 5px!important; }"),
                     QString(),
             };
             for (const QString& boxSheet : boxSheets) {
