@@ -258,7 +258,8 @@ if false then
 
   --- This function will have Mudlet parse the given text as if it came from the MUD - one great application
   --- is trigger testing. You can use \n to represent a new line. The function also accept ANSI color codes that
-  --- are used in MUDs. A sample table can be found here.
+  --- are used in MUDs. A sample table can be found here. Carriage returns are dropped, as they are from a game, so
+  --- "\r\n" ends a line once; only one that ends the text stays, and commits the line so far.
   ---
   --- @usage Usage of new line characters.
   ---   <pre>

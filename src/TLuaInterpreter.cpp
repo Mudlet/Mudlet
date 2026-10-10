@@ -1230,10 +1230,15 @@ int TLuaInterpreter::feedTriggers(lua_State* L)
     QByteArray data{bytes, static_cast<qsizetype>(length)};
     // cTelnet::processSocketData() drops a NUL from a game's text, so drop it here too
     data.replace('\0', QByteArray());
-    // TBuffer would commit the CR of a CRLF as a line of its own, so it goes as
-    // it does from a game; a lone CR stays, as it is how a script flushes a line
-    // still being fed:
-    data.replace("\r\n", "\n");
+    // and every CR, as TBuffer ends a line at each one, so a CR LF would end it twice. A CR that ends the
+    // text stays: like the one cTelnet::slot_timerPosting() adds, it flushes a line still being fed
+    if (data.contains('\r')) {
+        const bool flushesLine = data.endsWith('\r');
+        data.replace('\r', QByteArray());
+        if (flushesLine) {
+            data.append('\r');
+        }
+    }
 
     const QByteArray currentEncoding = host.mTelnet.getEncoding();
     if (dataIsUtf8Encoded) {
