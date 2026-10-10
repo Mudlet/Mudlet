@@ -1451,6 +1451,10 @@ describe("Tests the GUI utilities as far as possible without mudlet", function()
       { "\27]0;title\7\27[31mred", string = "red", decho = "<128,0,0>red", lastColour = 1 },
       { "\27[1 qA\27[38;5;-1mB\27(BC\27cD\27E", string = "ABCDE", decho = "ABCDE" },
       { "\27]0;t\rmore\7text", string = "text", decho = "text" },
+      { "A\27[999CB", string = "A" .. string.rep(" ", 998) .. "B", decho = "A" .. string.rep(" ", 998) .. "B" },
+      { string.rep("\27[999C", 3) .. "Z\nA\27[2CB", string = string.rep(" ", 999) .. "Z\nA  B", decho = string.rep(" ", 999) .. "Z\nA  B" },
+      { "a\27[99999999999999999999Cb", string = "ab", decho = "ab" },
+      { "\27[1zHello\27[zA\27[1;2zB", string = "HelloAB", decho = "\27[1zHello\27[zA\27[1;2zB" },
     }
 
     -- a case leaves out what it does not pin, such as output that comes from a known bug

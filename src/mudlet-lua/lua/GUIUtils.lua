@@ -2080,28 +2080,53 @@ function hecho2string(text)
   return x2string(text, "Hex")
 end
 
-local ansiPattern = rex.new("\\e\\[([0-9:;]*?)m")
--- the escape sequences TBuffer drops from game text: a string sequence (OSC, DCS, SOS, PM or APC)
--- up to its terminator or a line ending, any CSI but SGR and an MXP line mode up to its final
--- byte or the byte that cuts it short, a character set designation (with or without the byte naming
--- the set), the short escapes, a stray ESC;
--- first, a cursor forward, which TBuffer writes as spaces
-local ansiNonSgrPattern = rex.new("\\e\\[([0-9]+)C|\\e[\\]PX^_](?:[^\\a\\e\\n\\x04\\xff]++|\\e(?!\\\\))*+(?:\\a|\\e\\\\)?|\\e\\[(?![0-9:;]*m|[0-9]*z)[\\x20-\\x3F]*[\\x40-\\x7E]?|\\e[()*+][\\x30-\\x7E]?|\\e[78c\\\\]|\\e(?!\\[[0-9:;]*m|\\[[0-9]*z)")
+-- captures an SGR, an MXP line mode, a cursor forward, a line ending or a run of text; the uncaptured
+-- alternatives are what the console drops: a string sequence, other CSI, a charset, ESC 7/8/c/\, a stray ESC
+local ansiTokenPattern = rex.new("\\e\\[([0-9:;]*)m|(\\e\\[[0-9:;]*z)|\\e\\[([0-9]+)C"
+  .. "|\\e[\\]PX^_](?:[^\\a\\e\\n\\x04\\xff]++|\\e(?!\\\\))*+(?:\\a|\\e\\\\)?|\\e\\[[\\x20-\\x3F]*[\\x40-\\x7E]?|\\e[()*+][\\x30-\\x7E]?|\\e[78c\\\\]|\\e"
+  .. "|([\\n\\r\\x04\\xff])|([^\\e\\n\\r\\x04\\xff]+)")
+-- TBuffer's widest line; as there, a cursor forward stops at its last column
+local ansiLineWidth = 1000
 
-local function replaceNonSgrEscape(cursorForward)
-  -- the cap is TBuffer's widest line, as a count from the game is unbounded
-  return cursorForward and string.rep(" ", math.min(tonumber(cursorForward), 1000)) or ""
+local function convertAnsi(text, onSgr, onMxp, onCursorForward)
+  local column = 0
+  return (rex.gsub(text, ansiTokenPattern, function(sgr, mxp, cursorForward, lineEnding, plain)
+    if plain then
+      column = (column + (utf8.len(plain) or #plain)) % ansiLineWidth
+      return nil
+    elseif lineEnding then
+      column = 0
+      return nil
+    elseif sgr then
+      return onSgr(sgr)
+    elseif mxp then
+      return onMxp(mxp)
+    elseif cursorForward then
+      local requested = tonumber(cursorForward)
+      -- TBuffer ignores a count that does not fit an int
+      if requested > 2147483647 then
+        return ""
+      end
+      local spaces = math.max(0, math.min(requested, ansiLineWidth - 1 - column))
+      column = column + spaces
+      return onCursorForward(spaces)
+    end
+    return ""
+  end))
 end
 
-local function convertNonSgrEscapes(text)
-  return (rex.gsub(text, ansiNonSgrPattern, replaceNonSgrEscape))
+local function dropAnsiToken()
+  return ""
+end
+
+local function ansiSpaces(count)
+  return string.rep(" ", count)
 end
 
 -- function for converting a raw ANSI string into plain strings
 function ansi2string(text)
   assert(type(text) == 'string', 'ansi2string: bad argument #1 type (expected string, got '..type(text)..'!)')
-  local result = rex.gsub(convertNonSgrEscapes(text), ansiPattern, "")
-  return result
+  return convertAnsi(text, dropAnsiToken, dropAnsiToken, ansiSpaces)
 end
 
 local ansiColorNames = {}
@@ -2135,7 +2160,7 @@ function ansi2decho(text, ansi_default_color)
 
   -- match each set of ansi tags, ie [0;36;40m and convert to decho equivalent.
   -- this works since both ansi colours and echo don't need closing tags and map to each other
-  local result = rex.gsub(convertNonSgrEscapes(text), ansiPattern, function(s)
+  local result = convertAnsi(text, function(s)
     local output = {} -- assemble the output into this table
 
     local delim = ";"
@@ -2269,7 +2294,7 @@ function ansi2decho(text, ansi_default_color)
     end
 
     return table.concat(output)
-  end)
+  end, function() end, ansiSpaces)
 
   return result, lastColour
 end
