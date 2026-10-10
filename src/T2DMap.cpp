@@ -61,6 +61,7 @@
 #include <QCoreApplication>
 #include <QCursor>
 #include <QFutureWatcher>
+#include <QImageWriter>
 #if defined(Q_OS_LINUX) || defined(Q_OS_MACOS)
 /* The Devuan package for qt6-base-dev (for Qt 6.8.2) - and presumably
  * Debian and Ubuntu are missing the
@@ -6678,6 +6679,22 @@ std::pair<bool, QString> T2DMap::exportAreaToImage(int areaId, const QString& fi
         return {false, qsl("Map not initialized")};
     }
 
+    // The image is written on another thread, too late for the caller to hear
+    // of a failure, so whatever can be checked beforehand is checked here
+    if (filePath.isEmpty()) {
+        return {false, qsl("No file name given")};
+    }
+    const QFileInfo targetFileInfo(filePath);
+    // Not isWritable() as well: on Windows that reads the read-only attribute,
+    // which shell folders such as Documents carry and which does not stop a write
+    if (!QFileInfo(targetFileInfo.absolutePath()).isDir()) {
+        return {false, qsl("Directory %1 does not exist").arg(targetFileInfo.absolutePath())};
+    }
+    const QString format = targetFileInfo.suffix().isEmpty() ? qsl("png") : targetFileInfo.suffix().toLower();
+    if (!QImageWriter::supportedImageFormats().contains(format.toLatin1())) {
+        return {false, qsl("Image format \"%1\" is not supported").arg(format)};
+    }
+
     TArea* pArea = mpMap->mpRoomDB->getArea(areaId);
     if (!pArea) {
         return {false, qsl("Area %1 not found").arg(areaId)};
@@ -7388,13 +7405,6 @@ std::pair<bool, QString> T2DMap::exportAreaToImage(int areaId, const QString& fi
     mRY = originalRY;
     mRoomWidth = originalRoomWidth;
     mRoomHeight = originalRoomHeight;
-
-    // Prepare for async image save
-    QFileInfo fileInfo(filePath);
-    QString format = fileInfo.suffix().toLower();
-    if (format.isEmpty()) {
-        format = qsl("png");
-    }
 
     // Each export has a watcher of its own: several can be in flight at once,
     // from calls made back to back or one per z level

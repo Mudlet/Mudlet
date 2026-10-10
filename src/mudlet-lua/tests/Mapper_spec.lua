@@ -3291,9 +3291,14 @@ describe("Tests mapper functions against a shared fixture", function()
 
     it("exportAreaImage reports a save that failed against that export alone", function()
       local written, removeAll = expectExports({"mapper_spec_export_ok.png"})
-      finally(removeAll)
-      local badPath = exportPath("mapper_spec_no_such_dir/unsaved.png")
-      assert.is_false(io.exists(exportPath("mapper_spec_no_such_dir")), "the spec needs a directory nothing has made")
+      -- a directory under the image's name passes every check made before the
+      -- save, which is the only way to reach a save that fails
+      local badPath = exportPath("mapper_spec_export_is_a_dir.png")
+      finally(function()
+        removeAll()
+        lfs.rmdir(badPath)
+      end)
+      assert.is_true(lfs.mkdir(badPath) or lfs.attributes(badPath, "mode") == "directory")
       assert.is_true(exportAreaImage(areaAlpha, badPath))
       assert.is_true(exportAreaImage(areaAlpha, exportPath("mapper_spec_export_ok.png")))
       assert.is_true(waitUntil(written, 5000))
@@ -3303,6 +3308,29 @@ describe("Tests mapper functions against a shared fixture", function()
       pumpEvents(500)
       assert.are.equal(1, mainConsoleCount("Failed to save image to "))
       assert.are.equal(1, mainConsoleCount("Failed to save image to " .. badPath))
+    end)
+
+    -- the save itself runs on another thread, too late to change the answer
+    -- (#10686), so what can be checked beforehand has to be
+    it("exportAreaImage returns false and a message for an empty file name", function()
+      local ok, err = exportAreaImage(areaAlpha, "")
+      assert.is_false(ok)
+      assert.are.equal("No file name given", err)
+    end)
+
+    it("exportAreaImage returns false and a message for a directory that is not there", function()
+      local missingDirectory = exportPath("mapper_spec_no_such_dir")
+      assert.is_nil(lfs.attributes(missingDirectory), "the spec needs a directory nothing has made")
+      local ok, err = exportAreaImage(areaAlpha, missingDirectory .. "/unsaved.png")
+      assert.is_false(ok)
+      assert.is_truthy(err:find(missingDirectory, 1, true), err)
+      assert.is_nil(lfs.attributes(missingDirectory))
+    end)
+
+    it("exportAreaImage returns false and a message for an image format it cannot write", function()
+      local ok, err = exportAreaImage(areaAlpha, exportPath("mapper_spec_export.notanimageformat"))
+      assert.is_false(ok)
+      assert.is_truthy(err:find("notanimageformat", 1, true), err)
     end)
 
     it("exportAreaImage rejects false where a z level or true is wanted", function()
