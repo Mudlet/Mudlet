@@ -32,6 +32,7 @@
 #include <QScopeGuard>
 
 #include <algorithm>
+#include <chrono>
 #include <functional>
 #include <limits>
 #include <vector>
@@ -432,6 +433,7 @@ void TriggerUnit::stopSameLineCreationLoop(const int chainId)
 void TriggerUnit::collectPrescanTasks(TTrigger* pT)
 {
     if (pT->getRegexCodePropertyList().contains(REGEX_PERL)) {
+        pT->createPrescanMatchData();
         mPrescanTasks.push_back(pT);
     }
     if (pT->isFilterChain()) {
@@ -636,28 +638,51 @@ void TriggerUnit::processDataStream(const QString& data, int line)
     // and are already part of this pass's snapshot.
     const qsizetype firstNodeAddedThisPass = mRootNodesAddedWhileProcessing.size();
     const TBigramFilter lineBigrams(data, mSubstringQuestionsOnTheLastLine);
-    // Helper threads only rule triggers out; every match is still found, run and ordered by the loop
-    // below, on this thread.
+    // Helper threads rule triggers out and search ahead for regex matches; every match is still run and
+    // ordered by the loop below, on this thread.
     const quint32 previousPrescanPassId = TTrigger::prescanPassId();
-    TTrigger::setPrescanPassId(0);
-    const auto prescanGuard = qScopeGuard([previousPrescanPassId] {
-        TTrigger::setPrescanPassId(previousPrescanPassId);
+    const char* const previousPrescanSubject = TTrigger::prescanSubject();
+    const int previousPrescanSubjectLength = TTrigger::prescanSubjectLength();
+    TTrigger::setPrescanPass(0, nullptr, 0);
+    const auto prescanGuard = qScopeGuard([previousPrescanPassId, previousPrescanSubject, previousPrescanSubjectLength] {
+        TTrigger::setPrescanPass(previousPrescanPassId, previousPrescanSubject, previousPrescanSubjectLength);
     });
     // Only while behind, i.e. a chunk carries many lines: a wake-up is repaid only when the next line is
     // already waiting, so at normal game speed it would spend CPU to save nothing perceptible.
     TriggerMatchPool& pool = TriggerMatchPool::instance();
     const bool inFlood = pool.workerCount() > 0 && mpHost && mpHost->mainConsoleModelOrNull() && mpHost->mainConsoleModel().buffer.pendingChunkLines() >= pool.floodChunkLines();
     const quint64 regexSearchesBefore = TTrigger::regexSearches();
+    const quint64 regexMatchesBefore = TTrigger::regexMatches();
     int prescanRegexSearches = 0;
-    if (inFlood && mRegexSearchesOnTheLastLine >= pool.threshold()) {
+    int prescanRegexMatches = 0;
+    // Lines the pool takes are timed, and a few it would have taken are matched without it for comparison,
+    // so the statistics can say whether it pays on this profile. Top-level lines only: a nested pass's time
+    // is already inside the line that fed it.
+    const bool poolWouldTake = inFlood && !mSamplingLine && prescanPays();
+    const bool timed = poolWouldTake && mProcessingDepth == 1;
+    const bool sampled = timed && pool.takeSample();
+    const auto lineStart = timed ? std::chrono::steady_clock::now() : std::chrono::steady_clock::time_point{};
+    bool pooled = false;
+    mSamplingLine = mSamplingLine || sampled;
+    const auto timingGuard = qScopeGuard([this, &pool, timed, sampled, lineStart, &pooled] {
+        if (sampled) {
+            mSamplingLine = false;
+        }
+        if (timed && (pooled || sampled)) {
+            pool.recordLine(pooled, std::chrono::duration_cast<std::chrono::nanoseconds>(std::chrono::steady_clock::now() - lineStart).count());
+        }
+    });
+    if (poolWouldTake && !sampled) {
         rebuildPrescanTasksIfStale();
         const quint32 passId = TTrigger::nextPrescanPassId();
         // The helper threads run perl patterns of their own, so the line is
         // encoded here, on this thread, before any of them can ask for it -
         // TUtf8Subject encodes on first use, which is not a helper's to do.
         if (pool.prescan(mPrescanTasks.data(), static_cast<int>(mPrescanTasks.size()), passId, subject.data(), subject.length(), data, lineBigrams, subject.dropsText())) {
-            TTrigger::setPrescanPassId(passId);
+            TTrigger::setPrescanPass(passId, subject.data(), subject.length());
             prescanRegexSearches = pool.regexSearchesInLastBatch();
+            prescanRegexMatches = pool.regexMatchesInLastBatch();
+            pooled = true;
         }
     }
 
@@ -761,6 +786,20 @@ void TriggerUnit::processDataStream(const QString& data, int line)
     mSubstringQuestionsOnTheLastLine = lineBigrams.questionsAsked();
     // Includes nested passes' searches, which is fine: the count only steers the next line
     mRegexSearchesOnTheLastLine = prescanRegexSearches + static_cast<int>(TTrigger::regexSearches() - regexSearchesBefore);
+    mRegexMatchesOnTheLastLine = prescanRegexMatches + static_cast<int>(TTrigger::regexMatches() - regexMatchesBefore);
+}
+
+// A search the pool rules out saves the main thread its cost. One that matches is reused, but still a net
+// loss - the trigger is visited twice and its state crosses between cores - so a line where many match is
+// quicker left to the main thread alone.
+bool TriggerUnit::prescanPays() const
+{
+    const TriggerMatchPool& pool = TriggerMatchPool::instance();
+    if (pool.missesPerMatch() == 0) {
+        return mRegexSearchesOnTheLastLine >= pool.threshold();
+    }
+    const int misses = mRegexSearchesOnTheLastLine - mRegexMatchesOnTheLastLine;
+    return misses >= pool.threshold() && misses >= static_cast<qint64>(pool.missesPerMatch()) * mRegexMatchesOnTheLastLine;
 }
 
 void TriggerUnit::compileAll()

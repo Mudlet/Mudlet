@@ -675,6 +675,44 @@ int TLuaInterpreter::getProfileStats(lua_State* L)
 
     lua_settable(L, -3); // patterns
 
+    // Whether matching on several threads has paid for this workload, as the statistics report shows it.
+    // App-wide, like the pool itself, so every profile reads the same figures.
+    {
+        const TriggerMatchPool& pool = TriggerMatchPool::instance();
+        const TriggerMatchPool::Report& report = pool.report();
+        lua_pushstring(L, "matchPool");
+        lua_newtable(L);
+        const auto field = [L](const char* name, const double value) {
+            lua_pushstring(L, name);
+            lua_pushnumber(L, value);
+            lua_settable(L, -3);
+        };
+        field("threads", pool.workerCount());
+        field("pooledLines", static_cast<double>(report.pooledLines));
+        field("sampledLines", static_cast<double>(report.sampledLines));
+        field("pooledMicroseconds", static_cast<double>(report.averagePooledNanoseconds()) / 1000.0);
+        field("sampledMicroseconds", static_cast<double>(report.averageSampledNanoseconds()) / 1000.0);
+        field("savedMilliseconds", static_cast<double>(report.savedNanoseconds()) / 1000000.0);
+        const char* verdict = "not enough data";
+        switch (report.verdict()) {
+        case TriggerMatchPool::Report::Verdict::NotEnoughData:
+            break;
+        case TriggerMatchPool::Report::Verdict::WorthIt:
+            verdict = "worth it";
+            break;
+        case TriggerMatchPool::Report::Verdict::AboutEven:
+            verdict = "about even";
+            break;
+        case TriggerMatchPool::Report::Verdict::NotWorthIt:
+            verdict = "not worth it";
+            break;
+        }
+        lua_pushstring(L, "verdict");
+        lua_pushstring(L, verdict);
+        lua_settable(L, -3);
+        lua_settable(L, -3); // matchPool
+    }
+
     // No documentation available in wiki - test-only, so a spec can confirm a burst reached the parallel prescan
     if (qEnvironmentVariableIsSet("MUDLET_TEST_MODE")) {
         lua_pushstring(L, "prescanWorkers");
@@ -683,6 +721,10 @@ int TLuaInterpreter::getProfileStats(lua_State* L)
 
         lua_pushstring(L, "prescans");
         lua_pushnumber(L, static_cast<double>(TriggerMatchPool::instance().prescanCount()));
+        lua_settable(L, -3);
+
+        lua_pushstring(L, "prescanMatchesReused");
+        lua_pushnumber(L, static_cast<double>(TTrigger::prescanMatchesReused()));
         lua_settable(L, -3);
 
         lua_pushstring(L, "rootFilterEpoch");

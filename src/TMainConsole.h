@@ -360,6 +360,7 @@ signals:
 
 
 private:
+    QString assembleTriggerMatchPoolReport() const;
     dlgMapper* dockedMapper() const;
     void dockMapWidget(Qt::DockWidgetArea area);
     TDockWidget* createUserWindow(const QString& name);
