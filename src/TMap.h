@@ -481,6 +481,7 @@ public slots:
 
 
 private:
+    void clearRoutes();
     void resetSearchState(const std::size_t roomCount);
 
     // The same object as mpViewManager, set with it by setViewManager().
