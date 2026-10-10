@@ -170,8 +170,8 @@ private slots:
     void test_theRoomSizeControlGivesTheMapTheSameSizeAsTheProfile()
     {
         mpHost->showHideOrCreateMapper(true);
-        QVERIFY2(mpHost->mpMap && mpHost->mpMap->mpMapper && mpHost->mpMap->mpMapper->mp2dMap, "the mapper left no 2D map for the room size to reach");
-        T2DMap* p2dMap = mpHost->mpMap->mpMapper->mp2dMap;
+        QVERIFY2(mpHost->mpMap && mpHost->mpMap->mapper() && mpHost->mpMap->mapper()->mp2dMap, "the mapper left no 2D map for the room size to reach");
+        T2DMap* p2dMap = mpHost->mpMap->mapper()->mp2dMap;
 
         const double priorSize = p2dMap->rSize;
         // setRoomSize() writes the profile as well, so this puts both back
