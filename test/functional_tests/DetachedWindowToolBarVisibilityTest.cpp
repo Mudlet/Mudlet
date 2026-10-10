@@ -363,12 +363,12 @@ private slots:
         QVERIFY2(pHoldingMenu, "no menu of the detached window holds its Show Toolbar item");
 
         // Two items with one mnemonic make its key only move the highlight
-        const QKeySequence toggleMnemonic = QKeySequence::mnemonic(pToggleAction->text());
-        QVERIFY(!toggleMnemonic.isEmpty());
+        const QChar toggleMnemonic = mnemonicOf(pToggleAction->text());
+        QVERIFY(!toggleMnemonic.isNull());
         const QList<QAction*> siblingActions = pHoldingMenu->actions();
         for (QAction* pSibling : siblingActions) {
             if (pSibling != pToggleAction) {
-                QVERIFY2(QKeySequence::mnemonic(pSibling->text()) != toggleMnemonic, qPrintable(qsl("the Show Toolbar item shares its mnemonic with \"%1\"").arg(pSibling->text())));
+                QVERIFY2(mnemonicOf(pSibling->text()) != toggleMnemonic, qPrintable(qsl("the Show Toolbar item shares its mnemonic with \"%1\"").arg(pSibling->text())));
             }
         }
 
@@ -506,6 +506,23 @@ private slots:
     }
 
 private:
+    // Read off the text, not QKeySequence::mnemonic(): macOS turns mnemonics off,
+    // so that returns an empty sequence for every item there
+    static QChar mnemonicOf(const QString& text)
+    {
+        for (int i = 0; i < text.size() - 1; ++i) {
+            if (text.at(i) != QLatin1Char('&')) {
+                continue;
+            }
+            if (text.at(i + 1) == QLatin1Char('&')) {
+                ++i;
+                continue;
+            }
+            return text.at(i + 1).toLower();
+        }
+        return {};
+    }
+
     QToolBar* detachedToolBar(TDetachedWindow* pDetachedWindow) const { return pDetachedWindow ? pDetachedWindow->findChild<QToolBar*>(qsl("detachedMainToolBar")) : nullptr; }
 
     QAction* toolBarToggleAction(TDetachedWindow* pDetachedWindow) const { return pDetachedWindow ? pDetachedWindow->findChild<QAction*>(qsl("toggle_toolbar_action")) : nullptr; }
