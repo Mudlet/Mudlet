@@ -206,11 +206,13 @@ describe("Tests DebugTools.lua functions", function()
     end)
 
     it("Should recolour named capture groups without raising an error", function()
-      local ok, err, groupFormat, defaultFormat
+      local ok, err, selectSpy, groupFormat, defaultFormat
       local id = tempRegexTrigger("^You wave (?<what>goodbye) to (?<who>everyone)\\.$", function()
         selectString("You wave", 1)
         defaultFormat = getTextFormat().foreground
+        selectSpy = spy.on(_G, "selectCaptureGroup")
         ok, err = pcall(showCaptureGroups)
+        selectCaptureGroup:revert()
         selectString("everyone", 1)
         groupFormat = getTextFormat().foreground
       end)
@@ -218,7 +220,29 @@ describe("Tests DebugTools.lua functions", function()
       killTrigger(id)
 
       assert.is_true(ok, err)
+      -- each named group is visited once, by its number, and never by its name
+      assert.spy(selectSpy).was.called(3)
+      assert.spy(selectSpy).was_not.called_with("what")
+      assert.spy(selectSpy).was_not.called_with("who")
       assert.are_not.same(defaultFormat, groupFormat)
+    end)
+
+    it("Should visit every group by number when named and unnamed groups mix", function()
+      local ok, err, selectSpy
+      local id = tempRegexTrigger("^(\\w+) (?<who>\\w+)$", function()
+        selectSpy = spy.on(_G, "selectCaptureGroup")
+        ok, err = pcall(showCaptureGroups)
+        selectCaptureGroup:revert()
+      end)
+      feedTriggers("alpha beta\n")
+      killTrigger(id)
+
+      assert.is_true(ok, err)
+      assert.spy(selectSpy).was.called(3)
+      assert.spy(selectSpy).was.called_with(1)
+      assert.spy(selectSpy).was.called_with(2)
+      assert.spy(selectSpy).was.called_with(3)
+      assert.spy(selectSpy).was_not.called_with("who")
     end)
   end)
 end)
