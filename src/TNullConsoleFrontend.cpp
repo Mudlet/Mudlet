@@ -171,7 +171,10 @@ qsizetype indexOutsideQuotes(const QString& text, const QChar wanted, qsizetype 
     QChar quote;
     for (; from < text.size(); ++from) {
         const QChar c = text.at(from);
-        if (!quote.isNull()) {
+        // QCss::Scanner reads a backslash and the character after it as one, in a string or out of one
+        if (c == u'\\') {
+            ++from;
+        } else if (!quote.isNull()) {
             if (c == quote) {
                 quote = QChar();
             }
