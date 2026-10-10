@@ -6715,6 +6715,10 @@ void TBuffer::shrinkBuffer()
     // away:
     if (mpModel) {
         mpModel->mCurrentSearchResult = qMax(0, mpModel->mCurrentSearchResult - mBatchDeleteSize);
+        // As mCursorY above, which a real view's upper pane takes its line from as it repaints
+        if (mpModel->mScrolledBackTo) {
+            mpModel->mScrolledBackTo = std::max(0, *mpModel->mScrolledBackTo - mBatchDeleteSize);
+        }
     }
     mPreTriggerPassLineNumber = -1;
     if (mLastFoundLine >= mBatchDeleteSize) {

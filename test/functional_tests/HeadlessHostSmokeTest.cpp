@@ -764,6 +764,70 @@ headlessScroll = ok and "ok" or tostring(err)
         QVERIFY2(QApplication::topLevelWidgets().isEmpty(), "Scrolling created a widget.");
     }
 
+    // A console scrolled back stays on the same text as the buffer trims the lines above it, as a real view's
+    // does once it repaints, so the line it reads back moves up by each trim.
+    void test_headlessScrollFollowsTrimmedLines()
+    {
+        const QString hostname = qsl("Test-Headless-Host-Scroll-Trim");
+        QVERIFY2(HostManager::self()->addHost(hostname, QString(), QString(), QString()), "Could not create a profile with no main window.");
+        Host* host = HostManager::self()->getHost(hostname);
+        QVERIFY2(host, "The profile is not in the pool.");
+        QVERIFY(!host->hasConsoleView());
+        host->getLuaInterpreter()->loadGlobal();
+
+        const bool ran = host->getLuaInterpreter()->compileAndExecuteScript(qsl(R"lua(
+headlessTrim = "not run"
+local ok, err = pcall(function()
+  local function fill(name, count)
+    for i = 1, count do
+      echo(name, "trim line " .. i .. "\n")
+    end
+  end
+  local function at(name)
+    return getScroll(name) .. "/" .. getLastLineNumber(name)
+  end
+  local function walk(name)
+    local steps = {}
+    clearWindow(name)
+    setConsoleBufferSize(name, 100, 10)
+    fill(name, 100)
+    steps[#steps + 1] = "filled=" .. at(name)
+    scrollTo(name, 50)
+    steps[#steps + 1] = "to50=" .. at(name)
+    fill(name, 5)
+    steps[#steps + 1] = "fed5=" .. at(name)
+    fill(name, 10)
+    steps[#steps + 1] = "trimmed=" .. at(name)
+    fill(name, 10)
+    steps[#steps + 1] = "trimmedAgain=" .. at(name)
+    scrollTo(name, 5)
+    fill(name, 10)
+    steps[#steps + 1] = "trimmedPast=" .. at(name)
+    scrollDown(name, 2)
+    steps[#steps + 1] = "down2=" .. at(name)
+    scrollTo(name)
+    fill(name, 10)
+    steps[#steps + 1] = "trimmedAtEnd=" .. at(name)
+    return table.concat(steps, ";")
+  end
+  trimMain = walk("main")
+  assert(createMiniConsole("trimMini", 0, 0, 300, 200) == true, "createMiniConsole did not answer true")
+  trimMini = walk("trimMini")
+  assert(openUserWindow("trimWindow") == true, "openUserWindow did not answer true")
+  trimWindow = walk("trimWindow")
+end)
+headlessTrim = ok and "ok" or tostring(err)
+)lua"));
+
+        QVERIFY2(ran, "The Lua chunk did not run.");
+        QCOMPARE(luaGlobalString(host, "headlessTrim"), qsl("ok"));
+        // What the same steps read in the GUI self-test profile once each console has repainted
+        const QString steps = qsl("filled=90/90;to50=50/90;fed5=50/95;trimmed=40/95;trimmedAgain=30/95;trimmedPast=0/95;down2=2/95;trimmedAtEnd=95/95");
+        QCOMPARE(luaGlobalString(host, "trimMain"), steps);
+        QCOMPARE(luaGlobalString(host, "trimMini"), steps);
+        QCOMPARE(luaGlobalString(host, "trimWindow"), steps);
+    }
+
     // The trim that raises sysBufferShrinkEvent runs inside TBuffer::append(), and echo goes on using the
     // console's model after that returns, so a handler deleting the console must not free it there and then.
     void test_consoleDeletedByItsOwnShrinkEventWithNoMainWindow()
