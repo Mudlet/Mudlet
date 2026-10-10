@@ -3097,6 +3097,98 @@ describe("Tests exporting the profile to a file with saveProfile", function()
   end)
 end)
 
+-- A package's VariablePackage is read the way a profile load reads its saved
+-- variables, and marks what it holds as saved - so installing one and saving
+-- the profile sends a variable out through the writer, and installing what was
+-- written brings it back in through the reader, as the next profile load would.
+describe("Tests a saved variable's round trip through a profile save", function()
+  local name = "mudlet-spec-saved-variable"
+  local reloadedName = name .. "-reloaded"
+  local xml = getMudletHomeDir() .. "/" .. name .. ".xml"
+  local reloadedXml = getMudletHomeDir() .. "/" .. reloadedName .. ".xml"
+  local written, reloaded
+
+  -- mudletSpecSaved's own group out of the whole profile save, nested groups and all
+  local function savedGroup(document)
+    local from = document:find("<VariableGroup>%s*<name>mudletSpecSaved</name>")
+    assert.is_not_nil(from, "the profile save does not hold mudletSpecSaved")
+    local depth, position = 0, from
+    repeat
+      local _, tagEnd, closing = document:find("<(/?)VariableGroup>", position)
+      assert.is_not_nil(tagEnd, "the profile save does not close mudletSpecSaved's group")
+      depth = depth + (closing == "" and 1 or -1)
+      position = tagEnd + 1
+    until depth == 0
+    return document:sub(from, position - 1)
+  end
+
+  setup(function()
+    writePackageXml(xml, table.concat({
+      '<VariablePackage>',
+      '<VariableGroup><name>mudletSpecSaved</name><keyType>4</keyType><value></value><valueType>5</valueType>',
+      '</VariableGroup>',
+      '</VariablePackage>',
+    }, "\n"))
+    installUntilConfirmed(installPackage, xml, function() return packageInstalled(name) end, "the package " .. name)
+    assert.is_table(mudletSpecSaved, "the package did not create mudletSpecSaved")
+
+    mudletSpecSaved.third = 1 / 3
+    mudletSpecSaved.pi = math.pi
+    mudletSpecSaved.fifteenDigits = 123456789012345
+    mudletSpecSaved.tenth = 0.1
+    mudletSpecSaved.negativeZero = -0.0
+    mudletSpecSaved.pastTwoToThe53 = 2 ^ 53 + 2
+    mudletSpecSaved.hugeNegative = -1e300
+    mudletSpecSaved.smallestSubnormal = 5e-324
+    mudletSpecSaved.infinity = math.huge
+    mudletSpecSaved.negativeInfinity = -math.huge
+    mudletSpecSaved.nan = 0 / 0
+
+    assert.is_true(waitForProfileSaveToPass(), "a profile save was still running")
+    local ok, savedPath = saveProfile()
+    assert.is_true(ok, savedPath)
+    assert.is_true(waitForProfileSaveToPass(), "the profile save did not finish")
+    written = savedGroup(readFile(savedPath))
+
+    _G.mudletSpecSaved = nil
+    writePackageXml(reloadedXml, "<VariablePackage>\n" .. written .. "\n</VariablePackage>")
+    installUntilConfirmed(installPackage, reloadedXml, function() return packageInstalled(reloadedName) end, "the package " .. reloadedName)
+    reloaded = _G.mudletSpecSaved
+    assert.is_table(reloaded, "the written group did not create mudletSpecSaved again")
+  end)
+
+  teardown(function()
+    _G.mudletSpecSaved = nil
+    removeFixturePackage(reloadedName)
+    removeFixturePackage(name)
+    os.remove(xml)
+    os.remove(reloadedXml)
+  end)
+
+  it("writes a number with as many digits as it takes to read back the same number", function()
+    assert.equals(1 / 3, reloaded.third)
+    assert.equals(math.pi, reloaded.pi)
+    assert.equals(123456789012345, reloaded.fifteenDigits)
+    assert.is_true(contains(written, "<value>0.1</value>"), "0.1 was not written as short as it reads back: " .. written)
+  end)
+
+  it("keeps the numbers at the edges of what a double holds", function()
+    assert.equals(-math.huge, 1 / reloaded.negativeZero, "-0 came back as 0")
+    assert.equals(2 ^ 53 + 2, reloaded.pastTwoToThe53)
+    assert.equals(-1e300, reloaded.hugeNegative)
+    assert.equals(5e-324, reloaded.smallestSubnormal)
+    assert.equals(math.huge, reloaded.infinity)
+    assert.equals(-math.huge, reloaded.negativeInfinity)
+  end)
+
+  -- "nan" rather than glibc's "-nan", which QString::toDouble() reads as 0
+  it("writes a NaN as nan and brings it back as NaN", function()
+    assert.is_true(contains(written, "<value>nan</value>"), written)
+    assert.is_number(reloaded.nan)
+    assert.are_not.equal(reloaded.nan, reloaded.nan)
+  end)
+end)
+
 -- A module with syncing on is written back out to its own file on every profile
 -- save, by a writer of its own that only takes that module's items - so a
 -- module is the one thing a spec can send out through the writer and read back
