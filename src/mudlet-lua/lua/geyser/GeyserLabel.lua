@@ -718,8 +718,12 @@ end
 --- Set a predefined mouse cursor shape for this label
 -- @param cursorShape the predefined cursorshape as a string
 -- See: <a href="https://wiki.mudlet.org/w/CursorShapes">https://wiki.mudlet.org/w/CursorShapes</a>
+-- @return true, or nil and a message when the shape is not one Mudlet knows
 function Geyser.Label:setCursor(cursorShape)
-  setLabelCursor(self.name, cursorShape)
+  local ok, err = setLabelCursor(self.name, cursorShape)
+  if not ok then
+    return nil, err
+  end
   -- Get cursorShape as string
   for k,v in pairs(mudlet.cursor) do
     if cursorShape == v then
@@ -728,6 +732,7 @@ function Geyser.Label:setCursor(cursorShape)
   end
 
   self.cursorShape = cursorShape
+  return true
 end
 
 --- Set a custom mouse cursor shape for this label.
