@@ -800,7 +800,12 @@ int TLuaInterpreter::clearMapSelection(lua_State* L)
     const Host& host = getHostFromLua(L);
     auto* mapper = host.mpMap ? host.mpMap->mapViewFrontend() : nullptr;
     if (!mapper) {
-        return warnArgumentValue(L, __func__, "no map present or loaded");
+        if (!host.mapOpen()) {
+            return warnArgumentValue(L, __func__, "no map present or loaded");
+        }
+        // Rooms are selected on a mapper, so with none there is no selection to clear
+        lua_pushboolean(L, false);
+        return 1;
     }
     if (mapper->selectingRooms()) {
         return warnArgumentValue(L, __func__, "rooms are being selected right now and cannot be stopped at this point");
@@ -1945,7 +1950,12 @@ int TLuaInterpreter::getMapSelection(lua_State* L)
     Host* pHost = &getHostFromLua(L);
     auto* mapper = pHost && pHost->mpMap ? pHost->mpMap->mapViewFrontend() : nullptr;
     if (!mapper) {
-        return warnArgumentValue(L, __func__, "no map present or loaded");
+        if (!pHost->mapOpen()) {
+            return warnArgumentValue(L, __func__, "no map present or loaded");
+        }
+        // Rooms are selected on a mapper, so with none the selection is empty
+        lua_newtable(L);
+        return 1;
     }
 
     lua_newtable(L);
