@@ -2317,7 +2317,7 @@ map.defaults = {
 }
 
 local move_queue, lines = {}, {}
-local find_portal, vision_fail, room_detected, random_move, force_portal, find_prompt, downloading, walking, help_shown
+local find_portal, vision_fail, room_detected, random_move, force_portal, find_prompt, await_prompt, downloading, walking, help_shown
 local mt = getmetatable(map) or {}
 
 local exitmap = {
@@ -3830,8 +3830,26 @@ function map.make_move_method(str)
     table.save(profilePath .. "/map downloads/map_save.dat",map.save)
 end
 
+local function match_prompt_patterns()
+    for k,v in ipairs(map.configs.prompt_test_patterns) do
+        if string.match(line,v) then
+            map.save.prompt_pattern[map.character] = v
+            table.save(profilePath .. "/map downloads/map_save.dat",map.save)
+            find_prompt = false
+            await_prompt = false
+            map.echo("Prompt found")
+            break
+        end
+    end
+end
+
 local function grab_line()
     table.insert(lines,line)
+    -- unasked, only a line the game itself ends as a prompt (GA/EOR) is safe to test:
+    -- the loosest pattern also matches an ordinary "[ Exits: north ]" line
+    if await_prompt and not map.save.prompt_pattern[map.character] and isPrompt() then
+        match_prompt_patterns()
+    end
     if map.save.prompt_pattern[map.character] and string.match(line, map.save.prompt_pattern[map.character]) then
         if map.prompt.exits and map.prompt.exits ~= "" then
             raiseEvent("onNewRoom")
@@ -3840,15 +3858,7 @@ local function grab_line()
         map.echo("Prompt captured",true)
     end
     if find_prompt then
-        for k,v in ipairs(map.configs.prompt_test_patterns) do
-            if string.match(line,v) then
-                map.save.prompt_pattern[map.character] = v
-                table.save(profilePath .. "/map downloads/map_save.dat",map.save)
-                find_prompt = false
-                map.echo("Prompt found")
-                break
-            end
-        end
+        match_prompt_patterns()
     end
 end
 
@@ -4263,9 +4273,9 @@ function map.eventHandler(event, ...)
         config()
         raiseEvent("mapperScriptLoaded", "generic_mapper")
     elseif event == "mapOpenEvent" then
+        -- nothing is sent: the map can open at a login screen, which takes any text as the character's name
         if not help_shown and not map.save.prompt_pattern[map.character or ""] then
-            map.find_prompt()
-            send(map.configs.lang_dirs['look'], true)
+            await_prompt = true
             tempTimer(3, function() map.show_help("quick_start"); help_shown = true end)
         end
     elseif event == "mapStop" then

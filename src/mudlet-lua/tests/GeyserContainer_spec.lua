@@ -11,6 +11,23 @@ local function geometry(name)
   return {x = x, y = y, width = width, height = height}
 end
 
+local function upvalue(fn, name)
+  if type(fn) ~= "function" then
+    return nil
+  end
+  local index = 1
+  while true do
+    local upvalueName, value = debug.getupvalue(fn, index)
+    if not upvalueName then
+      return nil
+    end
+    if upvalueName == name then
+      return value, index
+    end
+    index = index + 1
+  end
+end
+
 describe("Tests functionality of Geyser.Container", function()
   local created
 
@@ -440,6 +457,14 @@ describe("Tests functionality of Geyser.Container", function()
     end)
 
     it("lays out a child of a container whose reposition does not recurse", function()
+      -- the session's first mapper raises mapOpenEvent, which leaves the generic mapper
+      -- waiting, with no time limit, to learn a later spec's GA/EOR prompt as the game's
+      local grabLine = type(map) == "table" and upvalue(map.eventHandler, "grab_line")
+      local _, awaitPromptIndex = upvalue(grabLine, "await_prompt")
+      if awaitPromptIndex then
+        local awaiting = select(2, debug.getupvalue(grabLine, awaitPromptIndex))
+        finally(function() debug.setupvalue(grabLine, awaitPromptIndex, awaiting) end)
+      end
       local root = track(Geyser.Container:new({name = "gcsMapRoot", x = 0, y = 0, width = "60%", height = "60%"}))
       -- Geyser.Mapper:reposition places the map widget and stops, so its children
       -- are laid out only because set_constraints visits them
