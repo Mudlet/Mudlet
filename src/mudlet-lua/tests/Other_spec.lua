@@ -1251,6 +1251,44 @@ describe("Tests Other.lua functions", function()
       assert.is_boolean(cfg.editorAutoComplete)
     end)
 
+    -- the no-argument table is built from a list kept in Other.lua, which has
+    -- to be told about every key the C++ side gains
+    it("includes the IRC and the CHARSET/NEW-ENVIRON keys in the table", function()
+      local cfg = getConfig()
+      for _, key in ipairs({"enableCHARSET", "enableNEWENVIRON", "ircChannels", "ircHostName",
+                            "ircHostPort", "ircHostSecure"}) do
+        assert.is_not_nil(cfg[key], "getConfig() left out " .. key)
+        assert.equals(getConfig(key), cfg[key], "getConfig() disagrees with getConfig('" .. key .. "')")
+      end
+      -- by name only: an unset nick reads as a random one, and the password is a credential
+      assert.is_nil(cfg.ircNickName)
+      assert.is_nil(cfg.ircPassword)
+    end)
+
+    it("restores the IRC server settings from a getConfig() snapshot", function()
+      local keys = {"ircHostName", "ircHostPort", "ircChannels"}
+      -- cleanup reads the originals by name: a snapshot missing the keys must not leave the test values behind
+      for _, key in ipairs(keys) do
+        snapshot(key)
+      end
+      finally(function()
+        for _, key in ipairs(keys) do
+          restore(key)
+        end
+      end)
+      local saved = getConfig()
+      assert.is_true(setConfig("ircHostName", "irc.example.org"))
+      assert.is_true(setConfig("ircHostPort", saved.ircHostPort == 5499 and 5498 or 5499))
+      assert.is_true(setConfig("ircChannels", "#mudletspec"))
+      -- only these: the snapshot's boolean showSentText would turn "always" into "script"
+      for _, key in ipairs(keys) do
+        assert.is_true(setConfig(key, saved[key]))
+      end
+      assert.equals(saved.ircHostName, getConfig("ircHostName"))
+      assert.equals(saved.ircHostPort, getConfig("ircHostPort"))
+      assert.equals(saved.ircChannels, getConfig("ircChannels"))
+    end)
+
     it("round-trips every boolean configuration option", function()
       local settable = 0
       for key, value in pairs(getConfig()) do
@@ -1676,8 +1714,7 @@ describe("Tests Other.lua functions", function()
 
     -- The modern key and the negotiation-off key it replaced are two spellings
     -- of one flag, so a script written against either has to see what the other
-    -- one did. getConfig() with no arguments does not list the modern spellings,
-    -- so the generic round-trip loop above never reaches them.
+    -- one did.
     it("keeps enableCHARSET the exact inverse of specialForceCharsetNegotiationOff", function()
       snapshot("enableCHARSET")
       assert.is_boolean(getConfig("enableCHARSET"))
