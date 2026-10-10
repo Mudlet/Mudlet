@@ -33,6 +33,7 @@
 
 #include <QPointer>
 #include <QTemporaryDir>
+#include <QScopeGuard>
 #include <QtTest/QtTest>
 #include <QtNetwork/QTcpServer>
 #include <QtNetwork/QTcpSocket>
@@ -486,6 +487,32 @@ private slots:
         QCOMPARE(CredentialManager::profileStoragePreferred(), std::optional<bool>(false));
     }
 
+    // A saved password the store will not hand over leaves auto-login sending nothing, which the
+    // player can only make sense of if told; a profile with no saved password is not
+    void testAPasswordTheStoreWontReadIsReported()
+    {
+        Host* host = TestProfile::create(mHostname, qsl("localhost"), mPort, 20s);
+        QVERIFY(host);
+        const QString warning = qsl("Could not check for a saved password");
+
+        host->lookUpSecuredPassword(new CredentialManager(host));
+        QVERIFY2(!waitForConsoleContains(host, warning, 500), "a profile with no saved password was told its password could not be read");
+
+        const QString passwordFile = CredentialManager::generateFilePath(mHostname, qsl("character"));
+        const auto unblock = qScopeGuard([&passwordFile] {
+            QDir(passwordFile).removeRecursively();
+        });
+        QVERIFY(QDir().mkpath(passwordFile));
+        // The connection dialog may already have put a password in, which is still sent
+        host->setPass(qsl("typed-in-the-dialog"));
+        host->lookUpSecuredPassword(new CredentialManager(host));
+        QVERIFY2(!waitForConsoleContains(host, warning, 500), "the player was told no password would be sent while one was set");
+
+        host->setPass(QString());
+        host->lookUpSecuredPassword(new CredentialManager(host));
+        QVERIFY2(waitForConsoleContains(host, warning), "a saved password the store would not hand over was not reported");
+    }
+
     void testTheProfilesLookupKeepsAPasswordOnItsWayUntilTheKeychainAnswers()
     {
         Host* host = TestProfile::create(mHostname, qsl("localhost"), mPort, 20s);
@@ -524,6 +551,7 @@ private slots:
                          5s),
                  "the lookup never answered at its deadline");
         QVERIFY2(host->hasAutoLoginCredentials(), "a lookup that timed out stopped the password step waiting for the answer it still owes");
+        QVERIFY2(!waitForConsoleContains(host, qsl("Could not check for a saved password"), 500), "a lookup still waiting on the keychain told the player it could not check");
 
         QPointer<QKeychain::Job> read = reads->constFirst();
         QVERIFY2(read, "the read the lookup gave up on was deleted before the keychain answered it");
