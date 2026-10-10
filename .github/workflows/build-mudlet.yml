@@ -107,7 +107,7 @@ jobs:
         # least-recently-used, and a dropped ccache is a 20 minute cold rebuild
         # rather than a 30 second download.
         cache: false
-        modules: qt5compat qtmultimedia qtspeech
+        modules: qt5compat qtmultimedia qtspeech qtwebsockets qthttpserver
 
     - name: Restore Lua build cache
       id: cache-lua
@@ -438,6 +438,9 @@ jobs:
         SENTRY_DSN: ${{ secrets.SENTRY_DSN }}
         MUDLET_SANITIZERS: ${{ github.event_name == 'pull_request' && 'address' || '' }}
         SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
+        # An environment variable rather than a -D: CMake reads this one through
+        # include_optional_module(), which only ever consults the environment.
+        WITH_MCPSERVER: "ON"
 
     # A hit refreshes an entry's timestamp, so whatever this build left untouched
     # is an object it no longer compiles. Dropping it saves one build's working
@@ -812,13 +815,15 @@ jobs:
   # until GitHub's least-recently-used eviction, which is as likely to drop a
   # current entry that only development builds restore. The Windows workflow
   # saves under the same scheme and is swept here too.
+  # Deliberately not `needs: compile-mudlet`: that would queue it for a runner only
+  # once the slowest leg ends, often long after later pushes have built. Started
+  # alongside the builds, it keeps the previous push's entries, which they restore.
   prune-superseded-ccache:
     name: Delete superseded ccache entries
-    needs: compile-mudlet
     # Skipped on PTBs, which save no ccache. A failed sweep must not fail the run:
     # releases from development are built from whichever platforms' runs succeeded.
     if: >-
-      always() && github.repository_owner == 'Mudlet' && github.ref == 'refs/heads/development'
+      github.repository_owner == 'Mudlet' && github.ref == 'refs/heads/development'
       && github.event_name != 'schedule' && github.event.inputs.scheduled != 'true'
     continue-on-error: true
     runs-on: ubuntu-latest

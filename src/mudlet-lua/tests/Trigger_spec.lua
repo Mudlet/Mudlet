@@ -53,6 +53,22 @@ describe("Trigger processing", function()
         return not packageInstalled(packageName), reason
     end
 
+    -- pcre2_jit_compile() reports success on a (*NO_JIT) pattern without making
+    -- any JIT code, and pcre2_jit_match() then fails every subject
+    describe("a pattern starting with (*NO_JIT)", function()
+
+        it("still matches", function()
+            local captured
+            local id = tempRegexTrigger([[(*NO_JIT)^nojit_trigger_probe (\w+)$]], function()
+                captured = matches[2]
+            end)
+            feedTriggers("nojit_trigger_probe world\n")
+            killTrigger(id)
+            assert.are.equal("world", captured)
+        end)
+
+    end)
+
     -- Test for nested trigger processing with self-deletion
     -- This verifies the fix that uses mProcessingDepth counter instead of a bool flag
     -- (same fix as for aliases - see Alias_spec.lua for detailed explanation)
@@ -999,6 +1015,124 @@ describe("Trigger processing", function()
             assert.is_true(reached, "the other trigger's feed should still be processed")
         end)
 
+        describe("scrolls the main console to the lines it feeds", function()
+            local restoreEncoding
+            local triggerId
+
+            before_each(function()
+                -- setServerEncoding() also writes the profile's "encoding"
+                -- file, and a profile that never had one must not keep one
+                local encodingFile = getMudletHomeDir() .. "/encoding"
+                local hadFile = io.exists(encodingFile)
+                local original = getServerEncoding()
+                restoreEncoding = function()
+                    setServerEncoding(original)
+                    if not hadFile then
+                        os.remove(encodingFile)
+                    end
+                end
+                -- A line an earlier spec left open would absorb the first fed line
+                if getLines("main", getLastLineNumber("main"), getLastLineNumber("main") + 1)[1] ~= "" then
+                    echo("main", "\n")
+                end
+                scrollTo()
+            end)
+
+            after_each(function()
+                if restoreEncoding then
+                    restoreEncoding()
+                    restoreEncoding = nil
+                end
+                if triggerId then
+                    killTrigger(triggerId)
+                    triggerId = nil
+                end
+                scrollTo()
+            end)
+
+            local function assertFed(how, lineCount, ...)
+                local before = getLastLineNumber("main")
+                assert.is_true(feedTriggers(...), how .. " was refused")
+                assert.are.equal(before + lineCount, getLastLineNumber("main"), how .. " did not add its lines")
+            end
+
+            -- Every case feeds at least two lines: getScroll() caps the pane's
+            -- position at the last line, so it cannot tell a pane one line
+            -- behind from one that has caught up
+            local function assertFedAndScrolled(how, lineCount, ...)
+                assertFed(how, lineCount, ...)
+                assert.are.equal(getLastLineNumber("main"), getScroll(), how .. " left the main console short of the lines it fed")
+            end
+
+            it("from text the game's UTF-8 encoding can carry", function()
+                assert.is_true(setServerEncoding("UTF-8"))
+                assertFedAndScrolled("a UTF-8 feed", 2, "feed_scroll utf8 one\nfeed_scroll utf8 two\n")
+            end)
+
+            it("from text transcoded to the game's encoding", function()
+                assert.is_true(setServerEncoding("ISO 8859-1"))
+                assertFedAndScrolled("a transcoded feed", 2, "feed_scroll latin one\nfeed_scroll latin two\n")
+            end)
+
+            it("from text for an ASCII game", function()
+                assert.is_true(setServerEncoding("ASCII"))
+                assertFedAndScrolled("an ASCII feed", 2, "feed_scroll ascii one\nfeed_scroll ascii two\n")
+            end)
+
+            it("from text already in the game's encoding", function()
+                assertFedAndScrolled("a feed not marked as UTF-8", 2, "feed_scroll raw one\nfeed_scroll raw two\n", false)
+            end)
+
+            it("from text a trigger feeds, once the pass that fired the trigger ends", function()
+                local scrolledMidPass
+                triggerId = tempRegexTrigger("^feed_scroll_outer$", function()
+                    feedTriggers("feed_scroll inner one\nfeed_scroll inner two\n")
+                    scrolledMidPass = getScroll() == getLastLineNumber("main")
+                end)
+                assertFedAndScrolled("a feed that sets off a trigger's", 3, "feed_scroll_outer\n")
+                assert.is_false(scrolledMidPass, "the feed inside the trigger scrolled the console before the pass that fired it had ended")
+            end)
+
+            it("from text a trigger feeds, once the game data that fired the trigger is handled", function()
+                local scrolledMidPass
+                triggerId = tempRegexTrigger("^feed_scroll_telnet_outer$", function()
+                    feedTriggers("feed_scroll telnet inner one\nfeed_scroll telnet inner two\n")
+                    scrolledMidPass = getScroll() == getLastLineNumber("main")
+                end)
+                local before = getLastLineNumber("main")
+                local ok, msg = feedTelnet("feed_scroll_telnet_outer\r\n")
+                assert.is_true(ok, "start the suite with --offline, see the tests README - feedTelnet said: " .. tostring(msg))
+                assert.are.equal(before + 3, getLastLineNumber("main"), "the game line and the trigger's feed did not add their lines")
+                assert.are.equal(getLastLineNumber("main"), getScroll(), "the main console was left short of the lines the trigger fed")
+                assert.is_false(scrolledMidPass, "the feed inside the trigger scrolled the console before the game data that fired it was handled")
+            end)
+
+            if not os.getenv("MUDLET_TEST_MODE") then
+                -- Scrolling back up waits a turn of the event loop, which
+                -- waitForEvent only pumps in test mode
+                pending("unless it has been scrolled back up - needs MUDLET_TEST_MODE for waitForEvent")
+            else
+                it("unless it has been scrolled back up", function()
+                    for i = 1, 200 do
+                        echo("main", "feed_scroll filler " .. i .. "\n")
+                    end
+                    local parked = getLastLineNumber("main") - 100
+                    for _ = 1, 20 do
+                        scrollTo(parked)
+                        if getScroll() == parked then
+                            break
+                        end
+                        tempTimer(0, function() raiseEvent("specFeedScrollPump") end)
+                        waitForEvent("specFeedScrollPump", 2000)
+                    end
+                    assert.are.equal(parked, getScroll(), "could not scroll the main console back up")
+
+                    assertFed("a feed", 2, "feed_scroll parked one\nfeed_scroll parked two\n")
+                    assert.are.equal(parked, getScroll(), "a feed pulled a console scrolled back up down to its end")
+                end)
+            end
+        end)
+
     end)
 
     describe("temporary trigger creation and firing", function()
@@ -1631,10 +1765,10 @@ describe("Trigger processing", function()
             assert.is_true(fired, "a complex regex trigger should fire on its pattern")
         end)
 
-        -- The match-all (/g) loop steps one byte after an empty match, so on a line
-        -- holding a multi-byte character it can land mid-character. pcre2 then
-        -- rejects the offset and TTrigger::match_perl() ends the loop, dropping
-        -- every capture past that character (#10112). matchAll is argument 8.
+        -- The match-all (/g) loop steps on after an empty match, so on a line holding
+        -- a multi-byte character it must step past the whole character: landing inside
+        -- one has ended the loop, dropping every capture past it (#10112), and has found
+        -- an extra empty match there. matchAll is argument 8.
         it("keeps collecting captures past a multi-byte character", function()
             -- feedTriggers() transcodes into the server encoding, so a non-UTF-8
             -- one would strip the character and let this pass without testing it
@@ -1670,6 +1804,27 @@ describe("Trigger processing", function()
                 end
             end
             assert.is_true(found, "the capture after the multi-byte character was dropped")
+        end)
+
+        -- One character, so one empty match before it: stepping a byte at a time
+        -- after an empty match gave one more inside the character as well
+        it("finds the same matches around a multi-byte character as around a plain one", function()
+            assert.are.equal("UTF-8", getServerEncoding(), "this spec needs a UTF-8 server encoding to feed a multi-byte character")
+            _G.TrigSpec = {seen = {}}
+            local id = tempComplexRegexTrigger("SpecComplexMatchAllSameCount", [[(\d*)]],
+                function()
+                    _G.TrigSpec.seen = {}
+                    for i = 1, #matches do
+                        _G.TrigSpec.seen[i] = matches[i]
+                    end
+                end,
+                0, -1, -1, 0, 1, -1, -1, 0, 0, 0)
+            assert.is_number(id)
+            finally(function() killTrigger("SpecComplexMatchAllSameCount") end)
+            feedTriggers("\ncafe 9\n")
+            local plain = _G.TrigSpec.seen
+            feedTriggers("caf\195\169 9\n")
+            assert.are.same(plain, _G.TrigSpec.seen)
         end)
 
         -- Every capture a match-all fire collects at a non-empty match carries
@@ -1728,9 +1883,7 @@ describe("Trigger processing", function()
         -- between the two. Each measurement is the cheapest of five runs,
         -- because scheduling noise only ever adds, and the two lines take turns
         -- so a slow patch on the runner cannot cost one line all five of its
-        -- runs. One full collection first leaves the next cycle a whole live
-        -- heap away at Lua's default pause, more than these runs allocate, so it
-        -- stays off both lines.
+        -- runs.
         --
         -- Subtracting an unarmed baseline to leave only what the trigger adds
         -- is what this did first, and it could not be made to hold. On the
@@ -1750,6 +1903,11 @@ describe("Trigger processing", function()
                 -- divide by. Feeding until the run is clear of that floor and
                 -- dividing by the number of feeds keeps both measurements
                 -- per-feed and comparable.
+                --
+                -- a collection cycle landing in one line's runs and not the
+                -- other's skews the ratio by whatever it costs
+                collectgarbage()
+                collectgarbage("stop")
                 local feeds, taken = 0, 0
                 local started = os.clock()
                 repeat
@@ -1761,6 +1919,7 @@ describe("Trigger processing", function()
                 -- needs, so giving up past it leaves the short > 0 assertion
                 -- below to report the dead clock.
                 until taken >= 0.02 or feeds >= 100
+                collectgarbage("restart")
                 return taken / feeds
             end
             _G.TrigSpec = {captures = 0}
@@ -1768,10 +1927,12 @@ describe("Trigger processing", function()
                 [[_G.TrigSpec.captures = #matches]],
                 0, -1, -1, 0, 1, -1, -1, 0, 0, 0)
             assert.is_number(id)
-            finally(function() if type(id) == "number" and id > 0 then killTrigger("SpecComplexMatchAllCost") end end)
+            finally(function()
+                collectgarbage("restart")
+                if type(id) == "number" and id > 0 then killTrigger("SpecComplexMatchAllCost") end
+            end)
             local shortLine, longLine = string.rep("word ", shortReps), string.rep("word ", longReps)
             local short, long, shortCaptures, longCaptures
-            collectgarbage()
             for _ = 1, 5 do
                 short = math.min(short or math.huge, costOf(shortLine))
                 shortCaptures = _G.TrigSpec.captures
@@ -2493,6 +2654,54 @@ describe("Trigger processing", function()
             assert.are.equal(1, spec.fired, "the prompt trigger did not fire on the line ended by IAC GA")
             assert.are.equal(spec.linesBefore - 1, spec.linesAfter, "the trigger did not gag the line it matched")
             assert.is_true(spec.wasPrompt, "isPrompt() was false on a prompt line the trigger had just gagged")
+        end)
+
+        it("isPrompt stays true after a prompt trigger clears the main window", function()
+            _G.TrigSpec = {fired = 0}
+            liveTriggerId = tempPromptTrigger(function()
+                _G.TrigSpec.fired = _G.TrigSpec.fired + 1
+                clearWindow()
+                _G.TrigSpec.linesAfter = getLineCount()
+                _G.TrigSpec.wasPrompt = isPrompt()
+            end)
+            assert.is_true(liveTriggerId > 0, "the prompt trigger was not created")
+
+            echo("\nfirst\nsecond\n")
+            local ok, msg = feedTelnet("SpecPromptCleared> <T_IAC><T_GA>")
+            local spec = _G.TrigSpec
+            feedTelnet("\r\n")
+            deselect()
+
+            assert.is_true(ok, "start the suite with --offline, see the tests README - feedTelnet said: " .. tostring(msg))
+            assert.are.equal(1, spec.fired, "the prompt trigger did not fire on the line ended by IAC GA")
+            assert.are.equal(0, spec.linesAfter, "clearWindow() did not leave the one empty line")
+            assert.is_true(spec.wasPrompt, "isPrompt() was false on a prompt line the trigger had just cleared away")
+        end)
+
+        -- On line 0 the cursor sits on the one line a clear leaves whether or not
+        -- the prompt went, so only the engine cursor can tell the two apart.
+        it("isPrompt stays true after a prompt trigger on the first line clears the main window", function()
+            _G.TrigSpec = {fired = 0}
+            liveTriggerId = tempPromptTrigger(function()
+                _G.TrigSpec.fired = _G.TrigSpec.fired + 1
+                _G.TrigSpec.lineBefore = getLineNumber()
+                clearWindow()
+                _G.TrigSpec.linesAfter = getLineCount()
+                _G.TrigSpec.wasPrompt = isPrompt()
+            end)
+            assert.is_true(liveTriggerId > 0, "the prompt trigger was not created")
+
+            clearWindow()
+            local ok, msg = feedTelnet("SpecPromptClearedFirst> <T_IAC><T_GA>")
+            local spec = _G.TrigSpec
+            feedTelnet("\r\n")
+            deselect()
+
+            assert.is_true(ok, "start the suite with --offline, see the tests README - feedTelnet said: " .. tostring(msg))
+            assert.are.equal(1, spec.fired, "the prompt trigger did not fire on the line ended by IAC GA")
+            assert.are.equal(0, spec.lineBefore, "the prompt did not arrive on line 0, so this spec proves nothing")
+            assert.are.equal(0, spec.linesAfter, "clearWindow() did not leave the one empty line")
+            assert.is_true(spec.wasPrompt, "isPrompt() was false on a first-line prompt the trigger had just cleared away")
         end)
 
         it("isPrompt stays false after an ordinary trigger gags the line it matched", function()
@@ -3317,6 +3526,61 @@ describe("Trigger processing", function()
             end)
         end)
 
+    end)
+
+    -- Installing a package moves the temporary triggers behind the permanent
+    -- ones it brought, keeping them in the order they were made in.
+    describe("temporary triggers made before a package is installed", function()
+
+        local packageName = "mudlet-spec-triggerkinds"
+        local specDirectory = debug.getinfo(1, "S").source:match("^@(.*)[/\\]")
+        assert(specDirectory, "Trigger_spec.lua has to be run from a file so that it can find its fixtures")
+        local fixture = specDirectory .. "/fixtures/packages/sources/" .. packageName .. "/" .. packageName .. ".xml"
+
+        if not os.getenv("MUDLET_TEST_MODE") then
+            it("needs test mode", function()
+                pending("installing the trigger-kinds fixture needs MUDLET_TEST_MODE (pumpEvents() does nothing without it)")
+            end)
+            return
+        end
+
+        it("fire after the package's triggers, in the order they were made", function()
+            local ids = {}
+            finally(function()
+                for _, id in pairs(ids) do
+                    killTrigger(id)
+                end
+                disableTrigger(packageName .. " colourise exact")
+                local gone, reason = removePackage(packageName)
+                assert.is_true(gone, "the " .. packageName .. " fixture was left behind: " .. tostring(reason))
+                _G.TriggerKindsSpec = nil
+            end)
+            _G.TriggerKindsSpec = {}
+            removePackage(packageName)
+            local fired = {}
+            for i = 1, 4 do
+                ids[i] = tempExactMatchTrigger("tkexact line", function()
+                    fired[#fired + 1] = _G.TriggerKindsSpec.exactFired and i or -i
+                end)
+            end
+            killTrigger(ids[2])
+
+            local reason
+            for _ = 1, 3 do
+                if packageInstalled(packageName) then
+                    break
+                end
+                waitForProfileSaveToPass()
+                local _, message = installPackage(fixture)
+                reason = message or reason
+                pumpEvents(200)
+            end
+            assert.is_true(packageInstalled(packageName), "could not install the " .. packageName .. " fixture: " .. tostring(reason))
+            enableTrigger(packageName .. " colourise exact")
+
+            feedTriggers("tkexact line\n")
+            assert.are.same({1, 3, 4}, fired, "a negative number is a temporary trigger that fired before the package's own")
+        end)
     end)
 
     -- A trigger created from another trigger's script (tempTrigger() & Co.) still

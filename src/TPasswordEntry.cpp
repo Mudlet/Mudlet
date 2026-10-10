@@ -24,6 +24,7 @@
 #include "KeyUnit.h"
 #include "TCommandLine.h"
 #include "TConsole.h"
+#include "TMainConsole.h"
 #include "TTabBar.h"
 #include "TTextEdit.h"
 #include "mudlet.h"
@@ -329,8 +330,8 @@ void TPasswordEntry::focusInEvent(QFocusEvent* event)
 {
     // Not on a switch back to the application, which would overwrite the
     // record just as it would for the command line itself
-    if (event->reason() != Qt::ActiveWindowFocusReason && mpHost && mpHost->mpConsole && mpCommandLine) {
-        mpHost->mpConsole->recordActiveCommandLine(mpCommandLine);
+    if (event->reason() != Qt::ActiveWindowFocusReason && mpHost && mpHost->mainConsoleView() && mpCommandLine) {
+        mpHost->mainConsoleView()->recordActiveCommandLine(mpCommandLine);
     }
     QLineEdit::focusInEvent(event);
 }

@@ -135,11 +135,11 @@ private:
     QColor paintedColour(const QPoint& logical)
     {
         QTest::qWait(50ms);
-        const QImage shot = mpHost->mpConsole->mpMainFrame->grab(backdropArea).toImage();
+        const QImage shot = mpHost->mainConsoleView()->mpMainFrame->grab(backdropArea).toImage();
         return shot.pixelColor((QPointF(logical) * shot.devicePixelRatio()).toPoint());
     }
 
-    TLabel* target() const { return mpHost->mpConsole->labelWidget(qsl("svgTarget")); }
+    TLabel* target() const { return mpHost->mainConsoleView()->labelWidget(qsl("svgTarget")); }
 
     void createTarget(int width, int height)
     {
@@ -232,7 +232,7 @@ private slots:
     void init()
     {
         QVERIFY(mpHost);
-        QVERIFY(mpHost->mpConsole);
+        QVERIFY(mpHost->mainConsoleView());
         runLua(qsl("createLabel('svgBackdrop', 0, 0, %1, %2, 1)").arg(backdropArea.width()).arg(backdropArea.height()));
         runLua(qsl("setBackgroundColor('svgBackdrop', %1, %2, %3, 255)").arg(backdropColour().red()).arg(backdropColour().green()).arg(backdropColour().blue()));
         QCOMPARE(paintedColour(QPoint(10, 10)), backdropColour());
@@ -241,7 +241,7 @@ private slots:
     void cleanup()
     {
         for (const auto& name : {qsl("svgTarget"), qsl("svgBackdrop")}) {
-            mpHost->mpConsole->deleteLabel(name);
+            mpHost->deleteLabel(name);
         }
     }
 

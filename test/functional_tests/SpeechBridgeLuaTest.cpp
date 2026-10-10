@@ -32,6 +32,7 @@
 #include "PortableModeTestHelper.h"
 #include "ProfileTestHelper.h"
 #include "TLuaInterpreter.h"
+#include "TSpeechBridge.h"
 #include "TelnetServerStub.h"
 #include "VoskRecognizer.h"
 #include "VoskStubHelper.h"
@@ -189,7 +190,7 @@ private slots:
         // profile, and a profile is only active once it has a console.
         mpHost = TestProfile::create(mProfileName, mLocalhost, QString::number(mpServer->serverPort()));
         QVERIFY2(mpHost, "the profile could not be created");
-        QVERIFY2(!mudlet::self()->speechRecognizer(), "a recognizer existed before any case asked for one, so its creation cannot be observed");
+        QVERIFY2(!TSpeechBridge::instance()->speechRecognizer(), "a recognizer existed before any case asked for one, so its creation cannot be observed");
     }
 
     void cleanupTestCase()
@@ -473,6 +474,24 @@ private slots:
         QVERIFY2(!luaTrue(qsl("_failedOk")), "the handler's load of an unloadable model succeeded, so this case is not about a failed load");
         QVERIFY2(luaTrue(qsl("_outerOk")), qPrintable(qsl("the load was abandoned for a handler load that failed: \"%1\"").arg(luaString(qsl("_outerErr")))));
         QCOMPARE(luaString(qsl("stt.getInfo().modelPath")), model);
+    }
+
+    // A load that fails leaves the engine in error with no model at all, so a
+    // start there must not talk of reloading one - nor of the engine never
+    // having been initialized, which is what the message for Uninitialized says.
+    void aStartAfterAFailedLoadDoesNotOfferAReload()
+    {
+        requireStub();
+        QVERIFY(runLua(qsl("_loadOk = stt.init([[%1]])").arg(unloadableStubModelDirectory())).isNull());
+        QVERIFY2(!luaTrue(qsl("_loadOk")), "the unloadable stand-in model loaded, so this case is not about a failed load");
+        QCOMPARE(luaString(qsl("stt.getInfo().state")), qsl("error"));
+        QVERIFY2(luaString(qsl("stt.getInfo().modelPath")).isEmpty(), "a failed load still names a model, so there is one to reload");
+
+        QVERIFY(runLua(qsl("_startOk, _startWhy = stt.start()")).isNull());
+        const QString why = luaString(qsl("_startWhy"));
+        QVERIFY2(!luaTrue(qsl("_startOk")), "a start after a failed load reported success");
+        QVERIFY2(why.contains(qsl("error state")) && why.contains(qsl("stt.init()")), qPrintable(why));
+        QVERIFY2(!why.contains(qsl("reload")) && !why.contains(qsl("not initialized")), qPrintable(why));
     }
 
     // Reloading a library that is not there has nothing to report success about,

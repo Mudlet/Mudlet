@@ -600,7 +600,8 @@ private slots:
 
     void test_aLabelPromptLinkFollowsTheKeyboardIntoTheBox()
     {
-        QVERIFY(mpHost->mpConsole->createLabel(QString(), qsl("passwordEntryLabel"), 0, 0, 60, 20, false));
+        const auto [created, message] = mpHost->createLabel(QString(), qsl("passwordEntryLabel"), 0, 0, 60, 20, false, false);
+        QVERIFY2(created, qPrintable(message));
         TLabel* pLabel = mpHost->mpConsole->labelWidget(qsl("passwordEntryLabel"));
         QVERIFY(pLabel);
         const auto tidy = qScopeGuard([this]() {

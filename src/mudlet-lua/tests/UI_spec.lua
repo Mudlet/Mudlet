@@ -2431,6 +2431,31 @@ describe("Tests UI functions", function()
       assert.are.equal(1, exists(buttonId, "button"))
       assert.are.equal(1, isActive(buttonId, "button"))
     end)
+
+    it("showing a button toolbar again does not stack another copy of its buttons", function()
+      if not os.getenv("MUDLET_TEST_MODE") then
+        pending("the layout only settles once pumpEvents() has run")
+        return
+      end
+      local stackToolbarName = "bustedTempButtonStack" .. suffix
+      tempButtonToolbar(stackToolbarName, 0, 0)
+      tempButton(stackToolbarName, "bustedTempStackButton" .. suffix, 0)
+      -- every showToolBar() rebuilds each bar; the bars it replaced must leave
+      -- the window then and there, as this whole run is one Lua call that never
+      -- returns to the event loop that would delete them
+      assert.is_true(showToolBar(stackToolbarName))
+      pumpEvents(200)
+      local _, heightBefore = getMainWindowSize()
+      for _ = 1, 5 do
+        showToolBar(stackToolbarName)
+      end
+      pumpEvents(200)
+      local _, heightAfter = getMainWindowSize()
+      -- hidden, a bar takes no room, so later specs get their rows back
+      hideToolBar(stackToolbarName)
+      pumpEvents(200)
+      assert.are.equal(heightBefore, heightAfter)
+    end)
   end)
 
   -- The getTextFormat suites earlier in this file are largely diagnostic: they
@@ -3819,6 +3844,29 @@ describe("Window state getters", function()
       assert.are.equal("inside the user window", getLabelText(childLabelName))
     end)
 
+    -- Qt writes a qproperty through QLabel's own setText(), not the label's
+    it("reports text a style sheet gives the label", function()
+      echo(labelName, "before the style sheet")
+      finally(function() setLabelStyleSheet(labelName, "") end)
+      assert.is_true(setLabelStyleSheet(labelName, 'qproperty-text: "from the style sheet";'))
+      assert.are.equal("from the style sheet", getLabelText(labelName))
+    end)
+
+    -- the label colours its links by rewriting the text it is given
+    it("reports links in the colour setLinkStyle gave them", function()
+      assert.is_true(setLinkStyle(labelName, "red", "blue", true))
+      finally(function() resetLinkStyle(labelName) end)
+      echo(labelName, '<a href="send:look">look</a>')
+      assert.is_truthy(getLabelText(labelName):find("color: red", 1, true))
+    end)
+
+    it("reports no text once a background image replaces it", function()
+      echo(labelName, "covered by an image")
+      assert.is_true(setBackgroundImage(labelName, ":/icons/mudlet.png"))
+      finally(function() resetBackgroundImage(labelName) end)
+      assert.are.equal("", getLabelText(labelName))
+    end)
+
     it("errors when called without a label name", function()
       assert.has_error(function() getLabelText() end)
     end)
@@ -4589,6 +4637,47 @@ describe("Window and label state", function()
 
     it("calcFontSize returns nil for an unknown window", function()
       assert.is_nil(calcFontSize(name("wlsNoSuchWindow")))
+    end)
+
+    -- Scripts compensate for the width of a "W" by hand, so the cell width is opt-in
+    it("calcFontSize given true reports the width a window draws each column in", function()
+      local original, originalSize = getFont(console), getFontSize(console)
+      finally(function()
+        setFont(console, original)
+        setMiniConsoleFontSize(console, originalSize)
+      end)
+      setMiniConsoleFontSize(console, 14)
+      assert.is_true(setFont(console, "Bitstream Vera Sans"))
+      local columnWidth, columnHeight = calcFontSize(console, true)
+      local defaultWidth, defaultHeight = calcFontSize(console)
+      assert.are.equal(defaultHeight, columnHeight)
+      -- the cells are the font's average width in whole pixels, which the font size form gives
+      assert.are.equal((calcFontSize(14, "Bitstream Vera Sans")), columnWidth)
+      assert.is_true(columnWidth < defaultWidth, ("a column is %s pixels and a \"W\" %s on a proportional font"):format(columnWidth, defaultWidth))
+      assert.are.same({calcFontSize(console)}, {calcFontSize(console, false)})
+    end)
+
+    it("calcFontSize given true leaves the font size forms as they were", function()
+      assert.are.same({calcFontSize(12)}, {calcFontSize(12, true)})
+      assert.are.same({calcFontSize(12, "Bitstream Vera Sans")}, {calcFontSize(12, "Bitstream Vera Sans", true)})
+    end)
+
+    it("calcFontSize given only true reports the main window's layout width", function()
+      assert.are.same({calcFontSize("main", true)}, {calcFontSize(true)})
+      assert.are.same({calcFontSize("main")}, {calcFontSize(false)})
+    end)
+
+    -- a nil in the font name's place is a mistake to report, not the flag left out
+    it("calcFontSize still rejects a nil font name", function()
+      local missingFontName = nil
+      assert.has_error(function()
+        calcFontSize(12, missingFontName)
+      end)
+    end)
+
+    it("calcFontSize takes a nil flag after a window name as the flag left out", function()
+      local omittedFlag = nil
+      assert.are.same({calcFontSize(console)}, {calcFontSize(console, omittedFlag)})
     end)
   end)
 
@@ -5508,6 +5597,31 @@ describe("Widget state getters", function()
       assert.is_truthy(title:find(userWindow, 1, true))
     end)
 
+    it("reports a new user window's name as its title", function()
+      local fresh = name("wdgFreshTitle")
+      openUserWindow(fresh, false)
+      finally(function() deleteMiniConsole(fresh) end)
+      assert.are.equal(fresh, getUserWindowTitle(fresh))
+    end)
+
+    it("reports the title a style sheet gives a floating user window", function()
+      local floating = name("wdgCssTitle")
+      openUserWindow(floating, false, false)
+      finally(function() deleteMiniConsole(floating) end)
+      assert.is_true(setUserWindowStyleSheet(floating, 'QDockWidget { qproperty-windowTitle: "from the style sheet"; }'))
+      assert.are.equal("from the style sheet", getUserWindowTitle(floating))
+    end)
+
+    it("does not give a user window the title of a deleted one it shares a name with", function()
+      local reused = name("wdgReusedTitle")
+      openUserWindow(reused, false)
+      finally(function() deleteMiniConsole(reused) end)
+      assert.is_true(setUserWindowTitle(reused, "the deleted window's title"))
+      assert.is_true(deleteMiniConsole(reused))
+      openUserWindow(reused, false)
+      assert.are.equal(reused, getUserWindowTitle(reused))
+    end)
+
     it("returns nil and a message naming an unknown user window", function()
       local unknown = name("wdgNoSuchUserWindow")
       local ok, err = getUserWindowTitle(unknown)
@@ -5556,6 +5670,31 @@ describe("Widget state getters", function()
       setUserWindowStyleSheet(userWindow, "background-color: rgb(7,8,9);")
       assert.is_true(setUserWindowStyleSheet(userWindow, ""))
       assert.are.equal("", getUserWindowStyleSheet(userWindow))
+    end)
+
+    it("does not give a user window the style sheet of a deleted one it shares a name with", function()
+      local reused = name("wdgReusedSheet")
+      openUserWindow(reused, false)
+      finally(function() deleteMiniConsole(reused) end)
+      assert.is_true(setUserWindowStyleSheet(reused, "background-color: rgb(9,8,7);"))
+      assert.is_true(deleteMiniConsole(reused))
+      openUserWindow(reused, false)
+      assert.are.equal("", getUserWindowStyleSheet(reused))
+    end)
+
+    it("reports the profile style sheet on user windows opened before and after it is set", function()
+      local before, after = name("wdgSheetBefore"), name("wdgSheetAfter")
+      openUserWindow(before, false)
+      local css = "/* wdg profile style sheet */"
+      finally(function()
+        setProfileStyleSheet("")
+        deleteMiniConsole(before)
+        deleteMiniConsole(after)
+      end)
+      assert.is_true(setProfileStyleSheet(css))
+      assert.are.equal(css, getUserWindowStyleSheet(before))
+      openUserWindow(after, false)
+      assert.are.equal(css, getUserWindowStyleSheet(after))
     end)
 
     it("returns nil and a message naming an unknown user window", function()
@@ -5608,6 +5747,22 @@ describe("Widget state getters", function()
       assert.are.equal(css, getCmdLineStyleSheet())
       assert.are.equal(css, getCmdLineStyleSheet(nil))
       assert.are.equal(css, getCmdLineStyleSheet("main"))
+    end)
+
+    it("does not give a command line the style sheet of a deleted one it shares a name with", function()
+      local reused = name("wdgReusedCmdLine")
+      createCommandLine(reused, 15, 25, 140, 35)
+      finally(function() deleteCommandLine(reused) end)
+      assert.is_true(setCmdLineStyleSheet(reused, "color: rgb(3,2,1);"))
+      assert.is_true(deleteCommandLine(reused))
+      createCommandLine(reused, 15, 25, 140, 35)
+      assert.is_truthy(getCmdLineStyleSheet(reused):find("QPlainTextEdit{background-color:", 1, true))
+    end)
+
+    it("reports the style sheet a mini console's command line is born with", function()
+      assert.is_true(enableCommandLine(console))
+      finally(function() disableCommandLine(console) end)
+      assert.is_truthy(getCmdLineStyleSheet(console):find("QPlainTextEdit{background-color:", 1, true))
     end)
 
     it("returns nil and a message naming an unknown command line", function()
@@ -5987,6 +6142,12 @@ describe("Label movies", function()
       assert.are.equal(totalBefore + 1, totalAfter)
       -- setMovie starts the movie as well as loading it
       assert.are.equal(activeBefore + 1, activeAfter)
+    end)
+
+    it("takes the label's text away", function()
+      echo(label, "before the movie")
+      assert.is_true(setMovie(label, giffile))
+      assert.are.equal("", getLabelText(label))
     end)
 
     it("reuses the same movie when called twice on one label", function()

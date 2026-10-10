@@ -79,7 +79,6 @@ class QNetworkReply;
 class QTimer;
 
 class Host;
-class dlgComposer;
 
 
 const char TN_BELL = static_cast<char>(7);
@@ -313,7 +312,7 @@ public:
     QElapsedTimer networkLatencyTimer;
     bool mGA_Driver = false;
     bool mFORCE_GA_OFF = false;
-    QPointer<dlgComposer> mpComposer;
+    QPointer<QObject> mpComposer;
     QNetworkAccessManager* mpDownloader = nullptr;
     QString mServerPackage;
     QString mProfileName;
@@ -456,7 +455,7 @@ private:
     void sendTelnetOption(char type, unsigned char option);
     void gotRest(std::string&);
     void gotPrompt(std::string&);
-    void postData();
+    void postData(bool endsWithPromptMarker = false);
     void raiseProtocolEvent(const QString& name, const QString& protocol);
     void beginNetworkLatencyMeasurement();
     void finishNetworkLatencyMeasurement();

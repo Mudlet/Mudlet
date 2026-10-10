@@ -139,7 +139,7 @@ private:
         createToolBarAction(pHost, qsl("HostChildTeardown toolbar"));
         createToolBarAction(pHost, qsl("HostChildTeardown second toolbar"));
         pHost->getActionUnit()->updateAllToolbars();
-        for (const auto& pToolBar : pHost->mpConsole->actionToolBars()) {
+        for (const auto& pToolBar : pHost->mainConsoleView()->actionToolBars()) {
             windows.toolBars.append(pToolBar);
         }
         return windows;
@@ -267,7 +267,7 @@ private slots:
         QVERIFY2(pHost, "Profile took too long to load");
 
         pHost->setRemoteEchoingActive(true);
-        QVERIFY2(pHost->mpConsole->passwordEntry(), "the box did not open");
+        QVERIFY2(pHost->mainConsoleView()->passwordEntry(), "the box did not open");
 
         pHost->forceClose();
         QVERIFY2(pHost->requestClose(), "Closing the profile was refused");
@@ -295,8 +295,8 @@ private slots:
         // forceClose() stops TMainConsole::closeEvent() asking whether to save,
         // which would block on a modal dialog here
         pHost->forceClose();
-        pHost->mpConsole->close();
-        QTRY_VERIFY2(pHost->mpConsole.isNull(), "The main console did not go away"); // Qt 6 disposes of a WA_DeleteOnClose widget by deleteLater()
+        pHost->mainConsoleView()->close();
+        QTRY_VERIFY2(!pHost->mainConsoleView(), "The main console did not go away"); // Qt 6 disposes of a WA_DeleteOnClose widget by deleteLater()
         QVERIFY2(pHost->requestClose(), "Closing the profile was refused");
         QVERIFY2(HostDialogs::of(pHost).mpNotePad, "requestClose() reached closeChildren() after all - this no longer tests a Host that skips it");
 

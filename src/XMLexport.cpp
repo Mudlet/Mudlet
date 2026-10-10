@@ -1066,7 +1066,7 @@ void XMLexport::exportToClipboard(TTrigger* pT)
     clipboard->setText(xml, QClipboard::Clipboard);
 }
 
-void XMLexport::writeTrigger(TTrigger* pT, pugi::xml_node xmlParent)
+void XMLexport::writeTrigger(TTrigger* pT, pugi::xml_node xmlParent, bool withChildren)
 {
     if (!pT->mModuleMasterFolder && pT->exportItem) {
         auto trigger = xmlParent.append_child(pT->isFolder() ? "TriggerGroup" : "Trigger");
@@ -1116,6 +1116,9 @@ void XMLexport::writeTrigger(TTrigger* pT, pugi::xml_node xmlParent)
         }
     }
 
+    if (!withChildren) {
+        return;
+    }
     for (auto* child : *pT->mpMyChildrenList) {
         writeTrigger(static_cast<TTrigger*>(child), xmlParent);
     }
@@ -1148,7 +1151,7 @@ void XMLexport::exportToClipboard(TAlias* pT)
     clipboard->setText(xml, QClipboard::Clipboard);
 }
 
-void XMLexport::writeAlias(TAlias* pT, pugi::xml_node xmlParent)
+void XMLexport::writeAlias(TAlias* pT, pugi::xml_node xmlParent, bool withChildren)
 {
     if (!pT->mModuleMasterFolder && pT->exportItem) {
         auto aliasContents = xmlParent.append_child(pT->isFolder() ? "AliasGroup" : "Alias");
@@ -1169,6 +1172,9 @@ void XMLexport::writeAlias(TAlias* pT, pugi::xml_node xmlParent)
         }
     }
 
+    if (!withChildren) {
+        return;
+    }
     for (auto* child : *pT->mpMyChildrenList) {
         writeAlias(static_cast<TAlias*>(child), xmlParent);
     }
@@ -1201,7 +1207,7 @@ void XMLexport::exportToClipboard(TAction* pT)
     clipboard->setText(xml, QClipboard::Clipboard);
 }
 
-void XMLexport::writeAction(TAction* pT, pugi::xml_node xmlParent)
+void XMLexport::writeAction(TAction* pT, pugi::xml_node xmlParent, bool withChildren)
 {
     if (!pT->mModuleMasterFolder && pT->exportItem) {
         auto actionContents = xmlParent.append_child(pT->isFolder() ? "ActionGroup" : "Action");
@@ -1240,6 +1246,9 @@ void XMLexport::writeAction(TAction* pT, pugi::xml_node xmlParent)
         }
     }
 
+    if (!withChildren) {
+        return;
+    }
     for (auto* child : *pT->mpMyChildrenList) {
         writeAction(static_cast<TAction*>(child), xmlParent);
     }
@@ -1272,7 +1281,7 @@ void XMLexport::exportToClipboard(TTimer* pT)
     clipboard->setText(xml, QClipboard::Clipboard);
 }
 
-void XMLexport::writeTimer(TTimer* pT, pugi::xml_node xmlParent)
+void XMLexport::writeTimer(TTimer* pT, pugi::xml_node xmlParent, bool withChildren)
 {
     if (!pT->mModuleMasterFolder && pT->exportItem) {
         auto timerContents = xmlParent.append_child(pT->isFolder() ? "TimerGroup" : "Timer");
@@ -1296,6 +1305,9 @@ void XMLexport::writeTimer(TTimer* pT, pugi::xml_node xmlParent)
         }
     }
 
+    if (!withChildren) {
+        return;
+    }
     for (auto* child : *pT->mpMyChildrenList) {
         writeTimer(static_cast<TTimer*>(child), xmlParent);
     }
@@ -1328,7 +1340,7 @@ void XMLexport::exportToClipboard(TScript* pT)
     clipboard->setText(xml, QClipboard::Clipboard);
 }
 
-void XMLexport::writeScript(TScript* pT, pugi::xml_node xmlParent)
+void XMLexport::writeScript(TScript* pT, pugi::xml_node xmlParent, bool withChildren)
 {
     if (!pT->mModuleMasterFolder && pT->exportItem) {
         auto scriptContents = xmlParent.append_child(pT->isFolder() ? "ScriptGroup" : "Script");
@@ -1351,6 +1363,9 @@ void XMLexport::writeScript(TScript* pT, pugi::xml_node xmlParent)
         }
     }
 
+    if (!withChildren) {
+        return;
+    }
     for (auto* child : *pT->mpMyChildrenList) {
         writeScript(static_cast<TScript*>(child), xmlParent);
     }
@@ -1383,7 +1398,7 @@ void XMLexport::exportToClipboard(TKey* pT)
     clipboard->setText(xml, QClipboard::Clipboard);
 }
 
-void XMLexport::writeKey(TKey* pT, pugi::xml_node xmlParent)
+void XMLexport::writeKey(TKey* pT, pugi::xml_node xmlParent, bool withChildren)
 {
     if (!pT->mModuleMasterFolder && pT->exportItem) {
         auto keyContents = xmlParent.append_child(pT->isFolder() ? "KeyGroup" : "Key");
@@ -1405,6 +1420,9 @@ void XMLexport::writeKey(TKey* pT, pugi::xml_node xmlParent)
         }
     }
 
+    if (!withChildren) {
+        return;
+    }
     for (auto* child : *pT->mpMyChildrenList) {
         writeKey(static_cast<TKey*>(child), xmlParent);
     }

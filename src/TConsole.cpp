@@ -153,11 +153,7 @@ QStyle* consoleScrollBarStyle()
     static auto* pStyle = new ConsoleScrollBarStyle;
     return pStyle;
 }
-} // namespace
 
-const QString TConsole::cmLuaLineVariable("line");
-
-namespace {
 // The main console co-owns Host's model so the trigger pipeline outlives the
 // view; every other console owns its own model.
 std::shared_ptr<TConsoleModel> resolveConsoleModel(Host* pHost, const QString& name, const TConsole::ConsoleType type)
@@ -231,8 +227,11 @@ TConsole::TConsole(Host* pH, const QString& name, const ConsoleType type, QWidge
 , mpBufferSearchUp(new QToolButton)
 , mpBufferSearchDown(new QToolButton)
 , mCurrentSearchResult(mpModel->mCurrentSearchResult)
+, mScrollBarEnabled(mpModel->mScrollBarEnabled)
 , mControlCharacter(pH->getControlCharacterMode())
 , mType(type)
+, mScrollingEnabled(mpModel->mScrollingEnabled)
+, mBorderColor(mpModel->mBorderColor)
 {
     // The model is built without a view (Host creates the main console's one
     // before any widget exists), so this view subscribes to it now.
@@ -267,6 +266,12 @@ TConsole::TConsole(Host* pH, const QString& name, const ConsoleType type, QWidge
         mBorders = mpHost->borders();
         mCommandBgColor = mpHost->mCommandBgColor;
         mCommandFgColor = mpHost->mCommandFgColor;
+    } else if (mType == Buffer) {
+        // Only a starting point: setWindowWrap() and friends keep a buffer's
+        // own settings nowhere else, so nothing may copy the profile's over them later
+        setWrapAt(mpHost->mWrapAt);
+        setIndentCount(mpHost->mWrapIndentCount);
+        setHangingIndentCount(mpHost->mWrapHangingIndentCount);
     }
 
     QWidget::setFont(mDisplayFontDetails.makeFont());
@@ -460,9 +465,9 @@ TConsole::TConsole(Host* pH, const QString& name, const ConsoleType type, QWidge
     } else if (mType & (UserWindow | SubConsole)) {
         // These will need to be changed when the built in TCommandLine is
         // enabled or an additional one is added to them:
-        setFocusProxy(mpHost->mpConsole->mpCommandLine);
-        mUpperPane->setFocusProxy(mpHost->mpConsole->mpCommandLine);
-        mLowerPane->setFocusProxy(mpHost->mpConsole->mpCommandLine);
+        setFocusProxy(mpHost->mainConsoleView()->mpCommandLine);
+        mUpperPane->setFocusProxy(mpHost->mainConsoleView()->mpCommandLine);
+        mLowerPane->setFocusProxy(mpHost->mainConsoleView()->mpCommandLine);
     }
 
     splitter->addWidget(mUpperPane);
@@ -737,6 +742,8 @@ TConsole::TConsole(Host* pH, const QString& name, const ConsoleType type, QWidge
     QList<int> sizeList;
     sizeList << 6 << 2;
     splitter->setSizes(sizeList);
+    // An unshown splitter resizes its panes with no Resize event, and a buffer is never shown.
+    mUpperPane->reportGridSize();
 
     mUpperPane->show();
     mLowerPane->hide();
@@ -942,8 +949,8 @@ void TConsole::resizeEvent(QResizeEvent* event)
         if (app && !app->getDetachedWindows().contains(mpHost->getName())) {
             for (const auto& otherHostPtr : *HostManager::self()) {
                 Host* otherHost = otherHostPtr.data();
-                if (otherHost && otherHost != mpHost.data() && otherHost->mpConsole) {
-                    otherHost->mpConsole->syncHiddenScreenDimensions();
+                if (otherHost && otherHost != mpHost.data() && otherHost->mainConsoleView()) {
+                    otherHost->mainConsoleView()->syncHiddenScreenDimensions();
                 }
             }
         }
@@ -974,6 +981,10 @@ void TConsole::resizeEvent(QResizeEvent* event)
         // don't call event in lua if size didn't change
         const bool preventLuaEvent = (getMainWindowSize() == mOldSize);
         mOldSize = getMainWindowSize();
+        // Laying out a hidden console, as above, resizes its command line with no event to report it
+        if (!mpHost.isNull()) {
+            mpHost->windowRegistry().setMainWindowSize(mOldSize);
+        }
         if (preventLuaEvent) {
             return;
         }
@@ -1048,9 +1059,7 @@ void TConsole::refresh()
 
 void TConsole::clear()
 {
-    buffer.clear();
-    // --mirror's pending line went with the buffer.
-    mpModel->mMirrorPendingLine.clear();
+    mpModel->clear();
     bufferCleared();
 }
 
@@ -1101,7 +1110,7 @@ void TConsole::closeEvent(QCloseEvent* event)
 
     if (mType & (SubConsole | Buffer)) {
         if (mudlet::self()->isGoingDown() || mpHost->isClosingDown()) {
-            auto pC = mpHost->mpConsole->deregisterSubConsole(mConsoleName);
+            auto pC = mpHost->mainConsoleView()->deregisterSubConsole(mConsoleName);
             if (pC) {
                 // As it happens pC will be identical to 'this' it is just that
                 // we will have removed it from the main TConsole's
@@ -1121,8 +1130,8 @@ void TConsole::closeEvent(QCloseEvent* event)
 
     if (mType == UserWindow) {
         if (mudlet::self()->isGoingDown() || mpHost->isClosingDown()) {
-            auto pC = mpHost->mpConsole->deregisterSubConsole(mConsoleName);
-            auto pD = mpHost->mpConsole->deregisterDockWidget(mConsoleName);
+            auto pC = mpHost->mainConsoleView()->deregisterSubConsole(mConsoleName);
+            auto pD = mpHost->mainConsoleView()->deregisterDockWidget(mConsoleName);
             if (pC) {
                 // As it happens pC will be identical to 'this' it is just that
                 // we will have removed it from the main TConsole's
@@ -1165,7 +1174,7 @@ void TConsole::slot_toggleLogging()
         return;
         // We don't support logging anything other than main console (at present?)
     }
-    mpHost->mpConsole->toggleLogging(true);
+    mpHost->mainConsoleView()->toggleLogging(true);
 }
 
 // FIXME: This needs to move to the TMainConsole class but the button handling
@@ -1290,7 +1299,7 @@ void TConsole::changeColors()
         // refreshMainConsoleColors() above already did this one
         buffer.updateColors();
     }
-    if (mType & (MainConsole | Buffer)) {
+    if (mType == MainConsole) {
         // the console's own copies too, as wrapLine() rewraps with those
         setWrapAt(mpHost->mWrapAt);
         setIndentCount(mpHost->mWrapIndentCount);
@@ -1662,7 +1671,7 @@ void TConsole::setCmdVisible(bool isVisible)
         mpCommandLine->setFont(font());
         // put this CommandLine in the mainConsoles SubCommandLineMap
         // name is the console name
-        mpHost->mpConsole->registerSubCommandLine(mConsoleName, mpCommandLine);
+        mpHost->mainConsoleView()->registerSubCommandLine(mConsoleName, mpCommandLine);
         layoutLayer2->addWidget(mpCommandLine);
     }
     if (mType == MainConsole) {
@@ -1684,8 +1693,8 @@ void TConsole::setCmdVisible(bool isVisible)
     setProxyForFocus(isVisible ? mpCommandLine : nullptr);
     // Need to remove the TCommandLine from the last used stack
     // if it has been explicitly hidden:
-    if (!isVisible && mpHost && mpHost->mpConsole) {
-        mpHost->mpConsole->forgetCommandLine(mpCommandLine);
+    if (!isVisible && mpHost && mpHost->mainConsoleView()) {
+        mpHost->mainConsoleView()->forgetCommandLine(mpCommandLine);
     }
 }
 
@@ -1728,8 +1737,8 @@ void TConsole::setFont(const QFont& newFont, const bool forceChange)
         QWidget::setFont(newFont);
         // Update associated TCommandLine's:
         if (mType & (MainConsole | SubConsole | UserWindow)) {
-            if (mpHost && mpHost->mpConsole) {
-                for (auto commandLine : mpHost->mpConsole->subCommandLineWidgets()) {
+            if (mpHost && mpHost->mainConsoleView()) {
+                for (auto commandLine : mpHost->mainConsoleView()->subCommandLineWidgets()) {
                     auto pConsole = commandLine->console();
                     if (pConsole && (pConsole == this)) {
                         commandLine->setFont(font());
@@ -1822,15 +1831,6 @@ void TConsole::setScrollBarVisible(bool isVisible)
         mScrollBarEnabled = isVisible;
         mpScrollBar->setVisible(isVisible);
     }
-}
-
-// Reports what enableScrollBar()/disableScrollBar() last asked for rather than
-// QWidget::isVisible(): a profile that is not the front tab has its whole
-// console hidden, which would otherwise make every background profile report
-// its scroll bar as gone.
-bool TConsole::getScrollBarVisible() const
-{
-    return mScrollBarEnabled;
 }
 
 void TConsole::setHorizontalScrollBar(bool isEnabled)
@@ -2211,8 +2211,8 @@ void TConsole::syncHiddenScreenDimensions()
     }
     syncHostScreenDimensions(upperPaneWidthFor(container->width()), upperPaneHeightFor(container->height()));
     // so that an MXP frame opened meanwhile is placed in the window it comes back to
-    if (mpHost->mpConsole) {
-        mpHost->mpConsole->mxpFrameWidgets().reportSize();
+    if (mpHost->mainConsoleView()) {
+        mpHost->mainConsoleView()->mxpFrameWidgets().reportSize();
     }
 }
 
@@ -2254,10 +2254,12 @@ void TConsole::setCompactInputLine(const bool state)
 
 void TConsole::repaintPanes() const
 {
+    // Queued, not painted here: a flood of lines carrying selected links would
+    // otherwise paint the whole pane once per line
     mUpperPane->updateScreenView();
-    mUpperPane->repaint();
+    mUpperPane->forceUpdate();
     mLowerPane->updateScreenView();
-    mLowerPane->repaint();
+    mLowerPane->forceUpdate();
 }
 
 void TConsole::setProfileName(const QString& newName)
@@ -2453,13 +2455,13 @@ void TConsole::raiseMudletMousePressOrReleaseEvent(QMouseEvent* event, const boo
     // This ensures clicking on a console focuses its own command line
     if (mpCommandLine && mpCommandLine->isVisible()) {
         mpCommandLine->setFocus(Qt::MouseFocusReason);
-        if (mpHost->mpConsole) {
-            mpHost->mpConsole->recordActiveCommandLine(mpCommandLine);
+        if (mpHost->mainConsoleView()) {
+            mpHost->mainConsoleView()->recordActiveCommandLine(mpCommandLine);
         }
     } else if (mType == MainConsole) {
         // Main console always has its command line
-        mpHost->mpConsole->mpCommandLine->setFocus(Qt::MouseFocusReason);
-        mpHost->mpConsole->recordActiveCommandLine(mpHost->mpConsole->mpCommandLine);
+        mpHost->mainConsoleView()->mpCommandLine->setFocus(Qt::MouseFocusReason);
+        mpHost->mainConsoleView()->recordActiveCommandLine(mpHost->mainConsoleView()->mpCommandLine);
     } else {
         // Fallback to the old behavior for other cases
         mpHost->setFocusOnHostActiveCommandLine();
@@ -2651,10 +2653,10 @@ void TConsole::setProxyForFocus(TCommandLine* pCommandLine)
             QAccessible::updateAccessibility(&event);
         } else {
             // Revert to main console's command line
-            setFocusProxy(mpHost->mpConsole->mpCommandLine);
-            mUpperPane->setFocusProxy(mpHost->mpConsole->mpCommandLine);
-            mLowerPane->setFocusProxy(mpHost->mpConsole->mpCommandLine);
-            QAccessibleEvent event(mpHost->mpConsole->mpCommandLine, QAccessible::Focus);
+            setFocusProxy(mpHost->mainConsoleView()->mpCommandLine);
+            mUpperPane->setFocusProxy(mpHost->mainConsoleView()->mpCommandLine);
+            mLowerPane->setFocusProxy(mpHost->mainConsoleView()->mpCommandLine);
+            QAccessibleEvent event(mpHost->mainConsoleView()->mpCommandLine, QAccessible::Focus);
             QAccessible::updateAccessibility(&event);
         }
     } else if (mType == SubConsole) {
@@ -2679,10 +2681,10 @@ void TConsole::setProxyForFocus(TCommandLine* pCommandLine)
                 QAccessible::updateAccessibility(&event);
             } else {
                 // Somehow that has failed so fall back to the main console
-                setFocusProxy(mpHost->mpConsole->mpCommandLine);
-                mUpperPane->setFocusProxy(mpHost->mpConsole->mpCommandLine);
-                mLowerPane->setFocusProxy(mpHost->mpConsole->mpCommandLine);
-                QAccessibleEvent event(mpHost->mpConsole->mpCommandLine, QAccessible::Focus);
+                setFocusProxy(mpHost->mainConsoleView()->mpCommandLine);
+                mUpperPane->setFocusProxy(mpHost->mainConsoleView()->mpCommandLine);
+                mLowerPane->setFocusProxy(mpHost->mainConsoleView()->mpCommandLine);
+                QAccessibleEvent event(mpHost->mainConsoleView()->mpCommandLine, QAccessible::Focus);
                 QAccessible::updateAccessibility(&event);
             }
         }
