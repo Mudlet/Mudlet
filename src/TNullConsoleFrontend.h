@@ -37,6 +37,7 @@
 #include <vector>
 
 class Host;
+class QMovie;
 struct TLabelModel;
 
 class TNullMxpFrameFrontend final : public TMxpFrameFrontend
@@ -94,7 +95,7 @@ public:
     bool moveLabel(const QString& name, int x, int y) override;
     bool reparentLabel(const QString& windowname, const QString& name, int x, int y, bool show) override;
     bool setLabelText(const QString& name, const QString& text) override;
-    std::pair<bool, QString> setLabelMovie(const QString&, const QString&) override { return noView(); }
+    std::pair<bool, QString> setLabelMovie(const QString& name, const QString& moviePath) override;
     bool setLabelBackgroundColor(const QString& name, const QColor& color) override;
     std::optional<QColor> getLabelBackgroundColor(const QString& name) const override;
     bool setLabelBackgroundImage(const QString&, const QString&) override { return false; }
@@ -107,12 +108,12 @@ public:
     bool resetLabelSvgShear(const QString& name) override { return setLabelSvgShear(name, 0.0, 0.0); }
     bool resetLabelSvgTransform(const QString& name) override { return setLabelSvgRotation(name, 0.0) && setLabelSvgShear(name, 0.0, 0.0); }
     bool setLabelFont(const QString& name, const QFont& font) override;
-    std::optional<bool> labelShowsMovie(const QString&) const override { return std::nullopt; }
-    bool startLabelMovie(const QString&) override { return false; }
-    bool pauseLabelMovie(const QString&) override { return false; }
-    bool setLabelMovieFrame(const QString&, int) override { return false; }
-    bool setLabelMovieSpeed(const QString&, int) override { return false; }
-    bool scaleLabelMovie(const QString&, bool) override { return false; }
+    std::optional<bool> labelShowsMovie(const QString& name) const override;
+    bool startLabelMovie(const QString& name) override;
+    bool pauseLabelMovie(const QString& name) override;
+    bool setLabelMovieFrame(const QString& name, int frame) override;
+    bool setLabelMovieSpeed(const QString& name, int percent) override;
+    bool scaleLabelMovie(const QString& name, bool followLabelSize) override;
     std::pair<bool, QString> createCommandLine(const QString&, const QString&, int, int, int, int) override { return noView(); }
     std::pair<bool, QString> deleteCommandLine(const QString&) override { return noView(); }
     bool setCommandLineAction(const QString&, int) override { return false; }
@@ -275,7 +276,14 @@ private:
         // QLabel only measures its text once it has been given some, and caches the answer
         bool textLabel = false;
         mutable std::optional<QSize> sizeHint;
+        // TLabel::mpMovie, which outlives its place in QLabel so a later setMovie() reuses it
+        std::unique_ptr<QMovie> movie;
+        // QLabel::movie() is set
+        bool showsMovie = false;
+        // TMainConsole::scaleLabelMovie()'s connection to TLabel::resized
+        bool movieFollowsSize = false;
     };
+    QMovie* shownMovie(const QString& name) const;
 
     TConsoleModel& addSubConsole(const QString& name, TWindowRegistry::SubConsoleKind kind, const QString& windowname);
     void removeSubConsole(const QString& name);

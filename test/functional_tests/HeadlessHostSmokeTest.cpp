@@ -19,6 +19,7 @@
 
 #include <QApplication>
 #include <QDir>
+#include <QFile>
 #include <QFontInfo>
 #include <QFontMetrics>
 #include <QFontMetricsF>
@@ -662,6 +663,221 @@ headlessProfileSheet = ok and "ok" or tostring(err)
                                   qsl("sheetC=[1]")};
         QCOMPARE(luaGlobalString(host, "headlessProfileSheetAnswers"), answers.join(QLatin1Char('\n')));
         QVERIFY2(QApplication::topLevelWidgets().isEmpty(), "Setting the profile sheet created a widget.");
+    }
+
+    // The answers are those of the same Lua run in the GUI self-test profile, with files of the same bytes.
+    void test_headlessLabelMovieContract()
+    {
+        const QString hostname = qsl("Test-Headless-Host-Label-Movie");
+        QVERIFY2(HostManager::self()->addHost(hostname, QString(), QString(), QString()), "Could not create a profile with no main window.");
+        Host* host = HostManager::self()->getHost(hostname);
+        QVERIFY2(host, "The profile is not in the pool.");
+        QVERIFY(!host->hasConsoleView());
+
+        QTemporaryDir movieDir;
+        QVERIFY(movieDir.isValid());
+        const auto writeFile = [&movieDir](const QString& name, const QByteArray& data) {
+            QFile file(movieDir.filePath(name));
+            return file.open(QIODevice::WriteOnly) && file.write(data) == data.size();
+        };
+        // Three 40x16 frames, then a 24x10 still image
+        QVERIFY(writeFile(qsl("anim.gif"),
+                          QByteArray::fromBase64("R0lGODlhKAAQAIEAAP8AAAAAAAAAAAAAACH/"
+                                                 "C05FVFNDQVBFMi4wAwEAAAAh+"
+                                                 "QQACgAAACwAAAAAKAAQAAAIKwABCBxIsKDBgwgTKlzIsKHDhxAjSpxIsaLFixgzatzIsaPHjyBDihypMCAAIfkEAQoAAQAsAAAAACgAEACBAP8AAAAAAAAAAAAACCsAAQgcSLCgwYMIEypcyLChw4"
+                                                 "cQI0qcSLGixYsYM2rcyLGjx48gQ4ocqTAgACH5BAEKAAEALAAAAAAoABAAgQAA/wAAAAAAAAAAAAgrAAEIHEiwoMGDCBMqXMiwocOHECNKnEixosWLGDNq3Mixo8ePIEOKHKkwIAA7")));
+        QVERIFY(writeFile(qsl("still.png"), QByteArray::fromBase64("iVBORw0KGgoAAAANSUhEUgAAABgAAAAKCAIAAAAhCwk/AAAAGUlEQVR4nGPk5ORkoAZgooopowaNGkQlAABsJgAvM+NphgAAAABJRU5ErkJggg==")));
+        QVERIFY(writeFile(qsl("fake.gif"), QByteArrayLiteral("not an image")));
+        QVERIFY(host->getLuaInterpreter()->compileAndExecuteScript(qsl("mvDir = [==[%1]==]").arg(movieDir.path())));
+
+        const bool ran = host->getLuaInterpreter()->compileAndExecuteScript(qsl(R"lua(
+headlessMovie = "not run"
+local ok, err = pcall(function()
+  local function described(called, ...)
+    if not called then
+      return "raised"
+    end
+    local count = select("#", ...)
+    local values = {}
+    for i = 1, count do
+      values[i] = tostring((select(i, ...)))
+    end
+    return "[" .. count .. "]" .. table.concat(values, ":")
+  end
+  local answers = {}
+  local function step(label, f, ...)
+    answers[#answers + 1] = label .. "=" .. described(pcall(f, ...))
+  end
+  local startGifs = getProfileStats().gifs
+  local function state(label, name)
+    local gifs = getProfileStats().gifs
+    local width, height = getLabelSizeHint(name)
+    answers[#answers + 1] = string.format("%s:hint=%sx%s,text=%s,gifs=%d/%d", label, tostring(width), tostring(height), tostring(getLabelText(name)), gifs.total - startGifs.total, gifs.active - startGifs.active)
+  end
+  local function textState(label, name, twin)
+    local gifs = getProfileStats().gifs
+    local width, height = getLabelSizeHint(name)
+    local twinWidth, twinHeight = getLabelSizeHint(twin)
+    local hint = (width == twinWidth and height == twinHeight) and twin or string.format("%sx%s", tostring(width), tostring(height))
+    answers[#answers + 1] = string.format("%s:hint=%s,text=%s,gifs=%d/%d", label, hint, tostring(getLabelText(name)), gifs.total - startGifs.total, gifs.active - startGifs.active)
+  end
+  local gif, still, fake = mvDir .. "/anim.gif", mvDir .. "/still.png", mvDir .. "/fake.gif"
+  assert(createLabel("mvA", 0, 0, 100, 20, 1) == true, "createLabel did not answer true")
+  assert(createLabel("mvB", 0, 0, 100, 20, 1) == true, "createLabel did not answer true")
+  step("echo", echo, "mvA", "words")
+  for _, name in ipairs({"startMovie", "pauseMovie", "scaleMovie"}) do
+    step(name, _G[name], "mvA")
+  end
+  step("setMovieFrame", setMovieFrame, "mvA", 1)
+  step("setMovieSpeed", setMovieSpeed, "mvA", 50)
+  step("startMissing", startMovie, "mvNoSuch")
+  step("startEmpty", startMovie, "")
+  step("startNumber", startMovie, 5)
+  step("setMissing", setMovie, "mvNoSuch", gif)
+  step("setEmpty", setMovie, "", gif)
+  step("setNoFile", setMovie, "mvA", mvDir .. "/nosuch.gif")
+  step("setNotImage", setMovie, "mvA", fake)
+  step("setStill", setMovie, "mvA", still)
+  state("still", "mvA")
+  step("startStill", startMovie, "mvA")
+  step("set", setMovie, "mvA", gif)
+  state("set", "mvA")
+  step("start", startMovie, "mvA")
+  step("pause", pauseMovie, "mvA")
+  state("paused", "mvA")
+  step("frame0", setMovieFrame, "mvA", 0)
+  step("frame2", setMovieFrame, "mvA", 2)
+  step("frameNegative", setMovieFrame, "mvA", -1)
+  step("framePast", setMovieFrame, "mvA", 3)
+  step("frameText", setMovieFrame, "mvA", "x")
+  step("speed", setMovieSpeed, "mvA", 200)
+  step("speedText", setMovieSpeed, "mvA", "x")
+  step("scale", scaleMovie, "mvA")
+  state("scaled", "mvA")
+  step("frame1", setMovieFrame, "mvA", 1)
+  state("scaledFrame", "mvA")
+  step("resize", resizeWindow, "mvA", 200, 40)
+  step("frame2", setMovieFrame, "mvA", 2)
+  state("resizedFrame", "mvA")
+  step("setFollowed", setMovie, "mvA", gif)
+  state("followed", "mvA")
+  step("unscale", scaleMovie, "mvA", false)
+  step("scaleText", scaleMovie, "mvA", "x")
+  step("resize", resizeWindow, "mvA", 50, 10)
+  step("frame0", setMovieFrame, "mvA", 0)
+  state("unscaledFrame", "mvA")
+  step("start", startMovie, "mvA")
+  step("setB", setMovie, "mvB", gif)
+  state("two", "mvB")
+  step("setAgain", setMovie, "mvA", gif)
+  state("again", "mvA")
+  step("setNotImageAfter", setMovie, "mvA", fake)
+  step("startAfter", startMovie, "mvA")
+  step("echoEmpty", echo, "mvA", "")
+  state("echoEmpty", "mvA")
+  step("startEchoEmpty", startMovie, "mvA")
+  state("startEchoEmpty", "mvA")
+  step("echoText", echo, "mvA", "again")
+  assert(createLabel("mvText", 0, 0, 100, 20, 1) == true, "createLabel did not answer true")
+  echo("mvText", "again")
+  textState("echoText", "mvA", "mvText")
+  deleteLabel("mvText")
+  step("startEchoText", startMovie, "mvA")
+  step("setText", setMovie, "mvA", gif)
+  step("sheet", setLabelStyleSheet, "mvA", "padding: 3px; border: 2px solid red;")
+  state("sheet", "mvA")
+  assert(openUserWindow("mvWindow", false, false, "f") == true, "openUserWindow did not answer true")
+  step("move", setWindow, "mvWindow", "mvA", 0, 0, true)
+  step("startMoved", startMovie, "mvA")
+  step("hide", hideWindow, "mvA")
+  step("pauseHidden", pauseMovie, "mvA")
+  state("hidden", "mvA")
+  step("delete", deleteLabel, "mvA")
+  step("startDeleted", startMovie, "mvA")
+  state("deleted", "mvB")
+  step("deleteB", deleteLabel, "mvB")
+  local gifs = getProfileStats().gifs
+  answers[#answers + 1] = string.format("gone:gifs=%d/%d", gifs.total - startGifs.total, gifs.active - startGifs.active)
+  closeUserWindow("mvWindow")
+  headlessMovieAnswers = table.concat(answers, "\n"):gsub(mvDir:gsub("%p", "%%%0"), "<dir>")
+end)
+headlessMovie = ok and "ok" or tostring(err)
+)lua"));
+
+        QVERIFY2(ran, "The Lua chunk did not run.");
+        QCOMPARE(luaGlobalString(host, "headlessMovie"), qsl("ok"));
+        // A text label drops the movie but keeps it for the next setMovie(); a movie's size hint is its frame's
+        const QStringList answers{qsl("echo=[1]true"),
+                                  qsl("startMovie=[2]nil:no movie found at label 'mvA'"),
+                                  qsl("pauseMovie=[2]nil:no movie found at label 'mvA'"),
+                                  qsl("scaleMovie=[2]nil:no movie found at label 'mvA'"),
+                                  qsl("setMovieFrame=[2]nil:no movie found at label 'mvA'"),
+                                  qsl("setMovieSpeed=[2]nil:no movie found at label 'mvA'"),
+                                  qsl("startMissing=[2]nil:label \"mvNoSuch\" not found"),
+                                  qsl("startEmpty=[2]nil:label name cannot be an empty string"),
+                                  qsl("startNumber=[2]nil:label \"5\" not found"),
+                                  qsl("setMissing=[2]nil:label 'mvNoSuch' does not exist"),
+                                  qsl("setEmpty=[2]nil:label name cannot be an empty string"),
+                                  qsl("setNoFile=[2]nil:no valid movie found at '<dir>/nosuch.gif'"),
+                                  qsl("setNotImage=[2]nil:no valid movie found at '<dir>/fake.gif'"),
+                                  qsl("setStill=[1]true"),
+                                  qsl("still:hint=24x10,text=,gifs=1/1"),
+                                  qsl("startStill=[1]true"),
+                                  qsl("set=[1]true"),
+                                  qsl("set:hint=40x16,text=,gifs=1/1"),
+                                  qsl("start=[1]true"),
+                                  qsl("pause=[1]true"),
+                                  qsl("paused:hint=40x16,text=,gifs=1/0"),
+                                  qsl("frame0=[1]true"),
+                                  qsl("frame2=[1]true"),
+                                  qsl("frameNegative=[1]false"),
+                                  qsl("framePast=[1]true"),
+                                  qsl("frameText=raised"),
+                                  qsl("speed=[1]true"),
+                                  qsl("speedText=raised"),
+                                  qsl("scale=[1]true"),
+                                  qsl("scaled:hint=40x16,text=,gifs=1/0"),
+                                  qsl("frame1=[1]true"),
+                                  qsl("scaledFrame:hint=40x16,text=,gifs=1/0"),
+                                  qsl("resize=[0]"),
+                                  qsl("frame2=[1]true"),
+                                  qsl("resizedFrame:hint=40x16,text=,gifs=1/0"),
+                                  qsl("setFollowed=[1]true"),
+                                  qsl("followed:hint=200x40,text=,gifs=1/1"),
+                                  qsl("unscale=[1]true"),
+                                  qsl("scaleText=raised"),
+                                  qsl("resize=[0]"),
+                                  qsl("frame0=[1]true"),
+                                  qsl("unscaledFrame:hint=200x40,text=,gifs=1/1"),
+                                  qsl("start=[1]true"),
+                                  qsl("setB=[1]true"),
+                                  qsl("two:hint=40x16,text=,gifs=2/2"),
+                                  qsl("setAgain=[1]true"),
+                                  qsl("again:hint=200x40,text=,gifs=2/2"),
+                                  qsl("setNotImageAfter=[2]nil:no valid movie found at '<dir>/fake.gif'"),
+                                  qsl("startAfter=[1]true"),
+                                  qsl("echoEmpty=[1]true"),
+                                  qsl("echoEmpty:hint=200x40,text=,gifs=2/1"),
+                                  qsl("startEchoEmpty=[1]true"),
+                                  qsl("startEchoEmpty:hint=200x40,text=,gifs=2/2"),
+                                  qsl("echoText=[1]true"),
+                                  qsl("echoText:hint=mvText,text=again,gifs=2/1"),
+                                  qsl("startEchoText=[2]nil:no movie found at label 'mvA'"),
+                                  qsl("setText=[1]true"),
+                                  qsl("sheet=[1]true"),
+                                  qsl("sheet:hint=210x50,text=,gifs=2/2"),
+                                  qsl("move=[1]true"),
+                                  qsl("startMoved=[1]true"),
+                                  qsl("hide=[0]"),
+                                  qsl("pauseHidden=[1]true"),
+                                  qsl("hidden:hint=210x50,text=,gifs=2/1"),
+                                  qsl("delete=[1]true"),
+                                  qsl("startDeleted=[2]nil:label \"mvA\" not found"),
+                                  qsl("deleted:hint=40x16,text=,gifs=1/1"),
+                                  qsl("deleteB=[1]true"),
+                                  qsl("gone:gifs=0/0")};
+        QCOMPARE(luaGlobalString(host, "headlessMovieAnswers"), answers.join(QLatin1Char('\n')));
+        QVERIFY2(QApplication::topLevelWidgets().isEmpty(), "Playing the movies created a widget.");
     }
 
     // What a profile with no view answers the scroll calls, taken from the same Lua run in the GUI self-test
