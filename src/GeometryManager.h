@@ -103,12 +103,8 @@ struct GeometryData
 
     bool isEmpty() const { return vertices.isEmpty(); }
 
-    int vertexCount() const
-    {
-        // If normals are stored separately, vertices has 3 floats per vertex
-        // If normals are interleaved, vertices has 6 floats per vertex (pos + normal)
-        return normals.isEmpty() ? vertices.size() / 6 : vertices.size() / 3;
-    }
+    // Positions are tightly packed, three floats per vertex; normals live in their own array
+    int vertexCount() const { return vertices.size() / 3; }
 
     int indexCount() const { return indices.size(); }
 
@@ -203,7 +199,6 @@ public:
                               QOpenGLBuffer& colorBuffer,
                               QOpenGLBuffer& normalBuffer,
                               QOpenGLBuffer& indexBuffer,
-                              QOpenGLBuffer& instanceBuffer,
                               GLenum drawMode = GL_TRIANGLES);
 
     void renderInstancedCubes(const QVector<CubeInstanceData>& instances,
@@ -212,7 +207,6 @@ public:
                               QOpenGLBuffer& colorBuffer,
                               QOpenGLBuffer& normalBuffer,
                               QOpenGLBuffer& indexBuffer,
-                              QOpenGLBuffer& instanceBuffer,
                               class ResourceManager* resourceManager,
                               GLenum drawMode = GL_TRIANGLES);
 
@@ -221,6 +215,9 @@ private:
 
     // Cached cube geometry template (will be transformed for each cube)
     GeometryData mCubeTemplate;
+    QOpenGLBuffer mCubeVertexBuffer{QOpenGLBuffer::VertexBuffer};
+    QOpenGLBuffer mCubeIndexBuffer{QOpenGLBuffer::IndexBuffer};
+    QOpenGLBuffer mInstanceBuffer{QOpenGLBuffer::VertexBuffer};
 
     // Cached player icon geometry
     mutable std::optional<GeometryData> mPlayerIconTemplate;
@@ -233,6 +230,7 @@ private:
     PFNGLDRAWELEMENTSINSTANCEDPROC glDrawElementsInstanced = nullptr;
 
     void generateCubeTemplate();
+    void uploadCubeTemplate();
     GeometryData transformCubeTemplate(const QMatrix4x4& transform, float r, float g, float b, float a);
 
     void loadPlayerIconTemplate(float scale = 0.005f, float rotX = 0.0f, float rotY = 0.0f, float rotZ = 90.0f);

@@ -33,8 +33,11 @@
 
 #include <QtEvents>
 #include <QDebug>
+#include <QLabel>
 #include <QPainter>
 #include <QKeyEvent>
+#include <QSurfaceFormat>
+#include <QVBoxLayout>
 #include <chrono>
 
 using namespace std::chrono_literals;
@@ -47,9 +50,18 @@ ModernGLWidget::ModernGLWidget(TMap* pMap, Host* pHost, QWidget* parent)
 , mColorBuffer(QOpenGLBuffer::VertexBuffer)
 , mNormalBuffer(QOpenGLBuffer::VertexBuffer)
 , mIndexBuffer(QOpenGLBuffer::IndexBuffer)
-, mInstanceBuffer(QOpenGLBuffer::VertexBuffer)
 , mpHost(pHost)
 {
+    // Per widget rather than application wide, so the classic 3D view keeps its compatibility profile context
+    QSurfaceFormat format = QSurfaceFormat::defaultFormat();
+    format.setVersion(3, 3);
+    format.setProfile(QSurfaceFormat::CoreProfile);
+    format.setSamples(4);
+#ifndef NDEBUG
+    format.setOption(QSurfaceFormat::DebugContext);
+#endif
+    setFormat(format);
+
     if (mpHost->mBgColor_2.alpha() < 255) {
         setAttribute(Qt::WA_OpaquePaintEvent, false);
         setAttribute(Qt::WA_AlwaysStackOnTop);
@@ -81,10 +93,13 @@ void ModernGLWidget::cleanup()
     mColorBuffer.destroy();
     mNormalBuffer.destroy();
     mIndexBuffer.destroy();
-    mInstanceBuffer.destroy();
     mTexCoordBuffer.destroy();
     mVAO.destroy();
     doneCurrent();
+    // ~QOpenGLWidget destroys the context after this class's members are gone
+    if (context()) {
+        disconnect(context(), &QOpenGLContext::aboutToBeDestroyed, this, &ModernGLWidget::cleanup);
+    }
 }
 
 QSize ModernGLWidget::minimumSizeHint() const
@@ -97,17 +112,49 @@ QSize ModernGLWidget::sizeHint() const
     return QSize(400, 400);
 }
 
+void ModernGLWidget::showEvent(QShowEvent* event)
+{
+    QOpenGLWidget::showEvent(event);
+    // Qt creates the context once the widget is laid out; if that failed, initializeGL never runs to say so
+    QTimer::singleShot(0, this, [this]() {
+        if (isVisible() && !isValid() && mFailureMessage.isEmpty()) {
+            //: Shown in place of the 3D map when the graphics driver cannot create the OpenGL context the modern 3D mapper needs
+            showFailure(tr("The modern 3D mapper could not create an OpenGL 3.3 context on this system."));
+        }
+    });
+}
+
+void ModernGLWidget::showFailure(const QString& message)
+{
+    mFailureMessage = message;
+    qWarning().noquote() << "ModernGLWidget:" << message;
+    if (!mpFailureLabel) {
+        mpFailureLabel = new QLabel(this);
+        mpFailureLabel->setAlignment(Qt::AlignCenter);
+        mpFailureLabel->setWordWrap(true);
+        mpFailureLabel->setAutoFillBackground(true);
+        mpFailureLabel->setMargin(16);
+        auto layout = new QVBoxLayout(this);
+        layout->setContentsMargins(0, 0, 0, 0);
+        layout->addWidget(mpFailureLabel);
+    }
+    //: Second paragraph of the message shown in place of the 3D map when the modern 3D mapper cannot run
+    mpFailureLabel->setText(qsl("%1\n\n%2").arg(message, tr("Use setConfig(\"experiment.3dmap.modernmapper\", false) to switch back to the classic 3D view.")));
+    mpFailureLabel->show();
+}
+
 void ModernGLWidget::initializeGL()
 {
     initializeOpenGLFunctions();
 
-    // Debug: Check which OpenGL profile is being used
-    QOpenGLContext* context = QOpenGLContext::currentContext();
-    if (context) {
-        QSurfaceFormat format = context->format();
-        qDebug() << "OpenGL Version:" << format.majorVersion() << "." << format.minorVersion();
-        qDebug() << "OpenGL Profile:" << (format.profile() == QSurfaceFormat::CoreProfile ? "Core" : format.profile() == QSurfaceFormat::CompatibilityProfile ? "Compatibility" : "NoProfile");
-        qDebug() << "Debug Context:" << (format.testOption(QSurfaceFormat::DebugContext) ? "Enabled" : "Disabled");
+    // Reparenting to another window replaces the context, and everything made in the old one goes with it
+    connect(context(), &QOpenGLContext::aboutToBeDestroyed, this, &ModernGLWidget::cleanup);
+
+    const QSurfaceFormat actualFormat = context()->format();
+    if (actualFormat.version() < qMakePair(3, 3)) {
+        //: Shown in place of the 3D map when the graphics driver is too old for the modern 3D mapper; %1.%2 is the OpenGL version it offers, such as 2.1
+        showFailure(tr("The modern 3D mapper needs OpenGL 3.3, but this system only provides OpenGL %1.%2.").arg(actualFormat.majorVersion()).arg(actualFormat.minorVersion()));
+        return;
     }
 
     const QColor color(mpHost->mBgColor_2);
@@ -125,10 +172,12 @@ void ModernGLWidget::initializeGL()
 
     if (!mShaderManager.initialize()) {
         qWarning() << "Failed to initialize ShaderManager";
+        //: Shown in place of the 3D map when the graphics driver rejects the modern 3D mapper's shaders
+        showFailure(tr("The modern 3D mapper could not compile its shaders on this graphics driver."));
         return;
     }
 
-    connect(&mShaderManager, &ShaderManager::shadersReloaded, this, QOverload<>::of(&QWidget::update));
+    connect(&mShaderManager, &ShaderManager::shadersReloaded, this, QOverload<>::of(&QWidget::update), Qt::UniqueConnection);
 
     setupBuffers();
 
@@ -189,13 +238,6 @@ void ModernGLWidget::setupBuffers()
     mTexCoordBuffer.setUsagePattern(QOpenGLBuffer::DynamicDraw);
     mResourceManager.checkGLError(qsl("Texture coordinate buffer creation"));
 
-    // Create instance buffer for instanced rendering
-    mInstanceBuffer.create();
-    mResourceManager.onBufferCreated();
-    mInstanceBuffer.bind();
-    mInstanceBuffer.setUsagePattern(QOpenGLBuffer::DynamicDraw);
-    mResourceManager.checkGLError(qsl("Instance buffer creation"));
-
     // Configure vertex attribute pointers (will be set during rendering)
 }
 
@@ -220,7 +262,7 @@ void ModernGLWidget::paintGL()
     // Start frame timing
     mFrameTimer.start();
 
-    if (!mpMap) {
+    if (!mpMap || !mFailureMessage.isEmpty()) {
         return;
     }
 
@@ -345,11 +387,7 @@ void ModernGLWidget::paintGL()
 
     shaderProgram->release();
 
-    // Draw label to identify this as the modern OpenGL implementation
     QPainter painter(this);
-    painter.setPen(QPen(QColor(255, 255, 255, 200))); // Semi-transparent white
-    painter.setFont(QFont("Arial", 12, QFont::Bold));
-    painter.drawText(10, height() - 20, "Modern OpenGL Mapper");
 
     // Draw map info using contributor manager
     QColor infoColor;
@@ -366,13 +404,11 @@ void ModernGLWidget::paintGL()
 void ModernGLWidget::renderRooms()
 {
     if (!mpMap || !mpMap->mpRoomDB) {
-        qDebug() << "ModernGLWidget: No map or room database";
         return;
     }
 
     TArea* pArea = mpMap->mpRoomDB->getArea(mAID);
     if (!pArea) {
-        qDebug() << "ModernGLWidget: No area found for ID:" << mAID;
         return;
     }
 
@@ -384,11 +420,16 @@ void ModernGLWidget::renderRooms()
     float px = static_cast<float>(mMapCenterX);
     float py = static_cast<float>(mMapCenterY);
 
+    const bool moreTransparent = mpHost->experimentEnabled(qsl("experiment.rendering.more-transparent"));
+    const bool playerIcon = mpHost->experimentEnabled(qsl("experiment.3d-player-icon"));
+    const bool inOutExits = mpHost->experimentEnabled(qsl("experiment.render-in-out-exits"));
+
     // Batched instance data for instanced rendering
     QVector<CubeInstanceData> mainRoomInstances;
     QVector<CubeInstanceData> currentRoomInstances;
-    QVector<CubeInstanceData> targetRoomInstances;
     QVector<CubeInstanceData> overlayInstances;
+    QVector<float> indicatorVertices;
+    QVector<float> indicatorColors;
 
     QSetIterator<int> itRoom(pArea->getAreaRooms());
     while (itRoom.hasNext()) {
@@ -420,7 +461,6 @@ void ModernGLWidget::renderRooms()
 
         // Check special room states
         bool isCurrentRoom = (rz == pz) && (rx == px) && (ry == py);
-        bool isTargetRoom = (currentRoomId == mTargetRoomId);
         bool belowOrAtLevel = (rz <= pz);
 
         // 1. Collect main room cube data
@@ -431,33 +471,19 @@ void ModernGLWidget::renderRooms()
             transform.scale(1.0f / scale, 1.0f / scale, 1.0f / scale / zFlattening);
             currentRoomInstances.append(CubeInstanceData(transform, 1.0f, 0.0f, 0.0f, 1.0f));
 
-            if (mpHost && mpHost->experimentEnabled("experiment.3d-player-icon")) {
+            if (playerIcon) {
                 GeometryData playerIcon = mGeometryManager.generatePlayerIconGeometry(mPlayerIconScale, mPlayerIconRotationX, mPlayerIconRotationY, mPlayerIconRotationZ);
                 if (!playerIcon.isEmpty()) {
                     // Create modified geometry positioned slightly above the current room
                     GeometryData positionedIcon = playerIcon;
 
-                    // Determine player icon position based on whether smooth animation is active
-                    float playerX, playerY, playerZ;
-                    if (mCameraSmoothAnimating && mpHost->experimentEnabled("experiment.rendering-movement.smooth")) {
-                        // Use animated coordinates during smooth transition
-                        playerX = mCurrentAnimationX;
-                        playerY = mCurrentAnimationY;
-                        playerZ = mCurrentAnimationZ;
-                    } else {
-                        // Use actual room coordinates when not animating
-                        playerX = rx;
-                        playerY = ry;
-                        playerZ = rz;
-                    }
-
                     // Position above the room using the adjustable height
                     for (int i = 2; i < positionedIcon.vertices.size(); i += 3) {
-                        positionedIcon.vertices[i] += (playerZ + mPlayerIconHeight); // Use adjustable height
+                        positionedIcon.vertices[i] += (rz + mPlayerIconHeight);
                     }
                     for (int i = 0; i < positionedIcon.vertices.size(); i += 3) {
-                        positionedIcon.vertices[i] += playerX;     // Add player X position
-                        positionedIcon.vertices[i + 1] += playerY; // Add player Y position
+                        positionedIcon.vertices[i] += rx;
+                        positionedIcon.vertices[i + 1] += ry;
                     }
 
                     // Use textured rendering for the player icon
@@ -466,12 +492,6 @@ void ModernGLWidget::renderRooms()
                     mRenderCommandQueue.addCommand(std::move(command));
                 }
             }
-        } else if (isTargetRoom) {
-            // Target room: green
-            QMatrix4x4 transform = QMatrix4x4();
-            transform.translate(rx, ry, rz);
-            transform.scale(1.0f / scale, 1.0f / scale, 1.0f / scale / zFlattening);
-            targetRoomInstances.append(CubeInstanceData(transform, 0.0f, 1.0f, 0.0f, 1.0f));
         } else {
             // Normal room: use planeColor logic based on z-level relationship
             QColor roomColor = getPlaneColor(static_cast<int>(rz), belowOrAtLevel);
@@ -481,12 +501,7 @@ void ModernGLWidget::renderRooms()
             float roomAlpha = 1.0f;
 
             // Check for more-transparent experiment
-            if (mpHost->experimentEnabled("experiment.rendering.more-transparent")) {
-                static bool debugOnce = false;
-                if (!debugOnce) {
-                    qDebug() << "[Experiment Debug] More-transparent experiment is ENABLED - SLIDING DARKNESS TEST";
-                    debugOnce = true;
-                }
+            if (moreTransparent) {
                 // EXPERIMENT: Apply sliding darkness based on level distance
                 int levelDistance = abs(static_cast<int>(rz - pz));
                 float darknessFactor = 1.0f; // Default: no darkness
@@ -504,10 +519,6 @@ void ModernGLWidget::renderRooms()
                 greenComponent *= darknessFactor;
                 blueComponent *= darknessFactor;
                 roomAlpha = 1.0f; // Full opacity
-
-                if (levelDistance > 0) {
-                    qDebug() << "[Sliding Darkness] Room Z:" << rz << "Player Z:" << pz << "Distance:" << levelDistance << "Darkness factor:" << darknessFactor;
-                }
             } else {
                 // Original rendering: rooms above are dark and transparent
                 roomAlpha = belowOrAtLevel ? 1.0f : 0.2f; // 80% transparent (20% opacity) if above current level
@@ -536,7 +547,7 @@ void ModernGLWidget::renderRooms()
         float overlayAlpha = 0.8f; // Default overlay transparency
 
         // Apply same sliding darkness to environment overlay
-        if (mpHost->experimentEnabled("experiment.rendering.more-transparent")) {
+        if (moreTransparent) {
             // EXPERIMENT: Apply same darkness calculation to environment overlay
             int levelDistance = abs(static_cast<int>(rz - pz));
             float darknessFactor = 1.0f; // Default: no darkness
@@ -572,12 +583,15 @@ void ModernGLWidget::renderRooms()
         transform.scale(0.75f / scale, 0.75f / scale, 1.0f / scale / zFlattening);
         overlayInstances.append(CubeInstanceData(transform, envRed, envGreen, envBlue, overlayAlpha));
 
-        // 3. Render up/down exit indicators on the overlay (keep individual rendering for now)
-        renderUpDownIndicators(pR, rx, ry, overlayZ + (1.0f / scale / zFlattening) + 0.1f / zFlattening);
-
-        // 4. Render in/out exit indicators on the overlay (keep individual rendering for now)
-        renderInOutIndicators(pR, rx, ry, overlayZ + (1.0f / scale / zFlattening) + 0.1f / zFlattening);
+        // 3. Up/down and in/out exit indicators on the overlay, batched into one draw for the area
+        const float indicatorZ = overlayZ + (1.0f / scale / zFlattening) + 0.1f / zFlattening;
+        addUpDownIndicators(pR, rx, ry, indicatorZ, indicatorVertices, indicatorColors);
+        if (inOutExits) {
+            addInOutIndicators(pR, rx, ry, indicatorZ, indicatorVertices, indicatorColors);
+        }
     }
+
+    renderTriangles(indicatorVertices, indicatorColors);
 
     // Create instanced render commands for each batch
     if (!mainRoomInstances.isEmpty()) {
@@ -588,12 +602,6 @@ void ModernGLWidget::renderRooms()
     if (!currentRoomInstances.isEmpty()) {
         auto command =
                 std::make_unique<RenderInstancedCubesCommand>(currentRoomInstances, mCameraController.getProjectionMatrix(), mCameraController.getViewMatrix(), mCameraController.getModelMatrix());
-        mRenderCommandQueue.addCommand(std::move(command));
-    }
-
-    if (!targetRoomInstances.isEmpty()) {
-        auto command =
-                std::make_unique<RenderInstancedCubesCommand>(targetRoomInstances, mCameraController.getProjectionMatrix(), mCameraController.getViewMatrix(), mCameraController.getModelMatrix());
         mRenderCommandQueue.addCommand(std::move(command));
     }
 
@@ -624,6 +632,7 @@ void ModernGLWidget::renderConnections()
     const QVector3D zVector = QVector3D(0, 0, 1);
 
     float pz = static_cast<float>(mMapCenterZ);
+    const bool inOutExits = mpHost->experimentEnabled(qsl("experiment.render-in-out-exits"));
 
     // Initialize instance queue
     QVector<CubeInstanceData> areaExitInstances;
@@ -705,7 +714,7 @@ void ModernGLWidget::renderConnections()
             }
 
             bool areaExit = (pExit->getArea() != mAID);
-            bool inOut = ((i == 10 || i == 11) && mpHost && mpHost->experimentEnabled("experiment.render-in-out-exits"));
+            bool inOut = ((i == 10 || i == 11) && inOutExits);
 
             if (!areaExit) {
                 // Normal connection within same area
@@ -1273,14 +1282,11 @@ void ModernGLWidget::renderTriangles(const QVector<float>& vertices, const QVect
     mRenderCommandQueue.addCommand(std::move(command));
 }
 
-void ModernGLWidget::renderUpDownIndicators(TRoom* pRoom, float x, float y, float z)
+void ModernGLWidget::addUpDownIndicators(TRoom* pRoom, float x, float y, float z, QVector<float>& triangleVertices, QVector<float>& triangleColors) const
 {
     if (!pRoom) {
         return;
     }
-
-    QVector<float> triangleVertices;
-    QVector<float> triangleColors;
 
     // Gray color for indicators (same as original)
     float gray[] = {128.0f / 255.0f, 128.0f / 255.0f, 128.0f / 255.0f, 1.0f};
@@ -1314,21 +1320,13 @@ void ModernGLWidget::renderUpDownIndicators(TRoom* pRoom, float x, float y, floa
             triangleColors << gray[0] << gray[1] << gray[2] << gray[3];
         }
     }
-
-    // Render the triangles if we have any
-    if (!triangleVertices.isEmpty()) {
-        renderTriangles(triangleVertices, triangleColors);
-    }
 }
 
-void ModernGLWidget::renderInOutIndicators(TRoom* pRoom, float x, float y, float z)
+void ModernGLWidget::addInOutIndicators(TRoom* pRoom, float x, float y, float z, QVector<float>& triangleVertices, QVector<float>& triangleColors) const
 {
-    if (!pRoom || !(mpHost && mpHost->experimentEnabled("experiment.render-in-out-exits"))) {
+    if (!pRoom) {
         return;
     }
-
-    QVector<float> triangleVertices;
-    QVector<float> triangleColors;
 
     // Gray color for indicators (same as original)
     float gray[] = {128.0f / 255.0f, 128.0f / 255.0f, 128.0f / 255.0f, 1.0f};
@@ -1369,11 +1367,6 @@ void ModernGLWidget::renderInOutIndicators(TRoom* pRoom, float x, float y, float
         for (int i = 0; i < 6; ++i) {
             triangleColors << gray[0] << gray[1] << gray[2] << gray[3];
         }
-    }
-
-    // Render the triangles if we have any
-    if (!triangleVertices.isEmpty()) {
-        renderTriangles(triangleVertices, triangleColors);
     }
 }
 
