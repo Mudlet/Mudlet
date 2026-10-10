@@ -2315,7 +2315,7 @@ describe("Tests UI functions", function()
     end)
   end)
 
-  -- the GMCP vitals handler, fed through the event a game's message raises
+  -- raised rather than called, so the handler registration is tested as well
   describe("Test BaseUI.updateVitals", function()
     if not (type(BaseUI) == "table" and type(BaseUI.updateVitals) == "function") then
       it("needs the base UI package installed", function()
@@ -2353,13 +2353,33 @@ describe("Tests UI functions", function()
       _G.gmcp = saved.gmcp
     end)
 
-    it("should read the maxima from Char.MaxStats", function()
-      _G.gmcp = { Char = { MaxStats = { maxhp = 100, maxmp = 40, maxmv = 60 } } }
+    it("should merge the currents from Char.Vitals with the maxima from Char.MaxStats", function()
+      _G.gmcp = { Char = { Vitals = { hp = 50, mp = 20, mv = 30 }, MaxStats = { maxhp = 100, maxmp = 40, maxmv = 60 } } }
       raiseEvent("gmcp.Char.MaxStats")
       assert.are.equal(1, #applied)
-      assert.are.equal(100, applied[1].hp.max)
-      assert.are.equal(40, applied[1].mp.max)
-      assert.are.equal(60, applied[1].mv.max)
+      assert.are.same({ current = 50, max = 100 }, applied[1].hp)
+      assert.are.same({ current = 20, max = 40 }, applied[1].mp)
+      assert.are.same({ current = 30, max = 60 }, applied[1].mv)
+    end)
+
+    -- GMCP package and message names are case-insensitive
+    it("should read a vitals node sent in any casing", function()
+      for _, spelling in ipairs({ { "char", "MaxStats" }, { "Char", "maxStats" }, { "CHAR", "MAXSTATS" }, { "Char", "vitals" } }) do
+        applied = {}
+        local namespace, message = spelling[1], spelling[2]
+        _G.gmcp = { [namespace] = { [message] = { hp = 50, maxhp = 100 } } }
+        raiseEvent("gmcp." .. namespace .. "." .. message)
+        assert.are.equal(1, #applied, namespace .. "." .. message)
+        assert.are.same({ current = 50, max = 100 }, applied[1].hp, namespace .. "." .. message)
+      end
+    end)
+
+    it("should only update for a vitals message", function()
+      _G.gmcp = { Char = { Vitals = { hp = 50, maxhp = 100 }, Items = { List = {} } } }
+      raiseEvent("gmcp.Char")
+      raiseEvent("gmcp.Char.Items.List")
+      raiseEvent("Char.Vitals")
+      assert.are.equal(0, #applied)
     end)
   end)
 
@@ -3951,6 +3971,29 @@ describe("Window state getters", function()
     it("reads a label that sits inside a user window", function()
       echo(childLabelName, "inside the user window")
       assert.are.equal("inside the user window", getLabelText(childLabelName))
+    end)
+
+    -- Qt writes a qproperty through QLabel's own setText(), not the label's
+    it("reports text a style sheet gives the label", function()
+      echo(labelName, "before the style sheet")
+      finally(function() setLabelStyleSheet(labelName, "") end)
+      assert.is_true(setLabelStyleSheet(labelName, 'qproperty-text: "from the style sheet";'))
+      assert.are.equal("from the style sheet", getLabelText(labelName))
+    end)
+
+    -- the label colours its links by rewriting the text it is given
+    it("reports links in the colour setLinkStyle gave them", function()
+      assert.is_true(setLinkStyle(labelName, "red", "blue", true))
+      finally(function() resetLinkStyle(labelName) end)
+      echo(labelName, '<a href="send:look">look</a>')
+      assert.is_truthy(getLabelText(labelName):find("color: red", 1, true))
+    end)
+
+    it("reports no text once a background image replaces it", function()
+      echo(labelName, "covered by an image")
+      assert.is_true(setBackgroundImage(labelName, ":/icons/mudlet.png"))
+      finally(function() resetBackgroundImage(labelName) end)
+      assert.are.equal("", getLabelText(labelName))
     end)
 
     it("errors when called without a label name", function()
@@ -5642,6 +5685,31 @@ describe("Widget state getters", function()
       assert.is_truthy(title:find(userWindow, 1, true))
     end)
 
+    it("reports a new user window's name as its title", function()
+      local fresh = name("wdgFreshTitle")
+      openUserWindow(fresh, false)
+      finally(function() deleteMiniConsole(fresh) end)
+      assert.are.equal(fresh, getUserWindowTitle(fresh))
+    end)
+
+    it("reports the title a style sheet gives a floating user window", function()
+      local floating = name("wdgCssTitle")
+      openUserWindow(floating, false, false)
+      finally(function() deleteMiniConsole(floating) end)
+      assert.is_true(setUserWindowStyleSheet(floating, 'QDockWidget { qproperty-windowTitle: "from the style sheet"; }'))
+      assert.are.equal("from the style sheet", getUserWindowTitle(floating))
+    end)
+
+    it("does not give a user window the title of a deleted one it shares a name with", function()
+      local reused = name("wdgReusedTitle")
+      openUserWindow(reused, false)
+      finally(function() deleteMiniConsole(reused) end)
+      assert.is_true(setUserWindowTitle(reused, "the deleted window's title"))
+      assert.is_true(deleteMiniConsole(reused))
+      openUserWindow(reused, false)
+      assert.are.equal(reused, getUserWindowTitle(reused))
+    end)
+
     it("returns nil and a message naming an unknown user window", function()
       local unknown = name("wdgNoSuchUserWindow")
       local ok, err = getUserWindowTitle(unknown)
@@ -5690,6 +5758,31 @@ describe("Widget state getters", function()
       setUserWindowStyleSheet(userWindow, "background-color: rgb(7,8,9);")
       assert.is_true(setUserWindowStyleSheet(userWindow, ""))
       assert.are.equal("", getUserWindowStyleSheet(userWindow))
+    end)
+
+    it("does not give a user window the style sheet of a deleted one it shares a name with", function()
+      local reused = name("wdgReusedSheet")
+      openUserWindow(reused, false)
+      finally(function() deleteMiniConsole(reused) end)
+      assert.is_true(setUserWindowStyleSheet(reused, "background-color: rgb(9,8,7);"))
+      assert.is_true(deleteMiniConsole(reused))
+      openUserWindow(reused, false)
+      assert.are.equal("", getUserWindowStyleSheet(reused))
+    end)
+
+    it("reports the profile style sheet on user windows opened before and after it is set", function()
+      local before, after = name("wdgSheetBefore"), name("wdgSheetAfter")
+      openUserWindow(before, false)
+      local css = "/* wdg profile style sheet */"
+      finally(function()
+        setProfileStyleSheet("")
+        deleteMiniConsole(before)
+        deleteMiniConsole(after)
+      end)
+      assert.is_true(setProfileStyleSheet(css))
+      assert.are.equal(css, getUserWindowStyleSheet(before))
+      openUserWindow(after, false)
+      assert.are.equal(css, getUserWindowStyleSheet(after))
     end)
 
     it("returns nil and a message naming an unknown user window", function()
@@ -5742,6 +5835,22 @@ describe("Widget state getters", function()
       assert.are.equal(css, getCmdLineStyleSheet())
       assert.are.equal(css, getCmdLineStyleSheet(nil))
       assert.are.equal(css, getCmdLineStyleSheet("main"))
+    end)
+
+    it("does not give a command line the style sheet of a deleted one it shares a name with", function()
+      local reused = name("wdgReusedCmdLine")
+      createCommandLine(reused, 15, 25, 140, 35)
+      finally(function() deleteCommandLine(reused) end)
+      assert.is_true(setCmdLineStyleSheet(reused, "color: rgb(3,2,1);"))
+      assert.is_true(deleteCommandLine(reused))
+      createCommandLine(reused, 15, 25, 140, 35)
+      assert.is_truthy(getCmdLineStyleSheet(reused):find("QPlainTextEdit{background-color:", 1, true))
+    end)
+
+    it("reports the style sheet a mini console's command line is born with", function()
+      assert.is_true(enableCommandLine(console))
+      finally(function() disableCommandLine(console) end)
+      assert.is_truthy(getCmdLineStyleSheet(console):find("QPlainTextEdit{background-color:", 1, true))
     end)
 
     it("returns nil and a message naming an unknown command line", function()
@@ -6121,6 +6230,12 @@ describe("Label movies", function()
       assert.are.equal(totalBefore + 1, totalAfter)
       -- setMovie starts the movie as well as loading it
       assert.are.equal(activeBefore + 1, activeAfter)
+    end)
+
+    it("takes the label's text away", function()
+      echo(label, "before the movie")
+      assert.is_true(setMovie(label, giffile))
+      assert.are.equal("", getLabelText(label))
     end)
 
     it("reuses the same movie when called twice on one label", function()
