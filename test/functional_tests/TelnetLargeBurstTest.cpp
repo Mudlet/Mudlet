@@ -63,11 +63,11 @@ private:
     const QString mHostname = qsl("LargeBurst-Host");
     const QString mLocalhost = qsl("localhost");
 
-    static QByteArray burstOf(const int lineCount)
+    static QByteArray burstOf(const int lineCount, const int firstLine = 0)
     {
         QByteArray payload;
         payload.reserve(lineCount * 64);
-        for (int i = 0; i < lineCount; ++i) {
+        for (int i = firstLine; i < firstLine + lineCount; ++i) {
             payload += qsl("BURSTLINE %1 padded out so the burst clears one buffer read\r\n").arg(i, 6, 10, QLatin1Char('0')).toUtf8();
         }
         return payload;
@@ -77,11 +77,11 @@ private:
     // construction the last of the burst. Scanning the whole buffer instead
     // costs more the further the burst has got, so a run that falls behind
     // spends its wait scanning rather than letting the ingest catch up.
-    bool tailContains(const QString& text) const
+    bool tailContains(const QString& text, const int depth = 3) const
     {
         TMainConsole* console = mpHost->mainConsoleView();
         const int lastLine = console->buffer.getLastLineNumber();
-        for (int i = lastLine; i >= std::max(0, lastLine - 3); --i) {
+        for (int i = lastLine; i >= std::max(0, lastLine - depth); --i) {
             if (console->buffer.line(i).contains(text)) {
                 return true;
             }
@@ -210,6 +210,44 @@ private slots:
         }
         QVERIFY2(tailContains(qsl("MCCP BURST END")),
                  qPrintable(qsl("the compressed burst stopped part-way through, at buffer line %1 of %2.").arg(mpHost->mainConsoleView()->buffer.getLastLineNumber()).arg(lineCount)));
+        const int outOfPlace = firstBurstLineOutOfPlace(lineCount);
+        QVERIFY2(outOfPlace < 0, qPrintable(qsl("burst line %1 is missing, repeated or out of order.").arg(outOfPlace)));
+    }
+
+    // Runs last, as it ends the connection the other cases share. A game that
+    // sends its last words and closes straight away: most of them are still
+    // waiting to be read when the close is noticed - see issue #10655
+    void aBurstFollowedByACloseIsShownInFull()
+    {
+        // Compressed first, so that the close can also find input inflated
+        // past the drain's depth still waiting ahead of what is unread on the
+        // socket; the start sequence opens the send so no read splits it.
+        constexpr int compressedLineCount = 20000;
+        constexpr int plainLineCount = 12000;
+        constexpr int lineCount = compressedLineCount + plainLineCount;
+        mpHost->mainConsoleView()->buffer.clear();
+        QSignalSpy disconnected(&(mpHost->mTelnet), &cTelnet::signal_disconnected);
+
+        // Agreed ahead of the burst, as a game does at login: an answer reaching
+        // the socket once the game has closed it is met with a reset, which
+        // throws away whatever of the burst the client has yet to receive. The
+        // LINEMODE refusal answers the request sent last, so once it is in, so
+        // is everything the client had still to send.
+        const QByteArray lineModeRefused("\xFF\xFC\x22", 3);
+        const qsizetype refusalsBefore = mpServer->receivedSoFar().count(lineModeRefused);
+        mpServer->sendRaw(QByteArray("\xFF\xFB\x56\xFF\xFD\x22", 6));
+        QTRY_VERIFY2_WITH_TIMEOUT(mpServer->receivedSoFar().count(lineModeRefused) > refusalsBefore, "the client never answered the negotiation", 15000);
+
+        // qCompress() prefixes the zlib stream with the source length
+        const QByteArray compressed = qCompress(burstOf(compressedLineCount), 9).mid(4);
+        mpServer->sendRaw(QByteArray("\xFF\xFA\x56\xFF\xF0", 5) + compressed + burstOf(plainLineCount, compressedLineCount) + "GOODBYE FROM THE GAME\r\n");
+        mpServer->closeClient();
+        QVERIFY2(disconnected.wait(15s), "the game closing the connection was never noticed");
+        QCoreApplication::processEvents(QEventLoop::AllEvents, 50);
+
+        // the disconnect's own messages follow the game's text
+        QVERIFY2(tailContains(qsl("GOODBYE FROM THE GAME"), 20),
+                 qPrintable(qsl("the text sent before the close was cut short, at buffer line %1 of %2.").arg(mpHost->mainConsoleView()->buffer.getLastLineNumber()).arg(lineCount)));
         const int outOfPlace = firstBurstLineOutOfPlace(lineCount);
         QVERIFY2(outOfPlace < 0, qPrintable(qsl("burst line %1 is missing, repeated or out of order.").arg(outOfPlace)));
     }

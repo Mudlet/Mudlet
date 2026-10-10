@@ -1094,6 +1094,14 @@ void cTelnet::slot_socketDisconnected()
         return;
     }
 
+    // The socket still holds what the game sent before it closed - often its
+    // last words, such as a quit message - and there will be no later read.
+    // Not when Mudlet ended the connection itself: a script's disconnect() gets
+    // here from inside processSocketData(), which has not finished its own read.
+    if (!mDontReconnect && mDecompressionRecursionDepth == 0) {
+        while (mpSocket && !mpHost->isClosingDown() && !mDeferredReconnect && readSocketDataOnce()) {
+        }
+    }
     postData();
     if (mpHost->consoleFrontend()) {
         // A line held back for server-wrap undoing is complete now that the
