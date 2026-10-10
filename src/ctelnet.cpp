@@ -5265,6 +5265,14 @@ void cTelnet::trackMXPElementDetection(const std::string& line)
 
 void cTelnet::gotRest(std::string& mud_data)
 {
+    // TBuffer joins an escape this read leaves unfinished to the next read, not to what a trigger
+    // feedTelnet()s while this read is posted, so that must neither be joined to this read's tail nor replace it
+    const auto postKeepingDetectionTail = [this]() {
+        const std::string tail = std::exchange(mMxpDetectionTail, std::string());
+        postData();
+        mMxpDetectionTail = tail;
+    };
+
     if (mud_data.empty()) {
         return;
     }
@@ -5284,7 +5292,7 @@ void cTelnet::gotRest(std::string& mud_data)
 
         if (i != std::string::npos) {
             mMudData.append(mud_data, 0, i + 1);
-            postData();
+            postKeepingDetectionTail();
 
             if (!mIsTimerPosting && (mpPostingTimer->interval() != mTimeOut)) {
                 mpPostingTimer->setInterval(mTimeOut);
@@ -5308,7 +5316,7 @@ void cTelnet::gotRest(std::string& mud_data)
         }
     } else {
         mMudData += mud_data;
-        postData();
+        postKeepingDetectionTail();
         mMudData = "";
     }
 }

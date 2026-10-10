@@ -2133,6 +2133,25 @@ describe("MXP auto-detection from the mode switch escape", function()
     assert.is_true(getConfig("promptForMXPProcessorOn"))
   end)
 
+  -- the console joins an escape a read leaves unfinished to the next read, not
+  -- to what a trigger the read fired feeds in the meantime
+  it("finds the switch split around a read whose trigger feeds more data", function()
+    local id = tempExactMatchTrigger("MXPFEEDINGLINE", [[feedTelnet("fed by a trigger\r\n")]])
+    finally(function() killTrigger(id) end)
+    feed("MXPFEEDINGLINE\r\n\27[1")
+    feed("z<send>MXPAFTERFEED</send>\r\n")
+    assert.is_true(getConfig("promptForMXPProcessorOn"))
+  end)
+
+  it("does not join what a trigger feeds to the end of the read that fired it", function()
+    local id = tempExactMatchTrigger("MXPFEEDINGLINE", [[feedTelnet("z fed by a trigger\r\n")]])
+    finally(function() killTrigger(id) end)
+    feed("MXPFEEDINGLINE\r\n\27[1")
+    feed("m after it\27[0m\r\n")
+    assert.is_false(getConfig("promptForMXPProcessorOn"))
+    assert.is_false(getConfig("specialForceMXPProcessorOn"))
+  end)
+
   -- a GA prompt that came while MXP was negotiated is not scanned, so it too
   -- comes between the reads either side of it
   it("does not join a read to one from before a prompt sent while MXP was negotiated", function()
