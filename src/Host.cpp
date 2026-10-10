@@ -1212,6 +1212,7 @@ void Host::resetProfile_phase2()
     getActionUnit()->compileAll();
     getKeyUnit()->compileAll();
     getScriptUnit()->compileAll(true);
+    reportScriptsThatFailedToLoad();
 
     mResetProfile = false;
 
@@ -2958,20 +2959,13 @@ static bool packageUnpacksAFolder(const QString& fileName)
     return fileName.endsWith(qsl(".zip"), Qt::CaseInsensitive) || fileName.endsWith(qsl(".mpackage"), Qt::CaseInsensitive);
 }
 
-// Without this a script whose body fails as the profile opens is only marked in the editor.
-// Modules are left out for the reason installPackage() does not report them while a profile opens.
+// Module scripts are left out: a module of positive priority runs its scripts only after this, at
+// open, so reporting the negative-priority ones would make the report depend on a module's priority.
 void Host::reportScriptsThatFailedToLoad()
 {
     QStringList names;
     for (auto* pScript : mScriptUnit.getScriptList()) {
-        if (!pScript->getLoadingError()) {
-            continue;
-        }
-        const TScript* pRoot = pScript;
-        while (pRoot->getParent()) {
-            pRoot = pRoot->getParent();
-        }
-        if (!mInstalledModules.contains(pRoot->mPackageName)) {
+        if (pScript->getLoadingError() && pScript->shouldBeActive() && !pScript->moduleMember()) {
             names << pScript->getName();
         }
     }

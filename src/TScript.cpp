@@ -164,6 +164,7 @@ bool TScript::compileScript(bool saveLoadingError)
     if (compiled) {
         mNeedsToBeCompiled = false;
         mOK_code = true;
+        clearLoadingError();
         if (mpHost->mResetProfile) {
             setEventHandlerList(getEventHandlerList());
         }
