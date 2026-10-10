@@ -700,21 +700,32 @@ function table.index_of(table, element)
   return nil
 end
 
+-- copies maps each table on the way down to t to its copy, so a table that reaches itself ends the
+-- recursion; it holds only those, so a table merely referenced twice still gets two copies
+local function deepcopy(t, copies)
+  if copies[t] then
+    return copies[t]
+  end
+  local mt = getmetatable(t)
+  local res = {}
+  copies[t] = res
+  for k, v in pairs(t) do
+    if type(v) == 'table' then
+      v = deepcopy(v, copies)
+    end
+    res[k] = v
+  end
+  copies[t] = nil
+  setmetatable(res, mt)
+  return res
+end
+
 -- returns a deep copy of the table with the metatable intact. Credit to Steve Donovan of Penlight.
 function table.deepcopy(t)
   if type(t) ~= 'table' then
     return t
   end
-  local mt = getmetatable(t)
-  local res = {}
-  for k, v in pairs(t) do
-    if type(v) == 'table' then
-      v = table.deepcopy(v)
-    end
-    res[k] = v
-  end
-  setmetatable(res, mt)
-  return res
+  return deepcopy(t, {})
 end
 
 -- Table keys
