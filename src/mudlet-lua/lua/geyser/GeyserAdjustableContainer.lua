@@ -820,17 +820,36 @@ function Adjustable.Container:unlockContainer()
     self:setTitle()
 end
 
+-- internal function: a padding goes into "-"..padding constraints, which only a number of 0 or more
+-- survives; the constraint parser strips letters, so it is rounded to where tostring() writes no exponent
+local function validPadding(padding)
+    padding = tonumber(padding)
+    if not (padding and padding >= 0 and padding < math.huge) then
+        return nil
+    end
+    padding = math.floor(padding * 10000 + 0.5) / 10000
+    if not tostring(padding):find("e", 1, true) then
+        return padding
+    end
+end
+
 --- sets the padding of your container
 -- changes how far the the container is positioned from the border of the container 
 -- padding behaviour also depends on your lockStyle
--- @param padding the padding value (standard is 10)
+-- @param padding the padding value, a number of 0 or more (standard is 10)
+-- @return true, or nil and an error message if the padding is not a number of 0 or more
 function Adjustable.Container:setPadding(padding)
-    self.padding = padding
+    local valid = validPadding(padding)
+    if not valid then
+        return nil, "setPadding: bad argument #1 value (padding as a number of 0 or more expected, got "..tostring(padding)..")"
+    end
+    self.padding = valid
     if self.locked then
         self:lockContainer()
     else
         self:unlockContainer()
     end
+    return true
 end
 
 -- internal function: onClick Lock event
@@ -1121,7 +1140,7 @@ function Adjustable.Container:load(slot, dir)
     end
 
     self.lockStyle = mytable.lockStyle or self.lockStyle
-    self.padding = mytable.padding or self.padding
+    self.padding = validPadding(mytable.padding) or self.padding
     self.attachedMargin = mytable.attachedMargin or self.attachedMargin
 
 
@@ -1461,7 +1480,7 @@ function Adjustable.Container:new(cons,container)
     me.MenuFontSize = me.MenuFontSize or "8"
     me.buttonsize = me.buttonsize or "15"
     me.buttonFontSize = me.buttonFontSize or "8"
-    me.padding = me.padding or 10
+    me.padding = validPadding(me.padding) or 10
     me.attachedMargin = me.attachedMargin or 5
 
     me.adjLabelstyle = me.adjLabelstyle or [[
