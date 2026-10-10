@@ -567,3 +567,74 @@ describe("Tests the raised errors for a wrongly typed argument", function()
     assertArgError(function() return saveProfile(nil, {}) end, "saveProfile: bad argument #2 type")
   end)
 end)
+
+describe("Tests that the window functions refuse a window that does not exist", function()
+  local unknown = ("specContractsNoSuchWindow-%d-%d"):format(os.time(), math.random(100000))
+  local notFound = ('window "%s" not found'):format(unknown)
+
+  -- an array rather than a keyed table so the specs are always generated in
+  -- the same order
+  local calls = {
+    {"cecho", function() return cecho(unknown, "<red>x\n") end},
+    {"decho", function() return decho(unknown, "<255,0,0>x\n") end},
+    {"hecho", function() return hecho(unknown, "#FF0000x\n") end},
+    {"cechoLink", function() return cechoLink(unknown, "<red>x", "", "") end},
+    {"dechoLink", function() return dechoLink(unknown, "<255,0,0>x", "", "") end},
+    {"hechoLink", function() return hechoLink(unknown, "#FF0000x", "", "") end},
+    {"cinsertLink", function() return cinsertLink(unknown, "<red>x", "", "") end},
+    {"cechoPopup", function() return cechoPopup(unknown, "<red>x", {""}, {""}) end},
+    {"dechoPopup", function() return dechoPopup(unknown, "<255,0,0>x", {""}, {""}) end},
+    {"hechoPopup", function() return hechoPopup(unknown, "#FF0000x", {""}, {""}) end},
+    {"cinsertPopup", function() return cinsertPopup(unknown, "<red>x", {""}, {""}) end},
+    {"replace", function() return replace(unknown, "x") end},
+    {"replace keepcolor", function() return replace(unknown, "x", true) end},
+    {"replaceLine", function() return replaceLine(unknown, "x") end},
+    {"gagLine", function() return gagLine(unknown) end},
+    {"setHexFgColor", function() return setHexFgColor(unknown, "FF0000") end},
+    {"setHexBgColor", function() return setHexBgColor(unknown, "FF0000") end},
+    {"clearUserWindow", function() return clearUserWindow(unknown) end},
+  }
+
+  for _, entry in ipairs(calls) do
+    local functionName, call = entry[1], entry[2]
+    it(functionName .. " answers nil and why, leaving the main console alone", function()
+      echo("main", "\nspecContracts line the call must not touch")
+      moveCursorEnd("main")
+      finally(function() echo("main", "\n") end)
+      local last = getLastLineNumber("main")
+      local line = getCurrentLine("main")
+      assert.are.same({nil, notFound}, {call()})
+      assert.are.equal(last, getLastLineNumber("main"))
+      assert.are.equal(line, getCurrentLine("main"))
+    end)
+  end
+
+  it("enableClickthrough and disableClickthrough answer nil and why", function()
+    local labelNotFound = ("label name '%s' not found"):format(unknown)
+    assert.are.same({nil, labelNotFound}, {enableClickthrough(unknown)})
+    assert.are.same({nil, labelNotFound}, {disableClickthrough(unknown)})
+  end)
+end)
+
+describe("Tests that gagLine works on the window it is given", function()
+  it("deletes the line in that window and leaves the main console alone", function()
+    local window = ("specContractsGag-%d-%d"):format(os.time(), math.random(100000))
+    assert.is_true(createMiniConsole(window, 0, 0, 200, 100))
+    finally(function()
+      deleteMiniConsole(window)
+      echo("main", "\n")
+    end)
+    echo(window, "first in the window\nsecond in the window")
+    assert.is_true(moveCursor(window, 0, 0))
+    echo("main", "\nspecContracts line gagLine must not touch")
+    moveCursorEnd("main")
+    local last = getLastLineNumber("main")
+    local line = getCurrentLine("main")
+
+    gagLine(window)
+
+    assert.are.same({"second in the window"}, getLines(window, 0, 1))
+    assert.are.equal(last, getLastLineNumber("main"))
+    assert.are.equal(line, getCurrentLine("main"))
+  end)
+end)

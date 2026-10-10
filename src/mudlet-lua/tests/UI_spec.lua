@@ -4116,11 +4116,10 @@ describe("Window and label state", function()
       assert.are.same({70, 80}, {x, y})
     end)
 
-    it("moveWindow and resizeWindow return no values for an unknown window", function()
-      -- both silently ignore names they cannot resolve, returning nothing at
-      -- all rather than nil - so count the returns instead of reading one
-      assert.are.equal(0, select("#", moveWindow(name("wlsNoSuchWindow"), 1, 2)))
-      assert.are.equal(0, select("#", resizeWindow(name("wlsNoSuchWindow"), 1, 2)))
+    it("moveWindow and resizeWindow refuse an unknown window", function()
+      local notFound = ('window "%s" not found'):format(name("wlsNoSuchWindow"))
+      assert.are.same({nil, notFound}, {moveWindow(name("wlsNoSuchWindow"), 1, 2)})
+      assert.are.same({nil, notFound}, {resizeWindow(name("wlsNoSuchWindow"), 1, 2)})
     end)
 
     it("moveWindow and resizeWindow hard-error without arguments", function()
@@ -4167,8 +4166,8 @@ describe("Window and label state", function()
       assert.is_true(windowVisible(label))
     end)
 
-    it("hideWindow returns no value for an unknown name", function()
-      assert.are.equal(0, select("#", hideWindow(name("wlsNoSuchWindow"))))
+    it("hideWindow refuses an unknown name", function()
+      assert.are.same({nil, ('window "%s" not found'):format(name("wlsNoSuchWindow"))}, {hideWindow(name("wlsNoSuchWindow"))})
     end)
 
     it("hides and shows a text edit", function()
@@ -4635,8 +4634,8 @@ describe("Window and label state", function()
       assert.is_true(largeHeight > smallHeight)
     end)
 
-    it("calcFontSize returns nil for an unknown window", function()
-      assert.is_nil(calcFontSize(name("wlsNoSuchWindow")))
+    it("calcFontSize refuses an unknown window", function()
+      assert.are.same({nil, ('window "%s" not found'):format(name("wlsNoSuchWindow"))}, {calcFontSize(name("wlsNoSuchWindow"))})
     end)
   end)
 
@@ -8022,10 +8021,10 @@ describe("Colour getters and setTextFormat by window name", function()
     assert.are.equal(0, select("#", getBgColor(console)))
   end)
 
-  it("answer nothing for a window that does not exist", function()
+  it("refuse a window that does not exist", function()
     local unknown = "colourByNameMissing" .. suffix
-    assert.are.equal(0, select("#", getFgColor(unknown)))
-    assert.are.equal(0, select("#", getBgColor(unknown)))
+    assert.are.same({nil, ('window "%s" not found'):format(unknown)}, {getFgColor(unknown)})
+    assert.are.same({nil, ('window "%s" not found'):format(unknown)}, {getBgColor(unknown)})
   end)
 
   it("setTextFormat changes what is written next and leaves what is there alone", function()
@@ -8339,8 +8338,8 @@ describe("calcFontSize on the main window", function()
     assert.are.same({width, height}, {calcFontSize()})
   end)
 
-  it("answers nil for a console name nothing is registered under", function()
-    assert.is_nil(calcFontSize("calcFontSizeAbsent"))
+  it("answers nil and why for a console name nothing is registered under", function()
+    assert.are.same({nil, 'window "calcFontSizeAbsent" not found'}, {calcFontSize("calcFontSizeAbsent")})
   end)
 
   it("measures a miniconsole separately from the main window", function()
