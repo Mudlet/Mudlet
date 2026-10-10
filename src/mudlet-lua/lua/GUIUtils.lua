@@ -2080,13 +2080,53 @@ function hecho2string(text)
   return x2string(text, "Hex")
 end
 
-local ansiPattern = rex.new("\\e\\[([0-9:;]*?)m")
+-- captures an SGR, an MXP line mode, a cursor forward, a line ending or a run of text; the uncaptured
+-- alternatives are dropped: a string sequence, any other CSI, a charset, ESC 7/8/c/\, a stray ESC
+local ansiTokenPattern = rex.new("\\e\\[([0-9:;]*)m|(\\e\\[[0-9:;]*z)|\\e\\[([0-9]+)C"
+  .. "|\\e[\\]PX^_](?:[^\\a\\e\\n\\x04\\xff]++|\\e(?!\\\\))*+(?:\\a|\\e\\\\)?|\\e\\[[\\x20-\\x3F]*[\\x40-\\x7E]?|\\e[()*+][\\x30-\\x7E]?|\\e[78c\\\\]|\\e"
+  .. "|([\\n\\r\\x04\\xff])|([^\\e\\n\\r\\x04\\xff]+)")
+-- TBuffer's widest line; as there, a cursor forward stops at its last column
+local ansiLineWidth = 1000
+
+local function convertAnsi(text, onSgr, onMxp, onCursorForward)
+  local column = 0
+  return (rex.gsub(text, ansiTokenPattern, function(sgr, mxp, cursorForward, lineEnding, plain)
+    if plain then
+      column = (column + (utf8.len(plain) or #plain)) % ansiLineWidth
+      return nil
+    elseif lineEnding then
+      column = 0
+      return nil
+    elseif sgr then
+      return onSgr(sgr)
+    elseif mxp then
+      return onMxp(mxp)
+    elseif cursorForward then
+      local requested = tonumber(cursorForward)
+      -- TBuffer ignores a count that does not fit an int
+      if requested > 2147483647 then
+        return ""
+      end
+      local spaces = math.max(0, math.min(requested, ansiLineWidth - 1 - column))
+      column = column + spaces
+      return onCursorForward(spaces)
+    end
+    return ""
+  end))
+end
+
+local function dropAnsiToken()
+  return ""
+end
+
+local function ansiSpaces(count)
+  return string.rep(" ", count)
+end
 
 -- function for converting a raw ANSI string into plain strings
 function ansi2string(text)
   assert(type(text) == 'string', 'ansi2string: bad argument #1 type (expected string, got '..type(text)..'!)')
-  local result = rex.gsub(text, ansiPattern, "")
-  return result
+  return convertAnsi(text, dropAnsiToken, dropAnsiToken, ansiSpaces)
 end
 
 local ansiColorNames = {}
@@ -2117,10 +2157,11 @@ function ansi2decho(text, ansi_default_color)
   assert(type(text) == 'string', 'ansi2decho: bad argument #1 type (expected string, got '..type(text)..'!)')
   local lastColour = ansi_default_color
   local namesToUse = basicColourNames
+  local decorations = {}
 
   -- match each set of ansi tags, ie [0;36;40m and convert to decho equivalent.
   -- this works since both ansi colours and echo don't need closing tags and map to each other
-  local result = rex.gsub(text, ansiPattern, function(s)
+  local result = convertAnsi(text, function(s)
     local output = {} -- assemble the output into this table
 
     local delim = ";"
@@ -2140,6 +2181,7 @@ function ansi2decho(text, ansi_default_color)
       if code == '0' or code == '00' or code == '' then
         -- reset attributes
         output[#output + 1] = "<r>"
+        decorations = {}
         fg, bg = nil, nil
         namesToUse = basicColourNames
         lastColour = ansi_default_color
@@ -2160,26 +2202,32 @@ function ansi2decho(text, ansi_default_color)
         -- underline
         formatCodeHandled = true
         output[#output+1] = "<u>"
+        decorations.u = true
       elseif code == "24" then
         -- turn off underline
         formatCodeHandled = true
         output[#output+1] = "</u>"
+        decorations.u = nil
       elseif code == "9" then
         -- strikethrough
         formatCodeHandled = true
         output[#output+1] = "<s>"
+        decorations.s = true
       elseif code == "29" then
         -- turn off strikethrough
         formatCodeHandled = true
         output[#output+1] = "</s>"
+        decorations.s = nil
       elseif code == "53" then
         -- turn on overline
         formatCodeHandled = true
         output[#output+1] = "<o>"
+        decorations.o = true
       elseif code == "55" then
         -- turn off overline
         formatCodeHandled = true
         output[#output+1] = "</o>"
+        decorations.o = nil
       else
         formatCodeHandled = true
         local layerCode = floor(code / 10)  -- extract the "layer": 3 is fore
@@ -2254,6 +2302,16 @@ function ansi2decho(text, ansi_default_color)
     end
 
     return table.concat(output)
+  end, function() end, function(count)
+    -- the console draws these spaces in the background colour, so no line through or under them shows
+    local closing, opening = {}, {}
+    for _, tag in ipairs({"u", "s", "o"}) do
+      if decorations[tag] then
+        closing[#closing + 1] = "</" .. tag .. ">"
+        opening[#opening + 1] = "<" .. tag .. ">"
+      end
+    end
+    return count > 0 and table.concat(closing) .. string.rep(" ", count) .. table.concat(opening) or ""
   end)
 
   return result, lastColour

@@ -113,7 +113,7 @@ describe("Tests the GUI utilities as far as possible without mudlet", function()
       end
     end)
 
-    it("Should leave normal text and other escape sequences alone", function()
+    it("Should leave normal text and MXP line mode sequences alone", function()
       local sequences = {
         {"Hello World", "Hello World"},
         {"[Something in braces]", "[Something in braces]"},
@@ -1437,6 +1437,29 @@ describe("Tests the GUI utilities as far as possible without mudlet", function()
       { "\27[38;5mtrunc", string = "trunc", decho = "trunc" },
       { "\27[38;2;1mtrunc2", string = "trunc2", decho = "<1,0,0>trunc2" },
       { "\27[1;30mdark\27[0;30mblack", string = "darkblack", decho = "<128,128,128>dark<r><0,0,0>black", lastColour = 0 },
+      -- other escape sequences go as the console drops them; a cursor forward becomes spaces
+      { "\27[?25hVISIBLE", string = "VISIBLE", decho = "VISIBLE" },
+      { "A\27[5CB", string = "A     B", decho = "A     B" },
+      { "A\27[CB\27[0CC\27[2;3CD", string = "ABCD", decho = "ABCD" },
+      { "A\27[3", string = "A", decho = "A" },
+      { "\27[3\nB\27[1\27[32mC", string = "\nBC", decho = "\nB<0,128,0>C", lastColour = 2 },
+      { "X\27]8;;http://a", string = "X", decho = "X" },
+      { "\27]0;title\nline\7", string = "\nline\7", decho = "\nline\7" },
+      { "A\27]title\4B\27]x\255C", string = "A\4B\255C", decho = "A\4B\255C" },
+      { "A\27(\nB\27)", string = "A\nB", decho = "A\nB" },
+      { "X\27]8;;http://a\27\\L\27]8;;\27\\Y", string = "XLY", decho = "XLY" },
+      { "\27]0;title\7\27[31mred", string = "red", decho = "<128,0,0>red", lastColour = 1 },
+      { "\27[1 qA\27[38;5;-1mB\27(BC\27cD\27E", string = "ABCDE", decho = "ABCDE" },
+      { "\27]0;t\rmore\7text", string = "text", decho = "text" },
+      { "A\27[999CB", string = "A" .. string.rep(" ", 998) .. "B", decho = "A" .. string.rep(" ", 998) .. "B" },
+      { string.rep("\27[999C", 3) .. "Z\nA\27[2CB", string = string.rep(" ", 999) .. "Z\nA  B", decho = string.rep(" ", 999) .. "Z\nA  B" },
+      { "a\27[99999999999999999999Cb", string = "ab", decho = "ab" },
+      { "\27[1zHello\27[zA\27[1;2zB", string = "HelloAB", decho = "\27[1zHello\27[zA\27[1;2zB" },
+      { "\27[4mA\27[3CB\27[9mC\27[2CD\27[24;29mE\27[1CF", string = "A   BC  DE F", decho = "<u>A</u>   <u>B<s>C</u></s>  <u><s>D</u></s>E F" },
+      { "\27Pdata\27\\X\27Xs\27\\Y\27^p\27\\Z\27_a\27\\W", string = "XYZW", decho = "XYZW" },
+      { "A\27]a\27[31mb\7X", string = "AX", decho = "AX" },
+      { "A\0277B\0278C\27\\D", string = "ABCD", decho = "ABCD" },
+      { "\27é", string = "é", decho = "é" },
     }
 
     -- a case leaves out what it does not pin, such as output that comes from a known bug
@@ -1490,6 +1513,12 @@ describe("Tests the GUI utilities as far as possible without mudlet", function()
           assert.are.equal(case.lastColour, lastColour, string.format("last colour of ansi2decho(%q)", case[1]))
         end
       end
+    end)
+
+    it("drops a string sequence too long to match by backtracking", function()
+      local long = "A\27P" .. string.rep("a", 5000000) .. "\27\\B"
+      assert.are.equal("AB", ansi2string(long))
+      assert.are.equal("AB", ansi2decho(long))
     end)
 
     it("raises the same error for a reset tag ANSI has no code for", function()
