@@ -45,7 +45,7 @@
 #include "TEvent.h"
 #include "TFeatureCallout.h"
 #include "TKey.h"
-#include "TLabel.h"
+#include "TLabelModel.h"
 #include "TMainConsole.h"
 #include "TMap.h"
 #include "TMapViewManager.h"
