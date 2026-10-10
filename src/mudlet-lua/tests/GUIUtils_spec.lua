@@ -1455,6 +1455,7 @@ describe("Tests the GUI utilities as far as possible without mudlet", function()
       { string.rep("\27[999C", 3) .. "Z\nA\27[2CB", string = string.rep(" ", 999) .. "Z\nA  B", decho = string.rep(" ", 999) .. "Z\nA  B" },
       { "a\27[99999999999999999999Cb", string = "ab", decho = "ab" },
       { "\27[1zHello\27[zA\27[1;2zB", string = "HelloAB", decho = "\27[1zHello\27[zA\27[1;2zB" },
+      { "\27[4mA\27[3CB\27[9mC\27[2CD\27[24;29mE\27[1CF", string = "A   BC  DE F", decho = "<u>A</u>   <u>B<s>C</u></s>  <u><s>D</u></s>E F" },
     }
 
     -- a case leaves out what it does not pin, such as output that comes from a known bug

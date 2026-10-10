@@ -2157,6 +2157,7 @@ function ansi2decho(text, ansi_default_color)
   assert(type(text) == 'string', 'ansi2decho: bad argument #1 type (expected string, got '..type(text)..'!)')
   local lastColour = ansi_default_color
   local namesToUse = basicColourNames
+  local decorations = {}
 
   -- match each set of ansi tags, ie [0;36;40m and convert to decho equivalent.
   -- this works since both ansi colours and echo don't need closing tags and map to each other
@@ -2180,6 +2181,7 @@ function ansi2decho(text, ansi_default_color)
       if code == '0' or code == '00' or code == '' then
         -- reset attributes
         output[#output + 1] = "<r>"
+        decorations = {}
         fg, bg = nil, nil
         namesToUse = basicColourNames
         lastColour = ansi_default_color
@@ -2200,26 +2202,32 @@ function ansi2decho(text, ansi_default_color)
         -- underline
         formatCodeHandled = true
         output[#output+1] = "<u>"
+        decorations.u = true
       elseif code == "24" then
         -- turn off underline
         formatCodeHandled = true
         output[#output+1] = "</u>"
+        decorations.u = nil
       elseif code == "9" then
         -- strikethrough
         formatCodeHandled = true
         output[#output+1] = "<s>"
+        decorations.s = true
       elseif code == "29" then
         -- turn off strikethrough
         formatCodeHandled = true
         output[#output+1] = "</s>"
+        decorations.s = nil
       elseif code == "53" then
         -- turn on overline
         formatCodeHandled = true
         output[#output+1] = "<o>"
+        decorations.o = true
       elseif code == "55" then
         -- turn off overline
         formatCodeHandled = true
         output[#output+1] = "</o>"
+        decorations.o = nil
       else
         formatCodeHandled = true
         local layerCode = floor(code / 10)  -- extract the "layer": 3 is fore
@@ -2294,7 +2302,17 @@ function ansi2decho(text, ansi_default_color)
     end
 
     return table.concat(output)
-  end, function() end, ansiSpaces)
+  end, function() end, function(count)
+    -- the console draws these spaces in the background colour, so no line through or under them shows
+    local closing, opening = {}, {}
+    for _, tag in ipairs({"u", "s", "o"}) do
+      if decorations[tag] then
+        closing[#closing + 1] = "</" .. tag .. ">"
+        opening[#opening + 1] = "<" .. tag .. ">"
+      end
+    end
+    return count > 0 and table.concat(closing) .. string.rep(" ", count) .. table.concat(opening) or ""
+  end)
 
   return result, lastColour
 end
