@@ -1924,18 +1924,52 @@ describe("Tests Other.lua functions", function()
     describe("IRC keys", function()
       -- These are stored in the profile rather than on the Host, and are the
       -- only config keys that read back through dlgIRC.
-      local ircKeys = {"ircHostName", "ircHostPort", "ircHostSecure", "ircChannels", "ircNickName"}
+      local function ircFiles()
+        local profile = getMudletHomeDir()
+        -- the last is the application-wide default nick, which the nick writer also rewrites
+        return {profile .. "/irc_host", profile .. "/irc_port", profile .. "/irc_secure",
+          profile .. "/irc_channels", profile .. "/irc_nick", profile .. "/../../irc_nick"}
+      end
 
+      local function readIrcFile(path)
+        local file = io.open(path, "rb")
+        if not file then
+          return nil
+        end
+        local data = file:read("*a")
+        file:close()
+        return data
+      end
+
+      local function writeIrcFile(path, data)
+        if data == nil then
+          os.remove(path)
+          return
+        end
+        local file = assert(io.open(path, "wb"))
+        file:write(data)
+        file:close()
+      end
+
+      -- Put back byte for byte: a restore through setConfig() can be refused, and
+      -- would leave a generated nick behind where none was stored
       local function snapshotIrc()
         local saved = {}
-        for _, key in ipairs(ircKeys) do
-          saved[key] = getConfig(key)
+        for index, path in ipairs(ircFiles()) do
+          saved[index] = readIrcFile(path)
         end
         return function()
-          for _, key in ipairs(ircKeys) do
-            setConfig(key, saved[key])
+          for index, path in ipairs(ircFiles()) do
+            writeIrcFile(path, saved[index])
           end
         end
+      end
+
+      -- an ASCII QString as QDataStream writes it: a big-endian byte count, then UTF-16BE
+      local function storedString(text)
+        local utf16 = text:gsub(".", function(character) return "\0" .. character end)
+        local size = #utf16
+        return string.char(math.floor(size / 16777216) % 256, math.floor(size / 65536) % 256, math.floor(size / 256) % 256, size % 256) .. utf16
       end
 
       it("answers every IRC key with the documented type", function()
@@ -1973,23 +2007,93 @@ describe("Tests Other.lua functions", function()
         assert.equals("#mudlet #mudlet-spec", getConfig("ircChannels"))
       end)
 
-      -- An unusable port would strand the IRC client on a connect attempt it
-      -- can never make, so the reader falls back rather than handing it out
-      it("reads back the default port when the stored one is out of range", function()
+      it("refuses a port outside 1 to 65535 and keeps the stored one", function()
         finally(snapshotIrc())
 
-        assert.is_true(setConfig("ircHostPort", 6697))
-        assert.equals(6697, getConfig("ircHostPort"))
-
-        -- the writer takes any integer today; whether it starts refusing this
-        -- one is not what is being pinned, only that the reader never answers
-        -- with a port nothing can connect to
-        local stored = setConfig("ircHostPort", 70000)
-        local fallback = getConfig("ircHostPort")
-        assert.is_true(fallback >= 1 and fallback <= 65535, "an unusable port was handed out: " .. tostring(fallback))
-        if stored then
-          assert.are_not.equals(6697, fallback, "the stored port was left in place rather than replaced by the default")
+        for _, port in ipairs({1, 65535, 6699}) do
+          assert.is_true(setConfig("ircHostPort", port))
+          assert.equals(port, getConfig("ircHostPort"))
         end
+        for _, port in ipairs({-1, 0, 65536, 70000}) do
+          local ok, err = setConfig("ircHostPort", port)
+          assert.is_nil(ok, "port " .. port .. " was taken")
+          assert.equals("invalid port number " .. port .. " given, it must be in range 1 to 65535", err)
+          assert.equals(6699, getConfig("ircHostPort"))
+        end
+      end)
+
+      it("refuses an empty host or nick name and keeps the stored one", function()
+        finally(snapshotIrc())
+
+        assert.is_true(setConfig("ircHostName", "irc.mudlet-spec.invalid"))
+        local ok, err = setConfig("ircHostName", "")
+        assert.is_nil(ok)
+        assert.equals("hostname must not be empty", err)
+        assert.equals("irc.mudlet-spec.invalid", getConfig("ircHostName"))
+
+        assert.is_true(setConfig("ircNickName", "MudletSpecNick"))
+        local appNick = readIrcFile(ircFiles()[6])
+        ok, err = setConfig("ircNickName", "")
+        assert.is_nil(ok)
+        assert.equals("nick must not be empty", err)
+        assert.equals("MudletSpecNick", getConfig("ircNickName"))
+        assert.equals(appNick, readIrcFile(ircFiles()[6]), "the refused nick reached the application-wide default")
+      end)
+
+      it("refuses a host name holding a space or a line break and keeps the stored one", function()
+        finally(snapshotIrc())
+
+        assert.is_true(setConfig("ircHostName", "irc.mudlet-spec.invalid"))
+        for _, host in ipairs({"   ", " irc.libera.chat", "irc.libera.chat\t", "irc.mudlet\nspec"}) do
+          local ok, err = setConfig("ircHostName", host)
+          assert.is_nil(ok, "'" .. host .. "' was taken")
+          assert.is_truthy(err:find("must not hold a space or a line break", 1, true), err)
+          assert.equals("irc.mudlet-spec.invalid", getConfig("ircHostName"))
+        end
+        local ok, err = setIrcServer("irc.mudlet\nspec")
+        assert.is_nil(ok)
+        assert.equals("unable to save hostname, reason: hostname \"irc.mudlet\\nspec\" must not hold a space or a line break", err)
+        assert.equals("irc.mudlet-spec.invalid", getConfig("ircHostName"))
+      end)
+
+      it("refuses a channel list with a name that is not a channel", function()
+        finally(snapshotIrc())
+
+        assert.is_true(setConfig("ircChannels", "#mudlet-spec"))
+        local refusals = {
+          {"nohash", "nohash"},
+          {"#mudlet nohash", "nohash"},
+          {"#mudlet,#spec", "#mudlet,#spec"},
+          {"#mudlet #a\tb", "#a\tb"},
+        }
+        for _, refusal in ipairs(refusals) do
+          local ok, err = setConfig("ircChannels", refusal[1])
+          assert.is_nil(ok, "'" .. refusal[1] .. "' was taken")
+          assert.equals("channel name \"" .. refusal[2] .. "\" must start with #, & or + and hold no space or comma", err)
+          assert.equals("#mudlet-spec", getConfig("ircChannels"))
+        end
+        local ok, err = setConfig("ircChannels", "")
+        assert.is_nil(ok)
+        assert.equals("no (valid) channel names provided", err)
+        assert.equals("#mudlet-spec", getConfig("ircChannels"))
+      end)
+
+      -- Profiles saved before the writers refused these still hold them
+      it("reads past a stored channel name no writer takes any more", function()
+        finally(snapshotIrc())
+
+        writeIrcFile(ircFiles()[4], storedString("nohash #mudlet-spec"))
+        assert.equals("#mudlet-spec", getConfig("ircChannels"))
+        writeIrcFile(ircFiles()[4], storedString("nohash"))
+        assert.equals("#mudlet", getConfig("ircChannels"))
+        assert.is_true(setConfig("ircChannels", getConfig("ircChannels")))
+      end)
+
+      it("reads the default port in place of a stored one outside 1 to 65535", function()
+        finally(snapshotIrc())
+
+        writeIrcFile(ircFiles()[2], storedString("70000"))
+        assert.equals(6667, getConfig("ircHostPort"))
       end)
     end)
   end)

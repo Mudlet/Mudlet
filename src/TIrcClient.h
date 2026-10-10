@@ -79,6 +79,7 @@ public:
     static QPair<bool, QString> validateIrcPassword(const QString& password);
     static QPair<bool, QString> writeIrcPassword(Host* pH, const QString& password);
     static QPair<bool, QString> writeIrcChannels(Host* pH, const QStringList& channels);
+    static bool validIrcChannelName(const QString& channel);
 
     // Set once a channel has been joined.
     bool mReadyForSending = false;
