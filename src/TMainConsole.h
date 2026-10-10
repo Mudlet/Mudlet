@@ -187,6 +187,7 @@ public:
     bool moveSubConsole(const QString& name, int x, int y) override;
     std::pair<bool, QString> reparentWindow(const QString& windowname, const QString& name, int x, int y, bool show) override;
     std::optional<QSize> consoleFontSize(const QString& name) const override;
+    std::optional<int> consoleColumnWidth(const QString& name) const override;
     bool setSubConsoleBackgroundColor(const QString& name, const QColor& color) override;
     bool setSubConsoleBackgroundImage(const QString& name, const QString& path, int mode) override;
     bool resetSubConsoleBackgroundImage(const QString& name) override;

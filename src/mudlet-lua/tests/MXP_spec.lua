@@ -510,6 +510,21 @@ describe("Tests MXP handling", function()
         ("five characters took %d rows and five percent took %d"):format(rowsTakenByCharacters, rowsTakenByPercent))
     end)
 
+    -- a "W" is about twice the width of the cells a proportional font is drawn in
+    it("makes a width given in characters hold that many columns on a proportional font", function()
+      local originalFont = getFont("main")
+      finally(function()
+        closeFrame("mxpSpecProportionalFrame")
+        setFont("main", originalFont)
+      end)
+      assert.is_true(setFont("main", "Bitstream Vera Sans"))
+
+      openFrame("mxpSpecProportionalFrame", 'Align="left" Width="20c" Height="50%"')
+
+      local columns = getColumnCount("mxpSpecProportionalFrame")
+      assert.is_true(math.abs(columns - 20) <= 2, ("a frame 20 characters wide holds %d columns"):format(columns))
+    end)
+
     -- CMUD leaves a frame the player has moved or resized alone when the game
     -- opens it again, and Mudlet follows it
     it("leaves a frame that is already open at the size it has", function()

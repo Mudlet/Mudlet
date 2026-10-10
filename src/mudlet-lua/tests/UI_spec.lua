@@ -4638,6 +4638,47 @@ describe("Window and label state", function()
     it("calcFontSize returns nil for an unknown window", function()
       assert.is_nil(calcFontSize(name("wlsNoSuchWindow")))
     end)
+
+    -- Scripts compensate for the width of a "W" by hand, so the cell width is opt-in
+    it("calcFontSize given true reports the width a window draws each column in", function()
+      local original, originalSize = getFont(console), getFontSize(console)
+      finally(function()
+        setFont(console, original)
+        setMiniConsoleFontSize(console, originalSize)
+      end)
+      setMiniConsoleFontSize(console, 14)
+      assert.is_true(setFont(console, "Bitstream Vera Sans"))
+      local columnWidth, columnHeight = calcFontSize(console, true)
+      local defaultWidth, defaultHeight = calcFontSize(console)
+      assert.are.equal(defaultHeight, columnHeight)
+      -- the cells are the font's average width in whole pixels, which the font size form gives
+      assert.are.equal((calcFontSize(14, "Bitstream Vera Sans")), columnWidth)
+      assert.is_true(columnWidth < defaultWidth, ("a column is %s pixels and a \"W\" %s on a proportional font"):format(columnWidth, defaultWidth))
+      assert.are.same({calcFontSize(console)}, {calcFontSize(console, false)})
+    end)
+
+    it("calcFontSize given true leaves the font size forms as they were", function()
+      assert.are.same({calcFontSize(12)}, {calcFontSize(12, true)})
+      assert.are.same({calcFontSize(12, "Bitstream Vera Sans")}, {calcFontSize(12, "Bitstream Vera Sans", true)})
+    end)
+
+    it("calcFontSize given only true reports the main window's layout width", function()
+      assert.are.same({calcFontSize("main", true)}, {calcFontSize(true)})
+      assert.are.same({calcFontSize("main")}, {calcFontSize(false)})
+    end)
+
+    -- a nil in the font name's place is a mistake to report, not the flag left out
+    it("calcFontSize still rejects a nil font name", function()
+      local missingFontName = nil
+      assert.has_error(function()
+        calcFontSize(12, missingFontName)
+      end)
+    end)
+
+    it("calcFontSize takes a nil flag after a window name as the flag left out", function()
+      local omittedFlag = nil
+      assert.are.same({calcFontSize(console)}, {calcFontSize(console, omittedFlag)})
+    end)
   end)
 
   describe("console metrics", function()

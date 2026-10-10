@@ -5857,6 +5857,15 @@ QSize Host::calcFontSize(const QString& windowName)
     return consoleFrontend()->consoleFontSize(windowName).value_or(QSize(-1, -1));
 }
 
+int Host::calcColumnWidth(const QString& windowName)
+{
+    if (!consoleFrontend()) {
+        return -1;
+    }
+
+    return consoleFrontend()->consoleColumnWidth(windowName).value_or(-1);
+}
+
 bool Host::setProfileStyleSheet(const QString& styleSheet)
 {
     if (!consoleFrontend()) {

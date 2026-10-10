@@ -323,8 +323,20 @@ int TLuaInterpreter::calcFontSize(lua_State* L)
     QString windowName = qsl("main");
     QSize size;
 
+    // Opt-in, as scripts already compensate for a window's default width of a "W"
+    int argumentCount = lua_gettop(L);
+    bool averageWidth = false;
+    if (argumentCount >= 1 && lua_isboolean(L, argumentCount)) {
+        averageWidth = lua_toboolean(L, argumentCount);
+        // Popped so that calcFontSize(true) reads no window name, as calcFontSize() does
+        lua_settop(L, --argumentCount);
+    } else if (argumentCount == 2 && lua_type(L, 1) == LUA_TSTRING && lua_isnil(L, 2)) {
+        // A flag passed on as nil after a window name; after a font size, nil is a missing font name
+        lua_settop(L, --argumentCount);
+    }
+
     // font name and size are passed in as arguments
-    if (lua_gettop(L) == 2) {
+    if (argumentCount == 2) {
         // hoisted because the order the two QFont arguments were evaluated in is
         // unspecified, so which failure got reported was up to the compiler
         if (!checkIntArg(L, __func__, 1, "font size") || !checkStringArg(L, __func__, 2, "font name")) {
@@ -340,7 +352,7 @@ int TLuaInterpreter::calcFontSize(lua_State* L)
     }
 
     // otherwise either window name or font size is passed in
-    if (lua_gettop(L) == 1 && lua_isnumber(L, 1)) {
+    if (argumentCount == 1 && lua_isnumber(L, 1)) {
         auto fontSize = lua_tonumber(L, 1);
         auto font = QFont(qsl("Bitstream Vera Sans Mono"), fontSize, QFont::Normal);
 
@@ -349,6 +361,9 @@ int TLuaInterpreter::calcFontSize(lua_State* L)
     } else {
         windowName = WINDOW_NAME(L, 1);
         size = host.calcFontSize(windowName);
+        if (averageWidth && size.width() > -1) {
+            size.setWidth(host.calcColumnWidth(windowName));
+        }
     }
 
     if (size.width() <= -1) {

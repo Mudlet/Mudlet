@@ -622,6 +622,8 @@ public:
     void hideMudletsVariables();
     bool createBuffer(const QString& name);
     QSize calcFontSize(const QString& windowName);
+    // The width TTextEdit draws each column in, unlike the width of a "W" calcFontSize() gives
+    int calcColumnWidth(const QString& windowName);
     bool clearWindow(const QString&);
     bool showWindow(const QString&);
     bool hideWindow(const QString&);

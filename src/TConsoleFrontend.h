@@ -189,6 +189,8 @@ public:
     virtual bool setWindowFontSize(const QString& name, int size) = 0;
     // The width of a 'W' and the height of a line in that console's font.
     virtual std::optional<QSize> consoleFontSize(const QString& name) const = 0;
+    // The width TTextEdit draws each of that console's columns in.
+    virtual std::optional<int> consoleColumnWidth(const QString& name) const = 0;
 
     // This console's own appearance. The image modes are 1 border, 2 center, 3 tile and 4 style, whose
     // path is a style sheet fragment instead; the window background also takes 5, cover, which fails for

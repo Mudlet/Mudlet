@@ -2799,6 +2799,17 @@ std::optional<QSize> TMainConsole::consoleFontSize(const QString& name) const
     return {QSize(fontMetrics.horizontalAdvance(QChar('W')), fontMetrics.height())};
 }
 
+std::optional<int> TMainConsole::consoleColumnWidth(const QString& name) const
+{
+    const TConsole* pC = (name.isEmpty() || name == qsl("main")) ? this : mSubConsoleMap.value(name).data();
+    if (!pC) {
+        return {};
+    }
+
+    // What TTextEdit::updateScreenView() sizes its cells by
+    return {pC->mUpperPane->fontMetrics().averageCharWidth()};
+}
+
 bool TMainConsole::setSubConsoleBackgroundColor(const QString& name, const QColor& color)
 {
     auto pC = mSubConsoleMap.value(name);
