@@ -2315,7 +2315,7 @@ describe("Tests UI functions", function()
     end)
   end)
 
-  -- the GMCP vitals handler, fed through the event a game's message raises
+  -- raised rather than called, so the handler registration is tested as well
   describe("Test BaseUI.updateVitals", function()
     if not (type(BaseUI) == "table" and type(BaseUI.updateVitals) == "function") then
       it("needs the base UI package installed", function()
@@ -2353,13 +2353,33 @@ describe("Tests UI functions", function()
       _G.gmcp = saved.gmcp
     end)
 
-    it("should read the maxima from Char.MaxStats", function()
-      _G.gmcp = { Char = { MaxStats = { maxhp = 100, maxmp = 40, maxmv = 60 } } }
+    it("should merge the currents from Char.Vitals with the maxima from Char.MaxStats", function()
+      _G.gmcp = { Char = { Vitals = { hp = 50, mp = 20, mv = 30 }, MaxStats = { maxhp = 100, maxmp = 40, maxmv = 60 } } }
       raiseEvent("gmcp.Char.MaxStats")
       assert.are.equal(1, #applied)
-      assert.are.equal(100, applied[1].hp.max)
-      assert.are.equal(40, applied[1].mp.max)
-      assert.are.equal(60, applied[1].mv.max)
+      assert.are.same({ current = 50, max = 100 }, applied[1].hp)
+      assert.are.same({ current = 20, max = 40 }, applied[1].mp)
+      assert.are.same({ current = 30, max = 60 }, applied[1].mv)
+    end)
+
+    -- GMCP package and message names are case-insensitive
+    it("should read a vitals node sent in any casing", function()
+      for _, spelling in ipairs({ { "char", "MaxStats" }, { "Char", "maxStats" }, { "CHAR", "MAXSTATS" }, { "Char", "vitals" } }) do
+        applied = {}
+        local namespace, message = spelling[1], spelling[2]
+        _G.gmcp = { [namespace] = { [message] = { hp = 50, maxhp = 100 } } }
+        raiseEvent("gmcp." .. namespace .. "." .. message)
+        assert.are.equal(1, #applied, namespace .. "." .. message)
+        assert.are.same({ current = 50, max = 100 }, applied[1].hp, namespace .. "." .. message)
+      end
+    end)
+
+    it("should only update for a vitals message", function()
+      _G.gmcp = { Char = { Vitals = { hp = 50, maxhp = 100 }, Items = { List = {} } } }
+      raiseEvent("gmcp.Char")
+      raiseEvent("gmcp.Char.Items.List")
+      raiseEvent("Char.Vitals")
+      assert.are.equal(0, #applied)
     end)
   end)
 
