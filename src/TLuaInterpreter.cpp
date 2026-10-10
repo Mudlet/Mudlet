@@ -1224,6 +1224,12 @@ int TLuaInterpreter::feedTriggers(lua_State* L)
         dataIsUtf8Encoded = getVerifiedBool(L, __func__, 2, "Utf8Encoded", true);
     }
     const QByteArray data{lua_tostring(L, 1)};
+    // cTelnet finalizes the console once per read, but nothing does that for
+    // fed text, so its lines would stay unpainted until some other repaint.
+    auto feed = [&host](std::string& text) {
+        host.printOnDisplay(text, false);
+        host.finalizeMainConsole();
+    };
 
     const QByteArray currentEncoding = host.mTelnet.getEncoding();
     if (dataIsUtf8Encoded) {
@@ -1231,7 +1237,7 @@ int TLuaInterpreter::feedTriggers(lua_State* L)
         if (currentEncoding == "UTF-8") {
             // Simple case: the encoding is already what we are using:
             std::string dataStdString{data.toStdString()};
-            host.printOnDisplay(dataStdString, false);
+            feed(dataStdString);
             lua_pushboolean(L, true);
             return 1;
         }
@@ -1249,7 +1255,7 @@ int TLuaInterpreter::feedTriggers(lua_State* L)
             }
 
             std::string encodedText{TEncodingHelper::encode(dataQString, currentEncoding).toStdString()};
-            host.printOnDisplay(encodedText, false);
+            feed(encodedText);
             lua_pushboolean(L, true);
             return 1;
         }
@@ -1265,7 +1271,7 @@ int TLuaInterpreter::feedTriggers(lua_State* L)
         // It is safe to use the data directly now as we have already proved it
         // to be plain ASCII
         std::string dataStdString{dataQString.toStdString()};
-        host.printOnDisplay(dataStdString, false);
+        feed(dataStdString);
         lua_pushboolean(L, true);
         return 1;
     }
@@ -1273,7 +1279,7 @@ int TLuaInterpreter::feedTriggers(lua_State* L)
     // else the user is assumed to have coded it themselves into the Game
     // Server's current encoding - the backwards "compatible" form:
     std::string dataStdString{data.toStdString()};
-    host.printOnDisplay(dataStdString, false);
+    feed(dataStdString);
     lua_pushboolean(L, true);
     return 1;
 }
