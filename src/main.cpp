@@ -440,14 +440,31 @@ int main(int argc, char* argv[])
     parser.addPositionalArgument(qsl("package"), qsl("Path to .mpackage file"));
 
     // A print-and-exit run is parsed before an application object strips Qt's own options, so this parser
-    // meets them. Those the hand-written help text promises are declared here, hidden, so that
-    // `mudlet --reverse --version` answers rather than calling a documented option unknown. Keep in step.
-    for (const QString& inheritedName : {qsl("dograb"), qsl("nograb"), qsl("reverse"), qsl("sync"), qsl("widgetcount")}) {
+    // meets them. They are declared here, hidden, so that `mudlet -platform offscreen --version` answers
+    // rather than calling one of them unknown. Keep in step with QGuiApplication, QApplication and the xcb
+    // platform plugin.
+    for (const QString& inheritedName : {qsl("dograb"), qsl("nograb"), qsl("reverse"), qsl("sync"), qsl("testability"), qsl("widgetcount")}) {
         QCommandLineOption inheritedOption(inheritedName);
         inheritedOption.setFlags(QCommandLineOption::HiddenFromHelp);
         parser.addOption(inheritedOption);
     }
-    for (const QString& inheritedName : {qsl("style"), qsl("stylesheet"), qsl("qmljsdebugger")}) {
+    for (const QString& inheritedName : {qsl("style"),
+                                         qsl("stylesheet"),
+                                         qsl("qmljsdebugger"),
+                                         qsl("platform"),
+                                         qsl("platformpluginpath"),
+                                         qsl("platformtheme"),
+                                         qsl("plugin"),
+                                         qsl("qwindowgeometry"),
+                                         qsl("qwindowicon"),
+                                         qsl("qwindowtitle"),
+                                         qsl("session"),
+                                         qsl("display"),
+                                         qsl("geometry"),
+                                         qsl("icon"),
+                                         qsl("name"),
+                                         qsl("title"),
+                                         qsl("visual")}) {
         QCommandLineOption inheritedOption(inheritedName, QString(), inheritedName);
         inheritedOption.setFlags(QCommandLineOption::HiddenFromHelp);
         parser.addOption(inheritedOption);
@@ -562,11 +579,11 @@ int main(int argc, char* argv[])
 
     if (!parsedCommandLineOk) {
         // Warn of unknown options but tolerate them.
-        // We want the message to be visible for someone launching from command prompt
-        // and will have standard output left on their screen, but still allow program
-        // to start when launched by installer.
+        // We want the message to be visible for someone launching from command prompt,
+        // but on standard error, out of the --version text a script reads, and still
+        // allow program to start when launched by installer.
         // --squirrel-firstrun for example is given for launch at end of install process.
-        std::cout << QCoreApplication::translate("main", "Warning: %1\n").arg(parser.errorText()).toStdString();
+        std::cerr << QCoreApplication::translate("main", "Warning: %1\n").arg(parser.errorText()).toStdString();
     }
 
     if (parser.isSet(showHelp)) {
