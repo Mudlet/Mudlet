@@ -136,6 +136,9 @@ struct CubeInstanceData
 class GeometryManager : protected QOpenGLFunctions
 {
 public:
+    // Must match the layout location of aTexCoord in shaders/vertex.glsl
+    static constexpr GLuint scmTexCoordLocation = 8;
+
     GeometryManager();
     ~GeometryManager();
 

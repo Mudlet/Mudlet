@@ -39,6 +39,30 @@ class ModernMapperGeometryTest : public QObject
     Q_OBJECT
 
 private:
+    struct ShaderAttribute
+    {
+        int location;
+        QString type;
+        QString name;
+    };
+
+    static QList<ShaderAttribute> vertexShaderAttributes()
+    {
+        QFile shader(qsl(":/shaders/vertex.glsl"));
+        if (!shader.open(QIODevice::ReadOnly | QIODevice::Text)) {
+            return {};
+        }
+        const QString source = QString::fromUtf8(shader.readAll());
+        static const QRegularExpression declaration(qsl(R"(layout\s*\(\s*location\s*=\s*(\d+)\s*\)\s*in\s+(\w+)\s+(\w+))"));
+        QList<ShaderAttribute> attributes;
+        auto matches = declaration.globalMatch(source);
+        while (matches.hasNext()) {
+            const auto match = matches.next();
+            attributes.append({match.captured(1).toInt(), match.captured(2), match.captured(3)});
+        }
+        return attributes;
+    }
+
     static void verifyTightlyPacked(const GeometryData& geometry, const QVector<float>& positions)
     {
         const int expectedVertices = positions.size() / 3;
@@ -79,25 +103,32 @@ private slots:
 
     void test_vertexShaderAttributeLocationsDoNotOverlap()
     {
-        QFile shader(qsl(":/shaders/vertex.glsl"));
-        QVERIFY2(shader.open(QIODevice::ReadOnly | QIODevice::Text), "the vertex shader is not in the resources");
-        const QString source = QString::fromUtf8(shader.readAll());
-
-        static const QRegularExpression attribute(qsl(R"(layout\s*\(\s*location\s*=\s*(\d+)\s*\)\s*in\s+(\w+)\s+(\w+))"));
+        const QList<ShaderAttribute> attributes = vertexShaderAttributes();
+        QVERIFY2(!attributes.isEmpty(), "no attribute declarations were found in the vertex shader");
         QMap<int, QString> taken;
-        auto matches = attribute.globalMatch(source);
-        QVERIFY2(matches.hasNext(), "no attribute declarations were found in the vertex shader");
-        while (matches.hasNext()) {
-            const auto match = matches.next();
-            const int location = match.captured(1).toInt();
-            const QString type = match.captured(2);
-            const QString name = match.captured(3);
-            const int span = type == qsl("mat4") ? 4 : type == qsl("mat3") ? 3 : type == qsl("mat2") ? 2 : 1;
-            for (int slot = location; slot < location + span; ++slot) {
-                QVERIFY2(!taken.contains(slot), qPrintable(qsl("%1 and %2 both use attribute location %3").arg(taken.value(slot), name).arg(slot)));
-                taken.insert(slot, name);
+        for (const auto& attribute : attributes) {
+            const int span = attribute.type == qsl("mat4") ? 4 : attribute.type == qsl("mat3") ? 3 : attribute.type == qsl("mat2") ? 2 : 1;
+            for (int slot = attribute.location; slot < attribute.location + span; ++slot) {
+                QVERIFY2(!taken.contains(slot), qPrintable(qsl("%1 and %2 both use attribute location %3").arg(taken.value(slot), attribute.name).arg(slot)));
+                taken.insert(slot, attribute.name);
             }
         }
+    }
+
+    // GeometryManager binds these locations by number
+    void test_vertexShaderAttributeLocationsMatchGeometryManager()
+    {
+        const QMap<QString, int> expected{{qsl("aPos"), 0},
+                                          {qsl("aNormal"), 1},
+                                          {qsl("aColor"), 2},
+                                          {qsl("aInstanceColor"), 3},
+                                          {qsl("aInstanceTransform"), 4},
+                                          {qsl("aTexCoord"), static_cast<int>(GeometryManager::scmTexCoordLocation)}};
+        QMap<QString, int> declared;
+        for (const auto& attribute : vertexShaderAttributes()) {
+            declared.insert(attribute.name, attribute.location);
+        }
+        QCOMPARE(declared, expected);
     }
 };
 

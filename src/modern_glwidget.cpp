@@ -144,6 +144,12 @@ void ModernGLWidget::initializeGL()
 {
     initializeOpenGLFunctions();
 
+    // A context rebuilt by floating or redocking the map gets a fresh check
+    mFailureMessage.clear();
+    if (mpFailureLabel) {
+        mpFailureLabel->hide();
+    }
+
     // Reparenting to another window replaces the context, and everything made in the old one goes with it
     connect(context(), &QOpenGLContext::aboutToBeDestroyed, this, &ModernGLWidget::cleanup);
 

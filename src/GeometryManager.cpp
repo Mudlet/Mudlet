@@ -25,9 +25,6 @@
 #include <QImage>
 
 namespace {
-// Must match the layout locations in shaders/vertex.glsl
-constexpr GLuint aTexCoordLocation = 8;
-
 QVector<float> upNormals(int vertexCount)
 {
     QVector<float> normals;
@@ -624,7 +621,7 @@ void GeometryManager::renderGeometry(
     glEnableVertexAttribArray(2);
 
     // A textured draw may have left this enabled, and this geometry has no texture coordinates to read
-    glDisableVertexAttribArray(aTexCoordLocation);
+    glDisableVertexAttribArray(scmTexCoordLocation);
 
     // Draw the geometry - use indexed rendering if indices are available
     if (geometry.hasIndices()) {
@@ -752,10 +749,10 @@ void GeometryManager::renderGeometry(const GeometryData& geometry,
             texCoordBuffer.allocate(geometry.textureCoords.data(), geometry.textureCoords.size() * sizeof(float));
             geometry.texCoordsUploaded = true;
         }
-        glVertexAttribPointer(aTexCoordLocation, 2, GL_FLOAT, GL_FALSE, 0, nullptr);
-        glEnableVertexAttribArray(aTexCoordLocation);
+        glVertexAttribPointer(scmTexCoordLocation, 2, GL_FLOAT, GL_FALSE, 0, nullptr);
+        glEnableVertexAttribArray(scmTexCoordLocation);
     } else {
-        glDisableVertexAttribArray(aTexCoordLocation);
+        glDisableVertexAttribArray(scmTexCoordLocation);
     }
 
     // Draw the geometry - use indexed rendering if indices are available
@@ -841,7 +838,7 @@ void GeometryManager::renderInstancedCubes(const QVector<CubeInstanceData>& inst
 
     // The shader takes color from the instance; a stale per-vertex color array may be shorter than the cube
     glDisableVertexAttribArray(2);
-    glDisableVertexAttribArray(aTexCoordLocation);
+    glDisableVertexAttribArray(scmTexCoordLocation);
 
     mInstanceBuffer.bind();
     mInstanceBuffer.allocate(instances.data(), static_cast<int>(instances.size() * sizeof(CubeInstanceData)));
