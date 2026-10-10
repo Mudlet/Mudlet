@@ -4382,9 +4382,9 @@ std::optional<QSize> mudlet::getImageSize(const QString& imageLocation)
     // QImage reads an SVG only where the qsvg image plugin is deployed, so the
     // document's own reader answers first; anything it cannot read - a raster
     // under a .svg name included - falls through to QImage
-    if (TLabel::svgCandidate(imageLocation)) {
+    if (TLabelModel::svgCandidate(imageLocation)) {
         QSvgRenderer renderer;
-        if (TLabel::loadSvg(renderer, imageLocation) && !renderer.defaultSize().isEmpty()) {
+        if (TLabelModel::loadSvg(renderer, imageLocation) && !renderer.defaultSize().isEmpty()) {
             return renderer.defaultSize();
         }
     }

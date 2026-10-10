@@ -900,6 +900,343 @@ headlessMovie = ok and "ok" or tostring(err)
         QVERIFY2(QApplication::topLevelWidgets().isEmpty(), "Playing the movies created a widget.");
     }
 
+    // The answers are those of the same Lua run in the GUI self-test profile, with files of the same bytes.
+    void test_headlessBackgroundImageContract()
+    {
+        const QString hostname = qsl("Test-Headless-Host-Background-Image");
+        QVERIFY2(HostManager::self()->addHost(hostname, QString(), QString(), QString()), "Could not create a profile with no main window.");
+        Host* host = HostManager::self()->getHost(hostname);
+        QVERIFY2(host, "The profile is not in the pool.");
+        QVERIFY(!host->hasConsoleView());
+
+        QTemporaryDir imageDir;
+        QVERIFY(imageDir.isValid());
+        const auto writeFile = [&imageDir](const QString& name, const QByteArray& data) {
+            QFile file(imageDir.filePath(name));
+            return file.open(QIODevice::WriteOnly) && file.write(data) == data.size();
+        };
+        // Three 40x16 frames, then a 24x10 still image
+        QVERIFY(writeFile(qsl("anim.gif"),
+                          QByteArray::fromBase64("R0lGODlhKAAQAIEAAP8AAAAAAAAAAAAAACH/"
+                                                 "C05FVFNDQVBFMi4wAwEAAAAh+"
+                                                 "QQACgAAACwAAAAAKAAQAAAIKwABCBxIsKDBgwgTKlzIsKHDhxAjSpxIsaLFixgzatzIsaPHjyBDihypMCAAIfkEAQoAAQAsAAAAACgAEACBAP8AAAAAAAAAAAAACCsAAQgcSLCgwYMIEypcyLChw4"
+                                                 "cQI0qcSLGixYsYM2rcyLGjx48gQ4ocqTAgACH5BAEKAAEALAAAAAAoABAAgQAA/wAAAAAAAAAAAAgrAAEIHEiwoMGDCBMqXMiwocOHECNKnEixosWLGDNq3Mixo8ePIEOKHKkwIAA7")));
+        QVERIFY(writeFile(qsl("still.png"), QByteArray::fromBase64("iVBORw0KGgoAAAANSUhEUgAAABgAAAAKCAIAAAAhCwk/AAAAGUlEQVR4nGPk5ORkoAZgooopowaNGkQlAABsJgAvM+NphgAAAABJRU5ErkJggg==")));
+        QVERIFY(writeFile(qsl("fake.gif"), QByteArrayLiteral("not an image")));
+        QVERIFY(writeFile(qsl("sized.svg"), QByteArrayLiteral("<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"30\" height=\"12\"><rect width=\"30\" height=\"12\" fill=\"red\"/></svg>\n")));
+        QVERIFY(writeFile(qsl("nosize.svg"), QByteArrayLiteral("<svg xmlns=\"http://www.w3.org/2000/svg\"><rect width=\"5\" height=\"5\" fill=\"red\"/></svg>\n")));
+        QVERIFY(writeFile(qsl("bad.svg"), QByteArrayLiteral("<notsvg>\n")));
+        QVERIFY(writeFile(qsl("blank.svg"), QByteArrayLiteral("<svg xmlns=\"http://www.w3.org/2000/svg\"/>\n")));
+        QVERIFY(host->getLuaInterpreter()->compileAndExecuteScript(qsl("bgDir = [==[%1]==]").arg(imageDir.path())));
+
+        const bool ran = host->getLuaInterpreter()->compileAndExecuteScript(qsl(R"lua(
+headlessBackground = "not run"
+local ok, err = pcall(function()
+  local function described(called, ...)
+    if not called then
+      return "raised"
+    end
+    local count = select("#", ...)
+    local values = {}
+    for i = 1, count do
+      values[i] = tostring((select(i, ...)))
+    end
+    return "[" .. count .. "]" .. table.concat(values, ":")
+  end
+  local answers = {}
+  local function step(label, f, ...)
+    answers[#answers + 1] = label .. "=" .. described(pcall(f, ...))
+  end
+  local startGifs = getProfileStats().gifs
+  local sheet = ""
+  local function state(label, name, emptied)
+    local gifs = getProfileStats().gifs
+    local width, height = getLabelSizeHint(name)
+    local text = getLabelText(name)
+    -- What a label measures for text, or for nothing, depends on the font, so that is read against a label with only the same text
+    createLabel("bgTwin", 0, 0, 100, 20, 1)
+    if sheet ~= "" then
+      setLabelStyleSheet("bgTwin", sheet)
+    end
+    -- A label whose text was emptied measures a line, which a fresh one does not
+    if emptied then
+      echo("bgTwin", "words")
+      echo("bgTwin", "")
+    end
+    if text ~= "" then
+      echo("bgTwin", text)
+    end
+    local twinWidth, twinHeight = getLabelSizeHint("bgTwin")
+    deleteLabel("bgTwin")
+    local hint = (width == twinWidth and height == twinHeight) and "twin" or string.format("%sx%s", tostring(width), tostring(height))
+    local movie = setMovieSpeed(name, 100) == true
+    answers[#answers + 1] = string.format("%s:hint=%s,text=%s,movie=%s,gifs=%d/%d", label, hint, tostring(text), tostring(movie), gifs.total - startGifs.total, gifs.active - startGifs.active)
+  end
+  local gif, still, fake = bgDir .. "/anim.gif", bgDir .. "/still.png", bgDir .. "/fake.gif"
+  local sized, nosize, bad = bgDir .. "/sized.svg", bgDir .. "/nosize.svg", bgDir .. "/bad.svg"
+  local blank = bgDir .. "/blank.svg"
+  assert(createLabel("bgA", 0, 0, 100, 20, 1) == true, "createLabel did not answer true")
+  state("fresh", "bgA")
+  step("still", setBackgroundImage, "bgA", still)
+  state("still", "bgA")
+  step("missing", setBackgroundImage, "bgA", bgDir .. "/nosuch.png")
+  step("notImage", setBackgroundImage, "bgA", fake)
+  step("badSvg", setBackgroundImage, "bgA", bad)
+  state("kept", "bgA")
+  step("mode3", setBackgroundImage, "bgA", still, 3)
+  step("mode4", setBackgroundImage, "bgA", "background-color: red;", 4)
+  step("mode5", setBackgroundImage, "bgA", still, 5)
+  step("mode0", setBackgroundImage, "bgA", still, 0)
+  step("full", setBackgroundImage, "bgA", still, 1, true)
+  step("echoEmpty", echo, "bgA", "")
+  state("echoEmpty", "bgA")
+  step("echoText", echo, "bgA", "words")
+  state("echoText", "bgA")
+  step("onText", setBackgroundImage, "bgA", still)
+  state("onText", "bgA")
+  step("resetImage", resetBackgroundImage, "bgA")
+  state("resetImage", "bgA")
+  step("resetAgain", resetBackgroundImage, "bgA")
+  step("echoText", echo, "bgA", "words")
+  step("resetText", resetBackgroundImage, "bgA")
+  state("resetText", "bgA")
+  step("setMovie", setMovie, "bgA", gif)
+  state("movie", "bgA")
+  step("onMovie", setBackgroundImage, "bgA", still)
+  state("onMovie", "bgA")
+  step("startMovie", startMovie, "bgA")
+  step("setMovieAgain", setMovie, "bgA", gif)
+  state("movieAgain", "bgA")
+  step("resetMovie", resetBackgroundImage, "bgA")
+  state("resetMovie", "bgA")
+  step("sized", setBackgroundImage, "bgA", sized)
+  state("sized", "bgA")
+  step("echoOnSvg", echo, "bgA", "svg text")
+  state("echoOnSvg", "bgA")
+  step("echoEmptyOnSvg", echo, "bgA", "")
+  state("echoEmptyOnSvg", "bgA")
+  step("rasterOnSvg", setBackgroundImage, "bgA", still)
+  state("rasterOnSvg", "bgA")
+  step("svgOnRaster", setBackgroundImage, "bgA", sized)
+  state("svgOnRaster", "bgA")
+  step("badOnSvg", setBackgroundImage, "bgA", bad)
+  state("badOnSvg", "bgA")
+  step("nosize", setBackgroundImage, "bgA", nosize)
+  state("nosize", "bgA")
+  step("sized", setBackgroundImage, "bgA", sized)
+  step("movieOnSvg", setMovie, "bgA", gif)
+  state("movieOnSvg", "bgA")
+  step("svgOnMovie", setBackgroundImage, "bgA", nosize)
+  state("svgOnMovie", "bgA")
+  step("rasterOnSvgMovie", setBackgroundImage, "bgA", still)
+  state("rasterOnSvgMovie", "bgA")
+  step("movieOnRaster", setMovie, "bgA", gif)
+  state("movieOnRaster", "bgA")
+  step("svgOnRasterMovie", setBackgroundImage, "bgA", sized)
+  state("svgOnRasterMovie", "bgA")
+  step("resetSvgMovie", resetBackgroundImage, "bgA")
+  state("resetSvgMovie", "bgA")
+  step("sized", setBackgroundImage, "bgA", sized)
+  step("resetSvg", resetBackgroundImage, "bgA")
+  state("resetSvg", "bgA")
+  step("sized", setBackgroundImage, "bgA", sized)
+  step("still", setBackgroundImage, "bgA", still)
+  step("echoText", echo, "bgA", "words")
+  step("echoEmpty", echo, "bgA", "")
+  state("rasterDroppedSvg", "bgA", true)
+  step("blank", setBackgroundImage, "bgA", blank)
+  state("blank", "bgA", true)
+  step("sized", setBackgroundImage, "bgA", sized)
+  sheet = "padding: 3px; border: 2px solid red;"
+  step("sheet", setLabelStyleSheet, "bgA", sheet)
+  state("sheetSvg", "bgA")
+  step("still", setBackgroundImage, "bgA", still)
+  state("sheetStill", "bgA")
+  step("echoText", echo, "bgA", "words")
+  step("svgOnText", setBackgroundImage, "bgA", sized)
+  state("svgOnText", "bgA")
+  step("resetSvgText", resetBackgroundImage, "bgA")
+  state("resetSvgText", "bgA")
+  step("missingLabel", setBackgroundImage, "bgNoSuch", still)
+  step("resetMissing", resetBackgroundImage, "bgNoSuch")
+  step("emptyName", setBackgroundImage, "", still)
+  step("number", setBackgroundImage, 5, still)
+  step("noArgs", setBackgroundImage)
+  step("main", setBackgroundImage, "main", still)
+  step("mainMissing", setBackgroundImage, "main", bgDir .. "/nosuch.png")
+  step("mainMode2", setBackgroundImage, "main", still, 2)
+  step("mainMode4", setBackgroundImage, "main", "background-color: red;", 4)
+  step("pathOnly", setBackgroundImage, still)
+  step("pathMode", setBackgroundImage, still, 3)
+  step("mainReset", resetBackgroundImage, "main")
+  step("resetNoArgs", resetBackgroundImage)
+  step("fullStill", setBackgroundImage, "main", still, 1, true)
+  step("fullCover", setBackgroundImage, "main", still, 5, true)
+  step("fullCoverMissing", setBackgroundImage, "main", bgDir .. "/nosuch.png", 5, true)
+  step("fullCoverFake", setBackgroundImage, "main", fake, 5, true)
+  step("fullMissing", setBackgroundImage, "main", bgDir .. "/nosuch.png", 1, true)
+  step("fullReset", resetBackgroundImage, "main", true)
+  step("fullResetName", resetBackgroundImage, "bgA", true)
+  step("fullOther", setBackgroundImage, "bgA", still, 1, true)
+  assert(createMiniConsole("bgMini", 0, 0, 100, 100) == true, "createMiniConsole did not answer true")
+  step("mini", setBackgroundImage, "bgMini", still)
+  step("miniMissing", setBackgroundImage, "bgMini", bgDir .. "/nosuch.png")
+  step("miniMode5", setBackgroundImage, "bgMini", still, 5)
+  step("miniReset", resetBackgroundImage, "bgMini")
+  assert(openUserWindow("bgWindow", false, false, "f") == true, "openUserWindow did not answer true")
+  step("window", setBackgroundImage, "bgWindow", still, 3)
+  step("windowReset", resetBackgroundImage, "bgWindow")
+  step("closeWindow", closeUserWindow, "bgWindow")
+  step("closedWindow", setBackgroundImage, "bgWindow", still)
+  step("closedWindowReset", resetBackgroundImage, "bgWindow")
+  createBuffer("bgBuffer")
+  step("buffer", setBackgroundImage, "bgBuffer", still)
+  step("bufferReset", resetBackgroundImage, "bgBuffer")
+  step("move", setWindow, "bgWindow", "bgA", 0, 0, true)
+  step("movedLabel", setBackgroundImage, "bgA", still)
+  state("moved", "bgA")
+  step("delete", deleteLabel, "bgA")
+  step("deleted", setBackgroundImage, "bgA", still)
+  step("deletedReset", resetBackgroundImage, "bgA")
+  step("deleteMini", deleteMiniConsole, "bgMini")
+  step("deletedMini", setBackgroundImage, "bgMini", still)
+  local gifs = getProfileStats().gifs
+  answers[#answers + 1] = string.format("gone:gifs=%d/%d", gifs.total - startGifs.total, gifs.active - startGifs.active)
+  resetBackgroundImage("main")
+  resetBackgroundImage("main", true)
+  headlessBackgroundAnswers = table.concat(answers, "\n"):gsub(bgDir:gsub("%p", "%%%0"), "<dir>")
+end)
+headlessBackground = ok and "ok" or tostring(err)
+)lua"));
+
+        QVERIFY2(ran, "The Lua chunk did not run.");
+        QCOMPARE(luaGlobalString(host, "headlessBackground"), qsl("ok"));
+        // A raster takes the place of a label's text or movie, an SVG paints under them; a console takes any path
+        const QStringList answers{qsl("fresh:hint=twin,text=,movie=false,gifs=0/0"),
+                                  qsl("still=[1]true"),
+                                  qsl("still:hint=24x10,text=,movie=false,gifs=0/0"),
+                                  qsl("missing=[2]nil:console or label 'bgA' not found, or '<dir>/nosuch.png' could not be loaded as an image"),
+                                  qsl("notImage=[2]nil:console or label 'bgA' not found, or '<dir>/fake.gif' could not be loaded as an image"),
+                                  qsl("badSvg=[2]nil:console or label 'bgA' not found, or '<dir>/bad.svg' could not be loaded as an image"),
+                                  qsl("kept:hint=24x10,text=,movie=false,gifs=0/0"),
+                                  qsl("mode3=[1]true"),
+                                  qsl("mode4=[2]nil:console or label 'bgA' not found, or 'background-color: red;' could not be loaded as an image"),
+                                  qsl("mode5=[2]nil:mode 'cover' is not supported for the main display - pass true as the 4th argument to apply it to the full window background instead"),
+                                  qsl("mode0=[2]nil:0 is not a valid mode! Valid modes are 1 'border', 2 'center', 3 'tile', 4 'style', 5 'cover'"),
+                                  qsl("full=[2]nil:the full window background can only be used with the main console"),
+                                  qsl("echoEmpty=[1]true"),
+                                  qsl("echoEmpty:hint=24x10,text=,movie=false,gifs=0/0"),
+                                  qsl("echoText=[1]true"),
+                                  qsl("echoText:hint=twin,text=words,movie=false,gifs=0/0"),
+                                  qsl("onText=[1]true"),
+                                  qsl("onText:hint=24x10,text=,movie=false,gifs=0/0"),
+                                  qsl("resetImage=[1]true"),
+                                  qsl("resetImage:hint=twin,text=,movie=false,gifs=0/0"),
+                                  qsl("resetAgain=[1]true"),
+                                  qsl("echoText=[1]true"),
+                                  qsl("resetText=[1]true"),
+                                  qsl("resetText:hint=twin,text=words,movie=false,gifs=0/0"),
+                                  qsl("setMovie=[1]true"),
+                                  qsl("movie:hint=40x16,text=,movie=true,gifs=1/1"),
+                                  qsl("onMovie=[1]true"),
+                                  qsl("onMovie:hint=24x10,text=,movie=false,gifs=1/0"),
+                                  qsl("startMovie=[2]nil:no movie found at label 'bgA'"),
+                                  qsl("setMovieAgain=[1]true"),
+                                  qsl("movieAgain:hint=40x16,text=,movie=true,gifs=1/1"),
+                                  qsl("resetMovie=[1]true"),
+                                  qsl("resetMovie:hint=twin,text=,movie=false,gifs=1/0"),
+                                  qsl("sized=[1]true"),
+                                  qsl("sized:hint=30x12,text=,movie=false,gifs=1/0"),
+                                  qsl("echoOnSvg=[1]true"),
+                                  qsl("echoOnSvg:hint=twin,text=svg text,movie=false,gifs=1/0"),
+                                  qsl("echoEmptyOnSvg=[1]true"),
+                                  qsl("echoEmptyOnSvg:hint=30x12,text=,movie=false,gifs=1/0"),
+                                  qsl("rasterOnSvg=[1]true"),
+                                  qsl("rasterOnSvg:hint=24x10,text=,movie=false,gifs=1/0"),
+                                  qsl("svgOnRaster=[1]true"),
+                                  qsl("svgOnRaster:hint=30x12,text=,movie=false,gifs=1/0"),
+                                  qsl("badOnSvg=[2]nil:console or label 'bgA' not found, or '<dir>/bad.svg' could not be loaded as an image"),
+                                  qsl("badOnSvg:hint=30x12,text=,movie=false,gifs=1/0"),
+                                  qsl("nosize=[1]true"),
+                                  qsl("nosize:hint=5x5,text=,movie=false,gifs=1/0"),
+                                  qsl("sized=[1]true"),
+                                  qsl("movieOnSvg=[1]true"),
+                                  qsl("movieOnSvg:hint=40x16,text=,movie=true,gifs=1/1"),
+                                  qsl("svgOnMovie=[1]true"),
+                                  qsl("svgOnMovie:hint=40x16,text=,movie=true,gifs=1/1"),
+                                  qsl("rasterOnSvgMovie=[1]true"),
+                                  qsl("rasterOnSvgMovie:hint=24x10,text=,movie=false,gifs=1/0"),
+                                  qsl("movieOnRaster=[1]true"),
+                                  qsl("movieOnRaster:hint=40x16,text=,movie=true,gifs=1/1"),
+                                  qsl("svgOnRasterMovie=[1]true"),
+                                  qsl("svgOnRasterMovie:hint=40x16,text=,movie=true,gifs=1/1"),
+                                  qsl("resetSvgMovie=[1]true"),
+                                  qsl("resetSvgMovie:hint=twin,text=,movie=false,gifs=1/0"),
+                                  qsl("sized=[1]true"),
+                                  qsl("resetSvg=[1]true"),
+                                  qsl("resetSvg:hint=twin,text=,movie=false,gifs=1/0"),
+                                  qsl("sized=[1]true"),
+                                  qsl("still=[1]true"),
+                                  qsl("echoText=[1]true"),
+                                  qsl("echoEmpty=[1]true"),
+                                  qsl("rasterDroppedSvg:hint=twin,text=,movie=false,gifs=1/0"),
+                                  qsl("blank=[1]true"),
+                                  qsl("blank:hint=twin,text=,movie=false,gifs=1/0"),
+                                  qsl("sized=[1]true"),
+                                  qsl("sheet=[1]true"),
+                                  qsl("sheetSvg:hint=40x22,text=,movie=false,gifs=1/0"),
+                                  qsl("still=[1]true"),
+                                  qsl("sheetStill:hint=34x20,text=,movie=false,gifs=1/0"),
+                                  qsl("echoText=[1]true"),
+                                  qsl("svgOnText=[1]true"),
+                                  qsl("svgOnText:hint=twin,text=words,movie=false,gifs=1/0"),
+                                  qsl("resetSvgText=[1]true"),
+                                  qsl("resetSvgText:hint=twin,text=words,movie=false,gifs=1/0"),
+                                  qsl("missingLabel=[2]nil:console or label 'bgNoSuch' not found, or '<dir>/still.png' could not be loaded as an image"),
+                                  qsl("resetMissing=[2]nil:console 'bgNoSuch' not found"),
+                                  qsl("emptyName=[1]true"),
+                                  qsl("number=[2]nil:console or label '5' not found, or '<dir>/still.png' could not be loaded as an image"),
+                                  qsl("noArgs=raised"),
+                                  qsl("main=[1]true"),
+                                  qsl("mainMissing=[1]true"),
+                                  qsl("mainMode2=[1]true"),
+                                  qsl("mainMode4=[1]true"),
+                                  qsl("pathOnly=[1]true"),
+                                  qsl("pathMode=[1]true"),
+                                  qsl("mainReset=[1]true"),
+                                  qsl("resetNoArgs=[1]true"),
+                                  qsl("fullStill=[1]true"),
+                                  qsl("fullCover=[1]true"),
+                                  qsl("fullCoverMissing=[2]nil:could not use '<dir>/nosuch.png' as a full window background image"),
+                                  qsl("fullCoverFake=[2]nil:could not use '<dir>/fake.gif' as a full window background image"),
+                                  qsl("fullMissing=[1]true"),
+                                  qsl("fullReset=[1]true"),
+                                  qsl("fullResetName=[2]nil:the full window background can only be reset on the main console"),
+                                  qsl("fullOther=[2]nil:the full window background can only be used with the main console"),
+                                  qsl("mini=[1]true"),
+                                  qsl("miniMissing=[1]true"),
+                                  qsl("miniMode5=[2]nil:mode 'cover' is not supported for the main display - pass true as the 4th argument to apply it to the full window background instead"),
+                                  qsl("miniReset=[1]true"),
+                                  qsl("window=[1]true"),
+                                  qsl("windowReset=[1]true"),
+                                  qsl("closeWindow=[0]"),
+                                  qsl("closedWindow=[1]true"),
+                                  qsl("closedWindowReset=[1]true"),
+                                  qsl("buffer=[1]true"),
+                                  qsl("bufferReset=[1]true"),
+                                  qsl("move=[1]true"),
+                                  qsl("movedLabel=[1]true"),
+                                  qsl("moved:hint=34x20,text=,movie=false,gifs=1/0"),
+                                  qsl("delete=[1]true"),
+                                  qsl("deleted=[2]nil:console or label 'bgA' not found, or '<dir>/still.png' could not be loaded as an image"),
+                                  qsl("deletedReset=[2]nil:console 'bgA' not found"),
+                                  qsl("deleteMini=[1]true"),
+                                  qsl("deletedMini=[2]nil:console or label 'bgMini' not found, or '<dir>/still.png' could not be loaded as an image"),
+                                  qsl("gone:gifs=0/0")};
+        QCOMPARE(luaGlobalString(host, "headlessBackgroundAnswers"), answers.join(QLatin1Char('\n')));
+        QVERIFY2(QApplication::topLevelWidgets().isEmpty(), "Setting the background images created a widget.");
+    }
+
     // What a profile with no view answers the scroll calls, taken from the same Lua run in the GUI self-test
     // profile, which lets each real pane repaint before it is read and re-issues each scroll until it holds.
     void test_headlessScrollContract()

@@ -21,7 +21,9 @@
 
 #include "Host.h"
 
+#include <QFile>
 #include <QRegularExpression>
+#include <QSvgRenderer>
 
 TLabelModel::TLabelModel(Host* pHost, const QString& name)
 : mpHost(pHost)
@@ -210,4 +212,61 @@ QString TLabelModel::linkStyledText(const QString& text) const
         }
     }
     return styledText;
+}
+
+// QPixmap and QImage read a file by its content, so a raster saved under a .svg
+// name has always displayed. This only asks whether the renderer is worth trying:
+// the renderer itself is the authority on what is an SVG.
+bool TLabelModel::svgCandidate(const QString& path)
+{
+    QFile file(path);
+    if (!file.open(QIODevice::ReadOnly)) {
+        return false;
+    }
+    const QByteArray head = file.read(64);
+    if (head.startsWith(QByteArrayLiteral("\x1f\x8b"))) {
+        return true;
+    }
+
+    qsizetype at = 0;
+    bool utf16 = false;
+    if (head.startsWith(QByteArrayLiteral("\xef\xbb\xbf"))) {
+        at = 3;
+    } else if (head.startsWith(QByteArrayLiteral("\xff\xfe")) || head.startsWith(QByteArrayLiteral("\xfe\xff"))) {
+        at = 2;
+        utf16 = true;
+    }
+    for (; at < head.size(); ++at) {
+        const char byte = head.at(at);
+        // in UTF-16 every ASCII character is half of a code unit whose other half
+        // is a NUL, whichever way round the byte order mark put them
+        if (utf16 && byte == '\0') {
+            continue;
+        }
+        if (byte == ' ' || byte == '\t' || byte == '\n' || byte == '\r' || byte == '\f' || byte == '\v') {
+            continue;
+        }
+        return byte == '<';
+    }
+    return false;
+}
+
+bool TLabelModel::loadSvg(QSvgRenderer& renderer, const QString& path)
+{
+    QFile file(path);
+    if (!file.open(QIODevice::ReadOnly)) {
+        return false;
+    }
+
+    // QSvgRenderer inflates a gzipped document by its content on the QByteArray
+    // overload, but only by a .svgz or .svg.gz name on the path one
+    if (file.peek(2) == QByteArrayLiteral("\x1f\x8b")) {
+        renderer.load(file.readAll());
+    } else {
+        file.close();
+        // the path overload resolves a relative href inside the document against
+        // the directory the document sits in
+        renderer.load(path);
+    }
+    return renderer.isValid();
 }

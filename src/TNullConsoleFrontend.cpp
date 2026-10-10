@@ -31,9 +31,11 @@
 #include <QMovie>
 #include <QObject>
 #include <QStringList>
+#include <QSvgRenderer>
 #include <QTextCharFormat>
 #include <QTextCursor>
 #include <QTextDocument>
+#include <QTextDocumentFragment>
 #include <QTextFrame>
 #include <QtMath>
 
@@ -505,6 +507,7 @@ bool TNullConsoleFrontend::setLabelText(const QString& name, const QString& text
     if (shown != label.pModel->mText) {
         label.textLabel = true;
         label.showsMovie = false;
+        label.pixmapSize.reset();
         label.sizeHint.reset();
     }
     label.pModel->mText = shown;
@@ -518,9 +521,17 @@ std::optional<QSize> TNullConsoleFrontend::getLabelSizeHint(const QString& name)
         return std::nullopt;
     }
     const Label& label = it->second;
+    const QSize frameSize(label.frame[1] + label.frame[3], label.frame[0] + label.frame[2]);
     // QLabel measures the movie's current image, re-reading it only as the movie resizes
     if (label.showsMovie && !label.movie->currentPixmap().isNull()) {
-        return label.movie->currentPixmap().deviceIndependentSize().toSize() + QSize(label.frame[1] + label.frame[3], label.frame[0] + label.frame[2]);
+        return label.movie->currentPixmap().deviceIndependentSize().toSize() + frameSize;
+    }
+    if (label.pixmapSize) {
+        return *label.pixmapSize + frameSize;
+    }
+    // TLabel::sizeHint() answers an SVG's own size only when nothing else shows
+    if (label.svgSize && !label.svgSize->isEmpty() && !label.showsMovie && QTextDocumentFragment::fromHtml(label.pModel->mText).toPlainText().trimmed().isEmpty()) {
+        return *label.svgSize + frameSize;
     }
     if (!label.sizeHint) {
         label.sizeHint = labelSizeHint(label.pModel->mFont, label.pModel->mText, label.textLabel, label.frame);
@@ -929,11 +940,80 @@ std::pair<bool, QString> TNullConsoleFrontend::setLabelMovie(const QString& name
     label.movie->stop();
     // QLabel::setMovie() clears the text and leaves the label measuring the movie
     label.showsMovie = true;
+    label.pixmapSize.reset();
     label.textLabel = false;
     label.sizeHint.reset();
     label.pModel->mText.clear();
     label.movie->start();
     return {true, QString()};
+}
+
+// QLabel::clear()
+void TNullConsoleFrontend::clearLabelContents(Label& label)
+{
+    label.pixmapSize.reset();
+    label.showsMovie = false;
+    label.textLabel = false;
+    label.sizeHint.reset();
+    label.pModel->mText.clear();
+}
+
+bool TNullConsoleFrontend::setLabelBackgroundImage(const QString& name, const QString& path)
+{
+    const auto it = mLabels.find(name);
+    if (it == mLabels.end()) {
+        return false;
+    }
+    Label& label = it->second;
+    if (TLabelModel::svgCandidate(path)) {
+        QSvgRenderer renderer;
+        if (TLabelModel::loadSvg(renderer, path)) {
+            label.svgSize = renderer.defaultSize();
+            // TLabel::setSvgImage() takes down a raster background but leaves text and movies
+            if (label.pixmapSize) {
+                clearLabelContents(label);
+            }
+            return true;
+        }
+    }
+    const QImage raster(path);
+    if (raster.isNull()) {
+        return false;
+    }
+    label.svgSize.reset();
+    if (label.showsMovie) {
+        label.movie->stop();
+    }
+    clearLabelContents(label);
+    label.pixmapSize = raster.deviceIndependentSize().toSize();
+    return true;
+}
+
+bool TNullConsoleFrontend::resetLabelBackgroundImage(const QString& name)
+{
+    const auto it = mLabels.find(name);
+    if (it == mLabels.end()) {
+        return false;
+    }
+    Label& label = it->second;
+    label.svgSize.reset();
+    // Text is not an image, so it stays
+    if (label.pixmapSize || label.showsMovie) {
+        if (label.showsMovie) {
+            label.movie->stop();
+        }
+        clearLabelContents(label);
+    }
+    return true;
+}
+
+// TConsole::setWindowBackgroundImage() loads a 'cover' image to scale it, and leaves the other modes to a stylesheet
+bool TNullConsoleFrontend::setWindowBackgroundImage(const QString& imgPath, const int mode)
+{
+    if (mode == 5) {
+        return !QImage(imgPath).isNull();
+    }
+    return mode >= 1 && mode <= 4;
 }
 
 QMovie* TNullConsoleFrontend::shownMovie(const QString& name) const

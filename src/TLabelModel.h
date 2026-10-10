@@ -28,6 +28,7 @@
 #include <QString>
 
 class Host;
+class QSvgRenderer;
 
 // A label's widget-free state, so the Widgets-free core can hold a named label without a QLabel.
 // Owned by its TLabel, whose same-named reference members alias it; TWindowRegistry indexes
@@ -57,6 +58,9 @@ struct TLabelModel
     static QString styleSheetWithBackgroundColor(const QString& styleSheet, const QColor& color);
     // Whether the text has an anchor tag, which makes the label's links clickable
     static bool containsAnchorTag(const QString& text);
+    // Whether the file opens like an SVG document, which is worth handing to QSvgRenderer
+    static bool svgCandidate(const QString& path);
+    static bool loadSvg(QSvgRenderer& renderer, const QString& path);
     // What TLabel::setText() shows for the text: each anchor given the link style as an inline style
     QString linkStyledText(const QString& text) const;
 
