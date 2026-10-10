@@ -1223,6 +1223,94 @@ describe("Tests addSupportedTelnetOption", function()
   end)
 end)
 
+describe("Tests the payload sysTelnetEvent hands over", function()
+  -- Options Mudlet has no handler of its own for can carry binary data, so the
+  -- payload has to reach Lua byte for byte, NULs and bytes from 0x80 up
+  -- included. 140 is never registered, so the WILL below is refused rather
+  -- than leaving an option negotiated for the specs that follow.
+  local option = 140
+
+  local function received(data)
+    local seen = {}
+    local handler = registerAnonymousEventHandler("sysTelnetEvent", function(_, kind, opt, payload)
+      if opt == option then
+        seen[kind] = payload
+      end
+    end)
+    local ok, msg = feedTelnet(data)
+    killAnonymousEventHandler(handler)
+    assert.is_true(ok, "start the suite with --offline, see the tests README - feedTelnet said: " .. tostring(msg))
+    return seen
+  end
+
+  it("hands the subnegotiation payload over byte for byte", function()
+    -- the IAC is doubled in the stream, as telnet escapes it
+    local seen = received("<T_IAC><T_SB>" .. string.char(option) .. "AB<00>CD\195\169<T_IAC><T_IAC>EF<T_IAC><T_SE>")
+    assert.equals("AB\0CD\195\169\255EF", seen[250])
+  end)
+
+  it("hands an empty subnegotiation over as an empty payload", function()
+    -- not as its framing, which an escaped payload of those same five bytes would also give
+    assert.equals("", received("<T_IAC><T_SB>" .. string.char(option) .. "<T_IAC><T_SE>")[250])
+    assert.equals("\255\250\140\255\240", received("<T_IAC><T_SB>" .. string.char(option) .. "<T_IAC><T_IAC>\250\140<T_IAC><T_IAC>\240<T_IAC><T_SE>")[250])
+  end)
+
+  it("hands a command that is not a subnegotiation over whole", function()
+    assert.equals("\255\251\140", received("<T_IAC><T_WILL>" .. string.char(option))[251])
+  end)
+
+  it("hands the payload over byte for byte to waitForEvent", function()
+    if not os.getenv("MUDLET_TEST_MODE") then
+      pending("waitForEvent needs MUDLET_TEST_MODE")
+      return
+    end
+    tempTimer(0, function()
+      feedTelnet("<T_IAC><T_SB>" .. string.char(option) .. "AB<00>\195\169<T_IAC><T_IAC><T_IAC><T_SE>")
+    end)
+    local name, kind, opt, data = waitForEvent("sysTelnetEvent", 2000)
+    assert.equals("sysTelnetEvent", name)
+    assert.equals(250, kind)
+    assert.equals(option, opt)
+    assert.equals("AB\0\195\169\255", data)
+  end)
+
+  it("hands a replayed subnegotiation over as the live one was", function()
+    if not os.getenv("MUDLET_TEST_MODE") then
+      pending("letting the replay timer run needs MUDLET_TEST_MODE")
+      return
+    end
+    local function bigEndian32(value)
+      return string.char(math.floor(value / 16777216) % 256, math.floor(value / 65536) % 256, math.floor(value / 256) % 256, value % 256)
+    end
+    local wire = "\255\250" .. string.char(option) .. "AB\0CD\255\255EF\255\240"
+    local replay = getMudletHomeDir() .. "/telnet-spec-subnegotiation-replay.dat"
+    local file = assert(io.open(replay, "wb"))
+    file:write(bigEndian32(0) .. bigEndian32(#wire) .. wire)
+    file:close()
+    local replayed
+    local handler = registerAnonymousEventHandler("sysTelnetEvent", function(_, kind, opt, payload)
+      if kind == 250 and opt == option then
+        replayed = payload
+      end
+    end)
+    finally(function()
+      killAnonymousEventHandler(handler)
+      os.remove(replay)
+    end)
+
+    assert.is_true(loadReplay(replay))
+    for _ = 1, 40 do
+      if replayed then
+        break
+      end
+      pumpEvents(50)
+    end
+    -- whether a replay is running is application-wide, so let this one run out
+    pumpEvents(200)
+    assert.equals("AB\0CD\255EF", replayed)
+  end)
+end)
+
 describe("Tests telnet option negotiation", function()
 
   local function feed(data)

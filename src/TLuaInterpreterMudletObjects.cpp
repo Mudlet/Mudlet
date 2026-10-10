@@ -1462,6 +1462,24 @@ static QString eventNumberText(const double number)
     return QString::number(number, 'g', 17);
 }
 
+// Text that would not come back from UTF-8 unchanged, or that holds a NUL, which
+// the text argument stops at, travels as bytes so a handler gets exactly what was raised.
+// The event name stays text: handlers are looked up by it.
+static std::pair<QString, int> eventStringArgument(lua_State* L, const int index, const bool eventName)
+{
+    if (eventName) {
+        return {QString::fromUtf8(lua_tostring(L, index)), ARGUMENT_TYPE_STRING};
+    }
+    size_t length = 0;
+    const char* text = lua_tolstring(L, index, &length);
+    const QByteArray bytes(text, static_cast<qsizetype>(length));
+    const QString utf8 = QString::fromUtf8(bytes);
+    if (bytes.contains('\0') || utf8.toUtf8() != bytes) {
+        return {QString::fromLatin1(bytes), ARGUMENT_TYPE_BYTES};
+    }
+    return {utf8, ARGUMENT_TYPE_STRING};
+}
+
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#raiseEvent
 int TLuaInterpreter::raiseEvent(lua_State* L)
 {
@@ -1479,11 +1497,13 @@ int TLuaInterpreter::raiseEvent(lua_State* L)
             event.mArgumentTypeList.prepend(ARGUMENT_TYPE_NUMBER);
             lua_pop(L, 1);
             break;
-        case LUA_TSTRING:
-            event.mArgumentList.prepend(lua_tostring(L, -1));
-            event.mArgumentTypeList.prepend(ARGUMENT_TYPE_STRING);
+        case LUA_TSTRING: {
+            const auto [text, type] = eventStringArgument(L, -1, i == 1);
+            event.mArgumentList.prepend(text);
+            event.mArgumentTypeList.prepend(type);
             lua_pop(L, 1);
             break;
+        }
         case LUA_TBOOLEAN:
             event.mArgumentList.prepend(QString::number(lua_toboolean(L, -1)));
             event.mArgumentTypeList.prepend(ARGUMENT_TYPE_BOOLEAN);
@@ -1716,10 +1736,12 @@ int TLuaInterpreter::raiseGlobalEvent(lua_State* L)
             event.mArgumentList.append(eventNumberText(lua_tonumber(L, i)));
             event.mArgumentTypeList.append(ARGUMENT_TYPE_NUMBER);
             break;
-        case LUA_TSTRING:
-            event.mArgumentList.append(lua_tostring(L, i));
-            event.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
+        case LUA_TSTRING: {
+            const auto [text, type] = eventStringArgument(L, i, i == 1);
+            event.mArgumentList.append(text);
+            event.mArgumentTypeList.append(type);
             break;
+        }
         case LUA_TBOOLEAN:
             event.mArgumentList.append(QString::number(lua_toboolean(L, i)));
             event.mArgumentTypeList.append(ARGUMENT_TYPE_BOOLEAN);

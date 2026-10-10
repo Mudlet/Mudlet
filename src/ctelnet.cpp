@@ -4372,9 +4372,15 @@ void cTelnet::processTelnetCommand(const std::string& telnetCommand)
             const auto type = static_cast<unsigned char>(data[1]);
             // Only access telnetCommand[2] if it exists
             const auto telnetOption = telnetCommand.size() > 2 ? static_cast<unsigned char>(data[2]) : 0;
-            QString msg = telnetCommand.c_str();
-            if (telnetCommand.size() >= 6) {
-                msg = msg.mid(3, telnetCommand.size() - 5);
+            // A subnegotiation can carry any bytes at all, so its payload (unescaped, without the
+            // IAC SB <option> and IAC SE framing) goes over byte for byte; other commands go whole
+            QByteArray payload;
+            if (type == static_cast<unsigned char>(TN_SB)) {
+                if (telnetCommand.size() >= 5) {
+                    payload = QByteArray(data + 3, static_cast<qsizetype>(telnetCommand.size() - 5));
+                }
+            } else {
+                payload = QByteArray(data, static_cast<qsizetype>(telnetCommand.size()));
             }
 
             TEvent event{};
@@ -4384,8 +4390,8 @@ void cTelnet::processTelnetCommand(const std::string& telnetCommand)
             event.mArgumentTypeList.append(ARGUMENT_TYPE_NUMBER);
             event.mArgumentList.append(QString::number(telnetOption));
             event.mArgumentTypeList.append(ARGUMENT_TYPE_NUMBER);
-            event.mArgumentList.append(msg);
-            event.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
+            event.mArgumentList.append(QString::fromLatin1(payload));
+            event.mArgumentTypeList.append(ARGUMENT_TYPE_BYTES);
             mpHost->raiseEvent(event);
         }
     }
@@ -5711,6 +5717,9 @@ void cTelnet::slot_processReplayChunk()
                     insb = false;
                 }
                 if (iac) {
+                    if (ch == TN_IAC) { // escaped TN_IAC, as the socket path unescapes it
+                        command.pop_back();
+                    }
                     iac = false;
                 } else if (ch == TN_IAC) {
                     iac = true;
