@@ -3309,10 +3309,12 @@ void mudlet::closeHost(const QString& name)
     // event loop - loading or closing another profile, a modal dialog, a
     // reconnect - after the profile's own script asked for the close: the
     // script is still running, and destroying the Host would lua_close() the
-    // state under it. Retried on a timer rather than immediately: the retry
-    // would otherwise land back in the same pump, spinning until the operation
-    // ends instead of letting it get there.
-    if (mapOperationRunning || pH->getLuaInterpreter()->luaOnStack()) {
+    // state under it. Likewise a Host::waitForProfileSave(), whose pump runs
+    // with the Host it waits on - and its caller - still on the stack. Retried
+    // on a timer rather than immediately: the retry would otherwise land back
+    // in the same pump, spinning until the operation ends instead of letting
+    // it get there.
+    if (mapOperationRunning || pH->getLuaInterpreter()->luaOnStack() || pH->waitingForProfileSave()) {
         if (mapOperationRunning) {
             if (!pH->mpMap->mapOperationAbortRequested()) {
                 qDebug().nospace().noquote() << "mudlet::closeHost(\"" << name << "\") INFO - a map operation is still running, so the profile will be closed once it has stopped.";

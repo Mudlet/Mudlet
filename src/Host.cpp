@@ -1123,9 +1123,10 @@ bool Host::resetProfile_phase1()
 void Host::resetProfile_phase2()
 {
     // A Lua API that spins a nested event loop delivers this while the script
-    // that asked for the reset is still running on the state closed below.
+    // that asked for the reset is still running on the state closed below, and
+    // a save wait while its caller still uses the units reset below.
     // A close that has come in meanwhile makes the reset moot.
-    if (mLuaInterpreter.luaOnStack()) {
+    if (mLuaInterpreter.luaOnStack() || waitingForProfileSave()) {
         QTimer::singleShot(50ms, this, [this]() {
             if (!mIsClosingDown) {
                 resetProfile_phase2();
@@ -1393,6 +1394,14 @@ void Host::waitForProfileSave()
     if (!currentlySavingProfile()) {
         return;
     }
+
+    ++mProfileSaveWaitDepth;
+    // A nested event loop too, so that the guards on a reset or close of this profile hold those off
+    mLuaInterpreter.enterNestedEventLoop();
+    const auto waitDepthGuard = qScopeGuard([this] {
+        mLuaInterpreter.leaveNestedEventLoop();
+        --mProfileSaveWaitDepth;
+    });
 
     // Only the notification below is on a clock - in wall-clock time, because a cap on
     // event loop passes is no wait at all on a fast machine (#9807) - and only because
