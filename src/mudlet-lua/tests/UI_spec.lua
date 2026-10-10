@@ -2471,6 +2471,90 @@ describe("Tests UI functions", function()
       assert.is_nil(BaseUI.settings.standingAside)
       assert.is_false(BaseUI.dormant())
     end)
+
+    -- A profile has one map widget, and a game's Client.GUI package that embeds a
+    -- mapper opens it before sysServerGuiInstalled has stood this UI aside
+    describe("when the map opens with map data in the profile", function()
+      local saved, createMapper
+
+      before_each(function()
+        saved = { container = BaseUI.container, map = BaseUI.map, placeholder = BaseUI.mapPlaceholder }
+        BaseUI.container = BaseUI.container or { hide = function() end, adjustBorder = function() end }
+        BaseUI.map, BaseUI.mapPlaceholder = nil, nil
+        BaseUI.settings.hidden, BaseUI.settings.standingAside = nil, nil
+        stub(BaseUI, "mapHasData", true)
+        stub(BaseUI, "layoutDock")
+        createMapper = stub(BaseUI, "createMapper")
+      end)
+
+      after_each(function()
+        BaseUI.mapHasData:revert()
+        BaseUI.layoutDock:revert()
+        BaseUI.createMapper:revert()
+        BaseUI.container, BaseUI.map, BaseUI.mapPlaceholder = saved.container, saved.map, saved.placeholder
+      end)
+
+      it("should not look again once the starter UI has been uninstalled", function()
+        local timer = stub(_G, "tempTimer")
+        -- busted leaves a stub in place when the spec that made it raises
+        local looked, lookError = pcall(BaseUI.checkMapData, "mapOpenEvent")
+        _G.tempTimer:revert()
+        assert.is_true(looked, tostring(lookError))
+        assert.stub(timer).was_called(1)
+        local lookAgain = timer.calls[1].vals[2]
+        local ui = BaseUI
+        _G.BaseUI = nil
+        local ok, err = pcall(lookAgain)
+        _G.BaseUI = ui
+        assert.is_true(ok, tostring(err))
+      end)
+
+      if not os.getenv("MUDLET_TEST_MODE") then
+        it("needs test mode", function()
+          pending("the map is taken on a timer, which only pumpEvents() runs")
+        end)
+        return
+      end
+
+      -- raised, not called, so the handlers are shown passing the event on; centerview()
+      -- raises sysMapAreaChanged at once, so a package loading its map raises it mid-install
+      for _, event in ipairs({ "mapOpenEvent", "sysMapAreaChanged", "sysMapDownloadEvent", "gmcp.Room.Info", "gmcp.room.info" }) do
+        it("should leave the map to a game interface that raises " .. event .. " while being installed", function()
+          raiseEvent(event)
+          BaseUI.standAside("sysServerGuiInstalled", "SomeGameUI")
+          pumpEvents(100)
+          assert.stub(createMapper).was_not_called()
+        end)
+
+        it("should still take the map on " .. event .. " when no game interface claims it", function()
+          raiseEvent(event)
+          pumpEvents(100)
+          assert.stub(createMapper).was_called(1)
+        end)
+      end
+    end)
+
+    -- the game's interface can be drawing on the profile's one map widget by the
+    -- time this UI stands aside holding it, and hiding an embedded mapper shrinks it
+    it("should leave the map widget to the game's own mapper when it stands aside holding the map", function()
+      local saved = { container = BaseUI.container, map = BaseUI.map }
+      local layoutDock = stub(BaseUI, "layoutDock")
+      local applied = stub(_G, "createMapper")
+      local dock = Geyser.Container:new({ name = "BaseUI_spec_dock", x = 0, y = 0, width = 400, height = 400 })
+      dock.adjustBorder = function() end
+      BaseUI.container = dock
+      BaseUI.map = Geyser.Mapper:new({ name = "BaseUI_spec_map", x = 0, y = 0, width = "100%", height = "100%" }, dock)
+      local game = Geyser.Mapper:new({ name = "BaseUI_spec_gameMap", x = 10, y = 10, width = 300, height = 200 })
+      local ok, err = pcall(BaseUI.standAside, "sysServerGuiInstalled", "SomeGameUI")
+      local last = applied.calls[#applied.calls]
+      pcall(game.delete, game)
+      pcall(dock.delete, dock)
+      _G.createMapper:revert()
+      layoutDock:revert()
+      BaseUI.container, BaseUI.map = saved.container, saved.map
+      assert.is_true(ok, tostring(err))
+      assert.are.same({ 10, 10, 300, 200 }, { last.vals[2], last.vals[3], last.vals[4], last.vals[5] })
+    end)
   end)
 
   describe("tempButtonToolbar and tempButton return values", function()
