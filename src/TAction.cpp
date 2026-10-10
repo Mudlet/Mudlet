@@ -191,7 +191,7 @@ void TAction::setName(const QString& name)
     if (name != mName) {
         setDataChanged();
         mName = name;
-        if (mpHost && mpHost->hasConsoleView()) {
+        if (mpHost) {
             mpHost->consoleFrontend()->renameActionToolBar(this, name);
         }
     }

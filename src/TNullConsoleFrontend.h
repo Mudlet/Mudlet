@@ -52,6 +52,9 @@ public:
 class TNullConsoleFrontend final : public TConsoleFrontend
 {
 public:
+    // Some callers hand a failure's message straight to Lua, so it has to say why.
+    static std::pair<bool, QString> noView() { return {false, qsl("the profile has no main window")}; }
+
     bool createLabel(const QString&, const QString&, int, int, int, int, bool, bool) override { return false; }
     std::pair<bool, QString> deleteLabel(const QString&) override { return noView(); }
     std::pair<bool, QString> setLabelStyleSheet(const QString&, const QString&) override { return noView(); }
@@ -219,9 +222,6 @@ public:
     const TMxpFrameFrontend& mxpFrames() const override { return mMxpFrames; }
 
 private:
-    // Some callers hand a failure's message straight to Lua, so it has to say why.
-    static std::pair<bool, QString> noView() { return {false, qsl("the profile has no main window")}; }
-
     TNullMxpFrameFrontend mMxpFrames;
 };
 

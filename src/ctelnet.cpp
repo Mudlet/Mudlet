@@ -5311,7 +5311,7 @@ void cTelnet::slot_timerPosting()
     postData();
     mMudData = "";
     mIsTimerPosting = false;
-    if (mpHost && mpHost->hasConsoleView()) {
+    if (mpHost) {
         mpHost->finalizeMainConsole();
     }
 }
@@ -5751,7 +5751,7 @@ void cTelnet::slot_processReplayChunk()
         gotRest(cleandata);
     }
 
-    if (mpHost && mpHost->hasConsoleView()) {
+    if (mpHost) {
         mpHost->finalizeMainConsole();
     }
     if (loadingReplay) {
@@ -6137,7 +6137,7 @@ Some data loss is likely - please mention this problem to the game admins.)",
         return;
     }
 
-    if (mpHost && mpHost->hasConsoleView()) {
+    if (mpHost) {
         mpHost->finalizeMainConsole();
     }
 
