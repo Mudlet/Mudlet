@@ -1281,6 +1281,24 @@ if not ttsSpeak then --check if ttsSpeak is defined, if not then Mudlet lacks TT
   end
 end
 
+-- one level deep, which covers the colour tables getConfig() hands back
+local function sameConfigValue(a, b)
+  if type(a) ~= "table" or type(b) ~= "table" then
+    return a == b
+  end
+  for k, v in pairs(a) do
+    if b[k] ~= v then
+      return false
+    end
+  end
+  for k, v in pairs(b) do
+    if a[k] ~= v then
+      return false
+    end
+  end
+  return true
+end
+
 local oldsetConfig = setConfig
 function setConfig(...)
   local args = {...}
@@ -1289,9 +1307,38 @@ function setConfig(...)
     return oldsetConfig(...)
   end
 
+  -- every key is tried, so one refusal - or a raised bad-argument error - does
+  -- not leave the rest unapplied
+  local failures, warnings, snapshotKeys = {}, {}, nil
   for k,v in pairs(args[1]) do
-    oldsetConfig(k, v)
+    local called, ok, message = pcall(oldsetConfig, k, v)
+    if not called then
+      ok, message = nil, ok
+    end
+    -- a snapshot key already at the value asked for needs nothing doing, so the
+    -- getConfig()-only keys in a getConfig() snapshot can be handed back; only
+    -- snapshot keys, as getConfig() also answers false for an unknown experiment
+    if not ok then
+      snapshotKeys = snapshotKeys or getConfig()
+      if snapshotKeys[k] ~= nil and sameConfigValue(getConfig(k), v) then
+        ok, message = true, nil
+      end
+    end
+    if not ok then
+      failures[#failures + 1] = string.format("%s: %s", tostring(k), tostring(message))
+    elseif message then
+      warnings[#warnings + 1] = string.format("%s: %s", tostring(k), message)
+    end
   end
+  if #failures > 0 then
+    table.sort(failures)
+    return nil, table.concat(failures, "; ")
+  end
+  if #warnings > 0 then
+    table.sort(warnings)
+    return true, table.concat(warnings, "; ")
+  end
+  return true
 end
 
 local oldgetConfig = getConfig

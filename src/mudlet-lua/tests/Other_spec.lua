@@ -1251,6 +1251,75 @@ describe("Tests Other.lua functions", function()
       assert.is_boolean(cfg.editorAutoComplete)
     end)
 
+
+    it("answers true from the table form when every key was applied", function()
+      snapshot("enableGMCP")
+      snapshot("enableMSDP")
+      local wantGMCP, wantMSDP = not getConfig("enableGMCP"), not getConfig("enableMSDP")
+      assert.is_true(setConfig({enableGMCP = wantGMCP, enableMSDP = wantMSDP}))
+      assert.equals(wantGMCP, getConfig("enableGMCP"))
+      assert.equals(wantMSDP, getConfig("enableMSDP"))
+      restore("enableGMCP")
+      restore("enableMSDP")
+    end)
+
+    it("names each refused key from the table form and still applies the rest", function()
+      snapshot("enableGMCP")
+      snapshot("mapSymbolFontScaling")
+      local wantGMCP = not getConfig("enableGMCP")
+      local ok, err = setConfig({enableGMCP = wantGMCP, mapSymbolFontScaling = 99, mudletSpecNoSuchKey = true})
+      assert.is_nil(ok)
+      assert.equals("mapSymbolFontScaling: mapSymbolFontScaling 99 is out of range, it must be between 0.50 and 2.00; "
+        .. "mudletSpecNoSuchKey: 'mudletSpecNoSuchKey' isn't a valid configuration option", err)
+      assert.equals(wantGMCP, getConfig("enableGMCP"), "a refused key stopped the others from being applied")
+      restore("enableGMCP")
+      restore("mapSymbolFontScaling")
+    end)
+
+    it("names a key of the wrong type from the table form instead of raising", function()
+      snapshot("enableGMCP")
+      local wantGMCP = not getConfig("enableGMCP")
+      local called, ok, err = pcall(setConfig, {enableGMCP = wantGMCP, enableMSDP = "yes"})
+      assert.is_true(called, "the table form raised: " .. tostring(ok))
+      assert.is_nil(ok)
+      assert.is_truthy(tostring(err):find("^enableMSDP: .*bad argument #2 type"), tostring(err))
+      assert.equals(wantGMCP, getConfig("enableGMCP"), "a raised error stopped the others from being applied")
+      restore("enableGMCP")
+    end)
+
+    it("hands back an applied key's warning from the table form", function()
+      snapshot("mapSymbolFont")
+      -- U+10FFFD has no glyph in any font, see the symbol font warning spec below
+      local roomId = createRoomID()
+      assert.is_true(addRoom(roomId))
+      assert.is_true(setRoomChar(roomId, "\244\143\191\189"))
+      local ok, warning = setConfig({mapSymbolFont = getConfig("mapSymbolFont")})
+      deleteRoom(roomId)
+      restore("mapSymbolFont")
+      assert.is_true(ok)
+      assert.is_truthy(tostring(warning):find("^mapSymbolFont: "), tostring(warning))
+    end)
+
+    it("answers true when handed back a getConfig() snapshot", function()
+      -- the snapshot holds showSentText as a boolean, which would turn "always" into "script"
+      local sentText = getConfig("showSentText", true)
+      finally(function()
+        setConfig("showSentText", sentText)
+      end)
+      local config = getConfig()
+      -- with a mapper open, setting show3dMapView to either value builds the
+      -- OpenGL view, after which a headless run never exits
+      config.show3dMapView = nil
+      local ok, err = setConfig(config)
+      assert.is_true(ok, tostring(err))
+    end)
+
+    it("names an unknown experiment from the table form", function()
+      local ok, err = setConfig({["experiment.mudletspec.nosuchthing"] = false})
+      assert.is_nil(ok)
+      assert.is_truthy(tostring(err):find("^experiment%.mudletspec%.nosuchthing: "), tostring(err))
+    end)
+
     it("round-trips every boolean configuration option", function()
       local settable = 0
       for key, value in pairs(getConfig()) do
