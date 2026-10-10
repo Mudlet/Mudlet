@@ -57,7 +57,8 @@ public:
 // The view a Host has while no real one is attached: before its console is made, after that has
 // gone, and in a run with no GUI. Labels, mini consoles, buffers and user windows made through it
 // get a model of their own, registered as a real view registers its widgets', so scripts can find
-// them, echo to them and delete them. Every other operation, on these or any other window, fails,
+// them, echo to them and delete them. What a real view would record of them as it moves, shows,
+// styles or titles them, this records too, so a later getter agrees. Every other operation fails,
 // has no value or does nothing; a close has nothing to refuse it.
 class TNullConsoleFrontend final : public TConsoleFrontend
 {
@@ -77,34 +78,34 @@ public:
 
     void createLabel(const QString& windowname, const QString& name, int x, int y, int width, int height, bool fillBackground, bool clickThrough) override;
     void deleteLabel(const QString& name) override;
-    std::pair<bool, QString> setLabelStyleSheet(const QString&, const QString&) override { return noView(); }
+    std::pair<bool, QString> setLabelStyleSheet(const QString& name, const QString& stylesheet) override;
     std::optional<QSize> getLabelSizeHint(const QString&) const override { return std::nullopt; }
-    std::pair<bool, QString> setLabelToolTip(const QString&, const QString&, double) override { return noView(); }
-    std::pair<bool, QString> setLabelCursor(const QString&, int) override { return noView(); }
-    std::pair<bool, QString> setLabelCustomCursor(const QString&, const QString&, int, int) override { return noView(); }
-    bool setLabelClickThrough(const QString&, bool) override { return false; }
-    bool setLabelLinkStyle(const QString&, const QString&, const QString&, bool) override { return false; }
-    bool resetLabelLinkStyle(const QString&) override { return false; }
-    bool clearLabelVisitedLinks(const QString&) override { return false; }
-    bool showLabel(const QString&) override { return false; }
-    bool hideLabel(const QString&) override { return false; }
-    bool resizeLabel(const QString&, int, int) override { return false; }
-    bool moveLabel(const QString&, int, int) override { return false; }
-    bool reparentLabel(const QString&, const QString&, int, int, bool) override { return false; }
+    std::pair<bool, QString> setLabelToolTip(const QString& name, const QString& text, double duration) override;
+    std::pair<bool, QString> setLabelCursor(const QString& name, int shape) override;
+    std::pair<bool, QString> setLabelCustomCursor(const QString& name, const QString& pixMapLocation, int hotX, int hotY) override;
+    bool setLabelClickThrough(const QString& name, bool) override { return labelModel(name) != nullptr; }
+    bool setLabelLinkStyle(const QString& name, const QString& linkColor, const QString& linkVisitedColor, bool underline) override;
+    bool resetLabelLinkStyle(const QString& name) override;
+    bool clearLabelVisitedLinks(const QString& name) override;
+    bool showLabel(const QString& name) override { return setLabelShown(name, true); }
+    bool hideLabel(const QString& name) override { return setLabelShown(name, false); }
+    bool resizeLabel(const QString& name, int width, int height) override;
+    bool moveLabel(const QString& name, int x, int y) override;
+    bool reparentLabel(const QString& windowname, const QString& name, int x, int y, bool show) override;
     bool setLabelText(const QString& name, const QString& text) override;
     std::pair<bool, QString> setLabelMovie(const QString&, const QString&) override { return noView(); }
-    bool setLabelBackgroundColor(const QString&, const QColor&) override { return false; }
-    std::optional<QColor> getLabelBackgroundColor(const QString&) const override { return std::nullopt; }
+    bool setLabelBackgroundColor(const QString& name, const QColor& color) override;
+    std::optional<QColor> getLabelBackgroundColor(const QString& name) const override;
     bool setLabelBackgroundImage(const QString&, const QString&) override { return false; }
     bool resetLabelBackgroundImage(const QString&) override { return false; }
-    bool setLabelSvgTint(const QString&, const QColor&) override { return false; }
-    bool resetLabelSvgTint(const QString&) override { return false; }
-    bool setLabelSvgRotation(const QString&, double) override { return false; }
-    bool resetLabelSvgRotation(const QString&) override { return false; }
-    bool setLabelSvgShear(const QString&, double, double) override { return false; }
-    bool resetLabelSvgShear(const QString&) override { return false; }
-    bool resetLabelSvgTransform(const QString&) override { return false; }
-    bool setLabelFont(const QString&, const QFont&) override { return false; }
+    bool setLabelSvgTint(const QString& name, const QColor& color) override;
+    bool resetLabelSvgTint(const QString& name) override { return setLabelSvgTint(name, QColor()); }
+    bool setLabelSvgRotation(const QString& name, double angle) override;
+    bool resetLabelSvgRotation(const QString& name) override { return setLabelSvgRotation(name, 0.0); }
+    bool setLabelSvgShear(const QString& name, double shearX, double shearY) override;
+    bool resetLabelSvgShear(const QString& name) override { return setLabelSvgShear(name, 0.0, 0.0); }
+    bool resetLabelSvgTransform(const QString& name) override { return setLabelSvgRotation(name, 0.0) && setLabelSvgShear(name, 0.0, 0.0); }
+    bool setLabelFont(const QString& name, const QFont& font) override;
     std::optional<bool> labelShowsMovie(const QString&) const override { return std::nullopt; }
     bool startLabelMovie(const QString&) override { return false; }
     bool pauseLabelMovie(const QString&) override { return false; }
@@ -147,14 +148,14 @@ public:
     void createBuffer(const QString& name) override;
     void addMiniConsole(const QString& windowname, const QString& name, int x, int y, int width, int height) override;
     void deleteMiniConsole(const QString& name) override;
-    bool showSubConsole(const QString&) override { return false; }
-    bool hideSubConsole(const QString&) override { return false; }
-    bool resizeSubConsole(const QString&, int, int) override { return false; }
-    bool moveSubConsole(const QString&, int, int) override { return false; }
+    bool showSubConsole(const QString& name) override { return setSubConsoleShown(name, true); }
+    bool hideSubConsole(const QString& name) override { return setSubConsoleShown(name, false); }
+    bool resizeSubConsole(const QString& name, int width, int height) override;
+    bool moveSubConsole(const QString& name, int x, int y) override;
     void closeSubConsole(const QString& name) override;
     void openUserWindow(const QString& name, bool loadLayout, bool autoDock, const QString& area) override;
-    std::pair<bool, QString> setUserWindowStyleSheet(const QString&, const QString&) override { return noView(); }
-    std::pair<bool, QString> setUserWindowTitle(const QString&, const QString&) override { return noView(); }
+    std::pair<bool, QString> setUserWindowStyleSheet(const QString& name, const QString& userWindowStyleSheet) override;
+    std::pair<bool, QString> setUserWindowTitle(const QString& name, const QString& text) override;
     bool createScrollBox(const QString&, const QString&, int, int, int, int) override { return false; }
     std::pair<bool, QString> deleteScrollBox(const QString&) override { return noView(); }
     bool showPlainWindow(const QString&) override { return false; }
@@ -171,23 +172,24 @@ public:
     std::optional<std::pair<bool, QString>> setWindowFontFamily(const QString&, const QString&, QFont::Weight) override { return std::nullopt; }
     bool setWindowFontSize(const QString&, int) override { return false; }
     std::optional<QSize> consoleFontSize(const QString&) const override { return std::nullopt; }
+    std::optional<int> consoleColumnWidth(const QString&) const override { return std::nullopt; }
     void setConsoleBgColor(int, int, int, int) override {}
     bool setConsoleBackgroundImage(const QString&, int) override { return false; }
     bool resetConsoleBackgroundImage() override { return false; }
     bool setWindowBackgroundImage(const QString&, int) override { return false; }
     bool resetWindowBackgroundImage() override { return false; }
-    void setBorderColor(const QColor&) override {}
+    void setBorderColor(const QColor& color) override;
     void changeColors() override {}
     void setProfileStyleSheet(const QString&) override {}
     void applyBorders() override {}
     QFont displayFont() const override { return QFont(); }
     void setFont(const QFont&) override {}
     void setFontSize(int) override {}
-    bool setSubConsoleBackgroundColor(const QString&, const QColor&) override { return false; }
+    bool setSubConsoleBackgroundColor(const QString& name, const QColor& color) override;
     bool setSubConsoleBackgroundImage(const QString&, const QString&, int) override { return false; }
     bool resetSubConsoleBackgroundImage(const QString&) override { return false; }
-    bool setSubConsoleCommandBackgroundColor(const QString&, const QColor&) override { return false; }
-    bool setSubConsoleCommandForegroundColor(const QString&, const QColor&) override { return false; }
+    bool setSubConsoleCommandBackgroundColor(const QString& name, const QColor& color) override;
+    bool setSubConsoleCommandForegroundColor(const QString& name, const QColor& color) override;
     void changeSubConsoleColors(const QString&) override {}
     std::pair<bool, QString> createMapper(const QString&, int, int, int, int) override { return noView(); }
     void createMapperDock(const QString&, const QString&) override {}
@@ -244,15 +246,19 @@ public:
 private:
     // A window made inside a user window goes with it, as a real one is its dock's child widget, though
     // out of the registry at once rather than when deferred deletes run.
+    // shown is the window's own flag, as QWidget::isHidden() is a widget's; what scripts read is also
+    // false while the user window holding it is hidden.
     struct SubConsole
     {
         std::unique_ptr<TConsoleModel> pModel;
         QString userWindow;
+        bool shown = false;
     };
     struct Label
     {
         std::unique_ptr<TLabelModel> pModel;
         QString userWindow;
+        bool shown = true;
     };
 
     TConsoleModel& addSubConsole(const QString& name, TWindowRegistry::SubConsoleKind kind, const QString& windowname);
@@ -260,6 +266,11 @@ private:
     void removeLabel(const QString& name);
     void queueRelease();
     QString userWindowOrMain(const QString& windowname) const;
+    TLabelModel* labelModel(const QString& name) const;
+    TConsoleModel* subConsoleModel(const QString& name) const;
+    bool setLabelShown(const QString& name, bool shown);
+    bool setSubConsoleShown(const QString& name, bool shown);
+    void reportVisibility(const QString& name);
 
     Host* mpHost = nullptr;
     TNullMxpFrameFrontend mMxpFrames;

@@ -3061,9 +3061,6 @@ int TLuaInterpreter::setBorderColor(lua_State* L)
     const int luaGreen = getVerifiedInt(L, __func__, 2, "green");
     const int luaBlue = getVerifiedInt(L, __func__, 3, "blue");
     const Host& host = getHostFromLua(L);
-    if (!host.hasConsoleView()) {
-        return warnArgumentValue(L, __func__, no_main_window_value);
-    }
     host.consoleFrontend()->setBorderColor(QColor(luaRed, luaGreen, luaBlue));
     return 0;
 }
@@ -3331,9 +3328,6 @@ int TLuaInterpreter::setFont(lua_State* L)
     // called "main" - so a name no console answers to is only then tried as a
     // label:
     const QString targetName{windowName};
-    if (!host.hasConsoleView()) {
-        return windowNotFound(L, targetName);
-    }
     if (const auto result = host.consoleFrontend()->setWindowFontFamily(targetName, effectiveFontName, fontWeight)) {
         if (!result->first) {
             return warnArgumentValue(L, __func__, result->second);
@@ -3410,9 +3404,6 @@ int TLuaInterpreter::setLabelToolTip(lua_State* L)
 
     const Host& host = getHostFromLua(L);
 
-    if (!host.hasConsoleView()) {
-        return warnArgumentValue(L, __func__, no_main_window_value);
-    }
     if (auto [success, message] = host.consoleFrontend()->setLabelToolTip(labelName, labelToolTip, duration); !success) {
         return warnArgumentValue(L, __func__, message);
     }
@@ -3484,9 +3475,6 @@ int TLuaInterpreter::setLabelStyleSheet(lua_State* L)
     const QString stylesheet{lua_tostring(L, 2)};
     const Host& host = getHostFromLua(L);
 
-    if (!host.hasConsoleView()) {
-        return warnArgumentValue(L, __func__, no_main_window_value);
-    }
     if (auto [success, message] = host.consoleFrontend()->setLabelStyleSheet(labelName, stylesheet); !success) {
         return warnArgumentValue(L, __func__, message);
     }
@@ -3661,9 +3649,6 @@ int TLuaInterpreter::setLabelCursor(lua_State* L)
     const QString labelName{lua_tostring(L, 1)};
     const Host& host = getHostFromLua(L);
 
-    if (!host.hasConsoleView()) {
-        return warnArgumentValue(L, __func__, no_main_window_value);
-    }
     if (auto [success, message] = host.consoleFrontend()->setLabelCursor(labelName, labelCursor); !success) {
         return warnArgumentValue(L, __func__, message);
     }
@@ -3691,9 +3676,6 @@ int TLuaInterpreter::setLabelCustomCursor(lua_State* L)
 
     const Host& host = getHostFromLua(L);
 
-    if (!host.hasConsoleView()) {
-        return warnArgumentValue(L, __func__, no_main_window_value);
-    }
     if (auto [success, message] = host.consoleFrontend()->setLabelCustomCursor(labelName, pixmapLocation, hotX, hotY); !success) {
         return warnArgumentValue(L, __func__, message);
     }
@@ -4137,9 +4119,6 @@ int TLuaInterpreter::setUserWindowTitle(lua_State* L)
     }
 
     const Host& host = getHostFromLua(L);
-    if (!host.hasConsoleView()) {
-        return warnArgumentValue(L, __func__, no_main_window_value);
-    }
     if (auto [success, message] = host.consoleFrontend()->setUserWindowTitle(name, title); !success) {
         return warnArgumentValue(L, __func__, message);
     }
@@ -4153,10 +4132,6 @@ int TLuaInterpreter::getUserWindowTitle(lua_State* L)
 {
     const QString name = getVerifiedString(L, __func__, 1, "name");
     const Host& host = getHostFromLua(L);
-
-    if (!host.hasConsoleView()) {
-        return warnArgumentValue(L, __func__, no_main_window_value);
-    }
 
     auto [success, result] = host.userWindowTitle(name);
     if (!success) {
@@ -4177,9 +4152,6 @@ int TLuaInterpreter::setUserWindowStyleSheet(lua_State* L)
     const QString userWindowStyleSheet{lua_tostring(L, 2)};
     const Host& host = getHostFromLua(L);
 
-    if (!host.hasConsoleView()) {
-        return warnArgumentValue(L, __func__, no_main_window_value);
-    }
     if (auto [success, message] = host.consoleFrontend()->setUserWindowStyleSheet(userWindowName, userWindowStyleSheet); !success) {
         return warnArgumentValue(L, __func__, message);
     }

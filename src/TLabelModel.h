@@ -52,6 +52,10 @@ struct TLabelModel
     void setEnter(const int func);
     void setLeave(const int func);
 
+    // What TLabel::setBackgroundColor() restyles a label with: the sheet with its background-color
+    // declarations given the colour, or the colour's appended.
+    static QString styleSheetWithBackgroundColor(const QString& styleSheet, const QColor& color);
+
     // A QPointer because Host and view are torn down in either order: quitting
     // destroys every Host before the labels' deferred deletes run.
     QPointer<Host> mpHost;

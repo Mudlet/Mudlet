@@ -5563,9 +5563,6 @@ bool Host::moveWindow(const QString& name, int x1, int y1)
 
 std::pair<bool, QString> Host::setWindow(const QString& windowname, const QString& name, int x1, int y1, bool show)
 {
-    if (!hasConsoleView()) {
-        return TNullConsoleFrontend::noView();
-    }
     //checks - for reasons why the indicated thing might not be moved to the indicated destination
     if (mWindowRegistry.hasDockWidget(name)) {
         return {false, qsl("element '%1' is the base of a floating/dockable user window and may not be moved").arg(name)};
@@ -5588,6 +5585,10 @@ std::pair<bool, QString> Host::setWindow(const QString& windowname, const QStrin
     if (mWindowRegistry.hasLabel(name)) {
         if (consoleFrontend()->reparentLabel(windowname, name, x1, y1, show)) {
             return {true, QString()};
+        }
+        if (!hasConsoleView()) {
+            // A detached view's, which only that view can move
+            return TNullConsoleFrontend::noView();
         }
         return {false, qsl("element '%1' not found").arg(name)};
     }
@@ -5691,10 +5692,6 @@ bool Host::resetCmdLineAction(const QString& name)
 
 bool Host::setLabelClickCallback(const QString& name, const int func)
 {
-    if (!hasConsoleView()) {
-        return false;
-    }
-
     auto* pModel = mWindowRegistry.labelModel(name);
     if (pModel) {
         pModel->setClick(func);
@@ -5705,10 +5702,6 @@ bool Host::setLabelClickCallback(const QString& name, const int func)
 
 bool Host::setLabelDoubleClickCallback(const QString& name, const int func)
 {
-    if (!hasConsoleView()) {
-        return false;
-    }
-
     auto* pModel = mWindowRegistry.labelModel(name);
     if (pModel) {
         pModel->setDoubleClick(func);
@@ -5719,10 +5712,6 @@ bool Host::setLabelDoubleClickCallback(const QString& name, const int func)
 
 bool Host::setLabelReleaseCallback(const QString& name, const int func)
 {
-    if (!hasConsoleView()) {
-        return false;
-    }
-
     auto* pModel = mWindowRegistry.labelModel(name);
     if (pModel) {
         pModel->setRelease(func);
@@ -5733,10 +5722,6 @@ bool Host::setLabelReleaseCallback(const QString& name, const int func)
 
 bool Host::setLabelMoveCallback(const QString& name, const int func)
 {
-    if (!hasConsoleView()) {
-        return false;
-    }
-
     auto* pModel = mWindowRegistry.labelModel(name);
     if (pModel) {
         pModel->setMove(func);
@@ -5747,10 +5732,6 @@ bool Host::setLabelMoveCallback(const QString& name, const int func)
 
 bool Host::setLabelWheelCallback(const QString& name, const int func)
 {
-    if (!hasConsoleView()) {
-        return false;
-    }
-
     auto* pModel = mWindowRegistry.labelModel(name);
     if (pModel) {
         pModel->setWheel(func);
@@ -5761,10 +5742,6 @@ bool Host::setLabelWheelCallback(const QString& name, const int func)
 
 bool Host::setLabelOnEnter(const QString& name, const int func)
 {
-    if (!hasConsoleView()) {
-        return false;
-    }
-
     auto* pModel = mWindowRegistry.labelModel(name);
     if (pModel) {
         pModel->setEnter(func);
@@ -5775,10 +5752,6 @@ bool Host::setLabelOnEnter(const QString& name, const int func)
 
 bool Host::setLabelOnLeave(const QString& name, const int func)
 {
-    if (!hasConsoleView()) {
-        return false;
-    }
-
     auto* pModel = mWindowRegistry.labelModel(name);
     if (pModel) {
         pModel->setLeave(func);
@@ -5789,10 +5762,6 @@ bool Host::setLabelOnLeave(const QString& name, const int func)
 
 std::pair<bool, QString> Host::setMovie(const QString& name, const QString& moviePath)
 {
-    if (!hasConsoleView()) {
-        return TNullConsoleFrontend::noView();
-    }
-
     if (!mWindowRegistry.hasLabel(name)) {
         return {false, qsl("label '%1' does not exist").arg(name)};
     }
@@ -5838,10 +5807,6 @@ bool Host::setBackgroundColor(const QString& name, int r, int g, int b, int alph
 
 std::optional<QColor> Host::getBackgroundColor(const QString& name) const
 {
-    if (!hasConsoleView()) {
-        return {};
-    }
-
     if (auto pModel = mWindowRegistry.subConsoleModel(name)) {
         return {pModel->mBgColor};
     }
@@ -6185,9 +6150,6 @@ std::optional<QString> Host::windowType(const QString& name) const
 
 std::optional<QString> Host::labelStyleSheet(const QString& name) const
 {
-    if (!hasConsoleView()) {
-        return {};
-    }
     if (const TLabelModel* pLabel = mWindowRegistry.labelModel(name)) {
         return pLabel->mStyleSheet;
     }
@@ -6196,9 +6158,6 @@ std::optional<QString> Host::labelStyleSheet(const QString& name) const
 
 std::optional<QString> Host::labelToolTip(const QString& name) const
 {
-    if (!hasConsoleView()) {
-        return {};
-    }
     if (const TLabelModel* pLabel = mWindowRegistry.labelModel(name)) {
         return pLabel->mToolTip;
     }
@@ -6207,9 +6166,6 @@ std::optional<QString> Host::labelToolTip(const QString& name) const
 
 std::optional<QFont> Host::labelFont(const QString& name) const
 {
-    if (!hasConsoleView()) {
-        return {};
-    }
     if (const TLabelModel* pLabel = mWindowRegistry.labelModel(name)) {
         return pLabel->mFont;
     }
@@ -6246,9 +6202,6 @@ std::pair<bool, QString> Host::userWindowTitle(const QString& name) const
 
 std::optional<QString> Host::userWindowStyleSheet(const QString& name) const
 {
-    if (!hasConsoleView()) {
-        return {};
-    }
     return mWindowRegistry.userWindowStyleSheet(name);
 }
 
@@ -6405,9 +6358,6 @@ std::optional<QFont> Host::textBoxFont(const QString& name) const
 
 std::optional<QColor> Host::borderColor() const
 {
-    if (!hasConsoleView()) {
-        return {};
-    }
     return {mpMainConsoleModel->mBorderColor};
 }
 
@@ -6430,10 +6380,6 @@ std::optional<QSize> Host::userWindowSize(const QString& name) const
 // last reported (see TMainConsole::reportVisibility()), so this needs no widget.
 std::optional<bool> Host::windowVisible(const QString& name) const
 {
-    if (!hasConsoleView()) {
-        return {};
-    }
-
     if (name.isEmpty() || name == QLatin1String("main")) {
         // only the tab machinery hides the main console, and that is the hiding
         // this function looks past
