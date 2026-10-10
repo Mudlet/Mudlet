@@ -1520,6 +1520,8 @@ void GMCPAuthenticator::readStoredSignInEntry(std::function<void(bool success, S
                              }
                              if (tokenSuccess) {
                                  entry.token = std::move(tokenValue);
+                                 // The store answered, so a failure after this is news again
+                                 mWarnedStoreUnreadable = false;
                              } else {
                                  entry.tokenUnreadable = true;
                                  reportStoreUnreadable(qsl("could not read the saved token; using the stored sign-in as a resume hint only:"), tokenError);

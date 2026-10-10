@@ -2786,7 +2786,7 @@ private slots:
 
     // A store that can't be asked fails every read, and the record of a current sign-in is read from the
     // profile, so the token's read is the one that fails on each connect
-    void testAStoreThatCannotBeReadWarnsOncePerSession()
+    void testAStoreThatCannotBeReadWarnsOnceUntilItAnswers()
     {
         Host* host = connectAndNegotiate();
         QVERIFY(host);
@@ -2806,6 +2806,22 @@ private slots:
             QJsonObject sent;
             QVERIFY2(waitForClientGmcp(qsl("Char.Login.Credentials"), sent), "client did not resume the saved provider");
         }
+
+        // A read that works makes the next failure news again
+        QVERIFY(QDir(tokenPath).removeRecursively());
+        QVERIFY(CredentialManager::storeCredential(host->getName(), qsl("reconnect-token"), qsl("readable-again")));
+        mpServer->clearReceived();
+        mpServer->sendGmcp(qsl("Char.Login.Default {\"version\": 2, \"type\": [\"oauth\"]}"));
+        QJsonObject replayed;
+        QVERIFY2(waitForClientGmcp(qsl("Char.Login.Reconnect"), replayed), "client did not replay the token once it could be read");
+
+        QVERIFY(CredentialManager::removeCredential(host->getName(), qsl("reconnect-token")));
+        QVERIFY(QDir().mkpath(tokenPath));
+        QTest::ignoreMessage(QtWarningMsg, warning);
+        mpServer->clearReceived();
+        mpServer->sendGmcp(qsl("Char.Login.Default {\"version\": 2, \"type\": [\"oauth\"]}"));
+        QJsonObject resumed;
+        QVERIFY2(waitForClientGmcp(qsl("Char.Login.Credentials"), resumed), "client did not resume the saved provider after the store failed again");
     }
 
     void testASignInWithNothingStoredDoesNotWarn_data()

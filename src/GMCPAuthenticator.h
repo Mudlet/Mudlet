@@ -109,7 +109,7 @@ private:
     using StoreReadDone = std::function<void(bool success, QString value, const QString& errorMessage)>;
     // Reads one credential key; what mStoreReader does unless a test replaces it.
     void readStoreKey(const QString& key, StoreReadDone done);
-    // Warns the first time per session, then logs at debug level; see mWarnedStoreUnreadable.
+    // Warns once until the store next answers, then logs at debug level; see mWarnedStoreUnreadable.
     void reportStoreUnreadable(const QString& what, const QString& error);
 
 public:
@@ -260,7 +260,7 @@ private:
     // after that could replay the dead token.
     bool mReconnectRejected = false;
     // A store that cannot be asked at all - no Secret Service, a disabled wallet - fails every read, so
-    // its warning is given once per session rather than on every connect.
+    // its warning is given once rather than on every connect, and again only after a read has worked.
     bool mWarnedStoreUnreadable = false;
     // Incremented on every per-connection auth reset - each Char.Login.Default, and each socket connect
     // or disconnect. The asynchronous reconnect-token keychain read captures the value current when it

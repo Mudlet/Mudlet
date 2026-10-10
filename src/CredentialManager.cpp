@@ -1615,14 +1615,20 @@ QString CredentialManager::retrieveCredentialFromFile(const QString& profileName
 
     QString encrypted = QString::fromUtf8(file.readAll());
     const bool readFailed = file.error() != QFileDevice::NoError;
+    const QString readError = file.errorString();
     file.close();
 
-    if (encrypted.isEmpty()) {
-        qWarning() << "CredentialManager: Retrieved empty encrypted data from file:" << filePath;
-        // An empty file is how "no password" is written; one that failed to read is not that
-        if (readFailed && unreadable) {
+    // An empty file is how "no password" is written; one that failed to read is not that
+    if (readFailed) {
+        qWarning() << "CredentialManager: Failed to read the encrypted credential file:" << filePath << "Error:" << readError;
+        if (unreadable) {
             *unreadable = true;
         }
+        if (encrypted.isEmpty()) {
+            return QString();
+        }
+    } else if (encrypted.isEmpty()) {
+        qWarning() << "CredentialManager: Retrieved empty encrypted data from file:" << filePath;
         return QString();
     }
 
