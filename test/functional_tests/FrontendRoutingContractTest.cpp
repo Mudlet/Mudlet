@@ -265,17 +265,27 @@ setBorderBottom(5)
         TConsoleModelNotifier& notifier = mpHost->mainConsoleModel().mNotifier;
         QSignalSpy newLines(&notifier, &TConsoleModelNotifier::newLinesWritten);
         QSignalSpy changedLines(&notifier, &TConsoleModelNotifier::linesChanged);
+        // One action at a time, so a signal from one cannot hide another that sent none
+        const auto runAlone = [&](const QString& chunk) {
+            newLines.clear();
+            changedLines.clear();
+            return runLua(chunk);
+        };
+        const auto cues = [&] {
+            return qsl("new lines %1, changed lines %2").arg(newLines.size()).arg(changedLines.size());
+        };
 
-        const QString result = runLua(qsl(R"lua(
-echo("routed main text\n")
-insertText("inserted ")
+        QCOMPARE(runAlone(qsl(R"lua(echo("routed main text\n"))lua")), qsl("ok"));
+        QCOMPARE(cues(), qsl("new lines 1, changed lines 0"));
+        QCOMPARE(runAlone(qsl(R"lua(insertText("inserted "))lua")), qsl("ok"));
+        QCOMPARE(cues(), qsl("new lines 0, changed lines 1"));
+        QCOMPARE(runAlone(qsl(R"lua(
 assert(selectString("routed main", 1) > -1, "the echoed text is not in the main console")
 setFgColor(255, 0, 0)
-)lua"));
-        QCOMPARE(result, qsl("ok"));
+)lua")),
+                 qsl("ok"));
+        QCOMPARE(cues(), qsl("new lines 0, changed lines 1"));
 
-        QVERIFY2(!newLines.isEmpty(), "echo() did not tell the main console's model it has new lines.");
-        QVERIFY2(!changedLines.isEmpty(), "Recolouring a selection did not tell the main console's model which lines changed.");
         // A view repaints from the model's signals; a direct cue as well would draw the same text twice
         QCOMPARE(mpRecorder->mCalls.join(qsl("; ")), QString());
     }
