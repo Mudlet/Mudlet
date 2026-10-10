@@ -480,6 +480,9 @@ Host::Host(int port, const QString& hostname, const QString& login, const QStrin
         if (mIsClosingDown) {
             return;
         }
+        if (mServerWrapFlushPaused) {
+            return;
+        }
         // Mimic Host::printOnDisplay() so that trigger-context
         // functions behave the same as for any other committed line:
         mpMainConsoleModel->mTriggerEngineMode = true;
@@ -568,6 +571,25 @@ bool Host::requestClose()
     // This time this will succeed as mEnableClose is set:
     consoleFrontend()->requestClose();
     return true;
+}
+
+void Host::pauseServerWrapFlush()
+{
+    mServerWrapFlushPaused = true;
+    mServerWrapFlushTimer.stop();
+}
+
+void Host::resumeServerWrapFlush()
+{
+    mServerWrapFlushPaused = false;
+    if (mpMainConsoleModel->buffer.holdsServerWrapLine()) {
+        mServerWrapFlushTimer.start();
+    }
+}
+
+bool Host::serverWrapLineHeldForClose() const
+{
+    return mServerWrapFlushPaused && mpMainConsoleModel->buffer.holdsServerWrapLine();
 }
 
 void Host::closeChildren()
