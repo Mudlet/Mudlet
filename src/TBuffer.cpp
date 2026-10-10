@@ -2354,9 +2354,11 @@ void TBuffer::commitLineData(QString line, std::vector<TChar> chars, const char 
         mpHost->runTriggers(lineIndex);
 #ifndef QT_NO_DEBUG
         // A write bypassing materialisePreTriggerPassLine() fails silently (color triggers match the
-        // recolored text), so catch it here:
-        if (!mPreTriggerPassSnapshotTaken && mPreTriggerPassLineNumber == lineIndex && lineIndex < static_cast<int>(buffer.size())) {
-            Q_ASSERT_X(colorFingerprint(buffer[lineIndex]) == committedColors, "TBuffer::commitLineData", "a trigger recolored the line without going through materialisePreTriggerPassLine()");
+        // recolored text), so catch it here, wherever earlier triggers moved the line to:
+        if (!mPreTriggerPassSnapshotTaken && mPreTriggerPassLineNumber >= 0 && mPreTriggerPassLineNumber < static_cast<int>(buffer.size())) {
+            Q_ASSERT_X(colorFingerprint(buffer[mPreTriggerPassLineNumber]) == committedColors,
+                       "TBuffer::commitLineData",
+                       "a trigger recolored the line without going through materialisePreTriggerPassLine()");
         }
 #endif
         passLineAfterTriggers = (mPreTriggerPassLineNumber >= 0) ? mPreTriggerPassLineNumber : lineIndex;
