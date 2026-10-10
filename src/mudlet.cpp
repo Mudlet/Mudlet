@@ -45,7 +45,7 @@
 #include "TEvent.h"
 #include "TFeatureCallout.h"
 #include "TKey.h"
-#include "TLabel.h"
+#include "TLabelModel.h"
 #include "TMainConsole.h"
 #include "TMap.h"
 #ifdef INCLUDE_MCPSERVER
@@ -102,7 +102,6 @@
 #include <QShortcut>
 #include <QSplitter>
 #include <QStyleFactory>
-#include <QSvgRenderer>
 #include <QStyleHints>
 #include <QTableWidget>
 #include <QTextStream>
@@ -4384,23 +4383,7 @@ QString mudlet::getExistingDirectory(const QString& title, const QString& locati
 
 std::optional<QSize> mudlet::getImageSize(const QString& imageLocation)
 {
-    // QImage reads an SVG only where the qsvg image plugin is deployed, so the
-    // document's own reader answers first; anything it cannot read - a raster
-    // under a .svg name included - falls through to QImage
-    if (TLabel::svgCandidate(imageLocation)) {
-        QSvgRenderer renderer;
-        if (TLabel::loadSvg(renderer, imageLocation) && !renderer.defaultSize().isEmpty()) {
-            return renderer.defaultSize();
-        }
-    }
-
-    const QImage image(imageLocation);
-
-    if (image.isNull()) {
-        return {};
-    }
-
-    return image.size();
+    return TLabelModel::imageSize(imageLocation);
 }
 
 Host* mudlet::getActiveHost()
