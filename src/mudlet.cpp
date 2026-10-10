@@ -6361,7 +6361,7 @@ QString mudlet::findMatchingProfile(const QString& host, int port)
     for (const auto& profileName : std::as_const(profileNames)) {
         QString profileHost = MudletApp::readProfileData(profileName, qsl("url"));
         QString profilePort = MudletApp::readProfileData(profileName, qsl("port"));
-        // A catalog game that has been played has these files only if its details were edited
+        // A catalog game's folder can lack either file, as showing the game in the connection dialog writes neither
         if (auto it = TGameDetails::findGame(profileName); it != TGameDetails::scmDefaultGames.end() && QFileInfo::exists(MudletApp::getMudletPath(enums::profileHomePath, profileName))) {
             if (profileHost.isEmpty()) {
                 profileHost = (*it).hostUrl;
@@ -7383,7 +7383,10 @@ Host* mudlet::loadProfile(const QString& profile_name, const bool playOnline, co
     if (it != TGameDetails::scmDefaultGames.end()) {
         pHost->setUrl((*it).hostUrl);
         pHost->setPort((*it).port);
-        pHost->mSslTsl = (*it).tlsEnabled;
+        // A saved Secure choice is the player's own, which the connection dialog keeps over the catalog's too
+        if (MudletApp::readProfileData(profile_name, qsl("ssl_tsl")).isEmpty()) {
+            pHost->mSslTsl = (*it).tlsEnabled;
+        }
     }
 
     const QString folder = MudletApp::getMudletPath(enums::profileXmlFilesPath, profile_name);

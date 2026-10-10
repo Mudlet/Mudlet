@@ -130,7 +130,7 @@ private:
     };
     CopiedProfileData captureProfileData() const;
     void saveDefaultProfileCopy(const QString& profileName, const CopiedProfileData& data, const QString& oldPassword);
-    void writeDetailsTheCopyLacks(const QString& profileName, const CopiedProfileData& data);
+    void writeCatalogDetailsTheFolderLacks(const QString& profileName, const QString& catalogName);
     bool hasCustomIcon(const QString&) const;
     void setProfileIcon() const;
     void loadCustomProfile(const QString&) const;
