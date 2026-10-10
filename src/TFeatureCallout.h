@@ -24,6 +24,9 @@
 #include <QSet>
 #include <QWidget>
 
+class QAction;
+class QMenuBar;
+
 // A small dismissible balloon anchored to another widget, used to point out
 // a newly added part of the interface without taking over the screen.
 //
@@ -37,9 +40,13 @@ class TFeatureCallout : public QWidget
     Q_OBJECT
 
 public:
-    TFeatureCallout(const QString& featureId, QWidget* pAnchor, const QString& title, const QString& body);
+    TFeatureCallout(const QString& featureId, QWidget* pAnchor, const QString& title, const QString& body, QAction* pAnchorMenu = nullptr);
 
     static void maybeShow(const QString& featureId, QWidget* pAnchor, const QString& title, const QString& body);
+    // Points at one menu's title in a menu bar rather than at the whole bar
+    static void maybeShow(const QString& featureId, QMenuBar* pMenuBar, QAction* pMenu, const QString& title, const QString& body);
+    // For when the player reaches the feature some other way than the anchor
+    static void dismiss(const QString& featureId);
 
     void showAnchored();
 
@@ -55,12 +62,15 @@ protected:
     bool eventFilter(QObject* watched, QEvent* event) override;
 
 private:
+    static void maybeShowImpl(const QString& featureId, QWidget* pAnchor, QAction* pAnchorMenu, const QString& title, const QString& body);
+    QRect anchorRect() const;
     void place();
     void reposition();
     void markDismissed();
 
     QString mFeatureId;
     QPointer<QWidget> mpAnchor;
+    QPointer<QAction> mpAnchorMenu;
     // Read out to screen readers the first time the balloon appears
     QString mAnnouncement;
     // Horizontal position of the arrow tip within the balloon, kept in sync

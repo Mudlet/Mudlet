@@ -18,6 +18,7 @@
  ***************************************************************************/
 
 #include <QCheckBox>
+#include <QMenuBar>
 #include <QPushButton>
 #include <QtTest/QtTest>
 
@@ -220,6 +221,45 @@ private slots:
         QTest::mouseClick(gotItButton, Qt::LeftButton);
 
         QVERIFY2(dismissed(), "clicking \"Got it\" no longer retires the callout");
+    }
+
+    void test_pointsAtOneMenuOfAMenuBar()
+    {
+        auto* menuBar = new QMenuBar(mpWindow);
+        menuBar->addMenu(qsl("Games"));
+        QAction* optionsMenu = menuBar->addMenu(qsl("Options"))->menuAction();
+        menuBar->move(0, 0);
+        menuBar->resize(mpWindow->width(), menuBar->sizeHint().height());
+        menuBar->show();
+        const QRect optionsRect = menuBar->actionGeometry(optionsMenu);
+        QVERIFY(!optionsRect.isEmpty());
+
+        auto* callout = new TFeatureCallout(mFeatureId, menuBar, qsl("Title"), qsl("Body"), optionsMenu);
+        callout->showAnchored();
+        callout->slot_applicationStateChanged(Qt::ApplicationActive);
+        QCOMPARE(callout->x() + callout->width() / 2, menuBar->mapToGlobal(QPoint(optionsRect.left() + optionsRect.width() / 2, 0)).x());
+
+        QTest::mousePress(menuBar, Qt::LeftButton, {}, menuBar->actionGeometry(menuBar->actions().constFirst()).center());
+        QVERIFY2(!dismissed(), "opening a different menu was taken as the player having found the feature");
+
+        QTest::mousePress(menuBar, Qt::LeftButton, {}, optionsRect.center());
+        QVERIFY2(dismissed(), "opening the menu the callout points at did not retire it");
+    }
+
+    void test_reachingTheFeatureElsewhereRetiresOnlyItsOwnCallout()
+    {
+        QPointer<TFeatureCallout> callout = shownCallout();
+        QPointer<TFeatureCallout> otherCallout = new TFeatureCallout(qsl("other-callout"), mpAnchor, qsl("Title"), qsl("Body"));
+        otherCallout->showAnchored();
+        otherCallout->slot_applicationStateChanged(Qt::ApplicationActive);
+
+        TFeatureCallout::dismiss(mFeatureId);
+        QTest::qWait(50ms);
+
+        QVERIFY2(dismissed(), "reaching the feature without using the callout did not retire it");
+        QVERIFY2(!callout || !callout->isVisible(), "the callout stayed on screen after the player reached the feature another way");
+        QVERIFY2(otherCallout && otherCallout->isVisible(), "dismissing one feature also took down the callout for another");
+        QVERIFY(!MudletApp::getQSettings()->value(qsl("whatsNew/other-callout/dismissed"), false).toBool());
     }
 };
 
