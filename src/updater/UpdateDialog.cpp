@@ -643,8 +643,10 @@ void UpdateDialog::startUpdate()
         QApplication::quit();
     } else {
         qWarning() << "Failed to open update file:" << mUpdateFilePath << "exists:" << QFile::exists(mUpdateFilePath);
+        //: Title for the warning dialog shown when the downloaded update could not be started
+        const QString errorTitle = tr("Update Error");
         //: Error shown when the downloaded update file cannot be opened for installation. %1 is the file path.
-        handleDownloadError(tr("Could not open the downloaded update. You can try opening it manually:\n%1").arg(mUpdateFilePath));
+        reportError(errorTitle, tr("Could not open the downloaded update. You can try opening it manually:\n%1").arg(mUpdateFilePath));
     }
 }
 
@@ -756,16 +758,21 @@ void UpdateDialog::handleDownloadFinished()
 
 void UpdateDialog::handleDownloadError(const QString& message)
 {
+    //: Title for the download error warning dialog
+    const QString errorTitle = tr("Download Error");
+    //: Message shown in the download error warning dialog, followed by the specific error details
+    reportError(errorTitle, tr("There was an error while downloading the update.") + qsl("\n\n") + message);
+}
+
+void UpdateDialog::reportError(const QString& title, const QString& text)
+{
     // Before the box: its event loop can run a later download to the end
     mAccepted = false;
     mAcceptedInstallButton = nullptr;
     // startDownload() disabled them, and otherwise only a later download that
     // succeeds would let the user try again
     disableButtons(false);
-    //: Title for the download error warning dialog
-    const QString errorTitle = tr("Download Error");
-    //: Message shown in the download error warning dialog, followed by the specific error details
-    QMessageBox::warning(this, errorTitle, tr("There was an error while downloading the update.") + qsl("\n\n") + message);
+    QMessageBox::warning(this, title, text);
     done(QDialog::Rejected);
 }
 

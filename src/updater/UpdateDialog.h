@@ -105,6 +105,8 @@ private:
 
     void startDownload();
     void startUpdate();
+    // Ends the install the user asked for, then tells them why
+    void reportError(const QString& title, const QString& text);
 
     bool mAccepted{false};
     bool mIsDownloadFinished{false};

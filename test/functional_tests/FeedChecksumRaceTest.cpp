@@ -545,6 +545,7 @@ private slots:
     void aDownloadStartedOutsideTheDialogIsSavedUnderItsRelease();
     void anUpdateButtonClickIsAnsweredByOneDownload();
     void aFailedDownloadLeavesTheUpdateButtonUsable();
+    void anInstallerThatWillNotOpenIsNotReportedAsADownloadError();
     // These two can hand the installer over and ask Qt to quit, so they run last
     void anInstallWhoseDownloadFailedIsNotStartedByTheNextDownload();
     void anInstallAskedForSurvivesACheckDuringItsDownload();
@@ -1269,6 +1270,36 @@ void FeedChecksumRaceTest::aFailedDownloadLeavesTheUpdateButtonUsable()
     harness.feed().load();
     QVERIFY2(readySpy.wait(waitMs), qPrintable(qsl("the next update check never reached the dialog. It reported: %1").arg(whatTheDialogWasTold())));
     QVERIFY2(updateButton->isEnabled(), "after a failed download the Update button stays disabled, so the user cannot try again");
+}
+
+// A verified installer the system refuses to open was downloaded perfectly well,
+// so the user is told what did fail
+void FeedChecksumRaceTest::anInstallerThatWillNotOpenIsNotReportedAsADownloadError()
+{
+    const QByteArray payload = stubDownloadPayload();
+
+    UpdateHarness harness;
+    QVERIFY2(harness.start(), "the stub update server needs TLS support and a free loopback port");
+    harness.server().setFeedBody(stubReleasesJson(harness.assetBaseUrl(), payload.size()));
+    harness.server().setChecksum(QCryptographicHash::hash(payload, QCryptographicHash::Sha256).toHex());
+    harness.server().setDownloadPayload(payload);
+    dblsqd::UpdateDialog::enableAutoDownload(false, &harness.settings());
+
+    // A handler slot that does not exist is what makes QDesktopServices::openUrl() return false
+    InstallerUrlCatcher installer;
+    QDesktopServices::setUrlHandler(qsl("file"), &installer, "noSuchSlot");
+    const auto restoreUrlHandler = qScopeGuard([]() {
+        QDesktopServices::unsetUrlHandler(qsl("file"));
+    });
+
+    harness.openDialog(dblsqd::UpdateDialog::Manual);
+    QSignalSpy readySpy(&harness.dialog(), &dblsqd::UpdateDialog::ready);
+    QVERIFY2(readySpy.wait(waitMs), qPrintable(qsl("the update dialog never became ready. It reported: %1").arg(whatTheDialogWasTold())));
+
+    harness.dialog().onButtonInstall();
+    QTRY_VERIFY2_WITH_TIMEOUT(!mModalBoxes.texts().isEmpty(), "the installer could not be opened and nobody was told", waitMs);
+    QVERIFY2(mModalBoxes.texts().first().startsWith(qsl("Could not open the downloaded update")),
+             qPrintable(qsl("an installer that would not open was reported as: \"%1\"").arg(mModalBoxes.texts().first())));
 }
 
 QTEST_MAIN(FeedChecksumRaceTest)
