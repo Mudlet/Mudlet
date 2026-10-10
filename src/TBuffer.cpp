@@ -1192,7 +1192,7 @@ void TBuffer::noteRemovedLinks(const std::vector<TChar>& line, const qint64 line
       elements at the end can be omitted.
  */
 
-void TBuffer::resetSequenceParserState()
+void TBuffer::clearSequenceLatches()
 {
     mGotESC = false;
     mGotEscCharset = false;
@@ -1200,6 +1200,11 @@ void TBuffer::resetSequenceParserState()
     mGotOSC = false;
     mGotString = false;
     mIncompleteSequenceBytes.clear();
+}
+
+void TBuffer::resetSequenceParserState()
+{
+    clearSequenceLatches();
     mPendingLead = 0;
     mLocalGotESC = false;
     mLocalGotEscCharset = false;
@@ -1239,6 +1244,20 @@ void TBuffer::swapParserSequenceState()
     std::swap(mPendingLeadFormat, mLocalPendingLeadFormat);
 }
 
+void TBuffer::endLocalFeedSequences()
+{
+    // A local feed arrives whole, so a sequence it left open was never going to
+    // be finished - carried over, it would swallow the start of the next feed:
+    if (Q_UNLIKELY(mPendingLead)) {
+        flushPendingLead();
+    }
+    if (mGotOSC) {
+        // mIncompleteSequenceBytes holds the payload so far:
+        warnAboutDiscardedStringSequence(qsl("was not terminated before the end of the locally fed text"), mIncompleteSequenceBytes, 0, mIncompleteSequenceBytes.size());
+    }
+    clearSequenceLatches();
+}
+
 void TBuffer::translateToPlainText(std::string& incoming, const bool isFromServer)
 {
     // The mGot... latches and mIncompleteSequenceBytes persist between calls so
@@ -1247,28 +1266,43 @@ void TBuffer::translateToPlainText(std::string& incoming, const bool isFromServe
     // insertions) runs through the same parser, so swap in a separate set of
     // that state for the duration of such a feed - otherwise local text
     // arriving between two packets would consume or clear a latch that the
-    // server stream is still relying on (and vice versa). The flag keeps a
-    // nested local feed (e.g. an MXP <HR> inside locally fed text) from
-    // swapping the server state back in part way through:
-    if (isFromServer || mProcessingLocalFeed) {
-        translateToPlainTextInner(incoming, isFromServer);
+    // server stream is still relying on. The flag keeps a nested local feed
+    // (e.g. an MXP <HR> inside locally fed text) from swapping the server
+    // state back in part way through:
+    if (isFromServer) {
+        translateToPlainTextInner(incoming, true);
+        return;
+    }
+
+    if (mProcessingLocalFeed) {
+        // Text a trigger or an MXP tag feeds while the enclosing feed is still
+        // being read is whole too, so it gets a clean state and leaves the
+        // enclosing feed's own as it found it:
+        const bool enclosingGotESC = std::exchange(mGotESC, false);
+        const bool enclosingGotEscCharset = std::exchange(mGotEscCharset, false);
+        const bool enclosingGotCSI = std::exchange(mGotCSI, false);
+        const bool enclosingGotOSC = std::exchange(mGotOSC, false);
+        const bool enclosingGotString = std::exchange(mGotString, false);
+        std::string enclosingIncompleteSequenceBytes = std::exchange(mIncompleteSequenceBytes, {});
+        const char enclosingPendingLead = std::exchange(mPendingLead, 0);
+        const TChar enclosingPendingLeadFormat = mPendingLeadFormat;
+        translateToPlainTextInner(incoming, false);
+        endLocalFeedSequences();
+        mGotESC = enclosingGotESC;
+        mGotEscCharset = enclosingGotEscCharset;
+        mGotCSI = enclosingGotCSI;
+        mGotOSC = enclosingGotOSC;
+        mGotString = enclosingGotString;
+        mIncompleteSequenceBytes = std::move(enclosingIncompleteSequenceBytes);
+        mPendingLead = enclosingPendingLead;
+        mPendingLeadFormat = enclosingPendingLeadFormat;
         return;
     }
 
     mProcessingLocalFeed = true;
     swapParserSequenceState();
     translateToPlainTextInner(incoming, false);
-    // A local feed arrives whole, so a sequence it left open was never going to
-    // be finished - carried over, it would swallow the start of the next feed:
-    if (Q_UNLIKELY(mPendingLead)) {
-        flushPendingLead();
-    }
-    mGotESC = false;
-    mGotEscCharset = false;
-    mGotCSI = false;
-    mGotOSC = false;
-    mGotString = false;
-    mIncompleteSequenceBytes.clear();
+    endLocalFeedSequences();
     swapParserSequenceState();
     mProcessingLocalFeed = false;
 }

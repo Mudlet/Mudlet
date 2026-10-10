@@ -273,6 +273,17 @@ describe("Tests what feedTriggers will and will not carry", function()
     return table.concat(getLines("main", mark, getLastLineNumber("main") + 1), "")
   end
 
+  -- textFrom() joins the lines, so it cannot tell one line from two
+  local function linesFrom(mark)
+    local shown = {}
+    for _, line in ipairs(getLines("main", mark, getLastLineNumber("main") + 1)) do
+      if line ~= "" then
+        shown[#shown + 1] = line
+      end
+    end
+    return shown
+  end
+
   it("refuses text the game's encoding cannot carry instead of mangling it", function()
     assert.is_true(setServerEncoding("ASCII"))
     local mark = getLastLineNumber("main")
@@ -313,15 +324,32 @@ describe("Tests what feedTriggers will and will not carry", function()
   end)
 
   -- Each feed is whole, so an escape sequence it leaves unfinished is never
-  -- going to be finished, and must not eat the start of the next feed - see issue #9926
+  -- going to be finished, and must not eat the start of the next feed
   it("does not finish one feed's unfinished escape sequence with the next feed", function()
     assert.is_true(setServerEncoding("UTF-8"))
     local mark = getLastLineNumber("main")
 
-    -- had the sequence carried over, the "C" would complete it as CSI 5 C
+    -- had the open sequence carried over, the "C" would have ended it as its
+    -- final byte and been lost
     assert.is_true(feedTriggers("FeedHalfEscape \27[5"))
     assert.is_true(feedTriggers("Cont\n"))
-    assert.is_true(contains(textFrom(mark), "FeedHalfEscape Cont"), textFrom(mark))
+    assert.same({"FeedHalfEscape Cont"}, linesFrom(mark))
+  end)
+
+  -- a trigger feeding text runs while the feed that fired it is still being
+  -- read, and that text is whole too
+  it("does not finish a nested feed's unfinished escape sequence with the text after it", function()
+    assert.is_true(setServerEncoding("UTF-8"))
+    local trigger = tempExactMatchTrigger("FeedNestOuter", function()
+      feedTriggers("FeedNestFirst \27[5")
+      feedTriggers("Cont sibling\n")
+      feedTriggers("FeedNestLast \27[5")
+    end)
+    finally(function() killTrigger(trigger) end)
+    local mark = getLastLineNumber("main")
+
+    assert.is_true(feedTriggers("FeedNestOuter\nCont outer\n"))
+    assert.same({"FeedNestOuter", "FeedNestFirst Cont sibling", "FeedNestLast Cont outer"}, linesFrom(mark))
   end)
 
   it("does not pair one feed's unfinished double byte character with the next feed", function()
@@ -334,7 +362,7 @@ describe("Tests what feedTriggers will and will not carry", function()
     -- has it held for the trail byte, which a whole feed has no more of.
     assert.is_true(feedTriggers("FeedHalfBig5 " .. string.char(0xA4) .. "\27[0m", false))
     assert.is_true(feedTriggers("Z\n", false))
-    assert.is_true(contains(textFrom(mark), "FeedHalfBig5 \239\191\189Z"), textFrom(mark))
+    assert.same({"FeedHalfBig5 \239\191\189Z"}, linesFrom(mark))
   end)
 
   it("raises on arguments it cannot make sense of", function()

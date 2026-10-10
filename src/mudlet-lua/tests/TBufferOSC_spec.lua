@@ -147,13 +147,22 @@ describe("Tests TBuffer OSC sequence handling", function()
     end)
 
     -- A local feed arrives whole, so a sequence still open at its end ends with
-    -- it rather than swallowing the next feed's text (#9926). A sequence the
-    -- game splits across packets is covered by the posting timeout cases in
-    -- TBufferEncoding_spec.lua.
+    -- it rather than swallowing the next feed's text. A sequence the game
+    -- splits is covered by the posting timeout cases in TBufferEncoding_spec.lua.
     it("should end an APC sequence a local feed leaves open with that feed", function()
       assert.is_true(feedTriggers("APCSPLIT1(\027_first half "))
       assert.is_true(feedTriggers("second half\027\\)APCSPLIT1\n"))
       assert.equals("APCSPLIT1(second half)APCSPLIT1", findRecentLine("APCSPLIT1"))
+    end)
+
+    -- An OSC introducer leaves mGotString alone, so had the last feed's string
+    -- sequence latch been kept, the link would be consumed without decoding. A
+    -- link written concealed shows whether its settings were decoded.
+    it("should decode an OSC sequence in the feed after one that left an APC sequence open", function()
+      local link = "\027]8;;send:look?config={\"visibility\":{\"action\":\"reveal\",\"delay\":3000}}\027\\"
+      assert.is_true(feedTriggers("APCSPLIT3(\027_open"))
+      assert.is_true(feedTriggers("APCSPLIT4(" .. link .. "LOOK\027]8;;\027\\)APCSPLIT4\n"))
+      assert.equals("APCSPLIT3(APCSPLIT4(    )APCSPLIT4", findRecentLine("APCSPLIT4"))
     end)
 
     it("should still render OSC 8 hyperlink text", function()
@@ -280,7 +289,7 @@ describe("Tests TBuffer OSC sequence handling", function()
       assert.equals("SPLITINT1(B)SPLITINT1", findRecentLine("SPLITINT1"))
     end)
 
-    it("should not eat a multibyte character starting the next packet", function()
+    it("should not eat a multibyte character starting the next local feed", function()
       assert.is_true(feedTriggers("SPLITESC2(\027"))
       assert.is_true(feedTriggers("\195\169)SPLITESC2\n"))
       assert.equals("SPLITESC2(\195\169)SPLITESC2", findRecentLine("SPLITESC2"))
@@ -317,9 +326,9 @@ describe("Tests TBuffer OSC sequence handling", function()
     end)
 
     -- Two feedTriggers() calls cannot express a packet split: a local feed ends
-    -- whatever sequence it leaves open (#9926), so the "?25" is dropped with it
-    -- and the "l" is the next feed's text. A split from the game is covered by
-    -- the posting timeout cases in TBufferEncoding_spec.lua.
+    -- whatever sequence it leaves open, so the "?25" is dropped with it and the
+    -- "l" is the next feed's text. A split from the game is covered by the
+    -- posting timeout cases in TBufferEncoding_spec.lua.
     it("should not leak a private sequence a local feed leaves open", function()
       assert.is_true(feedTriggers("CSISPLIT1(\027[?25"))
       assert.is_true(feedTriggers("l)CSISPLIT1\n"))

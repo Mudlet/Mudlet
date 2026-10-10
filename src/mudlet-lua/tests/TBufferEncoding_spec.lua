@@ -984,8 +984,8 @@ describe("Tests a character whose bytes are split by the posting timeout", funct
     using("UTF-8")
 
     -- Mudlet does not act on a private sequence, but it has to consume all of
-    -- it: had the held "?25" not been joined to the "l" after the pause, "25l"
-    -- would have printed as text
+    -- it: had the private introducer been acted on before the sequence was
+    -- known to be complete, the "l" after the pause would have printed as text
     local text, lines, perLine = splitAcrossTimeout("\27[?25", "l")
     assert.equals(":end", text)
     assert.equals(2, lines)
@@ -1015,6 +1015,21 @@ describe("Tests a character whose bytes are split by the posting timeout", funct
     end
     return seen
   end
+
+  it("keeps the game's held lead byte while a script feeds text during the pause", function()
+    if timerUnavailable() then return end
+    using("BIG5")
+
+    -- the end of the local feed gives up its own unfinished character, and must
+    -- not take the game's lead byte, still waiting for its trail, with it
+    local mark = getLastLineNumber("main")
+    feed("split:" .. bytes(0xA4) .. "\27[31m")
+    beQuiet()
+    assert.is_true(feedTriggers("interleaved\n", false))
+    feed(bytes(0xA4) .. ":end\n")
+    beQuiet()
+    assert.same({"split:", "interleaved", "\228\184\173:end"}, shownSince(mark))
+  end)
 
   it("commits the text ahead of an operating system command the marker lands inside", function()
     if timerUnavailable() then return end
