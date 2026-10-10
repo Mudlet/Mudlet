@@ -3362,10 +3362,10 @@ std::pair<bool, QString> Host::installPackage(const QString& fileName, enums::Pa
         _dir = QDir(newpath);
         // make any fonts in the package available to Mudlet for use - before the
         // XML below is imported, because the scripts in it run as they are read
-        // in and one of them may well want to use a font the package brought
-        if (thing != enums::PackageModuleType::ModuleSync) {
-            installPackageFonts(packageName);
-        }
+        // in and one of them may well want to use a font the package brought.
+        // A module sync too: the archive it unpacks can be a newer version
+        // bringing fonts of its own, and the ones already registered are skipped.
+        installPackageFonts(packageName);
         QStringList _filterList;
         _filterList << qsl("*.xml") << qsl("*.trigger");
         const QFileInfoList entries = _dir.entryInfoList(_filterList, QDir::Files);
@@ -3855,11 +3855,13 @@ bool Host::uninstallPackage(const QString& packageName, enums::PackageModuleType
     mKeyUnit.uninstall(packageName);
     // Not for a ModuleSync, which brings the module back with its Lua state and
     // ids - unless the name is also a package's, which a sync removes for good.
+    // The same goes for its fonts: a sync from another profile reinstalls from
+    // that profile's XML alone, which registers none.
     if (thing != enums::PackageModuleType::ModuleSync || installedBothWays) {
         emit signal_packageRemoved(packageName);
-    }
-    if (auto* fonts = FontManager::self()) {
-        fonts->unloadFonts(getName(), packageName);
+        if (auto* fonts = FontManager::self()) {
+            fonts->unloadFonts(getName(), packageName);
+        }
     }
     if (isModule) {
         mInstalledModules.remove(packageName);
