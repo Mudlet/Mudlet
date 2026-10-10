@@ -93,9 +93,7 @@ TDetachedWindow::TDetachedWindow(const QString& profileName, TMainConsole* conso
     }
 
     // Set initial toolbar visibility based on main window state
-    if (mpToolBar) {
-        mpToolBar->setVisible(toolbarVisible);
-    }
+    setToolBarVisibility(toolbarVisible);
 
     // Set window properties
     //: This is the title of a Mudlet window which was detached from the main Mudlet window, and %1 is the name of the profile.
@@ -568,15 +566,15 @@ void TDetachedWindow::createMenus()
     connect(reportIssueAction, &QAction::triggered, this, &TDetachedWindow::slot_reportIssue);
     aboutMenu->addAction(reportIssueAction);
 
-    // Toolbar visibility toggle
-    //: This is an item for the toolbar visibility toggle in a detached Mudlet window.
-    mpActionToggleToolBar = new QAction(tr("Show &Toolbar"), this);
+    // Toolbar visibility toggle; the constructor checks it, once the toolbar has its state
+    //: This is an item in the "Window" menu in the menubar of a detached Mudlet window. Its "&" letter must differ from the other items in that menu, "Always on Top" among them.
+    mpActionToggleToolBar = new QAction(tr("Show Tool&bar"), this);
     mpActionToggleToolBar->setObjectName(qsl("toggle_toolbar_action"));
     mpActionToggleToolBar->setCheckable(true);
-    mpActionToggleToolBar->setChecked(mpToolBar ? mpToolBar->isVisible() : true);
-    //: This explains the "Show Toolbar" action for toolbar visibility in a detached Mudlet window.
+    //: This explains the "Show Toolbar" item in the "Window" menu in the menubar of a detached Mudlet window.
     mpActionToggleToolBar->setStatusTip(tr("Show or hide the toolbar"));
     connect(mpActionToggleToolBar, &QAction::triggered, this, &TDetachedWindow::slot_toggleToolBarVisibility);
+    mpWindowMenu->insertAction(minimizeAction, mpActionToggleToolBar);
 
     // Connect the Window menu's aboutToShow signal to update the window list
     connect(mpWindowMenu, &QMenu::aboutToShow, this, &TDetachedWindow::updateWindowMenu);
@@ -1202,6 +1200,12 @@ void TDetachedWindow::updateMenuShortcuts()
         }
 
         action->setShortcut(resolveShortcut(key, fallback));
+        // Held by the window too: Qt fires no shortcut of an action whose only
+        // containers are menus of a hidden menu bar. Adding one the window
+        // already holds would remove it and add it again.
+        if (!actions().contains(action)) {
+            addAction(action);
+        }
     };
 
 #if defined(Q_OS_MACOS)
@@ -1712,6 +1716,11 @@ void TDetachedWindow::setToolBarVisibility(bool visible)
     }
 }
 
+void TDetachedWindow::setMenuBarVisibility(bool visible)
+{
+    menuBar()->setVisible(visible);
+}
+
 bool TDetachedWindow::isToolBarVisible() const
 {
     // Returns false when mpToolBar is null — callers that distinguish
@@ -1765,6 +1774,9 @@ void TDetachedWindow::updateWindowMenu()
     if (!pMudlet) {
         return;
     }
+
+    // Disabled when hiding would cause lockout (menu bar also never shown)
+    mpActionToggleToolBar->setEnabled(!(isToolBarVisible() && !canHideToolBar()));
 
     // Clean up existing window list actions
     for (QAction* action : std::as_const(mWindowListActions)) {

@@ -93,6 +93,7 @@ public:
 
     // Toolbar synchronization methods
     void setToolBarVisibility(bool visible);
+    void setMenuBarVisibility(bool visible);
     bool isToolBarVisible() const;
     bool canHideToolBar() const;
 

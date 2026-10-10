@@ -558,8 +558,8 @@ private:
     void migrateDebugConsole(Host*);
     void setupTrayIcon();
     void setGlobalStyleSheet(const QString&);
-    // Not const: HostManager::getHostCount() is not
-    bool toolBarShouldBeVisible();
+    // For the menu bar or toolbar setting. Not const: HostManager::getHostCount() is not
+    bool controlShouldBeVisible(enums::controlsVisibility);
     void reshowRequiredMainConsoles();
     void updateReplayTimeLabel();
     QString replayTimeLabelText(const QString& time, const bool paused) const;
