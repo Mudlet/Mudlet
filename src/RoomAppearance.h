@@ -44,6 +44,9 @@ QGradientStops highlightStops(const QColor& highlightColor, const QColor& highli
 // For a radial gradient over playerRoomRadius()
 QGradientStops playerRoomStops(int style, quint8 innerDiameterPercentage, const QColor& innerColor, const QColor& outerColor);
 
+// Fills the player's room under the ring when the strong highlight is on
+QColor strongHighlightFillColor();
+
 // At 100% the ring passes through the corners of a room roomVisualSize across
 qreal playerRoomRadius(quint8 outerDiameterPercentage, qreal roomVisualSize);
 

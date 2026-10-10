@@ -130,6 +130,7 @@ protected:
     void mouseReleaseEvent(QMouseEvent* event) override;
     void keyPressEvent(QKeyEvent* event) override;
     void showEvent(QShowEvent* event) override;
+    void resizeEvent(QResizeEvent* event) override;
 
 public:
     TMap* mpMap = nullptr;
@@ -158,8 +159,9 @@ private:
 
     // Label texture cache
     LabelTextureCache mLabelTextureCache;
-    // Room textures the last frame drew, which a full cache keeps
+    // Room textures this frame draws, which making room for another must keep
     QSet<QString> mRoomTexturesInUse;
+    bool mRoomTextureLimitWarned = false;
 
     // Host reference
     QPointer<Host> mpHost;
@@ -221,6 +223,8 @@ private:
     bool mCameraSmoothAnimating = false; // Dedicated flag for smooth camera animation
     int mPreviousRID = 0;                // Track previous room ID to detect changes
     bool mFramePending = true;
+    // A zoom applied while hidden was framed for the old size, so the next resize frames it again
+    bool mFrameOnResize = false;
     // A distance a script asked for since the last paint wins over framing a newly shown area
     bool mDistanceRequested = false;
 
@@ -242,6 +246,10 @@ private:
     GLuint symbolTexture(const QString& symbol, const QColor& color);
     // A disc filling the texture, shaded by a radial gradient over its radius
     GLuint discTexture(const QString& key, const QGradientStops& stops);
+    GLuint squareTexture(const QColor& color);
+    GLuint cachedRoomTexture(const QString& key);
+    bool roomForAnotherTexture();
+    GLuint addRoomTexture(const QString& key, const QImage& image);
     void startSmoothTransition(int targetAID, int targetX, int targetY, int targetZ);
     void stopSmoothTransition();
     void jumpTo(int areaId, int x, int y, int z);

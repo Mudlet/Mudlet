@@ -19,6 +19,8 @@
 
 #include <QtTest/QtTest>
 
+#include <optional>
+
 #include "CameraController.h"
 #include "GeometryManager.h"
 
@@ -94,9 +96,9 @@ private:
         QCOMPARE(decal.vertices.size(), 18);
         QCOMPARE(decal.textureCoords.size(), 12);
 
-        QPointF textureOrigin;
-        QPointF textureRight;
-        QPointF textureFarCorner;
+        std::optional<QPointF> textureOrigin;
+        std::optional<QPointF> textureRight;
+        std::optional<QPointF> textureFarCorner;
         for (int vertex = 0; vertex < 6; ++vertex) {
             const QVector3D position(decal.vertices[vertex * 3], decal.vertices[vertex * 3 + 1], decal.vertices[vertex * 3 + 2]);
             QCOMPARE(position.z(), center.z());
@@ -110,9 +112,10 @@ private:
                 textureFarCorner = toScreen(camera, position);
             }
         }
-        QVERIFY2(textureOrigin.x() < textureRight.x(), qPrintable(qsl("the room symbol reads mirrored in the %1 view").arg(view)));
-        QVERIFY2(qAbs(textureRight.y() - textureOrigin.y()) < qAbs(textureRight.x() - textureOrigin.x()), qPrintable(qsl("the room symbol's baseline is not level in the %1 view").arg(view)));
-        QVERIFY2(textureOrigin.y() < textureFarCorner.y(), qPrintable(qsl("the room symbol is upside down in the %1 view").arg(view)));
+        QVERIFY2(textureOrigin && textureRight && textureFarCorner, "the room symbol's texture no longer has corners at 0 and 1");
+        QVERIFY2(textureOrigin->x() < textureRight->x(), qPrintable(qsl("the room symbol reads mirrored in the %1 view").arg(view)));
+        QVERIFY2(qAbs(textureRight->y() - textureOrigin->y()) < qAbs(textureRight->x() - textureOrigin->x()), qPrintable(qsl("the room symbol's baseline is not level in the %1 view").arg(view)));
+        QVERIFY2(textureOrigin->y() < textureFarCorner->y(), qPrintable(qsl("the room symbol is upside down in the %1 view").arg(view)));
     }
 
 private slots:
@@ -142,6 +145,11 @@ private slots:
         }
         camera.setOrientation(30.0f, 120.0f, 170.0f);
         verifyRoomDecalReadable(camera, qsl("rolled nearly upside down"));
+        // At the steepest tilt a quarter roll leaves the least of the screen's right lying flat on the map
+        for (const float roll : {90.0f, -90.0f}) {
+            camera.setOrientation(82.0f, 200.0f, roll);
+            verifyRoomDecalReadable(camera, qsl("tilted fully and rolled %1 degrees").arg(roll));
+        }
     }
 
     void test_labelsReadLeftToRightFromAnyAngle()

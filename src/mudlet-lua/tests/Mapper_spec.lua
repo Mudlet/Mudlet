@@ -2920,6 +2920,34 @@ describe("Tests mapper functions against a shared fixture", function()
       assert.are.equal(3, getMapZoom(areaAlpha))
     end)
 
+    it("setMapZoom keeps its contract while the modern 3D view shows", function()
+      -- a GL context leaks in the leak-checking job's GL driver, as Media_spec explains
+      if (os.getenv("ASAN_OPTIONS") or ""):find("detect_leaks=1", 1, true) then
+        pending("a 3D view's GL context leaks in this job's GL driver")
+        return
+      end
+      local wasModern = getConfig("experiment.3dmap.modernmapper")
+      local before = getMapZoom(areaAlpha)
+      finally(function()
+        setConfig("show3dMapView", false)
+        setConfig("experiment.3dmap.modernmapper", wasModern == true)
+        setMapZoom(before, areaAlpha)
+      end)
+      assert.is_true(setConfig("experiment.3dmap.modernmapper", true))
+      assert.is_true(setConfig("show3dMapView", true))
+      assert.is_true(getConfig("show3dMapView"))
+
+      assert.is_true(setMapZoom(15, areaAlpha))
+      assert.are.equal(15, getMapZoom(areaAlpha))
+      local ok, err = setMapZoom(2.9, areaAlpha)
+      assert.is_nil(ok)
+      assert.is_truthy(err:find("it must be at least 3", 1, true), err)
+      ok, err = setMapZoom(0 / 0, areaAlpha)
+      assert.is_nil(ok)
+      assert.is_truthy(err:find("it must be a finite number", 1, true), err)
+      assert.are.equal(15, getMapZoom(areaAlpha))
+    end)
+
     it("setMapZoom refuses a zoom that is not a finite number", function()
       local before = getMapZoom(areaAlpha)
       for _, zoom in ipairs({0 / 0, math.huge, -math.huge}) do
@@ -3383,6 +3411,38 @@ describe("Tests mapper functions against a shared fixture", function()
       pumpEvents(500)
       assert.are.equal(1, mainConsoleCount("Failed to save image to "))
       assert.are.equal(1, mainConsoleCount("Failed to save image to " .. badPath))
+    end)
+
+    -- The first two exports are the control: with nothing changed they must match,
+    -- or the difference after setRoomChar() would prove nothing
+    it("exportAreaImage draws a room's symbol", function()
+      local names = {"mapper_spec_symbol_a.png", "mapper_spec_symbol_b.png", "mapper_spec_symbol_c.png"}
+      local area = addAreaName("MapperSpecExportSymbol")
+      local _, removeAll = expectExports(names)
+      finally(function()
+        removeAll()
+        deleteArea(area)
+      end)
+      local room = createRoomID()
+      addRoom(room)
+      setRoomArea(room, area)
+      setRoomCoordinates(room, 0, 0, 0)
+
+      local function export(name)
+        local written = expectExports({name})
+        assert.is_true(exportAreaImage(area, exportPath(name)))
+        assert.is_true(waitUntil(written, 5000))
+        pumpEvents(100)
+        local file = io.open(exportPath(name), "rb")
+        local contents = file:read("*a")
+        file:close()
+        return contents
+      end
+
+      local first = export(names[1])
+      assert.are.equal(first, export(names[2]))
+      setRoomChar(room, "W")
+      assert.are_not.equal(first, export(names[3]))
     end)
 
     it("exportAreaImage rejects false where a z level or true is wanted", function()

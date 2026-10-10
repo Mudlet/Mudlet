@@ -32,6 +32,7 @@
 #include <QRegularExpression>
 
 #include "GeometryManager.h"
+#include "LabelTextureCache.h"
 
 #include "GroupedTest.h"
 
@@ -100,6 +101,67 @@ private slots:
         const GeometryData geometry = geometryManager.generateLineGeometry(positions, colors);
 
         verifyTightlyPacked(geometry, positions);
+    }
+
+    void test_groundQuadsForOneTextureShareABatch()
+    {
+        GeometryData batch;
+        const QVector3D first(0.0f, 0.0f, 0.0f);
+        const QVector3D second(5.0f, 3.0f, 1.0f);
+        GeometryManager::appendGroundQuad(batch, first, 1.0f, QVector3D(1.0f, 0.0f, 0.0f), QVector3D(0.0f, 1.0f, 0.0f), QVector4D(1.0f, 1.0f, 1.0f, 1.0f));
+        GeometryManager::appendGroundQuad(batch, second, 1.0f, QVector3D(1.0f, 0.0f, 0.0f), QVector3D(0.0f, 1.0f, 0.0f), QVector4D(1.0f, 1.0f, 1.0f, 1.0f));
+
+        QCOMPARE(batch.vertices.size(), 36);
+        QCOMPARE(batch.normals.size(), 36);
+        QCOMPARE(batch.colors.size(), 48);
+        QCOMPARE(batch.textureCoords.size(), 24);
+        for (const auto& [quad, center] : {std::pair{0, first}, std::pair{1, second}}) {
+            QVector3D sum;
+            for (int vertex = quad * 6; vertex < quad * 6 + 6; ++vertex) {
+                sum += QVector3D(batch.vertices[vertex * 3], batch.vertices[vertex * 3 + 1], batch.vertices[vertex * 3 + 2]);
+            }
+            QCOMPARE(sum / 6.0f, center);
+        }
+    }
+
+    void test_aGroundQuadSeenEdgeOnLinesUpWithTheScreensUp()
+    {
+        GeometryData batch;
+        // The screen's right points straight down at the map, so lays flat to nothing; the quad's up follows the screen's
+        GeometryManager::appendGroundQuad(batch, QVector3D(), 2.0f, QVector3D(0.0f, 0.0f, 1.0f), QVector3D(1.0f, 0.0f, 0.0f), QVector4D(1.0f, 1.0f, 1.0f, 1.0f));
+
+        QCOMPARE(batch.vertices.size(), 18);
+        const QVector3D bottomLeft(batch.vertices[0], batch.vertices[1], batch.vertices[2]);
+        const QVector3D bottomRight(batch.vertices[3], batch.vertices[4], batch.vertices[5]);
+        const QVector3D topRight(batch.vertices[6], batch.vertices[7], batch.vertices[8]);
+        QCOMPARE((bottomRight - bottomLeft).length(), 2.0f);
+        QCOMPARE(topRight - bottomRight, QVector3D(2.0f, 0.0f, 0.0f));
+    }
+
+    void test_roomTexturesToEvict_data()
+    {
+        QTest::addColumn<QStringList>("cached");
+        QTest::addColumn<qsizetype>("maximum");
+        QTest::addColumn<QStringList>("inUse");
+        QTest::addColumn<QStringList>("evicted");
+
+        QTest::newRow("room for one more") << QStringList{qsl("a"), qsl("b")} << qsizetype(3) << QStringList{} << QStringList{};
+        QTest::newRow("full, nothing in use") << QStringList{qsl("a"), qsl("b"), qsl("c")} << qsizetype(3) << QStringList{} << QStringList{qsl("a")};
+        QTest::newRow("full, the oldest in use") << QStringList{qsl("a"), qsl("b"), qsl("c")} << qsizetype(3) << QStringList{qsl("a")} << QStringList{qsl("b")};
+        QTest::newRow("over, some in use") << QStringList{qsl("a"), qsl("b"), qsl("c"), qsl("d"), qsl("e")} << qsizetype(3) << QStringList{qsl("a"), qsl("c")}
+                                           << QStringList{qsl("b"), qsl("d"), qsl("e")};
+        QTest::newRow("all in use") << QStringList{qsl("a"), qsl("b"), qsl("c")} << qsizetype(3) << QStringList{qsl("a"), qsl("b"), qsl("c")} << QStringList{};
+    }
+
+    void test_roomTexturesToEvict()
+    {
+        QFETCH(QStringList, cached);
+        QFETCH(qsizetype, maximum);
+        QFETCH(QStringList, inUse);
+        QFETCH(QStringList, evicted);
+
+        const QSet<QString> keep(inUse.cbegin(), inUse.cend());
+        QCOMPARE(LabelTextureCache::keysToEvict(cached, maximum, keep), evicted);
     }
 
     void test_vertexShaderAttributeLocationsDoNotOverlap()

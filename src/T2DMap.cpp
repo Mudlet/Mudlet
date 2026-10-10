@@ -2991,7 +2991,7 @@ void T2DMap::paintEvent(QPaintEvent* e)
                                      playerRoomOnWidgetCoordinates.y() - (static_cast<double>(mRoomHeight) * rSize) / 2.0,
                                      static_cast<double>(mRoomWidth) * rSize,
                                      static_cast<double>(mRoomHeight) * rSize);
-            painter.fillRect(dr, QColor(255, 0, 0, 150));
+            painter.fillRect(dr, RoomAppearance::strongHighlightFillColor());
 
             gradient.setColorAt(0.95, QColor(255, 0, 0, 150));
             gradient.setColorAt(0.80, QColor(150, 100, 100, 150));

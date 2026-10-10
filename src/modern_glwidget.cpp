@@ -337,6 +337,7 @@ void ModernGLWidget::paintGL()
         frameArea();
     }
     mFramePending = false;
+    mFrameOnResize = false;
     mDistanceRequested = false;
 
     zmax = static_cast<float>(pArea->max_z);
@@ -392,7 +393,7 @@ void ModernGLWidget::paintGL()
 namespace {
 // Texels across the textures drawn on room tops
 constexpr int scmRoomTextureSize = 128;
-// Past this many, those the last frame did not draw are dropped, to be made again if needed
+// Past this many, those this frame does not draw are dropped to make room, to be made again if needed
 constexpr qsizetype scmMaxRoomTextures = 512;
 
 // A colour dimmed for its level's distance from the one being viewed
@@ -425,14 +426,46 @@ QImage clearRoomTextureImage(QColor edgeColor)
 }
 } // namespace
 
+GLuint ModernGLWidget::cachedRoomTexture(const QString& key)
+{
+    const GLuint texture = mLabelTextureCache.imageTexture(key);
+    if (texture) {
+        mRoomTexturesInUse.insert(key);
+    }
+    return texture;
+}
+
+bool ModernGLWidget::roomForAnotherTexture()
+{
+    if (mLabelTextureCache.makeRoomForImageTexture(scmMaxRoomTextures, mRoomTexturesInUse)) {
+        return true;
+    }
+    if (!mRoomTextureLimitWarned) {
+        mRoomTextureLimitWarned = true;
+        qWarning().nospace() << "ModernGLWidget: this view needs more than " << scmMaxRoomTextures << " different room symbols and markers, so some are not shown";
+    }
+    return false;
+}
+
+GLuint ModernGLWidget::addRoomTexture(const QString& key, const QImage& image)
+{
+    const GLuint texture = mLabelTextureCache.addImageTexture(key, image);
+    if (texture) {
+        mRoomTexturesInUse.insert(key);
+    }
+    return texture;
+}
+
 GLuint ModernGLWidget::symbolTexture(const QString& symbol, const QColor& color)
 {
     const QFont& font = mpMap->mMapSymbolFont;
     const qreal fudgeFactor = mpMap->mMapSymbolFontFudgeFactor;
     const QString key = qsl("symbol|%1|%2|%3|%4").arg(color.name(QColor::HexArgb), font.key(), QString::number(fudgeFactor), symbol);
-    mRoomTexturesInUse.insert(key);
-    if (const GLuint texture = mLabelTextureCache.imageTexture(key)) {
+    if (const GLuint texture = cachedRoomTexture(key)) {
         return texture;
+    }
+    if (!roomForAnotherTexture()) {
+        return 0;
     }
 
     QImage image = clearRoomTextureImage(color);
@@ -440,14 +473,16 @@ GLuint ModernGLWidget::symbolTexture(const QString& symbol, const QColor& color)
     ushort fontSize = 1;
     RoomAppearance::paintSymbol(painter, image.rect(), symbol, color, font, fudgeFactor, fontSize);
     painter.end();
-    return mLabelTextureCache.addImageTexture(key, image);
+    return addRoomTexture(key, image);
 }
 
 GLuint ModernGLWidget::discTexture(const QString& key, const QGradientStops& stops)
 {
-    mRoomTexturesInUse.insert(key);
-    if (const GLuint texture = mLabelTextureCache.imageTexture(key)) {
+    if (const GLuint texture = cachedRoomTexture(key)) {
         return texture;
+    }
+    if (!roomForAnotherTexture()) {
+        return 0;
     }
 
     QImage image = clearRoomTextureImage(stops.isEmpty() ? QColor(Qt::transparent) : stops.constLast().second);
@@ -461,7 +496,22 @@ GLuint ModernGLWidget::discTexture(const QString& key, const QGradientStops& sto
     painter.setBrush(gradient);
     painter.drawEllipse(center, radius, radius);
     painter.end();
-    return mLabelTextureCache.addImageTexture(key, image);
+    return addRoomTexture(key, image);
+}
+
+GLuint ModernGLWidget::squareTexture(const QColor& color)
+{
+    const QString key = qsl("square|%1").arg(color.name(QColor::HexArgb));
+    if (const GLuint texture = cachedRoomTexture(key)) {
+        return texture;
+    }
+    if (!roomForAnotherTexture()) {
+        return 0;
+    }
+
+    QImage image(scmRoomTextureSize, scmRoomTextureSize, QImage::Format_ARGB32);
+    image.fill(color);
+    return addRoomTexture(key, image);
 }
 
 void ModernGLWidget::renderRooms()
@@ -493,8 +543,24 @@ void ModernGLWidget::renderRooms()
     const QVector3D screenRight = mCameraController.screenRight();
     const QVector3D screenUp = mCameraController.screenUp();
 
-    mLabelTextureCache.limitImageTextures(scmMaxRoomTextures, mRoomTexturesInUse);
     mRoomTexturesInUse.clear();
+
+    // Made before any symbol, so a view short of room for textures still shows where the player is
+    GLuint playerRoomTexture = 0;
+    GLuint playerRoomFillTexture = 0;
+    if (pArea->getAreaRooms().contains(playerRoomId)) {
+        // The strong highlight is the original style over a translucent red room
+        const int style = mpHost->mMapStrongHighlight ? 0 : mpMap->mPlayerRoomStyle;
+        const QString key = qsl("player|%1|%2|%3|%4")
+                                    .arg(QString::number(style),
+                                         QString::number(mpMap->mPlayerRoomInnerDiameterPercentage),
+                                         mpMap->mPlayerRoomInnerColor.name(QColor::HexArgb),
+                                         mpMap->mPlayerRoomOuterColor.name(QColor::HexArgb));
+        playerRoomTexture = discTexture(key, RoomAppearance::playerRoomStops(style, mpMap->mPlayerRoomInnerDiameterPercentage, mpMap->mPlayerRoomInnerColor, mpMap->mPlayerRoomOuterColor));
+        if (mpHost->mMapStrongHighlight) {
+            playerRoomFillTexture = squareTexture(RoomAppearance::strongHighlightFillColor());
+        }
+    }
 
     QVector<CubeInstanceData> roomInstances;
     QVector<CubeInstanceData> borderInstances;
@@ -504,6 +570,7 @@ void ModernGLWidget::renderRooms()
     QHash<GLuint, GeometryData> symbolDecals;
     QHash<GLuint, GeometryData> highlightDecals;
     GeometryData playerRoomDecal;
+    GeometryData playerRoomFillDecal;
 
     QSetIterator<int> itRoom(pArea->getAreaRooms());
     while (itRoom.hasNext()) {
@@ -544,7 +611,7 @@ void ModernGLWidget::renderRooms()
         transform.scale(1.0f / scale, 1.0f / scale, 1.0f / scale / zFlattening);
         roomInstances.append(CubeInstanceData(transform, roomTint.x(), roomTint.y(), roomTint.z(), roomTint.w()));
 
-        if (mpHost->mMapperShowRoomBorders || pR->mBorderColor.isValid() || pR->mBorderThickness > 0) {
+        if ((mpHost->mMapperShowRoomBorders || pR->mBorderColor.isValid() || pR->mBorderThickness > 0) && !pArea->gridMode) {
             const float borderWidth = (pR->mBorderThickness > 0 ? pR->mBorderThickness : 1) * borderUnit;
             const float spread = (roomSize + 2.0f * borderWidth) / roomSize;
             const QColor borderColor = pR->mBorderColor.isValid() ? pR->mBorderColor : mpHost->mRoomBorderColor;
@@ -579,15 +646,12 @@ void ModernGLWidget::renderRooms()
         }
 
         if (isCurrentRoom) {
-            const int style = mpHost->mMapStrongHighlight ? 0 : mpMap->mPlayerRoomStyle;
-            const QString key = qsl("player|%1|%2|%3|%4")
-                                        .arg(QString::number(style),
-                                             QString::number(mpMap->mPlayerRoomInnerDiameterPercentage),
-                                             mpMap->mPlayerRoomInnerColor.name(QColor::HexArgb),
-                                             mpMap->mPlayerRoomOuterColor.name(QColor::HexArgb));
-            const QGradientStops stops = RoomAppearance::playerRoomStops(style, mpMap->mPlayerRoomInnerDiameterPercentage, mpMap->mPlayerRoomInnerColor, mpMap->mPlayerRoomOuterColor);
-            if (const GLuint texture = discTexture(key, stops)) {
-                playerRoomDecal.textureId = texture;
+            if (playerRoomFillTexture) {
+                playerRoomFillDecal.textureId = playerRoomFillTexture;
+                GeometryManager::appendGroundQuad(playerRoomFillDecal, roomTop, roomSize, screenRight, screenUp, decalTint);
+            }
+            if (playerRoomTexture) {
+                playerRoomDecal.textureId = playerRoomTexture;
                 const float radius = static_cast<float>(RoomAppearance::playerRoomRadius(mpMap->mPlayerRoomOuterDiameterPercentage, roomSize + 2.0f * borderUnit));
                 GeometryManager::appendGroundQuad(playerRoomDecal, roomTop, 2.0f * radius, screenRight, screenUp, decalTint);
             }
@@ -634,21 +698,25 @@ void ModernGLWidget::renderRooms()
 
     renderTriangles(indicatorVertices, indicatorColors);
 
-    if (symbolDecals.isEmpty() && highlightDecals.isEmpty() && playerRoomDecal.isEmpty()) {
+    if (symbolDecals.isEmpty() && highlightDecals.isEmpty() && playerRoomDecal.isEmpty() && playerRoomFillDecal.isEmpty()) {
         return;
     }
-    // Drawn on the room tops in the 2D map's order: symbol, then highlight, then the player's ring
+    // In the 2D map's order: outside grid mode a highlight is drawn over the symbol, in grid mode under it
+    const QHash<GLuint, GeometryData>& lowerDecals = pArea->gridMode ? highlightDecals : symbolDecals;
+    const QHash<GLuint, GeometryData>& upperDecals = pArea->gridMode ? symbolDecals : highlightDecals;
     mRenderCommandQueue.addCommand(std::make_unique<GLStateCommand>(GLStateCommand::DISABLE_DEPTH_WRITE));
     mRenderCommandQueue.addCommand(std::make_unique<GLStateCommand>(GLStateCommand::ENABLE_POLYGON_OFFSET));
-    for (const QHash<GLuint, GeometryData>* decals : {&symbolDecals, &highlightDecals}) {
+    for (const QHash<GLuint, GeometryData>* decals : {&lowerDecals, &upperDecals}) {
         for (const GeometryData& batch : *decals) {
             mRenderCommandQueue.addCommand(std::make_unique<RenderTexturedTrianglesCommand>(
                     batch, mCameraController.getProjectionMatrix(), mCameraController.getViewMatrix(), mCameraController.getModelMatrix(), RenderTexturedTrianglesCommand::Shading::Unlit));
         }
     }
-    if (!playerRoomDecal.isEmpty()) {
-        mRenderCommandQueue.addCommand(std::make_unique<RenderTexturedTrianglesCommand>(
-                playerRoomDecal, mCameraController.getProjectionMatrix(), mCameraController.getViewMatrix(), mCameraController.getModelMatrix(), RenderTexturedTrianglesCommand::Shading::Unlit));
+    for (const GeometryData* playerDecal : {&playerRoomFillDecal, &playerRoomDecal}) {
+        if (!playerDecal->isEmpty()) {
+            mRenderCommandQueue.addCommand(std::make_unique<RenderTexturedTrianglesCommand>(
+                    *playerDecal, mCameraController.getProjectionMatrix(), mCameraController.getViewMatrix(), mCameraController.getModelMatrix(), RenderTexturedTrianglesCommand::Shading::Unlit));
+        }
     }
     mRenderCommandQueue.addCommand(std::make_unique<GLStateCommand>(GLStateCommand::DISABLE_POLYGON_OFFSET));
     mRenderCommandQueue.addCommand(std::make_unique<GLStateCommand>(GLStateCommand::ENABLE_DEPTH_WRITE));
@@ -1016,7 +1084,16 @@ void ModernGLWidget::applyMapZoom(const qreal zoom, const int areaId)
         return;
     }
     frameRooms(zoom);
+    mFrameOnResize = !isVisible();
     update();
+}
+
+void ModernGLWidget::resizeEvent(QResizeEvent* event)
+{
+    QOpenGLWidget::resizeEvent(event);
+    if (mFrameOnResize) {
+        frameArea();
+    }
 }
 
 // Implement slot methods (same interface as original)
