@@ -145,9 +145,11 @@ private:
     void deleteSecurePassword(const QString& profile);
     void setupMudProfile(QListWidgetItem*, const QString& mudServer, const QString& serverDescription, const QString& iconFileName);
     void reallyDeleteProfile(const QString& profile);
-    // A removed profile's name is refused until its saved sign-in is gone, since a profile made or
-    // connected under it would read what is left. Process-wide: the removal outlives the dialog.
+    // A removed profile's name is refused until the removal of its saved sign-in has answered, since a
+    // profile made or connected under it meanwhile would read it. Process-wide: the removal outlives the
+    // dialog. Held as removalKey()s, because a case-insensitive disk files a variant in the same place.
     static QSet<QString>& namesWithSignInBeingRemoved();
+    static QString removalKey(const QString& name);
     static void forgetSignInOfRemovedProfile(const QString& profile, QPointer<dlgConnectionProfiles> dialog);
     bool profileRemovable(const QString& profile) const;
     void updateRemoveButtonState(const QString& profile);

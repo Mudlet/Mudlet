@@ -1198,7 +1198,7 @@ void dlgConnectionProfiles::reallyDeleteProfile(const QString& profile)
         return;
     }
 
-    namesWithSignInBeingRemoved().insert(profile);
+    namesWithSignInBeingRemoved().insert(removalKey(profile));
     QPointer<dlgConnectionProfiles> safeThis = this;
 
     // Clean up keychain entries for the deleted profile
@@ -1279,11 +1279,18 @@ void dlgConnectionProfiles::reallyDeleteProfile(const QString& profile)
     return names;
 }
 
+/*static*/ QString dlgConnectionProfiles::removalKey(const QString& name)
+{
+    return name.trimmed().toCaseFolded();
+}
+
 /*static*/ void dlgConnectionProfiles::forgetSignInOfRemovedProfile(const QString& profile, QPointer<dlgConnectionProfiles> dialog)
 {
     GMCPAuthenticator::forgetSavedSignInOfRemovedProfile(profile, [profile, dialog]() {
-        namesWithSignInBeingRemoved().remove(profile);
-        if (dialog) {
+        namesWithSignInBeingRemoved().remove(removalKey(profile));
+        // Only when it is the form being refused: revalidating clears the notification area, which may
+        // be saying that the removal itself went through
+        if (dialog && removalKey(dialog->profile_name_entry->text()) == removalKey(profile)) {
             dialog->validateProfile();
         }
     });
@@ -2540,11 +2547,12 @@ bool dlgConnectionProfiles::validateProfile()
             valid = false;
         }
 
-        if (namesWithSignInBeingRemoved().contains(name)) {
+        if (namesWithSignInBeingRemoved().contains(removalKey(name))) {
             notificationAreaIconLabelError->show();
-            notificationAreaMessageBox->setText(qsl("%1\n%2").arg(notificationAreaMessageBox->text(),
-                                                                  //: Shown for a moment after a profile is removed, while its saved sign-in is still being deleted from the password store
-                                                                  tr("The saved sign-in of the profile just removed under this name is still being deleted. Try again in a moment.")));
+            notificationAreaMessageBox->setText(
+                    qsl("%1\n%2").arg(notificationAreaMessageBox->text(),
+                                      //: Shown after a profile is removed, while its saved sign-in is still being deleted from the password store; it clears by itself when that finishes
+                                      tr("A profile with this name was just removed, and its saved sign-in is still being deleted. This will clear on its own in a moment.")));
             validName = false;
             valid = false;
         }
