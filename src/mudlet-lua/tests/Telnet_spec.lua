@@ -392,7 +392,7 @@ describe("Tests the rest of the SGR decoder", function()
     assert.is_true(isAnsiBgColor(6), "the SGR 42 behind a 48;4 sequence was not reached")
   end)
 
-  it("abandons a colour sequence whose type is missing, zero or unreadable", function()
+  it("leaves the colour alone when its type is missing, zero or empty", function()
     feed("\27[31mSgrStopA \27[38mSgrStopB")
     selectMarker("SgrStopB")
     assert.is_true(isAnsiFgColor(4), "a bare SGR 38 disturbed the foreground")
@@ -414,11 +414,9 @@ describe("Tests the rest of the SGR decoder", function()
     assert.is_true(isAnsiBgColor(4), "an empty background colour type disturbed the background")
   end)
 
-  -- only the colour is unusable, so the parameters either side of it still
-  -- apply, and its type is not read as an SGR code of its own
   it("applies the parameters around a colour whose type is empty, zero, unreadable or not rendered", function()
     for i, colour in ipairs({"38;;", "38;0;", "38;<;", "38;1;", "38;9;", "48;;", "48;0;", "48;<;", "48;1;", "48;9;"}) do
-      local marker = ("SgrBadTypeAttr%d"):format(i)
+      local marker = ("SgrBadTypeAttr%02d"):format(i)
       feed("\27[3;41;" .. colour .. "4m" .. marker)
       local format = formatOf(marker)
       assert.is_true(format.italic, "the italic before SGR " .. colour .. " was dropped")
