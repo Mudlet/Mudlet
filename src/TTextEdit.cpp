@@ -4406,7 +4406,9 @@ void TTextEdit::keyPressEvent(QKeyEvent* event)
 
     // #7933 Auto-reditect focus to command line from output window when press alpha-numeric characters
     // skips ctrl,alt, etc. This improves experiencie and makes fast switch to screenreader users focusing on output
-    if (!(event->modifiers() & (Qt::ControlModifier | Qt::AltModifier | Qt::MetaModifier)) && !event->text().isEmpty() && event->text().front().isPrint()) {
+    // Space on a focused link is an activation, handled with Return below
+    const bool activatesFocusedLink = event->key() == Qt::Key_Space && mpBuffer->getFocusedLink() > 0;
+    if (!activatesFocusedLink && !(event->modifiers() & (Qt::ControlModifier | Qt::AltModifier | Qt::MetaModifier)) && !event->text().isEmpty() && event->text().front().isPrint()) {
         if (mpHost && mpConsole && mpConsole->mpCommandLine) {
             mpHost->setCaretEnabled(false);
             mpHost->setFocusOnHostActiveCommandLine();

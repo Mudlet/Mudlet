@@ -549,6 +549,24 @@ private slots:
         QCOMPARE(luaGlobal("caretLinkOne"), qsl("ran"));
     }
 
+    // Space is the other activation key: being printable, it must not be handed
+    // to the command line while a link is focused (#10402)
+    void test_spaceActivatesTheLinkUnderTheCaret()
+    {
+        QVERIFY(runLua(qsl("caretLinkOne = ''")));
+        TCommandLine* pCommandLine = mpHost->mpConsole->mpCommandLine;
+        QVERIFY(pCommandLine);
+        pCommandLine->clear();
+        pane()->setCaretPosition(mLastLineNumber, 0);
+        press(pane(), Qt::Key_Tab);
+        QVERIFY2(consoleBuffer().getFocusedLink() > 0, "no link is focused, so Space has nothing to activate");
+
+        press(pane(), Qt::Key_Space);
+
+        QCOMPARE(luaGlobal("caretLinkOne"), qsl("ran"));
+        QCOMPARE(pCommandLine->toPlainText(), QString());
+    }
+
     // With no link under it, Return is not an activation and must not run the
     // link the caret visited last.
     void test_returnOffALinkRunsNothing()
