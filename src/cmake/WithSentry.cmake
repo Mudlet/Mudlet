@@ -73,6 +73,8 @@ ExternalProject_Add(
 )
 
 add_dependencies(${LIB_MUDLET_TARGET} sentry_native)
+add_dependencies(${LIB_MUDLET_APP_TARGET} sentry_native)
+add_dependencies(${EXE_MUDLET_TARGET} sentry_native)
 
 # Full debug info is only needed where the symbols are uploaded to Sentry, or
 # where the build type asks for it. Every other build - pull requests and pushes
@@ -89,6 +91,8 @@ else()
   set(SENTRY_DEBUG_INFO_FLAG -g1)
 endif()
 target_compile_options(${LIB_MUDLET_TARGET} PRIVATE ${SENTRY_DEBUG_INFO_FLAG})
+target_compile_options(${LIB_MUDLET_APP_TARGET} PRIVATE ${SENTRY_DEBUG_INFO_FLAG})
+target_compile_options(${EXE_MUDLET_TARGET} PRIVATE ${SENTRY_DEBUG_INFO_FLAG})
 
 if(WIN32)
     # On Windows the debug information must be emitted as CodeView (not DWARF) so
@@ -102,6 +106,7 @@ if(WIN32)
     # removed the RSDS record (empty debug-id) and changed size_of_image (different
     # code_id), so nothing ever matched and Windows crashes stayed unsymbolicated.
     target_compile_options(${LIB_MUDLET_TARGET} PRIVATE -gcodeview)
+    target_compile_options(${LIB_MUDLET_APP_TARGET} PRIVATE -gcodeview)
     target_compile_options(${EXE_MUDLET_TARGET} PRIVATE -g -gcodeview)
     # Derive the PDB name from the executable's base name so it always matches the
     # shipped exe (and the script's "${MUDLET_EXEC%.exe}.pdb" lookup) even if the
@@ -120,6 +125,12 @@ target_compile_definitions(${LIB_MUDLET_TARGET} PUBLIC
 )
 
 target_include_directories(${LIB_MUDLET_TARGET} PRIVATE
+   "${SENTRY_BUILD_ROOT}/include/"
+)
+target_include_directories(${LIB_MUDLET_APP_TARGET} PRIVATE
+   "${SENTRY_BUILD_ROOT}/include/"
+)
+target_include_directories(${EXE_MUDLET_TARGET} PRIVATE
    "${SENTRY_BUILD_ROOT}/include/"
 )
 target_link_directories(${LIB_MUDLET_TARGET} PUBLIC

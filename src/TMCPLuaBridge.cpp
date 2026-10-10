@@ -22,9 +22,9 @@
 #include "Host.h"
 #include "HostManager.h"
 #include "MudletApp.h"
+#include "TAppFrontend.h"
 #include "TLuaInterpreter.h"
 #include "TMap.h"
-#include "mudlet.h"
 #include "utils.h"
 
 #include <QElapsedTimer>
@@ -242,7 +242,8 @@ MCPToolResult TMCPLuaBridge::callTool(const QString& toolName, const QJsonObject
 
 Host* TMCPLuaBridge::targetHost(const QString& profileName, QString& failure)
 {
-    if (!mudlet::self()) {
+    auto* pFrontend = TAppFrontend::instance();
+    if (!pFrontend) {
         //: Error shown to an AI model when the application is not available to run Lua in.
         failure = tr("Mudlet is not running.");
         return nullptr;
@@ -262,7 +263,7 @@ Host* TMCPLuaBridge::targetHost(const QString& profileName, QString& failure)
     } else {
         // The foreground profile, which is the one the user would mean by "here". A model
         // that needs to be sure of which profile it is in should name it instead.
-        pTarget = mudlet::self()->getActiveHost();
+        pTarget = pFrontend->getActiveHost();
         if (!pTarget) {
             //: Error shown to an AI model when no game profile is open. Keep 'profile' as-is, it names an argument.
             failure = tr("No profile is open to run Lua in. Open one, or name a profile in the 'profile' argument.");

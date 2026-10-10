@@ -21,7 +21,7 @@ if(USE_UPDATER)
 endif()
 
 # Tests that share one executable rather than getting one each. A functional
-# test binary statically links mudlet_core and costs a build tree ~250MB plus a
+# test binary statically links mudlet_app and costs a build tree ~250MB plus a
 # link step, and none of that is per-test - so tests of one subsystem are built
 # together and told on the command line which class to run. See GroupedTest.h.
 #
@@ -333,8 +333,8 @@ mudlet_add_test_pch_provider(mudlet_functional_test_pch)
 macro(add_functional_test_binary target)
     add_executable(${target} ${ARGN} ${FUNCTIONAL_TEST_UTILS})
     mudlet_reuse_test_pch(${target} mudlet_functional_test_pch)
-    add_dependencies(${target} ${LIB_MUDLET_TARGET})
-    target_link_libraries(${target} PRIVATE Qt6::Test ${LIB_MUDLET_TARGET} mudlet_lsan_hooks)
+    add_dependencies(${target} ${LIB_MUDLET_APP_TARGET})
+    target_link_libraries(${target} PRIVATE Qt6::Test ${LIB_MUDLET_APP_TARGET} mudlet_lsan_hooks)
     set_target_properties(${target} PROPERTIES ENABLE_EXPORTS ON)
 endmacro()
 
