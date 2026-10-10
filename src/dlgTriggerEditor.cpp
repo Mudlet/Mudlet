@@ -13351,7 +13351,9 @@ void dlgTriggerEditor::slot_profileSaveAsAction()
     }
     slot_saveEdits();
 
-    mpHost->saveProfileAs(fileName);
+    if (auto [ok, filename, error] = mpHost->saveProfileAs(fileName); ok) {
+        mudlet::self()->writeSettings();
+    }
     mSavingAs = false;
 }
 
