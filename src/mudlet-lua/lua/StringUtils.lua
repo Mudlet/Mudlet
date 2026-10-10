@@ -184,7 +184,7 @@ if _VERSION == "Lua 5.1" then
   end
 end
 
-local find, sub, concat = string.find, string.sub, table.concat
+local find, sub, concat, type = string.find, string.sub, table.concat, type
 local getinfo, getlocal = debug.getinfo, debug.getlocal
 
 -- Compiling a {} block costs far more than running it, so each one is compiled
@@ -216,11 +216,11 @@ local function fstring_local(k, level)
     local i = 1
     repeat
       local name, value = getlocal(level, i)
-      if name == k then
-        return true, value
-      end
       if i == 1 and name == fstring_param then
         break
+      end
+      if name == k then
+        return true, value
       end
       i = i + 1
     until name == nil
@@ -290,8 +290,7 @@ local function fstring_parse(template)
   return parts
 end
 
--- long and inconvenient variable name is to help avoid collisions
--- str (what it was before) was causing f("Hello {str}") to return "Hello Hello {str}"
+-- Must match fstring_param: an unusual name, so no other function's frame is mistaken for f's
 function f(supersecretstringvariablenocollision)
   local supersecretstringvariablenocollisiontype = type(supersecretstringvariablenocollision)
   if supersecretstringvariablenocollisiontype ~= "string" then
@@ -332,6 +331,13 @@ function f(supersecretstringvariablenocollision)
         value = fstring_global(outer_env, name)
       end
       out[i] = tostring(value)
+      if seen then
+        -- A __tostring can change a local that a later name reads
+        local kind = type(value)
+        if kind == "table" or kind == "userdata" then
+          seen = nil
+        end
+      end
     else
       local code = part.code
       -- Made on first use and shared by this call's blocks; it reads the stack afresh on every access.

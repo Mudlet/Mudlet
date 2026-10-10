@@ -491,6 +491,14 @@ describe("Tests StringUtils.lua functions", function()
       assert.equals("nil", result)
     end)
 
+    it("should render locals holding nil and false as such in a template of several names", function()
+      _G.fstringSpecShadowedPair = "global"
+      local fstringSpecShadowedPair, other = nil, false
+      local result = f("{fstringSpecShadowedPair}{other}")
+      _G.fstringSpecShadowedPair = nil
+      assert.equals("nilfalse", result)
+    end)
+
     it("should take a name's locals from the caller's callers as well", function()
       local fromOuter = "outer"
       local function middle()
@@ -559,6 +567,41 @@ describe("Tests StringUtils.lua functions", function()
       local a = 1
       local result = f("{a}{a}{a}")
       assert.equals("111", result)
+    end)
+
+    it("should not let a nested f with several names see the outer f's internal locals", function()
+      local i, out, parts = "mine", "mine2", "mine3"
+      local result = f("{f('{i}{out}')}|{f('{parts}{i}')}")
+      assert.equals("minemine2|mine3mine", result)
+    end)
+
+    it("should not let a nested f read the outer f's template through its parameter", function()
+      local result = f("{f('{supersecretstringvariablenocollision}')}")
+      assert.equals("nil", result)
+    end)
+
+    it("should see a local that a __tostring changes before a later name is read", function()
+      local n = 0
+      local counter = setmetatable({}, { __tostring = function()
+        n = n + 1
+        return "o"
+      end })
+      local result = f("{counter}{n}")
+      assert.equals("o1", result)
+    end)
+
+    it("should take each name from the innermost frame that has it", function()
+      local function outer()
+        local x, y = "outer-x", "outer-y"
+        local function inner()
+          local x = "inner-x"
+          local result = f("{x}{y}")
+          return result
+        end
+        local result = inner()
+        return result
+      end
+      assert.equals("inner-xouter-y", outer())
     end)
 
     it("should prefer the innermost local when a name exists at several depths", function()
