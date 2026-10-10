@@ -427,6 +427,22 @@ gridMainBiggerCells = table.concat({getColumnCount("main"), getRowCount("main"),
         QCOMPARE(luaGlobalString(host, "gridMainBiggerSize"), joined({host->mScreenWidth * biggerMetrics.averageCharWidth(), host->mScreenHeight * biggerMetrics.height()}));
         QCOMPARE(luaGlobalString(host, "gridMainBiggerCells"), joined({host->mScreenWidth, host->mScreenHeight, 20}));
         QCOMPARE(luaGlobalString(host, "gridMainFontEvents"), qsl("main,20;main window font,20"));
+
+        QVERIFY(host->getLuaInterpreter()->compileAndExecuteScript(qsl(R"lua(
+gridFontEvents = {}
+gridBumped = false
+function gridBumpMainFont(_, window)
+  if window == "main" and not gridBumped then
+    gridBumped = true
+    setFontSize("main", 22)
+  end
+end
+registerAnonymousEventHandler("sysFontChangeEvent", "gridBumpMainFont")
+assert(setFontSize("main", 21) == true, "setFontSize did not answer true for main")
+gridReentrantFontEvents = table.concat(gridFontEvents, ";")
+)lua")));
+        // As Host::updateConsolesFont() does, the outer change reports the font a handler left, not the one it set
+        QCOMPARE(luaGlobalString(host, "gridReentrantFontEvents"), qsl("main,21;main,22;main window font,22;main window font,22"));
         QVERIFY2(QApplication::topLevelWidgets().isEmpty(), "Asking for the geometry created a widget.");
     }
 
