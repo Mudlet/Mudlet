@@ -379,43 +379,40 @@ private slots:
         QTRY_VERIFY_WITH_TIMEOUT(readGlobalInt(qsl("offsetChildTicks")) > 0, 5s);
     }
 
-    // An offset timer its parent has already armed must not fire after the stop.
-    // Command-only, as
-    // switching on an offset timer with a script by name gives it a schedule of
-    // its own - see the case above.
+    // An offset timer its parent has already armed must not run its script after
+    // the stop. Counted from the script body, not a sysDataSendRequest handler:
+    // the stop mutes events, so a sent command would go uncounted. The script is
+    // set after switching the child on, because switching on an offset timer with
+    // a script by name gives it a schedule of its own - see the case above.
     void test_armedOffsetTimerStoppedByEmergencyStop()
     {
         auto* unit = mpHost->getTimerUnit();
-        QVERIFY(mpHost->mLuaInterpreter.compileAndExecuteScript(qsl("stopOffsetParentTicks = 0\nstopOffsetChildTicks = 0\n"
-                                                                    "function onStopOffsetTimerSend(_, what)\n"
-                                                                    "  if what == 'stopOffsetParentCommand' then stopOffsetParentTicks = stopOffsetParentTicks + 1 end\n"
-                                                                    "  if what == 'stopOffsetChildCommand' then stopOffsetChildTicks = stopOffsetChildTicks + 1 end\n"
-                                                                    "end\n"
-                                                                    "registerAnonymousEventHandler('sysDataSendRequest', 'onStopOffsetTimerSend')")));
+        QVERIFY(mpHost->mLuaInterpreter.compileAndExecuteScript(qsl("stopOffsetParentTicks = 0\nstopOffsetChildTicks = 0")));
 
         const QString parentName = qsl("emergency stop armed offset parent");
-        auto [parentId, parentMessage] = mpHost->mLuaInterpreter.startPermTimer(parentName, QString(), scmOffsetParentSeconds, QString());
+        auto [parentId, parentMessage] = mpHost->mLuaInterpreter.startPermTimer(parentName, QString(), scmOffsetParentSeconds, qsl("stopOffsetParentTicks = stopOffsetParentTicks + 1"));
         QVERIFY2(parentId > 0, qPrintable(parentMessage));
-        unit->getTimer(parentId)->setCommand(qsl("stopOffsetParentCommand"));
         const QString childName = qsl("emergency stop armed offset child");
         // most of the parent's interval, so the case can catch the child armed but not yet fired
         auto [childId, childMessage] = mpHost->mLuaInterpreter.startPermTimer(childName, parentName, scmOffsetParentSeconds * 0.7, QString());
         QVERIFY2(childId > 0, qPrintable(childMessage));
         auto* pChild = unit->getTimer(childId);
-        pChild->setCommand(qsl("stopOffsetChildCommand"));
         QVERIFY(pChild->isOffsetTimer());
 
         mRunningTimerNames << parentName << childName;
         QVERIFY(unit->enableTimer(parentName));
         QVERIFY(unit->enableTimer(childName));
+        pChild->setScript(qsl("stopOffsetChildTicks = stopOffsetChildTicks + 1"));
+        QCOMPARE(unit->remainingTime(childId), -1);
         QTRY_VERIFY_WITH_TIMEOUT(readGlobalInt(qsl("stopOffsetParentTicks")) > 0, 5s);
         QVERIFY2(unit->remainingTime(childId) > 0, "the parent firing should have armed its offset child");
         QCOMPARE(readGlobalInt(qsl("stopOffsetChildTicks")), 0);
 
         mpHost->stopAllTriggers();
         QCOMPARE(unit->remainingTime(childId), -1);
-        QTest::qWait(static_cast<int>(scmOffsetParentSeconds * 1500));
-        QVERIFY2(readGlobalInt(qsl("stopOffsetChildTicks")) == 0, "an offset timer armed before the emergency stop must not fire after it");
+        // past the 0.7s the armed child had left
+        QTest::qWait(static_cast<int>(scmOffsetParentSeconds * 1000));
+        QVERIFY2(readGlobalInt(qsl("stopOffsetChildTicks")) == 0, "an offset timer armed before the emergency stop must not run its script after it");
 
         // and the resume still gets the pair going: the parent re-arms the child
         mpHost->reenableAllTriggers();
