@@ -5586,6 +5586,10 @@ std::pair<bool, QString> Host::setWindow(const QString& windowname, const QStrin
         if (consoleFrontend()->reparentLabel(windowname, name, x1, y1, show)) {
             return {true, QString()};
         }
+        if (!hasConsoleView()) {
+            // A detached view's, which only that view can move
+            return TNullConsoleFrontend::noView();
+        }
         return {false, qsl("element '%1' not found").arg(name)};
     }
 
