@@ -215,6 +215,8 @@ headlessDeletedNames = table.concat(headlessDeleted, ",")
         QVERIFY2(label, "The label has no model.");
         QCOMPARE(label->mText, qsl("label words"));
         QCOMPARE(label->mGeometry, QRect(5, 6, 70, 80));
+        QVERIFY(host->getLuaInterpreter()->compileAndExecuteScript(qsl(R"lua(headlessLabelText = getLabelText("headlessTextLabel"))lua")));
+        QCOMPARE(luaGlobalString(host, "headlessLabelText"), qsl("label words"));
     }
 
     // The trim that raises sysBufferShrinkEvent runs inside TBuffer::append(), and echo goes on using the

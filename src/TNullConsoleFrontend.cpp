@@ -34,11 +34,14 @@ TNullConsoleFrontend::~TNullConsoleFrontend() = default;
 
 void TNullConsoleFrontend::dropWindows()
 {
+    // Copies, as each call erases the node that holds the name
     while (!mSubConsoles.empty()) {
-        removeSubConsole(mSubConsoles.begin()->first);
+        const QString name = mSubConsoles.begin()->first;
+        removeSubConsole(name);
     }
     while (!mLabels.empty()) {
-        removeLabel(mLabels.begin()->first);
+        const QString name = mLabels.begin()->first;
+        removeLabel(name);
     }
 }
 

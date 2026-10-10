@@ -6201,9 +6201,6 @@ std::optional<QFont> Host::labelFont(const QString& name) const
 
 std::optional<QString> Host::labelText(const QString& name) const
 {
-    if (!hasConsoleView()) {
-        return {};
-    }
     if (const TLabelModel* pLabel = mWindowRegistry.labelModel(name)) {
         return pLabel->mText;
     }
