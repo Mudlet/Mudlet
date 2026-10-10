@@ -219,6 +219,83 @@ headlessDeletedNames = table.concat(headlessDeleted, ",")
         QCOMPARE(luaGlobalString(host, "headlessLabelText"), qsl("label words"));
     }
 
+    // What a real view records as it moves, shows, styles or titles a window, the null view records too.
+    void test_windowStateReadsBackWithNoMainWindow()
+    {
+        Host* host = HostManager::self()->getHost(mWindowsHostname);
+        QVERIFY2(host, "test_windowsMadeWithNoMainWindowHaveModels() did not leave its profile.");
+
+        const bool ran = host->getLuaInterpreter()->compileAndExecuteScript(qsl(R"lua(
+headlessState = 'not run'
+local ok, err = pcall(function()
+  assert(createLabel("stateLabel", 1, 2, 30, 40, 1) == true, "createLabel did not answer true")
+  assert(setLabelStyleSheet("stateLabel", "color: red;") == true, "setLabelStyleSheet did not answer true")
+  assert(getLabelStyleSheet("stateLabel") == "color: red;", "the style sheet did not read back")
+  assert(setLabelToolTip("stateLabel", "a tip") == true, "setLabelToolTip did not answer true")
+  assert(getLabelToolTip("stateLabel") == "a tip", "the tool tip did not read back")
+  assert(setLabelCursor("stateLabel", 2) == true, "setLabelCursor did not answer true")
+  local badShape, badShapeMsg = setLabelCursor("stateLabel", 99)
+  assert(badShape == nil and badShapeMsg:find("cursor shape"), "an unknown cursor shape was not refused")
+  local missing, missingMsg = setLabelStyleSheet("noSuchStateLabel", "color: red;")
+  assert(missing == nil and missingMsg:find("not found"), "styling a missing label did not answer nil and a message")
+  assert(setLabelClickCallback("stateLabel", function() end) == true, "setLabelClickCallback did not answer true")
+  assert(windowVisible("stateLabel") == true, "the new label is not visible")
+  hideWindow("stateLabel")
+  assert(windowVisible("stateLabel") == false, "the hidden label is visible")
+  assert(showWindow("stateLabel") == true, "showWindow did not answer true")
+  assert(windowVisible("stateLabel") == true, "the shown label is not visible")
+  moveWindow("stateLabel", 5, 6)
+  resizeWindow("stateLabel", 70, 80)
+
+  assert(createMiniConsole("stateMini", 0, 0, 10, 10) == true, "createMiniConsole did not answer true")
+  moveWindow("stateMini", 7, 8)
+  resizeWindow("stateMini", 90, 100)
+  hideWindow("stateMini")
+  assert(windowVisible("stateMini") == false, "the hidden miniconsole is visible")
+  setBackgroundColor("stateMini", 10, 20, 30, 255)
+  local r, g, b, a = getBackgroundColor("stateMini")
+  assert(r == 10 and g == 20 and b == 30 and a == 255, "the background colour of the miniconsole did not read back")
+
+  assert(openUserWindow("stateWindow") == true, "openUserWindow did not answer true")
+  assert(createLabel("stateWindow", "stateInner", 0, 0, 10, 10, 1) == true, "a label could not go in the user window")
+  hideWindow("stateWindow")
+  assert(windowVisible("stateWindow") == false, "the hidden user window is visible")
+  assert(windowVisible("stateInner") == false, "a label in a hidden user window is visible")
+  showWindow("stateWindow")
+  assert(windowVisible("stateInner") == true, "a label in a shown user window is not visible")
+  assert(setWindow("main", "stateInner", 3, 4, false) == true, "setWindow did not move the label")
+  hideWindow("stateWindow")
+  assert(windowVisible("stateInner") == false, "a label moved out unshown is visible")
+  showWindow("stateWindow")
+  assert(setUserWindowTitle("stateWindow", "A title") == true, "setUserWindowTitle did not answer true")
+  assert(getUserWindowTitle("stateWindow") == "A title", "the title did not read back")
+  assert(setUserWindowTitle("stateWindow") == true, "resetting the title did not answer true")
+  assert(getUserWindowTitle("stateWindow"):find("stateWindow", 1, true), "the default title does not name the window")
+  local notWindow, notWindowMsg = setUserWindowTitle("stateMini", "A title")
+  assert(notWindow == nil and notWindowMsg:find("not a user window"), "a miniconsole took a title")
+  assert(setUserWindowStyleSheet("stateWindow", "background: blue;") == true, "setUserWindowStyleSheet did not answer true")
+  assert(getUserWindowStyleSheet("stateWindow") == "background: blue;", "the user window style sheet did not read back")
+  resizeWindow("stateWindow", 120, 130)
+
+  setBorderColor(1, 2, 3)
+  local br, bg, bb = getBorderColor()
+  assert(br == 1 and bg == 2 and bb == 3, "the border colour did not read back")
+end)
+headlessState = ok and 'ok' or tostring(err)
+)lua"));
+
+        QVERIFY2(ran, "The Lua chunk did not run.");
+        QCOMPARE(luaGlobalString(host, "headlessState"), qsl("ok"));
+        const TLabelModel* label = host->windowRegistry().labelModel(qsl("stateLabel"));
+        QVERIFY2(label, "The label has no model.");
+        QCOMPARE(label->mGeometry, QRect(5, 6, 70, 80));
+        QVERIFY(label->mClickFunction);
+        QCOMPARE(host->windowRegistry().subConsoleGeometry(qsl("stateMini")), std::optional<QRect>(QRect(7, 8, 90, 100)));
+        QCOMPARE(host->windowRegistry().labelModel(qsl("stateInner"))->mGeometry.topLeft(), QPoint(3, 4));
+        QCOMPARE(host->windowRegistry().userWindowSize(qsl("stateWindow")), std::optional<QSize>(QSize(120, 130)));
+        QVERIFY2(QApplication::topLevelWidgets().isEmpty(), "Working the windows created a widget.");
+    }
+
     // The trim that raises sysBufferShrinkEvent runs inside TBuffer::append(), and echo goes on using the
     // console's model after that returns, so a handler deleting the console must not free it there and then.
     void test_consoleDeletedByItsOwnShrinkEventWithNoMainWindow()
