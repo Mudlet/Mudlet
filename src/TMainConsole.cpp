@@ -212,8 +212,11 @@ void shareDockAreaIfSqueezed(QPointer<TDockWidget> dock)
         }
         // Hidden before its first layout, as Geyser does to a window created hidden, it keeps no size of
         // its own and is squeezed the same way when shown
+        qDebug().nospace() << "SHAREDBG timer " << dock->objectName() << " visible=" << dock->isVisible() << " dockH=" << dock->height() << " widgetH=" << dock->widget()->height()
+                           << " fontH=" << dock->fontMetrics().height();
         if (!dock->isVisible()) {
-            const auto retry = [dock]() {
+            const auto retry = [dock](bool v) {
+                qDebug().nospace() << "SHAREDBG visibilityChanged " << v << " dockH=" << dock->height() << " widgetH=" << dock->widget()->height();
                 shareDockAreaIfSqueezed(dock);
             };
             QObject::connect(dock.data(), &QDockWidget::visibilityChanged, dock.data(), retry, Qt::SingleShotConnection);
@@ -233,10 +236,15 @@ void shareDockAreaIfSqueezed(QPointer<TDockWidget> dock)
             if (other->isVisible() && !other->isFloating() && other->parentWidget() == window && window->dockWidgetArea(other) == area) {
                 total += extent(other);
                 ++docks;
+                qDebug().nospace() << "SHAREDBG counted " << other->objectName() << " " << other->geometry();
             }
         }
+        qDebug().nospace() << "SHAREDBG resize docks=" << docks << " total=" << total;
         if (docks > 1) {
             window->resizeDocks({dock.data()}, {total / docks}, orientation);
+            QTimer::singleShot(0ms, dock, [dock]() {
+                qDebug().nospace() << "SHAREDBG after resizeDocks " << dock->objectName() << " dockH=" << dock->height() << " widgetH=" << dock->widget()->height();
+            });
         }
     });
 }

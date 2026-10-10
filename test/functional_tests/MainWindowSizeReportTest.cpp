@@ -112,6 +112,19 @@ private:
                 .arg(docksInArea);
     }
 
+    QString geom(const QString& name) const
+    {
+        TDockWidget* pDock = mpHost->mpConsole->dockWidget(name);
+        if (!pDock) {
+            return qsl("none");
+        }
+        QString out;
+        QDebug(&out).nospace() << name << " dock=" << pDock->geometry() << " widget=" << (pDock->widget() ? pDock->widget()->geometry() : QRect()) << " vis=" << pDock->isVisible()
+                               << " hidden=" << pDock->isHidden() << " area=" << mudlet::self()->dockWidgetArea(pDock) << " mw=" << mudlet::self()->geometry()
+                               << " mwvis=" << mudlet::self()->isVisible() << " central=" << (mudlet::self()->centralWidget() ? mudlet::self()->centralWidget()->geometry() : QRect());
+        return out;
+    }
+
     int luaInt(const QString& global) const
     {
         lua_State* L = mpHost->mLuaInterpreter.getLuaGlobalState();
@@ -289,10 +302,19 @@ private slots:
         const int alone = dockSize(first).height();
         QVERIFY2(alone > 100, qPrintable(qsl("the first user window is only %1 high on its own").arg(alone)));
 
+        qDebug().noquote() << "SHAREDBG test: opening hidden" << geom(first);
         runLua(qsl("openUserWindow('%1', false) hideWindow('%1')").arg(second));
+        qDebug().noquote() << "SHAREDBG test: opened and hidden" << geom(first) << geom(second);
         settle();
+        qDebug().noquote() << "SHAREDBG test: settled, showing" << geom(first) << geom(second);
         runLua(qsl("showWindow('%1')").arg(second));
+        qDebug().noquote() << "SHAREDBG test: shown" << geom(first) << geom(second);
         settle();
+        qDebug().noquote() << "SHAREDBG test: settled after show" << geom(first) << geom(second);
+        for (auto* d : mudlet::self()->findChildren<QDockWidget*>()) {
+            qDebug().nospace() << "SHAREDBG test: dock " << d->objectName() << " " << d->geometry() << " vis=" << d->isVisible() << " floating=" << d->isFloating()
+                               << " area=" << mudlet::self()->dockWidgetArea(d) << " parentIsMw=" << (d->parentWidget() == mudlet::self());
+        }
         const int firstHeight = dockSize(first).height();
         const int secondHeight = dockSize(second).height();
         QVERIFY2(secondHeight > alone / 4, qPrintable(qsl("the second user window is %1 high beside the first's %2 (%3)").arg(secondHeight).arg(firstHeight).arg(dockState(second))));
