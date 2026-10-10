@@ -83,8 +83,9 @@ public:
     // installed, so without this every one of those rules is only ever checked
     // by hand on a developer's machine.
     //
-    // A factory rather than a recognizer: mudlet retires the engine it replaces,
-    // so handing over one object would leave a second init dereferencing it.
+    // A factory rather than a recognizer: TSpeechBridge retires the engine it
+    // replaces, so handing over one object would leave a second init
+    // dereferencing it.
     using RecognizerFactory = std::function<SpeechRecognizer*(QObject* parent)>;
     static void setFactoryOverride(RecognizerFactory factory);
 
