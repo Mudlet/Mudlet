@@ -28,6 +28,7 @@
 #include <QDir>
 #include <QFile>
 #include <QFileInfo>
+#include <QScopeGuard>
 #include <QStandardPaths>
 #include <QTemporaryDir>
 
@@ -139,6 +140,7 @@ private slots:
     void testCredentialExistsWithoutHandingOverTheSecret();
     void testAsyncEmptyArgumentsAreReportedThroughTheCallback();
     void testAsyncApiRefusesTheKeysTheStaticApiRefuses();
+    void testAStoreWithNowhereToKeepTheKeyFails();
     void cleanupTestCase();
 
 private:
@@ -987,6 +989,32 @@ void CredentialManagerTest::testAsyncApiRefusesTheKeysTheStaticApiRefuses()
     QVERIFY(stored);
     QCOMPARE(CredentialManager::retrieveCredential(profile, accepted), QString("async_secret"));
     CredentialManager::removeCredential(profile, accepted);
+}
+
+// With no encryption key that can be stored, the password is not saved, and the callback the
+// connection dialog waits on has to say so
+void CredentialManagerTest::testAStoreWithNowhereToKeepTheKeyFails()
+{
+    CredentialManager manager;
+    const QString profile = qsl("NowhereToKeepTheKey");
+    const QString profileDir = qsl("%1/profiles/%2").arg(QStandardPaths::writableLocation(QStandardPaths::AppConfigLocation), profile);
+    QVERIFY(QDir(profileDir).removeRecursively());
+    // Where XDG_CONFIG_HOME is not honoured this is the real config folder, so it goes whatever the outcome
+    auto cleanup = qScopeGuard([&profileDir] {
+        QDir(profileDir).removeRecursively();
+    });
+    // A directory where the key file belongs makes it impossible to write
+    QVERIFY(QDir().mkpath(profileDir + qsl("/encryption_key")));
+
+    bool answered = false;
+    bool stored = true;
+    manager.storePassword(profile, qsl("character"), qsl("cannot_be_protected"), [&](bool success, const QString&) {
+        answered = true;
+        stored = success;
+    });
+    QVERIFY2(answered, "the file store answered later than it returned, which MUDLET_TEST_MODE should never let it do");
+    QVERIFY2(!stored, "the store reported a password saved that it had no key to protect");
+    QVERIFY(CredentialManager::retrieveCredential(profile, qsl("character")).isEmpty());
 }
 
 void CredentialManagerTest::cleanupTestCase()
