@@ -281,7 +281,7 @@ private slots:
         // as Host::loadMapFile() arranges it.
         host->showHideOrCreateMapper(false);
         QVERIFY(host->mpMap);
-        QVERIFY(host->mpMap->mpMapper);
+        QVERIFY(host->mpMap->mapper());
         TMap* pMap = host->mpMap.data();
 
         QElapsedTimer loadTimer;
@@ -292,7 +292,7 @@ private slots:
         pMap->audit();
         const double auditSeconds = loadTimer.nsecsElapsed() / 1.0e9;
 
-        T2DMap* p2dMap = host->mpMap->mpMapper->mp2dMap;
+        T2DMap* p2dMap = host->mpMap->mapper()->mp2dMap;
         QVERIFY(p2dMap);
         p2dMap->init();
 

@@ -31,9 +31,9 @@
 #include "KeyUnit.h"
 #include "ScriptUnit.h"
 #include "GifTracker.h"
+#include "TConsoleModel.h"
 #include "TLuaInterpreter.h"
 #include "TimerUnit.h"
-#include "TMainConsole.h"
 #include "TSpellChecker.h"
 #include "TWindowRegistry.h"
 #include "TriggerUnit.h"
@@ -77,6 +77,7 @@ class GMCPAuthenticator;
 class CredentialManager;
 class TRoom;
 class TConsole;
+class TConsoleFrontend;
 class TMainConsole;
 struct TConsoleModel;
 class TMap;
@@ -305,6 +306,15 @@ public:
     // code that can run that early has to be able to see "not there yet"
     // rather than dereference the shared_ptr.
     TConsoleModel* mainConsoleModelOrNull() { return mpMainConsoleModel.get(); }
+    // The concrete main console widget, or nullptr while this profile has none.
+    // For widget-side code: this and setMainConsoleView() are defined in
+    // TMainConsole.cpp, so that Host.cpp never needs the widget's definition.
+    TMainConsole* mainConsoleView() const;
+    // mainConsoleView() as core code calls it, by window name rather than widget; null when that is.
+    TConsoleFrontend* consoleFrontend() const;
+    void setMainConsoleView(TMainConsole* view);
+    // Keeps TMainConsole's translation context, so the existing translations still apply.
+    static QString loggingAnnouncementText(const bool isLogging, const QString& logFileName);
     std::shared_ptr<TConsoleModel> sharedMainConsoleModel();
     // Colorizer triggers: select a run of the current line, paint it, restore the format. Model state
     // only, so these run with no view; the two colour ones repaint the
@@ -317,7 +327,7 @@ public:
     // The console a script names: "" and "main" are the main console's, any
     // other a mini console's, user window's or buffer's. The main console's is
     // there with or without a view.
-    TConsoleModel* consoleModelNamed(const QString& name);
+    TConsoleModel* consoleModelNamed(const QString& name) const;
     // The one clipboard every console copies to and pastes from. Each answers
     // whether it found the console.
     bool copyToClipboard(const QString& name);
@@ -672,7 +682,40 @@ public:
     }
     std::optional<QString> windowType(const QString& name) const;
     std::optional<QRect> windowGeometry(const QString& name) const;
+    // {} for no such label.
+    std::optional<QString> labelStyleSheet(const QString& name) const;
+    std::optional<QString> labelToolTip(const QString& name) const;
+    std::optional<QFont> labelFont(const QString& name) const;
+    std::optional<QString> labelText(const QString& name) const;
+    // The title in .second when .first is true, otherwise why there is none, in setUserWindowTitle()'s words.
+    std::pair<bool, QString> userWindowTitle(const QString& name) const;
+    // {} for no such user window.
+    std::optional<QString> userWindowStyleSheet(const QString& name) const;
     std::optional<bool> windowVisible(const QString& name) const;
+    std::optional<QSize> mainWindowSize() const;
+    // A name with no user window answers the main window's size.
+    std::optional<QSize> userWindowSize(const QString& name) const;
+    // Columns by rows of a console's text area; {} for no such console.
+    std::optional<QSize> windowGridSize(const QString& name) const;
+    // The line a console's upper pane last drew up to, within its buffer; {} for no such console.
+    std::optional<int> windowScroll(const QString& name) const;
+    // Whether a console scrolls; {} for no such console.
+    std::optional<bool> windowScrolling(const QString& name) const;
+    // Whether a script last asked for a console's scroll bar; {} for no such console.
+    std::optional<bool> windowScrollBarVisible(const QString& name) const;
+    // {} for no such command line.
+    std::optional<QString> commandLineText(const QString& name) const;
+    std::optional<QString> commandLineStyleSheet(const QString& name) const;
+    std::optional<bool> commandLineSavesHistory(const QString& name) const;
+    // {} for no such text box.
+    std::optional<QString> textBoxText(const QString& name) const;
+    std::optional<QFont> textBoxFont(const QString& name) const;
+    // {} without a main console.
+    std::optional<QColor> borderColor() const;
+    // The main console answers the profile's display font; {} for no such console.
+    std::optional<QFont> windowFont(const QString& name) const;
+    // The point size of a console's upper pane font; {} for no such console.
+    std::optional<int> windowFontSize(const QString& name) const;
     bool getEditorShowBidi() const { return mEditorShowBidi; }
     void setEditorShowBidi(const bool);
     bool caretEnabled() const;
@@ -696,13 +739,7 @@ public:
     bool setMMCPChatName(const QString&);
     void setShowIdsInEditor(const bool isShown);
     bool getF3SearchEnabled() const { return mF3SearchEnabled; }
-    void setF3SearchEnabled(const bool enabled)
-    {
-        mF3SearchEnabled = enabled;
-        if (mpConsole) {
-            mpConsole->setF3SearchEnabled(enabled);
-        }
-    }
+    void setF3SearchEnabled(const bool enabled);
     bool getForceMXPProcessorOn() const { return mForceMXPProcessorOn; }
     void setForceMXPProcessorOn(bool value)
     {
@@ -749,13 +786,14 @@ private:
     // which reads members declared much later - mBgColor among them. Same class of
     // bug as #10229, which had to move a call rather than a declaration.
     bool mIsClosingDown = false;
+    // Its font is the "reference" or "master" font for the whole profile.
+    // Clears itself when the view is destroyed, which is what makes handing
+    // out mpConsoleFrontend safe.
+    QPointer<TMainConsole> mpConsole;
+    // The same object, as core code drives it; read only while mpConsole is set.
+    TConsoleFrontend* mpConsoleFrontend = nullptr;
 
 public:
-    // Make this the first public member instantiated so we can use ITS font
-    // as the "reference" or "master" font for whole profile - and so we don't
-    // have to maintain a separate one here in this class which does not, as
-    // something derived from a QObject, have one:
-    QPointer<TMainConsole> mpConsole;
     cTelnet mTelnet;
     TLuaInterpreter mLuaInterpreter;
 
