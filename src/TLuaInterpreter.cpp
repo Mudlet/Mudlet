@@ -1422,11 +1422,14 @@ int TLuaInterpreter::saveProfile(lua_State* L)
 {
     Host& host = getHostFromLua(L);
 
+    if (!lua_isnoneornil(L, 1) && !checkStringArg(L, __func__, 1, "folder", true)) {
+        return lua_error(L);
+    }
     if (!lua_isnoneornil(L, 2) && !checkStringArg(L, __func__, 2, "file name", true)) {
         return lua_error(L);
     }
     QString saveToDir;
-    if (lua_isstring(L, 1)) {
+    if (!lua_isnoneornil(L, 1)) {
         saveToDir = lua_tostring(L, 1);
     }
     QString saveAsFile;

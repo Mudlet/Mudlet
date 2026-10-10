@@ -938,6 +938,37 @@ describe("Tests C++ functions in the Miscallaneous category", function()
         assert.is_true(contains(tostring(message), "absolute path"), "saveProfile() answered " .. tostring(message))
         assert.is_false(fileExists(escapee), "the save landed at " .. escapee)
       end)
+
+      -- Only nil stands for no folder: any other folder that is not a string
+      -- raises, as a file name that is not a string does
+      it("raises for a folder that is not a string", function()
+        local folder = scratchFolder("mudlet-spec-save-folder-type")
+        local name = folder .. "/mudlet-spec-saved"
+
+        for _, notAFolder in ipairs({ {}, true, false }) do
+          local calls = {
+            function() return saveProfile(notAFolder) end,
+            function() return saveProfile(notAFolder, name) end,
+          }
+          for _, call in ipairs(calls) do
+            local ok, err, path = pcall(call)
+            -- A save taken anyway is waited out, so the cleanup cannot race it
+            if ok and err then
+              assertSaveTurnedUp(path)
+            end
+            assert.is_false(ok, "saveProfile() took a " .. type(notAFolder) .. " as its folder")
+            local expected = "saveProfile: bad argument #1 type (folder as string is optional, got " .. type(notAFolder) .. "!)"
+            assert.is_true(contains(tostring(err), expected), "saveProfile() raised " .. tostring(err))
+          end
+        end
+        assert.is_false(fileExists(name .. ".xml"), "the save landed at " .. name .. ".xml")
+      end)
+
+      it("reports a folder that is not a string ahead of a file name that is not one either", function()
+        local ok, err = pcall(saveProfile, {}, {})
+        assert.is_false(ok, "saveProfile() took two tables")
+        assert.is_true(contains(tostring(err), "saveProfile: bad argument #1 type"), "saveProfile() raised " .. tostring(err))
+      end)
     end)
 
     describe("Tests the logging functions", function()
