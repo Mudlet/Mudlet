@@ -3750,6 +3750,15 @@ void mudlet::addConsoleForNewHost(Host* pH)
     }
     mpTabBar->repaint();
 
+    //: Title of a balloon pointing out the redesigned Settings window
+    const QString settingsCalloutTitle = tr("Settings have a new look");
+    //: Body of a balloon pointing out the redesigned Settings window
+    const QString settingsCalloutBody = tr("Settings are now grouped by task, and you can search for any of them by name. Changes take effect as soon as you make them.");
+    // Whichever is on screen gets the balloon, the toolbar if both are; by
+    // default only the menu bar is shown
+    TFeatureCallout::maybeShow(qsl("redesignedSettings"), mpMainToolBar->widgetForAction(mpActionOptions), settingsCalloutTitle, settingsCalloutBody);
+    TFeatureCallout::maybeShow(qsl("redesignedSettings"), menuBar(), menuOptions->menuAction(), settingsCalloutTitle, settingsCalloutBody);
+
     // Tab switching only becomes relevant once a second profile is open; an
     // empty sequence means the player cleared the shortcut and already knows
     // about the feature:
@@ -5586,6 +5595,8 @@ void mudlet::showOptionsDialog(const QString& tab, Host* pHost)
     if (!pHost) {
         pHost = getActiveHost();
     }
+
+    TFeatureCallout::dismiss(qsl("redesignedSettings"));
 
     auto pPrefs = pHost ? HostDialogs::of(pHost).mpDlgProfilePreferences : mpDlgProfilePreferences;
 

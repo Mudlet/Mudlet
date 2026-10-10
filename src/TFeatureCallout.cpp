@@ -22,10 +22,12 @@
 #include "mudlet.h"
 #include "MudletApp.h"
 
+#include <QApplication>
 #include <QEvent>
-#include <QGuiApplication>
 #include <QHBoxLayout>
 #include <QLabel>
+#include <QMouseEvent>
+#include <QMenuBar>
 #include <QPainter>
 #include <QPainterPath>
 #include <QPushButton>
@@ -54,12 +56,21 @@ QString shownCountKey(const QString& featureId)
 {
     return qsl("whatsNew/%1/shownCount").arg(featureId);
 }
+
+QRect anchorRectFor(QWidget* pAnchor, QAction* pAnchorMenu)
+{
+    if (auto* pMenuBar = qobject_cast<QMenuBar*>(pAnchor); pMenuBar && pAnchorMenu) {
+        return pMenuBar->actionGeometry(pAnchorMenu);
+    }
+    return pAnchor->rect();
+}
 } // namespace
 
-TFeatureCallout::TFeatureCallout(const QString& featureId, QWidget* pAnchor, const QString& title, const QString& body)
+TFeatureCallout::TFeatureCallout(const QString& featureId, QWidget* pAnchor, const QString& title, const QString& body, QAction* pAnchorMenu)
 : QWidget(pAnchor->window(), Qt::ToolTip | Qt::FramelessWindowHint)
 , mFeatureId(featureId)
 , mpAnchor(pAnchor)
+, mpAnchorMenu(pAnchorMenu)
 , mAnnouncement(qsl("%1. %2").arg(title, body))
 {
     setAttribute(Qt::WA_TranslucentBackground);
@@ -104,6 +115,16 @@ TFeatureCallout::TFeatureCallout(const QString& featureId, QWidget* pAnchor, con
 
 void TFeatureCallout::maybeShow(const QString& featureId, QWidget* pAnchor, const QString& title, const QString& body)
 {
+    maybeShowImpl(featureId, pAnchor, nullptr, title, body);
+}
+
+void TFeatureCallout::maybeShow(const QString& featureId, QMenuBar* pMenuBar, QAction* pMenu, const QString& title, const QString& body)
+{
+    maybeShowImpl(featureId, pMenuBar, pMenu, title, body);
+}
+
+void TFeatureCallout::maybeShowImpl(const QString& featureId, QWidget* pAnchor, QAction* pAnchorMenu, const QString& title, const QString& body)
+{
     if (!pAnchor) {
         return;
     }
@@ -125,8 +146,11 @@ void TFeatureCallout::maybeShow(const QString& featureId, QWidget* pAnchor, cons
     }
 
     // let the widget holding the anchor settle into its final place first
-    QTimer::singleShot(800ms, pAnchor, [featureId, pAnchor, title, body]() {
-        if (!pAnchor->isVisible()) {
+    QTimer::singleShot(800ms, pAnchor, [featureId, pAnchor, pAnchorMenu = QPointer<QAction>(pAnchorMenu), title, body]() {
+        if (!pAnchor->isVisible() || !pAnchor->rect().contains(anchorRectFor(pAnchor, pAnchorMenu))) {
+            return;
+        }
+        if (MudletApp::getQSettings()->value(dismissedKey(featureId), false).toBool()) {
             return;
         }
         // the session budget is claimed here rather than up front, so an
@@ -136,14 +160,27 @@ void TFeatureCallout::maybeShow(const QString& featureId, QWidget* pAnchor, cons
             return;
         }
         smSessionShown.insert(featureId);
-        auto* pCallout = new TFeatureCallout(featureId, pAnchor, title, body);
+        auto* pCallout = new TFeatureCallout(featureId, pAnchor, title, body, pAnchorMenu);
         pCallout->showAnchored();
     });
 }
 
+void TFeatureCallout::dismiss(const QString& featureId)
+{
+    auto* settings = MudletApp::getQSettings();
+    if (!settings->value(dismissedKey(featureId), false).toBool()) {
+        settings->setValue(dismissedKey(featureId), true);
+    }
+    for (QWidget* pWidget : QApplication::topLevelWidgets()) {
+        if (auto* pCallout = qobject_cast<TFeatureCallout*>(pWidget); pCallout && pCallout->mFeatureId == featureId) {
+            pCallout->close();
+        }
+    }
+}
+
 void TFeatureCallout::showAnchored()
 {
-    if (!mpAnchor || !mpAnchor->isVisible()) {
+    if (!anchorOnScreen()) {
         return;
     }
     if (!mApplicationActive) {
@@ -187,7 +224,7 @@ void TFeatureCallout::slot_applicationStateChanged(const Qt::ApplicationState st
         return;
     }
     mWaitingForActivation = false;
-    if (!mpAnchor || !mpAnchor->isVisible()) {
+    if (!anchorOnScreen()) {
         close();
         return;
     }
@@ -199,13 +236,28 @@ void TFeatureCallout::markDismissed()
     MudletApp::getQSettings()->setValue(dismissedKey(mFeatureId), true);
 }
 
+QRect TFeatureCallout::anchorRect() const
+{
+    return anchorRectFor(mpAnchor, mpAnchorMenu);
+}
+
+// A menu folded into the bar's overflow extension keeps a geometry past the bar's edge
+bool TFeatureCallout::anchorOnScreen() const
+{
+    return mpAnchor && mpAnchor->isVisible() && mpAnchor->rect().contains(anchorRect());
+}
+
 void TFeatureCallout::reposition()
 {
-    if (!mpAnchor || !mpAnchor->isVisible()) {
+    // e.g. a narrowed window folded the menu into the bar's overflow; not a
+    // dismissal, the player never engaged with the balloon
+    if (!anchorOnScreen()) {
+        close();
         return;
     }
-    const QPoint anchorTopCenter = mpAnchor->mapToGlobal(QPoint(mpAnchor->width() / 2, 0));
-    const QPoint anchorBottomCenter = mpAnchor->mapToGlobal(QPoint(mpAnchor->width() / 2, mpAnchor->height()));
+    const QRect target = anchorRect();
+    const QPoint anchorTopCenter = mpAnchor->mapToGlobal(QPoint(target.left() + target.width() / 2, target.top()));
+    const QPoint anchorBottomCenter = mpAnchor->mapToGlobal(QPoint(target.left() + target.width() / 2, target.top() + target.height()));
     const QRect available = mpAnchor->screen()->availableGeometry();
     mArrowOnTop = anchorBottomCenter.y() + 2 + height() <= available.bottom();
     layout()->setContentsMargins(16, mArrowOnTop ? arrowHeight + 12 : 12, 16, mArrowOnTop ? 12 : arrowHeight + 12);
@@ -264,9 +316,9 @@ bool TFeatureCallout::eventFilter(QObject* watched, QEvent* event)
         }
         break;
     case QEvent::MouseButtonPress:
-        // the anchor got clicked, so the feature has been discovered - the
-        // balloon has served its purpose
-        if (watched == mpAnchor) {
+        // the anchor (or the menu it points at) got clicked, so the feature
+        // has been discovered - the balloon has served its purpose
+        if (watched == mpAnchor && anchorRect().contains(static_cast<QMouseEvent*>(event)->position().toPoint())) {
             markDismissed();
             close();
         }

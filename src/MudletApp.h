@@ -205,6 +205,8 @@ private:
     friend class ConfigDirOverrideTest;
     // Points the root at a scratch directory to seed the updater's version marker
     friend class FeedChecksumRaceTest;
+    // A fresh scratch config reads as a first launch, which never shows callouts
+    friend class FeatureCalloutTest;
     // Discards any settings store built under the previous root - and with it any
     // pointer a caller cached, so this must not run once init() has handed the
     // store to the Updater. portable says whether the root came from a
