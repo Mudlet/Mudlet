@@ -107,7 +107,7 @@ jobs:
         # least-recently-used, and a dropped ccache is a 20 minute cold rebuild
         # rather than a 30 second download.
         cache: false
-        modules: qt5compat qtmultimedia qtspeech
+        modules: qt5compat qtmultimedia qtspeech qtwebsockets qthttpserver
 
     - name: Restore Lua build cache
       id: cache-lua
@@ -438,6 +438,9 @@ jobs:
         SENTRY_DSN: ${{ secrets.SENTRY_DSN }}
         MUDLET_SANITIZERS: ${{ github.event_name == 'pull_request' && 'address' || '' }}
         SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
+        # An environment variable rather than a -D: CMake reads this one through
+        # include_optional_module(), which only ever consults the environment.
+        WITH_MCPSERVER: "ON"
 
     # A hit refreshes an entry's timestamp, so whatever this build left untouched
     # is an object it no longer compiles. Dropping it saves one build's working
