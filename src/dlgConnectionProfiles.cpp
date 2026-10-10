@@ -1198,6 +1198,9 @@ void dlgConnectionProfiles::reallyDeleteProfile(const QString& profile)
         return;
     }
 
+    namesWithSignInBeingRemoved().insert(removalKey(profile));
+    QPointer<dlgConnectionProfiles> safeThis = this;
+
     // Clean up keychain entries for the deleted profile
     // Note: CredentialManager only supports one operation at a time, so we must
     // chain the operations - the second removal starts only after the first completes.
@@ -1208,7 +1211,7 @@ void dlgConnectionProfiles::reallyDeleteProfile(const QString& profile)
         QPointer<CredentialManager> safeCredManager = new CredentialManager(nullptr);
 
         // Clean up character password entry first, then chain proxy cleanup
-        safeCredManager->removePassword(profile, "character", [safeCredManager, profile](bool success, const QString& errorMessage) {
+        safeCredManager->removePassword(profile, "character", [safeCredManager, profile, safeThis](bool success, const QString& errorMessage) {
             if (!success) {
                 qWarning() << "dlgConnectionProfiles: Failed to clean up character password for deleted profile" << profile << ":" << errorMessage;
             }
@@ -1216,11 +1219,12 @@ void dlgConnectionProfiles::reallyDeleteProfile(const QString& profile)
             // Check if credManager was destroyed before chaining next operation
             if (!safeCredManager) {
                 qWarning() << "dlgConnectionProfiles: CredentialManager destroyed, cannot clean up proxy password";
+                forgetSignInOfRemovedProfile(profile, safeThis, false);
                 return;
             }
 
             // Now clean up proxy password entry (chained after character password removal completes)
-            safeCredManager->removePassword(profile, "proxy", [safeCredManager, profile](bool proxySuccess, const QString& proxyErrorMessage) {
+            safeCredManager->removePassword(profile, "proxy", [safeCredManager, profile, safeThis, characterRemoved = success](bool proxySuccess, const QString& proxyErrorMessage) {
                 if (!proxySuccess) {
                     qWarning() << "dlgConnectionProfiles: Failed to clean up proxy password for deleted profile" << profile << ":" << proxyErrorMessage;
                 }
@@ -1229,8 +1233,14 @@ void dlgConnectionProfiles::reallyDeleteProfile(const QString& profile)
                 if (safeCredManager) {
                     safeCredManager->deleteLater();
                 }
+
+                // Only now: keychain jobs run one at a time, and each times out while it waits its turn
+                forgetSignInOfRemovedProfile(profile, safeThis, characterRemoved && proxySuccess);
             });
         });
+    } else {
+        // Passwords stored with the profile went with its folder; the sign-in never lives there
+        forgetSignInOfRemovedProfile(profile, safeThis, true);
     }
 
     // only the self-test entry needs its removal recorded: fillout_form() lists
@@ -1261,6 +1271,46 @@ void dlgConnectionProfiles::reallyDeleteProfile(const QString& profile)
             showRemovalNotice(tr("Nothing has been saved for '%1' yet, so there was nothing to remove.").arg(profile));
         }
     }
+}
+
+/*static*/ QSet<QString>& dlgConnectionProfiles::namesWithSignInBeingRemoved()
+{
+    static QSet<QString> names;
+    return names;
+}
+
+/*static*/ bool dlgConnectionProfiles::signInRemovalPending(const QString& name)
+{
+    return namesWithSignInBeingRemoved().contains(removalKey(name));
+}
+
+/*static*/ QString dlgConnectionProfiles::removalKey(const QString& name)
+{
+    return name.trimmed().toCaseFolded();
+}
+
+/*static*/ void dlgConnectionProfiles::forgetSignInOfRemovedProfile(const QString& profile, QPointer<dlgConnectionProfiles> dialog, bool passwordsRemoved)
+{
+    GMCPAuthenticator::forgetSavedSignInOfRemovedProfile(profile, [profile, dialog, passwordsRemoved](bool signInRemoved) {
+        namesWithSignInBeingRemoved().remove(removalKey(profile));
+        // Only when it is the form being refused: revalidating clears the notification area, which may
+        // be saying that the removal itself went through
+        if (dialog && removalKey(dialog->profile_name_entry->text()) == removalKey(profile)) {
+            dialog->validateProfile();
+        }
+        if (dialog && !(passwordsRemoved && signInRemoved)) {
+            // Next turn of the event loop: without a keychain this answers before the removal has put up
+            // its own notice, which would otherwise replace this one
+            QTimer::singleShot(0, dialog.data(), [dialog, profile]() {
+                if (dialog) {
+                    //: %1 is a profile name. Shown when the profile was removed but its saved password or sign-in could not be deleted from where it is kept, e.g. the computer's password manager was locked
+                    dialog->showRemovalProblem(tr("'%1' was removed, but its saved password or sign-in could not be deleted, so it is still stored on this computer. "
+                                                  "Don't make a new profile called '%1' until it has been removed.")
+                                                       .arg(profile));
+                }
+            });
+        }
+    });
 }
 
 // called when the 'delete' button is pressed, raises a dialog to confirm deletion
@@ -2510,6 +2560,16 @@ bool dlgConnectionProfiles::validateProfile()
         if ((QString::compare(pItem->data(csmNameRole).toString(), name, Qt::CaseInsensitive) != 0) && mProfileList.contains(name, Qt::CaseInsensitive)) {
             notificationAreaIconLabelError->show();
             notificationAreaMessageBox->setText(qsl("%1\n%2").arg(notificationAreaMessageBox->text(), tr("This profile name is already in use.")));
+            validName = false;
+            valid = false;
+        }
+
+        if (signInRemovalPending(name)) {
+            notificationAreaIconLabelError->show();
+            notificationAreaMessageBox->setText(
+                    qsl("%1\n%2").arg(notificationAreaMessageBox->text(),
+                                      //: Shown after a profile is removed, while its saved sign-in is still being deleted from the password store; it clears by itself when that finishes
+                                      tr("A profile with this name was just removed, and its saved sign-in is still being deleted. This will clear on its own in a moment.")));
             validName = false;
             valid = false;
         }

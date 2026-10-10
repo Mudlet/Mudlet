@@ -28,8 +28,11 @@
  * Run with: ctest -R ProfileDeletionSafetyTest -V
  */
 
+#include <QScopeGuard>
+#include <QStandardPaths>
 #include <QtTest/QtTest>
 
+#include "CredentialManager.h"
 #include "MudletApp.h"
 #include "PortableModeTestHelper.h"
 #include "MudletInstanceCoordinator.h"
@@ -37,6 +40,7 @@
 #include "mudlet.h"
 
 #include "GroupedTest.h"
+#include "HostManager.h"
 
 using namespace std::chrono_literals;
 
@@ -388,6 +392,136 @@ private slots:
         QVERIFY2(!QDir(profilePath(doomed)).exists(), "the confirmed profile was not removed");
         QVERIFY2(QDir(profilePath(mKeeper)).exists(), "an unrelated profile was removed too");
         closeDialog(dlg);
+    }
+
+    // The credential store is not inside the profile folder, so removing the
+    // folder alone leaves a sign-in for a new profile of the same name to find
+    void test_aRemovedProfileTakesItsSavedSignInWithIt_data()
+    {
+        QTest::addColumn<bool>("storingSecurely");
+        QTest::newRow("passwords kept in the profile") << false;
+        // the sign-in removal waits behind the password one here
+        QTest::newRow("passwords kept securely") << true;
+    }
+
+    void test_aRemovedProfileTakesItsSavedSignInWithIt()
+    {
+        QFETCH(bool, storingSecurely);
+        mudlet::self()->setStorePasswordsSecurely(storingSecurely);
+        const QString signedIn = qsl("QA Signed In");
+        // On macOS and Windows the store is outside the test's own directory
+        auto forgetBoth = qScopeGuard([this, signedIn] {
+            for (const QString& profile : {signedIn, mKeeper}) {
+                CredentialManager::removeCredential(profile, qsl("reconnect"));
+                CredentialManager::removeCredential(profile, qsl("reconnect-token"));
+            }
+            mudlet::self()->setStorePasswordsSecurely(false);
+        });
+        makeProfileWithSavedGame(signedIn);
+        QVERIFY(CredentialManager::storeCredential(signedIn, qsl("reconnect"), qsl(R"({"account": "acct:char", "provider": "discord", "token": "inline-token"})")));
+        QVERIFY(CredentialManager::storeCredential(signedIn, qsl("reconnect-token"), qsl("left-behind")));
+        QVERIFY(CredentialManager::storeCredential(mKeeper, qsl("reconnect-token"), qsl("keeper-token")));
+
+        auto* dlg = openDialog();
+        selectProfile(dlg, signedIn);
+        removeProfileAndConfirm(dlg, signedIn);
+        QVERIFY2(!QDir(profilePath(signedIn)).exists(), "the confirmed profile was not removed");
+
+        QTRY_VERIFY2(CredentialManager::retrieveCredential(signedIn, qsl("reconnect-token")).isEmpty(), "the removed profile's sign-in token is still stored");
+        QTRY_VERIFY2(CredentialManager::retrieveCredential(signedIn, qsl("reconnect")).isEmpty(), "the removed profile's sign-in record, with its token, is still stored");
+        QCOMPARE(CredentialManager::retrieveCredential(mKeeper, qsl("reconnect-token")), qsl("keeper-token"));
+        QVERIFY2(!dlgConnectionProfiles::namesWithSignInBeingRemoved().contains(dlgConnectionProfiles::removalKey(signedIn)), "the name stayed refused after its sign-in was removed");
+        // Nothing failed, so nothing is reported: it would otherwise follow every removal
+        QTest::qWait(50);
+        QVERIFY2(!dlg->notificationAreaMessageBox->text().contains(qsl("could not be deleted")), "a removal that went through was reported as leaving something behind");
+        closeDialog(dlg);
+    }
+
+    // The removal waits on the keychain, and a profile made or connected under the name meanwhile would
+    // read the sign-in it has not reached yet
+    void test_aNameIsRefusedWhileItsSignInIsStillBeingRemoved()
+    {
+        const QString reused = qsl("QA Reused Name");
+        makeProfileWithSavedGame(reused);
+        auto stopRefusing = qScopeGuard([reused] {
+            dlgConnectionProfiles::namesWithSignInBeingRemoved().remove(dlgConnectionProfiles::removalKey(reused));
+        });
+
+        auto* dlg = openDialog();
+        selectProfile(dlg, reused);
+        QVERIFY2(dlg->offline_button->isEnabled(), "the profile could not be opened even before its name was refused, so this case proves nothing");
+
+        // Removed under another case: a case-insensitive disk files both in the same place
+        dlgConnectionProfiles::namesWithSignInBeingRemoved().insert(dlgConnectionProfiles::removalKey(qsl(" qa reused NAME")));
+        dlg->validateProfile();
+        QVERIFY2(!dlg->offline_button->isEnabled() && !dlg->connect_button->isEnabled(), "a name whose sign-in is still being removed could be opened");
+
+        dlgConnectionProfiles::namesWithSignInBeingRemoved().remove(dlgConnectionProfiles::removalKey(reused));
+        dlg->validateProfile();
+        QVERIFY2(dlg->offline_button->isEnabled(), "the name stayed refused once its sign-in was gone");
+        closeDialog(dlg);
+    }
+
+    // A telnet:// link names and connects a profile without the dialog, so it must treat a name still
+    // being cleaned up as taken too
+    void test_aLinkDoesNotReuseANameStillBeingCleanedUp()
+    {
+        const QString pending = qsl("Qalinkpending");
+        auto stopRefusing = qScopeGuard([pending] {
+            dlgConnectionProfiles::namesWithSignInBeingRemoved().remove(dlgConnectionProfiles::removalKey(pending));
+        });
+        dlgConnectionProfiles::namesWithSignInBeingRemoved().insert(dlgConnectionProfiles::removalKey(pending));
+
+        const QString created = qsl("%1-2").arg(pending);
+        // The link loads and dials the profile it makes, which would otherwise outlive this case
+        auto closeCreated = qScopeGuard([this, created] {
+            if (Host* host = HostManager::self()->getHost(created)) {
+                host->forceClose();
+                mudlet::self()->slot_closeProfileByName(created);
+                QTest::qWaitFor(
+                        [&created]() {
+                            return !HostManager::self()->getHost(created);
+                        },
+                        10s);
+            }
+            QDir(profilePath(created)).removeRecursively();
+        });
+        mudlet::self()->handleTelnetUri(qsl("telnet://qalinkpending.invalid:23"));
+        QVERIFY2(!QDir(profilePath(pending)).exists(), "the link reused a name whose old sign-in was still being deleted");
+        QVERIFY2(QDir(profilePath(created)).exists(), "the link did not move on to the next free name");
+    }
+
+    // The password store can refuse to delete what a removed profile saved, and the profile is gone by
+    // then, so the dialog is the only place left to say so
+    void test_aSignInTheStoreWontDeleteIsReported()
+    {
+#if defined(Q_OS_WIN)
+        QSKIP("a read-only folder does not stop a file being deleted on Windows");
+#else
+        const QString stuck = qsl("QA Stuck Sign In");
+        makeProfileWithSavedGame(stuck);
+        QVERIFY(CredentialManager::storeCredential(stuck, qsl("reconnect-token"), qsl("cannot-go")));
+        const QString passwordsFolder = qsl("%1/profiles/%2/passwords").arg(QStandardPaths::writableLocation(QStandardPaths::AppConfigLocation), MudletApp::sanitizeForPath(stuck));
+        const auto unlock = qScopeGuard([&passwordsFolder, &stuck] {
+            QFile::setPermissions(passwordsFolder, QFileDevice::ReadOwner | QFileDevice::WriteOwner | QFileDevice::ExeOwner);
+            CredentialManager::removeCredential(stuck, qsl("reconnect-token"));
+        });
+        QVERIFY(QFile::setPermissions(passwordsFolder, QFileDevice::ReadOwner | QFileDevice::ExeOwner));
+        if (QFileInfo(passwordsFolder).isWritable()) {
+            QSKIP("folder permissions do not stop a deletion here (running as root)");
+        }
+
+        auto* dlg = openDialog();
+        auto close = qScopeGuard([this, dlg] {
+            closeDialog(dlg);
+        });
+        selectProfile(dlg, stuck);
+        removeProfileAndConfirm(dlg, stuck);
+        QVERIFY2(!QDir(profilePath(stuck)).exists(), "the confirmed profile was not removed");
+        QTRY_VERIFY2(dlg->notificationAreaMessageBox->text().contains(qsl("could not be deleted")),
+                     qPrintable(qsl("a sign-in left behind was not reported - the dialog says: %1").arg(dlg->notificationAreaMessageBox->text())));
+
+#endif
     }
 
     // A name Mudlet would turn down as a new profile is still a profile on disk

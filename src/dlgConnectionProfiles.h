@@ -25,7 +25,9 @@
 
 #include "ui_connection_profiles.h"
 #include <optional>
+#include <QPointer>
 #include <QRegularExpression>
+#include <QSet>
 #include <QTimer>
 #include <QKeyEvent>
 
@@ -43,6 +45,7 @@ class dlgConnectionProfiles : public QDialog, public Ui::connection_profiles
     friend class ConnectionDialogKeychainWaitTest;
     friend class ConnectionDialogOfflineProfileTest;
     friend class SelfTestProfileIconTest;
+    friend class ProfileDeletionSafetyTest;
 
 public:
     Q_DISABLE_COPY(dlgConnectionProfiles)
@@ -58,6 +61,9 @@ public:
     static const int csmNameRole{Qt::UserRole};
     static QChar firstInvalidProfileNameChar(const QString& name);
     static bool profileNameUsableAsIs(const QString& name);
+    // Whether a removed profile's saved sign-in is still being deleted under this name; see
+    // namesWithSignInBeingRemoved(). For anything that creates a profile outside this dialog, such as a telnet:// link.
+    static bool signInRemovalPending(const QString& name);
     static QString profileFolderPath(const QString& profilesPath, const QString& profile);
     static const QString scmAllowedProfileNameChars;
     static const QRegularExpression scmUnusableProfileNameChars;
@@ -142,6 +148,13 @@ private:
     void deleteSecurePassword(const QString& profile);
     void setupMudProfile(QListWidgetItem*, const QString& mudServer, const QString& serverDescription, const QString& iconFileName);
     void reallyDeleteProfile(const QString& profile);
+    // A removed profile's name is refused until the removal of its saved sign-in has answered, since a
+    // profile made or connected under it meanwhile would read it. Process-wide: the removal outlives the
+    // dialog. Held as removalKey()s, because a case-insensitive disk files a variant in the same place.
+    static QSet<QString>& namesWithSignInBeingRemoved();
+    static QString removalKey(const QString& name);
+    // passwordsRemoved: whether the profile's saved passwords were deleted; the player is told if they or the sign-in were not
+    static void forgetSignInOfRemovedProfile(const QString& profile, QPointer<dlgConnectionProfiles> dialog, bool passwordsRemoved);
     bool profileRemovable(const QString& profile) const;
     void updateRemoveButtonState(const QString& profile);
     void showRemovalProblem(const QString& message);
