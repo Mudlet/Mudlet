@@ -108,13 +108,8 @@ private slots:
         mpHost = TestProfile::create(mHostname, mLocalhost, mPort);
         QVERIFY2(mpHost, "no active host after profile creation");
 
-        // saveDictionary() reads the existing word count before writing, so the
-        // file-only profile needs the pair of files a first load would make:
+        // The file-only profile is never loaded, so nothing else makes its folder:
         QVERIFY(QDir().mkpath(MudletApp::getMudletPath(enums::profileDataItemPath, mFileOnlyProfile, QString())));
-        QSet<QString> empty;
-        Hunhandle* seed = TSpellChecker::prepareProfileDictionary(mFileOnlyProfile, empty);
-        QVERIFY2(seed, "could not prepare the dictionary of the file-only profile");
-        Hunspell_destroy(seed);
     }
 
     void cleanupTestCase()

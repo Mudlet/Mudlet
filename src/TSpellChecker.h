@@ -90,7 +90,7 @@ private:
     // supplied second argument and update the .aff file as appropriate. It is
     // to be used at the end of a session to store away the user's changes:
     static bool saveDictionary(const QString&, QSet<QString>&);
-    static int getDictionaryWordCount(const QString& dictionaryPath);
+    static int getDictionaryWordCount(const QString& dictionaryPath, QStringList& uncountedWords);
     static bool overwriteAffixFile(const QString& affixPath, const QHash<QString, unsigned int>&);
     static bool overwriteDictionaryFile(const QString& dictionaryPath, const QStringList&);
     static bool scanDictionaryFile(const QString& dictionaryPath, int&, QHash<QString, unsigned int>&, QStringList&);
