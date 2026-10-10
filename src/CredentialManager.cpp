@@ -1822,7 +1822,18 @@ QString CredentialManager::readLegacyFileCredential(const QString& profileName, 
     SecureStringUtils::restrictDirectoryToOwner(QFileInfo(legacyPath).absolutePath());
 
     const QString encrypted = QString::fromUtf8(file.readAll());
+    const bool readFailed = file.error() != QFileDevice::NoError;
+    const QString readError = file.errorString();
     file.close();
+
+    // Unlike a copy that won't decrypt, which may be another profile's, a failed read says nothing about whose it is
+    if (readFailed) {
+        qWarning() << "CredentialManager: Failed to read credential file left by the earlier naming scheme:" << legacyPath << "Error:" << readError;
+        if (unreadable) {
+            *unreadable = true;
+        }
+        return QString();
+    }
 
     return SecureStringUtils::decryptStringForProfile(encrypted, profileName);
 }
