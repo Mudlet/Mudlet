@@ -73,6 +73,7 @@ private:
     const QString mCopiedSecureCatalogProfile = qsl("Accursed Lands");
     const QString mRenamedCatalogProfile = qsl("Aardwolf");
     const QString mAddressSavedCatalogProfile = qsl("Slothmud");
+    const QString mUncopyableCatalogProfile = qsl("Materia Magica");
     const QString mAutoLoginSecureCatalogProfile = qsl("MorgenGrauen");
     // A catalog game with no folder at all
     const QString mUnopenedCatalogProfile = qsl("3Scapes");
@@ -124,6 +125,7 @@ private slots:
                                     mCopiedSecureCatalogProfile,
                                     mRenamedCatalogProfile,
                                     mAddressSavedCatalogProfile,
+                                    mUncopyableCatalogProfile,
                                     mAutoLoginSecureCatalogProfile,
                                     mSavedProfile,
                                     mTickedProfile}) {
@@ -337,6 +339,25 @@ private slots:
         selectTestProfile();
         selectProfile(renamed);
         QCOMPARE(dialog()->mud_description_textedit->toPlainText(), (*game).description);
+    }
+
+    // A copy that could not be made has to say so
+    void test_aCopyThatCannotBeMadeSaysSo()
+    {
+        QVERIFY2(dialog(), "No connection dialog to test against");
+        const QString copyPath = MudletApp::getMudletPath(enums::profileHomePath, mUncopyableCatalogProfile + qsl("1"));
+        // a file where the copy's folder would go
+        QFile blocker(copyPath);
+        QVERIFY(blocker.open(QIODevice::WriteOnly));
+        blocker.close();
+        selectTestProfile();
+        selectProfile(mUncopyableCatalogProfile);
+
+        dialog()->slot_copyProfile();
+        QVERIFY2(waitForTheCopy(), "the copy never finished");
+        QVERIFY2(!QDir(copyPath).exists(), "the copy's folder was made after all, so this proves nothing");
+        QVERIFY2(dialog()->notificationArea->isVisible() && dialog()->notificationAreaMessageBox->text().contains(qsl("copy"), Qt::CaseInsensitive), "the copy could not be made and nothing said so");
+        QVERIFY(QFile::remove(copyPath));
     }
 
     // A telnet:// link has to find a catalog game whose folder holds none of its details
