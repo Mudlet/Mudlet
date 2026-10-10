@@ -31,8 +31,11 @@
 #include <QFile>
 #include <QFileInfo>
 #include <QRegularExpression>
+#include <QSet>
 #include <QSettings>
 #include <QTemporaryDir>
+
+#include <limits>
 
 #include "PortableModeTestHelper.h"
 #include "Host.h"
@@ -176,6 +179,58 @@ private slots:
 
         QCOMPARE(pHost->readProfileIniData(qsl("CommandLines/UsedIndexes")), qsl("3"));
         QCOMPARE(parseWarnings, 0);
+
+        HostManager::self()->deleteHost(profileName);
+    }
+
+    // A hand-edited or damaged counter must not name a history file from an
+    // overflowed or negative index (#10644), nor one a command line already uses
+    void test_aCommandLineIndexThatCannotBeIncrementedStartsAgain_data()
+    {
+        const QString filesInUse = qsl("NameMapping\\chat=command_history_01\nNameMapping\\log=command_history_03\n");
+        QTest::addColumn<QString>("iniLines");
+        QTest::addColumn<QString>("expectedFile");
+        QTest::addColumn<QString>("expectedIndex");
+        QTest::newRow("INT_MAX") << qsl("UsedIndexes=%1\n").arg(std::numeric_limits<int>::max()) << qsl("command_history_01") << qsl("1");
+        QTest::newRow("negative") << qsl("UsedIndexes=-5\n") << qsl("command_history_01") << qsl("1");
+        QTest::newRow("INT_MAX, files in use") << qsl("UsedIndexes=%1\n%2").arg(QString::number(std::numeric_limits<int>::max()), filesInUse) << qsl("command_history_04") << qsl("4");
+        QTest::newRow("negative, files in use") << qsl("UsedIndexes=-5\n%1").arg(filesInUse) << qsl("command_history_04") << qsl("4");
+    }
+
+    void test_aCommandLineIndexThatCannotBeIncrementedStartsAgain()
+    {
+        QFETCH(QString, iniLines);
+        QFETCH(QString, expectedFile);
+        QFETCH(QString, expectedIndex);
+        const QString profileName = qsl("ProfileIniParseError-Index-%1").arg(QString::fromLatin1(QTest::currentDataTag()).replace(QRegularExpression(qsl("[^A-Za-z_]")), qsl("_")));
+
+        Host* pHost = hostWithProfileIni(profileName, qsl("[CommandLines]\n%1").arg(iniLines).toUtf8());
+        QVERIFY2(pHost, "the profile with a hand-edited command line index was not created");
+
+        const auto [fileName, saveCommands] = pHost->getCmdLineSettings(enums::SubCommandLine, qsl("qaIndexCommandLine"));
+        Q_UNUSED(saveCommands)
+        QCOMPARE(fileName, expectedFile);
+        QCOMPARE(pHost->readProfileIniData(qsl("CommandLines/UsedIndexes")), expectedIndex);
+
+        HostManager::self()->deleteHost(profileName);
+    }
+
+    // A counter rebuilt next to the largest index has nowhere to go but back to
+    // the start, and must still give every new command line a history of its own
+    void test_commandLinesMadeAtTheLargestIndexGetHistoriesOfTheirOwn()
+    {
+        const QString profileName = qsl("ProfileIniParseError-IndexBoundary");
+        const QString nearLargest = qsl("command_history_%1").arg(std::numeric_limits<int>::max() - 1);
+        Host* pHost = hostWithProfileIni(profileName, qsl("[CommandLines]\nUsedIndexes=-1\nNameMapping\\chat=%1\n").arg(nearLargest).toUtf8());
+        QVERIFY2(pHost, "the profile with a history file next to the largest index was not created");
+
+        QSet<QString> filesInUse{nearLargest};
+        for (const QString& name : {qsl("qaBoundaryOne"), qsl("qaBoundaryTwo"), qsl("qaBoundaryThree")}) {
+            const auto [fileName, saveCommands] = pHost->getCmdLineSettings(enums::SubCommandLine, name);
+            Q_UNUSED(saveCommands)
+            QVERIFY2(!filesInUse.contains(fileName), qPrintable(qsl("%1 was given %2, which another command line already has").arg(name, fileName)));
+            filesInUse.insert(fileName);
+        }
 
         HostManager::self()->deleteHost(profileName);
     }
