@@ -38,8 +38,8 @@ public:
     explicit MMCPServer(Host*);
     ~MMCPServer() = default;
 
-    // endsWithPromptMarker: the last byte is the 0xff cTelnet put after a GA/EOR prompt,
-    // which a literal 0xff the game sent looks the same as
+    // endsWithPromptMarker: the last byte is the NUL cTelnet put after a GA/EOR prompt.
+    // A literal 0xFF the game sent is text (Windows-1251 "я"), not this marker.
     void receiveFromPlayer(std::string&, bool endsWithPromptMarker);
 
     QPair<bool, QString> startServer(quint16);

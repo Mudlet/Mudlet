@@ -43,6 +43,7 @@
 #include "GMCPAuthenticator.h"
 #include "TTextCodec.h"
 #include "TEncodingHelper.h"
+#include "TStringUtils.h"
 #include "utils.h"
 #include "discord.h"
 #include "TAppFrontend.h"
@@ -6107,7 +6108,11 @@ Some data loss is likely - please mention this problem to the game admins.)",
             if (!mFORCE_GA_OFF) {
                 mGA_Driver = true;
 
-                cleandata.push_back('\xff');
+                // Not 0xFF: a literal 0xFF is text (Windows-1251 "я", and the
+                // same byte in several other encodings). The parser never
+                // forwards a NUL from the server, so this marker cannot collide
+                // with a character the game sent.
+                cleandata.push_back(CHAR_PROMPT);
                 recvdGA = false;
                 gotPrompt(cleandata);
                 cleandata = "";

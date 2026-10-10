@@ -23,6 +23,7 @@
 #include "MMCP.h"
 #include "MMCPClient.h"
 #include "TEvent.h"
+#include "TStringUtils.h"
 
 #include <string>
 
@@ -80,8 +81,10 @@ void MMCPServer::sendSnoopData(std::string& lines, const bool endsWithPromptMark
     // clients and the other (outData2) which will be send to all other clients
 
     while (std::getline(iss, line)) {
-        // writeData() would show the prompt marker to the snooper as a '?'
-        if (endsWithPromptMarker && iss.eof() && !line.empty() && line.back() == '\xff') {
+        // The prompt marker is a NUL cTelnet appended. A literal 0xFF in the
+        // line is text and must stay; writeData() still cannot put one in an
+        // MMCP frame, which ends on 0xFF, so that letter is shown as '?'.
+        if (endsWithPromptMarker && iss.eof() && !line.empty() && line.back() == CHAR_PROMPT) {
             line.pop_back();
             // GA straight after a line ending marks no prompt text at all
             if (line.empty()) {
