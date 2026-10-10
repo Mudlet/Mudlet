@@ -19,8 +19,8 @@
 
 /*
  * RoomAppearance is what the 2D map and the modern 3D view both draw a room
- * from. None of it has a Lua entry point: scripts set a room's symbol and
- * highlight, but what is painted for them is only visible as pixels.
+ * from. A spec can only tell that exportAreaImage's PNG changed; checking
+ * where, how big and in what colour a symbol is drawn needs the decoded pixels.
  */
 
 #include <QtTest/QtTest>

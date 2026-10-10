@@ -127,7 +127,7 @@ private slots:
     void test_aGroundQuadSeenEdgeOnLinesUpWithTheScreensUp()
     {
         GeometryData batch;
-        // The screen's right points straight down at the map, so lays flat to nothing; the quad's up follows the screen's
+        // The screen's right points straight up off the map, so lays flat to nothing; the quad's up follows the screen's
         GeometryManager::appendGroundQuad(batch, QVector3D(), 2.0f, QVector3D(0.0f, 0.0f, 1.0f), QVector3D(1.0f, 0.0f, 0.0f), QVector4D(1.0f, 1.0f, 1.0f, 1.0f));
 
         QCOMPARE(batch.vertices.size(), 18);

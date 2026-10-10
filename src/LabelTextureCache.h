@@ -56,7 +56,9 @@ public:
     // Textures drawn by the caller, such as room symbols, keyed by everything that decides how they look.
     // Mipmapped, as they are drawn far smaller than they are made.
     GLuint imageTexture(const QString& key) const { return mImageCache.value(key); }
+    // Returns 0 if the texture could not be made; a key that failed once is not tried again until clearAll()
     GLuint addImageTexture(const QString& key, const QImage& image);
+    bool imageTextureFailed(const QString& key) const { return mFailedImageKeys.contains(key); }
     // Drops image textures not in keep until one more fits under maximum, and says whether it does.
     // keep must hold every image texture queued for drawing, as a dropped one is gone at once.
     bool makeRoomForImageTexture(qsizetype maximum, const QSet<QString>& keep);
@@ -79,6 +81,7 @@ private:
     // Cache storage: (areaId, labelId) -> cache entry
     QHash<QPair<int, int>, LabelTextureCacheEntry> mCache;
     QHash<QString, GLuint> mImageCache;
+    QSet<QString> mFailedImageKeys;
 
     bool mInitialized = false;
 };

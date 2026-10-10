@@ -96,6 +96,22 @@ private:
         return pMapper;
     }
 
+    // The 3D view keeps the landscape shape it had when hidden, while its floating dock turns portrait
+    static void hide3DViewInAPortraitDock(dlgMapper* pMapper, QDockWidget*& pDock, ModernGLWidget*& pModern)
+    {
+        pDock = qobject_cast<QDockWidget*>(pMapper->parentWidget());
+        QVERIFY2(pDock, "the mapper is not in a dock, so its shape cannot be changed while the 3D view is hidden");
+        pDock->setFloating(true);
+        pDock->resize(900, 500);
+        pMapper->show3DView(true);
+        pModern = qobject_cast<ModernGLWidget*>(pMapper->glWidget);
+        QVERIFY(pModern);
+        QTRY_VERIFY(pModern->isVisible() && pModern->width() > pModern->height());
+        pMapper->show3DView(false);
+        pDock->resize(300, 900);
+        QTRY_VERIFY(pMapper->height() > pMapper->width());
+    }
+
 private slots:
     void initTestCase()
     {
@@ -261,19 +277,12 @@ private slots:
     {
         dlgMapper* pMapper = mapperShowing2DAtThePlayer();
         QVERIFY(pMapper);
-        auto* pDock = qobject_cast<QDockWidget*>(pMapper->parentWidget());
-        QVERIFY2(pDock, "the mapper is not in a dock, so its shape cannot be changed while the 3D view is hidden");
-        pDock->setFloating(true);
-        pDock->resize(900, 500);
-        pMapper->show3DView(true);
-        auto* pModern = qobject_cast<ModernGLWidget*>(pMapper->glWidget);
-        QVERIFY(pModern);
-        QTRY_VERIFY(pModern->isVisible() && pModern->width() > pModern->height());
-
-        pMapper->show3DView(false);
-        // The hidden 3D view keeps its landscape shape while the mapper becomes portrait
-        pDock->resize(300, 900);
-        QTRY_VERIFY(pMapper->height() > pMapper->width());
+        QDockWidget* pDock = nullptr;
+        ModernGLWidget* pModern = nullptr;
+        hide3DViewInAPortraitDock(pMapper, pDock, pModern);
+        if (QTest::currentTestFailed()) {
+            return;
+        }
         QSignalSpy cameraControls(pModern, &ModernGLWidget::cameraControlsChanged);
         const auto lastScale = [&cameraControls]() {
             return cameraControls.isEmpty() ? -1 : cameraControls.last().at(0).toInt();
@@ -284,10 +293,78 @@ private slots:
         pMapper->show3DView(true);
         QTRY_VERIFY(pModern->isVisible() && pModern->height() > pModern->width());
         const int framedOnceShown = lastScale();
+
+        // Once framed for its new shape, a zoom of the player's own outlasts later resizes
+        pModern->slot_setScale(framedOnceShown + 7);
+        cameraControls.clear();
+        pDock->resize(320, 950);
+        QTRY_COMPARE(pDock->height(), 950);
+        QCoreApplication::processEvents();
+        QVERIFY2(cameraControls.isEmpty(), "a resize after the hidden zoom had been framed undid the player's zoom");
+        pDock->resize(300, 900);
+        QTRY_COMPARE(pDock->height(), 900);
+
         QVERIFY(pMapper->setMapZoom(20.0, 0).first);
         const int framedWhileShown = lastScale();
         QVERIFY2(framedWhileShown != framedWhileHidden, "the 3D view's shape did not change, so this cannot tell a stale framing apart");
         QCOMPARE(framedOnceShown, framedWhileShown);
+
+        pMapper->show3DView(false);
+        pDock->setFloating(false);
+    }
+
+    void test_aDistanceAskedForAsThe3DViewIsShownWinsOverAHiddenZoom()
+    {
+        dlgMapper* pMapper = mapperShowing2DAtThePlayer();
+        QVERIFY(pMapper);
+        QDockWidget* pDock = nullptr;
+        ModernGLWidget* pModern = nullptr;
+        hide3DViewInAPortraitDock(pMapper, pDock, pModern);
+        if (QTest::currentTestFailed()) {
+            return;
+        }
+        QSignalSpy cameraControls(pModern, &ModernGLWidget::cameraControlsChanged);
+        const auto lastScale = [&cameraControls]() {
+            return cameraControls.isEmpty() ? -1 : cameraControls.last().at(0).toInt();
+        };
+        QVERIFY(pMapper->setMapZoom(20.0, 0).first);
+        const int framedWhileHidden = lastScale();
+
+        // As a script would in one go: show the 3D view, then set its camera before anything repaints
+        pMapper->show3DView(true);
+        QTRY_VERIFY(pModern->isVisible() && pModern->height() > pModern->width());
+        QVERIFY(pMapper->set3DViewCameraPosition(2.0f, 45.0f, 270.0f));
+        const int requested = lastScale();
+        QVERIFY(requested != framedWhileHidden);
+        // The window settling on its size can resize the view again before its first paint
+        pDock->resize(320, 950);
+        QTRY_COMPARE(pDock->height(), 950);
+        QCoreApplication::processEvents();
+        QCOMPARE(lastScale(), requested);
+
+        pMapper->show3DView(false);
+        pDock->setFloating(false);
+    }
+
+    void test_aResizeLeavesTheCameraAloneWithNoZoomPending()
+    {
+        dlgMapper* pMapper = mapperShowing2DAtThePlayer();
+        QVERIFY(pMapper);
+        auto* pDock = qobject_cast<QDockWidget*>(pMapper->parentWidget());
+        QVERIFY(pDock);
+        pDock->setFloating(true);
+        pDock->resize(900, 500);
+        pMapper->show3DView(true);
+        auto* pModern = qobject_cast<ModernGLWidget*>(pMapper->glWidget);
+        QVERIFY(pModern);
+        QTRY_VERIFY(pModern->isVisible() && pModern->width() > pModern->height());
+        QVERIFY(pMapper->setMapZoom(20.0, 0).first);
+        QSignalSpy cameraControls(pModern, &ModernGLWidget::cameraControlsChanged);
+
+        pDock->resize(300, 900);
+        QTRY_VERIFY(pModern->height() > pModern->width());
+        QCoreApplication::processEvents();
+        QVERIFY2(cameraControls.isEmpty(), "resizing the 3D view moved its camera");
 
         pMapper->show3DView(false);
         pDock->setFloating(false);

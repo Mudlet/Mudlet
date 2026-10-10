@@ -159,7 +159,7 @@ private:
 
     // Label texture cache
     LabelTextureCache mLabelTextureCache;
-    // Room textures this frame draws, which making room for another must keep
+    // Room textures this frame has used so far, which making room for another must keep
     QSet<QString> mRoomTexturesInUse;
     bool mRoomTextureLimitWarned = false;
 
@@ -223,7 +223,7 @@ private:
     bool mCameraSmoothAnimating = false; // Dedicated flag for smooth camera animation
     int mPreviousRID = 0;                // Track previous room ID to detect changes
     bool mFramePending = true;
-    // A zoom applied while hidden was framed for the old size, so the next resize frames it again
+    // A zoom applied while hidden was framed for the old size, so the next resize frames it again unless the camera has moved since
     bool mFrameOnResize = false;
     // A distance a script asked for since the last paint wins over framing a newly shown area
     bool mDistanceRequested = false;

@@ -337,7 +337,10 @@ void ModernGLWidget::paintGL()
         frameArea();
     }
     mFramePending = false;
-    mFrameOnResize = false;
+    // A hidden view can still be painted, at its old size, so only a frame that is seen counts
+    if (isVisible()) {
+        mFrameOnResize = false;
+    }
     mDistanceRequested = false;
 
     zmax = static_cast<float>(pArea->max_z);
@@ -393,7 +396,8 @@ void ModernGLWidget::paintGL()
 namespace {
 // Texels across the textures drawn on room tops
 constexpr int scmRoomTextureSize = 128;
-// Past this many, those this frame does not draw are dropped to make room, to be made again if needed
+// Past this many, textures this frame has not used yet are dropped to make room and remade if needed;
+// once the frame itself has used this many, the rest are not drawn
 constexpr qsizetype scmMaxRoomTextures = 512;
 
 // A colour dimmed for its level's distance from the one being viewed
@@ -464,7 +468,7 @@ GLuint ModernGLWidget::symbolTexture(const QString& symbol, const QColor& color)
     if (const GLuint texture = cachedRoomTexture(key)) {
         return texture;
     }
-    if (!roomForAnotherTexture()) {
+    if (mLabelTextureCache.imageTextureFailed(key) || !roomForAnotherTexture()) {
         return 0;
     }
 
@@ -481,7 +485,7 @@ GLuint ModernGLWidget::discTexture(const QString& key, const QGradientStops& sto
     if (const GLuint texture = cachedRoomTexture(key)) {
         return texture;
     }
-    if (!roomForAnotherTexture()) {
+    if (mLabelTextureCache.imageTextureFailed(key) || !roomForAnotherTexture()) {
         return 0;
     }
 
@@ -505,7 +509,7 @@ GLuint ModernGLWidget::squareTexture(const QColor& color)
     if (const GLuint texture = cachedRoomTexture(key)) {
         return texture;
     }
-    if (!roomForAnotherTexture()) {
+    if (mLabelTextureCache.imageTextureFailed(key) || !roomForAnotherTexture()) {
         return 0;
     }
 
@@ -605,7 +609,11 @@ void ModernGLWidget::renderRooms()
         const int levelDistance = static_cast<int>(std::abs(rz - pz));
 
         const QColor roomColor = RoomAppearance::environmentColor(*mpMap, *mpHost, pR->environment);
-        const QVector4D roomTint = levelFaded(roomColor, levelDistance, aboveLevel, moreTransparent);
+        QVector4D roomTint = levelFaded(roomColor, levelDistance, aboveLevel, moreTransparent);
+        if (isCurrentRoom && !playerRoomTexture) {
+            // Without its marker the player's room is drawn solid red, so it still stands out
+            roomTint = QVector4D(1.0f, 0.0f, 0.0f, 1.0f);
+        }
         QMatrix4x4 transform;
         transform.translate(rx, ry, rz);
         transform.scale(1.0f / scale, 1.0f / scale, 1.0f / scale / zFlattening);
@@ -616,7 +624,7 @@ void ModernGLWidget::renderRooms()
             const float spread = (roomSize + 2.0f * borderWidth) / roomSize;
             const QColor borderColor = pR->mBorderColor.isValid() ? pR->mBorderColor : mpHost->mRoomBorderColor;
             const QVector4D borderTint = levelFaded(borderColor, levelDistance, aboveLevel, moreTransparent);
-            // Lower than the room, so that its top is seen only around the room's
+            // Lower than the room, so that its top is seen only as a rim around the room's edges
             QMatrix4x4 borderTransform;
             borderTransform.translate(rx, ry, rz);
             borderTransform.scale(spread / scale, spread / scale, 0.6f / scale / zFlattening);
@@ -1008,6 +1016,7 @@ void ModernGLWidget::setCameraPosition(float r, float theta, float phi)
 {
     mCameraController.setPosition(r, theta, phi);
     mDistanceRequested = true;
+    mFrameOnResize = false;
     emitCameraControls();
     update();
 }
@@ -1085,6 +1094,7 @@ void ModernGLWidget::applyMapZoom(const qreal zoom, const int areaId)
     }
     frameRooms(zoom);
     mFrameOnResize = !isVisible();
+    mDistanceRequested = false;
     update();
 }
 
@@ -1092,6 +1102,7 @@ void ModernGLWidget::resizeEvent(QResizeEvent* event)
 {
     QOpenGLWidget::resizeEvent(event);
     if (mFrameOnResize) {
+        mFrameOnResize = false;
         frameArea();
     }
 }
@@ -1212,6 +1223,7 @@ void ModernGLWidget::slot_topView()
 void ModernGLWidget::slot_setScale(int value)
 {
     mCameraController.setScale(distanceForScaleSlider(value));
+    mFrameOnResize = false;
     update();
 }
 
@@ -1328,6 +1340,7 @@ void ModernGLWidget::wheelEvent(QWheelEvent* e)
         return;
     }
     mCameraController.zoomBy(steps);
+    mFrameOnResize = false;
     emitCameraControls();
     update();
 }

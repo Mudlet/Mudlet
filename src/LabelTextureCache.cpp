@@ -68,15 +68,12 @@ GLuint LabelTextureCache::getTexture(int areaId, int labelId, const QPixmap& pix
         deleteTexture(it.value().textureId);
     }
 
-    // Create new texture
-    GLuint textureId = createTextureFromPixmap(pixmap);
-    if (textureId != 0) {
-        LabelTextureCacheEntry entry;
-        entry.textureId = textureId;
-        entry.pixmapCacheKey = currentCacheKey;
-        mCache[key] = entry;
-    }
-
+    // A failure is cached as texture 0 too, so a pixmap too big to upload is not retried every frame
+    const GLuint textureId = createTextureFromPixmap(pixmap);
+    LabelTextureCacheEntry entry;
+    entry.textureId = textureId;
+    entry.pixmapCacheKey = currentCacheKey;
+    mCache[key] = entry;
     return textureId;
 }
 
@@ -106,7 +103,7 @@ void LabelTextureCache::invalidateArea(int areaId)
 
 GLuint LabelTextureCache::addImageTexture(const QString& key, const QImage& image)
 {
-    if (!mInitialized || image.isNull()) {
+    if (!mInitialized || image.isNull() || mFailedImageKeys.contains(key)) {
         return 0;
     }
     deleteTexture(mImageCache.value(key));
@@ -115,6 +112,7 @@ GLuint LabelTextureCache::addImageTexture(const QString& key, const QImage& imag
         mImageCache.insert(key, textureId);
     } else {
         mImageCache.remove(key);
+        mFailedImageKeys.insert(key);
     }
     return textureId;
 }
@@ -159,6 +157,7 @@ void LabelTextureCache::clearAll()
         deleteTexture(textureId);
     }
     mImageCache.clear();
+    mFailedImageKeys.clear();
 }
 
 GLuint LabelTextureCache::createTextureFromPixmap(const QPixmap& pixmap)

@@ -44,6 +44,7 @@
 #include "HostManager.h"
 #include "MudletInstanceCoordinator.h"
 #include "MudletApp.h"
+#include "RoomAppearance.h"
 #include "TMap.h"
 #include "TRoom.h"
 #include "TRoomDB.h"
@@ -331,6 +332,57 @@ private slots:
 
         QCOMPARE(map()->getColor(1), QColor(12, 34, 56));
         QCOMPARE(map()->getColor(2), QColor(200, 100, 50));
+    }
+
+    // What the modern 3D view tints a room with, and the 2D map's reduced-detail tiers fill it with.
+    // It follows getColor() except for a code with no colour, where it keeps the room visible.
+    void test_environmentColorResolvesLikeGetColor_data()
+    {
+        QTest::addColumn<int>("environment");
+        QTest::addColumn<int>("remappedTo");
+        QTest::addColumn<int>("customId");
+        QTest::addColumn<QColor>("expected");
+
+        constexpr int notRemapped = -1;
+        constexpr int noCustom = -1;
+        QTest::newRow("unmapped built-in code") << 16 << notRemapped << noCustom << mpHost->mRed_2;
+        QTest::newRow("unmapped cube code") << 21 << notRemapped << noCustom << mpHost->mRed_2;
+        QTest::newRow("unmapped past every range") << 300 << notRemapped << noCustom << mpHost->mRed_2;
+        QTest::newRow("onto green") << 60 << 2 << noCustom << mpHost->mGreen_2;
+        QTest::newRow("onto black") << 60 << 8 << noCustom << mpHost->mBlack_2;
+        QTest::newRow("onto light black") << 60 << 16 << noCustom << mpHost->mLightBlack_2;
+        QTest::newRow("onto the cube's first") << 60 << 17 << noCustom << QColor(0, 0, 95);
+        QTest::newRow("onto the cube's bluest") << 60 << 21 << noCustom << QColor(0, 0, 255);
+        QTest::newRow("onto the cube's last") << 60 << 231 << noCustom << QColor(255, 255, 255);
+        QTest::newRow("onto the grey ramp's first") << 60 << 232 << noCustom << QColor(8, 8, 8);
+        QTest::newRow("onto the grey ramp's last") << 60 << 255 << noCustom << QColor(238, 238, 238);
+        QTest::newRow("onto a code with no colour") << 60 << 256 << noCustom << mpHost->mRed_2;
+        QTest::newRow("a custom colour, not remapped") << 21 << notRemapped << 21 << QColor(1, 2, 3);
+        QTest::newRow("onto a custom colour") << 5 << 400 << 400 << QColor(1, 2, 3);
+    }
+
+    void test_environmentColorResolvesLikeGetColor()
+    {
+        QFETCH(int, environment);
+        QFETCH(int, remappedTo);
+        QFETCH(int, customId);
+        QFETCH(QColor, expected);
+
+        const QMap<int, int> savedEnvColors = map()->mEnvColors;
+        const QMap<int, QColor> savedCustomEnvColors = map()->mCustomEnvColors;
+        map()->mEnvColors.clear();
+        map()->mCustomEnvColors.clear();
+        if (remappedTo >= 0) {
+            map()->mEnvColors[environment] = remappedTo;
+        }
+        if (customId >= 0) {
+            map()->mCustomEnvColors[customId] = QColor(1, 2, 3);
+        }
+
+        const QColor actual = RoomAppearance::environmentColor(*map(), *mpHost, environment);
+        map()->mEnvColors = savedEnvColors;
+        map()->mCustomEnvColors = savedCustomEnvColors;
+        QCOMPARE(actual, expected);
     }
 };
 
