@@ -445,15 +445,21 @@ private slots:
         pSettings->setValue(qsl("telnetHandlerEnabled"), shown);
     }
 
-    // #10234: a choice that never reaches the ssl_tsl file is undone the next time the profile
+    // A choice that never reaches the ssl_tsl file is undone the next time the profile
     // connects through the connection dialog, which seeds its Secure checkbox from that file
     void test_theSecureConnectionChoiceReachesTheProfileFile()
     {
         const bool sslBefore = mpHost->mSslTsl;
+        const QString file = MudletApp::getMudletPath(enums::profileDataItemPath, mpHost->getName(), qsl("ssl_tsl"));
+        const bool fileExistedBefore = QFileInfo::exists(file);
         const QString fileBefore = mpHost->readProfileData(qsl("ssl_tsl"));
-        auto restore = qScopeGuard([this, sslBefore, fileBefore]() {
+        auto restore = qScopeGuard([this, sslBefore, file, fileExistedBefore, fileBefore]() {
             mpHost->mSslTsl = sslBefore;
-            mpHost->writeProfileData(qsl("ssl_tsl"), fileBefore);
+            if (fileExistedBefore) {
+                mpHost->writeProfileData(qsl("ssl_tsl"), fileBefore);
+            } else {
+                QFile::remove(file);
+            }
         });
         mpHost->mSslTsl = false;
         QVERIFY(mpHost->writeProfileData(qsl("ssl_tsl"), QString::number(Qt::Unchecked)).first);
