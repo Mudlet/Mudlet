@@ -14,6 +14,9 @@ on:
       - 'src/**.cpp'
       - 'src/**.h'
       - 'src/**.mm'
+      # mudlet_HDRS lists some vendored headers, which the audit scans too
+      - '3rdparty/**.cpp'
+      - '3rdparty/**.h'
       - 'src/CMakeLists.txt'
       - 'CMakeLists.txt'
       - 'cmake/audit-core-widgets.sh'
