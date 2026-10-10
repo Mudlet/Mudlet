@@ -544,6 +544,7 @@ private slots:
     void aCheckDuringADownloadLeavesTheVersionItIsSavedAs();
     void aDownloadStartedOutsideTheDialogIsSavedUnderItsRelease();
     void anUpdateButtonClickIsAnsweredByOneDownload();
+    void aFailedDownloadLeavesTheUpdateButtonUsable();
     // These two can hand the installer over and ask Qt to quit, so they run last
     void anInstallWhoseDownloadFailedIsNotStartedByTheNextDownload();
     void anInstallAskedForSurvivesACheckDuringItsDownload();
@@ -1239,6 +1240,35 @@ void FeedChecksumRaceTest::anUpdateButtonClickIsAnsweredByOneDownload()
     QCoreApplication::processEvents();
 
     QVERIFY2(clickedSpy.count() == 1, qPrintable(qsl("one click on Update was answered %1 times").arg(clickedSpy.count())));
+}
+
+// The buttons are disabled while a download runs, so one that fails has to hand
+// them back, or reopening the dialog offers an Update button nobody can click
+void FeedChecksumRaceTest::aFailedDownloadLeavesTheUpdateButtonUsable()
+{
+    const QByteArray payload = stubDownloadPayload();
+
+    UpdateHarness harness;
+    QVERIFY2(harness.start(), "the stub update server needs TLS support and a free loopback port");
+    harness.server().setFeedBody(stubReleasesJson(harness.assetBaseUrl(), payload.size()));
+    harness.server().setChecksum(QByteArray(64, 'b'));
+    harness.server().setDownloadPayload(payload);
+    dblsqd::UpdateDialog::enableAutoDownload(false, &harness.settings());
+
+    harness.openDialog(dblsqd::UpdateDialog::Manual);
+    auto* updateButton = new QPushButton(qsl("Update"));
+    harness.dialog().addInstallButton(updateButton);
+    QSignalSpy readySpy(&harness.dialog(), &dblsqd::UpdateDialog::ready);
+    QVERIFY2(readySpy.wait(waitMs), qPrintable(qsl("the update dialog never became ready. It reported: %1").arg(whatTheDialogWasTold())));
+    QVERIFY2(updateButton->isEnabled(), "the Update button was disabled before anything was downloaded, so the assertion below would test nothing");
+
+    updateButton->click();
+    QTRY_VERIFY2_WITH_TIMEOUT(!mModalBoxes.texts().isEmpty(), "the download the user asked for failed verification and nobody was told", waitMs);
+
+    readySpy.clear();
+    harness.feed().load();
+    QVERIFY2(readySpy.wait(waitMs), qPrintable(qsl("the next update check never reached the dialog. It reported: %1").arg(whatTheDialogWasTold())));
+    QVERIFY2(updateButton->isEnabled(), "after a failed download the Update button stays disabled, so the user cannot try again");
 }
 
 QTEST_MAIN(FeedChecksumRaceTest)

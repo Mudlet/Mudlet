@@ -759,6 +759,9 @@ void UpdateDialog::handleDownloadError(const QString& message)
     // Before the box: its event loop can run a later download to the end
     mAccepted = false;
     mAcceptedInstallButton = nullptr;
+    // startDownload() disabled them, and otherwise only a later download that
+    // succeeds would let the user try again
+    disableButtons(false);
     //: Title for the download error warning dialog
     const QString errorTitle = tr("Download Error");
     //: Message shown in the download error warning dialog, followed by the specific error details
