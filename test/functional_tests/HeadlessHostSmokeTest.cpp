@@ -26,6 +26,7 @@
 
 #include "Host.h"
 #include "HostManager.h"
+#include "MudletApp.h"
 #include "PortableModeTestHelper.h"
 #include "TAppFrontend.h"
 #include "TConsoleModel.h"
@@ -68,6 +69,7 @@ private slots:
         QVERIFY(QDir().mkpath(qsl("%1/mudlet/profiles").arg(mConfigDir.path())));
         mSavedXdg = qgetenv("XDG_CONFIG_HOME");
         qputenv("XDG_CONFIG_HOME", mConfigDir.path().toUtf8());
+        QCOMPARE(MudletApp::getMudletPath(enums::mainPath), qsl("%1/mudlet").arg(mConfigDir.path()));
 
         QVERIFY2(!HostManager::self(), "A profile pool already exists, so this run is not headless.");
         mpHostManager = std::make_unique<HostManager>();
@@ -82,6 +84,7 @@ private slots:
     void test_profileRunsLuaAndTriggersWithNoMainWindow()
     {
         QVERIFY2(!TAppFrontend::instance(), "A main window exists, so this run is not headless.");
+        QVERIFY2(!MudletApp::getQSettings(), "A settings store exists, so Host's defaults for having none go untested.");
 
         QVERIFY2(HostManager::self()->addHost(mHostname, QString(), QString(), QString()), "Could not create a profile with no main window.");
         Host* host = HostManager::self()->getHost(mHostname);
