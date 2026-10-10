@@ -26,6 +26,7 @@
 #include "TCommandLine.h"
 #include "TConsole.h"
 #include "TDockWidget.h"
+#include "TTextEdit.h"
 #include "mudlet.h"
 #include "TMainConsole.h"
 
@@ -256,9 +257,44 @@ void TLabel::mouseReleaseEvent(QMouseEvent* event)
     if (mpHost && mReleaseFunction) {
         mpHost->getLuaInterpreter()->callLabelCallbackEvent(mReleaseFunction, event);
         event->accept();
+    } else if (!takenByQt && !mClickFunction && event->button() == Qt::RightButton && forwardRightClickToConsole(event)) {
+        event->accept();
     } else if (!takenByQt) {
         QWidget::mouseReleaseEvent(event);
     }
+}
+
+// The console builds its context menu in its text pane, which is the label's sibling rather
+// than an ancestor, so an ignored right-click would never reach it
+bool TLabel::forwardRightClickToConsole(QMouseEvent* event)
+{
+    QWidget* pParent = parentWidget();
+    if (!pParent) {
+        return false;
+    }
+    // This label, and any other without callbacks stacked under it, is left out of the hit
+    // test for a moment, so that it finds what they cover
+    const QPoint where = pParent->mapFromGlobal(event->globalPosition().toPoint());
+    QList<TLabel*> skipped;
+    QWidget* pHit = nullptr;
+    for (TLabel* pLabel = this; pLabel; pLabel = qobject_cast<TLabel*>(pHit)) {
+        if (pLabel->mClickFunction || pLabel->mReleaseFunction) {
+            break;
+        }
+        pLabel->setAttribute(Qt::WA_TransparentForMouseEvents, true);
+        skipped.append(pLabel);
+        pHit = pParent->childAt(where);
+    }
+    for (auto* pLabel : skipped) {
+        pLabel->setAttribute(Qt::WA_TransparentForMouseEvents, false);
+    }
+    auto* pPane = qobject_cast<TTextEdit*>(pHit);
+    if (!pPane) {
+        return false;
+    }
+    // Not the pane's own right-click handling: that acts on a link the label hides
+    pPane->showContextMenu(event->globalPosition().toPoint());
+    return true;
 }
 
 void TLabel::mouseMoveEvent(QMouseEvent* event)
