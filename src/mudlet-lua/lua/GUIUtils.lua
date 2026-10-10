@@ -338,13 +338,16 @@ function setGaugeWindow(windowName, gaugeName, x, y, show)
     show = true
   end
   assert(gaugesTable[gaugeName], "setGaugeWindow: no such gauge exists.")
-  assert(type(windowName) == "string", "setGaugeWindow: bad argument #1 type (window name as string expected, got " .. type(windowName) .. "!)")
-  assert(tonumber(x), "setGaugeWindow: bad argument #3 type (x-coordinate as number expected, got " .. type(x) .. "!)")
-  assert(tonumber(y), "setGaugeWindow: bad argument #4 type (y-coordinate as number expected, got " .. type(y) .. "!)")
-  assert(type(show) == "boolean", "setGaugeWindow: bad argument #5 type (show element as boolean expected, got " .. type(show) .. "!)")
-  setWindow(windowName, gaugeName .. "_back", x, y, show)
-  setWindow(windowName, gaugeName .. "_front", x, y, show)
-  setWindow(windowName, gaugeName .. "_text", x, y, show)
+  for _, part in ipairs({"_back", "_front", "_text"}) do
+    -- setWindow numbers its arguments as this function does, so only its name needs swapping
+    local ok, moved, message = pcall(setWindow, windowName, gaugeName .. part, x, y, show)
+    if not ok then
+      error((tostring(moved):gsub("^setWindow:", "setGaugeWindow:")), 2)
+    end
+    if not moved then
+      return nil, message
+    end
+  end
   -- save new values in table
   gaugesTable[gaugeName].x, gaugesTable[gaugeName].y = x, y
   setGauge(gaugeName, gaugesTable[gaugeName].value, 1)
@@ -1474,9 +1477,10 @@ end
 --- @see dinsertText
 --- @see hinsertText
 function xEcho(style, func, ...)
+  local publicName = style:sub(1, 1):lower() .. func
   local arg1, arg2 = ...
   if type(arg1) ~= 'string' then
-    error(style:sub(1,1):lower() .. func .. ': bad argument #1, string expected, got '..type(arg1)..'!)')
+    error(publicName .. ': bad argument #1, string expected, got '..type(arg1)..'!)')
   end
 
   local win, str, cmd, hint, fmt
@@ -1486,7 +1490,7 @@ function xEcho(style, func, ...)
     local args = { ... }
     local n = #args
     if n < 3 then
-      error 'Insufficient arguments, usage: ([window, ] string, command, hint)'
+      error(publicName .. ': Insufficient arguments, usage: ([window, ] string, command, hint)')
     elseif n == 3 then
       str, cmd, hint = ...
       windowLeftOut = true
@@ -1496,13 +1500,13 @@ function xEcho(style, func, ...)
     elseif n >= 4 and type(args[4]) == 'string' then
       win, str, cmd, hint, fmt = ...
     else
-      error 'Improper arguments, usage: ([window, ] string, command, hint)'
+      error(publicName .. ': Improper arguments, usage: ([window, ] string, command, hint)')
     end
   elseif not plain and string.find(func, "Popup") then
     local args = { ... }
     local n = #args
     if n < 3 then
-      error 'Insufficient arguments, usage: ([window, ] string, {commands}, {hints})'
+      error(publicName .. ': Insufficient arguments, usage: ([window, ] string, {commands}, {hints})')
     elseif n == 3 then
       str, cmd, hint = ...
       windowLeftOut = true
@@ -1512,7 +1516,7 @@ function xEcho(style, func, ...)
     elseif n >= 4 and type(args[4]) == 'table' then
       win, str, cmd, hint, fmt = ...
     else
-      error 'Improper arguments, usage: ([window, ] string, {commands}, {hints})'
+      error(publicName .. ': Improper arguments, usage: ([window, ] string, {commands}, {hints})')
     end
 
   else
@@ -1589,7 +1593,8 @@ function xEcho(style, func, ...)
             if type(err) == "string" and err:sub(1, #func + 1) == func .. ":" then
               err = style:sub(1, 1):lower() .. err
               if windowLeftOut then
-                err = err:gsub("bad argument #(%d+)", function(position) return "bad argument #" .. (tonumber(position) - 1) end, 1)
+                -- covers "bad argument #N" and "bad item #i in table argument #N"
+                err = err:gsub("argument #(%d+)", function(position) return "argument #" .. (tonumber(position) - 1) end, 1)
               end
             end
             error(err, 0)
@@ -2456,6 +2461,8 @@ end
 --- @param text The text to replace the selection with.
 function creplaceLine(window, text)
   assert(type(window) == 'string', 'creplaceLine: bad argument #1 type (expected string, got '..type(window)..'!)')
+  -- checked before the line is selected and blanked, which xReplace does first
+  assert(text == nil or type(text) == 'string' or type(text) == 'number', 'creplaceLine: bad argument #2 type (text as string expected, got '..type(text)..'!)')
   if not text then
     selectCurrentLine()
   else
@@ -2477,6 +2484,7 @@ end
 --- @param text The text to replace the selection with.
 function dreplaceLine(window, text)
   assert(type(window) == 'string', 'dreplaceLine: bad argument #1 type (expected string, got '..type(window)..'!)')
+  assert(text == nil or type(text) == 'string' or type(text) == 'number', 'dreplaceLine: bad argument #2 type (text as string expected, got '..type(text)..'!)')
   if not text then
     selectCurrentLine()
   else
@@ -2498,6 +2506,7 @@ end
 --- @param text The text to replace the selection with.
 function hreplaceLine(window, text)
   assert(type(window) == 'string', 'hreplaceLine: bad argument #1 type (expected string, got '..type(window)..'!)')
+  assert(text == nil or type(text) == 'string' or type(text) == 'number', 'hreplaceLine: bad argument #2 type (text as string expected, got '..type(text)..'!)')
   if not text then
     selectCurrentLine()
   else

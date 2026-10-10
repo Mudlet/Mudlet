@@ -343,8 +343,10 @@ describe("Tests the GUI utilities as far as possible without mudlet", function()
         {"000000", { r = 0, g = 0, b = 0 }},
         {"FFFFFF", { r = 255, g = 255, b = 255 }},
         {"B22222", { r = 178, g = 34, b = 34 }},
+        {"b2a2c2", { r = 178, g = 162, b = 194 }},
       }
       local origSetFgColor = _G.setFgColor
+      finally(function() _G.setFgColor = origSetFgColor end)
       local outputTable
       _G.setFgColor = function(r, g, b)
         outputTable = { r = r, g = g, b = b }
@@ -353,7 +355,6 @@ describe("Tests the GUI utilities as far as possible without mudlet", function()
         setHexFgColor(pair[1])
         assert.are.same(pair[2], outputTable)
       end
-      _G.setFgColor = origSetFgColor
     end)
 
   end)
@@ -365,8 +366,10 @@ describe("Tests the GUI utilities as far as possible without mudlet", function()
         {"000000", { r = 0, g = 0, b = 0 }},
         {"FFFFFF", { r = 255, g = 255, b = 255 }},
         {"B22222", { r = 178, g = 34, b = 34 }},
+        {"b2a2c2", { r = 178, g = 162, b = 194 }},
       }
       local origSetBgColor = _G.setBgColor
+      finally(function() _G.setBgColor = origSetBgColor end)
       local outputTable
       _G.setBgColor = function(r, g, b)
         outputTable = { r = r, g = g, b = b }
@@ -375,7 +378,6 @@ describe("Tests the GUI utilities as far as possible without mudlet", function()
         setHexBgColor(pair[1])
         assert.are.same(pair[2], outputTable)
       end
-      _G.setBgColor = origSetBgColor
     end)
 
   end)
@@ -2077,6 +2079,12 @@ describe("Tests the GUI utilities as far as possible without mudlet", function()
         assert.is_truthy(tostring(err):find("setGaugeToolTip: bad argument #2 type", 1, true), tostring(err))
       end)
 
+      it("Should name itself when given a duration that is not a number", function()
+        local ok, err = pcall(setGaugeToolTip, gaugeName, "hint", {})
+        assert.is_false(ok)
+        assert.is_truthy(tostring(err):find("setGaugeToolTip: bad argument #3 type", 1, true), tostring(err))
+      end)
+
       it("Should error for an unknown gauge", function()
         assert.has_error(function() setGaugeToolTip("noSuchGauge", "hint") end)
         assert.has_error(function() resetGaugeToolTip("noSuchGauge") end)
@@ -2123,6 +2131,36 @@ describe("Tests the GUI utilities as far as possible without mudlet", function()
         ok, err = pcall(setGaugeWindow, userWindow, gaugeName, 0, {})
         assert.is_false(ok)
         assert.is_truthy(tostring(err):find("setGaugeWindow: bad argument #4 type", 1, true), tostring(err))
+      end)
+
+      it("Should name itself for a bad window name, show flag or out of range position", function()
+        local ok, err = pcall(setGaugeWindow, {}, gaugeName, 0, 0)
+        assert.is_false(ok)
+        assert.is_truthy(tostring(err):find("setGaugeWindow: bad argument #1 type", 1, true), tostring(err))
+        ok, err = pcall(setGaugeWindow, userWindow, gaugeName, 0, 0, "yes")
+        assert.is_false(ok)
+        assert.is_truthy(tostring(err):find("setGaugeWindow: bad argument #5 type", 1, true), tostring(err))
+        ok, err = pcall(setGaugeWindow, userWindow, gaugeName, 1e12, 0)
+        assert.is_false(ok)
+        assert.is_truthy(tostring(err):find("setGaugeWindow: integer over/under-flow in argument #3", 1, true), tostring(err))
+      end)
+
+      it("Should accept a window name given as a number, as setWindow does", function()
+        local numberedWindow = 1180801
+        openUserWindow(tostring(numberedWindow))
+        finally(function() closeUserWindow(tostring(numberedWindow)) end)
+        local ok, err = pcall(setGaugeWindow, numberedWindow, gaugeName, 3, 4)
+        assert.is_true(ok, tostring(err))
+        assert.equals(3, gaugesTable[gaugeName].x)
+      end)
+
+      it("Should answer nil and a message, and keep its position, for a window that does not exist", function()
+        setGaugeWindow(userWindow, gaugeName, 1, 2)
+        local result, message = setGaugeWindow("guiUtilsNoSuchWindow", gaugeName, 30, 40)
+        assert.is_nil(result)
+        assert.is_truthy(tostring(message):find("guiUtilsNoSuchWindow", 1, true), tostring(message))
+        assert.equals(1, gaugesTable[gaugeName].x)
+        assert.equals(2, gaugesTable[gaugeName].y)
       end)
 
       it("Should keep the gauge hidden when show is passed as false", function()
@@ -3248,6 +3286,15 @@ describe("Tests the GUI utilities as far as possible without mudlet", function()
       assert.has_error(function() hreplace(5, "x") end)
       assert.has_error(function() dreplaceLine(5, "x") end)
       assert.has_error(function() hreplaceLine(5, "x") end)
+    end)
+
+    it("Should name itself for replacement text that is not text, and leave the line alone", function()
+      for name, colourReplaceLine in pairs({creplaceLine = creplaceLine, dreplaceLine = dreplaceLine, hreplaceLine = hreplaceLine}) do
+        local ok, err = pcall(colourReplaceLine, windowName, {})
+        assert.is_false(ok)
+        assert.is_truthy(tostring(err):find(name .. ": bad argument #2 type", 1, true), tostring(err))
+        assert.equals("hello world", currentLine())
+      end
     end)
   end)
 
