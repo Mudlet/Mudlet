@@ -5382,6 +5382,10 @@ std::pair<bool, QString> Host::deleteLabel(const QString& name)
     }
 
     consoleFrontend()->deleteLabel(name);
+    if (mWindowRegistry.hasLabel(name)) {
+        // One the current view has no record of, such as a detached view's
+        return {false, qsl("label name '%1' could not be deleted").arg(name)};
+    }
     // The view may only have scheduled the label's deletion by now
     TEvent mudletEvent{};
     mudletEvent.mArgumentList.append(QLatin1String("sysLabelDeleted"));
@@ -5403,6 +5407,10 @@ std::pair<bool, QString> Host::deleteMiniConsole(const QString& name)
     }
 
     consoleFrontend()->deleteMiniConsole(name);
+    if (mWindowRegistry.hasSubConsole(name)) {
+        // One the current view has no record of, such as a detached view's
+        return {false, qsl("miniconsole name '%1' could not be deleted").arg(name)};
+    }
     // The view may only have scheduled the console's deletion by now
     TEvent mudletEvent{};
     mudletEvent.mArgumentList.append(QLatin1String("sysMiniConsoleDeleted"));

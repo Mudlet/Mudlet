@@ -391,8 +391,11 @@ private slots:
         const bool ran = host->getLuaInterpreter()->compileAndExecuteScript(
                 qsl("openUserWindow('realViewDock') nullViewMade = tostring(createLabel('nullViewMade', 0, 0, 10, 10, 1))"));
         const TConsoleModel* realModelWhileDetached = host->windowRegistry().subConsoleModel(realWindow);
+        const auto [realDeletedWhileDetached, realDeleteMessage] = host->deleteMiniConsole(realWindow);
         host->setMainConsoleView(console);
         const bool nullLabelRegistered = host->windowRegistry().hasLabel(qsl("nullViewMade"));
+        const bool realStillRegistered = host->windowRegistry().hasSubConsole(realWindow);
+        host->deleteMiniConsole(realWindow);
 
         QVERIFY(ran);
         lua_State* L = host->getLuaInterpreter()->getLuaGlobalState();
@@ -402,6 +405,9 @@ private slots:
         QCOMPARE(nullViewMade, qsl("true"));
         QCOMPARE(realModelWhileDetached, realModel);
         QVERIFY2(!nullLabelRegistered, "A label the null view made is still registered once a real view has attached.");
+        QVERIFY2(!realDeletedWhileDetached, "The null view reported deleting a window it has no record of.");
+        QVERIFY(!realDeleteMessage.isEmpty());
+        QVERIFY(realStillRegistered);
     }
 
     // What scripts are told while the profile has no view. The label is made first, so that its answers
