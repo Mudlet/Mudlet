@@ -392,7 +392,7 @@ void ModernGLWidget::paintGL()
 namespace {
 // Texels across the textures drawn on room tops
 constexpr int scmRoomTextureSize = 128;
-// Past this many, those textures are dropped to be made again as they are next needed
+// Past this many, those the last frame did not draw are dropped, to be made again if needed
 constexpr qsizetype scmMaxRoomTextures = 512;
 
 // A colour dimmed for its level's distance from the one being viewed
@@ -430,6 +430,7 @@ GLuint ModernGLWidget::symbolTexture(const QString& symbol, const QColor& color)
     const QFont& font = mpMap->mMapSymbolFont;
     const qreal fudgeFactor = mpMap->mMapSymbolFontFudgeFactor;
     const QString key = qsl("symbol|%1|%2|%3|%4").arg(color.name(QColor::HexArgb), font.key(), QString::number(fudgeFactor), symbol);
+    mRoomTexturesInUse.insert(key);
     if (const GLuint texture = mLabelTextureCache.imageTexture(key)) {
         return texture;
     }
@@ -444,6 +445,7 @@ GLuint ModernGLWidget::symbolTexture(const QString& symbol, const QColor& color)
 
 GLuint ModernGLWidget::discTexture(const QString& key, const QGradientStops& stops)
 {
+    mRoomTexturesInUse.insert(key);
     if (const GLuint texture = mLabelTextureCache.imageTexture(key)) {
         return texture;
     }
@@ -491,7 +493,8 @@ void ModernGLWidget::renderRooms()
     const QVector3D screenRight = mCameraController.screenRight();
     const QVector3D screenUp = mCameraController.screenUp();
 
-    mLabelTextureCache.limitImageTextures(scmMaxRoomTextures);
+    mLabelTextureCache.limitImageTextures(scmMaxRoomTextures, mRoomTexturesInUse);
+    mRoomTexturesInUse.clear();
 
     QVector<CubeInstanceData> roomInstances;
     QVector<CubeInstanceData> borderInstances;

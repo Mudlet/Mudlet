@@ -158,6 +158,8 @@ private:
 
     // Label texture cache
     LabelTextureCache mLabelTextureCache;
+    // Room textures the last frame drew, which a full cache keeps
+    QSet<QString> mRoomTexturesInUse;
 
     // Host reference
     QPointer<Host> mpHost;

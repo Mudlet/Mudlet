@@ -119,15 +119,19 @@ GLuint LabelTextureCache::addImageTexture(const QString& key, const QImage& imag
     return textureId;
 }
 
-void LabelTextureCache::limitImageTextures(const qsizetype maximum)
+void LabelTextureCache::limitImageTextures(const qsizetype maximum, const QSet<QString>& inUse)
 {
     if (mImageCache.size() <= maximum) {
         return;
     }
-    for (const GLuint textureId : std::as_const(mImageCache)) {
-        deleteTexture(textureId);
+    for (auto it = mImageCache.begin(); it != mImageCache.end();) {
+        if (inUse.contains(it.key())) {
+            ++it;
+            continue;
+        }
+        deleteTexture(it.value());
+        it = mImageCache.erase(it);
     }
-    mImageCache.clear();
 }
 
 void LabelTextureCache::clearAll()

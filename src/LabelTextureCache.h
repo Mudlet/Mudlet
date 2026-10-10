@@ -21,6 +21,7 @@
  ***************************************************************************/
 
 #include <QHash>
+#include <QSet>
 #include <QImage>
 #include <QPixmap>
 #include <QOpenGLFunctions>
@@ -55,8 +56,9 @@ public:
     // Mipmapped, as they are drawn far smaller than they are made.
     GLuint imageTexture(const QString& key) const { return mImageCache.value(key); }
     GLuint addImageTexture(const QString& key, const QImage& image);
-    // Only between frames: a texture already queued for drawing must outlive the frame
-    void limitImageTextures(qsizetype maximum);
+    // Only between frames: a texture already queued for drawing must outlive the frame.
+    // Keeps those in inUse, so a scene needing more than maximum is not redrawn every frame.
+    void limitImageTextures(qsizetype maximum, const QSet<QString>& inUse);
 
     // Clear entire cache
     void clearAll();
