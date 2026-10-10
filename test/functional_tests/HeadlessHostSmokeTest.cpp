@@ -430,6 +430,114 @@ gridMainBiggerCells = table.concat({getColumnCount("main"), getRowCount("main"),
         QVERIFY2(QApplication::topLevelWidgets().isEmpty(), "Asking for the geometry created a widget.");
     }
 
+    // What a profile with no view promises scripts: each window call answers as a real view would,
+    // from the models alone, on a profile nothing else has touched.
+    void test_headlessContract()
+    {
+        const QString hostname = qsl("Test-Headless-Host-Contract");
+        QVERIFY2(HostManager::self()->addHost(hostname, QString(), QString(), QString()), "Could not create a profile with no main window.");
+        Host* host = HostManager::self()->getHost(hostname);
+        QVERIFY2(host, "The profile is not in the pool.");
+        QVERIFY(!host->hasConsoleView());
+        QVERIFY2(!host->mainConsoleShowsTimeStamps(), "A new profile shows time stamps.");
+
+        const bool ran = host->getLuaInterpreter()->compileAndExecuteScript(qsl(R"lua(
+headlessContract = "not run"
+local ok, err = pcall(function()
+  assert(echo("main", "contract line\n") == true, "echo to main did not answer true")
+  contractGrid = table.concat({getColumnCount(), getRowCount()}, ",")
+  contractTimeStamps = tostring(timeStampsEnabled())
+  local function answer(f, ...)
+    local called, first, second = pcall(f, ...)
+    if not called then
+      return "raised"
+    end
+    return tostring(first) .. ":" .. (type(second) == "string" and "msg" or tostring(second))
+  end
+  local function joined(...)
+    return table.concat({...}, ",")
+  end
+  local missing = "noSuchContractWindow"
+  local answers = {}
+  for _, call in ipairs({
+    {"echo", echo, missing, "text"},
+    {"moveWindow", moveWindow, missing, 1, 1},
+    {"resizeWindow", resizeWindow, missing, 10, 10},
+    {"showWindow", showWindow, missing},
+    {"hideWindow", hideWindow, missing},
+    {"windowVisible", windowVisible, missing},
+    {"windowType", windowType, missing},
+    {"getWindowGeometry", getWindowGeometry, missing},
+    {"getColumnCount", getColumnCount, missing},
+    {"getRowCount", getRowCount, missing},
+    {"getFont", getFont, missing},
+    {"getFontSize", getFontSize, missing},
+    {"setFontSize", setFontSize, missing, 10},
+    {"calcFontSize", calcFontSize, missing},
+    {"clearWindow", clearWindow, missing},
+    {"getLineCount", getLineCount, missing},
+    {"setBackgroundColor", setBackgroundColor, missing, 1, 2, 3, 255},
+    {"getBackgroundColor", getBackgroundColor, missing},
+    {"getLabelText", getLabelText, missing},
+    {"setUserWindowTitle", setUserWindowTitle, missing, "title"},
+    {"timeStampsEnabled", timeStampsEnabled, missing},
+  }) do
+    answers[#answers + 1] = call[1] .. "=" .. answer(unpack(call, 2))
+  end
+  contractMissing = table.concat(answers, ";")
+
+  assert(createMiniConsole("contractMini", 10, 20, 200, 100) == true, "createMiniConsole did not answer true")
+  local miniEcho = answer(echo, "contractMini", "mini line\n")
+  local miniType = answer(windowType, "contractMini")
+  contractMini = joined(miniEcho, miniType, answer(windowVisible, "contractMini"), joined(getWindowGeometry("contractMini")), getLineCount("contractMini"))
+  assert(deleteMiniConsole("contractMini") == true, "deleteMiniConsole did not answer true")
+  contractMiniGone = joined(answer(echo, "contractMini", "text"), answer(windowType, "contractMini"))
+
+  assert(createLabel("contractLabel", 5, 6, 70, 80, 1) == true, "createLabel did not answer true")
+  local before = getLabelText("contractLabel")
+  local labelEcho = answer(echo, "contractLabel", "label words")
+  contractLabel = joined(before, labelEcho, getLabelText("contractLabel"), getLabelStyleSheet("contractLabel"), joined(getBackgroundColor("contractLabel")), joined(getWindowGeometry("contractLabel")), answer(windowVisible, "contractLabel"), answer(windowType, "contractLabel"))
+  deleteLabel("contractLabel")
+end)
+headlessContract = ok and "ok" or tostring(err)
+)lua"));
+
+        QVERIFY2(ran, "The Lua chunk did not run.");
+        QCOMPARE(luaGlobalString(host, "headlessContract"), qsl("ok"));
+        QVERIFY2(mainBufferHolds(host, qsl("contract line")), "echo() to main never reached the main console model.");
+        // The grid NAWS reports, which with no view draws no time stamp gutter
+        QCOMPARE(luaGlobalString(host, "contractGrid"), qsl("%1,%2").arg(host->mScreenWidth).arg(host->mScreenHeight));
+        QCOMPARE(luaGlobalString(host, "contractTimeStamps"), qsl("false"));
+        // Taken from the same Lua run in the GUI self-test profile: what a real view answers for a name it
+        // has no window for, where a few calls have always answered nothing or false rather than nil and a message
+        const QStringList missingAnswers{qsl("echo=nil:msg"),
+                                         qsl("moveWindow=nil:nil"),
+                                         qsl("resizeWindow=nil:nil"),
+                                         qsl("showWindow=false:nil"),
+                                         qsl("hideWindow=nil:nil"),
+                                         qsl("windowVisible=nil:msg"),
+                                         qsl("windowType=nil:msg"),
+                                         qsl("getWindowGeometry=nil:msg"),
+                                         qsl("getColumnCount=nil:msg"),
+                                         qsl("getRowCount=nil:msg"),
+                                         qsl("getFont=nil:msg"),
+                                         qsl("getFontSize=nil:msg"),
+                                         qsl("setFontSize=nil:msg"),
+                                         qsl("calcFontSize=nil:nil"),
+                                         qsl("clearWindow=nil:nil"),
+                                         qsl("getLineCount=nil:msg"),
+                                         qsl("setBackgroundColor=nil:msg"),
+                                         qsl("getBackgroundColor=nil:msg"),
+                                         qsl("getLabelText=nil:msg"),
+                                         qsl("setUserWindowTitle=nil:msg"),
+                                         qsl("timeStampsEnabled=nil:msg")};
+        QCOMPARE(luaGlobalString(host, "contractMissing"), missingAnswers.join(QLatin1Char(';')));
+        QCOMPARE(luaGlobalString(host, "contractMini"), qsl("true:nil,miniconsole:nil,true:nil,10,20,200,100,1"));
+        QCOMPARE(luaGlobalString(host, "contractMiniGone"), qsl("nil:msg,nil:msg"));
+        QCOMPARE(luaGlobalString(host, "contractLabel"), qsl(",true:nil,label words,background-color: rgba(32, 32, 32, 255);,32,32,32,255,5,6,70,80,true:nil,label:nil"));
+        QVERIFY2(QApplication::topLevelWidgets().isEmpty(), "Keeping the contract created a widget.");
+    }
+
     // The trim that raises sysBufferShrinkEvent runs inside TBuffer::append(), and echo goes on using the
     // console's model after that returns, so a handler deleting the console must not free it there and then.
     void test_consoleDeletedByItsOwnShrinkEventWithNoMainWindow()
