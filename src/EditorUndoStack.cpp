@@ -166,6 +166,16 @@ void EditorUndoStack::pushCommand(QUndoCommand* cmd)
 #endif
 }
 
+void EditorUndoStack::finishAddingItem(EditorViewTypes::EditorViewType viewType, int itemID)
+{
+    if (index() == 0) {
+        return;
+    }
+    if (const auto* pAdd = dynamic_cast<const EditorAddItemCommand*>(command(index() - 1))) {
+        pAdd->finishAdding(viewType, itemID);
+    }
+}
+
 void EditorUndoStack::beginMacro(const QString& text)
 {
 #if defined(DEBUG_UNDO_REDO)
