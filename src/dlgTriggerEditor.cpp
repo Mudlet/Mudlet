@@ -12018,7 +12018,6 @@ void dlgTriggerEditor::exportTriggerToClipboard()
 {
     QList<QTreeWidgetItem*> selectedItems = treeWidget_triggers->selectedItems();
     if (selectedItems.isEmpty()) {
-        QMessageBox::warning(this, tr("Export Package:"), tr("You have to choose an item for export first. Please select a tree item and then click on export again."));
         return;
     }
 
@@ -12035,7 +12034,6 @@ void dlgTriggerEditor::exportTriggerToClipboard()
     }
 
     if (triggersToExport.isEmpty()) {
-        QMessageBox::warning(this, tr("Export Package:"), tr("No valid triggers found to export."));
         return;
     }
 
@@ -12082,7 +12080,6 @@ void dlgTriggerEditor::exportTimerToClipboard()
 {
     QList<QTreeWidgetItem*> selectedItems = treeWidget_timers->selectedItems();
     if (selectedItems.isEmpty()) {
-        QMessageBox::warning(this, tr("Export Package:"), tr("You have to choose an item for export first. Please select a tree item and then click on export again."));
         return;
     }
 
@@ -12099,7 +12096,6 @@ void dlgTriggerEditor::exportTimerToClipboard()
     }
 
     if (timersToExport.isEmpty()) {
-        QMessageBox::warning(this, tr("Export Package:"), tr("No valid timers found to export."));
         return;
     }
 
@@ -12138,7 +12134,6 @@ void dlgTriggerEditor::exportAliasToClipboard()
 {
     QList<QTreeWidgetItem*> selectedItems = treeWidget_aliases->selectedItems();
     if (selectedItems.isEmpty()) {
-        QMessageBox::warning(this, tr("Export Package:"), tr("You have to choose an item for export first. Please select a tree item and then click on export again."));
         return;
     }
 
@@ -12155,7 +12150,6 @@ void dlgTriggerEditor::exportAliasToClipboard()
     }
 
     if (aliasesToExport.isEmpty()) {
-        QMessageBox::warning(this, tr("Export Package:"), tr("No valid aliases found to export."));
         return;
     }
 
@@ -12194,7 +12188,6 @@ void dlgTriggerEditor::exportActionToClipboard()
 {
     QList<QTreeWidgetItem*> selectedItems = treeWidget_actions->selectedItems();
     if (selectedItems.isEmpty()) {
-        QMessageBox::warning(this, tr("Export Package:"), tr("You have to choose an item for export first. Please select a tree item and then click on export again."));
         return;
     }
 
@@ -12211,7 +12204,6 @@ void dlgTriggerEditor::exportActionToClipboard()
     }
 
     if (actionsToExport.isEmpty()) {
-        QMessageBox::warning(this, tr("Export Package:"), tr("No valid actions found to export."));
         return;
     }
 
@@ -12250,7 +12242,6 @@ void dlgTriggerEditor::exportScriptToClipboard()
 {
     QList<QTreeWidgetItem*> selectedItems = treeWidget_scripts->selectedItems();
     if (selectedItems.isEmpty()) {
-        QMessageBox::warning(this, tr("Export Package:"), tr("You have to choose an item for export first. Please select a tree item and then click on export again."));
         return;
     }
 
@@ -12267,7 +12258,6 @@ void dlgTriggerEditor::exportScriptToClipboard()
     }
 
     if (scriptsToExport.isEmpty()) {
-        QMessageBox::warning(this, tr("Export Package:"), tr("No valid scripts found to export."));
         return;
     }
 
@@ -12306,7 +12296,6 @@ void dlgTriggerEditor::exportKeyToClipboard()
 {
     QList<QTreeWidgetItem*> selectedItems = treeWidget_keys->selectedItems();
     if (selectedItems.isEmpty()) {
-        QMessageBox::warning(this, tr("Export Package:"), tr("You have to choose an item for export first. Please select a tree item and then click on export again."));
         return;
     }
 
@@ -12323,7 +12312,6 @@ void dlgTriggerEditor::exportKeyToClipboard()
     }
 
     if (keysToExport.isEmpty()) {
-        QMessageBox::warning(this, tr("Export Package:"), tr("No valid keys found to export."));
         return;
     }
 
@@ -12470,6 +12458,7 @@ void dlgTriggerEditor::slot_createModule()
     packageExporter->show();
 }
 
+// Copy with nothing valid selected does nothing, as anywhere else Copy is offered
 void dlgTriggerEditor::slot_copyXml()
 {
     switch (resolveCurrentView()) {
