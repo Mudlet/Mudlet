@@ -32,6 +32,7 @@
 
 #include <algorithm>
 #include <array>
+#include <limits>
 #include <QJsonArray>
 #include <QJsonObject>
 #include <QJsonValue>
@@ -48,6 +49,12 @@
 static const QColor defaultLabelForeground(QColor(0, 0, 0));
 static const QColor defaultLabelBackground(QColor(0, 0, 0));
 static const int kPixmapDataLineSize = 64;
+
+// The span index files y negated; INT_MIN has no negation in an int, so saturate it.
+static int spanIndexY(const int y)
+{
+    return y == std::numeric_limits<int>::min() ? std::numeric_limits<int>::max() : -y;
+}
 
 
 TArea::TArea(TMap* pMap, TRoomDB* pRDB)
@@ -362,7 +369,7 @@ void TArea::addRoom(int id)
             if (!pR->customLines.empty()) {
                 mCustomLineIndex.addRoom(id, pR->z());
             }
-            if (mSpanIndex.addRoom(pR->x(), -1 * pR->y(), pR->z())) {
+            if (mSpanIndex.addRoom(pR->x(), spanIndexY(pR->y()), pR->z())) {
                 publishSpanForZ(pR->z());
             }
             // Rooms here with exits to the new room were treating it as another area's:
@@ -426,8 +433,8 @@ void TArea::moveRoom(int id, int fromZ, int fromX, int fromY, int toZ, int toX, 
     if (mCustomLineIndex.roomsForZ(fromZ).contains(id)) {
         mCustomLineIndex.moveRoom(id, fromZ, toZ);
     }
-    const bool fromExtremesMoved = mSpanIndex.removeRoom(fromX, -1 * fromY, fromZ);
-    const bool toExtremesMoved = mSpanIndex.addRoom(toX, -1 * toY, toZ);
+    const bool fromExtremesMoved = mSpanIndex.removeRoom(fromX, spanIndexY(fromY), fromZ);
+    const bool toExtremesMoved = mSpanIndex.addRoom(toX, spanIndexY(toY), toZ);
     if (fromExtremesMoved) {
         publishSpanForZ(fromZ);
     }
@@ -516,7 +523,7 @@ void TArea::calcSpan()
 
         roomIdToZ.insert(id, pR->z());
         zToRoomXY[pR->z()].insert(id, {pR->x(), pR->y()});
-        mSpanIndex.addRoom(pR->x(), -1 * pR->y(), pR->z());
+        mSpanIndex.addRoom(pR->x(), spanIndexY(pR->y()), pR->z());
         if (!pR->customLines.empty()) {
             customLineRoomIdToZ.insert(id, pR->z());
         }
@@ -677,7 +684,7 @@ void TArea::removeRoom(int room)
         mZLevelIndex.removeRoom(room, pR->z());
         mGridIndex.removeRoom(room, pR->z(), pR->x(), pR->y());
         mCustomLineIndex.removeRoom(room, pR->z());
-        if (mSpanIndex.removeRoom(pR->x(), -1 * pR->y(), pR->z())) {
+        if (mSpanIndex.removeRoom(pR->x(), spanIndexY(pR->y()), pR->z())) {
             publishSpanForZ(pR->z());
         }
     } else if (!pR && rooms.contains(room)) {
