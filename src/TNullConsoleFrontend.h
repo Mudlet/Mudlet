@@ -58,7 +58,7 @@ public:
 // gone, and in a run with no GUI. Labels, mini consoles, buffers and user windows made through it
 // get a model of their own, registered as a real view registers its widgets', so scripts can find
 // them, echo to them and delete them. What a real view would record of them as it moves, shows,
-// styles or titles them, this records too, so a later getter agrees. Every other operation fails,
+// styles, titles or scrolls them, this records too, so a later getter agrees. Every other operation fails,
 // has no value or does nothing; a close has nothing to refuse it.
 class TNullConsoleFrontend final : public TConsoleFrontend
 {
@@ -165,10 +165,10 @@ public:
     bool raiseWindow(const QString&) override { return false; }
     bool lowerWindow(const QString&) override { return false; }
     std::pair<bool, QString> reparentWindow(const QString&, const QString&, int, int, bool) override { return noView(); }
-    bool setWindowScrollBarVisible(const QString&, bool) override { return false; }
-    bool setWindowHorizontalScrollBarVisible(const QString&, bool) override { return false; }
-    bool setWindowScrolling(const QString&, bool) override { return false; }
-    bool scrollWindowTo(const QString&, int, bool) override { return false; }
+    bool setWindowScrollBarVisible(const QString& name, bool visible) override;
+    bool setWindowHorizontalScrollBarVisible(const QString& name, bool visible) override;
+    bool setWindowScrolling(const QString& name, bool enabled) override;
+    bool scrollWindowTo(const QString& name, int line, bool toEnd) override;
     std::optional<std::pair<bool, QString>> setWindowFontFamily(const QString& name, const QString& family, QFont::Weight weight) override;
     bool setWindowFontSize(const QString& name, int size) override;
     std::optional<QSize> consoleFontSize(const QString& name) const override;

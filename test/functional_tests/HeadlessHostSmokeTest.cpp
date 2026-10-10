@@ -563,6 +563,207 @@ headlessContract = ok and "ok" or tostring(err)
         QVERIFY2(QApplication::topLevelWidgets().isEmpty(), "Keeping the contract created a widget.");
     }
 
+    // What a profile with no view answers the scroll calls, taken from the same Lua run in the GUI self-test
+    // profile, which lets each real pane repaint before it is read and re-issues each scroll until it holds.
+    void test_headlessScrollContract()
+    {
+        const QString hostname = qsl("Test-Headless-Host-Scroll");
+        QVERIFY2(HostManager::self()->addHost(hostname, QString(), QString(), QString()), "Could not create a profile with no main window.");
+        Host* host = HostManager::self()->getHost(hostname);
+        QVERIFY2(host, "The profile is not in the pool.");
+        QVERIFY(!host->hasConsoleView());
+        // For scrollUp() and scrollDown(), which GUIUtils.lua builds on getScroll() and scrollTo()
+        host->getLuaInterpreter()->loadGlobal();
+
+        const bool ran = host->getLuaInterpreter()->compileAndExecuteScript(qsl(R"lua(
+headlessScroll = "not run"
+local ok, err = pcall(function()
+  local function described(called, ...)
+    if not called then
+      return "raised"
+    end
+    local count = select("#", ...)
+    local values = {}
+    for i = 1, count do
+      local value = select(i, ...)
+      values[i] = (i > 1 and type(value) == "string") and "msg" or tostring(value)
+    end
+    return "[" .. count .. "]" .. table.concat(values, ":")
+  end
+  local function answer(f, ...)
+    return described(pcall(f, ...))
+  end
+  local function settled(name)
+    return answer(getScroll, name)
+  end
+  local function park(name, line)
+    local called = answer(scrollTo, name, line)
+    return called .. settled(name)
+  end
+  local function fill(name, count)
+    for i = 1, count do
+      echo(name, "scroll line " .. i .. "\n")
+    end
+  end
+
+  local missing = "noSuchScrollWindow"
+  local answers = {}
+  for _, call in ipairs({
+    {"getScroll", getScroll, missing},
+    {"scrollTo", scrollTo, missing, 1},
+    {"scrollToEnd", scrollTo, missing},
+    {"scrollUp", scrollUp, missing, 1},
+    {"scrollDown", scrollDown, missing, 1},
+    {"getScrollBarVisible", getScrollBarVisible, missing},
+    {"enableScrollBar", enableScrollBar, missing},
+    {"disableScrollBar", disableScrollBar, missing},
+    {"enableHorizontalScrollBar", enableHorizontalScrollBar, missing},
+    {"disableHorizontalScrollBar", disableHorizontalScrollBar, missing},
+    {"enableScrolling", enableScrolling, missing},
+    {"disableScrolling", disableScrolling, missing},
+    {"scrollingActive", scrollingActive, missing},
+  }) do
+    answers[#answers + 1] = call[1] .. "=" .. answer(unpack(call, 2))
+  end
+  scrollMissing = table.concat(answers, ";")
+
+  -- main is cleared first, so every console walks from no lines and reads the same in any profile
+  local function walk(name)
+    local steps = {}
+    local function note(label, value)
+      steps[#steps + 1] = label .. "=" .. value
+    end
+    note("fresh", answer(getScroll, name) .. answer(getScrollBarVisible, name) .. answer(scrollingActive, name))
+    fill(name, 60)
+    note("filled", settled(name))
+    note("bar", answer(enableScrollBar, name) .. answer(getScrollBarVisible, name) .. answer(disableScrollBar, name) .. answer(getScrollBarVisible, name))
+    note("hbar", answer(enableHorizontalScrollBar, name) .. answer(disableHorizontalScrollBar, name))
+    note("frozen", answer(disableScrolling, name) .. answer(scrollingActive, name) .. park(name, 10))
+    note("thawed", answer(enableScrolling, name) .. answer(scrollingActive, name) .. park(name, 60))
+    note("to10", park(name, 10))
+    note("to20", park(name, 20))
+    note("toMinus5", park(name, -5))
+    note("up3", answer(scrollUp, name, 3) .. settled(name))
+    note("down2", answer(scrollDown, name, 2) .. settled(name))
+    fill(name, 5)
+    note("fedWhileBack", settled(name) .. answer(getLastLineNumber, name))
+    note("frozenWhileBack", answer(disableScrolling, name) .. settled(name))
+    enableScrolling(name)
+    note("toMinus100", park(name, -100))
+    note("toEnd", answer(scrollTo, name) .. settled(name))
+    note("to1000", park(name, 1000))
+    fill(name, 5)
+    note("fedAtEnd", settled(name) .. answer(getLastLineNumber, name))
+    park(name, 10)
+    clearWindow(name)
+    note("cleared", settled(name) .. answer(getLastLineNumber, name))
+    fill(name, 30)
+    note("fedAfterClear", settled(name) .. answer(getLastLineNumber, name))
+    return table.concat(steps, ";")
+  end
+
+  fill("main", 3)
+  scrollMainAtEnd = tostring(getScroll() == getLastLineNumber("main"))
+  clearWindow("main")
+  scrollMain = walk("main")
+  scrollMainForms = table.concat({park("", 30), park("main", 25), answer(scrollTo, 20) .. settled("main"), answer(scrollTo) .. settled("main"),
+    answer(disableScrolling, "") .. answer(scrollingActive, "") .. answer(enableScrolling, "") .. answer(scrollingActive)}, ";")
+  assert(createMiniConsole("scrollMini", 0, 0, 300, 200) == true, "createMiniConsole did not answer true")
+  scrollMini = walk("scrollMini")
+  assert(openUserWindow("scrollWindow") == true, "openUserWindow did not answer true")
+  scrollWindow = walk("scrollWindow")
+  createBuffer("scrollBuffer")
+  scrollBuffer = walk("scrollBuffer")
+  deleteMiniConsole("scrollMini")
+  scrollMiniGone = answer(getScroll, "scrollMini") .. answer(scrollTo, "scrollMini", 1)
+end)
+headlessScroll = ok and "ok" or tostring(err)
+)lua"));
+
+        QVERIFY2(ran, "The Lua chunk did not run.");
+        QCOMPARE(luaGlobalString(host, "headlessScroll"), qsl("ok"));
+        QCOMPARE(luaGlobalString(host, "scrollMainAtEnd"), qsl("true"));
+        const QStringList missingAnswers{qsl("getScroll=[2]nil:msg"),
+                                         qsl("scrollTo=[2]nil:msg"),
+                                         qsl("scrollToEnd=[2]nil:msg"),
+                                         qsl("scrollUp=[2]nil:msg"),
+                                         qsl("scrollDown=[2]nil:msg"),
+                                         qsl("getScrollBarVisible=[2]nil:msg"),
+                                         qsl("enableScrollBar=[2]nil:msg"),
+                                         qsl("disableScrollBar=[2]nil:msg"),
+                                         qsl("enableHorizontalScrollBar=[2]nil:msg"),
+                                         qsl("disableHorizontalScrollBar=[2]nil:msg"),
+                                         qsl("enableScrolling=[2]nil:msg"),
+                                         qsl("disableScrolling=[2]nil:msg"),
+                                         qsl("scrollingActive=[2]nil:msg")};
+        QCOMPARE(luaGlobalString(host, "scrollMissing"), missingAnswers.join(QLatin1Char(';')));
+        const QStringList mainSteps{qsl("fresh=[1]0[1]true[1]true"),
+                                    qsl("filled=[1]60"),
+                                    qsl("bar=[0][1]true[0][1]false"),
+                                    qsl("hbar=[0][0]"),
+                                    qsl("frozen=[2]nil:msg[1]true[0][1]10"),
+                                    qsl("thawed=[2]nil:msg[1]true[0][1]60"),
+                                    qsl("to10=[0][1]10"),
+                                    qsl("to20=[0][1]20"),
+                                    qsl("toMinus5=[0][1]55"),
+                                    qsl("up3=[0][1]52"),
+                                    qsl("down2=[0][1]54"),
+                                    qsl("fedWhileBack=[1]54[1]65"),
+                                    qsl("frozenWhileBack=[2]nil:msg[1]54"),
+                                    qsl("toMinus100=[0][1]0"),
+                                    qsl("toEnd=[0][1]65"),
+                                    qsl("to1000=[0][1]65"),
+                                    qsl("fedAtEnd=[1]70[1]70"),
+                                    qsl("cleared=[1]0[1]0"),
+                                    qsl("fedAfterClear=[1]30[1]30")};
+        QCOMPARE(luaGlobalString(host, "scrollMain"), mainSteps.join(QLatin1Char(';')));
+        QCOMPARE(luaGlobalString(host, "scrollMainForms"), qsl("[0][1]30;[0][1]25;[0][1]20;[0][1]30;[1]true[1]true[1]true[1]true"));
+        const QStringList subConsoleSteps{qsl("fresh=[1]0[1]false[1]true"),
+                                          qsl("filled=[1]60"),
+                                          qsl("bar=[0][1]true[0][1]false"),
+                                          qsl("hbar=[0][0]"),
+                                          qsl("frozen=[1]true[1]false[0][1]60"),
+                                          qsl("thawed=[1]true[1]true[0][1]60"),
+                                          qsl("to10=[0][1]10"),
+                                          qsl("to20=[0][1]20"),
+                                          qsl("toMinus5=[0][1]55"),
+                                          qsl("up3=[0][1]52"),
+                                          qsl("down2=[0][1]54"),
+                                          qsl("fedWhileBack=[1]54[1]65"),
+                                          qsl("frozenWhileBack=[1]true[1]65"),
+                                          qsl("toMinus100=[0][1]0"),
+                                          qsl("toEnd=[0][1]65"),
+                                          qsl("to1000=[0][1]65"),
+                                          qsl("fedAtEnd=[1]70[1]70"),
+                                          qsl("cleared=[1]0[1]0"),
+                                          qsl("fedAfterClear=[1]30[1]30")};
+        QCOMPARE(luaGlobalString(host, "scrollMini"), subConsoleSteps.join(QLatin1Char(';')));
+        QCOMPARE(luaGlobalString(host, "scrollWindow"), subConsoleSteps.join(QLatin1Char(';')));
+        // Never painted, so a real buffer never reads back as scrolled
+        const QStringList bufferSteps{qsl("fresh=[1]0[1]false[1]true"),
+                                      qsl("filled=[1]60"),
+                                      qsl("bar=[0][1]true[0][1]false"),
+                                      qsl("hbar=[0][0]"),
+                                      qsl("frozen=[1]true[1]true[0][1]60"),
+                                      qsl("thawed=[1]true[1]true[0][1]60"),
+                                      qsl("to10=[0][1]60"),
+                                      qsl("to20=[0][1]60"),
+                                      qsl("toMinus5=[0][1]60"),
+                                      qsl("up3=[0][1]60"),
+                                      qsl("down2=[0][1]60"),
+                                      qsl("fedWhileBack=[1]65[1]65"),
+                                      qsl("frozenWhileBack=[1]true[1]65"),
+                                      qsl("toMinus100=[0][1]65"),
+                                      qsl("toEnd=[0][1]65"),
+                                      qsl("to1000=[0][1]65"),
+                                      qsl("fedAtEnd=[1]70[1]70"),
+                                      qsl("cleared=[1]0[1]0"),
+                                      qsl("fedAfterClear=[1]30[1]30")};
+        QCOMPARE(luaGlobalString(host, "scrollBuffer"), bufferSteps.join(QLatin1Char(';')));
+        QCOMPARE(luaGlobalString(host, "scrollMiniGone"), qsl("[2]nil:msg[2]nil:msg"));
+        QVERIFY2(QApplication::topLevelWidgets().isEmpty(), "Scrolling created a widget.");
+    }
+
     // The trim that raises sysBufferShrinkEvent runs inside TBuffer::append(), and echo goes on using the
     // console's model after that returns, so a handler deleting the console must not free it there and then.
     void test_consoleDeletedByItsOwnShrinkEventWithNoMainWindow()

@@ -30,6 +30,8 @@
 #include <QObject>
 #include <QStringList>
 
+#include <algorithm>
+
 TNullConsoleFrontend::TNullConsoleFrontend(Host* pHost)
 : mpHost(pHost)
 {
@@ -566,6 +568,60 @@ bool TNullConsoleFrontend::setSubConsoleCommandForegroundColor(const QString& na
         return false;
     }
     pModel->mCommandFgColor = color;
+    return true;
+}
+
+bool TNullConsoleFrontend::setWindowScrollBarVisible(const QString& name, const bool visible)
+{
+    TConsoleModel* pModel = mpHost->consoleModelNamed(name);
+    if (!pModel) {
+        return false;
+    }
+    pModel->mScrollBarEnabled = visible;
+    return true;
+}
+
+// Nothing reads a horizontal scroll bar back, so there is nothing to record
+bool TNullConsoleFrontend::setWindowHorizontalScrollBarVisible(const QString& name, bool)
+{
+    return mpHost->consoleModelNamed(name) != nullptr;
+}
+
+// As TConsole::setScrolling(), which leaves the main console and buffers scrolling
+bool TNullConsoleFrontend::setWindowScrolling(const QString& name, const bool enabled)
+{
+    TConsoleModel* pModel = mpHost->consoleModelNamed(name);
+    if (!pModel) {
+        return false;
+    }
+    const auto kind = mpHost->windowRegistry().subConsoleKind(name);
+    if (kind == TWindowRegistry::SubConsoleKind::MiniConsole || kind == TWindowRegistry::SubConsoleKind::UserWindow) {
+        pModel->mScrollingEnabled = enabled;
+        if (!enabled) {
+            pModel->mScrolledBackTo.reset();
+        }
+    }
+    return true;
+}
+
+// Lands on the line itself, where TMainConsole::scrollWindowTo() lands its first scroll short by the rows of
+// the split screen pane it opens
+bool TNullConsoleFrontend::scrollWindowTo(const QString& name, const int line, const bool toEnd)
+{
+    TConsoleModel* pModel = mpHost->consoleModelNamed(name);
+    if (!pModel) {
+        return false;
+    }
+    const int lastLine = pModel->buffer.getLastLineNumber();
+    if (toEnd || line >= lastLine) {
+        pModel->mScrolledBackTo.reset();
+        return true;
+    }
+    // A buffer is never painted, so a real one never shows itself scrolled back
+    if (!pModel->mScrollingEnabled || mpHost->windowRegistry().subConsoleKind(name) == TWindowRegistry::SubConsoleKind::Buffer) {
+        return true;
+    }
+    pModel->mScrolledBackTo = line < 0 ? std::max(lastLine + line, 0) : line;
     return true;
 }
 
