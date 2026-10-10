@@ -28,7 +28,9 @@
  * Run with: ctest -R MapViewAreaListTest -V
  */
 
+#include <QApplication>
 #include <QComboBox>
+#include <QScopeGuard>
 #include <QFileInfo>
 #include <QTemporaryDir>
 #include <QtTest/QtTest>
@@ -177,6 +179,29 @@ private slots:
         QCOMPARE(alphaView->getCurrentAreaId(), alpha);
         QVERIFY2(doomedView->getCurrentAreaId() != doomed, "the view is still on the deleted area");
         QVERIFY(roomDB()->getAreaNamesMap().contains(doomedView->getCurrentAreaId()));
+    }
+
+    // A view sets its palette explicitly, so it no longer follows the
+    // application's and has to be told when the colour scheme changes.
+    void test_aColourSchemeChangeReachesEveryMapView()
+    {
+        const QPalette original = QApplication::palette();
+        auto restorePalette = qScopeGuard([&original]() {
+            QApplication::setPalette(original);
+        });
+        QApplication::setPalette(QPalette(QColor(10, 20, 30)));
+
+        map()->mapClear();
+        const int areaId = addAreaWithRoom(qsl("Colours"), 1);
+        QVERIFY(areaId > 0);
+        QPointer<TMapView> view = openView(areaId);
+        QVERIFY(view);
+        QCOMPARE(view->palette().color(QPalette::Window), QColor(10, 20, 30));
+
+        QApplication::setPalette(QPalette(QColor(200, 210, 220)));
+        map()->refreshMapperColours();
+
+        QCOMPARE(view->palette().color(QPalette::Window), QColor(200, 210, 220));
     }
 };
 
