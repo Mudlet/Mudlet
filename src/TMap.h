@@ -73,6 +73,9 @@ class TMap : public QObject
 {
     Q_OBJECT
 
+    // Allows the functional test to put recording map views in place of the GUI's:
+    friend class FrontendRoutingContractTest;
+
 public:
     // Host settings the 2D map keeps a copy of to draw with
     enum class MapperSetting { RoomSize, ExitSize, RoundRooms, ShowRoomIds, ShowGrid };
@@ -370,7 +373,7 @@ public:
     dlgMapper* mapper() const;
     void setMapper(dlgMapper* pMapper);
     // mapper() as core code drives it; null when that is.
-    TMapViewFrontend* mapViewFrontend() const { return mpMapper.isNull() ? nullptr : mpMapViewFrontend; }
+    TMapViewFrontend* mapViewFrontend() const { return mpMapViewObject.isNull() ? nullptr : mpMapViewFrontend; }
     QHash<int, int> roomidToIndex;
 
     // User-registered mapper context menu entries (addMapEvent()/addMapMenu());
@@ -486,8 +489,11 @@ private:
     // The same object as mpViewManager, set with it by setViewManager().
     TMapViewsFrontend* mpViewsFrontend = nullptr;
     QPointer<dlgMapper> mpMapper;
-    // The same object as mpMapper, set with it by setMapper(); read only while mpMapper is set.
+    // The same object as mpMapper, set with it by setMapper(); read only while mpMapViewObject is set.
     TMapViewFrontend* mpMapViewFrontend = nullptr;
+    // mpMapViewFrontend as a QObject, so it clears when the view goes. Not mpMapper, so a view that
+    // is not a dlgMapper can stand in its place.
+    QPointer<QObject> mpMapViewObject;
 
     // A* leaving the route in mSearchPredecessor; see the definition for why not boost::astar_search().
     bool searchGraph(const vertex start, const vertex goal);

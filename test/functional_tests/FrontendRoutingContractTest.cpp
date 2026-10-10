@@ -29,8 +29,12 @@
 #include "PortableModeTestHelper.h"
 #include "TConsoleModel.h"
 #include "TLuaInterpreter.h"
+#include "TMap.h"
+#include "TMapViewFrontend.h"
+#include "TMapViewsFrontend.h"
 #include "TNullAppFrontend.h"
 #include "TNullConsoleFrontend.h"
+#include "TRoomDB.h"
 
 #include "GroupedTest.h"
 
@@ -44,6 +48,11 @@ QString call(const char* name, const QStringList& args = {})
 QString flag(const bool value)
 {
     return value ? qsl("true") : qsl("false");
+}
+
+QString number(const qreal value)
+{
+    return QString::number(value);
 }
 
 // Writes down what core code asks of the view, then does what the null view does, so the windows it
@@ -135,6 +144,177 @@ public:
     }
 };
 
+// The mapper's place, which no view has filled on a profile with no main window. Its answers are
+// ones the mapper would not give unprompted, so a script that sees them got them from here.
+class RecordingMapView final : public QObject, public TMapViewFrontend
+{
+public:
+    // Written by the const queries too
+    mutable QStringList mCalls;
+    QSet<int> mSelection;
+    bool mSelecting = false;
+    int mShownAreaId = 0;
+    bool mShowing3D = false;
+
+    bool onScreen() const override
+    {
+        mCalls << call("onScreen");
+        return true;
+    }
+    void showMapProgress(const QString& label, bool cancelable) override { mCalls << call("showMapProgress", {label, flag(cancelable)}); }
+    void setMapProgressLabel(const QString& text) override { mCalls << call("setMapProgressLabel", {text}); }
+    void setMapProgressRange(int minimum, int maximum) override { mCalls << call("setMapProgressRange", {QString::number(minimum), QString::number(maximum)}); }
+    void setMapProgressValue(int value) override { mCalls << call("setMapProgressValue", {QString::number(value)}); }
+    int mapProgressMaximum() const override
+    {
+        mCalls << call("mapProgressMaximum");
+        return 0;
+    }
+    void setMapProgressCancelable(bool cancelable) override { mCalls << call("setMapProgressCancelable", {flag(cancelable)}); }
+    void hideMapProgress() override { mCalls << call("hideMapProgress"); }
+    bool isMapProgressVisible() const override
+    {
+        mCalls << call("isMapProgressVisible");
+        return false;
+    }
+
+    bool selectingRooms() const override
+    {
+        mCalls << call("selectingRooms");
+        return mSelecting;
+    }
+    QSet<int> selectedRooms() const override
+    {
+        mCalls << call("selectedRooms");
+        return mSelection;
+    }
+    int centerSelectedRoom() const override
+    {
+        mCalls << call("centerSelectedRoom");
+        return 7;
+    }
+    void clearRoomSelection() override
+    {
+        mCalls << call("clearRoomSelection");
+        mSelection.clear();
+    }
+
+    int shownAreaId() const override
+    {
+        mCalls << call("shownAreaId");
+        return mShownAreaId;
+    }
+    std::pair<bool, QString> setMapZoom(qreal zoom, int areaId) override
+    {
+        mCalls << call("setMapZoom", {number(zoom), QString::number(areaId)});
+        return zoom < 1.0 ? std::pair{false, qsl("routed zoom refusal")} : std::pair{true, QString()};
+    }
+    std::pair<bool, QString> exportAreaToImage(int areaId, const QString& filePath, std::optional<int> zLevel, qreal zoom, bool exportAllZLevels) override
+    {
+        mCalls << call("exportAreaToImage", {QString::number(areaId), filePath, zLevel ? QString::number(*zLevel) : qsl("none"), number(zoom), flag(exportAllZLevels)});
+        return exportAllZLevels ? std::pair{true, QString()} : std::pair{false, qsl("routed export refusal")};
+    }
+
+    void show3DView(bool shown) override
+    {
+        mCalls << call("show3DView", {flag(shown)});
+        mShowing3D = shown;
+    }
+    bool showing3DView() const override
+    {
+        mCalls << call("showing3DView");
+        return mShowing3D;
+    }
+    void recreate3DView() override { mCalls << call("recreate3DView"); }
+    void shift3DViewCamera(float verticalAngle, float horizontalAngle, float rotationAngle) override
+    {
+        mCalls << call("shift3DViewCamera", {number(verticalAngle), number(horizontalAngle), number(rotationAngle)});
+    }
+    void set3DViewCameraPosition(float r, float theta, float phi) override { mCalls << call("set3DViewCameraPosition", {number(r), number(theta), number(phi)}); }
+};
+
+// One secondary map view, writing into its manager's list so the order of the two shows
+class RecordingSecondaryMapView final : public TSecondaryMapViewFrontend
+{
+public:
+    explicit RecordingSecondaryMapView(QStringList& calls)
+    : mCalls(calls)
+    {
+    }
+
+    QStringList& mCalls;
+    int mAcceptedRoomId = 0;
+
+    std::pair<bool, QString> centerOnRoom(int roomId) override
+    {
+        mCalls << call("centerOnRoom", {QString::number(roomId)});
+        return roomId == mAcceptedRoomId ? std::pair{true, QString()} : std::pair{false, qsl("routed centring refusal")};
+    }
+    std::pair<bool, QString> setZoom(qreal zoom) override
+    {
+        mCalls << call("setZoom", {number(zoom)});
+        return {true, QString()};
+    }
+    int getCurrentAreaId() const override
+    {
+        mCalls << call("getCurrentAreaId");
+        return 21;
+    }
+    int getCenteredRoomId() const override
+    {
+        mCalls << call("getCenteredRoomId");
+        return 31;
+    }
+    qreal getZoom() const override
+    {
+        mCalls << call("getZoom");
+        return 2.75;
+    }
+    int getZLevel() const override
+    {
+        mCalls << call("getZLevel");
+        return -2;
+    }
+};
+
+// The secondary map views' manager, with one view open, numbered 7
+class RecordingMapViews final : public TMapViewsFrontend
+{
+public:
+    // Written by getViewIds(), which is const
+    mutable QStringList mCalls;
+    RecordingSecondaryMapView mView{mCalls};
+    int mAcceptedAreaId = 0;
+
+    std::pair<int, QString> createView(int initialAreaId) override
+    {
+        mCalls << call("createView", {QString::number(initialAreaId)});
+        return initialAreaId == mAcceptedAreaId ? std::pair{7, QString()} : std::pair{0, qsl("routed view refusal")};
+    }
+    std::pair<bool, QString> closeView(int viewId) override
+    {
+        mCalls << call("closeView", {QString::number(viewId)});
+        return viewId == 7 ? std::pair{true, QString()} : std::pair{false, qsl("routed close refusal")};
+    }
+    int closeAllViews() override
+    {
+        mCalls << call("closeAllViews");
+        return 2;
+    }
+    TSecondaryMapViewFrontend* view(int viewId) override
+    {
+        mCalls << call("view", {QString::number(viewId)});
+        return viewId == 7 ? &mView : nullptr;
+    }
+    QList<int> getViewIds() const override
+    {
+        mCalls << call("getViewIds");
+        return {7, 9};
+    }
+    void updateAllViews() override { mCalls << call("updateAllViews"); }
+    void switchViewsShowingArea(int areaId) override { mCalls << call("switchViewsShowingArea", {QString::number(areaId)}); }
+};
+
 } // namespace
 
 // What a Lua UI function asks of the frontend, read from a recording view on a profile with no main
@@ -151,6 +331,10 @@ private:
     const QString mHostname = qsl("Test-Frontend-Routing");
     Host* mpHost = nullptr;
     RecordingConsoleFrontend* mpRecorder = nullptr;
+    RecordingMapView mMapView;
+    RecordingMapViews mMapViews;
+    int mAreaId = 0;
+    int mShownAreaId = 0;
 
     QString runLua(const QString& chunk)
     {
@@ -164,6 +348,18 @@ private:
         lua_pop(L, 1);
         return value;
     }
+
+    int luaGlobalInt(const char* name)
+    {
+        lua_State* L = mpHost->getLuaInterpreter()->getLuaGlobalState();
+        lua_getglobal(L, name);
+        const int value = lua_isnumber(L, -1) ? static_cast<int>(lua_tointeger(L, -1)) : -1;
+        lua_pop(L, 1);
+        return value;
+    }
+
+    // AREA in the chunk stands for the id of the area holding the map's rooms
+    QString runMapLua(QString chunk) { return runLua(chunk.replace(qsl("AREA"), QString::number(mAreaId))); }
 
 private slots:
     void initTestCase()
@@ -189,6 +385,22 @@ private slots:
         mpRecorder = recorder.get();
         mpHost->mpNullConsoleFrontend = std::move(recorder);
         QVERIFY(mpHost->consoleFrontend() == mpRecorder);
+
+        TMap* map = mpHost->mpMap.data();
+        QVERIFY2(!map->mapViewFrontend() && !map->mapViewsFrontend(), "The profile has map views, so the recording ones would never be asked.");
+        mAreaId = map->mpRoomDB->addArea(qsl("Routed area"));
+        mShownAreaId = map->mpRoomDB->addArea(qsl("Routed shown area"));
+        QVERIFY(mAreaId > 0 && mShownAreaId > 0);
+        QVERIFY(map->addRoom(1) && map->setRoomArea(1, mAreaId) && map->setRoomCoordinates(1, 0, 0, 0));
+        QVERIFY(map->addRoom(2) && map->setRoomArea(2, mAreaId) && map->setRoomCoordinates(2, 1, 0, 0));
+        QVERIFY(map->mpRoomDB->set2DMapZoom(mShownAreaId, 4.25));
+        mMapView.mShownAreaId = mShownAreaId;
+        mMapViews.mAcceptedAreaId = mAreaId;
+        mMapViews.mView.mAcceptedRoomId = 1;
+        map->mpMapViewFrontend = &mMapView;
+        map->mpMapViewObject = &mMapView;
+        map->mpViewsFrontend = &mMapViews;
+        QVERIFY(map->mapViewFrontend() == &mMapView && map->mapViewsFrontend() == &mMapViews);
     }
 
     void init()
@@ -196,11 +408,18 @@ private slots:
         if (mpRecorder) {
             mpRecorder->mCalls.clear();
         }
+        mMapView.mCalls.clear();
+        mMapViews.mCalls.clear();
     }
 
     void cleanupTestCase()
     {
         mpRecorder = nullptr;
+        if (mpHost && mpHost->mpMap) {
+            mpHost->mpMap->mpMapViewFrontend = nullptr;
+            mpHost->mpMap->mpMapViewObject = nullptr;
+            mpHost->mpMap->mpViewsFrontend = nullptr;
+        }
         // The profile tears the recording view down as it would the null one
         mpHostManager.reset();
         mSavedXdg.isNull() ? qunsetenv("XDG_CONFIG_HOME") : qputenv("XDG_CONFIG_HOME", mSavedXdg);
@@ -310,6 +529,188 @@ assert(getProfileTabNumber() == 3, "getProfileTabNumber did not count from one")
                 qsl("profileTabIndex(%1)").arg(mHostname),
         };
         QCOMPARE(app.mCalls.join(qsl("; ")), expected.join(qsl("; ")));
+    }
+
+    void test_mapZoomReachesTheMapView()
+    {
+        const QString result = runMapLua(qsl(R"lua(
+assert(setMapZoom(3.5, AREA) == true, "setMapZoom did not pass on the view accepting it")
+local refused, why = setMapZoom(0.5, AREA)
+assert(refused == nil and why == "routed zoom refusal", "setMapZoom did not pass on the view refusing it")
+assert(getMapZoom() == 4.25, "getMapZoom did not read the zoom of the area the view shows")
+)lua"));
+        QCOMPARE(result, qsl("ok"));
+
+        const QStringList expected{
+                qsl("setMapZoom(3.5, %1)").arg(mAreaId),
+                qsl("setMapZoom(0.5, %1)").arg(mAreaId),
+                call("shownAreaId"),
+        };
+        QCOMPARE(mMapView.mCalls.join(qsl("; ")), expected.join(qsl("; ")));
+    }
+
+    void test_mapSelectionReachesTheMapView()
+    {
+        mMapView.mSelection = {12, 1, 7};
+        QCOMPARE(runMapLua(qsl(R"lua(
+local selection = getMapSelection()
+assert(selection.center == 7, "getMapSelection did not pass on the centre room the view chose")
+assert(table.concat(selection.rooms, ",") == "1,7,12", "getMapSelection did not list the rooms the view has selected")
+assert(clearMapSelection() == true, "clearMapSelection did not report a selection to clear")
+assert(clearMapSelection() == false, "clearMapSelection did not report that nothing was left selected")
+)lua")),
+                 qsl("ok"));
+        mMapView.mSelecting = true;
+        mMapView.mSelection = {1};
+        QCOMPARE(runMapLua(qsl(R"lua(
+local cleared, why = clearMapSelection()
+assert(cleared == nil and why ~= nil, "clearMapSelection cleared a selection still being made")
+)lua")),
+                 qsl("ok"));
+        mMapView.mSelecting = false;
+
+        const QStringList expected{
+                call("selectedRooms"),
+                call("centerSelectedRoom"),
+                call("selectingRooms"),
+                call("selectedRooms"),
+                call("clearRoomSelection"),
+                call("shownAreaId"),
+                call("selectingRooms"),
+                call("selectedRooms"),
+                call("shownAreaId"),
+                call("selectingRooms"),
+        };
+        QCOMPARE(mMapView.mCalls.join(qsl("; ")), expected.join(qsl("; ")));
+    }
+
+    void test_3DViewCallsReachTheMapView()
+    {
+#if defined(INCLUDE_3DMAPPER)
+        const QString result = runMapLua(qsl(R"lua(
+shiftMapPerspective(10, 20, 30)
+setMapPerspective(400, 50, 60)
+assert(getConfig("show3dMapView") == false, "getConfig did not pass on the view having no 3D view shown")
+assert(setConfig("show3dMapView", true) == true, "setConfig refused to show the 3D view")
+assert(getConfig("show3dMapView") == true, "getConfig did not pass on the view showing its 3D view")
+setConfig("experiment.3dmap.modernmapper", true)
+setConfig("experiment.3dmap.modernmapper", false)
+)lua"));
+        QCOMPARE(result, qsl("ok"));
+
+        const QStringList expected{
+                qsl("shift3DViewCamera(10, 20, 30)"),
+                qsl("set3DViewCameraPosition(400, 50, 60)"),
+                call("showing3DView"),
+                qsl("show3DView(true)"),
+                call("showing3DView"),
+                call("recreate3DView"),
+                call("recreate3DView"),
+        };
+        QCOMPARE(mMapView.mCalls.join(qsl("; ")), expected.join(qsl("; ")));
+#else
+        QSKIP("Built without the 3D mapper, so there is no 3D view to drive.");
+#endif
+    }
+
+    void test_areaImageExportReachesTheMapView()
+    {
+        const QString result = runMapLua(qsl(R"lua(
+local exported, why = exportAreaImage(AREA, "/routed/level.png", 2)
+assert(exported == false and why == "routed export refusal", "exportAreaImage did not pass on the view refusing it")
+assert(exportAreaImage(AREA, "/routed/all.png", true) == true, "exportAreaImage did not pass on the view exporting")
+)lua"));
+        QCOMPARE(result, qsl("ok"));
+
+        // The zoom is fixed at 2 for now; a script cannot choose it
+        const QStringList expected{
+                qsl("exportAreaToImage(%1, /routed/level.png, 2, 2, false)").arg(mAreaId),
+                qsl("exportAreaToImage(%1, /routed/all.png, none, 2, true)").arg(mAreaId),
+        };
+        QCOMPARE(mMapView.mCalls.join(qsl("; ")), expected.join(qsl("; ")));
+    }
+
+    void test_mapViewLifecycleReachesTheViews()
+    {
+        const QString result = runMapLua(qsl(R"lua(
+assert(createMapView(AREA) == 7, "createMapView did not pass on the id of the view made")
+local none, why = createMapView()
+assert(none == nil and why == "routed view refusal", "createMapView did not pass on the views refusing it")
+assert(table.concat(getMapViewIds(), ",") == "7,9", "getMapViewIds did not list the open views")
+assert(closeMapView(7) == true, "closeMapView did not pass on the view closing")
+local open, whyOpen = closeMapView(9)
+assert(open == nil and whyOpen == "routed close refusal", "closeMapView did not pass on the views refusing it")
+assert(closeAllMapViews() == 2, "closeAllMapViews did not pass on how many views closed")
+)lua"));
+        QCOMPARE(result, qsl("ok"));
+
+        const QStringList expected{
+                qsl("createView(%1)").arg(mAreaId),
+                qsl("createView(0)"),
+                call("getViewIds"),
+                qsl("closeView(7)"),
+                qsl("closeView(9)"),
+                call("closeAllViews"),
+        };
+        QCOMPARE(mMapViews.mCalls.join(qsl("; ")), expected.join(qsl("; ")));
+        QVERIFY2(mMapView.mCalls.isEmpty(), qPrintable(mMapView.mCalls.join(qsl("; "))));
+    }
+
+    void test_mapViewNavigationReachesTheView()
+    {
+        const QString result = runMapLua(qsl(R"lua(
+assert(centerview(1, 7) == true, "centerview did not pass on the view centring")
+local refused, whyRefused = centerview(2, 7)
+assert(refused == nil and whyRefused == "routed centring refusal", "centerview did not pass on the view refusing it")
+local missing, whyMissing = centerview(1, 8)
+assert(missing == nil and whyMissing == "view 8 not found", "centerview did not report a view that is not open")
+assert(setMapZoom(1.5, AREA, 7) == true, "setMapZoom did not pass on the view zooming")
+assert(getMapZoom(AREA, 7) == 2.75, "getMapZoom did not pass on the zoom the view has")
+local info = getMapViewInfo(7)
+assert(info.areaId == 21 and info.centeredRoomId == 31 and info.zoom == 2.75 and info.zLevel == -2, "getMapViewInfo did not pass on what the view answered")
+)lua"));
+        QCOMPARE(result, qsl("ok"));
+
+        // A secondary view is driven alone: the mapper is not asked
+        const QStringList expected{
+                qsl("view(7)"),
+                qsl("centerOnRoom(1)"),
+                qsl("view(7)"),
+                qsl("centerOnRoom(2)"),
+                qsl("view(8)"),
+                qsl("view(7)"),
+                qsl("setZoom(1.5)"),
+                qsl("view(7)"),
+                call("getZoom"),
+                qsl("view(7)"),
+                call("getCurrentAreaId"),
+                call("getCenteredRoomId"),
+                call("getZoom"),
+                call("getZLevel"),
+        };
+        QCOMPARE(mMapViews.mCalls.join(qsl("; ")), expected.join(qsl("; ")));
+        QVERIFY2(mMapView.mCalls.isEmpty(), qPrintable(mMapView.mCalls.join(qsl("; "))));
+    }
+
+    void test_areaChangesUpdateTheViews()
+    {
+        const QString result = runMapLua(qsl(R"lua(
+routedAreaId = addAreaName("Routed new area")
+assert(setAreaName(routedAreaId, "Routed renamed area") == true, "setAreaName did not rename the area")
+assert(deleteArea(routedAreaId) == true, "deleteArea did not delete the area")
+)lua"));
+        QCOMPARE(result, qsl("ok"));
+        const int areaId = luaGlobalInt("routedAreaId");
+        QVERIFY(areaId > 0);
+
+        // A view still showing a deleted area has to be moved off it
+        const QStringList expected{
+                call("updateAllViews"),
+                call("updateAllViews"),
+                call("updateAllViews"),
+                qsl("switchViewsShowingArea(%1)").arg(areaId),
+        };
+        QCOMPARE(mMapViews.mCalls.join(qsl("; ")), expected.join(qsl("; ")));
     }
 };
 
