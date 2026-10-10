@@ -284,6 +284,8 @@ public:
     // The 2D zoom a new area starts at, and the smallest one a view accepts:
     static constexpr qreal scmDefaultXYZoom = 20.0;
     static constexpr qreal scmMinXYZoom = 3.0;
+    // Why a script's 2D zoom can't be used, or empty when it can
+    static QString zoomError(qreal zoom);
     // Which of the symbols in use would be drawn as the replacement character
     // if the given font were the symbol font:
     QStringList symbolsNotInFont(const QFont&);
