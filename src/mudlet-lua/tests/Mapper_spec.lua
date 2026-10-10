@@ -2809,6 +2809,86 @@ describe("Tests mapper functions against a shared fixture", function()
     end)
   end)
 
+  describe("Tests the 3D map perspective functions", function()
+    -- Only a build with the 3D mapper has them. These run with the 2D map
+    -- showing, but for the one test below that opens the modern 3D view
+    if not setMapPerspective then
+      pending("setMapPerspective and shiftMapPerspective need a Mudlet built with the 3D mapper")
+      return
+    end
+
+    it("setMapPerspective returns nil and a message while the 2D map is showing", function()
+      local ok, err = setMapPerspective(2, 45, 270)
+      assert.is_nil(ok)
+      assert.are.equal("the modern 3D map view is not showing", err)
+    end)
+
+    it("shiftMapPerspective returns nil and a message while the 2D map is showing", function()
+      local ok, err = shiftMapPerspective(10, 10, 0)
+      assert.is_nil(ok)
+      assert.are.equal("the modern 3D map view is not showing", err)
+    end)
+
+    it("both refuse numbers that are not finite, in any argument", function()
+      for _, bad in ipairs({0 / 0, math.huge, -math.huge}) do
+        for position = 1, 3 do
+          local args = {2, 45, 270}
+          args[position] = bad
+          local ok, err = setMapPerspective(unpack(args))
+          assert.is_nil(ok)
+          assert.is_truthy(err:find("finite", 1, true), err)
+          args = {0, 0, 0}
+          args[position] = bad
+          ok, err = shiftMapPerspective(unpack(args))
+          assert.is_nil(ok)
+          assert.is_truthy(err:find("finite", 1, true), err)
+        end
+      end
+    end)
+
+    it("both raise an error for an argument that is not a number", function()
+      assert.has_error(function() setMapPerspective("far", 45, 270) end)
+      assert.has_error(function() shiftMapPerspective(1, nil, 0) end)
+    end)
+
+    it("neither moves nor zooms the 2D map", function()
+      assert.is_true(centerview(rA1))
+      local zoom = getMapZoom(areaAlpha)
+      setMapPerspective(0.5, 10, 0)
+      shiftMapPerspective(30, 30, 30)
+      assert.are.equal(zoom, getMapZoom(areaAlpha))
+      assert.are.equal(rA1, getPlayerRoom())
+      assert.is_false(getConfig("show3dMapView"))
+    end)
+
+    it("both are accepted while the modern 3D view shows, and refused for the classic view", function()
+      -- a GL context leaks in the leak-checking job's GL driver, as Media_spec explains
+      if (os.getenv("ASAN_OPTIONS") or ""):find("detect_leaks=1", 1, true) then
+        pending("a 3D view's GL context leaks in this job's GL driver")
+        return
+      end
+      local wasModern = getConfig("experiment.3dmap.modernmapper")
+      finally(function()
+        setConfig("show3dMapView", false)
+        setConfig("experiment.3dmap.modernmapper", wasModern == true)
+      end)
+      assert.is_true(setConfig("experiment.3dmap.modernmapper", true))
+      assert.is_true(setConfig("show3dMapView", true))
+      assert.is_true(getConfig("show3dMapView"))
+      assert.is_true(setMapPerspective(2, 45, 270))
+      assert.is_true(shiftMapPerspective(0, 30, 0))
+
+      assert.is_true(setConfig("experiment.3dmap.modernmapper", false))
+      assert.is_true(getConfig("show3dMapView"))
+      local ok, err = setMapPerspective(2, 45, 270)
+      assert.is_nil(ok)
+      assert.are.equal("the modern 3D map view is not showing", err)
+      ok, err = shiftMapPerspective(0, 30, 0)
+      assert.is_nil(ok)
+      assert.are.equal("the modern 3D map view is not showing", err)
+    end)
+  end)
+
   describe("Tests map zoom", function()
     it("setMapZoom is read back by getMapZoom for a given area", function()
       assert.is_true(setMapZoom(15, areaAlpha))
@@ -4338,12 +4418,6 @@ describe("Tests saveMap and loadMap", function()
     -- breadth-first search, so a fix leaves them green.
     pending("routes can come back a step longer than the shortest one - issue #10180")
   end)
-
-  -- setMapPerspective/shiftMapPerspective only exist with USE_3DMAPPER, and only
-  -- move a camera nothing here can read back, so there is nothing to assert yet
-  pending("setMapPerspective needs a Mudlet built with the 3D mapper")
-
-  pending("shiftMapPerspective needs a Mudlet built with the 3D mapper")
 end)
 
 -- Floating and redocking give the modern 3D view a new GL context, and switching

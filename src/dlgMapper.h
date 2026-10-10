@@ -74,8 +74,8 @@ public:
     void show3DView(bool shown) override { slot_toggle3DView(shown); }
     bool showing3DView() const override;
     void recreate3DView() override { recreate3DWidget(); }
-    void shift3DViewCamera(float verticalAngle, float horizontalAngle, float rotationAngle) override;
-    void set3DViewCameraPosition(float r, float theta, float phi) override;
+    bool shift3DViewCamera(float verticalAngle, float horizontalAngle, float rotationAngle) override;
+    bool set3DViewCameraPosition(float r, float theta, float phi) override;
     bool selectingRooms() const override { return mp2dMap->mMultiSelection; }
     QSet<int> selectedRooms() const override { return mp2dMap->mMultiSelectionSet; }
     int centerSelectedRoom() const override { return mp2dMap->getCenterSelectedRoomId(); }
@@ -138,6 +138,11 @@ private:
     void setupProgressOverlay();
     void repositionProgressOverlay();
     void loadMapFromFile();
+#if defined(INCLUDE_3DMAPPER)
+    void connect3DViewControls();
+    void sync3DViewFrom2D();
+    void sync2DViewFrom3D();
+#endif
 
     TMap* mpMap = nullptr;
     QPointer<Host> mpHost;
