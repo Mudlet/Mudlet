@@ -67,10 +67,12 @@ public:
     void resizeEvent(QResizeEvent* event) override;
     void paintEvent(QPaintEvent* event) override;
     void changeEvent(QEvent* event) override;
+    bool event(QEvent* event) override;
     QSize sizeHint() const override;
     void contextMenuEvent(QContextMenuEvent*) override;
     void setClickThrough(bool clickthrough);
     void setBackgroundColor(const QColor& color);
+    bool restyle(const QString& sheet);
     void setLinkStyle(const QString& linkColor, const QString& linkVisitedColor, bool underline = true);
     void resetLinkStyle();
     void clearVisitedLinks();
@@ -122,6 +124,8 @@ private:
 
     QColor& mBackgroundColor;
     QPixmap mSvgPixmapCache;
+    // set when the link styling replaces the palette the stylesheet gave the label
+    bool mPaletteSetSinceStyled = false;
 
 private slots:
     void slot_linkActivated(const QString& link);

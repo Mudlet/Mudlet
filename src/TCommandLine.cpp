@@ -53,6 +53,22 @@
 
 using namespace std::chrono_literals;
 
+namespace {
+// spellCheckWord() takes the word under the cursor it is given, and for a
+// cursor at the end of a word that is whatever follows it - so hand it the
+// start of the word that ends at, or runs across, the position instead
+QTextCursor cursorAtWordStart(QTextDocument* pDocument, const int position)
+{
+    QTextCursor cursor(pDocument);
+    const bool onALetter = pDocument->characterAt(position).isLetterOrNumber();
+    const bool afterALetter = position > 0 && pDocument->characterAt(position - 1).isLetterOrNumber();
+    cursor.setPosition(afterALetter && !onALetter ? position - 1 : position);
+    cursor.select(QTextCursor::WordUnderCursor);
+    cursor.setPosition(cursor.selectionStart());
+    return cursor;
+}
+} // namespace
+
 TCommandLine::TCommandLine(Host* pHost, const QString& name, enums::CommandLineType type, TConsole* pConsole, QWidget* parent)
 : QPlainTextEdit(parent)
 , mCommandLineName(name)
@@ -655,8 +671,8 @@ void TCommandLine::focusInEvent(QFocusEvent* event)
     // if it was Qt::ActiveWindowFocusReason as that gets used just by
     // switching away and back to the Mudlet application and it messes up
     // the record:
-    if (event->reason() != Qt::ActiveWindowFocusReason && mpHost->mpConsole) {
-        mpHost->mpConsole->recordActiveCommandLine(this);
+    if (mpHost && event->reason() != Qt::ActiveWindowFocusReason && mpHost->mainConsoleView()) {
+        mpHost->mainConsoleView()->recordActiveCommandLine(this);
     }
 
     QPlainTextEdit::focusInEvent(event);
@@ -677,8 +693,8 @@ void TCommandLine::focusOutEvent(QFocusEvent* event)
 void TCommandLine::hideEvent(QHideEvent* event)
 {
     // Redirect focus to main commandline when hiding a SubCommandLine to prevent keyboard input being trapped
-    if (mType == enums::SubCommandLine && hasFocus() && mpHost && mpHost->mpConsole && mpHost->mpConsole->mpCommandLine) {
-        mpHost->mpConsole->mpCommandLine->setFocus();
+    if (mType == enums::SubCommandLine && hasFocus() && mpHost && mpHost->mainConsoleView() && mpHost->mainConsoleView()->mpCommandLine) {
+        mpHost->mainConsoleView()->mpCommandLine->setFocus();
     }
 
     QPlainTextEdit::hideEvent(event);
@@ -749,7 +765,7 @@ void TCommandLine::spellCheck()
     }
 
     QTextCursor oldCursor = textCursor();
-    QTextCursor c = textCursor();
+    QTextCursor c = cursorAtWordStart(document(), oldCursor.position());
     spellCheckWord(c);
     QTextCharFormat f;
     f.setFontUnderline(false);
@@ -774,17 +790,12 @@ void TCommandLine::slot_popupMenu()
     c.removeSelectedText();
     c.insertText(t);
     c.clearSelection();
-    auto systemDictionaryHandle = mpHost->spellChecker().systemHandle();
-    if (systemDictionaryHandle) {
-        Hunspell_free_list(mpHost->spellChecker().systemHandle(), &mpSystemSuggestionsList, mSystemDictionarySuggestionsCount);
-    }
-    auto userDictionaryHandle = mpHost->spellChecker().userHandle();
-    if (userDictionaryHandle) {
-        Hunspell_free_list(userDictionaryHandle, &mpUserSuggestionsList, mUserDictionarySuggestionsCount);
-    }
 
-    // Call the function again so that the replaced word gets rechecked:
-    spellCheck();
+    // Recheck the replacement, which the caret need not be on
+    const QTextCursor oldCursor = textCursor();
+    QTextCursor replacement = cursorAtWordStart(document(), c.position());
+    spellCheckWord(replacement);
+    setTextCursor(oldCursor);
 }
 
 void TCommandLine::fillSpellCheckList(QMouseEvent* event, QMenu* popup)
@@ -811,9 +822,9 @@ void TCommandLine::fillSpellCheckList(QMouseEvent* event, QMenu* popup)
         //    action_addWord = new QAction(QIcon(QPixmap(qsl(":/icons/dictionary-add-word.png"))), tr("Add to user dictionary"));
         //    action_removeWord = new QAction(QIcon(QPixmap(qsl(":/icons/dictionary-remove-word.png"))), tr("Remove from user dictionary"));
         // } else {
-        action_addWord = new QAction(tr("Add to user dictionary"));
+        action_addWord = new QAction(tr("Add to user dictionary"), popup);
         action_addWord->setEnabled(false);
-        action_removeWord = new QAction(tr("Remove from user dictionary"));
+        action_removeWord = new QAction(tr("Remove from user dictionary"), popup);
         action_removeWord->setEnabled(false);
         // }
         if (MudletApp::usingMudletDictionaries()) {
@@ -826,7 +837,7 @@ void TCommandLine::fillSpellCheckList(QMouseEvent* event, QMenu* popup)
             bundled with Mudlet; the entries about this line are the ones that the user
             has personally added.
             */
-            action_dictionarySeparatorLine = new QAction(tr("▼Mudlet▼ │ dictionary suggestions │ ▲User▲"));
+            action_dictionarySeparatorLine = new QAction(tr("▼Mudlet▼ │ dictionary suggestions │ ▲User▲"), popup);
         } else {
             /*:
             This line is shown in the list of spelling suggestions on the profile's command
@@ -837,7 +848,7 @@ void TCommandLine::fillSpellCheckList(QMouseEvent* event, QMenu* popup)
             as part of the OS; the entries about this line are the ones that the user has
             personally added.
             */
-            action_dictionarySeparatorLine = new QAction(tr("▼System▼ │ dictionary suggestions │ ▲User▲"));
+            action_dictionarySeparatorLine = new QAction(tr("▼System▼ │ dictionary suggestions │ ▲User▲"), popup);
         }
         action_dictionarySeparatorLine->setEnabled(false);
     }
@@ -848,9 +859,11 @@ void TCommandLine::fillSpellCheckList(QMouseEvent* event, QMenu* popup)
     // need to have a codec prepared for it and can use QString::toUtf8()
     // directly:
     const QByteArray utf8Text = mSpellCheckedWord.toUtf8();
-    if (!(handle_system && !codecName.isEmpty())) {
-        mSystemDictionarySuggestionsCount = 0;
-    } else {
+    int systemSuggestionsCount = 0;
+    int userSuggestionsCount = 0;
+    char** pSystemSuggestionsList = nullptr;
+    char** pUserSuggestionsList = nullptr;
+    if (handle_system && !codecName.isEmpty()) {
         // The dictionary used from "the system" may not be UTF-8 encoded so we
         // will need to transform the UTF-16BE "QString" to the appropriate encoding:
         const QByteArray encodedText = TEncodingHelper::encode(mSpellCheckedWord, codecName);
@@ -877,25 +890,23 @@ void TCommandLine::fillSpellCheckList(QMouseEvent* event, QMenu* popup)
             }
         }
 
-        mSystemDictionarySuggestionsCount = Hunspell_suggest(handle_system, &mpSystemSuggestionsList, encodedText.constData());
+        systemSuggestionsCount = Hunspell_suggest(handle_system, &pSystemSuggestionsList, encodedText.constData());
     }
 
     if (handle_profile) {
-        mUserDictionarySuggestionsCount = Hunspell_suggest(handle_profile, &mpUserSuggestionsList, utf8Text.constData());
-    } else {
-        mUserDictionarySuggestionsCount = 0;
+        userSuggestionsCount = Hunspell_suggest(handle_profile, &pUserSuggestionsList, utf8Text.constData());
     }
 
-    if (mSystemDictionarySuggestionsCount) {
-        for (int i = 0; i < mSystemDictionarySuggestionsCount; ++i) {
-            auto pA = new QAction(TEncodingHelper::decode(mpSystemSuggestionsList[i], codecName));
+    if (systemSuggestionsCount) {
+        for (int i = 0; i < systemSuggestionsCount; ++i) {
+            auto pA = new QAction(TEncodingHelper::decode(pSystemSuggestionsList[i], codecName), popup);
 #if defined(Q_OS_FREEBSD)
             // Adding the text afterwards as user data as well as in the
             // constructor is to fix a bug(?) in FreeBSD that
             // automagically adds a '&' somewhere in the text to be a
             // shortcut - but doesn't show it and forgets to remove
             // it when asked for the text later:
-            pA->setData(TEncodingHelper::decode(mpSystemSuggestionsList[i], codecName));
+            pA->setData(TEncodingHelper::decode(pSystemSuggestionsList[i], codecName));
 #endif
             connect(pA, &QAction::triggered, this, &TCommandLine::slot_popupMenu);
             spellings_system << pA;
@@ -906,22 +917,22 @@ void TCommandLine::fillSpellCheckList(QMouseEvent* event, QMenu* popup)
         Used when the command spelling checker using the selected system dictionary has
         no words to suggest.
         */
-        auto pA = new QAction(tr("no suggestions (system)"));
+        auto pA = new QAction(tr("no suggestions (system)"), popup);
         pA->setEnabled(false);
         spellings_system << pA;
     }
 
     if (handle_profile) {
-        if (mUserDictionarySuggestionsCount) {
-            for (int i = 0; i < mUserDictionarySuggestionsCount; ++i) {
-                auto pA = new QAction(QString::fromUtf8(mpUserSuggestionsList[i]));
+        if (userSuggestionsCount) {
+            for (int i = 0; i < userSuggestionsCount; ++i) {
+                auto pA = new QAction(QString::fromUtf8(pUserSuggestionsList[i]), popup);
 #if defined(Q_OS_FREEBSD)
                 // Adding the text afterwards as user data as well as in the
                 // constructor is to fix a bug(?) in FreeBSD that
                 // automagically adds a '&' somewhere in the text to be a
                 // shortcut - but doesn't show it and forgets to remove
                 // it when asked for the text later:
-                pA->setData(QString::fromUtf8(mpUserSuggestionsList[i]));
+                pA->setData(QString::fromUtf8(pUserSuggestionsList[i]));
 #endif
                 connect(pA, &QAction::triggered, this, &TCommandLine::slot_popupMenu);
                 spellings_profile << pA;
@@ -934,17 +945,25 @@ void TCommandLine::fillSpellCheckList(QMouseEvent* event, QMenu* popup)
                 Used when the command spelling checker using the dictionary shared between
                 profile has no words to suggest.
                 */
-                pA = new QAction(tr("no suggestions (shared)"));
+                pA = new QAction(tr("no suggestions (shared)"), popup);
             } else {
                 /*:
                 Used when the command spelling checker using the profile's own dictionary has
                 no words to suggest.
                 */
-                pA = new QAction(tr("no suggestions (profile)"));
+                pA = new QAction(tr("no suggestions (profile)"), popup);
             }
             pA->setEnabled(false);
             spellings_profile << pA;
         }
+    }
+
+    // The actions hold copies of the suggestions, so the lists can go now
+    if (pSystemSuggestionsList) {
+        Hunspell_free_list(handle_system, &pSystemSuggestionsList, systemSuggestionsCount);
+    }
+    if (pUserSuggestionsList) {
+        Hunspell_free_list(handle_profile, &pUserSuggestionsList, userSuggestionsCount);
     }
 
     /*
@@ -992,6 +1011,7 @@ void TCommandLine::mousePressEvent(QMouseEvent* event)
 
     if (event->button() == Qt::RightButton) {
         auto popup = createStandardContextMenu(event->globalPosition().toPoint());
+        popup->setAttribute(Qt::WA_DeleteOnClose);
         if (mpHost->getEnableSpellCheck()) {
             fillSpellCheckList(event, popup);
             // else the word is in the dictionary - in either case show the context
@@ -1000,7 +1020,7 @@ void TCommandLine::mousePressEvent(QMouseEvent* event)
 
         popup->addSeparator();
         for (const auto& [label, eventName] : contextMenuItems.asKeyValueRange()) {
-            auto action = new QAction(label, this);
+            auto action = new QAction(label, popup);
             connect(action, &QAction::triggered, this, [=, this]() {
                 TEvent mudletEvent = {};
                 mudletEvent.mArgumentList << eventName;
@@ -1111,85 +1131,82 @@ void TCommandLine::handleTabCompletion(bool direction)
         mUserKeptOnTyping = false;
         mTabCompletionCount = -1;
     }
-    int amount = mpHost->mpConsole->buffer.size();
+    int amount = mpHost->mainConsoleView()->buffer.size();
     if (amount > 500) {
         amount = 500;
     }
 
-    const QStringList bufferList = mpHost->mpConsole->buffer.getEndLines(amount);
+    const QStringList bufferList = mpHost->mainConsoleView()->buffer.getEndLines(amount);
     QString buffer = bufferList.join(QChar::Space);
 
     buffer.replace(QChar(0x21af), QChar::LineFeed);
     buffer.replace(QChar::LineFeed, QChar::Space);
-
-    QStringList wordList = buffer.split(QRegularExpression(qsl(R"(\b)"), QRegularExpression::UseUnicodePropertiesOption), Qt::SkipEmptyParts);
-    wordList.append(
-            commandLineSuggestions
-                    .values()); // hindsight 20/20 I do not need to split this to a separate table, a check to not append buffer to this table and only append suggested list does same thing for far less overhead.
-    const QStringList blacklist = tabCompleteBlacklist.values();
-    QStringList toDelete;
-
-    for (const QString& wstr : std::as_const(wordList)) {
-        if (blacklist.contains(wstr, Qt::CaseInsensitive)) {
-            toDelete += wstr;
-        }
-    }
-    for (const QString& dstr : std::as_const(toDelete)) {
-        wordList.removeAll(dstr);
-    }
 
     if (direction) {
         mTabCompletionCount++;
     } else {
         mTabCompletionCount--;
     }
-    if (!wordList.empty()) {
-        if (mTabCompletionTyped.endsWith(QChar::Space)) {
-            return;
-        }
-        QString lastWord;
-        const QRegularExpression reg = QRegularExpression(qsl(R"(\b(\w+)$)"), QRegularExpression::UseUnicodePropertiesOption);
-        const QRegularExpressionMatch match = reg.match(mTabCompletionTyped);
-        const int typePosition = match.capturedStart();
-        if (reg.captureCount() >= 1) {
-            lastWord = match.captured(1);
-        } else {
-            lastWord = QString();
-        }
+    if (mTabCompletionTyped.endsWith(QChar::Space)) {
+        return;
+    }
+    QString lastWord;
+    const QRegularExpression reg = QRegularExpression(qsl(R"(\b(\w+)$)"), QRegularExpression::UseUnicodePropertiesOption);
+    const QRegularExpressionMatch match = reg.match(mTabCompletionTyped);
+    const int typePosition = match.capturedStart();
+    if (reg.captureCount() >= 1) {
+        lastWord = match.captured(1);
+    } else {
+        lastWord = QString();
+    }
 
-        QStringList filterList = wordList.filter(QRegularExpression(qsl(R"(^%1\w+)").arg(lastWord), QRegularExpression::CaseInsensitiveOption | QRegularExpression::UseUnicodePropertiesOption));
-
-        if (filterList.empty()) {
-            return;
-        }
-        int offset = 0;
-        forever
-        {
-            const QString tmp = filterList.back();
-            filterList.removeAll(tmp);
-            filterList.insert(offset, tmp);
-            ++offset;
-            if (offset >= filterList.size()) {
-                break;
-            }
-        }
-
-        if (!filterList.empty()) {
-            if (mTabCompletionCount >= filterList.size()) {
-                mTabCompletionCount = filterList.size() - 1;
-            }
-            if (mTabCompletionCount < 0) {
-                mTabCompletionCount = 0;
-            }
-
-            const QString proposal = filterList[mTabCompletionCount];
-            const QString userWords = mTabCompletionTyped.left(typePosition);
-            setPlainText(QString(userWords + proposal));
-            mudlet::self()->announce(proposal);
-            moveCursor(QTextCursor::End, QTextCursor::MoveAnchor);
-            mTabCompletionOld = toPlainText();
+    // One pass over the buffer collects only the words that can complete lastWord, so
+    // deduplicating and the blacklist work on those rather than on every word
+    const auto options = QRegularExpression::CaseInsensitiveOption | QRegularExpression::UseUnicodePropertiesOption;
+    QStringList candidates;
+    const QRegularExpression bufferWord(qsl(R"((?<!\w)%1\w+)").arg(lastWord), options);
+    for (const QRegularExpressionMatch& wordMatch : bufferWord.globalMatch(buffer)) {
+        candidates.append(wordMatch.captured());
+    }
+    const QRegularExpression suggestion(qsl(R"(^%1\w+)").arg(lastWord), options);
+    for (const QString& word : std::as_const(commandLineSuggestions)) {
+        if (word.contains(suggestion)) {
+            candidates.append(word);
         }
     }
+
+    // Each word once, the most recently seen first
+    QStringList filterList;
+    QSet<QString> seen;
+    for (auto it = candidates.crbegin(); it != candidates.crend(); ++it) {
+        if (seen.contains(*it)) {
+            continue;
+        }
+        seen.insert(*it);
+        const bool blacklisted = std::any_of(tabCompleteBlacklist.cbegin(), tabCompleteBlacklist.cend(), [it](const QString& banned) {
+            return it->compare(banned, Qt::CaseInsensitive) == 0;
+        });
+        if (!blacklisted) {
+            filterList.append(*it);
+        }
+    }
+
+    if (filterList.empty()) {
+        return;
+    }
+    if (mTabCompletionCount >= filterList.size()) {
+        mTabCompletionCount = filterList.size() - 1;
+    }
+    if (mTabCompletionCount < 0) {
+        mTabCompletionCount = 0;
+    }
+
+    const QString proposal = filterList[mTabCompletionCount];
+    const QString userWords = mTabCompletionTyped.left(typePosition);
+    setPlainText(QString(userWords + proposal));
+    mudlet::self()->announce(proposal);
+    moveCursor(QTextCursor::End, QTextCursor::MoveAnchor);
+    mTabCompletionOld = toPlainText();
 }
 
 // Hitting the cursor up key gets you in autocompletion mode.
@@ -1213,8 +1230,7 @@ void TCommandLine::handleAutoCompletion()
         mAutoCompletionCount = 0;
     }
     for (int i = mAutoCompletionCount; i < mHistoryList.size(); i++) {
-        const QString h = mHistoryList[i].mid(0, neu.size());
-        if (neu == h) {
+        if (mHistoryList[i].startsWith(neu)) {
             mAutoCompletionCount = i;
             mLastCompletion = mHistoryList[i];
             setPlainText(mHistoryList[i]);
@@ -1226,8 +1242,8 @@ void TCommandLine::handleAutoCompletion()
             moveCursor(QTextCursor::End, QTextCursor::KeepAnchor);
             return;
         }
-        moveCursor(QTextCursor::End, QTextCursor::MoveAnchor);
     }
+    moveCursor(QTextCursor::End, QTextCursor::MoveAnchor);
     mAutoCompletionCount = -1;
 }
 
@@ -1292,8 +1308,9 @@ void TCommandLine::slot_removeWord()
     }
 
     mpHost->spellChecker().removeWord(mSpellCheckedWord);
-    // Redo spell check to update underlining
-    spellCheck();
+    // The word right-clicked need not be the one the caret is on, and it
+    // may be in the line more than once
+    recheckWholeLine();
 }
 
 void TCommandLine::slot_addWord()
@@ -1303,8 +1320,9 @@ void TCommandLine::slot_addWord()
     }
 
     mpHost->spellChecker().addWord(mSpellCheckedWord);
-    // Redo spell check to update underlining
-    spellCheck();
+    // The word right-clicked need not be the one the caret is on, and it
+    // may be in the line more than once
+    recheckWholeLine();
 }
 
 void TCommandLine::spellCheckWord(QTextCursor& c)
@@ -1416,19 +1434,20 @@ void TCommandLine::recheckWholeLine()
     // Save the current position
     const QTextCursor oldCursor = textCursor();
 
-    QTextCursor c = textCursor();
-    // Move Cursor AND selection anchor to start:
-    c.movePosition(QTextCursor::Start);
-    // In case the first character is something other than the beginning of a
-    // word
-    c.movePosition(QTextCursor::NextWord);
-    c.movePosition(QTextCursor::PreviousWord);
-    // Now select the word
-    c.movePosition(QTextCursor::EndOfWord, QTextCursor::KeepAnchor);
-    while (c.hasSelection()) {
-        spellCheckWord(c);
-        c.movePosition(QTextCursor::NextWord);
-        c.movePosition(QTextCursor::EndOfWord, QTextCursor::KeepAnchor);
+    QTextCursor c(document());
+    const int length = document()->characterCount() - 1;
+    int position = 0;
+    while (position < length) {
+        c.setPosition(position);
+        c.select(QTextCursor::WordUnderCursor);
+        if (!c.hasSelection()) {
+            ++position;
+            continue;
+        }
+        const int wordEnd = c.selectionEnd();
+        QTextCursor word = cursorAtWordStart(document(), c.selectionStart());
+        spellCheckWord(word);
+        position = std::max(wordEnd, position + 1);
     }
     // Jump back to where we started
     setTextCursor(oldCursor);

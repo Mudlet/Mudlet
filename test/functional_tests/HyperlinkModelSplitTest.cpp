@@ -144,7 +144,7 @@ private slots:
     {
         Host* host = startProfile();
         QVERIFY(host);
-        TMainConsole* console = host->mpConsole;
+        TMainConsole* console = host->mainConsoleView();
         QVERIFY(console);
 
         TConsoleModel& model = host->mainConsoleModel();
@@ -311,7 +311,7 @@ private slots:
         Host* host = startProfile();
         QVERIFY(host);
         host->mEnableOSC8Hyperlinks = true;
-        TMainConsole* console = host->mpConsole;
+        TMainConsole* console = host->mainConsoleView();
         QVERIFY(console);
 
         // Long enough that closing the profile below cannot eat the whole delay
@@ -387,7 +387,7 @@ private:
     // live on, which is the window the delayed-reveal case needs.
     void destroyTheView(Host* host)
     {
-        QPointer<TMainConsole> console = host->mpConsole;
+        QPointer<TMainConsole> console = host->mainConsoleView();
         // Forcing the close stops TMainConsole::closeEvent() asking whether the
         // profile should be saved, which would block on a modal dialog here.
         host->forceClose();
@@ -395,7 +395,7 @@ private:
         QTest::qWait(500ms); // the console carries WA_DeleteOnClose
 
         QVERIFY2(console.isNull(), "the main console view was not destroyed by closing the profile");
-        QVERIFY2(host->mpConsole.isNull(), "the host still points at a main console");
+        QVERIFY2(!host->mainConsoleView(), "the host still points at a main console");
     }
 
     // The buffer can be trimmed under a poll that runs for a minute, so an
