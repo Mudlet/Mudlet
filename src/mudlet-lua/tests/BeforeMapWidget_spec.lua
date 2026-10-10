@@ -78,4 +78,9 @@ describe("Tests the map functions that wait for a mapper in a profile without on
     assert.are.same({{}}, {getMapViewIds()})
     assert.are.same({0}, {closeAllMapViews()})
   end)
+
+  it("refuses the map selection", function()
+    assert.are.same({nil, "no map present or loaded"}, {getMapSelection()})
+    assert.are.same({nil, "no map present or loaded"}, {clearMapSelection()})
+  end)
 end)
