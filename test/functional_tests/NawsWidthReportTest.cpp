@@ -86,7 +86,7 @@ private:
     // which is drawn outside the space the game gets to write into.
     int reportableWidth(const Host* pHost) const
     {
-        const int gutter = pHost->mpConsole->showTimeStamps() ? TBuffer::smTimeStampFormat.size() : 0;
+        const int gutter = pHost->mainConsoleView()->showTimeStamps() ? TBuffer::smTimeStampFormat.size() : 0;
         return std::min(pHost->mScreenWidth, pHost->mWrapAt) - gutter;
     }
 
@@ -197,8 +197,8 @@ private slots:
     // fails.
     void cleanup()
     {
-        if (mpHost && mpHost->mpConsole && mpHost->mpConsole->showTimeStamps()) {
-            mpHost->mpConsole->slot_toggleTimeStamps(false);
+        if (mpHost && mpHost->mainConsoleView() && mpHost->mainConsoleView()->showTimeStamps()) {
+            mpHost->mainConsoleView()->slot_toggleTimeStamps(false);
         }
         if (mpHost) {
             runLua(mpHost, qsl("if resizeProbeHandler then killAnonymousEventHandler(resizeProbeHandler) resizeProbeHandler = nil end"));
@@ -260,7 +260,7 @@ private slots:
     // enough for a game to wrap its output to about a third of the window.
     void resizeWithTimestampsShowingReportsOnlyTheSettledWidth()
     {
-        mpHost->mpConsole->slot_toggleTimeStamps(true);
+        mpHost->mainConsoleView()->slot_toggleTimeStamps(true);
         settle(1200ms);
 
         mpServer->clearNawsUpdates();
@@ -277,11 +277,11 @@ private slots:
     void showingTheTimestampGutterReportsTheColumnsItTakes()
     {
         settle(800ms);
-        QVERIFY(!mpHost->mpConsole->showTimeStamps());
+        QVERIFY(!mpHost->mainConsoleView()->showTimeStamps());
         const int withoutGutter = reportableWidth(mpHost);
 
         mpServer->clearNawsUpdates();
-        mpHost->mpConsole->slot_toggleTimeStamps(true);
+        mpHost->mainConsoleView()->slot_toggleTimeStamps(true);
         settle(1500ms);
 
         const auto updates = mpServer->nawsUpdates();
@@ -295,7 +295,7 @@ private slots:
     {
         settle(800ms);
         const int wrapBefore = mpHost->mWrapAt;
-        mpHost->mpConsole->slot_toggleTimeStamps(true);
+        mpHost->mainConsoleView()->slot_toggleTimeStamps(true);
         settle(800ms);
 
         mpServer->clearNawsUpdates();
@@ -326,7 +326,7 @@ private slots:
         runLua(mpHost, qsl("setBorderLeft(150) setBorderRight(150)"));
         showTab(mSecondHostname);
         settle(1500ms);
-        QVERIFY2(mpHost->mpConsole->isHidden(), "the first profile should be in a background tab by now");
+        QVERIFY2(mpHost->mainConsoleView()->isHidden(), "the first profile should be in a background tab by now");
 
         const QSize before = screenSize(mpHost);
         mpServer->clearNawsUpdates();
@@ -363,7 +363,7 @@ private slots:
         runLua(mpHost, qsl("if nawsProbeContainer then nawsProbeContainer:detach() end"));
         showTab(mSecondHostname);
         settle(1500ms);
-        QVERIFY2(mpHost->mpConsole->isHidden(), "the first profile should be in a background tab by now");
+        QVERIFY2(mpHost->mainConsoleView()->isHidden(), "the first profile should be in a background tab by now");
 
         const QSize before = screenSize(mpHost);
         mpServer->clearNawsUpdates();
@@ -393,12 +393,12 @@ private slots:
         runLua(mpHost, qsl("if nawsProbeContainer then nawsProbeContainer:detach() end"));
         showTab(mSecondHostname);
         settle(1500ms);
-        QVERIFY2(mpHost->mpConsole->isHidden(), "the first profile should be in a background tab by now");
+        QVERIFY2(mpHost->mainConsoleView()->isHidden(), "the first profile should be in a background tab by now");
 
         const int rowsBefore = mpHost->mScreenHeight;
         QVERIFY(rowsBefore > 0);
         mpServer->clearNawsUpdates();
-        runLua(mpHost, qsl("setBorderLeft(250) setBorderRight(250) setBorderTop(%1)").arg(mpHost->mpConsole->parentWidget()->height()));
+        runLua(mpHost, qsl("setBorderLeft(250) setBorderRight(250) setBorderTop(%1)").arg(mpHost->mainConsoleView()->parentWidget()->height()));
         settle(1500ms);
 
         const auto updates = mpServer->nawsUpdates();
@@ -421,7 +421,7 @@ private slots:
         // Loading the second profile puts it in front
         showTab(mHostname);
         settle(1500ms);
-        QVERIFY2(!mpHost->mpConsole->isHidden(), "the first profile has to be on screen for the first reading");
+        QVERIFY2(!mpHost->mainConsoleView()->isHidden(), "the first profile has to be on screen for the first reading");
 
         runLua(mpHost, qsl("setBorderLeft(60) setBorderRight(40)"));
         settle(600ms);
@@ -431,7 +431,7 @@ private slots:
         runLua(mpHost, qsl("setBorderLeft(0) setBorderRight(0)"));
         showTab(mSecondHostname);
         settle(1500ms);
-        QVERIFY2(mpHost->mpConsole->isHidden(), "the first profile should be in a background tab by now");
+        QVERIFY2(mpHost->mainConsoleView()->isHidden(), "the first profile should be in a background tab by now");
 
         runLua(mpHost, qsl("resizeProbeWidth = nil setBorderLeft(60) setBorderRight(40)"));
         const int widthWhileHidden = luaGlobalNumber(mpHost, "resizeProbeWidth");
@@ -447,15 +447,15 @@ private slots:
         QVERIFY2(ensureSecondProfile(), "the second profile did not load");
         showTab(mSecondHostname);
         settle(1500ms);
-        QVERIFY(mpHost->mpConsole->isHidden());
+        QVERIFY(mpHost->mainConsoleView()->isHidden());
 
         mudlet::self()->resize(1000, 800);
         settle(1500ms);
-        const QSize whileHidden = mpHost->mpConsole->getMainWindowSize();
+        const QSize whileHidden = mpHost->mainConsoleView()->getMainWindowSize();
 
         showTab(mHostname);
         settle(1500ms);
-        const QSize onceBack = mpHost->mpConsole->getMainWindowSize();
+        const QSize onceBack = mpHost->mainConsoleView()->getMainWindowSize();
 
         QCOMPARE(whileHidden, onceBack);
     }
