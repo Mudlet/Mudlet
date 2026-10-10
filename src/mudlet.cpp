@@ -4152,6 +4152,7 @@ bool mudlet::saveWindowLayout()
         mHasSavedLayout = true;
         return true;
     }
+    qWarning() << "mudlet::saveWindowLayout: error opening window layout file for writing:" << layoutFilePath << layoutFile.errorString();
     return false;
 }
 
