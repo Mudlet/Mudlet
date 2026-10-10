@@ -39,6 +39,8 @@
 #include <QTextBrowser>
 #include <QToolButton>
 
+#include <utility>
+
 namespace dblsqd {
 
 /*!
@@ -681,9 +683,20 @@ void UpdateDialog::handleFeedReady()
     if (!mUpdateFilePath.isEmpty() && QFile::exists(mUpdateFilePath)) {
         QString updateFileVersion = settingsValue(qsl("updateFileVersion"), "", mSettings).toString();
         const QString offeredVersion = mLatestRelease.getVersion();
-        // A check that offers nothing supersedes nothing: the release may only
-        // be waiting for its checksums
-        if ((!offeredVersion.isEmpty() && updateFileVersion != offeredVersion) || updateFileVersion == QApplication::applicationVersion()) {
+        bool superseded = !offeredVersion.isEmpty() && updateFileVersion != offeredVersion;
+        if (offeredVersion.isEmpty()) {
+            // Nothing offered may only mean the release awaits its checksums, but an installer the
+            // running version has passed is never offered again. The feed's entry dates a test build
+            Release fileRelease(updateFileVersion);
+            for (const auto& release : std::as_const(mReleases)) {
+                if (release.getVersion().compare(updateFileVersion, Qt::CaseInsensitive) == 0) {
+                    fileRelease = release;
+                    break;
+                }
+            }
+            superseded = !(Release::getCurrentRelease() < fileRelease);
+        }
+        if (superseded || updateFileVersion == QApplication::applicationVersion()) {
             if (!QFile::remove(mUpdateFilePath)) {
                 qWarning() << "Failed to remove stale update file:" << mUpdateFilePath;
             }

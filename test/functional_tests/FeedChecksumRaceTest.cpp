@@ -541,6 +541,7 @@ private slots:
     void theChangelogAfterAnUpdateListsWhatTheUpdateBrought();
     void aCheckThatFindsNothingWithdrawsTheEarlierOffer();
     void aDownloadedInstallerSurvivesACheckThatFindsNothing();
+    void anInstallerTheRunningVersionHasPassedIsNotKept();
     void aCheckDuringADownloadLeavesTheVersionItIsSavedAs();
     void aDownloadStartedOutsideTheDialogIsSavedUnderItsRelease();
     void anUpdateButtonClickIsAnsweredByOneDownload();
@@ -1072,6 +1073,33 @@ void FeedChecksumRaceTest::aDownloadedInstallerSurvivesACheckThatFindsNothing()
     QVERIFY2(QFile::exists(downloaded), "a check that found no update deleted the installer an earlier check had downloaded");
     QCOMPARE(harness.settings().value(qsl("DBLSQD/updateFilePath")).toString(), downloaded);
     QCOMPARE(harness.settings().value(qsl("DBLSQD/updateFileVersion")).toString(), stubVersion);
+}
+
+// An installer older than the version running is never going to be offered, so
+// a check finding nothing to offer is no reason to keep it on disk
+void FeedChecksumRaceTest::anInstallerTheRunningVersionHasPassedIsNotKept()
+{
+    QTemporaryDir downloadDir;
+    QVERIFY2(downloadDir.isValid(), qPrintable(downloadDir.errorString()));
+    const QString staleInstaller = downloadDir.filePath(qsl("Mudlet-0.0.1-linux-x64.AppImage.tar"));
+    QFile staleFile(staleInstaller);
+    QVERIFY2(staleFile.open(QIODevice::WriteOnly) && staleFile.write("installer") > 0, qPrintable(staleFile.errorString()));
+    staleFile.close();
+
+    UpdateHarness harness;
+    QVERIFY2(harness.start(), "the stub update server needs TLS support and a free loopback port");
+    // What an earlier session's finished download left behind, for a release the
+    // user has since moved past
+    harness.settings().setValue(qsl("DBLSQD/updateFilePath"), staleInstaller);
+    harness.settings().setValue(qsl("DBLSQD/updateFileVersion"), qsl("0.0.1"));
+    harness.server().setFeedBody("[]");
+
+    QSignalSpy feedReadySpy(&harness.feed(), &dblsqd::Feed::ready);
+    harness.openDialog(dblsqd::UpdateDialog::Manual);
+    QVERIFY2(feedReadySpy.wait(waitMs), qPrintable(qsl("the update check never finished. The dialog reported: %1").arg(whatTheDialogWasTold())));
+
+    QVERIFY2(!QFile::exists(staleInstaller), "an installer older than the running version was kept by a check that offered nothing");
+    QVERIFY2(harness.settings().value(qsl("DBLSQD/updateFilePath")).toString().isEmpty(), "the deleted installer is still recorded as the download to reuse");
 }
 
 // The file a download leaves is saved under the release that was downloaded,
