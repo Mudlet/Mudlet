@@ -55,8 +55,10 @@ Q_SIGNALS:
     void messageComposed(IrcMessage* message);
 
 private:
-    void startCompose(IrcMessage* composed);
-    void finishCompose(IrcMessage* message, IrcMessage::Type type);
+    qsizetype indexOf(IrcMessage::Type type) const;
+    void deliver(qsizetype index, IrcMessage* message);
+    void startCompose(IrcMessage* composed, IrcMessage* message);
+    void finishCompose(IrcMessage* message, IrcMessage::Type type, const QString& targets = QString());
     void replaceParam(int index, const QString& param);
 
     struct Data {
