@@ -62,6 +62,7 @@ void TMap::setMapper(dlgMapper* pMapper)
 {
     mpMapper = pMapper;
     mpMapViewFrontend = pMapper;
+    mpMapViewObject = pMapper;
 }
 
 dlgMapper::dlgMapper(QWidget* parent, Host* pH, TMap* pM)
