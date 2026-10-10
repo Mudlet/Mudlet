@@ -183,9 +183,9 @@ private slots:
         startProfile();
         auto host = mudlet::self()->getActiveHost();
         QVERIFY2(host, "No active host available for the test.");
-        QVERIFY2(host->mpConsole, "The active host has no main console.");
+        QVERIFY2(host->mainConsoleView(), "The active host has no main console.");
 
-        auto console = host->mpConsole;
+        QPointer<TMainConsole> console = host->mainConsoleView();
         TConsoleModel& model = host->mainConsoleModel();
 
         QCOMPARE(host->sharedMainConsoleModel().get(), &model);
@@ -229,10 +229,10 @@ private slots:
         startProfile();
         auto host = mudlet::self()->getActiveHost();
         QVERIFY2(host, "No active host available for the test.");
-        QVERIFY2(host->mpConsole, "The active host has no main console.");
+        QVERIFY2(host->mainConsoleView(), "The active host has no main console.");
 
         host->getLuaInterpreter()->compileAndExecuteScript(qsl("openUserWindow('modelWindow')\n"));
-        auto* subConsole = host->mpConsole->subConsoleWidget(qsl("modelWindow"));
+        auto* subConsole = host->mainConsoleView()->subConsoleWidget(qsl("modelWindow"));
         QVERIFY2(subConsole, "The user window was not created.");
 
         QVERIFY2(&subConsole->model() != &host->mainConsoleModel(), "A user window must not share the main console's model.");
@@ -248,7 +248,7 @@ private slots:
         startProfile();
         auto host = mudlet::self()->getActiveHost();
         QVERIFY2(host, "No active host available for the test.");
-        QVERIFY2(host->mpConsole, "The active host has no main console.");
+        QVERIFY2(host->mainConsoleView(), "The active host has no main console.");
         host->mEchoLuaErrors = true;
 
         // 'line' is the Lua global Host::runTriggers() sets for every line, so
@@ -263,8 +263,8 @@ private slots:
         QCOMPARE(model.mCurrentLine, qsl("ModelPipeline alpha"));
         QCOMPARE(model.buffer.line(fedLine), qsl("ModelPipeline alpha"));
         QVERIFY2(!model.mIsPromptLine, "runTriggers() must clear the prompt flag once the line is processed.");
-        QCOMPARE(host->mpConsole->mCurrentLine, model.mCurrentLine);
-        QCOMPARE(host->mpConsole->mEngineCursor, fedLine);
+        QCOMPARE(host->mainConsoleView()->mCurrentLine, model.mCurrentLine);
+        QCOMPARE(host->mainConsoleView()->mEngineCursor, fedLine);
 
         host->runTriggers(fedLine);
         QCOMPARE(model.mEngineCursor, fedLine);
@@ -285,7 +285,7 @@ private slots:
         startProfile();
         auto host = mudlet::self()->getActiveHost();
         QVERIFY2(host, "No active host available for the test.");
-        QVERIFY2(host->mpConsole, "The active host has no main console.");
+        QVERIFY2(host->mainConsoleView(), "The active host has no main console.");
 
         // Co-own the model the way Host does, so the test still holds it even
         // if Host were to let go of its own reference.
@@ -328,7 +328,7 @@ private slots:
         startProfile();
         auto host = mudlet::self()->getActiveHost();
         QVERIFY2(host, "No active host available for the test.");
-        QVERIFY2(host->mpConsole, "The active host has no main console.");
+        QVERIFY2(host->mainConsoleView(), "The active host has no main console.");
 
         // The trigger's body only writes a Lua global: echoing would need the
         // very view this test destroys. 'line' is the global Host::runTriggers()
@@ -361,7 +361,7 @@ private slots:
         startProfile();
         auto host = mudlet::self()->getActiveHost();
         QVERIFY2(host, "No active host available for the test.");
-        QVERIFY2(host->mpConsole, "The active host has no main console.");
+        QVERIFY2(host->mainConsoleView(), "The active host has no main console.");
 
         runLua(host,
                qsl("viewlessPrompt = 'none'\n"
@@ -394,7 +394,7 @@ private slots:
         startProfile();
         auto host = mudlet::self()->getActiveHost();
         QVERIFY2(host, "No active host available for the test.");
-        QVERIFY2(host->mpConsole, "The active host has no main console.");
+        QVERIFY2(host->mainConsoleView(), "The active host has no main console.");
 
         std::shared_ptr<TConsoleModel> model = host->sharedMainConsoleModel();
         destroyTheView(host);
@@ -421,7 +421,7 @@ private slots:
         startProfile();
         auto host = mudlet::self()->getActiveHost();
         QVERIFY2(host, "No active host available for the test.");
-        QVERIFY2(host->mpConsole, "The active host has no main console.");
+        QVERIFY2(host->mainConsoleView(), "The active host has no main console.");
 
         runLua(host,
                qsl("viewlessIncoming = ''\n"
@@ -457,7 +457,7 @@ private slots:
         startProfile();
         auto host = mudlet::self()->getActiveHost();
         QVERIFY2(host, "No active host available for the test.");
-        QVERIFY2(host->mpConsole, "The active host has no main console.");
+        QVERIFY2(host->mainConsoleView(), "The active host has no main console.");
         std::shared_ptr<TConsoleModel> model = host->sharedMainConsoleModel();
         destroyTheView(host);
         TBuffer& buffer = model->buffer;
@@ -479,7 +479,7 @@ private slots:
         startProfile();
         auto host = mudlet::self()->getActiveHost();
         QVERIFY2(host, "No active host available for the test.");
-        QVERIFY2(host->mpConsole, "The active host has no main console.");
+        QVERIFY2(host->mainConsoleView(), "The active host has no main console.");
         std::shared_ptr<TConsoleModel> model = host->sharedMainConsoleModel();
         destroyTheView(host);
         TBuffer& buffer = model->buffer;
@@ -498,7 +498,7 @@ private slots:
         startProfile();
         auto host = mudlet::self()->getActiveHost();
         QVERIFY2(host, "No active host available for the test.");
-        QVERIFY2(host->mpConsole, "The active host has no main console.");
+        QVERIFY2(host->mainConsoleView(), "The active host has no main console.");
         std::shared_ptr<TConsoleModel> model = host->sharedMainConsoleModel();
         destroyTheView(host);
         TBuffer& buffer = model->buffer;
@@ -525,14 +525,14 @@ private slots:
         startProfile();
         auto host = mudlet::self()->getActiveHost();
         QVERIFY2(host, "No active host available for the test.");
-        QVERIFY2(host->mpConsole, "The active host has no main console.");
+        QVERIFY2(host->mainConsoleView(), "The active host has no main console.");
         destroyTheView(host);
 
-        const bool savedMirrorToStdOut = mudlet::smMirrorToStdOut;
+        const bool savedMirrorToStdOut = MudletApp::smMirrorToStdOut;
         auto restoreMirrorToStdOut = qScopeGuard([savedMirrorToStdOut]() {
-            mudlet::smMirrorToStdOut = savedMirrorToStdOut;
+            MudletApp::smMirrorToStdOut = savedMirrorToStdOut;
         });
-        mudlet::smMirrorToStdOut = true;
+        MudletApp::smMirrorToStdOut = true;
         startStdOutCapture();
         host->printToMainConsole(qsl("ViewlessOpen"));
         std::string gameLines{"ViewlessGame one\nViewlessGame two\n"};
@@ -540,7 +540,7 @@ private slots:
         std::string prompt{"ViewlessPrompt> \xff"};
         host->printOnDisplay(prompt, true);
         host->printSystemMessage(qsl("ViewlessAfter\n"));
-        mudlet::smMirrorToStdOut = false;
+        MudletApp::smMirrorToStdOut = false;
         const QStringList captured = stopStdOutCapture();
 
         const QString prefix = qsl("%1.main| ").arg(mHostname);
@@ -561,7 +561,7 @@ private slots:
         startProfile();
         auto host = mudlet::self()->getActiveHost();
         QVERIFY2(host, "No active host available for the test.");
-        QVERIFY2(host->mpConsole, "The active host has no main console.");
+        QVERIFY2(host->mainConsoleView(), "The active host has no main console.");
 
         const QColor highlightFg(12, 34, 56);
         const QColor highlightBg(65, 43, 21);
@@ -647,7 +647,7 @@ private slots:
         startProfile();
         auto host = mudlet::self()->getActiveHost();
         QVERIFY2(host, "No active host available for the test.");
-        QVERIFY2(host->mpConsole, "The active host has no main console.");
+        QVERIFY2(host->mainConsoleView(), "The active host has no main console.");
 
         const QColor highlightFg(9, 87, 65);
         const QColor highlightBg(21, 43, 65);
@@ -688,7 +688,7 @@ private slots:
         startProfile();
         auto host = mudlet::self()->getActiveHost();
         QVERIFY2(host, "No active host available for the test.");
-        QVERIFY2(host->mpConsole, "The active host has no main console.");
+        QVERIFY2(host->mainConsoleView(), "The active host has no main console.");
 
         registerShrinkHandler(host);
 
@@ -708,7 +708,7 @@ private slots:
         startProfile();
         auto host = mudlet::self()->getActiveHost();
         QVERIFY2(host, "No active host available for the test.");
-        QVERIFY2(host->mpConsole, "The active host has no main console.");
+        QVERIFY2(host->mainConsoleView(), "The active host has no main console.");
 
         registerShrinkHandler(host);
 
@@ -734,7 +734,7 @@ private slots:
         startProfile();
         auto host = mudlet::self()->getActiveHost();
         QVERIFY2(host, "No active host available for the test.");
-        QVERIFY2(host->mpConsole, "The active host has no main console.");
+        QVERIFY2(host->mainConsoleView(), "The active host has no main console.");
 
         // A line ending that arrives while the tag is open writes it out too,
         // and cTelnet's posting timer supplies one shortly after any game
@@ -764,7 +764,7 @@ private slots:
         startProfile();
         auto host = mudlet::self()->getActiveHost();
         QVERIFY2(host, "No active host available for the test.");
-        QVERIFY2(host->mpConsole, "The active host has no main console.");
+        QVERIFY2(host->mainConsoleView(), "The active host has no main console.");
 
         runLua(host,
                qsl("wdogCapture = 'trigger never ran'\n"
@@ -799,7 +799,7 @@ private slots:
         startProfile();
         auto host = mudlet::self()->getActiveHost();
         QVERIFY2(host, "No active host available for the test.");
-        QVERIFY2(host->mpConsole, "The active host has no main console.");
+        QVERIFY2(host->mainConsoleView(), "The active host has no main console.");
 
         runLua(host,
                qsl("dcCapture = 'trigger never ran'\n"
@@ -837,7 +837,7 @@ private slots:
         startProfile();
         auto host = mudlet::self()->getActiveHost();
         QVERIFY2(host, "No active host available for the test.");
-        QVERIFY2(host->mpConsole, "The active host has no main console.");
+        QVERIFY2(host->mainConsoleView(), "The active host has no main console.");
 
         std::shared_ptr<TConsoleModel> model = host->sharedMainConsoleModel();
         destroyTheView(host);
@@ -858,7 +858,7 @@ private slots:
         startProfile();
         auto host = mudlet::self()->getActiveHost();
         QVERIFY2(host, "No active host available for the test.");
-        QVERIFY2(host->mpConsole, "The active host has no main console.");
+        QVERIFY2(host->mainConsoleView(), "The active host has no main console.");
 
         runLua(host, qsl("createMiniConsole('wdogsub', 0, 0, 300, 100)"));
         TConsoleModel* subModel = host->windowRegistry().subConsoleModel(qsl("wdogsub"));
@@ -879,7 +879,7 @@ private slots:
         startProfile();
         auto host = mudlet::self()->getActiveHost();
         QVERIFY2(host, "No active host available for the test.");
-        QVERIFY2(host->mpConsole, "The active host has no main console.");
+        QVERIFY2(host->mainConsoleView(), "The active host has no main console.");
 
         std::shared_ptr<TConsoleModel> model = host->sharedMainConsoleModel();
         destroyTheView(host);
@@ -905,7 +905,7 @@ private slots:
         QVERIFY2(HostManager::self()->addHost(mViewlessHostname, QString(), QString(), QString()), "Could not create a profile with no view.");
         Host* host = HostManager::self()->getHost(mViewlessHostname);
         QVERIFY2(host, "The profile with no view is not in the pool.");
-        QVERIFY2(!host->mpConsole, "The profile has a main console.");
+        QVERIFY2(!host->mainConsoleView(), "The profile has a main console.");
 
         // The trigger's body only writes a Lua global, as echoing would need
         // a view.
@@ -952,7 +952,7 @@ private slots:
         startProfile();
         auto host = mudlet::self()->getActiveHost();
         QVERIFY2(host, "No active host available for the test.");
-        QVERIFY2(host->mpConsole, "The active host has no main console.");
+        QVERIFY2(host->mainConsoleView(), "The active host has no main console.");
         host->mUndoServerWrap = true;
         host->mUndoServerWrapWidth = 80;
 
@@ -978,7 +978,7 @@ private slots:
         startProfile();
         auto host = mudlet::self()->getActiveHost();
         QVERIFY2(host, "No active host available for the test.");
-        QVERIFY2(host->mpConsole, "The active host has no main console.");
+        QVERIFY2(host->mainConsoleView(), "The active host has no main console.");
         host->mUndoServerWrap = true;
         host->mUndoServerWrapWidth = 80;
         host->mFORCE_SAVE_ON_EXIT = false;
@@ -1043,7 +1043,7 @@ private slots:
         startProfile();
         auto host = mudlet::self()->getActiveHost();
         QVERIFY2(host, "No active host available for the test.");
-        QVERIFY2(host->mpConsole, "The active host has no main console.");
+        QVERIFY2(host->mainConsoleView(), "The active host has no main console.");
         host->mUndoServerWrap = true;
         host->mUndoServerWrapWidth = 80;
         host->mFORCE_SAVE_ON_EXIT = false;
@@ -1102,7 +1102,7 @@ private slots:
         startProfile();
         auto host = mudlet::self()->getActiveHost();
         QVERIFY2(host, "No active host available for the test.");
-        QVERIFY2(host->mpConsole, "The active host has no main console.");
+        QVERIFY2(host->mainConsoleView(), "The active host has no main console.");
         host->mUndoServerWrap = true;
         host->mUndoServerWrapWidth = 80;
         host->mFORCE_SAVE_ON_EXIT = false;
@@ -1162,7 +1162,7 @@ private slots:
         startProfile();
         auto host = mudlet::self()->getActiveHost();
         QVERIFY2(host, "No active host available for the test.");
-        QVERIFY2(host->mpConsole, "The active host has no main console.");
+        QVERIFY2(host->mainConsoleView(), "The active host has no main console.");
         host->mUndoServerWrap = true;
         host->mUndoServerWrapWidth = 80;
         host->mFORCE_SAVE_ON_EXIT = false;
@@ -1220,7 +1220,7 @@ private slots:
         startProfile();
         auto host = mudlet::self()->getActiveHost();
         QVERIFY2(host, "No active host available for the test.");
-        QVERIFY2(host->mpConsole, "The active host has no main console.");
+        QVERIFY2(host->mainConsoleView(), "The active host has no main console.");
         host->mFORCE_SAVE_ON_EXIT = false;
         runLua(host, qsl("questionPrompt = 'no'\ntempRegexTrigger('^HP:100>', [[questionPrompt = 'yes']])\n"));
         QTest::qWait(500ms);
@@ -1266,10 +1266,10 @@ private slots:
         startProfile();
         auto host = mudlet::self()->getActiveHost();
         QVERIFY2(host, "No active host available for the test.");
-        QVERIFY2(host->mpConsole, "The active host has no main console.");
+        QVERIFY2(host->mainConsoleView(), "The active host has no main console.");
         host->mUndoServerWrap = true;
         host->mUndoServerWrapWidth = 80;
-        QPointer<TMainConsole> console = host->mpConsole;
+        QPointer<TMainConsole> console = host->mainConsoleView();
         // Before the line is held: this runs the event loop
         host->forceClose();
 
@@ -1292,7 +1292,6 @@ private slots:
         QVERIFY2(lastLineHolding(model->buffer, heldLine) < 0, "The held line was committed while the forced close waited for the save.");
     }
 
-
     // A line held after the close starts the flush timer again, and is
     // dropped all the same.
     void test_aLineHeldAfterTheProfileClosedIsDropped()
@@ -1300,7 +1299,7 @@ private slots:
         startProfile();
         auto host = mudlet::self()->getActiveHost();
         QVERIFY2(host, "No active host available for the test.");
-        QVERIFY2(host->mpConsole, "The active host has no main console.");
+        QVERIFY2(host->mainConsoleView(), "The active host has no main console.");
         std::shared_ptr<TConsoleModel> model = host->sharedMainConsoleModel();
         destroyTheView(host);
         host->mUndoServerWrap = true;
@@ -1323,7 +1322,7 @@ private slots:
         startProfile();
         auto host = mudlet::self()->getActiveHost();
         QVERIFY2(host, "No active host available for the test.");
-        QVERIFY2(host->mpConsole, "The active host has no main console.");
+        QVERIFY2(host->mainConsoleView(), "The active host has no main console.");
 
         std::shared_ptr<TConsoleModel> model = host->sharedMainConsoleModel();
         destroyTheView(host);
@@ -1344,7 +1343,7 @@ private slots:
         startProfile();
         auto host = mudlet::self()->getActiveHost();
         QVERIFY2(host, "No active host available for the test.");
-        QVERIFY2(host->mpConsole, "The active host has no main console.");
+        QVERIFY2(host->mainConsoleView(), "The active host has no main console.");
         host->mEnableOSC8Hyperlinks = true;
 
         std::shared_ptr<TConsoleModel> model = host->sharedMainConsoleModel();
@@ -1374,7 +1373,7 @@ private slots:
         startProfile();
         auto host = mudlet::self()->getActiveHost();
         QVERIFY2(host, "No active host available for the test.");
-        QVERIFY2(host->mpConsole, "The active host has no main console.");
+        QVERIFY2(host->mainConsoleView(), "The active host has no main console.");
 
         std::shared_ptr<TConsoleModel> model = host->sharedMainConsoleModel();
         destroyTheView(host);
@@ -1400,7 +1399,7 @@ private slots:
         startProfile();
         auto host = mudlet::self()->getActiveHost();
         QVERIFY2(host, "No active host available for the test.");
-        QVERIFY2(host->mpConsole, "The active host has no main console.");
+        QVERIFY2(host->mainConsoleView(), "The active host has no main console.");
 
         std::shared_ptr<TConsoleModel> model = host->sharedMainConsoleModel();
         const QColor staleFg{1, 2, 3};
@@ -1431,9 +1430,9 @@ private slots:
         startProfile();
         auto host = mudlet::self()->getActiveHost();
         QVERIFY2(host, "No active host available for the test.");
-        QVERIFY2(host->mpConsole, "The active host has no main console.");
+        QVERIFY2(host->mainConsoleView(), "The active host has no main console.");
 
-        auto console = host->mpConsole;
+        QPointer<TMainConsole> console = host->mainConsoleView();
         // Through TMainConsole::tr() rather than the English literal, so the
         // assertions hold whatever interface language the run picks up.
         const QString offerToStart = TMainConsole::tr("Start logging game output to log file.");
@@ -1496,7 +1495,7 @@ private slots:
         startProfile();
         auto host = mudlet::self()->getActiveHost();
         QVERIFY2(host, "No active host available for the test.");
-        QVERIFY2(host->mpConsole, "The active host has no main console.");
+        QVERIFY2(host->mainConsoleView(), "The active host has no main console.");
 
         std::shared_ptr<TConsoleModel> model = host->sharedMainConsoleModel();
         destroyTheView(host);
@@ -1583,13 +1582,13 @@ private slots:
         startProfile();
         auto host = mudlet::self()->getActiveHost();
         QVERIFY2(host, "No active host available for the test.");
-        QVERIFY2(host->mpConsole, "The active host has no main console.");
+        QVERIFY2(host->mainConsoleView(), "The active host has no main console.");
 
         const QColor background{12, 34, 56};
         QVERIFY2(background != QColorConstants::Black, "The colour under test is the default background, which cannot tell a hardcoded colour apart.");
         host->mBgColor = background;
         host->refreshMainConsoleColors();
-        QCOMPARE(host->mpConsole->getConsoleBgColor(), background);
+        QCOMPARE(host->mainConsoleView()->getConsoleBgColor(), background);
         host->mIsNextLogFileInHtmlFormat = true;
         host->mIsLoggingTimestamps = true;
 
@@ -1625,7 +1624,7 @@ private slots:
         Host* host = mudlet::self()->loadProfile(mColourHostname, false);
         QVERIFY2(host, "The seeded profile was not loaded.");
         QVERIFY2(host->mProfileLoadError.isEmpty(), qPrintable(qsl("Reading the seeded profile save failed: %1").arg(host->mProfileLoadError)));
-        QVERIFY2(host->mpConsole.isNull(), "loadProfile() built a view, so this no longer tests the view-less path.");
+        QVERIFY2(!host->mainConsoleView(), "loadProfile() built a view, so this no longer tests the view-less path.");
         QCOMPARE(host->mFgColor, mProfileFgColor);
         QCOMPARE(host->mBgColor, mProfileBgColor);
 
@@ -1651,7 +1650,7 @@ private slots:
         startProfile();
         auto host = mudlet::self()->getActiveHost();
         QVERIFY2(host, "No active host available for the test.");
-        QVERIFY2(host->mpConsole, "The active host has no main console.");
+        QVERIFY2(host->mainConsoleView(), "The active host has no main console.");
 
         // matches[1] rather than line, so a match elsewhere on the line cannot
         // satisfy the assertions. The long bracket has to be levelled: plain
@@ -1692,20 +1691,20 @@ private slots:
         startProfile();
         auto host = mudlet::self()->getActiveHost();
         QVERIFY2(host, "No active host available for the test.");
-        QVERIFY2(host->mpConsole, "The active host has no main console.");
+        QVERIFY2(host->mainConsoleView(), "The active host has no main console.");
         QCOMPARE(host->mainConsoleModel().mFgColor, QColorConstants::LightGray);
         QCOMPARE(host->mainConsoleModel().mBgColor, QColorConstants::Black);
 
         host->mFgColor = mProfileFgColor;
         host->mBgColor = mProfileBgColor;
-        host->mpConsole->changeColors();
+        host->mainConsoleView()->changeColors();
 
         QCOMPARE(host->mainConsoleModel().mFgColor, mProfileFgColor);
         QCOMPARE(host->mainConsoleModel().mBgColor, mProfileBgColor);
 
         host->mFgColor = QColorConstants::LightGray;
         host->mBgColor = QColorConstants::Black;
-        host->mpConsole->changeColors();
+        host->mainConsoleView()->changeColors();
 
         QCOMPARE(host->mainConsoleModel().mFgColor, QColorConstants::LightGray);
         QCOMPARE(host->mainConsoleModel().mBgColor, QColorConstants::Black);
@@ -1720,17 +1719,17 @@ private slots:
         startProfile();
         auto host = mudlet::self()->getActiveHost();
         QVERIFY2(host, "No active host available for the test.");
-        QVERIFY2(host->mpConsole, "The active host has no main console.");
-        QVERIFY2(!host->mpConsole->mBgImageMode, "A background image is set, so the console is not styled by colour here.");
+        QVERIFY2(host->mainConsoleView(), "The active host has no main console.");
+        QVERIFY2(!host->mainConsoleView()->mBgImageMode, "A background image is set, so the console is not styled by colour here.");
 
         const QString expectedBackground = qsl("rgba(%1,%2,%3,%4)").arg(mProfileBgColor.red()).arg(mProfileBgColor.green()).arg(mProfileBgColor.blue()).arg(mProfileBgColor.alpha());
-        QVERIFY2(!host->mpConsole->mpMainDisplay->styleSheet().contains(expectedBackground), "The console already carries the imported background, so the assertion below cannot fail.");
+        QVERIFY2(!host->mainConsoleView()->mpMainDisplay->styleSheet().contains(expectedBackground), "The console already carries the imported background, so the assertion below cannot fail.");
 
         importProfileColours(host);
 
         QCOMPARE(host->mainConsoleModel().mBgColor, mProfileBgColor);
-        QVERIFY2(host->mpConsole->mpMainDisplay->styleSheet().contains(expectedBackground),
-                 qPrintable(qsl("The console was not restyled by the import: %1").arg(host->mpConsole->mpMainDisplay->styleSheet())));
+        QVERIFY2(host->mainConsoleView()->mpMainDisplay->styleSheet().contains(expectedBackground),
+                 qPrintable(qsl("The console was not restyled by the import: %1").arg(host->mainConsoleView()->mpMainDisplay->styleSheet())));
         // changeColors() leaves the buffer's copy of the colours to
         // refreshMainConsoleColors(), so this walks that hand-off with a view
         // present:
@@ -1746,7 +1745,7 @@ private slots:
         startProfile();
         auto host = mudlet::self()->getActiveHost();
         QVERIFY2(host, "No active host available for the test.");
-        QVERIFY2(host->mpConsole, "The active host has no main console.");
+        QVERIFY2(host->mainConsoleView(), "The active host has no main console.");
 
         std::shared_ptr<TConsoleModel> model = host->sharedMainConsoleModel();
         destroyTheView(host);
@@ -1782,7 +1781,7 @@ private slots:
         startProfile();
         auto host = mudlet::self()->getActiveHost();
         QVERIFY2(host, "No active host available for the test.");
-        QVERIFY2(host->mpConsole, "The active host has no main console.");
+        QVERIFY2(host->mainConsoleView(), "The active host has no main console.");
 
         std::shared_ptr<TConsoleModel> model = host->sharedMainConsoleModel();
         destroyTheView(host);
@@ -1814,7 +1813,7 @@ private slots:
         Host* host = mudlet::self()->loadProfile(mSpellHostname, false);
         QVERIFY2(host, "The seeded profile was not loaded.");
         QVERIFY2(host->mProfileLoadError.isEmpty(), qPrintable(qsl("Reading the seeded profile save failed: %1").arg(host->mProfileLoadError)));
-        QVERIFY2(host->mpConsole.isNull(), "loadProfile() built a view, so this no longer tests the view-less path.");
+        QVERIFY2(!host->mainConsoleView(), "loadProfile() built a view, so this no longer tests the view-less path.");
         QCOMPARE(host->getSpellDic(), mProfileSpellDic);
 
         const auto [xml, saveError] = savedProfileXml(host);
@@ -1831,7 +1830,7 @@ private slots:
         startProfile();
         auto host = mudlet::self()->getActiveHost();
         QVERIFY2(host, "No active host available for the test.");
-        QVERIFY2(host->mpConsole, "The active host has no main console.");
+        QVERIFY2(host->mainConsoleView(), "The active host has no main console.");
         // Spelled out rather than read back from getSpellDic(), which is the
         // expression under test: a fallback quietly changed to some other
         // non-empty value has to redden this, not follow it. A profile made
@@ -1858,7 +1857,7 @@ private slots:
         startProfile();
         auto host = mudlet::self()->getActiveHost();
         QVERIFY2(host, "No active host available for the test.");
-        QVERIFY2(host->mpConsole, "The active host has no main console.");
+        QVERIFY2(host->mainConsoleView(), "The active host has no main console.");
 
         // Hunspell_create() hands back a usable handle even when neither file
         // exists, so a non-null handle only proves the load ran. Telling a
@@ -1902,7 +1901,7 @@ private slots:
 
         Host* host = mudlet::self()->loadProfile(mSpellHostname, false);
         QVERIFY2(host, "The seeded profile was not loaded.");
-        QVERIFY2(host->mpConsole.isNull(), "loadProfile() built a view, which warms the dictionary up and so hides what this tests.");
+        QVERIFY2(!host->mainConsoleView(), "loadProfile() built a view, which warms the dictionary up and so hides what this tests.");
 
         runLua(host, qsl("dictionaryList = table.concat(getDictionaryWordList(), ',')\n"));
         QCOMPARE(luaGlobalString(host, "dictionaryList"), qsl("bar,foo"));
@@ -1928,6 +1927,23 @@ private slots:
         deleteProfileDirectory(mAutoLogHostname);
     }
 
+    // Not a spec: Lua cannot delete a command line named "main", and the one left behind changes later specs.
+    void test_aSubCommandLineNamedMainLeavesTheMainStyleSheet()
+    {
+        startProfile();
+        auto host = mudlet::self()->getActiveHost();
+        QVERIFY2(host, "No active host available for the test.");
+
+        runLua(host, qsl(R"LUA(
+setCmdLineStyleSheet("main", "color: rgb(7,8,9);")
+createScrollBox("mainNamedHost", 0, 0, 50, 50)
+mainNamedCreated = tostring(createCommandLine("mainNamedHost", "main", 0, 0, 50, 20))
+mainNamedSheets = getCmdLineStyleSheet() .. "|" .. getCmdLineStyleSheet("main")
+)LUA"));
+        QCOMPARE(luaGlobalString(host, "mainNamedCreated"), qsl("true"));
+        QCOMPARE(luaGlobalString(host, "mainNamedSheets"), qsl("color: rgb(7,8,9);|color: rgb(7,8,9);"));
+    }
+
     // Every one of these Lua functions used to reach through Host::mpConsole
     // without checking it, so calling any of them on a profile whose window had
     // been closed took the whole client down with it. None of them can do what
@@ -1937,7 +1953,7 @@ private slots:
         startProfile();
         auto host = mudlet::self()->getActiveHost();
         QVERIFY2(host, "No active host available for the test.");
-        QVERIFY2(host->mpConsole, "The active host has no main console.");
+        QVERIFY2(host->mainConsoleView(), "The active host has no main console.");
         QVERIFY2(!FontManager::availableFonts().isEmpty(), "No font is installed, so setFont() refuses every family before it looks for a console.");
         destroyTheView(host);
 
@@ -2094,7 +2110,7 @@ noViewReport = table.concat(noViewProblems, '; ')
         startProfile();
         auto host = mudlet::self()->getActiveHost();
         QVERIFY2(host, "No active host available for the test.");
-        QVERIFY2(host->mpConsole, "The active host has no main console.");
+        QVERIFY2(host->mainConsoleView(), "The active host has no main console.");
         std::shared_ptr<TConsoleModel> model = host->sharedMainConsoleModel();
         destroyTheView(host);
 
@@ -2132,7 +2148,7 @@ noViewReport = table.concat(noViewProblems, '; ')
         startProfile();
         auto host = mudlet::self()->getActiveHost();
         QVERIFY2(host, "No active host available for the test.");
-        QVERIFY2(host->mpConsole, "The active host has no main console.");
+        QVERIFY2(host->mainConsoleView(), "The active host has no main console.");
         destroyTheView(host);
 
         const QString name = qsl("noViewEchoMini");
@@ -2160,7 +2176,7 @@ noViewReport = table.concat(noViewProblems, '; ')
         startProfile();
         auto host = mudlet::self()->getActiveHost();
         QVERIFY2(host, "No active host available for the test.");
-        QVERIFY2(host->mpConsole, "The active host has no main console.");
+        QVERIFY2(host->mainConsoleView(), "The active host has no main console.");
         destroyTheView(host);
 
         TConsoleModel& model = host->mainConsoleModel();
@@ -2232,7 +2248,7 @@ end
         startProfile();
         auto host = mudlet::self()->getActiveHost();
         QVERIFY2(host, "No active host available for the test.");
-        QVERIFY2(host->mpConsole, "The active host has no main console.");
+        QVERIFY2(host->mainConsoleView(), "The active host has no main console.");
 
         std::shared_ptr<TConsoleModel> model = host->sharedMainConsoleModel();
         destroyTheView(host);
@@ -2277,7 +2293,7 @@ noViewCursor = table.concat(results, '|')
         startProfile();
         auto host = mudlet::self()->getActiveHost();
         QVERIFY2(host, "No active host available for the test.");
-        QVERIFY2(host->mpConsole, "The active host has no main console.");
+        QVERIFY2(host->mainConsoleView(), "The active host has no main console.");
 
         const int wrapAt = host->mWrapAt;
         const int indent = host->mWrapIndentCount;
@@ -2287,7 +2303,7 @@ noViewCursor = table.concat(results, '|')
         const QString miniConsole = qsl("wrapSpy");
         runLua(host, qsl("createMiniConsole('%1', 0, 0, 100, 100)\n").arg(miniConsole));
         runLua(host, setAll.arg(miniConsole).arg(wrapAt + 1).arg(indent + 1).arg(hangingIndent + 1));
-        auto pMiniConsole = host->mpConsole->subConsoleWidget(miniConsole);
+        auto pMiniConsole = host->mainConsoleView()->subConsoleWidget(miniConsole);
         QVERIFY2(pMiniConsole, "The mini console was not created.");
         QCOMPARE(pMiniConsole->getWrapAt(), wrapAt + 1);
         QCOMPARE(host->mWrapAt, wrapAt);
@@ -2296,7 +2312,7 @@ noViewCursor = table.concat(results, '|')
 
         for (const auto& [name, offset] : {std::pair{QString(), 2}, std::pair{qsl("main"), 3}}) {
             runLua(host, setAll.arg(name).arg(wrapAt + offset).arg(indent + offset).arg(hangingIndent + offset));
-            QCOMPARE(host->mpConsole->getWrapAt(), wrapAt + offset);
+            QCOMPARE(host->mainConsoleView()->getWrapAt(), wrapAt + offset);
             QCOMPARE(host->mWrapAt, wrapAt + offset);
             QCOMPARE(host->mWrapIndentCount, indent + offset);
             QCOMPARE(host->mWrapHangingIndentCount, hangingIndent + offset);
@@ -2311,13 +2327,13 @@ noViewCursor = table.concat(results, '|')
         startProfile();
         auto host = mudlet::self()->getActiveHost();
         QVERIFY2(host, "No active host available for the test.");
-        QVERIFY2(host->mpConsole, "The active host has no main console.");
+        QVERIFY2(host->mainConsoleView(), "The active host has no main console.");
 
         const QString miniConsole = qsl("bufferSizeSpy");
         runLua(host, qsl("createMiniConsole('%1', 0, 0, 100, 100)\n").arg(miniConsole));
-        auto pMiniConsole = host->mpConsole->subConsoleWidget(miniConsole);
+        auto pMiniConsole = host->mainConsoleView()->subConsoleWidget(miniConsole);
         QVERIFY2(pMiniConsole, "The mini console was not created.");
-        const int maxBufferSize = host->mpConsole->buffer.getMaxBufferSize();
+        const int maxBufferSize = host->mainConsoleView()->buffer.getMaxBufferSize();
         QVERIFY(maxBufferSize > 1000);
 
         host->setConsoleBufferSize(12345);
@@ -2329,7 +2345,7 @@ noViewCursor = table.concat(results, '|')
         QCOMPARE(pMiniConsole->buffer.mLinesLimit, 500);
         QCOMPARE(host->getConsoleBufferSize(), 12345);
         QVERIFY(host->getUseMaxConsoleBufferSize());
-        QVERIFY(host->mpConsole->buffer.mLinesLimit != 500);
+        QVERIFY(host->mainConsoleView()->buffer.mLinesLimit != 500);
 
         for (const QString& call : {qsl("setConsoleBufferSize(50, 10)"), qsl("setConsoleBufferSize('', 50, 10)"), qsl("setConsoleBufferSize('main', 50, 10)")}) {
             host->setConsoleBufferSize(12345);
@@ -2338,8 +2354,8 @@ noViewCursor = table.concat(results, '|')
             // the profile keeps the limit asked for, and the buffer the one it can have
             QCOMPARE(host->getConsoleBufferSize(), 50);
             QVERIFY(!host->getUseMaxConsoleBufferSize());
-            QCOMPARE(host->mpConsole->buffer.mLinesLimit, 100);
-            QCOMPARE(host->mpConsole->buffer.mBatchDeleteSize, 10);
+            QCOMPARE(host->mainConsoleView()->buffer.mLinesLimit, 100);
+            QCOMPARE(host->mainConsoleView()->buffer.mBatchDeleteSize, 10);
         }
 
         for (const QString& name : {QString(), qsl("main")}) {
@@ -2348,8 +2364,8 @@ noViewCursor = table.concat(results, '|')
             runLua(host, qsl("setConsoleBufferSize('%1', 700, 70, true)\n").arg(name));
             QCOMPARE(host->getConsoleBufferSize(), 12345);
             QVERIFY(host->getUseMaxConsoleBufferSize());
-            QCOMPARE(host->mpConsole->buffer.mLinesLimit, maxBufferSize);
-            QCOMPARE(host->mpConsole->buffer.mBatchDeleteSize, 70);
+            QCOMPARE(host->mainConsoleView()->buffer.mLinesLimit, maxBufferSize);
+            QCOMPARE(host->mainConsoleView()->buffer.mBatchDeleteSize, 70);
         }
         QCOMPARE(pMiniConsole->buffer.mLinesLimit, 500);
     }
@@ -2362,11 +2378,11 @@ noViewCursor = table.concat(results, '|')
         startProfile();
         auto host = mudlet::self()->getActiveHost();
         QVERIFY2(host, "No active host available for the test.");
-        QVERIFY2(host->mpConsole, "The active host has no main console.");
+        QVERIFY2(host->mainConsoleView(), "The active host has no main console.");
 
         const QString miniConsole = qsl("clipboardView");
         runLua(host, qsl("createMiniConsole('%1', 0, 0, 300, 100)\necho('%1', 'one\\ntwo\\n')\nmoveCursor('%1', 0, 0)\nselectCurrentLine('%1')\ncopy('%1')\n").arg(miniConsole));
-        auto pMiniConsole = host->mpConsole->subConsoleWidget(miniConsole);
+        auto pMiniConsole = host->mainConsoleView()->subConsoleWidget(miniConsole);
         QVERIFY2(pMiniConsole, "The mini console was not created.");
 
         const QStringList calls{qsl("appendBuffer('%1')"), qsl("moveCursorEnd('%1') paste('%1')"), qsl("moveCursor('%1', 0, 0) paste('%1')"), qsl("pasteWindow('%1')")};
@@ -2376,9 +2392,9 @@ noViewCursor = table.concat(results, '|')
             QVERIFY2(pMiniConsole->buffer.mCursorY == pMiniConsole->buffer.size(), qPrintable(call));
         }
         for (const QString& call : {qsl("appendBuffer('main')"), qsl("paste()")}) {
-            host->mpConsole->buffer.mCursorY = -1;
+            host->mainConsoleView()->buffer.mCursorY = -1;
             runLua(host, call);
-            QVERIFY2(host->mpConsole->buffer.mCursorY == host->mpConsole->buffer.size(), qPrintable(call));
+            QVERIFY2(host->mainConsoleView()->buffer.mCursorY == host->mainConsoleView()->buffer.size(), qPrintable(call));
         }
     }
 
@@ -2389,7 +2405,7 @@ noViewCursor = table.concat(results, '|')
         startProfile();
         auto host = mudlet::self()->getActiveHost();
         QVERIFY2(host, "No active host available for the test.");
-        QVERIFY2(host->mpConsole, "The active host has no main console.");
+        QVERIFY2(host->mainConsoleView(), "The active host has no main console.");
         std::shared_ptr<TConsoleModel> model = host->sharedMainConsoleModel();
         destroyTheView(host);
 
@@ -2440,7 +2456,7 @@ headlessProblems = table.concat(headlessProblems, '; ')
         startProfile();
         auto host = mudlet::self()->getActiveHost();
         QVERIFY2(host, "No active host available for the test.");
-        QVERIFY2(host->mpConsole, "The active host has no main console.");
+        QVERIFY2(host->mainConsoleView(), "The active host has no main console.");
         std::shared_ptr<TConsoleModel> model = host->sharedMainConsoleModel();
         destroyTheView(host);
 
@@ -2464,7 +2480,7 @@ headlessProblems = table.concat(headlessProblems, '; ')
         startProfile();
         auto host = mudlet::self()->getActiveHost();
         QVERIFY2(host, "No active host available for the test.");
-        QVERIFY2(host->mpConsole, "The active host has no main console.");
+        QVERIFY2(host->mainConsoleView(), "The active host has no main console.");
         std::shared_ptr<TConsoleModel> model = host->sharedMainConsoleModel();
         destroyTheView(host);
 
@@ -2513,7 +2529,7 @@ paste('main')
         startProfile();
         auto host = mudlet::self()->getActiveHost();
         QVERIFY2(host, "No active host available for the test.");
-        QVERIFY2(host->mpConsole, "The active host has no main console.");
+        QVERIFY2(host->mainConsoleView(), "The active host has no main console.");
         std::shared_ptr<TConsoleModel> model = host->sharedMainConsoleModel();
         destroyTheView(host);
 
@@ -2539,15 +2555,15 @@ paste('main')
         startProfile();
         auto host = mudlet::self()->getActiveHost();
         QVERIFY2(host, "No active host available for the test.");
-        QVERIFY2(host->mpConsole, "The active host has no main console.");
+        QVERIFY2(host->mainConsoleView(), "The active host has no main console.");
         TConsoleModel& model = host->mainConsoleModel();
         const QString autoTimeStampPath = MudletApp::getMudletPath(enums::profileDataItemPath, host->getName(), qsl("autotimestamp"));
         QVERIFY2(!model.mShowTimeStamps, "The profile started with timestamps on, so turning them on proves nothing.");
         QVERIFY(!QFile::exists(autoTimeStampPath));
 
-        host->mpConsole->timeStampButton->click();
+        host->mainConsoleView()->timeStampButton->click();
         QVERIFY(model.mShowTimeStamps);
-        QVERIFY(host->mpConsole->showTimeStamps());
+        QVERIFY(host->mainConsoleView()->showTimeStamps());
         QVERIFY(host->mainConsoleShowsTimeStamps());
         QVERIFY(QFile::exists(autoTimeStampPath));
         runLua(host, qsl("timeStampsShown = tostring(timeStampsEnabled())\n"));
@@ -2556,12 +2572,12 @@ paste('main')
         runLua(host, qsl("disableTimeStamps()\n"));
         QVERIFY(!model.mShowTimeStamps);
         QVERIFY(!host->mainConsoleShowsTimeStamps());
-        QVERIFY2(!host->mpConsole->timeStampButton->isChecked(), "The toolbar button did not follow timestamps turned off from Lua.");
+        QVERIFY2(!host->mainConsoleView()->timeStampButton->isChecked(), "The toolbar button did not follow timestamps turned off from Lua.");
         QVERIFY(!QFile::exists(autoTimeStampPath));
 
         runLua(host, qsl("enableTimeStamps()\n"));
         QVERIFY(model.mShowTimeStamps);
-        QVERIFY2(host->mpConsole->timeStampButton->isChecked(), "The toolbar button did not follow timestamps turned on from Lua.");
+        QVERIFY2(host->mainConsoleView()->timeStampButton->isChecked(), "The toolbar button did not follow timestamps turned on from Lua.");
         QVERIFY(QFile::exists(autoTimeStampPath));
 
         destroyTheView(host);
@@ -2576,7 +2592,7 @@ paste('main')
         startProfile();
         auto host = mudlet::self()->getActiveHost();
         QVERIFY2(host, "No active host available for the test.");
-        QVERIFY2(host->mpConsole, "The active host has no main console.");
+        QVERIFY2(host->mainConsoleView(), "The active host has no main console.");
         QVERIFY2(!host->mainConsoleShowsTimeStamps(), "The profile started with timestamps on, so turning them on proves nothing.");
         const QString autoTimeStampPath = MudletApp::getMudletPath(enums::profileDataItemPath, host->getName(), qsl("autotimestamp"));
         QVERIFY(QDir().mkpath(autoTimeStampPath));
@@ -2584,7 +2600,7 @@ paste('main')
         QTest::failOnWarning(saveFailed);
 
         QTest::ignoreMessage(QtWarningMsg, saveFailed);
-        host->mpConsole->timeStampButton->click();
+        host->mainConsoleView()->timeStampButton->click();
         QVERIFY(host->mainConsoleShowsTimeStamps());
 
         runLua(host, qsl("disableTimeStamps()\n"));
@@ -2602,7 +2618,7 @@ paste('main')
         startProfile();
         auto host = mudlet::self()->getActiveHost();
         QVERIFY2(host, "No active host available for the test.");
-        QVERIFY2(host->mpConsole, "The active host has no main console.");
+        QVERIFY2(host->mainConsoleView(), "The active host has no main console.");
         QVERIFY2(!host->mainConsoleShowsTimeStamps(), "The profile started with timestamps on, so turning them on proves nothing.");
         const auto sizeWithGutter = [host](const int gutter) {
             return QSize(std::min(host->mScreenWidth, host->mWrapAt) - gutter, host->mScreenHeight);
@@ -2634,7 +2650,7 @@ paste('main')
         startProfile();
         auto host = mudlet::self()->getActiveHost();
         QVERIFY2(host, "No active host available for the test.");
-        QVERIFY2(host->mpConsole, "The active host has no main console.");
+        QVERIFY2(host->mainConsoleView(), "The active host has no main console.");
         const QString autoTimeStampPath = MudletApp::getMudletPath(enums::profileDataItemPath, host->getName(), qsl("autotimestamp"));
         QVERIFY2(!host->mainConsoleShowsTimeStamps(), "The profile started with timestamps on, so turning them on proves nothing.");
         destroyTheView(host);
@@ -2692,7 +2708,7 @@ noViewTimeStampReport = table.concat(noViewTimeStampProblems, '; ')
 
         Host* host = mudlet::self()->loadProfile(mTimeStampHostname, false);
         QVERIFY2(host, "The seeded profile was not loaded.");
-        QVERIFY2(host->mpConsole.isNull(), "loadProfile() built a view, so this no longer tests the view-less path.");
+        QVERIFY2(!host->mainConsoleView(), "loadProfile() built a view, so this no longer tests the view-less path.");
         QVERIFY2(host->mainConsoleShowsTimeStamps(), "A profile loaded with no view ignored its saved timestamps.");
         runLua(host, qsl("timeStampsShown = tostring(timeStampsEnabled())\n"));
         QCOMPARE(luaGlobalString(host, "timeStampsShown"), qsl("true"));
@@ -2711,9 +2727,9 @@ noViewTimeStampReport = table.concat(noViewTimeStampProblems, '; ')
         mudlet::self()->doAutoLogin(mTimeStampHostname, true);
         Host* host = HostManager::self()->getHost(mTimeStampHostname);
         QVERIFY2(host, "The seeded profile was not loaded.");
-        QVERIFY2(host->mpConsole, "The profile was loaded with no view.");
+        QVERIFY2(host->mainConsoleView(), "The profile was loaded with no view.");
         QVERIFY2(host->mainConsoleShowsTimeStamps(), "A profile loaded with a view ignored its saved timestamps.");
-        QVERIFY2(host->mpConsole->timeStampButton->isChecked(), "The toolbar button does not show the timestamps the profile loaded with.");
+        QVERIFY2(host->mainConsoleView()->timeStampButton->isChecked(), "The toolbar button does not show the timestamps the profile loaded with.");
     }
 
     // The saved choice is acted on by Host as the profile loads, not by the
@@ -2728,7 +2744,7 @@ noViewTimeStampReport = table.concat(noViewTimeStampProblems, '; ')
 
         Host* host = mudlet::self()->loadProfile(mAutoLogHostname, false);
         QVERIFY2(host, "The seeded profile was not loaded.");
-        QVERIFY2(host->mpConsole.isNull(), "loadProfile() built a view, so this no longer tests the view-less path.");
+        QVERIFY2(!host->mainConsoleView(), "loadProfile() built a view, so this no longer tests the view-less path.");
         TConsoleModel& model = host->mainConsoleModel();
         QVERIFY2(model.mLogToLogFile, "A profile loaded with no view did not start its saved log.");
         const QString logFileName = model.mLogFileName;
@@ -2753,11 +2769,11 @@ noViewTimeStampReport = table.concat(noViewTimeStampProblems, '; ')
         mudlet::self()->doAutoLogin(mAutoLogHostname, true);
         Host* host = HostManager::self()->getHost(mAutoLogHostname);
         QVERIFY2(host, "The seeded profile was not loaded.");
-        QVERIFY2(host->mpConsole, "The profile was loaded with no view.");
+        QVERIFY2(host->mainConsoleView(), "The profile was loaded with no view.");
         TConsoleModel& model = host->mainConsoleModel();
         QVERIFY2(model.mLogToLogFile, "A profile loaded with a view did not start its saved log.");
-        QVERIFY2(host->mpConsole->logButton->isChecked(), "The log button does not show the log the profile loaded with.");
-        QVERIFY2(host->mpConsole->logButton->toolTip().contains(TMainConsole::tr("Stop logging game output to log file.")), "The log button offers to start a log that is already running.");
+        QVERIFY2(host->mainConsoleView()->logButton->isChecked(), "The log button does not show the log the profile loaded with.");
+        QVERIFY2(host->mainConsoleView()->logButton->toolTip().contains(TMainConsole::tr("Stop logging game output to log file.")), "The log button offers to start a log that is already running.");
         QCOMPARE(announcementCount(model, TMainConsole::tr("Logging has started. Log file is %1").arg(model.mLogFileName)), 1);
     }
 
@@ -2773,7 +2789,7 @@ noViewTimeStampReport = table.concat(noViewTimeStampProblems, '; ')
 
         Host* host = mudlet::self()->loadProfile(mNawsHostname, false);
         QVERIFY2(host, "The seeded profile was not loaded.");
-        QVERIFY2(host->mpConsole.isNull(), "loadProfile() built a view, so this no longer tests the view-less path.");
+        QVERIFY2(!host->mainConsoleView(), "loadProfile() built a view, so this no longer tests the view-less path.");
         runLua(host, qsl("enableTimeStamps()\n"));
         QVERIFY(host->mainConsoleShowsTimeStamps());
 
@@ -2805,7 +2821,7 @@ noViewTimeStampReport = table.concat(noViewTimeStampProblems, '; ')
 
         Host* host = mudlet::self()->loadProfile(mNawsHostname, false);
         QVERIFY2(host, "The seeded profile was not loaded.");
-        QVERIFY2(host->mpConsole.isNull(), "loadProfile() built a view, so this no longer tests the view-less path.");
+        QVERIFY2(!host->mainConsoleView(), "loadProfile() built a view, so this no longer tests the view-less path.");
         QVERIFY(!host->mainConsoleShowsTimeStamps());
         const auto sizeWithGutter = [host](const int gutter) {
             return QSize(std::min(host->mScreenWidth, host->mWrapAt) - gutter, host->mScreenHeight);
@@ -2867,7 +2883,7 @@ noViewTimeStampReport = table.concat(noViewTimeStampProblems, '; ')
         Host* host = mudlet::self()->loadProfile(mWrapHostname, false);
         QVERIFY2(host, "The seeded profile was not loaded.");
         QVERIFY2(host->mProfileLoadError.isEmpty(), qPrintable(qsl("Reading the seeded profile save failed: %1").arg(host->mProfileLoadError)));
-        QVERIFY2(host->mpConsole.isNull(), "loadProfile() built a view, so this no longer tests the view-less path.");
+        QVERIFY2(!host->mainConsoleView(), "loadProfile() built a view, so this no longer tests the view-less path.");
         QCOMPARE(host->mWrapAt, 57);
 
         runLua(host, qsl("loadedWrap = getWindowWrap('main')\n"));
@@ -2882,7 +2898,7 @@ noViewTimeStampReport = table.concat(noViewTimeStampProblems, '; ')
         // a profile with no save at all is never read by XMLimport
         Host* freshHost = mudlet::self()->loadProfile(mHostname, false);
         QVERIFY2(freshHost && freshHost != host, "The unsaved profile was not loaded.");
-        QVERIFY2(freshHost->mpConsole.isNull(), "loadProfile() built a view, so this no longer tests the view-less path.");
+        QVERIFY2(!freshHost->mainConsoleView(), "loadProfile() built a view, so this no longer tests the view-less path.");
         runLua(freshHost, qsl("freshWrap = getWindowWrap('main')\n"));
         QCOMPARE(luaGlobalNumber(freshHost, "freshWrap"), freshHost->mWrapAt);
     }
@@ -2894,7 +2910,7 @@ noViewTimeStampReport = table.concat(noViewTimeStampProblems, '; ')
         startProfile();
         auto host = mudlet::self()->getActiveHost();
         QVERIFY2(host, "No active host available for the test.");
-        QVERIFY2(host->mpConsole, "The active host has no main console.");
+        QVERIFY2(host->mainConsoleView(), "The active host has no main console.");
         TConsoleModel& model = host->mainConsoleModel();
 
         const QString token = qsl("abcdefghijklmnopqrstuvwxyz0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ");
@@ -2906,7 +2922,7 @@ noViewTimeStampReport = table.concat(noViewTimeStampProblems, '; ')
         host->mWrapAt = 20;
         host->mWrapIndentCount = 2;
         host->mWrapHangingIndentCount = 4;
-        host->mpConsole->changeColors();
+        host->mainConsoleView()->changeColors();
 
         runLua(host, qsl("wrapLine('main', %1)\n").arg(viewLine));
         verifyRewrappedTo20(model.buffer, viewLine, qsl("  view-"));
@@ -2924,7 +2940,7 @@ noViewTimeStampReport = table.concat(noViewTimeStampProblems, '; ')
         startProfile();
         auto host = mudlet::self()->getActiveHost();
         QVERIFY2(host, "No active host available for the test.");
-        QVERIFY2(host->mpConsole, "The active host has no main console.");
+        QVERIFY2(host->mainConsoleView(), "The active host has no main console.");
         // Five of the seven calls answer "no user dictionary enabled" before they
         // ever reach a dictionary, so without one they would report a refusal here
         // whatever the spell checker did.
@@ -3001,7 +3017,7 @@ noViewSpellReport = table.concat(noViewSpellProblems, '; ')
         startProfile();
         auto host = mudlet::self()->getActiveHost();
         QVERIFY2(host, "No active host available for the test.");
-        QVERIFY2(host->mpConsole, "The active host has no main console.");
+        QVERIFY2(host->mainConsoleView(), "The active host has no main console.");
         QVERIFY2(!host->spellChecker().usingSharedDictionary(), "The profile is on the shared dictionary, so profile.dic is not where its words are saved.");
 
         runLua(host, qsl("dictionaryAdd = tostring(addWordToDictionary('outlivingword'))\n"));
@@ -3030,7 +3046,7 @@ noViewSpellReport = table.concat(noViewSpellProblems, '; ')
         startProfile();
         auto host = mudlet::self()->getActiveHost();
         QVERIFY2(host, "No active host available for the test.");
-        QVERIFY2(host->mpConsole, "The active host has no main console.");
+        QVERIFY2(host->mainConsoleView(), "The active host has no main console.");
 
         host->setUserDictionaryOptions(true, true);
         Hunhandle* shared = host->spellChecker().userHandle();
@@ -3051,7 +3067,7 @@ noViewSpellReport = table.concat(noViewSpellProblems, '; ')
         startProfile();
         auto host = mudlet::self()->getActiveHost();
         QVERIFY2(host, "No active host available for the test.");
-        QVERIFY2(host->mpConsole, "The active host has no main console.");
+        QVERIFY2(host->mainConsoleView(), "The active host has no main console.");
 
         host->setUserDictionaryOptions(true, true);
         QVERIFY2(host->spellChecker().userHandle() == TSpellChecker::sharedDictionary(), "The profile is not on the shared dictionary, so this proves nothing about it.");
@@ -3103,7 +3119,7 @@ sharedDictionaryReport = table.concat(sharedDictionaryReport, '; ')
         startProfile();
         auto host = mudlet::self()->getActiveHost();
         QVERIFY2(host, "No active host available for the test.");
-        QVERIFY2(host->mpConsole, "The active host has no main console.");
+        QVERIFY2(host->mainConsoleView(), "The active host has no main console.");
         runLua(host,
                qsl("captureGroupResult = 'the trigger did not run'\n"
                    "tempRegexTrigger([[^NoViewCapture (\\w+)]], [[captureGroupResult = tostring(selectCaptureGroup(2))]], 10)\n"));
@@ -3129,7 +3145,7 @@ sharedDictionaryReport = table.concat(sharedDictionaryReport, '; ')
         startProfile();
         auto host = mudlet::self()->getActiveHost();
         QVERIFY2(host, "No active host available for the test.");
-        QVERIFY2(host->mpConsole, "The active host has no main console.");
+        QVERIFY2(host->mainConsoleView(), "The active host has no main console.");
         runLua(host,
                qsl("noViewPaintRan = 'no'\n"
                    "tempRegexTrigger([[^NoViewPaint (\\w+) after]], [[noViewPaintRan = 'yes'; selectCaptureGroup(2)]], 10)\n"));
@@ -3162,7 +3178,7 @@ sharedDictionaryReport = table.concat(sharedDictionaryReport, '; ')
         startProfile();
         auto host = mudlet::self()->getActiveHost();
         QVERIFY2(host, "No active host available for the test.");
-        QVERIFY2(host->mpConsole, "The active host has no main console.");
+        QVERIFY2(host->mainConsoleView(), "The active host has no main console.");
         std::shared_ptr<TConsoleModel> model = host->sharedMainConsoleModel();
         destroyTheView(host);
 
@@ -3248,7 +3264,7 @@ noViewSelectionReport = table.concat(noViewSelectionProblems, '; ')
         startProfile();
         auto host = mudlet::self()->getActiveHost();
         QVERIFY2(host, "No active host available for the test.");
-        QVERIFY2(host->mpConsole, "The active host has no main console.");
+        QVERIFY2(host->mainConsoleView(), "The active host has no main console.");
         std::shared_ptr<TConsoleModel> model = host->sharedMainConsoleModel();
         destroyTheView(host);
 
@@ -3273,7 +3289,7 @@ noViewSelectionReport = table.concat(noViewSelectionProblems, '; ')
         startProfile();
         auto host = mudlet::self()->getActiveHost();
         QVERIFY2(host, "No active host available for the test.");
-        QVERIFY2(host->mpConsole, "The active host has no main console.");
+        QVERIFY2(host->mainConsoleView(), "The active host has no main console.");
         destroyTheView(host);
 
         const QColor scriptedBackground(0x12, 0x34, 0x56, 255);
@@ -3298,7 +3314,7 @@ noViewSelectionReport = table.concat(noViewSelectionProblems, '; ')
         startProfile();
         auto host = mudlet::self()->getActiveHost();
         QVERIFY2(host, "No active host available for the test.");
-        QVERIFY2(host->mpConsole, "The active host has no main console.");
+        QVERIFY2(host->mainConsoleView(), "The active host has no main console.");
         std::shared_ptr<TConsoleModel> model = host->sharedMainConsoleModel();
         destroyTheView(host);
 
@@ -3330,7 +3346,7 @@ noViewSelectionReport = table.concat(noViewSelectionProblems, '; ')
         startProfile();
         auto host = mudlet::self()->getActiveHost();
         QVERIFY2(host, "No active host available for the test.");
-        QVERIFY2(host->mpConsole, "The active host has no main console.");
+        QVERIFY2(host->mainConsoleView(), "The active host has no main console.");
 
         const QString labelName = qsl("registryCreatedLabel");
         QVERIFY2(!host->windowRegistry().hasLabel(labelName), "The registry claims a label that was never created.");
@@ -3338,7 +3354,7 @@ noViewSelectionReport = table.concat(noViewSelectionProblems, '; ')
         const auto [created, message] = host->createLabel(QString(), labelName, 10, 20, 100, 50, true, false);
         QVERIFY2(created, qPrintable(message));
 
-        TLabel* widget = host->mpConsole->labelWidget(labelName);
+        TLabel* widget = host->mainConsoleView()->labelWidget(labelName);
         QVERIFY2(widget, "Creating a label left the console's own widget map empty.");
 
         QVERIFY2(host->windowRegistry().hasLabel(labelName), "Creating a label registered no model in the profile's window registry.");
@@ -3365,17 +3381,17 @@ noViewSelectionReport = table.concat(noViewSelectionProblems, '; ')
         startProfile();
         auto host = mudlet::self()->getActiveHost();
         QVERIFY2(host, "No active host available for the test.");
-        QVERIFY2(host->mpConsole, "The active host has no main console.");
+        QVERIFY2(host->mainConsoleView(), "The active host has no main console.");
 
         const QString labelName = qsl("registryDeletedLabel");
         const auto [created, message] = host->createLabel(QString(), labelName, 0, 0, 40, 40, true, false);
         QVERIFY2(created, qPrintable(message));
         const TLabelModel* firstModel = host->windowRegistry().labelModel(labelName);
         QVERIFY2(firstModel, "Creating a label registered no model in the profile's window registry.");
-        QPointer<TLabel> firstWidget = host->mpConsole->labelWidget(labelName);
+        QPointer<TLabel> firstWidget = host->mainConsoleView()->labelWidget(labelName);
         QVERIFY2(firstWidget, "Creating a label left the console's own widget map empty.");
 
-        const auto [deleted, deleteMessage] = host->mpConsole->deleteLabel(labelName);
+        const auto [deleted, deleteMessage] = host->mainConsoleView()->deleteLabel(labelName);
         QVERIFY2(deleted, qPrintable(deleteMessage));
 
         QVERIFY2(!host->windowRegistry().hasLabel(labelName), "Deleting a label left its model in the profile's window registry.");
@@ -3396,7 +3412,7 @@ noViewSelectionReport = table.concat(noViewSelectionProblems, '; ')
         QCoreApplication::sendPostedEvents(nullptr, QEvent::DeferredDelete);
         QVERIFY2(firstWidget.isNull(), "The deleted label was never destroyed, so nothing below tests the identity check.");
         QVERIFY2(host->windowRegistry().labelModel(labelName) == secondModel, "The deferred destruction of a deleted label evicted the replacement that had taken its name.");
-        QVERIFY2(host->mpConsole->labelWidget(labelName), "The replacement label lost its widget.");
+        QVERIFY2(host->mainConsoleView()->labelWidget(labelName), "The replacement label lost its widget.");
     }
 
     // Resetting the profile destroys every label the console built without going
@@ -3407,14 +3423,14 @@ noViewSelectionReport = table.concat(noViewSelectionProblems, '; ')
         startProfile();
         auto host = mudlet::self()->getActiveHost();
         QVERIFY2(host, "No active host available for the test.");
-        QVERIFY2(host->mpConsole, "The active host has no main console.");
+        QVERIFY2(host->mainConsoleView(), "The active host has no main console.");
 
         const QString labelName = qsl("registryResetLabel");
         const auto [created, message] = host->createLabel(QString(), labelName, 0, 0, 40, 40, true, false);
         QVERIFY2(created, qPrintable(message));
         QVERIFY2(host->windowRegistry().hasLabel(labelName), "Creating a label registered no model in the profile's window registry.");
 
-        host->mpConsole->resetMainConsole();
+        host->mainConsoleView()->resetMainConsole();
 
         QVERIFY2(!host->windowRegistry().hasLabel(labelName), "Resetting the main console left its labels in the profile's window registry.");
         const auto [recreated, recreateMessage] = host->createLabel(QString(), labelName, 0, 0, 40, 40, true, false);
@@ -3430,7 +3446,7 @@ noViewSelectionReport = table.concat(noViewSelectionProblems, '; ')
         startProfile();
         auto host = mudlet::self()->getActiveHost();
         QVERIFY2(host, "No active host available for the test.");
-        QVERIFY2(host->mpConsole, "The active host has no main console.");
+        QVERIFY2(host->mainConsoleView(), "The active host has no main console.");
 
         const QString labelName = qsl("registryOrphanedLabel");
         const auto [created, message] = host->createLabel(QString(), labelName, 0, 0, 40, 40, true, false);
@@ -3453,23 +3469,23 @@ noViewSelectionReport = table.concat(noViewSelectionProblems, '; ')
         startProfile();
         auto host = mudlet::self()->getActiveHost();
         QVERIFY2(host, "No active host available for the test.");
-        QVERIFY2(host->mpConsole, "The active host has no main console.");
+        QVERIFY2(host->mainConsoleView(), "The active host has no main console.");
 
         const QString windowName = qsl("registryParentWindow");
         const QString labelName = qsl("registryChildLabel");
         runLua(host, qsl("openUserWindow('%1')\n").arg(windowName));
         const auto [created, message] = host->createLabel(windowName, labelName, 0, 0, 10, 10, true, false);
         QVERIFY2(created, qPrintable(message));
-        QPointer<TLabel> widget = host->mpConsole->labelWidget(labelName);
+        QPointer<TLabel> widget = host->mainConsoleView()->labelWidget(labelName);
         QVERIFY2(widget, "Creating a label into a user window left the console's own widget map empty.");
 
-        const auto [deleted, deleteMessage] = host->mpConsole->deleteMiniConsole(windowName);
+        const auto [deleted, deleteMessage] = host->mainConsoleView()->deleteMiniConsole(windowName);
         QVERIFY2(deleted, qPrintable(deleteMessage));
         QCoreApplication::sendPostedEvents(nullptr, QEvent::DeferredDelete);
         QVERIFY2(widget.isNull(), "Deleting the user window did not destroy the label it contained, so the checks below prove nothing.");
 
         QVERIFY2(!host->windowRegistry().hasLabel(labelName), "A label destroyed with its parent window stayed in the profile's window registry.");
-        QVERIFY2(!host->mpConsole->labelWidget(labelName), "A label destroyed with its parent window left a dangling widget in the console's map.");
+        QVERIFY2(!host->mainConsoleView()->labelWidget(labelName), "A label destroyed with its parent window left a dangling widget in the console's map.");
         // The call that reads the map entry and dies in the freed widget
         QVERIFY2(!host->setClickthrough(labelName, true), "setClickthrough reached a label that had been destroyed with its parent window.");
 
@@ -3485,23 +3501,23 @@ noViewSelectionReport = table.concat(noViewSelectionProblems, '; ')
         startProfile();
         auto host = mudlet::self()->getActiveHost();
         QVERIFY2(host, "No active host available for the test.");
-        QVERIFY2(host->mpConsole, "The active host has no main console.");
+        QVERIFY2(host->mainConsoleView(), "The active host has no main console.");
 
         const QString scrollBoxName = qsl("registryParentScrollBox");
         const QString labelName = qsl("registryScrollBoxChildLabel");
         runLua(host, qsl("createScrollBox('%1', 0, 0, 200, 200)\n").arg(scrollBoxName));
         const auto [created, message] = host->createLabel(scrollBoxName, labelName, 0, 0, 10, 10, true, false);
         QVERIFY2(created, qPrintable(message));
-        QPointer<TLabel> widget = host->mpConsole->labelWidget(labelName);
+        QPointer<TLabel> widget = host->mainConsoleView()->labelWidget(labelName);
         QVERIFY2(widget, "Creating a label into a scroll box left the console's own widget map empty.");
 
-        const auto [deleted, deleteMessage] = host->mpConsole->deleteScrollBox(scrollBoxName);
+        const auto [deleted, deleteMessage] = host->mainConsoleView()->deleteScrollBox(scrollBoxName);
         QVERIFY2(deleted, qPrintable(deleteMessage));
         QCoreApplication::sendPostedEvents(nullptr, QEvent::DeferredDelete);
         QVERIFY2(widget.isNull(), "Deleting the scroll box did not destroy the label it contained, so the checks below prove nothing.");
 
         QVERIFY2(!host->windowRegistry().hasLabel(labelName), "A label destroyed with its scroll box stayed in the profile's window registry.");
-        QVERIFY2(!host->mpConsole->labelWidget(labelName), "A label destroyed with its scroll box left a dangling widget in the console's map.");
+        QVERIFY2(!host->mainConsoleView()->labelWidget(labelName), "A label destroyed with its scroll box left a dangling widget in the console's map.");
         QVERIFY2(!host->setClickthrough(labelName, true), "setClickthrough reached a label that had been destroyed with its scroll box.");
     }
 
@@ -3515,7 +3531,7 @@ noViewSelectionReport = table.concat(noViewSelectionProblems, '; ')
         startProfile();
         auto host = mudlet::self()->getActiveHost();
         QVERIFY2(host, "No active host available for the test.");
-        QVERIFY2(host->mpConsole, "The active host has no main console.");
+        QVERIFY2(host->mainConsoleView(), "The active host has no main console.");
 
         const QString gifPath = writeTestGif();
         QVERIFY2(!gifPath.isEmpty(), "Could not write a GIF that Qt reads back as a movie.");
@@ -3523,7 +3539,7 @@ noViewSelectionReport = table.concat(noViewSelectionProblems, '; ')
         const QString labelName = qsl("gifChildLabel");
         runLua(host, qsl("openUserWindow('%1')\ncreateLabel('%1', '%2', 0, 0, 10, 10, 1)\nsetMovie('%2', '%3')\n").arg(windowName, labelName, gifPath));
 
-        TLabel* label = host->mpConsole->labelWidget(labelName);
+        TLabel* label = host->mainConsoleView()->labelWidget(labelName);
         QVERIFY2(label, "Creating a label into a user window left the console's own widget map empty.");
         const QPointer<QMovie> movie = label->mpMovie;
         QVERIFY2(movie, "setMovie gave the label no movie, so the checks below prove nothing.");
@@ -3542,7 +3558,7 @@ noViewSelectionReport = table.concat(noViewSelectionProblems, '; ')
         startProfile();
         auto host = mudlet::self()->getActiveHost();
         QVERIFY2(host, "No active host available for the test.");
-        QVERIFY2(host->mpConsole, "The active host has no main console.");
+        QVERIFY2(host->mainConsoleView(), "The active host has no main console.");
 
         const QString gifPath = writeTestGif();
         QVERIFY2(!gifPath.isEmpty(), "Could not write a GIF that Qt reads back as a movie.");
@@ -3550,7 +3566,7 @@ noViewSelectionReport = table.concat(noViewSelectionProblems, '; ')
         const QString labelName = qsl("gifScrollBoxChildLabel");
         runLua(host, qsl("createScrollBox('%1', 0, 0, 200, 200)\ncreateLabel('%1', '%2', 0, 0, 10, 10, 1)\nsetMovie('%2', '%3')\n").arg(scrollBoxName, labelName, gifPath));
 
-        TLabel* label = host->mpConsole->labelWidget(labelName);
+        TLabel* label = host->mainConsoleView()->labelWidget(labelName);
         QVERIFY2(label, "Creating a label into a scroll box left the console's own widget map empty.");
         const QPointer<QMovie> movie = label->mpMovie;
         QVERIFY2(movie, "setMovie gave the label no movie, so the checks below prove nothing.");
@@ -3571,15 +3587,15 @@ noViewSelectionReport = table.concat(noViewSelectionProblems, '; ')
         startProfile();
         auto host = mudlet::self()->getActiveHost();
         QVERIFY2(host, "No active host available for the test.");
-        QVERIFY2(host->mpConsole, "The active host has no main console.");
+        QVERIFY2(host->mainConsoleView(), "The active host has no main console.");
 
         const QString labelName = qsl("registrySweptLabel");
         const auto [created, message] = host->createLabel(QString(), labelName, 0, 0, 10, 10, true, false);
         QVERIFY2(created, qPrintable(message));
-        TLabel* label = host->mpConsole->labelWidget(labelName);
+        TLabel* label = host->mainConsoleView()->labelWidget(labelName);
         QVERIFY2(label, "Creating a label left the console's own widget map empty.");
 
-        TMainConsole* console = host->mpConsole;
+        TMainConsole* console = host->mainConsoleView();
         bool consoleWasDestroyed = false;
         bool alreadySevered = false;
         const auto probe = QObject::connect(console, &QObject::destroyed, [&consoleWasDestroyed, &alreadySevered, label, console]() {
@@ -3603,7 +3619,7 @@ noViewSelectionReport = table.concat(noViewSelectionProblems, '; ')
         startProfile();
         auto host = mudlet::self()->getActiveHost();
         QVERIFY2(host, "No active host available for the test.");
-        QVERIFY2(host->mpConsole, "The active host has no main console.");
+        QVERIFY2(host->mainConsoleView(), "The active host has no main console.");
 
         const QString labelName = qsl("registryLookupLabel");
         const QString absentName = qsl("registryNoSuchLabel");
@@ -3657,12 +3673,12 @@ noViewSelectionReport = table.concat(noViewSelectionProblems, '; ')
         startProfile();
         auto host = mudlet::self()->getActiveHost();
         QVERIFY2(host, "No active host available for the test.");
-        QVERIFY2(host->mpConsole, "The active host has no main console.");
+        QVERIFY2(host->mainConsoleView(), "The active host has no main console.");
 
         const QString labelName = qsl("registryOpsLabel");
         const auto [created, message] = host->createLabel(QString(), labelName, 10, 20, 100, 50, true, false);
         QVERIFY2(created, qPrintable(message));
-        TLabel* widget = host->mpConsole->labelWidget(labelName);
+        TLabel* widget = host->mainConsoleView()->labelWidget(labelName);
         QVERIFY2(widget, "Creating a label left the console's own widget map empty.");
         QWidget* const mainParent = widget->parentWidget();
         QVERIFY2(mainParent, "The label was created with no parent.");
@@ -3690,7 +3706,7 @@ noViewSelectionReport = table.concat(noViewSelectionProblems, '; ')
         // resolve as well, and the label has to end up parented to it
         const QString userWindowName = qsl("registryOpsWindow");
         runLua(host, qsl("openUserWindow('%1')\n").arg(userWindowName));
-        auto* dockWidget = host->mpConsole->dockWidget(userWindowName);
+        auto* dockWidget = host->mainConsoleView()->dockWidget(userWindowName);
         QVERIFY2(dockWidget, "The user window to move the label into was not created.");
 
         const auto [moved, moveMessage] = host->setWindow(userWindowName, labelName, 5, 6, true);
@@ -3710,12 +3726,12 @@ noViewSelectionReport = table.concat(noViewSelectionProblems, '; ')
         startProfile();
         auto host = mudlet::self()->getActiveHost();
         QVERIFY2(host, "No active host available for the test.");
-        QVERIFY2(host->mpConsole, "The active host has no main console.");
+        QVERIFY2(host->mainConsoleView(), "The active host has no main console.");
 
         const QString labelName = qsl("registryStyleLabel");
         const auto [created, message] = host->createLabel(QString(), labelName, 10, 20, 100, 50, true, false);
         QVERIFY2(created, qPrintable(message));
-        TLabel* widget = host->mpConsole->labelWidget(labelName);
+        TLabel* widget = host->mainConsoleView()->labelWidget(labelName);
         QVERIFY2(widget, "Creating a label left the console's own widget map empty.");
 
         QVERIFY2(host->setClickthrough(labelName, true), "setClickthrough() did not find the label.");
@@ -3761,7 +3777,7 @@ noViewSelectionReport = table.concat(noViewSelectionProblems, '; ')
         startProfile();
         auto host = mudlet::self()->getActiveHost();
         QVERIFY2(host, "No active host available for the test.");
-        QVERIFY2(host->mpConsole, "The active host has no main console.");
+        QVERIFY2(host->mainConsoleView(), "The active host has no main console.");
 
         const QString miniName = qsl("registryMini");
         const QString userWindowName = qsl("registryUserWindow");
@@ -3770,7 +3786,7 @@ noViewSelectionReport = table.concat(noViewSelectionProblems, '; ')
 
         const auto [mini, miniMessage] = host->createMiniConsole(QString(), miniName, 10, 20, 100, 50);
         QVERIFY2(mini, qPrintable(miniMessage));
-        TConsole* miniWidget = host->mpConsole->subConsoleWidget(miniName);
+        TConsole* miniWidget = host->mainConsoleView()->subConsoleWidget(miniName);
         QVERIFY2(miniWidget, "Creating a miniconsole left the console's own widget map empty.");
         QVERIFY2(host->windowRegistry().hasSubConsole(miniName), "Creating a miniconsole registered no model in the profile's window registry.");
         QCOMPARE(host->windowRegistry().subConsoleModel(miniName), &miniWidget->model());
@@ -3780,7 +3796,7 @@ noViewSelectionReport = table.concat(noViewSelectionProblems, '; ')
 
         const auto [userWindow, userWindowMessage] = host->openWindow(userWindowName, false, false, qsl("f"));
         QVERIFY2(userWindow, qPrintable(userWindowMessage));
-        TConsole* userWindowWidget = host->mpConsole->subConsoleWidget(userWindowName);
+        TConsole* userWindowWidget = host->mainConsoleView()->subConsoleWidget(userWindowName);
         QVERIFY2(userWindowWidget, "Creating a user window left the console's own widget map empty.");
         QCOMPARE(host->windowRegistry().subConsoleModel(userWindowName), &userWindowWidget->model());
         QCOMPARE(host->windowRegistry().subConsoleKind(userWindowName), std::optional<TWindowRegistry::SubConsoleKind>(TWindowRegistry::SubConsoleKind::UserWindow));
@@ -3788,7 +3804,7 @@ noViewSelectionReport = table.concat(noViewSelectionProblems, '; ')
         QCOMPARE(host->windowType(userWindowName), std::optional<QString>(qsl("userwindow")));
 
         QVERIFY2(host->createBuffer(bufferName), "createBuffer() refused a name that was not in use.");
-        TConsole* bufferWidget = host->mpConsole->subConsoleWidget(bufferName);
+        TConsole* bufferWidget = host->mainConsoleView()->subConsoleWidget(bufferName);
         QVERIFY2(bufferWidget, "Creating a buffer left the console's own widget map empty.");
         QCOMPARE(host->windowRegistry().subConsoleModel(bufferName), &bufferWidget->model());
         QCOMPARE(host->windowRegistry().subConsoleKind(bufferName), std::optional<TWindowRegistry::SubConsoleKind>(TWindowRegistry::SubConsoleKind::Buffer));
@@ -3811,17 +3827,17 @@ noViewSelectionReport = table.concat(noViewSelectionProblems, '; ')
         startProfile();
         auto host = mudlet::self()->getActiveHost();
         QVERIFY2(host, "No active host available for the test.");
-        QVERIFY2(host->mpConsole, "The active host has no main console.");
+        QVERIFY2(host->mainConsoleView(), "The active host has no main console.");
 
         const QString miniName = qsl("registryDeletedMini");
         const auto [mini, miniMessage] = host->createMiniConsole(QString(), miniName, 0, 0, 40, 40);
         QVERIFY2(mini, qPrintable(miniMessage));
         const TConsoleModel* firstModel = host->windowRegistry().subConsoleModel(miniName);
         QVERIFY2(firstModel, "Creating a miniconsole registered no model in the profile's window registry.");
-        const QPointer<TConsole> firstWidget = host->mpConsole->subConsoleWidget(miniName);
+        const QPointer<TConsole> firstWidget = host->mainConsoleView()->subConsoleWidget(miniName);
         QVERIFY2(firstWidget, "Creating a miniconsole left no widget in the console's own map.");
 
-        const auto [deleted, deleteMessage] = host->mpConsole->deleteMiniConsole(miniName);
+        const auto [deleted, deleteMessage] = host->mainConsoleView()->deleteMiniConsole(miniName);
         QVERIFY2(deleted, qPrintable(deleteMessage));
         QVERIFY2(!host->windowRegistry().hasSubConsole(miniName), "Deleting a miniconsole left its model in the profile's window registry.");
         QVERIFY2(!host->windowRegistry().subConsoleModel(miniName), "Deleting a miniconsole left a stale model handle in the profile's window registry.");
@@ -3832,7 +3848,7 @@ noViewSelectionReport = table.concat(noViewSelectionProblems, '; ')
         const TConsoleModel* secondModel = host->windowRegistry().subConsoleModel(miniName);
         QVERIFY2(secondModel, "The replacement miniconsole registered no model.");
         QVERIFY2(secondModel != firstModel, "The replacement miniconsole registered the model of the one it replaced.");
-        const QPointer<TConsole> secondWidget = host->mpConsole->subConsoleWidget(miniName);
+        const QPointer<TConsole> secondWidget = host->mainConsoleView()->subConsoleWidget(miniName);
 
         // deleteMiniConsole() only defers the widget's destruction, so the first
         // console's destructor runs from here - after its replacement has taken
@@ -3846,9 +3862,9 @@ noViewSelectionReport = table.concat(noViewSelectionProblems, '; ')
                                     .arg(QString::number(reinterpret_cast<quintptr>(host->windowRegistry().subConsoleModel(miniName)), 16),
                                          QString::number(reinterpret_cast<quintptr>(secondModel), 16),
                                          QString::number(reinterpret_cast<quintptr>(firstModel), 16),
-                                         QString::number(reinterpret_cast<quintptr>(host->mpConsole->subConsoleWidget(miniName)), 16),
+                                         QString::number(reinterpret_cast<quintptr>(host->mainConsoleView()->subConsoleWidget(miniName)), 16),
                                          secondWidget.isNull() ? qsl("destroyed") : qsl("alive"))));
-        QVERIFY2(host->mpConsole->subConsoleWidget(miniName), "The replacement miniconsole lost its widget.");
+        QVERIFY2(host->mainConsoleView()->subConsoleWidget(miniName), "The replacement miniconsole lost its widget.");
 
         // A user window goes the same way, and has to surrender its dock too
         const QString userWindowName = qsl("registryDeletedUserWindow");
@@ -3856,7 +3872,7 @@ noViewSelectionReport = table.concat(noViewSelectionProblems, '; ')
         QVERIFY2(userWindow, qPrintable(userWindowMessage));
         QVERIFY2(host->windowRegistry().hasDockWidget(userWindowName), "Creating a user window registered no dock widget.");
 
-        const auto [windowDeleted, windowDeleteMessage] = host->mpConsole->deleteMiniConsole(userWindowName);
+        const auto [windowDeleted, windowDeleteMessage] = host->mainConsoleView()->deleteMiniConsole(userWindowName);
         QVERIFY2(windowDeleted, qPrintable(windowDeleteMessage));
         QVERIFY2(!host->windowRegistry().hasSubConsole(userWindowName), "Deleting a user window left its model in the profile's window registry.");
         QVERIFY2(!host->windowRegistry().hasDockWidget(userWindowName), "Deleting a user window left its dock in the profile's window registry.");
@@ -3872,7 +3888,7 @@ noViewSelectionReport = table.concat(noViewSelectionProblems, '; ')
         startProfile();
         auto host = mudlet::self()->getActiveHost();
         QVERIFY2(host, "No active host available for the test.");
-        QVERIFY2(host->mpConsole, "The active host has no main console.");
+        QVERIFY2(host->mainConsoleView(), "The active host has no main console.");
 
         const QString userWindowName = qsl("registryNestingUserWindow");
         const auto [userWindow, userWindowMessage] = host->openWindow(userWindowName, false, false, qsl("f"));
@@ -3882,12 +3898,12 @@ noViewSelectionReport = table.concat(noViewSelectionProblems, '; ')
         const QString nestedName = qsl("registryNestedMini");
         const auto [nested, nestedMessage] = host->createMiniConsole(userWindowName, nestedName, 0, 0, 40, 40);
         QVERIFY2(nested, qPrintable(nestedMessage));
-        const QPointer<TConsole> nestedWidget = host->mpConsole->subConsoleWidget(nestedName);
+        const QPointer<TConsole> nestedWidget = host->mainConsoleView()->subConsoleWidget(nestedName);
         QVERIFY2(nestedWidget, "Creating a miniconsole inside a user window left no widget in the console's own map.");
         QCOMPARE(host->windowType(nestedName), std::optional<QString>(qsl("miniconsole")));
         QVERIFY2(!host->windowRegistry().hasDockWidget(nestedName), "A miniconsole inside a user window was registered as having a dock of its own.");
 
-        const auto [windowDeleted, windowDeleteMessage] = host->mpConsole->deleteMiniConsole(userWindowName);
+        const auto [windowDeleted, windowDeleteMessage] = host->mainConsoleView()->deleteMiniConsole(userWindowName);
         QVERIFY2(windowDeleted, qPrintable(windowDeleteMessage));
         QVERIFY2(!host->windowRegistry().hasSubConsole(userWindowName), "Deleting a user window left its own model in the profile's window registry.");
 
@@ -3912,7 +3928,7 @@ noViewSelectionReport = table.concat(noViewSelectionProblems, '; ')
         startProfile();
         auto host = mudlet::self()->getActiveHost();
         QVERIFY2(host, "No active host available for the test.");
-        QVERIFY2(host->mpConsole, "The active host has no main console.");
+        QVERIFY2(host->mainConsoleView(), "The active host has no main console.");
 
         const QString userWindowName = qsl("registryStaleUserWindow");
         const auto [userWindow, userWindowMessage] = host->openWindow(userWindowName, false, false, qsl("f"));
@@ -3920,22 +3936,22 @@ noViewSelectionReport = table.concat(noViewSelectionProblems, '; ')
         const QString nestedName = qsl("registryStaleNestedMini");
         const auto [nested, nestedMessage] = host->createMiniConsole(userWindowName, nestedName, 0, 0, 40, 40);
         QVERIFY2(nested, qPrintable(nestedMessage));
-        const QPointer<TConsole> nestedWidget = host->mpConsole->subConsoleWidget(nestedName);
+        const QPointer<TConsole> nestedWidget = host->mainConsoleView()->subConsoleWidget(nestedName);
         QVERIFY2(nestedWidget, "Creating a miniconsole inside a user window left no widget in the console's own map.");
 
-        const auto [windowDeleted, windowDeleteMessage] = host->mpConsole->deleteMiniConsole(userWindowName);
+        const auto [windowDeleted, windowDeleteMessage] = host->mainConsoleView()->deleteMiniConsole(userWindowName);
         QVERIFY2(windowDeleted, qPrintable(windowDeleteMessage));
         QTRY_VERIFY_WITH_TIMEOUT(nestedWidget.isNull(), 5s);
 
         // First, because the ones after it act on whatever this hands back
-        QVERIFY2(!host->mpConsole->subConsoleWidget(nestedName), "The console's own map still hands out a miniconsole destroyed with the user window it was in.");
-        QVERIFY2(!host->mpConsole->moveSubConsole(nestedName, 5, 6), "Moving a destroyed miniconsole by name reported success.");
-        QVERIFY2(!host->mpConsole->showSubConsole(nestedName), "Showing a destroyed miniconsole by name reported success.");
-        QVERIFY2(!host->mpConsole->getSubConsoleGeometry(nestedName).has_value(), "A destroyed miniconsole still reported a geometry.");
+        QVERIFY2(!host->mainConsoleView()->subConsoleWidget(nestedName), "The console's own map still hands out a miniconsole destroyed with the user window it was in.");
+        QVERIFY2(!host->mainConsoleView()->moveSubConsole(nestedName, 5, 6), "Moving a destroyed miniconsole by name reported success.");
+        QVERIFY2(!host->mainConsoleView()->showSubConsole(nestedName), "Showing a destroyed miniconsole by name reported success.");
+        QVERIFY2(!host->windowGeometry(nestedName).has_value(), "A destroyed miniconsole still reported a geometry.");
 
         const auto [recreated, recreateMessage] = host->createMiniConsole(QString(), nestedName, 0, 0, 40, 40);
         QVERIFY2(recreated, qPrintable(qsl("The name of a miniconsole destroyed with its user window could not be used again: %1").arg(recreateMessage)));
-        QVERIFY2(host->mpConsole->subConsoleWidget(nestedName), "The replacement miniconsole is not in the console's own map.");
+        QVERIFY2(host->mainConsoleView()->subConsoleWidget(nestedName), "The replacement miniconsole is not in the console's own map.");
         QVERIFY2(host->windowRegistry().hasSubConsole(nestedName), "The replacement miniconsole is not in the profile's window registry.");
     }
 
@@ -3947,7 +3963,7 @@ noViewSelectionReport = table.concat(noViewSelectionProblems, '; ')
         startProfile();
         auto host = mudlet::self()->getActiveHost();
         QVERIFY2(host, "No active host available for the test.");
-        QVERIFY2(host->mpConsole, "The active host has no main console.");
+        QVERIFY2(host->mainConsoleView(), "The active host has no main console.");
 
         const QString miniName = qsl("registryResetMini");
         const QString userWindowName = qsl("registryResetUserWindow");
@@ -3958,7 +3974,7 @@ noViewSelectionReport = table.concat(noViewSelectionProblems, '; ')
         QVERIFY2(userWindow, qPrintable(userWindowMessage));
         QVERIFY2(host->createBuffer(bufferName), "createBuffer() refused a name that was not in use.");
 
-        host->mpConsole->resetMainConsole();
+        host->mainConsoleView()->resetMainConsole();
 
         QVERIFY2(!host->windowRegistry().hasSubConsole(miniName), "Resetting the main console left a miniconsole in the profile's window registry.");
         QVERIFY2(!host->windowRegistry().hasSubConsole(userWindowName), "Resetting the main console left a user window in the profile's window registry.");
@@ -3978,7 +3994,7 @@ noViewSelectionReport = table.concat(noViewSelectionProblems, '; ')
         startProfile();
         auto host = mudlet::self()->getActiveHost();
         QVERIFY2(host, "No active host available for the test.");
-        QVERIFY2(host->mpConsole, "The active host has no main console.");
+        QVERIFY2(host->mainConsoleView(), "The active host has no main console.");
 
         const QString miniName = qsl("registryOrphanedMini");
         const QString userWindowName = qsl("registryOrphanedUserWindow");
@@ -4009,7 +4025,7 @@ noViewSelectionReport = table.concat(noViewSelectionProblems, '; ')
         startProfile();
         auto host = mudlet::self()->getActiveHost();
         QVERIFY2(host, "No active host available for the test.");
-        QVERIFY2(host->mpConsole, "The active host has no main console.");
+        QVERIFY2(host->mainConsoleView(), "The active host has no main console.");
 
         const QString firstName = qsl("registrySnapshotOne");
         const QString secondName = qsl("registrySnapshotTwo");
@@ -4021,7 +4037,7 @@ noViewSelectionReport = table.concat(noViewSelectionProblems, '; ')
         const QStringList names = host->windowRegistry().subConsoleNames();
         QVERIFY2(names.contains(firstName) && names.contains(secondName), qPrintable(qsl("Not every sub-console reached the snapshot: %1").arg(names.join(QChar::Space))));
 
-        const auto [deleted, deleteMessage] = host->mpConsole->deleteMiniConsole(secondName);
+        const auto [deleted, deleteMessage] = host->mainConsoleView()->deleteMiniConsole(secondName);
         QVERIFY2(deleted, qPrintable(deleteMessage));
         QVERIFY2(!host->windowRegistry().hasSubConsole(secondName), "Deleting the user window left it in the registry, so the snapshot is not being tested against a real removal.");
         QVERIFY2(names.contains(firstName) && names.contains(secondName), "Removing a sub-console changed a snapshot of the names that had already been taken.");
@@ -4034,7 +4050,7 @@ noViewSelectionReport = table.concat(noViewSelectionProblems, '; ')
         startProfile();
         auto host = mudlet::self()->getActiveHost();
         QVERIFY2(host, "No active host available for the test.");
-        QVERIFY2(host->mpConsole, "The active host has no main console.");
+        QVERIFY2(host->mainConsoleView(), "The active host has no main console.");
 
         const QString miniName = qsl("registryLookupMini");
         const QString userWindowName = qsl("registryLookupUserWindow");
@@ -4096,12 +4112,12 @@ noViewSelectionReport = table.concat(noViewSelectionProblems, '; ')
         startProfile();
         auto host = mudlet::self()->getActiveHost();
         QVERIFY2(host, "No active host available for the test.");
-        QVERIFY2(host->mpConsole, "The active host has no main console.");
+        QVERIFY2(host->mainConsoleView(), "The active host has no main console.");
 
         const QString miniName = qsl("registryOpsMini");
         const auto [mini, miniMessage] = host->createMiniConsole(QString(), miniName, 10, 20, 100, 50);
         QVERIFY2(mini, qPrintable(miniMessage));
-        TConsole* widget = host->mpConsole->subConsoleWidget(miniName);
+        TConsole* widget = host->mainConsoleView()->subConsoleWidget(miniName);
         QVERIFY2(widget, "Creating a miniconsole left the console's own widget map empty.");
         QWidget* const mainParent = widget->parentWidget();
         QVERIFY2(mainParent, "The miniconsole was created with no parent.");
@@ -4151,7 +4167,7 @@ noViewSelectionReport = table.concat(noViewSelectionProblems, '; ')
         const QString userWindowName = qsl("registryOpsHostWindow");
         const auto [userWindow, userWindowMessage] = host->openWindow(userWindowName, false, false, qsl("f"));
         QVERIFY2(userWindow, qPrintable(userWindowMessage));
-        TDockWidget* dockWidget = host->mpConsole->dockWidget(userWindowName);
+        TDockWidget* dockWidget = host->mainConsoleView()->dockWidget(userWindowName);
         QVERIFY2(dockWidget, "The user window to move the miniconsole into was not created.");
 
         const auto [moved, moveMessage] = host->setWindow(userWindowName, miniName, 5, 6, true);
@@ -4173,14 +4189,14 @@ noViewSelectionReport = table.concat(noViewSelectionProblems, '; ')
         startProfile();
         auto host = mudlet::self()->getActiveHost();
         QVERIFY2(host, "No active host available for the test.");
-        QVERIFY2(host->mpConsole, "The active host has no main console.");
+        QVERIFY2(host->mainConsoleView(), "The active host has no main console.");
 
         const QString userWindowName = qsl("registryDockOpsWindow");
         const auto [userWindow, userWindowMessage] = host->openWindow(userWindowName, false, true, qsl("r"));
         QVERIFY2(userWindow, qPrintable(userWindowMessage));
-        TDockWidget* dockWidget = host->mpConsole->dockWidget(userWindowName);
+        TDockWidget* dockWidget = host->mainConsoleView()->dockWidget(userWindowName);
         QVERIFY2(dockWidget, "Creating a user window left the console's own dock map empty.");
-        TConsole* widget = host->mpConsole->subConsoleWidget(userWindowName);
+        TConsole* widget = host->mainConsoleView()->subConsoleWidget(userWindowName);
         QVERIFY2(widget, "Creating a user window left the console's own widget map empty.");
         QVERIFY2(!dockWidget->isFloating(), "The user window was asked to dock on the right but came up floating, so floating it is not a change.");
 
@@ -4205,7 +4221,7 @@ noViewSelectionReport = table.concat(noViewSelectionProblems, '; ')
         // The profile's stylesheet reaches every dock by way of the console
         const QString styleSheet = qsl("QDockWidget { border: 2px solid #123456; }");
         QVERIFY2(host->setProfileStyleSheet(styleSheet), "setProfileStyleSheet() was refused.");
-        QCOMPARE(host->mpConsole->styleSheet(), styleSheet);
+        QCOMPARE(host->mainConsoleView()->styleSheet(), styleSheet);
         QCOMPARE(dockWidget->styleSheet(), styleSheet);
 
         // and the layout-changed flag is raised and cleared on the dock, by name.
@@ -4225,21 +4241,21 @@ noViewSelectionReport = table.concat(noViewSelectionProblems, '; ')
         startProfile();
         auto host = mudlet::self()->getActiveHost();
         QVERIFY2(host, "No active host available for the test.");
-        QVERIFY2(host->mpConsole, "The active host has no main console.");
+        QVERIFY2(host->mainConsoleView(), "The active host has no main console.");
 
         QCOMPARE(host->openWindow(QString(), false, true, QString()), std::make_pair(false, qsl("an userwindow cannot have an empty string as its name")));
 
         const QString miniConsoleName = qsl("openWindowMiniConsole");
         QVERIFY2(host->createMiniConsole(qsl("main"), miniConsoleName, 0, 0, 50, 50).first, "The miniconsole was not created.");
         QCOMPARE(host->openWindow(miniConsoleName, false, true, QString()), std::make_pair(false, qsl("userwindow '%1' already exists").arg(miniConsoleName)));
-        QVERIFY2(!host->mpConsole->dockWidget(miniConsoleName), "Refusing a miniconsole's name still made a dock for it.");
+        QVERIFY2(!host->mainConsoleView()->dockWidget(miniConsoleName), "Refusing a miniconsole's name still made a dock for it.");
 
         const QString name = qsl("openWindowPlacement");
         const std::pair<bool, QString> opened{true, QString()};
         QCOMPARE(host->openWindow(name, false, false, QString()), opened);
-        TDockWidget* dockWidget = host->mpConsole->dockWidget(name);
+        TDockWidget* dockWidget = host->mainConsoleView()->dockWidget(name);
         QVERIFY2(dockWidget, "openWindow() made no dock.");
-        QCOMPARE(host->mpConsole->subConsoleWidget(name)->getType(), TConsole::UserWindow);
+        QCOMPARE(host->mainConsoleView()->subConsoleWidget(name)->getType(), TConsole::UserWindow);
         QVERIFY2(!dockWidget->isHidden(), "openWindow() left the new user window hidden.");
         QCOMPARE(dockWidget->allowedAreas(), Qt::NoDockWidgetArea);
         QCOMPARE(mudlet::self()->dockWidgetArea(dockWidget), Qt::RightDockWidgetArea);
@@ -4248,7 +4264,7 @@ noViewSelectionReport = table.concat(noViewSelectionProblems, '; ')
         // Re-opening shows the same dock again rather than refusing the name
         QVERIFY2(host->hideWindow(name), "hideWindow() did not find the user window.");
         QCOMPARE(host->openWindow(name, false, true, QString()), opened);
-        QCOMPARE(host->mpConsole->dockWidget(name), dockWidget);
+        QCOMPARE(host->mainConsoleView()->dockWidget(name), dockWidget);
         QVERIFY2(!dockWidget->isHidden(), "Re-opening the user window left it hidden.");
         QCOMPARE(dockWidget->allowedAreas(), Qt::AllDockWidgetAreas);
 
@@ -4303,13 +4319,13 @@ noViewSelectionReport = table.concat(noViewSelectionProblems, '; ')
         // without being deregistered, so its name is only free once that has run
         const QString childName = qsl("openWindowChildConsole");
         QVERIFY2(host->createMiniConsole(name, childName, 0, 0, 50, 50).first, "The miniconsole inside the user window was not created.");
-        const QPointer<TConsole> child = host->mpConsole->subConsoleWidget(childName);
-        QVERIFY2(host->mpConsole->deleteMiniConsole(name).first, "The user window was not deleted.");
+        const QPointer<TConsole> child = host->mainConsoleView()->subConsoleWidget(childName);
+        QVERIFY2(host->mainConsoleView()->deleteMiniConsole(name).first, "The user window was not deleted.");
         QCOMPARE(host->openWindow(childName, false, true, QString()), std::make_pair(false, qsl("userwindow '%1' already exists").arg(childName)));
         QCoreApplication::sendPostedEvents(nullptr, QEvent::DeferredDelete);
         QVERIFY2(child.isNull(), "The miniconsole inside the deleted user window was never destroyed.");
         QCOMPARE(host->openWindow(childName, false, true, QString()), opened);
-        QCOMPARE(host->mpConsole->subConsoleWidget(childName)->getType(), TConsole::UserWindow);
+        QCOMPARE(host->mainConsoleView()->subConsoleWidget(childName)->getType(), TConsole::UserWindow);
     }
 
     // mudlet::slot_tabMoved() pairs each tab with its console by the console's
@@ -4319,15 +4335,15 @@ noViewSelectionReport = table.concat(noViewSelectionProblems, '; ')
         startProfile();
         auto host = mudlet::self()->getActiveHost();
         QVERIFY2(host, "No active host available for the test.");
-        QVERIFY2(host->mpConsole, "The active host has no main console.");
-        QCOMPARE(host->mpConsole->property("HostName").toString(), mHostname);
+        QVERIFY2(host->mainConsoleView(), "The active host has no main console.");
+        QCOMPARE(host->mainConsoleView()->property("HostName").toString(), mHostname);
 
         const QString newName = qsl("Test-ConsoleModelRenamed");
         auto restoreName = qScopeGuard([host, this]() {
             host->setName(mHostname);
         });
         host->setName(newName);
-        QCOMPARE(host->mpConsole->property("HostName").toString(), newName);
+        QCOMPARE(host->mainConsoleView()->property("HostName").toString(), newName);
     }
 
     // New borders lay the main console out again, and scripts hear the room
@@ -4337,8 +4353,8 @@ noViewSelectionReport = table.concat(noViewSelectionProblems, '; ')
         startProfile();
         auto host = mudlet::self()->getActiveHost();
         QVERIFY2(host, "No active host available for the test.");
-        QVERIFY2(host->mpConsole, "The active host has no main console.");
-        const QSize consoleSize = host->mpConsole->size();
+        QVERIFY2(host->mainConsoleView(), "The active host has no main console.");
+        const QSize consoleSize = host->mainConsoleView()->size();
         QVERIFY2(consoleSize.width() != consoleSize.height(), "The console is square, so a width and height swapped over would go unnoticed.");
 
         runLua(host,
@@ -4346,9 +4362,9 @@ noViewSelectionReport = table.concat(noViewSelectionProblems, '; ')
                    "registerAnonymousEventHandler('sysWindowResizeEvent', function(_, w, h) borderResizeWidth, borderResizeHeight = w, h end)\n"));
         host->setUserBorders(QMargins(30, 20, 10, 5));
 
-        QCOMPARE(host->mpConsole->size(), consoleSize);
+        QCOMPARE(host->mainConsoleView()->size(), consoleSize);
         QCOMPARE(luaGlobalNumber(host, "borderResizeWidth"), consoleSize.width() - 30 - 10);
-        QCOMPARE(luaGlobalNumber(host, "borderResizeHeight"), consoleSize.height() - 20 - 5 - host->mpConsole->mpCommandLine->height());
+        QCOMPARE(luaGlobalNumber(host, "borderResizeHeight"), consoleSize.height() - 20 - 5 - host->mainConsoleView()->mpCommandLine->height());
     }
 
     // Every profile's sub-consoles are restyled when the application palette
@@ -4358,12 +4374,12 @@ noViewSelectionReport = table.concat(noViewSelectionProblems, '; ')
         startProfile();
         auto host = mudlet::self()->getActiveHost();
         QVERIFY2(host, "No active host available for the test.");
-        QVERIFY2(host->mpConsole, "The active host has no main console.");
+        QVERIFY2(host->mainConsoleView(), "The active host has no main console.");
 
         const QString miniName = qsl("registryRecolouredMini");
         const auto [mini, miniMessage] = host->createMiniConsole(QString(), miniName, 0, 0, 40, 40);
         QVERIFY2(mini, qPrintable(miniMessage));
-        TConsole* widget = host->mpConsole->subConsoleWidget(miniName);
+        TConsole* widget = host->mainConsoleView()->subConsoleWidget(miniName);
         QVERIFY2(widget, "Creating a miniconsole left the console's own widget map empty.");
         QVERIFY2(widget->mpMainDisplay, "The miniconsole has no display to restyle.");
 
@@ -4387,22 +4403,22 @@ noViewSelectionReport = table.concat(noViewSelectionProblems, '; ')
         startProfile();
         auto host = mudlet::self()->getActiveHost();
         QVERIFY2(host, "No active host available for the test.");
-        QVERIFY2(host->mpConsole, "The active host has no main console.");
+        QVERIFY2(host->mainConsoleView(), "The active host has no main console.");
 
         const QString scrollBoxName = qsl("registryResetScrollBox");
         const QString commandLineName = qsl("registryResetCommandLine");
         const QString textBoxName = qsl("registryResetTextBox");
         const auto [scrollBox, scrollBoxMessage] = host->createScrollBox(QString(), scrollBoxName, 0, 0, 40, 40);
         QVERIFY2(scrollBox, qPrintable(scrollBoxMessage));
-        const auto [commandLine, commandLineMessage] = host->mpConsole->createCommandLine(QString(), commandLineName, 0, 50, 40, 20);
+        const auto [commandLine, commandLineMessage] = host->mainConsoleView()->createCommandLine(QString(), commandLineName, 0, 50, 40, 20);
         QVERIFY2(commandLine, qPrintable(commandLineMessage));
-        const auto [textBox, textBoxMessage] = host->mpConsole->createTextBox(QString(), textBoxName, 0, 80, 40, 40);
+        const auto [textBox, textBoxMessage] = host->mainConsoleView()->createTextBox(QString(), textBoxName, 0, 80, 40, 40);
         QVERIFY2(textBox, qPrintable(textBoxMessage));
         QVERIFY2(host->windowRegistry().hasScrollBox(scrollBoxName), "Creating a scroll box registered nothing in the profile's window registry.");
         QVERIFY2(host->windowRegistry().hasCommandLine(commandLineName), "Creating a command line registered nothing in the profile's window registry.");
         QVERIFY2(host->windowRegistry().hasTextBox(textBoxName), "Creating a text box registered nothing in the profile's window registry.");
 
-        host->mpConsole->resetMainConsole();
+        host->mainConsoleView()->resetMainConsole();
 
         QVERIFY2(!host->windowRegistry().hasScrollBox(scrollBoxName), "Resetting the main console left a scroll box in the profile's window registry.");
         QVERIFY2(!host->windowRegistry().hasCommandLine(commandLineName), "Resetting the main console left a command line in the profile's window registry.");
@@ -4424,19 +4440,19 @@ noViewSelectionReport = table.concat(noViewSelectionProblems, '; ')
         startProfile();
         auto host = mudlet::self()->getActiveHost();
         QVERIFY2(host, "No active host available for the test.");
-        QVERIFY2(host->mpConsole, "The active host has no main console.");
+        QVERIFY2(host->mainConsoleView(), "The active host has no main console.");
 
         const QString scrollBoxName = qsl("registryHostingScrollBox");
         const QString commandLineName = qsl("registryNestedCommandLine");
         const auto [scrollBox, scrollBoxMessage] = host->createScrollBox(QString(), scrollBoxName, 0, 0, 100, 100);
         QVERIFY2(scrollBox, qPrintable(scrollBoxMessage));
-        const auto [commandLine, commandLineMessage] = host->mpConsole->createCommandLine(scrollBoxName, commandLineName, 0, 0, 80, 20);
+        const auto [commandLine, commandLineMessage] = host->mainConsoleView()->createCommandLine(scrollBoxName, commandLineName, 0, 0, 80, 20);
         QVERIFY2(commandLine, qPrintable(commandLineMessage));
-        const QPointer<TCommandLine> commandLineWidget = host->mpConsole->subCommandLineWidget(commandLineName);
+        const QPointer<TCommandLine> commandLineWidget = host->mainConsoleView()->subCommandLineWidget(commandLineName);
         QVERIFY2(commandLineWidget, "Creating a command line inside a scroll box left no widget in the console's own map.");
         QCOMPARE(host->windowType(commandLineName), std::optional<QString>(qsl("commandline")));
 
-        const auto [deleted, deleteMessage] = host->mpConsole->deleteScrollBox(scrollBoxName);
+        const auto [deleted, deleteMessage] = host->mainConsoleView()->deleteScrollBox(scrollBoxName);
         QVERIFY2(deleted, qPrintable(deleteMessage));
 
         // Still registered at this point, because the scroll box is only queued
@@ -4448,7 +4464,7 @@ noViewSelectionReport = table.concat(noViewSelectionProblems, '; ')
 
         QVERIFY2(!host->windowRegistry().hasCommandLine(commandLineName), "Destroying a scroll box left the command line inside it in the profile's window registry.");
         QVERIFY2(!host->windowType(commandLineName).has_value(), "Host still reports a window type for a command line destroyed with the scroll box it was in.");
-        QVERIFY2(!host->mpConsole->subCommandLineWidget(commandLineName), "The console's own map still hands out a command line destroyed with its scroll box.");
+        QVERIFY2(!host->mainConsoleView()->subCommandLineWidget(commandLineName), "The console's own map still hands out a command line destroyed with its scroll box.");
     }
 
     // Deleting a command line only queues the widget for deletion, so a
@@ -4460,15 +4476,15 @@ noViewSelectionReport = table.concat(noViewSelectionProblems, '; ')
         startProfile();
         auto host = mudlet::self()->getActiveHost();
         QVERIFY2(host, "No active host available for the test.");
-        QVERIFY2(host->mpConsole, "The active host has no main console.");
+        QVERIFY2(host->mainConsoleView(), "The active host has no main console.");
 
         const QString commandLineName = qsl("registryReplacedCommandLine");
-        const auto [commandLine, commandLineMessage] = host->mpConsole->createCommandLine(QString(), commandLineName, 0, 50, 40, 20);
+        const auto [commandLine, commandLineMessage] = host->mainConsoleView()->createCommandLine(QString(), commandLineName, 0, 50, 40, 20);
         QVERIFY2(commandLine, qPrintable(commandLineMessage));
-        const QPointer<TCommandLine> original = host->mpConsole->subCommandLineWidget(commandLineName);
+        const QPointer<TCommandLine> original = host->mainConsoleView()->subCommandLineWidget(commandLineName);
         QVERIFY2(original, "Creating a command line left no widget in the console's own map.");
 
-        const auto [deleted, deleteMessage] = host->mpConsole->deleteCommandLine(commandLineName);
+        const auto [deleted, deleteMessage] = host->mainConsoleView()->deleteCommandLine(commandLineName);
         QVERIFY2(deleted, qPrintable(deleteMessage));
         QVERIFY2(!host->windowRegistry().hasCommandLine(commandLineName), "Deleting a command line left it in the profile's window registry.");
 
@@ -4476,16 +4492,143 @@ noViewSelectionReport = table.concat(noViewSelectionProblems, '; ')
         // check below would take a plain second create for a replacement.
         QVERIFY2(!original.isNull(), "The old command line was already destroyed before its replacement was made, so nothing below tests a replacement outliving a deferred delete.");
 
-        const auto [recreated, recreateMessage] = host->mpConsole->createCommandLine(QString(), commandLineName, 0, 50, 40, 20);
+        const auto [recreated, recreateMessage] = host->mainConsoleView()->createCommandLine(QString(), commandLineName, 0, 50, 40, 20);
         QVERIFY2(recreated, qPrintable(recreateMessage));
-        TCommandLine* replacement = host->mpConsole->subCommandLineWidget(commandLineName);
+        TCommandLine* replacement = host->mainConsoleView()->subCommandLineWidget(commandLineName);
         QVERIFY2(replacement && replacement != original, "Creating a command line over a deleted name did not produce a new widget.");
 
         QTRY_VERIFY_WITH_TIMEOUT(original.isNull(), 5s);
 
         QVERIFY2(host->windowRegistry().hasCommandLine(commandLineName), "The old command line's deferred delete took its replacement's registry entry with it.");
         QCOMPARE(host->windowType(commandLineName), std::optional<QString>(qsl("commandline")));
-        QVERIFY2(host->mpConsole->subCommandLineWidget(commandLineName) == replacement, "The old command line's deferred delete took its replacement out of the console's own map.");
+        QVERIFY2(host->mainConsoleView()->subCommandLineWidget(commandLineName) == replacement, "The old command line's deferred delete took its replacement out of the console's own map.");
+    }
+
+    // A mini console's command line takes the name of a standalone one, which stays on screen and can
+    // still be typed in; what is typed there must not become the name's text.
+    void test_aDisplacedCommandLineLeavesItsNamesTextAlone()
+    {
+        startProfile();
+        auto host = mudlet::self()->getActiveHost();
+        QVERIFY2(host, "No active host available for the test.");
+        QVERIFY2(host->mainConsoleView(), "The active host has no main console.");
+
+        const QString name = qsl("displacedCommandLine");
+        const auto [commandLine, commandLineMessage] = host->mainConsoleView()->createCommandLine(QString(), name, 0, 50, 40, 20);
+        QVERIFY2(commandLine, qPrintable(commandLineMessage));
+        const QPointer<TCommandLine> displaced = host->mainConsoleView()->subCommandLineWidget(name);
+        QVERIFY2(displaced, "Creating a command line left no widget in the console's own map.");
+
+        runLua(host, qsl("createMiniConsole('%1', 0, 100, 200, 100)\nenableCommandLine('%1')\nprintCmdLine('%1', 'mini console text')\n").arg(name));
+        TCommandLine* replacement = host->mainConsoleView()->subCommandLineWidget(name);
+        QVERIFY2(replacement && replacement != displaced, "The mini console's command line did not take the name, so nothing below tests a displaced one.");
+        QCOMPARE(host->commandLineText(name), std::optional<QString>(qsl("mini console text")));
+
+        displaced->setPlainText(qsl("typed into the displaced one"));
+
+        QCOMPARE(host->commandLineText(name), std::optional<QString>(qsl("mini console text")));
+    }
+
+    void test_aCommandLineStartsWithItsSavedHistorySetting()
+    {
+        startProfile();
+        auto host = mudlet::self()->getActiveHost();
+        QVERIFY2(host, "No active host available for the test.");
+        QVERIFY2(host->mainConsoleView(), "The active host has no main console.");
+
+        const QString name = qsl("historylessCommandLine");
+        host->setCmdLineSettings(enums::SubCommandLine, false, name);
+        const auto [commandLine, commandLineMessage] = host->mainConsoleView()->createCommandLine(QString(), name, 0, 50, 40, 20);
+        QVERIFY2(commandLine, qPrintable(commandLineMessage));
+        QVERIFY2(!host->mainConsoleView()->subCommandLineWidget(name)->mSaveCommands, "The command line did not take its saved setting, so nothing below tests reading it.");
+
+        QCOMPARE(host->commandLineSavesHistory(name), std::optional<bool>(false));
+    }
+
+    // setTextEditFont() and setTextEditFontSize() change one part of the font the
+    // registry holds, so it must follow every font the widget takes.
+    void test_aTextBoxsFontFollowsTheWidget()
+    {
+        startProfile();
+        auto host = mudlet::self()->getActiveHost();
+        QVERIFY2(host, "No active host available for the test.");
+        QVERIFY2(host->mainConsoleView(), "The active host has no main console.");
+
+        const QString name = qsl("fontFollowingTextBox");
+        runLua(host, qsl("createTextEdit('main', '%1', 0, 0, 100, 50)\n").arg(name));
+        TTextBox* textBox = host->mainConsoleView()->textBoxWidget(name);
+        QVERIFY2(textBox, "createTextEdit() made no widget.");
+        QCOMPARE(host->textBoxFont(name), std::optional<QFont>(textBox->font()));
+
+        runLua(host, qsl("setTextEditStyleSheet('%1', 'QPlainTextEdit { font-size: 23pt; }')\n").arg(name));
+        QVERIFY2(textBox->font().pointSize() == 23, "The style sheet did not change the widget's font, so nothing below tests following it.");
+        QCOMPARE(host->textBoxFont(name), std::optional<QFont>(textBox->font()));
+
+        runLua(host, qsl("setTextEditStyleSheet('%1', '')\nsetTextEditFontSize('%1', 9)\n").arg(name));
+        QCOMPARE(textBox->font().pointSize(), 9);
+        QCOMPARE(host->textBoxFont(name), std::optional<QFont>(textBox->font()));
+    }
+
+    // The label getters read the model, so whatever restyles, retips or refonts the
+    // widget - a script, the label itself or an application stylesheet - must reach it.
+    void test_aLabelsStyleSheetToolTipAndFontFollowTheWidget()
+    {
+        startProfile();
+        auto host = mudlet::self()->getActiveHost();
+        QVERIFY2(host, "No active host available for the test.");
+        QVERIFY2(host->mainConsoleView(), "The active host has no main console.");
+
+        const QString name = qsl("followedLabel");
+        const auto [created, message] = host->createLabel(QString(), name, 0, 0, 100, 40, true, false);
+        QVERIFY2(created, qPrintable(message));
+        QPointer<TLabel> label = host->mainConsoleView()->labelWidget(name);
+        QVERIFY2(label, "Creating a label left no widget in the console's own map.");
+        auto restoreAppStyleSheet = qScopeGuard([previous = qApp->styleSheet()]() {
+            qApp->setStyleSheet(previous);
+        });
+
+        auto compareWithTheWidget = [&](const char* step) {
+            QVERIFY2(label, step);
+            QVERIFY2(host->labelStyleSheet(name) == std::optional<QString>(label->styleSheet()), step);
+            QVERIFY2(host->labelToolTip(name) == std::optional<QString>(label->toolTip()), step);
+            QVERIFY2(host->labelFont(name) == std::optional<QFont>(label->font()), step);
+        };
+
+        compareWithTheWidget("a new label");
+        if (QTest::currentTestFailed()) {
+            return;
+        }
+        runLua(host, qsl("setLabelStyleSheet('%1', 'font-size: 23pt; color: red;')").arg(name));
+        compareWithTheWidget("a script set a stylesheet with a font in it");
+        if (QTest::currentTestFailed()) {
+            return;
+        }
+        QCOMPARE(host->labelFont(name)->pointSize(), 23);
+        runLua(host, qsl("setLabelToolTip('%1', 'followed tip', 2)").arg(name));
+        compareWithTheWidget("a script set a tooltip");
+        if (QTest::currentTestFailed()) {
+            return;
+        }
+        QCOMPARE(host->labelToolTip(name), std::optional<QString>(qsl("followed tip")));
+        runLua(host, qsl("setLabelStyleSheet('%1', '')").arg(name));
+        compareWithTheWidget("a script cleared the stylesheet");
+        if (QTest::currentTestFailed()) {
+            return;
+        }
+        qApp->setStyleSheet(qsl("QLabel { font-size: 17pt; }"));
+        compareWithTheWidget("an application stylesheet set the font");
+        if (QTest::currentTestFailed()) {
+            return;
+        }
+        QCOMPARE(host->labelFont(name)->pointSize(), 17);
+        qApp->setStyleSheet(QString());
+        label->setFont(QFont(label->font().family(), 31));
+        compareWithTheWidget("the widget's font was set directly");
+        if (QTest::currentTestFailed()) {
+            return;
+        }
+        label->setToolTip(QString());
+        compareWithTheWidget("the widget's tooltip was cleared directly");
     }
 
     // A scroll box, a command line and a text box are the three kinds nothing
@@ -4496,16 +4639,16 @@ noViewSelectionReport = table.concat(noViewSelectionProblems, '; ')
         startProfile();
         auto host = mudlet::self()->getActiveHost();
         QVERIFY2(host, "No active host available for the test.");
-        QVERIFY2(host->mpConsole, "The active host has no main console.");
+        QVERIFY2(host->mainConsoleView(), "The active host has no main console.");
 
         const QString scrollBoxName = qsl("registryOrphanedScrollBox");
         const QString commandLineName = qsl("registryOrphanedCommandLine");
         const QString textBoxName = qsl("registryOrphanedTextBox");
         const auto [scrollBox, scrollBoxMessage] = host->createScrollBox(QString(), scrollBoxName, 0, 0, 40, 40);
         QVERIFY2(scrollBox, qPrintable(scrollBoxMessage));
-        const auto [commandLine, commandLineMessage] = host->mpConsole->createCommandLine(QString(), commandLineName, 0, 50, 40, 20);
+        const auto [commandLine, commandLineMessage] = host->mainConsoleView()->createCommandLine(QString(), commandLineName, 0, 50, 40, 20);
         QVERIFY2(commandLine, qPrintable(commandLineMessage));
-        const auto [textBox, textBoxMessage] = host->mpConsole->createTextBox(QString(), textBoxName, 0, 80, 40, 40);
+        const auto [textBox, textBoxMessage] = host->mainConsoleView()->createTextBox(QString(), textBoxName, 0, 80, 40, 40);
         QVERIFY2(textBox, qPrintable(textBoxMessage));
         QCOMPARE(host->windowType(scrollBoxName), std::optional<QString>(qsl("scrollbox")));
         QCOMPARE(host->windowType(commandLineName), std::optional<QString>(qsl("commandline")));
@@ -4531,13 +4674,13 @@ noViewSelectionReport = table.concat(noViewSelectionProblems, '; ')
         startProfile();
         auto host = mudlet::self()->getActiveHost();
         QVERIFY2(host, "No active host available for the test.");
-        QVERIFY2(host->mpConsole, "The active host has no main console.");
+        QVERIFY2(host->mainConsoleView(), "The active host has no main console.");
 
         const QString windowName = qsl("registryScrollBoxParentWindow");
         const QString scrollBoxName = qsl("registryOrphanedChildScrollBox");
         runLua(host, qsl("openUserWindow('%1')\ncreateScrollBox('%1', '%2', 0, 0, 40, 40)\n").arg(windowName, scrollBoxName));
         QVERIFY2(host->windowRegistry().hasScrollBox(scrollBoxName), "Creating a scroll box into a user window registered nothing in the profile's window registry.");
-        TDockWidget* dock = host->mpConsole->dockWidget(windowName);
+        TDockWidget* dock = host->mainConsoleView()->dockWidget(windowName);
         QVERIFY2(dock, "Opening a user window left no dock in the console's own map.");
         QPointer<TScrollBox> widget = dock->findChild<TScrollBox*>(scrollBoxName);
         QVERIFY2(widget, "The scroll box was not created inside the user window's dock, so the checks below prove nothing.");
@@ -4570,13 +4713,13 @@ noViewSelectionReport = table.concat(noViewSelectionProblems, '; ')
         startProfile();
         auto host = mudlet::self()->getActiveHost();
         QVERIFY2(host, "No active host available for the test.");
-        QVERIFY2(host->mpConsole, "The active host has no main console.");
+        QVERIFY2(host->mainConsoleView(), "The active host has no main console.");
 
         const QString windowName = qsl("registryTextBoxParentWindow");
         const QString textBoxName = qsl("registryOrphanedChildTextBox");
         runLua(host, qsl("openUserWindow('%1')\ncreateTextEdit('%1', '%2', 0, 0, 40, 40)\n").arg(windowName, textBoxName));
         QVERIFY2(host->windowRegistry().hasTextBox(textBoxName), "Creating a text edit into a user window registered nothing in the profile's window registry.");
-        QPointer<TTextBox> widget = host->mpConsole->textBoxWidget(textBoxName);
+        QPointer<TTextBox> widget = host->mainConsoleView()->textBoxWidget(textBoxName);
         QVERIFY2(widget, "Creating a text edit into a user window left the console's own widget map empty.");
 
         runLua(host, qsl("deleteMiniConsole('%1')\n").arg(windowName));
@@ -4590,7 +4733,7 @@ noViewSelectionReport = table.concat(noViewSelectionProblems, '; ')
 
         QVERIFY2(!host->windowType(textBoxName).has_value(), "Host still reports a window type for a text edit destroyed with its user window.");
         QVERIFY2(!host->windowRegistry().hasTextBox(textBoxName), "A text edit destroyed with its user window stayed in the profile's window registry.");
-        QVERIFY2(!host->mpConsole->textBoxWidget(textBoxName), "A text edit destroyed with its user window left a dangling widget in the console's map.");
+        QVERIFY2(!host->mainConsoleView()->textBoxWidget(textBoxName), "A text edit destroyed with its user window left a dangling widget in the console's map.");
 
         // The crashing call, which reads that map entry and dies in the freed widget
         runLua(host, qsl("textEditText, textEditError = getTextEditText('%1')\ntextEditText = tostring(textEditText)\ntextEditError = tostring(textEditError)\n").arg(textBoxName));
@@ -4598,7 +4741,7 @@ noViewSelectionReport = table.concat(noViewSelectionProblems, '; ')
         QVERIFY2(luaGlobalString(host, "textEditError").contains(qsl("not found")),
                  qPrintable(qsl("getTextEditText did not report the name as gone, it answered: %1").arg(luaGlobalString(host, "textEditError"))));
 
-        const auto [recreated, recreateMessage] = host->mpConsole->createTextBox(QString(), textBoxName, 0, 0, 40, 40);
+        const auto [recreated, recreateMessage] = host->mainConsoleView()->createTextBox(QString(), textBoxName, 0, 0, 40, 40);
         QVERIFY2(recreated, qPrintable(qsl("The name of a text edit destroyed with its window could not be used again: %1").arg(recreateMessage)));
         // createTextBox() gates on the console's map alone, so on its own that
         // only restates the check above it. Writing through the name and reading
@@ -4614,11 +4757,11 @@ noViewSelectionReport = table.concat(noViewSelectionProblems, '; ')
         startProfile();
         auto host = mudlet::self()->getActiveHost();
         QVERIFY2(host, "No active host available for the test.");
-        QVERIFY2(host->mpConsole, "The active host has no main console.");
+        QVERIFY2(host->mainConsoleView(), "The active host has no main console.");
 
         const QString textBoxName = qsl("byNameTextBox");
         runLua(host, qsl("createTextEdit('main', '%1', 0, 0, 100, 50)\n").arg(textBoxName));
-        TTextBox* textBox = host->mpConsole->textBoxWidget(textBoxName);
+        TTextBox* textBox = host->mainConsoleView()->textBoxWidget(textBoxName);
         QVERIFY2(textBox, "createTextEdit() made no widget.");
 
         runLua(host,
@@ -4653,11 +4796,11 @@ noViewSelectionReport = table.concat(noViewSelectionProblems, '; ')
         startProfile();
         auto host = mudlet::self()->getActiveHost();
         QVERIFY2(host, "No active host available for the test.");
-        QVERIFY2(host->mpConsole, "The active host has no main console.");
+        QVERIFY2(host->mainConsoleView(), "The active host has no main console.");
 
         const QString labelName = qsl("byNameLabel");
         runLua(host, qsl("createLabel('%1', 0, 0, 100, 20, 1)\n").arg(labelName));
-        TLabel* label = host->mpConsole->labelWidget(labelName);
+        TLabel* label = host->mainConsoleView()->labelWidget(labelName);
         QVERIFY2(label, "createLabel() made no widget.");
         QFont sizedFont = label->font();
         sizedFont.setPointSize(19);
@@ -4685,14 +4828,14 @@ noViewSelectionReport = table.concat(noViewSelectionProblems, '; ')
         startProfile();
         auto host = mudlet::self()->getActiveHost();
         QVERIFY2(host, "No active host available for the test.");
-        QVERIFY2(host->mpConsole, "The active host has no main console.");
+        QVERIFY2(host->mainConsoleView(), "The active host has no main console.");
         // Anywhere else this would move the real pointer (X11), or not move it at all (Wayland)
         if (QGuiApplication::platformName() != qsl("offscreen")) {
             QSKIP("Needs the offscreen platform, which ctest sets, to place the pointer.");
         }
 
         const QPoint local(13, 7);
-        const QPoint global = host->mpConsole->mapToGlobal(local);
+        const QPoint global = host->mainConsoleView()->mapToGlobal(local);
         QVERIFY2(global != local, "The main console sits at the screen origin, so this cannot tell its coordinates from the screen's.");
         QCursor::setPos(global);
         QCOMPARE(QCursor::pos(), global);
@@ -4709,18 +4852,18 @@ noViewSelectionReport = table.concat(noViewSelectionProblems, '; ')
         startProfile();
         auto host = mudlet::self()->getActiveHost();
         QVERIFY2(host, "No active host available for the test.");
-        QVERIFY2(host->mpConsole, "The active host has no main console.");
+        QVERIFY2(host->mainConsoleView(), "The active host has no main console.");
 
         const QString gifPath = writeTestGif();
         QVERIFY2(!gifPath.isEmpty(), "Could not write a GIF that Qt reads back as a movie.");
         const QString labelName = qsl("scaledMovieLabel");
         runLua(host, qsl("createLabel('%1', 0, 0, 60, 30, 1)\nsetMovie('%1', '%2')\n").arg(labelName, gifPath));
-        TLabel* label = host->mpConsole->labelWidget(labelName);
+        TLabel* label = host->mainConsoleView()->labelWidget(labelName);
         QVERIFY2(label, "createLabel() made no widget.");
         QMovie* movie = label->movie();
         QVERIFY2(movie, "setMovie() gave the label no movie, so the checks below prove nothing.");
         const auto deleteTheLabel = qScopeGuard([host, labelName]() {
-            host->mpConsole->deleteLabel(labelName);
+            host->mainConsoleView()->deleteLabel(labelName);
         });
 
         runLua(host, qsl("setMovieSpeed('%1', 250)\n").arg(labelName));
@@ -4758,7 +4901,7 @@ noViewSelectionReport = table.concat(noViewSelectionProblems, '; ')
         startProfile();
         auto host = mudlet::self()->getActiveHost();
         QVERIFY2(host, "No active host available for the test.");
-        QVERIFY2(host->mpConsole, "The active host has no main console.");
+        QVERIFY2(host->mainConsoleView(), "The active host has no main console.");
 
         const QString outerName = qsl("registryOuterScrollBox");
         const QString innerName = qsl("registryNestedScrollBox");
@@ -4768,11 +4911,11 @@ noViewSelectionReport = table.concat(noViewSelectionProblems, '; ')
                    "createScrollBox('%1', '%2', 0, 0, 100, 100)\n"
                    "createTextEdit('%1', '%3', 0, 110, 100, 60)\n")
                        .arg(outerName, innerName, textBoxName));
-        TScrollBox* outer = host->mpConsole->findChild<TScrollBox*>(outerName);
+        TScrollBox* outer = host->mainConsoleView()->findChild<TScrollBox*>(outerName);
         QVERIFY2(outer, "Creating the outer scroll box left no widget under the console.");
         QPointer<TScrollBox> inner = outer->findChild<TScrollBox*>(innerName);
         QVERIFY2(inner, "The inner scroll box was not created inside the outer one, so the checks below prove nothing.");
-        QPointer<TTextBox> textBox = host->mpConsole->textBoxWidget(textBoxName);
+        QPointer<TTextBox> textBox = host->mainConsoleView()->textBoxWidget(textBoxName);
         QVERIFY2(textBox, "Creating a text edit into a scroll box left the console's own widget map empty.");
         // Not findChild() by name as for the scroll box: a text edit's object
         // name is decorated with the profile's, so ask the parentage instead
@@ -4780,7 +4923,7 @@ noViewSelectionReport = table.concat(noViewSelectionProblems, '; ')
         QCOMPARE(host->windowType(innerName), std::optional<QString>(qsl("scrollbox")));
         QCOMPARE(host->windowType(textBoxName), std::optional<QString>(qsl("textedit")));
 
-        const auto [deleted, deleteMessage] = host->mpConsole->deleteScrollBox(outerName);
+        const auto [deleted, deleteMessage] = host->mainConsoleView()->deleteScrollBox(outerName);
         QVERIFY2(deleted, qPrintable(deleteMessage));
 
         // Still registered at this point, because the outer box is only queued
@@ -4795,14 +4938,14 @@ noViewSelectionReport = table.concat(noViewSelectionProblems, '; ')
         QVERIFY2(!host->windowRegistry().hasTextBox(textBoxName), "A text edit destroyed with the scroll box it was in stayed in the profile's window registry.");
         QVERIFY2(!host->windowType(innerName).has_value(), "Host still reports a window type for a scroll box destroyed with the scroll box it was in.");
         QVERIFY2(!host->windowType(textBoxName).has_value(), "Host still reports a window type for a text edit destroyed with the scroll box it was in.");
-        QVERIFY2(!host->mpConsole->textBoxWidget(textBoxName), "A text edit destroyed with the scroll box it was in left a dangling widget in the console's map.");
+        QVERIFY2(!host->mainConsoleView()->textBoxWidget(textBoxName), "A text edit destroyed with the scroll box it was in left a dangling widget in the console's map.");
 
         // The scroll box goes through Host, which reads the registry; the text edit
         // is read straight out of the console's map, so it is written through and
         // read back to show the map holds a live one.
         const auto [recreatedScrollBox, scrollBoxMessage] = host->createScrollBox(QString(), innerName, 0, 0, 40, 40);
         QVERIFY2(recreatedScrollBox, qPrintable(qsl("The name of a scroll box destroyed with its scroll box could not be used again: %1").arg(scrollBoxMessage)));
-        const auto [recreatedTextBox, textBoxMessage] = host->mpConsole->createTextBox(QString(), textBoxName, 0, 50, 40, 40);
+        const auto [recreatedTextBox, textBoxMessage] = host->mainConsoleView()->createTextBox(QString(), textBoxName, 0, 50, 40, 40);
         QVERIFY2(recreatedTextBox, qPrintable(qsl("The name of a text edit destroyed with its scroll box could not be used again: %1").arg(textBoxMessage)));
         runLua(host, qsl("setTextEditText('%1', 'the nested replacement is reachable')\nnestedRoundTrippedText = tostring(getTextEditText('%1'))\n").arg(textBoxName));
         QCOMPARE(luaGlobalString(host, "nestedRoundTrippedText"), qsl("the nested replacement is reachable"));
@@ -4817,17 +4960,17 @@ noViewSelectionReport = table.concat(noViewSelectionProblems, '; ')
         startProfile();
         auto host = mudlet::self()->getActiveHost();
         QVERIFY2(host, "No active host available for the test.");
-        QVERIFY2(host->mpConsole, "The active host has no main console.");
+        QVERIFY2(host->mainConsoleView(), "The active host has no main console.");
 
         const QString scrollBoxName = qsl("registrySweptScrollBox");
         const QString textBoxName = qsl("registrySweptTextBox");
         runLua(host, qsl("createScrollBox('%1', 0, 0, 40, 40)\ncreateTextEdit('%2', 0, 50, 40, 40)\n").arg(scrollBoxName, textBoxName));
-        TScrollBox* scrollBox = host->mpConsole->findChild<TScrollBox*>(scrollBoxName);
+        TScrollBox* scrollBox = host->mainConsoleView()->findChild<TScrollBox*>(scrollBoxName);
         QVERIFY2(scrollBox, "Creating a scroll box left no widget under the console.");
-        TTextBox* textBox = host->mpConsole->textBoxWidget(textBoxName);
+        TTextBox* textBox = host->mainConsoleView()->textBoxWidget(textBoxName);
         QVERIFY2(textBox, "Creating a text edit left the console's own widget map empty.");
 
-        TMainConsole* console = host->mpConsole;
+        TMainConsole* console = host->mainConsoleView();
         bool consoleWasDestroyed = false;
         bool scrollBoxSevered = false;
         bool textBoxSevered = false;
@@ -4855,14 +4998,14 @@ noViewSelectionReport = table.concat(noViewSelectionProblems, '; ')
         startProfile();
         auto host = mudlet::self()->getActiveHost();
         QVERIFY2(host, "No active host available for the test.");
-        QVERIFY2(host->mpConsole, "The active host has no main console.");
+        QVERIFY2(host->mainConsoleView(), "The active host has no main console.");
 
         const QString scrollBoxName = qsl("registryReplacedScrollBox");
         runLua(host, qsl("createScrollBox('%1', 0, 0, 40, 40)\n").arg(scrollBoxName));
-        const QPointer<TScrollBox> original = host->mpConsole->findChild<TScrollBox*>(scrollBoxName);
+        const QPointer<TScrollBox> original = host->mainConsoleView()->findChild<TScrollBox*>(scrollBoxName);
         QVERIFY2(original, "Creating a scroll box left no widget under the console.");
 
-        const auto [deleted, deleteMessage] = host->mpConsole->deleteScrollBox(scrollBoxName);
+        const auto [deleted, deleteMessage] = host->mainConsoleView()->deleteScrollBox(scrollBoxName);
         QVERIFY2(deleted, qPrintable(deleteMessage));
         QVERIFY2(!host->windowRegistry().hasScrollBox(scrollBoxName), "Deleting a scroll box left it in the profile's window registry.");
 
@@ -4872,7 +5015,7 @@ noViewSelectionReport = table.concat(noViewSelectionProblems, '; ')
 
         runLua(host, qsl("createScrollBox('%1', 0, 0, 40, 40)\n").arg(scrollBoxName));
         TScrollBox* replacement = nullptr;
-        for (auto candidate : host->mpConsole->findChildren<TScrollBox*>(scrollBoxName)) {
+        for (auto candidate : host->mainConsoleView()->findChildren<TScrollBox*>(scrollBoxName)) {
             if (candidate != original) {
                 replacement = candidate;
             }
@@ -4883,7 +5026,7 @@ noViewSelectionReport = table.concat(noViewSelectionProblems, '; ')
 
         QVERIFY2(host->windowRegistry().hasScrollBox(scrollBoxName), "The old scroll box's deferred delete took its replacement's registry entry with it.");
         QCOMPARE(host->windowType(scrollBoxName), std::optional<QString>(qsl("scrollbox")));
-        QVERIFY2(host->mpConsole->resizePlainWindow(scrollBoxName, 33, 44), "The old scroll box's deferred delete took its replacement out of the console's own map.");
+        QVERIFY2(host->mainConsoleView()->resizePlainWindow(scrollBoxName, 33, 44), "The old scroll box's deferred delete took its replacement out of the console's own map.");
         QCOMPARE(replacement->size(), QSize(33, 44));
     }
 
@@ -4896,15 +5039,15 @@ noViewSelectionReport = table.concat(noViewSelectionProblems, '; ')
         startProfile();
         auto host = mudlet::self()->getActiveHost();
         QVERIFY2(host, "No active host available for the test.");
-        QVERIFY2(host->mpConsole, "The active host has no main console.");
+        QVERIFY2(host->mainConsoleView(), "The active host has no main console.");
 
         const QString textBoxName = qsl("registryReplacedTextBox");
-        const auto [created, createMessage] = host->mpConsole->createTextBox(QString(), textBoxName, 0, 80, 40, 40);
+        const auto [created, createMessage] = host->mainConsoleView()->createTextBox(QString(), textBoxName, 0, 80, 40, 40);
         QVERIFY2(created, qPrintable(createMessage));
-        const QPointer<TTextBox> original = host->mpConsole->textBoxWidget(textBoxName);
+        const QPointer<TTextBox> original = host->mainConsoleView()->textBoxWidget(textBoxName);
         QVERIFY2(original, "Creating a text edit left no widget in the console's own map.");
 
-        const auto [deleted, deleteMessage] = host->mpConsole->deleteTextBox(textBoxName);
+        const auto [deleted, deleteMessage] = host->mainConsoleView()->deleteTextBox(textBoxName);
         QVERIFY2(deleted, qPrintable(deleteMessage));
         QVERIFY2(!host->windowRegistry().hasTextBox(textBoxName), "Deleting a text edit left it in the profile's window registry.");
 
@@ -4912,16 +5055,16 @@ noViewSelectionReport = table.concat(noViewSelectionProblems, '; ')
         // check below would take a plain second create for a replacement.
         QVERIFY2(!original.isNull(), "The old text edit was already destroyed before its replacement was made, so nothing below tests a replacement outliving a deferred delete.");
 
-        const auto [recreated, recreateMessage] = host->mpConsole->createTextBox(QString(), textBoxName, 0, 80, 40, 40);
+        const auto [recreated, recreateMessage] = host->mainConsoleView()->createTextBox(QString(), textBoxName, 0, 80, 40, 40);
         QVERIFY2(recreated, qPrintable(recreateMessage));
-        TTextBox* replacement = host->mpConsole->textBoxWidget(textBoxName);
+        TTextBox* replacement = host->mainConsoleView()->textBoxWidget(textBoxName);
         QVERIFY2(replacement && replacement != original, "Creating a text edit over a deleted name did not produce a new widget.");
 
         QTRY_VERIFY_WITH_TIMEOUT(original.isNull(), 5s);
 
         QVERIFY2(host->windowRegistry().hasTextBox(textBoxName), "The old text edit's deferred delete took its replacement's registry entry with it.");
         QCOMPARE(host->windowType(textBoxName), std::optional<QString>(qsl("textedit")));
-        QVERIFY2(host->mpConsole->textBoxWidget(textBoxName) == replacement, "The old text edit's deferred delete took its replacement out of the console's own map.");
+        QVERIFY2(host->mainConsoleView()->textBoxWidget(textBoxName) == replacement, "The old text edit's deferred delete took its replacement out of the console's own map.");
         runLua(host, qsl("setTextEditText('%1', 'the replacement is still reachable')\nreplacedRoundTrippedText = tostring(getTextEditText('%1'))\n").arg(textBoxName));
         QCOMPARE(luaGlobalString(host, "replacedRoundTrippedText"), qsl("the replacement is still reachable"));
     }
@@ -4962,7 +5105,7 @@ private:
     // needs.
     void destroyTheView(Host* host)
     {
-        QPointer<TMainConsole> console = host->mpConsole;
+        QPointer<TMainConsole> console = host->mainConsoleView();
         // Forcing the close stops TMainConsole::closeEvent() asking whether the
         // profile should be saved, which would block on a modal dialog here.
         host->forceClose();
@@ -4974,7 +5117,7 @@ private:
                          },
                          5s),
                  "The main console view was not destroyed by closing the profile.");
-        QVERIFY2(host->mpConsole.isNull(), "The host still points at a main console.");
+        QVERIFY2(!host->mainConsoleView(), "The host still points at a main console.");
     }
 
     // Utility function redirecting this process's standard output into a file
