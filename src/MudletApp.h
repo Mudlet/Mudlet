@@ -92,7 +92,8 @@ public:
     static QString executableDir();
 
     // ~/.config/mudlet: the pre-XDG default, and the second place a portable.txt
-    // marker is looked for
+    // marker is looked for. Under a Flatpak or Snap sandbox it is wherever that
+    // sandbox lets Qt write instead.
     static QString legacyConfigDir();
 
     // The governing portable.txt, or empty; the one beside the executable outranks the config dir's.
