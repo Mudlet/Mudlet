@@ -32,9 +32,9 @@ public:
     static constexpr float scmMinDistance = 0.05f;
     static constexpr float scmMaxDistance = 100.0f;
     // Degrees from straight down; the limits keep the camera above the map's plane
-    static constexpr float scmMinTilt = 2.0f;
+    static constexpr float scmMinTilt = 0.0f;
     static constexpr float scmMaxTilt = 82.0f;
-    static constexpr float scmDefaultTilt = 42.0f;
+    static constexpr float scmDefaultTilt = 41.0f;
     // The azimuth that puts the camera south of its target, so north is up the screen and east is to its right
     static constexpr float scmNorthUpAzimuth = 270.0f;
     // Vertical, in degrees
@@ -50,7 +50,7 @@ public:
     // Positive steps zoom in
     void zoomBy(float steps);
     // The zoom steps for a wheel event, matching the 2D map: positive means zoom in
-    static int wheelZoomSteps(int angleDeltaY, bool fast, bool inverted);
+    static float wheelZoomSteps(int angleDeltaY, bool fast, bool inverted);
     // The distance that shows this many rooms across the shorter side of the view at the target
     static float distanceToShow(float rooms, float aspectRatio);
     void setViewportSize(int width, int height);
@@ -58,8 +58,6 @@ public:
 
     // Camera target control
     void setTarget(float x, float y, float z);
-    void translateTargetUp();
-    void translateTargetDown();
     void translateTargetLeft();
     void translateTargetRight();
     void translateTargetForward();

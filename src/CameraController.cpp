@@ -65,14 +65,6 @@ void CameraController::setTarget(float x, float y, float z)
     mTarget.setZ(z);
 };
 
-void CameraController::translateTargetUp()
-{
-    mTarget.setZ(mTarget.z() + 1);
-}
-void CameraController::translateTargetDown()
-{
-    mTarget.setZ(mTarget.z() - 1);
-}
 void CameraController::translateTargetLeft()
 {
     const QVector2D direction = mRightVector.toVector2D();
@@ -123,10 +115,11 @@ void CameraController::zoomBy(float steps)
     setScale(mDistance * std::pow(1.1f, -steps));
 }
 
-int CameraController::wheelZoomSteps(int angleDeltaY, bool fast, bool inverted)
+float CameraController::wheelZoomSteps(int angleDeltaY, bool fast, bool inverted)
 {
-    // One notch of a mouse wheel is 120, and the 2D map steps five times as fast with Ctrl
-    const int steps = qRound(angleDeltaY * (fast ? 5.0 : 1.0) / 120.0);
+    // One notch of a mouse wheel is 120, and the 2D map steps five times as fast with Ctrl.
+    // Not rounded: trackpads and smooth-scrolling wheels send a notch as many small deltas.
+    const float steps = static_cast<float>(angleDeltaY) * (fast ? 5.0f : 1.0f) / 120.0f;
     return inverted ? -steps : steps;
 }
 
@@ -159,6 +152,11 @@ void CameraController::shiftPerspective(float verticalAngle, float horizontalAng
         mUpVector /= mUpVector.length();
         mRightVector = QVector3D::normal(mPositionVector, mUpVector);
     }
+    // A free rotation can take the camera under the map, past where the tilt slider reaches
+    const QVector3D position = getPosition();
+    if (position.y() < scmMinTilt || position.y() > scmMaxTilt) {
+        setOrientation(position.y(), position.z(), getRoll());
+    }
 }
 
 QVector3D CameraController::rotateAround(QVector3D currentVector, QVector3D rotationAxis, float rotationAngle)
@@ -173,7 +171,7 @@ QVector3D CameraController::getPosition() const
 {
     const float theta = qRadiansToDegrees(std::acos(qBound(-1.0f, mPositionVector.z(), 1.0f)));
     if (mPositionVector.toVector2D().length() < 1e-6f) {
-        // Looking straight down, the azimuth is wherever the top of the screen faces
+        // Looking straight down, the camera sits on the side the bottom of the screen faces
         return QVector3D(mDistance, theta, qRadiansToDegrees(std::atan2(-mUpVector.y(), -mUpVector.x())));
     }
     return QVector3D(mDistance, theta, qRadiansToDegrees(std::atan2(mPositionVector.y(), mPositionVector.x())));

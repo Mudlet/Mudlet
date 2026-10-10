@@ -124,7 +124,17 @@ private slots:
         QCOMPARE(CameraController::wheelZoomSteps(-120, false, false), -1);
         QCOMPARE(CameraController::wheelZoomSteps(120, false, true), -1);
         QCOMPARE(CameraController::wheelZoomSteps(240, true, false), 10);
-        QCOMPARE(CameraController::wheelZoomSteps(30, false, false), 0);
+        // Trackpads and smooth-scrolling wheels split a notch into small deltas, each of which must still count
+        QCOMPARE(CameraController::wheelZoomSteps(30, false, false), 0.25f);
+        CameraController smooth;
+        smooth.setScale(2.0f);
+        for (int delta = 0; delta < 8; ++delta) {
+            smooth.zoomBy(CameraController::wheelZoomSteps(15, false, false));
+        }
+        CameraController notched;
+        notched.setScale(2.0f);
+        notched.zoomBy(CameraController::wheelZoomSteps(120, false, false));
+        QVERIFY2(qAbs(smooth.getScale() - notched.getScale()) < 1e-4f, qPrintable(qsl("eight 15 unit deltas zoomed to %1, one 120 unit notch to %2").arg(smooth.getScale()).arg(notched.getScale())));
 
         CameraController camera;
         camera.setScale(2.0f);
@@ -161,6 +171,30 @@ private slots:
         QVERIFY2(qAbs(std::remainder(camera.getPosition().z() - 300.0f, 360.0f)) < 0.01f, "setting the tilt changed the turn");
     }
 
+    // The tilt, turn and roll sliders each set the camera from the other two as read back,
+    // so the top view must read back as a tilt the camera can be set to again
+    void test_topViewStaysStraightDownWhenTurnedOrRolled()
+    {
+        CameraController camera;
+        camera.setTopView();
+        QVERIFY2(qAbs(camera.getPosition().y()) < 0.01f, qPrintable(qsl("the top view reads back a tilt of %1").arg(camera.getPosition().y())));
+        camera.setOrientation(camera.getPosition().y(), camera.getPosition().z() + 30.0f, camera.getRoll());
+        QVERIFY2(qAbs(camera.getPosition().y()) < 0.01f, qPrintable(qsl("turning the top view tilted it to %1").arg(camera.getPosition().y())));
+        camera.setOrientation(camera.getPosition().y(), camera.getPosition().z(), 20.0f);
+        QVERIFY2(qAbs(camera.getPosition().y()) < 0.01f, qPrintable(qsl("rolling the top view tilted it to %1").arg(camera.getPosition().y())));
+    }
+
+    void test_shiftingThePerspectiveStaysAboveTheMap()
+    {
+        for (const float verticalAngle : {-60.0f, 60.0f, -200.0f, 200.0f}) {
+            CameraController camera;
+            camera.shiftPerspective(verticalAngle, 0.0f, 0.0f);
+            const float tilt = camera.getPosition().y();
+            QVERIFY2(tilt >= CameraController::scmMinTilt - 0.01f && tilt <= CameraController::scmMaxTilt + 0.01f,
+                     qPrintable(qsl("tilting the default view by %1 left it at %2").arg(verticalAngle).arg(tilt)));
+        }
+    }
+
     void test_panningLookingStraightDownMovesNorth()
     {
         CameraController camera;
@@ -183,6 +217,16 @@ private slots:
         camera.updateMatrices();
         QVERIFY2(qAbs(toScreen(camera, QVector3D(10.0f, 0.0f, 0.0f)).x() - 1.0) < 0.01, "ten rooms east is not at the right edge");
         QVERIFY2(qAbs(toScreen(camera, QVector3D(0.0f, 10.0f, 0.0f)).y() - 1.0) < 0.01, "ten rooms north is not at the top edge");
+
+        // The rooms fit across the shorter side of the viewport
+        camera.setViewportSize(800, 600);
+        camera.setScale(CameraController::distanceToShow(20.0f, 800.0f / 600.0f));
+        camera.updateMatrices();
+        QVERIFY2(qAbs(toScreen(camera, QVector3D(0.0f, 10.0f, 0.0f)).y() - 1.0) < 0.01, "ten rooms north is not at the top edge of a wide view");
+        camera.setViewportSize(600, 800);
+        camera.setScale(CameraController::distanceToShow(20.0f, 600.0f / 800.0f));
+        camera.updateMatrices();
+        QVERIFY2(qAbs(toScreen(camera, QVector3D(10.0f, 0.0f, 0.0f)).x() - 1.0) < 0.01, "ten rooms east is not at the right edge of a tall view");
     }
 };
 

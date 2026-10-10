@@ -217,6 +217,8 @@ private:
     bool mCameraSmoothAnimating = false; // Dedicated flag for smooth camera animation
     int mPreviousRID = 0;                // Track previous room ID to detect changes
     bool mFramePending = true;
+    // A distance a script asked for since the last paint wins over framing a newly shown area
+    bool mDistanceRequested = false;
 
     // Private methods for modern OpenGL
     void updateMatrices();

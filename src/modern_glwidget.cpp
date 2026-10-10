@@ -332,9 +332,11 @@ void ModernGLWidget::paintGL()
         mCameraController.setGridMode(true);
     }
 
-    if (mFramePending) {
+    if (mFramePending && !mDistanceRequested) {
         frameArea();
     }
+    mFramePending = false;
+    mDistanceRequested = false;
 
     zmax = static_cast<float>(pArea->max_z);
     zmin = static_cast<float>(pArea->min_z);
@@ -891,6 +893,7 @@ void ModernGLWidget::shiftCamera(float verticalAngle, float horizontalAngle, flo
 void ModernGLWidget::setCameraPosition(float r, float theta, float phi)
 {
     mCameraController.setPosition(r, theta, phi);
+    mDistanceRequested = true;
     emitCameraControls();
     update();
 }
@@ -995,14 +998,16 @@ void ModernGLWidget::slot_shiftRight()
 void ModernGLWidget::slot_shiftZup()
 {
     mShiftMode = true;
-    mCameraController.translateTargetUp();
+    // Not the camera target: each paint sets that from the view center
+    ++mMapCenterZ;
     update();
 }
 
 void ModernGLWidget::slot_shiftZdown()
 {
     mShiftMode = true;
-    mCameraController.translateTargetDown();
+    // Not the camera target: each paint sets that from the view center
+    --mMapCenterZ;
     update();
 }
 
@@ -1180,12 +1185,12 @@ void ModernGLWidget::jumpTo(int areaId, int x, int y, int z)
 
 void ModernGLWidget::wheelEvent(QWheelEvent* e)
 {
-    const int steps = CameraController::wheelZoomSteps(e->angleDelta().y(), e->modifiers().testFlag(Qt::ControlModifier), mudlet::self()->invertMapZoom());
+    const float steps = CameraController::wheelZoomSteps(e->angleDelta().y(), e->modifiers().testFlag(Qt::ControlModifier), mudlet::self()->invertMapZoom());
     e->accept();
-    if (!steps) {
+    if (qFuzzyIsNull(steps)) {
         return;
     }
-    mCameraController.zoomBy(static_cast<float>(steps));
+    mCameraController.zoomBy(steps);
     emitCameraControls();
     update();
 }

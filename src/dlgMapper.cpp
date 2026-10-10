@@ -827,6 +827,10 @@ void dlgMapper::sync2DViewFrom3D()
     }
     // Read first: switchArea() recenters the 3D view as well
     const QVector3D center = modernWidget->viewCenter();
+    // The 3D view only centers on whole rooms, so if it was not moved the 2D map keeps its own center
+    if (areaId == mp2dMap->mAreaID && qRound(center.x()) == qRound(mp2dMap->mMapCenterX) && qRound(center.y()) == qRound(-mp2dMap->mMapCenterY) && qRound(center.z()) == mp2dMap->mMapCenterZ) {
+        return;
+    }
     if (areaId != mp2dMap->mAreaID) {
         mp2dMap->switchArea(areaId);
     }
