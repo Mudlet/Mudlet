@@ -463,12 +463,21 @@ local ok, err = pcall(function()
   assert(echo("main", "contract line\n") == true, "echo to main did not answer true")
   contractGrid = table.concat({getColumnCount(), getRowCount()}, ",")
   contractTimeStamps = tostring(timeStampsEnabled())
-  local function answer(f, ...)
-    local called, first, second = pcall(f, ...)
+  -- "[count]" and then each value, so no values reads apart from an explicit nil
+  local function described(called, ...)
     if not called then
       return "raised"
     end
-    return tostring(first) .. ":" .. (type(second) == "string" and "msg" or tostring(second))
+    local count = select("#", ...)
+    local values = {}
+    for i = 1, count do
+      local value = select(i, ...)
+      values[i] = (i > 1 and type(value) == "string") and "msg" or tostring(value)
+    end
+    return "[" .. count .. "]" .. table.concat(values, ":")
+  end
+  local function answer(f, ...)
+    return described(pcall(f, ...))
   end
   local function joined(...)
     return table.concat({...}, ",")
@@ -526,31 +535,31 @@ headlessContract = ok and "ok" or tostring(err)
         QCOMPARE(luaGlobalString(host, "contractTimeStamps"), qsl("false"));
         // Taken from the same Lua run in the GUI self-test profile: what a real view answers for a name it
         // has no window for, where a few calls have always answered nothing or false rather than nil and a message
-        const QStringList missingAnswers{qsl("echo=nil:msg"),
-                                         qsl("moveWindow=nil:nil"),
-                                         qsl("resizeWindow=nil:nil"),
-                                         qsl("showWindow=false:nil"),
-                                         qsl("hideWindow=nil:nil"),
-                                         qsl("windowVisible=nil:msg"),
-                                         qsl("windowType=nil:msg"),
-                                         qsl("getWindowGeometry=nil:msg"),
-                                         qsl("getColumnCount=nil:msg"),
-                                         qsl("getRowCount=nil:msg"),
-                                         qsl("getFont=nil:msg"),
-                                         qsl("getFontSize=nil:msg"),
-                                         qsl("setFontSize=nil:msg"),
-                                         qsl("calcFontSize=nil:nil"),
-                                         qsl("clearWindow=nil:nil"),
-                                         qsl("getLineCount=nil:msg"),
-                                         qsl("setBackgroundColor=nil:msg"),
-                                         qsl("getBackgroundColor=nil:msg"),
-                                         qsl("getLabelText=nil:msg"),
-                                         qsl("setUserWindowTitle=nil:msg"),
-                                         qsl("timeStampsEnabled=nil:msg")};
+        const QStringList missingAnswers{qsl("echo=[2]nil:msg"),
+                                         qsl("moveWindow=[0]"),
+                                         qsl("resizeWindow=[0]"),
+                                         qsl("showWindow=[1]false"),
+                                         qsl("hideWindow=[0]"),
+                                         qsl("windowVisible=[2]nil:msg"),
+                                         qsl("windowType=[2]nil:msg"),
+                                         qsl("getWindowGeometry=[2]nil:msg"),
+                                         qsl("getColumnCount=[2]nil:msg"),
+                                         qsl("getRowCount=[2]nil:msg"),
+                                         qsl("getFont=[2]nil:msg"),
+                                         qsl("getFontSize=[2]nil:msg"),
+                                         qsl("setFontSize=[2]nil:msg"),
+                                         qsl("calcFontSize=[1]nil"),
+                                         qsl("clearWindow=[0]"),
+                                         qsl("getLineCount=[2]nil:msg"),
+                                         qsl("setBackgroundColor=[2]nil:msg"),
+                                         qsl("getBackgroundColor=[2]nil:msg"),
+                                         qsl("getLabelText=[2]nil:msg"),
+                                         qsl("setUserWindowTitle=[2]nil:msg"),
+                                         qsl("timeStampsEnabled=[2]nil:msg")};
         QCOMPARE(luaGlobalString(host, "contractMissing"), missingAnswers.join(QLatin1Char(';')));
-        QCOMPARE(luaGlobalString(host, "contractMini"), qsl("true:nil,miniconsole:nil,true:nil,10,20,200,100,1"));
-        QCOMPARE(luaGlobalString(host, "contractMiniGone"), qsl("nil:msg,nil:msg"));
-        QCOMPARE(luaGlobalString(host, "contractLabel"), qsl(",true:nil,label words,background-color: rgba(32, 32, 32, 255);,32,32,32,255,5,6,70,80,true:nil,label:nil"));
+        QCOMPARE(luaGlobalString(host, "contractMini"), qsl("[1]true,[1]miniconsole,[1]true,10,20,200,100,1"));
+        QCOMPARE(luaGlobalString(host, "contractMiniGone"), qsl("[2]nil:msg,[2]nil:msg"));
+        QCOMPARE(luaGlobalString(host, "contractLabel"), qsl(",[1]true,label words,background-color: rgba(32, 32, 32, 255);,32,32,32,255,5,6,70,80,[1]true,[1]label"));
         QVERIFY2(QApplication::topLevelWidgets().isEmpty(), "Keeping the contract created a widget.");
     }
 

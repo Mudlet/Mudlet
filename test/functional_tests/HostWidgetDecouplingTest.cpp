@@ -409,10 +409,20 @@ nullViewKinds = table.concat({
 }, ",")
 createBuffer("nullViewBuffer")
 )lua"));
+        const QStringList nullViewNames{qsl("nullViewMini"), qsl("nullViewWindow"), qsl("nullViewNested"), qsl("nullViewBuffer")};
+        const auto registered = [host](const QString& name) {
+            return host->windowRegistry().hasSubConsole(name) || host->windowRegistry().hasDockWidget(name);
+        };
+        QStringList neverRegistered;
+        for (const QString& name : nullViewNames) {
+            if (!registered(name)) {
+                neverRegistered << name;
+            }
+        }
         host->setMainConsoleView(console);
         QStringList stillRegistered;
-        for (const QString& name : {qsl("nullViewMini"), qsl("nullViewWindow"), qsl("nullViewNested"), qsl("nullViewBuffer")}) {
-            if (host->windowRegistry().hasSubConsole(name) || host->windowRegistry().hasDockWidget(name)) {
+        for (const QString& name : nullViewNames) {
+            if (registered(name)) {
                 stillRegistered << name;
             }
         }
@@ -438,6 +448,7 @@ createBuffer("nullViewBuffer")
         const QString nullViewKinds = QString::fromUtf8(lua_tostring(L, -1));
         lua_pop(L, 1);
         QCOMPARE(nullViewKinds, qsl("true,true,true"));
+        QVERIFY2(neverRegistered.isEmpty(), qPrintable(qsl("The null view did not register windows it made: %1").arg(neverRegistered.join(qsl(", ")))));
         QVERIFY2(stillRegistered.isEmpty(), qPrintable(qsl("Windows the null view made are still registered once a real view has attached: %1").arg(stillRegistered.join(qsl(", ")))));
         QVERIFY2(remade, qPrintable(remadeMessage));
         QVERIFY2(remadeRegistered, "The real view did not register a widget of its own for a name the null view had used.");
