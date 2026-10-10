@@ -37,6 +37,7 @@
 #include "MMCPServer.h"
 #include "TAction.h"
 #include "TAlias.h"
+#include "TAppFrontend.h"
 #include "TConsoleFrontend.h"
 #include "TConsoleModel.h"
 #include "TDebug.h"
@@ -5129,8 +5130,9 @@ void Host::setDebugShowAllProblemCodepoints(const bool state)
 
 void Host::raiseSettingChangedEvent(const QString& settingName, const bool value)
 {
-    // The profile's own file is read before the console exists, so a value arriving from it is not a change to report:
-    if (!hasConsoleView()) {
+    // The main window reads the profile's own file before it makes the console, so a value arriving from it is not
+    // a change to report. With no main window there is never a console, and every change is reported.
+    if (TAppFrontend::hasView() && !hasConsoleView()) {
         return;
     }
 

@@ -39,6 +39,7 @@
 #include "Host.h"
 #include "HostManager.h"
 #include "MudletApp.h"
+#include "MudletMedia.h"
 #include "PortableModeTestHelper.h"
 #include "TAppFrontend.h"
 #include "TConsoleModel.h"
@@ -58,7 +59,9 @@ class HeadlessHostSmokeTest : public QObject
 private:
     QTemporaryDir mConfigDir;
     QByteArray mSavedXdg;
-    // The main window owns the profile pool in the app; here nothing else would.
+    // The main window owns the media switches and the profile pool in the app; here nothing else would.
+    // The media switches come first, as there, so they outlive the profiles that reach them.
+    std::unique_ptr<MudletMedia> mpMedia;
     std::unique_ptr<HostManager> mpHostManager;
     const QString mHostname = qsl("Test-Headless-Host-Smoke");
     const QString mConnectingHostname = qsl("Test-Headless-Host-Connect");
@@ -124,12 +127,14 @@ private slots:
         QCOMPARE(MudletApp::getMudletPath(enums::mainPath), qsl("%1/mudlet").arg(mConfigDir.path()));
 
         QVERIFY2(!HostManager::self(), "A profile pool already exists, so this run is not headless.");
+        mpMedia = std::make_unique<MudletMedia>();
         mpHostManager = std::make_unique<HostManager>();
     }
 
     void cleanupTestCase()
     {
         mpHostManager.reset();
+        mpMedia.reset();
         mSavedXdg.isNull() ? qunsetenv("XDG_CONFIG_HOME") : qputenv("XDG_CONFIG_HOME", mSavedXdg);
     }
 
@@ -582,6 +587,47 @@ headlessSettingsResult = ok and 'ok' or tostring(err)
 )lua"));
         QVERIFY2(ran, "The Lua chunk did not run.");
         QCOMPARE(luaGlobalString(host, "headlessSettingsResult"), qsl("ok"));
+    }
+
+    // As Other_spec.lua pins for the GUI: one event per real change, none for a write of the value held
+    void test_settingChangesRaiseEventsWithNoMainWindow()
+    {
+        QVERIFY2(!TAppFrontend::hasView(), "A main window exists, so this run is not headless.");
+
+        const QString hostname = qsl("Test-Headless-Host-Setting-Events");
+        QVERIFY2(HostManager::self()->addHost(hostname, QString(), QString(), QString()), "Could not create a profile with no main window.");
+        Host* host = HostManager::self()->getHost(hostname);
+        QVERIFY2(host, "The profile is not in the pool.");
+
+        // registerAnonymousEventHandler() is Lua from LuaGlobal, which these tests do not load
+        host->registerAnonymousEventHandler(qsl("sysSettingChanged"), qsl("onHeadlessSettingChanged"));
+        const bool ran = host->getLuaInterpreter()->compileAndExecuteScript(qsl(R"lua(
+headlessSettingEvents = 'not run'
+local events = {}
+function onHeadlessSettingChanged(_, key, value)
+  events[#events + 1] = {key = key, value = value, readBack = getConfig(key)}
+end
+local ok, err = pcall(function()
+  local keys = {"muteMediaAPI", "muteMediaGame", "compactInputLine", "mapperPanelVisible", "enableClosedCaption", "advertiseScreenReader", "announceIncomingText"}
+  for _, key in ipairs(keys) do
+    local start = getConfig(key)
+    for _, step in ipairs({{not start, 1}, {not start, 0}, {start, 1}}) do
+      local value, want = step[1], step[2]
+      events = {}
+      assert(setConfig(key, value) == true, "setConfig " .. key .. " refused")
+      assert(#events == want, key .. " set to " .. tostring(value) .. " raised " .. #events .. " events, not " .. want)
+      if want == 1 then
+        local event = events[1]
+        assert(event.key == key and event.value == value and event.readBack == value,
+          key .. " raised " .. tostring(event.key) .. " = " .. tostring(event.value) .. ", read back " .. tostring(event.readBack))
+      end
+    end
+  end
+end)
+headlessSettingEvents = ok and 'ok' or tostring(err)
+)lua"));
+        QVERIFY2(ran, "The Lua chunk did not run.");
+        QCOMPARE(luaGlobalString(host, "headlessSettingEvents"), qsl("ok"));
     }
 
     // As the GUI answers the same files
