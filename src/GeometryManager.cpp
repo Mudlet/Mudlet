@@ -321,6 +321,32 @@ GeometryManager::generateBillboardGeometry(float centerX, float centerY, float c
     return result;
 }
 
+void GeometryManager::appendGroundQuad(GeometryData& batch, const QVector3D& center, const float size, const QVector3D& cameraRight, const QVector3D& cameraUp, const QVector4D& color)
+{
+    // The screen's right laid flat on the map; looking straight along it, the screen's up laid flat
+    // is perpendicular to it instead
+    QVector2D right(cameraRight.x(), cameraRight.y());
+    if (right.length() < 1e-3f) {
+        right = QVector2D(cameraUp.y(), -cameraUp.x());
+    }
+    right = right.length() < 1e-3f ? QVector2D(1.0f, 0.0f) : right.normalized();
+    const QVector3D halfRight = QVector3D(right.x(), right.y(), 0.0f) * (size / 2.0f);
+    const QVector3D halfUp = QVector3D(-right.y(), right.x(), 0.0f) * (size / 2.0f);
+
+    const QVector3D bottomLeft = center - halfRight - halfUp;
+    const QVector3D bottomRight = center + halfRight - halfUp;
+    const QVector3D topRight = center + halfRight + halfUp;
+    const QVector3D topLeft = center - halfRight + halfUp;
+
+    for (const QVector3D& corner : {bottomLeft, bottomRight, topRight, bottomLeft, topRight, topLeft}) {
+        batch.vertices << corner.x() << corner.y() << corner.z();
+        batch.normals << 0.0f << 0.0f << 1.0f;
+        batch.colors << color.x() << color.y() << color.z() << color.w();
+    }
+    batch.textureCoords << 0.0f << 0.0f << 1.0f << 0.0f << 1.0f << 1.0f;
+    batch.textureCoords << 0.0f << 0.0f << 1.0f << 1.0f << 0.0f << 1.0f;
+}
+
 void GeometryManager::loadPlayerIconTemplate(float scale, float rotX, float rotY, float rotZ)
 {
     GeometryData result;

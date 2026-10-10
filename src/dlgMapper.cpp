@@ -175,6 +175,7 @@ void dlgMapper::connectMapCues()
     connect(mpMap, &TMap::signal_mapperColoursChanged, this, [this]() {
         if (drawsTheMap()) {
             refreshColours();
+            update3DView();
         }
     });
     connect(mpMap, &TMap::signal_mapCleared, this, [this]() {
@@ -216,11 +217,13 @@ void dlgMapper::connectMapCues()
         }
         mp2dMap->flushSymbolPixmapCache();
         mp2dMap->update();
+        update3DView();
         update();
     });
     connect(mpMap, &TMap::signal_playerRoomStyleChanged, this, [this]() {
         if (drawsTheMap()) {
             mp2dMap->setPlayerRoomStyle(mpMap->mPlayerRoomStyle);
+            update3DView();
         }
     });
     connect(mpMap, &TMap::signal_areaListChanged, this, [this]() {
@@ -679,6 +682,33 @@ void dlgMapper::slot_togglePanel()
 void dlgMapper::slot_setMapperPanelVisible(bool panelVisible)
 {
     widget_panel->setVisible(panelVisible);
+}
+
+void dlgMapper::update3DView()
+{
+#if defined(INCLUDE_3DMAPPER)
+    if (glWidget) {
+        glWidget->update();
+    }
+#endif
+}
+
+void dlgMapper::repaintMaps()
+{
+    mp2dMap->update();
+    update3DView();
+}
+
+std::pair<bool, QString> dlgMapper::setMapZoom(qreal zoom, int areaId)
+{
+    auto result = mp2dMap->setMapZoom(zoom, areaId);
+#if defined(INCLUDE_3DMAPPER)
+    auto* modernWidget = qobject_cast<ModernGLWidget*>(glWidget);
+    if (result.first && modernWidget) {
+        modernWidget->applyMapZoom(zoom, areaId ? areaId : mp2dMap->getAreaId());
+    }
+#endif
+    return result;
 }
 
 bool dlgMapper::showing3DView() const
