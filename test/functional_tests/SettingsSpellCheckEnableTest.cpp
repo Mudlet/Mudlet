@@ -160,15 +160,15 @@ private slots:
     void test_switchingSpellCheckRechecksTheInputLine()
     {
         QVERIFY2(mpPreferences && mpHost->getEnableSpellCheck(), "the case above left spell check off");
-        TCommandLine* pCommandLine = mpHost->mpConsole->mpCommandLine;
+        TCommandLine* pCommandLine = mpHost->mainConsoleView()->mpCommandLine;
         QVERIFY(pCommandLine);
-        const auto [created, message] = mpHost->mpConsole->createCommandLine(QString(), qsl("spellCheckLine"), 0, 0, 100, 30);
+        const auto [created, message] = mpHost->mainConsoleView()->createCommandLine(QString(), qsl("spellCheckLine"), 0, 0, 100, 30);
         QVERIFY2(created, qPrintable(message));
-        TCommandLine* pSubCommandLine = mpHost->mpConsole->subCommandLineWidget(qsl("spellCheckLine"));
+        TCommandLine* pSubCommandLine = mpHost->mainConsoleView()->subCommandLineWidget(qsl("spellCheckLine"));
         QVERIFY(pSubCommandLine);
         const auto cleanup = qScopeGuard([this, pCommandLine]() {
             pCommandLine->clear();
-            mpHost->mpConsole->deleteCommandLine(qsl("spellCheckLine"));
+            mpHost->mainConsoleView()->deleteCommandLine(qsl("spellCheckLine"));
         });
 
         pCommandLine->setPlainText(qsl("helo wrld "));
@@ -196,7 +196,7 @@ private slots:
     void test_pickingAnotherDictionaryRechecksTheInputLine()
     {
         QVERIFY2(mpHost->getEnableSpellCheck(), "the case above left spell check off");
-        TCommandLine* pCommandLine = mpHost->mpConsole->mpCommandLine;
+        TCommandLine* pCommandLine = mpHost->mainConsoleView()->mpCommandLine;
         QVERIFY(pCommandLine);
         const auto cleanup = qScopeGuard([pCommandLine]() {
             pCommandLine->clear();
