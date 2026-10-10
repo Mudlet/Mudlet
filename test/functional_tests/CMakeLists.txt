@@ -195,6 +195,7 @@ set(EDITOR_GROUP_TEST_SOURCES
     EditorReshowTest.cpp
     PackageExporterTest.cpp
     EditorWindowPositionTest.cpp
+    LuaFunctionListLoadTest.cpp
     MissingEditorThemeTest.cpp
     ScriptEventHandlerLifetimeTest.cpp
     EditorAddItemTest.cpp
