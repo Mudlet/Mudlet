@@ -2108,6 +2108,12 @@ int TLuaInterpreter::insertLink(lua_State* L)
     if (!pModel) {
         return windowNotFound(L, windowName);
     }
+    // an empty link covers no text, so nothing would take ownership of its functions;
+    // the QString stops at the first NUL, so "\0..." counts as empty too
+    const QString text{lua_tostring(L, textPos)};
+    if (text.isEmpty()) {
+        return warnArgumentValue(L, __func__, "text is empty - cannot create link");
+    }
 
     QString command;
     int luaReference = 0;
@@ -2121,7 +2127,7 @@ int TLuaInterpreter::insertLink(lua_State* L)
     hintList << QString{lua_tostring(L, hintPos)};
 
     const bool useCurrentFormat = hasFormatFlag && lua_toboolean(L, formatPos);
-    host.insertWindowLink(*pModel, QString{lua_tostring(L, textPos)}, commandList, hintList, useCurrentFormat, luaReferences);
+    host.insertWindowLink(*pModel, text, commandList, hintList, useCurrentFormat, luaReferences);
     lua_pushboolean(L, true);
     return 1;
 }
@@ -2159,6 +2165,12 @@ int TLuaInterpreter::insertPopup(lua_State* L)
     if (!pModel) {
         return windowNotFound(L, windowName);
     }
+    // an empty link covers no text, so nothing would take ownership of its functions;
+    // the QString stops at the first NUL, so "\0..." counts as empty too
+    const QString text{lua_tostring(L, textPos)};
+    if (text.isEmpty()) {
+        return warnArgumentValue(L, __func__, "text is empty - cannot create popup");
+    }
 
     QStringList commandList;
     QStringList hintList;
@@ -2177,7 +2189,7 @@ int TLuaInterpreter::insertPopup(lua_State* L)
     }
 
     const bool useCurrentFormat = hasFormatFlag && lua_toboolean(L, formatPos);
-    host.insertWindowLink(*pModel, QString{lua_tostring(L, textPos)}, commandList, hintList, useCurrentFormat, luaReferences);
+    host.insertWindowLink(*pModel, text, commandList, hintList, useCurrentFormat, luaReferences);
     lua_pushboolean(L, true);
     return 1;
 }
@@ -3753,7 +3765,10 @@ int TLuaInterpreter::setLink(lua_State* L)
     hintList << QString{lua_tostring(L, hintPos)};
     luaReferences << luaReference;
 
-    host.setWindowLink(*pModel, commandList, hintList, luaReferences);
+    if (!host.setWindowLink(*pModel, commandList, hintList, luaReferences)) {
+        releaseLuaReferences(L, luaReferences);
+        return warnArgumentValue(L, __func__, "no text is selected - cannot create link");
+    }
 
     lua_pushboolean(L, true);
     return 1;
@@ -3890,7 +3905,10 @@ int TLuaInterpreter::setPopup(lua_State* L)
         return 2;
     }
 
-    host.setWindowLink(*pModel, commandList, hintList, luaReferences);
+    if (!host.setWindowLink(*pModel, commandList, hintList, luaReferences)) {
+        releaseLuaReferences(L, luaReferences);
+        return warnArgumentValue(L, __func__, "no text is selected - cannot create popup");
+    }
 
     lua_pushboolean(L, true);
     return 1;
