@@ -774,7 +774,7 @@ private slots:
         QVERIFY(pHost);
         QVERIFY2(pHost->mLoadedOk, "the test profile save could not be loaded");
         mudlet::self()->slot_connectionDialogueFinished(profileName, false);
-        QVERIFY2(pHost->mpConsole, "the profile came up without a main console");
+        QVERIFY2(pHost->mainConsoleView(), "the profile came up without a main console");
         QVERIFY2(!FontManager::availableFonts().contains(mModuleSuppliedFamily, Qt::CaseInsensitive), "the module's family is already installed, so this cannot tell whether it went away");
         QVERIFY2(!FontManager::availableFonts().contains(mUpdatedModuleFamily, Qt::CaseInsensitive),
                  "the updated module's family is already installed, so this cannot tell whether the reload registered it");
@@ -827,7 +827,7 @@ private slots:
             QVERIFY(pHost);
             QVERIFY2(pHost->mLoadedOk, "a test profile save could not be loaded");
             mudlet::self()->slot_connectionDialogueFinished(profileName, false);
-            QVERIFY2(pHost->mpConsole, "a profile came up without a main console");
+            QVERIFY2(pHost->mainConsoleView(), "a profile came up without a main console");
             hosts.append(pHost);
         }
         Host* pFrom = hosts.at(0);
