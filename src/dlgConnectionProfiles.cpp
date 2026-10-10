@@ -55,6 +55,7 @@
 #include <QSignalBlocker>
 #include <QTabBar>
 #include <QTime>
+#include <array>
 #include <chrono>
 #include <sstream>
 
@@ -1000,6 +1001,7 @@ void dlgConnectionProfiles::continueProfileSave(QListWidgetItem* pItem, const QS
     }
 
     slot_updateSslTslPort(newProfileSslTsl);
+    writeCatalogDetailsTheFolderLacks(newProfileName, currentProfileEditName);
 
     // if this was a previously deleted profile, restore it
     auto& settings = *MudletApp::getQSettings();
@@ -1439,20 +1441,27 @@ void dlgConnectionProfiles::slot_itemClicked(QListWidgetItem* pItem)
             host_url = (*it).hostUrl;
         }
     }
+
+    // Showing a profile is not editing it: these fields' slots would pin the catalog's details in it
+    std::array blockers{QSignalBlocker(host_name_entry),
+                        QSignalBlocker(port_entry),
+                        QSignalBlocker(port_ssl_tsl),
+                        QSignalBlocker(autologin_checkBox),
+                        QSignalBlocker(auto_reconnect),
+                        QSignalBlocker(mud_description_textedit)};
+
     host_name_entry->setText(host_url);
 
     QString host_port = readProfileData(profile_name, qsl("port"));
     QString val = readProfileData(profile_name, qsl("ssl_tsl"));
-    if (val.toInt() == Qt::Checked) {
-        port_ssl_tsl->setChecked(true);
-    } else {
-        port_ssl_tsl->setChecked(false);
-    }
+    port_ssl_tsl->setChecked(val.toInt() == Qt::Checked);
 
-    if (host_port.isEmpty()) {
-        auto it = TGameDetails::findGame(profile_name);
-        if (it != TGameDetails::scmDefaultGames.end()) {
+    // Each detail the folder lacks comes from the catalog on its own: editing only the port saves only the port
+    if (auto it = TGameDetails::findGame(profile_name); it != TGameDetails::scmDefaultGames.end()) {
+        if (host_port.isEmpty()) {
             host_port = QString::number((*it).port);
+        }
+        if (val.isEmpty()) {
             port_ssl_tsl->setChecked((*it).tlsEnabled);
         }
     }
@@ -1516,6 +1525,12 @@ void dlgConnectionProfiles::slot_itemClicked(QListWidgetItem* pItem)
         website_entry->show();
     }
     website_entry->setText(val);
+
+    // Unblocked first, as validateProfile() trims a bad saved port through port_entry's own slot, which saves the trimmed one
+    for (auto& blocker : blockers) {
+        blocker.unblock();
+    }
+    validateProfile();
 
     profile_history->clear();
 
@@ -2076,10 +2091,13 @@ void dlgConnectionProfiles::slot_copyProfile()
     mpCopyProfile->setEnabled(false);
     auto future = QtConcurrent::run(dlgConnectionProfiles::copyFolder, MudletApp::getMudletPath(enums::profileHomePath, oldname), MudletApp::getMudletPath(enums::profileHomePath, profile_name));
     auto watcher = new QFutureWatcher<bool>(this);
-    connect(watcher, &QFutureWatcher<bool>::finished, this, [this, profile_name, oldPassword, watcher]() {
+    connect(watcher, &QFutureWatcher<bool>::finished, this, [this, profile_name, oldname, oldPassword, watcher]() {
+        const bool copiedAll = watcher->result();
         if (!mProfileList.contains(profile_name)) {
             mProfileList << profile_name;
         }
+
+        writeCatalogDetailsTheFolderLacks(profile_name, oldname);
 
         // The copy takes every file in the profile directory, and the saved sign-in's record is one
         // of them now that it lives there. Its token is not: that is filed under the profile it was
@@ -2123,9 +2141,35 @@ void dlgConnectionProfiles::slot_copyProfile()
         mpCopyProfile->setEnabled(true);
         QApplication::restoreOverrideCursor();
         validateProfile();
+        // after validateProfile(), which clears the notification area
+        if (!copiedAll) {
+            //: Shown in the connection dialog when copying a profile could not copy all of its files, e.g. as the disk is full or the profiles folder is read-only
+            showNotification(tr("Could not copy all of the profile's files, so the copy is incomplete."), notificationAreaIconLabelError);
+        }
         watcher->deleteLater();
     });
     watcher->setFuture(future);
+}
+
+// A catalog game's folder holds only the details the player changed, and a copied or renamed
+// profile's own name will not find the rest in the catalog
+void dlgConnectionProfiles::writeCatalogDetailsTheFolderLacks(const QString& profileName, const QString& catalogName)
+{
+    const auto it = TGameDetails::findGame(catalogName);
+    if (it == TGameDetails::scmDefaultGames.end()) {
+        return;
+    }
+
+    const QList<QPair<QString, QString>> details{{qsl("url"), (*it).hostUrl},
+                                                 {qsl("port"), QString::number((*it).port)},
+                                                 {qsl("ssl_tsl"), QString::number((*it).tlsEnabled ? Qt::Checked : Qt::Unchecked)},
+                                                 {qsl("description"), (*it).description},
+                                                 {qsl("website"), (*it).websiteInfo}};
+    for (const auto& [item, value] : details) {
+        if (!value.isEmpty() && readProfileData(profileName, item).isEmpty()) {
+            writeProfileData(profileName, item, value);
+        }
+    }
 }
 
 dlgConnectionProfiles::CopiedProfileData dlgConnectionProfiles::captureProfileData() const
@@ -2230,12 +2274,13 @@ void dlgConnectionProfiles::slot_copyOnlySettingsOfProfile()
     }
 
     // copy relevant profile files
-    for (const QString& file : {qsl("url"), qsl("port"), qsl("password"), qsl("login"), qsl("description")}) {
+    for (const QString& file : {qsl("url"), qsl("port"), qsl("ssl_tsl"), qsl("password"), qsl("login"), qsl("description")}) {
         auto filePath = qsl("%1/%2").arg(MudletApp::getMudletPath(enums::profileHomePath, oldname), file);
         auto newFilePath = qsl("%1/%2").arg(MudletApp::getMudletPath(enums::profileHomePath, profile_name), file);
         QFile::copy(filePath, newFilePath);
     }
 
+    writeCatalogDetailsTheFolderLacks(profile_name, oldname);
     copyProfileSettingsOnly(oldname, profile_name);
 
     mProfileList << profile_name;
@@ -2663,23 +2708,24 @@ bool dlgConnectionProfiles::copyFolder(const QString& sourceFolder, const QStrin
     }
 
     const QDir destDir(destFolder);
-    if (!destDir.exists()) {
-        destDir.mkdir(destFolder);
+    if (!destDir.exists() && !destDir.mkdir(destFolder)) {
+        return false;
     }
+    bool copiedAll = true;
     QStringList files = sourceDir.entryList(QDir::Files);
     for (const QString& file : std::as_const(files)) {
         const QString srcName = sourceFolder + QDir::separator() + file;
         const QString destName = destFolder + QDir::separator() + file;
-        QFile::copy(srcName, destName);
+        copiedAll = QFile::copy(srcName, destName) && copiedAll;
     }
     files.clear();
     files = sourceDir.entryList(QDir::AllDirs | QDir::NoDotAndDotDot);
     for (const QString& file : std::as_const(files)) {
         const QString srcName = sourceFolder + QDir::separator() + file;
         const QString destName = destFolder + QDir::separator() + file;
-        copyFolder(srcName, destName);
+        copiedAll = copyFolder(srcName, destName) && copiedAll;
     }
-    return true;
+    return copiedAll;
 }
 
 // As it is wired to the triggered() signal it is only called that way when
