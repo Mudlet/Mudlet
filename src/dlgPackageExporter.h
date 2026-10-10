@@ -188,6 +188,7 @@ private:
     QString mPackageComment;
     bool mCheckChildren = true;
     inline static bool mExportingPackage = false;
+    bool mRecountPending = false;
 
 signals:
     void signal_exportLocationChanged(const QString& location);

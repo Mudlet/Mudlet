@@ -431,9 +431,6 @@ private slots:
     void cleanup()
     {
         stopAnsweringMessageBoxes();
-        // slot_recountItems() arms a zero timer and holds a static flag until it
-        // runs, so let it run before the dialog that owns it goes away
-        QApplication::processEvents();
         delete mpExporter;
         mpExporter = nullptr;
         if (auto* self = mudlet::self()) {
@@ -1317,6 +1314,25 @@ private slots:
 
         packageList->setCurrentIndex(withoutIconIndex);
         QVERIFY2(iconLabel->isHidden(), "the icon label was left showing for a package that has no icon");
+    }
+
+    // The recount waits for a zero timer and only one is armed at a time, so a
+    // dialog gone before its timer ran must not stop the next one from counting.
+    void test_theCountKeepsUpAfterADialogClosedBeforeItCounted_10442()
+    {
+        makeTrigger(qsl("exporter early-closed count"), nullptr);
+        openExporter();
+        QVERIFY(checkItem(triggersTop(), qsl("exporter early-closed count")));
+        // replaced with no event loop run in between, so its recount is still pending
+        openExporter();
+        QVERIFY(checkItem(triggersTop(), qsl("exporter early-closed count")));
+
+        QVERIFY2(QTest::qWaitFor(
+                         [this]() {
+                             return selectionTitle().contains(QChar('1'));
+                         },
+                         2s),
+                 qPrintable(qsl("The title never took the count, and said: \"%1\"").arg(selectionTitle())));
     }
 };
 
