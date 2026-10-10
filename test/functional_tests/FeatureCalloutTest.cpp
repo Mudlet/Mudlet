@@ -60,6 +60,17 @@ private:
 
     int shownCount() const { return MudletApp::getQSettings()->value(shownCountKey(), 0).toInt(); }
 
+    QList<TFeatureCallout*> visibleCallouts() const
+    {
+        QList<TFeatureCallout*> result;
+        for (auto* callout : mpWindow->findChildren<TFeatureCallout*>(Qt::FindDirectChildrenOnly)) {
+            if (callout->isVisible()) {
+                result.append(callout);
+            }
+        }
+        return result;
+    }
+
     int anchorCentre() const { return mpAnchor->mapToGlobal(QPoint(mpAnchor->width() / 2, 0)).x(); }
 
     // Whichever application state this platform happens to report is not the
@@ -244,6 +255,96 @@ private slots:
 
         QTest::mousePress(menuBar, Qt::LeftButton, {}, optionsRect.center());
         QVERIFY2(dismissed(), "opening the menu the callout points at did not retire it");
+        if (auto* popup = QApplication::activePopupWidget()) {
+            popup->close();
+        }
+    }
+
+    void test_staysAwayWhileItsMenuIsFoldedIntoTheOverflow()
+    {
+        auto* menuBar = new QMenuBar(mpWindow);
+        menuBar->addMenu(qsl("Games"));
+        menuBar->addMenu(qsl("Toolbox"));
+        QAction* optionsMenu = menuBar->addMenu(qsl("Options"))->menuAction();
+        menuBar->resize(menuBar->actionGeometry(menuBar->actions().constFirst()).width() + 30, menuBar->sizeHint().height());
+        menuBar->show();
+        QVERIFY2(!menuBar->rect().contains(menuBar->actionGeometry(optionsMenu)), "the menu bar is not narrow enough to fold the menu away");
+
+        auto* callout = new TFeatureCallout(mFeatureId, menuBar, qsl("Title"), qsl("Body"), optionsMenu);
+        callout->showAnchored();
+        callout->slot_applicationStateChanged(Qt::ApplicationActive);
+
+        QVERIFY2(!callout->isVisible(), "the callout pointed at a menu that is folded out of sight");
+        QCOMPARE(shownCount(), 0);
+    }
+
+    // Each balloon maybeShow() puts up spends one of the two per-session slots,
+    // which this whole class shares, so there is room for two such cases
+    void test_offeredAtTwoAnchorsShowsOneBalloon()
+    {
+        const bool firstLaunch = MudletApp::firstLaunch();
+        MudletApp::setFirstLaunch(false);
+        auto* menuBar = new QMenuBar(mpWindow);
+        QAction* optionsMenu = menuBar->addMenu(qsl("Options"))->menuAction();
+        menuBar->resize(mpWindow->width(), menuBar->sizeHint().height());
+        menuBar->show();
+        mpAnchor->hide();
+
+        TFeatureCallout::maybeShow(mFeatureId, mpAnchor, qsl("Title"), qsl("Body"));
+        TFeatureCallout::maybeShow(mFeatureId, menuBar, optionsMenu, qsl("Title"), qsl("Body"));
+        QVERIFY2(QTest::qWaitFor(
+                         [this]() {
+                             return !visibleCallouts().isEmpty();
+                         },
+                         3s),
+                 "neither anchor got a balloon, though the menu bar was on screen");
+        QTest::qWait(200ms);
+        MudletApp::setFirstLaunch(firstLaunch);
+
+        const QList<TFeatureCallout*> callouts = visibleCallouts();
+        QCOMPARE(callouts.size(), 1);
+        const QRect optionsRect = menuBar->actionGeometry(optionsMenu);
+        QCOMPARE(callouts.constFirst()->x() + callouts.constFirst()->width() / 2, menuBar->mapToGlobal(QPoint(optionsRect.left() + optionsRect.width() / 2, 0)).x());
+    }
+
+    void test_bothAnchorsOnScreenStillShowsOneBalloon()
+    {
+        const QString featureId = qsl("two-anchors-callout");
+        MudletApp::getQSettings()->remove(qsl("whatsNew/%1/dismissed").arg(featureId));
+        const bool firstLaunch = MudletApp::firstLaunch();
+        MudletApp::setFirstLaunch(false);
+        auto* menuBar = new QMenuBar(mpWindow);
+        QAction* optionsMenu = menuBar->addMenu(qsl("Options"))->menuAction();
+        menuBar->resize(mpWindow->width(), menuBar->sizeHint().height());
+        menuBar->show();
+
+        TFeatureCallout::maybeShow(featureId, mpAnchor, qsl("Title"), qsl("Body"));
+        TFeatureCallout::maybeShow(featureId, menuBar, optionsMenu, qsl("Title"), qsl("Body"));
+        QVERIFY2(QTest::qWaitFor(
+                         [this]() {
+                             return !visibleCallouts().isEmpty();
+                         },
+                         3s),
+                 "neither anchor got a balloon");
+        QTest::qWait(200ms);
+        MudletApp::setFirstLaunch(firstLaunch);
+
+        QCOMPARE(visibleCallouts().size(), 1);
+    }
+
+    void test_reachedBeforeItsDelayShowsNothing()
+    {
+        const QString featureId = qsl("reached-early-callout");
+        MudletApp::getQSettings()->remove(qsl("whatsNew/%1/dismissed").arg(featureId));
+        const bool firstLaunch = MudletApp::firstLaunch();
+        MudletApp::setFirstLaunch(false);
+
+        TFeatureCallout::maybeShow(featureId, mpAnchor, qsl("Title"), qsl("Body"));
+        TFeatureCallout::dismiss(featureId);
+        QTest::qWait(1500ms);
+        MudletApp::setFirstLaunch(firstLaunch);
+
+        QVERIFY2(visibleCallouts().isEmpty(), "the balloon appeared after the player had already reached the feature");
     }
 
     void test_reachingTheFeatureElsewhereRetiresOnlyItsOwnCallout()

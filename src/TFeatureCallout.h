@@ -33,8 +33,9 @@ class QMenuBar;
 // Call maybeShow() from the code that owns the anchor widget, at the moment
 // the anchor becomes available; it decides whether this player should still
 // be told about the feature. The balloon goes away for good once the player
-// engages - clicking "Got it" or the anchor itself - and gives up on its own
-// after enough ignored appearances.
+// engages - clicking "Got it" or the anchor itself, or reaching the feature
+// some other way (see dismiss()) - and gives up on its own after enough
+// ignored appearances.
 class TFeatureCallout : public QWidget
 {
     Q_OBJECT
@@ -64,6 +65,7 @@ protected:
 private:
     static void maybeShowImpl(const QString& featureId, QWidget* pAnchor, QAction* pAnchorMenu, const QString& title, const QString& body);
     QRect anchorRect() const;
+    bool anchorOnScreen() const;
     void place();
     void reposition();
     void markDismissed();

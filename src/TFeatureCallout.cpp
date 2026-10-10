@@ -56,6 +56,14 @@ QString shownCountKey(const QString& featureId)
 {
     return qsl("whatsNew/%1/shownCount").arg(featureId);
 }
+
+QRect anchorRectFor(QWidget* pAnchor, QAction* pAnchorMenu)
+{
+    if (auto* pMenuBar = qobject_cast<QMenuBar*>(pAnchor); pMenuBar && pAnchorMenu) {
+        return pMenuBar->actionGeometry(pAnchorMenu);
+    }
+    return pAnchor->rect();
+}
 } // namespace
 
 TFeatureCallout::TFeatureCallout(const QString& featureId, QWidget* pAnchor, const QString& title, const QString& body, QAction* pAnchorMenu)
@@ -139,7 +147,10 @@ void TFeatureCallout::maybeShowImpl(const QString& featureId, QWidget* pAnchor, 
 
     // let the widget holding the anchor settle into its final place first
     QTimer::singleShot(800ms, pAnchor, [featureId, pAnchor, pAnchorMenu = QPointer<QAction>(pAnchorMenu), title, body]() {
-        if (!pAnchor->isVisible()) {
+        if (!pAnchor->isVisible() || !pAnchor->rect().contains(anchorRectFor(pAnchor, pAnchorMenu))) {
+            return;
+        }
+        if (MudletApp::getQSettings()->value(dismissedKey(featureId), false).toBool()) {
             return;
         }
         // the session budget is claimed here rather than up front, so an
@@ -169,7 +180,7 @@ void TFeatureCallout::dismiss(const QString& featureId)
 
 void TFeatureCallout::showAnchored()
 {
-    if (!mpAnchor || !mpAnchor->isVisible()) {
+    if (!anchorOnScreen()) {
         return;
     }
     if (!mApplicationActive) {
@@ -213,7 +224,7 @@ void TFeatureCallout::slot_applicationStateChanged(const Qt::ApplicationState st
         return;
     }
     mWaitingForActivation = false;
-    if (!mpAnchor || !mpAnchor->isVisible()) {
+    if (!anchorOnScreen()) {
         close();
         return;
     }
@@ -227,15 +238,18 @@ void TFeatureCallout::markDismissed()
 
 QRect TFeatureCallout::anchorRect() const
 {
-    if (auto* pMenuBar = qobject_cast<QMenuBar*>(mpAnchor.data()); pMenuBar && mpAnchorMenu) {
-        return pMenuBar->actionGeometry(mpAnchorMenu);
-    }
-    return mpAnchor->rect();
+    return anchorRectFor(mpAnchor, mpAnchorMenu);
+}
+
+// A menu folded into the bar's overflow extension keeps a geometry past the bar's edge
+bool TFeatureCallout::anchorOnScreen() const
+{
+    return mpAnchor && mpAnchor->isVisible() && mpAnchor->rect().contains(anchorRect());
 }
 
 void TFeatureCallout::reposition()
 {
-    if (!mpAnchor || !mpAnchor->isVisible()) {
+    if (!anchorOnScreen()) {
         return;
     }
     const QRect target = anchorRect();
@@ -299,8 +313,8 @@ bool TFeatureCallout::eventFilter(QObject* watched, QEvent* event)
         }
         break;
     case QEvent::MouseButtonPress:
-        // the anchor got clicked, so the feature has been discovered - the
-        // balloon has served its purpose
+        // the anchor (or the menu it points at) got clicked, so the feature
+        // has been discovered - the balloon has served its purpose
         if (watched == mpAnchor && anchorRect().contains(static_cast<QMouseEvent*>(event)->position().toPoint())) {
             markDismissed();
             close();
