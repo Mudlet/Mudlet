@@ -32,6 +32,7 @@
 #include <QSize>
 #include <QString>
 
+#include <array>
 #include <map>
 #include <memory>
 #include <vector>
@@ -300,6 +301,8 @@ private:
         std::optional<QFont> savedFont;
         // The font properties the label's own sheet declares, if it declares any
         std::optional<QFont> sheetFont;
+        // The margin, border and padding widths its sheet gives it, as top, right, bottom and left
+        std::array<int, 4> frame{};
         // Qt::WA_StyleSheet
         bool styled = false;
         // TLabel::mPaletteSetSinceStyled
