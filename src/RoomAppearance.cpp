@@ -19,6 +19,7 @@
 
 #include "RoomAppearance.h"
 
+#include "ExitAppearance.h"
 #include "Host.h"
 #include "TMap.h"
 
@@ -159,7 +160,7 @@ QPointF nameOffset(const QString& positionData)
     if (positionData.isEmpty()) {
         return offset;
     }
-    const QStringList posXY = positionData.split(" ");
+    const QStringList posXY = positionData.split(QLatin1Char(' '));
     bool ok1, ok2;
     double posX, posY;
 
@@ -191,7 +192,7 @@ QColor nameColor(const QString& colorData, const QColor& background)
             return userColor;
         }
     }
-    return QColor((background.lightness() > 127) ? Qt::black : Qt::white);
+    return ExitAppearance::contrastColor(background);
 }
 
 void paintSymbol(QPainter& painter, const QRect& rect, const QString& text, const QColor& color, const QFont& font, const qreal fontFudgeFactor, ushort& fontSize)

@@ -102,7 +102,12 @@ QList<qreal> visibleDashes(const Qt::PenStyle style)
     if (style == Qt::SolidLine || style == Qt::NoPen || style == Qt::CustomDashLine) {
         return {};
     }
-    return QPen(style).dashPattern();
+    // QPen's pattern leaves out the caps, which reach half the width past each end of a dash
+    QList<qreal> dashes = QPen(style).dashPattern();
+    for (qsizetype i = 0; i < dashes.size(); ++i) {
+        dashes[i] = (i % 2) == 0 ? dashes.at(i) + 1.0 : qMax(0.0, dashes.at(i) - 1.0);
+    }
+    return dashes;
 }
 
 void paintExitMarkers(QPainter& painter, QPen& pen, const TRoom& room, const float rx, const float ry, const qreal roomWidth, const qreal roomHeight, const QColor& roomColor, const bool cosmeticPen)

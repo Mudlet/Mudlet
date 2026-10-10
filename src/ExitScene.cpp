@@ -77,6 +77,7 @@ public:
 
 private:
     bool drawsExits(const TRoom* pRoom) const;
+    bool hasOneWayExitTo(const TRoom& from, int fromId, const TRoom& to, int toId) const;
     int nearerLevel(int a, int b) const;
     float top(float z) const { return z + mHeight / 2.0f; }
     void bar(const QVector3D& from, const QVector3D& to, float width, float height, const QColor& color, int level);
@@ -104,6 +105,16 @@ bool Builder::levelShown(const int z) const
 bool Builder::drawsExits(const TRoom* pRoom) const
 {
     return pRoom && !pRoom->isHidden() && pRoom->getArea() == mOptions.areaId && levelShown(pRoom->z());
+}
+
+bool Builder::hasOneWayExitTo(const TRoom& from, const int fromId, const TRoom& to, const int toId) const
+{
+    for (const int direction : scmDirections) {
+        if (from.getExit(direction) == toId && !from.customLines.contains(TRoom::dirCodeToShortString(direction)) && to.getExit(TMap::scmReverseDirections.value(direction)) != fromId) {
+            return true;
+        }
+    }
+    return false;
 }
 
 int Builder::nearerLevel(const int a, const int b) const
@@ -383,7 +394,8 @@ void Builder::addRoom(const int roomId, const TRoom& room)
         }
         if (!oneWayToDestination) {
             const QString reverseKey = TRoom::dirCodeToShortString(TMap::scmReverseDirections.value(exit.direction));
-            const bool otherEndDraws = drawsExits(exit.pDestination) && !exit.pDestination->customLines.contains(reverseKey);
+            // A one-way exit of its own to this room has the other end draw a dotted line instead
+            const bool otherEndDraws = drawsExits(exit.pDestination) && !exit.pDestination->customLines.contains(reverseKey) && !hasOneWayExitTo(*exit.pDestination, exit.destinationId, room, roomId);
             if (otherEndDraws && exit.destinationId < roomId) {
                 continue;
             }

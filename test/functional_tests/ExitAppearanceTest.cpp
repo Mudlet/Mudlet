@@ -103,6 +103,49 @@ private slots:
         QCOMPARE(ExitAppearance::visibleDashes(Qt::DashDotLine).size(), 4);
     }
 
+    // Measured from what the 2D map's pen paints, whose round or square caps lengthen every dash
+    void test_dashesMatchWhatThe2DMapPaints_data()
+    {
+        QTest::addColumn<int>("style");
+        QTest::addColumn<int>("cap");
+        QTest::newRow("dotted one-way exit") << static_cast<int>(Qt::DotLine) << static_cast<int>(Qt::SquareCap);
+        QTest::newRow("dashed custom line") << static_cast<int>(Qt::DashLine) << static_cast<int>(Qt::RoundCap);
+        QTest::newRow("dash-dot custom line") << static_cast<int>(Qt::DashDotLine) << static_cast<int>(Qt::RoundCap);
+    }
+
+    void test_dashesMatchWhatThe2DMapPaints()
+    {
+        QFETCH(int, style);
+        QFETCH(int, cap);
+        const int width = 10;
+        QImage image(600, 3 * width, QImage::Format_ARGB32);
+        image.fill(Qt::transparent);
+        QPainter painter(&image);
+        painter.setPen(QPen(Qt::black, width, static_cast<Qt::PenStyle>(style), static_cast<Qt::PenCapStyle>(cap)));
+        painter.drawLine(QPointF(2.0 * width, 1.5 * width), QPointF(image.width() - 2.0 * width, 1.5 * width));
+        painter.end();
+
+        // Runs of painted and unpainted pixels along the middle, from the first painted one
+        QList<int> runs;
+        bool painted = false;
+        for (int x = 0; x < image.width(); ++x) {
+            const bool here = qAlpha(image.pixel(x, image.height() / 2)) > 128;
+            if (runs.isEmpty() && !here) {
+                continue;
+            }
+            if (runs.isEmpty() || here != painted) {
+                runs.append(0);
+                painted = here;
+            }
+            ++runs.last();
+        }
+        const QList<qreal> dashes = ExitAppearance::visibleDashes(static_cast<Qt::PenStyle>(style));
+        QVERIFY(runs.size() > dashes.size());
+        for (qsizetype i = 0; i < dashes.size(); ++i) {
+            QVERIFY2(qAbs(runs.at(i) - dashes.at(i) * width) <= 1.5, qPrintable(qsl("piece %1 is %2 pixels painted, against %3 expected").arg(i).arg(runs.at(i)).arg(dashes.at(i) * width)));
+        }
+    }
+
     void test_markerShowsTheDoorOnIt_data()
     {
         QTest::addColumn<int>("direction");

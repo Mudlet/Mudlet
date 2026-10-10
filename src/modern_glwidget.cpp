@@ -44,6 +44,7 @@
 #include <QSurfaceFormat>
 #include <QVBoxLayout>
 #include <chrono>
+#include <optional>
 
 using namespace std::chrono_literals;
 
@@ -365,10 +366,11 @@ void ModernGLWidget::paintGL()
     // Enable room flattening
     zFlattening = 8.0f;
 
-    // Labels beneath the rooms come after them, so that the depth test keeps what stands on them over them
+    // Labels beneath the rooms come before them without writing depth, so that the translucent rooms
+    // of other levels show over them rather than cutting holes in them
     renderConnections();
-    renderRooms();
     renderLabels(false);
+    renderRooms();
     renderLabels(true);
 
     // Execute all queued commands
@@ -568,9 +570,8 @@ GLuint ModernGLWidget::exitMarkerTexture(const TRoom& room, const QColor& roomCo
     return addRoomTexture(key, image);
 }
 
-GLuint ModernGLWidget::textTexture(const QString& key, const QString& text, const QFont& font, const QColor& color, QSize& size)
+GLuint ModernGLWidget::textTexture(const QString& key, const QString& text, const QFont& font, const QFontMetricsF& metrics, const QColor& color, QSize& size)
 {
-    const QFontMetricsF metrics = imageFontMetrics(font);
     size = QSize(qMax(1, qCeil(metrics.horizontalAdvance(text))), qMax(1, qCeil(metrics.height())));
     if (const GLuint texture = cachedRoomTexture(key)) {
         return texture;
@@ -622,6 +623,8 @@ void ModernGLWidget::renderRooms()
     const bool showRoomIds = mpHost->mShowRoomID;
     QFont idFont = mpMap->mMapSymbolFont;
     float idTexel = 0.0f;
+    QString idFontKey;
+    std::optional<QFontMetricsF> idMetrics;
     if (showRoomIds) {
         int maxRoomId = 0;
         for (const int roomId : pArea->getAreaRooms()) {
@@ -630,10 +633,13 @@ void ModernGLWidget::renderRooms()
         idFont.setBold(true);
         idFont.setStyleStrategy(QFont::StyleStrategy(QFont::PreferNoShaping | QFont::PreferAntialias | QFont::PreferOutline));
         idFont.setPixelSize(scmTextTexelsPerRoom);
-        const QFontMetricsF metrics = imageFontMetrics(idFont);
-        const qreal widest = metrics.horizontalAdvance(QString(QString::number(maxRoomId).size(), QLatin1Char('8')));
-        idTexel = 0.9f * roomSize / static_cast<float>(qMax(widest, metrics.height()));
+        idFontKey = idFont.key();
+        idMetrics.emplace(imageFontMetrics(idFont));
+        const qreal widest = idMetrics->horizontalAdvance(QString(QString::number(maxRoomId).size(), QLatin1Char('8')));
+        idTexel = 0.9f * roomSize / static_cast<float>(qMax(widest, idMetrics->height()));
     }
+    // A digit's texture and size by its color and character, looked up once a frame
+    QHash<std::pair<QRgb, char16_t>, std::pair<GLuint, QSize>> digitTextures;
 
     const bool showRoomNames = mpMap->getRoomNamesShown() && !pArea->gridMode;
     QFont nameFont = mpMap->mMapSymbolFont;
@@ -649,6 +655,14 @@ void ModernGLWidget::renderRooms()
         nameFont.setStyleStrategy(QFont::StyleStrategy(QFont::PreferNoShaping | QFont::PreferAntialias | QFont::PreferOutline));
         nameFont.setPointSizeF(scmTextTexelsPerRoom / 2.0);
     }
+    struct RoomName
+    {
+        QVector3D center;
+        QColor color;
+        QString name;
+        QVector4D tint;
+    };
+    QList<RoomName> roomNames;
     const float textTexel = roomSize / scmTextTexelsPerRoom;
 
     mRoomTexturesInUse.clear();
@@ -759,10 +773,14 @@ void ModernGLWidget::renderRooms()
             QList<std::pair<GLuint, QSize>> digits;
             int numberWidth = 0;
             for (const QChar digit : number) {
-                QSize size;
-                const GLuint texture = textTexture(qsl("digit|%1|%2|%3").arg(idColor.name(), idFont.key(), digit), digit, idFont, idColor, size);
-                digits.append({texture, size});
-                numberWidth += size.width();
+                auto it = digitTextures.find({idColor.rgba(), digit.unicode()});
+                if (it == digitTextures.end()) {
+                    QSize size;
+                    const GLuint texture = textTexture(qsl("digit|%1|%2|%3").arg(idColor.name(), idFontKey, digit), digit, idFont, *idMetrics, idColor, size);
+                    it = digitTextures.insert({idColor.rgba(), digit.unicode()}, {texture, size});
+                }
+                digits.append(it.value());
+                numberWidth += it.value().second.width();
             }
             QVector3D corner = roomTop - groundRight * (numberWidth * idTexel / 2.0f);
             for (const auto& [texture, size] : digits) {
@@ -779,19 +797,10 @@ void ModernGLWidget::renderRooms()
 
         // Only the viewed level's, as only the 2D map's are
         if (showRoomNames && rz == pz && !pR->name.isEmpty()) {
-            const QColor nameColor = RoomAppearance::nameColor(pR->userData.value(ROOM_UI_NAMECOLOR), mpHost->mBgColor_2);
-            QSize size;
-            const QString key = qsl("name|%1|%2|%3").arg(nameColor.name(QColor::HexArgb), nameFont.key(), pR->name);
-            if (const GLuint texture = textTexture(key, pR->name, nameFont, nameColor, size)) {
-                // One room's size below the room, then moved by its offset in rooms' spacing, y downward
-                const QPointF offset = RoomAppearance::nameOffset(pR->userData.value(ROOM_UI_NAMEPOS));
-                const QVector3D center = roomTop + groundRight * static_cast<float>(offset.x()) - groundUp * (roomSize + static_cast<float>(offset.y()));
-                const QVector3D across = groundRight * (size.width() * textTexel);
-                const QVector3D upward = groundUp * (size.height() * textTexel);
-                GeometryData& batch = textDecals[texture];
-                batch.textureId = texture;
-                GeometryManager::appendQuad(batch, center - across / 2.0f - upward / 2.0f, across, upward, decalTint);
-            }
+            // One room's size below the room, then moved by its offset in rooms' spacing, y downward
+            const QPointF offset = RoomAppearance::nameOffset(pR->userData.value(ROOM_UI_NAMEPOS));
+            const QVector3D center = roomTop + groundRight * static_cast<float>(offset.x()) - groundUp * (roomSize + static_cast<float>(offset.y()));
+            roomNames.append({center, RoomAppearance::nameColor(pR->userData.value(ROOM_UI_NAMECOLOR), mpHost->mBgColor_2), pR->name, decalTint});
         }
 
         if (const GLuint texture = exitMarkerTexture(*pR, roomColor)) {
@@ -831,6 +840,23 @@ void ModernGLWidget::renderRooms()
                             positionedIcon, mCameraController.getProjectionMatrix(), mCameraController.getViewMatrix(), mCameraController.getModelMatrix());
                     mRenderCommandQueue.addCommand(std::move(command));
                 }
+            }
+        }
+    }
+
+    // Names come after every symbol and marker, so that a view short of room for textures loses names first
+    if (!roomNames.isEmpty()) {
+        const QString nameFontKey = nameFont.key();
+        const QFontMetricsF nameMetrics = imageFontMetrics(nameFont);
+        for (const RoomName& roomName : roomNames) {
+            QSize size;
+            const QString key = qsl("name|%1|%2|%3").arg(roomName.color.name(QColor::HexArgb), nameFontKey, roomName.name);
+            if (const GLuint texture = textTexture(key, roomName.name, nameFont, nameMetrics, roomName.color, size)) {
+                const QVector3D across = groundRight * (size.width() * textTexel);
+                const QVector3D upward = groundUp * (size.height() * textTexel);
+                GeometryData& batch = textDecals[texture];
+                batch.textureId = texture;
+                GeometryManager::appendQuad(batch, roomName.center - across / 2.0f - upward / 2.0f, across, upward, roomName.tint);
             }
         }
     }
@@ -1464,16 +1490,22 @@ void ModernGLWidget::renderLabels(const bool onTop)
             continue;
         }
 
+        // pos is the top-left corner, on the map's plane: on the rooms' tops if shown on top of them, else beneath them
         const auto x = static_cast<float>(label.pos.x());
         const auto y = static_cast<float>(label.pos.y());
+        const float z = static_cast<float>(labelZ) + (onTop ? roomHeight / 2.0f : -roomHeight / 2.0f);
         if (label.noScaling) {
             // Its own size in pixels whatever the zoom, as on the 2D map, so it faces the screen
-            const QVector3D corner(x, y, static_cast<float>(labelZ));
+            const QVector3D corner(x, y, z);
             const float worldPerPixel = mCameraController.worldUnitsPerPixel(corner);
             const QSizeF pixels = label.pix.deviceIndependentSize();
             const auto width = static_cast<float>(pixels.width()) * worldPerPixel;
             const auto height = static_cast<float>(pixels.height()) * worldPerPixel;
             const QVector3D center = corner + screenRight * (width / 2.0f) - screenUp * (height / 2.0f);
+            if (onTop) {
+                // Standing up off the map, it would pass through the rooms it is meant to be over
+                mRenderCommandQueue.addCommand(std::make_unique<GLStateCommand>(GLStateCommand::DISABLE_DEPTH_TEST));
+            }
             mRenderCommandQueue.addCommand(std::make_unique<RenderLabelCommand>(center.x(),
                                                                                 center.y(),
                                                                                 center.z(),
@@ -1486,13 +1518,14 @@ void ModernGLWidget::renderLabels(const bool onTop)
                                                                                 mCameraController.getProjectionMatrix(),
                                                                                 mCameraController.getViewMatrix(),
                                                                                 mCameraController.getModelMatrix()));
+            if (onTop) {
+                mRenderCommandQueue.addCommand(std::make_unique<GLStateCommand>(GLStateCommand::ENABLE_DEPTH_TEST));
+            }
             continue;
         }
 
-        // pos is the top-left corner, on the map's plane: on the rooms' tops if shown on top of them, else beneath them
         const float width = std::abs(static_cast<float>(label.size.width()));
         const float height = std::abs(static_cast<float>(label.size.height()));
-        const float z = static_cast<float>(labelZ) + (onTop ? roomHeight / 2.0f : -roomHeight / 2.0f);
         QVector4D tint = levelFaded(QColor(Qt::white), std::abs(labelZ - mMapCenterZ), labelZ > mMapCenterZ, moreTransparent);
         if (label.highlight) {
             tint = QVector4D(1.0f, 0.65f, 0.0f, tint.w());

@@ -232,6 +232,23 @@ private slots:
         QCOMPARE(lines.first().level, 0);
     }
 
+    // The lower-numbered room draws its two-way exits, but dots them all when it has a one-way one to the same room
+    void test_twoWayExitIsDrawnWhenTheOtherEndDotsItsLine()
+    {
+        TRoom* pNorth = addRoomAt(3, mAreaId, 0, 1);
+        TRoom* pSouth = addRoomAt(5, mAreaId, 0, 0);
+        QVERIFY(pNorth && pSouth);
+        pSouth->setExit(3, DIR_NORTH);
+        pNorth->setExit(5, DIR_SOUTH);
+        pNorth->setExit(5, DIR_UP);
+
+        bool solid = false;
+        for (const ExitScene::Segment& line : segmentsIn(build(), mExitColor)) {
+            solid = solid || joins(line, QVector2D(0, 0), QVector2D(0, 1));
+        }
+        QVERIFY2(solid, "neither end draws the two-way exit as a whole line");
+    }
+
     void test_oneWayExitIsDottedWithAnArrowInTheMiddle()
     {
         TRoom* pWest = addRoomAt(1, mAreaId, 0, 0);

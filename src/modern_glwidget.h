@@ -52,6 +52,7 @@
 #include "CameraController.h"
 
 class Host;
+class QFontMetricsF;
 class QLabel;
 class TMap;
 class TRoom;
@@ -249,7 +250,7 @@ private:
     // The 2D map's up/down/in/out markers for the room, or 0 when it has none
     GLuint exitMarkerTexture(const TRoom& room, const QColor& roomColor);
     // Text on a clear background; size is set to the texture's size in pixels
-    GLuint textTexture(const QString& key, const QString& text, const QFont& font, const QColor& color, QSize& size);
+    GLuint textTexture(const QString& key, const QString& text, const QFont& font, const QFontMetricsF& metrics, const QColor& color, QSize& size);
     void startSmoothTransition(int targetAID, int targetX, int targetY, int targetZ);
     void stopSmoothTransition();
     void jumpTo(int areaId, int x, int y, int z);
