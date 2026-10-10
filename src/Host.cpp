@@ -1212,6 +1212,7 @@ void Host::resetProfile_phase2()
     getActionUnit()->compileAll();
     getKeyUnit()->compileAll();
     getScriptUnit()->compileAll(true);
+    reportScriptsThatFailedToLoad();
 
     mResetProfile = false;
 
@@ -2956,6 +2957,23 @@ bool Host::killTrigger(const QString& name)
 static bool packageUnpacksAFolder(const QString& fileName)
 {
     return fileName.endsWith(qsl(".zip"), Qt::CaseInsensitive) || fileName.endsWith(qsl(".mpackage"), Qt::CaseInsensitive);
+}
+
+// Module scripts are left out: a module of positive priority runs its scripts only after this, at
+// open, so reporting the negative-priority ones would make the report depend on a module's priority.
+void Host::reportScriptsThatFailedToLoad()
+{
+    QStringList names;
+    for (auto* pScript : mScriptUnit.getScriptList()) {
+        if (pScript->getLoadingError() && pScript->shouldBeActive() && !pScript->moduleMember()) {
+            names << pScript->getName();
+        }
+    }
+    if (names.isEmpty()) {
+        return;
+    }
+    //: %1 is the names of the scripts, separated by ", " and each already in its own pair of quotes
+    postMessage(tr("[ WARN ]  - These scripts failed to run when the profile loaded: \"%1\". Open them in the editor to see why.").arg(names.join(qsl("\", \""))));
 }
 
 std::pair<bool, QString> Host::installPackage(const QString& fileName, enums::PackageModuleType thing, bool quiet)

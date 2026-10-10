@@ -6534,6 +6534,7 @@ void mudlet::slot_connectionDialogueFinished(const QString& profile, bool connec
     // not triggers/aliases/etc) - presumably so that the event handlers
     // are ready for use.
     pHost->getScriptUnit()->compileAll(true);
+    pHost->reportScriptsThatFailedToLoad();
     pHost->updateAnsi16ColorsInTable();
     pHost->updateExtendedAnsiColorsInTable();
 
