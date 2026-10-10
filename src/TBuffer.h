@@ -420,9 +420,16 @@ public:
     // The one color pair shared by every character of that same line, or
     // nullptr when its colors vary or there is no snapshot for it:
     const TChar* preTriggerPassLineUniformColors(int lineNumber);
-    // Where the line a trigger pass started on is now, as a trigger earlier in
-    // the pass can delete lines above it; -1 once it has been deleted itself
+    // Where the line a trigger pass was handed is now, after triggers earlier in the
+    // pass, or a nested pass, deleted lines above it or the buffer trimmed
+    // its oldest; csmDetachedTriggerPassLine once the line itself has been deleted.
+    // Any other line number is handed back as it is.
     int triggerPassLineNow(int lineNumber) const;
+    // What color matching reads for a pass line that has been deleted: its colors as
+    // they arrived and its text as it was when it went
+    const std::vector<TChar>& detachedTriggerPassLine() const { return mPreTriggerPassLine; }
+    const QString& detachedTriggerPassLineText() const { return mDetachedTriggerPassLineText; }
+    static constexpr int csmDetachedTriggerPassLine = -2;
     int find(int line, const QString& what, int pos);
     QStringList split(int line, const QString& splitter);
     QStringList split(int line, const QRegularExpression& splitter);
@@ -702,9 +709,16 @@ private:
     int mPreTriggerPassLineNumber = -1;
     // The index the current trigger pass was handed, which mPreTriggerPassLineNumber moves on from
     int mTriggerPassLineAsCommitted = -1;
-    // The pass lines of the passes a trigger calling feedTriggers() has paused, which
-    // move with deleted and trimmed lines just as the current one does
-    QList<int> mEnclosingTriggerPassLineNumbers;
+    QString mDetachedTriggerPassLineText;
+    struct EnclosingTriggerPass
+    {
+        int lineNumber = -1;
+        QString detachedText;
+    };
+    // The passes a trigger calling feedTriggers() has paused. A member, not saved in
+    // commitLineData()'s frame, as their lines move with deleted and trimmed
+    // lines just as the current one does
+    QList<EnclosingTriggerPass> mEnclosingTriggerPasses;
     // Meaningful only inside a trigger pass: false until something overwrites
     // the committed line, while the game's colors are still readable from it:
     bool mPreTriggerPassSnapshotTaken = true;

@@ -1364,11 +1364,12 @@ bool TTrigger::match_color_pattern(int line, int patternNumber, int posOffset, i
     // Read where the line is now, but hand children the line as committed, which
     // they resolve for themselves after this trigger's script has run
     const int lineNow = consoleModel.buffer.triggerPassLineNow(line);
-    if (lineNow < 0 || lineNow >= static_cast<int>(consoleModel.buffer.buffer.size())) {
+    const bool detached = lineNow == TBuffer::csmDetachedTriggerPassLine;
+    if (!detached && (lineNow < 0 || lineNow >= static_cast<int>(consoleModel.buffer.buffer.size()))) {
         return false;
     }
-    std::vector<TChar>& bufferLine = consoleModel.buffer.buffer[lineNow];
-    const QString& lineBuffer = consoleModel.buffer.lineBuffer[lineNow];
+    const std::vector<TChar>& bufferLine = detached ? consoleModel.buffer.detachedTriggerPassLine() : consoleModel.buffer.buffer[lineNow];
+    const QString& lineBuffer = detached ? consoleModel.buffer.detachedTriggerPassLineText() : consoleModel.buffer.lineBuffer[lineNow];
     // Match against the colors as they arrived from the game, not as already
     // recolored by other triggers or scripts earlier in this trigger pass; with
     // no snapshot taken, or past its end, the line itself still holds them:
@@ -1427,7 +1428,7 @@ bool TTrigger::match_color_pattern(int line, int patternNumber, int posOffset, i
         return true;
     }
 
-    for (auto it = bufferLine.begin() + start; pos < end; ++it, ++pos) {
+    for (auto it = bufferLine.cbegin() + start; pos < end; ++it, ++pos) {
         const TChar& character = (pos < passLineSize) ? (*pPassLine)[pos] : *it;
         if (colorsMatch(character)) {
             if (matchBegin == -1) {

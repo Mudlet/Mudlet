@@ -843,6 +843,98 @@ describe("Trigger processing", function()
             assert.are.same({"NestedPassOuterMarker red"}, fired)
         end)
 
+        -- the text patterns go on matching the haystack once a trigger deletes
+        -- the line itself, so the colour patterns go on matching its colours
+        it("should still match the line being processed after an earlier trigger deletes it", function()
+            local fired = {}
+            local countBefore, countAfter
+            local deleter = tempTrigger("DeletedPassLineMarker", function()
+                countBefore = getLineCount()
+                deleteLine()
+                countAfter = getLineCount()
+            end)
+            local colorTrigger = tempAnsiColorTrigger(1, -1, function() fired[#fired + 1] = matches[1] end)
+            finally(function()
+                killTrigger(deleter)
+                killTrigger(colorTrigger)
+            end)
+
+            feedTriggers("\27[31mDeletedPassLineMarker red\27[0m\n")
+
+            assert.are.equal(countBefore - 1, countAfter)
+            assert.are.same({"DeletedPassLineMarker red"}, fired)
+        end)
+
+        it("should still match the line being processed after an earlier trigger clears the window", function()
+            local fired = {}
+            local clearer = tempTrigger("ClearedPassLineMarker", function() clearWindow() end)
+            local colorTrigger = tempAnsiColorTrigger(1, -1, function() fired[#fired + 1] = matches[1] end)
+            finally(function()
+                killTrigger(clearer)
+                killTrigger(colorTrigger)
+            end)
+
+            feedTriggers("\27[31mClearedPassLineMarker red\27[0m\n")
+
+            assert.are.same({"ClearedPassLineMarker red"}, fired)
+        end)
+
+        it("should match each line once when a trigger feeds a red line and then deletes a line above", function()
+            local fired = {}
+            feedTriggers("\27[31mline above that is deleted after a nested pass\27[0m\n")
+            local doomed = getLineNumber()
+            local deleter = tempTrigger("FeedThenDeleteMarker", function()
+                feedTriggers("\27[31mfed red line\27[0m\n")
+                moveCursor(0, doomed)
+                deleteLine()
+            end)
+            local colorTrigger = tempAnsiColorTrigger(1, -1, function() fired[#fired + 1] = matches[1] end)
+            finally(function()
+                killTrigger(deleter)
+                killTrigger(colorTrigger)
+            end)
+
+            feedTriggers("\27[31mFeedThenDeleteMarker red\27[0m\n")
+
+            assert.are.same({"fed red line", "FeedThenDeleteMarker red"}, fired)
+        end)
+
+        it("should match each line once when a trigger deletes the line being processed and then feeds a red line", function()
+            local fired = {}
+            local deleter = tempTrigger("DeleteThenFeedMarker", function()
+                deleteLine()
+                feedTriggers("\27[31mred line fed after the deletion\27[0m\n")
+            end)
+            local colorTrigger = tempAnsiColorTrigger(1, -1, function() fired[#fired + 1] = matches[1] end)
+            finally(function()
+                killTrigger(deleter)
+                killTrigger(colorTrigger)
+            end)
+
+            feedTriggers("\27[31mDeleteThenFeedMarker red\27[0m\n")
+
+            assert.are.same({"red line fed after the deletion", "DeleteThenFeedMarker red"}, fired)
+        end)
+
+        it("should match part of a line in several colours after a line above it is deleted", function()
+            local fired = {}
+            feedTriggers("line above a line in several colours\n")
+            local doomed = getLineNumber()
+            local deleter = tempTrigger("SeveralColoursMarker", function()
+                moveCursor(0, doomed)
+                deleteLine()
+            end)
+            local colorTrigger = tempAnsiColorTrigger(1, -1, function() fired[#fired + 1] = matches[1] end)
+            finally(function()
+                killTrigger(deleter)
+                killTrigger(colorTrigger)
+            end)
+
+            feedTriggers("SeveralColoursMarker plain \27[31mred part\27[0m tail\n")
+
+            assert.are.same({"red part"}, fired)
+        end)
+
     end)
 
     describe("tempAnsiColorTrigger callbacks", function()

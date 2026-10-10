@@ -2337,7 +2337,7 @@ void TBuffer::commitLineData(QString line, std::vector<TChar> chars, const char 
         // Save/restore gives each nested pass its own snapshot; the spare member recycles its allocation:
         std::vector<TChar> savedPassLine;
         savedPassLine.swap(mPreTriggerPassLine);
-        mEnclosingTriggerPassLineNumbers.append(mPreTriggerPassLineNumber);
+        mEnclosingTriggerPasses.append({mPreTriggerPassLineNumber, std::exchange(mDetachedTriggerPassLineText, QString())});
         const int savedPassLineAsCommitted = mTriggerPassLineAsCommitted;
         const bool savedPassSnapshotTaken = mPreTriggerPassSnapshotTaken;
         const PassLineUniformity savedPassLineUniformity = mPreTriggerPassLineUniformity;
@@ -2363,7 +2363,9 @@ void TBuffer::commitLineData(QString line, std::vector<TChar> chars, const char 
             std::vector<TChar>().swap(mSpareTriggerPassLine);
         }
         mPreTriggerPassLine.swap(savedPassLine);
-        mPreTriggerPassLineNumber = mEnclosingTriggerPassLineNumbers.takeLast();
+        EnclosingTriggerPass enclosing = mEnclosingTriggerPasses.takeLast();
+        mPreTriggerPassLineNumber = enclosing.lineNumber;
+        mDetachedTriggerPassLineText = std::move(enclosing.detachedText);
         mTriggerPassLineAsCommitted = savedPassLineAsCommitted;
         mPreTriggerPassSnapshotTaken = savedPassSnapshotTaken;
         mPreTriggerPassLineUniformity = savedPassLineUniformity;
@@ -2680,19 +2682,32 @@ void TBuffer::flushPendingServerWrapJoin(const bool endsHyperlink)
     }
 }
 
+// Called before the lines go, so that a pass line among them can be kept for
+// color matching to go on reading, as the text patterns go on reading the haystack
 void TBuffer::triggerPassLinesRemoved(const int from, const int to)
 {
     const int delta = to - from + 1;
-    const auto follow = [from, to, delta](int& lineNumber) {
-        if (lineNumber > to) {
-            lineNumber -= delta;
-        } else if (lineNumber >= from) {
-            lineNumber = -1;
+    if (mPreTriggerPassLineNumber > to) {
+        mPreTriggerPassLineNumber -= delta;
+    } else if (mPreTriggerPassLineNumber >= from) {
+        // The snapshot, where taken, holds the colors as they arrived for as much of the line as it covers
+        std::vector<TChar> detached = std::move(buffer[mPreTriggerPassLineNumber]);
+        if (mPreTriggerPassSnapshotTaken) {
+            std::copy_n(mPreTriggerPassLine.cbegin(), std::min(mPreTriggerPassLine.size(), detached.size()), detached.begin());
         }
-    };
-    follow(mPreTriggerPassLineNumber);
-    for (int& lineNumber : mEnclosingTriggerPassLineNumbers) {
-        follow(lineNumber);
+        mPreTriggerPassLine = std::move(detached);
+        mPreTriggerPassSnapshotTaken = true;
+        mDetachedTriggerPassLineText = lineBuffer.at(mPreTriggerPassLineNumber);
+        mPreTriggerPassLineNumber = csmDetachedTriggerPassLine;
+    }
+    for (EnclosingTriggerPass& enclosing : mEnclosingTriggerPasses) {
+        if (enclosing.lineNumber > to) {
+            enclosing.lineNumber -= delta;
+        } else if (enclosing.lineNumber >= from) {
+            // Its colors were copied out before the nested pass began
+            enclosing.detachedText = lineBuffer.at(enclosing.lineNumber);
+            enclosing.lineNumber = csmDetachedTriggerPassLine;
+        }
     }
 }
 
@@ -6718,6 +6733,7 @@ void TBuffer::shrinkBuffer()
         }
     }
 
+    triggerPassLinesRemoved(0, mBatchDeleteSize - 1);
     for (int i = 0; i < mBatchDeleteSize; ++i) {
         // The lines going away were written a whole buffer ago, so freeing each
         // one stalls on a cache miss for its allocator header. Asking for the
@@ -6740,7 +6756,6 @@ void TBuffer::shrinkBuffer()
     if (mpModel) {
         mpModel->mCurrentSearchResult = qMax(0, mpModel->mCurrentSearchResult - mBatchDeleteSize);
     }
-    triggerPassLinesRemoved(0, mBatchDeleteSize - 1);
     if (mLastFoundLine >= mBatchDeleteSize) {
         mFirstFoundLine = std::max(0, mFirstFoundLine - mBatchDeleteSize);
         mLastFoundLine -= mBatchDeleteSize;
@@ -6825,6 +6840,7 @@ bool TBuffer::deleteLines(int from, int to)
             timeBuffer[to + 1] = timeBuffer.at(from);
         }
 
+        triggerPassLinesRemoved(from, to);
         for (int i = from, total = from + delta; i < total; ++i) {
             lineBuffer.removeAt(i);
             timeBuffer.removeAt(i);
@@ -6833,7 +6849,6 @@ bool TBuffer::deleteLines(int from, int to)
         }
 
         buffer.erase(buffer.begin() + from, buffer.begin() + to + 1);
-        triggerPassLinesRemoved(from, to);
         if (mLastFoundLine >= from) {
             mLastFoundLine = (mLastFoundLine > to) ? mLastFoundLine - delta : from - 1;
             if (mFirstFoundLine > to) {
