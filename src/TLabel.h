@@ -67,6 +67,7 @@ public:
     void resizeEvent(QResizeEvent* event) override;
     void paintEvent(QPaintEvent* event) override;
     void changeEvent(QEvent* event) override;
+    bool event(QEvent* event) override;
     QSize sizeHint() const override;
     void contextMenuEvent(QContextMenuEvent*) override;
     void setClickThrough(bool clickthrough);
