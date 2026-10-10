@@ -1228,6 +1228,7 @@ createLabel("lsD", 0, 0, 100, 20, 1)
                     qsl(".TLabel { font-size: 15px; } .QLabel { font-size: 40px; } QPushButton, QFrame { font-style: italic; }"),
                     qsl("QLabel, TLabel#%1 { font-size: 14px; } QLabel { font-size: 24px; }").arg(objectName),
                     qsl("/* { */ QLabel { font: bold 16px '%1'; } QLabel { color: red; font-size: 19px; }").arg(shorthandFamily),
+                    qsl(R"(QLabel { font-family: 'Rock\'n Roll'; font-size: 27px; } QLabel { font-weight: bold; })"),
                     qsl("@media screen { QLabel { font-size: 40px; } } QLabel { font-size: 17px; }"),
                     qsl("QLabel { font-size: 22px; } QLabel { font-size: 40px; "),
                     qsl("QLabel { font-size: 25px; } QLabel"),
