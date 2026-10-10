@@ -5114,7 +5114,7 @@ void mudlet::setMenuBarVisibility(const enums::controlsVisibility state)
 // This only adjusts the visibility as appropriate
 void mudlet::adjustMenuBarVisibility()
 {
-    const bool menuBarVisible = menuBarShouldBeVisible();
+    const bool menuBarVisible = controlShouldBeVisible(mMenuBarVisibility);
     menuBar()->setVisible(menuBarVisible);
 
     for (const auto& detachedWindow : std::as_const(mDetachedWindows)) {
@@ -5122,12 +5122,6 @@ void mudlet::adjustMenuBarVisibility()
             detachedWindow->setMenuBarVisibility(menuBarVisible);
         }
     }
-}
-
-bool mudlet::menuBarShouldBeVisible()
-{
-    const int hostCount = mHostManager.getHostCount();
-    return (hostCount < 1 && (mMenuBarVisibility & enums::visibleAlways)) || (hostCount >= 1 && (mMenuBarVisibility & enums::visibleMaskNormally));
 }
 
 void mudlet::setToolBarVisibility(const enums::controlsVisibility state)
@@ -5152,7 +5146,7 @@ void mudlet::slot_handleToolbarVisibilityChanged(bool isVisible)
 {
     if (!isVisible && mMenuBarVisibility == enums::visibleNever) {
         // Only need to worry about it DIS-appearing if the menu bar is not showing
-        if (toolBarShouldBeVisible()) {
+        if (controlShouldBeVisible(mToolbarVisibility)) {
             mpMainToolBar->show();
         }
     }
@@ -5187,15 +5181,15 @@ void mudlet::slot_toolbarToggleActionTriggered(bool checked)
     synchronizeToolBarVisibility(checked);
 }
 
-bool mudlet::toolBarShouldBeVisible()
+bool mudlet::controlShouldBeVisible(const enums::controlsVisibility visibility)
 {
     const int hostCount = mHostManager.getHostCount();
-    return (hostCount < 1 && (mToolbarVisibility & enums::visibleAlways)) || (hostCount >= 1 && (mToolbarVisibility & enums::visibleMaskNormally));
+    return (hostCount < 1 && (visibility & enums::visibleAlways)) || (hostCount >= 1 && (visibility & enums::visibleMaskNormally));
 }
 
 void mudlet::adjustToolBarVisibility()
 {
-    const bool toolBarVisible = toolBarShouldBeVisible();
+    const bool toolBarVisible = controlShouldBeVisible(mToolbarVisibility);
     mpMainToolBar->setVisible(toolBarVisible);
 
     // Detached windows only get the toolbar state in their constructor and from the toolbar's own toggle,
@@ -8992,7 +8986,7 @@ void mudlet::detachTab(int tabIndex, const QPoint& position)
     // Create detached window with toolbar state inherited from main window
     bool toolbarVisible = (mpMainToolBar && mpMainToolBar->isVisible());
     auto detachedWindow = new TDetachedWindow(profileName, console, toolbarVisible);
-    detachedWindow->setMenuBarVisibility(menuBarShouldBeVisible());
+    detachedWindow->setMenuBarVisibility(controlShouldBeVisible(mMenuBarVisibility));
     mDetachedWindows.insert(profileName, detachedWindow);
 
     // Transfer any dock widgets from the main window to the detached window

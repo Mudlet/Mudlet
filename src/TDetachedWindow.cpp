@@ -566,13 +566,12 @@ void TDetachedWindow::createMenus()
     connect(reportIssueAction, &QAction::triggered, this, &TDetachedWindow::slot_reportIssue);
     aboutMenu->addAction(reportIssueAction);
 
-    // Toolbar visibility toggle
-    //: This is an item for the toolbar visibility toggle in a detached Mudlet window.
-    mpActionToggleToolBar = new QAction(tr("Show &Toolbar"), this);
+    // Toolbar visibility toggle; the constructor checks it, once the toolbar has its state
+    //: This is an item in the "Window" menu in the menubar of a detached Mudlet window. Its "&" letter must differ from the other items in that menu, "Always on Top" among them.
+    mpActionToggleToolBar = new QAction(tr("Show Tool&bar"), this);
     mpActionToggleToolBar->setObjectName(qsl("toggle_toolbar_action"));
     mpActionToggleToolBar->setCheckable(true);
-    mpActionToggleToolBar->setChecked(mpToolBar ? mpToolBar->isVisible() : true);
-    //: This explains the "Show Toolbar" action for toolbar visibility in a detached Mudlet window.
+    //: This explains the "Show Toolbar" item in the "Window" menu in the menubar of a detached Mudlet window.
     mpActionToggleToolBar->setStatusTip(tr("Show or hide the toolbar"));
     connect(mpActionToggleToolBar, &QAction::triggered, this, &TDetachedWindow::slot_toggleToolBarVisibility);
     mpWindowMenu->insertAction(minimizeAction, mpActionToggleToolBar);
@@ -1202,8 +1201,11 @@ void TDetachedWindow::updateMenuShortcuts()
 
         action->setShortcut(resolveShortcut(key, fallback));
         // Held by the window too: Qt fires no shortcut of an action whose only
-        // container is a hidden menu bar
-        addAction(action);
+        // containers are menus of a hidden menu bar. Adding one the window
+        // already holds would remove it and add it again.
+        if (!actions().contains(action)) {
+            addAction(action);
+        }
     };
 
 #if defined(Q_OS_MACOS)
