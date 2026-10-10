@@ -184,8 +184,9 @@ headlessResult = ok and 'ok' or tostring(err)
         QVERIFY2(host, "The profile is not in the pool.");
         host->mUndoServerWrap = true;
         host->mUndoServerWrapWidth = static_cast<int>(heldLine.size());
-        // Long enough that only the disconnect, not the posting timer, can commit the held line
+        // Long enough that only the disconnect, not either timer, can commit the held line
         host->mTelnet.setPostingTimeout(60000);
+        host->mServerWrapFlushTimer.setInterval(60000);
         QSignalSpy held(&host->mainConsoleModel().mNotifier, &TConsoleModelNotifier::serverWrapLineHeld);
         QVERIFY(host->getLuaInterpreter()->compileAndExecuteScript(qsl(R"lua(headlessHeldLine = 'none'; tempTrigger("the gate stands open", [[headlessHeldLine = line]]))lua")));
         QString heldLineAtDisconnect;
