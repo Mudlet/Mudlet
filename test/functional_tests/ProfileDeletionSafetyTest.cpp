@@ -28,8 +28,10 @@
  * Run with: ctest -R ProfileDeletionSafetyTest -V
  */
 
+#include <QScopeGuard>
 #include <QtTest/QtTest>
 
+#include "CredentialManager.h"
 #include "MudletApp.h"
 #include "PortableModeTestHelper.h"
 #include "MudletInstanceCoordinator.h"
@@ -387,6 +389,45 @@ private slots:
 
         QVERIFY2(!QDir(profilePath(doomed)).exists(), "the confirmed profile was not removed");
         QVERIFY2(QDir(profilePath(mKeeper)).exists(), "an unrelated profile was removed too");
+        closeDialog(dlg);
+    }
+
+    // The credential store is not inside the profile folder, so removing the
+    // folder alone leaves a sign-in for a new profile of the same name to find
+    void test_aRemovedProfileTakesItsSavedSignInWithIt_data()
+    {
+        QTest::addColumn<bool>("storingSecurely");
+        QTest::newRow("passwords kept in the profile") << false;
+        // the sign-in removal waits behind the password one here
+        QTest::newRow("passwords kept securely") << true;
+    }
+
+    void test_aRemovedProfileTakesItsSavedSignInWithIt()
+    {
+        QFETCH(bool, storingSecurely);
+        mudlet::self()->setStorePasswordsSecurely(storingSecurely);
+        const QString signedIn = qsl("QA Signed In");
+        // On macOS and Windows the store is outside the test's own directory
+        auto forgetBoth = qScopeGuard([this, signedIn] {
+            for (const QString& profile : {signedIn, mKeeper}) {
+                CredentialManager::removeCredential(profile, qsl("reconnect"));
+                CredentialManager::removeCredential(profile, qsl("reconnect-token"));
+            }
+            mudlet::self()->setStorePasswordsSecurely(false);
+        });
+        makeProfileWithSavedGame(signedIn);
+        QVERIFY(CredentialManager::storeCredential(signedIn, qsl("reconnect"), qsl(R"({"account": "acct:char", "provider": "discord", "token": "inline-token"})")));
+        QVERIFY(CredentialManager::storeCredential(signedIn, qsl("reconnect-token"), qsl("left-behind")));
+        QVERIFY(CredentialManager::storeCredential(mKeeper, qsl("reconnect-token"), qsl("keeper-token")));
+
+        auto* dlg = openDialog();
+        selectProfile(dlg, signedIn);
+        removeProfileAndConfirm(dlg, signedIn);
+        QVERIFY2(!QDir(profilePath(signedIn)).exists(), "the confirmed profile was not removed");
+
+        QTRY_VERIFY2(CredentialManager::retrieveCredential(signedIn, qsl("reconnect-token")).isEmpty(), "the removed profile's sign-in token is still stored");
+        QTRY_VERIFY2(CredentialManager::retrieveCredential(signedIn, qsl("reconnect")).isEmpty(), "the removed profile's sign-in record, with its token, is still stored");
+        QCOMPARE(CredentialManager::retrieveCredential(mKeeper, qsl("reconnect-token")), qsl("keeper-token"));
         closeDialog(dlg);
     }
 

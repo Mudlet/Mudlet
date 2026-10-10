@@ -1229,8 +1229,14 @@ void dlgConnectionProfiles::reallyDeleteProfile(const QString& profile)
                 if (safeCredManager) {
                     safeCredManager->deleteLater();
                 }
+
+                // Only now: keychain jobs run one at a time, and each times out while it waits its turn
+                GMCPAuthenticator::forgetSavedSignInOfRemovedProfile(profile);
             });
         });
+    } else {
+        // Passwords stored with the profile went with its folder; the sign-in never lives there
+        GMCPAuthenticator::forgetSavedSignInOfRemovedProfile(profile);
     }
 
     // only the self-test entry needs its removal recorded: fillout_form() lists

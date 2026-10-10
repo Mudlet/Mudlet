@@ -116,6 +116,9 @@ public:
     // place for the reason metadataKey() gives, and a second spelling of it would read a file that
     // is never written.
     static QString savedSignInRecordPath(const QString& profileName);
+    // The credential store is keyed by name and outlives the profile's folder, so a new profile of the
+    // same name would otherwise find this sign-in and send its token to whatever game it connects to.
+    static void forgetSavedSignInOfRemovedProfile(const QString& profileName);
 
 private:
     // Reads the stored sign-in - the {account, provider?, secure_only} metadata plus the token from
