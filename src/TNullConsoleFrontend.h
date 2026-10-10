@@ -22,6 +22,7 @@
 
 #include "TConsoleFrontend.h"
 #include "TMxpFrameFrontend.h"
+#include "TPrintSink.h"
 #include "TWindowRegistry.h"
 #include "utils.h"
 
@@ -36,29 +37,58 @@
 #include <vector>
 
 class Host;
+class TNullConsoleFrontend;
 struct TLabelModel;
 
+// Writes to a model what TConsole's own print sink writes to a widget's
+class TConsoleModelSink final : public TPrintSink
+{
+public:
+    explicit TConsoleModelSink(TConsoleModel& model)
+    : mModel(model)
+    {
+    }
+
+    void printFormatted(const QString& text, const std::vector<TChar>& formatting, const TLinkStore& sourceLinkStore) override;
+    void discardAll() override;
+    void discardLastLine() override;
+
+private:
+    TConsoleModel& mModel;
+};
+
+// Each frame gets a mini console model of the null view's under the frame's name, as a real frame gets a
+// mini console, so <DEST> text lands where scripts can read it. A frame has no tab header here, so one
+// docked into another is opened as a frame of its own.
 class TNullMxpFrameFrontend final : public TMxpFrameFrontend
 {
 public:
-    void createInternalFrame(const QString&, const QString&, const QString&, const QRect&, bool, bool) override {}
-    std::optional<QSize> createExternalFrame(const QString&, const QString&, const QSize&, bool) override { return std::nullopt; }
-    void createTabFrame(const QString&, const QString&, const QString&, const QSize&, bool, bool) override {}
+    explicit TNullMxpFrameFrontend(TNullConsoleFrontend& view)
+    : mView(view)
+    {
+    }
+
+    void createInternalFrame(const QString& name, const QString&, const QString&, const QRect&, bool, bool) override;
+    std::optional<QSize> createExternalFrame(const QString& name, const QString&, const QSize& size, bool) override;
+    void createTabFrame(const QString& name, const QString&, const QString&, const QSize&, bool, bool) override;
     bool removeFromParentTabs(const QString&, const QString&) override { return false; }
-    void destroyFrame(const QString&) override {}
+    void destroyFrame(const QString& name) override;
     void showFrame(const QString&) override {}
     void focusFrame(const QString&) override {}
     void setGeometry(const QString&, const QRect&) override {}
     void reportSize() override {}
-    TPrintSink* sink(const QString&) const override { return nullptr; }
-    bool hasFrameWidget(const QString&) const override { return false; }
+    TPrintSink* sink(const QString& name) const override;
+    bool hasFrameWidget(const QString& name) const override { return sink(name) != nullptr; }
+
+private:
+    TNullConsoleFrontend& mView;
 };
 
 // The view a Host has while no real one is attached: before its console is made, after that has
-// gone, and in a run with no GUI. Labels, mini consoles, buffers and user windows made through it
-// get a model of their own, registered as a real view registers its widgets', so scripts can find
-// them, echo to them and delete them. Every other operation, on these or any other window, fails,
-// has no value or does nothing; a close has nothing to refuse it.
+// gone, and in a run with no GUI. Labels, mini consoles, buffers, user windows and MXP frames made
+// through it get a model of their own, registered as a real view registers its widgets', so scripts
+// can find them, echo to them and delete them. Every other operation, on these or any other window,
+// fails, has no value or does nothing; a close has nothing to refuse it.
 class TNullConsoleFrontend : public TConsoleFrontend
 {
 public:
@@ -244,12 +274,16 @@ public:
     const TMxpFrameFrontend& mxpFrames() const override { return mMxpFrames; }
 
 private:
+    friend class TNullMxpFrameFrontend;
+
     // A window made inside a user window goes with it, as a real one is its dock's child widget, though
     // out of the registry at once rather than when deferred deletes run.
     struct SubConsole
     {
         std::unique_ptr<TConsoleModel> pModel;
         QString userWindow;
+        // Only for an MXP frame's, which is how a frame tells its own from a script's window of the same name
+        std::unique_ptr<TConsoleModelSink> pFrameSink;
     };
     struct Label
     {
@@ -259,12 +293,15 @@ private:
 
     TConsoleModel& addSubConsole(const QString& name, TWindowRegistry::SubConsoleKind kind, const QString& windowname);
     void removeSubConsole(const QString& name);
+    void addFrameConsole(const QString& name);
+    void removeFrameConsole(const QString& name);
+    TConsoleModelSink* frameSink(const QString& name) const;
     void removeLabel(const QString& name);
     void queueRelease();
     QString userWindowOrMain(const QString& windowname) const;
 
     Host* mpHost = nullptr;
-    TNullMxpFrameFrontend mMxpFrames;
+    TNullMxpFrameFrontend mMxpFrames{*this};
     std::map<QString, SubConsole> mSubConsoles;
     std::map<QString, Label> mLabels;
     std::vector<std::unique_ptr<TConsoleModel>> mRetiredConsoles;
