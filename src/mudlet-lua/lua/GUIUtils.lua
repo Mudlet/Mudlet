@@ -2726,7 +2726,9 @@ local function setActionCallback(callbackFunc, funcName, name, func, ...)
   local nr = arg.n + 1
   arg.n = arg.n + 1
   if type(func) == "string" then
-    func = loadstring("return "..func.."(...)")
+    local compiled, compileError = loadstring("return "..func.."(...)")
+    assert(compiled, string.format('<%s: bad argument #2 value (%s)>', funcName, tostring(compileError)))
+    func = compiled
   end
   assert(type(func) == 'function', string.format('<%s: bad argument #2 type (function expected, got %s!)>', funcName, type(func)))
   if nr > 1 then
