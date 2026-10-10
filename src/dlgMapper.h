@@ -25,6 +25,7 @@
  ***************************************************************************/
 
 
+#include "TMapViewFrontend.h"
 #include "ui_mapper.h"
 #include <QPointer>
 
@@ -41,7 +42,7 @@ class QOpenGLWidget;
 #endif
 
 
-class dlgMapper : public QWidget, public Ui::mapper
+class dlgMapper : public QWidget, public Ui::mapper, public TMapViewFrontend
 {
     Q_OBJECT
 
@@ -61,14 +62,30 @@ public:
     void refreshColours();
     void recreate3DWidget();
 
-    void showMapProgress(const QString& label, bool cancelable);
-    void setMapProgressLabel(const QString& text);
-    void setMapProgressRange(int minimum, int maximum);
-    void setMapProgressValue(int value);
-    int mapProgressMaximum() const;
-    void setMapProgressCancelable(bool cancelable);
-    void hideMapProgress();
-    bool isMapProgressVisible() const;
+    bool onScreen() const override { return isVisible(); }
+    void showMapProgress(const QString& label, bool cancelable) override;
+    void setMapProgressLabel(const QString& text) override;
+    void setMapProgressRange(int minimum, int maximum) override;
+    void setMapProgressValue(int value) override;
+    int mapProgressMaximum() const override;
+    void setMapProgressCancelable(bool cancelable) override;
+    void hideMapProgress() override;
+    bool isMapProgressVisible() const override;
+    void show3DView(bool shown) override { slot_toggle3DView(shown); }
+    bool showing3DView() const override;
+    void recreate3DView() override { recreate3DWidget(); }
+    void shift3DViewCamera(float verticalAngle, float horizontalAngle, float rotationAngle) override;
+    void set3DViewCameraPosition(float r, float theta, float phi) override;
+    bool selectingRooms() const override { return mp2dMap->mMultiSelection; }
+    QSet<int> selectedRooms() const override { return mp2dMap->mMultiSelectionSet; }
+    int centerSelectedRoom() const override { return mp2dMap->getCenterSelectedRoomId(); }
+    void clearRoomSelection() override { mp2dMap->clearSelection(); }
+    int shownAreaId() const override { return mp2dMap->getAreaId(); }
+    std::pair<bool, QString> setMapZoom(qreal zoom, int areaId) override { return mp2dMap->setMapZoom(zoom, areaId); }
+    std::pair<bool, QString> exportAreaToImage(int areaId, const QString& filePath, std::optional<int> zLevel, qreal zoom, bool exportAllZLevels) override
+    {
+        return mp2dMap->exportAreaToImage(areaId, filePath, zLevel, zoom, exportAllZLevels);
+    }
 
 signals:
     void signal_mapProgressCanceled();
