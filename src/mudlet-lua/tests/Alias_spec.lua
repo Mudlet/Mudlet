@@ -952,10 +952,13 @@ describe("Alias processing", function()
         end)
 
         it("killAlias returns false the second time, as the alias is already dead", function()
+            -- earlier specs' killed items would be freed by the flush below too, so free them first
+            feedTriggers("\nspec_alias_kill_settle\n")
             local id = tempAlias("^spec_double_kill_alias$", [[]])
             assert.is_true(killAlias(id), "killing a live temporary alias should report success")
             -- only the deferred cleanup frees it, so the second kill is told about a
-            -- corpse it can still find, though exists() does not count it
+            -- corpse it can still find: exists() does not count it, but the profile still holds it
+            local held = getProfileStats().aliases.temp
             assert.are.equal(0, exists(id, "alias"), "a killed alias waiting for cleanup should not be counted")
             assert.are.equal(0, isActive(id, "alias"), "a killed alias is no longer active")
             assert.is_false(killAlias(id),
@@ -963,8 +966,21 @@ describe("Alias processing", function()
             -- an incoming line runs every unit's deferred cleanup, which is what
             -- finally frees the alias; the answer has to be the same after it
             feedTriggers("\nspec_alias_kill_flush\n")
+            assert.are.equal(held - 1, getProfileStats().aliases.temp, "the cleanup should have freed the killed alias")
             assert.are.equal(0, exists(id, "alias"), "the alias should be gone after kill and cleanup")
             assert.is_false(killAlias(id), "a freed alias cannot be killed either")
+        end)
+
+        it("does not count an alias its own script has just killed", function()
+            _G.AliasSelfKillExistsSpec = nil
+            finally(function() _G.AliasSelfKillExistsSpec = nil end)
+            local id
+            id = tempAlias("^spec_self_kill_exists_alias$", function()
+                killAlias(id)
+                _G.AliasSelfKillExistsSpec = {exists(id, "alias"), isActive(id, "alias"), #findItems(tostring(id), "alias")}
+            end)
+            expandAlias("spec_self_kill_exists_alias", false)
+            assert.are.same({0, 0, 0}, _G.AliasSelfKillExistsSpec, "exists, isActive and findItems inside the alias's own pass")
         end)
 
         it("killAlias returns false the second time inside the alias's own script", function()

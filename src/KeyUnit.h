@@ -91,8 +91,9 @@ public:
     QSet<TKey*> mCleanupSet;
     QList<TKey*> uninstallList;
     bool hasPendingDeletes() const { return !mCleanupSet.isEmpty() || !uninstallList.isEmpty(); }
-    // Still in the lookup tables until doCleanup() frees it, which cannot happen mid-pass
-    bool pendingDeletion(TKey* pItem) const { return mCleanupSet.contains(pItem) || uninstallList.contains(pItem); }
+    // Killed or uninstalled, itself or through an ancestor, but still in the lookup tables: doCleanup() runs only
+    // on the next line, timer flush or temp purge, so on an idle profile that can be a minute away
+    bool pendingDeletion(TKey* pItem) const;
     // Past behaviour is to only process the first key binding that matches,
     // ignoring any duplicates - but changing that behaviour unconditionally
     // could break things - so only do it if this flag is set:

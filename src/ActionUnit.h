@@ -77,6 +77,8 @@ public:
 
     QList<TAction*> uninstallList;
     bool hasPendingDeletes() const { return !uninstallList.isEmpty(); }
+    // Uninstalled, itself or through an ancestor, but kept until doCleanup()
+    bool pendingDeletion(TAction* pItem) const;
 
 private:
     ActionUnit() = default;

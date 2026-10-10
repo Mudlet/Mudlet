@@ -457,18 +457,31 @@ std::vector<int> TimerUnit::findItems(const QString& name, const bool exactMatch
     const auto searchCaseSensitivity = caseSensitive ? Qt::CaseSensitive : Qt::CaseInsensitive;
     if (exactMatch) {
         for (auto& item : std::as_const(mTimerMap)) {
-            if (!pendingDeletion(item) && !item->getName().compare(name, searchCaseSensitivity)) {
+            if (!item->getName().compare(name, searchCaseSensitivity)) {
                 ids.push_back(item->getID());
             }
         }
     } else {
         for (auto& item : std::as_const(mTimerMap)) {
-            if (!pendingDeletion(item) && item->getName().contains(name, searchCaseSensitivity)) {
+            if (item->getName().contains(name, searchCaseSensitivity)) {
                 ids.push_back(item->getID());
             }
         }
     }
     return ids;
+}
+
+bool TimerUnit::pendingDeletion(TTimer* pItem) const
+{
+    if (!hasPendingDeletes()) {
+        return false;
+    }
+    for (auto* pAncestor = pItem; pAncestor; pAncestor = pAncestor->getParent()) {
+        if (mCleanupSet.contains(pAncestor) || uninstallList.contains(pAncestor)) {
+            return true;
+        }
+    }
+    return false;
 }
 
 bool TimerUnit::killTimer(const QString& name)

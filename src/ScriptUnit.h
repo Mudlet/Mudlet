@@ -85,6 +85,8 @@ public:
 
     QList<TScript*> uninstallList;
     bool hasPendingDeletes() const { return !uninstallList.isEmpty(); }
+    // Uninstalled, itself or through an ancestor, but kept until doCleanup()
+    bool pendingDeletion(TScript* pItem) const;
 
 
 private:

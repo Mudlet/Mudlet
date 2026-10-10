@@ -395,18 +395,31 @@ std::vector<int> AliasUnit::findItems(const QString& name, const bool exactMatch
     const auto searchCaseSensitivity = caseSensitive ? Qt::CaseSensitive : Qt::CaseInsensitive;
     if (exactMatch) {
         for (auto& item : std::as_const(mAliasMap)) {
-            if (!pendingDeletion(item) && !item->getName().compare(name, searchCaseSensitivity)) {
+            if (!item->getName().compare(name, searchCaseSensitivity)) {
                 ids.push_back(item->getID());
             }
         }
     } else {
         for (auto& item : std::as_const(mAliasMap)) {
-            if (!pendingDeletion(item) && item->getName().contains(name, searchCaseSensitivity)) {
+            if (item->getName().contains(name, searchCaseSensitivity)) {
                 ids.push_back(item->getID());
             }
         }
     }
     return ids;
+}
+
+bool AliasUnit::pendingDeletion(TAlias* pItem) const
+{
+    if (!hasPendingDeletes()) {
+        return false;
+    }
+    for (auto* pAncestor = pItem; pAncestor; pAncestor = pAncestor->getParent()) {
+        if (mCleanupSet.contains(pAncestor) || uninstallList.contains(pAncestor)) {
+            return true;
+        }
+    }
+    return false;
 }
 
 bool AliasUnit::enableAlias(const QString& name)

@@ -150,8 +150,9 @@ public:
 
     QList<TTrigger*> uninstallList;
     bool hasPendingDeletes() const { return !mCleanupSet.isEmpty() || !uninstallList.isEmpty(); }
-    // Still in the lookup tables until doCleanup() frees it, which cannot happen mid-pass
-    bool pendingDeletion(TTrigger* pItem) const { return mCleanupSet.contains(pItem) || uninstallList.contains(pItem); }
+    // Killed or uninstalled, itself or through an ancestor, but still in the lookup tables: doCleanup() runs only
+    // on the next line, timer flush or temp purge, so on an idle profile that can be a minute away
+    bool pendingDeletion(TTrigger* pItem) const;
 
 private:
     TriggerUnit() = default;
