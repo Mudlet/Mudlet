@@ -1823,19 +1823,20 @@ int TLuaInterpreter::getSelection(lua_State* L)
 int TLuaInterpreter::getTextFormat(lua_State* L)
 {
     const QString windowName = lua_gettop(L) ? getVerifiedString(L, __func__, 1, "window name", true) : QString();
+    const QString shownName = isMain(windowName) ? qsl("main") : windowName;
     auto pModel = getHostFromLua(L).consoleModelNamed(windowName);
     if (!pModel) {
-        return warnArgumentValue(L, __func__, qsl("window '%1' not found").arg(windowName));
+        return warnArgumentValue(L, __func__, qsl("window '%1' not found").arg(shownName));
     }
 
     const QPair<quint8, TChar> result = pModel->textAttributes();
 
     if (result.first == 2) {
-        return warnArgumentValue(L, __func__, qsl("current selection invalid in window '%1'").arg(windowName));
+        return warnArgumentValue(L, __func__, qsl("current selection invalid in window '%1'").arg(shownName));
     }
 
     if (result.first != 0) {
-        return warnArgumentValue(L, __func__, qsl("no character under cursor or selection in window '%1'").arg(windowName));
+        return warnArgumentValue(L, __func__, qsl("no character under cursor or selection in window '%1'").arg(shownName));
     }
 
     lua_newtable(L);
