@@ -259,6 +259,8 @@ private:
         std::unique_ptr<TLabelModel> pModel;
         QString userWindow;
         bool shown = true;
+        // Set by setFont(), as QWidget::setFont() sets Qt::WA_SetFont on a real label
+        bool ownFont = false;
     };
 
     TConsoleModel& addSubConsole(const QString& name, TWindowRegistry::SubConsoleKind kind, const QString& windowname);

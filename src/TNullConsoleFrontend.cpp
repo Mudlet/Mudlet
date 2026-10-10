@@ -61,8 +61,11 @@ void TNullConsoleFrontend::createLabel(const QString& windowname, const QString&
 {
     auto pLabel = std::make_unique<TLabelModel>(mpHost, name);
     pLabel->mGeometry = QRect(x, y, width, height);
+    const QString userWindow = userWindowOrMain(windowname);
+    // A real label takes its console's font as it is made, and keeps it as that font changes
+    pLabel->mFont = consoleFont(userWindow).value_or(displayFont());
     mpHost->windowRegistry().registerLabel(name, pLabel.get());
-    mLabels[name] = {std::move(pLabel), userWindowOrMain(windowname)};
+    mLabels[name] = {std::move(pLabel), userWindow};
     reportVisibility(name);
     // TMainConsole::createLabel()'s colour
     setLabelBackgroundColor(name, QColor(32, 32, 32, 255));
@@ -407,7 +410,12 @@ bool TNullConsoleFrontend::reparentLabel(const QString& windowname, const QStrin
     if (it == mLabels.end()) {
         return false;
     }
-    it->second.userWindow = userWindowOrMain(windowname);
+    const QString userWindow = userWindowOrMain(windowname);
+    // A real label with no font of its own takes the application's, not its new parent's, as it moves
+    if (userWindow != it->second.userWindow && !it->second.ownFont) {
+        it->second.pModel->mFont = QFont();
+    }
+    it->second.userWindow = userWindow;
     it->second.pModel->mGeometry.moveTo(x, y);
     it->second.shown = show;
     reportVisibility(name);
@@ -468,11 +476,12 @@ bool TNullConsoleFrontend::setLabelSvgShear(const QString& name, const double sh
 
 bool TNullConsoleFrontend::setLabelFont(const QString& name, const QFont& font)
 {
-    TLabelModel* pLabel = labelModel(name);
-    if (!pLabel) {
+    const auto it = mLabels.find(name);
+    if (it == mLabels.end()) {
         return false;
     }
-    pLabel->mFont = font;
+    it->second.pModel->mFont = font;
+    it->second.ownFont = true;
     return true;
 }
 
