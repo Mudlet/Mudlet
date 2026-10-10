@@ -410,6 +410,7 @@ public:
     static int setFont(lua_State*);
     static int getFont(lua_State*);
     static int setFontSize(lua_State*);
+    static int setMiniConsoleFontSize(lua_State*);
     static int getFontSize(lua_State*);
     static int openUserWindow(lua_State*);
     static int setUserWindowTitle(lua_State*);
@@ -557,6 +558,7 @@ public:
     static int showToolBar(lua_State*);
     static int hideToolBar(lua_State*);
     static int loadReplay(lua_State*);
+    static int loadRawFile(lua_State*);
     static int setBold(lua_State*);
     static int setItalics(lua_State*);
     static int setReverse(lua_State*);
@@ -887,6 +889,8 @@ public slots:
     void slot_deleteSender(int, QProcess::ExitStatus);
 
 private:
+    static int loadReplayFile(lua_State*, const char* functionName);
+    static int setConsoleFontSize(lua_State*, const char* functionName, const bool windowNamed);
     static bool getVerifiedBool(lua_State*, const char* functionName, const int pos, const char* publicName, const bool isOptional = false);
     static QString getVerifiedString(lua_State*, const char* functionName, const int pos, const char* publicName, const bool isOptional = false);
     static bool checkStringArg(lua_State*, const char* functionName, const int pos, const char* publicName, const bool isOptional = false);

@@ -338,9 +338,16 @@ function setGaugeWindow(windowName, gaugeName, x, y, show)
     show = true
   end
   assert(gaugesTable[gaugeName], "setGaugeWindow: no such gauge exists.")
-  setWindow(windowName, gaugeName .. "_back", x, y, show)
-  setWindow(windowName, gaugeName .. "_front", x, y, show)
-  setWindow(windowName, gaugeName .. "_text", x, y, show)
+  for _, part in ipairs({"_back", "_front", "_text"}) do
+    -- setWindow numbers its arguments as this function does, so only its name needs swapping
+    local ok, moved, message = pcall(setWindow, windowName, gaugeName .. part, x, y, show)
+    if not ok then
+      error((tostring(moved):gsub("^setWindow:", "setGaugeWindow:")), 2)
+    end
+    if not moved then
+      return nil, message
+    end
+  end
   -- save new values in table
   gaugesTable[gaugeName].x, gaugesTable[gaugeName].y = x, y
   setGauge(gaugeName, gaugesTable[gaugeName].value, 1)
@@ -405,6 +412,8 @@ end
 function setGaugeToolTip(gaugeName, text, duration)
   duration = duration or 0
   assert(gaugesTable[gaugeName], "setGaugeToolTip: no such gauge exists.")
+  assert(type(text) == 'string' or type(text) == 'number', 'setGaugeToolTip: bad argument #2 type (text as string expected, got '..type(text)..'!)')
+  assert(tonumber(duration), 'setGaugeToolTip: bad argument #3 type (duration as number expected, got '..type(duration)..'!)')
   setLabelToolTip(gaugeName .. "_text", text, duration)
 end
 
@@ -1468,40 +1477,46 @@ end
 --- @see dinsertText
 --- @see hinsertText
 function xEcho(style, func, ...)
+  local publicName = style:sub(1, 1):lower() .. func
   local arg1, arg2 = ...
   if type(arg1) ~= 'string' then
-    error(style:sub(1,1):lower() .. func .. ': bad argument #1, string expected, got '..type(arg1)..'!)')
+    error(publicName .. ': bad argument #1, string expected, got '..type(arg1)..'!)')
   end
 
   local win, str, cmd, hint, fmt
+  local windowLeftOut = false
   local plain = func == "echo" or func == "insertText"
   if not plain and string.find(func, "Link") then
     local args = { ... }
     local n = #args
     if n < 3 then
-      error 'Insufficient arguments, usage: ([window, ] string, command, hint)'
+      error(publicName .. ': Insufficient arguments, usage: ([window, ] string, command, hint)')
     elseif n == 3 then
       str, cmd, hint = ...
+      windowLeftOut = true
     elseif n == 4 and type(args[4]) == 'boolean' then
       str, cmd, hint, fmt = ...
+      windowLeftOut = true
     elseif n >= 4 and type(args[4]) == 'string' then
       win, str, cmd, hint, fmt = ...
     else
-      error 'Improper arguments, usage: ([window, ] string, command, hint)'
+      error(publicName .. ': Improper arguments, usage: ([window, ] string, command, hint)')
     end
   elseif not plain and string.find(func, "Popup") then
     local args = { ... }
     local n = #args
     if n < 3 then
-      error 'Insufficient arguments, usage: ([window, ] string, {commands}, {hints})'
+      error(publicName .. ': Insufficient arguments, usage: ([window, ] string, {commands}, {hints})')
     elseif n == 3 then
       str, cmd, hint = ...
+      windowLeftOut = true
     elseif n == 4 and type(args[4]) == 'boolean' then
       str, cmd, hint, fmt = ...
+      windowLeftOut = true
     elseif n >= 4 and type(args[4]) == 'table' then
       win, str, cmd, hint, fmt = ...
     else
-      error 'Improper arguments, usage: ([window, ] string, {commands}, {hints})'
+      error(publicName .. ': Improper arguments, usage: ([window, ] string, {commands}, {hints})')
     end
 
   else
@@ -1571,7 +1586,19 @@ function xEcho(style, func, ...)
           end
         else
           -- if fmt then setUnderline(win, true) end -- not sure if underline is necessary unless asked for
-          _G[func](win, v, cmd, hint, fmt == true)
+          local ok, err = pcall(_G[func], win, v, cmd, hint, fmt == true)
+          if not ok then
+            -- named and numbered for the call the script made: the primitive is
+            -- always handed a window, which that call may have left out
+            if type(err) == "string" and err:sub(1, #func + 1) == func .. ":" then
+              err = style:sub(1, 1):lower() .. err
+              if windowLeftOut then
+                -- covers "bad argument #N" and "bad item #i in table argument #N"
+                err = err:gsub("argument #(%d+)", function(position) return "argument #" .. (tonumber(position) - 1) end, 1)
+              end
+            end
+            error(err, 0)
+          end
         end
       end
     end
@@ -2272,7 +2299,7 @@ function setHexFgColor(windowName, colorString)
     win = nil
   end
 
-  if #col ~= 6 then
+  if type(col) ~= "string" or not col:match("^%x%x%x%x%x%x$") then
     error("setHexFgColor needs a 6 digit hex color code.")
   end
 
@@ -2302,7 +2329,7 @@ function setHexBgColor(windowName, colorString)
     win = nil
   end
 
-  if #col ~= 6 then
+  if type(col) ~= "string" or not col:match("^%x%x%x%x%x%x$") then
     error("setHexBgColor needs a 6 digit hex color code.")
   end
 
@@ -2434,6 +2461,8 @@ end
 --- @param text The text to replace the selection with.
 function creplaceLine(window, text)
   assert(type(window) == 'string', 'creplaceLine: bad argument #1 type (expected string, got '..type(window)..'!)')
+  -- checked before the line is selected and blanked, which xReplace does first
+  assert(text == nil or type(text) == 'string' or type(text) == 'number', 'creplaceLine: bad argument #2 type (text as string expected, got '..type(text)..'!)')
   if not text then
     selectCurrentLine()
   else
@@ -2455,6 +2484,7 @@ end
 --- @param text The text to replace the selection with.
 function dreplaceLine(window, text)
   assert(type(window) == 'string', 'dreplaceLine: bad argument #1 type (expected string, got '..type(window)..'!)')
+  assert(text == nil or type(text) == 'string' or type(text) == 'number', 'dreplaceLine: bad argument #2 type (text as string expected, got '..type(text)..'!)')
   if not text then
     selectCurrentLine()
   else
@@ -2476,6 +2506,7 @@ end
 --- @param text The text to replace the selection with.
 function hreplaceLine(window, text)
   assert(type(window) == 'string', 'hreplaceLine: bad argument #1 type (expected string, got '..type(window)..'!)')
+  assert(text == nil or type(text) == 'string' or type(text) == 'number', 'hreplaceLine: bad argument #2 type (text as string expected, got '..type(text)..'!)')
   if not text then
     selectCurrentLine()
   else
@@ -2485,6 +2516,7 @@ function hreplaceLine(window, text)
 end
 
 function resetLabelToolTip(label)
+  assert(type(label) == 'string' or type(label) == 'number', 'resetLabelToolTip: bad argument #1 type (label name as string expected, got '..type(label)..'!)')
   return setLabelToolTip(label, "")
 end
 
@@ -2751,6 +2783,7 @@ for i = 1, #callBackFunc do
 end
 
 function resetUserWindowTitle(windowname)
+  assert(type(windowname) == 'string' or type(windowname) == 'number', 'resetUserWindowTitle: bad argument #1 type (name as string expected, got '..type(windowname)..'!)')
   return setUserWindowTitle(windowname, "")
 end
 
