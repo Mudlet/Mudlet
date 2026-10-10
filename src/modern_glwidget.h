@@ -79,6 +79,8 @@ public:
     void setCameraPosition(float, float, float);
     // Frames as many rooms as the 2D map shows at this zoom, when areaId is the area on view
     void applyMapZoom(qreal zoom, int areaId);
+    // A grid-mode area is always drawn looking straight down with north up
+    bool cameraFixedByGridMode() const;
 
     QSize minimumSizeHint() const override;
     QSize sizeHint() const override;
@@ -131,7 +133,9 @@ protected:
     void mouseReleaseEvent(QMouseEvent* event) override;
     void keyPressEvent(QKeyEvent* event) override;
     void showEvent(QShowEvent* event) override;
+    bool event(QEvent* event) override;
     void resizeEvent(QResizeEvent* event) override;
+    void paintEvent(QPaintEvent* event) override;
 
 public:
     TMap* mpMap = nullptr;
@@ -160,7 +164,7 @@ private:
 
     // Label texture cache
     LabelTextureCache mLabelTextureCache;
-    // Room textures this frame draws, which making room for another must keep
+    // Room textures this frame has used so far, which making room for another must keep
     QSet<QString> mRoomTexturesInUse;
     bool mRoomTextureLimitWarned = false;
 
@@ -224,7 +228,7 @@ private:
     bool mCameraSmoothAnimating = false; // Dedicated flag for smooth camera animation
     int mPreviousRID = 0;                // Track previous room ID to detect changes
     bool mFramePending = true;
-    // A zoom applied while hidden was framed for the old size, so the next resize frames it again
+    // A zoom applied while hidden was framed for the old size, so the next resize frames it again unless the camera has moved since
     bool mFrameOnResize = false;
     // A distance a script asked for since the last paint wins over framing a newly shown area
     bool mDistanceRequested = false;
@@ -251,6 +255,7 @@ private:
     GLuint exitMarkerTexture(const TRoom& room, const QColor& roomColor);
     // Text on a clear background; size is set to the texture's size in pixels
     GLuint textTexture(const QString& key, const QString& text, const QFont& font, const QFontMetricsF& metrics, const QColor& color, QSize& size);
+    bool contextCreationFailed() const;
     void startSmoothTransition(int targetAID, int targetX, int targetY, int targetZ);
     void stopSmoothTransition();
     void jumpTo(int areaId, int x, int y, int z);

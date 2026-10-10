@@ -169,8 +169,10 @@ QVector3D CameraController::rotateAround(QVector3D currentVector, QVector3D rota
 
 QVector3D CameraController::getPosition() const
 {
-    const float theta = qRadiansToDegrees(std::acos(qBound(-1.0f, mPositionVector.z(), 1.0f)));
-    if (mPositionVector.toVector2D().length() < 1e-6f) {
+    // Not acos(z): near 1 a float z cannot tell the minimum tilt from straight down
+    const float horizontal = mPositionVector.toVector2D().length();
+    const float theta = qRadiansToDegrees(std::atan2(horizontal, mPositionVector.z()));
+    if (horizontal < 1e-6f) {
         // Looking straight down, the camera sits on the side the bottom of the screen faces
         return QVector3D(mDistance, theta, qRadiansToDegrees(std::atan2(-mUpVector.y(), -mUpVector.x())));
     }
@@ -203,9 +205,7 @@ void CameraController::setSideView()
 
 void CameraController::setTopView()
 {
-    mPositionVector = QVector3D(0.0f, 0.0f, 1.0f);
-    mUpVector = QVector3D(0.0f, 1.0f, 0.0f);
-    mRightVector = QVector3D::crossProduct(mPositionVector, mUpVector);
+    setPosition(mDistance, scmMinTilt, scmNorthUpAzimuth);
 }
 
 void CameraController::setGridMode(bool enabled)

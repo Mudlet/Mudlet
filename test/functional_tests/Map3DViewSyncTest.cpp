@@ -65,6 +65,7 @@ private:
     int mPlayerAreaId = 0;
     int mOtherAreaId = 0;
     static constexpr int kPlayerRoomId = 1;
+    static constexpr int kMovedToRoomId = 3;
 
     TMap* map() const { return mpHost->mpMap.data(); }
 
@@ -85,6 +86,7 @@ private:
             return nullptr;
         }
         pMapper->show3DView(false);
+        map()->mRoomIdHash[map()->mProfileName] = kPlayerRoomId;
         T2DMap* p2dMap = pMapper->mp2dMap;
         p2dMap->switchArea(mPlayerAreaId);
         p2dMap->mRoomID = kPlayerRoomId;
@@ -92,8 +94,28 @@ private:
         p2dMap->mMapCenterX = 0.0;
         p2dMap->mMapCenterY = 0.0;
         p2dMap->mMapCenterZ = 0;
+        {
+            const QSignalBlocker blocker(pMapper->comboBox_showArea);
+            pMapper->comboBox_showArea->setCurrentText(qsl("Player Area"));
+        }
         map()->mNewMove = false;
         return pMapper;
+    }
+
+    // The 3D view keeps the landscape shape it had when hidden, while its floating dock turns portrait
+    static void hide3DViewInAPortraitDock(dlgMapper* pMapper, QDockWidget*& pDock, ModernGLWidget*& pModern)
+    {
+        pDock = qobject_cast<QDockWidget*>(pMapper->parentWidget());
+        QVERIFY2(pDock, "the mapper is not in a dock, so its shape cannot be changed while the 3D view is hidden");
+        pDock->setFloating(true);
+        pDock->resize(900, 500);
+        pMapper->show3DView(true);
+        pModern = qobject_cast<ModernGLWidget*>(pMapper->glWidget);
+        QVERIFY(pModern);
+        QTRY_VERIFY(pModern->isVisible() && pModern->width() > pModern->height());
+        pMapper->show3DView(false);
+        pDock->resize(300, 900);
+        QTRY_VERIFY(pMapper->height() > pMapper->width());
     }
 
 private slots:
@@ -134,6 +156,7 @@ private slots:
         QVERIFY(addRoomAt(kPlayerRoomId, mPlayerAreaId, 0, 0));
         // Far from where the 3D view is panned to below, so switching to this area cannot land there by chance
         QVERIFY(addRoomAt(2, mOtherAreaId, 20, 20));
+        QVERIFY(addRoomAt(kMovedToRoomId, mPlayerAreaId, 5, 5));
         map()->mRoomIdHash[map()->mProfileName] = kPlayerRoomId;
 
         mpHost->showHideOrCreateMapper(false);
@@ -163,16 +186,56 @@ private slots:
         pMapper->show3DView(true);
         auto* pModern = qobject_cast<ModernGLWidget*>(pMapper->glWidget);
         QVERIFY(pModern);
-        pModern->setViewCenter(mOtherAreaId, 3, 7, 0);
+        pModern->setViewCenter(mOtherAreaId, 3, 7, 1);
         pMapper->show3DView(false);
 
         T2DMap* p2dMap = pMapper->mp2dMap;
         QCOMPARE(p2dMap->mAreaID, mOtherAreaId);
+        QCOMPARE(pMapper->comboBox_showArea->currentText(), qsl("Other Area"));
         // The 2D map's y-axis points down the screen
         QCOMPARE(p2dMap->mMapCenterX, 3.0);
         QCOMPARE(p2dMap->mMapCenterY, -7.0);
+        QCOMPARE(p2dMap->mMapCenterZ, 1);
         QVERIFY2(p2dMap->mShiftMode, "the 2D map went back to following the player");
-        QCOMPARE(p2dMap->mRoomID, kPlayerRoomId);
+    }
+
+    void test_a3DViewPannedWithinTheAreaCarriesOverTo2D()
+    {
+        dlgMapper* pMapper = mapperShowing2DAtThePlayer();
+        QVERIFY(pMapper);
+        pMapper->show3DView(true);
+        auto* pModern = qobject_cast<ModernGLWidget*>(pMapper->glWidget);
+        QVERIFY(pModern);
+        pModern->setViewCenter(mPlayerAreaId, 3, 7, 0);
+        pMapper->show3DView(false);
+
+        T2DMap* p2dMap = pMapper->mp2dMap;
+        QCOMPARE(p2dMap->mAreaID, mPlayerAreaId);
+        QCOMPARE(p2dMap->mMapCenterX, 3.0);
+        QCOMPARE(p2dMap->mMapCenterY, -7.0);
+        QVERIFY2(p2dMap->mShiftMode, "the 2D map went back to following the player");
+    }
+
+    // The hidden 2D map has not painted since the player moved, so its own idea of the player's room is stale,
+    // and its next paint would drop a view kept for a room the player has left
+    void test_a3DViewPannedAfterThePlayerMovedStaysPannedIn2D()
+    {
+        dlgMapper* pMapper = mapperShowing2DAtThePlayer();
+        QVERIFY(pMapper);
+        pMapper->show3DView(true);
+        auto* pModern = qobject_cast<ModernGLWidget*>(pMapper->glWidget);
+        QVERIFY(pModern);
+        map()->mRoomIdHash[map()->mProfileName] = kMovedToRoomId;
+        // As if the 3D view had painted the move
+        map()->mNewMove = false;
+        pModern->setViewCenter(mPlayerAreaId, 3, 7, 0);
+        pMapper->show3DView(false);
+
+        T2DMap* p2dMap = pMapper->mp2dMap;
+        QCOMPARE(p2dMap->mRoomID, kMovedToRoomId);
+        QVERIFY(p2dMap->mShiftMode);
+        QCOMPARE(p2dMap->mMapCenterX, 3.0);
+        QCOMPARE(p2dMap->mMapCenterY, -7.0);
     }
 
     // The 3D view centers on whole rooms, so taking its center back would move the 2D map
@@ -202,6 +265,8 @@ private slots:
         QVERIFY(pModern);
         pMapper->toolButton_shiftZup->click();
         QCOMPARE(pModern->viewCenter().z(), 1.0f);
+        // The same button moves the hidden 2D map too, so put it elsewhere to see the 3D level come back
+        pMapper->mp2dMap->mMapCenterZ = 5;
         pMapper->show3DView(false);
 
         QCOMPARE(pMapper->mp2dMap->mMapCenterZ, 1);
@@ -212,6 +277,8 @@ private slots:
     {
         dlgMapper* pMapper = mapperShowing2DAtThePlayer();
         QVERIFY(pMapper);
+        // Every paint of the 2D map leaves it in shift mode
+        pMapper->mp2dMap->mShiftMode = true;
         pMapper->show3DView(true);
         auto* pModern = qobject_cast<ModernGLWidget*>(pMapper->glWidget);
         QVERIFY(pModern);
@@ -220,6 +287,46 @@ private slots:
         pMapper->show3DView(false);
 
         QVERIFY2(!pMapper->mp2dMap->mShiftMode, "the 2D map kept a view the player has since moved away from");
+    }
+
+    void test_showingThePlayersAreaMakesThe3DViewFollowAgain()
+    {
+        dlgMapper* pMapper = mapperShowing2DAtThePlayer();
+        QVERIFY(pMapper);
+        pMapper->show3DView(true);
+        auto* pModern = qobject_cast<ModernGLWidget*>(pMapper->glWidget);
+        QVERIFY(pModern);
+        pModern->setViewCenter(mOtherAreaId, 3, 7, 0);
+        QVERIFY(!pModern->followingPlayer());
+        pMapper->resetAreaComboBoxToPlayerRoomArea();
+
+        QVERIFY2(pModern->followingPlayer(), "the 3D view stayed on the area it was panned to");
+    }
+
+    // The sliders set the camera from the angles the others read back, and looking straight down
+    // the roll must not read back as a turn
+    void test_theRollAndTurnSlidersEachSetTheirOwnAngleOfTheTopView()
+    {
+        dlgMapper* pMapper = mapperShowing2DAtThePlayer();
+        QVERIFY(pMapper);
+        pMapper->show3DView(true);
+        auto* pModern = qobject_cast<ModernGLWidget*>(pMapper->glWidget);
+        QVERIFY(pModern);
+        pMapper->pushButton_topView->click();
+        QCOMPARE(pMapper->slider_xRot->value(), 100);
+        for (int roll = 1; roll <= 20; ++roll) {
+            pMapper->slider_yRot->setValue(roll);
+        }
+        // Has the view report its camera back to the sliders
+        pModern->shiftCamera(0.0f, 0.0f, 0.0f);
+        QCOMPARE(pMapper->slider_yRot->value(), 20);
+        QCOMPARE(pMapper->slider_zRot->value(), 0);
+
+        pMapper->slider_zRot->setValue(30);
+        pModern->shiftCamera(0.0f, 0.0f, 0.0f);
+        QCOMPARE(pMapper->slider_xRot->value(), 100);
+        QCOMPARE(pMapper->slider_yRot->value(), 20);
+        QCOMPARE(pMapper->slider_zRot->value(), 30);
     }
 
     void test_setMapZoomFramesThatManyRoomsIn3D()
@@ -261,19 +368,12 @@ private slots:
     {
         dlgMapper* pMapper = mapperShowing2DAtThePlayer();
         QVERIFY(pMapper);
-        auto* pDock = qobject_cast<QDockWidget*>(pMapper->parentWidget());
-        QVERIFY2(pDock, "the mapper is not in a dock, so its shape cannot be changed while the 3D view is hidden");
-        pDock->setFloating(true);
-        pDock->resize(900, 500);
-        pMapper->show3DView(true);
-        auto* pModern = qobject_cast<ModernGLWidget*>(pMapper->glWidget);
-        QVERIFY(pModern);
-        QTRY_VERIFY(pModern->isVisible() && pModern->width() > pModern->height());
-
-        pMapper->show3DView(false);
-        // The hidden 3D view keeps its landscape shape while the mapper becomes portrait
-        pDock->resize(300, 900);
-        QTRY_VERIFY(pMapper->height() > pMapper->width());
+        QDockWidget* pDock = nullptr;
+        ModernGLWidget* pModern = nullptr;
+        hide3DViewInAPortraitDock(pMapper, pDock, pModern);
+        if (QTest::currentTestFailed()) {
+            return;
+        }
         QSignalSpy cameraControls(pModern, &ModernGLWidget::cameraControlsChanged);
         const auto lastScale = [&cameraControls]() {
             return cameraControls.isEmpty() ? -1 : cameraControls.last().at(0).toInt();
@@ -284,10 +384,78 @@ private slots:
         pMapper->show3DView(true);
         QTRY_VERIFY(pModern->isVisible() && pModern->height() > pModern->width());
         const int framedOnceShown = lastScale();
+
+        // Once framed for its new shape, a zoom of the player's own outlasts later resizes
+        pModern->slot_setScale(framedOnceShown + 7);
+        cameraControls.clear();
+        pDock->resize(320, 950);
+        QTRY_COMPARE(pDock->height(), 950);
+        QCoreApplication::processEvents();
+        QVERIFY2(cameraControls.isEmpty(), "a resize after the hidden zoom had been framed undid the player's zoom");
+        pDock->resize(300, 900);
+        QTRY_COMPARE(pDock->height(), 900);
+
         QVERIFY(pMapper->setMapZoom(20.0, 0).first);
         const int framedWhileShown = lastScale();
         QVERIFY2(framedWhileShown != framedWhileHidden, "the 3D view's shape did not change, so this cannot tell a stale framing apart");
         QCOMPARE(framedOnceShown, framedWhileShown);
+
+        pMapper->show3DView(false);
+        pDock->setFloating(false);
+    }
+
+    void test_aDistanceAskedForAsThe3DViewIsShownWinsOverAHiddenZoom()
+    {
+        dlgMapper* pMapper = mapperShowing2DAtThePlayer();
+        QVERIFY(pMapper);
+        QDockWidget* pDock = nullptr;
+        ModernGLWidget* pModern = nullptr;
+        hide3DViewInAPortraitDock(pMapper, pDock, pModern);
+        if (QTest::currentTestFailed()) {
+            return;
+        }
+        QSignalSpy cameraControls(pModern, &ModernGLWidget::cameraControlsChanged);
+        const auto lastScale = [&cameraControls]() {
+            return cameraControls.isEmpty() ? -1 : cameraControls.last().at(0).toInt();
+        };
+        QVERIFY(pMapper->setMapZoom(20.0, 0).first);
+        const int framedWhileHidden = lastScale();
+
+        // As a script would in one go: show the 3D view, then set its camera before anything repaints
+        pMapper->show3DView(true);
+        QTRY_VERIFY(pModern->isVisible() && pModern->height() > pModern->width());
+        QVERIFY(pMapper->set3DViewCameraPosition(2.0f, 45.0f, 270.0f).first);
+        const int requested = lastScale();
+        QVERIFY(requested != framedWhileHidden);
+        // The window settling on its size can resize the view again before its first paint
+        pDock->resize(320, 950);
+        QTRY_COMPARE(pDock->height(), 950);
+        QCoreApplication::processEvents();
+        QCOMPARE(lastScale(), requested);
+
+        pMapper->show3DView(false);
+        pDock->setFloating(false);
+    }
+
+    void test_aResizeLeavesTheCameraAloneWithNoZoomPending()
+    {
+        dlgMapper* pMapper = mapperShowing2DAtThePlayer();
+        QVERIFY(pMapper);
+        auto* pDock = qobject_cast<QDockWidget*>(pMapper->parentWidget());
+        QVERIFY(pDock);
+        pDock->setFloating(true);
+        pDock->resize(900, 500);
+        pMapper->show3DView(true);
+        auto* pModern = qobject_cast<ModernGLWidget*>(pMapper->glWidget);
+        QVERIFY(pModern);
+        QTRY_VERIFY(pModern->isVisible() && pModern->width() > pModern->height());
+        QVERIFY(pMapper->setMapZoom(20.0, 0).first);
+        QSignalSpy cameraControls(pModern, &ModernGLWidget::cameraControlsChanged);
+
+        pDock->resize(300, 900);
+        QTRY_VERIFY(pModern->height() > pModern->width());
+        QCoreApplication::processEvents();
+        QVERIFY2(cameraControls.isEmpty(), "resizing the 3D view moved its camera");
 
         pMapper->show3DView(false);
         pDock->setFloating(false);

@@ -720,37 +720,53 @@ bool dlgMapper::showing3DView() const
 #endif
 }
 
-bool dlgMapper::shift3DViewCamera(float verticalAngle, float horizontalAngle, float rotationAngle)
+#if defined(INCLUDE_3DMAPPER)
+namespace {
+// Empty when a script can move the camera of this 3D view
+QString cameraRefusal(const ModernGLWidget* modernWidget, const bool showing)
+{
+    if (!modernWidget || !showing) {
+        return qsl("the modern 3D map view is not showing");
+    }
+    if (modernWidget->cameraFixedByGridMode()) {
+        return qsl("the area shown in the 3D view is in grid mode, which always looks straight down");
+    }
+    return QString();
+}
+} // namespace
+#endif
+
+std::pair<bool, QString> dlgMapper::shift3DViewCamera(float verticalAngle, float horizontalAngle, float rotationAngle)
 {
 #if defined(INCLUDE_3DMAPPER)
     auto* modernWidget = qobject_cast<ModernGLWidget*>(glWidget);
-    if (!modernWidget || !showing3DView()) {
-        return false;
+    if (const QString refusal = cameraRefusal(modernWidget, showing3DView()); !refusal.isEmpty()) {
+        return {false, refusal};
     }
     modernWidget->shiftCamera(verticalAngle, horizontalAngle, rotationAngle);
-    return true;
+    return {true, QString()};
 #else
     Q_UNUSED(verticalAngle)
     Q_UNUSED(horizontalAngle)
     Q_UNUSED(rotationAngle)
-    return false;
+    return {false, qsl("the modern 3D map view is not showing")};
 #endif
 }
 
-bool dlgMapper::set3DViewCameraPosition(float r, float theta, float phi)
+std::pair<bool, QString> dlgMapper::set3DViewCameraPosition(float r, float theta, float phi)
 {
 #if defined(INCLUDE_3DMAPPER)
     auto* modernWidget = qobject_cast<ModernGLWidget*>(glWidget);
-    if (!modernWidget || !showing3DView()) {
-        return false;
+    if (const QString refusal = cameraRefusal(modernWidget, showing3DView()); !refusal.isEmpty()) {
+        return {false, refusal};
     }
     modernWidget->setCameraPosition(r, theta, phi);
-    return true;
+    return {true, QString()};
 #else
     Q_UNUSED(r)
     Q_UNUSED(theta)
     Q_UNUSED(phi)
-    return false;
+    return {false, qsl("the modern 3D map view is not showing")};
 #endif
 }
 
@@ -1037,7 +1053,8 @@ void dlgMapper::recreate3DWidget()
 
     bool was3DMode = glWidget->isVisible();
 
-    // Detached while still shown, Qt queues a show that brings it back as a top-level window
+    // setParent()'s own hide isn't explicit, so a show QLayout queued at insertWidget() and
+    // not yet run would map the detached widget as a window of its own
     glWidget->hide();
     glWidget->setParent(nullptr);
     glWidget->deleteLater();
