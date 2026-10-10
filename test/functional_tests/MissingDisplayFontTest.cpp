@@ -774,7 +774,7 @@ private slots:
         QVERIFY(pHost);
         QVERIFY2(pHost->mLoadedOk, "the test profile save could not be loaded");
         mudlet::self()->slot_connectionDialogueFinished(profileName, false);
-        QVERIFY2(pHost->mpConsole, "the profile came up without a main console");
+        QVERIFY2(pHost->mainConsoleView(), "the profile came up without a main console");
         QVERIFY2(!FontManager::availableFonts().contains(mPackageSuppliedFamily, Qt::CaseInsensitive), "the package's family is already installed, so this cannot tell whether it went away");
 
         QVERIFY2(pHost->installPackage(packagePath, enums::PackageModuleType::Package).first, "the package carrying the font did not install");
@@ -794,7 +794,7 @@ private slots:
         QVERIFY(pOtherHost);
         QVERIFY2(pOtherHost->mLoadedOk, "the other test profile save could not be loaded");
         mudlet::self()->slot_connectionDialogueFinished(otherProfileName, false);
-        QVERIFY2(pOtherHost->mpConsole, "the other profile came up without a main console");
+        QVERIFY2(pOtherHost->mainConsoleView(), "the other profile came up without a main console");
         QCOMPARE(pOtherHost->getDisplayFont().family(), Host::scmDefaultFontFamily);
 
         // An open preferences dialog must not keep offering the stand-in, which its next size change would put back
@@ -838,7 +838,7 @@ private slots:
         QVERIFY(pHost);
         QVERIFY2(pHost->mLoadedOk, "the test profile save could not be loaded");
         mudlet::self()->slot_connectionDialogueFinished(profileName, false);
-        QVERIFY2(pHost->mpConsole, "the profile came up without a main console");
+        QVERIFY2(pHost->mainConsoleView(), "the profile came up without a main console");
         QVERIFY2(!FontManager::availableFonts().contains(mPackageSuppliedFamily, Qt::CaseInsensitive), "the package's family is already installed, so this cannot tell whether it went away");
 
         QVERIFY2(pHost->installPackage(packagePath, enums::PackageModuleType::Package).first, "the package carrying the font did not install");
@@ -876,7 +876,7 @@ private slots:
         QVERIFY(pWaitingHost);
         QVERIFY2(pWaitingHost->mLoadedOk, "the waiting test profile save could not be loaded");
         mudlet::self()->slot_connectionDialogueFinished(waitingProfileName, false);
-        QVERIFY2(pWaitingHost->mpConsole, "the waiting profile came up without a main console");
+        QVERIFY2(pWaitingHost->mainConsoleView(), "the waiting profile came up without a main console");
         QCOMPARE(pWaitingHost->getDisplayFont().family(), Host::scmDefaultFontFamily);
 
         const QString carryingProfileName = qsl("MissingDisplayFont-Open-Carrying-Test");
