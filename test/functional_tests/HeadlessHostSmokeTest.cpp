@@ -933,7 +933,26 @@ local ok, err = pcall(function()
   assert(setFont("main", startFamily) == true, "setFont did not answer true for main")
   assert(createLabel("fwWindow", "fwWindowLateLabel", 0, 0, 100, 20, 1) == true, "createLabel did not answer true in a user window")
   fwLabelFonts = table.concat({getFont("fwWindowLabel"), getFont("fwLateLabel"), getFont("fwWindowLateLabel")}, ";")
+end)
+headlessFontWrap = ok and "ok" or tostring(err)
+)lua"));
 
+        QVERIFY2(ran, "The Lua chunk did not run.");
+        QCOMPARE(luaGlobalString(host, "headlessFontWrap"), qsl("ok"));
+        // Main and fwWindow start in one family, so only the sizes show which console a label copied
+        const auto labelPointSize = [host](const QString& name) {
+            const auto font = host->labelFont(name);
+            return font ? font->pointSize() : -1;
+        };
+        QVERIFY(startFont.pointSize() != 10);
+        QCOMPARE(labelPointSize(qsl("fwLabel")), startFont.pointSize());
+        QCOMPARE(labelPointSize(qsl("fwWindowLabel")), 10);
+        QCOMPARE(labelPointSize(qsl("fwLateLabel")), 13);
+        QCOMPARE(labelPointSize(qsl("fwWindowLateLabel")), 13);
+
+        const bool moved = host->getLuaInterpreter()->compileAndExecuteScript(qsl(R"lua(
+headlessFontWrap = "not run"
+local ok, err = pcall(function()
   assert(createLabel("fwMovedLabel", 0, 0, 100, 20, 1) == true, "createLabel did not answer true")
   assert(setWindow("fwWindow", "fwMovedLabel", 0, 0, false) == true, "setWindow did not answer true for a label")
   assert(setWindow("main", "fwWindowLabel", 0, 0, true) == true, "setWindow did not answer true for a label")
@@ -945,7 +964,7 @@ end)
 headlessFontWrap = ok and "ok" or tostring(err)
 )lua"));
 
-        QVERIFY2(ran, "The Lua chunk did not run.");
+        QVERIFY2(moved, "The Lua chunk moving labels did not run.");
         QCOMPARE(luaGlobalString(host, "headlessFontWrap"), qsl("ok"));
 
         const auto sized = [](const QFont& font, const int pointSize) {
