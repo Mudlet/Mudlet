@@ -24,10 +24,12 @@
 #include "HostManager.h"
 
 #include "Host.h"
+#include "MudletMedia.h"
 
 #include <QDebug>
 
 HostManager::HostManager()
+: mpMedia(std::make_unique<MudletMedia>())
 {
     // self() callers trust there is only one; a second would repoint the accessor, then null it on
     // destruction while the first is still in use.

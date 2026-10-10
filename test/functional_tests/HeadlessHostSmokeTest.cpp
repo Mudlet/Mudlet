@@ -39,7 +39,6 @@
 #include "Host.h"
 #include "HostManager.h"
 #include "MudletApp.h"
-#include "MudletMedia.h"
 #include "PortableModeTestHelper.h"
 #include "TAppFrontend.h"
 #include "TConsoleModel.h"
@@ -59,9 +58,7 @@ class HeadlessHostSmokeTest : public QObject
 private:
     QTemporaryDir mConfigDir;
     QByteArray mSavedXdg;
-    // The main window owns the media switches and the profile pool in the app; here nothing else would.
-    // The media switches come first, as there, so they outlive the profiles that reach them.
-    std::unique_ptr<MudletMedia> mpMedia;
+    // The main window owns the profile pool in the app; here nothing else would.
     std::unique_ptr<HostManager> mpHostManager;
     const QString mHostname = qsl("Test-Headless-Host-Smoke");
     const QString mConnectingHostname = qsl("Test-Headless-Host-Connect");
@@ -127,14 +124,12 @@ private slots:
         QCOMPARE(MudletApp::getMudletPath(enums::mainPath), qsl("%1/mudlet").arg(mConfigDir.path()));
 
         QVERIFY2(!HostManager::self(), "A profile pool already exists, so this run is not headless.");
-        mpMedia = std::make_unique<MudletMedia>();
         mpHostManager = std::make_unique<HostManager>();
     }
 
     void cleanupTestCase()
     {
         mpHostManager.reset();
-        mpMedia.reset();
         mSavedXdg.isNull() ? qunsetenv("XDG_CONFIG_HOME") : qputenv("XDG_CONFIG_HOME", mSavedXdg);
     }
 
@@ -608,6 +603,7 @@ function onHeadlessSettingChanged(_, key, value)
   events[#events + 1] = {key = key, value = value, readBack = getConfig(key)}
 end
 local ok, err = pcall(function()
+  assert(getConfig("muteMediaAPI") == false and getConfig("muteMediaGame") == false, "media starts muted")
   local keys = {"muteMediaAPI", "muteMediaGame", "compactInputLine", "mapperPanelVisible", "enableClosedCaption", "advertiseScreenReader", "announceIncomingText"}
   for _, key in ipairs(keys) do
     local start = getConfig(key)

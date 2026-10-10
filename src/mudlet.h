@@ -29,7 +29,6 @@
 #include "discord.h"
 #include "FontManager.h"
 #include "HostManager.h"
-#include "MudletMedia.h"
 #include "MudletReplay.h"
 #include "ShortcutsManager.h"
 #include "TAppFrontend.h"
@@ -609,8 +608,6 @@ private:
     // Stores the translated names for the Encodings for the static and thus
     // const TBuffer::csmEncodingTable:
     QMap<QByteArray, QString> mEncodingNameMap;
-    // Before mHostManager, so it is destroyed after the profiles that reach it
-    MudletMedia mMedia;
     HostManager mHostManager;
     // After mHostManager, so it is gone before the profiles that reach it are
     MudletReplay mReplay;
