@@ -39,6 +39,7 @@
 #include "LabelInteractionHandler.h"
 #include "MiddleMousePanHandler.h"
 #include "PanInteractionHandler.h"
+#include "RoomAppearance.h"
 #include "RoomContextMenuHandler.h"
 #include "RoomMoveActivationHandler.h"
 #include "RoomMoveDragHandler.h"
@@ -960,9 +961,8 @@ std::pair<bool, QString> T2DMap::centerview(int roomId)
 // key format: <QColor.name()><QString of one or more QChars>
 void T2DMap::addSymbolToPixmapCache(const QString key, const QString text, const QColor symbolColor, const bool gridMode)
 {
-    // Some constants used to prevent small, unreadable symbols:
+    // Prevents small, unreadable symbols:
     static const float symbolLowerSizeLimit = 8.0;
-    static const unsigned int minimumUsableFontSize = 4;
 
     // Draw onto a rectangle that will fit the room symbol rectangle,
     // Must tweak the size so it fits within circle when round room symbols are
@@ -989,56 +989,9 @@ void T2DMap::addSymbolToPixmapCache(const QString key, const QString text, const
         return;
     }
 
-    QString symbolString = text;
     QPainter symbolPainter(pixmap);
-    symbolPainter.setPen(symbolColor);
-    symbolPainter.setFont(mpMap->mMapSymbolFont);
-    symbolPainter.setRenderHints(QPainter::Antialiasing | QPainter::TextAntialiasing | QPainter::SmoothPixmapTransform, true);
-
-    const QFontMetrics mapSymbolFontMetrics = symbolPainter.fontMetrics();
-    QVector<bool> isUsable;
-    for (const quint32 codePoint : symbolString.toUcs4()) {
-        isUsable.append(mapSymbolFontMetrics.inFontUcs4(codePoint));
-    }
-
-    QFont fontForThisSymbol = mpMap->mMapSymbolFont;
-    const bool needToFallback = isUsable.contains(false);
-    // Oh dear at least one grapheme is not represented in either the selected
-    // or any font as set elsewhere
-    if (needToFallback) {
-        symbolString = QString(QChar::ReplacementCharacter);
-        // Clear the setting that may be forcing only the specified font to be
-        // used, as it may not have the Replacement Character glyph...
-        fontForThisSymbol.setStyleStrategy(static_cast<QFont::StyleStrategy>(mpMap->mMapSymbolFont.styleStrategy() & ~(QFont::NoFontMerging)));
-    }
-
-    const qreal fudgeFactor = symbolRectangle.toRect().width() * mpMap->mMapSymbolFontFudgeFactor;
-    QRectF testRectangle(0, 0, fudgeFactor, fudgeFactor);
-    testRectangle.moveCenter(pixmap->rect().center());
-    QRectF boundaryRect;
-    // Try larger font sizes until it won't fit
-    do {
-        fontForThisSymbol.setPointSize(++mSymbolFontSize);
-        symbolPainter.setFont(fontForThisSymbol);
-        boundaryRect = symbolPainter.boundingRect(pixmap->rect(), Qt::AlignCenter, symbolString);
-        // Use a limit on mSymbolFontSize otherwise some broken fonts can
-        // lock the system into a very slow loop as it gets very large
-    } while (testRectangle.contains(boundaryRect) && mSymbolFontSize < 255);
-    // Then try smaller ones until it will
-    do {
-        fontForThisSymbol.setPointSize(--mSymbolFontSize);
-        symbolPainter.setFont(fontForThisSymbol);
-        boundaryRect = symbolPainter.boundingRect(pixmap->rect(), Qt::AlignCenter, symbolString);
-        // Use a limit on mSymbolFontSize otherwise some broken fonts can
-        // lock the system into a very slow loop as it gets very large
-    } while (!testRectangle.contains(boundaryRect) && mSymbolFontSize > minimumUsableFontSize);
-
-    if (testRectangle.contains(boundaryRect)) {
-        fontForThisSymbol.setPointSize(++mSymbolFontSize);
-        symbolPainter.drawText(pixmap->rect(), Qt::AlignCenter | Qt::TextSingleLine, symbolString);
-    }
-    // Else, it still doesn't fit, must be a long string, too bad, leave
-    // the  pixmap untouched so nothing will be shown when it is used
+    RoomAppearance::paintSymbol(symbolPainter, pixmap->rect(), text, symbolColor, mpMap->mMapSymbolFont, mpMap->mMapSymbolFontFudgeFactor, mSymbolFontSize);
+    symbolPainter.end();
 
     if (!mSymbolPixmapCache.insert(key, pixmap)) {
         qDebug("T2DMap::addSymbolToPixmapCache() ALERT: Map Room Symbol Pixmap cache is full...!");
@@ -1371,14 +1324,7 @@ void T2DMap::drawRoom(QPainter& painter,
 
     // Do we need to draw the room symbol:
     if (!(mShowRoomID && areRoomIdsLegible) && !pRoom->mSymbol.isEmpty()) {
-        QColor symbolColor;
-        if (pRoom->mSymbolColor.isValid()) {
-            symbolColor = pRoom->mSymbolColor;
-        } else if (roomColor.lightness() > 127) {
-            symbolColor = Qt::black;
-        } else {
-            symbolColor = Qt::white;
-        }
+        const QColor symbolColor = RoomAppearance::symbolColor(pRoom->mSymbolColor, roomColor);
         auto pixmapKey = qsl("%1_%2").arg(symbolColor.name(), pRoom->mSymbol);
         if (!mSymbolPixmapCache.contains(pixmapKey)) {
             addSymbolToPixmapCache(pixmapKey, pRoom->mSymbol, symbolColor, isGridMode);
@@ -1424,8 +1370,7 @@ void T2DMap::drawRoom(QPainter& painter,
         const float roomRadius = (pRoom->highlightRadius * mRoomWidth) / 2.0;
         const QPointF roomCenter = QPointF(rx, ry);
         QRadialGradient gradient(roomCenter, roomRadius);
-        gradient.setColorAt(0.85, pRoom->highlightColor);
-        gradient.setColorAt(0, pRoom->highlightColor2);
+        gradient.setStops(RoomAppearance::highlightStops(pRoom->highlightColor, pRoom->highlightColor2));
         const QPen transparentPen(Qt::transparent);
         QPainterPath diameterPath;
         painter.setBrush(gradient);
@@ -1764,66 +1709,7 @@ void T2DMap::resolveAreaExitClick(QPainter& painter, const QMap<int, QPointF>& a
 
 QColor T2DMap::environmentColor(int env) const
 {
-    if (mpMap->mEnvColors.contains(env)) {
-        env = mpMap->mEnvColors[env];
-    } else if (!mpMap->mCustomEnvColors.contains(env)) {
-        env = 1;
-    }
-    switch (env) {
-    case 1:
-        return mpHost->mRed_2;
-    case 2:
-        return mpHost->mGreen_2;
-    case 3:
-        return mpHost->mYellow_2;
-    case 4:
-        return mpHost->mBlue_2;
-    case 5:
-        return mpHost->mMagenta_2;
-    case 6:
-        return mpHost->mCyan_2;
-    case 7:
-        return mpHost->mWhite_2;
-    case 8:
-        return mpHost->mBlack_2;
-    case 9:
-        return mpHost->mLightRed_2;
-    case 10:
-        return mpHost->mLightGreen_2;
-    case 11:
-        return mpHost->mLightYellow_2;
-    case 12:
-        return mpHost->mLightBlue_2;
-    case 13:
-        return mpHost->mLightMagenta_2;
-    case 14:
-        return mpHost->mLightCyan_2;
-    case 15:
-        return mpHost->mLightWhite_2;
-    case 16:
-        return mpHost->mLightBlack_2;
-    default:
-        if (mpMap->mCustomEnvColors.contains(env)) {
-            return mpMap->mCustomEnvColors[env];
-        }
-        if (env > 16 && env < 232) {
-            quint8 const base = env - 16;
-            quint8 r = base / 36;
-            quint8 g = (base - (r * 36)) / 6;
-            quint8 b = (base - (r * 36)) - (g * 6);
-            r = r == 0 ? 0 : (r - 1) * 40 + 95;
-            g = g == 0 ? 0 : (g - 1) * 40 + 95;
-            b = b == 0 ? 0 : (b - 1) * 40 + 95;
-            return QColor(r, g, b, 255);
-        }
-        if (env > 231 && env < 256) {
-            quint8 const k = ((env - 232) * 10) + 8;
-            return QColor(k, k, k, 255);
-        }
-        // mEnvColors can remap onto an id with no colour, as map files aren't validated. Fall back as
-        // for an unmapped env: the background colour would make the room invisible.
-        return mpHost->mRed_2;
-    }
+    return RoomAppearance::environmentColor(*mpMap, *mpHost, env);
 }
 
 // Below this many pixels per room, both room loops just fill the environment colour, dropping border,
@@ -2218,8 +2104,7 @@ void T2DMap::drawGridModeRooms(QPainter& painter,
         const float roomRadius = (room->highlightRadius * mRoomWidth) / 2.0f;
         const QPointF roomCenter = roomRect.center();
         QRadialGradient gradient(roomCenter, roomRadius);
-        gradient.setColorAt(0.85f, room->highlightColor);
-        gradient.setColorAt(0.0f, room->highlightColor2);
+        gradient.setStops(RoomAppearance::highlightStops(room->highlightColor, room->highlightColor2));
         const QPen transparentPen(Qt::transparent);
         QPainterPath diameterPath;
         painter.setBrush(gradient);
@@ -2339,12 +2224,7 @@ void T2DMap::drawGridModeRooms(QPainter& painter,
 
         if (!showVnums && !room->mSymbol.isEmpty()) {
             const QColor roomColor = environmentColor(room->environment);
-            QColor symbolColor;
-            if (room->mSymbolColor.isValid()) {
-                symbolColor = room->mSymbolColor;
-            } else {
-                symbolColor = (roomColor.lightness() > 127) ? Qt::black : Qt::white;
-            }
+            const QColor symbolColor = RoomAppearance::symbolColor(room->mSymbolColor, roomColor);
             const QString pixmapKey = qsl("%1_%2").arg(symbolColor.name(), room->mSymbol);
             if (!mSymbolPixmapCache.contains(pixmapKey)) {
                 addSymbolToPixmapCache(pixmapKey, room->mSymbol, symbolColor, true);
@@ -2534,8 +2414,7 @@ void T2DMap::drawNonGridModeRoomsLod(QPainter& painter,
     for (const auto& [room, roomCenter] : std::as_const(highlightedRooms)) {
         const float roomRadius = (room->highlightRadius * mRoomWidth) / 2.0f;
         QRadialGradient gradient(roomCenter, roomRadius);
-        gradient.setColorAt(0.85f, room->highlightColor);
-        gradient.setColorAt(0, room->highlightColor2);
+        gradient.setStops(RoomAppearance::highlightStops(room->highlightColor, room->highlightColor2));
         painter.save();
         painter.setBrush(gradient);
         painter.setPen(QPen(Qt::transparent));
@@ -3103,7 +2982,7 @@ void T2DMap::paintEvent(QPaintEvent* e)
         // (including corners), not just touching the midpoints of the sides
         const int borderWidth = qMax(1, static_cast<int>(1.0 / mBSize * mRoomWidth * rSize));
         const double roomVisualSize = static_cast<double>(mRoomWidth) * rSize + 2.0 * borderWidth;
-        const double roomRadius = (mpMap->mPlayerRoomOuterDiameterPercentage / 200.0) * roomVisualSize * M_SQRT2;
+        const double roomRadius = RoomAppearance::playerRoomRadius(mpMap->mPlayerRoomOuterDiameterPercentage, roomVisualSize);
         QRadialGradient gradient(playerRoomOnWidgetCoordinates, roomRadius);
         if (mpHost->mMapStrongHighlight) {
             // Never set, no means to except via XMLImport, as dlgMapper class's
@@ -6565,43 +6444,7 @@ void T2DMap::setPlayerRoomStyle(const int type)
         return;
     }
 
-    mPlayerRoomColorGradientStops = buildPlayerRoomGradientStops(type, mpMap->mPlayerRoomInnerDiameterPercentage, mpMap->mPlayerRoomInnerColor, mpMap->mPlayerRoomOuterColor);
-}
-
-QGradientStops T2DMap::buildPlayerRoomGradientStops(const int style, const quint8 innerDiameterPercentage, const QColor& innerColor, const QColor& outerColor)
-{
-    const double factor = innerDiameterPercentage / 100.0;
-    const bool solid = (innerDiameterPercentage == 0);
-
-    switch (style) {
-    case 1: // Simple(?) shaded red ring:
-        if (solid) {
-            return {{0.000, QColor(255, 0, 0, 255)}, {0.990, QColor(255, 0, 0, 255)}, {1.000, QColor(255, 0, 0, 0)}};
-        }
-        return {{0.000, QColor(255, 0, 0, 0)}, {factor * 0.980, QColor(255, 0, 0, 0)}, {factor * 1.020, QColor(255, 0, 0, 255)}, {0.980, QColor(255, 0, 0, 255)}, {1.000, QColor(255, 0, 0, 0)}};
-
-    case 2: // Shaded bicolor (blue-yellow - so it ALWAYS contrasts with underlying room color) Ring:
-        if (solid) {
-            return {{0.000, QColor(255, 255, 0, 255)}, {0.990, QColor(0, 0, 255, 255)}, {1.000, QColor(0, 0, 255, 0)}};
-        }
-        return {{0.000, QColor(255, 255, 0, 0)}, {factor * 0.980, QColor(255, 255, 0, 0)}, {factor * 1.020, QColor(255, 255, 0, 255)}, {0.980, QColor(0, 0, 255, 255)}, {1.000, QColor(0, 0, 255, 0)}};
-
-    case 3: { // User set ring:
-        if (solid) {
-            QColor transparentOuter(outerColor);
-            transparentOuter.setAlpha(0);
-            return {{0.000, innerColor}, {0.990, outerColor}, {1.000, transparentOuter}};
-        }
-        QColor transparentInner(innerColor);
-        transparentInner.setAlpha(0);
-        QColor transparentOuter(outerColor);
-        transparentOuter.setAlpha(0);
-        return {{0.000, transparentInner}, {factor * 0.980, transparentInner}, {factor * 1.020, innerColor}, {0.980, outerColor}, {1.000, transparentOuter}};
-    }
-
-    default: // Sort of emulates the original code:
-        return {{0, Qt::white}, {0.7, QColor(255, 0, 0, 200)}, {0.799, QColor(150, 100, 100, 100)}, {0.80, QColor(150, 100, 100, 150)}, {0.95, QColor(255, 0, 0, 150)}};
-    }
+    mPlayerRoomColorGradientStops = RoomAppearance::playerRoomStops(type, mpMap->mPlayerRoomInnerDiameterPercentage, mpMap->mPlayerRoomInnerColor, mpMap->mPlayerRoomOuterColor);
 }
 
 void T2DMap::clearSelection()

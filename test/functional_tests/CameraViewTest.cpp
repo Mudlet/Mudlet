@@ -84,6 +84,37 @@ private:
         QVERIFY2(textureOrigin.y() < textureFarCorner.y(), qPrintable(qsl("the label is upside down in the %1 view").arg(view)));
     }
 
+    // A room's symbol lies flat on the room, but must still read upright and unmirrored
+    static void verifyRoomDecalReadable(CameraController& camera, const QString& view)
+    {
+        camera.updateMatrices();
+        const QVector3D center = camera.getTarget();
+        GeometryData decal;
+        GeometryManager::appendGroundQuad(decal, center, 0.5f, camera.screenRight(), camera.screenUp(), QVector4D(1.0f, 1.0f, 1.0f, 1.0f));
+        QCOMPARE(decal.vertices.size(), 18);
+        QCOMPARE(decal.textureCoords.size(), 12);
+
+        QPointF textureOrigin;
+        QPointF textureRight;
+        QPointF textureFarCorner;
+        for (int vertex = 0; vertex < 6; ++vertex) {
+            const QVector3D position(decal.vertices[vertex * 3], decal.vertices[vertex * 3 + 1], decal.vertices[vertex * 3 + 2]);
+            QCOMPARE(position.z(), center.z());
+            const float u = decal.textureCoords[vertex * 2];
+            const float v = decal.textureCoords[vertex * 2 + 1];
+            if (u == 0.0f && v == 0.0f) {
+                textureOrigin = toScreen(camera, position);
+            } else if (u == 1.0f && v == 0.0f) {
+                textureRight = toScreen(camera, position);
+            } else if (u == 1.0f && v == 1.0f) {
+                textureFarCorner = toScreen(camera, position);
+            }
+        }
+        QVERIFY2(textureOrigin.x() < textureRight.x(), qPrintable(qsl("the room symbol reads mirrored in the %1 view").arg(view)));
+        QVERIFY2(qAbs(textureRight.y() - textureOrigin.y()) < qAbs(textureRight.x() - textureOrigin.x()), qPrintable(qsl("the room symbol's baseline is not level in the %1 view").arg(view)));
+        QVERIFY2(textureOrigin.y() < textureFarCorner.y(), qPrintable(qsl("the room symbol is upside down in the %1 view").arg(view)));
+    }
+
 private slots:
     void test_presetsAreNorthUpWithEastToTheRight()
     {
@@ -94,6 +125,23 @@ private slots:
         verifyNorthUpEastRight(camera, "top");
         camera.setSideView();
         verifyNorthUpEastRight(camera, "side");
+    }
+
+    void test_roomSymbolsReadUprightFromAnyAngle()
+    {
+        CameraController camera = cameraLookingAt(QVector3D(-2.0f, 6.0f, 1.0f));
+        camera.setDefaultView();
+        verifyRoomDecalReadable(camera, qsl("default"));
+        camera.setTopView();
+        verifyRoomDecalReadable(camera, qsl("top"));
+        camera.setSideView();
+        verifyRoomDecalReadable(camera, qsl("side"));
+        for (int azimuth = 0; azimuth < 360; azimuth += 45) {
+            camera.setOrientation(40.0f, static_cast<float>(azimuth), 0.0f);
+            verifyRoomDecalReadable(camera, qsl("turned to %1 degrees").arg(azimuth));
+        }
+        camera.setOrientation(30.0f, 120.0f, 170.0f);
+        verifyRoomDecalReadable(camera, qsl("rolled nearly upside down"));
     }
 
     void test_labelsReadLeftToRightFromAnyAngle()

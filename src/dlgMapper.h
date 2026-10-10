@@ -60,6 +60,9 @@ public:
     int getCurrentShownAreaIndex();
     void setFont(const QFont&);
     void refreshColours();
+    // Redraws whichever of the 2D and 3D views exist, for settings both of them read
+    void repaintMaps();
+    void update3DView();
     void recreate3DWidget();
 
     bool onScreen() const override { return isVisible(); }
@@ -81,7 +84,7 @@ public:
     int centerSelectedRoom() const override { return mp2dMap->getCenterSelectedRoomId(); }
     void clearRoomSelection() override { mp2dMap->clearSelection(); }
     int shownAreaId() const override { return mp2dMap->getAreaId(); }
-    std::pair<bool, QString> setMapZoom(qreal zoom, int areaId) override { return mp2dMap->setMapZoom(zoom, areaId); }
+    std::pair<bool, QString> setMapZoom(qreal zoom, int areaId) override;
     std::pair<bool, QString> exportAreaToImage(int areaId, const QString& filePath, std::optional<int> zLevel, qreal zoom, bool exportAllZLevels) override
     {
         return mp2dMap->exportAreaToImage(areaId, filePath, zLevel, zoom, exportAllZLevels);

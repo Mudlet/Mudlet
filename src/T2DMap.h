@@ -183,7 +183,6 @@ public:
     void addTextLabelToCache(const QString& key, const TMapLabel& label, const QSize& targetSize);
     void drawScaledLabel(QPainter& painter, const QPointF& position, TMapLabel& label, int labelKey, const QRectF& paintRect);
     void setPlayerRoomStyle(const int style);
-    static QGradientStops buildPlayerRoomGradientStops(int style, quint8 innerDiameterPercentage, const QColor& innerColor, const QColor& outerColor);
     void switchArea(const QString& newAreaName);
     void switchArea(int areaId);
     void clearSelection();

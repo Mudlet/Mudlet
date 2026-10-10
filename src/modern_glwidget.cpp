@@ -25,6 +25,7 @@
 #include "modern_glwidget.h"
 
 #include "Host.h"
+#include "RoomAppearance.h"
 #include "TArea.h"
 #include "TRoom.h"
 #include "TRoomDB.h"
@@ -343,6 +344,10 @@ void ModernGLWidget::paintGL()
     const QColor color(mpHost->mBgColor_2);
     glClearColor(color.redF(), color.greenF(), color.blueF(), color.alphaF());
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+    // The QPainter that draws the overlay after the scene resets these when it ends
+    glEnable(GL_DEPTH_TEST);
+    glEnable(GL_BLEND);
+    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
     // Update transformation matrices
     updateMatrices();
@@ -382,6 +387,79 @@ void ModernGLWidget::paintGL()
     painter.end();
 }
 
+namespace {
+// Texels across the textures drawn on room tops
+constexpr int scmRoomTextureSize = 128;
+// Past this many, those textures are dropped to be made again as they are next needed
+constexpr qsizetype scmMaxRoomTextures = 512;
+
+// A colour dimmed for its level's distance from the one being viewed
+QVector4D levelFaded(const QColor& color, const int levelDistance, const bool aboveLevel, const bool moreTransparent)
+{
+    float darkness = 1.0f;
+    float alpha = color.alphaF();
+    if (moreTransparent) {
+        if (levelDistance == 1) {
+            darkness = 0.5f;
+        } else if (levelDistance == 2) {
+            darkness = 0.2f;
+        } else if (levelDistance > 2) {
+            darkness = 0.05f;
+        }
+    } else if (aboveLevel) {
+        darkness = 0.25f;
+        alpha *= 0.2f;
+    }
+    return QVector4D(color.redF() * darkness, color.greenF() * darkness, color.blueF() * darkness, alpha);
+}
+
+// An image whose clear texels keep edgeColor's hue, so that filtering does not fringe what is drawn on it with black
+QImage clearRoomTextureImage(QColor edgeColor)
+{
+    QImage image(scmRoomTextureSize, scmRoomTextureSize, QImage::Format_ARGB32);
+    edgeColor.setAlpha(0);
+    image.fill(edgeColor);
+    return image;
+}
+} // namespace
+
+GLuint ModernGLWidget::symbolTexture(const QString& symbol, const QColor& color)
+{
+    const QFont& font = mpMap->mMapSymbolFont;
+    const qreal fudgeFactor = mpMap->mMapSymbolFontFudgeFactor;
+    const QString key = qsl("symbol|%1|%2|%3|%4").arg(color.name(QColor::HexArgb), font.key(), QString::number(fudgeFactor), symbol);
+    if (const GLuint texture = mLabelTextureCache.imageTexture(key)) {
+        return texture;
+    }
+
+    QImage image = clearRoomTextureImage(color);
+    QPainter painter(&image);
+    ushort fontSize = 1;
+    RoomAppearance::paintSymbol(painter, image.rect(), symbol, color, font, fudgeFactor, fontSize);
+    painter.end();
+    return mLabelTextureCache.addImageTexture(key, image);
+}
+
+GLuint ModernGLWidget::discTexture(const QString& key, const QGradientStops& stops)
+{
+    if (const GLuint texture = mLabelTextureCache.imageTexture(key)) {
+        return texture;
+    }
+
+    QImage image = clearRoomTextureImage(stops.isEmpty() ? QColor(Qt::transparent) : stops.constLast().second);
+    QPainter painter(&image);
+    painter.setRenderHint(QPainter::Antialiasing);
+    const qreal radius = scmRoomTextureSize / 2.0;
+    const QPointF center(radius, radius);
+    QRadialGradient gradient(center, radius);
+    gradient.setStops(stops);
+    painter.setPen(Qt::NoPen);
+    painter.setBrush(gradient);
+    painter.drawEllipse(center, radius, radius);
+    painter.end();
+    return mLabelTextureCache.addImageTexture(key, image);
+}
+
 void ModernGLWidget::renderRooms()
 {
     if (!mpMap || !mpMap->mpRoomDB) {
@@ -404,12 +482,23 @@ void ModernGLWidget::renderRooms()
     const bool playerIcon = mpHost->experimentEnabled(qsl("experiment.3d-player-icon"));
     const bool inOutExits = mpHost->experimentEnabled(qsl("experiment.render-in-out-exits"));
 
-    // Batched instance data for instanced rendering
-    QVector<CubeInstanceData> mainRoomInstances;
-    QVector<CubeInstanceData> currentRoomInstances;
-    QVector<CubeInstanceData> overlayInstances;
+    const float roomSize = 2.0f / scale;
+    const float roomHeight = 2.0f / scale / zFlattening;
+    // As on the 2D map, a border of thickness 1 is this much of the room's width, and grows outward
+    const float borderUnit = mpHost->mRoomBorderSize > 0.0 ? roomSize / static_cast<float>(mpHost->mRoomBorderSize) : 0.0f;
+    const QVector3D screenRight = mCameraController.screenRight();
+    const QVector3D screenUp = mCameraController.screenUp();
+
+    mLabelTextureCache.limitImageTextures(scmMaxRoomTextures);
+
+    QVector<CubeInstanceData> roomInstances;
+    QVector<CubeInstanceData> borderInstances;
     QVector<float> indicatorVertices;
     QVector<float> indicatorColors;
+    // Keyed by texture, so each is one draw call however many rooms share it
+    QHash<GLuint, GeometryData> symbolDecals;
+    QHash<GLuint, GeometryData> highlightDecals;
+    GeometryData playerRoomDecal;
 
     QSetIterator<int> itRoom(pArea->getAreaRooms());
     while (itRoom.hasNext()) {
@@ -439,17 +528,64 @@ void ModernGLWidget::renderRooms()
             }
         }
 
-        // Check special room states
         const bool isCurrentRoom = currentRoomId == playerRoomId;
-        bool belowOrAtLevel = (rz <= pz);
+        const bool aboveLevel = rz > pz;
+        const int levelDistance = static_cast<int>(std::abs(rz - pz));
 
-        // 1. Collect main room cube data
+        const QColor roomColor = RoomAppearance::environmentColor(*mpMap, *mpHost, pR->environment);
+        const QVector4D roomTint = levelFaded(roomColor, levelDistance, aboveLevel, moreTransparent);
+        QMatrix4x4 transform;
+        transform.translate(rx, ry, rz);
+        transform.scale(1.0f / scale, 1.0f / scale, 1.0f / scale / zFlattening);
+        roomInstances.append(CubeInstanceData(transform, roomTint.x(), roomTint.y(), roomTint.z(), roomTint.w()));
+
+        if (mpHost->mMapperShowRoomBorders || pR->mBorderColor.isValid() || pR->mBorderThickness > 0) {
+            const float borderWidth = (pR->mBorderThickness > 0 ? pR->mBorderThickness : 1) * borderUnit;
+            const float spread = (roomSize + 2.0f * borderWidth) / roomSize;
+            const QColor borderColor = pR->mBorderColor.isValid() ? pR->mBorderColor : mpHost->mRoomBorderColor;
+            const QVector4D borderTint = levelFaded(borderColor, levelDistance, aboveLevel, moreTransparent);
+            // Lower than the room, so that its top is seen only around the room's
+            QMatrix4x4 borderTransform;
+            borderTransform.translate(rx, ry, rz);
+            borderTransform.scale(spread / scale, spread / scale, 0.6f / scale / zFlattening);
+            borderInstances.append(CubeInstanceData(borderTransform, borderTint.x(), borderTint.y(), borderTint.z(), borderTint.w()));
+        }
+
+        const QVector3D roomTop(rx, ry, rz + roomHeight / 2.0f);
+        const QVector4D decalTint = levelFaded(QColor(Qt::white), levelDistance, aboveLevel, moreTransparent);
+
+        if (!pR->mSymbol.isEmpty()) {
+            const QColor symbolColor = RoomAppearance::symbolColor(pR->mSymbolColor, roomColor);
+            if (const GLuint texture = symbolTexture(pR->mSymbol, symbolColor)) {
+                GeometryData& batch = symbolDecals[texture];
+                batch.textureId = texture;
+                GeometryManager::appendGroundQuad(batch, roomTop, roomSize, screenRight, screenUp, decalTint);
+            }
+        }
+
+        if (pR->highlight) {
+            const QString key = qsl("highlight|%1|%2").arg(pR->highlightColor.name(QColor::HexArgb), pR->highlightColor2.name(QColor::HexArgb));
+            if (const GLuint texture = discTexture(key, RoomAppearance::highlightStops(pR->highlightColor, pR->highlightColor2))) {
+                GeometryData& batch = highlightDecals[texture];
+                batch.textureId = texture;
+                // highlightRadius is in rooms' spacing, which is one unit here
+                GeometryManager::appendGroundQuad(batch, roomTop, pR->highlightRadius, screenRight, screenUp, decalTint);
+            }
+        }
+
         if (isCurrentRoom) {
-            // Current room: red
-            QMatrix4x4 transform = QMatrix4x4();
-            transform.translate(rx, ry, rz);
-            transform.scale(1.0f / scale, 1.0f / scale, 1.0f / scale / zFlattening);
-            currentRoomInstances.append(CubeInstanceData(transform, 1.0f, 0.0f, 0.0f, 1.0f));
+            const int style = mpHost->mMapStrongHighlight ? 0 : mpMap->mPlayerRoomStyle;
+            const QString key = qsl("player|%1|%2|%3|%4")
+                                        .arg(QString::number(style),
+                                             QString::number(mpMap->mPlayerRoomInnerDiameterPercentage),
+                                             mpMap->mPlayerRoomInnerColor.name(QColor::HexArgb),
+                                             mpMap->mPlayerRoomOuterColor.name(QColor::HexArgb));
+            const QGradientStops stops = RoomAppearance::playerRoomStops(style, mpMap->mPlayerRoomInnerDiameterPercentage, mpMap->mPlayerRoomInnerColor, mpMap->mPlayerRoomOuterColor);
+            if (const GLuint texture = discTexture(key, stops)) {
+                playerRoomDecal.textureId = texture;
+                const float radius = static_cast<float>(RoomAppearance::playerRoomRadius(mpMap->mPlayerRoomOuterDiameterPercentage, roomSize + 2.0f * borderUnit));
+                GeometryManager::appendGroundQuad(playerRoomDecal, roomTop, 2.0f * radius, screenRight, screenUp, decalTint);
+            }
 
             if (playerIcon) {
                 GeometryData playerIcon = mGeometryManager.generatePlayerIconGeometry(mPlayerIconScale, mPlayerIconRotationX, mPlayerIconRotationY, mPlayerIconRotationZ);
@@ -472,129 +608,45 @@ void ModernGLWidget::renderRooms()
                     mRenderCommandQueue.addCommand(std::move(command));
                 }
             }
-        } else {
-            // Normal room: use planeColor logic based on z-level relationship
-            QColor roomColor = getPlaneColor(static_cast<int>(rz), belowOrAtLevel);
-            float redComponent = roomColor.redF();
-            float greenComponent = roomColor.greenF();
-            float blueComponent = roomColor.blueF();
-            float roomAlpha = 1.0f;
-
-            // Check for more-transparent experiment
-            if (moreTransparent) {
-                // EXPERIMENT: Apply sliding darkness based on level distance
-                int levelDistance = abs(static_cast<int>(rz - pz));
-                float darknessFactor = 1.0f; // Default: no darkness
-
-                if (levelDistance == 1) {
-                    darknessFactor = 0.5f; // 50% darker
-                } else if (levelDistance == 2) {
-                    darknessFactor = 0.2f; // 80% darker
-                } else if (levelDistance > 2) {
-                    darknessFactor = 0.05f; // 95% darker
-                }
-
-                // Apply darkness to color components, keep full opacity
-                redComponent *= darknessFactor;
-                greenComponent *= darknessFactor;
-                blueComponent *= darknessFactor;
-                roomAlpha = 1.0f; // Full opacity
-            } else {
-                // Original rendering: rooms above are dark and transparent
-                roomAlpha = belowOrAtLevel ? 1.0f : 0.2f; // 80% transparent (20% opacity) if above current level
-
-                if (!belowOrAtLevel) {
-                    // Drastically reduce brightness for rooms above current level - match old widget appearance
-                    const float darkenFactor = 0.25f; // Keep only 25% of original brightness
-                    redComponent *= darkenFactor;
-                    greenComponent *= darkenFactor;
-                    blueComponent *= darkenFactor;
-                }
-            }
-
-            QMatrix4x4 transform = QMatrix4x4();
-            transform.translate(rx, ry, rz);
-            transform.scale(1.0f / scale, 1.0f / scale, 1.0f / scale / zFlattening);
-            mainRoomInstances.append(CubeInstanceData(transform, redComponent, greenComponent, blueComponent, roomAlpha));
         }
 
-        // 2. Collect environment color overlay data
-        QColor envColor = getEnvironmentColor(pR);
-        float overlayZ = rz + 0.25f / zFlattening; // Slightly above the main cube
-        float envRed = envColor.redF();
-        float envGreen = envColor.greenF();
-        float envBlue = envColor.blueF();
-        float overlayAlpha = 0.8f; // Default overlay transparency
-
-        // Apply same sliding darkness to environment overlay
-        if (moreTransparent) {
-            // EXPERIMENT: Apply same darkness calculation to environment overlay
-            int levelDistance = abs(static_cast<int>(rz - pz));
-            float darknessFactor = 1.0f; // Default: no darkness
-
-            if (levelDistance == 1) {
-                darknessFactor = 0.5f; // 50% darker
-            } else if (levelDistance == 2) {
-                darknessFactor = 0.2f; // 80% darker
-            } else if (levelDistance > 2) {
-                darknessFactor = 0.05f; // 95% darker
-            }
-
-            // Apply darkness to environment overlay colors, keep normal alpha
-            envRed *= darknessFactor;
-            envGreen *= darknessFactor;
-            envBlue *= darknessFactor;
-            overlayAlpha = 0.8f; // Normal overlay alpha
-        } else {
-            // Original rendering: darken overlays above player level
-            overlayAlpha = belowOrAtLevel ? 0.8f : 0.16f; // 84% transparent if above current level (0.2 * 0.8)
-
-            if (!belowOrAtLevel) {
-                // Drastically reduce brightness for environment overlays above current level
-                const float darkenFactor = 0.25f; // Keep only 25% of original brightness
-                envRed *= darkenFactor;
-                envGreen *= darkenFactor;
-                envBlue *= darkenFactor;
-            }
-        }
-
-        QMatrix4x4 transform = QMatrix4x4();
-        transform.translate(rx, ry, overlayZ);
-        transform.scale(0.75f / scale, 0.75f / scale, 1.0f / scale / zFlattening);
-        overlayInstances.append(CubeInstanceData(transform, envRed, envGreen, envBlue, overlayAlpha));
-
-        // 3. Up/down and in/out exit indicators on the overlay, batched into one draw for the area
-        const float indicatorZ = overlayZ + (1.0f / scale / zFlattening) + 0.1f / zFlattening;
+        // Up/down and in/out exit indicators just above the room, batched into one draw for the area
+        const float indicatorZ = roomTop.z() + 0.1f / zFlattening;
         addUpDownIndicators(pR, rx, ry, indicatorZ, indicatorVertices, indicatorColors);
         if (inOutExits) {
             addInOutIndicators(pR, rx, ry, indicatorZ, indicatorVertices, indicatorColors);
         }
     }
 
+    if (!borderInstances.isEmpty()) {
+        mRenderCommandQueue.addCommand(
+                std::make_unique<RenderInstancedCubesCommand>(borderInstances, mCameraController.getProjectionMatrix(), mCameraController.getViewMatrix(), mCameraController.getModelMatrix()));
+    }
+    if (!roomInstances.isEmpty()) {
+        mRenderCommandQueue.addCommand(
+                std::make_unique<RenderInstancedCubesCommand>(roomInstances, mCameraController.getProjectionMatrix(), mCameraController.getViewMatrix(), mCameraController.getModelMatrix()));
+    }
+
     renderTriangles(indicatorVertices, indicatorColors);
 
-    // Create instanced render commands for each batch
-    if (!mainRoomInstances.isEmpty()) {
-        auto command = std::make_unique<RenderInstancedCubesCommand>(mainRoomInstances, mCameraController.getProjectionMatrix(), mCameraController.getViewMatrix(), mCameraController.getModelMatrix());
-        mRenderCommandQueue.addCommand(std::move(command));
+    if (symbolDecals.isEmpty() && highlightDecals.isEmpty() && playerRoomDecal.isEmpty()) {
+        return;
     }
-
-    if (!currentRoomInstances.isEmpty()) {
-        auto command =
-                std::make_unique<RenderInstancedCubesCommand>(currentRoomInstances, mCameraController.getProjectionMatrix(), mCameraController.getViewMatrix(), mCameraController.getModelMatrix());
-        mRenderCommandQueue.addCommand(std::move(command));
+    // Drawn on the room tops in the 2D map's order: symbol, then highlight, then the player's ring
+    mRenderCommandQueue.addCommand(std::make_unique<GLStateCommand>(GLStateCommand::DISABLE_DEPTH_WRITE));
+    mRenderCommandQueue.addCommand(std::make_unique<GLStateCommand>(GLStateCommand::ENABLE_POLYGON_OFFSET));
+    for (const QHash<GLuint, GeometryData>* decals : {&symbolDecals, &highlightDecals}) {
+        for (const GeometryData& batch : *decals) {
+            mRenderCommandQueue.addCommand(std::make_unique<RenderTexturedTrianglesCommand>(
+                    batch, mCameraController.getProjectionMatrix(), mCameraController.getViewMatrix(), mCameraController.getModelMatrix(), RenderTexturedTrianglesCommand::Shading::Unlit));
+        }
     }
-
-    if (!overlayInstances.isEmpty()) {
-        // Keep depth testing enabled for overlays (was conditional with experiment.always-depth-test)
-
-        auto command = std::make_unique<RenderInstancedCubesCommand>(overlayInstances, mCameraController.getProjectionMatrix(), mCameraController.getViewMatrix(), mCameraController.getModelMatrix());
-        mRenderCommandQueue.addCommand(std::move(command));
-
-        // Re-enable depth testing for subsequent rendering
-        auto enableDepthCommand = std::make_unique<GLStateCommand>(GLStateCommand::ENABLE_DEPTH_TEST);
-        mRenderCommandQueue.addCommand(std::move(enableDepthCommand));
+    if (!playerRoomDecal.isEmpty()) {
+        mRenderCommandQueue.addCommand(std::make_unique<RenderTexturedTrianglesCommand>(
+                playerRoomDecal, mCameraController.getProjectionMatrix(), mCameraController.getViewMatrix(), mCameraController.getModelMatrix(), RenderTexturedTrianglesCommand::Shading::Unlit));
     }
+    mRenderCommandQueue.addCommand(std::make_unique<GLStateCommand>(GLStateCommand::DISABLE_POLYGON_OFFSET));
+    mRenderCommandQueue.addCommand(std::make_unique<GLStateCommand>(GLStateCommand::ENABLE_DEPTH_WRITE));
 }
 
 void ModernGLWidget::renderConnections()
@@ -613,7 +665,7 @@ void ModernGLWidget::renderConnections()
 
     float pz = static_cast<float>(mMapCenterZ);
     const bool inOutExits = mpHost->experimentEnabled(qsl("experiment.render-in-out-exits"));
-    const int playerRoomId = mpMap->mRoomIdHash.value(mpMap->mProfileName);
+    const QColor exitColor = mpHost->mFgColor_2;
 
     // Initialize instance queue
     QVector<CubeInstanceData> areaExitInstances;
@@ -665,19 +717,10 @@ void ModernGLWidget::renderConnections()
         exitList.push_back(pR->getIn());
         exitList.push_back(pR->getOut());
 
-        const bool isCurrentRoom = roomId == playerRoomId;
-
-        // Color for connections: red if current room, gray otherwise
-        float r, g, b;
-        if (isCurrentRoom) {
-            r = 1.0f;
-            g = 0.0f;
-            b = 0.0f; // Red
-        } else {
-            r = 0.3f;
-            g = 0.3f;
-            b = 0.3f; // Gray
-        }
+        // The 2D map's exit colour
+        const auto r = static_cast<float>(exitColor.redF());
+        const auto g = static_cast<float>(exitColor.greenF());
+        const auto b = static_cast<float>(exitColor.blueF());
 
         for (int i = 0; i < exitList.size(); ++i) {
             int k = exitList[i];
@@ -826,7 +869,7 @@ void ModernGLWidget::renderConnections()
                 areaExitInstances.append(CubeInstanceData(transform, exitRed, exitGreen, exitBlue, exitAlpha));
 
                 // Render smaller environment overlay rectangle on top with translucency and darkening
-                QColor envColor = getEnvironmentColor(pExit);
+                const QColor envColor = RoomAppearance::environmentColor(*mpMap, *mpHost, pExit->environment);
                 float overlayZ = dz + 0.25f / zFlattening;
                 float overlayAlpha = exitAboveCurrentLevel ? 0.16f : 0.8f; // 0.2 * 0.8 for above level
 
@@ -950,10 +993,24 @@ void ModernGLWidget::frameArea()
     if (!mpMap || !mpMap->mpRoomDB) {
         return;
     }
+    frameRooms(mpMap->mpRoomDB->get2DMapZoom(mAID));
+}
+
+// The same span of rooms the 2D map shows at this zoom
+void ModernGLWidget::frameRooms(const qreal zoom)
+{
     const float aspectRatio = height() > 0 ? static_cast<float>(width()) / static_cast<float>(height()) : 1.0f;
-    // The same span of rooms the 2D map shows for this area
-    mCameraController.setScale(CameraController::distanceToShow(static_cast<float>(mpMap->mpRoomDB->get2DMapZoom(mAID)), aspectRatio));
+    mCameraController.setScale(CameraController::distanceToShow(static_cast<float>(zoom), aspectRatio));
     emitCameraControls();
+}
+
+void ModernGLWidget::applyMapZoom(const qreal zoom, const int areaId)
+{
+    if (areaId != mAID) {
+        return;
+    }
+    frameRooms(zoom);
+    update();
 }
 
 // Implement slot methods (same interface as original)
@@ -1445,175 +1502,6 @@ void ModernGLWidget::addInOutIndicators(TRoom* pRoom, float x, float y, float z,
             triangleColors << gray[0] << gray[1] << gray[2] << gray[3];
         }
     }
-}
-
-QColor ModernGLWidget::getPlaneColor(int zLevel, bool belowOrAtLevel)
-{
-    // Both color arrays from original glwidget.cpp
-    static const float planeColor[][4] = {{0.5f, 0.6f, 0.5f, 0.2f},
-                                          {0.233f, 0.498f, 0.113f, 0.2f},
-                                          {0.666f, 0.333f, 0.498f, 0.2f},
-                                          {0.5f, 0.333f, 0.666f, 0.2f},
-                                          {0.69f, 0.458f, 0.0f, 0.2f},
-                                          {0.333f, 0.0f, 0.49f, 0.2f},
-                                          {133.0f / 255.0f, 65.0f / 255.0f, 98.0f / 255.0f, 0.2f},
-                                          {0.3f, 0.3f, 0.0f, 0.2f},
-                                          {0.6f, 0.2f, 0.6f, 0.2f},
-                                          {0.6f, 0.6f, 0.2f, 0.2f},
-                                          {0.4f, 0.1f, 0.4f, 0.2f},
-                                          {0.4f, 0.4f, 0.1f, 0.2f},
-                                          {0.3f, 0.1f, 0.3f, 0.2f},
-                                          {0.3f, 0.3f, 0.1f, 0.2f},
-                                          {0.2f, 0.1f, 0.2f, 0.2f},
-                                          {0.2f, 0.2f, 0.1f, 0.2f},
-                                          {0.24f, 0.1f, 0.5f, 0.2f},
-                                          {0.1f, 0.1f, 0.0f, 0.2f},
-                                          {0.54f, 0.6f, 0.2f, 0.2f},
-                                          {0.2f, 0.2f, 0.5f, 0.2f},
-                                          {0.6f, 0.6f, 0.2f, 0.2f},
-                                          {0.6f, 0.4f, 0.6f, 0.2f},
-                                          {0.4f, 0.4f, 0.1f, 0.2f},
-                                          {0.4f, 0.2f, 0.4f, 0.2f},
-                                          {0.2f, 0.2f, 0.0f, 0.2f},
-                                          {0.2f, 0.1f, 0.3f, 0.2f}};
-
-    static const float planeColor2[][4] = {{0.9f, 0.5f, 0.0f, 1.0f},
-                                           {165.0f / 255.0f, 102.0f / 255.0f, 167.0f / 255.0f, 1.0f},
-                                           {170.0f / 255.0f, 10.0f / 255.0f, 127.0f / 255.0f, 1.0f},
-                                           {203.0f / 255.0f, 135.0f / 255.0f, 101.0f / 255.0f, 1.0f},
-                                           {154.0f / 255.0f, 154.0f / 255.0f, 115.0f / 255.0f, 1.0f},
-                                           {107.0f / 255.0f, 154.0f / 255.0f, 100.0f / 255.0f, 1.0f},
-                                           {154.0f / 255.0f, 184.0f / 255.0f, 111.0f / 255.0f, 1.0f},
-                                           {67.0f / 255.0f, 154.0f / 255.0f, 148.0f / 255.0f, 1.0f},
-                                           {154.0f / 255.0f, 118.0f / 255.0f, 151.0f / 255.0f, 1.0f},
-                                           {208.0f / 255.0f, 213.0f / 255.0f, 164.0f / 255.0f, 1.0f},
-                                           {213.0f / 255.0f, 169.0f / 255.0f, 158.0f / 255.0f, 1.0f},
-                                           {139.0f / 255.0f, 209.0f / 255.0f, 0.0f, 1.0f},
-                                           {163.0f / 255.0f, 209.0f / 255.0f, 202.0f / 255.0f, 1.0f},
-                                           {158.0f / 255.0f, 156.0f / 255.0f, 209.0f / 255.0f, 1.0f},
-                                           {209.0f / 255.0f, 144.0f / 255.0f, 162.0f / 255.0f, 1.0f},
-                                           {209.0f / 255.0f, 183.0f / 255.0f, 78.0f / 255.0f, 1.0f},
-                                           {111.0f / 255.0f, 209.0f / 255.0f, 88.0f / 255.0f, 1.0f},
-                                           {95.0f / 255.0f, 120.0f / 255.0f, 209.0f / 255.0f, 1.0f},
-                                           {31.0f / 255.0f, 209.0f / 255.0f, 126.0f / 255.0f, 1.0f},
-                                           {1.0f, 170.0f / 255.0f, 1.0f, 1.0f},
-                                           {158.0f / 255.0f, 105.0f / 255.0f, 158.0f / 255.0f, 1.0f},
-                                           {68.0f / 255.0f, 189.0f / 255.0f, 189.0f / 255.0f, 1.0f},
-                                           {0.1f, 0.69f, 0.49f, 1.0f},
-                                           {0.0f, 0.15f, 1.0f, 1.0f},
-                                           {0.12f, 0.02f, 0.20f, 1.0f},
-                                           {0.0f, 0.3f, 0.1f, 1.0f}};
-
-    int ef = abs(zLevel % 26);
-    const float* color;
-
-    // Original logic from line 1382 and 1389:
-    // rz <= pz: glColor4f(planeColor[ef]) - use planeColor for rooms below/at level
-    // rz > pz:  glColor4f(planeColor2[ef]) - use planeColor2 for rooms above level
-    // Try using the brighter array as default since most rooms are likely at the same level
-    if (belowOrAtLevel) {
-        color = planeColor2[ef]; // Use bright colors for rooms at/below level
-        // qDebug() << "Using planeColor2[" << ef << "] for room at/below level";
-    } else {
-        color = planeColor[ef]; // Use darker colors for rooms above level
-        // qDebug() << "Using planeColor[" << ef << "] for room above level";
-    }
-
-    return QColor(static_cast<int>(color[0] * 255), static_cast<int>(color[1] * 255), static_cast<int>(color[2] * 255),
-                  255); // Use full alpha for room colors
-}
-
-QColor ModernGLWidget::getEnvironmentColor(TRoom* pRoom)
-{
-    if (!pRoom || !mpMap || !mpHost) {
-        return QColor(128, 128, 128); // Default gray
-    }
-
-    QColor roomColor;
-    int roomEnvironment = pRoom->environment;
-
-    // Same logic as T2DMap.cpp
-    if (mpMap->mEnvColors.contains(roomEnvironment)) {
-        roomEnvironment = mpMap->mEnvColors[roomEnvironment];
-    } else {
-        if (!mpMap->mCustomEnvColors.contains(roomEnvironment)) {
-            roomEnvironment = 1;
-        }
-    }
-
-    switch (roomEnvironment) {
-    case 1:
-        roomColor = mpHost->mRed_2;
-        break;
-    case 2:
-        roomColor = mpHost->mGreen_2;
-        break;
-    case 3:
-        roomColor = mpHost->mYellow_2;
-        break;
-    case 4:
-        roomColor = mpHost->mBlue_2;
-        break;
-    case 5:
-        roomColor = mpHost->mMagenta_2;
-        break;
-    case 6:
-        roomColor = mpHost->mCyan_2;
-        break;
-    case 7:
-        roomColor = mpHost->mWhite_2;
-        break;
-    case 8:
-        roomColor = mpHost->mBlack_2;
-        break;
-    case 9:
-        roomColor = mpHost->mLightRed_2;
-        break;
-    case 10:
-        roomColor = mpHost->mLightGreen_2;
-        break;
-    case 11:
-        roomColor = mpHost->mLightYellow_2;
-        break;
-    case 12:
-        roomColor = mpHost->mLightBlue_2;
-        break;
-    case 13:
-        roomColor = mpHost->mLightMagenta_2;
-        break;
-    case 14:
-        roomColor = mpHost->mLightCyan_2;
-        break;
-    case 15:
-        roomColor = mpHost->mLightWhite_2;
-        break;
-    case 16:
-        roomColor = mpHost->mLightBlack_2;
-        break;
-    default: // user defined room color
-        if (mpMap->mCustomEnvColors.contains(roomEnvironment)) {
-            roomColor = mpMap->mCustomEnvColors[roomEnvironment];
-        } else {
-            if (16 < roomEnvironment && roomEnvironment < 232) {
-                quint8 const base = roomEnvironment - 16;
-                quint8 r = base / 36;
-                quint8 g = (base - (r * 36)) / 6;
-                quint8 b = (base - (r * 36)) - (g * 6);
-
-                r = r == 0 ? 0 : (r - 1) * 40 + 95;
-                g = g == 0 ? 0 : (g - 1) * 40 + 95;
-                b = b == 0 ? 0 : (b - 1) * 40 + 95;
-                roomColor = QColor(r, g, b, 255);
-            } else if (231 < roomEnvironment && roomEnvironment < 256) {
-                quint8 const k = ((roomEnvironment - 232) * 10) + 8;
-                roomColor = QColor(k, k, k, 255);
-            } else {
-                roomColor = mpHost->mRed_2; // fallback
-            }
-        }
-    }
-
-    return roomColor;
 }
 
 void ModernGLWidget::renderBackgroundLabels()

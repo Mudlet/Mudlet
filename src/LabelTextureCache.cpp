@@ -104,12 +104,42 @@ void LabelTextureCache::invalidateArea(int areaId)
     }
 }
 
+GLuint LabelTextureCache::addImageTexture(const QString& key, const QImage& image)
+{
+    if (!mInitialized || image.isNull()) {
+        return 0;
+    }
+    deleteTexture(mImageCache.value(key));
+    const GLuint textureId = createTextureFromImage(image, true);
+    if (textureId) {
+        mImageCache.insert(key, textureId);
+    } else {
+        mImageCache.remove(key);
+    }
+    return textureId;
+}
+
+void LabelTextureCache::limitImageTextures(const qsizetype maximum)
+{
+    if (mImageCache.size() <= maximum) {
+        return;
+    }
+    for (const GLuint textureId : std::as_const(mImageCache)) {
+        deleteTexture(textureId);
+    }
+    mImageCache.clear();
+}
+
 void LabelTextureCache::clearAll()
 {
     for (auto it = mCache.begin(); it != mCache.end(); ++it) {
         deleteTexture(it.value().textureId);
     }
     mCache.clear();
+    for (const GLuint textureId : std::as_const(mImageCache)) {
+        deleteTexture(textureId);
+    }
+    mImageCache.clear();
 }
 
 GLuint LabelTextureCache::createTextureFromPixmap(const QPixmap& pixmap)
@@ -117,8 +147,11 @@ GLuint LabelTextureCache::createTextureFromPixmap(const QPixmap& pixmap)
     if (pixmap.isNull()) {
         return 0;
     }
+    return createTextureFromImage(pixmap.toImage(), false);
+}
 
-    QImage image = pixmap.toImage();
+GLuint LabelTextureCache::createTextureFromImage(const QImage& image, const bool mipmapped)
+{
     if (image.isNull()) {
         return 0;
     }
@@ -137,8 +170,13 @@ GLuint LabelTextureCache::createTextureFromPixmap(const QPixmap& pixmap)
     glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, glImage.width(), glImage.height(),
                  0, GL_RGBA, GL_UNSIGNED_BYTE, glImage.constBits());
 
-    // Set texture parameters for labels - linear filtering for smooth appearance
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+    if (mipmapped) {
+        glGenerateMipmap(GL_TEXTURE_2D);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
+    } else {
+        // Set texture parameters for labels - linear filtering for smooth appearance
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+    }
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);

@@ -155,6 +155,10 @@ public:
     // Generate billboard (camera-facing quad) geometry for labels; cameraRight and cameraUp are the screen's right and up in world space
     GeometryData generateBillboardGeometry(float centerX, float centerY, float centerZ, float width, float height, const QVector3D& cameraRight, const QVector3D& cameraUp, GLuint textureId);
 
+    // Appends a square lying flat on the map, centered on center, its texture's top turned toward the top of the
+    // screen so that it is never upside down or mirrored; cameraRight and cameraUp as for a billboard
+    static void appendGroundQuad(GeometryData& batch, const QVector3D& center, float size, const QVector3D& cameraRight, const QVector3D& cameraUp, const QVector4D& color);
+
     // Render geometry using provided VAO and buffers
     void renderGeometry(const GeometryData& geometry,
                         QOpenGLVertexArrayObject& vao,

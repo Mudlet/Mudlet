@@ -116,6 +116,7 @@ set(mudlet_SRCS
     OAuthClientFlow.cpp
     PackageItemDelegate.cpp
     PanInteractionHandler.cpp
+    RoomAppearance.cpp
     RoomContextMenuHandler.cpp
     RoomMoveActivationHandler.cpp
     RoomMoveDragHandler.cpp
@@ -401,6 +402,7 @@ set(mudlet_HDRS
     OAuthClientFlow.h
     PackageItemDelegate.h
     PanInteractionHandler.h
+    RoomAppearance.h
     RoomContextMenuHandler.h
     RoomMoveActivationHandler.h
     RoomMoveDragHandler.h

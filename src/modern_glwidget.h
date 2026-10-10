@@ -76,6 +76,8 @@ public:
     QVector3D viewCenter() const { return QVector3D(mMapCenterX, mMapCenterY, mMapCenterZ); }
     void shiftCamera(float, float, float);
     void setCameraPosition(float, float, float);
+    // Frames as many rooms as the 2D map shows at this zoom, when areaId is the area on view
+    void applyMapZoom(qreal zoom, int areaId);
 
     QSize minimumSizeHint() const override;
     QSize sizeHint() const override;
@@ -233,12 +235,14 @@ private:
     void setupBuffers();
     void cleanup();
     void showFailure(const QString& message);
-    QColor getPlaneColor(int zLevel, bool belowOrAtLevel);
-    QColor getEnvironmentColor(TRoom* pRoom);
+    GLuint symbolTexture(const QString& symbol, const QColor& color);
+    // A disc filling the texture, shaded by a radial gradient over its radius
+    GLuint discTexture(const QString& key, const QGradientStops& stops);
     void startSmoothTransition(int targetAID, int targetX, int targetY, int targetZ);
     void stopSmoothTransition();
     void jumpTo(int areaId, int x, int y, int z);
     void frameArea();
+    void frameRooms(qreal zoom);
     void emitCameraControls();
     void setOrientationKeepingRoll(float theta, float phi);
 };

@@ -21,6 +21,7 @@
  ***************************************************************************/
 
 #include <QHash>
+#include <QImage>
 #include <QPixmap>
 #include <QOpenGLFunctions>
 
@@ -50,12 +51,20 @@ public:
     // Invalidate all labels in an area
     void invalidateArea(int areaId);
 
+    // Textures drawn by the caller, such as room symbols, keyed by everything that decides how they look.
+    // Mipmapped, as they are drawn far smaller than they are made.
+    GLuint imageTexture(const QString& key) const { return mImageCache.value(key); }
+    GLuint addImageTexture(const QString& key, const QImage& image);
+    // Only between frames: a texture already queued for drawing must outlive the frame
+    void limitImageTextures(qsizetype maximum);
+
     // Clear entire cache
     void clearAll();
 
 private:
     // Create OpenGL texture from pixmap
     GLuint createTextureFromPixmap(const QPixmap& pixmap);
+    GLuint createTextureFromImage(const QImage& image, bool mipmapped);
 
     // Delete OpenGL texture
     void deleteTexture(GLuint textureId);
@@ -65,6 +74,7 @@ private:
 
     // Cache storage: (areaId, labelId) -> cache entry
     QHash<QPair<int, int>, LabelTextureCacheEntry> mCache;
+    QHash<QString, GLuint> mImageCache;
 
     bool mInitialized = false;
 };
