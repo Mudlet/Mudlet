@@ -2073,7 +2073,7 @@ describe("Tests the GUI utilities as far as possible without mudlet", function()
         end
       end)
 
-      it("Should name itself when given a tooltip that is not text (#10705)", function()
+      it("Should name itself when given a tooltip that is not text", function()
         local ok, err = pcall(setGaugeToolTip, gaugeName, {})
         assert.is_false(ok)
         assert.is_truthy(tostring(err):find("setGaugeToolTip: bad argument #2 type", 1, true), tostring(err))
@@ -2124,7 +2124,7 @@ describe("Tests the GUI utilities as far as possible without mudlet", function()
         assert.has_error(function() setGaugeWindow(userWindow, "noSuchGauge") end)
       end)
 
-      it("Should name itself when given a position that is not a number (#10705)", function()
+      it("Should name itself when given a position that is not a number", function()
         local ok, err = pcall(setGaugeWindow, userWindow, gaugeName, "left")
         assert.is_false(ok)
         assert.is_truthy(tostring(err):find("setGaugeWindow: bad argument #3 type", 1, true), tostring(err))

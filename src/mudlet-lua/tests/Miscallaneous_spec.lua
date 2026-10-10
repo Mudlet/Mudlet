@@ -2324,8 +2324,8 @@ describe("Tests C++ functions in the Miscallaneous category", function()
     end)
 
     describe("Tests the functionality of send", function()
-      -- send() is registered from the C++ sendRaw(), but its errors must name
-      -- the function the script called (#10705)
+      -- send() is registered from the C++ sendRaw(), so its errors must not
+      -- take that name from __func__
       it("raises a Lua error when called with no arguments", function()
         assertArgError(function() send() end, "send: bad argument #1 type")
       end)

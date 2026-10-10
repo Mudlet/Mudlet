@@ -347,8 +347,8 @@ describe("Tests the shape of the feeding functions' bad-argument errors", functi
   end
 end)
 
--- Each of these reached a primitive registered or written under another name,
--- and the refusal named that one instead of the function the script called (#10705)
+-- Each of these runs code shared with, or copied from, a function of another
+-- name, which is the name its errors would otherwise carry
 describe("Tests that functions sharing an implementation refuse under their own name", function()
 
   local cases = {
