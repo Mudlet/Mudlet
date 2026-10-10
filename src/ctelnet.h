@@ -459,13 +459,15 @@ private:
 
 private slots:
     void slot_networkLatencyBeat();
-    void slot_replaySpeedChanged(int speed);
+    void slot_replaySpeedChanged();
     void slot_passwordMaskTimeout();
 
 private:
 #if !defined(QT_NO_SSL)
     void promptTlsConnectionAvailable();
 #endif
+    void armReplayChunkTimer();
+    void stopReplayChunkTimer();
     void sendNAWS(int width, int height);
     void sendCurrentNAWS();
     void readPendingSocketData();
@@ -646,10 +648,12 @@ private:
     // A chunk is in ctelnet.cpp's global buffer but not yet parsed. Defensive: stops resumeReplay()
     // re-arming when a pause AND resume land inside one chunk's processing via a nested event loop.
     bool mReplayChunkPending = false;
-    // The gap scaled by replay speed, or what was left of it when paused mid-wait.
-    int mReplayChunkDelay = 0;
-    // The replay speed mReplayChunkDelay was worked out at
+    // What is left of the recorded gap before the pending chunk, in the recording's own
+    // milliseconds: a wait scaled to one speed and rescaled to another loses to truncation.
+    qint64 mReplayChunkOwedMsec = 0;
+    // The speed the running wait was armed at, and when.
     int mReplayChunkSpeed = 1;
+    QElapsedTimer mReplayChunkArmedAt;
     // Not QTimer::singleShot, so pausing can stop it and keep the remaining time.
     QTimer* mpReplayChunkTimer = nullptr;
     // Used to disable the TConsole ending messages if run from lua:
