@@ -550,6 +550,37 @@ headlessAnswersResult = ok and 'ok' or tostring(err)
         QCOMPARE(luaGlobalString(host, "headlessAnswersResult"), qsl("ok"));
     }
 
+    // As the GUI answers with no saved settings
+    void test_mainWindowSettingsRoundTripWithNoMainWindow()
+    {
+        QVERIFY2(!TAppFrontend::hasView(), "A main window exists, so this run is not headless.");
+
+        const QString hostname = qsl("Test-Headless-Host-App-Settings");
+        QVERIFY2(HostManager::self()->addHost(hostname, QString(), QString(), QString()), "Could not create a profile with no main window.");
+        Host* host = HostManager::self()->getHost(hostname);
+        QVERIFY2(host, "The profile is not in the pool.");
+
+        const bool ran = host->getLuaInterpreter()->compileAndExecuteScript(qsl(R"lua(
+headlessSettingsResult = 'not run'
+local ok, err = pcall(function()
+  local function check(label, want, ...)
+    local n = select("#", ...)
+    local got = ...
+    assert(n == 1 and got == want, label .. " answered " .. n .. " values: " .. tostring(got))
+  end
+  local key = "showTabConnectionIndicators"
+  check("getConfig default", false, getConfig(key))
+  check("setConfig true", true, setConfig(key, true))
+  check("getConfig after true", true, getConfig(key))
+  check("setConfig false", true, setConfig(key, false))
+  check("getConfig after false", false, getConfig(key))
+end)
+headlessSettingsResult = ok and 'ok' or tostring(err)
+)lua"));
+        QVERIFY2(ran, "The Lua chunk did not run.");
+        QCOMPARE(luaGlobalString(host, "headlessSettingsResult"), qsl("ok"));
+    }
+
     void test_profileWithNoSettingsStoreTakesTheDefaults()
     {
         if (MudletApp::getQSettings()) {
