@@ -3198,6 +3198,29 @@ std::pair<bool, QString> Host::installPackage(const QString& fileName, enums::Pa
     // Filled per XML file by the archive branch, reported once both branches are done.
     QStringList itemsWithErrors;
     QStringList itemsWithErrorNames;
+    // A package file that broke before a single item could be read out of it would be listed, and saved into
+    // the profile, with nothing in it. As nothing of it ran, taking it back leaves nothing behind. One that
+    // got as far as an item stays installed and is warned about, as its items are running.
+    auto takeBackAPackageNothingWasReadFrom = [this](const QString& packageName) {
+        mInstalledPackages.removeAll(packageName);
+        // A file from a later Mudlet is turned away after the empty folders for its items were made
+        mTriggerUnit.uninstall(packageName);
+        mTimerUnit.uninstall(packageName);
+        mAliasUnit.uninstall(packageName);
+        mActionUnit.uninstall(packageName);
+        mScriptUnit.uninstall(packageName);
+        mKeyUnit.uninstall(packageName);
+        if (auto* fonts = FontManager::self()) {
+            fonts->unloadFonts(getName(), packageName);
+        }
+        getActionUnit()->updateAllToolbars();
+        emit signal_editorCleanResetRequested();
+        emit signal_packageListChanged();
+    };
+    auto nothingCouldBeReadReason = [](const QString& packageName, const QString& errorMsg) {
+        //: %1 is the package name, %2 is the reason its contents could not be read
+        return tr("the contents of package \"%1\" could not be read: %2").arg(packageName, errorMsg);
+    };
     if (packageUnpacksAFolder(fileName)) {
         const QString _home = MudletApp::getMudletPath(enums::profileHomePath, getName());
         // Unpacking into a folder the other kind owns would overwrite its files, and the rename below would
@@ -3370,6 +3393,7 @@ std::pair<bool, QString> Host::installPackage(const QString& fileName, enums::Pa
         _filterList << qsl("*.xml") << qsl("*.trigger");
         const QFileInfoList entries = _dir.entryInfoList(_filterList, QDir::Files);
         bool registeredFromArchive = false;
+        bool anItemWasRead = false;
         for (auto& entry : entries) {
             file2.setFileName(entry.absoluteFilePath());
             if (!file2.open(QFile::ReadOnly | QFile::Text)) {
@@ -3390,6 +3414,7 @@ std::pair<bool, QString> Host::installPackage(const QString& fileName, enums::Pa
             mPackagesBeingInstalled.push(packageName);
             auto [success, errorMsg] = reader.importPackage(&file2, packageName, static_cast<int>(thing));
             mPackagesBeingInstalled.pop();
+            anItemWasRead = anItemWasRead || reader.readAnItem();
             itemsWithErrors << reader.itemsWithErrors();
             itemsWithErrorNames << reader.itemsWithErrorNames();
             if (thing != enums::PackageModuleType::Package) {
@@ -3399,6 +3424,12 @@ std::pair<bool, QString> Host::installPackage(const QString& fileName, enums::Pa
                     qWarning() << "Host::installPackage() WARNING - failed to load module" << packageName << ":" << errorMsg;
                     postMessage(tr("[ WARN ]  - Failed to load module \"%1\": %2").arg(packageName, errorMsg));
                 }
+            } else if (!success && !anItemWasRead) {
+                file2.close();
+                takeBackAPackageNothingWasReadFrom(packageName);
+                takeBackWhatTheManifestOverwrote();
+                discardTheFolderThisInstallMade();
+                return fail(nothingCouldBeReadReason(packageName, errorMsg));
             } else if (!success) {
                 // Only modules were ever asked whether their contents loaded, so a
                 // package whose XML is corrupt was registered, left in the profile
@@ -3458,6 +3489,10 @@ std::pair<bool, QString> Host::installPackage(const QString& fileName, enums::Pa
                 qWarning() << "Host::installPackage() WARNING - failed to load module" << packageName << ":" << errorMsg;
                 postMessage(tr("[ WARN ]  - Failed to load module \"%1\": %2").arg(packageName, errorMsg));
             }
+        } else if (!success && !reader.readAnItem()) {
+            file2.close();
+            takeBackAPackageNothingWasReadFrom(packageName);
+            return fail(nothingCouldBeReadReason(packageName, errorMsg));
         } else if (!success) {
             qWarning() << "Host::installPackage() WARNING - failed to load package" << packageName << ":" << errorMsg;
             //: %1 is the package name, %2 is the reason its contents could not be read
