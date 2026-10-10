@@ -76,6 +76,8 @@ public:
     QVector3D viewCenter() const { return QVector3D(mMapCenterX, mMapCenterY, mMapCenterZ); }
     void shiftCamera(float, float, float);
     void setCameraPosition(float, float, float);
+    // A grid-mode area is always drawn looking straight down with north up
+    bool cameraFixedByGridMode() const;
 
     QSize minimumSizeHint() const override;
     QSize sizeHint() const override;
@@ -128,6 +130,9 @@ protected:
     void mouseReleaseEvent(QMouseEvent* event) override;
     void keyPressEvent(QKeyEvent* event) override;
     void showEvent(QShowEvent* event) override;
+    bool event(QEvent* event) override;
+    void resizeEvent(QResizeEvent* event) override;
+    void paintEvent(QPaintEvent* event) override;
 
 public:
     TMap* mpMap = nullptr;
@@ -235,6 +240,7 @@ private:
     void setupBuffers();
     void cleanup();
     void showFailure(const QString& message);
+    bool contextCreationFailed() const;
     QColor getPlaneColor(int zLevel, bool belowOrAtLevel);
     QColor getEnvironmentColor(TRoom* pRoom);
     void startSmoothTransition(int targetAID, int targetX, int targetY, int targetZ);

@@ -121,6 +121,38 @@ void ModernGLWidget::showEvent(QShowEvent* event)
     });
 }
 
+// QOpenGLWidget retries a context it could not create on every show, resize and paint, and each retry
+// leaks the context that failed (QOpenGLWidgetPrivate::initialize() overwrites it), so ask only once
+bool ModernGLWidget::contextCreationFailed() const
+{
+    return context() && !isValid();
+}
+
+bool ModernGLWidget::event(QEvent* event)
+{
+    if (contextCreationFailed() && (event->type() == QEvent::Show || event->type() == QEvent::WindowChangeInternal)) {
+        return QWidget::event(event);
+    }
+    return QOpenGLWidget::event(event);
+}
+
+void ModernGLWidget::resizeEvent(QResizeEvent* event)
+{
+    if (contextCreationFailed()) {
+        QWidget::resizeEvent(event);
+        return;
+    }
+    QOpenGLWidget::resizeEvent(event);
+}
+
+void ModernGLWidget::paintEvent(QPaintEvent* event)
+{
+    if (contextCreationFailed()) {
+        return;
+    }
+    QOpenGLWidget::paintEvent(event);
+}
+
 void ModernGLWidget::showFailure(const QString& message)
 {
     mFailureMessage = message;
@@ -329,7 +361,12 @@ void ModernGLWidget::paintGL()
     }
 
     if (pArea->gridMode) {
+        const QVector3D upBefore = mCameraController.getUpVector();
+        const QVector3D positionBefore = mCameraController.getPosition();
         mCameraController.setGridMode(true);
+        if (mCameraController.getUpVector() != upBefore || mCameraController.getPosition() != positionBefore) {
+            emitCameraControls();
+        }
     }
 
     if (mFramePending && !mDistanceRequested) {
@@ -888,6 +925,22 @@ void ModernGLWidget::shiftCamera(float verticalAngle, float horizontalAngle, flo
     mCameraController.shiftPerspective(verticalAngle, horizontalAngle, rotationAngle);
     emitCameraControls();
     update();
+}
+
+bool ModernGLWidget::cameraFixedByGridMode() const
+{
+    if (!mpMap || !mpMap->mpRoomDB) {
+        return false;
+    }
+    int areaId = mAID;
+    // The next paint moves a view that follows the player to the player's area
+    if (followingPlayer()) {
+        if (const TRoom* pPlayerRoom = mpMap->mpRoomDB->getRoom(mpMap->mRoomIdHash.value(mpMap->mProfileName))) {
+            areaId = pPlayerRoom->getArea();
+        }
+    }
+    const TArea* pArea = mpMap->mpRoomDB->getArea(areaId);
+    return pArea && pArea->gridMode;
 }
 
 void ModernGLWidget::setCameraPosition(float r, float theta, float phi)

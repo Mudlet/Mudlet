@@ -38,6 +38,13 @@ CameraController cameraLookingAt(const QVector3D& target)
     camera.setTarget(target.x(), target.y(), target.z());
     return camera;
 }
+
+// Counterclockwise, in -180 to 180, as the map turns on a screen looking straight down
+float screenUpFromNorth(const CameraController& camera)
+{
+    const QVector3D up = camera.getUpVector();
+    return qRadiansToDegrees(std::atan2(-up.x(), up.y()));
+}
 } // namespace
 
 class CameraViewTest : public QObject
@@ -177,11 +184,34 @@ private slots:
     {
         CameraController camera;
         camera.setTopView();
-        QVERIFY2(qAbs(camera.getPosition().y()) < 0.01f, qPrintable(qsl("the top view reads back a tilt of %1").arg(camera.getPosition().y())));
+        const float straightDown = CameraController::scmMinTilt + 0.01f;
+        QVERIFY2(camera.getPosition().y() < straightDown, qPrintable(qsl("the top view reads back a tilt of %1").arg(camera.getPosition().y())));
         camera.setOrientation(camera.getPosition().y(), camera.getPosition().z() + 30.0f, camera.getRoll());
-        QVERIFY2(qAbs(camera.getPosition().y()) < 0.01f, qPrintable(qsl("turning the top view tilted it to %1").arg(camera.getPosition().y())));
+        QVERIFY2(camera.getPosition().y() < straightDown, qPrintable(qsl("turning the top view tilted it to %1").arg(camera.getPosition().y())));
         camera.setOrientation(camera.getPosition().y(), camera.getPosition().z(), 20.0f);
-        QVERIFY2(qAbs(camera.getPosition().y()) < 0.01f, qPrintable(qsl("rolling the top view tilted it to %1").arg(camera.getPosition().y())));
+        QVERIFY2(camera.getPosition().y() < straightDown, qPrintable(qsl("rolling the top view tilted it to %1").arg(camera.getPosition().y())));
+    }
+
+    // Looking straight down a turn and a roll turn the screen alike, but each must still read back as itself
+    void test_rollingTheTopViewSetsTheRollRatherThanAddingToIt()
+    {
+        CameraController camera;
+        camera.setTopView();
+        // As the roll slider does while it is dragged
+        for (int roll = 1; roll <= 20; ++roll) {
+            const QVector3D position = camera.getPosition();
+            camera.setOrientation(position.y(), position.z(), static_cast<float>(roll));
+        }
+        QVERIFY2(qAbs(screenUpFromNorth(camera) - 20.0f) < 0.1f, qPrintable(qsl("dragging the roll to 20 turned the map by %1").arg(screenUpFromNorth(camera))));
+        QVERIFY2(qAbs(camera.getRoll() - 20.0f) < 0.1f, qPrintable(qsl("a roll of 20 reads back as %1").arg(camera.getRoll())));
+
+        camera.setOrientation(camera.getPosition().y(), camera.getPosition().z(), 10.0f);
+        QVERIFY2(qAbs(screenUpFromNorth(camera) - 10.0f) < 0.1f, qPrintable(qsl("rolling back to 10 left the map turned by %1").arg(screenUpFromNorth(camera))));
+
+        // As the turn slider does
+        camera.setOrientation(camera.getPosition().y(), CameraController::scmNorthUpAzimuth + 30.0f, camera.getRoll());
+        QVERIFY2(qAbs(camera.getRoll() - 10.0f) < 0.1f, qPrintable(qsl("turning the rolled top view left a roll of %1").arg(camera.getRoll())));
+        QVERIFY2(qAbs(screenUpFromNorth(camera) - 40.0f) < 0.1f, qPrintable(qsl("a turn of 30 and a roll of 10 turned the map by %1").arg(screenUpFromNorth(camera))));
     }
 
     void test_shiftingThePerspectiveStaysAboveTheMap()

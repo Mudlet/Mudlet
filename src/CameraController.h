@@ -31,8 +31,9 @@ public:
     // One unit of distance shows about 5.8 rooms either side of the target vertically
     static constexpr float scmMinDistance = 0.05f;
     static constexpr float scmMaxDistance = 100.0f;
-    // Degrees from straight down; the limits keep the camera above the map's plane
-    static constexpr float scmMinTilt = 0.0f;
+    // Degrees from straight down; the limits keep the camera above the map's plane.
+    // Not quite 0: straight down, turning and rolling are the same rotation and could not be told apart.
+    static constexpr float scmMinTilt = 0.01f;
     static constexpr float scmMaxTilt = 82.0f;
     static constexpr float scmDefaultTilt = 41.0f;
     // The azimuth that puts the camera south of its target, so north is up the screen and east is to its right
