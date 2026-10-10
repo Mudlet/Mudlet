@@ -2151,4 +2151,104 @@ describe("MXP auto-detection from the mode switch escape", function()
     feed("\27[1mBold\27[0m and [1z in plain text\r\n")
     assert.is_false(getConfig("promptForMXPProcessorOn"))
   end)
+
+  -- connecting and disconnecting both reset cTelnet, so the reads either side
+  -- of a connection are not the two halves of one switch
+  it("does not join a read to one from before a connection", function()
+    if not os.getenv("MUDLET_TEST_MODE") then
+      pending("waiting for the connection to come and go needs MUDLET_TEST_MODE (pumpEvents() does nothing without it)")
+      return
+    end
+    local telnetDirectory = os.getenv("MUDLET_TEST_TELNET_DIR")
+    local handle = telnetDirectory and io.open(telnetDirectory .. "/port", "r")
+    local port = handle and tonumber((handle:read("*a") or ""):match("%d+") or "")
+    if handle then
+      handle:close()
+    end
+    if not port then
+      local reason = "needs the telnet fixture (run CI/telnet-fixture-server.py with MUDLET_TEST_TELNET_DIR set)"
+      assert.is_nil(os.getenv("MUDLET_TEST_REQUIRE_TELNET_FIXTURE"), "MUDLET_TEST_REQUIRE_TELNET_FIXTURE is set but this " .. reason)
+      pending(reason)
+      return
+    end
+    local function connected()
+      local _, _, isConnected = getConnectionInfo()
+      return isConnected
+    end
+    local function waitFor(predicate)
+      for _ = 1, 100 do
+        if predicate() then
+          return true
+        end
+        pumpEvents(50)
+      end
+      return predicate()
+    end
+
+    feed("\27[1")
+    connectToServer("127.0.0.1", port)
+    assert.is_true(waitFor(connected), "never connected to the telnet fixture on port " .. port)
+    disconnect()
+    assert.is_true(waitFor(function() return not connected() end), "the telnet fixture connection outlived the disconnect")
+    feed("z after it\r\n")
+    assert.is_false(getConfig("promptForMXPProcessorOn"))
+    assert.is_false(getConfig("specialForceMXPProcessorOn"))
+  end)
+end)
+
+-- A forced processor goes on scanning gotRest() reads, so that a game turning
+-- MXP back on re-locks it secure, but not gotPrompt() ones
+describe("MXP re-initialisation of a forced processor", function()
+
+  local function feed(data)
+    local ok, msg = feedTelnet(data)
+    assert.is_true(ok, "start the suite with --offline, see the tests README - feedTelnet said: " .. tostring(msg))
+  end
+
+  local function displayed(data)
+    local mark = getLastLineNumber("main")
+    feed(data)
+    return table.concat(getLines("main", mark, getLastLineNumber("main")), "|")
+  end
+
+  local stillOpen = "<SEND href=\"x\">MXPSTILLOPEN</SEND>"
+  local promptedBefore, forcedBefore
+
+  -- forcing a processor the game already had on and locked open leaves it open,
+  -- so only a re-initialisation makes a secure tag act
+  before_each(function()
+    promptedBefore = getConfig("promptForMXPProcessorOn")
+    forcedBefore = getConfig("specialForceMXPProcessorOn")
+    setConfig("specialForceMXPProcessorOn", false)
+    setConfig("promptForMXPProcessorOn", false)
+    feed("<T_IAC><T_DO><O_MXP>")
+    feed("\27[5z\r\n")
+    setConfig("specialForceMXPProcessorOn", true)
+    setConfig("promptForMXPProcessorOn", true)
+    feed("<T_IAC><T_DONT><O_MXP>")
+    assert.equals(stillOpen, displayed(stillOpen .. "\r\n"))
+  end)
+
+  -- a forced processor refuses to unlock a secure default, so unlock it unforced
+  after_each(function()
+    setConfig("specialForceMXPProcessorOn", false)
+    feed("<T_IAC><T_DO><O_MXP>")
+    feed("\27[5z\r\n")
+    feed("<T_IAC><T_DONT><O_MXP>")
+    setConfig("specialForceMXPProcessorOn", forcedBefore)
+    setConfig("promptForMXPProcessorOn", promptedBefore)
+  end)
+
+  it("re-locks it secure from a switch split between two reads", function()
+    feed("\27[1")
+    feed("z<B>MXPREINIT</B>\r\n")
+    assert.equals("MXPRELOCKED", displayed("<SEND href=\"x\">MXPRELOCKED</SEND>\r\n"))
+  end)
+
+  it("does not re-lock it from two reads a prompt came between", function()
+    feed("x\27[1")
+    feed("HP> <T_IAC><T_GA>")
+    feed("z after it\r\n")
+    assert.equals(stillOpen, displayed(stillOpen .. "\r\n"))
+  end)
 end)
