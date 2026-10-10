@@ -156,7 +156,8 @@ private:
 
     // What the console holds, minus the empty line a commit leaves ready for the
     // next one. Comparing this with mirroredLines() is the relation --mirror
-    // promises: one copied line per line shown.
+    // promises: one copied line per line shown, except that a game line a
+    // trigger writes into is copied as sent and what the trigger wrote follows.
     QStringList shownLines() const
     {
         QStringList lines = mpHost->mainConsoleView()->buffer.lineBuffer;
@@ -661,8 +662,41 @@ private slots:
         QCOMPARE(shownLines(), QStringList({qsl("paste a copy abovethe line above"), qsl("paste a copy above")}));
     }
 
+    // feedTriggers() commits its line in the middle of the trigger pass, below
+    // the line the trigger wrote into, so the held text goes out ahead of it.
+    void test_triggerTextIsMirroredAheadOfALineTheTriggerFeeds()
+    {
+        QVERIFY(runLua(qsl("mirrorTrigger = tempRegexTrigger([[^echo then feed$]], [[echo(\" [added]\") feedTriggers(\"a fed line\\n\")]])")));
 
+        feedLineFromServer("echo then feed");
+        QVERIFY(runLua(qsl("killTrigger(mirrorTrigger)")));
 
+        QCOMPARE(mirroredLines(), QStringList({qsl("echo then feed"), qsl(" [added]"), qsl("a fed line")}));
+        QCOMPARE(shownLines(), QStringList({qsl("echo then feed [added]"), qsl("a fed line")}));
+    }
+
+    void test_textATriggerEchoesBeforeClearingTheWindowIsNotMirrored()
+    {
+        QVERIFY(runLua(qsl("mirrorTrigger = tempRegexTrigger([[^echo then clear$]], [[echo(\" [cleared]\") clearWindow()]])")));
+
+        feedLineFromServer("echo then clear");
+        QVERIFY(runLua(qsl("killTrigger(mirrorTrigger)")));
+
+        QCOMPARE(mirroredLines(), QStringList{qsl("echo then clear")});
+        QCOMPARE(timesMirroredContaining(qsl("[cleared]")), 0);
+    }
+
+    void test_printInATriggerIsMirroredAfterTheLine()
+    {
+        QVERIFY(runLua(qsl("mirrorTrigger = tempRegexTrigger([[^print from a trigger$]], [[print(\"printed by the trigger\")]])")));
+
+        feedLineFromServer("print from a trigger");
+        QVERIFY(runLua(qsl("killTrigger(mirrorTrigger)")));
+
+        QCOMPARE(mirroredLines().size(), 2);
+        QCOMPARE(mirroredLines().at(0), qsl("print from a trigger"));
+        QVERIFY(mirroredLines().at(1).startsWith(qsl("printed by the trigger")));
+    }
 
     // A sub-console is not in trigger mode, so what a trigger writes to it is
     // copied at once; the main console's held text has to go out ahead of it.
@@ -709,6 +743,22 @@ private slots:
     // lines must neither be written nor warn again.
     void test_aFailedWriteTurnsMirroringOffWithOneWarning()
     {
+        std::fflush(stdout);
+        const int savedStdOut = dup(fileno(stdout));
+        QVERIFY(savedStdOut != -1);
+        const int fullFd = open("/dev/full", O_WRONLY);
+        if (fullFd == -1) {
+            close(savedStdOut);
+            QSKIP("no /dev/full to make standard output fail");
+        }
+        const bool redirected = dup2(fullFd, fileno(stdout)) != -1;
+        close(fullFd);
+        if (!redirected) {
+            close(savedStdOut);
+            QFAIL("could not point standard output at /dev/full");
+        }
+        // Installed only once nothing can return early, as it would swallow the
+        // warning for every case after this one
         static int failedWriteWarnings = 0;
         static QtMessageHandler previousHandler = nullptr;
         failedWriteWarnings = 0;
@@ -719,17 +769,6 @@ private slots:
             }
             previousHandler(type, context, message);
         });
-        std::fflush(stdout);
-        const int savedStdOut = dup(fileno(stdout));
-        QVERIFY(savedStdOut != -1);
-        const int fullFd = open("/dev/full", O_WRONLY);
-        if (fullFd == -1) {
-            close(savedStdOut);
-            qInstallMessageHandler(previousHandler);
-            QSKIP("no /dev/full to make standard output fail");
-        }
-        QVERIFY(dup2(fullFd, fileno(stdout)) != -1);
-        close(fullFd);
 
         const bool succeeded = mpHost->getLuaInterpreter()->compileAndExecuteScript(qsl("echo(\"first\\nsecond\\nthird\\n\")"));
 
@@ -751,6 +790,12 @@ private slots:
         QCOMPARE(mirroredLines(), shownLines());
     }
 
+    void test_echoLinkToASubConsoleIsMirroredOnce()
+    {
+        QVERIFY(runLua(qsl("createMiniConsole(\"mirrorChat\", 0, 0, 200, 100) echoLink(\"mirrorChat\", \"a sub-console link\", \"\", \"\") echo(\"mirrorChat\", \"\\n\")")));
+
+        QCOMPARE(mCapturedOutput.filter(qsl("a sub-console link")), QStringList{qsl("%1.mirrorChat| a sub-console link").arg(mHostname)});
+    }
 
     // Outside a trigger these append to the buffer just as echo() and echoLink() do
     void test_textInsertedAtTheEndOfTheBufferIsMirrored()
@@ -805,8 +850,8 @@ private slots:
     }
 
     // A prompt is ended by IAC GA rather than by a newline, which is a line
-    // boundary of its own in the commit path. Last, because the first GA seen
-    // switches cTelnet over to posting on every read.
+    // boundary of its own in the commit path. The cases with a GA come last,
+    // because the first GA seen switches cTelnet over to posting on every read.
     void test_aPromptTerminatedByGoAheadIsMirrored()
     {
         QByteArray prompt("HP:100 MP:50 > ");
