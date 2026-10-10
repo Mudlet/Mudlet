@@ -5962,20 +5962,11 @@ std::pair<bool, QString> Host::setMovie(const QString& name, const QString& movi
 
 QSize Host::calcFontSize(const QString& windowName)
 {
-    if (namesMainConsoleWithNoMainWindow(windowName)) {
-        const QFontMetrics fontMetrics(displayFontWithNoView());
-        return QSize(fontMetrics.horizontalAdvance(QChar('W')), fontMetrics.height());
-    }
-
     return consoleFrontend()->consoleFontSize(windowName).value_or(QSize(-1, -1));
 }
 
 int Host::calcColumnWidth(const QString& windowName)
 {
-    if (namesMainConsoleWithNoMainWindow(windowName)) {
-        return QFontMetrics(displayFontWithNoView()).averageCharWidth();
-    }
-
     if (!consoleFrontend()) {
         return -1;
     }
@@ -6409,15 +6400,11 @@ std::optional<QString> Host::userWindowStyleSheet(const QString& name) const
 // (see TMainConsole::reportGeometry()), so this needs no widget.
 std::optional<QRect> Host::windowGeometry(const QString& name) const
 {
-    if (!hasConsoleView()) {
-        return {};
-    }
-
     if (name.isEmpty() || name == QLatin1String("main")) {
         // 0,0 rather than the console's pos(), which under multi-view is an
         // offset within the split; the size is mainWindowSize()'s so the two
         // functions cannot disagree.
-        return {QRect(QPoint(0, 0), mWindowRegistry.mainWindowSize())};
+        return {QRect(QPoint(0, 0), mainWindowSize().value_or(QSize()))};
     }
     if (const TLabelModel* pLabel = mWindowRegistry.labelModel(name)) {
         return pLabel->mGeometry;
@@ -6436,19 +6423,21 @@ std::optional<QRect> Host::windowGeometry(const QString& name) const
 std::optional<QSize> Host::mainWindowSize() const
 {
     if (!hasConsoleView()) {
-        return {};
+        // Nothing lays the main console out, so it is the character grid NAWS reports
+        const QFontMetrics metrics(consoleFrontend()->displayFont());
+        return {QSize(mScreenWidth * metrics.averageCharWidth(), mScreenHeight * metrics.height())};
     }
     return {mWindowRegistry.mainWindowSize()};
 }
 
 std::optional<QSize> Host::windowGridSize(const QString& name) const
 {
-    if (!hasConsoleView()) {
-        return {};
-    }
     const TConsoleModel* pModel = consoleModelNamed(name);
     if (!pModel) {
         return {};
+    }
+    if (pModel == mpMainConsoleModel.get() && !hasConsoleView()) {
+        return {QSize(mScreenWidth, mScreenHeight)};
     }
     return {pModel->mGridSize};
 }
@@ -6491,12 +6480,6 @@ std::optional<bool> Host::windowScrollBarVisible(const QString& name) const
 
 std::optional<QFont> Host::windowFont(const QString& name) const
 {
-    if (namesMainConsoleWithNoMainWindow(name)) {
-        return {displayFontWithNoView()};
-    }
-    if (!hasConsoleView()) {
-        return {};
-    }
     const TConsoleModel* pModel = consoleModelNamed(name);
     if (!pModel) {
         return {};
@@ -6509,15 +6492,12 @@ std::optional<QFont> Host::windowFont(const QString& name) const
 
 std::optional<int> Host::windowFontSize(const QString& name) const
 {
-    if (namesMainConsoleWithNoMainWindow(name)) {
-        return {displayFontWithNoView().pointSize()};
-    }
-    if (!hasConsoleView()) {
-        return {};
-    }
     const TConsoleModel* pModel = consoleModelNamed(name);
     if (!pModel) {
         return {};
+    }
+    if (pModel == mpMainConsoleModel.get() && !hasConsoleView()) {
+        return {consoleFrontend()->displayFont().pointSize()};
     }
     return {pModel->mUpperPaneFont.pointSize()};
 }
@@ -6569,13 +6549,10 @@ std::optional<QColor> Host::borderColor() const
 
 std::optional<QSize> Host::userWindowSize(const QString& name) const
 {
-    if (!hasConsoleView()) {
-        return {};
-    }
     if (auto size = mWindowRegistry.userWindowSize(name)) {
         return size;
     }
-    return {mWindowRegistry.mainWindowSize()};
+    return mainWindowSize();
 }
 
 // Returns whether a window element is currently visible, mirroring the widget
@@ -6841,13 +6818,6 @@ QFont Host::getDisplayFont()
     }
 
     return mTempDisplayFont.value();
-}
-
-// Not for a console the main window has closed: the profile's font went with it, and
-// what is left is the default the profile started from
-bool Host::namesMainConsoleWithNoMainWindow(const QString& name) const
-{
-    return !TAppFrontend::hasView() && !hasConsoleView() && namesMainConsole(name);
 }
 
 QFont Host::displayFontWithNoView() const
