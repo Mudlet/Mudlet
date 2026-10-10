@@ -59,6 +59,8 @@ void TNullConsoleFrontend::createLabel(const QString& windowname, const QString&
     mpHost->windowRegistry().registerLabel(name, pLabel.get());
     mLabels[name] = {std::move(pLabel), userWindowOrMain(windowname)};
     reportVisibility(name);
+    // TMainConsole::createLabel()'s colour
+    setLabelBackgroundColor(name, QColor(32, 32, 32, 255));
 }
 
 void TNullConsoleFrontend::deleteLabel(const QString& name)
@@ -397,6 +399,27 @@ bool TNullConsoleFrontend::reparentLabel(const QString& windowname, const QStrin
     return true;
 }
 
+bool TNullConsoleFrontend::setLabelBackgroundColor(const QString& name, const QColor& color)
+{
+    TLabelModel* pLabel = labelModel(name);
+    if (!pLabel) {
+        return false;
+    }
+    pLabel->mBackgroundColor = color;
+    pLabel->mStyleSheet = TLabelModel::styleSheetWithBackgroundColor(pLabel->mStyleSheet, color);
+    return true;
+}
+
+// TLabel stamps its palette with the colour it was last given, which is what the real view reads
+std::optional<QColor> TNullConsoleFrontend::getLabelBackgroundColor(const QString& name) const
+{
+    const TLabelModel* pLabel = labelModel(name);
+    if (!pLabel) {
+        return std::nullopt;
+    }
+    return pLabel->mBackgroundColor;
+}
+
 bool TNullConsoleFrontend::setLabelSvgTint(const QString& name, const QColor& color)
 {
     TLabelModel* pLabel = labelModel(name);
@@ -490,6 +513,7 @@ std::pair<bool, QString> TNullConsoleFrontend::setUserWindowTitle(const QString&
         return {false, qsl("\"%1\" is not a user window").arg(name)};
     }
     // The real view's default title, so translated in its context
+    //: Default title of a user window; %1 is the profile's name and %2 the window's
     registry.setUserWindowTitle(name, text.isEmpty() ? QCoreApplication::translate("TMainConsole", "User window - %1 - %2").arg(mpHost->getName(), name) : text);
     return {true, QString()};
 }

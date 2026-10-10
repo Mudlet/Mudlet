@@ -94,8 +94,8 @@ public:
     bool reparentLabel(const QString& windowname, const QString& name, int x, int y, bool show) override;
     bool setLabelText(const QString& name, const QString& text) override;
     std::pair<bool, QString> setLabelMovie(const QString&, const QString&) override { return noView(); }
-    bool setLabelBackgroundColor(const QString&, const QColor&) override { return false; }
-    std::optional<QColor> getLabelBackgroundColor(const QString&) const override { return std::nullopt; }
+    bool setLabelBackgroundColor(const QString& name, const QColor& color) override;
+    std::optional<QColor> getLabelBackgroundColor(const QString& name) const override;
     bool setLabelBackgroundImage(const QString&, const QString&) override { return false; }
     bool resetLabelBackgroundImage(const QString&) override { return false; }
     bool setLabelSvgTint(const QString& name, const QColor& color) override;

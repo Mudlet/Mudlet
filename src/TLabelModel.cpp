@@ -21,6 +21,8 @@
 
 #include "Host.h"
 
+#include <QRegularExpression>
+
 TLabelModel::TLabelModel(Host* pHost, const QString& name)
 : mpHost(pHost)
 , mName(name)
@@ -92,4 +94,21 @@ void TLabelModel::releaseFunc(const int existingFunction, const int newFunction)
     if (newFunction != existingFunction) {
         mpHost->getLuaInterpreter()->freeLuaRegistryIndex(existingFunction);
     }
+}
+
+// the lookbehind keeps selection-background-color and friends out of it
+QString TLabelModel::styleSheetWithBackgroundColor(const QString& styleSheet, const QColor& color)
+{
+    static const QRegularExpression declaration(qsl("(?<![-\\w])background-color\\s*:[^;]*;"));
+    const QString newColor = qsl("background-color: rgba(%1, %2, %3, %4);").arg(color.red()).arg(color.green()).arg(color.blue()).arg(color.alpha());
+    QString sheet = styleSheet;
+    if (sheet.contains(declaration)) {
+        sheet.replace(declaration, newColor);
+    } else {
+        if (!sheet.isEmpty() && !sheet.endsWith(QChar::LineFeed)) {
+            sheet.append(QChar::LineFeed);
+        }
+        sheet.append(newColor);
+    }
+    return sheet;
 }

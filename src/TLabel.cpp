@@ -588,28 +588,11 @@ void TLabel::setClickThrough(bool clickthrough)
     }
 }
 
-// the lookbehind keeps selection-background-color and friends out of it
-static const QRegularExpression& backgroundColorDeclaration()
-{
-    static const QRegularExpression declaration(qsl("(?<![-\\w])background-color\\s*:[^;]*;"));
-    return declaration;
-}
-
 void TLabel::setBackgroundColor(const QColor& color)
 {
     mBackgroundColor = color;
 
-    const QString newColor = qsl("background-color: rgba(%1, %2, %3, %4);").arg(color.red()).arg(color.green()).arg(color.blue()).arg(color.alpha());
-    QString sheet = styleSheet();
-    if (sheet.contains(backgroundColorDeclaration())) {
-        sheet.replace(backgroundColorDeclaration(), newColor);
-    } else {
-        if (!sheet.isEmpty() && !sheet.endsWith(QChar::LineFeed)) {
-            sheet.append(QChar::LineFeed);
-        }
-        sheet.append(newColor);
-    }
-    if (!restyle(sheet)) {
+    if (!restyle(TLabelModel::styleSheetWithBackgroundColor(styleSheet(), color))) {
         applyBackgroundColor();
     }
 }
