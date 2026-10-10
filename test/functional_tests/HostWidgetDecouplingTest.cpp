@@ -372,6 +372,38 @@ private slots:
         QVERIFY(luaAnswered);
     }
 
+    // Each view keeps only the windows it made: the null view leaves a detached view's windows alone, and
+    // the ones it made go when a real view attaches, which knows nothing of them.
+    void test_windowsStayWithTheViewThatMadeThem()
+    {
+        startProfile(mHostname, mLocalhost, mPort);
+        auto host = mudlet::self()->getActiveHost();
+        QVERIFY2(host, "No active host available for the test.");
+
+        QPointer<TMainConsole> console = host->mainConsoleView();
+        QVERIFY2(console, "The active host has no main console.");
+        const QString realWindow = qsl("realViewDock");
+        QVERIFY(host->openWindow(realWindow, false, false, qsl("right")).first);
+        const TConsoleModel* realModel = host->windowRegistry().subConsoleModel(realWindow);
+        QVERIFY(realModel);
+
+        host->setMainConsoleView(nullptr);
+        const bool ran = host->getLuaInterpreter()->compileAndExecuteScript(
+                qsl("openUserWindow('realViewDock') nullViewMade = tostring(createLabel('nullViewMade', 0, 0, 10, 10, 1))"));
+        const TConsoleModel* realModelWhileDetached = host->windowRegistry().subConsoleModel(realWindow);
+        host->setMainConsoleView(console);
+        const bool nullLabelRegistered = host->windowRegistry().hasLabel(qsl("nullViewMade"));
+
+        QVERIFY(ran);
+        lua_State* L = host->getLuaInterpreter()->getLuaGlobalState();
+        lua_getglobal(L, "nullViewMade");
+        const QString nullViewMade = QString::fromUtf8(lua_tostring(L, -1));
+        lua_pop(L, 1);
+        QCOMPARE(nullViewMade, qsl("true"));
+        QCOMPARE(realModelWhileDetached, realModel);
+        QVERIFY2(!nullLabelRegistered, "A label the null view made is still registered once a real view has attached.");
+    }
+
     // What scripts are told while the profile has no view. The label is made first, so that its answers
     // come from the missing view rather than a missing label.
     void test_luaCallsWithNoConsoleSayWhy()

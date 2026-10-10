@@ -57,8 +57,8 @@ public:
 // The view a Host has while no real one is attached: before its console is made, after that has
 // gone, and in a run with no GUI. Labels, mini consoles, buffers and user windows made through it
 // get a model of their own, registered as a real view registers its widgets', so scripts can find
-// them, echo to them and delete them. Every other window is missing, so each call fails, has no
-// value or does nothing; a close has nothing to refuse it.
+// them, echo to them and delete them. Every other operation, on these or any other window, fails,
+// has no value or does nothing; a close has nothing to refuse it.
 class TNullConsoleFrontend final : public TConsoleFrontend
 {
 public:
@@ -242,7 +242,8 @@ public:
     const TMxpFrameFrontend& mxpFrames() const override { return mMxpFrames; }
 
 private:
-    // A window made into a user window goes with it, as a real one is its dock's child widget.
+    // A window made inside a user window goes with it, as a real one is its dock's child widget, though
+    // out of the registry at once rather than when deferred deletes run.
     struct SubConsole
     {
         std::unique_ptr<TConsoleModel> pModel;

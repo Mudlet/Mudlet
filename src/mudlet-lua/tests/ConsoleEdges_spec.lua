@@ -321,11 +321,14 @@ describe("Console edges", function()
         for _, id in ipairs(handlers) do
           killAnonymousEventHandler(id)
         end
+        deleteLabel(label)
+        deleteMiniConsole(mini)
+        deleteMiniConsole(window)
       end)
 
       assert.is_true(createLabel(label, 0, 0, 10, 10, 1))
       assert.is_true(createMiniConsole(mini, 0, 0, 10, 10))
-      assert.is_true(openUserWindow(window))
+      assert.is_true(openUserWindow(window, false))
       assert.is_true(deleteLabel(label))
       assert.is_true(deleteMiniConsole(mini))
       assert.is_true(deleteMiniConsole(window))

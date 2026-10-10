@@ -40,6 +40,7 @@
 #include "TMap.h"
 #include "TMedia.h"
 #include "TMxpFrameWidgets.h"
+#include "TNullConsoleFrontend.h"
 #include "TRoomDB.h"
 #include "TScrollBox.h"
 #include "TTextBox.h"
@@ -449,6 +450,10 @@ TMainConsole* Host::mainConsoleView() const
 
 void Host::setMainConsoleView(TMainConsole* view)
 {
+    // The view has no widget for a window the null view made, so none may outlive the swap
+    if (view) {
+        mpNullConsoleFrontend->dropWindows();
+    }
     mpConsole = view;
     mpConsoleFrontend = view;
 }

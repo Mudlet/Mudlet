@@ -312,7 +312,8 @@ public:
     // TMainConsole.cpp, so that Host.cpp never needs the widget's definition.
     TMainConsole* mainConsoleView() const;
     // mainConsoleView() as core code calls it, by window name rather than widget. Never null: while
-    // there is no view it is a null one, on which every window is missing.
+    // there is no view it is a null one, which keeps models for the labels and sub-consoles made
+    // through it and has no other windows.
     TConsoleFrontend* consoleFrontend() const;
     bool hasConsoleView() const;
     void setMainConsoleView(TMainConsole* view);

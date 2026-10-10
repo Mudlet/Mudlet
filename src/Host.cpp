@@ -5300,8 +5300,8 @@ std::pair<bool, QString> Host::openWindow(const QString& name, bool loadLayout, 
     return {true, QString()};
 }
 
-// Must refuse up front: TMainConsole::createMiniConsole(), createScrollBox() and createLabel() put an
-// element with an unresolvable parent into the main console, over the game text, and report success.
+// Must refuse up front: the views put an element with an unresolvable parent into the main console,
+// over the game text.
 // "main" is matched case-insensitively, as Host::setWindow() does.
 bool Host::parentWindowMissing(const QString& windowname) const
 {

@@ -193,6 +193,10 @@ void TNullConsoleFrontend::openUserWindow(const QString& name, bool, bool, const
 {
     TWindowRegistry& registry = mpHost->windowRegistry();
     if (!mSubConsoles.count(name)) {
+        if (registry.hasSubConsole(name)) {
+            // A detached view's, which this has no dock for
+            return;
+        }
         addSubConsole(name, TWindowRegistry::SubConsoleKind::UserWindow, QString());
         registry.registerDockWidget(name);
         registry.setUserWindowTitle(name, name);

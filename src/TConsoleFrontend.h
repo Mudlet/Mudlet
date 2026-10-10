@@ -43,9 +43,9 @@ class TConsoleFrontend
 {
 public:
     // Host decides every create and delete of a label, mini console, buffer or user window from the window
-    // registry before calling these, so they answer nothing, but each must have updated the registry by the
-    // time it returns. Bar openUserWindow(), Host calls no create for a name already taken, and no delete for a
-    // missing one.
+    // registry before calling these, so they answer nothing, but the named window must be in or out of the
+    // registry by the time each returns; what a user window holds may follow when its widgets go. Bar
+    // openUserWindow(), Host calls no create for a name already taken, and no delete for a missing one.
     virtual void createLabel(const QString& windowname, const QString& name, int x, int y, int width, int height, bool fillBackground, bool clickThrough) = 0;
     virtual void deleteLabel(const QString& name) = 0;
     // These fail for a name that is not a label's.

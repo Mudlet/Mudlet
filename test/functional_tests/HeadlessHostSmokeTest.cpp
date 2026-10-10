@@ -385,6 +385,27 @@ fbYT0tapBHTFGBkf6NgxBGenwL5TDeL9g3w57+FWiHtIKUylQhCoNb20
     }
 #endif
 
+    // A deleted window's model outlives the call that deleted it, as a real view's widget does, and goes
+    // when deferred deletes run; twice, as each release has to queue the next.
+    void test_deletedWindowModelGoesWithDeferredDeletes()
+    {
+        const QString hostname = qsl("Test-Headless-Host-Release");
+        QVERIFY2(HostManager::self()->addHost(hostname, QString(), QString(), QString()), "Could not create a profile with no main window.");
+        Host* host = HostManager::self()->getHost(hostname);
+        QVERIFY2(host, "The profile is not in the pool.");
+
+        for (int round = 0; round < 2; ++round) {
+            QVERIFY(host->getLuaInterpreter()->compileAndExecuteScript(qsl("assert(createMiniConsole('releasedMini', 0, 0, 10, 10))")));
+            TConsoleModel* model = host->windowRegistry().subConsoleModel(qsl("releasedMini"));
+            QVERIFY2(model, "The mini console has no model.");
+            const QPointer<TConsoleModelNotifier> notifier = &model->mNotifier;
+            QVERIFY(host->getLuaInterpreter()->compileAndExecuteScript(qsl("assert(deleteMiniConsole('releasedMini'))")));
+            QVERIFY2(notifier, "The model went before deferred deletes ran.");
+            QCoreApplication::sendPostedEvents(nullptr, QEvent::DeferredDelete);
+            QVERIFY2(!notifier, "The model outlived deferred deletes.");
+        }
+    }
+
     void test_profileWithNoSettingsStoreTakesTheDefaults()
     {
         if (MudletApp::getQSettings()) {
