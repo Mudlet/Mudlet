@@ -2247,6 +2247,11 @@ bool TBuffer::commitLine(char ch, size_t& localBufferPosition, const bool isFrom
 
 void TBuffer::commitLineData(QString line, std::vector<TChar> chars, const char ch)
 {
+    // An empty '\r' commit, such as the posting timer's flush, ends no line of text: drop it before the
+    // blank-line setting below can turn it into a line of one space
+    if (line.isEmpty() && ch == '\r') {
+        return;
+    }
     // Qt struggles to report blank lines on Windows to screen readers, this is a workaround
     // https://bugreports.qt.io/browse/QTBUG-105035
     if (Q_UNLIKELY(line.isEmpty())) {
@@ -2272,9 +2277,6 @@ void TBuffer::commitLineData(QString line, std::vector<TChar> chars, const char 
         if (!line.isEmpty()) {
             lineBuffer << std::move(line);
         } else {
-            if (ch == '\r') {
-                return; //empty timer posting
-            }
             lineBuffer << QString();
         }
         buffer.push_back(std::move(chars));
@@ -2290,9 +2292,6 @@ void TBuffer::commitLineData(QString line, std::vector<TChar> chars, const char 
             // The last line is empty, so this is the whole of it
             lineBuffer.back() = std::move(line);
         } else {
-            if (ch == '\r') {
-                return; //empty timer posting
-            }
             lineBuffer.back().append(QString());
         }
         // A commit re-entered from a pass (feedTriggers(), MXP) fills the empty last line, which may be

@@ -979,6 +979,47 @@ describe("Tests a character whose bytes are split by the posting timeout", funct
     assert.same({"", ":end"}, perLine)
   end)
 
+  it("adds no line for the marker when blank lines are replaced with a space", function()
+    if timerUnavailable() then return end
+    -- the text is ASCII, so the encoding can stay as it is and this test's one
+    -- finally() is free to put the setting back
+    local original = getConfig("blankLinesBehaviour")
+    finally(function() setConfig("blankLinesBehaviour", original) end)
+    setConfig("blankLinesBehaviour", "replacewithspace")
+
+    -- The timer sends the marker after every burst, whether or not part of a
+    -- line is waiting. Sent with nothing waiting it is no blank line from the
+    -- game, so it must not become a line of one space; the game's own blank
+    -- line still does. The part line is what shows the marker was sent at all.
+    local mark = getLastLineNumber("main")
+    feed("blank:one\n")
+    beQuiet()
+    feed("blank:part")
+    beQuiet()
+    feed("two\n\n")
+    beQuiet()
+    assert.same({"blank:one", "blank:part", "two", " ", ""}, getLines("main", mark, getLastLineNumber("main") + 1))
+
+    -- and the same when the marker lands on a line a script echoed without ending
+    mark = getLastLineNumber("main")
+    feed("burst\n")
+    echo("status")
+    beQuiet()
+    local echoed = getLines("main", mark, getLastLineNumber("main") + 1)
+    echo("\n")
+    assert.same({"burst", "status"}, echoed)
+  end)
+
+  it("adds no line for an empty carriage return fed to the triggers when blank lines are replaced with a space", function()
+    local original = getConfig("blankLinesBehaviour")
+    finally(function() setConfig("blankLinesBehaviour", original) end)
+    setConfig("blankLinesBehaviour", "replacewithspace")
+
+    local mark = getLastLineNumber("main")
+    feedTriggers("x\r\ry\n")
+    assert.same({"x", "y", ""}, getLines("main", mark, getLastLineNumber("main") + 1))
+  end)
+
   it("spends a held character set designation on the byte after the pause", function()
     if timerUnavailable() then return end
     using("UTF-8")
