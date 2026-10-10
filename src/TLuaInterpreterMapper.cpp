@@ -4216,6 +4216,15 @@ int TLuaInterpreter::setRoomIDbyHash(lua_State* L)
     const int id = getVerifiedInt(L, __func__, 1, "roomID");
     const QString hash = getVerifiedString(L, __func__, 2, "hash");
     const Host& host = getHostFromLua(L);
+    if (!host.mpMap || !host.mpMap->mpRoomDB) {
+        return warnArgumentValue(L, __func__, "no map present or loaded");
+    }
+    if (!host.mpMap->mpRoomDB->getRoom(id)) {
+        return warnArgumentValue(L, __func__, csmInvalidRoomID.arg(id));
+    }
+    if (hash.isEmpty()) {
+        return warnArgumentValue(L, __func__, "hash cannot be empty");
+    }
     if (host.mpMap->mpRoomDB->roomIDToHash.contains(id)) {
         host.mpMap->mpRoomDB->hashToRoomID.remove(host.mpMap->mpRoomDB->roomIDToHash[id]);
     }
@@ -4224,7 +4233,8 @@ int TLuaInterpreter::setRoomIDbyHash(lua_State* L)
     }
     host.mpMap->mpRoomDB->hashToRoomID[hash] = id;
     host.mpMap->mpRoomDB->roomIDToHash[id] = hash;
-    return 0;
+    lua_pushboolean(L, true);
+    return 1;
 }
 
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#setRoomName
