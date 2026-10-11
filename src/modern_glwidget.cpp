@@ -342,6 +342,15 @@ bool ModernGLWidget::contextCreationFailed() const
 
 bool ModernGLWidget::event(QEvent* event)
 {
+    // After a click Tab is the command line's too, for completion or the caret key, as with the 2D map; QWidget
+    // would take it to move focus before keyPressEvent() sees it
+    if (event->type() == QEvent::KeyPress && !mKeysNavigate) {
+        auto* keyEvent = static_cast<QKeyEvent*>(event);
+        if ((keyEvent->key() == Qt::Key_Tab || keyEvent->key() == Qt::Key_Backtab) && !(keyEvent->modifiers() & (Qt::ControlModifier | Qt::AltModifier))) {
+            keyPressEvent(keyEvent);
+            return true;
+        }
+    }
     // The keys go on to the command line, so it must also win the shortcuts it wins with focus of its own
     if (event->type() == QEvent::ShortcutOverride) {
         TCommandLine* pCommandLine = commandLine();
@@ -2090,6 +2099,10 @@ void ModernGLWidget::mousePressEvent(QMouseEvent* event)
 
     // Announced before this one, as with the 2D map, which announces each press as it comes
     raisePendingMousePressEvent();
+    // A script handling it may have hidden the view, whose hideEvent() has ended this press too
+    if (!isVisible()) {
+        return;
+    }
     mKeysNavigate = false;
     mPressPosition = event->position().toPoint();
     mPointerPosition = mPressPosition;
@@ -2110,15 +2123,19 @@ void ModernGLWidget::mousePressEvent(QMouseEvent* event)
         const int roomId = roomAt(mPressPosition, false);
         const bool moveRoom = roomId && !(event->modifiers() & (Qt::ControlModifier | Qt::ShiftModifier));
         const int rectangleRoomId = roomId ? roomId : roomAt(mPressPosition);
+        QPointF snap;
         if (mCameraSmoothAnimating) {
             // Stopped where it is, so a drag does not glide on with it
             stopSmoothTransition();
             mMapCenterX = qRound(mCurrentAnimationX);
             mMapCenterY = qRound(mCurrentAnimationY);
             mMapCenterZ = qRound(mCurrentAnimationZ);
+            snap = QPointF(mMapCenterX - mCurrentAnimationX, mMapCenterY - mCurrentAnimationY);
         }
         if (moveRoom) {
             startRoomMove(roomId);
+            // The pointer keeps its place on the room, though the view stopping on a whole step moved under it
+            mRoomMoveLastPoint += snap;
         } else {
             mp2DMap->beginRectangleSelection(rectangleRoomId, event->modifiers());
             mRectangleSelecting = true;
