@@ -22,13 +22,14 @@
  * ID digits, markers, names), and making room for another must not evict one
  * this frame has already drawn with.
  *
- * Why not a spec: no Lua call reports which textures a frame used. It needs a
- * GL context, which the offscreen platform ctest runs on has not, so there it
- * is listed as not run; run it on a display:
+ * Why not a spec: no Lua call reports which textures a frame used. The room
+ * pass is run without GL, with stand-in textures, so ctest's offscreen platform
+ * runs it; the GL frame is skipped there, and runs on a display:
  *   QT_QPA_PLATFORM=xcb MUDLET_TEST_MODE=1 ./functional_map_tests ModernRoomTextureTest
  */
 
 #include <QFileInfo>
+#include <QOpenGLContext>
 #include <QTemporaryDir>
 #include <QtTest/QtTest>
 
@@ -103,27 +104,25 @@ private slots:
     }
 
     // More differently named rooms than the view has textures for, so names have to make room
-    void test_roomIdDigitsKeepTheirTexturesThroughAFrameOverBudget()
+    int addCrowdedArea() const
     {
         TMap* pMap = mpHost->mpMap.data();
         pMap->mapClear();
         const int areaId = pMap->mpRoomDB->addArea(qsl("Crowded Area"));
-        QVERIFY(areaId > 0);
         for (int id = 1; id <= 600; ++id) {
-            QVERIFY(pMap->addRoom(id) && pMap->setRoomArea(id, areaId) && pMap->setRoomCoordinates(id, id % 25, id / 25, 0));
+            if (!(pMap->addRoom(id) && pMap->setRoomArea(id, areaId) && pMap->setRoomCoordinates(id, id % 25, id / 25, 0))) {
+                return 0;
+            }
             pMap->mpRoomDB->getRoom(id)->name = qsl("Room number %1").arg(id);
         }
         mpHost->mShowRoomID = true;
         pMap->setRoomNamesShown(true);
         pMap->mRoomIdHash[pMap->mProfileName] = 312;
+        return areaId;
+    }
 
-        ModernGLWidget widget(pMap, mpHost);
-        widget.resize(400, 300);
-        widget.grabFramebuffer();
-        if (!widget.isValid() || !widget.failureMessage().isEmpty()) {
-            QSKIP("no OpenGL context on this platform");
-        }
-
+    static void verifyDigitsKept(const ModernGLWidget& widget)
+    {
         QStringList digitKeys;
         for (const QString& key : std::as_const(widget.mRoomTexturesInUse)) {
             if (key.startsWith(qsl("digit|"))) {
@@ -136,6 +135,51 @@ private slots:
         for (const QString& key : std::as_const(digitKeys)) {
             QVERIFY2(widget.mLabelTextureCache.imageTexture(key), qPrintable(qsl("%1 was evicted in the frame that drew with it").arg(key)));
         }
+    }
+
+    // The room pass itself, with textures that need no GL context, so this runs wherever ctest does
+    void test_roomIdDigitsKeepTheirTexturesWithoutGL()
+    {
+        const int areaId = addCrowdedArea();
+        QVERIFY(areaId > 0);
+        ModernGLWidget widget(mpHost->mpMap.data(), mpHost);
+        GLuint lastTexture = 0;
+        widget.mLabelTextureCache.useTextureStandIn(
+                [&lastTexture](const QImage&) {
+                    return ++lastTexture;
+                },
+                [](GLuint) {});
+        widget.setViewCenter(areaId, 12, 12, 0);
+
+        // The second frame starts with a full cache, so it shows whether the first left the digits usable
+        for (int frame = 1; frame <= 2; ++frame) {
+            widget.renderRooms();
+            verifyDigitsKept(widget);
+            if (QTest::currentTestFailed()) {
+                qWarning().nospace() << "in frame " << frame;
+                return;
+            }
+        }
+        QVERIFY2(lastTexture >= 512, "the view never reached its texture budget");
+    }
+
+    void test_roomIdDigitsKeepTheirTexturesInAGLFrame()
+    {
+        // Probed first, so that where there is no GL no widget ever tries for a context
+        if (QOpenGLContext probe; !probe.create()) {
+            QSKIP("no OpenGL context on this platform");
+        }
+        const int areaId = addCrowdedArea();
+        QVERIFY(areaId > 0);
+        ModernGLWidget widget(mpHost->mpMap.data(), mpHost);
+        widget.resize(400, 300);
+        widget.grabFramebuffer();
+        if (!widget.isValid()) {
+            QSKIP("no OpenGL context on this platform");
+        }
+        // A context that will not draw, such as one whose shaders do not compile, is a failure
+        QVERIFY2(widget.failureMessage().isEmpty(), qPrintable(widget.failureMessage()));
+        verifyDigitsKept(widget);
     }
 };
 
