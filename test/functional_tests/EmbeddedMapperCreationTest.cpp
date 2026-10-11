@@ -122,6 +122,7 @@ private:
         });
     }
     static inline const QString smFalseFailure = qsl("could not create an OpenGL 3.3 context");
+    static QByteArray warningsSoFar() { return smModernViewWarnings.isEmpty() ? QByteArrayLiteral("no warnings") : smModernViewWarnings.join(u'\n').toUtf8(); }
 
 public:
     // Mirrors src/main.cpp, which shares GL contexts application-wide only on FreeBSD; with sharing,
@@ -384,6 +385,7 @@ private slots:
             const bool valid = pView->isValid();
             if (modern && !valid) {
                 QTRY_VERIFY2(pView->findChild<QLabel*>() && pView->findChild<QLabel*>()->isVisible(), "the modern 3D view did not say it could not create a context");
+                QVERIFY2(smModernViewWarnings.size() == 1 && smModernViewWarnings.constFirst().contains(smFalseFailure), warningsSoFar().constData());
             } else if (modern) {
                 qApp->processEvents();
                 const QSurfaceFormat format = pView->context()->format();
@@ -394,7 +396,7 @@ private slots:
                 if (!smModernViewWarnings.filter(qsl("could not compile its shaders")).isEmpty()) {
                     QSKIP("this driver rejected the modern 3D view's shaders, so a false context failure goes unchecked here");
                 }
-                QVERIFY2(smModernViewWarnings.filter(smFalseFailure).isEmpty(), "the 3D view has a working context but said it could not create one");
+                QVERIFY2(smModernViewWarnings.isEmpty(), warningsSoFar().constData());
             }
 
             pView->resize(pView->size() + QSize(10, 10));
@@ -405,10 +407,13 @@ private slots:
             if (valid) {
                 // Qt itself may rebuild a context that has not been composed yet when the view is shown again
                 QVERIFY2(pView->context() && pView->isValid(), "the 3D view was left without a working context");
-                QVERIFY2(smModernViewWarnings.filter(smFalseFailure).isEmpty(), "the 3D view has a working context but said it could not create one");
+                QVERIFY2(smModernViewWarnings.isEmpty(), warningsSoFar().constData());
             } else {
                 QVERIFY2(pView->context() == pFirstContext, "the 3D view asked again for a context it could not create");
                 QVERIFY(!pView->isValid());
+                if (modern) {
+                    QVERIFY2(smModernViewWarnings.size() == 1 && smModernViewWarnings.constFirst().contains(smFalseFailure), warningsSoFar().constData());
+                }
             }
         }
     }
@@ -433,9 +438,11 @@ private slots:
         QVERIFY2(resized, qPrintable(resizeMessage));
         QTRY_VERIFY2(pView->context(), "the 3D view asked for no context once it had a size");
         if (pView->isValid()) {
-            QVERIFY2(smModernViewWarnings.filter(smFalseFailure).isEmpty(), "the 3D view has a working context but said it could not create one");
+            qApp->processEvents();
+            QVERIFY2(smModernViewWarnings.isEmpty(), warningsSoFar().constData());
         } else {
             QTRY_VERIFY2(pView->findChild<QLabel*>() && pView->findChild<QLabel*>()->isVisible(), "the 3D view did not say it could not create a context once it had a size");
+            QVERIFY2(smModernViewWarnings.size() == 1 && smModernViewWarnings.constFirst().contains(smFalseFailure), warningsSoFar().constData());
         }
     }
 
@@ -468,14 +475,26 @@ private slots:
             QSKIP("this platform composed the window without a QRhi, so the 3D view got a context and this case goes unchecked here");
         }
         QVERIFY2(!pSized->size().isEmpty(), "the 3D view had no size, so this case covers nothing");
-        QVERIFY2(smModernViewWarnings.size() == 1 && smModernViewWarnings.filter(smFalseFailure).isEmpty(), qPrintable(smModernViewWarnings.join(u'\n')));
+        QVERIFY2(smModernViewWarnings.size() == 1 && smModernViewWarnings.filter(smFalseFailure).isEmpty(), warningsSoFar().constData());
+        // Qt refuses the classic 3D view in this window too
+        const QString classicAdvice = qsl("experiment.3dmap.modernmapper");
+        QVERIFY2(!pSized->findChild<QLabel*>()->text().contains(classicAdvice), qPrintable(pSized->findChild<QLabel*>()->text()));
 
         // Lets the deferred show checks run, as the notice above may have come from the resize that showing sends first
         qApp->processEvents();
         QVERIFY2(pHidden->isVisible() && pHidden->size().isEmpty() && !noticeShowing(pHidden), "a 3D view with no size said it could not get a context it never asked for");
+        // Qt read its own copy when the application started, so this reaches only the notice
+        const QByteArray forcing = QByteArrayLiteral("QT_WIDGETS_RHI_BACKEND");
+        QVERIFY2(qEnvironmentVariableIsEmpty(forcing.constData()), "the environment already forces a QRhi backend, so this case covers nothing");
+        qputenv(forcing.constData(), QByteArrayLiteral("vulkan"));
+        const auto unsetForcing = qScopeGuard([&forcing] {
+            qunsetenv(forcing.constData());
+        });
         pHidden->setFixedSize(400, 300);
         QTRY_VERIFY2(noticeShowing(pHidden), "a 3D view given a size got no context and showed no notice");
-        QVERIFY2(!pHidden->context() && smModernViewWarnings.size() == 2, qPrintable(smModernViewWarnings.join(u'\n')));
+        QVERIFY2(!pHidden->context() && smModernViewWarnings.size() == 2, warningsSoFar().constData());
+        const QString notice = pHidden->findChild<QLabel*>()->text();
+        QVERIFY2(notice.contains(QString::fromLatin1(forcing)) && !notice.contains(classicAdvice), qPrintable(notice));
     }
 
     // Replacing a 3D view in the same event-loop turn that inserted it must not let the show

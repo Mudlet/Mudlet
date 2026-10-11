@@ -135,9 +135,25 @@ void ModernGLWidget::reportContextCreationFailure()
         return;
     }
     if (!context()) {
-        // Qt makes no context at all when the window is composed with Direct3D, Metal or Vulkan, as QT_WIDGETS_RHI can force
+        // Qt makes no context at all when the window is composed with Direct3D, Metal or Vulkan, and refuses the
+        // classic 3D view the same way, so only undoing what forced it helps
+        QStringList forcing;
+        for (const char* name : {"QT_WIDGETS_RHI", "QT_WIDGETS_RHI_BACKEND", "QT_WIDGETS_HIGHDPI_DOWNSCALE"}) {
+            if (!qEnvironmentVariableIsEmpty(name)) {
+                forcing << QString::fromLatin1(name);
+            }
+        }
         //: Shown in place of the 3D map when the window is drawn with another graphics API, such as Direct3D, Metal or Vulkan, so the modern 3D mapper cannot get an OpenGL context
-        showFailure(tr("The modern 3D mapper needs OpenGL, but this window is drawn with another graphics API."));
+        const QString message = tr("The modern 3D mapper needs OpenGL, but this window is drawn with another graphics API.");
+        if (forcing.isEmpty()) {
+            //: Second paragraph of the message shown in place of the 3D map when the window is drawn with another graphics API; the classic 3D view is refused the same way
+            showFailure(message, tr("The classic 3D view cannot draw here either, so use the 2D map."));
+        } else {
+            //: Second paragraph of the message shown in place of the 3D map when the window is drawn with another graphics API; %1 is one or more environment variable names, such as QT_WIDGETS_RHI, keep them as written
+            showFailure(message,
+                        tr("%1 in Mudlet's environment makes Qt do this, for the classic 3D view too. Remove it and restart Mudlet to use either 3D view; until then, use the 2D map.")
+                                .arg(forcing.join(qsl(", "))));
+        }
     } else if (!isValid()) {
         //: Shown in place of the 3D map when the graphics driver cannot create the OpenGL context the modern 3D mapper needs
         showFailure(tr("The modern 3D mapper could not create an OpenGL 3.3 context on this system."));
@@ -177,7 +193,7 @@ void ModernGLWidget::paintEvent(QPaintEvent* event)
     QOpenGLWidget::paintEvent(event);
 }
 
-void ModernGLWidget::showFailure(const QString& message)
+void ModernGLWidget::showFailure(const QString& message, const QString& advice)
 {
     mFailureMessage = message;
     qWarning().noquote() << "ModernGLWidget:" << message;
@@ -192,7 +208,8 @@ void ModernGLWidget::showFailure(const QString& message)
         layout->addWidget(mpFailureLabel);
     }
     //: Second paragraph of the message shown in place of the 3D map when the modern 3D mapper cannot run; keep setConfig("experiment.3dmap.modernmapper", false) exactly as written, it is Lua code the user types
-    mpFailureLabel->setText(qsl("%1\n\n%2").arg(message, tr("Use setConfig(\"experiment.3dmap.modernmapper\", false) to try the classic 3D view; if that stays blank too, use the 2D map.")));
+    const QString tryClassic = tr("Use setConfig(\"experiment.3dmap.modernmapper\", false) to try the classic 3D view; if that stays blank too, use the 2D map.");
+    mpFailureLabel->setText(qsl("%1\n\n%2").arg(message, advice.isEmpty() ? tryClassic : advice));
     mpFailureLabel->show();
 }
 

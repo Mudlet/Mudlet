@@ -227,7 +227,7 @@ private:
     void renderText(const QString& text, float x, float y);
     void setupBuffers();
     void cleanup();
-    void showFailure(const QString& message);
+    void showFailure(const QString& message, const QString& advice = QString());
     bool contextCreationFailed() const;
     void reportContextCreationFailure();
     QColor getPlaneColor(int zLevel, bool belowOrAtLevel);
