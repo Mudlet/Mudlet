@@ -572,6 +572,21 @@ bool Host::requestClose()
     return true;
 }
 
+void Host::raiseExitEventIfOwed()
+{
+    if (!mExitEventOwed) {
+        return;
+    }
+    mExitEventOwed = false;
+    // As in TMainConsole::closeEvent(): a reset from a handler that pumps events would lua_close() under it
+    mLuaInterpreter.enterNestedEventLoop();
+    TEvent event{};
+    event.mArgumentList.append(qsl("sysExitEvent"));
+    event.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
+    raiseEvent(event);
+    mLuaInterpreter.leaveNestedEventLoop();
+}
+
 void Host::closeChildren()
 {
     mIsClosingDown = true;

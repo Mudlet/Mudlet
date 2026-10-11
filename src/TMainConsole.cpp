@@ -462,6 +462,7 @@ void Host::setMainConsoleView(TMainConsole* view)
     // The view has no widget for a window the null view made, so none may outlive the swap
     if (view) {
         mpNullConsoleFrontend->dropWindows();
+        mExitEventOwed = false;
     }
     mpConsole = view;
     mpConsoleFrontend = view;

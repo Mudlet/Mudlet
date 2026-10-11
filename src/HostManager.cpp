@@ -44,6 +44,9 @@ HostManager::HostManager()
 
 HostManager::~HostManager()
 {
+    for (const auto& pHost : hostList()) {
+        pHost->raiseExitEventIfOwed();
+    }
     // Drain the pool while self() still answers: ~Host() may reach the manager it is being removed from.
     mHostPool.clear();
     if (smpSelf == this) {
@@ -53,15 +56,15 @@ HostManager::~HostManager()
 
 void HostManager::deleteHost(const QString& hostname)
 {
-    // make sure this is really an existing host
-    if (!mHostPool.contains(hostname)) {
+    // Held here too, as a sysExitEvent handler that pumps events can get this profile deleted under it
+    const QSharedPointer<Host> pHost = mHostPool.value(hostname);
+    if (!pHost) {
         qDebug() << "HostManager::deleteHost(" << hostname.toUtf8().constData() << ") ERROR: not a member of host pool... aborting!";
         return;
     }
 
-    // As this pulls the QSharedPointer that hostname identifies out of the pool
-    // the Host goes out of scope when execution leaves this method and thus
-    // gets destroyed:
+    pHost->raiseExitEventIfOwed();
+    // The Host is destroyed as pHost goes out of scope, once it is out of the pool
     mHostPool.remove(hostname);
 }
 

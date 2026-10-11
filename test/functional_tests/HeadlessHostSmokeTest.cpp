@@ -1172,6 +1172,47 @@ headlessMapConfig = ok and 'ok' or tostring(err)
         QVERIFY2(host->mMapInfoContributors.contains(qsl("Headless")), "setConfig showMapInfo did not add the contributor.");
         QVERIFY2(QApplication::topLevelWidgets().isEmpty(), "The map functions created a widget.");
     }
+
+    // An embedder closes a profile by deleting it from the pool, and quits by destroying the pool
+    void test_exitEventIsRaisedOnceAsTheProfileGoes()
+    {
+        QTemporaryDir recordDir;
+        QVERIFY(recordDir.isValid());
+        const QString recordPath = qsl("%1/exits.txt").arg(recordDir.path());
+        // The record has to outlive the profile, so it goes to a file. A reset is refused under the handler, as in
+        // the GUI, since one reached while the handler pumps events would close the Lua state it runs on.
+        const QString handler = qsl(R"lua(
+function onHeadlessExit(event)
+  local file = io.open([[%1]], "a")
+  file:write(getProfileName(), " ", event, " reset:", tostring(resetProfile()), "\n")
+  file:close()
+end
+)lua")
+                                        .arg(recordPath);
+        const auto recordExits = [&handler](Host* host) {
+            host->registerAnonymousEventHandler(qsl("sysExitEvent"), qsl("onHeadlessExit"));
+            return host->getLuaInterpreter()->compileAndExecuteScript(handler);
+        };
+        const auto recorded = [&recordPath]() {
+            QFile file(recordPath);
+            return file.open(QIODevice::ReadOnly) ? QString::fromUtf8(file.readAll()) : QString();
+        };
+
+        const QString deletedHostname = qsl("Test-Headless-Host-Exit-Deleted");
+        QVERIFY2(HostManager::self()->addHost(deletedHostname, QString(), QString(), QString()), "Could not create a profile with no main window.");
+        QVERIFY2(recordExits(HostManager::self()->getHost(deletedHostname)), "The Lua chunk did not run.");
+        QVERIFY2(recorded().isEmpty(), "sysExitEvent was raised before the profile was closed.");
+        HostManager::self()->deleteHost(deletedHostname);
+        QCOMPARE(recorded(), qsl("%1 sysExitEvent reset:false\n").arg(deletedHostname));
+
+        // A second pool, as this test's own has to last until cleanupTestCase()
+        const QString quitHostname = qsl("Test-Headless-Host-Exit-Quit");
+        auto pool = std::make_unique<HostManager>();
+        QVERIFY2(pool->addHost(quitHostname, QString(), QString(), QString()), "Could not create a profile with no main window.");
+        QVERIFY2(recordExits(pool->getHost(quitHostname)), "The Lua chunk did not run.");
+        pool.reset();
+        QCOMPARE(recorded(), qsl("%1 sysExitEvent reset:false\n%2 sysExitEvent reset:false\n").arg(deletedHostname, quitHostname));
+    }
 };
 
 #include "HeadlessHostSmokeTest.moc"
