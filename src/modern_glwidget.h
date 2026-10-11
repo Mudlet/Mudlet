@@ -259,6 +259,7 @@ private:
     GLuint cachedRoomTexture(const QString& key);
     bool roomForAnotherTexture();
     GLuint addRoomTexture(const QString& key, const QImage& image);
+    void reportContextFailure();
     bool contextCreationFailed() const;
     void startSmoothTransition(int targetAID, int targetX, int targetY, int targetZ);
     void stopSmoothTransition();

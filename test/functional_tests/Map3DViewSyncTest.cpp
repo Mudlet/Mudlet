@@ -378,11 +378,12 @@ private slots:
             pPlayerArea->gridMode = false;
         });
         pPlayerArea->gridMode = true;
-        // A fresh view, asked before its context can be found to have failed, as a script showing the view and
-        // setting its camera in one go does
-        pMapper->recreate3DView();
         pMapper->show3DView(true);
-        QVERIFY(qobject_cast<ModernGLWidget*>(pMapper->glWidget));
+        auto* pModern = qobject_cast<ModernGLWidget*>(pMapper->glWidget);
+        QVERIFY(pModern);
+        if (!pModern->failureMessage().isEmpty()) {
+            QSKIP("the modern 3D view could not start here, so it refuses before it looks at grid mode");
+        }
         pMapper->slider_scale->setValue(0);
         const auto [moved, refusal] = pMapper->set3DViewCameraPosition(0.5f, 45.0f, 270.0f);
         QVERIFY(!moved);
@@ -390,18 +391,22 @@ private slots:
         QVERIFY2(pMapper->slider_scale->value() > 0, "the 3D view did not zoom in");
     }
 
-    // The view only shows why it could not start, so moving its camera would do nothing
+    // The view only shows why it could not start, so moving its camera would do nothing; asked with no event loop
+    // in between, as a script showing the view and setting its camera in one go does
     void test_aViewThatCouldNotStartRefusesCameraMoves()
     {
         dlgMapper* pMapper = mapperShowing2DAtThePlayer();
         QVERIFY(pMapper);
+        pMapper->recreate3DView();
         pMapper->show3DView(true);
-        QCoreApplication::processEvents();
         auto* pModern = qobject_cast<ModernGLWidget*>(pMapper->glWidget);
         QVERIFY(pModern);
-        if (pModern->failureMessage().isEmpty()) {
-            QSKIP("this machine started the modern 3D view");
+        QVERIFY2(pModern->isVisible() && !pModern->size().isEmpty(), "the 3D view is not showing, so nothing tried to start it");
+        if (pModern->isValid()) {
+            QSKIP("this machine created a GL context for the modern 3D view");
         }
+        QVERIFY2(pModern->context(), "nothing tried to create a GL context");
+        QVERIFY2(!pModern->failureMessage().isEmpty(), "the modern 3D view has not said why it could not start");
         const QString refusal = qsl("the modern 3D map view could not start: %1").arg(pModern->failureMessage());
         QCOMPARE(pMapper->set3DViewCameraPosition(2.0f, 45.0f, 270.0f), std::make_pair(false, refusal));
         QCOMPARE(pMapper->shift3DViewCamera(0.0f, 30.0f, 0.0f), std::make_pair(false, refusal));
@@ -425,10 +430,11 @@ private slots:
             QOpenGLWidget* pWidget = pMapper->glWidget;
             QVERIFY(pWidget);
             QCOMPARE(qobject_cast<ModernGLWidget*>(pWidget) != nullptr, modern);
-            QOpenGLContext* pFirstContext = pWidget->context();
-            if (!pFirstContext || pWidget->isValid()) {
+            if (pWidget->isValid()) {
                 QSKIP("this machine created a GL context, so there is no failed one to retry");
             }
+            QOpenGLContext* pFirstContext = pWidget->context();
+            QVERIFY2(pFirstContext, "nothing tried to create a GL context");
             pWidget->hide();
             pWidget->show();
             pWidget->resize(pWidget->size() + QSize(10, 10));

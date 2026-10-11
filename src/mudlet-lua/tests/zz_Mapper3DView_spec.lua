@@ -78,12 +78,21 @@ describe("Tests the 3D map perspective functions with the modern 3D view showing
     assert.is_true(setConfig("experiment.3dmap.modernmapper", true))
     assert.is_true(setConfig("show3dMapView", true))
     assert.is_true(getConfig("show3dMapView"))
-    assert.is_true(setMapPerspective(2, 45, 270))
+    local ok, err = setMapPerspective(2, 45, 270)
+    if ok == nil and err:find("could not start", 1, true) then
+      -- no usable OpenGL 3.3 here, as on Windows CI: the view only shows why, so both refuse with the reason
+      local shifted, shiftErr = shiftMapPerspective(0, 30, 0)
+      assert.is_nil(shifted)
+      assert.are.equal(err, shiftErr)
+      pending(err)
+      return
+    end
+    assert.is_true(ok, err)
     assert.is_true(shiftMapPerspective(0, 30, 0))
 
     -- the 3D view draws a grid-mode area looking straight down, whatever a script asks; only the distance applies
     assert.is_true(setGridMode(shownArea, true))
-    local ok, err = setMapPerspective(2, 45, 270)
+    ok, err = setMapPerspective(2, 45, 270)
     assert.is_nil(ok)
     assert.are.equal("the area shown in the 3D view is in grid mode, which always looks straight down, so only the distance was applied", err)
     ok, err = shiftMapPerspective(0, 30, 0)
