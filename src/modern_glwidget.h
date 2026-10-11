@@ -60,6 +60,7 @@ class QFontMetricsF;
 class QLabel;
 class QPainter;
 class T2DMap;
+class TCommandLine;
 class TMap;
 class TRoom;
 struct MapInfoProperties;
@@ -73,6 +74,9 @@ public:
     Q_DISABLE_COPY(ModernGLWidget)
     ModernGLWidget(TMap*, Host*, QWidget* parent = nullptr);
     ~ModernGLWidget() override;
+
+    // The environment variables that made Qt compose every window with an API other than OpenGL
+    static QStringList rhiForcingVariables();
 
     void wheelEvent(QWheelEvent* e) override;
     void setViewCenter(int, int, int, int);
@@ -93,8 +97,9 @@ public:
     bool cameraFixedByGridMode() const;
     // The mapper's 2D map, whose room selection, speedwalk and context menu this view shares
     void setCompanion2DMap(T2DMap* map);
-    // The room drawn under this point of the view, or 0
-    int roomAt(const QPoint& position);
+    // The room drawn under this point of the view, or 0; orNear also takes a room seen too small to point at
+    // whose middle is a few pixels off
+    int roomAt(const QPoint& position, bool orNear = true);
     // A view in a map window of its own: it shows the area it is told to rather than following the player
     void setSecondaryView(bool secondary);
     bool secondaryView() const { return mSecondaryView; }
@@ -162,6 +167,8 @@ protected:
     void mouseDoubleClickEvent(QMouseEvent* event) override;
     void keyPressEvent(QKeyEvent* event) override;
     void leaveEvent(QEvent* event) override;
+    void focusInEvent(QFocusEvent* event) override;
+    void focusOutEvent(QFocusEvent* event) override;
     void showEvent(QShowEvent* event) override;
     void hideEvent(QHideEvent* event) override;
     bool event(QEvent* event) override;
@@ -279,8 +286,13 @@ private:
     bool mMovingRooms = false;
     QPointF mRoomMoveLastPoint;
     int mRoomMoveLevel = 0;
+    bool mRoomsMoved = false;
     // A click that did not pick its room on the press does so on the release, unless it became a drag
     bool mClickPending = false;
+    // The button of a press whose sysMapWindowMousePressEvent waits for its selection to settle, on the release or the drag
+    Qt::MouseButton mPressEventButton = Qt::NoButton;
+    // Only focus reached from the keyboard, not by a click, gives the view the keys it pans and zooms with
+    bool mKeysNavigate = false;
     struct SavedCamera
     {
         float distance = 0.0f;
@@ -306,7 +318,7 @@ private:
     void renderText(const QString& text, float x, float y);
     void setupBuffers();
     void cleanup();
-    void showFailure(const QString& message);
+    void showFailure(const QString& message, const QString& advice = QString());
     GLuint symbolTexture(const QString& symbol, const QColor& color);
     // A disc filling the texture, shaded by a radial gradient over its radius
     GLuint discTexture(const QString& key, const QGradientStops& stops);
@@ -318,7 +330,7 @@ private:
     GLuint exitMarkerTexture(const TRoom& room, const QColor& roomColor);
     // Text on a clear background; size is set to the texture's size in pixels
     GLuint textTexture(const QString& key, const QString& text, const QFont& font, const QFontMetricsF& metrics, const QColor& color, QSize& size);
-    void reportContextFailure();
+    void reportContextCreationFailure();
     bool contextCreationFailed() const;
     void startSmoothTransition(int targetAID, int targetX, int targetY, int targetZ);
     void stopSmoothTransition();
@@ -332,12 +344,15 @@ private:
     void panByRooms(int right, int up);
     void selectRoom(int roomId, Qt::KeyboardModifiers modifiers);
     bool editingMap() const;
-    // Where the pointer at this point of the view meets the plane of map level z
+    // Where the pointer at this point of the view meets the plane of map level z, unless behind the camera or far off
     std::optional<QPointF> mapPointOnLevel(const QPoint& position, int z);
     void startRoomMove(int roomId);
+    void endEditGesture();
     void holdView();
     void showContextMenu(const QPoint& position);
     void raiseMousePressEvent();
+    void raisePendingMousePressEvent();
+    TCommandLine* commandLine() const;
     QString roomToolTip(int roomId) const;
     GLuint selectionTexture();
     void saveCamera();

@@ -1016,6 +1016,19 @@ private slots:
         releaseAt(south + QPoint(1, 1), Qt::ShiftModifier);
     }
 
+    // With Ctrl the box toggles the rooms it covers in what was selected before.
+    void test_aCtrlDragTogglesTheRoomsTheBoxCovers()
+    {
+        buildMap();
+        showMapper(false);
+        dragFromTo(pointUnitsFromCentre(-1.5, 1.5), pointUnitsFromCentre(0.5, -0.5));
+
+        dragFromTo(pointUnitsFromCentre(-0.5, 0.5), pointUnitsFromCentre(1.5, -0.5), Qt::ControlModifier);
+
+        const QSet<int> expected{kNorthWestRoomId, kNorthRoomId, kWestRoomId, kEastRoomId};
+        QCOMPARE(mp2dMap->mMultiSelectionSet, expected);
+    }
+
     // The same drag while viewing pans instead of drawing a box, which is what
     // the map being locked for viewing means.
     void test_draggingWhileViewingDrawsNoSelectionBox()
@@ -1058,11 +1071,14 @@ private slots:
         pEastRoom->customLinesArrow[qsl("n")] = false;
         pEastRoom->calcRoomDimensions();
         showMapper(false);
+        map()->resetUnsaved();
 
         // A custom line's first segment runs out of the middle of the room it
         // belongs to, so press just short of the middle: on it, the handler that
         // edits a line's points would take the press instead.
         dragFromTo(pointUnitsFromCentre(1, -0.2), pointUnitsFromCentre(1, 1.8));
+
+        QVERIFY2(map()->isUnsaved(), "moving a room did not mark the map as changed");
 
         QCOMPARE(pEastRoom->x(), 1);
         QCOMPARE(pEastRoom->y(), 2);

@@ -160,8 +160,8 @@ public:
     void prepareSingleClickSelection(MapInteractionContext& context);
     // A click on a room (0 for none) in another view of this map, such as the 3D one, with the same modifiers as here
     void selectRoomFromOtherView(int roomId, Qt::KeyboardModifiers modifiers);
-    // A selection rectangle in another view of this map, started on a room (0 for none) and then
-    // covering these rooms, adding to or toggling the selection with the same modifiers as here
+    // Another view of this map starts a selection rectangle on a room (0 for none) here, as a press on this map
+    // does; apply and end serve both, with Ctrl toggling the rooms covered and Shift adding them
     void beginRectangleSelection(int roomId, Qt::KeyboardModifiers modifiers);
     void applyRectangleSelection(const QSet<int>& rectangleSelection, Qt::KeyboardModifiers modifiers);
     void endRectangleSelection();

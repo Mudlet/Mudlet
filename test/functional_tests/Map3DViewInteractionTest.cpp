@@ -33,6 +33,7 @@
 #include <QAction>
 #include <QDockWidget>
 #include <QMenu>
+#include <QScopeGuard>
 #include <QSignalSpy>
 #include <QTemporaryDir>
 #include <QToolTip>
@@ -118,6 +119,71 @@ private:
         const int value = static_cast<int>(lua_tonumber(L, -1));
         lua_pop(L, 1);
         return value;
+    }
+
+    QString luaGlobalString(const char* name) const
+    {
+        lua_State* L = mpHost->getLuaInterpreter()->getLuaGlobalState();
+        lua_getglobal(L, name);
+        const QString value = QString::fromUtf8(lua_tostring(L, -1));
+        lua_pop(L, 1);
+        return value;
+    }
+
+    // Focus as Tab gives it, with which the view pans and zooms with keys
+    // qWaitForWindowActive() can return before QApplication moves focus into the window, and focus set before then
+    // arrives later with ActiveWindowFocusReason
+    static bool activate(QWidget* pWindow)
+    {
+        pWindow->activateWindow();
+        return QTest::qWaitFor([pWindow]() {
+            return QApplication::activeWindow() == pWindow;
+        });
+    }
+
+    static bool focusFromTheKeyboard(ModernGLWidget* pModern)
+    {
+        if (!activate(pModern->window())) {
+            return false;
+        }
+        // setFocus() does nothing to the widget that already has focus, whatever the reason it got it for
+        pModern->clearFocus();
+        pModern->setFocus(Qt::TabFocusReason);
+        return QTest::qWaitFor([pModern]() {
+            return pModern->hasFocus();
+        });
+    }
+
+    static QDockWidget* dockOf(QWidget* pWidget)
+    {
+        for (QWidget* pParent = pWidget->parentWidget(); pParent; pParent = pParent->parentWidget()) {
+            if (auto* pDock = qobject_cast<QDockWidget*>(pParent)) {
+                return pDock;
+            }
+        }
+        return nullptr;
+    }
+
+    // QDockWidget::setFloating() applies the state again even when it is unchanged, which loses the window's activation
+    static void setDockFloating(QDockWidget* pDock, const bool floating)
+    {
+        if (pDock->isFloating() != floating) {
+            pDock->setFloating(floating);
+        }
+    }
+
+    int pressesSeenByScript() const { return runLua(qsl("pressesSeen = #selectedOnPresses")).isEmpty() ? luaGlobalNumber("pressesSeen") : -1; }
+
+    // Each row of pixels in the middle column of the view at which roomId is picked
+    static QList<int> rowsPickingInTheMiddleColumn(ModernGLWidget* pModern, const int roomId)
+    {
+        QList<int> rows;
+        for (int y = 0; y < pModern->height(); ++y) {
+            if (pModern->roomAt(QPoint(pModern->width() / 2, y)) == roomId) {
+                rows.append(y);
+            }
+        }
+        return rows;
     }
 
     // The 3D view on the player's area, looking straight down with north up, nothing selected
@@ -371,6 +437,9 @@ private slots:
         // The 2D map's y-axis points down the screen
         QCOMPARE(p2dMap->mMapCenterY, -20.0);
         QCOMPARE(selection(), QSet<int>{kOtherAreaRoomId});
+        // Edit in 2D also switches to editing mode, which the later tests here, all in viewing mode, must not inherit
+        QVERIFY(!p2dMap->mMapViewOnly);
+        p2dMap->slot_toggleMapViewOnly();
     }
 
     // A click away from the 3D view's room menu closes it and goes on to the 3D view, as one away from the 2D
@@ -408,14 +477,352 @@ private slots:
         }
         QVERIFY2(eastFound, "the east room was not picked anywhere on the middle row");
 
+        // North above the middle and south below it, looking straight down and tilted, so that a ray turned
+        // upside down picks the room on the other side
+        constexpr int northRoomId = 22;
+        constexpr int southRoomId = 23;
+        QVERIFY(addRoomAt(northRoomId, mPlayerAreaId, 0, 2) && addRoomAt(southRoomId, mPlayerAreaId, 0, -2));
+        for (const float tilt : {CameraController::scmMinTilt, (CameraController::scmMinTilt + CameraController::scmMaxTilt) / 2.0f}) {
+            pModern->setCameraPosition(1.0f, tilt, CameraController::scmNorthUpAzimuth);
+            const QList<int> northRows = rowsPickingInTheMiddleColumn(pModern, northRoomId);
+            const QList<int> southRows = rowsPickingInTheMiddleColumn(pModern, southRoomId);
+            const QString pose = qsl("tilt %1: north at rows %2, south at rows %3, middle %4")
+                                         .arg(tilt)
+                                         .arg(northRows.isEmpty() ? -1 : northRows.constFirst())
+                                         .arg(southRows.isEmpty() ? -1 : southRows.constFirst())
+                                         .arg(middle.y());
+            QVERIFY2(!northRows.isEmpty() && !southRows.isEmpty(), qPrintable(pose));
+            QVERIFY2(northRows.constLast() < middle.y() && southRows.constFirst() > middle.y(), qPrintable(pose));
+        }
+        map()->mpRoomDB->removeRoom(northRoomId);
+        map()->mpRoomDB->removeRoom(southRoomId);
+
         pModern->setCameraPosition(1.0f, (CameraController::scmMinTilt + CameraController::scmMaxTilt) / 2.0f, CameraController::scmNorthUpAzimuth + 30.0f);
         QCOMPARE(pModern->roomAt(middle), kPlayerRoomId);
+    }
+
+    // Rooms the view does not draw, on levels it hides or hidden themselves, must not be picked either
+    void test_pickingSkipsRoomsTheViewDoesNotShow()
+    {
+        ModernGLWidget* pModern = viewAtThePlayer();
+        QVERIFY(pModern);
+        const QPoint middle(pModern->width() / 2, pModern->height() / 2);
+        constexpr int upperRoomId = 20;
+        constexpr int hiddenRoomId = 21;
+        QVERIFY(addRoomAt(upperRoomId, mPlayerAreaId, 0, 0) && map()->setRoomCoordinates(upperRoomId, 0, 0, 1));
+        QVERIFY(addRoomAt(hiddenRoomId, mPlayerAreaId, 0, 2));
+        const QList<int> hiddenRoomRows = rowsPickingInTheMiddleColumn(pModern, hiddenRoomId);
+
+        pModern->slot_singleLevelView();
+        const int pickedOnOneLevel = pModern->roomAt(middle);
+        pModern->slot_showAllLevels();
+        // Looking straight down, the room above is the nearer
+        const int pickedOnAllLevels = pModern->roomAt(middle);
+        map()->mpRoomDB->getRoom(hiddenRoomId)->setHidden(true);
+        const int pickedWhereTheHiddenRoomIs = hiddenRoomRows.isEmpty() ? -1 : pModern->roomAt(QPoint(middle.x(), hiddenRoomRows.at(hiddenRoomRows.size() / 2)));
+        map()->mpRoomDB->removeRoom(upperRoomId);
+        map()->mpRoomDB->removeRoom(hiddenRoomId);
+
+        QCOMPARE(pickedOnOneLevel, kPlayerRoomId);
+        QCOMPARE(pickedOnAllLevels, upperRoomId);
+        QVERIFY2(!hiddenRoomRows.isEmpty(), "the room to hide was not picked anywhere while shown");
+        QVERIFY(pickedWhereTheHiddenRoomIs != hiddenRoomId);
+    }
+
+    // Room actions from the 3D view's menu must never reach rooms of an area it no longer shows
+    void test_changingAreaIn3DDropsTheOldAreasRoomsFromTheSelection()
+    {
+        ModernGLWidget* pModern = viewAtThePlayer();
+        QVERIFY(pModern);
+        QTest::mouseClick(pModern, Qt::LeftButton, Qt::NoModifier, pixelOfRoom(pModern, kPlayerRoomId));
+        QCOMPARE(selection(), QSet<int>{kPlayerRoomId});
+        pModern->setViewCenter(mOtherAreaId, 20, 20, 0);
+        // The hidden 2D map stays where it was, so only the 3D view can have dropped them
+        QCOMPARE(map()->mapper()->mp2dMap->mAreaID, mPlayerAreaId);
+        QVERIFY(selection().isEmpty());
+    }
+
+    // As on the 2D map, which changes the selection on the press, a script handling the press reads the selection
+    // the click leaves, also for the clicks that the 3D view settles only on the release
+    void test_aScriptHandlingThePressSeesTheSelectionTheClickLeaves()
+    {
+        ModernGLWidget* pModern = viewAtThePlayer();
+        QVERIFY(pModern);
+        QCOMPARE(runLua(qsl("selectedOnPresses = {}\n"
+                            "pressHandler = registerAnonymousEventHandler('sysMapWindowMousePressEvent', function()\n"
+                            "  selectedOnPresses[#selectedOnPresses + 1] = #(getMapSelection().rooms or {})\n"
+                            "end)")),
+                 QString());
+        const QPoint playerRoom = pixelOfRoom(pModern, kPlayerRoomId);
+        QTest::mouseClick(pModern, Qt::LeftButton, Qt::NoModifier, playerRoom);
+        QTest::mouseClick(pModern, Qt::LeftButton, Qt::ControlModifier, pixelOfRoom(pModern, kEastRoomId));
+        QTest::mouseClick(pModern, Qt::LeftButton, Qt::NoModifier, QPoint(2, 2));
+        QTest::mouseClick(pModern, Qt::LeftButton, Qt::NoModifier, playerRoom);
+        // A drag from empty space pans and leaves the selection, and is announced once, as soon as it is a drag
+        QTest::mousePress(pModern, Qt::LeftButton, Qt::NoModifier, QPoint(5, 5));
+        QMouseEvent drag(QEvent::MouseMove, QPointF(60, 60), pModern->mapToGlobal(QPointF(60, 60)), Qt::NoButton, Qt::LeftButton, Qt::NoModifier);
+        QCoreApplication::sendEvent(pModern, &drag);
+        const int announcedBeforeTheRelease = pressesSeenByScript();
+        QTest::mouseRelease(pModern, Qt::LeftButton, Qt::NoModifier, QPoint(60, 60));
+        // The 2D map selects the room right-clicked on before it announces the press
+        QTest::mouseClick(pModern, Qt::LeftButton, Qt::NoModifier, QPoint(2, 2));
+        QTest::mouseClick(pModern, Qt::RightButton, Qt::NoModifier, playerRoom);
+        if (QMenu* menu = openMenu(pModern)) {
+            menu->close();
+        }
+        QCOMPARE(runLua(qsl("killAnonymousEventHandler(pressHandler)\n"
+                            "selectedOnPressesText = table.concat(selectedOnPresses, ',')")),
+                 QString());
+        QCOMPARE(announcedBeforeTheRelease, 5);
+        QCOMPARE(luaGlobalString("selectedOnPressesText"), qsl("1,2,0,1,1,0,1"));
+    }
+
+    // Each press is announced, also one made while another button is still down
+    void test_aPressWhileAnotherButtonIsDownIsAnnouncedToo()
+    {
+        ModernGLWidget* pModern = viewAtThePlayer();
+        QVERIFY(pModern);
+        QCOMPARE(runLua(qsl("selectedOnPresses = {}\n"
+                            "pressHandler = registerAnonymousEventHandler('sysMapWindowMousePressEvent', function()\n"
+                            "  selectedOnPresses[#selectedOnPresses + 1] = 0\n"
+                            "end)")),
+                 QString());
+        const QPointF corner(5, 5);
+        const QPointF globalCorner = pModern->mapToGlobal(corner);
+        QMouseEvent leftPress(QEvent::MouseButtonPress, corner, globalCorner, Qt::LeftButton, Qt::LeftButton, Qt::NoModifier);
+        QCoreApplication::sendEvent(pModern, &leftPress);
+        QMouseEvent rightPress(QEvent::MouseButtonPress, corner, globalCorner, Qt::RightButton, Qt::LeftButton | Qt::RightButton, Qt::NoModifier);
+        QCoreApplication::sendEvent(pModern, &rightPress);
+        QMouseEvent rightRelease(QEvent::MouseButtonRelease, corner, globalCorner, Qt::RightButton, Qt::LeftButton, Qt::NoModifier);
+        QCoreApplication::sendEvent(pModern, &rightRelease);
+        if (QMenu* menu = openMenu(pModern)) {
+            menu->close();
+        }
+        QMouseEvent leftRelease(QEvent::MouseButtonRelease, corner, globalCorner, Qt::LeftButton, Qt::NoButton, Qt::NoModifier);
+        QCoreApplication::sendEvent(pModern, &leftRelease);
+        const int presses = pressesSeenByScript();
+        QCOMPARE(runLua(qsl("killAnonymousEventHandler(pressHandler)")), QString());
+        QCOMPARE(presses, 2);
+    }
+
+    // The release of a press can go elsewhere once the view hides, as with "Edit in 2D"; the press is still
+    // announced, and a drag begun then does not pan the view when it is back
+    void test_aPressIsAnnouncedWhenTheViewHidesBeforeTheRelease()
+    {
+        ModernGLWidget* pModern = viewAtThePlayer();
+        QVERIFY(pModern);
+        QCOMPARE(runLua(qsl("selectedOnPresses = {}\n"
+                            "pressHandler = registerAnonymousEventHandler('sysMapWindowMousePressEvent', function()\n"
+                            "  selectedOnPresses[#selectedOnPresses + 1] = 0\n"
+                            "end)")),
+                 QString());
+        const QPointF corner(5, 5);
+        QMouseEvent leftPress(QEvent::MouseButtonPress, corner, pModern->mapToGlobal(corner), Qt::LeftButton, Qt::LeftButton, Qt::NoModifier);
+        QCoreApplication::sendEvent(pModern, &leftPress);
+        map()->mapper()->show3DView(false);
+        QTest::qWait(50);
+        const int announcedOnHiding = pressesSeenByScript();
+
+        pModern = viewAtThePlayer();
+        QVERIFY(pModern);
+        const QVector3D start = pModern->viewCenter();
+        QMouseEvent rightPress(QEvent::MouseButtonPress, corner, pModern->mapToGlobal(corner), Qt::RightButton, Qt::RightButton, Qt::NoModifier);
+        QCoreApplication::sendEvent(pModern, &rightPress);
+        QMouseEvent rightDrag(QEvent::MouseMove, QPointF(60, 60), pModern->mapToGlobal(QPointF(60, 60)), Qt::NoButton, Qt::RightButton, Qt::NoModifier);
+        QCoreApplication::sendEvent(pModern, &rightDrag);
+        QMouseEvent rightRelease(QEvent::MouseButtonRelease, QPointF(60, 60), pModern->mapToGlobal(QPointF(60, 60)), Qt::RightButton, Qt::NoButton, Qt::NoModifier);
+        QCoreApplication::sendEvent(pModern, &rightRelease);
+        if (QMenu* menu = openMenu(pModern)) {
+            menu->close();
+        }
+        QCOMPARE(runLua(qsl("killAnonymousEventHandler(pressHandler)")), QString());
+        QCOMPARE(announcedOnHiding, 1);
+        QCOMPARE(pModern->viewCenter(), start);
+    }
+
+    // Typing goes to the command line after a click on the view, as it does after one on the 2D map, so that "s",
+    // "w", the arrows and keypad key bindings are not taken for panning and zooming
+    void test_keysTypedAfterAClickOnTheViewReachTheCommandLine()
+    {
+        ModernGLWidget* pModern = viewAtThePlayer();
+        QVERIFY(pModern);
+        QDockWidget* pDock = dockOf(pModern);
+        QVERIFY2(pDock, "the map is not in a dock");
+        TCommandLine* commandLine = mpHost->mainConsoleView()->mpCommandLine;
+        const auto restore = qScopeGuard([pDock, floating = pDock->isFloating(), commandLine]() {
+            setDockFloating(pDock, floating);
+            commandLine->clear();
+        });
+        setDockFloating(pDock, true);
+        QVERIFY(activate(pDock));
+        QSignalSpy cameraControls(pModern, &ModernGLWidget::cameraControlsChanged);
+        const QVector3D start = pModern->viewCenter();
+        commandLine->clear();
+
+        QTest::mouseClick(pModern, Qt::LeftButton, Qt::NoModifier, pixelOfRoom(pModern, kPlayerRoomId));
+        QTRY_VERIFY(pModern->hasFocus());
+        for (const Qt::Key key : {Qt::Key_S, Qt::Key_W}) {
+            QTest::keyClick(static_cast<QWidget*>(nullptr), key);
+            QCoreApplication::processEvents();
+        }
+        QCOMPARE(commandLine->toPlainText(), qsl("sw"));
+        QCOMPARE(pModern->viewCenter(), start);
+        commandLine->clear();
+
+        // Even with focus from the keyboard, with which W does pan
+        QVERIFY(focusFromTheKeyboard(pModern));
+        QTest::keyClick(pModern, Qt::Key_W);
+        QVERIFY2(pModern->viewCenter().y() > start.y(), "W did not pan with focus from the keyboard");
+        cameraControls.clear();
+        QTest::keyClick(pModern, Qt::Key_Plus, Qt::KeypadModifier);
+        QCoreApplication::processEvents();
+        QCOMPARE(commandLine->toPlainText(), qsl("+"));
+        QVERIFY2(cameraControls.isEmpty(), "keypad + zoomed the view instead of reaching the command line");
+    }
+
+    // Qt sets KeypadModifier on every arrow key on macOS, where the arrows must still pan; elsewhere it marks the
+    // keypad's own arrows, which are left to key bindings
+    void test_arrowsWithTheKeypadModifierPanOnlyOnMacOS()
+    {
+        ModernGLWidget* pModern = viewAtThePlayer();
+        QVERIFY(pModern);
+        QVERIFY(focusFromTheKeyboard(pModern));
+        const QVector3D start = pModern->viewCenter();
+        QTest::keyClick(pModern, Qt::Key_Right, Qt::KeypadModifier);
+#if defined(Q_OS_MACOS)
+        QVERIFY2(pModern->viewCenter().x() > start.x(), "the right arrow did not pan east");
+#else
+        QCOMPARE(pModern->viewCenter(), start);
+#endif
+    }
+
+    // The keys pan and zoom only with focus from the keyboard, so the view must be in its window's Tab order
+    void test_tabReachesTheViewWhoseKeysThenPan()
+    {
+        ModernGLWidget* pModern = viewAtThePlayer();
+        QVERIFY(pModern);
+        QDockWidget* pDock = dockOf(pModern);
+        QVERIFY2(pDock, "the map is not in a dock");
+        const auto restore = qScopeGuard([pDock, floating = pDock->isFloating()]() {
+            setDockFloating(pDock, floating);
+        });
+        setDockFloating(pDock, true);
+        QVERIFY(activate(pDock));
+        pModern->clearFocus();
+        for (int presses = 0; presses < 50 && !pModern->hasFocus(); ++presses) {
+            QTest::keyClick(static_cast<QWidget*>(nullptr), Qt::Key_Tab);
+        }
+        QVERIFY2(pModern->hasFocus(), "Tab never reached the view");
+        const QVector3D start = pModern->viewCenter();
+        QTest::keyClick(static_cast<QWidget*>(nullptr), Qt::Key_W);
+        QVERIFY2(pModern->viewCenter().y() > start.y(), "W did not pan after Tab reached the view");
+    }
+
+    // A click takes the keys back for the command line also when the view already had focus from the keyboard
+    void test_aClickAfterTabFocusSendsTheKeysToTheCommandLine()
+    {
+        ModernGLWidget* pModern = viewAtThePlayer();
+        QVERIFY(pModern);
+        TCommandLine* commandLine = mpHost->mainConsoleView()->mpCommandLine;
+        const auto restore = qScopeGuard([commandLine]() {
+            commandLine->clear();
+        });
+        QVERIFY(focusFromTheKeyboard(pModern));
+        commandLine->clear();
+        QTest::mouseClick(pModern, Qt::LeftButton, Qt::NoModifier, pixelOfRoom(pModern, kPlayerRoomId));
+        QVERIFY(pModern->hasFocus());
+        const QVector3D start = pModern->viewCenter();
+        QTest::keyClick(static_cast<QWidget*>(nullptr), Qt::Key_S);
+        QCoreApplication::processEvents();
+        QCOMPARE(commandLine->toPlainText(), qsl("s"));
+        QCOMPARE(pModern->viewCenter(), start);
+    }
+
+    // Switching to another application and back hands focus back with ActiveWindowFocusReason, which must leave the
+    // keys panning as they did
+    void test_keysStillPanAfterSwitchingWindowsAndBack()
+    {
+        ModernGLWidget* pModern = viewAtThePlayer();
+        QVERIFY(pModern);
+        QDockWidget* pDock = dockOf(pModern);
+        QVERIFY2(pDock, "the map is not in a dock");
+        TCommandLine* commandLine = mpHost->mainConsoleView()->mpCommandLine;
+        const auto restore = qScopeGuard([pDock, floating = pDock->isFloating(), commandLine]() {
+            setDockFloating(pDock, floating);
+            commandLine->clear();
+        });
+        setDockFloating(pDock, true);
+        QVERIFY(focusFromTheKeyboard(pModern));
+        // Another application's window, as activating Mudlet's main window puts focus on the command line
+        QWidget otherWindow;
+        otherWindow.resize(200, 200);
+        otherWindow.show();
+        QVERIFY(activate(&otherWindow));
+        QVERIFY(!pModern->hasFocus());
+        QVERIFY(activate(pDock));
+        QTRY_VERIFY(pModern->hasFocus());
+        commandLine->clear();
+        const QVector3D start = pModern->viewCenter();
+        QTest::keyClick(static_cast<QWidget*>(nullptr), Qt::Key_W);
+        QCoreApplication::processEvents();
+        QVERIFY2(pModern->viewCenter().y() > start.y(), qPrintable(qsl("W did not pan; the command line got \"%1\"").arg(commandLine->toPlainText())));
+    }
+
+    // After a click the keys go on to the command line, so the view must also win the shortcuts that the command
+    // line wins over the application's, as the 2D map, which leaves focus on the command line, does
+    void test_aClickedViewClaimsTheShortcutsTheCommandLineClaims()
+    {
+        ModernGLWidget* pModern = viewAtThePlayer();
+        QVERIFY(pModern);
+        const auto restore = qScopeGuard([this]() {
+            mpHost->mCaretShortcut = Host::CaretShortcut::None;
+        });
+        mpHost->mCaretShortcut = Host::CaretShortcut::CtrlTab;
+        QTest::mouseClick(pModern, Qt::LeftButton, Qt::NoModifier, pixelOfRoom(pModern, kPlayerRoomId));
+
+        QKeyEvent caretShortcut(QEvent::ShortcutOverride, Qt::Key_Tab, Qt::ControlModifier);
+        QVERIFY(mpHost->mainConsoleView()->mpCommandLine->claimsShortcutOverride(&caretShortcut));
+        caretShortcut.ignore();
+        QCoreApplication::sendEvent(pModern, &caretShortcut);
+        QVERIFY2(caretShortcut.isAccepted(), "the view left Ctrl+Tab to the application's profile-switching shortcut");
+
+        QKeyEvent other(QEvent::ShortcutOverride, Qt::Key_X, Qt::ControlModifier);
+        other.ignore();
+        QCoreApplication::sendEvent(pModern, &other);
+        QVERIFY(!other.isAccepted());
+    }
+
+    // Hiding the focused view hands focus on to the next widget in its window, which in a floating map is one of
+    // its buttons; "Edit in 2D" must leave the keys typed next to the command line, as the 2D map does
+    void test_editIn2DLeavesTheKeysToTheCommandLine()
+    {
+        ModernGLWidget* pModern = viewAtThePlayer();
+        QVERIFY(pModern);
+        QDockWidget* pDock = dockOf(pModern);
+        QVERIFY2(pDock, "the map is not in a dock");
+        TCommandLine* commandLine = mpHost->mainConsoleView()->mpCommandLine;
+        const auto restore = qScopeGuard([pDock, floating = pDock->isFloating(), commandLine]() {
+            setDockFloating(pDock, floating);
+            commandLine->clear();
+        });
+        setDockFloating(pDock, true);
+        QVERIFY(activate(pDock));
+        QTest::mouseClick(pModern, Qt::LeftButton, Qt::NoModifier, pixelOfRoom(pModern, kPlayerRoomId));
+        QTRY_VERIFY(pModern->hasFocus());
+        commandLine->clear();
+
+        emit pModern->editIn2DRequested(kPlayerRoomId);
+        QVERIFY(!pModern->isVisible());
+        QTRY_VERIFY2(commandLine->hasFocus(), qPrintable(QDebug::toString(QApplication::focusWidget())));
+        QTest::keyClick(static_cast<QWidget*>(nullptr), Qt::Key_N);
+        QCOMPARE(commandLine->toPlainText(), qsl("n"));
     }
 
     void test_keysPanZoomAndRecenter()
     {
         ModernGLWidget* pModern = viewAtThePlayer();
         QVERIFY(pModern);
+        QVERIFY(focusFromTheKeyboard(pModern));
         QSignalSpy cameraControls(pModern, &ModernGLWidget::cameraControlsChanged);
         const QVector3D start = pModern->viewCenter();
 
@@ -528,9 +935,11 @@ private slots:
             pDock = qobject_cast<QDockWidget*>(pWidget);
         }
         QVERIFY2(pDock, "the map is not in a dock");
-        pDock->setFloating(true);
-        pDock->activateWindow();
-        QVERIFY(QTest::qWaitForWindowActive(pDock));
+        const auto restore = qScopeGuard([pDock, floating = pDock->isFloating()]() {
+            setDockFloating(pDock, floating);
+        });
+        setDockFloating(pDock, true);
+        QVERIFY(activate(pDock));
         pModern->setFocus(Qt::MouseFocusReason);
         QTRY_VERIFY(pModern->hasFocus());
         const QVector3D start = pModern->viewCenter();
@@ -545,7 +954,6 @@ private slots:
         const QString typed = commandLine->toPlainText();
         const QVector3D end = pModern->viewCenter();
         commandLine->clear();
-        pDock->setFloating(false);
         QCOMPARE(typed, qsl("xad"));
         QCOMPARE(end, start);
     }
@@ -554,6 +962,7 @@ private slots:
     {
         ModernGLWidget* pModern = viewAtThePlayer();
         QVERIFY(pModern);
+        QVERIFY(focusFromTheKeyboard(pModern));
         // viewCenter() is in floats, which cannot hold the ends exactly, so check only which side of the map it is on
         pModern->setViewCenter(mPlayerAreaId, std::numeric_limits<int>::max(), 0, 0);
         QTest::keyClick(pModern, Qt::Key_Right);
