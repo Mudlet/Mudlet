@@ -494,6 +494,7 @@ private slots:
         Host* host = TestProfile::create(mHostname, qsl("localhost"), mPort, 20s);
         QVERIFY(host);
         const QString warning = qsl("Could not check for a saved password");
+        host->setLogin(qsl("player"));
 
         host->lookUpSecuredPassword(new CredentialManager(host));
         QVERIFY2(!waitForConsoleContains(host, warning, 500), "a profile with no saved password was told its password could not be read");
@@ -509,6 +510,12 @@ private slots:
         QVERIFY2(!waitForConsoleContains(host, warning, 500), "the player was told no password would be sent while one was set");
 
         host->setPass(QString());
+        // Without a login auto-login sends no password, saved or not
+        host->setLogin(QString());
+        host->lookUpSecuredPassword(new CredentialManager(host));
+        QVERIFY2(!waitForConsoleContains(host, warning, 500), "a profile with no login was told no password would be sent");
+
+        host->setLogin(qsl("player"));
         host->lookUpSecuredPassword(new CredentialManager(host));
         QVERIFY2(waitForConsoleContains(host, warning), "a saved password the store would not hand over was not reported");
     }

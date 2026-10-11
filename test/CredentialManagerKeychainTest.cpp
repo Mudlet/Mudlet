@@ -1751,17 +1751,20 @@ void CredentialManagerKeychainTest::testASignInKeyIsNotLookedForInLayoutsOlderTh
 // tell "the store has nothing" from "the store would not say"
 void CredentialManagerKeychainTest::testALookupThatFindsNothingSaysWhetherTheStoreAnswered_data()
 {
-    QTest::addColumn<bool>("refused");
+    QTest::addColumn<QKeychain::Error>("firstReadError");
     QTest::addColumn<bool>("garbledFile");
     QTest::addColumn<CredentialManager::ReadOutcome>("expected");
-    QTest::newRow("nothing stored anywhere") << false << false << CredentialManager::ReadOutcome::NothingStored;
-    QTest::newRow("the first read refused") << true << false << CredentialManager::ReadOutcome::Unreadable;
-    QTest::newRow("the encrypted file garbled") << false << true << CredentialManager::ReadOutcome::Unreadable;
+    QTest::newRow("nothing stored anywhere") << QKeychain::NoError << false << CredentialManager::ReadOutcome::NothingStored;
+    QTest::newRow("the first read refused") << QKeychain::AccessDenied << false << CredentialManager::ReadOutcome::Unreadable;
+    // What libsecret reports when no Secret Service is running on D-Bus
+    QTest::newRow("no keychain service to ask") << QKeychain::OtherError << false << CredentialManager::ReadOutcome::Unavailable;
+    QTest::newRow("the encrypted file garbled") << QKeychain::NoError << true << CredentialManager::ReadOutcome::Unreadable;
+    QTest::newRow("no keychain service, and the file garbled") << QKeychain::OtherError << true << CredentialManager::ReadOutcome::Unreadable;
 }
 
 void CredentialManagerKeychainTest::testALookupThatFindsNothingSaysWhetherTheStoreAnswered()
 {
-    QFETCH(bool, refused);
+    QFETCH(QKeychain::Error, firstReadError);
     QFETCH(bool, garbledFile);
     QFETCH(CredentialManager::ReadOutcome, expected);
     const QString filePath = CredentialManager::generateFilePath(mProfile, mKey);
@@ -1775,7 +1778,7 @@ void CredentialManagerKeychainTest::testALookupThatFindsNothingSaysWhetherTheSto
         file.write("not an encrypted credential");
     }
     JobStaller staller;
-    if (refused) {
+    if (firstReadError != QKeychain::NoError) {
         staller.stallNth<QKeychain::ReadPasswordJob>(0);
     }
     staller.answerOtherReadsNotFound();
@@ -1784,10 +1787,10 @@ void CredentialManagerKeychainTest::testALookupThatFindsNothingSaysWhetherTheSto
     QObject lateContext;
 
     const auto answers = startTimedRetrieval(manager, mProfile, mKey, &lateContext);
-    if (refused) {
+    if (firstReadError != QKeychain::NoError) {
         QKeychain::Job* firstRead = staller.waitForStalled();
         QVERIFY(firstRead);
-        JobStaller::answer(firstRead, QKeychain::AccessDenied, QStringLiteral("synthetic: access refused"));
+        JobStaller::answer(firstRead, firstReadError, QStringLiteral("synthetic: the first read failed"));
     }
     QVERIFY(waitForAnswer(answers->first));
     QVERIFY(!answers->first->success);

@@ -454,7 +454,7 @@ void CredentialManager::retrievePassword(
 {
     if (profileName.isEmpty() || key.isEmpty()) {
         if (callback) {
-            callback(false, QString(), qsl("Profile name and key cannot be empty"), ReadOutcome::Unreadable);
+            callback(false, QString(), qsl("Profile name and key cannot be empty"), ReadOutcome::Unavailable);
         }
 
         return;
@@ -463,7 +463,7 @@ void CredentialManager::retrievePassword(
     // Match the static API: a key it refuses would be filed where its migration and cleanup never look.
     if (!isValidKeyName(key)) {
         if (callback) {
-            callback(false, QString(), scmInvalidKeyNameError, ReadOutcome::Unreadable);
+            callback(false, QString(), scmInvalidKeyNameError, ReadOutcome::Unavailable);
         }
 
         return;
@@ -474,7 +474,7 @@ void CredentialManager::retrievePassword(
         qWarning() << "CredentialManager: Rejecting retrievePassword operation during shutdown";
 
         if (callback) {
-            callback(false, QString(), qsl("Application is shutting down"), ReadOutcome::Unreadable);
+            callback(false, QString(), qsl("Application is shutting down"), ReadOutcome::Unavailable);
         }
 
         return;
@@ -570,6 +570,7 @@ void CredentialManager::retrievePassword(
             }
             stages.swap(fileOnly);
             lookup->keychainError = qsl("the keychain refused a read moments ago - unlock it, or answer its prompt, and try again");
+            lookup->keychainRefused = true;
         }
 
         // One deadline for the whole chain rather than one per read. The chain is several keychain
@@ -604,15 +605,15 @@ void CredentialManager::retrievePassword(
         runLookupStage(lookup, 0);
     } else {
         // Use SecureStringUtils directly (portable/test mode)
-        bool unreadable = false;
-        QString password = retrieveCredentialFromFile(profileName, key, &unreadable);
+        ReadOutcome failure = ReadOutcome::NothingStored;
+        QString password = retrieveCredentialFromFile(profileName, key, &failure);
         bool success = !password.isEmpty();
 
         if (callback) {
             // Empty password is normal for first-time profiles - not an error. Move the buffer so the
             // receiver takes sole ownership and can scrub the secret in place.
-            const ReadOutcome outcome = success ? ReadOutcome::Found : (unreadable ? ReadOutcome::Unreadable : ReadOutcome::NothingStored);
-            const QString error = success ? QString() : (unreadable ? qsl("Could not read encrypted file storage") : qsl("No password stored in encrypted file storage"));
+            const ReadOutcome outcome = success ? ReadOutcome::Found : failure;
+            const QString error = success ? QString() : (failure != ReadOutcome::NothingStored ? qsl("Could not read encrypted file storage") : qsl("No password stored in encrypted file storage"));
             callback(outcome == ReadOutcome::Found, std::move(password), error, outcome);
         }
     }
@@ -749,11 +750,16 @@ void CredentialManager::runLookupStage(const LookupPtr& lookup, std::size_t inde
         QString error = qsl("No stored credentials found for profile %1").arg(lookup->profileName);
         if (!lookup->keychainError.isEmpty()) {
             error = qsl("Could not read the keychain: %1").arg(lookup->keychainError);
-        } else if (lookup->fileUnreadable) {
+        } else if (lookup->fileOutcome != ReadOutcome::NothingStored) {
             error = qsl("Could not read the encrypted credential file for profile %1").arg(lookup->profileName);
         }
-        const bool absent = lookup->keychainError.isEmpty() && !lookup->fileUnreadable;
-        finishLookup(lookup, QString(), error, absent ? ReadOutcome::NothingStored : ReadOutcome::Unreadable);
+        ReadOutcome outcome = ReadOutcome::NothingStored;
+        if (lookup->keychainRefused || lookup->fileOutcome == ReadOutcome::Unreadable) {
+            outcome = ReadOutcome::Unreadable;
+        } else if (!lookup->keychainError.isEmpty() || lookup->fileOutcome == ReadOutcome::Unavailable) {
+            outcome = ReadOutcome::Unavailable;
+        }
+        finishLookup(lookup, QString(), error, outcome);
         return;
     }
 
@@ -767,9 +773,11 @@ void CredentialManager::runLookupStage(const LookupPtr& lookup, std::size_t inde
         return;
     }
     if (stage.fromFile) {
-        bool unreadable = false;
-        QString password = retrieveCredentialFromFile(lookup->profileName, lookup->key, &unreadable);
-        lookup->fileUnreadable = lookup->fileUnreadable || unreadable;
+        ReadOutcome failure = ReadOutcome::NothingStored;
+        QString password = retrieveCredentialFromFile(lookup->profileName, lookup->key, &failure);
+        if (lookup->fileOutcome != ReadOutcome::Unreadable && failure != ReadOutcome::NothingStored) {
+            lookup->fileOutcome = failure;
+        }
         if (password.isEmpty()) {
             runLookupStage(lookup, index + 1);
             return;
@@ -829,6 +837,7 @@ void CredentialManager::runLookupStage(const LookupPtr& lookup, std::size_t inde
                 lookup->keychainError = errorString;
             }
             if (readWasRefusedOutright(error)) {
+                lookup->keychainRefused = true;
                 ++lookup->consecutiveRefusals;
                 // One refusal can be this entry's own - a per-item ACL, or a keychain item another
                 // build saved under terms this one cannot meet - and an older layout behind it may
@@ -1554,18 +1563,18 @@ bool CredentialManager::storeCredentialToFile(const QString& profileName, const 
     return true;
 }
 
-QString CredentialManager::retrieveCredentialFromFile(const QString& profileName, const QString& key, bool* unreadable)
+QString CredentialManager::retrieveCredentialFromFile(const QString& profileName, const QString& key, ReadOutcome* failure)
 {
-    if (unreadable) {
-        *unreadable = false;
+    if (failure) {
+        *failure = ReadOutcome::NothingStored;
     }
     QString filePath = generateFilePath(profileName, key);
 
     // Check if path generation failed due to validation
     if (filePath.isEmpty()) {
         qWarning() << "CredentialManager: Failed to generate valid file path for retrieving encrypted credential";
-        if (unreadable) {
-            *unreadable = true;
+        if (failure) {
+            *failure = ReadOutcome::Unavailable;
         }
         return QString();
     }
@@ -1591,8 +1600,8 @@ QString CredentialManager::retrieveCredentialFromFile(const QString& profileName
 
         // The newer copy is the latest password, so the older one below would be stale
         if (legacyUnreadable) {
-            if (unreadable) {
-                *unreadable = true;
+            if (failure) {
+                *failure = ReadOutcome::Unreadable;
             }
             return QString();
         }
@@ -1610,10 +1619,10 @@ QString CredentialManager::retrieveCredentialFromFile(const QString& profileName
         // Only log warning if file should exist (not for first-time access)
         if (file.exists()) {
             qWarning() << "CredentialManager: Failed to open existing file for reading:" << filePath << "Error:" << file.errorString();
-            if (unreadable) {
-                *unreadable = true;
+            if (failure) {
+                *failure = ReadOutcome::Unreadable;
             }
-        } else if (unreadable) {
+        } else if (failure) {
 #if !defined(Q_OS_WIN)
             // A folder without search permission hides everything below it, so "not there" is not proof of
             // absence: check the nearest folder that does show. Not on Windows, which has no search permission.
@@ -1622,7 +1631,9 @@ QString CredentialManager::retrieveCredentialFromFile(const QString& profileName
                 folderPath = QFileInfo(folderPath).absolutePath();
             }
             const QFileInfo folder(folderPath);
-            *unreadable = folder.exists() && !folder.isExecutable();
+            if (folder.exists() && !folder.isExecutable()) {
+                *failure = ReadOutcome::Unreadable;
+            }
 #endif
         }
 
@@ -1642,8 +1653,8 @@ QString CredentialManager::retrieveCredentialFromFile(const QString& profileName
     // An empty file is how "no password" is written; one that failed to read is not that
     if (readFailed) {
         qWarning() << "CredentialManager: Failed to read the encrypted credential file:" << filePath << "Error:" << readError;
-        if (unreadable) {
-            *unreadable = true;
+        if (failure) {
+            *failure = ReadOutcome::Unreadable;
         }
         if (encrypted.isEmpty()) {
             return QString();
@@ -1658,8 +1669,8 @@ QString CredentialManager::retrieveCredentialFromFile(const QString& profileName
 
     if (decrypted.isEmpty()) {
         qWarning() << "CredentialManager: Failed to decrypt credential for profile" << profileName;
-        if (unreadable) {
-            *unreadable = true;
+        if (failure) {
+            *failure = ReadOutcome::Unreadable;
         }
     } else {
         // Logged here because the caller can't tell keychain from file fallback. The key is named because

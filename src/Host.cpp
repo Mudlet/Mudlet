@@ -4975,8 +4975,10 @@ void Host::lookUpSecuredPassword(CredentialManager* credManager)
                 securedPasswordAnswered(success, password, errorMessage, outcome == CredentialManager::ReadOutcome::TimedOut);
                 // Only a refusal: a timed-out read can still be answered late. A refusal does not say a
                 // password is there, so the message doesn't either.
-                // Nor when a password is already set, as the connection dialog may have put one in
-                if (outcome == CredentialManager::ReadOutcome::Unreadable && getPass().isEmpty()) {
+                // Nor when a password is already set, as the connection dialog may have put one in, nor
+                // without a login, as auto-login would send no password anyway. Not for Unavailable: a
+                // desktop with no keychain service says so on every load, password or not.
+                if (outcome == CredentialManager::ReadOutcome::Unreadable && !getLogin().isEmpty() && getPass().isEmpty()) {
                     //: Shown in the profile's console when Mudlet could not check for a saved character password, e.g. because the computer's password manager is locked, so auto-login won't send one
                     postMessage(tr("[ WARN ]  - Could not check for a saved password, so none will be sent automatically. "
                                    "If your computer's password manager is locked, unlock it; otherwise type your password when the game asks for it."));

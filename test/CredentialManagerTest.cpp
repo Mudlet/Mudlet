@@ -141,6 +141,7 @@ private slots:
     void testAnUndecryptableFileIsNotReportedAsNothingStored();
     void testAFileHiddenByItsFolderIsNotReportedAsNothingStored();
     void testANewerOlderNamedFileThatWontOpenIsNotReportedAsNothingStored();
+    void testANameNoFileCanBeMadeForIsNotReportedAsRefused();
     void testAsyncRemovePassword();
     void testCredentialExistsWithoutHandingOverTheSecret();
     void testAsyncEmptyArgumentsAreReportedThroughTheCallback();
@@ -875,11 +876,18 @@ void CredentialManagerTest::testANewerOlderNamedFileThatWontOpenIsNotReportedAsN
     QVERIFY(CredentialManager::storeCredential(profile, key, "stale_current_copy"));
     QVERIFY(legacyFile.open(QIODevice::WriteOnly | QIODevice::Text | QIODevice::Truncate));
     QVERIFY(legacyFile.write(SecureStringUtils::encryptStringForProfile("saved_long_ago", profile).toUtf8()) != -1);
-    QVERIFY(legacyFile.setFileTime(QDateTime::currentDateTime().addSecs(60), QFileDevice::FileModificationTime));
     legacyFile.close();
+    QVERIFY(setModificationTime(legacyFile.fileName(), 60));
 
     QVERIFY(legacyFile.setPermissions(QFileDevice::Permissions()));
     QCOMPARE(readOutcome(manager, profile, key), std::optional(CredentialManager::ReadOutcome::Unreadable));
+}
+
+// No file can hold a password for such a name, so the profile must not be told one could not be read
+void CredentialManagerTest::testANameNoFileCanBeMadeForIsNotReportedAsRefused()
+{
+    CredentialManager manager;
+    QCOMPARE(readOutcome(manager, qsl("Realm..."), qsl("character")), std::optional(CredentialManager::ReadOutcome::Unavailable));
 }
 
 // The static API is the migration and cleanup path for credentials the async API
