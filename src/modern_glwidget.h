@@ -56,6 +56,7 @@ class Host;
 class QFontMetricsF;
 class QLabel;
 class T2DMap;
+class TCommandLine;
 class TMap;
 class TRoom;
 struct MapInfoProperties;
@@ -146,6 +147,7 @@ protected:
     void mouseDoubleClickEvent(QMouseEvent* event) override;
     void keyPressEvent(QKeyEvent* event) override;
     void focusInEvent(QFocusEvent* event) override;
+    void focusOutEvent(QFocusEvent* event) override;
     void showEvent(QShowEvent* event) override;
     void hideEvent(QHideEvent* event) override;
     bool event(QEvent* event) override;
@@ -256,8 +258,8 @@ private:
     QPoint mPressPosition;
     // A click that did not pick its room on the press does so on the release, unless it became a drag
     bool mClickPending = false;
-    // Such a press raises sysMapWindowMousePressEvent once its selection is settled, on the release or the drag
-    bool mPressEventPending = false;
+    // The button of a press whose sysMapWindowMousePressEvent waits for its selection to settle, on the release or the drag
+    Qt::MouseButton mPressEventButton = Qt::NoButton;
     // Only focus reached from the keyboard, not by a click, gives the view the keys it pans and zooms with
     bool mKeysNavigate = false;
     struct SavedCamera
@@ -306,6 +308,8 @@ private:
     void selectRoom(int roomId, Qt::KeyboardModifiers modifiers);
     void showContextMenu(const QPoint& position);
     void raiseMousePressEvent();
+    void raisePendingMousePressEvent();
+    TCommandLine* commandLine() const;
     QString roomToolTip(int roomId) const;
     GLuint selectionTexture();
     void saveCamera();

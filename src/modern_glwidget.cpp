@@ -155,6 +155,20 @@ void ModernGLWidget::showEvent(QShowEvent* event)
 void ModernGLWidget::hideEvent(QHideEvent* event)
 {
     saveCamera();
+    // The release, if any, now goes elsewhere
+    mClickPending = false;
+    mPanMode = false;
+    if (std::exchange(mPressEventButton, Qt::NoButton) != Qt::NoButton) {
+        // Queued, as a script handling it could show or delete this view mid-hide
+        QTimer::singleShot(0, this, &ModernGLWidget::raiseMousePressEvent);
+    }
+    // Qt would pass focus to the next widget in the window, which in a floating map is one of its buttons
+    if (hasFocus() && !event->spontaneous() && mpHost && !mpHost->isClosingDown()) {
+        if (TCommandLine* pCommandLine = commandLine()) {
+            pCommandLine->activateWindow();
+            pCommandLine->setFocus(Qt::OtherFocusReason);
+        }
+    }
     QOpenGLWidget::hideEvent(event);
 }
 
@@ -244,6 +258,14 @@ bool ModernGLWidget::contextCreationFailed() const
 
 bool ModernGLWidget::event(QEvent* event)
 {
+    // The keys go on to the command line, so it must also win the shortcuts it wins with focus of its own
+    if (event->type() == QEvent::ShortcutOverride) {
+        TCommandLine* pCommandLine = commandLine();
+        if (pCommandLine && pCommandLine->claimsShortcutOverride(static_cast<QKeyEvent*>(event))) {
+            event->accept();
+            return true;
+        }
+    }
     if (event->type() == QEvent::ToolTip) {
         auto* helpEvent = static_cast<QHelpEvent*>(event);
         const QString text = roomToolTip(roomAt(helpEvent->pos()));
@@ -1731,6 +1753,19 @@ void ModernGLWidget::selectRoom(const int roomId, const Qt::KeyboardModifiers mo
     update();
 }
 
+void ModernGLWidget::raisePendingMousePressEvent()
+{
+    if (std::exchange(mPressEventButton, Qt::NoButton) != Qt::NoButton) {
+        raiseMousePressEvent();
+    }
+}
+
+TCommandLine* ModernGLWidget::commandLine() const
+{
+    TMainConsole* console = mpHost ? mpHost->mainConsoleView() : nullptr;
+    return console ? console->mpCommandLine.data() : nullptr;
+}
+
 void ModernGLWidget::raiseMousePressEvent()
 {
     if (!mpHost) {
@@ -1749,6 +1784,8 @@ void ModernGLWidget::mousePressEvent(QMouseEvent* event)
         return;
     }
 
+    // Announced before this one, as with the 2D map, which announces each press as it comes
+    raisePendingMousePressEvent();
     mKeysNavigate = false;
     mPressPosition = event->position().toPoint();
     mClickPending = false;
@@ -1772,9 +1809,11 @@ void ModernGLWidget::mousePressEvent(QMouseEvent* event)
         mPanYStart = y;
     }
 
-    // The 2D map raises this after the press has changed the selection, so a script handling it reads the new one
-    mPressEventPending = mClickPending;
-    if (!mPressEventPending) {
+    // The 2D map raises this after the press has changed the selection, so a script handling it reads the new one;
+    // here a right-click selects with the menu, on the release
+    if (mClickPending || event->button() == Qt::RightButton) {
+        mPressEventButton = event->button();
+    } else {
         raiseMousePressEvent();
     }
 }
@@ -1786,8 +1825,8 @@ void ModernGLWidget::mouseMoveEvent(QMouseEvent* event)
     }
     if (mClickPending && (event->position().toPoint() - mPressPosition).manhattanLength() >= QApplication::startDragDistance()) {
         mClickPending = false;
-        if (std::exchange(mPressEventPending, false)) {
-            raiseMousePressEvent();
+        if (mPressEventButton == Qt::LeftButton) {
+            raisePendingMousePressEvent();
         }
     }
     if (mPanMode) {
@@ -1844,8 +1883,8 @@ void ModernGLWidget::mouseReleaseEvent(QMouseEvent* event)
     } else if (event->button() == Qt::RightButton && mpMap && mpMap->mpRoomDB) {
         showContextMenu(event->position().toPoint());
     }
-    if (event->button() == Qt::LeftButton && std::exchange(mPressEventPending, false)) {
-        raiseMousePressEvent();
+    if (event->button() == mPressEventButton) {
+        raisePendingMousePressEvent();
     }
     QOpenGLWidget::mouseReleaseEvent(event);
     update();
@@ -1907,17 +1946,42 @@ void ModernGLWidget::panByRooms(const int right, const int up)
     setViewCenter(mAID, shifted(mMapCenterX, offset.x()), shifted(mMapCenterY, offset.y()), mMapCenterZ);
 }
 
+namespace {
+// Focus that a window switch, a menu or the menu bar took away comes back with the same reason
+bool focusReturnsWithReason(const Qt::FocusReason reason)
+{
+    return reason == Qt::ActiveWindowFocusReason || reason == Qt::PopupFocusReason || reason == Qt::MenuBarFocusReason;
+}
+} // namespace
+
 void ModernGLWidget::focusInEvent(QFocusEvent* event)
 {
     // After a click the keys typed next are a command, as with the 2D map, which never takes focus
-    mKeysNavigate = event->reason() == Qt::TabFocusReason || event->reason() == Qt::BacktabFocusReason;
+    if (!focusReturnsWithReason(event->reason())) {
+        mKeysNavigate = event->reason() == Qt::TabFocusReason || event->reason() == Qt::BacktabFocusReason;
+    }
     QOpenGLWidget::focusInEvent(event);
+}
+
+void ModernGLWidget::focusOutEvent(QFocusEvent* event)
+{
+    if (!focusReturnsWithReason(event->reason())) {
+        mKeysNavigate = false;
+    }
+    QOpenGLWidget::focusOutEvent(event);
 }
 
 void ModernGLWidget::keyPressEvent(QKeyEvent* event)
 {
     // Shift is needed for + on many layouts; keypad keys are left to key bindings on the command line
-    const bool navigates = mKeysNavigate && !(event->modifiers() & (Qt::ControlModifier | Qt::AltModifier | Qt::MetaModifier | Qt::KeypadModifier));
+    Qt::KeyboardModifiers otherModifiers = Qt::ControlModifier | Qt::AltModifier | Qt::MetaModifier | Qt::KeypadModifier;
+#if defined(Q_OS_MACOS)
+    // Where Qt marks every arrow key as on the keypad
+    if (event->key() >= Qt::Key_Left && event->key() <= Qt::Key_Down) {
+        otherModifiers &= ~Qt::KeypadModifier;
+    }
+#endif
+    const bool navigates = mKeysNavigate && !(event->modifiers() & otherModifiers);
     if (navigates && mpMap && mpMap->mpRoomDB) {
         switch (event->key()) {
         case Qt::Key_Left:
@@ -1951,13 +2015,11 @@ void ModernGLWidget::keyPressEvent(QKeyEvent* event)
         }
     }
 
-    TMainConsole* console = mpHost ? mpHost->mainConsoleView() : nullptr;
-    if (console && console->mpCommandLine) {
-        TCommandLine* commandLine = console->mpCommandLine;
+    if (TCommandLine* pCommandLine = commandLine()) {
         // A floating map is a window of its own, and focus in an inactive window waits for it to be activated
-        commandLine->activateWindow();
-        commandLine->setFocus(Qt::OtherFocusReason);
-        QCoreApplication::sendEvent(commandLine, event);
+        pCommandLine->activateWindow();
+        pCommandLine->setFocus(Qt::OtherFocusReason);
+        QCoreApplication::sendEvent(pCommandLine, event);
         return;
     }
     QOpenGLWidget::keyPressEvent(event);
