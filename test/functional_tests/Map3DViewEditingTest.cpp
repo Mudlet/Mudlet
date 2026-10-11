@@ -457,6 +457,20 @@ private slots:
         QVERIFY(mpHost->getLuaInterpreter()->compileAndExecuteScript(qsl("setConfig('experiment.3dmap.modernmapper', true)")));
         QVERIFY(p3DButton->isEnabled());
 
+        // A script switching renderer from the view's own mouse event leaves it to finish handling that event
+        p3DButton->click();
+        QPointer<ModernGLWidget> pReplaced = pView->get3DView();
+        QVERIFY(pReplaced && pReplaced->isVisible());
+        QVERIFY(mpHost->getLuaInterpreter()->compileAndExecuteScript(
+                qsl("mapEditingTestHandler = registerAnonymousEventHandler('sysMapWindowMousePressEvent', function() setConfig('experiment.3dmap.modernmapper', false) end)")));
+        QTest::mouseClick(pReplaced, Qt::LeftButton, Qt::NoModifier, QPoint(5, 5));
+        QVERIFY(mpHost->getLuaInterpreter()->compileAndExecuteScript(qsl("killAnonymousEventHandler(mapEditingTestHandler)")));
+        QVERIFY(!pView->get3DView());
+        QVERIFY(pView->get2DMap()->isVisible());
+        QCoreApplication::sendPostedEvents(nullptr, QEvent::DeferredDelete);
+        QVERIFY(!pReplaced);
+        QVERIFY(mpHost->getLuaInterpreter()->compileAndExecuteScript(qsl("setConfig('experiment.3dmap.modernmapper', true)")));
+
         QVERIFY(pManager->closeView(viewId).first);
         QCoreApplication::sendPostedEvents(nullptr, QEvent::DeferredDelete);
         QVERIFY(qobject_cast<ModernGLWidget*>(map()->mapper()->glWidget));

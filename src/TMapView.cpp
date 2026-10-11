@@ -407,7 +407,9 @@ void TMapView::update3DViewAvailability()
     if (!available && mp3DView) {
         show3DView(false);
         mp2dMap->setCompanion3DView(nullptr);
-        delete mp3DView.data();
+        // Later, as a script can get here from inside one of the view's own event handlers
+        mp3DView->deleteLater();
+        mp3DView = nullptr;
     }
     if (!mp3DButton) {
         return;
