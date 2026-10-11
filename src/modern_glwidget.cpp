@@ -2003,14 +2003,20 @@ void ModernGLWidget::mousePressEvent(QMouseEvent* event)
         const int roomId = roomAt(mPressPosition, false);
         const bool moveRoom = roomId && !(event->modifiers() & (Qt::ControlModifier | Qt::ShiftModifier));
         const int rectangleRoomId = roomId ? roomId : roomAt(mPressPosition);
+        const TRoom* pRoom = moveRoom ? mpMap->mpRoomDB->getRoom(roomId) : nullptr;
         QPointF snap;
         if (mCameraSmoothAnimating) {
-            // Stopped where it is, so a drag does not glide on with it
+            const std::optional<QPointF> seenAt = pRoom ? mapPointOnLevel(mPressPosition, pRoom->z()) : std::nullopt;
+            // Stopped where it is and held there, so neither a drag nor a glide after the player moves it on
             stopSmoothTransition();
             mMapCenterX = qRound(mCurrentAnimationX);
             mMapCenterY = qRound(mCurrentAnimationY);
             mMapCenterZ = qRound(mCurrentAnimationZ);
-            snap = QPointF(mMapCenterX - mCurrentAnimationX, mMapCenterY - mCurrentAnimationY);
+            holdView();
+            const std::optional<QPointF> stoppedAt = pRoom ? mapPointOnLevel(mPressPosition, pRoom->z()) : std::nullopt;
+            if (seenAt && stoppedAt) {
+                snap = *stoppedAt - *seenAt;
+            }
         }
         if (moveRoom) {
             startRoomMove(roomId);

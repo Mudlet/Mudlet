@@ -720,6 +720,60 @@ private slots:
         QCOMPARE(selection(), QSet<int>{kEastRoomId});
     }
 
+    // A press during a glide from one level to the next keeps the room under the pointer too, with the view tilted
+    void test_aPressPartWayThroughALevelGlideTakesTheRoomSeenThere()
+    {
+        ModernGLWidget* pModern = viewAtThePlayer(true);
+        QVERIFY(pModern);
+        pModern->setCameraPosition(1.0f, 45.0f, CameraController::scmNorthUpAzimuth);
+        pModern->setViewCenter(mPlayerAreaId, 0, 0, 1);
+        QVERIFY(QMetaObject::invokeMethod(pModern, "onCameraAnimationTick"));
+        const QPoint middle = pixelOfRoom(pModern, kEastRoomId);
+        QVERIFY2(middle.x() >= 0, "the room is not on screen");
+        int northEdge = middle.y();
+        while (northEdge > 0 && pModern->roomAt(QPoint(middle.x(), northEdge - 1), false) == kEastRoomId) {
+            --northEdge;
+        }
+        QVERIFY2(middle.y() - northEdge > 4, "the room is too small on screen to press off its middle");
+        // Towards the far side of the room, which stopping the view on the upper level brings further on
+        const QPoint east(middle.x(), middle.y() - (middle.y() - northEdge) * 3 / 5);
+
+        sendMouse(pModern, QEvent::MouseButtonPress, east, Qt::LeftButton);
+        sendMouse(pModern, QEvent::MouseMove, east + QPoint(1, 0), Qt::LeftButton);
+        sendMouse(pModern, QEvent::MouseButtonRelease, east + QPoint(1, 0), Qt::NoButton);
+        QCOMPARE(roomPlace(kEastRoomId), QVector3D(2, 0, 0));
+    }
+
+    // A rectangle started while the view glides after the player stops the view, which stays put after
+    void test_aRectanglePartWayThroughAFollowingGlideHoldsTheView()
+    {
+        ModernGLWidget* pModern = viewAtThePlayer(true);
+        QVERIFY(pModern);
+        const int spacing = pixelOfRoom(pModern, kEastRoomId).x() - pixelOfRoom(pModern, kPlayerRoomId).x();
+        QVERIFY(spacing > 20);
+        pModern->grabFramebuffer();
+        const bool painted = pModern->isValid();
+        map()->mRoomIdHash[map()->mProfileName] = kFarEastRoomId;
+        map()->mNewMove = true;
+        if (painted) {
+            pModern->grabFramebuffer();
+        } else {
+            // The glide a paint would start, as the view follows the player, taking the move as it does
+            pModern->setViewCenter(mPlayerAreaId, 6, 0, 0);
+            pModern->followPlayer();
+            map()->mNewMove = false;
+        }
+        QVERIFY(QMetaObject::invokeMethod(pModern, "onCameraAnimationTick"));
+
+        const QPoint emptySpace(pModern->width() / 2, pModern->height() / 2 + spacing);
+        QTest::mouseClick(pModern, Qt::LeftButton, Qt::ControlModifier, emptySpace);
+        const QVector3D stopped = pModern->viewCenter();
+        QVERIFY2(stopped.x() < 6.0f, "the glide was not stopped");
+        QVERIFY2(!pModern->followingPlayer(), "the view would glide on after the player");
+        pModern->grabFramebuffer();
+        QCOMPARE(pModern->viewCenter(), stopped);
+    }
+
     // A drag cut short by hiding the view, as Edit in 2D does, is over: its moves are announced and later
     // moves with the button held, once the view is back, move nothing
     void test_hidingTheViewEndsTheDrag()
