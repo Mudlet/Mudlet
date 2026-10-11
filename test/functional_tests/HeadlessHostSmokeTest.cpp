@@ -1233,9 +1233,11 @@ end
         mapFile.write(map);
         mapFile.close();
 
+#ifdef INCLUDE_FONTS
         const QString fontPath = qsl("%1HeadlessMono.ttf").arg(MudletApp::getMudletPath(enums::profilePackagePath, hostname, qsl("HeadlessFontPack")));
         QVERIFY(QDir().mkpath(QFileInfo(fontPath).path()));
         QVERIFY(QFile::copy(qsl(":/fonts/ttf-bitstream-vera-1.10/VeraMono.ttf"), fontPath));
+#endif
 
         const auto script = [](const QString& name, const QString& code) {
             return qsl(R"(<Script isActive="yes" isFolder="no"><name>%1</name><packageName></packageName><script>%2</script><eventHandlerList/></Script>)").arg(name, code);
@@ -1293,7 +1295,9 @@ end))lua");
         QVERIFY2(!host->mIsProfileLoadingSequence, "The profile is still marked as loading.");
         QVERIFY2(mainBufferHolds(host, qsl("loaded in offline mode")), "The offline load was not reported on the main console.");
         QVERIFY2(!mainBufferHolds(host, qsl("not working")), "Reinstalling the module as the profile opened reported its broken script.");
+#ifdef INCLUDE_FONTS
         QVERIFY2(HostManager::self()->fonts().fontAlreadyLoaded(fontPath, hostname), "The installed package's font was not loaded.");
+#endif
         QVERIFY2(host->mainConsoleModel().mLogToLogFile, "The profile's saved logging did not resume.");
         QVERIFY2(!host->mUSE_IRE_DRIVER_BUGFIX, "A profile with a save of its own was given the new profile settings.");
 
