@@ -108,6 +108,8 @@ public:
     int roomAt(const QPoint& position, bool orNear = true);
     // The room in another area that the area-exit arrow drawn under this point of the view leads to, or 0
     int areaExitAt(const QPoint& position);
+    // The room a double click or the tooltip at this position is about: a room, or where an area exit leads
+    int destinationAt(const QPoint& position);
     // A view in a map window of its own: it shows the area it is told to rather than following the player
     void setSecondaryView(bool secondary);
     bool secondaryView() const { return mSecondaryView; }
@@ -299,7 +301,7 @@ private:
     bool mClickPending = false;
     // The button of a press whose sysMapWindowMousePressEvent waits for its selection to settle, on the release or the drag
     Qt::MouseButton mPressEventButton = Qt::NoButton;
-    // Only focus reached from the keyboard, not by a click, gives the view the keys it pans and zooms with
+    // Only focus reached from the keyboard, not by a click, gives the view the keys it navigates with
     bool mKeysNavigate = false;
     struct SavedCamera
     {
@@ -323,14 +325,15 @@ private:
         QVector<float> colors;
     };
     QMap<int, LevelExits> mSeeThroughExits;
-    // The rooms whose IDs the last room pass drew: those too small to read, or behind a nearer one on screen, are left out
+    // The rooms whose IDs the last room pass drew: those too small to read, or overlapping one kept before them
+    // (the viewed level's first, then the nearest), are left out
     QSet<int> mRoomIdsDrawn;
 
     // Private methods for modern OpenGL
     void updateMatrices();
     void renderRooms();
     void renderConnections();
-    // The 2D map's grid, on the viewed level under its rooms: queued with depth testing on and depth writing off
+    // The 2D map's grid, at the viewed level's room bottoms, writing no depth
     void queueGrid();
     // Map labels lie flat at their place on the map; those shown on top over the rooms, the others under the exits
     // What a frame draws, in order, into the render command queue

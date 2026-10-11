@@ -1045,8 +1045,7 @@ void GeometryManager::renderInstancedCubes(const QVector<CubeInstanceData>& inst
 
     // Check if instancing functions are available
     if (!glVertexAttribDivisor || !glDrawElementsInstanced) {
-        qWarning() << "GeometryManager: Instancing functions not available, falling back to individual cubes";
-        // Fallback to individual cube rendering
+        qWarning() << "GeometryManager: Instancing functions not available, falling back to individual meshes";
         for (const auto& instance : instances) {
             GeometryData cubeGeometry = transformTemplate(mesh, instance.transform, instance.color[0], instance.color[1], instance.color[2], instance.color[3]);
             renderGeometry(cubeGeometry, vao, vertexBuffer, colorBuffer, normalBuffer, indexBuffer, drawMode);
@@ -1072,7 +1071,7 @@ void GeometryManager::renderInstancedCubes(const QVector<CubeInstanceData>& inst
     glEnableVertexAttribArray(1);
     meshIndexBuffer.bind();
 
-    // The shader takes color from the instance; a stale per-vertex color array may be shorter than the cube
+    // The shader takes color from the instance; a stale per-vertex color array may be shorter than the mesh
     glDisableVertexAttribArray(2);
     glDisableVertexAttribArray(scmTexCoordLocation);
 

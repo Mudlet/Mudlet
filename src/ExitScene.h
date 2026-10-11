@@ -87,6 +87,7 @@ struct Scene
 {
     QList<Segment> segments;
     QList<Triangle> triangles;
+    // Not drawn: where an area exit can be clicked
     QList<AreaExit> areaExits;
     // The first room with a dotted or dashed line drawn solid, as its pattern would repeat too often along it; 0 if none
     int solidDashRoomId = 0;

@@ -245,7 +245,7 @@ public:
                         class ResourceManager* resourceManager,
                         GLenum drawMode = GL_TRIANGLES);
 
-    // Instanced rendering methods for cube batching
+    // Instanced rendering of boxes or cylinders
     void renderInstancedCubes(const QVector<CubeInstanceData>& instances,
                               QOpenGLVertexArrayObject& vao,
                               QOpenGLBuffer& vertexBuffer,

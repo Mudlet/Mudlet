@@ -51,6 +51,8 @@
 #include "TLuaInterpreter.h"
 #include "TMainConsole.h"
 #include "TMap.h"
+#include "TMapView.h"
+#include "TMapViewManager.h"
 #include "TRoom.h"
 #include "TRoomDB.h"
 #include "TUiTour.h"
@@ -74,6 +76,7 @@ extern "C" {
 
 using namespace std::chrono_literals;
 
+namespace {
 class PaintCounter : public QObject
 {
 public:
@@ -88,6 +91,7 @@ protected:
         return false;
     }
 };
+} // namespace
 
 class Map3DViewInteractionTest : public QObject
 {
@@ -1342,7 +1346,7 @@ private slots:
         QCOMPARE(areaChanged.constFirst().at(0).toInt(), mOtherAreaId);
     }
 
-    // As on the 2D map, a double click on an area exit's arrow walks into the area it leads to, and hovering names it
+    // A double click on an area exit's arrow walks into the area it leads to, as on the 2D map; hovering names the room it leads to
     void test_anAreaExitLeadsIntoTheNextArea()
     {
         ModernGLWidget* pModern = viewAtThePlayer();
@@ -1375,6 +1379,83 @@ private slots:
         QCOMPARE(pastLeadsTo, 0);
         QCOMPARE(walkedTo, kOtherAreaRoomId);
         QVERIFY2(tip.contains(qsl("Room ID: %1").arg(kOtherAreaRoomId)) && tip.contains(qsl("Other Area")), qPrintable(tip));
+    }
+
+    // Over an area exit's arrow: the viewed level's room the arrow starts in wins, but a room on another level
+    // under the arrow, or a room merely near the pointer, loses to it
+    void test_anAreaExitArrowGivesWayOnlyToItsOwnRoom()
+    {
+        ModernGLWidget* pModern = viewAtThePlayer();
+        QVERIFY(pModern);
+        constexpr int lowerRoomId = 30;
+        TRoom* pEastRoom = map()->mpRoomDB->getRoom(kEastRoomId);
+        QVERIFY(pEastRoom->setExit(kOtherAreaRoomId, DIR_EAST));
+        QVERIFY(addRoomAt(lowerRoomId, mPlayerAreaId, 3, 0) && map()->setRoomCoordinates(lowerRoomId, 3, 0, -1));
+        const auto walkTo = [pModern](const QPoint& pixel) {
+            pModern->mpMap->mTargetID = 0;
+            QMouseEvent doubleClick(QEvent::MouseButtonDblClick, pixel, pModern->mapToGlobal(pixel), Qt::LeftButton, Qt::LeftButton, Qt::NoModifier);
+            QCoreApplication::sendEvent(pModern, &doubleClick);
+            return pModern->mpMap->mTargetID;
+        };
+        const auto tipAt = [pModern](const QPoint& pixel) {
+            QToolTip::hideText();
+            QHelpEvent over(QEvent::ToolTip, pixel, pModern->mapToGlobal(pixel));
+            QCoreApplication::sendEvent(pModern, &over);
+            for (int wait = 0; wait < 50 && !QToolTip::isVisible(); ++wait) {
+                QTest::qWait(10);
+            }
+            const QString tip = QToolTip::text();
+            QToolTip::hideText();
+            return tip;
+        };
+
+        const QPoint eastRoom = pixelOfRoom(pModern, kEastRoomId);
+        const int walkedFromTheRoom = walkTo(eastRoom);
+        const QString tipOverTheRoom = tipAt(eastRoom);
+        // Where the arrow is drawn over the room on the level below
+        QPoint overTheLowerRoom(-1, -1);
+        for (int x = eastRoom.x(); x < pModern->width(); ++x) {
+            const QPoint pixel(x, eastRoom.y());
+            if (pModern->roomAt(pixel, false) == lowerRoomId && pModern->areaExitAt(pixel) == kOtherAreaRoomId) {
+                overTheLowerRoom = pixel;
+                break;
+            }
+        }
+        const int walkedOverTheLowerRoom = overTheLowerRoom.x() < 0 ? -1 : walkTo(overTheLowerRoom);
+        const QString tipOverTheLowerRoom = overTheLowerRoom.x() < 0 ? QString() : tipAt(overTheLowerRoom);
+        // Another level's arrow is offered nowhere, as on the 2D map
+        QVERIFY(map()->mpRoomDB->getRoom(lowerRoomId)->setExit(kOtherAreaRoomId, DIR_SOUTH));
+        const std::optional<QPointF> alongTheLowerArrow = pModern->mCameraController.pixelForPoint(QVector3D(3.0f, -0.6f, -1.0f));
+        const int pickedOnTheLowerArrow = alongTheLowerArrow ? pModern->areaExitAt(alongTheLowerArrow->toPoint()) : -1;
+        map()->mpRoomDB->removeRoom(lowerRoomId);
+
+        // Zoomed out until the arrow is within the slop that picks a room near the pointer
+        qreal spacing = 0.0;
+        for (float distance = 1.0f; distance <= CameraController::scmMaxDistance; distance *= 1.1f) {
+            pModern->setCameraDistance(distance);
+            pModern->updateMatrices();
+            const std::optional<QPointF> from = pModern->mCameraController.pixelForPoint(QVector3D(2.0f, 0.0f, 0.0f));
+            const std::optional<QPointF> to = pModern->mCameraController.pixelForPoint(QVector3D(3.0f, 0.0f, 0.0f));
+            spacing = from && to ? QLineF(*from, *to).length() : 0.0;
+            if (spacing <= 7.0) {
+                break;
+            }
+        }
+        const std::optional<QPointF> alongTheArrow = pModern->mCameraController.pixelForPoint(QVector3D(2.75f, 0.0f, 0.0f));
+        const QPoint zoomedOutArrow = alongTheArrow ? alongTheArrow->toPoint() : QPoint(-1, -1);
+        const int nearRoom = pModern->roomAt(zoomedOutArrow);
+        const int walkedZoomedOut = walkTo(zoomedOutArrow);
+        pEastRoom->setExit(-1, DIR_EAST);
+
+        QCOMPARE(walkedFromTheRoom, kEastRoomId);
+        QVERIFY2(tipOverTheRoom.contains(qsl("Room ID: %1").arg(kEastRoomId)) && !tipOverTheRoom.contains(qsl("Other Area")), qPrintable(tipOverTheRoom));
+        QVERIFY2(overTheLowerRoom.x() >= 0, "the arrow is drawn over the lower room nowhere");
+        QCOMPARE(walkedOverTheLowerRoom, kOtherAreaRoomId);
+        QVERIFY2(tipOverTheLowerRoom.contains(qsl("Other Area")), qPrintable(tipOverTheLowerRoom));
+        QCOMPARE(pickedOnTheLowerArrow, 0);
+        QVERIFY2(spacing > 4.0 && spacing <= 7.0, qPrintable(qsl("a room spacing is %1 pixels").arg(spacing)));
+        QCOMPARE(nearRoom, kEastRoomId);
+        QCOMPARE(walkedZoomedOut, kOtherAreaRoomId);
     }
 
     void test_keysTurnTheViewAndChangeLevel()
@@ -1410,7 +1491,7 @@ private slots:
         const QPoint playerRoom = pixelOfRoom(pModern, kPlayerRoomId);
         QPoint eastRoom = pixelOfRoom(pModern, kEastRoomId);
         const int pixelsPerRoom = (eastRoom.x() - playerRoom.x()) / 2;
-        // A quarter of a room up and across is in the square of a room half a room wide, but outside its circle
+        // Just under a quarter of a room spacing up and across is inside a room's square (half a spacing wide) but outside its circle
         const QPoint corner = eastRoom + QPoint(pixelsPerRoom * 23 / 100, -pixelsPerRoom * 23 / 100);
         const int squarePick = pModern->roomAt(corner);
         mpHost->mBubbleMode = true;
@@ -1435,8 +1516,9 @@ private slots:
         QCOMPARE(roundBoxed, QSet<int>{kEastRoomId});
     }
 
-    // The map menu's toggles for the grid, round rooms and the upper and lower levels show at once in 3D
-    void test_theMapMenuTogglesRepaintThe3DView()
+    // The map menu's toggles for the grid, round rooms and the upper and lower levels, and Profile Preferences, which
+    // sets the upper and lower levels through the same call, show at once in the mapper's 3D view and another window's
+    void test_mapperSettingsRepaintEvery3DView()
     {
         ModernGLWidget* pModern = viewAtThePlayer();
         QVERIFY(pModern);
@@ -1444,40 +1526,85 @@ private slots:
         const bool grid = mpHost->mMapperShowGrid;
         const bool round = mpHost->mBubbleMode;
         const bool levels = mudlet::self()->drawUpperLowerLevels();
-        PaintCounter paints;
-        pModern->installEventFilter(&paints);
-        const auto repaints = [&paints](const std::function<void()>& toggle) {
-            QCoreApplication::processEvents();
-            paints.mCount = 0;
-            toggle();
-            for (int wait = 0; wait < 50 && !paints.mCount; ++wait) {
-                QTest::qWait(10);
-            }
-            return paints.mCount > 0;
+        // Every map window draws again on this signal, as the 2D map does
+        QSignalSpy repaintRequests(map(), &TMap::signal_mapRepaintRequested);
+        const auto requestsRepaint = [&repaintRequests](const std::function<void()>& change) {
+            repaintRequests.clear();
+            change();
+            return !repaintRequests.isEmpty();
         };
-        if (!repaints([pModern] {
-                pModern->update();
-            })) {
-            pModern->removeEventFilter(&paints);
-            QSKIP("this platform does not paint the 3D view");
-        }
-        const bool gridRepaints = repaints([pMapper, grid] {
+        const bool gridRequests = requestsRepaint([pMapper, grid] {
             pMapper->slot_setShowGrid(!grid);
         });
-        const bool roundRepaints = repaints([pMapper, round] {
+        const bool roundRequests = requestsRepaint([pMapper, round] {
             pMapper->slot_toggleRoundRooms(!round);
         });
-        const bool levelsRepaint = repaints([pMapper, levels] {
+        const bool levelsRequest = requestsRepaint([levels] {
+            mudlet::self()->setDrawUpperLowerLevels(!levels);
+        });
+        pMapper->slot_setShowGrid(grid);
+        pMapper->slot_toggleRoundRooms(round);
+        mudlet::self()->setDrawUpperLowerLevels(levels);
+        QVERIFY2(gridRequests, "showing the grid did not ask the map's windows to repaint");
+        QVERIFY2(roundRequests, "round rooms did not ask the map's windows to repaint");
+        QVERIFY2(levelsRequest, "showing the upper and lower levels did not ask the map's windows to repaint");
+
+        // Paints are only watched where the views have a context
+        const auto contextMade = [pModern]() {
+            return pModern->isValid();
+        };
+        if (!QTest::qWaitFor(contextMade, 1000)) {
+            QSKIP("no OpenGL context on this platform, so the 3D views do not paint");
+        }
+        TMapViewManager* pManager = map()->getViewManager();
+        QVERIFY(pManager);
+        const auto [viewId, error] = pManager->createView(mPlayerAreaId);
+        QVERIFY2(viewId, qPrintable(error));
+        const auto closeWindow = qScopeGuard([pManager, viewId = viewId]() {
+            pManager->closeView(viewId);
+        });
+        TMapView* pView = pManager->getView(viewId);
+        QVERIFY(pView);
+        pView->show3DView(true);
+        ModernGLWidget* pWindow3D = pView->get3DView();
+        QVERIFY(pWindow3D);
+        QTRY_VERIFY(pWindow3D->isVisible() && pWindow3D->isValid());
+        PaintCounter mapperPaints;
+        PaintCounter windowPaints;
+        pModern->installEventFilter(&mapperPaints);
+        pWindow3D->installEventFilter(&windowPaints);
+        const auto bothPainted = [&mapperPaints, &windowPaints]() {
+            return mapperPaints.mCount && windowPaints.mCount;
+        };
+        const auto repaintsBoth = [&mapperPaints, &windowPaints, &bothPainted](const std::function<void()>& change) {
+            QCoreApplication::processEvents();
+            mapperPaints.mCount = 0;
+            windowPaints.mCount = 0;
+            change();
+            return QTest::qWaitFor(bothPainted, 500);
+        };
+        const bool gridRepaints = repaintsBoth([pMapper, grid] {
+            pMapper->slot_setShowGrid(!grid);
+        });
+        const bool roundRepaints = repaintsBoth([pMapper, round] {
+            pMapper->slot_toggleRoundRooms(!round);
+        });
+        const bool menuLevelsRepaint = repaintsBoth([pMapper, levels] {
             pMapper->slot_toggleUpperLowerLevels(!levels);
         });
-        pModern->removeEventFilter(&paints);
+        const bool preferencesLevelsRepaint = repaintsBoth([levels] {
+            mudlet::self()->setDrawUpperLowerLevels(levels);
+        });
+        pModern->removeEventFilter(&mapperPaints);
+        pWindow3D->removeEventFilter(&windowPaints);
         pMapper->slot_setShowGrid(grid);
         pMapper->slot_toggleRoundRooms(round);
         pMapper->slot_toggleUpperLowerLevels(levels);
 
-        QVERIFY2(gridRepaints, "showing the grid did not repaint the 3D view");
-        QVERIFY2(roundRepaints, "round rooms did not repaint the 3D view");
-        QVERIFY2(levelsRepaint, "showing the upper and lower levels did not repaint the 3D view");
+        QVERIFY2(gridRepaints, "showing the grid did not repaint both 3D views");
+        QVERIFY2(roundRepaints, "round rooms did not repaint both 3D views");
+        QVERIFY2(menuLevelsRepaint, "the menu's upper and lower levels toggle did not repaint both 3D views");
+        QVERIFY2(preferencesLevelsRepaint, "Profile Preferences' upper and lower levels setting did not repaint both 3D views");
     }
 
     void test_eachAreaKeepsItsOwnCamera()

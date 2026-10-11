@@ -176,7 +176,7 @@ private:
     Shading mShading;
 };
 
-// Command to render multiple cube instances in a single draw call
+// Command to render multiple box or cylinder instances in a single draw call
 class RenderInstancedCubesCommand : public RenderCommand
 {
 public:
@@ -200,6 +200,7 @@ public:
 
     const char* getCommandName() const override { return "RenderInstancedCubes"; }
     const QVector<CubeInstanceData>& instances() const { return mInstances; }
+    GeometryManager::InstanceShape shape() const { return mShape; }
 
 private:
     QVector<CubeInstanceData> mInstances;

@@ -5426,7 +5426,7 @@ void dlgProfilePreferences::setButtonAndProfileColor(QPushButton* button, QColor
                                      || button == pushButton_Lwhite_2);
 
         if (isAMapEnvColor || button == pushButton_foreground_color_2 || button == pushButton_background_color_2 || button == pushButton_lowerLevelColor || button == pushButton_upperLevelColor
-            || button == pushButton_mapInfoBg || button == pushButton_roomBorderColor || button == pushButton_roomCollisionBorderColor) {
+            || button == pushButton_mapInfoBg || button == pushButton_roomBorderColor || button == pushButton_roomCollisionBorderColor || button == pushButton_mapGridColor) {
             if (pHost->mpMap) {
                 // Update the custom environment (room colors)
                 if (isAMapEnvColor) {
@@ -6632,7 +6632,7 @@ void dlgProfilePreferences::applyAll()
             pHost->mMapperShowRoomBorders = checkbox_mMapperShowRoomBorders->isChecked();
         }
         if (mSnapshot.dirty(checkBox_drawUpperLowerLevels)) {
-            pMudlet->mDrawUpperLowerLevels = checkBox_drawUpperLowerLevels->isChecked();
+            pMudlet->setDrawUpperLowerLevels(checkBox_drawUpperLowerLevels->isChecked());
         }
         if (pHost->mpMap) {
             if (mSnapshot.dirty(checkBox_showDefaultArea)) {
@@ -8939,11 +8939,7 @@ void dlgProfilePreferences::slot_changeMapperShowRoomBorders(const bool state)
 
 void dlgProfilePreferences::slot_changeDrawUpperLowerLevels(const bool state)
 {
-    mudlet::self()->mDrawUpperLowerLevels = state;
-    Host* pHost = mpHost;
-    if (pHost && pHost->mpMap && pHost->mpMap->mapper() && pHost->mpMap->mapper()->mp2dMap) {
-        pHost->mpMap->mapper()->mp2dMap->update();
-    }
+    mudlet::self()->setDrawUpperLowerLevels(state);
 }
 
 void dlgProfilePreferences::slot_changeMapperUseAntiAlias(const bool state)
@@ -9126,8 +9122,8 @@ void dlgProfilePreferences::slot_gridSizeChanged(double size)
 {
     if (mpHost) {
         mpHost->mMapGridLineSize = size;
-        if (mpHost->mpMap && mpHost->mpMap->mapper() && mpHost->mpMap->mapper()->mp2dMap) {
-            mpHost->mpMap->mapper()->mp2dMap->update();
+        if (mpHost->mpMap) {
+            mpHost->mpMap->requestMapRepaint();
         }
     }
 }

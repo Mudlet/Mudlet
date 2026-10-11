@@ -263,7 +263,7 @@ private slots:
         QVERIFY(GeometryManager::levelFade(2, false).opacity < GeometryManager::levelFade(1, false).opacity);
     }
 
-    // As the 2D map draws them: the levels above and below in their own colors, laid over the background by their alpha
+    // Every level above or below takes the upper or lower level color, laid over the background by its alpha
     void test_levelsFadeTowardTheUpperAndLowerLevelColors()
     {
         const QColor background(Qt::black);
@@ -321,7 +321,7 @@ private slots:
         QCOMPARE(lowest, -1.0f);
         QCOMPARE(highest, 1.0f);
         QVERIFY(qAbs(widest - 1.0f) < 1e-5f);
-        // Every triangle faces away from the axis or out of a cap, so it is lit from outside
+        // Every triangle is wound counterclockwise seen from outside, as the cube's are
         for (int i = 0; i < mesh.indexCount(); i += 3) {
             QVector3D corners[3];
             for (int k = 0; k < 3; ++k) {
