@@ -32,8 +32,10 @@
 #include "TMap.h"
 #include "TMapViewFrontend.h"
 #include "TMapViewsFrontend.h"
+#include "TMxpFrameManager.h"
 #include "TNullAppFrontend.h"
 #include "TNullConsoleFrontend.h"
+#include "TPrintSink.h"
 #include "TRoomDB.h"
 
 #include "GroupedTest.h"
@@ -55,14 +57,128 @@ QString number(const qreal value)
     return QString::number(value);
 }
 
+QString rect(const QRect& value)
+{
+    return qsl("%1 %2 %3x%4").arg(value.x()).arg(value.y()).arg(value.width()).arg(value.height());
+}
+
+QString size(const QSize& value)
+{
+    return qsl("%1x%2").arg(value.width()).arg(value.height());
+}
+
+// Writes down what reaches a frame's sink, then passes it on
+class RecordingSink final : public TPrintSink
+{
+public:
+    QStringList& mCalls;
+    TPrintSink* mpSink = nullptr;
+
+    explicit RecordingSink(QStringList& calls)
+    : mCalls(calls)
+    {
+    }
+
+    void printFormatted(const QString& text, const std::vector<TChar>& formatting, const TLinkStore& sourceLinkStore) override
+    {
+        mCalls << call("printFormatted", {text});
+        mpSink->printFormatted(text, formatting, sourceLinkStore);
+    }
+    void discardAll() override
+    {
+        mCalls << call("discardAll");
+        mpSink->discardAll();
+    }
+    void discardLastLine() override
+    {
+        mCalls << call("discardLastLine");
+        mpSink->discardLastLine();
+    }
+};
+
+// Writes down what TMxpFrameManager asks of the frames, then does what the null view does. It
+// measures the main console as a view would, so frames are laid out against a real size.
+class RecordingMxpFrames final : public TMxpFrameFrontend
+{
+public:
+    static constexpr QSize scmMainWindowSize{800, 600};
+
+    // Written by the const queries too
+    mutable QStringList mCalls;
+
+    RecordingMxpFrames(TMxpFrameFrontend& frames, Host* pHost)
+    : mFrames(frames)
+    , mpHost(pHost)
+    {
+    }
+
+    void createInternalFrame(const QString& name, const QString& hostName, const QString& title, const QRect& geometry, bool showHeader, bool scrolling) override
+    {
+        mCalls << call("createInternalFrame", {name, hostName, title, rect(geometry), flag(showHeader), flag(scrolling)});
+        mFrames.createInternalFrame(name, hostName, title, geometry, showHeader, scrolling);
+    }
+    std::optional<QSize> createExternalFrame(const QString& name, const QString& title, const QSize& frameSize, bool scrolling) override
+    {
+        mCalls << call("createExternalFrame", {name, title, size(frameSize), flag(scrolling)});
+        return mFrames.createExternalFrame(name, title, frameSize, scrolling);
+    }
+    void createTabFrame(const QString& name, const QString& title, const QString& parentName, const QSize& frameSize, bool scrolling, bool select) override
+    {
+        mCalls << call("createTabFrame", {name, title, parentName, size(frameSize), flag(scrolling), flag(select)});
+        mFrames.createTabFrame(name, title, parentName, frameSize, scrolling, select);
+    }
+    bool removeFromParentTabs(const QString& name, const QString& parentName) override
+    {
+        mCalls << call("removeFromParentTabs", {name, parentName});
+        return mFrames.removeFromParentTabs(name, parentName);
+    }
+    void destroyFrame(const QString& name) override
+    {
+        mCalls << call("destroyFrame", {name});
+        mFrames.destroyFrame(name);
+    }
+    void showFrame(const QString& name) override { mCalls << call("showFrame", {name}); }
+    void focusFrame(const QString& name) override { mCalls << call("focusFrame", {name}); }
+    void setGeometry(const QString& name, const QRect& geometry) override { mCalls << call("setGeometry", {name, rect(geometry)}); }
+    void reportSize() override
+    {
+        mCalls << call("reportSize");
+        mpHost->mMxpFrameManager.setMainConsoleSize(scmMainWindowSize, scmMainWindowSize);
+    }
+    TPrintSink* sink(const QString& name) const override
+    {
+        mCalls << call("sink", {name});
+        mSink.mpSink = mFrames.sink(name);
+        return mSink.mpSink ? &mSink : nullptr;
+    }
+    bool hasFrameWidget(const QString& name) const override
+    {
+        mCalls << call("hasFrameWidget", {name});
+        return mFrames.hasFrameWidget(name);
+    }
+
+private:
+    TMxpFrameFrontend& mFrames;
+    Host* mpHost;
+    mutable RecordingSink mSink{mCalls};
+};
+
 // Writes down what core code asks of the view, then does what the null view does, so the windows it
 // makes still get a model and a place in the window registry for the calls that follow.
 class RecordingConsoleFrontend final : public TNullConsoleFrontend
 {
 public:
-    using TNullConsoleFrontend::TNullConsoleFrontend;
+    explicit RecordingConsoleFrontend(Host* pHost)
+    : TNullConsoleFrontend(pHost)
+    , mFrames(TNullConsoleFrontend::mxpFrames(), pHost)
+    {
+    }
 
     QStringList mCalls;
+    RecordingMxpFrames mFrames;
+
+    TMxpFrameFrontend& mxpFrames() override { return mFrames; }
+    const TMxpFrameFrontend& mxpFrames() const override { return mFrames; }
 
     void createLabel(const QString& windowname, const QString& name, int x, int y, int width, int height, bool fillBackground, bool clickThrough) override
     {
@@ -407,6 +523,7 @@ private slots:
     {
         if (mpRecorder) {
             mpRecorder->mCalls.clear();
+            mpRecorder->mFrames.mCalls.clear();
         }
         mMapView.mCalls.clear();
         mMapView.mSelection.clear();
@@ -509,6 +626,82 @@ setFgColor(255, 0, 0)
 
         // A view repaints from the model's signals; a direct cue as well would draw the same text twice
         QCOMPARE(mpRecorder->mCalls.join(qsl("; ")), QString());
+    }
+
+    void test_mxpFrameTagsReachTheFrames()
+    {
+        const QString result = runLua(qsl(R"lua(
+setBorderTop(0)
+setBorderBottom(0)
+setConfig("specialForceMXPProcessorOn", true)
+feedTriggers([[<FRAME Name="routedFrame" Title="Routed" Align="right" Width="20%" Height="30%">]] .. "\n")
+feedTriggers([[<FRAME Name="routedFrame" Title="Routed" Align="right" Width="20%" Height="30%">]] .. "\n")
+feedTriggers([[<FRAME routedFrame ACTION="focus">]] .. "\n")
+feedTriggers([[<FRAME Name="routedWindow" EXTERNAL Title="Away" Width="300" Height="200" SCROLLING="NO">]] .. "\n")
+assert(windowType("routedWindow") == "miniconsole", "the external frame has no console")
+feedTriggers([[<FRAME routedFrame ACTION="close">]] .. "\n")
+feedTriggers([[<FRAME routedWindow ACTION="close">]] .. "\n")
+setConfig("specialForceMXPProcessorOn", false)
+)lua"));
+        QCOMPARE(result, qsl("ok"));
+
+        const QStringList expected{
+                call("reportSize"),
+                qsl("createInternalFrame(routedFrame, , Routed, 640 0 160x600, true, true)"),
+                qsl("showFrame(routedFrame)"),
+                qsl("focusFrame(routedFrame)"),
+                call("reportSize"),
+                qsl("createExternalFrame(routedWindow, Away, 300x200, false)"),
+                qsl("destroyFrame(routedFrame)"),
+                call("reportSize"),
+                qsl("destroyFrame(routedWindow)"),
+                call("reportSize"),
+        };
+        QCOMPARE(mpRecorder->mFrames.mCalls.join(qsl("; ")), expected.join(qsl("; ")));
+    }
+
+    void test_mxpDestTextReachesTheFrameSink()
+    {
+        const QString result = runLua(qsl(R"lua(
+setConfig("specialForceMXPProcessorOn", true)
+feedTriggers([[<FRAME Name="routedWindow" EXTERNAL Width="300" Height="200">]] .. "\n")
+feedTriggers([[<DEST routedWindow>first routed</DEST>]] .. "\n")
+feedTriggers([[<DEST routedWindow EOL>second routed</DEST>]] .. "\n")
+feedTriggers([[<DEST routedWindow EOF>third routed</DEST>]] .. "\n")
+feedTriggers([[<DEST routedWindow><FRAME Name="routedInside" Align="top" Height="50"></DEST>]] .. "\n")
+local routedLines = table.concat(getLines("routedWindow", 0, getLineCount("routedWindow") + 1), "|")
+assert(routedLines == "third routed|", "the frame holds " .. routedLines)
+feedTriggers([[<FRAME routedWindow ACTION="close">]] .. "\n")
+setConfig("specialForceMXPProcessorOn", false)
+)lua"));
+        QCOMPARE(result, qsl("ok"));
+
+        const QStringList expected{
+                call("reportSize"),
+                qsl("createExternalFrame(routedWindow, routedWindow, 300x200, true)"),
+                qsl("sink(routedWindow)"),
+                qsl("sink(routedWindow)"),
+                qsl("printFormatted(first routed)"),
+                qsl("sink(routedWindow)"),
+                qsl("discardLastLine()"),
+                qsl("sink(routedWindow)"),
+                qsl("printFormatted(second routed)"),
+                qsl("sink(routedWindow)"),
+                qsl("discardAll()"),
+                qsl("sink(routedWindow)"),
+                qsl("printFormatted(third routed)"),
+                qsl("sink(routedWindow)"),
+                call("reportSize"),
+                qsl("hasFrameWidget(routedWindow)"),
+                qsl("hasFrameWidget(routedWindow)"),
+                qsl("createInternalFrame(routedInside, routedWindow, routedInside, 0 0 300x50, false, true)"),
+                qsl("removeFromParentTabs(routedInside, routedWindow)"),
+                qsl("destroyFrame(routedInside)"),
+                call("reportSize"),
+                qsl("destroyFrame(routedWindow)"),
+                call("reportSize"),
+        };
+        QCOMPARE(mpRecorder->mFrames.mCalls.join(qsl("; ")), expected.join(qsl("; ")));
     }
 
     void test_appCallsReachTheAppView()
