@@ -371,6 +371,124 @@ void T2DMap::selectRoomFromOtherView(const int roomId, const Qt::KeyboardModifie
     update();
 }
 
+void T2DMap::beginRectangleSelection(const int roomId, const Qt::KeyboardModifiers modifiers)
+{
+    // As SelectionRectangleHandler's press: Ctrl toggles rooms in what was selected before, Shift adds to it
+    const bool hasShift = modifiers.testFlag(Qt::ShiftModifier);
+    const bool hasCtrl = modifiers.testFlag(Qt::ControlModifier);
+    mMultiSelectionBaseSet = mMultiSelectionSet;
+    if (!hasCtrl && !hasShift) {
+        mMultiSelectionSet.clear();
+    }
+    mMultiSelectionAnchorSet.clear();
+    QList<int> hitRooms;
+    if (roomId > 0) {
+        hitRooms.append(roomId);
+    }
+    addClickedRoomsToSelection(hitRooms, modifiers);
+    if (hasShift) {
+        mMultiSelectionAnchorSet = mMultiSelectionSet;
+    }
+    updateSelectionWidget();
+}
+
+void T2DMap::applyRectangleSelection(const QSet<int>& rectangleSelection, const Qt::KeyboardModifiers modifiers)
+{
+    const QSet<int> previousSelection = mMultiSelectionSet;
+    if (modifiers.testFlag(Qt::ShiftModifier)) {
+        mMultiSelectionSet = mMultiSelectionAnchorSet;
+        mMultiSelectionSet.unite(rectangleSelection);
+    } else if (modifiers.testFlag(Qt::ControlModifier)) {
+        QSet<int> toggledSelection = mMultiSelectionBaseSet;
+        for (const int roomId : rectangleSelection) {
+            if (toggledSelection.contains(roomId)) {
+                toggledSelection.remove(roomId);
+            } else {
+                toggledSelection.insert(roomId);
+            }
+        }
+        mMultiSelectionSet = toggledSelection;
+    } else {
+        mMultiSelectionSet = rectangleSelection;
+    }
+
+    switch (mMultiSelectionSet.size()) {
+    case 0:
+        mMultiSelectionHighlightRoomId = 0;
+        break;
+    case 1:
+        mMultiSelectionHighlightRoomId = *(mMultiSelectionSet.begin());
+        break;
+    default:
+        getCenterSelection();
+        break;
+    }
+
+    if (mMultiSelectionSet.size() > 1) {
+        // Most moves leave the selection as it was, and rebuilding the list
+        // for thousands of rooms takes longer than a mouse move's interval
+        if (mMultiSelectionSet != previousSelection || mMultiSelectionListWidget.isHidden()) {
+            updateSelectionWidget();
+        }
+    } else {
+        mMultiSelectionListWidget.hide();
+    }
+}
+
+void T2DMap::endRectangleSelection()
+{
+    mMultiSelection = false;
+    mMultiSelectionAnchorSet.clear();
+    mMultiSelectionBaseSet.clear();
+    mMultiRect = QRectF();
+    updateSelectionWidget();
+}
+
+void T2DMap::selectRoomsToMove(const QSet<int>& clickedRoomIds, const int roomId)
+{
+    if (!mMultiSelectionSet.contains(roomId)) {
+        mMultiSelectionSet = clickedRoomIds;
+        mMultiSelection = false;
+    }
+    mMultiSelectionHighlightRoomId = roomId;
+}
+
+void T2DMap::moveSelectedRoomsBy(const int dx, const int dy)
+{
+    if ((!dx && !dy) || !mpMap || !mpMap->mpRoomDB) {
+        return;
+    }
+    auto* roomDb = mpMap->mpRoomDB.get();
+    // Rebuilding an area's indexes costs a mouse move's interval on a big map, so it only
+    // beats updating them room by room once nearly every room in the area is moving
+    const TArea* shownArea = roomDb->getArea(mAreaID);
+    const bool rebuildIndexes = shownArea && mMultiSelectionSet.size() * 4 > shownArea->getAreaRooms().size() * 3;
+    QSet<int> dirtyAreas;
+    for (const int roomId : std::as_const(mMultiSelectionSet)) {
+        TRoom* room = roomDb->getRoom(roomId);
+        if (!room) {
+            continue;
+        }
+
+        const int oldX = room->x();
+        const int oldY = room->y();
+        room->offset(dx, dy, 0);
+        if (rebuildIndexes) {
+            dirtyAreas.insert(room->getArea());
+        } else if (auto* area = roomDb->getArea(room->getArea())) {
+            area->moveRoom(roomId, room->z(), oldX, oldY, room->z(), room->x(), room->y());
+        }
+    }
+
+    for (const int areaId : std::as_const(dirtyAreas)) {
+        if (auto* area = roomDb->getArea(areaId)) {
+            area->calcSpan();
+        }
+    }
+
+    mpMap->setUnsaved(__func__);
+}
+
 void T2DMap::InteractionDispatcher::registerHandler(IInteractionHandler* handler, int priority)
 {
     if (!handler) {
@@ -667,10 +785,19 @@ void T2DMap::slot_shiftZdown()
     update();
 }
 
+void T2DMap::setCompanion3DView(QOpenGLWidget* view)
+{
+#if defined(INCLUDE_3DMAPPER)
+    mpCompanion3DView = view;
+#else
+    Q_UNUSED(view)
+#endif
+}
+
 void T2DMap::set3DViewCenter(const int areaId, const int x, const int y, const int z)
 {
 #if defined(INCLUDE_3DMAPPER)
-    GLWidgetFactory::setViewCenter(mpMap->mpM, areaId, x, y, z);
+    GLWidgetFactory::setViewCenter(mIsSecondaryView ? mpCompanion3DView.data() : mpMap->mpM.data(), areaId, x, y, z);
 #else
     Q_UNUSED(areaId)
     Q_UNUSED(x)

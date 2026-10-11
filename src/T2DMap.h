@@ -67,6 +67,7 @@ class QTimer;
 class QTreeWidgetItem;
 class QMouseEvent;
 class QMenu;
+class QOpenGLWidget;
 
 
 class T2DMap : public QWidget
@@ -158,6 +159,16 @@ public:
     void prepareSingleClickSelection(MapInteractionContext& context);
     // A click on a room (0 for none) in another view of this map, such as the 3D one, with the same modifiers as here
     void selectRoomFromOtherView(int roomId, Qt::KeyboardModifiers modifiers);
+    // A selection rectangle in another view of this map, started on a room (0 for none) and then
+    // covering these rooms, adding to or toggling the selection with the same modifiers as here
+    void beginRectangleSelection(int roomId, Qt::KeyboardModifiers modifiers);
+    void applyRectangleSelection(const QSet<int>& rectangleSelection, Qt::KeyboardModifiers modifiers);
+    void endRectangleSelection();
+    // As a press in editing mode on roomId, one of the rooms clicked: those become the rooms to move,
+    // unless roomId is already selected, when the whole selection moves
+    void selectRoomsToMove(const QSet<int>& clickedRoomIds, int roomId);
+    void moveSelectedRoomsBy(int dx, int dy);
+    void updateSelectionWidget();
     std::optional<int> roomIdAtWidgetPosition(const QPoint& widgetPosition, const TArea* area) const;
     QSet<int> roomIdsAtWidgetPosition(const QPoint& widgetPosition, const TArea* area) const;
     void populateUserContextMenus(QMenu& menu);
@@ -201,6 +212,9 @@ public:
     // Secondary view support (for multiple map views feature)
     void setSecondaryView(bool isSecondary) { mIsSecondaryView = isSecondary; }
     bool isSecondaryView() const { return mIsSecondaryView; }
+    // The 3D view a secondary view's map window shows in its place, which changes of area here move;
+    // the mapper's own 3D view is the map's
+    void setCompanion3DView(QOpenGLWidget* view);
 
     // View state getters
     int getAreaId() const { return mAreaID; }
@@ -419,7 +433,6 @@ private:
 
     MapInteractionContext buildInteractionContext(QMouseEvent* event);
 
-    void updateSelectionWidget();
     void resizeMultiSelectionWidget();
     void hideSelectionWidget();
     std::pair<int, int> getMousePosition();
@@ -530,6 +543,7 @@ private:
     int mLastViewedAreaID = -2;
 
     bool mIsSecondaryView = false;
+    QPointer<QOpenGLWidget> mpCompanion3DView;
 
 private slots:
     void slot_createRoom();

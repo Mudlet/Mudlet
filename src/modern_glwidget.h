@@ -42,6 +42,7 @@
 #include <QOpenGLVertexArrayObject>
 #include <QOpenGLWidget>
 #include <QPointer>
+#include <QSet>
 #include <QTimer>
 #include <QEasingCurve>
 
@@ -92,6 +93,12 @@ public:
     void setCompanion2DMap(T2DMap* map);
     // The room drawn under this point of the view, or 0
     int roomAt(const QPoint& position);
+    // A view in a map window of its own: it shows the area it is told to rather than following the player
+    void setSecondaryView(bool secondary);
+    bool secondaryView() const { return mSecondaryView; }
+    // The rooms on show drawn wholly inside this rectangle of the view, on the level in the middle of
+    // the view or, with allLevels, on any level shown
+    QSet<int> roomsInRectangle(const QRect& rectangle, bool allLevels);
 
     QSize minimumSizeHint() const override;
     QSize sizeHint() const override;
@@ -249,7 +256,16 @@ private:
     bool mDistanceRequested = false;
 
     QPointer<T2DMap> mp2DMap;
+    bool mSecondaryView = false;
     QPoint mPressPosition;
+    // In editing mode a left drag from empty space draws a selection rectangle, as on the 2D map
+    bool mRectangleSelecting = false;
+    bool mRectangleDragged = false;
+    QRect mSelectionRectangle;
+    // In editing mode a left drag from a room moves the selected rooms, on that room's level
+    bool mMovingRooms = false;
+    QPointF mRoomMoveLastPoint;
+    int mRoomMoveLevel = 0;
     // A click that did not pick its room on the press does so on the release, unless it became a drag
     bool mClickPending = false;
     struct SavedCamera
@@ -295,6 +311,11 @@ private:
     void zoomBySteps(float steps);
     void panByRooms(int right, int up);
     void selectRoom(int roomId, Qt::KeyboardModifiers modifiers);
+    bool editingMap() const;
+    // Where the pointer at this point of the view meets the plane of map level z
+    std::optional<QPointF> mapPointOnLevel(const QPoint& position, int z);
+    void startRoomMove(int roomId);
+    void holdView();
     void showContextMenu(const QPoint& position);
     void raiseMousePressEvent();
     QString roomToolTip(int roomId) const;
