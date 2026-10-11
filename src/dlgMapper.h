@@ -83,7 +83,7 @@ public:
     QSet<int> selectedRooms() const override { return mp2dMap->mMultiSelectionSet; }
     int centerSelectedRoom() const override { return mp2dMap->getCenterSelectedRoomId(); }
     void clearRoomSelection() override { mp2dMap->clearSelection(); }
-    int shownAreaId() const override { return mp2dMap->getAreaId(); }
+    int shownAreaId() const override;
     std::pair<bool, QString> setMapZoom(qreal zoom, int areaId) override;
     std::pair<bool, QString> exportAreaToImage(int areaId, const QString& filePath, std::optional<int> zLevel, qreal zoom, bool exportAllZLevels) override
     {

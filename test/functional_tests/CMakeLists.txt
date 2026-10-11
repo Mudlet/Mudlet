@@ -244,7 +244,7 @@ set(MAP_GROUP_TEST_SOURCES
 
 # CameraController and GeometryManager are only compiled into the library with the 3D mapper
 if(USE_3DMAPPER)
-    list(APPEND MAP_GROUP_TEST_SOURCES CameraAngleLimitTest.cpp CameraViewTest.cpp ExitSceneTest.cpp LabelTextureCacheTest.cpp Map3DViewInteractionTest.cpp Map3DViewSyncTest.cpp ModernMapperGeometryTest.cpp)
+    list(APPEND MAP_GROUP_TEST_SOURCES CameraAngleLimitTest.cpp CameraViewTest.cpp ExitSceneTest.cpp LabelTextureCacheTest.cpp Map3DViewInteractionTest.cpp Map3DViewSyncTest.cpp ModernMapperGeometryTest.cpp ModernRoomTextureTest.cpp)
 endif()
 
 # Packages and modules: installing them, saving them and removing them
@@ -560,6 +560,9 @@ endforeach()
 # Offscreen has no GL context, so this skips; listed as not run rather than as passed
 if(TEST LabelTextureCacheTest)
     set_tests_properties(LabelTextureCacheTest PROPERTIES SKIP_REGULAR_EXPRESSION "SKIP   : LabelTextureCacheTest::initTestCase")
+endif()
+if(TEST ModernRoomTextureTest)
+    set_tests_properties(ModernRoomTextureTest PROPERTIES SKIP_REGULAR_EXPRESSION "SKIP   : ModernRoomTextureTest::")
 endif()
 
 # A buffer's default font gives the same row count for its pane's stale and laid-out

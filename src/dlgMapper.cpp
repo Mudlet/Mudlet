@@ -703,18 +703,28 @@ std::pair<bool, QString> dlgMapper::setMapZoom(qreal zoom, int areaId)
 {
 #if defined(INCLUDE_3DMAPPER)
     auto* modernWidget = qobject_cast<ModernGLWidget*>(glWidget);
-    // The hidden 2D map keeps the area it last showed, while the 3D view moves on
-    if (!areaId && modernWidget && showing3DView()) {
-        areaId = modernWidget->areaShownNext();
+    if (!areaId) {
+        areaId = shownAreaId();
     }
     auto result = mp2dMap->setMapZoom(zoom, areaId);
     if (result.first && modernWidget) {
-        modernWidget->applyMapZoom(zoom, areaId ? areaId : mp2dMap->getAreaId());
+        modernWidget->applyMapZoom(zoom, areaId);
     }
     return result;
 #else
     return mp2dMap->setMapZoom(zoom, areaId);
 #endif
+}
+
+int dlgMapper::shownAreaId() const
+{
+#if defined(INCLUDE_3DMAPPER)
+    // The hidden 2D map keeps the area it last showed, while the 3D view moves on
+    if (auto* modernWidget = qobject_cast<ModernGLWidget*>(glWidget); modernWidget && showing3DView()) {
+        return modernWidget->areaShownNext();
+    }
+#endif
+    return mp2dMap->getAreaId();
 }
 
 bool dlgMapper::showing3DView() const
