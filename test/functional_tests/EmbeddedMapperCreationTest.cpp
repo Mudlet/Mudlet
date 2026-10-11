@@ -30,12 +30,14 @@
  */
 
 #include <QApplication>
+#include <QDialog>
 #include <QDockWidget>
 #include <QFileInfo>
 #include <QOpenGLWidget>
 #include <QPointer>
 #include <QSignalSpy>
 #include <QTemporaryDir>
+#include <QWindow>
 #include <QtTest/QtTest>
 #include <chrono>
 
@@ -185,23 +187,84 @@ private slots:
         QVERIFY2(!hiddenSpy.isEmpty() && !hiddenSpy.last().at(0).toBool(), "the dock was not hidden as the window went, so this case covers nothing");
     }
 
+    // Qt only hands native children to a top-level it recreates, so any other child window
+    // must be relinked to the window it belongs to, and to no other
+    void test_aRecreatedWindowTakesBackItsOrphanedDialogs()
+    {
+        mudlet::self()->show();
+        mudlet::self()->slot_showMapperDialog();
+        QDockWidget* pDock = mudlet::self()->getMainWindowDockWidget(qsl("map_%1").arg(mHostname));
+        QVERIFY2(pDock, "slot_showMapperDialog() created no map dock, so this case covers nothing");
+        pDock->setFloating(true);
+        qApp->processEvents();
+        auto* pMainDialog = new QDialog(mudlet::self());
+        auto* pMapDialog = new QDialog(pDock->widget());
+        pMainDialog->show();
+        pMapDialog->show();
+        qApp->processEvents();
+        QVERIFY2(pDock->windowHandle() && pDock->windowHandle() != mudlet::self()->windowHandle(), "the map dock is not a window of its own, so this case covers nothing");
+        QCOMPARE(pMapDialog->windowHandle()->transientParent(), pDock->windowHandle());
+        pMainDialog->windowHandle()->setTransientParent(nullptr);
+        pMapDialog->windowHandle()->setTransientParent(nullptr);
+
+        QEvent mainWinIdChange(QEvent::WinIdChange);
+        QCoreApplication::sendEvent(mudlet::self(), &mainWinIdChange);
+        QCOMPARE(pMainDialog->windowHandle()->transientParent(), mudlet::self()->windowHandle());
+        QVERIFY2(!pMapDialog->windowHandle()->transientParent(), "a dialog was linked to the main window rather than to the floating map it belongs to");
+
+        QEvent dockWinIdChange(QEvent::WinIdChange);
+        QCoreApplication::sendEvent(pDock, &dockWinIdChange);
+        QCOMPARE(pMapDialog->windowHandle()->transientParent(), pDock->windowHandle());
+    }
+
 #if defined(INCLUDE_3DMAPPER)
-    // Replacing a 3D view the event loop hasn't shown yet must not leave the old
-    // widget mapped as a window of its own
+    // The first GL view parented into a window makes Qt recreate it; a dialog left open
+    // across that would no longer stop Mudlet from quitting once the main window closes
+    void test_aDialogKeepsItsWindowWhenA3DViewFirstShowsInAFloatingMap()
+    {
+        mudlet::self()->show();
+        mudlet::self()->slot_showMapperDialog();
+        QDockWidget* pDock = mudlet::self()->getMainWindowDockWidget(qsl("map_%1").arg(mHostname));
+        QVERIFY2(pDock, "slot_showMapperDialog() created no map dock, so this case covers nothing");
+        pDock->setFloating(true);
+        qApp->processEvents();
+        auto* pDialog = new QDialog(pDock->widget());
+        pDialog->show();
+        qApp->processEvents();
+        QVERIFY(mpHost->getLuaInterpreter()->compileAndExecuteScript(qsl("assert(setConfig('experiment.3dmap.modernmapper', true))")));
+        QPointer<QWindow> pWindowBefore = pDock->windowHandle();
+        QVERIFY(pWindowBefore);
+        QCOMPARE(pDialog->windowHandle()->transientParent(), pWindowBefore.data());
+
+        QVERIFY(mpHost->getLuaInterpreter()->compileAndExecuteScript(qsl("assert(setConfig('show3dMapView', true))")));
+        qApp->processEvents();
+        if (pWindowBefore && pDock->windowHandle() == pWindowBefore) {
+            QSKIP("Qt did not recreate the floating map's window for the GL view here, so there is nothing to relink");
+        }
+        QVERIFY2(pDialog->windowHandle()->transientParent(), "the dialog lost its window when the floating map was recreated");
+        QCOMPARE(pDialog->windowHandle()->transientParent(), pDock->windowHandle());
+    }
+
+    // Replacing a 3D view in the same event-loop turn that inserted it must not let the show
+    // its layout queued map the old widget as a window of its own
     void test_replacingThe3DViewLeavesNoStrayWindow()
     {
         mudlet::self()->slot_showMapperDialog();
         qApp->processEvents();
-        QVERIFY(mpHost->getLuaInterpreter()->compileAndExecuteScript(qsl("assert(setConfig('experiment.3dmap.modernmapper', true))\n"
-                                                                         "assert(setConfig('show3dMapView', true))\n"
-                                                                         "assert(getConfig('show3dMapView'))\n"
-                                                                         "assert(setConfig('experiment.3dmap.modernmapper', false))\n"
+        QDockWidget* pDock = mudlet::self()->getMainWindowDockWidget(qsl("map_%1").arg(mHostname));
+        QVERIFY2(pDock && pDock->widget(), "slot_showMapperDialog() created no map dock, so this case covers nothing");
+        QVERIFY(mpHost->getLuaInterpreter()->compileAndExecuteScript(qsl("assert(setConfig('show3dMapView', true))\n"
                                                                          "assert(getConfig('show3dMapView'))")));
+        QPointer<QOpenGLWidget> pOldView = pDock->widget()->findChild<QOpenGLWidget*>(qsl("glWidget"));
+        QVERIFY2(pOldView && pOldView->inherits("GLWidget"), "the classic renderer did not make the 3D view, so this case covers nothing");
+        QVERIFY(mpHost->getLuaInterpreter()->compileAndExecuteScript(qsl("assert(setConfig('experiment.3dmap.modernmapper', true))\n"
+                                                                         "assert(getConfig('show3dMapView'))")));
+        auto* pNewView = pDock->widget()->findChild<QOpenGLWidget*>(qsl("glWidget"));
+        QVERIFY2(pNewView && pNewView != pOldView && pNewView->inherits("ModernGLWidget"), "switching renderers did not replace the 3D view, so this case covers nothing");
+
         qApp->processEvents();
-        const auto topLevelWidgets = QApplication::topLevelWidgets();
-        for (QWidget* pWidget : topLevelWidgets) {
-            QVERIFY2(!(pWidget->isVisible() && qobject_cast<QOpenGLWidget*>(pWidget)), "a replaced 3D view came back as a window of its own");
-        }
+        QVERIFY2(pOldView, "the replaced 3D view was deleted inside processEvents(), so whether it was shown went unchecked");
+        QVERIFY2(!pOldView->isVisible(), "a replaced 3D view came back as a window of its own");
     }
 #endif
 
@@ -511,10 +574,7 @@ private:
 
     bool mapOpenEventCountIs(const int expected) const { return mpHost->getLuaInterpreter()->compileAndExecuteScript(qsl("assert(mapOpenSeen == %1)").arg(expected)); }
 
-    void deleteProfileDirectory() const
-    {
-        TestProfile::removeProfileDirectory(mHostname);
-    }
+    void deleteProfileDirectory() const { TestProfile::removeProfileDirectory(mHostname); }
 };
 
 #include "EmbeddedMapperCreationTest.moc"

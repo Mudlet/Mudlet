@@ -28,6 +28,7 @@
  */
 
 #include <QDockWidget>
+#include <QOpenGLContext>
 #include <QSignalSpy>
 #include <QTemporaryDir>
 #include <QtTest/QtTest>
@@ -38,6 +39,7 @@
 #include "PortableModeTestHelper.h"
 #include "ProfileTestHelper.h"
 #include "T2DMap.h"
+#include "TArea.h"
 #include "TMap.h"
 #include "TRoomDB.h"
 #include "TelnetServerStub.h"
@@ -320,16 +322,121 @@ private slots:
         for (int roll = 1; roll <= 20; ++roll) {
             pMapper->slider_yRot->setValue(roll);
         }
-        // Has the view report its camera back to the sliders
+        // Has the view report its camera back to the sliders; without the report they keep what was set
+        QSignalSpy reported(pModern, &ModernGLWidget::cameraControlsChanged);
         pModern->shiftCamera(0.0f, 0.0f, 0.0f);
+        QCOMPARE(reported.count(), 1);
         QCOMPARE(pMapper->slider_yRot->value(), 20);
         QCOMPARE(pMapper->slider_zRot->value(), 0);
 
         pMapper->slider_zRot->setValue(30);
         pModern->shiftCamera(0.0f, 0.0f, 0.0f);
+        QCOMPARE(reported.count(), 2);
         QCOMPARE(pMapper->slider_xRot->value(), 100);
         QCOMPARE(pMapper->slider_yRot->value(), 20);
         QCOMPARE(pMapper->slider_zRot->value(), 30);
+    }
+
+    // While the view follows the player, the next paint shows the player's area, wherever the view is now
+    void test_theGridModeCheckLooksAtTheAreaTheNextPaintShows()
+    {
+        dlgMapper* pMapper = mapperShowing2DAtThePlayer();
+        QVERIFY(pMapper);
+        pMapper->show3DView(true);
+        auto* pModern = qobject_cast<ModernGLWidget*>(pMapper->glWidget);
+        QVERIFY(pModern);
+        TArea* pPlayerArea = map()->mpRoomDB->getArea(mPlayerAreaId);
+        TArea* pOtherArea = map()->mpRoomDB->getArea(mOtherAreaId);
+        QVERIFY(pPlayerArea && pOtherArea);
+        const auto noGridMode = qScopeGuard([pPlayerArea, pOtherArea]() {
+            pPlayerArea->gridMode = false;
+            pOtherArea->gridMode = false;
+        });
+
+        pOtherArea->gridMode = true;
+        pModern->setViewCenter(mOtherAreaId, 20, 20, 0);
+        QVERIFY2(pModern->cameraFixedByGridMode(), "the view is panned to a grid-mode area");
+        pModern->followPlayer();
+        QCOMPARE(pModern->shownAreaId(), mOtherAreaId);
+        QVERIFY2(!pModern->cameraFixedByGridMode(), "the next paint shows the player's area, which is not in grid mode");
+
+        pOtherArea->gridMode = false;
+        pPlayerArea->gridMode = true;
+        QVERIFY2(pModern->cameraFixedByGridMode(), "the next paint shows the player's area, which is in grid mode");
+        pModern->setViewCenter(mOtherAreaId, 20, 20, 0);
+        QVERIFY2(!pModern->cameraFixedByGridMode(), "the view is panned away from the player's grid-mode area");
+    }
+
+    // Grid mode fixes the angles, not the distance
+    void test_aGridModeAreaStillTakesTheDistance()
+    {
+        dlgMapper* pMapper = mapperShowing2DAtThePlayer();
+        QVERIFY(pMapper);
+        TArea* pPlayerArea = map()->mpRoomDB->getArea(mPlayerAreaId);
+        QVERIFY(pPlayerArea);
+        const auto noGridMode = qScopeGuard([pPlayerArea]() {
+            pPlayerArea->gridMode = false;
+        });
+        pPlayerArea->gridMode = true;
+        // A fresh view, asked before its context can be found to have failed, as a script showing the view and
+        // setting its camera in one go does
+        pMapper->recreate3DView();
+        pMapper->show3DView(true);
+        QVERIFY(qobject_cast<ModernGLWidget*>(pMapper->glWidget));
+        pMapper->slider_scale->setValue(0);
+        const auto [moved, refusal] = pMapper->set3DViewCameraPosition(0.5f, 45.0f, 270.0f);
+        QVERIFY(!moved);
+        QCOMPARE(refusal, qsl("the area shown in the 3D view is in grid mode, which always looks straight down, so only the distance was applied"));
+        QVERIFY2(pMapper->slider_scale->value() > 0, "the 3D view did not zoom in");
+    }
+
+    // The view only shows why it could not start, so moving its camera would do nothing
+    void test_aViewThatCouldNotStartRefusesCameraMoves()
+    {
+        dlgMapper* pMapper = mapperShowing2DAtThePlayer();
+        QVERIFY(pMapper);
+        pMapper->show3DView(true);
+        QCoreApplication::processEvents();
+        auto* pModern = qobject_cast<ModernGLWidget*>(pMapper->glWidget);
+        QVERIFY(pModern);
+        if (pModern->failureMessage().isEmpty()) {
+            QSKIP("this machine started the modern 3D view");
+        }
+        const QString refusal = qsl("the modern 3D map view could not start: %1").arg(pModern->failureMessage());
+        QCOMPARE(pMapper->set3DViewCameraPosition(2.0f, 45.0f, 270.0f), std::make_pair(false, refusal));
+        QCOMPARE(pMapper->shift3DViewCamera(0.0f, 30.0f, 0.0f), std::make_pair(false, refusal));
+    }
+
+    // Each retry would leak the context that failed, for either renderer
+    void test_aContextThatCouldNotBeCreatedIsNotRetried()
+    {
+        dlgMapper* pMapper = mapperShowing2DAtThePlayer();
+        QVERIFY(pMapper);
+        // A skip on the classic pass would otherwise leave the tests after this one without a modern view
+        const auto modernAgain = qScopeGuard([this, pMapper]() {
+            mpHost->setExperimentEnabled(qsl("experiment.3dmap.modernmapper"), true);
+            pMapper->recreate3DView();
+        });
+        for (const bool modern : {false, true}) {
+            QVERIFY(mpHost->setExperimentEnabled(qsl("experiment.3dmap.modernmapper"), modern).first);
+            pMapper->recreate3DView();
+            pMapper->show3DView(true);
+            QCoreApplication::processEvents();
+            QOpenGLWidget* pWidget = pMapper->glWidget;
+            QVERIFY(pWidget);
+            QCOMPARE(qobject_cast<ModernGLWidget*>(pWidget) != nullptr, modern);
+            QOpenGLContext* pFirstContext = pWidget->context();
+            if (!pFirstContext || pWidget->isValid()) {
+                QSKIP("this machine created a GL context, so there is no failed one to retry");
+            }
+            pWidget->hide();
+            pWidget->show();
+            pWidget->resize(pWidget->size() + QSize(10, 10));
+            pWidget->repaint();
+            QCoreApplication::processEvents();
+            // A leaked context is never freed, so its address cannot come back for a new one
+            QVERIFY2(pWidget->context() == pFirstContext, modern ? "the modern 3D view tried again for a context" : "the classic 3D view tried again for a context");
+        }
     }
 
     void test_setMapZoomFramesThatManyRoomsIn3D()
@@ -424,10 +531,11 @@ private slots:
         QVERIFY(pMapper->setMapZoom(20.0, 0).first);
         const int framedWhileHidden = lastScale();
 
-        // As a script would in one go: show3DView lays the view out at once, so the camera is set before any paint
+        // As set3DViewCameraPosition does for a script in one go: show3DView lays the view out at once, so the
+        // camera is set before any paint. Called directly, as offscreen the view has no context and that refuses
         pMapper->show3DView(true);
         QVERIFY(pModern->isVisible() && pModern->height() > pModern->width());
-        QVERIFY(pMapper->set3DViewCameraPosition(2.0f, 45.0f, 270.0f).first);
+        pModern->setCameraPosition(2.0f, 45.0f, 270.0f);
         const int requested = lastScale();
         QVERIFY(requested != framedWhileHidden);
         // Neither a later resize nor a paint may reframe it
