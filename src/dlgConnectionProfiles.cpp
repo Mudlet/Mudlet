@@ -1198,7 +1198,7 @@ void dlgConnectionProfiles::reallyDeleteProfile(const QString& profile)
         return;
     }
 
-    namesWithSignInBeingRemoved().insert(removalKey(profile));
+    ++namesWithSignInBeingRemoved()[removalKey(profile)];
     QPointer<dlgConnectionProfiles> safeThis = this;
 
     // Clean up keychain entries for the deleted profile
@@ -1273,9 +1273,9 @@ void dlgConnectionProfiles::reallyDeleteProfile(const QString& profile)
     }
 }
 
-/*static*/ QSet<QString>& dlgConnectionProfiles::namesWithSignInBeingRemoved()
+/*static*/ QHash<QString, int>& dlgConnectionProfiles::namesWithSignInBeingRemoved()
 {
-    static QSet<QString> names;
+    static QHash<QString, int> names;
     return names;
 }
 
@@ -1286,31 +1286,58 @@ void dlgConnectionProfiles::reallyDeleteProfile(const QString& profile)
 
 /*static*/ QString dlgConnectionProfiles::removalKey(const QString& name)
 {
+    // Folded only where profile folders, and the credential files beside them, ignore case: elsewhere a
+    // name differing in case is another profile, with a sign-in of its own
+#if defined(Q_OS_WINDOWS) || defined(Q_OS_MACOS)
     return name.trimmed().toCaseFolded();
+#else
+    return name.trimmed();
+#endif
+}
+
+/*static*/ std::function<void(std::function<void()> startRemoval)>& dlgConnectionProfiles::signInRemovalStarterForTesting()
+{
+    static std::function<void(std::function<void()>)> starter;
+    return starter;
 }
 
 /*static*/ void dlgConnectionProfiles::forgetSignInOfRemovedProfile(const QString& profile, QPointer<dlgConnectionProfiles> dialog, bool passwordsRemoved)
 {
-    GMCPAuthenticator::forgetSavedSignInOfRemovedProfile(profile, [profile, dialog, passwordsRemoved](bool signInRemoved) {
-        namesWithSignInBeingRemoved().remove(removalKey(profile));
-        // Only when it is the form being refused: revalidating clears the notification area, which may
-        // be saying that the removal itself went through
-        if (dialog && removalKey(dialog->profile_name_entry->text()) == removalKey(profile)) {
-            dialog->validateProfile();
-        }
-        if (dialog && !(passwordsRemoved && signInRemoved)) {
-            // Next turn of the event loop: without a keychain this answers before the removal has put up
-            // its own notice, which would otherwise replace this one
-            QTimer::singleShot(0, dialog.data(), [dialog, profile]() {
-                if (dialog) {
-                    //: %1 is a profile name. Shown when the profile was removed but its saved password or sign-in could not be deleted from where it is kept, e.g. the computer's password manager was locked
-                    dialog->showRemovalProblem(tr("'%1' was removed, but its saved password or sign-in could not be deleted, so it is still stored on this computer. "
-                                                  "Don't make a new profile called '%1' until it has been removed.")
-                                                       .arg(profile));
+    auto startRemoval = [profile, dialog, passwordsRemoved]() {
+        GMCPAuthenticator::forgetSavedSignInOfRemovedProfile(profile, [profile, dialog, passwordsRemoved](bool signInRemoved) {
+            const QString key = removalKey(profile);
+            auto& pending = namesWithSignInBeingRemoved();
+            if (--pending[key] <= 0) {
+                pending.remove(key);
+                // Every connection dialog, not just the one that removed it: one opened since would otherwise
+                // stay refused until a field is edited. Only where it is the form being refused, as
+                // revalidating clears the notification area, which may be saying the removal went through.
+                for (auto* window : QApplication::topLevelWidgets()) {
+                    auto* openDialog = qobject_cast<dlgConnectionProfiles*>(window);
+                    if (openDialog && removalKey(openDialog->profile_name_entry->text()) == key) {
+                        openDialog->validateProfile();
+                    }
                 }
-            });
-        }
-    });
+            }
+            if (dialog && !(passwordsRemoved && signInRemoved)) {
+                // Next turn of the event loop: without a keychain this answers before the removal has put up
+                // its own notice, which would otherwise replace this one
+                QTimer::singleShot(0, dialog.data(), [dialog, profile]() {
+                    if (dialog) {
+                        //: %1 is a profile name. Shown when the profile was removed but its saved password or sign-in could not be deleted from where it is kept, e.g. the computer's password manager was locked
+                        dialog->showRemovalProblem(tr("'%1' was removed, but its saved password or sign-in could not be deleted, so it is still stored on this computer. "
+                                                      "Don't make a new profile called '%1' until it has been removed.")
+                                                           .arg(profile));
+                    }
+                });
+            }
+        });
+    };
+    if (auto& starter = signInRemovalStarterForTesting()) {
+        starter(std::move(startRemoval));
+    } else {
+        startRemoval();
+    }
 }
 
 // called when the 'delete' button is pressed, raises a dialog to confirm deletion
@@ -2305,13 +2332,13 @@ bool dlgConnectionProfiles::copyProfileWidget(QString& profile_name, QString& ol
         int i = 1;
         do {
             profile_name = profile_name.left(profile_name.size() - 1) + QString::number(profile_name.at(profile_name.size() - 1).digitValue() + i++);
-        } while (mProfileList.contains(profile_name));
+        } while (mProfileList.contains(profile_name) || signInRemovalPending(profile_name));
     } else {
         int i = 1;
         QString profile_name2;
         do {
             profile_name2 = profile_name + QString::number(i++);
-        } while (mProfileList.contains(profile_name2));
+        } while (mProfileList.contains(profile_name2) || signInRemovalPending(profile_name2));
         profile_name = profile_name2;
     }
 

@@ -24,10 +24,11 @@
  ***************************************************************************/
 
 #include "ui_connection_profiles.h"
+#include <functional>
 #include <optional>
+#include <QHash>
 #include <QPointer>
 #include <QRegularExpression>
-#include <QSet>
 #include <QTimer>
 #include <QKeyEvent>
 
@@ -150,11 +151,15 @@ private:
     void reallyDeleteProfile(const QString& profile);
     // A removed profile's name is refused until the removal of its saved sign-in has answered, since a
     // profile made or connected under it meanwhile would read it. Process-wide: the removal outlives the
-    // dialog. Held as removalKey()s, because a case-insensitive disk files a variant in the same place.
-    static QSet<QString>& namesWithSignInBeingRemoved();
+    // dialog. Held as removalKey()s, because a case-insensitive disk files a variant in the same place, and
+    // counted, because the same name can be removed again before the first removal answers.
+    static QHash<QString, int>& namesWithSignInBeingRemoved();
     static QString removalKey(const QString& name);
     // passwordsRemoved: whether the profile's saved passwords were deleted; the player is told if they or the sign-in were not
     static void forgetSignInOfRemovedProfile(const QString& profile, QPointer<dlgConnectionProfiles> dialog, bool passwordsRemoved);
+    // Test-only: when set, it is handed each removal of a removed profile's sign-in to start, so a test
+    // can hold one back the way a slow keychain does
+    static std::function<void(std::function<void()> startRemoval)>& signInRemovalStarterForTesting();
     bool profileRemovable(const QString& profile) const;
     void updateRemoveButtonState(const QString& profile);
     void showRemovalProblem(const QString& message);
