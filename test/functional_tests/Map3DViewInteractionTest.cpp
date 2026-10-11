@@ -1614,7 +1614,7 @@ private slots:
         QVERIFY2(tipWithTheArrow.contains(qsl("Room ID: %1").arg(kEastRoomId)) && !tipWithTheArrow.contains(qsl("Other Area")), qPrintable(tipWithTheArrow));
     }
 
-    // Hovering, clicking, the room menu and picking a room up to move it all act on the room the tooltip names
+    // Hovering, clicking with or without Ctrl or Shift, the room menu and picking a room up to move it all act on the room the tooltip names
     // and a double click walks to: the viewed level's, not the see-through room above it that is nearer
     void test_everyPointerActionPicksTheViewedLevelsRoomUnderARoomAbove()
     {
@@ -1634,6 +1634,13 @@ private slots:
         p2dMap->mMultiSelectionSet.clear();
         QTest::mouseClick(pModern, Qt::LeftButton, Qt::NoModifier, eastRoom);
         const QSet<int> clicked = selection();
+        // With Ctrl or Shift the room is picked on the release, as the press may begin an orbit
+        p2dMap->mMultiSelectionSet.clear();
+        QTest::mouseClick(pModern, Qt::LeftButton, Qt::ControlModifier, eastRoom);
+        const QSet<int> ctrlClicked = selection();
+        p2dMap->mMultiSelectionSet.clear();
+        QTest::mouseClick(pModern, Qt::LeftButton, Qt::ShiftModifier, eastRoom);
+        const QSet<int> shiftClicked = selection();
         p2dMap->mMultiSelectionSet.clear();
         p2dMap->mMapViewOnly = false;
         QTest::mouseClick(pModern, Qt::RightButton, Qt::NoModifier, eastRoom);
@@ -1654,6 +1661,8 @@ private slots:
         QCOMPARE(nearestHit, upperRoomId);
         QCOMPARE(hovered, kEastRoomId);
         QCOMPARE(clicked, QSet<int>{kEastRoomId});
+        QCOMPARE(ctrlClicked, QSet<int>{kEastRoomId});
+        QCOMPARE(shiftClicked, QSet<int>{kEastRoomId});
         QVERIFY2(menu, "right-clicking the room opened no menu");
         QCOMPARE(menuFor, QSet<int>{kEastRoomId});
         QVERIFY(moving);
