@@ -491,6 +491,44 @@ private slots:
         QCOMPARE(areaExits.first().to, QVector3D(0, -1, 0));
     }
 
+    // Picking asks for the area exits alone, which must be the very ones the drawn scene has
+    void test_areaExitsAloneAreTheDrawnScenesAreaExits()
+    {
+        const int otherAreaId = map()->mpRoomDB->addArea(qsl("Other Area"));
+        TRoom* pHere = addRoomAt(1, mAreaId, 0, 0);
+        TRoom* pNeighbor = addRoomAt(2, mAreaId, 0, 1);
+        TRoom* pThere = addRoomAt(3, otherAreaId, 5, 0);
+        TRoom* pAbove = addRoomAt(4, mAreaId, 0, 0, 1);
+        QVERIFY(pHere && pNeighbor && pThere && pAbove);
+        pHere->setExit(2, DIR_NORTH);
+        pNeighbor->setExit(1, DIR_SOUTH);
+        pHere->setExit(3, DIR_EAST);
+        pHere->setExit(3, DIR_IN);
+        pHere->exitStubs.append(DIR_WEST);
+        pAbove->setExit(3, DIR_SOUTH);
+        pNeighbor->setExit(3, DIR_WEST);
+        pNeighbor->customLines.insert(qsl("w"), {QPointF(-0.5, 1.0), QPointF(-1.0, 1.0)});
+        pNeighbor->customLinesColor.insert(qsl("w"), QColor(Qt::cyan));
+        pNeighbor->customLinesStyle.insert(qsl("w"), Qt::SolidLine);
+
+        ExitScene::Options sceneOptions = options();
+        sceneOptions.largeAreaExitArrows = true;
+        const ExitScene::Scene drawn = build(sceneOptions);
+        sceneOptions.areaExitsOnly = true;
+        const ExitScene::Scene picked = build(sceneOptions);
+
+        QCOMPARE(drawn.areaExits.size(), 2);
+        QCOMPARE(picked.areaExits.size(), drawn.areaExits.size());
+        for (qsizetype index = 0; index < drawn.areaExits.size(); ++index) {
+            QCOMPARE(picked.areaExits.at(index).destinationId, drawn.areaExits.at(index).destinationId);
+            QCOMPARE(picked.areaExits.at(index).from, drawn.areaExits.at(index).from);
+            QCOMPARE(picked.areaExits.at(index).to, drawn.areaExits.at(index).to);
+            QCOMPARE(picked.areaExits.at(index).level, drawn.areaExits.at(index).level);
+        }
+        QVERIFY(picked.segments.isEmpty());
+        QVERIFY(picked.triangles.isEmpty());
+    }
+
     // An upright arrow's fill stands off its outline's plane on both sides, so that it shows from either
     void test_uprightAreaExitArrowShowsItsFillFromEitherSide()
     {

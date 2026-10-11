@@ -66,7 +66,7 @@ void GeometryManager::initialize()
     }
 
     generateCubeTemplate();
-    mCylinderTemplate = cylinderMesh(24);
+    mCylinderTemplate = cylinderMesh(scmCylinderSegments);
     mInitialized = true;
 }
 

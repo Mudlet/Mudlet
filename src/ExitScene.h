@@ -45,6 +45,8 @@ struct Options
     // In and out exits drawn as a short stub from their room, rather than all the way
     bool inOutStubs = false;
     bool largeAreaExitArrows = false;
+    // Only where area exits can be clicked, with nothing to draw, for picking without the cost of the whole scene
+    bool areaExitsOnly = false;
     QColor exitColor;
     // The map's background, against which area exits are outlined
     QColor background;

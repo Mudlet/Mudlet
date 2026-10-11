@@ -2188,11 +2188,12 @@ int ModernGLWidget::areaExitAt(const QPoint& position)
     const QPointF pointer(position);
     int nearestExit = 0;
     qreal nearestPixels = std::numeric_limits<qreal>::max();
-    for (const ExitScene::AreaExit& areaExit : ExitScene::build(*mpMap, *mpHost, exitSceneOptions()).areaExits) {
-        // Only the viewed level's, as only those are offered on the 2D map
-        if (areaExit.level != mMapCenterZ) {
-            continue;
-        }
+    ExitScene::Options options = exitSceneOptions();
+    options.areaExitsOnly = true;
+    // Only the viewed level's, as only those are offered on the 2D map
+    options.levelsAbove = 0;
+    options.levelsBelow = 0;
+    for (const ExitScene::AreaExit& areaExit : ExitScene::build(*mpMap, *mpHost, options).areaExits) {
         const std::optional<QPointF> from = mCameraController.pixelForPoint(areaExit.from);
         const std::optional<QPointF> to = mCameraController.pixelForPoint(areaExit.to);
         if (!from || !to) {
@@ -2298,8 +2299,8 @@ QSet<int> ModernGLWidget::roomsInRectangle(const QRect& rectangle, const bool al
     const QRectF bounds(rectangle.normalized());
     const QVector3D halfSize(1.0f / scale, 1.0f / scale, 1.0f / scale / zFlattening);
     const bool round = mpHost && mpHost->mBubbleMode;
-    // Points around a round room's rim, top and bottom, that must all be inside
-    constexpr int scmRimPoints = 16;
+    // The corners of a round room's drawn rim, top and bottom, which must all be inside, as its edges run between them
+    constexpr int scmRimPoints = GeometryManager::scmCylinderSegments;
     for (const int roomId : pArea->getAreaRooms()) {
         const TRoom* pR = mpMap->mpRoomDB->getRoom(roomId);
         if (!pR || pR->isHidden() || !levelShown(pR->z()) || (!allLevels && pR->z() != mMapCenterZ)) {

@@ -202,6 +202,8 @@ public:
     static QList<QLineF> gridLines(const QRectF& extent);
     // An upright cylinder of radius 1 from z -1 to 1, its side smooth shaded, each face wound counterclockwise from outside
     static GeometryData cylinderMesh(int segments);
+    // The sides of the cylinder a round room is drawn as; a box selection tests the corners of that same rim
+    static constexpr int scmCylinderSegments = 24;
     // The tint for a texture drawn on a faded room, which can only make it more see-through
     static QVector4D fadedDecalTint(const LevelFade& fade);
 

@@ -39,6 +39,7 @@
 #include <QTemporaryDir>
 #include <QLineEdit>
 #include <QToolTip>
+#include <QtMath>
 #include <QtTest/QtTest>
 
 #include "Host.h"
@@ -1725,6 +1726,79 @@ private slots:
         QCOMPARE(roundMiddlePick, kEastRoomId);
         QVERIFY(squareBoxed.isEmpty());
         QCOMPARE(roundBoxed, QSet<int>{kEastRoomId});
+    }
+
+    // A box takes a round room only around the whole of the rim drawn, which a turned view can push out past points
+    // sampled around a truer circle
+    void test_aBoxTakesARoundRoomOnlyAroundItsWholeDrawnRim()
+    {
+        ModernGLWidget* pModern = viewAtThePlayer();
+        QVERIFY(pModern);
+        mpHost->mBubbleMode = true;
+        auto squareAgain = qScopeGuard([this] {
+            mpHost->mBubbleMode = false;
+        });
+        const GeometryData mesh = GeometryManager::cylinderMesh(GeometryManager::scmCylinderSegments);
+        const QVector3D center(0.0f, 0.0f, 0.0f);
+        const QVector3D halfSize(1.0f / pModern->scale, 1.0f / pModern->scale, 1.0f / pModern->scale / pModern->zFlattening);
+        const auto drawnBounds = [&]() {
+            pModern->updateMatrices();
+            qreal left = std::numeric_limits<qreal>::max();
+            qreal right = std::numeric_limits<qreal>::lowest();
+            qreal top = left;
+            qreal bottom = right;
+            for (qsizetype index = 0; index + 2 < mesh.vertices.size(); index += 3) {
+                const QVector3D vertex(mesh.vertices.at(index), mesh.vertices.at(index + 1), mesh.vertices.at(index + 2));
+                const std::optional<QPointF> pixel = pModern->mCameraController.pixelForPoint(center + vertex * halfSize);
+                if (!pixel) {
+                    return QRectF();
+                }
+                left = qMin(left, pixel->x());
+                right = qMax(right, pixel->x());
+                top = qMin(top, pixel->y());
+                bottom = qMax(bottom, pixel->y());
+            }
+            return QRectF(QPointF(left, top), QPointF(right, bottom));
+        };
+        // Close enough that the rim's corners stand out by whole pixels from points between them
+        const qreal radius = qMin(240.0, (qMin(pModern->width(), pModern->height()) - 40) / 2.0);
+        float distance = 1.0f;
+        for (; distance > CameraController::scmMinDistance; distance /= 1.05f) {
+            pModern->setCameraPosition(distance, CameraController::scmMinTilt, CameraController::scmNorthUpAzimuth);
+            if (drawnBounds().width() / 2.0 >= radius) {
+                break;
+            }
+        }
+        const QRectF view(pModern->rect());
+        QStringList wronglyTaken;
+        QStringList wronglyLeft;
+        for (int step = 0; step < 96; ++step) {
+            const float turn = 0.5f * static_cast<float>(step);
+            pModern->setCameraPosition(distance, CameraController::scmMinTilt, CameraController::scmNorthUpAzimuth + turn);
+            const QRectF drawn = drawnBounds();
+            QVERIFY2(!drawn.isEmpty() && view.contains(drawn), qPrintable(qsl("the room is drawn off the view turned %1").arg(turn)));
+            const int left = qFloor(drawn.left()) - 2;
+            const int top = qFloor(drawn.top()) - 2;
+            const int right = qCeil(drawn.right()) + 2;
+            const int bottom = qCeil(drawn.bottom()) + 2;
+            const auto taken = [pModern](const int boxLeft, const int boxTop, const int boxRight, const int boxBottom) {
+                return pModern->roomsInRectangle(QRect(boxLeft, boxTop, boxRight - boxLeft, boxBottom - boxTop), false).contains(kPlayerRoomId);
+            };
+            if (!taken(left, top, right, bottom)) {
+                wronglyLeft << QString::number(turn);
+            }
+            // Each side in turn just inside the rim drawn
+            const bool cutRight = taken(left, top, qFloor(drawn.right() - 0.25), bottom);
+            const bool cutLeft = taken(qCeil(drawn.left() + 0.25), top, right, bottom);
+            const bool cutBottom = taken(left, top, right, qFloor(drawn.bottom() - 0.25));
+            const bool cutTop = taken(left, qCeil(drawn.top() + 0.25), right, bottom);
+            if (cutRight || cutLeft || cutBottom || cutTop) {
+                wronglyTaken << QString::number(turn);
+            }
+        }
+
+        QVERIFY2(wronglyLeft.isEmpty(), qPrintable(qsl("a box around the whole room left it out, turned %1").arg(wronglyLeft.join(qsl(", ")))));
+        QVERIFY2(wronglyTaken.isEmpty(), qPrintable(qsl("a box cutting the rim drawn took the room, turned %1").arg(wronglyTaken.join(qsl(", ")))));
     }
 
     // The map menu's toggles for the grid, round rooms and the upper and lower levels, and Profile Preferences, which
