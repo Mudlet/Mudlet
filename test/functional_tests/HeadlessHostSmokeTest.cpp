@@ -3785,7 +3785,10 @@ local ok, err = pcall(function()
     answers[#answers + 1] = label .. "=" .. described(pcall(getWindowGeometry, name))
   end
   -- What a label answers to the sheet, its hint, its geometry, and its geometry once resized past the limits each way
+  -- Each label's key, sheet, size and text, for the test to make the same label with
+  local labelSpecs = {}
   local function label(key, sheet, w, h, text)
+    labelSpecs[#labelSpecs + 1] = table.concat({key, sheet, w or 10, h or 10, text or ""}, "\t")
     local name = "ls" .. key
     createLabel(name, 0, 0, w or 10, h or 10, 1)
     if text then
@@ -3810,6 +3813,14 @@ local ok, err = pcall(function()
   label("heightUnderMax", "height: 30px; max-height: 50px", 100, 100)
   label("negativeMinHeight", "height: 10px; min-height: -5px; padding: 1px")
   label("huge", "min-width: 16777215px; padding: 2px", 1, 1)
+  -- QRenderRule::boxSize() adds the box to the size in int, which wraps past INT_MAX, and QCss reads a length above it as INT_MAX
+  label("wrapped", "min-width: 2147483640px; padding: 10px", 1, 1)
+  label("wrappedMax", "max-width: 2147483640px; padding: 10px", 30, 30)
+  label("overInt", "min-width: 3000000000px", 1, 1)
+  label("overIntPadded", "min-width: 3000000000px; padding: 10px", 1, 1)
+  label("hugePadding", "padding: 2147483640px; min-width: 20px", 1, 1)
+  label("underInt", "min-width: -3000000000px; padding: 1px", 1, 1)
+  label("hugeEm", "min-width: 200000000em", 1, 1)
   label("widthUnderMax", "width: 30px; max-width: 50px; height: 70px; max-height: 50px", 100, 100)
   label("minOverMax", "min-width: 50px; max-width: 20px; min-height: 9px; max-height: 40px", 30, 30)
   label("em", "font-size: 20px; min-width: 2em; max-height: 1em", 10, 100)
@@ -4016,7 +4027,7 @@ local ok, err = pcall(function()
   step("teInBox.moveOut", setWindow, "lsWindow", "lsteInBox", 0, 0, true)
   resizeWindow("lsteInBox", 5, 5)
   look("teInBox.out", "lsteInBox")
-  for key in ("borderWidth borderNoStyle solidLeft leftWidth leftStyled topNone topLeft borderColor radiusWidth cornerRadius zeroNative widthMin solidSides borderImage url quoted stray upper twoValues notEditable readOnly activePadded inactivePadded named otherNamed min max minText maxText fixed widthOverMin heightOverMin heightUnderMax negativeMinHeight huge widthUnderMax minOverMax em ex number percent pt negativeMin negativeMax zeroMax important framed borderNone nativeBorder nativeStyle nativeStylePadded nativeMin nativeZeroMargin nativeRadius nativeRadiusMin nativeTop nativeLeft nativeShort rule otherClass enabled active inactive hover cleared hidden image movie svg"):gmatch("%S+") do
+  for key in ("borderWidth borderNoStyle solidLeft leftWidth leftStyled topNone topLeft borderColor radiusWidth cornerRadius zeroNative widthMin solidSides borderImage url quoted stray upper twoValues notEditable readOnly activePadded inactivePadded named otherNamed min max minText maxText fixed widthOverMin heightOverMin heightUnderMax negativeMinHeight huge wrapped wrappedMax overInt overIntPadded hugePadding underInt hugeEm widthUnderMax minOverMax em ex number percent pt negativeMin negativeMax zeroMax important framed borderNone nativeBorder nativeStyle nativeStylePadded nativeMin nativeZeroMargin nativeRadius nativeRadiusMin nativeTop nativeLeft nativeShort rule otherClass enabled active inactive hover cleared hidden image movie svg"):gmatch("%S+") do
     deleteLabel("ls" .. key)
   end
   for key in ("teMin teMax tePadded teWidth teRule teOwnRule teScrollRule teLabelRule teNative teNativeWidth teEm teReadOnly teCleared teShared teSolid teNoStyle teWidthOnly teSolidOnly tePadOnly teMargin teTop teLeftNative teRadius teCorner teColor teNone teColorOnly teEditable teNotReadOnly teActive teInactive teFocus teNamed teLabelNamed teFrame teStar teRuleLast teRuleFirst teReadOnlyRule teReadOnlyEditable teReadOnlyNotReadOnly teLater teBoxed teMoved teInBox"):gmatch("%S+") do
@@ -4025,167 +4036,239 @@ local ok, err = pcall(function()
   deleteScrollBox("lsteBoxed")
   deleteScrollBox("lsBox")
   closeUserWindow("lsWindow")
+  headlessSizeLimitsLabels = table.concat(labelSpecs, "\n")
   headlessSizeLimitsAnswers = table.concat(answers, "\n")
 end)
 headlessSizeLimits = ok and "ok" or tostring(err)
 )lua"));
         QVERIFY2(ran, "The Lua chunk did not run.");
         QCOMPARE(luaGlobalString(host, "headlessSizeLimits"), qsl("ok"));
-        const QStringList answers{qsl("min=[1]true [2]50:30 [4]0:0:50:30 [4]0:0:50:500 [4]0:0:500:30"),
-                                  qsl("max=[1]true [2]8:15 [4]0:0:20:8 [4]0:0:5:8 [4]0:0:20:5"),
-                                  qsl("minText=[1]true [2]84:19 [4]0:0:84:10 [4]0:0:84:500 [4]0:0:500:5"),
-                                  qsl("maxText=[1]true [2]39:19 [4]0:0:10:10 [4]0:0:5:500 [4]0:0:12:5"),
-                                  qsl("fixed=[1]true [2]8:15 [4]0:0:10:10 [4]0:0:5:500 [4]0:0:500:5"),
-                                  qsl("widthOverMin=[1]true [2]100:20 [4]0:0:100:20 [4]0:0:100:500 [4]0:0:500:20"),
-                                  qsl("heightOverMin=[1]true [2]8:30 [4]0:0:10:30 [4]0:0:5:500 [4]0:0:500:30"),
-                                  qsl("heightUnderMax=[1]true [2]8:15 [4]0:0:100:30 [4]0:0:5:30 [4]0:0:500:5"),
-                                  qsl("negativeMinHeight=[1]true [2]10:17 [4]0:0:10:12 [4]0:0:5:500 [4]0:0:500:12"),
-                                  qsl("huge=[1]true [2]16777215:19 [4]0:0:16777215:1 [4]0:0:16777215:500 [4]0:0:16777215:5"),
-                                  qsl("widthUnderMax=[1]true [2]8:15 [4]0:0:30:50 [4]0:0:5:50 [4]0:0:30:5"),
-                                  qsl("minOverMax=[1]true [2]50:15 [4]0:0:50:30 [4]0:0:50:40 [4]0:0:50:9"),
-                                  qsl("em=[1]true [2]48:24 [4]0:0:48:24 [4]0:0:48:24 [4]0:0:500:5"),
-                                  qsl("ex=[1]true [2]21:15 [4]0:0:21:1 [4]0:0:21:500 [4]0:0:500:5"),
-                                  qsl("number=[1]true [2]33:15 [4]0:0:33:44 [4]0:0:33:44 [4]0:0:500:5"),
-                                  qsl("percent=[1]true [2]40:15 [4]0:0:40:1 [4]0:0:40:500 [4]0:0:500:5"),
-                                  qsl("pt=[1]true [2]8:15 [4]0:0:1:1 [4]0:0:5:500 [4]0:0:500:5"),
-                                  qsl("negativeMin=[1]true [2]14:21 [4]0:0:1:1 [4]0:0:5:500 [4]0:0:500:5"),
-                                  qsl("negativeMax=[1]true [2]8:15 [4]0:0:0:30 [4]0:0:0:500 [4]0:0:0:5"),
-                                  qsl("zeroMax=[1]true [2]14:21 [4]0:0:6:30 [4]0:0:5:500 [4]0:0:6:5"),
-                                  qsl("important=[1]true [2]45:15 [4]0:0:45:1 [4]0:0:45:500 [4]0:0:500:5"),
-                                  qsl("framed=[1]true [2]20:27 [4]0:0:22:22 [4]0:0:5:500 [4]0:0:22:22"),
-                                  qsl("borderNone=[1]true [2]10:15 [4]0:0:10:1 [4]0:0:10:500 [4]0:0:500:5"),
-                                  qsl("nativeBorder=[1]true [2]27:25 [4]0:0:10:10 [4]0:0:5:500 [4]0:0:500:5"),
-                                  qsl("nativeStyle=[1]true [2]10:15 [4]0:0:10:10 [4]0:0:5:500 [4]0:0:500:5"),
-                                  qsl("nativeStylePadded=[1]true [2]27:25 [4]0:0:10:10 [4]0:0:5:500 [4]0:0:500:5"),
-                                  qsl("nativeMin=[1]true [2]58:15 [4]0:0:58:1 [4]0:0:58:500 [4]0:0:500:5"),
-                                  qsl("nativeZeroMargin=[1]true [2]25:23 [4]0:0:10:10 [4]0:0:5:500 [4]0:0:500:5"),
-                                  qsl("nativeRadius=[1]true [2]19:17 [4]0:0:10:10 [4]0:0:5:500 [4]0:0:500:5"),
-                                  qsl("nativeRadiusMin=[1]true [2]50:15 [4]0:0:50:1 [4]0:0:50:500 [4]0:0:500:5"),
-                                  qsl("nativeTop=[1]true [2]10:15 [4]0:0:10:10 [4]0:0:5:500 [4]0:0:500:5"),
-                                  qsl("nativeLeft=[1]true [2]20:17 [4]0:0:10:10 [4]0:0:5:500 [4]0:0:500:5"),
-                                  qsl("nativeShort=[1]true [2]10:15 [4]0:0:10:10 [4]0:0:5:500 [4]0:0:500:5"),
-                                  qsl("borderWidth=[1]true [2]27:25 [4]0:0:10:10 [4]0:0:5:500 [4]0:0:500:5"),
-                                  qsl("borderNoStyle=[1]true [2]19:17 [4]0:0:10:10 [4]0:0:5:500 [4]0:0:500:5"),
-                                  qsl("solidLeft=[1]true [2]10:15 [4]0:0:10:10 [4]0:0:5:500 [4]0:0:500:5"),
-                                  qsl("leftWidth=[1]true [2]22:17 [4]0:0:10:10 [4]0:0:5:500 [4]0:0:500:5"),
-                                  qsl("leftStyled=[1]true [2]10:15 [4]0:0:10:10 [4]0:0:5:500 [4]0:0:500:5"),
-                                  qsl("topNone=[1]true [2]20:15 [4]0:0:10:10 [4]0:0:5:500 [4]0:0:500:5"),
-                                  qsl("topLeft=[1]true [2]20:17 [4]0:0:10:10 [4]0:0:5:500 [4]0:0:500:5"),
-                                  qsl("borderColor=[1]true [2]19:17 [4]0:0:10:10 [4]0:0:5:500 [4]0:0:500:5"),
-                                  qsl("radiusWidth=[1]true [2]19:17 [4]0:0:10:10 [4]0:0:5:500 [4]0:0:500:5"),
-                                  qsl("cornerRadius=[1]true [2]19:17 [4]0:0:10:10 [4]0:0:5:500 [4]0:0:500:5"),
-                                  qsl("zeroNative=[1]true [2]19:17 [4]0:0:10:10 [4]0:0:5:500 [4]0:0:500:5"),
-                                  qsl("widthMin=[1]true [2]58:15 [4]0:0:58:1 [4]0:0:58:500 [4]0:0:500:5"),
-                                  qsl("solidSides=[1]true [2]20:19 [4]0:0:20:1 [4]0:0:20:500 [4]0:0:500:5"),
-                                  qsl("borderImage=[1]true [2]58:15 [4]0:0:58:1 [4]0:0:58:500 [4]0:0:500:5"),
-                                  qsl("url=[1]true [2]20:15 [4]0:0:20:1 [4]0:0:20:500 [4]0:0:500:5"),
-                                  qsl("quoted=[1]true [2]21:15 [4]0:0:21:1 [4]0:0:21:500 [4]0:0:500:5"),
-                                  qsl("stray=[1]true [2]22:15 [4]0:0:22:1 [4]0:0:22:500 [4]0:0:500:5"),
-                                  qsl("upper=[1]true [2]23:15 [4]0:0:23:1 [4]0:0:23:500 [4]0:0:500:5"),
-                                  qsl("twoValues=[1]true [2]24:15 [4]0:0:24:1 [4]0:0:24:500 [4]0:0:500:5"),
-                                  qsl("rule=[1]true [2]60:15 [4]0:0:60:1 [4]0:0:60:500 [4]0:0:500:5"),
-                                  qsl("otherClass=[1]true [2]8:15 [4]0:0:1:1 [4]0:0:5:500 [4]0:0:500:5"),
-                                  qsl("enabled=[1]true [2]60:15 [4]0:0:60:1 [4]0:0:60:500 [4]0:0:500:5"),
-                                  qsl("active=[1]true [2]8:15 [4]0:0:1:1 [4]0:0:5:500 [4]0:0:500:5"),
-                                  qsl("inactive=[1]true [2]60:15 [4]0:0:60:1 [4]0:0:60:500 [4]0:0:500:5"),
-                                  qsl("hover=[1]true [2]8:15 [4]0:0:1:1 [4]0:0:5:500 [4]0:0:500:5"),
-                                  qsl("notEditable=[1]true [2]30:15 [4]0:0:30:1 [4]0:0:30:500 [4]0:0:500:5"),
-                                  qsl("readOnly=[1]true [2]8:15 [4]0:0:1:1 [4]0:0:5:500 [4]0:0:500:5"),
-                                  qsl("named=[1]true [2]60:15 [4]0:0:60:1 [4]0:0:60:500 [4]0:0:500:5"),
-                                  qsl("otherNamed=[1]true [2]8:15 [4]0:0:1:1 [4]0:0:5:500 [4]0:0:500:5"),
-                                  qsl("activePadded=[1]true [2]23:21 [4]0:0:1:1 [4]0:0:5:500 [4]0:0:500:5"),
-                                  qsl("inactivePadded=[1]true [2]46:15 [4]0:0:46:1 [4]0:0:46:500 [4]0:0:500:5"),
-                                  qsl("cleared=[1]true [2]50:15 [4]0:0:50:8 [4]0:0:50:8 [4]0:0:500:5"),
-                                  qsl("cleared.clear=[1]true"),
-                                  qsl("cleared.after=[4]0:0:500:5"),
-                                  qsl("cleared.free=[4]0:0:5:500"),
-                                  qsl("cleared.hint=[2]8:15"),
-                                  qsl("cleared.again=[1]true"),
-                                  qsl("cleared.held=[4]0:0:3:500"),
-                                  qsl("cleared.color=[1]true"),
-                                  qsl("cleared.colored=[4]0:0:3:50"),
-                                  qsl("hidden.sheet=[1]true"),
-                                  qsl("hidden=[4]0:0:40:10"),
-                                  qsl("hidden.shown=[4]0:0:40:10"),
-                                  qsl("image.set=[1]true"),
-                                  qsl("image.hint=[2]24:10"),
-                                  qsl("image.sheet=[1]true"),
-                                  qsl("image.hintMin=[2]50:10"),
-                                  qsl("movie.set=[1]true"),
-                                  qsl("movie.sheet=[1]true"),
-                                  qsl("movie.hint=[2]60:16"),
-                                  qsl("svg.set=[1]true"),
-                                  qsl("svg.sheet=[1]true"),
-                                  qsl("svg.hint=[2]30:12"),
-                                  qsl("svg=[4]0:0:50:10"),
-                                  qsl("teMin=[1]true [4]0:0:52:32 [4]0:0:52:500 [4]0:0:500:32"),
-                                  qsl("teMax=[1]true [4]0:0:22:10 [4]0:0:5:10 [4]0:0:22:5"),
-                                  qsl("tePadded=[1]true [4]0:0:60:1 [4]0:0:60:500 [4]0:0:500:5"),
-                                  qsl("teWidth=[1]true [4]0:0:102:1 [4]0:0:102:500 [4]0:0:500:5"),
-                                  qsl("teRule=[1]true [4]0:0:62:1 [4]0:0:62:500 [4]0:0:500:5"),
-                                  qsl("teOwnRule=[1]true [4]0:0:1:62 [4]0:0:5:500 [4]0:0:500:62"),
-                                  qsl("teScrollRule=[1]true [4]0:0:1:63 [4]0:0:5:500 [4]0:0:500:63"),
-                                  qsl("teLabelRule=[1]true [4]0:0:1:1 [4]0:0:5:500 [4]0:0:500:5"),
-                                  qsl("teNative=[1]true [4]0:0:52:1 [4]0:0:52:500 [4]0:0:500:5"),
-                                  qsl("teNativeWidth=[1]true [4]0:0:58:1 [4]0:0:58:500 [4]0:0:500:5"),
-                                  qsl("teEm=[1]true [4]0:0:50:1 [4]0:0:50:500 [4]0:0:500:5"),
-                                  qsl("teSolid=[1]true [4]0:0:54:1 [4]0:0:54:500 [4]0:0:500:5"),
-                                  qsl("teNoStyle=[1]true [4]0:0:50:1 [4]0:0:50:500 [4]0:0:500:5"),
-                                  qsl("teWidthOnly=[1]true [4]0:0:56:1 [4]0:0:56:500 [4]0:0:500:5"),
-                                  qsl("teSolidOnly=[1]true [4]0:0:50:1 [4]0:0:50:500 [4]0:0:500:5"),
-                                  qsl("tePadOnly=[1]true [4]0:0:56:1 [4]0:0:56:500 [4]0:0:500:5"),
-                                  qsl("teMargin=[1]true [4]0:0:54:1 [4]0:0:54:500 [4]0:0:500:5"),
-                                  qsl("teTop=[1]true [4]0:0:52:53 [4]0:0:52:500 [4]0:0:500:53"),
-                                  qsl("teLeftNative=[1]true [4]0:0:53:52 [4]0:0:53:500 [4]0:0:500:52"),
-                                  qsl("teRadius=[1]true [4]0:0:50:1 [4]0:0:50:500 [4]0:0:500:5"),
-                                  qsl("teCorner=[1]true [4]0:0:50:1 [4]0:0:50:500 [4]0:0:500:5"),
-                                  qsl("teColor=[1]true [4]0:0:52:1 [4]0:0:52:500 [4]0:0:500:5"),
-                                  qsl("teNone=[1]true [4]0:0:50:1 [4]0:0:50:500 [4]0:0:500:5"),
-                                  qsl("teColorOnly=[1]true [4]0:0:52:1 [4]0:0:52:500 [4]0:0:500:5"),
-                                  qsl("teEditable=[1]true [4]0:0:62:1 [4]0:0:62:500 [4]0:0:500:5"),
-                                  qsl("teNotReadOnly=[1]true [4]0:0:62:1 [4]0:0:62:500 [4]0:0:500:5"),
-                                  qsl("teReadOnlyRule=[1]true [4]0:0:1:1 [4]0:0:5:500 [4]0:0:500:5"),
-                                  qsl("teActive=[1]true [4]0:0:1:1 [4]0:0:5:500 [4]0:0:500:5"),
-                                  qsl("teInactive=[1]true [4]0:0:56:1 [4]0:0:56:500 [4]0:0:500:5"),
-                                  qsl("teFocus=[1]true [4]0:0:1:1 [4]0:0:5:500 [4]0:0:500:5"),
-                                  qsl("teNamed=[1]true [4]0:0:62:1 [4]0:0:62:500 [4]0:0:500:5"),
-                                  qsl("teLabelNamed=[1]true [4]0:0:1:1 [4]0:0:5:500 [4]0:0:500:5"),
-                                  qsl("teFrame=[1]true [4]0:0:62:1 [4]0:0:62:500 [4]0:0:500:5"),
-                                  qsl("teStar=[1]true [4]0:0:62:1 [4]0:0:62:500 [4]0:0:500:5"),
-                                  qsl("teRuleLast=[1]true [4]0:0:72:1 [4]0:0:72:500 [4]0:0:500:5"),
-                                  qsl("teRuleFirst=[1]true [4]0:0:52:1 [4]0:0:52:500 [4]0:0:500:5"),
-                                  qsl("teReadOnly.sheet=[1]true"),
-                                  qsl("teReadOnly=[4]0:0:62:1"),
-                                  qsl("teReadOnlyEditable.sheet=[1]true"),
-                                  qsl("teReadOnlyEditable=[4]0:0:1:1"),
-                                  qsl("teReadOnlyNotReadOnly.sheet=[1]true"),
-                                  qsl("teReadOnlyNotReadOnly=[4]0:0:1:1"),
-                                  qsl("teLater.readOnly=[1]true"),
-                                  qsl("teLater.made=[4]0:0:5:5"),
-                                  qsl("teLater.restyled=[4]0:0:62:5"),
-                                  qsl("teLater.editable=[4]0:0:62:5"),
-                                  qsl("teLater.editableRestyled=[4]0:0:5:5"),
-                                  qsl("teCleared=[1]true [4]0:0:52:1 [4]0:0:52:500 [4]0:0:500:5"),
-                                  qsl("teCleared.clear=[1]true"),
-                                  qsl("teCleared.free=[4]0:0:5:5"),
-                                  qsl("teShared.sheet=[1]true"),
-                                  qsl("teShared=[4]0:0:10:10"),
-                                  qsl("teShared.alone=[4]0:0:52:10"),
-                                  qsl("teShared.resized=[4]0:0:52:5"),
-                                  qsl("teBoxed.sheet=[1]true"),
-                                  qsl("teBoxed=[4]0:0:40:40"),
-                                  qsl("teMissing.sheet=[2]nil:text edit name 'lsteMissing' not found"),
-                                  qsl("teMoved.toSame=[1]true"),
-                                  qsl("teMoved.same=[4]3:3:5:5"),
-                                  qsl("teMoved.toWindow=[1]true"),
-                                  qsl("teMoved.window=[4]0:0:62:5"),
-                                  qsl("teMoved.toMain=[1]true"),
-                                  qsl("teMoved.back=[4]0:0:5:5"),
-                                  qsl("teInBox.moveBox=[1]true"),
-                                  qsl("teInBox.box=[4]0:0:5:5"),
-                                  qsl("teInBox.moveOut=[1]true"),
-                                  qsl("teInBox.out=[4]0:0:62:5")};
-        QCOMPARE(luaGlobalString(host, "headlessSizeLimitsAnswers"), answers.join(QLatin1Char('\n')));
+        // QCss measures a text edit's em in the application font at the sheet's size
+        QFont sheetFont;
+        sheetFont.setPixelSize(20);
+        const int twoEm = 2 * QFontMetrics(sheetFont).height();
+        QStringList answers{qsl("min=[1]true {hint} [4]0:0:50:30 [4]0:0:50:500 [4]0:0:500:30"),
+                            qsl("max=[1]true {hint} [4]0:0:20:8 [4]0:0:5:8 [4]0:0:20:5"),
+                            qsl("minText=[1]true {hint} [4]0:0:84:10 [4]0:0:84:500 [4]0:0:500:5"),
+                            qsl("maxText=[1]true {hint} [4]0:0:10:10 [4]0:0:5:500 [4]0:0:12:5"),
+                            qsl("fixed=[1]true {hint} [4]0:0:10:10 [4]0:0:5:500 [4]0:0:500:5"),
+                            qsl("widthOverMin=[1]true {hint} [4]0:0:100:20 [4]0:0:100:500 [4]0:0:500:20"),
+                            qsl("heightOverMin=[1]true {hint} [4]0:0:10:30 [4]0:0:5:500 [4]0:0:500:30"),
+                            qsl("heightUnderMax=[1]true {hint} [4]0:0:100:30 [4]0:0:5:30 [4]0:0:500:5"),
+                            qsl("negativeMinHeight=[1]true {hint} [4]0:0:10:12 [4]0:0:5:500 [4]0:0:500:12"),
+                            qsl("huge=[1]true {hint} [4]0:0:16777215:1 [4]0:0:16777215:500 [4]0:0:16777215:5"),
+                            qsl("wrapped=[1]true {hint} [4]0:0:1:1 [4]0:0:5:500 [4]0:0:500:5"),
+                            qsl("wrappedMax=[1]true {hint} [4]0:0:30:30 [4]0:0:5:500 [4]0:0:500:5"),
+                            qsl("overInt=[1]true {hint} [4]0:0:16777215:1 [4]0:0:16777215:500 [4]0:0:16777215:5"),
+                            qsl("overIntPadded=[1]true {hint} [4]0:0:1:1 [4]0:0:5:500 [4]0:0:500:5"),
+                            qsl("hugePadding=[1]true {hint} [4]0:0:4:1 [4]0:0:5:500 [4]0:0:500:5"),
+                            qsl("underInt=[1]true {hint} [4]0:0:1:1 [4]0:0:5:500 [4]0:0:500:5"),
+                            qsl("hugeEm=[1]true {hint} [4]0:0:16777215:1 [4]0:0:16777215:500 [4]0:0:16777215:5"),
+                            qsl("widthUnderMax=[1]true {hint} [4]0:0:30:50 [4]0:0:5:50 [4]0:0:30:5"),
+                            qsl("minOverMax=[1]true {hint} [4]0:0:50:30 [4]0:0:50:40 [4]0:0:50:9"),
+                            qsl("em=[1]true {hint} {made} {tall} {wide}"),
+                            qsl("ex=[1]true {hint} {made} {tall} {wide}"),
+                            qsl("number=[1]true {hint} [4]0:0:33:44 [4]0:0:33:44 [4]0:0:500:5"),
+                            qsl("percent=[1]true {hint} [4]0:0:40:1 [4]0:0:40:500 [4]0:0:500:5"),
+                            qsl("pt=[1]true {hint} [4]0:0:1:1 [4]0:0:5:500 [4]0:0:500:5"),
+                            qsl("negativeMin=[1]true {hint} [4]0:0:1:1 [4]0:0:5:500 [4]0:0:500:5"),
+                            qsl("negativeMax=[1]true {hint} [4]0:0:0:30 [4]0:0:0:500 [4]0:0:0:5"),
+                            qsl("zeroMax=[1]true {hint} [4]0:0:6:30 [4]0:0:5:500 [4]0:0:6:5"),
+                            qsl("important=[1]true {hint} [4]0:0:45:1 [4]0:0:45:500 [4]0:0:500:5"),
+                            qsl("framed=[1]true {hint} [4]0:0:22:22 [4]0:0:5:500 [4]0:0:22:22"),
+                            qsl("borderNone=[1]true {hint} [4]0:0:10:1 [4]0:0:10:500 [4]0:0:500:5"),
+                            qsl("nativeBorder=[1]true {hint} [4]0:0:10:10 [4]0:0:5:500 [4]0:0:500:5"),
+                            qsl("nativeStyle=[1]true {hint} [4]0:0:10:10 [4]0:0:5:500 [4]0:0:500:5"),
+                            qsl("nativeStylePadded=[1]true {hint} [4]0:0:10:10 [4]0:0:5:500 [4]0:0:500:5"),
+                            qsl("nativeMin=[1]true {hint} [4]0:0:58:1 [4]0:0:58:500 [4]0:0:500:5"),
+                            qsl("nativeZeroMargin=[1]true {hint} [4]0:0:10:10 [4]0:0:5:500 [4]0:0:500:5"),
+                            qsl("nativeRadius=[1]true {hint} [4]0:0:10:10 [4]0:0:5:500 [4]0:0:500:5"),
+                            qsl("nativeRadiusMin=[1]true {hint} [4]0:0:50:1 [4]0:0:50:500 [4]0:0:500:5"),
+                            qsl("nativeTop=[1]true {hint} [4]0:0:10:10 [4]0:0:5:500 [4]0:0:500:5"),
+                            qsl("nativeLeft=[1]true {hint} [4]0:0:10:10 [4]0:0:5:500 [4]0:0:500:5"),
+                            qsl("nativeShort=[1]true {hint} [4]0:0:10:10 [4]0:0:5:500 [4]0:0:500:5"),
+                            qsl("borderWidth=[1]true {hint} [4]0:0:10:10 [4]0:0:5:500 [4]0:0:500:5"),
+                            qsl("borderNoStyle=[1]true {hint} [4]0:0:10:10 [4]0:0:5:500 [4]0:0:500:5"),
+                            qsl("solidLeft=[1]true {hint} [4]0:0:10:10 [4]0:0:5:500 [4]0:0:500:5"),
+                            qsl("leftWidth=[1]true {hint} [4]0:0:10:10 [4]0:0:5:500 [4]0:0:500:5"),
+                            qsl("leftStyled=[1]true {hint} [4]0:0:10:10 [4]0:0:5:500 [4]0:0:500:5"),
+                            qsl("topNone=[1]true {hint} [4]0:0:10:10 [4]0:0:5:500 [4]0:0:500:5"),
+                            qsl("topLeft=[1]true {hint} [4]0:0:10:10 [4]0:0:5:500 [4]0:0:500:5"),
+                            qsl("borderColor=[1]true {hint} [4]0:0:10:10 [4]0:0:5:500 [4]0:0:500:5"),
+                            qsl("radiusWidth=[1]true {hint} [4]0:0:10:10 [4]0:0:5:500 [4]0:0:500:5"),
+                            qsl("cornerRadius=[1]true {hint} [4]0:0:10:10 [4]0:0:5:500 [4]0:0:500:5"),
+                            qsl("zeroNative=[1]true {hint} [4]0:0:10:10 [4]0:0:5:500 [4]0:0:500:5"),
+                            qsl("widthMin=[1]true {hint} [4]0:0:58:1 [4]0:0:58:500 [4]0:0:500:5"),
+                            qsl("solidSides=[1]true {hint} [4]0:0:20:1 [4]0:0:20:500 [4]0:0:500:5"),
+                            qsl("borderImage=[1]true {hint} [4]0:0:58:1 [4]0:0:58:500 [4]0:0:500:5"),
+                            qsl("url=[1]true {hint} [4]0:0:20:1 [4]0:0:20:500 [4]0:0:500:5"),
+                            qsl("quoted=[1]true {hint} [4]0:0:21:1 [4]0:0:21:500 [4]0:0:500:5"),
+                            qsl("stray=[1]true {hint} [4]0:0:22:1 [4]0:0:22:500 [4]0:0:500:5"),
+                            qsl("upper=[1]true {hint} [4]0:0:23:1 [4]0:0:23:500 [4]0:0:500:5"),
+                            qsl("twoValues=[1]true {hint} [4]0:0:24:1 [4]0:0:24:500 [4]0:0:500:5"),
+                            qsl("rule=[1]true {hint} [4]0:0:60:1 [4]0:0:60:500 [4]0:0:500:5"),
+                            qsl("otherClass=[1]true {hint} [4]0:0:1:1 [4]0:0:5:500 [4]0:0:500:5"),
+                            qsl("enabled=[1]true {hint} [4]0:0:60:1 [4]0:0:60:500 [4]0:0:500:5"),
+                            qsl("active=[1]true {hint} [4]0:0:1:1 [4]0:0:5:500 [4]0:0:500:5"),
+                            qsl("inactive=[1]true {hint} [4]0:0:60:1 [4]0:0:60:500 [4]0:0:500:5"),
+                            qsl("hover=[1]true {hint} [4]0:0:1:1 [4]0:0:5:500 [4]0:0:500:5"),
+                            qsl("notEditable=[1]true {hint} [4]0:0:30:1 [4]0:0:30:500 [4]0:0:500:5"),
+                            qsl("readOnly=[1]true {hint} [4]0:0:1:1 [4]0:0:5:500 [4]0:0:500:5"),
+                            qsl("named=[1]true {hint} [4]0:0:60:1 [4]0:0:60:500 [4]0:0:500:5"),
+                            qsl("otherNamed=[1]true {hint} [4]0:0:1:1 [4]0:0:5:500 [4]0:0:500:5"),
+                            qsl("activePadded=[1]true {hint} [4]0:0:1:1 [4]0:0:5:500 [4]0:0:500:5"),
+                            qsl("inactivePadded=[1]true {hint} [4]0:0:46:1 [4]0:0:46:500 [4]0:0:500:5"),
+                            qsl("cleared=[1]true {hint} [4]0:0:50:8 [4]0:0:50:8 [4]0:0:500:5"),
+                            qsl("cleared.clear=[1]true"),
+                            qsl("cleared.after=[4]0:0:500:5"),
+                            qsl("cleared.free=[4]0:0:5:500"),
+                            qsl("cleared.hint={hint}"),
+                            qsl("cleared.again=[1]true"),
+                            qsl("cleared.held=[4]0:0:3:500"),
+                            qsl("cleared.color=[1]true"),
+                            qsl("cleared.colored=[4]0:0:3:50"),
+                            qsl("hidden.sheet=[1]true"),
+                            qsl("hidden=[4]0:0:40:10"),
+                            qsl("hidden.shown=[4]0:0:40:10"),
+                            qsl("image.set=[1]true"),
+                            qsl("image.hint=[2]24:10"),
+                            qsl("image.sheet=[1]true"),
+                            qsl("image.hintMin=[2]50:10"),
+                            qsl("movie.set=[1]true"),
+                            qsl("movie.sheet=[1]true"),
+                            qsl("movie.hint=[2]60:16"),
+                            qsl("svg.set=[1]true"),
+                            qsl("svg.sheet=[1]true"),
+                            qsl("svg.hint=[2]30:12"),
+                            qsl("svg=[4]0:0:50:10"),
+                            qsl("teMin=[1]true [4]0:0:52:32 [4]0:0:52:500 [4]0:0:500:32"),
+                            qsl("teMax=[1]true [4]0:0:22:10 [4]0:0:5:10 [4]0:0:22:5"),
+                            qsl("tePadded=[1]true [4]0:0:60:1 [4]0:0:60:500 [4]0:0:500:5"),
+                            qsl("teWidth=[1]true [4]0:0:102:1 [4]0:0:102:500 [4]0:0:500:5"),
+                            qsl("teRule=[1]true [4]0:0:62:1 [4]0:0:62:500 [4]0:0:500:5"),
+                            qsl("teOwnRule=[1]true [4]0:0:1:62 [4]0:0:5:500 [4]0:0:500:62"),
+                            qsl("teScrollRule=[1]true [4]0:0:1:63 [4]0:0:5:500 [4]0:0:500:63"),
+                            qsl("teLabelRule=[1]true [4]0:0:1:1 [4]0:0:5:500 [4]0:0:500:5"),
+                            qsl("teNative=[1]true [4]0:0:52:1 [4]0:0:52:500 [4]0:0:500:5"),
+                            qsl("teNativeWidth=[1]true [4]0:0:58:1 [4]0:0:58:500 [4]0:0:500:5"),
+                            qsl("teEm=[1]true [4]0:0:%1:1 [4]0:0:%1:500 [4]0:0:500:5").arg(twoEm + 2),
+                            qsl("teSolid=[1]true [4]0:0:54:1 [4]0:0:54:500 [4]0:0:500:5"),
+                            qsl("teNoStyle=[1]true [4]0:0:50:1 [4]0:0:50:500 [4]0:0:500:5"),
+                            qsl("teWidthOnly=[1]true [4]0:0:56:1 [4]0:0:56:500 [4]0:0:500:5"),
+                            qsl("teSolidOnly=[1]true [4]0:0:50:1 [4]0:0:50:500 [4]0:0:500:5"),
+                            qsl("tePadOnly=[1]true [4]0:0:56:1 [4]0:0:56:500 [4]0:0:500:5"),
+                            qsl("teMargin=[1]true [4]0:0:54:1 [4]0:0:54:500 [4]0:0:500:5"),
+                            qsl("teTop=[1]true [4]0:0:52:53 [4]0:0:52:500 [4]0:0:500:53"),
+                            qsl("teLeftNative=[1]true [4]0:0:53:52 [4]0:0:53:500 [4]0:0:500:52"),
+                            qsl("teRadius=[1]true [4]0:0:50:1 [4]0:0:50:500 [4]0:0:500:5"),
+                            qsl("teCorner=[1]true [4]0:0:50:1 [4]0:0:50:500 [4]0:0:500:5"),
+                            qsl("teColor=[1]true [4]0:0:52:1 [4]0:0:52:500 [4]0:0:500:5"),
+                            qsl("teNone=[1]true [4]0:0:50:1 [4]0:0:50:500 [4]0:0:500:5"),
+                            qsl("teColorOnly=[1]true [4]0:0:52:1 [4]0:0:52:500 [4]0:0:500:5"),
+                            qsl("teEditable=[1]true [4]0:0:62:1 [4]0:0:62:500 [4]0:0:500:5"),
+                            qsl("teNotReadOnly=[1]true [4]0:0:62:1 [4]0:0:62:500 [4]0:0:500:5"),
+                            qsl("teReadOnlyRule=[1]true [4]0:0:1:1 [4]0:0:5:500 [4]0:0:500:5"),
+                            qsl("teActive=[1]true [4]0:0:1:1 [4]0:0:5:500 [4]0:0:500:5"),
+                            qsl("teInactive=[1]true [4]0:0:56:1 [4]0:0:56:500 [4]0:0:500:5"),
+                            qsl("teFocus=[1]true [4]0:0:1:1 [4]0:0:5:500 [4]0:0:500:5"),
+                            qsl("teNamed=[1]true [4]0:0:62:1 [4]0:0:62:500 [4]0:0:500:5"),
+                            qsl("teLabelNamed=[1]true [4]0:0:1:1 [4]0:0:5:500 [4]0:0:500:5"),
+                            qsl("teFrame=[1]true [4]0:0:62:1 [4]0:0:62:500 [4]0:0:500:5"),
+                            qsl("teStar=[1]true [4]0:0:62:1 [4]0:0:62:500 [4]0:0:500:5"),
+                            qsl("teRuleLast=[1]true [4]0:0:72:1 [4]0:0:72:500 [4]0:0:500:5"),
+                            qsl("teRuleFirst=[1]true [4]0:0:52:1 [4]0:0:52:500 [4]0:0:500:5"),
+                            qsl("teReadOnly.sheet=[1]true"),
+                            qsl("teReadOnly=[4]0:0:62:1"),
+                            qsl("teReadOnlyEditable.sheet=[1]true"),
+                            qsl("teReadOnlyEditable=[4]0:0:1:1"),
+                            qsl("teReadOnlyNotReadOnly.sheet=[1]true"),
+                            qsl("teReadOnlyNotReadOnly=[4]0:0:1:1"),
+                            qsl("teLater.readOnly=[1]true"),
+                            qsl("teLater.made=[4]0:0:5:5"),
+                            qsl("teLater.restyled=[4]0:0:62:5"),
+                            qsl("teLater.editable=[4]0:0:62:5"),
+                            qsl("teLater.editableRestyled=[4]0:0:5:5"),
+                            qsl("teCleared=[1]true [4]0:0:52:1 [4]0:0:52:500 [4]0:0:500:5"),
+                            qsl("teCleared.clear=[1]true"),
+                            qsl("teCleared.free=[4]0:0:5:5"),
+                            qsl("teShared.sheet=[1]true"),
+                            qsl("teShared=[4]0:0:10:10"),
+                            qsl("teShared.alone=[4]0:0:52:10"),
+                            qsl("teShared.resized=[4]0:0:52:5"),
+                            qsl("teBoxed.sheet=[1]true"),
+                            qsl("teBoxed=[4]0:0:40:40"),
+                            qsl("teMissing.sheet=[2]nil:text edit name 'lsteMissing' not found"),
+                            qsl("teMoved.toSame=[1]true"),
+                            qsl("teMoved.same=[4]3:3:5:5"),
+                            qsl("teMoved.toWindow=[1]true"),
+                            qsl("teMoved.window=[4]0:0:62:5"),
+                            qsl("teMoved.toMain=[1]true"),
+                            qsl("teMoved.back=[4]0:0:5:5"),
+                            qsl("teInBox.moveBox=[1]true"),
+                            qsl("teInBox.box=[4]0:0:5:5"),
+                            qsl("teInBox.moveOut=[1]true"),
+                            qsl("teInBox.out=[4]0:0:62:5")};
+        // A label's hint, and a length in em or ex, follow fonts nothing here pins, so labels made as the GUI makes them
+        // in this process give those
+        {
+            QWidget parent;
+            parent.setFont(host->getDisplayFont());
+            parent.show();
+            // The GUI's main window is active, which a hint's sheet sees
+            parent.activateWindow();
+            QVERIFY(QTest::qWaitForWindowActive(&parent));
+            const auto hint = [](const QWidget* pWidget) {
+                const QSize size = pWidget->sizeHint();
+                return qsl("[2]%1:%2").arg(size.width()).arg(size.height());
+            };
+            const auto geometry = [](const QWidget* pWidget) {
+                const QRect rect = pWidget->geometry();
+                return qsl("[4]%1:%2:%3:%4").arg(rect.x()).arg(rect.y()).arg(rect.width()).arg(rect.height());
+            };
+            const auto fill = [&answers](const QString& key, const QString& placeholder, const QString& value) {
+                for (QString& answer : answers) {
+                    if (answer.startsWith(key + QLatin1Char('='))) {
+                        answer.replace(placeholder, value);
+                    }
+                }
+            };
+            for (const QString& spec : luaGlobalString(host, "headlessSizeLimitsLabels").split(QLatin1Char('\n'))) {
+                // Key, sheet, width, height and text, made as TMainConsole::createLabel(), echo() and setLabelStyleSheet() do
+                const QStringList fields = spec.split(QLatin1Char('\t'));
+                QCOMPARE(fields.size(), 5);
+                const QString& key = fields.at(0);
+                auto pLabel = new TLabel(host, qsl("ls%1").arg(key), &parent);
+                pLabel->setAutoFillBackground(true);
+                pLabel->resize(fields.at(2).toInt(), fields.at(3).toInt());
+                pLabel->setContentsMargins(0, 0, 0, 0);
+                pLabel->show();
+                pLabel->setBackgroundColor(QColor(32, 32, 32, 255));
+                if (!fields.at(4).isEmpty()) {
+                    pLabel->setText(fields.at(4));
+                }
+                pLabel->restyle(fields.at(1));
+                fill(key, qsl("{hint}"), hint(pLabel));
+                fill(key, qsl("{made}"), geometry(pLabel));
+                pLabel->resize(5, 500);
+                fill(key, qsl("{tall}"), geometry(pLabel));
+                pLabel->resize(500, 5);
+                fill(key, qsl("{wide}"), geometry(pLabel));
+                if (key == qsl("cleared")) {
+                    pLabel->restyle(QString());
+                    pLabel->resize(5, 500);
+                    fill(qsl("cleared.hint"), qsl("{hint}"), hint(pLabel));
+                }
+            }
+        }
+        QVERIFY2(!answers.join(QString()).contains(QLatin1Char('{')), "A font-dependent answer was left unfilled.");
+        const QStringList actual = luaGlobalString(host, "headlessSizeLimitsAnswers").split(QLatin1Char('\n'));
+        QStringList mismatches;
+        for (qsizetype i = 0; i < std::max(actual.size(), answers.size()); ++i) {
+            if (actual.value(i) != answers.value(i)) {
+                mismatches << qsl("%1, not %2").arg(actual.value(i), answers.value(i));
+            }
+        }
+        QVERIFY2(mismatches.isEmpty(), qPrintable(mismatches.join(QChar::LineFeed)));
         QVERIFY2(QApplication::topLevelWidgets().isEmpty(), "Making the labels and text edits created a widget.");
     }
 

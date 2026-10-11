@@ -40,6 +40,7 @@
 #include <QtMath>
 
 #include <algorithm>
+#include <climits>
 #include <tuple>
 
 namespace {
@@ -289,7 +290,25 @@ int sheetLength(const QString& value, const QFont& font)
     } else if (number.endsWith(u'%')) {
         number.chop(1);
     }
-    return qRound(scale.value_or(1) * number.toDouble());
+    // lengthValueFromData()'s bounds, as qRound() is undefined outside int
+    return qRound(qBound(double(INT_MIN) + 0.1, scale.value_or(1) * number.toDouble(), double(INT_MAX)));
+}
+
+// QRect and QSize add in int, which wraps past INT_MAX, and QWidget then holds a size it is given to 0 to QWIDGETSIZE_MAX
+int wrapped(const qint64 sum)
+{
+    return static_cast<int>(static_cast<quint32>(sum));
+}
+
+QSize wrappedSum(const QSize& size, const QSize& other)
+{
+    return QSize(wrapped(qint64{size.width()} + other.width()), wrapped(qint64{size.height()} + other.height()));
+}
+
+// The width and height a frame of top, right, bottom and left widths adds
+QSize frameExtent(const std::array<int, 4>& frame)
+{
+    return QSize(wrapped(qint64{frame[1]} + frame[3]), wrapped(qint64{frame[0]} + frame[2]));
 }
 
 // What QStyleSheetStyle sizes a widget by from its sheet's declarations
@@ -441,7 +460,7 @@ SheetGeometry sheetGeometry(const QString& declarations, const QFont& font, cons
     SheetGeometry geometry;
     std::array<int, 4> widths{};
     for (int i = 0; i < 4; ++i) {
-        widths[i] = margins[i] + borders[i] + paddings[i];
+        widths[i] = wrapped(qint64{margins[i]} + borders[i] + paddings[i]);
     }
     // The base style frames a native border, and a label has no frame of its own
     if (box || styles[0] != Style::Native) {
@@ -449,10 +468,11 @@ SheetGeometry sheetGeometry(const QString& declarations, const QFont& font, cons
     }
     // QRenderRule::boxSize(), which answers -1 for a negative size, and QWidget, which takes that as 0
     const auto boxed = [](const int size, const int edges) {
-        return size < 0 ? 0 : std::min(size + edges, maximumWidgetSize);
+        return size < 0 ? 0 : std::clamp(wrapped(qint64{size} + edges), 0, maximumWidgetSize);
     };
-    const int across = widths[1] + widths[3];
-    const int down = widths[0] + widths[2];
+    const QSize extent = frameExtent(widths);
+    const int across = extent.width();
+    const int down = extent.height();
     if (minimumWidth != -1) {
         geometry.minimum.setWidth(boxed(std::max(width, minimumWidth), across));
     }
@@ -488,10 +508,10 @@ void applySheetFont(QFont& font, uint& mask, const std::optional<QFont>& sheetFo
 // QLabel::sizeHint() for a label with no margin, indent or word wrap, as TLabel's are, inside the frame its sheet gives it
 QSize labelSizeHint(const QFont& font, const QString& text, const bool textLabel, const std::array<int, 4>& frame)
 {
-    const QSize frameSize(frame[1] + frame[3], frame[0] + frame[2]);
+    const QSize frameSize = frameExtent(frame);
     const QFontMetrics metrics(font);
     if (!textLabel) {
-        return QSize(metrics.averageCharWidth(), metrics.lineSpacing()) + frameSize;
+        return wrappedSum(QSize(metrics.averageCharWidth(), metrics.lineSpacing()), frameSize);
     }
     // QLabelPrivate::sizeForWidth(): a framed label with no indent of its own is indented by an x
     const int indent = *std::max_element(frame.begin(), frame.end()) ? std::max(metrics.horizontalAdvance(u'x'), 0) : 0;
@@ -507,7 +527,7 @@ QSize labelSizeHint(const QFont& font, const QString& text, const bool textLabel
     document.rootFrame()->setFrameFormat(frameFormat);
     document.setTextWidth(-1);
     const QSizeF size = document.size();
-    return QSize(qCeil(size.width()) + indent, qCeil(size.height())) + frameSize;
+    return wrappedSum(QSize(qCeil(size.width()) + indent, qCeil(size.height())), frameSize);
 }
 
 } // namespace
@@ -695,19 +715,19 @@ std::optional<QSize> TNullConsoleFrontend::getLabelSizeHint(const QString& name)
         return std::nullopt;
     }
     const Label& label = it->second;
-    const QSize frameSize(label.frame[1] + label.frame[3], label.frame[0] + label.frame[2]);
+    const QSize frameSize = frameExtent(label.frame);
     // QLabelPrivate::sizeForWidth() answers at least the minimum size, where TLabel's SVG size does not
     const QSize minimum = label.limits.minimum;
     // QLabel measures the movie's current image, re-reading it only as the movie resizes
     if (label.showsMovie && !label.movie->currentPixmap().isNull()) {
-        return (label.movie->currentPixmap().deviceIndependentSize().toSize() + frameSize).expandedTo(minimum);
+        return wrappedSum(label.movie->currentPixmap().deviceIndependentSize().toSize(), frameSize).expandedTo(minimum);
     }
     if (label.pixmapSize) {
-        return (*label.pixmapSize + frameSize).expandedTo(minimum);
+        return wrappedSum(*label.pixmapSize, frameSize).expandedTo(minimum);
     }
     // TLabel::sizeHint() answers an SVG's own size only when nothing else shows
     if (label.svgSize && !label.svgSize->isEmpty() && !label.showsMovie && QTextDocumentFragment::fromHtml(label.pModel->mText).toPlainText().trimmed().isEmpty()) {
-        return *label.svgSize + frameSize;
+        return wrappedSum(*label.svgSize, frameSize);
     }
     if (!label.sizeHint) {
         label.sizeHint = labelSizeHint(label.pModel->mFont, label.pModel->mText, label.textLabel, label.frame);
