@@ -40,6 +40,8 @@ public:
     static FontManager* self() { return smpSelf; }
     // Every family the font database knows, including those added here
     static QStringList availableFonts();
+    // For a query that resolves a family, as the bundled ones are only added on first use with no main window
+    static void ensureFontsAdded();
 
     void addFonts();
     void loadFont(const QString& filePath, const QString& profileName, const QString& belongsTo = "main");

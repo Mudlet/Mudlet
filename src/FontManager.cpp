@@ -52,10 +52,15 @@ FontManager::~FontManager()
 
 QStringList FontManager::availableFonts()
 {
+    ensureFontsAdded();
+    return QFontDatabase::families(QFontDatabase::Any);
+}
+
+void FontManager::ensureFontsAdded()
+{
     if (!smFontsAdded && smpSelf) {
         smpSelf->addFontsOnFirstUse();
     }
-    return QFontDatabase::families(QFontDatabase::Any);
 }
 
 void FontManager::addFonts()

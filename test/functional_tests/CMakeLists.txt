@@ -306,6 +306,7 @@ set(TEARDOWN_GROUP_TEST_SOURCES
     DialogTeardownTest.cpp
     FrontendRoutingContractTest.cpp
     HeadlessHostSmokeTest.cpp
+    HeadlessMainConsoleFontTest.cpp
     HeadlessVersionTest.cpp
     HostChildTeardownTest.cpp
     HostManagerAccessorTest.cpp
