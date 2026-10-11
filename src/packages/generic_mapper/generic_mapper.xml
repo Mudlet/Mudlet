@@ -372,7 +372,7 @@ setTriggerStayOpen("English Multi-Line Exits Trigger",1)</script>
 			</Trigger>
 			<Trigger isActive="yes" isFolder="no" isTempTrigger="no" isMultiline="no" isPerlSlashGOption="no" isColorizerTrigger="no" isFilterTrigger="no" isSoundTrigger="no" isColorTrigger="no" isColorTriggerFg="no" isColorTriggerBg="no">
 				<name>Swedish Failed Move Trigger</name>
-				<script>raiseEvent("onMoveFail")</script>
+				<script>if map.configs.language == "swedish" then raiseEvent("onMoveFail") end</script>
 				<triggerType>0</triggerType>
 				<conditonLineDelta>0</conditonLineDelta>
 				<mStayOpen>0</mStayOpen>
@@ -1971,12 +1971,13 @@ map.help.language = [[
         syntax: &lt;yellow&gt;map language &lt;english or swedish&gt;&lt;reset&gt;
 
         This command sets every direction translation at once, to the words a
-        game in that language uses. The mapper switches to Swedish by itself
-        the first time it sees a SvenskMUD exits line.
+        game in that language uses. On SvenskMUD the mapper picks Swedish by
+        itself, unless you have chosen a language or changed any translation.
 
         SvenskMUD rooms have no title, so the first sentence of the description
-        names the room. The game prints its prompt at the start of that line, so
-        set your prompt with &lt;yellow&gt;map prompt&lt;reset&gt; to keep it out of the name.
+        names the room. The game glues its prompt to the first line of the
+        description; if your prompt has letters in it, set it with
+        &lt;yellow&gt;map prompt&lt;reset&gt; to keep it out of the room name.
 ]]
 map.help.quick_start = [[
     &lt;link: quick_start&gt;map basics&lt;/link&gt; (quick start guide)
@@ -4017,7 +4018,7 @@ local function untitled_room_name()
     local prompt_pattern = map.save.prompt_pattern[map.character]
     local last = #lines
     if lines[last] == line then last = last - 1 end
-    -- an ASCII minimap left of the description pushes the text, exits line included, to the right
+    -- exits are indented 3; an ASCII minimap left of the text pushes it, exits line included, further right
     local indent = #string.match(line, "^%s*")
     local text = {}
     for i = last, 1, -1 do
@@ -4041,6 +4042,11 @@ local function untitled_room_name()
         if prompt_end then break end
     end
     lines = {}
+    if not prompt_pattern and text[1] then
+        -- a prompt nobody has described to the mapper is still glued on, and prompts rarely have letters
+        text[1] = (string.gsub(text[1], "^[^%a]+", ""))
+        if text[1] == "" then table.remove(text, 1) end
+    end
     if #text == 0 then return end
     local description = string.gsub(table.concat(text, " "), "%s+", " ")
     if map.configs.use_description_matching then
@@ -4055,6 +4061,7 @@ function map.setLanguage(name)
         map.echo("Unknown language, choose one of: " .. table.concat(table.keys(language_dirs), ", "), false, true)
         return
     end
+    map.configs.language = string.lower(name)
     map.configs.lang_dirs = table.update(map.defaults.lang_dirs, dirs)
     map.configs.translate = {}
     for k, v in pairs(map.configs.lang_dirs) do
@@ -4064,8 +4071,15 @@ function map.setLanguage(name)
     map.echo("Directions now use " .. string.lower(name) .. " words.")
 end
 
+local function lang_dirs_untouched()
+    for k, v in pairs(map.defaults.lang_dirs) do
+        if map.configs.lang_dirs[k] ~= v then return false end
+    end
+    return true
+end
+
 function map.captureUntitledRoom(exits, language)
-    if language and map.configs.lang_dirs.north == map.defaults.lang_dirs.north then
+    if language and not map.configs.language and map.configs.use_translation and lang_dirs_untouched() then
         map.setLanguage(language)
     end
     local name = untitled_room_name()

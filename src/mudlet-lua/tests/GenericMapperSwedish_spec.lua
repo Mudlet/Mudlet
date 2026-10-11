@@ -28,7 +28,7 @@ describe("Tests that the generic mapper follows a game in Swedish", function()
   end
 
   local mapperState = {"mapping", "currentRoom", "currentName", "currentExits", "prevRoom", "prevName", "prevExits"}
-  local saved, savedPrompt, savedNorth, savedQueue
+  local saved, savedPrompt, savedConfigs, savedQueue
 
   before_each(function()
     saved = {}
@@ -36,8 +36,12 @@ describe("Tests that the generic mapper follows a game in Swedish", function()
       saved[key] = map[key]
     end
     savedPrompt = map.save.prompt_pattern[map.character]
-    savedNorth = map.configs.lang_dirs.north
+    savedConfigs = {lang_dirs = map.configs.lang_dirs, translate = map.configs.translate,
+      language = map.configs.language, use_translation = map.configs.use_translation}
     savedQueue = {unpack(moveQueue())}
+    map.setLanguage("english")
+    map.configs.language = nil
+    map.configs.use_translation = true
     map.set("mapping", false)
     map.set("currentRoom", nil)
     map.save.prompt_pattern[map.character] = "^%d+/%d+ %d+/%d+"
@@ -52,8 +56,8 @@ describe("Tests that the generic mapper follows a game in Swedish", function()
       map.set(key, saved[key])
     end
     map.save.prompt_pattern[map.character] = savedPrompt
-    if map.configs.lang_dirs.north ~= savedNorth then
-      map.setLanguage(savedNorth == "norr" and "swedish" or "english")
+    for key, value in pairs(savedConfigs) do
+      map.configs[key] = value
     end
     local queue = moveQueue()
     for index = #queue, 1, -1 do
@@ -63,6 +67,8 @@ describe("Tests that the generic mapper follows a game in Swedish", function()
       queue[index] = move
     end
   end)
+
+  local room = "\n52/52 52/52Du står vid sjön. Norrut ligger byn.\n   Det finns två synliga vägar härifrån: norr och söder\n"
 
   local function sortedExits()
     local exits = {unpack(map.currentExits)}
@@ -94,21 +100,45 @@ describe("Tests that the generic mapper follows a game in Swedish", function()
   it("queues Swedish movement commands as the directions they lead", function()
     map.setLanguage("swedish")
     for _, command in ipairs({"nö", "väster", "ner", "ut", "t"}) do
-      map.eventHandler("sysDataSendRequest", command)
+      captureMoveCmd(command)
     end
     assert.are.same({"northeast", "west", "down", "out", "look"}, moveQueue())
   end)
 
   it("drops the queued move when the game does not understand it or a door is in the way", function()
     map.setLanguage("swedish")
-    map.eventHandler("sysDataSendRequest", "nv")
-    map.eventHandler("sysDataSendRequest", "v")
-    map.eventHandler("sysDataSendRequest", "s")
+    captureMoveCmd("nv")
+    captureMoveCmd("v")
+    captureMoveCmd("s")
     feedTriggers("\n52/52 52/52Ursäkta?\n")
     assert.are.same({"west", "south"}, moveQueue())
     feedTriggers("\n52/52 52/52Dörren hindrar dig.\n")
     assert.are.same({"south"}, moveQueue())
     feedTriggers("\nKalle säger: Vadå?\n")
     assert.are.same({"south"}, moveQueue())
+  end)
+
+  it("keeps English directions once they were chosen", function()
+    map.setLanguage("english")
+    feedTriggers(room)
+    assert.are.equal("north", map.configs.lang_dirs.north)
+  end)
+
+  it("leaves translations the player changed alone", function()
+    map.configs.lang_dirs.look = "kolla"
+    feedTriggers(room)
+    assert.are.equal("kolla", map.configs.lang_dirs.look)
+  end)
+
+  it("keeps the queued move when another game answers Eh?", function()
+    captureMoveCmd("n")
+    feedTriggers("\nEh?\n")
+    assert.are.same({"north"}, moveQueue())
+  end)
+
+  it("keeps a prompt with no letters out of the name before a prompt pattern is set", function()
+    map.save.prompt_pattern[map.character] = nil
+    feedTriggers(room)
+    assert.are.equal("Du står vid sjön.", map.currentName)
   end)
 end)
