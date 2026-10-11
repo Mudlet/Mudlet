@@ -506,7 +506,7 @@ createBuffer("nullViewBuffer")
                      "|nil:text edit name 'nullViewTextEdit' not found"
                      "|true:nil"
                      "|true:nil"
-                     "|false:the profile has no main window"
+                     "|true:nil"
                      "|true:nil"
                      "|nil:the profile has no main window"
                      "|nil:the profile has no main window"));

@@ -1428,6 +1428,269 @@ headlessRaise = ok and "ok" or tostring(err)
         QVERIFY2(QApplication::topLevelWidgets().isEmpty(), "Raising and lowering the windows created a widget.");
     }
 
+    // The answers are those of the same Lua run in the GUI self-test profile, but for the last ones:
+    // a spec cannot wait for deferred deletes, which take what a real deleted scroll box held out of
+    // the registry as TLabel's and TConsole's destructors and TMainConsole::deregisterScrollBox() run
+    void test_headlessScrollBoxContract()
+    {
+        const QString hostname = qsl("Test-Headless-Host-Scroll-Box");
+        QVERIFY2(HostManager::self()->addHost(hostname, QString(), QString(), QString()), "Could not create a profile with no main window.");
+        Host* host = HostManager::self()->getHost(hostname);
+        QVERIFY2(host, "The profile is not in the pool.");
+        QVERIFY(!host->hasConsoleView());
+
+        bool ran = host->getLuaInterpreter()->compileAndExecuteScript(qsl(R"lua(
+headlessScroll = "not run"
+local ok, err = pcall(function()
+  local function described(called, ...)
+    if not called then
+      return "raised:" .. tostring((...))
+    end
+    local count = select("#", ...)
+    local values = {}
+    for i = 1, count do
+      values[i] = tostring((select(i, ...)))
+    end
+    return "[" .. count .. "]" .. table.concat(values, ":")
+  end
+  local answers = {}
+  local function step(label, f, ...)
+    answers[#answers + 1] = label .. "=" .. described(pcall(f, ...))
+  end
+  local function look(label, name)
+    answers[#answers + 1] = label .. ":type=" .. described(pcall(windowType, name)) .. ",geometry=" .. described(pcall(getWindowGeometry, name)) .. ",visible=" .. described(pcall(windowVisible, name))
+  end
+  -- A label measures its text in the font it inherits, which is read against labels in the main window and in a user window
+  local function font(label, name)
+    local width, height = getLabelSizeHint(name)
+    local kinds = {}
+    for _, parent in ipairs({"main", "sbWindow"}) do
+      createLabel(parent, "sbTwin", 0, 0, 50, 20, 1)
+      echo("sbTwin", getLabelText(name))
+      local twinWidth, twinHeight = getLabelSizeHint("sbTwin")
+      deleteLabel("sbTwin")
+      if width == twinWidth and height == twinHeight then
+        kinds[#kinds + 1] = parent
+      end
+    end
+    answers[#answers + 1] = label .. ":font=" .. (#kinds > 0 and table.concat(kinds, "+") or "other")
+  end
+  local deletedEvents = {}
+  -- By name, as the C++ registerAnonymousEventHandler() takes no function
+  function headlessScrollDeleted(_, name)
+    deletedEvents[#deletedEvents + 1] = name
+  end
+  registerAnonymousEventHandler("sysScrollBoxDeleted", "headlessScrollDeleted")
+  local function events(label)
+    answers[#answers + 1] = label .. ":events=" .. table.concat(deletedEvents, ",")
+    deletedEvents = {}
+  end
+  assert(openUserWindow("sbWindow", false, false, "f") == true, "openUserWindow did not answer true")
+  setFont("sbWindow", "Bitstream Vera Sans Mono")
+  setFontSize("sbWindow", 20)
+  step("create", createScrollBox, "sbBox", 10, 20, 200, 100)
+  look("box", "sbBox")
+  step("createAgain", createScrollBox, "sbBox", 15, 25, 210, 110)
+  look("boxAgain", "sbBox")
+  step("createMain", createScrollBox, "main", "sbMainBox", 1, 2, 30, 40)
+  look("mainBox", "sbMainBox")
+  step("createInWindow", createScrollBox, "sbWindow", "sbWinBox", 3, 4, 150, 80)
+  look("winBox", "sbWinBox")
+  step("createInBox", createScrollBox, "sbBox", "sbInnerBox", 5, 6, 60, 50)
+  look("innerBox", "sbInnerBox")
+  step("createMissingParent", createScrollBox, "sbNoSuch", "sbOrphan", 0, 0, 10, 10)
+  look("orphan", "sbOrphan")
+  step("createNoName", createScrollBox)
+  step("createBadX", createScrollBox, "sbBad", "x", 0, 10, 10)
+  step("createLabel", createLabel, "sbBox", "sbLabel", 7, 8, 40, 20, 1)
+  look("label", "sbLabel")
+  step("echo", echo, "sbLabel", "words")
+  font("label", "sbLabel")
+  step("createWinBoxLabel", createLabel, "sbWinBox", "sbWinBoxLabel", 1, 1, 40, 20, 1)
+  step("echoWinBoxLabel", echo, "sbWinBoxLabel", "words")
+  font("winBoxLabel", "sbWinBoxLabel")
+  step("createInnerLabel", createLabel, "sbInnerBox", "sbInnerLabel", 2, 2, 20, 10, 1)
+  look("innerLabel", "sbInnerLabel")
+  step("createMini", createMiniConsole, "sbBox", "sbMini", 9, 10, 50, 40)
+  look("mini", "sbMini")
+  step("miniFontSize", getFontSize, "sbMini")
+  step("createWinBoxMini", createMiniConsole, "sbWinBox", "sbWinBoxMini", 0, 0, 50, 40)
+  step("winBoxMiniFontSize", getFontSize, "sbWinBoxMini")
+  step("move", moveWindow, "sbBox", 11, 12)
+  step("resize", resizeWindow, "sbBox", 120, 90)
+  look("moved", "sbBox")
+  step("raise", raiseWindow, "sbBox")
+  step("lower", lowerWindow, "sbBox")
+  step("hide", hideWindow, "sbBox")
+  look("hidden", "sbBox")
+  look("hiddenLabel", "sbLabel")
+  look("hiddenMini", "sbMini")
+  look("hiddenInnerBox", "sbInnerBox")
+  look("hiddenInnerLabel", "sbInnerLabel")
+  step("showLabelInHidden", showWindow, "sbLabel")
+  look("labelInHidden", "sbLabel")
+  step("show", showWindow, "sbBox")
+  look("shown", "sbBox")
+  look("shownLabel", "sbLabel")
+  look("shownInnerLabel", "sbInnerLabel")
+  step("hideWindow", hideWindow, "sbWindow")
+  look("winBoxInHidden", "sbWinBox")
+  look("winBoxLabelInHidden", "sbWinBoxLabel")
+  step("showWindow", showWindow, "sbWindow")
+  look("winBoxShown", "sbWinBox")
+  -- A scroll box may share a user window's name: a label goes into the user window, a mini console into the box
+  step("createClash", createScrollBox, "main", "sbWindow", 30, 30, 20, 20)
+  step("createClashLabel", createLabel, "sbWindow", "sbClashLabel", 0, 0, 40, 20, 1)
+  step("echoClashLabel", echo, "sbClashLabel", "words")
+  font("clashLabel", "sbClashLabel")
+  step("createClashMini", createMiniConsole, "sbWindow", "sbClashMini", 0, 0, 40, 20)
+  step("hideClash", hideWindow, "sbWindow")
+  step("clashHidden", windowVisible, "sbWindow")
+  look("clashLabelHidden", "sbClashLabel")
+  look("clashMiniHidden", "sbClashMini")
+  step("showClash", showWindow, "sbWindow")
+  step("deleteClash", deleteScrollBox, "sbWindow")
+  step("clashDeleted", windowType, "sbWindow")
+  step("bgImage", setBackgroundImage, "sbBox", "nothing.png")
+  step("bgColor", setBackgroundColor, "sbBox", 1, 2, 3)
+  events("beforeDelete")
+  step("delete", deleteScrollBox, "sbBox")
+  events("delete")
+  look("deleted", "sbBox")
+  look("deletedLabelAtOnce", "sbInnerLabel")
+  look("deletedMiniAtOnce", "sbMini")
+  look("deletedInnerAtOnce", "sbInnerBox")
+  step("deleteAgain", deleteScrollBox, "sbBox")
+  step("deleteEmpty", deleteScrollBox, "")
+  step("deleteNumber", deleteScrollBox, 5)
+  step("deleteNoArgs", deleteScrollBox)
+  step("createAfterDelete", createScrollBox, "sbBox", 1, 1, 10, 10)
+  look("recreated", "sbBox")
+  step("deleteRecreated", deleteScrollBox, "sbBox")
+  step("deleteMainBox", deleteScrollBox, "sbMainBox")
+  step("deleteWinBox", deleteScrollBox, "sbWinBox")
+  look("notYetGoneLabel", "sbLabel")
+  look("notYetGoneWinBoxMini", "sbWinBoxMini")
+  events("end")
+  closeUserWindow("sbWindow")
+  headlessScrollAnswers = table.concat(answers, "\n")
+end)
+headlessScroll = ok and "ok" or tostring(err)
+-- Run once deferred deletes have, which a spec cannot wait for
+function headlessScrollAfter()
+  local answers = {}
+  for _, name in ipairs({"sbLabel", "sbInnerLabel", "sbMini", "sbInnerBox", "sbWinBoxLabel", "sbWinBoxMini", "sbBox", "sbClashMini", "sbClashLabel", "sbWindow"}) do
+    answers[#answers + 1] = name .. ":" .. tostring(windowType(name))
+  end
+  return table.concat(answers, "\n")
+end
+)lua"));
+        QVERIFY2(ran, "The Lua chunk did not run.");
+        QCOMPARE(luaGlobalString(host, "headlessScroll"), qsl("ok"));
+        const QStringList answers{qsl("create=[1]true"),
+                                  qsl("box:type=[1]scrollbox,geometry=[4]10:20:200:100,visible=[1]true"),
+                                  qsl("createAgain=[2]false:scrollBox 'sbBox' already exists, moving/resizing 'sbBox'"),
+                                  qsl("boxAgain:type=[1]scrollbox,geometry=[4]15:25:210:110,visible=[1]true"),
+                                  qsl("createMain=[1]true"),
+                                  qsl("mainBox:type=[1]scrollbox,geometry=[4]1:2:30:40,visible=[1]true"),
+                                  qsl("createInWindow=[1]true"),
+                                  qsl("winBox:type=[1]scrollbox,geometry=[4]3:4:150:80,visible=[1]true"),
+                                  qsl("createInBox=[1]true"),
+                                  qsl("innerBox:type=[1]scrollbox,geometry=[4]5:6:60:50,visible=[1]true"),
+                                  qsl("createMissingParent=[2]false:window 'sbNoSuch' not found"),
+                                  qsl("orphan:type=[2]nil:'sbOrphan' is not a known label, any type of console, command line, text edit, nor scroll box,geometry=[2]nil:window \"sbOrphan\" not "
+                                      "found,visible=[2]nil:window \"sbOrphan\" not found"),
+                                  qsl("createNoName=raised:createScrollBox: bad argument #1 type (scrollBox name as string expected, got no value!)"),
+                                  qsl("createBadX=raised:createScrollBox: bad argument #6 type (scrollBox height as number expected, got no value!)"),
+                                  qsl("createLabel=[1]true"),
+                                  qsl("label:type=[1]label,geometry=[4]7:8:40:20,visible=[1]true"),
+                                  qsl("echo=[1]true"),
+                                  qsl("label:font=main"),
+                                  qsl("createWinBoxLabel=[1]true"),
+                                  qsl("echoWinBoxLabel=[1]true"),
+                                  qsl("winBoxLabel:font=sbWindow"),
+                                  qsl("createInnerLabel=[1]true"),
+                                  qsl("innerLabel:type=[1]label,geometry=[4]2:2:20:10,visible=[1]true"),
+                                  qsl("createMini=[1]true"),
+                                  qsl("mini:type=[1]miniconsole,geometry=[4]9:10:50:40,visible=[1]true"),
+                                  qsl("miniFontSize=[1]12"),
+                                  qsl("createWinBoxMini=[1]true"),
+                                  qsl("winBoxMiniFontSize=[1]12"),
+                                  qsl("move=[0]"),
+                                  qsl("resize=[0]"),
+                                  qsl("moved:type=[1]scrollbox,geometry=[4]11:12:120:90,visible=[1]true"),
+                                  qsl("raise=[1]true"),
+                                  qsl("lower=[1]true"),
+                                  qsl("hide=[0]"),
+                                  qsl("hidden:type=[1]scrollbox,geometry=[4]11:12:120:90,visible=[1]false"),
+                                  qsl("hiddenLabel:type=[1]label,geometry=[4]7:8:40:20,visible=[1]false"),
+                                  qsl("hiddenMini:type=[1]miniconsole,geometry=[4]9:10:50:40,visible=[1]false"),
+                                  qsl("hiddenInnerBox:type=[1]scrollbox,geometry=[4]5:6:60:50,visible=[1]false"),
+                                  qsl("hiddenInnerLabel:type=[1]label,geometry=[4]2:2:20:10,visible=[1]false"),
+                                  qsl("showLabelInHidden=[1]true"),
+                                  qsl("labelInHidden:type=[1]label,geometry=[4]7:8:40:20,visible=[1]false"),
+                                  qsl("show=[1]true"),
+                                  qsl("shown:type=[1]scrollbox,geometry=[4]11:12:120:90,visible=[1]true"),
+                                  qsl("shownLabel:type=[1]label,geometry=[4]7:8:40:20,visible=[1]true"),
+                                  qsl("shownInnerLabel:type=[1]label,geometry=[4]2:2:20:10,visible=[1]true"),
+                                  qsl("hideWindow=[0]"),
+                                  qsl("winBoxInHidden:type=[1]scrollbox,geometry=[4]3:4:150:80,visible=[1]false"),
+                                  qsl("winBoxLabelInHidden:type=[1]label,geometry=[4]1:1:40:20,visible=[1]false"),
+                                  qsl("showWindow=[1]true"),
+                                  qsl("winBoxShown:type=[1]scrollbox,geometry=[4]3:4:150:80,visible=[1]true"),
+                                  qsl("createClash=[1]true"),
+                                  qsl("createClashLabel=[1]true"),
+                                  qsl("echoClashLabel=[1]true"),
+                                  qsl("clashLabel:font=sbWindow"),
+                                  qsl("createClashMini=[1]true"),
+                                  qsl("hideClash=[0]"),
+                                  qsl("clashHidden=[1]false"),
+                                  qsl("clashLabelHidden:type=[1]label,geometry=[4]0:0:40:20,visible=[1]false"),
+                                  qsl("clashMiniHidden:type=[1]miniconsole,geometry=[4]0:0:40:20,visible=[1]true"),
+                                  qsl("showClash=[1]true"),
+                                  qsl("deleteClash=[1]true"),
+                                  qsl("clashDeleted=[1]userwindow"),
+                                  qsl("bgImage=[2]nil:console or label 'sbBox' not found, or 'nothing.png' could not be loaded as an image"),
+                                  qsl("bgColor=[2]nil:window/label 'sbBox' not found"),
+                                  qsl("beforeDelete:events=sbWindow"),
+                                  qsl("delete=[1]true"),
+                                  qsl("delete:events=sbBox"),
+                                  qsl("deleted:type=[2]nil:'sbBox' is not a known label, any type of console, command line, text edit, nor scroll box,geometry=[2]nil:window \"sbBox\" not "
+                                      "found,visible=[2]nil:window \"sbBox\" not found"),
+                                  qsl("deletedLabelAtOnce:type=[1]label,geometry=[4]2:2:20:10,visible=[1]true"),
+                                  qsl("deletedMiniAtOnce:type=[1]miniconsole,geometry=[4]9:10:50:40,visible=[1]true"),
+                                  qsl("deletedInnerAtOnce:type=[1]scrollbox,geometry=[4]5:6:60:50,visible=[1]true"),
+                                  qsl("deleteAgain=[2]false:scrollbox name 'sbBox' not found"),
+                                  qsl("deleteEmpty=[2]false:a scrollbox cannot have an empty string as its name"),
+                                  qsl("deleteNumber=[2]false:scrollbox name '5' not found"),
+                                  qsl("deleteNoArgs=raised:deleteScrollBox: bad argument #1 type (scrollbox name as string expected, got no value!)"),
+                                  qsl("createAfterDelete=[1]true"),
+                                  qsl("recreated:type=[1]scrollbox,geometry=[4]1:1:10:10,visible=[1]true"),
+                                  qsl("deleteRecreated=[1]true"),
+                                  qsl("deleteMainBox=[1]true"),
+                                  qsl("deleteWinBox=[1]true"),
+                                  qsl("notYetGoneLabel:type=[1]label,geometry=[4]7:8:40:20,visible=[1]true"),
+                                  qsl("notYetGoneWinBoxMini:type=[1]miniconsole,geometry=[4]0:0:50:40,visible=[1]true"),
+                                  qsl("end:events=sbBox,sbMainBox,sbWinBox")};
+        QCOMPARE(luaGlobalString(host, "headlessScrollAnswers"), answers.join(QLatin1Char('\n')));
+
+        QCoreApplication::sendPostedEvents(nullptr, QEvent::DeferredDelete);
+        ran = host->getLuaInterpreter()->compileAndExecuteScript(qsl("headlessScrollAfterAnswers = headlessScrollAfter()"));
+        QVERIFY2(ran, "The Lua chunk after the deferred deletes did not run.");
+        const QStringList after{qsl("sbLabel:nil"),
+                                qsl("sbInnerLabel:nil"),
+                                qsl("sbMini:nil"),
+                                qsl("sbInnerBox:nil"),
+                                qsl("sbWinBoxLabel:nil"),
+                                qsl("sbWinBoxMini:nil"),
+                                qsl("sbBox:nil"),
+                                qsl("sbClashMini:nil"),
+                                qsl("sbClashLabel:label"),
+                                qsl("sbWindow:userwindow")};
+        QCOMPARE(luaGlobalString(host, "headlessScrollAfterAnswers"), after.join(QLatin1Char('\n')));
+        QVERIFY2(QApplication::topLevelWidgets().isEmpty(), "Making and deleting the scroll boxes created a widget.");
+    }
+
     // What a profile with no view answers the scroll calls, taken from the same Lua run in the GUI self-test
     // profile, which lets each real pane repaint before it is read and re-issues each scroll until it holds.
     void test_headlessScrollContract()

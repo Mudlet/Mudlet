@@ -5526,10 +5526,6 @@ std::pair<bool, QString> Host::createMiniConsole(const QString& windowname, cons
 
 std::pair<bool, QString> Host::createScrollBox(const QString& windowname, const QString& name, int x, int y, int width, int height) const
 {
-    if (!hasConsoleView()) {
-        return TNullConsoleFrontend::noView();
-    }
-
     if (parentWindowMissing(windowname)) {
         return {false, qsl("window '%1' not found").arg(windowname)};
     }
