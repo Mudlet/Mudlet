@@ -29,6 +29,11 @@
 #include <QDesktopServices>
 #include <QFontDatabase>
 
+static QStringList fontFileFilters()
+{
+    return {qsl("*.ttf"), qsl("*.otf")};
+}
+
 FontManager::FontManager()
 {
     if (smpSelf) {
@@ -47,11 +52,15 @@ FontManager::~FontManager()
 
 QStringList FontManager::availableFonts()
 {
+    if (!smFontsAdded && smpSelf) {
+        smpSelf->addFontsOnFirstUse();
+    }
     return QFontDatabase::families(QFontDatabase::Any);
 }
 
 void FontManager::addFonts()
 {
+    smFontsAdded = true;
     const QDir dir(MudletApp::getMudletPath(enums::mainFontsPath));
 
     if (!dir.exists()) {
@@ -67,14 +76,34 @@ void FontManager::addFonts()
     }
 }
 
+// For when mudlet::init() has not loaded the fonts folder, as with no main
+// window. The executable also copies each bundled font missing from that folder
+// out of the resources first (copyFont() in main.cpp); nothing does so here, so
+// those are loaded from the resources instead.
+void FontManager::addFontsOnFirstUse()
+{
+    addFonts();
+
+    const QString folder = MudletApp::getMudletPath(enums::mainFontsPath);
+    const QDir resources(qsl(":/fonts"));
+    for (const QString& bundle : resources.entryList(QDir::Dirs | QDir::NoDotAndDotDot)) {
+        const QDir resourceBundle(resources.filePath(bundle));
+        for (const QString& fontFile : resourceBundle.entryList(fontFileFilters(), QDir::Files)) {
+            if (!QFileInfo::exists(qsl("%1/%2/%3").arg(folder, bundle, fontFile))) {
+                loadFont(resourceBundle.filePath(fontFile), QString());
+            }
+        }
+    }
+
+    addEmojiFont();
+}
+
 // loads all of the fonts in the given folder
 void FontManager::loadFonts(const QString& folder)
 {
     // Check what happens with this: "Adding application fonts on Unix/X11 platforms without fontconfig is currently not supported."
-    QStringList filters;
-    filters << qsl("*.ttf") << qsl("*.otf");
     QDir dir = folder;
-    dir.setNameFilters(filters);
+    dir.setNameFilters(fontFileFilters());
 
     for (auto fontFile : dir.entryList(QDir::Files | QDir::Readable | QDir::NoDotAndDotDot)) {
         const QString fontFilePathName = qsl("%1/%2").arg(dir.absolutePath(), fontFile);

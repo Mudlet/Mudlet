@@ -36,6 +36,7 @@
 
 #include <memory>
 
+#include "FontManager.h"
 #include "Host.h"
 #include "HostManager.h"
 #include "MudletApp.h"
@@ -94,6 +95,8 @@ private:
 )");
     }
 
+    static QString veraFontFolder() { return qsl("%1/ttf-bitstream-vera-1.10").arg(MudletApp::getMudletPath(enums::mainFontsPath)); }
+
     // A second of silence, for media that only has to be played and stopped
     static QByteArray silentWav()
     {
@@ -141,6 +144,12 @@ private slots:
         mSavedXdg = qgetenv("XDG_CONFIG_HOME");
         qputenv("XDG_CONFIG_HOME", mConfigDir.path().toUtf8());
         QCOMPARE(MudletApp::getMudletPath(enums::mainPath), qsl("%1/mudlet").arg(mConfigDir.path()));
+#ifdef INCLUDE_FONTS
+        // Staged before anything can ask for a font: one bundled font copied out, as a run of the executable
+        // can leave a bundle, so the rest of that bundle has to come from the resources
+        QVERIFY(QDir().mkpath(veraFontFolder()));
+        QVERIFY(QFile::copy(qsl(":/fonts/ttf-bitstream-vera-1.10/Vera.ttf"), qsl("%1/Vera.ttf").arg(veraFontFolder())));
+#endif
 
         QVERIFY2(!HostManager::self(), "A profile pool already exists, so this run is not headless.");
         mpHostManager = std::make_unique<HostManager>();
@@ -674,6 +683,43 @@ headlessCaptions = ok and 'ok' or tostring(err)
         QVERIFY2(host->getLuaInterpreter()->compileAndExecuteScript(script), "The Lua chunk did not run.");
         QCOMPARE(luaGlobalString(host, "headlessCaptions"), qsl("ok"));
         QTRY_VERIFY2(mainBufferHolds(host, qsl("[headless caption stops]")), "The stopped sound was not captioned in the main console.");
+    }
+
+    // Nothing copies the bundled fonts out to the config directory here, as the executable does for the GUI
+    void test_bundledFontsAreAvailableWithNoMainWindow()
+    {
+#ifndef INCLUDE_FONTS
+        QSKIP("Built with WITH_FONTS=NO, so there are no bundled fonts to list");
+#else
+        QVERIFY2(!TAppFrontend::hasView(), "A main window exists, so this run is not headless.");
+
+        const QString hostname = qsl("Test-Headless-Host-Fonts");
+        QVERIFY2(HostManager::self()->addHost(hostname, QString(), QString(), QString()), "Could not create a profile with no main window.");
+        Host* host = HostManager::self()->getHost(hostname);
+        QVERIFY2(host, "The profile is not in the pool.");
+
+        const bool ran = host->getLuaInterpreter()->compileAndExecuteScript(qsl(R"lua(
+local ok, err = pcall(function()
+  local fonts = getAvailableFonts()
+  assert(fonts["Bitstream Vera Sans Mono"], "the bundled default font is not listed")
+  assert(fonts["Ubuntu Mono"], "the bundled Ubuntu Mono is not listed")
+  local set, why = setConfig("mapSymbolFont", "Bitstream Vera Sans Mono")
+  assert(set, "the bundled default was refused as the map symbol font: " .. tostring(why))
+  assert(getConfig("mapSymbolFont") == "Bitstream Vera Sans Mono", "the map symbol font reads back as " .. tostring(getConfig("mapSymbolFont")))
+end)
+headlessFonts = ok and 'ok' or tostring(err)
+)lua"));
+        QVERIFY2(ran, "The Lua chunk did not run.");
+        QCOMPARE(luaGlobalString(host, "headlessFonts"), qsl("ok"));
+
+        // The families alone could be fonts this machine has installed itself
+        FontManager* fonts = FontManager::self();
+        QVERIFY2(fonts, "The profile pool has no font manager.");
+        QVERIFY2(fonts->fontAlreadyLoaded(qsl("%1/Vera.ttf").arg(veraFontFolder()), QString()), "The font copied out to the fonts folder was not loaded from there.");
+        QVERIFY2(!fonts->fontAlreadyLoaded(qsl(":/fonts/ttf-bitstream-vera-1.10/Vera.ttf"), QString()), "The font copied out to the fonts folder was loaded from the resources too.");
+        QVERIFY2(fonts->fontAlreadyLoaded(qsl(":/fonts/ttf-bitstream-vera-1.10/VeraMono.ttf"), QString()), "A font missing from a copied-out bundle was not loaded from the resources.");
+        QVERIFY2(fonts->fontAlreadyLoaded(qsl(":/fonts/ubuntu-font-family-0.83/UbuntuMono-R.ttf"), QString()), "A bundle never copied out was not loaded from the resources.");
+#endif
     }
 
     // As the GUI answers the same files

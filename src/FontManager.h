@@ -27,8 +27,8 @@
 
 
 // The fonts Mudlet and its profiles' packages add to the application's font
-// database. A value member of the application object like HostManager, so a
-// profile reaches it through self() rather than through the main window.
+// database. Owned by HostManager, so a profile reaches it through self() even
+// with no main window.
 class FontManager
 {
 public:
@@ -36,7 +36,7 @@ public:
     FontManager();
     ~FontManager();
 
-    // Null outside the application object's lifetime
+    // Null outside HostManager's lifetime
     static FontManager* self() { return smpSelf; }
     // Every family the font database knows, including those added here
     static QStringList availableFonts();
@@ -49,6 +49,11 @@ public:
 
 private:
     inline static FontManager* smpSelf = nullptr;
+    // For the process rather than the instance: the font database is the
+    // process's, and outlives every FontManager that adds to it
+    inline static bool smFontsAdded = false;
+
+    void addFontsOnFirstUse();
 
     void loadFonts(const QString& folder);
     void rememberFont(const QString& filePath, int fontID, const QString& profileName, const QString& belongsTo);

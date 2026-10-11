@@ -23,6 +23,7 @@
 
 #include "HostManager.h"
 
+#include "FontManager.h"
 #include "Host.h"
 #include "MudletMedia.h"
 
@@ -30,6 +31,7 @@
 
 HostManager::HostManager()
 : mpMedia(std::make_unique<MudletMedia>())
+, mpFonts(std::make_unique<FontManager>())
 {
     // self() callers trust there is only one; a second would repoint the accessor, then null it on
     // destruction while the first is still in use.
