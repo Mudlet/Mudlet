@@ -692,14 +692,16 @@ bool dlgMapper::showing3DView() const
 
 #if defined(INCLUDE_3DMAPPER)
 namespace {
-// Empty when a script can move the camera of this 3D view
+const QString scmGridModeRefusal = qsl("the area shown in the 3D view is in grid mode, which always looks straight down");
+
+// Empty when a script can move the camera of this 3D view; grid mode is checked by the callers
 QString cameraRefusal(const ModernGLWidget* modernWidget, const bool showing)
 {
     if (!modernWidget || !showing) {
         return qsl("the modern 3D map view is not showing");
     }
-    if (modernWidget->cameraFixedByGridMode()) {
-        return qsl("the area shown in the 3D view is in grid mode, which always looks straight down");
+    if (!modernWidget->failureMessage().isEmpty()) {
+        return qsl("the modern 3D map view could not start: %1").arg(modernWidget->failureMessage());
     }
     return QString();
 }
@@ -712,6 +714,9 @@ std::pair<bool, QString> dlgMapper::shift3DViewCamera(float verticalAngle, float
     auto* modernWidget = qobject_cast<ModernGLWidget*>(glWidget);
     if (const QString refusal = cameraRefusal(modernWidget, showing3DView()); !refusal.isEmpty()) {
         return {false, refusal};
+    }
+    if (modernWidget->cameraFixedByGridMode()) {
+        return {false, scmGridModeRefusal};
     }
     modernWidget->shiftCamera(verticalAngle, horizontalAngle, rotationAngle);
     return {true, QString()};
@@ -729,6 +734,11 @@ std::pair<bool, QString> dlgMapper::set3DViewCameraPosition(float r, float theta
     auto* modernWidget = qobject_cast<ModernGLWidget*>(glWidget);
     if (const QString refusal = cameraRefusal(modernWidget, showing3DView()); !refusal.isEmpty()) {
         return {false, refusal};
+    }
+    // Grid mode fixes the angles but not the distance, and no other call zooms the 3D view
+    if (modernWidget->cameraFixedByGridMode()) {
+        modernWidget->setCameraDistance(r);
+        return {false, qsl("%1, so only the distance was applied").arg(scmGridModeRefusal)};
     }
     modernWidget->setCameraPosition(r, theta, phi);
     return {true, QString()};

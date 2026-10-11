@@ -39,7 +39,8 @@ CameraController cameraLookingAt(const QVector3D& target)
     return camera;
 }
 
-// Counterclockwise, in -180 to 180, as the map turns on a screen looking straight down
+// How far the screen's up has turned counterclockwise from north, seen from above (the map turns clockwise
+// on screen by as much), in -180 to 180
 float screenUpFromNorth(const CameraController& camera)
 {
     const QVector3D up = camera.getUpVector();
@@ -222,6 +223,26 @@ private slots:
             const float tilt = camera.getPosition().y();
             QVERIFY2(tilt >= CameraController::scmMinTilt - 0.01f && tilt <= CameraController::scmMaxTilt + 0.01f,
                      qPrintable(qsl("tilting the default view by %1 left it at %2").arg(verticalAngle).arg(tilt)));
+            // Tipped over the top, the camera would read a roll of 180 and show the map upside down
+            QVERIFY2(qAbs(camera.getRoll()) < 1.0f, qPrintable(qsl("tilting the default view by %1 left a roll of %2").arg(verticalAngle).arg(camera.getRoll())));
+            QVERIFY2(qAbs(screenUpFromNorth(camera)) < 1.0f, qPrintable(qsl("tilting the default view by %1 turned the map by %2").arg(verticalAngle).arg(screenUpFromNorth(camera))));
+        }
+    }
+
+    void test_tiltingStepByStepStopsLookingStraightDown()
+    {
+        for (const float startRoll : {0.0f, 30.0f}) {
+            CameraController camera;
+            camera.setOrientation(CameraController::scmDefaultTilt, CameraController::scmNorthUpAzimuth, startRoll);
+            // As a script easing the view toward the top does, a tick at a time
+            for (int step = 1; step <= 30; ++step) {
+                camera.shiftPerspective(5.0f, 0.0f, 0.0f);
+                QVERIFY2(qAbs(camera.getRoll() - startRoll) < 0.5f,
+                         qPrintable(qsl("from a roll of %1, step %2 left a roll of %3 at a tilt of %4").arg(startRoll).arg(step).arg(camera.getRoll()).arg(camera.getPosition().y())));
+                QVERIFY2(camera.getUpVector().z() > -0.01f, qPrintable(qsl("from a roll of %1, step %2 turned the camera upside down").arg(startRoll).arg(step)));
+            }
+            QVERIFY2(camera.getPosition().y() < CameraController::scmMinTilt + 0.01f,
+                     qPrintable(qsl("from a roll of %1, tilting all the way stopped at %2").arg(startRoll).arg(camera.getPosition().y())));
         }
     }
 

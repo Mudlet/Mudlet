@@ -58,8 +58,9 @@ public:
     virtual bool showing3DView() const = 0;
     // Builds the 3D view afresh, for a change of 3D renderer to take effect.
     virtual void recreate3DView() = 0;
-    // Only the modern 3D renderer has a camera to move, and not while it shows a grid-mode area, which
-    // it always draws looking straight down; otherwise these answer false and why.
+    // Only the modern 3D view has a camera to move, and only while it is showing, started and not drawing a
+    // grid-mode area, which it always looks at straight down; otherwise these answer false and the reason.
+    // In grid mode set3DViewCameraPosition still applies the distance.
     virtual std::pair<bool, QString> shift3DViewCamera(float verticalAngle, float horizontalAngle, float rotationAngle) = 0;
     virtual std::pair<bool, QString> set3DViewCameraPosition(float r, float theta, float phi) = 0;
 

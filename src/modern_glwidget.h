@@ -76,6 +76,8 @@ public:
     QVector3D viewCenter() const { return QVector3D(mMapCenterX, mMapCenterY, mMapCenterZ); }
     void shiftCamera(float, float, float);
     void setCameraPosition(float, float, float);
+    void setCameraDistance(float r);
+    const QString& failureMessage() const { return mFailureMessage; }
     // A grid-mode area is always drawn looking straight down with north up
     bool cameraFixedByGridMode() const;
 
