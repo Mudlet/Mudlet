@@ -114,6 +114,11 @@ void ModernGLWidget::showEvent(QShowEvent* event)
     QOpenGLWidget::showEvent(event);
     // Qt creates the context once the widget is laid out; if that failed, initializeGL never runs to say so
     QTimer::singleShot(0, this, [this]() {
+        if (isVisible() && !context() && !size().isEmpty()) {
+            // Qt can drop the context as the view is shown (switching renderers does this) and only makes another on a resize
+            QResizeEvent resize(size(), size());
+            QCoreApplication::sendEvent(this, &resize);
+        }
         if (isVisible() && !isValid() && mFailureMessage.isEmpty()) {
             //: Shown in place of the 3D map when the graphics driver cannot create the OpenGL context the modern 3D mapper needs
             showFailure(tr("The modern 3D mapper could not create an OpenGL 3.3 context on this system."));
@@ -168,7 +173,7 @@ void ModernGLWidget::showFailure(const QString& message)
         layout->addWidget(mpFailureLabel);
     }
     //: Second paragraph of the message shown in place of the 3D map when the modern 3D mapper cannot run; keep setConfig("experiment.3dmap.modernmapper", false) exactly as written, it is Lua code the user types
-    mpFailureLabel->setText(qsl("%1\n\n%2").arg(message, tr("Use setConfig(\"experiment.3dmap.modernmapper\", false) to switch back to the classic 3D view.")));
+    mpFailureLabel->setText(qsl("%1\n\n%2").arg(message, tr("Use setConfig(\"experiment.3dmap.modernmapper\", false) to try the classic 3D view; if that stays blank too, use the 2D map.")));
     mpFailureLabel->show();
 }
 
