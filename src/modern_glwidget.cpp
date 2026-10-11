@@ -690,6 +690,8 @@ void ModernGLWidget::renderRooms()
         const qreal widest = idMetrics->horizontalAdvance(QString(QString::number(maxRoomId).size(), QLatin1Char('8')));
         idTexel = 0.9f * roomSize / static_cast<float>(qMax(widest, idMetrics->height()));
     }
+    // Cleared before any of this frame's textures is asked for, as only those in it are kept from eviction
+    mRoomTexturesInUse.clear();
     // A digit's texture and size by its color and character. Made before any room's other textures, so
     // that a view short of room for textures keeps its IDs whole
     QHash<std::pair<QRgb, char16_t>, std::pair<GLuint, QSize>> digitTextures;
@@ -727,8 +729,6 @@ void ModernGLWidget::renderRooms()
     };
     QList<RoomName> roomNames;
     const float textTexel = roomSize / scmTextTexelsPerRoom;
-
-    mRoomTexturesInUse.clear();
 
     // Made before any symbol, so a view short of room for textures still shows where the player is
     GLuint playerRoomTexture = 0;

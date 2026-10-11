@@ -63,6 +63,7 @@ struct MapInfoProperties;
 class ModernGLWidget : public QOpenGLWidget, protected QOpenGLFunctions
 {
     Q_OBJECT
+    friend class ModernRoomTextureTest;
 
 public:
     Q_DISABLE_COPY(ModernGLWidget)
