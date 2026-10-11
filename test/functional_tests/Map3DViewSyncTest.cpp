@@ -426,6 +426,11 @@ private slots:
         auto* pModern = qobject_cast<ModernGLWidget*>(pMapper->glWidget);
         QVERIFY(pModern);
         QVERIFY2(pModern->isVisible() && !pModern->size().isEmpty(), "the 3D view is not showing, so nothing tried to start it");
+        if (!pModern->context()) {
+            // Where GL works, Qt drops the context of a view shown straight after switching renderers and makes it again on resize
+            QResizeEvent resize(pModern->size(), pModern->size());
+            QCoreApplication::sendEvent(pModern, &resize);
+        }
         if (pModern->isValid()) {
             QSKIP("this machine created a GL context for the modern 3D view");
         }
