@@ -154,6 +154,7 @@ void ModernGLWidget::showEvent(QShowEvent* event)
 
 void ModernGLWidget::hideEvent(QHideEvent* event)
 {
+    endEditGesture();
     saveCamera();
     QOpenGLWidget::hideEvent(event);
 }
@@ -461,7 +462,8 @@ void ModernGLWidget::paintGL()
 
     glEnable(GL_MULTISAMPLE);
 
-    if (mShiftMode && !mSecondaryView && (mRID != mpMap->mRoomIdHash.value(mpMap->mProfileName) || mpMap->mNewMove)) {
+    // Not while rooms are dragged, as they follow the pointer across the map and would go along with the view
+    if (mShiftMode && !mSecondaryView && !mMovingRooms && (mRID != mpMap->mRoomIdHash.value(mpMap->mProfileName) || mpMap->mNewMove)) {
         mShiftMode = false;
     }
 
@@ -1688,7 +1690,7 @@ std::optional<float> rayHitsBox(const QVector3D& origin, const QVector3D& direct
 constexpr qreal scmPickSlopPixels = 6.0;
 } // namespace
 
-int ModernGLWidget::roomAt(const QPoint& position)
+int ModernGLWidget::roomAt(const QPoint& position, const bool orNear)
 {
     if (!mpMap || !mpMap->mpRoomDB) {
         return 0;
@@ -1716,7 +1718,7 @@ int ModernGLWidget::roomAt(const QPoint& position)
                 hitDistance = *distance;
                 hitRoom = roomId;
             }
-        } else if (!hitRoom) {
+        } else if (orNear && !hitRoom) {
             if (const std::optional<QPointF> pixel = mCameraController.pixelForPoint(center)) {
                 const qreal pixels = QLineF(*pixel, QPointF(position)).length();
                 if (pixels < nearPixels) {
@@ -1768,6 +1770,12 @@ bool ModernGLWidget::editingMap() const
     return mp2DMap && !mp2DMap->mMapViewOnly;
 }
 
+namespace {
+// Toward the horizon each pixel spans ever more of a level, so beyond this many times the camera's distance from the
+// view center a drag would throw rooms far off the map
+constexpr float scmMaxDragReach = 10.0f;
+} // namespace
+
 std::optional<QPointF> ModernGLWidget::mapPointOnLevel(const QPoint& position, const int z)
 {
     updateMatrices();
@@ -1776,7 +1784,7 @@ std::optional<QPointF> ModernGLWidget::mapPointOnLevel(const QPoint& position, c
         return std::nullopt;
     }
     const float distance = (static_cast<float>(z) - origin.z()) / direction.z();
-    if (distance < 0.0f) {
+    if (distance < 0.0f || distance > scmMaxDragReach * (mCameraController.getTarget() - origin).length()) {
         return std::nullopt;
     }
     const QVector3D point = origin + direction * distance;
@@ -1822,10 +1830,25 @@ void ModernGLWidget::startRoomMove(const int roomId)
     mp2DMap->selectRoomsToMove({roomId}, roomId);
     mp2DMap->updateSelectionWidget();
     mMovingRooms = true;
+    mRoomsMoved = false;
     mRoomMoveLastPoint = QPointF(pRoom->x(), pRoom->y());
     mRoomMoveLevel = pRoom->z();
     holdView();
     update();
+}
+
+void ModernGLWidget::endEditGesture()
+{
+    if (mRectangleSelecting && mp2DMap) {
+        mp2DMap->endRectangleSelection();
+    }
+    // The other views showing the area redraw only on this
+    if (std::exchange(mRoomsMoved, false) && mpHost && mpMap) {
+        mpMap->updateArea(mAID);
+    }
+    mMovingRooms = false;
+    mRectangleSelecting = false;
+    mSelectionRectangle = QRect();
 }
 
 void ModernGLWidget::raiseMousePressEvent()
@@ -1849,14 +1872,24 @@ void ModernGLWidget::mousePressEvent(QMouseEvent* event)
     mKeysNavigate = false;
     mPressPosition = event->position().toPoint();
     mClickPending = false;
+    // A release that went elsewhere, such as to a menu opened mid-drag, must not leave the last drag running
+    endEditGesture();
     // As on the 2D map in editing mode: a drag from a room moves the selection and one from empty space,
     // or with Ctrl or Shift, draws a selection rectangle; Alt keeps the viewing mode's drags to pan and orbit
     if (event->button() == Qt::LeftButton && editingMap() && !event->modifiers().testFlag(Qt::AltModifier)) {
-        const int roomId = roomAt(mPressPosition);
+        if (mCameraSmoothAnimating) {
+            // Stopped where it is, so the press picks what is under the pointer and a drag does not glide on with it
+            stopSmoothTransition();
+            mMapCenterX = qRound(mCurrentAnimationX);
+            mMapCenterY = qRound(mCurrentAnimationY);
+            mMapCenterZ = qRound(mCurrentAnimationZ);
+        }
+        // Only a room right under the pointer is picked up, so a drag beside rooms seen small draws a rectangle
+        const int roomId = roomAt(mPressPosition, false);
         if (roomId && !(event->modifiers() & (Qt::ControlModifier | Qt::ShiftModifier))) {
             startRoomMove(roomId);
         } else {
-            mp2DMap->beginRectangleSelection(roomId, event->modifiers());
+            mp2DMap->beginRectangleSelection(roomId ? roomId : roomAt(mPressPosition), event->modifiers());
             mRectangleSelecting = true;
             mRectangleDragged = false;
             mSelectionRectangle = QRect(mPressPosition, QSize());
@@ -1903,6 +1936,10 @@ void ModernGLWidget::mouseMoveEvent(QMouseEvent* event)
             raiseMousePressEvent();
         }
     }
+    if ((mMovingRooms || mRectangleSelecting) && !event->buttons().testFlag(Qt::LeftButton)) {
+        endEditGesture();
+        update();
+    }
     if (mMovingRooms) {
         // As RoomMoveDragHandler: the rooms follow the pointer in whole grid steps
         if (const std::optional<QPointF> point = mapPointOnLevel(event->position().toPoint(), mRoomMoveLevel)) {
@@ -1911,6 +1948,7 @@ void ModernGLWidget::mouseMoveEvent(QMouseEvent* event)
             if ((dx || dy) && mp2DMap) {
                 mRoomMoveLastPoint += QPointF(dx, dy);
                 mp2DMap->moveSelectedRoomsBy(dx, dy);
+                mRoomsMoved = true;
                 update();
             }
         }
@@ -1969,14 +2007,7 @@ void ModernGLWidget::mouseMoveEvent(QMouseEvent* event)
 void ModernGLWidget::mouseReleaseEvent(QMouseEvent* event)
 {
     if (event->button() == Qt::LeftButton && (mMovingRooms || mRectangleSelecting)) {
-        mMovingRooms = false;
-        if (mRectangleSelecting) {
-            mRectangleSelecting = false;
-            mSelectionRectangle = QRect();
-            if (mp2DMap) {
-                mp2DMap->endRectangleSelection();
-            }
-        }
+        endEditGesture();
         QOpenGLWidget::mouseReleaseEvent(event);
         update();
         return;

@@ -56,6 +56,16 @@
 #include "modern_glwidget.h"
 #include "mudlet.h"
 
+extern "C" {
+#if defined(INCLUDE_VERSIONED_LUA_HEADERS)
+#include <lua5.1/lauxlib.h>
+#include <lua5.1/lua.h>
+#else
+#include <lauxlib.h>
+#include <lua.h>
+#endif
+}
+
 #include "GroupedTest.h"
 
 using namespace std::chrono_literals;
@@ -98,7 +108,7 @@ private:
     // Every room back where initTestCase() put it
     void resetRooms() const
     {
-        const QList<std::tuple<int, int, int, int>> places{{kPlayerRoomId, 0, 0, 0}, {kEastRoomId, 2, 0, 0}, {kFarEastRoomId, 6, 0, 0}, {kUpperRoomId, 2, 2, 1}};
+        const QList<std::tuple<int, int, int, int>> places{{kPlayerRoomId, 0, 0, 0}, {kEastRoomId, 2, 0, 0}, {kFarEastRoomId, 6, 0, 0}, {kUpperRoomId, 2, 2, 1}, {kOtherAreaRoomId, 20, 20, 0}};
         for (const auto& [roomId, x, y, z] : places) {
             map()->setRoomCoordinates(roomId, x, y, z);
         }
@@ -153,6 +163,70 @@ private:
 
     QSet<int> selection() const { return map()->mapper()->mp2dMap->mMultiSelectionSet; }
 
+    QString runLua(const QString& code) const
+    {
+        lua_State* L = mpHost->getLuaInterpreter()->getLuaGlobalState();
+        if (luaL_dostring(L, code.toUtf8().constData()) == 0) {
+            return QString();
+        }
+        const QString error = QString::fromUtf8(lua_tostring(L, -1));
+        lua_pop(L, 1);
+        return error;
+    }
+
+    QString luaGlobalString(const char* name) const
+    {
+        lua_State* L = mpHost->getLuaInterpreter()->getLuaGlobalState();
+        lua_getglobal(L, name);
+        const QString value = QString::fromUtf8(lua_tostring(L, -1));
+        lua_pop(L, 1);
+        return value;
+    }
+
+    static void sendMouse(QWidget* pView, const QEvent::Type type, const QPoint& point, const Qt::MouseButtons buttons, const Qt::KeyboardModifiers modifiers = Qt::NoModifier)
+    {
+        const Qt::MouseButton button = type == QEvent::MouseMove ? Qt::NoButton : Qt::LeftButton;
+        QMouseEvent event(type, QPointF(point), pView->mapToGlobal(QPointF(point)), button, buttons, modifiers);
+        QCoreApplication::sendEvent(pView, &event);
+    }
+
+    void verifyRoomsInPlace() const
+    {
+        QCOMPARE(roomPlace(kPlayerRoomId), QVector3D(0, 0, 0));
+        QCOMPARE(roomPlace(kEastRoomId), QVector3D(2, 0, 0));
+        QCOMPARE(roomPlace(kFarEastRoomId), QVector3D(6, 0, 0));
+        QCOMPARE(roomPlace(kUpperRoomId), QVector3D(2, 2, 1));
+    }
+
+    // Opens a map window on the other area showing its 3D view, looking straight down, ready to edit
+    std::pair<int, ModernGLWidget*> mapWindowIn3D() const
+    {
+        TMapViewManager* pManager = map()->getViewManager();
+        if (!pManager) {
+            return {0, nullptr};
+        }
+        const int viewId = pManager->createView(mOtherAreaId).first;
+        TMapView* pView = viewId ? pManager->getView(viewId) : nullptr;
+        auto* pDock = pView ? qobject_cast<QDockWidget*>(pView->parentWidget()) : nullptr;
+        QToolButton* p3DButton = pView ? buttonNamed(pView, qsl("3D")) : nullptr;
+        if (!pDock || !p3DButton) {
+            return {viewId, nullptr};
+        }
+        pDock->resize(600, 600);
+        if (pView->get2DMap()->mMapViewOnly) {
+            pView->get2DMap()->slot_toggleMapViewOnly();
+        }
+        p3DButton->click();
+        ModernGLWidget* pWindow3D = pView->get3DView();
+        if (!pWindow3D || !QTest::qWaitFor([pWindow3D]() {
+                return pWindow3D->isVisible() && pWindow3D->height() > 200;
+            })) {
+            return {viewId, nullptr};
+        }
+        pWindow3D->setCameraPosition(1.0f, CameraController::scmMinTilt, CameraController::scmNorthUpAzimuth);
+        return {viewId, pWindow3D};
+    }
+
     QVector3D roomPlace(const int roomId) const
     {
         const TRoom* pRoom = map()->mpRoomDB->getRoom(roomId);
@@ -200,7 +274,7 @@ private:
         return nullptr;
     }
 
-    // A left-button drag as a hand makes it, in several moves
+    // Several move events, so the drag crosses the start-drag distance and steps the grid as a real one does
     static void drag(QWidget* pView, const QPoint& from, const QPoint& to, const Qt::KeyboardModifiers modifiers)
     {
         QTest::mousePress(pView, Qt::LeftButton, modifiers, from);
@@ -413,7 +487,6 @@ private slots:
         QVERIFY(pWindow3D != pMain);
         QCOMPARE(pWindow3D->shownAreaId(), mOtherAreaId);
         QCOMPARE(pView->getCurrentAreaId(), mOtherAreaId);
-        QVERIFY2(!pWindow3D->followingPlayer(), "the map window's 3D view follows the player");
         // The mapper's own 3D view stays with the player
         QCOMPARE(pMain->shownAreaId(), mPlayerAreaId);
 
@@ -498,7 +571,8 @@ private slots:
         editIn2D->trigger();
         menu->close();
 
-        // All in the one step: no 3D controls left over a moment later, and no switching mode by hand
+        // All in the one step: the 3D controls go at once rather than on dlgMapper's timer, and the 2D map needs no
+        // switch to editing mode by hand
         QVERIFY(p2dMap->isVisible() && !pModern->isVisible());
         QVERIFY2(pMapper->widget_3DControls->isHidden(), "the 3D controls stay up after switching to 2D");
         QVERIFY2(!p2dMap->mMapViewOnly, "the 2D map is not ready for editing");
@@ -517,6 +591,196 @@ private slots:
         QVERIFY2(pMapper->widget_3DControls->isVisible(), "the 3D controls went away after switching back to 3D");
         QCOMPARE(selection(), (QSet<int>{kPlayerRoomId, kEastRoomId}));
         QCOMPARE(pModern->viewCenter(), QVector3D(2.0f, 0.0f, 0.0f));
+    }
+
+    // Near the horizon the pointer's ray meets the room's level ever farther off, so a pixel there is no grid step
+    void test_aDragTowardsTheHorizonKeepsTheRoomInReach()
+    {
+        ModernGLWidget* pModern = viewAtThePlayer(true);
+        QVERIFY(pModern);
+        pModern->setCameraPosition(1.0f, CameraController::scmMaxTilt, CameraController::scmNorthUpAzimuth);
+        const QPoint east = pixelOfRoom(pModern, kEastRoomId);
+        QVERIFY2(east.x() >= 0, "the room is not on screen");
+
+        sendMouse(pModern, QEvent::MouseButtonPress, east, Qt::LeftButton);
+        for (int y = east.y() - 1; y >= 0; --y) {
+            sendMouse(pModern, QEvent::MouseMove, QPoint(east.x(), y), Qt::LeftButton);
+        }
+        sendMouse(pModern, QEvent::MouseButtonRelease, QPoint(east.x(), 0), Qt::NoButton);
+        const QVector3D place = roomPlace(kEastRoomId);
+        QVERIFY2(place.y() > 0.0f, "the drag did not move the room at all");
+        QVERIFY2(place.y() < 100.0f, qPrintable(qsl("the room was thrown to (%1, %2)").arg(place.x()).arg(place.y())));
+    }
+
+    // A drag whose release went elsewhere, such as to a menu or a dialog, is over by the next move without the
+    // button held or by the next press
+    void test_aDragThatLostItsReleaseMovesNothingLater()
+    {
+        ModernGLWidget* pModern = viewAtThePlayer(true);
+        QVERIFY(pModern);
+        const QPoint player = pixelOfRoom(pModern, kPlayerRoomId);
+        const QPoint east = pixelOfRoom(pModern, kEastRoomId);
+        const int spacing = east.x() - player.x();
+        QVERIFY(spacing > 20);
+
+        sendMouse(pModern, QEvent::MouseButtonPress, east, Qt::LeftButton);
+        // Qt passes on moves with no button held only to a view that tracks the mouse, which this one does not
+        sendMouse(pModern, QEvent::MouseMove, east + QPoint(spacing * 2, 0), Qt::MiddleButton);
+        QCOMPARE(roomPlace(kEastRoomId), QVector3D(2, 0, 0));
+
+        sendMouse(pModern, QEvent::MouseButtonPress, east, Qt::LeftButton);
+        const QPoint emptySpace(player.x() + spacing / 2, player.y() + spacing);
+        drag(pModern, emptySpace, emptySpace + QPoint(spacing * 2, 0), Qt::AltModifier);
+        QCOMPARE(roomPlace(kEastRoomId), QVector3D(2, 0, 0));
+    }
+
+    // Only a press on the room itself picks it up; one beside a room seen small, far off, draws a rectangle
+    void test_aPressBesideARoomDoesNotPickItUp()
+    {
+        ModernGLWidget* pModern = viewAtThePlayer(true);
+        QVERIFY(pModern);
+        const QPoint player = pixelOfRoom(pModern, kPlayerRoomId);
+        const QPoint east = pixelOfRoom(pModern, kEastRoomId);
+        const int spacing = east.x() - player.x();
+        QVERIFY(spacing > 20);
+        // About six pixels to a grid step, where a room is a pixel or two across
+        pModern->setCameraPosition(static_cast<float>(spacing) / 12.0f, CameraController::scmMinTilt, CameraController::scmNorthUpAzimuth);
+        const QPoint smallEast = pixelOfRoom(pModern, kEastRoomId);
+        QVERIFY2(smallEast.x() >= 0, "the room is not on screen");
+        const QPoint beside = smallEast + QPoint(0, 4);
+        // A click there still picks the room, as it is so small
+        QCOMPARE(pModern->roomAt(beside), kEastRoomId);
+
+        drag(pModern, beside, beside + QPoint(30, 30), Qt::NoModifier);
+        QCOMPARE(roomPlace(kEastRoomId), QVector3D(2, 0, 0));
+    }
+
+    // A press while the view still glides to where it was sent stops it where it is, so the rooms dragged stay
+    // under the pointer rather than going along with the rest of the glide
+    void test_aRoomDragStopsTheViewGliding()
+    {
+        ModernGLWidget* pModern = viewAtThePlayer(true);
+        QVERIFY(pModern);
+        const QPoint east = pixelOfRoom(pModern, kEastRoomId);
+        QVERIFY2(east.x() >= 0, "the room is not on screen");
+        pModern->setViewCenter(mPlayerAreaId, 4, 0, 0);
+
+        sendMouse(pModern, QEvent::MouseButtonPress, east, Qt::LeftButton);
+        QTest::qWait(250);
+        sendMouse(pModern, QEvent::MouseMove, east + QPoint(1, 0), Qt::LeftButton);
+        sendMouse(pModern, QEvent::MouseButtonRelease, east + QPoint(1, 0), Qt::NoButton);
+        verifyRoomsInPlace();
+        if (QTest::currentTestFailed()) {
+            return;
+        }
+        QCOMPARE(pModern->viewCenter(), QVector3D(0, 0, 0));
+    }
+
+    // The mapper's view goes after the player only once the rooms being dragged are down
+    void test_theMapperViewWaitsForARoomDragBeforeFollowingThePlayer()
+    {
+        ModernGLWidget* pModern = viewAtThePlayer(true);
+        QVERIFY(pModern);
+        pModern->grabFramebuffer();
+        if (!pModern->isValid()) {
+            QSKIP("no OpenGL context on this platform, so the view never paints");
+        }
+        const QPoint east = pixelOfRoom(pModern, kEastRoomId);
+        QVERIFY2(east.x() >= 0, "the room is not on screen");
+
+        sendMouse(pModern, QEvent::MouseButtonPress, east, Qt::LeftButton);
+        map()->mRoomIdHash[map()->mProfileName] = kFarEastRoomId;
+        map()->mNewMove = true;
+        pModern->grabFramebuffer();
+        QTest::qWait(250);
+        sendMouse(pModern, QEvent::MouseMove, east + QPoint(1, 0), Qt::LeftButton);
+        sendMouse(pModern, QEvent::MouseButtonRelease, east + QPoint(1, 0), Qt::NoButton);
+        verifyRoomsInPlace();
+        if (QTest::currentTestFailed()) {
+            return;
+        }
+        QCOMPARE(pModern->viewCenter(), QVector3D(0, 0, 0));
+
+        pModern->grabFramebuffer();
+        QCOMPARE(pModern->viewCenter(), QVector3D(6, 0, 0));
+    }
+
+    // A map window's 3D view stays on its own area whatever the player does
+    void test_aMapWindowIn3DStaysOnItsAreaWhenThePlayerMoves()
+    {
+        QVERIFY(viewAtThePlayer(false));
+        const auto [viewId, pWindow3D] = mapWindowIn3D();
+        QVERIFY2(pWindow3D, "the map window did not show its 3D view");
+        pWindow3D->grabFramebuffer();
+        const bool painted = pWindow3D->isValid();
+        const QVector3D center = pWindow3D->viewCenter();
+        map()->mRoomIdHash[map()->mProfileName] = kEastRoomId;
+        map()->mNewMove = true;
+        pWindow3D->grabFramebuffer();
+        const int shownAreaId = pWindow3D->shownAreaId();
+        const QVector3D centerAfter = pWindow3D->viewCenter();
+        QVERIFY(map()->getViewManager()->closeView(viewId).first);
+        QCoreApplication::sendPostedEvents(nullptr, QEvent::DeferredDelete);
+        if (!painted) {
+            QSKIP("no OpenGL context on this platform, so the view never paints");
+        }
+        QCOMPARE(shownAreaId, mOtherAreaId);
+        QCOMPARE(centerAfter, center);
+    }
+
+    // Rooms moved in a map window's 3D view are redrawn in the other views, and closing the window while it shows
+    // 3D leaves the mapper's view, and the cameras it keeps for the profile, as they were
+    void test_aMapWindowIn3DAnnouncesMovedRoomsAndClosesCleanly()
+    {
+        ModernGLWidget* pMain = viewAtThePlayer(true);
+        QVERIFY(pMain);
+        const QString savedCameras = mpHost->readProfileData(qsl("3dmapper_cameras"));
+        const auto [viewId, pWindow3D] = mapWindowIn3D();
+        QVERIFY2(pWindow3D, "the map window did not show its 3D view");
+        QPointer<ModernGLWidget> pClosed = pWindow3D;
+        const QPoint room = pixelOfRoom(pWindow3D, kOtherAreaRoomId);
+        QVERIFY2(room.x() >= 0, "the room is not on screen");
+
+        QSignalSpy areaChanged(map(), &TMap::signal_areaChanged);
+        drag(pWindow3D, room, room + QPoint(0, 80), Qt::NoModifier);
+        QVERIFY2(roomPlace(kOtherAreaRoomId).y() < 20.0f, "the drag did not move the room");
+        QTRY_VERIFY2(areaChanged.contains(QVariantList{mOtherAreaId}), "the other views were not told the area changed");
+
+        pWindow3D->setCameraPosition(2.0f, 30.0f, 100.0f);
+        QVERIFY(map()->getViewManager()->closeView(viewId).first);
+        QCoreApplication::sendPostedEvents(nullptr, QEvent::DeferredDelete);
+        QVERIFY(!pClosed);
+        QCOMPARE(qobject_cast<ModernGLWidget*>(map()->mapper()->glWidget), pMain);
+        QCOMPARE(pMain->shownAreaId(), mPlayerAreaId);
+        QCOMPARE(mpHost->readProfileData(qsl("3dmapper_cameras")), savedCameras);
+        QTest::mouseClick(pMain, Qt::LeftButton, Qt::NoModifier, pixelOfRoom(pMain, kEastRoomId));
+        QCOMPARE(selection(), QSet<int>{kEastRoomId});
+    }
+
+    // While editing, the press event comes once per press, after the press has settled the selection, as on the 2D map
+    void test_aPressWhileEditingIsAnnouncedOnceWithItsSelection()
+    {
+        ModernGLWidget* pModern = viewAtThePlayer(true);
+        QVERIFY(pModern);
+        const QPoint player = pixelOfRoom(pModern, kPlayerRoomId);
+        const QPoint east = pixelOfRoom(pModern, kEastRoomId);
+        const int spacing = east.x() - player.x();
+        QVERIFY(spacing > 20);
+        QCOMPARE(runLua(qsl("selectedOnPresses = {}\n"
+                            "pressHandler = registerAnonymousEventHandler('sysMapWindowMousePressEvent', function()\n"
+                            "  selectedOnPresses[#selectedOnPresses + 1] = #(getMapSelection().rooms or {})\n"
+                            "end)")),
+                 QString());
+        const QPoint emptySpace(player.x() + spacing / 2, player.y() + spacing);
+        QTest::mouseClick(pModern, Qt::LeftButton, Qt::NoModifier, player);
+        QTest::mouseClick(pModern, Qt::LeftButton, Qt::ControlModifier, east);
+        QTest::mouseClick(pModern, Qt::LeftButton, Qt::NoModifier, emptySpace);
+        drag(pModern, emptySpace, emptySpace + QPoint(spacing, spacing), Qt::NoModifier);
+        drag(pModern, east, east + QPoint(0, spacing), Qt::NoModifier);
+        QCOMPARE(runLua(qsl("killAnonymousEventHandler(pressHandler)\n"
+                            "selectedOnPressesText = table.concat(selectedOnPresses, ',')")),
+                 QString());
+        QCOMPARE(luaGlobalString("selectedOnPressesText"), qsl("1,2,0,0,1"));
     }
 };
 
