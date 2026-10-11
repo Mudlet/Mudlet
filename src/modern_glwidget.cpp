@@ -2130,7 +2130,7 @@ std::optional<float> rayHitsCylinder(const QVector3D& origin, const QVector3D& d
 constexpr qreal scmPickSlopPixels = 6.0;
 } // namespace
 
-int ModernGLWidget::roomAt(const QPoint& position, const bool orNear)
+int ModernGLWidget::roomAt(const QPoint& position, const bool orNear, const std::optional<int> onLevel)
 {
     if (!mpMap || !mpMap->mpRoomDB) {
         return 0;
@@ -2150,7 +2150,7 @@ int ModernGLWidget::roomAt(const QPoint& position, const bool orNear)
     qreal nearPixels = scmPickSlopPixels;
     for (const int roomId : pArea->getAreaRooms()) {
         const TRoom* pR = mpMap->mpRoomDB->getRoom(roomId);
-        if (!pR || pR->isHidden() || !levelShown(pR->z())) {
+        if (!pR || pR->isHidden() || !levelShown(pR->z()) || (onLevel && pR->z() != *onLevel)) {
             continue;
         }
         // The room hovered over is drawn raised by its height. It is hit where it rests too, or the pointer on
@@ -2215,17 +2215,16 @@ int ModernGLWidget::areaExitAt(const QPoint& position)
 
 int ModernGLWidget::destinationAt(const QPoint& position)
 {
-    const int roomHit = roomAt(position, false);
-    const TRoom* pHit = roomHit && mpMap && mpMap->mpRoomDB ? mpMap->mpRoomDB->getRoom(roomHit) : nullptr;
-    // The viewed level's room wins over the area exit arrow that starts at its center; a room on another level,
-    // and a room that is only near the pointer, lose to it
-    if (pHit && pHit->z() == mMapCenterZ) {
-        return roomHit;
+    // As on the 2D map, which shows only the viewed level's rooms, a room of that level under the pointer wins,
+    // even beneath or seen through a room on another level, then the area exit arrow that starts at its center
+    if (const int viewedRoom = roomAt(position, false, mMapCenterZ)) {
+        return viewedRoom;
     }
     if (const int exitDestination = areaExitAt(position)) {
         return exitDestination;
     }
-    return roomHit ? roomHit : roomAt(position);
+    // A room on another level, and a room only near the pointer, lose to the arrow
+    return roomAt(position);
 }
 
 QString ModernGLWidget::roomToolTip(const int roomId) const

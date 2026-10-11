@@ -115,6 +115,22 @@ int openAPopup(lua_State*)
     gpPopup->popup(gPopupAt);
     return 0;
 }
+
+// Counts the repaints asked of a window, which come even where the 3D view has no GL context to paint with
+class UpdateRequestCounter : public QObject
+{
+public:
+    int mRequests = 0;
+
+protected:
+    bool eventFilter(QObject*, QEvent* event) override
+    {
+        if (event->type() == QEvent::UpdateRequest) {
+            ++mRequests;
+        }
+        return false;
+    }
+};
 } // namespace
 
 class Map3DViewInteractionTest : public QObject
@@ -284,6 +300,28 @@ private:
     {
         QMouseEvent move(QEvent::MouseMove, position, pModern->mapToGlobal(position), Qt::NoButton, Qt::NoButton, Qt::NoModifier);
         QCoreApplication::sendEvent(pModern, &move);
+    }
+
+    // The room a double-click there speedwalks to
+    static int walkTo(ModernGLWidget* pModern, const QPoint& pixel)
+    {
+        pModern->mpMap->mTargetID = 0;
+        QMouseEvent doubleClick(QEvent::MouseButtonDblClick, pixel, pModern->mapToGlobal(pixel), Qt::LeftButton, Qt::LeftButton, Qt::NoModifier);
+        QCoreApplication::sendEvent(pModern, &doubleClick);
+        return pModern->mpMap->mTargetID;
+    }
+
+    static QString tipAt(ModernGLWidget* pModern, const QPoint& pixel)
+    {
+        QToolTip::hideText();
+        QHelpEvent over(QEvent::ToolTip, pixel, pModern->mapToGlobal(pixel));
+        QCoreApplication::sendEvent(pModern, &over);
+        for (int wait = 0; wait < 50 && !QToolTip::isVisible(); ++wait) {
+            QTest::qWait(10);
+        }
+        const QString tip = QToolTip::text();
+        QToolTip::hideText();
+        return tip;
     }
 
     // Looks straight down with north up from wherever puts the east room under the compass
@@ -1498,27 +1536,10 @@ private slots:
         TRoom* pEastRoom = map()->mpRoomDB->getRoom(kEastRoomId);
         QVERIFY(pEastRoom->setExit(kOtherAreaRoomId, DIR_EAST));
         QVERIFY(addRoomAt(lowerRoomId, mPlayerAreaId, 3, 0) && map()->setRoomCoordinates(lowerRoomId, 3, 0, -1));
-        const auto walkTo = [pModern](const QPoint& pixel) {
-            pModern->mpMap->mTargetID = 0;
-            QMouseEvent doubleClick(QEvent::MouseButtonDblClick, pixel, pModern->mapToGlobal(pixel), Qt::LeftButton, Qt::LeftButton, Qt::NoModifier);
-            QCoreApplication::sendEvent(pModern, &doubleClick);
-            return pModern->mpMap->mTargetID;
-        };
-        const auto tipAt = [pModern](const QPoint& pixel) {
-            QToolTip::hideText();
-            QHelpEvent over(QEvent::ToolTip, pixel, pModern->mapToGlobal(pixel));
-            QCoreApplication::sendEvent(pModern, &over);
-            for (int wait = 0; wait < 50 && !QToolTip::isVisible(); ++wait) {
-                QTest::qWait(10);
-            }
-            const QString tip = QToolTip::text();
-            QToolTip::hideText();
-            return tip;
-        };
 
         const QPoint eastRoom = pixelOfRoom(pModern, kEastRoomId);
-        const int walkedFromTheRoom = walkTo(eastRoom);
-        const QString tipOverTheRoom = tipAt(eastRoom);
+        const int walkedFromTheRoom = walkTo(pModern, eastRoom);
+        const QString tipOverTheRoom = tipAt(pModern, eastRoom);
         // Where the arrow is drawn over the room on the level below
         QPoint overTheLowerRoom(-1, -1);
         for (int x = eastRoom.x(); x < pModern->width(); ++x) {
@@ -1528,8 +1549,8 @@ private slots:
                 break;
             }
         }
-        const int walkedOverTheLowerRoom = overTheLowerRoom.x() < 0 ? -1 : walkTo(overTheLowerRoom);
-        const QString tipOverTheLowerRoom = overTheLowerRoom.x() < 0 ? QString() : tipAt(overTheLowerRoom);
+        const int walkedOverTheLowerRoom = overTheLowerRoom.x() < 0 ? -1 : walkTo(pModern, overTheLowerRoom);
+        const QString tipOverTheLowerRoom = overTheLowerRoom.x() < 0 ? QString() : tipAt(pModern, overTheLowerRoom);
         // Another level's arrow is offered nowhere, as on the 2D map
         QVERIFY(map()->mpRoomDB->getRoom(lowerRoomId)->setExit(kOtherAreaRoomId, DIR_SOUTH));
         const std::optional<QPointF> alongTheLowerArrow = pModern->mCameraController.pixelForPoint(QVector3D(3.0f, -0.6f, -1.0f));
@@ -1551,7 +1572,7 @@ private slots:
         const std::optional<QPointF> alongTheArrow = pModern->mCameraController.pixelForPoint(QVector3D(2.75f, 0.0f, 0.0f));
         const QPoint zoomedOutArrow = alongTheArrow ? alongTheArrow->toPoint() : QPoint(-1, -1);
         const int nearRoom = pModern->roomAt(zoomedOutArrow);
-        const int walkedZoomedOut = walkTo(zoomedOutArrow);
+        const int walkedZoomedOut = walkTo(pModern, zoomedOutArrow);
         pEastRoom->setExit(-1, DIR_EAST);
 
         QCOMPARE(walkedFromTheRoom, kEastRoomId);
@@ -1563,6 +1584,34 @@ private slots:
         QVERIFY2(spacing > 4.0 && spacing <= 7.0, qPrintable(qsl("a room spacing is %1 pixels").arg(spacing)));
         QCOMPARE(nearRoom, kEastRoomId);
         QCOMPARE(walkedZoomedOut, kOtherAreaRoomId);
+    }
+
+    // As on the 2D map, the viewed level's room wins even where the see-through room above it is nearer the camera
+    void test_theViewedLevelsRoomWinsUnderARoomAbove()
+    {
+        ModernGLWidget* pModern = viewAtThePlayer();
+        QVERIFY(pModern);
+        constexpr int upperRoomId = 31;
+        const QPoint eastRoom = pixelOfRoom(pModern, kEastRoomId);
+        QVERIFY(eastRoom.x() >= 0);
+        QVERIFY(addRoomAt(upperRoomId, mPlayerAreaId, 2, 0) && map()->setRoomCoordinates(upperRoomId, 2, 0, 1));
+        const int nearestHit = pModern->roomAt(eastRoom, false);
+        const int walkedUnderTheRoomAbove = walkTo(pModern, eastRoom);
+        const QString tipUnderTheRoomAbove = tipAt(pModern, eastRoom);
+        TRoom* pEastRoom = map()->mpRoomDB->getRoom(kEastRoomId);
+        QVERIFY(pEastRoom->setExit(kOtherAreaRoomId, DIR_EAST));
+        const int arrowLeadsTo = pModern->areaExitAt(eastRoom);
+        const int walkedWithTheArrow = walkTo(pModern, eastRoom);
+        const QString tipWithTheArrow = tipAt(pModern, eastRoom);
+        pEastRoom->setExit(-1, DIR_EAST);
+        map()->mpRoomDB->removeRoom(upperRoomId);
+
+        QCOMPARE(nearestHit, upperRoomId);
+        QCOMPARE(arrowLeadsTo, kOtherAreaRoomId);
+        QCOMPARE(walkedUnderTheRoomAbove, kEastRoomId);
+        QVERIFY2(tipUnderTheRoomAbove.contains(qsl("Room ID: %1").arg(kEastRoomId)), qPrintable(tipUnderTheRoomAbove));
+        QCOMPARE(walkedWithTheArrow, kEastRoomId);
+        QVERIFY2(tipWithTheArrow.contains(qsl("Room ID: %1").arg(kEastRoomId)) && !tipWithTheArrow.contains(qsl("Other Area")), qPrintable(tipWithTheArrow));
     }
 
     void test_keysTurnTheViewAndChangeLevel()
@@ -1656,13 +1705,6 @@ private slots:
         QVERIFY2(roundRequests, "round rooms did not ask the map's windows to repaint");
         QVERIFY2(levelsRequest, "showing the upper and lower levels did not ask the map's windows to repaint");
 
-        // Paints are only watched where the views have a context
-        const auto contextMade = [pModern]() {
-            return pModern->isValid();
-        };
-        if (!QTest::qWaitFor(contextMade, 1000)) {
-            QSKIP("no OpenGL context on this platform, so the 3D views do not paint");
-        }
         TMapViewManager* pManager = map()->getViewManager();
         QVERIFY(pManager);
         const auto [viewId, error] = pManager->createView(mPlayerAreaId);
@@ -1672,9 +1714,53 @@ private slots:
         });
         TMapView* pView = pManager->getView(viewId);
         QVERIFY(pView);
+        auto* pWindowDock = qobject_cast<QDockWidget*>(pView->parentWidget());
+        QVERIFY2(pWindowDock, "the map window is not in a dock");
+        // A window of its own, so that only the 3D view in it asks that window to repaint
+        setDockFloating(pWindowDock, true);
         pView->show3DView(true);
         ModernGLWidget* pWindow3D = pView->get3DView();
         QVERIFY(pWindow3D);
+        QTRY_VERIFY(pWindow3D->isVisible());
+        QVERIFY(pWindow3D->window() != pModern->window());
+        // Asked of the window even where the view has no context to paint with, so seen on any platform
+        UpdateRequestCounter windowRequests;
+        pWindow3D->window()->installEventFilter(&windowRequests);
+        const auto windowAsked = [&windowRequests]() {
+            return windowRequests.mRequests > 0;
+        };
+        const auto asksTheWindow = [&windowRequests, &windowAsked](const std::function<void()>& change) {
+            QCoreApplication::processEvents();
+            windowRequests.mRequests = 0;
+            change();
+            return QTest::qWaitFor(windowAsked, 500);
+        };
+        const bool askedUnprompted = asksTheWindow([] {});
+        const bool gridAsks = asksTheWindow([pMapper, grid] {
+            pMapper->slot_setShowGrid(!grid);
+        });
+        const bool roundAsks = asksTheWindow([pMapper, round] {
+            pMapper->slot_toggleRoundRooms(!round);
+        });
+        const bool levelsAsk = asksTheWindow([levels] {
+            mudlet::self()->setDrawUpperLowerLevels(!levels);
+        });
+        pWindow3D->window()->removeEventFilter(&windowRequests);
+        pMapper->slot_setShowGrid(grid);
+        pMapper->slot_toggleRoundRooms(round);
+        mudlet::self()->setDrawUpperLowerLevels(levels);
+        QVERIFY2(!askedUnprompted, "the map window asks to repaint unprompted, so its requests show nothing");
+        QVERIFY2(gridAsks, "showing the grid did not ask the map window's 3D view to repaint");
+        QVERIFY2(roundAsks, "round rooms did not ask the map window's 3D view to repaint");
+        QVERIFY2(levelsAsk, "showing the upper and lower levels did not ask the map window's 3D view to repaint");
+
+        // Paints are only watched where the views have a context
+        const auto contextMade = [pModern]() {
+            return pModern->isValid();
+        };
+        if (!QTest::qWaitFor(contextMade, 1000)) {
+            QSKIP("no OpenGL context on this platform, so the 3D views do not paint");
+        }
         QTRY_VERIFY(pWindow3D->isVisible() && pWindow3D->isValid());
         PaintCounter mapperPaints;
         PaintCounter windowPaints;

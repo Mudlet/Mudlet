@@ -104,8 +104,8 @@ public:
     // The mapper's 2D map, whose room selection, speedwalk and context menu this view shares
     void setCompanion2DMap(T2DMap* map);
     // The room drawn under this point of the view, or 0; orNear also takes a room seen too small to point at
-    // whose middle is a few pixels off
-    int roomAt(const QPoint& position, bool orNear = true);
+    // whose middle is a few pixels off. With onLevel, only that level's rooms count, even under others
+    int roomAt(const QPoint& position, bool orNear = true, std::optional<int> onLevel = std::nullopt);
     // The room in another area that the area-exit arrow drawn under this point of the view leads to, or 0
     int areaExitAt(const QPoint& position);
     // The room a double click or the tooltip at this position is about: a room, or where an area exit leads
