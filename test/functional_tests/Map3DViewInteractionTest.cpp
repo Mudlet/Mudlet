@@ -436,6 +436,9 @@ private slots:
         // The 2D map's y-axis points down the screen
         QCOMPARE(p2dMap->mMapCenterY, -20.0);
         QCOMPARE(selection(), QSet<int>{kOtherAreaRoomId});
+        // Edit in 2D also switches to editing mode, which the later tests here, all in viewing mode, must not inherit
+        QVERIFY(!p2dMap->mMapViewOnly);
+        p2dMap->slot_toggleMapViewOnly();
     }
 
     // A click away from the 3D view's room menu closes it and goes on to the 3D view, as one away from the 2D
