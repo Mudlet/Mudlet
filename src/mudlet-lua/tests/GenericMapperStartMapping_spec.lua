@@ -10,7 +10,7 @@ describe("Tests starting the generic mapper", function()
   local mapperState = {"mapping", "currentRoom", "currentArea", "currentName", "currentExits", "prevRoom", "prevName", "prevExits"}
   local defaultArea = "New area"
   local roomName = "Where the first map begins"
-  local saved, savedHash, savedPlayerRoom, areaExisted
+  local saved, savedHash, savedPlayerRoom, savedRooms, savedAreas
 
   local function makeRoom(areaId, name)
     local id = createRoomID()
@@ -28,7 +28,8 @@ describe("Tests starting the generic mapper", function()
     end
     savedHash = map.prompt.hash
     savedPlayerRoom = getPlayerRoom()
-    areaExisted = getAreaTable()[defaultArea] ~= nil
+    savedRooms = getRooms()
+    savedAreas = getAreaTable()
     map.prompt.hash = nil
     map.set("mapping", false)
     map.set("currentRoom", nil)
@@ -38,9 +39,15 @@ describe("Tests starting the generic mapper", function()
   end)
 
   after_each(function()
-    local areaId = getAreaTable()[defaultArea]
-    if areaId and not areaExisted then
-      deleteArea(areaId)
+    for id in pairs(getRooms()) do
+      if not savedRooms[id] then
+        deleteRoom(id)
+      end
+    end
+    for name, id in pairs(getAreaTable()) do
+      if savedAreas[name] == nil then
+        deleteArea(id)
+      end
     end
     for _, key in ipairs(mapperState) do
       map.set(key, saved[key])
@@ -59,21 +66,13 @@ describe("Tests starting the generic mapper", function()
           map.start_mapping(areaName or nil)
         end)
         assert.is_true(map.mapping)
-        local areaId = getAreaTable()[defaultArea]
-        assert.is_not_nil(areaId)
-        assert.are.equal(areaId, map.currentArea)
-        assert.are.equal(areaId, getRoomArea(map.currentRoom))
+        assert.are.equal(defaultArea:lower(), getRoomAreaName(map.currentArea):lower())
+        assert.are.equal(map.currentArea, getRoomArea(map.currentRoom))
       end)
     end
 
     it("uses the area name it is given", function()
       local named = "genericMapperStartMappingSpec"
-      finally(function()
-        local areaId = getAreaTable()[named]
-        if areaId then
-          deleteArea(areaId)
-        end
-      end)
       map.start_mapping(named)
       assert.are.equal(getAreaTable()[named], map.currentArea)
     end)
@@ -88,10 +87,6 @@ describe("Tests starting the generic mapper", function()
       room = makeRoom(areaId, roomName)
     end)
 
-    after_each(function()
-      deleteArea(areaId)
-    end)
-
     it("keeps mapping in the current area when no name is given", function()
       map.set("currentRoom", room)
       map.set("currentArea", areaId)
@@ -99,15 +94,15 @@ describe("Tests starting the generic mapper", function()
       assert.is_true(map.mapping)
       assert.are.equal(areaId, map.currentArea)
       assert.are.equal(areaId, getRoomArea(room))
-      assert.is_nil(getAreaTable()[defaultArea])
+      assert.are.equal(savedAreas[defaultArea], getAreaTable()[defaultArea])
     end)
 
     it("refuses to guess an area when it does not know where the player is", function()
-      assert.has_error(function()
-        map.start_mapping(nil)
-      end)
+      local ok, err = pcall(map.start_mapping, nil)
+      assert.is_false(ok)
+      assert.truthy(tostring(err):find("Not sure where you are", 1, true), tostring(err))
       assert.is_falsy(map.mapping)
-      assert.is_nil(getAreaTable()[defaultArea])
+      assert.are.equal(savedAreas[defaultArea], getAreaTable()[defaultArea])
       assert.are.equal(1, table.size(getAreaRooms(areaId)))
     end)
   end)
