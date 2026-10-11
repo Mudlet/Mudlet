@@ -108,6 +108,9 @@ describe("Tests functionality of Adjustable.Container", function()
       assert.equals(false, ac.locked)
       assert.equals(10, ac.padding)
       assert.equals("standard", ac.lockStyle)
+      -- the title bar is a drag handle, the close button is a button
+      assert.equals("text", getLabelAccessibleRole(ac.adjLabel.name))
+      assert.equals("button", getLabelAccessibleRole(ac.exitLabel.name))
 
       ac:delete()
     end)

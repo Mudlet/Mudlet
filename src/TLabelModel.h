@@ -27,6 +27,8 @@
 #include <QSet>
 #include <QString>
 
+#include <optional>
+
 class Host;
 
 // A label's widget-free state, so the Widgets-free core can hold a named label without a QLabel.
@@ -42,6 +44,11 @@ struct TLabelModel
     // A copy would free the same Lua registry indexes twice. This also suppresses the implicit moves.
     TLabelModel(const TLabelModel&) = delete;
     TLabelModel& operator=(const TLabelModel&) = delete;
+
+    // The name a screen reader hears: the one a script gave it, else its text, else its tooltip
+    QString effectiveAccessibleName() const;
+    // Whether a screen reader is told it is a button: as a script said, else when it has a click or release callback
+    bool actsAsButton() const;
 
     // Each releases the Lua registry index it replaces.
     void setClick(const int func);
@@ -84,6 +91,10 @@ struct TLabelModel
     // The widget's own styleSheet(), toolTip() and font(), kept current by the view.
     QString mStyleSheet;
     QString mToolTip;
+    // What a script named the label for screen readers; empty means its text is used
+    QString mAccessibleName;
+    // Set by a script whose label's callbacks are not a button's, such as a drag handle; empty means automatic
+    std::optional<bool> mAccessibleButton;
     QFont mFont;
     // QLabel::text(), which a pixmap or movie empties, written by the view after each change.
     QString mText;

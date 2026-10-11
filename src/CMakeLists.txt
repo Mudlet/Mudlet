@@ -130,6 +130,7 @@ set(mudlet_SRCS
     SpeechAudioCapture.cpp
     SpeechRecognizerFactory.cpp
     T2DMap.cpp
+    TAccessibleLabel.cpp
     TAccessibleTextEdit.cpp
     TAction.cpp
     TAlias.cpp
@@ -417,6 +418,7 @@ set(mudlet_HDRS
     SpeechRecognizerFactory.h
     T2DMap.h
     TAccessibleConsole.h
+    TAccessibleLabel.h
     TAccessibleTextEdit.h
     TAction.h
     TAlias.h

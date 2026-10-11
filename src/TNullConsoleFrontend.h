@@ -80,6 +80,7 @@ public:
     std::pair<bool, QString> setLabelStyleSheet(const QString&, const QString&) override { return noView(); }
     std::optional<QSize> getLabelSizeHint(const QString&) const override { return std::nullopt; }
     std::pair<bool, QString> setLabelToolTip(const QString&, const QString&, double) override { return noView(); }
+    std::pair<bool, QString> setLabelAccessibleName(const QString&, const QString&) override { return noView(); }
     std::pair<bool, QString> setLabelCursor(const QString&, int) override { return noView(); }
     std::pair<bool, QString> setLabelCustomCursor(const QString&, const QString&, int, int) override { return noView(); }
     bool setLabelClickThrough(const QString&, bool) override { return false; }

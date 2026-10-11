@@ -57,6 +57,9 @@ public:
     ~TLabel();
 
     void setText(const QString& text);
+    // A screen reader's activation, delivered as the left click a mouse would make
+    void press();
+    void setAuthoredAccessibleName(const QString& name);
     void mousePressEvent(QMouseEvent*) override;
     void mouseDoubleClickEvent(QMouseEvent*) override;
     void mouseReleaseEvent(QMouseEvent*) override;

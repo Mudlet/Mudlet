@@ -708,6 +708,23 @@ function Geyser.Label:setToolTip(txt, duration)
   self.toolTipDuration = duration
 end
 
+--- Sets the name a screen reader announces for the label, in place of its text.
+-- Needed for a label that shows only an image or icon. Pass "" to announce its text again.
+-- @param name the name to announce
+function Geyser.Label:setAccessibleName(name)
+  setLabelAccessibleName(self.name, name)
+  self.accessibleName = name
+end
+
+--- Sets whether a screen reader announces the label as a button or as text.
+-- By default it is a button when it has a click or release callback; use "text" for one whose
+-- callbacks are not a button's, such as a drag handle. Pass "" to decide by its callbacks again.
+-- @param role "button", "text" or ""
+function Geyser.Label:setAccessibleRole(role)
+  setLabelAccessibleRole(self.name, role)
+  self.accessibleRole = role
+end
+
 --- Resets the tooltip of the label
 function Geyser.Label:resetToolTip()
   resetLabelToolTip(self.name)
@@ -1203,6 +1220,14 @@ function Geyser.Label:new (cons, container)
     me:setToolTip(me.toolTip, me.toolTipDuration)
   end
 
+  if me.accessibleName then
+    me:setAccessibleName(me.accessibleName)
+  end
+
+  if me.accessibleRole then
+    me:setAccessibleRole(me.accessibleRole)
+  end
+
   -- Set clickthrough if included in constructor
   if cons.clickthrough then me:enableClickthrough() end
 
@@ -1635,6 +1660,10 @@ function Geyser.Label:createRightClickMenu(cons)
 
   if not(self.rightClickMenu) then
     self:setClickCallback(self.onRightClick, self)
+    -- A press is a left click, which this callback ignores
+    if not self.accessibleRole then
+      setLabelAccessibleRole(self.name, "text")
+    end
   end
 
   -- create a label with a nestable=true property as base menu

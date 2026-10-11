@@ -5705,6 +5705,20 @@ bool Host::setLabelClickCallback(const QString& name, const int func)
     return false;
 }
 
+bool Host::setLabelAccessibleButton(const QString& name, std::optional<bool> button)
+{
+    if (!hasConsoleView()) {
+        return false;
+    }
+
+    auto* pModel = mWindowRegistry.labelModel(name);
+    if (pModel) {
+        pModel->mAccessibleButton = button;
+        return true;
+    }
+    return false;
+}
+
 bool Host::setLabelDoubleClickCallback(const QString& name, const int func)
 {
     if (!hasConsoleView()) {
@@ -6203,6 +6217,28 @@ std::optional<QString> Host::labelToolTip(const QString& name) const
     }
     if (const TLabelModel* pLabel = mWindowRegistry.labelModel(name)) {
         return pLabel->mToolTip;
+    }
+    return {};
+}
+
+std::optional<QString> Host::labelAccessibleName(const QString& name) const
+{
+    if (!hasConsoleView()) {
+        return {};
+    }
+    if (const TLabelModel* pLabel = mWindowRegistry.labelModel(name)) {
+        return pLabel->effectiveAccessibleName();
+    }
+    return {};
+}
+
+std::optional<bool> Host::labelActsAsButton(const QString& name) const
+{
+    if (!hasConsoleView()) {
+        return {};
+    }
+    if (const TLabelModel* pLabel = mWindowRegistry.labelModel(name)) {
+        return pLabel->actsAsButton();
     }
     return {};
 }

@@ -21,6 +21,8 @@
 
 #include "Host.h"
 
+#include <QTextDocumentFragment>
+
 TLabelModel::TLabelModel(Host* pHost, const QString& name)
 : mpHost(pHost)
 , mName(name)
@@ -92,4 +94,31 @@ void TLabelModel::releaseFunc(const int existingFunction, const int newFunction)
     if (newFunction != existingFunction) {
         mpHost->getLuaInterpreter()->freeLuaRegistryIndex(existingFunction);
     }
+}
+
+namespace {
+QString plainName(const QString& labelText)
+{
+    // Labels carry markup and entities such as &nbsp;, and an image leaves an object
+    // replacement character behind, so the text is rendered rather than stripped
+    QString plain = QTextDocumentFragment::fromHtml(labelText).toPlainText();
+    plain.remove(QChar::ObjectReplacementCharacter);
+    return plain.simplified();
+}
+} // namespace
+
+QString TLabelModel::effectiveAccessibleName() const
+{
+    if (!mAccessibleName.isEmpty()) {
+        return mAccessibleName;
+    }
+    if (QString name = plainName(mText); !name.isEmpty()) {
+        return name;
+    }
+    return plainName(mToolTip);
+}
+
+bool TLabelModel::actsAsButton() const
+{
+    return mAccessibleButton.value_or(mClickFunction != 0 || mReleaseFunction != 0);
 }

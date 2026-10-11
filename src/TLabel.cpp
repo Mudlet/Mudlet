@@ -29,6 +29,7 @@
 #include "mudlet.h"
 #include "TMainConsole.h"
 
+#include <QAccessible>
 #include <QDesktopServices>
 #include <QFile>
 #include <QPainter>
@@ -201,6 +202,30 @@ void TLabel::setText(const QString& text)
         QLabel::setText(text);
     }
     mpModel->mText = QLabel::text();
+    if (QAccessible::isActive() && mpModel->mAccessibleName.isEmpty()) {
+        QAccessibleEvent event(this, QAccessible::NameChanged);
+        QAccessible::updateAccessibility(&event);
+    }
+}
+
+void TLabel::press()
+{
+    const QPointF centre = QRectF(rect()).center();
+    QMouseEvent pressEvent(QEvent::MouseButtonPress, centre, mapToGlobal(centre), Qt::LeftButton, Qt::LeftButton, Qt::NoModifier);
+    // The click callback may delete the label: deleteLabel() deregisters it at once but destroys it later
+    QPointer<TLabel> self(this);
+    mousePressEvent(&pressEvent);
+    if (!self || mpHost->windowRegistry().labelModel(mName) != mpModel.get()) {
+        return;
+    }
+    QMouseEvent releaseEvent(QEvent::MouseButtonRelease, centre, mapToGlobal(centre), Qt::LeftButton, Qt::NoButton, Qt::NoModifier);
+    mouseReleaseEvent(&releaseEvent);
+}
+
+void TLabel::setAuthoredAccessibleName(const QString& name)
+{
+    mpModel->mAccessibleName = name;
+    setAccessibleName(name);
 }
 
 bool TLabel::carriesLink() const
