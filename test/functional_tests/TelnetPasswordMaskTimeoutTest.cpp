@@ -47,10 +47,10 @@
 // old, which is past that window and far inside the intended 5 minutes, and the
 // interval being pinned at exactly 60000 rather than merely non-zero.
 //
-// cTelnet::checkEchoAnomalyPattern() counts every WILL and every WONT ECHO, and
-// a grouped ctest case runs this whole class in one process, so init() clears
-// that count before every test function and no case's toggles count against the
-// next.
+// cTelnet::checkEchoAnomalyPattern() counts every WILL and every WONT ECHO that
+// cTelnet acts on, and a grouped ctest case runs this whole class in one
+// process, so init() clears that count before every test function and no case's
+// toggles count against the next.
 
 #include <QTemporaryDir>
 #include <QTimer>
