@@ -28,6 +28,7 @@ describe("Tests that the generic mapper follows a game in Swedish", function()
   end
 
   local mapperState = {"mapping", "currentRoom", "currentName", "currentExits", "prevRoom", "prevName", "prevExits"}
+  local configKeys = {"lang_dirs", "translate", "language", "use_translation"}
   local saved, savedPrompt, savedConfigs, savedQueue
 
   before_each(function()
@@ -36,8 +37,10 @@ describe("Tests that the generic mapper follows a game in Swedish", function()
       saved[key] = map[key]
     end
     savedPrompt = map.save.prompt_pattern[map.character]
-    savedConfigs = {lang_dirs = map.configs.lang_dirs, translate = map.configs.translate,
-      language = map.configs.language, use_translation = map.configs.use_translation}
+    savedConfigs = {}
+    for _, key in ipairs(configKeys) do
+      savedConfigs[key] = map.configs[key]
+    end
     savedQueue = {unpack(moveQueue())}
     -- the mapper saves its configs to the profile, which would outlive the spec
     stub(table, "save")
@@ -58,8 +61,8 @@ describe("Tests that the generic mapper follows a game in Swedish", function()
       map.set(key, saved[key])
     end
     map.save.prompt_pattern[map.character] = savedPrompt
-    for key, value in pairs(savedConfigs) do
-      map.configs[key] = value
+    for _, key in ipairs(configKeys) do
+      map.configs[key] = savedConfigs[key]
     end
     table.save:revert()
     local queue = moveQueue()
@@ -150,6 +153,10 @@ describe("Tests that the generic mapper follows a game in Swedish", function()
     map.save.prompt_pattern[map.character] = "^HP %d+/%d+ SP %d+/%d+"
     captureMoveCmd("nv")
     feedTriggers("\nHP 52/52 SP 52/52Ursäkta?\n")
+    assert.are.same({}, moveQueue())
+    map.save.prompt_pattern[map.character] = "^%a+:%d+ >"
+    captureMoveCmd("nv")
+    feedTriggers("\nHälsa:52 >Ursäkta?\n")
     assert.are.same({}, moveQueue())
   end)
 end)

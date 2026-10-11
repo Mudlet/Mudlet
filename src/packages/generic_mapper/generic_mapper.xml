@@ -372,12 +372,9 @@ setTriggerStayOpen("English Multi-Line Exits Trigger",1)</script>
 			</Trigger>
 			<Trigger isActive="yes" isFolder="no" isTempTrigger="no" isMultiline="no" isPerlSlashGOption="no" isColorizerTrigger="no" isFilterTrigger="no" isSoundTrigger="no" isColorTrigger="no" isColorTriggerFg="no" isColorTriggerBg="no">
 				<name>Swedish Failed Move Trigger</name>
-				<script>if map.configs.language == "swedish" then
-  local before = line:sub(1, #line - #matches[1])
-  local prompt = map.save.prompt_pattern[map.character]
-  if prompt then before = before:gsub(prompt, "") end
-  -- only the prompt may come before the reply, so someone saying "Vadå?" is not a failed move
-  if not before:find("%a") then raiseEvent("onMoveFail") end
+				<script>-- only the prompt may come before the reply, so someone saying "Vadå?" is not a failed move
+if map.configs.language == "swedish" and map.promptOnly(line:sub(1, #line - #matches[1])) then
+  raiseEvent("onMoveFail")
 end</script>
 				<triggerType>0</triggerType>
 				<conditonLineDelta>0</conditonLineDelta>
@@ -4075,6 +4072,14 @@ function map.setLanguage(name)
     end
     table.save(profilePath.."/map downloads/configs.lua", map.configs)
     map.echo("Directions now use " .. string.lower(name) .. " words.")
+end
+
+function map.promptOnly(text)
+    local prompt = map.save.prompt_pattern[map.character]
+    if prompt then
+        text = string.gsub(text, prompt, "")
+    end
+    return not string.find(text, "%a")
 end
 
 local function lang_dirs_untouched()
