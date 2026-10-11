@@ -115,7 +115,8 @@ void ModernGLWidget::showEvent(QShowEvent* event)
     // Qt creates the context once the widget is laid out; if that failed, initializeGL never runs to say so
     QTimer::singleShot(0, this, [this]() {
         if (isVisible() && !context() && !size().isEmpty()) {
-            // Qt can drop the context as the view is shown (switching renderers does this) and only makes another on a resize
+            // Qt drops a context not yet composed when the view is shown (switching renderers does this) and rebuilds it
+            // only on a later resize or paint; resize synchronously so the check below sees the result, which update() would not
             QResizeEvent resize(size(), size());
             QCoreApplication::sendEvent(this, &resize);
         }

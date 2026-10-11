@@ -97,6 +97,16 @@ private:
         return false;
     }
 
+public:
+    // Mirrors src/main.cpp, which shares GL contexts application-wide only on FreeBSD; with sharing,
+    // Qt never resets a 3D view's context when it is shown
+    static void initMain()
+    {
+#if defined(Q_OS_FREEBSD) && defined(INCLUDE_3DMAPPER)
+        QApplication::setAttribute(Qt::AA_ShareOpenGLContexts);
+#endif
+    }
+
 private slots:
     void initTestCase()
     {
@@ -234,8 +244,8 @@ private slots:
         QCOMPARE(pMapDialog->windowHandle()->transientParent(), pDock->windowHandle());
     }
 
-    // Redocking destroys the floating map's window without recreating any other, so Qt sends
-    // no WinIdChange for the dialogs that were transient for it
+    // Redocking destroys the floating map's window and creates none in its place, so Qt itself
+    // never relinks the dialogs that were transient for it
     void test_redockingTheMapHandsItsDialogsToTheMainWindow()
     {
         mudlet::self()->show();
@@ -315,10 +325,10 @@ private slots:
         QPointer<QWindow> pMainWindowBefore = mudlet::self()->windowHandle();
         QVERIFY(pMainWindowBefore);
 
+        // Qt recreates the window inside setParent(); shown, this unguarded view would leak a context without GL
         auto* pGLView = new QOpenGLWidget();
         pGLView->setParent(mudlet::self());
-        pGLView->show();
-        qApp->processEvents();
+        delete pGLView;
         if (pMainWindowBefore && mudlet::self()->windowHandle() == pMainWindowBefore) {
             QSKIP("Qt did not recreate the main window for the GL view here, so there is nothing to relink");
         }
@@ -347,6 +357,9 @@ private slots:
             const bool valid = pView->isValid();
             if (modern && !valid) {
                 QTRY_VERIFY2(pView->findChild<QLabel*>() && pView->findChild<QLabel*>()->isVisible(), "the modern 3D view did not say it could not create a context");
+            } else if (modern) {
+                qApp->processEvents();
+                QVERIFY2(!pView->findChild<QLabel*>() || !pView->findChild<QLabel*>()->isVisible(), "the 3D view has a working context but says it could not create one");
             }
 
             pView->resize(pView->size() + QSize(10, 10));
@@ -357,6 +370,7 @@ private slots:
             if (valid) {
                 // Qt itself may rebuild a context that has not been composed yet when the view is shown again
                 QVERIFY2(pView->context() && pView->isValid(), "the 3D view was left without a working context");
+                QVERIFY2(!pView->findChild<QLabel*>() || !pView->findChild<QLabel*>()->isVisible(), "the 3D view has a working context but says it could not create one");
             } else {
                 QVERIFY2(pView->context() == pFirstContext, "the 3D view asked again for a context it could not create");
                 QVERIFY(!pView->isValid());
