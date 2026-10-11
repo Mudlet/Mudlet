@@ -857,10 +857,10 @@ std::optional<QRect> TMxpFrameManager::nestingArea(const TMxpFrame& frame) const
 
 TMxpFrameFrontend* TMxpFrameManager::frameWidgets()
 {
-    return mpHost && mpHost->hasConsoleView() ? &mpHost->consoleFrontend()->mxpFrames() : nullptr;
+    return mpHost ? &mpHost->consoleFrontend()->mxpFrames() : nullptr;
 }
 
 const TMxpFrameFrontend* TMxpFrameManager::frameWidgets() const
 {
-    return mpHost && mpHost->hasConsoleView() ? &mpHost->consoleFrontend()->mxpFrames() : nullptr;
+    return mpHost ? &mpHost->consoleFrontend()->mxpFrames() : nullptr;
 }
