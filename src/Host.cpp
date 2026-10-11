@@ -4971,8 +4971,8 @@ void Host::lookUpSecuredPassword(CredentialManager* credManager)
     credManager->retrievePassword(
             getName(),
             "character",
-            [this, credManager](bool success, const QString& password, const QString& errorMessage, bool timedOut) {
-                securedPasswordAnswered(success, password, errorMessage, timedOut);
+            [this, credManager](bool success, const QString& password, const QString& errorMessage, CredentialManager::ReadOutcome outcome) {
+                securedPasswordAnswered(success, password, errorMessage, outcome == CredentialManager::ReadOutcome::TimedOut);
 
                 // Clean up the credential manager
                 credManager->deleteLater();
