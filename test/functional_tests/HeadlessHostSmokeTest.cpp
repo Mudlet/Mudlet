@@ -1713,6 +1713,270 @@ ubTypes = tostring(windowType("ubBox")) .. "," .. tostring(windowType("ubLabel")
         QVERIFY(!host->windowRegistry().hasLabel(qsl("ubLabel")));
     }
 
+    // The answers are those of the same Lua run in the GUI self-test profile, but for the last ones,
+    // which a spec cannot wait for: what was moved into a deleted scroll box goes with it
+    void test_headlessSetWindowContract()
+    {
+        const QString hostname = qsl("Test-Headless-Host-Set-Window");
+        QVERIFY2(HostManager::self()->addHost(hostname, QString(), QString(), QString()), "Could not create a profile with no main window.");
+        Host* host = HostManager::self()->getHost(hostname);
+        QVERIFY2(host, "The profile is not in the pool.");
+        QVERIFY(!host->hasConsoleView());
+
+        bool ran = host->getLuaInterpreter()->compileAndExecuteScript(qsl(R"lua(
+headlessSetWindow = "not run"
+local ok, err = pcall(function()
+  local function described(called, ...)
+    if not called then
+      return "raised:" .. tostring((...))
+    end
+    local count = select("#", ...)
+    local values = {}
+    for i = 1, count do
+      values[i] = tostring((select(i, ...)))
+    end
+    return "[" .. count .. "]" .. table.concat(values, ":")
+  end
+  local answers = {}
+  local function step(label, f, ...)
+    answers[#answers + 1] = label .. "=" .. described(pcall(f, ...))
+  end
+  local function look(label, name)
+    answers[#answers + 1] = label .. ":type=" .. described(pcall(windowType, name)) .. ",geometry=" .. described(pcall(getWindowGeometry, name)) .. ",visible=" .. described(pcall(windowVisible, name))
+  end
+  -- A label measures its text in the font it has, which is read against labels made in the main window and in a user window
+  local function font(label, name)
+    local width, height = getLabelSizeHint(name)
+    local kinds = {}
+    for _, parent in ipairs({"main", "swWindow"}) do
+      createLabel(parent, "swTwin", 0, 0, 50, 20, 1)
+      echo("swTwin", getLabelText(name))
+      local twinWidth, twinHeight = getLabelSizeHint("swTwin")
+      deleteLabel("swTwin")
+      if width == twinWidth and height == twinHeight then
+        kinds[#kinds + 1] = parent
+      end
+    end
+    answers[#answers + 1] = label .. ":font=" .. (#kinds > 0 and table.concat(kinds, "+") or "other")
+  end
+  assert(openUserWindow("swWindow", false, false, "f") == true, "openUserWindow did not answer true")
+  setFont("swWindow", "Bitstream Vera Sans Mono")
+  setFontSize("swWindow", 20)
+  assert(createScrollBox("swBox", 10, 20, 200, 100))
+  assert(createScrollBox("swWindow", "swWinBox", 3, 4, 150, 80))
+  assert(createScrollBox("swBox", "swInner", 5, 6, 60, 50))
+  createLabel("swInner", "swDeep", 1, 2, 30, 15, 1)
+  echo("swDeep", "deep")
+  createLabel("swInner", "swDeepPlain", 1, 20, 40, 20, 1)
+  setLabelStyleSheet("swDeepPlain", "")
+  echo("swDeepPlain", "words")
+
+  createLabel("main", "swLabel", 7, 8, 40, 20, 1)
+  echo("swLabel", "words")
+  font("label", "swLabel")
+  step("labelIntoBox", setWindow, "swBox", "swLabel", 3, 3, true)
+  look("labelInBox", "swLabel")
+  font("labelInBox", "swLabel")
+  hideWindow("swBox")
+  look("labelInHiddenBox", "swLabel")
+  showWindow("swBox")
+  step("labelIntoWinBox", setWindow, "swWinBox", "swLabel", 4, 4, false)
+  look("labelInWinBox", "swLabel")
+  font("labelInWinBox", "swLabel")
+  step("showLabel", showWindow, "swLabel")
+  look("labelShown", "swLabel")
+  hideWindow("swWindow")
+  look("labelInHiddenWindow", "swLabel")
+  showWindow("swWindow")
+  step("labelIntoInner", setWindow, "swInner", "swLabel", 1, 1, true)
+  hideWindow("swBox")
+  look("labelInHiddenOuter", "swLabel")
+  step("labelIntoHiddenBox", setWindow, "swBox", "swLabel", 2, 2, true)
+  look("labelIntoHidden", "swLabel")
+  showWindow("swBox")
+  look("labelOutOfHidden", "swLabel")
+  step("labelIntoWindow", setWindow, "swWindow", "swLabel", 5, 5, true)
+  look("labelInWindow", "swLabel")
+  font("labelInWindow", "swLabel")
+  step("labelIntoMain", setWindow, "main", "swLabel", 6, 6, true)
+  look("labelInMain", "swLabel")
+  font("labelInMain", "swLabel")
+
+  createLabel("main", "swPlain", 0, 0, 40, 20, 1)
+  setLabelStyleSheet("swPlain", "")
+  echo("swPlain", "words")
+  font("plain", "swPlain")
+  step("plainIntoWinBox", setWindow, "swWinBox", "swPlain", 0, 0, true)
+  font("plainInWinBox", "swPlain")
+  step("plainIntoBox", setWindow, "swBox", "swPlain", 0, 0, true)
+  font("plainInBox", "swPlain")
+  step("plainOutToWinBox", setWindow, "swWinBox", "swPlain", 1, 1, true)
+
+  createMiniConsole("main", "swMini", 9, 10, 50, 40)
+  step("miniIntoBox", setWindow, "swBox", "swMini", 5, 5, true)
+  look("miniInBox", "swMini")
+  step("miniFontSize", getFontSize, "swMini")
+  hideWindow("swBox")
+  look("miniInHiddenBox", "swMini")
+  showWindow("swBox")
+  step("miniIntoWinBox", setWindow, "swWinBox", "swMini", 6, 6, false)
+  look("miniInWinBox", "swMini")
+  step("showMini", showWindow, "swMini")
+  look("miniShown", "swMini")
+  step("miniIntoMain", setWindow, "main", "swMini", 2, 2, true)
+  look("miniInMain", "swMini")
+  step("miniIntoWindow", setWindow, "swWindow", "swMini", 1, 1, true)
+  hideWindow("swWindow")
+  look("miniInHiddenWindow", "swMini")
+  showWindow("swWindow")
+  step("miniWinFontSize", getFontSize, "swMini")
+
+  step("boxIntoWindow", setWindow, "swWindow", "swBox", 6, 6, true)
+  look("boxInWindow", "swBox")
+  font("deepInWindowBox", "swDeep")
+  font("deepPlainInWindowBox", "swDeepPlain")
+  hideWindow("swWindow")
+  look("boxInHiddenWindow", "swBox")
+  look("deepInHiddenWindow", "swDeep")
+  showWindow("swWindow")
+  step("boxIntoItself", setWindow, "swBox", "swBox", 0, 0, true)
+  step("boxIntoChild", setWindow, "swInner", "swBox", 0, 0, true)
+  step("boxIntoMissing", setWindow, "swNoSuch", "swBox", 0, 0, true)
+  step("missingIntoBox", setWindow, "swBox", "swNoSuch", 0, 0, true)
+  step("windowIntoBox", setWindow, "swBox", "swWindow", 0, 0, true)
+  step("mapperIntoBox", setWindow, "swBox", "mapper", 0, 0, true)
+  step("mainIntoBox", setWindow, "swBox", "main", 0, 0, true)
+  step("innerToMainHidden", setWindow, "main", "swInner", 7, 7, false)
+  look("innerInMain", "swInner")
+  look("deepInHiddenInner", "swDeep")
+  step("innerBack", setWindow, "swBox", "swInner", 5, 6, true)
+  look("innerBack", "swInner")
+  look("deepBack", "swDeep")
+  step("boxIntoMain", setWindow, "main", "swBox", 11, 12, true)
+  look("boxInMain", "swBox")
+  step("boxIntoWinBox", setWindow, "swWinBox", "swBox", 1, 1, true)
+  hideWindow("swWindow")
+  look("boxInHiddenWinBox", "swBox")
+  look("deepInHiddenWinBox", "swDeep")
+  showWindow("swWindow")
+  font("deepPlainInWinBox", "swDeepPlain")
+  step("boxBackToMain", setWindow, "main", "swBox", 11, 12, true)
+  font("deepPlainInMain", "swDeepPlain")
+
+  -- setWindow takes a scroll box before a user window of the same name
+  assert(createScrollBox("swWindow", 30, 30, 20, 20))
+  step("plainIntoClash", setWindow, "swWindow", "swPlain", 0, 0, true)
+  font("plainInClash", "swPlain")
+  step("plainOutOfClash", setWindow, "swWinBox", "swPlain", 1, 1, true)
+  deleteScrollBox("swWindow")
+  step("miniIntoBoxAgain", setWindow, "swBox", "swMini", 5, 5, true)
+  step("labelIntoInnerAgain", setWindow, "swInner", "swLabel", 1, 1, true)
+  step("delete", deleteScrollBox, "swBox")
+  look("labelAtOnce", "swLabel")
+  look("miniAtOnce", "swMini")
+  look("plainOutside", "swPlain")
+  closeUserWindow("swWindow")
+  headlessSetWindowAnswers = table.concat(answers, "\n")
+end)
+headlessSetWindow = ok and "ok" or tostring(err)
+-- Run once deferred deletes have, which a spec cannot wait for
+function headlessSetWindowAfter()
+  local answers = {}
+  for _, name in ipairs({"swLabel", "swMini", "swDeep", "swInner", "swPlain", "swWinBox", "swDeepPlain"}) do
+    answers[#answers + 1] = name .. ":" .. tostring(windowType(name))
+  end
+  return table.concat(answers, "\n")
+end
+)lua"));
+        QVERIFY2(ran, "The Lua chunk did not run.");
+        QCOMPARE(luaGlobalString(host, "headlessSetWindow"), qsl("ok"));
+        const QStringList answers{qsl("label:font=main"),
+                                  qsl("labelIntoBox=[1]true"),
+                                  qsl("labelInBox:type=[1]label,geometry=[4]3:3:40:20,visible=[1]true"),
+                                  qsl("labelInBox:font=other"),
+                                  qsl("labelInHiddenBox:type=[1]label,geometry=[4]3:3:40:20,visible=[1]false"),
+                                  qsl("labelIntoWinBox=[1]true"),
+                                  qsl("labelInWinBox:type=[1]label,geometry=[4]4:4:40:20,visible=[1]false"),
+                                  qsl("labelInWinBox:font=other"),
+                                  qsl("showLabel=[1]true"),
+                                  qsl("labelShown:type=[1]label,geometry=[4]4:4:40:20,visible=[1]true"),
+                                  qsl("labelInHiddenWindow:type=[1]label,geometry=[4]4:4:40:20,visible=[1]false"),
+                                  qsl("labelIntoInner=[1]true"),
+                                  qsl("labelInHiddenOuter:type=[1]label,geometry=[4]1:1:40:20,visible=[1]false"),
+                                  qsl("labelIntoHiddenBox=[1]true"),
+                                  qsl("labelIntoHidden:type=[1]label,geometry=[4]2:2:40:20,visible=[1]false"),
+                                  qsl("labelOutOfHidden:type=[1]label,geometry=[4]2:2:40:20,visible=[1]true"),
+                                  qsl("labelIntoWindow=[1]true"),
+                                  qsl("labelInWindow:type=[1]label,geometry=[4]5:5:40:20,visible=[1]true"),
+                                  qsl("labelInWindow:font=other"),
+                                  qsl("labelIntoMain=[1]true"),
+                                  qsl("labelInMain:type=[1]label,geometry=[4]6:6:40:20,visible=[1]true"),
+                                  qsl("labelInMain:font=other"),
+                                  qsl("plain:font=other"),
+                                  qsl("plainIntoWinBox=[1]true"),
+                                  qsl("plainInWinBox:font=swWindow"),
+                                  qsl("plainIntoBox=[1]true"),
+                                  qsl("plainInBox:font=main"),
+                                  qsl("plainOutToWinBox=[1]true"),
+                                  qsl("miniIntoBox=[1]true"),
+                                  qsl("miniInBox:type=[1]miniconsole,geometry=[4]5:5:50:40,visible=[1]true"),
+                                  qsl("miniFontSize=[1]12"),
+                                  qsl("miniInHiddenBox:type=[1]miniconsole,geometry=[4]5:5:50:40,visible=[1]false"),
+                                  qsl("miniIntoWinBox=[1]true"),
+                                  qsl("miniInWinBox:type=[1]miniconsole,geometry=[4]6:6:50:40,visible=[1]false"),
+                                  qsl("showMini=[1]true"),
+                                  qsl("miniShown:type=[1]miniconsole,geometry=[4]6:6:50:40,visible=[1]true"),
+                                  qsl("miniIntoMain=[1]true"),
+                                  qsl("miniInMain:type=[1]miniconsole,geometry=[4]2:2:50:40,visible=[1]true"),
+                                  qsl("miniIntoWindow=[1]true"),
+                                  qsl("miniInHiddenWindow:type=[1]miniconsole,geometry=[4]1:1:50:40,visible=[1]false"),
+                                  qsl("miniWinFontSize=[1]12"),
+                                  qsl("boxIntoWindow=[1]true"),
+                                  qsl("boxInWindow:type=[1]scrollbox,geometry=[4]6:6:200:100,visible=[1]true"),
+                                  qsl("deepInWindowBox:font=main"),
+                                  qsl("deepPlainInWindowBox:font=swWindow"),
+                                  qsl("boxInHiddenWindow:type=[1]scrollbox,geometry=[4]6:6:200:100,visible=[1]false"),
+                                  qsl("deepInHiddenWindow:type=[1]label,geometry=[4]1:2:30:15,visible=[1]false"),
+                                  qsl("boxIntoItself=[2]nil:element 'swBox' cannot be moved into itself or into one of its own children"),
+                                  qsl("boxIntoChild=[2]nil:element 'swBox' cannot be moved into itself or into one of its own children"),
+                                  qsl("boxIntoMissing=[2]nil:window 'swNoSuch' not found"),
+                                  qsl("missingIntoBox=[2]nil:element 'swNoSuch' not found"),
+                                  qsl("windowIntoBox=[2]nil:element 'swWindow' is the base of a floating/dockable user window and may not be moved"),
+                                  qsl("mapperIntoBox=[2]nil:element 'mapper' not found"),
+                                  qsl("mainIntoBox=[2]nil:element 'main' not found"),
+                                  qsl("innerToMainHidden=[1]true"),
+                                  qsl("innerInMain:type=[1]scrollbox,geometry=[4]7:7:60:50,visible=[1]false"),
+                                  qsl("deepInHiddenInner:type=[1]label,geometry=[4]1:2:30:15,visible=[1]false"),
+                                  qsl("innerBack=[1]true"),
+                                  qsl("innerBack:type=[1]scrollbox,geometry=[4]5:6:60:50,visible=[1]true"),
+                                  qsl("deepBack:type=[1]label,geometry=[4]1:2:30:15,visible=[1]true"),
+                                  qsl("boxIntoMain=[1]true"),
+                                  qsl("boxInMain:type=[1]scrollbox,geometry=[4]11:12:200:100,visible=[1]true"),
+                                  qsl("boxIntoWinBox=[1]true"),
+                                  qsl("boxInHiddenWinBox:type=[1]scrollbox,geometry=[4]1:1:200:100,visible=[1]false"),
+                                  qsl("deepInHiddenWinBox:type=[1]label,geometry=[4]1:2:30:15,visible=[1]false"),
+                                  qsl("deepPlainInWinBox:font=swWindow"),
+                                  qsl("boxBackToMain=[1]true"),
+                                  qsl("deepPlainInMain:font=main"),
+                                  qsl("plainIntoClash=[1]true"),
+                                  qsl("plainInClash:font=main"),
+                                  qsl("plainOutOfClash=[1]true"),
+                                  qsl("miniIntoBoxAgain=[1]true"),
+                                  qsl("labelIntoInnerAgain=[1]true"),
+                                  qsl("delete=[1]true"),
+                                  qsl("labelAtOnce:type=[1]label,geometry=[4]1:1:40:20,visible=[1]true"),
+                                  qsl("miniAtOnce:type=[1]miniconsole,geometry=[4]5:5:50:40,visible=[1]true"),
+                                  qsl("plainOutside:type=[1]label,geometry=[4]1:1:40:20,visible=[1]true")};
+        QCOMPARE(luaGlobalString(host, "headlessSetWindowAnswers"), answers.join(QLatin1Char('\n')));
+
+        QCoreApplication::sendPostedEvents(nullptr, QEvent::DeferredDelete);
+        ran = host->getLuaInterpreter()->compileAndExecuteScript(qsl("headlessSetWindowAfterAnswers = headlessSetWindowAfter()"));
+        QVERIFY2(ran, "The Lua chunk after the deferred deletes did not run.");
+        const QStringList after{qsl("swLabel:nil"), qsl("swMini:nil"), qsl("swDeep:nil"), qsl("swInner:nil"), qsl("swPlain:label"), qsl("swWinBox:scrollbox"), qsl("swDeepPlain:nil")};
+        QCOMPARE(luaGlobalString(host, "headlessSetWindowAfterAnswers"), after.join(QLatin1Char('\n')));
+        QVERIFY2(QApplication::topLevelWidgets().isEmpty(), "Moving the windows created a widget.");
+    }
+
     // What a profile with no view answers the scroll calls, taken from the same Lua run in the GUI self-test
     // profile, which lets each real pane repaint before it is read and re-issues each scroll until it holds.
     void test_headlessScrollContract()
