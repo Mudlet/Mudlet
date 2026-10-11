@@ -142,7 +142,8 @@ describe("Tests the 3D map perspective functions with the modern 3D view showing
 
   -- Paints the room drawing code with a real GL context, which no C++ test does in CI. It can only
   -- check that the view started, not that a frame was drawn or what it shows. Pending under leak
-  -- detection, so in CI it runs only where that is off (macOS, without sanitizers)
+  -- detection and where the view cannot start, so in CI only macOS paints, without sanitizers;
+  -- Windows CI has no OpenGL 3.3
   it("paints rooms with a symbol, a highlight and a border, in and out of grid mode", function()
     if (os.getenv("ASAN_OPTIONS") or ""):find("detect_leaks=1", 1, true) then
       pending("a 3D view's GL context leaks in this job's GL driver")
@@ -174,6 +175,10 @@ describe("Tests the 3D map perspective functions with the modern 3D view showing
     pumpEvents(200)
     -- A view that could not start refuses camera moves rather than painting
     local ok, err = shiftMapPerspective(0, 0, 0)
+    if not ok and err:find("could not start", 1, true) then
+      pending(err)
+      return
+    end
     assert.is_true(ok, err)
 
     assert.is_true(setGridMode(areaId, true))

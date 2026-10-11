@@ -51,8 +51,6 @@
 #include "ShaderManager.h"
 #include "CameraController.h"
 
-#include <optional>
-
 class Host;
 class QLabel;
 class TMap;
@@ -232,8 +230,9 @@ private:
     bool mCameraSmoothAnimating = false; // Dedicated flag for smooth camera animation
     int mPreviousRID = 0;                // Track previous room ID to detect changes
     bool mFramePending = true;
-    // A zoom applied while hidden, framed again for the size the view is first seen at unless a camera distance is set first
-    std::optional<qreal> mPendingFrameZoom;
+    // Set by a zoom or a change of area while hidden: the shown area is framed at its stored zoom, read then so a later
+    // 2D zoom counts, for the size the view is first seen at, unless a camera distance is set first
+    bool mFrameWhenShown = false;
     // A distance a script asked for since the last paint wins over framing a newly shown area
     bool mDistanceRequested = false;
 
