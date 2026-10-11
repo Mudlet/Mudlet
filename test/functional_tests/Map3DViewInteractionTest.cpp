@@ -36,6 +36,7 @@
 #include <QScopeGuard>
 #include <QSignalSpy>
 #include <QTemporaryDir>
+#include <QLineEdit>
 #include <QToolTip>
 #include <QtTest/QtTest>
 
@@ -453,8 +454,15 @@ private slots:
         QCOMPARE(selection(), QSet<int>{kPlayerRoomId});
         QPointer<QMenu> menuGuard(menu);
 
+        const QPoint eastRoom = pixelOfRoom(pModern, kEastRoomId);
+        // Near the screen's right edge the menu shifts left, over the east room
+        const QPoint eastRoomOnScreen = pModern->mapToGlobal(eastRoom);
+        if (menu->geometry().contains(eastRoomOnScreen)) {
+            menu->move(eastRoomOnScreen.x() - menu->width() - 10, menu->y());
+        }
+        QVERIFY(!menu->geometry().contains(eastRoomOnScreen));
         // To the view, not to the menu's window, whose handling of a press outside it varies by platform
-        QTest::mouseClick(pModern, Qt::LeftButton, Qt::NoModifier, pixelOfRoom(pModern, kEastRoomId));
+        QTest::mouseClick(pModern, Qt::LeftButton, Qt::NoModifier, eastRoom);
         QTRY_VERIFY(menuGuard.isNull() || !menuGuard->isVisible());
         QTRY_COMPARE(selection(), QSet<int>{kEastRoomId});
     }
@@ -619,8 +627,7 @@ private slots:
         QMouseEvent leftPress(QEvent::MouseButtonPress, corner, pModern->mapToGlobal(corner), Qt::LeftButton, Qt::LeftButton, Qt::NoModifier);
         QCoreApplication::sendEvent(pModern, &leftPress);
         map()->mapper()->show3DView(false);
-        QTest::qWait(50);
-        const int announcedOnHiding = pressesSeenByScript();
+        QTRY_COMPARE(pressesSeenByScript(), 1);
 
         pModern = viewAtThePlayer();
         QVERIFY(pModern);
@@ -635,7 +642,6 @@ private slots:
             menu->close();
         }
         QCOMPARE(runLua(qsl("killAnonymousEventHandler(pressHandler)")), QString());
-        QCOMPARE(announcedOnHiding, 1);
         QCOMPARE(pModern->viewCenter(), start);
     }
 
@@ -686,6 +692,9 @@ private slots:
         ModernGLWidget* pModern = viewAtThePlayer();
         QVERIFY(pModern);
         QVERIFY(focusFromTheKeyboard(pModern));
+        const QVector3D before = pModern->viewCenter();
+        QTest::keyClick(pModern, Qt::Key_Right);
+        QVERIFY2(pModern->viewCenter().x() > before.x(), "the right arrow did not pan east without KeypadModifier");
         const QVector3D start = pModern->viewCenter();
         QTest::keyClick(pModern, Qt::Key_Right, Qt::KeypadModifier);
 #if defined(Q_OS_MACOS)
@@ -727,6 +736,9 @@ private slots:
             commandLine->clear();
         });
         QVERIFY(focusFromTheKeyboard(pModern));
+        const QVector3D beforeTheClick = pModern->viewCenter();
+        QTest::keyClick(pModern, Qt::Key_W);
+        QVERIFY2(pModern->viewCenter().y() > beforeTheClick.y(), "W did not pan with focus from the keyboard");
         commandLine->clear();
         QTest::mouseClick(pModern, Qt::LeftButton, Qt::NoModifier, pixelOfRoom(pModern, kPlayerRoomId));
         QVERIFY(pModern->hasFocus());
@@ -815,6 +827,169 @@ private slots:
         QTRY_VERIFY2(commandLine->hasFocus(), qPrintable(QDebug::toString(QApplication::focusWidget())));
         QTest::keyClick(static_cast<QWidget*>(nullptr), Qt::Key_N);
         QCOMPARE(commandLine->toPlainText(), qsl("n"));
+    }
+
+    // After a click Tab is the command line's, as with the 2D map: QWidget would otherwise take a plain Tab to move
+    // focus before the view could pass it on, so the caret key on Tab would not work
+    void test_theCaretKeyWorksAfterAClick_data()
+    {
+        QTest::addColumn<int>("shortcut");
+        QTest::addColumn<int>("modifiers");
+        QTest::newRow("Tab") << static_cast<int>(Host::CaretShortcut::Tab) << static_cast<int>(Qt::NoModifier);
+        QTest::newRow("Ctrl+Tab") << static_cast<int>(Host::CaretShortcut::CtrlTab) << static_cast<int>(Qt::ControlModifier);
+    }
+
+    void test_theCaretKeyWorksAfterAClick()
+    {
+        QFETCH(int, shortcut);
+        QFETCH(int, modifiers);
+        ModernGLWidget* pModern = viewAtThePlayer();
+        QVERIFY(pModern);
+        const auto restore = qScopeGuard([this]() {
+            mpHost->mCaretShortcut = Host::CaretShortcut::None;
+            // TConsole asserts on leaving a caret mode it is not in
+            if (mpHost->caretEnabled()) {
+                mpHost->setCaretEnabled(false);
+            }
+        });
+        mpHost->mCaretShortcut = static_cast<Host::CaretShortcut>(shortcut);
+        QVERIFY(!mpHost->caretEnabled());
+        QVERIFY(activate(pModern->window()));
+        QTest::mouseClick(pModern, Qt::LeftButton, Qt::NoModifier, pixelOfRoom(pModern, kPlayerRoomId));
+        QTRY_VERIFY(pModern->hasFocus());
+        // Sent as the window system would, through the shortcut map to the focused widget
+        QTest::keyClick(static_cast<QWidget*>(nullptr), Qt::Key_Tab, static_cast<Qt::KeyboardModifiers>(modifiers));
+        QCoreApplication::processEvents();
+        QVERIFY2(mpHost->caretEnabled(), qPrintable(qsl("focus went to %1").arg(QDebug::toString(QApplication::focusWidget()))));
+    }
+
+    // Keypad keys go on to the command line's key bindings even while the view pans with the other keys
+    void test_keypadKeyBindingsRunWithFocusFromTheKeyboard()
+    {
+        ModernGLWidget* pModern = viewAtThePlayer();
+        QVERIFY(pModern);
+        QCOMPARE(runLua(qsl("keypadBindings = {}\n"
+                            "keypadEight = tempKey(mudlet.keymodifier.Keypad, mudlet.key['8'], function() keypadBindings[#keypadBindings + 1] = '8' end)\n"
+                            "keypadUp = tempKey(mudlet.keymodifier.Keypad, mudlet.key.Up, function() keypadBindings[#keypadBindings + 1] = 'up' end)")),
+                 QString());
+        const auto restore = qScopeGuard([this]() {
+            runLua(qsl("killKey(keypadEight); killKey(keypadUp)"));
+        });
+        QVERIFY(focusFromTheKeyboard(pModern));
+        const QVector3D start = pModern->viewCenter();
+        QTest::keyClick(pModern, Qt::Key_8, Qt::KeypadModifier);
+        QCoreApplication::processEvents();
+#if !defined(Q_OS_MACOS)
+        // On macOS this is how Qt reports the plain up arrow, which pans
+        QVERIFY(focusFromTheKeyboard(pModern));
+        QTest::keyClick(pModern, Qt::Key_Up, Qt::KeypadModifier);
+        QCoreApplication::processEvents();
+#endif
+        QCOMPARE(runLua(qsl("keypadBindingsText = table.concat(keypadBindings, ',')")), QString());
+#if defined(Q_OS_MACOS)
+        QCOMPARE(luaGlobalString("keypadBindingsText"), qsl("8"));
+#else
+        QCOMPARE(luaGlobalString("keypadBindingsText"), qsl("8,up"));
+#endif
+        QCOMPARE(pModern->viewCenter(), start);
+    }
+
+    // A menu, the menu bar or a window switch hands focus back with its own reason and leaves the keys panning; a
+    // key passed on to the command line ends that, so re-activating the map's window later does not pan with W
+    void test_focusComingBackKeepsTheKeysOnlyIfTheViewDidNotPassThemOn()
+    {
+        ModernGLWidget* pModern = viewAtThePlayer();
+        QVERIFY(pModern);
+        QDockWidget* pDock = dockOf(pModern);
+        QVERIFY2(pDock, "the map is not in a dock");
+        TCommandLine* commandLine = mpHost->mainConsoleView()->mpCommandLine;
+        const auto restore = qScopeGuard([pDock, floating = pDock->isFloating(), commandLine]() {
+            setDockFloating(pDock, floating);
+            commandLine->clear();
+        });
+        setDockFloating(pDock, true);
+        QVERIFY(focusFromTheKeyboard(pModern));
+
+        QMenu menu(pModern);
+        menu.addAction(qsl("item"));
+        menu.popup(pModern->mapToGlobal(QPoint(10, 10)));
+        QTRY_VERIFY(menu.isVisible());
+        menu.close();
+        QTRY_VERIFY(pModern->hasFocus());
+        QVector3D start = pModern->viewCenter();
+        QTest::keyClick(static_cast<QWidget*>(nullptr), Qt::Key_W);
+        QVERIFY2(pModern->viewCenter().y() > start.y(), "W did not pan after a menu closed");
+
+        // The offscreen platform leaves the closed menu as the active window
+        QVERIFY(activate(pDock));
+        QTRY_VERIFY(pModern->hasFocus());
+        // Stands in for the menu bar, which takes focus with this reason in keyboard mode
+        QLineEdit other(pDock);
+        other.show();
+        other.setFocus(Qt::MenuBarFocusReason);
+        QTRY_VERIFY(other.hasFocus());
+        pModern->setFocus(Qt::MenuBarFocusReason);
+        QTRY_VERIFY(pModern->hasFocus());
+        start = pModern->viewCenter();
+        QTest::keyClick(static_cast<QWidget*>(nullptr), Qt::Key_W);
+        QVERIFY2(pModern->viewCenter().y() > start.y(), "W did not pan after the menu bar gave focus back");
+
+        commandLine->clear();
+        QTest::keyClick(static_cast<QWidget*>(nullptr), Qt::Key_X);
+        QTRY_VERIFY(commandLine->hasFocus());
+        QVERIFY(activate(pDock));
+        QTRY_VERIFY(pModern->hasFocus());
+        start = pModern->viewCenter();
+        QTest::keyClick(static_cast<QWidget*>(nullptr), Qt::Key_W);
+        QCoreApplication::processEvents();
+        QCOMPARE(commandLine->toPlainText(), qsl("xw"));
+        QCOMPARE(pModern->viewCenter(), start);
+    }
+
+    // A script handling an earlier press announced at the next one may hide the view; that press must not start a
+    // drag on the hidden view, which would pan it when it is back
+    void test_aScriptHidingTheMapOnAPressLeavesNoDrag()
+    {
+        ModernGLWidget* pModern = viewAtThePlayer();
+        QVERIFY(pModern);
+        QCOMPARE(runLua(qsl("selectedOnPresses = {}\n"
+                            "pressHandler = registerAnonymousEventHandler('sysMapWindowMousePressEvent', function()\n"
+                            "  selectedOnPresses[#selectedOnPresses + 1] = 0\n"
+                            "  if #selectedOnPresses == 1 then closeMapWidget() end\n"
+                            "end)")),
+                 QString());
+        const auto restore = qScopeGuard([this]() {
+            runLua(qsl("killAnonymousEventHandler(pressHandler); openMapWidget()"));
+        });
+        const QPointF corner(5, 5);
+        QMouseEvent leftPress(QEvent::MouseButtonPress, corner, pModern->mapToGlobal(corner), Qt::LeftButton, Qt::LeftButton, Qt::NoModifier);
+        QCoreApplication::sendEvent(pModern, &leftPress);
+        QMouseEvent rightPress(QEvent::MouseButtonPress, corner, pModern->mapToGlobal(corner), Qt::RightButton, Qt::LeftButton | Qt::RightButton, Qt::NoModifier);
+        QCoreApplication::sendEvent(pModern, &rightPress);
+        QVERIFY2(!pModern->isVisible(), "the script did not hide the map");
+
+        // As the toolbar's Map button does; openMapWidget() and viewAtThePlayer() re-dock or swap the view, which
+        // would end the drag themselves
+        QVERIFY(!mpHost->mapperShown());
+        mpHost->showHideOrCreateMapper(false);
+        QTRY_VERIFY(pModern->isVisible());
+        // A right-drag on its own does not pan; it would carry on the left drag a press on the hidden view began
+        const QVector3D start = pModern->viewCenter();
+        QMouseEvent laterRightPress(QEvent::MouseButtonPress, corner, pModern->mapToGlobal(corner), Qt::RightButton, Qt::RightButton, Qt::NoModifier);
+        QCoreApplication::sendEvent(pModern, &laterRightPress);
+        QPointF at = corner;
+        for (int step = 0; step < 20; ++step) {
+            at += QPointF(5, 5);
+            QMouseEvent rightDrag(QEvent::MouseMove, at, pModern->mapToGlobal(at), Qt::NoButton, Qt::RightButton, Qt::NoModifier);
+            QCoreApplication::sendEvent(pModern, &rightDrag);
+        }
+        // A drag moves the view center only as it ends
+        QMouseEvent laterRightRelease(QEvent::MouseButtonRelease, at, pModern->mapToGlobal(at), Qt::RightButton, Qt::NoButton, Qt::NoModifier);
+        QCoreApplication::sendEvent(pModern, &laterRightRelease);
+        if (QMenu* menu = openMenu(pModern)) {
+            menu->close();
+        }
+        QCOMPARE(pModern->viewCenter(), start);
     }
 
     void test_keysPanZoomAndRecenter()
