@@ -70,6 +70,22 @@ extern "C" {
 
 using namespace std::chrono_literals;
 
+// Counts the repaints asked of a window, which come even where the 3D view has no GL context to paint with
+class UpdateRequestCounter : public QObject
+{
+public:
+    int mRequests = 0;
+
+protected:
+    bool eventFilter(QObject* watched, QEvent* event) override
+    {
+        if (event->type() == QEvent::UpdateRequest) {
+            ++mRequests;
+        }
+        return QObject::eventFilter(watched, event);
+    }
+};
+
 class Map3DViewEditingTest : public QObject
 {
     Q_OBJECT
@@ -859,6 +875,27 @@ private slots:
         QTRY_VERIFY2(areaChanged.contains(QVariantList{mPlayerAreaId}), "the other views were not told the area changed");
         sendMouse(pModern, QEvent::MouseMove, east + QPoint(spacing, spacing), Qt::LeftButton);
         QCOMPARE(roomPlace(kEastRoomId), QVector3D(2, -2, 0));
+    }
+
+    // A selection rectangle whose release went to a popup goes from the screen once the pointer leaves
+    void test_aRectangleThatLostItsReleaseIsClearedWhenThePointerLeaves()
+    {
+        ModernGLWidget* pModern = viewAtThePlayer(true);
+        QVERIFY(pModern);
+        const QPoint player = pixelOfRoom(pModern, kPlayerRoomId);
+        const int spacing = pixelOfRoom(pModern, kEastRoomId).x() - player.x();
+        QVERIFY(spacing > 20);
+        const QPoint emptySpace(player.x() + spacing / 2, player.y() + spacing);
+        sendMouse(pModern, QEvent::MouseButtonPress, emptySpace, Qt::LeftButton);
+        sendMouse(pModern, QEvent::MouseMove, emptySpace + QPoint(spacing, spacing), Qt::LeftButton);
+        QTest::qWait(50);
+
+        UpdateRequestCounter repaints;
+        pModern->window()->installEventFilter(&repaints);
+        QEvent leave(QEvent::Leave);
+        QCoreApplication::sendEvent(pModern, &leave);
+        QTRY_VERIFY2(repaints.mRequests > 0, "the view was not drawn again without the selection rectangle");
+        pModern->window()->removeEventFilter(&repaints);
     }
 
     // The mapper's view goes after the player only once the rooms being dragged are down

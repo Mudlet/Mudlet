@@ -2080,6 +2080,33 @@ void ModernGLWidget::endEditGesture()
     mSelectionRectangle = QRect();
 }
 
+void ModernGLWidget::endLostPress()
+{
+    endPan();
+    const bool rectangleShown = mRectangleSelecting;
+    endEditGesture();
+    if (rectangleShown) {
+        update();
+    }
+    mClickPending = false;
+    if (std::exchange(mPressEventButton, Qt::NoButton) != Qt::NoButton) {
+        // Queued, as a script handling it could delete this view
+        QTimer::singleShot(0, this, &ModernGLWidget::raiseMousePressEvent);
+    }
+}
+
+void ModernGLWidget::raiseMousePressEventMidPress()
+{
+    const QWidget* popup = QApplication::activePopupWidget();
+    const Qt::MouseButtons held = QGuiApplication::mouseButtons();
+    raiseMousePressEvent();
+    // A script handling it may open a popup or a dialog, which takes the release, and no Leave reaches this view
+    // while the popup is open or once the button is up
+    if (QApplication::activePopupWidget() != popup || (held & ~QGuiApplication::mouseButtons()) != Qt::MouseButtons()) {
+        endLostPress();
+    }
+}
+
 void ModernGLWidget::raisePendingMousePressEvent()
 {
     if (std::exchange(mPressEventButton, Qt::NoButton) != Qt::NoButton) {
@@ -2163,7 +2190,7 @@ void ModernGLWidget::mousePressEvent(QMouseEvent* event)
             mSelectionRectangle = QRect(mPressPosition, QSize());
             update();
         }
-        raiseMousePressEvent();
+        raiseMousePressEventMidPress();
         return;
     }
     if (event->button() == Qt::LeftButton) {
@@ -2191,7 +2218,7 @@ void ModernGLWidget::mousePressEvent(QMouseEvent* event)
     if (mClickPending || event->button() == Qt::RightButton) {
         mPressEventButton = event->button();
     } else {
-        raiseMousePressEvent();
+        raiseMousePressEventMidPress();
     }
 }
 
@@ -2207,7 +2234,8 @@ void ModernGLWidget::mouseMoveEvent(QMouseEvent* event)
     if (mClickPending && (event->position().toPoint() - mPressPosition).manhattanLength() >= QApplication::startDragDistance()) {
         mClickPending = false;
         if (mPressEventButton == Qt::LeftButton) {
-            raisePendingMousePressEvent();
+            mPressEventButton = Qt::NoButton;
+            raiseMousePressEventMidPress();
         }
     }
     if ((mMovingRooms || mRectangleSelecting) && !event->buttons().testFlag(Qt::LeftButton)) {
@@ -2374,13 +2402,7 @@ void ModernGLWidget::leaveEvent(QEvent* event)
     // A press still on here with no button down lost its release to wherever the grab went, such as a popup; a
     // Leave while the button is held, mid-drag, must not end the drag
     if (QGuiApplication::mouseButtons() == Qt::NoButton) {
-        endPan();
-        endEditGesture();
-        mClickPending = false;
-        if (std::exchange(mPressEventButton, Qt::NoButton) != Qt::NoButton) {
-            // Queued, as a script handling it could delete this view
-            QTimer::singleShot(0, this, &ModernGLWidget::raiseMousePressEvent);
-        }
+        endLostPress();
     }
     mPointerInView = false;
     mPointerButtons = Qt::NoButton;
