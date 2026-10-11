@@ -40,10 +40,14 @@ public:
     static FontManager* self() { return smpSelf; }
     // Every family the font database knows, including those added here
     static QStringList availableFonts();
+    // For a query that resolves a family, as the bundled ones are only added on first use with no main window
+    static void ensureFontsAdded();
 
     void addFonts();
     void loadFont(const QString& filePath, const QString& profileName, const QString& belongsTo = "main");
     bool fontAlreadyLoaded(const QString& filePath, const QString& profileName);
+    // -1 for a file that failed to load as well as for one never loaded, which fontAlreadyLoaded() tells apart
+    int loadedFontId(const QString& filePath, const QString& profileName) const;
     void unloadFonts(const QString& profileName, const QString& belongsTo);
     void addEmojiFont();
 

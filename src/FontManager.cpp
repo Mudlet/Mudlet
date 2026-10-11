@@ -52,10 +52,15 @@ FontManager::~FontManager()
 
 QStringList FontManager::availableFonts()
 {
+    ensureFontsAdded();
+    return QFontDatabase::families(QFontDatabase::Any);
+}
+
+void FontManager::ensureFontsAdded()
+{
     if (!smFontsAdded && smpSelf) {
         smpSelf->addFontsOnFirstUse();
     }
-    return QFontDatabase::families(QFontDatabase::Any);
 }
 
 void FontManager::addFonts()
@@ -142,6 +147,12 @@ bool FontManager::fontAlreadyLoaded(const QString& filePath, const QString& prof
     // loading a font file with the same filename are tracked independently.
     const QString key = profileName.isEmpty() ? filePath : qsl("%1/%2").arg(profileName, filePath);
     return loadedFontPaths.contains(key);
+}
+
+int FontManager::loadedFontId(const QString& filePath, const QString& profileName) const
+{
+    const QString key = profileName.isEmpty() ? filePath : qsl("%1/%2").arg(profileName, filePath);
+    return loadedFontPaths.value(key, -1);
 }
 
 void FontManager::rememberFont(const QString& filePath, int fontID, const QString& profileName, const QString& belongsTo)
