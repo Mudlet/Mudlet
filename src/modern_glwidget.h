@@ -253,7 +253,7 @@ private:
     GLuint discTexture(const QString& key, const QGradientStops& stops);
     GLuint squareTexture(const QColor& color);
     GLuint cachedRoomTexture(const QString& key);
-    bool roomForAnotherTexture();
+    bool roomForAnotherTexture(const QString& key);
     GLuint addRoomTexture(const QString& key, const QImage& image);
     // The 2D map's up/down/in/out markers for the room, or 0 when it has none
     GLuint exitMarkerTexture(const TRoom& room, const QColor& roomColor);

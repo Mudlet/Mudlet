@@ -24,6 +24,9 @@
 #include <QFile>
 #include <QImage>
 
+#include <cmath>
+#include <limits>
+
 namespace {
 QVector<float> upNormals(int vertexCount)
 {
@@ -347,6 +350,25 @@ void GeometryManager::appendQuad(GeometryData& batch, const QVector3D& origin, c
     }
     batch.textureCoords << 0.0f << 0.0f << 1.0f << 0.0f << 1.0f << 1.0f;
     batch.textureCoords << 0.0f << 0.0f << 1.0f << 1.0f << 0.0f << 1.0f;
+}
+
+void GeometryManager::appendLabelQuad(GeometryData& batch, const QVector3D& topLeft, const float width, const float height, const bool turned, const QVector4D& color)
+{
+    if (turned) {
+        appendQuad(batch, topLeft + QVector3D(width, 0.0f, 0.0f), QVector3D(-width, 0.0f, 0.0f), QVector3D(0.0f, -height, 0.0f), color);
+    } else {
+        appendQuad(batch, topLeft - QVector3D(0.0f, height, 0.0f), QVector3D(width, 0.0f, 0.0f), QVector3D(0.0f, height, 0.0f), color);
+    }
+}
+
+std::optional<int> GeometryManager::labelLevel(const qreal z)
+{
+    const qreal rounded = std::round(z);
+    // Written so that NaN fails it too
+    if (!(rounded >= std::numeric_limits<int>::min() && rounded <= std::numeric_limits<int>::max())) {
+        return std::nullopt;
+    }
+    return static_cast<int>(rounded);
 }
 
 void GeometryManager::appendGroundQuad(GeometryData& batch, const QVector3D& center, const float size, const QVector3D& cameraRight, const QVector3D& cameraUp, const QVector4D& color)

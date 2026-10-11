@@ -113,6 +113,7 @@ GLuint LabelTextureCache::addImageTexture(const QString& key, const QImage& imag
     } else {
         mImageCache.remove(key);
         mFailedImageKeys.insert(key);
+        qWarning().nospace() << "LabelTextureCache: " << key << " is not shown, having no texture";
     }
     return textureId;
 }

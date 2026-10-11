@@ -26,6 +26,7 @@
 #include "TRoom.h"
 #include "TRoomDB.h"
 
+#include <QDebug>
 #include <QLineF>
 #include <QtMath>
 
@@ -39,6 +40,7 @@ constexpr int scmDirections[] = {DIR_NORTH, DIR_NORTHEAST, DIR_EAST, DIR_SOUTHEA
 // The 2D map's door glyphs are sized by a room's spacing across plus its spacing down
 constexpr qreal scmDoorRoomSpan = 2.0;
 constexpr int scmDiscSides = 16;
+constexpr qreal scmMaxDashRepetitions = 10000.0;
 
 bool onCompass(const int direction)
 {
@@ -94,6 +96,7 @@ private:
     const Options& mOptions;
     const float mWidth;
     const float mHeight;
+    int mRoomId = 0;
 };
 
 bool Builder::levelShown(const int z) const
@@ -153,6 +156,17 @@ void Builder::dashedBar(const QVector3D& from, const QVector3D& to, const QList<
         bar(from, to, mWidth, mHeight, color, level);
         return;
     }
+    // As Qt's dash stroker does, draw solid a pattern too fine to repeat along the line in reasonable time
+    if (!(length / period <= scmMaxDashRepetitions)) {
+        static bool warned = false;
+        if (!warned) {
+            warned = true;
+            qWarning().nospace() << "ExitScene: the line from room " << mRoomId << " is drawn solid, as its exit lines are too thin to dash";
+        }
+        bar(from, to, mWidth, mHeight, color, level);
+        phase = 0.0;
+        return;
+    }
     const QVector3D along = (to - from) / length;
     // Walk the pattern from where the last piece left it
     qreal position = -std::fmod(phase, period);
@@ -180,7 +194,8 @@ void Builder::arrowhead(const QVector3D& tip, const QVector3D& along, const floa
 {
     const QVector3D base = tip - along * length;
     QList<QVector3D> wings{sideways(along)};
-    if (std::abs(along.z()) > 0.99f) {
+    const bool upright = std::abs(along.z()) > 0.99f;
+    if (upright) {
         // Upright: a second, crossed head so that it shows from any side
         wings.append(QVector3D(0.0f, 1.0f, 0.0f));
     }
@@ -196,9 +211,17 @@ void Builder::arrowhead(const QVector3D& tip, const QVector3D& along, const floa
             const float grow = (inradius + mWidth / 2.0f) / inradius;
             triangle(incenter + (tip - incenter) * grow, incenter + (left - incenter) * grow, incenter + (right - incenter) * grow, outline, level);
         }
-        // Lifted a little, so that it is not level with its own outline
-        const QVector3D lift(0.0f, 0.0f, mHeight / 10.0f);
+        // Lifted a little off its own outline, so that the depth test does not hide it; an upright
+        // one gets a fill on each face, as it is seen from either side
+        QVector3D normal = QVector3D::crossProduct(along, wing).normalized();
+        if (normal.z() < 0.0f) {
+            normal = -normal;
+        }
+        const QVector3D lift = normal * (mHeight / 10.0f);
         triangle(tip + lift, left + lift, right + lift, color, level);
+        if (upright) {
+            triangle(tip - lift, left - lift, right - lift, color, level);
+        }
     }
 }
 
@@ -307,6 +330,7 @@ void Builder::addRoom(const int roomId, const TRoom& room)
     const QVector3D center(room.x(), room.y(), rz);
     const int level = room.z();
     const QColor exitColor = mOptions.exitColor;
+    mRoomId = roomId;
 
     for (auto it = room.customLines.constBegin(); it != room.customLines.constEnd(); ++it) {
         customLine(room, it.key(), it.value());
@@ -317,7 +341,6 @@ void Builder::addRoom(const int roomId, const TRoom& room)
             continue;
         }
         const QVector3D end = center + step(direction) * 0.5f;
-        // The door goes under the stub and its end, as on the 2D map
         door(room, TRoom::dirCodeToShortString(direction), center, end, level);
         bar(center, end, mWidth, mHeight, exitColor, level);
         disc(QVector3D(end.x(), end.y(), top(rz)), 0.1f, exitColor, level);

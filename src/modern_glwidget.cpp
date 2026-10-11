@@ -518,14 +518,14 @@ GLuint ModernGLWidget::cachedRoomTexture(const QString& key)
     return texture;
 }
 
-bool ModernGLWidget::roomForAnotherTexture()
+bool ModernGLWidget::roomForAnotherTexture(const QString& key)
 {
     if (mLabelTextureCache.makeRoomForImageTexture(scmMaxRoomTextures, mRoomTexturesInUse)) {
         return true;
     }
     if (!mRoomTextureLimitWarned) {
         mRoomTextureLimitWarned = true;
-        qWarning().nospace() << "ModernGLWidget: this view needs more than " << scmMaxRoomTextures << " different room symbols, markers and names, so some are not shown";
+        qWarning().nospace() << "ModernGLWidget: this view needs more than " << scmMaxRoomTextures << " different room symbols, IDs, markers and names, so some are not shown, the first being " << key;
     }
     return false;
 }
@@ -547,7 +547,7 @@ GLuint ModernGLWidget::symbolTexture(const QString& symbol, const QColor& color)
     if (const GLuint texture = cachedRoomTexture(key)) {
         return texture;
     }
-    if (mLabelTextureCache.imageTextureFailed(key) || !roomForAnotherTexture()) {
+    if (mLabelTextureCache.imageTextureFailed(key) || !roomForAnotherTexture(key)) {
         return 0;
     }
 
@@ -564,7 +564,7 @@ GLuint ModernGLWidget::discTexture(const QString& key, const QGradientStops& sto
     if (const GLuint texture = cachedRoomTexture(key)) {
         return texture;
     }
-    if (mLabelTextureCache.imageTextureFailed(key) || !roomForAnotherTexture()) {
+    if (mLabelTextureCache.imageTextureFailed(key) || !roomForAnotherTexture(key)) {
         return 0;
     }
 
@@ -588,7 +588,7 @@ GLuint ModernGLWidget::squareTexture(const QColor& color)
     if (const GLuint texture = cachedRoomTexture(key)) {
         return texture;
     }
-    if (mLabelTextureCache.imageTextureFailed(key) || !roomForAnotherTexture()) {
+    if (mLabelTextureCache.imageTextureFailed(key) || !roomForAnotherTexture(key)) {
         return 0;
     }
 
@@ -608,7 +608,7 @@ GLuint ModernGLWidget::exitMarkerTexture(const TRoom& room, const QColor& roomCo
     if (const GLuint texture = cachedRoomTexture(key)) {
         return texture;
     }
-    if (mLabelTextureCache.imageTextureFailed(key) || !roomForAnotherTexture()) {
+    if (mLabelTextureCache.imageTextureFailed(key) || !roomForAnotherTexture(key)) {
         return 0;
     }
 
@@ -628,7 +628,7 @@ GLuint ModernGLWidget::textTexture(const QString& key, const QString& text, cons
     if (const GLuint texture = cachedRoomTexture(key)) {
         return texture;
     }
-    if (mLabelTextureCache.imageTextureFailed(key) || !roomForAnotherTexture()) {
+    if (mLabelTextureCache.imageTextureFailed(key) || !roomForAnotherTexture(key)) {
         return 0;
     }
 
@@ -690,8 +690,19 @@ void ModernGLWidget::renderRooms()
         const qreal widest = idMetrics->horizontalAdvance(QString(QString::number(maxRoomId).size(), QLatin1Char('8')));
         idTexel = 0.9f * roomSize / static_cast<float>(qMax(widest, idMetrics->height()));
     }
-    // A digit's texture and size by its color and character, looked up once a frame
+    // A digit's texture and size by its color and character. Made before any room's other textures, so
+    // that a view short of room for textures keeps its IDs whole
     QHash<std::pair<QRgb, char16_t>, std::pair<GLuint, QSize>> digitTextures;
+    if (showRoomIds) {
+        for (const QColor& idColor : {QColor(Qt::black), QColor(Qt::white)}) {
+            for (char16_t digit = u'0'; digit <= u'9'; ++digit) {
+                const QString text(QChar{digit});
+                QSize size;
+                const GLuint texture = textTexture(qsl("digit|%1|%2|%3").arg(idColor.name(), idFontKey, text), text, idFont, *idMetrics, idColor, size);
+                digitTextures.insert({idColor.rgba(), digit}, {texture, size});
+            }
+        }
+    }
 
     const bool showRoomNames = mpMap->getRoomNamesShown() && !pArea->gridMode;
     QFont nameFont = mpMap->mMapSymbolFont;
@@ -828,34 +839,32 @@ void ModernGLWidget::renderRooms()
             const QString number = QString::number(currentRoomId);
             QList<std::pair<GLuint, QSize>> digits;
             int numberWidth = 0;
+            bool whole = true;
             for (const QChar digit : number) {
-                auto it = digitTextures.find({idColor.rgba(), digit.unicode()});
-                if (it == digitTextures.end()) {
-                    QSize size;
-                    const GLuint texture = textTexture(qsl("digit|%1|%2|%3").arg(idColor.name(), idFontKey, digit), digit, idFont, *idMetrics, idColor, size);
-                    it = digitTextures.insert({idColor.rgba(), digit.unicode()}, {texture, size});
-                }
-                digits.append(it.value());
-                numberWidth += it.value().second.width();
+                const std::pair<GLuint, QSize> found = digitTextures.value({idColor.rgba(), digit.unicode()});
+                whole = whole && found.first;
+                digits.append(found);
+                numberWidth += found.second.width();
             }
-            QVector3D corner = roomTop - groundRight * (numberWidth * idTexel / 2.0f);
-            for (const auto& [texture, size] : digits) {
-                const QVector3D across = groundRight * (size.width() * idTexel);
-                const QVector3D upward = groundUp * (size.height() * idTexel);
-                if (texture) {
+            // None rather than a number with digits missing, which would read as another room's
+            if (whole) {
+                QVector3D corner = roomTop - groundRight * (numberWidth * idTexel / 2.0f);
+                for (const auto& [texture, size] : digits) {
+                    const QVector3D across = groundRight * (size.width() * idTexel);
+                    const QVector3D upward = groundUp * (size.height() * idTexel);
                     GeometryData& batch = textDecals[texture];
                     batch.textureId = texture;
                     GeometryManager::appendQuad(batch, corner - upward / 2.0f, across, upward, decalTint);
+                    corner += across;
                 }
-                corner += across;
             }
         }
 
         // Only the viewed level's, as only the 2D map's are
         if (showRoomNames && rz == pz && !pR->name.isEmpty()) {
-            // One room's size below the room, then moved by its offset in rooms' spacing, y downward
+            // One room's size below the room on screen, then moved by its offset along the map, in rooms' spacing, y downward
             const QPointF offset = RoomAppearance::nameOffset(pR->userData.value(ROOM_UI_NAMEPOS));
-            const QVector3D center = roomTop + groundRight * static_cast<float>(offset.x()) - groundUp * (roomSize + static_cast<float>(offset.y()));
+            const QVector3D center = roomTop - groundUp * roomSize + QVector3D(static_cast<float>(offset.x()), -static_cast<float>(offset.y()), 0.0f);
             roomNames.append({center, RoomAppearance::nameColor(pR->userData.value(ROOM_UI_NAMECOLOR), mpHost->mBgColor_2), pR->name, decalTint});
         }
 
@@ -1558,11 +1567,12 @@ void ModernGLWidget::renderLabels(const bool onTop)
             continue;
         }
 
-        const int labelZ = static_cast<int>(label.pos.z());
-        if (labelZ > mMapCenterZ && labelZ - mMapCenterZ > mShowTopLevels) {
+        const std::optional<int> level = GeometryManager::labelLevel(label.pos.z());
+        if (!level) {
             continue;
         }
-        if (labelZ < mMapCenterZ && mMapCenterZ - labelZ > mShowBottomLevels) {
+        const qint64 levelsAbove = qint64{*level} - mMapCenterZ;
+        if (levelsAbove > mShowTopLevels || -levelsAbove > mShowBottomLevels) {
             continue;
         }
 
@@ -1574,7 +1584,7 @@ void ModernGLWidget::renderLabels(const bool onTop)
         // pos is the top-left corner, on the map's plane: on the rooms' tops if shown on top of them, else beneath them
         const auto x = static_cast<float>(label.pos.x());
         const auto y = static_cast<float>(label.pos.y());
-        const float z = static_cast<float>(labelZ) + (onTop ? roomHeight / 2.0f : -roomHeight / 2.0f);
+        const float z = static_cast<float>(label.pos.z()) + (onTop ? roomHeight / 2.0f : -roomHeight / 2.0f);
         if (label.noScaling) {
             // Its own size in pixels whatever the zoom, as on the 2D map, so it faces the screen
             const QVector3D corner(x, y, z);
@@ -1607,17 +1617,13 @@ void ModernGLWidget::renderLabels(const bool onTop)
 
         const float width = std::abs(static_cast<float>(label.size.width()));
         const float height = std::abs(static_cast<float>(label.size.height()));
-        QVector4D tint = levelFaded(QColor(Qt::white), std::abs(labelZ - mMapCenterZ), labelZ > mMapCenterZ, moreTransparent);
+        QVector4D tint = levelFaded(QColor(Qt::white), static_cast<int>(std::abs(levelsAbove)), levelsAbove > 0, moreTransparent);
         if (label.highlight) {
             tint = QVector4D(1.0f, 0.65f, 0.0f, tint.w());
         }
         GeometryData geometry;
         geometry.textureId = textureId;
-        if (turned) {
-            GeometryManager::appendQuad(geometry, QVector3D(x + width, y, z), QVector3D(-width, 0.0f, 0.0f), QVector3D(0.0f, -height, 0.0f), tint);
-        } else {
-            GeometryManager::appendQuad(geometry, QVector3D(x, y - height, z), QVector3D(width, 0.0f, 0.0f), QVector3D(0.0f, height, 0.0f), tint);
-        }
+        GeometryManager::appendLabelQuad(geometry, QVector3D(x, y, z), width, height, turned, tint);
         mRenderCommandQueue.addCommand(std::make_unique<RenderTexturedTrianglesCommand>(
                 geometry, mCameraController.getProjectionMatrix(), mCameraController.getViewMatrix(), mCameraController.getModelMatrix(), RenderCommand::Shading::Unlit));
     }
