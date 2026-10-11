@@ -43,6 +43,7 @@
 #include "PortableModeTestHelper.h"
 #include "TAppFrontend.h"
 #include "TConsoleModel.h"
+#include "TDebug.h"
 #include "TLabelModel.h"
 #include "TLuaInterpreter.h"
 #include "TMap.h"
@@ -683,6 +684,39 @@ headlessCaptions = ok and 'ok' or tostring(err)
         QVERIFY2(host->getLuaInterpreter()->compileAndExecuteScript(script), "The Lua chunk did not run.");
         QCOMPARE(luaGlobalString(host, "headlessCaptions"), qsl("ok"));
         QTRY_VERIFY2(mainBufferHolds(host, qsl("[headless caption stops]")), "The stopped sound was not captioned in the main console.");
+    }
+
+    // Debug mode reports a media error in the main console, which a profile with no main window has as well
+    void test_mediaErrorIsReportedInDebugModeWithNoMainWindow()
+    {
+        QVERIFY2(!TAppFrontend::hasView(), "A main window exists, so this run is not headless.");
+
+        const QString hostname = qsl("Test-Headless-Host-Media-Error");
+        QVERIFY2(HostManager::self()->addHost(hostname, QString(), QString(), QString()), "Could not create a profile with no main window.");
+        Host* host = HostManager::self()->getHost(hostname);
+        QVERIFY2(host, "The profile is not in the pool.");
+
+        const QString soundFile = qsl("%1/headless-not-a-sound.wav").arg(mConfigDir.path());
+        QFile file(soundFile);
+        QVERIFY(file.open(QIODevice::WriteOnly));
+        file.write(QByteArrayLiteral("not a sound at all, whatever its name says"));
+        file.close();
+
+        const bool debugMode = TDebug::smDebugMode;
+        const auto restoreDebugMode = qScopeGuard([debugMode] {
+            TDebug::smDebugMode = debugMode;
+        });
+        TDebug::smDebugMode = true;
+        const QString script = qsl(R"lua(
+local ok, err = pcall(function()
+  assert(playSoundFile({name = [[%1]], key = "headlessNotASound"}), "playSoundFile refused")
+end)
+headlessMediaError = ok and 'ok' or tostring(err)
+)lua")
+                                       .arg(soundFile);
+        QVERIFY2(host->getLuaInterpreter()->compileAndExecuteScript(script), "The Lua chunk did not run.");
+        QCOMPARE(luaGlobalString(host, "headlessMediaError"), qsl("ok"));
+        QTRY_VERIFY2_WITH_TIMEOUT(mainBufferHolds(host, qsl("Media error: ")), "The media error was not reported in the main console.", 10000);
     }
 
     // Nothing copies the bundled fonts out to the config directory here, as the executable does for the GUI
