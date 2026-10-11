@@ -573,7 +573,6 @@ private:
     void goingDown() { mIsGoingDown = true; }
     void endProfileLoad();
     void initEdbee();
-    void installModulesList(Host*, QStringList);
     void loadMaps();
     void loadTranslators(const QString&);
     void migrateDebugConsole(Host*);

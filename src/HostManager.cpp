@@ -100,6 +100,20 @@ bool HostManager::addHost(const QString& hostname, const QString& port, const QS
     return true;
 }
 
+Host* HostManager::openProfile(const QString& name, const bool connect)
+{
+    if (!addHost(name, QString(), QString(), QString())) {
+        return nullptr;
+    }
+    Host* pHost = getHost(name);
+    pHost->loadProfileSave(QString());
+    pHost->mIsProfileLoadingSequence = true;
+    pHost->startProfileScripts();
+    pHost->loadMapAndConnect(connect);
+    pHost->finishProfileLoad();
+    return pHost;
+}
+
 int HostManager::getHostCount()
 {
     return mHostPool.count();

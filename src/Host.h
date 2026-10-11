@@ -279,6 +279,13 @@ public:
     // A main console raises sysExitEvent as it closes; a profile that never had one gets it from this.
     void raiseExitEventIfOwed();
 
+    // The profile load, in this order, with the GUI doing its window work between the steps. The first
+    // returns true when the profile has no save of its own yet, so the GUI adds the default packages.
+    bool loadProfileSave(const QString& saveFileName);
+    void startProfileScripts();
+    void loadMapAndConnect(bool connect);
+    void finishProfileLoad();
+
     unsigned int assemblePath();
     bool checkForMappingScript();
     bool checkForCustomSpeedwalk();
@@ -1340,6 +1347,7 @@ private:
     void autoSaveMap();
     QString sanitizePackageName(const QString packageName) const;
     void closeChildren();
+    void installModulesList(const QStringList&);
     void setupSandboxedLuaState(lua_State* L);
 
     QStringList mModulesToSync;

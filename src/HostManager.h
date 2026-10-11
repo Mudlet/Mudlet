@@ -66,6 +66,9 @@ public:
 
     Host* getHost(const QString& hostname);
     bool addHost(const QString& name, const QString& port, const QString& login, const QString& pass);
+    // Loads and starts a saved profile with no window: what the GUI's load gives, less the default
+    // packages a new profile gets. Null when that profile is already open.
+    Host* openProfile(const QString& name, bool connect);
     int getHostCount();
     void deleteHost(const QString&);
     void postIrcMessage(const QString&, const QString&, const QString&);
