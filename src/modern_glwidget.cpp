@@ -1031,7 +1031,8 @@ void ModernGLWidget::renderRooms()
     QVector<CubeInstanceData> roomInstances;
     QVector<CubeInstanceData> borderInstances;
     QVector<CubeInstanceData> outlineInstances;
-    RoomDecals opaqueDecals;
+    // What is on the opaque rooms, by level, drawn with the see-through rooms of its level
+    QMap<int, RoomDecals> opaqueDecals;
     // Rooms and borders drawn see-through, with what is on them, by level: drawn after the opaque rooms
     struct SeeThroughLevel
     {
@@ -1085,7 +1086,7 @@ void ModernGLWidget::renderRooms()
         }
         const bool seeThrough = roomTint.w() < 1.0f;
         QVector<CubeInstanceData>& instances = seeThrough ? seeThroughLevels[pR->z()].cubes : roomInstances;
-        RoomDecals& decals = seeThrough ? seeThroughLevels[pR->z()].decals : opaqueDecals;
+        RoomDecals& decals = seeThrough ? seeThroughLevels[pR->z()].decals : opaqueDecals[pR->z()];
         // An outline is a lower, wider block, so that its top shows only as a rim around the room
         const auto outline = [&](const float width, const QVector4D& tint, const float height = 0.6f) {
             const float spread = (roomSize + 2.0f * width) / roomSize;
@@ -1328,31 +1329,20 @@ void ModernGLWidget::renderRooms()
 
     // Everything from here on is drawn over what is behind it, so it does not write depth unless it says so
     mRenderCommandQueue.addCommand(std::make_unique<GLStateCommand>(GLStateCommand::DISABLE_DEPTH_WRITE));
-    // The faint floors under the opaque rooms come first, as names, highlights and rings hang over the rooms'
-    // edges onto them without writing depth
-    for (auto it = levelExtents.cbegin(); it != levelExtents.cend(); ++it) {
-        if (it.key() <= mMapCenterZ) {
-            queuePlate(it.key());
-        }
-    }
-    queueDecals(opaqueDecals);
-    // The labels shown on top go with their level, as a see-through level above would hide them once its depth is laid
-    renderLabels(true, std::numeric_limits<int>::lowest(), mMapCenterZ);
-    int labelsQueuedTo = mMapCenterZ;
 
-    // From the lowest level up, as each blends over the ones under it: a level above the viewed one has its
-    // faint floor just under its rooms, then each level its see-through exits, rooms and borders, and what is on them
-    QList<int> levels = levelExtents.keys();
-    for (auto it = mSeeThroughExits.cbegin(); it != mSeeThroughExits.cend(); ++it) {
-        if (!levelExtents.contains(it.key())) {
-            levels.append(it.key());
-        }
-    }
+    // From the lowest level up, as each blends over the ones under it: its faint floor, its see-through exits, rooms
+    // and borders, what is on its rooms, then its labels shown on top. Every level's labels come before the next
+    // level up lays its depth, which would cut them out where it covers them
+    QList<int> levels = levelExtents.keys() + mSeeThroughExits.keys() + seeThroughLevels.keys() + opaqueDecals.keys();
     std::sort(levels.begin(), levels.end());
+    levels.erase(std::unique(levels.begin(), levels.end()), levels.end());
+    qint64 unlabeledFrom = std::numeric_limits<int>::lowest();
     for (const int level : std::as_const(levels)) {
-        if (level > mMapCenterZ) {
-            queuePlate(level);
+        // Those on levels with nothing else shown, under this one
+        if (level > unlabeledFrom) {
+            renderLabels(true, static_cast<int>(unlabeledFrom), level - 1);
         }
+        queuePlate(level);
         if (const auto exits = mSeeThroughExits.constFind(level); exits != mSeeThroughExits.cend()) {
             if (!exits->bars.isEmpty()) {
                 mRenderCommandQueue.addCommand(std::make_unique<RenderInstancedCubesCommand>(
@@ -1366,7 +1356,8 @@ void ModernGLWidget::renderRooms()
                 mRenderCommandQueue.addCommand(std::make_unique<GLStateCommand>(GLStateCommand::DISABLE_POLYGON_OFFSET));
             }
         }
-        if (const auto seeThrough = seeThroughLevels.constFind(level); seeThrough != seeThroughLevels.cend()) {
+        const auto seeThrough = seeThroughLevels.constFind(level);
+        if (seeThrough != seeThroughLevels.cend()) {
             if (!seeThrough->cubes.isEmpty()) {
                 // Depth first, then color only where that depth is: each pixel blends just the nearest face, not
                 // a block's far faces too, nor a border's top through the room on it
@@ -1381,15 +1372,18 @@ void ModernGLWidget::renderRooms()
                         seeThrough->cubes, mCameraController.getProjectionMatrix(), mCameraController.getViewMatrix(), mCameraController.getModelMatrix()));
                 mRenderCommandQueue.addCommand(std::make_unique<GLStateCommand>(GLStateCommand::DEPTH_FUNC_LESS));
             }
+        }
+        if (const auto decals = opaqueDecals.constFind(level); decals != opaqueDecals.cend()) {
+            queueDecals(*decals);
+        }
+        if (seeThrough != seeThroughLevels.cend()) {
             queueDecals(seeThrough->decals);
         }
-        if (level > labelsQueuedTo) {
-            renderLabels(true, labelsQueuedTo + 1, level);
-            labelsQueuedTo = level;
-        }
+        renderLabels(true, level, level);
+        unlabeledFrom = qint64{level} + 1;
     }
-    if (labelsQueuedTo < std::numeric_limits<int>::max()) {
-        renderLabels(true, labelsQueuedTo + 1, std::numeric_limits<int>::max());
+    if (unlabeledFrom <= std::numeric_limits<int>::max()) {
+        renderLabels(true, static_cast<int>(unlabeledFrom), std::numeric_limits<int>::max());
     }
     mRenderCommandQueue.addCommand(std::make_unique<GLStateCommand>(GLStateCommand::ENABLE_DEPTH_WRITE));
     mSeeThroughExits.clear();
@@ -2377,8 +2371,17 @@ void ModernGLWidget::showContextMenu(const QPoint& position)
 
 void ModernGLWidget::leaveEvent(QEvent* event)
 {
-    // Qt holds Leave back while this view has the mouse grabbed, so a pan still on now lost its release
-    endPan();
+    // A press still on here with no button down lost its release to wherever the grab went, such as a popup; a
+    // Leave while the button is held, mid-drag, must not end the drag
+    if (QGuiApplication::mouseButtons() == Qt::NoButton) {
+        endPan();
+        endEditGesture();
+        mClickPending = false;
+        if (std::exchange(mPressEventButton, Qt::NoButton) != Qt::NoButton) {
+            // Queued, as a script handling it could delete this view
+            QTimer::singleShot(0, this, &ModernGLWidget::raiseMousePressEvent);
+        }
+    }
     mPointerInView = false;
     mPointerButtons = Qt::NoButton;
     setHoveredRoom(0);

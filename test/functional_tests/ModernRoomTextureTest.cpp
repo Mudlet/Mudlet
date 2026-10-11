@@ -53,7 +53,7 @@
 #include "GroupedTest.h"
 
 // The depth and color writes, and the depth test, as the queued state commands leave them
-struct DrawState
+struct GLDrawState
 {
     bool depthWrite = true;
     bool colorWrite = true;
@@ -215,13 +215,14 @@ private slots:
     }
 
     // A room with a symbol under one of the level above, which has a border and an exit; and beside it on the
-    // viewed level, a room whose environment color is wholly see-through
-    int addLayeredArea() const
+    // viewed level, a room whose environment color is wholly see-through. The level above can be further up, and
+    // the label shown on top on another level
+    int addLayeredArea(const int upperLevel = 1, const int labelLevel = 0) const
     {
         TMap* pMap = mpHost->mpMap.data();
         pMap->mapClear();
         const int areaId = pMap->mpRoomDB->addArea(qsl("Layered Area"));
-        const QList<QVector3D> places{{0, 0, 0}, {2, 0, 0}, {0, 0, 1}, {2, 0, 1}};
+        const QList<QVector3D> places{{0, 0, 0}, {2, 0, 0}, {0, 0, static_cast<float>(upperLevel)}, {2, 0, static_cast<float>(upperLevel)}};
         for (int id = 1; id <= places.size(); ++id) {
             const QVector3D& place = places.at(id - 1);
             if (!(pMap->addRoom(id) && pMap->setRoomArea(id, areaId) && pMap->setRoomCoordinates(id, place.x(), place.y(), place.z()))) {
@@ -237,9 +238,9 @@ private slots:
         if (!(pMap->setExit(3, 4, DIR_EAST) && pMap->setExit(4, 3, DIR_WEST))) {
             return 0;
         }
-        // Shown on top of the viewed level, under the bordered room above
+        // Under the bordered room above
         TMapLabel label;
-        label.pos = QVector3D(-0.5f, 0.5f, 0.0f);
+        label.pos = QVector3D(-0.5f, 0.5f, static_cast<float>(labelLevel));
         label.size = QSizeF(1.0, 1.0);
         label.pix = QPixmap(8, 8);
         label.pix.fill(Qt::white);
@@ -252,14 +253,14 @@ private slots:
     }
 
     // The commands one frame queues for the layered area, seen at a slant
-    static void queueLayeredFrame(ModernGLWidget& widget, const int areaId)
+    static void queueLayeredFrame(ModernGLWidget& widget, const int areaId, const int viewedLevel = 0)
     {
         widget.mLabelTextureCache.useTextureStandIn(
                 [lastTexture = GLuint{0}](const QImage&) mutable {
                     return ++lastTexture;
                 },
                 [](GLuint) {});
-        widget.setViewCenter(areaId, 0, 0, 0);
+        widget.setViewCenter(areaId, 0, 0, viewedLevel);
         widget.resize(800, 600);
         widget.mCameraController.setViewportSize(widget.width(), widget.height());
         widget.setCameraPosition(1.0f, 40.0f, CameraController::scmNorthUpAzimuth);
@@ -322,6 +323,27 @@ private slots:
         return false;
     }
 
+    // Where the clear room beside the symbol is colored in, or -1
+    static qsizetype clearRoomColored(const ModernGLWidget& widget)
+    {
+        GLDrawState draw;
+        qsizetype index = 0;
+        for (const auto& command : widget.mRenderCommandQueue.commands()) {
+            if (const auto* state = dynamic_cast<const GLStateCommand*>(command.get())) {
+                draw.follow(state);
+            } else if (const auto* cubes = dynamic_cast<const RenderInstancedCubesCommand*>(command.get()); cubes && draw.colorWrite && seeThrough(cubes)) {
+                if (std::any_of(cubes->instances().cbegin(), cubes->instances().cend(), [](const CubeInstanceData& cube) {
+                        const QVector4D center = cube.transform.column(3);
+                        return qFuzzyCompare(center.x(), 2.0f) && qFuzzyIsNull(center.y()) && center.z() < 0.5f;
+                    })) {
+                    return index;
+                }
+            }
+            ++index;
+        }
+        return -1;
+    }
+
     // The room with a border above the symbol, rather than the exit beside it
     static bool theBorderedRoomAbove(const RenderInstancedCubesCommand* cubes)
     {
@@ -340,7 +362,7 @@ private slots:
         ModernGLWidget widget(mpHost->mpMap.data(), mpHost);
         queueLayeredFrame(widget, areaId);
 
-        DrawState draw;
+        GLDrawState draw;
         int seeThroughDraws = 0;
         for (const auto& command : widget.mRenderCommandQueue.commands()) {
             if (const auto* state = dynamic_cast<const GLStateCommand*>(command.get())) {
@@ -364,7 +386,7 @@ private slots:
         ModernGLWidget widget(mpHost->mpMap.data(), mpHost);
         queueLayeredFrame(widget, areaId);
 
-        DrawState draw;
+        GLDrawState draw;
         qsizetype index = 0;
         qsizetype lastLowerDecal = -1;
         qsizetype upperExit = -1;
@@ -440,16 +462,53 @@ private slots:
         QVERIFY2(plate < firstDecal, "the viewed level's floor is drawn over what is on its rooms");
     }
 
-    // A level above lays its rooms' depth down before coloring them, which would cut a label below out where it covers it
-    void test_aLabelOnTopIsDrawnBeforeTheLevelAboveCoversIt()
+    // Seen from the level above the clear room, whose floor lies over it
+    void test_aFloorIsDrawnOverTheSeeThroughRoomsBelowIt()
     {
         const int areaId = addLayeredArea();
         QVERIFY(areaId > 0);
         ModernGLWidget widget(mpHost->mpMap.data(), mpHost);
+        queueLayeredFrame(widget, areaId, 1);
+
+        const float plateZ = 1.0f - 2.0f / 4.0f / 8.0f;
+        qsizetype index = 0;
+        qsizetype plate = -1;
+        for (const auto& command : widget.mRenderCommandQueue.commands()) {
+            if (const auto* triangles = dynamic_cast<const RenderTrianglesCommand*>(command.get())) {
+                if (triangles->vertices().size() == 18 && allZ(triangles->vertices(), [plateZ](const float z) {
+                        return qFuzzyCompare(z, plateZ);
+                    })) {
+                    plate = index;
+                }
+            }
+            ++index;
+        }
+        const qsizetype clearRoom = clearRoomColored(widget);
+        QVERIFY2(plate >= 0, "the viewed level's floor is not drawn");
+        QVERIFY2(clearRoom >= 0, "the clear room below is not drawn");
+        QVERIFY2(clearRoom < plate, "the see-through room below is drawn over the floor above it");
+    }
+
+    // A level above lays its rooms' depth down before coloring them, which would cut a label below out where it covers it
+    void test_aLabelOnTopIsDrawnBeforeTheLevelAboveCoversIt_data()
+    {
+        QTest::addColumn<int>("upperLevel");
+        QTest::addColumn<int>("labelLevel");
+        QTest::newRow("on the viewed level") << 1 << 0;
+        QTest::newRow("on an empty level between") << 2 << 1;
+    }
+
+    void test_aLabelOnTopIsDrawnBeforeTheLevelAboveCoversIt()
+    {
+        QFETCH(int, upperLevel);
+        QFETCH(int, labelLevel);
+        const int areaId = addLayeredArea(upperLevel, labelLevel);
+        QVERIFY(areaId > 0);
+        ModernGLWidget widget(mpHost->mpMap.data(), mpHost);
         queueLayeredFrame(widget, areaId);
 
-        const float labelZ = 1.0f / 4.0f / 8.0f;
-        DrawState draw;
+        const float labelZ = static_cast<float>(labelLevel) + 1.0f / 4.0f / 8.0f;
+        GLDrawState draw;
         qsizetype index = 0;
         qsizetype label = -1;
         qsizetype upperDepthOnly = -1;
@@ -473,6 +532,34 @@ private slots:
         QVERIFY2(label >= 0, "the label is not drawn");
         QVERIFY2(upperDepthOnly >= 0, "the level above's depth is not laid down");
         QVERIFY2(label < upperDepthOnly, "the label is drawn after the level above has laid its depth down over it");
+    }
+
+    // Shown on top means over the see-through rooms of its own level too
+    void test_aLabelOnTopIsDrawnOverTheSeeThroughRoomsOfItsLevel()
+    {
+        const int areaId = addLayeredArea();
+        QVERIFY(areaId > 0);
+        ModernGLWidget widget(mpHost->mpMap.data(), mpHost);
+        queueLayeredFrame(widget, areaId);
+
+        const float labelZ = 1.0f / 4.0f / 8.0f;
+        qsizetype index = 0;
+        qsizetype label = -1;
+        for (const auto& command : widget.mRenderCommandQueue.commands()) {
+            if (const auto* textured = dynamic_cast<const RenderTexturedTrianglesCommand*>(command.get())) {
+                const QVector<float>& vertices = textured->geometry().vertices;
+                if (spanX(vertices) > 0.9f && allZ(vertices, [labelZ](const float z) {
+                        return qFuzzyCompare(z, labelZ);
+                    })) {
+                    label = index;
+                }
+            }
+            ++index;
+        }
+        const qsizetype clearRoom = clearRoomColored(widget);
+        QVERIFY2(label >= 0, "the label is not drawn");
+        QVERIFY2(clearRoom >= 0, "the clear room is not drawn");
+        QVERIFY2(clearRoom < label, "the see-through room on the label's level is drawn over the label");
     }
 
     // The pointer stays still while a key or the wheel moves the view under it

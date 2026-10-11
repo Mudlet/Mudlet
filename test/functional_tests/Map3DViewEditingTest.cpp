@@ -829,6 +829,29 @@ private slots:
         QCOMPARE(roomPlace(kEastRoomId), QVector3D(2, -2, 0));
     }
 
+    // A drag whose release went to a popup is over once the pointer leaves with nothing held: its moves are
+    // announced, and moves with the button held, once the pointer is back, move nothing
+    void test_aDragThatLostItsReleaseIsOverWhenThePointerLeaves()
+    {
+        ModernGLWidget* pModern = viewAtThePlayer(true);
+        QVERIFY(pModern);
+        const QPoint east = pixelOfRoom(pModern, kEastRoomId);
+        const int spacing = east.x() - pixelOfRoom(pModern, kPlayerRoomId).x();
+        QVERIFY(spacing > 20);
+
+        QSignalSpy areaChanged(map(), &TMap::signal_areaChanged);
+        sendMouse(pModern, QEvent::MouseButtonPress, east, Qt::LeftButton);
+        sendMouse(pModern, QEvent::MouseMove, east + QPoint(0, spacing), Qt::LeftButton);
+        QCOMPARE(roomPlace(kEastRoomId), QVector3D(2, -2, 0));
+        // Sent to the view alone, so the application sees no button down
+        QCOMPARE(QGuiApplication::mouseButtons(), Qt::NoButton);
+        QEvent leave(QEvent::Leave);
+        QCoreApplication::sendEvent(pModern, &leave);
+        QTRY_VERIFY2(areaChanged.contains(QVariantList{mPlayerAreaId}), "the other views were not told the area changed");
+        sendMouse(pModern, QEvent::MouseMove, east + QPoint(spacing, spacing), Qt::LeftButton);
+        QCOMPARE(roomPlace(kEastRoomId), QVector3D(2, -2, 0));
+    }
+
     // The mapper's view goes after the player only once the rooms being dragged are down
     void test_theMapperViewWaitsForARoomDragBeforeFollowingThePlayer()
     {
