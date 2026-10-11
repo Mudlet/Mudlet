@@ -2584,6 +2584,433 @@ end
         QVERIFY2(QApplication::topLevelWidgets().isEmpty(), "Making the command lines created a widget.");
     }
 
+    // The answers are those of the same Lua run in the GUI self-test profile, but for the last ones,
+    // which a spec cannot wait for: a text edit in a deleted scroll box goes with it
+    void test_headlessTextEditContract()
+    {
+        const QString hostname = qsl("Test-Headless-Host-Text-Edit");
+        QVERIFY2(HostManager::self()->addHost(hostname, QString(), QString(), QString()), "Could not create a profile with no main window.");
+        Host* host = HostManager::self()->getHost(hostname);
+        QVERIFY2(host, "The profile is not in the pool.");
+        QVERIFY(!host->hasConsoleView());
+
+        bool ran = host->getLuaInterpreter()->compileAndExecuteScript(qsl(R"lua(
+headlessTextEdit = "not run"
+local deletedEvents = {}
+local ok, err = pcall(function()
+  local function described(called, ...)
+    if not called then
+      return "raised:" .. tostring((...))
+    end
+    local count = select("#", ...)
+    local values = {}
+    for i = 1, count do
+      -- Bytes a line of answers cannot hold as they are, by number
+      values[i] = tostring((select(i, ...))):gsub("[%c\128-\255]", function(byte)
+        return "\\" .. byte:byte()
+      end)
+    end
+    return "[" .. count .. "]" .. table.concat(values, ":")
+  end
+  local answers = {}
+  local function step(label, f, ...)
+    answers[#answers + 1] = label .. "=" .. described(pcall(f, ...))
+  end
+  local function look(label, name)
+    answers[#answers + 1] = label .. ":type=" .. described(pcall(windowType, name)) .. ",geometry=" .. described(pcall(getWindowGeometry, name)) .. ",visible=" .. described(pcall(windowVisible, name))
+  end
+  -- By name, as the C++ registerAnonymousEventHandler() takes no function
+  function headlessTextEditDeleted(_, name)
+    deletedEvents[#deletedEvents + 1] = name
+  end
+  registerAnonymousEventHandler("sysTextEditDeleted", "headlessTextEditDeleted")
+  local function events(label)
+    answers[#answers + 1] = label .. ":events=" .. table.concat(deletedEvents, ",")
+    for i = #deletedEvents, 1, -1 do
+      deletedEvents[i] = nil
+    end
+  end
+  step("create", createTextEdit, "teMain", 10, 20, 200, 100)
+  look("created", "teMain")
+  step("createAgain", createTextEdit, "teMain", 0, 0, 10, 10)
+  step("createEmpty", createTextEdit, "", 0, 0, 10, 10)
+  step("createInMissing", createTextEdit, "teNoSuch", "teLost", 0, 0, 10, 10)
+  look("lost", "teLost")
+  step("createInMain", createTextEdit, "main", "teInMain", 1, 2, 30, 40)
+  look("inMain", "teInMain")
+  step("createInEmpty", createTextEdit, "", "teInEmpty", 1, 2, 30, 40)
+  look("inEmpty", "teInEmpty")
+  step("createNegative", createTextEdit, "teNegative", 3, 4, -5, -6)
+  look("negative", "teNegative")
+  step("createBadName", createTextEdit, {}, 0, 0, 10, 10)
+  step("createBadX", createTextEdit, "teBad", "x", 0, 10, 10)
+  look("bad", "teBad")
+
+  step("getNew", getTextEditText, "teMain")
+  step("set", setTextEditText, "teMain", "hello")
+  step("getSet", getTextEditText, "teMain")
+  step("setOdd", setTextEditText, "teMain", "a\tb\r\nc\rd\194\160e\226\128\168f\226\128\169g\0h")
+  step("getOdd", getTextEditText, "teMain")
+  step("setNumber", setTextEditText, "teMain", 42)
+  step("getNumber", getTextEditText, "teMain")
+  step("clear", clearTextEdit, "teMain")
+  step("getCleared", getTextEditText, "teMain")
+  step("readOnly", setTextEditReadOnly, "teMain", true)
+  step("setReadOnly", setTextEditText, "teMain", "read only")
+  step("getReadOnly", getTextEditText, "teMain")
+  step("writable", setTextEditReadOnly, "teMain", false)
+  step("placeholder", setTextEditPlaceholder, "teMain", "type here")
+  step("sheet", setTextEditStyleSheet, "teMain", "color: red; font-size: 20pt")
+  step("font", setTextEditFont, "teMain", "Bitstream Vera Sans Mono")
+  step("fontSize", setTextEditFontSize, "teMain", 15)
+  step("fontSizeNegative", setTextEditFontSize, "teMain", -3)
+  step("tab", setTextEditTabMovesFocus, "teMain", true)
+  step("getOther", getTextEditText, "teInMain")
+  look("afterSetters", "teMain")
+  for _, f in ipairs({"getTextEditText", "clearTextEdit"}) do
+    step("missing." .. f, _G[f], "teNoSuch")
+  end
+  for _, f in ipairs({"setTextEditText", "setTextEditPlaceholder", "setTextEditStyleSheet", "setTextEditFont"}) do
+    step("missing." .. f, _G[f], "teNoSuch", "x")
+  end
+  step("missing.setTextEditFontSize", setTextEditFontSize, "teNoSuch", 10)
+  step("missing.setTextEditReadOnly", setTextEditReadOnly, "teNoSuch", true)
+  step("missing.setTextEditTabMovesFocus", setTextEditTabMovesFocus, "teNoSuch", true)
+  step("setEmptyName", setTextEditText, "", "x")
+  step("setBadName", setTextEditText, {}, "x")
+  step("setBadText", setTextEditText, "teMain", {})
+
+  step("raise", raiseWindow, "teMain")
+  step("lower", lowerWindow, "teMain")
+  step("hide", hideWindow, "teMain")
+  look("hidden", "teMain")
+  step("show", showWindow, "teMain")
+  look("shown", "teMain")
+  step("move", moveWindow, "teMain", 5, 6)
+  step("resize", resizeWindow, "teMain", 70, 25)
+  look("moved", "teMain")
+  step("resizeNegative", resizeWindow, "teMain", -1, -2)
+  look("resizedNegative", "teMain")
+  step("resizeBack", resizeWindow, "teMain", 70, 25)
+
+  assert(openUserWindow("teWindow", false, false, "f") == true, "openUserWindow did not answer true")
+  step("createInWindow", createTextEdit, "teWindow", "teWin", 1, 1, 50, 20)
+  look("inWindow", "teWin")
+  hideWindow("teWindow")
+  look("inHiddenWindow", "teWin")
+  showWindow("teWindow")
+  look("inShownWindow", "teWin")
+  assert(createScrollBox("teWindow", "teBox", 0, 30, 100, 50))
+  step("createInBox", createTextEdit, "teBox", "teBoxed", 2, 2, 40, 20)
+  look("inBox", "teBoxed")
+  hideWindow("teBox")
+  look("inHiddenBox", "teBoxed")
+  step("createInHiddenBox", createTextEdit, "teBox", "teLate", 2, 25, 40, 20)
+  look("madeInHiddenBox", "teLate")
+  showWindow("teBox")
+  step("hideBoxed", hideWindow, "teBoxed")
+  hideWindow("teBox")
+  showWindow("teBox")
+  look("boxedStaysHidden", "teBoxed")
+  showWindow("teBoxed")
+  step("textInBox", setTextEditText, "teBoxed", "boxed")
+  step("getInBox", getTextEditText, "teBoxed")
+
+  step("intoBox", setWindow, "teBox", "teMain", 3, 3, true)
+  look("movedIntoBox", "teMain")
+  hideWindow("teWindow")
+  look("movedInHiddenWindow", "teMain")
+  showWindow("teWindow")
+  step("intoMainHidden", setWindow, "main", "teMain", 4, 4, false)
+  look("movedToMainHidden", "teMain")
+  step("showMoved", showWindow, "teMain")
+  step("intoWindow", setWindow, "teWindow", "teMain", 9, 9, true)
+  look("movedIntoWindow", "teMain")
+  step("textAfterMove", getTextEditText, "teMain")
+  step("intoMain", setWindow, "main", "teMain", 10, 20, true)
+  -- What a scroll box holds moves with it
+  assert(createScrollBox("teWindow", "teMover", 0, 0, 100, 50))
+  step("createInMover", createTextEdit, "teMover", "teRider", 1, 1, 40, 20)
+  step("moverIntoMain", setWindow, "main", "teMover", 0, 0, true)
+  hideWindow("teWindow")
+  look("riderAfterMove", "teRider")
+  showWindow("teWindow")
+  deleteScrollBox("teMover")
+  -- A scroll box takes a text edit before a user window of the same name
+  assert(openUserWindow("teTwin", false, false, "f") == true, "openUserWindow did not answer true")
+  assert(createScrollBox("teTwin", 0, 0, 100, 50))
+  step("createInTwin", createTextEdit, "teTwin", "teInTwin", 1, 1, 40, 20)
+  hideWindow("teTwin")
+  look("twinWindowHidden", "teInTwin")
+  showWindow("teTwin")
+
+  -- A command line of the same name is what the name's geometry and visibility are read from
+  step("lineFirst", createCommandLine, "teShared", 1, 1, 10, 10)
+  step("editAfterLine", createTextEdit, "teShared", 2, 2, 20, 20)
+  look("lineThenEdit", "teShared")
+  step("sharedEditText", setTextEditText, "teShared", "edit")
+  step("sharedLineText", printCmdLine, "teShared", "line")
+  step("sharedGetEdit", getTextEditText, "teShared")
+  step("sharedGetLine", getCmdLine, "teShared")
+  hideWindow("teShared")
+  moveWindow("teShared", 7, 8)
+  look("sharedHiddenMoved", "teShared")
+  hideWindow("teWindow")
+  showWindow("teWindow")
+  look("sharedAfterReport", "teShared")
+  step("deleteSharedLine", deleteCommandLine, "teShared")
+  look("sharedLineDeleted", "teShared")
+  step("lineAfterEdit", createCommandLine, "teShared", 3, 3, 30, 30)
+  look("editThenLine", "teShared")
+  deleteCommandLine("teShared")
+  look("lineGoneAgain", "teShared")
+  deleteTextEdit("teShared")
+  -- And a scroll box before either
+  assert(createScrollBox("teTriple", 1, 2, 100, 100))
+  assert(createCommandLine("teTriple", 3, 3, 30, 30))
+  step("editAfterBoxAndLine", createTextEdit, "teTriple", 5, 5, 50, 50)
+  hideWindow("teTriple")
+  deleteCommandLine("teTriple")
+  look("tripleLineDeleted", "teTriple")
+  deleteScrollBox("teTriple")
+  look("tripleBoxDeleted", "teTriple")
+  deleteTextEdit("teTriple")
+  assert(createScrollBox("teBoxShared", 1, 2, 100, 100))
+  hideWindow("teBoxShared")
+  step("editAfterBox", createTextEdit, "teBoxShared", 5, 6, 40, 20)
+  look("boxThenEdit", "teBoxShared")
+  step("resizeBoxShared", resizeWindow, "teBoxShared", 60, 70)
+  step("deleteBoxShared", deleteScrollBox, "teBoxShared")
+  look("sharedBoxDeleted", "teBoxShared")
+  step("editBeforeBox", createTextEdit, "teBoxLater", 5, 6, 40, 20)
+  moveWindow("teBoxLater", 9, 9)
+  createScrollBox("teBoxLater", 1, 2, 100, 100)
+  deleteScrollBox("teBoxLater")
+  look("movedBeforeBox", "teBoxLater")
+
+  step("delete", deleteTextEdit, "teInMain")
+  events("delete")
+  look("deleted", "teInMain")
+  step("getDeleted", getTextEditText, "teInMain")
+  step("setDeleted", setTextEditText, "teInMain", "x")
+  step("fontDeleted", setTextEditFontSize, "teInMain", 10)
+  step("raiseDeleted", raiseWindow, "teInMain")
+  step("deleteAgain", deleteTextEdit, "teInMain")
+  step("deleteEmpty", deleteTextEdit, "")
+  step("deleteMissing", deleteTextEdit, "teNoSuch")
+  step("deleteBadName", deleteTextEdit, {})
+  events("failedDeletes")
+  step("recreate", createTextEdit, "teInMain", 1, 2, 30, 40)
+  step("getRecreated", getTextEditText, "teInMain")
+  step("deleteRecreated", deleteTextEdit, "teInMain")
+  events("recreated")
+
+  assert(createTextEdit("teBoxedLine", 6, 7, 30, 30))
+  step("lineInBoxForEdit", createCommandLine, "teBox", "teBoxedLine", 1, 1, 20, 20)
+  look("boxedLineOverEdit", "teBoxedLine")
+  step("deleteBox", deleteScrollBox, "teBox")
+  events("box")
+  look("boxedAtOnce", "teBoxed")
+  step("getBoxedAtOnce", getTextEditText, "teBoxed")
+  -- A box in a box gives up its name when the outer one goes
+  assert(createScrollBox("teOuter", 0, 0, 100, 100))
+  assert(createScrollBox("teOuter", "teNested", 0, 0, 50, 50))
+  hideWindow("teNested")
+  step("editNamedForNested", createTextEdit, "teNested", 11, 12, 40, 20)
+  deleteScrollBox("teOuter")
+  closeUserWindow("teWindow")
+  closeUserWindow("teTwin")
+  deleteScrollBox("teTwin")
+  -- What a deleted user window holds goes with it, once its deferred delete has run
+  assert(openUserWindow("teDoomed", false, false, "f") == true, "openUserWindow did not answer true")
+  assert(createTextEdit("teDoomed", "teDoomedEdit", 0, 0, 40, 20))
+  assert(createTextEdit("teDoomedLine", 8, 9, 30, 30))
+  assert(createCommandLine("teDoomed", "teDoomedLine", 1, 1, 20, 20))
+  deleteMiniConsole("teDoomed")
+  for _, name in ipairs({"teMain", "teNegative", "teInEmpty", "teBoxShared", "teBoxLater"}) do
+    deleteTextEdit(name)
+  end
+  events("end")
+  headlessTextEditAnswers = table.concat(answers, "\n")
+end)
+headlessTextEdit = ok and "ok" or tostring(err)
+-- Run once deferred deletes have, which a spec cannot wait for
+function headlessTextEditAfter()
+  local answers = {}
+  for _, name in ipairs({"teMain", "teWin", "teBoxed", "teLate", "teRider", "teBox", "teWindow", "teInTwin", "teDoomedEdit", "teDoomed"}) do
+    answers[#answers + 1] = name .. ":" .. tostring(windowType(name))
+  end
+  for _, name in ipairs({"teNested", "teBoxedLine", "teDoomedLine"}) do
+    answers[#answers + 1] = name .. ":" .. tostring(windowType(name)) .. ":" .. table.concat({getWindowGeometry(name)}, ",") .. ":" .. tostring(windowVisible(name))
+  end
+  answers[#answers + 1] = "events:" .. table.concat(deletedEvents, ",")
+  return table.concat(answers, "\n")
+end
+)lua"));
+        QVERIFY2(ran, "The Lua chunk did not run.");
+        QCOMPARE(luaGlobalString(host, "headlessTextEdit"), qsl("ok"));
+        const QStringList answers{qsl("create=[1]true"),
+                                  qsl("created:type=[1]textedit,geometry=[4]10:20:200:100,visible=[1]true"),
+                                  qsl("createAgain=[2]nil:couldn't create text edit"),
+                                  qsl("createEmpty=[2]nil:a text edit cannot have an empty string as its name"),
+                                  qsl("createInMissing=[2]nil:window 'teNoSuch' not found"),
+                                  qsl("lost:type=[2]nil:'teLost' is not a known label, any type of console, command line, text edit, nor scroll box,geometry=[2]nil:window \"teLost\" not "
+                                      "found,visible=[2]nil:window \"teLost\" not found"),
+                                  qsl("createInMain=[1]true"),
+                                  qsl("inMain:type=[1]textedit,geometry=[4]1:2:30:40,visible=[1]true"),
+                                  qsl("createInEmpty=[1]true"),
+                                  qsl("inEmpty:type=[1]textedit,geometry=[4]1:2:30:40,visible=[1]true"),
+                                  qsl("createNegative=[1]true"),
+                                  qsl("negative:type=[1]textedit,geometry=[4]3:4:0:0,visible=[1]true"),
+                                  qsl("createBadName=raised:createTextEdit: bad argument #1 type (text edit name as string expected, got table!)"),
+                                  qsl("createBadX=raised:createTextEdit: bad argument #2 type (text edit x-coordinate as number expected, got string!)"),
+                                  qsl("bad:type=[2]nil:'teBad' is not a known label, any type of console, command line, text edit, nor scroll box,geometry=[2]nil:window \"teBad\" not "
+                                      "found,visible=[2]nil:window \"teBad\" not found"),
+                                  qsl("getNew=[1]"),
+                                  qsl("set=[1]true"),
+                                  qsl("getSet=[1]hello"),
+                                  qsl("setOdd=[1]true"),
+                                  qsl("getOdd=[1]a\\9b\\10c\\10d e\\10f\\10g"),
+                                  qsl("setNumber=[1]true"),
+                                  qsl("getNumber=[1]42"),
+                                  qsl("clear=[1]true"),
+                                  qsl("getCleared=[1]"),
+                                  qsl("readOnly=[1]true"),
+                                  qsl("setReadOnly=[1]true"),
+                                  qsl("getReadOnly=[1]read only"),
+                                  qsl("writable=[1]true"),
+                                  qsl("placeholder=[1]true"),
+                                  qsl("sheet=[1]true"),
+                                  qsl("font=[1]true"),
+                                  qsl("fontSize=[1]true"),
+                                  qsl("fontSizeNegative=[1]true"),
+                                  qsl("tab=[1]true"),
+                                  qsl("getOther=[1]"),
+                                  qsl("afterSetters:type=[1]textedit,geometry=[4]10:20:200:100,visible=[1]true"),
+                                  qsl("missing.getTextEditText=[2]nil:text edit name 'teNoSuch' not found"),
+                                  qsl("missing.clearTextEdit=[2]nil:text edit name 'teNoSuch' not found"),
+                                  qsl("missing.setTextEditText=[2]nil:text edit name 'teNoSuch' not found"),
+                                  qsl("missing.setTextEditPlaceholder=[2]nil:text edit name 'teNoSuch' not found"),
+                                  qsl("missing.setTextEditStyleSheet=[2]nil:text edit name 'teNoSuch' not found"),
+                                  qsl("missing.setTextEditFont=[2]nil:text edit name 'teNoSuch' not found"),
+                                  qsl("missing.setTextEditFontSize=[2]nil:text edit name 'teNoSuch' not found"),
+                                  qsl("missing.setTextEditReadOnly=[2]nil:text edit name 'teNoSuch' not found"),
+                                  qsl("missing.setTextEditTabMovesFocus=[2]nil:text edit name 'teNoSuch' not found"),
+                                  qsl("setEmptyName=[2]nil:text edit name '' not found"),
+                                  qsl("setBadName=raised:setTextEditText: bad argument #1 type (text edit name as string expected, got table!)"),
+                                  qsl("setBadText=raised:setTextEditText: bad argument #2 type (text as string expected, got table!)"),
+                                  qsl("raise=[1]true"),
+                                  qsl("lower=[1]true"),
+                                  qsl("hide=[0]"),
+                                  qsl("hidden:type=[1]textedit,geometry=[4]10:20:200:100,visible=[1]false"),
+                                  qsl("show=[1]true"),
+                                  qsl("shown:type=[1]textedit,geometry=[4]10:20:200:100,visible=[1]true"),
+                                  qsl("move=[0]"),
+                                  qsl("resize=[0]"),
+                                  qsl("moved:type=[1]textedit,geometry=[4]5:6:70:25,visible=[1]true"),
+                                  qsl("resizeNegative=[0]"),
+                                  qsl("resizedNegative:type=[1]textedit,geometry=[4]5:6:0:0,visible=[1]true"),
+                                  qsl("resizeBack=[0]"),
+                                  qsl("createInWindow=[1]true"),
+                                  qsl("inWindow:type=[1]textedit,geometry=[4]1:1:50:20,visible=[1]true"),
+                                  qsl("inHiddenWindow:type=[1]textedit,geometry=[4]1:1:50:20,visible=[1]false"),
+                                  qsl("inShownWindow:type=[1]textedit,geometry=[4]1:1:50:20,visible=[1]true"),
+                                  qsl("createInBox=[1]true"),
+                                  qsl("inBox:type=[1]textedit,geometry=[4]2:2:40:20,visible=[1]true"),
+                                  qsl("inHiddenBox:type=[1]textedit,geometry=[4]2:2:40:20,visible=[1]false"),
+                                  qsl("createInHiddenBox=[1]true"),
+                                  qsl("madeInHiddenBox:type=[1]textedit,geometry=[4]2:25:40:20,visible=[1]false"),
+                                  qsl("hideBoxed=[0]"),
+                                  qsl("boxedStaysHidden:type=[1]textedit,geometry=[4]2:2:40:20,visible=[1]false"),
+                                  qsl("textInBox=[1]true"),
+                                  qsl("getInBox=[1]boxed"),
+                                  qsl("intoBox=[1]true"),
+                                  qsl("movedIntoBox:type=[1]textedit,geometry=[4]3:3:70:25,visible=[1]true"),
+                                  qsl("movedInHiddenWindow:type=[1]textedit,geometry=[4]3:3:70:25,visible=[1]false"),
+                                  qsl("intoMainHidden=[1]true"),
+                                  qsl("movedToMainHidden:type=[1]textedit,geometry=[4]4:4:70:25,visible=[1]false"),
+                                  qsl("showMoved=[1]true"),
+                                  qsl("intoWindow=[1]true"),
+                                  qsl("movedIntoWindow:type=[1]textedit,geometry=[4]9:9:70:25,visible=[1]true"),
+                                  qsl("textAfterMove=[1]read only"),
+                                  qsl("intoMain=[1]true"),
+                                  qsl("createInMover=[1]true"),
+                                  qsl("moverIntoMain=[1]true"),
+                                  qsl("riderAfterMove:type=[1]textedit,geometry=[4]1:1:40:20,visible=[1]true"),
+                                  qsl("createInTwin=[1]true"),
+                                  qsl("twinWindowHidden:type=[1]textedit,geometry=[4]1:1:40:20,visible=[1]true"),
+                                  qsl("lineFirst=[1]true"),
+                                  qsl("editAfterLine=[1]true"),
+                                  qsl("lineThenEdit:type=[1]commandline,geometry=[4]1:1:10:10,visible=[1]true"),
+                                  qsl("sharedEditText=[1]true"),
+                                  qsl("sharedLineText=[0]"),
+                                  qsl("sharedGetEdit=[1]edit"),
+                                  qsl("sharedGetLine=[1]line"),
+                                  qsl("sharedHiddenMoved:type=[1]commandline,geometry=[4]7:8:10:10,visible=[1]false"),
+                                  qsl("sharedAfterReport:type=[1]commandline,geometry=[4]7:8:10:10,visible=[1]false"),
+                                  qsl("deleteSharedLine=[1]true"),
+                                  qsl("sharedLineDeleted:type=[1]textedit,geometry=[4]2:2:20:20,visible=[1]true"),
+                                  qsl("lineAfterEdit=[1]true"),
+                                  qsl("editThenLine:type=[1]commandline,geometry=[4]3:3:30:30,visible=[1]true"),
+                                  qsl("lineGoneAgain:type=[1]textedit,geometry=[4]2:2:20:20,visible=[1]true"),
+                                  qsl("editAfterBoxAndLine=[1]true"),
+                                  qsl("tripleLineDeleted:type=[1]scrollbox,geometry=[4]1:2:100:100,visible=[1]false"),
+                                  qsl("tripleBoxDeleted:type=[1]textedit,geometry=[4]5:5:50:50,visible=[1]true"),
+                                  qsl("editAfterBox=[1]true"),
+                                  qsl("boxThenEdit:type=[1]scrollbox,geometry=[4]1:2:100:100,visible=[1]false"),
+                                  qsl("resizeBoxShared=[0]"),
+                                  qsl("deleteBoxShared=[1]true"),
+                                  qsl("sharedBoxDeleted:type=[1]textedit,geometry=[4]5:6:40:20,visible=[1]true"),
+                                  qsl("editBeforeBox=[1]true"),
+                                  qsl("movedBeforeBox:type=[1]textedit,geometry=[4]9:9:40:20,visible=[1]true"),
+                                  qsl("delete=[1]true"),
+                                  qsl("delete:events=teShared,teTriple,teInMain"),
+                                  qsl("deleted:type=[2]nil:'teInMain' is not a known label, any type of console, command line, text edit, nor scroll box,geometry=[2]nil:window \"teInMain\" not "
+                                      "found,visible=[2]nil:window \"teInMain\" not found"),
+                                  qsl("getDeleted=[2]nil:text edit name 'teInMain' not found"),
+                                  qsl("setDeleted=[2]nil:text edit name 'teInMain' not found"),
+                                  qsl("fontDeleted=[2]nil:text edit name 'teInMain' not found"),
+                                  qsl("raiseDeleted=[1]false"),
+                                  qsl("deleteAgain=[2]false:text edit name 'teInMain' not found"),
+                                  qsl("deleteEmpty=[2]false:a text edit cannot have an empty string as its name"),
+                                  qsl("deleteMissing=[2]false:text edit name 'teNoSuch' not found"),
+                                  qsl("deleteBadName=raised:deleteTextEdit: bad argument #1 type (text edit name as string expected, got table!)"),
+                                  qsl("failedDeletes:events="),
+                                  qsl("recreate=[1]true"),
+                                  qsl("getRecreated=[1]"),
+                                  qsl("deleteRecreated=[1]true"),
+                                  qsl("recreated:events=teInMain"),
+                                  qsl("lineInBoxForEdit=[1]true"),
+                                  qsl("boxedLineOverEdit:type=[1]commandline,geometry=[4]1:1:20:20,visible=[1]true"),
+                                  qsl("deleteBox=[1]true"),
+                                  qsl("box:events="),
+                                  qsl("boxedAtOnce:type=[1]textedit,geometry=[4]2:2:40:20,visible=[1]true"),
+                                  qsl("getBoxedAtOnce=[1]boxed"),
+                                  qsl("editNamedForNested=[1]true"),
+                                  qsl("end:events=teMain,teNegative,teInEmpty,teBoxShared,teBoxLater")};
+        QCOMPARE(luaGlobalString(host, "headlessTextEditAnswers"), answers.join(QLatin1Char('\n')));
+
+        QCoreApplication::sendPostedEvents(nullptr, QEvent::DeferredDelete);
+        ran = host->getLuaInterpreter()->compileAndExecuteScript(qsl("headlessTextEditAfterAnswers = headlessTextEditAfter()"));
+        QVERIFY2(ran, "The Lua chunk after the deferred deletes did not run.");
+        const QStringList after{qsl("teMain:nil"),
+                                qsl("teWin:textedit"),
+                                qsl("teBoxed:nil"),
+                                qsl("teLate:nil"),
+                                qsl("teRider:nil"),
+                                qsl("teBox:nil"),
+                                qsl("teWindow:userwindow"),
+                                qsl("teInTwin:nil"),
+                                qsl("teDoomedEdit:nil"),
+                                qsl("teDoomed:nil"),
+                                qsl("teNested:textedit:11,12,40,20:true"),
+                                qsl("teBoxedLine:textedit:6,7,30,30:true"),
+                                qsl("teDoomedLine:textedit:8,9,30,30:true"),
+                                qsl("events:")};
+        QCOMPARE(luaGlobalString(host, "headlessTextEditAfterAnswers"), after.join(QLatin1Char('\n')));
+        QVERIFY2(QApplication::topLevelWidgets().isEmpty(), "Making the text edits created a widget.");
+    }
+
     // What a profile with no view answers the scroll calls, taken from the same Lua run in the GUI self-test
     // profile, which lets each real pane repaint before it is read and re-issues each scroll until it holds.
     void test_headlessScrollContract()
