@@ -1213,7 +1213,6 @@ void GMCPAuthenticator::handleAuthGMCP(const QString& packageMessage, const QStr
             // and cancel the auto-login timers a second later, so drop it.
             ++mSignInScheduleGeneration;
             mSignInAttemptPending = false;
-            mSignInOffered = false;
 #if defined(DEBUG_GMCP_AUTHENTICATION)
             qDebug() << "GMCP Char.Login.Default named no auth type; leaving the sign-in to the standard auto-login";
 #endif

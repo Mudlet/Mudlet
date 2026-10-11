@@ -822,8 +822,6 @@ private slots:
         QTest::newRow("no Char.Login.Default") << QString() << false;
         QTest::newRow("a Default naming no way to sign in") << qsl("Char.Login.Default {\"version\": 2, \"type\": []}") << false;
         QTest::newRow("an offer made on an earlier connection") << qsl("Char.Login.Default {\"version\": 2, \"type\": [\"password-credentials\"]}") << true;
-        QTest::newRow("an offer withdrawn by a later Default")
-                << qsl("Char.Login.Default {\"version\": 2, \"type\": [\"password-credentials\"]}\nChar.Login.Default {\"version\": 2, \"type\": []}") << false;
     }
 
     void testATokenIsKeptOnlyWhenThisConnectionOfferedASignIn()
@@ -835,9 +833,8 @@ private slots:
         QVERIFY(host);
         host->setLogin(QString());
         host->setPass(QString());
-        // One frame per line, in order
-        for (const QString& frame : offer.split(QLatin1Char('\n'), Qt::SkipEmptyParts)) {
-            mpServer->sendGmcp(frame);
+        if (!offer.isEmpty()) {
+            mpServer->sendGmcp(offer);
             QVERIFY2(waitForGmcpProcessed(host), "the offer never reached the client");
         }
         if (offerOnAnEarlierConnection) {
@@ -852,6 +849,41 @@ private slots:
 
         QVERIFY2(CredentialManager::retrieveCredential(host->getName(), qsl("reconnect-token")).isEmpty(), "a token no sign-in on this connection asked for was kept");
         QVERIFY2(!consoleContains(host, qsl("signed in automatically next time")), "a token that will never be replayed was promised as an automatic sign-in");
+    }
+
+    // The offer already told the game token_storage: true, so a later Default naming no way to sign in
+    // must not drop the token that follows - least of all a rotated one, or the stale one is replayed.
+    void testATokenIsKeptAfterALaterDefaultNamingNoWayToSignIn_data()
+    {
+        QTest::addColumn<QString>("laterDefault");
+        QTest::addColumn<QString>("earlierToken");
+
+        QTest::newRow("no type") << qsl("Char.Login.Default {\"version\": 2}") << QString();
+        QTest::newRow("an empty type") << qsl("Char.Login.Default {\"version\": 2, \"type\": []}") << QString();
+        QTest::newRow("JSON that does not parse") << qsl("Char.Login.Default {\"version\": 2, \"type\": [") << QString();
+        QTest::newRow("a rotated token") << qsl("Char.Login.Default {\"version\": 2}") << qsl("token-A");
+    }
+
+    void testATokenIsKeptAfterALaterDefaultNamingNoWayToSignIn()
+    {
+        QFETCH(QString, laterDefault);
+        QFETCH(QString, earlierToken);
+
+        Host* host = connectAndNegotiate();
+        QVERIFY(host);
+        host->setLogin(QString());
+        host->setPass(QString());
+        if (!earlierToken.isEmpty()) {
+            QVERIFY(seedSplitSignIn(host->getName(), qsl("{\"account\": \"acct:char\", \"secure_only\": false}"), earlierToken));
+        }
+        mpServer->sendGmcp(qsl("Char.Login.Default {\"version\": 2, \"type\": [\"password-credentials\"]}"));
+        QVERIFY2(waitForGmcpProcessed(host), "the offer never reached the client");
+        mpServer->sendGmcp(laterDefault);
+        QVERIFY2(waitForGmcpProcessed(host), "the later Default never reached the client");
+
+        mpServer->sendGmcp(qsl("Char.Login.Token {\"account\": \"acct:char\", \"token\": \"token-B\", \"secure_only\": false}"));
+        QVERIFY2(waitForStoredToken(host, qsl("token-B")), "the token sent after token_storage was promised was dropped");
+        QVERIFY(waitForStoreSettled(host));
     }
 
     // A saved name and password sign the player in ahead of a token, so the token is kept - for when
