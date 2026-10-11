@@ -66,6 +66,9 @@ public:
     ModernGLWidget(TMap*, Host*, QWidget* parent = nullptr);
     ~ModernGLWidget() override;
 
+    // The environment variables that made Qt compose every window with an API other than OpenGL
+    static QStringList rhiForcingVariables();
+
     void wheelEvent(QWheelEvent* e) override;
     void setViewCenter(int, int, int, int);
     // Takes over another view's area and center; roomId is the player room that view last followed
@@ -243,9 +246,9 @@ private:
     void renderText(const QString& text, float x, float y);
     void setupBuffers();
     void cleanup();
-    void showFailure(const QString& message);
-    void reportContextFailure();
+    void showFailure(const QString& message, const QString& advice = QString());
     bool contextCreationFailed() const;
+    void reportContextCreationFailure();
     QColor getPlaneColor(int zLevel, bool belowOrAtLevel);
     QColor getEnvironmentColor(TRoom* pRoom);
     void startSmoothTransition(int targetAID, int targetX, int targetY, int targetZ);
