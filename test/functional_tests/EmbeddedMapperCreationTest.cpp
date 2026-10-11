@@ -37,9 +37,11 @@
 #include <QOpenGLContext>
 #include <QOpenGLWidget>
 #include <QPointer>
+#include <QRhiWidget>
 #include <QScopeGuard>
 #include <QSignalSpy>
 #include <QTemporaryDir>
+#include <QVBoxLayout>
 #include <QWindow>
 #include <QtTest/QtTest>
 #include <chrono>
@@ -56,6 +58,9 @@
 #include "ctelnet.h"
 #include "dlgConnectionProfiles.h"
 #include "dlgMapper.h"
+#if defined(INCLUDE_3DMAPPER)
+#include "glwidget_integration.h"
+#endif
 #include "mudlet.h"
 
 #include "GroupedTest.h"
@@ -422,7 +427,7 @@ private slots:
         auto* pView = mpHost->mpMap->mapper()->findChild<QOpenGLWidget*>(qsl("glWidget"));
         QVERIFY2(pView && pView->inherits("ModernGLWidget"), "the modern renderer did not make the 3D view, so this case covers nothing");
         QVERIFY2(pView->isVisible() && pView->size().isEmpty() && !pView->context(), "the 3D view had a size or a context, so this case covers nothing");
-        QVERIFY2(smModernViewWarnings.filter(smFalseFailure).isEmpty(), "a 3D view with no size said it could not create a context it never asked for");
+        QVERIFY2(smModernViewWarnings.isEmpty(), "a 3D view with no size said it could not get a context it never asked for");
 
         auto [resized, resizeMessage] = mpHost->mainConsoleView()->createMapper(QString(), 10, 10, 400, 300);
         QVERIFY2(resized, qPrintable(resizeMessage));
@@ -432,6 +437,45 @@ private slots:
         } else {
             QTRY_VERIFY2(pView->findChild<QLabel*>() && pView->findChild<QLabel*>()->isVisible(), "the 3D view did not say it could not create a context once it had a size");
         }
+    }
+
+    // Qt gives an OpenGL view no context at all in a window composed with another graphics API. A Null
+    // QRhiWidget makes the window compose that way, standing in for the Direct3D, Metal or Vulkan that
+    // QT_WIDGETS_RHI forces; platforms with no QRhi, such as offscreen, ignore it
+    void test_a3DViewInAWindowNotDrawnWithOpenGLSaysSo()
+    {
+        QVERIFY(mpHost->getLuaInterpreter()->compileAndExecuteScript(qsl("assert(setConfig('experiment.3dmap.modernmapper', true))")));
+        QWidget window;
+        auto* pLayout = new QVBoxLayout(&window);
+        auto* pOtherApi = new QRhiWidget();
+        pOtherApi->setApi(QRhiWidget::Api::Null);
+        pLayout->addWidget(pOtherApi);
+        QOpenGLWidget* pSized = GLWidgetFactory::createGLWidget(mpHost->mpMap.data(), mpHost);
+        QOpenGLWidget* pHidden = GLWidgetFactory::createGLWidget(mpHost->mpMap.data(), mpHost);
+        QVERIFY2(pSized && pSized->inherits("ModernGLWidget") && pHidden && pHidden->inherits("ModernGLWidget"), "the modern renderer did not make the 3D views, so this case covers nothing");
+        pLayout->addWidget(pSized);
+        // As Geyser hides an embedded map
+        pHidden->setFixedSize(0, 0);
+        pLayout->addWidget(pHidden);
+        window.resize(400, 600);
+        const auto stopRecording = recordModernViewWarningsForThisScope();
+        window.show();
+        const auto noticeShowing = [](QOpenGLWidget* pView) {
+            return pView->findChild<QLabel*>() && pView->findChild<QLabel*>()->isVisible();
+        };
+        QTRY_VERIFY2(pSized->context() || noticeShowing(pSized), "a 3D view shown with a size got no context and showed no notice");
+        if (pSized->context()) {
+            QSKIP("this platform composed the window without a QRhi, so the 3D view got a context and this case goes unchecked here");
+        }
+        QVERIFY2(!pSized->size().isEmpty(), "the 3D view had no size, so this case covers nothing");
+        QVERIFY2(smModernViewWarnings.size() == 1 && smModernViewWarnings.filter(smFalseFailure).isEmpty(), qPrintable(smModernViewWarnings.join(u'\n')));
+
+        // Lets the deferred show checks run, as the notice above may have come from the resize that showing sends first
+        qApp->processEvents();
+        QVERIFY2(pHidden->isVisible() && pHidden->size().isEmpty() && !noticeShowing(pHidden), "a 3D view with no size said it could not get a context it never asked for");
+        pHidden->setFixedSize(400, 300);
+        QTRY_VERIFY2(noticeShowing(pHidden), "a 3D view given a size got no context and showed no notice");
+        QVERIFY2(!pHidden->context() && smModernViewWarnings.size() == 2, qPrintable(smModernViewWarnings.join(u'\n')));
     }
 
     // Replacing a 3D view in the same event-loop turn that inserted it must not let the show

@@ -114,22 +114,31 @@ void ModernGLWidget::showEvent(QShowEvent* event)
     QOpenGLWidget::showEvent(event);
     // Qt creates the context once the widget is laid out; if that failed, initializeGL never runs to say so
     QTimer::singleShot(0, this, [this]() {
-        if (isVisible() && !context() && !size().isEmpty()) {
+        if (!isVisible()) {
+            return;
+        }
+        if (!context() && !size().isEmpty()) {
             // Qt can drop a context not yet composed when the view is shown and, with no RHI yet, rebuild it only
             // on a later resize or paint; resize synchronously so the check below sees the result, which update() would not
             QResizeEvent resize(size(), size());
             QCoreApplication::sendEvent(this, &resize);
         }
-        if (isVisible()) {
-            reportContextCreationFailure();
-        }
+        reportContextCreationFailure();
     });
 }
 
-// A view with no size, such as an embedded map Geyser has hidden, has not asked for a context yet
+// Qt asks for a context on any resize to a non-empty size, so a view with no size, such as an embedded map
+// Geyser has hidden, has not asked yet, while a sized view with none was refused one
 void ModernGLWidget::reportContextCreationFailure()
 {
-    if (contextCreationFailed() && mFailureMessage.isEmpty()) {
+    if (!mFailureMessage.isEmpty() || size().isEmpty()) {
+        return;
+    }
+    if (!context()) {
+        // Qt makes no context at all when the window is composed with Direct3D, Metal or Vulkan, as QT_WIDGETS_RHI can force
+        //: Shown in place of the 3D map when the window is drawn with another graphics API, such as Direct3D, Metal or Vulkan, so the modern 3D mapper cannot get an OpenGL context
+        showFailure(tr("The modern 3D mapper needs OpenGL, but this window is drawn with another graphics API."));
+    } else if (!isValid()) {
         //: Shown in place of the 3D map when the graphics driver cannot create the OpenGL context the modern 3D mapper needs
         showFailure(tr("The modern 3D mapper could not create an OpenGL 3.3 context on this system."));
     }
