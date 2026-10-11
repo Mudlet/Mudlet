@@ -1520,9 +1520,9 @@ int TLuaInterpreter::raiseEvent(lua_State* L)
     return 1;
 }
 
-// A gone Host, or a mudlet singleton already past its destructor, is further
-// along than the flags rather than healthier, so the nulls count as shutting
-// down too.
+// A gone Host, or no main window (as once mudlet is past its destructor), is
+// further along than the flags rather than healthier, so both count as
+// shutting down too.
 static bool shuttingDown(const QPointer<Host>& pHost)
 {
     return !pHost || pHost->isClosingDown() || !TAppFrontend::hasView() || TAppFrontend::instance()->quitting();

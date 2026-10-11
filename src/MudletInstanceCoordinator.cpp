@@ -117,9 +117,7 @@ void MudletInstanceCoordinator::handleReadyRead()
             const QString uri = message.mid(11);
 
             QTimer::singleShot(0ms, this, [uri]() {
-                if (TAppFrontend::hasView()) {
-                    TAppFrontend::instance()->handleTelnetUri(uri);
-                }
+                TAppFrontend::instance()->handleTelnetUri(uri);
             });
         } else {
             QMutexLocker locker(&mMutex);
@@ -137,6 +135,7 @@ void MudletInstanceCoordinator::handleReadyRead()
 void MudletInstanceCoordinator::installPackagesLocally()
 {
     QTimer::singleShot(0ms, this, [this]() {
+        // The null view would leave the packages queued with no dialog to pick a profile for them
         Q_ASSERT(TAppFrontend::hasView());
         TAppFrontend* app = TAppFrontend::instance();
         Host* activeHost = app->getActiveHost();

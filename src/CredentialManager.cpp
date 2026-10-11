@@ -319,7 +319,7 @@ bool CredentialManager::isOperationValid() const
     if (const std::optional<bool>& override = profileStorageOverrideForTesting(); override.has_value()) {
         return override;
     }
-    // No instance in a unit test, and nothing to read the preference from - the caller's own default
+    // No main window in a unit test, and nothing to read the preference from - the caller's own default
     // stands, which keeps this the keychain as it was
     if (!TAppFrontend::hasView()) {
         return std::nullopt;
