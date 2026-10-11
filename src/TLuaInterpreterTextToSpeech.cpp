@@ -208,7 +208,7 @@ void TLuaInterpreter::ttsStateChanged(QTextToSpeech::State state)
         // is never coming waits forever. Look again once the engine has had its
         // chance to start speaking - if it is still idle, that Ready did mean
         // idle and the queue is free to go.
-        QTimer::singleShot(scmInterruptedSpeechGrace, qApp, []() {
+        QTimer::singleShot(scmInterruptedSpeechGrace, QCoreApplication::instance(), []() {
             if (!speechUnit.isNull() && speechUnit->state() == QTextToSpeech::State::Ready && !speechQueue.isEmpty()) {
                 TLuaInterpreter::ttsStateChanged(QTextToSpeech::State::Ready);
             }

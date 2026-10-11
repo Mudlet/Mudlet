@@ -222,7 +222,7 @@ public:
     void clearTransferProgress();
 
     // True while a map import, export or download is on the stack. Those pump
-    // qApp->processEvents() to keep their progress display alive, so anything
+    // QCoreApplication::processEvents() to keep their progress display alive, so anything
     // delivered from an event loop can find itself running nested inside one -
     // and destroying this map's Host from there would free the operation's own
     // "this" (#9520). Whoever would do that has to wait for this to go false.

@@ -654,6 +654,88 @@ headlessSettingEvents = ok and 'ok' or tostring(err)
         QCOMPARE(luaGlobalString(host, "headlessSettingEvents"), qsl("ok"));
     }
 
+    // The answers and events are those a GUI probe of the same calls gave, with the profile names changed
+    void test_appStyleSheetWithNoMainWindow()
+    {
+        QVERIFY2(!TAppFrontend::hasView(), "A main window exists, so this run is not headless.");
+
+        const QString hostname = qsl("Test-Headless-Host-App-Style");
+        const QString otherHostname = qsl("Test-Headless-Host-App-Style-Other");
+        QVERIFY2(HostManager::self()->addHost(hostname, QString(), QString(), QString()), "Could not create a profile with no main window.");
+        QVERIFY2(HostManager::self()->addHost(otherHostname, QString(), QString(), QString()), "Could not create a second profile with no main window.");
+        Host* host = HostManager::self()->getHost(hostname);
+        Host* otherHost = HostManager::self()->getHost(otherHostname);
+        QVERIFY2(host && otherHost, "The profiles are not in the pool.");
+
+        const QString recorder = qsl(R"lua(
+headlessStyleLog = {}
+function onHeadlessAppStyleSheet(...)
+  local parts = {}
+  for i = 1, select("#", ...) do parts[#parts + 1] = tostring((select(i, ...))) end
+  headlessStyleLog[#headlessStyleLog + 1] = "  event: " .. table.concat(parts, ", ") .. " (" .. select("#", ...) .. " args)"
+end
+)lua");
+        for (Host* profile : {host, otherHost}) {
+            QVERIFY2(profile->getLuaInterpreter()->compileAndExecuteScript(recorder), "The Lua chunk did not run.");
+            // registerAnonymousEventHandler() is Lua from LuaGlobal, which these tests do not load
+            profile->registerAnonymousEventHandler(qsl("sysAppStyleSheetChange"), qsl("onHeadlessAppStyleSheet"));
+        }
+
+        const QString calls = qsl(R"lua(
+local function call(label, f, ...)
+  local res = {pcall(f, ...)}
+  local parts = {}
+  for i = 1, table.maxn(res) do parts[#parts + 1] = tostring(res[i]) end
+  headlessStyleLog[#headlessStyleLog + 1] = label .. " -> " .. table.concat(parts, ", ")
+end
+local sheet = "QToolTip { color: #102030; }"
+call("setAppStyleSheet(sheet)", setAppStyleSheet, sheet)
+call("setAppStyleSheet(sheet, tag)", setAppStyleSheet, sheet, "probeTag")
+call("setAppStyleSheet(empty)", setAppStyleSheet, "")
+call("setAppStyleSheet()", setAppStyleSheet)
+call("setAppStyleSheet(number)", setAppStyleSheet, 5)
+call("setAppStyleSheet(table)", setAppStyleSheet, {})
+call("setAppStyleSheet(sheet, number)", setAppStyleSheet, sheet, 7)
+call("setAppStyleSheet(sheet, nil)", setAppStyleSheet, sheet, nil)
+call("setAppStyleSheet(bool)", setAppStyleSheet, true)
+)lua");
+        const QString styleSheetBefore = qApp->styleSheet();
+        QVERIFY2(host->getLuaInterpreter()->compileAndExecuteScript(calls), "The Lua chunk did not run.");
+
+        const QString expected = qsl(R"(  event: sysAppStyleSheetChange, , %1 (3 args)
+setAppStyleSheet(sheet) -> true, true
+  event: sysAppStyleSheetChange, probeTag, %1 (3 args)
+setAppStyleSheet(sheet, tag) -> true, true
+  event: sysAppStyleSheetChange, , %1 (3 args)
+setAppStyleSheet(empty) -> true, true
+setAppStyleSheet() -> false, setAppStyleSheet: bad argument #1 type (style sheet as string expected, got no value!)
+  event: sysAppStyleSheetChange, , %1 (3 args)
+setAppStyleSheet(number) -> true, true
+setAppStyleSheet(table) -> false, setAppStyleSheet: bad argument #1 type (style sheet as string expected, got table!)
+  event: sysAppStyleSheetChange, 7, %1 (3 args)
+setAppStyleSheet(sheet, number) -> true, true
+setAppStyleSheet(sheet, nil) -> false, setAppStyleSheet: bad argument #2 type (tag as string expected, got nil!)
+setAppStyleSheet(bool) -> false, setAppStyleSheet: bad argument #1 type (style sheet as string expected, got boolean!))")
+                                         .arg(hostname);
+        for (Host* profile : {host, otherHost}) {
+            QVERIFY2(profile->getLuaInterpreter()->compileAndExecuteScript(qsl(R"lua(headlessStyleLogText = table.concat(headlessStyleLog, "\n"))lua")), "The Lua chunk did not run.");
+        }
+        const QString answered = luaGlobalString(host, "headlessStyleLogText");
+        QCOMPARE(answered, expected);
+
+        // Every profile hears of it, not only the one that set it, and each is told which one that was
+        QStringList otherExpected;
+        for (const QString& line : expected.split(QChar::LineFeed)) {
+            if (line.startsWith(qsl("  event: "))) {
+                otherExpected << line;
+            }
+        }
+        const QString otherHeard = luaGlobalString(otherHost, "headlessStyleLogText");
+        QCOMPARE(otherHeard, otherExpected.join(QChar::LineFeed));
+
+        QVERIFY2(qApp->styleSheet() == styleSheetBefore, "The style sheet was applied with no main window to style.");
+    }
+
     // As Media_spec.lua pins for the GUI: with closed captions on, an ended playback is captioned in the main console
     void test_closedCaptionsReachTheMainConsoleWithNoMainWindow()
     {
