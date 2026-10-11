@@ -200,6 +200,14 @@ private slots:
     {
         QVERIFY(runLua(qsl("echo('%1', ''); setLabelToolTip('%1', '<b>Open</b> the map')").arg(mLabelName)));
         QCOMPARE(accessible()->text(QAccessible::Name), qsl("Open the map"));
+        QVERIFY2(accessible()->text(QAccessible::Description).isEmpty(), "the tooltip is read twice, as the name and as the description");
+
+        // Qt shows this one as it is written, tags and all
+        QVERIFY(runLua(qsl("setLabelToolTip('%1', 'Add one for <name> & more')").arg(mLabelName)));
+        QCOMPARE(accessible()->text(QAccessible::Name), qsl("Add one for <name> & more"));
+
+        QVERIFY(runLua(qsl("echo('%1', 'Map')").arg(mLabelName)));
+        QCOMPARE(accessible()->text(QAccessible::Description), qsl("Add one for <name> & more"));
         QVERIFY(runLua(qsl("resetLabelToolTip('%1')").arg(mLabelName)));
     }
 

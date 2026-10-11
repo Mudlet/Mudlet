@@ -1796,6 +1796,12 @@ describe("Tests Geyser.Label right click menus", function()
       assert.are.equal(Geyser.Label.onRightClick, label.clickCallback)
       -- a screen reader's press is a left click, which opens no menu
       assert.are.equal("text", getLabelAccessibleRole(label.name))
+    end)
+
+    it("leaves a label whose role was set to automatic as text", function()
+      local other = Geyser.Label:new({name = "glmAutomaticRole", x = 0, y = 0, width = 100, height = 30, accessibleRole = ""})
+      other:createRightClickMenu({MenuItems = {"Only"}})
+      assert.are.equal("text", getLabelAccessibleRole("glmAutomaticRole"))
       -- the menu itself is a nestable label of no size, so only its items show
       assert.are.equal(0, menu:get_width())
       assert.are.equal(0, menu:get_height())

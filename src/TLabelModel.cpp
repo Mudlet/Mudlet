@@ -21,6 +21,7 @@
 
 #include "Host.h"
 
+#include <QTextDocument>
 #include <QTextDocumentFragment>
 
 TLabelModel::TLabelModel(Host* pHost, const QString& name)
@@ -115,7 +116,13 @@ QString TLabelModel::effectiveAccessibleName() const
     if (QString name = plainName(mText); !name.isEmpty()) {
         return name;
     }
-    return plainName(mToolTip);
+    // Qt shows a tooltip that is not rich text literally, so it is read that way too
+    return Qt::mightBeRichText(mToolTip) ? plainName(mToolTip) : mToolTip.simplified();
+}
+
+bool TLabelModel::namedByToolTip() const
+{
+    return mAccessibleName.isEmpty() && plainName(mText).isEmpty() && !mToolTip.isEmpty();
 }
 
 bool TLabelModel::actsAsButton() const

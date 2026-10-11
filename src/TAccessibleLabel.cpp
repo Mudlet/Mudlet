@@ -43,10 +43,14 @@ QAccessible::Role TAccessibleLabel::role() const
 
 QString TAccessibleLabel::text(QAccessible::Text t) const
 {
-    if (t != QAccessible::Name) {
-        return QAccessibleWidget::text(t);
+    if (t == QAccessible::Name) {
+        return label()->model().effectiveAccessibleName();
     }
-    return label()->model().effectiveAccessibleName();
+    // A tooltip serving as the name would otherwise be read a second time as the description
+    if (t == QAccessible::Description && label()->model().namedByToolTip()) {
+        return {};
+    }
+    return QAccessibleWidget::text(t);
 }
 
 QStringList TAccessibleLabel::actionNames() const

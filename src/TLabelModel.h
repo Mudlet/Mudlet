@@ -47,6 +47,7 @@ struct TLabelModel
 
     // The name a screen reader hears: the one a script gave it, else its text, else its tooltip
     QString effectiveAccessibleName() const;
+    bool namedByToolTip() const;
     // Whether a screen reader is told it is a button: as a script said, else when it has a click or release callback
     bool actsAsButton() const;
 

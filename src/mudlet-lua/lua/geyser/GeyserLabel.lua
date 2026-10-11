@@ -1661,7 +1661,7 @@ function Geyser.Label:createRightClickMenu(cons)
   if not(self.rightClickMenu) then
     self:setClickCallback(self.onRightClick, self)
     -- A press is a left click, which this callback ignores
-    if not self.accessibleRole then
+    if not self.accessibleRole or self.accessibleRole == "" then
       setLabelAccessibleRole(self.name, "text")
     end
   end
