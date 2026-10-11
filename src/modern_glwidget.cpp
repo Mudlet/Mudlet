@@ -2602,6 +2602,20 @@ void ModernGLWidget::focusOutEvent(QFocusEvent* event)
 
 void ModernGLWidget::keyPressEvent(QKeyEvent* event)
 {
+    // A modifier pressed on its own waits for the key it goes with, such as Shift+Tab or the Shift for +; handed on
+    // first, it would take focus to the command line ahead of that key
+    if (mKeysNavigate) {
+        switch (event->key()) {
+        case Qt::Key_Shift:
+        case Qt::Key_Control:
+        case Qt::Key_Alt:
+        case Qt::Key_AltGr:
+        case Qt::Key_Meta:
+            return;
+        default:
+            break;
+        }
+    }
     // Shift is needed for + on many layouts; keypad keys are left to key bindings on the command line
     Qt::KeyboardModifiers otherModifiers = Qt::ControlModifier | Qt::AltModifier | Qt::MetaModifier | Qt::KeypadModifier;
 #if defined(Q_OS_MACOS)

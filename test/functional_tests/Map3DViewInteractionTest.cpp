@@ -658,6 +658,9 @@ private slots:
         QCoreApplication::sendEvent(pModern, &leftPress);
         map()->mapper()->show3DView(false);
         QTRY_COMPARE(pressesSeenByScript(), 1);
+        // Announced once only, though the hide queues it
+        QTest::qWait(50);
+        QCOMPARE(pressesSeenByScript(), 1);
 
         pModern = viewAtThePlayer();
         QVERIFY(pModern);
@@ -734,9 +737,20 @@ private slots:
 #endif
     }
 
-    // The keys pan and zoom only with focus from the keyboard, so the view must be in its window's Tab order
+    void test_tabReachesTheViewWhoseKeysThenPan_data()
+    {
+        QTest::addColumn<int>("onwardKey");
+        QTest::addColumn<int>("modifiers");
+        QTest::newRow("Tab") << static_cast<int>(Qt::Key_Tab) << static_cast<int>(Qt::NoModifier);
+        QTest::newRow("Backtab") << static_cast<int>(Qt::Key_Backtab) << static_cast<int>(Qt::ShiftModifier);
+    }
+
+    // The keys pan and zoom only with focus from the keyboard, so the view must be in its window's Tab order; from
+    // there Tab goes on through the window, not to the command line as it does after a click
     void test_tabReachesTheViewWhoseKeysThenPan()
     {
+        QFETCH(int, onwardKey);
+        QFETCH(int, modifiers);
         ModernGLWidget* pModern = viewAtThePlayer();
         QVERIFY(pModern);
         QDockWidget* pDock = dockOf(pModern);
@@ -754,6 +768,12 @@ private slots:
         const QVector3D start = pModern->viewCenter();
         QTest::keyClick(static_cast<QWidget*>(nullptr), Qt::Key_W);
         QVERIFY2(pModern->viewCenter().y() > start.y(), "W did not pan after Tab reached the view");
+
+        const QString typed = mpHost->mainConsoleView()->mpCommandLine->toPlainText();
+        QTest::keyClick(static_cast<QWidget*>(nullptr), static_cast<Qt::Key>(onwardKey), static_cast<Qt::KeyboardModifiers>(modifiers));
+        QVERIFY2(!pModern->hasFocus(), "Tab did not leave the view");
+        QVERIFY2(pDock->isAncestorOf(QApplication::focusWidget()), qPrintable(qsl("focus went to %1").arg(QDebug::toString(QApplication::focusWidget()))));
+        QCOMPARE(mpHost->mainConsoleView()->mpCommandLine->toPlainText(), typed);
     }
 
     // A click takes the keys back for the command line also when the view already had focus from the keyboard
@@ -906,6 +926,9 @@ private slots:
             runLua(qsl("killKey(keypadEight); killKey(keypadUp)"));
         });
         QVERIFY(focusFromTheKeyboard(pModern));
+        const QVector3D beforeW = pModern->viewCenter();
+        QTest::keyClick(pModern, Qt::Key_W);
+        QVERIFY2(pModern->viewCenter().y() > beforeW.y(), "W did not pan with focus from the keyboard");
         const QVector3D start = pModern->viewCenter();
         QTest::keyClick(pModern, Qt::Key_8, Qt::KeypadModifier);
         QCoreApplication::processEvents();
@@ -964,6 +987,8 @@ private slots:
         QTest::keyClick(static_cast<QWidget*>(nullptr), Qt::Key_W);
         QVERIFY2(pModern->viewCenter().y() > start.y(), "W did not pan after the menu bar gave focus back");
 
+        // Activating the main window for it, mudlet::changeEvent() refocuses the command line with OtherFocusReason;
+        // that focus-out is the one that ends the keys panning
         commandLine->clear();
         QTest::keyClick(static_cast<QWidget*>(nullptr), Qt::Key_X);
         QTRY_VERIFY(commandLine->hasFocus());
@@ -1020,6 +1045,8 @@ private slots:
             menu->close();
         }
         QCOMPARE(pModern->viewCenter(), start);
+        // The first press and the later one; the press the hidden view dropped is not announced
+        QCOMPARE(pressesSeenByScript(), 2);
     }
 
     void test_keysPanZoomAndRecenter()
