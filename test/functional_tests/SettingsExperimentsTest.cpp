@@ -167,7 +167,7 @@ private slots:
         if (mpHost) {
 #if defined(INCLUDE_3DMAPPER)
             if (mpHost->mpMap->mpM) {
-                runLua(qsl("setConfig('show3dMapView', false) closeMapWidget()"));
+                runLua(qsl("setConfig('show3dMapView', false)"));
             }
 #endif
             switchAllExperimentsOff();
@@ -290,12 +290,14 @@ private slots:
     }
 
 #if defined(INCLUDE_3DMAPPER)
-    // The renderer is picked when the 3D view is created, so an open one has to be rebuilt
+    // The renderer is picked when the 3D view is created, so an open one has to be rebuilt.
+    // The map stays hidden so no GL context is made: the leak job cannot have one (asan-suppressions.txt)
     void test_tickingTheModernMapperSwapsAnOpen3DView()
     {
         requireExperiments({mModernMapper});
-        runLua(qsl("openMapWidget() setConfig('show3dMapView', true)"));
+        runLua(qsl("openMapWidget() closeMapWidget() setConfig('show3dMapView', true)"));
         QVERIFY2(mpHost->mpMap->mpM, "SETUP: no 3D view opened");
+        QVERIFY2(!mpHost->mpMap->mpM->isVisible(), "SETUP: the 3D view is on screen, so it brought up a GL context");
         QVERIFY2(!mpHost->mpMap->mpM->inherits("ModernGLWidget"), "SETUP: the 3D view opened on the modern renderer");
 
         openPreferences();
