@@ -121,8 +121,8 @@ void ModernGLWidget::showEvent(QShowEvent* event)
     });
 }
 
-// Called as soon as a creation attempt fails, not on the next turn of the event loop, so a script that shows the
-// view and moves its camera in one go is refused
+// Each event that tries for a context reports a failure straight away, so a script that shows the view and moves
+// its camera in one go is refused; showEvent()'s timer is only a fallback, a turn of the event loop later
 void ModernGLWidget::reportContextFailure()
 {
     if (mFailureMessage.isEmpty()) {

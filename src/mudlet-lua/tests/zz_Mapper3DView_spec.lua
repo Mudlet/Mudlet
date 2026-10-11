@@ -79,26 +79,27 @@ describe("Tests the 3D map perspective functions with the modern 3D view showing
     assert.is_true(setConfig("show3dMapView", true))
     assert.is_true(getConfig("show3dMapView"))
     local ok, err = setMapPerspective(2, 45, 270)
-    if ok == nil and err:find("could not start", 1, true) then
-      -- no usable OpenGL 3.3 here, as on Windows CI: the view only shows why, so both refuse with the reason
+    -- only a missing GL context, as on Windows CI, excuses the modern view; any other reason it could not start,
+    -- such as shaders that will not compile, is a failure
+    local noContext = ok == nil and err:find("could not create an OpenGL 3.3 context", 1, true) ~= nil
+    if noContext then
       local shifted, shiftErr = shiftMapPerspective(0, 30, 0)
       assert.is_nil(shifted)
       assert.are.equal(err, shiftErr)
-      pending(err)
-      return
-    end
-    assert.is_true(ok, err)
-    assert.is_true(shiftMapPerspective(0, 30, 0))
+    else
+      assert.is_true(ok, err)
+      assert.is_true(shiftMapPerspective(0, 30, 0))
 
-    -- the 3D view draws a grid-mode area looking straight down, whatever a script asks; only the distance applies
-    assert.is_true(setGridMode(shownArea, true))
-    ok, err = setMapPerspective(2, 45, 270)
-    assert.is_nil(ok)
-    assert.are.equal("the area shown in the 3D view is in grid mode, which always looks straight down, so only the distance was applied", err)
-    ok, err = shiftMapPerspective(0, 30, 0)
-    assert.is_nil(ok)
-    assert.are.equal("the area shown in the 3D view is in grid mode, which always looks straight down", err)
-    assert.is_true(setGridMode(shownArea, false))
+      -- the 3D view draws a grid-mode area looking straight down, whatever a script asks; only the distance applies
+      assert.is_true(setGridMode(shownArea, true))
+      ok, err = setMapPerspective(2, 45, 270)
+      assert.is_nil(ok)
+      assert.are.equal("the area shown in the 3D view is in grid mode, which always looks straight down, so only the distance was applied", err)
+      ok, err = shiftMapPerspective(0, 30, 0)
+      assert.is_nil(ok)
+      assert.are.equal("the area shown in the 3D view is in grid mode, which always looks straight down", err)
+      assert.is_true(setGridMode(shownArea, false))
+    end
 
     assert.is_true(setConfig("experiment.3dmap.modernmapper", false))
     assert.is_true(getConfig("show3dMapView"))
@@ -108,6 +109,9 @@ describe("Tests the 3D map perspective functions with the modern 3D view showing
     ok, err = shiftMapPerspective(0, 30, 0)
     assert.is_nil(ok)
     assert.are.equal("the modern 3D map view is not showing", err)
+    if noContext then
+      pending("no GL context here, so only the refusals were checked")
+    end
   end)
 
   it("setMapZoom keeps its contract while the modern 3D view shows", function()
@@ -142,7 +146,7 @@ describe("Tests the 3D map perspective functions with the modern 3D view showing
 
   -- Paints the room drawing code with a real GL context, which no C++ test does in CI. It can only
   -- check that the view started, not that a frame was drawn or what it shows. Pending under leak
-  -- detection and where the view cannot start, so in CI only macOS paints, without sanitizers;
+  -- detection and where there is no GL context, so in CI only macOS paints, without sanitizers;
   -- Windows CI has no OpenGL 3.3
   it("paints rooms with a symbol, a highlight and a border, in and out of grid mode", function()
     if (os.getenv("ASAN_OPTIONS") or ""):find("detect_leaks=1", 1, true) then
@@ -173,9 +177,9 @@ describe("Tests the 3D map perspective functions with the modern 3D view showing
     assert.is_true(setConfig("experiment.3dmap.modernmapper", true))
     assert.is_true(setConfig("show3dMapView", true))
     pumpEvents(200)
-    -- A view that could not start refuses camera moves rather than painting
+    -- A view that could not start refuses camera moves rather than painting; only a missing GL context excuses it
     local ok, err = shiftMapPerspective(0, 0, 0)
-    if not ok and err:find("could not start", 1, true) then
+    if ok == nil and err:find("could not create an OpenGL 3.3 context", 1, true) then
       pending(err)
       return
     end
