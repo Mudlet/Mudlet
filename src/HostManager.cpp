@@ -64,8 +64,11 @@ void HostManager::deleteHost(const QString& hostname)
     }
 
     pHost->raiseExitEventIfOwed();
-    // The Host is destroyed as pHost goes out of scope, once it is out of the pool
-    mHostPool.remove(hostname);
+    // The handlers may have deleted this profile and opened another under its name
+    if (mHostPool.value(hostname) == pHost) {
+        // The Host is destroyed as pHost goes out of scope, once it is out of the pool
+        mHostPool.remove(hostname);
+    }
 }
 
 bool HostManager::addHost(const QString& hostname, const QString& port, const QString& login, const QString& pass)

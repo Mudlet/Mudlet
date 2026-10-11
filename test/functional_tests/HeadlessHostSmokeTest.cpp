@@ -1313,6 +1313,26 @@ end))lua");
         QCoreApplication::processEvents();
         QVERIFY2(QApplication::topLevelWidgets().isEmpty(), "Opening the profile created a widget.");
     }
+
+    void test_deleteHostKeepsAProfileReopenedUnderItsExitHandler()
+    {
+        const QString hostname = qsl("Test-Headless-Host-Exit-Reopened");
+        QVERIFY2(HostManager::self()->addHost(hostname, QString(), QString(), QString()), "Could not create a profile with no main window.");
+        Host* host = HostManager::self()->getHost(hostname);
+        // Stands in for an embedder's slot that runs while an exit handler pumps events
+        lua_register(host->getLuaInterpreter()->getLuaGlobalState(), "reopenProfile", [](lua_State* L) -> int {
+            const QString name = QString::fromUtf8(lua_tostring(L, 1));
+            HostManager::self()->deleteHost(name);
+            lua_pushboolean(L, HostManager::self()->addHost(name, QString(), QString(), QString()));
+            return 1;
+        });
+        host->registerAnonymousEventHandler(qsl("sysExitEvent"), qsl("onReopenExit"));
+        QVERIFY2(host->getLuaInterpreter()->compileAndExecuteScript(qsl("function onReopenExit() assert(reopenProfile(getProfileName())) end")), "The Lua chunk did not run.");
+
+        HostManager::self()->deleteHost(hostname);
+        QVERIFY2(HostManager::self()->getHost(hostname), "Closing the profile also removed the one reopened under its name.");
+        HostManager::self()->deleteHost(hostname);
+    }
 };
 
 #include "HeadlessHostSmokeTest.moc"
