@@ -113,7 +113,8 @@ private slots:
             if (!(pMap->addRoom(id) && pMap->setRoomArea(id, areaId) && pMap->setRoomCoordinates(id, id % 25, id / 25, 0))) {
                 return 0;
             }
-            pMap->mpRoomDB->getRoom(id)->name = qsl("Room number %1").arg(id);
+            // Short, so that every name fits its room and none is decluttered away
+            pMap->mpRoomDB->getRoom(id)->name = qsl("R%1").arg(id);
         }
         mpHost->mShowRoomID = true;
         pMap->setRoomNamesShown(true);
@@ -150,6 +151,12 @@ private slots:
                 },
                 [](GLuint) {});
         widget.setViewCenter(areaId, 12, 12, 0);
+        // Never shown, so nothing sizes it: big enough for every name to be legible, with the whole area in view
+        widget.resize(1200, 1200);
+        widget.mCameraController.setViewportSize(widget.width(), widget.height());
+        widget.frameRooms(26.0);
+        // As paintGL() does first: names are placed through the camera's matrices
+        widget.updateMatrices();
 
         // The second frame starts with a full cache, so it shows whether the first left the digits usable
         for (int frame = 1; frame <= 2; ++frame) {

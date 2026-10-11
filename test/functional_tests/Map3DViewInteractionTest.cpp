@@ -36,7 +36,6 @@
 #include <QSignalSpy>
 #include <QTemporaryDir>
 #include <QToolTip>
-#include <QWindow>
 #include <QtTest/QtTest>
 
 #include "Host.h"
@@ -373,6 +372,8 @@ private slots:
         QCOMPARE(selection(), QSet<int>{kOtherAreaRoomId});
     }
 
+    // A click away from the 3D view's room menu closes it and goes on to the 3D view, as one away from the 2D
+    // map's menu does there; the hidden 2D map must not take it at its own coordinates
     void test_aClickAwayFromTheRoomMenuGoesOnToThe3DView()
     {
         ModernGLWidget* pModern = viewAtThePlayer();
@@ -383,11 +384,8 @@ private slots:
         QCOMPARE(selection(), QSet<int>{kPlayerRoomId});
         QPointer<QMenu> menuGuard(menu);
 
-        // Delivered as the window system does while a menu is open: to the menu's window
-        const QPoint eastRoom = pModern->mapToGlobal(pixelOfRoom(pModern, kEastRoomId));
-        QWindow* menuWindow = menu->windowHandle();
-        QVERIFY(menuWindow);
-        QTest::mouseClick(menuWindow, Qt::LeftButton, Qt::NoModifier, menuWindow->mapFromGlobal(eastRoom));
+        // To the view, not to the menu's window, whose handling of a press outside it varies by platform
+        QTest::mouseClick(pModern, Qt::LeftButton, Qt::NoModifier, pixelOfRoom(pModern, kEastRoomId));
         QTRY_VERIFY(menuGuard.isNull() || !menuGuard->isVisible());
         QTRY_COMPARE(selection(), QSet<int>{kEastRoomId});
     }
@@ -413,8 +411,6 @@ private slots:
         QCOMPARE(pModern->roomAt(middle), kPlayerRoomId);
     }
 
-    // A click away from the 3D view's room menu closes it and goes on to the 3D view, as one away from the 2D
-    // map's menu does there; the hidden 2D map must not take it at its own coordinates
     void test_keysPanZoomAndRecenter()
     {
         ModernGLWidget* pModern = viewAtThePlayer();
