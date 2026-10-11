@@ -27,9 +27,22 @@ describe("Tests that the generic mapper follows a game in Swedish", function()
     return upvalue(captureMoveCmd, "move_queue")
   end
 
-  local mapperState = {"mapping", "currentRoom", "currentName", "currentExits", "prevRoom", "prevName", "prevExits"}
+  local mapperState = {"mapping", "currentRoom", "currentArea", "currentName", "currentExits", "prevRoom", "prevName", "prevExits"}
   local configKeys = {"lang_dirs", "translate", "language", "use_translation"}
-  local saved, savedPrompt, savedConfigs, savedQueue
+  local saved, savedPrompt, savedConfigs, savedQueue, dockWasShowing
+
+  -- the base UI reads the prompts fed here as vitals and docks itself on the right
+  -- border, leaving the main console narrower for every later spec
+  setup(function()
+    dockWasShowing = BaseUI ~= nil and BaseUI.container ~= nil and not BaseUI.container.hidden
+  end)
+
+  teardown(function()
+    if BaseUI and not dockWasShowing and BaseUI.container and not BaseUI.container.hidden then
+      BaseUI.container:hide()
+      BaseUI.container:adjustBorder()
+    end
+  end)
 
   before_each(function()
     saved = {}
@@ -158,5 +171,35 @@ describe("Tests that the generic mapper follows a game in Swedish", function()
     captureMoveCmd("nv")
     feedTriggers("\nHälsa:52 >Ursäkta?\n")
     assert.are.same({}, moveQueue())
+  end)
+
+  it("links a walk there and back to the room it started in", function()
+    local areaId = addAreaName("genericMapperSwedishSpec")
+    finally(function() deleteArea(areaId) end)
+    local start = createRoomID()
+    addRoom(start)
+    setRoomArea(start, areaId)
+    setRoomCoordinates(start, 0, 0, 0)
+    setRoomName(start, "Du står vid sjön.")
+    map.setLanguage("swedish")
+    map.set("currentRoom", start)
+    map.set("currentArea", areaId)
+    map.set("currentName", "Du står vid sjön.")
+    map.set("currentExits", {"north"})
+    map.set("mapping", true)
+    map.prompt.hash = nil
+
+    captureMoveCmd("n")
+    feedTriggers("\n52/52 52/52Du står i byn. Söderut ligger sjön.\n   Det finns en synlig väg härifrån: söder\n")
+    local village = map.currentRoom
+    assert.are_not.equal(start, village)
+    assert.are.equal("Du står i byn.", getRoomName(village))
+    assert.are.equal(village, getRoomExits(start).north)
+
+    captureMoveCmd("s")
+    feedTriggers("\n52/52 52/52Du står vid sjön. Norrut ligger byn.\n   Det finns en synlig väg härifrån: norr\n")
+    assert.are.equal(start, map.currentRoom)
+    assert.are.equal(start, getRoomExits(village).south)
+    assert.are.equal(2, table.size(getAreaRooms(areaId)))
   end)
 end)
