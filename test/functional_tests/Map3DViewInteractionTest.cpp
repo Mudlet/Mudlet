@@ -395,6 +395,38 @@ private slots:
         commandLine->clear();
     }
 
+    // A floating map is a window of its own, so focusing the command line alone leaves the keys typed next here
+    void test_typingAfterClickingAFloatingViewReachesTheCommandLine()
+    {
+        ModernGLWidget* pModern = viewAtThePlayer();
+        QVERIFY(pModern);
+        QDockWidget* pDock = nullptr;
+        for (QWidget* pWidget = pModern->parentWidget(); pWidget && !pDock; pWidget = pWidget->parentWidget()) {
+            pDock = qobject_cast<QDockWidget*>(pWidget);
+        }
+        QVERIFY2(pDock, "the map is not in a dock");
+        pDock->setFloating(true);
+        pDock->activateWindow();
+        QVERIFY(QTest::qWaitForWindowActive(pDock));
+        pModern->setFocus(Qt::MouseFocusReason);
+        QTRY_VERIFY(pModern->hasFocus());
+        const QVector3D start = pModern->viewCenter();
+        TCommandLine* commandLine = mpHost->mainConsoleView()->mpCommandLine;
+        commandLine->clear();
+
+        // Sent where the window system would send them: to whichever widget has the keyboard focus
+        for (const Qt::Key key : {Qt::Key_X, Qt::Key_A, Qt::Key_D}) {
+            QTest::keyClick(static_cast<QWidget*>(nullptr), key);
+            QCoreApplication::processEvents();
+        }
+        const QString typed = commandLine->toPlainText();
+        const QVector3D end = pModern->viewCenter();
+        commandLine->clear();
+        pDock->setFloating(false);
+        QCOMPARE(typed, qsl("xad"));
+        QCOMPARE(end, start);
+    }
+
     void test_eachAreaKeepsItsOwnCamera()
     {
         ModernGLWidget* pModern = viewAtThePlayer();

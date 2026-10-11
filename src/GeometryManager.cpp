@@ -24,7 +24,6 @@
 #include <QFile>
 #include <QHash>
 #include <QImage>
-#include <cmath>
 
 #include <cmath>
 #include <limits>

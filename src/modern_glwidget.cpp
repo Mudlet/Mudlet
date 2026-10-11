@@ -1898,6 +1898,8 @@ void ModernGLWidget::keyPressEvent(QKeyEvent* event)
     TMainConsole* console = mpHost ? mpHost->mainConsoleView() : nullptr;
     if (console && console->mpCommandLine) {
         TCommandLine* commandLine = console->mpCommandLine;
+        // A floating map is a window of its own, and focus in an inactive window waits for it to be activated
+        commandLine->activateWindow();
         commandLine->setFocus(Qt::OtherFocusReason);
         QCoreApplication::sendEvent(commandLine, event);
         return;
