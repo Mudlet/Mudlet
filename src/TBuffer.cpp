@@ -26,6 +26,7 @@
 #include "Host.h"
 #include "LuaLiteral.h"
 #include "MudletApp.h"
+#include "TAppFrontend.h"
 #include "TConsoleModel.h"
 #include "TEvent.h"
 #include "THyperlinkCompactManager.h"
@@ -2745,8 +2746,9 @@ void TBuffer::processMxpWatchdogCallback()
         mTagWatchdog->start(MAX_TAG_TIMEOUT_MS);
     } else if (mWatchdogPhase == WatchdogPhase::Phase2_Unfreeze) {
         // The continuation commits into this buffer and finalizes the main
-        // console's view, so it needs that view and this to be its buffer:
-        if (isMxpParserFrozen && mpHost->hasConsoleView() && mpModel == &mpHost->mainConsoleModel()) {
+        // console's view, so it needs this to be its buffer, and that view
+        // unless there is no main window to have made one:
+        if (isMxpParserFrozen && (mpHost->hasConsoleView() || !TAppFrontend::hasView()) && mpModel == &mpHost->mainConsoleModel()) {
             mpHost->mMxpProcessor.setLastEntityValue(QString::fromStdString('<' + currentTagContent));
             const TChar style(mForeGroundColor, mBackGroundColor, computeCurrentAttributeFlags());
             QPointer<Host> hostGuard = mpHost;
@@ -2760,7 +2762,7 @@ void TBuffer::processMxpWatchdogCallback()
                 // commitLine() and finalize() below both reach the main console
                 // through the host, and that pointer empties on its own when the
                 // profile's console goes:
-                if (!hostGuard || !hostGuard->hasConsoleView()) {
+                if (!hostGuard || (!hostGuard->hasConsoleView() && TAppFrontend::hasView())) {
                     return;
                 }
                 QString lastEntityValue = hostGuard->mMxpProcessor.getEntityValue();
