@@ -21,6 +21,7 @@
 #include <QDataStream>
 #include <QDir>
 #include <QFile>
+#include <QFileInfo>
 #include <QImage>
 #include <QSvgRenderer>
 #include <QTemporaryDir>
@@ -1213,6 +1214,100 @@ end
         QVERIFY2(recordExits(pool->getHost(quitHostname)), "The Lua chunk did not run.");
         pool.reset();
         QCOMPARE(recorded(), qsl("%1 sysExitEvent reset:false\n%2 sysExitEvent reset:false\n").arg(deletedHostname, quitHostname));
+    }
+
+    void test_openProfileLoadsAndStartsTheSaveWithNoMainWindow()
+    {
+        QVERIFY2(!TAppFrontend::hasView(), "A main window exists, so this run is not headless.");
+
+        const QString makerHostname = qsl("Test-Headless-Host-Open-Map-Maker");
+        QVERIFY2(HostManager::self()->addHost(makerHostname, QString(), QString(), QString()), "Could not create a profile with no main window.");
+        const QByteArray map = binaryMapOf(HostManager::self()->getHost(makerHostname), 9);
+        HostManager::self()->deleteHost(makerHostname);
+
+        const QString hostname = qsl("Test-Headless-Host-Open");
+        const QString mapFolder = MudletApp::getMudletPath(enums::profileMapsPath, hostname);
+        QVERIFY(QDir().mkpath(mapFolder));
+        QFile mapFile(qsl("%1/headless.dat").arg(mapFolder));
+        QVERIFY(mapFile.open(QIODevice::WriteOnly));
+        mapFile.write(map);
+        mapFile.close();
+
+        const QString fontPath = qsl("%1HeadlessMono.ttf").arg(MudletApp::getMudletPath(enums::profilePackagePath, hostname, qsl("HeadlessFontPack")));
+        QVERIFY(QDir().mkpath(QFileInfo(fontPath).path()));
+        QVERIFY(QFile::copy(qsl(":/fonts/ttf-bitstream-vera-1.10/VeraMono.ttf"), fontPath));
+
+        const auto script = [](const QString& name, const QString& code) {
+            return qsl(R"(<Script isActive="yes" isFolder="no"><name>%1</name><packageName></packageName><script>%2</script><eventHandlerList/></Script>)").arg(name, code);
+        };
+        // A Host element in a module would be read into the profile's settings too
+        const auto package = [](const QString& hostPackage, const QString& scripts) {
+            return qsl(R"(<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE MudletPackage>
+<MudletPackage version="1.001">
+%1<ScriptPackage>%2</ScriptPackage>
+</MudletPackage>
+)")
+                    .arg(hostPackage, scripts);
+        };
+        QTemporaryDir moduleDir;
+        QVERIFY(moduleDir.isValid());
+        const QString modulePath = moduleDir.filePath(qsl("HeadlessModule.xml"));
+        QFile moduleFile(modulePath);
+        QVERIFY(moduleFile.open(QIODevice::WriteOnly));
+        // The broken one would be reported on the console were the profile not marked as loading
+        moduleFile.write(package(QString(), script(qsl("headlessModule"), qsl("headlessOpenModule = 'ran'")) + script(qsl("headlessBroken"), qsl("this is not lua"))).toUtf8());
+        moduleFile.close();
+
+        const QString saveFolder = MudletApp::getMudletPath(enums::profileXmlFilesPath, hostname);
+        QVERIFY(QDir().mkpath(saveFolder));
+        QFile saveFile(qsl("%1/2020-01-01#00-00-00.xml").arg(saveFolder));
+        QVERIFY(saveFile.open(QIODevice::WriteOnly));
+        const QString hostDetails = qsl("<HostPackage><Host><mInstalledPackages><string>HeadlessFontPack</string></mInstalledPackages>"
+                                        "<mInstalledModules><key>HeadlessModule</key><filepath>%1</filepath><globalSave>0</globalSave><priority>-1</priority></mInstalledModules></Host></HostPackage>")
+                                            .arg(modulePath);
+        // table.size() comes from LuaGlobal, and a priority -1 module is in before the profile's scripts start
+        const QString profileScript = qsl(R"lua(headlessOpenModuleSeen = headlessOpenModule
+registerAnonymousEventHandler("sysLoadEvent", function(_, fresh)
+  headlessOpenLoad = tostring(fresh) .. " rooms:" .. table.size(getRooms()) .. " room9:" .. tostring(roomExists(9))
+end))lua");
+        saveFile.write(package(hostDetails, script(qsl("headlessOpen"), profileScript)).toUtf8());
+        saveFile.close();
+        QFile autolog(MudletApp::getMudletPath(enums::profileDataItemPath, hostname, qsl("autolog")));
+        QVERIFY(autolog.open(QIODevice::WriteOnly));
+        autolog.close();
+        // An IRE game's address, which only a new profile gets the IRE driver fix for
+        QFile url(MudletApp::getMudletPath(enums::profileDataItemPath, hostname, qsl("url")));
+        QVERIFY(url.open(QIODevice::WriteOnly));
+        QDataStream urlStream(&url);
+        urlStream.setVersion(QDataStream::Qt_5_12);
+        urlStream << qsl("achaea.com");
+        url.close();
+
+        Host* host = HostManager::self()->openProfile(hostname, false);
+        QVERIFY2(host, "The saved profile did not open.");
+        QVERIFY(!host->hasConsoleView());
+        QVERIFY2(host->mLoadedOk, qPrintable(host->mProfileLoadError));
+        QCOMPARE(luaGlobalString(host, "headlessOpenModuleSeen"), qsl("ran"));
+        QCOMPARE(luaGlobalString(host, "headlessOpenLoad"), qsl("true rooms:1 room9:true"));
+        QVERIFY2(!host->mIsProfileLoadingSequence, "The profile is still marked as loading.");
+        QVERIFY2(mainBufferHolds(host, qsl("loaded in offline mode")), "The offline load was not reported on the main console.");
+        QVERIFY2(!mainBufferHolds(host, qsl("not working")), "Reinstalling the module as the profile opened reported its broken script.");
+        QVERIFY2(HostManager::self()->fonts().fontAlreadyLoaded(fontPath, hostname), "The installed package's font was not loaded.");
+        QVERIFY2(host->mainConsoleModel().mLogToLogFile, "The profile's saved logging did not resume.");
+        QVERIFY2(!host->mUSE_IRE_DRIVER_BUGFIX, "A profile with a save of its own was given the new profile settings.");
+
+        QVERIFY2(!HostManager::self()->openProfile(hostname, false), "An open profile was opened again.");
+
+        // Named for a listed game, so a profile with no save yet takes that game's address
+        Host* fresh = HostManager::self()->openProfile(qsl("Achaea"), false);
+        QVERIFY2(fresh, "A profile with no save did not open.");
+        QVERIFY(fresh->mLoadedOk);
+        QCOMPARE(fresh->getUrl(), qsl("achaea.com"));
+        QVERIFY2(fresh->mUSE_IRE_DRIVER_BUGFIX, "A new profile for an IRE game did not get the IRE driver fix.");
+        QVERIFY2(!fresh->mainConsoleModel().mLogToLogFile, "A profile that never logged started logging.");
+        QCoreApplication::processEvents();
+        QVERIFY2(QApplication::topLevelWidgets().isEmpty(), "Opening the profile created a widget.");
     }
 };
 

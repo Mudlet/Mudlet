@@ -35,7 +35,6 @@
 #include "DarkTheme.h"
 #include "FontManager.h"
 #include "HostDialogs.h"
-#include "LuaInterface.h"
 #include "TBuffer.h"
 #include "TCommandLine.h"
 #include "TConsole.h"
@@ -62,7 +61,6 @@
 #include "TSpellChecker.h"
 #include "TTabBar.h"
 #include "TUiTour.h"
-#include "XMLimport.h"
 
 #include "dlgAboutDialog.h"
 #include "dlgComposer.h"
@@ -76,7 +74,6 @@
 #include "dlgProfilePreferences.h"
 #include "dlgTriggerEditor.h"
 #include "edbee/edbee.h"
-#include "MMCPServer.h"
 #include "widgetutils.h"
 
 #include <QDataStream>
@@ -6629,45 +6626,7 @@ void mudlet::slot_connectionDialogueFinished(const QString& profile, bool connec
     pHost->mIsProfileLoadingSequence = true;
     // The Host instance gets its TMainConsole here:
     addConsoleForNewHost(pHost);
-    // enable script compilation (which is off by default)
-    pHost->mBlockScriptCompile = false;
-    // This uses the external LuaGlobal.lua file to load all the other external
-    // lua files, including the condenseMapLoad() function needed by the
-    // TMap::audit() method:
-    pHost->mLuaInterpreter.loadGlobal();
-    pHost->hideMudletsVariables();
-
-    //do modules here
-    QMapIterator<QString, int> it(pHost->mModulePriorities);
-    QMap<int, QStringList> moduleOrder;
-    while (it.hasNext()) {
-        it.next();
-        QStringList moduleEntry = moduleOrder[it.value()];
-        moduleEntry << it.key();
-        moduleOrder[it.value()] = moduleEntry;
-    }
-
-    //First load modules with negative number priority
-    QMapIterator<int, QStringList> it2(moduleOrder);
-    while (it2.hasNext() && it2.peekNext().key() < 0) {
-        it2.next();
-        mudlet::installModulesList(pHost, it2.value());
-    }
-
-    pHost->mBlockStopWatchCreation = false;
-    // This will build all the scripts in the collection of script items (but
-    // not triggers/aliases/etc) - presumably so that the event handlers
-    // are ready for use.
-    pHost->getScriptUnit()->compileAll(true);
-    pHost->updateAnsi16ColorsInTable();
-    pHost->updateExtendedAnsiColorsInTable();
-
-    //Load rest of modules after scripts
-    while (it2.hasNext()) {
-        it2.next();
-        const QStringList modules = it2.value();
-        mudlet::installModulesList(pHost, modules);
-    }
+    pHost->startProfileScripts();
 
     // Decided before packages install so their scripts can see the flag and
     // hold off on their own introductions until the tour is done - the
@@ -6684,68 +6643,19 @@ void mudlet::slot_connectionDialogueFinished(const QString& profile, bool connec
 
     mPackagesToInstallList.clear();
 
-    // Only now are the fonts of the modules and the default packages registered
-    // too, so a family the profile names can be told apart from one that is
-    // merely not loaded yet - and the real console exists, so the stand-in this
-    // may pick lands on it and the warning reaches the player.
-    pHost->substituteMissingDisplayFont();
-
-    // Now load the default (latest stored) map file:
-    pHost->loadMap();
-
-    //NOTE: this is a potential problem if users connect by hand quickly
-    //      and one host has a slower response time as the other one, but
-    //      the worst that can happen is that they have to login manually.
-
+    pHost->loadMapAndConnect(connect);
     if (connect) {
-        pHost->mTelnet.connectIt(pHost->getUrl(), pHost->getPort());
         updateDetachedWindowToolbars();
-        updateMainWindowTabIndicators();
-
-        // Bring main window to focus when new profile connects
-        show();
-        raise();
-        activateWindow();
-    } else {
-        // no connectIt() on this path, so the telnet parser would otherwise run
-        // on the defaults rather than on the profile's own settings
-        pHost->mTelnet.cacheHostSettings();
-
-        const QString infoMsg = tr("[  OK  ]  - Profile \"%1\" loaded in offline mode.").arg(profile);
-        pHost->postMessage(infoMsg);
-
-        // Reconcile the Connecting placeholder seeded in addConsoleForNewHost.
-        updateMainWindowTabIndicators();
-
-        // Bring main window to focus when new profile loads offline
-        show();
-        raise();
-        activateWindow();
     }
+    // Offline, this reconciles the Connecting placeholder seeded in addConsoleForNewHost.
+    updateMainWindowTabIndicators();
 
-    // Now check if we should auto-start the MMCP server, and do so
-    if (pHost->getMMCPAutoStartServer()) {
-        if (!pHost->mMMCPServer) {
-            pHost->initMMCPServer();
-        }
+    // Bring main window to focus when the new profile loads
+    show();
+    raise();
+    activateWindow();
 
-        quint16 port = pHost->getMMCPPort();
-
-        const QString infoMsg = tr("[ CHAT ]  - Auto-starting MMCP Server on port %1.").arg(port);
-        pHost->postMessage(infoMsg);
-
-        pHost->mMMCPServer->startServer(port);
-    }
-
-    TEvent event{};
-    event.mArgumentList.append(QLatin1String("sysLoadEvent"));
-    event.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
-    // A non-zero value is how we send a "true" value - which indicates that
-    // this is for a freshly loaded profile (and NOT one after a resetProfile()):
-    event.mArgumentList.append(QString::number(1));
-    event.mArgumentTypeList.append(ARGUMENT_TYPE_BOOLEAN);
-    pHost->raiseEvent(event);
-    pHost->mIsProfileLoadingSequence = false;
+    pHost->finishProfileLoad();
     emit signal_profileLoaded();
 
     if (wantUiTour) {
@@ -6757,19 +6667,6 @@ void mudlet::slot_connectionDialogueFinished(const QString& profile, bool connec
         QTimer::singleShot(1s, this, [this, skipIntroStep]() {
             showUiTour(skipIntroStep);
         });
-    }
-}
-
-void mudlet::installModulesList(Host* pHost, QStringList modules)
-{
-    for (const auto& module : modules) {
-        QStringList entry = pHost->mInstalledModules[module];
-        if (!pHost->installPackage(entry[0], enums::PackageModuleType::ModuleFromUI).first) {
-            qWarning() << "mudlet::installModulesList() WARNING - failed to load module" << module;
-        }
-        //we repeat this step here b/c we use the same installPackage method for initial loading,
-        //where we overwrite the globalSave flag.  This restores saved and loaded packages to their proper flag
-        pHost->mInstalledModules[module] = entry;
     }
 }
 
@@ -7501,73 +7398,9 @@ Host* mudlet::loadProfile(const QString& profile_name, const bool playOnline, co
         return pHost;
     }
 
-    LuaInterface* lI = pHost->getLuaInterface();
-    lI->getVars(true);
-
-    const auto it = TGameDetails::findGame(profile_name);
-    if (it != TGameDetails::scmDefaultGames.end()) {
-        pHost->setUrl((*it).hostUrl);
-        pHost->setPort((*it).port);
-        pHost->mSslTsl = (*it).tlsEnabled;
-    }
-
-    const QString folder = MudletApp::getMudletPath(enums::profileXmlFilesPath, profile_name);
-    QDir dir(folder);
-    dir.setSorting(QDir::Time);
-    // Only consider profile saves (*.xml): a crash during a save can leave behind
-    // an empty QSaveFile temporary (e.g. "2026-01-01#12-00-00.xml.AbCdEf") as the
-    // newest file, and loading that instead of the newest real save presents the
-    // profile with all of its triggers/scripts seemingly wiped out
-    QStringList entries = dir.entryList(QStringList{qsl("*.xml")}, QDir::Files, QDir::Time);
-    // pre-install packages when loading this profile for the first time
-    bool preInstallPackages = false;
-    // NB: an explicitly requested saveFileName is honored even when no *.xml
-    // is present - failing to open it then reports a proper load error rather
-    // than silently starting a fresh profile:
-    if (entries.isEmpty() && saveFileName.isEmpty()) {
-        if (!dir.entryList(QDir::Files | QDir::NoDotAndDotDot).isEmpty()) {
-            qWarning().nospace().noquote() << "mudlet::loadProfile(" << profile_name << ", ...) WARNING - profile directory \"" << folder
-                                           << "\" contains files but no completed (*.xml) save; treating the profile as new. An interrupted save may have left "
-                                              "a recoverable QSaveFile temporary behind.";
-        }
-        preInstallPackages = true;
-        pHost->mLoadedOk = true;
-        pHost->mMapInfoContributors.insert(qsl("Short"));
-    } else {
-        QFile file(qsl("%1%2").arg(folder, saveFileName.isEmpty() ? entries.at(0) : saveFileName));
-        if (!file.open(QFile::ReadOnly | QFile::Text)) {
-            pHost->mProfileLoadError = tr("Could not open profile file: %1").arg(file.errorString());
-            qWarning() << "mudlet: failed to open profile file for reading:" << file.fileName() << file.errorString();
-        }
-        XMLimport importer(pHost);
-
-        qDebug() << "[LOADING PROFILE]:" << file.fileName();
-        if (auto [success, message] = importer.importPackage(&file); !success) {
-            pHost->mProfileLoadError = message;
-            //: %1 is the path and file name (i.e. the location) of the problem fil
-            pHost->postMessage(tr("[ ERROR ] - Something went wrong loading your Mudlet profile and it could not be loaded.\n"
-                                  "Try loading an older version in 'Connect - Options - Profile history' or double-check that %1 looks correct.")
-                                       .arg(file.fileName()));
-
-            qDebug().nospace().noquote() << "mudlet::loadProfile(" << profile_name << ", " << playOnline << ") ERROR - loading \"" << file.fileName() << "\" failed, reason: \"" << message << "\".";
-        } else {
-            pHost->mLoadedOk = true;
-        }
-
-        pHost->refreshPackageFonts();
-
-        // Is this a new profile created through 'copy profile (settings only)'? install default packages into it
-        if (entries.size() == 1 && entries.first() == QLatin1String("Copied profile (settings only).xml")) {
-            preInstallPackages = true;
-        }
-    }
-
-    if (preInstallPackages) {
+    if (pHost->loadProfileSave(saveFileName)) {
         mudlet::self()->setupPreInstallPackages(pHost->getUrl().toLower(), profile_name, pHost->mAcceptServerGUI && pHost->mEnableGMCP);
-        pHost->setupIreDriverBugfix();
     }
-
-    pHost->startSavedLogging();
 
     emit signal_hostCreated(pHost, mHostManager.getHostCount());
     emit signal_adjustAccessibleNames();

@@ -42,6 +42,7 @@
 #include "TConsoleModel.h"
 #include "TDebug.h"
 #include "TEvent.h"
+#include "TGameDetails.h"
 #include "TIrcClient.h"
 #include "TKey.h"
 #include "TLabelModel.h"
@@ -585,6 +586,188 @@ void Host::raiseExitEventIfOwed()
     event.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
     raiseEvent(event);
     mLuaInterpreter.leaveNestedEventLoop();
+}
+
+bool Host::loadProfileSave(const QString& saveFileName)
+{
+    getLuaInterface()->getVars(true);
+
+    const QString profileName = getName();
+    const auto it = TGameDetails::findGame(profileName);
+    if (it != TGameDetails::scmDefaultGames.end()) {
+        setUrl((*it).hostUrl);
+        setPort((*it).port);
+        mSslTsl = (*it).tlsEnabled;
+    }
+
+    const QString folder = MudletApp::getMudletPath(enums::profileXmlFilesPath, profileName);
+    QDir dir(folder);
+    dir.setSorting(QDir::Time);
+    // Only consider profile saves (*.xml): a crash during a save can leave behind
+    // an empty QSaveFile temporary (e.g. "2026-01-01#12-00-00.xml.AbCdEf") as the
+    // newest file, and loading that instead of the newest real save presents the
+    // profile with all of its triggers/scripts seemingly wiped out
+    QStringList entries = dir.entryList(QStringList{qsl("*.xml")}, QDir::Files, QDir::Time);
+    // pre-install packages when loading this profile for the first time
+    bool preInstallPackages = false;
+    // NB: an explicitly requested saveFileName is honored even when no *.xml
+    // is present - failing to open it then reports a proper load error rather
+    // than silently starting a fresh profile:
+    if (entries.isEmpty() && saveFileName.isEmpty()) {
+        if (!dir.entryList(QDir::Files | QDir::NoDotAndDotDot).isEmpty()) {
+            qWarning().nospace().noquote() << "Host::loadProfileSave(" << profileName << ", ...) WARNING - profile directory \"" << folder
+                                           << "\" contains files but no completed (*.xml) save; treating the profile as new. An interrupted save may have left "
+                                              "a recoverable QSaveFile temporary behind.";
+        }
+        preInstallPackages = true;
+        mLoadedOk = true;
+        mMapInfoContributors.insert(qsl("Short"));
+    } else {
+        QFile file(qsl("%1%2").arg(folder, saveFileName.isEmpty() ? entries.at(0) : saveFileName));
+        if (!file.open(QFile::ReadOnly | QFile::Text)) {
+            mProfileLoadError = QCoreApplication::translate("mudlet", "Could not open profile file: %1").arg(file.errorString());
+            qWarning() << "mudlet: failed to open profile file for reading:" << file.fileName() << file.errorString();
+        }
+        XMLimport importer(this);
+
+        qDebug() << "[LOADING PROFILE]:" << file.fileName();
+        if (auto [success, message] = importer.importPackage(&file); !success) {
+            mProfileLoadError = message;
+            //: %1 is the path and file name (i.e. the location) of the problem fil
+            postMessage(QCoreApplication::translate("mudlet",
+                                                    "[ ERROR ] - Something went wrong loading your Mudlet profile and it could not be loaded.\n"
+                                                    "Try loading an older version in 'Connect - Options - Profile history' or double-check that %1 looks correct.")
+                                .arg(file.fileName()));
+
+            qDebug().nospace().noquote() << "Host::loadProfileSave(" << profileName << ") ERROR - loading \"" << file.fileName() << "\" failed, reason: \"" << message << "\".";
+        } else {
+            mLoadedOk = true;
+        }
+
+        refreshPackageFonts();
+
+        // Is this a new profile created through 'copy profile (settings only)'? install default packages into it
+        if (entries.size() == 1 && entries.first() == QLatin1String("Copied profile (settings only).xml")) {
+            preInstallPackages = true;
+        }
+    }
+
+    if (preInstallPackages) {
+        setupIreDriverBugfix();
+    }
+
+    startSavedLogging();
+    return preInstallPackages;
+}
+
+void Host::startProfileScripts()
+{
+    // enable script compilation (which is off by default)
+    mBlockScriptCompile = false;
+    // This uses the external LuaGlobal.lua file to load all the other external
+    // lua files, including the condenseMapLoad() function needed by the
+    // TMap::audit() method:
+    mLuaInterpreter.loadGlobal();
+    hideMudletsVariables();
+
+    //do modules here
+    QMapIterator<QString, int> it(mModulePriorities);
+    QMap<int, QStringList> moduleOrder;
+    while (it.hasNext()) {
+        it.next();
+        QStringList moduleEntry = moduleOrder[it.value()];
+        moduleEntry << it.key();
+        moduleOrder[it.value()] = moduleEntry;
+    }
+
+    //First load modules with negative number priority
+    QMapIterator<int, QStringList> it2(moduleOrder);
+    while (it2.hasNext() && it2.peekNext().key() < 0) {
+        it2.next();
+        installModulesList(it2.value());
+    }
+
+    mBlockStopWatchCreation = false;
+    // This will build all the scripts in the collection of script items (but
+    // not triggers/aliases/etc) - presumably so that the event handlers
+    // are ready for use.
+    getScriptUnit()->compileAll(true);
+    updateAnsi16ColorsInTable();
+    updateExtendedAnsiColorsInTable();
+
+    //Load rest of modules after scripts
+    while (it2.hasNext()) {
+        it2.next();
+        const QStringList modules = it2.value();
+        installModulesList(modules);
+    }
+}
+
+void Host::installModulesList(const QStringList& modules)
+{
+    for (const auto& module : modules) {
+        QStringList entry = mInstalledModules[module];
+        if (!installPackage(entry[0], enums::PackageModuleType::ModuleFromUI).first) {
+            qWarning() << "Host::installModulesList() WARNING - failed to load module" << module;
+        }
+        //we repeat this step here b/c we use the same installPackage method for initial loading,
+        //where we overwrite the globalSave flag.  This restores saved and loaded packages to their proper flag
+        mInstalledModules[module] = entry;
+    }
+}
+
+void Host::loadMapAndConnect(const bool connect)
+{
+    // Only now are the fonts of the modules and the default packages registered
+    // too, so a family the profile names can be told apart from one that is
+    // merely not loaded yet - and in the GUI the real console exists, so the stand-in
+    // this may pick lands on it and the warning reaches the player.
+    substituteMissingDisplayFont();
+
+    // Now load the default (latest stored) map file:
+    loadMap();
+
+    //NOTE: this is a potential problem if users connect by hand quickly
+    //      and one host has a slower response time as the other one, but
+    //      the worst that can happen is that they have to login manually.
+
+    if (connect) {
+        mTelnet.connectIt(getUrl(), getPort());
+        return;
+    }
+    // no connectIt() on this path, so the telnet parser would otherwise run
+    // on the defaults rather than on the profile's own settings
+    mTelnet.cacheHostSettings();
+
+    const QString infoMsg = QCoreApplication::translate("mudlet", "[  OK  ]  - Profile \"%1\" loaded in offline mode.").arg(getName());
+    postMessage(infoMsg);
+}
+
+void Host::finishProfileLoad()
+{
+    // Now check if we should auto-start the MMCP server, and do so
+    if (getMMCPAutoStartServer()) {
+        if (!mMMCPServer) {
+            initMMCPServer();
+        }
+
+        quint16 port = getMMCPPort();
+
+        const QString infoMsg = QCoreApplication::translate("mudlet", "[ CHAT ]  - Auto-starting MMCP Server on port %1.").arg(port);
+        postMessage(infoMsg);
+
+        mMMCPServer->startServer(port);
+    }
+
+    TEvent event{};
+    event.mArgumentList.append(QLatin1String("sysLoadEvent"));
+    event.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
+    // A non-zero value is how we send a "true" value - which indicates that
+    // this is for a freshly loaded profile (and NOT one after a resetProfile()):
+    event.mArgumentList.append(QString::number(1));
+    event.mArgumentTypeList.append(ARGUMENT_TYPE_BOOLEAN);
+    raiseEvent(event);
+    mIsProfileLoadingSequence = false;
 }
 
 void Host::closeChildren()
