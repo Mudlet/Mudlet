@@ -71,6 +71,9 @@ public:
     ModernGLWidget(TMap*, Host*, QWidget* parent = nullptr);
     ~ModernGLWidget() override;
 
+    // The environment variables that made Qt compose every window with an API other than OpenGL
+    static QStringList rhiForcingVariables();
+
     void wheelEvent(QWheelEvent* e) override;
     void setViewCenter(int, int, int, int);
     // Takes over another view's area and center; roomId is the player room that view last followed
@@ -281,7 +284,7 @@ private:
     void renderText(const QString& text, float x, float y);
     void setupBuffers();
     void cleanup();
-    void showFailure(const QString& message);
+    void showFailure(const QString& message, const QString& advice = QString());
     GLuint symbolTexture(const QString& symbol, const QColor& color);
     // A disc filling the texture, shaded by a radial gradient over its radius
     GLuint discTexture(const QString& key, const QGradientStops& stops);
@@ -293,7 +296,7 @@ private:
     GLuint exitMarkerTexture(const TRoom& room, const QColor& roomColor);
     // Text on a clear background; size is set to the texture's size in pixels
     GLuint textTexture(const QString& key, const QString& text, const QFont& font, const QFontMetricsF& metrics, const QColor& color, QSize& size);
-    void reportContextFailure();
+    void reportContextCreationFailure();
     bool contextCreationFailed() const;
     void startSmoothTransition(int targetAID, int targetX, int targetY, int targetZ);
     void stopSmoothTransition();

@@ -37,8 +37,11 @@
 #include <QOpenGLContext>
 #include <QOpenGLWidget>
 #include <QPointer>
+#include <QRhiWidget>
+#include <QScopeGuard>
 #include <QSignalSpy>
 #include <QTemporaryDir>
+#include <QVBoxLayout>
 #include <QWindow>
 #include <QtTest/QtTest>
 #include <chrono>
@@ -55,6 +58,9 @@
 #include "ctelnet.h"
 #include "dlgConnectionProfiles.h"
 #include "dlgMapper.h"
+#if defined(INCLUDE_3DMAPPER)
+#include "glwidget_integration.h"
+#endif
 #include "mudlet.h"
 
 #include "GroupedTest.h"
@@ -96,6 +102,39 @@ private:
         }
         return false;
     }
+
+    // showFailure() logs each failure it shows, so this still holds one whose label initializeGL hid again
+    static inline QStringList smModernViewWarnings;
+    static inline QtMessageHandler smPreviousMessageHandler = nullptr;
+    static void recordModernViewWarnings(QtMsgType type, const QMessageLogContext& context, const QString& message)
+    {
+        if (type == QtWarningMsg && message.startsWith(qsl("ModernGLWidget: "))) {
+            smModernViewWarnings.append(message);
+        }
+        smPreviousMessageHandler(type, context, message);
+    }
+    [[nodiscard]] static auto recordModernViewWarningsForThisScope()
+    {
+        smModernViewWarnings.clear();
+        smPreviousMessageHandler = qInstallMessageHandler(recordModernViewWarnings);
+        return qScopeGuard([] {
+            qInstallMessageHandler(smPreviousMessageHandler);
+        });
+    }
+    static inline const QString smFalseFailure = qsl("could not create an OpenGL 3.3 context");
+    // A driver may give the modern 3D view a working context it still rightly refuses
+    static QString rightfulRefusal(QOpenGLWidget* pView)
+    {
+        const QSurfaceFormat format = pView->context()->format();
+        if (format.version() < qMakePair(3, 3)) {
+            return qsl("the modern 3D view got OpenGL %1.%2 and rightly refused it, so a false context failure goes unchecked here").arg(format.majorVersion()).arg(format.minorVersion());
+        }
+        if (!smModernViewWarnings.filter(qsl("could not compile its shaders")).isEmpty()) {
+            return qsl("this driver rejected the modern 3D view's shaders, so a false context failure goes unchecked here");
+        }
+        return {};
+    }
+    static QByteArray warningsSoFar() { return smModernViewWarnings.isEmpty() ? QByteArrayLiteral("no warnings") : smModernViewWarnings.join(u'\n').toUtf8(); }
 
 public:
     // Mirrors src/main.cpp, which shares GL contexts application-wide only on FreeBSD; with sharing,
@@ -344,6 +383,7 @@ private slots:
         mudlet::self()->slot_showMapperDialog();
         QDockWidget* pDock = mudlet::self()->getMainWindowDockWidget(qsl("map_%1").arg(mHostname));
         QVERIFY2(pDock && pDock->widget(), "slot_showMapperDialog() created no map dock, so this case covers nothing");
+        const auto stopRecording = recordModernViewWarningsForThisScope();
         for (const bool modern : {false, true}) {
             QVERIFY(mpHost->getLuaInterpreter()->compileAndExecuteScript(qsl("assert(setConfig('experiment.3dmap.modernmapper', %1))\n"
                                                                              "assert(setConfig('show3dMapView', true))")
@@ -357,9 +397,13 @@ private slots:
             const bool valid = pView->isValid();
             if (modern && !valid) {
                 QTRY_VERIFY2(pView->findChild<QLabel*>() && pView->findChild<QLabel*>()->isVisible(), "the modern 3D view did not say it could not create a context");
+                QVERIFY2(smModernViewWarnings.size() == 1 && smModernViewWarnings.constFirst().contains(smFalseFailure), warningsSoFar().constData());
             } else if (modern) {
                 qApp->processEvents();
-                QVERIFY2(!pView->findChild<QLabel*>() || !pView->findChild<QLabel*>()->isVisible(), "the 3D view has a working context but says it could not create one");
+                if (const QString refusal = rightfulRefusal(pView); !refusal.isEmpty()) {
+                    QSKIP(qPrintable(refusal));
+                }
+                QVERIFY2(smModernViewWarnings.isEmpty(), warningsSoFar().constData());
             }
 
             pView->resize(pView->size() + QSize(10, 10));
@@ -370,12 +414,135 @@ private slots:
             if (valid) {
                 // Qt itself may rebuild a context that has not been composed yet when the view is shown again
                 QVERIFY2(pView->context() && pView->isValid(), "the 3D view was left without a working context");
-                QVERIFY2(!pView->findChild<QLabel*>() || !pView->findChild<QLabel*>()->isVisible(), "the 3D view has a working context but says it could not create one");
+                QVERIFY2(smModernViewWarnings.isEmpty(), warningsSoFar().constData());
             } else {
                 QVERIFY2(pView->context() == pFirstContext, "the 3D view asked again for a context it could not create");
                 QVERIFY(!pView->isValid());
+                if (modern) {
+                    QVERIFY2(smModernViewWarnings.size() == 1 && smModernViewWarnings.constFirst().contains(smFalseFailure), warningsSoFar().constData());
+                }
             }
         }
+    }
+
+    // Geyser hides an embedded map by shrinking it to nothing; a view with no size has not asked
+    // for a context yet, so it must not say one failed
+    void test_aZeroSize3DViewReportsNoContextFailure()
+    {
+        mudlet::self()->show();
+        QVERIFY(mpHost->getLuaInterpreter()->compileAndExecuteScript(qsl("assert(setConfig('experiment.3dmap.modernmapper', true))")));
+        auto [created, message] = mpHost->mainConsoleView()->createMapper(QString(), 10, 10, 0, 0);
+        QVERIFY2(created, qPrintable(message));
+        const auto stopRecording = recordModernViewWarningsForThisScope();
+        QVERIFY(mpHost->getLuaInterpreter()->compileAndExecuteScript(qsl("assert(setConfig('show3dMapView', true))")));
+        qApp->processEvents();
+        auto* pView = mpHost->mpMap->mapper()->findChild<QOpenGLWidget*>(qsl("glWidget"));
+        QVERIFY2(pView && pView->inherits("ModernGLWidget"), "the modern renderer did not make the 3D view, so this case covers nothing");
+        QVERIFY2(pView->isVisible() && pView->size().isEmpty() && !pView->context(), "the 3D view had a size or a context, so this case covers nothing");
+        QVERIFY2(smModernViewWarnings.isEmpty(), "a 3D view with no size said it could not get a context it never asked for");
+
+        auto [resized, resizeMessage] = mpHost->mainConsoleView()->createMapper(QString(), 10, 10, 400, 300);
+        QVERIFY2(resized, qPrintable(resizeMessage));
+        QTRY_VERIFY2(pView->context(), "the 3D view asked for no context once it had a size");
+        if (pView->isValid()) {
+            qApp->processEvents();
+            if (const QString refusal = rightfulRefusal(pView); !refusal.isEmpty()) {
+                QSKIP(qPrintable(refusal));
+            }
+            QVERIFY2(smModernViewWarnings.isEmpty(), warningsSoFar().constData());
+        } else {
+            QTRY_VERIFY2(pView->findChild<QLabel*>() && pView->findChild<QLabel*>()->isVisible(), "the 3D view did not say it could not create a context once it had a size");
+            QVERIFY2(smModernViewWarnings.size() == 1 && smModernViewWarnings.constFirst().contains(smFalseFailure), warningsSoFar().constData());
+        }
+    }
+
+    // Qt gives an OpenGL view no context at all in a window composed with another graphics API. A Null
+    // QRhiWidget makes the window compose that way, standing in for the Direct3D, Metal or Vulkan that
+    // QT_WIDGETS_RHI forces; platforms with no QRhi, such as offscreen, ignore it
+    void test_a3DViewInAWindowNotDrawnWithOpenGLSaysSo()
+    {
+        QVERIFY(mpHost->getLuaInterpreter()->compileAndExecuteScript(qsl("assert(setConfig('experiment.3dmap.modernmapper', true))")));
+        QWidget window;
+        auto* pLayout = new QVBoxLayout(&window);
+        auto* pOtherApi = new QRhiWidget();
+        pOtherApi->setApi(QRhiWidget::Api::Null);
+        pLayout->addWidget(pOtherApi);
+        QOpenGLWidget* pSized = GLWidgetFactory::createGLWidget(mpHost->mpMap.data(), mpHost);
+        QOpenGLWidget* pHidden = GLWidgetFactory::createGLWidget(mpHost->mpMap.data(), mpHost);
+        QVERIFY2(pSized && pSized->inherits("ModernGLWidget") && pHidden && pHidden->inherits("ModernGLWidget"), "the modern renderer did not make the 3D views, so this case covers nothing");
+        pLayout->addWidget(pSized);
+        // As Geyser hides an embedded map
+        pHidden->setFixedSize(0, 0);
+        pLayout->addWidget(pHidden);
+        window.resize(400, 600);
+        const auto stopRecording = recordModernViewWarningsForThisScope();
+        window.show();
+        const auto noticeShowing = [](QOpenGLWidget* pView) {
+            return pView->findChild<QLabel*>() && pView->findChild<QLabel*>()->isVisible();
+        };
+        QTRY_VERIFY2(pSized->context() || noticeShowing(pSized), "a 3D view shown with a size got no context and showed no notice");
+        if (pSized->context()) {
+            QSKIP("this platform composed the window without a QRhi, so the 3D view got a context and this case goes unchecked here");
+        }
+        QVERIFY2(!pSized->size().isEmpty(), "the 3D view had no size, so this case covers nothing");
+        QVERIFY2(smModernViewWarnings.size() == 1 && smModernViewWarnings.filter(smFalseFailure).isEmpty(), warningsSoFar().constData());
+        // Qt refuses the classic 3D view in this window too
+        const QString classicAdvice = qsl("experiment.3dmap.modernmapper");
+        QVERIFY2(!pSized->findChild<QLabel*>()->text().contains(classicAdvice), qPrintable(pSized->findChild<QLabel*>()->text()));
+
+        // Lets the deferred show checks run, as the notice above may have come from the resize that showing sends first
+        qApp->processEvents();
+        QVERIFY2(pHidden->isVisible() && pHidden->size().isEmpty() && !noticeShowing(pHidden), "a 3D view with no size said it could not get a context it never asked for");
+        // Values Qt ignores, so a QRhiWidget, not the environment, is what drew this window without OpenGL
+        QVERIFY2(qEnvironmentVariableIsEmpty("QT_WIDGETS_RHI") && qEnvironmentVariableIsEmpty("QT_WIDGETS_RHI_BACKEND"), "the environment already sets a QRhi variable, so this case covers nothing");
+        qputenv("QT_WIDGETS_RHI", QByteArrayLiteral("0"));
+        qputenv("QT_WIDGETS_RHI_BACKEND", QByteArrayLiteral("vulkan"));
+        const auto unsetIgnored = qScopeGuard([] {
+            qunsetenv("QT_WIDGETS_RHI");
+            qunsetenv("QT_WIDGETS_RHI_BACKEND");
+        });
+        pHidden->setFixedSize(400, 300);
+        QTRY_VERIFY2(noticeShowing(pHidden), "a 3D view given a size got no context and showed no notice");
+        QVERIFY2(!pHidden->context() && smModernViewWarnings.size() == 2, warningsSoFar().constData());
+        const QString notice = pHidden->findChild<QLabel*>()->text();
+        QVERIFY2(!notice.contains(qsl("QT_WIDGETS_RHI")) && !notice.contains(classicAdvice), qPrintable(notice));
+    }
+
+    // The notice blames only a variable Qt acted on; Qt reads its own copy at startup, so this reaches only the notice
+    void test_theNoticeNamesOnlyTheVariablesQtHonours()
+    {
+        const QList<QByteArray> names{QByteArrayLiteral("QT_WIDGETS_RHI"), QByteArrayLiteral("QT_WIDGETS_RHI_BACKEND"), QByteArrayLiteral("QT_WIDGETS_HIGHDPI_DOWNSCALE")};
+        for (const QByteArray& name : names) {
+            QVERIFY2(qEnvironmentVariableIsEmpty(name.constData()), "the environment already sets a QRhi variable, so this case covers nothing");
+        }
+        const auto unsetAll = qScopeGuard([&names] {
+            for (const QByteArray& name : names) {
+                qunsetenv(name.constData());
+            }
+        });
+        const auto forcing = [&names](const QList<const char*>& values) {
+            for (qsizetype i = 0; i < names.size(); ++i) {
+                if (values.at(i)) {
+                    qputenv(names.at(i).constData(), QByteArray(values.at(i)));
+                } else {
+                    qunsetenv(names.at(i).constData());
+                }
+            }
+            return ModernGLWidget::rhiForcingVariables();
+        };
+        QCOMPARE(forcing({"0", "vulkan", "0"}), QStringList());
+        QCOMPARE(forcing({nullptr, "vulkan", nullptr}), QStringList());
+        QCOMPARE(forcing({"1", "opengl", nullptr}), QStringList());
+#if QT_CONFIG(vulkan)
+        QCOMPARE(forcing({"1", "vulkan", nullptr}), (QStringList{qsl("QT_WIDGETS_RHI"), qsl("QT_WIDGETS_RHI_BACKEND")}));
+        QCOMPARE(forcing({nullptr, "vulkan", "1"}), (QStringList{qsl("QT_WIDGETS_HIGHDPI_DOWNSCALE"), qsl("QT_WIDGETS_RHI_BACKEND")}));
+#endif
+#if defined(Q_OS_WIN) || QT_CONFIG(metal)
+        QCOMPARE(forcing({"1", nullptr, nullptr}), QStringList{qsl("QT_WIDGETS_RHI")});
+#else
+        // Elsewhere Qt composes with OpenGL unless told otherwise
+        QCOMPARE(forcing({"1", nullptr, nullptr}), QStringList());
+#endif
     }
 
     // Replacing a 3D view in the same event-loop turn that inserted it must not let the show
