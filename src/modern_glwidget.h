@@ -140,6 +140,8 @@ public:
     TMap* mpMap = nullptr;
 
 private:
+    friend class Map3DViewSyncTest;
+
     // Shader and rendering resources
     ShaderManager mShaderManager;
     QOpenGLBuffer mVertexBuffer;

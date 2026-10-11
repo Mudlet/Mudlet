@@ -361,14 +361,18 @@ private slots:
         pMapper->show3DView(true);
         auto* pModern = qobject_cast<ModernGLWidget*>(pMapper->glWidget);
         QVERIFY(pModern);
-        if (!pModern->failureMessage().isEmpty()) {
-            QSKIP("the modern 3D view could not start here, so it refuses before it looks at grid mode");
-        }
-        pMapper->slider_scale->setValue(0);
+        // Stands in for a view that started, where there is no GL: the distance is camera state, not drawing
+        const QString failure = pModern->mFailureMessage;
+        pModern->mFailureMessage.clear();
+        const auto restoreFailure = qScopeGuard([pModern, failure]() {
+            pModern->mFailureMessage = failure;
+        });
+        pModern->mCameraController.setScale(CameraController::scmMaxDistance);
         const auto [moved, refusal] = pMapper->set3DViewCameraPosition(0.5f, 45.0f, 270.0f);
         QVERIFY(!moved);
         QCOMPARE(refusal, qsl("the area shown in the 3D view is in grid mode, which always looks straight down, so only the distance was applied"));
-        QVERIFY2(pMapper->slider_scale->value() > 0, "the 3D view did not zoom in");
+        QCOMPARE(pModern->mCameraController.getScale(), 0.5f);
+        QVERIFY2(pModern->mDistanceRequested, "the next paint would frame the area over the distance asked for");
     }
 
     // The view only shows why it could not start, so moving its camera would do nothing; asked with no event loop
@@ -377,7 +381,14 @@ private slots:
     {
         dlgMapper* pMapper = mapperShowing2DAtThePlayer();
         QVERIFY(pMapper);
+        // A fresh view, whose failure no earlier test's event loop can have reported; recreate3DView() keeps a
+        // widget of the right kind, so go by way of the classic one
+        const QPointer<QOpenGLWidget> pOldWidget = pMapper->glWidget;
+        QVERIFY(mpHost->setExperimentEnabled(qsl("experiment.3dmap.modernmapper"), false).first);
         pMapper->recreate3DView();
+        QVERIFY(mpHost->setExperimentEnabled(qsl("experiment.3dmap.modernmapper"), true).first);
+        pMapper->recreate3DView();
+        QVERIFY2(pMapper->glWidget != pOldWidget, "the 3D view was not made afresh");
         pMapper->show3DView(true);
         auto* pModern = qobject_cast<ModernGLWidget*>(pMapper->glWidget);
         QVERIFY(pModern);
