@@ -115,26 +115,97 @@ void ModernGLWidget::showEvent(QShowEvent* event)
     QOpenGLWidget::showEvent(event);
     // Qt creates the context once the widget is laid out; if that failed, initializeGL never runs to say so
     QTimer::singleShot(0, this, [this]() {
-        if (isVisible() && !context() && !size().isEmpty()) {
-            // Qt drops a context not yet composed when the view is shown (switching renderers does this) and rebuilds it
-            // only on a later resize or paint; resize synchronously so the check below sees the result, which update() would not
+        if (!isVisible()) {
+            return;
+        }
+        if (!context() && !size().isEmpty()) {
+            // Qt can drop a context not yet composed when the view is shown and, with no RHI yet, rebuild it only
+            // on a later resize or paint; resize synchronously so the check below sees the result, which update() would not
             QResizeEvent resize(size(), size());
             QCoreApplication::sendEvent(this, &resize);
         }
-        if (isVisible() && !isValid()) {
-            reportContextFailure();
-        }
+        reportContextCreationFailure();
     });
 }
 
 // Each event that tries for a context reports a failure straight away, so a script that shows the view and moves
-// its camera in one go is refused; showEvent()'s timer is only a fallback, a turn of the event loop later
-void ModernGLWidget::reportContextFailure()
+// its camera in one go is refused; showEvent()'s timer is only a fallback, a turn of the event loop later.
+// Qt asks for a context on any resize to a non-empty size, so a view with no size, such as an embedded map
+// Geyser has hidden, has not asked yet, while a sized view with none was refused one
+void ModernGLWidget::reportContextCreationFailure()
 {
-    if (mFailureMessage.isEmpty()) {
+    if (!mFailureMessage.isEmpty() || size().isEmpty()) {
+        return;
+    }
+    if (!context()) {
+        // Qt makes no context at all when the window is composed with Direct3D, Metal or Vulkan, and refuses the
+        // classic 3D view the same way, so only undoing what forced it helps
+        const QStringList forcing = rhiForcingVariables();
+        //: Shown in place of the 3D map when the window is drawn with another graphics API, such as Direct3D, Metal or Vulkan, so the modern 3D mapper cannot get an OpenGL context
+        const QString message = tr("The modern 3D mapper needs OpenGL, but this window is drawn with another graphics API.");
+        if (forcing.isEmpty()) {
+            //: Second paragraph of the message shown in place of the 3D map when the window is drawn with another graphics API; the classic 3D view is refused the same way
+            showFailure(message, tr("The classic 3D view cannot draw here either, so use the 2D map."));
+        } else if (forcing.size() == 1) {
+            //: Second paragraph of the message shown in place of the 3D map when one environment variable makes Qt draw the window with another graphics API; %1 is its name, such as QT_WIDGETS_RHI, keep it as written
+            showFailure(message,
+                        tr("%1 is set in Mudlet's environment, which makes Qt draw this window that way, for the classic 3D view too. Remove it and restart Mudlet to use either 3D view; until then, "
+                           "use the 2D map.")
+                                .arg(forcing.constFirst()));
+        } else {
+            //: Second paragraph of the message shown in place of the 3D map when several environment variables make Qt draw the window with another graphics API; %1 is their names separated by commas, such as QT_WIDGETS_RHI, QT_WIDGETS_RHI_BACKEND, keep them as written
+            showFailure(message,
+                        tr("%1 are set in Mudlet's environment, which make Qt draw this window that way, for the classic 3D view too. Remove them and restart Mudlet to use either 3D view; until "
+                           "then, use the 2D map.")
+                                .arg(forcing.join(qsl(", "))));
+        }
+    } else if (!isValid()) {
         //: Shown in place of the 3D map when the graphics driver cannot create the OpenGL context the modern 3D mapper needs
         showFailure(tr("The modern 3D mapper could not create an OpenGL 3.3 context on this system."));
     }
+}
+
+// Mirrors QBackingStoreRhiSupport::checkForceRhi(), which Qt evaluates once at startup; Mudlet never changes these
+QStringList ModernGLWidget::rhiForcingVariables()
+{
+    QStringList enabling;
+    for (const char* name : {"QT_WIDGETS_RHI", "QT_WIDGETS_HIGHDPI_DOWNSCALE"}) {
+        if (qEnvironmentVariableIntValue(name)) {
+            enabling << QString::fromLatin1(name);
+        }
+    }
+    if (enabling.isEmpty()) {
+        return {};
+    }
+#if defined(Q_OS_WIN) || QT_CONFIG(metal)
+    bool openGL = false;
+#else
+    bool openGL = true;
+#endif
+    QStringList otherApis;
+#if QT_CONFIG(vulkan)
+    otherApis << qsl("vulkan");
+#endif
+#if defined(Q_OS_WIN)
+    otherApis << qsl("d3d11") << qsl("d3d") << qsl("d3d12");
+#endif
+#if QT_CONFIG(metal)
+    otherApis << qsl("metal");
+#endif
+    const QString backend = qEnvironmentVariable("QT_WIDGETS_RHI_BACKEND");
+    const bool backendChoseAnotherApi = otherApis.contains(backend);
+    if (backend == qsl("opengl") || backend == qsl("gl")) {
+        openGL = true;
+    } else if (backendChoseAnotherApi) {
+        openGL = false;
+    }
+    if (openGL) {
+        return {};
+    }
+    if (backendChoseAnotherApi) {
+        enabling << qsl("QT_WIDGETS_RHI_BACKEND");
+    }
+    return enabling;
 }
 
 // QOpenGLWidget retries a context it could not create on every show, resize and paint, and each retry
@@ -155,7 +226,7 @@ bool ModernGLWidget::event(QEvent* event)
     }
     const bool handled = QOpenGLWidget::event(event);
     if (contextCreationFailed()) {
-        reportContextFailure();
+        reportContextCreationFailure();
     }
     return handled;
 }
@@ -175,9 +246,7 @@ void ModernGLWidget::resizeEvent(QResizeEvent* event)
         return;
     }
     QOpenGLWidget::resizeEvent(event);
-    if (contextCreationFailed()) {
-        reportContextFailure();
-    }
+    reportContextCreationFailure();
 }
 
 void ModernGLWidget::paintEvent(QPaintEvent* event)
@@ -187,11 +256,11 @@ void ModernGLWidget::paintEvent(QPaintEvent* event)
     }
     QOpenGLWidget::paintEvent(event);
     if (contextCreationFailed()) {
-        reportContextFailure();
+        reportContextCreationFailure();
     }
 }
 
-void ModernGLWidget::showFailure(const QString& message)
+void ModernGLWidget::showFailure(const QString& message, const QString& advice)
 {
     mFailureMessage = message;
     qWarning().noquote() << "ModernGLWidget:" << message;
@@ -206,10 +275,9 @@ void ModernGLWidget::showFailure(const QString& message)
         layout->addWidget(mpFailureLabel);
     }
     //: Second paragraph of the message shown in place of the 3D map when the modern 3D mapper cannot run; keep setConfig("experiment.3dmap.modernmapper", false) and the word true exactly as written, they are Lua code the user types
-    mpFailureLabel->setText(qsl("%1\n\n%2")
-                                    .arg(message,
-                                         tr("Use setConfig(\"experiment.3dmap.modernmapper\", false) to try the classic 3D view; if that stays blank too, use the 2D map. Setting it back to true "
-                                            "tries the modern one again.")));
+    const QString tryClassic = tr("Use setConfig(\"experiment.3dmap.modernmapper\", false) to try the classic 3D view; if that stays blank too, use the 2D map. Setting it back to true "
+                                  "tries the modern one again.");
+    mpFailureLabel->setText(qsl("%1\n\n%2").arg(message, advice.isEmpty() ? tryClassic : advice));
     mpFailureLabel->show();
 }
 
