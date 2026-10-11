@@ -688,14 +688,36 @@ private slots:
         pModern->setViewCenter(mPlayerAreaId, 3, 0, 0);
         // The eased glide covers about half the way in its first tick, leaving the view between whole steps
         QVERIFY(QMetaObject::invokeMethod(pModern, "onCameraAnimationTick"));
-        const QPoint east = pixelOfRoom(pModern, kEastRoomId);
+        const QPoint player = pixelOfRoom(pModern, kPlayerRoomId);
+        // Off the middle of the room the way the view glides, where the view stopping on a whole step puts the
+        // pointer past the half-way mark to the next one; spacing spans two grid steps
+        const QPoint east = pixelOfRoom(pModern, kEastRoomId) + QPoint(qRound(spacing * 0.075), 0);
         QVERIFY2(east.x() >= 0, "the room is not on screen");
 
-        drag(pModern, east, east + QPoint(spacing, 0), Qt::NoModifier);
+        sendMouse(pModern, QEvent::MouseButtonPress, east, Qt::LeftButton);
+        sendMouse(pModern, QEvent::MouseMove, east + QPoint(1, 0), Qt::LeftButton);
+        QCOMPARE(roomPlace(kEastRoomId), QVector3D(2, 0, 0));
+        sendMouse(pModern, QEvent::MouseMove, east + QPoint(spacing, 0), Qt::LeftButton);
+        sendMouse(pModern, QEvent::MouseButtonRelease, east + QPoint(spacing, 0), Qt::NoButton);
         QTest::qWait(150);
         QCOMPARE(roomPlace(kEastRoomId), QVector3D(4, 0, 0));
         const float stoppedAt = pModern->viewCenter().x();
         QVERIFY2(stoppedAt > 0.0f && stoppedAt < 3.0f, qPrintable(qsl("the view went on to x=%1").arg(stoppedAt)));
+        QVERIFY2(qAbs(pixelOfRoom(pModern, kPlayerRoomId).x() - player.x()) > spacing / 8, "the glide stopped too close to a whole step to tell");
+    }
+
+    // A Ctrl click part-way through a glide toggles the room seen under the pointer
+    void test_aCtrlClickPartWayThroughAGlideTogglesTheRoomSeenThere()
+    {
+        ModernGLWidget* pModern = viewAtThePlayer(true);
+        QVERIFY(pModern);
+        pModern->setViewCenter(mPlayerAreaId, 3, 0, 0);
+        QVERIFY(QMetaObject::invokeMethod(pModern, "onCameraAnimationTick"));
+        const QPoint east = pixelOfRoom(pModern, kEastRoomId);
+        QVERIFY2(east.x() >= 0, "the room is not on screen");
+
+        QTest::mouseClick(pModern, Qt::LeftButton, Qt::ControlModifier, east);
+        QCOMPARE(selection(), QSet<int>{kEastRoomId});
     }
 
     // A drag cut short by hiding the view, as Edit in 2D does, is over: its moves are announced and later

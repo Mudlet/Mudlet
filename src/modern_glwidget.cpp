@@ -1990,15 +1990,19 @@ void ModernGLWidget::mousePressEvent(QMouseEvent* event)
         const int roomId = roomAt(mPressPosition, false);
         const bool moveRoom = roomId && !(event->modifiers() & (Qt::ControlModifier | Qt::ShiftModifier));
         const int rectangleRoomId = roomId ? roomId : roomAt(mPressPosition);
+        QPointF snap;
         if (mCameraSmoothAnimating) {
             // Stopped where it is, so a drag does not glide on with it
             stopSmoothTransition();
             mMapCenterX = qRound(mCurrentAnimationX);
             mMapCenterY = qRound(mCurrentAnimationY);
             mMapCenterZ = qRound(mCurrentAnimationZ);
+            snap = QPointF(mMapCenterX - mCurrentAnimationX, mMapCenterY - mCurrentAnimationY);
         }
         if (moveRoom) {
             startRoomMove(roomId);
+            // The pointer keeps its place on the room, though the view stopping on a whole step moved under it
+            mRoomMoveLastPoint += snap;
         } else {
             mp2DMap->beginRectangleSelection(rectangleRoomId, event->modifiers());
             mRectangleSelecting = true;
