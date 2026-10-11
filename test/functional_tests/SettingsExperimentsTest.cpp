@@ -171,6 +171,11 @@ private slots:
         QVERIFY2(pCard, "there is no Experiments card");
         QScrollArea* pAdvanced = TestSettings::pageOf(mpPreferences, qsl("advanced"));
         QVERIFY2(pAdvanced && pAdvanced->isAncestorOf(pCard), "the Experiments card is not on the Advanced page");
+#if defined(INCLUDE_3DMAPPER)
+        QVERIFY2(!pCard->isHidden(), "the Experiments card is hidden");
+#else
+        QVERIFY2(pCard->isHidden(), "the Experiments card is offered in a build where none of them does anything");
+#endif
 
         const QStringList keys = mpHost->getValidExperiments();
         QVERIFY(!keys.isEmpty());

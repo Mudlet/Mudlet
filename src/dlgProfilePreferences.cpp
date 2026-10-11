@@ -1783,6 +1783,10 @@ void dlgProfilePreferences::buildExperimentsCard()
         pCardLayout->addWidget(pDescription);
         mExperimentCheckBoxes.insert(key, pCheckBox);
     }
+#if !defined(INCLUDE_3DMAPPER)
+    // Every experiment so far only changes the 3D map, which this build leaves out
+    mpCard_experiments->hide();
+#endif
 
     // Mirrors Host::setExperimentEnabled(), which switches the rest of a group off, so the
     // dialog never shows two of one group ticked

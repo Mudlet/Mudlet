@@ -1927,9 +1927,8 @@ describe("Tests Other.lua functions", function()
         assert.are.same(sorted, list)
       end)
 
-      -- Only keys sharing the part after "experiment." are a group: a key with
-      -- no further dot is in none, and "experiment.3dmap" is not a prefix of
-      -- "experiment.3d-player-icon". The settings dialog mirrors this.
+      -- "experiment.3d-player-icon" is in no group, so the settings dialog
+      -- must not untick it when the modern mapper is switched on
       it("lets experiments outside a shared group be on together", function()
         local mapper = "experiment.3dmap.modernmapper"
         local icon = "experiment.3d-player-icon"
