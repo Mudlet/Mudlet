@@ -562,8 +562,7 @@ void ModernGLWidget::paintGL()
 
     glEnable(GL_MULTISAMPLE);
 
-    // Not while rooms are dragged, as they follow the pointer across the map and would go along with the view
-    if (mShiftMode && !mSecondaryView && !mMovingRooms && (mRID != mpMap->mRoomIdHash.value(mpMap->mProfileName) || mpMap->mNewMove)) {
+    if (mShiftMode && followingPlayer()) {
         mShiftMode = false;
     }
 
@@ -1727,7 +1726,11 @@ bool ModernGLWidget::followingPlayer() const
     if (mSecondaryView) {
         return false;
     }
-    return !mShiftMode || !mpMap || mRID != mpMap->mRoomIdHash.value(mpMap->mProfileName) || mpMap->mNewMove;
+    if (!mShiftMode || !mpMap) {
+        return true;
+    }
+    // Not while rooms are dragged, as they follow the pointer across the map and would go along with the view
+    return !mMovingRooms && (mRID != mpMap->mRoomIdHash.value(mpMap->mProfileName) || mpMap->mNewMove);
 }
 
 void ModernGLWidget::followPlayer()
@@ -2043,19 +2046,22 @@ void ModernGLWidget::mousePressEvent(QMouseEvent* event)
     // As on the 2D map in editing mode: a drag from a room moves the selection and one from empty space,
     // or with Ctrl or Shift, draws a selection rectangle; Alt keeps the viewing mode's drags to pan and orbit
     if (event->button() == Qt::LeftButton && editingMap() && !event->modifiers().testFlag(Qt::AltModifier)) {
+        // Picked before a glide stops, as stopping it snaps the view to whole grid steps away from what was seen.
+        // Only a room right under the pointer is picked up, so a drag beside rooms seen small draws a rectangle
+        const int roomId = roomAt(mPressPosition, false);
+        const bool moveRoom = roomId && !(event->modifiers() & (Qt::ControlModifier | Qt::ShiftModifier));
+        const int rectangleRoomId = roomId ? roomId : roomAt(mPressPosition);
         if (mCameraSmoothAnimating) {
-            // Stopped where it is, so the press picks what is under the pointer and a drag does not glide on with it
+            // Stopped where it is, so a drag does not glide on with it
             stopSmoothTransition();
             mMapCenterX = qRound(mCurrentAnimationX);
             mMapCenterY = qRound(mCurrentAnimationY);
             mMapCenterZ = qRound(mCurrentAnimationZ);
         }
-        // Only a room right under the pointer is picked up, so a drag beside rooms seen small draws a rectangle
-        const int roomId = roomAt(mPressPosition, false);
-        if (roomId && !(event->modifiers() & (Qt::ControlModifier | Qt::ShiftModifier))) {
+        if (moveRoom) {
             startRoomMove(roomId);
         } else {
-            mp2DMap->beginRectangleSelection(roomId ? roomId : roomAt(mPressPosition), event->modifiers());
+            mp2DMap->beginRectangleSelection(rectangleRoomId, event->modifiers());
             mRectangleSelecting = true;
             mRectangleDragged = false;
             mSelectionRectangle = QRect(mPressPosition, QSize());

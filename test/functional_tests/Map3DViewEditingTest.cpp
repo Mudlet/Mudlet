@@ -653,6 +653,8 @@ private slots:
 
         drag(pModern, beside, beside + QPoint(30, 30), Qt::NoModifier);
         QCOMPARE(roomPlace(kEastRoomId), QVector3D(2, 0, 0));
+        QTest::mouseClick(pModern, Qt::LeftButton, Qt::NoModifier, beside);
+        QCOMPARE(selection(), QSet<int>{kEastRoomId});
     }
 
     // A press while the view still glides to where it was sent stops it where it is, so the rooms dragged stay
@@ -676,21 +678,61 @@ private slots:
         QCOMPARE(pModern->viewCenter(), QVector3D(0, 0, 0));
     }
 
+    // Part-way through a glide, a press takes the room seen under the pointer, though the glide stops on a whole step
+    void test_aPressPartWayThroughAGlideTakesTheRoomSeenThere()
+    {
+        ModernGLWidget* pModern = viewAtThePlayer(true);
+        QVERIFY(pModern);
+        const int spacing = pixelOfRoom(pModern, kEastRoomId).x() - pixelOfRoom(pModern, kPlayerRoomId).x();
+        QVERIFY(spacing > 20);
+        pModern->setViewCenter(mPlayerAreaId, 3, 0, 0);
+        // The eased glide covers about half the way in its first tick, leaving the view between whole steps
+        QVERIFY(QMetaObject::invokeMethod(pModern, "onCameraAnimationTick"));
+        const QPoint east = pixelOfRoom(pModern, kEastRoomId);
+        QVERIFY2(east.x() >= 0, "the room is not on screen");
+
+        drag(pModern, east, east + QPoint(spacing, 0), Qt::NoModifier);
+        QTest::qWait(150);
+        QCOMPARE(roomPlace(kEastRoomId), QVector3D(4, 0, 0));
+        const float stoppedAt = pModern->viewCenter().x();
+        QVERIFY2(stoppedAt > 0.0f && stoppedAt < 3.0f, qPrintable(qsl("the view went on to x=%1").arg(stoppedAt)));
+    }
+
+    // A drag cut short by hiding the view, as Edit in 2D does, is over: its moves are announced and later
+    // moves with the button held, once the view is back, move nothing
+    void test_hidingTheViewEndsTheDrag()
+    {
+        ModernGLWidget* pModern = viewAtThePlayer(true);
+        QVERIFY(pModern);
+        const QPoint east = pixelOfRoom(pModern, kEastRoomId);
+        const int spacing = east.x() - pixelOfRoom(pModern, kPlayerRoomId).x();
+        QVERIFY(spacing > 20);
+
+        QSignalSpy areaChanged(map(), &TMap::signal_areaChanged);
+        sendMouse(pModern, QEvent::MouseButtonPress, east, Qt::LeftButton);
+        sendMouse(pModern, QEvent::MouseMove, east + QPoint(0, spacing), Qt::LeftButton);
+        QCOMPARE(roomPlace(kEastRoomId), QVector3D(2, -2, 0));
+        map()->mapper()->show3DView(false);
+        QTRY_VERIFY2(areaChanged.contains(QVariantList{mPlayerAreaId}), "the other views were not told the area changed");
+        map()->mapper()->show3DView(true);
+        QCOMPARE(qobject_cast<ModernGLWidget*>(map()->mapper()->glWidget), pModern);
+        sendMouse(pModern, QEvent::MouseMove, east + QPoint(spacing, spacing), Qt::LeftButton);
+        QCOMPARE(roomPlace(kEastRoomId), QVector3D(2, -2, 0));
+    }
+
     // The mapper's view goes after the player only once the rooms being dragged are down
     void test_theMapperViewWaitsForARoomDragBeforeFollowingThePlayer()
     {
         ModernGLWidget* pModern = viewAtThePlayer(true);
         QVERIFY(pModern);
         pModern->grabFramebuffer();
-        if (!pModern->isValid()) {
-            QSKIP("no OpenGL context on this platform, so the view never paints");
-        }
         const QPoint east = pixelOfRoom(pModern, kEastRoomId);
         QVERIFY2(east.x() >= 0, "the room is not on screen");
 
         sendMouse(pModern, QEvent::MouseButtonPress, east, Qt::LeftButton);
         map()->mRoomIdHash[map()->mProfileName] = kFarEastRoomId;
         map()->mNewMove = true;
+        QVERIFY2(!pModern->followingPlayer(), "the view would follow the player in the middle of the drag");
         pModern->grabFramebuffer();
         QTest::qWait(250);
         sendMouse(pModern, QEvent::MouseMove, east + QPoint(1, 0), Qt::LeftButton);
@@ -700,8 +742,12 @@ private slots:
             return;
         }
         QCOMPARE(pModern->viewCenter(), QVector3D(0, 0, 0));
+        QVERIFY2(pModern->followingPlayer(), "the view does not follow the player once the drag is over");
 
         pModern->grabFramebuffer();
+        if (!pModern->isValid()) {
+            QSKIP("no OpenGL context on this platform, so the view never paints");
+        }
         QCOMPARE(pModern->viewCenter(), QVector3D(6, 0, 0));
     }
 
@@ -716,11 +762,13 @@ private slots:
         const QVector3D center = pWindow3D->viewCenter();
         map()->mRoomIdHash[map()->mProfileName] = kEastRoomId;
         map()->mNewMove = true;
+        const bool following = pWindow3D->followingPlayer();
         pWindow3D->grabFramebuffer();
         const int shownAreaId = pWindow3D->shownAreaId();
         const QVector3D centerAfter = pWindow3D->viewCenter();
         QVERIFY(map()->getViewManager()->closeView(viewId).first);
         QCoreApplication::sendPostedEvents(nullptr, QEvent::DeferredDelete);
+        QVERIFY2(!following, "the map window's view would follow the player");
         if (!painted) {
             QSKIP("no OpenGL context on this platform, so the view never paints");
         }
