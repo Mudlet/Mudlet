@@ -37,6 +37,7 @@
 #include <QOpenGLContext>
 #include <QOpenGLWidget>
 #include <QPointer>
+#include <QScopeGuard>
 #include <QSignalSpy>
 #include <QTemporaryDir>
 #include <QWindow>
@@ -95,6 +96,17 @@ private:
             }
         }
         return false;
+    }
+
+    // showFailure() logs each failure it shows, so this still holds one whose label initializeGL hid again
+    static inline QStringList smModernViewWarnings;
+    static inline QtMessageHandler smPreviousMessageHandler = nullptr;
+    static void recordModernViewWarnings(QtMsgType type, const QMessageLogContext& context, const QString& message)
+    {
+        if (type == QtWarningMsg && message.startsWith(qsl("ModernGLWidget: "))) {
+            smModernViewWarnings.append(message);
+        }
+        smPreviousMessageHandler(type, context, message);
     }
 
 public:
@@ -344,6 +356,12 @@ private slots:
         mudlet::self()->slot_showMapperDialog();
         QDockWidget* pDock = mudlet::self()->getMainWindowDockWidget(qsl("map_%1").arg(mHostname));
         QVERIFY2(pDock && pDock->widget(), "slot_showMapperDialog() created no map dock, so this case covers nothing");
+        smModernViewWarnings.clear();
+        smPreviousMessageHandler = qInstallMessageHandler(recordModernViewWarnings);
+        const auto restoreMessageHandler = qScopeGuard([] {
+            qInstallMessageHandler(smPreviousMessageHandler);
+        });
+        const QString falseFailure = qsl("could not create an OpenGL 3.3 context");
         for (const bool modern : {false, true}) {
             QVERIFY(mpHost->getLuaInterpreter()->compileAndExecuteScript(qsl("assert(setConfig('experiment.3dmap.modernmapper', %1))\n"
                                                                              "assert(setConfig('show3dMapView', true))")
@@ -359,7 +377,15 @@ private slots:
                 QTRY_VERIFY2(pView->findChild<QLabel*>() && pView->findChild<QLabel*>()->isVisible(), "the modern 3D view did not say it could not create a context");
             } else if (modern) {
                 qApp->processEvents();
-                QVERIFY2(!pView->findChild<QLabel*>() || !pView->findChild<QLabel*>()->isVisible(), "the 3D view has a working context but says it could not create one");
+                const QSurfaceFormat format = pView->context()->format();
+                if (format.version() < qMakePair(3, 3)) {
+                    QSKIP(qPrintable(
+                            qsl("the modern 3D view got OpenGL %1.%2 and rightly refused it, so a false context failure goes unchecked here").arg(format.majorVersion()).arg(format.minorVersion())));
+                }
+                if (!smModernViewWarnings.filter(qsl("could not compile its shaders")).isEmpty()) {
+                    QSKIP("this driver rejected the modern 3D view's shaders, so a false context failure goes unchecked here");
+                }
+                QVERIFY2(smModernViewWarnings.filter(falseFailure).isEmpty(), "the 3D view has a working context but said it could not create one");
             }
 
             pView->resize(pView->size() + QSize(10, 10));
@@ -370,7 +396,7 @@ private slots:
             if (valid) {
                 // Qt itself may rebuild a context that has not been composed yet when the view is shown again
                 QVERIFY2(pView->context() && pView->isValid(), "the 3D view was left without a working context");
-                QVERIFY2(!pView->findChild<QLabel*>() || !pView->findChild<QLabel*>()->isVisible(), "the 3D view has a working context but says it could not create one");
+                QVERIFY2(smModernViewWarnings.filter(falseFailure).isEmpty(), "the 3D view has a working context but said it could not create one");
             } else {
                 QVERIFY2(pView->context() == pFirstContext, "the 3D view asked again for a context it could not create");
                 QVERIFY(!pView->isValid());
