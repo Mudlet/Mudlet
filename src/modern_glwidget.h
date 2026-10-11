@@ -76,6 +76,7 @@ public:
     void followPlayer();
     bool followingPlayer() const;
     int shownAreaId() const { return mAID; }
+    int areaShownNext() const;
     QVector3D viewCenter() const { return QVector3D(mMapCenterX, mMapCenterY, mMapCenterZ); }
     void shiftCamera(float, float, float);
     void setCameraPosition(float, float, float);
