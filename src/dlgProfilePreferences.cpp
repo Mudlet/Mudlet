@@ -1790,18 +1790,18 @@ void dlgProfilePreferences::buildExperimentsCard()
 
     // Mirrors Host::setExperimentEnabled(), which switches the rest of a group off, so the
     // dialog never shows two of one group ticked
-    for (auto it = mExperimentCheckBoxes.cbegin(), end = mExperimentCheckBoxes.cend(); it != end; ++it) {
-        const QString group = Host::experimentGroup(it.key());
+    for (const auto& [key, pCheckBox] : std::as_const(mExperimentCheckBoxes).asKeyValueRange()) {
+        const QString group = Host::experimentGroup(key);
         if (group.isEmpty()) {
             continue;
         }
-        connect(it.value(), &QAbstractButton::toggled, this, [this, key = it.key(), group](const bool checked) {
+        connect(pCheckBox, &QAbstractButton::toggled, this, [this, ownKey = key, group](const bool checked) {
             if (mPopulating || !checked) {
                 return;
             }
-            for (auto sibling = mExperimentCheckBoxes.cbegin(), last = mExperimentCheckBoxes.cend(); sibling != last; ++sibling) {
-                if (sibling.key() != key && sibling.value() && Host::experimentGroup(sibling.key()) == group) {
-                    sibling.value()->setChecked(false);
+            for (const auto& [siblingKey, pSibling] : std::as_const(mExperimentCheckBoxes).asKeyValueRange()) {
+                if (siblingKey != ownKey && pSibling && Host::experimentGroup(siblingKey) == group) {
+                    pSibling->setChecked(false);
                 }
             }
         });
@@ -1834,19 +1834,17 @@ void dlgProfilePreferences::retranslateExperiments()
     //: Description under the "Original level shading" checkbox on the "Experiments (unsupported)" card of the Advanced settings page
     descriptions.insert(qsl("experiment.rendering.originalish"), tr("Draws the rooms on other levels of the modern 3D map the usual way, with the rooms above you see-through."));
 
-    for (auto it = mExperimentCheckBoxes.cbegin(), end = mExperimentCheckBoxes.cend(); it != end; ++it) {
-        QCheckBox* pCheckBox = it.value();
+    for (const auto& [key, pCheckBox] : std::as_const(mExperimentCheckBoxes).asKeyValueRange()) {
         if (!pCheckBox) {
             continue;
         }
-        const QString& key = it.key();
         pCheckBox->setText(labels.value(key, key));
 
         QStringList siblings;
         const QString group = Host::experimentGroup(key);
-        for (auto sibling = mExperimentCheckBoxes.cbegin(); sibling != end; ++sibling) {
-            if (!group.isEmpty() && sibling.key() != key && Host::experimentGroup(sibling.key()) == group) {
-                siblings << labels.value(sibling.key(), sibling.key());
+        for (const auto& siblingKey : mExperimentCheckBoxes.keys()) {
+            if (!group.isEmpty() && siblingKey != key && Host::experimentGroup(siblingKey) == group) {
+                siblings << labels.value(siblingKey, siblingKey);
             }
         }
         QString description = descriptions.value(key);
@@ -4707,9 +4705,9 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
 
     checkBox_expectCSpaceIdInColonLessMColorCode->setChecked(pHost->getHaveColorSpaceId());
     checkBox_lazyCaptureGlobals->setChecked(pHost->lazyCaptureGlobals());
-    for (auto it = mExperimentCheckBoxes.cbegin(), end = mExperimentCheckBoxes.cend(); it != end; ++it) {
-        if (it.value()) {
-            it.value()->setChecked(pHost->experimentEnabled(it.key()));
+    for (const auto& [key, pCheckBox] : std::as_const(mExperimentCheckBoxes).asKeyValueRange()) {
+        if (pCheckBox) {
+            pCheckBox->setChecked(pHost->experimentEnabled(key));
         }
     }
     checkBox_allowServerToRedefineColors->setChecked(pHost->getMayRedefineColors());
@@ -7037,9 +7035,9 @@ void dlgProfilePreferences::applyAll()
         if (mSnapshot.dirty(checkBox_lazyCaptureGlobals)) {
             pHost->setLazyCaptureGlobals(checkBox_lazyCaptureGlobals->isChecked());
         }
-        for (auto it = mExperimentCheckBoxes.cbegin(), end = mExperimentCheckBoxes.cend(); it != end; ++it) {
-            if (it.value() && mSnapshot.dirty(it.value())) {
-                pHost->setExperimentEnabled(it.key(), it.value()->isChecked());
+        for (const auto& [key, pCheckBox] : std::as_const(mExperimentCheckBoxes).asKeyValueRange()) {
+            if (pCheckBox && mSnapshot.dirty(pCheckBox)) {
+                pHost->setExperimentEnabled(key, pCheckBox->isChecked());
             }
         }
         if (mSnapshot.dirty(comboBox_caretModeKey)) {
