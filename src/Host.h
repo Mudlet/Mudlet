@@ -780,7 +780,6 @@ public:
 
 private:
     QSettings& profileIni();
-    bool namesMainConsoleWithNoMainWindow(const QString& name) const;
 
     bool mNoAntiAlias = false;
     // These are used only during profile initiation to provide faked details

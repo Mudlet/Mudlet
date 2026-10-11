@@ -646,7 +646,7 @@ void TNullConsoleFrontend::reportGridSize(const QString& name)
 
 QFont TNullConsoleFrontend::displayFont() const
 {
-    return mpHost->getDisplayFont();
+    return mpHost->displayFontWithNoView();
 }
 
 std::optional<QFont> TNullConsoleFrontend::consoleFont(const QString& name) const
