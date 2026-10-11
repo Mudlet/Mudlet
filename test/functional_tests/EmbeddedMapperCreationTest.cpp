@@ -33,6 +33,8 @@
 #include <QDialog>
 #include <QDockWidget>
 #include <QFileInfo>
+#include <QLabel>
+#include <QOpenGLContext>
 #include <QOpenGLWidget>
 #include <QPointer>
 #include <QSignalSpy>
@@ -80,6 +82,29 @@ private:
     {
         dlgMapper* pMapper = mpHost->mpMap->mapper();
         return mpHost->mpMap->mapViewFrontend() == (pMapper ? static_cast<TMapViewFrontend*>(pMapper) : nullptr);
+    }
+
+    // Qt's own test for quitting once the last window closes, which emits lastWindowClosed only inside exec()
+    static bool aWindowStillHoldsTheApplicationOpen()
+    {
+        const auto topLevels = QApplication::topLevelWidgets();
+        for (QWidget* pTopLevel : topLevels) {
+            QWindow* pHandle = pTopLevel->windowHandle();
+            if (pTopLevel->isVisible() && pTopLevel->testAttribute(Qt::WA_QuitOnClose) && pTopLevel->windowType() != Qt::ToolTip && pHandle && !pHandle->transientParent()) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+public:
+    // Mirrors src/main.cpp, which shares GL contexts application-wide only on FreeBSD; with sharing,
+    // Qt never resets a 3D view's context when it is shown
+    static void initMain()
+    {
+#if defined(Q_OS_FREEBSD) && defined(INCLUDE_3DMAPPER)
+        QApplication::setAttribute(Qt::AA_ShareOpenGLContexts);
+#endif
     }
 
 private slots:
@@ -210,16 +235,53 @@ private slots:
         QEvent mainWinIdChange(QEvent::WinIdChange);
         QCoreApplication::sendEvent(mudlet::self(), &mainWinIdChange);
         QCOMPARE(pMainDialog->windowHandle()->transientParent(), mudlet::self()->windowHandle());
-        QVERIFY2(!pMapDialog->windowHandle()->transientParent(), "a dialog was linked to the main window rather than to the floating map it belongs to");
+        QVERIFY2(pMapDialog->windowHandle()->transientParent() != mudlet::self()->windowHandle(), "a dialog was linked to the main window rather than to the floating map it belongs to");
+        QCOMPARE(pMapDialog->windowHandle()->transientParent(), pDock->windowHandle());
 
+        pMapDialog->windowHandle()->setTransientParent(nullptr);
         QEvent dockWinIdChange(QEvent::WinIdChange);
         QCoreApplication::sendEvent(pDock, &dockWinIdChange);
         QCOMPARE(pMapDialog->windowHandle()->transientParent(), pDock->windowHandle());
     }
 
+    // Redocking destroys the floating map's window and creates none in its place, so Qt itself
+    // never relinks the dialogs that were transient for it
+    void test_redockingTheMapHandsItsDialogsToTheMainWindow()
+    {
+        mudlet::self()->show();
+        mudlet::self()->slot_showMapperDialog();
+        QDockWidget* pDock = mudlet::self()->getMainWindowDockWidget(qsl("map_%1").arg(mHostname));
+        QVERIFY2(pDock, "slot_showMapperDialog() created no map dock, so this case covers nothing");
+        pDock->setFloating(true);
+        qApp->processEvents();
+        auto* pDialog = new QDialog(pDock->widget());
+        pDialog->show();
+        qApp->processEvents();
+        QCOMPARE(pDialog->windowHandle()->transientParent(), pDock->windowHandle());
+
+        pDock->setFloating(false);
+        qApp->processEvents();
+        QCOMPARE(pDialog->windowHandle()->transientParent(), mudlet::self()->windowHandle());
+    }
+
+    // Whatever route leaves a dialog without a transient parent, closing the main window must still quit
+    void test_closingTheMainWindowQuitsPastADialogThatLostItsWindow()
+    {
+        mudlet::self()->show();
+        QPointer<QDialog> pDialog = new QDialog(mudlet::self());
+        pDialog->show();
+        qApp->processEvents();
+        pDialog->windowHandle()->setTransientParent(nullptr);
+
+        QVERIFY(mudlet::self()->close());
+        mpHost = nullptr;
+        QVERIFY2(pDialog && pDialog->isVisible(), "the dialog was gone before the main window closed, so this case covers nothing");
+        QVERIFY2(!aWindowStillHoldsTheApplicationOpen(), "a dialog that lost its window would keep Mudlet from quitting");
+    }
+
 #if defined(INCLUDE_3DMAPPER)
-    // The first GL view parented into a window makes Qt recreate it; a dialog left open
-    // across that would no longer stop Mudlet from quitting once the main window closes
+    // The first GL view parented into a window makes Qt recreate it; a dialog open across that
+    // must keep its transient parent, or it keeps Mudlet running after the main window closes
     void test_aDialogKeepsItsWindowWhenA3DViewFirstShowsInAFloatingMap()
     {
         mudlet::self()->show();
@@ -243,6 +305,77 @@ private slots:
         }
         QVERIFY2(pDialog->windowHandle()->transientParent(), "the dialog lost its window when the floating map was recreated");
         QCOMPARE(pDialog->windowHandle()->transientParent(), pDock->windowHandle());
+    }
+
+    // Floating the map leaves a dialog opened over it transient for the main window, so when
+    // the main window is recreated the dialog must go to the window it is in now
+    void test_aDialogOpenedBeforeTheMapFloatedKeepsAWindowWhenTheMainWindowIsRecreated()
+    {
+        mudlet::self()->show();
+        mudlet::self()->slot_showMapperDialog();
+        QDockWidget* pDock = mudlet::self()->getMainWindowDockWidget(qsl("map_%1").arg(mHostname));
+        QVERIFY2(pDock, "slot_showMapperDialog() created no map dock, so this case covers nothing");
+        qApp->processEvents();
+        auto* pDialog = new QDialog(pDock->widget());
+        pDialog->show();
+        qApp->processEvents();
+        QCOMPARE(pDialog->windowHandle()->transientParent(), mudlet::self()->windowHandle());
+        pDock->setFloating(true);
+        qApp->processEvents();
+        QPointer<QWindow> pMainWindowBefore = mudlet::self()->windowHandle();
+        QVERIFY(pMainWindowBefore);
+
+        // Qt recreates the window inside setParent(); shown, this unguarded view would leak a context without GL
+        auto* pGLView = new QOpenGLWidget();
+        pGLView->setParent(mudlet::self());
+        delete pGLView;
+        if (pMainWindowBefore && mudlet::self()->windowHandle() == pMainWindowBefore) {
+            QSKIP("Qt did not recreate the main window for the GL view here, so there is nothing to relink");
+        }
+        QVERIFY2(pDialog->windowHandle()->transientParent(), "the dialog lost its window when the main window was recreated");
+        QCOMPARE(pDialog->windowHandle()->transientParent(), pDock->windowHandle());
+    }
+
+    // The context-retry guard must not hold back the first attempt: with GL the view keeps a
+    // working context, and without it the failure is reported and the context never asked again
+    void test_each3DViewAsksForOneContext()
+    {
+        mudlet::self()->show();
+        mudlet::self()->slot_showMapperDialog();
+        QDockWidget* pDock = mudlet::self()->getMainWindowDockWidget(qsl("map_%1").arg(mHostname));
+        QVERIFY2(pDock && pDock->widget(), "slot_showMapperDialog() created no map dock, so this case covers nothing");
+        for (const bool modern : {false, true}) {
+            QVERIFY(mpHost->getLuaInterpreter()->compileAndExecuteScript(qsl("assert(setConfig('experiment.3dmap.modernmapper', %1))\n"
+                                                                             "assert(setConfig('show3dMapView', true))")
+                                                                                 .arg(modern ? qsl("true") : qsl("false"))));
+            qApp->processEvents();
+            auto* pView = pDock->widget()->findChild<QOpenGLWidget*>(qsl("glWidget"));
+            QVERIFY2(pView && pView->inherits(modern ? "ModernGLWidget" : "GLWidget"), "the expected renderer did not make the 3D view, so this case covers nothing");
+            QVERIFY2(pView->isVisible() && !pView->size().isEmpty(), "the 3D view was never laid out, so this case covers nothing");
+            QTRY_VERIFY2(pView->context(), "the 3D view never asked for a context");
+            QPointer<QOpenGLContext> pFirstContext = pView->context();
+            const bool valid = pView->isValid();
+            if (modern && !valid) {
+                QTRY_VERIFY2(pView->findChild<QLabel*>() && pView->findChild<QLabel*>()->isVisible(), "the modern 3D view did not say it could not create a context");
+            } else if (modern) {
+                qApp->processEvents();
+                QVERIFY2(!pView->findChild<QLabel*>() || !pView->findChild<QLabel*>()->isVisible(), "the 3D view has a working context but says it could not create one");
+            }
+
+            pView->resize(pView->size() + QSize(10, 10));
+            pView->hide();
+            pView->show();
+            pView->repaint();
+            qApp->processEvents();
+            if (valid) {
+                // Qt itself may rebuild a context that has not been composed yet when the view is shown again
+                QVERIFY2(pView->context() && pView->isValid(), "the 3D view was left without a working context");
+                QVERIFY2(!pView->findChild<QLabel*>() || !pView->findChild<QLabel*>()->isVisible(), "the 3D view has a working context but says it could not create one");
+            } else {
+                QVERIFY2(pView->context() == pFirstContext, "the 3D view asked again for a context it could not create");
+                QVERIFY(!pView->isValid());
+            }
+        }
     }
 
     // Replacing a 3D view in the same event-loop turn that inserted it must not let the show

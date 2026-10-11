@@ -81,6 +81,16 @@ private:
 
     bool addRoomAt(const int id, const int areaId, const int x, const int y) const { return map()->addRoom(id) && map()->setRoomArea(id, areaId) && map()->setRoomCoordinates(id, x, y, 0); }
 
+    // There is no GL to start the view with here; what a camera call does to the camera needs none
+    static auto standInForAViewThatStarted(ModernGLWidget* pModern)
+    {
+        const QString failure = pModern->mFailureMessage;
+        pModern->mFailureMessage.clear();
+        return qScopeGuard([pModern, failure]() {
+            pModern->mFailureMessage = failure;
+        });
+    }
+
     dlgMapper* mapperShowing2DAtThePlayer() const
     {
         dlgMapper* pMapper = map()->mapper();
@@ -381,18 +391,41 @@ private slots:
         pMapper->show3DView(true);
         auto* pModern = qobject_cast<ModernGLWidget*>(pMapper->glWidget);
         QVERIFY(pModern);
-        // Stands in for a view that started, where there is no GL: the distance is camera state, not drawing
-        const QString failure = pModern->mFailureMessage;
-        pModern->mFailureMessage.clear();
-        const auto restoreFailure = qScopeGuard([pModern, failure]() {
-            pModern->mFailureMessage = failure;
-        });
+        const auto restoreFailure = standInForAViewThatStarted(pModern);
         pModern->mCameraController.setScale(CameraController::scmMaxDistance);
+        pModern->mDistanceRequested = false;
+        {
+            const QSignalBlocker blocker(pMapper->slider_scale);
+            pMapper->slider_scale->setValue(0);
+        }
         const auto [moved, refusal] = pMapper->set3DViewCameraPosition(0.5f, 45.0f, 270.0f);
         QVERIFY(!moved);
         QCOMPARE(refusal, qsl("the area shown in the 3D view is in grid mode, which always looks straight down, so only the distance was applied"));
         QCOMPARE(pModern->mCameraController.getScale(), 0.5f);
         QVERIFY2(pModern->mDistanceRequested, "the next paint would frame the area over the distance asked for");
+        // A stale slider would put the old distance back the next time the user touched it
+        QVERIFY2(pMapper->slider_scale->value() > 0, "the zoom slider still shows the old distance");
+    }
+
+    void test_aCameraMoveThatSucceedsMovesTheCamera()
+    {
+        dlgMapper* pMapper = mapperShowing2DAtThePlayer();
+        QVERIFY(pMapper);
+        pMapper->show3DView(true);
+        auto* pModern = qobject_cast<ModernGLWidget*>(pMapper->glWidget);
+        QVERIFY(pModern);
+        QVERIFY(!pModern->cameraFixedByGridMode());
+        const auto restoreFailure = standInForAViewThatStarted(pModern);
+        pModern->mCameraController.setPosition(1.0f, 10.0f, 100.0f);
+
+        QCOMPARE(pMapper->set3DViewCameraPosition(2.0f, 45.0f, 270.0f), std::make_pair(true, QString()));
+        QVector3D position = pModern->mCameraController.getPosition();
+        QVERIFY2(qAbs(position.x() - 2.0f) < 0.01f && qAbs(position.y() - 45.0f) < 0.01f && qAbs(std::remainder(position.z() - 270.0f, 360.0f)) < 0.01f,
+                 qPrintable(qsl("asked for (2, 45, 270), the camera is at (%1, %2, %3)").arg(position.x()).arg(position.y()).arg(position.z())));
+
+        QCOMPARE(pMapper->shift3DViewCamera(0.0f, 30.0f, 0.0f), std::make_pair(true, QString()));
+        position = pModern->mCameraController.getPosition();
+        QVERIFY2(qAbs(std::remainder(position.z() - 300.0f, 360.0f)) < 0.01f, qPrintable(qsl("turned by 30 from 270, the camera faces %1").arg(position.z())));
     }
 
     // The view only shows why it could not start, so moving its camera would do nothing; asked with no event loop
@@ -413,6 +446,11 @@ private slots:
         auto* pModern = qobject_cast<ModernGLWidget*>(pMapper->glWidget);
         QVERIFY(pModern);
         QVERIFY2(pModern->isVisible() && !pModern->size().isEmpty(), "the 3D view is not showing, so nothing tried to start it");
+        if (!pModern->context()) {
+            // Where GL works, Qt drops the context of a view shown straight after switching renderers and makes it again on resize
+            QResizeEvent resize(pModern->size(), pModern->size());
+            QCoreApplication::sendEvent(pModern, &resize);
+        }
         if (pModern->isValid()) {
             QSKIP("this machine created a GL context for the modern 3D view");
         }
