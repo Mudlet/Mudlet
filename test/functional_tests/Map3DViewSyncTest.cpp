@@ -378,30 +378,46 @@ private slots:
             pPlayerArea->gridMode = false;
         });
         pPlayerArea->gridMode = true;
-        // A fresh view, asked before its context can be found to have failed, as a script showing the view and
-        // setting its camera in one go does
-        pMapper->recreate3DView();
         pMapper->show3DView(true);
-        QVERIFY(qobject_cast<ModernGLWidget*>(pMapper->glWidget));
-        pMapper->slider_scale->setValue(0);
+        auto* pModern = qobject_cast<ModernGLWidget*>(pMapper->glWidget);
+        QVERIFY(pModern);
+        // Stands in for a view that started, where there is no GL: the distance is camera state, not drawing
+        const QString failure = pModern->mFailureMessage;
+        pModern->mFailureMessage.clear();
+        const auto restoreFailure = qScopeGuard([pModern, failure]() {
+            pModern->mFailureMessage = failure;
+        });
+        pModern->mCameraController.setScale(CameraController::scmMaxDistance);
         const auto [moved, refusal] = pMapper->set3DViewCameraPosition(0.5f, 45.0f, 270.0f);
         QVERIFY(!moved);
         QCOMPARE(refusal, qsl("the area shown in the 3D view is in grid mode, which always looks straight down, so only the distance was applied"));
-        QVERIFY2(pMapper->slider_scale->value() > 0, "the 3D view did not zoom in");
+        QCOMPARE(pModern->mCameraController.getScale(), 0.5f);
+        QVERIFY2(pModern->mDistanceRequested, "the next paint would frame the area over the distance asked for");
     }
 
-    // The view only shows why it could not start, so moving its camera would do nothing
+    // The view only shows why it could not start, so moving its camera would do nothing; asked with no event loop
+    // in between, as a script showing the view and setting its camera in one go does
     void test_aViewThatCouldNotStartRefusesCameraMoves()
     {
         dlgMapper* pMapper = mapperShowing2DAtThePlayer();
         QVERIFY(pMapper);
+        // A fresh view, whose failure no earlier test's event loop can have reported; recreate3DView() keeps a
+        // widget of the right kind, so go by way of the classic one
+        const QPointer<QOpenGLWidget> pOldWidget = pMapper->glWidget;
+        QVERIFY(mpHost->setExperimentEnabled(qsl("experiment.3dmap.modernmapper"), false).first);
+        pMapper->recreate3DView();
+        QVERIFY(mpHost->setExperimentEnabled(qsl("experiment.3dmap.modernmapper"), true).first);
+        pMapper->recreate3DView();
+        QVERIFY2(pMapper->glWidget != pOldWidget, "the 3D view was not made afresh");
         pMapper->show3DView(true);
-        QCoreApplication::processEvents();
         auto* pModern = qobject_cast<ModernGLWidget*>(pMapper->glWidget);
         QVERIFY(pModern);
-        if (pModern->failureMessage().isEmpty()) {
-            QSKIP("this machine started the modern 3D view");
+        QVERIFY2(pModern->isVisible() && !pModern->size().isEmpty(), "the 3D view is not showing, so nothing tried to start it");
+        if (pModern->isValid()) {
+            QSKIP("this machine created a GL context for the modern 3D view");
         }
+        QVERIFY2(pModern->context(), "nothing tried to create a GL context");
+        QVERIFY2(!pModern->failureMessage().isEmpty(), "the modern 3D view has not said why it could not start");
         const QString refusal = qsl("the modern 3D map view could not start: %1").arg(pModern->failureMessage());
         QCOMPARE(pMapper->set3DViewCameraPosition(2.0f, 45.0f, 270.0f), std::make_pair(false, refusal));
         QCOMPARE(pMapper->shift3DViewCamera(0.0f, 30.0f, 0.0f), std::make_pair(false, refusal));
@@ -425,10 +441,11 @@ private slots:
             QOpenGLWidget* pWidget = pMapper->glWidget;
             QVERIFY(pWidget);
             QCOMPARE(qobject_cast<ModernGLWidget*>(pWidget) != nullptr, modern);
-            QOpenGLContext* pFirstContext = pWidget->context();
-            if (!pFirstContext || pWidget->isValid()) {
+            if (pWidget->isValid()) {
                 QSKIP("this machine created a GL context, so there is no failed one to retry");
             }
+            QOpenGLContext* pFirstContext = pWidget->context();
+            QVERIFY2(pFirstContext, "nothing tried to create a GL context");
             pWidget->hide();
             pWidget->show();
             pWidget->resize(pWidget->size() + QSize(10, 10));
@@ -531,7 +548,8 @@ private slots:
         QVERIFY(pMapper->setMapZoom(20.0, 0).first);
         const int framedWhileHidden = lastScale();
 
-        // As a script setting the camera before it shows the view does
+        // Stands in for a script setting the camera after showing the view but before its first visible paint.
+        // set3DViewCameraPosition refuses a hidden view, and offscreen the visible resize settles the zoom first
         pModern->setCameraPosition(2.0f, 45.0f, 270.0f);
         const int requested = lastScale();
         QVERIFY(requested != framedWhileHidden);
@@ -579,10 +597,8 @@ private slots:
         const int framedAt9 = cameraControls.last().at(0).toInt();
         QVERIFY(framedAt20 != framedAt9);
         QVERIFY2(!framedOnShow.contains(framedAt20), "the zoom asked for the area the 3D view showed before was used for the area it shows now");
-        // With no GL context nothing paints, so the area is not framed at all
-        if (!framedOnShow.isEmpty()) {
-            QCOMPARE(framedOnShow.last(), framedAt9);
-        }
+        QVERIFY2(!framedOnShow.isEmpty(), "the area shown now was not framed");
+        QCOMPARE(framedOnShow.last(), framedAt9);
 
         pMapper->show3DView(false);
         pDock->setFloating(false);
@@ -608,6 +624,57 @@ private slots:
         QVERIFY2(!cameraControls.isEmpty(), "the 3D view was not zoomed");
 
         pMapper->show3DView(false);
+    }
+
+    // As a script zooming one step out does, with the hidden 2D map still on the area the player left
+    void test_getMapZoomAndSetMapZoomWithNoAreaAgreeIn3D()
+    {
+        dlgMapper* pMapper = mapperShowing2DAtThePlayer();
+        QVERIFY(pMapper);
+        pMapper->show3DView(true);
+        auto* pModern = qobject_cast<ModernGLWidget*>(pMapper->glWidget);
+        QVERIFY(pModern);
+        pModern->followPlayer();
+        QVERIFY(pMapper->setMapZoom(5.0, mPlayerAreaId).first);
+        QVERIFY(pMapper->setMapZoom(12.0, mOtherAreaId).first);
+        map()->mRoomIdHash[map()->mProfileName] = 2;
+        QCOMPARE(pMapper->mp2dMap->getAreaId(), mPlayerAreaId);
+
+        // What getMapZoom() with no area answers
+        const qreal shownZoom = map()->mpRoomDB->get2DMapZoom(pMapper->shownAreaId());
+        QVERIFY(pMapper->setMapZoom(shownZoom + 1.0, 0).first);
+        QCOMPARE(map()->mpRoomDB->get2DMapZoom(mOtherAreaId), 13.0);
+        QCOMPARE(map()->mpRoomDB->get2DMapZoom(mPlayerAreaId), 5.0);
+
+        pMapper->show3DView(false);
+    }
+
+    // The 2D mouse wheel stores the zoom on the area without telling the hidden 3D view
+    void test_aZoomOfTheSameAreaMadeLaterIn2DWinsOverAHiddenZoom()
+    {
+        dlgMapper* pMapper = mapperShowing2DAtThePlayer();
+        QVERIFY(pMapper);
+        QDockWidget* pDock = nullptr;
+        ModernGLWidget* pModern = nullptr;
+        hide3DViewInAPortraitDock(pMapper, pDock, pModern);
+        if (QTest::currentTestFailed()) {
+            return;
+        }
+        QVERIFY(pMapper->setMapZoom(20.0, 0).first);
+        QVERIFY(map()->mpRoomDB->set2DMapZoom(mPlayerAreaId, 7.0));
+        QSignalSpy cameraControls(pModern, &ModernGLWidget::cameraControlsChanged);
+
+        pMapper->show3DView(true);
+        QTRY_VERIFY(pModern->isVisible() && pModern->height() > pModern->width());
+        QCoreApplication::processEvents();
+        QVERIFY2(!cameraControls.isEmpty(), "the 3D view was not framed when shown");
+        const int framedOnShow = cameraControls.last().at(0).toInt();
+
+        QVERIFY(pMapper->setMapZoom(7.0, mPlayerAreaId).first);
+        QCOMPARE(framedOnShow, cameraControls.last().at(0).toInt());
+
+        pMapper->show3DView(false);
+        pDock->setFloating(false);
     }
 
     void test_aResizeLeavesTheCameraAloneWithNoZoomPending()

@@ -51,8 +51,6 @@
 #include "ShaderManager.h"
 #include "CameraController.h"
 
-#include <optional>
-
 class Host;
 class QFontMetricsF;
 class QLabel;
@@ -147,6 +145,8 @@ public:
     TMap* mpMap = nullptr;
 
 private:
+    friend class Map3DViewSyncTest;
+
     // Shader and rendering resources
     ShaderManager mShaderManager;
     QOpenGLBuffer mVertexBuffer;
@@ -234,8 +234,9 @@ private:
     bool mCameraSmoothAnimating = false; // Dedicated flag for smooth camera animation
     int mPreviousRID = 0;                // Track previous room ID to detect changes
     bool mFramePending = true;
-    // A zoom applied while hidden, framed again for the size the view is first seen at unless a camera distance is set first
-    std::optional<qreal> mPendingFrameZoom;
+    // Set by a zoom or a change of area while hidden: the shown area is framed at its stored zoom, read then so a later
+    // 2D zoom counts, for the size the view is first seen at, unless a camera distance is set first
+    bool mFrameWhenShown = false;
     // A distance a script asked for since the last paint wins over framing a newly shown area
     bool mDistanceRequested = false;
 
@@ -261,6 +262,7 @@ private:
     GLuint exitMarkerTexture(const TRoom& room, const QColor& roomColor);
     // Text on a clear background; size is set to the texture's size in pixels
     GLuint textTexture(const QString& key, const QString& text, const QFont& font, const QFontMetricsF& metrics, const QColor& color, QSize& size);
+    void reportContextFailure();
     bool contextCreationFailed() const;
     void startSmoothTransition(int targetAID, int targetX, int targetY, int targetZ);
     void stopSmoothTransition();

@@ -120,11 +120,20 @@ void ModernGLWidget::showEvent(QShowEvent* event)
     QOpenGLWidget::showEvent(event);
     // Qt creates the context once the widget is laid out; if that failed, initializeGL never runs to say so
     QTimer::singleShot(0, this, [this]() {
-        if (isVisible() && !isValid() && mFailureMessage.isEmpty()) {
-            //: Shown in place of the 3D map when the graphics driver cannot create the OpenGL context the modern 3D mapper needs
-            showFailure(tr("The modern 3D mapper could not create an OpenGL 3.3 context on this system."));
+        if (isVisible() && !isValid()) {
+            reportContextFailure();
         }
     });
+}
+
+// Each event that tries for a context reports a failure straight away, so a script that shows the view and moves
+// its camera in one go is refused; showEvent()'s timer is only a fallback, a turn of the event loop later
+void ModernGLWidget::reportContextFailure()
+{
+    if (mFailureMessage.isEmpty()) {
+        //: Shown in place of the 3D map when the graphics driver cannot create the OpenGL context the modern 3D mapper needs
+        showFailure(tr("The modern 3D mapper could not create an OpenGL 3.3 context on this system."));
+    }
 }
 
 // QOpenGLWidget retries a context it could not create on every show, resize and paint, and each retry
@@ -136,26 +145,37 @@ bool ModernGLWidget::contextCreationFailed() const
 
 bool ModernGLWidget::event(QEvent* event)
 {
-    if (contextCreationFailed() && (event->type() == QEvent::Show || event->type() == QEvent::WindowChangeInternal)) {
+    // Of the events this sees, only these try for a context; after some others, such as DeferredDelete, this object is gone
+    if (event->type() != QEvent::Show && event->type() != QEvent::WindowChangeInternal) {
+        return QOpenGLWidget::event(event);
+    }
+    if (contextCreationFailed()) {
         return QWidget::event(event);
     }
-    return QOpenGLWidget::event(event);
+    const bool handled = QOpenGLWidget::event(event);
+    if (contextCreationFailed()) {
+        reportContextFailure();
+    }
+    return handled;
 }
 
 void ModernGLWidget::resizeEvent(QResizeEvent* event)
 {
-    // Framed before the base class, whose resize paints at once; with no context nothing paints,
-    // so a visible resize settles the zoom here
-    if (mPendingFrameZoom) {
-        frameRooms(*mPendingFrameZoom);
+    // Framed before the base class, whose resize paints at once. A visible resize settles it, since
+    // with no context no paint follows to do it
+    if (mFrameWhenShown) {
+        frameArea();
         if (isVisible()) {
-            mPendingFrameZoom.reset();
+            mFrameWhenShown = false;
         }
     }
     if (contextCreationFailed()) {
         QWidget::resizeEvent(event);
-    } else {
-        QOpenGLWidget::resizeEvent(event);
+        return;
+    }
+    QOpenGLWidget::resizeEvent(event);
+    if (contextCreationFailed()) {
+        reportContextFailure();
     }
 }
 
@@ -165,6 +185,9 @@ void ModernGLWidget::paintEvent(QPaintEvent* event)
         return;
     }
     QOpenGLWidget::paintEvent(event);
+    if (contextCreationFailed()) {
+        reportContextFailure();
+    }
 }
 
 void ModernGLWidget::showFailure(const QString& message)
@@ -181,7 +204,7 @@ void ModernGLWidget::showFailure(const QString& message)
         layout->setContentsMargins(0, 0, 0, 0);
         layout->addWidget(mpFailureLabel);
     }
-    //: Second paragraph of the message shown in place of the 3D map when the modern 3D mapper cannot run; keep setConfig("experiment.3dmap.modernmapper", false) exactly as written, it is Lua code the user types
+    //: Second paragraph of the message shown in place of the 3D map when the modern 3D mapper cannot run; keep setConfig("experiment.3dmap.modernmapper", false) and the word true exactly as written, they are Lua code the user types
     mpFailureLabel->setText(
             qsl("%1\n\n%2").arg(message, tr("Use setConfig(\"experiment.3dmap.modernmapper\", false) to switch back to the classic 3D view. Setting it back to true tries the modern one again.")));
     mpFailureLabel->show();
@@ -389,10 +412,10 @@ void ModernGLWidget::paintGL()
     }
     mFramePending = false;
     // QOpenGLWidget paints inside a resize sent before the view is marked visible, at a size the
-    // layout may change again once the 3D controls appear, so only a visible paint settles the zoom
-    if (mPendingFrameZoom && isVisible()) {
-        frameRooms(*mPendingFrameZoom);
-        mPendingFrameZoom.reset();
+    // layout may change again once the 3D controls appear, so only a visible paint settles the framing
+    if (mFrameWhenShown && isVisible()) {
+        frameArea();
+        mFrameWhenShown = false;
     }
     mDistanceRequested = false;
 
@@ -1062,7 +1085,7 @@ void ModernGLWidget::setCameraDistance(float r)
 {
     mCameraController.setScale(r);
     mDistanceRequested = true;
-    mPendingFrameZoom.reset();
+    mFrameWhenShown = false;
     emitCameraControls();
     update();
 }
@@ -1071,7 +1094,7 @@ void ModernGLWidget::setCameraPosition(float r, float theta, float phi)
 {
     mCameraController.setPosition(r, theta, phi);
     mDistanceRequested = true;
-    mPendingFrameZoom.reset();
+    mFrameWhenShown = false;
     emitCameraControls();
     update();
 }
@@ -1148,11 +1171,7 @@ void ModernGLWidget::applyMapZoom(const qreal zoom, const int areaId)
         return;
     }
     frameRooms(zoom);
-    if (isVisible()) {
-        mPendingFrameZoom.reset();
-    } else {
-        mPendingFrameZoom = zoom;
-    }
+    mFrameWhenShown = !isVisible();
     mDistanceRequested = false;
     update();
 }
@@ -1273,7 +1292,7 @@ void ModernGLWidget::slot_topView()
 void ModernGLWidget::slot_setScale(int value)
 {
     mCameraController.setScale(distanceForScaleSlider(value));
-    mPendingFrameZoom.reset();
+    mFrameWhenShown = false;
     update();
 }
 
@@ -1373,8 +1392,7 @@ void ModernGLWidget::jumpTo(int areaId, int x, int y, int z)
     stopSmoothTransition();
     if (areaId != mAID) {
         mFramePending = true;
-        // It was asked for the area being left; the new one is framed at its own zoom
-        mPendingFrameZoom.reset();
+        mFrameWhenShown = !isVisible();
     }
     mAID = areaId;
     mMapCenterX = x;
@@ -1392,7 +1410,7 @@ void ModernGLWidget::wheelEvent(QWheelEvent* e)
         return;
     }
     mCameraController.zoomBy(steps);
-    mPendingFrameZoom.reset();
+    mFrameWhenShown = false;
     emitCameraControls();
     update();
 }
