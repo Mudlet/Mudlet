@@ -175,6 +175,9 @@ GLuint LabelTextureCache::createTextureFromImage(const QImage& image, const bool
     if (image.isNull()) {
         return 0;
     }
+    if (mMakeStandIn) {
+        return mMakeStandIn(image);
+    }
 
     // Convert to RGBA format for OpenGL
 #if QT_VERSION >= QT_VERSION_CHECK(6, 9, 0)
@@ -225,9 +228,21 @@ GLuint LabelTextureCache::createTextureFromImage(const QImage& image, const bool
 
 void LabelTextureCache::deleteTexture(GLuint textureId)
 {
-    if (textureId != 0) {
-        glDeleteTextures(1, &textureId);
+    if (textureId == 0) {
+        return;
     }
+    if (mRemoveStandIn) {
+        mRemoveStandIn(textureId);
+        return;
+    }
+    glDeleteTextures(1, &textureId);
+}
+
+void LabelTextureCache::useTextureStandIn(std::function<GLuint(const QImage&)> make, std::function<void(GLuint)> remove)
+{
+    mMakeStandIn = std::move(make);
+    mRemoveStandIn = std::move(remove);
+    mInitialized = true;
 }
 
 QPair<int, int> LabelTextureCache::makeCacheKey(int areaId, int labelId)

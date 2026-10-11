@@ -561,9 +561,6 @@ endforeach()
 if(TEST LabelTextureCacheTest)
     set_tests_properties(LabelTextureCacheTest PROPERTIES SKIP_REGULAR_EXPRESSION "SKIP   : LabelTextureCacheTest::initTestCase")
 endif()
-if(TEST ModernRoomTextureTest)
-    set_tests_properties(ModernRoomTextureTest PROPERTIES SKIP_REGULAR_EXPRESSION "SKIP   : ModernRoomTextureTest::")
-endif()
 
 # A buffer's default font gives the same row count for its pane's stale and laid-out
 # heights at 96 DPI; 72 DPI tells them apart

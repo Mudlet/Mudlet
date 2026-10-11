@@ -972,9 +972,10 @@ void dlgMapper::slot_toggle3DView(const bool is3DMode)
     } else {
         widget_3DControls->setVisible(false);
         widget_playerIconControls->setVisible(false);
-        // workaround for buttons reloading oddly; the 3D view may be back by the time this runs
+        // workaround for buttons reloading oddly
         QTimer::singleShot(100ms, this, [this]() {
-            if (mIs3DMode) {
+            // The 3D view may have been shown again since
+            if (glWidget && !glWidget->isHidden()) {
                 return;
             }
             widget_3DControls->setVisible(false);
