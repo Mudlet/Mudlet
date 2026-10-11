@@ -1175,10 +1175,9 @@ void ModernGLWidget::renderRooms()
     mRenderCommandQueue.addCommand(std::make_unique<GLStateCommand>(GLStateCommand::DISABLE_DEPTH_WRITE));
     QColor plateColor = contrast;
     plateColor.setAlphaF(scmFloorPlateOpacity);
-    for (auto it = levelExtents.cbegin(); it != levelExtents.cend(); ++it) {
-        const QVector4D tint = GeometryManager::fadedColor(plateColor, GeometryManager::levelFade(it.key() - mMapCenterZ, moreTransparent), background);
-        const QRectF& extent = it.value();
-        const float plateZ = static_cast<float>(it.key()) - roomHeight;
+    for (const auto& [level, extent] : levelExtents.asKeyValueRange()) {
+        const QVector4D tint = GeometryManager::fadedColor(plateColor, GeometryManager::levelFade(level - mMapCenterZ, moreTransparent), background);
+        const float plateZ = static_cast<float>(level) - roomHeight;
         QVector<float> vertices;
         QVector<float> colors;
         for (const QPointF& corner : {extent.topLeft(), extent.topRight(), extent.bottomRight(), extent.topLeft(), extent.bottomRight(), extent.bottomLeft()}) {
@@ -1187,7 +1186,7 @@ void ModernGLWidget::renderRooms()
         }
         mRenderCommandQueue.addCommand(std::make_unique<RenderTrianglesCommand>(
                 vertices, colors, mCameraController.getProjectionMatrix(), mCameraController.getViewMatrix(), mCameraController.getModelMatrix(), RenderCommand::Shading::Unlit));
-        if (const auto translucent = translucentInstances.constFind(it.key()); translucent != translucentInstances.cend()) {
+        if (const auto translucent = translucentInstances.constFind(level); translucent != translucentInstances.cend()) {
             mRenderCommandQueue.addCommand(
                     std::make_unique<RenderInstancedCubesCommand>(*translucent, mCameraController.getProjectionMatrix(), mCameraController.getViewMatrix(), mCameraController.getModelMatrix()));
         }
@@ -2057,6 +2056,11 @@ void ModernGLWidget::mouseDoubleClickEvent(QMouseEvent* event)
 {
     // Qt sends this in place of the second press, and the release after it must not select again
     mClickPending = false;
+    if (event->button() == Qt::LeftButton && compassRect().contains(event->position().toPoint())) {
+        turnNorthUp();
+        event->accept();
+        return;
+    }
     if (event->button() != Qt::LeftButton || !mp2DMap || !mpMap || !mpMap->mpRoomDB) {
         QOpenGLWidget::mouseDoubleClickEvent(event);
         return;

@@ -495,6 +495,30 @@ private slots:
         QVERIFY(selection().isEmpty());
     }
 
+    // A double click on the compass is two clicks on it, not a speedwalk to the room drawn under it
+    void test_doubleClickingTheCompassDoesNotSpeedwalk()
+    {
+        ModernGLWidget* pModern = viewAtThePlayer();
+        QVERIFY(pModern);
+        const QPoint compass = pModern->compassRect().center();
+        bool underCompass = false;
+        // Centers are whole rooms, so the zoom varies too until one lands under the compass
+        for (int step = 0; step <= 20 && !underCompass; ++step) {
+            pModern->setCameraPosition(1.0f + 0.1f * step, CameraController::scmMinTilt, CameraController::scmNorthUpAzimuth);
+            for (int x = -15; x <= 15 && !underCompass; ++x) {
+                for (int y = -15; y <= 15 && !underCompass; ++y) {
+                    pModern->syncView(mPlayerAreaId, x, y, 0, kPlayerRoomId);
+                    underCompass = pModern->roomAt(compass) == kEastRoomId;
+                }
+            }
+        }
+        QVERIFY2(underCompass, "no view puts the east room under the compass");
+        map()->mTargetID = 0;
+        QMouseEvent doubleClick(QEvent::MouseButtonDblClick, compass, pModern->mapToGlobal(compass), Qt::LeftButton, Qt::LeftButton, Qt::NoModifier);
+        QCoreApplication::sendEvent(pModern, &doubleClick);
+        QCOMPARE(map()->mTargetID, 0);
+    }
+
     void test_typingAfterClickingAFloatingViewReachesTheCommandLine()
     {
         ModernGLWidget* pModern = viewAtThePlayer();
