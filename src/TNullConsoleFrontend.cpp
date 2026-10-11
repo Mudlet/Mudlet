@@ -1265,7 +1265,8 @@ bool TNullConsoleFrontend::moveLabel(const QString& name, const int x, const int
     return true;
 }
 
-// QWidget::setParent() hides the widget, so it only shows again when asked
+// QWidget::setParent(QWidget*) returns at once for the parent a widget already has; otherwise it hides
+// the widget, which then only shows again when asked
 bool TNullConsoleFrontend::reparentLabel(const QString& windowname, const QString& name, const int x, const int y, const bool show)
 {
     const auto it = mLabels.find(name);
@@ -1274,14 +1275,16 @@ bool TNullConsoleFrontend::reparentLabel(const QString& windowname, const QStrin
     }
     // TMainConsole::parentWidgetFor() takes a scroll box before a user window
     auto [userWindow, box] = containerFor(windowname, true);
-    // QWidget::setParent() restyles a label it moves, and leaves one it doesn't alone
-    if (Label& label = it->second; userWindow != label.userWindow || box != label.box) {
+    Label& label = it->second;
+    const bool moved = userWindow != label.userWindow || box != label.box;
+    // QWidget::setParent() restyles a label it moves
+    if (moved) {
         label.userWindow = userWindow;
         label.box = std::move(box);
         inheritLabelFont(label, true);
     }
-    it->second.pModel->mGeometry.moveTo(x, y);
-    it->second.shown = show;
+    label.pModel->mGeometry.moveTo(x, y);
+    label.shown = show || (!moved && label.shown);
     reportWindowVisibility(name);
     return true;
 }
@@ -1312,9 +1315,10 @@ std::pair<bool, QString> TNullConsoleFrontend::reparentWindow(const QString& win
         if (registry.subConsoleKind(name) != TWindowRegistry::SubConsoleKind::MiniConsole) {
             return noView();
         }
+        const bool moved = userWindow != it->second.userWindow || box != it->second.box;
         it->second.userWindow = userWindow;
         it->second.box = std::move(box);
-        it->second.shown = show;
+        it->second.shown = show || (!moved && it->second.shown);
         moveSubConsole(name, x, y);
         reportWindowVisibility(name);
         return {true, QString()};
@@ -1329,9 +1333,10 @@ std::pair<bool, QString> TNullConsoleFrontend::reparentWindow(const QString& win
     if (within(box.get(), it->second.get())) {
         return {false, qsl("element '%1' cannot be moved into itself or into one of its own children").arg(name)};
     }
+    const bool moved = userWindow != it->second->userWindow || box != it->second->box;
     it->second->userWindow = userWindow;
     it->second->box = std::move(box);
-    it->second->shown = show;
+    it->second->shown = show || (!moved && it->second->shown);
     moveScrollBoxContents(it->second.get());
     movePlainWindow(name, x, y);
     reportVisibility();

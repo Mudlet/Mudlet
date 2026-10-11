@@ -1735,6 +1735,14 @@ local ok, err = pcall(function()
   step("labelIntoMain", setWindow, "main", "swLabel", 6, 6, true)
   look("labelInMain", "swLabel")
   font("labelInMain", "swLabel")
+  -- QWidget::setParent(QWidget*) leaves a widget whose parent stays the same shown or hidden
+  step("labelSameHidden", setWindow, "main", "swLabel", 6, 6, false)
+  look("labelSameHidden", "swLabel")
+  hideWindow("swLabel")
+  step("hiddenLabelSame", setWindow, "main", "swLabel", 6, 6, false)
+  look("hiddenLabelSame", "swLabel")
+  step("labelSameShown", setWindow, "main", "swLabel", 6, 6, true)
+  look("labelSameShown", "swLabel")
 
   createLabel("main", "swPlain", 0, 0, 40, 20, 1)
   setLabelStyleSheet("swPlain", "")
@@ -1764,6 +1772,13 @@ local ok, err = pcall(function()
   look("miniInHiddenWindow", "swMini")
   showWindow("swWindow")
   step("miniWinFontSize", getFontSize, "swMini")
+  step("miniSameHidden", setWindow, "swWindow", "swMini", 1, 1, false)
+  look("miniSameHidden", "swMini")
+  hideWindow("swMini")
+  step("hiddenMiniSame", setWindow, "swWindow", "swMini", 1, 1, false)
+  look("hiddenMiniSame", "swMini")
+  step("miniSameShown", setWindow, "swWindow", "swMini", 1, 1, true)
+  look("miniSameShown", "swMini")
 
   step("boxIntoWindow", setWindow, "swWindow", "swBox", 6, 6, true)
   look("boxInWindow", "swBox")
@@ -1773,6 +1788,16 @@ local ok, err = pcall(function()
   look("boxInHiddenWindow", "swBox")
   look("deepInHiddenWindow", "swDeep")
   showWindow("swWindow")
+  step("boxSameHidden", setWindow, "swWindow", "swBox", 6, 6, false)
+  look("boxSameHidden", "swBox")
+  look("deepInSameHidden", "swDeep")
+  hideWindow("swBox")
+  step("hiddenBoxSame", setWindow, "swWindow", "swBox", 6, 6, false)
+  look("hiddenBoxSame", "swBox")
+  look("deepInHiddenBoxSame", "swDeep")
+  step("boxSameShown", setWindow, "swWindow", "swBox", 6, 6, true)
+  look("boxSameShown", "swBox")
+  look("deepInSameShown", "swDeep")
   step("boxIntoItself", setWindow, "swBox", "swBox", 0, 0, true)
   step("boxIntoChild", setWindow, "swInner", "swBox", 0, 0, true)
   step("boxIntoMissing", setWindow, "swNoSuch", "swBox", 0, 0, true)
@@ -1786,6 +1811,13 @@ local ok, err = pcall(function()
   step("innerBack", setWindow, "swBox", "swInner", 5, 6, true)
   look("innerBack", "swInner")
   look("deepBack", "swDeep")
+  step("innerSameHidden", setWindow, "swBox", "swInner", 5, 6, false)
+  look("innerSameHidden", "swInner")
+  hideWindow("swInner")
+  step("hiddenInnerSame", setWindow, "swBox", "swInner", 5, 6, false)
+  look("hiddenInnerSame", "swInner")
+  step("innerSameShown", setWindow, "swBox", "swInner", 5, 6, true)
+  look("innerSameShown", "swInner")
   step("boxIntoMain", setWindow, "main", "swBox", 11, 12, true)
   look("boxInMain", "swBox")
   step("boxIntoWinBox", setWindow, "swWinBox", "swBox", 1, 1, true)
@@ -1809,6 +1841,24 @@ local ok, err = pcall(function()
   look("labelAtOnce", "swLabel")
   look("miniAtOnce", "swMini")
   look("plainOutside", "swPlain")
+  -- Made while their user window is hidden
+  assert(openUserWindow("swHidden", false, false, "f") == true, "openUserWindow did not answer true")
+  hideWindow("swHidden")
+  createMiniConsole("swHidden", "swHiddenMini", 0, 0, 20, 20)
+  assert(createScrollBox("swHidden", "swHiddenBox", 0, 30, 20, 20))
+  look("hiddenMiniMade", "swHiddenMini")
+  step("hiddenMiniSameHidden", setWindow, "swHidden", "swHiddenMini", 0, 0, false)
+  step("hiddenBoxSameShown", setWindow, "swHidden", "swHiddenBox", 0, 30, true)
+  showWindow("swHidden")
+  look("hiddenMiniSameHidden", "swHiddenMini")
+  look("hiddenBoxSameShown", "swHiddenBox")
+  hideWindow("swHidden")
+  step("hiddenMiniSameShown", setWindow, "swHidden", "swHiddenMini", 0, 0, true)
+  step("hiddenBoxSameHidden", setWindow, "swHidden", "swHiddenBox", 0, 30, false)
+  showWindow("swHidden")
+  look("hiddenMiniSameShown", "swHiddenMini")
+  look("hiddenBoxSameHidden", "swHiddenBox")
+  closeUserWindow("swHidden")
   closeUserWindow("swWindow")
   headlessSetWindowAnswers = table.concat(answers, "\n")
 end)
@@ -1825,82 +1875,118 @@ end
         QVERIFY2(ran, "The Lua chunk did not run.");
         QCOMPARE(luaGlobalString(host, "headlessSetWindow"), qsl("ok"));
         const QStringList answers{qsl("label:font=main"),
-                                  qsl("labelIntoBox=[1]true"),
-                                  qsl("labelInBox:type=[1]label,geometry=[4]3:3:40:20,visible=[1]true"),
-                                  qsl("labelInBox:font=other"),
-                                  qsl("labelInHiddenBox:type=[1]label,geometry=[4]3:3:40:20,visible=[1]false"),
-                                  qsl("labelIntoWinBox=[1]true"),
-                                  qsl("labelInWinBox:type=[1]label,geometry=[4]4:4:40:20,visible=[1]false"),
-                                  qsl("labelInWinBox:font=other"),
-                                  qsl("showLabel=[1]true"),
-                                  qsl("labelShown:type=[1]label,geometry=[4]4:4:40:20,visible=[1]true"),
-                                  qsl("labelInHiddenWindow:type=[1]label,geometry=[4]4:4:40:20,visible=[1]false"),
-                                  qsl("labelIntoInner=[1]true"),
-                                  qsl("labelInHiddenOuter:type=[1]label,geometry=[4]1:1:40:20,visible=[1]false"),
-                                  qsl("labelIntoHiddenBox=[1]true"),
-                                  qsl("labelIntoHidden:type=[1]label,geometry=[4]2:2:40:20,visible=[1]false"),
-                                  qsl("labelOutOfHidden:type=[1]label,geometry=[4]2:2:40:20,visible=[1]true"),
-                                  qsl("labelIntoWindow=[1]true"),
-                                  qsl("labelInWindow:type=[1]label,geometry=[4]5:5:40:20,visible=[1]true"),
-                                  qsl("labelInWindow:font=other"),
-                                  qsl("labelIntoMain=[1]true"),
-                                  qsl("labelInMain:type=[1]label,geometry=[4]6:6:40:20,visible=[1]true"),
-                                  qsl("labelInMain:font=other"),
-                                  qsl("plain:font=other"),
-                                  qsl("plainIntoWinBox=[1]true"),
-                                  qsl("plainInWinBox:font=swWindow"),
-                                  qsl("plainIntoBox=[1]true"),
-                                  qsl("plainInBox:font=main"),
-                                  qsl("plainOutToWinBox=[1]true"),
-                                  qsl("miniIntoBox=[1]true"),
-                                  qsl("miniInBox:type=[1]miniconsole,geometry=[4]5:5:50:40,visible=[1]true"),
-                                  qsl("miniFontSize=[1]12"),
-                                  qsl("miniInHiddenBox:type=[1]miniconsole,geometry=[4]5:5:50:40,visible=[1]false"),
-                                  qsl("miniIntoWinBox=[1]true"),
-                                  qsl("miniInWinBox:type=[1]miniconsole,geometry=[4]6:6:50:40,visible=[1]false"),
-                                  qsl("showMini=[1]true"),
-                                  qsl("miniShown:type=[1]miniconsole,geometry=[4]6:6:50:40,visible=[1]true"),
-                                  qsl("miniIntoMain=[1]true"),
-                                  qsl("miniInMain:type=[1]miniconsole,geometry=[4]2:2:50:40,visible=[1]true"),
-                                  qsl("miniIntoWindow=[1]true"),
-                                  qsl("miniInHiddenWindow:type=[1]miniconsole,geometry=[4]1:1:50:40,visible=[1]false"),
-                                  qsl("miniWinFontSize=[1]12"),
-                                  qsl("boxIntoWindow=[1]true"),
-                                  qsl("boxInWindow:type=[1]scrollbox,geometry=[4]6:6:200:100,visible=[1]true"),
-                                  qsl("deepInWindowBox:font=main"),
-                                  qsl("deepPlainInWindowBox:font=swWindow"),
-                                  qsl("boxInHiddenWindow:type=[1]scrollbox,geometry=[4]6:6:200:100,visible=[1]false"),
-                                  qsl("deepInHiddenWindow:type=[1]label,geometry=[4]1:2:30:15,visible=[1]false"),
-                                  qsl("boxIntoItself=[2]nil:element 'swBox' cannot be moved into itself or into one of its own children"),
-                                  qsl("boxIntoChild=[2]nil:element 'swBox' cannot be moved into itself or into one of its own children"),
-                                  qsl("boxIntoMissing=[2]nil:window 'swNoSuch' not found"),
-                                  qsl("missingIntoBox=[2]nil:element 'swNoSuch' not found"),
-                                  qsl("windowIntoBox=[2]nil:element 'swWindow' is the base of a floating/dockable user window and may not be moved"),
-                                  qsl("mapperIntoBox=[2]nil:element 'mapper' not found"),
-                                  qsl("mainIntoBox=[2]nil:element 'main' not found"),
-                                  qsl("innerToMainHidden=[1]true"),
-                                  qsl("innerInMain:type=[1]scrollbox,geometry=[4]7:7:60:50,visible=[1]false"),
-                                  qsl("deepInHiddenInner:type=[1]label,geometry=[4]1:2:30:15,visible=[1]false"),
-                                  qsl("innerBack=[1]true"),
-                                  qsl("innerBack:type=[1]scrollbox,geometry=[4]5:6:60:50,visible=[1]true"),
-                                  qsl("deepBack:type=[1]label,geometry=[4]1:2:30:15,visible=[1]true"),
-                                  qsl("boxIntoMain=[1]true"),
-                                  qsl("boxInMain:type=[1]scrollbox,geometry=[4]11:12:200:100,visible=[1]true"),
-                                  qsl("boxIntoWinBox=[1]true"),
-                                  qsl("boxInHiddenWinBox:type=[1]scrollbox,geometry=[4]1:1:200:100,visible=[1]false"),
-                                  qsl("deepInHiddenWinBox:type=[1]label,geometry=[4]1:2:30:15,visible=[1]false"),
-                                  qsl("deepPlainInWinBox:font=swWindow"),
-                                  qsl("boxBackToMain=[1]true"),
-                                  qsl("deepPlainInMain:font=main"),
-                                  qsl("plainIntoClash=[1]true"),
-                                  qsl("plainInClash:font=main"),
-                                  qsl("plainOutOfClash=[1]true"),
-                                  qsl("miniIntoBoxAgain=[1]true"),
-                                  qsl("labelIntoInnerAgain=[1]true"),
-                                  qsl("delete=[1]true"),
-                                  qsl("labelAtOnce:type=[1]label,geometry=[4]1:1:40:20,visible=[1]true"),
-                                  qsl("miniAtOnce:type=[1]miniconsole,geometry=[4]5:5:50:40,visible=[1]true"),
-                                  qsl("plainOutside:type=[1]label,geometry=[4]1:1:40:20,visible=[1]true")};
+qsl("labelIntoBox=[1]true"),
+qsl("labelInBox:type=[1]label,geometry=[4]3:3:40:20,visible=[1]true"),
+qsl("labelInBox:font=other"),
+qsl("labelInHiddenBox:type=[1]label,geometry=[4]3:3:40:20,visible=[1]false"),
+qsl("labelIntoWinBox=[1]true"),
+qsl("labelInWinBox:type=[1]label,geometry=[4]4:4:40:20,visible=[1]false"),
+qsl("labelInWinBox:font=other"),
+qsl("showLabel=[1]true"),
+qsl("labelShown:type=[1]label,geometry=[4]4:4:40:20,visible=[1]true"),
+qsl("labelInHiddenWindow:type=[1]label,geometry=[4]4:4:40:20,visible=[1]false"),
+qsl("labelIntoInner=[1]true"),
+qsl("labelInHiddenOuter:type=[1]label,geometry=[4]1:1:40:20,visible=[1]false"),
+qsl("labelIntoHiddenBox=[1]true"),
+qsl("labelIntoHidden:type=[1]label,geometry=[4]2:2:40:20,visible=[1]false"),
+qsl("labelOutOfHidden:type=[1]label,geometry=[4]2:2:40:20,visible=[1]true"),
+qsl("labelIntoWindow=[1]true"),
+qsl("labelInWindow:type=[1]label,geometry=[4]5:5:40:20,visible=[1]true"),
+qsl("labelInWindow:font=other"),
+qsl("labelIntoMain=[1]true"),
+qsl("labelInMain:type=[1]label,geometry=[4]6:6:40:20,visible=[1]true"),
+qsl("labelInMain:font=other"),
+qsl("labelSameHidden=[1]true"),
+qsl("labelSameHidden:type=[1]label,geometry=[4]6:6:40:20,visible=[1]true"),
+qsl("hiddenLabelSame=[1]true"),
+qsl("hiddenLabelSame:type=[1]label,geometry=[4]6:6:40:20,visible=[1]false"),
+qsl("labelSameShown=[1]true"),
+qsl("labelSameShown:type=[1]label,geometry=[4]6:6:40:20,visible=[1]true"),
+qsl("plain:font=other"),
+qsl("plainIntoWinBox=[1]true"),
+qsl("plainInWinBox:font=swWindow"),
+qsl("plainIntoBox=[1]true"),
+qsl("plainInBox:font=main"),
+qsl("plainOutToWinBox=[1]true"),
+qsl("miniIntoBox=[1]true"),
+qsl("miniInBox:type=[1]miniconsole,geometry=[4]5:5:50:40,visible=[1]true"),
+qsl("miniFontSize=[1]12"),
+qsl("miniInHiddenBox:type=[1]miniconsole,geometry=[4]5:5:50:40,visible=[1]false"),
+qsl("miniIntoWinBox=[1]true"),
+qsl("miniInWinBox:type=[1]miniconsole,geometry=[4]6:6:50:40,visible=[1]false"),
+qsl("showMini=[1]true"),
+qsl("miniShown:type=[1]miniconsole,geometry=[4]6:6:50:40,visible=[1]true"),
+qsl("miniIntoMain=[1]true"),
+qsl("miniInMain:type=[1]miniconsole,geometry=[4]2:2:50:40,visible=[1]true"),
+qsl("miniIntoWindow=[1]true"),
+qsl("miniInHiddenWindow:type=[1]miniconsole,geometry=[4]1:1:50:40,visible=[1]false"),
+qsl("miniWinFontSize=[1]12"),
+qsl("miniSameHidden=[1]true"),
+qsl("miniSameHidden:type=[1]miniconsole,geometry=[4]1:1:50:40,visible=[1]true"),
+qsl("hiddenMiniSame=[1]true"),
+qsl("hiddenMiniSame:type=[1]miniconsole,geometry=[4]1:1:50:40,visible=[1]false"),
+qsl("miniSameShown=[1]true"),
+qsl("miniSameShown:type=[1]miniconsole,geometry=[4]1:1:50:40,visible=[1]true"),
+qsl("boxIntoWindow=[1]true"),
+qsl("boxInWindow:type=[1]scrollbox,geometry=[4]6:6:200:100,visible=[1]true"),
+qsl("deepInWindowBox:font=main"),
+qsl("deepPlainInWindowBox:font=swWindow"),
+qsl("boxInHiddenWindow:type=[1]scrollbox,geometry=[4]6:6:200:100,visible=[1]false"),
+qsl("deepInHiddenWindow:type=[1]label,geometry=[4]1:2:30:15,visible=[1]false"),
+qsl("boxSameHidden=[1]true"),
+qsl("boxSameHidden:type=[1]scrollbox,geometry=[4]6:6:200:100,visible=[1]true"),
+qsl("deepInSameHidden:type=[1]label,geometry=[4]1:2:30:15,visible=[1]true"),
+qsl("hiddenBoxSame=[1]true"),
+qsl("hiddenBoxSame:type=[1]scrollbox,geometry=[4]6:6:200:100,visible=[1]false"),
+qsl("deepInHiddenBoxSame:type=[1]label,geometry=[4]1:2:30:15,visible=[1]false"),
+qsl("boxSameShown=[1]true"),
+qsl("boxSameShown:type=[1]scrollbox,geometry=[4]6:6:200:100,visible=[1]true"),
+qsl("deepInSameShown:type=[1]label,geometry=[4]1:2:30:15,visible=[1]true"),
+qsl("boxIntoItself=[2]nil:element 'swBox' cannot be moved into itself or into one of its own children"),
+qsl("boxIntoChild=[2]nil:element 'swBox' cannot be moved into itself or into one of its own children"),
+qsl("boxIntoMissing=[2]nil:window 'swNoSuch' not found"),
+qsl("missingIntoBox=[2]nil:element 'swNoSuch' not found"),
+qsl("windowIntoBox=[2]nil:element 'swWindow' is the base of a floating/dockable user window and may not be moved"),
+qsl("mapperIntoBox=[2]nil:element 'mapper' not found"),
+qsl("mainIntoBox=[2]nil:element 'main' not found"),
+qsl("innerToMainHidden=[1]true"),
+qsl("innerInMain:type=[1]scrollbox,geometry=[4]7:7:60:50,visible=[1]false"),
+qsl("deepInHiddenInner:type=[1]label,geometry=[4]1:2:30:15,visible=[1]false"),
+qsl("innerBack=[1]true"),
+qsl("innerBack:type=[1]scrollbox,geometry=[4]5:6:60:50,visible=[1]true"),
+qsl("deepBack:type=[1]label,geometry=[4]1:2:30:15,visible=[1]true"),
+qsl("innerSameHidden=[1]true"),
+qsl("innerSameHidden:type=[1]scrollbox,geometry=[4]5:6:60:50,visible=[1]true"),
+qsl("hiddenInnerSame=[1]true"),
+qsl("hiddenInnerSame:type=[1]scrollbox,geometry=[4]5:6:60:50,visible=[1]false"),
+qsl("innerSameShown=[1]true"),
+qsl("innerSameShown:type=[1]scrollbox,geometry=[4]5:6:60:50,visible=[1]true"),
+qsl("boxIntoMain=[1]true"),
+qsl("boxInMain:type=[1]scrollbox,geometry=[4]11:12:200:100,visible=[1]true"),
+qsl("boxIntoWinBox=[1]true"),
+qsl("boxInHiddenWinBox:type=[1]scrollbox,geometry=[4]1:1:200:100,visible=[1]false"),
+qsl("deepInHiddenWinBox:type=[1]label,geometry=[4]1:2:30:15,visible=[1]false"),
+qsl("deepPlainInWinBox:font=swWindow"),
+qsl("boxBackToMain=[1]true"),
+qsl("deepPlainInMain:font=main"),
+qsl("plainIntoClash=[1]true"),
+qsl("plainInClash:font=main"),
+qsl("plainOutOfClash=[1]true"),
+qsl("miniIntoBoxAgain=[1]true"),
+qsl("labelIntoInnerAgain=[1]true"),
+qsl("delete=[1]true"),
+qsl("labelAtOnce:type=[1]label,geometry=[4]1:1:40:20,visible=[1]true"),
+qsl("miniAtOnce:type=[1]miniconsole,geometry=[4]5:5:50:40,visible=[1]true"),
+qsl("plainOutside:type=[1]label,geometry=[4]1:1:40:20,visible=[1]true"),
+qsl("hiddenMiniMade:type=[1]miniconsole,geometry=[4]0:0:20:20,visible=[1]false"),
+qsl("hiddenMiniSameHidden=[1]true"),
+qsl("hiddenBoxSameShown=[1]true"),
+qsl("hiddenMiniSameHidden:type=[1]miniconsole,geometry=[4]0:0:20:20,visible=[1]true"),
+qsl("hiddenBoxSameShown:type=[1]scrollbox,geometry=[4]0:30:20:20,visible=[1]true"),
+qsl("hiddenMiniSameShown=[1]true"),
+qsl("hiddenBoxSameHidden=[1]true"),
+qsl("hiddenMiniSameShown:type=[1]miniconsole,geometry=[4]0:0:20:20,visible=[1]true"),
+qsl("hiddenBoxSameHidden:type=[1]scrollbox,geometry=[4]0:30:20:20,visible=[1]true")};
         QCOMPARE(luaGlobalString(host, "headlessSetWindowAnswers"), answers.join(QLatin1Char('\n')));
 
         QCoreApplication::sendPostedEvents(nullptr, QEvent::DeferredDelete);
