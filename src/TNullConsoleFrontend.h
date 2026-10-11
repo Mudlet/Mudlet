@@ -328,6 +328,7 @@ private:
     void restyleLabel(Label& label, const QString& sheet);
     bool setSubConsoleShown(const QString& name, bool shown);
     void reportVisibility();
+    void reportWindowVisibility(const QString& name);
     std::optional<QFont> consoleFont(const QString& name) const;
     void setSubConsoleFont(const QString& name, const QFont& font);
     void reportDisplayFontChange(const QFont& before);
