@@ -182,7 +182,8 @@ void ModernGLWidget::showFailure(const QString& message)
         layout->addWidget(mpFailureLabel);
     }
     //: Second paragraph of the message shown in place of the 3D map when the modern 3D mapper cannot run; keep setConfig("experiment.3dmap.modernmapper", false) exactly as written, it is Lua code the user types
-    mpFailureLabel->setText(qsl("%1\n\n%2").arg(message, tr("Use setConfig(\"experiment.3dmap.modernmapper\", false) to switch back to the classic 3D view.")));
+    mpFailureLabel->setText(
+            qsl("%1\n\n%2").arg(message, tr("Use setConfig(\"experiment.3dmap.modernmapper\", false) to switch back to the classic 3D view. Setting it back to true tries the modern one again.")));
     mpFailureLabel->show();
 }
 
@@ -1042,6 +1043,15 @@ bool ModernGLWidget::cameraFixedByGridMode() const
     }
     const TArea* pArea = mpMap->mpRoomDB->getArea(areaId);
     return pArea && pArea->gridMode;
+}
+
+void ModernGLWidget::setCameraDistance(float r)
+{
+    mCameraController.setScale(r);
+    mDistanceRequested = true;
+    mPendingFrameZoom.reset();
+    emitCameraControls();
+    update();
 }
 
 void ModernGLWidget::setCameraPosition(float r, float theta, float phi)

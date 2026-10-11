@@ -140,8 +140,10 @@ void CameraController::setViewportSize(int width, int height)
 void CameraController::shiftPerspective(float verticalAngle, float horizontalAngle, float rotationAngle)
 {
     if (verticalAngle != 0) {
-        mPositionVector = rotateAround(mPositionVector, mRightVector, verticalAngle);
-        mUpVector = QVector3D::normal(mRightVector, mPositionVector);
+        // The tilt alone, as the tilt slider sets it: turning about a rolled camera's right vector would roll
+        // it as well, and carry it over the top until the map shows upside down
+        const QVector3D position = getPosition();
+        setOrientation(position.y() - verticalAngle, position.z(), getRoll());
     }
     if (horizontalAngle != 0) {
         mPositionVector = rotateAround(mPositionVector, mUpVector, horizontalAngle);

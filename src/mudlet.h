@@ -502,7 +502,6 @@ public slots:
     void slot_showVariableDialog();
 
 protected:
-    bool event(QEvent*) override;
     void closeEvent(QCloseEvent*) override;
     void changeEvent(QEvent*) override;
     void dragEnterEvent(QDragEnterEvent* event) override;

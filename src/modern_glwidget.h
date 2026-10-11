@@ -81,6 +81,8 @@ public:
     void setCameraPosition(float, float, float);
     // Frames as many rooms as the 2D map shows at this zoom, when areaId is the area on view
     void applyMapZoom(qreal zoom, int areaId);
+    void setCameraDistance(float r);
+    const QString& failureMessage() const { return mFailureMessage; }
     // A grid-mode area is always drawn looking straight down with north up
     bool cameraFixedByGridMode() const;
 
