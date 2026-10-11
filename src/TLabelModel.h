@@ -25,9 +25,13 @@
 #include <QPointer>
 #include <QRect>
 #include <QSet>
+#include <QSize>
 #include <QString>
 
+#include <optional>
+
 class Host;
+class QSvgRenderer;
 
 // A label's widget-free state, so the Widgets-free core can hold a named label without a QLabel.
 // Owned by its TLabel, whose same-named reference members alias it; TWindowRegistry indexes
@@ -42,6 +46,12 @@ struct TLabelModel
     // A copy would free the same Lua registry indexes twice. This also suppresses the implicit moves.
     TLabelModel(const TLabelModel&) = delete;
     TLabelModel& operator=(const TLabelModel&) = delete;
+
+    // Whether the SVG renderer is worth trying on a file, judged by its first bytes.
+    static bool svgCandidate(const QString& path);
+    static bool loadSvg(QSvgRenderer& renderer, const QString& path);
+    // A file's natural size as an SVG document or a raster image, without a widget.
+    static std::optional<QSize> imageSize(const QString& path);
 
     // Each releases the Lua registry index it replaces.
     void setClick(const int func);
