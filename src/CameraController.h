@@ -58,6 +58,8 @@ public:
     static float wheelZoomSteps(int angleDeltaY, bool fast, bool inverted);
     // The distance that shows this many rooms across the shorter side of the view at the target
     static float distanceToShow(float rooms, float aspectRatio);
+    // The distance that fits a span of rooms this wide and tall on screen, with a margin, at the target
+    static float distanceToFit(float width, float height, float aspectRatio);
     void setViewportSize(int width, int height);
     void shiftPerspective(float verticalAngle, float horizontalAngle, float rotationAngle);
 

@@ -28,6 +28,7 @@
 
 #include <QtTest/QtTest>
 
+#include <QColor>
 #include <QFile>
 #include <QRegularExpression>
 
@@ -234,6 +235,31 @@ private slots:
         QCOMPARE(GeometryManager::declutteredRects(rects, 7.0), (QList<qsizetype>{0, 2, 5, 7}));
         QCOMPARE(GeometryManager::declutteredRects(rects, 2.0), (QList<qsizetype>{0, 2, 3, 5, 7}));
         QVERIFY(GeometryManager::declutteredRects({}, 7.0).isEmpty());
+    }
+
+    // Levels below the viewed one fade toward the background, further the further down; those above turn see-through
+    void test_levelsFadeTowardTheBackgroundWithDistance()
+    {
+        const QColor room(200, 40, 40);
+        // Light, so a fade that only darkened would move away from it
+        const QColor background(240, 240, 240);
+        const auto fromBackground = [&background](const QVector4D& color) {
+            return QVector3D(color.x() - background.redF(), color.y() - background.greenF(), color.z() - background.blueF()).length();
+        };
+        const QVector4D viewed = GeometryManager::fadedColor(room, GeometryManager::levelFade(0, false), background);
+        QCOMPARE(viewed, QVector4D(room.redF(), room.greenF(), room.blueF(), 1.0f));
+        QCOMPARE(GeometryManager::fadedDecalTint(GeometryManager::levelFade(0, false)), QVector4D(1.0f, 1.0f, 1.0f, 1.0f));
+
+        const QVector4D oneBelow = GeometryManager::fadedColor(room, GeometryManager::levelFade(-1, false), background);
+        const QVector4D twoBelow = GeometryManager::fadedColor(room, GeometryManager::levelFade(-2, false), background);
+        QVERIFY2(fromBackground(oneBelow) < fromBackground(viewed), "the level below does not fade toward the background");
+        QVERIFY2(fromBackground(twoBelow) < fromBackground(oneBelow), "two levels below fades no further than one");
+        QCOMPARE(oneBelow.w(), 1.0f);
+        QVERIFY(GeometryManager::fadedDecalTint(GeometryManager::levelFade(-1, false)).w() < 1.0f);
+
+        const QVector4D oneAbove = GeometryManager::fadedColor(room, GeometryManager::levelFade(1, false), background);
+        QVERIFY2(oneAbove.w() < 0.5f, "the level above would hide the viewed one");
+        QVERIFY(GeometryManager::levelFade(2, false).opacity < GeometryManager::levelFade(1, false).opacity);
     }
 
     void test_aLabelIsOnTheLevelItsHeightRoundsTo_data()

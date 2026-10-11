@@ -35,6 +35,8 @@
 #include <assimp/scene.h>
 #include <assimp/postprocess.h>
 
+class QColor;
+
 struct GeometryData
 {
     QVector<float> vertices;
@@ -178,6 +180,19 @@ public:
     // The indices of the screen rectangles to keep, taking them in the order given: one shorter than
     // minimumHeight, or overlapping one kept before it, is left out
     static QList<qsizetype> declutteredRects(const QList<QRectF>& rects, qreal minimumHeight);
+
+    // How a level other than the viewed one recedes: how far its colors go toward the background, and
+    // how opaque it stays
+    struct LevelFade
+    {
+        float towardBackground = 0.0f;
+        float opacity = 1.0f;
+    };
+    // levelsAbove is how many levels above the viewed one, negative for below
+    static LevelFade levelFade(int levelsAbove, bool moreTransparent);
+    static QVector4D fadedColor(const QColor& color, const LevelFade& fade, const QColor& background);
+    // The tint for a texture drawn on a faded room, which can only make it more see-through
+    static QVector4D fadedDecalTint(const LevelFade& fade);
 
     // Render geometry using provided VAO and buffers
     void renderGeometry(const GeometryData& geometry,

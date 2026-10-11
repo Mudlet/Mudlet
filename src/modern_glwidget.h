@@ -58,6 +58,7 @@
 class Host;
 class QFontMetricsF;
 class QLabel;
+class QPainter;
 class T2DMap;
 class TMap;
 class TRoom;
@@ -100,6 +101,12 @@ public:
     // The rooms on show drawn wholly inside this rectangle of the view, on the level in the middle of
     // the view or, with allLevels, on any level shown
     QSet<int> roomsInRectangle(const QRect& rectangle, bool allLevels);
+    // The room under the pointer, drawn raised and outlined, or 0
+    int hoveredRoomId() const { return mHoveredRoomId; }
+    // Centers and zooms the view to show all the area's rooms on the levels shown
+    void fitArea();
+    // Where the compass is drawn, which turns the view north up when clicked; empty while the camera is fixed
+    QRect compassRect() const;
 
     QSize minimumSizeHint() const override;
     QSize sizeHint() const override;
@@ -154,6 +161,7 @@ protected:
     void mouseReleaseEvent(QMouseEvent* event) override;
     void mouseDoubleClickEvent(QMouseEvent* event) override;
     void keyPressEvent(QKeyEvent* event) override;
+    void leaveEvent(QEvent* event) override;
     void showEvent(QShowEvent* event) override;
     void hideEvent(QHideEvent* event) override;
     bool event(QEvent* event) override;
@@ -281,6 +289,7 @@ private:
         float roll = 0.0f;
     };
     QHash<int, SavedCamera> mSavedCameras;
+    int mHoveredRoomId = 0;
 
     // Private methods for modern OpenGL
     void updateMatrices();
@@ -288,6 +297,11 @@ private:
     void renderConnections();
     // Map labels lie flat at their place on the map; those shown on top over the rooms, the others under the exits
     void renderLabels(bool onTop);
+    // A column of light over the player's room, seen faintly through anything in front of it
+    void renderPlayerBeacon();
+    void paintCompass(QPainter& painter);
+    void turnNorthUp();
+    void setHoveredRoom(int roomId);
     void renderCube(float x, float y, float z, float size, float r, float g, float b, float a);
     void renderText(const QString& text, float x, float y);
     void setupBuffers();

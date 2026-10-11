@@ -144,6 +144,18 @@ QGradientStops playerRoomStops(const int style, const quint8 innerDiameterPercen
     }
 }
 
+QColor playerBeaconColor(const int style, const QColor& outerColor)
+{
+    switch (style) {
+    case 2:
+        return QColor(255, 255, 0);
+    case 3:
+        return QColor(outerColor.red(), outerColor.green(), outerColor.blue());
+    default:
+        return QColor(255, 0, 0);
+    }
+}
+
 QColor strongHighlightFillColor()
 {
     return QColor(255, 0, 0, 150);

@@ -280,6 +280,50 @@ private slots:
         QVERIFY(stub && stairs);
     }
 
+    // Up and down exits that do not lead straight up or down are short shafts at each end, not slanting lines
+    void test_offsetStairsAreShortShaftsAtEachEnd()
+    {
+        TRoom* pLow = addRoomAt(1, mAreaId, 0, 0, 0);
+        TRoom* pHigh = addRoomAt(2, mAreaId, 3, 2, 1);
+        QVERIFY(pLow && pHigh);
+        pLow->setExit(2, DIR_UP);
+        pHigh->setExit(1, DIR_DOWN);
+
+        const QList<ExitScene::Segment> lines = segmentsIn(build(), mExitColor);
+        QCOMPARE(lines.size(), 2);
+        bool rising = false;
+        bool dropping = false;
+        for (const ExitScene::Segment& line : lines) {
+            QVERIFY2(closeTo(flat(line.from), flat(line.to)), "a shaft slants");
+            const float rise = line.to.z() - line.from.z();
+            QVERIFY2(qAbs(rise) > 0.1f && qAbs(rise) < 0.5f, qPrintable(qsl("a shaft %1 levels tall").arg(rise)));
+            rising = rising || (closeTo(flat(line.from), QVector2D(0, 0)) && line.level == 0 && rise > 0.0f);
+            dropping = dropping || (closeTo(flat(line.from), QVector2D(3, 2)) && line.level == 1 && rise < 0.0f);
+        }
+        QVERIFY(rising && dropping);
+    }
+
+    // A one-way one is a shaft from its own room only, tipped in the one-way arrow's color
+    void test_oneWayOffsetStairsAreAShaftWithAColoredTip()
+    {
+        TRoom* pLow = addRoomAt(1, mAreaId, 0, 0, 0);
+        TRoom* pHigh = addRoomAt(2, mAreaId, 3, 2, 1);
+        QVERIFY(pLow && pHigh);
+        pHigh->setExit(1, DIR_DOWN);
+
+        const ExitScene::Scene scene = build();
+        const QList<ExitScene::Segment> shaft = segmentsIn(scene, mExitColor);
+        const QList<ExitScene::Segment> tip = segmentsIn(scene, ExitAppearance::oneWayArrowColor());
+        QCOMPARE(shaft.size(), 1);
+        QCOMPARE(tip.size(), 1);
+        for (const ExitScene::Segment& line : {shaft.first(), tip.first()}) {
+            QVERIFY2(closeTo(flat(line.from), QVector2D(3, 2)) && closeTo(flat(line.to), QVector2D(3, 2)), "the shaft is not upright at the room with the exit");
+            QVERIFY(line.to.z() < line.from.z());
+        }
+        QVERIFY(qAbs(shaft.first().to.z() - tip.first().from.z()) < scmTolerance);
+        QVERIFY(scene.triangles.isEmpty());
+    }
+
     void test_dashesTooFineForTheLineAreDrawnSolid_data()
     {
         QTest::addColumn<float>("lineWidth");

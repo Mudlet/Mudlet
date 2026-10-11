@@ -347,6 +347,7 @@ private slots:
         QVERIFY2(menu, "right-clicking a room in the 3D view opened no menu");
         QStringList texts = actionTexts(menu);
         QVERIFY2(texts.value(0) == qsl("Edit in 2D"), qPrintable(texts.join(qsl(", "))));
+        QVERIFY2(texts.value(1) == qsl("Fit area"), qPrintable(texts.join(qsl(", "))));
         QVERIFY2(texts.contains(qsl("Configure room...")), qPrintable(texts.join(qsl(", "))));
         QVERIFY2(texts.contains(qsl("Set player location")), qPrintable(texts.join(qsl(", "))));
         // These need a pointer on the 2D map itself
@@ -441,6 +442,59 @@ private slots:
     }
 
     // A floating map is a window of its own, so focusing the command line alone leaves the keys typed next here
+    void test_hoveringRaisesTheRoomUnderThePointer()
+    {
+        ModernGLWidget* pModern = viewAtThePlayer();
+        QVERIFY(pModern);
+        // Sent rather than QTest::mouseMove(), which the offscreen platform does not deliver without a button down
+        const auto moveTo = [pModern](const QPoint& position) {
+            QMouseEvent move(QEvent::MouseMove, position, pModern->mapToGlobal(position), Qt::NoButton, Qt::NoButton, Qt::NoModifier);
+            QCoreApplication::sendEvent(pModern, &move);
+        };
+        moveTo(pixelOfRoom(pModern, kEastRoomId));
+        QCOMPARE(pModern->hoveredRoomId(), kEastRoomId);
+        moveTo(QPoint(pModern->width() / 2, 2));
+        QCOMPARE(pModern->hoveredRoomId(), 0);
+    }
+
+    // F frames the whole area, however the camera is tilted and turned
+    void test_fitAreaShowsEveryRoom()
+    {
+        ModernGLWidget* pModern = viewAtThePlayer();
+        QVERIFY(pModern);
+        pModern->setCameraPosition(CameraController::scmMinDistance, 60.0f, CameraController::scmNorthUpAzimuth + 30.0f);
+        QVERIFY2(pixelOfRoom(pModern, kEastRoomId).x() < 0, "the east room is on screen before fitting");
+
+        QTest::keyClick(pModern, Qt::Key_F);
+        QCOMPARE(pModern->viewCenter(), QVector3D(1.0f, 0.0f, 0.0f));
+        QVERIFY(!pModern->followingPlayer());
+        QTRY_VERIFY2(pixelOfRoom(pModern, kEastRoomId).x() >= 0 && pixelOfRoom(pModern, kPlayerRoomId).x() >= 0, "a room is off screen after fitting");
+
+        // Not merely zoomed out: the rooms fill much of the view
+        pModern->setCameraPosition(1.0f, CameraController::scmMinTilt, CameraController::scmNorthUpAzimuth);
+        QTest::keyClick(pModern, Qt::Key_F);
+        QTRY_VERIFY(pixelOfRoom(pModern, kEastRoomId).x() - pixelOfRoom(pModern, kPlayerRoomId).x() > pModern->width() / 3);
+    }
+
+    void test_clickingTheCompassTurnsTheViewNorthUp()
+    {
+        ModernGLWidget* pModern = viewAtThePlayer();
+        QVERIFY(pModern);
+        QSignalSpy cameraControls(pModern, &ModernGLWidget::cameraControlsChanged);
+        pModern->setCameraPosition(1.0f, 50.0f, CameraController::scmNorthUpAzimuth + 40.0f);
+        pModern->shiftCamera(0.0f, 0.0f, 25.0f);
+        const QVariantList turned = cameraControls.last();
+        QVERIFY(turned.at(3).toInt() != 0 && turned.at(2).toInt() != 0);
+        const QRect compass = pModern->compassRect();
+        QVERIFY(pModern->rect().contains(compass));
+
+        QTest::mouseClick(pModern, Qt::LeftButton, Qt::NoModifier, compass.center());
+        QCOMPARE(cameraControls.last().at(3).toInt(), 0);
+        QCOMPARE(cameraControls.last().at(2).toInt(), 0);
+        QCOMPARE(cameraControls.last().at(1), turned.at(1));
+        QVERIFY(selection().isEmpty());
+    }
+
     void test_typingAfterClickingAFloatingViewReachesTheCommandLine()
     {
         ModernGLWidget* pModern = viewAtThePlayer();
