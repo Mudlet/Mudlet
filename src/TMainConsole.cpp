@@ -41,6 +41,7 @@
 #include "TMedia.h"
 #include "TMxpFrameWidgets.h"
 #include "TNullConsoleFrontend.h"
+#include "TPasswordEntry.h"
 #include "TRoomDB.h"
 #include "TScrollBox.h"
 #include "TTextBox.h"
@@ -71,6 +72,7 @@
 #include <QTextCodec>
 #include <QTimer>
 #include <QPainter>
+#include <QResizeEvent>
 #include <QVideoWidget>
 
 #include <chrono>
@@ -300,6 +302,9 @@ TMainConsole::TMainConsole(Host* pH, QWidget* parent)
     mpLatencyBoxPacer->setSingleShot(true);
     mpLatencyBoxPacer->setInterval(csmLatencyBoxPaceMs);
     connect(mpLatencyBoxPacer, &QTimer::timeout, this, &TMainConsole::slot_refreshLatencyBox);
+
+    connect(pH, &Host::signal_passwordEntryWantedChanged, this, &TMainConsole::slot_passwordEntryWanted, Qt::UniqueConnection);
+    slot_passwordEntryWanted(pH->passwordEntryWanted());
 
     // Ensure the QWidget has the profile name embedded into it
     setProperty("HostName", pH->getName());
@@ -1798,8 +1803,118 @@ void TMainConsole::updateCommandLineSpellCheck(bool enabled)
 
 void TMainConsole::setCommandLineText(const QString& text)
 {
+    if (mpPasswordEntry) {
+        mpPasswordEntry->setText(text);
+        mpPasswordEntry->selectAll();
+        return;
+    }
     mpCommandLine->setPlainText(text);
     mpCommandLine->selectAll();
+}
+
+void TMainConsole::printToCommandLine(const QString& text)
+{
+    if (mpPasswordEntry) {
+        mpPasswordEntry->setText(text);
+        return;
+    }
+    mpCommandLine->setPlainText(text);
+    QTextCursor cursor = mpCommandLine->textCursor();
+    cursor.clearSelection();
+    // End, not EndOfLine: the latter stops at the end of the first wrapped line
+    cursor.movePosition(QTextCursor::End);
+    mpCommandLine->setTextCursor(cursor);
+    mpCommandLine->adjustHeight();
+}
+
+TPasswordEntry* TMainConsole::passwordEntry() const
+{
+    return mpPasswordEntry;
+}
+
+void TMainConsole::slot_passwordEntryWanted(const bool wanted)
+{
+    if (!mpCommandLine || !mpHost || mpHost->isClosingDown()) {
+        return;
+    }
+    if (wanted && !mpPasswordEntry) {
+        openPasswordEntry();
+    } else if (!wanted && mpPasswordEntry) {
+        closePasswordEntry();
+    }
+}
+
+void TMainConsole::openPasswordEntry()
+{
+    // A sibling, not a child: an ignored key event would bubble from a child
+    // into TCommandLine::event()
+    mpPasswordEntry = new TPasswordEntry(mpHost, mpCommandLine, layerCommandLine);
+    mpPasswordEntry->setGeometry(mpCommandLine->geometry());
+    mpPasswordEntry->raise();
+    mpPasswordEntry->show();
+    mpCommandLine->installEventFilter(this);
+
+    // So a fast typist's password is not split between the two. A box that comes
+    // back later in the hold finds text typed into the command line on purpose.
+    // setText() does not report the move as the player's first edit on its own.
+    if (mpHost->passwordEntryOpensWithThePrompt() && mpCommandLine->playerTypedLine()) {
+        QString typedAhead = mpCommandLine->toPlainText();
+        typedAhead.remove(QChar::CarriageReturn);
+        typedAhead.remove(QChar::LineFeed);
+        if (!typedAhead.isEmpty()) {
+            mpPasswordEntry->setText(typedAhead);
+            mpCommandLine->clear();
+            mpHost->passwordEntryEdited();
+        }
+    }
+
+    // Before the box takes focus, so a screen reader announces this wording
+    if (mpHost->passwordEntryReopened()) {
+        mpPasswordEntry->setReopened();
+    }
+
+    // QApplication::focusWidget() is null while Mudlet is not the active
+    // application. Read before setting the proxy, which moves focus to the box.
+    QWidget* pFocused = window()->focusWidget();
+    mpCommandLine->setFocusProxy(mpPasswordEntry);
+
+    // A printable key typed anywhere else reaches the box through the proxy anyway
+    auto* pCommandLineFocused = qobject_cast<TCommandLine*>(pFocused);
+    const bool fromOwnCommandLine = !pFocused || pFocused == mpCommandLine || (pCommandLineFocused && pCommandLineFocused->console() && pCommandLineFocused->console()->getHost() == mpHost);
+    if (fromOwnCommandLine) {
+        mpPasswordEntry->setFocus(Qt::OtherFocusReason);
+    } else {
+        //: Spoken by a screen reader when the game asks for hidden input while the keyboard focus is somewhere the hidden-input box does not take it from
+        mudlet::self()->announce(tr("The game asks for hidden input."), QString(), true);
+    }
+
+    connect(mpPasswordEntry, &TPasswordEntry::dismissed, mpHost, &Host::dismissPasswordEntry);
+}
+
+void TMainConsole::closePasswordEntry()
+{
+    TPasswordEntry* pEntry = mpPasswordEntry;
+    mpPasswordEntry = nullptr;
+    // Before the box hides, or hide() runs focusNextPrevChild() itself
+    const bool hadFocus = window()->focusWidget() == pEntry;
+    mpCommandLine->setFocusProxy(nullptr);
+    if (hadFocus) {
+        mpCommandLine->setFocus(Qt::OtherFocusReason);
+    }
+    mpCommandLine->removeEventFilter(this);
+    // Hidden before the deferred delete, or a WONT and a WILL in one read leave
+    // two boxes alive. Qt zero-fills only a password-mode line edit's text.
+    pEntry->setEchoMode(QLineEdit::Password);
+    pEntry->hide();
+    pEntry->deleteLater();
+}
+
+bool TMainConsole::eventFilter(QObject* watched, QEvent* event)
+{
+    if (mpPasswordEntry && watched == mpCommandLine && (event->type() == QEvent::Resize || event->type() == QEvent::Move)) {
+        mpPasswordEntry->setGeometry(mpCommandLine->geometry());
+    }
+    return TConsole::eventFilter(watched, event);
 }
 
 void TMainConsole::recordActiveCommandLine(TCommandLine* pCommandLine)
@@ -1898,6 +2013,10 @@ bool TMainConsole::replaceCommandLineText(const QString& name, const QString& te
     if (!pN) {
         return false;
     }
+    if (pN == mpCommandLine) {
+        printToCommandLine(text);
+        return true;
+    }
     putTextOnCommandLine(pN, text);
     return true;
 }
@@ -1907,6 +2026,17 @@ bool TMainConsole::appendCommandLineText(const QString& name, const QString& tex
     auto pN = commandLineNamed(name);
     if (!pN) {
         return false;
+    }
+    if (pN == mpCommandLine) {
+        if (mpPasswordEntry) {
+            // A script's write is not the player's first edit, which would cancel the auto-login
+            const QSignalBlocker blocker(mpPasswordEntry);
+            mpPasswordEntry->end(false);
+            mpPasswordEntry->insert(text);
+            return true;
+        }
+        printToCommandLine(mpCommandLine->toPlainText() + text);
+        return true;
     }
     putTextOnCommandLine(pN, pN->toPlainText() + text);
     return true;
@@ -1918,6 +2048,10 @@ bool TMainConsole::clearCommandLine(const QString& name)
     if (!pN) {
         return false;
     }
+    if (pN == mpCommandLine && mpPasswordEntry) {
+        mpPasswordEntry->setText(QString());
+        return true;
+    }
     pN->clear();
     pN->adjustHeight();
     return true;
@@ -1928,6 +2062,10 @@ bool TMainConsole::selectCommandLineText(const QString& name)
     auto pN = commandLineNamed(name);
     if (!pN) {
         return false;
+    }
+    if (pN == mpCommandLine && mpPasswordEntry) {
+        mpPasswordEntry->selectAll();
+        return true;
     }
     pN->selectAll();
     return true;

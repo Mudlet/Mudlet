@@ -2328,6 +2328,13 @@ describe("Tests UI functions", function()
     end
 
     local savedSettings
+    local dockWasShowing
+    local originalBorders
+
+    setup(function()
+      dockWasShowing = BaseUI.container ~= nil and not BaseUI.container.hidden
+      originalBorders = getBorderSizes()
+    end)
 
     before_each(function()
       savedSettings = table.deepcopy(BaseUI.settings)
@@ -2338,6 +2345,13 @@ describe("Tests UI functions", function()
       BaseUI.saveSettings()
       BaseUI.armChatTriggers()
       BaseUI.createVitalsTriggers()
+      -- BaseUI.show() docks the chat window on the right border and it stays there,
+      -- leaving the main console narrower for every later spec; BaseUI.hide() is
+      -- how the base UI itself gives that border back
+      if not dockWasShowing and BaseUI.container and not BaseUI.container.hidden then
+        BaseUI.container:hide()
+        BaseUI.container:adjustBorder()
+      end
     end)
 
     it("should stand aside when the game installs its own GUI", function()
@@ -2402,6 +2416,15 @@ describe("Tests UI functions", function()
       BaseUI.show()
       assert.is_nil(BaseUI.settings.standingAside)
       assert.is_false(BaseUI.dormant())
+    end)
+
+    -- runs after the after_each of every spec above it
+    it("should leave the main console's borders as it found them", function()
+      if dockWasShowing then
+        pending("the base UI dock was already showing, so its border is not this block's to check")
+        return
+      end
+      assert.are.same(originalBorders, getBorderSizes())
     end)
   end)
 

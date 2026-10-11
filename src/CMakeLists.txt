@@ -140,6 +140,7 @@ set(mudlet_SRCS
     TAreaZLevelIndex.cpp
     TBuffer.cpp
     TCommandLine.cpp
+    TPasswordEntry.cpp
     TConsole.cpp
     TConsoleModel.cpp
     TDebug.cpp
@@ -428,6 +429,7 @@ set(mudlet_HDRS
     TAstar.h
     TBuffer.h
     TCommandLine.h
+    TPasswordEntry.h
     TConsole.h
     TConsoleFrontend.h
     TConsoleModel.h
