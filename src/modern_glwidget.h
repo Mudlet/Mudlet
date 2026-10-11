@@ -114,11 +114,11 @@ public:
     // The rooms on show drawn wholly inside this rectangle of the view, on the level in the middle of
     // the view or, with allLevels, on any level shown
     QSet<int> roomsInRectangle(const QRect& rectangle, bool allLevels);
-    // The room under the pointer, drawn raised and outlined, or 0
-    int hoveredRoomId() { return roomUnderPointer(); }
+    // The room drawn raised and outlined, as the one under the pointer, or 0
+    int hoveredRoomId() const { return mHoveredRoomId; }
     // Centers and zooms the view to show all the area's rooms on the levels shown
     void fitArea();
-    // Where the compass is drawn, which turns the view north up when clicked; empty while the camera is fixed
+    // Where the compass is drawn, which turns the view north up when clicked; empty while the camera is fixed or the view is too small for it
     QRect compassRect() const;
 
     QSize minimumSizeHint() const override;
@@ -309,7 +309,7 @@ private:
         float roll = 0.0f;
     };
     QHash<int, SavedCamera> mSavedCameras;
-    // The room drawn raised in the last frame; picking goes by where it was drawn
+    // The room drawn raised, or to be at the next frame; roomAt() picks it where it rests or is raised
     int mHoveredRoomId = 0;
     QPoint mPointerPosition;
     bool mPointerInView = false;
@@ -333,7 +333,10 @@ private:
     // The 2D map's grid, on the viewed level under its rooms: queued with depth testing on and depth writing off
     void queueGrid();
     // Map labels lie flat at their place on the map; those shown on top over the rooms, the others under the exits
-    void renderLabels(bool onTop);
+    // What a frame draws, in order, into the render command queue
+    void queueScene();
+    // The labels of the levels from lowestLevel to highestLevel, either beneath the rooms or on top of them
+    void renderLabels(bool onTop, int lowestLevel, int highestLevel);
     // A column of light over the player's room, seen faintly through anything in front of it
     void renderPlayerBeacon();
     void paintCompass(QPainter& painter);

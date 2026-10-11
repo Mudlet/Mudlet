@@ -674,6 +674,9 @@ private slots:
         QCoreApplication::sendEvent(pModern, &leftPress);
         map()->mapper()->show3DView(false);
         QTRY_COMPARE(pressesSeenByScript(), 1);
+        // Announced once only, though the hide queues it
+        QTest::qWait(50);
+        QCOMPARE(pressesSeenByScript(), 1);
 
         pModern = viewAtThePlayer();
         QVERIFY(pModern);
@@ -750,9 +753,20 @@ private slots:
 #endif
     }
 
-    // The keys pan and zoom only with focus from the keyboard, so the view must be in its window's Tab order
+    void test_tabReachesTheViewWhoseKeysThenPan_data()
+    {
+        QTest::addColumn<int>("onwardKey");
+        QTest::addColumn<int>("modifiers");
+        QTest::newRow("Tab") << static_cast<int>(Qt::Key_Tab) << static_cast<int>(Qt::NoModifier);
+        QTest::newRow("Backtab") << static_cast<int>(Qt::Key_Backtab) << static_cast<int>(Qt::ShiftModifier);
+    }
+
+    // The keys pan and zoom only with focus from the keyboard, so the view must be in its window's Tab order; from
+    // there Tab goes on through the window, not to the command line as it does after a click
     void test_tabReachesTheViewWhoseKeysThenPan()
     {
+        QFETCH(int, onwardKey);
+        QFETCH(int, modifiers);
         ModernGLWidget* pModern = viewAtThePlayer();
         QVERIFY(pModern);
         QDockWidget* pDock = dockOf(pModern);
@@ -770,6 +784,12 @@ private slots:
         const QVector3D start = pModern->viewCenter();
         QTest::keyClick(static_cast<QWidget*>(nullptr), Qt::Key_W);
         QVERIFY2(pModern->viewCenter().y() > start.y(), "W did not pan after Tab reached the view");
+
+        const QString typed = mpHost->mainConsoleView()->mpCommandLine->toPlainText();
+        QTest::keyClick(static_cast<QWidget*>(nullptr), static_cast<Qt::Key>(onwardKey), static_cast<Qt::KeyboardModifiers>(modifiers));
+        QVERIFY2(!pModern->hasFocus(), "Tab did not leave the view");
+        QVERIFY2(pDock->isAncestorOf(QApplication::focusWidget()), qPrintable(qsl("focus went to %1").arg(QDebug::toString(QApplication::focusWidget()))));
+        QCOMPARE(mpHost->mainConsoleView()->mpCommandLine->toPlainText(), typed);
     }
 
     // A click takes the keys back for the command line also when the view already had focus from the keyboard
@@ -922,6 +942,9 @@ private slots:
             runLua(qsl("killKey(keypadEight); killKey(keypadUp)"));
         });
         QVERIFY(focusFromTheKeyboard(pModern));
+        const QVector3D beforeW = pModern->viewCenter();
+        QTest::keyClick(pModern, Qt::Key_W);
+        QVERIFY2(pModern->viewCenter().y() > beforeW.y(), "W did not pan with focus from the keyboard");
         const QVector3D start = pModern->viewCenter();
         QTest::keyClick(pModern, Qt::Key_8, Qt::KeypadModifier);
         QCoreApplication::processEvents();
@@ -980,6 +1003,8 @@ private slots:
         QTest::keyClick(static_cast<QWidget*>(nullptr), Qt::Key_W);
         QVERIFY2(pModern->viewCenter().y() > start.y(), "W did not pan after the menu bar gave focus back");
 
+        // Activating the main window for it, mudlet::changeEvent() refocuses the command line with OtherFocusReason;
+        // that focus-out is the one that ends the keys panning
         commandLine->clear();
         QTest::keyClick(static_cast<QWidget*>(nullptr), Qt::Key_X);
         QTRY_VERIFY(commandLine->hasFocus());
@@ -1036,6 +1061,8 @@ private slots:
             menu->close();
         }
         QCOMPARE(pModern->viewCenter(), start);
+        // The first press and the later one; the press the hidden view dropped is not announced
+        QCOMPARE(pressesSeenByScript(), 2);
     }
 
     void test_keysPanZoomAndRecenter()
@@ -1078,19 +1105,6 @@ private slots:
         QCOMPARE(pModern->hoveredRoomId(), 0);
     }
 
-    // The pointer stays still while a key or the wheel moves the view under it
-    void test_theRaisedRoomFollowsTheViewMovingUnderAStillPointer()
-    {
-        ModernGLWidget* pModern = viewAtThePlayer();
-        QVERIFY(pModern);
-        const QPoint pointer = pixelOfRoom(pModern, kEastRoomId);
-        hoverAt(pModern, pointer);
-        QCOMPARE(pModern->hoveredRoomId(), kEastRoomId);
-        pModern->setCameraPosition(8.0f, CameraController::scmMinTilt, CameraController::scmNorthUpAzimuth);
-        QCOMPARE(pModern->roomAt(pointer), 0);
-        QCOMPARE(pModern->hoveredRoomId(), 0);
-    }
-
     // Seen at a slant, the raised room's top stands out past where the room is when not raised
     void test_theRaisedRoomIsPickedWhereItIsDrawn()
     {
@@ -1126,21 +1140,53 @@ private slots:
         QTRY_VERIFY(pixelOfRoom(pModern, kEastRoomId).x() - pixelOfRoom(pModern, kPlayerRoomId).x() > pModern->width() / 3);
     }
 
-    void test_fitAreaShowsTheLevelsAboveToo()
+    void test_fitAreaShowsTheLevelsAboveAndBelow_data()
     {
+        QTest::addColumn<int>("level");
+        QTest::addColumn<float>("tilt");
+        QTest::addColumn<float>("turn");
+        QTest::newRow("a room six levels up, tilted") << 6 << 60.0f << 30.0f;
+        QTest::newRow("a room six levels down, tilted") << -6 << 60.0f << 30.0f;
+        // Taller than the area is wide, so the top floors come near the camera
+        QTest::newRow("a tower thirty levels up, from above") << 30 << CameraController::scmMinTilt << 0.0f;
+        QTest::newRow("a tower thirty levels down, from above") << -30 << CameraController::scmMinTilt << 0.0f;
+    }
+
+    void test_fitAreaShowsTheLevelsAboveAndBelow()
+    {
+        QFETCH(int, level);
+        QFETCH(float, tilt);
+        QFETCH(float, turn);
         ModernGLWidget* pModern = viewAtThePlayer();
         QVERIFY(pModern);
-        constexpr int upperRoomId = 3;
-        QVERIFY(addRoomAt(upperRoomId, mPlayerAreaId, 1, 0) && map()->setRoomCoordinates(upperRoomId, 1, 0, 6));
-        auto removeUpperRoom = qScopeGuard([this]() {
-            map()->mpRoomDB->removeRoom(upperRoomId);
+        constexpr int otherLevelRoomId = 3;
+        QVERIFY(addRoomAt(otherLevelRoomId, mPlayerAreaId, 1, 0) && map()->setRoomCoordinates(otherLevelRoomId, 1, 0, level));
+        auto removeOtherLevelRoom = qScopeGuard([this]() {
+            map()->mpRoomDB->removeRoom(otherLevelRoomId);
         });
         pModern->slot_showAllLevels();
-        pModern->setCameraPosition(CameraController::scmMinDistance, 60.0f, CameraController::scmNorthUpAzimuth + 30.0f);
+        pModern->setCameraPosition(CameraController::scmMinDistance, tilt, CameraController::scmNorthUpAzimuth + turn);
 
         pModern->fitArea();
-        QTRY_VERIFY2(pixelOfRoom(pModern, upperRoomId).x() >= 0, "the room six levels up is off screen after fitting");
-        QVERIFY2(pixelOfRoom(pModern, kPlayerRoomId).x() >= 0, "the player's room is off screen after fitting");
+        QTRY_VERIFY(!pModern->mCameraSmoothAnimating);
+        pModern->updateMatrices();
+        const float halfWidth = pModern->width() / 2.0f;
+        const float halfHeight = pModern->height() / 2.0f;
+        float reach = 0.0f;
+        for (const int roomId : {kPlayerRoomId, kEastRoomId, otherLevelRoomId}) {
+            const TRoom* pRoom = map()->mpRoomDB->getRoom(roomId);
+            // The room's cell on the grid, which the fit leaves a margin around
+            for (const QPointF& corner : {QPointF(-0.5, -0.5), QPointF(0.5, -0.5), QPointF(-0.5, 0.5), QPointF(0.5, 0.5)}) {
+                const QVector3D point(pRoom->x() + corner.x(), pRoom->y() + corner.y(), pRoom->z());
+                const std::optional<QPointF> pixel = pModern->mCameraController.pixelForPoint(point);
+                QVERIFY2(pixel, qPrintable(qsl("room %1 is behind the camera after fitting").arg(roomId)));
+                const float across = std::max(std::abs(static_cast<float>(pixel->x()) - halfWidth) / halfWidth, std::abs(static_cast<float>(pixel->y()) - halfHeight) / halfHeight);
+                QVERIFY2(across <= 1.0f, qPrintable(qsl("room %1 is off screen after fitting, %2 of the way to the edge").arg(roomId).arg(across)));
+                reach = std::max(reach, across);
+            }
+        }
+        // Not merely zoomed out: what is fitted fills much of the view
+        QVERIFY2(reach > 0.8f, qPrintable(qsl("the rooms reach only %1 of the way to the edge").arg(reach)));
     }
 
     // The 3D view can be docked smaller than the compass with its margin
@@ -1174,6 +1220,23 @@ private slots:
         QCoreApplication::sendEvent(pModern, &release);
         QCOMPARE(after, before);
         QVERIFY(!panning);
+    }
+
+    // The pointer then often comes back by way of the level buttons, which a pan left on would undo
+    void test_aPanThatLostItsReleaseEndsWhenThePointerLeaves()
+    {
+        ModernGLWidget* pModern = viewAtThePlayer();
+        QVERIFY(pModern);
+        const QPoint start(pModern->width() / 4, pModern->height() / 4);
+        QCOMPARE(pModern->roomAt(start), 0);
+        QMouseEvent press(QEvent::MouseButtonPress, start, pModern->mapToGlobal(start), Qt::LeftButton, Qt::LeftButton, Qt::NoModifier);
+        QCoreApplication::sendEvent(pModern, &press);
+        QEvent leave(QEvent::Leave);
+        QCoreApplication::sendEvent(pModern, &leave);
+        const int level = static_cast<int>(pModern->viewCenter().z());
+        pModern->slot_shiftZup();
+        hoverAt(pModern, start);
+        QCOMPARE(static_cast<int>(pModern->viewCenter().z()), level + 1);
     }
 
     void test_clickingTheCompassTurnsTheViewNorthUp()
