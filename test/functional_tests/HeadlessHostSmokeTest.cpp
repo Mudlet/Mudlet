@@ -1179,11 +1179,12 @@ headlessMapConfig = ok and 'ok' or tostring(err)
         QTemporaryDir recordDir;
         QVERIFY(recordDir.isValid());
         const QString recordPath = qsl("%1/exits.txt").arg(recordDir.path());
-        // The record has to outlive the profile, so it goes to a file. A reset is refused under the handler, as in
-        // the GUI, since one reached while the handler pumps events would close the Lua state it runs on.
+        // The record has to outlive the profile, so it goes to a file, opened binary so Windows writes no \r. A
+        // reset is refused under the handler, as in the GUI, since one reached while the handler pumps events would
+        // close the Lua state it runs on.
         const QString handler = qsl(R"lua(
 function onHeadlessExit(event)
-  local file = io.open([[%1]], "a")
+  local file = io.open([[%1]], "ab")
   file:write(getProfileName(), " ", event, " reset:", tostring(resetProfile()), "\n")
   file:close()
 end
