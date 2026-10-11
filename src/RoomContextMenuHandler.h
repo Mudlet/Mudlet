@@ -33,8 +33,8 @@ public:
     bool handle(T2DMap::MapInteractionContext& context) override;
 
     // The same menu for a right-click on roomId (0 for none) in another view of this map, such as the
-    // 3D view, without the actions that need a pointer position on the 2D map; nullptr while a mapper
-    // dialog is open. The caller pops it up; it deletes itself on close.
+    // 3D view, without the actions that need a pointer position on the 2D map or act on the area it shows
+    // (Export area to image); nullptr while a mapper dialog is open. The caller pops it up; it deletes itself on close.
     QMenu* menuForOtherView(int roomId, QWidget* parent);
 
 private:

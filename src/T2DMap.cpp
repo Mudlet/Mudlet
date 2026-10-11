@@ -4925,7 +4925,8 @@ void T2DMap::slot_setRoomProperties(bool changeName,
         newSymbol = newSymbol.normalized(QString::NormalizationForm_C, QChar::Unicode_10_0);
     }
 
-    // The rooms' own area: they may have been picked on the 3D view while this map, hidden, shows another
+    // The rooms' own area, or -1 (every area) when they span several: they may have been picked on the 3D view
+    // while this map, hidden, shows another
     std::optional<int> editedAreaId;
     for (const int roomId : std::as_const(roomIds)) {
         // The dialog is not modal, so rooms may have gone while it was open

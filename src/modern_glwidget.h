@@ -154,6 +154,7 @@ protected:
     void mouseReleaseEvent(QMouseEvent* event) override;
     void mouseDoubleClickEvent(QMouseEvent* event) override;
     void keyPressEvent(QKeyEvent* event) override;
+    void focusInEvent(QFocusEvent* event) override;
     void showEvent(QShowEvent* event) override;
     void hideEvent(QHideEvent* event) override;
     bool event(QEvent* event) override;
@@ -273,6 +274,10 @@ private:
     int mRoomMoveLevel = 0;
     // A click that did not pick its room on the press does so on the release, unless it became a drag
     bool mClickPending = false;
+    // Such a press raises sysMapWindowMousePressEvent once its selection is settled, on the release or the drag
+    bool mPressEventPending = false;
+    // Only focus reached from the keyboard, not by a click, gives the view the keys it pans and zooms with
+    bool mKeysNavigate = false;
     struct SavedCamera
     {
         float distance = 0.0f;
