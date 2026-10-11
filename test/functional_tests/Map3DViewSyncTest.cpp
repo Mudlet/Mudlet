@@ -529,6 +529,20 @@ private slots:
         QCOMPARE(cameraControls.size(), emitted);
     }
 
+    // The controls are hidden a moment after the view goes; a view shown again in between keeps them,
+    // or it grows under the framing it was just given
+    void test_the3DControlsStayWithAViewShownAgainStraightAway()
+    {
+        dlgMapper* pMapper = mapperShowing2DAtThePlayer();
+        QVERIFY(pMapper);
+        pMapper->show3DView(true);
+        pMapper->show3DView(false);
+        pMapper->show3DView(true);
+        QVERIFY(!pMapper->widget_3DControls->isHidden());
+        QTest::qWait(250);
+        QVERIFY2(!pMapper->widget_3DControls->isHidden(), "the 3D controls were hidden while the 3D view shows");
+    }
+
     void test_aZoomMadeWhileThe3DViewIsHiddenFitsItsShapeOnceShown()
     {
         dlgMapper* pMapper = mapperShowing2DAtThePlayer();
