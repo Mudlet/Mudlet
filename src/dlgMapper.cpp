@@ -701,14 +701,20 @@ void dlgMapper::repaintMaps()
 
 std::pair<bool, QString> dlgMapper::setMapZoom(qreal zoom, int areaId)
 {
-    auto result = mp2dMap->setMapZoom(zoom, areaId);
 #if defined(INCLUDE_3DMAPPER)
     auto* modernWidget = qobject_cast<ModernGLWidget*>(glWidget);
+    // The hidden 2D map keeps the area it last showed, while the 3D view moves on
+    if (!areaId && modernWidget && showing3DView()) {
+        areaId = modernWidget->areaShownNext();
+    }
+    auto result = mp2dMap->setMapZoom(zoom, areaId);
     if (result.first && modernWidget) {
         modernWidget->applyMapZoom(zoom, areaId ? areaId : mp2dMap->getAreaId());
     }
-#endif
     return result;
+#else
+    return mp2dMap->setMapZoom(zoom, areaId);
+#endif
 }
 
 bool dlgMapper::showing3DView() const

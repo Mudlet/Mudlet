@@ -1065,15 +1065,19 @@ bool ModernGLWidget::cameraFixedByGridMode() const
     if (!mpMap || !mpMap->mpRoomDB) {
         return false;
     }
-    int areaId = mAID;
+    const TArea* pArea = mpMap->mpRoomDB->getArea(areaShownNext());
+    return pArea && pArea->gridMode;
+}
+
+int ModernGLWidget::areaShownNext() const
+{
     // The next paint moves a view that follows the player to the player's area
-    if (followingPlayer()) {
+    if (mpMap && mpMap->mpRoomDB && followingPlayer()) {
         if (const TRoom* pPlayerRoom = mpMap->mpRoomDB->getRoom(mpMap->mRoomIdHash.value(mpMap->mProfileName))) {
-            areaId = pPlayerRoom->getArea();
+            return pPlayerRoom->getArea();
         }
     }
-    const TArea* pArea = mpMap->mpRoomDB->getArea(areaId);
-    return pArea && pArea->gridMode;
+    return mAID;
 }
 
 void ModernGLWidget::setCameraDistance(float r)
@@ -1391,6 +1395,8 @@ void ModernGLWidget::jumpTo(int areaId, int x, int y, int z)
     stopSmoothTransition();
     if (areaId != mAID) {
         mFramePending = true;
+        // It was asked for the area being left; the new one is framed at its own zoom
+        mPendingFrameZoom.reset();
     }
     mAID = areaId;
     mMapCenterX = x;
