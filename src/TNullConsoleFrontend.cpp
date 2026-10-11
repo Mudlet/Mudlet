@@ -492,6 +492,13 @@ QString TNullConsoleFrontend::userWindowOrMain(const QString& windowname) const
     return mpHost->windowRegistry().hasDockWidget(windowname) ? windowname : QString();
 }
 
+// Not a user window or scroll box that only a detached view has
+bool TNullConsoleFrontend::ownsContainer(const QString& windowname) const
+{
+    const TWindowRegistry& registry = mpHost->windowRegistry();
+    return mScrollBoxes.contains(windowname) || mSubConsoles.contains(windowname) || !(registry.hasScrollBox(windowname) || registry.hasDockWidget(windowname));
+}
+
 // The user window and scroll box a new window goes into. Only a mini console looks among the
 // scroll boxes first, as TMainConsole::createMiniConsole() does.
 std::pair<QString, std::shared_ptr<TNullConsoleFrontend::ScrollBox>> TNullConsoleFrontend::containerFor(const QString& windowname, const bool scrollBoxFirst) const
@@ -507,7 +514,7 @@ std::pair<QString, std::shared_ptr<TNullConsoleFrontend::ScrollBox>> TNullConsol
 void TNullConsoleFrontend::createLabel(const QString& windowname, const QString& name, int x, int y, int width, int height, bool, bool)
 {
     auto pLabel = std::make_unique<TLabelModel>(mpHost, name);
-    pLabel->mGeometry = QRect(x, y, width, height);
+    pLabel->mGeometry = QRect(QPoint(x, y), widgetSize(width, height));
     auto [userWindow, box] = containerFor(windowname, false);
     // A real label takes its console's font as it is made, and keeps it as that font changes
     pLabel->mFont = consoleFont(userWindow).value_or(displayFont());
@@ -764,7 +771,7 @@ void TNullConsoleFrontend::createBuffer(const QString& name)
 void TNullConsoleFrontend::addMiniConsole(const QString& windowname, const QString& name, int x, int y, int width, int height)
 {
     addSubConsole(name, TWindowRegistry::SubConsoleKind::MiniConsole, windowname);
-    mpHost->windowRegistry().setSubConsoleGeometry(name, QRect(x, y, width, height));
+    mpHost->windowRegistry().setSubConsoleGeometry(name, QRect(QPoint(x, y), widgetSize(width, height)));
     // As TMainConsole::createMiniConsole() sizes its font, which raises sysFontChangeEvent
     setWindowFontSize(name, 12);
     setSubConsoleShown(name, true);
@@ -876,8 +883,8 @@ bool TNullConsoleFrontend::shownWithin(const QString& userWindow, const ScrollBo
     return it != mSubConsoles.end() && it->second.shown;
 }
 
-// For a label or a sub-console that is not a user window, which hold nothing, so that making many
-// windows does not report every window each time
+// For a window that holds nothing, such as a label, a mini console or a new scroll box, so that making
+// many windows does not report every window each time
 void TNullConsoleFrontend::reportWindowVisibility(const QString& name)
 {
     TWindowRegistry& registry = mpHost->windowRegistry();
@@ -1016,7 +1023,9 @@ bool TNullConsoleFrontend::resizePlainWindow(const QString& name, const int widt
     }
     TWindowRegistry& registry = mpHost->windowRegistry();
     QRect geometry = registry.plainWindowGeometry(name).value_or(QRect());
-    geometry.setSize(widgetSize(width, height));
+    // QWidget::resize() bounds a size only for a widget not yet created or with size limits, and a
+    // scroll box is created once made and has no limits
+    geometry.setSize(QSize(width, height));
     registry.setPlainWindowGeometry(name, geometry);
     return true;
 }
@@ -1329,11 +1338,12 @@ bool TNullConsoleFrontend::moveLabel(const QString& name, const int x, const int
 }
 
 // QWidget::setParent(QWidget*) returns at once for the parent a widget already has; otherwise it hides
-// the widget, which then only shows again when asked
+// a widget that has been created, which then only shows again when asked. Every window here is taken
+// as created, as one is once any window it is in has been shown.
 bool TNullConsoleFrontend::reparentLabel(const QString& windowname, const QString& name, const int x, const int y, const bool show)
 {
     const auto it = mLabels.find(name);
-    if (it == mLabels.end()) {
+    if (it == mLabels.end() || !ownsContainer(windowname)) {
         return false;
     }
     // TMainConsole::parentWidgetFor() takes a scroll box before a user window
@@ -1371,6 +1381,9 @@ void TNullConsoleFrontend::inheritLabelFont(Label& label, const bool restyle)
 
 std::pair<bool, QString> TNullConsoleFrontend::reparentWindow(const QString& windowname, const QString& name, const int x, const int y, const bool show)
 {
+    if (!ownsContainer(windowname)) {
+        return noView();
+    }
     TWindowRegistry& registry = mpHost->windowRegistry();
     auto [userWindow, box] = containerFor(windowname, true);
     if (const auto it = mSubConsoles.find(name); it != mSubConsoles.end()) {

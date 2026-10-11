@@ -393,7 +393,14 @@ private slots:
 
         host->setMainConsoleView(nullptr);
         const bool ran = host->getLuaInterpreter()->compileAndExecuteScript(
-                qsl("openUserWindow('realViewDock') nullViewMade = tostring(createLabel('nullViewMade', 0, 0, 10, 10, 1))"));
+                qsl("openUserWindow('realViewDock') nullViewMade = tostring(createLabel('nullViewMade', 0, 0, 10, 10, 1)) createMiniConsole('nullViewMoved', 0, 0, 10, 10)"));
+        // The detached view's windows are in the registry, so only the null view can say it cannot reach them
+        QStringList movesIntoRealWindows;
+        for (const QString& target : {realBox, realWindow}) {
+            for (const QString& moved : {qsl("nullViewMade"), qsl("nullViewMoved")}) {
+                movesIntoRealWindows << host->setWindow(target, moved, 1, 1, true).second;
+            }
+        }
         const TConsoleModel* realModelWhileDetached = host->windowRegistry().subConsoleModel(realWindow);
         const auto [realDeletedWhileDetached, realDeleteMessage] = host->deleteMiniConsole(realWindow);
         const auto [realBoxDeletedWhileDetached, realBoxDeleteMessage] = host->consoleFrontend()->deleteScrollBox(realBox);
@@ -451,6 +458,7 @@ createBuffer("nullViewBuffer")
         QVERIFY2(!realBoxDeletedWhileDetached, "The null view reported deleting a scroll box it has no record of.");
         QCOMPARE(realBoxDeleteMessage, qsl("scrollbox name 'realViewBox' could not be deleted"));
         QVERIFY(realBoxRegisteredWhileDetached);
+        QCOMPARE(movesIntoRealWindows, QStringList(4, qsl("the profile has no main window")));
 
         QVERIFY(ranKinds);
         lua_getglobal(L, "nullViewKinds");

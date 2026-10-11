@@ -1713,6 +1713,104 @@ ubTypes = tostring(windowType("ubBox")) .. "," .. tostring(windowType("ubLabel")
         QVERIFY(!host->windowRegistry().hasLabel(qsl("ubLabel")));
     }
 
+    // The answers are those of the same Lua run in the GUI self-test profile
+    void test_headlessWindowSizesContract()
+    {
+        const QString hostname = qsl("Test-Headless-Host-Window-Sizes");
+        QVERIFY2(HostManager::self()->addHost(hostname, QString(), QString(), QString()), "Could not create a profile with no main window.");
+        Host* host = HostManager::self()->getHost(hostname);
+        QVERIFY2(host, "The profile is not in the pool.");
+        QVERIFY(!host->hasConsoleView());
+
+        const bool ran = host->getLuaInterpreter()->compileAndExecuteScript(qsl(R"lua(
+headlessWindowSizes = "not run"
+local ok, err = pcall(function()
+  local function described(called, ...)
+    if not called then
+      return "raised:" .. tostring((...))
+    end
+    local count = select("#", ...)
+    local values = {}
+    for i = 1, count do
+      values[i] = tostring((select(i, ...)))
+    end
+    return "[" .. count .. "]" .. table.concat(values, ":")
+  end
+  local answers = {}
+  local function look(label, name)
+    answers[#answers + 1] = label .. ":geometry=" .. described(pcall(getWindowGeometry, name)) .. ",visible=" .. described(pcall(windowVisible, name))
+  end
+  -- QWIDGETSIZE_MAX is 16777215
+  local huge = 20000000
+  createLabel("szNegativeLabel", 1, 2, -5, -7, 1)
+  look("negativeLabel", "szNegativeLabel")
+  createLabel("szHugeLabel", 1, 2, huge, huge, 1)
+  look("hugeLabel", "szHugeLabel")
+  createMiniConsole("szNegativeMini", 1, 2, -5, -7)
+  look("negativeMini", "szNegativeMini")
+  createMiniConsole("szHugeMini", 1, 2, huge, huge)
+  look("hugeMini", "szHugeMini")
+  createScrollBox("szNegativeBox", 1, 2, -5, -7)
+  look("negativeBox", "szNegativeBox")
+  createScrollBox("szHugeBox", 1, 2, huge, huge)
+  look("hugeBox", "szHugeBox")
+  for _, name in ipairs({"szNegativeLabel", "szNegativeMini", "szNegativeBox"}) do
+    resizeWindow(name, huge, huge)
+    look(name .. ":resizedHuge", name)
+    resizeWindow(name, -3, -4)
+    look(name .. ":resizedNegative", name)
+  end
+  -- A scroll box is bounded only as it is made
+  createScrollBox("szNegativeBox", 1, 2, -6, -8)
+  look("negativeBox:remadeNegative", "szNegativeBox")
+  createScrollBox("szHugeBox", 1, 2, huge, huge)
+  look("hugeBox:remadeHuge", "szHugeBox")
+  -- A label made where nothing has been shown, then moved out with show false
+  openUserWindow("szHidden", false, false, "f")
+  hideWindow("szHidden")
+  createScrollBox("szHidden", "szHiddenBox", 0, 0, 50, 50)
+  resizeWindow("szHiddenBox", -3, -4)
+  look("hiddenBox:resizedNegative", "szHiddenBox")
+  createLabel("szHiddenBox", "szNeverShown", 1, 1, 20, 20, 1)
+  look("neverShown", "szNeverShown")
+  setWindow("main", "szNeverShown", 3, 3, false)
+  look("neverShownMoved", "szNeverShown")
+  for _, name in ipairs({"szNegativeLabel", "szHugeLabel", "szNeverShown"}) do
+    deleteLabel(name)
+  end
+  for _, name in ipairs({"szNegativeMini", "szHugeMini"}) do
+    deleteMiniConsole(name)
+  end
+  for _, name in ipairs({"szNegativeBox", "szHugeBox", "szHiddenBox"}) do
+    deleteScrollBox(name)
+  end
+  closeUserWindow("szHidden")
+  headlessWindowSizesAnswers = table.concat(answers, "\n")
+end)
+headlessWindowSizes = ok and "ok" or tostring(err)
+)lua"));
+        QVERIFY2(ran, "The Lua chunk did not run.");
+        QCOMPARE(luaGlobalString(host, "headlessWindowSizes"), qsl("ok"));
+        const QStringList answers{qsl("negativeLabel:geometry=[4]1:2:0:0,visible=[1]true"),
+                                  qsl("hugeLabel:geometry=[4]1:2:16777215:16777215,visible=[1]true"),
+                                  qsl("negativeMini:geometry=[4]1:2:0:0,visible=[1]true"),
+                                  qsl("hugeMini:geometry=[4]1:2:16777215:16777215,visible=[1]true"),
+                                  qsl("negativeBox:geometry=[4]1:2:0:0,visible=[1]true"),
+                                  qsl("hugeBox:geometry=[4]1:2:16777215:16777215,visible=[1]true"),
+                                  qsl("szNegativeLabel:resizedHuge:geometry=[4]1:2:16777215:16777215,visible=[1]true"),
+                                  qsl("szNegativeLabel:resizedNegative:geometry=[4]1:2:0:0,visible=[1]true"),
+                                  qsl("szNegativeMini:resizedHuge:geometry=[4]1:2:16777215:16777215,visible=[1]true"),
+                                  qsl("szNegativeMini:resizedNegative:geometry=[4]1:2:0:0,visible=[1]true"),
+                                  qsl("szNegativeBox:resizedHuge:geometry=[4]1:2:20000000:20000000,visible=[1]true"),
+                                  qsl("szNegativeBox:resizedNegative:geometry=[4]1:2:-3:-4,visible=[1]true"),
+                                  qsl("negativeBox:remadeNegative:geometry=[4]1:2:-6:-8,visible=[1]true"),
+                                  qsl("hugeBox:remadeHuge:geometry=[4]1:2:20000000:20000000,visible=[1]true"),
+                                  qsl("hiddenBox:resizedNegative:geometry=[4]0:0:-3:-4,visible=[1]false"),
+                                  qsl("neverShown:geometry=[4]1:1:20:20,visible=[1]false"),
+                                  qsl("neverShownMoved:geometry=[4]3:3:20:20,visible=[1]false")};
+        QCOMPARE(luaGlobalString(host, "headlessWindowSizesAnswers"), answers.join(QLatin1Char('\n')));
+    }
+
     // The answers are those of the same Lua run in the GUI self-test profile, but for the last ones,
     // which a spec cannot wait for: what was moved into a deleted scroll box goes with it
     void test_headlessSetWindowContract()
