@@ -158,14 +158,15 @@ public:
     void openUserWindow(const QString& name, bool loadLayout, bool autoDock, const QString& area) override;
     std::pair<bool, QString> setUserWindowStyleSheet(const QString& name, const QString& userWindowStyleSheet) override;
     std::pair<bool, QString> setUserWindowTitle(const QString& name, const QString& text) override;
-    bool createScrollBox(const QString&, const QString&, int, int, int, int) override { return false; }
-    std::pair<bool, QString> deleteScrollBox(const QString&) override { return noView(); }
-    bool showPlainWindow(const QString&) override { return false; }
-    bool hidePlainWindow(const QString&) override { return false; }
-    bool resizePlainWindow(const QString&, int, int) override { return false; }
-    bool movePlainWindow(const QString&, int, int) override { return false; }
+    bool createScrollBox(const QString& windowname, const QString& name, int x, int y, int width, int height) override;
+    std::pair<bool, QString> deleteScrollBox(const QString& name) override;
+    // Only a scroll box: command lines and text boxes are not made here
+    bool showPlainWindow(const QString& name) override { return setScrollBoxShown(name, true); }
+    bool hidePlainWindow(const QString& name) override { return setScrollBoxShown(name, false); }
+    bool resizePlainWindow(const QString& name, int width, int height) override;
+    bool movePlainWindow(const QString& name, int x, int y) override;
     // No Lua call reads the stacking order back, so these only answer whether the window exists
-    bool raiseWindow(const QString& name) override { return mLabels.contains(name) || subConsoleModel(name); }
+    bool raiseWindow(const QString& name) override { return mLabels.contains(name) || subConsoleModel(name) || mScrollBoxes.contains(name); }
     bool lowerWindow(const QString& name) override { return raiseWindow(name); }
     std::pair<bool, QString> reparentWindow(const QString&, const QString&, int, int, bool) override { return noView(); }
     bool setWindowScrollBarVisible(const QString& name, bool visible) override;
@@ -248,6 +249,15 @@ public:
     const TMxpFrameFrontend& mxpFrames() const override { return mMxpFrames; }
 
 private:
+    // A scroll box takes the font of the user window it is in, as do the windows inside it. Deleting
+    // it takes what it holds out of the registry once deferred deletes run, as TScrollBox's children
+    // are destroyed with it then.
+    struct ScrollBox
+    {
+        QString userWindow;
+        std::shared_ptr<ScrollBox> box;
+        bool shown = true;
+    };
     // A window made inside a user window goes with it, as a real one is its dock's child widget, though
     // out of the registry at once rather than when deferred deletes run.
     // shown is the window's own flag, as QWidget::isHidden() is a widget's; what scripts read is also
@@ -256,12 +266,14 @@ private:
     {
         std::unique_ptr<TConsoleModel> pModel;
         QString userWindow;
+        std::shared_ptr<ScrollBox> box;
         bool shown = false;
     };
     struct Label
     {
         std::unique_ptr<TLabelModel> pModel;
         QString userWindow;
+        std::shared_ptr<ScrollBox> box;
         bool shown = true;
         // What a real label's QWidget and QStyleSheetStyle keep beside its font: which of its
         // attributes were set on it, and the font each restyle starts again from
@@ -300,6 +312,10 @@ private:
     void removeLabel(const QString& name);
     void queueRelease();
     QString userWindowOrMain(const QString& windowname) const;
+    std::pair<QString, std::shared_ptr<ScrollBox>> containerFor(const QString& windowname, bool scrollBoxFirst) const;
+    bool shownWithin(const QString& userWindow, const ScrollBox* box) const;
+    bool setScrollBoxShown(const QString& name, bool shown);
+    void removeScrollBoxContents(const ScrollBox* box);
     TLabelModel* labelModel(const QString& name) const;
     TConsoleModel* subConsoleModel(const QString& name) const;
     bool setLabelShown(const QString& name, bool shown);
@@ -308,7 +324,7 @@ private:
     void polishLabel(Label& label);
     void restyleLabel(Label& label, const QString& sheet);
     bool setSubConsoleShown(const QString& name, bool shown);
-    void reportVisibility(const QString& name);
+    void reportVisibility();
     std::optional<QFont> consoleFont(const QString& name) const;
     void setSubConsoleFont(const QString& name, const QFont& font);
     void reportDisplayFontChange(const QFont& before);
@@ -319,6 +335,7 @@ private:
     TNullMxpFrameFrontend mMxpFrames;
     std::map<QString, SubConsole> mSubConsoles;
     std::map<QString, Label> mLabels;
+    std::map<QString, std::shared_ptr<ScrollBox>> mScrollBoxes;
     std::vector<std::unique_ptr<TConsoleModel>> mRetiredConsoles;
     std::vector<std::unique_ptr<TLabelModel>> mRetiredLabels;
     bool mReleaseQueued = false;

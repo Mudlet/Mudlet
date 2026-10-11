@@ -914,9 +914,6 @@ int TLuaInterpreter::deleteScrollBox(lua_State* L)
     const QString scrollBoxName = getVerifiedString(L, __func__, 1, "scrollbox name");
     const Host& host = getHostFromLua(L);
 
-    if (!host.hasConsoleView()) {
-        return warnArgumentValue(L, __func__, no_main_window_value, true);
-    }
     if (auto [success, message] = host.consoleFrontend()->deleteScrollBox(scrollBoxName); !success) {
         lua_pushboolean(L, false);
         lua_pushstring(L, message.toUtf8().constData());
