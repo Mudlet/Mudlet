@@ -182,6 +182,34 @@ public:
         });
     }
 };
+
+// Qt recreates a window the first time a GL view is parented into it, and only relinks native
+// children to the new one; any other dialog left open there would, counting as a window of its
+// own, keep Mudlet from quitting once the main window closes
+class TransientParentRelinker : public QObject
+{
+public:
+    using QObject::QObject;
+
+    bool eventFilter(QObject* watched, QEvent* event) override
+    {
+        if (event->type() != QEvent::WinIdChange || !watched->isWidgetType()) {
+            return false;
+        }
+        auto* pWindow = static_cast<QWidget*>(watched);
+        if (!pWindow->isWindow() || !pWindow->internalWinId() || !pWindow->windowHandle()) {
+            return false;
+        }
+        const auto children = pWindow->findChildren<QWidget*>();
+        for (QWidget* pChild : children) {
+            QWindow* pHandle = pChild->windowHandle();
+            if (pChild->isWindow() && pHandle && !pHandle->transientParent() && pChild->parentWidget()->window() == pWindow) {
+                pHandle->setTransientParent(pWindow->windowHandle());
+            }
+        }
+        return false;
+    }
+};
 } // namespace
 
 /*static*/ void mudlet::start()
@@ -1407,6 +1435,7 @@ mudlet::mudlet()
     // statics, so one serves every mudlet instance and is never uninstalled:
     static DebugProfileObserver debugProfileObserver;
     TDebug::setProfileObserver(&debugProfileObserver);
+    qApp->installEventFilter(new TransientParentRelinker(this));
     // A child rather than a member, so it and the recognizer it owns are torn
     // down with the main window's other children
     mpSpeechBridge = new TSpeechBridge(this);
@@ -8607,22 +8636,6 @@ dlgTriggerEditor* mudlet::createMudletEditor()
     pEditor->fillout_form();
 
     return pEditor;
-}
-
-bool mudlet::event(QEvent* event)
-{
-    // Qt recreates this window when a 3D map view is first docked in it, and only hands
-    // native children to the new one; a dialog left open would lose its transient parent
-    // and, counting as a window of its own, keep Mudlet from quitting once this one closes
-    if (event->type() == QEvent::WinIdChange && internalWinId() && windowHandle()) {
-        const auto children = findChildren<QWidget*>();
-        for (QWidget* pChild : children) {
-            if (pChild->isWindow() && pChild->windowHandle() && !pChild->windowHandle()->transientParent()) {
-                pChild->windowHandle()->setTransientParent(windowHandle());
-            }
-        }
-    }
-    return QMainWindow::event(event);
 }
 
 // Getting a QWidget to emit a signal that normally comes from a QWindow;

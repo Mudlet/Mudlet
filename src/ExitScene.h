@@ -72,7 +72,8 @@ struct Triangle
     int level = 0;
 };
 
-// To be drawn in list order: later ones over earlier ones
+// Drawn with the depth test, so overlaps are settled by height, not list order: a door stands
+// taller than its line and an arrowhead's fill sits a little off its outline
 struct Scene
 {
     QList<Segment> segments;

@@ -236,6 +236,63 @@ private slots:
         QVERIFY(GeometryManager::declutteredRects({}, 7.0).isEmpty());
     }
 
+    void test_aLabelIsOnTheLevelItsHeightRoundsTo_data()
+    {
+        QTest::addColumn<qreal>("z");
+        QTest::addColumn<bool>("onALevel");
+        QTest::addColumn<int>("level");
+        QTest::newRow("on a level") << 2.0 << true << 2;
+        QTest::newRow("three quarters up") << 0.75 << true << 1;
+        QTest::newRow("three quarters down") << -0.75 << true << -1;
+        QTest::newRow("a quarter up") << 0.25 << true << 0;
+        QTest::newRow("a quarter down") << -0.25 << true << 0;
+        QTest::newRow("beyond any level") << 1e12 << false << 0;
+        QTest::newRow("not a number") << qQNaN() << false << 0;
+        QTest::newRow("infinite") << -qInf() << false << 0;
+    }
+
+    void test_aLabelIsOnTheLevelItsHeightRoundsTo()
+    {
+        QFETCH(qreal, z);
+        QFETCH(bool, onALevel);
+        QFETCH(int, level);
+        const std::optional<int> found = GeometryManager::labelLevel(z);
+        QCOMPARE(found.has_value(), onALevel);
+        if (onALevel) {
+            QCOMPARE(*found, level);
+        }
+    }
+
+    void test_aLabelQuadCoversTheLabelAndTurnsInPlace_data()
+    {
+        QTest::addColumn<bool>("turned");
+        QTest::addColumn<QVector3D>("textureTopLeft");
+        QTest::newRow("upright") << false << QVector3D(1.0f, 2.0f, 0.5f);
+        QTest::newRow("turned") << true << QVector3D(4.0f, 1.0f, 0.5f);
+    }
+
+    void test_aLabelQuadCoversTheLabelAndTurnsInPlace()
+    {
+        QFETCH(bool, turned);
+        QFETCH(QVector3D, textureTopLeft);
+        GeometryData quad;
+        // Three wide and one tall, with its top-left corner at (1, 2)
+        GeometryManager::appendLabelQuad(quad, QVector3D(1.0f, 2.0f, 0.5f), 3.0f, 1.0f, turned, QVector4D(1.0f, 1.0f, 1.0f, 1.0f));
+        QCOMPARE(quad.vertexCount(), 6);
+        bool sawTextureTopLeft = false;
+        for (int vertex = 0; vertex < 6; ++vertex) {
+            const QVector3D position(quad.vertices[vertex * 3], quad.vertices[vertex * 3 + 1], quad.vertices[vertex * 3 + 2]);
+            QVERIFY(position.x() == 1.0f || position.x() == 4.0f);
+            QVERIFY(position.y() == 1.0f || position.y() == 2.0f);
+            QCOMPARE(position.z(), 0.5f);
+            if (quad.textureCoords[vertex * 2] == 0.0f && quad.textureCoords[vertex * 2 + 1] == 1.0f) {
+                QCOMPARE(position, textureTopLeft);
+                sawTextureTopLeft = true;
+            }
+        }
+        QVERIFY(sawTextureTopLeft);
+    }
+
     void test_vertexShaderAttributeLocationsDoNotOverlap()
     {
         const QList<ShaderAttribute> attributes = vertexShaderAttributes();

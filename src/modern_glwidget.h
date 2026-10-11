@@ -52,6 +52,8 @@
 #include "ShaderManager.h"
 #include "CameraController.h"
 
+#include <optional>
+
 class Host;
 class QFontMetricsF;
 class QLabel;
@@ -76,11 +78,14 @@ public:
     void followPlayer();
     bool followingPlayer() const;
     int shownAreaId() const { return mAID; }
+    int areaShownNext() const;
     QVector3D viewCenter() const { return QVector3D(mMapCenterX, mMapCenterY, mMapCenterZ); }
     void shiftCamera(float, float, float);
     void setCameraPosition(float, float, float);
     // Frames as many rooms as the 2D map shows at this zoom, when areaId is the area on view
     void applyMapZoom(qreal zoom, int areaId);
+    void setCameraDistance(float r);
+    const QString& failureMessage() const { return mFailureMessage; }
     // A grid-mode area is always drawn looking straight down with north up
     bool cameraFixedByGridMode() const;
     // The mapper's 2D map, whose room selection, speedwalk and context menu this view shares
@@ -238,8 +243,8 @@ private:
     bool mCameraSmoothAnimating = false; // Dedicated flag for smooth camera animation
     int mPreviousRID = 0;                // Track previous room ID to detect changes
     bool mFramePending = true;
-    // A zoom applied while hidden was framed for the old size, so the next resize frames it again unless the camera has moved since
-    bool mFrameOnResize = false;
+    // A zoom applied while hidden, framed again for the size the view is first seen at unless a camera distance is set first
+    std::optional<qreal> mPendingFrameZoom;
     // A distance a script asked for since the last paint wins over framing a newly shown area
     bool mDistanceRequested = false;
 
@@ -272,7 +277,7 @@ private:
     GLuint discTexture(const QString& key, const QGradientStops& stops);
     GLuint squareTexture(const QColor& color);
     GLuint cachedRoomTexture(const QString& key);
-    bool roomForAnotherTexture();
+    bool roomForAnotherTexture(const QString& key);
     GLuint addRoomTexture(const QString& key, const QImage& image);
     // The 2D map's up/down/in/out markers for the room, or 0 when it has none
     GLuint exitMarkerTexture(const TRoom& room, const QColor& roomColor);

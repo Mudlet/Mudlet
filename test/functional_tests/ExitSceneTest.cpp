@@ -28,6 +28,8 @@
  */
 
 #include <QFileInfo>
+#include <QImage>
+#include <QPainter>
 #include <QTemporaryDir>
 #include <QtTest/QtTest>
 
@@ -70,7 +72,7 @@ QList<ExitScene::Triangle> trianglesIn(const ExitScene::Scene& scene, const QCol
     return found;
 }
 
-bool near(const QVector2D& a, const QVector2D& b)
+bool closeTo(const QVector2D& a, const QVector2D& b)
 {
     return (a - b).length() < scmTolerance;
 }
@@ -82,7 +84,7 @@ QVector2D flat(const QVector3D& point)
 
 bool joins(const ExitScene::Segment& segment, const QVector2D& a, const QVector2D& b)
 {
-    return (near(flat(segment.from), a) && near(flat(segment.to), b)) || (near(flat(segment.from), b) && near(flat(segment.to), a));
+    return (closeTo(flat(segment.from), a) && closeTo(flat(segment.to), b)) || (closeTo(flat(segment.from), b) && closeTo(flat(segment.to), a));
 }
 
 float totalLength(const QList<ExitScene::Segment>& segments)
@@ -216,14 +218,14 @@ private slots:
         QVERIFY2(scene.triangles.isEmpty(), "a two-way exit has no arrow");
     }
 
-    // Unless the room at the far end will not draw it: it is on a level not shown
+    // Unless the room at the far end, the one with the lower id, will not draw it: it is on a level not shown
     void test_twoWayExitToALevelNotShownIsStillDrawn()
     {
-        TRoom* pLow = addRoomAt(1, mAreaId, 0, 0, 0);
-        TRoom* pHigh = addRoomAt(2, mAreaId, 0, 0, 1);
+        TRoom* pHigh = addRoomAt(1, mAreaId, 0, 0, 1);
+        TRoom* pLow = addRoomAt(2, mAreaId, 0, 0, 0);
         QVERIFY(pLow && pHigh);
-        pLow->setExit(2, DIR_UP);
-        pHigh->setExit(1, DIR_DOWN);
+        pLow->setExit(1, DIR_UP);
+        pHigh->setExit(2, DIR_DOWN);
 
         ExitScene::Options sceneOptions = options();
         sceneOptions.levelsAbove = 0;
@@ -247,6 +249,50 @@ private slots:
             solid = solid || joins(line, QVector2D(0, 0), QVector2D(0, 1));
         }
         QVERIFY2(solid, "neither end draws the two-way exit as a whole line");
+    }
+
+    // Levels are counted from the one viewed, and a line between two takes the fading of the nearer
+    void test_levelsAreCountedFromTheViewedLevel()
+    {
+        TRoom* pGround = addRoomAt(1, mAreaId, 0, 0, 0);
+        TRoom* pUpstairs = addRoomAt(2, mAreaId, 0, 0, 1);
+        TRoom* pAttic = addRoomAt(3, mAreaId, 5, 5, 2);
+        QVERIFY(pGround && pUpstairs && pAttic);
+        pGround->setExit(2, DIR_UP);
+        pUpstairs->setExit(1, DIR_DOWN);
+        pAttic->setExitStub(DIR_EAST, true);
+        pUpstairs->setExitStub(DIR_WEST, true);
+
+        ExitScene::Options sceneOptions = options();
+        sceneOptions.centerZ = 1;
+        sceneOptions.levelsAbove = 0;
+        sceneOptions.levelsBelow = 0;
+        const QList<ExitScene::Segment> lines = segmentsIn(build(sceneOptions), mExitColor);
+        QCOMPARE(lines.size(), 2);
+        bool stub = false;
+        bool stairs = false;
+        for (const ExitScene::Segment& line : lines) {
+            QVERIFY2(!closeTo(flat(line.from), QVector2D(5, 5)), "a stub on a level not shown is drawn");
+            QCOMPARE(line.level, 1);
+            stub = stub || joins(line, QVector2D(0, 0), QVector2D(-0.5f, 0));
+            stairs = stairs || qAbs(qAbs(line.to.z() - line.from.z()) - 1.0f) < scmTolerance;
+        }
+        QVERIFY(stub && stairs);
+    }
+
+    // As Qt's own dash stroker does, a pattern too fine to draw is drawn solid, rather than without end
+    void test_dashesTooFineForTheLineAreDrawnSolid()
+    {
+        TRoom* pWest = addRoomAt(1, mAreaId, 0, 0);
+        QVERIFY(addRoomAt(2, mAreaId, 1, 0));
+        QVERIFY(pWest);
+        pWest->setExit(2, DIR_EAST);
+
+        ExitScene::Options sceneOptions = options();
+        sceneOptions.lineWidth = 1e-6f;
+        const QList<ExitScene::Segment> lines = segmentsIn(build(sceneOptions), mExitColor);
+        QCOMPARE(lines.size(), 1);
+        QVERIFY(joins(lines.first(), QVector2D(0, 0), QVector2D(1, 0)));
     }
 
     void test_oneWayExitIsDottedWithAnArrowInTheMiddle()
@@ -363,6 +409,38 @@ private slots:
         QVERIFY2(segmentsIn(scene, mExitColor).isEmpty(), "the exit is drawn as an ordinary line too");
     }
 
+    // An upright arrow's fill stands off its outline's plane on both sides, so that it shows from either
+    void test_uprightAreaExitArrowShowsItsFillFromEitherSide()
+    {
+        const int otherAreaId = map()->mpRoomDB->addArea(qsl("Other Area"));
+        TRoom* pHere = addRoomAt(1, mAreaId, 0, 0);
+        TRoom* pThere = addRoomAt(2, otherAreaId, 0, 0, 1);
+        QVERIFY(pHere && pThere);
+        pThere->environment = 4;
+        pHere->setExit(2, DIR_UP);
+
+        const ExitScene::Options sceneOptions = options();
+        const ExitScene::Scene scene = build(sceneOptions);
+        const QList<ExitScene::Triangle> outlines = trianglesIn(scene, ExitAppearance::contrastColor(sceneOptions.background));
+        const QList<ExitScene::Triangle> fills = trianglesIn(scene, RoomAppearance::environmentColor(*map(), *mpHost, 4));
+        QVERIFY(!outlines.isEmpty() && !fills.isEmpty());
+        for (const ExitScene::Triangle& outline : outlines) {
+            const QVector3D normal = QVector3D::crossProduct(outline.b - outline.a, outline.c - outline.a).normalized();
+            bool front = false;
+            bool back = false;
+            for (const ExitScene::Triangle& fill : fills) {
+                const QVector3D fillNormal = QVector3D::crossProduct(fill.b - fill.a, fill.c - fill.a).normalized();
+                if (qAbs(QVector3D::dotProduct(fillNormal, normal)) < 0.99f) {
+                    continue;
+                }
+                const float offset = QVector3D::dotProduct(fill.a - outline.a, normal);
+                front = front || offset > scmTolerance / 10.0f;
+                back = back || offset < -scmTolerance / 10.0f;
+            }
+            QVERIFY2(front && back, "the fill shares its outline's plane on one side, where the outline hides it");
+        }
+    }
+
     void test_customLineTakesThePlaceOfTheExit()
     {
         TRoom* pWest = addRoomAt(1, mAreaId, 0, 0);
@@ -389,7 +467,7 @@ private slots:
         QVERIFY(totalLength(dashes) < pathLength * 0.9f);
         const QList<ExitScene::Triangle> arrow = trianglesIn(scene, cyan);
         QVERIFY(!arrow.isEmpty());
-        QVERIFY(near(flat(furthest(arrow.first(), QVector3D(1, 0, 0))), QVector2D(1, 1)));
+        QVERIFY(closeTo(flat(furthest(arrow.first(), QVector3D(1, 0, 0))), QVector2D(1, 1)));
     }
 
     void test_customLineWithNoPenIsNotDrawn()
@@ -426,7 +504,7 @@ private slots:
         const QList<ExitScene::Segment> lines = segmentsIn(build(sceneOptions), yellow);
         bool upright = false;
         for (const ExitScene::Segment& line : lines) {
-            if (near(flat(line.from), QVector2D(2, 0)) && near(flat(line.to), QVector2D(2, 0)) && qAbs(qAbs(line.to.z() - line.from.z()) - 2.0f) < scmTolerance) {
+            if (closeTo(flat(line.from), QVector2D(2, 0)) && closeTo(flat(line.to), QVector2D(2, 0)) && qAbs(qAbs(line.to.z() - line.from.z()) - 2.0f) < scmTolerance) {
                 upright = true;
             }
         }
@@ -470,6 +548,47 @@ private slots:
         pSecret->setHidden(true);
 
         QVERIFY(build().segments.isEmpty());
+    }
+
+    // The markers are the 2D map's, painted on the room's top; a real exit's has the bolder outline of the two
+    void test_markerForARealExitIsBolderThanForAStub_data()
+    {
+        QTest::addColumn<int>("direction");
+        QTest::newRow("up") << static_cast<int>(DIR_UP);
+        QTest::newRow("down") << static_cast<int>(DIR_DOWN);
+        QTest::newRow("in") << static_cast<int>(DIR_IN);
+        QTest::newRow("out") << static_cast<int>(DIR_OUT);
+    }
+
+    void test_markerForARealExitIsBolderThanForAStub()
+    {
+        QFETCH(int, direction);
+        TRoom* pStubbed = addRoomAt(1, mAreaId, 0, 0);
+        TRoom* pExited = addRoomAt(2, mAreaId, 1, 0);
+        QVERIFY(pStubbed && pExited);
+        pStubbed->setExitStub(direction, true);
+        QVERIFY(pExited->setExit(1, direction));
+
+        const QColor roomColor(200, 200, 200);
+        const auto outlinePixels = [&roomColor](const TRoom& room) {
+            QImage image(128, 128, QImage::Format_ARGB32);
+            image.fill(Qt::transparent);
+            QPainter painter(&image);
+            QPen pen;
+            ExitAppearance::paintExitMarkers(painter, pen, room, 64.0f, 64.0f, 128.0, 128.0, roomColor, false);
+            painter.end();
+            int count = 0;
+            for (int y = 0; y < image.height(); ++y) {
+                for (int x = 0; x < image.width(); ++x) {
+                    count += image.pixelColor(x, y) == QColor(Qt::black) ? 1 : 0;
+                }
+            }
+            return count;
+        };
+        const int stubPixels = outlinePixels(*pStubbed);
+        const int exitPixels = outlinePixels(*pExited);
+        QVERIFY2(stubPixels > 0, "no marker for the stub");
+        QVERIFY2(exitPixels > stubPixels, qPrintable(qsl("%1 outline pixels for the exit against %2 for the stub").arg(exitPixels).arg(stubPixels)));
     }
 
     void test_levelsNotShownAreLeftOut()

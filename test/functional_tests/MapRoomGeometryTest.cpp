@@ -334,8 +334,8 @@ private slots:
         QCOMPARE(map()->getColor(2), QColor(200, 100, 50));
     }
 
-    // What the modern 3D view tints a room with, and the 2D map's reduced-detail tiers fill it with.
-    // It follows getColor() except for a code with no colour, where it keeps the room visible.
+    // What both the 2D map and the modern 3D view fill a room with. It follows getColor() except
+    // for a code with no colour, where it keeps the room visible.
     void test_environmentColorResolvesLikeGetColor_data()
     {
         QTest::addColumn<int>("environment");
