@@ -57,6 +57,13 @@ namespace {
 // an entry that may still exist.
 bool keychainDeleteSucceeded(QKeychain::Error error)
 {
+#if !defined(Q_OS_MACOS) && !defined(Q_OS_WIN)
+    // libsecret reports a Secret Service missing from D-Bus as OtherError, where KWallet says
+    // NoBackendAvailable; on macOS and Windows the store is part of the OS, so there it is the entry's own failure
+    if (error == QKeychain::OtherError) {
+        return true;
+    }
+#endif
     return error == QKeychain::NoError || error == QKeychain::EntryNotFound || error == QKeychain::NoBackendAvailable || error == QKeychain::NotImplemented;
 }
 

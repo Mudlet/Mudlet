@@ -91,6 +91,7 @@ private slots:
     void testARefusalForOneProfileDoesNotSkipTheStoreForAnother();
     void testATrimmedLookupStillFindsTheProfilesOwnCopy();
     void testForgettingSaysSoWhenTheKeychainCopyRemains();
+    void testAKeychainNotOnDBusHoldsNothingToRemove();
     void testRefusalsAfterTheStoreHasAnsweredDoNotStopTheChain();
     void testOneUnreadableEntryDoesNotHideAnOlderLayout();
     void testASignInKeyIsNotLookedForInLayoutsOlderThanItself();
@@ -1683,6 +1684,38 @@ void CredentialManagerKeychainTest::testForgettingSaysSoWhenTheKeychainCopyRemai
     QVERIFY2(!removed, "a keychain copy that could not be removed was reported as forgotten");
     QVERIFY2(reported.contains(QStringLiteral("keychain")), qPrintable(QStringLiteral("the failure does not say where the credential still is: %1").arg(reported)));
     QVERIFY2(reported.contains(QStringLiteral("synthetic: this entry will not be deleted")), qPrintable(QStringLiteral("the keychain's own reason was dropped: %1").arg(reported)));
+}
+
+// With no Secret Service on D-Bus, libsecret answers every job with OtherError. A store that fails
+// falls back to the encrypted file, so nothing can be in a keychain that isn't there, and a removal
+// should not report one as left behind (raised in review of #11906).
+void CredentialManagerKeychainTest::testAKeychainNotOnDBusHoldsNothingToRemove()
+{
+    JobStaller watcher;
+    watcher.stallEvery<QKeychain::DeletePasswordJob>();
+    CredentialManager manager;
+    manager.mJobStartHook = watcher.hook();
+
+    bool removed = false;
+    bool removeAnswered = false;
+    manager.removePassword(mProfile, mKey, [&removed, &removeAnswered](bool success, const QString&) {
+        removed = success;
+        removeAnswered = true;
+    });
+
+    const int deletions = onWindows() ? 4 : 2;
+    for (int deletion = 0; deletion < deletions; ++deletion) {
+        QKeychain::Job* cleanup = watcher.waitForStalled(deletion);
+        QVERIFY(cleanup);
+        JobStaller::answer(cleanup, QKeychain::OtherError, QStringLiteral("The name org.freedesktop.secrets was not provided by any .service files"));
+    }
+
+    QTRY_VERIFY(removeAnswered);
+#if defined(Q_OS_MACOS) || defined(Q_OS_WIN)
+    QVERIFY2(!removed, "a keychain that is part of the OS failing to delete an entry was reported as nothing left behind");
+#else
+    QVERIFY2(removed, "a keychain with no service on D-Bus was reported as still holding the credential");
+#endif
 }
 
 // Once the store has answered a read it is unlocked, so every refusal after that is one entry's
