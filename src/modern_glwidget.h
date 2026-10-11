@@ -263,7 +263,7 @@ private:
     QPointer<T2DMap> mp2DMap;
     bool mSecondaryView = false;
     QPoint mPressPosition;
-    // In editing mode a left drag from empty space draws a selection rectangle, as on the 2D map
+    // In editing mode a left drag from empty space, or with Ctrl or Shift, draws a selection rectangle, as on the 2D map
     bool mRectangleSelecting = false;
     bool mRectangleDragged = false;
     QRect mSelectionRectangle;

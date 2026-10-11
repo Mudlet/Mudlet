@@ -352,6 +352,8 @@ private slots:
         QTest::mouseClick(pModern, Qt::LeftButton, Qt::ControlModifier, east);
         QCOMPARE(selection(), (QSet<int>{kPlayerRoomId, kEastRoomId}));
         map()->resetUnsaved();
+        pModern->followPlayer();
+        QVERIFY(pModern->followingPlayer());
 
         // Three steps east and one north, from a little off the room's middle
         const QPoint grab = east + QPoint(spacing / 12, spacing / 12);
@@ -361,6 +363,9 @@ private slots:
         QCOMPARE(roomPlace(kFarEastRoomId), QVector3D(6, 0, 0));
         QCOMPARE(roomPlace(kUpperRoomId), QVector3D(2, 2, 1));
         QVERIFY2(map()->isUnsaved(), "moving rooms did not mark the map as changed");
+        // Moving the player's room does not drag the view after it
+        QVERIFY(!pModern->followingPlayer());
+        QCOMPARE(pModern->viewCenter(), QVector3D(0, 0, 0));
         QCOMPARE(selection(), (QSet<int>{kPlayerRoomId, kEastRoomId}));
         // The rooms' area finds them at their new places, as after a move on the 2D map
         QVERIFY(map()->mpRoomDB->getArea(mPlayerAreaId)->getGridIndex().roomsAt(0, 5, 1).contains(kEastRoomId));
