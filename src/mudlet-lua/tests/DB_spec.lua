@@ -39,6 +39,8 @@ describe("Tests DB.lua functions", function()
       os.remove(db_path(fresh_two))
       os.remove(db_path(fresh_legacy))
       os.remove(db_path(legacy_name) .. ".aside")
+      os.remove(getMudletHomeDir() .. "/Database_.db")
+      os.remove(getMudletHomeDir() .. "/Database_90731.db")
     end
 
     local function names_in(database)
@@ -86,7 +88,9 @@ describe("Tests DB.lua functions", function()
       assert.is_falsy(io.exists(db_path(shared_name)))
     end)
 
-    it("keeps a digit-named file that already exists ahead of the older file", function()
+    it("opens the digit-stripped file when a digit-named file is also present", function()
+      -- 4.18.0 and 4.18.1 kept the digits. 4.18.2 went back to stripping them.
+      -- The stripped file is the later copy, so it wins when both are on disk.
       local legacy = db:create(legacy_name, schema)
       db:add(legacy.sheet, {name = "fromold"})
       db:close()
@@ -100,12 +104,62 @@ describe("Tests DB.lua functions", function()
       assert.is_truthy(os.rename(aside, legacy_path))
 
       local opened = db:create(digit_name, schema)
-      assert.are.same({"fromnew"}, names_in(opened))
+      assert.are.same({"fromold"}, names_in(opened))
       assert.is_truthy(io.exists(db_path(digit_name)))
+      assert.is_truthy(io.exists(db_path(legacy_name)))
       db:close()
 
       local old = db:create(legacy_name, schema)
       assert.are.same({"fromold"}, names_in(old))
+    end)
+
+    it("keeps a row written through the other name that opens the same legacy file", function()
+      local legacy = db:create(legacy_name, schema)
+      db:add(legacy.sheet, {name = "kept"})
+      db:close()
+
+      local first = db:create(digit_name, schema)
+      local second = db:create(shared_name, schema)
+      assert.is_true(db:add(second.sheet, {name = "fromsecond"}))
+      assert.are.same({"fromsecond", "kept"}, names_in(first))
+
+      assert.is_true(first:_begin())
+      assert.is_true(db:add(second.sheet, {name = "held"}))
+      assert.is_true(first:_rollback())
+      assert.are.same({"fromsecond", "kept"}, names_in(first))
+
+      db:close(digit_name)
+      assert.is_true(db:add(second.sheet, {name = "afterclose"}))
+      db:close()
+
+      local reopened = db:create(digit_name, schema)
+      assert.are.same({"afterclose", "fromsecond", "kept"}, names_in(reopened))
+    end)
+
+    it("opens Database_.db for a name that is only digits", function()
+      local digits_name = "90731"
+      assert.are.equal("", db:_legacy_safe_name(db:safe_name(digits_name)))
+
+      -- safe_name drops the dots, so this is the empty name: Database_.db
+      local seeded = db:create("...", schema)
+      db:add(seeded.sheet, {name = "fromempty"})
+      db:close()
+
+      local opened = db:create(digits_name, schema)
+      assert.are.same({"fromempty"}, names_in(opened))
+      assert.is_truthy(io.exists(getMudletHomeDir() .. "/Database_.db"))
+      assert.is_falsy(io.exists(getMudletHomeDir() .. "/Database_90731.db"))
+    end)
+
+    it("recreates a database after its file is deleted", function()
+      local created = db:create(fresh_one, schema)
+      db:add(created.sheet, {name = "first"})
+      assert.is_truthy(os.remove(db_path(fresh_one)))
+
+      local again = db:create(fresh_one, schema)
+      assert.is_true(db:add(again.sheet, {name = "second"}))
+      assert.are.same({"second"}, names_in(again))
+      assert.is_truthy(io.exists(db_path(fresh_one)))
     end)
 
     it("creates and reopens two files when no digit-stripped file exists", function()
