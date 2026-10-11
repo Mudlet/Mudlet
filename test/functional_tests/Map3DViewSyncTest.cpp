@@ -603,8 +603,16 @@ private slots:
         pDock->setFloating(false);
     }
 
-    void test_aHiddenZoomIsNotUsedForTheNextAreaShown()
+    void test_anAreaChangedToWhileHiddenIsFramedAtItsOwnZoom_data()
     {
+        QTest::addColumn<bool>("zoomWhileHidden");
+        QTest::newRow("after a zoom of the area left") << true;
+        QTest::newRow("with no zoom while hidden") << false;
+    }
+
+    void test_anAreaChangedToWhileHiddenIsFramedAtItsOwnZoom()
+    {
+        QFETCH(bool, zoomWhileHidden);
         dlgMapper* pMapper = mapperShowing2DAtThePlayer();
         QVERIFY(pMapper);
         QDockWidget* pDock = nullptr;
@@ -613,7 +621,10 @@ private slots:
         if (QTest::currentTestFailed()) {
             return;
         }
-        QVERIFY(pMapper->setMapZoom(20.0, 0).first);
+        if (zoomWhileHidden) {
+            QVERIFY(pMapper->setMapZoom(20.0, 0).first);
+        }
+        // Not the area the 3D view shows, so this frames nothing yet
         QVERIFY(pMapper->setMapZoom(9.0, mOtherAreaId).first);
         pMapper->mp2dMap->switchArea(mOtherAreaId);
         QSignalSpy cameraControls(pModern, &ModernGLWidget::cameraControlsChanged);
@@ -634,7 +645,9 @@ private slots:
         QVERIFY(pMapper->setMapZoom(9.0, mOtherAreaId).first);
         const int framedAt9 = cameraControls.last().at(0).toInt();
         QVERIFY(framedAt20 != framedAt9);
-        QVERIFY2(!framedOnShow.contains(framedAt20), "the zoom asked for the area the 3D view showed before was used for the area it shows now");
+        if (zoomWhileHidden) {
+            QVERIFY2(!framedOnShow.contains(framedAt20), "the zoom asked for the area the 3D view showed before was used for the area it shows now");
+        }
         QVERIFY2(!framedOnShow.isEmpty(), "the area shown now was not framed");
         QCOMPARE(framedOnShow.last(), framedAt9);
 
