@@ -902,7 +902,8 @@ public:
 
 public:
     // On false, clears the per-hold hidden-input flags even when the value does
-    // not change: cTelnet::reset() releases ECHO while it is already off
+    // not change: cTelnet::reset() releases ECHO while it is already off. Once
+    // cTelnet sees an ECHO anomaly, an Esc is kept instead, see the definition.
     void setRemoteEchoingActive(bool active);
     bool isRemoteEchoingActive() const { return mIsRemoteEchoingActive; }
 

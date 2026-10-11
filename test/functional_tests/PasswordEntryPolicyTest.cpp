@@ -521,6 +521,26 @@ private slots:
         QTRY_VERIFY2(consoleText().contains(qsl("Tried to send 'ünsafe'")), "the warning for an ordinary line no longer quotes it");
     }
 
+    // Near the end, because reset() forgets every negotiation the connection has made
+    void test_anEscKeptThroughAnEchoAnomalyEndsWithTheConnection()
+    {
+        for (int toggle = 0; toggle < 3; ++toggle) {
+            serverSaysEcho(TN_WILL);
+            serverSaysEcho(TN_WONT);
+        }
+        QVERIFY2(mpHost->mTelnet.mEchoAnomalyDetected, "the toggling did not trip the anomaly detector, so this case proves nothing");
+        serverSaysEcho(TN_WILL);
+        mpHost->dismissPasswordEntry();
+        serverSaysEcho(TN_WONT);
+        serverSaysEcho(TN_WILL);
+        QVERIFY2(!mpHost->passwordEntryWanted(), "the Esc was not kept through the anomaly, so this case proves nothing");
+
+        mpHost->mTelnet.reset();
+        serverSaysEcho(TN_WILL);
+
+        QVERIFY2(mpHost->passwordEntryWanted(), "an Esc kept through one connection's ECHO anomaly hid the next connection's password prompt");
+    }
+
     // Next to last, because reset() forgets every negotiation the connection has made
     void test_resetReleasesEchoBeforeItDropsThePendingFlag()
     {

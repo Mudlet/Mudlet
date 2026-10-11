@@ -259,6 +259,9 @@ void cTelnet::reset()
     if (mTimerNawsUpdate) {
         mTimerNawsUpdate->stop();
     }
+    // Before ECHO is released, or an Esc kept through the anomaly outlives the connection
+    mEchoToggleCount = 0;
+    mEchoAnomalyDetected = false;
     // Ensure we do not think that the game server is echoing for us:
     mpHost->setRemoteEchoingActive(false);
     // After ECHO is released, or a disconnect during the auto-login opens a box
@@ -272,8 +275,6 @@ void cTelnet::reset()
 
     mServerRequestedSGA = false;
     mCharacterModeDetected = false;
-    mEchoToggleCount = 0;
-    mEchoAnomalyDetected = false;
 
     mNegotiationOrder.clear();
 
@@ -3640,8 +3641,7 @@ void cTelnet::processTelnetCommand(const std::string& telnetCommand)
 
                 if (option == OPT_ECHO) {
                     // Whatever prompt the auto-login's password step found masked is over with
-                    // this, whether or not the release is honoured below - see
-                    // sendOutstandingAutoLoginPassword()
+                    // this - see sendOutstandingAutoLoginPassword()
                     mAutoLoginPasswordMaskWithdrawn = true;
                     checkEchoAnomalyPattern();
                     // Cancel any pending password mode timeout since we got the proper WONT ECHO

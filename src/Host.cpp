@@ -6583,14 +6583,21 @@ void Host::sendCmdLine(const QString& cmd)
 
 void Host::setRemoteEchoingActive(bool active)
 {
-    if (!active) {
+    if (!active && mTelnet.echoAnomalyDetected() && (mPasswordEntryDismissed || mPasswordEntrySuppressed)) {
+        // A game toggling ECHO would reopen the box every WILL: the Esc lasts until
+        // the game answers the player's next line instead
+        mPasswordEntryDismissed = true;
+        mPasswordEntrySuppressed = false;
+    } else if (!active) {
         mPasswordEntrySuppressed = false;
         mPasswordEntryDismissed = false;
         mPasswordEntryDismissedOnce = false;
         mPasswordEntryDismissalEnding = false;
     }
     mIsRemoteEchoingActive = active;
-    mPasswordEntryOpensWithThePrompt = active;
+    // Text typed before a toggling game's WILL is a command, not the start of a
+    // password, and would be lost with the box at the next WONT
+    mPasswordEntryOpensWithThePrompt = active && !mTelnet.echoAnomalyDetected();
     recomputePasswordEntryWanted();
     mPasswordEntryOpensWithThePrompt = false;
 }

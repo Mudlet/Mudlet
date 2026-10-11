@@ -91,6 +91,15 @@ private:
     }
     void serverSaysEcho(const char command) { serverSaysOption(command, OPT_ECHO); }
     bool echoNegotiatedByServer() const { return mpHost->mTelnet.hisOptionState.test(static_cast<size_t>(OPT_ECHO)); }
+    bool tripEchoAnomaly()
+    {
+        for (int toggle = 0; toggle < 3; ++toggle) {
+            serverSaysEcho(TN_WILL);
+            serverSaysEcho(TN_WONT);
+        }
+        runDeferredDeletes();
+        return mpHost->mTelnet.echoAnomalyDetected();
+    }
 
     // Through the window's focus, the only way to prove the focus proxy delivers
     void typeIntoWindow(const QString& text)
@@ -567,6 +576,64 @@ private slots:
         QVERIFY(!box());
         QVERIFY2(wanted.isEmpty(), "the WONT that answered the player's line let a box open on the way");
         QCOMPARE(commandLine()->toPlainText(), qsl("next"));
+    }
+
+    void test_aTogglingGameLeavesTextTypedBeforeItsPromptInTheCommandLine()
+    {
+        QVERIFY2(tripEchoAnomaly(), "the toggling did not trip the anomaly detector, so this case proves nothing");
+        QTRY_COMPARE(focusWidget(), commandLine());
+
+        typeIntoWindow(qsl("kill rat"));
+        serverSaysEcho(TN_WILL);
+        QVERIFY2(box(), "a toggling game's WILL ECHO got no box");
+        QCOMPARE(box()->text(), QString());
+        QCOMPARE(commandLine()->toPlainText(), qsl("kill rat"));
+
+        serverSaysEcho(TN_WONT);
+        QTRY_VERIFY(!box());
+        QCOMPARE(commandLine()->toPlainText(), qsl("kill rat"));
+        QTRY_COMPARE(focusWidget(), commandLine());
+        pressInWindow(Qt::Key_Return);
+        QVERIFY2(waitForServerToReceive(asSent({qsl("kill rat")})), "the command typed before the toggle was lost with the box");
+    }
+
+    void test_anEscOutlastsATogglingGameUntilTheGameAnswersThePlayer()
+    {
+        QVERIFY2(tripEchoAnomaly(), "the toggling did not trip the anomaly detector, so this case proves nothing");
+
+        serverSaysEcho(TN_WILL);
+        QVERIFY(box());
+        QTRY_COMPARE(focusWidget(), box());
+        pressInWindow(Qt::Key_Escape);
+        runDeferredDeletes();
+        QVERIFY(!box());
+
+        QSignalSpy wanted(mpHost, &Host::signal_passwordEntryWantedChanged);
+        for (int toggle = 0; toggle < 3; ++toggle) {
+            serverSaysEcho(TN_WONT);
+            serverSaysEcho(TN_WILL);
+        }
+        QVERIFY2(wanted.isEmpty(), "the toggling reopened a box the player had closed with Esc");
+
+        typeIntoWindow(qsl("hunter2"));
+        pressInWindow(Qt::Key_Return);
+        QVERIFY(waitForServerToReceive(asSent({qsl("hunter2")})));
+        serverSends(QByteArrayLiteral("Wrong password.\r\nPassword: "));
+        QVERIFY2(box(), "the game's answer to the player's line did not bring the box back");
+
+        // A second Esc lasts past the WONT too, but no longer than the first
+        QTRY_COMPARE(focusWidget(), box());
+        pressInWindow(Qt::Key_Escape);
+        runDeferredDeletes();
+        QVERIFY(!box());
+        serverSaysEcho(TN_WONT);
+        serverSaysEcho(TN_WILL);
+        QVERIFY2(!box(), "the toggling reopened a box the player had closed with a second Esc");
+        typeIntoWindow(qsl("hunter3"));
+        pressInWindow(Qt::Key_Return);
+        QVERIFY(waitForServerToReceive(asSent({qsl("hunter2"), qsl("hunter3")})));
+        serverSends(QByteArrayLiteral("Wrong password.\r\nPassword: "));
+        QVERIFY2(box(), "after a second Esc the toggling game's answer never brought the box back");
     }
 
     void test_aScriptAppendingToMainDoesNotCancelTheAutoLogin()
