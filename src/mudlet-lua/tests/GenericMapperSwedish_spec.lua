@@ -39,6 +39,8 @@ describe("Tests that the generic mapper follows a game in Swedish", function()
     savedConfigs = {lang_dirs = map.configs.lang_dirs, translate = map.configs.translate,
       language = map.configs.language, use_translation = map.configs.use_translation}
     savedQueue = {unpack(moveQueue())}
+    -- the mapper saves its configs to the profile, which would outlive the spec
+    stub(table, "save")
     map.setLanguage("english")
     map.configs.language = nil
     map.configs.use_translation = true
@@ -59,6 +61,7 @@ describe("Tests that the generic mapper follows a game in Swedish", function()
     for key, value in pairs(savedConfigs) do
       map.configs[key] = value
     end
+    table.save:revert()
     local queue = moveQueue()
     for index = #queue, 1, -1 do
       queue[index] = nil
@@ -140,5 +143,13 @@ describe("Tests that the generic mapper follows a game in Swedish", function()
     map.save.prompt_pattern[map.character] = nil
     feedTriggers(room)
     assert.are.equal("Du står vid sjön.", map.currentName)
+  end)
+
+  it("drops the move when the reply follows a prompt with letters in it", function()
+    map.setLanguage("swedish")
+    map.save.prompt_pattern[map.character] = "^HP %d+/%d+ SP %d+/%d+"
+    captureMoveCmd("nv")
+    feedTriggers("\nHP 52/52 SP 52/52Ursäkta?\n")
+    assert.are.same({}, moveQueue())
   end)
 end)

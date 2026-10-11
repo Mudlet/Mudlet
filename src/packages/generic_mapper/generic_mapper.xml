@@ -372,7 +372,13 @@ setTriggerStayOpen("English Multi-Line Exits Trigger",1)</script>
 			</Trigger>
 			<Trigger isActive="yes" isFolder="no" isTempTrigger="no" isMultiline="no" isPerlSlashGOption="no" isColorizerTrigger="no" isFilterTrigger="no" isSoundTrigger="no" isColorTrigger="no" isColorTriggerFg="no" isColorTriggerBg="no">
 				<name>Swedish Failed Move Trigger</name>
-				<script>if map.configs.language == "swedish" then raiseEvent("onMoveFail") end</script>
+				<script>if map.configs.language == "swedish" then
+  local before = line:sub(1, #line - #matches[1])
+  local prompt = map.save.prompt_pattern[map.character]
+  if prompt then before = before:gsub(prompt, "") end
+  -- only the prompt may come before the reply, so someone saying "Vadå?" is not a failed move
+  if not before:find("%a") then raiseEvent("onMoveFail") end
+end</script>
 				<triggerType>0</triggerType>
 				<conditonLineDelta>0</conditonLineDelta>
 				<mStayOpen>0</mStayOpen>
@@ -384,8 +390,8 @@ setTriggerStayOpen("English Multi-Line Exits Trigger",1)</script>
 				<colorTriggerFgColor>#000000</colorTriggerFgColor>
 				<colorTriggerBgColor>#000000</colorTriggerBgColor>
 				<regexCodeList>
-					<string>^[^\p{L}]*(?:Eh|Ursäkta|Vadå|Vad menar du)\?$</string>
-					<string>^[^\p{L}]*Dörren hindrar dig\.$</string>
+					<string>(?:Eh|Ursäkta|Vadå|Vad menar du)\?$</string>
+					<string>Dörren hindrar dig\.$</string>
 				</regexCodeList>
 				<regexCodePropertyList>
 					<integer>1</integer>
