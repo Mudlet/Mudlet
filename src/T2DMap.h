@@ -156,6 +156,8 @@ public:
     void registerContextMenu(QMenu* menu);
     bool eventFilter(QObject* watched, QEvent* event) override;
     void prepareSingleClickSelection(MapInteractionContext& context);
+    // A click on a room (0 for none) in another view of this map, such as the 3D one, with the same modifiers as here
+    void selectRoomFromOtherView(int roomId, Qt::KeyboardModifiers modifiers);
     std::optional<int> roomIdAtWidgetPosition(const QPoint& widgetPosition, const TArea* area) const;
     QSet<int> roomIdsAtWidgetPosition(const QPoint& widgetPosition, const TArea* area) const;
     void populateUserContextMenus(QMenu& menu);
@@ -186,6 +188,8 @@ public:
     void switchArea(const QString& newAreaName);
     void switchArea(int areaId);
     void clearSelection();
+    void pruneRoomSelectionToArea(int areaId);
+    void initiateSpeedWalk(const int speedWalkStartRoomId, const int speedWalkTargetRoomId);
 
     // Schedules a repaint through a single-shot timer, coalescing multiple
     // rapid requests (e.g. during mouse wheel zoom or pan drag) into at most
@@ -418,7 +422,6 @@ private:
     void updateSelectionWidget();
     void resizeMultiSelectionWidget();
     void hideSelectionWidget();
-    void pruneRoomSelectionToArea(int areaId);
     std::pair<int, int> getMousePosition();
     std::pair<bool, QString> performImageSave(const QPixmap& pixmap, const QString& filePath, const QString& format);
     bool isSnapCustomLinePointsToGridEnabled() const;
@@ -468,7 +471,7 @@ private:
     };
     void paintRoomExits(QPainter&, QPen&, QList<ExitToPaint>& exitList, const TArea*, int zLevel, const QRect& roomBounds, const QList<int>& viewportRooms, float exitWidth, QMap<int, QPointF>&);
     void resolveAreaExitClick(QPainter&, const QMap<int, QPointF>& areaExitsMap, const int speedWalkStartRoomId);
-    void initiateSpeedWalk(const int speedWalkStartRoomId, const int speedWalkTargetRoomId);
+    void addClickedRoomsToSelection(const QList<int>& hitRooms, Qt::KeyboardModifiers modifiers);
     inline void drawDoor(QPainter&, const TRoom&, const QString&, const QLineF&);
     void updateMapLabel(QRectF labelRectangle, int labelId, TArea* pArea);
     static void paintLabelHighlight(QPainter& painter, QRectF labelPaintRectangle, const QSizeF& clickSize);

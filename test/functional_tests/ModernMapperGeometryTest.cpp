@@ -218,6 +218,24 @@ private slots:
         }
     }
 
+    // Room names on the 3D view: the nearest of an overlapping pair is kept, and one too small to read is not
+    void test_declutteredRectsDropOverlappingAndTinyNames()
+    {
+        const QList<QRectF> rects{
+                QRectF(0, 0, 100, 12),     // kept
+                QRectF(50, 6, 100, 12),    // overlaps the first
+                QRectF(200, 0, 100, 12),   // clear of both
+                QRectF(400, 0, 100, 4),    // too short to read
+                QRectF(),                  // off screen
+                QRectF(-90, 500, 100, 12), // clear, though in a grid cell left of the origin
+                QRectF(-80, 505, 20, 12),  // overlaps the one before, across the origin's cell boundary
+                QRectF(130, 2, 60, 12),    // between the first and third, touching neither
+        };
+        QCOMPARE(GeometryManager::declutteredRects(rects, 7.0), (QList<qsizetype>{0, 2, 5, 7}));
+        QCOMPARE(GeometryManager::declutteredRects(rects, 2.0), (QList<qsizetype>{0, 2, 3, 5, 7}));
+        QVERIFY(GeometryManager::declutteredRects({}, 7.0).isEmpty());
+    }
+
     void test_vertexShaderAttributeLocationsDoNotOverlap()
     {
         const QList<ShaderAttribute> attributes = vertexShaderAttributes();

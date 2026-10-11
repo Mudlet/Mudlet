@@ -315,9 +315,14 @@ void T2DMap::prepareSingleClickSelection(MapInteractionContext& context)
         }
     }
 
+    addClickedRoomsToSelection(hitRooms, context.modifiers);
+}
+
+void T2DMap::addClickedRoomsToSelection(const QList<int>& hitRooms, const Qt::KeyboardModifiers modifiers)
+{
+    const bool hasShift = modifiers.testFlag(Qt::ShiftModifier);
+    const bool hasCtrl = modifiers.testFlag(Qt::ControlModifier);
     for (const int roomId : hitRooms) {
-        const bool hasShift = context.modifiers.testFlag(Qt::ShiftModifier);
-        const bool hasCtrl = context.modifiers.testFlag(Qt::ControlModifier);
         const bool isAlreadySelected = mMultiSelectionSet.contains(roomId);
 
         if (hasCtrl) {
@@ -349,6 +354,21 @@ void T2DMap::prepareSingleClickSelection(MapInteractionContext& context)
         getCenterSelection();
         break;
     }
+}
+
+void T2DMap::selectRoomFromOtherView(const int roomId, const Qt::KeyboardModifiers modifiers)
+{
+    // As a click on the 2D map: without Ctrl or Shift it starts a new selection
+    if (!modifiers.testFlag(Qt::ControlModifier) && !modifiers.testFlag(Qt::ShiftModifier)) {
+        mMultiSelectionSet.clear();
+    }
+    QList<int> hitRooms;
+    if (roomId > 0) {
+        hitRooms.append(roomId);
+    }
+    addClickedRoomsToSelection(hitRooms, modifiers);
+    updateSelectionWidget();
+    update();
 }
 
 void T2DMap::InteractionDispatcher::registerHandler(IInteractionHandler* handler, int priority)

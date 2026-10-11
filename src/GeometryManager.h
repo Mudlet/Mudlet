@@ -20,6 +20,8 @@
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
 
+#include <QList>
+#include <QRectF>
 #include <QVector>
 #include <QMatrix4x4>
 #include <QOpenGLBuffer>
@@ -167,6 +169,9 @@ public:
     // Places the unit cube [-1, 1] as a bar from one point to another, width across and height tall,
     // with its width kept level with the map
     static QMatrix4x4 barTransform(const QVector3D& from, const QVector3D& to, float width, float height);
+    // The indices of the screen rectangles to keep, taking them in the order given: one shorter than
+    // minimumHeight, or overlapping one kept before it, is left out
+    static QList<qsizetype> declutteredRects(const QList<QRectF>& rects, qreal minimumHeight);
 
     // Render geometry using provided VAO and buffers
     void renderGeometry(const GeometryData& geometry,

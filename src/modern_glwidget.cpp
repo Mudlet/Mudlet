@@ -28,7 +28,12 @@
 #include "ExitScene.h"
 #include "Host.h"
 #include "RoomAppearance.h"
+#include "RoomContextMenuHandler.h"
+#include "T2DMap.h"
 #include "TArea.h"
+#include "TCommandLine.h"
+#include "TEvent.h"
+#include "TMainConsole.h"
 #include "TMap.h"
 #include "TRoom.h"
 #include "TRoomDB.h"
@@ -36,14 +41,23 @@
 #include "mudlet.h"
 
 #include <QtEvents>
+#include <QApplication>
 #include <QDebug>
 #include <QFontMetricsF>
+#include <QJsonArray>
+#include <QJsonDocument>
+#include <QJsonObject>
 #include <QLabel>
+#include <QLinearGradient>
+#include <QMenu>
 #include <QPainter>
 #include <QKeyEvent>
 #include <QSurfaceFormat>
+#include <QToolTip>
 #include <QVBoxLayout>
+#include <algorithm>
 #include <chrono>
+#include <limits>
 #include <optional>
 
 using namespace std::chrono_literals;
@@ -77,6 +91,10 @@ ModernGLWidget::ModernGLWidget(TMap* pMap, Host* pHost, QWidget* parent)
     mCameraAnimationTimer->setInterval(17ms); // ~60fps updates for smoother animation
     connect(mCameraAnimationTimer, &QTimer::timeout, this, &ModernGLWidget::onCameraAnimationTick);
     mEasingCurve.setType(QEasingCurve::OutQuart); // Natural deceleration
+
+    // Keys this view does not use go on to the command line
+    setFocusPolicy(Qt::ClickFocus);
+    loadSavedCameras();
 }
 
 ModernGLWidget::~ModernGLWidget()
@@ -127,6 +145,78 @@ void ModernGLWidget::showEvent(QShowEvent* event)
     });
 }
 
+void ModernGLWidget::hideEvent(QHideEvent* event)
+{
+    saveCamera();
+    QOpenGLWidget::hideEvent(event);
+}
+
+namespace {
+// Per profile: for each area by ID, how the 3D view last looked at it
+constexpr QLatin1StringView scmSavedCamerasItem{"3dmapper_cameras"};
+} // namespace
+
+void ModernGLWidget::saveCamera()
+{
+    // While a frame is pending the camera is still the one set up for the area shown before
+    if (!mAID || mFramePending || !mpMap || !mpMap->mpRoomDB || !mpMap->mpRoomDB->getArea(mAID)) {
+        return;
+    }
+    const QVector3D position = mCameraController.getPosition();
+    const SavedCamera camera{mCameraController.getScale(), position.y(), position.z(), mCameraController.getRoll()};
+    const auto it = mSavedCameras.constFind(mAID);
+    if (it != mSavedCameras.cend() && it->distance == camera.distance && it->tilt == camera.tilt && it->azimuth == camera.azimuth && it->roll == camera.roll) {
+        return;
+    }
+    mSavedCameras.insert(mAID, camera);
+    writeSavedCameras();
+}
+
+bool ModernGLWidget::restoreCamera(const bool distanceOnly)
+{
+    const auto it = mSavedCameras.constFind(mAID);
+    if (it == mSavedCameras.cend()) {
+        return false;
+    }
+    mCameraController.setScale(it->distance);
+    if (!distanceOnly) {
+        mCameraController.setOrientation(it->tilt, it->azimuth, it->roll);
+    }
+    emitCameraControls();
+    return true;
+}
+
+void ModernGLWidget::loadSavedCameras()
+{
+    if (!mpHost) {
+        return;
+    }
+    const QJsonObject cameras = QJsonDocument::fromJson(mpHost->readProfileData(QString(scmSavedCamerasItem)).toUtf8()).object();
+    for (auto it = cameras.constBegin(); it != cameras.constEnd(); ++it) {
+        bool isNumber = false;
+        const int areaId = it.key().toInt(&isNumber);
+        const QJsonArray values = it.value().toArray();
+        if (!isNumber || values.size() != 4) {
+            continue;
+        }
+        mSavedCameras.insert(
+                areaId,
+                {static_cast<float>(values.at(0).toDouble()), static_cast<float>(values.at(1).toDouble()), static_cast<float>(values.at(2).toDouble()), static_cast<float>(values.at(3).toDouble())});
+    }
+}
+
+void ModernGLWidget::writeSavedCameras() const
+{
+    if (!mpHost) {
+        return;
+    }
+    QJsonObject cameras;
+    for (auto it = mSavedCameras.cbegin(); it != mSavedCameras.cend(); ++it) {
+        cameras.insert(QString::number(it.key()), QJsonArray{it->distance, it->tilt, it->azimuth, it->roll});
+    }
+    mpHost->writeProfileData(QString(scmSavedCamerasItem), QString::fromUtf8(QJsonDocument(cameras).toJson(QJsonDocument::Compact)));
+}
+
 // QOpenGLWidget retries a context it could not create on every show, resize and paint, and each retry
 // leaks the context that failed (QOpenGLWidgetPrivate::initialize() overwrites it), so ask only once
 bool ModernGLWidget::contextCreationFailed() const
@@ -136,6 +226,17 @@ bool ModernGLWidget::contextCreationFailed() const
 
 bool ModernGLWidget::event(QEvent* event)
 {
+    if (event->type() == QEvent::ToolTip) {
+        auto* helpEvent = static_cast<QHelpEvent*>(event);
+        const QString text = roomToolTip(roomAt(helpEvent->pos()));
+        if (text.isEmpty()) {
+            QToolTip::hideText();
+            event->ignore();
+        } else {
+            QToolTip::showText(helpEvent->globalPos(), text, this);
+        }
+        return true;
+    }
     if (contextCreationFailed() && (event->type() == QEvent::Show || event->type() == QEvent::WindowChangeInternal)) {
         return QWidget::event(event);
     }
@@ -480,6 +581,9 @@ QImage clearRoomTextureImage(const QColor& edgeColor)
 // Texels across a room, for the text drawn beside or on it at the 2D map's proportions
 constexpr int scmTextTexelsPerRoom = 48;
 
+// Names drawn shorter than this on screen are left out, as unreadable
+constexpr qreal scmMinimumNamePixels = 7.0;
+
 // Measured as the image text is drawn on will lay it out, whatever the screen's resolution
 QFontMetricsF imageFontMetrics(const QFont& font)
 {
@@ -587,6 +691,29 @@ GLuint ModernGLWidget::squareTexture(const QColor& color)
 
     QImage image(scmRoomTextureSize, scmRoomTextureSize, QImage::Format_ARGB32);
     image.fill(color);
+    return addRoomTexture(key, image);
+}
+
+// As the 2D map shades a selected room: from clear at one corner to blue at the opposite one
+GLuint ModernGLWidget::selectionTexture()
+{
+    const QString key = qsl("selection");
+    if (const GLuint texture = cachedRoomTexture(key)) {
+        return texture;
+    }
+    if (mLabelTextureCache.imageTextureFailed(key) || !roomForAnotherTexture()) {
+        return 0;
+    }
+
+    QImage image = clearRoomTextureImage(QColor(Qt::blue));
+    QPainter painter(&image);
+    QLinearGradient gradient(QPointF(0.0, 0.0), QPointF(scmRoomTextureSize, scmRoomTextureSize));
+    QColor clearBlue(Qt::blue);
+    clearBlue.setAlpha(0);
+    gradient.setColorAt(0.2, clearBlue);
+    gradient.setColorAt(1.0, QColor(Qt::blue));
+    painter.fillRect(image.rect(), gradient);
+    painter.end();
     return addRoomTexture(key, image);
 }
 
@@ -738,6 +865,12 @@ void ModernGLWidget::renderRooms()
     QHash<GLuint, GeometryData> markerDecals;
     GeometryData playerRoomDecal;
     GeometryData playerRoomFillDecal;
+    GeometryData selectionDecal;
+    const QSet<int> emptySelection;
+    const QSet<int>& selection = mp2DMap ? mp2DMap->mMultiSelectionSet : emptySelection;
+    if (!selection.isEmpty()) {
+        selectionDecal.textureId = selectionTexture();
+    }
 
     QSetIterator<int> itRoom(pArea->getAreaRooms());
     while (itRoom.hasNext()) {
@@ -751,21 +884,13 @@ void ModernGLWidget::renderRooms()
             continue;
         }
 
+        if (!levelShown(pR->z())) {
+            continue;
+        }
+
         auto rx = static_cast<float>(pR->x());
         auto ry = static_cast<float>(pR->y());
         auto rz = static_cast<float>(pR->z());
-
-        // Level filtering logic from original
-        if (rz > pz) {
-            if (abs(rz - pz) > mShowTopLevels) {
-                continue;
-            }
-        }
-        if (rz < pz) {
-            if (abs(rz - pz) > mShowBottomLevels) {
-                continue;
-            }
-        }
 
         const bool isCurrentRoom = currentRoomId == playerRoomId;
         const bool aboveLevel = rz > pz;
@@ -796,6 +921,10 @@ void ModernGLWidget::renderRooms()
 
         const QVector3D roomTop(rx, ry, rz + roomHeight / 2.0f);
         const QVector4D decalTint = levelFaded(QColor(Qt::white), levelDistance, aboveLevel, moreTransparent);
+
+        if (selectionDecal.textureId && selection.contains(currentRoomId)) {
+            GeometryManager::appendGroundQuad(selectionDecal, roomTop, roomSize, screenRight, screenUp, decalTint);
+        }
 
         if (!showRoomIds && !pR->mSymbol.isEmpty()) {
             const QColor symbolColor = RoomAppearance::symbolColor(pR->mSymbolColor, roomColor);
@@ -897,7 +1026,42 @@ void ModernGLWidget::renderRooms()
     if (!roomNames.isEmpty()) {
         const QString nameFontKey = nameFont.key();
         const QFontMetricsF nameMetrics = imageFontMetrics(nameFont);
-        for (const RoomName& roomName : roomNames) {
+        // Nearest first, so that where names overlap the one in front is the one kept
+        const QMatrix4x4 viewModel = mCameraController.getViewMatrix() * mCameraController.getModelMatrix();
+        std::stable_sort(roomNames.begin(), roomNames.end(), [&viewModel](const RoomName& a, const RoomName& b) {
+            return viewModel.map(a.center).z() > viewModel.map(b.center).z();
+        });
+        QList<QRectF> nameRects;
+        nameRects.reserve(roomNames.size());
+        const QRectF nameBounds = QRectF(rect()).adjusted(-100.0, -100.0, 100.0, 100.0);
+        for (const RoomName& roomName : std::as_const(roomNames)) {
+            const QSizeF size(qMax(1, qCeil(nameMetrics.horizontalAdvance(roomName.name))), qMax(1, qCeil(nameMetrics.height())));
+            const QVector3D across = groundRight * static_cast<float>(size.width() * textTexel);
+            const QVector3D upward = groundUp * static_cast<float>(size.height() * textTexel);
+            const QVector3D corner = roomName.center - across / 2.0f - upward / 2.0f;
+            qreal left = std::numeric_limits<qreal>::max();
+            qreal top = std::numeric_limits<qreal>::max();
+            qreal right = std::numeric_limits<qreal>::lowest();
+            qreal bottom = std::numeric_limits<qreal>::lowest();
+            bool onScreen = true;
+            for (const QVector3D& point : {corner, corner + across, corner + upward, corner + across + upward}) {
+                const std::optional<QPointF> pixel = mCameraController.pixelForPoint(point);
+                if (!pixel) {
+                    onScreen = false;
+                    break;
+                }
+                left = qMin(left, pixel->x());
+                top = qMin(top, pixel->y());
+                right = qMax(right, pixel->x());
+                bottom = qMax(bottom, pixel->y());
+            }
+            // An invalid rectangle, for a name partly behind the camera or off screen, is never kept; one
+            // nearly edge on can span millions of pixels, so each is cut down to about the view
+            const QRectF rect(QPointF(left, top), QPointF(right, bottom));
+            nameRects.append(onScreen && rect.intersects(nameBounds) ? rect.intersected(nameBounds) : QRectF());
+        }
+        for (const qsizetype index : GeometryManager::declutteredRects(nameRects, scmMinimumNamePixels)) {
+            const RoomName& roomName = roomNames.at(index);
             QSize size;
             const QString key = qsl("name|%1|%2|%3").arg(roomName.color.name(QColor::HexArgb), nameFontKey, roomName.name);
             if (const GLuint texture = textTexture(key, roomName.name, nameFont, nameMetrics, roomName.color, size)) {
@@ -919,7 +1083,8 @@ void ModernGLWidget::renderRooms()
                 std::make_unique<RenderInstancedCubesCommand>(roomInstances, mCameraController.getProjectionMatrix(), mCameraController.getViewMatrix(), mCameraController.getModelMatrix()));
     }
 
-    if (symbolDecals.isEmpty() && highlightDecals.isEmpty() && textDecals.isEmpty() && markerDecals.isEmpty() && playerRoomDecal.isEmpty() && playerRoomFillDecal.isEmpty()) {
+    if (selectionDecal.isEmpty() && symbolDecals.isEmpty() && highlightDecals.isEmpty() && textDecals.isEmpty() && markerDecals.isEmpty() && playerRoomDecal.isEmpty()
+        && playerRoomFillDecal.isEmpty()) {
         return;
     }
     // In the 2D map's order: outside grid mode a highlight is drawn over the symbol, in grid mode under it;
@@ -928,6 +1093,11 @@ void ModernGLWidget::renderRooms()
     const QHash<GLuint, GeometryData>& upperDecals = pArea->gridMode ? symbolDecals : highlightDecals;
     mRenderCommandQueue.addCommand(std::make_unique<GLStateCommand>(GLStateCommand::DISABLE_DEPTH_WRITE));
     mRenderCommandQueue.addCommand(std::make_unique<GLStateCommand>(GLStateCommand::ENABLE_POLYGON_OFFSET));
+    // The selection shades the room itself, as the 2D map's does, so it is under everything drawn on it
+    if (!selectionDecal.isEmpty()) {
+        mRenderCommandQueue.addCommand(std::make_unique<RenderTexturedTrianglesCommand>(
+                selectionDecal, mCameraController.getProjectionMatrix(), mCameraController.getViewMatrix(), mCameraController.getModelMatrix(), RenderCommand::Shading::Unlit));
+    }
     const QHash<GLuint, GeometryData>* const decalLayers[] = {&lowerDecals, &upperDecals, &textDecals, &markerDecals};
     for (const QHash<GLuint, GeometryData>* decals : decalLayers) {
         for (const GeometryData& batch : *decals) {
@@ -1042,6 +1212,8 @@ void ModernGLWidget::setCameraPosition(float r, float theta, float phi)
 {
     mCameraController.setPosition(r, theta, phi);
     mDistanceRequested = true;
+    // Set for the area on view, so it is that area's camera now even before a paint
+    mFramePending = false;
     mFrameOnResize = false;
     emitCameraControls();
     update();
@@ -1116,6 +1288,10 @@ void ModernGLWidget::frameRooms(const qreal zoom)
 void ModernGLWidget::applyMapZoom(const qreal zoom, const int areaId)
 {
     if (areaId != mAID) {
+        // So that the area is framed for this zoom when it is next shown
+        if (mSavedCameras.remove(areaId)) {
+            writeSavedCameras();
+        }
         return;
     }
     frameRooms(zoom);
@@ -1339,7 +1515,14 @@ void ModernGLWidget::jumpTo(int areaId, int x, int y, int z)
 {
     stopSmoothTransition();
     if (areaId != mAID) {
-        mFramePending = true;
+        saveCamera();
+        mAID = areaId;
+        const TArea* pArea = mpMap && mpMap->mpRoomDB ? mpMap->mpRoomDB->getArea(areaId) : nullptr;
+        mFramePending = !restoreCamera(pArea && pArea->gridMode);
+        // As the 2D map does on changing area, so that room actions never reach rooms out of sight
+        if (mp2DMap) {
+            mp2DMap->pruneRoomSelectionToArea(areaId);
+        }
     }
     mAID = areaId;
     mMapCenterX = x;
@@ -1356,18 +1539,158 @@ void ModernGLWidget::wheelEvent(QWheelEvent* e)
     if (qFuzzyIsNull(steps)) {
         return;
     }
+    zoomBySteps(steps);
+}
+
+void ModernGLWidget::zoomBySteps(const float steps)
+{
     mCameraController.zoomBy(steps);
     mFrameOnResize = false;
     emitCameraControls();
     update();
 }
 
+bool ModernGLWidget::levelShown(const int z) const
+{
+    const int levelsAbove = z - mMapCenterZ;
+    return levelsAbove >= 0 ? levelsAbove <= mShowTopLevels : -levelsAbove <= mShowBottomLevels;
+}
+
+namespace {
+// Where a ray first meets an axis-aligned box, as a distance along it, by the slab method
+std::optional<float> rayHitsBox(const QVector3D& origin, const QVector3D& direction, const QVector3D& lowCorner, const QVector3D& highCorner)
+{
+    float nearest = 0.0f;
+    float farthest = std::numeric_limits<float>::max();
+    for (int axis = 0; axis < 3; ++axis) {
+        if (std::abs(direction[axis]) < 1e-9f) {
+            if (origin[axis] < lowCorner[axis] || origin[axis] > highCorner[axis]) {
+                return std::nullopt;
+            }
+            continue;
+        }
+        float entry = (lowCorner[axis] - origin[axis]) / direction[axis];
+        float exit = (highCorner[axis] - origin[axis]) / direction[axis];
+        if (entry > exit) {
+            std::swap(entry, exit);
+        }
+        nearest = qMax(nearest, entry);
+        farthest = qMin(farthest, exit);
+        if (nearest > farthest) {
+            return std::nullopt;
+        }
+    }
+    return nearest;
+}
+
+// A room seen nearly edge on is a sliver, so one whose center is this close to the pointer counts as hit
+constexpr qreal scmPickSlopPixels = 6.0;
+} // namespace
+
+int ModernGLWidget::roomAt(const QPoint& position)
+{
+    if (!mpMap || !mpMap->mpRoomDB) {
+        return 0;
+    }
+    const TArea* pArea = mpMap->mpRoomDB->getArea(mAID);
+    if (!pArea) {
+        return 0;
+    }
+
+    updateMatrices();
+    const auto [origin, direction] = mCameraController.rayThroughPixel(QPointF(position));
+    const QVector3D halfSize(1.0f / scale, 1.0f / scale, 1.0f / scale / zFlattening);
+    int hitRoom = 0;
+    float hitDistance = std::numeric_limits<float>::max();
+    int nearRoom = 0;
+    qreal nearPixels = scmPickSlopPixels;
+    for (const int roomId : pArea->getAreaRooms()) {
+        const TRoom* pR = mpMap->mpRoomDB->getRoom(roomId);
+        if (!pR || pR->isHidden() || !levelShown(pR->z())) {
+            continue;
+        }
+        const QVector3D center(static_cast<float>(pR->x()), static_cast<float>(pR->y()), static_cast<float>(pR->z()));
+        if (const std::optional<float> distance = rayHitsBox(origin, direction, center - halfSize, center + halfSize)) {
+            if (*distance < hitDistance) {
+                hitDistance = *distance;
+                hitRoom = roomId;
+            }
+        } else if (!hitRoom) {
+            if (const std::optional<QPointF> pixel = mCameraController.pixelForPoint(center)) {
+                const qreal pixels = QLineF(*pixel, QPointF(position)).length();
+                if (pixels < nearPixels) {
+                    nearPixels = pixels;
+                    nearRoom = roomId;
+                }
+            }
+        }
+    }
+    return hitRoom ? hitRoom : nearRoom;
+}
+
+QString ModernGLWidget::roomToolTip(const int roomId) const
+{
+    const TRoom* pR = mpMap && mpMap->mpRoomDB ? mpMap->mpRoomDB->getRoom(roomId) : nullptr;
+    if (!pR) {
+        return QString();
+    }
+    QStringList lines;
+    if (!pR->name.isEmpty()) {
+        lines << qsl("<b>%1</b>").arg(pR->name.toHtmlEscaped());
+    }
+    //: Tooltip over a room in the 3D map view, %1 is the room's ID number
+    lines << tr("Room ID: %1").arg(roomId);
+    const QString areaName = mpMap->mpRoomDB->getAreaNamesMap().value(pR->getArea());
+    if (!areaName.isEmpty()) {
+        //: Tooltip over a room in the 3D map view, %1 is the name of the area the room is in
+        lines << tr("Area: %1").arg(areaName.toHtmlEscaped());
+    }
+    return qsl("<p style='white-space:pre'>%1</p>").arg(lines.join(qsl("<br>")));
+}
+
+void ModernGLWidget::setCompanion2DMap(T2DMap* map)
+{
+    mp2DMap = map;
+}
+
+void ModernGLWidget::selectRoom(const int roomId, const Qt::KeyboardModifiers modifiers)
+{
+    if (!mp2DMap) {
+        return;
+    }
+    mp2DMap->selectRoomFromOtherView(roomId, modifiers);
+    update();
+}
+
+void ModernGLWidget::raiseMousePressEvent()
+{
+    if (!mpHost) {
+        return;
+    }
+    TEvent sysMapWindowMousePressEvent{};
+    sysMapWindowMousePressEvent.mArgumentList.append(QLatin1String("sysMapWindowMousePressEvent"));
+    sysMapWindowMousePressEvent.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
+    mpHost->raiseEvent(sysMapWindowMousePressEvent);
+}
+
 void ModernGLWidget::mousePressEvent(QMouseEvent* event)
 {
-    // Implement mouse handling (placeholder)
     mudlet::self()->activateProfile(mpHost);
     if (!mpMap || !mpMap->mpRoomDB) {
         return;
+    }
+
+    mPressPosition = event->position().toPoint();
+    mClickPending = false;
+    if (event->button() == Qt::LeftButton) {
+        // A plain click on a room selects it at once, as on the 2D map, so a script handling the event below sees
+        // it; anything else waits for the release, as a drag from empty space pans and a Ctrl or Shift drag orbits
+        const int roomId = event->modifiers() == Qt::NoModifier ? roomAt(mPressPosition) : 0;
+        if (roomId) {
+            selectRoom(roomId, event->modifiers());
+        } else {
+            mClickPending = true;
+        }
     }
 
     if (event->buttons() & Qt::LeftButton) { // translation on xy-plane
@@ -1378,12 +1701,17 @@ void ModernGLWidget::mousePressEvent(QMouseEvent* event)
         mPanXStart = x;
         mPanYStart = y;
     }
+
+    raiseMousePressEvent();
 }
 
 void ModernGLWidget::mouseMoveEvent(QMouseEvent* event)
 {
     if (!mpMap || !mpMap->mpRoomDB) {
         return;
+    }
+    if (mClickPending && (event->position().toPoint() - mPressPosition).manhattanLength() >= QApplication::startDragDistance()) {
+        mClickPending = false;
     }
     if (mPanMode) {
         auto eventPos = event->position();
@@ -1425,18 +1753,119 @@ void ModernGLWidget::mouseMoveEvent(QMouseEvent* event)
 
 void ModernGLWidget::mouseReleaseEvent(QMouseEvent* event)
 {
-    mPanMode = false;
-    mCameraController.snapTargetToGrid();
-    const QVector3D newCenter = mCameraController.getTarget();
-    mMapCenterX = static_cast<int>(newCenter.x());
-    mMapCenterY = static_cast<int>(newCenter.y());
-    mMapCenterZ = static_cast<int>(newCenter.z());
+    if (mPanMode) {
+        mPanMode = false;
+        mCameraController.snapTargetToGrid();
+        const QVector3D newCenter = mCameraController.getTarget();
+        mMapCenterX = static_cast<int>(newCenter.x());
+        mMapCenterY = static_cast<int>(newCenter.y());
+        mMapCenterZ = static_cast<int>(newCenter.z());
+    }
+    if (event->button() == Qt::LeftButton && mClickPending) {
+        mClickPending = false;
+        selectRoom(roomAt(event->position().toPoint()), event->modifiers());
+    } else if (event->button() == Qt::RightButton && mpMap && mpMap->mpRoomDB) {
+        showContextMenu(event->position().toPoint());
+    }
     QOpenGLWidget::mouseReleaseEvent(event);
     update();
 }
 
+void ModernGLWidget::mouseDoubleClickEvent(QMouseEvent* event)
+{
+    // Qt sends this in place of the second press, and the release after it must not select again
+    mClickPending = false;
+    if (event->button() != Qt::LeftButton || !mp2DMap || !mpMap || !mpMap->mpRoomDB) {
+        QOpenGLWidget::mouseDoubleClickEvent(event);
+        return;
+    }
+    const int roomId = roomAt(event->position().toPoint());
+    if (roomId) {
+        mp2DMap->initiateSpeedWalk(mpMap->mRoomIdHash.value(mpMap->mProfileName), roomId);
+        update();
+    }
+    event->accept();
+}
+
+void ModernGLWidget::showContextMenu(const QPoint& position)
+{
+    if (!mp2DMap) {
+        return;
+    }
+    const int roomId = roomAt(position);
+    RoomContextMenuHandler handler(*mp2DMap);
+    QMenu* menu = handler.menuForOtherView(roomId, this);
+    if (!menu) {
+        return;
+    }
+    //: 3D map view context menu item: shows the room clicked on, or else the middle of the view, on the 2D map
+    auto* editIn2D = new QAction(tr("Edit in 2D"), menu);
+    connect(editIn2D, &QAction::triggered, this, [this, roomId]() {
+        emit editIn2DRequested(roomId);
+    });
+    QAction* firstAction = menu->actions().value(0);
+    menu->insertAction(firstAction, editIn2D);
+    if (firstAction) {
+        menu->insertSeparator(firstAction);
+    }
+    connect(menu, &QObject::destroyed, this, qOverload<>(&QWidget::update));
+    update();
+    menu->popup(mapToGlobal(position));
+}
+
+void ModernGLWidget::panByRooms(const int right, const int up)
+{
+    // A step of about a sixth of what the view shows from top to bottom, along the screen's axes laid on the map
+    const int step = qMax(1, qRound(mCameraController.getScale() * 2.0f));
+    const auto [groundRight, groundUp] = GeometryManager::groundAxes(mCameraController.screenRight(), mCameraController.screenUp());
+    const QVector3D offset = (groundRight * static_cast<float>(right) + groundUp * static_cast<float>(up)) * static_cast<float>(step);
+    setViewCenter(mAID, mMapCenterX + qRound(offset.x()), mMapCenterY + qRound(offset.y()), mMapCenterZ);
+}
+
 void ModernGLWidget::keyPressEvent(QKeyEvent* event)
 {
+    // Shift is needed for + on many layouts, and for capitals with Caps Lock on
+    const bool noCommandModifier = !(event->modifiers() & (Qt::ControlModifier | Qt::AltModifier | Qt::MetaModifier));
+    if (noCommandModifier && mpMap && mpMap->mpRoomDB) {
+        switch (event->key()) {
+        case Qt::Key_Left:
+        case Qt::Key_A:
+            panByRooms(-1, 0);
+            return;
+        case Qt::Key_Right:
+        case Qt::Key_D:
+            panByRooms(1, 0);
+            return;
+        case Qt::Key_Up:
+        case Qt::Key_W:
+            panByRooms(0, 1);
+            return;
+        case Qt::Key_Down:
+        case Qt::Key_S:
+            panByRooms(0, -1);
+            return;
+        case Qt::Key_Plus:
+        case Qt::Key_Equal:
+            zoomBySteps(1.0f);
+            return;
+        case Qt::Key_Minus:
+            zoomBySteps(-1.0f);
+            return;
+        case Qt::Key_Home:
+            followPlayer();
+            return;
+        default:
+            break;
+        }
+    }
+
+    TMainConsole* console = mpHost ? mpHost->mainConsoleView() : nullptr;
+    if (console && console->mpCommandLine) {
+        TCommandLine* commandLine = console->mpCommandLine;
+        commandLine->setFocus(Qt::OtherFocusReason);
+        QCoreApplication::sendEvent(commandLine, event);
+        return;
+    }
     QOpenGLWidget::keyPressEvent(event);
 }
 

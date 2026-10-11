@@ -811,6 +811,14 @@ void dlgMapper::connect3DViewControls()
         return;
     }
 
+    modernWidget->setCompanion2DMap(mp2dMap);
+    connect(modernWidget, &ModernGLWidget::editIn2DRequested, this, [this, modernWidget](const int roomId) {
+        // Held on the room, as a view moved by hand is, so that switching views carries it to the 2D map
+        if (const TRoom* pRoom = mpMap->mpRoomDB->getRoom(roomId)) {
+            modernWidget->syncView(pRoom->getArea(), pRoom->x(), pRoom->y(), pRoom->z(), mpMap->mRoomIdHash.value(mpMap->mProfileName));
+        }
+        slot_toggle3DView(false);
+    });
     connect(modernWidget, &ModernGLWidget::resetPlayerIconSliders, this, [this](int height, int rotX, int rotY, int rotZ, int scale) {
         slider_playerIconHeight->setValue(height);
         slider_playerIconRotX->setValue(rotX);

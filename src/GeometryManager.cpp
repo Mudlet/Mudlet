@@ -22,7 +22,9 @@
 
 #include <QDebug>
 #include <QFile>
+#include <QHash>
 #include <QImage>
+#include <cmath>
 
 namespace {
 QVector<float> upNormals(int vertexCount)
@@ -353,6 +355,48 @@ void GeometryManager::appendGroundQuad(GeometryData& batch, const QVector3D& cen
 {
     const auto [right, up] = groundAxes(cameraRight, cameraUp);
     appendQuad(batch, center - (right + up) * (size / 2.0f), right * size, up * size, color);
+}
+
+QList<qsizetype> GeometryManager::declutteredRects(const QList<QRectF>& rects, const qreal minimumHeight)
+{
+    // Kept rectangles are filed under every grid cell they touch, so each test looks only at near ones
+    constexpr qreal cellSize = 64.0;
+    const auto cellKey = [](const qint64 column, const qint64 row) {
+        return (static_cast<quint64>(static_cast<quint32>(column)) << 32) | static_cast<quint32>(row);
+    };
+    QHash<quint64, QList<qsizetype>> keptByCell;
+    QList<qsizetype> kept;
+    for (qsizetype index = 0; index < rects.size(); ++index) {
+        const QRectF& rect = rects.at(index);
+        if (!rect.isValid() || rect.height() < minimumHeight) {
+            continue;
+        }
+        const auto firstColumn = static_cast<qint64>(std::floor(rect.left() / cellSize));
+        const auto lastColumn = static_cast<qint64>(std::floor(rect.right() / cellSize));
+        const auto firstRow = static_cast<qint64>(std::floor(rect.top() / cellSize));
+        const auto lastRow = static_cast<qint64>(std::floor(rect.bottom() / cellSize));
+        bool overlaps = false;
+        for (qint64 column = firstColumn; column <= lastColumn && !overlaps; ++column) {
+            for (qint64 row = firstRow; row <= lastRow && !overlaps; ++row) {
+                for (const qsizetype other : keptByCell.value(cellKey(column, row))) {
+                    if (rects.at(other).intersects(rect)) {
+                        overlaps = true;
+                        break;
+                    }
+                }
+            }
+        }
+        if (overlaps) {
+            continue;
+        }
+        kept.append(index);
+        for (qint64 column = firstColumn; column <= lastColumn; ++column) {
+            for (qint64 row = firstRow; row <= lastRow; ++row) {
+                keptByCell[cellKey(column, row)].append(index);
+            }
+        }
+    }
+    return kept;
 }
 
 QMatrix4x4 GeometryManager::barTransform(const QVector3D& from, const QVector3D& to, const float width, const float height)

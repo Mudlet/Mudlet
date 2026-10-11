@@ -23,6 +23,10 @@
 #include <QMatrix4x4>
 #include <QVector3D>
 
+#include <optional>
+#include <utility>
+
+class QPointF;
 class QVector2D;
 
 class CameraController
@@ -88,6 +92,10 @@ public:
     float getScale() const { return mDistance; }
     // The map distance one pixel of the viewport's height spans at that point, as of the last updateMatrices()
     float worldUnitsPerPixel(const QVector3D& point) const;
+    // The line of sight through a viewport pixel, from the near plane, in map coordinates, as of the last updateMatrices()
+    std::pair<QVector3D, QVector3D> rayThroughPixel(const QPointF& pixel) const;
+    // Where a map point lands in the viewport, in pixels from its top left; nullopt when behind the camera
+    std::optional<QPointF> pixelForPoint(const QVector3D& point) const;
 
     // View center (for external API compatibility)
     void setViewCenter(float x, float y, float z);
