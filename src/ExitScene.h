@@ -78,6 +78,8 @@ struct Scene
 {
     QList<Segment> segments;
     QList<Triangle> triangles;
+    // The first room with a dotted or dashed line drawn solid, as its pattern would repeat too often along it; 0 if none
+    int solidDashRoomId = 0;
 };
 
 Scene build(const TMap& map, const Host& host, const Options& options);

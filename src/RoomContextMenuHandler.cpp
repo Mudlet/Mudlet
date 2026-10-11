@@ -116,7 +116,7 @@ QMenu* RoomContextMenuHandler::createMenu(QWidget* parent) const
     auto* popup = new QMenu(parent);
     popup->setToolTipsVisible(true);
     popup->setAttribute(Qt::WA_DeleteOnClose);
-    mMapWidget.registerContextMenu(popup);
+    mMapWidget.registerContextMenu(popup, parent);
     return popup;
 }
 

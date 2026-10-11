@@ -138,9 +138,14 @@ void ModernGLWidget::showEvent(QShowEvent* event)
     QOpenGLWidget::showEvent(event);
     // Qt creates the context once the widget is laid out; if that failed, initializeGL never runs to say so
     QTimer::singleShot(0, this, [this]() {
-        if (isVisible() && !isValid() && mFailureMessage.isEmpty()) {
-            //: Shown in place of the 3D map when the graphics driver cannot create the OpenGL context the modern 3D mapper needs
-            showFailure(tr("The modern 3D mapper could not create an OpenGL 3.3 context on this system."));
+        if (isVisible() && !context() && !size().isEmpty()) {
+            // Qt drops a context not yet composed when the view is shown (switching renderers does this) and rebuilds it
+            // only on a later resize or paint; resize synchronously so the check below sees the result, which update() would not
+            QResizeEvent resize(size(), size());
+            QCoreApplication::sendEvent(this, &resize);
+        }
+        if (isVisible() && !isValid()) {
+            reportContextFailure();
         }
     });
 }
@@ -219,6 +224,16 @@ void ModernGLWidget::writeSavedCameras() const
     mpHost->writeProfileData(QString(scmSavedCamerasItem), QString::fromUtf8(QJsonDocument(cameras).toJson(QJsonDocument::Compact)));
 }
 
+// Each event that tries for a context reports a failure straight away, so a script that shows the view and moves
+// its camera in one go is refused; showEvent()'s timer is only a fallback, a turn of the event loop later
+void ModernGLWidget::reportContextFailure()
+{
+    if (mFailureMessage.isEmpty()) {
+        //: Shown in place of the 3D map when the graphics driver cannot create the OpenGL context the modern 3D mapper needs
+        showFailure(tr("The modern 3D mapper could not create an OpenGL 3.3 context on this system."));
+    }
+}
+
 // QOpenGLWidget retries a context it could not create on every show, resize and paint, and each retry
 // leaks the context that failed (QOpenGLWidgetPrivate::initialize() overwrites it), so ask only once
 bool ModernGLWidget::contextCreationFailed() const
@@ -239,26 +254,37 @@ bool ModernGLWidget::event(QEvent* event)
         }
         return true;
     }
-    if (contextCreationFailed() && (event->type() == QEvent::Show || event->type() == QEvent::WindowChangeInternal)) {
+    // Of the events this sees, only these try for a context; after some others, such as DeferredDelete, this object is gone
+    if (event->type() != QEvent::Show && event->type() != QEvent::WindowChangeInternal) {
+        return QOpenGLWidget::event(event);
+    }
+    if (contextCreationFailed()) {
         return QWidget::event(event);
     }
-    return QOpenGLWidget::event(event);
+    const bool handled = QOpenGLWidget::event(event);
+    if (contextCreationFailed()) {
+        reportContextFailure();
+    }
+    return handled;
 }
 
 void ModernGLWidget::resizeEvent(QResizeEvent* event)
 {
-    // Framed before the base class, whose resize paints at once; with no context nothing paints,
-    // so a visible resize settles the zoom here
-    if (mPendingFrameZoom) {
-        frameRooms(*mPendingFrameZoom);
+    // Framed before the base class, whose resize paints at once. A visible resize settles it, since
+    // with no context no paint follows to do it
+    if (mFrameWhenShown) {
+        frameArea();
         if (isVisible()) {
-            mPendingFrameZoom.reset();
+            mFrameWhenShown = false;
         }
     }
     if (contextCreationFailed()) {
         QWidget::resizeEvent(event);
-    } else {
-        QOpenGLWidget::resizeEvent(event);
+        return;
+    }
+    QOpenGLWidget::resizeEvent(event);
+    if (contextCreationFailed()) {
+        reportContextFailure();
     }
 }
 
@@ -268,6 +294,9 @@ void ModernGLWidget::paintEvent(QPaintEvent* event)
         return;
     }
     QOpenGLWidget::paintEvent(event);
+    if (contextCreationFailed()) {
+        reportContextFailure();
+    }
 }
 
 void ModernGLWidget::showFailure(const QString& message)
@@ -284,9 +313,11 @@ void ModernGLWidget::showFailure(const QString& message)
         layout->setContentsMargins(0, 0, 0, 0);
         layout->addWidget(mpFailureLabel);
     }
-    //: Second paragraph of the message shown in place of the 3D map when the modern 3D mapper cannot run; keep setConfig("experiment.3dmap.modernmapper", false) exactly as written, it is Lua code the user types
-    mpFailureLabel->setText(
-            qsl("%1\n\n%2").arg(message, tr("Use setConfig(\"experiment.3dmap.modernmapper\", false) to switch back to the classic 3D view. Setting it back to true tries the modern one again.")));
+    //: Second paragraph of the message shown in place of the 3D map when the modern 3D mapper cannot run; keep setConfig("experiment.3dmap.modernmapper", false) and the word true exactly as written, they are Lua code the user types
+    mpFailureLabel->setText(qsl("%1\n\n%2")
+                                    .arg(message,
+                                         tr("Use setConfig(\"experiment.3dmap.modernmapper\", false) to try the classic 3D view; if that stays blank too, use the 2D map. Setting it back to true "
+                                            "tries the modern one again.")));
     mpFailureLabel->show();
 }
 
@@ -492,10 +523,10 @@ void ModernGLWidget::paintGL()
     }
     mFramePending = false;
     // QOpenGLWidget paints inside a resize sent before the view is marked visible, at a size the
-    // layout may change again once the 3D controls appear, so only a visible paint settles the zoom
-    if (mPendingFrameZoom && isVisible()) {
-        frameRooms(*mPendingFrameZoom);
-        mPendingFrameZoom.reset();
+    // layout may change again once the 3D controls appear, so only a visible paint settles the framing
+    if (mFrameWhenShown && isVisible()) {
+        frameArea();
+        mFrameWhenShown = false;
     }
     mDistanceRequested = false;
 
@@ -823,6 +854,8 @@ void ModernGLWidget::renderRooms()
         const qreal widest = idMetrics->horizontalAdvance(QString(QString::number(maxRoomId).size(), QLatin1Char('8')));
         idTexel = 0.9f * roomSize / static_cast<float>(qMax(widest, idMetrics->height()));
     }
+    // Cleared before any of this frame's textures is asked for, as only those in it are kept from eviction
+    mRoomTexturesInUse.clear();
     // A digit's texture and size by its color and character. Made before any room's other textures, so
     // that a view short of room for textures keeps its IDs whole
     QHash<std::pair<QRgb, char16_t>, std::pair<GLuint, QSize>> digitTextures;
@@ -860,8 +893,6 @@ void ModernGLWidget::renderRooms()
     };
     QList<RoomName> roomNames;
     const float textTexel = roomSize / scmTextTexelsPerRoom;
-
-    mRoomTexturesInUse.clear();
 
     // Made before any symbol, so a view short of room for textures still shows where the player is
     GLuint playerRoomTexture = 0;
@@ -1158,6 +1189,11 @@ void ModernGLWidget::renderConnections()
     options.exitColor = mpHost->mFgColor_2;
     options.background = mpHost->mBgColor_2;
     const ExitScene::Scene scene = ExitScene::build(*mpMap, *mpHost, options);
+    if (scene.solidDashRoomId && !mSolidDashWarned) {
+        mSolidDashWarned = true;
+        qWarning().nospace() << "ModernGLWidget: room " << scene.solidDashRoomId
+                             << "'s dotted or dashed exit line is drawn solid, as its pattern would repeat too many times along it: the line is very long or the exit lines very thin";
+    }
     if (scene.segments.isEmpty() && scene.triangles.isEmpty()) {
         return;
     }
@@ -1238,7 +1274,7 @@ void ModernGLWidget::setCameraDistance(float r)
 {
     mCameraController.setScale(r);
     mDistanceRequested = true;
-    mPendingFrameZoom.reset();
+    mFrameWhenShown = false;
     emitCameraControls();
     update();
 }
@@ -1249,7 +1285,7 @@ void ModernGLWidget::setCameraPosition(float r, float theta, float phi)
     mDistanceRequested = true;
     // Set for the area on view, so it is that area's camera now even before a paint
     mFramePending = false;
-    mPendingFrameZoom.reset();
+    mFrameWhenShown = false;
     emitCameraControls();
     update();
 }
@@ -1330,11 +1366,7 @@ void ModernGLWidget::applyMapZoom(const qreal zoom, const int areaId)
         return;
     }
     frameRooms(zoom);
-    if (isVisible()) {
-        mPendingFrameZoom.reset();
-    } else {
-        mPendingFrameZoom = zoom;
-    }
+    mFrameWhenShown = !isVisible();
     mDistanceRequested = false;
     update();
 }
@@ -1455,7 +1487,7 @@ void ModernGLWidget::slot_topView()
 void ModernGLWidget::slot_setScale(int value)
 {
     mCameraController.setScale(distanceForScaleSlider(value));
-    mPendingFrameZoom.reset();
+    mFrameWhenShown = false;
     update();
 }
 
@@ -1585,8 +1617,7 @@ void ModernGLWidget::jumpTo(int areaId, int x, int y, int z)
         mAID = areaId;
         const TArea* pArea = mpMap && mpMap->mpRoomDB ? mpMap->mpRoomDB->getArea(areaId) : nullptr;
         mFramePending = !restoreCamera(pArea && pArea->gridMode);
-        // It was asked for the area being left; the new one is framed at its own zoom
-        mPendingFrameZoom.reset();
+        mFrameWhenShown = mFramePending && !isVisible();
         // As the 2D map does on changing area, so that room actions never reach rooms out of sight
         if (mp2DMap) {
             mp2DMap->pruneRoomSelectionToArea(areaId);
@@ -1613,7 +1644,7 @@ void ModernGLWidget::wheelEvent(QWheelEvent* e)
 void ModernGLWidget::zoomBySteps(const float steps)
 {
     mCameraController.zoomBy(steps);
-    mPendingFrameZoom.reset();
+    mFrameWhenShown = false;
     emitCameraControls();
     update();
 }
@@ -2006,7 +2037,12 @@ void ModernGLWidget::panByRooms(const int right, const int up)
     const int step = qMax(1, qRound(mCameraController.getScale() * 2.0f));
     const auto [groundRight, groundUp] = GeometryManager::groundAxes(mCameraController.screenRight(), mCameraController.screenUp());
     const QVector3D offset = (groundRight * static_cast<float>(right) + groundUp * static_cast<float>(up)) * static_cast<float>(step);
-    setViewCenter(mAID, mMapCenterX + qRound(offset.x()), mMapCenterY + qRound(offset.y()), mMapCenterZ);
+    // Rooms may sit at the ends of the int range, where the sum would wrap to the far side of the map
+    const auto shifted = [](const int coordinate, const float by) {
+        const qint64 sum = static_cast<qint64>(coordinate) + qRound64(by);
+        return static_cast<int>(std::clamp<qint64>(sum, std::numeric_limits<int>::min(), std::numeric_limits<int>::max()));
+    };
+    setViewCenter(mAID, shifted(mMapCenterX, offset.x()), shifted(mMapCenterY, offset.y()), mMapCenterZ);
 }
 
 void ModernGLWidget::keyPressEvent(QKeyEvent* event)
@@ -2248,9 +2284,9 @@ void ModernGLWidget::startSmoothTransition(int targetAID, int targetX, int targe
     mCurrentAnimationZ = mStartMapCenterZ;
 
     // update map's actual position
-    mMapCenterX = static_cast<float>(targetX);
-    mMapCenterY = static_cast<float>(targetY);
-    mMapCenterZ = static_cast<float>(targetZ);
+    mMapCenterX = targetX;
+    mMapCenterY = targetY;
+    mMapCenterZ = targetZ;
 
     // Reset animation progress
     mAnimationProgress = 0.0;
