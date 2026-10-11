@@ -122,6 +122,18 @@ private:
         });
     }
     static inline const QString smFalseFailure = qsl("could not create an OpenGL 3.3 context");
+    // A driver may give the modern 3D view a working context it still rightly refuses
+    static QString rightfulRefusal(QOpenGLWidget* pView)
+    {
+        const QSurfaceFormat format = pView->context()->format();
+        if (format.version() < qMakePair(3, 3)) {
+            return qsl("the modern 3D view got OpenGL %1.%2 and rightly refused it, so a false context failure goes unchecked here").arg(format.majorVersion()).arg(format.minorVersion());
+        }
+        if (!smModernViewWarnings.filter(qsl("could not compile its shaders")).isEmpty()) {
+            return qsl("this driver rejected the modern 3D view's shaders, so a false context failure goes unchecked here");
+        }
+        return {};
+    }
     static QByteArray warningsSoFar() { return smModernViewWarnings.isEmpty() ? QByteArrayLiteral("no warnings") : smModernViewWarnings.join(u'\n').toUtf8(); }
 
 public:
@@ -388,13 +400,8 @@ private slots:
                 QVERIFY2(smModernViewWarnings.size() == 1 && smModernViewWarnings.constFirst().contains(smFalseFailure), warningsSoFar().constData());
             } else if (modern) {
                 qApp->processEvents();
-                const QSurfaceFormat format = pView->context()->format();
-                if (format.version() < qMakePair(3, 3)) {
-                    QSKIP(qPrintable(
-                            qsl("the modern 3D view got OpenGL %1.%2 and rightly refused it, so a false context failure goes unchecked here").arg(format.majorVersion()).arg(format.minorVersion())));
-                }
-                if (!smModernViewWarnings.filter(qsl("could not compile its shaders")).isEmpty()) {
-                    QSKIP("this driver rejected the modern 3D view's shaders, so a false context failure goes unchecked here");
+                if (const QString refusal = rightfulRefusal(pView); !refusal.isEmpty()) {
+                    QSKIP(qPrintable(refusal));
                 }
                 QVERIFY2(smModernViewWarnings.isEmpty(), warningsSoFar().constData());
             }
@@ -439,6 +446,9 @@ private slots:
         QTRY_VERIFY2(pView->context(), "the 3D view asked for no context once it had a size");
         if (pView->isValid()) {
             qApp->processEvents();
+            if (const QString refusal = rightfulRefusal(pView); !refusal.isEmpty()) {
+                QSKIP(qPrintable(refusal));
+            }
             QVERIFY2(smModernViewWarnings.isEmpty(), warningsSoFar().constData());
         } else {
             QTRY_VERIFY2(pView->findChild<QLabel*>() && pView->findChild<QLabel*>()->isVisible(), "the 3D view did not say it could not create a context once it had a size");
@@ -483,18 +493,56 @@ private slots:
         // Lets the deferred show checks run, as the notice above may have come from the resize that showing sends first
         qApp->processEvents();
         QVERIFY2(pHidden->isVisible() && pHidden->size().isEmpty() && !noticeShowing(pHidden), "a 3D view with no size said it could not get a context it never asked for");
-        // Qt read its own copy when the application started, so this reaches only the notice
-        const QByteArray forcing = QByteArrayLiteral("QT_WIDGETS_RHI_BACKEND");
-        QVERIFY2(qEnvironmentVariableIsEmpty(forcing.constData()), "the environment already forces a QRhi backend, so this case covers nothing");
-        qputenv(forcing.constData(), QByteArrayLiteral("vulkan"));
-        const auto unsetForcing = qScopeGuard([&forcing] {
-            qunsetenv(forcing.constData());
+        // Values Qt ignores, so a QRhiWidget, not the environment, is what drew this window without OpenGL
+        QVERIFY2(qEnvironmentVariableIsEmpty("QT_WIDGETS_RHI") && qEnvironmentVariableIsEmpty("QT_WIDGETS_RHI_BACKEND"), "the environment already sets a QRhi variable, so this case covers nothing");
+        qputenv("QT_WIDGETS_RHI", QByteArrayLiteral("0"));
+        qputenv("QT_WIDGETS_RHI_BACKEND", QByteArrayLiteral("vulkan"));
+        const auto unsetIgnored = qScopeGuard([] {
+            qunsetenv("QT_WIDGETS_RHI");
+            qunsetenv("QT_WIDGETS_RHI_BACKEND");
         });
         pHidden->setFixedSize(400, 300);
         QTRY_VERIFY2(noticeShowing(pHidden), "a 3D view given a size got no context and showed no notice");
         QVERIFY2(!pHidden->context() && smModernViewWarnings.size() == 2, warningsSoFar().constData());
         const QString notice = pHidden->findChild<QLabel*>()->text();
-        QVERIFY2(notice.contains(QString::fromLatin1(forcing)) && !notice.contains(classicAdvice), qPrintable(notice));
+        QVERIFY2(!notice.contains(qsl("QT_WIDGETS_RHI")) && !notice.contains(classicAdvice), qPrintable(notice));
+    }
+
+    // The notice blames only a variable Qt acted on; Qt reads its own copy at startup, so this reaches only the notice
+    void test_theNoticeNamesOnlyTheVariablesQtHonours()
+    {
+        const QList<QByteArray> names{QByteArrayLiteral("QT_WIDGETS_RHI"), QByteArrayLiteral("QT_WIDGETS_RHI_BACKEND"), QByteArrayLiteral("QT_WIDGETS_HIGHDPI_DOWNSCALE")};
+        for (const QByteArray& name : names) {
+            QVERIFY2(qEnvironmentVariableIsEmpty(name.constData()), "the environment already sets a QRhi variable, so this case covers nothing");
+        }
+        const auto unsetAll = qScopeGuard([&names] {
+            for (const QByteArray& name : names) {
+                qunsetenv(name.constData());
+            }
+        });
+        const auto forcing = [&names](const QList<const char*>& values) {
+            for (qsizetype i = 0; i < names.size(); ++i) {
+                if (values.at(i)) {
+                    qputenv(names.at(i).constData(), QByteArray(values.at(i)));
+                } else {
+                    qunsetenv(names.at(i).constData());
+                }
+            }
+            return ModernGLWidget::rhiForcingVariables();
+        };
+        QCOMPARE(forcing({"0", "vulkan", "0"}), QStringList());
+        QCOMPARE(forcing({nullptr, "vulkan", nullptr}), QStringList());
+        QCOMPARE(forcing({"1", "opengl", nullptr}), QStringList());
+#if QT_CONFIG(vulkan)
+        QCOMPARE(forcing({"1", "vulkan", nullptr}), (QStringList{qsl("QT_WIDGETS_RHI"), qsl("QT_WIDGETS_RHI_BACKEND")}));
+        QCOMPARE(forcing({nullptr, "vulkan", "1"}), (QStringList{qsl("QT_WIDGETS_HIGHDPI_DOWNSCALE"), qsl("QT_WIDGETS_RHI_BACKEND")}));
+#endif
+#if defined(Q_OS_WIN) || QT_CONFIG(metal)
+        QCOMPARE(forcing({"1", nullptr, nullptr}), QStringList{qsl("QT_WIDGETS_RHI")});
+#else
+        // Elsewhere Qt composes with OpenGL unless told otherwise
+        QCOMPARE(forcing({"1", nullptr, nullptr}), QStringList());
+#endif
     }
 
     // Replacing a 3D view in the same event-loop turn that inserted it must not let the show

@@ -137,27 +137,72 @@ void ModernGLWidget::reportContextCreationFailure()
     if (!context()) {
         // Qt makes no context at all when the window is composed with Direct3D, Metal or Vulkan, and refuses the
         // classic 3D view the same way, so only undoing what forced it helps
-        QStringList forcing;
-        for (const char* name : {"QT_WIDGETS_RHI", "QT_WIDGETS_RHI_BACKEND", "QT_WIDGETS_HIGHDPI_DOWNSCALE"}) {
-            if (!qEnvironmentVariableIsEmpty(name)) {
-                forcing << QString::fromLatin1(name);
-            }
-        }
+        const QStringList forcing = rhiForcingVariables();
         //: Shown in place of the 3D map when the window is drawn with another graphics API, such as Direct3D, Metal or Vulkan, so the modern 3D mapper cannot get an OpenGL context
         const QString message = tr("The modern 3D mapper needs OpenGL, but this window is drawn with another graphics API.");
         if (forcing.isEmpty()) {
             //: Second paragraph of the message shown in place of the 3D map when the window is drawn with another graphics API; the classic 3D view is refused the same way
             showFailure(message, tr("The classic 3D view cannot draw here either, so use the 2D map."));
-        } else {
-            //: Second paragraph of the message shown in place of the 3D map when the window is drawn with another graphics API; %1 is one or more environment variable names, such as QT_WIDGETS_RHI, keep them as written
+        } else if (forcing.size() == 1) {
+            //: Second paragraph of the message shown in place of the 3D map when one environment variable makes Qt draw the window with another graphics API; %1 is its name, such as QT_WIDGETS_RHI, keep it as written
             showFailure(message,
-                        tr("%1 in Mudlet's environment makes Qt do this, for the classic 3D view too. Remove it and restart Mudlet to use either 3D view; until then, use the 2D map.")
+                        tr("%1 is set in Mudlet's environment, which makes Qt draw this window that way, for the classic 3D view too. Remove it and restart Mudlet to use either 3D view; until then, "
+                           "use the 2D map.")
+                                .arg(forcing.constFirst()));
+        } else {
+            //: Second paragraph of the message shown in place of the 3D map when several environment variables make Qt draw the window with another graphics API; %1 is their names separated by commas, such as QT_WIDGETS_RHI, QT_WIDGETS_RHI_BACKEND, keep them as written
+            showFailure(message,
+                        tr("%1 are set in Mudlet's environment, which make Qt draw this window that way, for the classic 3D view too. Remove them and restart Mudlet to use either 3D view; until "
+                           "then, use the 2D map.")
                                 .arg(forcing.join(qsl(", "))));
         }
     } else if (!isValid()) {
         //: Shown in place of the 3D map when the graphics driver cannot create the OpenGL context the modern 3D mapper needs
         showFailure(tr("The modern 3D mapper could not create an OpenGL 3.3 context on this system."));
     }
+}
+
+// Mirrors QBackingStoreRhiSupport::checkForceRhi(), which Qt evaluates once at startup; Mudlet never changes these
+QStringList ModernGLWidget::rhiForcingVariables()
+{
+    QStringList enabling;
+    for (const char* name : {"QT_WIDGETS_RHI", "QT_WIDGETS_HIGHDPI_DOWNSCALE"}) {
+        if (qEnvironmentVariableIntValue(name)) {
+            enabling << QString::fromLatin1(name);
+        }
+    }
+    if (enabling.isEmpty()) {
+        return {};
+    }
+#if defined(Q_OS_WIN) || QT_CONFIG(metal)
+    bool openGL = false;
+#else
+    bool openGL = true;
+#endif
+    QStringList otherApis;
+#if QT_CONFIG(vulkan)
+    otherApis << qsl("vulkan");
+#endif
+#if defined(Q_OS_WIN)
+    otherApis << qsl("d3d11") << qsl("d3d") << qsl("d3d12");
+#endif
+#if QT_CONFIG(metal)
+    otherApis << qsl("metal");
+#endif
+    const QString backend = qEnvironmentVariable("QT_WIDGETS_RHI_BACKEND");
+    const bool backendChoseAnotherApi = otherApis.contains(backend);
+    if (backend == qsl("opengl") || backend == qsl("gl")) {
+        openGL = true;
+    } else if (backendChoseAnotherApi) {
+        openGL = false;
+    }
+    if (openGL) {
+        return {};
+    }
+    if (backendChoseAnotherApi) {
+        enabling << qsl("QT_WIDGETS_RHI_BACKEND");
+    }
+    return enabling;
 }
 
 // QOpenGLWidget retries a context it could not create on every show, resize and paint, and each retry

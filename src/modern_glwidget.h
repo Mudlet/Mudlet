@@ -66,6 +66,9 @@ public:
     ModernGLWidget(TMap*, Host*, QWidget* parent = nullptr);
     ~ModernGLWidget() override;
 
+    // The environment variables that made Qt compose every window with an API other than OpenGL
+    static QStringList rhiForcingVariables();
+
     void wheelEvent(QWheelEvent* e) override;
     void setViewCenter(int, int, int, int);
     void shiftCamera(float, float, float);
