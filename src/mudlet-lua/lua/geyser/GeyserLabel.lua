@@ -721,8 +721,9 @@ end
 -- callbacks are not a button's, such as a drag handle. Pass "" to decide by its callbacks again.
 -- @param role "button", "text" or ""
 function Geyser.Label:setAccessibleRole(role)
-  setLabelAccessibleRole(self.name, role)
-  self.accessibleRole = role
+  if setLabelAccessibleRole(self.name, role) then
+    self.accessibleRole = role
+  end
 end
 
 --- Resets the tooltip of the label
