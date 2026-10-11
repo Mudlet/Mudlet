@@ -108,6 +108,15 @@ private:
         }
         smPreviousMessageHandler(type, context, message);
     }
+    [[nodiscard]] static auto recordModernViewWarningsForThisScope()
+    {
+        smModernViewWarnings.clear();
+        smPreviousMessageHandler = qInstallMessageHandler(recordModernViewWarnings);
+        return qScopeGuard([] {
+            qInstallMessageHandler(smPreviousMessageHandler);
+        });
+    }
+    static inline const QString smFalseFailure = qsl("could not create an OpenGL 3.3 context");
 
 public:
     // Mirrors src/main.cpp, which shares GL contexts application-wide only on FreeBSD; with sharing,
@@ -356,12 +365,7 @@ private slots:
         mudlet::self()->slot_showMapperDialog();
         QDockWidget* pDock = mudlet::self()->getMainWindowDockWidget(qsl("map_%1").arg(mHostname));
         QVERIFY2(pDock && pDock->widget(), "slot_showMapperDialog() created no map dock, so this case covers nothing");
-        smModernViewWarnings.clear();
-        smPreviousMessageHandler = qInstallMessageHandler(recordModernViewWarnings);
-        const auto restoreMessageHandler = qScopeGuard([] {
-            qInstallMessageHandler(smPreviousMessageHandler);
-        });
-        const QString falseFailure = qsl("could not create an OpenGL 3.3 context");
+        const auto stopRecording = recordModernViewWarningsForThisScope();
         for (const bool modern : {false, true}) {
             QVERIFY(mpHost->getLuaInterpreter()->compileAndExecuteScript(qsl("assert(setConfig('experiment.3dmap.modernmapper', %1))\n"
                                                                              "assert(setConfig('show3dMapView', true))")
@@ -385,7 +389,7 @@ private slots:
                 if (!smModernViewWarnings.filter(qsl("could not compile its shaders")).isEmpty()) {
                     QSKIP("this driver rejected the modern 3D view's shaders, so a false context failure goes unchecked here");
                 }
-                QVERIFY2(smModernViewWarnings.filter(falseFailure).isEmpty(), "the 3D view has a working context but said it could not create one");
+                QVERIFY2(smModernViewWarnings.filter(smFalseFailure).isEmpty(), "the 3D view has a working context but said it could not create one");
             }
 
             pView->resize(pView->size() + QSize(10, 10));
@@ -396,11 +400,37 @@ private slots:
             if (valid) {
                 // Qt itself may rebuild a context that has not been composed yet when the view is shown again
                 QVERIFY2(pView->context() && pView->isValid(), "the 3D view was left without a working context");
-                QVERIFY2(smModernViewWarnings.filter(falseFailure).isEmpty(), "the 3D view has a working context but said it could not create one");
+                QVERIFY2(smModernViewWarnings.filter(smFalseFailure).isEmpty(), "the 3D view has a working context but said it could not create one");
             } else {
                 QVERIFY2(pView->context() == pFirstContext, "the 3D view asked again for a context it could not create");
                 QVERIFY(!pView->isValid());
             }
+        }
+    }
+
+    // Geyser hides an embedded map by shrinking it to nothing; a view with no size has not asked
+    // for a context yet, so it must not say one failed
+    void test_aZeroSize3DViewReportsNoContextFailure()
+    {
+        mudlet::self()->show();
+        QVERIFY(mpHost->getLuaInterpreter()->compileAndExecuteScript(qsl("assert(setConfig('experiment.3dmap.modernmapper', true))")));
+        auto [created, message] = mpHost->mainConsoleView()->createMapper(QString(), 10, 10, 0, 0);
+        QVERIFY2(created, qPrintable(message));
+        const auto stopRecording = recordModernViewWarningsForThisScope();
+        QVERIFY(mpHost->getLuaInterpreter()->compileAndExecuteScript(qsl("assert(setConfig('show3dMapView', true))")));
+        qApp->processEvents();
+        auto* pView = mpHost->mpMap->mapper()->findChild<QOpenGLWidget*>(qsl("glWidget"));
+        QVERIFY2(pView && pView->inherits("ModernGLWidget"), "the modern renderer did not make the 3D view, so this case covers nothing");
+        QVERIFY2(pView->isVisible() && pView->size().isEmpty() && !pView->context(), "the 3D view had a size or a context, so this case covers nothing");
+        QVERIFY2(smModernViewWarnings.filter(smFalseFailure).isEmpty(), "a 3D view with no size said it could not create a context it never asked for");
+
+        auto [resized, resizeMessage] = mpHost->mainConsoleView()->createMapper(QString(), 10, 10, 400, 300);
+        QVERIFY2(resized, qPrintable(resizeMessage));
+        QTRY_VERIFY2(pView->context(), "the 3D view asked for no context once it had a size");
+        if (pView->isValid()) {
+            QVERIFY2(smModernViewWarnings.filter(smFalseFailure).isEmpty(), "the 3D view has a working context but said it could not create one");
+        } else {
+            QTRY_VERIFY2(pView->findChild<QLabel*>() && pView->findChild<QLabel*>()->isVisible(), "the 3D view did not say it could not create a context once it had a size");
         }
     }
 

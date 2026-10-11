@@ -229,6 +229,7 @@ private:
     void cleanup();
     void showFailure(const QString& message);
     bool contextCreationFailed() const;
+    void reportContextCreationFailure();
     QColor getPlaneColor(int zLevel, bool belowOrAtLevel);
     QColor getEnvironmentColor(TRoom* pRoom);
     void startSmoothTransition(int targetAID, int targetX, int targetY, int targetZ);

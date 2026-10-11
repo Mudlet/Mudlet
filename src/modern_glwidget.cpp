@@ -115,17 +115,24 @@ void ModernGLWidget::showEvent(QShowEvent* event)
     // Qt creates the context once the widget is laid out; if that failed, initializeGL never runs to say so
     QTimer::singleShot(0, this, [this]() {
         if (isVisible() && !context() && !size().isEmpty()) {
-            // Qt drops a context not yet composed when the view is shown (switching renderers does this on the
-            // offscreen platform) and, with no RHI yet, rebuilds it only on a later resize or paint; resize
-            // synchronously so the check below sees the result, which update() would not
+            // Qt can drop a context not yet composed when the view is shown and, with no RHI yet, rebuild it only
+            // on a later resize or paint; resize synchronously so the check below sees the result, which update() would not
             QResizeEvent resize(size(), size());
             QCoreApplication::sendEvent(this, &resize);
         }
-        if (isVisible() && !isValid() && mFailureMessage.isEmpty()) {
-            //: Shown in place of the 3D map when the graphics driver cannot create the OpenGL context the modern 3D mapper needs
-            showFailure(tr("The modern 3D mapper could not create an OpenGL 3.3 context on this system."));
+        if (isVisible()) {
+            reportContextCreationFailure();
         }
     });
+}
+
+// A view with no size, such as an embedded map Geyser has hidden, has not asked for a context yet
+void ModernGLWidget::reportContextCreationFailure()
+{
+    if (contextCreationFailed() && mFailureMessage.isEmpty()) {
+        //: Shown in place of the 3D map when the graphics driver cannot create the OpenGL context the modern 3D mapper needs
+        showFailure(tr("The modern 3D mapper could not create an OpenGL 3.3 context on this system."));
+    }
 }
 
 // QOpenGLWidget retries a context it could not create on every show, resize and paint, and each retry
@@ -150,6 +157,7 @@ void ModernGLWidget::resizeEvent(QResizeEvent* event)
         return;
     }
     QOpenGLWidget::resizeEvent(event);
+    reportContextCreationFailure();
 }
 
 void ModernGLWidget::paintEvent(QPaintEvent* event)
