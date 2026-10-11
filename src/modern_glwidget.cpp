@@ -165,6 +165,8 @@ void ModernGLWidget::hideEvent(QHideEvent* event)
     // The release, if any, now goes elsewhere
     mClickPending = false;
     mPanMode = false;
+    mPointerInView = false;
+    mHoveredRoomId = 0;
     if (std::exchange(mPressEventButton, Qt::NoButton) != Qt::NoButton) {
         // Queued, as a script handling it could show or delete this view mid-hide
         QTimer::singleShot(0, this, &ModernGLWidget::raiseMousePressEvent);
@@ -719,11 +721,23 @@ constexpr int scmTextTexelsPerRoom = 48;
 // Names drawn shorter than this on screen are left out, as unreadable
 constexpr qreal scmMinimumNamePixels = 7.0;
 
-// Outlines' widths, as a part of a room's width: around each room of the viewed level, and the one hovered over
+// Outlines' widths, as a part of a room's width: around the viewed level's unbordered rooms, and the one hovered over
 constexpr float scmLevelOutline = 0.06f;
 constexpr float scmHoverOutline = 0.14f;
 // How strongly a level's floor plate shows
 constexpr float scmFloorPlateOpacity = 0.07f;
+
+// What is drawn on the tops of a set of rooms; each map is keyed by texture, so each is one draw call however many rooms share it
+struct RoomDecals
+{
+    GeometryData selection;
+    QHash<GLuint, GeometryData> symbols;
+    QHash<GLuint, GeometryData> highlights;
+    QHash<GLuint, GeometryData> text;
+    QHash<GLuint, GeometryData> markers;
+    GeometryData playerFill;
+    GeometryData player;
+};
 
 // Measured as the image text is drawn on will lay it out, whatever the screen's resolution
 QFontMetricsF imageFontMetrics(const QFont& font)
@@ -988,6 +1002,7 @@ void ModernGLWidget::renderRooms()
         QColor color;
         QString name;
         QVector4D tint;
+        RoomDecals* decals;
     };
     QList<RoomName> roomNames;
     const float textTexel = roomSize / scmTextTexelsPerRoom;
@@ -1012,23 +1027,20 @@ void ModernGLWidget::renderRooms()
     QVector<CubeInstanceData> roomInstances;
     QVector<CubeInstanceData> borderInstances;
     QVector<CubeInstanceData> outlineInstances;
-    // The see-through rooms of the levels above, by level, drawn after everything opaque
-    QMap<int, QVector<CubeInstanceData>> translucentInstances;
+    RoomDecals opaqueDecals;
+    // Rooms and borders drawn see-through, with what is on them, by level: drawn after the opaque rooms
+    struct SeeThroughLevel
+    {
+        QVector<CubeInstanceData> cubes;
+        RoomDecals decals;
+    };
+    QMap<int, SeeThroughLevel> seeThroughLevels;
     // Each level's extent, for its floor plate
     QMap<int, QRectF> levelExtents;
-    // Keyed by texture, so each is one draw call however many rooms share it
-    QHash<GLuint, GeometryData> symbolDecals;
-    QHash<GLuint, GeometryData> highlightDecals;
-    QHash<GLuint, GeometryData> textDecals;
-    QHash<GLuint, GeometryData> markerDecals;
-    GeometryData playerRoomDecal;
-    GeometryData playerRoomFillDecal;
-    GeometryData selectionDecal;
     const QSet<int> emptySelection;
     const QSet<int>& selection = mp2DMap ? mp2DMap->mMultiSelectionSet : emptySelection;
-    if (!selection.isEmpty()) {
-        selectionDecal.textureId = selectionTexture();
-    }
+    const GLuint selectionTextureId = selection.isEmpty() ? 0 : selectionTexture();
+    mHoveredRoomId = roomUnderPointer();
 
     QSetIterator<int> itRoom(pArea->getAreaRooms());
     while (itRoom.hasNext()) {
@@ -1067,7 +1079,9 @@ void ModernGLWidget::renderRooms()
             // Without its marker the player's room is drawn solid red, so it still stands out
             roomTint = QVector4D(1.0f, 0.0f, 0.0f, 1.0f);
         }
-        QVector<CubeInstanceData>& instances = roomTint.w() < 1.0f ? translucentInstances[pR->z()] : roomInstances;
+        const bool seeThrough = roomTint.w() < 1.0f;
+        QVector<CubeInstanceData>& instances = seeThrough ? seeThroughLevels[pR->z()].cubes : roomInstances;
+        RoomDecals& decals = seeThrough ? seeThroughLevels[pR->z()].decals : opaqueDecals;
         // An outline is a lower, wider block, so that its top shows only as a rim around the room
         const auto outline = [&](const float width, const QVector4D& tint, const float height = 0.6f) {
             const float spread = (roomSize + 2.0f * width) / roomSize;
@@ -1081,7 +1095,7 @@ void ModernGLWidget::renderRooms()
         if (hovered) {
             // Taller than a border, so that it shows over one
             outlineInstances.append(outline(roomSize * scmHoverOutline, QVector4D(contrast.redF(), contrast.greenF(), contrast.blueF(), 1.0f), 0.75f));
-        } else if (!bordered && !pArea->gridMode && pR->z() == mMapCenterZ) {
+        } else if (!bordered && !pArea->gridMode && pR->z() == mMapCenterZ && !seeThrough) {
             // Halfway from the room's color to the one that stands out on the background, so the viewed level's rooms stand apart from the rest
             outlineInstances.append(outline(roomSize * scmLevelOutline, GeometryManager::fadedColor(roomColor, {0.5f, 1.0f}, contrast)));
         }
@@ -1089,7 +1103,7 @@ void ModernGLWidget::renderRooms()
             const float borderWidth = (pR->mBorderThickness > 0 ? pR->mBorderThickness : 1) * borderUnit;
             const QColor borderColor = pR->mBorderColor.isValid() ? pR->mBorderColor : mpHost->mRoomBorderColor;
             const QVector4D borderTint = GeometryManager::fadedColor(borderColor, fade, background);
-            (borderTint.w() < 1.0f ? translucentInstances[pR->z()] : borderInstances).append(outline(borderWidth, borderTint));
+            (borderTint.w() < 1.0f ? seeThroughLevels[pR->z()].cubes : borderInstances).append(outline(borderWidth, borderTint));
         }
 
         QMatrix4x4 transform;
@@ -1100,14 +1114,15 @@ void ModernGLWidget::renderRooms()
         const QVector3D roomTop(rx, ry, rz + roomHeight / 2.0f);
         const QVector4D decalTint = GeometryManager::fadedDecalTint(fade);
 
-        if (selectionDecal.textureId && selection.contains(currentRoomId)) {
-            GeometryManager::appendGroundQuad(selectionDecal, roomTop, roomSize, screenRight, screenUp, decalTint);
+        if (selectionTextureId && selection.contains(currentRoomId)) {
+            decals.selection.textureId = selectionTextureId;
+            GeometryManager::appendGroundQuad(decals.selection, roomTop, roomSize, screenRight, screenUp, decalTint);
         }
 
         if (!showRoomIds && !pR->mSymbol.isEmpty()) {
             const QColor symbolColor = RoomAppearance::symbolColor(pR->mSymbolColor, roomColor);
             if (const GLuint texture = symbolTexture(pR->mSymbol, symbolColor)) {
-                GeometryData& batch = symbolDecals[texture];
+                GeometryData& batch = decals.symbols[texture];
                 batch.textureId = texture;
                 GeometryManager::appendGroundQuad(batch, roomTop, roomSize, screenRight, screenUp, decalTint);
             }
@@ -1116,7 +1131,7 @@ void ModernGLWidget::renderRooms()
         if (pR->highlight) {
             const QString key = qsl("highlight|%1|%2").arg(pR->highlightColor.name(QColor::HexArgb), pR->highlightColor2.name(QColor::HexArgb));
             if (const GLuint texture = discTexture(key, RoomAppearance::highlightStops(pR->highlightColor, pR->highlightColor2))) {
-                GeometryData& batch = highlightDecals[texture];
+                GeometryData& batch = decals.highlights[texture];
                 batch.textureId = texture;
                 // highlightRadius is in rooms' spacing, which is one unit here
                 GeometryManager::appendGroundQuad(batch, roomTop, pR->highlightRadius, screenRight, screenUp, decalTint);
@@ -1141,7 +1156,7 @@ void ModernGLWidget::renderRooms()
                 for (const auto& [texture, size] : digits) {
                     const QVector3D across = groundRight * (size.width() * idTexel);
                     const QVector3D upward = groundUp * (size.height() * idTexel);
-                    GeometryData& batch = textDecals[texture];
+                    GeometryData& batch = decals.text[texture];
                     batch.textureId = texture;
                     GeometryManager::appendQuad(batch, corner - upward / 2.0f, across, upward, decalTint);
                     corner += across;
@@ -1154,24 +1169,24 @@ void ModernGLWidget::renderRooms()
             // One room's size below the room on screen, then moved by its offset along the map, in rooms' spacing, y downward
             const QPointF offset = RoomAppearance::nameOffset(pR->userData.value(ROOM_UI_NAMEPOS));
             const QVector3D center = roomTop - groundUp * roomSize + QVector3D(static_cast<float>(offset.x()), -static_cast<float>(offset.y()), 0.0f);
-            roomNames.append({center, RoomAppearance::nameColor(pR->userData.value(ROOM_UI_NAMECOLOR), mpHost->mBgColor_2), pR->name, decalTint});
+            roomNames.append({center, RoomAppearance::nameColor(pR->userData.value(ROOM_UI_NAMECOLOR), mpHost->mBgColor_2), pR->name, decalTint, &decals});
         }
 
         if (const GLuint texture = exitMarkerTexture(*pR, roomColor)) {
-            GeometryData& batch = markerDecals[texture];
+            GeometryData& batch = decals.markers[texture];
             batch.textureId = texture;
             GeometryManager::appendGroundQuad(batch, roomTop, roomSize, screenRight, screenUp, decalTint);
         }
 
         if (isCurrentRoom) {
             if (playerRoomFillTexture) {
-                playerRoomFillDecal.textureId = playerRoomFillTexture;
-                GeometryManager::appendGroundQuad(playerRoomFillDecal, roomTop, roomSize, screenRight, screenUp, decalTint);
+                decals.playerFill.textureId = playerRoomFillTexture;
+                GeometryManager::appendGroundQuad(decals.playerFill, roomTop, roomSize, screenRight, screenUp, decalTint);
             }
             if (playerRoomTexture) {
-                playerRoomDecal.textureId = playerRoomTexture;
+                decals.player.textureId = playerRoomTexture;
                 const float radius = static_cast<float>(RoomAppearance::playerRoomRadius(mpMap->mPlayerRoomOuterDiameterPercentage, roomSize + 2.0f * borderUnit));
-                GeometryManager::appendGroundQuad(playerRoomDecal, roomTop, 2.0f * radius, screenRight, screenUp, decalTint);
+                GeometryManager::appendGroundQuad(decals.player, roomTop, 2.0f * radius, screenRight, screenUp, decalTint);
             }
 
             if (playerIcon) {
@@ -1243,7 +1258,7 @@ void ModernGLWidget::renderRooms()
             if (const GLuint texture = textTexture(key, roomName.name, nameFont, nameMetrics, roomName.color, size)) {
                 const QVector3D across = groundRight * (size.width() * textTexel);
                 const QVector3D upward = groundUp * (size.height() * textTexel);
-                GeometryData& batch = textDecals[texture];
+                GeometryData& batch = roomName.decals->text[texture];
                 batch.textureId = texture;
                 GeometryManager::appendQuad(batch, roomName.center - across / 2.0f - upward / 2.0f, across, upward, roomName.tint);
             }
@@ -1263,63 +1278,99 @@ void ModernGLWidget::renderRooms()
                 std::make_unique<RenderInstancedCubesCommand>(roomInstances, mCameraController.getProjectionMatrix(), mCameraController.getViewMatrix(), mCameraController.getModelMatrix()));
     }
 
-    // From the lowest level up, each level's faint floor just under its rooms, then its see-through rooms,
-    // neither writing depth so that what is under them shows through
+    // In the 2D map's order: outside grid mode a highlight is drawn over the symbol, in grid mode under it;
+    // then the ID and name, the exit markers and the player's ring. Drawn on what is already there without
+    // writing depth, as a set of rooms' decals do not hide each other
+    const auto queueDecals = [this, pArea](const RoomDecals& decals) {
+        mRenderCommandQueue.addCommand(std::make_unique<GLStateCommand>(GLStateCommand::ENABLE_POLYGON_OFFSET));
+        const auto queue = [this](const GeometryData& batch) {
+            if (!batch.isEmpty()) {
+                mRenderCommandQueue.addCommand(std::make_unique<RenderTexturedTrianglesCommand>(
+                        batch, mCameraController.getProjectionMatrix(), mCameraController.getViewMatrix(), mCameraController.getModelMatrix(), RenderCommand::Shading::Unlit));
+            }
+        };
+        // The selection shades the room itself, as the 2D map's does, so it is under everything drawn on it
+        queue(decals.selection);
+        const QHash<GLuint, GeometryData>& lower = pArea->gridMode ? decals.highlights : decals.symbols;
+        const QHash<GLuint, GeometryData>& upper = pArea->gridMode ? decals.symbols : decals.highlights;
+        for (const QHash<GLuint, GeometryData>* layer : {&lower, &upper, &decals.text, &decals.markers}) {
+            for (const GeometryData& batch : *layer) {
+                queue(batch);
+            }
+        }
+        queue(decals.playerFill);
+        queue(decals.player);
+        mRenderCommandQueue.addCommand(std::make_unique<GLStateCommand>(GLStateCommand::DISABLE_POLYGON_OFFSET));
+    };
+
+    // Everything from here on is drawn over what is behind it, so it does not write depth unless it says so
     mRenderCommandQueue.addCommand(std::make_unique<GLStateCommand>(GLStateCommand::DISABLE_DEPTH_WRITE));
+    queueDecals(opaqueDecals);
+
+    // From the lowest level up, as each blends over the ones under it: the level's faint floor just under
+    // its rooms, its see-through exits, rooms and borders, and what is on them
+    QList<int> levels = levelExtents.keys();
+    for (auto it = mSeeThroughExits.cbegin(); it != mSeeThroughExits.cend(); ++it) {
+        if (!levelExtents.contains(it.key())) {
+            levels.append(it.key());
+        }
+    }
+    std::sort(levels.begin(), levels.end());
     QColor plateColor = contrast;
     plateColor.setAlphaF(scmFloorPlateOpacity);
-    for (const auto& [level, extent] : levelExtents.asKeyValueRange()) {
-        const QVector4D tint = GeometryManager::fadedColor(plateColor, GeometryManager::levelFade(level - mMapCenterZ, moreTransparent), background);
-        const float plateZ = static_cast<float>(level) - roomHeight;
-        QVector<float> vertices;
-        QVector<float> colors;
-        for (const QPointF& corner : {extent.topLeft(), extent.topRight(), extent.bottomRight(), extent.topLeft(), extent.bottomRight(), extent.bottomLeft()}) {
-            vertices << static_cast<float>(corner.x()) << static_cast<float>(corner.y()) << plateZ;
-            colors << tint.x() << tint.y() << tint.z() << tint.w();
+    for (const int level : std::as_const(levels)) {
+        if (const auto extent = levelExtents.constFind(level); extent != levelExtents.cend()) {
+            const QVector4D tint = GeometryManager::fadedColor(plateColor, GeometryManager::levelFade(level - mMapCenterZ, moreTransparent), background);
+            const float plateZ = static_cast<float>(level) - roomHeight;
+            QVector<float> vertices;
+            QVector<float> colors;
+            for (const QPointF& corner : {extent->topLeft(), extent->topRight(), extent->bottomRight(), extent->topLeft(), extent->bottomRight(), extent->bottomLeft()}) {
+                vertices << static_cast<float>(corner.x()) << static_cast<float>(corner.y()) << plateZ;
+                colors << tint.x() << tint.y() << tint.z() << tint.w();
+            }
+            mRenderCommandQueue.addCommand(std::make_unique<RenderTrianglesCommand>(
+                    vertices, colors, mCameraController.getProjectionMatrix(), mCameraController.getViewMatrix(), mCameraController.getModelMatrix(), RenderCommand::Shading::Unlit));
         }
-        mRenderCommandQueue.addCommand(std::make_unique<RenderTrianglesCommand>(
-                vertices, colors, mCameraController.getProjectionMatrix(), mCameraController.getViewMatrix(), mCameraController.getModelMatrix(), RenderCommand::Shading::Unlit));
-        if (const auto translucent = translucentInstances.constFind(level); translucent != translucentInstances.cend()) {
+        if (const auto exits = mSeeThroughExits.constFind(level); exits != mSeeThroughExits.cend()) {
+            if (!exits->bars.isEmpty()) {
+                mRenderCommandQueue.addCommand(std::make_unique<RenderInstancedCubesCommand>(
+                        exits->bars, mCameraController.getProjectionMatrix(), mCameraController.getViewMatrix(), mCameraController.getModelMatrix(), RenderCommand::Shading::Unlit));
+            }
+            if (!exits->vertices.isEmpty()) {
+                // Arrowheads and dots lie on the lines' tops
+                mRenderCommandQueue.addCommand(std::make_unique<GLStateCommand>(GLStateCommand::ENABLE_POLYGON_OFFSET));
+                mRenderCommandQueue.addCommand(std::make_unique<RenderTrianglesCommand>(
+                        exits->vertices, exits->colors, mCameraController.getProjectionMatrix(), mCameraController.getViewMatrix(), mCameraController.getModelMatrix(), RenderCommand::Shading::Unlit));
+                mRenderCommandQueue.addCommand(std::make_unique<GLStateCommand>(GLStateCommand::DISABLE_POLYGON_OFFSET));
+            }
+        }
+        const auto seeThrough = seeThroughLevels.constFind(level);
+        if (seeThrough == seeThroughLevels.cend()) {
+            continue;
+        }
+        if (!seeThrough->cubes.isEmpty()) {
+            // Depth first, then color only where that depth is: each pixel blends just the nearest face, not
+            // a block's far faces too, nor a border's top through the room on it
+            mRenderCommandQueue.addCommand(std::make_unique<GLStateCommand>(GLStateCommand::ENABLE_DEPTH_WRITE));
+            mRenderCommandQueue.addCommand(std::make_unique<GLStateCommand>(GLStateCommand::DISABLE_COLOR_WRITE));
             mRenderCommandQueue.addCommand(
-                    std::make_unique<RenderInstancedCubesCommand>(*translucent, mCameraController.getProjectionMatrix(), mCameraController.getViewMatrix(), mCameraController.getModelMatrix()));
+                    std::make_unique<RenderInstancedCubesCommand>(seeThrough->cubes, mCameraController.getProjectionMatrix(), mCameraController.getViewMatrix(), mCameraController.getModelMatrix()));
+            mRenderCommandQueue.addCommand(std::make_unique<GLStateCommand>(GLStateCommand::ENABLE_COLOR_WRITE));
+            mRenderCommandQueue.addCommand(std::make_unique<GLStateCommand>(GLStateCommand::DISABLE_DEPTH_WRITE));
+            mRenderCommandQueue.addCommand(std::make_unique<GLStateCommand>(GLStateCommand::DEPTH_FUNC_LEQUAL));
+            mRenderCommandQueue.addCommand(
+                    std::make_unique<RenderInstancedCubesCommand>(seeThrough->cubes, mCameraController.getProjectionMatrix(), mCameraController.getViewMatrix(), mCameraController.getModelMatrix()));
+            mRenderCommandQueue.addCommand(std::make_unique<GLStateCommand>(GLStateCommand::DEPTH_FUNC_LESS));
         }
+        queueDecals(seeThrough->decals);
     }
     mRenderCommandQueue.addCommand(std::make_unique<GLStateCommand>(GLStateCommand::ENABLE_DEPTH_WRITE));
-
-    if (selectionDecal.isEmpty() && symbolDecals.isEmpty() && highlightDecals.isEmpty() && textDecals.isEmpty() && markerDecals.isEmpty() && playerRoomDecal.isEmpty()
-        && playerRoomFillDecal.isEmpty()) {
-        return;
-    }
-    // In the 2D map's order: outside grid mode a highlight is drawn over the symbol, in grid mode under it;
-    // then the ID and name, the exit markers and the player's ring
-    const QHash<GLuint, GeometryData>& lowerDecals = pArea->gridMode ? highlightDecals : symbolDecals;
-    const QHash<GLuint, GeometryData>& upperDecals = pArea->gridMode ? symbolDecals : highlightDecals;
-    mRenderCommandQueue.addCommand(std::make_unique<GLStateCommand>(GLStateCommand::DISABLE_DEPTH_WRITE));
-    mRenderCommandQueue.addCommand(std::make_unique<GLStateCommand>(GLStateCommand::ENABLE_POLYGON_OFFSET));
-    // The selection shades the room itself, as the 2D map's does, so it is under everything drawn on it
-    if (!selectionDecal.isEmpty()) {
-        mRenderCommandQueue.addCommand(std::make_unique<RenderTexturedTrianglesCommand>(
-                selectionDecal, mCameraController.getProjectionMatrix(), mCameraController.getViewMatrix(), mCameraController.getModelMatrix(), RenderCommand::Shading::Unlit));
-    }
-    const QHash<GLuint, GeometryData>* const decalLayers[] = {&lowerDecals, &upperDecals, &textDecals, &markerDecals};
-    for (const QHash<GLuint, GeometryData>* decals : decalLayers) {
-        for (const GeometryData& batch : *decals) {
-            mRenderCommandQueue.addCommand(std::make_unique<RenderTexturedTrianglesCommand>(
-                    batch, mCameraController.getProjectionMatrix(), mCameraController.getViewMatrix(), mCameraController.getModelMatrix(), RenderCommand::Shading::Unlit));
-        }
-    }
-    for (const GeometryData* playerDecal : {&playerRoomFillDecal, &playerRoomDecal}) {
-        if (!playerDecal->isEmpty()) {
-            mRenderCommandQueue.addCommand(std::make_unique<RenderTexturedTrianglesCommand>(
-                    *playerDecal, mCameraController.getProjectionMatrix(), mCameraController.getViewMatrix(), mCameraController.getModelMatrix(), RenderCommand::Shading::Unlit));
-        }
-    }
-    mRenderCommandQueue.addCommand(std::make_unique<GLStateCommand>(GLStateCommand::DISABLE_POLYGON_OFFSET));
-    mRenderCommandQueue.addCommand(std::make_unique<GLStateCommand>(GLStateCommand::ENABLE_DEPTH_WRITE));
+    mSeeThroughExits.clear();
 }
 
 void ModernGLWidget::renderConnections()
 {
+    mSeeThroughExits.clear();
     if (!mpMap || !mpMap->mpRoomDB || !mpHost) {
         return;
     }
@@ -1359,7 +1410,9 @@ void ModernGLWidget::renderConnections()
     bars.reserve(scene.segments.size());
     for (const ExitScene::Segment& segment : scene.segments) {
         const QVector4D tint = faded(segment.color, segment.level);
-        bars.append(CubeInstanceData(GeometryManager::barTransform(segment.from, segment.to, segment.width, segment.height), tint.x(), tint.y(), tint.z(), tint.w()));
+        const CubeInstanceData bar(GeometryManager::barTransform(segment.from, segment.to, segment.width, segment.height), tint.x(), tint.y(), tint.z(), tint.w());
+        // Not drawn into the depth buffer, or it would cut its shape out of the levels below drawn after it
+        (tint.w() < 1.0f ? mSeeThroughExits[segment.level].bars : bars).append(bar);
     }
     if (!bars.isEmpty()) {
         mRenderCommandQueue.addCommand(std::make_unique<RenderInstancedCubesCommand>(
@@ -1372,9 +1425,10 @@ void ModernGLWidget::renderConnections()
     colors.reserve(scene.triangles.size() * 12);
     for (const ExitScene::Triangle& triangle : scene.triangles) {
         const QVector4D tint = faded(triangle.color, triangle.level);
+        LevelExits* seeThrough = tint.w() < 1.0f ? &mSeeThroughExits[triangle.level] : nullptr;
         for (const QVector3D& corner : {triangle.a, triangle.b, triangle.c}) {
-            vertices << corner.x() << corner.y() << corner.z();
-            colors << tint.x() << tint.y() << tint.z() << tint.w();
+            (seeThrough ? seeThrough->vertices : vertices) << corner.x() << corner.y() << corner.z();
+            (seeThrough ? seeThrough->colors : colors) << tint.x() << tint.y() << tint.z() << tint.w();
         }
     }
     if (!vertices.isEmpty()) {
@@ -1862,7 +1916,9 @@ int ModernGLWidget::roomAt(const QPoint& position, const bool orNear)
         if (!pR || pR->isHidden() || !levelShown(pR->z())) {
             continue;
         }
-        const QVector3D center(static_cast<float>(pR->x()), static_cast<float>(pR->y()), static_cast<float>(pR->z()));
+        // The room hovered over is drawn raised by its height
+        const float lift = roomId == mHoveredRoomId ? 2.0f * halfSize.z() : 0.0f;
+        const QVector3D center(static_cast<float>(pR->x()), static_cast<float>(pR->y()), static_cast<float>(pR->z()) + lift);
         if (const std::optional<float> distance = rayHitsBox(origin, direction, center - halfSize, center + halfSize)) {
             if (*distance < hitDistance) {
                 hitDistance = *distance;
@@ -2036,6 +2092,9 @@ void ModernGLWidget::mousePressEvent(QMouseEvent* event)
     raisePendingMousePressEvent();
     mKeysNavigate = false;
     mPressPosition = event->position().toPoint();
+    mPointerPosition = mPressPosition;
+    mPointerInView = true;
+    mPointerButtons = event->buttons();
     mClickPending = false;
     // A release that went elsewhere, such as to a menu opened mid-drag, must not leave the last drag running
     endEditGesture();
@@ -2081,7 +2140,7 @@ void ModernGLWidget::mousePressEvent(QMouseEvent* event)
         }
     }
 
-    if (event->buttons() & Qt::LeftButton) { // translation on xy-plane
+    if (event->button() == Qt::LeftButton) { // translation on xy-plane
         auto eventPos = event->position().toPoint();
         const int x = eventPos.x();
         const int y = height() - eventPos.y(); // the opengl origin is at bottom left
@@ -2104,8 +2163,10 @@ void ModernGLWidget::mouseMoveEvent(QMouseEvent* event)
     if (!mpMap || !mpMap->mpRoomDB) {
         return;
     }
-    const bool overCompass = compassRect().contains(event->position().toPoint());
-    setHoveredRoom(event->buttons() == Qt::NoButton && !overCompass ? roomAt(event->position().toPoint()) : 0);
+    mPointerPosition = event->position().toPoint();
+    mPointerInView = true;
+    mPointerButtons = event->buttons();
+    setHoveredRoom(roomUnderPointer());
     if (mClickPending && (event->position().toPoint() - mPressPosition).manhattanLength() >= QApplication::startDragDistance()) {
         mClickPending = false;
         if (mPressEventButton == Qt::LeftButton) {
@@ -2115,6 +2176,10 @@ void ModernGLWidget::mouseMoveEvent(QMouseEvent* event)
     if ((mMovingRooms || mRectangleSelecting) && !event->buttons().testFlag(Qt::LeftButton)) {
         endEditGesture();
         update();
+    }
+    // The release went elsewhere; with mouse tracking on, a move with no button down would pan on
+    if (mPanMode && !event->buttons().testFlag(Qt::LeftButton)) {
+        endPan();
     }
     if (mMovingRooms) {
         // As RoomMoveDragHandler: the rooms follow the pointer in whole grid steps
@@ -2180,22 +2245,28 @@ void ModernGLWidget::mouseMoveEvent(QMouseEvent* event)
     QOpenGLWidget::mouseMoveEvent(event);
 }
 
+void ModernGLWidget::endPan()
+{
+    if (!std::exchange(mPanMode, false)) {
+        return;
+    }
+    mCameraController.snapTargetToGrid();
+    const QVector3D newCenter = mCameraController.getTarget();
+    mMapCenterX = static_cast<int>(newCenter.x());
+    mMapCenterY = static_cast<int>(newCenter.y());
+    mMapCenterZ = static_cast<int>(newCenter.z());
+}
+
 void ModernGLWidget::mouseReleaseEvent(QMouseEvent* event)
 {
+    mPointerButtons = event->buttons();
     if (event->button() == Qt::LeftButton && (mMovingRooms || mRectangleSelecting)) {
         endEditGesture();
         QOpenGLWidget::mouseReleaseEvent(event);
         update();
         return;
     }
-    if (mPanMode) {
-        mPanMode = false;
-        mCameraController.snapTargetToGrid();
-        const QVector3D newCenter = mCameraController.getTarget();
-        mMapCenterX = static_cast<int>(newCenter.x());
-        mMapCenterY = static_cast<int>(newCenter.y());
-        mMapCenterZ = static_cast<int>(newCenter.z());
-    }
+    endPan();
     if (event->button() == Qt::LeftButton && mClickPending) {
         mClickPending = false;
         selectRoom(roomAt(event->position().toPoint()), event->modifiers());
@@ -2262,8 +2333,17 @@ void ModernGLWidget::showContextMenu(const QPoint& position)
 
 void ModernGLWidget::leaveEvent(QEvent* event)
 {
+    mPointerInView = false;
     setHoveredRoom(0);
     QOpenGLWidget::leaveEvent(event);
+}
+
+int ModernGLWidget::roomUnderPointer()
+{
+    if (!mPointerInView || mPointerButtons != Qt::NoButton || compassRect().contains(mPointerPosition)) {
+        return 0;
+    }
+    return roomAt(mPointerPosition);
 }
 
 void ModernGLWidget::setHoveredRoom(const int roomId)
@@ -2282,10 +2362,14 @@ void ModernGLWidget::fitArea()
         return;
     }
     QRectF extent;
+    int lowestLevel = std::numeric_limits<int>::max();
+    int highestLevel = std::numeric_limits<int>::lowest();
     for (const int roomId : pArea->getAreaRooms()) {
         const TRoom* pR = mpMap->mpRoomDB->getRoom(roomId);
         if (pR && !pR->isHidden() && levelShown(pR->z())) {
             extent = extent.united(QRectF(pR->x() - 0.5, pR->y() - 0.5, 1.0, 1.0));
+            lowestLevel = qMin(lowestLevel, pR->z());
+            highestLevel = qMax(highestLevel, pR->z());
         }
     }
     if (extent.isEmpty()) {
@@ -2300,20 +2384,23 @@ void ModernGLWidget::fitArea()
     camera.setTarget(target.x(), target.y(), target.z());
     camera.setViewportSize(width(), height());
     float distance = CameraController::distanceToFit(static_cast<float>(extent.width()), static_cast<float>(extent.height()), aspectRatio);
-    for (int pass = 0; pass < 4 && width() > 0 && height() > 0; ++pass) {
+    // The levels shown above and below the viewed one are in the box fitted, as they stand out from its plane
+    for (int pass = 0; pass < 8 && width() > 0 && height() > 0; ++pass) {
         camera.setScale(distance);
         camera.updateMatrices();
         float spanX = 0.0f;
         float spanY = 0.0f;
         bool behind = false;
-        for (const QPointF& corner : {extent.topLeft(), extent.topRight(), extent.bottomLeft(), extent.bottomRight()}) {
-            const std::optional<QPointF> pixel = camera.pixelForPoint(QVector3D(static_cast<float>(corner.x()), static_cast<float>(corner.y()), target.z()));
-            if (!pixel) {
-                behind = true;
-                break;
+        for (const int level : {lowestLevel, highestLevel}) {
+            for (const QPointF& corner : {extent.topLeft(), extent.topRight(), extent.bottomLeft(), extent.bottomRight()}) {
+                const std::optional<QPointF> pixel = camera.pixelForPoint(QVector3D(static_cast<float>(corner.x()), static_cast<float>(corner.y()), static_cast<float>(level)));
+                if (!pixel) {
+                    behind = true;
+                    break;
+                }
+                spanX = qMax(spanX, 2.0f * std::abs(static_cast<float>(pixel->x()) - width() / 2.0f));
+                spanY = qMax(spanY, 2.0f * std::abs(static_cast<float>(pixel->y()) - height() / 2.0f));
             }
-            spanX = qMax(spanX, 2.0f * std::abs(static_cast<float>(pixel->x()) - width() / 2.0f));
-            spanY = qMax(spanY, 2.0f * std::abs(static_cast<float>(pixel->y()) - height() / 2.0f));
         }
         const float overflow = behind ? 2.0f : qMax(spanX / (0.9f * width()), spanY / (0.9f * height()));
         distance = qBound(CameraController::scmMinDistance, distance * overflow, CameraController::scmMaxDistance);
@@ -2333,6 +2420,10 @@ QRect ModernGLWidget::compassRect() const
     }
     constexpr int diameter = 44;
     constexpr int margin = 12;
+    // A view too small to spare the room for it has none
+    if (width() < 3 * diameter || height() < 3 * diameter) {
+        return QRect();
+    }
     return QRect(width() - margin - diameter, height() - margin - diameter, diameter, diameter);
 }
 

@@ -411,7 +411,7 @@ void Builder::addRoom(const int roomId, const TRoom& room)
         }
 
         // Stairs that do not lead straight up or down would be long slanting lines that read as exits on the
-        // map, so each end shows a short shaft of its own instead
+        // map, so each room with one shows a short shaft of its own instead
         const float rise = destination.z() - center.z();
         const bool upOrDown = (exit.direction == DIR_UP && rise > 0.0f) || (exit.direction == DIR_DOWN && rise < 0.0f);
         if (upOrDown && (exit.pDestination->x() != room.x() || exit.pDestination->y() != room.y())) {

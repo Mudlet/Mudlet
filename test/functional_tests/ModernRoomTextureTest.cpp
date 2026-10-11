@@ -33,10 +33,12 @@
 #include <QTemporaryDir>
 #include <QtTest/QtTest>
 
+#include "GeometryManager.h"
 #include "Host.h"
 #include "HostManager.h"
 #include "MudletApp.h"
 #include "MudletInstanceCoordinator.h"
+#include "RenderCommand.h"
 #include "TMap.h"
 #include "TRoom.h"
 #include "TRoomDB.h"
@@ -168,6 +170,148 @@ private slots:
             }
         }
         QVERIFY2(lastTexture >= 512, "the view never reached its texture budget");
+    }
+
+    // A room with a symbol under one of the level above, which has a border and an exit; and beside it on the
+    // viewed level, a room whose environment color is wholly see-through
+    int addLayeredArea() const
+    {
+        TMap* pMap = mpHost->mpMap.data();
+        pMap->mapClear();
+        const int areaId = pMap->mpRoomDB->addArea(qsl("Layered Area"));
+        const QList<QVector3D> places{{0, 0, 0}, {2, 0, 0}, {0, 0, 1}, {2, 0, 1}};
+        for (int id = 1; id <= places.size(); ++id) {
+            const QVector3D& place = places.at(id - 1);
+            if (!(pMap->addRoom(id) && pMap->setRoomArea(id, areaId) && pMap->setRoomCoordinates(id, place.x(), place.y(), place.z()))) {
+                return 0;
+            }
+        }
+        pMap->mpRoomDB->getRoom(1)->mSymbol = qsl("W");
+        constexpr int clearEnvironment = 500;
+        pMap->mCustomEnvColors[clearEnvironment] = QColor(0, 0, 0, 0);
+        pMap->mpRoomDB->getRoom(2)->environment = clearEnvironment;
+        pMap->mpRoomDB->getRoom(3)->mBorderColor = QColor(Qt::red);
+        pMap->mpRoomDB->getRoom(3)->mBorderThickness = 4;
+        if (!(pMap->setExit(3, 4, DIR_EAST) && pMap->setExit(4, 3, DIR_WEST))) {
+            return 0;
+        }
+        mpHost->mShowRoomID = false;
+        pMap->setRoomNamesShown(false);
+        pMap->mRoomIdHash[pMap->mProfileName] = 1;
+        return areaId;
+    }
+
+    // The commands one frame queues for the exits and rooms of the layered area, seen at a slant
+    static void queueLayeredFrame(ModernGLWidget& widget, const int areaId)
+    {
+        GLuint lastTexture = 0;
+        widget.mLabelTextureCache.useTextureStandIn(
+                [&lastTexture](const QImage&) {
+                    return ++lastTexture;
+                },
+                [](GLuint) {});
+        widget.setViewCenter(areaId, 0, 0, 0);
+        widget.resize(800, 600);
+        widget.mCameraController.setViewportSize(widget.width(), widget.height());
+        widget.setCameraPosition(1.0f, 40.0f, CameraController::scmNorthUpAzimuth);
+        widget.updateMatrices();
+        widget.mRenderCommandQueue.clear();
+        widget.renderConnections();
+        widget.renderRooms();
+    }
+
+    static bool seeThrough(const RenderCommand* command)
+    {
+        if (const auto* cubes = dynamic_cast<const RenderInstancedCubesCommand*>(command)) {
+            return std::any_of(cubes->instances().cbegin(), cubes->instances().cend(), [](const CubeInstanceData& cube) {
+                return cube.color[3] < 1.0f;
+            });
+        }
+        if (const auto* triangles = dynamic_cast<const RenderTrianglesCommand*>(command)) {
+            for (qsizetype i = 3; i < triangles->colors().size(); i += 4) {
+                if (triangles->colors().at(i) < 1.0f) {
+                    return true;
+                }
+            }
+        }
+        return false;
+    }
+
+    // The room with a border above the symbol, rather than the exit beside it
+    static bool theBorderedRoomAbove(const RenderInstancedCubesCommand* cubes)
+    {
+        return std::any_of(cubes->instances().cbegin(), cubes->instances().cend(), [](const CubeInstanceData& cube) {
+            const QVector4D center = cube.transform.column(3);
+            return qFuzzyIsNull(center.x()) && qFuzzyIsNull(center.y()) && center.z() > 0.5f;
+        });
+    }
+
+    // Drawn into the depth buffer, it would hide what is behind it that is drawn after it
+    void test_nothingSeeThroughIsDrawnIntoTheDepthBuffer()
+    {
+        const int areaId = addLayeredArea();
+        QVERIFY(areaId > 0);
+        ModernGLWidget widget(mpHost->mpMap.data(), mpHost);
+        queueLayeredFrame(widget, areaId);
+
+        bool depthWrite = true;
+        bool colorWrite = true;
+        int seeThroughDraws = 0;
+        for (const auto& command : widget.mRenderCommandQueue.commands()) {
+            if (const auto* state = dynamic_cast<const GLStateCommand*>(command.get())) {
+                depthWrite = state->stateType() == GLStateCommand::ENABLE_DEPTH_WRITE ? true : state->stateType() == GLStateCommand::DISABLE_DEPTH_WRITE ? false : depthWrite;
+                colorWrite = state->stateType() == GLStateCommand::ENABLE_COLOR_WRITE ? true : state->stateType() == GLStateCommand::DISABLE_COLOR_WRITE ? false : colorWrite;
+                continue;
+            }
+            if (seeThrough(command.get())) {
+                ++seeThroughDraws;
+                QVERIFY2(!(depthWrite && colorWrite), qPrintable(qsl("a see-through %1 is drawn into the depth buffer").arg(QLatin1String(command->getCommandName()))));
+            }
+        }
+        QVERIFY2(seeThroughDraws > 0, "nothing see-through was drawn");
+    }
+
+    // From the lowest level up, each level with what is on it, so a symbol below shows only through the room above
+    void test_eachLevelIsDrawnWithWhatIsOnItBeforeTheLevelAbove()
+    {
+        const int areaId = addLayeredArea();
+        QVERIFY(areaId > 0);
+        ModernGLWidget widget(mpHost->mpMap.data(), mpHost);
+        queueLayeredFrame(widget, areaId);
+
+        bool depthWrite = true;
+        bool colorWrite = true;
+        qsizetype index = 0;
+        qsizetype lastLowerDecal = -1;
+        qsizetype upperDepthOnly = -1;
+        qsizetype upperColored = -1;
+        for (const auto& command : widget.mRenderCommandQueue.commands()) {
+            if (const auto* state = dynamic_cast<const GLStateCommand*>(command.get())) {
+                depthWrite = state->stateType() == GLStateCommand::ENABLE_DEPTH_WRITE ? true : state->stateType() == GLStateCommand::DISABLE_DEPTH_WRITE ? false : depthWrite;
+                colorWrite = state->stateType() == GLStateCommand::ENABLE_COLOR_WRITE ? true : state->stateType() == GLStateCommand::DISABLE_COLOR_WRITE ? false : colorWrite;
+            } else if (const auto* decal = dynamic_cast<const RenderTexturedTrianglesCommand*>(command.get())) {
+                const QVector<float>& vertices = decal->geometry().vertices;
+                bool lower = !vertices.isEmpty();
+                for (qsizetype i = 2; i < vertices.size(); i += 3) {
+                    lower = lower && vertices.at(i) < 0.5f;
+                }
+                if (lower) {
+                    lastLowerDecal = index;
+                }
+            } else if (const auto* cubes = dynamic_cast<const RenderInstancedCubesCommand*>(command.get()); cubes && seeThrough(cubes) && theBorderedRoomAbove(cubes)) {
+                if (depthWrite && !colorWrite && upperDepthOnly < 0) {
+                    upperDepthOnly = index;
+                } else if (colorWrite && upperColored < 0) {
+                    upperColored = index;
+                }
+            }
+            ++index;
+        }
+        QVERIFY2(lastLowerDecal >= 0, "nothing was drawn on the viewed level's rooms");
+        QVERIFY2(upperColored >= 0, "the level above was not drawn");
+        QVERIFY2(lastLowerDecal < upperColored, "something on the viewed level's rooms is drawn over the level above");
+        // Each pixel then takes the color of the nearest face of the see-through blocks only, not of those behind it too
+        QVERIFY2(upperDepthOnly >= 0 && upperDepthOnly < upperColored, "the level above's see-through blocks are not first drawn into the depth buffer alone");
     }
 
     void test_roomIdDigitsKeepTheirTexturesInAGLFrame()

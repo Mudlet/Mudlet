@@ -33,6 +33,7 @@
 
 #include <QElapsedTimer>
 #include <QHash>
+#include <QMap>
 #include <QMatrix4x4>
 #include <QVector3D>
 #include <QQuaternion>
@@ -69,6 +70,7 @@ class ModernGLWidget : public QOpenGLWidget, protected QOpenGLFunctions
 {
     Q_OBJECT
     friend class ModernRoomTextureTest;
+    friend class Map3DViewInteractionTest;
 
 public:
     Q_DISABLE_COPY(ModernGLWidget)
@@ -107,7 +109,7 @@ public:
     // the view or, with allLevels, on any level shown
     QSet<int> roomsInRectangle(const QRect& rectangle, bool allLevels);
     // The room under the pointer, drawn raised and outlined, or 0
-    int hoveredRoomId() const { return mHoveredRoomId; }
+    int hoveredRoomId() { return roomUnderPointer(); }
     // Centers and zooms the view to show all the area's rooms on the levels shown
     void fitArea();
     // Where the compass is drawn, which turns the view north up when clicked; empty while the camera is fixed
@@ -301,7 +303,20 @@ private:
         float roll = 0.0f;
     };
     QHash<int, SavedCamera> mSavedCameras;
+    // The room drawn raised in the last frame; picking goes by where it was drawn
     int mHoveredRoomId = 0;
+    QPoint mPointerPosition;
+    bool mPointerInView = false;
+    Qt::MouseButtons mPointerButtons;
+    // The exit lines and arrowheads of see-through levels, made by renderConnections() for renderRooms()
+    // to draw with their levels' rooms, lowest level first
+    struct LevelExits
+    {
+        QVector<CubeInstanceData> bars;
+        QVector<float> vertices;
+        QVector<float> colors;
+    };
+    QMap<int, LevelExits> mSeeThroughExits;
 
     // Private methods for modern OpenGL
     void updateMatrices();
@@ -314,6 +329,9 @@ private:
     void paintCompass(QPainter& painter);
     void turnNorthUp();
     void setHoveredRoom(int roomId);
+    // Worked out afresh, as the view can move under a pointer that stays still
+    int roomUnderPointer();
+    void endPan();
     void renderCube(float x, float y, float z, float size, float r, float g, float b, float a);
     void renderText(const QString& text, float x, float y);
     void setupBuffers();

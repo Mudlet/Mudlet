@@ -624,7 +624,6 @@ private slots:
         QVERIFY(spacing > 20);
 
         sendMouse(pModern, QEvent::MouseButtonPress, east, Qt::LeftButton);
-        // Qt passes on moves with no button held only to a view that tracks the mouse, which this one does not
         sendMouse(pModern, QEvent::MouseMove, east + QPoint(spacing * 2, 0), Qt::MiddleButton);
         QCOMPARE(roomPlace(kEastRoomId), QVector3D(2, 0, 0));
 
@@ -632,6 +631,40 @@ private slots:
         const QPoint emptySpace(player.x() + spacing / 2, player.y() + spacing);
         drag(pModern, emptySpace, emptySpace + QPoint(spacing * 2, 0), Qt::AltModifier);
         QCOMPARE(roomPlace(kEastRoomId), QVector3D(2, 0, 0));
+    }
+
+    // A right-click in the middle of a room drag ends it, and the left button still held does not pan the view
+    void test_aRightClickMidDragLeavesTheViewAndRoomsAlone()
+    {
+        ModernGLWidget* pModern = viewAtThePlayer(true);
+        QVERIFY(pModern);
+        const QPoint player = pixelOfRoom(pModern, kPlayerRoomId);
+        const QPoint east = pixelOfRoom(pModern, kEastRoomId);
+        const int spacing = east.x() - player.x();
+        QVERIFY(spacing > 20);
+        const QVector3D center = pModern->viewCenter();
+
+        sendMouse(pModern, QEvent::MouseButtonPress, east, Qt::LeftButton);
+        QMouseEvent rightPress(QEvent::MouseButtonPress, QPointF(east), pModern->mapToGlobal(QPointF(east)), Qt::RightButton, Qt::LeftButton | Qt::RightButton, Qt::NoModifier);
+        QCoreApplication::sendEvent(pModern, &rightPress);
+        QPoint point = east;
+        for (int step = 0; step < 12; ++step) {
+            point += QPoint(spacing / 4, 0);
+            sendMouse(pModern, QEvent::MouseMove, point, Qt::LeftButton | Qt::RightButton);
+        }
+        QMouseEvent rightRelease(QEvent::MouseButtonRelease, QPointF(point), pModern->mapToGlobal(QPointF(point)), Qt::RightButton, Qt::LeftButton, Qt::NoModifier);
+        QCoreApplication::sendEvent(pModern, &rightRelease);
+        if (QMenu* menu = openMenu(pModern)) {
+            menu->close();
+        }
+        for (int step = 0; step < 4; ++step) {
+            point += QPoint(spacing / 4, 0);
+            sendMouse(pModern, QEvent::MouseMove, point, Qt::LeftButton);
+        }
+        sendMouse(pModern, QEvent::MouseButtonRelease, point, Qt::NoButton);
+
+        QCOMPARE(pModern->viewCenter(), center);
+        verifyRoomsInPlace();
     }
 
     // Only a press on the room itself picks it up; one beside a room seen small, far off, draws a rectangle
