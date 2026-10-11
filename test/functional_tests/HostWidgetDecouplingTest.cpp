@@ -428,6 +428,10 @@ nullViewKinds = table.concat({
   tostring(createCommandLine("nullViewLine", 0, 0, 10, 10))
 }, ",")
 createBuffer("nullViewBuffer")
+nullViewActions = setmetatable({}, {__mode = "k"})
+local action = function() end
+nullViewActions[action] = true
+setCmdLineAction("nullViewLine", action)
 )lua"));
         const QStringList nullViewNames{qsl("nullViewMini"), qsl("nullViewWindow"), qsl("nullViewNested"), qsl("nullViewBuffer"), qsl("nullViewBox"), qsl("nullViewLine")};
         const auto registered = [host](const QString& name) {
@@ -440,6 +444,10 @@ createBuffer("nullViewBuffer")
             }
         }
         host->setMainConsoleView(console);
+        const bool ranCollect = host->getLuaInterpreter()->compileAndExecuteScript(qsl(R"lua(
+collectgarbage("collect")
+nullViewActionKept = next(nullViewActions) ~= nil
+)lua"));
         QStringList stillRegistered;
         for (const QString& name : nullViewNames) {
             if (registered(name)) {
@@ -479,6 +487,11 @@ createBuffer("nullViewBuffer")
         QCOMPARE(nullViewKinds, qsl("true,true,true,true,true"));
         QVERIFY2(neverRegistered.isEmpty(), qPrintable(qsl("The null view did not register windows it made: %1").arg(neverRegistered.join(qsl(", ")))));
         QVERIFY2(stillRegistered.isEmpty(), qPrintable(qsl("Windows the null view made are still registered once a real view has attached: %1").arg(stillRegistered.join(qsl(", ")))));
+        QVERIFY(ranCollect);
+        lua_getglobal(L, "nullViewActionKept");
+        const bool nullViewActionKept = lua_toboolean(L, -1);
+        lua_pop(L, 1);
+        QVERIFY2(!nullViewActionKept, "A command line's Lua action outlived the null view that held it.");
         QVERIFY2(remade, qPrintable(remadeMessage));
         QVERIFY2(remadeRegistered, "The real view did not register a widget of its own for a name the null view had used.");
     }

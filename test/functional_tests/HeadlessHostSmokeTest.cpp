@@ -1700,13 +1700,26 @@ end
         QVERIFY2(host, "The profile is not in the pool.");
         QVERIFY(!host->hasConsoleView());
 
-        const bool ran = host->getLuaInterpreter()->compileAndExecuteScript(qsl(R"lua(
+        bool ran = host->getLuaInterpreter()->compileAndExecuteScript(qsl(R"lua(
 assert(openUserWindow("ubWindow", false, false, "f"))
 assert(createScrollBox("ubWindow", "ubBox", 0, 0, 100, 100))
 assert(createLabel("ubBox", "ubLabel", 0, 0, 10, 10, 1))
 assert(createCommandLine("ubWindow", "ubLine", 0, 0, 10, 10))
 assert(createCommandLine("ubBox", "ubBoxLine", 0, 0, 10, 10))
+assert(createScrollBox("ubWindow", "ubShared", 0, 0, 100, 100))
+hideWindow("ubShared")
+assert(createCommandLine("ubShared", 3, 4, 40, 20))
+assert(createScrollBox("ubLoneBox", 0, 0, 100, 100))
+assert(createCommandLine("ubLoneBox", "ubLoneLine", 0, 0, 10, 10))
+-- Weak keys, so a function only a command line still holds is collected
+ubActions = setmetatable({}, {__mode = "k"})
+for _, name in ipairs({"ubLine", "ubBoxLine", "ubLoneLine"}) do
+  local action = function() end
+  ubActions[action] = name
+  setCmdLineAction(name, action)
+end
 assert(deleteMiniConsole("ubWindow"))
+assert(deleteScrollBox("ubLoneBox"))
 ubTypes = tostring(windowType("ubBox")) .. "," .. tostring(windowType("ubLabel")) .. "," .. tostring(windowType("ubLine")) .. "," .. tostring(windowType("ubBoxLine"))
 )lua"));
         QVERIFY2(ran, "The Lua chunk did not run.");
@@ -1715,6 +1728,24 @@ ubTypes = tostring(windowType("ubBox")) .. "," .. tostring(windowType("ubLabel")
         QVERIFY(!host->windowRegistry().hasLabel(qsl("ubLabel")));
         QVERIFY(!host->windowRegistry().hasCommandLine(qsl("ubLine")));
         QVERIFY(!host->windowRegistry().hasCommandLine(qsl("ubBoxLine")));
+
+        // A main window command line of a scroll box's name is what is left of the name once the box is
+        QCoreApplication::sendPostedEvents(nullptr, QEvent::DeferredDelete);
+        ran = host->getLuaInterpreter()->compileAndExecuteScript(
+                qsl(R"lua(ubShared = tostring(windowType("ubShared")) .. ":" .. table.concat({getWindowGeometry("ubShared")}, ",") .. ":" .. tostring(windowVisible("ubShared")))lua"));
+        QVERIFY2(ran, "The Lua chunk after the deferred deletes did not run.");
+        QCOMPARE(luaGlobalString(host, "ubShared"), qsl("commandline:3,4,40,20:true"));
+        ran = host->getLuaInterpreter()->compileAndExecuteScript(qsl(R"lua(
+collectgarbage("collect")
+local kept = {}
+for _, name in pairs(ubActions) do
+  kept[#kept + 1] = name
+end
+table.sort(kept)
+ubActionsKept = table.concat(kept, ",")
+)lua"));
+        QVERIFY2(ran, "The Lua chunk after collecting garbage did not run.");
+        QCOMPARE(luaGlobalString(host, "ubActionsKept"), QString());
     }
 
     // The answers are those of the same Lua run in the GUI self-test profile
@@ -2331,6 +2362,35 @@ local ok, err = pcall(function()
   deleteScrollBox("clTwin")
   deleteScrollBox("clMover")
 
+  -- A command line may share a scroll box's name, and what is read for the name is the box's while there is one
+  assert(createScrollBox("clShared", 1, 2, 100, 100))
+  hideWindow("clShared")
+  step("lineAfterBox", createCommandLine, "clShared", 5, 6, 40, 20)
+  look("boxThenLine", "clShared")
+  step("resizeShared", resizeWindow, "clShared", 60, 70)
+  look("sharedResized", "clShared")
+  step("deleteSharedLine", deleteCommandLine, "clShared")
+  look("sharedLineDeleted", "clShared")
+  deleteScrollBox("clShared")
+  step("lineBeforeBox", createCommandLine, "clSharedLater", 5, 6, 40, 20)
+  moveWindow("clSharedLater", 9, 9)
+  resizeWindow("clSharedLater", 45, 25)
+  step("boxAfterLine", createScrollBox, "clSharedLater", 1, 2, 100, 100)
+  look("lineThenBox", "clSharedLater")
+  hideWindow("clSharedLater")
+  look("sharedHidden", "clSharedLater")
+  step("deleteSharedBox", deleteScrollBox, "clSharedLater")
+  look("sharedBoxDeleted", "clSharedLater")
+  moveWindow("clSharedLater", 7, 8)
+  look("sharedLineMoved", "clSharedLater")
+  deleteCommandLine("clSharedLater")
+  createCommandLine("clSharedMoved", 5, 6, 40, 20)
+  moveWindow("clSharedMoved", 9, 9)
+  createScrollBox("clSharedMoved", 1, 2, 100, 100)
+  deleteScrollBox("clSharedMoved")
+  look("movedBeforeBox", "clSharedMoved")
+  deleteCommandLine("clSharedMoved")
+
   step("delete", deleteCommandLine, "clInMain")
   events("delete")
   look("deleted", "clInMain")
@@ -2355,6 +2415,12 @@ local ok, err = pcall(function()
   step("deleteNegative", deleteCommandLine, "clNegative")
   step("deleteFirst", deleteCommandLine, "clMain")
   events("end")
+  -- A box in a box gives up its name when the outer one goes
+  assert(createScrollBox("clOuter", 0, 0, 100, 100))
+  assert(createScrollBox("clOuter", "clNested", 0, 0, 50, 50))
+  hideWindow("clNested")
+  step("lineNamedForNested", createCommandLine, "clNested", 11, 12, 40, 20)
+  deleteScrollBox("clOuter")
   closeUserWindow("clWindow")
   closeUserWindow("clTwin")
   headlessCommandLineAnswers = table.concat(answers, "\n")
@@ -2366,6 +2432,7 @@ function headlessCommandLineAfter()
   for _, name in ipairs({"clMain", "clInMain", "clWin", "clBoxed", "clBox", "clWindow"}) do
     answers[#answers + 1] = name .. ":" .. tostring(windowType(name))
   end
+  answers[#answers + 1] = "clNested:" .. tostring(windowType("clNested")) .. ":" .. table.concat({getWindowGeometry("clNested")}, ",") .. ":" .. tostring(windowVisible("clNested"))
   return table.concat(answers, "\n")
 end
 )lua"));
@@ -2467,8 +2534,22 @@ end
                                   qsl("createInMover=[1]true"),
                                   qsl("moverIntoMain=[1]true"),
                                   qsl("riderAfterMove:type=[1]commandline,geometry=[4]1:1:40:20,visible=[1]true"),
+                                  qsl("lineAfterBox=[1]true"),
+                                  qsl("boxThenLine:type=[1]scrollbox,geometry=[4]1:2:100:100,visible=[1]false"),
+                                  qsl("resizeShared=[0]"),
+                                  qsl("sharedResized:type=[1]scrollbox,geometry=[4]1:2:60:70,visible=[1]false"),
+                                  qsl("deleteSharedLine=[1]true"),
+                                  qsl("sharedLineDeleted:type=[1]scrollbox,geometry=[4]1:2:60:70,visible=[1]false"),
+                                  qsl("lineBeforeBox=[1]true"),
+                                  qsl("boxAfterLine=[1]true"),
+                                  qsl("lineThenBox:type=[1]scrollbox,geometry=[4]1:2:100:100,visible=[1]true"),
+                                  qsl("sharedHidden:type=[1]scrollbox,geometry=[4]1:2:100:100,visible=[1]false"),
+                                  qsl("deleteSharedBox=[1]true"),
+                                  qsl("sharedBoxDeleted:type=[1]commandline,geometry=[4]9:9:45:25,visible=[1]true"),
+                                  qsl("sharedLineMoved:type=[1]commandline,geometry=[4]7:8:45:25,visible=[1]true"),
+                                  qsl("movedBeforeBox:type=[1]commandline,geometry=[4]9:9:40:20,visible=[1]true"),
                                   qsl("delete=[1]true"),
-                                  qsl("delete:events=clInMain"),
+                                  qsl("delete:events=clShared,clSharedLater,clSharedMoved,clInMain"),
                                   qsl("deleted:type=[2]nil:'clInMain' is not a known label, any type of console, command line, text edit, nor scroll box,geometry=[2]nil:window \"clInMain\" not "
                                       "found,visible=[2]nil:window \"clInMain\" not found"),
                                   qsl("getDeleted=[2]nil:command line \"clInMain\" not found"),
@@ -2490,13 +2571,15 @@ end
                                   qsl("boxedAtOnce:type=[1]commandline,geometry=[4]2:2:40:20,visible=[1]true"),
                                   qsl("deleteNegative=[1]true"),
                                   qsl("deleteFirst=[1]true"),
-                                  qsl("end:events=clNegative,clMain")};
+                                  qsl("end:events=clNegative,clMain"),
+                                  qsl("lineNamedForNested=[1]true")};
         QCOMPARE(luaGlobalString(host, "headlessCommandLineAnswers"), answers.join(QLatin1Char('\n')));
 
         QCoreApplication::sendPostedEvents(nullptr, QEvent::DeferredDelete);
         ran = host->getLuaInterpreter()->compileAndExecuteScript(qsl("headlessCommandLineAfterAnswers = headlessCommandLineAfter()"));
         QVERIFY2(ran, "The Lua chunk after the deferred deletes did not run.");
-        const QStringList after{qsl("clMain:nil"), qsl("clInMain:nil"), qsl("clWin:commandline"), qsl("clBoxed:nil"), qsl("clBox:nil"), qsl("clWindow:userwindow")};
+        const QStringList after{
+                qsl("clMain:nil"), qsl("clInMain:nil"), qsl("clWin:commandline"), qsl("clBoxed:nil"), qsl("clBox:nil"), qsl("clWindow:userwindow"), qsl("clNested:commandline:11,12,40,20:true")};
         QCOMPARE(luaGlobalString(host, "headlessCommandLineAfterAnswers"), after.join(QLatin1Char('\n')));
         QVERIFY2(QApplication::topLevelWidgets().isEmpty(), "Making the command lines created a widget.");
     }
