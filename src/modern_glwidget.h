@@ -242,6 +242,7 @@ private:
     void setupBuffers();
     void cleanup();
     void showFailure(const QString& message);
+    void reportContextFailure();
     bool contextCreationFailed() const;
     QColor getPlaneColor(int zLevel, bool belowOrAtLevel);
     QColor getEnvironmentColor(TRoom* pRoom);

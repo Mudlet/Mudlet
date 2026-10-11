@@ -114,11 +114,20 @@ void ModernGLWidget::showEvent(QShowEvent* event)
     QOpenGLWidget::showEvent(event);
     // Qt creates the context once the widget is laid out; if that failed, initializeGL never runs to say so
     QTimer::singleShot(0, this, [this]() {
-        if (isVisible() && !isValid() && mFailureMessage.isEmpty()) {
-            //: Shown in place of the 3D map when the graphics driver cannot create the OpenGL context the modern 3D mapper needs
-            showFailure(tr("The modern 3D mapper could not create an OpenGL 3.3 context on this system."));
+        if (isVisible() && !isValid()) {
+            reportContextFailure();
         }
     });
+}
+
+// Called as soon as a creation attempt fails, not on the next turn of the event loop, so a script that shows the
+// view and moves its camera in one go is refused
+void ModernGLWidget::reportContextFailure()
+{
+    if (mFailureMessage.isEmpty()) {
+        //: Shown in place of the 3D map when the graphics driver cannot create the OpenGL context the modern 3D mapper needs
+        showFailure(tr("The modern 3D mapper could not create an OpenGL 3.3 context on this system."));
+    }
 }
 
 // QOpenGLWidget retries a context it could not create on every show, resize and paint, and each retry
@@ -130,10 +139,18 @@ bool ModernGLWidget::contextCreationFailed() const
 
 bool ModernGLWidget::event(QEvent* event)
 {
-    if (contextCreationFailed() && (event->type() == QEvent::Show || event->type() == QEvent::WindowChangeInternal)) {
+    // Of the events this sees, only these try for a context; after some others, such as DeferredDelete, this object is gone
+    if (event->type() != QEvent::Show && event->type() != QEvent::WindowChangeInternal) {
+        return QOpenGLWidget::event(event);
+    }
+    if (contextCreationFailed()) {
         return QWidget::event(event);
     }
-    return QOpenGLWidget::event(event);
+    const bool handled = QOpenGLWidget::event(event);
+    if (contextCreationFailed()) {
+        reportContextFailure();
+    }
+    return handled;
 }
 
 void ModernGLWidget::resizeEvent(QResizeEvent* event)
@@ -143,6 +160,9 @@ void ModernGLWidget::resizeEvent(QResizeEvent* event)
         return;
     }
     QOpenGLWidget::resizeEvent(event);
+    if (contextCreationFailed()) {
+        reportContextFailure();
+    }
 }
 
 void ModernGLWidget::paintEvent(QPaintEvent* event)
@@ -151,6 +171,9 @@ void ModernGLWidget::paintEvent(QPaintEvent* event)
         return;
     }
     QOpenGLWidget::paintEvent(event);
+    if (contextCreationFailed()) {
+        reportContextFailure();
+    }
 }
 
 void ModernGLWidget::showFailure(const QString& message)
@@ -167,7 +190,7 @@ void ModernGLWidget::showFailure(const QString& message)
         layout->setContentsMargins(0, 0, 0, 0);
         layout->addWidget(mpFailureLabel);
     }
-    //: Second paragraph of the message shown in place of the 3D map when the modern 3D mapper cannot run; keep setConfig("experiment.3dmap.modernmapper", false) exactly as written, it is Lua code the user types
+    //: Second paragraph of the message shown in place of the 3D map when the modern 3D mapper cannot run; keep setConfig("experiment.3dmap.modernmapper", false) and the word true exactly as written, they are Lua code the user types
     mpFailureLabel->setText(
             qsl("%1\n\n%2").arg(message, tr("Use setConfig(\"experiment.3dmap.modernmapper\", false) to switch back to the classic 3D view. Setting it back to true tries the modern one again.")));
     mpFailureLabel->show();

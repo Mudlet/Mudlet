@@ -139,25 +139,17 @@ void CameraController::setViewportSize(int width, int height)
 
 void CameraController::shiftPerspective(float verticalAngle, float horizontalAngle, float rotationAngle)
 {
-    if (verticalAngle != 0) {
-        // The tilt alone, as the tilt slider sets it: turning about a rolled camera's right vector would roll
-        // it as well, and carry it over the top until the map shows upside down
+    if (verticalAngle != 0 || horizontalAngle != 0) {
+        // The tilt and the turn alone, as their sliders set them: turning about the camera's right vector rolls a
+        // rolled camera and carries an unrolled one over the top; turning about its up vector rolls a tilted one
+        // and drops it to the horizon
         const QVector3D position = getPosition();
-        setOrientation(position.y() - verticalAngle, position.z(), getRoll());
-    }
-    if (horizontalAngle != 0) {
-        mPositionVector = rotateAround(mPositionVector, mUpVector, horizontalAngle);
-        mRightVector = QVector3D::normal(mPositionVector, mUpVector);
+        setOrientation(position.y() - verticalAngle, position.z() + horizontalAngle, getRoll());
     }
     if (rotationAngle != 0) {
         mUpVector = rotateAround(mUpVector, mPositionVector, rotationAngle);
         mUpVector /= mUpVector.length();
         mRightVector = QVector3D::normal(mPositionVector, mUpVector);
-    }
-    // A free rotation can take the camera under the map, past where the tilt slider reaches
-    const QVector3D position = getPosition();
-    if (position.y() < scmMinTilt || position.y() > scmMaxTilt) {
-        setOrientation(position.y(), position.z(), getRoll());
     }
 }
 

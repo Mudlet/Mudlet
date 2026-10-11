@@ -246,6 +246,26 @@ private slots:
         }
     }
 
+    void test_turningStepByStepCirclesTheMapAtTheSameTilt()
+    {
+        for (const float startTilt : {CameraController::scmDefaultTilt, CameraController::scmMinTilt}) {
+            for (const float startRoll : {0.0f, 30.0f}) {
+                CameraController camera;
+                camera.setOrientation(startTilt, CameraController::scmNorthUpAzimuth, startRoll);
+                // As a script orbiting the map does, a tick at a time, once round
+                for (int step = 1; step <= 72; ++step) {
+                    camera.shiftPerspective(0.0f, 5.0f, 0.0f);
+                    const QVector3D position = camera.getPosition();
+                    const QString where = qsl("from a tilt of %1 and a roll of %2, step %3").arg(startTilt).arg(startRoll).arg(step);
+                    QVERIFY2(qAbs(position.y() - startTilt) < 0.1f, qPrintable(qsl("%1 left a tilt of %2").arg(where).arg(position.y())));
+                    QVERIFY2(qAbs(camera.getRoll() - startRoll) < 0.5f, qPrintable(qsl("%1 left a roll of %2").arg(where).arg(camera.getRoll())));
+                    const float turned = std::remainder(position.z() - CameraController::scmNorthUpAzimuth - 5.0f * static_cast<float>(step), 360.0f);
+                    QVERIFY2(qAbs(turned) < 0.5f, qPrintable(qsl("%1 turned %2 off five degrees a step").arg(where).arg(turned)));
+                }
+            }
+        }
+    }
+
     void test_panningLookingStraightDownMovesNorth()
     {
         CameraController camera;
