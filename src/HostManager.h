@@ -28,7 +28,10 @@
 #include <QString>
 #include <QSharedPointer>
 
+#include <memory>
+
 class Host;
+class MudletMedia;
 class TEvent;
 typedef QMap<QString, QSharedPointer<Host>> HostMap;
 
@@ -57,6 +60,8 @@ public:
     // members are torn down; null outside that.
     static HostManager* self() { return smpSelf; }
 
+    MudletMedia& media() { return *mpMedia; }
+
     Host* getHost(const QString& hostname);
     bool addHost(const QString& name, const QString& port, const QString& login, const QString& pass);
     int getHostCount();
@@ -73,6 +78,9 @@ public:
 private:
     inline static HostManager* smpSelf = nullptr;
 
+    // Every profile obeys these switches, so whatever owns the profiles owns them too, and with no main
+    // window a profile still has real ones. Before mHostPool, so they outlive the profiles that reach them.
+    std::unique_ptr<MudletMedia> mpMedia;
     HostMap mHostPool;
 };
 
