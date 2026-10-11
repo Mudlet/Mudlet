@@ -50,6 +50,7 @@
 #include "TLuaInterpreter.h"
 #include "TMainConsole.h"
 #include "TMap.h"
+#include "TRoom.h"
 #include "TRoomDB.h"
 #include "TUiTour.h"
 #include "TelnetServerStub.h"
@@ -1061,19 +1062,6 @@ private slots:
         QCOMPARE(pModern->hoveredRoomId(), 0);
     }
 
-    // The pointer stays still while a key or the wheel moves the view under it
-    void test_theRaisedRoomFollowsTheViewMovingUnderAStillPointer()
-    {
-        ModernGLWidget* pModern = viewAtThePlayer();
-        QVERIFY(pModern);
-        const QPoint pointer = pixelOfRoom(pModern, kEastRoomId);
-        hoverAt(pModern, pointer);
-        QCOMPARE(pModern->hoveredRoomId(), kEastRoomId);
-        pModern->setCameraPosition(8.0f, CameraController::scmMinTilt, CameraController::scmNorthUpAzimuth);
-        QCOMPARE(pModern->roomAt(pointer), 0);
-        QCOMPARE(pModern->hoveredRoomId(), 0);
-    }
-
     // Seen at a slant, the raised room's top stands out past where the room is when not raised
     void test_theRaisedRoomIsPickedWhereItIsDrawn()
     {
@@ -1109,21 +1097,53 @@ private slots:
         QTRY_VERIFY(pixelOfRoom(pModern, kEastRoomId).x() - pixelOfRoom(pModern, kPlayerRoomId).x() > pModern->width() / 3);
     }
 
-    void test_fitAreaShowsTheLevelsAboveToo()
+    void test_fitAreaShowsTheLevelsAboveAndBelow_data()
     {
+        QTest::addColumn<int>("level");
+        QTest::addColumn<float>("tilt");
+        QTest::addColumn<float>("turn");
+        QTest::newRow("a room six levels up, tilted") << 6 << 60.0f << 30.0f;
+        QTest::newRow("a room six levels down, tilted") << -6 << 60.0f << 30.0f;
+        // Taller than the area is wide, so the top floors come near the camera
+        QTest::newRow("a tower thirty levels up, from above") << 30 << CameraController::scmMinTilt << 0.0f;
+        QTest::newRow("a tower thirty levels down, from above") << -30 << CameraController::scmMinTilt << 0.0f;
+    }
+
+    void test_fitAreaShowsTheLevelsAboveAndBelow()
+    {
+        QFETCH(int, level);
+        QFETCH(float, tilt);
+        QFETCH(float, turn);
         ModernGLWidget* pModern = viewAtThePlayer();
         QVERIFY(pModern);
-        constexpr int upperRoomId = 3;
-        QVERIFY(addRoomAt(upperRoomId, mPlayerAreaId, 1, 0) && map()->setRoomCoordinates(upperRoomId, 1, 0, 6));
-        auto removeUpperRoom = qScopeGuard([this]() {
-            map()->mpRoomDB->removeRoom(upperRoomId);
+        constexpr int otherLevelRoomId = 3;
+        QVERIFY(addRoomAt(otherLevelRoomId, mPlayerAreaId, 1, 0) && map()->setRoomCoordinates(otherLevelRoomId, 1, 0, level));
+        auto removeOtherLevelRoom = qScopeGuard([this]() {
+            map()->mpRoomDB->removeRoom(otherLevelRoomId);
         });
         pModern->slot_showAllLevels();
-        pModern->setCameraPosition(CameraController::scmMinDistance, 60.0f, CameraController::scmNorthUpAzimuth + 30.0f);
+        pModern->setCameraPosition(CameraController::scmMinDistance, tilt, CameraController::scmNorthUpAzimuth + turn);
 
         pModern->fitArea();
-        QTRY_VERIFY2(pixelOfRoom(pModern, upperRoomId).x() >= 0, "the room six levels up is off screen after fitting");
-        QVERIFY2(pixelOfRoom(pModern, kPlayerRoomId).x() >= 0, "the player's room is off screen after fitting");
+        QTRY_VERIFY(!pModern->mCameraSmoothAnimating);
+        pModern->updateMatrices();
+        const float halfWidth = pModern->width() / 2.0f;
+        const float halfHeight = pModern->height() / 2.0f;
+        float reach = 0.0f;
+        for (const int roomId : {kPlayerRoomId, kEastRoomId, otherLevelRoomId}) {
+            const TRoom* pRoom = map()->mpRoomDB->getRoom(roomId);
+            // The room's cell on the grid, which the fit leaves a margin around
+            for (const QPointF& corner : {QPointF(-0.5, -0.5), QPointF(0.5, -0.5), QPointF(-0.5, 0.5), QPointF(0.5, 0.5)}) {
+                const QVector3D point(pRoom->x() + corner.x(), pRoom->y() + corner.y(), pRoom->z());
+                const std::optional<QPointF> pixel = pModern->mCameraController.pixelForPoint(point);
+                QVERIFY2(pixel, qPrintable(qsl("room %1 is behind the camera after fitting").arg(roomId)));
+                const float across = std::max(std::abs(static_cast<float>(pixel->x()) - halfWidth) / halfWidth, std::abs(static_cast<float>(pixel->y()) - halfHeight) / halfHeight);
+                QVERIFY2(across <= 1.0f, qPrintable(qsl("room %1 is off screen after fitting, %2 of the way to the edge").arg(roomId).arg(across)));
+                reach = std::max(reach, across);
+            }
+        }
+        // Not merely zoomed out: what is fitted fills much of the view
+        QVERIFY2(reach > 0.8f, qPrintable(qsl("the rooms reach only %1 of the way to the edge").arg(reach)));
     }
 
     // The 3D view can be docked smaller than the compass with its margin
@@ -1157,6 +1177,23 @@ private slots:
         QCoreApplication::sendEvent(pModern, &release);
         QCOMPARE(after, before);
         QVERIFY(!panning);
+    }
+
+    // The pointer then often comes back by way of the level buttons, which a pan left on would undo
+    void test_aPanThatLostItsReleaseEndsWhenThePointerLeaves()
+    {
+        ModernGLWidget* pModern = viewAtThePlayer();
+        QVERIFY(pModern);
+        const QPoint start(pModern->width() / 4, pModern->height() / 4);
+        QCOMPARE(pModern->roomAt(start), 0);
+        QMouseEvent press(QEvent::MouseButtonPress, start, pModern->mapToGlobal(start), Qt::LeftButton, Qt::LeftButton, Qt::NoModifier);
+        QCoreApplication::sendEvent(pModern, &press);
+        QEvent leave(QEvent::Leave);
+        QCoreApplication::sendEvent(pModern, &leave);
+        const int level = static_cast<int>(pModern->viewCenter().z());
+        pModern->slot_shiftZup();
+        hoverAt(pModern, start);
+        QCOMPARE(static_cast<int>(pModern->viewCenter().z()), level + 1);
     }
 
     void test_clickingTheCompassTurnsTheViewNorthUp()

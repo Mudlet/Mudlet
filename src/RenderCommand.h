@@ -134,6 +134,7 @@ public:
                 QOpenGLBuffer& texCoordBuffer) override;
 
     const char* getCommandName() const override { return "RenderTriangles"; }
+    const QVector<float>& vertices() const { return mVertices; }
     // Four per vertex: r, g, b, a
     const QVector<float>& colors() const { return mColors; }
 
@@ -219,8 +220,8 @@ public:
         // Pulls what follows toward the camera, to draw on a surface already drawn without fighting it for depth
         ENABLE_POLYGON_OFFSET,
         DISABLE_POLYGON_OFFSET,
-        // With the color writes off, what follows only fills the depth buffer
         ENABLE_COLOR_WRITE,
+        // With the color writes off, what follows only fills the depth buffer
         DISABLE_COLOR_WRITE,
         // Passes what is as near as what is already drawn, to color exactly what a depth-only pass laid down
         DEPTH_FUNC_LEQUAL,

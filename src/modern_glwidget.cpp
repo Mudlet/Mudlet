@@ -166,6 +166,7 @@ void ModernGLWidget::hideEvent(QHideEvent* event)
     mClickPending = false;
     mPanMode = false;
     mPointerInView = false;
+    mPointerButtons = Qt::NoButton;
     mHoveredRoomId = 0;
     if (std::exchange(mPressEventButton, Qt::NoButton) != Qt::NoButton) {
         // Queued, as a script handling it could show or delete this view mid-hide
@@ -671,13 +672,7 @@ void ModernGLWidget::paintGL()
     // Enable room flattening
     zFlattening = 8.0f;
 
-    // Labels beneath the rooms come before them without writing depth, so that the translucent rooms
-    // of other levels show over them rather than cutting holes in them
-    renderConnections();
-    renderLabels(false);
-    renderRooms();
-    renderLabels(true);
-    renderPlayerBeacon();
+    queueScene();
 
     // Execute all queued commands
     mRenderCommandQueue.executeAll(shaderProgram, &mGeometryManager, &mResourceManager, mVAO, mVertexBuffer, mColorBuffer, mNormalBuffer, mIndexBuffer, mTexCoordBuffer);
@@ -730,7 +725,7 @@ constexpr int scmTextTexelsPerRoom = 48;
 // Names drawn shorter than this on screen are left out, as unreadable
 constexpr qreal scmMinimumNamePixels = 7.0;
 
-// Outlines' widths, as a part of a room's width: around the viewed level's unbordered rooms, and the one hovered over
+// Outlines' widths, as a part of a room's width: around the viewed level's unbordered, opaque rooms outside grid mode, and the one hovered over
 constexpr float scmLevelOutline = 0.06f;
 constexpr float scmHoverOutline = 0.14f;
 // How strongly a level's floor plate shows
@@ -1312,12 +1307,41 @@ void ModernGLWidget::renderRooms()
         mRenderCommandQueue.addCommand(std::make_unique<GLStateCommand>(GLStateCommand::DISABLE_POLYGON_OFFSET));
     };
 
+    QColor plateColor = contrast;
+    plateColor.setAlphaF(scmFloorPlateOpacity);
+    const auto queuePlate = [&](const int level) {
+        const auto extent = levelExtents.constFind(level);
+        if (extent == levelExtents.cend()) {
+            return;
+        }
+        const QVector4D tint = GeometryManager::fadedColor(plateColor, GeometryManager::levelFade(level - mMapCenterZ, moreTransparent), background);
+        const float plateZ = static_cast<float>(level) - roomHeight;
+        QVector<float> vertices;
+        QVector<float> colors;
+        for (const QPointF& corner : {extent->topLeft(), extent->topRight(), extent->bottomRight(), extent->topLeft(), extent->bottomRight(), extent->bottomLeft()}) {
+            vertices << static_cast<float>(corner.x()) << static_cast<float>(corner.y()) << plateZ;
+            colors << tint.x() << tint.y() << tint.z() << tint.w();
+        }
+        mRenderCommandQueue.addCommand(std::make_unique<RenderTrianglesCommand>(
+                vertices, colors, mCameraController.getProjectionMatrix(), mCameraController.getViewMatrix(), mCameraController.getModelMatrix(), RenderCommand::Shading::Unlit));
+    };
+
     // Everything from here on is drawn over what is behind it, so it does not write depth unless it says so
     mRenderCommandQueue.addCommand(std::make_unique<GLStateCommand>(GLStateCommand::DISABLE_DEPTH_WRITE));
+    // The faint floors under the opaque rooms come first, as names, highlights and rings hang over the rooms'
+    // edges onto them without writing depth
+    for (auto it = levelExtents.cbegin(); it != levelExtents.cend(); ++it) {
+        if (it.key() <= mMapCenterZ) {
+            queuePlate(it.key());
+        }
+    }
     queueDecals(opaqueDecals);
+    // The labels shown on top go with their level, as a see-through level above would hide them once its depth is laid
+    renderLabels(true, std::numeric_limits<int>::lowest(), mMapCenterZ);
+    int labelsQueuedTo = mMapCenterZ;
 
-    // From the lowest level up, as each blends over the ones under it: the level's faint floor just under
-    // its rooms, its see-through exits, rooms and borders, and what is on them
+    // From the lowest level up, as each blends over the ones under it: a level above the viewed one has its
+    // faint floor just under its rooms, then each level its see-through exits, rooms and borders, and what is on them
     QList<int> levels = levelExtents.keys();
     for (auto it = mSeeThroughExits.cbegin(); it != mSeeThroughExits.cend(); ++it) {
         if (!levelExtents.contains(it.key())) {
@@ -1325,20 +1349,9 @@ void ModernGLWidget::renderRooms()
         }
     }
     std::sort(levels.begin(), levels.end());
-    QColor plateColor = contrast;
-    plateColor.setAlphaF(scmFloorPlateOpacity);
     for (const int level : std::as_const(levels)) {
-        if (const auto extent = levelExtents.constFind(level); extent != levelExtents.cend()) {
-            const QVector4D tint = GeometryManager::fadedColor(plateColor, GeometryManager::levelFade(level - mMapCenterZ, moreTransparent), background);
-            const float plateZ = static_cast<float>(level) - roomHeight;
-            QVector<float> vertices;
-            QVector<float> colors;
-            for (const QPointF& corner : {extent->topLeft(), extent->topRight(), extent->bottomRight(), extent->topLeft(), extent->bottomRight(), extent->bottomLeft()}) {
-                vertices << static_cast<float>(corner.x()) << static_cast<float>(corner.y()) << plateZ;
-                colors << tint.x() << tint.y() << tint.z() << tint.w();
-            }
-            mRenderCommandQueue.addCommand(std::make_unique<RenderTrianglesCommand>(
-                    vertices, colors, mCameraController.getProjectionMatrix(), mCameraController.getViewMatrix(), mCameraController.getModelMatrix(), RenderCommand::Shading::Unlit));
+        if (level > mMapCenterZ) {
+            queuePlate(level);
         }
         if (const auto exits = mSeeThroughExits.constFind(level); exits != mSeeThroughExits.cend()) {
             if (!exits->bars.isEmpty()) {
@@ -1353,25 +1366,30 @@ void ModernGLWidget::renderRooms()
                 mRenderCommandQueue.addCommand(std::make_unique<GLStateCommand>(GLStateCommand::DISABLE_POLYGON_OFFSET));
             }
         }
-        const auto seeThrough = seeThroughLevels.constFind(level);
-        if (seeThrough == seeThroughLevels.cend()) {
-            continue;
+        if (const auto seeThrough = seeThroughLevels.constFind(level); seeThrough != seeThroughLevels.cend()) {
+            if (!seeThrough->cubes.isEmpty()) {
+                // Depth first, then color only where that depth is: each pixel blends just the nearest face, not
+                // a block's far faces too, nor a border's top through the room on it
+                mRenderCommandQueue.addCommand(std::make_unique<GLStateCommand>(GLStateCommand::ENABLE_DEPTH_WRITE));
+                mRenderCommandQueue.addCommand(std::make_unique<GLStateCommand>(GLStateCommand::DISABLE_COLOR_WRITE));
+                mRenderCommandQueue.addCommand(std::make_unique<RenderInstancedCubesCommand>(
+                        seeThrough->cubes, mCameraController.getProjectionMatrix(), mCameraController.getViewMatrix(), mCameraController.getModelMatrix()));
+                mRenderCommandQueue.addCommand(std::make_unique<GLStateCommand>(GLStateCommand::ENABLE_COLOR_WRITE));
+                mRenderCommandQueue.addCommand(std::make_unique<GLStateCommand>(GLStateCommand::DISABLE_DEPTH_WRITE));
+                mRenderCommandQueue.addCommand(std::make_unique<GLStateCommand>(GLStateCommand::DEPTH_FUNC_LEQUAL));
+                mRenderCommandQueue.addCommand(std::make_unique<RenderInstancedCubesCommand>(
+                        seeThrough->cubes, mCameraController.getProjectionMatrix(), mCameraController.getViewMatrix(), mCameraController.getModelMatrix()));
+                mRenderCommandQueue.addCommand(std::make_unique<GLStateCommand>(GLStateCommand::DEPTH_FUNC_LESS));
+            }
+            queueDecals(seeThrough->decals);
         }
-        if (!seeThrough->cubes.isEmpty()) {
-            // Depth first, then color only where that depth is: each pixel blends just the nearest face, not
-            // a block's far faces too, nor a border's top through the room on it
-            mRenderCommandQueue.addCommand(std::make_unique<GLStateCommand>(GLStateCommand::ENABLE_DEPTH_WRITE));
-            mRenderCommandQueue.addCommand(std::make_unique<GLStateCommand>(GLStateCommand::DISABLE_COLOR_WRITE));
-            mRenderCommandQueue.addCommand(
-                    std::make_unique<RenderInstancedCubesCommand>(seeThrough->cubes, mCameraController.getProjectionMatrix(), mCameraController.getViewMatrix(), mCameraController.getModelMatrix()));
-            mRenderCommandQueue.addCommand(std::make_unique<GLStateCommand>(GLStateCommand::ENABLE_COLOR_WRITE));
-            mRenderCommandQueue.addCommand(std::make_unique<GLStateCommand>(GLStateCommand::DISABLE_DEPTH_WRITE));
-            mRenderCommandQueue.addCommand(std::make_unique<GLStateCommand>(GLStateCommand::DEPTH_FUNC_LEQUAL));
-            mRenderCommandQueue.addCommand(
-                    std::make_unique<RenderInstancedCubesCommand>(seeThrough->cubes, mCameraController.getProjectionMatrix(), mCameraController.getViewMatrix(), mCameraController.getModelMatrix()));
-            mRenderCommandQueue.addCommand(std::make_unique<GLStateCommand>(GLStateCommand::DEPTH_FUNC_LESS));
+        if (level > labelsQueuedTo) {
+            renderLabels(true, labelsQueuedTo + 1, level);
+            labelsQueuedTo = level;
         }
-        queueDecals(seeThrough->decals);
+    }
+    if (labelsQueuedTo < std::numeric_limits<int>::max()) {
+        renderLabels(true, labelsQueuedTo + 1, std::numeric_limits<int>::max());
     }
     mRenderCommandQueue.addCommand(std::make_unique<GLStateCommand>(GLStateCommand::ENABLE_DEPTH_WRITE));
     mSeeThroughExits.clear();
@@ -1925,10 +1943,12 @@ int ModernGLWidget::roomAt(const QPoint& position, const bool orNear)
         if (!pR || pR->isHidden() || !levelShown(pR->z())) {
             continue;
         }
-        // The room hovered over is drawn raised by its height
+        // The room hovered over is drawn raised by its height. It is hit where it rests too, or the pointer on
+        // its near side, which the raised room leaves bare, would drop and raise it again on every frame
         const float lift = roomId == mHoveredRoomId ? 2.0f * halfSize.z() : 0.0f;
         const QVector3D center(static_cast<float>(pR->x()), static_cast<float>(pR->y()), static_cast<float>(pR->z()) + lift);
-        if (const std::optional<float> distance = rayHitsBox(origin, direction, center - halfSize, center + halfSize)) {
+        const QVector3D bottom = center - halfSize - QVector3D(0.0f, 0.0f, lift);
+        if (const std::optional<float> distance = rayHitsBox(origin, direction, bottom, center + halfSize)) {
             if (*distance < hitDistance) {
                 hitDistance = *distance;
                 hitRoom = roomId;
@@ -2278,6 +2298,7 @@ void ModernGLWidget::endPan()
     mMapCenterX = static_cast<int>(newCenter.x());
     mMapCenterY = static_cast<int>(newCenter.y());
     mMapCenterZ = static_cast<int>(newCenter.z());
+    update();
 }
 
 void ModernGLWidget::mouseReleaseEvent(QMouseEvent* event)
@@ -2356,7 +2377,10 @@ void ModernGLWidget::showContextMenu(const QPoint& position)
 
 void ModernGLWidget::leaveEvent(QEvent* event)
 {
+    // Qt holds Leave back while this view has the mouse grabbed, so a pan still on now lost its release
+    endPan();
     mPointerInView = false;
+    mPointerButtons = Qt::NoButton;
     setHoveredRoom(0);
     QOpenGLWidget::leaveEvent(event);
 }
@@ -2385,14 +2409,16 @@ void ModernGLWidget::fitArea()
         return;
     }
     QRectF extent;
-    int lowestLevel = std::numeric_limits<int>::max();
-    int highestLevel = std::numeric_limits<int>::lowest();
+    // Each room's cell on its own level, as the levels shown above and below stand out from the viewed one
+    QVector<QVector3D> corners;
     for (const int roomId : pArea->getAreaRooms()) {
         const TRoom* pR = mpMap->mpRoomDB->getRoom(roomId);
         if (pR && !pR->isHidden() && levelShown(pR->z())) {
-            extent = extent.united(QRectF(pR->x() - 0.5, pR->y() - 0.5, 1.0, 1.0));
-            lowestLevel = qMin(lowestLevel, pR->z());
-            highestLevel = qMax(highestLevel, pR->z());
+            const QRectF cell(pR->x() - 0.5, pR->y() - 0.5, 1.0, 1.0);
+            extent = extent.united(cell);
+            for (const QPointF& corner : {cell.topLeft(), cell.topRight(), cell.bottomLeft(), cell.bottomRight()}) {
+                corners.append(QVector3D(static_cast<float>(corner.x()), static_cast<float>(corner.y()), static_cast<float>(pR->z())));
+            }
         }
     }
     if (extent.isEmpty()) {
@@ -2401,32 +2427,33 @@ void ModernGLWidget::fitArea()
     const int centerX = qRound(extent.center().x());
     const int centerY = qRound(extent.center().y());
     const QVector3D target(static_cast<float>(centerX), static_cast<float>(centerY), static_cast<float>(mMapCenterZ));
-    const float aspectRatio = height() > 0 ? static_cast<float>(width()) / static_cast<float>(height()) : 1.0f;
-    // Fitted as if from straight above, then corrected for the tilt and turn, which leave the near side larger
     CameraController camera = mCameraController;
     camera.setTarget(target.x(), target.y(), target.z());
     camera.setViewportSize(width(), height());
-    float distance = CameraController::distanceToFit(static_cast<float>(extent.width()), static_cast<float>(extent.height()), aspectRatio);
-    // The levels shown above and below the viewed one are in the box fitted, as they stand out from its plane
-    for (int pass = 0; pass < 8 && width() > 0 && height() > 0; ++pass) {
+    const auto fits = [&](const float distance) {
         camera.setScale(distance);
         camera.updateMatrices();
-        float spanX = 0.0f;
-        float spanY = 0.0f;
-        bool behind = false;
-        for (const int level : {lowestLevel, highestLevel}) {
-            for (const QPointF& corner : {extent.topLeft(), extent.topRight(), extent.bottomLeft(), extent.bottomRight()}) {
-                const std::optional<QPointF> pixel = camera.pixelForPoint(QVector3D(static_cast<float>(corner.x()), static_cast<float>(corner.y()), static_cast<float>(level)));
-                if (!pixel) {
-                    behind = true;
-                    break;
-                }
-                spanX = qMax(spanX, 2.0f * std::abs(static_cast<float>(pixel->x()) - width() / 2.0f));
-                spanY = qMax(spanY, 2.0f * std::abs(static_cast<float>(pixel->y()) - height() / 2.0f));
+        for (const QVector3D& corner : std::as_const(corners)) {
+            const std::optional<QPointF> pixel = camera.pixelForPoint(corner);
+            if (!pixel || std::abs(pixel->x() - width() / 2.0) > 0.45 * width() || std::abs(pixel->y() - height() / 2.0) > 0.45 * height()) {
+                return false;
             }
         }
-        const float overflow = behind ? 2.0f : qMax(spanX / (0.9f * width()), spanY / (0.9f * height()));
-        distance = qBound(CameraController::scmMinDistance, distance * overflow, CameraController::scmMaxDistance);
+        return true;
+    };
+    // Searched for, as a level near the camera grows on screen faster than the distance shrinks it, so
+    // scaling the distance by how far the box overflows can swing ever wider instead of settling
+    float closest = CameraController::scmMinDistance;
+    float distance = CameraController::scmMaxDistance;
+    if (width() <= 0 || height() <= 0) {
+        distance = CameraController::distanceToFit(static_cast<float>(extent.width()), static_cast<float>(extent.height()), 1.0f);
+    } else if (fits(closest)) {
+        distance = closest;
+    } else {
+        for (int pass = 0; pass < 32 && distance - closest > 1e-4f; ++pass) {
+            const float middle = (closest + distance) / 2.0f;
+            (fits(middle) ? distance : closest) = middle;
+        }
     }
     mCameraController.setScale(distance);
     mFrameWhenShown = false;
@@ -2699,7 +2726,17 @@ void ModernGLWidget::slot_resetPlayerIcon()
     update();
 }
 
-void ModernGLWidget::renderLabels(const bool onTop)
+void ModernGLWidget::queueScene()
+{
+    renderConnections();
+    // Labels beneath the rooms come before them without writing depth, so that the translucent rooms
+    // of other levels show over them rather than cutting holes in them
+    renderLabels(false, std::numeric_limits<int>::lowest(), std::numeric_limits<int>::max());
+    renderRooms();
+    renderPlayerBeacon();
+}
+
+void ModernGLWidget::renderLabels(const bool onTop, const int lowestLevel, const int highestLevel)
 {
     if (!mpMap || !mpMap->mpRoomDB) {
         return;
@@ -2717,9 +2754,11 @@ void ModernGLWidget::renderLabels(const bool onTop)
     // Turned around while the top of the screen faces south, so that it never reads upside down
     const bool turned = GeometryManager::groundAxes(screenRight, screenUp).second.y() < 0.0f;
 
-    mRenderCommandQueue.addCommand(std::make_unique<GLStateCommand>(GLStateCommand::DISABLE_DEPTH_WRITE));
+    // Those on top are queued by renderRooms(), which has turned depth writes off by then
     if (onTop) {
         mRenderCommandQueue.addCommand(std::make_unique<GLStateCommand>(GLStateCommand::ENABLE_POLYGON_OFFSET));
+    } else {
+        mRenderCommandQueue.addCommand(std::make_unique<GLStateCommand>(GLStateCommand::DISABLE_DEPTH_WRITE));
     }
 
     for (auto it = pArea->mMapLabels.constBegin(); it != pArea->mMapLabels.constEnd(); ++it) {
@@ -2729,7 +2768,7 @@ void ModernGLWidget::renderLabels(const bool onTop)
         }
 
         const std::optional<int> level = GeometryManager::labelLevel(label.pos.z());
-        if (!level) {
+        if (!level || *level < lowestLevel || *level > highestLevel) {
             continue;
         }
         const qint64 levelsAbove = qint64{*level} - mMapCenterZ;
@@ -2791,8 +2830,9 @@ void ModernGLWidget::renderLabels(const bool onTop)
 
     if (onTop) {
         mRenderCommandQueue.addCommand(std::make_unique<GLStateCommand>(GLStateCommand::DISABLE_POLYGON_OFFSET));
+    } else {
+        mRenderCommandQueue.addCommand(std::make_unique<GLStateCommand>(GLStateCommand::ENABLE_DEPTH_WRITE));
     }
-    mRenderCommandQueue.addCommand(std::make_unique<GLStateCommand>(GLStateCommand::ENABLE_DEPTH_WRITE));
 }
 
 void ModernGLWidget::startSmoothTransition(int targetAID, int targetX, int targetY, int targetZ)
