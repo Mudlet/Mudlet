@@ -45,6 +45,7 @@ class TEasyButtonBar;
 class TFlipButton;
 class TMediaPlayer;
 class TMxpFrameWidgets;
+class TPasswordEntry;
 class TScrollBox;
 class TTextBox;
 class TToolBar;
@@ -56,6 +57,9 @@ class QTimer;
 class TMainConsole : public TConsole, public TConsoleFrontend
 {
     Q_OBJECT
+
+    friend class PasswordEntryTest;
+    friend class HostChildTeardownTest;
 
 public:
     explicit TMainConsole(Host*, QWidget* parent = nullptr);
@@ -199,7 +203,11 @@ public:
     QList<TCommandLine*> subCommandLineWidgets() const { return mSubCommandLineMap.values(); }
     void setCommandLinePlaceholderText(const QString& text) override;
     void updateCommandLineSpellCheck(bool enabled) override;
+    // While the hidden-input box is up these, and the writers by name below on
+    // the main command line, write into it, so a script pre-filling a password
+    // lands it masked. Reads never see the box.
     void setCommandLineText(const QString& text) override;
+    void printToCommandLine(const QString& text);
     // The command line the player used last for this profile, so the focus can
     // go back to it on returning to the profile.
     void recordActiveCommandLine(TCommandLine*);
@@ -349,6 +357,7 @@ private slots:
     // owns everything else about it.
     void slot_loggingAnnouncement(const bool isLogging, const QString& logFileName);
     void slot_loggingStateChanged(const bool isLogging);
+    void slot_passwordEntryWanted(const bool wanted);
     void slot_refreshLatencyBox();
 
 
@@ -360,6 +369,10 @@ signals:
 
 
 private:
+    bool eventFilter(QObject* watched, QEvent* event) override;
+    void openPasswordEntry();
+    void closePasswordEntry();
+    TPasswordEntry* passwordEntry() const;
     dlgMapper* dockedMapper() const;
     void dockMapWidget(Qt::DockWidgetArea area);
     TDockWidget* createUserWindow(const QString& name);
@@ -434,6 +447,8 @@ private:
     std::list<QPointer<TToolBar>> mToolBarList;
     std::list<QPointer<TEasyButtonBar>> mEasyButtonBarList;
     QList<QPointer<TToolBar>> mToolBarLayoutChanges;
+
+    QPointer<TPasswordEntry> mpPasswordEntry;
 
     bool mEnableClose = false;
     std::unique_ptr<TMxpFrameWidgets> mpMxpFrameWidgets;

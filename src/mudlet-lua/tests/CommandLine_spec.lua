@@ -2,10 +2,10 @@
 -- Geyser wrapper around a sub command line is covered in
 -- GeyserCommandLine_spec.lua.
 
--- Password mode cannot be turned on from Lua: the game server takes the ECHO
+-- Hidden input cannot be asked for from Lua: the game server takes the ECHO
 -- option, so the real telnet parser is what has to be fed to reach it. It can be
--- turned off, by the profile's "disable password masking" preference, which the
--- self-test profile leaves alone.
+-- turned off, by the profile's "Show passwords as you type them" preference,
+-- which the self-test profile leaves alone.
 local echoActive = false
 local function serverEcho(takesEcho)
   local ok, msg = feedTelnet(takesEcho and "<T_IAC><T_WILL><O_ECHO>" or "<T_IAC><T_WONT><O_ECHO>")
@@ -13,18 +13,16 @@ local function serverEcho(takesEcho)
   echoActive = takesEcho
 end
 
--- These pin what becomes of the surrounding text at a password prompt. The
--- masking itself is painted over the document by TCommandLine::paintEvent, so
--- getCmdLine still reads the password back and no spec can see it happen.
-describe("Tests the functionality of the main command line at a server password prompt", function()
+-- getCmdLine reads the command line and never the hidden-input box over it
+describe("Tests the functionality of the main command line while the server asks for hidden input", function()
   -- cTelnet stops answering ECHO once five negotiations arrive with less than
   -- five seconds between consecutive ones, and it restarts that window on every
   -- one, so spacing prompts out does not help. A prompt costs two negotiations,
   -- so the tests below use four of the five: a third prompt needs a five second
-  -- wait in front of it, or the masking it asks for never happens.
+  -- wait in front of it, or the hidden input it asks for never happens.
   -- https://github.com/Mudlet/Mudlet/issues/10367
   after_each(function()
-    -- the suppression is process wide, so a prompt left open by a failed
+    -- the ECHO state is process wide, so a prompt left open by a failed
     -- assertion would follow every later spec file
     if echoActive then
       serverEcho(false)
@@ -32,38 +30,61 @@ describe("Tests the functionality of the main command line at a server password 
     clearCmdLine("main")
   end)
 
-  it("puts the command aside while the server asks for a password, and gives it back", function()
+  it("keeps a left-over command in the command line while the game asks for hidden input", function()
     -- what the profile does at a password prompt when auto-clear is off: the
-    -- command that was just sent is still there, selected. Only the text is
-    -- readable from Lua, so what the selection itself becomes goes unpinned
+    -- command that was just sent is still there, selected
     printCmdLine("main", "specCommandUnderPassword")
     selectCmdLineText("main")
     assert.are.equal("specCommandUnderPassword", getCmdLine("main"))
 
-    -- a sub command line is exempt from echo suppression, so the same prompt
-    -- doubles as its control
+    -- a sub command line is not the main one, so the same prompt doubles as
+    -- its control
     createCommandLine("specPasswordSubCmdLine", 0, 0, 200, 30)
     finally(function() deleteCommandLine("specPasswordSubCmdLine") end)
     printCmdLine("specPasswordSubCmdLine", "specSubCommandLineText")
 
     serverEcho(true)
-    assert.are.equal("", getCmdLine("main"), "the typed command was left on screen for the password prompt")
+    assert.are.equal("specCommandUnderPassword", getCmdLine("main"), "the prompt for hidden input touched the command that was left in the command line")
     assert.are.equal("specSubCommandLineText", getCmdLine("specPasswordSubCmdLine"),
-                     "the password prompt emptied a sub command line, which it has no business touching")
+                     "the prompt for hidden input emptied a sub command line, which it has no business touching")
 
     serverEcho(false)
-    assert.are.equal("specCommandUnderPassword", getCmdLine("main"), "the typed command was not put back when the password prompt ended")
+    assert.are.equal("specCommandUnderPassword", getCmdLine("main"), "the command left in the command line did not survive the prompt ending")
   end)
 
   it("does not leave the password behind when the prompt ends", function()
     clearCmdLine("main")
     serverEcho(true)
 
+    -- goes into the hidden-input box
     printCmdLine("main", "specSecretPassword")
-    assert.are.equal("specSecretPassword", getCmdLine("main"))
+    assert.are.equal("", getCmdLine("main"), "text written to the main command line during a prompt for hidden input was readable from the command line")
 
     serverEcho(false)
-    assert.are.equal("", getCmdLine("main"), "the password was still readable in the command line after the prompt ended")
+    assert.are.equal("", getCmdLine("main"), "the password was readable in the command line after the prompt ended")
+  end)
+end)
+
+describe("Tests the functionality of the main command line writers with no prompt open", function()
+  after_each(function()
+    clearCmdLine("main")
+  end)
+
+  it("printCmdLine, appendCmdLine, selectCmdLineText and clearCmdLine reach the main command line", function()
+    printCmdLine("main", "specWritten")
+    assert.are.equal("specWritten", getCmdLine("main"))
+    appendCmdLine("main", "Twice")
+    assert.are.equal("specWrittenTwice", getCmdLine("main"))
+    assert.is_true(selectCmdLineText("main"))
+    clearCmdLine("main")
+    assert.are.equal("", getCmdLine("main"))
+  end)
+
+  it("treats a lone argument as the text for the main command line", function()
+    printCmdLine("specLoneArgument")
+    assert.are.equal("specLoneArgument", getCmdLine())
+    appendCmdLine("!")
+    assert.are.equal("specLoneArgument!", getCmdLine())
   end)
 end)
 

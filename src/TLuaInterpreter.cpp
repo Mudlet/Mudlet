@@ -5723,13 +5723,6 @@ bool TLuaInterpreter::callAnonymousFunction(const int func, QString name)
 bool TLuaInterpreter::callCmdLineAction(const int func, QString text)
 {
     lua_State* L = pGlobalLua;
-    auto& host = getHostFromLua(L);
-
-    // Suppress command line actions if remote echo is active (e.g., during password entry)
-    if (host.isRemoteEchoingActive()) {
-        return false; // Do not invoke actions during password entry
-    }
-
     lua_rawgeti(L, LUA_REGISTRYINDEX, func);
     lua_pushstring(L, text.toUtf8().constData());
     return callReference(L, qsl("cmdLineAction"), 1);
@@ -7000,6 +6993,9 @@ void TLuaInterpreter::initLuaGlobals()
     lua_register(pGlobalLua, "addMapMenu", TLuaInterpreter::addMapMenu);
     lua_register(pGlobalLua, "removeMapMenu", TLuaInterpreter::removeMapMenu);
     lua_register(pGlobalLua, "getMapMenus", TLuaInterpreter::getMapMenus);
+    lua_register(pGlobalLua, "hideMapMenuItem", TLuaInterpreter::hideMapMenuItem);
+    lua_register(pGlobalLua, "showMapMenuItem", TLuaInterpreter::showMapMenuItem);
+    lua_register(pGlobalLua, "getHiddenMapMenuItems", TLuaInterpreter::getHiddenMapMenuItems);
     lua_register(pGlobalLua, "installPackage", TLuaInterpreter::installPackage);
     lua_register(pGlobalLua, "installModule", TLuaInterpreter::installModule);
     lua_register(pGlobalLua, "uninstallModule", TLuaInterpreter::uninstallModule);
