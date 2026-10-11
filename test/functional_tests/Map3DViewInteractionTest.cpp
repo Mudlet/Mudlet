@@ -120,6 +120,40 @@ private:
         return value;
     }
 
+    QString luaGlobalString(const char* name) const
+    {
+        lua_State* L = mpHost->getLuaInterpreter()->getLuaGlobalState();
+        lua_getglobal(L, name);
+        const QString value = QString::fromUtf8(lua_tostring(L, -1));
+        lua_pop(L, 1);
+        return value;
+    }
+
+    // Focus as Tab gives it, with which the view pans and zooms with keys
+    static bool focusFromTheKeyboard(ModernGLWidget* pModern)
+    {
+        pModern->window()->activateWindow();
+        if (!QTest::qWaitForWindowActive(pModern->window())) {
+            return false;
+        }
+        pModern->setFocus(Qt::TabFocusReason);
+        return QTest::qWaitFor([pModern]() {
+            return pModern->hasFocus();
+        });
+    }
+
+    // Each row of pixels in the middle column of the view at which roomId is picked
+    static QList<int> rowsPickingInTheMiddleColumn(ModernGLWidget* pModern, const int roomId)
+    {
+        QList<int> rows;
+        for (int y = 0; y < pModern->height(); ++y) {
+            if (pModern->roomAt(QPoint(pModern->width() / 2, y)) == roomId) {
+                rows.append(y);
+            }
+        }
+        return rows;
+    }
+
     // The 3D view on the player's area, looking straight down with north up, nothing selected
     ModernGLWidget* viewAtThePlayer() const
     {
@@ -407,14 +441,148 @@ private slots:
         }
         QVERIFY2(eastFound, "the east room was not picked anywhere on the middle row");
 
+        // North above the middle and south below it, looking straight down and tilted, so that a ray turned
+        // upside down picks the room on the other side
+        constexpr int northRoomId = 22;
+        constexpr int southRoomId = 23;
+        QVERIFY(addRoomAt(northRoomId, mPlayerAreaId, 0, 2) && addRoomAt(southRoomId, mPlayerAreaId, 0, -2));
+        for (const float tilt : {CameraController::scmMinTilt, (CameraController::scmMinTilt + CameraController::scmMaxTilt) / 2.0f}) {
+            pModern->setCameraPosition(1.0f, tilt, CameraController::scmNorthUpAzimuth);
+            const QList<int> northRows = rowsPickingInTheMiddleColumn(pModern, northRoomId);
+            const QList<int> southRows = rowsPickingInTheMiddleColumn(pModern, southRoomId);
+            const QString pose = qsl("tilt %1: north at rows %2, south at rows %3, middle %4")
+                                         .arg(tilt)
+                                         .arg(northRows.isEmpty() ? -1 : northRows.constFirst())
+                                         .arg(southRows.isEmpty() ? -1 : southRows.constFirst())
+                                         .arg(middle.y());
+            QVERIFY2(!northRows.isEmpty() && !southRows.isEmpty(), qPrintable(pose));
+            QVERIFY2(northRows.constLast() < middle.y() && southRows.constFirst() > middle.y(), qPrintable(pose));
+        }
+        map()->mpRoomDB->removeRoom(northRoomId);
+        map()->mpRoomDB->removeRoom(southRoomId);
+
         pModern->setCameraPosition(1.0f, (CameraController::scmMinTilt + CameraController::scmMaxTilt) / 2.0f, CameraController::scmNorthUpAzimuth + 30.0f);
         QCOMPARE(pModern->roomAt(middle), kPlayerRoomId);
+    }
+
+    // Rooms the view does not draw, on levels it hides or hidden themselves, must not be picked either
+    void test_pickingSkipsRoomsTheViewDoesNotShow()
+    {
+        ModernGLWidget* pModern = viewAtThePlayer();
+        QVERIFY(pModern);
+        const QPoint middle(pModern->width() / 2, pModern->height() / 2);
+        constexpr int upperRoomId = 20;
+        constexpr int hiddenRoomId = 21;
+        QVERIFY(addRoomAt(upperRoomId, mPlayerAreaId, 0, 0) && map()->setRoomCoordinates(upperRoomId, 0, 0, 1));
+        QVERIFY(addRoomAt(hiddenRoomId, mPlayerAreaId, 0, 2));
+        const QList<int> hiddenRoomRows = rowsPickingInTheMiddleColumn(pModern, hiddenRoomId);
+
+        pModern->slot_singleLevelView();
+        const int pickedOnOneLevel = pModern->roomAt(middle);
+        pModern->slot_showAllLevels();
+        // Looking straight down, the room above is the nearer
+        const int pickedOnAllLevels = pModern->roomAt(middle);
+        map()->mpRoomDB->getRoom(hiddenRoomId)->setHidden(true);
+        const int pickedWhereTheHiddenRoomIs = hiddenRoomRows.isEmpty() ? -1 : pModern->roomAt(QPoint(middle.x(), hiddenRoomRows.at(hiddenRoomRows.size() / 2)));
+        map()->mpRoomDB->removeRoom(upperRoomId);
+        map()->mpRoomDB->removeRoom(hiddenRoomId);
+
+        QCOMPARE(pickedOnOneLevel, kPlayerRoomId);
+        QCOMPARE(pickedOnAllLevels, upperRoomId);
+        QVERIFY2(!hiddenRoomRows.isEmpty(), "the room to hide was not picked anywhere while shown");
+        QVERIFY(pickedWhereTheHiddenRoomIs != hiddenRoomId);
+    }
+
+    // Room actions from the 3D view's menu must never reach rooms of an area it no longer shows
+    void test_changingAreaIn3DDropsTheOldAreasRoomsFromTheSelection()
+    {
+        ModernGLWidget* pModern = viewAtThePlayer();
+        QVERIFY(pModern);
+        QTest::mouseClick(pModern, Qt::LeftButton, Qt::NoModifier, pixelOfRoom(pModern, kPlayerRoomId));
+        QCOMPARE(selection(), QSet<int>{kPlayerRoomId});
+        pModern->setViewCenter(mOtherAreaId, 20, 20, 0);
+        // The hidden 2D map stays where it was, so only the 3D view can have dropped them
+        QCOMPARE(map()->mapper()->mp2dMap->mAreaID, mPlayerAreaId);
+        QVERIFY(selection().isEmpty());
+    }
+
+    // As on the 2D map, which changes the selection on the press, a script handling the press reads the selection
+    // the click leaves, also for the clicks that the 3D view settles only on the release
+    void test_aScriptHandlingThePressSeesTheSelectionTheClickLeaves()
+    {
+        ModernGLWidget* pModern = viewAtThePlayer();
+        QVERIFY(pModern);
+        QCOMPARE(runLua(qsl("selectedOnPresses = {}\n"
+                            "pressHandler = registerAnonymousEventHandler('sysMapWindowMousePressEvent', function()\n"
+                            "  selectedOnPresses[#selectedOnPresses + 1] = #(getMapSelection().rooms or {})\n"
+                            "end)")),
+                 QString());
+        const QPoint playerRoom = pixelOfRoom(pModern, kPlayerRoomId);
+        QTest::mouseClick(pModern, Qt::LeftButton, Qt::NoModifier, playerRoom);
+        QTest::mouseClick(pModern, Qt::LeftButton, Qt::ControlModifier, pixelOfRoom(pModern, kEastRoomId));
+        QTest::mouseClick(pModern, Qt::LeftButton, Qt::NoModifier, QPoint(2, 2));
+        QTest::mouseClick(pModern, Qt::LeftButton, Qt::NoModifier, playerRoom);
+        // A drag from empty space pans and leaves the selection, and is announced once
+        QTest::mousePress(pModern, Qt::LeftButton, Qt::NoModifier, QPoint(5, 5));
+        QMouseEvent drag(QEvent::MouseMove, QPointF(60, 60), pModern->mapToGlobal(QPointF(60, 60)), Qt::NoButton, Qt::LeftButton, Qt::NoModifier);
+        QCoreApplication::sendEvent(pModern, &drag);
+        QTest::mouseRelease(pModern, Qt::LeftButton, Qt::NoModifier, QPoint(60, 60));
+        QCOMPARE(runLua(qsl("killAnonymousEventHandler(pressHandler)\n"
+                            "selectedOnPressesText = table.concat(selectedOnPresses, ',')")),
+                 QString());
+        QCOMPARE(luaGlobalString("selectedOnPressesText"), qsl("1,2,0,1,1"));
+    }
+
+    // Typing goes to the command line after a click on the view, as it does after one on the 2D map, so that "s",
+    // "w", the arrows and keypad key bindings are not taken for panning and zooming
+    void test_keysTypedAfterAClickOnTheViewReachTheCommandLine()
+    {
+        ModernGLWidget* pModern = viewAtThePlayer();
+        QVERIFY(pModern);
+        QDockWidget* pDock = nullptr;
+        for (QWidget* pWidget = pModern->parentWidget(); pWidget && !pDock; pWidget = pWidget->parentWidget()) {
+            pDock = qobject_cast<QDockWidget*>(pWidget);
+        }
+        QVERIFY2(pDock, "the map is not in a dock");
+        pDock->setFloating(true);
+        pDock->activateWindow();
+        QVERIFY(QTest::qWaitForWindowActive(pDock));
+        QSignalSpy cameraControls(pModern, &ModernGLWidget::cameraControlsChanged);
+        const QVector3D start = pModern->viewCenter();
+        TCommandLine* commandLine = mpHost->mainConsoleView()->mpCommandLine;
+        commandLine->clear();
+
+        QTest::mouseClick(pModern, Qt::LeftButton, Qt::NoModifier, pixelOfRoom(pModern, kPlayerRoomId));
+        QTRY_VERIFY(pModern->hasFocus());
+        for (const Qt::Key key : {Qt::Key_S, Qt::Key_W}) {
+            QTest::keyClick(static_cast<QWidget*>(nullptr), key);
+            QCoreApplication::processEvents();
+        }
+        const QString typedAfterAClick = commandLine->toPlainText();
+        commandLine->clear();
+
+        // Even with focus from the keyboard, which pans with the other keys
+        QVERIFY(focusFromTheKeyboard(pModern));
+        cameraControls.clear();
+        QTest::keyClick(pModern, Qt::Key_Plus, Qt::KeypadModifier);
+        QCoreApplication::processEvents();
+        const QString typedOnTheKeypad = commandLine->toPlainText();
+        const bool zoomed = !cameraControls.isEmpty();
+        const QVector3D end = pModern->viewCenter();
+        commandLine->clear();
+        pDock->setFloating(false);
+
+        QCOMPARE(typedAfterAClick, qsl("sw"));
+        QCOMPARE(end, start);
+        QCOMPARE(typedOnTheKeypad, qsl("+"));
+        QVERIFY2(!zoomed, "keypad + zoomed the view instead of reaching the command line");
     }
 
     void test_keysPanZoomAndRecenter()
     {
         ModernGLWidget* pModern = viewAtThePlayer();
         QVERIFY(pModern);
+        QVERIFY(focusFromTheKeyboard(pModern));
         QSignalSpy cameraControls(pModern, &ModernGLWidget::cameraControlsChanged);
         const QVector3D start = pModern->viewCenter();
 
@@ -476,6 +644,7 @@ private slots:
     {
         ModernGLWidget* pModern = viewAtThePlayer();
         QVERIFY(pModern);
+        QVERIFY(focusFromTheKeyboard(pModern));
         // viewCenter() is in floats, which cannot hold the ends exactly, so check only which side of the map it is on
         pModern->setViewCenter(mPlayerAreaId, std::numeric_limits<int>::max(), 0, 0);
         QTest::keyClick(pModern, Qt::Key_Right);

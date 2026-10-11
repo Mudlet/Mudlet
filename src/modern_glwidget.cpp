@@ -59,6 +59,7 @@
 #include <chrono>
 #include <limits>
 #include <optional>
+#include <utility>
 
 using namespace std::chrono_literals;
 
@@ -92,8 +93,9 @@ ModernGLWidget::ModernGLWidget(TMap* pMap, Host* pHost, QWidget* parent)
     connect(mCameraAnimationTimer, &QTimer::timeout, this, &ModernGLWidget::onCameraAnimationTick);
     mEasingCurve.setType(QEasingCurve::OutQuart); // Natural deceleration
 
-    // Keys this view does not use go on to the command line
-    setFocusPolicy(Qt::ClickFocus);
+    // A click takes focus only so that a floating view can pass typed keys on to the command line; focus from
+    // Tab also lets the view pan and zoom with keys
+    setFocusPolicy(Qt::StrongFocus);
     loadSavedCameras();
 }
 
@@ -1747,11 +1749,12 @@ void ModernGLWidget::mousePressEvent(QMouseEvent* event)
         return;
     }
 
+    mKeysNavigate = false;
     mPressPosition = event->position().toPoint();
     mClickPending = false;
     if (event->button() == Qt::LeftButton) {
-        // A plain click on a room selects it at once, as on the 2D map, so a script handling the event below sees
-        // it; anything else waits for the release, as a drag from empty space pans and a Ctrl or Shift drag orbits
+        // A plain click on a room selects it at once, as on the 2D map; anything else waits for the release, as a
+        // drag from empty space pans and a Ctrl or Shift drag orbits
         const int roomId = event->modifiers() == Qt::NoModifier ? roomAt(mPressPosition) : 0;
         if (roomId) {
             selectRoom(roomId, event->modifiers());
@@ -1769,7 +1772,11 @@ void ModernGLWidget::mousePressEvent(QMouseEvent* event)
         mPanYStart = y;
     }
 
-    raiseMousePressEvent();
+    // The 2D map raises this after the press has changed the selection, so a script handling it reads the new one
+    mPressEventPending = mClickPending;
+    if (!mPressEventPending) {
+        raiseMousePressEvent();
+    }
 }
 
 void ModernGLWidget::mouseMoveEvent(QMouseEvent* event)
@@ -1779,6 +1786,9 @@ void ModernGLWidget::mouseMoveEvent(QMouseEvent* event)
     }
     if (mClickPending && (event->position().toPoint() - mPressPosition).manhattanLength() >= QApplication::startDragDistance()) {
         mClickPending = false;
+        if (std::exchange(mPressEventPending, false)) {
+            raiseMousePressEvent();
+        }
     }
     if (mPanMode) {
         auto eventPos = event->position();
@@ -1833,6 +1843,9 @@ void ModernGLWidget::mouseReleaseEvent(QMouseEvent* event)
         selectRoom(roomAt(event->position().toPoint()), event->modifiers());
     } else if (event->button() == Qt::RightButton && mpMap && mpMap->mpRoomDB) {
         showContextMenu(event->position().toPoint());
+    }
+    if (event->button() == Qt::LeftButton && std::exchange(mPressEventPending, false)) {
+        raiseMousePressEvent();
     }
     QOpenGLWidget::mouseReleaseEvent(event);
     update();
@@ -1894,11 +1907,18 @@ void ModernGLWidget::panByRooms(const int right, const int up)
     setViewCenter(mAID, shifted(mMapCenterX, offset.x()), shifted(mMapCenterY, offset.y()), mMapCenterZ);
 }
 
+void ModernGLWidget::focusInEvent(QFocusEvent* event)
+{
+    // After a click the keys typed next are a command, as with the 2D map, which never takes focus
+    mKeysNavigate = event->reason() == Qt::TabFocusReason || event->reason() == Qt::BacktabFocusReason;
+    QOpenGLWidget::focusInEvent(event);
+}
+
 void ModernGLWidget::keyPressEvent(QKeyEvent* event)
 {
-    // Shift is needed for + on many layouts, and for capitals with Caps Lock on
-    const bool noCommandModifier = !(event->modifiers() & (Qt::ControlModifier | Qt::AltModifier | Qt::MetaModifier));
-    if (noCommandModifier && mpMap && mpMap->mpRoomDB) {
+    // Shift is needed for + on many layouts; keypad keys are left to key bindings on the command line
+    const bool navigates = mKeysNavigate && !(event->modifiers() & (Qt::ControlModifier | Qt::AltModifier | Qt::MetaModifier | Qt::KeypadModifier));
+    if (navigates && mpMap && mpMap->mpRoomDB) {
         switch (event->key()) {
         case Qt::Key_Left:
         case Qt::Key_A:
