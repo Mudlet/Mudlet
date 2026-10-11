@@ -736,6 +736,68 @@ setAppStyleSheet(bool) -> false, setAppStyleSheet: bad argument #1 type (style s
         QVERIFY2(qApp->styleSheet() == styleSheetBefore, "The style sheet was applied with no main window to style.");
     }
 
+    // The lines and trigger match are those a GUI probe of the same feeds gave
+    void test_stalledMxpTagIsWrittenOutWithNoMainWindow()
+    {
+        QVERIFY2(!TAppFrontend::hasView(), "A main window exists, so this run is not headless.");
+
+        const QString hostname = qsl("Test-Headless-Host-Mxp-Stall");
+        QVERIFY2(HostManager::self()->addHost(hostname, QString(), QString(), QString()), "Could not create a profile with no main window.");
+        Host* host = HostManager::self()->getHost(hostname);
+        QVERIFY2(host, "The profile is not in the pool.");
+
+        QVERIFY2(host->getLuaInterpreter()->compileAndExecuteScript(qsl(R"lua(
+headlessStallLog = {}
+local function record(text) headlessStallLog[#headlessStallLog + 1] = text end
+local mark = getLastLineNumber("main")
+function headlessStallTail(label)
+  record(label)
+  for _, l in ipairs(getLines("main", mark, getLastLineNumber("main") + 1)) do record("  line: [" .. l .. "]") end
+end
+record("force -> " .. tostring(setConfig("specialForceMXPProcessorOn", true)))
+headlessStallTrigger = tempRegexTrigger("stall", function()
+  record("  trigger: [" .. line .. "]")
+  headlessStallFired = "yes"
+end)
+feedTriggers("plain line\n")
+feedTriggers("stall <send")
+headlessStallTail("fed")
+)lua")),
+                 "The Lua chunk did not run.");
+
+        // The watchdog gives a stalled tag two of its 1300ms timeouts before it writes it out
+        QTest::qWaitFor(
+                [host]() {
+                    return luaGlobalString(host, "headlessStallFired") == qsl("yes");
+                },
+                8000);
+
+        QVERIFY2(host->getLuaInterpreter()->compileAndExecuteScript(qsl(R"lua(
+headlessStallTail("after the watchdog")
+killTrigger(headlessStallTrigger)
+feedTriggers(">done\n")
+headlessStallTail("after >done")
+setConfig("specialForceMXPProcessorOn", false)
+headlessStallLogText = table.concat(headlessStallLog, "\n")
+)lua")),
+                 "The Lua chunk did not run.");
+
+        QCOMPARE(luaGlobalString(host, "headlessStallLogText"), qsl(R"(force -> true
+fed
+  line: [plain line]
+  line: []
+  trigger: [stall <send]
+after the watchdog
+  line: [plain line]
+  line: [stall <send]
+  line: []
+after >done
+  line: [plain line]
+  line: [stall <send]
+  line: [>done]
+  line: [])"));
+    }
+
     // As Media_spec.lua pins for the GUI: with closed captions on, an ended playback is captioned in the main console
     void test_closedCaptionsReachTheMainConsoleWithNoMainWindow()
     {
