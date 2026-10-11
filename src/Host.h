@@ -512,6 +512,8 @@ public:
     // Use this rather than accessing the TMainConsole::font() as the latter
     // isn't always around during profile start-up:
     QFont getDisplayFont();
+    // What getDisplayFont() answers with no main console, with the bundled fonts added to resolve it against
+    QFont displayFontWithNoView() const;
     QFont getAndClearTempDisplayFont();
     // Whether the font arriving is a fresh choice of family or only a tweak to
     // the one already in use: the caller knows which, and comparing the fonts
@@ -770,8 +772,6 @@ public:
 private:
     QSettings& profileIni();
     bool namesMainConsoleWithNoMainWindow(const QString& name) const;
-    // What getDisplayFont() answers with no main console, with the bundled fonts added to resolve it against
-    QFont displayFontWithNoView() const;
 
     bool mNoAntiAlias = false;
     // These are used only during profile initiation to provide faked details

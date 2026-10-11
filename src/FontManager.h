@@ -46,6 +46,8 @@ public:
     void addFonts();
     void loadFont(const QString& filePath, const QString& profileName, const QString& belongsTo = "main");
     bool fontAlreadyLoaded(const QString& filePath, const QString& profileName);
+    // -1 for a file that failed to load as well as for one never loaded, which fontAlreadyLoaded() tells apart
+    int loadedFontId(const QString& filePath, const QString& profileName) const;
     void unloadFonts(const QString& profileName, const QString& belongsTo);
     void addEmojiFont();
 

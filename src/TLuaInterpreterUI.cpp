@@ -1664,7 +1664,8 @@ int TLuaInterpreter::getLineNumber(lua_State* L)
 int TLuaInterpreter::getMainConsoleWidth(lua_State* L)
 {
     Host& host = getHostFromLua(L);
-    int fw = QFontMetrics(host.getDisplayFont()).averageCharWidth();
+    const QFont font = host.hasConsoleView() ? host.getDisplayFont() : host.displayFontWithNoView();
+    int fw = QFontMetrics(font).averageCharWidth();
     fw *= host.mWrapAt + 1;
     lua_pushnumber(L, fw);
     return 1;

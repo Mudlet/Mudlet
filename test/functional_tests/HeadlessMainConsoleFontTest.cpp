@@ -18,6 +18,7 @@
  ***************************************************************************/
 
 #include <QDir>
+#include <QFontDatabase>
 #include <QTemporaryDir>
 #include <QtTest/QtTest>
 
@@ -117,12 +118,23 @@ private slots:
         const QString bundledFile = qsl(":/fonts/ttf-bitstream-vera-1.10/VeraMono.ttf");
         QVERIFY2(!fonts->fontAlreadyLoaded(bundledFile, QString()), "The bundled fonts were added before the first query, so this cannot tell whether that query adds them.");
 
+        // DejaVu Sans Mono, a usual fallback, has the same metrics as Bitstream Vera Sans Mono, so only
+        // the files registered can show the width was measured in the bundled font
+        const QString widthChecks = runChecks(host, qsl("  headlessMainConsoleWidth = getMainConsoleWidth()"));
+        QCOMPARE(widthChecks, qsl("ok"));
+        QVERIFY2(fonts->fontAlreadyLoaded(bundledFile, QString()), "getMainConsoleWidth() measured the display font without the bundled fonts added.");
+        // A file that failed to load is remembered all the same, and then the family can only be one this machine has installed
+        const int bundledFontId = fonts->loadedFontId(bundledFile, QString());
+        QVERIFY2(bundledFontId > -1, "The bundled font file was tried but did not load.");
+        QVERIFY2(QFontDatabase::applicationFontFamilies(bundledFontId).contains(qsl("Bitstream Vera Sans Mono")), "The bundled font file loaded without adding Bitstream Vera Sans Mono.");
+
         const QString defaultFontChecks = runChecks(host, qsl(R"lua(
   same("getFont()", getFont(), "Bitstream Vera Sans Mono")
   same("getFont('main')", getFont("main"), "Bitstream Vera Sans Mono")
   same("getFontSize()", getFontSize(), 14)
   same("getFontSize('main')", getFontSize("main"), 14)
   local columnWidth, rowHeight = calcFontSize(14, "Bitstream Vera Sans Mono")
+  same("getMainConsoleWidth()", headlessMainConsoleWidth, columnWidth * (getWindowWrap() + 1))
   local width, height = calcFontSize("main", true)
   same("calcFontSize('main', true) width", width, columnWidth)
   same("calcFontSize('main', true) height", height, rowHeight)
@@ -134,7 +146,6 @@ private slots:
   same("getFont reason for a missing window", why, 'window "noSuchHeadlessWindow" not found')
 )lua"));
         QCOMPARE(defaultFontChecks, qsl("ok"));
-        QVERIFY2(fonts->fontAlreadyLoaded(bundledFile, QString()), "getFont() named the bundled default without the bundled fonts added, so it could only be a font this machine has installed.");
 
         // The calls the GUI's setFont() and setFontSize() make for its main console
         QVERIFY(host->setDisplayFont(host->createFontWithSettings(qsl("Ubuntu Mono"), 14), Host::DisplayFontChange::UserChoice).first);
@@ -143,6 +154,7 @@ private slots:
   same("getFont()", getFont(), "Ubuntu Mono")
   same("getFontSize()", getFontSize(), 11)
   local columnWidth, rowHeight = calcFontSize(11, "Ubuntu Mono")
+  same("getMainConsoleWidth()", getMainConsoleWidth(), columnWidth * (getWindowWrap() + 1))
   local width, height = calcFontSize(true)
   same("calcFontSize(true) width", width, columnWidth)
   same("calcFontSize(true) height", height, rowHeight)

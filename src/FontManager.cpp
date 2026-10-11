@@ -149,6 +149,12 @@ bool FontManager::fontAlreadyLoaded(const QString& filePath, const QString& prof
     return loadedFontPaths.contains(key);
 }
 
+int FontManager::loadedFontId(const QString& filePath, const QString& profileName) const
+{
+    const QString key = profileName.isEmpty() ? filePath : qsl("%1/%2").arg(profileName, filePath);
+    return loadedFontPaths.value(key, -1);
+}
+
 void FontManager::rememberFont(const QString& filePath, int fontID, const QString& profileName, const QString& belongsTo)
 {
     const QString key = profileName.isEmpty() ? filePath : qsl("%1/%2").arg(profileName, filePath);
