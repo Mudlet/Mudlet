@@ -3050,7 +3050,7 @@ int TLuaInterpreter::setDefaultAreaVisible(lua_State* L)
     }
 
     const bool isToShowDefaultArea = getVerifiedBool(L, __func__, 1, "isToShowDefaultArea");
-    if (host.mpMap->mapViewFrontend()) {
+    if (host.mapOpen()) {
         const bool wasShown = host.mpMap->getDefaultAreaShown();
         host.mpMap->setDefaultAreaShown(isToShowDefaultArea);
         host.mpMap->announceDefaultAreaVisibilitySet(wasShown);
@@ -4280,9 +4280,7 @@ void TLuaInterpreter::handleIreComposerEdit(const QString& jsonData)
         return;
     }
 
-    if (auto* frontend = TAppFrontend::instance()) {
-        host.mTelnet.mpComposer = frontend->openComposer(&host, title, initialText);
-    }
+    host.mTelnet.mpComposer = TAppFrontend::instance()->openComposer(&host, title, initialText);
 }
 
 // No documentation available in wiki - internal function
@@ -6994,6 +6992,9 @@ void TLuaInterpreter::initLuaGlobals()
     lua_register(pGlobalLua, "addMapMenu", TLuaInterpreter::addMapMenu);
     lua_register(pGlobalLua, "removeMapMenu", TLuaInterpreter::removeMapMenu);
     lua_register(pGlobalLua, "getMapMenus", TLuaInterpreter::getMapMenus);
+    lua_register(pGlobalLua, "hideMapMenuItem", TLuaInterpreter::hideMapMenuItem);
+    lua_register(pGlobalLua, "showMapMenuItem", TLuaInterpreter::showMapMenuItem);
+    lua_register(pGlobalLua, "getHiddenMapMenuItems", TLuaInterpreter::getHiddenMapMenuItems);
     lua_register(pGlobalLua, "installPackage", TLuaInterpreter::installPackage);
     lua_register(pGlobalLua, "installModule", TLuaInterpreter::installModule);
     lua_register(pGlobalLua, "uninstallModule", TLuaInterpreter::uninstallModule);
@@ -9113,7 +9114,7 @@ int TLuaInterpreter::setConfig(lua_State* L)
         return 2;
     };
 
-    if (host.mpMap && host.mpMap->mapViewFrontend()) {
+    if (host.mapOpen()) {
         if (key == qsl("mapRoomSize")) {
             const int size = getVerifiedInt(L, __func__, 2, "value");
             if (size < 1) {
@@ -9161,7 +9162,7 @@ int TLuaInterpreter::setConfig(lua_State* L)
             return success();
         }
 #if defined(INCLUDE_3DMAPPER)
-        if (key == qsl("show3dMapView")) {
+        if (key == qsl("show3dMapView") && host.mpMap->mapViewFrontend()) {
             host.mpMap->mapViewFrontend()->show3DView(getVerifiedBool(L, __func__, 2, "value"));
             return success();
         }

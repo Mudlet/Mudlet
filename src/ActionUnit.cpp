@@ -409,9 +409,7 @@ std::pair<bool, QString> ActionUnit::setToolBarActive(const QString& name, const
     if (found) {
         updateAllToolbars();
     }
-    if (auto* pFrontend = TAppFrontend::instance()) {
-        pFrontend->processEventLoopHack();
-    }
+    TAppFrontend::instance()->processEventLoopHack();
     if (found) {
         return {true, QString()};
     }
