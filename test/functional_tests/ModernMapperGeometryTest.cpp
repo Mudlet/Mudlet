@@ -228,6 +228,10 @@ private slots:
         QTest::newRow("three quarters down") << -0.75 << true << -1;
         QTest::newRow("a quarter up") << 0.25 << true << 0;
         QTest::newRow("a quarter down") << -0.25 << true << 0;
+        // Halves round away from zero, as the 2D map's qRound does
+        QTest::newRow("half up") << 0.5 << true << 1;
+        QTest::newRow("half down") << -0.5 << true << -1;
+        QTest::newRow("one and a half down") << -1.5 << true << -2;
         QTest::newRow("beyond any level") << 1e12 << false << 0;
         QTest::newRow("not a number") << qQNaN() << false << 0;
         QTest::newRow("infinite") << -qInf() << false << 0;
@@ -242,6 +246,7 @@ private slots:
         QCOMPARE(found.has_value(), onALevel);
         if (onALevel) {
             QCOMPARE(*found, level);
+            QCOMPARE(*found, qRound(z));
         }
     }
 

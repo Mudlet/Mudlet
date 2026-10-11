@@ -173,6 +173,7 @@ private:
     // Room textures this frame has used so far, which making room for another must keep
     QSet<QString> mRoomTexturesInUse;
     bool mRoomTextureLimitWarned = false;
+    bool mSolidDashWarned = false;
 
     // Host reference
     QPointer<Host> mpHost;

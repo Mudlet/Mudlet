@@ -26,7 +26,6 @@
 #include "TRoom.h"
 #include "TRoomDB.h"
 
-#include <QDebug>
 #include <QLineF>
 #include <QtMath>
 
@@ -40,6 +39,7 @@ constexpr int scmDirections[] = {DIR_NORTH, DIR_NORTHEAST, DIR_EAST, DIR_SOUTHEA
 // The 2D map's door glyphs are sized by a room's spacing across plus its spacing down
 constexpr qreal scmDoorRoomSpan = 2.0;
 constexpr int scmDiscSides = 16;
+// Qt's dash stroker's limit, QDashStroker::repetitionLimit()
 constexpr qreal scmMaxDashRepetitions = 10000.0;
 
 bool onCompass(const int direction)
@@ -158,10 +158,8 @@ void Builder::dashedBar(const QVector3D& from, const QVector3D& to, const QList<
     }
     // As Qt's dash stroker does, draw solid a pattern too fine to repeat along the line in reasonable time
     if (!(length / period <= scmMaxDashRepetitions)) {
-        static bool warned = false;
-        if (!warned) {
-            warned = true;
-            qWarning().nospace() << "ExitScene: the line from room " << mRoomId << " is drawn solid, as its exit lines are too thin to dash";
+        if (!mScene.solidDashRoomId) {
+            mScene.solidDashRoomId = mRoomId;
         }
         bar(from, to, mWidth, mHeight, color, level);
         phase = 0.0;

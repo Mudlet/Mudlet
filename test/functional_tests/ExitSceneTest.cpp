@@ -280,19 +280,31 @@ private slots:
         QVERIFY(stub && stairs);
     }
 
-    // As Qt's own dash stroker does, a pattern too fine to draw is drawn solid, rather than without end
+    void test_dashesTooFineForTheLineAreDrawnSolid_data()
+    {
+        QTest::addColumn<float>("lineWidth");
+        QTest::addColumn<int>("eastX");
+        QTest::newRow("exit lines too thin") << 1e-6f << 1;
+        QTest::newRow("rooms too far apart") << 0.05f << 20000;
+    }
+
+    // As Qt's own dash stroker does, a pattern that would repeat too often along the line is drawn solid, rather than without end
     void test_dashesTooFineForTheLineAreDrawnSolid()
     {
+        QFETCH(float, lineWidth);
+        QFETCH(int, eastX);
         TRoom* pWest = addRoomAt(1, mAreaId, 0, 0);
-        QVERIFY(addRoomAt(2, mAreaId, 1, 0));
+        QVERIFY(addRoomAt(2, mAreaId, eastX, 0));
         QVERIFY(pWest);
         pWest->setExit(2, DIR_EAST);
 
         ExitScene::Options sceneOptions = options();
-        sceneOptions.lineWidth = 1e-6f;
-        const QList<ExitScene::Segment> lines = segmentsIn(build(sceneOptions), mExitColor);
+        sceneOptions.lineWidth = lineWidth;
+        const ExitScene::Scene scene = build(sceneOptions);
+        const QList<ExitScene::Segment> lines = segmentsIn(scene, mExitColor);
         QCOMPARE(lines.size(), 1);
-        QVERIFY(joins(lines.first(), QVector2D(0, 0), QVector2D(1, 0)));
+        QVERIFY(joins(lines.first(), QVector2D(0, 0), QVector2D(eastX, 0)));
+        QCOMPARE(scene.solidDashRoomId, 1);
     }
 
     void test_oneWayExitIsDottedWithAnArrowInTheMiddle()
@@ -303,6 +315,7 @@ private slots:
         pWest->setExit(2, DIR_EAST);
 
         const ExitScene::Scene scene = build();
+        QCOMPARE(scene.solidDashRoomId, 0);
         const QList<ExitScene::Segment> dots = segmentsIn(scene, mExitColor);
         QVERIFY2(dots.size() > 3, qPrintable(qsl("%1 pieces is not a dotted line").arg(dots.size())));
         for (const ExitScene::Segment& dot : dots) {

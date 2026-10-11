@@ -1005,6 +1005,11 @@ void ModernGLWidget::renderConnections()
     options.exitColor = mpHost->mFgColor_2;
     options.background = mpHost->mBgColor_2;
     const ExitScene::Scene scene = ExitScene::build(*mpMap, *mpHost, options);
+    if (scene.solidDashRoomId && !mSolidDashWarned) {
+        mSolidDashWarned = true;
+        qWarning().nospace() << "ModernGLWidget: room " << scene.solidDashRoomId
+                             << "'s dotted or dashed exit line is drawn solid, as its pattern would repeat too many times along it: the line is very long or the exit lines very thin";
+    }
     if (scene.segments.isEmpty() && scene.triangles.isEmpty()) {
         return;
     }
