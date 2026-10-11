@@ -417,11 +417,21 @@ private slots:
         QVERIFY(!pModern->cameraFixedByGridMode());
         const auto restoreFailure = standInForAViewThatStarted(pModern);
         pModern->mCameraController.setPosition(1.0f, 10.0f, 100.0f);
+        pModern->mDistanceRequested = false;
+        {
+            const QSignalBlocker scaleBlocker(pMapper->slider_scale);
+            const QSignalBlocker turnBlocker(pMapper->slider_zRot);
+            pMapper->slider_scale->setValue(0);
+            pMapper->slider_zRot->setValue(90);
+        }
 
         QCOMPARE(pMapper->set3DViewCameraPosition(2.0f, 45.0f, 270.0f), std::make_pair(true, QString()));
         QVector3D position = pModern->mCameraController.getPosition();
         QVERIFY2(qAbs(position.x() - 2.0f) < 0.01f && qAbs(position.y() - 45.0f) < 0.01f && qAbs(std::remainder(position.z() - 270.0f, 360.0f)) < 0.01f,
                  qPrintable(qsl("asked for (2, 45, 270), the camera is at (%1, %2, %3)").arg(position.x()).arg(position.y()).arg(position.z())));
+        QVERIFY2(pModern->mDistanceRequested, "the next paint would frame the area over the distance asked for");
+        QVERIFY2(pMapper->slider_scale->value() > 0, "the zoom slider still shows the old distance");
+        QCOMPARE(pMapper->slider_zRot->value(), 0);
 
         QCOMPARE(pMapper->shift3DViewCamera(0.0f, 30.0f, 0.0f), std::make_pair(true, QString()));
         position = pModern->mCameraController.getPosition();
@@ -446,16 +456,19 @@ private slots:
         auto* pModern = qobject_cast<ModernGLWidget*>(pMapper->glWidget);
         QVERIFY(pModern);
         QVERIFY2(pModern->isVisible() && !pModern->size().isEmpty(), "the 3D view is not showing, so nothing tried to start it");
-        if (!pModern->context()) {
-            // Where GL works, Qt drops the context of a view shown straight after switching renderers and makes it again on resize
+        const bool showTriedForAContext = pModern->context();
+        const QString failureOnShow = pModern->failureMessage();
+        if (!showTriedForAContext) {
+            // Where GL works, Qt drops the context of a view shown straight after switching renderers and makes it again
+            // on resize; this resize only finds out whether GL works, so the checks below go by what the show did
             QResizeEvent resize(pModern->size(), pModern->size());
             QCoreApplication::sendEvent(pModern, &resize);
         }
         if (pModern->isValid()) {
             QSKIP("this machine created a GL context for the modern 3D view");
         }
-        QVERIFY2(pModern->context(), "nothing tried to create a GL context");
-        QVERIFY2(!pModern->failureMessage().isEmpty(), "the modern 3D view has not said why it could not start");
+        QVERIFY2(showTriedForAContext, "showing the view did not try for a GL context, so a script moving the camera straight after is not refused");
+        QVERIFY2(!failureOnShow.isEmpty(), "the modern 3D view has not said why it could not start");
         const QString refusal = qsl("the modern 3D map view could not start: %1").arg(pModern->failureMessage());
         QCOMPARE(pMapper->set3DViewCameraPosition(2.0f, 45.0f, 270.0f), std::make_pair(false, refusal));
         QCOMPARE(pMapper->shift3DViewCamera(0.0f, 30.0f, 0.0f), std::make_pair(false, refusal));

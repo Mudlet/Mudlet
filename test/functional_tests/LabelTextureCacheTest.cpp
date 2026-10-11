@@ -50,7 +50,8 @@ private:
 
     static void countUploadWarnings(QtMsgType type, const QMessageLogContext& context, const QString& message)
     {
-        if (type == QtWarningMsg && message.startsWith(qsl("LabelTextureCache"))) {
+        // Only the upload warning: a failed image texture also logs its key, and a retry would repeat the upload
+        if (type == QtWarningMsg && message.startsWith(qsl("LabelTextureCache: could not upload"))) {
             ++smUploadWarnings;
         }
         smPreviousHandler(type, context, message);

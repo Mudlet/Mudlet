@@ -140,15 +140,16 @@ void ModernGLWidget::showEvent(QShowEvent* event)
     QOpenGLWidget::showEvent(event);
     // Qt creates the context once the widget is laid out; if that failed, initializeGL never runs to say so
     QTimer::singleShot(0, this, [this]() {
-        if (isVisible() && !context() && !size().isEmpty()) {
-            // Qt drops a context not yet composed when the view is shown (switching renderers does this) and rebuilds it
-            // only on a later resize or paint; resize synchronously so the check below sees the result, which update() would not
+        if (!isVisible()) {
+            return;
+        }
+        if (!context() && !size().isEmpty()) {
+            // Qt can drop a context not yet composed when the view is shown and, with no RHI yet, rebuild it only
+            // on a later resize or paint; resize synchronously so the check below sees the result, which update() would not
             QResizeEvent resize(size(), size());
             QCoreApplication::sendEvent(this, &resize);
         }
-        if (isVisible() && !isValid()) {
-            reportContextFailure();
-        }
+        reportContextCreationFailure();
     });
 }
 
@@ -156,6 +157,20 @@ void ModernGLWidget::hideEvent(QHideEvent* event)
 {
     endEditGesture();
     saveCamera();
+    // The release, if any, now goes elsewhere
+    mClickPending = false;
+    mPanMode = false;
+    if (std::exchange(mPressEventButton, Qt::NoButton) != Qt::NoButton) {
+        // Queued, as a script handling it could show or delete this view mid-hide
+        QTimer::singleShot(0, this, &ModernGLWidget::raiseMousePressEvent);
+    }
+    // Qt would pass focus to the next widget in the window, which in a floating map is one of its buttons
+    if (hasFocus() && !event->spontaneous() && mpHost && !mpHost->isClosingDown()) {
+        if (TCommandLine* pCommandLine = commandLine()) {
+            pCommandLine->activateWindow();
+            pCommandLine->setFocus(Qt::OtherFocusReason);
+        }
+    }
     QOpenGLWidget::hideEvent(event);
 }
 
@@ -228,13 +243,83 @@ void ModernGLWidget::writeSavedCameras() const
 }
 
 // Each event that tries for a context reports a failure straight away, so a script that shows the view and moves
-// its camera in one go is refused; showEvent()'s timer is only a fallback, a turn of the event loop later
-void ModernGLWidget::reportContextFailure()
+// its camera in one go is refused; showEvent()'s timer is only a fallback, a turn of the event loop later.
+// Qt asks for a context on any resize to a non-empty size, so a view with no size, such as an embedded map
+// Geyser has hidden, has not asked yet, while a sized view with none was refused one
+void ModernGLWidget::reportContextCreationFailure()
 {
-    if (mFailureMessage.isEmpty()) {
+    if (!mFailureMessage.isEmpty() || size().isEmpty()) {
+        return;
+    }
+    if (!context()) {
+        // Qt makes no context at all when the window is composed with Direct3D, Metal or Vulkan, and refuses the
+        // classic 3D view the same way, so only undoing what forced it helps
+        const QStringList forcing = rhiForcingVariables();
+        //: Shown in place of the 3D map when the window is drawn with another graphics API, such as Direct3D, Metal or Vulkan, so the modern 3D mapper cannot get an OpenGL context
+        const QString message = tr("The modern 3D mapper needs OpenGL, but this window is drawn with another graphics API.");
+        if (forcing.isEmpty()) {
+            //: Second paragraph of the message shown in place of the 3D map when the window is drawn with another graphics API; the classic 3D view is refused the same way
+            showFailure(message, tr("The classic 3D view cannot draw here either, so use the 2D map."));
+        } else if (forcing.size() == 1) {
+            //: Second paragraph of the message shown in place of the 3D map when one environment variable makes Qt draw the window with another graphics API; %1 is its name, such as QT_WIDGETS_RHI, keep it as written
+            showFailure(message,
+                        tr("%1 is set in Mudlet's environment, which makes Qt draw this window that way, for the classic 3D view too. Remove it and restart Mudlet to use either 3D view; until then, "
+                           "use the 2D map.")
+                                .arg(forcing.constFirst()));
+        } else {
+            //: Second paragraph of the message shown in place of the 3D map when several environment variables make Qt draw the window with another graphics API; %1 is their names separated by commas, such as QT_WIDGETS_RHI, QT_WIDGETS_RHI_BACKEND, keep them as written
+            showFailure(message,
+                        tr("%1 are set in Mudlet's environment, which make Qt draw this window that way, for the classic 3D view too. Remove them and restart Mudlet to use either 3D view; until "
+                           "then, use the 2D map.")
+                                .arg(forcing.join(qsl(", "))));
+        }
+    } else if (!isValid()) {
         //: Shown in place of the 3D map when the graphics driver cannot create the OpenGL context the modern 3D mapper needs
         showFailure(tr("The modern 3D mapper could not create an OpenGL 3.3 context on this system."));
     }
+}
+
+// Mirrors QBackingStoreRhiSupport::checkForceRhi(), which Qt evaluates once at startup; Mudlet never changes these
+QStringList ModernGLWidget::rhiForcingVariables()
+{
+    QStringList enabling;
+    for (const char* name : {"QT_WIDGETS_RHI", "QT_WIDGETS_HIGHDPI_DOWNSCALE"}) {
+        if (qEnvironmentVariableIntValue(name)) {
+            enabling << QString::fromLatin1(name);
+        }
+    }
+    if (enabling.isEmpty()) {
+        return {};
+    }
+#if defined(Q_OS_WIN) || QT_CONFIG(metal)
+    bool openGL = false;
+#else
+    bool openGL = true;
+#endif
+    QStringList otherApis;
+#if QT_CONFIG(vulkan)
+    otherApis << qsl("vulkan");
+#endif
+#if defined(Q_OS_WIN)
+    otherApis << qsl("d3d11") << qsl("d3d") << qsl("d3d12");
+#endif
+#if QT_CONFIG(metal)
+    otherApis << qsl("metal");
+#endif
+    const QString backend = qEnvironmentVariable("QT_WIDGETS_RHI_BACKEND");
+    const bool backendChoseAnotherApi = otherApis.contains(backend);
+    if (backend == qsl("opengl") || backend == qsl("gl")) {
+        openGL = true;
+    } else if (backendChoseAnotherApi) {
+        openGL = false;
+    }
+    if (openGL) {
+        return {};
+    }
+    if (backendChoseAnotherApi) {
+        enabling << qsl("QT_WIDGETS_RHI_BACKEND");
+    }
+    return enabling;
 }
 
 // QOpenGLWidget retries a context it could not create on every show, resize and paint, and each retry
@@ -246,6 +331,14 @@ bool ModernGLWidget::contextCreationFailed() const
 
 bool ModernGLWidget::event(QEvent* event)
 {
+    // The keys go on to the command line, so it must also win the shortcuts it wins with focus of its own
+    if (event->type() == QEvent::ShortcutOverride) {
+        TCommandLine* pCommandLine = commandLine();
+        if (pCommandLine && pCommandLine->claimsShortcutOverride(static_cast<QKeyEvent*>(event))) {
+            event->accept();
+            return true;
+        }
+    }
     if (event->type() == QEvent::ToolTip) {
         auto* helpEvent = static_cast<QHelpEvent*>(event);
         const QString text = roomToolTip(roomAt(helpEvent->pos()));
@@ -266,7 +359,7 @@ bool ModernGLWidget::event(QEvent* event)
     }
     const bool handled = QOpenGLWidget::event(event);
     if (contextCreationFailed()) {
-        reportContextFailure();
+        reportContextCreationFailure();
     }
     return handled;
 }
@@ -286,9 +379,7 @@ void ModernGLWidget::resizeEvent(QResizeEvent* event)
         return;
     }
     QOpenGLWidget::resizeEvent(event);
-    if (contextCreationFailed()) {
-        reportContextFailure();
-    }
+    reportContextCreationFailure();
 }
 
 void ModernGLWidget::paintEvent(QPaintEvent* event)
@@ -298,11 +389,11 @@ void ModernGLWidget::paintEvent(QPaintEvent* event)
     }
     QOpenGLWidget::paintEvent(event);
     if (contextCreationFailed()) {
-        reportContextFailure();
+        reportContextCreationFailure();
     }
 }
 
-void ModernGLWidget::showFailure(const QString& message)
+void ModernGLWidget::showFailure(const QString& message, const QString& advice)
 {
     mFailureMessage = message;
     qWarning().noquote() << "ModernGLWidget:" << message;
@@ -317,10 +408,9 @@ void ModernGLWidget::showFailure(const QString& message)
         layout->addWidget(mpFailureLabel);
     }
     //: Second paragraph of the message shown in place of the 3D map when the modern 3D mapper cannot run; keep setConfig("experiment.3dmap.modernmapper", false) and the word true exactly as written, they are Lua code the user types
-    mpFailureLabel->setText(qsl("%1\n\n%2")
-                                    .arg(message,
-                                         tr("Use setConfig(\"experiment.3dmap.modernmapper\", false) to try the classic 3D view; if that stays blank too, use the 2D map. Setting it back to true "
-                                            "tries the modern one again.")));
+    const QString tryClassic = tr("Use setConfig(\"experiment.3dmap.modernmapper\", false) to try the classic 3D view; if that stays blank too, use the 2D map. Setting it back to true "
+                                  "tries the modern one again.");
+    mpFailureLabel->setText(qsl("%1\n\n%2").arg(message, advice.isEmpty() ? tryClassic : advice));
     mpFailureLabel->show();
 }
 
@@ -1851,6 +1941,19 @@ void ModernGLWidget::endEditGesture()
     mSelectionRectangle = QRect();
 }
 
+void ModernGLWidget::raisePendingMousePressEvent()
+{
+    if (std::exchange(mPressEventButton, Qt::NoButton) != Qt::NoButton) {
+        raiseMousePressEvent();
+    }
+}
+
+TCommandLine* ModernGLWidget::commandLine() const
+{
+    TMainConsole* console = mpHost ? mpHost->mainConsoleView() : nullptr;
+    return console ? console->mpCommandLine.data() : nullptr;
+}
+
 void ModernGLWidget::raiseMousePressEvent()
 {
     if (!mpHost) {
@@ -1869,6 +1972,8 @@ void ModernGLWidget::mousePressEvent(QMouseEvent* event)
         return;
     }
 
+    // Announced before this one, as with the 2D map, which announces each press as it comes
+    raisePendingMousePressEvent();
     mKeysNavigate = false;
     mPressPosition = event->position().toPoint();
     mClickPending = false;
@@ -1918,9 +2023,11 @@ void ModernGLWidget::mousePressEvent(QMouseEvent* event)
         mPanYStart = y;
     }
 
-    // The 2D map raises this after the press has changed the selection, so a script handling it reads the new one
-    mPressEventPending = mClickPending;
-    if (!mPressEventPending) {
+    // The 2D map raises this after the press has changed the selection, so a script handling it reads the new one;
+    // here a right-click selects with the menu, on the release
+    if (mClickPending || event->button() == Qt::RightButton) {
+        mPressEventButton = event->button();
+    } else {
         raiseMousePressEvent();
     }
 }
@@ -1932,8 +2039,8 @@ void ModernGLWidget::mouseMoveEvent(QMouseEvent* event)
     }
     if (mClickPending && (event->position().toPoint() - mPressPosition).manhattanLength() >= QApplication::startDragDistance()) {
         mClickPending = false;
-        if (std::exchange(mPressEventPending, false)) {
-            raiseMousePressEvent();
+        if (mPressEventButton == Qt::LeftButton) {
+            raisePendingMousePressEvent();
         }
     }
     if ((mMovingRooms || mRectangleSelecting) && !event->buttons().testFlag(Qt::LeftButton)) {
@@ -2026,8 +2133,8 @@ void ModernGLWidget::mouseReleaseEvent(QMouseEvent* event)
     } else if (event->button() == Qt::RightButton && mpMap && mpMap->mpRoomDB) {
         showContextMenu(event->position().toPoint());
     }
-    if (event->button() == Qt::LeftButton && std::exchange(mPressEventPending, false)) {
-        raiseMousePressEvent();
+    if (event->button() == mPressEventButton) {
+        raisePendingMousePressEvent();
     }
     QOpenGLWidget::mouseReleaseEvent(event);
     update();
@@ -2089,17 +2196,42 @@ void ModernGLWidget::panByRooms(const int right, const int up)
     setViewCenter(mAID, shifted(mMapCenterX, offset.x()), shifted(mMapCenterY, offset.y()), mMapCenterZ);
 }
 
+namespace {
+// Focus that a window switch, a menu or the menu bar took away comes back with the same reason
+bool focusReturnsWithReason(const Qt::FocusReason reason)
+{
+    return reason == Qt::ActiveWindowFocusReason || reason == Qt::PopupFocusReason || reason == Qt::MenuBarFocusReason;
+}
+} // namespace
+
 void ModernGLWidget::focusInEvent(QFocusEvent* event)
 {
     // After a click the keys typed next are a command, as with the 2D map, which never takes focus
-    mKeysNavigate = event->reason() == Qt::TabFocusReason || event->reason() == Qt::BacktabFocusReason;
+    if (!focusReturnsWithReason(event->reason())) {
+        mKeysNavigate = event->reason() == Qt::TabFocusReason || event->reason() == Qt::BacktabFocusReason;
+    }
     QOpenGLWidget::focusInEvent(event);
+}
+
+void ModernGLWidget::focusOutEvent(QFocusEvent* event)
+{
+    if (!focusReturnsWithReason(event->reason())) {
+        mKeysNavigate = false;
+    }
+    QOpenGLWidget::focusOutEvent(event);
 }
 
 void ModernGLWidget::keyPressEvent(QKeyEvent* event)
 {
     // Shift is needed for + on many layouts; keypad keys are left to key bindings on the command line
-    const bool navigates = mKeysNavigate && !(event->modifiers() & (Qt::ControlModifier | Qt::AltModifier | Qt::MetaModifier | Qt::KeypadModifier));
+    Qt::KeyboardModifiers otherModifiers = Qt::ControlModifier | Qt::AltModifier | Qt::MetaModifier | Qt::KeypadModifier;
+#if defined(Q_OS_MACOS)
+    // Where Qt marks every arrow key as on the keypad
+    if (event->key() >= Qt::Key_Left && event->key() <= Qt::Key_Down) {
+        otherModifiers &= ~Qt::KeypadModifier;
+    }
+#endif
+    const bool navigates = mKeysNavigate && !(event->modifiers() & otherModifiers);
     if (navigates && mpMap && mpMap->mpRoomDB) {
         switch (event->key()) {
         case Qt::Key_Left:
@@ -2133,13 +2265,11 @@ void ModernGLWidget::keyPressEvent(QKeyEvent* event)
         }
     }
 
-    TMainConsole* console = mpHost ? mpHost->mainConsoleView() : nullptr;
-    if (console && console->mpCommandLine) {
-        TCommandLine* commandLine = console->mpCommandLine;
+    if (TCommandLine* pCommandLine = commandLine()) {
         // A floating map is a window of its own, and focus in an inactive window waits for it to be activated
-        commandLine->activateWindow();
-        commandLine->setFocus(Qt::OtherFocusReason);
-        QCoreApplication::sendEvent(commandLine, event);
+        pCommandLine->activateWindow();
+        pCommandLine->setFocus(Qt::OtherFocusReason);
+        QCoreApplication::sendEvent(pCommandLine, event);
         return;
     }
     QOpenGLWidget::keyPressEvent(event);

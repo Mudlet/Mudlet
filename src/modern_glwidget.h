@@ -59,6 +59,7 @@ class Host;
 class QFontMetricsF;
 class QLabel;
 class T2DMap;
+class TCommandLine;
 class TMap;
 class TRoom;
 struct MapInfoProperties;
@@ -72,6 +73,9 @@ public:
     Q_DISABLE_COPY(ModernGLWidget)
     ModernGLWidget(TMap*, Host*, QWidget* parent = nullptr);
     ~ModernGLWidget() override;
+
+    // The environment variables that made Qt compose every window with an API other than OpenGL
+    static QStringList rhiForcingVariables();
 
     void wheelEvent(QWheelEvent* e) override;
     void setViewCenter(int, int, int, int);
@@ -156,6 +160,7 @@ protected:
     void mouseDoubleClickEvent(QMouseEvent* event) override;
     void keyPressEvent(QKeyEvent* event) override;
     void focusInEvent(QFocusEvent* event) override;
+    void focusOutEvent(QFocusEvent* event) override;
     void showEvent(QShowEvent* event) override;
     void hideEvent(QHideEvent* event) override;
     bool event(QEvent* event) override;
@@ -276,8 +281,8 @@ private:
     bool mRoomsMoved = false;
     // A click that did not pick its room on the press does so on the release, unless it became a drag
     bool mClickPending = false;
-    // Such a press raises sysMapWindowMousePressEvent once its selection is settled, on the release or the drag
-    bool mPressEventPending = false;
+    // The button of a press whose sysMapWindowMousePressEvent waits for its selection to settle, on the release or the drag
+    Qt::MouseButton mPressEventButton = Qt::NoButton;
     // Only focus reached from the keyboard, not by a click, gives the view the keys it pans and zooms with
     bool mKeysNavigate = false;
     struct SavedCamera
@@ -299,7 +304,7 @@ private:
     void renderText(const QString& text, float x, float y);
     void setupBuffers();
     void cleanup();
-    void showFailure(const QString& message);
+    void showFailure(const QString& message, const QString& advice = QString());
     GLuint symbolTexture(const QString& symbol, const QColor& color);
     // A disc filling the texture, shaded by a radial gradient over its radius
     GLuint discTexture(const QString& key, const QGradientStops& stops);
@@ -311,7 +316,7 @@ private:
     GLuint exitMarkerTexture(const TRoom& room, const QColor& roomColor);
     // Text on a clear background; size is set to the texture's size in pixels
     GLuint textTexture(const QString& key, const QString& text, const QFont& font, const QFontMetricsF& metrics, const QColor& color, QSize& size);
-    void reportContextFailure();
+    void reportContextCreationFailure();
     bool contextCreationFailed() const;
     void startSmoothTransition(int targetAID, int targetX, int targetY, int targetZ);
     void stopSmoothTransition();
@@ -332,6 +337,8 @@ private:
     void holdView();
     void showContextMenu(const QPoint& position);
     void raiseMousePressEvent();
+    void raisePendingMousePressEvent();
+    TCommandLine* commandLine() const;
     QString roomToolTip(int roomId) const;
     GLuint selectionTexture();
     void saveCamera();
