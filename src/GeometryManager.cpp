@@ -29,6 +29,7 @@
 #include <algorithm>
 #include <cmath>
 #include <limits>
+#include <numbers>
 
 namespace {
 QVector<float> upNormals(int vertexCount)
@@ -65,6 +66,7 @@ void GeometryManager::initialize()
     }
 
     generateCubeTemplate();
+    mCylinderTemplate = cylinderMesh(24);
     mInitialized = true;
 }
 
@@ -76,8 +78,11 @@ void GeometryManager::cleanup()
 
     mCubeVertexBuffer.destroy();
     mCubeIndexBuffer.destroy();
+    mCylinderVertexBuffer.destroy();
+    mCylinderIndexBuffer.destroy();
     mInstanceBuffer.destroy();
     mCubeTemplate.clear();
+    mCylinderTemplate.clear();
     mPlayerIconTemplate.reset();
     mInitialized = false;
 }
@@ -179,23 +184,23 @@ void GeometryManager::generateCubeTemplate()
     // Colors will be set per instance, so we don't populate them in the template
 }
 
-GeometryData GeometryManager::transformCubeTemplate(const QMatrix4x4& transform, float r, float g, float b, float a)
+GeometryData GeometryManager::transformTemplate(const GeometryData& geometry, const QMatrix4x4& transform, float r, float g, float b, float a)
 {
     GeometryData result;
     const QMatrix4x4 normalTransform = transform.inverted().transposed();
 
-    for (int i = 0; i < mCubeTemplate.vertices.size(); i += 3) {
-        const QVector3D vertex = transform.map(QVector3D(mCubeTemplate.vertices[i], mCubeTemplate.vertices[i + 1], mCubeTemplate.vertices[i + 2]));
+    for (int i = 0; i < geometry.vertices.size(); i += 3) {
+        const QVector3D vertex = transform.map(QVector3D(geometry.vertices[i], geometry.vertices[i + 1], geometry.vertices[i + 2]));
         result.vertices << vertex.x() << vertex.y() << vertex.z();
 
-        const QVector3D normal = normalTransform.mapVector(QVector3D(mCubeTemplate.normals[i], mCubeTemplate.normals[i + 1], mCubeTemplate.normals[i + 2])).normalized();
+        const QVector3D normal = normalTransform.mapVector(QVector3D(geometry.normals[i], geometry.normals[i + 1], geometry.normals[i + 2])).normalized();
         result.normals << normal.x() << normal.y() << normal.z();
 
         result.colors << r << g << b << a;
     }
 
     // Copy indices (they don't need transformation)
-    result.indices = mCubeTemplate.indices;
+    result.indices = geometry.indices;
 
     return result;
 }
@@ -210,7 +215,7 @@ GeometryData GeometryManager::generateCubeGeometry(float x, float y, float z, fl
     QMatrix4x4 transform = QMatrix4x4();
     transform.translate(x, y, z);
     transform.scale(size);
-    return transformCubeTemplate(transform, r, g, b, a);
+    return transformTemplate(mCubeTemplate, transform, r, g, b, a);
 }
 
 GeometryData GeometryManager::generateLineGeometry(const QVector<float>& vertices, const QVector<float>& colors)
@@ -450,6 +455,86 @@ QVector4D GeometryManager::fadedColor(const QColor& color, const LevelFade& fade
         return own * keep + back * fade.towardBackground;
     };
     return QVector4D(mixed(color.redF(), background.redF()), mixed(color.greenF(), background.greenF()), mixed(color.blueF(), background.blueF()), color.alphaF() * fade.opacity);
+}
+
+QColor GeometryManager::levelFadeTarget(const int levelsAbove, const QColor& background, const QColor& upperLevelColor, const QColor& lowerLevelColor)
+{
+    if (levelsAbove == 0) {
+        return background;
+    }
+    const QColor& levelColor = levelsAbove > 0 ? upperLevelColor : lowerLevelColor;
+    const float cover = levelColor.alphaF();
+    const auto over = [cover](const float own, const float back) {
+        return own * cover + back * (1.0f - cover);
+    };
+    return QColor::fromRgbF(over(levelColor.redF(), background.redF()), over(levelColor.greenF(), background.greenF()), over(levelColor.blueF(), background.blueF()));
+}
+
+QList<QLineF> GeometryManager::gridLines(const QRectF& extent)
+{
+    QList<QLineF> lines;
+    if (!extent.isValid()) {
+        return lines;
+    }
+    const auto firstX = static_cast<qint64>(std::ceil(extent.left()));
+    const auto lastX = static_cast<qint64>(std::floor(extent.right()));
+    const auto firstY = static_cast<qint64>(std::ceil(extent.top()));
+    const auto lastY = static_cast<qint64>(std::floor(extent.bottom()));
+    lines.reserve(qMax<qint64>(0, lastX - firstX + 1) + qMax<qint64>(0, lastY - firstY + 1));
+    for (qint64 x = firstX; x <= lastX; ++x) {
+        lines.append(QLineF(static_cast<qreal>(x), extent.top(), static_cast<qreal>(x), extent.bottom()));
+    }
+    for (qint64 y = firstY; y <= lastY; ++y) {
+        lines.append(QLineF(extent.left(), static_cast<qreal>(y), extent.right(), static_cast<qreal>(y)));
+    }
+    return lines;
+}
+
+GeometryData GeometryManager::cylinderMesh(const int segments)
+{
+    GeometryData mesh;
+    const int count = qMax(3, segments);
+    const auto addVertex = [&mesh](const float x, const float y, const float z, const float nx, const float ny, const float nz) {
+        mesh.vertices << x << y << z;
+        mesh.normals << nx << ny << nz;
+    };
+    const auto rim = [count](const int index) {
+        const float angle = 2.0f * std::numbers::pi_v<float> * static_cast<float>(index % count) / static_cast<float>(count);
+        return std::pair<float, float>(std::cos(angle), std::sin(angle));
+    };
+    // The side's rings share no vertex with the caps, whose normals point straight up or down
+    for (const float z : {-1.0f, 1.0f}) {
+        for (int index = 0; index < count; ++index) {
+            const auto [x, y] = rim(index);
+            addVertex(x, y, z, x, y, 0.0f);
+        }
+    }
+    const auto u = [](const int index) {
+        return static_cast<unsigned int>(index);
+    };
+    for (int index = 0; index < count; ++index) {
+        const int next = (index + 1) % count;
+        mesh.indices << u(index) << u(next) << u(count + next);
+        mesh.indices << u(index) << u(count + next) << u(count + index);
+    }
+    for (const float z : {1.0f, -1.0f}) {
+        const int center = mesh.vertexCount();
+        addVertex(0.0f, 0.0f, z, 0.0f, 0.0f, z);
+        for (int index = 0; index < count; ++index) {
+            const auto [x, y] = rim(index);
+            addVertex(x, y, z, 0.0f, 0.0f, z);
+        }
+        for (int index = 0; index < count; ++index) {
+            const int here = center + 1 + index;
+            const int next = center + 1 + (index + 1) % count;
+            if (z > 0.0f) {
+                mesh.indices << u(center) << u(here) << u(next);
+            } else {
+                mesh.indices << u(center) << u(next) << u(here);
+            }
+        }
+    }
+    return mesh;
 }
 
 QVector4D GeometryManager::fadedDecalTint(const LevelFade& fade)
@@ -947,18 +1032,23 @@ void GeometryManager::renderInstancedCubes(const QVector<CubeInstanceData>& inst
                                            QOpenGLBuffer& colorBuffer,
                                            QOpenGLBuffer& normalBuffer,
                                            QOpenGLBuffer& indexBuffer,
-                                           GLenum drawMode)
+                                           GLenum drawMode,
+                                           const InstanceShape shape)
 {
     if (!mInitialized || instances.isEmpty()) {
         return;
     }
+    const bool cylinder = shape == InstanceShape::Cylinder;
+    const GeometryData& mesh = cylinder ? mCylinderTemplate : mCubeTemplate;
+    QOpenGLBuffer& meshVertexBuffer = cylinder ? mCylinderVertexBuffer : mCubeVertexBuffer;
+    QOpenGLBuffer& meshIndexBuffer = cylinder ? mCylinderIndexBuffer : mCubeIndexBuffer;
 
     // Check if instancing functions are available
     if (!glVertexAttribDivisor || !glDrawElementsInstanced) {
         qWarning() << "GeometryManager: Instancing functions not available, falling back to individual cubes";
         // Fallback to individual cube rendering
         for (const auto& instance : instances) {
-            GeometryData cubeGeometry = transformCubeTemplate(instance.transform, instance.color[0], instance.color[1], instance.color[2], instance.color[3]);
+            GeometryData cubeGeometry = transformTemplate(mesh, instance.transform, instance.color[0], instance.color[1], instance.color[2], instance.color[3]);
             renderGeometry(cubeGeometry, vao, vertexBuffer, colorBuffer, normalBuffer, indexBuffer, drawMode);
         }
         return;
@@ -966,17 +1056,21 @@ void GeometryManager::renderInstancedCubes(const QVector<CubeInstanceData>& inst
 
     QOpenGLVertexArrayObject::Binder vaoBinder(&vao);
 
-    if (!mCubeVertexBuffer.isCreated()) {
-        uploadCubeTemplate();
+    if (!meshVertexBuffer.isCreated()) {
+        uploadTemplate(mesh, meshVertexBuffer, meshIndexBuffer);
+    }
+    if (!mInstanceBuffer.isCreated()) {
+        mInstanceBuffer.create();
+        mInstanceBuffer.setUsagePattern(QOpenGLBuffer::StreamDraw);
     }
 
-    const int positionBytes = static_cast<int>(mCubeTemplate.vertices.size() * sizeof(float));
-    mCubeVertexBuffer.bind();
+    const int positionBytes = static_cast<int>(mesh.vertices.size() * sizeof(float));
+    meshVertexBuffer.bind();
     glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, nullptr);
     glEnableVertexAttribArray(0);
     glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 0, reinterpret_cast<void*>(static_cast<quintptr>(positionBytes)));
     glEnableVertexAttribArray(1);
-    mCubeIndexBuffer.bind();
+    meshIndexBuffer.bind();
 
     // The shader takes color from the instance; a stale per-vertex color array may be shorter than the cube
     glDisableVertexAttribArray(2);
@@ -1006,7 +1100,7 @@ void GeometryManager::renderInstancedCubes(const QVector<CubeInstanceData>& inst
     glVertexAttribDivisor(7, 1);
 
     // Draw all instances with a single call
-    glDrawElementsInstanced(drawMode, mCubeTemplate.indexCount(), GL_UNSIGNED_INT, nullptr, instances.size());
+    glDrawElementsInstanced(drawMode, mesh.indexCount(), GL_UNSIGNED_INT, nullptr, instances.size());
 
     // Clean up instance attributes
     glVertexAttribDivisor(3, 0);
@@ -1021,24 +1115,21 @@ void GeometryManager::renderInstancedCubes(const QVector<CubeInstanceData>& inst
     glDisableVertexAttribArray(7);
 }
 
-void GeometryManager::uploadCubeTemplate()
+void GeometryManager::uploadTemplate(const GeometryData& geometry, QOpenGLBuffer& vertexBuffer, QOpenGLBuffer& indexBuffer)
 {
-    const int positionBytes = static_cast<int>(mCubeTemplate.vertices.size() * sizeof(float));
-    const int normalBytes = static_cast<int>(mCubeTemplate.normals.size() * sizeof(float));
-    mCubeVertexBuffer.create();
-    mCubeVertexBuffer.bind();
-    mCubeVertexBuffer.setUsagePattern(QOpenGLBuffer::StaticDraw);
-    mCubeVertexBuffer.allocate(positionBytes + normalBytes);
-    mCubeVertexBuffer.write(0, mCubeTemplate.vertices.constData(), positionBytes);
-    mCubeVertexBuffer.write(positionBytes, mCubeTemplate.normals.constData(), normalBytes);
+    const int positionBytes = static_cast<int>(geometry.vertices.size() * sizeof(float));
+    const int normalBytes = static_cast<int>(geometry.normals.size() * sizeof(float));
+    vertexBuffer.create();
+    vertexBuffer.bind();
+    vertexBuffer.setUsagePattern(QOpenGLBuffer::StaticDraw);
+    vertexBuffer.allocate(positionBytes + normalBytes);
+    vertexBuffer.write(0, geometry.vertices.constData(), positionBytes);
+    vertexBuffer.write(positionBytes, geometry.normals.constData(), normalBytes);
 
-    mCubeIndexBuffer.create();
-    mCubeIndexBuffer.bind();
-    mCubeIndexBuffer.setUsagePattern(QOpenGLBuffer::StaticDraw);
-    mCubeIndexBuffer.allocate(mCubeTemplate.indices.constData(), static_cast<int>(mCubeTemplate.indices.size() * sizeof(unsigned int)));
-
-    mInstanceBuffer.create();
-    mInstanceBuffer.setUsagePattern(QOpenGLBuffer::StreamDraw);
+    indexBuffer.create();
+    indexBuffer.bind();
+    indexBuffer.setUsagePattern(QOpenGLBuffer::StaticDraw);
+    indexBuffer.allocate(geometry.indices.constData(), static_cast<int>(geometry.indices.size() * sizeof(unsigned int)));
 }
 
 void GeometryManager::renderInstancedCubes(const QVector<CubeInstanceData>& instances,
@@ -1048,17 +1139,19 @@ void GeometryManager::renderInstancedCubes(const QVector<CubeInstanceData>& inst
                                            QOpenGLBuffer& normalBuffer,
                                            QOpenGLBuffer& indexBuffer,
                                            ResourceManager* resourceManager,
-                                           GLenum drawMode)
+                                           GLenum drawMode,
+                                           const InstanceShape shape)
 {
     if (instances.isEmpty()) {
         return;
     }
 
     // Call the original instanced render method
-    renderInstancedCubes(instances, vao, vertexBuffer, colorBuffer, normalBuffer, indexBuffer, drawMode);
+    renderInstancedCubes(instances, vao, vertexBuffer, colorBuffer, normalBuffer, indexBuffer, drawMode, shape);
 
     // Track draw call statistics - one draw call for all instances
     if (resourceManager) {
-        resourceManager->onDrawCall(instances.size() * (mCubeTemplate.indexCount() / 3)); // Count triangles for all instances
+        const GeometryData& mesh = shape == InstanceShape::Cylinder ? mCylinderTemplate : mCubeTemplate;
+        resourceManager->onDrawCall(instances.size() * (mesh.indexCount() / 3)); // Count triangles for all instances
     }
 }

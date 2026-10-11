@@ -20,6 +20,7 @@
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
 
+#include <QLineF>
 #include <QList>
 #include <QRectF>
 #include <QVector>
@@ -144,6 +145,9 @@ public:
     // Must match the layout location of aTexCoord in shaders/vertex.glsl
     static constexpr GLuint scmTexCoordLocation = 8;
 
+    // What each instance's transform places: the cube [-1, 1], or an upright cylinder of radius 1 from z -1 to 1
+    enum class InstanceShape { Box, Cylinder };
+
     GeometryManager();
     ~GeometryManager();
 
@@ -191,6 +195,13 @@ public:
     // levelsAbove is how many levels above the viewed one, negative for below
     static LevelFade levelFade(int levelsAbove, bool moreTransparent);
     static QVector4D fadedColor(const QColor& color, const LevelFade& fade, const QColor& background);
+    // What a level fades toward when the mapper draws the levels above and below in their own colors: the
+    // upper or lower level color laid over the background by its alpha, or the background on the viewed level
+    static QColor levelFadeTarget(int levelsAbove, const QColor& background, const QColor& upperLevelColor, const QColor& lowerLevelColor);
+    // The map grid's lines across extent, one at each whole coordinate as the 2D map draws them, through rooms' centers
+    static QList<QLineF> gridLines(const QRectF& extent);
+    // An upright cylinder of radius 1 from z -1 to 1, its side smooth shaded, each face wound counterclockwise from outside
+    static GeometryData cylinderMesh(int segments);
     // The tint for a texture drawn on a faded room, which can only make it more see-through
     static QVector4D fadedDecalTint(const LevelFade& fade);
 
@@ -241,7 +252,8 @@ public:
                               QOpenGLBuffer& colorBuffer,
                               QOpenGLBuffer& normalBuffer,
                               QOpenGLBuffer& indexBuffer,
-                              GLenum drawMode = GL_TRIANGLES);
+                              GLenum drawMode = GL_TRIANGLES,
+                              InstanceShape shape = InstanceShape::Box);
 
     void renderInstancedCubes(const QVector<CubeInstanceData>& instances,
                               QOpenGLVertexArrayObject& vao,
@@ -250,7 +262,8 @@ public:
                               QOpenGLBuffer& normalBuffer,
                               QOpenGLBuffer& indexBuffer,
                               class ResourceManager* resourceManager,
-                              GLenum drawMode = GL_TRIANGLES);
+                              GLenum drawMode = GL_TRIANGLES,
+                              InstanceShape shape = InstanceShape::Box);
 
 private:
     bool mInitialized = false;
@@ -259,6 +272,9 @@ private:
     GeometryData mCubeTemplate;
     QOpenGLBuffer mCubeVertexBuffer{QOpenGLBuffer::VertexBuffer};
     QOpenGLBuffer mCubeIndexBuffer{QOpenGLBuffer::IndexBuffer};
+    GeometryData mCylinderTemplate;
+    QOpenGLBuffer mCylinderVertexBuffer{QOpenGLBuffer::VertexBuffer};
+    QOpenGLBuffer mCylinderIndexBuffer{QOpenGLBuffer::IndexBuffer};
     QOpenGLBuffer mInstanceBuffer{QOpenGLBuffer::VertexBuffer};
 
     // Cached player icon geometry
@@ -272,8 +288,8 @@ private:
     PFNGLDRAWELEMENTSINSTANCEDPROC glDrawElementsInstanced = nullptr;
 
     void generateCubeTemplate();
-    void uploadCubeTemplate();
-    GeometryData transformCubeTemplate(const QMatrix4x4& transform, float r, float g, float b, float a);
+    static void uploadTemplate(const GeometryData& geometry, QOpenGLBuffer& vertexBuffer, QOpenGLBuffer& indexBuffer);
+    static GeometryData transformTemplate(const GeometryData& geometry, const QMatrix4x4& transform, float r, float g, float b, float a);
 
     void loadPlayerIconTemplate(float scale = 0.005f, float rotX = 0.0f, float rotY = 0.0f, float rotZ = 90.0f);
 };

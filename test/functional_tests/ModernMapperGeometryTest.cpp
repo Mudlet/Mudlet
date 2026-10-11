@@ -31,6 +31,7 @@
 #include <QColor>
 #include <QFile>
 #include <QRegularExpression>
+#include <QVector2D>
 
 #include "GeometryManager.h"
 #include "LabelTextureCache.h"
@@ -260,6 +261,79 @@ private slots:
         const QVector4D oneAbove = GeometryManager::fadedColor(room, GeometryManager::levelFade(1, false), background);
         QVERIFY2(oneAbove.w() < 0.5f, "the level above would hide the viewed one");
         QVERIFY(GeometryManager::levelFade(2, false).opacity < GeometryManager::levelFade(1, false).opacity);
+    }
+
+    // As the 2D map draws them: the levels above and below in their own colors, laid over the background by their alpha
+    void test_levelsFadeTowardTheUpperAndLowerLevelColors()
+    {
+        const QColor background(Qt::black);
+        const QColor upper(Qt::white);
+        const QColor lower(255, 0, 0, 128);
+        QCOMPARE(GeometryManager::levelFadeTarget(0, background, upper, lower), background);
+        QCOMPARE(GeometryManager::levelFadeTarget(1, background, upper, lower), QColor(Qt::white));
+        QCOMPARE(GeometryManager::levelFadeTarget(3, background, upper, lower), QColor(Qt::white));
+        const QColor below = GeometryManager::levelFadeTarget(-2, background, upper, lower);
+        QVERIFY2(qAbs(below.redF() - 128.0 / 255.0) < 0.01 && below.greenF() == 0.0 && below.blueF() == 0.0, qPrintable(below.name()));
+        QCOMPARE(below.alpha(), 255);
+    }
+
+    void test_gridLinesRunThroughEveryWholeCoordinate()
+    {
+        const QRectF extent(QPointF(-1.5, -0.5), QPointF(1.5, 2.25));
+        const QList<QLineF> lines = GeometryManager::gridLines(extent);
+        QList<qreal> across;
+        QList<qreal> upward;
+        for (const QLineF& line : lines) {
+            if (line.x1() == line.x2()) {
+                QCOMPARE(line.y1(), extent.top());
+                QCOMPARE(line.y2(), extent.bottom());
+                across.append(line.x1());
+            } else {
+                QCOMPARE(line.y1(), line.y2());
+                QCOMPARE(line.x1(), extent.left());
+                QCOMPARE(line.x2(), extent.right());
+                upward.append(line.y1());
+            }
+        }
+        QCOMPARE(across, (QList<qreal>{-1.0, 0.0, 1.0}));
+        QCOMPARE(upward, (QList<qreal>{0.0, 1.0, 2.0}));
+        QVERIFY(GeometryManager::gridLines(QRectF()).isEmpty());
+    }
+
+    // Round rooms are drawn from this, scaled like the cube [-1, 1], so it must fill the same height and the circle inside it
+    void test_theCylinderFitsInsideTheUnitCube()
+    {
+        const GeometryData mesh = GeometryManager::cylinderMesh(24);
+        QVERIFY(mesh.vertexCount() > 0);
+        QCOMPARE(mesh.normals.size(), mesh.vertices.size());
+        QCOMPARE(mesh.indexCount() % 3, 0);
+        float lowest = 0.0f;
+        float highest = 0.0f;
+        float widest = 0.0f;
+        for (int i = 0; i < mesh.vertexCount(); ++i) {
+            const QVector3D vertex(mesh.vertices[3 * i], mesh.vertices[3 * i + 1], mesh.vertices[3 * i + 2]);
+            const QVector3D normal(mesh.normals[3 * i], mesh.normals[3 * i + 1], mesh.normals[3 * i + 2]);
+            QVERIFY(qAbs(normal.length() - 1.0f) < 1e-5f);
+            lowest = qMin(lowest, vertex.z());
+            highest = qMax(highest, vertex.z());
+            widest = qMax(widest, QVector2D(vertex.x(), vertex.y()).length());
+        }
+        QCOMPARE(lowest, -1.0f);
+        QCOMPARE(highest, 1.0f);
+        QVERIFY(qAbs(widest - 1.0f) < 1e-5f);
+        // Every triangle faces away from the axis or out of a cap, so it is lit from outside
+        for (int i = 0; i < mesh.indexCount(); i += 3) {
+            QVector3D corners[3];
+            for (int k = 0; k < 3; ++k) {
+                const auto v = static_cast<int>(mesh.indices[i + k]);
+                QVERIFY(v < mesh.vertexCount());
+                corners[k] = QVector3D(mesh.vertices[3 * v], mesh.vertices[3 * v + 1], mesh.vertices[3 * v + 2]);
+            }
+            const QVector3D facing = QVector3D::crossProduct(corners[1] - corners[0], corners[2] - corners[0]);
+            const QVector3D middle = (corners[0] + corners[1] + corners[2]) / 3.0f;
+            const QVector3D outward = qAbs(middle.z()) > 0.999f ? QVector3D(0.0f, 0.0f, middle.z()) : QVector3D(middle.x(), middle.y(), 0.0f);
+            QVERIFY2(QVector3D::dotProduct(facing, outward) > 0.0f, qPrintable(qsl("triangle %1 faces inward").arg(i / 3)));
+        }
     }
 
     void test_aLabelIsOnTheLevelItsHeightRoundsTo_data()

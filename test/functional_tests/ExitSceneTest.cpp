@@ -464,6 +464,31 @@ private slots:
         QVERIFY(!arrow.isEmpty());
         QVERIFY(qAbs(furthest(arrow.first(), QVector3D(1, 0, 0)).x() - reach) < scmTolerance);
         QVERIFY2(segmentsIn(scene, mExitColor).isEmpty(), "the exit is drawn as an ordinary line too");
+
+        // What a click on the arrow walks to
+        QCOMPARE(scene.areaExits.size(), 1);
+        QCOMPARE(scene.areaExits.first().destinationId, 2);
+        QCOMPARE(scene.areaExits.first().from, QVector3D(0, 0, 0));
+        QCOMPARE(scene.areaExits.first().to, QVector3D(reach, 0, 0));
+        QCOMPARE(scene.areaExits.first().level, 0);
+    }
+
+    void test_onlyExitsOutOfTheAreaAreClickedThrough()
+    {
+        const int otherAreaId = map()->mpRoomDB->addArea(qsl("Other Area"));
+        TRoom* pHere = addRoomAt(1, mAreaId, 0, 0);
+        TRoom* pNeighbor = addRoomAt(2, mAreaId, 0, 1);
+        TRoom* pThere = addRoomAt(3, otherAreaId, 5, 0);
+        QVERIFY(pHere && pNeighbor && pThere);
+        pHere->setExit(2, DIR_NORTH);
+        // In and out have no direction on the map to point to
+        pHere->setExit(3, DIR_IN);
+        QVERIFY(build().areaExits.isEmpty());
+        pHere->setExit(3, DIR_SOUTH);
+        const QList<ExitScene::AreaExit> areaExits = build().areaExits;
+        QCOMPARE(areaExits.size(), 1);
+        QCOMPARE(areaExits.first().destinationId, 3);
+        QCOMPARE(areaExits.first().to, QVector3D(0, -1, 0));
     }
 
     // An upright arrow's fill stands off its outline's plane on both sides, so that it shows from either

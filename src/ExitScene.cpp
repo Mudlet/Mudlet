@@ -393,6 +393,7 @@ void Builder::addRoom(const int roomId, const TRoom& room)
             const float length = mOptions.largeAreaExitArrows ? 0.8f : mWidth * 5.0f;
             const float halfWidth = mOptions.largeAreaExitArrows ? 0.3f : mWidth * 2.0f;
             arrowhead(QVector3D(outer.x(), outer.y(), top(outer.z())), along, length, halfWidth, color, level, outlineColor);
+            mScene.areaExits.append({center, outer, exit.destinationId, level});
             if (onCompass(exit.direction)) {
                 door(room, key, center, center + (outer - center) / 2.0f, level);
             }

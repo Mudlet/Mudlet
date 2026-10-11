@@ -233,13 +233,18 @@ void RenderTexturedTrianglesCommand::execute(QOpenGLFunctions* gl,
     }
 }
 
-RenderInstancedCubesCommand::RenderInstancedCubesCommand(
-        const QVector<CubeInstanceData>& instances, const QMatrix4x4& projectionMatrix, const QMatrix4x4& viewMatrix, const QMatrix4x4& modelMatrix, const Shading shading)
+RenderInstancedCubesCommand::RenderInstancedCubesCommand(const QVector<CubeInstanceData>& instances,
+                                                         const QMatrix4x4& projectionMatrix,
+                                                         const QMatrix4x4& viewMatrix,
+                                                         const QMatrix4x4& modelMatrix,
+                                                         const Shading shading,
+                                                         const GeometryManager::InstanceShape shape)
 : mInstances(instances)
 , mProjectionMatrix(projectionMatrix)
 , mViewMatrix(viewMatrix)
 , mModelMatrix(modelMatrix)
 , mShading(shading)
+, mShape(shape)
 {
 }
 
@@ -277,7 +282,7 @@ void RenderInstancedCubesCommand::execute(QOpenGLFunctions* gl,
         shader->setUniformValue("uDisableLighting", true);
     }
 
-    geometryManager->renderInstancedCubes(mInstances, vao, vertexBuffer, colorBuffer, normalBuffer, indexBuffer, resourceManager, GL_TRIANGLES);
+    geometryManager->renderInstancedCubes(mInstances, vao, vertexBuffer, colorBuffer, normalBuffer, indexBuffer, resourceManager, GL_TRIANGLES, mShape);
 
     if (unlit) {
         shader->setUniformValue("uDisableLighting", false);

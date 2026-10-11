@@ -65,12 +65,16 @@ class TCommandLine;
 class TMap;
 class TRoom;
 struct MapInfoProperties;
+namespace ExitScene {
+struct Options;
+}
 
 class ModernGLWidget : public QOpenGLWidget, protected QOpenGLFunctions
 {
     Q_OBJECT
     friend class ModernRoomTextureTest;
     friend class Map3DViewInteractionTest;
+    friend class ModernMapperRenderTest;
 
 public:
     Q_DISABLE_COPY(ModernGLWidget)
@@ -102,6 +106,8 @@ public:
     // The room drawn under this point of the view, or 0; orNear also takes a room seen too small to point at
     // whose middle is a few pixels off
     int roomAt(const QPoint& position, bool orNear = true);
+    // The room in another area that the area-exit arrow drawn under this point of the view leads to, or 0
+    int areaExitAt(const QPoint& position);
     // A view in a map window of its own: it shows the area it is told to rather than following the player
     void setSecondaryView(bool secondary);
     bool secondaryView() const { return mSecondaryView; }
@@ -317,11 +323,15 @@ private:
         QVector<float> colors;
     };
     QMap<int, LevelExits> mSeeThroughExits;
+    // The rooms whose IDs the last room pass drew: those too small to read, or behind a nearer one on screen, are left out
+    QSet<int> mRoomIdsDrawn;
 
     // Private methods for modern OpenGL
     void updateMatrices();
     void renderRooms();
     void renderConnections();
+    // The 2D map's grid, on the viewed level under its rooms: queued with depth testing on and depth writing off
+    void queueGrid();
     // Map labels lie flat at their place on the map; those shown on top over the rooms, the others under the exits
     void renderLabels(bool onTop);
     // A column of light over the player's room, seen faintly through anything in front of it
@@ -357,7 +367,12 @@ private:
     void frameRooms(qreal zoom);
     void emitCameraControls();
     void setOrientationKeepingRoll(float theta, float phi);
+    // Turns the camera around the view's center, by degrees of azimuth
+    void turnCamera(float degrees);
     bool levelShown(int z) const;
+    // What rooms and exits on level z recede toward: the mapper's upper or lower level color, or the background
+    QColor levelFadeTarget(int z) const;
+    ExitScene::Options exitSceneOptions() const;
     void zoomBySteps(float steps);
     void panByRooms(int right, int up);
     void selectRoom(int roomId, Qt::KeyboardModifiers modifiers);
@@ -372,7 +387,7 @@ private:
     void raisePendingMousePressEvent();
     TCommandLine* commandLine() const;
     QString roomToolTip(int roomId) const;
-    GLuint selectionTexture();
+    GLuint selectionTexture(bool round);
     void saveCamera();
     bool restoreCamera(bool distanceOnly);
     void loadSavedCameras();

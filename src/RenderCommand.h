@@ -179,8 +179,12 @@ private:
 class RenderInstancedCubesCommand : public RenderCommand
 {
 public:
-    RenderInstancedCubesCommand(
-            const QVector<CubeInstanceData>& instances, const QMatrix4x4& projectionMatrix, const QMatrix4x4& viewMatrix, const QMatrix4x4& modelMatrix, Shading shading = Shading::Lit);
+    RenderInstancedCubesCommand(const QVector<CubeInstanceData>& instances,
+                                const QMatrix4x4& projectionMatrix,
+                                const QMatrix4x4& viewMatrix,
+                                const QMatrix4x4& modelMatrix,
+                                Shading shading = Shading::Lit,
+                                GeometryManager::InstanceShape shape = GeometryManager::InstanceShape::Box);
 
     void execute(QOpenGLFunctions* gl,
                 QOpenGLShaderProgram* shader,
@@ -202,6 +206,7 @@ private:
     QMatrix4x4 mViewMatrix;
     QMatrix4x4 mModelMatrix;
     Shading mShading;
+    GeometryManager::InstanceShape mShape;
 };
 
 // Command to change OpenGL state
