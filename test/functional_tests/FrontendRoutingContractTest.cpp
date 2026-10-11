@@ -20,6 +20,8 @@
 #include <QDir>
 #include <QSignalSpy>
 #include <QTemporaryDir>
+#include <QtNetwork/QTcpServer>
+#include <QtNetwork/QTcpSocket>
 #include <QtTest/QtTest>
 
 #include <memory>
@@ -66,6 +68,19 @@ QString size(const QSize& value)
 {
     return qsl("%1x%2").arg(value.width()).arg(value.height());
 }
+
+const QByteArray scmRoutedXmlMap = QByteArrayLiteral(R"(<?xml version="1.0" encoding="UTF-8"?>
+<map>
+ <areas>
+  <area id="1" name="Routed Xml Area"/>
+ </areas>
+ <rooms>
+  <room id="3" area="1" title="Routed Xml Room" environment="2">
+   <coord x="0" y="0" z="0"/>
+  </room>
+ </rooms>
+</map>
+)");
 
 // Writes down what reaches a frame's sink, then passes it on
 class RecordingSink final : public TPrintSink
@@ -271,27 +286,42 @@ public:
     bool mSelecting = false;
     int mShownAreaId = 0;
     bool mShowing3D = false;
+    bool mProgressShown = false;
+    int mProgressMaximum = 0;
 
     bool onScreen() const override
     {
         mCalls << call("onScreen");
         return true;
     }
-    void showMapProgress(const QString& label, bool cancelable) override { mCalls << call("showMapProgress", {label, flag(cancelable)}); }
+    void showMapProgress(const QString& label, bool cancelable) override
+    {
+        mCalls << call("showMapProgress", {label, flag(cancelable)});
+        mProgressShown = true;
+        mProgressMaximum = 0;
+    }
     void setMapProgressLabel(const QString& text) override { mCalls << call("setMapProgressLabel", {text}); }
-    void setMapProgressRange(int minimum, int maximum) override { mCalls << call("setMapProgressRange", {QString::number(minimum), QString::number(maximum)}); }
+    void setMapProgressRange(int minimum, int maximum) override
+    {
+        mCalls << call("setMapProgressRange", {QString::number(minimum), QString::number(maximum)});
+        mProgressMaximum = maximum;
+    }
     void setMapProgressValue(int value) override { mCalls << call("setMapProgressValue", {QString::number(value)}); }
     int mapProgressMaximum() const override
     {
         mCalls << call("mapProgressMaximum");
-        return 0;
+        return mProgressMaximum;
     }
     void setMapProgressCancelable(bool cancelable) override { mCalls << call("setMapProgressCancelable", {flag(cancelable)}); }
-    void hideMapProgress() override { mCalls << call("hideMapProgress"); }
+    void hideMapProgress() override
+    {
+        mCalls << call("hideMapProgress");
+        mProgressShown = false;
+    }
     bool isMapProgressVisible() const override
     {
         mCalls << call("isMapProgressVisible");
-        return false;
+        return mProgressShown;
     }
 
     bool selectingRooms() const override
@@ -472,6 +502,37 @@ private:
         const int value = lua_isnumber(L, -1) ? static_cast<int>(lua_tointeger(L, -1)) : -1;
         lua_pop(L, 1);
         return value;
+    }
+
+    // The map view's calls that show map progress, without its queries
+    static QStringList progressCalls(const QStringList& calls)
+    {
+        QStringList shown;
+        for (const QString& entry : calls) {
+            if (entry.startsWith(qsl("showMapProgress(")) || entry.startsWith(qsl("setMapProgress")) || entry.startsWith(qsl("hideMapProgress("))) {
+                shown << entry;
+            }
+        }
+        return shown;
+    }
+
+    // What importing scmRoutedXmlMap shows; shownWith is the arguments of its opening showMapProgress()
+    static QStringList mapImportProgress(const QString& shownWith)
+    {
+        return {
+                qsl("showMapProgress(%1)").arg(shownWith),
+                qsl("setMapProgressLabel(Parsing area data...)"),
+                qsl("setMapProgressRange(0, 3)"),
+                qsl("setMapProgressValue(0)"),
+                qsl("setMapProgressValue(3)"),
+                qsl("setMapProgressLabel(Parsing room data...)"),
+                qsl("setMapProgressValue(1)"),
+                qsl("setMapProgressValue(3)"),
+                qsl("setMapProgressLabel(Assigning rooms to their areas...)"),
+                qsl("setMapProgressRange(0, 1)"),
+                qsl("setMapProgressValue(1)"),
+                call("hideMapProgress"),
+        };
     }
 
     // AREA in the chunk stands for the id of the area holding the map's rooms
@@ -909,6 +970,63 @@ assert(deleteArea(routedAreaId) == true, "deleteArea did not delete the area")
                 qsl("switchViewsShowingArea(%1)").arg(areaId),
         };
         QCOMPARE(mMapViews.mCalls.join(qsl("; ")), expected.join(qsl("; ")));
+    }
+
+    // Last, as loading a map replaces the one the tests above use. A small map, so its import
+    // reports each stage once rather than as often as time allows.
+    void test_mapImportProgressReachesTheMapView()
+    {
+        QTemporaryDir mapDir;
+        QVERIFY(mapDir.isValid());
+        QFile xmlFile(mapDir.filePath(qsl("routed.xml")));
+        QVERIFY(xmlFile.open(QIODevice::WriteOnly));
+        xmlFile.write(scmRoutedXmlMap);
+        xmlFile.close();
+
+        const QString result = runLua(qsl("assert(loadMap([[%1]]) == true, 'loadMap did not import the map')").arg(xmlFile.fileName()));
+        QCOMPARE(result, qsl("ok"));
+
+        QCOMPARE(progressCalls(mMapView.mCalls).join(qsl("; ")), mapImportProgress(qsl("Importing XML map file for use in %1..., false").arg(mHostname)).join(qsl("; ")));
+    }
+
+    // The download reports progress as often as the network delivers, so those calls are skipped
+    void test_mapDownloadProgressReachesTheMapView()
+    {
+        QTcpServer server;
+        QVERIFY2(server.listen(QHostAddress::LocalHost), "Could not start the local test server.");
+        connect(&server, &QTcpServer::newConnection, this, [&server]() {
+            QTcpSocket* client = server.nextPendingConnection();
+            connect(
+                    client,
+                    &QTcpSocket::readyRead,
+                    client,
+                    [client]() {
+                        client->readAll();
+                        client->write("HTTP/1.1 200 OK\r\nContent-Length: " + QByteArray::number(scmRoutedXmlMap.size()) + "\r\nConnection: close\r\n\r\n" + scmRoutedXmlMap);
+                        client->disconnectFromHost();
+                    },
+                    Qt::SingleShotConnection);
+        });
+        TMap* map = mpHost->mpMap.data();
+        mpHost->registerAnonymousEventHandler(qsl("sysMapDownloadEvent"), qsl("onRoutedMapDownload"));
+        QCOMPARE(runLua(qsl("routedMapDownloads = 0; function onRoutedMapDownload() routedMapDownloads = routedMapDownloads + 1 end")), qsl("ok"));
+
+        map->downloadMap(qsl("http://127.0.0.1:%1/routed.xml").arg(server.serverPort()));
+        QTRY_VERIFY_WITH_TIMEOUT(!mMapView.mProgressShown, 10000);
+        QCOMPARE(luaGlobalInt("routedMapDownloads"), 1);
+
+        QStringList calls = progressCalls(mMapView.mCalls);
+        const QString download = qsl("showMapProgress(Downloading map file for use in %1..., true)").arg(mHostname);
+        QVERIFY2(!calls.isEmpty() && calls.takeFirst() == download, qPrintable(mMapView.mCalls.join(qsl("; "))));
+        // The guess that stands until the reply says how big it is
+        QVERIFY2(!calls.isEmpty() && calls.takeFirst() == qsl("setMapProgressRange(0, 4000000)"), qPrintable(mMapView.mCalls.join(qsl("; "))));
+        const QString sized = qsl("setMapProgressRange(0, %1)").arg(scmRoutedXmlMap.size());
+        while (!calls.isEmpty() && (calls.first() == sized || calls.first().startsWith(qsl("setMapProgressValue(")))) {
+            calls.removeFirst();
+        }
+        QStringList expected{call("setMapProgressCancelable", {flag(false)})};
+        expected << mapImportProgress(QString()).mid(1);
+        QCOMPARE(calls.join(qsl("; ")), expected.join(qsl("; ")));
     }
 };
 
