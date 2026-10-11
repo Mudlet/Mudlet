@@ -44,6 +44,15 @@
 
 namespace {
 
+// QWIDGETSIZE_MAX, which only <QWidget> defines
+constexpr int maximumWidgetSize = (1 << 24) - 1;
+
+// As QWidget::resize() bounds a size
+QSize widgetSize(const int width, const int height)
+{
+    return QSize(width, height).expandedTo(QSize(0, 0)).boundedTo(QSize(maximumWidgetSize, maximumWidgetSize));
+}
+
 // The font properties a sheet's declarations set, read by the CSS value extractor a widget's sheet goes through
 std::optional<QFont> styleSheetFont(const QString& sheet)
 {
@@ -504,7 +513,7 @@ void TNullConsoleFrontend::createLabel(const QString& windowname, const QString&
     pLabel->mFont = consoleFont(userWindow).value_or(displayFont());
     mpHost->windowRegistry().registerLabel(name, pLabel.get());
     mLabels[name] = {std::move(pLabel), userWindow, std::move(box)};
-    reportVisibility();
+    reportWindowVisibility(name);
     // TMainConsole::createLabel()'s colour
     setLabelBackgroundColor(name, QColor(32, 32, 32, 255));
 }
@@ -832,7 +841,7 @@ bool TNullConsoleFrontend::setLabelShown(const QString& name, const bool shown)
         return false;
     }
     it->second.shown = shown;
-    reportVisibility();
+    reportWindowVisibility(name);
     return true;
 }
 
@@ -843,7 +852,11 @@ bool TNullConsoleFrontend::setSubConsoleShown(const QString& name, const bool sh
         return false;
     }
     it->second.shown = shown;
-    reportVisibility();
+    if (mpHost->windowRegistry().subConsoleKind(name) == TWindowRegistry::SubConsoleKind::UserWindow) {
+        reportVisibility();
+    } else {
+        reportWindowVisibility(name);
+    }
     return true;
 }
 
@@ -861,6 +874,22 @@ bool TNullConsoleFrontend::shownWithin(const QString& userWindow, const ScrollBo
     }
     const auto it = mSubConsoles.find(userWindow);
     return it != mSubConsoles.end() && it->second.shown;
+}
+
+// For a label or a sub-console that is not a user window, which hold nothing, so that making many
+// windows does not report every window each time
+void TNullConsoleFrontend::reportWindowVisibility(const QString& name)
+{
+    TWindowRegistry& registry = mpHost->windowRegistry();
+    if (const auto it = mLabels.find(name); it != mLabels.end()) {
+        setLabelVisible(it->second, it->second.shown && shownWithin(it->second.userWindow, it->second.box.get()));
+    }
+    if (const auto it = mSubConsoles.find(name); it != mSubConsoles.end()) {
+        registry.setSubConsoleVisible(name, it->second.shown && shownWithin(it->second.userWindow, it->second.box.get()));
+    }
+    if (const auto it = mScrollBoxes.find(name); it != mScrollBoxes.end()) {
+        registry.setPlainWindowVisible(name, it->second->shown && shownWithin(it->second->userWindow, it->second->box.get()));
+    }
 }
 
 // As TMainConsole::reportVisibility() and reportVisibilityWithin() write it for every window a change reaches
@@ -888,9 +917,9 @@ bool TNullConsoleFrontend::createScrollBox(const QString& windowname, const QStr
     mScrollBoxes[name] = box;
     TWindowRegistry& registry = mpHost->windowRegistry();
     registry.registerScrollBox(name);
-    // As QWidget::resize() bounds the size
-    registry.setPlainWindowGeometry(name, QRect(QPoint(x, y), QSize(width, height).expandedTo(QSize(0, 0))));
-    reportVisibility();
+    registry.setPlainWindowGeometry(name, QRect(QPoint(x, y), widgetSize(width, height)));
+    // A new box holds nothing yet
+    reportWindowVisibility(name);
     return true;
 }
 
@@ -901,6 +930,10 @@ std::pair<bool, QString> TNullConsoleFrontend::deleteScrollBox(const QString& na
     }
     const auto it = mScrollBoxes.find(name);
     if (it == mScrollBoxes.end()) {
+        if (mpHost->windowRegistry().hasScrollBox(name)) {
+            // One the current view has no record of, such as a detached view's
+            return {false, qsl("scrollbox name '%1' could not be deleted").arg(name)};
+        }
         return {false, qsl("scrollbox name '%1' not found").arg(name)};
     }
     const std::shared_ptr<ScrollBox> box = it->second;
@@ -978,7 +1011,7 @@ bool TNullConsoleFrontend::resizePlainWindow(const QString& name, const int widt
     }
     TWindowRegistry& registry = mpHost->windowRegistry();
     QRect geometry = registry.plainWindowGeometry(name).value_or(QRect());
-    geometry.setSize(QSize(width, height).expandedTo(QSize(0, 0)));
+    geometry.setSize(widgetSize(width, height));
     registry.setPlainWindowGeometry(name, geometry);
     return true;
 }
@@ -1096,7 +1129,7 @@ bool TNullConsoleFrontend::resizeLabel(const QString& name, const int width, con
         return false;
     }
     Label& label = it->second;
-    const QSize size = QSize(width, height).expandedTo(QSize(0, 0));
+    const QSize size = widgetSize(width, height);
     if (size == label.pModel->mGeometry.size()) {
         return true;
     }
@@ -1294,7 +1327,8 @@ bool TNullConsoleFrontend::moveLabel(const QString& name, const int x, const int
 bool TNullConsoleFrontend::reparentLabel(const QString& windowname, const QString& name, const int x, const int y, const bool show)
 {
     const auto it = mLabels.find(name);
-    // A label moved into or out of a scroll box takes a font this does not work out yet
+    // Left to a view: moved into or out of a scroll box, or to a name a box shares with a user window,
+    // the label would have the box as its parent, which a label here does not record
     if (it == mLabels.end() || it->second.box || mScrollBoxes.contains(windowname)) {
         return false;
     }
@@ -1316,7 +1350,7 @@ bool TNullConsoleFrontend::reparentLabel(const QString& windowname, const QStrin
     }
     it->second.pModel->mGeometry.moveTo(x, y);
     it->second.shown = show;
-    reportVisibility();
+    reportWindowVisibility(name);
     return true;
 }
 
@@ -1396,7 +1430,7 @@ bool TNullConsoleFrontend::resizeSubConsole(const QString& name, const int width
     }
     TWindowRegistry& registry = mpHost->windowRegistry();
     QRect geometry = registry.subConsoleGeometry(name).value_or(QRect());
-    geometry.setSize(QSize(width, height).expandedTo(QSize(0, 0)));
+    geometry.setSize(widgetSize(width, height));
     registry.setSubConsoleGeometry(name, geometry);
     registry.setUserWindowSize(name, geometry.size());
     reportGridSize(name);

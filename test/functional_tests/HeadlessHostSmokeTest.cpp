@@ -1691,6 +1691,28 @@ end
         QVERIFY2(QApplication::topLevelWidgets().isEmpty(), "Making and deleting the scroll boxes created a widget.");
     }
 
+    // A real scroll box and what it holds are destroyed with the user window they are in
+    void test_headlessUserWindowTakesItsScrollBoxes()
+    {
+        const QString hostname = qsl("Test-Headless-Host-User-Window-Scroll-Box");
+        QVERIFY2(HostManager::self()->addHost(hostname, QString(), QString(), QString()), "Could not create a profile with no main window.");
+        Host* host = HostManager::self()->getHost(hostname);
+        QVERIFY2(host, "The profile is not in the pool.");
+        QVERIFY(!host->hasConsoleView());
+
+        const bool ran = host->getLuaInterpreter()->compileAndExecuteScript(qsl(R"lua(
+assert(openUserWindow("ubWindow", false, false, "f"))
+assert(createScrollBox("ubWindow", "ubBox", 0, 0, 100, 100))
+assert(createLabel("ubBox", "ubLabel", 0, 0, 10, 10, 1))
+assert(deleteMiniConsole("ubWindow"))
+ubTypes = tostring(windowType("ubBox")) .. "," .. tostring(windowType("ubLabel"))
+)lua"));
+        QVERIFY2(ran, "The Lua chunk did not run.");
+        QCOMPARE(luaGlobalString(host, "ubTypes"), qsl("nil,nil"));
+        QVERIFY(!host->windowRegistry().hasScrollBox(qsl("ubBox")));
+        QVERIFY(!host->windowRegistry().hasLabel(qsl("ubLabel")));
+    }
+
     // What a profile with no view answers the scroll calls, taken from the same Lua run in the GUI self-test
     // profile, which lets each real pane repaint before it is read and re-issues each scroll until it holds.
     void test_headlessScrollContract()
