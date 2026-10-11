@@ -656,6 +656,58 @@ headlessMapLoad = ok and 'ok' or tostring(err)
         QCOMPARE(luaGlobalString(host, "headlessMapLoad"), qsl("ok"));
         QVERIFY2(QApplication::topLevelWidgets().isEmpty(), "Loading a map created a widget.");
     }
+    // As the GUI answers once loadMap has made its mapper; with no main window the model is the open map
+    void test_playerRoomAndJsonMapWithNoMainWindow()
+    {
+        QVERIFY2(!TAppFrontend::hasView(), "A main window exists, so this run is not headless.");
+        QTest::failOnWarning(QRegularExpression(qsl("no frontend is connected to show the map progress dialog")));
+
+        const QString hostname = qsl("Test-Headless-Host-Map-Lua");
+        QVERIFY2(HostManager::self()->addHost(hostname, QString(), QString(), QString()), "Could not create a profile with no main window.");
+        Host* host = HostManager::self()->getHost(hostname);
+        QVERIFY2(host, "The profile is not in the pool.");
+        QTemporaryDir mapDir;
+        QVERIFY(mapDir.isValid());
+
+        const QString script = qsl("headlessMapDir = [[%1]]\n").arg(mapDir.path()) + qsl(R"lua(
+headlessMapLua = 'not run'
+local ok, err = pcall(function()
+  local function answers(...) return select("#", ...), ... end
+  local count, first, second = answers(getPlayerRoom())
+  assert(count == 2 and first == nil and second == "the player does not have a valid roomID set",
+    "getPlayerRoom with no player room answered " .. tostring(first) .. ", " .. tostring(second))
+
+  local area = addAreaName("Headless Lua Area")
+  local kept = createRoomID()
+  addRoom(kept); setRoomArea(kept, area)
+  local moved = createRoomID()
+  addRoom(moved); setRoomArea(moved, area)
+  assert(saveMap(headlessMapDir .. "/rooms.dat") == true, "saveMap did not save the map")
+  assert(loadMap(headlessMapDir .. "/rooms.dat") == true, "loadMap did not load the map")
+
+  count, first, second = answers(centerview(moved))
+  assert(count == 1 and first == true, "centerview answered " .. tostring(first) .. ", " .. tostring(second))
+  count, first, second = answers(getPlayerRoom())
+  assert(count == 1 and first == moved, "getPlayerRoom after centerview answered " .. tostring(first) .. ", " .. tostring(second))
+
+  count, first, second = answers(saveJsonMap(headlessMapDir .. "/rooms.json"))
+  assert(count == 1 and first == true, "saveJsonMap answered " .. tostring(first) .. ", " .. tostring(second))
+  deleteRoom(kept)
+  count, first, second = answers(loadJsonMap(headlessMapDir .. "/rooms.json"))
+  assert(count == 1 and first == true, "loadJsonMap answered " .. tostring(first) .. ", " .. tostring(second))
+  assert(roomExists(kept), "loadJsonMap did not read back the map saveJsonMap wrote")
+  count, first, second = answers(loadJsonMap(headlessMapDir .. "/nosuchmap.json"))
+  assert(count == 2 and first == nil and tostring(second):find("could not open file", 1, true),
+    "loadJsonMap of a missing file answered " .. tostring(first) .. ", " .. tostring(second))
+end)
+headlessMapLua = ok and 'ok' or tostring(err)
+)lua");
+        const bool ran = host->getLuaInterpreter()->compileAndExecuteScript(script);
+
+        QVERIFY2(ran, "The Lua chunk did not run.");
+        QCOMPARE(luaGlobalString(host, "headlessMapLua"), qsl("ok"));
+        QVERIFY2(QApplication::topLevelWidgets().isEmpty(), "The map functions created a widget.");
+    }
 };
 
 #include "HeadlessHostSmokeTest.moc"
