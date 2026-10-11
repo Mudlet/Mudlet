@@ -390,7 +390,11 @@ private:
     void holdView();
     void showContextMenu(const QPoint& position);
     void raiseMousePressEvent();
+    // Raised with the press still on, which ends here if a script handling it takes the release
+    void raiseMousePressEventMidPress();
     void raisePendingMousePressEvent();
+    // Ends the press whose release went elsewhere, as its release would have, but selects nothing
+    void endLostPress();
     TCommandLine* commandLine() const;
     QString roomToolTip(int roomId) const;
     GLuint selectionTexture(bool round);

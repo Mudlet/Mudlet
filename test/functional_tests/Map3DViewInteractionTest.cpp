@@ -91,6 +91,30 @@ protected:
         return false;
     }
 };
+
+// What a sysMapWindowMousePressEvent handler calls to take the press's release from the view: in a dialog it opens,
+// which blocks the view's window, or in a popup
+QWindow* gpPressedWindow = nullptr;
+QPoint gReleaseAt;
+QMenu* gpPopup = nullptr;
+QPoint gPopupAt;
+
+int releaseInADialog(lua_State*)
+{
+    QDialog dialog;
+    QTimer::singleShot(0, &dialog, [&dialog]() {
+        QTest::mouseRelease(gpPressedWindow, Qt::LeftButton, Qt::NoModifier, gReleaseAt);
+        dialog.reject();
+    });
+    dialog.exec();
+    return 0;
+}
+
+int openAPopup(lua_State*)
+{
+    gpPopup->popup(gPopupAt);
+    return 0;
+}
 } // namespace
 
 class Map3DViewInteractionTest : public QObject
@@ -1233,14 +1257,97 @@ private slots:
         QVERIFY(pModern);
         const QPoint start(pModern->width() / 4, pModern->height() / 4);
         QCOMPARE(pModern->roomAt(start), 0);
+        QCOMPARE(runLua(qsl("selectedOnPresses = {}\n"
+                            "pressHandler = registerAnonymousEventHandler('sysMapWindowMousePressEvent', function()\n"
+                            "  selectedOnPresses[#selectedOnPresses + 1] = 0\n"
+                            "end)")),
+                 QString());
+        const auto restore = qScopeGuard([this]() {
+            runLua(qsl("killAnonymousEventHandler(pressHandler)"));
+        });
+        // Sent to the view alone, so the application sees no button down, as once a popup has taken the release
         QMouseEvent press(QEvent::MouseButtonPress, start, pModern->mapToGlobal(start), Qt::LeftButton, Qt::LeftButton, Qt::NoModifier);
         QCoreApplication::sendEvent(pModern, &press);
+        QCOMPARE(QGuiApplication::mouseButtons(), Qt::NoButton);
         QEvent leave(QEvent::Leave);
         QCoreApplication::sendEvent(pModern, &leave);
+        // Announced, as the press would have been on its release
+        QTRY_COMPARE(pressesSeenByScript(), 1);
         const int level = static_cast<int>(pModern->viewCenter().z());
         pModern->slot_shiftZup();
         hoverAt(pModern, start);
         QCOMPARE(static_cast<int>(pModern->viewCenter().z()), level + 1);
+    }
+
+    // A dialog a press handler opens takes the release, and the view hears of neither it nor a Leave
+    void test_aPressWhoseHandlerTakesTheReleaseIsOver()
+    {
+        ModernGLWidget* pModern = viewAtThePlayer();
+        QVERIFY(pModern);
+        gpPressedWindow = pModern->window()->windowHandle();
+        QVERIFY(gpPressedWindow);
+        gReleaseAt = pModern->mapTo(pModern->window(), pixelOfRoom(pModern, kPlayerRoomId));
+        lua_register(mpHost->getLuaInterpreter()->getLuaGlobalState(), "releaseInADialog", releaseInADialog);
+        QCOMPARE(runLua(qsl("pressHandler = registerAnonymousEventHandler('sysMapWindowMousePressEvent', releaseInADialog)")), QString());
+        const auto restore = qScopeGuard([this]() {
+            runLua(qsl("killAnonymousEventHandler(pressHandler)"));
+        });
+        // Through the window, so the application knows the button is down until the release
+        QTest::mousePress(gpPressedWindow, Qt::LeftButton, Qt::NoModifier, gReleaseAt);
+        QCOMPARE(QGuiApplication::mouseButtons(), Qt::NoButton);
+        QCOMPARE(selection(), QSet<int>{kPlayerRoomId});
+        QVERIFY2(!pModern->mPanMode, "the press goes on panning after its release went to the dialog");
+    }
+
+    // A popup a press handler opens takes the rest of the press, and no Leave reaches the view while it is open
+    void test_aPressWhoseHandlerOpensAPopupIsOver()
+    {
+        ModernGLWidget* pModern = viewAtThePlayer();
+        QVERIFY(pModern);
+        QMenu menu;
+        menu.addAction(qsl("one"));
+        gpPopup = &menu;
+        const QPoint room = pixelOfRoom(pModern, kPlayerRoomId);
+        gPopupAt = pModern->mapToGlobal(room + QPoint(5, 5));
+        lua_register(mpHost->getLuaInterpreter()->getLuaGlobalState(), "openAPopup", openAPopup);
+        QCOMPARE(runLua(qsl("pressHandler = registerAnonymousEventHandler('sysMapWindowMousePressEvent', openAPopup)")), QString());
+        const auto restore = qScopeGuard([this]() {
+            runLua(qsl("killAnonymousEventHandler(pressHandler)"));
+        });
+        QWindow* pWindow = pModern->window()->windowHandle();
+        QVERIFY(pWindow);
+        const QPoint inWindow = pModern->mapTo(pModern->window(), room);
+        QTest::mousePress(pWindow, Qt::LeftButton, Qt::NoModifier, inWindow);
+        const auto release = qScopeGuard([pWindow, inWindow, &menu]() {
+            QTest::mouseRelease(pWindow, Qt::LeftButton, Qt::NoModifier, inWindow);
+            menu.close();
+        });
+        if (QApplication::activePopupWidget() != &menu) {
+            QSKIP("popups do not open on this platform");
+        }
+        QVERIFY2(!pModern->mPanMode, "the press goes on panning under the popup");
+    }
+
+    // As on platforms that send Leave while a drag holds the mouse
+    void test_aLeaveWhileTheButtonIsHeldKeepsThePanGoing()
+    {
+        ModernGLWidget* pModern = viewAtThePlayer();
+        QVERIFY(pModern);
+        QWindow* pWindow = pModern->window()->windowHandle();
+        QVERIFY(pWindow);
+        const QPoint start(pModern->width() / 4, pModern->height() / 4);
+        QCOMPARE(pModern->roomAt(start), 0);
+        const QPoint inWindow = pModern->mapTo(pModern->window(), start);
+        // Through the window, so the application knows the button is down
+        QTest::mousePress(pWindow, Qt::LeftButton, Qt::NoModifier, inWindow);
+        const auto release = qScopeGuard([pWindow, inWindow]() {
+            QTest::mouseRelease(pWindow, Qt::LeftButton, Qt::NoModifier, inWindow);
+        });
+        QCOMPARE(QGuiApplication::mouseButtons(), Qt::LeftButton);
+        QVERIFY(pModern->mPanMode);
+        QEvent leave(QEvent::Leave);
+        QCoreApplication::sendEvent(pModern, &leave);
+        QVERIFY2(pModern->mPanMode, "the pan ended while the button was still held");
     }
 
     void test_clickingTheCompassTurnsTheViewNorthUp()
