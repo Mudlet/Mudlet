@@ -1919,6 +1919,31 @@ describe("Tests Other.lua functions", function()
         assert.is_true(setConfig(second, false))
         assert.is_nil(getConfig(group .. ".active"))
       end)
+
+      it("lists the experiments sorted, so a group's members sit together", function()
+        local list = getConfig("experiment.list")
+        local sorted = table.deepcopy(list)
+        table.sort(sorted)
+        assert.are.same(sorted, list)
+      end)
+
+      -- Only keys sharing the part after "experiment." are a group: a key with
+      -- no further dot is in none, and "experiment.3dmap" is not a prefix of
+      -- "experiment.3d-player-icon". The settings dialog mirrors this.
+      it("lets experiments outside a shared group be on together", function()
+        local mapper = "experiment.3dmap.modernmapper"
+        local icon = "experiment.3d-player-icon"
+        local mapperWas, iconWas = getConfig(mapper), getConfig(icon)
+        finally(function()
+          setConfig(mapper, mapperWas)
+          setConfig(icon, iconWas)
+        end)
+
+        assert.is_true(setConfig(mapper, true))
+        assert.is_true(setConfig(icon, true))
+        assert.is_true(getConfig(mapper), "switching on " .. icon .. " switched off " .. mapper)
+        assert.is_true(getConfig(icon))
+      end)
     end)
 
     describe("IRC keys", function()

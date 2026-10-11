@@ -9592,15 +9592,6 @@ int TLuaInterpreter::setConfig(lua_State* L)
         if (!result) {
             return warnArgumentValue(L, __func__, errorMessage);
         }
-
-        // Special handling for 3D mapper experiment
-        if (key == qsl("experiment.3dmap.modernmapper")) {
-#if defined(INCLUDE_3DMAPPER)
-            if (auto* mapper = host.mpMap ? host.mpMap->mapViewFrontend() : nullptr) {
-                mapper->recreate3DView();
-            }
-#endif
-        }
         return success();
     }
 

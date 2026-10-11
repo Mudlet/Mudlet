@@ -343,6 +343,9 @@ private:
     void setCardDescriptions();
     void buildProtocolsSubpage();
     void updateProtocolSummary();
+    // One checkbox per experiment the Host accepts, so a new one needs no work here
+    void buildExperimentsCard();
+    void retranslateExperiments();
     void buildDiscordSummaryCard();
     void updateDiscordSummary();
 #ifdef INCLUDE_MCPSERVER
@@ -485,6 +488,9 @@ private:
     // The card on the parent category page that opens each subpage
     QMap<QString, QPointer<QWidget>> mSubpageOpeners;
     QPointer<QGroupBox> mpCard_protocolList;
+    QPointer<QGroupBox> mpCard_experiments;
+    // Keyed by experiment, e.g. "experiment.3dmap.modernmapper"
+    QMap<QString, QPointer<QCheckBox>> mExperimentCheckBoxes;
     QPointer<QGroupBox> mpCard_discord;
     QPointer<QPushButton> mpButton_discordSubpage;
     QPointer<QGroupBox> mpCard_securityStatus;
