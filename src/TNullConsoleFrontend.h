@@ -168,7 +168,7 @@ public:
     // No Lua call reads the stacking order back, so these only answer whether the window exists
     bool raiseWindow(const QString& name) override { return mLabels.contains(name) || subConsoleModel(name) || mScrollBoxes.contains(name); }
     bool lowerWindow(const QString& name) override { return raiseWindow(name); }
-    std::pair<bool, QString> reparentWindow(const QString&, const QString&, int, int, bool) override { return noView(); }
+    std::pair<bool, QString> reparentWindow(const QString& windowname, const QString& name, int x, int y, bool show) override;
     bool setWindowScrollBarVisible(const QString& name, bool visible) override;
     bool setWindowHorizontalScrollBarVisible(const QString& name, bool visible) override;
     bool setWindowScrolling(const QString& name, bool enabled) override;
@@ -315,7 +315,10 @@ private:
     std::pair<QString, std::shared_ptr<ScrollBox>> containerFor(const QString& windowname, bool scrollBoxFirst) const;
     bool shownWithin(const QString& userWindow, const ScrollBox* box) const;
     bool setScrollBoxShown(const QString& name, bool shown);
+    static bool within(const ScrollBox* container, const ScrollBox* box);
     void removeScrollBoxContents(const ScrollBox* box);
+    void moveScrollBoxContents(const ScrollBox* box);
+    void inheritLabelFont(Label& label, bool restyle);
     TLabelModel* labelModel(const QString& name) const;
     TConsoleModel* subConsoleModel(const QString& name) const;
     bool setLabelShown(const QString& name, bool shown);
