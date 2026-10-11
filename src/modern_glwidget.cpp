@@ -1886,7 +1886,12 @@ void ModernGLWidget::panByRooms(const int right, const int up)
     const int step = qMax(1, qRound(mCameraController.getScale() * 2.0f));
     const auto [groundRight, groundUp] = GeometryManager::groundAxes(mCameraController.screenRight(), mCameraController.screenUp());
     const QVector3D offset = (groundRight * static_cast<float>(right) + groundUp * static_cast<float>(up)) * static_cast<float>(step);
-    setViewCenter(mAID, mMapCenterX + qRound(offset.x()), mMapCenterY + qRound(offset.y()), mMapCenterZ);
+    // Rooms may sit at the ends of the int range, where the sum would wrap to the far side of the map
+    const auto shifted = [](const int coordinate, const float by) {
+        const qint64 sum = static_cast<qint64>(coordinate) + qRound64(by);
+        return static_cast<int>(std::clamp<qint64>(sum, std::numeric_limits<int>::min(), std::numeric_limits<int>::max()));
+    };
+    setViewCenter(mAID, shifted(mMapCenterX, offset.x()), shifted(mMapCenterY, offset.y()), mMapCenterZ);
 }
 
 void ModernGLWidget::keyPressEvent(QKeyEvent* event)
@@ -2128,9 +2133,9 @@ void ModernGLWidget::startSmoothTransition(int targetAID, int targetX, int targe
     mCurrentAnimationZ = mStartMapCenterZ;
 
     // update map's actual position
-    mMapCenterX = static_cast<float>(targetX);
-    mMapCenterY = static_cast<float>(targetY);
-    mMapCenterZ = static_cast<float>(targetZ);
+    mMapCenterX = targetX;
+    mMapCenterY = targetY;
+    mMapCenterZ = targetZ;
 
     // Reset animation progress
     mAnimationProgress = 0.0;

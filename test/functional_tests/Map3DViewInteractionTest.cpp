@@ -28,12 +28,15 @@
  * Run with: ctest -R Map3DViewInteractionTest -V
  */
 
+#include <limits>
+
 #include <QAction>
 #include <QDockWidget>
 #include <QMenu>
 #include <QSignalSpy>
 #include <QTemporaryDir>
 #include <QToolTip>
+#include <QWindow>
 #include <QtTest/QtTest>
 
 #include "Host.h"
@@ -47,6 +50,7 @@
 #include "TMainConsole.h"
 #include "TMap.h"
 #include "TRoomDB.h"
+#include "TUiTour.h"
 #include "TelnetServerStub.h"
 #include "ctelnet.h"
 #include "dlgMapper.h"
@@ -203,9 +207,12 @@ private slots:
         mudlet::start();
         mudlet::self()->setupConfig();
         QCOMPARE(MudletApp::getMudletPath(enums::mainPath), qsl("%1/mudlet").arg(mConfigDir.path()));
+        // The first-run tour opens a second after the profile loads and takes the main window's keys
+        TUiTour::rememberShown();
         mudlet::self()->takeOwnershipOfInstanceCoordinator(std::make_unique<MudletInstanceCoordinator>("MudletInstanceCoordinator"));
         mudlet::self()->init();
         mudlet::self()->setStorePasswordsSecurely(false);
+        QVERIFY2(mudlet::self()->experiencedMudletPlayer(), "the first-run UI would open over these tests and eat their key presses");
         mudlet::self()->mSkipDefaultPackageInstall = true;
         deleteProfileDirectory();
 
@@ -366,6 +373,48 @@ private slots:
         QCOMPARE(selection(), QSet<int>{kOtherAreaRoomId});
     }
 
+    void test_aClickAwayFromTheRoomMenuGoesOnToThe3DView()
+    {
+        ModernGLWidget* pModern = viewAtThePlayer();
+        QVERIFY(pModern);
+        QTest::mouseClick(pModern, Qt::RightButton, Qt::NoModifier, pixelOfRoom(pModern, kPlayerRoomId));
+        QMenu* menu = openMenu(pModern);
+        QVERIFY(menu);
+        QCOMPARE(selection(), QSet<int>{kPlayerRoomId});
+        QPointer<QMenu> menuGuard(menu);
+
+        // Delivered as the window system does while a menu is open: to the menu's window
+        const QPoint eastRoom = pModern->mapToGlobal(pixelOfRoom(pModern, kEastRoomId));
+        QWindow* menuWindow = menu->windowHandle();
+        QVERIFY(menuWindow);
+        QTest::mouseClick(menuWindow, Qt::LeftButton, Qt::NoModifier, menuWindow->mapFromGlobal(eastRoom));
+        QTRY_VERIFY(menuGuard.isNull() || !menuGuard->isVisible());
+        QTRY_COMPARE(selection(), QSet<int>{kEastRoomId});
+    }
+
+    // Checks picking against where the camera is known to look, not against roomAt() itself as pixelOfRoom() does
+    void test_pickingFindsTheRoomTheCameraLooksAt()
+    {
+        ModernGLWidget* pModern = viewAtThePlayer();
+        QVERIFY(pModern);
+        const QPoint middle(pModern->width() / 2, pModern->height() / 2);
+        QCOMPARE(pModern->roomAt(middle), kPlayerRoomId);
+        // Looking straight down with north up, east is to the right on the same row
+        bool eastFound = false;
+        for (int x = 0; x < pModern->width(); ++x) {
+            if (pModern->roomAt(QPoint(x, middle.y())) == kEastRoomId) {
+                eastFound = true;
+                QVERIFY2(x > middle.x(), qPrintable(qsl("the east room was picked at x %1, left of the middle %2").arg(x).arg(middle.x())));
+            }
+        }
+        QVERIFY2(eastFound, "the east room was not picked anywhere on the middle row");
+
+        pModern->setCameraPosition(1.0f, (CameraController::scmMinTilt + CameraController::scmMaxTilt) / 2.0f, CameraController::scmNorthUpAzimuth + 30.0f);
+        QCOMPARE(pModern->roomAt(middle), kPlayerRoomId);
+    }
+
+    // A click away from the 3D view's room menu closes it and goes on to the 3D view, as one away from the 2D
+    // map's menu does there; the hidden 2D map must not take it at its own coordinates
     void test_keysPanZoomAndRecenter()
     {
         ModernGLWidget* pModern = viewAtThePlayer();
@@ -425,6 +474,39 @@ private slots:
         pDock->setFloating(false);
         QCOMPARE(typed, qsl("xad"));
         QCOMPARE(end, start);
+    }
+
+    void test_keyPanningStopsAtTheEndsOfTheCoordinateRange()
+    {
+        ModernGLWidget* pModern = viewAtThePlayer();
+        QVERIFY(pModern);
+        // viewCenter() is in floats, which cannot hold the ends exactly, so check only which side of the map it is on
+        pModern->setViewCenter(mPlayerAreaId, std::numeric_limits<int>::max(), 0, 0);
+        QTest::keyClick(pModern, Qt::Key_Right);
+        QVERIFY(pModern->viewCenter().x() > 0.0f);
+        pModern->setViewCenter(mPlayerAreaId, 0, std::numeric_limits<int>::min(), 0);
+        QTest::keyClick(pModern, Qt::Key_Down);
+        QVERIFY(pModern->viewCenter().y() < 0.0f);
+    }
+
+    // Rooms picked on the 3D view can be in an area the hidden 2D map is not showing; other views of the map
+    // showing that area must still hear that they changed
+    void test_editingRoomsPickedIn3DAnnouncesTheirOwnArea()
+    {
+        ModernGLWidget* pModern = viewAtThePlayer();
+        QVERIFY(pModern);
+        T2DMap* p2dMap = map()->mapper()->mp2dMap;
+        pModern->setViewCenter(mOtherAreaId, 20, 20, 0);
+        QCOMPARE(p2dMap->mAreaID, mPlayerAreaId);
+        QTest::mouseClick(pModern, Qt::LeftButton, Qt::NoModifier, pixelOfRoom(pModern, kOtherAreaRoomId));
+        QCOMPARE(selection(), QSet<int>{kOtherAreaRoomId});
+
+        QSignalSpy areaChanged(map(), &TMap::signal_areaChanged);
+        const QString oldName = map()->mpRoomDB->getRoom(kOtherAreaRoomId)->name;
+        p2dMap->slot_setRoomProperties(true, qsl("Renamed"), false, 0, false, QString(), false, QColor(), false, 1, false, std::nullopt, false, std::nullopt, false, QColor(), false, 0, selection());
+        map()->mpRoomDB->getRoom(kOtherAreaRoomId)->name = oldName;
+        QTRY_COMPARE(areaChanged.size(), 1);
+        QCOMPARE(areaChanged.constFirst().at(0).toInt(), mOtherAreaId);
     }
 
     void test_eachAreaKeepsItsOwnCamera()

@@ -396,13 +396,14 @@ void T2DMap::InteractionDispatcher::registerHandler(IInteractionHandler* handler
     mHandlers.insert(insertIterator, entry);
 }
 
-void T2DMap::registerContextMenu(QMenu* menu)
+void T2DMap::registerContextMenu(QMenu* menu, QWidget* clickTarget)
 {
     if (!menu) {
         return;
     }
 
     mActiveContextMenu = menu;
+    mContextMenuClickTarget = clickTarget ? clickTarget : this;
 
     QObject::connect(menu, &QMenu::aboutToHide, this, [this]() {
         mActiveContextMenu.clear();
@@ -468,9 +469,11 @@ bool T2DMap::eventFilter(QObject* watched, QEvent* event)
                     }
                 }
 
-                const QPoint localPos = mapFromGlobal(globalPos);
+                // This map is hidden while another view of it, which opened the menu, is shown in its place
+                QWidget* target = mContextMenuClickTarget.data();
+                const QPoint localPos = target ? target->mapFromGlobal(globalPos) : QPoint();
 
-                if (rect().contains(localPos)) {
+                if (target && target->rect().contains(localPos)) {
                     auto menu = mActiveContextMenu;
                     mActiveContextMenu.clear();
 
@@ -484,8 +487,8 @@ bool T2DMap::eventFilter(QObject* watched, QEvent* event)
                     auto* pressEvent = new QMouseEvent(QEvent::MouseButtonPress, localPosF, localPosF, globalPosF, button, button, mouseEvent->modifiers());
                     auto* releaseEvent = new QMouseEvent(QEvent::MouseButtonRelease, localPosF, localPosF, globalPosF, button, Qt::NoButton, mouseEvent->modifiers());
 
-                    QCoreApplication::postEvent(this, pressEvent);
-                    QCoreApplication::postEvent(this, releaseEvent);
+                    QCoreApplication::postEvent(target, pressEvent);
+                    QCoreApplication::postEvent(target, releaseEvent);
 
                     return true;
                 }
@@ -4795,12 +4798,15 @@ void T2DMap::slot_setRoomProperties(bool changeName,
         newSymbol = newSymbol.normalized(QString::NormalizationForm_C, QChar::Unicode_10_0);
     }
 
+    // The rooms' own area: they may have been picked on the 3D view while this map, hidden, shows another
+    std::optional<int> editedAreaId;
     for (const int roomId : std::as_const(roomIds)) {
         // The dialog is not modal, so rooms may have gone while it was open
         TRoom* room = mpMap->mpRoomDB->getRoom(roomId);
         if (!room) {
             continue;
         }
+        editedAreaId = !editedAreaId || *editedAreaId == room->getArea() ? room->getArea() : -1;
         if (changeName) {
             room->name = newName;
         }
@@ -4832,7 +4838,7 @@ void T2DMap::slot_setRoomProperties(bool changeName,
     if (changeWeight || changeLockStatus) {
         mpMap->mMapGraphNeedsUpdate = true;
     }
-    mpMap->updateArea(mAreaID);
+    mpMap->updateArea(editedAreaId.value_or(mAreaID));
     mpMap->setUnsaved(__func__);
 }
 

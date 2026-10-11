@@ -153,7 +153,8 @@ public:
      * its position in the priority list.
      */
     void registerInteractionHandler(IInteractionHandler* handler, int priority);
-    void registerContextMenu(QMenu* menu);
+    // Clicks outside the menu that land on clickTarget (this map when nullptr) close it and go on to that widget
+    void registerContextMenu(QMenu* menu, QWidget* clickTarget = nullptr);
     bool eventFilter(QObject* watched, QEvent* event) override;
     void prepareSingleClickSelection(MapInteractionContext& context);
     // A click on a room (0 for none) in another view of this map, such as the 3D one, with the same modifiers as here
@@ -246,6 +247,7 @@ public:
     QRectF mMultiRect;
     bool mPopupMenu = false;
     QPointer<QMenu> mActiveContextMenu;
+    QPointer<QWidget> mContextMenuClickTarget;
     QSet<int> mMultiSelectionSet;
     QSet<int> mMultiSelectionBaseSet;
     QSet<int> mMultiSelectionAnchorSet;
