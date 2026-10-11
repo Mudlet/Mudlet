@@ -53,6 +53,12 @@
 
 #include "GroupedTest.h"
 
+#if defined(INCLUDE_3DMAPPER)
+#include "TMap.h"
+
+#include <QOpenGLWidget>
+#endif
+
 class SettingsExperimentsTest : public QObject
 {
     Q_OBJECT
@@ -159,6 +165,11 @@ private slots:
         delete mpPreferences;
         mpPreferences = nullptr;
         if (mpHost) {
+#if defined(INCLUDE_3DMAPPER)
+            if (mpHost->mpMap->mpM) {
+                runLua(qsl("setConfig('show3dMapView', false) closeMapWidget()"));
+            }
+#endif
             switchAllExperimentsOff();
         }
     }
@@ -277,6 +288,30 @@ private slots:
         QVERIFY(mpHost->experimentEnabled(mModernMapper));
         QVERIFY(mpHost->experimentEnabled(mPlayerIcon));
     }
+
+#if defined(INCLUDE_3DMAPPER)
+    // The renderer is picked when the 3D view is created, so an open one has to be rebuilt
+    void test_tickingTheModernMapperSwapsAnOpen3DView()
+    {
+        requireExperiments({mModernMapper});
+        runLua(qsl("openMapWidget() setConfig('show3dMapView', true)"));
+        QVERIFY2(mpHost->mpMap->mpM, "SETUP: no 3D view opened");
+        QVERIFY2(!mpHost->mpMap->mpM->inherits("ModernGLWidget"), "SETUP: the 3D view opened on the modern renderer");
+
+        openPreferences();
+        QCheckBox* pBox = experimentBox(mModernMapper);
+        QVERIFY(pBox);
+        QSignalSpy applySpy(mpPreferences, &dlgProfilePreferences::signal_preferencesSaved);
+        pBox->click();
+        QVERIFY2(TestSettings::waitForApply(applySpy), "the debounce never wrote the settings back");
+        QVERIFY2(mpHost->mpMap->mpM && mpHost->mpMap->mpM->inherits("ModernGLWidget"), "the open 3D view kept the original renderer");
+
+        applySpy.clear();
+        pBox->click();
+        QVERIFY2(TestSettings::waitForApply(applySpy), "the debounce never wrote the settings back");
+        QVERIFY2(mpHost->mpMap->mpM && !mpHost->mpMap->mpM->inherits("ModernGLWidget"), "the open 3D view kept the modern renderer");
+    }
+#endif
 
     // Experiments live in the profile's save, so one ticked here outlasts the session
     void test_aTickedExperimentIsSavedWithTheProfileAndReadBack()
