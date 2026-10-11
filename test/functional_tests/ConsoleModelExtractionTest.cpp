@@ -1665,8 +1665,9 @@ end
 -- a family setFont() takes, which it checks for before it looks for a console
 local anyFont = next(getAvailableFonts())
 
-expectRefusal('createCommandLine', createCommandLine('noViewCl', 0, 0, 100, 20))
-expectRefusal('deleteCommandLine', deleteCommandLine('noViewCl'))
+-- a command line is a record the null view keeps
+expectValue('createCommandLine', true, createCommandLine('noViewCl', 0, 0, 100, 20))
+expectValue('deleteCommandLine', true, deleteCommandLine('noViewCl'))
 expectRefusal('deleteLabel', deleteLabel('noViewLbl'))
 expectRefusal('deleteMiniConsole', deleteMiniConsole('noViewMc'))
 expectRefusal('deleteScrollBox', deleteScrollBox('noViewSb'))

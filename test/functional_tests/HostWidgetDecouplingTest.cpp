@@ -390,6 +390,8 @@ private slots:
         QVERIFY(realModel);
         const QString realBox = qsl("realViewBox");
         QVERIFY(host->createScrollBox(QString(), realBox, 0, 0, 10, 10).first);
+        const QString realLine = qsl("realViewLine");
+        QVERIFY(console->createCommandLine(QString(), realLine, 0, 0, 10, 10).first);
 
         host->setMainConsoleView(nullptr);
         const bool ran = host->getLuaInterpreter()->compileAndExecuteScript(
@@ -401,12 +403,16 @@ private slots:
                 movesIntoRealWindows << host->setWindow(target, moved, 1, 1, true).second;
             }
         }
+        const auto [lineInRealBox, lineInRealBoxMessage] = host->consoleFrontend()->createCommandLine(realBox, qsl("nullViewLineInRealBox"), 0, 0, 10, 10);
         const TConsoleModel* realModelWhileDetached = host->windowRegistry().subConsoleModel(realWindow);
         const auto [realDeletedWhileDetached, realDeleteMessage] = host->deleteMiniConsole(realWindow);
         const auto [realBoxDeletedWhileDetached, realBoxDeleteMessage] = host->consoleFrontend()->deleteScrollBox(realBox);
         const bool realBoxRegisteredWhileDetached = host->windowRegistry().hasScrollBox(realBox);
+        const auto [realLineDeletedWhileDetached, realLineDeleteMessage] = host->consoleFrontend()->deleteCommandLine(realLine);
+        const bool realLineRegisteredWhileDetached = host->windowRegistry().hasCommandLine(realLine);
         host->setMainConsoleView(console);
         console->deleteScrollBox(realBox);
+        console->deleteCommandLine(realLine);
         const bool nullLabelRegistered = host->windowRegistry().hasLabel(qsl("nullViewMade"));
         const bool realStillRegistered = host->windowRegistry().hasSubConsole(realWindow);
         host->deleteMiniConsole(realWindow);
@@ -418,13 +424,14 @@ nullViewKinds = table.concat({
   tostring(createMiniConsole("nullViewMini", 0, 0, 10, 10)),
   tostring(openUserWindow("nullViewWindow")),
   tostring(createMiniConsole("nullViewWindow", "nullViewNested", 0, 0, 10, 10)),
-  tostring(createScrollBox("nullViewBox", 0, 0, 10, 10))
+  tostring(createScrollBox("nullViewBox", 0, 0, 10, 10)),
+  tostring(createCommandLine("nullViewLine", 0, 0, 10, 10))
 }, ",")
 createBuffer("nullViewBuffer")
 )lua"));
-        const QStringList nullViewNames{qsl("nullViewMini"), qsl("nullViewWindow"), qsl("nullViewNested"), qsl("nullViewBuffer"), qsl("nullViewBox")};
+        const QStringList nullViewNames{qsl("nullViewMini"), qsl("nullViewWindow"), qsl("nullViewNested"), qsl("nullViewBuffer"), qsl("nullViewBox"), qsl("nullViewLine")};
         const auto registered = [host](const QString& name) {
-            return host->windowRegistry().hasSubConsole(name) || host->windowRegistry().hasDockWidget(name) || host->windowRegistry().hasScrollBox(name);
+            return host->windowRegistry().hasSubConsole(name) || host->windowRegistry().hasDockWidget(name) || host->windowRegistry().hasScrollBox(name) || host->windowRegistry().hasCommandLine(name);
         };
         QStringList neverRegistered;
         for (const QString& name : nullViewNames) {
@@ -459,12 +466,17 @@ createBuffer("nullViewBuffer")
         QCOMPARE(realBoxDeleteMessage, qsl("scrollbox name 'realViewBox' could not be deleted"));
         QVERIFY(realBoxRegisteredWhileDetached);
         QCOMPARE(movesIntoRealWindows, QStringList(4, qsl("the profile has no main window")));
+        QVERIFY2(!lineInRealBox, "The null view made a command line in a scroll box it has no record of.");
+        QCOMPARE(lineInRealBoxMessage, qsl("the profile has no main window"));
+        QVERIFY2(!realLineDeletedWhileDetached, "The null view reported deleting a command line it has no record of.");
+        QCOMPARE(realLineDeleteMessage, qsl("command line name 'realViewLine' could not be deleted"));
+        QVERIFY(realLineRegisteredWhileDetached);
 
         QVERIFY(ranKinds);
         lua_getglobal(L, "nullViewKinds");
         const QString nullViewKinds = QString::fromUtf8(lua_tostring(L, -1));
         lua_pop(L, 1);
-        QCOMPARE(nullViewKinds, qsl("true,true,true,true"));
+        QCOMPARE(nullViewKinds, qsl("true,true,true,true,true"));
         QVERIFY2(neverRegistered.isEmpty(), qPrintable(qsl("The null view did not register windows it made: %1").arg(neverRegistered.join(qsl(", ")))));
         QVERIFY2(stillRegistered.isEmpty(), qPrintable(qsl("Windows the null view made are still registered once a real view has attached: %1").arg(stillRegistered.join(qsl(", ")))));
         QVERIFY2(remade, qPrintable(remadeMessage));
