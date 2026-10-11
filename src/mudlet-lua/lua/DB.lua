@@ -218,11 +218,11 @@ end
 
 function db:_resolve_database_path(safe_name)
   local current = db:_database_path(safe_name)
-  if io.exists(current) then
-    return current
-  end
-
   local legacy_name = db:_legacy_safe_name(safe_name)
+  -- 4.18.2 wrote the digit-stripped file. 4.18.0 and 4.18.1 wrote the file
+  -- that keeps the digits. When both are present the stripped file is the
+  -- later one, so it wins. A name that is only digits strips to Database_.db,
+  -- and an empty legacy name is that file, not "no file".
   if legacy_name ~= safe_name then
     local legacy = db:_database_path(legacy_name)
     if io.exists(legacy) then
@@ -239,7 +239,11 @@ end
 function db:_shared_connection(db_name)
   local path = db:_resolve_database_path(db_name)
   for other_name, other_conn in pairs(db.__conn) do
-    if other_conn and other_conn ~= "SQLite3 connection (closed)"
+    -- A deleted file leaves this name's own connection in __conn. Matching it
+    -- here reuses that handle, and the next add hears "readonly database"
+    -- instead of creating the file again.
+    if other_name ~= db_name
+        and other_conn and other_conn ~= "SQLite3 connection (closed)"
         and db:_resolve_database_path(other_name) == path then
       return other_conn
     end
@@ -456,10 +460,11 @@ local lua_reserved_words = {
 --- on echoing Lua errors. <br/><br/>
 ---
 --- The database will be called Database_<sanitized database name>.db and will be stored in the
---- Mudlet configuration directory. If that file is not there yet but an older Mudlet stored the
---- same name with its digits removed (Database_stats.db for "stats1"), that older file is opened
---- so the rows are still readable. Two names that used to share that file still open it, until
---- each name has a file of its own. <br/><br/>
+--- Mudlet configuration directory. If an older Mudlet stored the same name with its digits removed
+--- (Database_stats.db for "stats1", Database_.db for "2024"), that file is opened, including when
+--- a Database_stats1.db from 4.18.0 or 4.18.1 is also present. A name gets its own file only when
+--- the digit-stripped file is absent. Two names that used to share the stripped file still open it
+--- on one connection. <br/><br/>
 ---
 --- Database 'tables' are called 'sheets' consistently throughout this documentation, to avoid confusion
 --- with Lua tables. <br/><br/>
