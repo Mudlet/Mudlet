@@ -276,6 +276,8 @@ public:
     bool isClosingDown() const { return mIsClosingDown; }
     bool isClosingForced() const { return mForcedClose; }
     bool requestClose();
+    // A main console raises sysExitEvent as it closes; a profile that never had one gets it from this.
+    void raiseExitEventIfOwed();
 
     unsigned int assemblePath();
     bool checkForMappingScript();
@@ -812,6 +814,7 @@ private:
     TConsoleFrontend* mpConsoleFrontend = nullptr;
     // What consoleFrontend() hands out while mpConsole is not set.
     std::unique_ptr<TNullConsoleFrontend> mpNullConsoleFrontend;
+    bool mExitEventOwed = true;
 
 public:
     cTelnet mTelnet;
