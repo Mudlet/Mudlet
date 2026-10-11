@@ -159,7 +159,8 @@ constexpr QLatin1StringView scmSavedCamerasItem{"3dmapper_cameras"};
 void ModernGLWidget::saveCamera()
 {
     // While a frame is pending the camera is still the one set up for the area shown before
-    if (!mAID || mFramePending || !mpMap || !mpMap->mpRoomDB || !mpMap->mpRoomDB->getArea(mAID)) {
+    // A floating view is hidden while its dock is torn down, after the Host and its TMap are freed
+    if (!mpHost || !mAID || mFramePending || !mpMap || !mpMap->mpRoomDB || !mpMap->mpRoomDB->getArea(mAID)) {
         return;
     }
     const QVector3D position = mCameraController.getPosition();
