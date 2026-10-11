@@ -36,6 +36,7 @@
 #include "mapInfoContributorManager.h"
 
 #include <QBuffer>
+#include <QCoreApplication>
 #include <QDataStream>
 #include <QElapsedTimer>
 #include <QFontMetrics>
@@ -1909,7 +1910,7 @@ bool TMap::restore(QString location)
             }
 
             // Allow for somethings to be updated - especially on Windows?
-            qApp->processEvents();
+            QCoreApplication::processEvents();
         } else {
             file.setFileName(location);
             if (validatePotentialMapFile(file, ifs)) {
@@ -2851,7 +2852,7 @@ void TMap::downloadMap(const QString& remoteUrl, const QString& localFileName)
 
     const QString infoMsg = tr("[ INFO ]  - Map download initiated, please wait...");
     postMessage(infoMsg);
-    qApp->processEvents();
+    QCoreApplication::processEvents();
     // Attempts to ensure INFO message gets shown before download is initiated!
 
     mpNetworkReply = mpNetworkAccessManager->get(request);
@@ -3144,7 +3145,7 @@ void TMap::reportStringToProgressDialog(const QString text)
         // time a little but as the main usage is when parsing XML room data
         // and that can take MORE THAN A MINUTE the activity is essential to
         // inform the user that something IS happening...
-        qApp->processEvents();
+        QCoreApplication::processEvents();
     }
 }
 
@@ -3496,7 +3497,7 @@ std::pair<bool, QString> TMap::writeJsonMapFile(const QString& dest)
                                      tr("Abort"),
                                      static_cast<int>(mProgressDialogRoomsTotal));
     emit signal_mapProgressSetValue(0);
-    qApp->processEvents();
+    QCoreApplication::processEvents();
     QSaveFile file(destination);
     if (!file.open(QFile::OpenMode(QFile::Text | QFile::WriteOnly))) {
         qWarning().noquote().nospace() << "TMap::writeJsonMapFile(...) WARNING - Could not open save file \"" << destination << "\".";
@@ -3721,7 +3722,7 @@ std::pair<bool, QString> TMap::readJsonMapFile(const QString& source, const bool
                                      tr("Abort"),
                                      static_cast<int>(mProgressDialogRoomsTotal));
     emit signal_mapProgressSetValue(0);
-    qApp->processEvents();
+    QCoreApplication::processEvents();
 
     mDefaultAreaName = mapObj[QLatin1String("defaultAreaName")].toString();
     mUnnamedAreaName = mapObj[QLatin1String("anonymousAreaName")].toString();
@@ -3981,7 +3982,7 @@ bool TMap::incrementJsonProgressDialog(const bool isExportNotImport, const bool 
                                                      QString::number(mProgressDialogLabelsCount),
                                                      QString::number(mProgressDialogLabelsTotal)));
     }
-    qApp->processEvents();
+    QCoreApplication::processEvents();
     return mMapProgressCancelRequested;
 }
 

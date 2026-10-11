@@ -538,7 +538,7 @@ void Host::forceClose()
     mForcedClose = true;
     postMessage(tr("[ ALERT ] - This profile will now save and close."));
     // Ensure the above is displayed before proceeding...
-    qApp->processEvents();
+    QCoreApplication::processEvents();
 
     // Because we have set the mForcedClose flag above a requestClose()
     // afterwards WILL succeed
@@ -1402,7 +1402,7 @@ void Host::waitForProfileSave()
     // busy.
     constexpr auto notificationTimeout = 30s;
     QElapsedTimer waitedForNotification;
-    // A QEventLoop's processEvents() rather than qApp's only for its "did anything
+    // A QEventLoop's processEvents() rather than QCoreApplication's only for its "did anything
     // happen" answer - nothing is exec()ed here. No user input either: this runs on the
     // way out of a profile, and all it is here to deliver is that notification.
     QEventLoop pump;
