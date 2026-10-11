@@ -1614,6 +1614,52 @@ private slots:
         QVERIFY2(tipWithTheArrow.contains(qsl("Room ID: %1").arg(kEastRoomId)) && !tipWithTheArrow.contains(qsl("Other Area")), qPrintable(tipWithTheArrow));
     }
 
+    // Hovering, clicking, the room menu and picking a room up to move it all act on the room the tooltip names
+    // and a double click walks to: the viewed level's, not the see-through room above it that is nearer
+    void test_everyPointerActionPicksTheViewedLevelsRoomUnderARoomAbove()
+    {
+        ModernGLWidget* pModern = viewAtThePlayer();
+        QVERIFY(pModern);
+        T2DMap* p2dMap = map()->mapper()->mp2dMap;
+        constexpr int upperRoomId = 31;
+        const QPoint eastRoom = pixelOfRoom(pModern, kEastRoomId);
+        QVERIFY(eastRoom.x() >= 0);
+        QVERIFY(addRoomAt(upperRoomId, mPlayerAreaId, 2, 0) && map()->setRoomCoordinates(upperRoomId, 2, 0, 1));
+        const int nearestHit = pModern->roomAt(eastRoom, false);
+
+        hoverAt(pModern, eastRoom);
+        const int hovered = pModern->mHoveredRoomId;
+        QEvent leave(QEvent::Leave);
+        QCoreApplication::sendEvent(pModern, &leave);
+        p2dMap->mMultiSelectionSet.clear();
+        QTest::mouseClick(pModern, Qt::LeftButton, Qt::NoModifier, eastRoom);
+        const QSet<int> clicked = selection();
+        p2dMap->mMultiSelectionSet.clear();
+        p2dMap->mMapViewOnly = false;
+        QTest::mouseClick(pModern, Qt::RightButton, Qt::NoModifier, eastRoom);
+        QMenu* menu = openMenu(pModern);
+        const QSet<int> menuFor = selection();
+        if (menu) {
+            menu->close();
+        }
+        p2dMap->mMultiSelectionSet.clear();
+        QTest::mousePress(pModern, Qt::LeftButton, Qt::NoModifier, eastRoom);
+        const bool moving = pModern->mMovingRooms;
+        const QSet<int> pickedUp = selection();
+        QTest::mouseRelease(pModern, Qt::LeftButton, Qt::NoModifier, eastRoom);
+        p2dMap->mMapViewOnly = true;
+        p2dMap->mMultiSelectionSet.clear();
+        map()->mpRoomDB->removeRoom(upperRoomId);
+
+        QCOMPARE(nearestHit, upperRoomId);
+        QCOMPARE(hovered, kEastRoomId);
+        QCOMPARE(clicked, QSet<int>{kEastRoomId});
+        QVERIFY2(menu, "right-clicking the room opened no menu");
+        QCOMPARE(menuFor, QSet<int>{kEastRoomId});
+        QVERIFY(moving);
+        QCOMPARE(pickedUp, QSet<int>{kEastRoomId});
+    }
+
     void test_keysTurnTheViewAndChangeLevel()
     {
         ModernGLWidget* pModern = viewAtThePlayer();

@@ -2213,18 +2213,18 @@ int ModernGLWidget::areaExitAt(const QPoint& position)
     return nearestExit;
 }
 
-int ModernGLWidget::destinationAt(const QPoint& position)
+int ModernGLWidget::roomPickedAt(const QPoint& position, const bool orNear, const bool areaExits)
 {
-    // As on the 2D map, which shows only the viewed level's rooms, a room of that level under the pointer wins,
-    // even beneath or seen through a room on another level, then the area exit arrow that starts at its center
     if (const int viewedRoom = roomAt(position, false, mMapCenterZ)) {
         return viewedRoom;
     }
-    if (const int exitDestination = areaExitAt(position)) {
-        return exitDestination;
+    if (areaExits) {
+        // A room on another level, and a room only near the pointer, lose to the arrow
+        if (const int exitDestination = areaExitAt(position)) {
+            return exitDestination;
+        }
     }
-    // A room on another level, and a room only near the pointer, lose to the arrow
-    return roomAt(position);
+    return roomAt(position, orNear);
 }
 
 QString ModernGLWidget::roomToolTip(const int roomId) const
@@ -2441,9 +2441,9 @@ void ModernGLWidget::mousePressEvent(QMouseEvent* event)
     if (event->button() == Qt::LeftButton && editingMap() && !event->modifiers().testFlag(Qt::AltModifier)) {
         // Picked before a glide stops, as stopping it snaps the view to whole grid steps away from what was seen.
         // Only a room right under the pointer is picked up, so a drag beside rooms seen small draws a rectangle
-        const int roomId = roomAt(mPressPosition, false);
+        const int roomId = roomPickedAt(mPressPosition, false);
         const bool moveRoom = roomId && !(event->modifiers() & (Qt::ControlModifier | Qt::ShiftModifier));
-        const int rectangleRoomId = roomId ? roomId : roomAt(mPressPosition);
+        const int rectangleRoomId = roomId ? roomId : roomPickedAt(mPressPosition);
         const TRoom* pRoom = moveRoom ? mpMap->mpRoomDB->getRoom(roomId) : nullptr;
         QPointF snap;
         if (mCameraSmoothAnimating) {
@@ -2476,7 +2476,7 @@ void ModernGLWidget::mousePressEvent(QMouseEvent* event)
     if (event->button() == Qt::LeftButton) {
         // A plain click on a room selects it at once, as on the 2D map; anything else waits for the release, as a
         // drag from empty space pans and a Ctrl or Shift drag orbits
-        const int roomId = event->modifiers() == Qt::NoModifier ? roomAt(mPressPosition) : 0;
+        const int roomId = event->modifiers() == Qt::NoModifier ? roomPickedAt(mPressPosition) : 0;
         if (roomId) {
             selectRoom(roomId, event->modifiers());
         } else {
@@ -2615,7 +2615,7 @@ void ModernGLWidget::mouseReleaseEvent(QMouseEvent* event)
     endPan();
     if (event->button() == Qt::LeftButton && mClickPending) {
         mClickPending = false;
-        selectRoom(roomAt(event->position().toPoint()), event->modifiers());
+        selectRoom(roomPickedAt(event->position().toPoint()), event->modifiers());
     } else if (event->button() == Qt::RightButton && mpMap && mpMap->mpRoomDB) {
         showContextMenu(event->position().toPoint());
     }
@@ -2651,7 +2651,7 @@ void ModernGLWidget::showContextMenu(const QPoint& position)
     if (!mp2DMap) {
         return;
     }
-    const int roomId = roomAt(position);
+    const int roomId = roomPickedAt(position);
     RoomContextMenuHandler handler(*mp2DMap);
     QMenu* menu = handler.menuForOtherView(roomId, this);
     if (!menu) {
@@ -2694,7 +2694,7 @@ int ModernGLWidget::roomUnderPointer()
     if (!mPointerInView || mPointerButtons != Qt::NoButton || compassRect().contains(mPointerPosition)) {
         return 0;
     }
-    return roomAt(mPointerPosition);
+    return roomPickedAt(mPointerPosition);
 }
 
 void ModernGLWidget::setHoveredRoom(const int roomId)

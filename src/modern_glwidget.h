@@ -108,8 +108,12 @@ public:
     int roomAt(const QPoint& position, bool orNear = true, std::optional<int> onLevel = std::nullopt);
     // The room in another area that the area-exit arrow drawn under this point of the view leads to, or 0
     int areaExitAt(const QPoint& position);
+    // The room a pointer action at this position is about. As on the 2D map, which shows only the viewed level's
+    // rooms, that level's room under the pointer wins, even beneath or seen through a room on another level; with
+    // areaExits, where an arrow from the viewed level leads comes next, ahead of other rooms
+    int roomPickedAt(const QPoint& position, bool orNear = true, bool areaExits = false);
     // The room a double click or the tooltip at this position is about: a room, or where an area exit leads
-    int destinationAt(const QPoint& position);
+    int destinationAt(const QPoint& position) { return roomPickedAt(position, true, true); }
     // A view in a map window of its own: it shows the area it is told to rather than following the player
     void setSecondaryView(bool secondary);
     bool secondaryView() const { return mSecondaryView; }
