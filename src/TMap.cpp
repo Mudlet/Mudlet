@@ -29,6 +29,7 @@
 #include "TEvent.h"
 #include "TMapLabel.h"
 #include "TMapViewFrontend.h"
+#include "TMapViewsFrontend.h"
 #include "TRoomDB.h"
 #include "XMLimport.h"
 #include "TLuaInterpreter.h"
@@ -150,7 +151,25 @@ MapFileCheck fileHoldsMapData(QFile& file)
     file.seek(startPosition);
     return check;
 }
+
+class TNullMapViewsFrontend final : public TMapViewsFrontend
+{
+public:
+    std::pair<int, QString> createView(int) override { return {0, qsl("no view manager available")}; }
+    std::pair<bool, QString> closeView(int viewId) override { return {false, qsl("view %1 not found").arg(viewId)}; }
+    int closeAllViews() override { return 0; }
+    TSecondaryMapViewFrontend* view(int) override { return nullptr; }
+    QList<int> getViewIds() const override { return {}; }
+    void updateAllViews() override {}
+    void switchViewsShowingArea(int) override {}
+};
 } // anonymous namespace
+
+TMapViewsFrontend* TMap::mapViewsFrontend() const
+{
+    static TNullMapViewsFrontend noViews;
+    return mpViewsFrontend ? mpViewsFrontend : &noViews;
+}
 
 TMap::TMap(Host* pH, const QString& profileName)
 : mDefaultAreaName(tr("Default Area"))

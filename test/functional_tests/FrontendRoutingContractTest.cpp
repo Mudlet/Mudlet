@@ -564,7 +564,7 @@ private slots:
         QVERIFY(mpHost->consoleFrontend() == mpRecorder);
 
         TMap* map = mpHost->mpMap.data();
-        QVERIFY2(!map->mapViewFrontend() && !map->mapViewsFrontend(), "The profile has map views, so the recording ones would never be asked.");
+        QVERIFY2(!map->mapViewFrontend() && !map->getViewManager(), "The profile has map views, so the recording ones would never be asked.");
         mAreaId = map->mpRoomDB->addArea(qsl("Routed area"));
         mShownAreaId = map->mpRoomDB->addArea(qsl("Routed shown area"));
         QVERIFY(mAreaId > 0 && mShownAreaId > 0);

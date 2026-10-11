@@ -326,8 +326,9 @@ public:
     TMapViewManager* getViewManager() { return mpViewManager; }
     // Defined in TMapViewManager.cpp, which can see that TMapViewManager is a TMapViewsFrontend.
     void setViewManager(TMapViewManager* pViewManager);
-    // mpViewManager as core code drives it.
-    TMapViewsFrontend* mapViewsFrontend() const { return mpViewsFrontend; }
+    // mpViewManager as core code drives it. Never null: with no manager, as in a profile with no
+    // console view, a frontend that has no views and can make none.
+    TMapViewsFrontend* mapViewsFrontend() const;
 
     // Was a single int mRoomId but that breaks things when maps are
     // copied/shared between profiles - so now we track the profile name
