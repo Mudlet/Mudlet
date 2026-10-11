@@ -19,9 +19,16 @@
 
 #include "TNullAppFrontend.h"
 
+#include "TLabelModel.h"
+
 TAppFrontend* TAppFrontend::nullView()
 {
     // Function-local, so it exists before any static initialiser can ask for it
     static TNullAppFrontend view;
     return &view;
+}
+
+std::optional<QSize> TNullAppFrontend::getImageSize(const QString& imageLocation)
+{
+    return TLabelModel::imageSize(imageLocation);
 }

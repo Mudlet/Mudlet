@@ -20,6 +20,9 @@
 #include <QApplication>
 #include <QDataStream>
 #include <QDir>
+#include <QFile>
+#include <QImage>
+#include <QSvgRenderer>
 #include <QTemporaryDir>
 #include <QtNetwork/QTcpServer>
 #include <QtNetwork/QTcpSocket>
@@ -579,6 +582,66 @@ headlessSettingsResult = ok and 'ok' or tostring(err)
 )lua"));
         QVERIFY2(ran, "The Lua chunk did not run.");
         QCOMPARE(luaGlobalString(host, "headlessSettingsResult"), qsl("ok"));
+    }
+
+    // As the GUI answers the same files
+    void test_imageSizeWithNoMainWindow()
+    {
+        QVERIFY2(!TAppFrontend::hasView(), "A main window exists, so this run is not headless.");
+
+        const QString hostname = qsl("Test-Headless-Host-Image-Size");
+        QVERIFY2(HostManager::self()->addHost(hostname, QString(), QString(), QString()), "Could not create a profile with no main window.");
+        Host* host = HostManager::self()->getHost(hostname);
+        QVERIFY2(host, "The profile is not in the pool.");
+
+        QTemporaryDir images;
+        QVERIFY(images.isValid());
+        const auto writeFile = [&images](const QString& name, const QByteArray& content) {
+            QFile file(images.filePath(name));
+            return file.open(QIODevice::WriteOnly) && file.write(content) == content.size();
+        };
+        QVERIFY(QImage(37, 21, QImage::Format_ARGB32).save(images.filePath(qsl("raster.png"))));
+        QVERIFY(writeFile(qsl("document.svg"), QByteArrayLiteral("<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"64\" height=\"48\"/>")));
+        // QImage reads this by its content, which the SVG renderer cannot
+        QVERIFY(QImage(5, 9, QImage::Format_ARGB32).save(images.filePath(qsl("raster.svg")), "PNG"));
+        // Not named .svgz, so only its content says it is gzipped
+        QVERIFY(writeFile(
+                qsl("gzipped.svg"),
+                QByteArrayLiteral(
+                        "\x1f\x8b\x08\x00\x00\x00\x00\x00\x02\xff\xb3\x29\x2e\x4b\x57\xa8\xc8\xcd\xc9\x2b\xb6\x55\xca\x28\x29\x29\xb0\xd2\xd7\x2f\x2f\x2f\xd7\x2b\x37\xd6\xcb\x2f\x4a\xd7\x37\x32\x30"
+                        "\x30\xd0\x07\xaa\x50\x52\x28\xcf\x4c\x29\xc9\xb0\x55\x32\x31\x50\x52\xc8\x48\xcd\x4c\xcf\x28\xb1\x55\x32\x36\x50\xd2\xb7\x03\x00\x54\x4e\x04\xa0\x40\x00\x00\x00")));
+
+        const QString missing = images.filePath(qsl("missing.png"));
+        // The refusal is outside the raw string: moc pairs up the apostrophes in one, and an odd count breaks it
+        const QString script = qsl("imageDir = \"%1/\"\nmissingRefusal = \"couldn't retrieve image size, is the location '%2' correct?\"\n").arg(images.path(), missing) + qsl(R"lua(
+headlessImageSize = 'not run'
+local ok, err = pcall(function()
+  local function check(label, wantA, wantB, ...)
+    local n = select("#", ...)
+    local a, b = ...
+    assert(n == 2 and a == wantA and b == wantB, label .. " answered " .. n .. " values: " .. tostring(a) .. ", " .. tostring(b))
+  end
+  check("PNG", 37, 21, getImageSize(imageDir .. "raster.png"))
+  check("SVG", 64, 48, getImageSize(imageDir .. "document.svg"))
+  check("raster named .svg", 5, 9, getImageSize(imageDir .. "raster.svg"))
+  check("gzipped SVG", 40, 30, getImageSize(imageDir .. "gzipped.svg"))
+  check("missing file", nil, missingRefusal, getImageSize(imageDir .. "missing.png"))
+  check("empty path", nil, "image location cannot be an empty string", getImageSize(""))
+end)
+headlessImageSize = ok and 'ok' or tostring(err)
+)lua");
+        const bool ran = host->getLuaInterpreter()->compileAndExecuteScript(script);
+
+        QVERIFY2(ran, "The Lua chunk did not run.");
+        QCOMPARE(luaGlobalString(host, "headlessImageSize"), qsl("ok"));
+
+        // QImage reads SVG too where the qsvg plugin is deployed, which would hide a broken helper from getImageSize
+        QVERIFY(TLabelModel::svgCandidate(images.filePath(qsl("document.svg"))));
+        QVERIFY(TLabelModel::svgCandidate(images.filePath(qsl("gzipped.svg"))));
+        QVERIFY(!TLabelModel::svgCandidate(images.filePath(qsl("raster.svg"))));
+        QSvgRenderer renderer;
+        QVERIFY(TLabelModel::loadSvg(renderer, images.filePath(qsl("gzipped.svg"))));
+        QCOMPARE(renderer.defaultSize(), QSize(40, 30));
     }
 
     void test_profileWithNoSettingsStoreTakesTheDefaults()
