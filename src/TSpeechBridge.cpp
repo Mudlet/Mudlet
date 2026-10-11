@@ -89,8 +89,7 @@ void TSpeechBridge::raiseSpeechEvent(const QString& name, const QString& value)
         mpMicrophoneOwnerEnding = nullptr;
     }
     if (!pHost) {
-        auto* pFrontend = TAppFrontend::instance();
-        pHost = pFrontend ? pFrontend->getActiveHost() : nullptr;
+        pHost = TAppFrontend::hasView() ? TAppFrontend::instance()->getActiveHost() : nullptr;
     }
     raiseSpeechEventOn(pHost, name, value);
 }

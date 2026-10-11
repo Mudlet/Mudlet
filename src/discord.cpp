@@ -334,8 +334,7 @@ void Discord::UpdatePresence()
         return;
     }
 
-    auto* pFrontend = TAppFrontend::instance();
-    Host* pHost = pFrontend ? pFrontend->getActiveHost() : nullptr;
+    Host* pHost = TAppFrontend::hasView() ? TAppFrontend::instance()->getActiveHost() : nullptr;
 
     // Don't send any presence when no profile is active or Discord is
     // disabled - showing "Playing Mudlet" would leak information when the
