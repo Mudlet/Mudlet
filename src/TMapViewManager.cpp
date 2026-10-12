@@ -27,6 +27,12 @@
 #include "TRoomDB.h"
 #include "utils.h"
 
+void TMap::setViewManager(TMapViewManager* pViewManager)
+{
+    mpViewManager = pViewManager;
+    mpViewsFrontend = pViewManager;
+}
+
 TMapViewManager::TMapViewManager(Host* pHost, TMap* pMap)
 : QObject(pMap)
 , mpHost(pHost)
@@ -134,6 +140,11 @@ TMapView* TMapViewManager::getView(int viewId)
     return nullptr;
 }
 
+TSecondaryMapViewFrontend* TMapViewManager::view(int viewId)
+{
+    return getView(viewId);
+}
+
 QList<int> TMapViewManager::getViewIds() const
 {
     return mViews.keys();
@@ -161,6 +172,15 @@ void TMapViewManager::switchViewsShowingArea(int areaId)
         Q_UNUSED(viewId)
         if (view && view->getCurrentAreaId() == areaId) {
             view->switchToAnotherArea();
+        }
+    }
+}
+
+void TMapViewManager::update3DViewAvailability()
+{
+    for (const auto& view : std::as_const(mViews)) {
+        if (view) {
+            view->update3DViewAvailability();
         }
     }
 }
