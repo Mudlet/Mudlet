@@ -36,6 +36,7 @@
 #include <QMap>
 #include <QMatrix4x4>
 #include <QVector3D>
+#include <QVector4D>
 #include <QQuaternion>
 #include <QOpenGLBuffer>
 #include <QOpenGLFunctions>
@@ -221,6 +222,30 @@ private:
     LabelTextureCache mLabelTextureCache;
     // Room textures this frame has used so far, which making room for another must keep
     QSet<QString> mRoomTexturesInUse;
+    // A room's ink outline, by everything it is made from
+    struct InkOutline
+    {
+        float x = 0.0f;
+        float y = 0.0f;
+        float top = 0.0f;
+        float half = 0.0f;
+        float width = 0.0f;
+        float dashLength = 0.0f;
+        QVector4D color;
+        bool operator==(const InkOutline&) const = default;
+    };
+    // A level's ink outlines and the triangles made from them, where each outline's are remade only when it
+    // changes, as making them all for a large area costs more each frame than all the rest of its rooms
+    struct InkOutlineLevel
+    {
+        QVector<InkOutline> outlines;
+        bool round = false;
+        QVector<float> vertices;
+        QVector<float> colors;
+        // Where each outline's vertices end
+        QVector<int> ends;
+    };
+    QHash<int, InkOutlineLevel> mInkOutlines;
     bool mRoomTextureLimitWarned = false;
     bool mSolidDashWarned = false;
 

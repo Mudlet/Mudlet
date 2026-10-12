@@ -1156,7 +1156,7 @@ void ModernGLWidget::renderRooms()
     const bool inkOutlines = style.edges == MapStyle::Edges::InkOutlines;
     const QColor ink = style.exitColor(contrast);
     // By level, drawn with that level's rooms
-    QMap<int, FlatLines> inkLines;
+    QHash<int, QVector<InkOutline>> roomOutlines;
     // What is on the opaque rooms, by level, drawn with the see-through rooms of its level
     QMap<int, RoomDecals> opaqueDecals;
     // Rooms and borders drawn see-through, with what is on them, by level: drawn after the opaque rooms
@@ -1233,23 +1233,16 @@ void ModernGLWidget::renderRooms()
             // color and thickness show, but not the profile's border color, which every room has and would drown the ink
             const QColor lineColor = pR->mBorderColor.isValid() ? pR->mBorderColor : ink;
             const float top = rz + roomHeight / 2.0f;
-            const float pixel = mCameraController.worldUnitsPerPixel(QVector3D(rx, ry, top));
+            // In steps of a quarter of a doubling, so that turning or panning the view seldom changes an outline and
+            // its triangles can be kept
+            const float pixel = std::exp2(std::ceil(std::log2(mCameraController.worldUnitsPerPixel(QVector3D(rx, ry, top))) * 4.0f) / 4.0f);
             const float thickness = pR->mBorderThickness > 0 ? static_cast<float>(pR->mBorderThickness) * borderUnit : 0.0f;
             const float lineWidth = qMax(static_cast<float>(roomSize * scmInkOutline), pixel);
             const float width = qMax(lineWidth * (hovered ? 2.5f : 1.0f), thickness);
-            QList<QPointF> corners;
             // Any wider than the plain line grows outward, as a border does, so as not to cover the room
-            const qreal half = roomSize / 2.0 + (width - lineWidth) / 2.0;
-            if (round) {
-                for (int i = 0; i < GeometryManager::scmCylinderSegments; ++i) {
-                    const qreal angle = 2.0 * std::numbers::pi * i / GeometryManager::scmCylinderSegments;
-                    corners.append(QPointF(rx + half * std::cos(angle), ry + half * std::sin(angle)));
-                }
-            } else {
-                corners = {QPointF(rx - half, ry - half), QPointF(rx + half, ry - half), QPointF(rx + half, ry + half), QPointF(rx - half, ry + half)};
-            }
+            const float half = roomSize / 2.0f + (width - lineWidth) / 2.0f;
             const bool dashed = !look.onViewedLevel() && !hovered;
-            appendFlatOutline(inkLines[pR->z()], corners, top, width, GeometryManager::fadedColor(lineColor, fade, fadeTarget), dashed ? roomSize * scmInkDash : 0.0);
+            roomOutlines[pR->z()].append({rx, ry, top, half, width, dashed ? static_cast<float>(roomSize * scmInkDash) : 0.0f, GeometryManager::fadedColor(lineColor, fade, fadeTarget)});
         } else if (hovered) {
             // Taller than a border, so that it shows over one
             outlineInstances.append(outline(roomSize * scmHoverOutline, QVector4D(contrast.redF(), contrast.greenF(), contrast.blueF(), 1.0f), 0.75f));
@@ -1513,10 +1506,53 @@ void ModernGLWidget::renderRooms()
     // Everything from here on is drawn over what is behind it, so it does not write depth unless it says so
     mRenderCommandQueue.addCommand(std::make_unique<GLStateCommand>(GLStateCommand::DISABLE_DEPTH_WRITE));
 
+    QHash<int, InkOutlineLevel> inkLevels;
+    for (auto outlines = roomOutlines.cbegin(); outlines != roomOutlines.cend(); ++outlines) {
+        const InkOutlineLevel previous = mInkOutlines.value(outlines.key());
+        if (previous.outlines == outlines.value() && previous.round == round) {
+            inkLevels.insert(outlines.key(), previous);
+            continue;
+        }
+        // The rooms come in the same order while the area's rooms stay the same
+        const bool reusable = previous.round == round && previous.outlines.size() == outlines.value().size();
+        InkOutlineLevel& level = inkLevels[outlines.key()];
+        level.outlines = outlines.value();
+        level.round = round;
+        FlatLines lines;
+        for (int index = 0; index < level.outlines.size(); ++index) {
+            const InkOutline& outline = level.outlines.at(index);
+            if (reusable && previous.outlines.at(index) == outline) {
+                const int from = index > 0 ? previous.ends.at(index - 1) : 0;
+                const int to = previous.ends.at(index);
+                lines.vertices.append(previous.vertices.sliced(from, to - from));
+                lines.colors.append(previous.colors.sliced(from / 3 * 4, (to - from) / 3 * 4));
+            } else {
+                const qreal half = outline.half;
+                QList<QPointF> corners;
+                if (round) {
+                    for (int i = 0; i < GeometryManager::scmCylinderSegments; ++i) {
+                        const qreal angle = 2.0 * std::numbers::pi * i / GeometryManager::scmCylinderSegments;
+                        corners.append(QPointF(outline.x + half * std::cos(angle), outline.y + half * std::sin(angle)));
+                    }
+                } else {
+                    corners = {QPointF(outline.x - half, outline.y - half),
+                               QPointF(outline.x + half, outline.y - half),
+                               QPointF(outline.x + half, outline.y + half),
+                               QPointF(outline.x - half, outline.y + half)};
+                }
+                appendFlatOutline(lines, corners, outline.top, outline.width, outline.color, outline.dashLength);
+            }
+            level.ends.append(static_cast<int>(lines.vertices.size()));
+        }
+        level.vertices = lines.vertices;
+        level.colors = lines.colors;
+    }
+    mInkOutlines = inkLevels;
+
     // From the lowest level up, as each blends over the ones under it: its faint floor, its see-through exits, rooms
     // and borders, what is on its rooms, then its labels shown on top. Every level's labels come before the next
     // level up lays its depth, which would cut them out where it covers them
-    QList<int> levels = levelExtents.keys() + mSeeThroughExits.keys() + seeThroughLevels.keys() + opaqueDecals.keys() + inkLines.keys();
+    QList<int> levels = levelExtents.keys() + mSeeThroughExits.keys() + seeThroughLevels.keys() + opaqueDecals.keys() + mInkOutlines.keys();
     std::sort(levels.begin(), levels.end());
     levels.erase(std::unique(levels.begin(), levels.end()), levels.end());
     qint64 unlabeledFrom = std::numeric_limits<int>::lowest();
@@ -1556,7 +1592,7 @@ void ModernGLWidget::renderRooms()
                 mRenderCommandQueue.addCommand(std::make_unique<GLStateCommand>(GLStateCommand::DEPTH_FUNC_LESS));
             }
         }
-        if (const auto lines = inkLines.constFind(level); lines != inkLines.cend()) {
+        if (const auto lines = mInkOutlines.constFind(level); lines != mInkOutlines.cend()) {
             mRenderCommandQueue.addCommand(std::make_unique<GLStateCommand>(GLStateCommand::ENABLE_POLYGON_OFFSET));
             mRenderCommandQueue.addCommand(std::make_unique<RenderTrianglesCommand>(
                     lines->vertices, lines->colors, mCameraController.getProjectionMatrix(), mCameraController.getViewMatrix(), mCameraController.getModelMatrix(), RenderCommand::Shading::Unlit));
