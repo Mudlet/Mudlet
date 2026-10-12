@@ -89,7 +89,7 @@ struct MapStyle
         // with no fill on the others
         InkOutlines,
         // A metro map's station: a ring just inside each room's edge in ringColor(), and a heavier one in the style's ink
-        // around an interchange, a room with interchangeExits or more exits, which is drawn larger
+        // around an interchange, a room with interchangeExits or more exits
         StationRings,
         // A base around each room on the viewed level, halfway from the room's color to the background, so the
         // room reads as a block with shaded sides
