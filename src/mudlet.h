@@ -27,9 +27,7 @@
  ***************************************************************************/
 
 #include "discord.h"
-#include "FontManager.h"
 #include "HostManager.h"
-#include "MudletMedia.h"
 #include "MudletReplay.h"
 #include "ShortcutsManager.h"
 #include "TAppFrontend.h"
@@ -47,6 +45,7 @@
 #include <QMainWindow>
 #include <QMap>
 #include <QPointer>
+#include <QScopedPointer>
 #include <QSystemTrayIcon>
 #include <QTextOption>
 
@@ -89,6 +88,9 @@ class dlgPackageExporter;
 class dlgProfilePreferences;
 class dlgTriggerEditor;
 class Host;
+#ifdef INCLUDE_MCPSERVER
+class TMCPServer;
+#endif
 class MudletInstanceCoordinator;
 class ShortcutManager;
 class TConsole;
@@ -216,7 +218,7 @@ public:
     void readEarlySettings(const QSettings&);
     void readLateSettings(const QSettings&);
     void refreshTabBar();
-    void refreshTabBarsAfterStyleChange() override;
+    void refreshTabBarsAfterStyleChange();
     // Used by a profile to tell the mudlet class
     // to tell other profiles to reload the updated
     // maps (via signal_profileMapReloadRequested(...))
@@ -228,6 +230,7 @@ public:
     void scanForMudletTranslations(const QString&);
     void scanForQtTranslations(const QString&);
     void setAppearance(enums::Appearance, const bool& loading = false);
+    void setAppStyleSheet(const QString& styleSheet) override;
     bool setClickthrough(Host*, const QString&, bool);
     void setEditorTextoptions(bool isTabsAndSpacesToBeShown, bool isLinesAndParagraphsToBeShown);
     void setEditorTreeWidgetIconSize(int);
@@ -251,7 +254,7 @@ public:
     bool showTabConnectionIndicators() const override { return mShowTabConnectionIndicators; }
     void showNotification(const QString& title, const QString& text, std::optional<int> msecs) override;
     bool drawUpperLowerLevels() const override { return mDrawUpperLowerLevels; }
-    void setDrawUpperLowerLevels(bool draw) override { mDrawUpperLowerLevels = draw; }
+    void setDrawUpperLowerLevels(bool draw) override;
     // Addon toolbar button management
     int addAddonCommand(const CommandRequest& request, Host* pHost, const QString& package, QString& error) override;
     bool removeAddonCommand(int commandId, Host* pHost) override;
@@ -293,6 +296,20 @@ public:
     void updateDiscordNamedIcon();
     void updateMultiViewControls();
     void writeSettings();
+#ifdef INCLUDE_MCPSERVER
+    bool mcpEnabled() const { return mEnableMCP; }
+    quint16 mcpServerPort() const { return mMCPServerPort; }
+    // The URL to paste into an MCP client, or an empty string while the server is down.
+    QString mcpEndpoint() const;
+    // The last thing that went wrong, ready to show, or an empty string when the server
+    // is doing what was asked. Outlives the call that failed, so a start refused at
+    // launch - when no dialog is open to be told - is still explainable afterwards.
+    QString mcpLastError() const { return mMCPLastError; }
+    // Starts or stops the one application-wide MCP server. Returns false and fills error
+    // with a message ready to show when the assistant will not be able to reach Mudlet;
+    // the caller has to show it, because every reason is one the user can act on.
+    bool setMCPEnabled(bool enabled, quint16 port, QString& error);
+#endif
     bool profileExists(const QString& profileName);
     bool showSplitscreenTutorial();
     void showedSplitscreenTutorial();
@@ -334,7 +351,6 @@ public:
     // are considered/used/stored
     QTextOption::Flags mEditorTextOptions = QTextOption::Flags();
     int mEditorTreeWidgetIconSize = 0;
-    FontManager mFontManager;
     bool mHasSavedLayout = false;
     bool mIsLoadingLayout = false;
     QStringList mOnlyShownPredefinedProfiles;
@@ -546,13 +562,17 @@ private slots:
 private:
     void assignKeySequences();
     QString autodetectPreferredLanguage();
+#ifdef INCLUDE_MCPSERVER
+    // Everything setMCPEnabled() does bar the discovery file, which has to be squared
+    // with whatever this leaves behind whichever way it goes
+    bool startMCPServer(bool enabled, quint16 port, QString& error);
+#endif
     void showUiTour(const bool skipIntroStep);
     static bool needsCustomDarkTheme();
     void closeHost(const QString&);
     void goingDown() { mIsGoingDown = true; }
     void endProfileLoad();
     void initEdbee();
-    void installModulesList(Host*, QStringList);
     void loadMaps();
     void loadTranslators(const QString&);
     void migrateDebugConsole(Host*);
@@ -586,8 +606,6 @@ private:
     // Stores the translated names for the Encodings for the static and thus
     // const TBuffer::csmEncodingTable:
     QMap<QByteArray, QString> mEncodingNameMap;
-    // Before mHostManager, so it is destroyed after the profiles that reach it
-    MudletMedia mMedia;
     HostManager mHostManager;
     // After mHostManager, so it is gone before the profiles that reach it are
     MudletReplay mReplay;
@@ -625,6 +643,12 @@ private:
     std::optional<bool> mMenuVisibleState;
     QString mMudletDiscordInvite = qsl("https://www.mudlet.org/chat");
     bool mMultiView = false;
+#ifdef INCLUDE_MCPSERVER
+    bool mEnableMCP = false;
+    quint16 mMCPServerPort = 11235;
+    QString mMCPLastError;
+    QScopedPointer<TMCPServer> mpMCPServer;
+#endif
     QPointer<QAction> mpActionAbout;
     QPointer<QAction> mpActionAboutWithUpdates;
     QPointer<QAction> mpActionAliases;
