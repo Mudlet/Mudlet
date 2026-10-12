@@ -40,8 +40,18 @@
 #include <QtMath>
 
 #include <algorithm>
+#include <tuple>
 
 namespace {
+
+// QWIDGETSIZE_MAX, which only <QWidget> defines
+constexpr int maximumWidgetSize = (1 << 24) - 1;
+
+// As QWidget::resize() bounds a size
+QSize widgetSize(const int width, const int height)
+{
+    return QSize(width, height).expandedTo(QSize(0, 0)).boundedTo(QSize(maximumWidgetSize, maximumWidgetSize));
+}
 
 // The font properties a sheet's declarations set, read by the CSS value extractor a widget's sheet goes through
 std::optional<QFont> styleSheetFont(const QString& sheet)
@@ -471,6 +481,10 @@ void TNullConsoleFrontend::dropWindows()
         const QString name = mLabels.begin()->first;
         removeLabel(name);
     }
+    for (const auto& [name, box] : mScrollBoxes) {
+        mpHost->windowRegistry().deregisterScrollBox(name);
+    }
+    mScrollBoxes.clear();
 }
 
 QString TNullConsoleFrontend::userWindowOrMain(const QString& windowname) const
@@ -478,16 +492,28 @@ QString TNullConsoleFrontend::userWindowOrMain(const QString& windowname) const
     return mpHost->windowRegistry().hasDockWidget(windowname) ? windowname : QString();
 }
 
+// The user window and scroll box a new window goes into. Only a mini console looks among the
+// scroll boxes first, as TMainConsole::createMiniConsole() does.
+std::pair<QString, std::shared_ptr<TNullConsoleFrontend::ScrollBox>> TNullConsoleFrontend::containerFor(const QString& windowname, const bool scrollBoxFirst) const
+{
+    const QString userWindow = userWindowOrMain(windowname);
+    const auto it = mScrollBoxes.find(windowname);
+    if (it != mScrollBoxes.end() && (scrollBoxFirst || userWindow.isEmpty())) {
+        return {it->second->userWindow, it->second};
+    }
+    return {userWindow, nullptr};
+}
+
 void TNullConsoleFrontend::createLabel(const QString& windowname, const QString& name, int x, int y, int width, int height, bool, bool)
 {
     auto pLabel = std::make_unique<TLabelModel>(mpHost, name);
     pLabel->mGeometry = QRect(x, y, width, height);
-    const QString userWindow = userWindowOrMain(windowname);
+    auto [userWindow, box] = containerFor(windowname, false);
     // A real label takes its console's font as it is made, and keeps it as that font changes
     pLabel->mFont = consoleFont(userWindow).value_or(displayFont());
     mpHost->windowRegistry().registerLabel(name, pLabel.get());
-    mLabels[name] = {std::move(pLabel), userWindow};
-    reportVisibility(name);
+    mLabels[name] = {std::move(pLabel), userWindow, std::move(box)};
+    reportWindowVisibility(name);
     // TMainConsole::createLabel()'s colour
     setLabelBackgroundColor(name, QColor(32, 32, 32, 255));
 }
@@ -659,7 +685,8 @@ TConsoleModel& TNullConsoleFrontend::addSubConsole(const QString& name, const TW
     pModel->mUpperPaneFont = TFontAttributes(mpHost->fontsAntiAlias()).makeFont();
     TConsoleModel& model = *pModel;
     mpHost->windowRegistry().registerSubConsole(name, &model, kind);
-    mSubConsoles[name] = {std::move(pModel), userWindowOrMain(windowname)};
+    auto [userWindow, box] = containerFor(windowname, true);
+    mSubConsoles[name] = {std::move(pModel), userWindow, std::move(box)};
     return model;
 }
 
@@ -689,6 +716,13 @@ void TNullConsoleFrontend::removeSubConsole(const QString& name)
         for (const QString& childName : contents) {
             removeLabel(childName);
         }
+        std::erase_if(mScrollBoxes, [&registry, &name](const auto& entry) {
+            if (entry.second->userWindow != name) {
+                return false;
+            }
+            registry.deregisterScrollBox(entry.first);
+            return true;
+        });
         registry.deregisterDockWidget(name);
     }
     registry.deregisterSubConsole(name, it->second.pModel.get());
@@ -807,7 +841,7 @@ bool TNullConsoleFrontend::setLabelShown(const QString& name, const bool shown)
         return false;
     }
     it->second.shown = shown;
-    reportVisibility(name);
+    reportWindowVisibility(name);
     return true;
 }
 
@@ -818,43 +852,180 @@ bool TNullConsoleFrontend::setSubConsoleShown(const QString& name, const bool sh
         return false;
     }
     it->second.shown = shown;
-    reportVisibility(name);
+    if (mpHost->windowRegistry().subConsoleKind(name) == TWindowRegistry::SubConsoleKind::UserWindow) {
+        reportVisibility();
+    } else {
+        reportWindowVisibility(name);
+    }
     return true;
 }
 
-// As TMainConsole::reportVisibility() writes QWidget::isVisibleTo() the main console, for which a
-// window inside a hidden user window is hidden too.
-void TNullConsoleFrontend::reportVisibility(const QString& name)
+// QWidget::isVisibleTo() the main console, for which a window inside a hidden user window or scroll
+// box is hidden too
+bool TNullConsoleFrontend::shownWithin(const QString& userWindow, const ScrollBox* box) const
 {
-    const auto shownWithin = [this](const QString& userWindow) {
-        if (userWindow.isEmpty()) {
-            return true;
+    for (; box; box = box->box.get()) {
+        if (!box->shown) {
+            return false;
         }
-        const auto it = mSubConsoles.find(userWindow);
-        return it != mSubConsoles.end() && it->second.shown;
-    };
-    if (const auto it = mLabels.find(name); it != mLabels.end()) {
-        setLabelVisible(it->second, it->second.shown && shownWithin(it->second.userWindow));
     }
-    const auto it = mSubConsoles.find(name);
-    if (it == mSubConsoles.end()) {
-        return;
+    if (userWindow.isEmpty()) {
+        return true;
+    }
+    const auto it = mSubConsoles.find(userWindow);
+    return it != mSubConsoles.end() && it->second.shown;
+}
+
+// For a label or a sub-console that is not a user window, which hold nothing, so that making many
+// windows does not report every window each time
+void TNullConsoleFrontend::reportWindowVisibility(const QString& name)
+{
+    TWindowRegistry& registry = mpHost->windowRegistry();
+    if (const auto it = mLabels.find(name); it != mLabels.end()) {
+        setLabelVisible(it->second, it->second.shown && shownWithin(it->second.userWindow, it->second.box.get()));
+    }
+    if (const auto it = mSubConsoles.find(name); it != mSubConsoles.end()) {
+        registry.setSubConsoleVisible(name, it->second.shown && shownWithin(it->second.userWindow, it->second.box.get()));
+    }
+    if (const auto it = mScrollBoxes.find(name); it != mScrollBoxes.end()) {
+        registry.setPlainWindowVisible(name, it->second->shown && shownWithin(it->second->userWindow, it->second->box.get()));
+    }
+}
+
+// As TMainConsole::reportVisibility() and reportVisibilityWithin() write it for every window a change reaches
+void TNullConsoleFrontend::reportVisibility()
+{
+    TWindowRegistry& registry = mpHost->windowRegistry();
+    for (auto& [name, label] : mLabels) {
+        setLabelVisible(label, label.shown && shownWithin(label.userWindow, label.box.get()));
+    }
+    for (const auto& [name, subConsole] : mSubConsoles) {
+        registry.setSubConsoleVisible(name, subConsole.shown && shownWithin(subConsole.userWindow, subConsole.box.get()));
+    }
+    for (const auto& [name, box] : mScrollBoxes) {
+        registry.setPlainWindowVisible(name, box->shown && shownWithin(box->userWindow, box->box.get()));
+    }
+}
+
+bool TNullConsoleFrontend::createScrollBox(const QString& windowname, const QString& name, const int x, const int y, const int width, const int height)
+{
+    if (mScrollBoxes.contains(name)) {
+        return false;
+    }
+    auto box = std::make_shared<ScrollBox>();
+    std::tie(box->userWindow, box->box) = containerFor(windowname, false);
+    mScrollBoxes[name] = box;
+    TWindowRegistry& registry = mpHost->windowRegistry();
+    registry.registerScrollBox(name);
+    registry.setPlainWindowGeometry(name, QRect(QPoint(x, y), widgetSize(width, height)));
+    // A new box holds nothing yet
+    reportWindowVisibility(name);
+    return true;
+}
+
+std::pair<bool, QString> TNullConsoleFrontend::deleteScrollBox(const QString& name)
+{
+    if (name.isEmpty()) {
+        return {false, qsl("a scrollbox cannot have an empty string as its name")};
+    }
+    const auto it = mScrollBoxes.find(name);
+    if (it == mScrollBoxes.end()) {
+        if (mpHost->windowRegistry().hasScrollBox(name)) {
+            // One the current view has no record of, such as a detached view's
+            return {false, qsl("scrollbox name '%1' could not be deleted").arg(name)};
+        }
+        return {false, qsl("scrollbox name '%1' not found").arg(name)};
+    }
+    const std::shared_ptr<ScrollBox> box = it->second;
+    mScrollBoxes.erase(it);
+    mpHost->windowRegistry().deregisterScrollBox(name);
+    // TMainConsole::deleteScrollBox() calls deleteLater(), so what the box holds stays until then
+    auto pRelease = new QObject();
+    QObject::connect(pRelease, &QObject::destroyed, mpHost, [this, box]() {
+        removeScrollBoxContents(box.get());
+    });
+    pRelease->deleteLater();
+
+    TEvent event{};
+    event.mArgumentList.append(qsl("sysScrollBoxDeleted"));
+    event.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
+    event.mArgumentList.append(name);
+    event.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
+    mpHost->raiseEvent(event);
+    return {true, QString()};
+}
+
+void TNullConsoleFrontend::removeScrollBoxContents(const ScrollBox* box)
+{
+    const auto inside = [box](const ScrollBox* container) {
+        for (; container; container = container->box.get()) {
+            if (container == box) {
+                return true;
+            }
+        }
+        return false;
+    };
+    QStringList contents;
+    for (const auto& [name, label] : mLabels) {
+        if (inside(label.box.get())) {
+            contents << name;
+        }
+    }
+    for (const QString& name : contents) {
+        removeLabel(name);
+    }
+    contents.clear();
+    for (const auto& [name, subConsole] : mSubConsoles) {
+        if (inside(subConsole.box.get())) {
+            contents << name;
+        }
+    }
+    for (const QString& name : contents) {
+        removeSubConsole(name);
     }
     TWindowRegistry& registry = mpHost->windowRegistry();
-    registry.setSubConsoleVisible(name, it->second.shown && shownWithin(it->second.userWindow));
-    if (registry.subConsoleKind(name) != TWindowRegistry::SubConsoleKind::UserWindow) {
-        return;
-    }
-    for (const auto& [childName, child] : mSubConsoles) {
-        if (child.userWindow == name) {
-            registry.setSubConsoleVisible(childName, child.shown && it->second.shown);
+    std::erase_if(mScrollBoxes, [&registry, &inside](const auto& entry) {
+        if (!inside(entry.second->box.get())) {
+            return false;
         }
+        registry.deregisterScrollBox(entry.first);
+        return true;
+    });
+}
+
+bool TNullConsoleFrontend::setScrollBoxShown(const QString& name, const bool shown)
+{
+    const auto it = mScrollBoxes.find(name);
+    if (it == mScrollBoxes.end()) {
+        return false;
     }
-    for (auto& [childName, child] : mLabels) {
-        if (child.userWindow == name) {
-            setLabelVisible(child, child.shown && it->second.shown);
-        }
+    it->second->shown = shown;
+    reportVisibility();
+    return true;
+}
+
+bool TNullConsoleFrontend::resizePlainWindow(const QString& name, const int width, const int height)
+{
+    if (!mScrollBoxes.contains(name)) {
+        return false;
     }
+    TWindowRegistry& registry = mpHost->windowRegistry();
+    QRect geometry = registry.plainWindowGeometry(name).value_or(QRect());
+    geometry.setSize(widgetSize(width, height));
+    registry.setPlainWindowGeometry(name, geometry);
+    return true;
+}
+
+bool TNullConsoleFrontend::movePlainWindow(const QString& name, const int x, const int y)
+{
+    if (!mScrollBoxes.contains(name)) {
+        return false;
+    }
+    TWindowRegistry& registry = mpHost->windowRegistry();
+    QRect geometry = registry.plainWindowGeometry(name).value_or(QRect());
+    geometry.moveTo(x, y);
+    registry.setPlainWindowGeometry(name, geometry);
+    return true;
 }
 
 std::pair<bool, QString> TNullConsoleFrontend::setLabelStyleSheet(const QString& name, const QString& stylesheet)
@@ -958,7 +1129,7 @@ bool TNullConsoleFrontend::resizeLabel(const QString& name, const int width, con
         return false;
     }
     Label& label = it->second;
-    const QSize size = QSize(width, height).expandedTo(QSize(0, 0));
+    const QSize size = widgetSize(width, height);
     if (size == label.pModel->mGeometry.size()) {
         return true;
     }
@@ -1156,7 +1327,9 @@ bool TNullConsoleFrontend::moveLabel(const QString& name, const int x, const int
 bool TNullConsoleFrontend::reparentLabel(const QString& windowname, const QString& name, const int x, const int y, const bool show)
 {
     const auto it = mLabels.find(name);
-    if (it == mLabels.end()) {
+    // Left to a view: moved into or out of a scroll box, or to a name a box shares with a user window,
+    // the label would have the box as its parent, which a label here does not record
+    if (it == mLabels.end() || it->second.box || mScrollBoxes.contains(windowname)) {
         return false;
     }
     const QString userWindow = userWindowOrMain(windowname);
@@ -1177,7 +1350,7 @@ bool TNullConsoleFrontend::reparentLabel(const QString& windowname, const QStrin
     }
     it->second.pModel->mGeometry.moveTo(x, y);
     it->second.shown = show;
-    reportVisibility(name);
+    reportWindowVisibility(name);
     return true;
 }
 
@@ -1257,7 +1430,7 @@ bool TNullConsoleFrontend::resizeSubConsole(const QString& name, const int width
     }
     TWindowRegistry& registry = mpHost->windowRegistry();
     QRect geometry = registry.subConsoleGeometry(name).value_or(QRect());
-    geometry.setSize(QSize(width, height).expandedTo(QSize(0, 0)));
+    geometry.setSize(widgetSize(width, height));
     registry.setSubConsoleGeometry(name, geometry);
     registry.setUserWindowSize(name, geometry.size());
     reportGridSize(name);

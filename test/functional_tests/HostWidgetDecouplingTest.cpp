@@ -388,13 +388,18 @@ private slots:
         QVERIFY(host->openWindow(realWindow, false, false, qsl("right")).first);
         const TConsoleModel* realModel = host->windowRegistry().subConsoleModel(realWindow);
         QVERIFY(realModel);
+        const QString realBox = qsl("realViewBox");
+        QVERIFY(host->createScrollBox(QString(), realBox, 0, 0, 10, 10).first);
 
         host->setMainConsoleView(nullptr);
         const bool ran = host->getLuaInterpreter()->compileAndExecuteScript(
                 qsl("openUserWindow('realViewDock') nullViewMade = tostring(createLabel('nullViewMade', 0, 0, 10, 10, 1))"));
         const TConsoleModel* realModelWhileDetached = host->windowRegistry().subConsoleModel(realWindow);
         const auto [realDeletedWhileDetached, realDeleteMessage] = host->deleteMiniConsole(realWindow);
+        const auto [realBoxDeletedWhileDetached, realBoxDeleteMessage] = host->consoleFrontend()->deleteScrollBox(realBox);
+        const bool realBoxRegisteredWhileDetached = host->windowRegistry().hasScrollBox(realBox);
         host->setMainConsoleView(console);
+        console->deleteScrollBox(realBox);
         const bool nullLabelRegistered = host->windowRegistry().hasLabel(qsl("nullViewMade"));
         const bool realStillRegistered = host->windowRegistry().hasSubConsole(realWindow);
         host->deleteMiniConsole(realWindow);
@@ -405,13 +410,14 @@ private slots:
 nullViewKinds = table.concat({
   tostring(createMiniConsole("nullViewMini", 0, 0, 10, 10)),
   tostring(openUserWindow("nullViewWindow")),
-  tostring(createMiniConsole("nullViewWindow", "nullViewNested", 0, 0, 10, 10))
+  tostring(createMiniConsole("nullViewWindow", "nullViewNested", 0, 0, 10, 10)),
+  tostring(createScrollBox("nullViewBox", 0, 0, 10, 10))
 }, ",")
 createBuffer("nullViewBuffer")
 )lua"));
-        const QStringList nullViewNames{qsl("nullViewMini"), qsl("nullViewWindow"), qsl("nullViewNested"), qsl("nullViewBuffer")};
+        const QStringList nullViewNames{qsl("nullViewMini"), qsl("nullViewWindow"), qsl("nullViewNested"), qsl("nullViewBuffer"), qsl("nullViewBox")};
         const auto registered = [host](const QString& name) {
-            return host->windowRegistry().hasSubConsole(name) || host->windowRegistry().hasDockWidget(name);
+            return host->windowRegistry().hasSubConsole(name) || host->windowRegistry().hasDockWidget(name) || host->windowRegistry().hasScrollBox(name);
         };
         QStringList neverRegistered;
         for (const QString& name : nullViewNames) {
@@ -442,12 +448,15 @@ createBuffer("nullViewBuffer")
         QVERIFY2(!realDeletedWhileDetached, "The null view reported deleting a window it has no record of.");
         QVERIFY(!realDeleteMessage.isEmpty());
         QVERIFY(realStillRegistered);
+        QVERIFY2(!realBoxDeletedWhileDetached, "The null view reported deleting a scroll box it has no record of.");
+        QCOMPARE(realBoxDeleteMessage, qsl("scrollbox name 'realViewBox' could not be deleted"));
+        QVERIFY(realBoxRegisteredWhileDetached);
 
         QVERIFY(ranKinds);
         lua_getglobal(L, "nullViewKinds");
         const QString nullViewKinds = QString::fromUtf8(lua_tostring(L, -1));
         lua_pop(L, 1);
-        QCOMPARE(nullViewKinds, qsl("true,true,true"));
+        QCOMPARE(nullViewKinds, qsl("true,true,true,true"));
         QVERIFY2(neverRegistered.isEmpty(), qPrintable(qsl("The null view did not register windows it made: %1").arg(neverRegistered.join(qsl(", ")))));
         QVERIFY2(stillRegistered.isEmpty(), qPrintable(qsl("Windows the null view made are still registered once a real view has attached: %1").arg(stillRegistered.join(qsl(", ")))));
         QVERIFY2(remade, qPrintable(remadeMessage));
@@ -506,7 +515,7 @@ createBuffer("nullViewBuffer")
                      "|nil:text edit name 'nullViewTextEdit' not found"
                      "|true:nil"
                      "|true:nil"
-                     "|false:the profile has no main window"
+                     "|true:nil"
                      "|true:nil"
                      "|nil:the profile has no main window"
                      "|nil:the profile has no main window"));
