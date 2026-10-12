@@ -810,6 +810,7 @@ private slots:
         mp2dMap->slot_setSnapCustomLinePointsToGrid(false);
         map()->mUserMenus.clear();
         map()->mUserActions.clear();
+        map()->mHiddenMenuItems.clear();
         map()->setMmpMapLocation(QString());
         mudlet::self()->setInvertMapZoom(false);
         mp2dMap->mRoomBeingMoved = false;
@@ -1016,6 +1017,19 @@ private slots:
         releaseAt(south + QPoint(1, 1), Qt::ShiftModifier);
     }
 
+    // With Ctrl the box toggles the rooms it covers in what was selected before.
+    void test_aCtrlDragTogglesTheRoomsTheBoxCovers()
+    {
+        buildMap();
+        showMapper(false);
+        dragFromTo(pointUnitsFromCentre(-1.5, 1.5), pointUnitsFromCentre(0.5, -0.5));
+
+        dragFromTo(pointUnitsFromCentre(-0.5, 0.5), pointUnitsFromCentre(1.5, -0.5), Qt::ControlModifier);
+
+        const QSet<int> expected{kNorthWestRoomId, kNorthRoomId, kWestRoomId, kEastRoomId};
+        QCOMPARE(mp2dMap->mMultiSelectionSet, expected);
+    }
+
     // The same drag while viewing pans instead of drawing a box, which is what
     // the map being locked for viewing means.
     void test_draggingWhileViewingDrawsNoSelectionBox()
@@ -1058,11 +1072,14 @@ private slots:
         pEastRoom->customLinesArrow[qsl("n")] = false;
         pEastRoom->calcRoomDimensions();
         showMapper(false);
+        map()->resetUnsaved();
 
         // A custom line's first segment runs out of the middle of the room it
         // belongs to, so press just short of the middle: on it, the handler that
         // edits a line's points would take the press instead.
         dragFromTo(pointUnitsFromCentre(1, -0.2), pointUnitsFromCentre(1, 1.8));
+
+        QVERIFY2(map()->isUnsaved(), "moving a room did not mark the map as changed");
 
         QCOMPARE(pEastRoom->x(), 1);
         QCOMPARE(pEastRoom->y(), 2);
@@ -2090,6 +2107,67 @@ private slots:
                            "assert(#mouseTestRooms == 2 and mouseTestRooms[1] == %1 and mouseTestRooms[2] == %2, table.concat(mouseTestRooms, ','))")
                                .arg(kWestRoomId)
                                .arg(kEastRoomId)));
+    }
+
+    void test_aScriptCanHideTheViewingItemsAndKeepItsOwn()
+    {
+        buildMap();
+        showMapper(true);
+        QVERIFY(runLua(qsl("hideMapMenuItem('setPlayerLocation')\n"
+                           "hideMapMenuItem('switchMapMode')\n"
+                           "addMapEvent('mouseTestAction', 'mouseTestEvent', '', 'Do the thing')")));
+        rightClickAt(pointUnitsFromCentre(1, 0));
+
+        QVERIFY(!contextMenuItem(qsl("Set player location")));
+        QVERIFY(!contextMenuItem(qsl("Switch to editing mode")));
+        QVERIFY(contextMenuItem(qsl("Do the thing")));
+    }
+
+    void test_aMenuWithEveryItemHiddenDoesNotPopUp()
+    {
+        buildMap();
+        showMapper(true);
+        QVERIFY(runLua(qsl("hideMapMenuItem('setPlayerLocation')\n"
+                           "hideMapMenuItem('switchMapMode')")));
+        rightClickAt(pointUnitsFromCentre(1, 0));
+
+        QVERIFY2(!mp2dMap->mActiveContextMenu, "an empty context menu was put up");
+    }
+
+    void test_hidingAnEditingItemLeavesTheOthersOnTheMenu()
+    {
+        buildMap();
+        showMapper(false);
+        QVERIFY(runLua(qsl("hideMapMenuItem('deleteRoom')")));
+        rightClickAt(pointUnitsFromCentre(1, 0));
+
+        QVERIFY(!contextMenuItem(qsl("Delete")));
+        QVERIFY(contextMenuItem(qsl("Set exits...")));
+        QVERIFY(contextMenuItem(qsl("Create label...")));
+        QVERIFY(contextMenuItem(qsl("Switch to viewing mode")));
+    }
+
+    void test_showingAHiddenItemPutsItBackOnTheMenu()
+    {
+        buildMap();
+        showMapper(true);
+        QVERIFY(runLua(qsl("hideMapMenuItem('setPlayerLocation')\n"
+                           "showMapMenuItem('setPlayerLocation')")));
+        rightClickAt(pointUnitsFromCentre(1, 0));
+
+        QVERIFY(contextMenuItem(qsl("Set player location")));
+    }
+
+    void test_theMenuOnAnEmptyMapLeavesOutHiddenItems()
+    {
+        buildMap();
+        showMapper(true);
+        map()->mapClear();
+        QVERIFY(runLua(qsl("hideMapMenuItem('loadMap')")));
+        rightClickAt(viewCentre());
+
+        QVERIFY(!contextMenuItem(qsl("Load map...")));
+        QVERIFY(contextMenuItem(qsl("Create new map")));
     }
 
     void test_theMenuOnAnEmptyMapOffersToLoadOrCreateOne()
