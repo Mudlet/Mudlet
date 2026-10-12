@@ -176,7 +176,7 @@ For complete setup instructions on how to run static analysis during a build, se
 
 ### Git
 
-Do not force-push to remote branches.
+Do not force-push to remote branches, except to restack a `gh stack` chain onto its base for linear history (use `--force-with-lease`).
 
 #### Commit trailers for AI-assisted work
 
