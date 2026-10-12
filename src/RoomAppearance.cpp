@@ -23,6 +23,7 @@
 #include "Host.h"
 #include "TMap.h"
 #include "TRoom.h"
+#include "utils.h"
 
 #include <QFontMetrics>
 #include <QPainter>
@@ -47,6 +48,48 @@ Look look(const TMap& map, const Host& host, const TRoom& room, const int player
     result.playerRoom = room.getId() == playerRoomId;
     result.levelOffset = room.z() - viewedLevel;
     return result;
+}
+
+QString terminalGlyph(const TRoom& room, const Look& look, const bool gridMode)
+{
+    if (look.playerRoom) {
+        return qsl("@");
+    }
+    if (!look.symbol.isEmpty()) {
+        return look.symbol;
+    }
+    const bool up = room.getExit(DIR_UP) > 0 || room.exitStubs.contains(DIR_UP);
+    const bool down = room.getExit(DIR_DOWN) > 0 || room.exitStubs.contains(DIR_DOWN);
+    // X as Dwarf Fortress marks a staircase that goes both ways
+    if (up && down) {
+        return qsl("X");
+    }
+    if (up) {
+        return qsl("<");
+    }
+    if (down) {
+        return qsl(">");
+    }
+    return gridMode ? qsl(".") : qsl("#");
+}
+
+QChar terminalLineGlyph(const qreal degrees)
+{
+    // A line reads the same either way along it, so only its angle within a half turn counts
+    qreal angle = std::fmod(degrees, 180.0);
+    if (angle < 0.0) {
+        angle += 180.0;
+    }
+    if (angle < 22.5 || angle >= 157.5) {
+        return QLatin1Char('-');
+    }
+    if (angle < 67.5) {
+        return QLatin1Char('/');
+    }
+    if (angle < 112.5) {
+        return QLatin1Char('|');
+    }
+    return QLatin1Char('\\');
 }
 
 QColor environmentColor(const TMap& map, const Host& host, int env)

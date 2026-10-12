@@ -709,6 +709,7 @@ void ModernGLWidget::paintGL()
     if (mRectangleSelecting) {
         painter.fillRect(mSelectionRectangle, QColor(190, 190, 190, 60));
     }
+    paintStatusLine(painter);
     paintCompass(painter);
     const QRect titleBlock = paintTitleBlock(painter, *pArea, infoBottom);
     paintLevelCallouts(painter, *pArea, infoBottom, titleBlock);
@@ -753,6 +754,30 @@ constexpr qreal scmInkDash = 0.12;
 // How strongly a level's floor plate shows
 constexpr float scmFloorPlateOpacity = 0.07f;
 
+// The terminal style's glyph atlas: cells of this many texels, this many to a side
+constexpr int scmGlyphCellTexels = 64;
+constexpr int scmGlyphAtlasColumns = 16;
+// Clear around a character in its atlas cell, so that the smaller mipmaps of a cell do not take in its neighbors
+constexpr int scmGlyphCellInset = scmGlyphCellTexels / 16;
+// A character cell's side on the map: half rooms' spacing, so that an exit's line has a cell between two rooms side by side
+constexpr float scmGlyphCell = 0.5f;
+// A character's quad, wider than its cell as a font's em is taller than a monospace character is wide, so that it fills the cell
+constexpr float scmGlyphSize = scmGlyphCell * 1.25f;
+// A whole cell filled, for a cell shown in reverse video
+const QString scmGlyphBlock = QString(QChar(0x2588));
+// How opaque the cell under the pointer is lit, as a terminal's selection shows
+constexpr float scmGlyphHoverOpacity = 0.35f;
+
+// A cell of the glyph atlas, in texture coordinates
+QRectF glyphAtlasRect(const qsizetype cell)
+{
+    constexpr qreal side = 1.0 / scmGlyphAtlasColumns;
+    const qsizetype column = cell % scmGlyphAtlasColumns;
+    const qsizetype row = cell / scmGlyphAtlasColumns;
+    // Rows run down the image, which is uploaded upside down
+    return QRectF(column * side, 1.0 - (row + 1) * side, side, side);
+}
+
 // What is drawn on the tops of a set of rooms; each map is keyed by texture, so each is one draw call however many rooms share it
 struct RoomDecals
 {
@@ -763,6 +788,8 @@ struct RoomDecals
     GeometryData selection;
     QHash<GLuint, GeometryData> symbols;
     QHash<GLuint, GeometryData> highlights;
+    // Characters from the glyph atlas, as the terminal style draws rooms and exits
+    GeometryData glyphs;
     QHash<GLuint, GeometryData> text;
     QHash<GLuint, GeometryData> markers;
     GeometryData playerFill;
@@ -1023,6 +1050,70 @@ GLuint ModernGLWidget::textTexture(const QString& key, const QString& text, cons
     return addRoomTexture(key, image);
 }
 
+qsizetype ModernGLWidget::glyphAtlasCell(const QString& text)
+{
+    if (mGlyphAtlasCells.isEmpty()) {
+        // What a map shows most, so that the atlas seldom has to be drawn again
+        mGlyphAtlasCells.append(scmGlyphBlock);
+        for (char16_t character = u'!'; character <= u'~'; ++character) {
+            mGlyphAtlasCells.append(QString(QChar(character)));
+        }
+    }
+    if (const qsizetype cell = mGlyphAtlasCells.indexOf(text); cell >= 0) {
+        return cell;
+    }
+    if (mGlyphAtlasCells.size() >= scmGlyphAtlasColumns * scmGlyphAtlasColumns) {
+        return -1;
+    }
+    mGlyphAtlasCells.append(text);
+    return mGlyphAtlasCells.size() - 1;
+}
+
+GLuint ModernGLWidget::glyphAtlasTexture(const QFont& font)
+{
+    const QString key = qsl("glyphs");
+    const QString fontKey = font.key();
+    if (mGlyphAtlasDrawnCells == mGlyphAtlasCells.size() && mGlyphAtlasFontKey == fontKey) {
+        if (const GLuint texture = cachedRoomTexture(key)) {
+            return texture;
+        }
+    }
+    if (mLabelTextureCache.imageTextureFailed(key) || (!mLabelTextureCache.imageTexture(key) && !roomForAnotherTexture(key))) {
+        return 0;
+    }
+
+    constexpr int side = scmGlyphCellTexels * scmGlyphAtlasColumns;
+    QImage image = clearImage(QSize(side, side), QColor(Qt::white));
+    QPainter painter(&image);
+    painter.setRenderHint(QPainter::TextAntialiasing);
+    painter.setPen(QColor(Qt::white));
+    constexpr int room = scmGlyphCellTexels - 2 * scmGlyphCellInset;
+    for (qsizetype cell = 0; cell < mGlyphAtlasCells.size(); ++cell) {
+        const QRect cellRect((cell % scmGlyphAtlasColumns) * scmGlyphCellTexels, (cell / scmGlyphAtlasColumns) * scmGlyphCellTexels, scmGlyphCellTexels, scmGlyphCellTexels);
+        const QString& text = mGlyphAtlasCells.at(cell);
+        if (text == scmGlyphBlock) {
+            painter.fillRect(cellRect, QColor(Qt::white));
+            continue;
+        }
+        QFont cellFont = font;
+        cellFont.setPixelSize(room);
+        // A symbol of more than one character is shrunk to fit across the cell
+        const qreal width = imageFontMetrics(cellFont).horizontalAdvance(text);
+        if (width > room) {
+            cellFont.setPixelSize(qMax(1, static_cast<int>(room * room / width)));
+        }
+        painter.setFont(cellFont);
+        painter.drawText(cellRect, Qt::AlignCenter, text);
+    }
+    painter.end();
+    const GLuint texture = addRoomTexture(key, image);
+    if (texture) {
+        mGlyphAtlasDrawnCells = mGlyphAtlasCells.size();
+        mGlyphAtlasFontKey = fontKey;
+    }
+    return texture;
+}
+
 void ModernGLWidget::renderRooms()
 {
     if (!mpMap || !mpMap->mpRoomDB) {
@@ -1043,6 +1134,7 @@ void ModernGLWidget::renderRooms()
     const QColor background = backgroundColor();
     const QColor contrast = ExitAppearance::contrastColor(background);
     const RenderCommand::Shading roomShading = style.lit ? RenderCommand::Shading::Lit : RenderCommand::Shading::Unlit;
+    const bool terminal = style.glyphs == MapStyle::Glyphs::Terminal;
 
     const bool moreTransparent = mpHost->experimentEnabled(qsl("experiment.rendering.more-transparent"));
     const bool playerIcon = mpHost->experimentEnabled(qsl("experiment.3d-player-icon"));
@@ -1059,7 +1151,9 @@ void ModernGLWidget::renderRooms()
     const auto [groundRight, groundUp] = GeometryManager::groundAxes(screenRight, screenUp);
 
     // As on the 2D map: room IDs in place of symbols, bold, sized so that the area's longest fits
-    const bool showRoomIds = mpHost->mShowRoomID;
+    // The terminal style writes a room's ID in its cell with its other characters
+    const bool showRoomIds = mpHost->mShowRoomID && !terminal;
+    const bool terminalIds = mpHost->mShowRoomID && terminal;
     QFont idFont = style.roomIdFont(mpMap->mMapSymbolFont);
     float idTexel = 0.0f;
     QString idFontKey;
@@ -1160,7 +1254,7 @@ void ModernGLWidget::renderRooms()
     // Made before any symbol, so a view short of room for textures still shows where the player is
     GLuint playerRoomTexture = 0;
     GLuint playerRoomFillTexture = 0;
-    if (pArea->getAreaRooms().contains(playerRoomId)) {
+    if (!terminal && pArea->getAreaRooms().contains(playerRoomId)) {
         // The strong highlight is the original style over a translucent red room
         const int style = mpHost->mMapStrongHighlight ? 0 : mpMap->mPlayerRoomStyle;
         const bool themed = mapStyle().themesPlayerMarker(mpMap->mPlayerRoomStyle, mpHost->mMapStrongHighlight);
@@ -1204,6 +1298,24 @@ void ModernGLWidget::renderRooms()
     QMap<int, SeeThroughLevel> seeThroughLevels;
     // Each level's extent, for its floor plate
     QMap<int, QRectF> levelExtents;
+    // A room's characters, drawn once the glyph atlas holds all of them
+    struct TerminalCell
+    {
+        int roomId = 0;
+        // The room's character, or its ID written out
+        QString text;
+        bool id = false;
+        QVector3D center;
+        QVector4D color;
+        // In reverse video: the cell filled with color, the text in reverseColor
+        bool reverse = false;
+        QVector4D reverseColor;
+        bool hovered = false;
+        RoomDecals* decals = nullptr;
+    };
+    QList<TerminalCell> terminalCells;
+    // The cells rooms are in, as doubled map coordinates, and their levels: no exit's character goes over one
+    QSet<std::pair<std::pair<qint64, qint64>, int>> roomCells;
     const QSet<int> emptySelection;
     const QSet<int>& selection = mp2DMap ? mp2DMap->mMultiSelectionSet : emptySelection;
     const GLuint selectionTextureId = selection.isEmpty() ? 0 : selectionTexture(round);
@@ -1242,7 +1354,8 @@ void ModernGLWidget::renderRooms()
         auto rx = static_cast<float>(pR->x());
         auto ry = static_cast<float>(pR->y());
         const bool hovered = currentRoomId == mHoveredRoomId;
-        auto rz = static_cast<float>(pR->z()) + (hovered ? roomHeight : 0.0f);
+        // A character stays in its cell
+        auto rz = static_cast<float>(pR->z()) + (hovered && !terminal ? roomHeight : 0.0f);
         const QRectF cell(rx - 0.5f, ry - 0.5f, 1.0, 1.0);
         const auto extent = levelExtents.find(pR->z());
         if (extent == levelExtents.end()) {
@@ -1258,13 +1371,13 @@ void ModernGLWidget::renderRooms()
 
         const QColor roomColor = style.roomColor(look.color);
         QVector4D roomTint = GeometryManager::fadedColor(roomColor, fade, fadeTarget);
-        if (look.playerRoom && !playerRoomTexture) {
+        if (look.playerRoom && !playerRoomTexture && !terminal) {
             // Without its marker the player's room is drawn solid, so it still stands out
             const QColor playerColor = style.playerRoomColor();
             roomTint = QVector4D(playerColor.redF(), playerColor.greenF(), playerColor.blueF(), 1.0f);
         }
         // Outlined, a room off the viewed level has no fill, so its level's decals go with the see-through ones
-        const bool unfilled = inkOutlines && !look.onViewedLevel() && !(look.playerRoom && !playerRoomTexture);
+        const bool unfilled = terminal || (inkOutlines && !look.onViewedLevel() && !(look.playerRoom && !playerRoomTexture));
         const bool seeThrough = roomTint.w() < 1.0f || unfilled;
         QVector<CubeInstanceData>& instances = seeThrough ? seeThroughLevels[pR->z()].cubes : roomInstances;
         RoomDecals& decals = seeThrough ? seeThroughLevels[pR->z()].decals : opaqueDecals[pR->z()];
@@ -1293,7 +1406,7 @@ void ModernGLWidget::renderRooms()
             const float half = roomSize / 2.0f + (width - lineWidth) / 2.0f;
             const bool dashed = !look.onViewedLevel() && !hovered;
             roomOutlines[pR->z()].append({rx, ry, top, half, width, dashed ? static_cast<float>(roomSize * scmInkDash) : 0.0f, GeometryManager::fadedColor(lineColor, fade, fadeTarget)});
-        } else if (hovered) {
+        } else if (hovered && !terminal) {
             // Taller than a border, so that it shows over one
             outlineInstances.append(outline(roomSize * scmHoverOutline, QVector4D(contrast.redF(), contrast.greenF(), contrast.blueF(), 1.0f), 0.75f));
         } else if (!bordered && !pArea->gridMode && look.onViewedLevel() && !seeThrough) {
@@ -1301,7 +1414,7 @@ void ModernGLWidget::renderRooms()
             const QColor rimTarget = style.edges == MapStyle::Edges::ViewedLevelBase ? background : contrast;
             outlineInstances.append(outline(roomSize * scmLevelOutline, GeometryManager::fadedColor(roomColor, {0.5f, 1.0f}, rimTarget)));
         }
-        if (bordered && !inkOutlines) {
+        if (bordered && !inkOutlines && !terminal) {
             const float borderWidth = (pR->mBorderThickness > 0 ? pR->mBorderThickness : 1) * borderUnit;
             const QColor borderColor = pR->mBorderColor.isValid() ? pR->mBorderColor : style.roomBorderColor(mpHost->mRoomBorderColor, roomColor, background);
             const QVector4D borderTint = GeometryManager::fadedColor(borderColor, fade, fadeTarget);
@@ -1333,7 +1446,17 @@ void ModernGLWidget::renderRooms()
             GeometryManager::appendGroundQuad(decals.selection, roomTop, roomSize, screenRight, screenUp, decalTint);
         }
 
-        if (!look.symbol.isEmpty()) {
+        if (terminal) {
+            const QString text = terminalIds ? QString::number(currentRoomId) : RoomAppearance::terminalGlyph(*pR, look, pArea->gridMode);
+            const QColor textColor = !terminalIds && !look.symbol.isEmpty() ? style.symbolColor(look.symbolColor, roomColor) : style.roomIdColor(roomColor);
+            TerminalCell cell{currentRoomId, text, terminalIds, roomTop, GeometryManager::fadedColor(textColor, fade, fadeTarget), look.playerRoom, {}, hovered, &decals};
+            if (look.playerRoom) {
+                cell.color = GeometryManager::fadedColor(roomColor, fade, fadeTarget);
+                cell.reverseColor = GeometryManager::fadedColor(ExitAppearance::contrastColor(roomColor), fade, fadeTarget);
+            }
+            terminalCells.append(cell);
+            roomCells.insert({{qRound64(pR->x() * 2.0), qRound64(pR->y() * 2.0)}, pR->z()});
+        } else if (!look.symbol.isEmpty()) {
             const RoomSymbol roomSymbol{currentRoomId, look.symbol, style.symbolColor(look.symbolColor, roomColor), roomTop, decalTint, &decals};
             if (showRoomIds) {
                 symbolsInPlaceOfIds.append(roomSymbol);
@@ -1386,7 +1509,7 @@ void ModernGLWidget::renderRooms()
             roomNames.append({center, style.roomNameColorFor(pR->userData.value(ROOM_UI_NAMECOLOR), background), pR->name, decalTint, &decals});
         }
 
-        if (const GLuint texture = exitMarkerTexture(*pR, roomColor)) {
+        if (const GLuint texture = terminal ? 0 : exitMarkerTexture(*pR, roomColor)) {
             GeometryData& batch = decals.markers[texture];
             batch.textureId = texture;
             GeometryManager::appendGroundQuad(batch, roomTop, roomSize, screenRight, screenUp, decalTint);
@@ -1485,6 +1608,77 @@ void ModernGLWidget::renderRooms()
         }
     }
 
+    if (terminal) {
+        // Every character goes into the atlas before it is drawn, so that it is drawn once for the frame
+        QFont glyphFont = style.labelFont(mpMap->mMapSymbolFont);
+        glyphFont.setBold(true);
+        glyphFont.setStyleStrategy(QFont::StyleStrategy(QFont::PreferNoShaping | QFont::PreferAntialias | QFont::PreferOutline));
+        for (const TerminalCell& cell : std::as_const(terminalCells)) {
+            if (cell.id) {
+                for (const QChar digit : cell.text) {
+                    glyphAtlasCell(QString(digit));
+                }
+            } else {
+                glyphAtlasCell(cell.text);
+            }
+        }
+        const qsizetype blockCell = glyphAtlasCell(scmGlyphBlock);
+        const auto appendGlyph = [&](GeometryData& batch, const GLuint texture, const QVector3D& center, const qsizetype atlasCell, const float size, const QVector4D& color) {
+            if (atlasCell < 0) {
+                return;
+            }
+            batch.textureId = texture;
+            GeometryManager::appendQuad(batch, center - (groundRight + groundUp) * (size / 2.0f), groundRight * size, groundUp * size, color, glyphAtlasRect(atlasCell));
+        };
+        if (const GLuint texture = glyphAtlasTexture(glyphFont)) {
+            // A digit's advance across its atlas cell, so that a room's ID can be set across its own cell
+            QFont digitFont = glyphFont;
+            digitFont.setPixelSize(scmGlyphCellTexels - 2 * scmGlyphCellInset);
+            const float digitAdvance = static_cast<float>(imageFontMetrics(digitFont).horizontalAdvance(QLatin1Char('8')) / scmGlyphCellTexels);
+            for (const TerminalCell& cell : std::as_const(terminalCells)) {
+                GeometryData& batch = cell.decals->glyphs;
+                if (cell.reverse) {
+                    appendGlyph(batch, texture, cell.center, blockCell, scmGlyphCell, cell.color);
+                } else if (cell.hovered) {
+                    appendGlyph(batch, texture, cell.center, blockCell, scmGlyphCell, QVector4D(contrast.redF(), contrast.greenF(), contrast.blueF(), scmGlyphHoverOpacity * cell.color.w()));
+                }
+                const QVector4D textColor = cell.reverse ? cell.reverseColor : cell.color;
+                if (!cell.id) {
+                    appendGlyph(batch, texture, cell.center, mGlyphAtlasCells.indexOf(cell.text), scmGlyphSize, textColor);
+                    continue;
+                }
+                // Narrowed to fit the cell, as many digits as there are
+                const float size = qMin(scmGlyphSize, scmGlyphSize / (digitAdvance * static_cast<float>(cell.text.size())));
+                const float advance = size * digitAdvance;
+                QVector3D center = cell.center - groundRight * (advance * static_cast<float>(cell.text.size() - 1) / 2.0f);
+                for (const QChar digit : cell.text) {
+                    appendGlyph(batch, texture, center, mGlyphAtlasCells.indexOf(QString(digit)), size, textColor);
+                    center += groundRight * advance;
+                }
+                mRoomIdsDrawn.insert(cell.roomId);
+            }
+            for (const ExitScene::Glyph& glyph : std::as_const(mExitGlyphs)) {
+                if (!levelShown(glyph.level) || roomCells.contains({{qRound64(glyph.at.x() * 2.0), qRound64(glyph.at.y() * 2.0)}, glyph.level})) {
+                    continue;
+                }
+                QChar character = glyph.character;
+                if (character.isNull()) {
+                    // As the line runs on screen, which turns with the view
+                    const qreal degrees = qRadiansToDegrees(std::atan2(QVector3D::dotProduct(glyph.along, groundUp), QVector3D::dotProduct(glyph.along, groundRight)));
+                    character = RoomAppearance::terminalLineGlyph(degrees);
+                }
+                const GeometryManager::LevelFade fade = GeometryManager::levelFade(glyph.level - mMapCenterZ, moreTransparent);
+                const QVector3D center(glyph.at.x(), glyph.at.y(), glyph.at.z() + roomHeight / 2.0f);
+                appendGlyph(seeThroughLevels[glyph.level].decals.glyphs,
+                            texture,
+                            center,
+                            glyphAtlasCell(QString(character)),
+                            scmGlyphSize,
+                            GeometryManager::fadedColor(glyph.color, fade, levelFadeTarget(glyph.level)));
+            }
+        }
+    }
+
     // Names come after every symbol and marker, so that a view short of room for textures loses names first
     if (!roomNames.isEmpty()) {
         const QString nameFontKey = nameFont.key();
@@ -1549,7 +1743,13 @@ void ModernGLWidget::renderRooms()
         queue(decals.selection);
         const QHash<GLuint, GeometryData>& lower = pArea->gridMode ? decals.highlights : decals.symbols;
         const QHash<GLuint, GeometryData>& upper = pArea->gridMode ? decals.symbols : decals.highlights;
-        for (const QHash<GLuint, GeometryData>* layer : {&lower, &upper, &decals.text, &decals.markers}) {
+        for (const QHash<GLuint, GeometryData>* layer : {&lower, &upper}) {
+            for (const GeometryData& batch : *layer) {
+                queue(batch);
+            }
+        }
+        queue(decals.glyphs);
+        for (const QHash<GLuint, GeometryData>* layer : {&decals.text, &decals.markers}) {
             for (const GeometryData& batch : *layer) {
                 queue(batch);
             }
@@ -1706,6 +1906,7 @@ ExitScene::Options ModernGLWidget::exitSceneOptions() const
     options.largeAreaExitArrows = mpHost->getLargeAreaExitArrows();
     options.exitColor = style.exitColor(mpHost->mFgColor_2);
     options.doorSwings = style.doors == MapStyle::Doors::Swings;
+    options.glyphs = style.glyphs == MapStyle::Glyphs::Terminal;
     options.roomSize = roomSize;
     options.roundRooms = style.roundRooms(mpHost->mBubbleMode);
     options.dashedStairs = style.dashedStairs;
@@ -1844,6 +2045,7 @@ void ModernGLWidget::queueGrid()
 void ModernGLWidget::renderConnections()
 {
     mSeeThroughExits.clear();
+    mExitGlyphs.clear();
     if (!mpMap || !mpMap->mpRoomDB || !mpHost) {
         return;
     }
@@ -1854,6 +2056,7 @@ void ModernGLWidget::renderConnections()
         qWarning().nospace() << "ModernGLWidget: room " << scene.solidDashRoomId
                              << "'s dotted or dashed exit line is drawn solid, as its pattern would repeat too many times along it: the line is very long or the exit lines very thin";
     }
+    mExitGlyphs = scene.glyphs;
     if (scene.segments.isEmpty() && scene.triangles.isEmpty()) {
         return;
     }
@@ -3055,7 +3258,52 @@ QRect ModernGLWidget::compassRect() const
     if (width() < 3 * diameter || height() < 3 * diameter) {
         return QRect();
     }
-    return QRect(width() - margin - diameter, height() - margin - diameter, diameter, diameter);
+    return QRect(width() - margin - diameter, height() - statusLineRect().height() - margin - diameter, diameter, diameter);
+}
+
+namespace {
+QFont statusLineFont(const MapStyle& style)
+{
+    QFont font(style.labelFontFamily);
+    font.setStyleHint(QFont::Monospace);
+    font.setPixelSize(14);
+    return font;
+}
+} // namespace
+
+QRect ModernGLWidget::statusLineRect() const
+{
+    if (!mapStyle().statusLine) {
+        return QRect();
+    }
+    const int lineHeight = QFontMetrics(statusLineFont(mapStyle())).height() + 4;
+    return QRect(0, height() - lineHeight, width(), lineHeight);
+}
+
+void ModernGLWidget::paintStatusLine(QPainter& painter)
+{
+    const QRect area = statusLineRect();
+    if (area.isEmpty() || !mpMap || !mpMap->mpRoomDB) {
+        return;
+    }
+    QStringList parts{mpMap->mpRoomDB->getAreaNamesMap().value(mAID)};
+    if (const TRoom* pR = mpMap->mpRoomDB->getRoom(mRID); pR && pR->getArea() == mAID) {
+        //: The terminal map style's status line: where the player (shown as @ on the map) is - room ID, then its x, y and z coordinates
+        parts.append(tr("@ room %1 at %2,%3,%4").arg(QString::number(mRID), QString::number(pR->x()), QString::number(pR->y()), QString::number(pR->z())));
+    }
+    if (const TRoom* pR = mpMap->mpRoomDB->getRoom(mHoveredRoomId); pR && mHoveredRoomId != mRID) {
+        //: The terminal map style's status line: the room under the mouse pointer - its ID, then its name if it has one
+        parts.append(tr("cursor: room %1 %2").arg(QString::number(mHoveredRoomId), pR->name).trimmed());
+    }
+    // Reverse video, as a terminal program draws its status line
+    const QColor ink = mapStyle().ink.isValid() ? mapStyle().ink : ExitAppearance::contrastColor(backgroundColor());
+    painter.save();
+    painter.fillRect(area, ink);
+    painter.setPen(backgroundColor());
+    painter.setFont(statusLineFont(mapStyle()));
+    const QString text = parts.join(qsl(" | "));
+    painter.drawText(area.adjusted(6, 0, -6, 0), Qt::AlignLeft | Qt::AlignVCenter, QFontMetrics(painter.font()).elidedText(text, Qt::ElideRight, area.width() - 12));
+    painter.restore();
 }
 
 void ModernGLWidget::turnNorthUp()
@@ -3270,7 +3518,8 @@ void ModernGLWidget::paintLevelCallouts(QPainter& painter, const TArea& area, co
 
 void ModernGLWidget::renderPlayerBeacon()
 {
-    if (!mpMap || !mpMap->mpRoomDB || !mpHost) {
+    // A text screen has no depth to raise a column in: its @ is the player
+    if (!mpMap || !mpMap->mpRoomDB || !mpHost || mapStyle().glyphs == MapStyle::Glyphs::Terminal) {
         return;
     }
     const TRoom* pR = mpMap->mpRoomDB->getRoom(mpMap->mRoomIdHash.value(mpMap->mProfileName));

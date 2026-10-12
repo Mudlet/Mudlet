@@ -59,6 +59,13 @@ Look look(const TMap& map, const Host& host, const TRoom& room, int playerRoomId
 
 QColor environmentColor(const TMap& map, const Host& host, int environmentId);
 
+// The character a map drawn as a text screen shows for a room, roguelike fashion: @ for the player, the room's
+// own symbol, < > or X for stairs up, down or both, else # (. for an area in grid mode, which is open ground)
+QString terminalGlyph(const TRoom& room, const Look& look, bool gridMode);
+
+// The line character - | / or \ that reads as a line running at degrees, counterclockwise from rightward
+QChar terminalLineGlyph(qreal degrees);
+
 // roomSymbolColor is the room's own, which is invalid unless one was set
 QColor symbolColor(const QColor& roomSymbolColor, const QColor& roomColor);
 

@@ -20,6 +20,7 @@
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
 
+#include <QChar>
 #include <QColor>
 #include <QList>
 #include <QVector3D>
@@ -47,6 +48,8 @@ struct Options
     bool largeAreaExitArrows = false;
     // Doors drawn as a plan's door swing, as MapStyle::Doors::Swings says, rather than the 2D map's strokes
     bool doorSwings = false;
+    // Exit lines between rooms on one level, their stubs and doors drawn as Glyphs, as MapStyle::Glyphs::Terminal says
+    bool glyphs = false;
     // A room's width, in rooms' spacing, and whether it is round, so that a door swing clears its room
     float roomSize = 0.0f;
     bool roundRooms = false;
@@ -81,6 +84,18 @@ struct Triangle
     int level = 0;
 };
 
+// A character in a cell of the grid, half a room's spacing across, that a map drawn as text is laid out on
+struct Glyph
+{
+    QVector3D at;
+    // The line it is part of runs this way, so that the one drawing it can pick the character that reads so on screen
+    QVector3D along;
+    // Null for a line's character
+    QChar character;
+    QColor color;
+    int level = 0;
+};
+
 // An area exit's arrow, from its room's center to its tip, for clicking through to destinationId
 struct AreaExit
 {
@@ -96,6 +111,8 @@ struct Scene
 {
     QList<Segment> segments;
     QList<Triangle> triangles;
+    // At most one in a cell, a door's over a line's
+    QList<Glyph> glyphs;
     // Not drawn: where an area exit can be clicked
     QList<AreaExit> areaExits;
     // The first room with a dotted or dashed line drawn solid, as its pattern would repeat too often along it; 0 if none
