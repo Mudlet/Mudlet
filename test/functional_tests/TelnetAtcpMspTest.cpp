@@ -455,6 +455,37 @@ private slots:
                  "saving the composer left its window behind");
     }
 
+    // IRE's GMCP form of Client.Compose, which the Lua interpreter's GMCP
+    // handling opens rather than cTelnet's ATCP parser.
+    void test_gmcpComposerEditOpensOneEditor()
+    {
+        announce(TN_WILL, static_cast<char>(OPT_GMCP));
+        QVERIFY2(mpHost->mTelnet.isGMCPEnabled(), "GMCP did not turn on, so IRE.Composer.Edit had nothing to arrive over");
+        QCOMPARE(openComposers().size(), 0);
+
+        const QByteArray edit("IRE.Composer.Edit {\"title\": \"Letter\", \"text\": \"Dear friend\"}");
+        feedSubnegotiation(static_cast<char>(OPT_GMCP), edit);
+        QVERIFY2(QTest::qWaitFor(
+                         []() {
+                             return !openComposers().isEmpty();
+                         },
+                         5s),
+                 "IRE.Composer.Edit did not open the composer");
+        QCOMPARE(openComposers().first()->title->text(), qsl("Letter"));
+        QCOMPARE(openComposers().first()->edit->toPlainText(), qsl("Dear friend"));
+
+        feedSubnegotiation(static_cast<char>(OPT_GMCP), edit);
+        QCOMPARE(openComposers().size(), 1);
+
+        mpHost->mTelnet.atcpComposerCancel();
+        QVERIFY2(QTest::qWaitFor(
+                         []() {
+                             return openComposers().isEmpty();
+                         },
+                         5s),
+                 "cancelling the composer left its window behind");
+    }
+
     // MSP names a file without an extension and leaves the client to pick one
     // per media type, so the file requested is where a sound and a piece of
     // music part company.
