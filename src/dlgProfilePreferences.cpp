@@ -1988,11 +1988,16 @@ void dlgProfilePreferences::reflowWideCards()
     for (int i = 0, total = mapViewOptions.size(); i < total; ++i) {
         gridLayout_groupBox_mapViewOptions->addWidget(mapViewOptions.at(i), i / 2, i % 2);
     }
+#if defined(INCLUDE_3DMAPPER)
     auto* pMapStyleRow = new QHBoxLayout();
     pMapStyleRow->addWidget(label_mapStyle);
     pMapStyleRow->addWidget(comboBox_mapStyle);
     pMapStyleRow->addStretch(1);
     gridLayout_groupBox_mapViewOptions->addLayout(pMapStyleRow, 3, 0, 1, 2);
+#else
+    label_mapStyle->hide();
+    comboBox_mapStyle->hide();
+#endif
     gridLayout_groupBox_mapViewOptions->addWidget(gridGroupBox, 4, 0, 1, 2);
     gridLayout_groupBox_mapViewOptions->addWidget(groupBox_mapSymbols, 5, 0, 1, 2);
 
@@ -4616,10 +4621,6 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
         }
         comboBox_mapStyle->setCurrentIndex(comboBox_mapStyle->findData(pHost->mapStyle()));
     }
-#if !defined(INCLUDE_3DMAPPER)
-    label_mapStyle->hide();
-    comboBox_mapStyle->hide();
-#endif
     checkBox_invertMapZoom->setChecked(mudlet::self()->invertMapZoom());
     comboBox_blankLinesBehaviour->setCurrentIndex(static_cast<int>(pHost->mBlankLineBehaviour));
 

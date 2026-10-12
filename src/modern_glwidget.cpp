@@ -1504,7 +1504,7 @@ QColor ModernGLWidget::levelFadeTarget(const int z) const
 
 const MapStyle& ModernGLWidget::mapStyle() const
 {
-    return MapStyle::findOrDefault(mpHost ? mpHost->mapStyle() : MapStyle::defaultId());
+    return mpHost ? mpHost->mapStylePreset() : MapStyle::findOrDefault(MapStyle::defaultId());
 }
 
 QColor ModernGLWidget::backgroundColor() const
