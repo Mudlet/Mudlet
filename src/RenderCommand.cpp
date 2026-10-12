@@ -249,14 +249,7 @@ void RenderInstancedCubesCommand::execute(QOpenGLFunctions* gl,
     QMatrix3x3 normalMatrix = mModelMatrix.normalMatrix();
     shader->setUniformValue("uNormalMatrix", normalMatrix);
 
-    // For now, we need to create a temporary instance buffer
-    // This will be improved when we add the instance buffer to ModernGLWidget
-    QOpenGLBuffer instanceBuffer(QOpenGLBuffer::VertexBuffer);
-    instanceBuffer.create();
-
-    geometryManager->renderInstancedCubes(mInstances, vao, vertexBuffer, colorBuffer, normalBuffer, indexBuffer, instanceBuffer, resourceManager, GL_TRIANGLES);
-
-    instanceBuffer.destroy();
+    geometryManager->renderInstancedCubes(mInstances, vao, vertexBuffer, colorBuffer, normalBuffer, indexBuffer, resourceManager, GL_TRIANGLES);
 }
 
 GLStateCommand::GLStateCommand(StateType stateType)

@@ -24,6 +24,18 @@
 #include <QFile>
 #include <QImage>
 
+namespace {
+QVector<float> upNormals(int vertexCount)
+{
+    QVector<float> normals;
+    normals.reserve(vertexCount * 3);
+    for (int i = 0; i < vertexCount; ++i) {
+        normals << 0.0f << 0.0f << 1.0f;
+    }
+    return normals;
+}
+} // namespace
+
 GeometryManager::GeometryManager() {}
 
 GeometryManager::~GeometryManager()
@@ -56,6 +68,9 @@ void GeometryManager::cleanup()
         mPlayerIconTemplate->clearTexture();
     }
 
+    mCubeVertexBuffer.destroy();
+    mCubeIndexBuffer.destroy();
+    mInstanceBuffer.destroy();
     mCubeTemplate.clear();
     mPlayerIconTemplate.reset();
     mInitialized = false;
@@ -66,40 +81,45 @@ void GeometryManager::generateCubeTemplate()
     // Generate unit cube centered at origin using indexed geometry
     mCubeTemplate.clear();
 
+    const auto addVertex = [this](float x, float y, float z, float nx, float ny, float nz) {
+        mCubeTemplate.vertices << x << y << z;
+        mCubeTemplate.normals << nx << ny << nz;
+    };
+
     // Define 24 unique vertices + normals for a unit cube
     // Vertex order: front face (counter-clockwise from bottom-left), then back face
     // Front bottom-left
-    mCubeTemplate.vertices << -1.0f << -1.0f << 1.0f << 0.0 << 0.0 << 1.0;  // 0: Front bottom-left (normal:front)
-    mCubeTemplate.vertices << -1.0f << -1.0f << 1.0f << 0.0 << -1.0 << 0.0; // 1: Front bottom-left (normal:bottom)
-    mCubeTemplate.vertices << -1.0f << -1.0f << 1.0f << -1.0 << 0.0 << 0.0; // 2: Front bottom-left (normal:left)
+    addVertex(-1.0f, -1.0f, 1.0f, 0.0f, 0.0f, 1.0f);  // 0: Front bottom-left (normal:front)
+    addVertex(-1.0f, -1.0f, 1.0f, 0.0f, -1.0f, 0.0f); // 1: Front bottom-left (normal:bottom)
+    addVertex(-1.0f, -1.0f, 1.0f, -1.0f, 0.0f, 0.0f); // 2: Front bottom-left (normal:left)
     // Front bottom-right
-    mCubeTemplate.vertices << 1.0f << -1.0f << 1.0f << 0.0 << 0.0 << 1.0;  // 3: Front bottom-right (normal:front)
-    mCubeTemplate.vertices << 1.0f << -1.0f << 1.0f << 0.0 << -1.0 << 0.0; // 4: Front bottom-right (normal:bottom)
-    mCubeTemplate.vertices << 1.0f << -1.0f << 1.0f << 1.0 << 0.0 << 0.0;  // 5: Front bottom-right (normal:right)
+    addVertex(1.0f, -1.0f, 1.0f, 0.0f, 0.0f, 1.0f);  // 3: Front bottom-right (normal:front)
+    addVertex(1.0f, -1.0f, 1.0f, 0.0f, -1.0f, 0.0f); // 4: Front bottom-right (normal:bottom)
+    addVertex(1.0f, -1.0f, 1.0f, 1.0f, 0.0f, 0.0f);  // 5: Front bottom-right (normal:right)
     // Front top-right
-    mCubeTemplate.vertices << 1.0f << 1.0f << 1.0f << 0.0 << 0.0 << 1.0; // 6: Front top-right (normal:front)
-    mCubeTemplate.vertices << 1.0f << 1.0f << 1.0f << 0.0 << 1.0 << 0.0; // 7: Front top-right (normal:top)
-    mCubeTemplate.vertices << 1.0f << 1.0f << 1.0f << 1.0 << 0.0 << 0.0; // 8: Front top-right (normal:right)
+    addVertex(1.0f, 1.0f, 1.0f, 0.0f, 0.0f, 1.0f); // 6: Front top-right (normal:front)
+    addVertex(1.0f, 1.0f, 1.0f, 0.0f, 1.0f, 0.0f); // 7: Front top-right (normal:top)
+    addVertex(1.0f, 1.0f, 1.0f, 1.0f, 0.0f, 0.0f); // 8: Front top-right (normal:right)
     // Front top-left
-    mCubeTemplate.vertices << -1.0f << 1.0f << 1.0f << 0.0 << 0.0 << 1.0;  // 9: Front top-left (normal:front)
-    mCubeTemplate.vertices << -1.0f << 1.0f << 1.0f << 0.0 << 1.0 << 0.0;  // 10: Front top-left (normal:top)
-    mCubeTemplate.vertices << -1.0f << 1.0f << 1.0f << -1.0 << 0.0 << 0.0; // 11: Front top-left (normal:left)
+    addVertex(-1.0f, 1.0f, 1.0f, 0.0f, 0.0f, 1.0f);  // 9: Front top-left (normal:front)
+    addVertex(-1.0f, 1.0f, 1.0f, 0.0f, 1.0f, 0.0f);  // 10: Front top-left (normal:top)
+    addVertex(-1.0f, 1.0f, 1.0f, -1.0f, 0.0f, 0.0f); // 11: Front top-left (normal:left)
     // Back bottom-left
-    mCubeTemplate.vertices << -1.0f << -1.0f << -1.0f << 0.0 << 0.0 << -1.0; // 12: Back bottom-left (normal:back)
-    mCubeTemplate.vertices << -1.0f << -1.0f << -1.0f << 0.0 << -1.0 << 0.0; // 13: Back bottom-left (normal:bottom)
-    mCubeTemplate.vertices << -1.0f << -1.0f << -1.0f << -1.0 << 0.0 << 0.0; // 14: Back bottom-left (normal:left)
+    addVertex(-1.0f, -1.0f, -1.0f, 0.0f, 0.0f, -1.0f); // 12: Back bottom-left (normal:back)
+    addVertex(-1.0f, -1.0f, -1.0f, 0.0f, -1.0f, 0.0f); // 13: Back bottom-left (normal:bottom)
+    addVertex(-1.0f, -1.0f, -1.0f, -1.0f, 0.0f, 0.0f); // 14: Back bottom-left (normal:left)
     // Back bottom-right
-    mCubeTemplate.vertices << 1.0f << -1.0f << -1.0f << 0.0 << 0.0 << -1.0; // 15: Back bottom-right (normal:back)
-    mCubeTemplate.vertices << 1.0f << -1.0f << -1.0f << 0.0 << -1.0 << 0.0; // 16: Back bottom-right (normal:bottom)
-    mCubeTemplate.vertices << 1.0f << -1.0f << -1.0f << 1.0 << 0.0 << 0.0;  // 17: Back bottom-right (normal:right)
+    addVertex(1.0f, -1.0f, -1.0f, 0.0f, 0.0f, -1.0f); // 15: Back bottom-right (normal:back)
+    addVertex(1.0f, -1.0f, -1.0f, 0.0f, -1.0f, 0.0f); // 16: Back bottom-right (normal:bottom)
+    addVertex(1.0f, -1.0f, -1.0f, 1.0f, 0.0f, 0.0f);  // 17: Back bottom-right (normal:right)
     // Back top-right
-    mCubeTemplate.vertices << 1.0f << 1.0f << -1.0f << 0.0 << 0.0 << -1.0; // 18: Back top-right (normal:back)
-    mCubeTemplate.vertices << 1.0f << 1.0f << -1.0f << 0.0 << 1.0 << 0.0;  // 19: Back top-right (normal:top)
-    mCubeTemplate.vertices << 1.0f << 1.0f << -1.0f << 1.0 << 0.0 << 0.0;  // 20: Back top-right (normal:right)
+    addVertex(1.0f, 1.0f, -1.0f, 0.0f, 0.0f, -1.0f); // 18: Back top-right (normal:back)
+    addVertex(1.0f, 1.0f, -1.0f, 0.0f, 1.0f, 0.0f);  // 19: Back top-right (normal:top)
+    addVertex(1.0f, 1.0f, -1.0f, 1.0f, 0.0f, 0.0f);  // 20: Back top-right (normal:right)
     // Back top-left
-    mCubeTemplate.vertices << -1.0f << 1.0f << -1.0f << 0.0 << 0.0 << -1.0; // 21: Back top-left (normal:back)
-    mCubeTemplate.vertices << -1.0f << 1.0f << -1.0f << 0.0 << 1.0 << 0.0;  // 22: Back top-left (normal:top)
-    mCubeTemplate.vertices << -1.0f << 1.0f << -1.0f << -1.0 << 0.0 << 0.0; // 23: Back top-left (normal:left)
+    addVertex(-1.0f, 1.0f, -1.0f, 0.0f, 0.0f, -1.0f); // 21: Back top-left (normal:back)
+    addVertex(-1.0f, 1.0f, -1.0f, 0.0f, 1.0f, 0.0f);  // 22: Back top-left (normal:top)
+    addVertex(-1.0f, 1.0f, -1.0f, -1.0f, 0.0f, 0.0f); // 23: Back top-left (normal:left)
 
     // Define indices for the 12 triangles (6 faces × 2 triangles each)
     // Counter-clockwise winding order for front-facing triangles
@@ -156,25 +176,15 @@ void GeometryManager::generateCubeTemplate()
 GeometryData GeometryManager::transformCubeTemplate(const QMatrix4x4& transform, float r, float g, float b, float a)
 {
     GeometryData result;
+    const QMatrix4x4 normalTransform = transform.inverted().transposed();
 
-    // Transform vertices and copy normals
-    for (int i = 0; i < mCubeTemplate.vertices.size(); i += 6) {
-        // Scale and translate vertex
-        QVector3D vertex = QVector3D(mCubeTemplate.vertices[i], mCubeTemplate.vertices[i + 1], mCubeTemplate.vertices[i + 2]);
-        vertex = transform.map(vertex);
-        result.vertices << vertex.x();
-        result.vertices << vertex.y();
-        result.vertices << vertex.z();
+    for (int i = 0; i < mCubeTemplate.vertices.size(); i += 3) {
+        const QVector3D vertex = transform.map(QVector3D(mCubeTemplate.vertices[i], mCubeTemplate.vertices[i + 1], mCubeTemplate.vertices[i + 2]));
+        result.vertices << vertex.x() << vertex.y() << vertex.z();
 
-        // Copy normal (no transformation needed since it's a uniform scale)
-        vertex = QVector3D(mCubeTemplate.vertices[i + 3], mCubeTemplate.vertices[i + 4], mCubeTemplate.vertices[i + 5]);
-        vertex = transform.map(vertex) - transform.map(QVector3D());
-        vertex.normalize();
-        result.vertices << vertex.x();
-        result.vertices << vertex.y();
-        result.vertices << vertex.z();
+        const QVector3D normal = normalTransform.mapVector(QVector3D(mCubeTemplate.normals[i], mCubeTemplate.normals[i + 1], mCubeTemplate.normals[i + 2])).normalized();
+        result.normals << normal.x() << normal.y() << normal.z();
 
-        // Set color for this vertex
         result.colors << r << g << b << a;
     }
 
@@ -206,6 +216,7 @@ GeometryData GeometryManager::generateLineGeometry(const QVector<float>& vertice
     GeometryData result;
     result.vertices = vertices;
     result.colors = colors;
+    result.normals = upNormals(vertices.size() / 3);
 
     return result;
 }
@@ -224,13 +235,9 @@ GeometryData GeometryManager::generateTriangleGeometry(const QVector<float>& ver
     }
 
     GeometryData result;
-    //result.vertices = vertices;
+    result.vertices = vertices;
     result.colors = colors;
-
-    // add normals pointing up
-    for (int i = 0; i < vertices.size(); i += 3) {
-        result.vertices << vertices[i] << vertices[i + 1] << vertices[i + 2] << 0.0f << 0.0f << 1.0f;
-    }
+    result.normals = upNormals(vertices.size() / 3);
 
     return result;
 }
@@ -613,6 +620,9 @@ void GeometryManager::renderGeometry(
     glVertexAttribPointer(2, 4, GL_FLOAT, GL_FALSE, 0, nullptr);
     glEnableVertexAttribArray(2);
 
+    // A textured draw may have left this enabled, and this geometry has no texture coordinates to read
+    glDisableVertexAttribArray(scmTexCoordLocation);
+
     // Draw the geometry - use indexed rendering if indices are available
     if (geometry.hasIndices()) {
         // Upload index data (cached)
@@ -739,8 +749,10 @@ void GeometryManager::renderGeometry(const GeometryData& geometry,
             texCoordBuffer.allocate(geometry.textureCoords.data(), geometry.textureCoords.size() * sizeof(float));
             geometry.texCoordsUploaded = true;
         }
-        glVertexAttribPointer(6, 2, GL_FLOAT, GL_FALSE, 0, nullptr);
-        glEnableVertexAttribArray(6);
+        glVertexAttribPointer(scmTexCoordLocation, 2, GL_FLOAT, GL_FALSE, 0, nullptr);
+        glEnableVertexAttribArray(scmTexCoordLocation);
+    } else {
+        glDisableVertexAttribArray(scmTexCoordLocation);
     }
 
     // Draw the geometry - use indexed rendering if indices are available
@@ -793,7 +805,6 @@ void GeometryManager::renderInstancedCubes(const QVector<CubeInstanceData>& inst
                                            QOpenGLBuffer& colorBuffer,
                                            QOpenGLBuffer& normalBuffer,
                                            QOpenGLBuffer& indexBuffer,
-                                           QOpenGLBuffer& instanceBuffer,
                                            GLenum drawMode)
 {
     if (!mInitialized || instances.isEmpty()) {
@@ -813,24 +824,24 @@ void GeometryManager::renderInstancedCubes(const QVector<CubeInstanceData>& inst
 
     QOpenGLVertexArrayObject::Binder vaoBinder(&vao);
 
-    // Upload cube template vertex and normal data
-    vertexBuffer.bind();
-    vertexBuffer.allocate(mCubeTemplate.vertices.data(), mCubeTemplate.vertices.size() * sizeof(float));
-    // Pointer to vertices
-    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(float), reinterpret_cast<void*>(0));
+    if (!mCubeVertexBuffer.isCreated()) {
+        uploadCubeTemplate();
+    }
+
+    const int positionBytes = static_cast<int>(mCubeTemplate.vertices.size() * sizeof(float));
+    mCubeVertexBuffer.bind();
+    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, nullptr);
     glEnableVertexAttribArray(0);
-
-    // Pointer to normals
-    glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(float), reinterpret_cast<void*>(3 * sizeof(float)));
+    glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 0, reinterpret_cast<void*>(static_cast<quintptr>(positionBytes)));
     glEnableVertexAttribArray(1);
+    mCubeIndexBuffer.bind();
 
-    // Upload cube template index data
-    indexBuffer.bind();
-    indexBuffer.allocate(mCubeTemplate.indices.data(), mCubeTemplate.indices.size() * sizeof(unsigned int));
+    // The shader takes color from the instance; a stale per-vertex color array may be shorter than the cube
+    glDisableVertexAttribArray(2);
+    glDisableVertexAttribArray(scmTexCoordLocation);
 
-    // Upload instance data to GPU
-    instanceBuffer.bind();
-    instanceBuffer.allocate(instances.data(), instances.size() * sizeof(CubeInstanceData));
+    mInstanceBuffer.bind();
+    mInstanceBuffer.allocate(instances.data(), static_cast<int>(instances.size() * sizeof(CubeInstanceData)));
 
     // Set up instance attributes
     // Color: location 3
@@ -868,13 +879,32 @@ void GeometryManager::renderInstancedCubes(const QVector<CubeInstanceData>& inst
     glDisableVertexAttribArray(7);
 }
 
+void GeometryManager::uploadCubeTemplate()
+{
+    const int positionBytes = static_cast<int>(mCubeTemplate.vertices.size() * sizeof(float));
+    const int normalBytes = static_cast<int>(mCubeTemplate.normals.size() * sizeof(float));
+    mCubeVertexBuffer.create();
+    mCubeVertexBuffer.bind();
+    mCubeVertexBuffer.setUsagePattern(QOpenGLBuffer::StaticDraw);
+    mCubeVertexBuffer.allocate(positionBytes + normalBytes);
+    mCubeVertexBuffer.write(0, mCubeTemplate.vertices.constData(), positionBytes);
+    mCubeVertexBuffer.write(positionBytes, mCubeTemplate.normals.constData(), normalBytes);
+
+    mCubeIndexBuffer.create();
+    mCubeIndexBuffer.bind();
+    mCubeIndexBuffer.setUsagePattern(QOpenGLBuffer::StaticDraw);
+    mCubeIndexBuffer.allocate(mCubeTemplate.indices.constData(), static_cast<int>(mCubeTemplate.indices.size() * sizeof(unsigned int)));
+
+    mInstanceBuffer.create();
+    mInstanceBuffer.setUsagePattern(QOpenGLBuffer::StreamDraw);
+}
+
 void GeometryManager::renderInstancedCubes(const QVector<CubeInstanceData>& instances,
                                            QOpenGLVertexArrayObject& vao,
                                            QOpenGLBuffer& vertexBuffer,
                                            QOpenGLBuffer& colorBuffer,
                                            QOpenGLBuffer& normalBuffer,
                                            QOpenGLBuffer& indexBuffer,
-                                           QOpenGLBuffer& instanceBuffer,
                                            ResourceManager* resourceManager,
                                            GLenum drawMode)
 {
@@ -883,7 +913,7 @@ void GeometryManager::renderInstancedCubes(const QVector<CubeInstanceData>& inst
     }
 
     // Call the original instanced render method
-    renderInstancedCubes(instances, vao, vertexBuffer, colorBuffer, normalBuffer, indexBuffer, instanceBuffer, drawMode);
+    renderInstancedCubes(instances, vao, vertexBuffer, colorBuffer, normalBuffer, indexBuffer, drawMode);
 
     // Track draw call statistics - one draw call for all instances
     if (resourceManager) {

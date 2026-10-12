@@ -110,6 +110,7 @@
 #include <QToolTip>
 #include <QTranslator>
 #include <QVariantHash>
+#include <QWindow>
 
 #include <QRandomGenerator>
 
@@ -177,6 +178,58 @@ public:
         QTimer::singleShot(0ms, self, [self]() {
             self->refreshTabBar();
         });
+    }
+};
+
+// A child window whose transient parent's QWindow was destroyed counts as a window of its own and
+// keeps Mudlet running once the main window closes, so it goes back to the window it now sits in
+bool relinkIfOrphaned(QWidget* pChildWindow)
+{
+    QWindow* pHandle = pChildWindow->windowHandle();
+    if (!pChildWindow->isWindow() || !pChildWindow->parentWidget() || !pHandle || pHandle->transientParent()) {
+        return false;
+    }
+    QWindow* pOwnWindow = pChildWindow->parentWidget()->window()->windowHandle();
+    if (!pOwnWindow || pOwnWindow == pHandle) {
+        return false;
+    }
+    pHandle->setTransientParent(pOwnWindow);
+    return true;
+}
+
+void relinkOrphansUnder(const QWidget* pWindow)
+{
+    const auto children = pWindow->findChildren<QWidget*>();
+    for (QWidget* pChild : children) {
+        relinkIfOrphaned(pChild);
+    }
+}
+
+// Qt relinks only native children when it recreates a window for its first GL view, and nothing
+// at all when redocking a floating dock destroys the dock's window without recreating another
+class TransientParentRelinker : public QObject
+{
+public:
+    using QObject::QObject;
+
+    bool eventFilter(QObject* watched, QEvent* event) override
+    {
+        if (event->type() != QEvent::WinIdChange || !watched->isWidgetType()) {
+            return false;
+        }
+        auto* pWindow = static_cast<QWidget*>(watched);
+        if (!pWindow->isWindow()) {
+            return false;
+        }
+        if (pWindow->internalWinId() && pWindow->windowHandle()) {
+            relinkOrphansUnder(pWindow);
+        } else {
+            // Sent as the window is about to go, while dialogs still hold it as their transient parent
+            QTimer::singleShot(0, pWindow, [pWindow]() {
+                relinkOrphansUnder(pWindow);
+            });
+        }
+        return false;
     }
 };
 } // namespace
@@ -1404,6 +1457,7 @@ mudlet::mudlet()
     // statics, so one serves every mudlet instance and is never uninstalled:
     static DebugProfileObserver debugProfileObserver;
     TDebug::setProfileObserver(&debugProfileObserver);
+    qApp->installEventFilter(new TransientParentRelinker(this));
     // A child rather than a member, so it and the recognizer it owns are torn
     // down with the main window's other children
     mpSpeechBridge = new TSpeechBridge(this);
@@ -4514,6 +4568,13 @@ void mudlet::closeEvent(QCloseEvent* event)
 
     // hide main Mudlet window once we're sure the 'do you want to save the profile?' won't come up
     hide();
+
+    const auto topLevels = QApplication::topLevelWidgets();
+    for (QWidget* pTopLevel : topLevels) {
+        if (pTopLevel->isVisible() && relinkIfOrphaned(pTopLevel)) {
+            qWarning().nospace() << "mudlet::closeEvent(...) WARNING - " << pTopLevel << " had lost its transient parent, which would have kept Mudlet from quitting.";
+        }
+    }
 
     // pass the event on so dblsqd can perform an update
     // if automatic updates have been disabled

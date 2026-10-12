@@ -4348,8 +4348,8 @@ describe("Tests saveMap and loadMap", function()
     pending("routes can come back a step longer than the shortest one - issue #10180")
   end)
 
-  -- setMapPerspective/shiftMapPerspective only exist in a build made with 3D
-  -- mapper support, which the CI and release builds are not
+  -- setMapPerspective/shiftMapPerspective only exist with USE_3DMAPPER, and only
+  -- move a camera nothing here can read back, so there is nothing to assert yet
   pending("setMapPerspective needs a Mudlet built with the 3D mapper")
 
   pending("shiftMapPerspective needs a Mudlet built with the 3D mapper")

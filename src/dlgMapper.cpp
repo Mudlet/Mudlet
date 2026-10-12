@@ -896,6 +896,9 @@ void dlgMapper::recreate3DWidget()
 
     bool was3DMode = glWidget->isVisible();
 
+    // setParent()'s own hide isn't explicit, so a show QLayout queued at insertWidget() and
+    // not yet run would map the detached widget as a window of its own
+    glWidget->hide();
     glWidget->setParent(nullptr);
     glWidget->deleteLater();
     glWidget = nullptr;
