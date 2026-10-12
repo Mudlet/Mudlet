@@ -1621,8 +1621,8 @@ mainNamedSheets = getCmdLineStyleSheet() .. "|" .. getCmdLineStyleSheet("main")
 
     // Every one of these Lua functions used to reach through Host::mpConsole
     // without checking it, so calling any of them on a profile whose window had
-    // been closed took the whole client down with it. None of them can do what
-    // it was asked here, so each has to report that instead.
+    // been closed took the whole client down with it. Each has to report that it
+    // cannot do what it was asked here, or answer from the main console's model.
     void test_viewOnlyUiFunctionsReportWithNoView()
     {
         startProfile();
@@ -1651,6 +1651,14 @@ local function expectValue(name, expected, ...)
     local first = ...
     if first ~= expected then
         table.insert(noViewProblems, name .. ' returned ' .. tostring(first) .. ' rather than ' .. tostring(expected))
+    end
+end
+
+-- how many values a function answers, and the first of them
+local function expectAnswer(name, expected, ...)
+    local answered = '[' .. select('#', ...) .. ']' .. tostring((...))
+    if answered ~= expected then
+        table.insert(noViewProblems, name .. ' answered ' .. answered .. ' rather than ' .. expected)
     end
 end
 
@@ -1716,17 +1724,20 @@ expectRefusal('getUserWindowTitle', getUserWindowTitle('noViewUw'))
 expectRefusal('setUserWindowTitle', setUserWindowTitle('noViewUw', 't'))
 expectRefusal('getUserWindowStyleSheet', getUserWindowStyleSheet('noViewUw'))
 expectRefusal('setUserWindowStyleSheet', setUserWindowStyleSheet('noViewUw', ''))
-expectRefusal('enableScrollBar', enableScrollBar())
-expectRefusal('disableScrollBar', disableScrollBar())
-expectRefusal('enableHorizontalScrollBar', enableHorizontalScrollBar())
-expectRefusal('disableHorizontalScrollBar', disableHorizontalScrollBar())
-expectRefusal('getScrollBarVisible', getScrollBarVisible())
-expectRefusal('enableScrolling', enableScrolling())
-expectRefusal('disableScrolling', disableScrolling())
-expectRefusal('scrollingActive', scrollingActive())
-expectRefusal('getScroll', getScroll())
-expectRefusal('scrollTo', scrollTo(1))
-expectRefusal('scrollTo end', scrollTo())
+-- the main console's scrolling is its model's, so these answer as a real one's do
+expectAnswer('enableScrollBar', '[0]nil', enableScrollBar())
+expectAnswer('disableScrollBar', '[0]nil', disableScrollBar())
+expectAnswer('enableHorizontalScrollBar', '[0]nil', enableHorizontalScrollBar())
+expectAnswer('disableHorizontalScrollBar', '[0]nil', disableHorizontalScrollBar())
+expectAnswer('getScrollBarVisible', '[1]false', getScrollBarVisible())
+expectAnswer('enableScrolling', '[1]true', enableScrolling())
+expectAnswer('disableScrolling', '[1]true', disableScrolling())
+expectAnswer('scrollingActive', '[1]true', scrollingActive())
+expectAnswer('getScroll', '[1]' .. getLastLineNumber('main'), getScroll())
+expectAnswer('scrollTo', '[0]nil', scrollTo(1))
+expectAnswer('getScroll after scrollTo', '[1]1', getScroll())
+expectAnswer('scrollTo end', '[0]nil', scrollTo())
+expectAnswer('getScroll after scrollTo end', '[1]' .. getLastLineNumber('main'), getScroll())
 expectRefusal('getWindowWrap of a sub-console', getWindowWrap('noViewMc'))
 expectRefusal('setWindowWrap of a sub-console', setWindowWrap('noViewMc', 80))
 expectRefusal('moveCursor', moveCursor('noViewMc', 0, 0))
