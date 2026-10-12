@@ -29,6 +29,8 @@
 
 #include "utils.h"
 
+using namespace std::chrono_literals;
+
 ShaderManager::ShaderManager(ResourceManager* resourceManager, QObject* parent)
 : QObject(parent)
 , mDevelopmentMode(false)
@@ -40,7 +42,7 @@ ShaderManager::ShaderManager(ResourceManager* resourceManager, QObject* parent)
 {
     mReloadTimer = new QTimer(this);
     mReloadTimer->setSingleShot(true);
-    mReloadTimer->setInterval(std::chrono::milliseconds(50));
+    mReloadTimer->setInterval(50ms);
     connect(mReloadTimer, &QTimer::timeout, this, &ShaderManager::delayedReload);
 }
 

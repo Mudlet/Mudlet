@@ -160,7 +160,7 @@ private:
                 [this]() {
                     return Discord::getLoggedInUserName() == mDiscordStubUserName;
                 },
-                65000);
+                65s);
         return loggedIn && mpDiscordIpcStub->handshakeCount() > handshakesBefore;
     }
 
@@ -212,7 +212,7 @@ private slots:
         // The connection can complete before the spy exists, and on a loaded
         // leak-detection runner it can take seconds
         QSignalSpy spy2(&(mpHost->mTelnet), &cTelnet::signal_connected);
-        if (mpHost->mTelnet.getConnectionState() != QAbstractSocket::ConnectedState && !spy2.wait(8000)) {
+        if (mpHost->mTelnet.getConnectionState() != QAbstractSocket::ConnectedState && !spy2.wait(8s)) {
             QFAIL("Could not connect with the host.");
         }
 
@@ -556,8 +556,31 @@ private slots:
 
         // discord-rpc serializes SET_ACTIVITY on its own IO thread, so give
         // the frames generous time to arrive:
-        QTRY_COMPARE_WITH_TIMEOUT(lastSetActivity().value(qsl("details")).toString(), qsl("Exploring the IPC stub"), 10000);
-        QTRY_COMPARE_WITH_TIMEOUT(lastSetActivity().value(qsl("state")).toString(), qsl("end-to-end"), 10000);
+        QTRY_COMPARE_WITH_TIMEOUT(lastSetActivity().value(qsl("details")).toString(), qsl("Exploring the IPC stub"), 10s);
+        QTRY_COMPARE_WITH_TIMEOUT(lastSetActivity().value(qsl("state")).toString(), qsl("end-to-end"), 10s);
+    }
+
+    void testTabChangeRefreshesPresenceEndToEnd()
+    {
+        auto& discord = *Discord::self();
+        if (!discord.libraryLoaded()) {
+            QSKIP("Discord RPC library not available - cannot test presence delivery");
+        }
+        if (!mpDiscordIpcStub->listening()) {
+            QSKIP("Discord IPC stub is not listening - cannot test presence delivery");
+        }
+        QCOMPARE(mudlet::self()->getActiveHost(), mpHost);
+        QVERIFY2(establishDiscordLogin(), "the discord-rpc handshake did not complete in time");
+
+        discord.setDetailText(mpHost, qsl("Back on this tab"));
+        QTRY_COMPARE_WITH_TIMEOUT(lastSetActivity().value(qsl("details")).toString(), qsl("Back on this tab"), 10s);
+        mpDiscordIpcStub->clearRecordedFrames();
+
+        // Nothing else sends presence now, so a SET_ACTIVITY can only come from the tab change
+        auto* pMudlet = mudlet::self();
+        emit pMudlet->signal_tabChanged(mpHost->getName());
+
+        QTRY_COMPARE_WITH_TIMEOUT(lastSetActivity().value(qsl("details")).toString(), qsl("Back on this tab"), 10s);
     }
 
     void cleanupTestCase()

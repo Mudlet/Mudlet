@@ -167,7 +167,7 @@ private:
     // What a keychain read answers with
     void passwordRetrieved(const QString& profileName, bool success, const QString& password, const QString& errorMessage);
     // What a read that had timed out answers with afterwards, while the dialog is still open - a
-    // load that ran closed it - so all it may do is fill a password field left empty.
+    // load that ran closed it - so all it may do is fill a password field the user has not typed in.
     void passwordArrivedLate(const QString& profileName, bool success, const QString& password, const QString& errorMessage);
     void revealConnectionDetails();
     bool showingOnlyMyProfiles() const;

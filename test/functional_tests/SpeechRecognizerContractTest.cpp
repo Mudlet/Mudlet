@@ -62,6 +62,7 @@
 #include "SpeechRecognizer.h"
 #include "SpeechRecognizerFactory.h"
 #include "TLuaInterpreter.h"
+#include "TSpeechBridge.h"
 #include "VoskRecognizer.h"
 #include "VoskStubHelper.h"
 #include "mudlet.h"
@@ -74,6 +75,8 @@
 
 #include <memory>
 #include <optional>
+
+using namespace std::chrono_literals;
 
 extern "C" {
 #if defined(INCLUDE_VERSIONED_LUA_HEADERS)
@@ -1154,7 +1157,7 @@ private slots:
         QVERIFY2(!SpeechRecognizerFactory::create(backend, nullptr), "a backend requested by name must still refuse when its library is not installed");
     }
 
-    // gap 1's other half: stt.init()'s new caller, mudlet::initSpeechRecognition(),
+    // gap 1's other half: stt.init()'s new caller, TSpeechBridge::initSpeechRecognition(),
     // must actually forward the backend it is given rather than falling back
     // to its old hardcoded Auto. Same warning-message proof as above, this
     // time through the real call site.
@@ -1163,11 +1166,11 @@ private slots:
         if (VoskRecognizer::libraryAvailable()) {
             QSKIP("libvosk is installed here, so create(Vosk) would succeed rather than warn");
         }
-        QVERIFY2(!mudlet::self()->speechRecognizer(), "an earlier case in this file left a live recognizer behind");
+        QVERIFY2(!TSpeechBridge::instance()->speechRecognizer(), "an earlier case in this file left a live recognizer behind");
 
         QTest::ignoreMessage(QtWarningMsg, "SpeechRecognizerFactory: Vosk backend requested but not available");
-        mudlet::self()->initSpeechRecognition(SpeechRecognizerFactory::Backend::Vosk);
-        QVERIFY2(!mudlet::self()->speechRecognizer(), "an unavailable backend must not have been silently swapped for Auto's own choice");
+        TSpeechBridge::instance()->initSpeechRecognition(SpeechRecognizerFactory::Backend::Vosk);
+        QVERIFY2(!TSpeechBridge::instance()->speechRecognizer(), "an unavailable backend must not have been silently swapped for Auto's own choice");
     }
 
     // gap 2: stt.init() with no argument must be able to reach the built-in
@@ -1263,7 +1266,7 @@ private slots:
         if (VoskRecognizer::libraryAvailable() || SherpaRecognizer::sherpaAvailable()) {
             QSKIP("a model-based engine is installed here, so the default this case pins does not apply");
         }
-        QVERIFY2(!mudlet::self()->speechRecognizer(), "a live recognizer would make these answer for it instead of the default");
+        QVERIFY2(!TSpeechBridge::instance()->speechRecognizer(), "a live recognizer would make these answer for it instead of the default");
 
         lua_State* L = luaL_newstate();
         QVERIFY(L);
@@ -1278,6 +1281,43 @@ private slots:
         TLuaInterpreter::sttGetLibraryPath(L);
         QCOMPARE(QString::fromUtf8(lua_tostring(L, -1)), VoskRecognizer::userLibraryPath());
         lua_pop(L, 1);
+    }
+
+    // A package asks where to install the engine, installs it there and calls
+    // stt.init(): asking must not have settled detection on "not installed"
+    void askingForTheInstallPathsDoesNotSettleDetection()
+    {
+        if (VoskRecognizer::libraryAvailable() || SherpaRecognizer::sherpaAvailable()) {
+            QSKIP("a model-based engine is installed here, so there is nothing for this case to install");
+        }
+        QVERIFY2(!TSpeechBridge::instance()->speechRecognizer(), "a live recognizer would answer for the paths instead of detection");
+
+        const QString stub = QDir(VoskRecognizer::userLibraryPath()).filePath(QFileInfo(qsl(MUDLET_VOSK_STUB_LIBRARY)).fileName());
+        QVERIFY(QDir().mkpath(VoskRecognizer::userLibraryPath()));
+        QFile::remove(stub);
+        VoskRecognizer::resetLibraryLoadState();
+        VoskRecognizer::unloadLibraryByRequest(false);
+        SherpaRecognizer::resetLibraryLoadState();
+        if (SherpaRecognizer::libraryPresent()) {
+            QSKIP("a sherpa-onnx library file that will not load is on its search paths here, so the getters answer for sherpa-onnx");
+        }
+        auto removeStub = qScopeGuard([stub]() {
+            // Unmapped before it is deleted, as Windows will not remove a loaded module
+            VoskRecognizer::resetLibraryLoadState();
+            QFile::remove(stub);
+        });
+
+        lua_State* L = luaL_newstate();
+        QVERIFY(L);
+        auto closeState = qScopeGuard([L]() {
+            lua_close(L);
+        });
+        TLuaInterpreter::sttGetLibraryPath(L);
+        TLuaInterpreter::sttGetModelPath(L);
+        QCOMPARE(QString::fromUtf8(lua_tostring(L, -2)), VoskRecognizer::userLibraryPath());
+
+        QVERIFY2(QFile::copy(qsl(MUDLET_VOSK_STUB_LIBRARY), stub), "the stand-in speech library could not be installed");
+        QVERIFY2(VoskRecognizer::libraryAvailable(), "asking for the install paths settled detection on \"not installed\" before the engine was installed");
     }
 
     // gap 3: stt.listModels() must show what is on disk for every model-based
@@ -1331,10 +1371,10 @@ private slots:
     }
 
     // Last in the file on purpose: alone among the cases here, these two
-    // leave a recognizer built on mudlet::self() for the rest of the
+    // leave a recognizer built on TSpeechBridge::instance() for the rest of the
     // process - keeping one is the behaviour they exist to prove - and
     // several cases above open by asserting the bridge is empty.
-    // Live testing found that mudlet::initSpeechRecognition() returned
+    // Live testing found that TSpeechBridge::initSpeechRecognition() returned
     // immediately whenever mpSpeechRecognizer was already built, so
     // stt.close() followed by stt.init() naming a different engine kept
     // feeding models to the first engine the session ever built. Fixing that
@@ -1352,20 +1392,20 @@ private slots:
         if (!SpeechRecognizerFactory::backendAvailable(SpeechRecognizerFactory::Backend::Platform)) {
             QSKIP("no system speech recognizer available for this locale on this machine");
         }
-        QVERIFY2(!mudlet::self()->speechRecognizer(), "an earlier case in this file left a live recognizer behind");
+        QVERIFY2(!TSpeechBridge::instance()->speechRecognizer(), "an earlier case in this file left a live recognizer behind");
 
-        mudlet::self()->initSpeechRecognition(SpeechRecognizerFactory::Backend::Platform);
-        const QPointer<SpeechRecognizer> firstRecognizer = mudlet::self()->speechRecognizer();
+        TSpeechBridge::instance()->initSpeechRecognition(SpeechRecognizerFactory::Backend::Platform);
+        const QPointer<SpeechRecognizer> firstRecognizer = TSpeechBridge::instance()->speechRecognizer();
         QVERIFY2(firstRecognizer, "the built-in macOS backend must have been built");
 
         // Auto, and the backend already in place, must both leave it alone -
         // several call sites pass one of these on every setter call, and
         // rebuilding on either would tear down a working recognizer under a
         // caller who never asked to switch engines.
-        mudlet::self()->initSpeechRecognition(SpeechRecognizerFactory::Backend::Auto);
-        QCOMPARE(mudlet::self()->speechRecognizer(), firstRecognizer.data());
-        mudlet::self()->initSpeechRecognition(SpeechRecognizerFactory::Backend::Platform);
-        QCOMPARE(mudlet::self()->speechRecognizer(), firstRecognizer.data());
+        TSpeechBridge::instance()->initSpeechRecognition(SpeechRecognizerFactory::Backend::Auto);
+        QCOMPARE(TSpeechBridge::instance()->speechRecognizer(), firstRecognizer.data());
+        TSpeechBridge::instance()->initSpeechRecognition(SpeechRecognizerFactory::Backend::Platform);
+        QCOMPARE(TSpeechBridge::instance()->speechRecognizer(), firstRecognizer.data());
 #else
         QCOMPARE(SpeechRecognizerFactory::backendAvailable(SpeechRecognizerFactory::Backend::Platform), false);
         QSKIP("no backend on this platform can be built without an engine library, so this cannot be exercised here");
@@ -1395,22 +1435,22 @@ private slots:
 
         // Reaches the case above's recognizer when that one ran, and builds one
         // otherwise, so this does not depend on the order the slots run in
-        mudlet::self()->initSpeechRecognition(SpeechRecognizerFactory::Backend::Platform);
-        const QPointer<SpeechRecognizer> workingRecognizer = mudlet::self()->speechRecognizer();
+        TSpeechBridge::instance()->initSpeechRecognition(SpeechRecognizerFactory::Backend::Platform);
+        const QPointer<SpeechRecognizer> workingRecognizer = TSpeechBridge::instance()->speechRecognizer();
         QVERIFY2(workingRecognizer, "the built-in macOS backend must have been built");
 
         QTest::ignoreMessage(QtWarningMsg, "SpeechRecognizerFactory: Vosk backend requested but not available");
-        mudlet::self()->initSpeechRecognition(SpeechRecognizerFactory::Backend::Vosk);
+        TSpeechBridge::instance()->initSpeechRecognition(SpeechRecognizerFactory::Backend::Vosk);
 
-        QVERIFY2(mudlet::self()->speechRecognizer(), "a replacement that could not be built left the bridge with no engine at all");
-        QCOMPARE(mudlet::self()->speechRecognizer(), workingRecognizer.data());
+        QVERIFY2(TSpeechBridge::instance()->speechRecognizer(), "a replacement that could not be built left the bridge with no engine at all");
+        QCOMPARE(TSpeechBridge::instance()->speechRecognizer(), workingRecognizer.data());
 
         // Not merely still pointed at: an engine retired the way the swap path
         // retires one is deleteLater()d, so the destruction only lands on an
         // event loop turn. Take one, then check the object is still there.
-        QTest::qWait(1);
+        QTest::qWait(1ms);
         QVERIFY2(!workingRecognizer.isNull(), "the working backend was torn down for a replacement that never arrived");
-        QCOMPARE(mudlet::self()->speechRecognizer(), workingRecognizer.data());
+        QCOMPARE(TSpeechBridge::instance()->speechRecognizer(), workingRecognizer.data());
 #else
         QCOMPARE(SpeechRecognizerFactory::backendAvailable(SpeechRecognizerFactory::Backend::Platform), false);
         QSKIP("no backend on this platform can be built without an engine library, so this cannot be exercised here");

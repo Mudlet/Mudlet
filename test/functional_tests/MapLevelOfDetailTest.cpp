@@ -78,6 +78,8 @@
 
 #include "GroupedTest.h"
 
+using namespace std::chrono_literals;
+
 class MapLevelOfDetailTest : public QObject
 {
     Q_OBJECT
@@ -311,13 +313,13 @@ private:
         mpHost->mMapInfoContributors.clear();
 
         TMap* pMap = map();
-        if (!pMap->mpMapper) {
+        if (!pMap->mapper()) {
             mpHost->showHideOrCreateMapper(false);
         }
-        if (!pMap->mpMapper) {
+        if (!pMap->mapper()) {
             return nullptr;
         }
-        T2DMap* p2dMap = pMap->mpMapper->mp2dMap;
+        T2DMap* p2dMap = pMap->mapper()->mp2dMap;
         if (!p2dMap) {
             return nullptr;
         }
@@ -400,7 +402,7 @@ private slots:
         mpHost = TestProfile::create(mProfileName, mLocalhost, mPort);
         QVERIFY(mpHost);
         QSignalSpy connected(&(mpHost->mTelnet), &cTelnet::signal_connected);
-        QVERIFY2(connected.wait(3000), "could not connect to the telnet stub");
+        QVERIFY2(connected.wait(3s), "could not connect to the telnet stub");
     }
 
     void cleanupTestCase()

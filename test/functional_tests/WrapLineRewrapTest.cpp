@@ -36,6 +36,8 @@
 
 #include "GroupedTest.h"
 
+using namespace std::chrono_literals;
+
 // TBuffer::wrapLine() rebuilds every line from its start line to the end of the
 // buffer, and its callers rely on more than the text coming back out intact:
 // the count it returns positions the user cursor and the repaint range, and the
@@ -367,7 +369,7 @@ private slots:
         startProfile();
         auto* host = mudlet::self()->getActiveHost();
         QVERIFY(host);
-        TMainConsole* console = host->mpConsole;
+        TMainConsole* console = host->mainConsoleView();
         QVERIFY(console);
 
         const QString token = qsl("abcdefghijklmnopqrstuvwxyz0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ");
@@ -456,7 +458,7 @@ private slots:
     {
         auto* host = startLoggingProfile();
         QVERIFY(host);
-        host->mpConsole->setWrapAt(20);
+        host->mainConsoleView()->setWrapAt(20);
 
         // one unbroken token, so no wrap point can swallow a space, and long
         // enough to be split into more than two lines
@@ -484,7 +486,7 @@ private slots:
         QVERIFY(host);
         host->mUndoServerWrap = true;
         host->mUndoServerWrapWidth = 80;
-        TMainConsole* console = host->mpConsole;
+        TMainConsole* console = host->mainConsoleView();
         // keep Mudlet's own display wrap out of the way, so the held line is
         // one buffer line to look for
         console->setWrapAt(500);
@@ -509,7 +511,7 @@ private slots:
                          [&]() {
                              return bufferHasLine(console, heldLine);
                          },
-                         5000),
+                         5s),
                  "held full-width line was not flushed after the game went quiet");
         QVERIFY2(sizeAtFlush > 0, "the flush timer never fired, so the line was committed by some other path");
         QCOMPARE(cursorAtFlush, sizeAtFlush);
@@ -584,7 +586,7 @@ private:
     {
         startProfile();
         runLua(qsl("createMiniConsole('%1', 0, 0, 600, 600)").arg(mMiniConsole));
-        auto* console = mudlet::self()->getActiveHost()->mpConsole->subConsoleWidget(mMiniConsole);
+        auto* console = mudlet::self()->getActiveHost()->mainConsoleView()->subConsoleWidget(mMiniConsole);
         if (console) {
             console->setWrapAt(width);
         }
@@ -599,7 +601,7 @@ private:
         }
 
         QSignalSpy connectedSpy(&(host->mTelnet), &cTelnet::signal_connected);
-        if (!connectedSpy.wait(2000)) {
+        if (!connectedSpy.wait(2s)) {
             QFAIL("Could not connect with the host.");
         }
     }
@@ -656,7 +658,7 @@ private:
                     [host]() {
                         return host->mTelnet.getConnectionState() == QAbstractSocket::UnconnectedState;
                     },
-                    5000)) {
+                    5s)) {
             qWarning() << "Profile did not go offline in time; feedTelnet() calls will fail";
         }
         return host;
@@ -676,14 +678,14 @@ private:
         host->mLogFileName = qsl("wrapline-rewrap-test");
         host->mIsNextLogFileInHtmlFormat = false;
         host->mIsLoggingTimestamps = false;
-        host->mpConsole->toggleLogging(false);
+        host->mainConsoleView()->toggleLogging(false);
         return host;
     }
 
     QString stopLoggingAndReadLog(Host* host)
     {
-        const QString logFileName = host->mpConsole->mLogFileName;
-        host->mpConsole->toggleLogging(false);
+        const QString logFileName = host->mainConsoleView()->mLogFileName;
+        host->mainConsoleView()->toggleLogging(false);
 
         QFile logFile(logFileName);
         if (!logFile.open(QIODevice::ReadOnly | QIODevice::Text)) {

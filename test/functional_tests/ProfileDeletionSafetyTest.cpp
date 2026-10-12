@@ -38,6 +38,8 @@
 
 #include "GroupedTest.h"
 
+using namespace std::chrono_literals;
+
 class ProfileDeletionSafetyTest : public QObject
 {
     Q_OBJECT
@@ -74,7 +76,7 @@ private:
         const auto items = dlg->findData(*dlg->listWidget_profiles, profile, dlgConnectionProfiles::csmNameRole);
         QVERIFY2(!items.isEmpty(), qPrintable(qsl("profile '%1' was not listed").arg(profile)));
         dlg->listWidget_profiles->setCurrentItem(items.first());
-        QTest::qWait(120);
+        QTest::qWait(120ms);
         dlg->slot_itemClicked(items.first());
     }
 

@@ -77,10 +77,10 @@ private:
   // Scans backward through the buffer to find the first hyperlink and returns
   // its command list from the link store.
   QStringList findFirstLinkCommands() {
-    if (!mpHost || !mpHost->mpConsole) {
+    if (!mpHost || !mpHost->mainConsoleView()) {
       return {};
     }
-    TMainConsole *console = mpHost->mpConsole;
+    TMainConsole *console = mpHost->mainConsoleView();
     int linkId = 0;
     for (int line = console->buffer.getLastLineNumber();
          line >= 0 && linkId == 0; --line) {
@@ -95,10 +95,10 @@ private:
   // Scans backward through the buffer to find the first hyperlink and returns
   // its HyperlinkStyling from the link store.
   Mudlet::HyperlinkStyling findFirstLinkStyling() {
-    if (!mpHost || !mpHost->mpConsole) {
+    if (!mpHost || !mpHost->mainConsoleView()) {
       return {};
     }
-    TMainConsole *console = mpHost->mpConsole;
+    TMainConsole *console = mpHost->mainConsoleView();
     int linkId = 0;
     for (int line = console->buffer.getLastLineNumber();
          line >= 0 && linkId == 0; --line) {
@@ -125,10 +125,10 @@ private:
   // Scans forward through the buffer to find the first hyperlink and returns
   // its (line, column) position, or std::nullopt if none found.
   std::optional<std::pair<int, int>> findFirstLinkPosition() {
-    if (!mpHost || !mpHost->mpConsole) {
+    if (!mpHost || !mpHost->mainConsoleView()) {
       return std::nullopt;
     }
-    TMainConsole *console = mpHost->mpConsole;
+    TMainConsole *console = mpHost->mainConsoleView();
     for (int line = 0; line <= console->buffer.getLastLineNumber(); ++line) {
       for (int col = 0; col < console->buffer.line(line).length(); ++col) {
         if (console->buffer.getLinkIndexAt(line, col) > 0) {
@@ -142,10 +142,10 @@ private:
   // Scans forward through the buffer to find the first hyperlink and returns
   // its (line, column, linkId), or std::nullopt if none found.
   std::optional<std::tuple<int, int, int>> findFirstLinkPositionWithId() {
-    if (!mpHost || !mpHost->mpConsole) {
+    if (!mpHost || !mpHost->mainConsoleView()) {
       return std::nullopt;
     }
-    TMainConsole *console = mpHost->mpConsole;
+    TMainConsole *console = mpHost->mainConsoleView();
     for (int line = 0; line <= console->buffer.getLastLineNumber(); ++line) {
       for (int col = 0; col < console->buffer.line(line).length(); ++col) {
         int lid = console->buffer.getLinkIndexAt(line, col);
@@ -160,10 +160,10 @@ private:
   // Scans forward through the buffer to find the nth distinct hyperlink
   // (1-based) and returns its (line, column, linkId), or std::nullopt.
   std::optional<std::tuple<int, int, int>> findNthDistinctLinkPosition(int n) {
-    if (!mpHost || !mpHost->mpConsole) {
+    if (!mpHost || !mpHost->mainConsoleView()) {
       return std::nullopt;
     }
-    TMainConsole *console = mpHost->mpConsole;
+    TMainConsole *console = mpHost->mainConsoleView();
     QSet<int> seenIds;
     for (int line = 0; line <= console->buffer.getLastLineNumber(); ++line) {
       for (int col = 0; col < console->buffer.line(line).length(); ++col) {
@@ -181,7 +181,7 @@ private:
 
   // Joins all buffer lines into one string.
   QString allBufferText() {
-    TMainConsole *console = mpHost->mpConsole;
+    TMainConsole *console = mpHost->mainConsoleView();
     QString allText;
     for (int i = 0; i <= console->buffer.getLastLineNumber(); ++i) {
       allText += console->buffer.line(i);
@@ -190,7 +190,7 @@ private:
   }
 
   int lineStartingWith(const QString &start) {
-    TMainConsole *console = mpHost->mpConsole;
+    TMainConsole *console = mpHost->mainConsoleView();
     for (int i = console->buffer.getLastLineNumber(); i >= 0; --i) {
       if (console->buffer.line(i).startsWith(start)) {
         return i;
@@ -266,7 +266,7 @@ private slots:
                      "for the step that timed out.");
 
     QSignalSpy spy2(&(mpHost->mTelnet), &cTelnet::signal_connected);
-    if (!spy2.wait(5000)) {
+    if (!spy2.wait(5s)) {
       QFAIL("Could not connect with the host.");
     }
   }
@@ -274,8 +274,8 @@ private slots:
   // Clear buffer and link state before each test for isolation.
   void init() {
     QVERIFY(mpHost);
-    QVERIFY(mpHost->mpConsole);
-    mpHost->mpConsole->buffer.clear();
+    QVERIFY(mpHost->mainConsoleView());
+    mpHost->mainConsoleView()->buffer.clear();
   }
 
   void cleanup() {
@@ -326,7 +326,7 @@ private slots:
     injectData(message);
 
     // Join all buffer lines since cursor position varies with loopback.
-    TMainConsole *console = mpHost->mpConsole;
+    TMainConsole *console = mpHost->mainConsoleView();
     QString allText;
     for (int i = 0; i <= console->buffer.getLastLineNumber(); ++i) {
       allText += console->buffer.line(i);
@@ -549,7 +549,7 @@ private slots:
                qsl("=%7B%22tooltip%22%3A%22URL-DATA%22%2C%22style%22%3A%7B%"
                    "22color%22%3A%22red%22%7D%7D\x1b\\Encoded\x1b]8;;\x1b\\"));
 
-    TMainConsole *console = mpHost->mpConsole;
+    TMainConsole *console = mpHost->mainConsoleView();
     int linkId = 0;
     for (int line = console->buffer.getLastLineNumber();
          line >= 0 && linkId == 0; --line) {
@@ -609,7 +609,7 @@ private slots:
     injectData(qsl("\x1b]8;;https://example.com/") + query +
                qsl("\x1b\\Link\x1b]8;;\x1b\\"));
 
-    TMainConsole *console = mpHost->mpConsole;
+    TMainConsole *console = mpHost->mainConsoleView();
     int linkId = 0;
     for (int line = console->buffer.getLastLineNumber();
          line >= 0 && linkId == 0; --line) {
@@ -676,7 +676,7 @@ private slots:
     injectData(qsl("\x1b]8;;https://example.com/") + query +
                qsl("\x1b\\Link\x1b]8;;\x1b\\"));
 
-    TMainConsole *console = mpHost->mpConsole;
+    TMainConsole *console = mpHost->mainConsoleView();
     int linkId = 0;
     for (int line = console->buffer.getLastLineNumber();
          line >= 0 && linkId == 0; --line) {
@@ -716,7 +716,7 @@ private slots:
     injectData(qsl("\x1b]8;;https://example.com/") + query +
                qsl("\x1b\\Link\x1b]8;;\x1b\\"));
 
-    TMainConsole *console = mpHost->mpConsole;
+    TMainConsole *console = mpHost->mainConsoleView();
     int linkId = 0;
     for (int line = console->buffer.getLastLineNumber();
          line >= 0 && linkId == 0; --line) {
@@ -733,7 +733,7 @@ private slots:
     injectData(qsl("\x1b]8;;preset:danger?config=%7B%22style%22%3A%7B%22color%"
                    "22%3A%22red%22%7D%7D\x1b\\\x1b]8;;\x1b\\"));
 
-    TMainConsole *console = mpHost->mpConsole;
+    TMainConsole *console = mpHost->mainConsoleView();
     // Returns 0 when the query produced no link at all. Each caller has to
     // reject that before asking for styling, because getStyling() answers an
     // unknown id with a default-constructed styling whose hasCustomStyling is
@@ -942,7 +942,7 @@ private slots:
     injectData(buildOsc8WithConfig(qsl("send:look stew"),
                                    qsl("[Lamb and Barley Stew]"), config));
 
-    TMainConsole *console = mpHost->mpConsole;
+    TMainConsole *console = mpHost->mainConsoleView();
     QString allText;
     for (int i = 0; i <= console->buffer.getLastLineNumber(); ++i) {
       allText += console->buffer.line(i);
@@ -962,7 +962,7 @@ private slots:
     injectData(qsl("\x1b]8;;send:north\x1b\\North\x1b]8;;\x1b\\ - "
                    "\x1b]8;;send:south\x1b\\South\x1b]8;;\x1b\\"));
 
-    TMainConsole *console = mpHost->mpConsole;
+    TMainConsole *console = mpHost->mainConsoleView();
 
     // Starting from position 0 (on the first link), findNextLink should find
     // the second
@@ -986,7 +986,7 @@ private slots:
     // Inject plain text with no links
     injectData(qsl("Just some plain text with no links"));
 
-    TMainConsole *console = mpHost->mpConsole;
+    TMainConsole *console = mpHost->mainConsoleView();
 
     int outLine = -1, outCol = -1;
     bool found = console->buffer.findNextLink(0, 0, outLine, outCol);
@@ -997,7 +997,7 @@ private slots:
     // Inject a single link
     injectData(qsl("\x1b]8;;send:look\x1b\\Look around\x1b]8;;\x1b\\"));
 
-    TMainConsole *console = mpHost->mpConsole;
+    TMainConsole *console = mpHost->mainConsoleView();
 
     // Find where the link starts
     auto pos = findFirstLinkPosition();
@@ -1017,7 +1017,7 @@ private slots:
     injectData(qsl("\x1b]8;;send:north\x1b\\North\x1b]8;;\x1b\\ - "
                    "\x1b]8;;send:south\x1b\\South\x1b]8;;\x1b\\"));
 
-    TMainConsole *console = mpHost->mpConsole;
+    TMainConsole *console = mpHost->mainConsoleView();
 
     // Find the first and second distinct links
     auto first = findNthDistinctLinkPosition(1);
@@ -1044,7 +1044,7 @@ private slots:
     // Inject a single link
     injectData(qsl("\x1b]8;;send:look\x1b\\Look\x1b]8;;\x1b\\"));
 
-    TMainConsole *console = mpHost->mpConsole;
+    TMainConsole *console = mpHost->mainConsoleView();
 
     // Starting from 0,0 there should be no previous link
     int outLine = -1, outCol = -1;
@@ -1077,7 +1077,7 @@ private slots:
     injectData(
         buildOsc8WithConfig(qsl("send:look sword"), qsl("[Sword]"), config));
 
-    TMainConsole *console = mpHost->mpConsole;
+    TMainConsole *console = mpHost->mainConsoleView();
     int linkId = 0;
     for (int line = console->buffer.getLastLineNumber();
          line >= 0 && linkId == 0; --line) {
@@ -1090,7 +1090,7 @@ private slots:
   }
 
   void test_GetLinkTooltip_InvalidIndex() {
-    TMainConsole *console = mpHost->mpConsole;
+    TMainConsole *console = mpHost->mainConsoleView();
 
     // Index 0 and negative should return empty
     QCOMPARE(console->buffer.getLinkTooltip(0), QString());
@@ -1106,7 +1106,7 @@ private slots:
   void test_LinkVisitedState() {
     injectData(qsl("\x1b]8;;send:look\x1b\\Look\x1b]8;;\x1b\\"));
 
-    TMainConsole *console = mpHost->mpConsole;
+    TMainConsole *console = mpHost->mainConsoleView();
     int linkId = 0;
     for (int line = console->buffer.getLastLineNumber();
          line >= 0 && linkId == 0; --line) {
@@ -1131,7 +1131,7 @@ private slots:
   void test_LinkAttributes_ExposedInAccessible() {
     injectData(qsl("\x1b]8;;https://example.com\x1b\\Click me\x1b]8;;\x1b\\"));
 
-    TMainConsole *console = mpHost->mpConsole;
+    TMainConsole *console = mpHost->mainConsoleView();
 
     // Find the link position in the buffer
     auto pos = findFirstLinkPosition();
@@ -1168,7 +1168,7 @@ private slots:
   void test_LinkAttributes_NotPresentOnPlainText() {
     injectData(qsl("Just plain text here"));
 
-    TMainConsole *console = mpHost->mpConsole;
+    TMainConsole *console = mpHost->mainConsoleView();
     TTextEdit *pane = console->mUpperPane;
     QVERIFY2(pane, "Expected upper pane to exist");
 
@@ -1188,7 +1188,7 @@ private slots:
   void test_LinkAttributes_VisitedState() {
     injectData(qsl("\x1b]8;;send:look\x1b\\Look\x1b]8;;\x1b\\"));
 
-    TMainConsole *console = mpHost->mpConsole;
+    TMainConsole *console = mpHost->mainConsoleView();
 
     // Find the link
     auto pos = findFirstLinkPositionWithId();
@@ -1226,7 +1226,7 @@ private slots:
   void test_LinkAttributes_DisabledState() {
     injectData(qsl("\x1b]8;;send:look\x1b\\Disabled Link\x1b]8;;\x1b\\"));
 
-    TMainConsole *console = mpHost->mpConsole;
+    TMainConsole *console = mpHost->mainConsoleView();
 
     auto pos = findFirstLinkPositionWithId();
     QVERIFY2(pos.has_value(), "Expected to find a link in the buffer");
@@ -1258,7 +1258,7 @@ private slots:
   void test_LinkAttributes_SelectedState() {
     injectData(qsl("\x1b]8;;send:look\x1b\\Select Me\x1b]8;;\x1b\\"));
 
-    TMainConsole *console = mpHost->mpConsole;
+    TMainConsole *console = mpHost->mainConsoleView();
 
     auto pos = findFirstLinkPositionWithId();
     QVERIFY2(pos.has_value(), "Expected to find a link in the buffer");
@@ -1295,7 +1295,7 @@ private slots:
     injectData(
         qsl("\x1b]8;;https://example.com:8080/path\x1b\\Look\x1b]8;;\x1b\\"));
 
-    TMainConsole *console = mpHost->mpConsole;
+    TMainConsole *console = mpHost->mainConsoleView();
 
     auto pos = findFirstLinkPosition();
     QVERIFY2(pos.has_value(), "Expected to find a link in the buffer");
@@ -1343,7 +1343,7 @@ private slots:
     injectData(qsl("\x1b]8;;https://example.com/"
                    "path;param\\extra\x1b\\Look\x1b]8;;\x1b\\"));
 
-    TMainConsole *console = mpHost->mpConsole;
+    TMainConsole *console = mpHost->mainConsoleView();
 
     auto pos = findFirstLinkPosition();
     QVERIFY2(pos.has_value(), "Expected to find a link in the buffer");
@@ -1397,7 +1397,7 @@ private slots:
     injectData(
         buildOsc8WithConfig(qsl("send:equip sword"), qsl("[Sword]"), config));
 
-    TMainConsole *console = mpHost->mpConsole;
+    TMainConsole *console = mpHost->mainConsoleView();
 
     auto pos = findFirstLinkPosition();
     QVERIFY2(pos.has_value(), "Expected to find a link in the buffer");
@@ -1437,7 +1437,7 @@ private slots:
     injectData(
         buildOsc8WithConfig(qsl("send:look sword"), qsl("[Sword]"), config));
 
-    TMainConsole *console = mpHost->mpConsole;
+    TMainConsole *console = mpHost->mainConsoleView();
 
     // Find the link position
     auto pos = findFirstLinkPosition();
@@ -1465,7 +1465,7 @@ private slots:
   void test_Description_CaretNotOnLink() {
     injectData(qsl("Plain text with no links"));
 
-    TMainConsole *console = mpHost->mpConsole;
+    TMainConsole *console = mpHost->mainConsoleView();
 
     // Enable caret mode, caret at line 0 col 0 (plain text)
     mpHost->setCaretEnabled(true);
@@ -1501,7 +1501,7 @@ private slots:
     // (start..end describe the contiguous range with these attributes).
     injectData(qsl("\x1b]8;;https://example.com\x1b\\Click me\x1b]8;;\x1b\\"));
 
-    TMainConsole *console = mpHost->mpConsole;
+    TMainConsole *console = mpHost->mainConsoleView();
     auto pos = findFirstLinkPositionWithId();
     QVERIFY2(pos.has_value(), "Expected to find a link in the buffer");
     auto [linkLine, linkCol, linkId] = *pos;
@@ -1540,7 +1540,7 @@ private slots:
     // " " between "X" and the link must not be merged with the link's run.
     injectData(qsl("X \x1b]8;;https://example.com\x1b\\L\x1b]8;;\x1b\\"));
 
-    TMainConsole *console = mpHost->mpConsole;
+    TMainConsole *console = mpHost->mainConsoleView();
     auto pos = findFirstLinkPositionWithId();
     QVERIFY2(pos.has_value(), "Expected to find a link in the buffer");
     auto [linkLine, linkCol, linkId] = *pos;
@@ -1570,7 +1570,7 @@ private slots:
     // neighbouring run even when they otherwise share styling.
     injectData(qsl("\x1b]8;;https://example.com\x1b\\Hello\x1b]8;;\x1b\\"));
 
-    TMainConsole *console = mpHost->mpConsole;
+    TMainConsole *console = mpHost->mainConsoleView();
     auto pos = findFirstLinkPositionWithId();
     QVERIFY2(pos.has_value(), "Expected to find a link in the buffer");
     auto [linkLine, linkCol, linkId] = *pos;
@@ -1615,7 +1615,7 @@ private slots:
     // to the start and rediscover the same link (and report wrapped == true).
     injectData(qsl("\x1b]8;;send:look\x1b\\Look\x1b]8;;\x1b\\ trailing text"));
 
-    TMainConsole *console = mpHost->mpConsole;
+    TMainConsole *console = mpHost->mainConsoleView();
     auto pos = findFirstLinkPositionWithId();
     QVERIFY2(pos.has_value(), "Expected to find a link in the buffer");
     auto [linkLine, linkCol, linkId] = *pos;
@@ -1641,7 +1641,7 @@ private slots:
     injectData(qsl("plain leading line"));
     injectData(qsl("\x1b]8;;send:look\x1b\\Look\x1b]8;;\x1b\\"));
 
-    TMainConsole *console = mpHost->mpConsole;
+    TMainConsole *console = mpHost->mainConsoleView();
     auto pos = findFirstLinkPositionWithId();
     QVERIFY2(pos.has_value(), "Expected to find a link in the buffer");
     auto [linkLine, linkCol, linkId] = *pos;
@@ -1667,7 +1667,7 @@ private slots:
     injectData(qsl("\x1b]8;;send:north\x1b\\North\x1b]8;;\x1b\\ - "
                    "\x1b]8;;send:south\x1b\\South\x1b]8;;\x1b\\"));
 
-    TMainConsole *console = mpHost->mpConsole;
+    TMainConsole *console = mpHost->mainConsoleView();
     auto first = findNthDistinctLinkPosition(1);
     auto second = findNthDistinctLinkPosition(2);
     QVERIFY(first.has_value() && second.has_value());
@@ -1695,7 +1695,7 @@ private slots:
     injectData(qsl("\x1b]8;;send:north\x1b\\North\x1b]8;;\x1b\\ - "
                    "\x1b]8;;send:south\x1b\\South\x1b]8;;\x1b\\"));
 
-    TMainConsole *console = mpHost->mpConsole;
+    TMainConsole *console = mpHost->mainConsoleView();
     auto first = findNthDistinctLinkPosition(1);
     auto second = findNthDistinctLinkPosition(2);
     QVERIFY(first.has_value() && second.has_value());
@@ -1728,7 +1728,7 @@ private slots:
     injectData(qsl("FOLLOWING LINE"));
     injectData(qsl("LATER LINE"));
 
-    TMainConsole *console = mpHost->mpConsole;
+    TMainConsole *console = mpHost->mainConsoleView();
     const int lastLine = console->buffer.getLastLineNumber();
     // The three lines before the last, which is left empty by the final newline.
     const int laterLine = lastLine - 1;
@@ -1752,7 +1752,7 @@ private slots:
     injectData(qsl("\x1b]8;;send:reveal?config={\"spoiler\":true}\x1b\\SECRET"));
     injectData(qsl("AFTER THE SPOILER"));
 
-    TMainConsole *console = mpHost->mpConsole;
+    TMainConsole *console = mpHost->mainConsoleView();
     const int lastLine = console->buffer.getLastLineNumber();
     const int afterLine = lastLine - 1;
     const int spoilerLine = lastLine - 2;
@@ -1793,7 +1793,7 @@ private slots:
     feedFromServer(firstPacket);
     feedFromServer(secondPacket);
 
-    TMainConsole *console = mpHost->mpConsole;
+    TMainConsole *console = mpHost->mainConsoleView();
     const int secondLine = lineStartingWith(secondPart);
     QVERIFY2(secondLine >= 0, qPrintable(qsl("'%1' never reached the buffer: '%2'").arg(secondPart, allBufferText())));
     QVERIFY2(console->buffer.getLinkIndexAt(secondLine, 0) > 0,
@@ -1808,7 +1808,7 @@ private slots:
     feedFromServer(padding + qsl(" \x1b]8;;send:wrapped\x1b\\alpha\n"));
     feedFromServer(qsl("beta tail.\x1b]8;;\x1b\\\n"));
 
-    TMainConsole *console = mpHost->mpConsole;
+    TMainConsole *console = mpHost->mainConsoleView();
     const int joinedLine = lineStartingWith(padding);
     QVERIFY2(joinedLine >= 0, qPrintable(qsl("the wrapped line never reached the buffer: '%1'").arg(allBufferText())));
     QCOMPARE(console->buffer.line(joinedLine), padding + qsl(" alpha beta tail."));
@@ -1827,7 +1827,7 @@ private slots:
     feedFromServer(heldText + qsl("\n"));
     feedFromServer(qsl("\x1b]8;;send:reveal?config={\"spoiler\":true}\x1b\\beta tail.\n"));
 
-    TMainConsole *console = mpHost->mpConsole;
+    TMainConsole *console = mpHost->mainConsoleView();
     const int joinedLine = lineStartingWith(heldText);
     QVERIFY2(joinedLine >= 0, qPrintable(qsl("the held text is missing or was masked: '%1'").arg(allBufferText())));
     QCOMPARE(console->buffer.line(joinedLine), heldText + qsl(" ") + QString(10, QLatin1Char(' ')));
@@ -1845,7 +1845,7 @@ private slots:
     // a list entry is never the continuation of the line above
     feedFromServer(qsl("- a list entry\n"));
 
-    TMainConsole *console = mpHost->mpConsole;
+    TMainConsole *console = mpHost->mainConsoleView();
     const int heldLine = lineStartingWith(padding);
     const int nextLine = lineStartingWith(qsl("- a list entry"));
     QVERIFY2(heldLine >= 0 && nextLine >= 0, qPrintable(qsl("a line is missing: '%1'").arg(allBufferText())));
@@ -1866,7 +1866,7 @@ private slots:
     feedFromServer(heldText + qsl("\n"));
     feedFromServer(qsl("\x1b]8;;send:hide?config={\"visibility\":{\"action\":\"reveal\",\"delay\":20000}}\x1b\\beta\x1b]8;;\x1b\\ tail.\n"));
 
-    TMainConsole *console = mpHost->mpConsole;
+    TMainConsole *console = mpHost->mainConsoleView();
     const int joinedLine = lineStartingWith(heldText);
     QVERIFY2(joinedLine >= 0, qPrintable(qsl("the held text never reached the buffer: '%1'").arg(allBufferText())));
     // Concealed where the link landed: the held text in front is untouched
@@ -1887,7 +1887,7 @@ private slots:
     // a list entry is never the continuation of the line above
     feedFromServer(qsl("- \x1b]8;;send:hide?config={\"visibility\":{\"action\":\"reveal\",\"delay\":20000}}\x1b\\item\x1b]8;;\x1b\\\n"));
 
-    TMainConsole *console = mpHost->mpConsole;
+    TMainConsole *console = mpHost->mainConsoleView();
     const int heldLine = lineStartingWith(heldText);
     QVERIFY2(heldLine >= 0, qPrintable(qsl("the held text never reached the buffer: '%1'").arg(allBufferText())));
     QCOMPARE(console->buffer.line(heldLine), heldText);
@@ -1903,7 +1903,7 @@ private slots:
   void test_ALinkOpenedJustBeforeALineBreakIsForTheLineAfterIt() {
     feedFromServer(qsl("Exits: \x1b]8;;send:north\x1b\\\nnorth\x1b]8;;\x1b\\\nafter\n"));
 
-    TMainConsole *console = mpHost->mpConsole;
+    TMainConsole *console = mpHost->mainConsoleView();
     const int linkLine = lineStartingWith(qsl("north"));
     QVERIFY2(linkLine > 0, qPrintable(qsl("the link's line is missing: '%1'").arg(allBufferText())));
     QVERIFY2(console->buffer.getLinkIndexAt(linkLine, 0) > 0, "the line the link was opened for is plain text");
@@ -1922,7 +1922,7 @@ private slots:
     feedFromServer(qsl("\r"));
     feedFromServer(qsl("- a list entry\n"));
 
-    TMainConsole *console = mpHost->mpConsole;
+    TMainConsole *console = mpHost->mainConsoleView();
     const int heldLine = lineStartingWith(padding);
     const int nextLine = lineStartingWith(qsl("- a list entry"));
     QVERIFY2(heldLine >= 0 && nextLine >= 0, qPrintable(qsl("a line is missing: '%1'").arg(allBufferText())));
@@ -1940,7 +1940,7 @@ private slots:
     feedFromServer(qsl("HP 10 \x1b]8;;send:x\x1b\\go\r"));
     feedFromServer(qsl("You arrive.\nLater.\n"));
 
-    TMainConsole *console = mpHost->mpConsole;
+    TMainConsole *console = mpHost->mainConsoleView();
     const int arriveLine = lineStartingWith(qsl("You arrive."));
     QVERIFY2(arriveLine > 0, qPrintable(qsl("a line is missing: '%1'").arg(allBufferText())));
     QCOMPARE(console->buffer.getLinkIndexAt(arriveLine + 1, 0), 0);
@@ -1953,7 +1953,7 @@ private slots:
     feedFromServer(qsl("\x1b]8;;send:reveal?config={\"spoiler\":true}\x1b\\SEC\r"));
     feedFromServer(qsl("RET\x1b]8;;\x1b\\ after\n"));
 
-    TMainConsole *console = mpHost->mpConsole;
+    TMainConsole *console = mpHost->mainConsoleView();
     QVERIFY2(!allBufferText().contains(qsl("SEC")) && !allBufferText().contains(qsl("RET")),
              qPrintable(qsl("part of the spoiler is on show: '%1'").arg(allBufferText())));
     const int restLine = lineStartingWith(qsl("    after"));
@@ -1976,7 +1976,7 @@ private slots:
     feedFromServer(qsl("beta \r"));
     feedFromServer(qsl("tail.\x1b]8;;\x1b\\\n"));
 
-    TMainConsole *console = mpHost->mpConsole;
+    TMainConsole *console = mpHost->mainConsoleView();
     const int heldLine = lineStartingWith(padding);
     QVERIFY2(heldLine >= 0, qPrintable(qsl("the held text never reached the buffer: '%1'").arg(allBufferText())));
     QCOMPARE(console->buffer.line(heldLine + 1), qsl("beta "));
@@ -1997,7 +1997,7 @@ private slots:
     feedFromServer(padding + qsl(" \x1b]8;;send:reveal?config={\"spoiler\":true}\x1b\\alpha\n"));
     feedFromServer(qsl("beta\x1b]8;;\x1b\\ tail.\n"));
 
-    TMainConsole *console = mpHost->mpConsole;
+    TMainConsole *console = mpHost->mainConsoleView();
     const int joinedLine = lineStartingWith(padding);
     QVERIFY2(joinedLine >= 0, qPrintable(qsl("the held text never reached the buffer: '%1'").arg(allBufferText())));
     QCOMPARE(console->buffer.line(joinedLine), padding + QString(11, QLatin1Char(' ')) + qsl(" tail."));

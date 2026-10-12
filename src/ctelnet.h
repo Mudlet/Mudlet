@@ -79,7 +79,6 @@ class QNetworkReply;
 class QTimer;
 
 class Host;
-class dlgComposer;
 
 
 const char TN_BELL = static_cast<char>(7);
@@ -281,6 +280,10 @@ public:
     // a decompression bomb.
     inline static const int scmMaxDecompressionRecursion = 8;
     void cancelLoginTimers();
+    // A flag rather than a timer query, so every transition makes the Host
+    // recompute its hidden-input policy
+    bool autoLoginPending() const { return mAutoLoginPending; }
+    bool autoLoginTimersRunning() const;
     // Called when a password turns up after the auto-login already reached the password step -
     // a keychain read the user only answered by then. Sends it only while the game is provably
     // still waiting at that prompt, see the definition.
@@ -309,7 +312,7 @@ public:
     QElapsedTimer networkLatencyTimer;
     bool mGA_Driver = false;
     bool mFORCE_GA_OFF = false;
-    QPointer<dlgComposer> mpComposer;
+    QPointer<QObject> mpComposer;
     QNetworkAccessManager* mpDownloader = nullptr;
     QString mServerPackage;
     QString mProfileName;
@@ -381,6 +384,8 @@ private:
     // character-at-a-time detection timer and flags, which have no public face,
     // and fires those timers early rather than waiting them out.
     friend class TelnetPasswordMaskTimeoutTest;
+    friend class PasswordEntryPolicyTest;
+    friend class PasswordEntryTest;
 
     // Host calls reset(), not cTelnet's constructor: it clears Host members declared after
     // cTelnet, which don't exist yet while cTelnet is constructed.
@@ -399,6 +404,9 @@ private:
     void processSocketData(char* data, int size, const bool loopbackTesting = false);
     void initStreamDecompressor();
     int decompressBuffer(char*& in_buffer, int& length, char* out_buffer);
+    // Sends DONT for the running MCCP stream and stops decompressing it, for a
+    // stream that can no longer be followed.
+    void refuseCompressedStream();
     void reset();
     void handleFailedConnection();
     void sendLoginAndPass();
@@ -447,7 +455,7 @@ private:
     void sendTelnetOption(char type, unsigned char option);
     void gotRest(std::string&);
     void gotPrompt(std::string&);
-    void postData();
+    void postData(bool endsWithPromptMarker = false);
     void raiseProtocolEvent(const QString& name, const QString& protocol);
     void beginNetworkLatencyMeasurement();
     void finishNetworkLatencyMeasurement();
@@ -533,6 +541,17 @@ private:
     z_stream mZstream = {};
 
     bool mNeedDecompression = false;
+    // The MCCP version whose start sequence began the stream being inflated
+    char mCompressionOption = OPT_COMPRESS2;
+    // Input of earlier reads inflate() took without producing any output yet -
+    // a stream header, or the first bytes of text a game sent instead of the
+    // stream it announced, to give back if it turns out to be the latter.
+    std::string mUninflatedInput;
+    // Real text fails the header check within two bytes; past this many the
+    // stream is taken to be compressed and nothing is kept.
+    inline static const size_t scmMaxUninflatedInput = 32;
+    // Whether mUninflatedInput still holds every byte the stream has taken
+    bool mUninflatedInputComplete = true;
     // Re-entry depth of processSocketData() while draining leftover
     // (de)compressed data; bounds stack use and decompression-bomb output.
     int mDecompressionRecursionDepth = 0;
@@ -588,6 +607,8 @@ private:
 
     QTimer* mTimerLogin = nullptr;
     QTimer* mTimerPass = nullptr;
+    bool mAutoLoginPending = false;
+    void setAutoLoginPending(const bool pending);
     // Set when the auto-login reached the password step with no password in hand, which is where
     // an unanswered keychain prompt leaves it. It is the record of the game sitting at its
     // password prompt that sendOutstandingAutoLoginPassword() needs to decide whether a password

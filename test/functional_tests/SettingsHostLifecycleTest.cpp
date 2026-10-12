@@ -40,6 +40,7 @@
 #include <QGridLayout>
 #include <QGroupBox>
 #include <QKeySequenceEdit>
+#include <QLabel>
 #include <QLineEdit>
 #include <QScrollArea>
 #include <QSignalSpy>
@@ -131,6 +132,15 @@ private:
                      QString::number(mpPreferences->comboBox_mapHistory->count()));
     }
 
+    static void verifyNoProfileNoticeIs(const dlgProfilePreferences* pDialog, const bool shown)
+    {
+        QLabel* pNotice = pDialog->findChild<QLabel*>(qsl("settingsNoProfileNotice"));
+        QVERIFY2(pNotice, "the settings shell has no notice for when no profile is open");
+        QVERIFY2(!pNotice->text().isEmpty(), "the notice was never given its text");
+        QCOMPARE(pNotice->isVisible(), shown);
+        QCOMPARE(pDialog->accessibleDescription(), shown ? pNotice->text() : QString());
+    }
+
     // What disableHostDetails() greys out, and what it deliberately leaves
     // alone because it is application-wide rather than a profile's
     void verifyProfileSettingsAre(const bool enabled)
@@ -144,6 +154,11 @@ private:
         QCOMPARE(mpPreferences->doubleclick_ignore_lineedit->isEnabled(), enabled);
         QCOMPARE(mpPreferences->checkBox_enableOSC8Hyperlinks->isEnabled(), enabled);
         QCOMPARE(mpPreferences->checkBox_echoLuaErrors->isEnabled(), enabled);
+        QCOMPARE(mpPreferences->checkBox_f3SearchEnabled->isEnabled(), enabled);
+        QCOMPARE(mpPreferences->groupBox_MMCPOptions->isEnabled(), enabled);
+
+        // ...and the dialog says why, on screen and to a screen reader
+        verifyNoProfileNoticeIs(mpPreferences, !enabled);
 
         // ...and the application-wide settings stay usable either way
         QVERIFY2(mpPreferences->comboBox_appearance->isEnabled(), "the theme selector is not a profile setting and must stay usable");
@@ -210,6 +225,56 @@ private slots:
         verifyProfileSettingsAre(false);
     }
 
+    // Handling telnet:// links is the application's choice rather than a
+    // profile's, so it has to show and keep its state with no profile open too
+    void test_theTelnetLinkHandlerOptionWorksWithNoProfile()
+    {
+        MudletApp::getQSettings()->setValue(qsl("telnetHandlerEnabled"), true);
+        openPreferences(mpPreferences, nullptr);
+        QVERIFY2(mpPreferences->telnetHandlerEnabled->isEnabled(), "the telnet:// handler option is not a profile setting and must stay usable");
+        QVERIFY2(mpPreferences->telnetHandlerEnabled->isChecked(), "the telnet:// handler option does not show what is stored");
+
+        QSignalSpy applySpy(mpPreferences, &dlgProfilePreferences::signal_preferencesSaved);
+        mpPreferences->telnetHandlerEnabled->click();
+        const bool applied = TestSettings::waitForApply(applySpy);
+        const bool stored = MudletApp::getQSettings()->value(qsl("telnetHandlerEnabled")).toBool();
+        MudletApp::getQSettings()->remove(qsl("telnetHandlerEnabled"));
+
+        QVERIFY2(applied, "the debounce never wrote the settings back");
+        QVERIFY2(!stored, "unticking the telnet:// handler option with no profile open was not saved");
+    }
+
+    // The notice is also the dialog's description, which has to follow it into
+    // a new language or a screen reader keeps announcing the old one
+    void test_aLanguageChangeRewordsTheNoProfileNoticeForScreenReadersToo()
+    {
+        openPreferences(mpPreferences, nullptr);
+
+        TestSettings::BracketingTranslator translator;
+        QCoreApplication::installTranslator(&translator);
+        mpPreferences->slot_guiLanguageChanged(MudletApp::getInterfaceLanguage());
+        // Read before the translator goes, so a failure cannot leave it installed
+        const QString notice = mpPreferences->findChild<QLabel*>(qsl("settingsNoProfileNotice"))->text();
+        const QString description = mpPreferences->accessibleDescription();
+        QCoreApplication::removeTranslator(&translator);
+
+        QVERIFY2(notice.startsWith(QLatin1Char('[')), "the notice was not retranslated");
+        QCOMPARE(description, notice);
+    }
+
+    // A keyboard user tabbing out of the sidebar reaches the explanation before the greyed-out page
+    void test_tabFromTheSidebarReachesTheNoProfileNotice()
+    {
+        openPreferences(mpPreferences, nullptr);
+        mpPreferences->setTab(qsl("accessibility"));
+
+        QWidget* pNextStop = TestSettings::sidebar(mpPreferences)->nextInFocusChain();
+        while (!(pNextStop->isVisible() && pNextStop->isEnabled() && (pNextStop->focusPolicy() & Qt::TabFocus))) {
+            pNextStop = pNextStop->nextInFocusChain();
+        }
+        QCOMPARE(pNextStop->objectName(), qsl("settingsNoProfileNotice"));
+    }
+
     // The profile chooser's dialog is still up when a profile is opened, and
     // has to come to life around it - without that counting as an edit
     void test_aProfileAppearingEnablesTheDialogWithoutApplying()
@@ -248,6 +313,8 @@ private slots:
     {
         openPreferences(mpPreferences, mpHost);
         openPreferences(mpSecondPreferences, nullptr);
+        verifyNoProfileNoticeIs(mpPreferences, false);
+        verifyNoProfileNoticeIs(mpSecondPreferences, true);
 
         // applied live rather than through the debounce, so the second dialog
         // hears about it as the box is ticked

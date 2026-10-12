@@ -64,6 +64,7 @@
 #include "MudletApp.h"
 #include "ProfileTestHelper.h"
 #include "TLuaInterpreter.h"
+#include "TSpeechBridge.h"
 #include "TDetachedWindow.h"
 #include "TTabBar.h"
 #include "SpeechRecognizer.h"
@@ -286,8 +287,8 @@ private:
         // already is, so a case running after another one left a recognizer in
         // place would otherwise drive that one instead of this stand-in.
         for (const SpeechRecognizerFactory::Backend backend : {SpeechRecognizerFactory::Backend::Sherpa, SpeechRecognizerFactory::Backend::Vosk}) {
-            mudlet::self()->initSpeechRecognition(backend);
-            if (auto* pStandIn = qobject_cast<StandInRecognizer*>(mudlet::self()->speechRecognizer())) {
+            TSpeechBridge::instance()->initSpeechRecognition(backend);
+            if (auto* pStandIn = qobject_cast<StandInRecognizer*>(TSpeechBridge::instance()->speechRecognizer())) {
                 return pStandIn;
             }
         }
@@ -300,10 +301,10 @@ private:
     void retireStandInEngine()
     {
         SpeechRecognizerFactory::setFactoryOverride(nullptr);
-        if (auto* pRecognizer = mudlet::self()->speechRecognizer()) {
+        if (auto* pRecognizer = TSpeechBridge::instance()->speechRecognizer()) {
             pRecognizer->releaseResources();
         }
-        mudlet::self()->releaseMicrophone();
+        TSpeechBridge::instance()->releaseMicrophone();
         QTest::qWait(50ms);
     }
 
@@ -502,7 +503,7 @@ private slots:
     // so tidying inline means one real failure arrives as several.
     void cleanup()
     {
-        mudlet::self()->releaseMicrophone();
+        TSpeechBridge::instance()->releaseMicrophone();
         if (mudlet::self()->getDetachedWindows().contains(mSecondHostname)) {
             mudlet::self()->slot_tabReattachRequested(mSecondHostname);
             QTest::qWait(200ms);
@@ -523,7 +524,7 @@ private slots:
         if (mSystemEngineWins) {
             QSKIP("libvosk answers the bare name here, so the loader would reach it before the stand-in this case installs");
         }
-        if (mudlet::self()->speechRecognizer()) {
+        if (TSpeechBridge::instance()->speechRecognizer()) {
             QSKIP("a recognizer already exists, so its arrival - the change this case is about - is already behind us");
         }
         QVERIFY2(installStubEngine(), "the stand-in engine could not be installed, so no recognizer can be built here");
@@ -534,10 +535,10 @@ private slots:
         // Held deliberately: the owner is what every other speech event routes
         // by, so a broadcast that had quietly gone back to owner-routing would
         // still look right with nobody holding the microphone.
-        mudlet::self()->claimMicrophoneFor(mpFirstHost);
+        TSpeechBridge::instance()->claimMicrophoneFor(mpFirstHost);
 
-        mudlet::self()->initSpeechRecognition(SpeechRecognizerFactory::Backend::Vosk);
-        QVERIFY2(mudlet::self()->speechRecognizer(), "the stand-in engine was installed but no recognizer was built from it");
+        TSpeechBridge::instance()->initSpeechRecognition(SpeechRecognizerFactory::Backend::Vosk);
+        QVERIFY2(TSpeechBridge::instance()->speechRecognizer(), "the stand-in engine was installed but no recognizer was built from it");
 
         const QString owner = luaGlobalString(mpFirstHost, qsl("_capsFirst"));
         const QString other = luaGlobalString(mpSecondHost, qsl("_capsSecond"));
@@ -554,11 +555,11 @@ private slots:
         listenFor(mpFirstHost, qsl("sysSTTResult"), qsl("_heardFirst"));
         listenFor(mpSecondHost, qsl("sysSTTResult"), qsl("_heardSecond"));
 
-        mudlet::self()->claimMicrophoneFor(mpFirstHost);
+        TSpeechBridge::instance()->claimMicrophoneFor(mpFirstHost);
         mudlet::self()->activateProfile(mpSecondHost);
         QCOMPARE(mudlet::self()->getActiveHost(), mpSecondHost);
 
-        mudlet::self()->raiseSpeechEvent(qsl("sysSTTResult"), qsl("kill hound"));
+        TSpeechBridge::instance()->raiseSpeechEvent(qsl("sysSTTResult"), qsl("kill hound"));
 
         QCOMPARE(luaGlobalString(mpFirstHost, qsl("_heardFirst")), qsl("kill hound"));
         QVERIFY2(luaGlobalString(mpSecondHost, qsl("_heardSecond")).isEmpty(), "the phrase was delivered to the profile in front rather than to the one that was listening");
@@ -572,10 +573,10 @@ private slots:
         listenFor(mpFirstHost, qsl("sysSTTError"), qsl("_faultFirst"));
         listenFor(mpSecondHost, qsl("sysSTTError"), qsl("_faultSecond"));
 
-        mudlet::self()->releaseMicrophone();
+        TSpeechBridge::instance()->releaseMicrophone();
         mudlet::self()->activateProfile(mpSecondHost);
 
-        mudlet::self()->raiseSpeechEvent(qsl("sysSTTError"), qsl("no model"));
+        TSpeechBridge::instance()->raiseSpeechEvent(qsl("sysSTTError"), qsl("no model"));
 
         QCOMPARE(luaGlobalString(mpSecondHost, qsl("_faultSecond")), qsl("no model"));
         QVERIFY2(luaGlobalString(mpFirstHost, qsl("_faultFirst")).isEmpty(), "an event with no session running went somewhere other than the profile in front");
@@ -589,10 +590,10 @@ private slots:
         listenFor(mpFirstHost, qsl("sysSTTHandover"), qsl("_handoverFirst"));
         listenFor(mpSecondHost, qsl("sysSTTHandover"), qsl("_handoverSecond"));
 
-        mudlet::self()->claimMicrophoneFor(mpFirstHost);
-        mudlet::self()->claimMicrophoneFor(mpSecondHost);
+        TSpeechBridge::instance()->claimMicrophoneFor(mpFirstHost);
+        TSpeechBridge::instance()->claimMicrophoneFor(mpSecondHost);
 
-        QCOMPARE(mudlet::self()->microphoneOwner(), mpSecondHost);
+        QCOMPARE(TSpeechBridge::instance()->microphoneOwner(), mpSecondHost);
         QCOMPARE(luaGlobalString(mpFirstHost, qsl("_handoverFirst")), mSecondHostname);
         QVERIFY2(luaGlobalString(mpSecondHost, qsl("_handoverSecond")).isEmpty(), "the profile that took the microphone was told it had lost one");
     }
@@ -604,13 +605,13 @@ private slots:
     {
         listenFor(mpFirstHost, qsl("sysSTTHandover"), qsl("_handoverAgain"));
 
-        mudlet::self()->claimMicrophoneFor(mpFirstHost);
+        TSpeechBridge::instance()->claimMicrophoneFor(mpFirstHost);
         // Answers true without taking anything, which is what lets a caller
         // tell "I hold it" apart from "I could not have it" and give back only
         // what its own call actually took.
-        QVERIFY2(mudlet::self()->claimMicrophoneFor(mpFirstHost), "a profile could not re-claim the microphone it already held");
+        QVERIFY2(TSpeechBridge::instance()->claimMicrophoneFor(mpFirstHost), "a profile could not re-claim the microphone it already held");
 
-        QCOMPARE(mudlet::self()->microphoneOwner(), mpFirstHost);
+        QCOMPARE(TSpeechBridge::instance()->microphoneOwner(), mpFirstHost);
         QVERIFY2(luaGlobalString(mpFirstHost, qsl("_handoverAgain")).isEmpty(), "a profile that kept the microphone was told it had lost it");
     }
 
@@ -621,11 +622,11 @@ private slots:
         listenFor(mpFirstHost, qsl("sysSTTStateChanged"), qsl("_stateFirst"));
         listenFor(mpSecondHost, qsl("sysSTTStateChanged"), qsl("_stateSecond"));
 
-        mudlet::self()->claimMicrophoneFor(mpFirstHost);
+        TSpeechBridge::instance()->claimMicrophoneFor(mpFirstHost);
         mudlet::self()->activateProfile(mpSecondHost);
-        mudlet::self()->releaseMicrophone();
+        TSpeechBridge::instance()->releaseMicrophone();
 
-        mudlet::self()->raiseSpeechEvent(qsl("sysSTTStateChanged"), qsl("ready"));
+        TSpeechBridge::instance()->raiseSpeechEvent(qsl("sysSTTStateChanged"), qsl("ready"));
 
         QCOMPARE(luaGlobalString(mpSecondHost, qsl("_stateSecond")), qsl("ready"));
         QVERIFY2(luaGlobalString(mpFirstHost, qsl("_stateFirst")).isEmpty(), "a released microphone left its old owner still receiving the session's events");
@@ -797,10 +798,10 @@ private slots:
         const QString quiet = mudlet::self()->windowTitle();
         QVERIFY2(!quiet.contains(qsl("listening")), "the title claimed a microphone before one was open");
 
-        mudlet::self()->claimMicrophoneFor(mpFirstHost);
+        TSpeechBridge::instance()->claimMicrophoneFor(mpFirstHost);
         QVERIFY2(mudlet::self()->windowTitle().contains(qsl("listening")), qPrintable(qsl("the title does not say the microphone is open: %1").arg(mudlet::self()->windowTitle())));
 
-        mudlet::self()->releaseMicrophone();
+        TSpeechBridge::instance()->releaseMicrophone();
         QCOMPARE(mudlet::self()->windowTitle(), quiet);
     }
 
@@ -812,11 +813,11 @@ private slots:
         TDetachedWindow* pWindow = detachSecondProfile();
         QVERIFY(pWindow);
 
-        mudlet::self()->claimMicrophoneFor(mpSecondHost);
+        TSpeechBridge::instance()->claimMicrophoneFor(mpSecondHost);
         QVERIFY2(pWindow->windowTitle().contains(qsl("listening")), qPrintable(qsl("the detached window holding the microphone does not say so: %1").arg(pWindow->windowTitle())));
         QVERIFY2(!mudlet::self()->windowTitle().contains(qsl("listening")), "the main window claimed a microphone belonging to a profile in another window");
 
-        mudlet::self()->releaseMicrophone();
+        TSpeechBridge::instance()->releaseMicrophone();
     }
 
     // The same move into a window that is already open, which is what the second
@@ -829,7 +830,7 @@ private slots:
         TDetachedWindow* pWindow = detachSecondProfile();
         QVERIFY(pWindow);
 
-        mudlet::self()->claimMicrophoneFor(mpFirstHost);
+        TSpeechBridge::instance()->claimMicrophoneFor(mpFirstHost);
         QVERIFY2(mudlet::self()->windowTitle().contains(qsl("listening")), qPrintable(qsl("the main window did not mark the microphone its own profile holds: %1").arg(mudlet::self()->windowTitle())));
 
         mudlet::self()->slot_profileDetachToWindow(mFirstHostname, pWindow);
@@ -838,7 +839,7 @@ private slots:
         const QString mainTitle = mudlet::self()->windowTitle();
         const QString movedIntoTitle = pWindow->windowTitle();
 
-        mudlet::self()->releaseMicrophone();
+        TSpeechBridge::instance()->releaseMicrophone();
         mudlet::self()->slot_tabReattachRequested(mFirstHostname);
         QTest::qWait(200ms);
         mudlet::self()->slot_tabReattachRequested(mSecondHostname);
@@ -861,18 +862,18 @@ private slots:
         // a pinned one goes is covered by the pinning case above.
         const int secondId = addCommand(mpSecondHost, qsl("name = \"SpeechLive\", surfaces = \"toolbar\""));
         QVERIFY(secondId > 0);
-        mudlet::self()->claimMicrophoneFor(mpSecondHost);
+        TSpeechBridge::instance()->claimMicrophoneFor(mpSecondHost);
 
         TDetachedWindow* pWindow = detachSecondProfile();
         QVERIFY(pWindow);
 
-        QCOMPARE(mudlet::self()->microphoneOwner(), mpSecondHost);
+        QCOMPARE(TSpeechBridge::instance()->microphoneOwner(), mpSecondHost);
         QVERIFY2(pWindow->windowTitle().contains(qsl("listening")), "the detached window does not say it took the open microphone with it");
         QVERIFY2(buttonIn(pWindow, qsl("SpeechLive")), "the live command did not follow its profile out of the main window");
 
         QVERIFY2(!buttonIn(mudlet::self(), qsl("SpeechLive")), "the command stayed in the main window while its listening profile left");
 
-        mudlet::self()->releaseMicrophone();
+        TSpeechBridge::instance()->releaseMicrophone();
         QVERIFY2(!pWindow->windowTitle().contains(qsl("listening")), "the marker outlived the session it was describing");
 
         runLua(mpSecondHost, qsl("removeCommand(%1)").arg(secondId));
@@ -898,7 +899,7 @@ private slots:
                          [pWindow]() {
                              return QApplication::activeWindow() == pWindow;
                          },
-                         2000),
+                         2s),
                  "the detached window never became the active one, so this cannot test what follows focus");
 
         QVERIFY2(buttonIn(pWindow, qsl("SpeechFollow")), "a pinned command did not follow the player into the window they moved to");
@@ -931,7 +932,7 @@ private slots:
                          [pWindow]() {
                              return QApplication::activeWindow() == pWindow;
                          },
-                         2000),
+                         2s),
                  "the detached window never became the active one, so the pinned command never left home");
         QVERIFY2(menuItemIn(pWindow, qsl("SpeechPinnedItem")), "the pinned command did not follow the player into the other window");
 
@@ -945,7 +946,7 @@ private slots:
                          []() {
                              return QApplication::activeWindow() == mudlet::self();
                          },
-                         2000),
+                         2s),
                  "the main window never became the active one, so the pinned command never came home");
 
         const bool itemCameBack = menuItemIn(mudlet::self(), qsl("SpeechPinnedItem")) != nullptr;
@@ -981,7 +982,7 @@ private slots:
         pEngine->initialize(QString());
         QTest::qWait(50ms);
 
-        const Host* pOwner = mudlet::self()->microphoneOwner();
+        const Host* pOwner = TSpeechBridge::instance()->microphoneOwner();
         const bool engineListening = pEngine->listening();
         runLua(mpFirstHost, qsl("_sttLuaListening = stt.listening()"));
         const bool luaSaysListening = luaGlobalBoolean(mpFirstHost, qsl("_sttLuaListening"));
@@ -1014,7 +1015,7 @@ private slots:
 
         QVERIFY(runLua(mpSecondHost, qsl("_sttStartedSecond = stt.start()")).isNull());
         QVERIFY2(luaGlobalBoolean(mpSecondHost, qsl("_sttStartedSecond")), "the second profile could not start a session");
-        QCOMPARE(mudlet::self()->microphoneOwner(), mpSecondHost);
+        QCOMPARE(TSpeechBridge::instance()->microphoneOwner(), mpSecondHost);
 
         // The player has moved on to the other game, which is what makes the
         // two answers differ at all
@@ -1125,15 +1126,82 @@ private slots:
 
         QVERIFY(runLua(mpFirstHost, qsl("_sttStartedOwner = stt.start()")).isNull());
         QVERIFY2(luaGlobalBoolean(mpFirstHost, qsl("_sttStartedOwner")), "the session did not start");
-        QCOMPARE(mudlet::self()->microphoneOwner(), mpFirstHost);
+        QCOMPARE(TSpeechBridge::instance()->microphoneOwner(), mpFirstHost);
 
         runLua(mpFirstHost, qsl("stt.stop()"));
         QTest::qWait(50ms);
 
-        const Host* pOwnerAfter = mudlet::self()->microphoneOwner();
+        const Host* pOwnerAfter = TSpeechBridge::instance()->microphoneOwner();
         retireStandInEngine();
 
         QVERIFY2(pOwnerAfter == nullptr, "the microphone was still held after the session that claimed it ended");
+    }
+
+    // A profile that closes mid-session takes the session with it, including a
+    // phrase still being decoded. Left running, the claim would clear with the
+    // Host and the phrase would land on whichever profile is in front.
+    void test_closingTheProfileHoldingTheMicrophoneEndsItsSession_data()
+    {
+        QTest::addColumn<bool>("stillDecoding");
+        QTest::newRow("listening") << false;
+        QTest::newRow("decoding") << true;
+    }
+
+    void test_closingTheProfileHoldingTheMicrophoneEndsItsSession()
+    {
+        QFETCH(bool, stillDecoding);
+        const QString doomedName = qsl("SpeechAcrossProfiles-Doomed");
+        deleteProfileDirectory(doomedName);
+        QVERIFY(provisionProfileOnDisk(doomedName));
+        QVERIFY2(runLua(mpFirstHost, qsl("loadProfile('%1', true)").arg(doomedName)).isNull(), "the third profile could not be loaded");
+        QTest::qWait(500ms);
+        Host* pDoomed = hostFor(doomedName);
+        QVERIFY2(pDoomed, "the third profile did not open");
+
+        mudlet::self()->activateProfile(pDoomed);
+        StandInRecognizer* pEngine = installStandInEngine();
+        QVERIFY2(pEngine, "the stand-in engine was not installed");
+        pEngine->initialize(QString());
+        QVERIFY(runLua(pDoomed, qsl("_sttDoomedStarted = stt.start()")).isNull());
+        QVERIFY2(luaGlobalBoolean(pDoomed, qsl("_sttDoomedStarted")), "the session did not start");
+        QCOMPARE(TSpeechBridge::instance()->microphoneOwner(), pDoomed);
+        if (stillDecoding) {
+            pEngine->beginProcessing();
+        } else {
+            pEngine->hearSoFar(qsl("kill hound"));
+        }
+
+        mudlet::self()->activateProfile(mpFirstHost);
+        listenFor(mpFirstHost, qsl("sysSTTResult"), qsl("_heardAfterCloseFirst"));
+        listenFor(mpFirstHost, qsl("sysSTTError"), qsl("_faultAfterCloseFirst"));
+        listenFor(mpSecondHost, qsl("sysSTTResult"), qsl("_heardAfterCloseSecond"));
+        listenFor(mpSecondHost, qsl("sysSTTError"), qsl("_faultAfterCloseSecond"));
+
+        mudlet::self()->slot_closeProfileByName(doomedName);
+        QTRY_VERIFY_WITH_TIMEOUT(!hostFor(doomedName), 5000);
+
+        const bool busyAfterClose = pEngine->listening() || pEngine->state() == SpeechRecognizer::State::Processing;
+        const Host* pOwnerAfterClose = TSpeechBridge::instance()->microphoneOwner();
+        // A session the close left running would hand its phrase over now
+        if (pEngine->listening()) {
+            pEngine->stopListening();
+        } else if (pEngine->state() == SpeechRecognizer::State::Processing) {
+            pEngine->finishPhrase(qsl("kill hound"));
+        }
+        QTest::qWait(50ms);
+        const QStringList heardBySurvivors{luaGlobalString(mpFirstHost, qsl("_heardAfterCloseFirst")),
+                                           luaGlobalString(mpFirstHost, qsl("_faultAfterCloseFirst")),
+                                           luaGlobalString(mpSecondHost, qsl("_heardAfterCloseSecond")),
+                                           luaGlobalString(mpSecondHost, qsl("_faultAfterCloseSecond"))};
+
+        retireStandInEngine();
+        deleteProfileDirectory(doomedName);
+
+        QVERIFY2(!busyAfterClose, "closing the profile holding the microphone left its session running");
+        QVERIFY2(pOwnerAfterClose == nullptr, "the microphone was still held after the profile holding it closed");
+        for (const QString& heard : heardBySurvivors) {
+            QVERIFY2(heard.isEmpty(), qPrintable(qsl("a profile that never listened received the closed profile's session: %1").arg(heard)));
+        }
     }
 
     // Stopping is as much a part of owning a session as starting was. A profile
@@ -1154,7 +1222,7 @@ private slots:
         const bool stopSucceeded = luaGlobalBoolean(mpFirstHost, qsl("_sttStopOk"));
         const QString why = luaGlobalString(mpFirstHost, qsl("_sttStopWhy"));
         const bool stillListening = pEngine->listening();
-        const Host* pOwner = mudlet::self()->microphoneOwner();
+        const Host* pOwner = TSpeechBridge::instance()->microphoneOwner();
 
         runLua(mpSecondHost, qsl("stt.stop()"));
         retireStandInEngine();
@@ -1188,7 +1256,7 @@ private slots:
         runLua(mpFirstHost, qsl("_sttCancelHeardText = tostring(_sttCancelHeard)"));
         const QString resultsDelivered = luaGlobalString(mpFirstHost, qsl("_sttCancelHeardText"));
         const SpeechRecognizer::State stateAfter = pEngine->state();
-        const Host* pOwnerAfter = mudlet::self()->microphoneOwner();
+        const Host* pOwnerAfter = TSpeechBridge::instance()->microphoneOwner();
 
         runLua(mpFirstHost, qsl("killAnonymousEventHandler(_sttCancelHandler)"));
         retireStandInEngine();
@@ -1217,7 +1285,7 @@ private slots:
         QVERIFY(runLua(mpFirstHost, qsl("_sttDecodingCancelOk = stt.cancel()")).isNull());
         const bool cancelled = luaGlobalBoolean(mpFirstHost, qsl("_sttDecodingCancelOk"));
         const SpeechRecognizer::State stateAfter = pEngine->state();
-        const Host* pOwnerAfter = mudlet::self()->microphoneOwner();
+        const Host* pOwnerAfter = TSpeechBridge::instance()->microphoneOwner();
 
         retireStandInEngine();
 
@@ -1250,7 +1318,7 @@ private slots:
         const bool cancelSucceeded = luaGlobalBoolean(mpFirstHost, qsl("_sttForeignCancelOk"));
         const QString why = luaGlobalString(mpFirstHost, qsl("_sttForeignCancelWhy"));
         const bool stillListening = pEngine->listening();
-        const Host* pOwner = mudlet::self()->microphoneOwner();
+        const Host* pOwner = TSpeechBridge::instance()->microphoneOwner();
         const QString errorsToCaller = luaGlobalString(mpFirstHost, qsl("_sttCancelErrorsHeard"));
         const QString errorsToListener = luaGlobalString(mpSecondHost, qsl("_sttCancelErrorsHeard"));
 
@@ -1301,7 +1369,7 @@ private slots:
         const QString heard = luaGlobalString(mpFirstHost, qsl("_heardAfterCancel"));
         const bool handlerRan = luaGlobalBoolean(mpFirstHost, qsl("_cancelledFromHandler"));
         const auto stateAfter = pEngine->state();
-        const Host* pOwnerAfter = mudlet::self()->microphoneOwner();
+        const Host* pOwnerAfter = TSpeechBridge::instance()->microphoneOwner();
         runLua(mpFirstHost, qsl("killAnonymousEventHandler(_processingHandler)"));
         retireStandInEngine();
 
@@ -1325,13 +1393,13 @@ private slots:
 
         QVERIFY(runLua(mpFirstHost, qsl("_sttPendingStart = stt.start()")).isNull());
         const bool startPending = pEngine->state() == SpeechRecognizer::State::Starting;
-        const Host* pOwnerWhilePending = mudlet::self()->microphoneOwner();
+        const Host* pOwnerWhilePending = TSpeechBridge::instance()->microphoneOwner();
 
         QVERIFY(runLua(mpFirstHost, qsl("_sttPendingCancelOk, _sttPendingCancelWhy = stt.cancel()")).isNull());
         const bool cancelSucceeded = luaGlobalBoolean(mpFirstHost, qsl("_sttPendingCancelOk"));
         const QString why = luaGlobalString(mpFirstHost, qsl("_sttPendingCancelWhy"));
         const auto stateAfter = pEngine->state();
-        const Host* pOwnerAfter = mudlet::self()->microphoneOwner();
+        const Host* pOwnerAfter = TSpeechBridge::instance()->microphoneOwner();
         retireStandInEngine();
 
         QVERIFY2(startPending, "the stand-in did not park the session in Starting");
@@ -1352,7 +1420,7 @@ private slots:
         QVERIFY2(pEngine, "the stand-in engine was not installed");
         pEngine->initialize(QString());
 
-        const Host* pOwnerBefore = mudlet::self()->microphoneOwner();
+        const Host* pOwnerBefore = TSpeechBridge::instance()->microphoneOwner();
         QVERIFY(runLua(mpFirstHost, qsl("_sttIdleCancelOk, _sttIdleCancelWhy = stt.cancel()")).isNull());
         const bool cancelSucceeded = luaGlobalBoolean(mpFirstHost, qsl("_sttIdleCancelOk"));
         const QString why = luaGlobalString(mpFirstHost, qsl("_sttIdleCancelWhy"));
@@ -1403,6 +1471,90 @@ private slots:
         QCOMPARE(errorsToProfileInFront, qsl("0"));
     }
 
+    // stt.stop() refused in an error state, by the same rule as stt.cancel():
+    // there is no claim left to route by, so the profile in front must not hear it
+    void test_aStopRefusedInAnErrorStateIsReportedToTheCaller()
+    {
+        mudlet::self()->activateProfile(mpSecondHost);
+        StandInRecognizer* pEngine = installStandInEngine();
+        QVERIFY2(pEngine, "the stand-in engine was not installed");
+        pEngine->initialize(QString());
+        pEngine->faultTheEngine();
+
+        for (Host* pHost : {mpFirstHost, mpSecondHost}) {
+            QVERIFY(runLua(pHost,
+                           qsl("_sttFaultErrorsHeard = '0'\n_sttFaultErrorHandler = registerAnonymousEventHandler('sysSTTError', function() _sttFaultErrorsHeard = "
+                               "tostring(tonumber(_sttFaultErrorsHeard) + 1) end)"))
+                            .isNull());
+        }
+
+        QVERIFY(runLua(mpFirstHost, qsl("_sttFaultStopOk, _sttFaultStopWhy = stt.stop()")).isNull());
+        const bool stopSucceeded = luaGlobalBoolean(mpFirstHost, qsl("_sttFaultStopOk"));
+        const QString why = luaGlobalString(mpFirstHost, qsl("_sttFaultStopWhy"));
+        const QString errorsToCaller = luaGlobalString(mpFirstHost, qsl("_sttFaultErrorsHeard"));
+        const QString errorsToProfileInFront = luaGlobalString(mpSecondHost, qsl("_sttFaultErrorsHeard"));
+
+        for (Host* pHost : {mpFirstHost, mpSecondHost}) {
+            runLua(pHost, qsl("killAnonymousEventHandler(_sttFaultErrorHandler)"));
+        }
+        retireStandInEngine();
+
+        QVERIFY2(!stopSucceeded, "a stop in an error state reported success");
+        QVERIFY2(why.contains(qsl("error state")), qPrintable(qsl("the refusal does not say why: \"%1\"").arg(why)));
+        QCOMPARE(errorsToCaller, qsl("1"));
+        QCOMPARE(errorsToProfileInFront, qsl("0"));
+    }
+
+    // A fault while listening leaves the model loaded - getInfo() still names
+    // it - so a start refused there says to reload it, not that the engine was
+    // never initialized, which initialized() being false in Error would suggest.
+    void test_aStartInAnErrorStateSaysToReloadTheModel_data()
+    {
+        QTest::addColumn<QString>("call");
+        QTest::newRow("start") << qsl("stt.start");
+        QTest::newRow("toggle") << qsl("stt.toggle");
+    }
+
+    void test_aStartInAnErrorStateSaysToReloadTheModel()
+    {
+        QFETCH(QString, call);
+        // The caller is not the profile in front, so a refusal routed by
+        // focus rather than to the caller shows up in the wrong profile
+        mudlet::self()->activateProfile(mpSecondHost);
+        StandInRecognizer* pEngine = installStandInEngine();
+        QVERIFY2(pEngine, "the stand-in engine was not installed");
+        pEngine->initialize(QString());
+        pEngine->faultTheEngine();
+
+        for (Host* pHost : {mpFirstHost, mpSecondHost}) {
+            QVERIFY(runLua(pHost,
+                           qsl("_sttFaultErrorsHeard = '0'\n_sttFaultErrorHandler = registerAnonymousEventHandler('sysSTTError', function() _sttFaultErrorsHeard = "
+                               "tostring(tonumber(_sttFaultErrorsHeard) + 1) end)"))
+                            .isNull());
+        }
+
+        QVERIFY(runLua(mpFirstHost, qsl("_sttFaultStartOk, _sttFaultStartWhy = %1()").arg(call)).isNull());
+        const bool startSucceeded = luaGlobalBoolean(mpFirstHost, qsl("_sttFaultStartOk"));
+        const QString why = luaGlobalString(mpFirstHost, qsl("_sttFaultStartWhy"));
+        const QString errorsToCaller = luaGlobalString(mpFirstHost, qsl("_sttFaultErrorsHeard"));
+        const QString errorsToProfileInFront = luaGlobalString(mpSecondHost, qsl("_sttFaultErrorsHeard"));
+        const bool stillFaulted = pEngine->state() == SpeechRecognizer::State::Error;
+        const Host* pOwnerAfter = TSpeechBridge::instance()->microphoneOwner();
+
+        for (Host* pHost : {mpFirstHost, mpSecondHost}) {
+            runLua(pHost, qsl("killAnonymousEventHandler(_sttFaultErrorHandler)"));
+        }
+        retireStandInEngine();
+
+        QVERIFY2(!startSucceeded, "a start in an error state reported success");
+        QVERIFY2(why.contains(qsl("error state")) && why.contains(qsl("reload")), qPrintable(qsl("the refusal does not say to reload the model: \"%1\"").arg(why)));
+        QVERIFY2(!why.contains(qsl("not initialized")), qPrintable(qsl("the refusal blames a missing model that is loaded: \"%1\"").arg(why)));
+        QCOMPARE(errorsToCaller, qsl("1"));
+        QCOMPARE(errorsToProfileInFront, qsl("0"));
+        QVERIFY2(stillFaulted, "a refused start moved the engine out of its error state");
+        QVERIFY2(!pOwnerAfter, "a refused start left the microphone claimed");
+    }
+
     // The microphone cannot change hands while the last phrase is still being
     // decoded: the result is owed to the profile that spoke it, and the claim
     // is what routes it there. Refused rather than waited for, since a decode
@@ -1422,7 +1574,7 @@ private slots:
         QVERIFY(runLua(mpFirstHost, qsl("_sttTakeOk, _sttTakeWhy = stt.start()")).isNull());
         const bool takeSucceeded = luaGlobalBoolean(mpFirstHost, qsl("_sttTakeOk"));
         const QString why = luaGlobalString(mpFirstHost, qsl("_sttTakeWhy"));
-        const Host* pOwner = mudlet::self()->microphoneOwner();
+        const Host* pOwner = TSpeechBridge::instance()->microphoneOwner();
 
         retireStandInEngine();
 
@@ -1486,14 +1638,14 @@ private slots:
         QVERIFY(runLua(mpFirstHost, qsl("_sttTakeOk, _sttTakeWhy = stt.start()")).isNull());
         const bool takeSucceeded = luaGlobalBoolean(mpFirstHost, qsl("_sttTakeOk"));
         const QString why = luaGlobalString(mpFirstHost, qsl("_sttTakeWhy"));
-        const Host* pOwnerAfterTake = mudlet::self()->microphoneOwner();
+        const Host* pOwnerAfterTake = TSpeechBridge::instance()->microphoneOwner();
 
         // What the stop set going, arriving after the claim was answered.
         pEngine->finishPhrase(qsl("kill hound"));
 
         const QString heardFirst = luaGlobalString(mpFirstHost, qsl("_heardFirst"));
         const QString heardSecond = luaGlobalString(mpSecondHost, qsl("_heardSecond"));
-        const Host* pOwnerAfterPhrase = mudlet::self()->microphoneOwner();
+        const Host* pOwnerAfterPhrase = TSpeechBridge::instance()->microphoneOwner();
 
         // The retry the refusal asked for. The phrase has landed, so the session
         // it belonged to has ended and released the microphone: this claim finds
@@ -1501,7 +1653,7 @@ private slots:
         QVERIFY(runLua(mpFirstHost, qsl("_sttRetryOk, _sttRetryWhy = stt.start()")).isNull());
         const bool retrySucceeded = luaGlobalBoolean(mpFirstHost, qsl("_sttRetryOk"));
         const QString retryWhy = luaGlobalString(mpFirstHost, qsl("_sttRetryWhy"));
-        const Host* pOwnerAfterRetry = mudlet::self()->microphoneOwner();
+        const Host* pOwnerAfterRetry = TSpeechBridge::instance()->microphoneOwner();
         const int handoversToSecond = luaGlobalString(mpSecondHost, qsl("_handoversToSecond")).toInt();
         const QString handoverNamed = luaGlobalString(mpSecondHost, qsl("_handoverNamed"));
         QVERIFY(runLua(mpSecondHost, qsl("_orderSecond = table.concat(_eventsSecond, ',')")).isNull());
@@ -1552,7 +1704,7 @@ private slots:
         QVERIFY(runLua(mpFirstHost, qsl("_sttToggleOk, _sttToggleWhy = stt.toggle()")).isNull());
         const bool toggleSucceeded = luaGlobalBoolean(mpFirstHost, qsl("_sttToggleOk"));
         const QString toggleWhy = luaGlobalString(mpFirstHost, qsl("_sttToggleWhy"));
-        const Host* pOwnerAfterToggle = mudlet::self()->microphoneOwner();
+        const Host* pOwnerAfterToggle = TSpeechBridge::instance()->microphoneOwner();
 
         pEngine->finishPhrase(qsl("kill hound"));
         const QString heardFirst = luaGlobalString(mpFirstHost, qsl("_heardFirst"));
@@ -1594,10 +1746,10 @@ private slots:
         mudlet::self()->activateProfile(mpFirstHost);
         const QString quiet = mudlet::self()->windowTitle();
 
-        mudlet::self()->claimMicrophoneFor(mpSecondHost);
+        TSpeechBridge::instance()->claimMicrophoneFor(mpSecondHost);
         QVERIFY2(mudlet::self()->windowTitle().contains(qsl("listening")), qPrintable(qsl("a profile listening on a background tab left the title unmarked: %1").arg(mudlet::self()->windowTitle())));
 
-        mudlet::self()->releaseMicrophone();
+        TSpeechBridge::instance()->releaseMicrophone();
         QCOMPARE(mudlet::self()->windowTitle(), quiet);
     }
 
@@ -1609,11 +1761,11 @@ private slots:
     // path only; the refusal is covered by inspection rather than here.
     void test_aHandoverIsGrantedWhenNothingIsBeingDecoded()
     {
-        mudlet::self()->claimMicrophoneFor(mpFirstHost);
-        QCOMPARE(mudlet::self()->microphoneOwner(), mpFirstHost);
+        TSpeechBridge::instance()->claimMicrophoneFor(mpFirstHost);
+        QCOMPARE(TSpeechBridge::instance()->microphoneOwner(), mpFirstHost);
 
-        QVERIFY2(mudlet::self()->claimMicrophoneFor(mpSecondHost), "a handover was refused with nothing being decoded");
-        QCOMPARE(mudlet::self()->microphoneOwner(), mpSecondHost);
+        QVERIFY2(TSpeechBridge::instance()->claimMicrophoneFor(mpSecondHost), "a handover was refused with nothing being decoded");
+        QCOMPARE(TSpeechBridge::instance()->microphoneOwner(), mpSecondHost);
     }
 
     // Per-window chrome must not outlive its window. The entry is keyed by the
@@ -1675,7 +1827,7 @@ private slots:
                          [pWindow]() {
                              return QApplication::activeWindow() == pWindow;
                          },
-                         2000),
+                         2s),
                  "the detached window never became active, so this cannot test what happens when focus leaves it");
         QVERIFY2(buttonIn(pWindow, qsl("SpeechStay")), "the pinned command did not follow the player into the detached window");
 
@@ -1732,7 +1884,7 @@ private slots:
 
         // Move the first profile in alongside the second, so one window holds
         // both - the arrangement four tabs in one detached window generalises
-        QVERIFY2(pWindow->addProfile(mFirstHostname, mpFirstHost->mpConsole), "the first profile could not join the detached window");
+        QVERIFY2(pWindow->addProfile(mFirstHostname, mpFirstHost->mainConsoleView()), "the first profile could not join the detached window");
         pWindow->switchToProfile(mFirstHostname);
         QTest::qWait(200ms);
 
@@ -1756,6 +1908,30 @@ private slots:
         QTest::qWait(100ms);
         runLua(mpFirstHost, qsl("removeCommand(%1)").arg(firstId));
         runLua(mpSecondHost, qsl("removeCommand(%1)").arg(secondId));
+    }
+
+    // Must stay the last case: it closes both of the fixture's profiles.
+    // With no profile left nobody can raise sysSTT* or stop the engine, so
+    // closing the last one releases it.
+    void test_closingTheLastProfileReleasesTheEngine()
+    {
+        StandInRecognizer* pEngine = installStandInEngine();
+        QVERIFY2(pEngine, "the stand-in engine was not installed");
+        pEngine->initialize(QString());
+        const QPointer<StandInRecognizer> engine = pEngine;
+
+        mudlet::self()->slot_closeProfileByName(mSecondHostname);
+        QTRY_VERIFY_WITH_TIMEOUT(!hostFor(mSecondHostname), 5000);
+        mpSecondHost = nullptr;
+        QVERIFY2(engine && engine->initialized(), "the engine was released while a profile was still open");
+
+        mudlet::self()->slot_closeProfileByName(mFirstHostname);
+        QTRY_VERIFY_WITH_TIMEOUT(HostManager::self()->getHostCount() == 0, 5000);
+        mpFirstHost = nullptr;
+        SpeechRecognizerFactory::setFactoryOverride(nullptr);
+
+        QVERIFY2(engine, "the engine was destroyed rather than released");
+        QVERIFY2(!engine->initialized(), "the engine kept its resources after the last profile closed");
     }
 
 private:

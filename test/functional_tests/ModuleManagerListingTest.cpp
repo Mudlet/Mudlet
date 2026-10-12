@@ -34,6 +34,8 @@
 
 #include "GroupedTest.h"
 
+using namespace std::chrono_literals;
+
 // The Module Manager's table is rebuilt in place, and installPackage() and
 // uninstallPackage() rebuild it behind the user's back whenever a module goes
 // in or out while the dialog is open. What is listed afterwards has to be what
@@ -107,7 +109,7 @@ private slots:
     {
         if (auto* self = mudlet::self()) {
             if (auto* host = self->getActiveHost()) {
-                QTest::qWait(50);
+                QTest::qWait(50ms);
                 host->waitForProfileSave();
             }
         }
@@ -180,6 +182,43 @@ private slots:
         delete manager;
     }
 
+    void test_aScriptChangingAModulesSyncKeepsThePriorityItSet()
+    {
+        auto* host = startProfile();
+        QVERIFY2(host, "Could not start the profile");
+        listModules(host);
+
+        mudlet::self()->slot_moduleManager();
+        dlgModuleManager* manager = HostDialogs::of(host).mpModuleManager;
+        QVERIFY2(manager, "The module manager did not open for the profile");
+        manager->show();
+        QVERIFY(QTest::qWaitForWindowExposed(manager));
+
+        QVERIFY(host->getLuaInterpreter()->compileAndExecuteScript(qsl("setModulePriority(\"listing-c\", 7) enableModuleSync(\"listing-c\")")));
+        QCOMPARE(host->mModulePriorities.value(qsl("listing-c")), 7);
+        int row = rowNames(manager).indexOf(qsl("listing-c"));
+        QVERIFY2(row >= 0, "The seeded module is not listed");
+        QCOMPARE(manager->moduleTable->item(row, 1)->text(), qsl("7"));
+
+        QVERIFY(host->getLuaInterpreter()->compileAndExecuteScript(qsl("setModulePriority(\"listing-c\", 9) disableModuleSync(\"listing-c\")")));
+        QCOMPARE(host->mModulePriorities.value(qsl("listing-c")), 9);
+        row = rowNames(manager).indexOf(qsl("listing-c"));
+        QCOMPARE(manager->moduleTable->item(row, 1)->text(), qsl("9"));
+
+        // The sync call alone must leave the priority be, even when the row is behind the host
+        host->mModulePriorities[qsl("listing-c")] = 11;
+        QVERIFY(host->getLuaInterpreter()->compileAndExecuteScript(qsl("enableModuleSync(\"listing-c\") disableModuleSync(\"listing-c\")")));
+        QCOMPARE(host->mModulePriorities.value(qsl("listing-c")), 11);
+        host->mModulePriorities[qsl("listing-c")] = 9;
+
+        // A box the user ticks after the script ran saves the row's priority, so the row must show the script's
+        manager->moduleTable->item(row, 2)->setCheckState(Qt::Checked);
+        QCOMPARE(host->mInstalledModules.value(qsl("listing-c")).at(1), qsl("1"));
+        QCOMPARE(host->mModulePriorities.value(qsl("listing-c")), 9);
+
+        delete manager;
+    }
+
     // The box is found by the module's name alone: another row's location
     // can read the same, and a module installed since the dialog listed its
     // modules has no row to tick
@@ -217,7 +256,7 @@ private:
             return nullptr;
         }
         QSignalSpy connected(&(host->mTelnet), &cTelnet::signal_connected);
-        if (!connected.wait(2000)) {
+        if (!connected.wait(2s)) {
             return nullptr;
         }
         return mudlet::self()->getActiveHost();

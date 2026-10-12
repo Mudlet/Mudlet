@@ -54,3 +54,12 @@ QString GLWidgetFactory::getWidgetTypeName(QOpenGLWidget* widget)
     }
     return QStringLiteral("Unknown");
 }
+
+void GLWidgetFactory::setViewCenter(QOpenGLWidget* widget, const int areaId, const int x, const int y, const int z)
+{
+    if (auto* glWidget = dynamic_cast<GLWidget*>(widget)) {
+        glWidget->setViewCenter(areaId, x, y, z);
+    } else if (auto* modernWidget = dynamic_cast<ModernGLWidget*>(widget)) {
+        modernWidget->setViewCenter(areaId, x, y, z);
+    }
+}

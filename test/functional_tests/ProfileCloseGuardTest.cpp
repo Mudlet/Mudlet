@@ -18,16 +18,23 @@
  ***************************************************************************/
 
 /*
- * Three guards on a profile that is still opening or closing, each of which used
+ * Four guards on a profile that is still opening or closing, each of which used
  * to take the application apart underneath work that was still running: a close
  * shortcut held down while a profile loads (PR #8301, issue #7478), a startup
- * autologin for a profile that is already open (PR #8475, issue #1195), and a
+ * autologin for a profile that is already open (PR #8475, issue #1195), a
  * close that ran inside the keystroke that asked for it rather than once
- * everything else had finished (PR #7461).
+ * everything else had finished (PR #7461), and a second close of the profile,
+ * or of the whole application, asked for while the first one's save question
+ * is still open.
  *
  * Run with: ctest -R ProfileCloseGuardTest -V
  */
 
+#include <QApplication>
+#include <QElapsedTimer>
+#include <QMessageBox>
+#include <QPointer>
+#include <QPushButton>
 #include <QScopeGuard>
 #include <QSignalSpy>
 #include <QTemporaryDir>
@@ -91,7 +98,7 @@ private slots:
         mpHost = TestProfile::create(mProfileName, mLocalhost, mPort);
         QVERIFY2(mpHost, "no active host after creating the profile");
         QSignalSpy connected(&(mpHost->mTelnet), &cTelnet::signal_connected);
-        QVERIFY2(connected.wait(2000), "could not connect the profile to the stub server");
+        QVERIFY2(connected.wait(2s), "could not connect the profile to the stub server");
         // otherwise closing the profile asks whether to save it, and the modal
         // question would hang the test
         QVERIFY2(mpHost->mFORCE_SAVE_ON_EXIT, "profiles must save without asking, or a close puts up a modal question");
@@ -147,6 +154,71 @@ private slots:
         QCOMPARE(HostManager::self()->getHost(mProfileName), mpHost);
     }
 
+    // The save question runs the event loop, so a close of the same profile
+    // reached from a script meanwhile asked again and then deleted the console
+    // the first question was still running over.
+    void test_aCloseAskedForWhileTheSaveQuestionIsUpIsHeldOff_data()
+    {
+        QTest::addColumn<bool>("closeTheApplication");
+        QTest::newRow("profile") << false;
+        QTest::newRow("application") << true;
+    }
+
+    void test_aCloseAskedForWhileTheSaveQuestionIsUpIsHeldOff()
+    {
+        QFETCH(bool, closeTheApplication);
+        mpHost->mFORCE_SAVE_ON_EXIT = false;
+        const auto restoreForcedSave = qScopeGuard([this]() {
+            mpHost->mFORCE_SAVE_ON_EXIT = true;
+        });
+        QPointer<QMessageBox> firstQuestion;
+        int questionsSeen = 0;
+        bool secondCloseReturned = false;
+        QElapsedTimer waited;
+        QTimer driver;
+        driver.setInterval(10ms);
+        connect(&driver, &QTimer::timeout, this, [&]() {
+            auto* question = qobject_cast<QMessageBox*>(QApplication::activeModalWidget());
+            if (!question) {
+                return;
+            }
+            if (!firstQuestion) {
+                firstQuestion = question;
+                ++questionsSeen;
+                waited.start();
+                QTimer::singleShot(0ms, this, [this, closeTheApplication, &secondCloseReturned]() {
+                    if (closeTheApplication) {
+                        mudlet::self()->close();
+                    } else {
+                        mudlet::self()->slot_closeProfileByName(mProfileName);
+                    }
+                    secondCloseReturned = true;
+                });
+                return;
+            }
+            if (question != firstQuestion) {
+                ++questionsSeen;
+                question->button(QMessageBox::No)->click();
+                return;
+            }
+            // Cancel keeps the profile for the test after this one
+            if (secondCloseReturned || waited.hasExpired(5000)) {
+                driver.stop();
+                question->button(QMessageBox::Cancel)->click();
+            }
+        });
+        driver.start();
+
+        mudlet::self()->slot_closeProfileByName(mProfileName);
+
+        QVERIFY(firstQuestion.isNull() || !firstQuestion->isVisible());
+        QVERIFY(secondCloseReturned);
+        QCOMPARE(questionsSeen, 1);
+        QTest::qWait(100ms);
+        QVERIFY2(profileIsStillOpen(), "the profile closed although its save question was cancelled");
+        QCOMPARE(HostManager::self()->getHost(mProfileName), mpHost);
+    }
+
     // PR #7461: the close used to run inside the keystroke that asked for it, so
     // a held-down shortcut stacked one close on top of the last. Runs last: it
     // is the one that takes the profile away.
@@ -162,7 +234,7 @@ private slots:
                          [this]() {
                              return !profileIsStillOpen();
                          },
-                         10000),
+                         10s),
                  "the profile never closed once the event loop got a turn");
     }
 };

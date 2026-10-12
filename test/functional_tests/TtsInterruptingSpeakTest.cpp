@@ -125,6 +125,13 @@ private slots:
     {
         mpHost = nullptr;
         delete mudlet::self();
+#ifdef QT_TEXTTOSPEECH_LIB
+        // The engine outlives the main window, so it can still report a state
+        // change once the profiles are gone at quit (#11330). Two different
+        // states, so at least one is a change whatever it was left in.
+        TLuaInterpreter::ttsStateChanged(QTextToSpeech::State::Paused);
+        TLuaInterpreter::ttsStateChanged(QTextToSpeech::State::Ready);
+#endif
         qunsetenv("MUDLET_TEST_MODE");
         mSavedXdg.isNull() ? qunsetenv("XDG_CONFIG_HOME") : qputenv("XDG_CONFIG_HOME", mSavedXdg);
     }

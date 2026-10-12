@@ -38,7 +38,9 @@ public:
     explicit MMCPServer(Host*);
     ~MMCPServer() = default;
 
-    void receiveFromPlayer(std::string&);
+    // endsWithPromptMarker: the last byte is the 0xff cTelnet put after a GA/EOR prompt,
+    // which a literal 0xff the game sent looks the same as
+    void receiveFromPlayer(std::string&, bool endsWithPromptMarker);
 
     QPair<bool, QString> startServer(quint16);
     QPair<bool, QString> stopServer();
@@ -98,7 +100,7 @@ protected:
 
 private:
     MMCPClient* clientByNameOrId(const QVariant&);
-    void sendSnoopData(std::string&);
+    void sendSnoopData(std::string&, bool endsWithPromptMarker);
     void sendAll(QString&);
     void postChatMessage(const QString &, const QString&);
 

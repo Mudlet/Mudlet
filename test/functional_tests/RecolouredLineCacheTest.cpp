@@ -134,7 +134,7 @@ private slots:
 
         auto host = mudlet::self()->getActiveHost();
         QVERIFY(host);
-        auto console = host->mpConsole;
+        QPointer<TMainConsole> console = host->mainConsoleView();
         QVERIFY(console);
         TTextEdit* pane = console->mUpperPane;
         QVERIFY(pane);
@@ -191,14 +191,14 @@ private:
         }
 
         QSignalSpy spy2(&(host->mTelnet), &cTelnet::signal_connected);
-        if (!spy2.wait(2000)) {
+        if (!spy2.wait(2s)) {
             QFAIL("Could not connect with the host.");
         }
     }
 
     bool waitForTextInBuffer(const QString& text, int timeoutMs = 5000)
     {
-        auto console = mudlet::self()->getActiveHost()->mpConsole;
+        QPointer<TMainConsole> console = mudlet::self()->getActiveHost()->mainConsoleView();
         return QTest::qWaitFor(
                 [&]() {
                     for (int i = 0; i <= console->buffer.getLastLineNumber(); ++i) {

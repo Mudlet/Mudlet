@@ -23,7 +23,10 @@ sign_app_bundle () {
   # -f forces a re-sign: the portable flow adds portable.txt to the bundle, which
   # invalidates the signature applied during the main dmg flow. Return non-zero on
   # failure so callers can skip the portable rather than ship a broken bundle.
-  if ! codesign -f -s "$IDENTITY" -o runtime --timestamp "${appBundle}"; then
+  # The entitlements make-installer.sh signed in (src/mudlet.entitlements) are
+  # kept: a re-sign without --preserve-metadata drops them, and with them the
+  # microphone.
+  if ! codesign -f -s "$IDENTITY" -o runtime --timestamp --preserve-metadata=entitlements "${appBundle}"; then
     echo "::warning::failed to codesign ${appBundle}"
     return 1
   fi

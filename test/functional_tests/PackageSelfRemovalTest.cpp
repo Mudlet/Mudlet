@@ -71,6 +71,8 @@
 #include "XMLimport.h"
 #include "mudlet.h"
 
+using namespace std::chrono_literals;
+
 extern "C" {
 #if defined(INCLUDE_VERSIONED_LUA_HEADERS)
 #include <lua5.1/lauxlib.h>
@@ -302,11 +304,11 @@ private slots:
         pTimer->enableTimer();
 
         // Let the timer fire and take its package (and itself) down:
-        QTRY_VERIFY_WITH_TIMEOUT(!mpHost->mInstalledPackages.contains(packageName), 5000);
+        QTRY_VERIFY_WITH_TIMEOUT(!mpHost->mInstalledPackages.contains(packageName), 5s);
 
         // Allow any queued activity (the declined deferred save, further timer
         // ticks) to surface problems:
-        QTest::qWait(500);
+        QTest::qWait(500ms);
         // TimerUnit::timerFired() flushes the deferred delete as soon as the
         // uninstalling timer's execute() has finished, so by now the timer must
         // be properly gone - not lingering deactivated where the next profile

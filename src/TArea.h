@@ -55,6 +55,8 @@ public:
     ~TArea();
     int getAreaID();
     void addRoom(int id);
+    // Rebuilds the indexes and extents once at the end, rather than updating them per room
+    void addRooms(const QSet<int>& ids);
     const QSet<int>& getAreaRooms() const { return rooms; }
     const QList<int> getAreaExitRoomIds() const { return mAreaExits.uniqueKeys(); }
     const QMultiMap<int, QPair<QString, int>> getAreaExitRoomData() const;
@@ -139,6 +141,7 @@ public:
     qreal get2DMapZoom() const { return mLast2DMapZoom; }
     void set2DMapZoom(const qreal zoom);
     void clean();
+    static void dropFileOnlyUserData(QMap<QString, QString>& userData);
 
 
     QSet<int> rooms; // rooms of this area

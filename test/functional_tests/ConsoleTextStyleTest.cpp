@@ -37,6 +37,8 @@
 
 #include "GroupedTest.h"
 
+using namespace std::chrono_literals;
+
 // GlyphCacheTest proves TGlyphCache draws what drawText() would; this proves
 // TTextEdit hands it, and the decorated drawText() path, the font each cell's
 // attributes call for - so a bold cell really is drawn bold.
@@ -104,7 +106,7 @@ private slots:
     {
         Host* host = startOfflineProfile();
         QVERIFY2(host, "Could not start an offline profile");
-        TTextEdit* pane = host->mpConsole->mUpperPane;
+        TTextEdit* pane = host->mainConsoleView()->mUpperPane;
 
         QFont font(QFontDatabase::systemFont(QFontDatabase::FixedFont).family(), 13);
         font.setFixedPitch(true);
@@ -122,13 +124,13 @@ private slots:
         QApplication::processEvents();
 
         QImage rendered(pane->size(), QImage::Format_ARGB32_Premultiplied);
-        rendered.fill(host->mpConsole->getConsoleBgColor());
+        rendered.fill(host->mainConsoleView()->getConsoleBgColor());
         pane->render(&rendered, QPoint(), QRegion(), QWidget::DrawChildren);
 
         const QFontMetrics metrics(pane->font());
         const int cellWidth = metrics.averageCharWidth();
         const int cellHeight = metrics.height();
-        TBuffer& buffer = host->mpConsole->buffer;
+        TBuffer& buffer = host->mainConsoleView()->buffer;
         for (const StyledLine& line : styledLines()) {
             int index = -1;
             for (int i = 0; i <= buffer.getLastLineNumber(); ++i) {
@@ -148,7 +150,7 @@ private slots:
             expectedFont.setItalic(line.italic);
             expectedFont.setUnderline(line.underline);
             QImage expected(line.text.size() * cellWidth, cellHeight, QImage::Format_ARGB32_Premultiplied);
-            expected.fill(host->mpConsole->getConsoleBgColor());
+            expected.fill(host->mainConsoleView()->getConsoleBgColor());
             {
                 QPainter painter(&expected);
                 painter.setFont(expectedFont);
@@ -180,7 +182,7 @@ private:
             return nullptr;
         }
         QSignalSpy connected(&(mudlet::self()->getActiveHost()->mTelnet), &cTelnet::signal_connected);
-        if (!connected.wait(2000)) {
+        if (!connected.wait(2s)) {
             return nullptr;
         }
         auto* host = mudlet::self()->getActiveHost();
@@ -195,7 +197,7 @@ private:
                 [host]() {
                     return host->mTelnet.getConnectionState() == QAbstractSocket::UnconnectedState;
                 },
-                5000);
+                5s);
         return host;
     }
 

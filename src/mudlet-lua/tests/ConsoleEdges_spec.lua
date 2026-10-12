@@ -309,5 +309,70 @@ describe("Console edges", function()
       assert.is_false(ok)
       assert.are.equal("a label cannot have an empty string as its name", err)
     end)
+
+    it("a missing name to delete, and raises an event for each it deletes", function()
+      local label, mini, window = name("DeletedLabel"), name("DeletedMini"), name("DeletedWindow")
+      local deleted = {}
+      local handlers = {
+        registerAnonymousEventHandler("sysLabelDeleted", function(_, which) deleted[#deleted + 1] = which end),
+        registerAnonymousEventHandler("sysMiniConsoleDeleted", function(_, which) deleted[#deleted + 1] = which end),
+      }
+      finally(function()
+        for _, id in ipairs(handlers) do
+          killAnonymousEventHandler(id)
+        end
+        deleteLabel(label)
+        deleteMiniConsole(mini)
+        deleteMiniConsole(window)
+      end)
+
+      assert.is_true(createLabel(label, 0, 0, 10, 10, 1))
+      assert.is_true(createMiniConsole(mini, 0, 0, 10, 10))
+      assert.is_true(openUserWindow(window, false))
+      assert.is_true(deleteLabel(label))
+      assert.is_true(deleteMiniConsole(mini))
+      assert.is_true(deleteMiniConsole(window))
+      assert.are.same({label, mini, window}, deleted)
+
+      local ok, err = deleteLabel(label)
+      assert.is_false(ok)
+      assert.are.equal(string.format("label name '%s' not found", label), err)
+      ok, err = deleteMiniConsole(mini)
+      assert.is_false(ok)
+      assert.are.equal(string.format("miniconsole name '%s' not found", mini), err)
+      assert.are.same({label, mini, window}, deleted)
+    end)
+  end)
+
+  -- A range spanning most of the int range must not build a table entry per
+  -- line number it covers, or it runs out of memory
+  describe("getLines() with a range reaching outside the buffer", function()
+    local window = name("GetLines")
+
+    setup(function()
+      createMiniConsole(window, 0, 0, 400, 300)
+      clearWindow(window)
+      -- clearWindow() leaves one empty line, which would otherwise be line 0
+      moveCursor(window, 0, 0)
+      deleteLine(window)
+      echo(window, "one\ntwo\nthree")
+    end)
+
+    teardown(function()
+      deleteMiniConsole(window)
+    end)
+
+    it("returns only the lines that exist", function()
+      assert.are.same({"one", "two", "three"}, getLines(window, 0, 3))
+      assert.are.same({"one", "two"}, getLines(window, -2, 2))
+      assert.are.same({"two", "three"}, getLines(window, 1, 100))
+      assert.are.same({}, getLines(window, 10, 20))
+    end)
+
+    it("copes with the extremes of the int range", function()
+      assert.are.same({"one", "two"}, getLines(window, -2147483648, 2))
+      assert.are.same({"one", "two", "three"}, getLines(window, 0, 2147483647))
+      assert.are.same({}, getLines(window, 2147483647, -2147483648))
+    end)
   end)
 end)

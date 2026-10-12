@@ -377,9 +377,8 @@ describe("Tests keybind-related functions", function()
     end)
 
     it("killKey finds a temporary key behind a same-named permanent one", function()
-      -- killKey walks the root node list in creation order, so a permanent key
-      -- restored from the profile sits in front of this session's temporaries: it
-      -- must be scanned past, not reported as a failure
+      -- a permanent key can share a temporary's name (its id), and must be
+      -- passed over rather than reported as a failure
       local seed = tempKey(mudlet.key.F9, [[echo("x")]])
       killKey(seed)
       -- permKey itself takes seed + 1, so the next temporary takes seed + 2

@@ -49,6 +49,8 @@
 
 #include "GroupedTest.h"
 
+using namespace std::chrono_literals;
+
 // Keeps every line each connection sends, and speaks to the newest one.
 // IrcConnection acts on what arrives whatever state it is in, so a test
 // scripts only the server lines it needs.
@@ -84,6 +86,13 @@ public:
         }
         socket->write(line + "\r\n");
         return socket->flush();
+    }
+
+    void dropLast()
+    {
+        if (!mSockets.isEmpty() && mSockets.last()) {
+            mSockets.last()->disconnectFromHost();
+        }
     }
 
 protected:
@@ -158,7 +167,7 @@ private:
                 [this, count]() {
                     return mpIrcServer->connectionCount() >= count;
                 },
-                5000);
+                5s);
     }
 
     bool waitForLine(int connection, const QByteArray& line)
@@ -167,7 +176,7 @@ private:
                 [this, connection, line]() {
                     return mpIrcServer->lines(connection).contains(line);
                 },
-                5000);
+                5s);
     }
 
     bool waitForLua(const QString& expression, const QString& expected)
@@ -176,7 +185,7 @@ private:
                 [this, expression, expected]() {
                     return luaValues(expression) == expected;
                 },
-                5000);
+                5s);
     }
 
     // Opened through Lua, connected to the stub and registered on it, which is
@@ -195,7 +204,7 @@ private:
                        [this]() {
                            return mpHost->mpDlgIRC && mpHost->mpDlgIRC->ircBrowser->toPlainText().contains(qsl("! Connected to"));
                        },
-                       5000);
+                       5s);
     }
 
     // The auto-join is queued until the server welcomes the client
@@ -228,7 +237,7 @@ private:
                     [this]() {
                         return bufferTitles().contains(mChannel);
                     },
-                    5000)) {
+                    5s)) {
             return false;
         }
         return runLua(qsl("ircEvents = {}"));
@@ -259,7 +268,7 @@ private:
                 [this]() {
                     return events().contains(qsl("%1>%2:! You have joined %2 as %1").arg(mNick, mChannel));
                 },
-                5000);
+                5s);
     }
 
     QStringList bufferTitles() const
@@ -289,7 +298,7 @@ private:
                 [this, expected]() {
                     return events() == expected;
                 },
-                5000);
+                5s);
     }
 
     // What typing a line into the window does
@@ -340,11 +349,11 @@ private slots:
         if (mpHost && mpHost->mpDlgIRC) {
             delete mpHost->mpDlgIRC;
             // lets the stub read the QUIT before the next test looks at its lines
-            QTest::qWait(100);
+            QTest::qWait(100ms);
         }
         if (mpHost && mpHost->mpIrcClient) {
             delete mpHost->mpIrcClient.data();
-            QTest::qWait(100);
+            QTest::qWait(100ms);
         }
         if (mpHost) {
             runLua(qsl("ircEvents = {}\n"
@@ -396,7 +405,7 @@ private slots:
         dlgIRC* first = mpHost->mpDlgIRC;
         QCOMPARE(luaValues(qsl("openIRC()")), qsl("true"));
         QCOMPARE(mpHost->mpDlgIRC.data(), first);
-        QTest::qWait(100);
+        QTest::qWait(100ms);
         QCOMPARE(mpIrcServer->connectionCount(), connectionsBefore + 1);
     }
 
@@ -415,6 +424,17 @@ private slots:
 
         QVERIFY(mpIrcServer->sendLine(qsl(":%1 002 %2 :Your host is %1").arg(mServerName, mNick).toUtf8()));
         QVERIFY2(waitForLua(qsl("getIrcConnectedHost()"), qsl("true|%1").arg(mServerName)), qPrintable(luaValues(qsl("getIrcConnectedHost()"))));
+    }
+
+    void test_aDroppedConnectionNoLongerReportsTheServer()
+    {
+        QVERIFY(openRegisteredClient());
+        QVERIFY(mpIrcServer->sendLine(qsl(":%1 002 %2 :Your host is %1").arg(mServerName, mNick).toUtf8()));
+        QVERIFY2(waitForLua(qsl("getIrcConnectedHost()"), qsl("true|%1").arg(mServerName)), qPrintable(luaValues(qsl("getIrcConnectedHost()"))));
+
+        mpIrcServer->dropLast();
+
+        QVERIFY2(waitForLua(qsl("getIrcConnectedHost()"), qsl("false|not yet connected")), qPrintable(luaValues(qsl("getIrcConnectedHost()"))));
     }
 
     void test_joinsAndPartsAreTrackedAndReported()
@@ -466,7 +486,7 @@ private slots:
                              }
                              return false;
                          },
-                         5000),
+                         5s),
                  "no replacement nick was sent");
         QVERIFY(shownText().contains(qsl("! The Nickname %1 is reserved. Automatically changing Nickname to: %1_").arg(mNick)));
     }
@@ -480,13 +500,18 @@ private slots:
                 [this]() {
                     return mpHost->mpDlgIRC && mpHost->mpDlgIRC->bufferList->model()->rowCount() == 2;
                 },
-                5000));
+                5s));
 
         // otherwise the line lands in the channel's document, which the restart takes away
         QVERIFY(showBuffer(mServerHost));
 
+        QVERIFY(mpIrcServer->sendLine(qsl(":%1 002 %2 :Your host is %1").arg(mServerName, mNick).toUtf8()));
+        QVERIFY2(waitForLua(qsl("getIrcConnectedHost()"), qsl("true|%1").arg(mServerName)), qPrintable(luaValues(qsl("getIrcConnectedHost()"))));
+
         QVERIFY(storeSettings(qsl("restartedbot"), qsl("#restarted")));
         QCOMPARE(luaValues(qsl("restartIrc()")), qsl("true"));
+        // the new server has not named itself yet
+        QCOMPARE(luaValues(qsl("getIrcConnectedHost()")), qsl("false|not yet connected"));
 
         QVERIFY2(waitForLine(oldConnection, "QUIT :Restarting IRC Client"), "the old connection was not quit");
         QVERIFY(shownText().contains(qsl("! Restarting IRC Client.")));
@@ -554,7 +579,7 @@ private slots:
                          [this]() {
                              return events().contains(qsl("bob>#extra:"));
                          },
-                         5000),
+                         5s),
                  qPrintable(events()));
         QVERIFY(runLua(qsl("ircEvents = {}")));
 
@@ -570,7 +595,7 @@ private slots:
 
         QVERIFY(mpIrcServer->sendLine(qsl(":op!u@h KICK %1 %2 :bye").arg(mChannel, mNick).toUtf8()));
         QVERIFY2(waitForEvents(qsl("op>%1:! op kicked %2 from %1 (bye)").arg(mChannel, mNick)), qPrintable(events()));
-        QTest::qWait(100);
+        QTest::qWait(100ms);
         QCOMPARE(events(), qsl("op>%1:! op kicked %2 from %1 (bye)").arg(mChannel, mNick));
         QCOMPARE(bufferTitles(), QStringList({mServerHost}));
     }
@@ -620,6 +645,27 @@ private slots:
         QCOMPARE(bufferTitles(), QStringList({mServerHost}));
     }
 
+    void test_closingAChannelShowsTheServerBufferAfterTheServerRenamedIt()
+    {
+        QVERIFY(openJoinedClient());
+        const int connection = mpIrcServer->connectionCount() - 1;
+        QVERIFY(mpIrcServer->sendLine(qsl(":%1 002 %2 :Your host is %1").arg(mServerName, mNick).toUtf8()));
+        QVERIFY(QTest::qWaitFor(
+                [this]() {
+                    return bufferTitles().contains(mServerName);
+                },
+                5s));
+        QVERIFY(showBuffer(mChannel));
+
+        QVERIFY(typeLine(qsl("/close")));
+        QVERIFY(waitForLine(connection, qsl("PART %1").arg(mChannel).toUtf8()));
+
+        const auto* shown = mpHost->mpDlgIRC->bufferList->currentIndex().data(Irc::BufferRole).value<IrcBuffer*>();
+        QVERIFY2(shown && shown == mpHost->mpIrcClient->serverBuffer(), "the server buffer was not shown after the channel closed");
+        QVERIFY(typeLine(qsl("hello after close")));
+        QVERIFY2(waitForLine(connection, qsl("PRIVMSG %1 :hello after close").arg(mServerName).toUtf8()), qPrintable(mpIrcServer->lines(connection).join('\n')));
+    }
+
     // The reply is timed from when the ping was typed, not from when it arrived
     void test_aTypedPingIsTimedFromWhenItWasSent()
     {
@@ -629,14 +675,14 @@ private slots:
 
         QVERIFY(typeLine(qsl("/ping %1").arg(mServerName)));
         QVERIFY(waitForLine(connection, qsl("PING %1").arg(mServerName).toUtf8()));
-        QTest::qWait(300);
+        QTest::qWait(300ms);
         QVERIFY(mpIrcServer->sendLine(qsl(":%1 PONG %1 :%1").arg(mServerName).toUtf8()));
 
         QVERIFY2(QTest::qWaitFor(
                          [this]() {
                              return events().contains(qsl("replied in"));
                          },
-                         5000),
+                         5s),
                  qPrintable(events()));
         const QRegularExpression pong(qsl("^%1>%2:! %1 replied in (\\d+\\.\\d+) seconds$").arg(QRegularExpression::escape(mServerName), QRegularExpression::escape(mServerHost)));
         const QRegularExpressionMatch match = pong.match(events());
@@ -653,7 +699,7 @@ private slots:
         const int connectionsBefore = mpIrcServer->connectionCount();
 
         QPointer<TIrcClient> client = mpHost->getOrCreateIrcClient();
-        QTest::qWait(300);
+        QTest::qWait(300ms);
         QCOMPARE(mpIrcServer->connectionCount(), connectionsBefore);
         QVERIFY(!mpHost->mpDlgIRC);
         QCOMPARE(luaValues(qsl("getIrcConnectedHost()")), qsl("false|not yet connected"));

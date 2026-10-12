@@ -47,6 +47,8 @@
 
 #include "GroupedTest.h"
 
+using namespace std::chrono_literals;
+
 class TriggerMatchPoolTest : public QObject
 {
     Q_OBJECT
@@ -110,7 +112,7 @@ private slots:
         QVERIFY(mpHost);
         QVERIFY(mpHost->mLoadedOk);
         mudlet::self()->slot_connectionDialogueFinished(mProfileName, false);
-        QVERIFY(mpHost->mpConsole);
+        QVERIFY(mpHost->mainConsoleView());
     }
 
     void cleanupTestCase()
@@ -171,7 +173,7 @@ private slots:
         QCOMPARE(luaInteger(mpHost, "needleCount"), 1);
         // Gives the helper time to finish its share and park. Nothing here can
         // observe that it has, so the case is only as strong as this wait.
-        QThread::msleep(50);
+        QThread::sleep(50ms);
 
         TriggerMatchPool::shutdown();
         QCOMPARE(pool.workerCount(), 0);

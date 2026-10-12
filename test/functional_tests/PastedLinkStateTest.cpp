@@ -94,11 +94,11 @@ private slots:
         auto host = TestProfile::create(mHostname, mLocalhost, mPort);
         QVERIFY2(host, "no active host available for the test");
         QSignalSpy connectionSpy(&(host->mTelnet), &cTelnet::signal_connected);
-        QVERIFY2(connectionSpy.wait(2000), "could not connect with the host");
+        QVERIFY2(connectionSpy.wait(2s), "could not connect with the host");
 
         mpHost = HostManager::self()->getHost(mHostname);
         QVERIFY(mpHost);
-        QVERIFY(mpHost->mpConsole);
+        QVERIFY(mpHost->mainConsoleView());
     }
 
     void cleanupTestCase()
@@ -145,7 +145,7 @@ private slots:
                                                                      .arg(targetName, mLinkText));
         qApp->processEvents();
 
-        auto* pTarget = mpHost->mpConsole->subConsoleWidget(targetName);
+        auto* pTarget = mpHost->mainConsoleView()->subConsoleWidget(targetName);
         QVERIFY2(pTarget, "the target miniconsole was not created");
         const int ownId = pTarget->getLinkStore().getCurrentLinkID();
         QVERIFY2(ownId > 0, "the target's own echoLink() registered nothing, so there is no id to collide with");
@@ -180,7 +180,7 @@ private slots:
         qApp->processEvents();
 
         // split the link's own run with characters carrying no link index
-        auto& mainBuffer = mpHost->mpConsole->buffer;
+        auto& mainBuffer = mpHost->mainConsoleView()->buffer;
         int splitLine = -1;
         int splitColumn = -1;
         for (int y = 0, lines = static_cast<int>(mainBuffer.buffer.size()); y < lines && splitLine < 0; ++y) {
@@ -200,11 +200,11 @@ private slots:
         QCOMPARE(mainBuffer.buffer.at(splitLine).at(splitColumn).linkIndex(), 0);
         QVERIFY2(mainBuffer.buffer.at(splitLine).at(splitColumn + 2).linkIndex() == sourceId, "the link does not resume after the inserted text, so this test covers nothing");
 
-        mpHost->mpConsole->P_begin = QPoint(splitColumn - 5, splitLine);
-        mpHost->mpConsole->P_end = QPoint(splitColumn + 8, splitLine);
+        mpHost->mainConsoleView()->P_begin = QPoint(splitColumn - 5, splitLine);
+        mpHost->mainConsoleView()->P_end = QPoint(splitColumn + 8, splitLine);
         QVERIFY(mpHost->copyToClipboard(qsl("main")));
 
-        auto* pTarget = mpHost->mpConsole->subConsoleWidget(targetName);
+        auto* pTarget = mpHost->mainConsoleView()->subConsoleWidget(targetName);
         QVERIFY2(pTarget, "the target miniconsole was not created");
         QVERIFY(pTarget->moveCursor(0, 0));
         QVERIFY(mpHost->pasteClipboard(targetName));
@@ -260,7 +260,7 @@ private slots:
     // life of the profile and the links' Lua references would never be freed.
     void test_trimStillReapsAnUnreferencedLinkFromTheStore()
     {
-        auto* pConsole = mpHost->mpConsole.data();
+        auto* pConsole = mpHost->mainConsoleView();
         pConsole->buffer.setBufferSize(100, 20);
 
         mpHost->getLuaInterpreter()->compileAndExecuteScript(qsl("echoLink('%1', [[send('look')]], 'hint')\necho('\\n')").arg(mLinkText));
@@ -289,13 +289,13 @@ private slots:
                                                                      .arg(targetName));
         qApp->processEvents();
 
-        auto* pTarget = mpHost->mpConsole->subConsoleWidget(targetName);
+        auto* pTarget = mpHost->mainConsoleView()->subConsoleWidget(targetName);
         QVERIFY2(pTarget, "the target miniconsole was not created");
         QVERIFY2(selectLinkRunInMainConsole(), "echoLink() put no link-bearing character in the main console");
 
-        const QPoint selectionStart = mpHost->mpConsole->P_begin;
-        const int sourceId = mpHost->mpConsole->buffer.buffer.at(selectionStart.y()).at(selectionStart.x()).linkIndex();
-        const int sourceReference = mpHost->mpConsole->buffer.mLinkStore.getReference(sourceId).value(0);
+        const QPoint selectionStart = mpHost->mainConsoleView()->P_begin;
+        const int sourceId = mpHost->mainConsoleView()->buffer.buffer.at(selectionStart.y()).at(selectionStart.x()).linkIndex();
+        const int sourceReference = mpHost->mainConsoleView()->buffer.mLinkStore.getReference(sourceId).value(0);
         QVERIFY2(sourceReference > 0, "echoLink() given a function registered no Lua reference, so this test covers nothing");
 
         QVERIFY(mpHost->copyToClipboard(qsl("main")));
@@ -349,8 +349,56 @@ private slots:
         QVERIFY2(destination.mLinkStore.getStyling(destinationId).isBold, "the copied link's styling did not come across intact");
     }
 
+    // Text that spans line feeds, with a negative link index and one character
+    // more than it has formatting for
+    void test_appendedLinesKeepEachCharactersFormatting()
+    {
+        TBuffer source(mpHost);
+        const int sourceId = source.mLinkStore.addLinks(QStringList{qsl("send('lines')")}, QStringList{qsl("hint")}, mpHost);
+        QVERIFY(sourceId > 0);
+
+        const TChar red(Qt::red, Qt::black);
+        const TChar green(Qt::green, Qt::black);
+        const TChar linked(Qt::white, Qt::black, TChar::None, sourceId);
+        const TChar unlinked(Qt::blue, Qt::black, TChar::None, -1);
+        const std::vector<TChar> formatting{red, unlinked, TChar(), linked, linked, TChar(), TChar(), green};
+
+        TBuffer destination(mpHost);
+        destination.appendFormatted(qsl("ab\nLK\n\ncd"), formatting, source.mLinkStore);
+
+        QCOMPARE(destination.lineBuffer.mid(0, 5), (QStringList{qsl("ab"), qsl("LK"), QString(), qsl("cd"), QString()}));
+        QCOMPARE(destination.buffer.at(0).size(), std::size_t(2));
+        QCOMPARE(destination.buffer.at(0).at(0).foreground(), QColor(Qt::red));
+        QCOMPARE(destination.buffer.at(0).at(1).foreground(), QColor(Qt::blue));
+        QCOMPARE(destination.buffer.at(0).at(1).linkIndex(), 0);
+        const int destinationId = destination.buffer.at(1).at(0).linkIndex();
+        QVERIFY2(destinationId > 0, "the copied characters carry no link index, so this test covers nothing");
+        QCOMPARE(destination.buffer.at(1).at(1).linkIndex(), destinationId);
+        QCOMPARE(destination.mLinkStore.getLinksConst(destinationId), QStringList{qsl("send('lines')")});
+        QVERIFY(destination.buffer.at(2).empty());
+        QCOMPARE(destination.buffer.at(3).size(), std::size_t(2));
+        QCOMPARE(destination.buffer.at(3).at(0).foreground(), QColor(Qt::green));
+        QCOMPARE(destination.buffer.at(3).at(1).foreground(), TChar().foreground());
+        QCOMPARE(destination.buffer.at(3).at(1).linkIndex(), 0);
+    }
+
+    // The formatting runs out before the second line even starts
+    void test_appendedLinesPastTheFormattingGetTheDefault()
+    {
+        TBuffer source(mpHost);
+        TBuffer destination(mpHost);
+        destination.appendFormatted(qsl("ab\ncd"), std::vector<TChar>{TChar(Qt::red, Qt::black)}, source.mLinkStore);
+
+        QCOMPARE(destination.lineBuffer.mid(0, 2), (QStringList{qsl("ab"), qsl("cd")}));
+        QCOMPARE(destination.buffer.at(0).at(0).foreground(), QColor(Qt::red));
+        QCOMPARE(destination.buffer.at(0).at(1).foreground(), TChar().foreground());
+        QCOMPARE(destination.buffer.at(1).size(), std::size_t(2));
+        QCOMPARE(destination.buffer.at(1).at(0).foreground(), TChar().foreground());
+        QCOMPARE(destination.buffer.at(1).at(1).foreground(), TChar().foreground());
+    }
+
 private:
-    TConsole* miniconsole() const { return mpHost->mpConsole->subConsoleWidget(mMiniName); }
+    TConsole* miniconsole() const { return mpHost->mainConsoleView()->subConsoleWidget(mMiniName); }
 
     // Highest link index still present in a console's buffer, 0 for none
     static int copiedLinkId(const TBuffer& destination)
@@ -381,7 +429,7 @@ private:
     // whichever line it considers current
     bool selectLinkRunInMainConsole() const
     {
-        const auto& mainBuffer = mpHost->mpConsole->buffer;
+        const auto& mainBuffer = mpHost->mainConsoleView()->buffer;
         // backwards: every case before this one left its own link-bearing line
         // higher up, and copying that one tests whatever it happened to hold
         for (int y = static_cast<int>(mainBuffer.buffer.size()) - 1; y >= 0; --y) {
@@ -395,8 +443,8 @@ private:
                 }
             }
             if (from >= 0) {
-                mpHost->mpConsole->P_begin = QPoint(from, y);
-                mpHost->mpConsole->P_end = QPoint(to, y);
+                mpHost->mainConsoleView()->P_begin = QPoint(from, y);
+                mpHost->mainConsoleView()->P_end = QPoint(to, y);
                 return true;
             }
         }

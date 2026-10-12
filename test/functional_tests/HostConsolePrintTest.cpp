@@ -53,6 +53,8 @@
 
 #include "GroupedTest.h"
 
+using namespace std::chrono_literals;
+
 class HostConsolePrintTest : public QObject
 {
     Q_OBJECT
@@ -166,9 +168,9 @@ private slots:
         QVERIFY2(mpHost, "Could not create the test profile - see the warning above for the step that timed out.");
         QSignalSpy connected(&mpHost->mTelnet, &cTelnet::signal_connected);
         if (connected.isEmpty()) {
-            QVERIFY2(connected.wait(15000), "The test profile never connected to the stub server.");
+            QVERIFY2(connected.wait(15s), "The test profile never connected to the stub server.");
         }
-        QVERIFY(mpHost->mpConsole);
+        QVERIFY(mpHost->mainConsoleView());
         mSavedLogFileNameFormat = mpHost->mLogFileNameFormat;
         mSavedLogFileName = mpHost->mLogFileName;
     }
@@ -322,10 +324,10 @@ private slots:
     {
         QVERIFY(!mpHost->mainConsoleShowsTimeStamps());
 
-        mpHost->mpConsole->slot_toggleTimeStamps(true);
+        mpHost->mainConsoleView()->slot_toggleTimeStamps(true);
         QVERIFY(mpHost->mainConsoleShowsTimeStamps());
 
-        mpHost->mpConsole->slot_toggleTimeStamps(false);
+        mpHost->mainConsoleView()->slot_toggleTimeStamps(false);
         QVERIFY(!mpHost->mainConsoleShowsTimeStamps());
     }
 
@@ -333,7 +335,7 @@ private slots:
     // button now follows the model's state whichever way logging is toggled.
     void test_luaStartLoggingDrivesTheLogButton()
     {
-        QToolButton* button = mpHost->mpConsole->logButton;
+        QToolButton* button = mpHost->mainConsoleView()->logButton;
         QVERIFY(!button->isChecked());
 
         QVERIFY(runLua(qsl("startLogging(true)")));
@@ -356,7 +358,7 @@ private slots:
         mpHost->mLogFileNameFormat.clear();
         mpHost->mLogFileName = qsl("hcpt-failed-log");
 
-        QToolButton* button = mpHost->mpConsole->logButton;
+        QToolButton* button = mpHost->mainConsoleView()->logButton;
         QVERIFY(!button->isChecked());
         // The report carries the whole path, so widen the wrap to read it back
         // off one buffer line
@@ -450,7 +452,7 @@ private slots:
     void test_replayRecordingWritesWhatTheGameSent()
     {
         cTelnet& telnet = mpHost->mTelnet;
-        mpHost->mpConsole->slot_toggleReplayRecording();
+        mpHost->mainConsoleView()->slot_toggleReplayRecording();
         QVERIFY(telnet.recordingReplay());
         const QString fileName = telnet.replayRecordingFileName();
         QVERIFY(!fileName.isEmpty());
@@ -462,7 +464,7 @@ private slots:
         mpServer->sendRaw(sent);
         QTRY_VERIFY(bufferContains(qsl("recorded line")));
 
-        mpHost->mpConsole->slot_toggleReplayRecording();
+        mpHost->mainConsoleView()->slot_toggleReplayRecording();
         QVERIFY(!telnet.recordingReplay());
         QVERIFY2(QFileInfo::exists(fileName), qPrintable(fileName));
 
@@ -497,7 +499,7 @@ private slots:
     void test_replayRecordingIsCommittedWhenTheConnectionDrops()
     {
         cTelnet& telnet = mpHost->mTelnet;
-        mpHost->mpConsole->slot_toggleReplayRecording();
+        mpHost->mainConsoleView()->slot_toggleReplayRecording();
         QVERIFY(telnet.recordingReplay());
         const QString fileName = telnet.replayRecordingFileName();
         QVERIFY(!fileName.isEmpty());
@@ -512,7 +514,7 @@ private slots:
         // QSignalSpy::wait() waits for the *next* signal after the ones it
         // already holds:
         if (disconnected.isEmpty()) {
-            QVERIFY2(disconnected.wait(15000), "the test profile never noticed the disconnection");
+            QVERIFY2(disconnected.wait(15s), "the test profile never noticed the disconnection");
         }
 
         QVERIFY(!telnet.recordingReplay());

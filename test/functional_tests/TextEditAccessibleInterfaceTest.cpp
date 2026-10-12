@@ -42,6 +42,7 @@
 #include <QFontInfo>
 #include <QSignalSpy>
 #include <QTemporaryDir>
+#include <QTextBoundaryFinder>
 #include <QtTest/QtTest>
 
 #include <chrono>
@@ -84,9 +85,9 @@ private:
         return QFileInfo::exists(qsl("%1/portable.txt").arg(QCoreApplication::applicationDirPath())) || QFileInfo::exists(qsl("%1/.config/mudlet/portable.txt").arg(QDir::homePath()));
     }
 
-    TTextEdit* pane() const { return mpHost->mpConsole->mUpperPane; }
+    TTextEdit* pane() const { return mpHost->mainConsoleView()->mUpperPane; }
 
-    const QStringList& lines() const { return mpHost->mpConsole->buffer.lineBuffer; }
+    const QStringList& lines() const { return mpHost->mainConsoleView()->buffer.lineBuffer; }
 
     QString wholeText() const { return lines().join(QChar::LineFeed); }
 
@@ -110,6 +111,76 @@ private:
     }
 
     bool lineIsOnScreen(const int line) const { return line >= pane()->imageTopLine() && line < pane()->imageTopLine() + pane()->getScreenHeight(); }
+
+    // A sentence running on over a line break, empty lines, abbreviations,
+    // characters outside the BMP or that join onto what is ahead of them, and
+    // Thai, which Qt breaks into words over the digits and lines after it too
+    const QStringList mTrickyLines = {
+            qsl("The quick brown fox. Jumps over"),
+            qsl("the lazy dog"),
+            QString(),
+            qsl("Mr. Smith went to Washington."),
+            qsl("\"Hello!\" she said. (Really.) "),
+            qsl("no terminator here"),
+            qsl("ends with a space. "),
+            qsl("e.g. etc. U.S.A. 3.14, 1,000"),
+            qsl("emoji \U0001F600 flags \U0001F1EC\U0001F1E7\U0001F1EB\U0001F1F7 e\u0301"),
+            qsl("\u0301starts with a combining mark"),
+            qsl("ends lower. and continues"),
+            qsl("ALL CAPS. NEXT"),
+            QString(),
+            qsl("one"),
+            qsl("two."),
+            qsl("\u0E2A\u0E27\u0E31\u0E2A\u0E14\u0E35\u0E04\u0E23\u0E31\u0E1A"),
+            qsl("----"),
+            qsl("12 34"),
+            qsl("> "),
+            qsl("100 200"),
+            qsl("ok"),
+            qsl("HP: 100"),
+            qsl("\u0E2A\u0E27\u0E31\u0E2A\u0E14\u0E35"),
+            QString(),
+            QString(),
+            QString(),
+            qsl("123"),
+            qsl("456"),
+            qsl("after the tricky lines"),
+    };
+
+    void printTrickyLines()
+    {
+        if (lineOf(mTrickyLines.first()) != -1) {
+            return;
+        }
+        for (const QString& line : mTrickyLines) {
+            mpHost->mainConsoleView()->print(line + QChar::LineFeed);
+        }
+    }
+
+    enum class Step { Before, At, After };
+
+    // A word or sentence lookup done over the whole text, which is what the
+    // interface has to agree with however much of the text it looks at.
+    static QString boundaryOverWholeText(const QString& all, const QTextBoundaryFinder::BoundaryType type, const Step step, const int offset, int* start, int* end)
+    {
+        QTextBoundaryFinder finder(type, all);
+        finder.setPosition(offset);
+        if (step == Step::Before) {
+            *end = static_cast<int>(finder.toPreviousBoundary());
+            *start = static_cast<int>(finder.toPreviousBoundary());
+        } else if (step == Step::At) {
+            *start = static_cast<int>(finder.toPreviousBoundary());
+            *end = static_cast<int>(finder.toNextBoundary());
+        } else {
+            *start = static_cast<int>(finder.toNextBoundary());
+            *end = static_cast<int>(finder.toNextBoundary());
+        }
+        if (*start == -1 || *end == -1) {
+            *start = *end = 0;
+            return QString();
+        }
+        return all.mid(*start, *end - *start);
+    }
 
 private slots:
     void initTestCase()
@@ -169,9 +240,9 @@ private slots:
         // what the visibility cases need, followed by the three named ones so
         // they are on screen at the end.
         for (int line = 0; line < 200; ++line) {
-            mpHost->mpConsole->print(qsl("filler %1\n").arg(line));
+            mpHost->mainConsoleView()->print(qsl("filler %1\n").arg(line));
         }
-        mpHost->mpConsole->print(qsl("%1\n%2\n%3\n").arg(mFirstMarker, mSecondMarker, mThirdMarker));
+        mpHost->mainConsoleView()->print(qsl("%1\n%2\n%3\n").arg(mFirstMarker, mSecondMarker, mThirdMarker));
         QTest::qWait(100ms);
 
         QVERIFY2(textInterface(), "no QAccessibleTextInterface for the console - the factory never took");
@@ -200,7 +271,7 @@ private slots:
         // Every case but one needs the marker lines on screen, and the one that
         // scrolls away from them leaves the view up in the buffer if it fails
         // part way through.
-        pane()->scrollTo(mpHost->mpConsole->buffer.getLastLineNumber() + 1);
+        pane()->scrollTo(mpHost->mainConsoleView()->buffer.getLastLineNumber() + 1);
     }
 
     // The flat string every other case indexes into: the buffer's lines with a
@@ -564,6 +635,102 @@ private slots:
         QVERIFY2(state.selectableText, "the console does not report its text as selectable");
         QVERIFY2(state.multiLine, "the console does not report itself as multi-line");
         QVERIFY2(state.focusable, "the console does not report itself as focusable");
+    }
+
+    // Cut from the lines a range covers, so it must match cutting the whole
+    // text however the range starts and ends against a line.
+    void test_anyRangeOfTheTextMatchesTheWholeText()
+    {
+        QAccessibleTextInterface* ti = textInterface();
+        QVERIFY(ti);
+        printTrickyLines();
+        const QString all = wholeText();
+
+        for (int start = offsetOfLine(lineOf(mTrickyLines.first()) - 1); start <= all.length(); ++start) {
+            for (int end = start; end <= all.length(); ++end) {
+                QCOMPARE(ti->text(start, end), all.mid(start, end - start));
+            }
+            QCOMPARE(ti->text(start, start - 1), all.mid(start));
+        }
+        QCOMPARE(ti->text(0, 0), QString());
+        QCOMPARE(ti->text(0, 10), all.left(10));
+    }
+
+    // Looked up over the lines around the offset, so they must find exactly the
+    // boundaries a lookup over the whole text does.
+    void test_wordAndSentenceBoundariesMatchTheWholeText()
+    {
+        QAccessibleTextInterface* ti = textInterface();
+        QVERIFY(ti);
+        printTrickyLines();
+        const QString all = wholeText();
+        QVERIFY2(lineOf(mTrickyLines.first()) > 4, "the tricky lines are at the top of the buffer, so nothing is ahead of them");
+
+        // The start of the buffer too, where the window is cut short
+        QList<int> offsets;
+        for (int offset = 0; offset <= offsetOfLine(4); ++offset) {
+            offsets << offset;
+        }
+        for (int offset = offsetOfLine(lineOf(mTrickyLines.first()) - 2); offset <= all.length(); ++offset) {
+            offsets << offset;
+        }
+
+        for (const auto type : {QAccessible::WordBoundary, QAccessible::SentenceBoundary}) {
+            const auto finderType = type == QAccessible::WordBoundary ? QTextBoundaryFinder::Word : QTextBoundaryFinder::Sentence;
+            for (const int offset : std::as_const(offsets)) {
+                for (const Step step : {Step::Before, Step::At, Step::After}) {
+                    int expectedStart = -1;
+                    int expectedEnd = -1;
+                    const QString expected = boundaryOverWholeText(all, finderType, step, offset, &expectedStart, &expectedEnd);
+                    int start = -1;
+                    int end = -1;
+                    const QString actual = step == Step::Before ? ti->textBeforeOffset(offset, type, &start, &end)
+                                           : step == Step::At   ? ti->textAtOffset(offset, type, &start, &end)
+                                                                : ti->textAfterOffset(offset, type, &start, &end);
+                    const QByteArray where =
+                            qsl("%1 boundary, step %2, offset %3").arg(type == QAccessible::WordBoundary ? qsl("word") : qsl("sentence")).arg(static_cast<int>(step)).arg(offset).toUtf8();
+                    QVERIFY2(actual == expected, where.constData());
+                    QVERIFY2(start == expectedStart && end == expectedEnd, where.constData());
+                }
+            }
+        }
+    }
+
+    // Including the newline at the end of every line, empty ones too
+    void test_charBoundaryMatchesTheWholeTextAtEveryOffset()
+    {
+        QAccessibleTextInterface* ti = textInterface();
+        QVERIFY(ti);
+        printTrickyLines();
+        const QString all = wholeText();
+        int start = -1;
+        int end = -1;
+
+        for (int offset = offsetOfLine(lineOf(mTrickyLines.first()) - 1); offset < all.length(); ++offset) {
+            QCOMPARE(ti->textAtOffset(offset, QAccessible::CharBoundary, &start, &end), QString(all.at(offset)));
+            QCOMPARE(start, offset);
+            QCOMPARE(end, offset + 1);
+            if (offset + 1 < all.length()) {
+                QCOMPARE(ti->textAfterOffset(offset, QAccessible::CharBoundary, &start, &end), QString(all.at(offset + 1)));
+                QCOMPARE(ti->textBeforeOffset(offset + 1, QAccessible::CharBoundary, &start, &end), QString(all.at(offset)));
+            }
+        }
+    }
+
+    // Everything after or before an offset is cut from the lines it covers too
+    void test_noBoundaryBeforeAndAfterMatchTheWholeTextAtEveryOffset()
+    {
+        QAccessibleTextInterface* ti = textInterface();
+        QVERIFY(ti);
+        printTrickyLines();
+        const QString all = wholeText();
+        int start = -1;
+        int end = -1;
+
+        for (int offset = offsetOfLine(lineOf(mTrickyLines.first()) - 1); offset <= all.length(); ++offset) {
+            QCOMPARE(ti->textAfterOffset(offset, QAccessible::NoBoundary, &start, &end), all.mid(offset));
+            QCOMPARE(ti->textBeforeOffset(offset, QAccessible::NoBoundary, &start, &end), all.left(offset));
+        }
     }
 };
 

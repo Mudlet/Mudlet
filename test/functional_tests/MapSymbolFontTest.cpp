@@ -67,6 +67,8 @@
 
 #include "GroupedTest.h"
 
+using namespace std::chrono_literals;
+
 class MapSymbolFontTest : public QObject
 {
     Q_OBJECT
@@ -118,7 +120,7 @@ private:
                          [this]() {
                              return !HostDialogs::of(mpHost).mpDlgProfilePreferences.isNull();
                          },
-                         5000),
+                         5s),
                  "Preferences dialog was not created");
         mpPreferences = HostDialogs::of(mpHost).mpDlgProfilePreferences.data();
         QVERIFY2(scalingSpinBox(), "The symbol scaling spin-box was not found in the Symbols group box");
@@ -134,7 +136,7 @@ private:
                          [this]() {
                              return HostDialogs::of(mpHost).mpDlgProfilePreferences.isNull();
                          },
-                         5000),
+                         5s),
                  "Preferences dialog should have been destroyed by closing it");
         mpPreferences = nullptr;
     }
@@ -479,7 +481,7 @@ private slots:
                          [this]() {
                              return glyphUsageTable() != nullptr;
                          },
-                         5000),
+                         5s),
                  "the glyph usage dialog did not appear");
 
         QTableWidget* pTable = glyphUsageTable();

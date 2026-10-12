@@ -26,6 +26,7 @@
 
 #include "utils.h"
 
+#include <QHash>
 #include <QList>
 #include <QMap>
 #include <QMultiMap>
@@ -106,12 +107,17 @@ private:
     void addTimerRootNode(TTimer* pT, int parentPosition = -1, int childPosition = -1);
     void addTimer(TTimer* pT);
     void _removeTimerRootNode(TTimer* pT);
+    void listRootNode(TTimer* pT, std::list<TTimer*>::iterator before);
+    void unlistRootNode(TTimer* pT);
     void _removeTimer(TTimer*);
 
 
     QPointer<Host> mpHost;
     QMap<int, TTimer*> mTimerMap;
     std::list<TTimer*> mTimerRootNodeList;
+    // Where each root node sits in mTimerRootNodeList: std::list::remove() walks the whole list,
+    // which made freeing a batch of temporary timers quadratic
+    QHash<TTimer*, std::list<TTimer*>::iterator> mRootNodePositions;
     int mMaxID = 0;
     bool mModuleMember = false;
     // > 0 whilst a TTimer::execute() is on the call stack; uninstall() and

@@ -18,6 +18,10 @@
  ***************************************************************************/
 
 #include <CredentialManager.h>
+#include <QDir>
+#include <QFile>
+#include <QFileInfo>
+#include <QScopeGuard>
 #include <QtTest/QtTest>
 #include <QCryptographicHash>
 #include <QRegularExpression>
@@ -31,6 +35,8 @@
 #endif
 
 #include <memory>
+
+using namespace std::chrono_literals;
 
 // Exercises CredentialManager's real keychain paths against the live platform credential
 // store, in particular the migrations for the qtkeychain 0.17.0 Windows naming change
@@ -64,6 +70,7 @@ private slots:
     void testOldFormatMigration();
     void testCollidingFormatRecovery();
     void testALookupAnswersWhenItsFirstReadStalls();
+    void testALookupWhoseKeychainStallsStillReadsTheEncryptedFile();
     void testALookupAnswersWhicheverLaterReadStalls_data();
     void testALookupAnswersWhicheverLaterReadStalls();
     void testALookupReadsEachPlaceOnceInOrder_data();
@@ -92,10 +99,13 @@ private slots:
     void testOneUnreadableEntryDoesNotHideAnOlderLayout();
     void testASignInKeyIsNotLookedForInLayoutsOlderThanItself();
     void testALookupThatAnswersInTimeOwesNoLateAnswer();
+    void testALookupThatFindsNothingSaysWhetherTheStoreAnswered_data();
+    void testALookupThatFindsNothingSaysWhetherTheStoreAnswered();
     void testALateAnswerFollowsALookupThatTimedOut_data();
     void testALateAnswerFollowsALookupThatTimedOut();
     void testALateAnswerIsDroppedOnceWhatAskedForItHasGone();
     void testALateAnswerHandsOverThePassword();
+    void testALateAnswerFollowsTheFilesOlderCopy();
 
 private:
     QTemporaryDir mConfigDir;
@@ -464,7 +474,7 @@ public:
             }
             if (read && mAnswerReadsNotFound) {
                 watch(job);
-                QTimer::singleShot(0, job, [job, error = mNotFoundError]() {
+                QTimer::singleShot(0ms, job, [job, error = mNotFoundError]() {
                     answer(job, error, QStringLiteral("synthetic: nothing found"));
                 });
                 return false;
@@ -595,6 +605,7 @@ struct TimedAnswers
 {
     std::shared_ptr<Answer> first = std::make_shared<Answer>();
     bool timedOut = false;
+    CredentialManager::ReadOutcome outcome = CredentialManager::ReadOutcome::Found;
     std::shared_ptr<Answer> late = std::make_shared<Answer>();
 };
 
@@ -605,12 +616,13 @@ std::shared_ptr<TimedAnswers> startTimedRetrieval(CredentialManager& manager, co
     manager.retrievePassword(
             profile,
             key,
-            [answers](bool success, QString password, const QString& error, bool timedOut) {
+            [answers](bool success, QString password, const QString& error, CredentialManager::ReadOutcome outcome) {
                 ++answers->first->count;
                 answers->first->success = success;
                 answers->first->password = password;
                 answers->first->error = error;
-                answers->timedOut = timedOut;
+                answers->outcome = outcome;
+                answers->timedOut = outcome == CredentialManager::ReadOutcome::TimedOut;
             },
             lateContext,
             [answers](bool success, QString password, const QString& error) {
@@ -625,6 +637,7 @@ std::shared_ptr<TimedAnswers> startTimedRetrieval(CredentialManager& manager, co
 } // namespace
 
 Q_DECLARE_METATYPE(QKeychain::Error)
+Q_DECLARE_METATYPE(CredentialManager::ReadOutcome)
 
 void CredentialManagerKeychainTest::initTestCase()
 {
@@ -880,7 +893,7 @@ void CredentialManagerKeychainTest::testALookupAnswersWhenItsFirstReadStalls()
 
     // The read is still waiting on the keychain, and a backend that answers a deleted job reads freed
     // memory, so it has to be left to finish on its own.
-    QTest::qWait(100);
+    QTest::qWait(100ms);
     QVERIFY2(staller.firstStalledAlive(), "a read still waiting on the keychain was deleted");
 
     // Once the keychain answers, the read deletes itself - and the answer has to reach receivers other
@@ -889,6 +902,32 @@ void CredentialManagerKeychainTest::testALookupAnswersWhenItsFirstReadStalls()
     QCOMPARE(staller.answersToOtherReceivers(), released);
     QVERIFY2(keychainQueueRuns(), "QtKeychain's queue did not move on once the stalled read answered");
     QTRY_VERIFY2(!staller.firstStalledAlive(), "a read that answered after its lookup gave up was never deleted");
+    QCOMPARE(answer->count, 1);
+}
+
+// Reading the file needs nothing from the keychain, and the next lookup would stall at the same read,
+// so a password kept only there was never found while the keychain did not answer
+void CredentialManagerKeychainTest::testALookupWhoseKeychainStallsStillReadsTheEncryptedFile()
+{
+    const QString secret = QStringLiteral("file-secret-behind-a-stall");
+    QVERIFY(CredentialManager::storeCredential(mProfile, mKey, secret));
+    JobStaller staller;
+    staller.stallNth<QKeychain::ReadPasswordJob>(0);
+    CredentialManager manager;
+    manager.mJobStartHook = staller.hook();
+    manager.mOperationTimeoutMs = 300;
+
+    const auto answer = startRetrieval(manager, mProfile, mKey);
+    const bool answered = waitForAnswer(answer);
+    CredentialManager::removeCredential(mProfile, mKey);
+
+    QVERIFY2(answered, "a lookup whose keychain read never answers must still answer its caller");
+    QVERIFY2(staller.waitForAnyStalled(), "the read meant to stall was never started, so this run tested nothing");
+    QVERIFY2(answer->success, qPrintable(answer->error));
+    QCOMPARE(answer->password, secret);
+
+    staller.release();
+    QTRY_VERIFY2(!staller.firstStalledAlive(), "a read that answered after its lookup was answered was never deleted");
     QCOMPARE(answer->count, 1);
 }
 
@@ -971,7 +1010,7 @@ void CredentialManagerKeychainTest::testALookupReadsEachPlaceOnceInOrder()
         expected.append({read.service, read.key});
     }
     QCOMPARE(recorder.reads(), expected);
-    QTest::qWait(200);
+    QTest::qWait(200ms);
     QCOMPARE(answer->count, 1);
 }
 
@@ -1050,7 +1089,7 @@ void CredentialManagerKeychainTest::testAStoreStartedFromATimedOutCallbackIsNotT
     QVERIFY2(waitForAnswer(second), "the store started from the timed-out callback was torn down by the cleanup of the operation that timed out, so it never answered - see #9072");
     QVERIFY(!second->success);
     QCOMPARE(second->error, QStringLiteral("Operation timed out"));
-    QTest::qWait(200);
+    QTest::qWait(200ms);
     QCOMPARE(first->count, 1);
     QCOMPARE(second->count, 1);
 }
@@ -1075,7 +1114,7 @@ void CredentialManagerKeychainTest::testALookupIsNotDisturbedByAnotherOnTheSameM
     QVERIFY2(waitForAnswer(first), "the stalled lookup never answered once another lookup started on its manager");
     QCOMPARE(first->error, QStringLiteral("Operation timed out"));
     staller.release();
-    QTest::qWait(200);
+    QTest::qWait(200ms);
     QCOMPARE(first->count, 1);
     QCOMPARE(second->count, 1);
 }
@@ -1094,7 +1133,7 @@ void CredentialManagerKeychainTest::testDeletingAManagerMidLookupLeavesItsReadTo
     // itself only once the keychain answers - which a real backend may well do moments later.
     manager.reset();
     QVERIFY2(staller.firstStalledAlive(), "a read still waiting on the keychain was deleted along with its manager");
-    QTest::qWait(100);
+    QTest::qWait(100ms);
     QCOMPARE(answer->count, 0);
 
     staller.release();
@@ -1125,7 +1164,7 @@ void CredentialManagerKeychainTest::testACallbackThatFlushesDeferredDeletesDoesN
                      },
                      kWaitMs),
              "the lookup never answered");
-    QTest::qWait(100);
+    QTest::qWait(100ms);
 }
 
 void CredentialManagerKeychainTest::testALookupFindsThePasswordInTheEncryptedFileBeforeTheCollidingFormat_data()
@@ -1708,6 +1747,53 @@ void CredentialManagerKeychainTest::testASignInKeyIsNotLookedForInLayoutsOlderTh
     QCOMPARE(staller.reads(), expected);
 }
 
+// A caller that would remove what it cannot read back - the sign-in's rotated-token check - has to
+// tell "the store has nothing" from "the store would not say"
+void CredentialManagerKeychainTest::testALookupThatFindsNothingSaysWhetherTheStoreAnswered_data()
+{
+    QTest::addColumn<bool>("refused");
+    QTest::addColumn<bool>("garbledFile");
+    QTest::addColumn<CredentialManager::ReadOutcome>("expected");
+    QTest::newRow("nothing stored anywhere") << false << false << CredentialManager::ReadOutcome::NothingStored;
+    QTest::newRow("the first read refused") << true << false << CredentialManager::ReadOutcome::Unreadable;
+    QTest::newRow("the encrypted file garbled") << false << true << CredentialManager::ReadOutcome::Unreadable;
+}
+
+void CredentialManagerKeychainTest::testALookupThatFindsNothingSaysWhetherTheStoreAnswered()
+{
+    QFETCH(bool, refused);
+    QFETCH(bool, garbledFile);
+    QFETCH(CredentialManager::ReadOutcome, expected);
+    const QString filePath = CredentialManager::generateFilePath(mProfile, mKey);
+    const auto removeFile = qScopeGuard([&filePath] {
+        QFile::remove(filePath);
+    });
+    if (garbledFile) {
+        QVERIFY(QDir().mkpath(QFileInfo(filePath).absolutePath()));
+        QFile file(filePath);
+        QVERIFY(file.open(QIODevice::WriteOnly | QIODevice::Truncate));
+        file.write("not an encrypted credential");
+    }
+    JobStaller staller;
+    if (refused) {
+        staller.stallNth<QKeychain::ReadPasswordJob>(0);
+    }
+    staller.answerOtherReadsNotFound();
+    CredentialManager manager;
+    manager.mJobStartHook = staller.hook();
+    QObject lateContext;
+
+    const auto answers = startTimedRetrieval(manager, mProfile, mKey, &lateContext);
+    if (refused) {
+        QKeychain::Job* firstRead = staller.waitForStalled();
+        QVERIFY(firstRead);
+        JobStaller::answer(firstRead, QKeychain::AccessDenied, QStringLiteral("synthetic: access refused"));
+    }
+    QVERIFY(waitForAnswer(answers->first));
+    QVERIFY(!answers->first->success);
+    QCOMPARE(answers->outcome, expected);
+}
+
 void CredentialManagerKeychainTest::testALookupThatAnswersInTimeOwesNoLateAnswer()
 {
     JobStaller recorder;
@@ -1723,7 +1809,7 @@ void CredentialManagerKeychainTest::testALookupThatAnswersInTimeOwesNoLateAnswer
     QVERIFY(!answers->first->success);
     QVERIFY2(!answers->timedOut, "a lookup that went all the way down its chain was reported as timed out");
     // Past where the deadline would have fallen
-    QTest::qWait(1500);
+    QTest::qWait(1500ms);
     QCOMPARE(answers->first->count, 1);
     QCOMPARE(answers->late->count, 0);
 }
@@ -1763,7 +1849,7 @@ void CredentialManagerKeychainTest::testALateAnswerFollowsALookupThatTimedOut()
     QVERIFY(!answers->late->success);
     QCOMPARE(answers->late->error,
              refused ? QStringLiteral("Could not read the keychain: synthetic: answered at last") : QStringLiteral("No password in the current format for profile %1").arg(mProfile));
-    QTest::qWait(100);
+    QTest::qWait(100ms);
     QCOMPARE(answers->first->count, 1);
     QCOMPARE(answers->late->count, 1);
 }
@@ -1787,7 +1873,7 @@ void CredentialManagerKeychainTest::testALateAnswerIsDroppedOnceWhatAskedForItHa
     lateContext.reset();
     QTest::ignoreMessage(QtWarningMsg, QRegularExpression(QStringLiteral("after its lookup had timed out, but whatever asked for it has gone")));
     JobStaller::answer(read, QKeychain::AccessDenied, QStringLiteral("synthetic: answered at last"));
-    QTest::qWait(100);
+    QTest::qWait(100ms);
     QCOMPARE(answers->late->count, 0);
 }
 
@@ -1824,6 +1910,49 @@ void CredentialManagerKeychainTest::testALateAnswerHandsOverThePassword()
     QVERIFY(answers->late->success);
     QCOMPARE(answers->late->password, secret);
     QCOMPARE(answers->first->count, 1);
+}
+
+// A keychain write leaves the file as it was, so the copy read there at the deadline can be an
+// older password than the one the stalled read is about to hand over
+void CredentialManagerKeychainTest::testALateAnswerFollowsTheFilesOlderCopy()
+{
+    if (!mStoreAvailable) {
+        QSKIP("credential store unavailable in this environment");
+    }
+    const QString service = expectedServiceName(mProfile, mKey);
+    const QString older = QStringLiteral("older-file-secret");
+    const QString newer = QStringLiteral("newer-keychain-secret");
+    QVERIFY(CredentialManager::storeCredential(mProfile, mKey, older));
+    QVERIFY(writeEntry(service, service, newer));
+
+    JobStaller staller;
+    staller.stallNth<QKeychain::ReadPasswordJob>(0);
+    CredentialManager manager;
+    manager.mJobStartHook = staller.hook();
+    manager.mOperationTimeoutMs = 300;
+    QObject lateContext;
+
+    const auto answers = startTimedRetrieval(manager, mProfile, mKey, &lateContext);
+    const bool answered = waitForAnswer(answers->first);
+    QKeychain::Job* read = staller.waitForStalled();
+    bool lateAnswered = false;
+    if (read) {
+        staller.forget(read);
+        read->start();
+        lateAnswered = waitForAnswer(answers->late);
+    }
+    CredentialManager::removeCredential(mProfile, mKey);
+    deleteEntry(service, service);
+
+    QVERIFY(answered);
+    QVERIFY2(read, "the read meant to stall was never started, so this run tested nothing");
+    QVERIFY2(answers->first->success, qPrintable(answers->first->error));
+    QCOMPARE(answers->first->password, older);
+    QVERIFY2(lateAnswered, "the keychain's newer password never followed the file's older one");
+    QVERIFY(answers->late->success);
+    QCOMPARE(answers->late->password, newer);
+    QCOMPARE(answers->first->count, 1);
+    QCOMPARE(answers->late->count, 1);
 }
 
 QTEST_GUILESS_MAIN(CredentialManagerKeychainTest)
