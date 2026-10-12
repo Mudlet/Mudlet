@@ -61,6 +61,8 @@ struct MapStyle
     enum class Palette {
         // Each room in its environment's color, as on the 2D map
         Environment,
+        // A drafting sheet: rooms filled with the style's background, only faintly tinted by their environment's color, and drawn in its ink
+        Ink,
         // Each room in its environment's color, softened toward a lit pastel: less saturated, and kept from the
         // darkest and lightest
         Soft
@@ -74,9 +76,20 @@ struct MapStyle
     enum class Edges {
         // A rim around each room on the viewed level, so that level stands apart from the others
         ViewedLevelRim,
+        // A thin line around each room's top in the style's ink: solid on the viewed level, dashed and dimmed
+        // with no fill on the others
+        InkOutlines,
         // A base around each room on the viewed level, halfway from the room's color to the background, so the
         // room reads as a block with shaded sides
         ViewedLevelBase
+    };
+
+    enum class Doors {
+        // The 2D map's door strokes in the door's status color
+        Strokes,
+        // A plan's door: a leaf hinged at the side of the opening and the arc it swings through,
+        // swung open for an open door and shut across the opening for a closed or locked one
+        Swings
     };
 
     enum class Glyphs {
@@ -139,6 +152,16 @@ struct MapStyle
     bool dashedStairs = false;
     PostEffects postEffects;
     Glyphs glyphs = Glyphs::RoomSymbols;
+    // The Ink palette's lines and text; invalid for the profile's exit color
+    QColor ink;
+    // Invalid to draw the profile's grid, when it shows one; else the style's own, always shown, with its lines
+    // between the rooms and every fifth one stronger
+    QColor gridColor;
+    // Exit lines' width, as a part of the width the profile's exit size gives
+    float exitWidthFactor = 1.0f;
+    Doors doors = Doors::Strokes;
+    // A faint plate under each level's rooms, which tints the background behind rooms filled with it
+    bool floorPlates = true;
 
     QString displayName() const;
     // Whether this style's player ring and color take the place of the profile's player room marker
@@ -157,6 +180,11 @@ struct MapStyle
     QColor backgroundColor(const QColor& profileBackground) const;
     bool roundRooms(bool profileRoundRooms) const;
     QFont labelFont(const QFont& mapSymbolFont) const;
+    // roomSymbolColor is the room's own, invalid unless one was set; drawnRoomColor is roomColor()'s
+    QColor symbolColor(const QColor& roomSymbolColor, const QColor& drawnRoomColor) const;
+    QColor exitColor(const QColor& profileExitColor) const;
+    // The player's room, where its marker could not be made
+    QColor playerRoomColor() const;
 
     static QString defaultId();
     // In the order the preferences list them

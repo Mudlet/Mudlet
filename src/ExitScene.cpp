@@ -38,6 +38,9 @@ namespace {
 constexpr int scmDirections[] = {DIR_NORTH, DIR_NORTHEAST, DIR_EAST, DIR_SOUTHEAST, DIR_SOUTH, DIR_SOUTHWEST, DIR_WEST, DIR_NORTHWEST, DIR_UP, DIR_DOWN, DIR_IN, DIR_OUT};
 // The 2D map's door glyphs are sized by a room's spacing across plus its spacing down
 constexpr qreal scmDoorRoomSpan = 2.0;
+// A door swing's opening, and how far along its exit line from the room's center, in rooms' spacing
+constexpr qreal scmDoorSwingWidth = 0.3;
+constexpr qreal scmDoorSwingInset = 0.28;
 constexpr int scmDiscSides = 16;
 // Qt's dash stroker's limit, QDashStroker::repetitionLimit()
 constexpr qreal scmMaxDashRepetitions = 10000.0;
@@ -93,6 +96,8 @@ private:
     void arrowhead(const QVector3D& tip, const QVector3D& along, float length, float halfWidth, const QColor& color, int level, const QColor& outline = QColor());
     void disc(const QVector3D& center, float radius, const QColor& color, int level);
     void door(const TRoom& room, const QString& key, const QVector3D& from, const QVector3D& to, int level);
+    // Along the exit line from its start, across it to the side
+    void doorSwing(int status, const QVector3D& from, const QVector3D& along, const QVector3D& side, float length, float height, int level);
     void customLine(const TRoom& room, const QString& key, const QList<QPointF>& points);
 
     const TMap& mMap;
@@ -253,12 +258,48 @@ void Builder::door(const TRoom& room, const QString& key, const QVector3D& from,
     const auto place = [&](const QPointF& point) {
         return from + along * static_cast<float>(point.x()) + side * static_cast<float>(point.y());
     };
-    const auto [strokeA, strokeB] = ExitAppearance::doorStrokes(QLineF(0.0, 0.0, length, 0.0), scmDoorRoomSpan);
-    const QColor color = ExitAppearance::doorColor(status);
     // A little taller than the line, so that it shows over it
     const float height = mHeight * 1.2f;
+    if (mOptions.doorSwings) {
+        doorSwing(status, from, along, side, length, height, level);
+        return;
+    }
+    const auto [strokeA, strokeB] = ExitAppearance::doorStrokes(QLineF(0.0, 0.0, length, 0.0), scmDoorRoomSpan);
+    const QColor color = ExitAppearance::doorColor(status);
     for (const QLineF& stroke : {strokeA, strokeB}) {
         bar(place(stroke.p1()), place(stroke.p2()), mWidth * 1.5f, height, color, level);
+    }
+}
+
+void Builder::doorSwing(const int status, const QVector3D& from, const QVector3D& along, const QVector3D& side, const float length, const float height, const int level)
+{
+    const auto place = [&](const QPointF& point) {
+        return from + along * static_cast<float>(point.x()) + side * static_cast<float>(point.y());
+    };
+    // Just past a room's edge on a line from its center, and about as wide as a room
+    const qreal opening = qMin(scmDoorSwingWidth, length * 0.8);
+    const qreal jamb = qMin(scmDoorSwingInset, length * 0.55);
+    const QPointF hinge(jamb, -opening / 2.0);
+    // Halfway to the ink, so the status still shows without the plan turning gaudy
+    const QColor statusColor = ExitAppearance::doorColor(status);
+    const QColor ink = mOptions.exitColor.isValid() ? mOptions.exitColor : statusColor;
+    const QColor color = QColor::fromRgbF((statusColor.redF() + ink.redF()) / 2.0f, (statusColor.greenF() + ink.greenF()) / 2.0f, (statusColor.blueF() + ink.blueF()) / 2.0f);
+    const bool shut = status != 1;
+    const QPointF leafEnd = shut ? QPointF(jamb, opening / 2.0) : QPointF(jamb + opening, -opening / 2.0);
+    bar(place(hinge), place(leafEnd), mWidth * 2.0f, height, color, level);
+    if (status == 3) {
+        // A bolt across the shut leaf
+        const QPointF middle(jamb, 0.0);
+        bar(place(middle - QPointF(opening / 4.0, 0.0)), place(middle + QPointF(opening / 4.0, 0.0)), mWidth * 2.0f, height, color, level);
+    }
+    // The leaf's sweep, from where it swings open to the far side of the opening
+    constexpr int arcSegments = 8;
+    QPointF previous = QPointF(jamb + opening, -opening / 2.0);
+    for (int segment = 1; segment <= arcSegments; ++segment) {
+        const qreal angle = M_PI / 2.0 * segment / arcSegments;
+        const QPointF point = hinge + QPointF(std::cos(angle), std::sin(angle)) * opening;
+        bar(place(previous), place(point), mWidth * 1.2f, height, color, level);
+        previous = point;
     }
 }
 

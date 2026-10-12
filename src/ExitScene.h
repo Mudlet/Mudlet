@@ -45,6 +45,8 @@ struct Options
     // In and out exits drawn as a short stub from their room, rather than all the way
     bool inOutStubs = false;
     bool largeAreaExitArrows = false;
+    // Doors drawn as a plan's door swing, as MapStyle::Doors::Swings says, rather than the 2D map's strokes
+    bool doorSwings = false;
     // Exits straight up or down drawn dashed
     bool dashedStairs = false;
     // Only where area exits can be clicked, with nothing to draw, for picking without the cost of the whole scene

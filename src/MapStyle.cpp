@@ -59,6 +59,21 @@ QList<MapStyle> registeredStyles()
     tiles.dashedStairs = true;
     styles.append(tiles);
 
+    MapStyle blueprint;
+    blueprint.id = qsl("blueprint");
+    blueprint.palette = MapStyle::Palette::Ink;
+    blueprint.roomFlattening = 16.0f;
+    blueprint.edges = MapStyle::Edges::InkOutlines;
+    blueprint.lit = false;
+    blueprint.background = QColor(18, 60, 110);
+    blueprint.ink = QColor(225, 242, 255);
+    blueprint.gridColor = QColor(150, 200, 255, 38);
+    blueprint.labelFontFamily = qsl("Bitstream Vera Sans");
+    blueprint.exitWidthFactor = 0.5f;
+    blueprint.doors = MapStyle::Doors::Swings;
+    blueprint.floorPlates = false;
+    styles.append(blueprint);
+
     return styles;
 }
 } // namespace
@@ -69,6 +84,10 @@ QString MapStyle::displayName() const
         //: Name of the 3D map style that draws rooms as lit blocks in their environment colors, chosen in the Mapper preferences
         return QCoreApplication::translate("MapStyle", "Tiles");
     }
+    if (id == qsl("blueprint")) {
+        //: Name of the 3D map style that draws rooms as thin white outlines on a deep blue drafting sheet, chosen in the Mapper preferences
+        return QCoreApplication::translate("MapStyle", "Blueprint");
+    }
     return id;
 }
 
@@ -77,12 +96,43 @@ QColor MapStyle::roomColor(const QColor& environmentColor) const
     switch (palette) {
     case Palette::Environment:
         return environmentColor;
+    case Palette::Ink: {
+        // Enough of the environment's color to tell areas of the plan apart, not so much that the ink stops standing out
+        constexpr float tint = 0.18f;
+        const QColor paper = background.isValid() ? background : QColor(Qt::black);
+        return QColor::fromRgbF(paper.redF() + (environmentColor.redF() - paper.redF()) * tint,
+                                paper.greenF() + (environmentColor.greenF() - paper.greenF()) * tint,
+                                paper.blueF() + (environmentColor.blueF() - paper.blueF()) * tint);
+    }
     case Palette::Soft: {
         const QColor hsl = environmentColor.toHsl();
         return QColor::fromHslF(std::max(hsl.hslHueF(), 0.0f), hsl.hslSaturationF() * 0.7f, 0.25f + hsl.lightnessF() * 0.6f, hsl.alphaF());
     }
     }
     return environmentColor;
+}
+
+QColor MapStyle::symbolColor(const QColor& roomSymbolColor, const QColor& drawnRoomColor) const
+{
+    // A room's own symbol color was picked against its environment's color, which the ink palette does not fill it with
+    if (palette == Palette::Ink && ink.isValid()) {
+        return ink;
+    }
+    return RoomAppearance::symbolColor(roomSymbolColor, drawnRoomColor);
+}
+
+QColor MapStyle::exitColor(const QColor& profileExitColor) const
+{
+    return ink.isValid() ? ink : profileExitColor;
+}
+
+QColor MapStyle::playerRoomColor() const
+{
+    if (palette == Palette::Ink) {
+        // Red would sink into the blue of a drafting sheet
+        return QColor(255, 190, 60);
+    }
+    return QColor(Qt::red);
 }
 
 QColor MapStyle::backgroundColor(const QColor& profileBackground) const
