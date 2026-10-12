@@ -399,6 +399,38 @@ private slots:
         const bool realStillRegistered = host->windowRegistry().hasSubConsole(realWindow);
         host->deleteMiniConsole(realWindow);
 
+        // The other kinds go too, so the real view can make each name afresh as a widget of its own
+        host->setMainConsoleView(nullptr);
+        const bool ranKinds = host->getLuaInterpreter()->compileAndExecuteScript(qsl(R"lua(
+nullViewKinds = table.concat({
+  tostring(createMiniConsole("nullViewMini", 0, 0, 10, 10)),
+  tostring(openUserWindow("nullViewWindow")),
+  tostring(createMiniConsole("nullViewWindow", "nullViewNested", 0, 0, 10, 10))
+}, ",")
+createBuffer("nullViewBuffer")
+)lua"));
+        const QStringList nullViewNames{qsl("nullViewMini"), qsl("nullViewWindow"), qsl("nullViewNested"), qsl("nullViewBuffer")};
+        const auto registered = [host](const QString& name) {
+            return host->windowRegistry().hasSubConsole(name) || host->windowRegistry().hasDockWidget(name);
+        };
+        QStringList neverRegistered;
+        for (const QString& name : nullViewNames) {
+            if (!registered(name)) {
+                neverRegistered << name;
+            }
+        }
+        host->setMainConsoleView(console);
+        QStringList stillRegistered;
+        for (const QString& name : nullViewNames) {
+            if (registered(name)) {
+                stillRegistered << name;
+            }
+        }
+        const auto [remade, remadeMessage] = host->createMiniConsole(QString(), qsl("nullViewMini"), 0, 0, 10, 10);
+        const TConsole* remadeWidget = console->subConsoleWidget(qsl("nullViewMini"));
+        const bool remadeRegistered = remadeWidget && host->windowRegistry().subConsoleModel(qsl("nullViewMini")) == &remadeWidget->model();
+        host->deleteMiniConsole(qsl("nullViewMini"));
+
         QVERIFY(ran);
         lua_State* L = host->getLuaInterpreter()->getLuaGlobalState();
         lua_getglobal(L, "nullViewMade");
@@ -410,6 +442,16 @@ private slots:
         QVERIFY2(!realDeletedWhileDetached, "The null view reported deleting a window it has no record of.");
         QVERIFY(!realDeleteMessage.isEmpty());
         QVERIFY(realStillRegistered);
+
+        QVERIFY(ranKinds);
+        lua_getglobal(L, "nullViewKinds");
+        const QString nullViewKinds = QString::fromUtf8(lua_tostring(L, -1));
+        lua_pop(L, 1);
+        QCOMPARE(nullViewKinds, qsl("true,true,true"));
+        QVERIFY2(neverRegistered.isEmpty(), qPrintable(qsl("The null view did not register windows it made: %1").arg(neverRegistered.join(qsl(", ")))));
+        QVERIFY2(stillRegistered.isEmpty(), qPrintable(qsl("Windows the null view made are still registered once a real view has attached: %1").arg(stillRegistered.join(qsl(", ")))));
+        QVERIFY2(remade, qPrintable(remadeMessage));
+        QVERIFY2(remadeRegistered, "The real view did not register a widget of its own for a name the null view had used.");
     }
 
     // What scripts are told while the profile has no view. The label is made first, so that its answers
