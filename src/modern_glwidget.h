@@ -32,6 +32,7 @@
 #endif
 
 #include <QElapsedTimer>
+#include <QHash>
 #include <QMatrix4x4>
 #include <QVector3D>
 #include <QQuaternion>
@@ -54,6 +55,8 @@
 class Host;
 class QFontMetricsF;
 class QLabel;
+class T2DMap;
+class TCommandLine;
 class TMap;
 class TRoom;
 struct MapInfoProperties;
@@ -88,6 +91,10 @@ public:
     const QString& failureMessage() const { return mFailureMessage; }
     // A grid-mode area is always drawn looking straight down with north up
     bool cameraFixedByGridMode() const;
+    // The mapper's 2D map, whose room selection, speedwalk and context menu this view shares
+    void setCompanion2DMap(T2DMap* map);
+    // The room drawn under this point of the view, or 0
+    int roomAt(const QPoint& position);
 
     QSize minimumSizeHint() const override;
     QSize sizeHint() const override;
@@ -127,6 +134,8 @@ signals:
     void resetPlayerIconSliders(int height, int rotX, int rotY, int rotZ, int scale);
     // Slider positions for the camera as it now is, in the ranges of the mapper's 3D controls
     void cameraControlsChanged(int scale, int tilt, int roll, int azimuth);
+    // The user asked to see this room on the 2D map, or this view's center when roomId is 0
+    void editIn2DRequested(int roomId);
 
 private slots:
     void onCameraAnimationTick();
@@ -138,8 +147,12 @@ protected:
     void mousePressEvent(QMouseEvent* event) override;
     void mouseMoveEvent(QMouseEvent* event) override;
     void mouseReleaseEvent(QMouseEvent* event) override;
+    void mouseDoubleClickEvent(QMouseEvent* event) override;
     void keyPressEvent(QKeyEvent* event) override;
+    void focusInEvent(QFocusEvent* event) override;
+    void focusOutEvent(QFocusEvent* event) override;
     void showEvent(QShowEvent* event) override;
+    void hideEvent(QHideEvent* event) override;
     bool event(QEvent* event) override;
     void resizeEvent(QResizeEvent* event) override;
     void paintEvent(QPaintEvent* event) override;
@@ -244,6 +257,23 @@ private:
     // A distance a script asked for since the last paint wins over framing a newly shown area
     bool mDistanceRequested = false;
 
+    QPointer<T2DMap> mp2DMap;
+    QPoint mPressPosition;
+    // A click that did not pick its room on the press does so on the release, unless it became a drag
+    bool mClickPending = false;
+    // The button of a press whose sysMapWindowMousePressEvent waits for its selection to settle, on the release or the drag
+    Qt::MouseButton mPressEventButton = Qt::NoButton;
+    // Only focus reached from the keyboard, not by a click, gives the view the keys it pans and zooms with
+    bool mKeysNavigate = false;
+    struct SavedCamera
+    {
+        float distance = 0.0f;
+        float tilt = 0.0f;
+        float azimuth = 0.0f;
+        float roll = 0.0f;
+    };
+    QHash<int, SavedCamera> mSavedCameras;
+
     // Private methods for modern OpenGL
     void updateMatrices();
     void renderRooms();
@@ -275,6 +305,20 @@ private:
     void frameRooms(qreal zoom);
     void emitCameraControls();
     void setOrientationKeepingRoll(float theta, float phi);
+    bool levelShown(int z) const;
+    void zoomBySteps(float steps);
+    void panByRooms(int right, int up);
+    void selectRoom(int roomId, Qt::KeyboardModifiers modifiers);
+    void showContextMenu(const QPoint& position);
+    void raiseMousePressEvent();
+    void raisePendingMousePressEvent();
+    TCommandLine* commandLine() const;
+    QString roomToolTip(int roomId) const;
+    GLuint selectionTexture();
+    void saveCamera();
+    bool restoreCamera(bool distanceOnly);
+    void loadSavedCameras();
+    void writeSavedCameras() const;
 };
 
 #endif // MUDLET_MODERN_GLWIDGET_H

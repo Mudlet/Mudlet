@@ -19,7 +19,9 @@
 
 #include "CameraController.h"
 
+#include <QPointF>
 #include <QVector2D>
+#include <QVector4D>
 #include <QtMath>
 
 CameraController::CameraController()
@@ -239,6 +241,27 @@ float CameraController::worldUnitsPerPixel(const QVector3D& point) const
     const float viewUnitsPerPixel = 2.0f * depth * std::tan(qDegreesToRadians(scmFieldOfView / 2.0f)) / static_cast<float>(qMax(1, mViewportHeight));
     // The view matrix shrinks the map tenfold
     return viewUnitsPerPixel * 10.0f;
+}
+
+std::pair<QVector3D, QVector3D> CameraController::rayThroughPixel(const QPointF& pixel) const
+{
+    const float ndcX = 2.0f * static_cast<float>(pixel.x()) / static_cast<float>(qMax(1, mViewportWidth)) - 1.0f;
+    const float ndcY = 1.0f - 2.0f * static_cast<float>(pixel.y()) / static_cast<float>(qMax(1, mViewportHeight));
+    const QMatrix4x4 inverse = (mProjectionMatrix * mViewMatrix * mModelMatrix).inverted();
+    const QVector3D nearPoint = inverse.map(QVector3D(ndcX, ndcY, -1.0f));
+    const QVector3D farPoint = inverse.map(QVector3D(ndcX, ndcY, 1.0f));
+    return {nearPoint, (farPoint - nearPoint).normalized()};
+}
+
+std::optional<QPointF> CameraController::pixelForPoint(const QVector3D& point) const
+{
+    const QVector4D clip = mProjectionMatrix * mViewMatrix * mModelMatrix * QVector4D(point, 1.0f);
+    if (clip.w() <= 0.0f) {
+        return std::nullopt;
+    }
+    const float ndcX = clip.x() / clip.w();
+    const float ndcY = clip.y() / clip.w();
+    return QPointF((ndcX + 1.0f) / 2.0f * static_cast<float>(mViewportWidth), (1.0f - ndcY) / 2.0f * static_cast<float>(mViewportHeight));
 }
 
 void CameraController::calculateViewMatrix()
