@@ -112,6 +112,19 @@ private:
         runEventLoop(flightTime + 400ms);
     }
 
+    // A ~0.3s quiet round trip, for a method to start from or to check. A reading
+    // is dropped when the event loop misses a beat, and an oversubscribed runner
+    // can delay one on its own; that is worth a retry, not a failure.
+    double measureRoughlyAThirdOfASecond()
+    {
+        double measured = 0.0;
+        for (int attempt = 0; attempt < 3 && !(measured > 0.2 && measured < 0.6); ++attempt) {
+            measureQuietRoundTrip(300ms);
+            measured = latency();
+        }
+        return measured;
+    }
+
 private slots:
     void initTestCase()
     {
@@ -175,14 +188,7 @@ private slots:
     // pass the rest of the file by never publishing a reading at all.
     void reportsRoundTripMeasuredWhileResponsive()
     {
-        // A reading is dropped when the event loop misses a beat, and an
-        // oversubscribed runner can delay one on its own; that is worth a
-        // retry, not a failure.
-        double measured = 0.0;
-        for (int attempt = 0; attempt < 3 && !(measured > 0.2 && measured < 0.6); ++attempt) {
-            measureQuietRoundTrip(300ms);
-            measured = latency();
-        }
+        const double measured = measureRoughlyAThirdOfASecond();
         QVERIFY2(measured > 0.2 && measured < 0.6, qPrintable(qsl("A 0.3s round trip taken with the event loop running should be reported as roughly that, got %1s").arg(measured)));
     }
 
@@ -191,8 +197,7 @@ private slots:
     // network's, and must not be published as the ping.
     void dropsRoundTripMeasuredAcrossAStall()
     {
-        measureQuietRoundTrip(300ms);
-        const double beforeStall = latency();
+        const double beforeStall = measureRoughlyAThirdOfASecond();
         QVERIFY2(beforeStall > 0.2 && beforeStall < 0.6, qPrintable(qsl("Setup failed: expected a ~0.3s reading to start from, got %1s").arg(beforeStall)));
 
         sendCommand();
@@ -214,8 +219,7 @@ private slots:
     // however long afterwards - being timed as that command's reply.
     void abandonsAMeasurementTheGameNeverAnswers()
     {
-        measureQuietRoundTrip(300ms);
-        const double beforeSilence = latency();
+        const double beforeSilence = measureRoughlyAThirdOfASecond();
         QVERIFY2(beforeSilence > 0.2 && beforeSilence < 0.6, qPrintable(qsl("Setup failed: expected a ~0.3s reading to start from, got %1s").arg(beforeSilence)));
 
         sendCommand();
@@ -253,8 +257,7 @@ private slots:
     // connection: the next one's first packet is not its reply.
     void abandonsAMeasurementWhenTheConnectionGoesAway()
     {
-        measureQuietRoundTrip(300ms);
-        const double beforeReconnect = latency();
+        const double beforeReconnect = measureRoughlyAThirdOfASecond();
         QVERIFY2(beforeReconnect > 0.2 && beforeReconnect < 0.6, qPrintable(qsl("Setup failed: expected a ~0.3s reading to start from, got %1s").arg(beforeReconnect)));
 
         sendCommand();

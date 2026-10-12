@@ -2007,7 +2007,7 @@ void dlgConnectionProfiles::slot_setCustomIcon()
     lastDir = QFileInfo(imageLocation).absolutePath();
     settings.setValue("lastFileDialogLocation", lastDir);
 
-    const bool success = mudlet::self()->setProfileIcon(profileName, imageLocation).first;
+    const bool success = MudletApp::setProfileIcon(profileName, imageLocation).first;
     if (!success) {
         return;
     }
@@ -2045,7 +2045,7 @@ void dlgConnectionProfiles::slot_resetCustomIcon()
         return;
     }
 
-    const bool success = mudlet::self()->resetProfileIcon(profileName).first;
+    const bool success = MudletApp::resetProfileIcon(profileName).first;
     if (!success) {
         return;
     }
@@ -3114,7 +3114,7 @@ void dlgConnectionProfiles::slot_loadPasswordAsync()
         credManager->retrievePassword(
                 profile_name,
                 "character",
-                [this, credManager, profile_name](bool success, const QString& retrievedPassword, const QString& errorMessage, bool) {
+                [this, credManager, profile_name](bool success, const QString& retrievedPassword, const QString& errorMessage, CredentialManager::ReadOutcome) {
                     passwordRetrieved(profile_name, success, retrievedPassword, errorMessage);
 
                     credManager->deleteLater();
@@ -3182,12 +3182,14 @@ void dlgConnectionProfiles::passwordArrivedLate(const QString& profileName, bool
         return;
     }
 
-    // An empty field has nothing in it to lose, while a password typed in the meantime is the user's
+    // A password typed in the meantime is the user's; anything else came from a store, and may be the
+    // encrypted file's copy answered at the deadline, which a keychain write leaves older
     const bool profileStillSelected = listWidget_profiles->currentItem() && listWidget_profiles->currentItem()->data(csmNameRole).toString() == profileName;
-    if (!password.isEmpty() && profileStillSelected && character_password_entry->text().isEmpty()) {
+    const bool typedInMeantime = character_password_entry->isModified() && !character_password_entry->text().isEmpty();
+    if (!password.isEmpty() && profileStillSelected && !typedInMeantime) {
         const QSignalBlocker blocker(character_password_entry);
         character_password_entry->setText(password);
-        qDebug() << "dlgConnectionProfiles: Credential retrieval that had timed out was answered, filling the empty password field for" << profileName;
+        qDebug() << "dlgConnectionProfiles: Credential retrieval that had timed out was answered, filling the password field for" << profileName;
     }
 }
 

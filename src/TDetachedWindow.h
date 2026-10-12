@@ -70,6 +70,7 @@ public:
     void refreshTabBar();                             // Update tab text to account for CDC identifiers
     void updateWindowMenu();                          // Update the window menu with current window list
     void switchToProfile(const QString& profileName); // Switch to a specific profile tab
+    void markTabActivity(const QString& profileName, bool isLowerPriorityChange);
     void refreshAfterApplicationStyleChange();
 
     // Dock widget management methods
@@ -185,6 +186,7 @@ private slots:
 private:
     void setupUI();
     void createMenus();
+    void showMuteState();
     void createToolBar();
     void connectToolBarActions();
     void updateTabIndicator(int tabIndex = -1);                            // -1 means current tab
@@ -261,6 +263,8 @@ private:
     QAction* mpMenuPreferencesAction{nullptr};
     QAction* mpMenuToggleTimeStampAction{nullptr};
     QAction* mpMenuMuteMediaAction{nullptr};
+    QAction* mpMenuMuteAPIAction{nullptr};
+    QAction* mpMenuMuteGameAction{nullptr};
     QAction* mpMenuMultiViewAction{nullptr};
 
     // Toolbar buttons

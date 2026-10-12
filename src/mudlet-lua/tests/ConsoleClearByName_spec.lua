@@ -139,17 +139,18 @@ describe("Tests that clearWindow() finds its console by name", function()
           assert.are.same({"clear line 3"}, getLines(sibling, getLastLineNumber(sibling) - 1, getLastLineNumber(sibling)))
         end)
 
-        it("leaves the user cursor and the selection where they were", function()
+        it("puts the user cursor on the line left and keeps the selection, no longer valid", function()
           clearWindow(window)
           fill(window, 3)
           moveCursor(window, 0, 2)
           assert.are.equal(2, selectString(window, "ear", 1))
           clearWindow(window)
-          assert.are.equal(2, getLineNumber(window))
+          assert.are.equal(0, getLineNumber(window))
           assert.are.same({nil, "the selection is no longer valid"}, {getSelection(window)})
-          -- a write after the clear still lands on the one line left
           echo(window, "after")
           assert.are.same({"after"}, getLines(window, 0, 1))
+          assert.are.equal("after", getCurrentLine(window))
+          assert.are.equal(1, selectString(window, "fter", 1))
         end)
 
         if isBuffer then

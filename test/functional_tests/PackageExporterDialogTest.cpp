@@ -968,6 +968,60 @@ private slots:
         QVERIFY2(QFileInfo::exists(qsl("%1/%2/.mudlet/Icon/badge.png").arg(profileHome(), rebuiltName)), "the icon file did not survive the round trip");
     }
 
+    // The dialog is not modal, so the editor or a script can delete an item it
+    // lists while it is open; that item is then simply not there to export.
+    void test_itemsDeletedWhileTheDialogIsOpenAreLeftOutOfTheExport()
+    {
+        const QString packageName = packageNamed(qsl("exporter-deleted-items"));
+        makeTrigger(qsl("exporter surviving trigger"), nullptr);
+        auto* checkedTrigger = makeTrigger(qsl("exporter checked then deleted"), nullptr);
+        auto* uncheckedTrigger = makeTrigger(qsl("exporter unchecked then deleted"), nullptr);
+        auto* checkedAlias = makeAlias(qsl("exporter alias checked then deleted"));
+
+        openExporter();
+        QVERIFY(checkItem(triggersTop(), qsl("exporter surviving trigger")));
+        QVERIFY(checkItem(triggersTop(), qsl("exporter checked then deleted")));
+        QVERIFY(checkItem(aliasesTop(), qsl("exporter alias checked then deleted")));
+        delete checkedTrigger;
+        delete uncheckedTrigger;
+        delete checkedAlias;
+
+        QVERIFY2(runExport(packageName), "the export never finished");
+        QVERIFY2(QFileInfo::exists(packagePath(packageName)), qPrintable(qsl("No package file was written. The dialog said: \"%1\"").arg(infoLabel()->text())));
+        settleSaves();
+        auto [installed, reason] = mpHost->installPackage(packagePath(packageName), enums::PackageModuleType::Package);
+        QVERIFY2(installed, qPrintable(reason));
+        QCOMPARE(triggerCount(qsl("exporter surviving trigger")), 2);
+        QCOMPARE(triggerCount(qsl("exporter checked then deleted")), 0);
+        QCOMPARE(aliasCount(qsl("exporter alias checked then deleted")), 0);
+    }
+
+    void test_choosingAnInstalledPackageAfterOneOfItsItemsWasDeletedChecksTheRest()
+    {
+        const QString existingPackage = qsl("exporter-shrunk");
+        auto* master = makeTrigger(existingPackage, nullptr, true);
+        master->mPackageName = existingPackage;
+        auto* remaining = makeTrigger(qsl("exporter remaining member"), master);
+        remaining->mPackageName = existingPackage;
+        // Outside the master folder, so checking the folder does not check it too
+        auto* deleted = makeTrigger(qsl("exporter deleted member"), nullptr);
+        deleted->mPackageName = existingPackage;
+        mpHost->mInstalledPackages << existingPackage;
+        mpHost->mPackageInfo[existingPackage] = QMap<QString, QString>{{qsl("mpackage"), existingPackage}};
+
+        openExporter();
+        delete deleted;
+        auto* packageList = comboNamed(qsl("packageList"));
+        const int index = packageList->findText(existingPackage);
+        QVERIFY2(index > 0, "the installed package was not offered in the dropdown");
+        packageList->setCurrentIndex(index);
+
+        auto* masterItem = itemNamed(triggersTop(), existingPackage);
+        QVERIFY(masterItem);
+        QCOMPARE(itemNamed(masterItem, qsl("exporter remaining member"))->checkState(0), Qt::Checked);
+        QCOMPARE(itemNamed(triggersTop(), qsl("exporter deleted member"))->checkState(0), Qt::Unchecked);
+    }
+
     // Dependencies are moved between the list of what is available and the list
     // of what this package needs, and the Delete key is the way back.
     void test_dependenciesMoveBetweenTheAvailableAndRequiredLists()

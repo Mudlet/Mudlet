@@ -71,6 +71,14 @@ if [ ! -d "${QT_DIR}" ]; then
     linux_gcc_64 -O /opt/qt -m qt5compat qtmultimedia qtspeech)
 fi
 
+# rcc stamps every resource with its file's mtime, which differs between
+# checkouts; pinned, the font and image resources share ccache hits too. Not
+# SOURCE_DATE_EPOCH: GCC would apply that to __DATE__, and the updater reads the
+# real build time.
+if [ -n "${CLAUDE_ENV_FILE:-}" ]; then
+  echo "export QT_RCC_SOURCE_DATE_OVERRIDE=1" >> "${CLAUDE_ENV_FILE}"
+fi
+
 # Test-suite and UI-driving dependencies: xvfb and xcb libraries for the
 # busted run (the aqt Qt's xcb platform needs libxcb-cursor0 and
 # libxcb-shape0, which Ubuntu's own Qt would have pulled in), gstreamer for

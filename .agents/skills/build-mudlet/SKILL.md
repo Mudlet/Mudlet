@@ -89,7 +89,7 @@ on every platform and `USE_SANITIZER=Address` on Linux, and a `Mudlet-*` tag set
 `CMAKE_BUILD_TYPE=Release` with `USE_SANITIZER` empty and `SENTRY_SEND_DEBUG=1`. So
 `USE_SANITIZER=Address cmake --preset ci-linux` reproduces the Linux PR job; `SENTRY_DSN` is a
 repository secret and cannot be matched locally. `ci-macos-no-tests` is `ci-macos` with
-`BUILD_TESTING=OFF`, for the Intel job that ships a binary and leaves the testing to the arm64
+`BUILD_TESTING=OFF`, for the Intel PTB and release job, which leaves the testing to the arm64
 one. `ci-windows` builds into `build-$MSYSTEM/`, but the rest build into `../b/ninja` — beside
 the checkout, not inside it, which is where the workflows' ctest and packaging steps look — so
 reach for them to investigate a CI failure, not for day-to-day work. They have no test presets:
@@ -244,6 +244,17 @@ bounded job count, which is why the presets use it. In a pre-existing Makefiles 
 ccache is installed. A full cache evicts objects continuously, so switching branches can trigger a
 near-full rebuild. Run `ccache -s`; if `Cache size` has reached `Max cache size`, raise it with
 `ccache -M <n>G`.
+
+Worktrees share that cache: unless you have set a `base_dir` yourself, CMake sets one per
+checkout, so paths inside each checkout reach ccache relative. The Debug presets (`-g`) also need
+`ccache --set-config=hash_dir=false`, and exporting `QT_RCC_SOURCE_DATE_OVERRIDE=1` wherever you
+build lets the generated resource sources, which otherwise carry each checkout's file mtimes, match
+too; the remote session hook does both. `base_dir` rewrites path arguments but not a path inside a
+`-D` value, so a define carrying `CMAKE_SOURCE_DIR` or a build-tree path makes every file it reaches
+miss in every other checkout: put such defines on the source files that read them
+(`set_property(SOURCE …)`), not on a whole target. Under Clang, targets with a precompiled header
+share nothing between checkouts: the header records its build tree's path and fails to load from
+another, so `cmake/PrecompiledHeaders.cmake` turns `base_dir` off for those targets.
 
 **Sanitizers are on by default** on every non-Windows build, regardless of build type
 (`src/cmake/EnableSanitizers.cmake` defaults `USE_SANITIZER` to `address`). They cost both compile

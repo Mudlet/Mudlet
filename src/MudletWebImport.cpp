@@ -397,25 +397,3 @@ MudletWebImport::Result MudletWebImport::importArchive(const QString& archivePat
     }
     return result;
 }
-
-QString MudletWebImport::locateModuleFile(const QString& profileHome, const QString& module, const QString& filePath)
-{
-    const QFileInfo stored(filePath);
-    if (filePath.isEmpty() || (stored.isAbsolute() && stored.exists())) {
-        return filePath;
-    }
-    // Mudlet Web lists a module by its place inside the profile, and another
-    // computer by a path that only exists there - either way the file came along
-    const QString portable = QString(filePath).replace(QLatin1Char('\\'), QLatin1Char('/'));
-    QStringList candidates;
-    if (stored.isRelative()) {
-        candidates.append(qsl("%1/%2").arg(profileHome, portable));
-    }
-    candidates.append(qsl("%1/%2/%3").arg(profileHome, module, portable.section(QLatin1Char('/'), -1)));
-    for (const auto& candidate : std::as_const(candidates)) {
-        if (QFileInfo(candidate).isFile()) {
-            return QDir::cleanPath(candidate);
-        }
-    }
-    return filePath;
-}

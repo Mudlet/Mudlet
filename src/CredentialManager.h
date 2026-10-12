@@ -75,8 +75,11 @@ public:
     // Callback types for asynchronous operations
     using CredentialCallback = std::function<void(bool success, const QString& errorMessage)>;
     using CredentialRetrievalCallback = std::function<void(bool success, QString password, const QString& errorMessage)>;
-    // timedOut: it was the lookup's deadline that answered, not the keychain
-    using TimedRetrievalCallback = std::function<void(bool success, QString password, const QString& errorMessage, bool timedOut)>;
+    // Why a read came back without a password; success is always outcome == Found. After NothingStored the
+    // store has answered, so a caller may remove or replace what it holds, which it cannot after Unreadable
+    // (also a read refused before it started) or TimedOut, the lookup's deadline answering.
+    enum class ReadOutcome { Found, NothingStored, Unreadable, TimedOut };
+    using TimedRetrievalCallback = std::function<void(bool success, QString password, const QString& errorMessage, ReadOutcome outcome)>;
     using AvailabilityCallback = std::function<void(bool available, const QString& message)>;
 
     // How far a removal or an existence check reaches when the storage preference puts credentials
@@ -97,9 +100,9 @@ public:
     void retrievePassword(const QString& profileName, const QString& key, CredentialRetrievalCallback callback);
     // For a caller that can still use a password the keychain hands over after the lookup gave up
     // on it, as it does when the user answers an access or unlock prompt late. callback is answered
-    // exactly once, as above. When that answer is the deadline's, lateCallback is answered once
-    // more with what the read the lookup was left waiting on finds, as long as lateContext still
-    // exists by then. That read only: the places the lookup had not reached yet stay unread.
+    // exactly once, as above. When that answer is the deadline's - a timeout, or the encrypted
+    // file's copy read then - lateCallback is answered once more with what the read the lookup was
+    // left waiting on finds, as long as lateContext still exists by then. That read only: the places the lookup had not reached yet stay unread.
     // scope EveryStore reads the keychain even when the preference files the credential in the
     // profile, for a copy stored there before the player chose it.
     void retrievePassword(const QString& profileName,
@@ -163,7 +166,9 @@ private:
     static bool isValidKeyName(const QString& key);
     static bool storeCredentialToFile(const QString& profileName, const QString& key, const QString& credential);
     bool storeCredentialToFileForThisOperation(const QString& profileName, const QString& key, const QString& credential);
-    static QString retrieveCredentialFromFile(const QString& profileName, const QString& key);
+    // unreadable, when given, is set when the file could not be consulted: no valid path, or a file there
+    // that cannot be opened or decrypted
+    static QString retrieveCredentialFromFile(const QString& profileName, const QString& key, bool* unreadable = nullptr);
     static bool removeCredentialFromFile(const QString& profileName, const QString& key);
 
     // One place a lookup may find the password: a keychain entry, or the encrypted file. recover
@@ -203,6 +208,8 @@ private:
         // refusal after it is that entry's own, however many of them there are, and the chain runs
         // to the end: the password may be in a layout behind them.
         bool storeHasAnswered = false;
+        // The encrypted file could not be consulted, so finding nothing is not proof of absence
+        bool fileUnreadable = false;
         // Set when the store has refused scmRefusalsBeforeGivingUpOnTheStore reads in a row without
         // answering any: every remaining keychain read would ask it the same question, and be
         // refused the same way, at the cost of another prompt. Only the file is read from then on.
@@ -214,7 +221,7 @@ private:
     };
     using LookupPtr = std::shared_ptr<Lookup>;
 
-    void finishLookup(const LookupPtr& lookup, bool success, QString password, const QString& errorMessage, bool timedOut = false);
+    void finishLookup(const LookupPtr& lookup, QString password, const QString& errorMessage, ReadOutcome outcome);
     void runLookupStage(const LookupPtr& lookup, std::size_t index);
     // When the store last refused a profile's reads before answering any of them. Kept per profile
     // and across managers, because a caller asking about two keys - the profile preferences ask

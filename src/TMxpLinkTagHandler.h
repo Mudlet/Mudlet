@@ -44,6 +44,6 @@ public:
     TMxpTagHandlerResult handleStartTag(TMxpContext& ctx, TMxpClient& client, MxpStartTag* tag) override;
     TMxpTagHandlerResult handleEndTag(TMxpContext& ctx, TMxpClient& client, MxpEndTag* tag) override;
 
-    void handleContent(char ch) override;
+    void handleContentBytes(QByteArrayView bytes) override;
 };
 #endif //MUDLET_TMXPLINKTAGHANDLER_H

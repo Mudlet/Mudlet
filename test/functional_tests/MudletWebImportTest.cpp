@@ -29,6 +29,7 @@
 #include <QTemporaryDir>
 #include <zip.h>
 
+#include "Host.h"
 #include "MudletWebImport.h"
 
 #include "GroupedTest.h"
@@ -374,13 +375,13 @@ private slots:
         }
 
         // Mudlet Web lists it by its place in the profile
-        QCOMPARE(MudletWebImport::locateModuleFile(home, qsl("Scripts"), qsl("scripts/combat.xml")), home + qsl("/scripts/combat.xml"));
+        QCOMPARE(Host::locateModuleFile(home, qsl("Scripts"), qsl("scripts/combat.xml")), home + qsl("/scripts/combat.xml"));
         // another computer's path, gone here, but the export brought the file along
-        QCOMPARE(MudletWebImport::locateModuleFile(home, qsl("Combat"), qsl("/home/someone/mods/Combat.mpackage")), home + qsl("/Combat/Combat.mpackage"));
-        QCOMPARE(MudletWebImport::locateModuleFile(home, qsl("Combat"), qsl("C:\\Users\\someone\\Combat.mpackage")), home + qsl("/Combat/Combat.mpackage"));
+        QCOMPARE(Host::locateModuleFile(home, qsl("Combat"), qsl("/home/someone/mods/Combat.mpackage")), home + qsl("/Combat/Combat.mpackage"));
+        QCOMPARE(Host::locateModuleFile(home, qsl("Combat"), qsl("C:\\Users\\someone\\Combat.mpackage")), home + qsl("/Combat/Combat.mpackage"));
         // a module that is where the save says is left alone, as is one found nowhere
-        QCOMPARE(MudletWebImport::locateModuleFile(home, qsl("Other"), home + qsl("/scripts/combat.xml")), home + qsl("/scripts/combat.xml"));
-        QCOMPARE(MudletWebImport::locateModuleFile(home, qsl("Gone"), qsl("/nowhere/Gone.xml")), qsl("/nowhere/Gone.xml"));
+        QCOMPARE(Host::locateModuleFile(home, qsl("Other"), home + qsl("/scripts/combat.xml")), home + qsl("/scripts/combat.xml"));
+        QCOMPARE(Host::locateModuleFile(home, qsl("Gone"), qsl("/nowhere/Gone.xml")), qsl("/nowhere/Gone.xml"));
     }
 };
 

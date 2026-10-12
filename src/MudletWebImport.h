@@ -42,8 +42,6 @@ public:
 
     // Blocks, and touches nothing but the file system, so it can run off the main thread
     static Result importArchive(const QString& archivePathFileName, const QString& profilesPath);
-
-    static QString locateModuleFile(const QString& profileHome, const QString& module, const QString& filePath);
 };
 
 #endif // MUDLET_MUDLETWEBIMPORT_H
