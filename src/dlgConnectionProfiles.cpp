@@ -2982,7 +2982,7 @@ void dlgConnectionProfiles::slot_loadPasswordAsync()
         credManager->retrievePassword(
                 profile_name,
                 "character",
-                [this, credManager, profile_name](bool success, const QString& retrievedPassword, const QString& errorMessage, bool) {
+                [this, credManager, profile_name](bool success, const QString& retrievedPassword, const QString& errorMessage, CredentialManager::ReadOutcome) {
                     passwordRetrieved(profile_name, success, retrievedPassword, errorMessage);
 
                     credManager->deleteLater();
