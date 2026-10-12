@@ -42,9 +42,11 @@ if false then
   end
 
 
-  --- The <i>command variable</i> holds initial user command e.g. unchanged by any aliases or triggers.
-  --- This is typically used in alias scripts. It holds the command of the dispatch that ran your script, which an
-  --- expandAlias() call made from that script does not change - see expandAlias().
+  --- The <i>command variable</i> holds the command that went through the aliases. This is typically used in alias
+  --- scripts, where it holds the command that ran the alias - or the last one the alias's Command field expanded - and
+  --- an expandAlias() call the script makes does not change it. Anywhere else it holds the last command that went
+  --- through the aliases, including one sent by expandAlias(), or, in a script that an alias sets off after an
+  --- expandAlias() call of its own, the alias's command - see expandAlias().
   ---
   --- @see line
   ---
@@ -244,11 +246,17 @@ if false then
   --- to use send( ) inside an alias script to prevent recursion. This will send the data directly and bypass
   --- the alias expansion.
   ---
-  --- Note: expandAlias() leaves the variables of the script that called it alone. The aliases it runs are given the
-  --- expanded command in "command" and their own captures in "matches", and once the call returns the calling script
-  --- has back the "command", "matches" and "multimatches" it had before it - so a capture read after an expandAlias()
-  --- call is still the caller's own. A command sent at the command line is unaffected: every alias it runs sees it
-  --- in "command" as before.
+  --- Note: expandAlias() leaves the captures of the script that called it alone. The aliases it runs are given the
+  --- expanded command in "command" and their own captures in "matches", and once the call returns the calling script has
+  --- back the "matches" and "multimatches" it had before it - so a capture read after an expandAlias() call is still the
+  --- caller's own. An alias script also gets back the "command" it held from each expandAlias() call it makes while it
+  --- runs. Called from any other script - a trigger, timer, key binding, button or event handler, even one an alias set
+  --- off with raiseEvent() or feedTriggers() - "command" holds the last command expanded, so an alias that sets off such
+  --- a script reads what that script expanded, while such a script reads the alias's own command if the alias has already
+  --- had it back from an expandAlias() call of its own. Once the alias pass is over, "command" holds the last command
+  --- expanded, unless a script has since set it to a different value. A command sent at the command line is still given
+  --- to each alias it runs in "command", unless an earlier one of those aliases has set another command since, or its
+  --- Command field or a script other than an alias that it set off has expanded or set one.
   ---
   --- @see send
   function expandAlias(command, print=1)
