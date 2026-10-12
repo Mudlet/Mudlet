@@ -104,18 +104,118 @@ describe("Tests the area graph and its world layout", function()
     assert.are.same(first, positions(getAreaGraph()))
   end)
 
-  it("keeps areas apart", function()
-    buildMap()
+  local function assertApart(areas)
     local list = {}
-    for _, area in pairs(getAreaGraph().areas) do
+    for _, area in pairs(areas) do
       list[#list + 1] = area
     end
     for i = 1, #list do
       for j = i + 1, #list do
         local distance = math.sqrt((list[i].x - list[j].x) ^ 2 + (list[i].y - list[j].y) ^ 2)
-        assert.is_true(distance >= 4, list[i].name .. " and " .. list[j].name .. " are " .. distance .. " apart")
+        local needed = list[i].radius + list[j].radius
+        assert.is_true(distance >= needed, list[i].name .. " and " .. list[j].name .. " are " .. distance .. " apart, need " .. needed)
       end
     end
+  end
+
+  local function addRoomAt(area, x, y)
+    local id = createRoomID()
+    addRoom(id)
+    setRoomArea(id, area)
+    setRoomCoordinates(id, x, y, 0)
+    return id
+  end
+
+  it("keeps areas apart", function()
+    buildMap()
+    assertApart(getAreaGraph().areas)
+  end)
+
+  it("has nothing for an empty map, and one unlinked area for a map of one", function()
+    local graph = getAreaGraph()
+    assert.is_nil(next(graph.areas))
+    assert.are.same({}, graph.links)
+
+    local only = addAreaName("GraphSpecOnly")
+    addRoomAt(only, 0, 0)
+    graph = getAreaGraph()
+    assert.are.equal(only, (next(graph.areas)))
+    assert.is_nil(next(graph.areas, only))
+    assert.are.same({}, graph.links)
+    assert.are.equal(2, graph.areas[only].radius)
+  end)
+
+  it("sizes each area by its rooms, following them as they move", function()
+    local ids = buildMap()
+    local function expectedRadius(rooms)
+      local minX, maxX, minY, maxY = math.huge, -math.huge, math.huge, -math.huge
+      for _, room in ipairs(rooms) do
+        local x, y = getRoomCoordinates(room)
+        minX, maxX, minY, maxY = math.min(minX, x), math.max(maxX, x), math.min(minY, y), math.max(maxY, y)
+      end
+      return math.max(2, 0.5 * math.sqrt((maxX - minX + 1) ^ 2 + (maxY - minY + 1) ^ 2))
+    end
+    local function assertRadius(area, rooms)
+      local radius = getAreaGraph().areas[area].radius
+      assert.is_true(math.abs(radius - expectedRadius(rooms)) < 1e-9, "radius " .. radius .. ", expected " .. expectedRadius(rooms))
+    end
+    local A = ids.GraphSpecA
+    assertRadius(A, {ids.a1, ids.a2})
+    setRoomCoordinates(ids.a2, 30, -20, 4)
+    assertRadius(A, {ids.a1, ids.a2})
+    setRoomArea(ids.a2, ids.GraphSpecD)
+    assertRadius(A, {ids.a1})
+    assertRadius(ids.GraphSpecD, {ids.d1, ids.a2})
+  end)
+
+  it("makes room for an area that grows after it was placed", function()
+    local A, B = addAreaName("GraphSpecA"), addAreaName("GraphSpecB")
+    local a1, b1 = addRoomAt(A, 0, 0), addRoomAt(B, 0, 0)
+    setExit(a1, b1, "e")
+    assertApart(getAreaGraph().areas)
+    for i = 1, 400 do
+      addRoomAt(A, i % 40, math.floor(i / 10))
+    end
+    assertApart(getAreaGraph().areas)
+  end)
+
+  it("shows the default area once it has rooms, keeping its place while it is empty", function()
+    local ids = buildMap()
+    local loose = createRoomID()
+    addRoom(loose)
+    local graph = getAreaGraph()
+    assert.are.equal(1, graph.areas[-1].rooms)
+    setExit(loose, ids.d1, "n")
+    assert.are.same(1, linkSet(getAreaGraph())["-1-" .. ids.GraphSpecD])
+
+    assert.is_true(setAreaGraphPosition(-1, 100, 100))
+    setRoomArea(loose, ids.GraphSpecD)
+    assert.is_nil(getAreaGraph().areas[-1])
+    resetRoomArea(loose)
+    local area = getAreaGraph().areas[-1]
+    assert.are.same({100, 100, true}, {area.x, area.y, area.pinned})
+  end)
+
+  it("has an area that so far only has a name", function()
+    buildMap()
+    getAreaGraph()
+    local id = 9999
+    assert.is_true(setAreaName(id, "GraphSpecNameOnly"))
+    local area = getAreaGraph().areas[id]
+    assert.are.same({"GraphSpecNameOnly", 0}, {area.name, area.rooms})
+    assert.is_true(setAreaGraphPosition(id, 7, 7))
+  end)
+
+  it("keeps an area whose rooms all moved away, with its place", function()
+    local ids = buildMap()
+    local D = ids.GraphSpecD
+    assert.is_true(setAreaGraphPosition(D, -60, 40))
+    setRoomArea(ids.d1, ids.GraphSpecA)
+    local area = getAreaGraph().areas[D]
+    assert.are.same({0, -60, 40, true}, {area.rooms, area.x, area.y, area.pinned})
+    setRoomArea(ids.d1, D)
+    area = getAreaGraph().areas[D]
+    assert.are.same({1, -60, 40, true}, {area.rooms, area.x, area.y, area.pinned})
   end)
 
   it("leaves placed areas where they are when another area is added", function()
@@ -247,6 +347,7 @@ describe("Tests the area graph and its world layout", function()
     setRoomArea(room, lonely)
 
     local areas = getAreaGraph().areas
+    assertApart(areas)
     for _, id in ipairs({newArea, lonely}) do
       assert.is_true(setAreaGraphPosition(id, areas[id].x, areas[id].y), areas[id].name .. " was given " .. areas[id].x .. ", " .. areas[id].y)
     end

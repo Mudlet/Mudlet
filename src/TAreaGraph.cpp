@@ -44,13 +44,17 @@ constexpr int cOverlapPasses = 50;
 constexpr quint64 cSeed = 0x6d75646c65744147ULL;
 
 // splitmix64, rather than a <random> distribution, whose output differs between standard libraries.
-double unitHash(quint64 value)
+quint64 splitMix(quint64 value)
 {
     value += 0x9e3779b97f4a7c15ULL;
     value = (value ^ (value >> 30)) * 0xbf58476d1ce4e5b9ULL;
     value = (value ^ (value >> 27)) * 0x94d049bb133111ebULL;
-    value ^= value >> 31;
-    return static_cast<double>(value >> 11) / static_cast<double>(1ULL << 53);
+    return value ^ (value >> 31);
+}
+
+double unitHash(quint64 value)
+{
+    return static_cast<double>(splitMix(value) >> 11) / static_cast<double>(1ULL << 53);
 }
 
 double unitHash(int a, int b = 0)
@@ -182,56 +186,85 @@ void TAreaGraph::refresh()
     if (layoutChanged) {
         readStoredLayout();
     }
-    if (structureChanged) {
-        rebuildGraph();
+    const bool graphChanged = structureChanged && rebuildGraph();
+    if (!mBuilt || graphChanged || layoutChanged) {
+        layoutAreas();
     }
-    layoutUnplacedAreas();
-    writeStoredLayout();
     mSeenGeneration = generation;
     mSeenRevision = revision;
     mBuilt = true;
+    writeStoredLayout();
 }
 
-void TAreaGraph::rebuildGraph()
+bool TAreaGraph::rebuildGraph()
 {
-    mNodes.clear();
-    mLinks.clear();
-
     const QMap<int, QString>& names = mpMap->mpRoomDB->getAreaNamesMap();
     const QMap<int, TArea*>& areas = mpMap->mpRoomDB->getAreaMap();
+    quint64 linksSignature = splitMix(mpMap->mpRoomDB->exitsRevision());
+    // setAreaName() makes an area that has only a name until a room is put in it.
+    QMap<int, const TArea*> allAreas;
+    for (auto it = names.cbegin(); it != names.cend(); ++it) {
+        allAreas.insert(it.key(), nullptr);
+    }
     for (auto it = areas.cbegin(); it != areas.cend(); ++it) {
+        allAreas.insert(it.key(), it.value());
+        linksSignature = splitMix(linksSignature ^ (static_cast<quint64>(static_cast<quint32>(it.key())) << 32 | it.value()->getRoomsVersion()));
+    }
+
+    QMap<int, Node> nodes;
+    for (auto it = allAreas.cbegin(); it != allAreas.cend(); ++it) {
+        const TArea* pA = it.value();
         // The default area exists in every map; only show it once something is in it.
-        if (it.key() == -1 && it.value()->getAreaRooms().isEmpty()) {
+        if (it.key() == -1 && (!pA || pA->getAreaRooms().isEmpty())) {
             continue;
         }
         Node node;
         node.areaId = it.key();
         node.name = names.value(it.key());
-        mNodes.insert(it.key(), node);
+        node.roomCount = pA ? static_cast<int>(pA->getAreaRooms().size()) : 0;
+        node.radius = cMinRadius;
+        if (node.roomCount) {
+            // TArea keeps its extremes up to date as rooms come, go and move, with y negated.
+            node.minX = pA->min_x;
+            node.maxX = pA->max_x;
+            node.minY = -pA->max_y;
+            node.maxY = -pA->min_y;
+            node.minZ = pA->min_z;
+            node.maxZ = pA->max_z;
+            // In double: the span of int room coordinates can overflow an int.
+            const double width = static_cast<double>(node.maxX) - node.minX + 1.0;
+            const double height = static_cast<double>(node.maxY) - node.minY + 1.0;
+            node.radius = std::max(cMinRadius, 0.5 * std::hypot(width, height));
+        }
+        nodes.insert(it.key(), node);
     }
 
+    bool changed = nodes.size() != mNodes.size();
+    for (auto itNew = nodes.cbegin(), itOld = mNodes.cbegin(); !changed && itNew != nodes.cend(); ++itNew, ++itOld) {
+        changed = itNew.key() != itOld.key() || itNew->radius != itOld->radius;
+    }
+    mNodes = std::move(nodes);
+
+    // Finding the links means looking at every exit of every room, so it is skipped when no exit and
+    // no area's set of rooms changed - room coordinates, colors and the like often do.
+    if (!mLinksBuilt || linksSignature != mLinksSignature) {
+        rebuildLinks();
+        mLinksSignature = linksSignature;
+        mLinksBuilt = true;
+    }
+    return changed;
+}
+
+void TAreaGraph::rebuildLinks()
+{
+    mLinks.clear();
     const QHash<int, TRoom*>& rooms = mpMap->mpRoomDB->getRoomMap();
     QMap<QPair<int, int>, Link> links;
     for (TRoom* pR : rooms) {
         const int areaId = pR->getArea();
-        auto itNode = mNodes.find(areaId);
-        if (itNode == mNodes.end()) {
+        if (!mNodes.contains(areaId)) {
             continue;
         }
-        Node& node = itNode.value();
-        if (node.roomCount == 0) {
-            node.minX = node.maxX = pR->x();
-            node.minY = node.maxY = pR->y();
-            node.minZ = node.maxZ = pR->z();
-        } else {
-            node.minX = std::min(node.minX, pR->x());
-            node.maxX = std::max(node.maxX, pR->x());
-            node.minY = std::min(node.minY, pR->y());
-            node.maxY = std::max(node.maxY, pR->y());
-            node.minZ = std::min(node.minZ, pR->z());
-            node.maxZ = std::max(node.maxZ, pR->z());
-        }
-        ++node.roomCount;
 
         const int fromId = pR->getId();
         const auto addExit = [&](const int toId) {
@@ -283,6 +316,7 @@ void TAreaGraph::readStoredLayout()
     mStored.clear();
     mStoredLayoutText = mpMap->mUserData.value(cLayoutUserDataKey);
     mStoredLayoutRead = true;
+    mStoredDirty = false;
     if (mStoredLayoutText.isEmpty()) {
         return;
     }
@@ -303,63 +337,92 @@ void TAreaGraph::readStoredLayout()
 
 void TAreaGraph::writeStoredLayout()
 {
-    QJsonObject areas;
+    // Only deleted areas are dropped, so a recycled id is laid out afresh; an area that is only
+    // empty for now, the default one included, keeps its place and pin for when rooms come back.
+    const QMap<int, QString>& names = mpMap->mpRoomDB->getAreaNamesMap();
+    const QMap<int, TArea*>& areas = mpMap->mpRoomDB->getAreaMap();
+    for (auto it = mStored.begin(); it != mStored.end();) {
+        if (names.contains(it.key()) || areas.contains(it.key())) {
+            ++it;
+        } else {
+            it = mStored.erase(it);
+            mStoredDirty = true;
+        }
+    }
     for (Node& node : mNodes) {
         const StoredPosition stored = mStored.value(node.areaId);
         node.position = stored.position;
         node.pinned = stored.pinned;
-        QJsonObject entry{{qsl("x"), stored.position.x()}, {qsl("y"), stored.position.y()}};
-        if (stored.pinned) {
-            entry.insert(qsl("pinned"), true);
-        }
-        areas.insert(QString::number(node.areaId), entry);
+    }
+    if (!mStoredDirty) {
+        return;
+    }
+    mStoredDirty = false;
+    // So that autosave keeps the layout; the revision this bumps is taken as seen, as no room changed.
+    const bool revisionSeen = mBuilt && mSeenRevision == mpMap->mapRevision();
+    mpMap->setUnsaved(__func__);
+    if (revisionSeen) {
+        mSeenRevision = mpMap->mapRevision();
     }
 
-    // Areas deleted since are dropped, so a recycled id is laid out afresh.
-    for (auto it = mStored.begin(); it != mStored.end();) {
-        it = mNodes.contains(it.key()) ? std::next(it) : mStored.erase(it);
-    }
-
-    if (mNodes.isEmpty()) {
+    if (mStored.isEmpty()) {
         mpMap->mUserData.remove(cLayoutUserDataKey);
         mStoredLayoutText.clear();
         return;
     }
-    const QJsonObject root{{qsl("version"), 1}, {qsl("areas"), areas}};
+    QJsonObject entries;
+    for (auto it = mStored.cbegin(); it != mStored.cend(); ++it) {
+        QJsonObject entry{{qsl("x"), it->position.x()}, {qsl("y"), it->position.y()}};
+        if (it->pinned) {
+            entry.insert(qsl("pinned"), true);
+        }
+        entries.insert(QString::number(it.key()), entry);
+    }
+    const QJsonObject root{{qsl("version"), 1}, {qsl("areas"), entries}};
     mStoredLayoutText = QString::fromUtf8(QJsonDocument(root).toJson(QJsonDocument::Compact));
     mpMap->mUserData.insert(cLayoutUserDataKey, mStoredLayoutText);
 }
 
 double TAreaGraph::radiusOf(int areaId) const
 {
-    const Node node = mNodes.value(areaId);
-    if (node.roomCount == 0) {
-        return cMinRadius;
-    }
-    // In double: the span of int room coordinates can overflow an int.
-    const double width = static_cast<double>(node.maxX) - node.minX + 1.0;
-    const double height = static_cast<double>(node.maxY) - node.minY + 1.0;
-    return std::max(cMinRadius, 0.5 * std::hypot(width, height));
+    const auto it = mNodes.constFind(areaId);
+    return it == mNodes.cend() ? cMinRadius : it->radius;
 }
 
-void TAreaGraph::layoutUnplacedAreas()
+void TAreaGraph::layoutAreas()
 {
+    QHash<int, bool> fixed;
+    for (auto it = mStored.cbegin(); it != mStored.cend(); ++it) {
+        fixed.insert(it.key(), true);
+    }
     const bool anyUnplaced = std::any_of(mNodes.keyBegin(), mNodes.keyEnd(), [this](int id) {
         return !mStored.contains(id);
     });
-    if (!anyUnplaced) {
-        return;
+    if (anyUnplaced) {
+        placeNewAreas(fixed);
     }
 
+    // Areas grown from placed ones, packed rows, and areas that grew since they were placed can all
+    // overlap others. New areas make way first, then areas placed earlier; pinned ones never move.
+    QHash<int, int> mobility;
+    for (auto it = mStored.cbegin(); it != mStored.cend(); ++it) {
+        if (it->pinned) {
+            mobility.insert(it.key(), cMobilityPinned);
+        } else if (fixed.contains(it.key())) {
+            mobility.insert(it.key(), cMobilitySettled);
+        }
+    }
+    if (removeOverlaps(mNodes.keys(), mobility) || anyUnplaced) {
+        mStoredDirty = true;
+    }
+}
+
+void TAreaGraph::placeNewAreas(const QHash<int, bool>& fixed)
+{
     QHash<int, QList<int>> adjacency;
     for (const Link& link : std::as_const(mLinks)) {
         adjacency[link.fromArea].append(link.toArea);
         adjacency[link.toArea].append(link.fromArea);
-    }
-
-    QHash<int, bool> fixed;
-    for (auto it = mStored.cbegin(); it != mStored.cend(); ++it) {
-        fixed.insert(it.key(), true);
     }
 
     // Connected components in ascending order of their lowest area id, each in BFS order.
@@ -444,15 +507,6 @@ void TAreaGraph::layoutUnplacedAreas()
 
     if (!freshComponents.isEmpty()) {
         packComponents(freshComponents);
-    }
-    // Areas grown from placed ones, and the packed rows, can land on areas of other components.
-    removeOverlaps(mNodes.keys(), fixed);
-    // Growing from or packing beside an area pinned near the limit can pass it.
-    for (auto it = mStored.begin(); it != mStored.end(); ++it) {
-        if (!fixed.contains(it.key())) {
-            QPointF& position = it.value().position;
-            position = QPointF(std::clamp(position.x(), -cMaxCoordinate, cMaxCoordinate), std::clamp(position.y(), -cMaxCoordinate, cMaxCoordinate));
-        }
     }
 }
 
@@ -611,22 +665,44 @@ void TAreaGraph::simulate(const QList<int>& component, const QHash<int, bool>& f
             mStored[component.at(i)].position = QPointF(x[i], y[i]);
         }
     }
-    removeOverlaps(component, fixed);
+    QHash<int, int> mobility;
+    for (const int id : component) {
+        if (fixed.contains(id)) {
+            mobility.insert(id, cMobilityPinned);
+        }
+    }
+    removeOverlaps(component, mobility);
 }
 
-void TAreaGraph::removeOverlaps(const QList<int>& ids, const QHash<int, bool>& fixed)
+bool TAreaGraph::removeOverlaps(const QList<int>& ids, const QHash<int, int>& mobilityOf)
 {
     const int count = static_cast<int>(ids.size());
     std::vector<double> x(count);
     std::vector<double> y(count);
     std::vector<double> radius(count);
-    std::vector<char> movable(count);
+    std::vector<int> mobility(count);
     for (int i = 0; i < count; ++i) {
         const QPointF position = mStored.value(ids.at(i)).position;
         x[i] = position.x();
         y[i] = position.y();
         radius[i] = radiusOf(ids.at(i));
-        movable[i] = !fixed.contains(ids.at(i));
+        mobility[i] = mobilityOf.value(ids.at(i), cMobilityNew);
+    }
+    bool anyMoved = false;
+    // Growing from, packing beside, or making way for an area pinned near the limit can pass it; kept
+    // within it here, the overlap passes then slide areas along the limit instead of stacking them.
+    const auto keepInBounds = [&](int i) {
+        if (mobility[i] == cMobilityPinned) {
+            return;
+        }
+        const double clampedX = std::clamp(x[i], -cMaxCoordinate, cMaxCoordinate);
+        const double clampedY = std::clamp(y[i], -cMaxCoordinate, cMaxCoordinate);
+        anyMoved = anyMoved || clampedX != x[i] || clampedY != y[i];
+        x[i] = clampedX;
+        y[i] = clampedY;
+    };
+    for (int i = 0; i < count; ++i) {
+        keepInBounds(i);
     }
     // Far enough to find every pair closer than twice its ideal distance, or overlapping.
     std::vector<double> reach(count);
@@ -639,7 +715,7 @@ void TAreaGraph::removeOverlaps(const QList<int>& ids, const QHash<int, bool>& f
         bool moved = false;
         collectNearbyPairs(x, y, reach, pairs);
         for (const auto& [i, j] : pairs) {
-            if (!movable[i] && !movable[j]) {
+            if (mobility[i] == cMobilityPinned && mobility[j] == cMobilityPinned) {
                 continue;
             }
             double dx = x[j] - x[i];
@@ -658,24 +734,30 @@ void TAreaGraph::removeOverlaps(const QList<int>& ids, const QHash<int, bool>& f
                 dy /= distance;
             }
             const double overlap = wanted - distance;
-            const double shareI = movable[i] ? (movable[j] ? 0.5 : 1.0) : 0.0;
+            const double shareI = mobility[i] > mobility[j] ? 1.0 : (mobility[i] < mobility[j] ? 0.0 : 0.5);
             const double shareJ = 1.0 - shareI;
             x[i] -= dx * overlap * shareI;
             y[i] -= dy * overlap * shareI;
             x[j] += dx * overlap * shareJ;
             y[j] += dy * overlap * shareJ;
+            keepInBounds(i);
+            keepInBounds(j);
             moved = true;
         }
         if (!moved) {
             break;
         }
+        anyMoved = true;
     }
 
-    for (int i = 0; i < count; ++i) {
-        if (movable[i]) {
-            mStored[ids.at(i)].position = QPointF(x[i], y[i]);
+    if (anyMoved) {
+        for (int i = 0; i < count; ++i) {
+            if (mobility[i] != cMobilityPinned) {
+                mStored[ids.at(i)].position = QPointF(x[i], y[i]);
+            }
         }
     }
+    return anyMoved;
 }
 
 bool TAreaGraph::setPosition(int areaId, const QPointF& position)
@@ -688,10 +770,8 @@ bool TAreaGraph::setPosition(int areaId, const QPointF& position)
         return false;
     }
     mStored.insert(areaId, {position, true});
+    mStoredDirty = true;
     writeStoredLayout();
-    mpMap->setUnsaved(__func__);
-    // Moving an area changes no rooms or exits, so the graph built above stays valid.
-    mSeenRevision = mpMap->mapRevision();
     return true;
 }
 
@@ -704,10 +784,9 @@ void TAreaGraph::resetLayout(bool keepPinned)
     for (auto it = mStored.begin(); it != mStored.end();) {
         it = (keepPinned && it.value().pinned) ? std::next(it) : mStored.erase(it);
     }
-    layoutUnplacedAreas();
+    mStoredDirty = true;
+    layoutAreas();
     writeStoredLayout();
-    mpMap->setUnsaved(__func__);
-    mSeenRevision = mpMap->mapRevision();
 }
 
 void TAreaGraph::forgetArea(int areaId)

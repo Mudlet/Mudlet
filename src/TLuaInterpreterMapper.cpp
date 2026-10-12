@@ -1560,6 +1560,9 @@ int TLuaInterpreter::getAreaGraph(lua_State* L)
     if (!host.mpMap || !host.mpMap->mpRoomDB) {
         return warnArgumentValue(L, __func__, "no map present or loaded");
     }
+    if (host.mpMap->mapOperationInProgress()) {
+        return warnArgumentValue(L, __func__, "a map is being loaded");
+    }
     TAreaGraph* pGraph = host.mpMap->areaGraph();
     pGraph->refresh();
 
@@ -1576,6 +1579,8 @@ int TLuaInterpreter::getAreaGraph(lua_State* L)
         lua_setfield(L, -2, "y");
         lua_pushnumber(L, node.roomCount);
         lua_setfield(L, -2, "rooms");
+        lua_pushnumber(L, node.radius);
+        lua_setfield(L, -2, "radius");
         lua_pushboolean(L, node.pinned);
         lua_setfield(L, -2, "pinned");
         lua_settable(L, -3);

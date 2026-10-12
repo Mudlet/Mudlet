@@ -36,8 +36,9 @@ class TMap;
  * each other in a world view.
  *
  * A position is where the centre of the area's room bounding box goes, in room units. Positions
- * are kept in the map user data under cLayoutUserDataKey, so they travel with the map file; areas
- * that already have one keep it when others are added, and only setPosition() pins an area.
+ * are kept in the map user data under cLayoutUserDataKey, so they travel with the map file. Areas
+ * that already have one keep it when others are added, moving only to make way for an area that
+ * grew into them; setPosition() pins an area so that it never moves.
  *
  * Rebuilt lazily: refresh() compares the map's revision and generation with the ones it last saw.
  */
@@ -61,6 +62,8 @@ public:
         int maxY = 0;
         int minZ = 0;
         int maxZ = 0;
+        // Half the diagonal of the bounding box, at least cMinRadius: how much room the area needs.
+        double radius = 0.0;
         QPointF position;
         bool pinned = false;
     };
@@ -91,19 +94,28 @@ public:
     void forgetArea(int areaId);
 
 private:
+    static constexpr int cMobilityPinned = 0;
+    static constexpr int cMobilitySettled = 1;
+    static constexpr int cMobilityNew = 2;
+
     struct StoredPosition
     {
         QPointF position;
         bool pinned = false;
     };
 
-    void rebuildGraph();
+    // True if an area was added or removed, changed size, or the links changed.
+    bool rebuildGraph();
+    void rebuildLinks();
     void readStoredLayout();
     void writeStoredLayout();
-    void layoutUnplacedAreas();
+    // Places areas with no position, then pushes apart any that overlap.
+    void layoutAreas();
     void simulate(const QList<int>& component, const QHash<int, bool>& fixed, const QHash<int, QList<int>>& adjacency);
-    // Pushes apart overlapping areas, moving only those not in fixed.
-    void removeOverlaps(const QList<int>& ids, const QHash<int, bool>& fixed);
+    // Pushes apart overlapping areas. Of a pair, the one with the higher mobility moves, both move
+    // if equal, and neither if both are 0; an area missing from mobility has cMobilityNew.
+    bool removeOverlaps(const QList<int>& ids, const QHash<int, int>& mobility);
+    void placeNewAreas(const QHash<int, bool>& fixed);
     // Shelf-packs components laid out on their own into rows below what is already placed.
     void packComponents(QList<QList<int>> freshComponents);
     double radiusOf(int areaId) const;
@@ -114,6 +126,10 @@ private:
     QHash<int, StoredPosition> mStored;
     // What the user data held when this last read or wrote it, to notice a load or a script changing it.
     QString mStoredLayoutText;
+    // What the links were built from: the exits revision and every area's rooms version.
+    quint64 mLinksSignature = 0;
+    bool mLinksBuilt = false;
+    bool mStoredDirty = true;
     bool mStoredLayoutRead = false;
     quint64 mSeenRevision = 0;
     unsigned int mSeenGeneration = 0;
