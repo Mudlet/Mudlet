@@ -25,6 +25,7 @@
 
 #include "LuaInterface.h"
 #include "CredentialManager.h"
+#include "Host.h"
 #include "SecureStringUtils.h"
 #include "TAction.h"
 #include "TAlias.h"
@@ -37,7 +38,7 @@
 #include "TTrigger.h"
 #include "TVar.h"
 #include "VarUnit.h"
-#include "mudlet.h"
+#include "TAppFrontend.h"
 #include "enums.h"
 
 #include <QBuffer>
@@ -790,7 +791,9 @@ void XMLimport::readHost(Host* pHost)
     setBoolAttributeWithDefault(qsl("mEnableNEWENVIRON"), pHost->mEnableNEWENVIRON, getBoolValueFromLegacyAttributeOrDefault(qsl("forceNewEnvironNegotiationOff"), true, true));
 
     setBoolAttribute(qsl("autoClearCommandLineAfterSend"), pHost->mAutoClearCommandLineAfterSend);
-    setBoolAttributeWithDefault(qsl("disablePasswordMasking"), pHost->mDisablePasswordMasking, false);
+    bool disablePasswordMasking = false;
+    setBoolAttributeWithDefault(qsl("disablePasswordMasking"), disablePasswordMasking, false);
+    pHost->setDisablePasswordMasking(disablePasswordMasking);
 
     // Handle command echo mode with backward compatibility
     if (attributes().hasAttribute(qsl("commandEchoMode"))) {
@@ -1072,8 +1075,8 @@ void XMLimport::readHost(Host* pHost)
     const bool compactInputLine = attributes().value(QLatin1String("CompactInputLine")) == YES;
     pHost->setCompactInputLine(compactInputLine);
 
-    if (mudlet::self()->mpCurrentActiveHost == pHost) {
-        mudlet::self()->dactionInputLine->setChecked(compactInputLine);
+    if (auto* frontend = TAppFrontend::instance()) {
+        frontend->setCompactInputLineChecked(pHost, compactInputLine);
     }
 
     if (attributes().hasAttribute(QLatin1String("CommandLineHistorySaveSize"))) {
@@ -1264,7 +1267,7 @@ void XMLimport::readHost(Host* pHost)
     // A package import comes through here too, into a profile that does have a
     // console - and that one needs the whole restyle, not just the model:
     pHost->applyMainConsoleColors();
-    if (!pHost->mpConsole) {
+    if (!pHost->hasConsoleView()) {
         TConsoleModel& model = pHost->mainConsoleModel();
         model.setWrapAt(pHost->mWrapAt);
         model.setIndentCount(pHost->mWrapIndentCount);
