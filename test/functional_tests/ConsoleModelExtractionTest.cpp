@@ -1946,8 +1946,8 @@ mainNamedSheets = getCmdLineStyleSheet() .. "|" .. getCmdLineStyleSheet("main")
 
     // Every one of these Lua functions used to reach through Host::mpConsole
     // without checking it, so calling any of them on a profile whose window had
-    // been closed took the whole client down with it. None of them can do what
-    // it was asked here, so each has to report that instead.
+    // been closed took the whole client down with it. Each has to report that it
+    // cannot do what it was asked here, or answer from the main console's model.
     void test_viewOnlyUiFunctionsReportWithNoView()
     {
         startProfile();
@@ -1979,16 +1979,26 @@ local function expectValue(name, expected, ...)
     end
 end
 
+-- how many values a function answers, and the first of them
+local function expectAnswer(name, expected, ...)
+    local answered = '[' .. select('#', ...) .. ']' .. tostring((...))
+    if answered ~= expected then
+        table.insert(noViewProblems, name .. ' answered ' .. answered .. ' rather than ' .. expected)
+    end
+end
+
 -- a family setFont() takes, which it checks for before it looks for a console
 local anyFont = next(getAvailableFonts())
 
-expectRefusal('createCommandLine', createCommandLine('noViewCl', 0, 0, 100, 20))
-expectRefusal('deleteCommandLine', deleteCommandLine('noViewCl'))
+-- a command line is a record the null view keeps
+expectValue('createCommandLine', true, createCommandLine('noViewCl', 0, 0, 100, 20))
+expectValue('deleteCommandLine', true, deleteCommandLine('noViewCl'))
+-- and so is a text edit
+expectValue('createTextEdit', true, createTextEdit('noViewTe', 0, 0, 100, 20))
+expectValue('deleteTextEdit', true, deleteTextEdit('noViewTe'))
 expectRefusal('deleteLabel', deleteLabel('noViewLbl'))
 expectRefusal('deleteMiniConsole', deleteMiniConsole('noViewMc'))
 expectRefusal('deleteScrollBox', deleteScrollBox('noViewSb'))
-expectRefusal('createTextEdit', createTextEdit('noViewTe', 0, 0, 100, 20))
-expectRefusal('deleteTextEdit', deleteTextEdit('noViewTe'))
 expectRefusal('getTextEditText', getTextEditText('noViewTe'))
 expectRefusal('setTextEditText', setTextEditText('noViewTe', 'x'))
 expectRefusal('clearTextEdit', clearTextEdit('noViewTe'))
@@ -1998,8 +2008,9 @@ expectRefusal('setTextEditStyleSheet', setTextEditStyleSheet('noViewTe', ''))
 expectRefusal('setTextEditFont', setTextEditFont('noViewTe', 'Courier'))
 expectRefusal('setTextEditFontSize', setTextEditFontSize('noViewTe', 10))
 expectRefusal('setTextEditTabMovesFocus', setTextEditTabMovesFocus('noViewTe', true))
-expectRefusal('getBorderColor', getBorderColor())
-expectRefusal('setBorderColor', setBorderColor(1, 2, 3))
+-- the border colour is the main console model's, so it answers with no view
+setBorderColor(1, 2, 3)
+expectValue('getBorderColor', 1, getBorderColor())
 expectRefusal('getLabelSizeHint', getLabelSizeHint('noViewLbl'))
 expectRefusal('getLabelStyleSheet', getLabelStyleSheet('noViewLbl'))
 expectRefusal('setLabelStyleSheet', setLabelStyleSheet('noViewLbl', ''))
@@ -2033,23 +2044,27 @@ expectRefusal('disableCommandLine', disableCommandLine('noViewCl'))
 expectRefusal('getCmdLineStyleSheet', getCmdLineStyleSheet())
 expectRefusal('setCmdLineStyleSheet', setCmdLineStyleSheet(''))
 expectRefusal('getMousePosition', getMousePosition())
-expectRefusal('getMainWindowSize', getMainWindowSize())
-expectRefusal('getUserWindowSize', getUserWindowSize('noViewUw'))
+-- the main console is the character grid NAWS reports, and a name with no user window takes its size
+expectValue('getMainWindowSize', 'number', type(getMainWindowSize()))
+expectValue('getUserWindowSize', getMainWindowSize(), getUserWindowSize('noViewUw'))
 expectRefusal('getUserWindowTitle', getUserWindowTitle('noViewUw'))
 expectRefusal('setUserWindowTitle', setUserWindowTitle('noViewUw', 't'))
 expectRefusal('getUserWindowStyleSheet', getUserWindowStyleSheet('noViewUw'))
 expectRefusal('setUserWindowStyleSheet', setUserWindowStyleSheet('noViewUw', ''))
-expectRefusal('enableScrollBar', enableScrollBar())
-expectRefusal('disableScrollBar', disableScrollBar())
-expectRefusal('enableHorizontalScrollBar', enableHorizontalScrollBar())
-expectRefusal('disableHorizontalScrollBar', disableHorizontalScrollBar())
-expectRefusal('getScrollBarVisible', getScrollBarVisible())
-expectRefusal('enableScrolling', enableScrolling())
-expectRefusal('disableScrolling', disableScrolling())
-expectRefusal('scrollingActive', scrollingActive())
-expectRefusal('getScroll', getScroll())
-expectRefusal('scrollTo', scrollTo(1))
-expectRefusal('scrollTo end', scrollTo())
+-- the main console's scrolling is its model's, so these answer as a real one's do
+expectAnswer('enableScrollBar', '[0]nil', enableScrollBar())
+expectAnswer('disableScrollBar', '[0]nil', disableScrollBar())
+expectAnswer('enableHorizontalScrollBar', '[0]nil', enableHorizontalScrollBar())
+expectAnswer('disableHorizontalScrollBar', '[0]nil', disableHorizontalScrollBar())
+expectAnswer('getScrollBarVisible', '[1]false', getScrollBarVisible())
+expectAnswer('enableScrolling', '[1]true', enableScrolling())
+expectAnswer('disableScrolling', '[1]true', disableScrolling())
+expectAnswer('scrollingActive', '[1]true', scrollingActive())
+expectAnswer('getScroll', '[1]' .. getLastLineNumber('main'), getScroll())
+expectAnswer('scrollTo', '[0]nil', scrollTo(1))
+expectAnswer('getScroll after scrollTo', '[1]1', getScroll())
+expectAnswer('scrollTo end', '[0]nil', scrollTo())
+expectAnswer('getScroll after scrollTo end', '[1]' .. getLastLineNumber('main'), getScroll())
 expectRefusal('getWindowWrap of a sub-console', getWindowWrap('noViewMc'))
 expectRefusal('setWindowWrap of a sub-console', setWindowWrap('noViewMc', 80))
 expectRefusal('moveCursor', moveCursor('noViewMc', 0, 0))
@@ -2057,14 +2072,15 @@ expectRefusal('moveCursorEnd', moveCursorEnd('noViewMc'))
 expectRefusal('getLineNumber', getLineNumber('noViewMc'))
 expectRefusal('getLineCount', getLineCount('noViewMc'))
 expectRefusal('getColumnNumber', getColumnNumber('noViewMc'))
-expectRefusal('getColumnCount', getColumnCount())
-expectRefusal('getRowCount', getRowCount())
+expectValue('getColumnCount', 'number', type(getColumnCount()))
+expectValue('getRowCount', 'number', type(getRowCount()))
 expectRefusal('deleteLine', deleteLine('noViewMc'))
-expectRefusal('getFont', getFont())
-expectRefusal('getFont main', getFont('main'))
-expectRefusal('setFont', setFont(anyFont))
-expectRefusal('getFontSize', getFontSize())
-expectRefusal('setFontSize', setFontSize(10))
+-- the main console's font is the profile's display font
+expectValue('getFont', 'string', type(getFont()))
+expectValue('getFont main', getFont(), getFont('main'))
+expectValue('setFont', true, setFont(anyFont))
+expectValue('setFontSize', true, setFontSize(10))
+expectValue('getFontSize', 10, getFontSize())
 -- the main console's clipboard and buffer size are its model's, but there are
 -- no other consoles
 expectRefusal('copy', copy('noViewMini'))
@@ -2090,7 +2106,6 @@ expectValue('getLastLineNumber', -1, getLastLineNumber('noViewMc'))
 expectValue('getCurrentLine', 'ERROR: mini console does not exist', getCurrentLine('noViewMc'))
 expectValue('getCurrentLine reason', 'window "noViewMc" not found', select(2, getCurrentLine('noViewMc')))
 -- whereas the font and the size are checked before any console is looked for
-expectValue('setFont reason', 'window "" not found', select(2, setFont(anyFont)))
 expectValue('setFont empty', 'font must not be empty', select(2, setFont('')))
 expectValue('setFontSize 0', 'size cannot be 0 or negative', select(2, setFontSize(0)))
 expectValue('copy reason', 'window "noViewMini" not found', select(2, copy('noViewMini')))
@@ -3391,7 +3406,7 @@ noViewSelectionReport = table.concat(noViewSelectionProblems, '; ')
         QPointer<TLabel> firstWidget = host->mainConsoleView()->labelWidget(labelName);
         QVERIFY2(firstWidget, "Creating a label left the console's own widget map empty.");
 
-        const auto [deleted, deleteMessage] = host->mainConsoleView()->deleteLabel(labelName);
+        const auto [deleted, deleteMessage] = host->deleteLabel(labelName);
         QVERIFY2(deleted, qPrintable(deleteMessage));
 
         QVERIFY2(!host->windowRegistry().hasLabel(labelName), "Deleting a label left its model in the profile's window registry.");
@@ -3479,7 +3494,7 @@ noViewSelectionReport = table.concat(noViewSelectionProblems, '; ')
         QPointer<TLabel> widget = host->mainConsoleView()->labelWidget(labelName);
         QVERIFY2(widget, "Creating a label into a user window left the console's own widget map empty.");
 
-        const auto [deleted, deleteMessage] = host->mainConsoleView()->deleteMiniConsole(windowName);
+        const auto [deleted, deleteMessage] = host->deleteMiniConsole(windowName);
         QVERIFY2(deleted, qPrintable(deleteMessage));
         QCoreApplication::sendPostedEvents(nullptr, QEvent::DeferredDelete);
         QVERIFY2(widget.isNull(), "Deleting the user window did not destroy the label it contained, so the checks below prove nothing.");
@@ -3837,7 +3852,7 @@ noViewSelectionReport = table.concat(noViewSelectionProblems, '; ')
         const QPointer<TConsole> firstWidget = host->mainConsoleView()->subConsoleWidget(miniName);
         QVERIFY2(firstWidget, "Creating a miniconsole left no widget in the console's own map.");
 
-        const auto [deleted, deleteMessage] = host->mainConsoleView()->deleteMiniConsole(miniName);
+        const auto [deleted, deleteMessage] = host->deleteMiniConsole(miniName);
         QVERIFY2(deleted, qPrintable(deleteMessage));
         QVERIFY2(!host->windowRegistry().hasSubConsole(miniName), "Deleting a miniconsole left its model in the profile's window registry.");
         QVERIFY2(!host->windowRegistry().subConsoleModel(miniName), "Deleting a miniconsole left a stale model handle in the profile's window registry.");
@@ -3872,7 +3887,7 @@ noViewSelectionReport = table.concat(noViewSelectionProblems, '; ')
         QVERIFY2(userWindow, qPrintable(userWindowMessage));
         QVERIFY2(host->windowRegistry().hasDockWidget(userWindowName), "Creating a user window registered no dock widget.");
 
-        const auto [windowDeleted, windowDeleteMessage] = host->mainConsoleView()->deleteMiniConsole(userWindowName);
+        const auto [windowDeleted, windowDeleteMessage] = host->deleteMiniConsole(userWindowName);
         QVERIFY2(windowDeleted, qPrintable(windowDeleteMessage));
         QVERIFY2(!host->windowRegistry().hasSubConsole(userWindowName), "Deleting a user window left its model in the profile's window registry.");
         QVERIFY2(!host->windowRegistry().hasDockWidget(userWindowName), "Deleting a user window left its dock in the profile's window registry.");
@@ -3903,7 +3918,7 @@ noViewSelectionReport = table.concat(noViewSelectionProblems, '; ')
         QCOMPARE(host->windowType(nestedName), std::optional<QString>(qsl("miniconsole")));
         QVERIFY2(!host->windowRegistry().hasDockWidget(nestedName), "A miniconsole inside a user window was registered as having a dock of its own.");
 
-        const auto [windowDeleted, windowDeleteMessage] = host->mainConsoleView()->deleteMiniConsole(userWindowName);
+        const auto [windowDeleted, windowDeleteMessage] = host->deleteMiniConsole(userWindowName);
         QVERIFY2(windowDeleted, qPrintable(windowDeleteMessage));
         QVERIFY2(!host->windowRegistry().hasSubConsole(userWindowName), "Deleting a user window left its own model in the profile's window registry.");
 
@@ -3939,7 +3954,7 @@ noViewSelectionReport = table.concat(noViewSelectionProblems, '; ')
         const QPointer<TConsole> nestedWidget = host->mainConsoleView()->subConsoleWidget(nestedName);
         QVERIFY2(nestedWidget, "Creating a miniconsole inside a user window left no widget in the console's own map.");
 
-        const auto [windowDeleted, windowDeleteMessage] = host->mainConsoleView()->deleteMiniConsole(userWindowName);
+        const auto [windowDeleted, windowDeleteMessage] = host->deleteMiniConsole(userWindowName);
         QVERIFY2(windowDeleted, qPrintable(windowDeleteMessage));
         QTRY_VERIFY_WITH_TIMEOUT(nestedWidget.isNull(), 5s);
 
@@ -4037,7 +4052,7 @@ noViewSelectionReport = table.concat(noViewSelectionProblems, '; ')
         const QStringList names = host->windowRegistry().subConsoleNames();
         QVERIFY2(names.contains(firstName) && names.contains(secondName), qPrintable(qsl("Not every sub-console reached the snapshot: %1").arg(names.join(QChar::Space))));
 
-        const auto [deleted, deleteMessage] = host->mainConsoleView()->deleteMiniConsole(secondName);
+        const auto [deleted, deleteMessage] = host->deleteMiniConsole(secondName);
         QVERIFY2(deleted, qPrintable(deleteMessage));
         QVERIFY2(!host->windowRegistry().hasSubConsole(secondName), "Deleting the user window left it in the registry, so the snapshot is not being tested against a real removal.");
         QVERIFY2(names.contains(firstName) && names.contains(secondName), "Removing a sub-console changed a snapshot of the names that had already been taken.");
@@ -4320,7 +4335,7 @@ noViewSelectionReport = table.concat(noViewSelectionProblems, '; ')
         const QString childName = qsl("openWindowChildConsole");
         QVERIFY2(host->createMiniConsole(name, childName, 0, 0, 50, 50).first, "The miniconsole inside the user window was not created.");
         const QPointer<TConsole> child = host->mainConsoleView()->subConsoleWidget(childName);
-        QVERIFY2(host->mainConsoleView()->deleteMiniConsole(name).first, "The user window was not deleted.");
+        QVERIFY2(host->deleteMiniConsole(name).first, "The user window was not deleted.");
         QCOMPARE(host->openWindow(childName, false, true, QString()), std::make_pair(false, qsl("userwindow '%1' already exists").arg(childName)));
         QCoreApplication::sendPostedEvents(nullptr, QEvent::DeferredDelete);
         QVERIFY2(child.isNull(), "The miniconsole inside the deleted user window was never destroyed.");
@@ -4863,7 +4878,7 @@ noViewSelectionReport = table.concat(noViewSelectionProblems, '; ')
         QMovie* movie = label->movie();
         QVERIFY2(movie, "setMovie() gave the label no movie, so the checks below prove nothing.");
         const auto deleteTheLabel = qScopeGuard([host, labelName]() {
-            host->mainConsoleView()->deleteLabel(labelName);
+            host->deleteLabel(labelName);
         });
 
         runLua(host, qsl("setMovieSpeed('%1', 250)\n").arg(labelName));

@@ -40,6 +40,8 @@
 #include "TMap.h"
 #include "TMedia.h"
 #include "TMxpFrameWidgets.h"
+#include "TNullConsoleFrontend.h"
+#include "TPasswordEntry.h"
 #include "TRoomDB.h"
 #include "TScrollBox.h"
 #include "TTextBox.h"
@@ -70,6 +72,7 @@
 #include <QTextCodec>
 #include <QTimer>
 #include <QPainter>
+#include <QResizeEvent>
 #include <QVideoWidget>
 
 #include <chrono>
@@ -218,6 +221,10 @@ void shareDockAreaIfSqueezed(QPointer<TDockWidget> dock)
             QObject::connect(dock.data(), &QDockWidget::visibilityChanged, dock.data(), retry, Qt::SingleShotConnection);
             return;
         }
+        // A busy event loop can run this ahead of the pending layout, while the console still has a
+        // new widget's default size, which reads as not squeezed
+        window->layout()->activate();
+        dock->layout()->activate();
         const Qt::DockWidgetArea area = window->dockWidgetArea(dock);
         const Qt::Orientation orientation = (area == Qt::TopDockWidgetArea || area == Qt::BottomDockWidgetArea) ? Qt::Horizontal : Qt::Vertical;
         const auto extent = [orientation](const QWidget* widget) {
@@ -299,6 +306,9 @@ TMainConsole::TMainConsole(Host* pH, QWidget* parent)
     mpLatencyBoxPacer->setSingleShot(true);
     mpLatencyBoxPacer->setInterval(csmLatencyBoxPaceMs);
     connect(mpLatencyBoxPacer, &QTimer::timeout, this, &TMainConsole::slot_refreshLatencyBox);
+
+    connect(pH, &Host::signal_passwordEntryWantedChanged, this, &TMainConsole::slot_passwordEntryWanted, Qt::UniqueConnection);
+    slot_passwordEntryWanted(pH->passwordEntryWanted());
 
     // Ensure the QWidget has the profile name embedded into it
     setProperty("HostName", pH->getName());
@@ -449,6 +459,11 @@ TMainConsole* Host::mainConsoleView() const
 
 void Host::setMainConsoleView(TMainConsole* view)
 {
+    // The view has no widget for a window the null view made, so none may outlive the swap
+    if (view) {
+        mpNullConsoleFrontend->dropWindows();
+        mExitEventOwed = false;
+    }
     mpConsole = view;
     mpConsoleFrontend = view;
 }
@@ -461,18 +476,13 @@ void TMainConsole::slot_loggingStateChanged(const bool isLogging)
 }
 
 
-bool TMainConsole::createBuffer(const QString& name)
+void TMainConsole::createBuffer(const QString& name)
 {
-    if (!subConsoleWidget(name)) {
-        auto pC = new TConsole(mpHost, name, Buffer);
-        registerSubConsole(name, pC);
-        pC->setContentsMargins(0, 0, 0, 0);
-        pC->hide();
-        pC->layerCommandLine->hide();
-        return true;
-    }
-
-    return false;
+    auto pC = new TConsole(mpHost, name, Buffer);
+    registerSubConsole(name, pC);
+    pC->setContentsMargins(0, 0, 0, 0);
+    pC->hide();
+    pC->layerCommandLine->hide();
 }
 
 void TMainConsole::watchWindowState(const QString& name, QWidget* pWidget)
@@ -621,14 +631,13 @@ TDockWidget* TMainConsole::createUserWindow(const QString& name)
     return dockwidget;
 }
 
-std::pair<bool, QString> TMainConsole::openUserWindow(const QString& name, bool loadLayout, bool autoDock, const QString& area)
+void TMainConsole::openUserWindow(const QString& name, bool loadLayout, bool autoDock, const QString& area)
 {
-    auto result = placeUserWindow(name, loadLayout, autoDock, area);
+    placeUserWindow(name, loadLayout, autoDock, area);
     reportGeometry(name);
-    return result;
 }
 
-std::pair<bool, QString> TMainConsole::placeUserWindow(const QString& name, bool loadLayout, bool autoDock, const QString& area)
+void TMainConsole::placeUserWindow(const QString& name, bool loadLayout, bool autoDock, const QString& area)
 {
     // Host::openWindow() has refused a name holding a console or a dock but not both
     auto dockwidget = dockWidget(name);
@@ -645,37 +654,31 @@ std::pair<bool, QString> TMainConsole::placeUserWindow(const QString& name, bool
     dockwidget->show();
     dockwidget->setAllowedAreas(autoDock ? Qt::AllDockWidgetAreas : Qt::NoDockWidgetArea);
 
-    if (area.isEmpty()) {
-        return {true, QString()};
-    }
-
     if (area == QLatin1String("f") || area == QLatin1String("floating")) {
         if (!dockwidget->isFloating()) {
             dockwidget->setFloating(true);
         }
-        return {true, QString()};
+        return;
     }
     if (area == QLatin1String("r") || area == QLatin1String("right")) {
         dockwidget->setFloating(false);
         mudlet::self()->addDockWidget(Qt::RightDockWidgetArea, dockwidget);
-        return {true, QString()};
+        return;
     }
     if (area == QLatin1String("l") || area == QLatin1String("left")) {
         dockwidget->setFloating(false);
         mudlet::self()->addDockWidget(Qt::LeftDockWidgetArea, dockwidget);
-        return {true, QString()};
+        return;
     }
     if (area == QLatin1String("t") || area == QLatin1String("top")) {
         dockwidget->setFloating(false);
         mudlet::self()->addDockWidget(Qt::TopDockWidgetArea, dockwidget);
-        return {true, QString()};
+        return;
     }
     if (area == QLatin1String("b") || area == QLatin1String("bottom")) {
         dockwidget->setFloating(false);
         mudlet::self()->addDockWidget(Qt::BottomDockWidgetArea, dockwidget);
-        return {true, QString()};
     }
-    return {false, qsl(R"(docking option "%1" not available. available docking options are "t" top, "b" bottom, "r" right, "l" left and "f" floating)").arg(area)};
 }
 
 void TMainConsole::registerScrollBox(const QString& name, TScrollBox* pScrollBox)
@@ -1360,47 +1363,38 @@ bool TMainConsole::createScrollBox(const QString& windowname, const QString& nam
     return false;
 }
 
-bool TMainConsole::createLabel(const QString& windowname, const QString& name, int x, int y, int width, int height, bool fillBackground, bool clickThrough)
+void TMainConsole::createLabel(const QString& windowname, const QString& name, int x, int y, int width, int height, bool fillBackground, bool clickThrough)
 {
     //if pW put Label in Userwindow
-    auto pL = mLabelMap.value(name);
     auto pW = mDockWidgetMap.value(windowname);
     auto pS = mScrollBoxMap.value(windowname);
-    if (!pL) {
-        if (pW) {
-            pL = new TLabel(mpHost, name, pW->widget());
-        } else if (pS) {
-            pL = new TLabel(mpHost, name, pS->widget());
-        } else {
-            pL = new TLabel(mpHost, name, mpMainFrame);
-        }
-        registerLabelWidget(name, pL);
-        pL->setAutoFillBackground(fillBackground);
-        pL->setClickThrough(clickThrough);
-        pL->resize(width, height);
-        pL->setContentsMargins(0, 0, 0, 0);
-        pL->move(x, y);
-        pL->show();
-        reportGeometry(name);
-        // fillBackground = 0 gets this grey too, which is not what the argument reads
-        // like: honouring it would turn every such label in an installed script
-        // transparent. What the argument does decide is what survives a later
-        // stylesheet - setAutoFillBackground(false) above means the colour is dropped
-        // rather than kept. A script wanting a transparent label has to say so with
-        // setBackgroundColor(name, 0, 0, 0, 0).
-        mpHost->setBackgroundColor(name, 32, 32, 32, 255);
-        return true;
+    TLabel* pL = nullptr;
+    if (pW) {
+        pL = new TLabel(mpHost, name, pW->widget());
+    } else if (pS) {
+        pL = new TLabel(mpHost, name, pS->widget());
+    } else {
+        pL = new TLabel(mpHost, name, mpMainFrame);
     }
-
-    return false;
+    registerLabelWidget(name, pL);
+    pL->setAutoFillBackground(fillBackground);
+    pL->setClickThrough(clickThrough);
+    pL->resize(width, height);
+    pL->setContentsMargins(0, 0, 0, 0);
+    pL->move(x, y);
+    pL->show();
+    reportGeometry(name);
+    // fillBackground = 0 gets this grey too, which is not what the argument reads
+    // like: honouring it would turn every such label in an installed script
+    // transparent. What the argument does decide is what survives a later
+    // stylesheet - setAutoFillBackground(false) above means the colour is dropped
+    // rather than kept. A script wanting a transparent label has to say so with
+    // setBackgroundColor(name, 0, 0, 0, 0).
+    mpHost->setBackgroundColor(name, 32, 32, 32, 255);
 }
 
-std::pair<bool, QString> TMainConsole::deleteLabel(const QString& name)
+void TMainConsole::deleteLabel(const QString& name)
 {
-    if (name.isEmpty()) {
-        return {false, QLatin1String("a label cannot have an empty string as its name")};
-    }
-
     auto pL = mLabelMap.value(name);
     if (pL) {
         mpHost->windowRegistry().deregisterLabel(name, &pL->model());
@@ -1413,28 +1407,11 @@ std::pair<bool, QString> TMainConsole::deleteLabel(const QString& name)
         // given that this item is likely to be linked to some events and
         // suchlike:
         pL->deleteLater();
-
-        // It remains to be seen if the label has "gone" as a result of the
-        // above by the time the Lua subsystem processes the following:
-        TEvent mudletEvent{};
-        mudletEvent.mArgumentList.append(QLatin1String("sysLabelDeleted"));
-        mudletEvent.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
-        mudletEvent.mArgumentList.append(name);
-        mudletEvent.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
-        mpHost->raiseEvent(mudletEvent);
-        return {true, QString()};
     }
-
-    // Message is of the form needed for a Lua API function call run-time error
-    return {false, qsl("label name '%1' not found").arg(name)};
 }
 
-std::pair<bool, QString> TMainConsole::deleteMiniConsole(const QString& name)
+void TMainConsole::deleteMiniConsole(const QString& name)
 {
-    if (name.isEmpty()) {
-        return {false, QLatin1String("a miniconsole cannot have an empty string as its name")};
-    }
-
     auto pConsole = deregisterSubConsole(name);
     if (pConsole) {
         mpHost->windowRegistry().forgetUserWindowSize(name);
@@ -1466,20 +1443,7 @@ std::pair<bool, QString> TMainConsole::deleteMiniConsole(const QString& name)
             // suchlike:
             pConsole->deleteLater();
         }
-
-        // It remains to be seen if the miniconsole has "gone" as a result of the
-        // above by the time the Lua subsystem processes the following:
-        TEvent mudletEvent{};
-        mudletEvent.mArgumentList.append(QLatin1String("sysMiniConsoleDeleted"));
-        mudletEvent.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
-        mudletEvent.mArgumentList.append(name);
-        mudletEvent.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
-        mpHost->raiseEvent(mudletEvent);
-        return {true, QString()};
     }
-
-    // Message is of the form needed for a Lua API function call run-time error
-    return {false, qsl("miniconsole name '%1' not found").arg(name)};
 }
 
 std::pair<bool, QString> TMainConsole::deleteCommandLine(const QString& name)
@@ -1844,8 +1808,118 @@ void TMainConsole::updateCommandLineSpellCheck(bool enabled)
 
 void TMainConsole::setCommandLineText(const QString& text)
 {
+    if (mpPasswordEntry) {
+        mpPasswordEntry->setText(text);
+        mpPasswordEntry->selectAll();
+        return;
+    }
     mpCommandLine->setPlainText(text);
     mpCommandLine->selectAll();
+}
+
+void TMainConsole::printToCommandLine(const QString& text)
+{
+    if (mpPasswordEntry) {
+        mpPasswordEntry->setText(text);
+        return;
+    }
+    mpCommandLine->setPlainText(text);
+    QTextCursor cursor = mpCommandLine->textCursor();
+    cursor.clearSelection();
+    // End, not EndOfLine: the latter stops at the end of the first wrapped line
+    cursor.movePosition(QTextCursor::End);
+    mpCommandLine->setTextCursor(cursor);
+    mpCommandLine->adjustHeight();
+}
+
+TPasswordEntry* TMainConsole::passwordEntry() const
+{
+    return mpPasswordEntry;
+}
+
+void TMainConsole::slot_passwordEntryWanted(const bool wanted)
+{
+    if (!mpCommandLine || !mpHost || mpHost->isClosingDown()) {
+        return;
+    }
+    if (wanted && !mpPasswordEntry) {
+        openPasswordEntry();
+    } else if (!wanted && mpPasswordEntry) {
+        closePasswordEntry();
+    }
+}
+
+void TMainConsole::openPasswordEntry()
+{
+    // A sibling, not a child: an ignored key event would bubble from a child
+    // into TCommandLine::event()
+    mpPasswordEntry = new TPasswordEntry(mpHost, mpCommandLine, layerCommandLine);
+    mpPasswordEntry->setGeometry(mpCommandLine->geometry());
+    mpPasswordEntry->raise();
+    mpPasswordEntry->show();
+    mpCommandLine->installEventFilter(this);
+
+    // So a fast typist's password is not split between the two. A box that comes
+    // back later in the hold finds text typed into the command line on purpose.
+    // setText() does not report the move as the player's first edit on its own.
+    if (mpHost->passwordEntryOpensWithThePrompt() && mpCommandLine->playerTypedLine()) {
+        QString typedAhead = mpCommandLine->toPlainText();
+        typedAhead.remove(QChar::CarriageReturn);
+        typedAhead.remove(QChar::LineFeed);
+        if (!typedAhead.isEmpty()) {
+            mpPasswordEntry->setText(typedAhead);
+            mpCommandLine->clear();
+            mpHost->passwordEntryEdited();
+        }
+    }
+
+    // Before the box takes focus, so a screen reader announces this wording
+    if (mpHost->passwordEntryReopened()) {
+        mpPasswordEntry->setReopened();
+    }
+
+    // QApplication::focusWidget() is null while Mudlet is not the active
+    // application. Read before setting the proxy, which moves focus to the box.
+    QWidget* pFocused = window()->focusWidget();
+    mpCommandLine->setFocusProxy(mpPasswordEntry);
+
+    // A printable key typed anywhere else reaches the box through the proxy anyway
+    auto* pCommandLineFocused = qobject_cast<TCommandLine*>(pFocused);
+    const bool fromOwnCommandLine = !pFocused || pFocused == mpCommandLine || (pCommandLineFocused && pCommandLineFocused->console() && pCommandLineFocused->console()->getHost() == mpHost);
+    if (fromOwnCommandLine) {
+        mpPasswordEntry->setFocus(Qt::OtherFocusReason);
+    } else {
+        //: Spoken by a screen reader when the game asks for hidden input while the keyboard focus is somewhere the hidden-input box does not take it from
+        mudlet::self()->announce(tr("The game asks for hidden input."), QString(), true);
+    }
+
+    connect(mpPasswordEntry, &TPasswordEntry::dismissed, mpHost, &Host::dismissPasswordEntry);
+}
+
+void TMainConsole::closePasswordEntry()
+{
+    TPasswordEntry* pEntry = mpPasswordEntry;
+    mpPasswordEntry = nullptr;
+    // Before the box hides, or hide() runs focusNextPrevChild() itself
+    const bool hadFocus = window()->focusWidget() == pEntry;
+    mpCommandLine->setFocusProxy(nullptr);
+    if (hadFocus) {
+        mpCommandLine->setFocus(Qt::OtherFocusReason);
+    }
+    mpCommandLine->removeEventFilter(this);
+    // Hidden before the deferred delete, or a WONT and a WILL in one read leave
+    // two boxes alive. Qt zero-fills only a password-mode line edit's text.
+    pEntry->setEchoMode(QLineEdit::Password);
+    pEntry->hide();
+    pEntry->deleteLater();
+}
+
+bool TMainConsole::eventFilter(QObject* watched, QEvent* event)
+{
+    if (mpPasswordEntry && watched == mpCommandLine && (event->type() == QEvent::Resize || event->type() == QEvent::Move)) {
+        mpPasswordEntry->setGeometry(mpCommandLine->geometry());
+    }
+    return TConsole::eventFilter(watched, event);
 }
 
 void TMainConsole::recordActiveCommandLine(TCommandLine* pCommandLine)
@@ -1944,6 +2018,10 @@ bool TMainConsole::replaceCommandLineText(const QString& name, const QString& te
     if (!pN) {
         return false;
     }
+    if (pN == mpCommandLine) {
+        printToCommandLine(text);
+        return true;
+    }
     putTextOnCommandLine(pN, text);
     return true;
 }
@@ -1953,6 +2031,17 @@ bool TMainConsole::appendCommandLineText(const QString& name, const QString& tex
     auto pN = commandLineNamed(name);
     if (!pN) {
         return false;
+    }
+    if (pN == mpCommandLine) {
+        if (mpPasswordEntry) {
+            // A script's write is not the player's first edit, which would cancel the auto-login
+            const QSignalBlocker blocker(mpPasswordEntry);
+            mpPasswordEntry->end(false);
+            mpPasswordEntry->insert(text);
+            return true;
+        }
+        printToCommandLine(mpCommandLine->toPlainText() + text);
+        return true;
     }
     putTextOnCommandLine(pN, pN->toPlainText() + text);
     return true;
@@ -1964,6 +2053,10 @@ bool TMainConsole::clearCommandLine(const QString& name)
     if (!pN) {
         return false;
     }
+    if (pN == mpCommandLine && mpPasswordEntry) {
+        mpPasswordEntry->setText(QString());
+        return true;
+    }
     pN->clear();
     pN->adjustHeight();
     return true;
@@ -1974,6 +2067,10 @@ bool TMainConsole::selectCommandLineText(const QString& name)
     auto pN = commandLineNamed(name);
     if (!pN) {
         return false;
+    }
+    if (pN == mpCommandLine && mpPasswordEntry) {
+        mpPasswordEntry->selectAll();
+        return true;
     }
     pN->selectAll();
     return true;
@@ -2797,6 +2894,17 @@ std::optional<QSize> TMainConsole::consoleFontSize(const QString& name) const
 
     const QFontMetrics fontMetrics(pC->mUpperPane->fontMetrics());
     return {QSize(fontMetrics.horizontalAdvance(QChar('W')), fontMetrics.height())};
+}
+
+std::optional<int> TMainConsole::consoleColumnWidth(const QString& name) const
+{
+    const TConsole* pC = (name.isEmpty() || name == qsl("main")) ? this : mSubConsoleMap.value(name).data();
+    if (!pC) {
+        return {};
+    }
+
+    // What TTextEdit::updateScreenView() sizes its cells by
+    return {pC->mUpperPane->fontMetrics().averageCharWidth()};
 }
 
 bool TMainConsole::setSubConsoleBackgroundColor(const QString& name, const QColor& color)

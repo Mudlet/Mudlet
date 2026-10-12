@@ -29,11 +29,20 @@
  * and each test method needs a mudlet of its own.
  */
 
+#include <QApplication>
+#include <QDialog>
 #include <QDockWidget>
 #include <QFileInfo>
+#include <QLabel>
+#include <QOpenGLContext>
+#include <QOpenGLWidget>
 #include <QPointer>
+#include <QRhiWidget>
+#include <QScopeGuard>
 #include <QSignalSpy>
 #include <QTemporaryDir>
+#include <QVBoxLayout>
+#include <QWindow>
 #include <QtTest/QtTest>
 #include <chrono>
 
@@ -49,6 +58,9 @@
 #include "ctelnet.h"
 #include "dlgConnectionProfiles.h"
 #include "dlgMapper.h"
+#if defined(INCLUDE_3DMAPPER)
+#include "glwidget_integration.h"
+#endif
 #include "mudlet.h"
 
 #include "GroupedTest.h"
@@ -76,6 +88,62 @@ private:
     {
         dlgMapper* pMapper = mpHost->mpMap->mapper();
         return mpHost->mpMap->mapViewFrontend() == (pMapper ? static_cast<TMapViewFrontend*>(pMapper) : nullptr);
+    }
+
+    // Qt's own test for quitting once the last window closes, which emits lastWindowClosed only inside exec()
+    static bool aWindowStillHoldsTheApplicationOpen()
+    {
+        const auto topLevels = QApplication::topLevelWidgets();
+        for (QWidget* pTopLevel : topLevels) {
+            QWindow* pHandle = pTopLevel->windowHandle();
+            if (pTopLevel->isVisible() && pTopLevel->testAttribute(Qt::WA_QuitOnClose) && pTopLevel->windowType() != Qt::ToolTip && pHandle && !pHandle->transientParent()) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    // showFailure() logs each failure it shows, so this still holds one whose label initializeGL hid again
+    static inline QStringList smModernViewWarnings;
+    static inline QtMessageHandler smPreviousMessageHandler = nullptr;
+    static void recordModernViewWarnings(QtMsgType type, const QMessageLogContext& context, const QString& message)
+    {
+        if (type == QtWarningMsg && message.startsWith(qsl("ModernGLWidget: "))) {
+            smModernViewWarnings.append(message);
+        }
+        smPreviousMessageHandler(type, context, message);
+    }
+    [[nodiscard]] static auto recordModernViewWarningsForThisScope()
+    {
+        smModernViewWarnings.clear();
+        smPreviousMessageHandler = qInstallMessageHandler(recordModernViewWarnings);
+        return qScopeGuard([] {
+            qInstallMessageHandler(smPreviousMessageHandler);
+        });
+    }
+    static inline const QString smFalseFailure = qsl("could not create an OpenGL 3.3 context");
+    // A driver may give the modern 3D view a working context it still rightly refuses
+    static QString rightfulRefusal(QOpenGLWidget* pView)
+    {
+        const QSurfaceFormat format = pView->context()->format();
+        if (format.version() < qMakePair(3, 3)) {
+            return qsl("the modern 3D view got OpenGL %1.%2 and rightly refused it, so a false context failure goes unchecked here").arg(format.majorVersion()).arg(format.minorVersion());
+        }
+        if (!smModernViewWarnings.filter(qsl("could not compile its shaders")).isEmpty()) {
+            return qsl("this driver rejected the modern 3D view's shaders, so a false context failure goes unchecked here");
+        }
+        return {};
+    }
+    static QByteArray warningsSoFar() { return smModernViewWarnings.isEmpty() ? QByteArrayLiteral("no warnings") : smModernViewWarnings.join(u'\n').toUtf8(); }
+
+public:
+    // Mirrors src/main.cpp, which shares GL contexts application-wide only on FreeBSD; with sharing,
+    // Qt never resets a 3D view's context when it is shown
+    static void initMain()
+    {
+#if defined(Q_OS_FREEBSD) && defined(INCLUDE_3DMAPPER)
+        QApplication::setAttribute(Qt::AA_ShareOpenGLContexts);
+#endif
     }
 
 private slots:
@@ -182,6 +250,323 @@ private slots:
         delete mudlet::self();
         QVERIFY2(!hiddenSpy.isEmpty() && !hiddenSpy.last().at(0).toBool(), "the dock was not hidden as the window went, so this case covers nothing");
     }
+
+    // Qt only hands native children to a top-level it recreates, so any other child window
+    // must be relinked to the window it belongs to, and to no other
+    void test_aRecreatedWindowTakesBackItsOrphanedDialogs()
+    {
+        mudlet::self()->show();
+        mudlet::self()->slot_showMapperDialog();
+        QDockWidget* pDock = mudlet::self()->getMainWindowDockWidget(qsl("map_%1").arg(mHostname));
+        QVERIFY2(pDock, "slot_showMapperDialog() created no map dock, so this case covers nothing");
+        pDock->setFloating(true);
+        qApp->processEvents();
+        auto* pMainDialog = new QDialog(mudlet::self());
+        auto* pMapDialog = new QDialog(pDock->widget());
+        pMainDialog->show();
+        pMapDialog->show();
+        qApp->processEvents();
+        QVERIFY2(pDock->windowHandle() && pDock->windowHandle() != mudlet::self()->windowHandle(), "the map dock is not a window of its own, so this case covers nothing");
+        QCOMPARE(pMapDialog->windowHandle()->transientParent(), pDock->windowHandle());
+        pMainDialog->windowHandle()->setTransientParent(nullptr);
+        pMapDialog->windowHandle()->setTransientParent(nullptr);
+
+        QEvent mainWinIdChange(QEvent::WinIdChange);
+        QCoreApplication::sendEvent(mudlet::self(), &mainWinIdChange);
+        QCOMPARE(pMainDialog->windowHandle()->transientParent(), mudlet::self()->windowHandle());
+        QVERIFY2(pMapDialog->windowHandle()->transientParent() != mudlet::self()->windowHandle(), "a dialog was linked to the main window rather than to the floating map it belongs to");
+        QCOMPARE(pMapDialog->windowHandle()->transientParent(), pDock->windowHandle());
+
+        pMapDialog->windowHandle()->setTransientParent(nullptr);
+        QEvent dockWinIdChange(QEvent::WinIdChange);
+        QCoreApplication::sendEvent(pDock, &dockWinIdChange);
+        QCOMPARE(pMapDialog->windowHandle()->transientParent(), pDock->windowHandle());
+    }
+
+    // Redocking destroys the floating map's window and creates none in its place, so Qt itself
+    // never relinks the dialogs that were transient for it
+    void test_redockingTheMapHandsItsDialogsToTheMainWindow()
+    {
+        mudlet::self()->show();
+        mudlet::self()->slot_showMapperDialog();
+        QDockWidget* pDock = mudlet::self()->getMainWindowDockWidget(qsl("map_%1").arg(mHostname));
+        QVERIFY2(pDock, "slot_showMapperDialog() created no map dock, so this case covers nothing");
+        pDock->setFloating(true);
+        qApp->processEvents();
+        auto* pDialog = new QDialog(pDock->widget());
+        pDialog->show();
+        qApp->processEvents();
+        QCOMPARE(pDialog->windowHandle()->transientParent(), pDock->windowHandle());
+
+        pDock->setFloating(false);
+        qApp->processEvents();
+        QCOMPARE(pDialog->windowHandle()->transientParent(), mudlet::self()->windowHandle());
+    }
+
+    // Whatever route leaves a dialog without a transient parent, closing the main window must still quit
+    void test_closingTheMainWindowQuitsPastADialogThatLostItsWindow()
+    {
+        mudlet::self()->show();
+        QPointer<QDialog> pDialog = new QDialog(mudlet::self());
+        pDialog->show();
+        qApp->processEvents();
+        pDialog->windowHandle()->setTransientParent(nullptr);
+
+        QVERIFY(mudlet::self()->close());
+        mpHost = nullptr;
+        QVERIFY2(pDialog && pDialog->isVisible(), "the dialog was gone before the main window closed, so this case covers nothing");
+        QVERIFY2(!aWindowStillHoldsTheApplicationOpen(), "a dialog that lost its window would keep Mudlet from quitting");
+    }
+
+#if defined(INCLUDE_3DMAPPER)
+    // The first GL view parented into a window makes Qt recreate it; a dialog open across that
+    // must keep its transient parent, or it keeps Mudlet running after the main window closes
+    void test_aDialogKeepsItsWindowWhenA3DViewFirstShowsInAFloatingMap()
+    {
+        mudlet::self()->show();
+        mudlet::self()->slot_showMapperDialog();
+        QDockWidget* pDock = mudlet::self()->getMainWindowDockWidget(qsl("map_%1").arg(mHostname));
+        QVERIFY2(pDock, "slot_showMapperDialog() created no map dock, so this case covers nothing");
+        pDock->setFloating(true);
+        qApp->processEvents();
+        auto* pDialog = new QDialog(pDock->widget());
+        pDialog->show();
+        qApp->processEvents();
+        QVERIFY(mpHost->getLuaInterpreter()->compileAndExecuteScript(qsl("assert(setConfig('experiment.3dmap.modernmapper', true))")));
+        QPointer<QWindow> pWindowBefore = pDock->windowHandle();
+        QVERIFY(pWindowBefore);
+        QCOMPARE(pDialog->windowHandle()->transientParent(), pWindowBefore.data());
+
+        QVERIFY(mpHost->getLuaInterpreter()->compileAndExecuteScript(qsl("assert(setConfig('show3dMapView', true))")));
+        qApp->processEvents();
+        if (pWindowBefore && pDock->windowHandle() == pWindowBefore) {
+            QSKIP("Qt did not recreate the floating map's window for the GL view here, so there is nothing to relink");
+        }
+        QVERIFY2(pDialog->windowHandle()->transientParent(), "the dialog lost its window when the floating map was recreated");
+        QCOMPARE(pDialog->windowHandle()->transientParent(), pDock->windowHandle());
+    }
+
+    // Floating the map leaves a dialog opened over it transient for the main window, so when
+    // the main window is recreated the dialog must go to the window it is in now
+    void test_aDialogOpenedBeforeTheMapFloatedKeepsAWindowWhenTheMainWindowIsRecreated()
+    {
+        mudlet::self()->show();
+        mudlet::self()->slot_showMapperDialog();
+        QDockWidget* pDock = mudlet::self()->getMainWindowDockWidget(qsl("map_%1").arg(mHostname));
+        QVERIFY2(pDock, "slot_showMapperDialog() created no map dock, so this case covers nothing");
+        qApp->processEvents();
+        auto* pDialog = new QDialog(pDock->widget());
+        pDialog->show();
+        qApp->processEvents();
+        QCOMPARE(pDialog->windowHandle()->transientParent(), mudlet::self()->windowHandle());
+        pDock->setFloating(true);
+        qApp->processEvents();
+        QPointer<QWindow> pMainWindowBefore = mudlet::self()->windowHandle();
+        QVERIFY(pMainWindowBefore);
+
+        // Qt recreates the window inside setParent(); shown, this unguarded view would leak a context without GL
+        auto* pGLView = new QOpenGLWidget();
+        pGLView->setParent(mudlet::self());
+        delete pGLView;
+        if (pMainWindowBefore && mudlet::self()->windowHandle() == pMainWindowBefore) {
+            QSKIP("Qt did not recreate the main window for the GL view here, so there is nothing to relink");
+        }
+        QVERIFY2(pDialog->windowHandle()->transientParent(), "the dialog lost its window when the main window was recreated");
+        QCOMPARE(pDialog->windowHandle()->transientParent(), pDock->windowHandle());
+    }
+
+    // The context-retry guard must not hold back the first attempt: with GL the view keeps a
+    // working context, and without it the failure is reported and the context never asked again
+    void test_each3DViewAsksForOneContext()
+    {
+        mudlet::self()->show();
+        mudlet::self()->slot_showMapperDialog();
+        QDockWidget* pDock = mudlet::self()->getMainWindowDockWidget(qsl("map_%1").arg(mHostname));
+        QVERIFY2(pDock && pDock->widget(), "slot_showMapperDialog() created no map dock, so this case covers nothing");
+        const auto stopRecording = recordModernViewWarningsForThisScope();
+        for (const bool modern : {false, true}) {
+            QVERIFY(mpHost->getLuaInterpreter()->compileAndExecuteScript(qsl("assert(setConfig('experiment.3dmap.modernmapper', %1))\n"
+                                                                             "assert(setConfig('show3dMapView', true))")
+                                                                                 .arg(modern ? qsl("true") : qsl("false"))));
+            qApp->processEvents();
+            auto* pView = pDock->widget()->findChild<QOpenGLWidget*>(qsl("glWidget"));
+            QVERIFY2(pView && pView->inherits(modern ? "ModernGLWidget" : "GLWidget"), "the expected renderer did not make the 3D view, so this case covers nothing");
+            QVERIFY2(pView->isVisible() && !pView->size().isEmpty(), "the 3D view was never laid out, so this case covers nothing");
+            QTRY_VERIFY2(pView->context(), "the 3D view never asked for a context");
+            QPointer<QOpenGLContext> pFirstContext = pView->context();
+            const bool valid = pView->isValid();
+            if (modern && !valid) {
+                QTRY_VERIFY2(pView->findChild<QLabel*>() && pView->findChild<QLabel*>()->isVisible(), "the modern 3D view did not say it could not create a context");
+                QVERIFY2(smModernViewWarnings.size() == 1 && smModernViewWarnings.constFirst().contains(smFalseFailure), warningsSoFar().constData());
+            } else if (modern) {
+                qApp->processEvents();
+                if (const QString refusal = rightfulRefusal(pView); !refusal.isEmpty()) {
+                    QSKIP(qPrintable(refusal));
+                }
+                QVERIFY2(smModernViewWarnings.isEmpty(), warningsSoFar().constData());
+            }
+
+            pView->resize(pView->size() + QSize(10, 10));
+            pView->hide();
+            pView->show();
+            pView->repaint();
+            qApp->processEvents();
+            if (valid) {
+                // Qt itself may rebuild a context that has not been composed yet when the view is shown again
+                QVERIFY2(pView->context() && pView->isValid(), "the 3D view was left without a working context");
+                QVERIFY2(smModernViewWarnings.isEmpty(), warningsSoFar().constData());
+            } else {
+                QVERIFY2(pView->context() == pFirstContext, "the 3D view asked again for a context it could not create");
+                QVERIFY(!pView->isValid());
+                if (modern) {
+                    QVERIFY2(smModernViewWarnings.size() == 1 && smModernViewWarnings.constFirst().contains(smFalseFailure), warningsSoFar().constData());
+                }
+            }
+        }
+    }
+
+    // Geyser hides an embedded map by shrinking it to nothing; a view with no size has not asked
+    // for a context yet, so it must not say one failed
+    void test_aZeroSize3DViewReportsNoContextFailure()
+    {
+        mudlet::self()->show();
+        QVERIFY(mpHost->getLuaInterpreter()->compileAndExecuteScript(qsl("assert(setConfig('experiment.3dmap.modernmapper', true))")));
+        auto [created, message] = mpHost->mainConsoleView()->createMapper(QString(), 10, 10, 0, 0);
+        QVERIFY2(created, qPrintable(message));
+        const auto stopRecording = recordModernViewWarningsForThisScope();
+        QVERIFY(mpHost->getLuaInterpreter()->compileAndExecuteScript(qsl("assert(setConfig('show3dMapView', true))")));
+        qApp->processEvents();
+        auto* pView = mpHost->mpMap->mapper()->findChild<QOpenGLWidget*>(qsl("glWidget"));
+        QVERIFY2(pView && pView->inherits("ModernGLWidget"), "the modern renderer did not make the 3D view, so this case covers nothing");
+        QVERIFY2(pView->isVisible() && pView->size().isEmpty() && !pView->context(), "the 3D view had a size or a context, so this case covers nothing");
+        QVERIFY2(smModernViewWarnings.isEmpty(), "a 3D view with no size said it could not get a context it never asked for");
+
+        auto [resized, resizeMessage] = mpHost->mainConsoleView()->createMapper(QString(), 10, 10, 400, 300);
+        QVERIFY2(resized, qPrintable(resizeMessage));
+        QTRY_VERIFY2(pView->context(), "the 3D view asked for no context once it had a size");
+        if (pView->isValid()) {
+            qApp->processEvents();
+            if (const QString refusal = rightfulRefusal(pView); !refusal.isEmpty()) {
+                QSKIP(qPrintable(refusal));
+            }
+            QVERIFY2(smModernViewWarnings.isEmpty(), warningsSoFar().constData());
+        } else {
+            QTRY_VERIFY2(pView->findChild<QLabel*>() && pView->findChild<QLabel*>()->isVisible(), "the 3D view did not say it could not create a context once it had a size");
+            QVERIFY2(smModernViewWarnings.size() == 1 && smModernViewWarnings.constFirst().contains(smFalseFailure), warningsSoFar().constData());
+        }
+    }
+
+    // Qt gives an OpenGL view no context at all in a window composed with another graphics API. A Null
+    // QRhiWidget makes the window compose that way, standing in for the Direct3D, Metal or Vulkan that
+    // QT_WIDGETS_RHI forces; platforms with no QRhi, such as offscreen, ignore it
+    void test_a3DViewInAWindowNotDrawnWithOpenGLSaysSo()
+    {
+        QVERIFY(mpHost->getLuaInterpreter()->compileAndExecuteScript(qsl("assert(setConfig('experiment.3dmap.modernmapper', true))")));
+        QWidget window;
+        auto* pLayout = new QVBoxLayout(&window);
+        auto* pOtherApi = new QRhiWidget();
+        pOtherApi->setApi(QRhiWidget::Api::Null);
+        pLayout->addWidget(pOtherApi);
+        QOpenGLWidget* pSized = GLWidgetFactory::createGLWidget(mpHost->mpMap.data(), mpHost);
+        QOpenGLWidget* pHidden = GLWidgetFactory::createGLWidget(mpHost->mpMap.data(), mpHost);
+        QVERIFY2(pSized && pSized->inherits("ModernGLWidget") && pHidden && pHidden->inherits("ModernGLWidget"), "the modern renderer did not make the 3D views, so this case covers nothing");
+        pLayout->addWidget(pSized);
+        // As Geyser hides an embedded map
+        pHidden->setFixedSize(0, 0);
+        pLayout->addWidget(pHidden);
+        window.resize(400, 600);
+        const auto stopRecording = recordModernViewWarningsForThisScope();
+        window.show();
+        const auto noticeShowing = [](QOpenGLWidget* pView) {
+            return pView->findChild<QLabel*>() && pView->findChild<QLabel*>()->isVisible();
+        };
+        QTRY_VERIFY2(pSized->context() || noticeShowing(pSized), "a 3D view shown with a size got no context and showed no notice");
+        if (pSized->context()) {
+            QSKIP("this platform composed the window without a QRhi, so the 3D view got a context and this case goes unchecked here");
+        }
+        QVERIFY2(!pSized->size().isEmpty(), "the 3D view had no size, so this case covers nothing");
+        QVERIFY2(smModernViewWarnings.size() == 1 && smModernViewWarnings.filter(smFalseFailure).isEmpty(), warningsSoFar().constData());
+        // Qt refuses the classic 3D view in this window too
+        const QString classicAdvice = qsl("experiment.3dmap.modernmapper");
+        QVERIFY2(!pSized->findChild<QLabel*>()->text().contains(classicAdvice), qPrintable(pSized->findChild<QLabel*>()->text()));
+
+        // Lets the deferred show checks run, as the notice above may have come from the resize that showing sends first
+        qApp->processEvents();
+        QVERIFY2(pHidden->isVisible() && pHidden->size().isEmpty() && !noticeShowing(pHidden), "a 3D view with no size said it could not get a context it never asked for");
+        // Values Qt ignores, so a QRhiWidget, not the environment, is what drew this window without OpenGL
+        QVERIFY2(qEnvironmentVariableIsEmpty("QT_WIDGETS_RHI") && qEnvironmentVariableIsEmpty("QT_WIDGETS_RHI_BACKEND"), "the environment already sets a QRhi variable, so this case covers nothing");
+        qputenv("QT_WIDGETS_RHI", QByteArrayLiteral("0"));
+        qputenv("QT_WIDGETS_RHI_BACKEND", QByteArrayLiteral("vulkan"));
+        const auto unsetIgnored = qScopeGuard([] {
+            qunsetenv("QT_WIDGETS_RHI");
+            qunsetenv("QT_WIDGETS_RHI_BACKEND");
+        });
+        pHidden->setFixedSize(400, 300);
+        QTRY_VERIFY2(noticeShowing(pHidden), "a 3D view given a size got no context and showed no notice");
+        QVERIFY2(!pHidden->context() && smModernViewWarnings.size() == 2, warningsSoFar().constData());
+        const QString notice = pHidden->findChild<QLabel*>()->text();
+        QVERIFY2(!notice.contains(qsl("QT_WIDGETS_RHI")) && !notice.contains(classicAdvice), qPrintable(notice));
+    }
+
+    // The notice blames only a variable Qt acted on; Qt reads its own copy at startup, so this reaches only the notice
+    void test_theNoticeNamesOnlyTheVariablesQtHonours()
+    {
+        const QList<QByteArray> names{QByteArrayLiteral("QT_WIDGETS_RHI"), QByteArrayLiteral("QT_WIDGETS_RHI_BACKEND"), QByteArrayLiteral("QT_WIDGETS_HIGHDPI_DOWNSCALE")};
+        for (const QByteArray& name : names) {
+            QVERIFY2(qEnvironmentVariableIsEmpty(name.constData()), "the environment already sets a QRhi variable, so this case covers nothing");
+        }
+        const auto unsetAll = qScopeGuard([&names] {
+            for (const QByteArray& name : names) {
+                qunsetenv(name.constData());
+            }
+        });
+        const auto forcing = [&names](const QList<const char*>& values) {
+            for (qsizetype i = 0; i < names.size(); ++i) {
+                if (values.at(i)) {
+                    qputenv(names.at(i).constData(), QByteArray(values.at(i)));
+                } else {
+                    qunsetenv(names.at(i).constData());
+                }
+            }
+            return ModernGLWidget::rhiForcingVariables();
+        };
+        QCOMPARE(forcing({"0", "vulkan", "0"}), QStringList());
+        QCOMPARE(forcing({nullptr, "vulkan", nullptr}), QStringList());
+        QCOMPARE(forcing({"1", "opengl", nullptr}), QStringList());
+#if QT_CONFIG(vulkan)
+        QCOMPARE(forcing({"1", "vulkan", nullptr}), (QStringList{qsl("QT_WIDGETS_RHI"), qsl("QT_WIDGETS_RHI_BACKEND")}));
+        QCOMPARE(forcing({nullptr, "vulkan", "1"}), (QStringList{qsl("QT_WIDGETS_HIGHDPI_DOWNSCALE"), qsl("QT_WIDGETS_RHI_BACKEND")}));
+#endif
+#if defined(Q_OS_WIN) || QT_CONFIG(metal)
+        QCOMPARE(forcing({"1", nullptr, nullptr}), QStringList{qsl("QT_WIDGETS_RHI")});
+#else
+        // Elsewhere Qt composes with OpenGL unless told otherwise
+        QCOMPARE(forcing({"1", nullptr, nullptr}), QStringList());
+#endif
+    }
+
+    // Replacing a 3D view in the same event-loop turn that inserted it must not let the show
+    // its layout queued map the old widget as a window of its own
+    void test_replacingThe3DViewLeavesNoStrayWindow()
+    {
+        mudlet::self()->slot_showMapperDialog();
+        qApp->processEvents();
+        QDockWidget* pDock = mudlet::self()->getMainWindowDockWidget(qsl("map_%1").arg(mHostname));
+        QVERIFY2(pDock && pDock->widget(), "slot_showMapperDialog() created no map dock, so this case covers nothing");
+        QVERIFY(mpHost->getLuaInterpreter()->compileAndExecuteScript(qsl("assert(setConfig('show3dMapView', true))\n"
+                                                                         "assert(getConfig('show3dMapView'))")));
+        QPointer<QOpenGLWidget> pOldView = pDock->widget()->findChild<QOpenGLWidget*>(qsl("glWidget"));
+        QVERIFY2(pOldView && pOldView->inherits("GLWidget"), "the classic renderer did not make the 3D view, so this case covers nothing");
+        QVERIFY(mpHost->getLuaInterpreter()->compileAndExecuteScript(qsl("assert(setConfig('experiment.3dmap.modernmapper', true))\n"
+                                                                         "assert(getConfig('show3dMapView'))")));
+        auto* pNewView = pDock->widget()->findChild<QOpenGLWidget*>(qsl("glWidget"));
+        QVERIFY2(pNewView && pNewView != pOldView && pNewView->inherits("ModernGLWidget"), "switching renderers did not replace the 3D view, so this case covers nothing");
+
+        qApp->processEvents();
+        QVERIFY2(pOldView, "the replaced 3D view was deleted inside processEvents(), so whether it was shown went unchecked");
+        QVERIFY2(!pOldView->isVisible(), "a replaced 3D view came back as a window of its own");
+    }
+#endif
 
     // An embedded mapper stops redrawing once the toolbar's own map dock has
     // been opened and closed again. slot_showMapperDialog() repoints
@@ -489,10 +874,7 @@ private:
 
     bool mapOpenEventCountIs(const int expected) const { return mpHost->getLuaInterpreter()->compileAndExecuteScript(qsl("assert(mapOpenSeen == %1)").arg(expected)); }
 
-    void deleteProfileDirectory() const
-    {
-        TestProfile::removeProfileDirectory(mHostname);
-    }
+    void deleteProfileDirectory() const { TestProfile::removeProfileDirectory(mHostname); }
 };
 
 #include "EmbeddedMapperCreationTest.moc"

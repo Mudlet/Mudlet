@@ -168,7 +168,7 @@ private:
     // Nothing while the view shows nothing the frame could hold
     std::optional<QRect> nestingArea(const TMxpFrame& frame) const;
     QSize calculateFrameSize(const QString& spec, const QSize& containerSize, bool isHeight);
-    // Null while the profile has no main console
+    // The null view's frames while the profile has no main console
     TMxpFrameFrontend* frameWidgets();
     const TMxpFrameFrontend* frameWidgets() const;
 
