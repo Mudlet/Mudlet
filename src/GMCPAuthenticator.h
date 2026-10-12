@@ -93,8 +93,8 @@ private:
         // unreadable never widens a stored token's exposure.
         bool secureOnly = true;
         QString token;
-        // The metadata named an account but its token could not be read - most often because a resume
-        // hint has none, but indistinguishably a store that failed to answer.
+        // The metadata named an account but the store would not answer for its token - locked, denied or
+        // timed out. A resume hint with no token reads as an empty token, not this.
         bool tokenUnreadable = false;
     };
     // Reads the stored sign-in as one entry, following the token wherever it lives: inline in the
@@ -109,6 +109,8 @@ private:
     using StoreReadDone = std::function<void(bool success, QString value, const QString& errorMessage)>;
     // Reads one credential key; what mStoreReader does unless a test replaces it.
     void readStoreKey(const QString& key, StoreReadDone done);
+    // Warns once until the store next answers, then logs at debug level; see mWarnedStoreUnreadable.
+    void reportStoreUnreadable(const QString& what, const QString& error);
 
 public:
     // Where a profile's saved sign-in record is filed, for the preferences deciding whether there is
@@ -257,6 +259,9 @@ private:
     // then the superseding Default has already consumed the latch, so without re-arming it the Default
     // after that could replay the dead token.
     bool mReconnectRejected = false;
+    // A store that cannot be asked at all - no Secret Service, a disabled wallet - fails every read, so
+    // its warning is given once rather than on every connect, and again only after a read has worked.
+    bool mWarnedStoreUnreadable = false;
     // Incremented on every per-connection auth reset - each Char.Login.Default, and each socket connect
     // or disconnect. The asynchronous reconnect-token keychain read captures the value current when it
     // started and re-checks it in its callback, so a result arriving after a newer connection began is
