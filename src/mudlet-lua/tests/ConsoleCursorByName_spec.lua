@@ -195,6 +195,38 @@ describe("Tests that the cursor and line functions find their console by name", 
         assert.are.equal(mainRows, getRowCount("main"))
       end)
     end)
+
+    describe("of a mini console with its split screen open", function()
+      local window = "specCursorByName split" .. suffix
+
+      setup(function()
+        assert.is_true(createMiniConsole(window, 0, 0, 300, 400))
+        enableScrolling(window)
+        for i = 1, 300 do
+          echo(window, "split line " .. i .. "\n")
+        end
+      end)
+
+      teardown(function()
+        deleteMiniConsole(window)
+      end)
+
+      -- the lower pane takes a quarter of the height, so counting it instead
+      -- of the upper one would answer well under half the rows
+      it("counts the rows above the split", function()
+        pumpEvents(100)
+        local fullRows = getRowCount(window)
+        scrollTo(window, 10)
+        pumpEvents(100)
+        local splitRows = getRowCount(window)
+        scrollTo(window)
+        pumpEvents(100)
+
+        assert.is_true(splitRows < fullRows, ("%d rows split, %d without"):format(splitRows, fullRows))
+        assert.is_true(splitRows > fullRows / 2, ("%d rows split, %d without"):format(splitRows, fullRows))
+        assert.are.equal(fullRows, getRowCount(window))
+      end)
+    end)
   end)
 
   describe("with the main console", function()
