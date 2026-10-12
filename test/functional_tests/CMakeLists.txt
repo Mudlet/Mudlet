@@ -21,7 +21,7 @@ if(USE_UPDATER)
 endif()
 
 # Tests that share one executable rather than getting one each. A functional
-# test binary statically links mudlet_core and costs a build tree ~250MB plus a
+# test binary statically links mudlet_app and costs a build tree ~250MB plus a
 # link step, and none of that is per-test - so tests of one subsystem are built
 # together and told on the command line which class to run. See GroupedTest.h.
 #
@@ -33,6 +33,7 @@ endif()
 
 # Windows, consoles and the text they draw
 set(WINDOW_GROUP_TEST_SOURCES
+    AccessibleToolTipTest.cpp
     AddonControlsTest.cpp
     AsciiLineBreakTest.cpp
     ConsoleModelExtractionTest.cpp
@@ -42,6 +43,7 @@ set(WINDOW_GROUP_TEST_SOURCES
     DebugConsoleFilterTest.cpp
     FrontendRefreshSeamTest.cpp
     CommandLineKeyHandlingTest.cpp
+    PasswordEntryTest.cpp
     DetachedWindowMenuShortcutsTest.cpp
     FramePacingTest.cpp
     DockWidgetWithoutProfileTest.cpp
@@ -151,6 +153,7 @@ set(TELNET_GROUP_TEST_SOURCES
     MMCPIncomingCallTest.cpp
     TelnetNewEnvironTest.cpp
     TelnetPasswordMaskTimeoutTest.cpp
+    PasswordEntryPolicyTest.cpp
     TelnetOptionsReportTest.cpp
     ReplayPlaybackControlTest.cpp
     TelnetReconnectStateTest.cpp
@@ -209,6 +212,7 @@ set(EDITOR_GROUP_TEST_SOURCES
 # The map: its rooms and areas, its file format, and the mapper widget
 set(MAP_GROUP_TEST_SOURCES
     EmbeddedMapperCreationTest.cpp
+    ExitAppearanceTest.cpp
     MapAreaReassignmentTest.cpp
     MapAreaSelectionTest.cpp
     MapCloseDuringImportTest.cpp
@@ -235,12 +239,13 @@ set(MAP_GROUP_TEST_SOURCES
     MapAreaImageExportTest.cpp
     MapRoundTripTest.cpp
     MapSymbolFontTest.cpp
+    RoomAppearanceTest.cpp
     RoomExitsDeletedEditItemTest.cpp
 )
 
-# CameraController is only compiled into the library with the 3D mapper
+# CameraController and GeometryManager are only compiled into the library with the 3D mapper
 if(USE_3DMAPPER)
-    list(APPEND MAP_GROUP_TEST_SOURCES CameraAngleLimitTest.cpp)
+    list(APPEND MAP_GROUP_TEST_SOURCES CameraAngleLimitTest.cpp CameraViewTest.cpp ExitSceneTest.cpp LabelTextureCacheTest.cpp Map3DViewEditingTest.cpp Map3DViewInteractionTest.cpp Map3DViewSyncTest.cpp ModernMapperGeometryTest.cpp ModernMapperRenderTest.cpp ModernRoomTextureTest.cpp)
 endif()
 
 # Packages and modules: installing them, saving them and removing them
@@ -302,6 +307,9 @@ set(SETTINGS_GROUP_TEST_SOURCES
 set(TEARDOWN_GROUP_TEST_SOURCES
     AppStartupTeardownTest.cpp
     DialogTeardownTest.cpp
+    FrontendRoutingContractTest.cpp
+    HeadlessHostSmokeTest.cpp
+    HeadlessMainConsoleFontTest.cpp
     HeadlessVersionTest.cpp
     HostChildTeardownTest.cpp
     HostManagerAccessorTest.cpp
@@ -319,6 +327,7 @@ set(MEDIA_GROUP_TEST_SOURCES
     VideoOutputHideTest.cpp
     TMediaLoopTest.cpp
     TtsInterruptingSpeakTest.cpp
+    HeadlessMediaDebugTest.cpp
 )
 
 set(FUNCTIONAL_TEST_UTILS
@@ -332,8 +341,8 @@ mudlet_add_test_pch_provider(mudlet_functional_test_pch)
 macro(add_functional_test_binary target)
     add_executable(${target} ${ARGN} ${FUNCTIONAL_TEST_UTILS})
     mudlet_reuse_test_pch(${target} mudlet_functional_test_pch)
-    add_dependencies(${target} ${LIB_MUDLET_TARGET})
-    target_link_libraries(${target} PRIVATE Qt6::Test ${LIB_MUDLET_TARGET} mudlet_lsan_hooks)
+    add_dependencies(${target} ${LIB_MUDLET_APP_TARGET})
+    target_link_libraries(${target} PRIVATE Qt6::Test ${LIB_MUDLET_APP_TARGET} mudlet_lsan_hooks)
     set_target_properties(${target} PROPERTIES ENABLE_EXPORTS ON)
 endmacro()
 
@@ -552,6 +561,11 @@ foreach(test_name ${allFunctionalTestNames})
     )
 endforeach()
 
+# Offscreen has no GL context, so this skips; listed as not run rather than as passed
+if(TEST LabelTextureCacheTest)
+    set_tests_properties(LabelTextureCacheTest PROPERTIES SKIP_REGULAR_EXPRESSION "SKIP   : LabelTextureCacheTest::initTestCase")
+endif()
+
 # A buffer's default font gives the same row count for its pane's stale and laid-out
 # heights at 96 DPI; 72 DPI tells them apart
 set_property(TEST WindowStateGettersTest APPEND PROPERTY ENVIRONMENT "QT_FONT_DPI=72")
@@ -648,8 +662,8 @@ endif()
 # and each clip has to be waited out in real time, so it needs a longer timeout.
 # VideoOutputHideTest boots one profile for the whole class and waits two of its three endings
 # out in real time, and takes the same headroom.
-# No test binary runs src/main.cpp, so pin QT_MEDIA_BACKEND for both to what main.cpp picks
-# for the shipped application - otherwise the tests silently exercise Qt's default backend for
+# No test binary runs src/main.cpp, so pin QT_MEDIA_BACKEND for both, and for HeadlessMediaDebugTest,
+# to what main.cpp picks for the shipped application - otherwise the tests silently exercise Qt's default backend for
 # the platform rather than the one users actually get. It is empty, and so a no-op, on Linux.
 if(APPLE)
     set(mediaLoopTestBackend "darwin")
@@ -661,7 +675,7 @@ endif()
 set_tests_properties(TMediaLoopTest VideoOutputHideTest PROPERTIES TIMEOUT 300)
 if(mediaLoopTestBackend)
     # APPEND, so the environment set by the loop above stays in force rather than being replaced
-    set_property(TEST TMediaLoopTest VideoOutputHideTest APPEND PROPERTY ENVIRONMENT "QT_MEDIA_BACKEND=${mediaLoopTestBackend}")
+    set_property(TEST TMediaLoopTest VideoOutputHideTest HeadlessMediaDebugTest APPEND PROPERTY ENVIRONMENT "QT_MEDIA_BACKEND=${mediaLoopTestBackend}")
 endif()
 
 # StarterUiSectionsTest creates a fresh profile per test method and one of them
