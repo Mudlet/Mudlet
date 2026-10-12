@@ -101,9 +101,9 @@ QString TMxpLinkTagHandler::getHref(const MxpStartTag* tag)
     }
     return "";
 }
-void TMxpLinkTagHandler::handleContent(char ch)
+void TMxpLinkTagHandler::handleContentBytes(QByteArrayView bytes)
 {
     if (mIsHrefInContent) {
-        mCurrentTagContent.append(ch);
+        mCurrentTagContent.append(QLatin1StringView(bytes));
     }
 }

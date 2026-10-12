@@ -117,6 +117,7 @@ jobs:
         # Releases are built profile-guided - see cmake/ProfileGuidedOptimization.cmake - and so
         # are PTBs, so a broken profile-guided build shows up the next morning, not on release day
         MUDLET_PGO_BUILD: ${{ startsWith(github.ref, 'refs/tags/Mudlet-') || github.event_name == 'schedule' || github.event.inputs.scheduled == 'true' || github.event.inputs.pgo == 'true' }}
+        WITH_MCPSERVER: "ON"
       run: $GITHUB_WORKSPACE/CI/build-mudlet-for-windows.sh
 
     # A hit refreshes an entry's timestamp, so whatever this build left untouched

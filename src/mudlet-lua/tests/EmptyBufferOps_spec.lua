@@ -34,12 +34,10 @@ describe("Console operations on a buffer emptied by deleteLine()", function()
     deleteMiniConsole(win)
   end)
 
-  -- clearWindow() leaves exactly one empty line, and deleteLine() removes the
-  -- line under the user cursor - which clearWindow() does not reset, so the
-  -- cursor has to be put back on that line for the buffer to end up empty.
+  -- clearWindow() leaves exactly one empty line, with the user cursor on it for
+  -- deleteLine() to remove.
   local function empty()
     clearWindow(win)
-    moveCursor(win, 0, 0)
     deleteLine(win)
   end
 

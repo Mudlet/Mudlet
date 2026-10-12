@@ -158,6 +158,8 @@ private:
     void addTriggerRootNode(TTrigger* pT, int parentPosition = -1, int childPosition = -1, bool moveTrigger = false);
     void addTrigger(TTrigger* pT);
     void removeTriggerRootNode(TTrigger* pT);
+    bool listRootNode(TTrigger* pT, std::list<TTrigger*>::iterator before);
+    void unlistRootNode(TTrigger* pT);
     void removeTrigger(TTrigger*);
     void startOrExtendSameLineChain(TTrigger* pT);
     void collectPrescanTasks(TTrigger* pT);
@@ -186,6 +188,9 @@ private:
     int mRegexSearchesOnTheLastLine = 0;
     QMap<int, TTrigger*> mTriggerMap;
     std::list<TTrigger*> mTriggerRootNodeList;
+    // Where each root node sits in mTriggerRootNodeList: std::list::remove() walks the whole list,
+    // which made freeing a batch of temporary triggers quadratic
+    QHash<TTrigger*, std::list<TTrigger*>::iterator> mRootNodePositions;
     // What processDataStream() iterates instead of mTriggerRootNodeList. A pass pins the snapshot current
     // when it started, so a mid-pass mutation only affects the next pass. Every mutation of
     // mTriggerRootNodeList must set the flag below, or a pass would walk freed triggers.

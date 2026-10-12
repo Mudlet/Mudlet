@@ -1134,6 +1134,81 @@ describe("Tests DB.lua functions", function()
     end)
   end)
 
+  describe("Tests db:_epoch_from_utc", function()
+    it("reads sqlite's UTC datetime strings back as the epoch they were written from", function()
+      local known = {
+        ["1970-01-01 00:00:00"] = 0,
+        ["1969-12-31 23:59:59"] = -1,
+        ["1900-03-01 00:00:00"] = -2203891200,
+        ["2000-02-29 12:00:00"] = 951825600,
+        ["2025-05-26 19:34:42"] = 1748288082,
+        ["2099-12-31 23:59:59"] = 4102444799,
+        ["2023-13-01 00:00:00"] = 1704067200,
+        ["2024-00-31 00:00:00"] = 1703980800,
+      }
+      for value, epoch in pairs(known) do
+        assert.are.equal(epoch, db:_epoch_from_utc(value), value)
+      end
+    end)
+
+    it("matches os.date for every hour of a leap year", function()
+      local start = 1704067200 -- 2024-01-01 00:00:00 UTC
+      for hour = 0, 366 * 24 - 1 do
+        local epoch = start + hour * 3600 + 1799
+        local value = os.date("!%Y-%m-%d %H:%M:%S", epoch)
+        assert.are.equal(epoch, db:_epoch_from_utc(value), value)
+      end
+    end)
+  end)
+
+  -- Hours when European or North American clocks spring forward or fall back, so
+  -- a conversion that goes through local time is off by an hour in those zones
+  describe("Tests timestamps around daylight saving changes", function()
+    local epochs = {
+      1710037800, -- 2024-03-10 02:30:00 UTC
+      1710041400, -- 2024-03-10 03:30:00 UTC
+      1710054000, -- 2024-03-10 07:00:00 UTC, 02:00 EST becomes 03:00 EDT
+      1711846800, -- 2024-03-31 01:00:00 UTC, 02:00 CET becomes 03:00 CEST
+      1711848600, -- 2024-03-31 01:30:00 UTC
+      1711852200, -- 2024-03-31 02:30:00 UTC
+      1729989000, -- 2024-10-27 00:30:00 UTC
+      1729992600, -- 2024-10-27 01:30:00 UTC
+      1729996200, -- 2024-10-27 02:30:00 UTC
+      1730611800, -- 2024-11-03 05:30:00 UTC
+      1730615400, -- 2024-11-03 06:30:00 UTC
+    }
+
+    before_each(function()
+      mydb = db:create("mydbdstesting", { sheet = { seen = db:Timestamp(nil), n = 0 } })
+    end)
+
+    after_each(function()
+      db:close()
+      os.remove(getMudletHomeDir() .. "/Database_mydbdstesting.db")
+      mydb = nil
+    end)
+
+    it("fetches the same epoch as was added", function()
+      for n, epoch in ipairs(epochs) do
+        db:add(mydb.sheet, { seen = db:Timestamp(epoch), n = n })
+      end
+      local results = db:fetch(mydb.sheet, nil, { mydb.sheet.n })
+      assert.are.equal(#epochs, #results)
+      for n, epoch in ipairs(epochs) do
+        assert.are.equal(epoch, results[n].seen:as_number(), os.date("!%Y-%m-%d %H:%M:%S", epoch))
+      end
+    end)
+
+    it("aggregates to the same epoch as was added", function()
+      for n, epoch in ipairs(epochs) do
+        db:add(mydb.sheet, { seen = db:Timestamp(epoch), n = n })
+      end
+      assert.are.equal(1730615400, db:aggregate(mydb.sheet.seen, "MAX"):as_number())
+      assert.are.equal(1710037800, db:aggregate(mydb.sheet.seen, "MIN"):as_number())
+    end)
+  end)
+
+
   -- the accessors are pure Lua and need no database, so they are driven
   -- directly rather than through a fetched row
   describe("Tests the functionality of db.__Timestamp", function()

@@ -115,12 +115,12 @@ public:
     int getId() const { return id; }
     quint64 serial() const { return mSerial; }
     int getArea() const { return area; }
-    void audit(QHash<int, int>, QHash<int, int>);
-    void auditExits(QHash<int, int>);
+    void audit(const QHash<int, int>&, const QHash<int, int>&);
+    void auditExits(const QHash<int, int>&);
     /*bool*/ void restore(QDataStream& ifs, int roomID, int version);
     void auditExit(int&,
                    int,
-                   QString,
+                   const QString&,
                    QMap<QString, int>&,
                    QSet<int>&,
                    QSet<int>&,
@@ -129,7 +129,7 @@ public:
                    QMap<QString, QColor>&,
                    QMap<QString, Qt::PenStyle>&,
                    QMap<QString, bool>&,
-                   QHash<int, int>);
+                   const QHash<int, int>&);
     QString dirCodeToDisplayName(int) const;
     // As above but for auditExit()'s messages specifically, which predate
     // dirCodeToDisplayName() and spell the diagonals without a hyphen -
@@ -191,6 +191,7 @@ public:
 
 
 private:
+    void calcCustomLineBounds();
     void setPlanarExit(int&, const int);
     void refreshLodExitIndex();
 

@@ -97,9 +97,9 @@ private:
         return QFileInfo::exists(qsl("%1/portable.txt").arg(QCoreApplication::applicationDirPath())) || QFileInfo::exists(qsl("%1/.config/mudlet/portable.txt").arg(QDir::homePath()));
     }
 
-    TTextEdit* pane() const { return mpHost->mpConsole->mUpperPane; }
+    TTextEdit* pane() const { return mpHost->mainConsoleView()->mUpperPane; }
 
-    TBuffer& consoleBuffer() const { return mpHost->mpConsole->buffer; }
+    TBuffer& consoleBuffer() const { return mpHost->mainConsoleView()->buffer; }
 
     static void press(TTextEdit* pPane, const Qt::Key key, const Qt::KeyboardModifiers modifiers = Qt::NoModifier) { QTest::keyClick(pPane, key, modifiers); }
 
@@ -195,9 +195,9 @@ private slots:
 
         // More lines than fit on the screen, so paging has somewhere to go
         for (int line = 0; line < 100; ++line) {
-            mpHost->mpConsole->print(qsl("caret filler %1\n").arg(line));
+            mpHost->mainConsoleView()->print(qsl("caret filler %1\n").arg(line));
         }
-        mpHost->mpConsole->print(qsl("%1\n%2\n%3\n").arg(mLongLine, mShortLine, mLastLine));
+        mpHost->mainConsoleView()->print(qsl("%1\n%2\n%3\n").arg(mLongLine, mShortLine, mLastLine));
         // Two links on one line, with a plain character between them, so
         // stepping between links has to land on each one's first column
         QVERIFY(runLua(qsl("caretLinkOne = ''\n"
@@ -220,7 +220,7 @@ private slots:
             QTest::qWait(200ms);
         }
         QVERIFY2(settledLength == consoleBuffer().lineBuffer.length(), "the profile's start-up output never stopped arriving");
-        mpHost->mpConsole->print(qsl("%1\n").arg(mLatestLine));
+        mpHost->mainConsoleView()->print(qsl("%1\n").arg(mLatestLine));
 
         mLongLineNumber = consoleBuffer().lineBuffer.indexOf(mLongLine);
         mShortLineNumber = consoleBuffer().lineBuffer.indexOf(mShortLine);
@@ -452,7 +452,7 @@ private slots:
     // character is delivered to the command line rather than dropped.
     void test_aPrintableKeyHandsTheCharacterToTheCommandLine()
     {
-        TCommandLine* pCommandLine = mpHost->mpConsole->mpCommandLine;
+        TCommandLine* pCommandLine = mpHost->mainConsoleView()->mpCommandLine;
         QVERIFY(pCommandLine);
         pCommandLine->clear();
         pane()->setCaretPosition(mLongLineNumber, 0);
@@ -469,7 +469,7 @@ private slots:
     // ...but a key that cannot start a command stays with the caret.
     void test_aCaretKeyIsNotSentToTheCommandLine()
     {
-        TCommandLine* pCommandLine = mpHost->mpConsole->mpCommandLine;
+        TCommandLine* pCommandLine = mpHost->mainConsoleView()->mpCommandLine;
         QVERIFY(pCommandLine);
         pCommandLine->clear();
         pane()->setCaretPosition(mLongLineNumber, 4);
@@ -531,7 +531,7 @@ private slots:
         QCOMPARE(pane()->mCaretLine, mLastLineNumber);
         QCOMPARE(pane()->mCaretColumn, 0);
         QVERIFY2(!mpHost->caretEnabled(), "a printable key left caret mode on");
-        mpHost->mpConsole->mpCommandLine->clear();
+        mpHost->mainConsoleView()->mpCommandLine->clear();
         drainDeferredFocusChange();
     }
 
@@ -651,12 +651,70 @@ private slots:
         QVERIFY2(consoleBuffer().isLinkVisited(linkIndex), "the activated link was not marked as visited");
     }
 
+    // deleteLine() can take a console's last line, leaving no line at all, and
+    // the caret keys indexed that buffer unchecked
+    void test_caretKeysOnAConsoleEmptiedByDeleteLine()
+    {
+        QVERIFY(runLua(qsl("createMiniConsole('caretEmptied', 0, 0, 300, 100)\nclearWindow('caretEmptied')\ndeleteLine('caretEmptied')")));
+        TConsole* pMini = mpHost->mainConsoleView()->subConsoleWidget(qsl("caretEmptied"));
+        QVERIFY(pMini);
+        QVERIFY(pMini->buffer.lineBuffer.isEmpty());
+        TTextEdit* pMiniPane = pMini->mUpperPane;
+
+        press(pMiniPane, Qt::Key_Down);
+        press(pMiniPane, Qt::Key_Right);
+        press(pMiniPane, Qt::Key_End);
+        press(pMiniPane, Qt::Key_End, Qt::ControlModifier);
+
+        QCOMPARE(pMiniPane->mCaretLine, 0);
+        QCOMPARE(pMiniPane->mCaretColumn, 0);
+    }
+
+    // deleteLine() does not move the caret, so deleting lines above it can leave
+    // it below the last line of the buffer
+    void test_caretKeysAfterDeleteLineShortensTheBufferPastTheCaret()
+    {
+        QVERIFY(runLua(qsl("createMiniConsole('caretShortened', 0, 0, 300, 100)\nfor i = 1, 10 do echo('caretShortened', 'line ' .. i .. '\\n') end")));
+        TConsole* pMini = mpHost->mainConsoleView()->subConsoleWidget(qsl("caretShortened"));
+        QVERIFY(pMini);
+        TTextEdit* pMiniPane = pMini->mUpperPane;
+        pMiniPane->setCaretPosition(9, 2);
+
+        QVERIFY(runLua(qsl("for i = 1, 8 do moveCursor('caretShortened', 0, 1) deleteLine('caretShortened') end")));
+        QCOMPARE(pMini->buffer.lineBuffer, QStringList({qsl("line 1"), qsl("line 10"), QString()}));
+        QCOMPARE(pMiniPane->mCaretLine, 9);
+
+        // Back on the last line with text, as turning caret mode on would put it
+        press(pMiniPane, Qt::Key_Right);
+        QCOMPARE(pMiniPane->mCaretLine, 1);
+        QCOMPARE(pMiniPane->mCaretColumn, 1);
+        press(pMiniPane, Qt::Key_End);
+        QCOMPARE(pMiniPane->mCaretLine, 1);
+        QCOMPARE(pMiniPane->mCaretColumn, 6);
+    }
+
+    // Deleting the only line of text leaves just the trailing empty line, which
+    // Ctrl+End skipped past to line -1
+    void test_ctrlEndOnAConsoleLeftWithOnlyItsTrailingLine()
+    {
+        QVERIFY(runLua(qsl("createMiniConsole('caretTrailing', 0, 0, 300, 100)\necho('caretTrailing', 'only\\n')\nmoveCursor('caretTrailing', 0, 0)\ndeleteLine('caretTrailing')")));
+        TConsole* pMini = mpHost->mainConsoleView()->subConsoleWidget(qsl("caretTrailing"));
+        QVERIFY(pMini);
+        QCOMPARE(pMini->buffer.lineBuffer, QStringList({QString()}));
+        TTextEdit* pMiniPane = pMini->mUpperPane;
+
+        press(pMiniPane, Qt::Key_End, Qt::ControlModifier);
+
+        QCOMPARE(pMiniPane->mCaretLine, 0);
+        QCOMPARE(pMiniPane->mCaretColumn, 0);
+    }
+
     // clearWindow() leaves a Shift selection's anchor on a line that is gone, and
     // reading the selection then stepped it back a whole batch-delete to line -998
     void test_extendingAShiftSelectionAcrossAClearedWindow()
     {
         QVERIFY(runLua(qsl("createMiniConsole('caretShiftCleared', 0, 0, 300, 100)\nfor i = 1, 10 do echo('caretShiftCleared', 'line ' .. i .. '\\n') end")));
-        TConsole* pMini = mpHost->mpConsole->subConsoleWidget(qsl("caretShiftCleared"));
+        TConsole* pMini = mpHost->mainConsoleView()->subConsoleWidget(qsl("caretShiftCleared"));
         QVERIFY(pMini);
         TTextEdit* pMiniPane = pMini->mUpperPane;
         pMiniPane->setCaretPosition(5, 2);
@@ -673,6 +731,58 @@ private slots:
         press(pMiniPane, Qt::Key_Right);
 
         QCOMPARE(selected, QString());
+    }
+
+    // clearWindow() takes away the line the caret is on, and the caret keys read
+    // that line. After the cases that read the original buffer, as it empties it.
+    void test_theCaretKeysStayInsideABufferClearedUnderTheCaret()
+    {
+        for (int line = 0; line < 5; ++line) {
+            mpHost->mainConsoleView()->print(qsl("clear filler %1\n").arg(line));
+        }
+        const int line = static_cast<int>(consoleBuffer().lineBuffer.length()) - 2;
+        QVERIFY(line >= 2);
+        pane()->setCaretPosition(line, 3);
+
+        QVERIFY(runLua(qsl("clearWindow()")));
+        QCOMPARE(consoleBuffer().lineBuffer.length(), 1);
+
+        for (const Qt::Key key : {Qt::Key_End, Qt::Key_Right, Qt::Key_Left}) {
+            press(pane(), key);
+            QCOMPARE(pane()->mCaretLine, 0);
+            QCOMPARE(pane()->mCaretColumn, 0);
+        }
+    }
+
+    // clearWindow() leaves a single empty line, which Ctrl+End cannot step over
+    // the way it does a trailing one, as there is no line before it.
+    void test_ctrlEndInAClearedBufferStaysOnTheOnlyLine()
+    {
+        QVERIFY(runLua(qsl("clearWindow()")));
+        QCOMPARE(consoleBuffer().lineBuffer.length(), 1);
+        pane()->setCaretPosition(0, 0);
+
+        press(pane(), Qt::Key_End, Qt::ControlModifier);
+
+        QCOMPARE(pane()->mCaretLine, 0);
+        QCOMPARE(pane()->mCaretColumn, 0);
+    }
+
+    // Last, as it empties the main console the other cases read. Turning caret
+    // mode on brings the old caret into view before moving it, and with the
+    // buffer emptied by deleteLine() that read the last line of an empty list.
+    void test_turningCaretModeOnAfterDeleteLineEmptiedTheMainConsole()
+    {
+        pane()->setCaretPosition(mLastLineNumber, 0);
+        mpHost->setCaretEnabled(false);
+        QVERIFY(runLua(qsl("clearWindow()\nmoveCursor(0, 0)\ndeleteLine()")));
+        QVERIFY(consoleBuffer().lineBuffer.isEmpty());
+        QVERIFY2(pane()->mCaretLine * QFontMetrics(pane()->font()).height() > pane()->height(), "the caret is not below the screen, so turning caret mode on does not bring it into view");
+
+        mpHost->setCaretEnabled(true);
+
+        QCOMPARE(pane()->mCaretLine, 0);
+        QCOMPARE(pane()->mCaretColumn, 0);
     }
 };
 

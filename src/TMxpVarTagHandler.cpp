@@ -58,9 +58,9 @@ TMxpTagHandlerResult TMxpVarTagHandler::handleEndTag(TMxpContext& ctx, TMxpClien
     return MXP_TAG_HANDLED;
 }
 
-void TMxpVarTagHandler::handleContent(char ch)
+void TMxpVarTagHandler::handleContentBytes(QByteArrayView bytes)
 {
     if (mInsideTag) {
-        mCurrentVarContent.append(ch);
+        mCurrentVarContent.append(QLatin1StringView(bytes));
     }
 }

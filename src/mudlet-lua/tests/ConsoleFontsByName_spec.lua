@@ -120,6 +120,11 @@ describe("Tests that the font functions find their console by name", function()
     assert.are.same({nil, "font must not be empty"}, {setFont(unknown, "  ")})
     local missing = "specFontsByNameNoSuchFamily" .. suffix
     assert.are.same({nil, ("font '%s' is not available"):format(missing)}, {setFont(unknown, missing)})
+    -- a name is one family, not the comma separated, quoted list Qt reads a
+    -- font string as, where these name no family or an installed one
+    for _, name in ipairs({missing .. ",", ",", "'", "''", missing .. ", " .. families[1]}) do
+      assert.are.same({nil, ("font '%s' is not available"):format(name)}, {setFont(unknown, name)})
+    end
     assert.are.same({nil, "size cannot be 0 or negative"}, {setFontSize(unknown, 0)})
   end)
 
@@ -206,6 +211,18 @@ describe("Tests that the font functions find their console by name", function()
         assert.are.equal(rows, getRowCount(window))
       end)
     end
+
+    it("reads the size a style sheet gives a user window's text", function()
+      local window = "specFontsByName styled user window" .. suffix
+      assert.is_true(kinds[2][2](window))
+      finally(function()
+        kinds[2][3](window)
+      end)
+      local size = getFontSize(window) == 21 and 22 or 21
+
+      assert.is_true(setUserWindowStyleSheet(window, ("TTextEdit { font-size: %dpt; }"):format(size)))
+      assert.are.equal(size, getFontSize(window))
+    end)
   end)
 
   describe("with the main console", function()

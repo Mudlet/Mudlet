@@ -680,7 +680,9 @@ bool TTrigger::setRegexCodeList(QStringList patterns, QList<int> patternKinds, b
                                                   .arg(QString::number(i + 1), QString(regexp.constData()).toHtmlEscaped(), QString(error).toHtmlEscaped())));
                     state = false;
                 } else {
-                    mRegexJitCompiled[patternIndex] = (pcre2_jit_compile(re.data(), PCRE2_JIT_COMPLETE) == 0);
+                    // A (*NO_JIT) pattern compiles "successfully" to no JIT code, and pcre2_jit_match() then fails every subject
+                    size_t jitSize = 0;
+                    mRegexJitCompiled[patternIndex] = pcre2_jit_compile(re.data(), PCRE2_JIT_COMPLETE) == 0 && pcre2_pattern_info(re.data(), PCRE2_INFO_JITSIZE, &jitSize) == 0 && jitSize > 0;
                     // Once per pattern of every trigger created, so it is high-volume trigger detail
                     if (TDebug::wants(TDebug::Category::TriggerDetail)) {
                         TDebug(Qt::white, Qt::darkGreen, TDebug::Category::TriggerDetail, mName) << "[OK]: REGEX_COMPILE OK\n" >> mpHost;
@@ -1049,7 +1051,13 @@ void TTrigger::processRegexMatch(const char* haystackC,
             if (options == 0) {
                 break;
             }
-            ovector[1] = start_offset + 1;
+            // Past the whole character, as pcre2demo.c does: PCRE2_MATCH_INVALID_UTF
+            // matches empty at an offset inside one, a match of its own in every result
+            PCRE2_SIZE nextOffset = start_offset + 1;
+            while (nextOffset < static_cast<PCRE2_SIZE>(haystackCLength) && (static_cast<unsigned char>(haystackC[nextOffset]) & 0xC0) == 0x80) {
+                ++nextOffset;
+            }
+            ovector[1] = nextOffset;
             continue;
         } else if (rc < 0) { // NOLINT(readability-else-after-return)
             goto END;

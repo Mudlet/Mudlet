@@ -180,9 +180,9 @@ void TMxpSendTagHandler::updateHrefInLinks(TMxpClient& client) const
         }
     }
 }
-void TMxpSendTagHandler::handleContent(char ch)
+void TMxpSendTagHandler::handleContentBytes(QByteArrayView bytes)
 {
     if (mInsideTag) {
-        mCurrentTagContent.append(ch);
+        mCurrentTagContent.append(QLatin1StringView(bytes));
     }
 }

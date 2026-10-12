@@ -378,7 +378,8 @@ function table.pickle( t, file, tables, lookup )
       if type( i ) == "table" then
         if not lookup[i] then
           table.insert( tables, i )
-          lookup[i] = table.maxn( tables )
+          -- not table.maxn(), which walks every entry: once per table saved, that is quadratic
+          lookup[i] = #tables
         end
         file:write( "[{" .. lookup[i] .. "}] = " )
       else
@@ -389,7 +390,7 @@ function table.pickle( t, file, tables, lookup )
       if type( v ) == "table" then
         if not lookup[v] then
           table.insert( tables, v )
-          lookup[v] = table.maxn( tables )
+          lookup[v] = #tables
         end
         file:write( "{" .. lookup[v] .. "}," )
       else
@@ -742,9 +743,17 @@ if not _TEST then
   end
 end
 
+-- One function shared by every deleteFull() call: a string script would be
+-- compiled into a new Lua chunk each time a line is gagged.
+local function deletePromptLine()
+  if isPrompt() then
+    deleteLine()
+  end
+end
+
 function deleteFull()
   deleteLine()
-  tempLineTrigger(1, 1, [[if isPrompt() then deleteLine() end]])
+  tempLineTrigger(1, 1, deletePromptLine)
 end
 
 function deleteMultiline(maxLines)
@@ -1140,11 +1149,15 @@ function verbosePackageInstall(fileName)
   -- That is all for installing, now to announce the result to the user:
   mudlet.Locale = mudlet.Locale or loadTranslations("Mudlet")
   if ok and reason and reason ~= "" then
-    -- installed, but with problems already reported on the console
+    -- installPackage() asks for a quiet install, so nothing else puts the reason on the console
     local partialText = mudlet.Locale.packageInstallPartial.message
-    partialText = string.format(partialText, packageName)
+    partialText = string.format(partialText, packageName, reason)
     local warnPrefix = mudlet.Locale.prefixWarn.message
-    decho('<0,150,190>' .. warnPrefix .. '<190,150,0>' .. partialText .. '\n')
+    decho('<0,150,190>' .. warnPrefix)
+    -- echo, as decho would take a tag such as <b> in an error message as formatting
+    setFgColor(190, 150, 0)
+    echo(partialText .. '\n')
+    resetFormat()
   elseif ok then
     local successText = mudlet.Locale.packageInstallSuccess.message
     successText = string.format(successText, packageName)
@@ -1167,9 +1180,12 @@ function verboseModuleInstall(fileName)
   mudlet.Locale = mudlet.Locale or loadTranslations("Mudlet")
   if ok and reason and reason ~= "" then
     local partialText = mudlet.Locale.moduleInstallPartial.message
-    partialText = string.format(partialText, moduleName)
+    partialText = string.format(partialText, moduleName, reason)
     local warnPrefix = mudlet.Locale.prefixWarn.message
-    decho('<0,150,190>' .. warnPrefix .. '<190,150,0>' .. partialText .. '\n')
+    decho('<0,150,190>' .. warnPrefix)
+    setFgColor(190, 150, 0)
+    echo(partialText .. '\n')
+    resetFormat()
   elseif ok then
     local successText = mudlet.Locale.moduleInstallSuccess.message
     successText = string.format(successText, moduleName)

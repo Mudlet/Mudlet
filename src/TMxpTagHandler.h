@@ -25,6 +25,7 @@
 #include "TMxpTagHandlerResult.h"
 #include "utils.h"
 
+#include <QByteArrayView>
 #include <QString>
 
 class TMxpClient;
@@ -35,7 +36,10 @@ class TMxpTagHandler
 public:
     virtual TMxpTagHandlerResult handleTag(TMxpContext& ctx, TMxpClient& client, MxpTag* tag);
 
-    virtual void handleContent(char ch) { Q_UNUSED(ch) }
+    void handleContent(char ch) { handleContentBytes(QByteArrayView(&ch, 1)); }
+
+    // Game text in the bytes it arrived as, a run of plain text at a time
+    virtual void handleContentBytes(QByteArrayView bytes) { Q_UNUSED(bytes) }
 
     void handleContent(const QString& text)
     {

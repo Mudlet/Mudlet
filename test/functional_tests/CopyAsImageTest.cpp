@@ -69,10 +69,10 @@ private:
     TTextEdit* upperPane() const
     {
         auto host = mudlet::self()->getActiveHost();
-        if (!host || !host->mpConsole) {
+        if (!host || !host->mainConsoleView()) {
             return nullptr;
         }
-        return host->mpConsole->mUpperPane;
+        return host->mainConsoleView()->mUpperPane;
     }
 
     void sendMouse(QWidget* w, QEvent::Type type, Qt::MouseButton button, Qt::MouseButtons buttons, const QPointF& localPos)
@@ -211,6 +211,7 @@ private:
             buffer.lineBuffer.pop_front();
             buffer.promptBuffer.pop_front();
             buffer.timeBuffer.pop_front();
+            buffer.wrapGapBuffer.pop_front();
             buffer.buffer.pop_front();
             buffer.mCursorY--;
         }
@@ -279,7 +280,7 @@ private slots:
     {
         TTextEdit* pane = preparePane();
         QVERIFY2(pane, "Could not prepare a console");
-        auto console = mudlet::self()->getActiveHost()->mpConsole;
+        QPointer<TMainConsole> console = mudlet::self()->getActiveHost()->mainConsoleView();
         QVERIFY(!console->showTimeStamps());
 
         copyAsImage(pane);
@@ -397,7 +398,7 @@ private slots:
         TTextEdit* pane = preparePane();
         QVERIFY2(pane, "Could not prepare a console");
         Host* host = mudlet::self()->getActiveHost();
-        TMainConsole* console = host->mpConsole;
+        TMainConsole* console = host->mainConsoleView();
         QVERIFY(!console->showTimeStamps());
         QCOMPARE(host->getControlCharacterMode(), ControlCharacterMode::AsIs);
         auto restoreMode = qScopeGuard([host] {
@@ -492,7 +493,7 @@ private slots:
         QVERIFY2(pane, "Could not prepare a console");
         // with timestamps on, a blank line is still 13 characters wide, which is
         // not the zero width case this covers
-        QVERIFY(!mudlet::self()->getActiveHost()->mpConsole->showTimeStamps());
+        QVERIFY(!mudlet::self()->getActiveHost()->mainConsoleView()->showTimeStamps());
 
         const int blankLine = firstBlankLine();
         QVERIFY2(blankLine >= 0, "The console has no blank line to select");
@@ -517,10 +518,11 @@ private slots:
         TTextEdit* pane = preparePane();
         QVERIFY2(pane, "Could not prepare a console");
         // TConsole::clear() leaves an empty line behind, so empty it by hand
-        auto& buffer = mudlet::self()->getActiveHost()->mpConsole->buffer;
+        auto& buffer = mudlet::self()->getActiveHost()->mainConsoleView()->buffer;
         buffer.lineBuffer.clear();
         buffer.timeBuffer.clear();
         buffer.promptBuffer.clear();
+        buffer.wrapGapBuffer.clear();
         buffer.buffer.clear();
         buffer.mCursorY = 0;
 
@@ -542,7 +544,7 @@ private slots:
         TTextEdit* pane = prepareSelectedPane(QPointF(60, 60));
         QVERIFY2(pane, "Could not prepare a console with a selection");
 
-        mudlet::self()->getActiveHost()->mpConsole->TConsole::clear();
+        mudlet::self()->getActiveHost()->mainConsoleView()->TConsole::clear();
         QVERIFY2(pane->mSelectedRegion.isEmpty(), "Clearing the console left a selection behind pointing at lines that are gone");
 
         copyAsImage(pane);
@@ -557,7 +559,7 @@ private slots:
     {
         TTextEdit* pane = preparePane();
         QVERIFY2(pane, "Could not prepare a console");
-        auto& buffer = mudlet::self()->getActiveHost()->mpConsole->buffer;
+        auto& buffer = mudlet::self()->getActiveHost()->mainConsoleView()->buffer;
 
         dragSelection(pane, QPointF(60, 3 * pane->mFontHeight));
         QVERIFY2(!pane->mSelectedRegion.isEmpty(), "The drag failed to create a selection");
@@ -585,7 +587,7 @@ private slots:
     {
         TTextEdit* pane = preparePane();
         QVERIFY2(pane, "Could not prepare a console");
-        auto console = mudlet::self()->getActiveHost()->mpConsole;
+        QPointer<TMainConsole> console = mudlet::self()->getActiveHost()->mainConsoleView();
         const int lastLine = console->buffer.getLastLineNumber();
 
         // beyond the buffer and beyond any batch-delete adjustment, i.e. gone
@@ -621,7 +623,7 @@ private:
     bool startProfile(const QString& hostname, const QString& address, const QString& port)
     {
         auto host = TestProfile::create(hostname, address, port);
-        if (!host || !host->mpConsole) {
+        if (!host || !host->mainConsoleView()) {
             qWarning() << "No active host available for the test.";
             return false;
         }
@@ -636,7 +638,7 @@ private:
 
     int firstBlankLine() const
     {
-        auto console = mudlet::self()->getActiveHost()->mpConsole;
+        QPointer<TMainConsole> console = mudlet::self()->getActiveHost()->mainConsoleView();
         for (int i = 0; i <= console->buffer.getLastLineNumber(); ++i) {
             if (console->buffer.lineBuffer.at(i).isEmpty()) {
                 return i;
@@ -647,7 +649,7 @@ private:
 
     bool waitForTextInBuffer(const QString& text, int timeoutMs = 5000)
     {
-        auto console = mudlet::self()->getActiveHost()->mpConsole;
+        QPointer<TMainConsole> console = mudlet::self()->getActiveHost()->mainConsoleView();
         return QTest::qWaitFor(
                 [&]() {
                     for (int i = 0; i <= console->buffer.getLastLineNumber(); ++i) {

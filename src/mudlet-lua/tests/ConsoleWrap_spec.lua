@@ -165,6 +165,47 @@ describe("Tests how a console wraps the lines it is given", function()
       assert.are.same({"aaaa bbbb ", "cccc dddd ", "eeee"}, lines())
     end)
 
+    -- Wider than the main console's own width, so a rewrap at that width shows
+    local longRun = string.rep("y", 300)
+
+    it("rewraps text insertText() puts into a line with a newline to this console's width", function()
+      wrapAt(10)
+      echo(win, "abc\n")
+      moveCursor(win, 0, 0)
+      insertText(win, "x\n" .. longRun)
+      local result = lines()
+      for index, line in ipairs(result) do
+        assert.is_true(#line <= 10, "line " .. index .. " is " .. #line .. " characters wide")
+      end
+      assert.are.equal("x" .. longRun .. "abc", table.concat(result))
+    end)
+
+    it("rewraps a link insertLink() puts into a line with a newline to this console's width", function()
+      wrapAt(10)
+      echo(win, "abc\n")
+      moveCursor(win, 0, 0)
+      insertLink(win, "x\n" .. longRun, "", "")
+      local result = lines()
+      for index, line in ipairs(result) do
+        assert.is_true(#line <= 10, "line " .. index .. " is " .. #line .. " characters wide")
+      end
+      assert.are.equal("x" .. longRun .. "abc", table.concat(result))
+    end)
+
+    it("rewraps inserted text the way echo() wraps it in a console whose wrap was never set", function()
+      local unset = "consoleWrapSpecUnsetWindow"
+      createMiniConsole(unset, 0, 0, 400, 300)
+      echo(unset, "x" .. longRun .. "\n")
+      local echoed = getLines(unset, 0, getLineCount(unset))
+      clearWindow(unset)
+      echo(unset, "abc\n")
+      moveCursor(unset, 0, 0)
+      insertText(unset, "x" .. longRun .. "\n")
+      local inserted = getLines(unset, 0, getLineCount(unset))
+      deleteMiniConsole(unset)
+      assert.are.same(echoed, {inserted[1]})
+    end)
+
     it("wraps a line that was added to before its newline arrived", function()
       wrapAt(20)
       echo(win, "keeps going")
@@ -185,11 +226,35 @@ describe("Tests how a console wraps the lines it is given", function()
 
     it("gives a continued line no timestamp of its own", function()
       wrapAt(20)
-      -- getTimestamp() refuses line zero, so the wrapped line goes second
-      echo(win, "first\n")
       echo(win, "aaaaaaaaaa bbbbbbbbbb cccc\n")
-      assert.is_not.matches("^%-+%s*$", getTimestamp(win, 1))
-      assert.matches("^%-+%s*$", getTimestamp(win, 2))
+      assert.is_not.matches("^%-+%s*$", getTimestamp(win, 0))
+      assert.matches("^%-+%s*$", getTimestamp(win, 1))
+    end)
+  end)
+
+  describe("Tests that a buffer keeps the wrap it is given", function()
+    local buffer = ("specWrapBuffer-%d-%d"):format(os.time(), math.random(100000))
+    local long = string.rep("a", 80)
+
+    local function firstLine()
+      clearWindow(buffer)
+      echo(buffer, long .. "\n")
+      return getLines(buffer, 0, 1)[1]
+    end
+
+    it("keeps its wrap width and indents when its colours are refreshed", function()
+      createBuffer(buffer)
+      setWindowWrap(buffer, 40)
+      setWindowWrapIndent(buffer, 6)
+      setWindowWrapHangingIndent(buffer, 2)
+      local wrapped = string.rep(" ", 6) .. string.rep("a", 34)
+      assert.are.equal(wrapped, firstLine())
+
+      -- like a theme change, this recolours the buffer from the profile
+      resetBackgroundImage(buffer)
+      assert.are.equal(wrapped, firstLine())
+      assert.are.equal(40, getWindowWrap(buffer))
+      assert.are.same({"  " .. string.rep("a", 38), "  " .. string.rep("a", 8)}, getLines(buffer, 1, 3))
     end)
   end)
 end)

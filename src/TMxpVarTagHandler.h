@@ -30,7 +30,7 @@
 class TMxpVarTagHandler : public TMxpTagHandler {
     MxpStartTag mCurrentStartTag;
     QString mCurrentVarContent;
-    // Every byte of game text reaches handleContent(), not only what is inside a VAR
+    // Every byte of game text reaches handleContentBytes(), not only what is inside a VAR
     bool mInsideTag = false;
 
 public:
@@ -42,7 +42,7 @@ public:
     TMxpTagHandlerResult handleStartTag(TMxpContext& ctx, TMxpClient& client, MxpStartTag* tag) override;
     TMxpTagHandlerResult handleEndTag(TMxpContext& ctx, TMxpClient& client, MxpEndTag* tag) override;
 
-    void handleContent(char ch) override;
+    void handleContentBytes(QByteArrayView bytes) override;
 };
 
 #endif//MUDLET__TMXPVARTAGHANDLER_H

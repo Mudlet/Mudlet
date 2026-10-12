@@ -32,6 +32,8 @@
 #endif
 
 #include <QElapsedTimer>
+#include <QHash>
+#include <QMap>
 #include <QMatrix4x4>
 #include <QVector3D>
 #include <QQuaternion>
@@ -41,6 +43,7 @@
 #include <QOpenGLVertexArrayObject>
 #include <QOpenGLWidget>
 #include <QPointer>
+#include <QSet>
 #include <QTimer>
 #include <QEasingCurve>
 
@@ -51,24 +54,78 @@
 #include "ShaderManager.h"
 #include "CameraController.h"
 
+#include <optional>
+
 class Host;
+class QFontMetricsF;
+class QLabel;
+class QPainter;
+class T2DMap;
+class TCommandLine;
 class TMap;
 class TRoom;
 struct MapInfoProperties;
+namespace ExitScene {
+struct Options;
+}
 
 class ModernGLWidget : public QOpenGLWidget, protected QOpenGLFunctions
 {
     Q_OBJECT
+    friend class ModernRoomTextureTest;
+    friend class Map3DViewInteractionTest;
+    friend class ModernMapperRenderTest;
 
 public:
     Q_DISABLE_COPY(ModernGLWidget)
     ModernGLWidget(TMap*, Host*, QWidget* parent = nullptr);
     ~ModernGLWidget() override;
-    
+
+    // The environment variables that made Qt compose every window with an API other than OpenGL
+    static QStringList rhiForcingVariables();
+
     void wheelEvent(QWheelEvent* e) override;
     void setViewCenter(int, int, int, int);
+    // Takes over another view's area and center; roomId is the player room that view last followed
+    void syncView(int areaId, int x, int y, int z, int roomId);
+    void followPlayer();
+    bool followingPlayer() const;
+    int shownAreaId() const { return mAID; }
+    int areaShownNext() const;
+    QVector3D viewCenter() const { return QVector3D(mMapCenterX, mMapCenterY, mMapCenterZ); }
     void shiftCamera(float, float, float);
     void setCameraPosition(float, float, float);
+    // Frames as many rooms as the 2D map shows at this zoom, when areaId is the area on view
+    void applyMapZoom(qreal zoom, int areaId);
+    void setCameraDistance(float r);
+    const QString& failureMessage() const { return mFailureMessage; }
+    // A grid-mode area is always drawn looking straight down with north up
+    bool cameraFixedByGridMode() const;
+    // The mapper's 2D map, whose room selection, speedwalk and context menu this view shares
+    void setCompanion2DMap(T2DMap* map);
+    // The room drawn under this point of the view, or 0; orNear also takes a room seen too small to point at
+    // whose middle is a few pixels off. With onLevel, only that level's rooms count, even under others
+    int roomAt(const QPoint& position, bool orNear = true, std::optional<int> onLevel = std::nullopt);
+    // The room in another area that the area-exit arrow drawn under this point of the view leads to, or 0
+    int areaExitAt(const QPoint& position);
+    // The room a pointer action at this position is about. As on the 2D map, which shows only the viewed level's
+    // rooms, that level's room under the pointer wins, even beneath or seen through a room on another level; with
+    // areaExits, where an arrow from the viewed level leads comes next, ahead of other rooms
+    int roomPickedAt(const QPoint& position, bool orNear = true, bool areaExits = false);
+    // The room a double click or the tooltip at this position is about: a room, or where an area exit leads
+    int destinationAt(const QPoint& position) { return roomPickedAt(position, true, true); }
+    // A view in a map window of its own: it shows the area it is told to rather than following the player
+    void setSecondaryView(bool secondary);
+    bool secondaryView() const { return mSecondaryView; }
+    // The rooms on show drawn wholly inside this rectangle of the view, on the level in the middle of
+    // the view or, with allLevels, on any level shown
+    QSet<int> roomsInRectangle(const QRect& rectangle, bool allLevels);
+    // The room drawn raised and outlined, as the one under the pointer, or 0
+    int hoveredRoomId() const { return mHoveredRoomId; }
+    // Centers and zooms the view to show all the area's rooms on the levels shown
+    void fitArea();
+    // Where the compass is drawn, which turns the view north up when clicked; empty while the camera is fixed or the view is too small for it
+    QRect compassRect() const;
 
     QSize minimumSizeHint() const override;
     QSize sizeHint() const override;
@@ -106,6 +163,10 @@ public slots:
 
 signals:
     void resetPlayerIconSliders(int height, int rotX, int rotY, int rotZ, int scale);
+    // Slider positions for the camera as it now is, in the ranges of the mapper's 3D controls
+    void cameraControlsChanged(int scale, int tilt, int roll, int azimuth);
+    // The user asked to see this room on the 2D map, or this view's center when roomId is 0
+    void editIn2DRequested(int roomId);
 
 private slots:
     void onCameraAnimationTick();
@@ -117,12 +178,23 @@ protected:
     void mousePressEvent(QMouseEvent* event) override;
     void mouseMoveEvent(QMouseEvent* event) override;
     void mouseReleaseEvent(QMouseEvent* event) override;
+    void mouseDoubleClickEvent(QMouseEvent* event) override;
     void keyPressEvent(QKeyEvent* event) override;
+    void leaveEvent(QEvent* event) override;
+    void focusInEvent(QFocusEvent* event) override;
+    void focusOutEvent(QFocusEvent* event) override;
+    void showEvent(QShowEvent* event) override;
+    void hideEvent(QHideEvent* event) override;
+    bool event(QEvent* event) override;
+    void resizeEvent(QResizeEvent* event) override;
+    void paintEvent(QPaintEvent* event) override;
 
 public:
     TMap* mpMap = nullptr;
 
 private:
+    friend class Map3DViewSyncTest;
+
     // Shader and rendering resources
     ShaderManager mShaderManager;
     QOpenGLBuffer mVertexBuffer;
@@ -130,7 +202,6 @@ private:
     QOpenGLBuffer mNormalBuffer;
     QOpenGLBuffer mIndexBuffer;
     QOpenGLBuffer mTexCoordBuffer;
-    QOpenGLBuffer mInstanceBuffer;
     QOpenGLVertexArrayObject mVAO;
 
     // Geometry management
@@ -147,9 +218,16 @@ private:
 
     // Label texture cache
     LabelTextureCache mLabelTextureCache;
+    // Room textures this frame has used so far, which making room for another must keep
+    QSet<QString> mRoomTexturesInUse;
+    bool mRoomTextureLimitWarned = false;
+    bool mSolidDashWarned = false;
 
     // Host reference
     QPointer<Host> mpHost;
+
+    QString mFailureMessage;
+    QLabel* mpFailureLabel = nullptr;
 
     // View state
     bool is2DView = false;
@@ -167,7 +245,7 @@ private:
     int mMapCenterZ = 0;
     bool mShiftMode = false;
     int mFontHeight = 20;
-    
+
     // Scales the size of rooms compared to the space between them - currently
     // hard coded to be a quarter (would be equivalent to a 2D room size setting
     // of "2.5"):
@@ -176,7 +254,6 @@ private:
     float zFlattening = 8;
     int mShowTopLevels = 999999;
     int mShowBottomLevels = 999999;
-    int mTargetRoomId = 0;
 
     // Player icon adjustment settings
     float mPlayerIconHeight = 0.41f;     // Default height above room (in units)
@@ -204,26 +281,131 @@ private:
     int mAnimationDuration = 100; // 100ms animation duration for smooth movement
     QEasingCurve mEasingCurve;
     bool mCameraSmoothAnimating = false; // Dedicated flag for smooth camera animation
-    int mPreviousRID = 0; // Track previous room ID to detect changes
-    int mPreviousAID = 0; // Track previous area ID to detect area changes
+    int mPreviousRID = 0;                // Track previous room ID to detect changes
+    bool mFramePending = true;
+    // Set by a zoom or a change of area while hidden: the shown area is framed at its stored zoom, read then so a later
+    // 2D zoom counts, for the size the view is first seen at, unless a camera distance is set first
+    bool mFrameWhenShown = false;
+    // A distance a script asked for since the last paint wins over framing a newly shown area
+    bool mDistanceRequested = false;
+
+    QPointer<T2DMap> mp2DMap;
+    bool mSecondaryView = false;
+    QPoint mPressPosition;
+    // In editing mode a left drag from empty space, or with Ctrl or Shift, draws a selection rectangle, as on the 2D map
+    bool mRectangleSelecting = false;
+    bool mRectangleDragged = false;
+    QRect mSelectionRectangle;
+    // In editing mode a left drag from a room moves the selected rooms, on that room's level
+    bool mMovingRooms = false;
+    QPointF mRoomMoveLastPoint;
+    int mRoomMoveLevel = 0;
+    bool mRoomsMoved = false;
+    // A click that did not pick its room on the press does so on the release, unless it became a drag
+    bool mClickPending = false;
+    // The button of a press whose sysMapWindowMousePressEvent waits for its selection to settle, on the release or the drag
+    Qt::MouseButton mPressEventButton = Qt::NoButton;
+    // Only focus reached from the keyboard, not by a click, gives the view the keys it navigates with
+    bool mKeysNavigate = false;
+    struct SavedCamera
+    {
+        float distance = 0.0f;
+        float tilt = 0.0f;
+        float azimuth = 0.0f;
+        float roll = 0.0f;
+    };
+    QHash<int, SavedCamera> mSavedCameras;
+    // The room drawn raised, or to be at the next frame; roomAt() picks it where it rests or is raised
+    int mHoveredRoomId = 0;
+    QPoint mPointerPosition;
+    bool mPointerInView = false;
+    Qt::MouseButtons mPointerButtons;
+    // The exit lines and arrowheads of see-through levels, made by renderConnections() for renderRooms()
+    // to draw with their levels' rooms, lowest level first
+    struct LevelExits
+    {
+        QVector<CubeInstanceData> bars;
+        QVector<float> vertices;
+        QVector<float> colors;
+    };
+    QMap<int, LevelExits> mSeeThroughExits;
+    // The rooms whose IDs the last room pass drew: those too small to read, or overlapping one kept before them
+    // (the viewed level's first, then the nearest), are left out
+    QSet<int> mRoomIdsDrawn;
 
     // Private methods for modern OpenGL
     void updateMatrices();
     void renderRooms();
     void renderConnections();
-    void renderBackgroundLabels();
-    void renderForegroundLabels();
+    // The 2D map's grid, at the viewed level's room bottoms, writing no depth
+    void queueGrid();
+    // Map labels lie flat at their place on the map; those shown on top over the rooms, the others under the exits
+    // What a frame draws, in order, into the render command queue
+    void queueScene();
+    // The labels of the levels from lowestLevel to highestLevel, either beneath the rooms or on top of them
+    void renderLabels(bool onTop, int lowestLevel, int highestLevel);
+    // A column of light over the player's room, seen faintly through anything in front of it
+    void renderPlayerBeacon();
+    void paintCompass(QPainter& painter);
+    void turnNorthUp();
+    void setHoveredRoom(int roomId);
+    // Worked out afresh, as the view can move under a pointer that stays still
+    int roomUnderPointer();
+    void endPan();
     void renderCube(float x, float y, float z, float size, float r, float g, float b, float a);
-    void renderLines(const QVector<float>& vertices, const QVector<float>& colors);
-    void renderTriangles(const QVector<float>& vertices, const QVector<float>& colors);
-    void renderUpDownIndicators(TRoom* pRoom, float x, float y, float z);
-    void renderInOutIndicators(TRoom* pRoom, float x, float y, float z);
     void renderText(const QString& text, float x, float y);
     void setupBuffers();
     void cleanup();
-    QColor getPlaneColor(int zLevel, bool belowOrAtLevel);
-    QColor getEnvironmentColor(TRoom* pRoom);
+    void showFailure(const QString& message, const QString& advice = QString());
+    GLuint symbolTexture(const QString& symbol, const QColor& color);
+    // A disc filling the texture, shaded by a radial gradient over its radius
+    GLuint discTexture(const QString& key, const QGradientStops& stops);
+    GLuint squareTexture(const QColor& color);
+    GLuint cachedRoomTexture(const QString& key);
+    bool roomForAnotherTexture(const QString& key);
+    GLuint addRoomTexture(const QString& key, const QImage& image);
+    // The 2D map's up/down/in/out markers for the room, or 0 when it has none
+    GLuint exitMarkerTexture(const TRoom& room, const QColor& roomColor);
+    // Text on a clear background; size is set to the texture's size in pixels
+    GLuint textTexture(const QString& key, const QString& text, const QFont& font, const QFontMetricsF& metrics, const QColor& color, QSize& size);
+    void reportContextCreationFailure();
+    bool contextCreationFailed() const;
     void startSmoothTransition(int targetAID, int targetX, int targetY, int targetZ);
+    void stopSmoothTransition();
+    void jumpTo(int areaId, int x, int y, int z);
+    void frameArea();
+    void frameRooms(qreal zoom);
+    void emitCameraControls();
+    void setOrientationKeepingRoll(float theta, float phi);
+    // Turns the camera around the view's center, by degrees of azimuth
+    void turnCamera(float degrees);
+    bool levelShown(int z) const;
+    // What rooms and exits on level z recede toward: the mapper's upper or lower level color, or the background
+    QColor levelFadeTarget(int z) const;
+    ExitScene::Options exitSceneOptions() const;
+    void zoomBySteps(float steps);
+    void panByRooms(int right, int up);
+    void selectRoom(int roomId, Qt::KeyboardModifiers modifiers);
+    bool editingMap() const;
+    // Where the pointer at this point of the view meets the plane of map level z, unless behind the camera or far off
+    std::optional<QPointF> mapPointOnLevel(const QPoint& position, int z);
+    void startRoomMove(int roomId);
+    void endEditGesture();
+    void holdView();
+    void showContextMenu(const QPoint& position);
+    void raiseMousePressEvent();
+    // Raised with the press still on, which ends here if a script handling it takes the release
+    void raiseMousePressEventMidPress();
+    void raisePendingMousePressEvent();
+    // Ends the press whose release went elsewhere, as its release would have, but selects nothing
+    void endLostPress();
+    TCommandLine* commandLine() const;
+    QString roomToolTip(int roomId) const;
+    GLuint selectionTexture(bool round);
+    void saveCamera();
+    bool restoreCamera(bool distanceOnly);
+    void loadSavedCameras();
+    void writeSavedCameras() const;
 };
 
 #endif // MUDLET_MODERN_GLWIDGET_H

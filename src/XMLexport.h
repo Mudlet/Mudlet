@@ -58,12 +58,12 @@ public:
     explicit XMLexport(TKey*);
 
     void writeHost(Host*, pugi::xml_node hostPackage);
-    void writeTrigger(TTrigger*, pugi::xml_node xmlParent);
-    void writeTimer(TTimer*, pugi::xml_node xmlParent);
-    void writeAlias(TAlias*, pugi::xml_node xmlParent);
-    void writeAction(TAction*, pugi::xml_node xmlParent);
-    void writeScript(TScript*, pugi::xml_node xmlParent);
-    void writeKey(TKey*, pugi::xml_node xmlParent);
+    void writeTrigger(TTrigger*, pugi::xml_node xmlParent, bool withChildren = true);
+    void writeTimer(TTimer*, pugi::xml_node xmlParent, bool withChildren = true);
+    void writeAlias(TAlias*, pugi::xml_node xmlParent, bool withChildren = true);
+    void writeAction(TAction*, pugi::xml_node xmlParent, bool withChildren = true);
+    void writeScript(TScript*, pugi::xml_node xmlParent, bool withChildren = true);
+    void writeKey(TKey*, pugi::xml_node xmlParent, bool withChildren = true);
     void writeVariable(TVar*, VarUnit*, pugi::xml_node xmlParent, bool insideSavedTable = false, bool rideAlongAllowed = true);
     void writeModuleXML(const QString& moduleName);
     std::shared_ptr<pugi::xml_document> takeExportDocument();

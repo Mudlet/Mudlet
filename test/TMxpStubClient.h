@@ -45,7 +45,7 @@ public:
         return MXP_TAG_HANDLED;
     }
 
-    void handleContent(char ch) override
+    void handleContentBytes(QByteArrayView bytes) override
     {
 
     }

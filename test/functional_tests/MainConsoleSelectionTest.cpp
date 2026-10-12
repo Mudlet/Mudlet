@@ -79,10 +79,10 @@ private:
     TTextEdit* upperPane() const
     {
         auto host = mudlet::self()->getActiveHost();
-        if (!host || !host->mpConsole) {
+        if (!host || !host->mainConsoleView()) {
             return nullptr;
         }
-        return host->mpConsole->mUpperPane;
+        return host->mainConsoleView()->mUpperPane;
     }
 
     void sendMouse(QWidget* w, QEvent::Type type, Qt::MouseButton button, Qt::MouseButtons buttons, const QPointF& localPos, Qt::KeyboardModifiers modifiers = Qt::NoModifier)
@@ -135,9 +135,73 @@ private:
         return pane->mpContextMenuAnalyser->toolTip();
     }
 
+    // A profile whose main console wraps at the given width, with a line
+    // "before" above wherever the text under test goes
+    TConsole* consoleWrappingAt(int wrapAt, int hangingIndent)
+    {
+        mpServer->setWelcomeMessage(qsl("ready\r\n"));
+        startProfile(mpHostname, mpLocalhost, mpPort);
+        if (QTest::currentTestFailed() || !waitForTextInBuffer(qsl("ready"))) {
+            return nullptr;
+        }
+        auto console = mudlet::self()->getActiveHost()->mainConsoleView();
+        console->print(qsl("before\n"));
+        console->setWrapAt(wrapAt);
+        console->setHangingIndentCount(hangingIndent);
+        return console;
+    }
+
+    // Prints text, which has to wrap, and selects all of it
+    TTextEdit* paneWithWrappedText(TConsole* console, const QString& text)
+    {
+        const TBuffer& buffer = console->buffer;
+        const int firstLine = static_cast<int>(buffer.lineBuffer.size()) - 1;
+        if (!buffer.lineBuffer.at(firstLine).isEmpty()) {
+            qWarning() << "the text would be appended to a line already there";
+            return nullptr;
+        }
+        console->print(text);
+        TTextEdit* pane = upperPane();
+        pane->mPA = QPoint(0, firstLine);
+        selectToTheEnd(pane);
+        pane->mSelectedRegion = QRegion(0, 0, 1, 1);
+        for (int y = firstLine + 1; y <= pane->mPB.y(); ++y) {
+            if (buffer.wrapsFromPreviousLine(y)) {
+                return pane;
+            }
+        }
+        qWarning() << "the text did not wrap, so there is no wrapped line to rejoin";
+        return nullptr;
+    }
+
+    TTextEdit* paneWithWrappedText(const QString& text, int wrapAt, int hangingIndent)
+    {
+        TConsole* console = consoleWrappingAt(wrapAt, hangingIndent);
+        return console ? paneWithWrappedText(console, text) : nullptr;
+    }
+
+    int lineNumberOf(const QString& text)
+    {
+        const TBuffer& buffer = mudlet::self()->getActiveHost()->mainConsoleView()->buffer;
+        return static_cast<int>(buffer.lineBuffer.lastIndexOf(text));
+    }
+
+    void runLua(const QString& script) { QVERIFY2(mudlet::self()->getActiveHost()->getLuaInterpreter()->compileAndExecuteScript(script), qPrintable(script)); }
+
+    // Moves the end of the selection to the last character in the buffer
+    void selectToTheEnd(TTextEdit* pane)
+    {
+        const TBuffer& buffer = mudlet::self()->getActiveHost()->mainConsoleView()->buffer;
+        int lastLine = static_cast<int>(buffer.lineBuffer.size()) - 1;
+        while (lastLine > 0 && buffer.lineBuffer.at(lastLine).isEmpty()) {
+            --lastLine;
+        }
+        pane->mPB = QPoint(static_cast<int>(buffer.lineBuffer.at(lastLine).size()) - 1, lastLine);
+    }
+
     int printedLineNumber(const QString& text)
     {
-        auto console = mudlet::self()->getActiveHost()->mpConsole;
+        QPointer<TMainConsole> console = mudlet::self()->getActiveHost()->mainConsoleView();
         console->print(text + QChar::LineFeed);
         for (int i = console->buffer.getLastLineNumber(); i >= 0; --i) {
             if (console->buffer.line(i) == text) {
@@ -155,7 +219,7 @@ private:
 
     QString lineUnder(TTextEdit* pane, const QPointF& pos) const
     {
-        return mudlet::self()->getActiveHost()->mpConsole->buffer.line(static_cast<int>(pos.y()) / pane->mFontHeight + pane->imageTopLine());
+        return mudlet::self()->getActiveHost()->mainConsoleView()->buffer.line(static_cast<int>(pos.y()) / pane->mFontHeight + pane->imageTopLine());
     }
 
     // Leaves the button held on the last press, which is where a word (2) or
@@ -179,7 +243,7 @@ private:
     // does not depend on the selection endpoints that a copy works from.
     QString highlightedText() const
     {
-        TBuffer& buffer = mudlet::self()->getActiveHost()->mpConsole->buffer;
+        TBuffer& buffer = mudlet::self()->getActiveHost()->mainConsoleView()->buffer;
         QStringList lines;
         for (int y = 0; y <= buffer.getLastLineNumber(); ++y) {
             QString selected;
@@ -199,6 +263,9 @@ private:
     // Each copy starts from a marker, so a slot that returns early cannot pass
     // on what an earlier copy left on the clipboard.
     const QString mNothingCopied = qsl("nothing was copied");
+
+    // Wraps at 16 columns straight after "late.", dropping all three spaces
+    const QString mSeveralSpaces = qsl("It is very late.   The clock strikes eleven.");
 
     QString copiedText(TTextEdit* pane) const
     {
@@ -401,7 +468,7 @@ private slots:
         sendMouse(pane, QEvent::MouseButtonPress, Qt::LeftButton, Qt::LeftButton, pressPos, Qt::ControlModifier);
         QVERIFY2(pane->mDragStart.y() > 0, "the press did not start the drag below the first line");
         QVERIFY2(host->getLuaInterpreter()->compileAndExecuteScript(qsl("for i = 1, 25 do moveCursor(0, 0) deleteLine() end")), "the deleteLine() calls failed");
-        QVERIFY(host->mpConsole->buffer.getLastLineNumber() < pane->mDragStart.y());
+        QVERIFY(host->mainConsoleView()->buffer.getLastLineNumber() < pane->mDragStart.y());
         const QString highlightedByThePress = highlightedText();
 
         moveAndReleaseLeftButton(pane, QPointF(pressPos.x(), pane->mFontHeight / 2.0), Qt::ControlModifier);
@@ -421,7 +488,7 @@ private slots:
         sendMouse(pane, QEvent::MouseButtonPress, Qt::LeftButton, Qt::LeftButton, pressPos, Qt::ControlModifier);
         QVERIFY2(pane->mDragStart.y() > 0, "the press did not start the drag below the first line");
         QVERIFY2(host->getLuaInterpreter()->compileAndExecuteScript(qsl("clearWindow()\nfor i = 1, 200 do echo('refill ' .. i .. '\\n') end")), "the clearWindow() and echo calls failed");
-        QVERIFY(host->mpConsole->buffer.getLastLineNumber() > pane->mDragStart.y());
+        QVERIFY(host->mainConsoleView()->buffer.getLastLineNumber() > pane->mDragStart.y());
 
         moveAndReleaseLeftButton(pane, QPointF(pressPos.x(), pane->mFontHeight / 2.0), Qt::ControlModifier);
 
@@ -594,7 +661,7 @@ private slots:
 
         const QPointF belowTheText = cellInMiddleRow(pane, 2);
         const int lineBelowTheText = static_cast<int>(belowTheText.y()) / pane->mFontHeight + pane->imageTopLine();
-        QVERIFY2(lineBelowTheText >= static_cast<int>(host->mpConsole->buffer.lineBuffer.size()), "the middle of the pane is not below the text");
+        QVERIFY2(lineBelowTheText >= static_cast<int>(host->mainConsoleView()->buffer.lineBuffer.size()), "the middle of the pane is not below the text");
         sendMouse(pane, QEvent::MouseButtonPress, Qt::LeftButton, Qt::LeftButton, belowTheText, Qt::ControlModifier);
         sendMouse(pane, QEvent::MouseButtonRelease, Qt::LeftButton, Qt::NoButton, belowTheText, Qt::ControlModifier);
 
@@ -641,6 +708,226 @@ private slots:
         QCOMPARE(copiedText(pane), expected);
     }
 
+    // Word wrapping only breaks a line to fit the console, so a copy has to put
+    // the pieces back together as they were printed: the spaces a break at a
+    // space dropped go back in, the hanging indent stays out, and a break with
+    // no space at it - part way through a word, or after a hyphen - joins with
+    // nothing between. Lines that were ended stay apart.
+    void test_copyRejoinsLinesSplitByWordWrapping_data()
+    {
+        QTest::addColumn<QString>("sent");
+        QTest::addColumn<int>("hangingIndent");
+        QTest::newRow("break at a space") << qsl("a quick brownish fox jumps over it") << 0;
+        QTest::newRow("break before a word") << qsl("the quick brown fox jumps over the lazy dog") << 0;
+        QTest::newRow("several spaces at a break") << mSeveralSpaces << 0;
+        QTest::newRow("no break opportunity") << qsl("abcdefghijklmnopqrstuvwxyz0123456789ABCDEFGHIJ") << 0;
+        QTest::newRow("hyphenated") << qsl("they will co-operate if asked") << 0;
+        QTest::newRow("hanging indent") << qsl("the quick brown fox jumps over the lazy dog") << 4;
+        QTest::newRow("several spaces and a hanging indent") << mSeveralSpaces << 4;
+        QTest::newRow("two lines sent") << qsl("the quick brown fox jumps\nover the lazy dog and away it goes") << 3;
+    }
+
+    void test_copyRejoinsLinesSplitByWordWrapping()
+    {
+        QFETCH(QString, sent);
+        QFETCH(int, hangingIndent);
+
+        TTextEdit* pane = paneWithWrappedText(sent + QChar::LineFeed, 16, hangingIndent);
+        QVERIFY2(pane, "the wrapped text never reached the upper pane");
+
+        QCOMPARE(copiedText(pane), sent);
+    }
+
+    // Selecting from inside a wrapped line's hanging indent must not copy the
+    // indent, which was never printed.
+    void test_copyFromInsideAHangingIndentLeavesTheIndentOut()
+    {
+        TTextEdit* pane = paneWithWrappedText(mSeveralSpaces + QChar::LineFeed, 16, 4);
+        QVERIFY2(pane, "the wrapped text never reached the upper pane");
+        auto& buffer = mudlet::self()->getActiveHost()->mainConsoleView()->buffer;
+        const int continuation = pane->mPA.y() + 1;
+        QVERIFY2(buffer.line(continuation).startsWith(qsl("    ")), qPrintable(qsl("the second line was not indented: '%1'").arg(buffer.line(continuation))));
+
+        pane->mPA = QPoint(2, continuation);
+        const QString continuationText = buffer.line(continuation).trimmed();
+
+        QCOMPARE(copiedText(pane), mSeveralSpaces.mid(mSeveralSpaces.indexOf(continuationText)));
+    }
+
+    // Part of a wrapped paragraph, and a single word inside one of its wrapped
+    // lines, come out as just what was selected.
+    void test_copyPartOfAWrappedLine()
+    {
+        TTextEdit* pane = paneWithWrappedText(mSeveralSpaces + QChar::LineFeed, 16, 4);
+        QVERIFY2(pane, "the wrapped text never reached the upper pane");
+        auto& buffer = mudlet::self()->getActiveHost()->mainConsoleView()->buffer;
+        const int firstLine = pane->mPA.y();
+        const int clockColumn = static_cast<int>(buffer.line(firstLine + 1).indexOf(qsl("clock")));
+        QVERIFY2(clockColumn > 4, qPrintable(buffer.line(firstLine + 1)));
+
+        pane->mPA = QPoint(3, firstLine);
+        pane->mPB = QPoint(clockColumn + 4, firstLine + 1);
+        QCOMPARE(copiedText(pane), qsl("is very late.   The clock"));
+
+        pane->mPA = QPoint(clockColumn, firstLine + 1);
+        QCOMPARE(copiedText(pane), qsl("clock"));
+    }
+
+    // Echoing onto a line that has already wrapped rewraps the last part of
+    // it, which has to keep the spaces its own break dropped.
+    void test_copyRejoinsTextEchoedOntoAWrappedLine()
+    {
+        TConsole* console = consoleWrappingAt(16, 0);
+        QVERIFY(console);
+        TTextEdit* pane = paneWithWrappedText(console, qsl("It is very late.   The clock"));
+        QVERIFY2(pane, "the wrapped text never reached the upper pane");
+
+        console->print(qsl(" strikes eleven.\n"));
+        selectToTheEnd(pane);
+
+        QCOMPARE(copiedText(pane), mSeveralSpaces);
+    }
+
+    // A space that one echo ends on, right where the line wraps, still stands
+    // between it and what the next echo carries on with.
+    void test_copyRejoinsEchoesSplitAtTheWrapColumn()
+    {
+        TConsole* console = consoleWrappingAt(16, 0);
+        QVERIFY(console);
+        TTextEdit* pane = paneWithWrappedText(console, qsl("xxxxxxxxxxxx yyyyyyyyyyyyyyyy "));
+        QVERIFY2(pane, "the wrapped text never reached the upper pane");
+
+        console->print(qsl("zzz\n"));
+        selectToTheEnd(pane);
+
+        QCOMPARE(copiedText(pane), qsl("xxxxxxxxxxxx yyyyyyyyyyyyyyyy zzz"));
+    }
+
+    // The spaces the next echo starts with fall at that same break, so they
+    // are dropped from the line and kept for the copy just as the one space is.
+    void test_copyKeepsTheSpacesAnEchoAfterTheWrapColumnStartsWith()
+    {
+        TConsole* console = consoleWrappingAt(16, 0);
+        QVERIFY(console);
+        TTextEdit* pane = paneWithWrappedText(console, qsl("xxxxxxxxxxxx yyyyyyyyyyyyyyyy "));
+        QVERIFY2(pane, "the wrapped text never reached the upper pane");
+
+        console->print(qsl("  zzz\n"));
+        selectToTheEnd(pane);
+
+        QCOMPARE(copiedText(pane), qsl("xxxxxxxxxxxx yyyyyyyyyyyyyyyy   zzz"));
+    }
+
+    // A game line is over once its line feed arrives, even one that wrapped
+    // in the spaces it ended on, so what is printed next starts a new line.
+    void test_copyDoesNotJoinWhatFollowsAGameLineThatWrappedInItsLastSpaces()
+    {
+        TConsole* console = consoleWrappingAt(16, 0);
+        QVERIFY(console);
+        const int firstLine = static_cast<int>(console->buffer.lineBuffer.size()) - 1;
+        runLua(qsl("feedTriggers('xxxxxxxxxxxx yyyyyyyyyyyyyyyy \\n')"));
+        console->print(qsl("zzz\n"));
+        TTextEdit* pane = upperPane();
+        pane->mPA = QPoint(0, firstLine);
+        selectToTheEnd(pane);
+        pane->mSelectedRegion = QRegion(0, 0, 1, 1);
+
+        QCOMPARE(copiedText(pane), qsl("xxxxxxxxxxxx yyyyyyyyyyyyyyyy\nzzz"));
+    }
+
+    // MXP's <DEST EOL> discards the last line to print a new one in its place,
+    // which is no part of the line above even when the discarded one was.
+    void test_copyDoesNotJoinWhatReplacesADiscardedWrappedLine()
+    {
+        TConsole* console = consoleWrappingAt(16, 0);
+        QVERIFY(console);
+        TTextEdit* pane = paneWithWrappedText(console, qsl("the quick brown fox jumps"));
+        QVERIFY2(pane, "the wrapped text never reached the upper pane");
+
+        console->discardLastLine();
+        console->print(qsl("zzz\n"));
+        selectToTheEnd(pane);
+
+        QCOMPARE(copiedText(pane), qsl("the quick brown \nzzz"));
+    }
+
+    // The spaces each wrapped line dropped are kept line by line, so they have
+    // to stay with their lines when other lines come and go around them.
+    void test_copyRejoinsWrappedLinesAfterAnEarlierLineIsDeleted()
+    {
+        TConsole* console = consoleWrappingAt(16, 0);
+        QVERIFY(console);
+        runLua(qsl("moveCursor(0, %1) deleteLine()").arg(lineNumberOf(qsl("ready"))));
+        TTextEdit* pane = paneWithWrappedText(console, mSeveralSpaces + QChar::LineFeed);
+        QVERIFY2(pane, "the wrapped text never reached the upper pane");
+
+        QCOMPARE(copiedText(pane), mSeveralSpaces);
+    }
+
+    void test_copyRejoinsWrappedLinesAfterTheOldestLinesAreTrimmed()
+    {
+        TConsole* console = consoleWrappingAt(16, 0);
+        QVERIFY(console);
+        // an odd batch, so wrapped lines out of step with their dropped spaces
+        // do not happen to line up with another break's
+        console->buffer.setBufferSize(100, 7);
+        for (int previousSize = 0; console->buffer.size() > previousSize;) {
+            previousSize = console->buffer.size();
+            console->print(qsl("filler\n"));
+        }
+        TTextEdit* pane = paneWithWrappedText(console, mSeveralSpaces + QChar::LineFeed);
+        QVERIFY2(pane, "the wrapped text never reached the upper pane");
+
+        QCOMPARE(copiedText(pane), mSeveralSpaces);
+    }
+
+    void test_copyRejoinsWrappedLinesAfterALineFeedIsInsertedAboveThem()
+    {
+        TConsole* console = consoleWrappingAt(16, 0);
+        QVERIFY(console);
+        TTextEdit* pane = paneWithWrappedText(console, mSeveralSpaces + QChar::LineFeed);
+        QVERIFY2(pane, "the wrapped text never reached the upper pane");
+
+        runLua(qsl("moveCursor(2, %1) insertText('X\\n')").arg(lineNumberOf(qsl("before"))));
+        QCOMPARE(lineNumberOf(qsl("fore")), pane->mPA.y());
+        pane->mPA.ry() += 1;
+        selectToTheEnd(pane);
+
+        QCOMPARE(copiedText(pane), mSeveralSpaces);
+    }
+
+    // A line feed a script inserts into a wrapped line starts a line of its
+    // own, so what follows it is neither joined back on nor stripped of its
+    // leading spaces as though they were a hanging indent.
+    void test_copyKeepsALineFeedInsertedIntoAWrappedLine()
+    {
+        TTextEdit* pane = paneWithWrappedText(qsl("the quick brown fox jumps over the lazy dog\n"), 16, 0);
+        QVERIFY2(pane, "the wrapped text never reached the upper pane");
+        auto& buffer = mudlet::self()->getActiveHost()->mainConsoleView()->buffer;
+        const int continuation = pane->mPA.y() + 1;
+        QVERIFY2(buffer.line(continuation).startsWith(qsl("fox ")), qPrintable(buffer.line(continuation)));
+
+        runLua(qsl("moveCursor(3, %1) insertText('\\n  ')").arg(continuation));
+        selectToTheEnd(pane);
+
+        QCOMPARE(copiedText(pane), qsl("the quick brown fox\n   jumps over the lazy dog"));
+    }
+
+    // Once the line a wrapped one was split off is deleted, the rest of it
+    // follows whatever line is left above, which it must not be joined onto.
+    void test_copyDoesNotJoinWhatWasWrappedOffADeletedLine()
+    {
+        TTextEdit* pane = paneWithWrappedText(qsl("the quick brown fox jumps over the lazy dog\n"), 16, 0);
+        QVERIFY2(pane, "the wrapped text never reached the upper pane");
+        const int firstLine = pane->mPA.y();
+
+        runLua(qsl("moveCursor(0, %1) deleteLine()").arg(firstLine));
+        pane->mPA = QPoint(0, firstLine - 1);
+        selectToTheEnd(pane);
+
+        QCOMPARE(copiedText(pane), qsl("before\nfox jumps over the lazy dog"));
+    }
+
     // A double-click leaves mMouseTrackLevel at 2, which must not widen a
     // selection a screen reader makes afterwards.
     void test_screenReaderSelectionAfterADoubleClickIsNotWidenedToWords()
@@ -683,7 +970,7 @@ private slots:
         TTextEdit* pane = upperPane();
         QVERIFY2(pane, "No upper pane available");
 
-        TMainConsole* console = mudlet::self()->getActiveHost()->mpConsole;
+        TMainConsole* console = mudlet::self()->getActiveHost()->mainConsoleView();
         console->print(qsl("\nselected"));
         const int y = console->buffer.getLastLineNumber();
         QCOMPARE(console->buffer.line(y), qsl("selected"));
@@ -697,6 +984,42 @@ private slots:
         QCOMPARE(console->buffer.getLastLineNumber(), y);
 
         QVERIFY2(console->buffer.buffer.at(y).at(0).isSelected(), "text arriving on a selected line deselected the characters that were already on it");
+    }
+
+    // Selected text takes its background as the pen, and a transparent cell
+    // borrows the console's for that - whose alpha a script may have set to 0
+    void test_selectedTransparentTextStaysVisibleOnATransparentConsole()
+    {
+        mpServer->setWelcomeMessage(qsl("selection test\r\n"));
+        startProfile(mpHostname, mpLocalhost, mpPort);
+        QVERIFY2(waitForTextInBuffer(qsl("selection test")), "the welcome text never reached the buffer");
+        Host* host = mudlet::self()->getActiveHost();
+        QVERIFY(host->getLuaInterpreter()->compileAndExecuteScript(qsl("setBackgroundColor('main', 10, 20, 30, 0)")));
+
+        TMainConsole* console = host->mainConsoleView();
+        TTextEdit* pane = upperPane();
+        QVERIFY2(pane, "No upper pane available");
+        // a system message, then game text on a background barely there
+        for (const QColor& background : {QColor(QColorConstants::Transparent), QColor(10, 20, 30, 1)}) {
+            const QString text = qsl("system\n");
+            console->buffer.append(text, 0, text.size(), QColorConstants::White, background, TChar::None, 0);
+            const int y = console->buffer.getLastLineNumber() - 1;
+            QCOMPARE(console->buffer.line(y), qsl("system"));
+            for (auto& character : console->buffer.buffer[y]) {
+                character.select();
+            }
+
+            TTextEdit::LineLayout layout;
+            pane->layoutLine(y, 0, pane->timeStampCharStyle(), layout);
+            int glyphs = 0;
+            for (const auto& run : layout) {
+                if (run.style && !run.grapheme.isEmpty()) {
+                    ++glyphs;
+                    QCOMPARE(run.fgColor, QColor(10, 20, 30));
+                }
+            }
+            QCOMPARE(glyphs, 6);
+        }
     }
 
     // #6363: the mouse cursor becomes a hand over a link, and the reset back to
@@ -793,11 +1116,10 @@ private slots:
         // the buffer
         const int blankRowY = overTheLink.y() + pane->mFontHeight;
         const int blankRowLine = (blankRowY / pane->mFontHeight) + pane->imageTopLine();
-        QVERIFY2(blankRowLine < static_cast<int>(pane->mpBuffer->buffer.size()),
-                 "the row below the link is past the buffer, which is the case the test above covers rather than this one");
+        QVERIFY2(blankRowLine < static_cast<int>(pane->mpBuffer->buffer.size()), "the row below the link is past the buffer, which is the case the test above covers rather than this one");
         QVERIFY2(pane->mpBuffer->buffer.at(blankRowLine).empty(),
-                 qPrintable(qsl("the row below the link holds %1 characters rather than none, so the character check is not what has to reject it")
-                                    .arg(pane->mpBuffer->buffer.at(blankRowLine).size())));
+                 qPrintable(
+                         qsl("the row below the link holds %1 characters rather than none, so the character check is not what has to reject it").arg(pane->mpBuffer->buffer.at(blankRowLine).size())));
         sendMouse(pane, QEvent::MouseMove, Qt::NoButton, Qt::NoButton, QPointF(overTheLink.x(), blankRowY));
 
         QCOMPARE(pane->cursor().shape(), Qt::IBeamCursor);
@@ -811,7 +1133,7 @@ private slots:
     {
         TTextEdit* pane = paneShowingProse();
         QVERIFY2(pane, "No upper pane showing the prose");
-        TMainConsole* console = mudlet::self()->getActiveHost()->mpConsole;
+        TMainConsole* console = mudlet::self()->getActiveHost()->mainConsoleView();
         console->slot_toggleTimeStamps(true);
         QVERIFY2(console->showTimeStamps(), "the timestamp gutter never came on, so the click has nothing to land in");
 
@@ -893,6 +1215,68 @@ private slots:
         QCoreApplication::sendPostedEvents(nullptr, QEvent::DeferredDelete);
     }
 
+    // #11401: a dropped selection leaves mPA and mPB behind, so an action picked
+    // without one must not hand them on as though they were still selected.
+    void test_aMouseEventPickedWithoutASelectionGetsNoCoordinates()
+    {
+        TTextEdit* pane = paneShowingProse();
+        QVERIFY2(pane, "No upper pane showing the prose");
+
+        auto host = mudlet::self()->getActiveHost();
+        QVERIFY2(host->getLuaInterpreter()->compileAndExecuteScript(
+                         qsl("mouseSelectionSeen = ''\n"
+                             "function mouseSelectionTestHandler(_, _, _, startCol, startLine, endCol, endLine)\n"
+                             "  mouseSelectionSeen = string.format('%s %s %s %s', tostring(startCol), tostring(startLine), tostring(endCol), tostring(endLine))\n"
+                             "end\n"
+                             "registerAnonymousEventHandler('testMouseSelection', 'mouseSelectionTestHandler')\n"
+                             "addMouseEvent('testMouseSelectionUnique', 'testMouseSelection', 'Show the selection')\n")),
+                 "the addMouseEvent() call failed");
+
+        auto selectionTheActionSees = [&]() -> QString {
+            const QPointF pos = cellInMiddleRow(pane, 8);
+            sendMouse(pane, QEvent::MouseButtonPress, Qt::RightButton, Qt::RightButton, pos);
+            sendMouse(pane, QEvent::MouseButtonRelease, Qt::RightButton, Qt::NoButton, pos);
+            QPointer<QMenu> menu = pane->findChildren<QMenu*>().value(0);
+            if (!menu) {
+                return qsl("no menu");
+            }
+            const QList<QAction*> actions = menu->actions();
+            const auto entry = std::find_if(actions.cbegin(), actions.cend(), [](QAction* pAction) {
+                return pAction->text() == qsl("Show the selection");
+            });
+            if (entry == actions.cend()) {
+                return qsl("no entry");
+            }
+            (*entry)->trigger();
+            menu->close();
+            QCoreApplication::sendPostedEvents(nullptr, QEvent::DeferredDelete);
+
+            lua_State* L = host->getLuaInterpreter()->getLuaGlobalState();
+            lua_getglobal(L, "mouseSelectionSeen");
+            const QString seen = QString::fromUtf8(lua_tostring(L, -1));
+            lua_pop(L, 1);
+            return seen;
+        };
+
+        QCOMPARE(selectionTheActionSees(), qsl("nil nil nil nil"));
+
+        const QPointF dragStart = cellInMiddleRow(pane, 5);
+        const QPointF dragEnd = cellInMiddleRow(pane, 15);
+        sendMouse(pane, QEvent::MouseButtonPress, Qt::LeftButton, Qt::LeftButton, dragStart);
+        sendMouse(pane, QEvent::MouseMove, Qt::NoButton, Qt::LeftButton, dragEnd);
+        sendMouse(pane, QEvent::MouseButtonRelease, Qt::LeftButton, Qt::NoButton, dragEnd);
+        QVERIFY2(pane->hasSelectedText(), "the drag selected nothing");
+        const QString selected = qsl("%1 %2 %3 %4").arg(pane->mPA.x()).arg(pane->mPA.y()).arg(pane->mPB.x()).arg(pane->mPB.y());
+        QCOMPARE(selectionTheActionSees(), selected);
+
+        QTest::qWait(350ms); // long enough after the drag's press not to count as a double-click
+        const QPointF elsewhere = cellInMiddleRow(pane, 40);
+        sendMouse(pane, QEvent::MouseButtonPress, Qt::LeftButton, Qt::LeftButton, elsewhere);
+        sendMouse(pane, QEvent::MouseButtonRelease, Qt::LeftButton, Qt::NoButton, elsewhere);
+        QVERIFY2(!pane->hasSelectedText(), "the click elsewhere left the selection in place");
+        QCOMPARE(selectionTheActionSees(), qsl("nil nil nil nil"));
+    }
+
     // The menu is non-modal, so a script can remove a mouse event while its
     // entry is still showing. Picking it then indexed an empty list, so a
     // regression aborts the run rather than failing this case.
@@ -954,7 +1338,7 @@ private slots:
         startProfile(mpHostname, mpLocalhost, mpPort);
         QVERIFY2(waitForTextInBuffer(qsl("selection test")), "the welcome text never reached the buffer");
 
-        TMainConsole* console = mudlet::self()->getActiveHost()->mpConsole;
+        TMainConsole* console = mudlet::self()->getActiveHost()->mainConsoleView();
         console->print(qsl("\nbackwards selection"));
         const int y = console->buffer.getLastLineNumber();
         QCOMPARE(console->buffer.line(y), qsl("backwards selection"));
@@ -979,7 +1363,7 @@ private slots:
         startProfile(mpHostname, mpLocalhost, mpPort);
         QVERIFY2(waitForTextInBuffer(qsl("selection test")), "the welcome text never reached the buffer");
 
-        TMainConsole* console = mudlet::self()->getActiveHost()->mpConsole;
+        TMainConsole* console = mudlet::self()->getActiveHost()->mainConsoleView();
         console->print(qsl("\nfirst\nsecond"));
         const int lastLine = console->buffer.getLastLineNumber();
         const int firstLine = lastLine - 1;
@@ -1036,7 +1420,7 @@ private:
 
     bool waitForTextInBuffer(const QString& text, int timeoutMs = 5000)
     {
-        auto console = mudlet::self()->getActiveHost()->mpConsole;
+        QPointer<TMainConsole> console = mudlet::self()->getActiveHost()->mainConsoleView();
         return QTest::qWaitFor(
                 [&]() {
                     for (int i = 0; i <= console->buffer.getLastLineNumber(); ++i) {
