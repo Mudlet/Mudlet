@@ -26,6 +26,7 @@
 #include "Host.h"
 #include "MudletApp.h"
 #include "TArea.h"
+#include "TAreaGraph.h"
 #include "TEvent.h"
 #include "TMapLabel.h"
 #include "TMapViewFrontend.h"
@@ -190,6 +191,7 @@ TMap::TMap(Host* pH, const QString& profileName)
     mpNetworkAccessManager = new QNetworkAccessManager(this);
 
     mMapInfoContributorManager = new MapInfoContributorManager(this, pH);
+    mpAreaGraph = std::make_unique<TAreaGraph>(this);
 
     connect(mpNetworkAccessManager, &QNetworkAccessManager::finished, this, &TMap::slot_replyFinished);
 }
@@ -260,6 +262,7 @@ void TMap::mapClear()
     mNewMove = true;
     mVersion = mDefaultVersion;
     mUserData.clear();
+    ++mMapRevision;
 
     // mSaveVersion is not reset - so that any new Mudlet map file saves are to
     // whatever version was previously set/deduced
@@ -3838,6 +3841,7 @@ std::pair<bool, QString> TMap::readJsonMapFile(const QString& source, const bool
 
     // This is it - the point at which the new map gets activated:
     mpRoomDB = std::move(pNewRoomDB);
+    ++mMapRevision;
     // The routing graph holds pointers to the rooms just destroyed, and the bulk
     // deletion skipped the per-room cleanup that would otherwise have flagged it:
     roomidToIndex.clear();
@@ -4185,6 +4189,7 @@ void TMap::setUnsaved(const char* fromWhere)
     qDebug().nospace().noquote() << "TMap::setUnsaved(...) INFO - called at: " << nowString << " from: " << fromWhere << ".";
 #endif
     mUnsavedMap = true;
+    ++mMapRevision;
 }
 
 void TMap::setSaveError(bool state)
