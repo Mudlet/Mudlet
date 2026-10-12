@@ -93,7 +93,7 @@ Discord::Discord(QObject* parent)
         const auto msg = mpLibrary->errorString();
         auto notFound = msg.contains(qsl("not found")) || msg.contains(qsl("No such file or directory"));
         qDebug().nospace() << "Could not " << (notFound ? "find" : "load") << " Discord library - searched in:";
-        for (const auto& libraryPath : qApp->libraryPaths()) {
+        for (const auto& libraryPath : QCoreApplication::libraryPaths()) {
             qDebug() << "    " << libraryPath;
         }
         if (!msg.isEmpty() && !notFound) {
@@ -334,8 +334,7 @@ void Discord::UpdatePresence()
         return;
     }
 
-    auto* pFrontend = TAppFrontend::instance();
-    Host* pHost = pFrontend ? pFrontend->getActiveHost() : nullptr;
+    Host* pHost = TAppFrontend::instance()->getActiveHost();
 
     // Don't send any presence when no profile is active or Discord is
     // disabled - showing "Playing Mudlet" would leak information when the
