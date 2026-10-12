@@ -34,6 +34,7 @@
 
 #include "Host.h"
 #include "TArea.h"
+#include "TAreaGraph.h"
 #include "TConsoleFrontend.h"
 #include "TDebug.h"
 #include "TEvent.h"
@@ -1549,6 +1550,52 @@ int TLuaInterpreter::getAreaExits(lua_State* L)
             lua_settable(L, -3);
         }
     }
+    return 1;
+}
+
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#getAreaGraph
+int TLuaInterpreter::getAreaGraph(lua_State* L)
+{
+    const Host& host = getHostFromLua(L);
+    if (!host.mpMap || !host.mpMap->mpRoomDB) {
+        return warnArgumentValue(L, __func__, "no map present or loaded");
+    }
+    TAreaGraph* pGraph = host.mpMap->areaGraph();
+    pGraph->refresh();
+
+    lua_newtable(L);
+    lua_newtable(L);
+    for (const auto& node : pGraph->nodes()) {
+        lua_pushnumber(L, node.areaId);
+        lua_newtable(L);
+        lua_pushstring(L, node.name.toUtf8().constData());
+        lua_setfield(L, -2, "name");
+        lua_pushnumber(L, node.position.x());
+        lua_setfield(L, -2, "x");
+        lua_pushnumber(L, node.position.y());
+        lua_setfield(L, -2, "y");
+        lua_pushnumber(L, node.roomCount);
+        lua_setfield(L, -2, "rooms");
+        lua_pushboolean(L, node.pinned);
+        lua_setfield(L, -2, "pinned");
+        lua_settable(L, -3);
+    }
+    lua_setfield(L, -2, "areas");
+
+    lua_newtable(L);
+    int index = 0;
+    for (const auto& link : pGraph->links()) {
+        lua_pushnumber(L, ++index);
+        lua_newtable(L);
+        lua_pushnumber(L, link.fromArea);
+        lua_setfield(L, -2, "from");
+        lua_pushnumber(L, link.toArea);
+        lua_setfield(L, -2, "to");
+        lua_pushnumber(L, link.exitCount);
+        lua_setfield(L, -2, "exits");
+        lua_settable(L, -3);
+    }
+    lua_setfield(L, -2, "links");
     return 1;
 }
 
@@ -3155,6 +3202,19 @@ int TLuaInterpreter::removeSpecialExit(lua_State* L)
     return 1;
 }
 
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#resetAreaGraphLayout
+int TLuaInterpreter::resetAreaGraphLayout(lua_State* L)
+{
+    const bool keepPinned = !lua_isnoneornil(L, 1) && getVerifiedBool(L, __func__, 1, "keep pinned areas", true);
+    const Host& host = getHostFromLua(L);
+    if (!host.mpMap || !host.mpMap->mpRoomDB) {
+        return warnArgumentValue(L, __func__, "no map present or loaded");
+    }
+    host.mpMap->areaGraph()->resetLayout(keepPinned);
+    lua_pushboolean(L, true);
+    return 1;
+}
+
 // Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#resetRoomArea
 int TLuaInterpreter::resetRoomArea(lua_State* L)
 {
@@ -3549,6 +3609,26 @@ int TLuaInterpreter::searchRoomUserData(lua_State* L)
         }
     }
 
+    return 1;
+}
+
+// Documentation: https://wiki.mudlet.org/w/Manual:Lua_Functions#setAreaGraphPosition
+int TLuaInterpreter::setAreaGraphPosition(lua_State* L)
+{
+    const int areaId = getVerifiedInt(L, __func__, 1, "areaID");
+    const double x = getVerifiedDouble(L, __func__, 2, "x");
+    const double y = getVerifiedDouble(L, __func__, 3, "y");
+    const Host& host = getHostFromLua(L);
+    if (!host.mpMap || !host.mpMap->mpRoomDB) {
+        return warnArgumentValue(L, __func__, "no map present or loaded");
+    }
+    if (!std::isfinite(x) || !std::isfinite(y)) {
+        return warnArgumentValue(L, __func__, "x and y must be finite numbers");
+    }
+    if (!host.mpMap->areaGraph()->setPosition(areaId, QPointF(x, y))) {
+        return warnArgumentValue(L, __func__, csmInvalidAreaID.arg(areaId));
+    }
+    lua_pushboolean(L, true);
     return 1;
 }
 

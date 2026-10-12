@@ -62,6 +62,7 @@ class Host;
 class QOpenGLWidget;
 #endif
 class TArea;
+class TAreaGraph;
 class TMapViewManager;
 class TRoom;
 class TRoomDB;
@@ -320,6 +321,10 @@ public:
     void setUnsaved(const char*);
     void resetUnsaved() { mUnsavedMap = false; }
     bool isUnsaved() const { return mUnsavedMap; }
+    // Bumped by setUnsaved() and whenever the whole map is replaced, so a cache can tell it is stale.
+    quint64 mapRevision() const { return mMapRevision; }
+    // Call TAreaGraph::refresh() before reading it.
+    TAreaGraph* areaGraph() const { return mpAreaGraph.get(); }
     void setSaveError(bool state);
     bool hasSaveError() const { return mSaveError; }
     void setDefaultAreaShown(bool);
@@ -551,6 +556,8 @@ private:
     bool mMapOperationAbortRequested = false;
     int mScriptCallbackDepth = 0;
     bool mGraphBuildInProgress = false;
+    quint64 mMapRevision = 0;
+    std::unique_ptr<TAreaGraph> mpAreaGraph;
 
     void addDirectionalRoute(std::vector<std::pair<unsigned int, route>>& bestRoutes,
                              const QMap<QString, int>& exitWeights,

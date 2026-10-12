@@ -220,6 +220,7 @@ public:
     static int sendMSDP(lua_State*);
     static int auditAreas(lua_State*);
     static int getAreaExits(lua_State*);
+    static int getAreaGraph(lua_State*);
     static int setMergeTables(lua_State*);
     static int addSupportedTelnetOption(lua_State*);
     static int setDoor(lua_State*);
@@ -379,6 +380,7 @@ public:
     static int setCustomEnvColor(lua_State*);
     static int roomLocked(lua_State*);
     static int setAreaName(lua_State*);
+    static int setAreaGraphPosition(lua_State*);
     static int getRoomCoordinates(lua_State*);
     static int setRoomCoordinates(lua_State*);
     static int roomExists(lua_State*);
@@ -387,6 +389,7 @@ public:
     static int createRoomID(lua_State*);
     static int setRoomArea(lua_State*);
     static int resetRoomArea(lua_State*);
+    static int resetAreaGraphLayout(lua_State*);
     static int getRoomArea(lua_State*);
     static int denyCurrentSend(lua_State*);
     static int tempBeginOfLineTrigger(lua_State*);
