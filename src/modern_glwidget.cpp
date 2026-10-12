@@ -1183,7 +1183,7 @@ void ModernGLWidget::renderRooms()
         }
 
         if (!look.symbol.isEmpty()) {
-            const RoomSymbol roomSymbol{currentRoomId, look.symbol, RoomAppearance::symbolColor(pR->mSymbolColor, roomColor), roomTop, decalTint, &decals};
+            const RoomSymbol roomSymbol{currentRoomId, look.symbol, RoomAppearance::symbolColor(look.symbolColor, roomColor), roomTop, decalTint, &decals};
             if (showRoomIds) {
                 symbolsInPlaceOfIds.append(roomSymbol);
             } else {
