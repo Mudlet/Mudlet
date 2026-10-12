@@ -82,6 +82,7 @@ public:
     void scrollDown(int lines);
     void wheelEvent(QWheelEvent* e) override;
     void resizeEvent(QResizeEvent* event) override;
+    void changeEvent(QEvent* event) override;
     void mousePressEvent(QMouseEvent*) override;
     void mouseReleaseEvent(QMouseEvent*) override;
     void mouseMoveEvent(QMouseEvent*) override;
@@ -107,6 +108,8 @@ public:
     void searchSelectionOnline();
     int getColumnCount() const;
     int getRowCount() const;
+    // Upper pane only: its grid is what Host::windowGridSize() answers for the console.
+    void reportGridSize();
     void toggleTimeStamps(const bool);
 
 #if defined(DEBUG_CODEPOINT_PROBLEMS)
@@ -121,8 +124,9 @@ public:
     void applyHyperlinkSelectionGroupState(int linkIndex, QString& uri, const Mudlet::HyperlinkStyling::SelectionSettings& selection, const char* callerContext);
 
     QColor mBgColor;
-    // position of cursor, in characters, across the entire buffer
-    int mCursorY = 0;
+    // position of cursor, in characters, across the entire buffer. The upper
+    // pane's lives in its console's model, where getScroll() reads it.
+    int& mCursorY;
     int mCursorX = 0;
 
     // Position of "caret", the cursor used for accessibility purposes.
@@ -283,6 +287,7 @@ private:
     // or reset on creation and is used to adjust the behaviour depending on
     // which one this instance is:
     const bool mIsLowerPane;
+    int mLowerPaneCursorY = 0;
     // last line offset rendered
     int mLastRenderedOffset = 0;
     bool mMouseTracking = false;

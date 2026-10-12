@@ -25,7 +25,10 @@
 #include <QToolButton>
 #include <QWidget>
 
+#include "TMapViewsFrontend.h"
+
 class Host;
+class ModernGLWidget;
 class T2DMap;
 class TMap;
 
@@ -35,7 +38,7 @@ class TMap;
  * independent of the player's current room, but do allow navigation (area selection,
  * z-level changes, zoom).
  */
-class TMapView : public QWidget
+class TMapView : public QWidget, public TSecondaryMapViewFrontend
 {
     Q_OBJECT
 
@@ -48,13 +51,13 @@ public:
     T2DMap* get2DMap() { return mp2dMap; }
 
     void setArea(int areaId);
-    std::pair<bool, QString> centerOnRoom(int roomId);
-    std::pair<bool, QString> setZoom(qreal zoom);
+    std::pair<bool, QString> centerOnRoom(int roomId) override;
+    std::pair<bool, QString> setZoom(qreal zoom) override;
 
-    int getCurrentAreaId() const;
-    int getCenteredRoomId() const;
-    qreal getZoom() const;
-    int getZLevel() const;
+    int getCurrentAreaId() const override;
+    int getCenteredRoomId() const override;
+    qreal getZoom() const override;
+    int getZLevel() const override;
 
     void updateAreaComboBox();
     // Called via TMapViewManager::switchViewsShowingArea() when a Configure
@@ -64,11 +67,21 @@ public:
     // through Lua's deleteArea() does not reach this.
     void switchToAnotherArea();
 
+    // Shows this window's map in the modern 3D view in place of the 2D one, on the same area and center;
+    // that view only exists while the profile uses the modern 3D renderer
+    void show3DView(bool show);
+    ModernGLWidget* get3DView() const;
+    // For after the profile changes which 3D renderer it uses
+    void update3DViewAvailability();
+
 private slots:
     void slot_switchArea(int index);
 
 private:
     void setupUi();
+    bool showing3DView() const;
+    void sync3DViewFrom2D();
+    void sync2DViewFrom3D();
 
     const int mViewId;
     QPointer<Host> mpHost;
@@ -80,6 +93,8 @@ private:
     QToolButton* mpZDownButton = nullptr;
     QWidget* mpPanelWidget = nullptr;
     QToolButton* mpTogglePanelButton = nullptr;
+    QToolButton* mp3DButton = nullptr;
+    QPointer<ModernGLWidget> mp3DView;
 };
 
 #endif // MUDLET_TMAPVIEW_H
