@@ -210,9 +210,7 @@ void ActionUnit::reParentAction(int childID, int oldParentID, int newParentID, i
         pOldParent->popChild(pChild);
         pOldParent->setDataChanged();
 
-        if (mpHost->consoleFrontend()) {
-            mpHost->consoleFrontend()->releaseParentActionBars(pOldParent, pChild);
-        }
+        mpHost->consoleFrontend()->releaseParentActionBars(pOldParent, pChild);
     }
     if (!pOldParent) {
         removeActionRootNode(pChild);
@@ -234,10 +232,7 @@ void ActionUnit::reParentAction(int childID, int oldParentID, int newParentID, i
     pChild->setDataChanged();
 
     if ((!pOldParent) && (pNewParent)) {
-        // A profile with no view has no console, so no bars to take down
-        if (mpHost->consoleFrontend()) {
-            mpHost->consoleFrontend()->detachActionBars(pChild);
-        }
+        mpHost->consoleFrontend()->detachActionBars(pChild);
     }
 }
 
@@ -304,7 +299,7 @@ void ActionUnit::unregisterAction(TAction* pT)
         updateAllToolbars();
         return;
     }
-    if (mpHost->consoleFrontend() && mpHost->consoleFrontend()->hasEasyButtonBar(pT) && pT->mPackageName.isEmpty()) {
+    if (mpHost->consoleFrontend()->hasEasyButtonBar(pT) && pT->mPackageName.isEmpty()) {
         mpHost->consoleFrontend()->detachActionBars(pT);
     }
     removeAction(pT);
@@ -414,9 +409,7 @@ std::pair<bool, QString> ActionUnit::setToolBarActive(const QString& name, const
     if (found) {
         updateAllToolbars();
     }
-    if (auto* pFrontend = TAppFrontend::instance()) {
-        pFrontend->processEventLoopHack();
-    }
+    TAppFrontend::instance()->processEventLoopHack();
     if (found) {
         return {true, QString()};
     }
@@ -438,11 +431,6 @@ std::pair<bool, QString> ActionUnit::hideToolBar(const QString& name)
 
 void ActionUnit::updateAllToolbars()
 {
-    // The bars are the console's widgets, so a profile with no view has nothing
-    // to build
-    if (!mpHost->consoleFrontend()) {
-        return;
-    }
     mpHost->consoleFrontend()->regenerateToolBars(mActionRootNodeList);
     mpHost->consoleFrontend()->regenerateEasyButtonBars(mActionRootNodeList);
 }

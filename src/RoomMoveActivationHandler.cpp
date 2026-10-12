@@ -84,14 +84,7 @@ bool RoomMoveActivationHandler::handle(T2DMap::MapInteractionContext& context)
 
         const int roomId = *clickedRoomIds.constBegin();
 
-        if (!mMapWidget.mMultiSelectionSet.contains(roomId)) {
-            mMapWidget.mMultiSelectionSet.clear();
-            mMapWidget.mMultiSelectionSet.unite(clickedRoomIds);
-            mMapWidget.mMultiSelectionHighlightRoomId = roomId;
-            mMapWidget.mMultiSelection = false;
-        } else {
-            mMapWidget.mMultiSelectionHighlightRoomId = roomId;
-        }
+        mMapWidget.selectRoomsToMove(clickedRoomIds, roomId);
 
         context.hasMultiSelection = !mMapWidget.mMultiSelectionSet.isEmpty();
 
