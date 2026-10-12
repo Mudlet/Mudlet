@@ -167,6 +167,10 @@ TAreaGraph::TAreaGraph(TMap* pMap)
 
 void TAreaGraph::refresh()
 {
+    // A load pumps events part way through; laying out a half-loaded map would fix those positions for good.
+    if (mpMap->mapOperationInProgress()) {
+        return;
+    }
     const unsigned int generation = mpMap->mpRoomDB->mapGeneration();
     const quint64 revision = mpMap->mapRevision();
     const bool structureChanged = !mBuilt || generation != mSeenGeneration || revision != mSeenRevision;
@@ -443,6 +447,13 @@ void TAreaGraph::layoutUnplacedAreas()
     }
     // Areas grown from placed ones, and the packed rows, can land on areas of other components.
     removeOverlaps(mNodes.keys(), fixed);
+    // Growing from or packing beside an area pinned near the limit can pass it.
+    for (auto it = mStored.begin(); it != mStored.end(); ++it) {
+        if (!fixed.contains(it.key())) {
+            QPointF& position = it.value().position;
+            position = QPointF(std::clamp(position.x(), -cMaxCoordinate, cMaxCoordinate), std::clamp(position.y(), -cMaxCoordinate, cMaxCoordinate));
+        }
+    }
 }
 
 void TAreaGraph::packComponents(QList<QList<int>> freshComponents)
@@ -669,6 +680,9 @@ void TAreaGraph::removeOverlaps(const QList<int>& ids, const QHash<int, bool>& f
 
 bool TAreaGraph::setPosition(int areaId, const QPointF& position)
 {
+    if (mpMap->mapOperationInProgress()) {
+        return false;
+    }
     refresh();
     if (!mNodes.contains(areaId) || !(std::abs(position.x()) <= cMaxCoordinate) || !(std::abs(position.y()) <= cMaxCoordinate)) {
         return false;
@@ -683,6 +697,9 @@ bool TAreaGraph::setPosition(int areaId, const QPointF& position)
 
 void TAreaGraph::resetLayout(bool keepPinned)
 {
+    if (mpMap->mapOperationInProgress()) {
+        return;
+    }
     refresh();
     for (auto it = mStored.begin(); it != mStored.end();) {
         it = (keepPinned && it.value().pinned) ? std::next(it) : mStored.erase(it);

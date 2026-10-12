@@ -233,6 +233,25 @@ describe("Tests the area graph and its world layout", function()
     assert.is_true(setAreaGraphPosition(wide, areas[wide].x, areas[wide].y), "a position the layout gave was refused")
   end)
 
+  it("only gives positions that can be set back", function()
+    local ids = buildMap()
+    assert.is_true(setAreaGraphPosition(ids.GraphSpecA, 1e15, -1e15))
+    local newArea = addAreaName("GraphSpecE")
+    local room = createRoomID()
+    addRoom(room)
+    setRoomArea(room, newArea)
+    addSpecialExit(room, ids.a1, "go")
+    local lonely = addAreaName("GraphSpecF")
+    room = createRoomID()
+    addRoom(room)
+    setRoomArea(room, lonely)
+
+    local areas = getAreaGraph().areas
+    for _, id in ipairs({newArea, lonely}) do
+      assert.is_true(setAreaGraphPosition(id, areas[id].x, areas[id].y), areas[id].name .. " was given " .. areas[id].x .. ", " .. areas[id].y)
+    end
+  end)
+
   it("refuses bad arguments", function()
     local ids = buildMap()
     local ok, message = setAreaGraphPosition(999999, 0, 0)

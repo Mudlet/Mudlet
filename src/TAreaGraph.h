@@ -46,7 +46,7 @@ class TAreaGraph
 public:
     static inline const QString cLayoutUserDataKey = QStringLiteral("system.areaGraphLayout");
     // Positions further out than this are refused, which keeps the layout's grid cell arithmetic in range;
-    // that is far beyond what a layout of int room coordinates produces.
+    // computed positions are clamped to it.
     static constexpr double cMaxCoordinate = 1.0e15;
 
     struct Node
@@ -77,12 +77,13 @@ public:
 
     explicit TAreaGraph(TMap*);
 
-    // Cheap when nothing changed since the last call.
+    // Cheap when nothing changed since the last call; does nothing while a map is being loaded.
     void refresh();
     const QMap<int, Node>& nodes() const { return mNodes; }
     // Sorted by (fromArea, toArea).
     const QList<Link>& links() const { return mLinks; }
-    // Pins the area there. False if there is no such area or a coordinate is not finite or beyond cMaxCoordinate.
+    // Pins the area there. False if there is no such area, a coordinate is not finite or beyond
+    // cMaxCoordinate, or a map is being loaded.
     bool setPosition(int areaId, const QPointF& position);
     // Discards the stored positions (but the pinned ones, if asked) and lays everything out again.
     void resetLayout(bool keepPinned);

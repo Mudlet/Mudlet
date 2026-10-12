@@ -3210,6 +3210,9 @@ int TLuaInterpreter::resetAreaGraphLayout(lua_State* L)
     if (!host.mpMap || !host.mpMap->mpRoomDB) {
         return warnArgumentValue(L, __func__, "no map present or loaded");
     }
+    if (host.mpMap->mapOperationInProgress()) {
+        return warnArgumentValue(L, __func__, "a map is being loaded");
+    }
     host.mpMap->areaGraph()->resetLayout(keepPinned);
     lua_pushboolean(L, true);
     return 1;
@@ -3621,6 +3624,9 @@ int TLuaInterpreter::setAreaGraphPosition(lua_State* L)
     const Host& host = getHostFromLua(L);
     if (!host.mpMap || !host.mpMap->mpRoomDB) {
         return warnArgumentValue(L, __func__, "no map present or loaded");
+    }
+    if (host.mpMap->mapOperationInProgress()) {
+        return warnArgumentValue(L, __func__, "a map is being loaded");
     }
     if (!(std::abs(x) <= TAreaGraph::cMaxCoordinate) || !(std::abs(y) <= TAreaGraph::cMaxCoordinate)) {
         return warnArgumentValue(L, __func__, qsl("x and y must be numbers between -%1 and %1").arg(TAreaGraph::cMaxCoordinate, 0, 'f', 0));
