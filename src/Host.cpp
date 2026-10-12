@@ -6506,17 +6506,11 @@ std::optional<bool> Host::commandLineSavesHistory(const QString& name) const
 
 std::optional<QString> Host::textBoxText(const QString& name) const
 {
-    if (!hasConsoleView()) {
-        return {};
-    }
     return mWindowRegistry.textBoxText(name);
 }
 
 std::optional<QFont> Host::textBoxFont(const QString& name) const
 {
-    if (!hasConsoleView()) {
-        return {};
-    }
     return mWindowRegistry.textBoxFont(name);
 }
 

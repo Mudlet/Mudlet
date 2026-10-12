@@ -700,9 +700,6 @@ int TLuaInterpreter::createTextEdit(lua_State* L)
     const QString textEditName{lua_tostring(L, textEditNamePos)};
 
     const Host& host = getHostFromLua(L);
-    if (!host.hasConsoleView()) {
-        return warnArgumentValue(L, __func__, no_main_window_value);
-    }
     if (auto [success, message] = host.consoleFrontend()->createTextBox(windowName, textEditName, x, y, width, height); !success) {
         return warnArgumentValue(L, __func__, message);
     }
@@ -717,10 +714,6 @@ int TLuaInterpreter::deleteTextEdit(lua_State* L)
     const QString textEditName = getVerifiedString(L, __func__, 1, "text edit name");
 
     const Host& host = getHostFromLua(L);
-
-    if (!host.hasConsoleView()) {
-        return warnArgumentValue(L, __func__, no_main_window_value, true);
-    }
     if (auto [success, message] = host.consoleFrontend()->deleteTextBox(textEditName); !success) {
         lua_pushboolean(L, false);
         lua_pushstring(L, message.toUtf8().constData());
@@ -855,7 +848,10 @@ int TLuaInterpreter::setTextEditFont(lua_State* L)
     const auto resolved = host.resolveFontFamily(fontName);
     font->setFamily(resolved.family);
     font->setWeight(resolved.weight);
-    host.consoleFrontend()->setTextBoxFont(textEditName, *font);
+    // The registry also has a detached view's text edits, which this view cannot set
+    if (!host.consoleFrontend()->setTextBoxFont(textEditName, *font)) {
+        return warnArgumentValue(L, __func__, qsl("text edit name '%1' not found").arg(textEditName));
+    }
     lua_pushboolean(L, true);
     return 1;
 }
@@ -876,7 +872,9 @@ int TLuaInterpreter::setTextEditFontSize(lua_State* L)
     }
 
     font->setPointSize(size);
-    host.consoleFrontend()->setTextBoxFont(textEditName, *font);
+    if (!host.consoleFrontend()->setTextBoxFont(textEditName, *font)) {
+        return warnArgumentValue(L, __func__, qsl("text edit name '%1' not found").arg(textEditName));
+    }
     lua_pushboolean(L, true);
     return 1;
 }

@@ -489,6 +489,10 @@ void TNullConsoleFrontend::dropWindows()
         releaseCommandLine(name, commandLine);
     }
     mCommandLines.clear();
+    for (const auto& [name, textBox] : mTextBoxes) {
+        mpHost->windowRegistry().deregisterTextBox(name);
+    }
+    mTextBoxes.clear();
 }
 
 QString TNullConsoleFrontend::userWindowOrMain(const QString& windowname) const
@@ -736,15 +740,23 @@ void TNullConsoleFrontend::removeSubConsole(const QString& name)
             boxes << entry.first;
             return true;
         });
-        std::erase_if(mCommandLines, [this, &name](const auto& entry) {
+        std::erase_if(mCommandLines, [this, &name, &boxes](const auto& entry) {
             if (entry.second.userWindow != name) {
                 return false;
             }
             releaseCommandLine(entry.first, entry.second);
+            boxes << entry.first;
             return true;
         });
-        for (const QString& boxName : boxes) {
-            republishCommandLine(boxName);
+        std::erase_if(mTextBoxes, [&registry, &name](const auto& entry) {
+            if (entry.second.userWindow != name) {
+                return false;
+            }
+            registry.deregisterTextBox(entry.first);
+            return true;
+        });
+        for (const QString& plainName : boxes) {
+            republishPlainWindow(plainName);
         }
         registry.deregisterDockWidget(name);
     }
@@ -912,8 +924,8 @@ void TNullConsoleFrontend::reportWindowVisibility(const QString& name)
     }
     if (const auto it = mScrollBoxes.find(name); it != mScrollBoxes.end()) {
         registry.setPlainWindowVisible(name, it->second->shown && shownWithin(it->second->userWindow, it->second->box.get()));
-    } else if (const auto line = mCommandLines.find(name); line != mCommandLines.end()) {
-        registry.setPlainWindowVisible(name, line->second.shown && shownWithin(line->second.userWindow, line->second.box.get()));
+    } else if (const PlainWindow* window = plainWindow(name)) {
+        registry.setPlainWindowVisible(name, window->shown && shownWithin(window->userWindow, window->box.get()));
     }
 }
 
@@ -927,10 +939,13 @@ void TNullConsoleFrontend::reportVisibility()
     for (const auto& [name, subConsole] : mSubConsoles) {
         registry.setSubConsoleVisible(name, subConsole.shown && shownWithin(subConsole.userWindow, subConsole.box.get()));
     }
+    for (const auto& [name, textBox] : mTextBoxes) {
+        registry.setPlainWindowVisible(name, textBox.shown && shownWithin(textBox.userWindow, textBox.box.get()));
+    }
     for (const auto& [name, commandLine] : mCommandLines) {
         registry.setPlainWindowVisible(name, commandLine.shown && shownWithin(commandLine.userWindow, commandLine.box.get()));
     }
-    // After the command lines, as TMainConsole::plainWindowWidget() takes a box before a command line of the same name
+    // Last, as TMainConsole::plainWindowWidget() takes a box, then a command line, then a text box of a name
     for (const auto& [name, box] : mScrollBoxes) {
         registry.setPlainWindowVisible(name, box->shown && shownWithin(box->userWindow, box->box.get()));
     }
@@ -968,7 +983,7 @@ std::pair<bool, QString> TNullConsoleFrontend::deleteScrollBox(const QString& na
     const std::shared_ptr<ScrollBox> box = it->second;
     mScrollBoxes.erase(it);
     mpHost->windowRegistry().deregisterScrollBox(name);
-    republishCommandLine(name);
+    republishPlainWindow(name);
     // TMainConsole::deleteScrollBox() calls deleteLater(), so what the box holds stays until then
     auto pRelease = new QObject();
     QObject::connect(pRelease, &QObject::destroyed, mpHost, [this, box]() {
@@ -1018,15 +1033,23 @@ void TNullConsoleFrontend::removeScrollBoxContents(const ScrollBox* box)
     for (const QString& name : contents) {
         removeSubConsole(name);
     }
-    std::erase_if(mCommandLines, [this, &inside](const auto& entry) {
+    contents.clear();
+    std::erase_if(mCommandLines, [this, &inside, &contents](const auto& entry) {
         if (!inside(entry.second.box.get())) {
             return false;
         }
         releaseCommandLine(entry.first, entry.second);
+        contents << entry.first;
         return true;
     });
     TWindowRegistry& registry = mpHost->windowRegistry();
-    contents.clear();
+    std::erase_if(mTextBoxes, [&registry, &inside](const auto& entry) {
+        if (!inside(entry.second.box.get())) {
+            return false;
+        }
+        registry.deregisterTextBox(entry.first);
+        return true;
+    });
     std::erase_if(mScrollBoxes, [&registry, &inside, &contents](const auto& entry) {
         if (!inside(entry.second->box.get())) {
             return false;
@@ -1036,7 +1059,7 @@ void TNullConsoleFrontend::removeScrollBoxContents(const ScrollBox* box)
         return true;
     });
     for (const QString& name : contents) {
-        republishCommandLine(name);
+        republishPlainWindow(name);
     }
 }
 
@@ -1047,11 +1070,11 @@ bool TNullConsoleFrontend::setPlainWindowShown(const QString& name, const bool s
         reportVisibility();
         return true;
     }
-    const auto it = mCommandLines.find(name);
-    if (it == mCommandLines.end()) {
+    PlainWindow* window = plainWindow(name);
+    if (!window) {
         return false;
     }
-    it->second.shown = shown;
+    window->shown = shown;
     reportWindowVisibility(name);
     return true;
 }
@@ -1059,18 +1082,18 @@ bool TNullConsoleFrontend::setPlainWindowShown(const QString& name, const bool s
 bool TNullConsoleFrontend::resizePlainWindow(const QString& name, const int width, const int height)
 {
     const bool box = mScrollBoxes.contains(name);
-    const auto line = mCommandLines.find(name);
-    if (!box && line == mCommandLines.end()) {
+    PlainWindow* window = box ? nullptr : plainWindow(name);
+    if (!box && !window) {
         return false;
     }
     TWindowRegistry& registry = mpHost->windowRegistry();
     QRect geometry = registry.plainWindowGeometry(name).value_or(QRect());
     // QWidget::resize() bounds a size only for a widget not yet created or with size limits, and a
-    // scroll box is created once made and has no limits, where a command line has them
+    // scroll box is created once made and has no limits, where a command line or text box has them
     geometry.setSize(box ? QSize(width, height) : widgetSize(width, height));
     registry.setPlainWindowGeometry(name, geometry);
-    if (!box) {
-        line->second.geometry = geometry;
+    if (window) {
+        window->geometry = geometry;
     }
     return true;
 }
@@ -1078,16 +1101,16 @@ bool TNullConsoleFrontend::resizePlainWindow(const QString& name, const int widt
 bool TNullConsoleFrontend::movePlainWindow(const QString& name, const int x, const int y)
 {
     const bool box = mScrollBoxes.contains(name);
-    const auto line = mCommandLines.find(name);
-    if (!box && line == mCommandLines.end()) {
+    PlainWindow* window = box ? nullptr : plainWindow(name);
+    if (!box && !window) {
         return false;
     }
     TWindowRegistry& registry = mpHost->windowRegistry();
     QRect geometry = registry.plainWindowGeometry(name).value_or(QRect());
     geometry.moveTo(x, y);
     registry.setPlainWindowGeometry(name, geometry);
-    if (!box) {
-        line->second.geometry = geometry;
+    if (window) {
+        window->geometry = geometry;
     }
     return true;
 }
@@ -1107,7 +1130,7 @@ std::pair<bool, QString> TNullConsoleFrontend::createCommandLine(const QString& 
     if (registry.hasCommandLine(name)) {
         return {false, qsl("couldn't create commandLine")};
     }
-    CommandLine& commandLine = mCommandLines[name];
+    PlainWindow& commandLine = mCommandLines[name];
     // TMainConsole::parentWidgetFor() takes a scroll box before a user window
     std::tie(commandLine.userWindow, commandLine.box) = containerFor(windowname, true);
     commandLine.geometry = QRect(QPoint(x, y), widgetSize(width, height));
@@ -1135,6 +1158,7 @@ std::pair<bool, QString> TNullConsoleFrontend::deleteCommandLine(const QString& 
     }
     releaseCommandLine(name, it->second);
     mCommandLines.erase(it);
+    republishPlainWindow(name);
 
     TEvent event{};
     event.mArgumentList.append(qsl("sysCommandLineDeleted"));
@@ -1173,7 +1197,7 @@ bool TNullConsoleFrontend::resetCommandLineAction(const QString& name)
 }
 
 // Its Lua function is freed as a label's is, where TCommandLine leaves it to the Lua state's close
-void TNullConsoleFrontend::releaseCommandLine(const QString& name, const CommandLine& commandLine)
+void TNullConsoleFrontend::releaseCommandLine(const QString& name, const PlainWindow& commandLine)
 {
     if (commandLine.action) {
         mpHost->getLuaInterpreter()->freeLuaRegistryIndex(commandLine.action);
@@ -1181,12 +1205,27 @@ void TNullConsoleFrontend::releaseCommandLine(const QString& name, const Command
     mpHost->windowRegistry().deregisterCommandLine(name);
 }
 
-// What the registry has for a name a scroll box gave up, which TMainConsole::plainWindowWidget()
-// then finds a command line for
-void TNullConsoleFrontend::republishCommandLine(const QString& name)
+// In the order TMainConsole::plainWindowWidget() takes them after a scroll box
+TNullConsoleFrontend::PlainWindow* TNullConsoleFrontend::plainWindow(const QString& name)
 {
     if (const auto it = mCommandLines.find(name); it != mCommandLines.end()) {
-        mpHost->windowRegistry().setPlainWindowGeometry(name, it->second.geometry);
+        return &it->second;
+    }
+    if (const auto it = mTextBoxes.find(name); it != mTextBoxes.end()) {
+        return &it->second;
+    }
+    return nullptr;
+}
+
+// What the registry has for a name a window gave up, which TMainConsole::plainWindowWidget()
+// then finds another window for
+void TNullConsoleFrontend::republishPlainWindow(const QString& name)
+{
+    if (mScrollBoxes.contains(name)) {
+        return;
+    }
+    if (const PlainWindow* window = plainWindow(name)) {
+        mpHost->windowRegistry().setPlainWindowGeometry(name, window->geometry);
         reportWindowVisibility(name);
     }
 }
@@ -1198,16 +1237,21 @@ bool TNullConsoleFrontend::ownsCommandLine(const QString& name) const
     return !name.isEmpty() && name != QLatin1String("main") && mCommandLines.contains(name);
 }
 
+// What QPlainTextEdit::toPlainText() gives back, which turns line breaks into newlines and
+// non-breaking spaces into spaces
+static QString plainText(const QString& text)
+{
+    QTextDocument document;
+    document.setPlainText(text);
+    return document.toPlainText();
+}
+
 bool TNullConsoleFrontend::replaceCommandLineText(const QString& name, const QString& text)
 {
     if (!ownsCommandLine(name)) {
         return false;
     }
-    // What QPlainTextEdit::toPlainText() gives back, which turns line breaks into newlines and
-    // non-breaking spaces into spaces
-    QTextDocument document;
-    document.setPlainText(text);
-    mpHost->windowRegistry().setCommandLineText(name, document.toPlainText());
+    mpHost->windowRegistry().setCommandLineText(name, plainText(text));
     return true;
 }
 
@@ -1217,6 +1261,76 @@ bool TNullConsoleFrontend::appendCommandLineText(const QString& name, const QStr
         return false;
     }
     return replaceCommandLineText(name, mpHost->windowRegistry().commandLineText(name).value_or(QString()) + text);
+}
+
+std::pair<bool, QString> TNullConsoleFrontend::createTextBox(const QString& windowname, const QString& name, const int x, const int y, const int width, const int height)
+{
+    if (name.isEmpty()) {
+        return {false, qsl("a text edit cannot have an empty string as its name")};
+    }
+    if (mpHost->parentWindowMissing(windowname)) {
+        return {false, qsl("window '%1' not found").arg(windowname)};
+    }
+    if (!ownsContainer(windowname)) {
+        return noView();
+    }
+    TWindowRegistry& registry = mpHost->windowRegistry();
+    if (registry.hasTextBox(name)) {
+        return {false, qsl("couldn't create text edit")};
+    }
+    PlainWindow& textBox = mTextBoxes[name];
+    std::tie(textBox.userWindow, textBox.box) = containerFor(windowname, true);
+    textBox.geometry = QRect(QPoint(x, y), widgetSize(width, height));
+    registry.registerTextBox(name);
+    if (!mScrollBoxes.contains(name) && !mCommandLines.contains(name)) {
+        registry.setPlainWindowGeometry(name, textBox.geometry);
+        reportWindowVisibility(name);
+    }
+    return {true, QString()};
+}
+
+std::pair<bool, QString> TNullConsoleFrontend::deleteTextBox(const QString& name)
+{
+    if (name.isEmpty()) {
+        return {false, qsl("a text edit cannot have an empty string as its name")};
+    }
+    const auto it = mTextBoxes.find(name);
+    if (it == mTextBoxes.end()) {
+        if (mpHost->windowRegistry().hasTextBox(name)) {
+            // One the current view has no record of, such as a detached view's
+            return {false, qsl("text edit name '%1' could not be deleted").arg(name)};
+        }
+        return {false, qsl("text edit name '%1' not found").arg(name)};
+    }
+    mTextBoxes.erase(it);
+    // A text box is never what the name's state is read from while another window has the name
+    mpHost->windowRegistry().deregisterTextBox(name);
+
+    TEvent event{};
+    event.mArgumentList.append(qsl("sysTextEditDeleted"));
+    event.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
+    event.mArgumentList.append(name);
+    event.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
+    mpHost->raiseEvent(event);
+    return {true, QString()};
+}
+
+bool TNullConsoleFrontend::setTextBoxText(const QString& name, const QString& text)
+{
+    if (!mTextBoxes.contains(name)) {
+        return false;
+    }
+    mpHost->windowRegistry().setTextBoxText(name, plainText(text));
+    return true;
+}
+
+bool TNullConsoleFrontend::setTextBoxFont(const QString& name, const QFont& font)
+{
+    if (!mTextBoxes.contains(name)) {
+        return false;
+    }
+    mpHost->windowRegistry().setTextBoxFont(name, font);
+    return true;
 }
 
 std::pair<bool, QString> TNullConsoleFrontend::setLabelStyleSheet(const QString& name, const QString& stylesheet)
@@ -1578,11 +1692,11 @@ std::pair<bool, QString> TNullConsoleFrontend::reparentWindow(const QString& win
     }
     const auto it = mScrollBoxes.find(name);
     if (it == mScrollBoxes.end()) {
-        if (const auto line = mCommandLines.find(name); line != mCommandLines.end()) {
-            const bool moved = userWindow != line->second.userWindow || box != line->second.box;
-            line->second.userWindow = userWindow;
-            line->second.box = std::move(box);
-            line->second.shown = show || (!moved && line->second.shown);
+        if (PlainWindow* window = plainWindow(name)) {
+            const bool moved = userWindow != window->userWindow || box != window->box;
+            window->userWindow = userWindow;
+            window->box = std::move(box);
+            window->shown = show || (!moved && window->shown);
             movePlainWindow(name, x, y);
             reportWindowVisibility(name);
             return {true, QString()};
@@ -1627,6 +1741,11 @@ void TNullConsoleFrontend::moveScrollBoxContents(const ScrollBox* box)
     for (auto& [name, commandLine] : mCommandLines) {
         if (within(commandLine.box.get(), box)) {
             commandLine.userWindow = box->userWindow;
+        }
+    }
+    for (auto& [name, textBox] : mTextBoxes) {
+        if (within(textBox.box.get(), box)) {
+            textBox.userWindow = box->userWindow;
         }
     }
 }

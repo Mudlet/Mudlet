@@ -392,10 +392,13 @@ private slots:
         QVERIFY(host->createScrollBox(QString(), realBox, 0, 0, 10, 10).first);
         const QString realLine = qsl("realViewLine");
         QVERIFY(console->createCommandLine(QString(), realLine, 0, 0, 10, 10).first);
+        const QString realText = qsl("realViewText");
+        QVERIFY(console->createTextBox(QString(), realText, 0, 0, 10, 10).first);
 
         host->setMainConsoleView(nullptr);
         const bool ran = host->getLuaInterpreter()->compileAndExecuteScript(
-                qsl("openUserWindow('realViewDock') nullViewMade = tostring(createLabel('nullViewMade', 0, 0, 10, 10, 1)) createMiniConsole('nullViewMoved', 0, 0, 10, 10)"));
+                qsl("openUserWindow('realViewDock') nullViewMade = tostring(createLabel('nullViewMade', 0, 0, 10, 10, 1)) createMiniConsole('nullViewMoved', 0, 0, 10, 10) "
+                    "realTextFonts = table.concat({tostring(setTextEditFont('realViewText', 'Courier')), tostring(select(2, setTextEditFontSize('realViewText', 10)))}, ',')"));
         // The detached view's windows are in the registry, so only the null view can say it cannot reach them
         QStringList movesIntoRealWindows;
         for (const QString& target : {realBox, realWindow}) {
@@ -404,15 +407,19 @@ private slots:
             }
         }
         const auto [lineInRealBox, lineInRealBoxMessage] = host->consoleFrontend()->createCommandLine(realBox, qsl("nullViewLineInRealBox"), 0, 0, 10, 10);
+        const auto [textInRealBox, textInRealBoxMessage] = host->consoleFrontend()->createTextBox(realBox, qsl("nullViewTextInRealBox"), 0, 0, 10, 10);
         const TConsoleModel* realModelWhileDetached = host->windowRegistry().subConsoleModel(realWindow);
         const auto [realDeletedWhileDetached, realDeleteMessage] = host->deleteMiniConsole(realWindow);
         const auto [realBoxDeletedWhileDetached, realBoxDeleteMessage] = host->consoleFrontend()->deleteScrollBox(realBox);
         const bool realBoxRegisteredWhileDetached = host->windowRegistry().hasScrollBox(realBox);
         const auto [realLineDeletedWhileDetached, realLineDeleteMessage] = host->consoleFrontend()->deleteCommandLine(realLine);
         const bool realLineRegisteredWhileDetached = host->windowRegistry().hasCommandLine(realLine);
+        const auto [realTextDeletedWhileDetached, realTextDeleteMessage] = host->consoleFrontend()->deleteTextBox(realText);
+        const bool realTextRegisteredWhileDetached = host->windowRegistry().hasTextBox(realText);
         host->setMainConsoleView(console);
         console->deleteScrollBox(realBox);
         console->deleteCommandLine(realLine);
+        console->deleteTextBox(realText);
         const bool nullLabelRegistered = host->windowRegistry().hasLabel(qsl("nullViewMade"));
         const bool realStillRegistered = host->windowRegistry().hasSubConsole(realWindow);
         host->deleteMiniConsole(realWindow);
@@ -425,7 +432,8 @@ nullViewKinds = table.concat({
   tostring(openUserWindow("nullViewWindow")),
   tostring(createMiniConsole("nullViewWindow", "nullViewNested", 0, 0, 10, 10)),
   tostring(createScrollBox("nullViewBox", 0, 0, 10, 10)),
-  tostring(createCommandLine("nullViewLine", 0, 0, 10, 10))
+  tostring(createCommandLine("nullViewLine", 0, 0, 10, 10)),
+  tostring(createTextEdit("nullViewText", 0, 0, 10, 10))
 }, ",")
 createBuffer("nullViewBuffer")
 nullViewActions = setmetatable({}, {__mode = "k"})
@@ -433,9 +441,10 @@ local action = function() end
 nullViewActions[action] = true
 setCmdLineAction("nullViewLine", action)
 )lua"));
-        const QStringList nullViewNames{qsl("nullViewMini"), qsl("nullViewWindow"), qsl("nullViewNested"), qsl("nullViewBuffer"), qsl("nullViewBox"), qsl("nullViewLine")};
+        const QStringList nullViewNames{qsl("nullViewMini"), qsl("nullViewWindow"), qsl("nullViewNested"), qsl("nullViewBuffer"), qsl("nullViewBox"), qsl("nullViewLine"), qsl("nullViewText")};
         const auto registered = [host](const QString& name) {
-            return host->windowRegistry().hasSubConsole(name) || host->windowRegistry().hasDockWidget(name) || host->windowRegistry().hasScrollBox(name) || host->windowRegistry().hasCommandLine(name);
+            return host->windowRegistry().hasSubConsole(name) || host->windowRegistry().hasDockWidget(name) || host->windowRegistry().hasScrollBox(name) || host->windowRegistry().hasCommandLine(name)
+                   || host->windowRegistry().hasTextBox(name);
         };
         QStringList neverRegistered;
         for (const QString& name : nullViewNames) {
@@ -479,12 +488,21 @@ nullViewActionKept = next(nullViewActions) ~= nil
         QVERIFY2(!realLineDeletedWhileDetached, "The null view reported deleting a command line it has no record of.");
         QCOMPARE(realLineDeleteMessage, qsl("command line name 'realViewLine' could not be deleted"));
         QVERIFY(realLineRegisteredWhileDetached);
+        QVERIFY2(!textInRealBox, "The null view made a text edit in a scroll box it has no record of.");
+        QCOMPARE(textInRealBoxMessage, qsl("the profile has no main window"));
+        QVERIFY2(!realTextDeletedWhileDetached, "The null view reported deleting a text edit it has no record of.");
+        QCOMPARE(realTextDeleteMessage, qsl("text edit name 'realViewText' could not be deleted"));
+        QVERIFY(realTextRegisteredWhileDetached);
+        lua_getglobal(L, "realTextFonts");
+        const QString realTextFonts = QString::fromUtf8(lua_tostring(L, -1));
+        lua_pop(L, 1);
+        QCOMPARE(realTextFonts, qsl("nil,text edit name 'realViewText' not found"));
 
         QVERIFY(ranKinds);
         lua_getglobal(L, "nullViewKinds");
         const QString nullViewKinds = QString::fromUtf8(lua_tostring(L, -1));
         lua_pop(L, 1);
-        QCOMPARE(nullViewKinds, qsl("true,true,true,true,true"));
+        QCOMPARE(nullViewKinds, qsl("true,true,true,true,true,true"));
         QVERIFY2(neverRegistered.isEmpty(), qPrintable(qsl("The null view did not register windows it made: %1").arg(neverRegistered.join(qsl(", ")))));
         QVERIFY2(stillRegistered.isEmpty(), qPrintable(qsl("Windows the null view made are still registered once a real view has attached: %1").arg(stillRegistered.join(qsl(", ")))));
         QVERIFY(ranCollect);
