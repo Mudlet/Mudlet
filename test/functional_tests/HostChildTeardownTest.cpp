@@ -139,7 +139,7 @@ private:
         createToolBarAction(pHost, qsl("HostChildTeardown toolbar"));
         createToolBarAction(pHost, qsl("HostChildTeardown second toolbar"));
         pHost->getActionUnit()->updateAllToolbars();
-        for (const auto& pToolBar : pHost->mpConsole->actionToolBars()) {
+        for (const auto& pToolBar : pHost->mainConsoleView()->actionToolBars()) {
             windows.toolBars.append(pToolBar);
         }
         return windows;
@@ -227,7 +227,7 @@ private slots:
     // the last test leaves open on purpose is deliberately not named here.
     void cleanup()
     {
-        for (const QString& profileName : {qsl("HostChildTeardown-NoCloseChildren"), qsl("HostChildTeardown-CloseChildren"), qsl("HostChildTeardown-First"), qsl("HostChildTeardown-Second")}) {
+        for (const QString& profileName : {qsl("HostChildTeardown-NoCloseChildren"), qsl("HostChildTeardown-CloseChildren"), qsl("HostChildTeardown-HiddenInputBox"), qsl("HostChildTeardown-First"), qsl("HostChildTeardown-Second")}) {
             if (HostManager::self()->getHost(profileName)) {
                 HostManager::self()->deleteHost(profileName);
             }
@@ -259,6 +259,27 @@ private slots:
         mSavedXdg.isNull() ? qunsetenv("XDG_CONFIG_HOME") : qputenv("XDG_CONFIG_HOME", mSavedXdg);
     }
 
+    // Its close path is refused once the Host is closing down
+    void test_closingTheProfileWithTheHiddenInputBoxOpenIsSafe()
+    {
+        const QString profileName = qsl("HostChildTeardown-HiddenInputBox");
+        Host* pHost = startProfile(profileName);
+        QVERIFY2(pHost, "Profile took too long to load");
+
+        pHost->setRemoteEchoingActive(true);
+        QVERIFY2(pHost->mainConsoleView()->passwordEntry(), "the box did not open");
+
+        pHost->forceClose();
+        QVERIFY2(pHost->requestClose(), "Closing the profile was refused");
+        const QPointer<Host> hostGuard(pHost);
+        pHost = nullptr;
+        HostManager::self()->deleteHost(profileName);
+        QVERIFY2(hostGuard.isNull(), "The Host outlived deleteHost(), so ~Host() never ran");
+        QCoreApplication::sendPostedEvents(nullptr, QEvent::DeferredDelete);
+
+        deleteProfileDirectory(profileName);
+    }
+
     // Nothing calls closeChildren(): the host pool simply lets go of the Host.
     // Mudlet reaches this whenever the profile's main console has already gone,
     // as Host::requestClose() then returns before it gets to closeChildren().
@@ -274,8 +295,8 @@ private slots:
         // forceClose() stops TMainConsole::closeEvent() asking whether to save,
         // which would block on a modal dialog here
         pHost->forceClose();
-        pHost->mpConsole->close();
-        QTRY_VERIFY2(pHost->mpConsole.isNull(), "The main console did not go away"); // Qt 6 disposes of a WA_DeleteOnClose widget by deleteLater()
+        pHost->mainConsoleView()->close();
+        QTRY_VERIFY2(!pHost->mainConsoleView(), "The main console did not go away"); // Qt 6 disposes of a WA_DeleteOnClose widget by deleteLater()
         QVERIFY2(pHost->requestClose(), "Closing the profile was refused");
         QVERIFY2(HostDialogs::of(pHost).mpNotePad, "requestClose() reached closeChildren() after all - this no longer tests a Host that skips it");
 
