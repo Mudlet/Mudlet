@@ -350,7 +350,7 @@ private:
         }
 
         QSignalSpy connectionSpy(&(pHost->mTelnet), &cTelnet::signal_connected);
-        QSignalSpy greetingSpy(pHost->mpConsole.data(), &TMainConsole::signal_newDataAlert);
+        QSignalSpy greetingSpy(pHost->mainConsoleView(), &TMainConsole::signal_newDataAlert);
         if (!connectionSpy.wait(2000)) {
             QTest::qFail("Could not connect with the host.", __FILE__, __LINE__);
             return nullptr;
