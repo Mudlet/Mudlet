@@ -534,6 +534,27 @@ nullViewActionKept = next(nullViewActions) ~= nil
         QVERIFY2(remadeRegistered, "The real view did not register a widget of its own for a name the null view had used.");
     }
 
+    // The null view's command lines go as a view takes the profile back, so write no history setting again
+    void test_nullViewCommandLineSettingsGoWithItsWindows()
+    {
+        startProfile(mHostname, mLocalhost, mPort);
+        auto host = mudlet::self()->getActiveHost();
+        QVERIFY2(host, "No active host available for the test.");
+        QPointer<TMainConsole> console = host->mainConsoleView();
+        QVERIFY2(console, "The active host has no main console.");
+
+        host->setMainConsoleView(nullptr);
+        QVERIFY(host->getLuaInterpreter()->compileAndExecuteScript(qsl("createCommandLine('nullViewHistoryLine', 0, 0, 50, 20) setSaveCommandHistory('nullViewHistoryLine', false)")));
+        host->setMainConsoleView(console);
+        QTRY_VERIFY(!host->currentlySavingProfile());
+        QVERIFY(host->getLuaInterpreter()->compileAndExecuteScript(
+                qsl("createCommandLine('realViewHistoryLine', 0, 0, 50, 20) setSaveCommandHistory('realViewHistoryLine', false) assert(saveProfile())")));
+        QTRY_VERIFY(!host->currentlySavingProfile());
+        QCOMPARE(host->readProfileIniData(qsl("CommandLines/SaveHistory/nullViewHistoryLine")), qsl("true"));
+        QCOMPARE(host->readProfileIniData(qsl("CommandLines/SaveHistory/realViewHistoryLine")), qsl("false"));
+        console->deleteCommandLine(qsl("realViewHistoryLine"));
+    }
+
     // What scripts are told while the profile has no view. The label is made first, so that its answers
     // come from the missing view rather than a missing label.
     void test_luaCallsWithNoConsoleSayWhy()
