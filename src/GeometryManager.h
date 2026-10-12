@@ -20,6 +20,9 @@
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
 
+#include <QLineF>
+#include <QList>
+#include <QRectF>
 #include <QVector>
 #include <QMatrix4x4>
 #include <QOpenGLBuffer>
@@ -28,9 +31,12 @@
 #include <QOpenGLContext>
 #include <QOpenGLTexture>
 #include <optional>
+#include <utility>
 #include <assimp/Importer.hpp>
 #include <assimp/scene.h>
 #include <assimp/postprocess.h>
+
+class QColor;
 
 struct GeometryData
 {
@@ -103,12 +109,8 @@ struct GeometryData
 
     bool isEmpty() const { return vertices.isEmpty(); }
 
-    int vertexCount() const
-    {
-        // If normals are stored separately, vertices has 3 floats per vertex
-        // If normals are interleaved, vertices has 6 floats per vertex (pos + normal)
-        return normals.isEmpty() ? vertices.size() / 6 : vertices.size() / 3;
-    }
+    // Positions are tightly packed, three floats per vertex; normals live in their own array
+    int vertexCount() const { return vertices.size() / 3; }
 
     int indexCount() const { return indices.size(); }
 
@@ -140,6 +142,12 @@ struct CubeInstanceData
 class GeometryManager : protected QOpenGLFunctions
 {
 public:
+    // Must match the layout location of aTexCoord in shaders/vertex.glsl
+    static constexpr GLuint scmTexCoordLocation = 8;
+
+    // What each instance's transform places: the cube [-1, 1], or an upright cylinder of radius 1 from z -1 to 1
+    enum class InstanceShape { Box, Cylinder };
+
     GeometryManager();
     ~GeometryManager();
 
@@ -153,8 +161,51 @@ public:
     GeometryData generatePlayerIconGeometry(float scale = 0.005f, float rotX = 0.0f, float rotY = 0.0f, float rotZ = 90.0f);
     void clearPlayerIconTemplate(); // Clear cached template to free memory
 
-    // Generate billboard (camera-facing quad) geometry for labels
+    // Generate billboard (camera-facing quad) geometry for labels; cameraRight and cameraUp are the screen's right and up in world space
     GeometryData generateBillboardGeometry(float centerX, float centerY, float centerZ, float width, float height, const QVector3D& cameraRight, const QVector3D& cameraUp, GLuint textureId);
+
+    // Appends a square lying flat on the map, centered on center, its texture's top turned toward the top of the
+    // screen so that it is never upside down or mirrored; cameraRight and cameraUp as for a billboard
+    static void appendGroundQuad(GeometryData& batch, const QVector3D& center, float size, const QVector3D& cameraRight, const QVector3D& cameraUp, const QVector4D& color);
+    // The unit vectors on the map's plane that appendGroundQuad() turns a texture's right and top toward
+    static std::pair<QVector3D, QVector3D> groundAxes(const QVector3D& cameraRight, const QVector3D& cameraUp);
+    // Appends a textured parallelogram: the texture's bottom-left at origin, its bottom edge along across
+    // and its left edge along upward
+    static void appendQuad(GeometryData& batch, const QVector3D& origin, const QVector3D& across, const QVector3D& upward, const QVector4D& color);
+    // Appends a map label lying flat with its top-left corner at topLeft; turned, it is rotated half
+    // around in place, so that it reads upright while the top of the screen faces south
+    static void appendLabelQuad(GeometryData& batch, const QVector3D& topLeft, float width, float height, bool turned, const QVector4D& color);
+    // The level a map label is on: its height rounded, as the 2D map picks labels by, or none for a
+    // height that no level could have
+    static std::optional<int> labelLevel(qreal z);
+    // Places the unit cube [-1, 1] as a bar from one point to another, width across and height tall,
+    // with its width kept level with the map
+    static QMatrix4x4 barTransform(const QVector3D& from, const QVector3D& to, float width, float height);
+    // The indices of the screen rectangles to keep, taking them in the order given: one shorter than
+    // minimumHeight, or overlapping one kept before it, is left out
+    static QList<qsizetype> declutteredRects(const QList<QRectF>& rects, qreal minimumHeight);
+
+    // How a level other than the viewed one recedes: how far its colors go toward the background, and
+    // how opaque it stays
+    struct LevelFade
+    {
+        float towardBackground = 0.0f;
+        float opacity = 1.0f;
+    };
+    // levelsAbove is how many levels above the viewed one, negative for below
+    static LevelFade levelFade(int levelsAbove, bool moreTransparent);
+    static QVector4D fadedColor(const QColor& color, const LevelFade& fade, const QColor& background);
+    // What a level fades toward when the mapper draws the levels above and below in their own colors: the
+    // upper or lower level color laid over the background by its alpha, or the background on the viewed level
+    static QColor levelFadeTarget(int levelsAbove, const QColor& background, const QColor& upperLevelColor, const QColor& lowerLevelColor);
+    // The map grid's lines across extent, one at each whole coordinate as the 2D map draws them, through rooms' centers
+    static QList<QLineF> gridLines(const QRectF& extent);
+    // An upright cylinder of radius 1 from z -1 to 1, its side smooth shaded, each face wound counterclockwise from outside
+    static GeometryData cylinderMesh(int segments);
+    // The sides of the cylinder a round room is drawn as; a box selection tests the corners of that same rim
+    static constexpr int scmCylinderSegments = 24;
+    // The tint for a texture drawn on a faded room, which can only make it more see-through
+    static QVector4D fadedDecalTint(const LevelFade& fade);
 
     // Render geometry using provided VAO and buffers
     void renderGeometry(const GeometryData& geometry,
@@ -196,15 +247,15 @@ public:
                         class ResourceManager* resourceManager,
                         GLenum drawMode = GL_TRIANGLES);
 
-    // Instanced rendering methods for cube batching
+    // Instanced rendering of boxes or cylinders
     void renderInstancedCubes(const QVector<CubeInstanceData>& instances,
                               QOpenGLVertexArrayObject& vao,
                               QOpenGLBuffer& vertexBuffer,
                               QOpenGLBuffer& colorBuffer,
                               QOpenGLBuffer& normalBuffer,
                               QOpenGLBuffer& indexBuffer,
-                              QOpenGLBuffer& instanceBuffer,
-                              GLenum drawMode = GL_TRIANGLES);
+                              GLenum drawMode = GL_TRIANGLES,
+                              InstanceShape shape = InstanceShape::Box);
 
     void renderInstancedCubes(const QVector<CubeInstanceData>& instances,
                               QOpenGLVertexArrayObject& vao,
@@ -212,15 +263,21 @@ public:
                               QOpenGLBuffer& colorBuffer,
                               QOpenGLBuffer& normalBuffer,
                               QOpenGLBuffer& indexBuffer,
-                              QOpenGLBuffer& instanceBuffer,
                               class ResourceManager* resourceManager,
-                              GLenum drawMode = GL_TRIANGLES);
+                              GLenum drawMode = GL_TRIANGLES,
+                              InstanceShape shape = InstanceShape::Box);
 
 private:
     bool mInitialized = false;
 
     // Cached cube geometry template (will be transformed for each cube)
     GeometryData mCubeTemplate;
+    QOpenGLBuffer mCubeVertexBuffer{QOpenGLBuffer::VertexBuffer};
+    QOpenGLBuffer mCubeIndexBuffer{QOpenGLBuffer::IndexBuffer};
+    GeometryData mCylinderTemplate;
+    QOpenGLBuffer mCylinderVertexBuffer{QOpenGLBuffer::VertexBuffer};
+    QOpenGLBuffer mCylinderIndexBuffer{QOpenGLBuffer::IndexBuffer};
+    QOpenGLBuffer mInstanceBuffer{QOpenGLBuffer::VertexBuffer};
 
     // Cached player icon geometry
     mutable std::optional<GeometryData> mPlayerIconTemplate;
@@ -233,7 +290,8 @@ private:
     PFNGLDRAWELEMENTSINSTANCEDPROC glDrawElementsInstanced = nullptr;
 
     void generateCubeTemplate();
-    GeometryData transformCubeTemplate(const QMatrix4x4& transform, float r, float g, float b, float a);
+    static void uploadTemplate(const GeometryData& geometry, QOpenGLBuffer& vertexBuffer, QOpenGLBuffer& indexBuffer);
+    static GeometryData transformTemplate(const GeometryData& geometry, const QMatrix4x4& transform, float r, float g, float b, float a);
 
     void loadPlayerIconTemplate(float scale = 0.005f, float rotX = 0.0f, float rotY = 0.0f, float rotZ = 90.0f);
 };
