@@ -149,7 +149,7 @@ private slots:
     void cleanupTestCase()
     {
         if (mpHost && mpHost->mainConsoleView()) {
-            mpHost->mainConsoleView()->deleteLabel(mLabelName);
+            mpHost->deleteLabel(mLabelName);
         }
         delete mpServer;
         mpServer = nullptr;
