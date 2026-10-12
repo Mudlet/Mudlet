@@ -224,8 +224,8 @@ private slots:
         pMap->setDefaultAreaShown(false);
 
         mpHost->showHideOrCreateMapper(false);
-        QVERIFY(pMap->mpMapper);
-        T2DMap* p2dMap = pMap->mpMapper->mp2dMap;
+        QVERIFY(pMap->mapper());
+        T2DMap* p2dMap = pMap->mapper()->mp2dMap;
         QVERIFY(p2dMap);
         p2dMap->init();
         p2dMap->resize(kWidgetWidth, kWidgetHeight);
@@ -369,8 +369,8 @@ private slots:
         pRoom->calcRoomDimensions();
 
         mpHost->showHideOrCreateMapper(false);
-        QVERIFY(pMap->mpMapper);
-        T2DMap* p2dMap = pMap->mpMapper->mp2dMap;
+        QVERIFY(pMap->mapper());
+        T2DMap* p2dMap = pMap->mapper()->mp2dMap;
         QVERIFY(p2dMap);
         // What clicking a custom line leaves behind for the context menu
         p2dMap->mCustomLineSelectedRoom = 1;

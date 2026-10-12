@@ -161,6 +161,7 @@ message(STATUS "Value written to app-build.txt file: ${BUILD_VALUE}")
 set(APP_BUILD ${BUILD_VALUE} CACHE STRING "Auto-set during CMake run. Do not alter manually." FORCE)
 
 set(LIB_MUDLET_TARGET "mudlet_core")
+set(LIB_MUDLET_APP_TARGET "mudlet_app")
 
 set(CMAKE_MODULE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/cmake ${CMAKE_MODULE_PATH})
 
@@ -183,6 +184,13 @@ include_optional_module(ENVIRONMENT_VARIABLE WITH_FONTS
 include_optional_module(ENVIRONMENT_VARIABLE WITH_3DMAPPER
                         OPTION_VARIABLE USE_3DMAPPER
                         READABLE_NAME "3D mapper")
+# Off by default: it needs Qt6::HttpServer, which several of the project's own build
+# environments do not install, and it opens a port that runs arbitrary Lua - opting in
+# is the right shape for both.
+include_optional_module(ENVIRONMENT_VARIABLE WITH_MCPSERVER
+                        OPTION_VARIABLE USE_MCPSERVER
+                        READABLE_NAME "MCP server"
+                        DEFAULT OFF)
 include_optional_module(ENVIRONMENT_VARIABLE WITH_SHADER_HOT_RELOAD
                         OPTION_VARIABLE USE_SHADER_HOT_RELOAD
                         READABLE_NAME "shader hot-reloading"
