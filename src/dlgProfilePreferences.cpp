@@ -4616,6 +4616,10 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
         }
         comboBox_mapStyle->setCurrentIndex(comboBox_mapStyle->findData(pHost->mapStyle()));
     }
+#if !defined(INCLUDE_3DMAPPER)
+    label_mapStyle->hide();
+    comboBox_mapStyle->hide();
+#endif
     checkBox_invertMapZoom->setChecked(mudlet::self()->invertMapZoom());
     comboBox_blankLinesBehaviour->setCurrentIndex(static_cast<int>(pHost->mBlankLineBehaviour));
 
@@ -5021,6 +5025,7 @@ void dlgProfilePreferences::clearHostDetails()
 
     comboBox_mapFileSaveFormatVersion->clear();
     comboBox_mapFileSaveFormatVersion->setEnabled(true);
+    comboBox_mapStyle->clear();
     label_mapFileSaveFormatVersion->setEnabled(false);
     checkBox_showDefaultArea->setChecked(false);
     checkBox_showDefaultArea->hide();

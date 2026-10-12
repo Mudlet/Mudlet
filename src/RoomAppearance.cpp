@@ -37,9 +37,7 @@ Look look(const TMap& map, const Host& host, const TRoom& room, const int player
     Look result;
     result.color = environmentColor(map, host, room.environment);
     result.symbol = room.mSymbol;
-    if (!result.symbol.isEmpty()) {
-        result.symbolColor = symbolColor(room.mSymbolColor, result.color);
-    }
+    result.symbolColor = room.mSymbolColor;
     result.highlighted = room.highlight;
     if (result.highlighted) {
         result.highlightColor = room.highlightColor;

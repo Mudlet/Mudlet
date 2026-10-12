@@ -41,6 +41,7 @@ struct Look
     QColor color;
     // Empty when the room has none
     QString symbol;
+    // The room's own, invalid unless one was set; symbolColor() picks the drawn one against the color a style draws the room in
     QColor symbolColor;
     bool highlighted = false;
     QColor highlightColor;
