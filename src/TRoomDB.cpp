@@ -24,6 +24,7 @@
 
 #include "Host.h"
 #include "TArea.h"
+#include "TAreaGraph.h"
 #include "TMap.h"
 
 #include <QDataStream>
@@ -394,6 +395,7 @@ bool TRoomDB::removeArea(int id)
 {
     if (TArea* pA = areas.value(id)) {
         mpMap->areasAboutToBeDeleted();
+        mpMap->areaGraph()->forgetArea(id);
         if (!rooms.isEmpty()) {
             // During map deletion rooms will already
             // have been cleared so this would not
@@ -417,6 +419,7 @@ bool TRoomDB::removeArea(int id)
     if (areaNamesMap.contains(id)) {
         // Handle corner case where the area name was created but not used
         areaNamesMap.remove(id);
+        mpMap->areaGraph()->forgetArea(id);
         return true;
     }
     return false;

@@ -85,6 +85,8 @@ public:
     bool setPosition(int areaId, const QPointF& position);
     // Discards the stored positions (but the pinned ones, if asked) and lays everything out again.
     void resetLayout(bool keepPinned);
+    // Drops a deleted area's stored position, which a later area given the same id would otherwise take.
+    void forgetArea(int areaId);
 
 private:
     struct StoredPosition
