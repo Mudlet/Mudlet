@@ -134,7 +134,7 @@ private slots:
 
         auto host = mudlet::self()->getActiveHost();
         QVERIFY(host);
-        auto console = host->mpConsole;
+        QPointer<TMainConsole> console = host->mainConsoleView();
         QVERIFY(console);
         TTextEdit* pane = console->mUpperPane;
         QVERIFY(pane);
@@ -198,7 +198,7 @@ private:
 
     bool waitForTextInBuffer(const QString& text, int timeoutMs = 5000)
     {
-        auto console = mudlet::self()->getActiveHost()->mpConsole;
+        QPointer<TMainConsole> console = mudlet::self()->getActiveHost()->mainConsoleView();
         return QTest::qWaitFor(
                 [&]() {
                     for (int i = 0; i <= console->buffer.getLastLineNumber(); ++i) {

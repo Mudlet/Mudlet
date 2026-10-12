@@ -102,7 +102,7 @@ private:
     {
         // The widgets a redraw replaces are only queued for deletion
         QCoreApplication::sendPostedEvents(nullptr, QEvent::DeferredDelete);
-        QWidget* bar = root->mLocation == 4 ? static_cast<QWidget*>(host->mpConsole->actionToolBar(root)) : host->mpConsole->actionEasyButtonBar(root);
+        QWidget* bar = root->mLocation == 4 ? static_cast<QWidget*>(host->mainConsoleView()->actionToolBar(root)) : host->mainConsoleView()->actionEasyButtonBar(root);
         return bar ? bar->findChildren<QMenu*>().size() : -1;
     }
 
@@ -182,7 +182,7 @@ private:
         entry->setIsActive(true);
         host->getActionUnit()->registerAction(entry);
         host->getActionUnit()->updateAllToolbars();
-        QPointer<QWidget> bar = location == 4 ? static_cast<QWidget*>(host->mpConsole->actionToolBar(root)) : host->mpConsole->actionEasyButtonBar(root);
+        QPointer<QWidget> bar = location == 4 ? static_cast<QWidget*>(host->mainConsoleView()->actionToolBar(root)) : host->mainConsoleView()->actionEasyButtonBar(root);
         QVERIFY(bar);
         const QString css = qsl("color: red;");
         auto styledMenu = [&bar, &css]() -> QMenu* {
@@ -223,7 +223,7 @@ private:
         entry->setIsActive(true);
         host->getActionUnit()->registerAction(entry);
         host->getActionUnit()->updateAllToolbars();
-        QPointer<QWidget> bar = location == 4 ? static_cast<QWidget*>(host->mpConsole->actionToolBar(root)) : host->mpConsole->actionEasyButtonBar(root);
+        QPointer<QWidget> bar = location == 4 ? static_cast<QWidget*>(host->mainConsoleView()->actionToolBar(root)) : host->mainConsoleView()->actionEasyButtonBar(root);
         QVERIFY(bar);
         const QString css = qsl("color: red;");
         menu->css = css;
@@ -270,7 +270,7 @@ private slots:
         startProfile(mpHostname, mpLocalhost, mpPort);
         auto* host = mudlet::self()->getActiveHost();
         QVERIFY2(host, "No active host available for the test.");
-        auto* console = host->mpConsole.data();
+        auto* console = host->mainConsoleView();
         QVERIFY(console);
 
         auto* top = makeRootBar(host, qsl("placementTop"), 0);
@@ -295,10 +295,10 @@ private slots:
         auto* floating = makeRootBar(host, qsl("placementFloating"), 4);
         host->getActionUnit()->updateAllToolbars();
 
-        QVERIFY2(host->mpConsole->actionToolBar(floating), "a floating location should have been given a toolbar");
-        QVERIFY(!host->mpConsole->actionEasyButtonBar(floating));
-        QCOMPARE(mudlet::self()->dockWidgetArea(host->mpConsole->actionToolBar(floating)), Qt::RightDockWidgetArea);
-        QVERIFY(host->mpConsole->actionToolBars().size() == 1);
+        QVERIFY2(host->mainConsoleView()->actionToolBar(floating), "a floating location should have been given a toolbar");
+        QVERIFY(!host->mainConsoleView()->actionEasyButtonBar(floating));
+        QCOMPARE(mudlet::self()->dockWidgetArea(host->mainConsoleView()->actionToolBar(floating)), Qt::RightDockWidgetArea);
+        QVERIFY(host->mainConsoleView()->actionToolBars().size() == 1);
     }
 
     void test_aDeactivatedFloatingToolbarIsTakenOffTheWindow()
@@ -309,16 +309,16 @@ private slots:
 
         auto* floating = makeRootBar(host, qsl("placementDeactivated"), 4);
         host->getActionUnit()->updateAllToolbars();
-        QVERIFY(host->mpConsole->actionToolBar(floating));
-        QVERIFY2(mudlet::self()->dockWidgetArea(host->mpConsole->actionToolBar(floating)) != Qt::NoDockWidgetArea, "the toolbar has to be docked first, or undocking it proves nothing");
+        QVERIFY(host->mainConsoleView()->actionToolBar(floating));
+        QVERIFY2(mudlet::self()->dockWidgetArea(host->mainConsoleView()->actionToolBar(floating)) != Qt::NoDockWidgetArea, "the toolbar has to be docked first, or undocking it proves nothing");
 
         floating->setIsActive(false);
         floating->setDataChanged();
         host->getActionUnit()->updateAllToolbars();
 
-        QVERIFY2(host->mpConsole->actionToolBar(floating), "a deactivated toolbar is taken down, not destroyed");
-        QCOMPARE(mudlet::self()->dockWidgetArea(host->mpConsole->actionToolBar(floating)), Qt::NoDockWidgetArea);
-        QVERIFY(host->mpConsole->actionToolBar(floating)->isHidden());
+        QVERIFY2(host->mainConsoleView()->actionToolBar(floating), "a deactivated toolbar is taken down, not destroyed");
+        QCOMPARE(mudlet::self()->dockWidgetArea(host->mainConsoleView()->actionToolBar(floating)), Qt::NoDockWidgetArea);
+        QVERIFY(host->mainConsoleView()->actionToolBar(floating)->isHidden());
     }
 
     void test_aButtonBarMovedUnderAnotherActionLeavesItsStrip()
@@ -326,7 +326,7 @@ private slots:
         startProfile(mpHostname, mpLocalhost, mpPort);
         auto* host = mudlet::self()->getActiveHost();
         QVERIFY2(host, "No active host available for the test.");
-        auto* console = host->mpConsole.data();
+        auto* console = host->mainConsoleView();
         QVERIFY(console);
 
         auto* moved = makeRootBar(host, qsl("placementMoved"), 0);
@@ -352,7 +352,7 @@ private slots:
         auto* moved = makeRootBar(host, qsl("placementMovedFloating"), 4);
         auto* newParent = makeRootBar(host, qsl("placementFloatingParent"), 0);
         host->getActionUnit()->updateAllToolbars();
-        QPointer<TToolBar> toolBar = host->mpConsole->actionToolBar(moved);
+        QPointer<TToolBar> toolBar = host->mainConsoleView()->actionToolBar(moved);
         QVERIFY(toolBar);
         toolBar->setFloating(true);
 
@@ -368,7 +368,7 @@ private slots:
         startProfile(mpHostname, mpLocalhost, mpPort);
         auto* host = mudlet::self()->getActiveHost();
         QVERIFY2(host, "No active host available for the test.");
-        auto* console = host->mpConsole.data();
+        auto* console = host->mainConsoleView();
         QVERIFY(console);
 
         // Childless, so deleting it runs no unregisterAction() but its own
@@ -390,7 +390,7 @@ private slots:
         startProfile(mpHostname, mpLocalhost, mpPort);
         auto* host = mudlet::self()->getActiveHost();
         QVERIFY2(host, "No active host available for the test.");
-        auto* console = host->mpConsole.data();
+        auto* console = host->mainConsoleView();
         QVERIFY(console);
 
         auto* floating = makeRootBar(host, qsl("placementNamed"), 4);
@@ -412,7 +412,7 @@ private slots:
         startProfile(mpHostname, mpLocalhost, mpPort);
         auto* host = mudlet::self()->getActiveHost();
         QVERIFY2(host, "No active host available for the test.");
-        auto* console = host->mpConsole.data();
+        auto* console = host->mainConsoleView();
         QVERIFY(console);
 
         auto* floating = makeRootBar(host, qsl("placementShownFloating"), 4);
@@ -439,7 +439,7 @@ private slots:
         startProfile(mpHostname, mpLocalhost, mpPort);
         auto* host = mudlet::self()->getActiveHost();
         QVERIFY2(host, "No active host available for the test.");
-        auto* console = host->mpConsole.data();
+        auto* console = host->mainConsoleView();
         QVERIFY(console);
 
         auto* removed = makeRootBar(host, qsl("placementForgotten"), 4, false);
@@ -460,7 +460,7 @@ private slots:
         startProfile(mpHostname, mpLocalhost, mpPort);
         auto* host = mudlet::self()->getActiveHost();
         QVERIFY2(host, "No active host available for the test.");
-        auto* console = host->mpConsole.data();
+        auto* console = host->mainConsoleView();
         QVERIFY(console);
 
         auto* floating = makeRootBar(host, qsl("placementGroupHome"), 4);
@@ -496,7 +496,7 @@ private slots:
         startProfile(mpHostname, mpLocalhost, mpPort);
         auto* host = mudlet::self()->getActiveHost();
         QVERIFY2(host, "No active host available for the test.");
-        auto* console = host->mpConsole.data();
+        auto* console = host->mainConsoleView();
         QVERIFY(console);
 
         auto* root = makeRootBar(host, qsl("placementMenuHome"), 0, false);
@@ -529,7 +529,7 @@ private slots:
         startProfile(mpHostname, mpLocalhost, mpPort);
         auto* host = mudlet::self()->getActiveHost();
         QVERIFY2(host, "No active host available for the test.");
-        auto* console = host->mpConsole.data();
+        auto* console = host->mainConsoleView();
         QVERIFY(console);
 
         auto* root = makeRootBar(host, qsl("placementDeletedMenuHome"), 0, false);
@@ -564,7 +564,7 @@ private slots:
         startProfile(mpHostname, mpLocalhost, mpPort);
         auto* host = mudlet::self()->getActiveHost();
         QVERIFY2(host, "No active host available for the test.");
-        auto* console = host->mpConsole.data();
+        auto* console = host->mainConsoleView();
         QVERIFY(console);
 
         auto* package = makeRootBar(host, qsl("placementDeletedPackage"), 0, false);
@@ -611,7 +611,7 @@ private slots:
         entry->setIsActive(true);
         host->getActionUnit()->registerAction(entry);
         host->getActionUnit()->updateAllToolbars();
-        QPointer<TEasyButtonBar> bar = host->mpConsole->actionEasyButtonBar(root);
+        QPointer<TEasyButtonBar> bar = host->mainConsoleView()->actionEasyButtonBar(root);
         QVERIFY(bar);
         auto menuButtons = [&bar, &menuName]() {
             // Each redraw replaces the bar's widget with deleteLater()
@@ -696,7 +696,7 @@ private slots:
 
         auto* floating = makeRootBar(host, qsl("placementLayout"), 4);
         host->getActionUnit()->updateAllToolbars();
-        QPointer<TToolBar> toolBar = host->mpConsole->actionToolBar(floating);
+        QPointer<TToolBar> toolBar = host->mainConsoleView()->actionToolBar(floating);
         QVERIFY(toolBar);
         QCoreApplication::processEvents();
         host->commitLayoutUpdates();
@@ -728,7 +728,7 @@ private slots:
 
         auto* floating = makeRootBar(host, qsl("placementFlushed"), 4);
         host->getActionUnit()->updateAllToolbars();
-        QPointer<TToolBar> toolBar = host->mpConsole->actionToolBar(floating);
+        QPointer<TToolBar> toolBar = host->mainConsoleView()->actionToolBar(floating);
         QVERIFY(toolBar);
         QCoreApplication::processEvents();
         host->commitLayoutUpdates();
@@ -754,7 +754,7 @@ private slots:
 
         auto* floating = makeRootBar(host, qsl("placementLayoutGone"), 4);
         host->getActionUnit()->updateAllToolbars();
-        QPointer<TToolBar> toolBar = host->mpConsole->actionToolBar(floating);
+        QPointer<TToolBar> toolBar = host->mainConsoleView()->actionToolBar(floating);
         QVERIFY(toolBar);
         QCoreApplication::processEvents();
         host->commitLayoutUpdates();
@@ -779,7 +779,7 @@ private slots:
         other->setIsActive(true);
         host->getActionUnit()->registerAction(other);
         host->getActionUnit()->updateAllToolbars();
-        QPointer<TEasyButtonBar> bar = host->mpConsole->actionEasyButtonBar(root);
+        QPointer<TEasyButtonBar> bar = host->mainConsoleView()->actionEasyButtonBar(root);
         QVERIFY(bar);
         QPointer<QPushButton> styled = buttonNamed(bar, qsl("placementStyledButtons button"));
         QPointer<QPushButton> unstyled = buttonNamed(bar, qsl("placementStyledButtons other"));
@@ -804,7 +804,7 @@ private slots:
         typed->css = qsl("color: red;");
 
         QVERIFY(host->getLuaInterpreter()->compileAndExecuteScript(qsl("setButtonStyleSheet('placementTypedStyle button', 'color: red;')")));
-        QPointer<QPushButton> button = buttonNamed(host->mpConsole->actionEasyButtonBar(root), qsl("placementTypedStyle button"));
+        QPointer<QPushButton> button = buttonNamed(host->mainConsoleView()->actionEasyButtonBar(root), qsl("placementTypedStyle button"));
         QVERIFY(button);
         QCOMPARE(button->styleSheet(), qsl("color: red;"));
     }
@@ -819,12 +819,12 @@ private slots:
         auto* root = makeRootBar(host, qsl("placementMovedOut"), 0);
         host->getActionUnit()->updateAllToolbars();
         auto* moved = static_cast<TAction*>(root->mpMyChildrenList->front());
-        QVERIFY(buttonNamed(host->mpConsole->actionEasyButtonBar(root), qsl("placementMovedOut button")));
+        QVERIFY(buttonNamed(host->mainConsoleView()->actionEasyButtonBar(root), qsl("placementMovedOut button")));
         host->getActionUnit()->reParentAction(moved->getID(), root->getID(), 0);
         host->getActionUnit()->updateAllToolbars();
 
         QVERIFY(host->getLuaInterpreter()->compileAndExecuteScript(qsl("setButtonStyleSheet('placementMovedOut button', 'color: red;')")));
-        QPointer<TEasyButtonBar> bar = host->mpConsole->actionEasyButtonBar(moved);
+        QPointer<TEasyButtonBar> bar = host->mainConsoleView()->actionEasyButtonBar(moved);
         QVERIFY(bar);
         QCOMPARE(bar->styleSheet(), qsl("color: red;"));
     }
@@ -841,12 +841,12 @@ private slots:
         package->mPackageName = qsl("placementMovedInPackage");
         host->getActionUnit()->updateAllToolbars();
         auto* moved = static_cast<TAction*>(root->mpMyChildrenList->front());
-        QVERIFY(buttonNamed(host->mpConsole->actionEasyButtonBar(root), qsl("placementMovedIn button")));
+        QVERIFY(buttonNamed(host->mainConsoleView()->actionEasyButtonBar(root), qsl("placementMovedIn button")));
         host->getActionUnit()->reParentAction(moved->getID(), root->getID(), package->getID());
         host->getActionUnit()->updateAllToolbars();
 
         QVERIFY(host->getLuaInterpreter()->compileAndExecuteScript(qsl("setButtonStyleSheet('placementMovedIn button', 'color: red;')")));
-        QPointer<TToolBar> toolBar = host->mpConsole->actionToolBar(moved);
+        QPointer<TToolBar> toolBar = host->mainConsoleView()->actionToolBar(moved);
         QVERIFY(toolBar);
         QCOMPARE(toolBar->styleSheet(), qsl("color: red;"));
     }
@@ -860,7 +860,7 @@ private slots:
 
         auto* floating = makeRootBar(host, qsl("placementStyledFloating"), 4);
         host->getActionUnit()->updateAllToolbars();
-        QPointer<TToolBar> toolBar = host->mpConsole->actionToolBar(floating);
+        QPointer<TToolBar> toolBar = host->mainConsoleView()->actionToolBar(floating);
         QVERIFY(toolBar);
         QVERIFY(buttonNamed(toolBar, qsl("placementStyledFloating button")));
 

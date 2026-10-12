@@ -21,8 +21,13 @@
  ***************************************************************************/
 
 #include <QHash>
+#include <QSet>
+#include <QStringList>
+#include <QImage>
 #include <QPixmap>
 #include <QOpenGLFunctions>
+
+#include <functional>
 
 // Cache entry storing OpenGL texture ID and pixmap cache key for change detection
 struct LabelTextureCacheEntry {
@@ -50,12 +55,27 @@ public:
     // Invalidate all labels in an area
     void invalidateArea(int areaId);
 
+    // Textures drawn by the caller, such as room symbols, keyed by everything that decides how they look.
+    // Mipmapped, as they are drawn far smaller than they are made.
+    GLuint imageTexture(const QString& key) const { return mImageCache.value(key); }
+    // Returns 0 if the texture could not be made; a key that failed once is not tried again until clearAll()
+    GLuint addImageTexture(const QString& key, const QImage& image);
+    bool imageTextureFailed(const QString& key) const { return mFailedImageKeys.contains(key); }
+    // Drops image textures not in keep until one more fits under maximum, and says whether it does.
+    // keep must hold every image texture queued for drawing, as a dropped one is gone at once.
+    bool makeRoomForImageTexture(qsizetype maximum, const QSet<QString>& keep);
+    static QStringList keysToEvict(const QStringList& cached, qsizetype maximum, const QSet<QString>& keep);
+
     // Clear entire cache
     void clearAll();
+
+    // Makes and deletes image textures in place of OpenGL, for tests where there is no context; counts as initialized
+    void useTextureStandIn(std::function<GLuint(const QImage&)> make, std::function<void(GLuint)> remove);
 
 private:
     // Create OpenGL texture from pixmap
     GLuint createTextureFromPixmap(const QPixmap& pixmap);
+    GLuint createTextureFromImage(const QImage& image, bool mipmapped);
 
     // Delete OpenGL texture
     void deleteTexture(GLuint textureId);
@@ -65,8 +85,12 @@ private:
 
     // Cache storage: (areaId, labelId) -> cache entry
     QHash<QPair<int, int>, LabelTextureCacheEntry> mCache;
+    QHash<QString, GLuint> mImageCache;
+    QSet<QString> mFailedImageKeys;
 
     bool mInitialized = false;
+    std::function<GLuint(const QImage&)> mMakeStandIn;
+    std::function<void(GLuint)> mRemoveStandIn;
 };
 
 #endif // MUDLET_LABEL_TEXTURE_CACHE_H
