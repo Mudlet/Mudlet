@@ -144,7 +144,7 @@ private:
     QStringList linesContaining(const QString& text, const Host* pHost = nullptr) const
     {
         QStringList lines;
-        TMainConsole* console = (pHost ? pHost : mpHost)->mpConsole;
+        TMainConsole* console = (pHost ? pHost : mpHost)->mainConsoleView();
         for (int i = 0; i <= console->buffer.getLastLineNumber(); ++i) {
             if (console->buffer.line(i).contains(text)) {
                 lines << console->buffer.line(i);
@@ -231,8 +231,8 @@ private slots:
     void init()
     {
         QVERIFY(mpHost);
-        QVERIFY(mpHost->mpConsole);
-        mpHost->mpConsole->buffer.clear();
+        QVERIFY(mpHost->mainConsoleView());
+        mpHost->mainConsoleView()->buffer.clear();
         // The replay file and the toolbar are one per application, so a test
         // that left one running would decide the next one's result.
         QVERIFY(!mpHost->mTelnet.isReplaying());
@@ -465,7 +465,7 @@ private slots:
         QVERIFY(!mpHost->mTelnet.replayPaused());
         QTRY_VERIFY(!replayAction(qsl("replay_pause_action")));
 
-        mpHost->mpConsole->buffer.clear();
+        mpHost->mainConsoleView()->buffer.clear();
         const QString second = writeReplay(qsl("second.dat"), {{20, QByteArrayLiteral("REPLAY_AGAIN\r\n")}});
         QVERIFY(!second.isEmpty());
         QVERIFY(MudletReplay::self()->load(mpHost, second));

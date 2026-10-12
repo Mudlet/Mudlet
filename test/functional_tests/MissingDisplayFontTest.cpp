@@ -274,7 +274,7 @@ private:
 
     // What the player would see: the console wraps a long message over several
     // buffer lines, so the text is put back together before it is searched.
-    static QString consoleText(Host* pHost) { return pHost->mpConsole->buffer.lineBuffer.join(QChar::Space).simplified(); }
+    static QString consoleText(Host* pHost) { return pHost->mainConsoleView()->buffer.lineBuffer.join(QChar::Space).simplified(); }
 
     // The family the saved profile asks for, straight out of the written XML
     static QString savedDisplayFontFamily(const QString& xmlPath)
@@ -583,10 +583,10 @@ private slots:
         QVERIFY(pHost);
         QVERIFY2(pHost->mLoadedOk, "the test profile save could not be loaded");
         mudlet::self()->slot_connectionDialogueFinished(profileName, false);
-        QVERIFY2(pHost->mpConsole, "the profile came up without a main console");
+        QVERIFY2(pHost->mainConsoleView(), "the profile came up without a main console");
 
         QVERIFY(pHost->getLuaInterpreter()->compileAndExecuteScript(qsl("createTextEdit('main', 'mdfTextEdit', 0, 0, 100, 50)")));
-        auto* pTextEdit = pHost->mpConsole->textBoxWidget(qsl("mdfTextEdit"));
+        auto* pTextEdit = pHost->mainConsoleView()->textBoxWidget(qsl("mdfTextEdit"));
         QVERIFY2(pTextEdit, "the test text edit was not created");
 
         QVERIFY(pHost->getLuaInterpreter()->compileAndExecuteScript(qsl("setTextEditFont('mdfTextEdit', '%1 Bold')").arg(mOtherBundledFamily)));
@@ -620,7 +620,7 @@ private slots:
         // What Lua's loadProfile() does next, and what the connection dialog does
         // for a profile the player opens:
         mudlet::self()->slot_connectionDialogueFinished(profileName, false);
-        QVERIFY2(pHost->mpConsole, "the profile came up without a main console");
+        QVERIFY2(pHost->mainConsoleView(), "the profile came up without a main console");
 
         QCOMPARE(pHost->getDisplayFont().family(), Host::scmDefaultFontFamily);
 
@@ -648,7 +648,7 @@ private slots:
         QVERIFY(pHost);
         QVERIFY2(pHost->mLoadedOk, "the test profile save could not be loaded");
         mudlet::self()->slot_connectionDialogueFinished(profileName, false);
-        QVERIFY2(pHost->mpConsole, "the profile came up without a main console");
+        QVERIFY2(pHost->mainConsoleView(), "the profile came up without a main console");
         QCOMPARE(pHost->getDisplayFont().family(), Host::scmDefaultFontFamily);
         QCOMPARE(pHost->getDisplayFontForSaving().family(), mMissingFamily);
 
@@ -696,7 +696,7 @@ private slots:
         QVERIFY(pHost);
         QVERIFY2(pHost->mLoadedOk, "the test profile save could not be loaded");
         mudlet::self()->slot_connectionDialogueFinished(profileName, false);
-        QVERIFY2(pHost->mpConsole, "the profile came up without a main console");
+        QVERIFY2(pHost->mainConsoleView(), "the profile came up without a main console");
 
         QVERIFY2(FontManager::availableFonts().contains(mOtherBundledFamily, Qt::CaseInsensitive), "the module's font was never registered, so the profile's font really was missing");
         QCOMPARE(pHost->getDisplayFont().family(), mOtherBundledFamily);
@@ -725,7 +725,7 @@ private slots:
         QVERIFY(pHost);
         QVERIFY2(pHost->mLoadedOk, "the test profile save could not be loaded");
         mudlet::self()->slot_connectionDialogueFinished(profileName, false);
-        QVERIFY2(pHost->mpConsole, "the profile came up without a main console");
+        QVERIFY2(pHost->mainConsoleView(), "the profile came up without a main console");
         QVERIFY2(!FontManager::availableFonts().contains(mPackageSuppliedFamily, Qt::CaseInsensitive),
                  "the package's family is already installed, so this cannot tell whether uninstalling removed it");
 
