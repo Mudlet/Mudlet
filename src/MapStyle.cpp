@@ -115,9 +115,9 @@ QColor MapStyle::symbolColor(const QColor& roomSymbolColor, const QColor& drawnR
     if (palette == Palette::Ink && ink.isValid() && !roomSymbolColor.isValid()) {
         return ink;
     }
-    // A character is drawn in the room's color rather than on it
+    // A character is drawn in the room's color rather than on it, and lifted as a room's is, so that it shows on the dark screen
     if (palette == Palette::Terminal) {
-        return roomSymbolColor.isValid() ? roomSymbolColor : drawnRoomColor;
+        return roomSymbolColor.isValid() ? roomColor(roomSymbolColor) : drawnRoomColor;
     }
     return RoomAppearance::symbolColor(roomSymbolColor, drawnRoomColor);
 }

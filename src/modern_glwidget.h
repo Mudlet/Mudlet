@@ -227,6 +227,7 @@ private:
     // The text in each cell of the terminal style's glyph atlas, in order, and how many of them and in which font
     // its texture was last drawn with
     QStringList mGlyphAtlasCells;
+    QHash<QString, qsizetype> mGlyphAtlasIndex;
     qsizetype mGlyphAtlasDrawnCells = 0;
     QString mGlyphAtlasFontKey;
     bool mRoomTextureLimitWarned = false;
@@ -380,8 +381,8 @@ private:
     GLuint exitMarkerTexture(const TRoom& room, const QColor& roomColor);
     // Text on a clear background; size is set to the texture's size in pixels
     GLuint textTexture(const QString& key, const QString& text, const QFont& font, const QFontMetricsF& metrics, const QColor& color, QSize& size);
-    // The cell of the glyph atlas holding text, added if there is room, else -1
-    qsizetype glyphAtlasCell(const QString& text);
+    // The cell of the glyph atlas holding text, added if there is room, else -1; with add false, -1 for any not in it
+    qsizetype glyphAtlasCell(const QString& text, bool add = true);
     // Every cell's text in white on clear, to be tinted as drawn, in one texture; 0 if it could not be made
     GLuint glyphAtlasTexture(const QFont& font);
     void reportContextCreationFailure();
