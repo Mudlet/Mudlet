@@ -246,6 +246,15 @@ describe("Tests the area graph and its world layout", function()
     assert.is_false(getAreaGraph().areas[D].pinned)
   end)
 
+  it("moves unpinned areas out of the way of one that is moved onto them", function()
+    local ids = buildMap()
+    local A = getAreaGraph().areas[ids.GraphSpecA]
+    assert.is_true(setAreaGraphPosition(ids.GraphSpecD, A.x, A.y))
+    local areas = getAreaGraph().areas
+    assert.are.same({A.x, A.y, true}, {areas[ids.GraphSpecD].x, areas[ids.GraphSpecD].y, areas[ids.GraphSpecD].pinned})
+    assertApart(areas)
+  end)
+
   it("keeps the layout through a map save and load", function()
     local ids = buildMap()
     assert.is_true(setAreaGraphPosition(ids.GraphSpecB, -42.25, 17))
@@ -350,6 +359,24 @@ describe("Tests the area graph and its world layout", function()
     assertApart(areas)
     for _, id in ipairs({newArea, lonely}) do
       assert.is_true(setAreaGraphPosition(id, areas[id].x, areas[id].y), areas[id].name .. " was given " .. areas[id].x .. ", " .. areas[id].y)
+    end
+  end)
+
+  it("keeps areas apart from one pinned at the limit", function()
+    -- Which way a new area is first pushed depends on its id, so try a range of ids at each spot.
+    for _, corner in ipairs({{1, 1}, {1, -1}, {-1, 1}, {-1, -1}, {0, -1}}) do
+      for padding = 0, 39 do
+        deleteMap()
+        local pinned = addAreaName("GraphSpecPinned")
+        local pinnedRoom = addRoomAt(pinned, 0, 0)
+        assert.is_true(setAreaGraphPosition(pinned, corner[1] * 1e15, corner[2] * 1e15))
+        for i = 1, padding do
+          addAreaName("GraphSpecPadding" .. i)
+        end
+        local newArea = addAreaName("GraphSpecNew")
+        setExit(addRoomAt(newArea, 0, 0), pinnedRoom, "n")
+        assertApart(getAreaGraph().areas)
+      end
     end
   end)
 

@@ -104,7 +104,8 @@ private:
         bool pinned = false;
     };
 
-    // True if an area was added or removed, changed size, or the links changed.
+    // True if an area was added or removed or changed size; the links are rebuilt only when exits
+    // or area memberships changed.
     bool rebuildGraph();
     void rebuildLinks();
     void readStoredLayout();
