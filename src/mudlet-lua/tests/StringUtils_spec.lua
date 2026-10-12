@@ -847,6 +847,34 @@ describe("Tests StringUtils.lua functions", function()
       assert.equals("nil", outside)
     end)
 
+    it("should read a global from a coroutine an expression starts", function()
+      _G.fstringSpecCoroutine = "global"
+      local result = f("{coroutine.wrap(function() return fstringSpecCoroutine end)()}")
+      _G.fstringSpecCoroutine = nil
+      assert.equals("global", result)
+    end)
+
+    it("should leave a block as written when its __tostring gives nil or false", function()
+      local none = setmetatable({}, { __tostring = function() return nil end })
+      local no = setmetatable({}, { __tostring = function() return false end })
+      assert.equals("<{none}> tail", f("<{none}> tail"))
+      assert.equals("<{none}{no}> tail", f("<{none}{no}> tail"))
+      assert.equals("<{no or 1}> tail", f("<{no or 1}> tail"))
+    end)
+
+    it("should see a local that an overridden tostring changes before a later name is read", function()
+      local first, second = 1, 0
+      local original = _G.tostring
+      _G.tostring = function(value)
+        second = second + 1
+        return original(value)
+      end
+      local ok, result = pcall(f, "{first}{second}")
+      _G.tostring = original
+      assert.is_true(ok, result)
+      assert.equals("11", result)
+    end)
+
     it("should not treat % as a format directive", function()
       assert.equals("100% sure", f("100% sure"))
       assert.equals("50% of 4 is 2", f("50% of 4 is {4/2}"))

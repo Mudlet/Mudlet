@@ -176,6 +176,8 @@ end
 
 local find, sub, concat, type = string.find, string.sub, table.concat, type
 local getinfo, getlocal = debug.getinfo, debug.getlocal
+-- A script can replace tostring with one that changes a local a later name reads
+local fstring_tostring = tostring
 
 -- Compiling a {} block costs far more than running it, so each one is compiled
 -- once and handed this call's environment to run in. Weak, so expressions built
@@ -298,7 +300,7 @@ function f(supersecretstringvariablenocollision)
   local outer_env = _ENV or getfenv(1)
   local lookup, values, seen
   -- Reading every name up front would miss a block that changes a local before a later name is read
-  if parts.onlyNames and parts.nameCount > 1 then
+  if parts.onlyNames and parts.nameCount > 1 and tostring == fstring_tostring then
     values, seen = {}, {}
     fstring_locals(parts.names, parts.nameCount, 3, values, seen)
   end
@@ -318,7 +320,8 @@ function f(supersecretstringvariablenocollision)
       if not found then
         value = fstring_global(outer_env, name)
       end
-      out[i] = tostring(value)
+      -- A __tostring that gives nil or false leaves the block as written
+      out[i] = tostring(value) or "{" .. name .. "}"
       if seen then
         -- A __tostring can change a local that a later name reads
         local kind = type(value)
@@ -333,12 +336,10 @@ function f(supersecretstringvariablenocollision)
         -- An expression can read from inside functions of its own, so f's frame is
         -- found rather than counted to, and its caller's locals are the ones searched.
         -- Level 3 is whatever called the reading function, which is usually f.
+        -- A coroutine started in an expression has a stack of its own, without f in it.
         local level = 3
-        while getlocal(level, 1) ~= fstring_param do
+        while getinfo(level, "") and getlocal(level, 1) ~= fstring_param do
           level = level + 1
-          if not getinfo(level, "") then
-            break
-          end
         end
         local found, value = fstring_local(k, level + 2)
         if found then
@@ -353,7 +354,7 @@ function f(supersecretstringvariablenocollision)
         if not fn then
           error(err, 0)
         end
-        out[i] = tostring(fn())
+        out[i] = tostring(fn()) or "{" .. code .. "}"
       else
         fn = fstring_compiled[code]
         if not fn then
@@ -367,7 +368,7 @@ function f(supersecretstringvariablenocollision)
         -- called, and must get its own environment back afterwards
         local previous_env = getfenv(fn)
         setfenv(fn, exp_env)
-        out[i] = tostring(fstring_settle(fn, previous_env, fn()))
+        out[i] = tostring(fstring_settle(fn, previous_env, fn())) or "{" .. code .. "}"
       end
     end
   end
