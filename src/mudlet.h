@@ -254,7 +254,7 @@ public:
     bool showTabConnectionIndicators() const override { return mShowTabConnectionIndicators; }
     void showNotification(const QString& title, const QString& text, std::optional<int> msecs) override;
     bool drawUpperLowerLevels() const override { return mDrawUpperLowerLevels; }
-    void setDrawUpperLowerLevels(bool draw) override { mDrawUpperLowerLevels = draw; }
+    void setDrawUpperLowerLevels(bool draw) override;
     // Addon toolbar button management
     int addAddonCommand(const CommandRequest& request, Host* pHost, const QString& package, QString& error) override;
     bool removeAddonCommand(int commandId, Host* pHost) override;

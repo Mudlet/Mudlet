@@ -67,6 +67,16 @@ TMapView::TMapView(int viewId, Host* pHost, TMap* pMap, QWidget* parent)
         }
 #endif
     });
+#if defined(INCLUDE_3DMAPPER)
+    // The 3D view reads the mapper settings as it draws, so it needs only to draw again
+    const auto repaint3DView = [this]() {
+        if (showing3DView()) {
+            mp3DView->update();
+        }
+    };
+    connect(mpMap, &TMap::signal_mapRepaintRequested, this, repaint3DView);
+    connect(mpMap, &TMap::signal_mapperSettingChanged, this, repaint3DView);
+#endif
     connect(mpMap, &TMap::signal_symbolCachesStale, this, [this]() {
         mp2dMap->flushSymbolPixmapCache();
         mp2dMap->update();

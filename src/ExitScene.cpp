@@ -334,18 +334,20 @@ void Builder::addRoom(const int roomId, const TRoom& room)
     const QColor exitColor = mOptions.exitColor;
     mRoomId = roomId;
 
-    for (auto it = room.customLines.constBegin(); it != room.customLines.constEnd(); ++it) {
-        customLine(room, it.key(), it.value());
-    }
-
-    for (const int direction : room.exitStubs) {
-        if (!onCompass(direction)) {
-            continue;
+    if (!mOptions.areaExitsOnly) {
+        for (auto it = room.customLines.constBegin(); it != room.customLines.constEnd(); ++it) {
+            customLine(room, it.key(), it.value());
         }
-        const QVector3D end = center + step(direction) * 0.5f;
-        door(room, TRoom::dirCodeToShortString(direction), center, end, level);
-        bar(center, end, mWidth, mHeight, exitColor, level);
-        disc(QVector3D(end.x(), end.y(), top(rz)), 0.1f, exitColor, level);
+
+        for (const int direction : room.exitStubs) {
+            if (!onCompass(direction)) {
+                continue;
+            }
+            const QVector3D end = center + step(direction) * 0.5f;
+            door(room, TRoom::dirCodeToShortString(direction), center, end, level);
+            bar(center, end, mWidth, mHeight, exitColor, level);
+            disc(QVector3D(end.x(), end.y(), top(rz)), 0.1f, exitColor, level);
+        }
     }
 
     struct Exit
@@ -357,16 +359,12 @@ void Builder::addRoom(const int roomId, const TRoom& room)
     };
     QList<Exit> exits;
     for (const int direction : scmDirections) {
-        const QString key = TRoom::dirCodeToShortString(direction);
-        if (room.customLines.contains(key)) {
-            continue;
-        }
         const int destinationId = room.getExit(direction);
-        if (destinationId <= 0) {
+        if (destinationId <= 0 || room.customLines.contains(TRoom::dirCodeToShortString(direction))) {
             continue;
         }
         const TRoom* pDestination = mMap.mpRoomDB->getRoom(destinationId);
-        if (!pDestination || pDestination->isHidden()) {
+        if (!pDestination || pDestination->isHidden() || (mOptions.areaExitsOnly && pDestination->getArea() == mOptions.areaId)) {
             continue;
         }
         const bool oneWay = pDestination->getExit(TMap::scmReverseDirections.value(direction)) != roomId;
@@ -384,8 +382,12 @@ void Builder::addRoom(const int roomId, const TRoom& room)
                 // Nowhere on this map to point to; the room's marker shows it
                 continue;
             }
-            const QVector3D along = step(exit.direction).normalized();
             const QVector3D outer = center + step(exit.direction) * arrowScale;
+            mScene.areaExits.append({center, outer, exit.destinationId, level});
+            if (mOptions.areaExitsOnly) {
+                continue;
+            }
+            const QVector3D along = step(exit.direction).normalized();
             const QColor color = RoomAppearance::environmentColor(mMap, mHost, exit.pDestination->environment);
             // The outline is lower, so that the line shows over it from above
             bar(center, outer, mWidth * 2.0f, mHeight * 0.7f, outlineColor, level);

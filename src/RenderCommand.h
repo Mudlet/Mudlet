@@ -176,12 +176,16 @@ private:
     Shading mShading;
 };
 
-// Command to render multiple cube instances in a single draw call
+// Command to render multiple box or cylinder instances in a single draw call
 class RenderInstancedCubesCommand : public RenderCommand
 {
 public:
-    RenderInstancedCubesCommand(
-            const QVector<CubeInstanceData>& instances, const QMatrix4x4& projectionMatrix, const QMatrix4x4& viewMatrix, const QMatrix4x4& modelMatrix, Shading shading = Shading::Lit);
+    RenderInstancedCubesCommand(const QVector<CubeInstanceData>& instances,
+                                const QMatrix4x4& projectionMatrix,
+                                const QMatrix4x4& viewMatrix,
+                                const QMatrix4x4& modelMatrix,
+                                Shading shading = Shading::Lit,
+                                GeometryManager::InstanceShape shape = GeometryManager::InstanceShape::Box);
 
     void execute(QOpenGLFunctions* gl,
                 QOpenGLShaderProgram* shader,
@@ -196,6 +200,7 @@ public:
 
     const char* getCommandName() const override { return "RenderInstancedCubes"; }
     const QVector<CubeInstanceData>& instances() const { return mInstances; }
+    GeometryManager::InstanceShape shape() const { return mShape; }
 
 private:
     QVector<CubeInstanceData> mInstances;
@@ -203,6 +208,7 @@ private:
     QMatrix4x4 mViewMatrix;
     QMatrix4x4 mModelMatrix;
     Shading mShading;
+    GeometryManager::InstanceShape mShape;
 };
 
 // Command to change OpenGL state

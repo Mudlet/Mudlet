@@ -60,7 +60,9 @@
 #include <QVBoxLayout>
 #include <algorithm>
 #include <chrono>
+#include <cmath>
 #include <limits>
+#include <numbers>
 #include <optional>
 #include <utility>
 
@@ -362,8 +364,14 @@ bool ModernGLWidget::event(QEvent* event)
     }
     if (event->type() == QEvent::ToolTip) {
         auto* helpEvent = static_cast<QHelpEvent*>(event);
-        //: Tooltip of the compass in the corner of the 3D map view
-        const QString text = compassRect().contains(helpEvent->pos()) ? tr("Turn the view north up") : roomToolTip(roomAt(helpEvent->pos()));
+        QString text;
+        if (compassRect().contains(helpEvent->pos())) {
+            //: Tooltip of the compass in the corner of the 3D map view
+            text = tr("Turn the view north up");
+        } else {
+            // Over an area exit, the room it leads to and the area that room is in are named
+            text = roomToolTip(destinationAt(helpEvent->pos()));
+        }
         if (text.isEmpty()) {
             QToolTip::hideText();
             event->ignore();
@@ -722,8 +730,10 @@ QImage clearRoomTextureImage(const QColor& edgeColor)
 // Texels across a room, for the text drawn beside or on it at the 2D map's proportions
 constexpr int scmTextTexelsPerRoom = 48;
 
-// Names drawn shorter than this on screen are left out, as unreadable
-constexpr qreal scmMinimumNamePixels = 7.0;
+// Names and IDs drawn shorter than this on screen are left out, as unreadable
+constexpr qreal scmMinimumTextPixels = 7.0;
+// As on the 2D map, what is drawn on a round room's top is shrunk to fit inside its circle
+constexpr float scmRoundRoomInset = 0.707f;
 
 // Outlines' widths, as a part of a room's width: around the viewed level's unbordered, opaque rooms outside grid mode, and the one hovered over
 constexpr float scmLevelOutline = 0.06f;
@@ -854,9 +864,9 @@ GLuint ModernGLWidget::squareTexture(const QColor& color)
 }
 
 // As the 2D map shades a selected room: from clear at one corner to blue at the opposite one
-GLuint ModernGLWidget::selectionTexture()
+GLuint ModernGLWidget::selectionTexture(const bool round)
 {
-    const QString key = qsl("selection");
+    const QString key = round ? qsl("selection|round") : qsl("selection");
     if (const GLuint texture = cachedRoomTexture(key)) {
         return texture;
     }
@@ -871,7 +881,14 @@ GLuint ModernGLWidget::selectionTexture()
     clearBlue.setAlpha(0);
     gradient.setColorAt(0.2, clearBlue);
     gradient.setColorAt(1.0, QColor(Qt::blue));
-    painter.fillRect(image.rect(), gradient);
+    if (round) {
+        painter.setRenderHint(QPainter::Antialiasing);
+        painter.setPen(Qt::NoPen);
+        painter.setBrush(gradient);
+        painter.drawEllipse(QRectF(image.rect()));
+    } else {
+        painter.fillRect(image.rect(), gradient);
+    }
     painter.end();
     return addRoomTexture(key, image);
 }
@@ -945,6 +962,9 @@ void ModernGLWidget::renderRooms()
 
     const float roomSize = 2.0f / scale;
     const float roomHeight = 2.0f / scale / zFlattening;
+    const bool round = mpHost->mBubbleMode;
+    const GeometryManager::InstanceShape roomShape = round ? GeometryManager::InstanceShape::Cylinder : GeometryManager::InstanceShape::Box;
+    const float symbolSize = round ? roomSize * scmRoundRoomInset : roomSize;
     // As on the 2D map, a border of thickness 1 is this much of the room's width, and grows outward
     const float borderUnit = mpHost->mRoomBorderSize > 0.0 ? roomSize / static_cast<float>(mpHost->mRoomBorderSize) : 0.0f;
     const QVector3D screenRight = mCameraController.screenRight();
@@ -968,7 +988,7 @@ void ModernGLWidget::renderRooms()
         idFontKey = idFont.key();
         idMetrics.emplace(imageFontMetrics(idFont));
         const qreal widest = idMetrics->horizontalAdvance(QString(QString::number(maxRoomId).size(), QLatin1Char('8')));
-        idTexel = 0.9f * roomSize / static_cast<float>(qMax(widest, idMetrics->height()));
+        idTexel = 0.9f * symbolSize / static_cast<float>(qMax(widest, idMetrics->height()));
     }
     // Cleared before any of this frame's textures is asked for, as only those in it are kept from eviction
     mRoomTexturesInUse.clear();
@@ -1010,6 +1030,37 @@ void ModernGLWidget::renderRooms()
     };
     QList<RoomName> roomNames;
     const float textTexel = roomSize / scmTextTexelsPerRoom;
+    struct RoomIdText
+    {
+        int roomId = 0;
+        bool onViewedLevel = false;
+        QVector3D center;
+        QList<std::pair<GLuint, QSize>> digits;
+        int width = 0;
+        int height = 0;
+        QVector4D tint;
+        RoomDecals* decals = nullptr;
+    };
+    QList<RoomIdText> roomIdTexts;
+    mRoomIdsDrawn.clear();
+    struct RoomSymbol
+    {
+        int roomId = 0;
+        QString symbol;
+        QColor color;
+        QVector3D center;
+        QVector4D tint;
+        RoomDecals* decals = nullptr;
+    };
+    const auto queueSymbol = [this, symbolSize, &screenRight, &screenUp](const RoomSymbol& roomSymbol) {
+        if (const GLuint texture = symbolTexture(roomSymbol.symbol, roomSymbol.color)) {
+            GeometryData& batch = roomSymbol.decals->symbols[texture];
+            batch.textureId = texture;
+            GeometryManager::appendGroundQuad(batch, roomSymbol.center, symbolSize, screenRight, screenUp, roomSymbol.tint);
+        }
+    };
+    // As on the 2D map, a room shows its symbol where its ID is not drawn
+    QList<RoomSymbol> symbolsInPlaceOfIds;
 
     // Made before any symbol, so a view short of room for textures still shows where the player is
     GLuint playerRoomTexture = 0;
@@ -1024,7 +1075,8 @@ void ModernGLWidget::renderRooms()
                                          mpMap->mPlayerRoomOuterColor.name(QColor::HexArgb));
         playerRoomTexture = discTexture(key, RoomAppearance::playerRoomStops(style, mpMap->mPlayerRoomInnerDiameterPercentage, mpMap->mPlayerRoomInnerColor, mpMap->mPlayerRoomOuterColor));
         if (mpHost->mMapStrongHighlight) {
-            playerRoomFillTexture = squareTexture(RoomAppearance::strongHighlightFillColor());
+            const QColor fill = RoomAppearance::strongHighlightFillColor();
+            playerRoomFillTexture = round ? discTexture(qsl("disc|%1").arg(fill.name(QColor::HexArgb)), {{0.0, fill}, {1.0, fill}}) : squareTexture(fill);
         }
     }
 
@@ -1044,7 +1096,7 @@ void ModernGLWidget::renderRooms()
     QMap<int, QRectF> levelExtents;
     const QSet<int> emptySelection;
     const QSet<int>& selection = mp2DMap ? mp2DMap->mMultiSelectionSet : emptySelection;
-    const GLuint selectionTextureId = selection.isEmpty() ? 0 : selectionTexture();
+    const GLuint selectionTextureId = selection.isEmpty() ? 0 : selectionTexture(round);
     mHoveredRoomId = roomUnderPointer();
 
     QSetIterator<int> itRoom(pArea->getAreaRooms());
@@ -1078,8 +1130,10 @@ void ModernGLWidget::renderRooms()
         const bool isCurrentRoom = currentRoomId == playerRoomId;
         const GeometryManager::LevelFade fade = GeometryManager::levelFade(pR->z() - mMapCenterZ, moreTransparent);
 
+        const QColor fadeTarget = levelFadeTarget(pR->z());
+
         const QColor roomColor = RoomAppearance::environmentColor(*mpMap, *mpHost, pR->environment);
-        QVector4D roomTint = GeometryManager::fadedColor(roomColor, fade, background);
+        QVector4D roomTint = GeometryManager::fadedColor(roomColor, fade, fadeTarget);
         if (isCurrentRoom && !playerRoomTexture) {
             // Without its marker the player's room is drawn solid red, so it still stands out
             roomTint = QVector4D(1.0f, 0.0f, 0.0f, 1.0f);
@@ -1107,7 +1161,7 @@ void ModernGLWidget::renderRooms()
         if (bordered) {
             const float borderWidth = (pR->mBorderThickness > 0 ? pR->mBorderThickness : 1) * borderUnit;
             const QColor borderColor = pR->mBorderColor.isValid() ? pR->mBorderColor : mpHost->mRoomBorderColor;
-            const QVector4D borderTint = GeometryManager::fadedColor(borderColor, fade, background);
+            const QVector4D borderTint = GeometryManager::fadedColor(borderColor, fade, fadeTarget);
             (borderTint.w() < 1.0f ? seeThroughLevels[pR->z()].cubes : borderInstances).append(outline(borderWidth, borderTint));
         }
 
@@ -1124,12 +1178,12 @@ void ModernGLWidget::renderRooms()
             GeometryManager::appendGroundQuad(decals.selection, roomTop, roomSize, screenRight, screenUp, decalTint);
         }
 
-        if (!showRoomIds && !pR->mSymbol.isEmpty()) {
-            const QColor symbolColor = RoomAppearance::symbolColor(pR->mSymbolColor, roomColor);
-            if (const GLuint texture = symbolTexture(pR->mSymbol, symbolColor)) {
-                GeometryData& batch = decals.symbols[texture];
-                batch.textureId = texture;
-                GeometryManager::appendGroundQuad(batch, roomTop, roomSize, screenRight, screenUp, decalTint);
+        if (!pR->mSymbol.isEmpty()) {
+            const RoomSymbol roomSymbol{currentRoomId, pR->mSymbol, RoomAppearance::symbolColor(pR->mSymbolColor, roomColor), roomTop, decalTint, &decals};
+            if (showRoomIds) {
+                symbolsInPlaceOfIds.append(roomSymbol);
+            } else {
+                queueSymbol(roomSymbol);
             }
         }
 
@@ -1146,26 +1200,18 @@ void ModernGLWidget::renderRooms()
         if (showRoomIds) {
             const QColor idColor = ExitAppearance::contrastColor(roomColor);
             const QString number = QString::number(currentRoomId);
-            QList<std::pair<GLuint, QSize>> digits;
-            int numberWidth = 0;
+            RoomIdText idText{currentRoomId, pR->z() == mMapCenterZ, roomTop, {}, 0, 0, decalTint, &decals};
             bool whole = true;
             for (const QChar digit : number) {
                 const std::pair<GLuint, QSize> found = digitTextures.value({idColor.rgba(), digit.unicode()});
                 whole = whole && found.first;
-                digits.append(found);
-                numberWidth += found.second.width();
+                idText.digits.append(found);
+                idText.width += found.second.width();
+                idText.height = qMax(idText.height, found.second.height());
             }
             // None rather than a number with digits missing, which would read as another room's
             if (whole) {
-                QVector3D corner = roomTop - groundRight * (numberWidth * idTexel / 2.0f);
-                for (const auto& [texture, size] : digits) {
-                    const QVector3D across = groundRight * (size.width() * idTexel);
-                    const QVector3D upward = groundUp * (size.height() * idTexel);
-                    GeometryData& batch = decals.text[texture];
-                    batch.textureId = texture;
-                    GeometryManager::appendQuad(batch, corner - upward / 2.0f, across, upward, decalTint);
-                    corner += across;
-                }
+                roomIdTexts.append(idText);
             }
         }
 
@@ -1218,45 +1264,81 @@ void ModernGLWidget::renderRooms()
         }
     }
 
+    const QMatrix4x4 viewModel = mCameraController.getViewMatrix() * mCameraController.getModelMatrix();
+    const QRectF textBounds = QRectF(rect()).adjusted(-100.0, -100.0, 100.0, 100.0);
+    // Where text lying flat on the map shows on screen. An invalid rectangle, for text partly behind the camera or
+    // off screen, is never kept; text nearly edge on can span millions of pixels, so each is cut down to about the view
+    const auto screenRect = [this, &textBounds](const QVector3D& corner, const QVector3D& across, const QVector3D& upward) {
+        qreal left = std::numeric_limits<qreal>::max();
+        qreal top = std::numeric_limits<qreal>::max();
+        qreal right = std::numeric_limits<qreal>::lowest();
+        qreal bottom = std::numeric_limits<qreal>::lowest();
+        for (const QVector3D& point : {corner, corner + across, corner + upward, corner + across + upward}) {
+            const std::optional<QPointF> pixel = mCameraController.pixelForPoint(point);
+            if (!pixel) {
+                return QRectF();
+            }
+            left = qMin(left, pixel->x());
+            top = qMin(top, pixel->y());
+            right = qMax(right, pixel->x());
+            bottom = qMax(bottom, pixel->y());
+        }
+        const QRectF rect(QPointF(left, top), QPointF(right, bottom));
+        return rect.intersects(textBounds) ? rect.intersected(textBounds) : QRectF();
+    };
+
+    if (!roomIdTexts.isEmpty()) {
+        // The viewed level's first, the only ones the 2D map shows, then nearest first, so where IDs overlap the one in front is kept
+        std::stable_sort(roomIdTexts.begin(), roomIdTexts.end(), [&viewModel](const RoomIdText& a, const RoomIdText& b) {
+            if (a.onViewedLevel != b.onViewedLevel) {
+                return a.onViewedLevel;
+            }
+            return viewModel.map(a.center).z() > viewModel.map(b.center).z();
+        });
+        QList<QRectF> idRects;
+        idRects.reserve(roomIdTexts.size());
+        for (const RoomIdText& idText : std::as_const(roomIdTexts)) {
+            const QVector3D across = groundRight * (idText.width * idTexel);
+            const QVector3D upward = groundUp * (idText.height * idTexel);
+            idRects.append(screenRect(idText.center - across / 2.0f - upward / 2.0f, across, upward));
+        }
+        for (const qsizetype index : GeometryManager::declutteredRects(idRects, scmMinimumTextPixels)) {
+            const RoomIdText& idText = roomIdTexts.at(index);
+            QVector3D corner = idText.center - groundRight * (idText.width * idTexel / 2.0f);
+            for (const auto& [texture, size] : idText.digits) {
+                const QVector3D across = groundRight * (size.width() * idTexel);
+                const QVector3D upward = groundUp * (size.height() * idTexel);
+                GeometryData& batch = idText.decals->text[texture];
+                batch.textureId = texture;
+                GeometryManager::appendQuad(batch, corner - upward / 2.0f, across, upward, idText.tint);
+                corner += across;
+            }
+            mRoomIdsDrawn.insert(idText.roomId);
+        }
+    }
+    for (const RoomSymbol& roomSymbol : std::as_const(symbolsInPlaceOfIds)) {
+        if (!mRoomIdsDrawn.contains(roomSymbol.roomId)) {
+            queueSymbol(roomSymbol);
+        }
+    }
+
     // Names come after every symbol and marker, so that a view short of room for textures loses names first
     if (!roomNames.isEmpty()) {
         const QString nameFontKey = nameFont.key();
         const QFontMetricsF nameMetrics = imageFontMetrics(nameFont);
         // Nearest first, so that where names overlap the one in front is the one kept
-        const QMatrix4x4 viewModel = mCameraController.getViewMatrix() * mCameraController.getModelMatrix();
         std::stable_sort(roomNames.begin(), roomNames.end(), [&viewModel](const RoomName& a, const RoomName& b) {
             return viewModel.map(a.center).z() > viewModel.map(b.center).z();
         });
         QList<QRectF> nameRects;
         nameRects.reserve(roomNames.size());
-        const QRectF nameBounds = QRectF(rect()).adjusted(-100.0, -100.0, 100.0, 100.0);
         for (const RoomName& roomName : std::as_const(roomNames)) {
             const QSizeF size(qMax(1, qCeil(nameMetrics.horizontalAdvance(roomName.name))), qMax(1, qCeil(nameMetrics.height())));
             const QVector3D across = groundRight * static_cast<float>(size.width() * textTexel);
             const QVector3D upward = groundUp * static_cast<float>(size.height() * textTexel);
-            const QVector3D corner = roomName.center - across / 2.0f - upward / 2.0f;
-            qreal left = std::numeric_limits<qreal>::max();
-            qreal top = std::numeric_limits<qreal>::max();
-            qreal right = std::numeric_limits<qreal>::lowest();
-            qreal bottom = std::numeric_limits<qreal>::lowest();
-            bool onScreen = true;
-            for (const QVector3D& point : {corner, corner + across, corner + upward, corner + across + upward}) {
-                const std::optional<QPointF> pixel = mCameraController.pixelForPoint(point);
-                if (!pixel) {
-                    onScreen = false;
-                    break;
-                }
-                left = qMin(left, pixel->x());
-                top = qMin(top, pixel->y());
-                right = qMax(right, pixel->x());
-                bottom = qMax(bottom, pixel->y());
-            }
-            // An invalid rectangle, for a name partly behind the camera or off screen, is never kept; one
-            // nearly edge on can span millions of pixels, so each is cut down to about the view
-            const QRectF rect(QPointF(left, top), QPointF(right, bottom));
-            nameRects.append(onScreen && rect.intersects(nameBounds) ? rect.intersected(nameBounds) : QRectF());
+            nameRects.append(screenRect(roomName.center - across / 2.0f - upward / 2.0f, across, upward));
         }
-        for (const qsizetype index : GeometryManager::declutteredRects(nameRects, scmMinimumNamePixels)) {
+        for (const qsizetype index : GeometryManager::declutteredRects(nameRects, scmMinimumTextPixels)) {
             const RoomName& roomName = roomNames.at(index);
             QSize size;
             const QString key = qsl("name|%1|%2|%3").arg(roomName.color.name(QColor::HexArgb), nameFontKey, roomName.name);
@@ -1271,16 +1353,16 @@ void ModernGLWidget::renderRooms()
     }
 
     if (!borderInstances.isEmpty()) {
-        mRenderCommandQueue.addCommand(
-                std::make_unique<RenderInstancedCubesCommand>(borderInstances, mCameraController.getProjectionMatrix(), mCameraController.getViewMatrix(), mCameraController.getModelMatrix()));
+        mRenderCommandQueue.addCommand(std::make_unique<RenderInstancedCubesCommand>(
+                borderInstances, mCameraController.getProjectionMatrix(), mCameraController.getViewMatrix(), mCameraController.getModelMatrix(), RenderCommand::Shading::Lit, roomShape));
     }
     if (!outlineInstances.isEmpty()) {
         mRenderCommandQueue.addCommand(std::make_unique<RenderInstancedCubesCommand>(
-                outlineInstances, mCameraController.getProjectionMatrix(), mCameraController.getViewMatrix(), mCameraController.getModelMatrix(), RenderCommand::Shading::Unlit));
+                outlineInstances, mCameraController.getProjectionMatrix(), mCameraController.getViewMatrix(), mCameraController.getModelMatrix(), RenderCommand::Shading::Unlit, roomShape));
     }
     if (!roomInstances.isEmpty()) {
-        mRenderCommandQueue.addCommand(
-                std::make_unique<RenderInstancedCubesCommand>(roomInstances, mCameraController.getProjectionMatrix(), mCameraController.getViewMatrix(), mCameraController.getModelMatrix()));
+        mRenderCommandQueue.addCommand(std::make_unique<RenderInstancedCubesCommand>(
+                roomInstances, mCameraController.getProjectionMatrix(), mCameraController.getViewMatrix(), mCameraController.getModelMatrix(), RenderCommand::Shading::Lit, roomShape));
     }
 
     // In the 2D map's order: outside grid mode a highlight is drawn over the symbol, in grid mode under it;
@@ -1315,7 +1397,7 @@ void ModernGLWidget::renderRooms()
         if (extent == levelExtents.cend()) {
             return;
         }
-        const QVector4D tint = GeometryManager::fadedColor(plateColor, GeometryManager::levelFade(level - mMapCenterZ, moreTransparent), background);
+        const QVector4D tint = GeometryManager::fadedColor(plateColor, GeometryManager::levelFade(level - mMapCenterZ, moreTransparent), levelFadeTarget(level));
         const float plateZ = static_cast<float>(level) - roomHeight;
         QVector<float> vertices;
         QVector<float> colors;
@@ -1364,12 +1446,12 @@ void ModernGLWidget::renderRooms()
                 mRenderCommandQueue.addCommand(std::make_unique<GLStateCommand>(GLStateCommand::ENABLE_DEPTH_WRITE));
                 mRenderCommandQueue.addCommand(std::make_unique<GLStateCommand>(GLStateCommand::DISABLE_COLOR_WRITE));
                 mRenderCommandQueue.addCommand(std::make_unique<RenderInstancedCubesCommand>(
-                        seeThrough->cubes, mCameraController.getProjectionMatrix(), mCameraController.getViewMatrix(), mCameraController.getModelMatrix()));
+                        seeThrough->cubes, mCameraController.getProjectionMatrix(), mCameraController.getViewMatrix(), mCameraController.getModelMatrix(), RenderCommand::Shading::Lit, roomShape));
                 mRenderCommandQueue.addCommand(std::make_unique<GLStateCommand>(GLStateCommand::ENABLE_COLOR_WRITE));
                 mRenderCommandQueue.addCommand(std::make_unique<GLStateCommand>(GLStateCommand::DISABLE_DEPTH_WRITE));
                 mRenderCommandQueue.addCommand(std::make_unique<GLStateCommand>(GLStateCommand::DEPTH_FUNC_LEQUAL));
                 mRenderCommandQueue.addCommand(std::make_unique<RenderInstancedCubesCommand>(
-                        seeThrough->cubes, mCameraController.getProjectionMatrix(), mCameraController.getViewMatrix(), mCameraController.getModelMatrix()));
+                        seeThrough->cubes, mCameraController.getProjectionMatrix(), mCameraController.getViewMatrix(), mCameraController.getModelMatrix(), RenderCommand::Shading::Lit, roomShape));
                 mRenderCommandQueue.addCommand(std::make_unique<GLStateCommand>(GLStateCommand::DEPTH_FUNC_LESS));
             }
         }
@@ -1389,13 +1471,8 @@ void ModernGLWidget::renderRooms()
     mSeeThroughExits.clear();
 }
 
-void ModernGLWidget::renderConnections()
+ExitScene::Options ModernGLWidget::exitSceneOptions() const
 {
-    mSeeThroughExits.clear();
-    if (!mpMap || !mpMap->mpRoomDB || !mpHost) {
-        return;
-    }
-
     const float roomSize = 2.0f / scale;
     const float roomHeight = roomSize / zFlattening;
     ExitScene::Options options;
@@ -1410,7 +1487,92 @@ void ModernGLWidget::renderConnections()
     options.largeAreaExitArrows = mpHost->getLargeAreaExitArrows();
     options.exitColor = mpHost->mFgColor_2;
     options.background = mpHost->mBgColor_2;
-    const ExitScene::Scene scene = ExitScene::build(*mpMap, *mpHost, options);
+    return options;
+}
+
+QColor ModernGLWidget::levelFadeTarget(const int z) const
+{
+    if (!mudlet::self() || !mudlet::self()->drawUpperLowerLevels()) {
+        return mpHost->mBgColor_2;
+    }
+    return GeometryManager::levelFadeTarget(z - mMapCenterZ, mpHost->mBgColor_2, mpHost->mUpperLevelColor, mpHost->mLowerLevelColor);
+}
+
+void ModernGLWidget::queueGrid()
+{
+    if (!mpHost || !mpHost->mMapperShowGrid || mpHost->mMapGridColor.alpha() == 0 || !mpMap || !mpMap->mpRoomDB || !mpMap->mpRoomDB->getArea(mAID)) {
+        return;
+    }
+    const float roomHeight = 2.0f / scale / zFlattening;
+    // At the rooms' bottoms, so they stand on it
+    const float gridZ = static_cast<float>(mMapCenterZ) - roomHeight / 2.0f;
+    const QVector3D target = mCameraController.getTarget();
+    const QPointF center(target.x(), target.y());
+    // Roughly where the fog ends, past which the grid would be mostly noise. The fog is measured in eye distances,
+    // and the camera's own distance is not in map units
+    const qreal eyeDistance = mCameraController.rayThroughPixel(QPointF(width() / 2.0, height() / 2.0)).first.distanceToPoint(target);
+    const qreal reach = eyeDistance * scmFogEnd;
+    // Not QRectF::united(), which drops empty rectangles such as points
+    QPointF lowest = center;
+    QPointF highest = center;
+    const qreal w = width();
+    const qreal h = height();
+    for (const QPointF& pixel : {QPointF(0.0, 0.0), QPointF(w / 2.0, 0.0), QPointF(w, 0.0), QPointF(w, h / 2.0), QPointF(w, h), QPointF(w / 2.0, h), QPointF(0.0, h), QPointF(0.0, h / 2.0)}) {
+        const auto [origin, direction] = mCameraController.rayThroughPixel(pixel);
+        QPointF reached;
+        const float distance = std::abs(direction.z()) < 1e-6f ? -1.0f : (gridZ - origin.z()) / direction.z();
+        if (distance > 0.0f) {
+            const QVector3D point = origin + direction * distance;
+            reached = QPointF(point.x(), point.y());
+        } else {
+            // Above the horizon: as far as the grid shows, that way
+            reached = center + QPointF(direction.x(), direction.y()) * reach;
+        }
+        QLineF toReached(center, reached);
+        if (toReached.length() > reach) {
+            toReached.setLength(reach);
+        }
+        lowest = QPointF(qMin(lowest.x(), toReached.p2().x()), qMin(lowest.y(), toReached.p2().y()));
+        highest = QPointF(qMax(highest.x(), toReached.p2().x()), qMax(highest.y(), toReached.p2().y()));
+    }
+    const QList<QLineF> lines = GeometryManager::gridLines(QRectF(lowest, highest));
+    if (lines.isEmpty()) {
+        return;
+    }
+
+    // As on the 2D map, a line size of 50 is a room spacing (one map unit) wide; never thinner than a pixel where the view looks
+    const float lineWidth = qMax(static_cast<float>(mpHost->mMapGridLineSize) / 50.0f, mCameraController.worldUnitsPerPixel(QVector3D(target.x(), target.y(), gridZ)));
+    const QColor color = mpHost->mMapGridColor;
+    QVector<float> vertices;
+    QVector<float> colors;
+    vertices.reserve(lines.size() * 18);
+    colors.reserve(lines.size() * 24);
+    for (const QLineF& line : lines) {
+        const QPointF side = QPointF(-line.dy(), line.dx()) * (lineWidth / 2.0 / line.length());
+        const QPointF a = line.p1() + side;
+        const QPointF b = line.p2() + side;
+        const QPointF c = line.p2() - side;
+        const QPointF d = line.p1() - side;
+        for (const QPointF& corner : {a, b, c, a, c, d}) {
+            vertices << static_cast<float>(corner.x()) << static_cast<float>(corner.y()) << gridZ;
+            colors << color.redF() << color.greenF() << color.blueF() << color.alphaF();
+        }
+    }
+    // Writing no depth, so what is drawn after it, nearer or further, paints over it as on the 2D map
+    mRenderCommandQueue.addCommand(std::make_unique<GLStateCommand>(GLStateCommand::DISABLE_DEPTH_WRITE));
+    mRenderCommandQueue.addCommand(std::make_unique<RenderTrianglesCommand>(
+            vertices, colors, mCameraController.getProjectionMatrix(), mCameraController.getViewMatrix(), mCameraController.getModelMatrix(), RenderCommand::Shading::Unlit));
+    mRenderCommandQueue.addCommand(std::make_unique<GLStateCommand>(GLStateCommand::ENABLE_DEPTH_WRITE));
+}
+
+void ModernGLWidget::renderConnections()
+{
+    mSeeThroughExits.clear();
+    if (!mpMap || !mpMap->mpRoomDB || !mpHost) {
+        return;
+    }
+
+    const ExitScene::Scene scene = ExitScene::build(*mpMap, *mpHost, exitSceneOptions());
     if (scene.solidDashRoomId && !mSolidDashWarned) {
         mSolidDashWarned = true;
         qWarning().nospace() << "ModernGLWidget: room " << scene.solidDashRoomId
@@ -1422,7 +1584,7 @@ void ModernGLWidget::renderConnections()
 
     const bool moreTransparent = mpHost->experimentEnabled(qsl("experiment.rendering.more-transparent"));
     const auto faded = [&](const QColor& color, const int level) {
-        return GeometryManager::fadedColor(color, GeometryManager::levelFade(level - mMapCenterZ, moreTransparent), mpHost->mBgColor_2);
+        return GeometryManager::fadedColor(color, GeometryManager::levelFade(level - mMapCenterZ, moreTransparent), levelFadeTarget(level));
     };
 
     mRenderCommandQueue.addCommand(std::make_unique<GLStateCommand>(GLStateCommand::ENABLE_DEPTH_TEST));
@@ -1758,17 +1920,18 @@ void ModernGLWidget::slot_shiftCameraUp()
 
 void ModernGLWidget::slot_shiftCameraLeft()
 {
-    const QVector3D position = mCameraController.getPosition();
-    setOrientationKeepingRoll(position.y(), position.z() - 3.0f);
-    is2DView = false;
-    emitCameraControls();
-    update();
+    turnCamera(-3.0f);
 }
 
 void ModernGLWidget::slot_shiftCameraRight()
 {
+    turnCamera(3.0f);
+}
+
+void ModernGLWidget::turnCamera(const float degrees)
+{
     const QVector3D position = mCameraController.getPosition();
-    setOrientationKeepingRoll(position.y(), position.z() + 3.0f);
+    setOrientationKeepingRoll(position.y(), position.z() + degrees);
     is2DView = false;
     emitCameraControls();
     update();
@@ -1911,11 +2074,63 @@ std::optional<float> rayHitsBox(const QVector3D& origin, const QVector3D& direct
     return nearest;
 }
 
+// Where a ray first meets an upright cylinder, as a distance along it
+std::optional<float> rayHitsCylinder(const QVector3D& origin, const QVector3D& direction, const QVector3D& center, const float radius, const float halfHeight)
+{
+    const float low = center.z() - halfHeight;
+    const float high = center.z() + halfHeight;
+    const auto withinHeight = [&](const float distance) {
+        const float z = origin.z() + direction.z() * distance;
+        return distance >= 0.0f && z >= low && z <= high;
+    };
+    const auto withinRadius = [&](const float distance) {
+        const QVector3D point = origin + direction * distance - center;
+        return distance >= 0.0f && point.x() * point.x() + point.y() * point.y() <= radius * radius;
+    };
+    std::optional<float> nearest;
+    const auto consider = [&nearest](const float distance) {
+        if (!nearest || distance < *nearest) {
+            nearest = distance;
+        }
+    };
+    if (std::abs(direction.z()) > 1e-9f) {
+        for (const float capZ : {low, high}) {
+            const float distance = (capZ - origin.z()) / direction.z();
+            if (withinRadius(distance)) {
+                consider(distance);
+            }
+        }
+    }
+    // The side: where the ray's path across the map comes within radius of the axis
+    const float dx = direction.x();
+    const float dy = direction.y();
+    const float ox = origin.x() - center.x();
+    const float oy = origin.y() - center.y();
+    const float a = dx * dx + dy * dy;
+    if (a > 1e-12f) {
+        const float b = 2.0f * (ox * dx + oy * dy);
+        const float c = ox * ox + oy * oy - radius * radius;
+        const float discriminant = b * b - 4.0f * a * c;
+        if (discriminant >= 0.0f) {
+            const float root = std::sqrt(discriminant);
+            for (const float distance : {(-b - root) / (2.0f * a), (-b + root) / (2.0f * a)}) {
+                if (withinHeight(distance)) {
+                    consider(distance);
+                }
+            }
+        }
+    }
+    if (!nearest && withinRadius(0.0f) && withinHeight(0.0f)) {
+        nearest = 0.0f;
+    }
+    return nearest;
+}
+
 // A room seen nearly edge on is a sliver, so one whose center is this close to the pointer counts as hit
 constexpr qreal scmPickSlopPixels = 6.0;
 } // namespace
 
-int ModernGLWidget::roomAt(const QPoint& position, const bool orNear)
+int ModernGLWidget::roomAt(const QPoint& position, const bool orNear, const std::optional<int> onLevel)
 {
     if (!mpMap || !mpMap->mpRoomDB) {
         return 0;
@@ -1928,13 +2143,14 @@ int ModernGLWidget::roomAt(const QPoint& position, const bool orNear)
     updateMatrices();
     const auto [origin, direction] = mCameraController.rayThroughPixel(QPointF(position));
     const QVector3D halfSize(1.0f / scale, 1.0f / scale, 1.0f / scale / zFlattening);
+    const bool round = mpHost && mpHost->mBubbleMode;
     int hitRoom = 0;
     float hitDistance = std::numeric_limits<float>::max();
     int nearRoom = 0;
     qreal nearPixels = scmPickSlopPixels;
     for (const int roomId : pArea->getAreaRooms()) {
         const TRoom* pR = mpMap->mpRoomDB->getRoom(roomId);
-        if (!pR || pR->isHidden() || !levelShown(pR->z())) {
+        if (!pR || pR->isHidden() || !levelShown(pR->z()) || (onLevel && pR->z() != *onLevel)) {
             continue;
         }
         // The room hovered over is drawn raised by its height. It is hit where it rests too, or the pointer on
@@ -1942,7 +2158,10 @@ int ModernGLWidget::roomAt(const QPoint& position, const bool orNear)
         const float lift = roomId == mHoveredRoomId ? 2.0f * halfSize.z() : 0.0f;
         const QVector3D center(static_cast<float>(pR->x()), static_cast<float>(pR->y()), static_cast<float>(pR->z()) + lift);
         const QVector3D bottom = center - halfSize - QVector3D(0.0f, 0.0f, lift);
-        if (const std::optional<float> distance = rayHitsBox(origin, direction, bottom, center + halfSize)) {
+        const QVector3D top = center + halfSize;
+        const std::optional<float> distance =
+                round ? rayHitsCylinder(origin, direction, (bottom + top) / 2.0f, halfSize.x(), (top.z() - bottom.z()) / 2.0f) : rayHitsBox(origin, direction, bottom, top);
+        if (distance) {
             if (*distance < hitDistance) {
                 hitDistance = *distance;
                 hitRoom = roomId;
@@ -1958,6 +2177,55 @@ int ModernGLWidget::roomAt(const QPoint& position, const bool orNear)
         }
     }
     return hitRoom ? hitRoom : nearRoom;
+}
+
+int ModernGLWidget::areaExitAt(const QPoint& position)
+{
+    if (!mpMap || !mpMap->mpRoomDB || !mpHost || !mpMap->mpRoomDB->getArea(mAID)) {
+        return 0;
+    }
+    updateMatrices();
+    const QPointF pointer(position);
+    int nearestExit = 0;
+    qreal nearestPixels = std::numeric_limits<qreal>::max();
+    ExitScene::Options options = exitSceneOptions();
+    options.areaExitsOnly = true;
+    // Only the viewed level's, as only those are offered on the 2D map
+    options.levelsAbove = 0;
+    options.levelsBelow = 0;
+    for (const ExitScene::AreaExit& areaExit : ExitScene::build(*mpMap, *mpHost, options).areaExits) {
+        const std::optional<QPointF> from = mCameraController.pixelForPoint(areaExit.from);
+        const std::optional<QPointF> to = mCameraController.pixelForPoint(areaExit.to);
+        if (!from || !to) {
+            continue;
+        }
+        // A third of a room spacing either side of the arrow, from its room's center to its tip, but never less
+        // than the slop for a room. The 2D map takes a square of that size around one point a room out
+        const qreal reach = qMax(scmPickSlopPixels, 1.0 / (3.0 * mCameraController.worldUnitsPerPixel(areaExit.to)));
+        const QPointF along = *to - *from;
+        const qreal lengthSquared = QPointF::dotProduct(along, along);
+        const qreal t = lengthSquared > 0.0 ? std::clamp(QPointF::dotProduct(pointer - *from, along) / lengthSquared, 0.0, 1.0) : 0.0;
+        const qreal pixels = QLineF(pointer, *from + along * t).length();
+        if (pixels <= reach && pixels < nearestPixels) {
+            nearestPixels = pixels;
+            nearestExit = areaExit.destinationId;
+        }
+    }
+    return nearestExit;
+}
+
+int ModernGLWidget::roomPickedAt(const QPoint& position, const bool orNear, const bool areaExits)
+{
+    if (const int viewedRoom = roomAt(position, false, mMapCenterZ)) {
+        return viewedRoom;
+    }
+    if (areaExits) {
+        // A room on another level, and a room only near the pointer, lose to the arrow
+        if (const int exitDestination = areaExitAt(position)) {
+            return exitDestination;
+        }
+    }
+    return roomAt(position, orNear);
 }
 
 QString ModernGLWidget::roomToolTip(const int roomId) const
@@ -2030,6 +2298,9 @@ QSet<int> ModernGLWidget::roomsInRectangle(const QRect& rectangle, const bool al
     updateMatrices();
     const QRectF bounds(rectangle.normalized());
     const QVector3D halfSize(1.0f / scale, 1.0f / scale, 1.0f / scale / zFlattening);
+    const bool round = mpHost && mpHost->mBubbleMode;
+    // The corners of a round room's drawn rim, top and bottom, which must all be inside, as its edges run between them
+    constexpr int scmRimPoints = GeometryManager::scmCylinderSegments;
     for (const int roomId : pArea->getAreaRooms()) {
         const TRoom* pR = mpMap->mpRoomDB->getRoom(roomId);
         if (!pR || pR->isHidden() || !levelShown(pR->z()) || (!allLevels && pR->z() != mMapCenterZ)) {
@@ -2042,6 +2313,16 @@ QSet<int> ModernGLWidget::roomsInRectangle(const QRect& rectangle, const bool al
             const QVector3D offset((corner & 1) ? halfSize.x() : -halfSize.x(), (corner & 2) ? halfSize.y() : -halfSize.y(), (corner & 4) ? halfSize.z() : -halfSize.z());
             const std::optional<QPointF> pixel = mCameraController.pixelForPoint(center + offset);
             inside = pixel && bounds.contains(*pixel);
+        }
+        // A round room can be whole inside even where its box's corners are not
+        if (!inside && round) {
+            inside = true;
+            for (int step = 0; step < scmRimPoints * 2 && inside; ++step) {
+                const float angle = 2.0f * std::numbers::pi_v<float> * static_cast<float>(step % scmRimPoints) / static_cast<float>(scmRimPoints);
+                const QVector3D offset(halfSize.x() * std::cos(angle), halfSize.y() * std::sin(angle), step < scmRimPoints ? -halfSize.z() : halfSize.z());
+                const std::optional<QPointF> pixel = mCameraController.pixelForPoint(center + offset);
+                inside = pixel && bounds.contains(*pixel);
+            }
         }
         if (inside) {
             rooms.insert(roomId);
@@ -2161,9 +2442,9 @@ void ModernGLWidget::mousePressEvent(QMouseEvent* event)
     if (event->button() == Qt::LeftButton && editingMap() && !event->modifiers().testFlag(Qt::AltModifier)) {
         // Picked before a glide stops, as stopping it snaps the view to whole grid steps away from what was seen.
         // Only a room right under the pointer is picked up, so a drag beside rooms seen small draws a rectangle
-        const int roomId = roomAt(mPressPosition, false);
+        const int roomId = roomPickedAt(mPressPosition, false);
         const bool moveRoom = roomId && !(event->modifiers() & (Qt::ControlModifier | Qt::ShiftModifier));
-        const int rectangleRoomId = roomId ? roomId : roomAt(mPressPosition);
+        const int rectangleRoomId = roomId ? roomId : roomPickedAt(mPressPosition);
         const TRoom* pRoom = moveRoom ? mpMap->mpRoomDB->getRoom(roomId) : nullptr;
         QPointF snap;
         if (mCameraSmoothAnimating) {
@@ -2196,7 +2477,7 @@ void ModernGLWidget::mousePressEvent(QMouseEvent* event)
     if (event->button() == Qt::LeftButton) {
         // A plain click on a room selects it at once, as on the 2D map; anything else waits for the release, as a
         // drag from empty space pans and a Ctrl or Shift drag orbits
-        const int roomId = event->modifiers() == Qt::NoModifier ? roomAt(mPressPosition) : 0;
+        const int roomId = event->modifiers() == Qt::NoModifier ? roomPickedAt(mPressPosition) : 0;
         if (roomId) {
             selectRoom(roomId, event->modifiers());
         } else {
@@ -2335,7 +2616,7 @@ void ModernGLWidget::mouseReleaseEvent(QMouseEvent* event)
     endPan();
     if (event->button() == Qt::LeftButton && mClickPending) {
         mClickPending = false;
-        selectRoom(roomAt(event->position().toPoint()), event->modifiers());
+        selectRoom(roomPickedAt(event->position().toPoint()), event->modifiers());
     } else if (event->button() == Qt::RightButton && mpMap && mpMap->mpRoomDB) {
         showContextMenu(event->position().toPoint());
     }
@@ -2359,8 +2640,7 @@ void ModernGLWidget::mouseDoubleClickEvent(QMouseEvent* event)
         QOpenGLWidget::mouseDoubleClickEvent(event);
         return;
     }
-    const int roomId = roomAt(event->position().toPoint());
-    if (roomId) {
+    if (const int roomId = destinationAt(event->position().toPoint())) {
         mp2DMap->initiateSpeedWalk(mpMap->mRoomIdHash.value(mpMap->mProfileName), roomId);
         update();
     }
@@ -2372,7 +2652,7 @@ void ModernGLWidget::showContextMenu(const QPoint& position)
     if (!mp2DMap) {
         return;
     }
-    const int roomId = roomAt(position);
+    const int roomId = roomPickedAt(position);
     RoomContextMenuHandler handler(*mp2DMap);
     QMenu* menu = handler.menuForOtherView(roomId, this);
     if (!menu) {
@@ -2415,7 +2695,7 @@ int ModernGLWidget::roomUnderPointer()
     if (!mPointerInView || mPointerButtons != Qt::NoButton || compassRect().contains(mPointerPosition)) {
         return 0;
     }
-    return roomAt(mPointerPosition);
+    return roomPickedAt(mPointerPosition);
 }
 
 void ModernGLWidget::setHoveredRoom(const int roomId)
@@ -2625,6 +2905,10 @@ void ModernGLWidget::focusOutEvent(QFocusEvent* event)
     QOpenGLWidget::focusOutEvent(event);
 }
 
+namespace {
+constexpr float scmKeyTurnDegrees = 15.0f;
+} // namespace
+
 void ModernGLWidget::keyPressEvent(QKeyEvent* event)
 {
     // A modifier pressed on its own waits for the key it goes with, such as Shift+Tab or the Shift for +; handed on
@@ -2680,6 +2964,18 @@ void ModernGLWidget::keyPressEvent(QKeyEvent* event)
             return;
         case Qt::Key_F:
             fitArea();
+            return;
+        case Qt::Key_Q:
+            turnCamera(-scmKeyTurnDegrees);
+            return;
+        case Qt::Key_E:
+            turnCamera(scmKeyTurnDegrees);
+            return;
+        case Qt::Key_PageUp:
+            slot_shiftZup();
+            return;
+        case Qt::Key_PageDown:
+            slot_shiftZdown();
             return;
         default:
             break;
@@ -2767,6 +3063,8 @@ void ModernGLWidget::slot_resetPlayerIcon()
 
 void ModernGLWidget::queueScene()
 {
+    // First, as on the 2D map, where the other levels, the labels and everything else paint over it
+    queueGrid();
     renderConnections();
     // Labels beneath the rooms come before them without writing depth, so that the translucent rooms
     // of other levels show over them rather than cutting holes in them

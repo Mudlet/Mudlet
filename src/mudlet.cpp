@@ -4812,6 +4812,17 @@ void mudlet::readLateSettings(const QSettings& settings)
     // console look broken today.
 }
 
+void mudlet::setDrawUpperLowerLevels(const bool draw)
+{
+    mDrawUpperLowerLevels = draw;
+    // Every profile's maps, as the setting is the application's
+    for (auto pHost : mHostManager) {
+        if (pHost && pHost->mpMap) {
+            pHost->mpMap->requestMapRepaint();
+        }
+    }
+}
+
 void mudlet::setToolBarIconSize(const int s)
 {
     if (mToolbarIconSize == s || s <= 0) {

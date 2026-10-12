@@ -45,6 +45,8 @@ struct Options
     // In and out exits drawn as a short stub from their room, rather than all the way
     bool inOutStubs = false;
     bool largeAreaExitArrows = false;
+    // Only where area exits can be clicked, with nothing to draw, for picking without the cost of the whole scene
+    bool areaExitsOnly = false;
     QColor exitColor;
     // The map's background, against which area exits are outlined
     QColor background;
@@ -72,12 +74,23 @@ struct Triangle
     int level = 0;
 };
 
+// An area exit's arrow, from its room's center to its tip, for clicking through to destinationId
+struct AreaExit
+{
+    QVector3D from;
+    QVector3D to;
+    int destinationId = 0;
+    int level = 0;
+};
+
 // Drawn with the depth test, so overlaps are settled by height, not list order: a door stands
 // taller than its line and an arrowhead's fill sits a little off its outline
 struct Scene
 {
     QList<Segment> segments;
     QList<Triangle> triangles;
+    // Not drawn: where an area exit can be clicked
+    QList<AreaExit> areaExits;
     // The first room with a dotted or dashed line drawn solid, as its pattern would repeat too often along it; 0 if none
     int solidDashRoomId = 0;
 };

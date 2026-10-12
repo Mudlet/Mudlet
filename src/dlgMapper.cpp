@@ -1009,7 +1009,9 @@ void dlgMapper::slot_setShowGrid(bool showGrid)
 {
     mp2dMap->mShowGrid = showGrid;
     mp2dMap->mpHost->mMapperShowGrid = showGrid;
-    mp2dMap->update();
+    repaintMaps();
+    // The map's other windows too
+    mpMap->requestMapRepaint();
 }
 
 void dlgMapper::slot_toggleRoundRooms(const bool state)
@@ -1019,7 +1021,8 @@ void dlgMapper::slot_toggleRoundRooms(const bool state)
     }
     if (mp2dMap->mBubbleMode != state) {
         mp2dMap->mBubbleMode = state;
-        mp2dMap->update();
+        repaintMaps();
+        mpMap->requestMapRepaint();
     }
 }
 
@@ -1293,10 +1296,8 @@ void dlgMapper::slot_setupMapperMenu()
 
 void dlgMapper::slot_toggleUpperLowerLevels(bool enabled)
 {
-    mudlet::self()->mDrawUpperLowerLevels = enabled;
-    if (mp2dMap) {
-        mp2dMap->update();
-    }
+    mudlet::self()->setDrawUpperLowerLevels(enabled);
+    repaintMaps();
 }
 
 void dlgMapper::slot_toggleShowRoomIDsFromMenu(bool enabled)
