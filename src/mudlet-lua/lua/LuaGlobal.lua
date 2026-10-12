@@ -22,6 +22,13 @@ mssp = {}
 
 function __gmcp_merge_gmcp_sub_tables( a, key )
   local _m = a.__needMerge;
+  -- a merge key whose payload is not a JSON object or array has nothing to merge into
+  -- the old table, so take it as is, the same as an unmerged key would
+  if _m ~= nil and type(_m) ~= "table" then
+    a[key] = _m
+    a.__needMerge = nil
+    return
+  end
   for k, v in pairs(_m) do
     a[key][k] = v;
   end

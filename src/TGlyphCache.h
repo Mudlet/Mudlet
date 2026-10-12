@@ -21,11 +21,13 @@
  ***************************************************************************/
 
 #include <QFlags>
+#include <QColor>
 #include <QFont>
-#include <QGlyphRun>
 #include <QHash>
 #include <QList>
 #include <QMetaObject>
+#include <QPointF>
+#include <QRawFont>
 #include <QString>
 #include <QStringView>
 
@@ -54,8 +56,17 @@ public:
     void setFont(const QFont&, const QPaintDevice&);
     // Places the grapheme exactly where drawText(cell, Qt::AlignCenter |
     // Qt::TextDontClip | Qt::TextSingleLine, grapheme) would have put it,
-    // shaped with the font given to the last setFont().
-    void drawCentered(QPainter&, const QRect& cell, QStringView grapheme, Style);
+    // shaped with the font given to the last setFont(). Returns how far down its ink reaches.
+    qreal drawCentered(QPainter&, const QRect& cell, QStringView grapheme, Style);
+    // As drawCentered() in `color`, but the glyphs only reach the painter at
+    // the next flush(), so that a line costs one draw call per color rather
+    // than one per cell. Anything else drawn with the painter has to wait for
+    // that flush, or it lands beneath glyphs queued before it.
+    qreal queueCentered(QPainter&, const QRect& cell, QStringView grapheme, Style, const QColor& color);
+    // Where drawCentered() would leave the bottom of the grapheme's ink, without drawing it.
+    qreal inkBottom(const QRect& cell, QStringView grapheme, Style);
+    // Draws the queued glyphs, leaving the painter's pen in their color.
+    void flush(QPainter&);
     qsizetype size() const { return mEntries.size(); }
     // The display font as a cell in this style is drawn with, for text that
     // does not go through the cache, so that both paths agree on its weight.
@@ -78,13 +89,25 @@ private:
     };
     friend size_t qHash(const Key& key, size_t seed) noexcept { return qHashMulti(seed, key.text, key.style.toInt()); }
 
+    struct Run
+    {
+        QRawFont font;
+        QList<quint32> glyphs;
+        QList<QPointF> positions;
+    };
+
     struct Entry
     {
         // More than one when part of the grapheme comes from a fallback font.
-        QList<QGlyphRun> runs;
+        QList<Run> runs;
         qreal advance = 0.0;
         qreal height = 0.0;
+        // Below the origin, from the glyphs' outlines: stacked combining marks
+        // can reach several lines past the line box the runs' own bounds give.
+        qreal inkBottom = 0.0;
     };
+
+    static QPointF origin(const QRect& cell, const Entry&);
 
     const Entry& lookup(QStringView grapheme, Style);
     Entry shape(QStringView grapheme, Style) const;
@@ -98,6 +121,11 @@ private:
     // resolved again - as drawText() would have done on its next call. mFont
     // can stay, as Qt drops every font's resolved files when the database changes.
     QMetaObject::Connection mFontDatabaseConnection;
+
+    QRawFont mQueuedFont;
+    QColor mQueuedColor;
+    QList<quint32> mQueuedGlyphs;
+    QList<QPointF> mQueuedPositions;
 };
 
 Q_DECLARE_OPERATORS_FOR_FLAGS(TGlyphCache::Style)

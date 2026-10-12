@@ -30,7 +30,6 @@
 #include "utils.h"
 
 #include <QLatin1String>
-#include <QMapIterator>
 #include <QSet>
 #include <QStringList>
 
@@ -271,10 +270,8 @@ void ScriptUnit::removeScript(TScript* pT)
     if (!pT) {
         return;
     }
-    QMapIterator<QString, QList<TScript*>> it(mpHost->mEventHandlerMap);
-    while (it.hasNext()) {
-        it.next();
-        mpHost->mEventHandlerMap[it.key()].removeAll(pT);
+    for (auto& handlers : mpHost->mEventHandlerMap) {
+        handlers.removeAll(pT);
     }
     mScriptMap.remove(pT->getID());
 }

@@ -1,4 +1,4 @@
-# Precompiled headers for mudlet_core and the test binaries that link it.
+# Precompiled headers for mudlet_core, mudlet_app and the test binaries.
 #
 # Only third-party headers belong in the list: they change with the toolchain,
 # not with a pull request. A Mudlet header in it would turn every edit to that
@@ -31,14 +31,18 @@ set(MUDLET_PRECOMPILED_HEADERS
   <QVector>
   <QAction> <QColor> <QEnterEvent> <QFont> <QIcon> <QKeySequence> <QMovie>
   <QPixmap> <QResizeEvent> <QShortcut> <QTextOption> <QTransform>
+  <QHostAddress> <QHostInfo> <QNetworkAccessManager> <QNetworkCookie>
+  <QNetworkCookieJar> <QNetworkReply> <QNetworkRequest> <QSslConfiguration>
+  <QSslPreSharedKeyAuthenticator> <QSslSocket>
+)
+
+# Qt Widgets, which mudlet_core does not link: only for mudlet_app and the tests.
+set(MUDLET_PRECOMPILED_WIDGET_HEADERS
   <QApplication> <QBoxLayout> <QCheckBox> <QComboBox> <QDialog> <QFrame>
   <QGridLayout> <QGroupBox> <QHBoxLayout> <QLabel> <QLineEdit> <QMainWindow>
   <QMdiArea> <QMenu> <QMenuBar> <QPlainTextEdit> <QPushButton> <QSpacerItem>
   <QSpinBox> <QSystemTrayIcon> <QTabWidget> <QToolButton> <QTreeWidget>
   <QVBoxLayout> <QWidget>
-  <QHostAddress> <QHostInfo> <QNetworkAccessManager> <QNetworkCookie>
-  <QNetworkCookieJar> <QNetworkReply> <QNetworkRequest> <QSslConfiguration>
-  <QSslPreSharedKeyAuthenticator> <QSslSocket>
 )
 
 # ccache only takes direct-mode hits on a file that uses a precompiled header
@@ -56,8 +60,16 @@ if(CCACHE_FOUND AND NOT CMAKE_DISABLE_PRECOMPILE_HEADERS)
   list(REMOVE_ITEM ccacheSloppiness "")
   list(REMOVE_DUPLICATES ccacheSloppiness)
   list(JOIN ccacheSloppiness "," ccacheSloppiness)
+  set(pchLauncherEnvironment "CCACHE_SLOPPINESS=${ccacheSloppiness}" ${MUDLET_CCACHE_ENV})
+  # A Clang precompiled header names the build tree it was made in and fails to
+  # load once that tree is gone, so one must never reach another checkout
+  # through a base_dir cache hit. Target-wide, as the objects using it hash its
+  # contents and so could only hit alongside it.
+  if(CMAKE_CXX_COMPILER_ID MATCHES "Clang")
+    list(APPEND pchLauncherEnvironment "CCACHE_BASEDIR=")
+  endif()
   set(MUDLET_PCH_COMPILER_LAUNCHER
-      ${CMAKE_COMMAND} -E env "CCACHE_SLOPPINESS=${ccacheSloppiness}" ${CCACHE_FOUND})
+      ${CMAKE_COMMAND} -E env ${pchLauncherEnvironment} ${CCACHE_FOUND})
 endif()
 
 function(mudlet_use_pch_compiler_launcher target)
@@ -80,9 +92,7 @@ endfunction()
 
 # Test executables are mostly one or two files each, so a precompiled header of
 # their own would cost more than it saves. They share one per directory
-# instead - one directory, because Qt6::Test defines QT_TESTCASE_BUILDDIR and
-# QT_TESTCASE_SOURCEDIR from it, and a precompiled header is only reused under
-# the definitions it was built with.
+# instead.
 function(mudlet_add_test_pch_provider provider)
   if(CMAKE_DISABLE_PRECOMPILE_HEADERS)
     return()
@@ -90,8 +100,8 @@ function(mudlet_add_test_pch_provider provider)
   file(CONFIGURE OUTPUT "${CMAKE_CURRENT_BINARY_DIR}/${provider}.cpp" CONTENT "")
   add_library(${provider} OBJECT "${CMAKE_CURRENT_BINARY_DIR}/${provider}.cpp")
   set_target_properties(${provider} PROPERTIES AUTOMOC OFF)
-  target_link_libraries(${provider} PRIVATE Qt6::Test ${LIB_MUDLET_TARGET})
-  mudlet_precompile_headers(${provider} <QSignalSpy> <QTest>)
+  target_link_libraries(${provider} PRIVATE Qt6::Test ${LIB_MUDLET_APP_TARGET})
+  mudlet_precompile_headers(${provider} ${MUDLET_PRECOMPILED_WIDGET_HEADERS} <QSignalSpy> <QTest>)
 endfunction()
 
 function(mudlet_reuse_test_pch target provider)

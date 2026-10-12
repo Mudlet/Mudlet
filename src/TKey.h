@@ -69,8 +69,10 @@ public:
     bool match(const Qt::Key, const Qt::KeyboardModifiers, const bool);
     // Query-only counterpart to match(), which executes what it matches
     bool wouldMatch(const Qt::Key, const Qt::KeyboardModifiers) const;
-    // The binding wouldMatch() found, for naming it in a clash report
+    // The binding wouldMatch() found
     const TKey* firstMatch(const Qt::Key, const Qt::KeyboardModifiers) const;
+    // As firstMatch(), but switched off bindings count too
+    const TKey* firstBinding(const Qt::Key, const Qt::KeyboardModifiers) const;
     bool registerKey();
     void validateKeyBinding();
 

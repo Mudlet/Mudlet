@@ -21,6 +21,8 @@
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
 
+#include "TMxpFrameFrontend.h"
+
 #include <QMap>
 #include <QPointer>
 #include <QRect>
@@ -37,41 +39,30 @@ class TPrintSink;
 // The widgets of a profile's MXP frames, kept by frame name. TMxpFrameManager
 // decides where each frame goes and how frames nest; this builds, shows and
 // removes what the player sees of them.
-class TMxpFrameWidgets
+class TMxpFrameWidgets final : public TMxpFrameFrontend
 {
 public:
     explicit TMxpFrameWidgets(TMainConsole* pMainConsole);
 
-    // A frame on the main window, or inside hostName's frame when that is set,
-    // with its title on a tab header when showHeader
-    void createInternalFrame(const QString& name, const QString& hostName, const QString& title, const QRect& geometry, bool showHeader, bool scrolling);
-    // A frame in a window of its own, whose resizes are reported to the frame
-    // manager from then on. The size the window is shown at, or nothing when no
-    // console could be made for it.
-    std::optional<QSize> createExternalFrame(const QString& name, const QString& title, const QSize& size, bool scrolling);
-    void createTabFrame(const QString& name, const QString& title, const QString& parentName, const QSize& size, bool scrolling, bool select);
-    // False, leaving everything alone, when name is not a tab in parentName's header
-    bool removeFromParentTabs(const QString& name, const QString& parentName);
-    // Also deregisters the name's sub-console and dock whether or not this
-    // built them, as the name is the frame's to give up either way
-    void destroyFrame(const QString& name);
-    void showFrame(const QString& name);
-    void focusFrame(const QString& name);
-
-    void setGeometry(const QString& name, const QRect& geometry);
+    void createInternalFrame(const QString& name, const QString& hostName, const QString& title, const QRect& geometry, bool showHeader, bool scrolling) override;
+    std::optional<QSize> createExternalFrame(const QString& name, const QString& title, const QSize& size, bool scrolling) override;
+    void createTabFrame(const QString& name, const QString& title, const QString& parentName, const QSize& size, bool scrolling, bool select) override;
+    bool removeFromParentTabs(const QString& name, const QString& parentName) override;
+    void destroyFrame(const QString& name) override;
+    void showFrame(const QString& name) override;
+    void focusFrame(const QString& name) override;
+    void setGeometry(const QString& name, const QRect& geometry) override;
+    void reportSize() override;
+    TPrintSink* sink(const QString& name) const override;
+    bool hasFrameWidget(const QString& name) const override { return frameWidget(name) != nullptr; }
 
     // Tells the frame manager the main console's size on the next event loop
     // turn, and has it reposition the frames if relayout was set on any call
     // before then while frames were open
     void scheduleSizeReport(bool relayout);
-    // Tells the frame manager the main console's size now
-    void reportSize();
     // Tells the frame manager the space the pages of headerName's tabs have,
     // and has it place what is nested in them again if that changed it
     void reportTabAreaSize(const QString& headerName, const QSize& size);
-    // Null for a frame without a console, and for one that would print back
-    // into the main console
-    TPrintSink* sink(const QString& name) const;
 
     // For callers that need the widgets themselves
     QWidget* frameWidget(const QString& name) const;

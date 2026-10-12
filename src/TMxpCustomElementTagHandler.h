@@ -24,12 +24,16 @@
 #include "TMxpContext.h"
 #include "TMxpTagHandler.h"
 
+#include <QSet>
+
 class TMxpCustomElementTagHandler : public TMxpTagHandler
 {
     QString mCurrentFlagName;
     QString mCurrentFlagContent;
     QMap<QString, QString> mCurrentFlagAttributes;
+    QSet<QString> mElementsBeingExpanded;
 
+    bool mayExpand(const QString& key) const;
     MxpStartTag resolveElementDefinition(const TMxpElement& element, MxpStartTag* definitionTag, MxpStartTag* customTag) const;
     static QString mapAttributes(const TMxpElement& element, const QString& input, MxpStartTag* tag);
     void setFlag(TMxpClient& ctx, const MxpStartTag* tag, const TMxpElement& el);
@@ -37,13 +41,14 @@ class TMxpCustomElementTagHandler : public TMxpTagHandler
     const QMap<QString, QString>& parseFlagAttributes(const MxpStartTag* tag, const TMxpElement& el);
 
 public:
-    bool supports(TMxpContext& ctx, TMxpClient& client, MxpTag* tag) override {
+    bool supports(TMxpContext& ctx, TMxpClient& client, MxpTag* tag) override
+    {
         Q_UNUSED(client)
         return ctx.getElementRegistry().containsElement(tag->getName());
     }
 
     TMxpTagHandlerResult handleStartTag(TMxpContext& ctx, TMxpClient& client, MxpStartTag* tag) override;
     TMxpTagHandlerResult handleEndTag(TMxpContext& ctx, TMxpClient& client, MxpEndTag* tag) override;
-    void handleContent(char ch) override;
+    void handleContentBytes(QByteArrayView bytes) override;
 };
 #endif //MUDLET_TMXPCUSTOMELEMENTTAGHANDLER_H

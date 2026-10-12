@@ -41,7 +41,6 @@
 #include "TMapLabel.h"
 #include "TMedia.h"
 #include "TRoomDB.h"
-#include "TTabBar.h"
 #include "TTimer.h"
 #include "mapInfoContributorManager.h"
 
@@ -138,6 +137,13 @@ int TLuaInterpreter::ttsSkip(lua_State* L)
 // No documentation available in wiki - internal function
 void TLuaInterpreter::ttsStateChanged(QTextToSpeech::State state)
 {
+    // The engine has no parent and outlives the main window, so it can still
+    // report the end of an utterance after the profiles are gone at quit.
+    // There is nobody left to tell, and nothing more should be said.
+    if (!HostManager::self()) {
+        return;
+    }
+
     // ttsSpeak() announces an utterance itself when the engine was already
     // speaking, because there is then no state edge to announce it. An engine
     // that gets round to reporting the interruption afterwards ends up here
@@ -202,7 +208,7 @@ void TLuaInterpreter::ttsStateChanged(QTextToSpeech::State state)
         // is never coming waits forever. Look again once the engine has had its
         // chance to start speaking - if it is still idle, that Ready did mean
         // idle and the queue is free to go.
-        QTimer::singleShot(scmInterruptedSpeechGrace, qApp, []() {
+        QTimer::singleShot(scmInterruptedSpeechGrace, QCoreApplication::instance(), []() {
             if (!speechUnit.isNull() && speechUnit->state() == QTextToSpeech::State::Ready && !speechQueue.isEmpty()) {
                 TLuaInterpreter::ttsStateChanged(QTextToSpeech::State::Ready);
             }
