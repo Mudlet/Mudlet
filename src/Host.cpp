@@ -472,8 +472,7 @@ Host::Host(int port, const QString& hostname, const QString& login, const QStrin
     mpMainConsoleModel = std::make_shared<TConsoleModel>(this);
     mpMainConsoleModel->mConsoleName = qsl("main");
     mpMainConsoleModel->mScriptAddressable = true;
-    mpMainConsoleModel->mCommandFgColor = mCommandFgColor;
-    mpMainConsoleModel->mCommandBgColor = mCommandBgColor;
+    refreshMainConsoleColors();
 
     mServerWrapFlushTimer.setSingleShot(true);
     mServerWrapFlushTimer.setInterval(TBuffer::csmServerWrapFlushDelayMs);
@@ -5510,6 +5509,10 @@ std::pair<bool, QString> Host::createMiniConsole(const QString& windowname, cons
     }
 
     if (!mWindowRegistry.hasSubConsole(name)) {
+        // The null view would make it in its main window, as it has no record of a detached view's windows
+        if (!hasConsoleView() && !mpNullConsoleFrontend->ownsContainer(windowname)) {
+            return TNullConsoleFrontend::noView();
+        }
         consoleFrontend()->addMiniConsole(windowname, name, x, y, width, height);
         return {true, QString()};
     }
@@ -5527,15 +5530,14 @@ std::pair<bool, QString> Host::createMiniConsole(const QString& windowname, cons
 
 std::pair<bool, QString> Host::createScrollBox(const QString& windowname, const QString& name, int x, int y, int width, int height) const
 {
-    if (!hasConsoleView()) {
-        return TNullConsoleFrontend::noView();
-    }
-
     if (parentWindowMissing(windowname)) {
         return {false, qsl("window '%1' not found").arg(windowname)};
     }
 
     if (!mWindowRegistry.hasScrollBox(name)) {
+        if (!hasConsoleView() && !mpNullConsoleFrontend->ownsContainer(windowname)) {
+            return TNullConsoleFrontend::noView();
+        }
         if (consoleFrontend()->createScrollBox(windowname, name, x, y, width, height)) {
             return {true, QString()};
         }
@@ -5558,6 +5560,9 @@ std::pair<bool, QString> Host::createLabel(const QString& windowname, const QStr
     }
     if (mWindowRegistry.hasSubConsole(name)) {
         return {false, qsl("a miniconsole/userwindow with the name '%1' already exists").arg(name)};
+    }
+    if (!hasConsoleView() && !mpNullConsoleFrontend->ownsContainer(windowname)) {
+        return TNullConsoleFrontend::noView();
     }
     consoleFrontend()->createLabel(windowname, name, x, y, width, height, fillBg, clickthrough);
     return {true, QString()};
@@ -5755,9 +5760,6 @@ bool Host::moveWindow(const QString& name, int x1, int y1)
 
 std::pair<bool, QString> Host::setWindow(const QString& windowname, const QString& name, int x1, int y1, bool show)
 {
-    if (!hasConsoleView()) {
-        return TNullConsoleFrontend::noView();
-    }
     //checks - for reasons why the indicated thing might not be moved to the indicated destination
     if (mWindowRegistry.hasDockWidget(name)) {
         return {false, qsl("element '%1' is the base of a floating/dockable user window and may not be moved").arg(name)};
@@ -5780,6 +5782,10 @@ std::pair<bool, QString> Host::setWindow(const QString& windowname, const QStrin
     if (mWindowRegistry.hasLabel(name)) {
         if (consoleFrontend()->reparentLabel(windowname, name, x1, y1, show)) {
             return {true, QString()};
+        }
+        if (!hasConsoleView()) {
+            // A detached view's, which only that view can move
+            return TNullConsoleFrontend::noView();
         }
         return {false, qsl("element '%1' not found").arg(name)};
     }
@@ -5883,10 +5889,6 @@ bool Host::resetCmdLineAction(const QString& name)
 
 bool Host::setLabelClickCallback(const QString& name, const int func)
 {
-    if (!hasConsoleView()) {
-        return false;
-    }
-
     auto* pModel = mWindowRegistry.labelModel(name);
     if (pModel) {
         pModel->setClick(func);
@@ -5897,10 +5899,6 @@ bool Host::setLabelClickCallback(const QString& name, const int func)
 
 bool Host::setLabelDoubleClickCallback(const QString& name, const int func)
 {
-    if (!hasConsoleView()) {
-        return false;
-    }
-
     auto* pModel = mWindowRegistry.labelModel(name);
     if (pModel) {
         pModel->setDoubleClick(func);
@@ -5911,10 +5909,6 @@ bool Host::setLabelDoubleClickCallback(const QString& name, const int func)
 
 bool Host::setLabelReleaseCallback(const QString& name, const int func)
 {
-    if (!hasConsoleView()) {
-        return false;
-    }
-
     auto* pModel = mWindowRegistry.labelModel(name);
     if (pModel) {
         pModel->setRelease(func);
@@ -5925,10 +5919,6 @@ bool Host::setLabelReleaseCallback(const QString& name, const int func)
 
 bool Host::setLabelMoveCallback(const QString& name, const int func)
 {
-    if (!hasConsoleView()) {
-        return false;
-    }
-
     auto* pModel = mWindowRegistry.labelModel(name);
     if (pModel) {
         pModel->setMove(func);
@@ -5939,10 +5929,6 @@ bool Host::setLabelMoveCallback(const QString& name, const int func)
 
 bool Host::setLabelWheelCallback(const QString& name, const int func)
 {
-    if (!hasConsoleView()) {
-        return false;
-    }
-
     auto* pModel = mWindowRegistry.labelModel(name);
     if (pModel) {
         pModel->setWheel(func);
@@ -5953,10 +5939,6 @@ bool Host::setLabelWheelCallback(const QString& name, const int func)
 
 bool Host::setLabelOnEnter(const QString& name, const int func)
 {
-    if (!hasConsoleView()) {
-        return false;
-    }
-
     auto* pModel = mWindowRegistry.labelModel(name);
     if (pModel) {
         pModel->setEnter(func);
@@ -5967,10 +5949,6 @@ bool Host::setLabelOnEnter(const QString& name, const int func)
 
 bool Host::setLabelOnLeave(const QString& name, const int func)
 {
-    if (!hasConsoleView()) {
-        return false;
-    }
-
     auto* pModel = mWindowRegistry.labelModel(name);
     if (pModel) {
         pModel->setLeave(func);
@@ -5981,10 +5959,6 @@ bool Host::setLabelOnLeave(const QString& name, const int func)
 
 std::pair<bool, QString> Host::setMovie(const QString& name, const QString& moviePath)
 {
-    if (!hasConsoleView()) {
-        return TNullConsoleFrontend::noView();
-    }
-
     if (!mWindowRegistry.hasLabel(name)) {
         return {false, qsl("label '%1' does not exist").arg(name)};
     }
@@ -5994,20 +5968,11 @@ std::pair<bool, QString> Host::setMovie(const QString& name, const QString& movi
 
 QSize Host::calcFontSize(const QString& windowName)
 {
-    if (namesMainConsoleWithNoMainWindow(windowName)) {
-        const QFontMetrics fontMetrics(displayFontWithNoView());
-        return QSize(fontMetrics.horizontalAdvance(QChar('W')), fontMetrics.height());
-    }
-
     return consoleFrontend()->consoleFontSize(windowName).value_or(QSize(-1, -1));
 }
 
 int Host::calcColumnWidth(const QString& windowName)
 {
-    if (namesMainConsoleWithNoMainWindow(windowName)) {
-        return QFontMetrics(displayFontWithNoView()).averageCharWidth();
-    }
-
     if (!consoleFrontend()) {
         return -1;
     }
@@ -6017,10 +5982,6 @@ int Host::calcColumnWidth(const QString& windowName)
 
 bool Host::setProfileStyleSheet(const QString& styleSheet)
 {
-    if (!hasConsoleView()) {
-        return false;
-    }
-
     mProfileStyleSheet = styleSheet;
     consoleFrontend()->setProfileStyleSheet(styleSheet);
     emit signal_profileStyleSheetChanged(styleSheet);
@@ -6039,10 +6000,6 @@ bool Host::setBackgroundColor(const QString& name, int r, int g, int b, int alph
 
 std::optional<QColor> Host::getBackgroundColor(const QString& name) const
 {
-    if (!hasConsoleView()) {
-        return {};
-    }
-
     if (auto pModel = mWindowRegistry.subConsoleModel(name)) {
         return {pModel->mBgColor};
     }
@@ -6052,10 +6009,6 @@ std::optional<QColor> Host::getBackgroundColor(const QString& name) const
 
 bool Host::setBackgroundImage(const QString& name, QString& imgPath, int mode, bool fullWindow)
 {
-    if (!hasConsoleView()) {
-        return false;
-    }
-
     // Mode 4 ('style') is a raw QSS fragment (e.g. a gradient), not a literal file
     // path - normalising separators would corrupt any url()/gradient syntax in it:
     if (mode != 4) {
@@ -6084,10 +6037,6 @@ bool Host::setBackgroundImage(const QString& name, QString& imgPath, int mode, b
 
 bool Host::resetBackgroundImage(const QString& name, bool fullWindow)
 {
-    if (!hasConsoleView()) {
-        return false;
-    }
-
     if (fullWindow) {
         return consoleFrontend()->resetWindowBackgroundImage();
     }
@@ -6386,9 +6335,6 @@ std::optional<QString> Host::windowType(const QString& name) const
 
 std::optional<QString> Host::labelStyleSheet(const QString& name) const
 {
-    if (!hasConsoleView()) {
-        return {};
-    }
     if (const TLabelModel* pLabel = mWindowRegistry.labelModel(name)) {
         return pLabel->mStyleSheet;
     }
@@ -6397,9 +6343,6 @@ std::optional<QString> Host::labelStyleSheet(const QString& name) const
 
 std::optional<QString> Host::labelToolTip(const QString& name) const
 {
-    if (!hasConsoleView()) {
-        return {};
-    }
     if (const TLabelModel* pLabel = mWindowRegistry.labelModel(name)) {
         return pLabel->mToolTip;
     }
@@ -6408,9 +6351,6 @@ std::optional<QString> Host::labelToolTip(const QString& name) const
 
 std::optional<QFont> Host::labelFont(const QString& name) const
 {
-    if (!hasConsoleView()) {
-        return {};
-    }
     if (const TLabelModel* pLabel = mWindowRegistry.labelModel(name)) {
         return pLabel->mFont;
     }
@@ -6447,9 +6387,6 @@ std::pair<bool, QString> Host::userWindowTitle(const QString& name) const
 
 std::optional<QString> Host::userWindowStyleSheet(const QString& name) const
 {
-    if (!hasConsoleView()) {
-        return {};
-    }
     return mWindowRegistry.userWindowStyleSheet(name);
 }
 
@@ -6457,15 +6394,11 @@ std::optional<QString> Host::userWindowStyleSheet(const QString& name) const
 // (see TMainConsole::reportGeometry()), so this needs no widget.
 std::optional<QRect> Host::windowGeometry(const QString& name) const
 {
-    if (!hasConsoleView()) {
-        return {};
-    }
-
     if (name.isEmpty() || name == QLatin1String("main")) {
         // 0,0 rather than the console's pos(), which under multi-view is an
         // offset within the split; the size is mainWindowSize()'s so the two
         // functions cannot disagree.
-        return {QRect(QPoint(0, 0), mWindowRegistry.mainWindowSize())};
+        return {QRect(QPoint(0, 0), mainWindowSize().value_or(QSize()))};
     }
     if (const TLabelModel* pLabel = mWindowRegistry.labelModel(name)) {
         return pLabel->mGeometry;
@@ -6484,40 +6417,38 @@ std::optional<QRect> Host::windowGeometry(const QString& name) const
 std::optional<QSize> Host::mainWindowSize() const
 {
     if (!hasConsoleView()) {
-        return {};
+        // Nothing lays the main console out, so it is the character grid NAWS reports
+        const QFontMetrics metrics(consoleFrontend()->displayFont());
+        return {QSize(mScreenWidth * metrics.averageCharWidth(), mScreenHeight * metrics.height())};
     }
     return {mWindowRegistry.mainWindowSize()};
 }
 
 std::optional<QSize> Host::windowGridSize(const QString& name) const
 {
-    if (!hasConsoleView()) {
-        return {};
-    }
     const TConsoleModel* pModel = consoleModelNamed(name);
     if (!pModel) {
         return {};
+    }
+    if (pModel == mpMainConsoleModel.get() && !hasConsoleView()) {
+        return {QSize(mScreenWidth, mScreenHeight)};
     }
     return {pModel->mGridSize};
 }
 
 std::optional<int> Host::windowScroll(const QString& name) const
 {
-    if (!hasConsoleView()) {
-        return {};
-    }
     TConsoleModel* pModel = consoleModelNamed(name);
     if (!pModel) {
         return {};
     }
-    return {std::max(std::min(pModel->mUpperPaneCursorY, pModel->buffer.getLastLineNumber()), 0)};
+    const int lastLine = pModel->buffer.getLastLineNumber();
+    const int line = hasConsoleView() ? pModel->mUpperPaneCursorY : pModel->mScrolledBackTo.value_or(lastLine);
+    return {std::max(std::min(line, lastLine), 0)};
 }
 
 std::optional<bool> Host::windowScrolling(const QString& name) const
 {
-    if (!hasConsoleView()) {
-        return {};
-    }
     const TConsoleModel* pModel = consoleModelNamed(name);
     if (!pModel) {
         return {};
@@ -6527,9 +6458,6 @@ std::optional<bool> Host::windowScrolling(const QString& name) const
 
 std::optional<bool> Host::windowScrollBarVisible(const QString& name) const
 {
-    if (!hasConsoleView()) {
-        return {};
-    }
     const TConsoleModel* pModel = consoleModelNamed(name);
     if (!pModel) {
         return {};
@@ -6539,12 +6467,6 @@ std::optional<bool> Host::windowScrollBarVisible(const QString& name) const
 
 std::optional<QFont> Host::windowFont(const QString& name) const
 {
-    if (namesMainConsoleWithNoMainWindow(name)) {
-        return {displayFontWithNoView()};
-    }
-    if (!hasConsoleView()) {
-        return {};
-    }
     const TConsoleModel* pModel = consoleModelNamed(name);
     if (!pModel) {
         return {};
@@ -6557,22 +6479,20 @@ std::optional<QFont> Host::windowFont(const QString& name) const
 
 std::optional<int> Host::windowFontSize(const QString& name) const
 {
-    if (namesMainConsoleWithNoMainWindow(name)) {
-        return {displayFontWithNoView().pointSize()};
-    }
-    if (!hasConsoleView()) {
-        return {};
-    }
     const TConsoleModel* pModel = consoleModelNamed(name);
     if (!pModel) {
         return {};
+    }
+    if (pModel == mpMainConsoleModel.get() && !hasConsoleView()) {
+        return {consoleFrontend()->displayFont().pointSize()};
     }
     return {pModel->mUpperPaneFont.pointSize()};
 }
 
 std::optional<QString> Host::commandLineText(const QString& name) const
 {
-    if (!hasConsoleView()) {
+    // The main command line's text is a view's
+    if (!hasConsoleView() && (name.isEmpty() || name == QLatin1String("main"))) {
         return {};
     }
     return mWindowRegistry.commandLineText(name);
@@ -6596,37 +6516,25 @@ std::optional<bool> Host::commandLineSavesHistory(const QString& name) const
 
 std::optional<QString> Host::textBoxText(const QString& name) const
 {
-    if (!hasConsoleView()) {
-        return {};
-    }
     return mWindowRegistry.textBoxText(name);
 }
 
 std::optional<QFont> Host::textBoxFont(const QString& name) const
 {
-    if (!hasConsoleView()) {
-        return {};
-    }
     return mWindowRegistry.textBoxFont(name);
 }
 
 std::optional<QColor> Host::borderColor() const
 {
-    if (!hasConsoleView()) {
-        return {};
-    }
     return {mpMainConsoleModel->mBorderColor};
 }
 
 std::optional<QSize> Host::userWindowSize(const QString& name) const
 {
-    if (!hasConsoleView()) {
-        return {};
-    }
     if (auto size = mWindowRegistry.userWindowSize(name)) {
         return size;
     }
-    return {mWindowRegistry.mainWindowSize()};
+    return mainWindowSize();
 }
 
 // Returns whether a window element is currently visible, mirroring the widget
@@ -6637,10 +6545,6 @@ std::optional<QSize> Host::userWindowSize(const QString& name) const
 // last reported (see TMainConsole::reportVisibility()), so this needs no widget.
 std::optional<bool> Host::windowVisible(const QString& name) const
 {
-    if (!hasConsoleView()) {
-        return {};
-    }
-
     if (name.isEmpty() || name == QLatin1String("main")) {
         // only the tab machinery hides the main console, and that is the hiding
         // this function looks past
@@ -6896,13 +6800,6 @@ QFont Host::getDisplayFont()
     }
 
     return mTempDisplayFont.value();
-}
-
-// Not for a console the main window has closed: the profile's font went with it, and
-// what is left is the default the profile started from
-bool Host::namesMainConsoleWithNoMainWindow(const QString& name) const
-{
-    return !TAppFrontend::hasView() && !hasConsoleView() && namesMainConsole(name);
 }
 
 QFont Host::displayFontWithNoView() const

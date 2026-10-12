@@ -1075,7 +1075,9 @@ void XMLimport::readHost(Host* pHost)
     const bool compactInputLine = attributes().value(QLatin1String("CompactInputLine")) == YES;
     pHost->setCompactInputLine(compactInputLine);
 
-    TAppFrontend::instance()->setCompactInputLineChecked(pHost, compactInputLine);
+    if (auto* frontend = TAppFrontend::instance()) {
+        frontend->setCompactInputLineChecked(pHost, compactInputLine);
+    }
 
     if (attributes().hasAttribute(QLatin1String("CommandLineHistorySaveSize"))) {
         pHost->setCommandLineHistorySaveSize(attributes().value(QLatin1String("CommandLineHistorySaveSize")).toInt());
