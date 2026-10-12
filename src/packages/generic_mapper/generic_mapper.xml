@@ -335,6 +335,67 @@ setTriggerStayOpen("English Multi-Line Exits Trigger",1)</script>
 				</regexCodePropertyList>
 			</Trigger>
 		</TriggerGroup>
+		<TriggerGroup isActive="yes" isFolder="yes" isTempTrigger="no" isMultiline="no" isPerlSlashGOption="no" isColorizerTrigger="no" isFilterTrigger="no" isSoundTrigger="no" isColorTrigger="no" isColorTriggerFg="no" isColorTriggerBg="no">
+			<name>Swedish Trigger Group</name>
+			<script></script>
+			<triggerType>0</triggerType>
+			<conditonLineDelta>0</conditonLineDelta>
+			<mStayOpen>0</mStayOpen>
+			<mCommand></mCommand>
+			<packageName></packageName>
+			<mFgColor>#ff0000</mFgColor>
+			<mBgColor>#ffff00</mBgColor>
+			<mSoundFile></mSoundFile>
+			<colorTriggerFgColor>#000000</colorTriggerFgColor>
+			<colorTriggerBgColor>#000000</colorTriggerBgColor>
+			<regexCodeList />
+			<regexCodePropertyList />
+			<Trigger isActive="yes" isFolder="no" isTempTrigger="no" isMultiline="no" isPerlSlashGOption="no" isColorizerTrigger="no" isFilterTrigger="no" isSoundTrigger="no" isColorTrigger="no" isColorTriggerFg="no" isColorTriggerBg="no">
+				<name>Swedish Exits Trigger</name>
+				<script>map.captureUntitledRoom(matches[2] or "", "swedish")</script>
+				<triggerType>0</triggerType>
+				<conditonLineDelta>0</conditonLineDelta>
+				<mStayOpen>0</mStayOpen>
+				<mCommand></mCommand>
+				<packageName></packageName>
+				<mFgColor>#ff0000</mFgColor>
+				<mBgColor>#ffff00</mBgColor>
+				<mSoundFile></mSoundFile>
+				<colorTriggerFgColor>#000000</colorTriggerFgColor>
+				<colorTriggerBgColor>#000000</colorTriggerBgColor>
+				<regexCodeList>
+					<string>^\s*Det finns \S+ synliga? väg(?:ar)? härifrån(?::\s*(.+?))?\.?\s*$</string>
+				</regexCodeList>
+				<regexCodePropertyList>
+					<integer>1</integer>
+				</regexCodePropertyList>
+			</Trigger>
+			<Trigger isActive="yes" isFolder="no" isTempTrigger="no" isMultiline="no" isPerlSlashGOption="no" isColorizerTrigger="no" isFilterTrigger="no" isSoundTrigger="no" isColorTrigger="no" isColorTriggerFg="no" isColorTriggerBg="no">
+				<name>Swedish Failed Move Trigger</name>
+				<script>-- only the prompt may come before the reply, so someone saying "Vadå?" is not a failed move
+if map.configs.language == "swedish" and map.promptOnly(line:sub(1, #line - #matches[1])) then
+  raiseEvent("onMoveFail")
+end</script>
+				<triggerType>0</triggerType>
+				<conditonLineDelta>0</conditonLineDelta>
+				<mStayOpen>0</mStayOpen>
+				<mCommand></mCommand>
+				<packageName></packageName>
+				<mFgColor>#ff0000</mFgColor>
+				<mBgColor>#ffff00</mBgColor>
+				<mSoundFile></mSoundFile>
+				<colorTriggerFgColor>#000000</colorTriggerFgColor>
+				<colorTriggerBgColor>#000000</colorTriggerBgColor>
+				<regexCodeList>
+					<string>(?:Eh|Ursäkta|Vadå|Vad menar du)\?$</string>
+					<string>Dörren hindrar dig\.$</string>
+				</regexCodeList>
+				<regexCodePropertyList>
+					<integer>1</integer>
+					<integer>1</integer>
+				</regexCodePropertyList>
+			</Trigger>
+		</TriggerGroup>
 	</TriggerPackage>
 	<TimerPackage />
 	<AliasPackage>
@@ -442,6 +503,13 @@ end</script>
 				<command></command>
 				<packageName></packageName>
 				<regex>^map translate (\w+) (\w+) (\w+)$</regex>
+			</Alias>
+			<Alias isActive="yes" isFolder="no">
+				<name>Map Language Alias</name>
+				<script>map.setLanguage(matches[2])</script>
+				<command></command>
+				<packageName></packageName>
+				<regex>^map language (\w+)$</regex>
 			</Alias>
 		</AliasGroup>
 		<AliasGroup isActive="yes" isFolder="yes">
@@ -1322,6 +1390,8 @@ map.help = {[[
         &lt;link: translate&gt;map translate &lt;english direction&gt; &lt;translated long direction&gt;&lt;/link&gt;
         &lt;link: translate&gt;&lt;translated short direction&gt;&lt;/link&gt; - Sets the provided translations for the
             given english direction word.
+        &lt;link: language&gt;map language &lt;english or swedish&gt;&lt;/link&gt; - Sets all direction translations
+            for a game in that language.
 
     &lt;cyan&gt;Map Information Commands:&lt;reset&gt;
         These commands show detailed information about your current map.
@@ -1899,6 +1969,19 @@ map.help.translate = [[
         northwest, northeast, southwest, southeast, up, down, in, and out.
         Also you can customize special commands sent to mud like 'look'.
 ]]
+map.help.language = [[
+    &lt;yellow&gt;Map Language&lt;reset&gt;
+        syntax: &lt;yellow&gt;map language &lt;english or swedish&gt;&lt;reset&gt;
+
+        This command sets every direction translation at once, to the words a
+        game in that language uses. On SvenskMUD the mapper picks Swedish by
+        itself, unless you have chosen a language or changed any translation.
+
+        SvenskMUD rooms have no title, so the first sentence of the description
+        names the room. The game glues its prompt to the first line of the
+        description; if your prompt has letters in it, set it with
+        &lt;yellow&gt;map prompt&lt;reset&gt; to keep it out of the room name.
+]]
 map.help.quick_start = [[
     &lt;link: quick_start&gt;map basics&lt;/link&gt; (quick start guide)
     ----------------------------------------
@@ -2314,6 +2397,14 @@ map.defaults = {
     },
     debug = false,
     download_path = "https://raw.githubusercontent.com/Mudlet/Mudlet/development/src/packages/generic_mapper",
+}
+
+local language_dirs = {
+    english = {},
+    swedish = {n = 'n', ne = 'nö', nw = 'nv', e = 'ö', w = 'v', s = 's', se = 'sö', sw = 'sv',
+        u = 'u', d = 'ner', ["in"] = 'in', out = 'ut', north = 'norr', northeast = 'nordöst',
+        east = 'öster', west = 'väster', south = 'söder', southeast = 'sydöst', southwest = 'sydväst',
+        northwest = 'nordväst', up = 'upp', down = 'ner', l = 't', look = 'titta'},
 }
 
 local move_queue, lines = {}, {}
@@ -2998,7 +3089,7 @@ local function move_map()
             force_portal = false
         elseif move == "recall" and map.save.recall[map.character] then
             set_room(map.save.recall[map.character])
-        elseif move == map.configs.lang_dirs['look'] and map.currentRoom and not check_room(map.currentRoom, map.currentName, map.currentExits) then
+        elseif move == "look" and map.currentRoom and not check_room(map.currentRoom, map.currentName, map.currentExits) then
             -- this check isn't working as intended, find out why
             map.find_me(map.currentName,map.currentExits)
         else
@@ -3058,7 +3149,7 @@ local function capture_move_cmd(dir,priority)
         end
     end
     if table.contains(exitmap,dir) or string.starts(dir,"enter ") or dir == "recall" then
-      if dir ~= configs.lang_dirs['look'] then
+      if dir ~= "look" then
         if priority then
             table.insert(move_queue,1,exitmap[dir] or dir)
         else
@@ -3104,7 +3195,7 @@ local function capture_room_info(name, exits)
         for w in string.gmatch(exits,"%a+") do
             if map.configs.use_translation then
                 local dir = map.configs.translate and map.configs.translate[w]
-                if dir then table.insert(map.currentExits,dir) end
+                if dir then table.insert(map.currentExits,exitmap[dir] or dir) end
             else
                 table.insert(map.currentExits,w)
             end
@@ -3436,6 +3527,9 @@ function map.set_door(dir,status,one_way)
     if map.mapping then
         if not map.currentRoom then
             show_err("Make Door: No room found.")
+        end
+        if map.configs.use_translation then
+            dir = map.configs.translate[dir] or dir
         end
         dir = exitmap[dir] or dir
         if not stubmap[dir] then
@@ -3919,6 +4013,93 @@ local function name_search()
         map.prompt.description = nil
     end
     return room_name
+end
+
+-- for games whose rooms have no title line: the room is named by the first
+-- sentence of the description that came before the exits line
+local function untitled_room_name()
+    local prompt_pattern = map.save.prompt_pattern[map.character]
+    local last = #lines
+    if lines[last] == line then last = last - 1 end
+    -- exits are indented 3; an ASCII minimap left of the text pushes it, exits line included, further right
+    local indent = #string.match(line, "^%s*")
+    local text = {}
+    for i = last, 1, -1 do
+        local cur_line = lines[i]
+        for _, v in ipairs(map.save.ignore_patterns) do
+            cur_line = string.gsub(cur_line, v, "")
+        end
+        local prompt_end = prompt_pattern and select(2, string.find(cur_line, prompt_pattern))
+        if prompt_end then
+            cur_line = string.sub(cur_line, prompt_end + 1)
+        end
+        if indent &gt; 3 then
+            cur_line = string.sub(cur_line, indent + 1)
+        end
+        cur_line = string.trim(cur_line)
+        if cur_line ~= "" then
+            table.insert(text, 1, cur_line)
+        elseif #text &gt; 0 then
+            break
+        end
+        if prompt_end then break end
+    end
+    lines = {}
+    if not prompt_pattern and text[1] then
+        -- a prompt nobody has described to the mapper is still glued on, and prompts rarely have letters
+        text[1] = (string.gsub(text[1], "^[^%a]+", ""))
+        if text[1] == "" then table.remove(text, 1) end
+    end
+    if #text == 0 then return end
+    local description = string.gsub(table.concat(text, " "), "%s+", " ")
+    if map.configs.use_description_matching then
+        map.prompt.description = table.concat(text, "\n")
+    end
+    return string.sub(string.match(description, "^(.-[%.!?])%s") or description, 1, 100)
+end
+
+function map.setLanguage(name)
+    local dirs = language_dirs[string.lower(name or "")]
+    if not dirs then
+        map.echo("Unknown language, choose one of: " .. table.concat(table.keys(language_dirs), ", "), false, true)
+        return
+    end
+    map.configs.language = string.lower(name)
+    map.configs.lang_dirs = table.update(map.defaults.lang_dirs, dirs)
+    map.configs.translate = {}
+    for k, v in pairs(map.configs.lang_dirs) do
+        map.configs.translate[v] = k
+    end
+    table.save(profilePath.."/map downloads/configs.lua", map.configs)
+    map.echo("Directions now use " .. string.lower(name) .. " words.")
+end
+
+function map.promptOnly(text)
+    local prompt = map.save.prompt_pattern[map.character]
+    if prompt then
+        text = string.gsub(text, prompt, "")
+    end
+    return not string.find(text, "%a")
+end
+
+local function lang_dirs_untouched()
+    for k, v in pairs(map.defaults.lang_dirs) do
+        if map.configs.lang_dirs[k] ~= v then return false end
+    end
+    return true
+end
+
+function map.captureUntitledRoom(exits, language)
+    if language and not map.configs.language and map.configs.use_translation and lang_dirs_untouched() then
+        map.setLanguage(language)
+    end
+    local name = untitled_room_name()
+    if not name then
+        map.echo("No room description before the exits line.", true)
+        return
+    end
+    map.prompt.room = name
+    raiseEvent("onNewRoom", exits)
 end
 
 local function handle_exits(exits)
