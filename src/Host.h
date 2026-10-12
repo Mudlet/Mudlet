@@ -262,6 +262,10 @@ public:
     ControlCharacterMode getControlCharacterMode() const { return mControlCharacter; }
     bool getLargeAreaExitArrows() const { return mLargeAreaExitArrows; }
     void setLargeAreaExitArrows(const bool);
+    // The id of the modern 3D mapper's style
+    const QString& mapStyle() const { return mMapStyle; }
+    // False, changing nothing, when no style has that id
+    bool setMapStyle(const QString& id);
     bool getUseModern3DMapper() const { return experimentEnabled(qsl("experiment.3dmap.modernmapper")); }
 
     // Experiment system methods
@@ -1537,6 +1541,7 @@ private:
     ControlCharacterMode mControlCharacter = ControlCharacterMode::AsIs;
 
     bool mLargeAreaExitArrows = false;
+    QString mMapStyle{qsl("tiles")};
     bool mEditorShowBidi = true;
     // should focus should be on the main window with the caret enabled?
     bool mCaretEnabled = false;

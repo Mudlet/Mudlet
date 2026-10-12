@@ -33,6 +33,7 @@
 #include "HostManager.h"
 #include "LuaInterface.h"
 #include "mapInfoContributorManager.h"
+#include "MapStyle.h"
 #include "MMCP.h"
 #include "MMCPServer.h"
 #include "TAction.h"
@@ -6570,6 +6571,20 @@ void Host::setLargeAreaExitArrows(const bool state)
             consoleFrontend()->setMapLargeAreaExitArrows(state);
         }
     }
+}
+
+bool Host::setMapStyle(const QString& id)
+{
+    if (!MapStyle::find(id)) {
+        return false;
+    }
+    if (mMapStyle != id) {
+        mMapStyle = id;
+        if (mpMap) {
+            mpMap->announceMapperSettingChanged(TMap::MapperSetting::Style);
+        }
+    }
+    return true;
 }
 
 void Host::setEditorShowBidi(const bool state)

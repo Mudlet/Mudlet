@@ -78,7 +78,7 @@ class TMap : public QObject
 
 public:
     // Host settings the 2D map keeps a copy of to draw with
-    enum class MapperSetting { RoomSize, ExitSize, RoundRooms, ShowRoomIds, ShowGrid };
+    enum class MapperSetting { RoomSize, ExitSize, RoundRooms, ShowRoomIds, ShowGrid, Style };
 
 signals:
     void signal_saveErrorChanged(bool hasError);

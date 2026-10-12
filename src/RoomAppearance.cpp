@@ -22,6 +22,7 @@
 #include "ExitAppearance.h"
 #include "Host.h"
 #include "TMap.h"
+#include "TRoom.h"
 
 #include <QFontMetrics>
 #include <QPainter>
@@ -30,6 +31,25 @@
 #include <cmath>
 
 namespace RoomAppearance {
+
+Look look(const TMap& map, const Host& host, const TRoom& room, const int playerRoomId, const int viewedLevel)
+{
+    Look result;
+    result.color = environmentColor(map, host, room.environment);
+    result.symbol = room.mSymbol;
+    if (!result.symbol.isEmpty()) {
+        result.symbolColor = symbolColor(room.mSymbolColor, result.color);
+    }
+    result.highlighted = room.highlight;
+    if (result.highlighted) {
+        result.highlightColor = room.highlightColor;
+        result.highlightCenterColor = room.highlightColor2;
+        result.highlightRadius = room.highlightRadius;
+    }
+    result.playerRoom = room.getId() == playerRoomId;
+    result.levelOffset = room.z() - viewedLevel;
+    return result;
+}
 
 QColor environmentColor(const TMap& map, const Host& host, int env)
 {

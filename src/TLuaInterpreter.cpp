@@ -31,6 +31,7 @@
 
 #include "FontManager.h"
 #include "Host.h"
+#include "MapStyle.h"
 #include "MudletApp.h"
 #include "MudletMedia.h"
 #include "MudletReplay.h"
@@ -402,10 +403,13 @@ int TLuaInterpreter::warnArgumentValue(lua_State* L, const char* functionName, c
 // place a script can read what the set is, so it lists every accepted value
 int TLuaInterpreter::warnArgumentChoice(lua_State* L, const char* functionName, const QString& argumentName, const QStringList& accepted, const QString& value)
 {
-    Q_ASSERT(accepted.size() > 1);
+    Q_ASSERT(!accepted.isEmpty());
     QStringList quoted;
     for (const auto& choice : accepted) {
         quoted << qsl("\"%1\"").arg(choice);
+    }
+    if (quoted.size() == 1) {
+        return warnArgumentValue(L, functionName, qsl("%1 must be %2, got \"%3\"").arg(argumentName, quoted.constFirst(), value));
     }
     const QString lastChoice = quoted.takeLast();
     return warnArgumentValue(L, functionName, qsl("%1 must be %2 or %3, got \"%4\"").arg(argumentName, quoted.join(qsl(", ")), lastChoice, value));
@@ -9254,6 +9258,13 @@ int TLuaInterpreter::setConfig(lua_State* L)
         TAppFrontend::instance()->updateMapActionAvailability();
         return success();
     }
+    if (key == qsl("mapStyle")) {
+        const QString value = getVerifiedString(L, __func__, 2, "value");
+        if (!host.setMapStyle(value)) {
+            return warnArgumentChoice(L, __func__, qsl("mapStyle"), MapStyle::ids(), value);
+        }
+        return success();
+    }
     if (key == qsl("enableGMCP")) {
         host.mEnableGMCP = getVerifiedBool(L, __func__, 2, "value");
         return success();
@@ -9714,6 +9725,10 @@ int TLuaInterpreter::getConfig(lua_State* L)
             {qsl("mapRoundRooms"),
              [&]() {
                  lua_pushboolean(L, host.mBubbleMode);
+             }},
+            {qsl("mapStyle"),
+             [&]() {
+                 lua_pushstring(L, host.mapStyle().toUtf8().constData());
              }},
             {qsl("mapperButton"),
              [&]() {

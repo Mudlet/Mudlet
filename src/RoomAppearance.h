@@ -22,17 +22,39 @@
 #include <QBrush>
 #include <QColor>
 #include <QPointF>
+#include <QString>
 
 class Host;
 class QFont;
 class QPainter;
 class QRect;
-class QString;
 class TMap;
+class TRoom;
 
 // How a room looks, shared by the 2D map and the modern 3D view so that the
 // two draw a room from the same colours, symbol and rings.
 namespace RoomAppearance {
+
+// What a room shows, worked out once whichever view or style draws it
+struct Look
+{
+    QColor color;
+    // Empty when the room has none
+    QString symbol;
+    QColor symbolColor;
+    bool highlighted = false;
+    QColor highlightColor;
+    QColor highlightCenterColor;
+    // In rooms' spacing
+    float highlightRadius = 0.0f;
+    bool playerRoom = false;
+    // How many levels the room is above the viewed one, negative below
+    int levelOffset = 0;
+
+    bool onViewedLevel() const { return levelOffset == 0; }
+};
+
+Look look(const TMap& map, const Host& host, const TRoom& room, int playerRoomId, int viewedLevel);
 
 QColor environmentColor(const TMap& map, const Host& host, int environmentId);
 
