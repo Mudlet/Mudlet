@@ -25,7 +25,6 @@
  ***************************************************************************/
 
 
-#include "dlgTriggerEditor.h"
 #include "EditorCommand.h"
 #include "utils.h"
 
