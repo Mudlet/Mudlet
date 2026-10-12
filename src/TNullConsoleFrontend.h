@@ -27,7 +27,9 @@
 #include "utils.h"
 
 #include <QColor>
+#include <QObject>
 #include <QPoint>
+#include <QPointer>
 #include <QRect>
 #include <QSize>
 #include <QString>
@@ -80,7 +82,7 @@ public:
     void setGeometry(const QString&, const QRect&) override {}
     void reportSize() override {}
     TPrintSink* sink(const QString& name) const override;
-    bool hasFrameWidget(const QString& name) const override { return sink(name) != nullptr; }
+    bool hasFrameWidget(const QString& name) const override;
 
 private:
     TNullConsoleFrontend& mView;
@@ -155,18 +157,19 @@ public:
     bool replaceCommandLineText(const QString& name, const QString& text) override;
     bool appendCommandLineText(const QString& name, const QString& text) override;
     bool clearCommandLine(const QString& name) override { return replaceCommandLineText(name, QString()); }
-    bool selectCommandLineText(const QString&) override { return false; }
-    bool addCommandLineSuggestion(const QString&, const QString&) override { return false; }
-    bool removeCommandLineSuggestion(const QString&, const QString&) override { return false; }
-    bool clearCommandLineSuggestions(const QString&) override { return false; }
-    bool addCommandLineBlacklistWord(const QString&, const QString&) override { return false; }
-    bool removeCommandLineBlacklistWord(const QString&, const QString&) override { return false; }
-    bool clearCommandLineBlacklist(const QString&) override { return false; }
-    bool addCommandLineMenuItem(const QString&, const QString&, const QString&) override { return false; }
-    std::optional<bool> removeCommandLineMenuItem(const QString&, const QString&) override { return std::nullopt; }
-    bool setCommandLineSavesHistory(const QString&, bool) override { return false; }
-    bool setCommandLineVisible(const QString&, bool) override { return false; }
-    bool setWindowCommandLineVisible(const QString&, bool) override { return false; }
+    // Only typing and tab completion read what these set, and with no view nothing is typed
+    bool selectCommandLineText(const QString& name) override { return ownsCommandLine(name); }
+    bool addCommandLineSuggestion(const QString& name, const QString&) override { return ownsCommandLine(name); }
+    bool removeCommandLineSuggestion(const QString& name, const QString&) override { return ownsCommandLine(name); }
+    bool clearCommandLineSuggestions(const QString& name) override { return ownsCommandLine(name); }
+    bool addCommandLineBlacklistWord(const QString& name, const QString&) override { return ownsCommandLine(name); }
+    bool removeCommandLineBlacklistWord(const QString& name, const QString&) override { return ownsCommandLine(name); }
+    bool clearCommandLineBlacklist(const QString& name) override { return ownsCommandLine(name); }
+    bool addCommandLineMenuItem(const QString& name, const QString& label, const QString& eventName) override;
+    std::optional<bool> removeCommandLineMenuItem(const QString& name, const QString& label) override;
+    bool setCommandLineSavesHistory(const QString& name, bool savesHistory) override;
+    bool setCommandLineVisible(const QString& name, bool visible) override;
+    bool setWindowCommandLineVisible(const QString& name, bool visible) override;
     void setCommandLinePlaceholderText(const QString&) override {}
     void updateCommandLineSpellCheck(bool) override {}
     void setCommandLineText(const QString&) override {}
@@ -274,7 +277,7 @@ public:
     void refreshView() const override {}
     void requestRepaintAfterCommand() override {}
     bool requestClose() override { return true; }
-    void resetMainConsole() override { dropWindows(); }
+    void resetMainConsole() override;
     void setProfileName(const QString&) override {}
     void setF3SearchEnabled(bool) override {}
     void setCompactInputLine(bool) override {}
@@ -286,6 +289,15 @@ public:
 
 private:
     friend class TNullMxpFrameFrontend;
+
+    // Lives as long as a TCommandLine would, as that writes its history setting on each end of session profile
+    // save until it is destroyed. Each window that can hold one has a QObject standing for its widget, as a parent.
+    class HistoryWriter : public QObject
+    {
+    public:
+        using QObject::QObject;
+        bool savesHistory = true;
+    };
 
     // QWidget's minimumSize() and maximumSize(), which QStyleSheetStyle::setGeometry() sets from a sheet
     struct SizeLimits
@@ -305,6 +317,7 @@ private:
         QString userWindow;
         std::shared_ptr<ScrollBox> box;
         bool shown = true;
+        QPointer<QObject> holder;
     };
     // A window made inside a user window goes with it, as a real one is its dock's child widget, though
     // out of the registry at once rather than when deferred deletes run.
@@ -320,6 +333,15 @@ private:
         QRect geometry;
         // A command line's TCommandLine::mActionFunction, a Lua registry index
         int action = 0;
+        // A command line's TCommandLine::contextMenuItems, event names by label
+        std::map<QString, QString> menuItems;
+        QPointer<HistoryWriter> writer;
+        // A console's own command line, still in TConsole::layerCommandLine, which TConsole::setCmdVisible() shows
+        // and hides with it
+        bool inConsole = false;
+        bool layerShown = true;
+        // Whether the console holding its own command line shows, once that console has left the registry
+        bool consoleShown = true;
         SizeLimits limits;
         // A text box's QPlainTextEdit::isReadOnly() and own sheet, which its limits depend on
         bool readOnly = false;
@@ -333,7 +355,12 @@ private:
         bool shown = false;
         // Only for an MXP frame's, which is how a frame tells its own from a script's window of the same name
         std::unique_ptr<TConsoleModelSink> pFrameSink;
+        QPointer<QObject> holder;
+        // TConsole::mpCommandLine, which still holds a deleted command line until deferred deletes run
+        QPointer<HistoryWriter> ownLine;
     };
+    // As TConsole::mpCommandLine tells a console's own command line from another of its name
+    static bool ownsLine(const SubConsole& console, const PlainWindow& commandLine) { return commandLine.writer && commandLine.writer == console.ownLine; }
     struct Label
     {
         std::unique_ptr<TLabelModel> pModel;
@@ -378,8 +405,9 @@ private:
     void clearLabelContents(Label& label);
 
     TConsoleModel& addSubConsole(const QString& name, TWindowRegistry::SubConsoleKind kind, const QString& windowname);
-    void removeSubConsole(const QString& name);
-    void addFrameConsole(const QString& name);
+    // keepWidget for a console whose widget outlives its place in the registry, with its own command line
+    void removeSubConsole(const QString& name, bool keepWidget = false);
+    void addFrameConsole(const QString& name, bool external = false, const QString& hostFrame = QString());
     void removeFrameConsole(const QString& name);
     TConsoleModelSink* frameSink(const QString& name) const;
     void removeLabel(const QString& name);
@@ -390,6 +418,9 @@ private:
     bool setPlainWindowShown(const QString& name, bool shown);
     bool ownsCommandLine(const QString& name) const;
     void releaseCommandLine(const QString& name, const PlainWindow& commandLine);
+    QObject* holderFor(const QString& userWindow, const ScrollBox* box) const;
+    HistoryWriter* makeHistoryWriter(QObject* parent, const QString& name, bool savesHistory);
+    void dropModels();
     PlainWindow* plainWindow(const QString& name);
     void republishPlainWindow(const QString& name);
     static bool within(const ScrollBox* container, const ScrollBox* box);
@@ -424,6 +455,10 @@ private:
     std::vector<std::unique_ptr<TConsoleModel>> mRetiredConsoles;
     std::vector<std::unique_ptr<TLabelModel>> mRetiredLabels;
     bool mReleaseQueued = false;
+    // The main window, which holds what a script makes in it
+    std::unique_ptr<QObject> mpMainHolder = std::make_unique<QObject>();
+    // TMxpFrameWidgets' container widget of each frame, which holds the frame's console until a script moves it
+    std::map<QString, QPointer<QObject>> mFrameHolders;
 };
 
 #endif // MUDLET_TNULLCONSOLEFRONTEND_H
