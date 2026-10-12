@@ -112,12 +112,13 @@ void RenderLinesCommand::execute(QOpenGLFunctions* gl,
 }
 
 RenderTrianglesCommand::RenderTrianglesCommand(
-        const QVector<float>& vertices, const QVector<float>& colors, const QMatrix4x4& projectionMatrix, const QMatrix4x4& viewMatrix, const QMatrix4x4& modelMatrix)
+        const QVector<float>& vertices, const QVector<float>& colors, const QMatrix4x4& projectionMatrix, const QMatrix4x4& viewMatrix, const QMatrix4x4& modelMatrix, const Shading shading)
 : mVertices(vertices)
 , mColors(colors)
 , mProjectionMatrix(projectionMatrix)
 , mViewMatrix(viewMatrix)
 , mModelMatrix(modelMatrix)
+, mShading(shading)
 {
 }
 
@@ -152,14 +153,25 @@ void RenderTrianglesCommand::execute(QOpenGLFunctions* gl,
     QMatrix3x3 normalMatrix = mModelMatrix.normalMatrix();
     shader->setUniformValue("uNormalMatrix", normalMatrix);
 
+    const bool unlit = mShading == Shading::Unlit;
+    if (unlit) {
+        shader->setUniformValue("uDisableLighting", true);
+    }
+
     geometryManager->renderGeometry(triangleGeometry, vao, vertexBuffer, colorBuffer, normalBuffer, indexBuffer, resourceManager, GL_TRIANGLES);
+
+    if (unlit) {
+        shader->setUniformValue("uDisableLighting", false);
+    }
 }
 
-RenderTexturedTrianglesCommand::RenderTexturedTrianglesCommand(const GeometryData& geometry, const QMatrix4x4& projectionMatrix, const QMatrix4x4& viewMatrix, const QMatrix4x4& modelMatrix)
+RenderTexturedTrianglesCommand::RenderTexturedTrianglesCommand(
+        const GeometryData& geometry, const QMatrix4x4& projectionMatrix, const QMatrix4x4& viewMatrix, const QMatrix4x4& modelMatrix, const Shading shading)
 : mGeometry(geometry)
 , mProjectionMatrix(projectionMatrix)
 , mViewMatrix(viewMatrix)
 , mModelMatrix(modelMatrix)
+, mShading(shading)
 {
 }
 
@@ -208,15 +220,31 @@ void RenderTexturedTrianglesCommand::execute(QOpenGLFunctions* gl,
     QMatrix3x3 normalMatrix = mModelMatrix.normalMatrix();
     shader->setUniformValue("uNormalMatrix", normalMatrix);
 
+    const bool unlit = mShading == Shading::Unlit;
+    if (unlit) {
+        shader->setUniformValue("uDisableLighting", true);
+    }
+
     // Use the textured rendering method
     geometryManager->renderGeometry(mGeometry, vao, vertexBuffer, colorBuffer, normalBuffer, indexBuffer, texCoordBuffer, resourceManager, GL_TRIANGLES);
+
+    if (unlit) {
+        shader->setUniformValue("uDisableLighting", false);
+    }
 }
 
-RenderInstancedCubesCommand::RenderInstancedCubesCommand(const QVector<CubeInstanceData>& instances, const QMatrix4x4& projectionMatrix, const QMatrix4x4& viewMatrix, const QMatrix4x4& modelMatrix)
+RenderInstancedCubesCommand::RenderInstancedCubesCommand(const QVector<CubeInstanceData>& instances,
+                                                         const QMatrix4x4& projectionMatrix,
+                                                         const QMatrix4x4& viewMatrix,
+                                                         const QMatrix4x4& modelMatrix,
+                                                         const Shading shading,
+                                                         const GeometryManager::InstanceShape shape)
 : mInstances(instances)
 , mProjectionMatrix(projectionMatrix)
 , mViewMatrix(viewMatrix)
 , mModelMatrix(modelMatrix)
+, mShading(shading)
+, mShape(shape)
 {
 }
 
@@ -249,14 +277,16 @@ void RenderInstancedCubesCommand::execute(QOpenGLFunctions* gl,
     QMatrix3x3 normalMatrix = mModelMatrix.normalMatrix();
     shader->setUniformValue("uNormalMatrix", normalMatrix);
 
-    // For now, we need to create a temporary instance buffer
-    // This will be improved when we add the instance buffer to ModernGLWidget
-    QOpenGLBuffer instanceBuffer(QOpenGLBuffer::VertexBuffer);
-    instanceBuffer.create();
+    const bool unlit = mShading == Shading::Unlit;
+    if (unlit) {
+        shader->setUniformValue("uDisableLighting", true);
+    }
 
-    geometryManager->renderInstancedCubes(mInstances, vao, vertexBuffer, colorBuffer, normalBuffer, indexBuffer, instanceBuffer, resourceManager, GL_TRIANGLES);
+    geometryManager->renderInstancedCubes(mInstances, vao, vertexBuffer, colorBuffer, normalBuffer, indexBuffer, resourceManager, GL_TRIANGLES, mShape);
 
-    instanceBuffer.destroy();
+    if (unlit) {
+        shader->setUniformValue("uDisableLighting", false);
+    }
 }
 
 GLStateCommand::GLStateCommand(StateType stateType)
@@ -306,6 +336,26 @@ void GLStateCommand::execute(QOpenGLFunctions* gl,
         break;
     case CLEAR_BUFFERS:
         gl->glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+        break;
+    case ENABLE_POLYGON_OFFSET:
+        gl->glEnable(GL_POLYGON_OFFSET_FILL);
+        gl->glPolygonOffset(-1.0f, -4.0f);
+        break;
+    case DISABLE_POLYGON_OFFSET:
+        gl->glDisable(GL_POLYGON_OFFSET_FILL);
+        gl->glPolygonOffset(0.0f, 0.0f);
+        break;
+    case ENABLE_COLOR_WRITE:
+        gl->glColorMask(GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE);
+        break;
+    case DISABLE_COLOR_WRITE:
+        gl->glColorMask(GL_FALSE, GL_FALSE, GL_FALSE, GL_FALSE);
+        break;
+    case DEPTH_FUNC_LEQUAL:
+        gl->glDepthFunc(GL_LEQUAL);
+        break;
+    case DEPTH_FUNC_LESS:
+        gl->glDepthFunc(GL_LESS);
         break;
     }
 }

@@ -1,6 +1,7 @@
 #version 330 core
 in vec4 vertexColor;
 in vec2 texCoord;
+in float eyeDepth;
 out vec4 FragColor;
 
 uniform bool uUseTexture = false;
@@ -14,6 +15,12 @@ uniform sampler2D uNormalTexture;     // PBR normal map
 uniform vec4 uBaseColorFactor;
 uniform float uMetallicFactor;
 uniform float uRoughnessFactor;
+
+// Toward the background with distance, from no fog at uFogStart to uFogMax at uFogEnd; none when uFogEnd <= uFogStart
+uniform vec3 uFogColor = vec3(0.0, 0.0, 0.0);
+uniform float uFogStart = 0.0;
+uniform float uFogEnd = 0.0;
+uniform float uFogMax = 0.0;
 
 void main()
 {
@@ -94,5 +101,9 @@ void main()
         FragColor = textureColor * vertexColor;
     } else {
         FragColor = vertexColor;
+    }
+    if (uFogEnd > uFogStart) {
+        float fog = clamp((eyeDepth - uFogStart) / (uFogEnd - uFogStart), 0.0, 1.0) * uFogMax;
+        FragColor.rgb = mix(FragColor.rgb, uFogColor, fog);
     }
 }

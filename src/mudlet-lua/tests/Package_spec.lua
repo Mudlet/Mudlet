@@ -3336,6 +3336,351 @@ describe("Tests importing a colour trigger on a colour past the basic sixteen", 
   end)
 end)
 
+describe("Tests uninstalling the Mudlet Tutorial", function()
+  local name = "Mudlet Tutorial"
+  local archive = ":/packages/mudlet-tutorial/mudlet-tutorial.mpackage"
+  local mapperArchive = ":/packages/generic_mapper/generic_mapper.mpackage"
+
+  -- Overrides a global for the rest of the spec; Package_spec's own environment
+  -- would only shadow it, and the packages read their globals from _G
+  local function override(globalName, value)
+    local original = _G[globalName]
+    defer(function() _G[globalName] = original end)
+    _G[globalName] = value
+    return original
+  end
+
+  -- The tutorial uninstalls the generic mapper as it starts and installs it again
+  -- when it goes, so that is faked here rather than done to the shared profile;
+  -- its clearing the screen and changing the map info are kept out of it too.
+  -- The returned table says what the tutorial asked for.
+  local function keepTheProfile()
+    local profile = { hasMapper = true, mapperReinstalls = 0, mapInfoChanges = 0 }
+    local realUninstall, realInstall, realGetPackages = _G.uninstallPackage, _G.installPackage, _G.getPackages
+    override("uninstallPackage", function(packageName)
+      if packageName == "generic_mapper" then
+        profile.hasMapper = false
+        return true
+      end
+      return realUninstall(packageName)
+    end)
+    override("installPackage", function(path, ...)
+      if path == mapperArchive then
+        profile.hasMapper = true
+        profile.mapperReinstalls = profile.mapperReinstalls + 1
+        return true
+      end
+      return realInstall(path, ...)
+    end)
+    override("getPackages", function()
+      local packages = {}
+      for _, package in ipairs(realGetPackages()) do
+        if package ~= "generic_mapper" then
+          packages[#packages + 1] = package
+        end
+      end
+      if profile.hasMapper then
+        packages[#packages + 1] = "generic_mapper"
+      end
+      return packages
+    end)
+    override("clearWindow", function() end)
+    -- a profile has one map widget and an embedded one cannot be undone, so the lesson's mapper would break later specs
+    for _, call in ipairs({ "createMapper", "openMapWidget", "closeMapWidget" }) do
+      override(call, function() return true end)
+    end
+    for _, call in ipairs({ "enableMapInfo", "disableMapInfo" }) do
+      override(call, function()
+        profile.mapInfoChanges = profile.mapInfoChanges + 1
+      end)
+    end
+    -- a profile that is to show the UI tour holds the lesson back until the tour ends
+    local tourPending = mudlet.uiTourPending
+    defer(function() mudlet.uiTourPending = tourPending end)
+    mudlet.uiTourPending = nil
+    defer(function()
+      deleteNamedEventHandler("mudlet-tutorial", "parser")
+      _G.hq = nil
+    end)
+    return profile
+  end
+
+  local function install()
+    defer(function() removeFixturePackage(name) end)
+    installUntilConfirmed(installPackage, archive, function() return packageInstalled(name) end, "the tutorial")
+  end
+
+  local function lessonStarted()
+    return waitUntil(function() return type(_G.hq) == "table" and _G.hq.mainMenuContainer ~= nil end, 2000)
+  end
+
+  local function playersLabel(labelName)
+    local label = Geyser.Label:new({ name = labelName, x = 0, y = 0, width = 10, height = 10 })
+    defer(function() label:delete() end)
+    return label
+  end
+
+  local function lessonWindowsLeft()
+    local left = {}
+    for windowName in pairs(Geyser.windowList) do
+      if windowName:find("^hq%.") then
+        left[#left + 1] = windowName
+      end
+    end
+    return left
+  end
+
+  -- saving a script in the editor runs it again
+  local function runAgain(script)
+    assert.is_true(setScript(script, (getScript(script))) ~= -1, "could not run " .. script .. " again")
+  end
+
+  it("gives back the input, doSpeedWalk and windows it took", function()
+    local playersSpeedWalk = function() end
+    override("doSpeedWalk", playersSpeedWalk)
+    local profile = keepTheProfile()
+    -- timers the lesson's own scripts start, whether through hq.tempTimer or not
+    local tutorialScripts = {}
+    for _, script in ipairs({ "Mini Quest", "Mini-Game Intro", "Misc Functions", "GUI Tutorial", "Set up Map", "Room Scripts", "Init" }) do
+      tutorialScripts['[string "Script: ' .. script .. '"]'] = true
+    end
+    local timers = {}
+    local realTempTimer = _G.tempTimer
+    override("tempTimer", function(...)
+      local id = realTempTimer(...)
+      if tutorialScripts[debug.getinfo(2, "S").short_src] then
+        timers[#timers + 1] = id
+      end
+      return id
+    end)
+    local shownLabel = playersLabel("packageSpecTutorialLabel")
+    local hiddenLabel = playersLabel("packageSpecTutorialHiddenLabel")
+    hiddenLabel:hide()
+
+    install()
+    assert.is_true(lessonStarted(), "the lesson never started")
+    assert.are_not.equal(playersSpeedWalk, _G.doSpeedWalk, "the tutorial did not take doSpeedWalk over")
+    assert.is_true(shownLabel.hidden, "the lesson did not hide the player's windows")
+    assert.is_false(profile.hasMapper, "the lesson did not take the generic mapper away")
+    local lateLabel = playersLabel("packageSpecTutorialLateLabel")
+    -- each step and the story after the name queue timers of their own
+    _G.hq.guiTutorialStep1()
+    assert.is_true(lateLabel.hidden, "the lesson did not hide a window made after it started")
+    _G.hq.newGameScreen()
+    raiseEvent("sysDataSendRequest", "Bob")
+
+    removeFixturePackage(name)
+
+    assert.are.same({}, getNamedEventHandlers("mudlet-tutorial"))
+    assert.are.equal(playersSpeedWalk, _G.doSpeedWalk)
+    assert.is_falsy(shownLabel.hidden)
+    assert.is_falsy(lateLabel.hidden, "a window made during the lesson stayed hidden")
+    assert.is_true(hiddenLabel.hidden, "a window hidden before the lesson was shown")
+    -- a lesson panel left hidden would come back with Geyser.showAll(), Next button and all
+    assert.are.same({}, lessonWindowsLeft())
+    assert.is_nil(_G.hq)
+    assert.is_true(profile.hasMapper, "the generic mapper was not installed again")
+    assert.is_true(#timers > 0, "SETUP: the lesson queued no timers")
+    for _, id in ipairs(timers) do
+      assert.is_nil(remainingTime(id), "a lesson timer is still waiting to fire")
+    end
+  end)
+
+  it("does not install a generic mapper the profile did not have", function()
+    local profile = keepTheProfile()
+    profile.hasMapper = false
+
+    install()
+    assert.is_true(lessonStarted(), "the lesson never started")
+    removeFixturePackage(name)
+
+    assert.are.equal(0, profile.mapperReinstalls)
+  end)
+
+  it("shows the player's windows again when the lesson ends", function()
+    keepTheProfile()
+    local label = playersLabel("packageSpecTutorialLabel")
+
+    install()
+    assert.is_true(lessonStarted(), "the lesson never started")
+    _G.hq.guiTutorialStep1()
+    expandAlias("quit")
+
+    assert.is_falsy(label.hidden)
+  end)
+
+  it("gives back the player's map, map info and command line style", function()
+    local realEnableMapInfo, realDisableMapInfo = _G.enableMapInfo, _G.disableMapInfo
+    keepTheProfile()
+    _G.enableMapInfo, _G.disableMapInfo = realEnableMapInfo, realDisableMapInfo
+    local mapInfo = getMapInfo()
+    defer(function()
+      for contributor, enabled in pairs(mapInfo) do
+        if enabled then enableMapInfo(contributor) else disableMapInfo(contributor) end
+      end
+    end)
+    enableMapInfo("Short")
+    local styleSheet = getCmdLineStyleSheet("main")
+    defer(function() setCmdLineStyleSheet("main", styleSheet) end)
+    local playersStyleSheet = "QPlainTextEdit { background-color: navy; }"
+    setCmdLineStyleSheet("main", playersStyleSheet)
+    local areaId = addAreaName("packageSpecTutorialArea")
+    local roomId = createRoomID()
+    defer(function()
+      deleteRoom(roomId)
+      deleteArea(areaId)
+    end)
+    addRoom(roomId)
+    setRoomArea(roomId, areaId)
+    setRoomName(roomId, "packageSpecTutorialRoom")
+
+    install()
+    assert.is_true(lessonStarted(), "the lesson never started")
+    _G.hq.guiTutorialStep1()
+    _G.hq.guiTutorialStep2()
+    -- the second step blinks the command line, grey and black by turns
+    pumpEvents(1100)
+    _G.hq.newGameScreen()
+    _G.hq.initVillage()
+    assert.are_not.equal("packageSpecTutorialRoom", getRoomName(roomId), "SETUP: the lesson did not replace the map")
+    removeFixturePackage(name)
+
+    assert.are.equal("packageSpecTutorialRoom", getRoomName(roomId))
+    assert.is_true(getMapInfo().Short)
+    assert.are.equal(playersStyleSheet, getCmdLineStyleSheet("main"))
+  end)
+
+  it("gives back a global hq that a player's script had", function()
+    keepTheProfile()
+    local label = playersLabel("packageSpecTutorialLabel")
+    local playersHq = { data = 42, label = label }
+    _G.hq = playersHq
+
+    install()
+    assert.is_true(lessonStarted(), "the lesson never started")
+    removeFixturePackage(name)
+
+    assert.are.equal(playersHq, _G.hq)
+    assert.are.same({ data = 42, label = label }, playersHq)
+    assert.is_falsy(label.hidden)
+  end)
+
+  it("cleans up as well when it was installed as a module", function()
+    keepTheProfile()
+    local label = playersLabel("packageSpecTutorialLabel")
+
+    defer(function() removeFixtureModule(name, "mudlet-tutorial") end)
+    installUntilConfirmed(installModule, archive, function() return moduleInstalled(name) end, "the tutorial as a module")
+    assert.is_true(lessonStarted(), "the lesson never started")
+    removeFixtureModule(name, "mudlet-tutorial")
+
+    assert.are.same({}, getNamedEventHandlers("mudlet-tutorial"))
+    assert.is_nil(_G.hq)
+    assert.is_falsy(label.hidden)
+  end)
+
+  it("keeps the lesson going when another package is uninstalled", function()
+    keepTheProfile()
+
+    install()
+    assert.is_true(lessonStarted(), "the lesson never started")
+    withFixturePackage(minimalPackage)
+    removeFixturePackage(minimalPackage)
+
+    assert.are.same({ "parser" }, getNamedEventHandlers("mudlet-tutorial"))
+    assert.are.equal("table", type(_G.hq))
+  end)
+
+  it("gives back the player's windows even after its Init script was run again", function()
+    keepTheProfile()
+    local label = playersLabel("packageSpecTutorialLabel")
+
+    install()
+    assert.is_true(lessonStarted(), "the lesson never started")
+    runAgain("Init")
+    pumpEvents(100)
+    removeFixturePackage(name)
+
+    assert.is_falsy(label.hidden)
+    assert.are.same({}, lessonWindowsLeft())
+  end)
+
+  it("does not start the lesson when the UI tour ends after it was uninstalled", function()
+    local profile = keepTheProfile()
+    mudlet.uiTourPending = true
+
+    install()
+    pumpEvents(100)
+    removeFixturePackage(name)
+    assert.is_nil(_G.hq)
+    assert.are.same({}, getNamedEventHandlers("mudlet-tutorial"))
+    install()
+    pumpEvents(100)
+    raiseEvent("sysUiTourFinished")
+    pumpEvents(100)
+
+    -- each lesson start turns the map's short and full info off and the empty one on
+    assert.are.equal(3, profile.mapInfoChanges)
+  end)
+
+  it("does not start the lesson when the UI tour ends after its Init script was run again and it was uninstalled", function()
+    local profile = keepTheProfile()
+    mudlet.uiTourPending = true
+
+    install()
+    pumpEvents(100)
+    runAgain("Init")
+    removeFixturePackage(name)
+    assert.is_nil(_G.hq)
+    assert.are.same({}, getNamedEventHandlers("mudlet-tutorial"))
+    install()
+    pumpEvents(100)
+    raiseEvent("sysUiTourFinished")
+    pumpEvents(100)
+
+    assert.are.equal(3, profile.mapInfoChanges)
+  end)
+
+  it("leaves no doSpeedWalk behind in a profile that had none, even after its map script was run again", function()
+    override("doSpeedWalk", nil)
+    keepTheProfile()
+
+    install()
+    assert.is_true(lessonStarted(), "the lesson never started")
+    runAgain("Set up Map")
+    removeFixturePackage(name)
+
+    assert.is_nil(_G.doSpeedWalk)
+  end)
+
+  it("leaves alone a doSpeedWalk that a mapping script installed after it set", function()
+    override("doSpeedWalk", _G.doSpeedWalk)
+    keepTheProfile()
+    local mappersSpeedWalk = function() end
+
+    install()
+    assert.is_true(lessonStarted(), "the lesson never started")
+    _G.doSpeedWalk = mappersSpeedWalk
+    removeFixturePackage(name)
+
+    assert.are.equal(mappersSpeedWalk, _G.doSpeedWalk)
+  end)
+
+  it("gives back a mapping script's doSpeedWalk even after its map script was run again", function()
+    override("doSpeedWalk", function() end)
+    keepTheProfile()
+    local mappersSpeedWalk = function() end
+
+    install()
+    assert.is_true(lessonStarted(), "the lesson never started")
+    _G.doSpeedWalk = mappersSpeedWalk
+    runAgain("Set up Map")
+    removeFixturePackage(name)
+
+    assert.are.equal(mappersSpeedWalk, _G.doSpeedWalk)
+  end)
+end)
+
 describe("Tests installing a module whose XML cannot be read", function()
   it("says the module could not be loaded, and keeps it listed", function()
     local name = "mudlet-spec-badxml"
