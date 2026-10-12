@@ -24,6 +24,8 @@
 #include <IrcMessage>
 #include <QString>
 
+class QUrl;
+
 class IrcMessageFormatter
 {
 public:
@@ -31,6 +33,7 @@ public:
     static QString formatMessage(const QString& message, QString color = "#f29010", bool isForLua = false);
     static QString formatSeconds(int secs);
     static QString formatDuration(int secs);
+    static bool linkOpensInBrowser(const QUrl& link);
 
 private:
     static QString formatAwayMessage(IrcAwayMessage* message, bool isForLua = false);
