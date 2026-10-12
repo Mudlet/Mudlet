@@ -891,21 +891,7 @@ std::pair<int, QString> TArea::readJsonArea(const QJsonArray& array, const int a
     }
     // Those for a label the file does not have are left over from one since deleted,
     // while for one it has they can be the only copy of its font or outline color
-    const QLatin1String fontPrefix{"system.labelFont_"};
-    const QLatin1String outlineColorPrefix{"system.labelOutlineColor_"};
-    mUserData.removeIf([this, fontPrefix, outlineColorPrefix](QMap<QString, QString>::iterator item) {
-        QStringView labelIdText{item.key()};
-        if (labelIdText.startsWith(fontPrefix)) {
-            labelIdText = labelIdText.sliced(fontPrefix.size());
-        } else if (labelIdText.startsWith(outlineColorPrefix)) {
-            labelIdText = labelIdText.sliced(outlineColorPrefix.size());
-        } else {
-            return false;
-        }
-        bool isNumber = false;
-        const int labelId = labelIdText.toInt(&isNumber);
-        return !isNumber || !mMapLabels.contains(labelId);
-    });
+    dropFileOnlyUserData(mUserData, &mMapLabels);
     return {id, name};
 }
 
@@ -924,6 +910,26 @@ void TArea::writeJsonUserData(QJsonObject& obj) const
     }
     const QJsonValue userDatasValue{userDataObj};
     obj.insert(QLatin1String("userData"), userDatasValue);
+}
+
+// The binary format keeps an area's zoom (below format 21) and its labels'
+// fonts and outline colors as user data under these keys. They mean nothing in
+// the live map, and a map file can hold them for labels that no longer exist.
+void TArea::dropFileOnlyUserData(QMap<QString, QString>& userData, const QMap<int, TMapLabel>* pKeptLabels)
+{
+    // exactly the form a save writes, so "_007" or "_+5" stay a script's own
+    const auto labelKey = [pKeptLabels](const QString& key, const QLatin1String prefix) {
+        if (!key.startsWith(prefix)) {
+            return false;
+        }
+        const QStringView suffix = QStringView(key).mid(prefix.size());
+        bool isNumber = false;
+        const int labelId = suffix.toInt(&isNumber);
+        return isNumber && suffix == QString::number(labelId) && !(pKeptLabels && pKeptLabels->contains(labelId));
+    };
+    userData.removeIf([&labelKey](const QMap<QString, QString>::iterator& it) {
+        return it.key() == QLatin1String("system.fallback_map2DZoom") || labelKey(it.key(), QLatin1String("system.labelFont_")) || labelKey(it.key(), QLatin1String("system.labelOutlineColor_"));
+    });
 }
 
 // Takes a userData object and parses all its elements

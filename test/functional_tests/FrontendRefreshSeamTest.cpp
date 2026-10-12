@@ -271,6 +271,30 @@ private slots:
         assertReading(seen, qsl("disconnected"), 2, TabConnectionIndicator::Disconnected);
     }
 
+    // A style sheet a script sets reaches the tab bar only through
+    // TAppFrontend::setAppStyleSheet()'s tab bar refresh: TTabBar installs its
+    // own style, so Qt's StyleChange broadcast skips it and it keeps tab sizes
+    // laid out against the previous style.
+    void test_aScriptsAppStyleSheetReachesTheTabBar()
+    {
+        Host* host = startProfile();
+        QVERIFY(host);
+        TTabBar* tabBar = mudlet::self()->mpTabBar;
+        QVERIFY(tabBar);
+        const int index = tabBar->tabIndex(mHostname);
+        QVERIFY2(index >= 0, "the profile got no tab of its own, so there is no tab size to assert on");
+        auto restoreStyleSheet = qScopeGuard([host]() {
+            host->getLuaInterpreter()->compileAndExecuteScript(qsl("setAppStyleSheet('')"));
+        });
+
+        for (const int minimumWidth : {tabBar->tabRect(index).width() + 150, tabBar->tabRect(index).width() + 300}) {
+            const QString script = qsl("setAppStyleSheet[[QTabBar::tab { min-width: %1px; }]]").arg(minimumWidth);
+            QVERIFY2(host->getLuaInterpreter()->compileAndExecuteScript(script), qPrintable(script));
+            QVERIFY2(tabBar->tabRect(index).width() >= minimumWidth,
+                     qPrintable(qsl("the tab is %1px wide after a style sheet asking for at least %2px").arg(tabBar->tabRect(index).width()).arg(minimumWidth)));
+        }
+    }
+
     // The repaint half of the OSC 8 visibility seam. TBufferOSC_spec.lua drives
     // the same delayed reveal but reads back only the line text, which
     // performReveal() restores before it emits, so the whole spec suite stays
@@ -281,7 +305,7 @@ private slots:
         QVERIFY(host);
         host->mEnableOSC8Hyperlinks = true;
 
-        TMainConsole* console = host->mpConsole;
+        TMainConsole* console = host->mainConsoleView();
         QVERIFY(console);
         QVERIFY(console->mUpperPane);
         QVERIFY(console->mLowerPane);
@@ -363,7 +387,7 @@ private slots:
     {
         Host* host = startProfile();
         QVERIFY(host);
-        TMainConsole* console = host->mpConsole;
+        TMainConsole* console = host->mainConsoleView();
         QVERIFY(console);
         const int linkId = feedSpoilerLink(host, qsl("OSCPAINT1"));
         QVERIFY2(linkId > 0, "no spoiler link reached the buffer");
@@ -395,7 +419,7 @@ private slots:
     {
         Host* host = startProfile();
         QVERIFY(host);
-        TMainConsole* console = host->mpConsole;
+        TMainConsole* console = host->mainConsoleView();
         QVERIFY(console);
         QVERIFY2(host->getLuaInterpreter()->compileAndExecuteScript(qsl("createMiniConsole('seamMini', 0, 0, 300, 200)\n"
                                                                         "echo('seamMini', 'first\\nsecond\\nthird\\n')\n"
@@ -426,10 +450,10 @@ private slots:
             pane->mDirtyFirstLine = -1;
             pane->mDirtyLastLine = -1;
         }
-        const QPointer<TMainConsole> mainView = host->mpConsole;
-        host->mpConsole = nullptr;
+        const QPointer<TMainConsole> mainView = host->mainConsoleView();
+        host->setMainConsoleView(nullptr);
         const bool restyled = host->getLuaInterpreter()->compileAndExecuteScript(qsl("setBold('seamMini', false)"));
-        host->mpConsole = mainView;
+        host->setMainConsoleView(mainView);
         QVERIFY(restyled);
         QVERIFY2(mini->mUpperPane->mDirtyFirstLine == selectedLine && mini->mLowerPane->mDirtyFirstLine == selectedLine, "restyling a mini console redrew it only while the main console had a view");
     }
@@ -438,7 +462,7 @@ private slots:
     {
         Host* host = startProfile();
         QVERIFY(host);
-        TMainConsole* console = host->mpConsole;
+        TMainConsole* console = host->mainConsoleView();
         QVERIFY(console);
         QVERIFY2(host->getLuaInterpreter()->compileAndExecuteScript(qsl("createMiniConsole('seamWrite', 0, 0, 300, 200)\n"
                                                                         "echo('seamWrite', 'first\\nsecond\\nthird\\n')\n"
@@ -472,7 +496,7 @@ private slots:
     {
         Host* host = startProfile();
         QVERIFY(host);
-        TMainConsole* console = host->mpConsole;
+        TMainConsole* console = host->mainConsoleView();
         QVERIFY(console);
         QVERIFY2(host->getLuaInterpreter()->compileAndExecuteScript(qsl("echo('first\\nkeep seamCut keep\\nthird\\n')\n")), "the main console could not be written to");
         int line = -1;
@@ -500,7 +524,7 @@ private slots:
     {
         Host* host = startProfile();
         QVERIFY(host);
-        TMainConsole* console = host->mpConsole;
+        TMainConsole* console = host->mainConsoleView();
         QVERIFY(console);
         QVERIFY2(host->getLuaInterpreter()->compileAndExecuteScript(qsl("echo('first\\nkeep seamOld keep\\nthird\\n')\n")), "the main console could not be written to");
         int line = -1;
@@ -538,7 +562,7 @@ private:
         if (!host->getLuaInterpreter()->compileAndExecuteScript(feed)) {
             return 0;
         }
-        TMainConsole* console = host->mpConsole;
+        TMainConsole* console = host->mainConsoleView();
         int lineNumber = -1;
         const bool landed = QTest::qWaitFor(
                 [&]() {
