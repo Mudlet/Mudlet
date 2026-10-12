@@ -89,6 +89,7 @@ void TMxpFrameWidgets::createInternalFrame(const QString& name, const QString& h
     containerWidget->setAttribute(Qt::WA_DontShowOnScreen, true);
     containerWidget->setObjectName(name + qsl("_container"));
     containerWidget->setGeometry(geometry);
+    mpMainConsole->watchVisibility(containerWidget);
 
     if (showHeader) {
         containerWidget->setFrameStyle(QFrame::Panel | QFrame::Raised);
@@ -128,6 +129,7 @@ void TMxpFrameWidgets::createInternalFrame(const QString& name, const QString& h
         tabPage->setStyleSheet(qsl("background-color: transparent;"));
         auto* tabPageLayout = new QVBoxLayout(tabPage);
         tabPageLayout->setContentsMargins(0, 0, 0, 0);
+        mpMainConsole->watchVisibility(tabPage);
 
         // Not createMiniConsole: it parents to mpMainFrame and calls show(), causing a flash
         console = mpMainConsole->createSubConsole(name, tabPage);
@@ -251,6 +253,7 @@ void TMxpFrameWidgets::createTabFrame(const QString& name, const QString& title,
     tabPage->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding);
     auto* tabPageLayout = new QVBoxLayout(tabPage);
     tabPageLayout->setContentsMargins(0, 0, 0, 0);
+    mpMainConsole->watchVisibility(tabPage);
 
     auto* console = mpMainConsole->createSubConsole(name, tabPage);
     console->resize(size.width(), size.height());
