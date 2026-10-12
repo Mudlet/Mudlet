@@ -548,6 +548,7 @@ private slots:
         mpSource->setControlCharacterMode(ControlCharacterMode::Picture);
         mpSource->setWideAmbiguousEAsianGlyphs(Qt::Checked);
         mpSource->setLargeAreaExitArrows(true);
+        QVERIFY(mpSource->setMapStyle(qsl("blueprint")));
         const auto [experimentSet, experimentError] = mpSource->setExperimentEnabled(scmExperiment, true);
         QVERIFY2(experimentSet, qPrintable(experimentError));
 
@@ -610,7 +611,8 @@ private slots:
                                        std::pair{qsl("blankLineBehaviour=\"Hide\""), qsl("blankLineBehaviour=\"ReplaceWithSpace\"")},
                                        std::pair{qsl("ControlCharacterHandling=\"1\""), qsl("ControlCharacterHandling=\"2\"")},
                                        std::pair{qsl("AmbigousWidthGlyphsToBeWide=\"yes\""), qsl("AmbigousWidthGlyphsToBeWide=\"no\"")},
-                                       std::pair{qsl("Large2DMapAreaExitArrows=\"yes\""), qsl("Large2DMapAreaExitArrows=\"no\"")}}) {
+                                       std::pair{qsl("Large2DMapAreaExitArrows=\"yes\""), qsl("Large2DMapAreaExitArrows=\"no\"")},
+                                       std::pair{qsl("mapStyle=\"blueprint\""), qsl("mapStyle=\"no-such-style\"")}}) {
             QVERIFY2(legacyXml.count(from) == 1, qPrintable(qsl("the export does not hold %1 exactly once").arg(from)));
             legacyXml.replace(from, to);
         }
@@ -625,6 +627,8 @@ private slots:
 
         QFile legacyReadFile(legacyPath);
         QVERIFY2(legacyReadFile.open(QFile::ReadOnly | QFile::Text), qPrintable(legacyReadFile.errorString()));
+        // Off the default first, so only falling back to it can pass
+        QVERIFY(mpLegacyTarget->setMapStyle(qsl("blueprint")));
         XMLimport legacyImporter(mpLegacyTarget);
         auto [legacyImported, legacyImportError] = legacyImporter.importPackage(&legacyReadFile);
         QVERIFY2(legacyImported, qPrintable(legacyImportError));
@@ -812,12 +816,15 @@ private slots:
         QCOMPARE(mpTarget->getWideAmbiguousEAsianGlyphsControlState(), Qt::Checked);
         QVERIFY(mpTarget->getLargeAreaExitArrows());
         QVERIFY(mpTarget->experimentEnabled(scmExperiment));
+        QCOMPARE(mpTarget->mapStyle(), qsl("blueprint"));
 
         QCOMPARE(mpLegacyTarget->mCaretShortcut, Host::CaretShortcut::CtrlTab);
         QCOMPARE(mpLegacyTarget->mBlankLineBehaviour, Host::BlankLineBehaviour::ReplaceWithSpace);
         QCOMPARE(mpLegacyTarget->getControlCharacterMode(), ControlCharacterMode::OEM);
         QCOMPARE(mpLegacyTarget->getWideAmbiguousEAsianGlyphsControlState(), Qt::Unchecked);
         QVERIFY(!mpLegacyTarget->getLargeAreaExitArrows());
+        // A style this version does not know falls back to the default one
+        QCOMPARE(mpLegacyTarget->mapStyle(), qsl("tiles"));
     }
 
     // A persistent stopwatch comes back under its own name, still running or

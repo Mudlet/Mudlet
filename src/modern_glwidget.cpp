@@ -86,11 +86,13 @@ ModernGLWidget::ModernGLWidget(TMap* pMap, Host* pHost, QWidget* parent)
     format.setSamples(4);
     setFormat(format);
 
-    if (mpHost->mBgColor_2.alpha() < 255) {
-        setAttribute(Qt::WA_OpaquePaintEvent, false);
-        setAttribute(Qt::WA_AlwaysStackOnTop);
-    } else {
-        setAttribute(Qt::WA_OpaquePaintEvent);
+    applyStyle();
+    if (mpMap) {
+        connect(mpMap, &TMap::signal_mapperSettingChanged, this, [this](const TMap::MapperSetting setting) {
+            if (setting == TMap::MapperSetting::Style) {
+                applyStyle();
+            }
+        });
     }
 
     // Initialize smooth camera animation
@@ -657,9 +659,7 @@ void ModernGLWidget::paintGL()
     zmax = static_cast<float>(pArea->max_z);
     zmin = static_cast<float>(pArea->min_z);
 
-    const MapStyle& style = mapStyle();
-    scale = style.roomScale;
-    zFlattening = style.roomFlattening;
+    applyStyleGeometry();
 
     // Clear the screen
     const QColor color(backgroundColor());
@@ -740,6 +740,9 @@ constexpr float scmRoundRoomInset = 0.707f;
 // Outlines' widths, as a part of a room's width: around the viewed level's unbordered, opaque rooms outside grid mode, and the one hovered over
 constexpr float scmLevelOutline = 0.06f;
 constexpr float scmHoverOutline = 0.14f;
+// An ink outline's width, and its dashes' length off the viewed level, as a part of a room's width
+constexpr float scmInkOutline = 0.035f;
+constexpr qreal scmInkDash = 0.12;
 // How strongly a level's floor plate shows
 constexpr float scmFloorPlateOpacity = 0.07f;
 
@@ -774,6 +777,61 @@ QString exitMarkerKey(const TRoom& room)
         }
     }
     return key;
+}
+
+// Lines drawn flat on rooms' tops, as triangles
+struct FlatLines
+{
+    QVector<float> vertices;
+    QVector<float> colors;
+};
+
+// A closed outline through corners on the plane at z, every piece of it dashLength long with gaps as long between,
+// or solid when dashLength is 0
+void appendFlatOutline(FlatLines& lines, const QList<QPointF>& corners, const float z, const float width, const QVector4D& color, const qreal dashLength)
+{
+    const auto piece = [&](const QPointF& from, const QPointF& to) {
+        QLineF line(from, to);
+        if (line.length() <= 0.0) {
+            return;
+        }
+        // Overlapping at the corners rather than leaving notches there
+        const QPointF along = (to - from) * (width / 2.0 / line.length());
+        const QPointF side(-along.y(), along.x());
+        const QPointF a = from - along + side;
+        const QPointF b = to + along + side;
+        const QPointF c = to + along - side;
+        const QPointF d = from - along - side;
+        for (const QPointF& corner : {a, b, c, a, c, d}) {
+            lines.vertices << static_cast<float>(corner.x()) << static_cast<float>(corner.y()) << z;
+            lines.colors << color.x() << color.y() << color.z() << color.w();
+        }
+    };
+    qreal position = 0.0;
+    for (qsizetype i = 0, total = corners.size(); i < total; ++i) {
+        const QPointF from = corners.at(i);
+        const QPointF to = corners.at((i + 1) % total);
+        const QLineF edge(from, to);
+        if (dashLength <= 0.0) {
+            piece(from, to);
+            continue;
+        }
+        // The pattern carries on round the corners, so a dash can turn one. Counted in whole dashes, as stepping a
+        // float along the edge can stall on rounding
+        const qreal length = edge.length();
+        if (length <= 0.0) {
+            continue;
+        }
+        const qreal period = 2.0 * dashLength;
+        for (qint64 dash = static_cast<qint64>(std::floor(position / period)); dash * period < position + length; ++dash) {
+            const qreal start = qMax(dash * period, position) - position;
+            const qreal end = qMin(dash * period + dashLength, position + length) - position;
+            if (end > start) {
+                piece(edge.pointAt(start / length), edge.pointAt(end / length));
+            }
+        }
+        position += length;
+    }
 }
 } // namespace
 
@@ -1014,7 +1072,7 @@ void ModernGLWidget::renderRooms()
     QFont nameFont = style.labelFont(mpMap->mMapSymbolFont);
     if (showRoomNames) {
         if (QFont font; font.fromString(mpMap->mUserData.value(ROOM_UI_NAMEFONT))) {
-            nameFont = font;
+            nameFont = style.labelFont(font);
         }
         nameFont.setItalic(false);
         nameFont.setUnderline(false);
@@ -1087,6 +1145,10 @@ void ModernGLWidget::renderRooms()
     QVector<CubeInstanceData> roomInstances;
     QVector<CubeInstanceData> borderInstances;
     QVector<CubeInstanceData> outlineInstances;
+    const bool inkOutlines = style.edges == MapStyle::Edges::InkOutlines;
+    const QColor ink = style.exitColor(contrast);
+    // By level, drawn with that level's rooms
+    QMap<int, FlatLines> inkLines;
     // What is on the opaque rooms, by level, drawn with the see-through rooms of its level
     QMap<int, RoomDecals> opaqueDecals;
     // Rooms and borders drawn see-through, with what is on them, by level: drawn after the opaque rooms
@@ -1139,10 +1201,13 @@ void ModernGLWidget::renderRooms()
         const QColor roomColor = style.roomColor(look.color);
         QVector4D roomTint = GeometryManager::fadedColor(roomColor, fade, fadeTarget);
         if (look.playerRoom && !playerRoomTexture) {
-            // Without its marker the player's room is drawn solid red, so it still stands out
-            roomTint = QVector4D(1.0f, 0.0f, 0.0f, 1.0f);
+            // Without its marker the player's room is drawn solid, so it still stands out
+            const QColor playerColor = style.playerRoomColor();
+            roomTint = QVector4D(playerColor.redF(), playerColor.greenF(), playerColor.blueF(), 1.0f);
         }
-        const bool seeThrough = roomTint.w() < 1.0f;
+        // Outlined, a room off the viewed level has no fill, so its level's decals go with the see-through ones
+        const bool unfilled = inkOutlines && !look.onViewedLevel() && !(look.playerRoom && !playerRoomTexture);
+        const bool seeThrough = roomTint.w() < 1.0f || unfilled;
         QVector<CubeInstanceData>& instances = seeThrough ? seeThroughLevels[pR->z()].cubes : roomInstances;
         RoomDecals& decals = seeThrough ? seeThroughLevels[pR->z()].decals : opaqueDecals[pR->z()];
         // An outline is a lower, wider block, so that its top shows only as a rim around the room
@@ -1155,14 +1220,32 @@ void ModernGLWidget::renderRooms()
         };
 
         const bool bordered = (mpHost->mMapperShowRoomBorders || pR->mBorderColor.isValid() || pR->mBorderThickness > 0) && !pArea->gridMode;
-        if (hovered) {
+        if (inkOutlines) {
+            // A border's color, where the room has one, in place of the ink, as a block around a room with no fill would hide it
+            const QColor lineColor = bordered ? (pR->mBorderColor.isValid() ? pR->mBorderColor : mpHost->mRoomBorderColor) : ink;
+            const float top = rz + roomHeight / 2.0f;
+            const float pixel = mCameraController.worldUnitsPerPixel(QVector3D(rx, ry, top));
+            const float width = qMax(roomSize * scmInkOutline, pixel) * (hovered ? 2.5f : 1.0f);
+            QList<QPointF> corners;
+            const qreal half = roomSize / 2.0;
+            if (round) {
+                for (int i = 0; i < GeometryManager::scmCylinderSegments; ++i) {
+                    const qreal angle = 2.0 * std::numbers::pi * i / GeometryManager::scmCylinderSegments;
+                    corners.append(QPointF(rx + half * std::cos(angle), ry + half * std::sin(angle)));
+                }
+            } else {
+                corners = {QPointF(rx - half, ry - half), QPointF(rx + half, ry - half), QPointF(rx + half, ry + half), QPointF(rx - half, ry + half)};
+            }
+            const bool dashed = !look.onViewedLevel() && !hovered;
+            appendFlatOutline(inkLines[pR->z()], corners, top, width, GeometryManager::fadedColor(lineColor, fade, fadeTarget), dashed ? roomSize * scmInkDash : 0.0);
+        } else if (hovered) {
             // Taller than a border, so that it shows over one
             outlineInstances.append(outline(roomSize * scmHoverOutline, QVector4D(contrast.redF(), contrast.greenF(), contrast.blueF(), 1.0f), 0.75f));
         } else if (style.edges == MapStyle::Edges::ViewedLevelRim && !bordered && !pArea->gridMode && look.onViewedLevel() && !seeThrough) {
             // Halfway from the room's color to the one that stands out on the background, so the viewed level's rooms stand apart from the rest
             outlineInstances.append(outline(roomSize * scmLevelOutline, GeometryManager::fadedColor(roomColor, {0.5f, 1.0f}, contrast)));
         }
-        if (bordered) {
+        if (bordered && !inkOutlines) {
             const float borderWidth = (pR->mBorderThickness > 0 ? pR->mBorderThickness : 1) * borderUnit;
             const QColor borderColor = pR->mBorderColor.isValid() ? pR->mBorderColor : mpHost->mRoomBorderColor;
             const QVector4D borderTint = GeometryManager::fadedColor(borderColor, fade, fadeTarget);
@@ -1172,7 +1255,9 @@ void ModernGLWidget::renderRooms()
         QMatrix4x4 transform;
         transform.translate(rx, ry, rz);
         transform.scale(1.0f / scale, 1.0f / scale, 1.0f / scale / zFlattening);
-        instances.append(CubeInstanceData(transform, roomTint.x(), roomTint.y(), roomTint.z(), roomTint.w()));
+        if (!unfilled) {
+            instances.append(CubeInstanceData(transform, roomTint.x(), roomTint.y(), roomTint.z(), roomTint.w()));
+        }
 
         const QVector3D roomTop(rx, ry, rz + roomHeight / 2.0f);
         const QVector4D decalTint = GeometryManager::fadedDecalTint(fade);
@@ -1183,7 +1268,7 @@ void ModernGLWidget::renderRooms()
         }
 
         if (!look.symbol.isEmpty()) {
-            const RoomSymbol roomSymbol{currentRoomId, look.symbol, RoomAppearance::symbolColor(look.symbolColor, roomColor), roomTop, decalTint, &decals};
+            const RoomSymbol roomSymbol{currentRoomId, look.symbol, style.symbolColor(look.symbolColor, roomColor), roomTop, decalTint, &decals};
             if (showRoomIds) {
                 symbolsInPlaceOfIds.append(roomSymbol);
             } else {
@@ -1398,7 +1483,7 @@ void ModernGLWidget::renderRooms()
     plateColor.setAlphaF(scmFloorPlateOpacity);
     const auto queuePlate = [&](const int level) {
         const auto extent = levelExtents.constFind(level);
-        if (extent == levelExtents.cend()) {
+        if (extent == levelExtents.cend() || !style.floorPlates) {
             return;
         }
         const QVector4D tint = GeometryManager::fadedColor(plateColor, GeometryManager::levelFade(level - mMapCenterZ, moreTransparent), levelFadeTarget(level));
@@ -1419,7 +1504,7 @@ void ModernGLWidget::renderRooms()
     // From the lowest level up, as each blends over the ones under it: its faint floor, its see-through exits, rooms
     // and borders, what is on its rooms, then its labels shown on top. Every level's labels come before the next
     // level up lays its depth, which would cut them out where it covers them
-    QList<int> levels = levelExtents.keys() + mSeeThroughExits.keys() + seeThroughLevels.keys() + opaqueDecals.keys();
+    QList<int> levels = levelExtents.keys() + mSeeThroughExits.keys() + seeThroughLevels.keys() + opaqueDecals.keys() + inkLines.keys();
     std::sort(levels.begin(), levels.end());
     levels.erase(std::unique(levels.begin(), levels.end()), levels.end());
     qint64 unlabeledFrom = std::numeric_limits<int>::lowest();
@@ -1459,6 +1544,12 @@ void ModernGLWidget::renderRooms()
                 mRenderCommandQueue.addCommand(std::make_unique<GLStateCommand>(GLStateCommand::DEPTH_FUNC_LESS));
             }
         }
+        if (const auto lines = inkLines.constFind(level); lines != inkLines.cend()) {
+            mRenderCommandQueue.addCommand(std::make_unique<GLStateCommand>(GLStateCommand::ENABLE_POLYGON_OFFSET));
+            mRenderCommandQueue.addCommand(std::make_unique<RenderTrianglesCommand>(
+                    lines->vertices, lines->colors, mCameraController.getProjectionMatrix(), mCameraController.getViewMatrix(), mCameraController.getModelMatrix(), RenderCommand::Shading::Unlit));
+            mRenderCommandQueue.addCommand(std::make_unique<GLStateCommand>(GLStateCommand::DISABLE_POLYGON_OFFSET));
+        }
         if (const auto decals = opaqueDecals.constFind(level); decals != opaqueDecals.cend()) {
             queueDecals(*decals);
         }
@@ -1485,11 +1576,13 @@ ExitScene::Options ModernGLWidget::exitSceneOptions() const
     options.levelsAbove = mShowTopLevels;
     options.levelsBelow = mShowBottomLevels;
     // As on the 2D map, the exit size setting is how many line widths make a room's width
-    options.lineWidth = roomSize / static_cast<float>(qMax(0.1, mpHost->mLineSize));
+    const MapStyle& style = mapStyle();
+    options.lineWidth = roomSize / static_cast<float>(qMax(0.1, mpHost->mLineSize)) * style.exitWidthFactor;
     options.lineHeight = qMin(options.lineWidth, 0.8f * roomHeight);
     options.inOutStubs = mpHost->experimentEnabled(qsl("experiment.render-in-out-exits"));
     options.largeAreaExitArrows = mpHost->getLargeAreaExitArrows();
-    options.exitColor = mpHost->mFgColor_2;
+    options.exitColor = style.exitColor(mpHost->mFgColor_2);
+    options.doorSwings = style.doors == MapStyle::Doors::Swings;
     options.background = backgroundColor();
     return options;
 }
@@ -1500,6 +1593,24 @@ QColor ModernGLWidget::levelFadeTarget(const int z) const
         return backgroundColor();
     }
     return GeometryManager::levelFadeTarget(z - mMapCenterZ, backgroundColor(), mpHost->mUpperLevelColor, mpHost->mLowerLevelColor);
+}
+
+void ModernGLWidget::applyStyleGeometry()
+{
+    const MapStyle& style = mapStyle();
+    scale = style.roomScale;
+    zFlattening = style.roomFlattening;
+}
+
+void ModernGLWidget::applyStyle()
+{
+    // Before any repaint, as picking a room reads them too
+    applyStyleGeometry();
+    // Only an opaque view may tell Qt that it paints over everything behind it
+    const bool translucent = backgroundColor().alpha() < 255;
+    setAttribute(Qt::WA_OpaquePaintEvent, !translucent);
+    setAttribute(Qt::WA_AlwaysStackOnTop, translucent);
+    update();
 }
 
 const MapStyle& ModernGLWidget::mapStyle() const
@@ -1514,7 +1625,12 @@ QColor ModernGLWidget::backgroundColor() const
 
 void ModernGLWidget::queueGrid()
 {
-    if (!mpHost || !mpHost->mMapperShowGrid || mpHost->mMapGridColor.alpha() == 0 || !mpMap || !mpMap->mpRoomDB || !mpMap->mpRoomDB->getArea(mAID)) {
+    if (!mpHost || !mpMap || !mpMap->mpRoomDB || !mpMap->mpRoomDB->getArea(mAID)) {
+        return;
+    }
+    const QColor styleGridColor = mapStyle().gridColor;
+    const bool styleGrid = styleGridColor.isValid();
+    if (!styleGrid && (!mpHost->mMapperShowGrid || mpHost->mMapGridColor.alpha() == 0)) {
         return;
     }
     const float roomHeight = 2.0f / scale / zFlattening;
@@ -1549,19 +1665,28 @@ void ModernGLWidget::queueGrid()
         lowest = QPointF(qMin(lowest.x(), toReached.p2().x()), qMin(lowest.y(), toReached.p2().y()));
         highest = QPointF(qMax(highest.x(), toReached.p2().x()), qMax(highest.y(), toReached.p2().y()));
     }
-    const QList<QLineF> lines = GeometryManager::gridLines(QRectF(lowest, highest));
+    // The style's own grid runs between the rooms, as on squared drafting paper, so that rooms sit in its cells
+    const QPointF gridOffset = styleGrid ? QPointF(0.5, 0.5) : QPointF();
+    QList<QLineF> lines = GeometryManager::gridLines(QRectF(lowest - gridOffset, highest - gridOffset));
     if (lines.isEmpty()) {
         return;
     }
 
+    const float pixel = mCameraController.worldUnitsPerPixel(QVector3D(target.x(), target.y(), gridZ));
     // As on the 2D map, a line size of 50 is a room spacing (one map unit) wide; never thinner than a pixel where the view looks
-    const float lineWidth = qMax(static_cast<float>(mpHost->mMapGridLineSize) / 50.0f, mCameraController.worldUnitsPerPixel(QVector3D(target.x(), target.y(), gridZ)));
-    const QColor color = mpHost->mMapGridColor;
+    const float lineWidth = styleGrid ? pixel : qMax(static_cast<float>(mpHost->mMapGridLineSize) / 50.0f, pixel);
+    const QColor color = styleGrid ? styleGridColor : mpHost->mMapGridColor;
+    QColor majorColor = color;
+    majorColor.setAlphaF(qMin(1.0f, color.alphaF() * 2.5f));
     QVector<float> vertices;
     QVector<float> colors;
     vertices.reserve(lines.size() * 18);
     colors.reserve(lines.size() * 24);
-    for (const QLineF& line : lines) {
+    for (QLineF& line : lines) {
+        line.translate(gridOffset);
+        // Every fifth of the style's lines, counted from the map's origin, is stronger
+        const qreal at = line.dx() == 0.0 ? line.x1() - gridOffset.x() : line.y1() - gridOffset.y();
+        const QColor& lineColor = styleGrid && qRound64(at) % 5 == 0 ? majorColor : color;
         const QPointF side = QPointF(-line.dy(), line.dx()) * (lineWidth / 2.0 / line.length());
         const QPointF a = line.p1() + side;
         const QPointF b = line.p2() + side;
@@ -1569,7 +1694,7 @@ void ModernGLWidget::queueGrid()
         const QPointF d = line.p1() - side;
         for (const QPointF& corner : {a, b, c, a, c, d}) {
             vertices << static_cast<float>(corner.x()) << static_cast<float>(corner.y()) << gridZ;
-            colors << color.redF() << color.greenF() << color.blueF() << color.alphaF();
+            colors << lineColor.redF() << lineColor.greenF() << lineColor.blueF() << lineColor.alphaF();
         }
     }
     // Writing no depth, so what is drawn after it, nearer or further, paints over it as on the 2D map
