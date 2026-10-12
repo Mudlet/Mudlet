@@ -757,6 +757,8 @@ constexpr float scmFloorPlateOpacity = 0.07f;
 // The terminal style's glyph atlas: cells of this many texels, this many to a side
 constexpr int scmGlyphCellTexels = 64;
 constexpr int scmGlyphAtlasColumns = 16;
+// The block and the printable ASCII characters, which the atlas always holds first
+constexpr qsizetype scmGlyphAtlasPreloaded = 1 + (u'~' - u'!' + 1);
 // Clear around a character in its atlas cell, so that the smaller mipmaps of a cell do not take in its neighbors
 constexpr int scmGlyphCellInset = scmGlyphCellTexels / 16;
 // A character cell's side on the map: half rooms' spacing, so that an exit's line has a cell between two rooms side by side
@@ -1621,23 +1623,33 @@ void ModernGLWidget::renderRooms()
         QFont glyphFont = style.labelFont(mpMap->mMapSymbolFont);
         glyphFont.setBold(true);
         glyphFont.setStyleStrategy(QFont::StyleStrategy(QFont::PreferNoShaping | QFont::PreferAntialias | QFont::PreferOutline));
+        QSet<QString> needed;
         const auto fillAtlas = [&]() {
             bool whole = true;
+            const auto add = [&](const QString& text) {
+                needed.insert(text);
+                whole = glyphAtlasCell(text) >= 0 && whole;
+            };
             for (const TerminalCell& cell : std::as_const(terminalCells)) {
                 if (cell.id) {
                     for (const QChar digit : cell.text) {
-                        whole = glyphAtlasCell(QString(digit)) >= 0 && whole;
+                        add(QString(digit));
                     }
                 } else {
-                    whole = glyphAtlasCell(cell.text) >= 0 && whole;
+                    add(cell.text);
                 }
             }
             return whole;
         };
-        if (!fillAtlas()) {
-            // Full of symbols from other views: started again with this one's
+        // Full of symbols from other views, it starts again with this one's; not when this view alone fills it, which
+        // starting again would not help
+        if (!fillAtlas() && std::any_of(mGlyphAtlasCells.cbegin() + scmGlyphAtlasPreloaded, mGlyphAtlasCells.cend(), [&needed](const QString& text) {
+                return !needed.contains(text);
+            })) {
             mGlyphAtlasCells.clear();
             mGlyphAtlasIndex.clear();
+            // Its cells hold other characters now, whatever their number
+            mGlyphAtlasDrawnCells = -1;
             fillAtlas();
         }
         const qsizetype blockCell = glyphAtlasCell(scmGlyphBlock);
@@ -3307,7 +3319,10 @@ void ModernGLWidget::paintStatusLine(QPainter& painter)
     if (area.isEmpty() || !mpMap || !mpMap->mpRoomDB) {
         return;
     }
-    QStringList parts{mpMap->mpRoomDB->getAreaNamesMap().value(mAID)};
+    QStringList parts;
+    if (const QString areaName = mpMap->mpRoomDB->getAreaNamesMap().value(mAID); !areaName.isEmpty()) {
+        parts.append(areaName);
+    }
     const int playerRoomId = mpMap->mRoomIdHash.value(mpMap->mProfileName);
     if (const TRoom* pR = mpMap->mpRoomDB->getRoom(playerRoomId); pR && pR->getArea() == mAID) {
         //: The terminal map style's status line: where the player (shown as @ on the map) is - room ID, then its x, y and z coordinates
