@@ -19,6 +19,7 @@
 
 #include "MapStyle.h"
 
+#include "ExitAppearance.h"
 #include "RoomAppearance.h"
 #include "utils.h"
 
@@ -77,7 +78,8 @@ QColor MapStyle::roomColor(const QColor& environmentColor) const
         const QColor paper = background.isValid() ? background : QColor(Qt::black);
         return QColor::fromRgbF(paper.redF() + (environmentColor.redF() - paper.redF()) * tint,
                                 paper.greenF() + (environmentColor.greenF() - paper.greenF()) * tint,
-                                paper.blueF() + (environmentColor.blueF() - paper.blueF()) * tint);
+                                paper.blueF() + (environmentColor.blueF() - paper.blueF()) * tint,
+                                environmentColor.alphaF());
     }
     }
     return environmentColor;
@@ -85,8 +87,8 @@ QColor MapStyle::roomColor(const QColor& environmentColor) const
 
 QColor MapStyle::symbolColor(const QColor& roomSymbolColor, const QColor& drawnRoomColor) const
 {
-    // A room's own symbol color was picked against its environment's color, which the ink palette does not fill it with
-    if (palette == Palette::Ink && ink.isValid()) {
+    // The automatic choice is made against the environment's color, which the ink palette barely fills a room with
+    if (palette == Palette::Ink && ink.isValid() && !roomSymbolColor.isValid()) {
         return ink;
     }
     return RoomAppearance::symbolColor(roomSymbolColor, drawnRoomColor);
@@ -95,6 +97,11 @@ QColor MapStyle::symbolColor(const QColor& roomSymbolColor, const QColor& drawnR
 QColor MapStyle::exitColor(const QColor& profileExitColor) const
 {
     return ink.isValid() ? ink : profileExitColor;
+}
+
+QColor MapStyle::roomIdColor(const QColor& drawnRoomColor) const
+{
+    return palette == Palette::Ink && ink.isValid() ? ink : ExitAppearance::contrastColor(drawnRoomColor);
 }
 
 QColor MapStyle::playerRoomColor() const
