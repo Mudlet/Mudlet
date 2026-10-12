@@ -25,6 +25,8 @@
 
 #include "Host.h"
 #include "LuaLiteral.h"
+#include "MudletApp.h"
+#include "TAppFrontend.h"
 #include "TConsoleModel.h"
 #include "TEvent.h"
 #include "THyperlinkCompactManager.h"
@@ -37,7 +39,6 @@
 #include "widechar_width.h"
 #include "TEncodingHelper.h"
 #include "SentryWrapper.h"
-#include "mudlet.h"
 
 #include <QDateTime>
 #include <QHash>
@@ -2303,7 +2304,7 @@ void TBuffer::commitLineData(QString line, std::vector<TChar> chars, const char 
     // keeps arrival order, so script output in response follows it, but lines that triggers gag or rewrite
     // are still mirrored as sent. Mirroring at log() below would trade the other way and copy wrapLine()'s
     // fragments instead of the line as sent.
-    if (Q_UNLIKELY(mudlet::smMirrorToStdOut)) {
+    if (Q_UNLIKELY(MudletApp::smMirrorToStdOut)) {
         if (Q_LIKELY(mpModel)) {
             // Read back out of the buffer rather than from line, which every
             // path above has moved from by now
@@ -2738,8 +2739,9 @@ void TBuffer::processMxpWatchdogCallback()
         mTagWatchdog->start(MAX_TAG_TIMEOUT_MS);
     } else if (mWatchdogPhase == WatchdogPhase::Phase2_Unfreeze) {
         // The continuation commits into this buffer and finalizes the main
-        // console's view, so it needs that view and this to be its buffer:
-        if (isMxpParserFrozen && !mpHost->mpConsole.isNull() && mpModel == &mpHost->mainConsoleModel()) {
+        // console's view, so it needs this to be its buffer, and that view
+        // unless there is no main window to have made one:
+        if (isMxpParserFrozen && (mpHost->hasConsoleView() || !TAppFrontend::hasView()) && mpModel == &mpHost->mainConsoleModel()) {
             mpHost->mMxpProcessor.setLastEntityValue(QString::fromStdString('<' + currentTagContent));
             const TChar style(mForeGroundColor, mBackGroundColor, computeCurrentAttributeFlags());
             QPointer<Host> hostGuard = mpHost;
@@ -2753,7 +2755,7 @@ void TBuffer::processMxpWatchdogCallback()
                 // commitLine() and finalize() below both reach the main console
                 // through the host, and that pointer empties on its own when the
                 // profile's console goes:
-                if (!hostGuard || hostGuard->mpConsole.isNull()) {
+                if (!hostGuard || (!hostGuard->hasConsoleView() && TAppFrontend::hasView())) {
                     return;
                 }
                 QString lastEntityValue = hostGuard->mMxpProcessor.getEntityValue();
@@ -6708,6 +6710,10 @@ void TBuffer::shrinkBuffer()
     // away:
     if (mpModel) {
         mpModel->mCurrentSearchResult = qMax(0, mpModel->mCurrentSearchResult - mBatchDeleteSize);
+        // As mCursorY above, which a real view's upper pane takes its line from as it repaints
+        if (mpModel->mScrolledBackTo) {
+            mpModel->mScrolledBackTo = std::max(0, *mpModel->mScrolledBackTo - mBatchDeleteSize);
+        }
     }
     mPreTriggerPassLineNumber = -1;
     if (mLastFoundLine >= mBatchDeleteSize) {
