@@ -2328,6 +2328,13 @@ describe("Tests UI functions", function()
     end
 
     local savedSettings
+    local dockWasShowing
+    local originalBorders
+
+    setup(function()
+      dockWasShowing = BaseUI.container ~= nil and not BaseUI.container.hidden
+      originalBorders = getBorderSizes()
+    end)
 
     before_each(function()
       savedSettings = table.deepcopy(BaseUI.settings)
@@ -2338,6 +2345,13 @@ describe("Tests UI functions", function()
       BaseUI.saveSettings()
       BaseUI.armChatTriggers()
       BaseUI.createVitalsTriggers()
+      -- BaseUI.show() docks the chat window on the right border and it stays there,
+      -- leaving the main console narrower for every later spec; BaseUI.hide() is
+      -- how the base UI itself gives that border back
+      if not dockWasShowing and BaseUI.container and not BaseUI.container.hidden then
+        BaseUI.container:hide()
+        BaseUI.container:adjustBorder()
+      end
     end)
 
     it("should stand aside when the game installs its own GUI", function()
@@ -2402,6 +2416,15 @@ describe("Tests UI functions", function()
       BaseUI.show()
       assert.is_nil(BaseUI.settings.standingAside)
       assert.is_false(BaseUI.dormant())
+    end)
+
+    -- runs after the after_each of every spec above it
+    it("should leave the main console's borders as it found them", function()
+      if dockWasShowing then
+        pending("the base UI dock was already showing, so its border is not this block's to check")
+        return
+      end
+      assert.are.same(originalBorders, getBorderSizes())
     end)
   end)
 
@@ -4637,6 +4660,47 @@ describe("Window and label state", function()
 
     it("calcFontSize returns nil for an unknown window", function()
       assert.is_nil(calcFontSize(name("wlsNoSuchWindow")))
+    end)
+
+    -- Scripts compensate for the width of a "W" by hand, so the cell width is opt-in
+    it("calcFontSize given true reports the width a window draws each column in", function()
+      local original, originalSize = getFont(console), getFontSize(console)
+      finally(function()
+        setFont(console, original)
+        setMiniConsoleFontSize(console, originalSize)
+      end)
+      setMiniConsoleFontSize(console, 14)
+      assert.is_true(setFont(console, "Bitstream Vera Sans"))
+      local columnWidth, columnHeight = calcFontSize(console, true)
+      local defaultWidth, defaultHeight = calcFontSize(console)
+      assert.are.equal(defaultHeight, columnHeight)
+      -- the cells are the font's average width in whole pixels, which the font size form gives
+      assert.are.equal((calcFontSize(14, "Bitstream Vera Sans")), columnWidth)
+      assert.is_true(columnWidth < defaultWidth, ("a column is %s pixels and a \"W\" %s on a proportional font"):format(columnWidth, defaultWidth))
+      assert.are.same({calcFontSize(console)}, {calcFontSize(console, false)})
+    end)
+
+    it("calcFontSize given true leaves the font size forms as they were", function()
+      assert.are.same({calcFontSize(12)}, {calcFontSize(12, true)})
+      assert.are.same({calcFontSize(12, "Bitstream Vera Sans")}, {calcFontSize(12, "Bitstream Vera Sans", true)})
+    end)
+
+    it("calcFontSize given only true reports the main window's layout width", function()
+      assert.are.same({calcFontSize("main", true)}, {calcFontSize(true)})
+      assert.are.same({calcFontSize("main")}, {calcFontSize(false)})
+    end)
+
+    -- a nil in the font name's place is a mistake to report, not the flag left out
+    it("calcFontSize still rejects a nil font name", function()
+      local missingFontName = nil
+      assert.has_error(function()
+        calcFontSize(12, missingFontName)
+      end)
+    end)
+
+    it("calcFontSize takes a nil flag after a window name as the flag left out", function()
+      local omittedFlag = nil
+      assert.are.same({calcFontSize(console)}, {calcFontSize(console, omittedFlag)})
     end)
   end)
 
