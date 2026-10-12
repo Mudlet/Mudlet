@@ -195,8 +195,9 @@ public:
     bool hidePlainWindow(const QString&) override { return false; }
     bool resizePlainWindow(const QString&, int, int) override { return false; }
     bool movePlainWindow(const QString&, int, int) override { return false; }
-    bool raiseWindow(const QString&) override { return false; }
-    bool lowerWindow(const QString&) override { return false; }
+    // No Lua call reads the stacking order back, so these only answer whether the window exists
+    bool raiseWindow(const QString& name) override { return mLabels.contains(name) || subConsoleModel(name); }
+    bool lowerWindow(const QString& name) override { return raiseWindow(name); }
     std::pair<bool, QString> reparentWindow(const QString&, const QString&, int, int, bool) override { return noView(); }
     bool setWindowScrollBarVisible(const QString& name, bool visible) override;
     bool setWindowHorizontalScrollBarVisible(const QString& name, bool visible) override;
