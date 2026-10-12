@@ -1105,13 +1105,28 @@ const ModernGLWidget::HaloedLabel& ModernGLWidget::haloedLabel(const int labelId
         painter.setCompositionMode(QPainter::CompositionMode_SourceIn);
         painter.fillRect(shape.rect(), halo);
     }
-    QImage image(source.width() + 2 * reach, source.height() + 2 * reach, QImage::Format_ARGB32_Premultiplied);
+    // Every point within reach of the shape, without a gap however fine the shape: widened across one texel at a
+    // time, each width kept, then each row of the disc taking the width it needs
+    QImage widened(source.width() + 2 * reach, source.height() + 2 * reach, QImage::Format_ARGB32_Premultiplied);
+    widened.fill(Qt::transparent);
+    QList<QImage> widths;
+    widths.reserve(reach + 1);
+    {
+        QPainter painter(&widened);
+        painter.drawImage(QPoint(reach, reach), shape);
+        widths.append(widened.copy());
+        for (int width = 1; width <= reach; ++width) {
+            painter.drawImage(QPoint(reach - width, reach), shape);
+            painter.drawImage(QPoint(reach + width, reach), shape);
+            widths.append(widened.copy());
+        }
+    }
+    QImage image(widened.size(), QImage::Format_ARGB32_Premultiplied);
     image.fill(Qt::transparent);
     QPainter painter(&image);
-    constexpr int stamps = 16;
-    for (int stamp = 0; stamp < stamps; ++stamp) {
-        const qreal angle = 2.0 * std::numbers::pi * stamp / stamps;
-        painter.drawImage(QPointF(reach + reach * std::cos(angle), reach + reach * std::sin(angle)), shape);
+    for (int row = -reach; row <= reach; ++row) {
+        const auto width = static_cast<qsizetype>(std::floor(std::sqrt(static_cast<double>(reach * reach - row * row))));
+        painter.drawImage(QPoint(0, row), widths.at(width));
     }
     painter.drawImage(QPoint(reach, reach), source);
     painter.end();
@@ -1360,6 +1375,8 @@ void ModernGLWidget::renderRooms()
     const QColor ink = style.exitColor(contrast);
     // By level, drawn with that level's rooms
     QHash<int, QVector<InkOutline>> roomOutlines;
+    // MapStyle::ringColor() by environment color, as finding one takes a search
+    QHash<QRgb, QColor> ringColors;
     // What is on the opaque rooms, by level, drawn with the see-through rooms of its level
     QMap<int, RoomDecals> opaqueDecals;
     // Rooms and borders drawn see-through, with what is on them, by level: drawn after the opaque rooms
@@ -1471,7 +1488,14 @@ void ModernGLWidget::renderRooms()
             const bool dashed = !look.onViewedLevel() && !hovered;
             roomOutlines[pR->z()].append({rx, ry, top, half, width, dashed ? static_cast<float>(roomSize * scmInkDash) : 0.0f, GeometryManager::fadedColor(lineColor, fade, fadeTarget)});
         } else if (stationRings) {
-            const QColor ringColor = pR->mBorderColor.isValid() ? pR->mBorderColor : (interchange ? ink : style.ringColor(look.color));
+            QColor ringColor = pR->mBorderColor.isValid() ? pR->mBorderColor : ink;
+            if (!pR->mBorderColor.isValid() && !interchange) {
+                auto found = ringColors.find(look.color.rgba());
+                if (found == ringColors.end()) {
+                    found = ringColors.insert(look.color.rgba(), style.ringColor(look.color));
+                }
+                ringColor = *found;
+            }
             const float ring = qMax(roomSize * (interchange ? scmInterchangeRing : scmStationRing) * (hovered ? 1.6f : 1.0f), outlinePixel());
             const float width = qMax(ring, thickness);
             // Just inside the station's edge, unless a thick border reaches past it

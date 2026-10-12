@@ -787,6 +787,43 @@ private slots:
         QCOMPARE(roomWidth(kPlayerRoomId), roomWidth(kEastRoomId));
     }
 
+    // However fine the label's ink, its halo covers everything within reach of it, and nothing past
+    void test_labelHaloLeavesNoGapsAroundFineInk()
+    {
+        const int areaId = addArea();
+        QVERIFY(areaId > 0);
+        ModernGLWidget widget(map(), mpHost);
+        QImage dot(200, 200, QImage::Format_ARGB32_Premultiplied);
+        dot.fill(Qt::transparent);
+        dot.setPixelColor(100, 100, QColor(Qt::black));
+        const QColor halo(245, 243, 236);
+
+        const auto& haloed = widget.haloedLabel(1, QPixmap::fromImage(dot), halo);
+        const QImage image = haloed.pixmap.toImage();
+        const int reach = qRound(haloed.margin.y() * dot.height());
+        QVERIFY(reach >= 3);
+        QCOMPARE(image.size(), dot.size() + QSize(2 * reach, 2 * reach));
+        const QPoint center(100 + reach, 100 + reach);
+        int gaps = 0;
+        int spill = 0;
+        for (int y = 0; y < image.height(); ++y) {
+            for (int x = 0; x < image.width(); ++x) {
+                const QPoint offset = QPoint(x, y) - center;
+                const int squared = QPoint::dotProduct(offset, offset);
+                const int alpha = image.pixelColor(x, y).alpha();
+                if (squared <= (reach - 1) * (reach - 1) && alpha < 255) {
+                    ++gaps;
+                } else if (squared > (reach + 1) * (reach + 1) && alpha > 0) {
+                    ++spill;
+                }
+            }
+        }
+        QCOMPARE(gaps, 0);
+        QCOMPARE(spill, 0);
+        QCOMPARE(image.pixelColor(center), QColor(Qt::black));
+        QCOMPARE(image.pixelColor(center + QPoint(reach - 1, 0)), halo);
+    }
+
     // As names are: where IDs overlap one is kept, the viewed level's as only it has IDs on the 2D map,
     // and none so small as to be unreadable. As on the 2D map, a room whose ID is left out shows its symbol
     void test_roomIdsAreDeclutteredWithoutGL()
