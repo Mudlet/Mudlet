@@ -790,20 +790,21 @@ struct FlatLines
 // or solid when dashLength is 0
 void appendFlatOutline(FlatLines& lines, const QList<QPointF>& corners, const float z, const float width, const QVector4D& color, const qreal dashLength)
 {
-    const auto piece = [&](const QPointF& from, const QPointF& to) {
+    const auto piece = [&](const QPointF& from, const QPointF& to, const bool extendFrom, const bool extendTo) {
         QLineF line(from, to);
         if (line.length() <= 0.0) {
             return;
         }
-        const QPointF halfWidth = (to - from) * (width / 2.0 / line.length());
-        const QPointF side(-halfWidth.y(), halfWidth.x());
-        // A solid outline overlaps at the corners rather than leaving notches there; a dashed one does not, as that
-        // would close its gaps once the line is as wide as they are
-        const QPointF along = dashLength > 0.0 ? QPointF() : halfWidth;
-        const QPointF a = from - along + side;
-        const QPointF b = to + along + side;
-        const QPointF c = to + along - side;
-        const QPointF d = from - along - side;
+        const QPointF along = (to - from) * (width / 2.0 / line.length());
+        const QPointF side(-along.y(), along.x());
+        // Overlapping at the corners rather than leaving notches there, but only there, as lengthening every dash
+        // would close the gaps once the line is as wide as they are
+        const QPointF fromEnd = extendFrom ? along : QPointF();
+        const QPointF toEnd = extendTo ? along : QPointF();
+        const QPointF a = from - fromEnd + side;
+        const QPointF b = to + toEnd + side;
+        const QPointF c = to + toEnd - side;
+        const QPointF d = from - fromEnd - side;
         for (const QPointF& corner : {a, b, c, a, c, d}) {
             lines.vertices << static_cast<float>(corner.x()) << static_cast<float>(corner.y()) << z;
             lines.colors << color.x() << color.y() << color.z() << color.w();
@@ -815,7 +816,7 @@ void appendFlatOutline(FlatLines& lines, const QList<QPointF>& corners, const fl
         const QPointF to = corners.at((i + 1) % total);
         const QLineF edge(from, to);
         if (dashLength <= 0.0) {
-            piece(from, to);
+            piece(from, to, true, true);
             continue;
         }
         // The pattern carries on round the corners, so a dash can turn one. Counted in whole dashes, as stepping a
@@ -829,7 +830,7 @@ void appendFlatOutline(FlatLines& lines, const QList<QPointF>& corners, const fl
             const qreal start = qMax(dash * period, position) - position;
             const qreal end = qMin(dash * period + dashLength, position + length) - position;
             if (end > start) {
-                piece(edge.pointAt(start / length), edge.pointAt(end / length));
+                piece(edge.pointAt(start / length), edge.pointAt(end / length), start <= 0.0, end >= length);
             }
         }
         position += length;
@@ -1061,7 +1062,7 @@ void ModernGLWidget::renderRooms()
     QHash<std::pair<QRgb, char16_t>, std::pair<GLuint, QSize>> digitTextures;
     if (showRoomIds) {
         QList<QColor> idColors{QColor(Qt::black), QColor(Qt::white)};
-        // A style's own text color does not depend on the room's, so either one stands for every room
+        // A style that sets its own text color uses it whatever the room's color, so any room's stands for all
         if (const QColor styleIdColor = style.roomIdColor(Qt::black); !idColors.contains(styleIdColor)) {
             idColors.append(styleIdColor);
         }
@@ -1234,9 +1235,11 @@ void ModernGLWidget::renderRooms()
             const float top = rz + roomHeight / 2.0f;
             const float pixel = mCameraController.worldUnitsPerPixel(QVector3D(rx, ry, top));
             const float thickness = pR->mBorderThickness > 0 ? static_cast<float>(pR->mBorderThickness) * borderUnit : 0.0f;
-            const float width = qMax(qMax(static_cast<float>(roomSize * scmInkOutline), thickness), pixel) * (hovered ? 2.5f : 1.0f);
+            const float lineWidth = qMax(static_cast<float>(roomSize * scmInkOutline), pixel);
+            const float width = qMax(lineWidth * (hovered ? 2.5f : 1.0f), thickness);
             QList<QPointF> corners;
-            const qreal half = roomSize / 2.0;
+            // Any wider than the plain line grows outward, as a border does, so as not to cover the room
+            const qreal half = roomSize / 2.0 + (width - lineWidth) / 2.0;
             if (round) {
                 for (int i = 0; i < GeometryManager::scmCylinderSegments; ++i) {
                     const qreal angle = 2.0 * std::numbers::pi * i / GeometryManager::scmCylinderSegments;
