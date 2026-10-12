@@ -189,7 +189,7 @@ void dlgMapper::connectMapCues()
     });
     connect(mpMap, &TMap::signal_mapLabelsChanged, this, [this]() {
         if (drawsTheMap()) {
-            mp2dMap->update();
+            repaintMaps();
         }
     });
     connect(mpMap, &TMap::signal_mapLoaded, this, [this](const bool showPlayerArea) {
@@ -266,7 +266,7 @@ void dlgMapper::connectMapCues()
     });
     connect(mpMap, &TMap::signal_mapRepaintRequested, this, [this]() {
         if (drawsTheMap()) {
-            mp2dMap->update();
+            repaintMaps();
         }
     });
     connect(mpMap, &TMap::signal_mapperSettingChanged, this, [this](const TMap::MapperSetting setting) {
@@ -280,7 +280,7 @@ void dlgMapper::connectMapCues()
             break;
         case TMap::MapperSetting::ExitSize:
             mp2dMap->setExitSize(mpHost->mLineSize);
-            mp2dMap->update();
+            repaintMaps();
             break;
         case TMap::MapperSetting::RoundRooms:
             slot_toggleRoundRooms(mpHost->mBubbleMode);
@@ -660,7 +660,7 @@ void dlgMapper::slot_toggleShowRoomIDs(int toggle)
 {
     mp2dMap->mShowRoomID = (toggle == Qt::Checked);
     mp2dMap->mpHost->mShowRoomID = mp2dMap->mShowRoomID;
-    mp2dMap->update();
+    repaintMaps();
 }
 
 void dlgMapper::slot_toggleStrongHighlight(int toggle)
@@ -1290,13 +1290,13 @@ void dlgMapper::slot_toggleShowRoomIDsFromMenu(bool enabled)
 {
     mp2dMap->mShowRoomID = enabled;
     mp2dMap->mpHost->mShowRoomID = enabled;
-    mp2dMap->update();
+    repaintMaps();
 }
 
 void dlgMapper::slot_toggleShowRoomNames(const bool enabled)
 {
     mpMap->setRoomNamesShown(enabled);
-    mp2dMap->update();
+    repaintMaps();
 }
 
 void dlgMapper::updateInfoMenu()

@@ -24,6 +24,9 @@
 #include <QFile>
 #include <QImage>
 
+#include <cmath>
+#include <limits>
+
 namespace {
 QVector<float> upNormals(int vertexCount)
 {
@@ -321,7 +324,7 @@ GeometryManager::generateBillboardGeometry(float centerX, float centerY, float c
     return result;
 }
 
-void GeometryManager::appendGroundQuad(GeometryData& batch, const QVector3D& center, const float size, const QVector3D& cameraRight, const QVector3D& cameraUp, const QVector4D& color)
+std::pair<QVector3D, QVector3D> GeometryManager::groundAxes(const QVector3D& cameraRight, const QVector3D& cameraUp)
 {
     // The screen's right laid flat on the map; looking straight along it, the screen's up laid flat
     // is perpendicular to it instead
@@ -330,13 +333,15 @@ void GeometryManager::appendGroundQuad(GeometryData& batch, const QVector3D& cen
         right = QVector2D(cameraUp.y(), -cameraUp.x());
     }
     right = right.length() < 1e-3f ? QVector2D(1.0f, 0.0f) : right.normalized();
-    const QVector3D halfRight = QVector3D(right.x(), right.y(), 0.0f) * (size / 2.0f);
-    const QVector3D halfUp = QVector3D(-right.y(), right.x(), 0.0f) * (size / 2.0f);
+    return {QVector3D(right.x(), right.y(), 0.0f), QVector3D(-right.y(), right.x(), 0.0f)};
+}
 
-    const QVector3D bottomLeft = center - halfRight - halfUp;
-    const QVector3D bottomRight = center + halfRight - halfUp;
-    const QVector3D topRight = center + halfRight + halfUp;
-    const QVector3D topLeft = center - halfRight + halfUp;
+void GeometryManager::appendQuad(GeometryData& batch, const QVector3D& origin, const QVector3D& across, const QVector3D& upward, const QVector4D& color)
+{
+    const QVector3D bottomLeft = origin;
+    const QVector3D bottomRight = origin + across;
+    const QVector3D topRight = origin + across + upward;
+    const QVector3D topLeft = origin + upward;
 
     for (const QVector3D& corner : {bottomLeft, bottomRight, topRight, bottomLeft, topRight, topLeft}) {
         batch.vertices << corner.x() << corner.y() << corner.z();
@@ -345,6 +350,46 @@ void GeometryManager::appendGroundQuad(GeometryData& batch, const QVector3D& cen
     }
     batch.textureCoords << 0.0f << 0.0f << 1.0f << 0.0f << 1.0f << 1.0f;
     batch.textureCoords << 0.0f << 0.0f << 1.0f << 1.0f << 0.0f << 1.0f;
+}
+
+void GeometryManager::appendLabelQuad(GeometryData& batch, const QVector3D& topLeft, const float width, const float height, const bool turned, const QVector4D& color)
+{
+    if (turned) {
+        appendQuad(batch, topLeft + QVector3D(width, 0.0f, 0.0f), QVector3D(-width, 0.0f, 0.0f), QVector3D(0.0f, -height, 0.0f), color);
+    } else {
+        appendQuad(batch, topLeft - QVector3D(0.0f, height, 0.0f), QVector3D(width, 0.0f, 0.0f), QVector3D(0.0f, height, 0.0f), color);
+    }
+}
+
+std::optional<int> GeometryManager::labelLevel(const qreal z)
+{
+    const qreal rounded = std::round(z);
+    // Written so that NaN fails it too
+    if (!(rounded >= std::numeric_limits<int>::min() && rounded <= std::numeric_limits<int>::max())) {
+        return std::nullopt;
+    }
+    return static_cast<int>(rounded);
+}
+
+void GeometryManager::appendGroundQuad(GeometryData& batch, const QVector3D& center, const float size, const QVector3D& cameraRight, const QVector3D& cameraUp, const QVector4D& color)
+{
+    const auto [right, up] = groundAxes(cameraRight, cameraUp);
+    appendQuad(batch, center - (right + up) * (size / 2.0f), right * size, up * size, color);
+}
+
+QMatrix4x4 GeometryManager::barTransform(const QVector3D& from, const QVector3D& to, const float width, const float height)
+{
+    const QVector3D line = to - from;
+    const float length = line.length();
+    const QVector3D along = length > 0.0f ? line / length : QVector3D(1.0f, 0.0f, 0.0f);
+    QVector3D side = QVector3D::crossProduct(QVector3D(0.0f, 0.0f, 1.0f), along);
+    side = side.lengthSquared() < 1e-6f ? QVector3D(0.0f, 1.0f, 0.0f) : side.normalized();
+    const QVector3D rise = QVector3D::crossProduct(along, side);
+    const QVector3D center = (from + to) / 2.0f;
+    const QVector3D x = along * (length / 2.0f);
+    const QVector3D y = side * (width / 2.0f);
+    const QVector3D z = rise * (height / 2.0f);
+    return QMatrix4x4(x.x(), y.x(), z.x(), center.x(), x.y(), y.y(), z.y(), center.y(), x.z(), y.z(), z.z(), center.z(), 0.0f, 0.0f, 0.0f, 1.0f);
 }
 
 void GeometryManager::loadPlayerIconTemplate(float scale, float rotX, float rotY, float rotZ)

@@ -86,6 +86,8 @@ public:
     QVector3D screenRight() const;
     QVector3D screenUp() const { return mUpVector; }
     float getScale() const { return mDistance; }
+    // The map distance one pixel of the viewport's height spans at that point, as of the last updateMatrices()
+    float worldUnitsPerPixel(const QVector3D& point) const;
 
     // View center (for external API compatibility)
     void setViewCenter(float x, float y, float z);

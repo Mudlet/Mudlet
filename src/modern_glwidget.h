@@ -52,6 +52,7 @@
 #include "CameraController.h"
 
 class Host;
+class QFontMetricsF;
 class QLabel;
 class TMap;
 class TRoom;
@@ -60,6 +61,7 @@ struct MapInfoProperties;
 class ModernGLWidget : public QOpenGLWidget, protected QOpenGLFunctions
 {
     Q_OBJECT
+    friend class ModernRoomTextureTest;
 
 public:
     Q_DISABLE_COPY(ModernGLWidget)
@@ -174,6 +176,7 @@ private:
     // Room textures this frame has used so far, which making room for another must keep
     QSet<QString> mRoomTexturesInUse;
     bool mRoomTextureLimitWarned = false;
+    bool mSolidDashWarned = false;
 
     // Host reference
     QPointer<Host> mpHost;
@@ -245,13 +248,9 @@ private:
     void updateMatrices();
     void renderRooms();
     void renderConnections();
-    void renderBackgroundLabels();
-    void renderForegroundLabels();
+    // Map labels lie flat at their place on the map; those shown on top over the rooms, the others under the exits
+    void renderLabels(bool onTop);
     void renderCube(float x, float y, float z, float size, float r, float g, float b, float a);
-    void renderLines(const QVector<float>& vertices, const QVector<float>& colors);
-    void renderTriangles(const QVector<float>& vertices, const QVector<float>& colors);
-    void addUpDownIndicators(TRoom* pRoom, float x, float y, float z, QVector<float>& vertices, QVector<float>& colors) const;
-    void addInOutIndicators(TRoom* pRoom, float x, float y, float z, QVector<float>& vertices, QVector<float>& colors) const;
     void renderText(const QString& text, float x, float y);
     void setupBuffers();
     void cleanup();
@@ -261,8 +260,12 @@ private:
     GLuint discTexture(const QString& key, const QGradientStops& stops);
     GLuint squareTexture(const QColor& color);
     GLuint cachedRoomTexture(const QString& key);
-    bool roomForAnotherTexture();
+    bool roomForAnotherTexture(const QString& key);
     GLuint addRoomTexture(const QString& key, const QImage& image);
+    // The 2D map's up/down/in/out markers for the room, or 0 when it has none
+    GLuint exitMarkerTexture(const TRoom& room, const QColor& roomColor);
+    // Text on a clear background; size is set to the texture's size in pixels
+    GLuint textTexture(const QString& key, const QString& text, const QFont& font, const QFontMetricsF& metrics, const QColor& color, QSize& size);
     void reportContextCreationFailure();
     bool contextCreationFailed() const;
     void startSmoothTransition(int targetAID, int targetX, int targetY, int targetZ);

@@ -27,6 +27,8 @@
 #include <QPixmap>
 #include <QOpenGLFunctions>
 
+#include <functional>
+
 // Cache entry storing OpenGL texture ID and pixmap cache key for change detection
 struct LabelTextureCacheEntry {
     GLuint textureId = 0;
@@ -67,6 +69,9 @@ public:
     // Clear entire cache
     void clearAll();
 
+    // Makes and deletes image textures in place of OpenGL, for tests where there is no context; counts as initialized
+    void useTextureStandIn(std::function<GLuint(const QImage&)> make, std::function<void(GLuint)> remove);
+
 private:
     // Create OpenGL texture from pixmap
     GLuint createTextureFromPixmap(const QPixmap& pixmap);
@@ -84,6 +89,8 @@ private:
     QSet<QString> mFailedImageKeys;
 
     bool mInitialized = false;
+    std::function<GLuint(const QImage&)> mMakeStandIn;
+    std::function<void(GLuint)> mRemoveStandIn;
 };
 
 #endif // MUDLET_LABEL_TEXTURE_CACHE_H

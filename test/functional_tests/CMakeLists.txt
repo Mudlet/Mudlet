@@ -211,6 +211,7 @@ set(EDITOR_GROUP_TEST_SOURCES
 # The map: its rooms and areas, its file format, and the mapper widget
 set(MAP_GROUP_TEST_SOURCES
     EmbeddedMapperCreationTest.cpp
+    ExitAppearanceTest.cpp
     MapAreaReassignmentTest.cpp
     MapAreaSelectionTest.cpp
     MapCloseDuringImportTest.cpp
@@ -243,7 +244,7 @@ set(MAP_GROUP_TEST_SOURCES
 
 # CameraController and GeometryManager are only compiled into the library with the 3D mapper
 if(USE_3DMAPPER)
-    list(APPEND MAP_GROUP_TEST_SOURCES CameraAngleLimitTest.cpp CameraViewTest.cpp LabelTextureCacheTest.cpp Map3DViewSyncTest.cpp ModernMapperGeometryTest.cpp)
+    list(APPEND MAP_GROUP_TEST_SOURCES CameraAngleLimitTest.cpp CameraViewTest.cpp ExitSceneTest.cpp LabelTextureCacheTest.cpp Map3DViewSyncTest.cpp ModernMapperGeometryTest.cpp ModernRoomTextureTest.cpp)
 endif()
 
 # Packages and modules: installing them, saving them and removing them

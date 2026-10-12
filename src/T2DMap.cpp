@@ -36,6 +36,7 @@
 #include "CustomLineEditContextMenuHandler.h"
 #include "CustomLineEditHandler.h"
 #include "CustomLineSession.h"
+#include "ExitAppearance.h"
 #include "LabelInteractionHandler.h"
 #include "MiddleMousePanHandler.h"
 #include "PanInteractionHandler.h"
@@ -1398,263 +1399,15 @@ void T2DMap::drawRoom(QPainter& painter,
     if (showRoomName) {
         painter.save();
 
-        const QString namePosData = pRoom->userData.value(ROOM_UI_NAMEPOS);
-        if (!namePosData.isEmpty()) {
-            QPointF nameOffset{0, 0};
-            QStringList posXY = namePosData.split(" ");
-            bool ok1, ok2;
-            double posX, posY;
-
-            switch (posXY.count()) {
-            case 1:
-                // one value: treat as Y offset
-                posY = posXY[0].toDouble(&ok1);
-                if (ok1) {
-                    nameOffset.setY(posY);
-                }
-                break;
-            case 2:
-                posX = posXY[0].toDouble(&ok1);
-                posY = posXY[1].toDouble(&ok2);
-                if (ok1 && ok2) {
-                    nameOffset.setX(posX);
-                    nameOffset.setY(posY);
-                }
-                break;
-            }
-            roomNameRectangle.adjust(mRoomWidth * nameOffset.x(), mRoomHeight * nameOffset.y(), mRoomWidth * nameOffset.x(), mRoomHeight * nameOffset.y());
-        }
-        auto roomNameColor = QColor((mpHost->mBgColor_2.lightness() > 127) ? Qt::black : Qt::white);
-        const QString roomNameColorData = pRoom->userData.value(ROOM_UI_NAMECOLOR);
-        if (!roomNameColorData.isEmpty()) {
-            const QColor userColor(roomNameColorData);
-            if (userColor.isValid()) {
-                roomNameColor = userColor;
-            }
-        }
-        painter.setPen(QPen(roomNameColor));
+        const QPointF nameOffset = RoomAppearance::nameOffset(pRoom->userData.value(ROOM_UI_NAMEPOS));
+        roomNameRectangle.adjust(mRoomWidth * nameOffset.x(), mRoomHeight * nameOffset.y(), mRoomWidth * nameOffset.x(), mRoomHeight * nameOffset.y());
+        painter.setPen(QPen(RoomAppearance::nameColor(pRoom->userData.value(ROOM_UI_NAMECOLOR), mpHost->mBgColor_2)));
         painter.setFont(mapNameFont);
         painter.drawText(roomNameRectangle, Qt::AlignCenter, pRoom->name);
         painter.restore();
     }
 
-    // Change these from const to static to tweak them while running in a debugger...!
-    const float allInsideTipOffsetFactor = 1 / 20.0f;
-    const float upDownXOrYFactor = 1 / 3.1f;
-    const float inOuterXFactor = 1 / 4.5f;
-    const float inUpDownYFactor = 1 / 7.0f;
-    const float outOuterXFactor = 1 / 2.2f;
-    const float outUpDownYFactor = 1 / 5.5f;
-    const float outInterXFactor = 1 / 3.5f;
-    const float outerRealDoorPenThicknessFactor = 0.050f;
-    const float outerStubDoorPenThicknessFactor = 0.025f;
-    const float innerRealDoorPenThicknessFactor = 0.025f;
-    const float innerStubDoorPenThicknessFactor = 0.0125f;
-
-    QColor lc;
-    if (roomColor.lightness() > 127) {
-        lc = QColorConstants::Black;
-    } else {
-        lc = QColorConstants::White;
-    }
-    pen = painter.pen();
-    pen.setColor(lc);
-    pen.setCosmetic(mMapperUseAntiAlias);
-    pen.setCapStyle(Qt::RoundCap);
-    pen.setJoinStyle(Qt::RoundJoin);
-    QPen innerPen = pen;
-    painter.save();
-
-    QBrush innerBrush = painter.brush();
-    innerBrush.setStyle(Qt::NoBrush);
-    if (pRoom->getUp() > 0 || pRoom->exitStubs.contains(DIR_UP)) {
-        QPolygonF poly_up;
-        poly_up.append(QPointF(rx, ry + (mRoomHeight * rSize * allInsideTipOffsetFactor)));
-        poly_up.append(QPointF(rx - (mRoomWidth * rSize * upDownXOrYFactor), ry + (mRoomHeight * rSize * upDownXOrYFactor)));
-        poly_up.append(QPointF(rx + (mRoomWidth * rSize * upDownXOrYFactor), ry + (mRoomHeight * rSize * upDownXOrYFactor)));
-        bool isDoor = true;
-        QBrush brush = painter.brush();
-        switch (pRoom->doors.value(key_up)) {
-        case 1:
-            brush.setColor(mOpenDoorColor);
-            innerPen.setColor(mOpenDoorColor);
-            break;
-        case 2:
-            brush.setColor(mClosedDoorColor);
-            innerPen.setColor(mClosedDoorColor);
-            break;
-        case 3:
-            brush.setColor(mLockedDoorColor);
-            innerPen.setColor(mLockedDoorColor);
-            break;
-        default:
-            brush.setColor(lc);
-            isDoor = false;
-        }
-        if (pRoom->getUp() > 0) {
-            pen.setWidthF(mRoomWidth * rSize * outerRealDoorPenThicknessFactor);
-            innerPen.setWidthF(mRoomWidth * rSize * innerRealDoorPenThicknessFactor);
-            brush.setStyle(Qt::Dense4Pattern);
-        } else {
-            pen.setWidthF(mRoomWidth * rSize * outerStubDoorPenThicknessFactor);
-            innerPen.setWidthF(mRoomWidth * rSize * innerStubDoorPenThicknessFactor);
-            brush.setStyle(Qt::DiagCrossPattern);
-        }
-        painter.setPen(pen);
-        painter.setBrush(brush);
-        painter.drawPolygon(poly_up);
-        if (isDoor) {
-            // Draw a narrower triangle on top of the existing one if there
-            // is a door - to help emphasis the coloured door if the brush
-            // from the main one is not obvious given the main room colour.
-            painter.setPen(innerPen);
-            painter.setBrush(innerBrush);
-            painter.drawPolygon(poly_up);
-        }
-    }
-
-    if (pRoom->getDown() > 0 || pRoom->exitStubs.contains(DIR_DOWN)) {
-        QPolygonF poly_down;
-        poly_down.append(QPointF(rx, ry - (mRoomHeight * rSize * allInsideTipOffsetFactor)));
-        poly_down.append(QPointF(rx - (mRoomWidth * rSize * upDownXOrYFactor), ry - (mRoomHeight * rSize * upDownXOrYFactor)));
-        poly_down.append(QPointF(rx + (mRoomWidth * rSize * upDownXOrYFactor), ry - (mRoomHeight * rSize * upDownXOrYFactor)));
-        bool isDoor = true;
-        QBrush brush = painter.brush();
-        switch (pRoom->doors.value(key_down)) {
-        case 1:
-            brush.setColor(mOpenDoorColor);
-            innerPen.setColor(mOpenDoorColor);
-            break;
-        case 2:
-            brush.setColor(mClosedDoorColor);
-            innerPen.setColor(mClosedDoorColor);
-            break;
-        case 3:
-            brush.setColor(mLockedDoorColor);
-            innerPen.setColor(mLockedDoorColor);
-            break;
-        default:
-            brush.setColor(lc);
-            isDoor = false;
-        }
-        if (pRoom->getDown() > 0) {
-            pen.setWidthF(mRoomWidth * rSize * outerRealDoorPenThicknessFactor);
-            innerPen.setWidthF(mRoomWidth * rSize * innerRealDoorPenThicknessFactor);
-            brush.setStyle(Qt::Dense4Pattern);
-        } else {
-            pen.setWidthF(mRoomWidth * rSize * outerStubDoorPenThicknessFactor);
-            innerPen.setWidthF(mRoomWidth * rSize * innerStubDoorPenThicknessFactor);
-            brush.setStyle(Qt::DiagCrossPattern);
-        }
-        painter.setPen(pen);
-        painter.setBrush(brush);
-        painter.drawPolygon(poly_down);
-        if (isDoor) {
-            painter.setPen(innerPen);
-            painter.setBrush(innerBrush);
-            painter.drawPolygon(poly_down);
-        }
-    }
-
-    if (pRoom->getIn() > 0 || pRoom->exitStubs.contains(DIR_IN)) {
-        QPolygonF poly_in_left;
-        QPolygonF poly_in_right;
-        poly_in_left.append(QPointF(rx - (mRoomWidth * rSize * allInsideTipOffsetFactor), ry));
-        poly_in_left.append(QPointF(rx - (mRoomWidth * rSize * inOuterXFactor), ry + (mRoomHeight * rSize * inUpDownYFactor)));
-        poly_in_left.append(QPointF(rx - (mRoomWidth * rSize * inOuterXFactor), ry - (mRoomHeight * rSize * inUpDownYFactor)));
-        poly_in_right.append(QPointF(rx + (mRoomWidth * rSize * allInsideTipOffsetFactor), ry));
-        poly_in_right.append(QPointF(rx + (mRoomWidth * rSize * inOuterXFactor), ry + (mRoomHeight * rSize * inUpDownYFactor)));
-        poly_in_right.append(QPointF(rx + (mRoomWidth * rSize * inOuterXFactor), ry - (mRoomHeight * rSize * inUpDownYFactor)));
-        bool isDoor = true;
-        QBrush brush = painter.brush();
-        switch (pRoom->doors.value(key_in)) {
-        case 1:
-            brush.setColor(mOpenDoorColor);
-            innerPen.setColor(mOpenDoorColor);
-            break;
-        case 2:
-            brush.setColor(mClosedDoorColor);
-            innerPen.setColor(mClosedDoorColor);
-            break;
-        case 3:
-            brush.setColor(mLockedDoorColor);
-            innerPen.setColor(mLockedDoorColor);
-            break;
-        default:
-            brush.setColor(lc);
-            isDoor = false;
-        }
-        if (pRoom->getIn() > 0) {
-            pen.setWidthF(mRoomWidth * rSize * outerRealDoorPenThicknessFactor);
-            innerPen.setWidthF(mRoomWidth * rSize * innerRealDoorPenThicknessFactor);
-            brush.setStyle(Qt::Dense4Pattern);
-        } else {
-            pen.setWidthF(mRoomWidth * rSize * outerStubDoorPenThicknessFactor);
-            innerPen.setWidthF(mRoomWidth * rSize * innerStubDoorPenThicknessFactor);
-            brush.setStyle(Qt::DiagCrossPattern);
-        }
-        painter.setBrush(brush);
-        painter.setPen(pen);
-        painter.drawPolygon(poly_in_left);
-        painter.drawPolygon(poly_in_right);
-        if (isDoor) {
-            painter.setPen(innerPen);
-            painter.setBrush(innerBrush);
-            painter.drawPolygon(poly_in_left);
-            painter.drawPolygon(poly_in_right);
-        }
-    }
-
-    if (pRoom->getOut() > 0 || pRoom->exitStubs.contains(DIR_OUT)) {
-        QPolygonF poly_out_left;
-        QPolygonF poly_out_right;
-        poly_out_left.append(QPointF(rx - (mRoomWidth * rSize * outOuterXFactor), ry));
-        poly_out_left.append(QPointF(rx - (mRoomWidth * rSize * outInterXFactor), ry + (mRoomHeight * rSize * outUpDownYFactor)));
-        poly_out_left.append(QPointF(rx - (mRoomWidth * rSize * outInterXFactor), ry - (mRoomHeight * rSize * outUpDownYFactor)));
-        poly_out_right.append(QPointF(rx + (mRoomWidth * rSize * outOuterXFactor), ry));
-        poly_out_right.append(QPointF(rx + (mRoomWidth * rSize * outInterXFactor), ry + (mRoomHeight * rSize * outUpDownYFactor)));
-        poly_out_right.append(QPointF(rx + (mRoomWidth * rSize * outInterXFactor), ry - (mRoomHeight * rSize * outUpDownYFactor)));
-        bool isDoor = true;
-        QBrush brush = painter.brush();
-        switch (pRoom->doors.value(key_out)) {
-        case 1:
-            brush.setColor(mOpenDoorColor);
-            innerPen.setColor(mOpenDoorColor);
-            break;
-        case 2:
-            brush.setColor(mClosedDoorColor);
-            innerPen.setColor(mClosedDoorColor);
-            break;
-        case 3:
-            brush.setColor(mLockedDoorColor);
-            innerPen.setColor(mLockedDoorColor);
-            break;
-        default:
-            brush.setColor(lc);
-            isDoor = false;
-        }
-        if (pRoom->getOut() > 0) {
-            pen.setWidthF(mRoomWidth * rSize * outerRealDoorPenThicknessFactor);
-            innerPen.setWidthF(mRoomWidth * rSize * innerRealDoorPenThicknessFactor);
-            brush.setStyle(Qt::Dense4Pattern);
-        } else {
-            pen.setWidthF(mRoomWidth * rSize * outerStubDoorPenThicknessFactor);
-            innerPen.setWidthF(mRoomWidth * rSize * innerStubDoorPenThicknessFactor);
-            brush.setStyle(Qt::DiagCrossPattern);
-        }
-        painter.setBrush(brush);
-        painter.setPen(pen);
-        painter.drawPolygon(poly_out_left);
-        painter.drawPolygon(poly_out_right);
-        if (isDoor) {
-            painter.setPen(innerPen);
-            painter.setBrush(innerBrush);
-            painter.drawPolygon(poly_out_left);
-            painter.drawPolygon(poly_out_right);
-        }
-    }
-
-    painter.restore();
+    ExitAppearance::paintExitMarkers(painter, pen, *pRoom, rx, ry, mRoomWidth * rSize, mRoomHeight * rSize, roomColor, mMapperUseAntiAlias);
 }
 
 // Markers are gathered from every drawn room, so hit-test once after the room passes rather than
@@ -2142,16 +1895,10 @@ void T2DMap::drawGridModeRooms(QPainter& painter,
                 QBrush brush;
                 switch (doorVal) {
                 case 1:
-                    brush.setColor(mOpenDoorColor);
-                    innerPen.setColor(mOpenDoorColor);
-                    break;
                 case 2:
-                    brush.setColor(mClosedDoorColor);
-                    innerPen.setColor(mClosedDoorColor);
-                    break;
                 case 3:
-                    brush.setColor(mLockedDoorColor);
-                    innerPen.setColor(mLockedDoorColor);
+                    brush.setColor(ExitAppearance::doorColor(doorVal));
+                    innerPen.setColor(ExitAppearance::doorColor(doorVal));
                     break;
                 default:
                     brush.setColor(lc);
@@ -3202,49 +2949,8 @@ void T2DMap::paintEvent(QPaintEvent* e)
 // no change to the QPainter as a result of calling this method.
 void T2DMap::drawDoor(QPainter& painter, const TRoom& room, const QString& dirKey, const QLineF& exitLine)
 {
-    // A set of numbers that can be converted to "static" type and be frobbed
-    // during development:
-    const double shortPositionFactor = 0.225;
-    const double middlePositionFactor = 0.95;
-    const double longPositionFactor = 0.45;
-    const double innerThresholdFactor = 0.225;
-    const double outerThresholdFactor = 0.45;
-    const double middleAngleFactor = 165.0;
-    const double middleFiddleFactor = 0.25;
-    const double endAngleFactor = 150.0;
-    const double endFiddleFactor = 0.50;
     const float doorWidthFactor = 1.5;
-    const bool isShortLine = ((exitLine.length() / (mRoomWidth + mRoomHeight)) < innerThresholdFactor);
-    const bool isLongLine = ((exitLine.length() / (mRoomWidth + mRoomHeight)) > outerThresholdFactor);
-    QLineF line{exitLine};
-    if (isShortLine) {
-        line.setLength(shortPositionFactor * (mRoomWidth + mRoomHeight));
-    } else if (isLongLine) {
-        line.setLength(longPositionFactor * (mRoomWidth + mRoomHeight));
-    } else {
-        line.setLength(middlePositionFactor * line.length());
-    }
-    // The end of "doorLine" is the one nearest the room center
-    QLineF doorLine(line.p2(), line.p1());
-    // This drags that end outwards - so that the door can be positioned in
-    // 1/10 of the overall distance from the end:
-    doorLine.setLength(endFiddleFactor * (mRoomWidth + mRoomHeight));
-    // This line starts at the inner end of doorLine and ends at the outer end:
-    QLineF subDoorLineA{doorLine.p2(), doorLine.p1()};
-    // This swings the outer end anti-clockwise:
-    subDoorLineA.setAngle(doorLine.angle() - endAngleFactor);
-    // This swings another one in the same configuration clockwise:
-    QLineF subDoorLineD{doorLine.p2(), doorLine.p1()};
-    subDoorLineD.setAngle(doorLine.angle() + endAngleFactor);
-
-    // Repeat for an intermediate second pair of lines - a smaller factor puts
-    // these points nearer to the outer edge - but the amount from the
-    // centerline is less:
-    doorLine.setLength(middleFiddleFactor * (mRoomWidth + mRoomHeight));
-    QLineF subDoorLineB{doorLine.p2(), doorLine.p1()};
-    subDoorLineB.setAngle(doorLine.angle() - middleAngleFactor);
-    QLineF subDoorLineC{doorLine.p2(), doorLine.p1()};
-    subDoorLineC.setAngle(doorLine.angle() + middleAngleFactor);
+    const auto [strokeA, strokeB] = ExitAppearance::doorStrokes(exitLine, mRoomWidth + mRoomHeight);
 
     painter.save();
     QPen doorPen = painter.pen();
@@ -3252,18 +2958,10 @@ void T2DMap::drawDoor(QPainter& painter, const TRoom& room, const QString& dirKe
     doorPen.setCosmetic(mMapperUseAntiAlias);
     doorPen.setStyle(Qt::SolidLine);
     doorPen.setCapStyle(Qt::RoundCap);
-
-    const int doorStatus = room.doors.value(dirKey);
-    if (doorStatus == 1) {
-        doorPen.setColor(mOpenDoorColor);
-    } else if (doorStatus == 2) {
-        doorPen.setColor(mClosedDoorColor);
-    } else {
-        doorPen.setColor(mLockedDoorColor);
-    }
+    doorPen.setColor(ExitAppearance::doorColor(room.doors.value(dirKey)));
     painter.setPen(doorPen);
-    painter.drawLine(QLineF(subDoorLineA.p2(), subDoorLineB.p2()));
-    painter.drawLine(QLineF(subDoorLineD.p2(), subDoorLineC.p2()));
+    painter.drawLine(strokeA);
+    painter.drawLine(strokeB);
     painter.restore();
 }
 
@@ -3785,7 +3483,7 @@ void T2DMap::paintRoomExits(QPainter& painter,
                     arrowPen.setStyle(Qt::SolidLine);
                     arrowPen.setJoinStyle(Qt::RoundJoin);
                     arrowPen.setCapStyle(Qt::RoundCap);
-                    brush.setColor(QColor(255, 100, 100));
+                    brush.setColor(ExitAppearance::oneWayArrowColor());
                     brush.setStyle(Qt::SolidPattern);
                     painter.setPen(arrowPen);
                     painter.setBrush(brush);

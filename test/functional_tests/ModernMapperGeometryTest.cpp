@@ -164,6 +164,122 @@ private slots:
         QCOMPARE(LabelTextureCache::keysToEvict(cached, maximum, keep), evicted);
     }
 
+    // The instanced cube spans -1 to 1 on each axis
+    void test_barTransformStretchesTheCubeAlongTheLine_data()
+    {
+        QTest::addColumn<QVector3D>("from");
+        QTest::addColumn<QVector3D>("to");
+        QTest::newRow("east") << QVector3D(1.0f, 2.0f, 0.0f) << QVector3D(3.0f, 2.0f, 0.0f);
+        QTest::newRow("northwest") << QVector3D(0.0f, 0.0f, 1.0f) << QVector3D(-1.0f, 1.0f, 1.0f);
+        QTest::newRow("up a level") << QVector3D(4.0f, 4.0f, 0.0f) << QVector3D(4.0f, 4.0f, 1.0f);
+        QTest::newRow("down and away") << QVector3D(0.0f, 0.0f, 2.0f) << QVector3D(1.0f, 0.0f, 0.0f);
+    }
+
+    void test_barTransformStretchesTheCubeAlongTheLine()
+    {
+        QFETCH(QVector3D, from);
+        QFETCH(QVector3D, to);
+        const float width = 0.1f;
+        const float height = 0.04f;
+        const QMatrix4x4 transform = GeometryManager::barTransform(from, to, width, height);
+        QVERIFY((transform.map(QVector3D(-1.0f, 0.0f, 0.0f)) - from).length() < 1e-5f);
+        QVERIFY((transform.map(QVector3D(1.0f, 0.0f, 0.0f)) - to).length() < 1e-5f);
+
+        const QVector3D center = (from + to) / 2.0f;
+        const QVector3D across = transform.map(QVector3D(0.0f, 1.0f, 0.0f)) - center;
+        const QVector3D upward = transform.map(QVector3D(0.0f, 0.0f, 1.0f)) - center;
+        QVERIFY(qAbs(across.length() - width / 2.0f) < 1e-5f);
+        QVERIFY(qAbs(upward.length() - height / 2.0f) < 1e-5f);
+        const QVector3D along = (to - from).normalized();
+        QVERIFY(qAbs(QVector3D::dotProduct(across, along)) < 1e-5f);
+        QVERIFY(qAbs(QVector3D::dotProduct(upward, along)) < 1e-5f);
+        QVERIFY(qAbs(QVector3D::dotProduct(across, upward)) < 1e-5f);
+        if (qAbs(along.z()) < 1e-5f) {
+            QVERIFY2(qAbs(across.z()) < 1e-5f, "a level line is not level across");
+            QVERIFY2(upward.z() > 0.0f, "a level line's height is not upward");
+        }
+    }
+
+    void test_quadTexturesFromItsOrigin()
+    {
+        GeometryData quad;
+        const QVector3D origin(1.0f, 2.0f, 3.0f);
+        const QVector3D across(2.0f, 0.0f, 0.0f);
+        const QVector3D upward(0.0f, 1.0f, 0.0f);
+        GeometryManager::appendQuad(quad, origin, across, upward, QVector4D(1.0f, 0.5f, 0.25f, 1.0f));
+        QCOMPARE(quad.vertexCount(), 6);
+        QCOMPARE(quad.textureCoords.size(), 12);
+        QCOMPARE(quad.colors.size(), 24);
+        for (int vertex = 0; vertex < 6; ++vertex) {
+            const QVector3D position(quad.vertices[vertex * 3], quad.vertices[vertex * 3 + 1], quad.vertices[vertex * 3 + 2]);
+            const float u = quad.textureCoords[vertex * 2];
+            const float v = quad.textureCoords[vertex * 2 + 1];
+            QCOMPARE(position, origin + across * u + upward * v);
+        }
+    }
+
+    void test_aLabelIsOnTheLevelItsHeightRoundsTo_data()
+    {
+        QTest::addColumn<qreal>("z");
+        QTest::addColumn<bool>("onALevel");
+        QTest::addColumn<int>("level");
+        QTest::newRow("on a level") << 2.0 << true << 2;
+        QTest::newRow("three quarters up") << 0.75 << true << 1;
+        QTest::newRow("three quarters down") << -0.75 << true << -1;
+        QTest::newRow("a quarter up") << 0.25 << true << 0;
+        QTest::newRow("a quarter down") << -0.25 << true << 0;
+        // Halves round away from zero, as the 2D map's qRound does
+        QTest::newRow("half up") << 0.5 << true << 1;
+        QTest::newRow("half down") << -0.5 << true << -1;
+        QTest::newRow("one and a half down") << -1.5 << true << -2;
+        QTest::newRow("beyond any level") << 1e12 << false << 0;
+        QTest::newRow("not a number") << qQNaN() << false << 0;
+        QTest::newRow("infinite") << -qInf() << false << 0;
+    }
+
+    void test_aLabelIsOnTheLevelItsHeightRoundsTo()
+    {
+        QFETCH(qreal, z);
+        QFETCH(bool, onALevel);
+        QFETCH(int, level);
+        const std::optional<int> found = GeometryManager::labelLevel(z);
+        QCOMPARE(found.has_value(), onALevel);
+        if (onALevel) {
+            QCOMPARE(*found, level);
+            QCOMPARE(*found, qRound(z));
+        }
+    }
+
+    void test_aLabelQuadCoversTheLabelAndTurnsInPlace_data()
+    {
+        QTest::addColumn<bool>("turned");
+        QTest::addColumn<QVector3D>("textureTopLeft");
+        QTest::newRow("upright") << false << QVector3D(1.0f, 2.0f, 0.5f);
+        QTest::newRow("turned") << true << QVector3D(4.0f, 1.0f, 0.5f);
+    }
+
+    void test_aLabelQuadCoversTheLabelAndTurnsInPlace()
+    {
+        QFETCH(bool, turned);
+        QFETCH(QVector3D, textureTopLeft);
+        GeometryData quad;
+        // Three wide and one tall, with its top-left corner at (1, 2)
+        GeometryManager::appendLabelQuad(quad, QVector3D(1.0f, 2.0f, 0.5f), 3.0f, 1.0f, turned, QVector4D(1.0f, 1.0f, 1.0f, 1.0f));
+        QCOMPARE(quad.vertexCount(), 6);
+        bool sawTextureTopLeft = false;
+        for (int vertex = 0; vertex < 6; ++vertex) {
+            const QVector3D position(quad.vertices[vertex * 3], quad.vertices[vertex * 3 + 1], quad.vertices[vertex * 3 + 2]);
+            QVERIFY(position.x() == 1.0f || position.x() == 4.0f);
+            QVERIFY(position.y() == 1.0f || position.y() == 2.0f);
+            QCOMPARE(position.z(), 0.5f);
+            if (quad.textureCoords[vertex * 2] == 0.0f && quad.textureCoords[vertex * 2 + 1] == 1.0f) {
+                QCOMPARE(position, textureTopLeft);
+                sawTextureTopLeft = true;
+            }
+        }
+        QVERIFY(sawTextureTopLeft);
+    }
+
     void test_vertexShaderAttributeLocationsDoNotOverlap()
     {
         const QList<ShaderAttribute> attributes = vertexShaderAttributes();

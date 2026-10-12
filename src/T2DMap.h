@@ -310,9 +310,6 @@ public:
     bool mSizeLabel = false;
     bool isCenterViewCall = false;
     QString mHelpMsg;
-    QColor mOpenDoorColor = QColor(10, 155, 10);
-    QColor mClosedDoorColor = QColor(155, 155, 10);
-    QColor mLockedDoorColor = QColor(155, 10, 10);
     // Introduced as a side effect of #4608 the larger area exit arrows don't
     // always work well on existing maps - so allow for them to be reverted
     // almost back to how they were before that PR:
