@@ -31,6 +31,7 @@
 #include "Host.h"
 #include "HostDialogs.h"
 #include "HostManager.h"
+#include "MapStyle.h"
 #include "MudletApp.h"
 #include "MudletProxyStyle.h"
 #include "TAction.h"
@@ -1992,12 +1993,17 @@ void dlgProfilePreferences::reflowWideCards()
 
     const QList<QWidget*> mapViewOptions{
             mMapperUseAntiAlias, checkBox_drawUpperLowerLevels, checkbox_mMapperShowRoomBorders, checkBox_invertMapZoom, checkBox_largeAreaExitArrows, checkBox_showDefaultArea};
-    takeOutOfLayout(gridLayout_groupBox_mapViewOptions, mapViewOptions + QList<QWidget*>{gridGroupBox, groupBox_mapSymbols});
+    takeOutOfLayout(gridLayout_groupBox_mapViewOptions, mapViewOptions + QList<QWidget*>{label_mapStyle, comboBox_mapStyle, gridGroupBox, groupBox_mapSymbols});
     for (int i = 0, total = mapViewOptions.size(); i < total; ++i) {
         gridLayout_groupBox_mapViewOptions->addWidget(mapViewOptions.at(i), i / 2, i % 2);
     }
-    gridLayout_groupBox_mapViewOptions->addWidget(gridGroupBox, 3, 0, 1, 2);
-    gridLayout_groupBox_mapViewOptions->addWidget(groupBox_mapSymbols, 4, 0, 1, 2);
+    auto* pMapStyleRow = new QHBoxLayout();
+    pMapStyleRow->addWidget(label_mapStyle);
+    pMapStyleRow->addWidget(comboBox_mapStyle);
+    pMapStyleRow->addStretch(1);
+    gridLayout_groupBox_mapViewOptions->addLayout(pMapStyleRow, 3, 0, 1, 2);
+    gridLayout_groupBox_mapViewOptions->addWidget(gridGroupBox, 4, 0, 1, 2);
+    gridLayout_groupBox_mapViewOptions->addWidget(groupBox_mapSymbols, 5, 0, 1, 2);
 
     // A column of three, leaving free the two cells initWithHost() appends the scaling factor to
     const QList<QWidget*> mapSymbolRows{label_mapSymbolsFont, fontComboBox_mapSymbols, pushButton_showGlyphUsage, checkBox_isOnlyMapSymbolFontToBeUsed};
@@ -4640,6 +4646,14 @@ void dlgProfilePreferences::initWithHost(Host* pHost)
         comboBox_caretModeKey->setCurrentIndex(static_cast<int>(pHost->mCaretShortcut));
     }
     checkBox_largeAreaExitArrows->setChecked(pHost->getLargeAreaExitArrows());
+    {
+        const QSignalBlocker blocker(comboBox_mapStyle);
+        comboBox_mapStyle->clear();
+        for (const MapStyle& style : MapStyle::all()) {
+            comboBox_mapStyle->addItem(style.displayName(), style.id);
+        }
+        comboBox_mapStyle->setCurrentIndex(comboBox_mapStyle->findData(pHost->mapStyle()));
+    }
     checkBox_invertMapZoom->setChecked(mudlet::self()->invertMapZoom());
     comboBox_blankLinesBehaviour->setCurrentIndex(static_cast<int>(pHost->mBlankLineBehaviour));
 
@@ -6964,6 +6978,9 @@ void dlgProfilePreferences::applyAll()
         }
         if (mSnapshot.dirty(comboBox_caretModeKey)) {
             pHost->mCaretShortcut = static_cast<Host::CaretShortcut>(comboBox_caretModeKey->currentIndex());
+        }
+        if (mSnapshot.dirty(comboBox_mapStyle) && comboBox_mapStyle->currentIndex() >= 0) {
+            pHost->setMapStyle(comboBox_mapStyle->currentData().toString());
         }
         if (groupBox_playerRoomStyle->isEnabled() && mSnapshot.anyDirty({comboBox_playerRoomStyle, spinBox_playerRoomOuterDiameter, spinBox_playerRoomInnerDiameter})) {
             // Although the controls have been interactively modifying the

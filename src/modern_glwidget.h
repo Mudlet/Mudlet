@@ -65,6 +65,7 @@ class TCommandLine;
 class TMap;
 class TRoom;
 struct MapInfoProperties;
+struct MapStyle;
 namespace ExitScene {
 struct Options;
 }
@@ -382,6 +383,9 @@ private:
     bool levelShown(int z) const;
     // What rooms and exits on level z recede toward: the mapper's upper or lower level color, or the background
     QColor levelFadeTarget(int z) const;
+    const MapStyle& mapStyle() const;
+    // The style's background, else the profile's mapper background color
+    QColor backgroundColor() const;
     ExitScene::Options exitSceneOptions() const;
     void zoomBySteps(float steps);
     void panByRooms(int right, int up);

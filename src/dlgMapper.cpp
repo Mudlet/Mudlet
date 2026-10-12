@@ -292,6 +292,9 @@ void dlgMapper::connectMapCues()
         case TMap::MapperSetting::ShowGrid:
             slot_setShowGrid(mpHost->mMapperShowGrid);
             break;
+        case TMap::MapperSetting::Style:
+            update3DView();
+            break;
         }
     });
 }

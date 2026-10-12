@@ -66,6 +66,7 @@ set(mudlet_SRCS
     LuaInterface.cpp
     LuaLiteral.cpp
     mapInfoContributorManager.cpp
+    MapStyle.cpp
     MMCPClient.cpp
     MMCPServer.cpp
     MudletApp.cpp
@@ -358,6 +359,7 @@ set(mudlet_HDRS
     LuaLiteral.h
     MacMicrophonePermission.h
     mapInfoContributorManager.h
+    MapStyle.h
     MMCP.h
     MMCPClient.h
     MMCPServer.h
