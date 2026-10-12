@@ -702,7 +702,7 @@ private slots:
         QCOMPARE(transit->roomColor(environment), QColor(255, 255, 255, 200));
         QCOMPARE(transit->ringColor(environment), environment);
         const QColor pale(250, 245, 200);
-        QVERIFY2(transit->background.lightness() - transit->ringColor(pale).lightness() >= 75, "a pale environment's ring does not stand out on the paper");
+        QVERIFY2(ExitAppearance::brightness(transit->background) - ExitAppearance::brightness(transit->ringColor(pale)) >= 75, "a pale environment's ring does not stand out on the paper");
         QVERIFY(transit->roundRooms(false));
         QVERIFY(!transit->lit);
         QCOMPARE(transit->doors, MapStyle::Doors::Bars);
@@ -718,8 +718,8 @@ private slots:
         QCOMPARE(tiles->interchangeExits, 0);
     }
 
-    // A station is ringed in its environment's color, an interchange larger and in ink, and the player's
-    // room has a flag rather than the profile's marker
+    // A station is ringed in its environment's color, and an interchange in ink but no larger, as clicks and
+    // the selection take a room's size; and the player's room has a flag rather than the profile's marker
     void test_transitRingsStationsAndFlagsThePlayerWithoutGL()
     {
         const int areaId = addArea();
@@ -783,7 +783,8 @@ private slots:
         QVERIFY2(flagDrawn(), "transit did not flag the player's room");
         QVERIFY2(colorQueued(transit->ringColor(red)), "the station is not ringed in its environment's color");
         QVERIFY2(colorQueued(transit->ink), "the interchange is not ringed in ink");
-        QVERIFY2(roomWidth(kEastRoomId) > 0.0f && roomWidth(kPlayerRoomId) > roomWidth(kEastRoomId) * 1.2f, "the interchange is no larger than a station");
+        QVERIFY(roomWidth(kEastRoomId) > 0.0f);
+        QCOMPARE(roomWidth(kPlayerRoomId), roomWidth(kEastRoomId));
     }
 
     // As names are: where IDs overlap one is kept, the viewed level's as only it has IDs on the 2D map,
