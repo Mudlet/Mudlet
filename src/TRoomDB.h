@@ -90,7 +90,7 @@ public:
     // Bumped on every clear. Holders of room/area/label ids that can outlive one (e.g. a dialog open
     // across loadMap()) compare it to detect stale ids, since the next map reuses them.
     unsigned int mapGeneration() const { return mMapGeneration; }
-    // Bumped whenever any room's exits change, as every exit change refreshes the entrance map.
+    // Bumped whenever the entrance map is refreshed, which every exit change of a room in an area does.
     quint64 exitsRevision() const { return mExitsRevision; }
     void auditRooms(QHash<int, int>&, QHash<int, int>&);
     bool addRoom(int id, TRoom* pR, bool isMapLoading = false);

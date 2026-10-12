@@ -533,6 +533,7 @@ void TAreaGraph::packComponents(QList<QList<int>> freshComponents)
     });
     QList<Bounds> bounds;
     double totalArea = 0.0;
+    double totalHeight = 0.0;
     double widest = 0.0;
     for (const QList<int>& component : std::as_const(freshComponents)) {
         Bounds b;
@@ -541,25 +542,32 @@ void TAreaGraph::packComponents(QList<QList<int>> freshComponents)
         }
         bounds.append(b);
         totalArea += (b.width() + cGap) * (b.height() + cGap);
+        totalHeight += b.height() + cGap;
         widest = std::max(widest, b.width());
     }
     const double rowLimit = std::max({widest, std::sqrt(totalArea) * 1.5, anyPlaced ? placedBounds.width() : 0.0});
-    const double startX = anyPlaced ? placedBounds.minX : 0.0;
+    // Rows that would run past the coordinate limit go the other way instead: clamped, they would
+    // pile up in a corner.
+    const bool leftward = anyPlaced && placedBounds.minX + rowLimit > cMaxCoordinate;
+    const bool upward = anyPlaced && placedBounds.minY - 2.0 * cGap - totalHeight < -cMaxCoordinate;
+    const double stepX = leftward ? -1.0 : 1.0;
+    const double stepY = upward ? 1.0 : -1.0;
+    const double startX = anyPlaced ? (leftward ? placedBounds.maxX : placedBounds.minX) : 0.0;
     double cursorX = startX;
-    double cursorY = anyPlaced ? placedBounds.minY - 2.0 * cGap : 0.0;
+    double cursorY = anyPlaced ? (upward ? placedBounds.maxY : placedBounds.minY) + stepY * 2.0 * cGap : 0.0;
     double rowHeight = 0.0;
     for (qsizetype i = 0; i < freshComponents.size(); ++i) {
         const Bounds& b = bounds.at(i);
-        if (cursorX > startX && cursorX - startX + b.width() > rowLimit) {
+        if (cursorX != startX && std::abs(cursorX - startX) + b.width() > rowLimit) {
             cursorX = startX;
-            cursorY -= rowHeight + cGap;
+            cursorY += stepY * (rowHeight + cGap);
             rowHeight = 0.0;
         }
-        const QPointF shift(cursorX - b.minX, cursorY - b.maxY);
+        const QPointF shift(cursorX - (leftward ? b.maxX : b.minX), cursorY - (upward ? b.minY : b.maxY));
         for (const int id : freshComponents.at(i)) {
             mStored[id].position += shift;
         }
-        cursorX += b.width() + cGap;
+        cursorX += stepX * (b.width() + cGap);
         rowHeight = std::max(rowHeight, b.height());
     }
 }
@@ -688,18 +696,14 @@ bool TAreaGraph::removeOverlaps(const QList<int>& ids, const QHash<int, int>& mo
         radius[i] = radiusOf(ids.at(i));
         mobility[i] = mobilityOf.value(ids.at(i), cMobilityNew);
     }
-    bool anyMoved = false;
     // Growing from, packing beside, or making way for an area pinned near the limit can pass it; kept
     // within it here, the overlap passes then slide areas along the limit instead of stacking them.
     const auto keepInBounds = [&](int i) {
         if (mobility[i] == cMobilityPinned) {
             return;
         }
-        const double clampedX = std::clamp(x[i], -cMaxCoordinate, cMaxCoordinate);
-        const double clampedY = std::clamp(y[i], -cMaxCoordinate, cMaxCoordinate);
-        anyMoved = anyMoved || clampedX != x[i] || clampedY != y[i];
-        x[i] = clampedX;
-        y[i] = clampedY;
+        x[i] = std::clamp(x[i], -cMaxCoordinate, cMaxCoordinate);
+        y[i] = std::clamp(y[i], -cMaxCoordinate, cMaxCoordinate);
     };
     for (int i = 0; i < count; ++i) {
         keepInBounds(i);
@@ -736,6 +740,16 @@ bool TAreaGraph::removeOverlaps(const QList<int>& ids, const QHash<int, int>& mo
             const double overlap = wanted - distance;
             const double shareI = mobility[i] > mobility[j] ? 1.0 : (mobility[i] < mobility[j] ? 0.0 : 0.5);
             const double shareJ = 1.0 - shareI;
+            // A push out past the limit would be clamped straight back, leaving the pair stacked in a
+            // corner, so the area that moves is sent back inside instead.
+            const int mover = shareJ > 0.0 ? j : i;
+            const double outward = mover == j ? 1.0 : -1.0;
+            if ((x[mover] >= cMaxCoordinate && dx * outward > 0.0) || (x[mover] <= -cMaxCoordinate && dx * outward < 0.0)) {
+                dx = -dx;
+            }
+            if ((y[mover] >= cMaxCoordinate && dy * outward > 0.0) || (y[mover] <= -cMaxCoordinate && dy * outward < 0.0)) {
+                dy = -dy;
+            }
             x[i] -= dx * overlap * shareI;
             y[i] -= dy * overlap * shareI;
             x[j] += dx * overlap * shareJ;
@@ -747,14 +761,18 @@ bool TAreaGraph::removeOverlaps(const QList<int>& ids, const QHash<int, int>& mo
         if (!moved) {
             break;
         }
-        anyMoved = true;
     }
 
-    if (anyMoved) {
-        for (int i = 0; i < count; ++i) {
-            if (mobility[i] != cMobilityPinned) {
-                mStored[ids.at(i)].position = QPointF(x[i], y[i]);
-            }
+    // Compared rather than tracked: a push that a pin or the limit undoes is no move.
+    bool anyMoved = false;
+    for (int i = 0; i < count; ++i) {
+        if (mobility[i] == cMobilityPinned) {
+            continue;
+        }
+        QPointF& position = mStored[ids.at(i)].position;
+        if (position.x() != x[i] || position.y() != y[i]) {
+            position = QPointF(x[i], y[i]);
+            anyMoved = true;
         }
     }
     return anyMoved;
@@ -771,6 +789,8 @@ bool TAreaGraph::setPosition(int areaId, const QPointF& position)
     }
     mStored.insert(areaId, {position, true});
     mStoredDirty = true;
+    // Unpinned areas under the new spot make way now, not on some later unrelated edit.
+    layoutAreas();
     writeStoredLayout();
     return true;
 }
