@@ -6003,10 +6003,6 @@ std::optional<QColor> Host::getBackgroundColor(const QString& name) const
 
 bool Host::setBackgroundImage(const QString& name, QString& imgPath, int mode, bool fullWindow)
 {
-    if (!hasConsoleView()) {
-        return false;
-    }
-
     // Mode 4 ('style') is a raw QSS fragment (e.g. a gradient), not a literal file
     // path - normalising separators would corrupt any url()/gradient syntax in it:
     if (mode != 4) {
@@ -6035,10 +6031,6 @@ bool Host::setBackgroundImage(const QString& name, QString& imgPath, int mode, b
 
 bool Host::resetBackgroundImage(const QString& name, bool fullWindow)
 {
-    if (!hasConsoleView()) {
-        return false;
-    }
-
     if (fullWindow) {
         return consoleFrontend()->resetWindowBackgroundImage();
     }
