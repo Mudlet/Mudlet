@@ -791,7 +791,9 @@ void XMLimport::readHost(Host* pHost)
     setBoolAttributeWithDefault(qsl("mEnableNEWENVIRON"), pHost->mEnableNEWENVIRON, getBoolValueFromLegacyAttributeOrDefault(qsl("forceNewEnvironNegotiationOff"), true, true));
 
     setBoolAttribute(qsl("autoClearCommandLineAfterSend"), pHost->mAutoClearCommandLineAfterSend);
-    setBoolAttributeWithDefault(qsl("disablePasswordMasking"), pHost->mDisablePasswordMasking, false);
+    bool disablePasswordMasking = false;
+    setBoolAttributeWithDefault(qsl("disablePasswordMasking"), disablePasswordMasking, false);
+    pHost->setDisablePasswordMasking(disablePasswordMasking);
 
     // Handle command echo mode with backward compatibility
     if (attributes().hasAttribute(qsl("commandEchoMode"))) {
@@ -1073,7 +1075,9 @@ void XMLimport::readHost(Host* pHost)
     const bool compactInputLine = attributes().value(QLatin1String("CompactInputLine")) == YES;
     pHost->setCompactInputLine(compactInputLine);
 
-    TAppFrontend::instance()->setCompactInputLineChecked(pHost, compactInputLine);
+    if (auto* frontend = TAppFrontend::instance()) {
+        frontend->setCompactInputLineChecked(pHost, compactInputLine);
+    }
 
     if (attributes().hasAttribute(QLatin1String("CommandLineHistorySaveSize"))) {
         pHost->setCommandLineHistorySaveSize(attributes().value(QLatin1String("CommandLineHistorySaveSize")).toInt());
@@ -1263,7 +1267,7 @@ void XMLimport::readHost(Host* pHost)
     // A package import comes through here too, into a profile that does have a
     // console - and that one needs the whole restyle, not just the model:
     pHost->applyMainConsoleColors();
-    if (!pHost->consoleFrontend()) {
+    if (!pHost->hasConsoleView()) {
         TConsoleModel& model = pHost->mainConsoleModel();
         model.setWrapAt(pHost->mWrapAt);
         model.setIndentCount(pHost->mWrapIndentCount);
