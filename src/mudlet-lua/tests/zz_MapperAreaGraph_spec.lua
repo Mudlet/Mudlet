@@ -198,6 +198,40 @@ describe("Tests the area graph and its world layout", function()
     end
   end)
 
+  it("lays out afresh an area that takes the id of a deleted one", function()
+    local ids = buildMap()
+    local D = ids.GraphSpecD
+    assert.is_true(setAreaGraphPosition(D, 500, 500))
+    assert.is_true(deleteArea(D))
+    assert.is_true(setAreaName(D, "GraphSpecReused"))
+    local room = createRoomID()
+    addRoom(room)
+    assert.is_true(setRoomArea(room, D))
+
+    local area = getAreaGraph().areas[D]
+    assert.are.equal("GraphSpecReused", area.name)
+    assert.is_false(area.pinned)
+    assert.is_false(area.x == 500 and area.y == 500)
+  end)
+
+  it("sizes an area by the full span of its rooms", function()
+    local wide = addAreaName("GraphSpecWide")
+    for _, x in ipairs({2147483647, -2147483647}) do
+      local room = createRoomID()
+      addRoom(room)
+      setRoomArea(room, wide)
+      setRoomCoordinates(room, x, 0, 0)
+    end
+    local other = addAreaName("GraphSpecOther")
+    local room = createRoomID()
+    addRoom(room)
+    setRoomArea(room, other)
+
+    local areas = getAreaGraph().areas
+    local distance = math.sqrt((areas[wide].x - areas[other].x) ^ 2 + (areas[wide].y - areas[other].y) ^ 2)
+    assert.is_true(distance > 2e9, "the areas are only " .. distance .. " apart")
+  end)
+
   it("refuses bad arguments", function()
     local ids = buildMap()
     local ok, message = setAreaGraphPosition(999999, 0, 0)

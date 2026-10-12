@@ -3730,11 +3730,18 @@ std::pair<bool, QString> TMap::readJsonMapFile(const QString& source, const bool
 
     mDefaultAreaName = mapObj[QLatin1String("defaultAreaName")].toString();
     mUnnamedAreaName = mapObj[QLatin1String("anonymousAreaName")].toString();
-    bool importedAreaGraphLayout = false;
+    // The layout is keyed by area id, so it must not change until the rooms do: an aborted import keeps the old one.
+    const QString previousAreaGraphLayout = mUserData.value(TAreaGraph::cLayoutUserDataKey);
+    QString importedAreaGraphLayout;
     if (mapObj.contains(QLatin1String("userData"))) {
         const QJsonObject userDataObj = mapObj[QLatin1String("userData")].toObject();
-        importedAreaGraphLayout = userDataObj.contains(TAreaGraph::cLayoutUserDataKey);
+        importedAreaGraphLayout = userDataObj.value(TAreaGraph::cLayoutUserDataKey).toString();
         readJsonUserData(userDataObj);
+        if (previousAreaGraphLayout.isEmpty()) {
+            mUserData.remove(TAreaGraph::cLayoutUserDataKey);
+        } else {
+            mUserData.insert(TAreaGraph::cLayoutUserDataKey, previousAreaGraphLayout);
+        }
     }
     const QString mapSymbolFontText = mapObj[QLatin1String("mapSymbolFontDetails")].toString();
     // qRound() returns an int, so dividing by an int literal here used to be
@@ -3846,8 +3853,10 @@ std::pair<bool, QString> TMap::readJsonMapFile(const QString& source, const bool
     mpRoomDB = std::move(pNewRoomDB);
     ++mMapRevision;
     // User data is merged rather than replaced, so a layout left from the previous map would place this one's areas.
-    if (!importedAreaGraphLayout) {
+    if (importedAreaGraphLayout.isEmpty()) {
         mUserData.remove(TAreaGraph::cLayoutUserDataKey);
+    } else {
+        mUserData.insert(TAreaGraph::cLayoutUserDataKey, importedAreaGraphLayout);
     }
     // The routing graph holds pointers to the rooms just destroyed, and the bulk
     // deletion skipped the per-room cleanup that would otherwise have flagged it:

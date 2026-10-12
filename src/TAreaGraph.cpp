@@ -290,7 +290,10 @@ double TAreaGraph::radiusOf(int areaId) const
     if (node.roomCount == 0) {
         return cMinRadius;
     }
-    return std::max(cMinRadius, 0.5 * std::hypot(node.maxX - node.minX + 1, node.maxY - node.minY + 1));
+    // In double: the span of int room coordinates can overflow an int.
+    const double width = static_cast<double>(node.maxX) - node.minX + 1.0;
+    const double height = static_cast<double>(node.maxY) - node.minY + 1.0;
+    return std::max(cMinRadius, 0.5 * std::hypot(width, height));
 }
 
 void TAreaGraph::layoutUnplacedAreas()
@@ -642,4 +645,22 @@ void TAreaGraph::resetLayout(bool keepPinned)
     writeStoredLayout();
     mpMap->setUnsaved(__func__);
     mSeenRevision = mpMap->mapRevision();
+}
+
+void TAreaGraph::forgetArea(int areaId)
+{
+    mStored.remove(areaId);
+    const QString text = mpMap->mUserData.value(cLayoutUserDataKey);
+    if (text.isEmpty()) {
+        return;
+    }
+    QJsonObject root = QJsonDocument::fromJson(text.toUtf8()).object();
+    QJsonObject areas = root.value(qsl("areas")).toObject();
+    const QString key = QString::number(areaId);
+    if (!areas.contains(key)) {
+        return;
+    }
+    areas.remove(key);
+    root.insert(qsl("areas"), areas);
+    mpMap->mUserData.insert(cLayoutUserDataKey, QString::fromUtf8(QJsonDocument(root).toJson(QJsonDocument::Compact)));
 }
