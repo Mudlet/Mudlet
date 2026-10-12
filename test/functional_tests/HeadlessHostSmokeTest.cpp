@@ -53,6 +53,7 @@
 #include "TLuaInterpreter.h"
 #include "TMap.h"
 #include "TRoomDB.h"
+#include "XMLimport.h"
 
 #include "GroupedTest.h"
 
@@ -4921,6 +4922,115 @@ headlessImageSize = ok and 'ok' or tostring(err)
         Host* host = HostManager::self()->getHost(hostname);
         QVERIFY2(host, "The profile is not in the pool.");
         QVERIFY(!host->mMapperCenterSmallAreas);
+    }
+
+    // Text echoed to main takes the profile's colours from birth, as the view applies them when it is
+    // built, and then the colours a profile save brings.
+    void test_mainConsoleTextTakesTheProfileColours()
+    {
+        const QString hostname = qsl("Test-Headless-Host-Colours");
+        QVERIFY2(HostManager::self()->addHost(hostname, QString(), QString(), QString()), "Could not create a profile with no main window.");
+        Host* host = HostManager::self()->getHost(hostname);
+        QVERIFY2(host, "The profile is not in the pool.");
+        const QString echoAndRead = qsl(R"lua(
+echo("main", "\n%1")
+moveCursorEnd("main")
+selectString("main", "%1", 1)
+local fr, fg, fb = getFgColor("main")
+local br, bg, bb = getBgColor("main")
+deselect("main")
+headlessColours = table.concat({fr, fg, fb, br, bg, bb}, ",")
+)lua");
+        const auto echoedColours = [host, &echoAndRead](const QString& text) {
+            host->getLuaInterpreter()->compileAndExecuteScript(echoAndRead.arg(text));
+            return luaGlobalString(host, "headlessColours");
+        };
+        const auto coloursOf = [](const QColor& fg, const QColor& bg) {
+            return qsl("%1,%2,%3,%4,%5,%6").arg(fg.red()).arg(fg.green()).arg(fg.blue()).arg(bg.red()).arg(bg.green()).arg(bg.blue());
+        };
+        QCOMPARE(echoedColours(qsl("fresh text")), coloursOf(QColorConstants::LightGray, QColorConstants::Black));
+
+        const QByteArray save = "<?xml version=\"1.0\"?><MudletPackage version=\"1.001\"><HostPackage><Host>"
+                                "<mFgColor>#102030</mFgColor><mBgColor>#405060</mBgColor>"
+                                "</Host></HostPackage></MudletPackage>";
+        QTemporaryDir saveDir;
+        QVERIFY(saveDir.isValid());
+        QFile file(saveDir.filePath(qsl("save.xml")));
+        QVERIFY(file.open(QIODevice::WriteOnly));
+        QCOMPARE(file.write(save), save.size());
+        file.close();
+        QVERIFY(file.open(QIODevice::ReadOnly | QIODevice::Text));
+        XMLimport importer(host);
+        const auto [imported, importError] = importer.importPackage(&file);
+        QVERIFY2(imported, qPrintable(importError));
+        QCOMPARE(echoedColours(qsl("loaded text")), coloursOf(QColor(0x10, 0x20, 0x30), QColor(0x40, 0x50, 0x60)));
+    }
+
+    // The GUI resolves "main" to the main console before it looks for a label of that name
+    void test_setFontPrefersMainConsoleOverALabelNamedMain()
+    {
+        const QString hostname = qsl("Test-Headless-Host-Font-Label-Main");
+        QVERIFY2(HostManager::self()->addHost(hostname, QString(), QString(), QString()), "Could not create a profile with no main window.");
+        Host* host = HostManager::self()->getHost(hostname);
+        QVERIFY2(host, "The profile is not in the pool.");
+        QVERIFY(!host->hasConsoleView());
+        const QFont startFont = host->getDisplayFont();
+        const QString startFamily = QFontInfo(startFont).family();
+
+        // setFont() refuses a family this machine does not have, and macOS CI has none of the Linux ones
+        const QStringList installed = FontManager::availableFonts();
+        QString family;
+        for (const QString& candidate : QStringList{qsl("DejaVu Sans"), qsl("Ubuntu Mono"), qsl("Menlo"), qsl("Courier New")} + installed) {
+            if (installed.contains(candidate) && !candidate.startsWith(QLatin1Char('.')) && !candidate.contains(QLatin1Char('"')) && !candidate.contains(QLatin1Char('\\'))
+                && QFontInfo(host->createFontWithSettings(candidate, startFont.pointSize())).family() != startFamily) {
+                family = candidate;
+                break;
+            }
+        }
+        QVERIFY2(!family.isEmpty(), "No font family other than the main console one is installed.");
+
+        QVERIFY(host->getLuaInterpreter()->compileAndExecuteScript(qsl("labelMainFamily = \"%1\"").arg(family)));
+        const bool ran = host->getLuaInterpreter()->compileAndExecuteScript(qsl(R"lua(
+headlessLabelMain = "not run"
+local ok, err = pcall(function()
+  assert(createLabel("main", 0, 0, 50, 20, 1) == true, "createLabel did not answer true")
+end)
+headlessLabelMain = ok and "ok" or tostring(err)
+)lua"));
+        QVERIFY2(ran, "The Lua chunk did not run.");
+        QCOMPARE(luaGlobalString(host, "headlessLabelMain"), qsl("ok"));
+        const auto labelBefore = host->labelFont(qsl("main"));
+        QVERIFY2(labelBefore, "The label named main was not made.");
+
+        const bool set = host->getLuaInterpreter()->compileAndExecuteScript(qsl(R"lua(
+headlessLabelMain = "not run"
+local ok, err = pcall(function()
+  assert(setFont("main", labelMainFamily) == true, "setFont did not answer true for main")
+  labelMainSetFont = getFont("main")
+end)
+headlessLabelMain = ok and "ok" or tostring(err)
+)lua"));
+        QVERIFY2(set, "The Lua chunk setting the font did not run.");
+        QCOMPARE(luaGlobalString(host, "headlessLabelMain"), qsl("ok"));
+        const auto labelAfter = host->labelFont(qsl("main"));
+        QVERIFY(labelAfter);
+        QCOMPARE(labelAfter->family(), labelBefore->family());
+
+        const bool deleted = host->getLuaInterpreter()->compileAndExecuteScript(qsl(R"lua(
+headlessLabelMain = "not run"
+local ok, err = pcall(function()
+  assert(deleteLabel("main") == true, "deleteLabel did not answer true")
+  labelMainAfterDelete = getFont("main")
+end)
+headlessLabelMain = ok and "ok" or tostring(err)
+)lua"));
+        QVERIFY2(deleted, "The Lua chunk deleting the label did not run.");
+        QCOMPARE(luaGlobalString(host, "headlessLabelMain"), qsl("ok"));
+        const QString expected = QFontInfo(host->createFontWithSettings(family, startFont.pointSize())).family();
+        QCOMPARE(luaGlobalString(host, "labelMainSetFont"), expected);
+        QCOMPARE(luaGlobalString(host, "labelMainAfterDelete"), expected);
+        QCOMPARE(QFontInfo(host->getDisplayFont()).family(), expected);
+        QVERIFY2(QApplication::topLevelWidgets().isEmpty(), "A profile with no main window made a widget.");
     }
 
     // As MapDownloadTest's checks of the same downloads in the GUI: the map is stored and loaded,
