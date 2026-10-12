@@ -38,6 +38,7 @@
 #include "dlgPackageManager.h"
 #include "dlgModuleManager.h"
 #include "dlgTriggerEditor.h"
+#include <QResizeEvent>
 #include <QVBoxLayout>
 #include <QMenuBar>
 #include <QAction>
