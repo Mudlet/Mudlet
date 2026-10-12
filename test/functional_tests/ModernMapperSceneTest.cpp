@@ -50,6 +50,7 @@
 #include "MudletApp.h"
 #include "MudletInstanceCoordinator.h"
 #include "RenderCommand.h"
+#include "RetainedMapScene.h"
 #include "RoomAppearance.h"
 #include "TArea.h"
 #include "TMap.h"
@@ -429,6 +430,41 @@ private slots:
         QCOMPARE(texturedCommands(widget), 0);
         QCOMPARE(drawnCubes(widget, levelOutline).size(), 0);
         mpHost->mMapperShowRoomBorders = savedBorders;
+    }
+
+    void test_aRoomJustOutOfViewIsJudgedNearOrFarAsTheViewMovesWithoutGL()
+    {
+        RetainedMapScene scene;
+        RetainedMapScene::Room room;
+        room.id = 1;
+        room.decalReach = 0.5f;
+        scene.addRoom(room);
+        QMatrix4x4 body;
+        body.scale(0.5f);
+        scene.addInstance(RetainedMapScene::Layer::Rooms, 1, 0, QPointF(0.0, 0.0), CubeInstanceData(body, 1.0f, 1.0f, 1.0f, 1.0f));
+        scene.finish();
+
+        const auto view = [](const QVector3D& camera, const QVector3D& target) {
+            RetainedMapScene::View view;
+            view.viewport = QSizeF(800.0, 600.0);
+            QMatrix4x4 projection;
+            projection.perspective(60.0f, 800.0f / 600.0f, 0.1f, 10000.0f);
+            view.eye.lookAt(camera, target, QVector3D(0.0f, 1.0f, 0.0f));
+            view.projection = projection * view.eye;
+            view.unitsPerPixelPerDepth = 2.0f * std::tan(qDegreesToRadians(30.0f)) / 600.0f;
+            view.roomSize = 1.0f;
+            view.detailPixels = 3.0f;
+            return view;
+        };
+        // Far above, the room is under a pixel wide
+        scene.cull(view(QVector3D(0.0f, 0.0f, 1000.0f), QVector3D(0.0f, 0.0f, 0.0f)));
+        QVERIFY(scene.decalRooms(100.0, 0.0f, 0.0f, {}, {}).isEmpty());
+
+        // Close by, about 50 pixels wide, just past the view's left edge, near enough for its text to reach in
+        scene.cull(view(QVector3D(9.5f, 0.0f, 10.0f), QVector3D(9.5f, 0.0f, 0.0f)));
+        const QList<RetainedMapScene::DecalRoom> near = scene.decalRooms(100.0, 0.0f, 0.0f, {}, {});
+        QCOMPARE(near.size(), 1);
+        QVERIFY2(near.first().detailed, "a room just out of view but close by is judged by the view it is now in, not the last one that showed it");
     }
 
     void test_roomsAreMadeAgainOnlyOnceTheMapSaysItChangedWithoutGL()

@@ -562,6 +562,8 @@ private:
     int mScriptCallbackDepth = 0;
     bool mGraphBuildInProgress = false;
     quint64 mMapRevision = 0;
+    // Per map, not per process, or one profile's pending update swallows another's
+    bool mAreaUpdatePending = false;
     std::unique_ptr<TAreaGraph> mpAreaGraph;
 
     void addDirectionalRoute(std::vector<std::pair<unsigned int, route>>& bestRoutes,

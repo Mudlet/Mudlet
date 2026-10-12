@@ -310,10 +310,8 @@ void RetainedMapScene::cull(const View& view)
     const QList<QVector4D> planes = frustumPlanes(view.projection);
     for (Tile& tile : mTiles) {
         tile.drawn = tile.low.x() <= tile.high.x() && boxInside(planes, tile.low, tile.high);
-        if (!tile.drawn) {
-            continue;
-        }
-        // The nearest corner stands for the nearest room; a tile reaching behind the camera is near enough
+        // Judged for tiles out of view too, as their rooms' text may reach into it. The nearest corner stands for
+        // the nearest room; a tile reaching behind the camera is near enough
         float nearest = scmFar;
         for (int corner = 0; corner < 8; ++corner) {
             const QVector3D point(corner & 1 ? tile.high.x() : tile.low.x(), corner & 2 ? tile.high.y() : tile.low.y(), corner & 4 ? tile.high.z() : tile.low.z());
