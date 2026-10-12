@@ -49,6 +49,17 @@ QColor contrastColor(const QColor& background)
     return background.lightness() > 127 ? QColor(Qt::black) : QColor(Qt::white);
 }
 
+QColor standOutColor(const QColor& color, const QColor& background)
+{
+    constexpr int minimumDifference = 75;
+    const int backgroundLightness = background.lightness();
+    if (qAbs(color.lightness() - backgroundLightness) >= minimumDifference) {
+        return color;
+    }
+    const int lightness = backgroundLightness > 127 ? qMax(0, backgroundLightness - minimumDifference) : qMin(255, backgroundLightness + minimumDifference);
+    return QColor::fromHsl(color.hslHue(), color.hslSaturation(), lightness, color.alpha());
+}
+
 std::pair<QLineF, QLineF> doorStrokes(const QLineF& exitLine, const qreal roomSpan)
 {
     // A set of numbers that can be converted to "static" type and be frobbed

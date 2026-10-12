@@ -64,6 +64,27 @@ QList<MapStyle> registeredStyles()
     terminal.statusLine = true;
     styles.append(terminal);
 
+    MapStyle transit;
+    transit.id = qsl("transit");
+    transit.palette = MapStyle::Palette::Stations;
+    // Stations smaller than tiles' blocks, so that the lines between them have room to show
+    transit.roomScale = 5.0f;
+    transit.roomFlattening = 16.0f;
+    transit.shape = MapStyle::Shape::Round;
+    transit.edges = MapStyle::Edges::StationRings;
+    transit.lit = false;
+    transit.background = QColor(245, 243, 236);
+    transit.ink = QColor(35, 35, 40);
+    transit.labelFontFamily = qsl("Bitstream Vera Sans");
+    transit.exitWidthFactor = 3.0f;
+    transit.doors = MapStyle::Doors::Bars;
+    transit.floorPlates = false;
+    transit.playerMarker = MapStyle::PlayerMarker::Flag;
+    transit.environmentLines = true;
+    transit.interchangeExits = 5;
+    transit.labelHalos = true;
+    styles.append(transit);
+
     return styles;
 }
 } // namespace
@@ -81,6 +102,10 @@ QString MapStyle::displayName() const
     if (id == qsl("terminal")) {
         //: Name of the 3D map style that draws rooms and exits as colored text characters on a black screen, as roguelike games do, chosen in the Mapper preferences
         return QCoreApplication::translate("MapStyle", "Terminal");
+    }
+    if (id == qsl("transit")) {
+        //: Name of the 3D map style that draws rooms as stations and exits as colored lines, as a metro or subway map does, chosen in the Mapper preferences
+        return QCoreApplication::translate("MapStyle", "Transit");
     }
     return id;
 }
@@ -105,6 +130,8 @@ QColor MapStyle::roomColor(const QColor& environmentColor) const
             return QColor::fromHsl(environmentColor.hslHue(), environmentColor.hslSaturation(), 96, environmentColor.alpha());
         }
         return environmentColor;
+    case Palette::Stations:
+        return QColor(255, 255, 255, environmentColor.alpha());
     }
     return environmentColor;
 }
@@ -144,6 +171,11 @@ QColor MapStyle::playerRoomColor() const
     return QColor(Qt::red);
 }
 
+QColor MapStyle::ringColor(const QColor& environmentColor) const
+{
+    return ExitAppearance::standOutColor(environmentColor, background.isValid() ? background : QColor(Qt::black));
+}
+
 QColor MapStyle::backgroundColor(const QColor& profileBackground) const
 {
     return background.isValid() ? background : profileBackground;
@@ -154,6 +186,8 @@ bool MapStyle::roundRooms(const bool profileRoundRooms) const
     switch (shape) {
     case Shape::Profile:
         return profileRoundRooms;
+    case Shape::Round:
+        return true;
     }
     return profileRoundRooms;
 }

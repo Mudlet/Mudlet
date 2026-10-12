@@ -43,6 +43,8 @@
 #include <QOpenGLShaderProgram>
 #include <QOpenGLVertexArrayObject>
 #include <QOpenGLWidget>
+#include <QPixmap>
+#include <QPointF>
 #include <QPointer>
 #include <QSet>
 #include <QTimer>
@@ -255,6 +257,16 @@ private:
         QVector<int> ends;
     };
     QHash<int, InkOutlineLevel> mInkOutlines;
+    // A map label's image with a halo around it, by its area and ID, and what it was made from
+    struct HaloedLabel
+    {
+        qint64 sourceKey = 0;
+        QRgb halo = 0;
+        QPixmap pixmap;
+        // How far the halo reaches past each side of the label, as a part of its width and height
+        QPointF margin;
+    };
+    QHash<std::pair<int, int>, HaloedLabel> mHaloedLabels;
     bool mRoomTextureLimitWarned = false;
     bool mSolidDashWarned = false;
 
@@ -404,8 +416,12 @@ private:
     GLuint addRoomTexture(const QString& key, const QImage& image);
     // The 2D map's up/down/in/out markers for the room, or 0 when it has none
     GLuint exitMarkerTexture(const TRoom& room, const QColor& roomColor);
-    // Text on a clear background; size is set to the texture's size in pixels
-    GLuint textTexture(const QString& key, const QString& text, const QFont& font, const QFontMetricsF& metrics, const QColor& color, QSize& size);
+    // Text on a clear background, with a rim of halo around it if that is valid; size is set to the texture's size in pixels
+    GLuint textTexture(const QString& key, const QString& text, const QFont& font, const QFontMetricsF& metrics, const QColor& color, QSize& size, const QColor& halo = QColor());
+    // A flag on a pole, its foot at the bottom left of the texture, reading text
+    GLuint flagTexture(const QString& text, const QColor& color, const QColor& poleColor);
+    // The label's image with a halo around it, made again only when the label or the halo changes
+    const HaloedLabel& haloedLabel(int labelId, const QPixmap& pixmap, const QColor& halo);
     // The cell of the glyph atlas holding text, added if there is room, else -1; with add false, -1 for any not in it
     qsizetype glyphAtlasCell(const QString& text, bool add = true);
     // Every cell's text in white on clear, to be tinted as drawn, in one texture; 0 if it could not be made
