@@ -22,12 +22,17 @@
 #include "Host.h"
 #include "T2DMap.h"
 #include "TMap.h"
+#include "TRoom.h"
 #include "TRoomDB.h"
 #include "utils.h"
+#if defined(INCLUDE_3DMAPPER)
+#include "modern_glwidget.h"
+#endif
 
 #include <QApplication>
 #include <QHBoxLayout>
 #include <QLabel>
+#include <QToolButton>
 #include <QVBoxLayout>
 
 TMapView::TMapView(int viewId, Host* pHost, TMap* pMap, QWidget* parent)
@@ -56,7 +61,22 @@ TMapView::TMapView(int viewId, Host* pHost, TMap* pMap, QWidget* parent)
         if (areaId == -1 || areaId == mp2dMap->getAreaId()) {
             mp2dMap->update();
         }
+#if defined(INCLUDE_3DMAPPER)
+        if (showing3DView() && (areaId == -1 || areaId == getCurrentAreaId())) {
+            mp3DView->update();
+        }
+#endif
     });
+#if defined(INCLUDE_3DMAPPER)
+    // The 3D view reads the mapper settings as it draws, so it needs only to draw again
+    const auto repaint3DView = [this]() {
+        if (showing3DView()) {
+            mp3DView->update();
+        }
+    };
+    connect(mpMap, &TMap::signal_mapRepaintRequested, this, repaint3DView);
+    connect(mpMap, &TMap::signal_mapperSettingChanged, this, repaint3DView);
+#endif
     connect(mpMap, &TMap::signal_symbolCachesStale, this, [this]() {
         mp2dMap->flushSymbolPixmapCache();
         mp2dMap->update();
@@ -67,6 +87,7 @@ TMapView::TMapView(int viewId, Host* pHost, TMap* pMap, QWidget* parent)
 
     setFont(qApp->font());
     setPalette(QApplication::palette());
+    update3DViewAvailability();
 }
 
 TMapView::~TMapView() = default;
@@ -126,13 +147,40 @@ void TMapView::setupUi()
     mpAreaComboBox->setInsertPolicy(QComboBox::InsertAlphabetically);
     panelLayout->addWidget(mpAreaComboBox);
 
+#if defined(INCLUDE_3DMAPPER)
+    mp3DButton = new QToolButton(mpPanelWidget);
+    mp3DButton->setMinimumSize(30, 20);
+    mp3DButton->setMaximumHeight(20);
+    //: Button in a secondary map window that shows its map in 3D
+    mp3DButton->setText(tr("3D"));
+    mp3DButton->setCheckable(true);
+    panelLayout->addWidget(mp3DButton);
+    connect(mp3DButton, &QAbstractButton::toggled, this, &TMapView::show3DView);
+#endif
+
     mainLayout->addWidget(mpPanelWidget);
 
     connect(mpTogglePanelButton, &QAbstractButton::clicked, this, [this](bool checked) {
         mpPanelWidget->setVisible(checked);
     });
-    connect(mpZUpButton, &QAbstractButton::clicked, mp2dMap, &T2DMap::slot_shiftZup);
-    connect(mpZDownButton, &QAbstractButton::clicked, mp2dMap, &T2DMap::slot_shiftZdown);
+    connect(mpZUpButton, &QAbstractButton::clicked, this, [this]() {
+#if defined(INCLUDE_3DMAPPER)
+        if (showing3DView()) {
+            mp3DView->slot_shiftZup();
+            return;
+        }
+#endif
+        mp2dMap->slot_shiftZup();
+    });
+    connect(mpZDownButton, &QAbstractButton::clicked, this, [this]() {
+#if defined(INCLUDE_3DMAPPER)
+        if (showing3DView()) {
+            mp3DView->slot_shiftZdown();
+            return;
+        }
+#endif
+        mp2dMap->slot_shiftZdown();
+    });
     connect(mpAreaComboBox, qOverload<int>(&QComboBox::activated), this, &TMapView::slot_switchArea);
 }
 
@@ -233,7 +281,11 @@ std::pair<bool, QString> TMapView::centerOnRoom(int roomId)
     if (!mp2dMap) {
         return {false, qsl("mp2dMap is null for view %1").arg(mViewId)};
     }
-    return mp2dMap->centerview(roomId);
+    const auto result = mp2dMap->centerview(roomId);
+    if (result.first && showing3DView()) {
+        sync3DViewFrom2D();
+    }
+    return result;
 }
 
 std::pair<bool, QString> TMapView::setZoom(qreal zoom)
@@ -241,7 +293,13 @@ std::pair<bool, QString> TMapView::setZoom(qreal zoom)
     if (!mp2dMap) {
         return {false, qsl("mp2dMap is null for view %1").arg(mViewId)};
     }
-    return mp2dMap->setMapZoom(zoom, getCurrentAreaId());
+    const auto result = mp2dMap->setMapZoom(zoom, getCurrentAreaId());
+#if defined(INCLUDE_3DMAPPER)
+    if (result.first && showing3DView()) {
+        mp3DView->applyMapZoom(zoom, mp3DView->shownAreaId());
+    }
+#endif
+    return result;
 }
 
 int TMapView::getCurrentAreaId() const
@@ -250,6 +308,11 @@ int TMapView::getCurrentAreaId() const
         qWarning() << "TMapView::getCurrentAreaId() - mp2dMap is null for view" << mViewId;
         return -1;
     }
+#if defined(INCLUDE_3DMAPPER)
+    if (showing3DView()) {
+        return mp3DView->shownAreaId();
+    }
+#endif
     return mp2dMap->getAreaId();
 }
 
@@ -277,5 +340,137 @@ int TMapView::getZLevel() const
         qWarning() << "TMapView::getZLevel() - mp2dMap is null for view" << mViewId;
         return 0;
     }
+#if defined(INCLUDE_3DMAPPER)
+    if (showing3DView()) {
+        return qRound(mp3DView->viewCenter().z());
+    }
+#endif
     return mp2dMap->getZLevel();
+}
+
+ModernGLWidget* TMapView::get3DView() const
+{
+#if defined(INCLUDE_3DMAPPER)
+    return mp3DView.data();
+#else
+    return nullptr;
+#endif
+}
+
+bool TMapView::showing3DView() const
+{
+#if defined(INCLUDE_3DMAPPER)
+    return mp3DView && !mp3DView->isHidden();
+#else
+    return false;
+#endif
+}
+
+void TMapView::show3DView(const bool show)
+{
+#if defined(INCLUDE_3DMAPPER)
+    if (show && (!mpHost || !mpMap || !mpHost->getUseModern3DMapper())) {
+        update3DViewAvailability();
+        return;
+    }
+    if (show == showing3DView()) {
+        return;
+    }
+    if (show && !mp3DView) {
+        auto* view = new ModernGLWidget(mpMap, mpHost, this);
+        view->setObjectName(qsl("mapView3D_%1").arg(mViewId));
+        view->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding);
+        view->setSecondaryView(true);
+        view->setCompanion2DMap(mp2dMap);
+        view->hide();
+        static_cast<QVBoxLayout*>(layout())->insertWidget(0, view);
+        connect(view, &ModernGLWidget::editIn2DRequested, this, [this, view](const int roomId) {
+            if (const TRoom* pRoom = mpMap ? mpMap->mpRoomDB->getRoom(roomId) : nullptr) {
+                view->syncView(pRoom->getArea(), pRoom->x(), pRoom->y(), pRoom->z(), mp2dMap->getCenterRoomId());
+            }
+            if (mp2dMap->mMapViewOnly) {
+                mp2dMap->slot_toggleMapViewOnly();
+            }
+            show3DView(false);
+        });
+        mp3DView = view;
+        mp2dMap->setCompanion3DView(view);
+    }
+
+    if (show) {
+        sync3DViewFrom2D();
+    } else {
+        sync2DViewFrom3D();
+    }
+    mp2dMap->setVisible(!show);
+    mp3DView->setVisible(show);
+    if (mp3DButton) {
+        const QSignalBlocker blocker(mp3DButton);
+        mp3DButton->setChecked(show);
+    }
+#else
+    Q_UNUSED(show)
+#endif
+}
+
+void TMapView::update3DViewAvailability()
+{
+#if defined(INCLUDE_3DMAPPER)
+    const bool available = mpHost && mpHost->getUseModern3DMapper();
+    if (!available && mp3DView) {
+        show3DView(false);
+        mp2dMap->setCompanion3DView(nullptr);
+        // Later, as a script can get here from inside one of the view's own event handlers
+        mp3DView->deleteLater();
+        mp3DView = nullptr;
+    }
+    if (!mp3DButton) {
+        return;
+    }
+    mp3DButton->setEnabled(available);
+    if (available) {
+        //: Tooltip for the button in a secondary map window that switches it between the 2D and 3D map
+        mp3DButton->setToolTip(tr("Show this window's map in 3D"));
+    } else {
+        //: Tooltip for the disabled 3D button in a secondary map window; keep setConfig("experiment.3dmap.modernmapper", true) exactly as written, it is Lua code the user types
+        mp3DButton->setToolTip(tr("Map windows show the map in 3D with the modern 3D mapper only; use setConfig(\"experiment.3dmap.modernmapper\", true) to switch to it"));
+    }
+    const QSignalBlocker blocker(mp3DButton);
+    mp3DButton->setChecked(showing3DView());
+#endif
+}
+
+void TMapView::sync3DViewFrom2D()
+{
+#if defined(INCLUDE_3DMAPPER)
+    if (!mp3DView || !mpMap || !mpMap->mpRoomDB->getArea(mp2dMap->getAreaId())) {
+        return;
+    }
+    // The 2D map's y-axis points down the screen
+    mp3DView->syncView(mp2dMap->getAreaId(), qRound(mp2dMap->mMapCenterX), qRound(-mp2dMap->mMapCenterY), mp2dMap->mMapCenterZ, mp2dMap->getCenterRoomId());
+#endif
+}
+
+void TMapView::sync2DViewFrom3D()
+{
+#if defined(INCLUDE_3DMAPPER)
+    if (!mp3DView || !mpMap) {
+        return;
+    }
+    const int areaId = mp3DView->shownAreaId();
+    if (!mpMap->mpRoomDB->getArea(areaId)) {
+        return;
+    }
+    // Read first: switchArea() recenters the 3D view as well
+    const QVector3D center = mp3DView->viewCenter();
+    if (areaId != mp2dMap->getAreaId()) {
+        mp2dMap->switchArea(areaId);
+        updateAreaComboBox();
+    }
+    mp2dMap->mMapCenterX = center.x();
+    mp2dMap->mMapCenterY = -center.y();
+    mp2dMap->mMapCenterZ = qRound(center.z());
+    mp2dMap->mShiftMode = true;
+    mp2dMap->update();
+#endif
 }
