@@ -45,6 +45,15 @@ describe("Tests map events and menus before the map widget is opened", function(
     assert.are.equal("no floating/dockable type map window found", err)
   end)
 
+  it("should hide and show a built-in map menu item before the widget is opened", function()
+    finally(function() showMapMenuItem("setPlayerLocation") end)
+    assert.is_true(hideMapMenuItem("setPlayerLocation"))
+    assert.are.same({"setPlayerLocation"}, getHiddenMapMenuItems())
+
+    assert.is_true(showMapMenuItem("setPlayerLocation"))
+    assert.are.same({}, getHiddenMapMenuItems())
+  end)
+
   it("should retain a registration for when the widget opens later", function()
     assert.is_true(addMapEvent("preWidgetKeptEvent", "myEvent", "", "Kept Event"))
   end)
@@ -2851,6 +2860,67 @@ describe("Tests mapper functions against a shared fixture", function()
     end)
   end)
 
+  describe("Tests the 3D map view setting", function()
+    -- Read only: showing the 3D view brings up a GL context, which the leak job
+    -- cannot have - see Other_spec's getConfig and setConfig round-trips
+    it("getConfig reports the 3D view hidden while the mapper shows its 2D map", function()
+      assert.is_false(getConfig("show3dMapView"))
+    end)
+  end)
+
+  describe("Tests the 3D map perspective functions", function()
+    -- Only a build with the 3D mapper has them. These run with the 2D map showing;
+    -- zz_Mapper3DView_spec.lua tries them with the modern 3D view open
+    if not setMapPerspective then
+      pending("setMapPerspective and shiftMapPerspective need a Mudlet built with the 3D mapper")
+      return
+    end
+
+    it("setMapPerspective returns nil and a message while the 2D map is showing", function()
+      local ok, err = setMapPerspective(2, 45, 270)
+      assert.is_nil(ok)
+      assert.are.equal("the modern 3D map view is not showing", err)
+    end)
+
+    it("shiftMapPerspective returns nil and a message while the 2D map is showing", function()
+      local ok, err = shiftMapPerspective(10, 10, 0)
+      assert.is_nil(ok)
+      assert.are.equal("the modern 3D map view is not showing", err)
+    end)
+
+    it("both refuse numbers that are not finite, in any argument", function()
+      for _, bad in ipairs({0 / 0, math.huge, -math.huge}) do
+        for position = 1, 3 do
+          local args = {2, 45, 270}
+          args[position] = bad
+          local ok, err = setMapPerspective(unpack(args))
+          assert.is_nil(ok)
+          assert.is_truthy(err:find("finite", 1, true), err)
+          args = {0, 0, 0}
+          args[position] = bad
+          ok, err = shiftMapPerspective(unpack(args))
+          assert.is_nil(ok)
+          assert.is_truthy(err:find("finite", 1, true), err)
+        end
+      end
+    end)
+
+    it("both raise an error for an argument that is not a number", function()
+      assert.has_error(function() setMapPerspective("far", 45, 270) end)
+      assert.has_error(function() shiftMapPerspective(1, nil, 0) end)
+    end)
+
+    it("neither moves nor zooms the 2D map", function()
+      assert.is_true(centerview(rA1))
+      local zoom = getMapZoom(areaAlpha)
+      setMapPerspective(0.5, 10, 0)
+      shiftMapPerspective(30, 30, 30)
+      assert.are.equal(zoom, getMapZoom(areaAlpha))
+      assert.are.equal(rA1, getPlayerRoom())
+      assert.is_false(getConfig("show3dMapView"))
+    end)
+  end)
+
   describe("Tests map zoom", function()
     it("setMapZoom is read back by getMapZoom for a given area", function()
       assert.is_true(setMapZoom(15, areaAlpha))
@@ -3347,6 +3417,38 @@ describe("Tests mapper functions against a shared fixture", function()
       assert.are.equal(1, mainConsoleCount("Failed to save image to " .. badPath))
     end)
 
+    -- The first two exports are the control: with nothing changed they must match,
+    -- or the difference after setRoomChar() would prove nothing
+    it("exportAreaImage draws a room's symbol", function()
+      local names = {"mapper_spec_symbol_a.png", "mapper_spec_symbol_b.png", "mapper_spec_symbol_c.png"}
+      local area = addAreaName("MapperSpecExportSymbol")
+      local _, removeAll = expectExports(names)
+      finally(function()
+        removeAll()
+        deleteArea(area)
+      end)
+      local room = createRoomID()
+      addRoom(room)
+      setRoomArea(room, area)
+      setRoomCoordinates(room, 0, 0, 0)
+
+      local function export(name)
+        local written = expectExports({name})
+        assert.is_true(exportAreaImage(area, exportPath(name)))
+        assert.is_true(waitUntil(written, 5000))
+        pumpEvents(100)
+        local file = io.open(exportPath(name), "rb")
+        local contents = file:read("*a")
+        file:close()
+        return contents
+      end
+
+      local first = export(names[1])
+      assert.are.equal(first, export(names[2]))
+      setRoomChar(room, "W")
+      assert.are_not.equal(first, export(names[3]))
+    end)
+
     it("exportAreaImage rejects false where a z level or true is wanted", function()
       local ok, err = exportAreaImage(areaAlpha, getMudletHomeDir() .. "/unused.png", false)
       assert.is_nil(ok)
@@ -3827,6 +3929,30 @@ describe("Tests saveMap and loadMap", function()
       deleteMap()
       assert.is_true(loadMap(savePath))
       assert.are.same({roomA}, getAllRoomEntrances(roomB))
+    end)
+
+    -- a save carries its labels' fonts and outline colours, and below format
+    -- 21 the area's zoom, as extra area user data that only the file should see
+    it("leaves the live area user data alone when it saves", function()
+      local area = buildMap()
+      assert.is_true(setAreaUserData(area, "climate", "temperate"))
+      local labelId = createMapLabel(area, "Saved Label", 0, 0, 0, 255, 255, 255, 0, 0, 0,
+                                     30.0, 50, true, true, "", 255, 50, false)
+      assert.is_true(labelId >= 0, "the label whose keys this checks was never made")
+
+      -- pinned below 21 so the zoom key stays covered whatever the default is
+      assert.is_true(saveMap(savePath, 20))
+      assert.are.same({climate = "temperate"}, getAllAreaUserData(area))
+    end)
+
+    it("drops label keys a map file holds for labels that no longer exist", function()
+      -- see fixtures/maps/README.md for what the file holds
+      assert.is_true(loadMap(specDirectory .. "/fixtures/maps/stale-label-keys.dat"))
+      local area = getAreaTable()["StaleLabelKeysArea"]
+      assert.is_number(area)
+
+      assert.are.same({climate = "temperate"}, getAllAreaUserData(area))
+      assert.are.equal("Kept Label", getMapLabels(area)[0])
     end)
 
     it("replaces what is on the map rather than merging into it", function()
@@ -4356,12 +4482,6 @@ describe("Tests saveMap and loadMap", function()
     -- breadth-first search, so a fix leaves them green.
     pending("routes can come back a step longer than the shortest one - issue #10180")
   end)
-
-  -- setMapPerspective/shiftMapPerspective only exist in a build made with 3D
-  -- mapper support, which the CI and release builds are not
-  pending("setMapPerspective needs a Mudlet built with the 3D mapper")
-
-  pending("shiftMapPerspective needs a Mudlet built with the 3D mapper")
 end)
 
 -- The JSON map format has a writer and a reader of its own, entirely separate
@@ -4759,6 +4879,29 @@ describe("Tests saveJsonMap and loadJsonMap", function()
       roundTrip()
 
       assert.are.same({climate = "temperate", ruler = "nobody"}, getAllAreaUserData(area))
+    end)
+
+    it("leaves out the label keys a binary save keeps as area user data", function()
+      deleteMap()
+      local area = addAreaName("MapperSpecJsonLabelKeysArea")
+      roomA = createRoomID(); addRoom(roomA); setRoomArea(roomA, area)
+      assert.is_true(setAreaUserData(area, "climate", "temperate"))
+      -- what a JSON file exported from a map those keys had got into holds
+      assert.is_true(setAreaUserData(area, "system.labelFont_99", "Sans|10|50|0"))
+      assert.is_true(setAreaUserData(area, "system.labelOutlineColor_99", "1|2|3|255"))
+      assert.is_true(setAreaUserData(area, "system.fallback_map2DZoom", "20"))
+      -- a label read from a file can have a negative id
+      assert.is_true(setAreaUserData(area, "system.labelOutlineColor_-1", "4|5|6|255"))
+      -- not the label ids a save writes, so a script's own keys
+      assert.is_true(setAreaUserData(area, "system.labelFont_default", "kept"))
+      assert.is_true(setAreaUserData(area, "system.labelFont_007", "kept"))
+      assert.is_true(setAreaUserData(area, "system.labelOutlineColor_+5", "kept"))
+
+      roundTrip()
+
+      assert.are.same({climate = "temperate", ["system.labelFont_default"] = "kept", ["system.labelFont_007"] = "kept",
+                       ["system.labelOutlineColor_+5"] = "kept"},
+                      getAllAreaUserData(area))
     end)
 
     -- TMap::readJsonColor returns QColor(red, green, blue) for a colour array of
@@ -5212,6 +5355,24 @@ describe("Tests the profile colour set behind setCustomEnvColor", function()
   end)
 end)
 
+describe("Tests the app-wide mapper options in getConfig and setConfig", function()
+  setup(function()
+    openMapWidget()
+  end)
+
+  -- setConfig takes map options only while a mapper exists, so the generic
+  -- round-trip in Other_spec never reaches this one
+  it("round-trips showUpperLowerLevels", function()
+    local original = getConfig("showUpperLowerLevels")
+    finally(function() setConfig("showUpperLowerLevels", original) end)
+
+    assert.is_true(setConfig("showUpperLowerLevels", not original))
+    assert.are.equal(not original, getConfig("showUpperLowerLevels"))
+    assert.is_true(setConfig("showUpperLowerLevels", original))
+    assert.are.equal(original, getConfig("showUpperLowerLevels"))
+  end)
+end)
+
 describe("Tests closing another profile that opened a map widget", function()
   local profilesDirectory = getMudletHomeDir():match("^(.*)[/\\]")
   local name = "mudlet-spec-map-widget-close"
@@ -5328,5 +5489,66 @@ describe("Tests closing another profile that opened a map widget", function()
     assert.is_true(closeProfile(name))
     assert.is_true(waitUntil(function() return not loaded() end), "the other profile did not close")
     pumpEvents(500)
+  end)
+end)
+
+describe("Tests hiding the mapper's built-in context menu items", function()
+  after_each(function()
+    for _, itemName in ipairs(getHiddenMapMenuItems()) do
+      showMapMenuItem(itemName)
+    end
+  end)
+
+  it("should list nothing as hidden to begin with", function()
+    assert.are.same({}, getHiddenMapMenuItems())
+  end)
+
+  it("should list hidden items in alphabetical order", function()
+    assert.is_true(hideMapMenuItem("switchMapMode"))
+    assert.is_true(hideMapMenuItem("createLabel"))
+    assert.is_true(hideMapMenuItem("setPlayerLocation"))
+    assert.are.same({"createLabel", "setPlayerLocation", "switchMapMode"}, getHiddenMapMenuItems())
+  end)
+
+  it("should list an item hidden twice only once", function()
+    hideMapMenuItem("deleteRoom")
+    hideMapMenuItem("deleteRoom")
+    assert.are.same({"deleteRoom"}, getHiddenMapMenuItems())
+  end)
+
+  it("should show a hidden item again and leave the others hidden", function()
+    hideMapMenuItem("deleteRoom")
+    hideMapMenuItem("moveRoom")
+    assert.is_true(showMapMenuItem("deleteRoom"))
+    assert.are.same({"moveRoom"}, getHiddenMapMenuItems())
+  end)
+
+  it("should accept showing an item that was never hidden", function()
+    assert.is_true(showMapMenuItem("createRoom"))
+    assert.are.same({}, getHiddenMapMenuItems())
+  end)
+
+  it("should refuse a name that is not a built-in item and say which are", function()
+    local ok, err = hideMapMenuItem("noSuchItem")
+    assert.is_nil(ok)
+    assert.truthy(err:find('"setPlayerLocation"', 1, true))
+    assert.truthy(err:find('got "noSuchItem"', 1, true))
+
+    ok, err = showMapMenuItem("noSuchItem")
+    assert.is_nil(ok)
+    assert.truthy(err:find('got "noSuchItem"', 1, true))
+    assert.are.same({}, getHiddenMapMenuItems())
+  end)
+
+  it("should not take the name of a script's own map event", function()
+    addMapEvent("hideTestEvent", "myEvent", "", "Hide Test Event")
+    local ok = hideMapMenuItem("hideTestEvent")
+    removeMapEvent("hideTestEvent")
+    assert.is_nil(ok)
+  end)
+
+  it("should raise an error when the item name is not a string", function()
+    assert.has_error(function() hideMapMenuItem({}) end)
+    assert.has_error(function() showMapMenuItem() end)
   end)
 end)
