@@ -230,6 +230,7 @@ describe("Tests the area graph and its world layout", function()
     local areas = getAreaGraph().areas
     local distance = math.sqrt((areas[wide].x - areas[other].x) ^ 2 + (areas[wide].y - areas[other].y) ^ 2)
     assert.is_true(distance > 2e9, "the areas are only " .. distance .. " apart")
+    assert.is_true(setAreaGraphPosition(wide, areas[wide].x, areas[wide].y), "a position the layout gave was refused")
   end)
 
   it("refuses bad arguments", function()

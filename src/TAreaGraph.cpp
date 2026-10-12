@@ -64,35 +64,77 @@ QPointF hashedDirection(int a, int b = 0)
     return {std::cos(angle), std::sin(angle)};
 }
 
-// Every pair i < j whose points share a cell of the given size or sit in neighbouring cells.
-void collectNearbyPairs(const std::vector<double>& x, const std::vector<double>& y, const double cellSize, std::vector<std::pair<int, int>>& pairs)
+// Every pair i < j whose reach boxes (centre +/- reach) overlap, which includes every pair closer than
+// reach[i] + reach[j]. Cells are sized by the median reach so that one huge area does not put all the
+// others in one cell; an area too big for the grid is checked against every other one instead.
+void collectNearbyPairs(const std::vector<double>& x, const std::vector<double>& y, const std::vector<double>& reach, std::vector<std::pair<int, int>>& pairs)
 {
     pairs.clear();
     const int count = static_cast<int>(x.size());
+    if (count < 2) {
+        return;
+    }
+    std::vector<double> sortedReach(reach);
+    std::nth_element(sortedReach.begin(), sortedReach.begin() + count / 2, sortedReach.end());
+    const double cellSize = 2.0 * sortedReach[count / 2];
+    constexpr qint64 cMaxCellsAcross = 8;
     const auto cellOf = [cellSize](double v) {
         return static_cast<qint64>(std::floor(v / cellSize));
     };
     const auto cellKey = [](qint64 cx, qint64 cy) {
         return (cx << 32) ^ (cy & 0xffffffffLL);
     };
+    const auto boxesOverlap = [&](int i, int j) {
+        return std::abs(x[i] - x[j]) <= reach[i] + reach[j] && std::abs(y[i] - y[j]) <= reach[i] + reach[j];
+    };
+
+    std::vector<qint64> lowX(count);
+    std::vector<qint64> lowY(count);
+    std::vector<qint64> highX(count);
+    std::vector<qint64> highY(count);
+    std::vector<char> large(count);
+    std::vector<int> largeIds;
     std::unordered_map<qint64, std::vector<int>> grid;
     for (int i = 0; i < count; ++i) {
-        grid[cellKey(cellOf(x[i]), cellOf(y[i]))].push_back(i);
+        lowX[i] = cellOf(x[i] - reach[i]);
+        lowY[i] = cellOf(y[i] - reach[i]);
+        highX[i] = cellOf(x[i] + reach[i]);
+        highY[i] = cellOf(y[i] + reach[i]);
+        if (highX[i] - lowX[i] >= cMaxCellsAcross || highY[i] - lowY[i] >= cMaxCellsAcross) {
+            large[i] = true;
+            largeIds.push_back(i);
+            continue;
+        }
+        for (qint64 cx = lowX[i]; cx <= highX[i]; ++cx) {
+            for (qint64 cy = lowY[i]; cy <= highY[i]; ++cy) {
+                grid[cellKey(cx, cy)].push_back(i);
+            }
+        }
     }
+
     for (int i = 0; i < count; ++i) {
-        const qint64 cx = cellOf(x[i]);
-        const qint64 cy = cellOf(y[i]);
-        for (qint64 dx = -1; dx <= 1; ++dx) {
-            for (qint64 dy = -1; dy <= 1; ++dy) {
-                const auto it = grid.find(cellKey(cx + dx, cy + dy));
+        if (large[i]) {
+            continue;
+        }
+        for (qint64 cx = lowX[i]; cx <= highX[i]; ++cx) {
+            for (qint64 cy = lowY[i]; cy <= highY[i]; ++cy) {
+                const auto it = grid.find(cellKey(cx, cy));
                 if (it == grid.end()) {
                     continue;
                 }
                 for (const int j : it->second) {
-                    if (j > i) {
+                    // Two boxes share several cells; the pair is taken only in the lowest of them.
+                    if (j > i && cx == std::max(lowX[i], lowX[j]) && cy == std::max(lowY[i], lowY[j]) && boxesOverlap(i, j)) {
                         pairs.emplace_back(i, j);
                     }
                 }
+            }
+        }
+    }
+    for (const int i : largeIds) {
+        for (int j = 0; j < count; ++j) {
+            if (j != i && !(large[j] && j < i) && boxesOverlap(i, j)) {
+                pairs.emplace_back(std::min(i, j), std::max(i, j));
             }
         }
     }
@@ -469,7 +511,6 @@ void TAreaGraph::simulate(const QList<int>& component, const QHash<int, bool>& f
     std::vector<char> movable(count);
     QHash<int, int> indexOf;
     bool anyMovable = false;
-    double largestRadius = 0.0;
     for (int i = 0; i < count; ++i) {
         const int id = component.at(i);
         indexOf.insert(id, i);
@@ -477,7 +518,6 @@ void TAreaGraph::simulate(const QList<int>& component, const QHash<int, bool>& f
         x[i] = position.x();
         y[i] = position.y();
         radius[i] = radiusOf(id);
-        largestRadius = std::max(largestRadius, radius[i]);
         movable[i] = !fixed.contains(id);
         anyMovable = anyMovable || movable[i];
     }
@@ -500,7 +540,11 @@ void TAreaGraph::simulate(const QList<int>& component, const QHash<int, bool>& f
         spread += std::pow(2.0 * r + cGap, 2);
     }
     const double startTemperature = std::max(cGap, std::sqrt(spread) * 0.25);
-    const double cellSize = 2.0 * (2.0 * largestRadius + cGap);
+    // Far enough to find every pair closer than twice its ideal distance, or overlapping.
+    std::vector<double> reach(count);
+    for (int i = 0; i < count; ++i) {
+        reach[i] = 2.0 * radius[i] + cGap;
+    }
 
     std::vector<double> moveX(count);
     std::vector<double> moveY(count);
@@ -508,7 +552,7 @@ void TAreaGraph::simulate(const QList<int>& component, const QHash<int, bool>& f
     for (int iteration = 0; iteration < cIterations; ++iteration) {
         std::fill(moveX.begin(), moveX.end(), 0.0);
         std::fill(moveY.begin(), moveY.end(), 0.0);
-        collectNearbyPairs(x, y, cellSize, pairs);
+        collectNearbyPairs(x, y, reach, pairs);
         for (const auto& [i, j] : pairs) {
             double dx = x[j] - x[i];
             double dy = y[j] - y[i];
@@ -566,21 +610,23 @@ void TAreaGraph::removeOverlaps(const QList<int>& ids, const QHash<int, bool>& f
     std::vector<double> y(count);
     std::vector<double> radius(count);
     std::vector<char> movable(count);
-    double largestRadius = 0.0;
     for (int i = 0; i < count; ++i) {
         const QPointF position = mStored.value(ids.at(i)).position;
         x[i] = position.x();
         y[i] = position.y();
         radius[i] = radiusOf(ids.at(i));
-        largestRadius = std::max(largestRadius, radius[i]);
         movable[i] = !fixed.contains(ids.at(i));
     }
-    const double cellSize = 2.0 * (2.0 * largestRadius + cGap);
+    // Far enough to find every pair closer than twice its ideal distance, or overlapping.
+    std::vector<double> reach(count);
+    for (int i = 0; i < count; ++i) {
+        reach[i] = 2.0 * radius[i] + cGap;
+    }
 
     std::vector<std::pair<int, int>> pairs;
     for (int pass = 0; pass < cOverlapPasses; ++pass) {
         bool moved = false;
-        collectNearbyPairs(x, y, cellSize, pairs);
+        collectNearbyPairs(x, y, reach, pairs);
         for (const auto& [i, j] : pairs) {
             if (!movable[i] && !movable[j]) {
                 continue;
