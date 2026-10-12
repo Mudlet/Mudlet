@@ -20,7 +20,7 @@
 
 #include "MudletInstanceCoordinator.h"
 #include "Host.h"
-#include "mudlet.h"
+#include "TAppFrontend.h"
 #include <QLocalSocket>
 #include <chrono>
 
@@ -117,10 +117,7 @@ void MudletInstanceCoordinator::handleReadyRead()
             const QString uri = message.mid(11);
 
             QTimer::singleShot(0ms, this, [uri]() {
-                mudlet* app = mudlet::self();
-                if (app) {
-                    app->handleTelnetUri(uri);
-                }
+                TAppFrontend::instance()->handleTelnetUri(uri);
             });
         } else {
             QMutexLocker locker(&mMutex);
@@ -138,13 +135,14 @@ void MudletInstanceCoordinator::handleReadyRead()
 void MudletInstanceCoordinator::installPackagesLocally()
 {
     QTimer::singleShot(0ms, this, [this]() {
-        mudlet* mudletApp = mudlet::self();
-        Q_ASSERT(mudletApp);
-        Host* activeHost = mudletApp->getActiveHost();
+        // The null view would leave the packages queued with no dialog to pick a profile for them
+        Q_ASSERT(TAppFrontend::hasView());
+        TAppFrontend* app = TAppFrontend::instance();
+        Host* activeHost = app->getActiveHost();
         if (activeHost) {
             installPackagesToHost(activeHost);
         } else {
-            mudletApp->slot_showConnectionDialog();
+            app->showConnectionDialog();
         }
     });
 }
