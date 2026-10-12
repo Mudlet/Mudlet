@@ -24,6 +24,7 @@
 #include "Host.h"
 #include "mudlet.h"
 #include "TConsole.h"
+#include "TMainConsole.h"
 
 TDockWidget::TDockWidget(Host* pH, const QString& consoleName)
 : QDockWidget()
@@ -41,6 +42,15 @@ void TDockWidget::setTConsole(TConsole* pC)
     mpConsole = pC;
     setWidget(pC);
     pC->mpDockWidget = this;
+}
+
+// A qproperty-windowTitle in a style sheet sets the title without going through setUserWindowTitle()
+bool TDockWidget::event(QEvent* event)
+{
+    if (event->type() == QEvent::WindowTitleChange && mpHost) {
+        mpHost->windowRegistry().setUserWindowTitle(mWidgetConsoleName, windowTitle());
+    }
+    return QDockWidget::event(event);
 }
 
 void TDockWidget::closeEvent(QCloseEvent* event)
@@ -73,7 +83,7 @@ void TDockWidget::moveEvent(QMoveEvent* event)
 
 void TDockWidget::setVisible(bool visible)
 {
-    auto pC = (mpHost && mpHost->mpConsole) ? mpHost->mpConsole->subConsoleWidget(mWidgetConsoleName) : nullptr;
+    auto pC = (mpHost && mpHost->mainConsoleView()) ? mpHost->mainConsoleView()->subConsoleWidget(mWidgetConsoleName) : nullptr;
     if (!pC) {
         // During shutdown / profile closure TDockWidgets will get a hide event
         // as part of the underlying Qt class's built in handling of a close
@@ -91,7 +101,7 @@ void TDockWidget::setVisible(bool visible)
     if (visible) {
         pC->show();
         QWidget::setVisible(true);
-        mpHost->mpConsole->showWindow(mWidgetConsoleName);
+        mpHost->mainConsoleView()->showWindow(mWidgetConsoleName);
     } else {
         QWidget::setVisible(false);
     }
