@@ -73,6 +73,7 @@ set(mudlet_SRCS
     MudletReplay.cpp
     MxpTag.cpp
     OAuthClientFlow.cpp
+    RoomAppearance.cpp
     ScriptUnit.cpp
     SecureStringUtils.cpp
     SentryWrapper.cpp
@@ -364,6 +365,7 @@ set(mudlet_HDRS
     MudletReplay.h
     MxpTag.h
     OAuthClientFlow.h
+    RoomAppearance.h
     ScriptUnit.h
     SecureStringUtils.h
     SentryWrapper.h

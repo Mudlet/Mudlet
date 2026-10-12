@@ -3367,6 +3367,38 @@ describe("Tests mapper functions against a shared fixture", function()
       assert.are.equal(1, mainConsoleCount("Failed to save image to " .. badPath))
     end)
 
+    -- The first two exports are the control: with nothing changed they must match,
+    -- or the difference after setRoomChar() would prove nothing
+    it("exportAreaImage draws a room's symbol", function()
+      local names = {"mapper_spec_symbol_a.png", "mapper_spec_symbol_b.png", "mapper_spec_symbol_c.png"}
+      local area = addAreaName("MapperSpecExportSymbol")
+      local _, removeAll = expectExports(names)
+      finally(function()
+        removeAll()
+        deleteArea(area)
+      end)
+      local room = createRoomID()
+      addRoom(room)
+      setRoomArea(room, area)
+      setRoomCoordinates(room, 0, 0, 0)
+
+      local function export(name)
+        local written = expectExports({name})
+        assert.is_true(exportAreaImage(area, exportPath(name)))
+        assert.is_true(waitUntil(written, 5000))
+        pumpEvents(100)
+        local file = io.open(exportPath(name), "rb")
+        local contents = file:read("*a")
+        file:close()
+        return contents
+      end
+
+      local first = export(names[1])
+      assert.are.equal(first, export(names[2]))
+      setRoomChar(room, "W")
+      assert.are_not.equal(first, export(names[3]))
+    end)
+
     it("exportAreaImage rejects false where a z level or true is wanted", function()
       local ok, err = exportAreaImage(areaAlpha, getMudletHomeDir() .. "/unused.png", false)
       assert.is_nil(ok)

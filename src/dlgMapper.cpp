@@ -176,6 +176,7 @@ void dlgMapper::connectMapCues()
     connect(mpMap, &TMap::signal_mapperColoursChanged, this, [this]() {
         if (drawsTheMap()) {
             refreshColours();
+            update3DView();
         }
     });
     connect(mpMap, &TMap::signal_mapCleared, this, [this]() {
@@ -217,11 +218,13 @@ void dlgMapper::connectMapCues()
         }
         mp2dMap->flushSymbolPixmapCache();
         mp2dMap->update();
+        update3DView();
         update();
     });
     connect(mpMap, &TMap::signal_playerRoomStyleChanged, this, [this]() {
         if (drawsTheMap()) {
             mp2dMap->setPlayerRoomStyle(mpMap->mPlayerRoomStyle);
+            update3DView();
         }
     });
     connect(mpMap, &TMap::signal_areaListChanged, this, [this]() {
@@ -682,6 +685,49 @@ void dlgMapper::slot_setMapperPanelVisible(bool panelVisible)
     widget_panel->setVisible(panelVisible);
 }
 
+void dlgMapper::update3DView()
+{
+#if defined(INCLUDE_3DMAPPER)
+    if (glWidget) {
+        glWidget->update();
+    }
+#endif
+}
+
+void dlgMapper::repaintMaps()
+{
+    mp2dMap->update();
+    update3DView();
+}
+
+std::pair<bool, QString> dlgMapper::setMapZoom(qreal zoom, int areaId)
+{
+#if defined(INCLUDE_3DMAPPER)
+    auto* modernWidget = qobject_cast<ModernGLWidget*>(glWidget);
+    if (!areaId) {
+        areaId = shownAreaId();
+    }
+    auto result = mp2dMap->setMapZoom(zoom, areaId);
+    if (result.first && modernWidget) {
+        modernWidget->applyMapZoom(zoom, areaId);
+    }
+    return result;
+#else
+    return mp2dMap->setMapZoom(zoom, areaId);
+#endif
+}
+
+int dlgMapper::shownAreaId() const
+{
+#if defined(INCLUDE_3DMAPPER)
+    // The hidden 2D map keeps the area it last showed, while the 3D view moves on
+    if (auto* modernWidget = qobject_cast<ModernGLWidget*>(glWidget); modernWidget && showing3DView()) {
+        return modernWidget->areaShownNext();
+    }
+#endif
+    return mp2dMap->getAreaId();
+}
+
 bool dlgMapper::showing3DView() const
 {
 #if defined(INCLUDE_3DMAPPER)
@@ -916,6 +962,10 @@ void dlgMapper::slot_toggle3DView(const bool is3DMode)
     } else {
         // workaround for buttons reloading oddly
         QTimer::singleShot(100ms, this, [this]() {
+            // The 3D view may have been shown again since
+            if (glWidget && !glWidget->isHidden()) {
+                return;
+            }
             widget_3DControls->setVisible(false);
             widget_playerIconControls->setVisible(false);
         });

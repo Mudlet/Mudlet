@@ -76,9 +76,12 @@ public:
     void followPlayer();
     bool followingPlayer() const;
     int shownAreaId() const { return mAID; }
+    int areaShownNext() const;
     QVector3D viewCenter() const { return QVector3D(mMapCenterX, mMapCenterY, mMapCenterZ); }
     void shiftCamera(float, float, float);
     void setCameraPosition(float, float, float);
+    // Frames as many rooms as the 2D map shows at this zoom, when areaId is the area on view
+    void applyMapZoom(qreal zoom, int areaId);
     void setCameraDistance(float r);
     const QString& failureMessage() const { return mFailureMessage; }
     // A grid-mode area is always drawn looking straight down with north up
@@ -168,6 +171,9 @@ private:
 
     // Label texture cache
     LabelTextureCache mLabelTextureCache;
+    // Room textures this frame has used so far, which making room for another must keep
+    QSet<QString> mRoomTexturesInUse;
+    bool mRoomTextureLimitWarned = false;
 
     // Host reference
     QPointer<Host> mpHost;
@@ -229,6 +235,9 @@ private:
     bool mCameraSmoothAnimating = false; // Dedicated flag for smooth camera animation
     int mPreviousRID = 0;                // Track previous room ID to detect changes
     bool mFramePending = true;
+    // Set by a zoom or a change of area while hidden: the shown area is framed at its stored zoom, read then so a later
+    // 2D zoom counts, for the size the view is first seen at, unless a camera distance is set first
+    bool mFrameWhenShown = false;
     // A distance a script asked for since the last paint wins over framing a newly shown area
     bool mDistanceRequested = false;
 
@@ -247,14 +256,20 @@ private:
     void setupBuffers();
     void cleanup();
     void showFailure(const QString& message, const QString& advice = QString());
-    bool contextCreationFailed() const;
+    GLuint symbolTexture(const QString& symbol, const QColor& color);
+    // A disc filling the texture, shaded by a radial gradient over its radius
+    GLuint discTexture(const QString& key, const QGradientStops& stops);
+    GLuint squareTexture(const QColor& color);
+    GLuint cachedRoomTexture(const QString& key);
+    bool roomForAnotherTexture();
+    GLuint addRoomTexture(const QString& key, const QImage& image);
     void reportContextCreationFailure();
-    QColor getPlaneColor(int zLevel, bool belowOrAtLevel);
-    QColor getEnvironmentColor(TRoom* pRoom);
+    bool contextCreationFailed() const;
     void startSmoothTransition(int targetAID, int targetX, int targetY, int targetZ);
     void stopSmoothTransition();
     void jumpTo(int areaId, int x, int y, int z);
     void frameArea();
+    void frameRooms(qreal zoom);
     void emitCameraControls();
     void setOrientationKeepingRoll(float theta, float phi);
 };

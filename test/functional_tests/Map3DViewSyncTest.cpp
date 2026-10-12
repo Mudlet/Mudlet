@@ -27,6 +27,7 @@
  * Run with: ctest -R Map3DViewSyncTest -V
  */
 
+#include <QDockWidget>
 #include <QOpenGLContext>
 #include <QSignalSpy>
 #include <QTemporaryDir>
@@ -111,6 +112,25 @@ private:
         }
         map()->mNewMove = false;
         return pMapper;
+    }
+
+    // The 3D view keeps the landscape shape it had when hidden, while its floating dock turns portrait
+    static void hide3DViewInAPortraitDock(dlgMapper* pMapper, QDockWidget*& pDock, ModernGLWidget*& pModern)
+    {
+        pDock = qobject_cast<QDockWidget*>(pMapper->parentWidget());
+        QVERIFY2(pDock, "the mapper is not in a dock, so its shape cannot be changed while the 3D view is hidden");
+        pDock->setFloating(true);
+        pDock->resize(900, 500);
+        pMapper->show3DView(true);
+        pModern = qobject_cast<ModernGLWidget*>(pMapper->glWidget);
+        QVERIFY(pModern);
+        QTRY_VERIFY(pModern->isVisible() && pModern->width() > pModern->height());
+        pMapper->show3DView(false);
+        pDock->resize(300, 900);
+        QTRY_VERIFY(pMapper->height() > pMapper->width());
+        // As when a player switches back later: with the controls gone, showing the view lays it out
+        // once without them, then again, smaller, once they reappear
+        QTRY_VERIFY(pMapper->widget_3DControls->isHidden());
     }
 
 private slots:
@@ -459,6 +479,11 @@ private slots:
     {
         dlgMapper* pMapper = mapperShowing2DAtThePlayer();
         QVERIFY(pMapper);
+        // A skip on the classic pass would otherwise leave the tests after this one without a modern view
+        const auto modernAgain = qScopeGuard([this, pMapper]() {
+            mpHost->setExperimentEnabled(qsl("experiment.3dmap.modernmapper"), true);
+            pMapper->recreate3DView();
+        });
         for (const bool modern : {false, true}) {
             QVERIFY(mpHost->setExperimentEnabled(qsl("experiment.3dmap.modernmapper"), modern).first);
             pMapper->recreate3DView();
@@ -480,6 +505,278 @@ private slots:
             // A leaked context is never freed, so its address cannot come back for a new one
             QVERIFY2(pWidget->context() == pFirstContext, modern ? "the modern 3D view tried again for a context" : "the classic 3D view tried again for a context");
         }
+    }
+
+    void test_setMapZoomFramesThatManyRoomsIn3D()
+    {
+        dlgMapper* pMapper = mapperShowing2DAtThePlayer();
+        QVERIFY(pMapper);
+        pMapper->show3DView(true);
+        auto* pModern = qobject_cast<ModernGLWidget*>(pMapper->glWidget);
+        QVERIFY(pModern);
+        QSignalSpy cameraControls(pModern, &ModernGLWidget::cameraControlsChanged);
+        const auto lastScale = [&cameraControls]() {
+            return cameraControls.isEmpty() ? -1 : cameraControls.last().at(0).toInt();
+        };
+
+        QVERIFY(pMapper->setMapZoom(5.0, 0).first);
+        const int fewRooms = lastScale();
+        QVERIFY(pMapper->setMapZoom(20.0, 0).first);
+        const int manyRooms = lastScale();
+        QVERIFY2(fewRooms != -1 && manyRooms != fewRooms, "the 3D view did not zoom with setMapZoom");
+        QVERIFY2(manyRooms < fewRooms, "showing more rooms should move the 3D camera away, which lowers the scale");
+
+        cameraControls.clear();
+        QVERIFY(!pMapper->setMapZoom(2.9, 0).first);
+        QVERIFY(!pMapper->setMapZoom(qQNaN(), 0).first);
+        QVERIFY2(cameraControls.isEmpty(), "a zoom the 2D map refused still moved the 3D camera");
+
+        // Asking again for the zoom the area already has must still undo a zoom the player made with the scale slider
+        pModern->slot_setScale(fewRooms);
+        cameraControls.clear();
+        QVERIFY(pMapper->setMapZoom(20.0, 0).first);
+        QCOMPARE(lastScale(), manyRooms);
+
+        const qsizetype emitted = cameraControls.size();
+        QVERIFY(pMapper->setMapZoom(9.0, mOtherAreaId).first);
+        QCOMPARE(cameraControls.size(), emitted);
+    }
+
+    // The controls are hidden a moment after the view goes; a view shown again in between keeps them,
+    // or it grows under the framing it was just given
+    void test_the3DControlsStayWithAViewShownAgainStraightAway()
+    {
+        dlgMapper* pMapper = mapperShowing2DAtThePlayer();
+        QVERIFY(pMapper);
+        pMapper->show3DView(true);
+        pMapper->show3DView(false);
+        pMapper->show3DView(true);
+        QVERIFY(!pMapper->widget_3DControls->isHidden());
+        QTest::qWait(250);
+        QVERIFY2(!pMapper->widget_3DControls->isHidden(), "the 3D controls were hidden while the 3D view shows");
+    }
+
+    void test_aZoomMadeWhileThe3DViewIsHiddenFitsItsShapeOnceShown()
+    {
+        dlgMapper* pMapper = mapperShowing2DAtThePlayer();
+        QVERIFY(pMapper);
+        QDockWidget* pDock = nullptr;
+        ModernGLWidget* pModern = nullptr;
+        hide3DViewInAPortraitDock(pMapper, pDock, pModern);
+        if (QTest::currentTestFailed()) {
+            return;
+        }
+        QSignalSpy cameraControls(pModern, &ModernGLWidget::cameraControlsChanged);
+        const auto lastScale = [&cameraControls]() {
+            return cameraControls.isEmpty() ? -1 : cameraControls.last().at(0).toInt();
+        };
+        QVERIFY(pMapper->setMapZoom(20.0, 0).first);
+        const int framedWhileHidden = lastScale();
+
+        pMapper->show3DView(true);
+        QTRY_VERIFY(pModern->isVisible() && pModern->height() > pModern->width());
+        const int framedOnceShown = lastScale();
+
+        // Once framed for its new shape, a zoom of the player's own outlasts later resizes
+        pModern->slot_setScale(framedOnceShown + 7);
+        cameraControls.clear();
+        pDock->resize(320, 950);
+        QTRY_COMPARE(pDock->height(), 950);
+        QCoreApplication::processEvents();
+        QVERIFY2(cameraControls.isEmpty(), "a resize after the hidden zoom had been framed undid the player's zoom");
+        pDock->resize(300, 900);
+        QTRY_COMPARE(pDock->height(), 900);
+
+        QVERIFY(pMapper->setMapZoom(20.0, 0).first);
+        const int framedWhileShown = lastScale();
+        QVERIFY2(framedWhileShown != framedWhileHidden, "the 3D view's shape did not change, so this cannot tell a stale framing apart");
+        QCOMPARE(framedOnceShown, framedWhileShown);
+
+        pMapper->show3DView(false);
+        pDock->setFloating(false);
+    }
+
+    void test_aDistanceSetWhileAHiddenZoomIsPendingWinsOverIt()
+    {
+        dlgMapper* pMapper = mapperShowing2DAtThePlayer();
+        QVERIFY(pMapper);
+        QDockWidget* pDock = nullptr;
+        ModernGLWidget* pModern = nullptr;
+        hide3DViewInAPortraitDock(pMapper, pDock, pModern);
+        if (QTest::currentTestFailed()) {
+            return;
+        }
+        QSignalSpy cameraControls(pModern, &ModernGLWidget::cameraControlsChanged);
+        const auto lastScale = [&cameraControls]() {
+            return cameraControls.isEmpty() ? -1 : cameraControls.last().at(0).toInt();
+        };
+        QVERIFY(pMapper->setMapZoom(20.0, 0).first);
+        const int framedWhileHidden = lastScale();
+
+        // Stands in for a script setting the camera after showing the view but before its first visible paint.
+        // set3DViewCameraPosition refuses a hidden view, and offscreen the visible resize settles the zoom first
+        pModern->setCameraPosition(2.0f, 45.0f, 270.0f);
+        const int requested = lastScale();
+        QVERIFY(requested != framedWhileHidden);
+        // Neither showing the view, nor a later resize or paint, may reframe it
+        pMapper->show3DView(true);
+        QTRY_VERIFY(pModern->isVisible() && pModern->height() > pModern->width());
+        pDock->resize(320, 950);
+        QTRY_COMPARE(pDock->height(), 950);
+        QCoreApplication::processEvents();
+        QCOMPARE(lastScale(), requested);
+
+        pMapper->show3DView(false);
+        pDock->setFloating(false);
+    }
+
+    void test_anAreaChangedToWhileHiddenIsFramedAtItsOwnZoom_data()
+    {
+        QTest::addColumn<bool>("zoomWhileHidden");
+        QTest::newRow("after a zoom of the area left") << true;
+        QTest::newRow("with no zoom while hidden") << false;
+    }
+
+    void test_anAreaChangedToWhileHiddenIsFramedAtItsOwnZoom()
+    {
+        QFETCH(bool, zoomWhileHidden);
+        dlgMapper* pMapper = mapperShowing2DAtThePlayer();
+        QVERIFY(pMapper);
+        QDockWidget* pDock = nullptr;
+        ModernGLWidget* pModern = nullptr;
+        hide3DViewInAPortraitDock(pMapper, pDock, pModern);
+        if (QTest::currentTestFailed()) {
+            return;
+        }
+        if (zoomWhileHidden) {
+            QVERIFY(pMapper->setMapZoom(20.0, 0).first);
+        }
+        // Not the area the 3D view shows, so this frames nothing yet
+        QVERIFY(pMapper->setMapZoom(9.0, mOtherAreaId).first);
+        pMapper->mp2dMap->switchArea(mOtherAreaId);
+        QSignalSpy cameraControls(pModern, &ModernGLWidget::cameraControlsChanged);
+
+        pMapper->show3DView(true);
+        QTRY_VERIFY(pModern->isVisible() && pModern->height() > pModern->width());
+        QCoreApplication::processEvents();
+        QCOMPARE(pModern->shownAreaId(), mOtherAreaId);
+        QList<int> framedOnShow;
+        for (const auto& emission : cameraControls) {
+            framedOnShow.append(emission.at(0).toInt());
+        }
+
+        cameraControls.clear();
+        QVERIFY(pMapper->setMapZoom(20.0, mOtherAreaId).first);
+        QVERIFY(!cameraControls.isEmpty());
+        const int framedAt20 = cameraControls.last().at(0).toInt();
+        QVERIFY(pMapper->setMapZoom(9.0, mOtherAreaId).first);
+        const int framedAt9 = cameraControls.last().at(0).toInt();
+        QVERIFY(framedAt20 != framedAt9);
+        if (zoomWhileHidden) {
+            QVERIFY2(!framedOnShow.contains(framedAt20), "the zoom asked for the area the 3D view showed before was used for the area it shows now");
+        }
+        QVERIFY2(!framedOnShow.isEmpty(), "the area shown now was not framed");
+        QCOMPARE(framedOnShow.last(), framedAt9);
+
+        pMapper->show3DView(false);
+        pDock->setFloating(false);
+    }
+
+    // The hidden 2D map keeps the area it last showed, while the 3D view moves on
+    void test_setMapZoomWithNoAreaZoomsTheArea3DShows()
+    {
+        dlgMapper* pMapper = mapperShowing2DAtThePlayer();
+        QVERIFY(pMapper);
+        pMapper->show3DView(true);
+        auto* pModern = qobject_cast<ModernGLWidget*>(pMapper->glWidget);
+        QVERIFY(pModern);
+        pModern->setViewCenter(mOtherAreaId, 0, 0, 0);
+        QCOMPARE(pMapper->mp2dMap->getAreaId(), mPlayerAreaId);
+        QVERIFY(pMapper->setMapZoom(5.0, mPlayerAreaId).first);
+        QVERIFY(pMapper->setMapZoom(5.0, mOtherAreaId).first);
+        QSignalSpy cameraControls(pModern, &ModernGLWidget::cameraControlsChanged);
+
+        QVERIFY(pMapper->setMapZoom(9.0, 0).first);
+        QCOMPARE(map()->mpRoomDB->get2DMapZoom(mOtherAreaId), 9.0);
+        QCOMPARE(map()->mpRoomDB->get2DMapZoom(mPlayerAreaId), 5.0);
+        QVERIFY2(!cameraControls.isEmpty(), "the 3D view was not zoomed");
+
+        pMapper->show3DView(false);
+    }
+
+    // As a script zooming one step out does, with the hidden 2D map still on the area the player left
+    void test_getMapZoomAndSetMapZoomWithNoAreaAgreeIn3D()
+    {
+        dlgMapper* pMapper = mapperShowing2DAtThePlayer();
+        QVERIFY(pMapper);
+        pMapper->show3DView(true);
+        auto* pModern = qobject_cast<ModernGLWidget*>(pMapper->glWidget);
+        QVERIFY(pModern);
+        pModern->followPlayer();
+        QVERIFY(pMapper->setMapZoom(5.0, mPlayerAreaId).first);
+        QVERIFY(pMapper->setMapZoom(12.0, mOtherAreaId).first);
+        map()->mRoomIdHash[map()->mProfileName] = 2;
+        QCOMPARE(pMapper->mp2dMap->getAreaId(), mPlayerAreaId);
+
+        // What getMapZoom() with no area answers
+        const qreal shownZoom = map()->mpRoomDB->get2DMapZoom(pMapper->shownAreaId());
+        QVERIFY(pMapper->setMapZoom(shownZoom + 1.0, 0).first);
+        QCOMPARE(map()->mpRoomDB->get2DMapZoom(mOtherAreaId), 13.0);
+        QCOMPARE(map()->mpRoomDB->get2DMapZoom(mPlayerAreaId), 5.0);
+
+        pMapper->show3DView(false);
+    }
+
+    // The 2D mouse wheel stores the zoom on the area without telling the hidden 3D view
+    void test_aZoomOfTheSameAreaMadeLaterIn2DWinsOverAHiddenZoom()
+    {
+        dlgMapper* pMapper = mapperShowing2DAtThePlayer();
+        QVERIFY(pMapper);
+        QDockWidget* pDock = nullptr;
+        ModernGLWidget* pModern = nullptr;
+        hide3DViewInAPortraitDock(pMapper, pDock, pModern);
+        if (QTest::currentTestFailed()) {
+            return;
+        }
+        QVERIFY(pMapper->setMapZoom(20.0, 0).first);
+        QVERIFY(map()->mpRoomDB->set2DMapZoom(mPlayerAreaId, 7.0));
+        QSignalSpy cameraControls(pModern, &ModernGLWidget::cameraControlsChanged);
+
+        pMapper->show3DView(true);
+        QTRY_VERIFY(pModern->isVisible() && pModern->height() > pModern->width());
+        QCoreApplication::processEvents();
+        QVERIFY2(!cameraControls.isEmpty(), "the 3D view was not framed when shown");
+        const int framedOnShow = cameraControls.last().at(0).toInt();
+
+        QVERIFY(pMapper->setMapZoom(7.0, mPlayerAreaId).first);
+        QCOMPARE(framedOnShow, cameraControls.last().at(0).toInt());
+
+        pMapper->show3DView(false);
+        pDock->setFloating(false);
+    }
+
+    void test_aResizeLeavesTheCameraAloneWithNoZoomPending()
+    {
+        dlgMapper* pMapper = mapperShowing2DAtThePlayer();
+        QVERIFY(pMapper);
+        auto* pDock = qobject_cast<QDockWidget*>(pMapper->parentWidget());
+        QVERIFY(pDock);
+        pDock->setFloating(true);
+        pDock->resize(900, 500);
+        pMapper->show3DView(true);
+        auto* pModern = qobject_cast<ModernGLWidget*>(pMapper->glWidget);
+        QVERIFY(pModern);
+        QTRY_VERIFY(pModern->isVisible() && pModern->width() > pModern->height());
+        QVERIFY(pMapper->setMapZoom(20.0, 0).first);
+        QSignalSpy cameraControls(pModern, &ModernGLWidget::cameraControlsChanged);
+
+        pDock->resize(300, 900);
+        QTRY_VERIFY(pModern->height() > pModern->width());
+        QCoreApplication::processEvents();
+        QVERIFY2(cameraControls.isEmpty(), "resizing the 3D view moved its camera");
+
+        pMapper->show3DView(false);
+        pDock->setFloating(false);
     }
 };
 

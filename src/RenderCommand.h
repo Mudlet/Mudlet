@@ -139,8 +139,11 @@ private:
 class RenderTexturedTrianglesCommand : public RenderCommand
 {
 public:
+    enum class Shading { Lit, Unlit };
+
     RenderTexturedTrianglesCommand(const GeometryData& geometry,
-                                  const QMatrix4x4& projectionMatrix, const QMatrix4x4& viewMatrix, const QMatrix4x4& modelMatrix);
+                                  const QMatrix4x4& projectionMatrix, const QMatrix4x4& viewMatrix, const QMatrix4x4& modelMatrix,
+                                  Shading shading = Shading::Lit);
     
     void execute(QOpenGLFunctions* gl,
                 QOpenGLShaderProgram* shader,
@@ -160,6 +163,7 @@ private:
     QMatrix4x4 mProjectionMatrix;
     QMatrix4x4 mViewMatrix;
     QMatrix4x4 mModelMatrix;
+    Shading mShading;
 };
 
 // Command to render multiple cube instances in a single draw call
@@ -200,7 +204,10 @@ public:
         DISABLE_DEPTH_WRITE,
         ENABLE_BLEND,
         DISABLE_BLEND,
-        CLEAR_BUFFERS
+        CLEAR_BUFFERS,
+        // Pulls what follows toward the camera, to draw on a surface already drawn without fighting it for depth
+        ENABLE_POLYGON_OFFSET,
+        DISABLE_POLYGON_OFFSET
     };
 
     explicit GLStateCommand(StateType stateType);

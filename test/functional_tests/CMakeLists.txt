@@ -237,12 +237,13 @@ set(MAP_GROUP_TEST_SOURCES
     MapAreaImageExportTest.cpp
     MapRoundTripTest.cpp
     MapSymbolFontTest.cpp
+    RoomAppearanceTest.cpp
     RoomExitsDeletedEditItemTest.cpp
 )
 
 # CameraController and GeometryManager are only compiled into the library with the 3D mapper
 if(USE_3DMAPPER)
-    list(APPEND MAP_GROUP_TEST_SOURCES CameraAngleLimitTest.cpp CameraViewTest.cpp Map3DViewSyncTest.cpp ModernMapperGeometryTest.cpp)
+    list(APPEND MAP_GROUP_TEST_SOURCES CameraAngleLimitTest.cpp CameraViewTest.cpp LabelTextureCacheTest.cpp Map3DViewSyncTest.cpp ModernMapperGeometryTest.cpp)
 endif()
 
 # Packages and modules: installing them, saving them and removing them
@@ -557,6 +558,11 @@ foreach(test_name ${allFunctionalTestNames})
         TIMEOUT 60  # seconds
     )
 endforeach()
+
+# Offscreen has no GL context, so this skips; listed as not run rather than as passed
+if(TEST LabelTextureCacheTest)
+    set_tests_properties(LabelTextureCacheTest PROPERTIES SKIP_REGULAR_EXPRESSION "SKIP   : LabelTextureCacheTest::initTestCase")
+endif()
 
 # A buffer's default font gives the same row count for its pane's stale and laid-out
 # heights at 96 DPI; 72 DPI tells them apart

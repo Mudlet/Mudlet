@@ -68,15 +68,12 @@ GLuint LabelTextureCache::getTexture(int areaId, int labelId, const QPixmap& pix
         deleteTexture(it.value().textureId);
     }
 
-    // Create new texture
-    GLuint textureId = createTextureFromPixmap(pixmap);
-    if (textureId != 0) {
-        LabelTextureCacheEntry entry;
-        entry.textureId = textureId;
-        entry.pixmapCacheKey = currentCacheKey;
-        mCache[key] = entry;
-    }
-
+    // A failure is cached as texture 0 too, so a pixmap too big to upload is not retried every frame
+    const GLuint textureId = createTextureFromPixmap(pixmap);
+    LabelTextureCacheEntry entry;
+    entry.textureId = textureId;
+    entry.pixmapCacheKey = currentCacheKey;
+    mCache[key] = entry;
     return textureId;
 }
 
@@ -104,12 +101,63 @@ void LabelTextureCache::invalidateArea(int areaId)
     }
 }
 
+GLuint LabelTextureCache::addImageTexture(const QString& key, const QImage& image)
+{
+    if (!mInitialized || image.isNull() || mFailedImageKeys.contains(key)) {
+        return 0;
+    }
+    deleteTexture(mImageCache.value(key));
+    const GLuint textureId = createTextureFromImage(image, true);
+    if (textureId) {
+        mImageCache.insert(key, textureId);
+    } else {
+        mImageCache.remove(key);
+        mFailedImageKeys.insert(key);
+    }
+    return textureId;
+}
+
+bool LabelTextureCache::makeRoomForImageTexture(const qsizetype maximum, const QSet<QString>& keep)
+{
+    if (mImageCache.size() < maximum) {
+        return true;
+    }
+    if (keep.size() >= maximum) {
+        return false;
+    }
+    for (const QString& key : keysToEvict(mImageCache.keys(), maximum, keep)) {
+        deleteTexture(mImageCache.take(key));
+    }
+    return mImageCache.size() < maximum;
+}
+
+QStringList LabelTextureCache::keysToEvict(const QStringList& cached, const qsizetype maximum, const QSet<QString>& keep)
+{
+    QStringList result;
+    qsizetype excess = cached.size() - maximum + 1;
+    for (const QString& key : cached) {
+        if (excess <= 0) {
+            break;
+        }
+        if (!keep.contains(key)) {
+            result.append(key);
+            --excess;
+        }
+    }
+    return result;
+}
+
 void LabelTextureCache::clearAll()
 {
     for (auto it = mCache.begin(); it != mCache.end(); ++it) {
         deleteTexture(it.value().textureId);
     }
     mCache.clear();
+    for (const GLuint textureId : std::as_const(mImageCache)) {
+        deleteTexture(textureId);
+    }
+    mImageCache.clear();
+    mFailedImageKeys.clear();
 }
 
 GLuint LabelTextureCache::createTextureFromPixmap(const QPixmap& pixmap)
@@ -117,8 +165,11 @@ GLuint LabelTextureCache::createTextureFromPixmap(const QPixmap& pixmap)
     if (pixmap.isNull()) {
         return 0;
     }
+    return createTextureFromImage(pixmap.toImage(), false);
+}
 
-    QImage image = pixmap.toImage();
+GLuint LabelTextureCache::createTextureFromImage(const QImage& image, const bool mipmapped)
+{
     if (image.isNull()) {
         return 0;
     }
@@ -130,21 +181,43 @@ GLuint LabelTextureCache::createTextureFromPixmap(const QPixmap& pixmap)
     QImage glImage = image.convertToFormat(QImage::Format_RGBA8888).mirrored(false, true);
 #endif
 
-    GLuint textureId;
+    // Errors raised before this upload are not ours to report; bounded, as a lost context may keep reporting one
+    for (int i = 0; i < 8; ++i) {
+        if (glGetError() == GL_NO_ERROR) {
+            break;
+        }
+    }
+
+    GLuint textureId = 0;
     glGenTextures(1, &textureId);
+    if (!textureId) {
+        qWarning() << "LabelTextureCache: could not create a texture";
+        return 0;
+    }
     glBindTexture(GL_TEXTURE_2D, textureId);
 
     glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, glImage.width(), glImage.height(),
                  0, GL_RGBA, GL_UNSIGNED_BYTE, glImage.constBits());
 
-    // Set texture parameters for labels - linear filtering for smooth appearance
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+    if (mipmapped) {
+        glGenerateMipmap(GL_TEXTURE_2D);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
+    } else {
+        // Set texture parameters for labels - linear filtering for smooth appearance
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+    }
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
 
     glBindTexture(GL_TEXTURE_2D, 0);
 
+    // A texture that failed to upload samples as black, so it must not be used in place of none
+    if (const GLenum error = glGetError(); error != GL_NO_ERROR) {
+        qWarning().nospace() << "LabelTextureCache: could not upload a " << image.width() << "x" << image.height() << " texture, OpenGL error 0x" << Qt::hex << error;
+        glDeleteTextures(1, &textureId);
+        return 0;
+    }
     return textureId;
 }
 

@@ -155,11 +155,13 @@ void RenderTrianglesCommand::execute(QOpenGLFunctions* gl,
     geometryManager->renderGeometry(triangleGeometry, vao, vertexBuffer, colorBuffer, normalBuffer, indexBuffer, resourceManager, GL_TRIANGLES);
 }
 
-RenderTexturedTrianglesCommand::RenderTexturedTrianglesCommand(const GeometryData& geometry, const QMatrix4x4& projectionMatrix, const QMatrix4x4& viewMatrix, const QMatrix4x4& modelMatrix)
+RenderTexturedTrianglesCommand::RenderTexturedTrianglesCommand(
+        const GeometryData& geometry, const QMatrix4x4& projectionMatrix, const QMatrix4x4& viewMatrix, const QMatrix4x4& modelMatrix, const Shading shading)
 : mGeometry(geometry)
 , mProjectionMatrix(projectionMatrix)
 , mViewMatrix(viewMatrix)
 , mModelMatrix(modelMatrix)
+, mShading(shading)
 {
 }
 
@@ -208,8 +210,17 @@ void RenderTexturedTrianglesCommand::execute(QOpenGLFunctions* gl,
     QMatrix3x3 normalMatrix = mModelMatrix.normalMatrix();
     shader->setUniformValue("uNormalMatrix", normalMatrix);
 
+    const bool unlit = mShading == Shading::Unlit;
+    if (unlit) {
+        shader->setUniformValue("uDisableLighting", true);
+    }
+
     // Use the textured rendering method
     geometryManager->renderGeometry(mGeometry, vao, vertexBuffer, colorBuffer, normalBuffer, indexBuffer, texCoordBuffer, resourceManager, GL_TRIANGLES);
+
+    if (unlit) {
+        shader->setUniformValue("uDisableLighting", false);
+    }
 }
 
 RenderInstancedCubesCommand::RenderInstancedCubesCommand(const QVector<CubeInstanceData>& instances, const QMatrix4x4& projectionMatrix, const QMatrix4x4& viewMatrix, const QMatrix4x4& modelMatrix)
@@ -299,6 +310,14 @@ void GLStateCommand::execute(QOpenGLFunctions* gl,
         break;
     case CLEAR_BUFFERS:
         gl->glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+        break;
+    case ENABLE_POLYGON_OFFSET:
+        gl->glEnable(GL_POLYGON_OFFSET_FILL);
+        gl->glPolygonOffset(-1.0f, -4.0f);
+        break;
+    case DISABLE_POLYGON_OFFSET:
+        gl->glDisable(GL_POLYGON_OFFSET_FILL);
+        gl->glPolygonOffset(0.0f, 0.0f);
         break;
     }
 }
