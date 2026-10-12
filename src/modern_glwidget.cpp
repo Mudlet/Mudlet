@@ -1403,9 +1403,11 @@ void ModernGLWidget::renderRooms()
         }
 
         if (terminal) {
-            const QString text = terminalIds ? QString::number(currentRoomId) : RoomAppearance::terminalGlyph(*pR, look, pArea->gridMode);
-            const QColor textColor = !terminalIds && !look.symbol.isEmpty() ? style.symbolColor(look.symbolColor, roomColor) : style.roomIdColor(roomColor);
-            TerminalCell cell{currentRoomId, text, terminalIds, roomTop, GeometryManager::fadedColor(textColor, fade, fadeTarget), look.playerRoom, {}, hovered, &decals};
+            // Only the viewed level's IDs, as on the 2D map: another level's, in the same cell, would run into them
+            const bool showId = terminalIds && look.onViewedLevel();
+            const QString text = showId ? QString::number(currentRoomId) : RoomAppearance::terminalGlyph(*pR, look, pArea->gridMode);
+            const QColor textColor = !showId && !look.symbol.isEmpty() ? style.symbolColor(look.symbolColor, roomColor) : style.roomIdColor(roomColor);
+            TerminalCell cell{currentRoomId, text, showId, roomTop, GeometryManager::fadedColor(textColor, fade, fadeTarget), look.playerRoom, {}, hovered, &decals};
             if (look.playerRoom) {
                 cell.color = GeometryManager::fadedColor(roomColor, fade, fadeTarget);
                 cell.reverseColor = GeometryManager::fadedColor(ExitAppearance::contrastColor(roomColor), fade, fadeTarget);

@@ -27,6 +27,8 @@
  * Run with: ctest -R ExitSceneTest -V
  */
 
+#include <algorithm>
+
 #include <QFileInfo>
 #include <QImage>
 #include <QPainter>
@@ -427,6 +429,102 @@ private slots:
             }
         }
         QCOMPARE(segmentsIn(scene, ExitAppearance::doorColor(2)).size(), 2);
+    }
+
+    void test_glyphsFillTheCellsBetweenRoomsWithTheDoorNextToItsRoom()
+    {
+        TRoom* pWest = addRoomAt(1, mAreaId, 0, 0);
+        TRoom* pEast = addRoomAt(2, mAreaId, 2, 0);
+        QVERIFY(pWest && pEast);
+        pWest->setExit(2, DIR_EAST);
+        pEast->setExit(1, DIR_WEST);
+        pWest->setDoor(qsl("e"), 2);
+        ExitScene::Options glyphOptions = options();
+        glyphOptions.glyphs = true;
+
+        const ExitScene::Scene scene = build(glyphOptions);
+        QVERIFY(segmentsIn(scene, mExitColor).isEmpty());
+        QCOMPARE(scene.glyphs.size(), 3);
+        for (const ExitScene::Glyph& glyph : scene.glyphs) {
+            QVERIFY(qAbs(glyph.at.y()) < scmTolerance);
+            if (qAbs(glyph.at.x() - 0.5f) < scmTolerance) {
+                QCOMPARE(glyph.character, QChar(u'+'));
+                QCOMPARE(glyph.color, ExitAppearance::doorColor(2));
+            } else {
+                QVERIFY2(qAbs(glyph.at.x() - 1.0f) < scmTolerance || qAbs(glyph.at.x() - 1.5f) < scmTolerance, "a line's character is outside the cells between the rooms");
+                QVERIFY(glyph.character.isNull());
+                QCOMPARE(glyph.color, mExitColor);
+            }
+        }
+    }
+
+    void test_glyphDoorStaysOnASlantedLine()
+    {
+        TRoom* pWest = addRoomAt(1, mAreaId, 0, 0);
+        TRoom* pEast = addRoomAt(2, mAreaId, 4, 2);
+        QVERIFY(pWest && pEast);
+        pWest->setExit(2, DIR_EAST);
+        pEast->setExit(1, DIR_WEST);
+        ExitScene::Options glyphOptions = options();
+        glyphOptions.glyphs = true;
+        QList<QVector2D> lineCells;
+        for (const ExitScene::Glyph& glyph : build(glyphOptions).glyphs) {
+            lineCells.append(flat(glyph.at));
+        }
+
+        pWest->setDoor(qsl("e"), 1);
+        const ExitScene::Scene scene = build(glyphOptions);
+        QCOMPARE(scene.glyphs.size(), lineCells.size());
+        int doors = 0;
+        for (const ExitScene::Glyph& glyph : scene.glyphs) {
+            if (glyph.character == QChar(u'+')) {
+                ++doors;
+                QVERIFY2(std::any_of(lineCells.cbegin(),
+                                     lineCells.cend(),
+                                     [&glyph](const QVector2D& cell) {
+                                         return closeTo(cell, flat(glyph.at));
+                                     }),
+                         "the door is off its line");
+            }
+        }
+        QCOMPARE(doors, 1);
+    }
+
+    void test_glyphStubIsOneCharacterAtItsEnd()
+    {
+        TRoom* pRoom = addRoomAt(1, mAreaId, 3, 4);
+        QVERIFY(pRoom);
+        pRoom->setExitStub(DIR_NORTH, true);
+        ExitScene::Options glyphOptions = options();
+        glyphOptions.glyphs = true;
+
+        const ExitScene::Scene scene = build(glyphOptions);
+        QVERIFY(segmentsIn(scene, mExitColor).isEmpty());
+        QVERIFY(trianglesIn(scene, mExitColor).isEmpty());
+        QCOMPARE(scene.glyphs.size(), 1);
+        QVERIFY(closeTo(flat(scene.glyphs.first().at), QVector2D(3, 4.5f)));
+        QVERIFY(scene.glyphs.first().character.isNull());
+    }
+
+    void test_terminalGlyphMarksThePlayerStairsAndSymbol()
+    {
+        TRoom* pRoom = addRoomAt(1, mAreaId, 0, 0);
+        TRoom* pAbove = addRoomAt(2, mAreaId, 0, 0, 1);
+        TRoom* pBelow = addRoomAt(3, mAreaId, 0, 0, -1);
+        QVERIFY(pRoom && pAbove && pBelow);
+        RoomAppearance::Look look;
+        QCOMPARE(RoomAppearance::terminalGlyph(*pRoom, look, false), qsl("#"));
+        QCOMPARE(RoomAppearance::terminalGlyph(*pRoom, look, true), qsl("."));
+        pRoom->setExit(2, DIR_UP);
+        QCOMPARE(RoomAppearance::terminalGlyph(*pRoom, look, false), qsl("<"));
+        pRoom->setExitStub(DIR_DOWN, true);
+        QCOMPARE(RoomAppearance::terminalGlyph(*pRoom, look, false), qsl("X"));
+        pRoom->setExit(-1, DIR_UP);
+        QCOMPARE(RoomAppearance::terminalGlyph(*pRoom, look, false), qsl(">"));
+        look.symbol = qsl("$");
+        QCOMPARE(RoomAppearance::terminalGlyph(*pRoom, look, false), qsl("$"));
+        look.playerRoom = true;
+        QCOMPARE(RoomAppearance::terminalGlyph(*pRoom, look, false), qsl("@"));
     }
 
     void test_areaExitPointsOutOfTheArea_data()
