@@ -78,6 +78,7 @@ class CredentialManager;
 class TRoom;
 class TConsole;
 class TConsoleFrontend;
+class TNullConsoleFrontend;
 class TMainConsole;
 struct TConsoleModel;
 class TMap;
@@ -167,8 +168,12 @@ class Host : public QObject
     friend class HostWidgetDecouplingTest;
     // Allows the functional test to answer the keychain lookup in place of a keychain:
     friend class TelnetLatePasswordTest;
+    friend class PasswordEntryPolicyTest;
+    friend class PasswordEntryTest;
     // Allows the functional test to size its archives past the unpacking dialog's threshold:
     friend class PackageRemovalSaveTeardownTest;
+    // Allows the functional test to put a recording view in place of the null one:
+    friend class FrontendRoutingContractTest;
 
 public:
     Host(int port, const QString& mHostName, const QString& login, const QString& pass, int host_id);
@@ -271,6 +276,15 @@ public:
     bool isClosingDown() const { return mIsClosingDown; }
     bool isClosingForced() const { return mForcedClose; }
     bool requestClose();
+    // A main console raises sysExitEvent as it closes; a profile that never had one gets it from this.
+    void raiseExitEventIfOwed();
+
+    // The profile load, in this order, with the GUI doing its window work between the steps. The first
+    // returns true when the profile has no save of its own yet, so the GUI adds the default packages.
+    bool loadProfileSave(const QString& saveFileName);
+    void startProfileScripts();
+    void loadMapAndConnect(bool connect);
+    void finishProfileLoad();
 
     unsigned int assemblePath();
     bool checkForMappingScript();
@@ -310,8 +324,14 @@ public:
     // For widget-side code: this and setMainConsoleView() are defined in
     // TMainConsole.cpp, so that Host.cpp never needs the widget's definition.
     TMainConsole* mainConsoleView() const;
-    // mainConsoleView() as core code calls it, by window name rather than widget; null when that is.
+    // mainConsoleView() as core code calls it, by window name rather than widget. Never null: while
+    // there is no view it is a null one, which keeps models for the labels and sub-consoles made
+    // through it and has no other windows.
     TConsoleFrontend* consoleFrontend() const;
+    bool hasConsoleView() const;
+    // Whether scripts see the map as open: once a mapper shows it, or always with no console view,
+    // where no mapper can be made and the model is the whole map.
+    bool mapOpen() const;
     void setMainConsoleView(TMainConsole* view);
     // Keeps TMainConsole's translation context, so the existing translations still apply.
     static QString loggingAnnouncementText(const bool isLogging, const QString& logFileName);
@@ -501,6 +521,8 @@ public:
     // Use this rather than accessing the TMainConsole::font() as the latter
     // isn't always around during profile start-up:
     QFont getDisplayFont();
+    // What getDisplayFont() answers with no main console, with the bundled fonts added to resolve it against
+    QFont displayFontWithNoView() const;
     QFont getAndClearTempDisplayFont();
     // Whether the font arriving is a fresh choice of family or only a tweak to
     // the one already in use: the caller knows which, and comparing the fonts
@@ -614,6 +636,9 @@ public:
     std::pair<bool, QString> createMiniConsole(const QString& windowname, const QString& name, int x, int y, int width, int height);
     std::pair<bool, QString> createScrollBox(const QString& windowname, const QString& name, int x, int y, int width, int height) const;
     std::pair<bool, QString> createLabel(const QString& windowname, const QString& name, int x, int y, int width, int height, bool fillBg, bool clickthrough);
+    // Each raises its sys*Deleted event; deleteMiniConsole() takes any sub-console, a user window's dock with it.
+    std::pair<bool, QString> deleteLabel(const QString& name);
+    std::pair<bool, QString> deleteMiniConsole(const QString& name);
     bool setClickthrough(const QString& name, bool clickthrough);
     bool setLabelStyleSheet(const QString& name, const QString& styleSheet);
     bool setLinkStyle(const QString& name, const QString& linkColor, const QString& linkVisitedColor, bool underline);
@@ -622,6 +647,8 @@ public:
     void hideMudletsVariables();
     bool createBuffer(const QString& name);
     QSize calcFontSize(const QString& windowName);
+    // The width TTextEdit draws each column in, unlike the width of a "W" calcFontSize() gives
+    int calcColumnWidth(const QString& windowName);
     bool clearWindow(const QString&);
     bool showWindow(const QString&);
     bool hideWindow(const QString&);
@@ -695,7 +722,8 @@ public:
     std::optional<QSize> userWindowSize(const QString& name) const;
     // Columns by rows of a console's text area; {} for no such console.
     std::optional<QSize> windowGridSize(const QString& name) const;
-    // The line a console's upper pane last drew up to, within its buffer; {} for no such console.
+    // The line a console's upper pane last drew up to, or with no view the one it is scrolled back to, else its
+    // last; within its buffer, {} for no such console.
     std::optional<int> windowScroll(const QString& name) const;
     // Whether a console scrolls; {} for no such console.
     std::optional<bool> windowScrolling(const QString& name) const;
@@ -712,7 +740,8 @@ public:
     std::optional<QColor> borderColor() const;
     // The main console answers the profile's display font; {} for no such console.
     std::optional<QFont> windowFont(const QString& name) const;
-    // The point size of a console's upper pane font; {} for no such console.
+    // The point size of a console's upper pane font, or the display font's for the main console with no
+    // main window; {} for no such console.
     std::optional<int> windowFontSize(const QString& name) const;
     bool getEditorShowBidi() const { return mEditorShowBidi; }
     void setEditorShowBidi(const bool);
@@ -779,10 +808,10 @@ private:
     // isClosingDown() whether to flush what it has stacked up. Declaration order is
     // what decides initialisation order, the access specifier between them is not.
     //
-    // mpConsole's position carries the same weight: it is null for the whole of
-    // construction, so that guard returns before reaching the rest of the function,
-    // which reads members declared much later - mBgColor among them. Same class of
-    // bug as #10229, which had to move a call rather than a declaration.
+    // mpMainConsoleModel's position, above, carries the same weight: it is null until
+    // the end of construction, so that guard returns before reaching the rest of the
+    // function, which reads members declared much later - mBgColor among them. Same
+    // class of bug as #10229, which had to move a call rather than a declaration.
     bool mIsClosingDown = false;
     // Its font is the "reference" or "master" font for the whole profile.
     // Clears itself when the view is destroyed, which is what makes handing
@@ -790,12 +819,14 @@ private:
     QPointer<TMainConsole> mpConsole;
     // The same object, as core code drives it; read only while mpConsole is set.
     TConsoleFrontend* mpConsoleFrontend = nullptr;
+    // What consoleFrontend() hands out while mpConsole is not set.
+    std::unique_ptr<TNullConsoleFrontend> mpNullConsoleFrontend;
+    bool mExitEventOwed = true;
 
 public:
     cTelnet mTelnet;
     TLuaInterpreter mLuaInterpreter;
 
-    bool mDisablePasswordMasking = false;
     int commandLineMinimumHeight = 30;
     bool mAlertOnNewData = true;
     bool mAllowToSendCommand = true;
@@ -889,8 +920,36 @@ public:
     void setPrintCommand(bool print) { mCommandEchoMode = print ? CommandEchoMode::ScriptControl : CommandEchoMode::Never; }
 
 public:
+    // On false, clears the per-hold hidden-input flags even when the value does
+    // not change: cTelnet::reset() releases ECHO while it is already off
     void setRemoteEchoingActive(bool active);
     bool isRemoteEchoingActive() const { return mIsRemoteEchoingActive; }
+
+    // The inputs are combined in recomputePasswordEntryWanted() and nowhere else
+    bool passwordEntryWanted() const { return mPasswordEntryWanted; }
+    void recomputePasswordEntryWanted();
+    void setDisablePasswordMasking(const bool disable);
+    bool disablePasswordMasking() const { return mDisablePasswordMasking; }
+    // The first Esc in an ECHO hold hides the box until the game answers the
+    // player's next line; the second until the game releases ECHO
+    void dismissPasswordEntry();
+    // Enter on a command line with no Lua action, or the auto-login's name - not
+    // a script's, trigger's or timer's send. The game's next text then ends a dismissal.
+    void playerSentLineFromCommandLine();
+    // Not for negotiation or out-of-band messages, which answer nothing
+    void gameDataArrived();
+    bool passwordEntryReopened() const { return mPasswordEntryDismissedOnce; }
+    // Only the box the prompt itself opens takes text the player was typing in
+    // the command line, not one that comes back later in the hold
+    bool passwordEntryOpensWithThePrompt() const { return mPasswordEntryOpensWithThePrompt; }
+    // No box until the game answers the masked send; a re-prompt under the held
+    // ECHO then gets one for the retry
+    void autoLoginPasswordSent();
+    // Stops any auto-login timer or late keychain password answering for the player
+    void passwordEntryEdited();
+    // No sysDataSendRequest, aliases, command separator, local echo or history.
+    // Taken by rvalue so that the caller's copy is the one zeroed afterwards.
+    bool sendPasswordEntry(QString&& text);
 
     // To cover the corner case of the user changing the mode
     // while a log is being written, this stores the mode of
@@ -1152,7 +1211,7 @@ signals:
     void signal_saveCommandLinesHistory();
     void mmcpChatNameChanged(const QString&);
     void signal_editorThemeChanged();
-    void signal_remoteEchoChanged(bool enabled);
+    void signal_passwordEntryWantedChanged(bool wanted);
     void signal_forceMXPProcessorOnChanged(bool enabled);
     // The frontend (TMainConsole) owns the dialogs these drive; the strings are
     // built here so they stay in Host's translation context.
@@ -1217,6 +1276,8 @@ private:
     void pasteClipboardInto(TConsoleModel& model);
     // Repaints the lines holding the console's selection, when it is on screen.
     void markSelectionDirty(TConsoleModel& model);
+    // False if the map cannot be loaded; true with no console view, which has no mapper to show it in.
+    bool prepareMapperForMapLoad();
     // Stores a boolean setting and tells scripts about it.
     void changeSetting(bool& setting, const bool state, const QString& settingName);
     void setBorders(const QMargins);
@@ -1286,6 +1347,7 @@ private:
     void autoSaveMap();
     QString sanitizePackageName(const QString packageName) const;
     void closeChildren();
+    void installModulesList(const QStringList&);
     void setupSandboxedLuaState(lua_State* L);
 
     QStringList mModulesToSync;
@@ -1478,6 +1540,18 @@ private:
     bool mEditorShowBidi = true;
     // should focus should be on the main window with the caret enabled?
     bool mCaretEnabled = false;
+
+    bool mDisablePasswordMasking = false;
+    bool mPasswordEntryWanted = false;
+    // Per ECHO hold: a second Esc, a first Esc or masked auto-login send, and
+    // whether a first Esc has happened
+    bool mPasswordEntrySuppressed = false;
+    bool mPasswordEntryDismissed = false;
+    bool mPasswordEntryDismissedOnce = false;
+    // A line has gone to the game since the dismissal, so its next text ends it
+    bool mPasswordEntryDismissalEnding = false;
+    // Set around the recompute a WILL ECHO makes, see passwordEntryOpensWithThePrompt().
+    bool mPasswordEntryOpensWithThePrompt = false;
 
     // ensures that only one "zero-time" timer is created by the lambda in
     // setFocusOnHostActiveCommandLine(), even when it is called multiple
