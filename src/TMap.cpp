@@ -163,6 +163,7 @@ public:
     QList<int> getViewIds() const override { return {}; }
     void updateAllViews() override {}
     void switchViewsShowingArea(int) override {}
+    void update3DViewAvailability() override {}
 };
 } // anonymous namespace
 

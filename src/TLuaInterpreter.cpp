@@ -46,6 +46,7 @@
 #include "TMap.h"
 #include "TMapLabel.h"
 #include "TMapViewFrontend.h"
+#include "TMapViewsFrontend.h"
 #include "TRoomDB.h"
 #include "TScript.h"
 #include "TEncodingHelper.h"
@@ -9596,6 +9597,9 @@ int TLuaInterpreter::setConfig(lua_State* L)
 #if defined(INCLUDE_3DMAPPER)
             if (auto* mapper = host.mpMap ? host.mpMap->mapViewFrontend() : nullptr) {
                 mapper->recreate3DView();
+            }
+            if (auto* views = host.mpMap ? host.mpMap->mapViewsFrontend() : nullptr) {
+                views->update3DViewAvailability();
             }
 #endif
         }

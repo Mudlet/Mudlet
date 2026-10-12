@@ -464,6 +464,7 @@ public:
     }
     void updateAllViews() override { mCalls << call("updateAllViews"); }
     void switchViewsShowingArea(int areaId) override { mCalls << call("switchViewsShowingArea", {QString::number(areaId)}); }
+    void update3DViewAvailability() override { mCalls << call("update3DViewAvailability"); }
 };
 
 } // namespace

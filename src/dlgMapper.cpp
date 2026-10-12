@@ -844,6 +844,9 @@ void dlgMapper::connect3DViewControls()
         if (const TRoom* pRoom = mpMap->mpRoomDB->getRoom(roomId)) {
             modernWidget->syncView(pRoom->getArea(), pRoom->x(), pRoom->y(), pRoom->z(), mpMap->mRoomIdHash.value(mpMap->mProfileName));
         }
+        if (mp2dMap->mMapViewOnly) {
+            mp2dMap->slot_toggleMapViewOnly();
+        }
         slot_toggle3DView(false);
     });
     connect(modernWidget, &ModernGLWidget::resetPlayerIconSliders, this, [this](int height, int rotX, int rotY, int rotZ, int scale) {
@@ -968,6 +971,8 @@ void dlgMapper::slot_toggle3DView(const bool is3DMode)
 #endif
         );
     } else {
+        widget_3DControls->setVisible(false);
+        widget_playerIconControls->setVisible(false);
         // workaround for buttons reloading oddly
         QTimer::singleShot(100ms, this, [this]() {
             // The 3D view may have been shown again since

@@ -155,6 +155,7 @@ void ModernGLWidget::showEvent(QShowEvent* event)
 
 void ModernGLWidget::hideEvent(QHideEvent* event)
 {
+    endEditGesture();
     saveCamera();
     // The release, if any, now goes elsewhere
     mClickPending = false;
@@ -182,7 +183,8 @@ void ModernGLWidget::saveCamera()
 {
     // While a frame is pending the camera is still the one set up for the area shown before
     // A floating view is hidden while its dock is torn down, after the Host and its TMap are freed
-    if (!mpHost || !mAID || mFramePending || !mpMap || !mpMap->mpRoomDB || !mpMap->mpRoomDB->getArea(mAID)) {
+    // A map window's view would overwrite the cameras the mapper's view keeps for the profile
+    if (mSecondaryView || !mpHost || !mAID || mFramePending || !mpMap || !mpMap->mpRoomDB || !mpMap->mpRoomDB->getArea(mAID)) {
         return;
     }
     const QVector3D position = mCameraController.getPosition();
@@ -559,7 +561,7 @@ void ModernGLWidget::paintGL()
 
     glEnable(GL_MULTISAMPLE);
 
-    if (mShiftMode && (mRID != mpMap->mRoomIdHash.value(mpMap->mProfileName) || mpMap->mNewMove)) {
+    if (mShiftMode && followingPlayer()) {
         mShiftMode = false;
     }
 
@@ -673,6 +675,10 @@ void ModernGLWidget::paintGL()
         infoColor = QColor(Qt::white);
     }
     dlgMapper::paintMapInfo(mFrameTimer, painter, mpHost, mpMap, mRID, mAID, 0, infoColor, 10, 10, width(), mFontHeight);
+
+    if (mRectangleSelecting) {
+        painter.fillRect(mSelectionRectangle, QColor(190, 190, 190, 60));
+    }
 
     painter.end();
 }
@@ -1669,13 +1675,44 @@ void ModernGLWidget::syncView(int areaId, int x, int y, int z, int roomId)
 
 bool ModernGLWidget::followingPlayer() const
 {
-    return !mShiftMode || !mpMap || mRID != mpMap->mRoomIdHash.value(mpMap->mProfileName) || mpMap->mNewMove;
+    if (mSecondaryView) {
+        return false;
+    }
+    if (!mShiftMode || !mpMap) {
+        return true;
+    }
+    // Not while rooms are dragged, as they follow the pointer across the map and would go along with the view
+    return !mMovingRooms && (mRID != mpMap->mRoomIdHash.value(mpMap->mProfileName) || mpMap->mNewMove);
 }
 
 void ModernGLWidget::followPlayer()
 {
+    if (mSecondaryView) {
+        // Its map window goes to the player's room when asked, but stays there as the player moves on
+        const TRoom* pRoom = mpMap && mpMap->mpRoomDB ? mpMap->mpRoomDB->getRoom(mpMap->mRoomIdHash.value(mpMap->mProfileName)) : nullptr;
+        if (pRoom) {
+            setViewCenter(pRoom->getArea(), pRoom->x(), pRoom->y(), pRoom->z());
+        }
+        return;
+    }
     mShiftMode = false;
     update();
+}
+
+void ModernGLWidget::setSecondaryView(const bool secondary)
+{
+    mSecondaryView = secondary;
+    if (secondary) {
+        mShiftMode = true;
+    }
+}
+
+void ModernGLWidget::holdView()
+{
+    // Held as a view moved by hand is, so it does not chase the player's room if that is among those moved
+    mShiftMode = true;
+    mRID = mpMap ? mpMap->mRoomIdHash.value(mpMap->mProfileName) : 0;
+    mPreviousRID = mRID;
 }
 
 void ModernGLWidget::jumpTo(int areaId, int x, int y, int z)
@@ -1755,7 +1792,7 @@ std::optional<float> rayHitsBox(const QVector3D& origin, const QVector3D& direct
 constexpr qreal scmPickSlopPixels = 6.0;
 } // namespace
 
-int ModernGLWidget::roomAt(const QPoint& position)
+int ModernGLWidget::roomAt(const QPoint& position, const bool orNear)
 {
     if (!mpMap || !mpMap->mpRoomDB) {
         return 0;
@@ -1783,7 +1820,7 @@ int ModernGLWidget::roomAt(const QPoint& position)
                 hitDistance = *distance;
                 hitRoom = roomId;
             }
-        } else if (!hitRoom) {
+        } else if (orNear && !hitRoom) {
             if (const std::optional<QPointF> pixel = mCameraController.pixelForPoint(center)) {
                 const qreal pixels = QLineF(*pixel, QPointF(position)).length();
                 if (pixels < nearPixels) {
@@ -1830,6 +1867,92 @@ void ModernGLWidget::selectRoom(const int roomId, const Qt::KeyboardModifiers mo
     update();
 }
 
+bool ModernGLWidget::editingMap() const
+{
+    return mp2DMap && !mp2DMap->mMapViewOnly;
+}
+
+namespace {
+// Toward the horizon each pixel spans ever more of a level, so beyond this many times the camera's distance from the
+// view center a drag would throw rooms far off the map
+constexpr float scmMaxDragReach = 10.0f;
+} // namespace
+
+std::optional<QPointF> ModernGLWidget::mapPointOnLevel(const QPoint& position, const int z)
+{
+    updateMatrices();
+    const auto [origin, direction] = mCameraController.rayThroughPixel(QPointF(position));
+    if (std::abs(direction.z()) < 1e-6f) {
+        return std::nullopt;
+    }
+    const float distance = (static_cast<float>(z) - origin.z()) / direction.z();
+    if (distance < 0.0f || distance > scmMaxDragReach * (mCameraController.getTarget() - origin).length()) {
+        return std::nullopt;
+    }
+    const QVector3D point = origin + direction * distance;
+    return QPointF(point.x(), point.y());
+}
+
+QSet<int> ModernGLWidget::roomsInRectangle(const QRect& rectangle, const bool allLevels)
+{
+    QSet<int> rooms;
+    const TArea* pArea = mpMap && mpMap->mpRoomDB ? mpMap->mpRoomDB->getArea(mAID) : nullptr;
+    if (!pArea) {
+        return rooms;
+    }
+    updateMatrices();
+    const QRectF bounds(rectangle.normalized());
+    const QVector3D halfSize(1.0f / scale, 1.0f / scale, 1.0f / scale / zFlattening);
+    for (const int roomId : pArea->getAreaRooms()) {
+        const TRoom* pR = mpMap->mpRoomDB->getRoom(roomId);
+        if (!pR || pR->isHidden() || !levelShown(pR->z()) || (!allLevels && pR->z() != mMapCenterZ)) {
+            continue;
+        }
+        const QVector3D center(static_cast<float>(pR->x()), static_cast<float>(pR->y()), static_cast<float>(pR->z()));
+        // As on the 2D map, only a room the rectangle covers whole is picked
+        bool inside = true;
+        for (int corner = 0; corner < 8 && inside; ++corner) {
+            const QVector3D offset((corner & 1) ? halfSize.x() : -halfSize.x(), (corner & 2) ? halfSize.y() : -halfSize.y(), (corner & 4) ? halfSize.z() : -halfSize.z());
+            const std::optional<QPointF> pixel = mCameraController.pixelForPoint(center + offset);
+            inside = pixel && bounds.contains(*pixel);
+        }
+        if (inside) {
+            rooms.insert(roomId);
+        }
+    }
+    return rooms;
+}
+
+void ModernGLWidget::startRoomMove(const int roomId)
+{
+    const TRoom* pRoom = mpMap->mpRoomDB->getRoom(roomId);
+    if (!pRoom) {
+        return;
+    }
+    mp2DMap->selectRoomsToMove({roomId}, roomId);
+    mp2DMap->updateSelectionWidget();
+    mMovingRooms = true;
+    mRoomsMoved = false;
+    mRoomMoveLastPoint = QPointF(pRoom->x(), pRoom->y());
+    mRoomMoveLevel = pRoom->z();
+    holdView();
+    update();
+}
+
+void ModernGLWidget::endEditGesture()
+{
+    if (mRectangleSelecting && mp2DMap) {
+        mp2DMap->endRectangleSelection();
+    }
+    // The other views showing the area redraw only on this
+    if (std::exchange(mRoomsMoved, false) && mpHost && mpMap) {
+        mpMap->updateArea(mAID);
+    }
+    mMovingRooms = false;
+    mRectangleSelecting = false;
+    mSelectionRectangle = QRect();
+}
+
 void ModernGLWidget::raisePendingMousePressEvent()
 {
     if (std::exchange(mPressEventButton, Qt::NoButton) != Qt::NoButton) {
@@ -1870,6 +1993,45 @@ void ModernGLWidget::mousePressEvent(QMouseEvent* event)
     mKeysNavigate = false;
     mPressPosition = event->position().toPoint();
     mClickPending = false;
+    // A release that went elsewhere, such as to a menu opened mid-drag, must not leave the last drag running
+    endEditGesture();
+    // As on the 2D map in editing mode: a drag from a room moves the selection and one from empty space,
+    // or with Ctrl or Shift, draws a selection rectangle; Alt keeps the viewing mode's drags to pan and orbit
+    if (event->button() == Qt::LeftButton && editingMap() && !event->modifiers().testFlag(Qt::AltModifier)) {
+        // Picked before a glide stops, as stopping it snaps the view to whole grid steps away from what was seen.
+        // Only a room right under the pointer is picked up, so a drag beside rooms seen small draws a rectangle
+        const int roomId = roomAt(mPressPosition, false);
+        const bool moveRoom = roomId && !(event->modifiers() & (Qt::ControlModifier | Qt::ShiftModifier));
+        const int rectangleRoomId = roomId ? roomId : roomAt(mPressPosition);
+        const TRoom* pRoom = moveRoom ? mpMap->mpRoomDB->getRoom(roomId) : nullptr;
+        QPointF snap;
+        if (mCameraSmoothAnimating) {
+            const std::optional<QPointF> seenAt = pRoom ? mapPointOnLevel(mPressPosition, pRoom->z()) : std::nullopt;
+            // Stopped where it is and held there, so neither a drag nor a glide after the player moves it on
+            stopSmoothTransition();
+            mMapCenterX = qRound(mCurrentAnimationX);
+            mMapCenterY = qRound(mCurrentAnimationY);
+            mMapCenterZ = qRound(mCurrentAnimationZ);
+            holdView();
+            const std::optional<QPointF> stoppedAt = pRoom ? mapPointOnLevel(mPressPosition, pRoom->z()) : std::nullopt;
+            if (seenAt && stoppedAt) {
+                snap = *stoppedAt - *seenAt;
+            }
+        }
+        if (moveRoom) {
+            startRoomMove(roomId);
+            // The pointer keeps its place on the room, though the view stopping on a whole step moved under it
+            mRoomMoveLastPoint += snap;
+        } else {
+            mp2DMap->beginRectangleSelection(rectangleRoomId, event->modifiers());
+            mRectangleSelecting = true;
+            mRectangleDragged = false;
+            mSelectionRectangle = QRect(mPressPosition, QSize());
+            update();
+        }
+        raiseMousePressEvent();
+        return;
+    }
     if (event->button() == Qt::LeftButton) {
         // A plain click on a room selects it at once, as on the 2D map; anything else waits for the release, as a
         // drag from empty space pans and a Ctrl or Shift drag orbits
@@ -1909,6 +2071,36 @@ void ModernGLWidget::mouseMoveEvent(QMouseEvent* event)
         if (mPressEventButton == Qt::LeftButton) {
             raisePendingMousePressEvent();
         }
+    }
+    if ((mMovingRooms || mRectangleSelecting) && !event->buttons().testFlag(Qt::LeftButton)) {
+        endEditGesture();
+        update();
+    }
+    if (mMovingRooms) {
+        // As RoomMoveDragHandler: the rooms follow the pointer in whole grid steps
+        if (const std::optional<QPointF> point = mapPointOnLevel(event->position().toPoint(), mRoomMoveLevel)) {
+            const int dx = qRound(point->x() - mRoomMoveLastPoint.x());
+            const int dy = qRound(point->y() - mRoomMoveLastPoint.y());
+            if ((dx || dy) && mp2DMap) {
+                mRoomMoveLastPoint += QPointF(dx, dy);
+                mp2DMap->moveSelectedRoomsBy(dx, dy);
+                mRoomsMoved = true;
+                update();
+            }
+        }
+        return;
+    }
+    if (mRectangleSelecting) {
+        mSelectionRectangle = QRect(mPressPosition, event->position().toPoint()).normalized();
+        if (!mRectangleDragged && (event->position().toPoint() - mPressPosition).manhattanLength() >= QApplication::startDragDistance()) {
+            mRectangleDragged = true;
+        }
+        // Until it is a drag, a Ctrl or Shift click keeps the room it picked
+        if (mRectangleDragged && mp2DMap) {
+            mp2DMap->applyRectangleSelection(roomsInRectangle(mSelectionRectangle, event->modifiers().testFlag(Qt::ShiftModifier)), event->modifiers());
+        }
+        update();
+        return;
     }
     if (mPanMode) {
         auto eventPos = event->position();
@@ -1950,6 +2142,12 @@ void ModernGLWidget::mouseMoveEvent(QMouseEvent* event)
 
 void ModernGLWidget::mouseReleaseEvent(QMouseEvent* event)
 {
+    if (event->button() == Qt::LeftButton && (mMovingRooms || mRectangleSelecting)) {
+        endEditGesture();
+        QOpenGLWidget::mouseReleaseEvent(event);
+        update();
+        return;
+    }
     if (mPanMode) {
         mPanMode = false;
         mCameraController.snapTargetToGrid();
