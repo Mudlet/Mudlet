@@ -182,7 +182,7 @@ private slots:
                 },
                 5s));
         mpOtherHost = HostManager::self()->getHost(mOtherProfile);
-        QVERIFY2(mpOtherHost->mpConsole, "the other profile has no console, so a module sync passes it by");
+        QVERIFY2(mpOtherHost->mainConsoleView(), "the other profile has no console, so a module sync passes it by");
 
         QVERIFY2(writeModule(), "could not write the module");
         QVERIFY2(installModule(mpSavingHost), "the module could not be installed in the saving profile");
