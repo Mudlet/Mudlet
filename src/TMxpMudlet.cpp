@@ -74,12 +74,12 @@ void TMxpMudlet::popColor(QList<QColor>& stack)
 
 int TMxpMudlet::setLink(const QStringList& links, const QStringList& hints)
 {
-    return getLinkStore().addLinks(links, hints, mpHost);
+    return mpHost->mainConsoleModel().buffer.addLinkToStore(links, hints);
 }
 
 int TMxpMudlet::setLink(const QStringList& links, const QStringList& hints, const QString& expireName)
 {
-    return getLinkStore().addLinks(links, hints, mpHost, QVector<int>(), expireName);
+    return mpHost->mainConsoleModel().buffer.addLinkToStore(links, hints, QVector<int>(), expireName);
 }
 
 void TMxpMudlet::expireLinks(const QString& expireName)

@@ -31,7 +31,6 @@
 #include <QCache>
 #include <QColor>
 #include <QFont>
-#include <QFutureWatcher>
 #include <QPixmap>
 #include <QPointer>
 #include <QPointF>
@@ -68,6 +67,7 @@ class QTimer;
 class QTreeWidgetItem;
 class QMouseEvent;
 class QMenu;
+class QOpenGLWidget;
 
 
 class T2DMap : public QWidget
@@ -154,9 +154,22 @@ public:
      * its position in the priority list.
      */
     void registerInteractionHandler(IInteractionHandler* handler, int priority);
-    void registerContextMenu(QMenu* menu);
+    // Clicks outside the menu that land on clickTarget (this map when nullptr) close it and go on to that widget
+    void registerContextMenu(QMenu* menu, QWidget* clickTarget = nullptr);
     bool eventFilter(QObject* watched, QEvent* event) override;
     void prepareSingleClickSelection(MapInteractionContext& context);
+    // A click on a room (0 for none) in another view of this map, such as the 3D one, with the same modifiers as here
+    void selectRoomFromOtherView(int roomId, Qt::KeyboardModifiers modifiers);
+    // Another view of this map starts a selection rectangle on a room (0 for none) here, as a press on this map
+    // does; apply and end serve both, with Ctrl toggling the rooms covered and Shift adding them
+    void beginRectangleSelection(int roomId, Qt::KeyboardModifiers modifiers);
+    void applyRectangleSelection(const QSet<int>& rectangleSelection, Qt::KeyboardModifiers modifiers);
+    void endRectangleSelection();
+    // As a press in editing mode on roomId, one of the rooms clicked: those become the rooms to move,
+    // unless roomId is already selected, when the whole selection moves
+    void selectRoomsToMove(const QSet<int>& clickedRoomIds, int roomId);
+    void moveSelectedRoomsBy(int dx, int dy);
+    void updateSelectionWidget();
     std::optional<int> roomIdAtWidgetPosition(const QPoint& widgetPosition, const TArea* area) const;
     QSet<int> roomIdsAtWidgetPosition(const QPoint& widgetPosition, const TArea* area) const;
     void populateUserContextMenus(QMenu& menu);
@@ -184,10 +197,11 @@ public:
     void addTextLabelToCache(const QString& key, const TMapLabel& label, const QSize& targetSize);
     void drawScaledLabel(QPainter& painter, const QPointF& position, TMapLabel& label, int labelKey, const QRectF& paintRect);
     void setPlayerRoomStyle(const int style);
-    static QGradientStops buildPlayerRoomGradientStops(int style, quint8 innerDiameterPercentage, const QColor& innerColor, const QColor& outerColor);
     void switchArea(const QString& newAreaName);
     void switchArea(int areaId);
     void clearSelection();
+    void pruneRoomSelectionToArea(int areaId);
+    void initiateSpeedWalk(const int speedWalkStartRoomId, const int speedWalkTargetRoomId);
 
     // Schedules a repaint through a single-shot timer, coalescing multiple
     // rapid requests (e.g. during mouse wheel zoom or pan drag) into at most
@@ -199,6 +213,9 @@ public:
     // Secondary view support (for multiple map views feature)
     void setSecondaryView(bool isSecondary) { mIsSecondaryView = isSecondary; }
     bool isSecondaryView() const { return mIsSecondaryView; }
+    // The 3D view a secondary view's map window shows in its place, which changes of area here move;
+    // the mapper's own 3D view is the map's
+    void setCompanion3DView(QOpenGLWidget* view);
 
     // View state getters
     int getAreaId() const { return mAreaID; }
@@ -214,7 +231,6 @@ public:
     TMap* mpMap = nullptr;
     QPointer<Host> mpHost;
     qreal xyzoom;
-    QFutureWatcher<std::pair<bool, QString>>* mpExportWatcher = nullptr;
     int mRX = 0;
     int mRY = 0;
     QPoint mPHighlight;
@@ -245,6 +261,7 @@ public:
     QRectF mMultiRect;
     bool mPopupMenu = false;
     QPointer<QMenu> mActiveContextMenu;
+    QPointer<QWidget> mContextMenuClickTarget;
     QSet<int> mMultiSelectionSet;
     QSet<int> mMultiSelectionBaseSet;
     QSet<int> mMultiSelectionAnchorSet;
@@ -313,9 +330,6 @@ public:
     bool mSizeLabel = false;
     bool isCenterViewCall = false;
     QString mHelpMsg;
-    QColor mOpenDoorColor = QColor(10, 155, 10);
-    QColor mClosedDoorColor = QColor(155, 155, 10);
-    QColor mLockedDoorColor = QColor(155, 10, 10);
     // Introduced as a side effect of #4608 the larger area exit arrows don't
     // always work well on existing maps - so allow for them to be reverted
     // almost back to how they were before that PR:
@@ -357,8 +371,8 @@ public slots:
                                 QColor newBorderColor,
                                 bool changeBorderThickness,
                                 int newBorderThickness,
-                                QSet<TRoom*> rooms);
-    void slot_previewBorderProperties(QSet<TRoom*> rooms);
+                                QSet<int> roomIds);
+    void slot_previewBorderProperties(QSet<int> roomIds);
     void slot_setImage();
     void slot_movePosition();
     void slot_moveRoom();
@@ -421,10 +435,8 @@ private:
 
     MapInteractionContext buildInteractionContext(QMouseEvent* event);
 
-    void updateSelectionWidget();
     void resizeMultiSelectionWidget();
     void hideSelectionWidget();
-    void pruneRoomSelectionToArea(int areaId);
     std::pair<int, int> getMousePosition();
     std::pair<bool, QString> performImageSave(const QPixmap& pixmap, const QString& filePath, const QString& format);
     bool isSnapCustomLinePointsToGridEnabled() const;
@@ -474,7 +486,7 @@ private:
     };
     void paintRoomExits(QPainter&, QPen&, QList<ExitToPaint>& exitList, const TArea*, int zLevel, const QRect& roomBounds, const QList<int>& viewportRooms, float exitWidth, QMap<int, QPointF>&);
     void resolveAreaExitClick(QPainter&, const QMap<int, QPointF>& areaExitsMap, const int speedWalkStartRoomId);
-    void initiateSpeedWalk(const int speedWalkStartRoomId, const int speedWalkTargetRoomId);
+    void addClickedRoomsToSelection(const QList<int>& hitRooms, Qt::KeyboardModifiers modifiers);
     inline void drawDoor(QPainter&, const TRoom&, const QString&, const QLineF&);
     void updateMapLabel(QRectF labelRectangle, int labelId, TArea* pArea);
     static void paintLabelHighlight(QPainter& painter, QRectF labelPaintRectangle, const QSizeF& clickSize);
@@ -533,6 +545,7 @@ private:
     int mLastViewedAreaID = -2;
 
     bool mIsSecondaryView = false;
+    QPointer<QOpenGLWidget> mpCompanion3DView;
 
 private slots:
     void slot_createRoom();

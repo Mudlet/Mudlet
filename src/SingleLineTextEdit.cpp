@@ -65,9 +65,10 @@ void SingleLineTextEdit::resizeEvent(QResizeEvent* event)
 void SingleLineTextEdit::insertFromMimeData(const QMimeData* source)
 {
     if (source->hasText()) {
-        QString text = source->text();
-        QString firstLine = text.split(QRegularExpression("[\r\n]"), Qt::SkipEmptyParts).first();
-        QPlainTextEdit::insertPlainText(firstLine);
+        const QStringList lines = source->text().split(QRegularExpression(qsl("[\r\n]")), Qt::SkipEmptyParts);
+        if (!lines.isEmpty()) {
+            QPlainTextEdit::insertPlainText(lines.first());
+        }
     }
 }
 

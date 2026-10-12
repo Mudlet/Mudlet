@@ -87,11 +87,10 @@ private:
 
     // The exporter maps its own tree items onto the profile's items, so this is
     // how a test says "tick the row for that trigger"
-    template <typename T>
-    QTreeWidgetItem* itemFor(const QMap<QTreeWidgetItem*, T*>& map, const QString& name) const
+    QTreeWidgetItem* itemFor(const QMap<QTreeWidgetItem*, int>& map, const QString& name) const
     {
         for (auto it = map.cbegin(); it != map.cend(); ++it) {
-            if (it.value()->getName() == name) {
+            if (it.key()->text(0) == name) {
                 return it.key();
             }
         }
@@ -100,8 +99,7 @@ private:
 
     // ticking through the raw pointer would crash the whole class if the row
     // were ever missing, which is exactly when a readable failure is wanted
-    template <typename T>
-    bool tickRow(const QMap<QTreeWidgetItem*, T*>& map, const QString& name) const
+    bool tickRow(const QMap<QTreeWidgetItem*, int>& map, const QString& name) const
     {
         QTreeWidgetItem* row = itemFor(map, name);
         if (!row) {
@@ -398,6 +396,7 @@ private slots:
         const auto cleanup = qScopeGuard([this, exporter, moduleName]() {
             delete exporter;
             if (mpHost->mInstalledModules.contains(moduleName)) {
+                mpHost->waitForProfileSave();
                 mpHost->uninstallPackage(moduleName, enums::PackageModuleType::ModuleFromUI);
             }
         });
@@ -418,6 +417,9 @@ private slots:
         QVERIFY2(QFileInfo::exists(moduleFile), "module mode did not write the package into the profile directory");
         QVERIFY2(mpHost->mInstalledModules.contains(moduleName), "module mode exported the file but never installed it");
 
+        // the install schedules a profile save 100ms out, which the export wait
+        // above can let start, and uninstallPackage() refuses while one runs
+        mpHost->waitForProfileSave();
         QVERIFY2(mpHost->uninstallPackage(moduleName, enums::PackageModuleType::ModuleFromUI), "the module it installed could not be uninstalled again");
     }
 

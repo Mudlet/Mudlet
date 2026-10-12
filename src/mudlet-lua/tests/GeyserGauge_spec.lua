@@ -167,14 +167,72 @@ describe("Tests functionality of Geyser.Gauge", function()
       local resize = spy.on(_G, "resizeWindow")
       finally(function() move:revert() resize:revert() end)
       gauge:setValue(60)
-      assert.spy(move).was.called(1)
+      assert.spy(move).was_not.called()
       assert.spy(resize).was.called(1)
       gauge:setValue(60)
       gauge:setValue(60)
-      assert.spy(move).was.called(1)
+      assert.spy(move).was_not.called()
       assert.spy(resize).was.called(1)
       -- and the skipped repeats left it where the update put it
       assert.are.equal(120, geometry("ggsValue_front").width)
+    end)
+
+    it("moves a fill that starts from the far edge as well as resizing it", function()
+      local vertical = track(Geyser.Gauge:new({name = "ggsMovesvertical", x = 0, y = 0, width = 200, height = 200, orientation = "vertical"}))
+      local goofy = track(Geyser.Gauge:new({name = "ggsMovesgoofy", x = 0, y = 0, width = 200, height = 200, orientation = "goofy"}))
+      vertical:setValue(50)
+      goofy:setValue(50)
+      local move = spy.on(_G, "moveWindow")
+      finally(function() move:revert() end)
+      vertical:setValue(25)
+      goofy:setValue(25)
+      assert.spy(move).was.called(2)
+      assert.are.same({x = 0, y = 150, width = 200, height = 50}, geometry("ggsMovesvertical_front"))
+      assert.are.same({x = 150, y = 0, width = 50, height = 200}, geometry("ggsMovesgoofy_front"))
+    end)
+
+    it("lays out what a script put inside the fill along with it", function()
+      gauge:setValue(50)
+      local marker = track(Geyser.Label:new({name = "ggsFillMarker", x = "50%", y = 0, width = "50%", height = "100%"}, gauge.front))
+      gauge:setValue(80)
+      assert.are.same({x = 80, y = 0, width = 80, height = 40}, geometry("ggsFillMarker"))
+    end)
+
+    it("still runs a reposition a script put on the fill", function()
+      gauge:setValue(50)
+      local repositioned = 0
+      gauge.front.reposition = function(self, ...)
+        repositioned = repositioned + 1
+        return Geyser.Container.reposition(self, ...)
+      end
+      finally(function() gauge.front.reposition = nil end)
+      gauge:setValue(70)
+      assert.are.equal(1, repositioned)
+      assert.are.equal(140, geometry("ggsValue_front").width)
+    end)
+
+    it("still runs a reposition a script wrapped around Geyser's own", function()
+      gauge:setValue(50)
+      local stock = Geyser.Container.reposition
+      local repositioned = 0
+      Geyser.Container.reposition = function(self, ...)
+        if self == gauge.front then
+          repositioned = repositioned + 1
+        end
+        return stock(self, ...)
+      end
+      finally(function() Geyser.Container.reposition = stock end)
+      gauge:setValue(70)
+      assert.are.equal(1, repositioned)
+    end)
+
+    it("still redraws a fill that asks to be redrawn", function()
+      gauge:setValue(50)
+      local redrawn = 0
+      gauge.front.redraw = function() redrawn = redrawn + 1 end
+      finally(function() gauge.front.redraw = nil end)
+      gauge:setValue(70)
+      assert.are.equal(1, redrawn)
     end)
 
     -- the geometry is the gauge's answer, not something a later event-loop turn

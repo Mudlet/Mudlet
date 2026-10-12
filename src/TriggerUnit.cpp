@@ -138,15 +138,16 @@ void TriggerUnit::addTriggerRootNode(TTrigger* pT, int parentPosition, int child
         pT->setID(getNewID());
     }
     if ((parentPosition == -1) || (childPosition >= static_cast<int>(mTriggerRootNodeList.size()))) {
-        mTriggerRootNodeList.push_back(pT);
-        markRootNodeAppended(pT);
+        if (listRootNode(pT, mTriggerRootNodeList.end())) {
+            markRootNodeAppended(pT);
+        }
     } else {
         markRootNodeListReordered();
         // insert item at proper position
         int cnt = 0;
         for (auto it = mTriggerRootNodeList.begin(); it != mTriggerRootNodeList.end(); it++) {
             if (cnt >= childPosition) {
-                mTriggerRootNodeList.insert(it, pT);
+                listRootNode(pT, it);
                 break;
             }
             cnt++;
@@ -176,7 +177,7 @@ void TriggerUnit::reParentTrigger(int childID, int oldParentID, int newParentID,
         pOldParent->popChild(pChild);
     } else {
         markRootNodeRemoved(pChild);
-        mTriggerRootNodeList.remove(pChild);
+        unlistRootNode(pChild);
     }
 
     // Convert enum mode to the internal flags
@@ -216,7 +217,7 @@ void TriggerUnit::removeTriggerRootNode(TTrigger* pT)
     mLookupTable.remove(pT->getName(), pT);
     mTriggerMap.remove(pT->getID());
     markRootNodeRemoved(pT);
-    mTriggerRootNodeList.remove(pT);
+    unlistRootNode(pT);
 }
 
 TTrigger* TriggerUnit::getTrigger(int id)
@@ -333,10 +334,28 @@ void TriggerUnit::reorderTriggersAfterPackageImport()
     }
     markRootNodeListReordered();
     for (auto& trigger : tempList) {
-        mTriggerRootNodeList.remove(trigger);
+        unlistRootNode(trigger);
     }
     for (auto& trigger : tempList) {
-        mTriggerRootNodeList.push_back(trigger);
+        listRootNode(trigger, mTriggerRootNodeList.end());
+    }
+}
+
+bool TriggerUnit::listRootNode(TTrigger* pT, std::list<TTrigger*>::iterator before)
+{
+    if (mRootNodePositions.contains(pT)) {
+        return false;
+    }
+    mRootNodePositions.insert(pT, mTriggerRootNodeList.insert(before, pT));
+    return true;
+}
+
+void TriggerUnit::unlistRootNode(TTrigger* pT)
+{
+    const auto position = mRootNodePositions.constFind(pT);
+    if (position != mRootNodePositions.cend()) {
+        mTriggerRootNodeList.erase(position.value());
+        mRootNodePositions.erase(position);
     }
 }
 
@@ -557,6 +576,11 @@ void TriggerUnit::processDataStream(const QString& data, int line)
         return;
     }
 
+    if (mpHost->getLuaInterpreter()->buildingCaptureTables()) {
+        qWarning() << "TriggerUnit::processDataStream(...) WARNING - not running triggers on a line a garbage collection finaliser fed while the capture tables were being built.";
+        return;
+    }
+
     // Encoded, when a perl pattern asks, into storage borrowed from the unit so only a line longer than
     // any before allocates. Moved out rather than lent, so a nested pass finds the member empty and
     // cannot resize the outer pass's buffer.
@@ -573,6 +597,9 @@ void TriggerUnit::processDataStream(const QString& data, int line)
     const auto processingGuard = qScopeGuard([this] {
         mProcessingDepth--;
         Q_ASSERT(mProcessingDepth >= 0);
+        if (mProcessingDepth <= 1) {
+            mRunawayFeedStopped = false;
+        }
         if (mProcessingDepth == 0) {
             // Deletion is deferred while any pass runs, so these pointers stayed
             // valid; drop them before doCleanup() frees the underlying triggers.

@@ -37,6 +37,9 @@ class ResourceManager;
 class RenderCommand
 {
 public:
+    // Unlit draws its colors as given, as the 2D map does; lit shades them by the light
+    enum class Shading { Lit, Unlit };
+
     virtual ~RenderCommand() = default;
     virtual void execute(QOpenGLFunctions* gl,
                         QOpenGLShaderProgram* shader,
@@ -112,8 +115,12 @@ private:
 class RenderTrianglesCommand : public RenderCommand
 {
 public:
-    RenderTrianglesCommand(const QVector<float>& vertices, const QVector<float>& colors,
-                          const QMatrix4x4& projectionMatrix, const QMatrix4x4& viewMatrix, const QMatrix4x4& modelMatrix);
+    RenderTrianglesCommand(const QVector<float>& vertices,
+                           const QVector<float>& colors,
+                           const QMatrix4x4& projectionMatrix,
+                           const QMatrix4x4& viewMatrix,
+                           const QMatrix4x4& modelMatrix,
+                           Shading shading = Shading::Lit);
 
     void execute(QOpenGLFunctions* gl,
                 QOpenGLShaderProgram* shader,
@@ -127,6 +134,9 @@ public:
                 QOpenGLBuffer& texCoordBuffer) override;
 
     const char* getCommandName() const override { return "RenderTriangles"; }
+    const QVector<float>& vertices() const { return mVertices; }
+    // Four per vertex: r, g, b, a
+    const QVector<float>& colors() const { return mColors; }
 
 private:
     QVector<float> mVertices;
@@ -134,13 +144,15 @@ private:
     QMatrix4x4 mProjectionMatrix;
     QMatrix4x4 mViewMatrix;
     QMatrix4x4 mModelMatrix;
+    Shading mShading;
 };
 
 class RenderTexturedTrianglesCommand : public RenderCommand
 {
 public:
     RenderTexturedTrianglesCommand(const GeometryData& geometry,
-                                  const QMatrix4x4& projectionMatrix, const QMatrix4x4& viewMatrix, const QMatrix4x4& modelMatrix);
+                                  const QMatrix4x4& projectionMatrix, const QMatrix4x4& viewMatrix, const QMatrix4x4& modelMatrix,
+                                  Shading shading = Shading::Lit);
     
     void execute(QOpenGLFunctions* gl,
                 QOpenGLShaderProgram* shader,
@@ -154,20 +166,26 @@ public:
                 QOpenGLBuffer& texCoordBuffer) override;
                 
     const char* getCommandName() const override { return "RenderTexturedTriangles"; }
+    const GeometryData& geometry() const { return mGeometry; }
 
 private:
     GeometryData mGeometry;
     QMatrix4x4 mProjectionMatrix;
     QMatrix4x4 mViewMatrix;
     QMatrix4x4 mModelMatrix;
+    Shading mShading;
 };
 
-// Command to render multiple cube instances in a single draw call
+// Command to render multiple box or cylinder instances in a single draw call
 class RenderInstancedCubesCommand : public RenderCommand
 {
 public:
     RenderInstancedCubesCommand(const QVector<CubeInstanceData>& instances,
-                               const QMatrix4x4& projectionMatrix, const QMatrix4x4& viewMatrix, const QMatrix4x4& modelMatrix);
+                                const QMatrix4x4& projectionMatrix,
+                                const QMatrix4x4& viewMatrix,
+                                const QMatrix4x4& modelMatrix,
+                                Shading shading = Shading::Lit,
+                                GeometryManager::InstanceShape shape = GeometryManager::InstanceShape::Box);
 
     void execute(QOpenGLFunctions* gl,
                 QOpenGLShaderProgram* shader,
@@ -181,12 +199,16 @@ public:
                 QOpenGLBuffer& texCoordBuffer) override;
 
     const char* getCommandName() const override { return "RenderInstancedCubes"; }
+    const QVector<CubeInstanceData>& instances() const { return mInstances; }
+    GeometryManager::InstanceShape shape() const { return mShape; }
 
 private:
     QVector<CubeInstanceData> mInstances;
     QMatrix4x4 mProjectionMatrix;
     QMatrix4x4 mViewMatrix;
     QMatrix4x4 mModelMatrix;
+    Shading mShading;
+    GeometryManager::InstanceShape mShape;
 };
 
 // Command to change OpenGL state
@@ -200,7 +222,16 @@ public:
         DISABLE_DEPTH_WRITE,
         ENABLE_BLEND,
         DISABLE_BLEND,
-        CLEAR_BUFFERS
+        CLEAR_BUFFERS,
+        // Pulls what follows toward the camera, to draw on a surface already drawn without fighting it for depth
+        ENABLE_POLYGON_OFFSET,
+        DISABLE_POLYGON_OFFSET,
+        ENABLE_COLOR_WRITE,
+        // With the color writes off, what follows only fills the depth buffer
+        DISABLE_COLOR_WRITE,
+        // Passes what is as near as what is already drawn, to color exactly what a depth-only pass laid down
+        DEPTH_FUNC_LEQUAL,
+        DEPTH_FUNC_LESS
     };
 
     explicit GLStateCommand(StateType stateType);
@@ -217,6 +248,7 @@ public:
                 QOpenGLBuffer& texCoordBuffer) override;
 
     const char* getCommandName() const override { return "GLState"; }
+    StateType stateType() const { return mStateType; }
 
 private:
     StateType mStateType;

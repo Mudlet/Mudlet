@@ -382,6 +382,19 @@ describe("Tests the tags MXP handles", function()
       local joined = table.concat(linesFor("mxpVarDelete<VAR hp DELETE>0</VAR>mxpVarDeleteAfter"), "\n")
       assert.is_truthy(joined:find("mxpVarDelete0mxpVarDeleteAfter", 1, true), joined)
     end)
+
+    -- with no name there is no variable to set, and nothing to read one from
+    it("shows the value of a VAR that has no name", function()
+      local joined = table.concat(linesFor("mxpVarNoName: <VAR>7</VAR> <V>8</V>"), "\n")
+      assert.is_truthy(joined:find("mxpVarNoName: 7 8", 1, true), joined)
+    end)
+
+    -- the complete VAR first, so the stray end tag meets a used-up start tag
+    -- whichever tests ran before this one
+    it("shows the text around a VAR end tag that has no start tag", function()
+      local joined = table.concat(linesFor("mxpVarFirst: <VAR mxpVarX>1</VAR> mxpVarStray2</VAR>mxpVarStrayAfter"), "\n")
+      assert.is_truthy(joined:find("mxpVarFirst: 1 mxpVarStray2mxpVarStrayAfter", 1, true), joined)
+    end)
   end)
 
   -- The two tags a game uses to ask what it is talking to. Both answer over the

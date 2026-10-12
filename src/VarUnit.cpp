@@ -27,6 +27,9 @@
 
 #include <QDebug>
 #include <QLocale>
+#include <QVarLengthArray>
+
+#include <limits>
 
 extern "C" {
 #if defined(INCLUDE_VERSIONED_LUA_HEADERS)
@@ -87,7 +90,7 @@ bool VarUnit::isHidden(TVar* var)
         // of the user's. Forget the identity so it is not asked about again.
         forgetHiddenTableAddress(var->pValue);
     }
-    const QString fullName = shortVarName(var).join(qsl("."));
+    const QString fullName = shortVarPath(var);
     if (hidden.contains(fullName) && !rootNameReadsAsAMemberPath(var)) {
         return true;
     }
@@ -269,8 +272,7 @@ bool VarUnit::shouldSave(TVar* var)
 
     // Check if table is too large (max 10,000 items)
     if (var->getValueType() == LUA_TTABLE) {
-        const int itemCount = countTableItems(var);
-        if (itemCount > 10000) {
+        if (countTableItems(var, 10000) > 10000) {
             return false;
         }
     }
@@ -278,16 +280,20 @@ bool VarUnit::shouldSave(TVar* var)
     return true;
 }
 
-int VarUnit::countTableItems(TVar* var)
+// Stops once past limit, as every row of the Variables view asks this of its
+// whole subtree
+int VarUnit::countTableItems(TVar* var, const int limit)
 {
     int count = 0;
     const QList<TVar*> children = var->getChildren(false);
 
     for (TVar* child : children) {
         count++;
-        // Recursively count items in nested tables
         if (child->getValueType() == LUA_TTABLE) {
-            count += countTableItems(child);
+            count += countTableItems(child, limit - count);
+        }
+        if (count > limit) {
+            break;
         }
     }
 
@@ -313,7 +319,7 @@ QString VarUnit::getUnsaveableReason(TVar* var)
     }
 
     if (var->getValueType() == LUA_TTABLE) {
-        const int itemCount = countTableItems(var);
+        const int itemCount = countTableItems(var, std::numeric_limits<int>::max());
         if (itemCount > 10000) {
             //: Tooltip explaining why a large table cannot be saved, recommending alternative methods
             return tr("This table has %1 items, exceeding the 10,000 item limit for saved variables. "
@@ -323,25 +329,6 @@ QString VarUnit::getUnsaveableReason(TVar* var)
     }
 
     return QString();
-}
-
-QStringList VarUnit::varName(TVar* var)
-{
-    QStringList names;
-    names << "_G";
-    if (var == base.get() || !var) {
-        return names;
-    }
-    names << var->getName();
-    TVar* p = var->getParent();
-    while (p && p != base.get()) {
-        names.insert(1, p->getName());
-        if (p == base.get()) {
-            break;
-        }
-        p = p->getParent();
-    }
-    return names;
 }
 
 QStringList VarUnit::shortVarName(TVar* var)
@@ -360,11 +347,31 @@ QStringList VarUnit::shortVarName(TVar* var)
     return names;
 }
 
+// shortVarName() joined with dots, built without the list: the Variables view
+// asks this of every row twice
+QString VarUnit::shortVarPath(TVar* var)
+{
+    QVarLengthArray<TVar*, 16> chain;
+    qsizetype length = 0;
+    for (TVar* pVar = var; pVar && pVar->getName() != qsl("_G"); pVar = pVar->getParent()) {
+        chain.append(pVar);
+        length += pVar->getName().size() + 1;
+    }
+    QString path;
+    path.reserve(length);
+    for (qsizetype i = chain.size() - 1; i >= 0; --i) {
+        path.append(chain.at(i)->getName());
+        if (i) {
+            path.append(QLatin1Char('.'));
+        }
+    }
+    return path;
+}
+
 void VarUnit::addVariable(TVar* var)
 {
-    variableSet.insert(varName(var).join(qsl(".")));
     if (var->hidden) {
-        const QString shortName = shortVarName(var).join(qsl("."));
+        const QString shortName = shortVarPath(var);
         hidden.insert(shortName);
         rememberHiddenTable(var, shortName);
     }
@@ -373,7 +380,7 @@ void VarUnit::addVariable(TVar* var)
 void VarUnit::addHidden(TVar* var, int user)
 {
     var->hidden = true;
-    const QString shortName = shortVarName(var).join(qsl("."));
+    const QString shortName = shortVarPath(var);
     if (user) {
         hiddenByUser.insert(shortName);
     } else {
@@ -389,7 +396,7 @@ void VarUnit::addHidden(const QString& var)
 
 void VarUnit::removeHidden(TVar* var)
 {
-    const QString fullName = shortVarName(var).join(qsl("."));
+    const QString fullName = shortVarPath(var);
     hidden.remove(fullName);
     hiddenByUser.remove(fullName);
     forgetHiddenTable(fullName);
@@ -465,7 +472,7 @@ void VarUnit::addSavedVar(TVar* var)
         // the Variables view never offers this in the first place.
         return;
     }
-    const QString fullName = shortVarName(var).join(qsl("."));
+    const QString fullName = shortVarPath(var);
     var->saved = true;
     savedVars.insert(fullName);
 }
@@ -478,7 +485,7 @@ void VarUnit::removeSavedVar(TVar* var)
         // clicking such a root's row in the Variables view used to do
         return;
     }
-    savedVars.remove(shortVarName(var).join(qsl(".")));
+    savedVars.remove(shortVarPath(var));
 }
 
 bool VarUnit::isSaved(TVar* var)
@@ -488,13 +495,8 @@ bool VarUnit::isSaved(TVar* var)
         // the member path, and addSavedVar() will not put such a root there
         return false;
     }
-    const QString fullName = shortVarName(var).join(qsl("."));
+    const QString fullName = shortVarPath(var);
     return (savedVars.contains(fullName) || var->saved);
-}
-
-void VarUnit::removeVariable(TVar* var)
-{
-    variableSet.remove(varName(var).join(qsl(".")));
 }
 
 bool VarUnit::varExists(TVar* var)
@@ -522,6 +524,5 @@ void VarUnit::clear()
 {
     mTreeGeneration = nextTreeGeneration();
     base.reset();
-    variableSet.clear();
     mPointers.clear();
 }
