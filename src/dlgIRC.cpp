@@ -127,9 +127,9 @@ void dlgIRC::startClient()
     setupBuffers();
 
     ircBrowser->append(IrcMessageFormatter::formatMessage(tr("$ Starting Mudlet IRC Client...")));
-    ircBrowser->append(IrcMessageFormatter::formatMessage(tr("$ Host: %1:%2").arg(mpClient->getHostName(), QString::number(mpClient->getHostPort()))));
-    ircBrowser->append(IrcMessageFormatter::formatMessage(tr("$ Nick: %1").arg(mpClient->getNickName())));
-    ircBrowser->append(IrcMessageFormatter::formatMessage(tr("$ Auto-Join Channels: %1").arg(mpClient->getChannels().join(" "))));
+    ircBrowser->append(IrcMessageFormatter::formatMessage(tr("$ Host: %1:%2").arg(mpClient->getHostName().toHtmlEscaped(), QString::number(mpClient->getHostPort()))));
+    ircBrowser->append(IrcMessageFormatter::formatMessage(tr("$ Nick: %1").arg(mpClient->getNickName().toHtmlEscaped())));
+    ircBrowser->append(IrcMessageFormatter::formatMessage(tr("$ Auto-Join Channels: %1").arg(mpClient->getChannels().join(" ").toHtmlEscaped())));
     ircBrowser->append(IrcMessageFormatter::formatMessage(tr("$ This client supports Auto-Completion using the Tab key.")));
     ircBrowser->append(IrcMessageFormatter::formatMessage(tr("$ Type <b>/help</b> for commands or <b>/help [command]</b> for command syntax.")));
     ircBrowser->append(qsl("\n"));
@@ -327,7 +327,7 @@ bool dlgIRC::processCustomCommand(IrcCommand* cmd)
         const auto result = sendMsg(target, msgText);
         if (!result.first) {
             //: %1 is why the message could not be sent, e.g. 'no message given to send'
-            const QString error = tr("[ERROR] Could not send that message: %1").arg(result.second);
+            const QString error = tr("[ERROR] Could not send that message: %1").arg(result.second.toHtmlEscaped());
             ircBrowser->append(IrcMessageFormatter::formatMessage(error, qsl("indianred")));
         }
         return true;
@@ -382,18 +382,18 @@ void dlgIRC::displayHelp(const QString& cmdName = "")
 
 void dlgIRC::slot_onConnected()
 {
-    ircBrowser->append(IrcMessageFormatter::formatMessage(tr("! Connected to %1.")).arg(mpClient->getHostName()));
-    ircBrowser->append(IrcMessageFormatter::formatMessage(tr("! Joining %1...")).arg(mpClient->getChannels().join(qsl(" "))));
+    ircBrowser->append(IrcMessageFormatter::formatMessage(tr("! Connected to %1.")).arg(mpClient->getHostName().toHtmlEscaped()));
+    ircBrowser->append(IrcMessageFormatter::formatMessage(tr("! Joining %1...")).arg(mpClient->getChannels().join(qsl(" ")).toHtmlEscaped()));
 }
 
 void dlgIRC::slot_onConnecting()
 {
-    ircBrowser->append(IrcMessageFormatter::formatMessage(tr("! Connecting %1...")).arg(mpClient->getHostName()));
+    ircBrowser->append(IrcMessageFormatter::formatMessage(tr("! Connecting %1...")).arg(mpClient->getHostName().toHtmlEscaped()));
 }
 
 void dlgIRC::slot_onDisconnected()
 {
-    ircBrowser->append(IrcMessageFormatter::formatMessage(tr("! Disconnected from %1.")).arg(mpClient->getHostName()));
+    ircBrowser->append(IrcMessageFormatter::formatMessage(tr("! Disconnected from %1.")).arg(mpClient->getHostName().toHtmlEscaped()));
 }
 
 void dlgIRC::slot_onTextEdited()
@@ -459,7 +459,7 @@ void dlgIRC::slot_onTextEntered()
         if (commandParser->commands().contains(command)) {
             error = tr("[ERROR] Syntax: %1").arg(commandParser->syntax(command).replace(qsl("<"), qsl("&lt;")).replace(qsl(">"), qsl("&gt;")));
         } else {
-            error = tr("[ERROR] Unknown command: %1").arg(command);
+            error = tr("[ERROR] Unknown command: %1").arg(command.toHtmlEscaped());
         }
         ircBrowser->append(IrcMessageFormatter::formatMessage(error, qsl("indianred")));
         lineEdit->setStyleSheet(qsl("background: salmon"));
@@ -600,12 +600,14 @@ void dlgIRC::slot_showMessage(IrcBuffer* buffer, IrcMessage* message)
 
 void dlgIRC::slot_onAnchorClicked(const QUrl& link)
 {
-    QDesktopServices::openUrl(link);
+    if (IrcMessageFormatter::linkOpensInBrowser(link)) {
+        QDesktopServices::openUrl(link);
+    }
 }
 
 void dlgIRC::slot_nickNameReserved(const QString& reserved, const QString& replacement)
 {
-    ircBrowser->append(IrcMessageFormatter::formatMessage(tr("! The Nickname %1 is reserved. Automatically changing Nickname to: %2").arg(reserved, replacement)));
+    ircBrowser->append(IrcMessageFormatter::formatMessage(tr("! The Nickname %1 is reserved. Automatically changing Nickname to: %2").arg(reserved.toHtmlEscaped(), replacement.toHtmlEscaped())));
 }
 
 void dlgIRC::showEvent(QShowEvent* event)
