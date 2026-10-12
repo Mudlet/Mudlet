@@ -176,6 +176,15 @@ void TMapViewManager::switchViewsShowingArea(int areaId)
     }
 }
 
+void TMapViewManager::update3DViewAvailability()
+{
+    for (const auto& view : std::as_const(mViews)) {
+        if (view) {
+            view->update3DViewAvailability();
+        }
+    }
+}
+
 void TMapViewManager::forgetView(int viewId)
 {
     if (!mDockWidgets.remove(viewId)) {
