@@ -29,6 +29,7 @@
 #include <QImage>
 #include <QPainter>
 
+#include "ExitAppearance.h"
 #include "RoomAppearance.h"
 
 #include "GroupedTest.h"
@@ -190,6 +191,20 @@ private slots:
         QFETCH(qreal, degrees);
         QFETCH(QChar, expected);
         QCOMPARE(RoomAppearance::terminalLineGlyph(degrees), expected);
+    }
+
+    void test_standOutColorKeepsItsHueButLeavesTheBackground()
+    {
+        const QColor paper(245, 243, 236);
+        const QColor navy(20, 40, 160);
+        QCOMPARE(ExitAppearance::standOutColor(navy, paper), navy);
+        const QColor paleYellow(250, 240, 150);
+        const QColor onPaper = ExitAppearance::standOutColor(paleYellow, paper);
+        QVERIFY2(paper.lightness() - onPaper.lightness() >= 75, qPrintable(qsl("lightness %1 on %2").arg(onPaper.lightness()).arg(paper.lightness())));
+        QCOMPARE(onPaper.hslHue(), paleYellow.hslHue());
+        const QColor onBlack = ExitAppearance::standOutColor(navy, QColor(Qt::black));
+        QVERIFY(onBlack.lightness() >= 75);
+        QCOMPARE(onBlack.hslHue(), navy.hslHue());
     }
 
     void test_symbolTooLongToFitDrawsNothing()

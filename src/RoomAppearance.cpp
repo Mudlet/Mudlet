@@ -133,6 +133,22 @@ QChar terminalLineGlyph(const qreal degrees)
     return QLatin1Char('\\');
 }
 
+int exitCount(const TRoom& room)
+{
+    int count = 0;
+    for (int direction = DIR_NORTH; direction <= DIR_OUT; ++direction) {
+        if (room.getExit(direction) > 0) {
+            ++count;
+        }
+    }
+    for (const int destination : room.getSpecialExits()) {
+        if (destination > 0) {
+            ++count;
+        }
+    }
+    return count;
+}
+
 namespace {
 // The color an environment is drawn in: an ANSI color's number, or a custom color's environment ID
 std::optional<int> colorEnvironment(const TMap& map, int env)

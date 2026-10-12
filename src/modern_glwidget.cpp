@@ -56,6 +56,7 @@
 #include <QMap>
 #include <QMenu>
 #include <QPainter>
+#include <QPainterPath>
 #include <QPolygonF>
 #include <QKeyEvent>
 #include <QSurfaceFormat>
@@ -752,6 +753,15 @@ constexpr float scmLevelOutline = 0.06f;
 constexpr float scmHoverOutline = 0.14f;
 // An ink outline's dashes' length off the viewed level, as a part of a room's width
 constexpr qreal scmInkDash = 0.12;
+// A station's ring's width and an interchange's, as a part of its width, and how much wider an interchange is than a station
+constexpr float scmStationRing = 0.2f;
+constexpr float scmInterchangeRing = 0.26f;
+constexpr float scmInterchangeScale = 1.3f;
+// The player's flag's side, in rooms' spacing, and its pole's middle, as a part of the flag's texture across
+constexpr float scmFlagSize = 0.9f;
+constexpr float scmFlagPole = 0.08f;
+// A label halo's reach past the text, as a part of the text's height
+constexpr qreal scmLabelHalo = 0.12;
 // How strongly a level's floor plate shows
 constexpr float scmFloorPlateOpacity = 0.07f;
 
@@ -1051,9 +1061,10 @@ GLuint ModernGLWidget::exitMarkerTexture(const TRoom& room, const QColor& roomCo
     return addRoomTexture(key, image);
 }
 
-GLuint ModernGLWidget::textTexture(const QString& key, const QString& text, const QFont& font, const QFontMetricsF& metrics, const QColor& color, QSize& size)
+GLuint ModernGLWidget::textTexture(const QString& key, const QString& text, const QFont& font, const QFontMetricsF& metrics, const QColor& color, QSize& size, const QColor& halo)
 {
-    size = QSize(qMax(1, qCeil(metrics.horizontalAdvance(text))), qMax(1, qCeil(metrics.height())));
+    const int haloWidth = halo.isValid() ? qMax(1, qCeil(metrics.height() * scmLabelHalo)) : 0;
+    size = QSize(qMax(1, qCeil(metrics.horizontalAdvance(text))) + 2 * haloWidth, qMax(1, qCeil(metrics.height())) + 2 * haloWidth);
     if (const GLuint texture = cachedRoomTexture(key)) {
         return texture;
     }
@@ -1061,14 +1072,88 @@ GLuint ModernGLWidget::textTexture(const QString& key, const QString& text, cons
         return 0;
     }
 
-    QImage image = clearImage(size, color);
+    QImage image = clearImage(size, halo.isValid() ? halo : color);
     QPainter painter(&image);
     painter.setRenderHint(QPainter::TextAntialiasing);
     painter.setFont(font);
-    painter.setPen(color);
-    painter.drawText(image.rect(), Qt::AlignCenter, text);
+    if (halo.isValid()) {
+        QPainterPath path;
+        path.addText(haloWidth, haloWidth + metrics.ascent(), font, text);
+        painter.setRenderHint(QPainter::Antialiasing);
+        painter.strokePath(path, QPen(halo, 2.0 * haloWidth, Qt::SolidLine, Qt::RoundCap, Qt::RoundJoin));
+        painter.fillPath(path, color);
+    } else {
+        painter.setPen(color);
+        painter.drawText(image.rect(), Qt::AlignCenter, text);
+    }
     painter.end();
     return addRoomTexture(key, image);
+}
+
+GLuint ModernGLWidget::flagTexture(const QString& text, const QColor& color, const QColor& poleColor)
+{
+    const QString key = qsl("flag|%1|%2|%3").arg(color.name(QColor::HexArgb), poleColor.name(QColor::HexArgb), text);
+    if (const GLuint texture = cachedRoomTexture(key)) {
+        return texture;
+    }
+    if (mLabelTextureCache.imageTextureFailed(key) || !roomForAnotherTexture(key)) {
+        return 0;
+    }
+
+    constexpr int side = scmRoomTextureSize;
+    QImage image = clearRoomTextureImage(poleColor);
+    QPainter painter(&image);
+    painter.setRenderHint(QPainter::Antialiasing);
+    const qreal poleWidth = side * 0.05;
+    const qreal poleX = side * scmFlagPole;
+    painter.fillRect(QRectF(poleX - poleWidth / 2.0, side * 0.04, poleWidth, side * 0.96), poleColor);
+    const QRectF cloth(poleX + poleWidth / 2.0, side * 0.04, side * 0.96 - poleX - poleWidth / 2.0, side * 0.42);
+    painter.fillRect(cloth, color);
+    QFont font(qsl("Bitstream Vera Sans"));
+    font.setBold(true);
+    font.setPixelSize(qRound(cloth.height() * 0.62));
+    const qreal width = imageFontMetrics(font).horizontalAdvance(text);
+    if (width > cloth.width() * 0.88) {
+        font.setPixelSize(qMax(1, static_cast<int>(font.pixelSize() * cloth.width() * 0.88 / width)));
+    }
+    painter.setFont(font);
+    painter.setPen(ExitAppearance::contrastColor(color));
+    painter.drawText(cloth, Qt::AlignCenter, text);
+    painter.end();
+    return addRoomTexture(key, image);
+}
+
+const ModernGLWidget::HaloedLabel& ModernGLWidget::haloedLabel(const int labelId, const QPixmap& pixmap, const QColor& halo)
+{
+    HaloedLabel& haloed = mHaloedLabels[{mAID, labelId}];
+    if (haloed.sourceKey == pixmap.cacheKey() && haloed.halo == halo.rgba() && !haloed.pixmap.isNull()) {
+        return haloed;
+    }
+    const QImage source = pixmap.toImage().convertToFormat(QImage::Format_ARGB32_Premultiplied);
+    const int reach = qMax(2, qRound(source.height() * scmLabelHalo / 2.0));
+    // The label's shape in the halo's color, stamped all round it
+    QImage shape = source;
+    {
+        QPainter painter(&shape);
+        painter.setCompositionMode(QPainter::CompositionMode_SourceIn);
+        painter.fillRect(shape.rect(), halo);
+    }
+    QImage image(source.width() + 2 * reach, source.height() + 2 * reach, QImage::Format_ARGB32_Premultiplied);
+    image.fill(Qt::transparent);
+    QPainter painter(&image);
+    constexpr int stamps = 16;
+    for (int stamp = 0; stamp < stamps; ++stamp) {
+        const qreal angle = 2.0 * std::numbers::pi * stamp / stamps;
+        painter.drawImage(QPointF(reach + reach * std::cos(angle), reach + reach * std::sin(angle)), shape);
+    }
+    painter.drawImage(QPoint(reach, reach), source);
+    painter.end();
+    haloed.sourceKey = pixmap.cacheKey();
+    haloed.halo = halo.rgba();
+    haloed.pixmap = QPixmap::fromImage(image);
+    haloed.pixmap.setDevicePixelRatio(pixmap.devicePixelRatio());
+    haloed.margin = QPointF(static_cast<qreal>(reach) / qMax(1, source.width()), static_cast<qreal>(reach) / qMax(1, source.height()));
+    return haloed;
 }
 
 qsizetype ModernGLWidget::glyphAtlasCell(const QString& text, const bool add)
@@ -1310,7 +1395,15 @@ void ModernGLWidget::renderRooms()
     // Made before any symbol, so a view short of room for textures still shows where the player is
     GLuint playerRoomTexture = 0;
     GLuint playerRoomFillTexture = 0;
-    if (!terminal && pArea->getAreaRooms().contains(playerRoomId)) {
+    GLuint playerFlagTexture = 0;
+    const bool playerFlag = style.playerMarker == MapStyle::PlayerMarker::Flag;
+    if (playerFlag && pArea->getAreaRooms().contains(playerRoomId)) {
+        //: Written on the flag that marks the player's room on the 3D map in the Transit style, as "you are here" on a metro map; keep it to a few letters
+        playerFlagTexture = flagTexture(tr("YOU"), style.playerRoomColor(), style.exitColor(contrast));
+    }
+    // Where the flag stands, drawn after everything else
+    std::optional<QVector3D> playerFlagFoot;
+    if (!terminal && !playerFlag && pArea->getAreaRooms().contains(playerRoomId)) {
         // The strong highlight is the original style over a translucent red room
         const int style = mpHost->mMapStrongHighlight ? 0 : mpMap->mPlayerRoomStyle;
         const bool themed = mapStyle().themesPlayerMarker(mpMap->mPlayerRoomStyle, mpHost->mMapStrongHighlight);
@@ -1340,6 +1433,7 @@ void ModernGLWidget::renderRooms()
     QVector<CubeInstanceData> borderInstances;
     QVector<CubeInstanceData> outlineInstances;
     const bool inkOutlines = style.edges == MapStyle::Edges::InkOutlines;
+    const bool stationRings = style.edges == MapStyle::Edges::StationRings;
     const QColor ink = style.exitColor(contrast);
     // By level, drawn with that level's rooms
     QHash<int, QVector<InkOutline>> roomOutlines;
@@ -1431,7 +1525,7 @@ void ModernGLWidget::renderRooms()
 
         const QColor roomColor = style.roomColor(look.color);
         QVector4D roomTint = GeometryManager::fadedColor(roomColor, fade, fadeTarget);
-        if (look.playerRoom && !playerRoomTexture && !terminal) {
+        if (look.playerRoom && !playerRoomTexture && !playerFlagTexture && !terminal) {
             // Without its marker the player's room is drawn solid, so it still stands out
             const QColor playerColor = style.playerRoomColor();
             roomTint = QVector4D(playerColor.redF(), playerColor.greenF(), playerColor.blueF(), 1.0f);
@@ -1451,21 +1545,35 @@ void ModernGLWidget::renderRooms()
         };
 
         const bool bordered = (mpHost->mMapperShowRoomBorders || pR->mBorderColor.isValid() || pR->mBorderThickness > 0) && !pArea->gridMode;
+        const bool interchange = stationRings && style.interchangeExits > 0 && RoomAppearance::exitCount(*pR) >= style.interchangeExits;
+        const float stationScale = interchange ? scmInterchangeScale : 1.0f;
+        const float top = rz + roomHeight / 2.0f;
+        // In steps of a quarter of a doubling, so that turning or panning the view seldom changes an outline and
+        // its triangles can be kept
+        const auto outlinePixel = [&]() {
+            return std::exp2(std::ceil(std::log2(mCameraController.worldUnitsPerPixel(QVector3D(rx, ry, top))) * 4.0f) / 4.0f);
+        };
+        // An outline stands in for a border: a room's own border color and thickness show, but not the profile's border
+        // color, which every room has and would drown the outlines
+        const float thickness = pR->mBorderThickness > 0 ? static_cast<float>(pR->mBorderThickness) * borderUnit : 0.0f;
         if (inkOutlines) {
-            // The outline stands in for a border, as a block around a room with no fill would hide it: a room's own border
-            // color and thickness show, but not the profile's border color, which every room has and would drown the ink
+            // As a block around a room with no fill would hide it
             const QColor lineColor = pR->mBorderColor.isValid() ? pR->mBorderColor : ink;
-            const float top = rz + roomHeight / 2.0f;
-            // In steps of a quarter of a doubling, so that turning or panning the view seldom changes an outline and
-            // its triangles can be kept
-            const float pixel = std::exp2(std::ceil(std::log2(mCameraController.worldUnitsPerPixel(QVector3D(rx, ry, top))) * 4.0f) / 4.0f);
-            const float thickness = pR->mBorderThickness > 0 ? static_cast<float>(pR->mBorderThickness) * borderUnit : 0.0f;
+            const float pixel = outlinePixel();
             const float lineWidth = qMax(roomSize * style.inkOutlineWidth, pixel);
             const float width = qMax(lineWidth * (hovered ? 2.5f : 1.0f), thickness);
             // Any wider than the plain line grows outward, as a border does, so as not to cover the room
             const float half = roomSize / 2.0f + (width - lineWidth) / 2.0f;
             const bool dashed = !look.onViewedLevel() && !hovered;
             roomOutlines[pR->z()].append({rx, ry, top, half, width, dashed ? static_cast<float>(roomSize * scmInkDash) : 0.0f, GeometryManager::fadedColor(lineColor, fade, fadeTarget)});
+        } else if (stationRings) {
+            const QColor ringColor = pR->mBorderColor.isValid() ? pR->mBorderColor : (interchange ? ink : style.ringColor(look.color));
+            const float stationSize = roomSize * stationScale;
+            const float ring = qMax(stationSize * (interchange ? scmInterchangeRing : scmStationRing) * (hovered ? 1.6f : 1.0f), outlinePixel());
+            const float width = qMax(ring, thickness);
+            // Just inside the station's edge, unless a thick border reaches past it
+            const float half = stationSize / 2.0f - ring / 2.0f + (width - ring) / 2.0f;
+            roomOutlines[pR->z()].append({rx, ry, top, half, width, 0.0f, GeometryManager::fadedColor(ringColor, fade, fadeTarget)});
         } else if (hovered && !terminal) {
             // Taller than a border, so that it shows over one
             outlineInstances.append(outline(roomSize * scmHoverOutline, QVector4D(contrast.redF(), contrast.greenF(), contrast.blueF(), 1.0f), 0.75f));
@@ -1474,7 +1582,7 @@ void ModernGLWidget::renderRooms()
             const QColor rimTarget = style.edges == MapStyle::Edges::ViewedLevelBase ? background : contrast;
             outlineInstances.append(outline(roomSize * scmLevelOutline, GeometryManager::fadedColor(roomColor, {0.5f, 1.0f}, rimTarget)));
         }
-        if (bordered && !inkOutlines && !terminal) {
+        if (bordered && !inkOutlines && !stationRings && !terminal) {
             const float borderWidth = (pR->mBorderThickness > 0 ? pR->mBorderThickness : 1) * borderUnit;
             const QColor borderColor = pR->mBorderColor.isValid() ? pR->mBorderColor : style.roomBorderColor(mpHost->mRoomBorderColor, roomColor, background);
             const QVector4D borderTint = GeometryManager::fadedColor(borderColor, fade, fadeTarget);
@@ -1483,7 +1591,7 @@ void ModernGLWidget::renderRooms()
 
         QMatrix4x4 transform;
         transform.translate(rx, ry, rz);
-        transform.scale(1.0f / scale, 1.0f / scale, 1.0f / scale / zFlattening);
+        transform.scale(stationScale / scale, stationScale / scale, 1.0f / scale / zFlattening);
         if (!unfilled) {
             instances.append(CubeInstanceData(transform, roomTint.x(), roomTint.y(), roomTint.z(), roomTint.w()));
         }
@@ -1597,6 +1705,9 @@ void ModernGLWidget::renderRooms()
         }
 
         if (look.playerRoom) {
+            if (playerFlagTexture) {
+                playerFlagFoot = roomTop;
+            }
             if (playerRoomFillTexture) {
                 decals.playerFill.textureId = playerRoomFillTexture;
                 GeometryManager::appendGroundQuad(decals.playerFill, roomTop, roomSize, screenRight, screenUp, decalTint);
@@ -1811,11 +1922,15 @@ void ModernGLWidget::renderRooms()
             const QVector3D upward = groundUp * static_cast<float>(size.height() * nameTexel);
             nameRects.append(screenRect(roomName.center - across / 2.0f - upward / 2.0f, across, upward));
         }
+        const QColor nameHalo = style.labelHalos ? background : QColor();
         for (const qsizetype index : GeometryManager::declutteredRects(nameRects, scmMinimumTextPixels)) {
             const RoomName& roomName = roomNames.at(index);
             QSize size;
-            const QString key = qsl("name|%1|%2|%3").arg(roomName.color.name(QColor::HexArgb), nameFontKey, roomName.name);
-            if (const GLuint texture = textTexture(key, roomName.name, nameFont, nameMetrics, roomName.color, size)) {
+            QString key = qsl("name|%1|%2|%3").arg(roomName.color.name(QColor::HexArgb), nameFontKey, roomName.name);
+            if (nameHalo.isValid()) {
+                key.append(qsl("|halo|%1").arg(nameHalo.name(QColor::HexArgb)));
+            }
+            if (const GLuint texture = textTexture(key, roomName.name, nameFont, nameMetrics, roomName.color, size, nameHalo)) {
                 const QVector3D across = groundRight * (size.width() * nameTexel);
                 const QVector3D upward = groundUp * (size.height() * nameTexel);
                 GeometryData& batch = roomName.decals->text[texture];
@@ -2000,6 +2115,17 @@ void ModernGLWidget::renderRooms()
     if (unlabeledFrom <= std::numeric_limits<int>::max()) {
         renderLabels(true, static_cast<int>(unlabeledFrom), std::numeric_limits<int>::max());
     }
+    if (playerFlagFoot) {
+        // Standing toward the camera, which would put it through the rooms behind it, so over everything
+        GeometryData flag;
+        flag.textureId = playerFlagTexture;
+        const float side = scmFlagSize;
+        GeometryManager::appendQuad(flag, *playerFlagFoot - screenRight * (side * scmFlagPole), screenRight * side, screenUp * side, QVector4D(1.0f, 1.0f, 1.0f, 1.0f));
+        mRenderCommandQueue.addCommand(std::make_unique<GLStateCommand>(GLStateCommand::DISABLE_DEPTH_TEST));
+        mRenderCommandQueue.addCommand(std::make_unique<RenderTexturedTrianglesCommand>(
+                flag, mCameraController.getProjectionMatrix(), mCameraController.getViewMatrix(), mCameraController.getModelMatrix(), RenderCommand::Shading::Unlit));
+        mRenderCommandQueue.addCommand(std::make_unique<GLStateCommand>(GLStateCommand::ENABLE_DEPTH_TEST));
+    }
     mRenderCommandQueue.addCommand(std::make_unique<GLStateCommand>(GLStateCommand::ENABLE_DEPTH_WRITE));
     mSeeThroughExits.clear();
 }
@@ -2021,6 +2147,8 @@ ExitScene::Options ModernGLWidget::exitSceneOptions() const
     options.largeAreaExitArrows = mpHost->getLargeAreaExitArrows();
     options.exitColor = style.exitColor(mpHost->mFgColor_2);
     options.doorSwings = style.doors == MapStyle::Doors::Swings;
+    options.doorBars = style.doors == MapStyle::Doors::Bars;
+    options.environmentLines = style.environmentLines;
     options.glyphs = style.glyphs == MapStyle::Glyphs::Terminal;
     options.roomSize = roomSize;
     options.roundRooms = style.roundRooms(mpHost->mBubbleMode);
@@ -3700,8 +3828,8 @@ void ModernGLWidget::paintLevelCallouts(QPainter& painter, const TArea& area, co
 
 void ModernGLWidget::renderPlayerBeacon()
 {
-    // A text screen has no depth to raise a column in: its @ is the player
-    if (!mpMap || !mpMap->mpRoomDB || !mpHost || mapStyle().glyphs == MapStyle::Glyphs::Terminal) {
+    // A text screen has no depth to raise a column in: its @ is the player; and a flag marks the player in its stead
+    if (!mpMap || !mpMap->mpRoomDB || !mpHost || mapStyle().glyphs == MapStyle::Glyphs::Terminal || mapStyle().playerMarker == MapStyle::PlayerMarker::Flag) {
         return;
     }
     const TRoom* pR = mpMap->mpRoomDB->getRoom(mpMap->mRoomIdHash.value(mpMap->mProfileName));
@@ -3972,6 +4100,7 @@ void ModernGLWidget::renderLabels(const bool onTop, const int lowestLevel, const
     const QVector3D screenUp = mCameraController.screenUp();
     // Turned around while the top of the screen faces south, so that it never reads upside down
     const bool turned = GeometryManager::groundAxes(screenRight, screenUp).second.y() < 0.0f;
+    const QColor halo = mapStyle().labelHalos ? backgroundColor() : QColor();
 
     // Those on top are queued by renderRooms(), which has turned depth writes off by then
     if (onTop) {
@@ -3997,7 +4126,16 @@ void ModernGLWidget::renderLabels(const bool onTop, const int lowestLevel, const
 
         const QPixmap* themed = themedLabel(it.key(), label, style);
         const QPixmap& pixmap = themed ? *themed : label.pix;
-        const GLuint textureId = mLabelTextureCache.getTexture(mAID, it.key(), pixmap);
+        // Halo and all, as wide as the label is with it
+        QPointF margin;
+        GLuint textureId = 0;
+        if (halo.isValid()) {
+            const HaloedLabel& haloed = haloedLabel(it.key(), pixmap, halo);
+            margin = haloed.margin;
+            textureId = mLabelTextureCache.getTexture(mAID, it.key(), haloed.pixmap);
+        } else {
+            textureId = mLabelTextureCache.getTexture(mAID, it.key(), pixmap);
+        }
         if (textureId == 0) {
             continue;
         }
@@ -4011,9 +4149,11 @@ void ModernGLWidget::renderLabels(const bool onTop, const int lowestLevel, const
             const QVector3D corner(x, y, z);
             const float worldPerPixel = mCameraController.worldUnitsPerPixel(corner);
             const QSizeF pixels = pixmap.deviceIndependentSize();
-            const auto width = static_cast<float>(pixels.width()) * worldPerPixel;
-            const auto height = static_cast<float>(pixels.height()) * worldPerPixel;
-            const QVector3D center = corner + screenRight * (width / 2.0f) - screenUp * (height / 2.0f);
+            const auto labelWidth = static_cast<float>(pixels.width()) * worldPerPixel;
+            const auto labelHeight = static_cast<float>(pixels.height()) * worldPerPixel;
+            const QVector3D center = corner + screenRight * (labelWidth / 2.0f) - screenUp * (labelHeight / 2.0f);
+            const auto width = labelWidth * static_cast<float>(1.0 + 2.0 * margin.x());
+            const auto height = labelHeight * static_cast<float>(1.0 + 2.0 * margin.y());
             if (onTop) {
                 // Standing up off the map, it would pass through the rooms it is meant to be over
                 mRenderCommandQueue.addCommand(std::make_unique<GLStateCommand>(GLStateCommand::DISABLE_DEPTH_TEST));
@@ -4036,15 +4176,17 @@ void ModernGLWidget::renderLabels(const bool onTop, const int lowestLevel, const
             continue;
         }
 
-        const float width = std::abs(static_cast<float>(label.size.width()));
-        const float height = std::abs(static_cast<float>(label.size.height()));
+        const float marginX = static_cast<float>(margin.x() * std::abs(label.size.width()));
+        const float marginY = static_cast<float>(margin.y() * std::abs(label.size.height()));
+        const float width = std::abs(static_cast<float>(label.size.width())) + 2.0f * marginX;
+        const float height = std::abs(static_cast<float>(label.size.height())) + 2.0f * marginY;
         QVector4D tint = GeometryManager::fadedDecalTint(GeometryManager::levelFade(static_cast<int>(levelsAbove), moreTransparent));
         if (label.highlight) {
             tint = QVector4D(1.0f, 0.65f, 0.0f, tint.w());
         }
         GeometryData geometry;
         geometry.textureId = textureId;
-        GeometryManager::appendLabelQuad(geometry, QVector3D(x, y, z), width, height, turned, tint);
+        GeometryManager::appendLabelQuad(geometry, QVector3D(x - marginX, y + marginY, z), width, height, turned, tint);
         mRenderCommandQueue.addCommand(std::make_unique<RenderTexturedTrianglesCommand>(
                 geometry, mCameraController.getProjectionMatrix(), mCameraController.getViewMatrix(), mCameraController.getModelMatrix(), RenderCommand::Shading::Unlit));
     }

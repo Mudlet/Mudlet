@@ -842,11 +842,107 @@ private slots:
         });
         QVERIFY(mpHost->setMapStyle(qsl("blueprint")));
         const QStringList blueprint = frame();
+        QVERIFY(mpHost->setMapStyle(qsl("transit")));
+        const QStringList transit = frame();
         QVERIFY(mpHost->setMapStyle(qsl("tiles")));
         const QStringList after = frame();
 
         QVERIFY(before != blueprint);
+        QVERIFY(before != transit);
         QCOMPARE(after, before);
+    }
+
+    // Transit's stations are white, ringed in their environment's color where it stands out on its paper
+    void test_transitDrawsStations()
+    {
+        const MapStyle* transit = MapStyle::find(qsl("transit"));
+        QVERIFY(transit);
+        const QColor environment(200, 40, 40, 200);
+        QCOMPARE(transit->roomColor(environment), QColor(255, 255, 255, 200));
+        QCOMPARE(transit->ringColor(environment), environment);
+        const QColor pale(250, 245, 200);
+        QVERIFY2(transit->background.lightness() - transit->ringColor(pale).lightness() >= 75, "a pale environment's ring does not stand out on the paper");
+        QVERIFY(transit->roundRooms(false));
+        QVERIFY(!transit->lit);
+        QCOMPARE(transit->doors, MapStyle::Doors::Bars);
+        QCOMPARE(transit->playerMarker, MapStyle::PlayerMarker::Flag);
+        QVERIFY(transit->environmentLines);
+        QVERIFY(transit->labelHalos);
+        QVERIFY(transit->interchangeExits > 0);
+        const MapStyle* tiles = MapStyle::find(qsl("tiles"));
+        QVERIFY(tiles);
+        QCOMPARE(tiles->playerMarker, MapStyle::PlayerMarker::Ring);
+        QVERIFY(!tiles->environmentLines);
+        QVERIFY(!tiles->labelHalos);
+        QCOMPARE(tiles->interchangeExits, 0);
+    }
+
+    // A station is ringed in its environment's color, an interchange larger and in ink, and the player's
+    // room has a flag rather than the profile's marker
+    void test_transitRingsStationsAndFlagsThePlayerWithoutGL()
+    {
+        const int areaId = addArea();
+        QVERIFY(areaId > 0);
+        const QColor red(200, 30, 30);
+        map()->mCustomEnvColors[301] = red;
+        const auto restore = qScopeGuard([this]() {
+            mpHost->setMapStyle(qsl("tiles"));
+            map()->mCustomEnvColors.remove(301);
+        });
+        map()->mpRoomDB->getRoom(kEastRoomId)->environment = 301;
+        TRoom* pPlayerRoom = map()->mpRoomDB->getRoom(kPlayerRoomId);
+        for (const int direction : {DIR_NORTH, DIR_EAST, DIR_SOUTH, DIR_WEST, DIR_DOWN}) {
+            pPlayerRoom->setExit(kEastRoomId, direction);
+        }
+        ModernGLWidget widget(map(), mpHost);
+        const auto colorQueued = [&widget](const QColor& color) {
+            for (const auto& command : widget.mRenderCommandQueue.commands()) {
+                const auto* triangles = dynamic_cast<const RenderTrianglesCommand*>(command.get());
+                if (!triangles) {
+                    continue;
+                }
+                const QVector<float>& colors = triangles->colors();
+                for (qsizetype i = 0; i + 3 < colors.size(); i += 4) {
+                    if (qAbs(colors.at(i) - color.redF()) < 0.01 && qAbs(colors.at(i + 1) - color.greenF()) < 0.01 && qAbs(colors.at(i + 2) - color.blueF()) < 0.01) {
+                        return true;
+                    }
+                }
+            }
+            return false;
+        };
+        const auto flagDrawn = [&widget]() {
+            return std::any_of(widget.mRoomTexturesInUse.cbegin(), widget.mRoomTexturesInUse.cend(), [](const QString& key) {
+                return key.startsWith(qsl("flag|"));
+            });
+        };
+        // A room's fill, the widest cube standing at its place, as its exits' bars stand between rooms
+        const auto roomWidth = [this, &widget](const int roomId) {
+            const TRoom* pRoom = map()->mpRoomDB->getRoom(roomId);
+            float widest = 0.0f;
+            for (const auto& command : widget.mRenderCommandQueue.commands()) {
+                if (const auto* cubes = dynamic_cast<const RenderInstancedCubesCommand*>(command.get())) {
+                    for (const CubeInstanceData& cube : cubes->instances()) {
+                        const QVector4D center = cube.transform.column(3);
+                        if (qAbs(center.x() - pRoom->x()) < 1e-4f && qAbs(center.y() - pRoom->y()) < 1e-4f) {
+                            widest = qMax(widest, cube.transform.column(0).toVector3D().length());
+                        }
+                    }
+                }
+            }
+            return widest;
+        };
+
+        queueFrame(widget, areaId);
+        const bool tilesFlag = flagDrawn();
+        QVERIFY(mpHost->setMapStyle(qsl("transit")));
+        const MapStyle* transit = MapStyle::find(qsl("transit"));
+        queueFrame(widget, areaId);
+
+        QVERIFY2(!tilesFlag, "tiles flagged the player's room");
+        QVERIFY2(flagDrawn(), "transit did not flag the player's room");
+        QVERIFY2(colorQueued(transit->ringColor(red)), "the station is not ringed in its environment's color");
+        QVERIFY2(colorQueued(transit->ink), "the interchange is not ringed in ink");
+        QVERIFY2(roomWidth(kEastRoomId) > 0.0f && roomWidth(kPlayerRoomId) > roomWidth(kEastRoomId) * 1.2f, "the interchange is no larger than a station");
     }
 
     // As names are: where IDs overlap one is kept, the viewed level's as only it has IDs on the 2D map,

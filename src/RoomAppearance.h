@@ -79,6 +79,9 @@ bool fontShows(const QFont& font, const QString& text);
 // The line character - | / or \ that reads as a line running at degrees, counterclockwise from rightward
 QChar terminalLineGlyph(qreal degrees);
 
+// The room's exits in every direction and its special exits, wherever they lead; stubs are not exits
+int exitCount(const TRoom& room);
+
 // roomSymbolColor is the room's own, which is invalid unless one was set
 QColor symbolColor(const QColor& roomSymbolColor, const QColor& roomColor);
 
