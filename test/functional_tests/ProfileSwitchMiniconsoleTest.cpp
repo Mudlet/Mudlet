@@ -139,7 +139,7 @@ private:
         return true;
     }
 
-    TConsole* miniconsoleOf(Host* pHost) const { return pHost->mpConsole ? pHost->mpConsole->subConsoleWidget(mMiniconsoleName) : nullptr; }
+    TConsole* miniconsoleOf(Host* pHost) const { return pHost->mainConsoleView() ? pHost->mainConsoleView()->subConsoleWidget(mMiniconsoleName) : nullptr; }
 
     bool createMiniconsole(Host* pHost) const
     {
