@@ -5,10 +5,10 @@ layout (location = 2) in vec4 aColor;
 
 // Per-instance attributes (for instanced rendering)
 layout (location = 3) in vec4 aInstanceColor; // Per-instance color
-layout (location = 4) in mat4 aInstanceTransform;   // Per-instance transformation matrix (scale -> rotate -> translate)
+layout (location = 4) in mat4 aInstanceTransform;   // Per-instance transformation matrix (scale -> rotate -> translate), takes locations 4-7
 
 // Texture coordinates (for textured rendering)
-layout (location = 6) in vec2 aTexCoord;
+layout (location = 8) in vec2 aTexCoord;
 
 uniform mat4 uMVP;
 uniform mat4 uModel;
@@ -17,15 +17,15 @@ uniform bool uUseInstancing = false;
 uniform bool uUseTexture = false;
 uniform bool uDisableLighting = false;
 
-uniform vec3 uLight0Pos = vec3(5000.0, 4000.0, 1000.0);
-uniform vec3 uLight1Pos = vec3(5000.0, 1000.0, 1000.0);
-uniform vec3 uLight0Diffuse = vec3(0.507, 0.507, 0.507);
-uniform vec3 uLight1Diffuse = vec3(0.501, 0.901, 0.501);
-uniform vec3 uLight0Ambient = vec3(0.8, 0.8, 0.8);
-uniform vec3 uLight1Ambient = vec3(0.4501, 0.4501, 0.4501);
+// A low ambient and one soft key light from high in the north-west: a room's top shows its own color, its sides shade
+uniform float uAmbient = 0.5;
+uniform vec3 uKeyLightDirection = vec3(-0.3, 0.4, 0.866);
+uniform float uKeyLight = 0.6;
 
 out vec4 vertexColor;
 out vec2 texCoord;
+// How far in front of the camera, for the fog
+out float eyeDepth;
 
 void main()
 {
@@ -35,44 +35,25 @@ void main()
     vec4 finalColor = aColor;
     if (uUseInstancing) {
         finalPos = aInstanceTransform * finalPos;
-        // rotation without translation, since cube normals on perpendicular or parallel to stretches, we don't need to worry about that
-        finalNormal = normalize(aInstanceTransform * finalNormal); 
+        // Normals need the inverse transpose: the instance transform scales unevenly
+        finalNormal = vec4(normalize(transpose(inverse(mat3(aInstanceTransform))) * aNormal), 0.0);
         finalColor = aInstanceColor;
     }
 
     
-    vec3 worldPos = vec3(uModel * finalPos);
     vec3 worldNormal = normalize(uNormalMatrix * vec3(finalNormal));
 
     if (uDisableLighting) {
         // Pass through color without lighting (for labels/billboards)
         vertexColor = finalColor;
     } else {
-        vec3 ambient = uLight0Ambient + uLight1Ambient;
-
-        vec3 lightDir0 = normalize(uLight0Pos - worldPos);
-        float diff0 = max(dot(worldNormal, lightDir0), 0.0);
-        vec3 diffuse0 = diff0 * uLight0Diffuse;
-
-        vec3 lightDir1 = normalize(uLight1Pos - worldPos);
-        float diff1 = max(dot(worldNormal, lightDir1), 0.0);
-        vec3 diffuse1 = diff1 * uLight1Diffuse;
-
-        vec3 lighting = ambient + diffuse0 + diffuse1;
-        lighting = clamp(lighting, 0.0, 1.0);
-
-        vec3 materialAmbientDiffuse = finalColor.rgb;
-
-        vec3 ambientContrib = (uLight0Ambient + uLight1Ambient) * materialAmbientDiffuse;
-        vec3 diffuseContrib = (diffuse0 + diffuse1) * materialAmbientDiffuse;
-
-        vec3 finalColorRGB = ambientContrib + diffuseContrib;
-
-        vertexColor = vec4(finalColorRGB, finalColor.a);
+        float diffuse = max(dot(worldNormal, normalize(uKeyLightDirection)), 0.0);
+        vertexColor = vec4(finalColor.rgb * min(uAmbient + uKeyLight * diffuse, 1.0), finalColor.a);
     }
     
     // Pass texture coordinates to fragment shader
     texCoord = aTexCoord;
     
     gl_Position = uMVP * finalPos;
+    eyeDepth = gl_Position.w;
 }
