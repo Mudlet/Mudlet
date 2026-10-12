@@ -67,6 +67,7 @@ public:
     void resizeEvent(QResizeEvent* event) override;
     void paintEvent(QPaintEvent* event) override;
     void changeEvent(QEvent* event) override;
+    bool event(QEvent* event) override;
     QSize sizeHint() const override;
     void contextMenuEvent(QContextMenuEvent*) override;
     void setClickThrough(bool clickthrough);
@@ -79,8 +80,6 @@ public:
     void resetBackgroundImage();
     bool setSvgImage(const QString& path);
     void clearSvgImage();
-    static bool svgCandidate(const QString& path);
-    static bool loadSvg(QSvgRenderer& renderer, const QString& path);
     void setSvgTint(const QColor& color);
     void clearSvgTint();
     void setSvgRotation(double angle);
