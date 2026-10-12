@@ -25,9 +25,13 @@
 #include <QPointer>
 #include <QRect>
 #include <QSet>
+#include <QSize>
 #include <QString>
 
+#include <optional>
+
 class Host;
+class QSvgRenderer;
 
 // A label's widget-free state, so the Widgets-free core can hold a named label without a QLabel.
 // Owned by its TLabel, whose same-named reference members alias it; TWindowRegistry indexes
@@ -43,6 +47,12 @@ struct TLabelModel
     TLabelModel(const TLabelModel&) = delete;
     TLabelModel& operator=(const TLabelModel&) = delete;
 
+    // Whether the SVG renderer is worth trying on a file, judged by its first bytes.
+    static bool svgCandidate(const QString& path);
+    static bool loadSvg(QSvgRenderer& renderer, const QString& path);
+    // A file's natural size as an SVG document or a raster image, without a widget.
+    static std::optional<QSize> imageSize(const QString& path);
+
     // Each releases the Lua registry index it replaces.
     void setClick(const int func);
     void setDoubleClick(const int func);
@@ -51,6 +61,14 @@ struct TLabelModel
     void setWheel(const int func);
     void setEnter(const int func);
     void setLeave(const int func);
+
+    // What TLabel::setBackgroundColor() restyles a label with: the sheet with its background-color
+    // declarations given the colour, or the colour's appended.
+    static QString styleSheetWithBackgroundColor(const QString& styleSheet, const QColor& color);
+    // Whether the text has an anchor tag, which makes the label's links clickable
+    static bool containsAnchorTag(const QString& text);
+    // What TLabel::setText() shows for the text: each anchor given the link style as an inline style
+    QString linkStyledText(const QString& text) const;
 
     // A QPointer because Host and view are torn down in either order: quitting
     // destroys every Host before the labels' deferred deletes run.
