@@ -55,6 +55,8 @@
 #define DIR_OTHER 13
 
 class dlgMapper;
+class TMapViewFrontend;
+class TMapViewsFrontend;
 class Host;
 #if defined(INCLUDE_3DMAPPER)
 class QOpenGLWidget;
@@ -70,6 +72,9 @@ class MapInfoContributorManager;
 class TMap : public QObject
 {
     Q_OBJECT
+
+    // Allows the functional test to put recording map views in place of the GUI's:
+    friend class FrontendRoutingContractTest;
 
 public:
     // Host settings the 2D map keeps a copy of to draw with
@@ -219,7 +224,7 @@ public:
     void clearTransferProgress();
 
     // True while a map import, export or download is on the stack. Those pump
-    // qApp->processEvents() to keep their progress display alive, so anything
+    // QCoreApplication::processEvents() to keep their progress display alive, so anything
     // delivered from an event loop can find itself running nested inside one -
     // and destroying this map's Host from there would free the operation's own
     // "this" (#9520). Whoever would do that has to wait for this to go false.
@@ -281,6 +286,8 @@ public:
     // The 2D zoom a new area starts at, and the smallest one a view accepts:
     static constexpr qreal scmDefaultXYZoom = 20.0;
     static constexpr qreal scmMinXYZoom = 3.0;
+    // Why a script's 2D zoom can't be used, or empty when it can
+    static QString zoomError(qreal zoom);
     // Which of the symbols in use would be drawn as the replacement character
     // if the given font were the symbol font:
     QStringList symbolsNotInFont(const QFont&);
@@ -321,7 +328,11 @@ public:
     QString mProfileName;
 
     TMapViewManager* getViewManager() { return mpViewManager; }
-    void setViewManager(TMapViewManager* pViewManager) { mpViewManager = pViewManager; }
+    // Defined in TMapViewManager.cpp, which can see that TMapViewManager is a TMapViewsFrontend.
+    void setViewManager(TMapViewManager* pViewManager);
+    // mpViewManager as core code drives it. Never null: with no manager, as in a profile with no
+    // console view, a frontend that has no views and can make none.
+    TMapViewsFrontend* mapViewsFrontend() const;
 
     // Was a single int mRoomId but that breaks things when maps are
     // copied/shared between profiles - so now we track the profile name
@@ -363,7 +374,11 @@ public:
 #if defined(INCLUDE_3DMAPPER)
     QPointer<QOpenGLWidget> mpM;
 #endif
-    QPointer<dlgMapper> mpMapper;
+    // Defined in dlgMapper.cpp: both need dlgMapper complete, setMapper() to see it is a TMapViewFrontend.
+    dlgMapper* mapper() const;
+    void setMapper(dlgMapper* pMapper);
+    // mapper() as core code drives it; null when that is.
+    TMapViewFrontend* mapViewFrontend() const { return mpMapViewObject.isNull() ? nullptr : mpMapViewFrontend; }
     QHash<int, int> roomidToIndex;
 
     // User-registered mapper context menu entries (addMapEvent()/addMapMenu());
@@ -372,6 +387,10 @@ public:
     QMap<QString, QStringList> mUserActions;
     // unique name, List:parent name ("" if null), display name
     QMap<QString, QStringList> mUserMenus;
+    // Built-in context menu items hidden with hideMapMenuItem(); session-only like the above.
+    QSet<QString> mHiddenMenuItems;
+    static const QStringList& builtInMenuItemNames();
+    bool menuItemShown(const QString& itemName) const;
 
     typedef boost::adjacency_list<boost::listS, boost::vecS, boost::directedS, boost::no_property, boost::property<boost::edge_weight_t, cost>> mygraph_t;
     typedef boost::property_map<mygraph_t, boost::edge_weight_t>::type WeightMap;
@@ -475,6 +494,15 @@ public slots:
 
 private:
     void resetSearchState(const std::size_t roomCount);
+
+    // The same object as mpViewManager, set with it by setViewManager().
+    TMapViewsFrontend* mpViewsFrontend = nullptr;
+    QPointer<dlgMapper> mpMapper;
+    // The same object as mpMapper, set with it by setMapper(); read only while mpMapViewObject is set.
+    TMapViewFrontend* mpMapViewFrontend = nullptr;
+    // mpMapViewFrontend as a QObject, so it clears when the view goes. Not mpMapper, so a view that
+    // is not a dlgMapper can stand in its place.
+    QPointer<QObject> mpMapViewObject;
 
     // A* leaving the route in mSearchPredecessor; see the definition for why not boost::astar_search().
     bool searchGraph(const vertex start, const vertex goal);
