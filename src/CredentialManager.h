@@ -75,8 +75,11 @@ public:
     // Callback types for asynchronous operations
     using CredentialCallback = std::function<void(bool success, const QString& errorMessage)>;
     using CredentialRetrievalCallback = std::function<void(bool success, QString password, const QString& errorMessage)>;
-    // timedOut: it was the lookup's deadline that answered, not the keychain
-    using TimedRetrievalCallback = std::function<void(bool success, QString password, const QString& errorMessage, bool timedOut)>;
+    // Why a read came back without a password; success is always outcome == Found. After NothingStored the
+    // store has answered, so a caller may remove or replace what it holds, which it cannot after Unreadable
+    // (also a read refused before it started) or TimedOut, the lookup's deadline answering.
+    enum class ReadOutcome { Found, NothingStored, Unreadable, TimedOut };
+    using TimedRetrievalCallback = std::function<void(bool success, QString password, const QString& errorMessage, ReadOutcome outcome)>;
     using AvailabilityCallback = std::function<void(bool available, const QString& message)>;
 
     // How far a removal or an existence check reaches when the storage preference puts credentials
@@ -167,7 +170,8 @@ private:
     static bool isValidKeyName(const QString& key);
     static bool storeCredentialToFile(const QString& profileName, const QString& key, const QString& credential);
     bool storeCredentialToFileForThisOperation(const QString& profileName, const QString& key, const QString& credential);
-    // unreadable, when given, is set if a credential file exists but could not be read or decrypted
+    // unreadable, when given, is set when the file could not be consulted: no valid path, or a file there
+    // that cannot be opened or decrypted
     static QString retrieveCredentialFromFile(const QString& profileName, const QString& key, bool* unreadable = nullptr);
     static bool removeCredentialFromFile(const QString& profileName, const QString& key);
 
@@ -202,14 +206,14 @@ private:
         // The first read that failed for a reason other than there being no such entry, reported in
         // place of "not found" if nothing turns up.
         QString keychainError;
-        // The encrypted file is there but could not be decrypted, reported if nothing else turns up
-        bool fileUnreadable = false;
         // Whether any read has reached the store, answering either with a password or with "no such
         // entry". Until one has, a refusal is the store itself saying no - locked, or a prompt the
         // player dismissed - and the layouts behind it cannot be read either. Once one has, every
         // refusal after it is that entry's own, however many of them there are, and the chain runs
         // to the end: the password may be in a layout behind them.
         bool storeHasAnswered = false;
+        // The encrypted file could not be consulted, so finding nothing is not proof of absence
+        bool fileUnreadable = false;
         // Set when the store has refused scmRefusalsBeforeGivingUpOnTheStore reads in a row without
         // answering any: every remaining keychain read would ask it the same question, and be
         // refused the same way, at the cost of another prompt. Only the file is read from then on.
@@ -221,7 +225,7 @@ private:
     };
     using LookupPtr = std::shared_ptr<Lookup>;
 
-    void finishLookup(const LookupPtr& lookup, bool success, QString password, const QString& errorMessage, bool timedOut = false);
+    void finishLookup(const LookupPtr& lookup, QString password, const QString& errorMessage, ReadOutcome outcome);
     void runLookupStage(const LookupPtr& lookup, std::size_t index);
     // When the store last refused a profile's reads before answering any of them. Kept per profile
     // and across managers, because a caller asking about two keys - the profile preferences ask
