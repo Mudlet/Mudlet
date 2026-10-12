@@ -408,6 +408,24 @@ private slots:
         }
         const auto [lineInRealBox, lineInRealBoxMessage] = host->consoleFrontend()->createCommandLine(realBox, qsl("nullViewLineInRealBox"), 0, 0, 10, 10);
         const auto [textInRealBox, textInRealBoxMessage] = host->consoleFrontend()->createTextBox(realBox, qsl("nullViewTextInRealBox"), 0, 0, 10, 10);
+        QStringList createsInRealWindows;
+        QStringList madeInRealWindows;
+        for (const QString& target : {realBox, realWindow}) {
+            const QString label = qsl("nullViewLabelIn%1").arg(target);
+            const QString mini = qsl("nullViewMiniIn%1").arg(target);
+            const QString box = qsl("nullViewBoxIn%1").arg(target);
+            createsInRealWindows << host->createLabel(target, label, 0, 0, 10, 10, true, false).second << host->createMiniConsole(target, mini, 0, 0, 10, 10).second
+                                 << host->createScrollBox(target, box, 0, 0, 10, 10).second;
+            if (host->windowRegistry().hasLabel(label)) {
+                madeInRealWindows << label;
+            }
+            if (host->windowRegistry().hasSubConsole(mini)) {
+                madeInRealWindows << mini;
+            }
+            if (host->windowRegistry().hasScrollBox(box)) {
+                madeInRealWindows << box;
+            }
+        }
         const TConsoleModel* realModelWhileDetached = host->windowRegistry().subConsoleModel(realWindow);
         const auto [realDeletedWhileDetached, realDeleteMessage] = host->deleteMiniConsole(realWindow);
         const auto [realBoxDeletedWhileDetached, realBoxDeleteMessage] = host->consoleFrontend()->deleteScrollBox(realBox);
@@ -490,6 +508,8 @@ nullViewActionKept = next(nullViewActions) ~= nil
         QVERIFY(realLineRegisteredWhileDetached);
         QVERIFY2(!textInRealBox, "The null view made a text edit in a scroll box it has no record of.");
         QCOMPARE(textInRealBoxMessage, qsl("the profile has no main window"));
+        QCOMPARE(createsInRealWindows, QStringList(6, qsl("the profile has no main window")));
+        QVERIFY2(madeInRealWindows.isEmpty(), qPrintable(qsl("The null view made windows in a detached view's windows: %1").arg(madeInRealWindows.join(qsl(", ")))));
         QVERIFY2(!realTextDeletedWhileDetached, "The null view reported deleting a text edit it has no record of.");
         QCOMPARE(realTextDeleteMessage, qsl("text edit name 'realViewText' could not be deleted"));
         QVERIFY(realTextRegisteredWhileDetached);

@@ -103,6 +103,7 @@ public:
     virtual ~TNullConsoleFrontend();
 
     void dropWindows();
+    bool ownsContainer(const QString& windowname) const;
     // A deleted window's model can still be in use, as a sysBufferShrinkEvent handler runs inside its
     // buffer's append(), so models are kept until deferred deletes next run, as a real view's widgets are
     // by deleteLater(). Host calls this itself as it goes, while its Lua interpreter is still alive, since
@@ -382,7 +383,6 @@ private:
     void removeLabel(const QString& name);
     void queueRelease();
     QString userWindowOrMain(const QString& windowname) const;
-    bool ownsContainer(const QString& windowname) const;
     std::pair<QString, std::shared_ptr<ScrollBox>> containerFor(const QString& windowname, bool scrollBoxFirst) const;
     bool shownWithin(const QString& userWindow, const ScrollBox* box) const;
     bool setPlainWindowShown(const QString& name, bool shown);
