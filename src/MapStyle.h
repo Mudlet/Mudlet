@@ -183,6 +183,7 @@ struct MapStyle
     // roomSymbolColor is the room's own, invalid unless one was set; drawnRoomColor is roomColor()'s
     QColor symbolColor(const QColor& roomSymbolColor, const QColor& drawnRoomColor) const;
     QColor exitColor(const QColor& profileExitColor) const;
+    QColor roomIdColor(const QColor& drawnRoomColor) const;
     // The player's room, where its marker could not be made
     QColor playerRoomColor() const;
 

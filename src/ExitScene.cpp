@@ -277,8 +277,9 @@ void Builder::doorSwing(const int status, const QVector3D& from, const QVector3D
         return from + along * static_cast<float>(point.x()) + side * static_cast<float>(point.y());
     };
     // Just past a room's edge on a line from its center, and about as wide as a room
-    const qreal opening = qMin(scmDoorSwingWidth, length * 0.8);
-    const qreal jamb = qMin(scmDoorSwingInset, length * 0.55);
+    // Within the exit's half, so that it does not meet the swing of a door drawn from the other end
+    const qreal opening = qMin(scmDoorSwingWidth, length * 0.4);
+    const qreal jamb = qMin(scmDoorSwingInset, length * 0.5);
     const QPointF hinge(jamb, -opening / 2.0);
     // Halfway to the ink, so the status still shows without the plan turning gaudy
     const QColor statusColor = ExitAppearance::doorColor(status);

@@ -805,9 +805,11 @@ void appendFlatOutline(FlatLines& lines, const QList<QPointF>& corners, const fl
         if (line.length() <= 0.0) {
             return;
         }
-        // Overlapping at the corners rather than leaving notches there
-        const QPointF along = (to - from) * (width / 2.0 / line.length());
-        const QPointF side(-along.y(), along.x());
+        const QPointF halfWidth = (to - from) * (width / 2.0 / line.length());
+        const QPointF side(-halfWidth.y(), halfWidth.x());
+        // A solid outline overlaps at the corners rather than leaving notches there; a dashed one does not, as that
+        // would close its gaps once the line is as wide as they are
+        const QPointF along = dashLength > 0.0 ? QPointF() : halfWidth;
         const QPointF a = from - along + side;
         const QPointF b = to + along + side;
         const QPointF c = to + along - side;
@@ -1079,7 +1081,12 @@ void ModernGLWidget::renderRooms()
     // that a view short of room for textures keeps its IDs whole
     QHash<std::pair<QRgb, char16_t>, std::pair<GLuint, QSize>> digitTextures;
     if (showRoomIds) {
-        for (const QColor& idColor : {QColor(Qt::black), QColor(Qt::white)}) {
+        QList<QColor> idColors{QColor(Qt::black), QColor(Qt::white)};
+        // A style's own text color does not depend on the room's, so either one stands for every room
+        if (const QColor styleIdColor = style.roomIdColor(Qt::black); !idColors.contains(styleIdColor)) {
+            idColors.append(styleIdColor);
+        }
+        for (const QColor& idColor : idColors) {
             for (char16_t digit = u'0'; digit <= u'9'; ++digit) {
                 const QString text(QChar{digit});
                 QSize size;
@@ -1094,7 +1101,7 @@ void ModernGLWidget::renderRooms()
     bool namesGivenFont = false;
     if (showRoomNames) {
         if (QFont font; font.fromString(mpMap->mUserData.value(ROOM_UI_NAMEFONT))) {
-            nameFont = style.labelFont(font);
+            nameFont = font;
             namesGivenFont = true;
         }
         nameFont.setItalic(false);
@@ -1264,11 +1271,13 @@ void ModernGLWidget::renderRooms()
 
         const bool bordered = (mpHost->mMapperShowRoomBorders || pR->mBorderColor.isValid() || pR->mBorderThickness > 0) && !pArea->gridMode;
         if (inkOutlines) {
-            // A border's color, where the room has one, in place of the ink, as a block around a room with no fill would hide it
-            const QColor lineColor = bordered ? (pR->mBorderColor.isValid() ? pR->mBorderColor : mpHost->mRoomBorderColor) : ink;
+            // The outline stands in for a border, as a block around a room with no fill would hide it: a room's own border
+            // color and thickness show, but not the profile's border color, which every room has and would drown the ink
+            const QColor lineColor = pR->mBorderColor.isValid() ? pR->mBorderColor : ink;
             const float top = rz + roomHeight / 2.0f;
             const float pixel = mCameraController.worldUnitsPerPixel(QVector3D(rx, ry, top));
-            const float width = qMax(roomSize * scmInkOutline, pixel) * (hovered ? 2.5f : 1.0f);
+            const float thickness = pR->mBorderThickness > 0 ? static_cast<float>(pR->mBorderThickness) * borderUnit : 0.0f;
+            const float width = qMax(qMax(static_cast<float>(roomSize * scmInkOutline), thickness), pixel) * (hovered ? 2.5f : 1.0f);
             QList<QPointF> corners;
             const qreal half = roomSize / 2.0;
             if (round) {
@@ -1349,7 +1358,7 @@ void ModernGLWidget::renderRooms()
         }
 
         if (showRoomIds) {
-            const QColor idColor = ExitAppearance::contrastColor(roomColor);
+            const QColor idColor = style.roomIdColor(roomColor);
             const QString number = QString::number(currentRoomId);
             RoomIdText idText{currentRoomId, look.onViewedLevel(), roomTop, {}, 0, 0, decalTint, &decals};
             bool whole = true;
@@ -1678,6 +1687,8 @@ void ModernGLWidget::applyStyle()
     const bool translucent = backgroundColor().alpha() < 255;
     setAttribute(Qt::WA_OpaquePaintEvent, !translucent);
     setAttribute(Qt::WA_AlwaysStackOnTop, translucent);
+    // Qt asks for the window, not only this widget, to be repainted when stacking on top changes
+    window()->update();
     update();
 }
 
