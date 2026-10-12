@@ -36,3 +36,81 @@ describe("Tests the modern 3D mapper surviving context rebuilds", function()
     assert.is_true(getConfig("show3dMapView"))
   end)
 end)
+
+describe("Tests the 3D map perspective functions with the modern 3D view showing", function()
+  if not setMapPerspective then
+    pending("setMapPerspective and shiftMapPerspective need a Mudlet built with the 3D mapper")
+    return
+  end
+
+  local areaId, rA1
+
+  setup(function()
+    assert.is_true(openMapWidget())
+    areaId = addAreaName("Mapper3DViewSpecArea")
+    rA1 = createRoomID()
+    addRoom(rA1)
+    setRoomArea(rA1, areaId)
+    setRoomCoordinates(rA1, 0, 0, 0)
+  end)
+
+  teardown(function()
+    deleteRoom(rA1)
+    deleteArea("Mapper3DViewSpecArea")
+  end)
+
+  it("both are accepted while the modern 3D view shows, and refused for the classic view", function()
+    -- a GL context leaks in the leak-checking job's GL driver, as Media_spec explains
+    if (os.getenv("ASAN_OPTIONS") or ""):find("detect_leaks=1", 1, true) then
+      pending("a 3D view's GL context leaks in this job's GL driver")
+      return
+    end
+    local wasModern = getConfig("experiment.3dmap.modernmapper")
+    local shownArea = getRoomArea(rA1)
+    local wasGrid = getGridMode(shownArea)
+    finally(function()
+      setGridMode(shownArea, wasGrid)
+      setConfig("show3dMapView", false)
+      setConfig("experiment.3dmap.modernmapper", wasModern == true)
+    end)
+    assert.is_true(centerview(rA1))
+    assert.is_true(setGridMode(shownArea, false))
+    assert.is_true(setConfig("experiment.3dmap.modernmapper", true))
+    assert.is_true(setConfig("show3dMapView", true))
+    assert.is_true(getConfig("show3dMapView"))
+    local ok, err = setMapPerspective(2, 45, 270)
+    -- only a missing GL context, as on Windows CI, excuses the modern view; any other reason it could not start,
+    -- such as shaders that will not compile, is a failure
+    local noContext = ok == nil and err:find("could not create an OpenGL 3.3 context", 1, true) ~= nil
+    if noContext then
+      local shifted, shiftErr = shiftMapPerspective(0, 30, 0)
+      assert.is_nil(shifted)
+      assert.are.equal(err, shiftErr)
+    else
+      assert.is_true(ok, err)
+      assert.is_true(shiftMapPerspective(0, 30, 0))
+
+      -- the 3D view draws a grid-mode area looking straight down, whatever a script asks; only the distance applies
+      assert.is_true(setGridMode(shownArea, true))
+      ok, err = setMapPerspective(2, 45, 270)
+      assert.is_nil(ok)
+      assert.are.equal("the area shown in the 3D view is in grid mode, which always looks straight down, so only the distance was applied", err)
+      ok, err = shiftMapPerspective(0, 30, 0)
+      assert.is_nil(ok)
+      assert.are.equal("the area shown in the 3D view is in grid mode, which always looks straight down", err)
+      assert.is_true(setGridMode(shownArea, false))
+    end
+
+    assert.is_true(setConfig("experiment.3dmap.modernmapper", false))
+    assert.is_true(getConfig("show3dMapView"))
+    ok, err = setMapPerspective(2, 45, 270)
+    assert.is_nil(ok)
+    assert.are.equal("the modern 3D map view is not showing", err)
+    ok, err = shiftMapPerspective(0, 30, 0)
+    assert.is_nil(ok)
+    assert.are.equal("the modern 3D map view is not showing", err)
+    if noContext then
+      pending("no GL context here, so only the refusals were checked")
+    end
+  end)
+end)

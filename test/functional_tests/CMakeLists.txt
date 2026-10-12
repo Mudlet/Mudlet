@@ -242,7 +242,7 @@ set(MAP_GROUP_TEST_SOURCES
 
 # CameraController and GeometryManager are only compiled into the library with the 3D mapper
 if(USE_3DMAPPER)
-    list(APPEND MAP_GROUP_TEST_SOURCES CameraAngleLimitTest.cpp ModernMapperGeometryTest.cpp)
+    list(APPEND MAP_GROUP_TEST_SOURCES CameraAngleLimitTest.cpp CameraViewTest.cpp Map3DViewSyncTest.cpp ModernMapperGeometryTest.cpp)
 endif()
 
 # Packages and modules: installing them, saving them and removing them

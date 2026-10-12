@@ -372,11 +372,16 @@ public:
         return mShowing3D;
     }
     void recreate3DView() override { mCalls << call("recreate3DView"); }
-    void shift3DViewCamera(float verticalAngle, float horizontalAngle, float rotationAngle) override
+    std::pair<bool, QString> shift3DViewCamera(float verticalAngle, float horizontalAngle, float rotationAngle) override
     {
         mCalls << call("shift3DViewCamera", {number(verticalAngle), number(horizontalAngle), number(rotationAngle)});
+        return {true, QString()};
     }
-    void set3DViewCameraPosition(float r, float theta, float phi) override { mCalls << call("set3DViewCameraPosition", {number(r), number(theta), number(phi)}); }
+    std::pair<bool, QString> set3DViewCameraPosition(float r, float theta, float phi) override
+    {
+        mCalls << call("set3DViewCameraPosition", {number(r), number(theta), number(phi)});
+        return {true, QString()};
+    }
 };
 
 // One secondary map view, writing into its manager's list so the order of the two shows

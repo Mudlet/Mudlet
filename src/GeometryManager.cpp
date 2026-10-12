@@ -286,38 +286,29 @@ GeometryManager::generateBillboardGeometry(float centerX, float centerY, float c
     QVector3D topRight = center + cameraRight * halfWidth + cameraUp * halfHeight;
     QVector3D topLeft = center - cameraRight * halfWidth + cameraUp * halfHeight;
 
-    // Calculate normal pointing toward camera
-    // cross(up, right) points toward viewer in right-handed coordinate system
-    QVector3D normal = QVector3D::crossProduct(cameraUp, cameraRight).normalized();
+    // Points toward the camera, as cameraRight is the screen's right
+    QVector3D normal = QVector3D::crossProduct(cameraRight, cameraUp).normalized();
 
-    // Add vertices (positions only, 3 floats per vertex)
-    // Two triangles forming a quad, CCW winding order when viewed from front
-    // Triangle 1: bottomLeft, topLeft, topRight
+    // Two counter-clockwise triangles as seen from the camera
     result.vertices << bottomLeft.x() << bottomLeft.y() << bottomLeft.z();
-    result.vertices << topLeft.x() << topLeft.y() << topLeft.z();
-    result.vertices << topRight.x() << topRight.y() << topRight.z();
-
-    // Triangle 2: bottomLeft, topRight, bottomRight
-    result.vertices << bottomLeft.x() << bottomLeft.y() << bottomLeft.z();
-    result.vertices << topRight.x() << topRight.y() << topRight.z();
     result.vertices << bottomRight.x() << bottomRight.y() << bottomRight.z();
+    result.vertices << topRight.x() << topRight.y() << topRight.z();
 
-    // Add normals (separate array, 3 floats per vertex)
+    result.vertices << bottomLeft.x() << bottomLeft.y() << bottomLeft.z();
+    result.vertices << topRight.x() << topRight.y() << topRight.z();
+    result.vertices << topLeft.x() << topLeft.y() << topLeft.z();
+
     for (int i = 0; i < 6; ++i) {
         result.normals << normal.x() << normal.y() << normal.z();
     }
 
-    // Add texture coordinates (UV)
-    // Mirror horizontally (1-u) so text reads correctly
-    // Triangle 1: bottomLeft, topLeft, topRight
-    result.textureCoords << 1.0f << 0.0f; // bottomLeft (mirrored: was 0,0)
-    result.textureCoords << 1.0f << 1.0f; // topLeft (mirrored: was 0,1)
-    result.textureCoords << 0.0f << 1.0f; // topRight (mirrored: was 1,1)
+    result.textureCoords << 0.0f << 0.0f; // bottomLeft
+    result.textureCoords << 1.0f << 0.0f; // bottomRight
+    result.textureCoords << 1.0f << 1.0f; // topRight
 
-    // Triangle 2: bottomLeft, topRight, bottomRight
-    result.textureCoords << 1.0f << 0.0f; // bottomLeft (mirrored: was 0,0)
-    result.textureCoords << 0.0f << 1.0f; // topRight (mirrored: was 1,1)
-    result.textureCoords << 0.0f << 0.0f; // bottomRight (mirrored: was 1,0)
+    result.textureCoords << 0.0f << 0.0f; // bottomLeft
+    result.textureCoords << 1.0f << 1.0f; // topRight
+    result.textureCoords << 0.0f << 1.0f; // topLeft
 
     // Add white color for all vertices (texture will provide actual color)
     for (int i = 0; i < 6; ++i) {
