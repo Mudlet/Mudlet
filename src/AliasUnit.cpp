@@ -327,7 +327,7 @@ bool AliasUnit::processDataStream(const QString& data)
                              << " as a garbage collection finaliser sent it while the capture tables were being built; it goes to the game unexpanded.";
         return false;
     }
-    Lua->set_lua_string(qsl("command"), data);
+    Lua->setExpandedCommand(data);
     bool state = false;
     //Using copy fixes https://github.com/Mudlet/Mudlet/issues/4297
     const std::vector<TAlias*> copyOfNodeList(mAliasRootNodeList.cbegin(), mAliasRootNodeList.cend());
@@ -336,12 +336,13 @@ bool AliasUnit::processDataStream(const QString& data)
     haystack.truncate(qstrlen(haystack.constData()));
 
     mProcessingDepth++;
-    const auto processingGuard = qScopeGuard([this] {
+    const auto processingGuard = qScopeGuard([this, Lua] {
         mProcessingDepth--;
         Q_ASSERT(mProcessingDepth >= 0);
         if (mProcessingDepth <= 1) {
             mRunawayExpansionStopped = false;
         }
+        Lua->settleCommandAfterAliasPass();
         if (mProcessingDepth == 0) {
             doCleanup();
         }
