@@ -55,6 +55,7 @@ set(mudlet_SRCS
     EditorToggleActiveCommand.cpp
     EditorUndoStack.cpp
     EventLoopPump.cpp
+    ExitAppearance.cpp
     FontManager.cpp
     GifTracker.cpp
     GMCPAuthenticator.cpp
@@ -73,6 +74,7 @@ set(mudlet_SRCS
     MudletReplay.cpp
     MxpTag.cpp
     OAuthClientFlow.cpp
+    RoomAppearance.cpp
     ScriptUnit.cpp
     SecureStringUtils.cpp
     SentryWrapper.cpp
@@ -147,6 +149,7 @@ set(mudlet_SRCS
     TMxpTagProcessor.cpp
     TMxpVarTagHandler.cpp
     TMxpVersionTagHandler.cpp
+    TNullAppFrontend.cpp
     TNullConsoleFrontend.cpp
     TriggerMatchPool.cpp
     TriggerUnit.cpp
@@ -343,6 +346,7 @@ set(mudlet_HDRS
     EditorUndoStack.h
     enums.h
     EventLoopPump.h
+    ExitAppearance.h
     FontManager.h
     GifTracker.h
     GMCPAuthenticator.h
@@ -363,6 +367,7 @@ set(mudlet_HDRS
     MudletReplay.h
     MxpTag.h
     OAuthClientFlow.h
+    RoomAppearance.h
     ScriptUnit.h
     SecureStringUtils.h
     SentryWrapper.h
@@ -445,6 +450,7 @@ set(mudlet_HDRS
     TMxpTagProcessor.h
     TMxpVarTagHandler.h
     TMxpVersionTagHandler.h
+    TNullAppFrontend.h
     TNullConsoleFrontend.h
     TPrintSink.h
     Tree.h
@@ -583,6 +589,8 @@ if(USE_3DMAPPER)
   list(APPEND mudlet_app_HDRS modern_glwidget.h)
   list(APPEND mudlet_SRCS CameraController.cpp)
   list(APPEND mudlet_HDRS CameraController.h)
+  list(APPEND mudlet_SRCS ExitScene.cpp)
+  list(APPEND mudlet_HDRS ExitScene.h)
   list(APPEND mudlet_SRCS GeometryManager.cpp)
   list(APPEND mudlet_HDRS GeometryManager.h)
   list(APPEND mudlet_SRCS LabelTextureCache.cpp)

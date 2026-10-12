@@ -2818,6 +2818,59 @@ describe("Tests mapper functions against a shared fixture", function()
     end)
   end)
 
+  describe("Tests the 3D map perspective functions", function()
+    -- Only a build with the 3D mapper has them. These run with the 2D map showing;
+    -- zz_Mapper3DView_spec.lua tries them with the modern 3D view open
+    if not setMapPerspective then
+      pending("setMapPerspective and shiftMapPerspective need a Mudlet built with the 3D mapper")
+      return
+    end
+
+    it("setMapPerspective returns nil and a message while the 2D map is showing", function()
+      local ok, err = setMapPerspective(2, 45, 270)
+      assert.is_nil(ok)
+      assert.are.equal("the modern 3D map view is not showing", err)
+    end)
+
+    it("shiftMapPerspective returns nil and a message while the 2D map is showing", function()
+      local ok, err = shiftMapPerspective(10, 10, 0)
+      assert.is_nil(ok)
+      assert.are.equal("the modern 3D map view is not showing", err)
+    end)
+
+    it("both refuse numbers that are not finite, in any argument", function()
+      for _, bad in ipairs({0 / 0, math.huge, -math.huge}) do
+        for position = 1, 3 do
+          local args = {2, 45, 270}
+          args[position] = bad
+          local ok, err = setMapPerspective(unpack(args))
+          assert.is_nil(ok)
+          assert.is_truthy(err:find("finite", 1, true), err)
+          args = {0, 0, 0}
+          args[position] = bad
+          ok, err = shiftMapPerspective(unpack(args))
+          assert.is_nil(ok)
+          assert.is_truthy(err:find("finite", 1, true), err)
+        end
+      end
+    end)
+
+    it("both raise an error for an argument that is not a number", function()
+      assert.has_error(function() setMapPerspective("far", 45, 270) end)
+      assert.has_error(function() shiftMapPerspective(1, nil, 0) end)
+    end)
+
+    it("neither moves nor zooms the 2D map", function()
+      assert.is_true(centerview(rA1))
+      local zoom = getMapZoom(areaAlpha)
+      setMapPerspective(0.5, 10, 0)
+      shiftMapPerspective(30, 30, 30)
+      assert.are.equal(zoom, getMapZoom(areaAlpha))
+      assert.are.equal(rA1, getPlayerRoom())
+      assert.is_false(getConfig("show3dMapView"))
+    end)
+  end)
+
   describe("Tests map zoom", function()
     it("setMapZoom is read back by getMapZoom for a given area", function()
       assert.is_true(setMapZoom(15, areaAlpha))
@@ -3312,6 +3365,38 @@ describe("Tests mapper functions against a shared fixture", function()
       pumpEvents(500)
       assert.are.equal(1, mainConsoleCount("Failed to save image to "))
       assert.are.equal(1, mainConsoleCount("Failed to save image to " .. badPath))
+    end)
+
+    -- The first two exports are the control: with nothing changed they must match,
+    -- or the difference after setRoomChar() would prove nothing
+    it("exportAreaImage draws a room's symbol", function()
+      local names = {"mapper_spec_symbol_a.png", "mapper_spec_symbol_b.png", "mapper_spec_symbol_c.png"}
+      local area = addAreaName("MapperSpecExportSymbol")
+      local _, removeAll = expectExports(names)
+      finally(function()
+        removeAll()
+        deleteArea(area)
+      end)
+      local room = createRoomID()
+      addRoom(room)
+      setRoomArea(room, area)
+      setRoomCoordinates(room, 0, 0, 0)
+
+      local function export(name)
+        local written = expectExports({name})
+        assert.is_true(exportAreaImage(area, exportPath(name)))
+        assert.is_true(waitUntil(written, 5000))
+        pumpEvents(100)
+        local file = io.open(exportPath(name), "rb")
+        local contents = file:read("*a")
+        file:close()
+        return contents
+      end
+
+      local first = export(names[1])
+      assert.are.equal(first, export(names[2]))
+      setRoomChar(room, "W")
+      assert.are_not.equal(first, export(names[3]))
     end)
 
     it("exportAreaImage rejects false where a z level or true is wanted", function()
@@ -4347,12 +4432,6 @@ describe("Tests saveMap and loadMap", function()
     -- breadth-first search, so a fix leaves them green.
     pending("routes can come back a step longer than the shortest one - issue #10180")
   end)
-
-  -- setMapPerspective/shiftMapPerspective only exist in a build made with 3D
-  -- mapper support, which the CI and release builds are not
-  pending("setMapPerspective needs a Mudlet built with the 3D mapper")
-
-  pending("shiftMapPerspective needs a Mudlet built with the 3D mapper")
 end)
 
 -- The JSON map format has a writer and a reader of its own, entirely separate

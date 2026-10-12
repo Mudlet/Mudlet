@@ -29,12 +29,14 @@
 #include "TEvent.h"
 #include "TMapLabel.h"
 #include "TMapViewFrontend.h"
+#include "TMapViewsFrontend.h"
 #include "TRoomDB.h"
 #include "XMLimport.h"
 #include "TLuaInterpreter.h"
 #include "mapInfoContributorManager.h"
 
 #include <QBuffer>
+#include <QCoreApplication>
 #include <QDataStream>
 #include <QElapsedTimer>
 #include <QFontMetrics>
@@ -150,7 +152,26 @@ MapFileCheck fileHoldsMapData(QFile& file)
     file.seek(startPosition);
     return check;
 }
+
+class TNullMapViewsFrontend final : public TMapViewsFrontend
+{
+public:
+    std::pair<int, QString> createView(int) override { return {0, qsl("no view manager available")}; }
+    std::pair<bool, QString> closeView(int viewId) override { return {false, qsl("view %1 not found").arg(viewId)}; }
+    int closeAllViews() override { return 0; }
+    TSecondaryMapViewFrontend* view(int) override { return nullptr; }
+    QList<int> getViewIds() const override { return {}; }
+    void updateAllViews() override {}
+    void switchViewsShowingArea(int) override {}
+    void update3DViewAvailability() override {}
+};
 } // anonymous namespace
+
+TMapViewsFrontend* TMap::mapViewsFrontend() const
+{
+    static TNullMapViewsFrontend noViews;
+    return mpViewsFrontend ? mpViewsFrontend : &noViews;
+}
 
 TMap::TMap(Host* pH, const QString& profileName)
 : mDefaultAreaName(tr("Default Area"))
@@ -1890,7 +1911,7 @@ bool TMap::restore(QString location)
             }
 
             // Allow for somethings to be updated - especially on Windows?
-            qApp->processEvents();
+            QCoreApplication::processEvents();
         } else {
             file.setFileName(location);
             if (validatePotentialMapFile(file, ifs)) {
@@ -2832,7 +2853,7 @@ void TMap::downloadMap(const QString& remoteUrl, const QString& localFileName)
 
     const QString infoMsg = tr("[ INFO ]  - Map download initiated, please wait...");
     postMessage(infoMsg);
-    qApp->processEvents();
+    QCoreApplication::processEvents();
     // Attempts to ensure INFO message gets shown before download is initiated!
 
     mpNetworkReply = mpNetworkAccessManager->get(request);
@@ -3125,7 +3146,7 @@ void TMap::reportStringToProgressDialog(const QString text)
         // time a little but as the main usage is when parsing XML room data
         // and that can take MORE THAN A MINUTE the activity is essential to
         // inform the user that something IS happening...
-        qApp->processEvents();
+        QCoreApplication::processEvents();
     }
 }
 
@@ -3251,6 +3272,10 @@ void TMap::slot_mapProgressDialogCancelled()
 
 void TMap::warnIfMapProgressUnwired(const char* context, const bool transferPath)
 {
+    // The console view is what shows the dialog, so without one there is nothing to wire
+    if (!mpHost || !mpHost->hasConsoleView()) {
+        return;
+    }
     static const QMetaMethod transferStart = QMetaMethod::fromSignal(&TMap::signal_mapTransferProgressStart);
     static const QMetaMethod jsonStart = QMetaMethod::fromSignal(&TMap::signal_mapJsonProgressStart);
     static const QMetaMethod progressClose = QMetaMethod::fromSignal(&TMap::signal_mapProgressClose);
@@ -3473,7 +3498,7 @@ std::pair<bool, QString> TMap::writeJsonMapFile(const QString& dest)
                                      tr("Abort"),
                                      static_cast<int>(mProgressDialogRoomsTotal));
     emit signal_mapProgressSetValue(0);
-    qApp->processEvents();
+    QCoreApplication::processEvents();
     QSaveFile file(destination);
     if (!file.open(QFile::OpenMode(QFile::Text | QFile::WriteOnly))) {
         qWarning().noquote().nospace() << "TMap::writeJsonMapFile(...) WARNING - Could not open save file \"" << destination << "\".";
@@ -3698,7 +3723,7 @@ std::pair<bool, QString> TMap::readJsonMapFile(const QString& source, const bool
                                      tr("Abort"),
                                      static_cast<int>(mProgressDialogRoomsTotal));
     emit signal_mapProgressSetValue(0);
-    qApp->processEvents();
+    QCoreApplication::processEvents();
 
     mDefaultAreaName = mapObj[QLatin1String("defaultAreaName")].toString();
     mUnnamedAreaName = mapObj[QLatin1String("anonymousAreaName")].toString();
@@ -3958,7 +3983,7 @@ bool TMap::incrementJsonProgressDialog(const bool isExportNotImport, const bool 
                                                      QString::number(mProgressDialogLabelsCount),
                                                      QString::number(mProgressDialogLabelsTotal)));
     }
-    qApp->processEvents();
+    QCoreApplication::processEvents();
     return mMapProgressCancelRequested;
 }
 
@@ -4005,6 +4030,19 @@ void TMap::announceDefaultAreaVisibilitySet(const bool wasShown)
 void TMap::announceMapInfoContributorsChanged()
 {
     emit signal_mapInfoContributorsChanged();
+}
+
+QString TMap::zoomError(const qreal zoom)
+{
+    if (!qIsFinite(zoom)) {
+        return qsl("zoom %1 is invalid, it must be a finite number").arg(QString::number(zoom));
+    }
+    if (zoom < scmMinXYZoom) {
+        // 16 digits, as the default precision shows 2.999999 as 3 and the
+        // message would read "zoom 3 is invalid, it must be at least 3"
+        return qsl("zoom %1 is invalid, it must be at least %2").arg(QString::number(zoom, 'g', 16), QString::number(scmMinXYZoom, 'g', 16));
+    }
+    return QString();
 }
 
 void TMap::requestMapRepaint()

@@ -27,9 +27,7 @@
  ***************************************************************************/
 
 #include "discord.h"
-#include "FontManager.h"
 #include "HostManager.h"
-#include "MudletMedia.h"
 #include "MudletReplay.h"
 #include "ShortcutsManager.h"
 #include "TAppFrontend.h"
@@ -256,7 +254,7 @@ public:
     bool showTabConnectionIndicators() const override { return mShowTabConnectionIndicators; }
     void showNotification(const QString& title, const QString& text, std::optional<int> msecs) override;
     bool drawUpperLowerLevels() const override { return mDrawUpperLowerLevels; }
-    void setDrawUpperLowerLevels(bool draw) override { mDrawUpperLowerLevels = draw; }
+    void setDrawUpperLowerLevels(bool draw) override;
     // Addon toolbar button management
     int addAddonCommand(const CommandRequest& request, Host* pHost, const QString& package, QString& error) override;
     bool removeAddonCommand(int commandId, Host* pHost) override;
@@ -353,7 +351,6 @@ public:
     // are considered/used/stored
     QTextOption::Flags mEditorTextOptions = QTextOption::Flags();
     int mEditorTreeWidgetIconSize = 0;
-    FontManager mFontManager;
     bool mHasSavedLayout = false;
     bool mIsLoadingLayout = false;
     QStringList mOnlyShownPredefinedProfiles;
@@ -576,7 +573,6 @@ private:
     void goingDown() { mIsGoingDown = true; }
     void endProfileLoad();
     void initEdbee();
-    void installModulesList(Host*, QStringList);
     void loadMaps();
     void loadTranslators(const QString&);
     void migrateDebugConsole(Host*);
@@ -610,8 +606,6 @@ private:
     // Stores the translated names for the Encodings for the static and thus
     // const TBuffer::csmEncodingTable:
     QMap<QByteArray, QString> mEncodingNameMap;
-    // Before mHostManager, so it is destroyed after the profiles that reach it
-    MudletMedia mMedia;
     HostManager mHostManager;
     // After mHostManager, so it is gone before the profiles that reach it are
     MudletReplay mReplay;

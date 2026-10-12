@@ -5546,7 +5546,7 @@ void dlgProfilePreferences::setButtonAndProfileColor(QPushButton* button, QColor
                                      || button == pushButton_Lwhite_2);
 
         if (isAMapEnvColor || button == pushButton_foreground_color_2 || button == pushButton_background_color_2 || button == pushButton_lowerLevelColor || button == pushButton_upperLevelColor
-            || button == pushButton_mapInfoBg || button == pushButton_roomBorderColor || button == pushButton_roomCollisionBorderColor) {
+            || button == pushButton_mapInfoBg || button == pushButton_roomBorderColor || button == pushButton_roomCollisionBorderColor || button == pushButton_mapGridColor) {
             if (pHost->mpMap) {
                 // Update the custom environment (room colors)
                 if (isAMapEnvColor) {
@@ -6752,7 +6752,7 @@ void dlgProfilePreferences::applyAll()
             pHost->mMapperShowRoomBorders = checkbox_mMapperShowRoomBorders->isChecked();
         }
         if (mSnapshot.dirty(checkBox_drawUpperLowerLevels)) {
-            pMudlet->mDrawUpperLowerLevels = checkBox_drawUpperLowerLevels->isChecked();
+            pMudlet->setDrawUpperLowerLevels(checkBox_drawUpperLowerLevels->isChecked());
         }
         if (pHost->mpMap) {
             if (mSnapshot.dirty(checkBox_showDefaultArea)) {
@@ -8812,7 +8812,7 @@ void dlgProfilePreferences::slot_changePlayerRoomStyle(const int index)
     }
     pHost->mpMap->mapper()->mp2dMap->setPlayerRoomStyle(style);
     // And update the displayed map:
-    pHost->mpMap->mapper()->mp2dMap->update();
+    pHost->mpMap->mapper()->repaintMaps();
 }
 
 void dlgProfilePreferences::slot_setPlayerRoomPrimaryColor()
@@ -8832,7 +8832,7 @@ void dlgProfilePreferences::slot_setPlayerRoomPrimaryColor()
         // The current setting IS for the custom color - so use it straight away:
         mpHost->mpMap->mapper()->mp2dMap->setPlayerRoomStyle(3);
         // And update the displayed map:
-        mpHost->mpMap->mapper()->mp2dMap->update();
+        mpHost->mpMap->mapper()->repaintMaps();
     }
 }
 
@@ -8853,7 +8853,7 @@ void dlgProfilePreferences::slot_setPlayerRoomSecondaryColor()
         // The current setting IS for the custom color - so use it straight away:
         mpHost->mpMap->mapper()->mp2dMap->setPlayerRoomStyle(3);
         // And update the displayed map:
-        mpHost->mpMap->mapper()->mp2dMap->update();
+        mpHost->mpMap->mapper()->repaintMaps();
     }
 }
 
@@ -8869,7 +8869,7 @@ void dlgProfilePreferences::slot_setPlayerRoomOuterDiameter(const int value)
         pHost->setPlayerRoomOuterDiameter(static_cast<quint8>(value));
         if (pHost->mpMap->mapper() && pHost->mpMap->mapper()->mp2dMap) {
             // And update the displayed map:
-            pHost->mpMap->mapper()->mp2dMap->update();
+            pHost->mpMap->mapper()->repaintMaps();
         }
     }
 }
@@ -8888,7 +8888,7 @@ void dlgProfilePreferences::slot_setPlayerRoomInnerDiameter(const int value)
             // Redefine the QGradientStops
             pHost->mpMap->mapper()->mp2dMap->setPlayerRoomStyle(qBound(0, comboBox_playerRoomStyle->currentIndex(), 3));
             // And update the displayed map:
-            pHost->mpMap->mapper()->mp2dMap->update();
+            pHost->mpMap->mapper()->repaintMaps();
         }
     }
 }
@@ -9058,17 +9058,13 @@ void dlgProfilePreferences::slot_changeMapperShowRoomBorders(const bool state)
 
     pHost->mMapperShowRoomBorders = state;
     if (pHost->mpMap && pHost->mpMap->mapper() && pHost->mpMap->mapper()->mp2dMap) {
-        pHost->mpMap->mapper()->mp2dMap->update();
+        pHost->mpMap->mapper()->repaintMaps();
     }
 }
 
 void dlgProfilePreferences::slot_changeDrawUpperLowerLevels(const bool state)
 {
-    mudlet::self()->mDrawUpperLowerLevels = state;
-    Host* pHost = mpHost;
-    if (pHost && pHost->mpMap && pHost->mpMap->mapper() && pHost->mpMap->mapper()->mp2dMap) {
-        pHost->mpMap->mapper()->mp2dMap->update();
-    }
+    mudlet::self()->setDrawUpperLowerLevels(state);
 }
 
 void dlgProfilePreferences::slot_changeMapperUseAntiAlias(const bool state)
@@ -9242,6 +9238,7 @@ void dlgProfilePreferences::slot_borderSizeChanged(int size)
         mpHost->mRoomBorderSize = internalSize;
         if (mpHost->mpMap && mpHost->mpMap->mapper() && mpHost->mpMap->mapper()->mp2dMap) {
             mpHost->mpMap->mapper()->mp2dMap->setBorderSize(internalSize);
+            mpHost->mpMap->mapper()->update3DView();
         }
     }
 }
@@ -9250,8 +9247,8 @@ void dlgProfilePreferences::slot_gridSizeChanged(double size)
 {
     if (mpHost) {
         mpHost->mMapGridLineSize = size;
-        if (mpHost->mpMap && mpHost->mpMap->mapper() && mpHost->mpMap->mapper()->mp2dMap) {
-            mpHost->mpMap->mapper()->mp2dMap->update();
+        if (mpHost->mpMap) {
+            mpHost->mpMap->requestMapRepaint();
         }
     }
 }

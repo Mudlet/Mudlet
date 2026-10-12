@@ -37,10 +37,12 @@
 #include "MMCPServer.h"
 #include "TAction.h"
 #include "TAlias.h"
+#include "TAppFrontend.h"
 #include "TConsoleFrontend.h"
 #include "TConsoleModel.h"
 #include "TDebug.h"
 #include "TEvent.h"
+#include "TGameDetails.h"
 #include "TIrcClient.h"
 #include "TKey.h"
 #include "TLabelModel.h"
@@ -538,7 +540,7 @@ void Host::forceClose()
     mForcedClose = true;
     postMessage(tr("[ ALERT ] - This profile will now save and close."));
     // Ensure the above is displayed before proceeding...
-    qApp->processEvents();
+    QCoreApplication::processEvents();
 
     // Because we have set the mForcedClose flag above a requestClose()
     // afterwards WILL succeed
@@ -570,6 +572,203 @@ bool Host::requestClose()
     // This time this will succeed as mEnableClose is set:
     consoleFrontend()->requestClose();
     return true;
+}
+
+void Host::raiseExitEventIfOwed()
+{
+    if (!mExitEventOwed) {
+        return;
+    }
+    mExitEventOwed = false;
+    // As in TMainConsole::closeEvent(): a reset from a handler that pumps events would lua_close() under it
+    mLuaInterpreter.enterNestedEventLoop();
+    TEvent event{};
+    event.mArgumentList.append(qsl("sysExitEvent"));
+    event.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
+    raiseEvent(event);
+    mLuaInterpreter.leaveNestedEventLoop();
+}
+
+bool Host::loadProfileSave(const QString& saveFileName)
+{
+    getLuaInterface()->getVars(true);
+
+    const QString profileName = getName();
+    const auto it = TGameDetails::findGame(profileName);
+    if (it != TGameDetails::scmDefaultGames.end()) {
+        setUrl((*it).hostUrl);
+        setPort((*it).port);
+        mSslTsl = (*it).tlsEnabled;
+    }
+
+    const QString folder = MudletApp::getMudletPath(enums::profileXmlFilesPath, profileName);
+    QDir dir(folder);
+    dir.setSorting(QDir::Time);
+    // Only consider profile saves (*.xml): a crash during a save can leave behind
+    // an empty QSaveFile temporary (e.g. "2026-01-01#12-00-00.xml.AbCdEf") as the
+    // newest file, and loading that instead of the newest real save presents the
+    // profile with all of its triggers/scripts seemingly wiped out
+    QStringList entries = dir.entryList(QStringList{qsl("*.xml")}, QDir::Files, QDir::Time);
+    // pre-install packages when loading this profile for the first time
+    bool preInstallPackages = false;
+    // NB: an explicitly requested saveFileName is honored even when no *.xml
+    // is present - failing to open it then reports a proper load error rather
+    // than silently starting a fresh profile:
+    if (entries.isEmpty() && saveFileName.isEmpty()) {
+        if (!dir.entryList(QDir::Files | QDir::NoDotAndDotDot).isEmpty()) {
+            qWarning().nospace().noquote() << "Host::loadProfileSave(" << profileName << ", ...) WARNING - profile directory \"" << folder
+                                           << "\" contains files but no completed (*.xml) save; treating the profile as new. An interrupted save may have left "
+                                              "a recoverable QSaveFile temporary behind.";
+        }
+        preInstallPackages = true;
+        mLoadedOk = true;
+        mMapInfoContributors.insert(qsl("Short"));
+    } else {
+        QFile file(qsl("%1%2").arg(folder, saveFileName.isEmpty() ? entries.at(0) : saveFileName));
+        if (!file.open(QFile::ReadOnly | QFile::Text)) {
+            mProfileLoadError = QCoreApplication::translate("mudlet", "Could not open profile file: %1").arg(file.errorString());
+            qWarning() << "mudlet: failed to open profile file for reading:" << file.fileName() << file.errorString();
+        }
+        XMLimport importer(this);
+
+        qDebug() << "[LOADING PROFILE]:" << file.fileName();
+        if (auto [success, message] = importer.importPackage(&file); !success) {
+            mProfileLoadError = message;
+            //: %1 is the path and file name (i.e. the location) of the problem fil
+            postMessage(QCoreApplication::translate("mudlet",
+                                                    "[ ERROR ] - Something went wrong loading your Mudlet profile and it could not be loaded.\n"
+                                                    "Try loading an older version in 'Connect - Options - Profile history' or double-check that %1 looks correct.")
+                                .arg(file.fileName()));
+
+            qDebug().nospace().noquote() << "Host::loadProfileSave(" << profileName << ") ERROR - loading \"" << file.fileName() << "\" failed, reason: \"" << message << "\".";
+        } else {
+            mLoadedOk = true;
+        }
+
+        refreshPackageFonts();
+
+        // Is this a new profile created through 'copy profile (settings only)'? install default packages into it
+        if (entries.size() == 1 && entries.first() == QLatin1String("Copied profile (settings only).xml")) {
+            preInstallPackages = true;
+        }
+    }
+
+    if (preInstallPackages) {
+        setupIreDriverBugfix();
+    }
+
+    startSavedLogging();
+    return preInstallPackages;
+}
+
+void Host::startProfileScripts()
+{
+    // enable script compilation (which is off by default)
+    mBlockScriptCompile = false;
+    // This uses the external LuaGlobal.lua file to load all the other external
+    // lua files, including the condenseMapLoad() function needed by the
+    // TMap::audit() method:
+    mLuaInterpreter.loadGlobal();
+    hideMudletsVariables();
+
+    //do modules here
+    QMapIterator<QString, int> it(mModulePriorities);
+    QMap<int, QStringList> moduleOrder;
+    while (it.hasNext()) {
+        it.next();
+        QStringList moduleEntry = moduleOrder[it.value()];
+        moduleEntry << it.key();
+        moduleOrder[it.value()] = moduleEntry;
+    }
+
+    //First load modules with negative number priority
+    QMapIterator<int, QStringList> it2(moduleOrder);
+    while (it2.hasNext() && it2.peekNext().key() < 0) {
+        it2.next();
+        installModulesList(it2.value());
+    }
+
+    mBlockStopWatchCreation = false;
+    // This will build all the scripts in the collection of script items (but
+    // not triggers/aliases/etc) - presumably so that the event handlers
+    // are ready for use.
+    getScriptUnit()->compileAll(true);
+    updateAnsi16ColorsInTable();
+    updateExtendedAnsiColorsInTable();
+
+    //Load rest of modules after scripts
+    while (it2.hasNext()) {
+        it2.next();
+        const QStringList modules = it2.value();
+        installModulesList(modules);
+    }
+}
+
+void Host::installModulesList(const QStringList& modules)
+{
+    for (const auto& module : modules) {
+        QStringList entry = mInstalledModules[module];
+        if (!installPackage(entry[0], enums::PackageModuleType::ModuleFromUI).first) {
+            qWarning() << "Host::installModulesList() WARNING - failed to load module" << module;
+        }
+        //we repeat this step here b/c we use the same installPackage method for initial loading,
+        //where we overwrite the globalSave flag.  This restores saved and loaded packages to their proper flag
+        mInstalledModules[module] = entry;
+    }
+}
+
+void Host::loadMapAndConnect(const bool connect)
+{
+    // Only now are the fonts of the modules and the default packages registered
+    // too, so a family the profile names can be told apart from one that is
+    // merely not loaded yet - and in the GUI the real console exists, so the stand-in
+    // this may pick lands on it and the warning reaches the player.
+    substituteMissingDisplayFont();
+
+    // Now load the default (latest stored) map file:
+    loadMap();
+
+    //NOTE: this is a potential problem if users connect by hand quickly
+    //      and one host has a slower response time as the other one, but
+    //      the worst that can happen is that they have to login manually.
+
+    if (connect) {
+        mTelnet.connectIt(getUrl(), getPort());
+        return;
+    }
+    // no connectIt() on this path, so the telnet parser would otherwise run
+    // on the defaults rather than on the profile's own settings
+    mTelnet.cacheHostSettings();
+
+    const QString infoMsg = QCoreApplication::translate("mudlet", "[  OK  ]  - Profile \"%1\" loaded in offline mode.").arg(getName());
+    postMessage(infoMsg);
+}
+
+void Host::finishProfileLoad()
+{
+    // Now check if we should auto-start the MMCP server, and do so
+    if (getMMCPAutoStartServer()) {
+        if (!mMMCPServer) {
+            initMMCPServer();
+        }
+
+        quint16 port = getMMCPPort();
+
+        const QString infoMsg = QCoreApplication::translate("mudlet", "[ CHAT ]  - Auto-starting MMCP Server on port %1.").arg(port);
+        postMessage(infoMsg);
+
+        mMMCPServer->startServer(port);
+    }
+
+    TEvent event{};
+    event.mArgumentList.append(QLatin1String("sysLoadEvent"));
+    event.mArgumentTypeList.append(ARGUMENT_TYPE_STRING);
+    // A non-zero value is how we send a "true" value - which indicates that
+    // this is for a freshly loaded profile (and NOT one after a resetProfile()):
+    event.mArgumentList.append(QString::number(1));
+    event.mArgumentTypeList.append(ARGUMENT_TYPE_BOOLEAN);
+    raiseEvent(event);
+    mIsProfileLoadingSequence = false;
 }
 
 void Host::closeChildren()
@@ -657,17 +856,23 @@ bool Host::saveMapFile(const QString& location, int saveVersion)
     return saved;
 }
 
-bool Host::loadMapFile(const QString& location)
+bool Host::prepareMapperForMapLoad()
 {
-    if (!mpMap || !mpMap->mapViewFrontend()) {
-        // No map or map currently loaded - so try and created mapper
-        // but don't load a map here by default, we do that below and it may not
-        // be the default map anyhow
-        showHideOrCreateMapper(false);
+    // The console owns the mapper dock, so without one the map loads into the model alone
+    if (mpMap && !hasConsoleView()) {
+        return true;
     }
 
     if (!mpMap || !mpMap->mapViewFrontend()) {
-        // And that failed so give up
+        // Not the default map: the caller loads the one it was asked for
+        showHideOrCreateMapper(false);
+    }
+    return mpMap && mpMap->mapViewFrontend();
+}
+
+bool Host::loadMapFile(const QString& location)
+{
+    if (!prepareMapperForMapLoad()) {
         return false;
     }
 
@@ -713,13 +918,7 @@ bool Host::loadMapFile(const QString& location)
 // console - if possible!
 bool Host::importMapFile(const QString& location, QString* errMsg)
 {
-    if (!mpMap || !mpMap->mapViewFrontend()) {
-        // No map or mapper currently loaded/present - so try and create mapper
-        showHideOrCreateMapper(false);
-    }
-
-    if (!mpMap || !mpMap->mapViewFrontend()) {
-        // And that failed so give up
+    if (!prepareMapperForMapLoad()) {
         if (errMsg) {
             *errMsg = qsl("loadMap: unable to initialise mapper {in Host::importMapFile(...)} - something is wrong!");
         }
@@ -1402,7 +1601,7 @@ void Host::waitForProfileSave()
     // busy.
     constexpr auto notificationTimeout = 30s;
     QElapsedTimer waitedForNotification;
-    // A QEventLoop's processEvents() rather than qApp's only for its "did anything
+    // A QEventLoop's processEvents() rather than QCoreApplication's only for its "did anything
     // happen" answer - nothing is exec()ed here. No user input either: this runs on the
     // way out of a profile, and all it is here to deliver is that notification.
     QEventLoop pump;
@@ -2281,6 +2480,11 @@ bool Host::hasConsoleView() const
     return !mpConsole.isNull();
 }
 
+bool Host::mapOpen() const
+{
+    return mpMap && (mpMap->mapViewFrontend() || !hasConsoleView());
+}
+
 void Host::setF3SearchEnabled(const bool enabled)
 {
     mF3SearchEnabled = enabled;
@@ -2321,9 +2525,14 @@ void Host::resetMainConsoleFormat()
     mpMainConsoleModel->resetFormat();
 }
 
+static bool namesMainConsole(const QString& name)
+{
+    return name.isEmpty() || name == QLatin1String("main");
+}
+
 TConsoleModel* Host::consoleModelNamed(const QString& name) const
 {
-    if (name.isEmpty() || name == QLatin1String("main")) {
+    if (namesMainConsole(name)) {
         return mpMainConsoleModel.get();
     }
     return mWindowRegistry.subConsoleModel(name);
@@ -5086,12 +5295,7 @@ std::pair<int, QString> Host::createMapView(int areaId)
         return {0, qsl("no map present or loaded")};
     }
 
-    auto* viewManager = mpMap->mapViewsFrontend();
-    if (!viewManager) {
-        return {0, qsl("no view manager available")};
-    }
-
-    return viewManager->createView(areaId);
+    return mpMap->mapViewsFrontend()->createView(areaId);
 }
 
 std::pair<bool, QString> Host::closeMapView(int viewId)
@@ -5100,12 +5304,7 @@ std::pair<bool, QString> Host::closeMapView(int viewId)
         return {false, qsl("no map present or loaded")};
     }
 
-    auto* viewManager = mpMap->mapViewsFrontend();
-    if (!viewManager) {
-        return {false, qsl("no view manager available")};
-    }
-
-    return viewManager->closeView(viewId);
+    return mpMap->mapViewsFrontend()->closeView(viewId);
 }
 
 std::pair<int, QString> Host::closeAllMapViews()
@@ -5114,12 +5313,7 @@ std::pair<int, QString> Host::closeAllMapViews()
         return {0, qsl("no map present or loaded")};
     }
 
-    auto* viewManager = mpMap->mapViewsFrontend();
-    if (!viewManager) {
-        return {0, qsl("no view manager available")};
-    }
-
-    return {viewManager->closeAllViews(), QString()};
+    return {mpMap->mapViewsFrontend()->closeAllViews(), QString()};
 }
 
 QList<int> Host::getMapViewIds() const
@@ -5129,13 +5323,7 @@ QList<int> Host::getMapViewIds() const
         return {};
     }
 
-    auto* viewManager = mpMap->mapViewsFrontend();
-    if (!viewManager) {
-        qWarning() << "Host::getMapViewIds() - no view manager available";
-        return {};
-    }
-
-    return viewManager->getViewIds();
+    return mpMap->mapViewsFrontend()->getViewIds();
 }
 
 void Host::setDebugShowAllProblemCodepoints(const bool state)
@@ -5148,8 +5336,9 @@ void Host::setDebugShowAllProblemCodepoints(const bool state)
 
 void Host::raiseSettingChangedEvent(const QString& settingName, const bool value)
 {
-    // The profile's own file is read before the console exists, so a value arriving from it is not a change to report:
-    if (!hasConsoleView()) {
+    // The main window reads the profile's own file before it makes the console, so a value arriving from it is not
+    // a change to report. With no main window there is never a console, and every change is reported.
+    if (TAppFrontend::hasView() && !hasConsoleView()) {
         return;
     }
 
@@ -5805,11 +5994,20 @@ std::pair<bool, QString> Host::setMovie(const QString& name, const QString& movi
 
 QSize Host::calcFontSize(const QString& windowName)
 {
+    if (namesMainConsoleWithNoMainWindow(windowName)) {
+        const QFontMetrics fontMetrics(displayFontWithNoView());
+        return QSize(fontMetrics.horizontalAdvance(QChar('W')), fontMetrics.height());
+    }
+
     return consoleFrontend()->consoleFontSize(windowName).value_or(QSize(-1, -1));
 }
 
 int Host::calcColumnWidth(const QString& windowName)
 {
+    if (namesMainConsoleWithNoMainWindow(windowName)) {
+        return QFontMetrics(displayFontWithNoView()).averageCharWidth();
+    }
+
     if (!consoleFrontend()) {
         return -1;
     }
@@ -6341,6 +6539,9 @@ std::optional<bool> Host::windowScrollBarVisible(const QString& name) const
 
 std::optional<QFont> Host::windowFont(const QString& name) const
 {
+    if (namesMainConsoleWithNoMainWindow(name)) {
+        return {displayFontWithNoView()};
+    }
     if (!hasConsoleView()) {
         return {};
     }
@@ -6356,6 +6557,9 @@ std::optional<QFont> Host::windowFont(const QString& name) const
 
 std::optional<int> Host::windowFontSize(const QString& name) const
 {
+    if (namesMainConsoleWithNoMainWindow(name)) {
+        return {displayFontWithNoView().pointSize()};
+    }
     if (!hasConsoleView()) {
         return {};
     }
@@ -6694,6 +6898,22 @@ QFont Host::getDisplayFont()
     return mTempDisplayFont.value();
 }
 
+// Not for a console the main window has closed: the profile's font went with it, and
+// what is left is the default the profile started from
+bool Host::namesMainConsoleWithNoMainWindow(const QString& name) const
+{
+    return !TAppFrontend::hasView() && !hasConsoleView() && namesMainConsole(name);
+}
+
+QFont Host::displayFontWithNoView() const
+{
+    FontManager::ensureFontsAdded();
+    if (mTempDisplayFont.has_value()) {
+        return mTempDisplayFont.value();
+    }
+    return TFontAttributes(!mNoAntiAlias).makeFont();
+}
+
 QFont Host::getDisplayFontForSaving()
 {
     QFont font = getDisplayFont();
@@ -6753,9 +6973,13 @@ std::pair<bool, QString> Host::setExperimentEnabled(const QString& experimentKey
     // Refresh maps if any experiments changed the 3D map
     if (mpMap) {
         consoleFrontend()->requestMapRepaint();
-        // A no-op unless the 3D view exists and is the other renderer
-        if (experimentKey == qsl("experiment.3dmap.modernmapper") && mpMap->mapViewFrontend()) {
-            mpMap->mapViewFrontend()->recreate3DView();
+        if (experimentKey == qsl("experiment.3dmap.modernmapper")) {
+            // A no-op unless the 3D view exists and is the other renderer
+            if (mpMap->mapViewFrontend()) {
+                mpMap->mapViewFrontend()->recreate3DView();
+            }
+            // Map windows can only show 3D with the modern renderer
+            mpMap->mapViewsFrontend()->update3DViewAvailability();
         }
     }
 #endif

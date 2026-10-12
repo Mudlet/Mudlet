@@ -858,9 +858,7 @@ void GMCPAuthenticator::announceBrowserHandoff(const QString& provider)
 
     // The browser handoff happens with no focused control to announce it, so push an explicit
     // announcement to assistive technology (VoiceOver/NVDA/Orca) instead of relying on the console.
-    if (auto* app = TAppFrontend::instance()) {
-        app->announce(message, QString(), true);
-    }
+    TAppFrontend::instance()->announce(message, QString(), true);
 }
 
 void GMCPAuthenticator::startClientDrivenOAuth()
