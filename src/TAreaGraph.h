@@ -45,6 +45,8 @@ class TAreaGraph
 {
 public:
     static inline const QString cLayoutUserDataKey = QStringLiteral("system.areaGraphLayout");
+    // Positions further out than this are refused, which keeps the layout's grid cell arithmetic in range.
+    static constexpr double cMaxCoordinate = 1.0e7;
 
     struct Node
     {
@@ -79,13 +81,10 @@ public:
     const QMap<int, Node>& nodes() const { return mNodes; }
     // Sorted by (fromArea, toArea).
     const QList<Link>& links() const { return mLinks; }
-    // Pins the area there. False if there is no such area or the point is not finite.
+    // Pins the area there. False if there is no such area or a coordinate is not finite or beyond cMaxCoordinate.
     bool setPosition(int areaId, const QPointF& position);
     // Discards the stored positions (but the pinned ones, if asked) and lays everything out again.
     void resetLayout(bool keepPinned);
-    // For tests: how often the graph and the layout were recomputed.
-    quint32 rebuildCount() const { return mRebuildCount; }
-    quint32 layoutRunCount() const { return mLayoutRunCount; }
 
 private:
     struct StoredPosition
@@ -99,6 +98,10 @@ private:
     void writeStoredLayout();
     void layoutUnplacedAreas();
     void simulate(const QList<int>& component, const QHash<int, bool>& fixed, const QHash<int, QList<int>>& adjacency);
+    // Pushes apart overlapping areas, moving only those not in fixed.
+    void removeOverlaps(const QList<int>& ids, const QHash<int, bool>& fixed);
+    // Shelf-packs components laid out on their own into rows below what is already placed.
+    void packComponents(QList<QList<int>> freshComponents);
     double radiusOf(int areaId) const;
 
     TMap* mpMap = nullptr;
@@ -111,8 +114,6 @@ private:
     quint64 mSeenRevision = 0;
     unsigned int mSeenGeneration = 0;
     bool mBuilt = false;
-    quint32 mRebuildCount = 0;
-    quint32 mLayoutRunCount = 0;
 };
 
 #endif // MUDLET_TAREAGRAPH_H

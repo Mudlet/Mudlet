@@ -3622,8 +3622,8 @@ int TLuaInterpreter::setAreaGraphPosition(lua_State* L)
     if (!host.mpMap || !host.mpMap->mpRoomDB) {
         return warnArgumentValue(L, __func__, "no map present or loaded");
     }
-    if (!std::isfinite(x) || !std::isfinite(y)) {
-        return warnArgumentValue(L, __func__, "x and y must be finite numbers");
+    if (!(std::abs(x) <= TAreaGraph::cMaxCoordinate) || !(std::abs(y) <= TAreaGraph::cMaxCoordinate)) {
+        return warnArgumentValue(L, __func__, qsl("x and y must be numbers between -%1 and %1").arg(TAreaGraph::cMaxCoordinate, 0, 'f', 0));
     }
     if (!host.mpMap->areaGraph()->setPosition(areaId, QPointF(x, y))) {
         return warnArgumentValue(L, __func__, csmInvalidAreaID.arg(areaId));
