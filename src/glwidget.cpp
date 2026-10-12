@@ -225,6 +225,38 @@ void GLWidget::slot_setCameraPositionZ(int angle)
     update();
 }
 
+// QOpenGLWidget retries a context it could not create on every show, resize and paint, and each retry
+// leaks the context that failed (QOpenGLWidgetPrivate::initialize() overwrites it), so ask only once
+bool GLWidget::contextCreationFailed() const
+{
+    return context() && !isValid();
+}
+
+bool GLWidget::event(QEvent* event)
+{
+    if (contextCreationFailed() && (event->type() == QEvent::Show || event->type() == QEvent::WindowChangeInternal)) {
+        return QWidget::event(event);
+    }
+    return QOpenGLWidget::event(event);
+}
+
+void GLWidget::resizeEvent(QResizeEvent* event)
+{
+    if (contextCreationFailed()) {
+        QWidget::resizeEvent(event);
+        return;
+    }
+    QOpenGLWidget::resizeEvent(event);
+}
+
+void GLWidget::paintEvent(QPaintEvent* event)
+{
+    if (contextCreationFailed()) {
+        return;
+    }
+    QOpenGLWidget::paintEvent(event);
+}
+
 void GLWidget::initializeGL()
 {
     const QColor color(mpHost->mBgColor_2);
