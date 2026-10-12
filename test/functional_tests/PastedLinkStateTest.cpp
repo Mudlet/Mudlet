@@ -98,7 +98,7 @@ private slots:
 
         mpHost = HostManager::self()->getHost(mHostname);
         QVERIFY(mpHost);
-        QVERIFY(mpHost->mpConsole);
+        QVERIFY(mpHost->mainConsoleView());
     }
 
     void cleanupTestCase()
@@ -145,7 +145,7 @@ private slots:
                                                                      .arg(targetName, mLinkText));
         qApp->processEvents();
 
-        auto* pTarget = mpHost->mpConsole->subConsoleWidget(targetName);
+        auto* pTarget = mpHost->mainConsoleView()->subConsoleWidget(targetName);
         QVERIFY2(pTarget, "the target miniconsole was not created");
         const int ownId = pTarget->getLinkStore().getCurrentLinkID();
         QVERIFY2(ownId > 0, "the target's own echoLink() registered nothing, so there is no id to collide with");
@@ -180,7 +180,7 @@ private slots:
         qApp->processEvents();
 
         // split the link's own run with characters carrying no link index
-        auto& mainBuffer = mpHost->mpConsole->buffer;
+        auto& mainBuffer = mpHost->mainConsoleView()->buffer;
         int splitLine = -1;
         int splitColumn = -1;
         for (int y = 0, lines = static_cast<int>(mainBuffer.buffer.size()); y < lines && splitLine < 0; ++y) {
@@ -200,11 +200,11 @@ private slots:
         QCOMPARE(mainBuffer.buffer.at(splitLine).at(splitColumn).linkIndex(), 0);
         QVERIFY2(mainBuffer.buffer.at(splitLine).at(splitColumn + 2).linkIndex() == sourceId, "the link does not resume after the inserted text, so this test covers nothing");
 
-        mpHost->mpConsole->P_begin = QPoint(splitColumn - 5, splitLine);
-        mpHost->mpConsole->P_end = QPoint(splitColumn + 8, splitLine);
+        mpHost->mainConsoleView()->P_begin = QPoint(splitColumn - 5, splitLine);
+        mpHost->mainConsoleView()->P_end = QPoint(splitColumn + 8, splitLine);
         QVERIFY(mpHost->copyToClipboard(qsl("main")));
 
-        auto* pTarget = mpHost->mpConsole->subConsoleWidget(targetName);
+        auto* pTarget = mpHost->mainConsoleView()->subConsoleWidget(targetName);
         QVERIFY2(pTarget, "the target miniconsole was not created");
         QVERIFY(pTarget->moveCursor(0, 0));
         QVERIFY(mpHost->pasteClipboard(targetName));
@@ -260,7 +260,7 @@ private slots:
     // life of the profile and the links' Lua references would never be freed.
     void test_trimStillReapsAnUnreferencedLinkFromTheStore()
     {
-        auto* pConsole = mpHost->mpConsole.data();
+        auto* pConsole = mpHost->mainConsoleView();
         pConsole->buffer.setBufferSize(100, 20);
 
         mpHost->getLuaInterpreter()->compileAndExecuteScript(qsl("echoLink('%1', [[send('look')]], 'hint')\necho('\\n')").arg(mLinkText));
@@ -289,13 +289,13 @@ private slots:
                                                                      .arg(targetName));
         qApp->processEvents();
 
-        auto* pTarget = mpHost->mpConsole->subConsoleWidget(targetName);
+        auto* pTarget = mpHost->mainConsoleView()->subConsoleWidget(targetName);
         QVERIFY2(pTarget, "the target miniconsole was not created");
         QVERIFY2(selectLinkRunInMainConsole(), "echoLink() put no link-bearing character in the main console");
 
-        const QPoint selectionStart = mpHost->mpConsole->P_begin;
-        const int sourceId = mpHost->mpConsole->buffer.buffer.at(selectionStart.y()).at(selectionStart.x()).linkIndex();
-        const int sourceReference = mpHost->mpConsole->buffer.mLinkStore.getReference(sourceId).value(0);
+        const QPoint selectionStart = mpHost->mainConsoleView()->P_begin;
+        const int sourceId = mpHost->mainConsoleView()->buffer.buffer.at(selectionStart.y()).at(selectionStart.x()).linkIndex();
+        const int sourceReference = mpHost->mainConsoleView()->buffer.mLinkStore.getReference(sourceId).value(0);
         QVERIFY2(sourceReference > 0, "echoLink() given a function registered no Lua reference, so this test covers nothing");
 
         QVERIFY(mpHost->copyToClipboard(qsl("main")));
@@ -398,7 +398,7 @@ private slots:
     }
 
 private:
-    TConsole* miniconsole() const { return mpHost->mpConsole->subConsoleWidget(mMiniName); }
+    TConsole* miniconsole() const { return mpHost->mainConsoleView()->subConsoleWidget(mMiniName); }
 
     // Highest link index still present in a console's buffer, 0 for none
     static int copiedLinkId(const TBuffer& destination)
@@ -429,7 +429,7 @@ private:
     // whichever line it considers current
     bool selectLinkRunInMainConsole() const
     {
-        const auto& mainBuffer = mpHost->mpConsole->buffer;
+        const auto& mainBuffer = mpHost->mainConsoleView()->buffer;
         // backwards: every case before this one left its own link-bearing line
         // higher up, and copying that one tests whatever it happened to hold
         for (int y = static_cast<int>(mainBuffer.buffer.size()) - 1; y >= 0; --y) {
@@ -443,8 +443,8 @@ private:
                 }
             }
             if (from >= 0) {
-                mpHost->mpConsole->P_begin = QPoint(from, y);
-                mpHost->mpConsole->P_end = QPoint(to, y);
+                mpHost->mainConsoleView()->P_begin = QPoint(from, y);
+                mpHost->mainConsoleView()->P_end = QPoint(to, y);
                 return true;
             }
         }
