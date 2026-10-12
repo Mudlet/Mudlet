@@ -45,8 +45,9 @@ class TAreaGraph
 {
 public:
     static inline const QString cLayoutUserDataKey = QStringLiteral("system.areaGraphLayout");
-    // Positions further out than this are refused, which keeps the layout's grid cell arithmetic in range.
-    static constexpr double cMaxCoordinate = 1.0e7;
+    // Positions further out than this are refused, which keeps the layout's grid cell arithmetic in range;
+    // that is far beyond what a layout of int room coordinates produces.
+    static constexpr double cMaxCoordinate = 1.0e15;
 
     struct Node
     {

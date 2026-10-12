@@ -532,7 +532,12 @@ private:
             }
             ++mpMap->mMapOperationDepth;
         }
-        ~MapOperationScope() { --mpMap->mMapOperationDepth; }
+        // A load replaces rooms and user data without going through setUnsaved().
+        ~MapOperationScope()
+        {
+            --mpMap->mMapOperationDepth;
+            ++mpMap->mMapRevision;
+        }
         MapOperationScope(const MapOperationScope&) = delete;
         MapOperationScope& operator=(const MapOperationScope&) = delete;
 
