@@ -62,6 +62,7 @@ public:
     // that area is deleted, so paintEvent() isn't left drawing one that no
     // longer exists.
     void switchViewsShowingArea(int areaId) override;
+    void update3DViewAvailability() override;
 
 signals:
     void viewCreated(int viewId);
