@@ -82,6 +82,7 @@ void TForkedProcess::slot_receivedData()
             return;
         }
         // Call lua function by stored Reference
+        const TLuaInterpreter::ScriptCallerScope callerScope(*mpInterpreter, false);
         lua_rawgeti(L, LUA_REGISTRYINDEX, callBackFunctionRef);
         lua_pushstring(L, line.data());
         if (lua_pcall(L, 1, 0, 0)) {
