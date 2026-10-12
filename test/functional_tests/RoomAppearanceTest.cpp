@@ -193,18 +193,33 @@ private slots:
         QCOMPARE(RoomAppearance::terminalLineGlyph(degrees), expected);
     }
 
+    void test_standOutColorKeepsItsHueButLeavesTheBackground_data()
+    {
+        QTest::addColumn<QColor>("color");
+        QTest::addColumn<QColor>("background");
+        QTest::newRow("navy on paper") << QColor(20, 40, 160) << QColor(245, 243, 236);
+        QTest::newRow("pale yellow on paper") << QColor(250, 240, 150) << QColor(245, 243, 236);
+        QTest::newRow("yellow on paper") << QColor(255, 255, 0) << QColor(245, 243, 236);
+        QTest::newRow("cyan on paper") << QColor(0, 255, 255) << QColor(245, 243, 236);
+        QTest::newRow("navy on black") << QColor(20, 40, 160) << QColor(Qt::black);
+        QTest::newRow("white on white") << QColor(Qt::white) << QColor(Qt::white);
+    }
+
     void test_standOutColorKeepsItsHueButLeavesTheBackground()
     {
-        const QColor paper(245, 243, 236);
-        const QColor navy(20, 40, 160);
-        QCOMPARE(ExitAppearance::standOutColor(navy, paper), navy);
-        const QColor paleYellow(250, 240, 150);
-        const QColor onPaper = ExitAppearance::standOutColor(paleYellow, paper);
-        QVERIFY2(paper.lightness() - onPaper.lightness() >= 75, qPrintable(qsl("lightness %1 on %2").arg(onPaper.lightness()).arg(paper.lightness())));
-        QCOMPARE(onPaper.hslHue(), paleYellow.hslHue());
-        const QColor onBlack = ExitAppearance::standOutColor(navy, QColor(Qt::black));
-        QVERIFY(onBlack.lightness() >= 75);
-        QCOMPARE(onBlack.hslHue(), navy.hslHue());
+        QFETCH(QColor, color);
+        QFETCH(QColor, background);
+        const QColor result = ExitAppearance::standOutColor(color, background);
+        const int gap = qAbs(ExitAppearance::brightness(result) - ExitAppearance::brightness(background));
+        QVERIFY2(gap >= 75, qPrintable(qsl("%1 is %2 from the background's brightness").arg(result.name()).arg(gap)));
+        QCOMPARE(result.hslHue(), color.hslHue());
+        if (qAbs(ExitAppearance::brightness(color) - ExitAppearance::brightness(background)) >= 75) {
+            QCOMPARE(result, color);
+        } else {
+            // No further from the color than it has to be
+            const QColor nearer = QColor::fromHsl(color.hslHue(), color.hslSaturation(), result.lightness() + (ExitAppearance::brightness(background) > 127 ? 2 : -2));
+            QVERIFY(qAbs(ExitAppearance::brightness(nearer) - ExitAppearance::brightness(background)) < 75);
+        }
     }
 
     void test_symbolTooLongToFitDrawsNothing()

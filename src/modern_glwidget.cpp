@@ -753,15 +753,20 @@ constexpr float scmLevelOutline = 0.06f;
 constexpr float scmHoverOutline = 0.14f;
 // An ink outline's dashes' length off the viewed level, as a part of a room's width
 constexpr qreal scmInkDash = 0.12;
-// A station's ring's width and an interchange's, as a part of its width, and how much wider an interchange is than a station
+// A station's ring's width and an interchange's, as a part of its width
 constexpr float scmStationRing = 0.2f;
-constexpr float scmInterchangeRing = 0.26f;
-constexpr float scmInterchangeScale = 1.3f;
+constexpr float scmInterchangeRing = 0.3f;
 // The player's flag's side, in rooms' spacing, and its pole's middle, as a part of the flag's texture across
 constexpr float scmFlagSize = 0.9f;
 constexpr float scmFlagPole = 0.08f;
 // A label halo's reach past the text, as a part of the text's height
 constexpr qreal scmLabelHalo = 0.12;
+
+// A text texture's halo's width in texels, on each side
+int textHaloWidth(const QFontMetricsF& metrics, const bool haloed)
+{
+    return haloed ? qMax(1, qCeil(metrics.height() * scmLabelHalo)) : 0;
+}
 // How strongly a level's floor plate shows
 constexpr float scmFloorPlateOpacity = 0.07f;
 
@@ -1063,7 +1068,7 @@ GLuint ModernGLWidget::exitMarkerTexture(const TRoom& room, const QColor& roomCo
 
 GLuint ModernGLWidget::textTexture(const QString& key, const QString& text, const QFont& font, const QFontMetricsF& metrics, const QColor& color, QSize& size, const QColor& halo)
 {
-    const int haloWidth = halo.isValid() ? qMax(1, qCeil(metrics.height() * scmLabelHalo)) : 0;
+    const int haloWidth = textHaloWidth(metrics, halo.isValid());
     size = QSize(qMax(1, qCeil(metrics.horizontalAdvance(text))) + 2 * haloWidth, qMax(1, qCeil(metrics.height())) + 2 * haloWidth);
     if (const GLuint texture = cachedRoomTexture(key)) {
         return texture;
@@ -1546,7 +1551,6 @@ void ModernGLWidget::renderRooms()
 
         const bool bordered = (mpHost->mMapperShowRoomBorders || pR->mBorderColor.isValid() || pR->mBorderThickness > 0) && !pArea->gridMode;
         const bool interchange = stationRings && style.interchangeExits > 0 && RoomAppearance::exitCount(*pR) >= style.interchangeExits;
-        const float stationScale = interchange ? scmInterchangeScale : 1.0f;
         const float top = rz + roomHeight / 2.0f;
         // In steps of a quarter of a doubling, so that turning or panning the view seldom changes an outline and
         // its triangles can be kept
@@ -1568,11 +1572,10 @@ void ModernGLWidget::renderRooms()
             roomOutlines[pR->z()].append({rx, ry, top, half, width, dashed ? static_cast<float>(roomSize * scmInkDash) : 0.0f, GeometryManager::fadedColor(lineColor, fade, fadeTarget)});
         } else if (stationRings) {
             const QColor ringColor = pR->mBorderColor.isValid() ? pR->mBorderColor : (interchange ? ink : style.ringColor(look.color));
-            const float stationSize = roomSize * stationScale;
-            const float ring = qMax(stationSize * (interchange ? scmInterchangeRing : scmStationRing) * (hovered ? 1.6f : 1.0f), outlinePixel());
+            const float ring = qMax(roomSize * (interchange ? scmInterchangeRing : scmStationRing) * (hovered ? 1.6f : 1.0f), outlinePixel());
             const float width = qMax(ring, thickness);
             // Just inside the station's edge, unless a thick border reaches past it
-            const float half = stationSize / 2.0f - ring / 2.0f + (width - ring) / 2.0f;
+            const float half = roomSize / 2.0f - ring / 2.0f + (width - ring) / 2.0f;
             roomOutlines[pR->z()].append({rx, ry, top, half, width, 0.0f, GeometryManager::fadedColor(ringColor, fade, fadeTarget)});
         } else if (hovered && !terminal) {
             // Taller than a border, so that it shows over one
@@ -1591,7 +1594,7 @@ void ModernGLWidget::renderRooms()
 
         QMatrix4x4 transform;
         transform.translate(rx, ry, rz);
-        transform.scale(stationScale / scale, stationScale / scale, 1.0f / scale / zFlattening);
+        transform.scale(1.0f / scale, 1.0f / scale, 1.0f / scale / zFlattening);
         if (!unfilled) {
             instances.append(CubeInstanceData(transform, roomTint.x(), roomTint.y(), roomTint.z(), roomTint.w()));
         }
@@ -1913,16 +1916,19 @@ void ModernGLWidget::renderRooms()
         std::stable_sort(roomNames.begin(), roomNames.end(), [&viewModel](const RoomName& a, const RoomName& b) {
             return viewModel.map(a.center).z() > viewModel.map(b.center).z();
         });
+        const QColor nameHalo = style.labelHalos ? background : QColor();
+        // A halo covers what it overlaps as the text does
+        const int nameHaloWidth = textHaloWidth(nameMetrics, nameHalo.isValid());
         const qreal spaceWidth = nameMetrics.horizontalAdvance(QLatin1Char(' '));
         QList<QRectF> nameRects;
         nameRects.reserve(roomNames.size());
         for (const RoomName& roomName : std::as_const(roomNames)) {
-            const QSizeF size(qMax(1, qCeil(style.roomNameSpan(nameMetrics.horizontalAdvance(roomName.name), spaceWidth))), qMax(1, qCeil(nameMetrics.height())));
+            const QSizeF size(qMax(1, qCeil(style.roomNameSpan(nameMetrics.horizontalAdvance(roomName.name), spaceWidth))) + 2 * nameHaloWidth,
+                              qMax(1, qCeil(nameMetrics.height())) + 2 * nameHaloWidth);
             const QVector3D across = groundRight * static_cast<float>(size.width() * nameTexel);
             const QVector3D upward = groundUp * static_cast<float>(size.height() * nameTexel);
             nameRects.append(screenRect(roomName.center - across / 2.0f - upward / 2.0f, across, upward));
         }
-        const QColor nameHalo = style.labelHalos ? background : QColor();
         for (const qsizetype index : GeometryManager::declutteredRects(nameRects, scmMinimumTextPixels)) {
             const RoomName& roomName = roomNames.at(index);
             QSize size;
@@ -4101,6 +4107,13 @@ void ModernGLWidget::renderLabels(const bool onTop, const int lowestLevel, const
     // Turned around while the top of the screen faces south, so that it never reads upside down
     const bool turned = GeometryManager::groundAxes(screenRight, screenUp).second.y() < 0.0f;
     const QColor halo = mapStyle().labelHalos ? backgroundColor() : QColor();
+    if (!halo.isValid()) {
+        mHaloedLabels.clear();
+    } else {
+        mHaloedLabels.removeIf([this](const auto& entry) {
+            return entry.key().first != mAID;
+        });
+    }
 
     // Those on top are queued by renderRooms(), which has turned depth writes off by then
     if (onTop) {
@@ -4129,7 +4142,7 @@ void ModernGLWidget::renderLabels(const bool onTop, const int lowestLevel, const
         // Halo and all, as wide as the label is with it
         QPointF margin;
         GLuint textureId = 0;
-        if (halo.isValid()) {
+        if (halo.isValid() && !pixmap.isNull()) {
             const HaloedLabel& haloed = haloedLabel(it.key(), pixmap, halo);
             margin = haloed.margin;
             textureId = mLabelTextureCache.getTexture(mAID, it.key(), haloed.pixmap);
