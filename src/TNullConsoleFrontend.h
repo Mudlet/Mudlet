@@ -129,8 +129,8 @@ public:
     std::pair<bool, QString> setLabelMovie(const QString& name, const QString& moviePath) override;
     bool setLabelBackgroundColor(const QString& name, const QColor& color) override;
     std::optional<QColor> getLabelBackgroundColor(const QString& name) const override;
-    bool setLabelBackgroundImage(const QString&, const QString&) override { return false; }
-    bool resetLabelBackgroundImage(const QString&) override { return false; }
+    bool setLabelBackgroundImage(const QString& name, const QString& path) override;
+    bool resetLabelBackgroundImage(const QString& name) override;
     bool setLabelSvgTint(const QString& name, const QColor& color) override;
     bool resetLabelSvgTint(const QString& name) override { return setLabelSvgTint(name, QColor()); }
     bool setLabelSvgRotation(const QString& name, double angle) override;
@@ -207,10 +207,11 @@ public:
     std::optional<QSize> consoleFontSize(const QString& name) const override;
     std::optional<int> consoleColumnWidth(const QString& name) const override;
     void setConsoleBgColor(int, int, int, int) override {}
-    bool setConsoleBackgroundImage(const QString&, int) override { return false; }
-    bool resetConsoleBackgroundImage() override { return false; }
-    bool setWindowBackgroundImage(const QString&, int) override { return false; }
-    bool resetWindowBackgroundImage() override { return false; }
+    // TConsole::setConsoleBackgroundImage() builds a stylesheet for the image without loading it
+    bool setConsoleBackgroundImage(const QString&, int mode) override { return mode >= 1 && mode <= 4; }
+    bool resetConsoleBackgroundImage() override { return true; }
+    bool setWindowBackgroundImage(const QString& imgPath, int mode) override;
+    bool resetWindowBackgroundImage() override { return true; }
     void setBorderColor(const QColor& color) override;
     void changeColors() override {}
     void setProfileStyleSheet(const QString& styleSheet) override;
@@ -219,8 +220,8 @@ public:
     void setFont(const QFont&) override {}
     void setFontSize(int) override {}
     bool setSubConsoleBackgroundColor(const QString& name, const QColor& color) override;
-    bool setSubConsoleBackgroundImage(const QString&, const QString&, int) override { return false; }
-    bool resetSubConsoleBackgroundImage(const QString&) override { return false; }
+    bool setSubConsoleBackgroundImage(const QString& name, const QString&, int) override { return subConsoleModel(name); }
+    bool resetSubConsoleBackgroundImage(const QString& name) override { return subConsoleModel(name); }
     bool setSubConsoleCommandBackgroundColor(const QString& name, const QColor& color) override;
     bool setSubConsoleCommandForegroundColor(const QString& name, const QColor& color) override;
     void changeSubConsoleColors(const QString&) override {}
@@ -319,9 +320,14 @@ private:
         bool movieFollowsSize = false;
         // Qt::WA_PendingResizeEvent
         bool resizePending = false;
+        // QLabel::pixmap()'s size, which a raster background image puts in place of the text or movie
+        std::optional<QSize> pixmapSize;
+        // TLabel::mpSvgRenderer's default size, as an SVG background image paints under the content
+        std::optional<QSize> svgSize;
     };
     QMovie* shownMovie(const QString& name) const;
     void setLabelVisible(Label& label, bool visible);
+    void clearLabelContents(Label& label);
 
     TConsoleModel& addSubConsole(const QString& name, TWindowRegistry::SubConsoleKind kind, const QString& windowname);
     void removeSubConsole(const QString& name);
