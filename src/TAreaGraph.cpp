@@ -64,6 +64,40 @@ QPointF hashedDirection(int a, int b = 0)
     return {std::cos(angle), std::sin(angle)};
 }
 
+// Every pair i < j whose points share a cell of the given size or sit in neighbouring cells.
+void collectNearbyPairs(const std::vector<double>& x, const std::vector<double>& y, const double cellSize, std::vector<std::pair<int, int>>& pairs)
+{
+    pairs.clear();
+    const int count = static_cast<int>(x.size());
+    const auto cellOf = [cellSize](double v) {
+        return static_cast<qint64>(std::floor(v / cellSize));
+    };
+    const auto cellKey = [](qint64 cx, qint64 cy) {
+        return (cx << 32) ^ (cy & 0xffffffffLL);
+    };
+    std::unordered_map<qint64, std::vector<int>> grid;
+    for (int i = 0; i < count; ++i) {
+        grid[cellKey(cellOf(x[i]), cellOf(y[i]))].push_back(i);
+    }
+    for (int i = 0; i < count; ++i) {
+        const qint64 cx = cellOf(x[i]);
+        const qint64 cy = cellOf(y[i]);
+        for (qint64 dx = -1; dx <= 1; ++dx) {
+            for (qint64 dy = -1; dy <= 1; ++dy) {
+                const auto it = grid.find(cellKey(cx + dx, cy + dy));
+                if (it == grid.end()) {
+                    continue;
+                }
+                for (const int j : it->second) {
+                    if (j > i) {
+                        pairs.emplace_back(i, j);
+                    }
+                }
+            }
+        }
+    }
+}
+
 struct Bounds
 {
     double minX = std::numeric_limits<double>::max();
@@ -114,7 +148,6 @@ void TAreaGraph::refresh()
 
 void TAreaGraph::rebuildGraph()
 {
-    ++mRebuildCount;
     mNodes.clear();
     mLinks.clear();
 
@@ -215,7 +248,7 @@ void TAreaGraph::readStoredLayout()
         const QJsonObject entry = it.value().toObject();
         const double x = entry.value(qsl("x")).toDouble(qQNaN());
         const double y = entry.value(qsl("y")).toDouble(qQNaN());
-        if (!isNumber || !std::isfinite(x) || !std::isfinite(y)) {
+        if (!isNumber || !(std::abs(x) <= cMaxCoordinate) || !(std::abs(y) <= cMaxCoordinate)) {
             continue;
         }
         mStored.insert(areaId, {QPointF(x, y), entry.value(qsl("pinned")).toBool()});
@@ -262,21 +295,12 @@ double TAreaGraph::radiusOf(int areaId) const
 
 void TAreaGraph::layoutUnplacedAreas()
 {
-    bool anyUnplaced = false;
-    bool anyPlaced = false;
-    Bounds placedBounds;
-    for (const Node& node : std::as_const(mNodes)) {
-        if (mStored.contains(node.areaId)) {
-            anyPlaced = true;
-            placedBounds.add(mStored.value(node.areaId).position, radiusOf(node.areaId));
-        } else {
-            anyUnplaced = true;
-        }
-    }
+    const bool anyUnplaced = std::any_of(mNodes.keyBegin(), mNodes.keyEnd(), [this](int id) {
+        return !mStored.contains(id);
+    });
     if (!anyUnplaced) {
         return;
     }
-    ++mLayoutRunCount;
 
     QHash<int, QList<int>> adjacency;
     for (const Link& link : std::as_const(mLinks)) {
@@ -369,8 +393,28 @@ void TAreaGraph::layoutUnplacedAreas()
         }
     }
 
-    if (freshComponents.isEmpty()) {
-        return;
+    if (!freshComponents.isEmpty()) {
+        packComponents(freshComponents);
+    }
+    // Areas grown from placed ones, and the packed rows, can land on areas of other components.
+    removeOverlaps(mNodes.keys(), fixed);
+}
+
+void TAreaGraph::packComponents(QList<QList<int>> freshComponents)
+{
+    QSet<int> fresh;
+    for (const QList<int>& component : std::as_const(freshComponents)) {
+        for (const int id : component) {
+            fresh.insert(id);
+        }
+    }
+    bool anyPlaced = false;
+    Bounds placedBounds;
+    for (const int id : mNodes.keys()) {
+        if (!fresh.contains(id) && mStored.contains(id)) {
+            anyPlaced = true;
+            placedBounds.add(mStored.value(id).position, radiusOf(id));
+        }
     }
 
     // Shelf-pack the new components in rows, below whatever was already placed.
@@ -412,7 +456,7 @@ void TAreaGraph::layoutUnplacedAreas()
 
 // Fruchterman-Reingold in its grid form - areas repel only within twice their ideal distance, which
 // keeps a step near linear in the number of areas - with each pair's ideal distance set by the two
-// areas' sizes, then passes that push apart any areas still overlapping. Only areas not in fixed move.
+// areas' sizes. Only areas not in fixed move.
 void TAreaGraph::simulate(const QList<int>& component, const QHash<int, bool>& fixed, const QHash<int, QList<int>>& adjacency)
 {
     const int count = static_cast<int>(component.size());
@@ -448,55 +492,21 @@ void TAreaGraph::simulate(const QList<int>& component, const QHash<int, bool>& f
         }
     }
 
-    // No pair interacts across more than one cell, so a cell and its eight neighbours hold every
-    // area another one can feel.
-    const double cellSize = 2.0 * (2.0 * largestRadius + cGap);
-    std::unordered_map<qint64, std::vector<int>> grid;
-    const auto cellOf = [cellSize](double v) {
-        return static_cast<qint64>(std::floor(v / cellSize));
-    };
-    const auto cellKey = [](qint64 cx, qint64 cy) {
-        return (cx << 32) ^ (cy & 0xffffffffLL);
-    };
-    // Calls visit(i, j) once for every pair i < j sharing a cell or in neighbouring cells.
-    const auto forNearbyPairs = [&](const auto& visit) {
-        for (auto& [key, members] : grid) {
-            members.clear();
-        }
-        for (int i = 0; i < count; ++i) {
-            grid[cellKey(cellOf(x[i]), cellOf(y[i]))].push_back(i);
-        }
-        for (int i = 0; i < count; ++i) {
-            const qint64 cx = cellOf(x[i]);
-            const qint64 cy = cellOf(y[i]);
-            for (qint64 dx = -1; dx <= 1; ++dx) {
-                for (qint64 dy = -1; dy <= 1; ++dy) {
-                    const auto it = grid.find(cellKey(cx + dx, cy + dy));
-                    if (it == grid.end()) {
-                        continue;
-                    }
-                    for (const int j : it->second) {
-                        if (j > i) {
-                            visit(i, j);
-                        }
-                    }
-                }
-            }
-        }
-    };
-
     double spread = 0.0;
     for (const double r : radius) {
         spread += std::pow(2.0 * r + cGap, 2);
     }
     const double startTemperature = std::max(cGap, std::sqrt(spread) * 0.25);
+    const double cellSize = 2.0 * (2.0 * largestRadius + cGap);
 
     std::vector<double> moveX(count);
     std::vector<double> moveY(count);
+    std::vector<std::pair<int, int>> pairs;
     for (int iteration = 0; iteration < cIterations; ++iteration) {
         std::fill(moveX.begin(), moveX.end(), 0.0);
         std::fill(moveY.begin(), moveY.end(), 0.0);
-        forNearbyPairs([&](int i, int j) {
+        collectNearbyPairs(x, y, cellSize, pairs);
+        for (const auto& [i, j] : pairs) {
             double dx = x[j] - x[i];
             double dy = y[j] - y[i];
             double distance = std::hypot(dx, dy);
@@ -508,14 +518,14 @@ void TAreaGraph::simulate(const QList<int>& component, const QHash<int, bool>& f
             }
             const double ideal = radius[i] + radius[j] + cGap;
             if (distance >= 2.0 * ideal) {
-                return;
+                continue;
             }
             const double force = ideal * ideal / (distance * distance);
             moveX[i] -= dx * force;
             moveY[i] -= dy * force;
             moveX[j] += dx * force;
             moveY[j] += dy * force;
-        });
+        }
         for (const auto& [i, j] : edges) {
             const double dx = x[j] - x[i];
             const double dy = y[j] - y[i];
@@ -538,21 +548,49 @@ void TAreaGraph::simulate(const QList<int>& component, const QHash<int, bool>& f
         }
     }
 
+    for (int i = 0; i < count; ++i) {
+        if (movable[i]) {
+            mStored[component.at(i)].position = QPointF(x[i], y[i]);
+        }
+    }
+    removeOverlaps(component, fixed);
+}
+
+void TAreaGraph::removeOverlaps(const QList<int>& ids, const QHash<int, bool>& fixed)
+{
+    const int count = static_cast<int>(ids.size());
+    std::vector<double> x(count);
+    std::vector<double> y(count);
+    std::vector<double> radius(count);
+    std::vector<char> movable(count);
+    double largestRadius = 0.0;
+    for (int i = 0; i < count; ++i) {
+        const QPointF position = mStored.value(ids.at(i)).position;
+        x[i] = position.x();
+        y[i] = position.y();
+        radius[i] = radiusOf(ids.at(i));
+        largestRadius = std::max(largestRadius, radius[i]);
+        movable[i] = !fixed.contains(ids.at(i));
+    }
+    const double cellSize = 2.0 * (2.0 * largestRadius + cGap);
+
+    std::vector<std::pair<int, int>> pairs;
     for (int pass = 0; pass < cOverlapPasses; ++pass) {
         bool moved = false;
-        forNearbyPairs([&](int i, int j) {
+        collectNearbyPairs(x, y, cellSize, pairs);
+        for (const auto& [i, j] : pairs) {
             if (!movable[i] && !movable[j]) {
-                return;
+                continue;
             }
             double dx = x[j] - x[i];
             double dy = y[j] - y[i];
             const double distance = std::hypot(dx, dy);
             const double wanted = radius[i] + radius[j] + cGap * 0.5;
             if (distance >= wanted) {
-                return;
+                continue;
             }
             if (distance < 1e-3) {
-                const QPointF direction = hashedDirection(component.at(i), component.at(j));
+                const QPointF direction = hashedDirection(ids.at(i), ids.at(j));
                 dx = direction.x();
                 dy = direction.y();
             } else {
@@ -567,7 +605,7 @@ void TAreaGraph::simulate(const QList<int>& component, const QHash<int, bool>& f
             x[j] += dx * overlap * shareJ;
             y[j] += dy * overlap * shareJ;
             moved = true;
-        });
+        }
         if (!moved) {
             break;
         }
@@ -575,7 +613,7 @@ void TAreaGraph::simulate(const QList<int>& component, const QHash<int, bool>& f
 
     for (int i = 0; i < count; ++i) {
         if (movable[i]) {
-            mStored[component.at(i)].position = QPointF(x[i], y[i]);
+            mStored[ids.at(i)].position = QPointF(x[i], y[i]);
         }
     }
 }
@@ -583,7 +621,7 @@ void TAreaGraph::simulate(const QList<int>& component, const QHash<int, bool>& f
 bool TAreaGraph::setPosition(int areaId, const QPointF& position)
 {
     refresh();
-    if (!mNodes.contains(areaId) || !std::isfinite(position.x()) || !std::isfinite(position.y())) {
+    if (!mNodes.contains(areaId) || !(std::abs(position.x()) <= cMaxCoordinate) || !(std::abs(position.y()) <= cMaxCoordinate)) {
         return false;
     }
     mStored.insert(areaId, {position, true});

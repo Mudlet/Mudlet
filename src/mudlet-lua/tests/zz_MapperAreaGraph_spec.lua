@@ -5,6 +5,7 @@ describe("Tests the area graph and its world layout", function()
   local mapDirectory = getMudletHomeDir() .. "/map"
   local backupPath = mapDirectory .. "/area_graph_spec_backup.dat"
   local savePath = mapDirectory .. "/area_graph_spec_saved.dat"
+  local jsonPath = mapDirectory .. "/area_graph_spec_saved.json"
 
   -- A <-> B by two normal exits, B -> C by a special exit, C -> A going up, D on its own
   local function buildMap()
@@ -60,6 +61,7 @@ describe("Tests the area graph and its world layout", function()
     openMapWidget("r")
     os.remove(backupPath)
     os.remove(savePath)
+    os.remove(jsonPath)
   end)
 
   before_each(function()
@@ -155,6 +157,47 @@ describe("Tests the area graph and its world layout", function()
     assert.are.same(before, positions(getAreaGraph()))
   end)
 
+  it("does not carry a layout over to a JSON map that has none", function()
+    openMapWidget()
+    buildMap()
+    assert.is_true(saveJsonMap(jsonPath))
+    local fromFile = positions(getAreaGraph())
+    assert.is_true(setAreaGraphPosition(next(fromFile), 500, 500))
+
+    -- the file was written before the move, so it must come back unmoved
+    assert.is_true(loadJsonMap(jsonPath))
+    assert.are.same(fromFile, positions(getAreaGraph()))
+  end)
+
+  it("keeps a new linked area clear of areas it is not linked to", function()
+    local ids = buildMap()
+    local graph = getAreaGraph()
+    local D = ids.GraphSpecD
+    -- surround A with pinned unlinked areas, so a new neighbour of A has nowhere free close by
+    local ax, ay = graph.areas[ids.GraphSpecA].x, graph.areas[ids.GraphSpecA].y
+    for k = 0, 7 do
+      local ring = addAreaName("GraphSpecRing" .. k)
+      local room = createRoomID()
+      addRoom(room)
+      setRoomArea(room, ring)
+      assert.is_true(setAreaGraphPosition(ring, ax + 8 * math.cos(k * math.pi / 4), ay + 8 * math.sin(k * math.pi / 4)))
+    end
+    local newArea = addAreaName("GraphSpecE")
+    local room = createRoomID()
+    addRoom(room)
+    setRoomArea(room, newArea)
+    addSpecialExit(room, ids.a1, "go")
+
+    graph = getAreaGraph()
+    local placed = graph.areas[newArea]
+    for id, area in pairs(graph.areas) do
+      if id ~= newArea and id ~= D then
+        local distance = math.sqrt((area.x - placed.x) ^ 2 + (area.y - placed.y) ^ 2)
+        assert.is_true(distance >= 4, area.name .. " is " .. distance .. " from the new area")
+      end
+    end
+  end)
+
   it("refuses bad arguments", function()
     local ids = buildMap()
     local ok, message = setAreaGraphPosition(999999, 0, 0)
@@ -163,6 +206,8 @@ describe("Tests the area graph and its world layout", function()
     ok = setAreaGraphPosition(ids.GraphSpecA, 0 / 0, 0)
     assert.is_nil(ok)
     ok = setAreaGraphPosition(ids.GraphSpecA, math.huge, 0)
+    assert.is_nil(ok)
+    ok = setAreaGraphPosition(ids.GraphSpecA, 0, 1e300)
     assert.is_nil(ok)
     assert.has_error(function() setAreaGraphPosition("GraphSpecA", 0, 0) end)
     assert.has_error(function() setAreaGraphPosition(ids.GraphSpecA, 0) end)

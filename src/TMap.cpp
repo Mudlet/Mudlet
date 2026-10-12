@@ -3730,8 +3730,11 @@ std::pair<bool, QString> TMap::readJsonMapFile(const QString& source, const bool
 
     mDefaultAreaName = mapObj[QLatin1String("defaultAreaName")].toString();
     mUnnamedAreaName = mapObj[QLatin1String("anonymousAreaName")].toString();
+    bool importedAreaGraphLayout = false;
     if (mapObj.contains(QLatin1String("userData"))) {
-        readJsonUserData(mapObj[QLatin1String("userData")].toObject());
+        const QJsonObject userDataObj = mapObj[QLatin1String("userData")].toObject();
+        importedAreaGraphLayout = userDataObj.contains(TAreaGraph::cLayoutUserDataKey);
+        readJsonUserData(userDataObj);
     }
     const QString mapSymbolFontText = mapObj[QLatin1String("mapSymbolFontDetails")].toString();
     // qRound() returns an int, so dividing by an int literal here used to be
@@ -3842,6 +3845,10 @@ std::pair<bool, QString> TMap::readJsonMapFile(const QString& source, const bool
     // This is it - the point at which the new map gets activated:
     mpRoomDB = std::move(pNewRoomDB);
     ++mMapRevision;
+    // User data is merged rather than replaced, so a layout left from the previous map would place this one's areas.
+    if (!importedAreaGraphLayout) {
+        mUserData.remove(TAreaGraph::cLayoutUserDataKey);
+    }
     // The routing graph holds pointers to the rooms just destroyed, and the bulk
     // deletion skipped the per-room cleanup that would otherwise have flagged it:
     roomidToIndex.clear();
