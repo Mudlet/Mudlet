@@ -32,9 +32,19 @@ public:
     bool matches(const T2DMap::MapInteractionContext& context) const override;
     bool handle(T2DMap::MapInteractionContext& context) override;
 
+    // The same menu for a right-click on roomId (0 for none) in another view of this map, such as the
+    // 3D view, without the actions that need a pointer position on the 2D map or act on the area it shows
+    // (Export area to image); nullptr while a mapper dialog is open. The caller pops it up; it deletes itself on close.
+    QMenu* menuForOtherView(int roomId, QWidget* parent);
+
 private:
-    void populateEditModeActions(QMenu* menu, int selectionSize, TArea* area) const;
+    QMenu* createMenu(QWidget* parent) const;
+    bool populateNoMapActions(QMenu* menu) const;
+    bool applyClickedRoom(int clickedRoomId);
+    void populateRoomActions(QMenu* menu, TArea* area, bool includePointerActions) const;
+    void populateEditModeActions(QMenu* menu, int selectionSize, TArea* area, bool includePointerActions) const;
     void populateViewModeActions(QMenu* menu, int selectionSize) const;
+    void showPopup(QMenu* popup, const T2DMap::MapInteractionContext& context) const;
     bool hasCustomLineSelection(const T2DMap::MapInteractionContext& context) const;
 
     T2DMap& mMapWidget;
