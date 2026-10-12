@@ -471,8 +471,7 @@ Host::Host(int port, const QString& hostname, const QString& login, const QStrin
     mpMainConsoleModel = std::make_shared<TConsoleModel>(this);
     mpMainConsoleModel->mConsoleName = qsl("main");
     mpMainConsoleModel->mScriptAddressable = true;
-    mpMainConsoleModel->mCommandFgColor = mCommandFgColor;
-    mpMainConsoleModel->mCommandBgColor = mCommandBgColor;
+    refreshMainConsoleColors();
 
     mServerWrapFlushTimer.setSingleShot(true);
     mServerWrapFlushTimer.setInterval(TBuffer::csmServerWrapFlushDelayMs);
